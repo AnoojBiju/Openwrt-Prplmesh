@@ -11,6 +11,9 @@
 #include "agent_db.h"
 #include "traffic_separation.h"
 
+constexpr char DOT_PVID_SUFFIX[] = ".pvid";
+#define PVID_SUFFIX &DOT_PVID_SUFFIX[1]
+
 namespace beerocks {
 namespace net {
 
@@ -93,7 +96,26 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
             LOG(ERROR) << "Could not find Backhaul Radio interface!";
             return;
         }
+
+        // Delete old VLAN interface, since it is not possible to modify the VLAN ID of an
+        // interface. Only removing and re-create it.
+        network_utils::delete_interface(db->backhaul.selected_iface_name + DOT_PVID_SUFFIX);
+
         if (db->backhaul.bssid_multi_ap_profile > 1) {
+
+            // Since multicast messages are not bridged (c83c81fa), and instead of being sent to all
+            // interfaces, they will lack a VLAN tag. To overcome it, add a VLAN interface with the
+            // Primary VLAN on the backhaul interface. Only a Primary VLAN is needed since it is the
+            // only VLAN that IEEE 1905.1 messages could be sent on.
+            // Use ".pvid" suffix so it will be easy to change the VLAN ID if changed by the
+            // Controller.
+            // The same is done on any Profile 2 bAP interface.
+            auto vlan_iface_name = network_utils::create_vlan_interface(
+                db->backhaul.selected_iface_name, db->traffic_separation.primary_vlan_id,
+                PVID_SUFFIX);
+
+            network_utils::linux_iface_ctrl(vlan_iface_name, true);
+
             set_vlan_policy(radio->back.iface_name, ePortMode::TAGGED_PORT_PRIMARY_TAGGED,
                             is_bridge);
         } else {
@@ -157,8 +179,28 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
                 network_utils::get_bss_ifaces(bss_iface, db->bridge.iface_name);
 
             for (const auto &bss_iface_netdev : bss_iface_netdevs) {
+
+                // Delete old VLAN interface, since it is not possible to modify the VLAN ID of an
+                // interface. Only removing and re-create it.
+                network_utils::delete_interface(db->backhaul.selected_iface_name + DOT_PVID_SUFFIX);
+
                 // Profile-2 Backhaul BSS
                 if (bss.backhaul_bss_disallow_profile1_agent_association) {
+
+                    // Since multicast messages are not bridged (c83c81fa), and instead of being
+                    // sent to all interfaces, they will lack a VLAN tag. To overcome it, add a VLAN
+                    // interfacewith the Primary VLAN on the backhaul interface. Only a Primary VLAN
+                    // is needed since it is the only VLAN that IEEE 1905.1 messages could be sent
+                    // on.
+                    // Use ".pvid" suffix so it will be easy to change the VLAN ID if changed by the
+                    // Controller.
+                    // The same is done on the Profile 2 bSTA interface.
+                    auto vlan_iface_name = network_utils::create_vlan_interface(
+                        db->backhaul.selected_iface_name, db->traffic_separation.primary_vlan_id,
+                        PVID_SUFFIX);
+
+                    network_utils::linux_iface_ctrl(vlan_iface_name, true);
+
                     set_vlan_policy(bss_iface_netdev, ePortMode::TAGGED_PORT_PRIMARY_UNTAGGED,
                                     is_bridge);
                 }
@@ -172,6 +214,9 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
         // Combined fBSS & bBSS - Currently Support only Profile-1 (PPM-1418)
         else {
             if (!bss.backhaul_bss_disallow_profile2_agent_association) {
+
+                // Note: If Combined mode with profile 2 will be supported, need to create a VLAN
+                // interface for it to support tagging on multicast messages.
                 LOG(WARNING) << "bBSS invalid configuration! "
                              << "Combined BSS not supported with Profile-2 bBSS - Skip";
                 continue;
