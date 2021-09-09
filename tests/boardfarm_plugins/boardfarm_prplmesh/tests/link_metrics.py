@@ -72,11 +72,15 @@ class LinkMetrics(PrplMeshBaseTest):
         debug("Found sta2 in topology: {}".format(map_sta2.path))
 
         debug("Send 1905 Link metric query to agent 1 (neighbor STA)")
-        mid = controller.dev_send_1905(agent1.mac, 0x0005,
-                                       tlv(0x08, 0x0008, "0x01 {%s} 0x02" % sta1.mac))
+        mid = controller.dev_send_1905(agent1.mac,
+                                       self.ieee1905['eMessageType']['LINK_METRIC_QUERY_MESSAGE'],
+                                       tlv(self.ieee1905['eTlvType']['TLV_LINK_METRIC_QUERY'],
+                                           "0x01 {%s} 0x02" % sta1.mac))
         time.sleep(1)
-        response = self.check_cmdu_type_single("Link metrics response", 0x0006, agent1.mac,
-                                               controller.mac, mid)
+        response = self.check_cmdu_type_single("Link metrics response",
+                                               self.ieee1905['eMessageType']
+                                               ['LINK_METRIC_RESPONSE_MESSAGE'],
+                                               agent1.mac, controller.mac, mid)
         # We requested specific neighbor, so only one transmitter and receiver link metrics TLV
         time.sleep(1)
 

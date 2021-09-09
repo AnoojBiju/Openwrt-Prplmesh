@@ -25,7 +25,8 @@ class Topology(PrplMeshBaseTest):
         time.sleep(61)
 
         # Send Topology Query
-        controller.dev_send_1905(agent.mac, 0x0002)
+        controller.dev_send_1905(agent.mac,
+                                 self.ieee1905['eMessageType']['TOPOLOGY_QUERY_MESSAGE'])
         time.sleep(1)
 
         debug("\nAfter Topology Query Message:\nCurrent network topology:")

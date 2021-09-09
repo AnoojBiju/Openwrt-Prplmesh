@@ -47,21 +47,29 @@ class LinkMetricQuery(PrplMeshBaseTest):
         sniffer = self.dev.DUT.wired_sniffer
         sniffer.start(self.__class__.__name__ + "-" + self.dev.DUT.name)
 
-        mid = controller.ucc_socket.dev_send_1905(agent1.mac, 0x0005,
-                                                  tlv(0x08, 0x0002, "0x00 0x02"))
+        mid = controller.ucc_socket.dev_send_1905(agent1.mac,
+                                                  self.ieee1905['eMessageType']
+                                                  ['LINK_METRIC_QUERY_MESSAGE'],
+                                                  tlv(self.ieee1905['eTlvType']
+                                                      ['TLV_LINK_METRIC_QUERY'],
+                                                      "0x00 0x02"))
         time.sleep(1)
 
-        query = self.check_cmdu_type_single("link metric query", 0x0005,
+        query = self.check_cmdu_type_single("link metric query", self.ieee1905['eMessageType']
+                                            ['LINK_METRIC_QUERY_MESSAGE'],
                                             controller.mac, agent1.mac,
                                             mid)
-        query_tlv = self.check_cmdu_has_tlv_single(query, 0x08)
+        query_tlv = self.check_cmdu_has_tlv_single(query, self.ieee1905['eTlvType']
+                                                   ['TLV_LINK_METRIC_QUERY'])
 
         debug("Checking query type and queried metrics are correct")
         assert int(query_tlv.link_metric_query_type) == 0x00, "Query type is not 'All neighbors'"
         assert int(query_tlv.link_metrics_requested) == 0x02, \
             "Metrics for both Tx and Rx is not requested"
 
-        resp = self.check_cmdu_type_single("link metric response", 0x0006,
+        resp = self.check_cmdu_type_single("link metric response",
+                                           self.ieee1905['eMessageType']
+                                           ['LINK_METRIC_RESPONSE_MESSAGE'],
                                            agent1.mac, controller.mac,
                                            mid)
 
@@ -69,8 +77,10 @@ class LinkMetricQuery(PrplMeshBaseTest):
         # neighbor macs are based on the setup in "launch_environment_docker" method
         expected_tx_link_neighbors = [controller.mac, agent2.mac]
         expected_rx_link_neighbors = [controller.mac, agent2.mac]
-        actual_tx_links = self.check_cmdu_has_tlvs(resp, 0x09)
-        actual_rx_links = self.check_cmdu_has_tlvs(resp, 0x0a)
+        actual_tx_links = self.check_cmdu_has_tlvs(
+            resp, self.ieee1905['eTlvType']['TLV_TRANSMITTER_LINK_METRIC'])
+        actual_rx_links = self.check_cmdu_has_tlvs(
+            resp, self.ieee1905['eTlvType']['TLV_RECEIVER_LINK_METRIC'])
 
         def verify_links(links, expected_neighbors, link_type):
             verified_neighbors = []

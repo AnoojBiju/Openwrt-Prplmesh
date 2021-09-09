@@ -35,13 +35,18 @@ class DevResetDefault(PrplMeshBaseTest):
             agent.ucc_socket.cmd_reply("dev_reset_default,devrole,agent,program,map,type,DUT")
 
             time.sleep(2)
-            self.check_no_cmdu_type("autoconfig search while in reset", 0x0007, agent.mac)
+            self.check_no_cmdu_type("autoconfig search while in reset",
+                                    self.ieee1905['eMessageType']
+                                    ['AP_AUTOCONFIGURATION_SEARCH_MESSAGE'],
+                                    agent.mac)
 
         print("Configuring agent 1")
         self.checkpoint()
         agent.ucc_socket.cmd_reply("dev_set_config,backhaul,eth")
         time.sleep(2)
-        self.check_cmdu_type("autoconfig search", 0x0007, agent.mac)
+        self.check_cmdu_type("autoconfig search",
+                             self.ieee1905['eMessageType']['AP_AUTOCONFIGURATION_SEARCH_MESSAGE'],
+                             agent.mac)
 
         # After dev_reset_default there is a delay between the auto_config message to the moment,
         # that the sockets to the son_slaves are open. Add a delay to make sure that the son_slaves

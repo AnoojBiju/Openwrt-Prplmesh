@@ -30,14 +30,20 @@ class MultiApPolicyConfigWSteeringPolicy(PrplMeshBaseTest):
         self.dev.DUT.wired_sniffer.start(self.__class__.__name__ + "-" + self.dev.DUT.name)
 
         debug("Send multi-ap policy config request with steering policy to agent 1")
-        mid = controller.dev_send_1905(agent.mac, 0x8003,
-                                             tlv(0x89, 0x000C, "{0x00 0x00 0x01 {%s 0x01 0xFF 0x14}}" % agent.radios[0].mac))  # noqa E501
+        mid = controller.dev_send_1905(agent.mac, self.ieee1905['eMessageType']
+                                        ['MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE'],
+                                        tlv(self.ieee1905['eTlvTypeMap']
+                                        ['TLV_STEERING_POLICY'],
+                                        "{0x00 0x00 0x01 {%s 0x01 0xFF 0x14}}" % agent.radios[0].mac))  # noqa E501
         time.sleep(1)
         debug("Confirming multi-ap policy config request has been received on agent")
 
-        self.check_cmdu_type("MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE", 0x8003,
+        self.check_cmdu_type("MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE",
+                             self.ieee1905['eMessageType']
+                             ['MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE'],
                              controller.mac, agent.mac, mid)
 
         time.sleep(1)
         debug("Confirming multi-ap policy config ack message has been received on the controller")
-        self.check_cmdu_type_single("ACK", 0x8000, agent.mac, controller.mac, mid)
+        self.check_cmdu_type_single(
+            "ACK", self.ieee1905['eMessageType']['ACK_MESSAGE'], agent.mac, controller.mac, mid)

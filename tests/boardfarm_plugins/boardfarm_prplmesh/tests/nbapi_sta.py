@@ -52,19 +52,32 @@ class NbapiSta(PrplMeshBaseTest):
         time_before_query = pytz.utc.localize(time_before_query)
 
         debug('Send AP Metrics Query Message')
-        mid1 = controller.dev_send_1905(agent.mac, 0x800B,
-                                        tlv(0x93, 0x0007, "0x01 {%s}" % (vap1.bssid)))
+        mid1 = controller.dev_send_1905(agent.mac,
+                                        self.ieee1905['eMessageType']['AP_METRICS_QUERY_MESSAGE'],
+                                        tlv(self.ieee1905['eTlvTypeMap']['TLV_AP_METRIC_QUERY'],
+                                            "0x01 {%s}" % (vap1.bssid)))
         debug("Send Associated STA Link Metrics Query message")
-        controller.ucc_socket.dev_send_1905(agent.mac, 0x800D, tlv(0x95, 0x0006, sta1.mac))
+        controller.ucc_socket.dev_send_1905(agent.mac,
+                                            self.ieee1905['eMessageType']
+                                            ['ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE'],
+                                            tlv(self.ieee1905['eTlvTypeMap']
+                                                ['TLV_STAMAC_ADDRESS_TYPE'],
+                                                sta1.mac))
         time.sleep(5)
 
-        ap_metrics_resp = self.check_cmdu_type_single("AP metrics response", 0x800C, agent.mac,
+        ap_metrics_resp = self.check_cmdu_type_single("AP metrics response",
+                                                      self.ieee1905['eMessageType']
+                                                      ['AP_METRICS_RESPONSE_MESSAGE'], agent.mac,
                                                       controller.mac, mid1)
 
         debug("Check AP metrics response has STA traffic stats")
-        traffic_stats = self.check_cmdu_has_tlv_single(ap_metrics_resp, 0xa2)
+        traffic_stats = self.check_cmdu_has_tlv_single(ap_metrics_resp,
+                                                       self.ieee1905['eTlvTypeMap']
+                                                       ['TLV_ASSOCIATED_STA_TRAFFIC_STATS'])
         debug("Check AP metrics response has STA Link Metrics")
-        sta_link_metrics = self.check_cmdu_has_tlv_single(ap_metrics_resp, 0x96)
+        sta_link_metrics = self.check_cmdu_has_tlv_single(ap_metrics_resp,
+                                                          self.ieee1905['eTlvTypeMap']
+                                                          ['TLV_ASSOCIATED_STA_LINK_METRICS'])
 
         print("\nNetwork topology after settings:")
         topology = self.get_topology()

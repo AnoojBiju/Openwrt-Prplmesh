@@ -35,7 +35,9 @@ class BeaconReportQueryAndResponse(PrplMeshBaseTest):
         sta.wifi_connect_check(agent.radios[0].vaps[0])
         time.sleep(1)
         debug("Send Associated STA Link Metrics Query message")
-        mid = controller.ucc_socket.dev_send_1905(agent.mac, 0x800D, tlv(0x95, 0x0006, sta.mac))
+        mid = controller.ucc_socket.dev_send_1905(
+            agent.mac, self.ieee1905['eMessageType']['ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE'],
+            tlv(self.ieee1905['eTlvTypeMap']['TLV_STAMAC_ADDRESS_TYPE'], sta.mac))
         time.sleep(5)
         debug("STA sends a valid Association Request frame to MAUT")
         self.check_log(agent,
@@ -63,11 +65,14 @@ class BeaconReportQueryAndResponse(PrplMeshBaseTest):
 
         debug("Send Beacon Metrics Query from controller to agent.")
         mid = controller.ucc_socket.dev_send_1905(
-            agent.mac, 0x8011, tlv(0x99, 0x0015, beacon_query_tlv_val))
+            agent.mac, self.ieee1905['eMessageType']['BEACON_METRICS_QUERY_MESSAGE'],
+            tlv(self.ieee1905['eTlvTypeMap']['TLV_BEACON_METRICS_QUERY'],
+                beacon_query_tlv_val))
 
         # Step 5. Verify that MAUT sends a 1905 ACK to Controller.
         time.sleep(1)
-        self.check_cmdu_type_single("ACK", 0x8000, agent.mac, controller.mac, mid)
+        self.check_cmdu_type_single(
+            "ACK", self.ieee1905['eMessageType']['ACK_MESSAGE'], agent.mac, controller.mac, mid)
         debug("Confirming ACK message was received.")
 
         # Step 6. Verify that MAUT sends a correct Beacon request to STA.
@@ -81,7 +86,9 @@ class BeaconReportQueryAndResponse(PrplMeshBaseTest):
 
         # Step 8. MAUT sends Beacon Metrics Response to Controller
         beacon_resp = self.check_cmdu_type_single(
-            "Agent send Beacon Response to controller.", 0x8012, agent.mac, controller.mac)
+            "Agent send Beacon Response to controller.",
+            self.ieee1905['eMessageType']['BEACON_METRICS_RESPONSE_MESSAGE'],
+            agent.mac, controller.mac)
         debug("Confirming MAUT sends Beacon Metrics Response to Controller.")
 
         beacon_resp_tlv = self.check_cmdu_has_tlv_single(beacon_resp, 154)

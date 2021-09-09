@@ -2,6 +2,7 @@
 import argparse
 import logging
 import socket
+import re
 import time
 from enum import Enum
 from typing import Dict, Union
@@ -20,7 +21,7 @@ class CAPIReply(Enum):
 class tlv:
     """Representation of an 1905.1 TLV."""
 
-    def __init__(self, type_: int, length: int, value: str):
+    def __init__(self, type_: int, value: str):
         """A TLV has a type, a length and a value.
 
         Parameters
@@ -36,8 +37,31 @@ class tlv:
             curly braces and hexadecimal numbers.
         """
         self.type = type_
-        self.length = length
+        self.length = self.get_byte_length(value)
         self.value = value
+
+    def get_byte_length(self, value: str) -> int:
+        """Return tlv length for a given value
+
+        Parameters
+        ----------
+        value : str
+            The TLV value, as a string. It must be formatted according to the UCC rules, i.e. with
+            curly braces and hexadecimal numbers.
+
+        Returns
+        -------
+        int
+            The length of the given value
+        """
+        byte_length = 0
+        hex_values = re.split(' |:', re.sub('({|})', '', value))
+        for num in hex_values:
+            if num:
+                if len(num) > 4:
+                    byte_length += len(num[4:])/2
+                byte_length += 1
+        return int(byte_length)
 
     def format(self, tlv_num: int = 0) -> str:
         """Format the TLV for the dev_send_1905 CAPI command.

@@ -26,16 +26,22 @@ class ApConfigBSSTeardown(PrplMeshBaseTest):
             raise SkipTest(ae)
 
         self.dev.DUT.wired_sniffer.start(self.__class__.__name__ + "-" + self.dev.DUT.name)
-
         # Configure the controller and send renew
         self.device_reset_default()
         controller.cmd_reply(
             "DEV_SET_CONFIG,bss_info1,"
             "{} 8x Boardfarm-Tests-24G-3 0x0020 0x0008 maprocks1 0 1".format(agent.mac))
-        controller.dev_send_1905(agent.mac, 0x000A,
-                                 tlv(0x01, 0x0006, "{" + controller.mac + "}"),
-                                 tlv(0x0F, 0x0001, "{0x00}"),
-                                 tlv(0x10, 0x0001, "{0x00}"))
+        controller.dev_send_1905(agent.mac,
+                                 self.ieee1905['eMessageType']
+                                 ['AP_AUTOCONFIGURATION_RENEW_MESSAGE'],
+                                 tlv(self.ieee1905['eTlvType']['TLV_AL_MAC_ADDRESS'],
+                                     "{" + controller.mac + "}"),
+                                 tlv(self.ieee1905['eTlvType']['TLV_SUPPORTED_ROLE'],
+                                     "{" + f"""0x{self.ieee1905['tlvSupportedRole']
+                                     ['eValue']['REGISTRAR']:02x}""" + "}"),
+                                 tlv(self.ieee1905['eTlvType']['TLV_SUPPORTED_FREQ_BAND'],
+                                     "{" + f"""0x{self.ieee1905['tlvSupportedFreqBand']
+                                     ['eValue']['BAND_2_4G']:02x}""" + "}"))
 
         # Wait until the connection map is updated:
         self.check_log(controller,
@@ -63,10 +69,17 @@ class ApConfigBSSTeardown(PrplMeshBaseTest):
         controller.cmd_reply(
             "DEV_SET_CONFIG,bss_info1,{} 8x".format(agent.mac))
         # Send renew message
-        controller.dev_send_1905(agent.mac, 0x000A,
-                                 tlv(0x01, 0x0006, "{" + controller.mac + "}"),
-                                 tlv(0x0F, 0x0001, "{0x00}"),
-                                 tlv(0x10, 0x0001, "{0x00}"))
+        controller.dev_send_1905(agent.mac,
+                                 self.ieee1905['eMessageType']
+                                 ['AP_AUTOCONFIGURATION_RENEW_MESSAGE'],
+                                 tlv(self.ieee1905['eTlvType']['TLV_AL_MAC_ADDRESS'],
+                                     "{" + controller.mac + "}"),
+                                 tlv(self.ieee1905['eTlvType']['TLV_SUPPORTED_ROLE'],
+                                     "{" + f"""0x{self.ieee1905['tlvSupportedRole']
+                                     ['eValue']['REGISTRAR']:02x}""" + "}"),
+                                 tlv(self.ieee1905['eTlvType']['TLV_SUPPORTED_FREQ_BAND'],
+                                     "{" + f"""0x{self.ieee1905['tlvSupportedFreqBand']
+                                     ['eValue']['BAND_2_4G']:02x}""" + "}"))
 
         self.check_log(controller,
                        rf"Setting node '{agent.radios[0].mac}' as active", timeout=10)

@@ -35,11 +35,15 @@ class ApOperationalBss(PrplMeshBaseTest):
         controller.beerocks_cli_command('bml_update_wifi_credentials {}'.format(agent.mac))
         time.sleep(3)
         debug("Send 1905 a Topology Query message")
-        mid = controller.dev_send_1905(agent.mac, 0x0002)
+        mid = controller.dev_send_1905(
+            agent.mac, self.ieee1905['eMessageType']['TOPOLOGY_QUERY_MESSAGE'])
         time.sleep(1)
-        topology_resp = self.check_cmdu_type_single("Topology Response message", 0x0003,
-                                                    agent.mac, controller.mac, mid)
-        ap_op_bss_tlv = self.check_cmdu_has_tlv_single(topology_resp, 0x83)
+        topology_resp = self.check_cmdu_type_single(
+            "Topology Response message", self.ieee1905['eMessageType']
+            ['TOPOLOGY_RESPONSE_MESSAGE'],
+            agent.mac, controller.mac, mid)
+        ap_op_bss_tlv = self.check_cmdu_has_tlv_single(
+            topology_resp, self.ieee1905['eTlvTypeMap']['TLV_AP_OPERATIONAL_BSS'])
 
         if int(ap_op_bss_tlv.ap_bss_radio_count) != len(agent.radios):
             self.fail("No radios found in AP Operational TLV.")

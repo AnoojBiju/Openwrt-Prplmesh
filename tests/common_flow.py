@@ -28,7 +28,7 @@ class CommonFlows(prplmesh_base_test.PrplMeshBaseTest):
             reporting_value |= 0x40
         radio_policies = ["{%s 0x00 0x00 0x01 0x%02x}" % (radio.mac, reporting_value)
                           for radio in agent.radios]
-        metric_reporting_tlv = tlv(0x8a, 2 + 10 * len(radio_policies),
+        metric_reporting_tlv = tlv(self.ieee1905['eTlvTypeMap']['TLV_METRIC_REPORTING_POLICY'],
                                    "{0x00 0x%02x %s}" % (len(radio_policies),
                                                          " ".join(radio_policies)))
         mid = controller.dev_send_1905(agent.mac, 0x8003, metric_reporting_tlv)
@@ -40,7 +40,9 @@ class CommonFlows(prplmesh_base_test.PrplMeshBaseTest):
             self, agent, controller, enable: 0x80, max_repeat: 0x0A):
         debug("Send multi-ap policy config request with unsuccessful association policy to agent 1")
         mid = controller.dev_send_1905(agent.mac, 0x8003,
-                                       tlv(0xC4, 0x0005, "{{0x{:02X} 0x{:08X}}}"
+                                       tlv(self.ieee1905['eTlvTypeMap']
+                                           ['TLV_PROFILE2_UNSUCCESSFUL_ASSOCIATION_POLICY'],
+                                           "{{0x{:02X} 0x{:08X}}}"
                                            .format(enable, max_repeat)))
         time.sleep(1)
         debug("Confirming multi-ap policy config with unsuccessful association"
