@@ -214,11 +214,17 @@ public:
     /**
      * @brief Create a VLAN interface.
      *
+     * The function creates a new VLAN interface with ID @a vid.
+     * The parrten of the interface name if the @a suffix is empty is:
+     * "<iface>.<vid>"", otherwise it is "<iface>.<suffix>".
+     *
      * @param iface Interface to attach the VLAN interface to.
      * @param vid VLAN ID.
+     * @param suffix VLAN interface suffix.
      * @return New interface name.
      */
-    static std::string create_vlan_interface(const std::string &iface, uint16_t vid);
+    static std::string create_vlan_interface(const std::string &iface, uint16_t vid,
+                                             const std::string &suffix = {});
 
     /**
      * @brief Enable or disable "vlan_filtering" on the bridge.

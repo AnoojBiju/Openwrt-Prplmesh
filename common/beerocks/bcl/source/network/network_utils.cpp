@@ -330,11 +330,11 @@ static int parseRoutes(struct nlmsghdr *nlHdr, std::shared_ptr<route_info> rtInf
 
     rtMsg = (struct rtmsg *)NLMSG_DATA(nlHdr);
 
-    //If the route is not for AF_INET then return
+    // If the route is not for AF_INET then return
     if (rtMsg->rtm_family != AF_INET)
         return (0);
 
-    //get the rtattr field
+    // get the rtattr field
     rtAttr = (struct rtattr *)RTM_RTA(rtMsg);
     rtLen  = RTM_PAYLOAD(nlHdr);
     for (; RTA_OK(rtAttr, rtLen); rtAttr = RTA_NEXT(rtAttr, rtLen)) {
@@ -467,12 +467,12 @@ network_utils::get_arp_table(bool mac_as_key)
 std::string network_utils::get_mac_from_arp_table(const std::string &ipv4)
 {
     /**
- * /proc/net/arp looks like this:
- *
- * IP address       HW type     Flags       HW address            Mask     Device
- * 192.168.12.31    0x1         0x2         00:09:6b:00:02:03     *        eth0
- * 192.168.12.70    0x1         0x2         00:01:02:38:4c:85     *        eth0
- */
+     * /proc/net/arp looks like this:
+     *
+     * IP address       HW type     Flags       HW address            Mask     Device
+     * 192.168.12.31    0x1         0x2         00:09:6b:00:02:03     *        eth0
+     * 192.168.12.70    0x1         0x2         00:01:02:38:4c:85     *        eth0
+     */
     std::ifstream arp_table("/proc/net/arp");
 
     if (!arp_table.is_open()) {
@@ -816,25 +816,25 @@ bool network_utils::linux_iface_get_pci_info(const std::string &iface, std::stri
                                   std::ios::in);
 
     if (!phy_device_file.is_open()) {
-        //LOG(ERROR) << "can't open phy80211 device file for interface " << iface;
+        // LOG(ERROR) << "can't open phy80211 device file for interface " << iface;
         return false;
     }
 
     std::string device;
     std::getline(phy_device_file, device);
-    device = device.substr(2); //remove trailing 0x
+    device = device.substr(2); // remove trailing 0x
 
     std::ifstream phy_vendor_file("/sys/class/net/" + iface + "/phy80211/device/vendor",
                                   std::ios::in);
 
     if (!phy_vendor_file.is_open()) {
-        //LOG(ERROR) << "can't open phy80211 vendor file for interface " << iface;
+        // LOG(ERROR) << "can't open phy80211 vendor file for interface " << iface;
         return false;
     }
 
     std::string vendor;
     std::getline(phy_vendor_file, vendor);
-    vendor = vendor.substr(2); //remove trailing 0x
+    vendor = vendor.substr(2); // remove trailing 0x
 
     pci_id = vendor + ":" + device;
 
@@ -919,8 +919,8 @@ bool network_utils::linux_iface_get_speed(const std::string &iface, uint32_t &sp
                 LOG(ERROR) << "ETHTOOL_GLINKSETTINGS handshake failed";
             } else {
                 /**
-               * Got the real ecmd.req.link_mode_masks_nwords, now send the real request
-              */
+                 * Got the real ecmd.req.link_mode_masks_nwords, now send the real request
+                 */
                 ecmd.req.cmd                    = ETHTOOL_GLINKSETTINGS;
                 ecmd.req.link_mode_masks_nwords = -ecmd.req.link_mode_masks_nwords;
                 rc                              = ioctl(sock, SIOCETHTOOL, &ifr);
@@ -1109,7 +1109,7 @@ bool network_utils::arp_send(const std::string &iface, const std::string &dst_ip
     tlvf::mac_to_array(dst_mac, sock.sll_addr);
 
     // build ARP header
-    arphdr.htype  = htons(1);        //type: 1 for ethernet
+    arphdr.htype  = htons(1);        // type: 1 for ethernet
     arphdr.ptype  = htons(ETH_P_IP); // proto
     arphdr.hlen   = MAC_ADDR_LEN;    // mac addr len
     arphdr.plen   = IP_ADDR_LEN;     // ip addr len
@@ -1139,7 +1139,7 @@ bool network_utils::arp_send(const std::string &iface, const std::string &dst_ip
 
     // Send ethernet frame to socket.
     for (int i = 0; i < count; i++) {
-        //LOG_MONITOR(DEBUG) << "ARP to ip=" << dest_ip << " mac=" << dest_mac;
+        // LOG_MONITOR(DEBUG) << "ARP to ip=" << dest_ip << " mac=" << dest_mac;
         if (sendto(arp_socket, packet_buffer, tx_len, 0, (struct sockaddr *)&sock, sizeof(sock)) <=
             0) {
             LOG(ERROR) << "sendto() failed";
@@ -1172,7 +1172,7 @@ bool network_utils::icmp_send(const std::string &ip, uint16_t id, int count, int
         pkt->un.echo.id       = htons(id);
         pkt->un.echo.sequence = htons(i);
         pkt->checksum =
-            0; //keep cheksum = 0 before calling icmp_checksum -> needed for checksum calculation
+            0; // keep cheksum = 0 before calling icmp_checksum -> needed for checksum calculation
         pkt->checksum = htons(icmp_checksum((uint16_t *)pkt, sizeof(packet_buffer)));
         ssize_t bytes = sendto(icmp_socket, packet_buffer, sizeof(packet_buffer), 0,
                                (sockaddr *)&pingaddr, sizeof(sockaddr_in));
@@ -1247,7 +1247,8 @@ std::vector<std::string> network_utils::get_bss_ifaces(const std::string &bss_if
     return bss_ifaces;
 }
 
-std::string network_utils::create_vlan_interface(const std::string &iface, uint16_t vid)
+std::string network_utils::create_vlan_interface(const std::string &iface, uint16_t vid,
+                                                 const std::string &suffix)
 {
     if (iface.empty()) {
         LOG(ERROR) << "iface is empty!";
@@ -1261,15 +1262,16 @@ std::string network_utils::create_vlan_interface(const std::string &iface, uint1
 
     // Command example:
     // ip link add <iface>.<vid> link <iface> type vlan id <vid>
+    // ip link add <iface>.<suffix> ip link add <iface> type vlan id <vid>
 
     std::string cmd;
-    // Reserve 60 bytes for appended data to prevent reallocations.
-    cmd.reserve(60);
+    // Reserve 80 bytes for appended data to prevent reallocations.
+    cmd.reserve(80);
 
     std::string new_iface_name;
     new_iface_name.reserve(IFNAMSIZ);
     auto vid_str = std::to_string(vid);
-    new_iface_name.assign(iface).append(".").append(vid_str);
+    new_iface_name.assign(iface).append(".").append(suffix.empty() ? vid_str : suffix);
 
     cmd.assign("ip link add ")
         .append(new_iface_name)
@@ -1278,7 +1280,7 @@ std::string network_utils::create_vlan_interface(const std::string &iface, uint1
         .append(" type vlan id ")
         .append(vid_str);
 
-    beerocks::os_utils::system_call(cmd, true);
+    beerocks::os_utils::system_call(cmd);
     return new_iface_name;
 }
 
@@ -1307,7 +1309,7 @@ bool network_utils::set_vlan_filtering(const std::string &bridge_iface, uint16_t
         cmd.append("1 vlan_default_pvid ").append(std::to_string(default_vlan_id));
     }
 
-    beerocks::os_utils::system_call(cmd, true);
+    beerocks::os_utils::system_call(cmd);
     return true;
 }
 
@@ -1437,7 +1439,7 @@ uint8_t network_utils::convert_rcpi_from_rssi(int8_t rssi)
 
     if (rssi < lower_rssi_bound) {
 
-        rcpi = RCPI_MIN; //represents RSSI < -109dBm
+        rcpi = RCPI_MIN; // represents RSSI < -109dBm
 
     } else if ((lower_rssi_bound <= rssi) && (rssi < upper_rssi_bound)) {
 
