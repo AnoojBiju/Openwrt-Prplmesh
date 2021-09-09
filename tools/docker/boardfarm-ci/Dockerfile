@@ -16,7 +16,7 @@ RUN apt-get update \
 
 # Install docker and docker-compose from docker.com repositories
 RUN curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add -
-RUN add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"
+RUN add-apt-repository "deb [arch=$(dpkg --print-architecture)] https://download.docker.com/linux/debian $(lsb_release -cs) stable"
 RUN apt-get update \
     && apt-get install -y \
        containerd.io \
@@ -38,7 +38,6 @@ RUN git clone https://github.com/mattsm/boardfarm.git \
 COPY requirements.txt /app/requirements.txt
 WORKDIR app
 RUN pip3 install -r requirements.txt
-RUN pip3 install -Iv iperf3==0.1.11
 
 # Installation of Debian dependencies needed by the tests
 RUN apt-get update \
@@ -51,3 +50,4 @@ RUN apt-get update \
        wireshark-common \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+

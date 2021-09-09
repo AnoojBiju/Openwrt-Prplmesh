@@ -29,8 +29,8 @@ class PrplMeshStation(DebianWifi):
         self.station_ip_wifi = config.get("station_ip_wifi", None)
 
         ipaddr = config.get("station_ip", None)
-        remote_pw = config.get("station_pw", None)
-        username = config.get("username", "root")
+        station_username = config.get("station_username", "root")
+        station_pw = config.get("station_pw", None)
 
         if not ipaddr:
             self.connection = connection_decider.connection(device=self,
@@ -42,8 +42,8 @@ class PrplMeshStation(DebianWifi):
 
         super().__init__(*args, **kwargs,
                          ipaddr=ipaddr,
-                         username=username,
-                         password=remote_pw)
+                         username=station_username,
+                         password=station_pw)
 
         self.iface_dut = self.iface_wifi = self.kwargs.get(
             'iface', 'wlan0')
@@ -98,21 +98,19 @@ class PrplMeshStation(DebianWifi):
         for _ in range(5):
             self.wifi_connect(vap)
             self.expect(pexpect.TIMEOUT, timeout=10)
-            verify_connect = self.wifi_connectivity_verify()
+            verify_connect = self.wifi_connectivity_verify(vap)
             if verify_connect:
                 break
             else:
                 self.wifi_disconnect(None)
         return verify_connect
 
-    def wifi_connectivity_verify(self):
+    def wifi_connectivity_verify(self, vap):
         """Verify that wifi is connected. Return bool"""
         self.sendline("iw %s link" % self.iface_wifi)
-        matched = self.expect(["Connected", "Not connected", pexpect.TIMEOUT])
-        if matched == 0:
-            return True
-        else:
-            return False
+        matched = self.expect([f"Connected to {vap.bssid}",
+                               "Not connected", pexpect.TIMEOUT])
+        return matched == 0
 
     def get_mac(self) -> str:
         """Get MAC of STA iface"""
@@ -126,10 +124,10 @@ class PrplMeshStation(DebianWifi):
         return self.match.group('mac')
 
     def iperf_throughput(self, to_dut: bool, duration: int = 5, protocol: str = 'tcp',
-                         omit: int = 2, num_streams: int = 5,
+                         bitrate: int = 0, omit: int = 2, num_streams: int = 5,
                          print_output: bool = False) -> float:
         server_hostname = self.station_ip_wifi
         self.station_command('iperf3', '--daemon', '-s', '-B', server_hostname, '-J', '-1')
         return _iperf_throughput(server_hostname, to_dut, duration,
-                                 protocol, omit,
+                                 protocol, omit, bitrate,
                                  num_streams, print_output)
