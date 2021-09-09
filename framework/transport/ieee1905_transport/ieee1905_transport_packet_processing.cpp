@@ -661,11 +661,15 @@ bool Ieee1905Transport::forward_packet(Packet &packet)
     if (!ch->GetRelayIndicator()) {
         return true;
     }
-    // 3. Message type is topology notification, which is currently the only
-    //    message which should be sent using reliable multicast. See Multi-AP
+    // 3. Message type is topology notification or association status notification, which are
+    //    currently the only message which should be sent using reliable multicast. See Multi-AP
     //    specification Table 5
-    if (ntohs(ch->messageType) !=
-        static_cast<uint16_t>(ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE)) {
+    auto host_order_messageType = ntohs(ch->messageType);
+    if (host_order_messageType !=
+            static_cast<uint16_t>(ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE) &&
+        host_order_messageType !=
+            static_cast<uint16_t>(
+                ieee1905_1::eMessageType::ASSOCIATION_STATUS_NOTIFICATION_MESSAGE)) {
         return true;
     }
     // 4. Message is locally generated - the spec says to duplicate the message as part
