@@ -93,9 +93,12 @@ class cmakebuilder(builder):
         cmd = ["cmake",
                "--build", self.build_path,
                "--target", "install"]
+
+        logger.info("building args: {}".format(self.cmake_flags))
+
         if self.make_verbose:
             cmd.extend(["--", "VERBOSE=1"])
-        else:
+        elif not self.generator:  # self.generator is empty
             cmd.extend(["--", "-j", str(self.parallel)])
         logger.info("building & installing {}: {}".format(self.name, " ".join(cmd)))
         subprocess.check_call(cmd, env=self.env)
