@@ -54,6 +54,7 @@ platform:
     - image-build-boardfarm-ci
   rules: *expensive-job
   variables:
+    ALTRAN_TESTS: $ALTRAN_TESTS
     TESTS_TO_RUN_ESSENSIUM: $TESTS_TO_RUN_ESSENSIUM
     DEVICE_UNDER_TEST_ESSENSIUM: $DEVICE_UNDER_TEST_ESSENSIUM
     TESTS_TO_RUN_ISR: $TESTS_TO_RUN_ISR

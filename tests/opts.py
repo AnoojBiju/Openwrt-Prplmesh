@@ -13,18 +13,18 @@ class opts:
     stop_on_failure = False
 
 
-def message(msg: str, color: int = 0):
+def message(msg: str, color: int = 0, end='\n'):
     '''Print a message, optionally in a color.'''
     if color:
-        print('\x1b[1;{}m{}\x1b[0m'.format(color, msg))
+        print('\x1b[1;{}m{}\x1b[0m'.format(color, msg), end=end)
     else:
-        print(msg)
+        print(msg, end=end)
 
 
-def debug(msg: str):
+def debug(msg: str, end='\n'):
     '''Print a debug message if verbose is enabled.'''
     if opts.verbose:
-        message(msg)
+        message(msg, end=end)
 
 
 def status(msg: str):

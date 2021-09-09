@@ -7,7 +7,6 @@
 
 from enum import Enum
 import json
-import iperf3
 import os
 import shlex
 import platform
@@ -21,6 +20,7 @@ from capi import UCCSocket
 from collections import namedtuple
 from connmap import MapDevice
 from opts import opts, debug, err
+from subprocess import PIPE, Popen
 from typing import Dict, Any, List
 import sniffer
 
@@ -599,12 +599,13 @@ class ALEntityDocker(ALEntity):
         return logfilename
 
     def iperf_throughput(self, to_dut: bool, duration: int = 5, protocol: str = 'tcp',
-                         omit: int = 2, num_streams: int = 5,
+                         bitrate: int = 0, omit: int = 2, num_streams: int = 5,
                          print_output: bool = False) -> float:
         server_hostname = self.get_iface_ip()
         self.command('iperf3', '--daemon', '-s', '-B', server_hostname, '-J', '-1')
-        return _iperf_throughput(server_hostname, to_dut, duration, protocol,
-                                 omit, num_streams, print_output)
+        return _iperf_throughput(server_hostname, to_dut, duration,
+                                 protocol, omit, bitrate,
+                                 num_streams, print_output)
 
     def command(self, *command: str) -> str:
         '''Execute `command` in docker container and return its output.'''
@@ -817,7 +818,7 @@ def _docker_inspect_network_json(unique_id: str):
 
 
 def _iperf_throughput(server_hostname: str, to_dut: bool, duration: int = 5,
-                      protocol: str = 'tcp', omit: int = 2,
+                      protocol: str = 'tcp', omit: int = 2, bitrate: int = 0,
                       num_streams: int = 5, print_output: bool = False) -> float:
     '''Connects boardfarm as client to previously started server
      on the server_hostname address
@@ -839,45 +840,57 @@ def _iperf_throughput(server_hostname: str, to_dut: bool, duration: int = 5,
         omit: int = 2
             Seconds to be removed from a test result
 
+        bitrate: int = 0
+            bitrate
+
         num_streams: int = 5
             Parallel streams
 
-        Raises
-        ------
-        CalledProcessError
-            If exit code was non-zero
-
         Returns
         ------
-        inspect: dict
-            dict containing the inspected docker network
+            2 decimals rounded value of the throughput average
     '''
 
-    client = iperf3.Client()
-    client.server_hostname = server_hostname
-    client.duration = duration
-    client.omit = omit
-    client.num_streams = num_streams
-    client.reverse = to_dut
-    client.protocol = protocol
+    to_dut_flag = {True: '', False: '-R'}
+    cmd = (f"iperf3 -c {server_hostname} -t {str(duration)} -b {str(bitrate)}"
+           f"-P {num_streams}{to_dut_flag.get(to_dut)} -O {omit} -J --get-server-output")
+
     debug('Running {} iperf {}'.format(protocol,
                                        {True: "download",
                                         False: "upload"}.get(to_dut)))
-    debug('Connecting to {}:{}'.format(client.server_hostname,
-                                       client.port))
-    result = client.run()
+    debug('Connecting to {}'.format(server_hostname))
 
-    if result.error:
-        raise Exception(result.error)
-    else:
-        if print_output:
-            debug(result)
-        throughput_intervals = list(
-            x['sum']['bits_per_second'] for x in result.json['intervals']
-            if x['sum']['omitted'] is False)
-        throughput_average = int(sum(throughput_intervals) /
-                                 len(throughput_intervals)) / 10 ** 6
-        return throughput_average
+    output = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
+    output = output.communicate()[0]
+    throughput_average = extract_avg(output.decode())
+
+    return throughput_average
+
+
+def extract_avg(iperf_output):
+    try:
+        _json = json.loads(re.sub('(-nan|nan)', '"nan"', iperf_output))
+    except TypeError:
+        raise TypeError("The output of the Iperf server was empty.")
+
+    try:
+        intervals = _json['server_output_json']['intervals']
+        throughput_intervals = [x['sum']['bits_per_second']
+                                for x in intervals if x['sum']['omitted'] is False]
+    except KeyError as exc:
+        raise KeyError('The iperf json output does not have the expected keys.') from exc
+
+    try:
+        # Find the sample average and convert bits to Mbits
+        throughput_average = sum(throughput_intervals) / len(throughput_intervals) / 10**6
+    except ZeroDivisionError:
+        print('Throughput average: 0 Mbit/s')
+        return 0
+
+    # Round two decimal place
+    throughput_average = round(throughput_average, 2)
+
+    return throughput_average
 
 
 def _get_bridge_interface(unique_id: str):
