@@ -1284,6 +1284,24 @@ std::string network_utils::create_vlan_interface(const std::string &iface, uint1
     return new_iface_name;
 }
 
+void network_utils::delete_interface(const std::string &iface)
+{
+    if (iface.empty()) {
+        LOG(ERROR) << "iface is empty!";
+        return;
+    }
+
+    // Command example:
+    // ip link delete <iface>
+
+    std::string cmd;
+    // Reserve 32 bytes for appended data to prevent reallocations.
+    cmd.reserve(32);
+
+    cmd.assign("ip link delete ").append(iface);
+    beerocks::os_utils::system_call(cmd);
+}
+
 bool network_utils::set_vlan_filtering(const std::string &bridge_iface, uint16_t default_vlan_id)
 {
     if (bridge_iface.empty()) {

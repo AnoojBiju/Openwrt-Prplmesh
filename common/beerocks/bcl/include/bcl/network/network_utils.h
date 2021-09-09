@@ -227,6 +227,13 @@ public:
                                              const std::string &suffix = {});
 
     /**
+     * @brief Deletes network interface.
+     *
+     * @param iface Interface to delete.
+     */
+    static void delete_interface(const std::string &iface);
+
+    /**
      * @brief Enable or disable "vlan_filtering" on the bridge.
      *
      * @param default_vlan_id If 'default_vlan_id is not zero, turn on "vlan_filtering" and set the
