@@ -6009,6 +6009,14 @@ bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, cons
     return true;
 }
 
+void db::dm_uint64_param_one_up(const std::string &obj_path, const char *param_name)
+{
+    uint64_t ret_val;
+
+    m_ambiorix_datamodel->read_param(obj_path, param_name, &ret_val);
+    m_ambiorix_datamodel->set(obj_path, param_name, ret_val + 1);
+}
+
 bool db::set_radio_metrics(const sMacAddr &radio_mac, uint8_t noise, uint8_t transmit,
                            uint8_t receive_self, uint8_t receive_other)
 {
