@@ -136,7 +136,7 @@ void client_steering_task::steer_sta()
     }
 
     if (m_database.get_node_type(m_sta_mac) != beerocks::TYPE_IRE_BACKHAUL) {
-        if (!m_database.set_node_handoff_flag(*client, true)) {
+        if (client && !m_database.set_node_handoff_flag(*client, true)) {
             LOG(ERROR) << "can't set handoff flag for " << m_sta_mac;
         }
     }
