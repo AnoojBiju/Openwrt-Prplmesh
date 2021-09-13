@@ -147,6 +147,9 @@ bool config_file::read_slave_config_file(const std::string &config_file_path, sC
             std::make_tuple("bridge_iface=", &conf.bridge_iface, 0),
             std::make_tuple("enable_system_hang_test=", &conf.enable_system_hang_test, 0),
             std::make_tuple("const_backhaul_slave=", &conf.const_backhaul_slave, 0),
+            std::make_tuple("monitor_polling_rate_msec=", &conf.monitor_polling_rate_msec, 0),
+            std::make_tuple("monitor_measurement_window_poll_count=",
+                            &conf.monitor_measurement_window_poll_count, 0),
         };
         std::string config_type = "global";
         if (!read_config_file(config_file_path, slave_global_conf_args, config_type)) {
