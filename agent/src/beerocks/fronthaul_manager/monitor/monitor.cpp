@@ -89,6 +89,31 @@ Monitor::Monitor(const std::string &monitor_iface_,
 
     auto radio_node = mon_db.get_radio_node();
     radio_node->set_iface(monitor_iface);
+
+    // set polling-rate(msec)
+    auto polling_rate_msec = string_utils::stoi(beerocks_slave_conf_.monitor_polling_rate_msec);
+    if (polling_rate_msec != 0) {
+        mon_db.set_polling_rate_msec(polling_rate_msec);
+        LOG(DEBUG) << "Set poll-rate(msec) to: " << polling_rate_msec;
+    } else {
+        LOG(DEBUG) << "poll-rate(msec) not configured, using default value: "
+                   << mon_db.get_polling_rate_msec();
+    }
+
+    // set measurement-window(msec)
+    auto measurement_window_poll_count =
+        string_utils::stoi(beerocks_slave_conf_.monitor_measurement_window_poll_count);
+    if ((measurement_window_poll_count != 0) || (polling_rate_msec != 0)) {
+        auto measurement_window_msec =
+            (measurement_window_poll_count != 0)
+                ? (measurement_window_poll_count * polling_rate_msec)
+                : (mon_db.MONITOR_DB_DEFAULT_MEASUREMENT_WINDOW_POLL_COUNT * polling_rate_msec);
+        mon_db.set_measurement_window_msec(measurement_window_msec);
+        LOG(DEBUG) << "Set measurement-window(msec) to: " << measurement_window_msec;
+    } else {
+        LOG(DEBUG) << "measurement-window-poll-count and poll-rate not configured, using default "
+                   << "measurement-window(msec): " << mon_db.get_measurement_window_msec();
+    }
 }
 
 bool Monitor::send_cmdu(ieee1905_1::CmduMessageTx &cmdu_tx)
@@ -510,9 +535,8 @@ bool Monitor::monitor_fsm()
         // Update DB - Polling
         if (now >= mon_db.get_poll_next_time()) {
 
-            mon_db.set_poll_next_time(
-                std::chrono::steady_clock::now() +
-                std::chrono::milliseconds(mon_db.MONITOR_DB_POLLING_RATE_MSEC));
+            mon_db.set_poll_next_time(std::chrono::steady_clock::now() +
+                                      std::chrono::milliseconds(mon_db.get_polling_rate_msec()));
 
             // If clients measurement mode is disabled - no need to call update_sta_stats.
             // The differentiation between measure all clients and only specific clients is done
