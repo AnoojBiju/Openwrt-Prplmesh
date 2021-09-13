@@ -381,7 +381,7 @@ void monitor_db::set_ap_poll_next_time(std::chrono::steady_clock::time_point pt,
 
 bool monitor_db::poll_done()
 {
-    if (((poll_cnt + 1) * MONITOR_DB_POLLING_RATE_MSEC) >= MONITOR_DB_MEASUREMENT_WINDOW_MSEC) {
+    if (((poll_cnt + 1) * m_poll_rate_msec) >= m_measurement_window_msec) {
         poll_cnt = 0;
         poll_id++;
         return true;
@@ -397,8 +397,7 @@ uint8_t monitor_db::get_poll_cnt() { return poll_cnt; }
 
 bool monitor_db::is_last_poll()
 {
-    bool poll_last =
-        (((poll_cnt + 1) * MONITOR_DB_POLLING_RATE_MSEC) >= MONITOR_DB_MEASUREMENT_WINDOW_MSEC);
+    bool poll_last = (((poll_cnt + 1) * m_poll_rate_msec) >= m_measurement_window_msec);
     return poll_last;
 }
 
