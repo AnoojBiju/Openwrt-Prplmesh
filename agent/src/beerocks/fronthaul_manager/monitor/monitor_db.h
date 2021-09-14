@@ -482,6 +482,14 @@ public:
     uint8_t get_poll_cnt();
     bool is_last_poll();
 
+    void set_polling_rate_msec(uint32_t poll_rate_msec) { m_poll_rate_msec = poll_rate_msec; }
+    uint32_t get_polling_rate_msec() { return m_poll_rate_msec; }
+    void set_measurement_window_msec(uint32_t measurement_window_msec)
+    {
+        m_measurement_window_msec = measurement_window_msec;
+    }
+    uint32_t get_measurement_window_msec() { return m_measurement_window_msec; }
+
     std::chrono::steady_clock::time_point get_ap_poll_next_time();
     void set_ap_poll_next_time(std::chrono::steady_clock::time_point pt, bool reset_poll = false);
 
@@ -491,10 +499,10 @@ public:
     }
     eClientsMeasurementMode get_clients_measuremet_mode() { return m_clients_measurement_mode; }
 
-    const int MONITOR_LAST_CHANGE_TIMEOUT_MSEC   = 30000;
-    const int MONITOR_DB_POLLING_RATE_MSEC       = 250;
-    const int MONITOR_DB_MEASUREMENT_WINDOW_MSEC = (4 * MONITOR_DB_POLLING_RATE_MSEC);
-    const int MONITOR_DB_AP_POLLING_RATE_SEC     = 5;
+    const int MONITOR_LAST_CHANGE_TIMEOUT_MSEC                            = 30000;
+    const int MONITOR_DB_AP_POLLING_RATE_SEC                              = 5;
+    static constexpr int MONITOR_DB_DEFAULT_POLLING_RATE_MSEC             = 250;
+    static constexpr int MONITOR_DB_DEFAULT_MEASUREMENT_WINDOW_POLL_COUNT = 4;
 
     const int MONITOR_ARP_TIMEOUT_MSEC = 550;
     const int MONITOR_ARP_PKT_NUM      = 6;
@@ -504,8 +512,11 @@ public:
     const int MONITOR_ARP_RETRY_COUNT   = 10;
 
 private:
-    uint32_t poll_id = 0;
-    int8_t poll_cnt  = 0;
+    uint32_t poll_id          = 0;
+    int8_t poll_cnt           = 0;
+    uint32_t m_poll_rate_msec = MONITOR_DB_DEFAULT_POLLING_RATE_MSEC;
+    uint32_t m_measurement_window_msec =
+        MONITOR_DB_DEFAULT_MEASUREMENT_WINDOW_POLL_COUNT * MONITOR_DB_DEFAULT_POLLING_RATE_MSEC;
     std::chrono::steady_clock::time_point last_stats_update_time;
     std::chrono::steady_clock::time_point poll_next_time;
     std::chrono::steady_clock::time_point ap_poll_next_time;
