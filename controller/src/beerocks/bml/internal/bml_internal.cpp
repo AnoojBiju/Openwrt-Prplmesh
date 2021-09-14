@@ -568,7 +568,7 @@ int bml_internal::process_cmdu_header(std::shared_ptr<beerocks_header> beerocks_
             auto response =
                 beerocks_header->addClass<beerocks_message::cACTION_BML_NW_MAP_RESPONSE>();
             uint32_t num_of_nodes = response->node_num();
-            char *firstNode       = (num_of_nodes > 0) ? response->buffer(0) : nullptr;
+            char *firstNode       = (char *)((num_of_nodes > 0) ? response->buffer(0) : nullptr);
 
             // Process the message
             handle_nw_map_query_update(num_of_nodes, (int)beerocks_header->actionhdr()->last(),

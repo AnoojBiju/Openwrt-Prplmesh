@@ -95,10 +95,8 @@ class cACTION_BML_NW_MAP_RESPONSE : public BaseClass
         }
         uint32_t& node_num();
         uint32_t& buffer_size();
-        std::string buffer_str();
-        char* buffer(size_t length = 0);
-        bool set_buffer(const std::string& str);
-        bool set_buffer(const char buffer[], size_t size);
+        uint8_t* buffer(size_t idx = 0);
+        bool set_buffer(const void* buffer, size_t size);
         bool alloc_buffer(size_t count = 1);
         void class_swap() override;
         bool finalize() override;
@@ -109,7 +107,7 @@ class cACTION_BML_NW_MAP_RESPONSE : public BaseClass
         eActionOp_BML* m_action_op = nullptr;
         uint32_t* m_node_num = nullptr;
         uint32_t* m_buffer_size = nullptr;
-        char* m_buffer = nullptr;
+        uint8_t* m_buffer = nullptr;
         size_t m_buffer_idx__ = 0;
         int m_lock_order_counter__ = 0;
 };
@@ -126,10 +124,8 @@ class cACTION_BML_NW_MAP_UPDATE : public BaseClass
         }
         uint32_t& node_num();
         uint32_t& buffer_size();
-        std::string buffer_str();
-        char* buffer(size_t length = 0);
-        bool set_buffer(const std::string& str);
-        bool set_buffer(const char buffer[], size_t size);
+        uint8_t* buffer(size_t idx = 0);
+        bool set_buffer(const void* buffer, size_t size);
         bool alloc_buffer(size_t count = 1);
         void class_swap() override;
         bool finalize() override;
@@ -140,7 +136,7 @@ class cACTION_BML_NW_MAP_UPDATE : public BaseClass
         eActionOp_BML* m_action_op = nullptr;
         uint32_t* m_node_num = nullptr;
         uint32_t* m_buffer_size = nullptr;
-        char* m_buffer = nullptr;
+        uint8_t* m_buffer = nullptr;
         size_t m_buffer_idx__ = 0;
         int m_lock_order_counter__ = 0;
 };
@@ -157,10 +153,8 @@ class cACTION_BML_STATS_UPDATE : public BaseClass
         }
         uint32_t& num_of_stats_bulks();
         uint32_t& buffer_size();
-        std::string buffer_str();
-        char* buffer(size_t length = 0);
-        bool set_buffer(const std::string& str);
-        bool set_buffer(const char buffer[], size_t size);
+        uint8_t* buffer(size_t idx = 0);
+        bool set_buffer(const void* buffer, size_t size);
         bool alloc_buffer(size_t count = 1);
         void class_swap() override;
         bool finalize() override;
@@ -171,7 +165,7 @@ class cACTION_BML_STATS_UPDATE : public BaseClass
         eActionOp_BML* m_action_op = nullptr;
         uint32_t* m_num_of_stats_bulks = nullptr;
         uint32_t* m_buffer_size = nullptr;
-        char* m_buffer = nullptr;
+        uint8_t* m_buffer = nullptr;
         size_t m_buffer_idx__ = 0;
         int m_lock_order_counter__ = 0;
 };
@@ -187,10 +181,8 @@ class cACTION_BML_EVENTS_UPDATE : public BaseClass
             return (eActionOp_BML)(ACTION_BML_EVENTS_UPDATE);
         }
         uint32_t& buffer_size();
-        std::string buffer_str();
-        char* buffer(size_t length = 0);
-        bool set_buffer(const std::string& str);
-        bool set_buffer(const char buffer[], size_t size);
+        uint8_t* buffer(size_t idx = 0);
+        bool set_buffer(const void* buffer, size_t size);
         bool alloc_buffer(size_t count = 1);
         void class_swap() override;
         bool finalize() override;
@@ -200,7 +192,7 @@ class cACTION_BML_EVENTS_UPDATE : public BaseClass
         bool init();
         eActionOp_BML* m_action_op = nullptr;
         uint32_t* m_buffer_size = nullptr;
-        char* m_buffer = nullptr;
+        uint8_t* m_buffer = nullptr;
         size_t m_buffer_idx__ = 0;
         int m_lock_order_counter__ = 0;
 };
@@ -1584,10 +1576,8 @@ class cACTION_BML_STEERING_EVENTS_UPDATE : public BaseClass
             return (eActionOp_BML)(ACTION_BML_STEERING_EVENTS_UPDATE);
         }
         uint32_t& buffer_size();
-        std::string buffer_str();
-        char* buffer(size_t length = 0);
-        bool set_buffer(const std::string& str);
-        bool set_buffer(const char buffer[], size_t size);
+        uint8_t* buffer(size_t idx = 0);
+        bool set_buffer(const void* buffer, size_t size);
         bool alloc_buffer(size_t count = 1);
         void class_swap() override;
         bool finalize() override;
@@ -1597,7 +1587,7 @@ class cACTION_BML_STEERING_EVENTS_UPDATE : public BaseClass
         bool init();
         eActionOp_BML* m_action_op = nullptr;
         uint32_t* m_buffer_size = nullptr;
-        char* m_buffer = nullptr;
+        uint8_t* m_buffer = nullptr;
         size_t m_buffer_idx__ = 0;
         int m_lock_order_counter__ = 0;
 };
