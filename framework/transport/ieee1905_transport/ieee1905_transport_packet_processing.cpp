@@ -374,6 +374,9 @@ bool Ieee1905Transport::fragment_and_send_packet_to_network_interface(unsigned i
                                                                       Packet &packet)
 {
     // only fragment IEEE1905 packets longer than the threashold, that originate from the local device
+    LOG(DEBUG) << "send_packet_to_network_interface: packet.ether_type=" << std::hex
+               << packet.ether_type << std::dec
+               << ", packet.src_if_type=" << int(packet.src_if_type);
     if (packet.ether_type != ETH_P_1905_1 ||
         packet.payload.iov_len <= kIeee1905FragmentationThreashold + sizeof(Ieee1905CmduHeader) ||
         packet.src_if_type != CmduRxMessage::IF_TYPE_LOCAL_BUS) {
@@ -449,7 +452,7 @@ bool Ieee1905Transport::fragment_and_send_packet_to_network_interface(unsigned i
 
         if (remainingPacketLength > 0 &&
             fragment_packet.payload.iov_len < kIeee1905FragmentationMinimum) {
-            MAPF_WARN("Fragment is too small - possiblly padded EOM!");
+            MAPF_WARN("Fragment is too small - possibly padded EOM!");
         }
 
         // send the fragment
@@ -601,17 +604,26 @@ bool Ieee1905Transport::forward_packet_single(Packet &packet)
                 }
             }
         }
+
+        LOG(DEBUG) << "forwarding to bridge=" << forward_to_bridge
+                   << ", to net_ifaces=" << forward_to_network_interfaces;
         if (forward_to_network_interfaces || forward_to_bridge) {
             for (auto it = network_interfaces_.begin(); it != network_interfaces_.end(); ++it) {
                 auto &network_interface = it->second;
                 auto &ifname            = it->second.ifname;
                 unsigned int if_index   = if_nametoindex(ifname.c_str());
+                LOG(DEBUG) << "Candidate if=" << ifname
+                           << ", is_bridge=" << network_interface.is_bridge
+                           << ", fd_null=" << !network_interface.fd << ", if_index=" << if_index
+                           << ", packet.src_if_type=" << int(packet.src_if_type)
+                           << ", packet.src_if_index=" << int(packet.src_if_index);
 
                 if (((forward_to_bridge && network_interface.is_bridge) ||
                      (forward_to_network_interfaces && !network_interface.is_bridge)) &&
                     (network_interface.fd) &&
                     !(packet.src_if_type == CmduRxMessage::IF_TYPE_NET &&
                       packet.src_if_index == if_index)) { /* avoid loop-back */
+                    LOG(DEBUG) << "Forwarding the packet on " << ifname;
                     if (!fragment_and_send_packet_to_network_interface(if_index, packet)) {
                         MAPF_ERR("cannot forward packet to network inteface " << ifname << ".");
                         return false;
@@ -645,6 +657,7 @@ bool Ieee1905Transport::forward_packet(Packet &packet)
         return false;
     }
     // First, forward the packet as is.
+    MAPF_DBG("First forward_packet_single");
     bool success = forward_packet_single(packet);
     if (!success) {
         MAPF_DBG("Failed to forward packet " << packet);
@@ -653,11 +666,14 @@ bool Ieee1905Transport::forward_packet(Packet &packet)
 
     // Check if this packet should also go through reliable multicast, return if not:
     // 1. Destination is multicast
+    LOG(DEBUG) << "ETHER_IS_MULTICAST=" << std::hex << std::boolalpha
+               << bool(ETHER_IS_MULTICAST(packet.dst.oct));
     if (!ETHER_IS_MULTICAST(packet.dst.oct)) {
         return true;
     }
     // 2. Message is relayed multicast
     Ieee1905CmduHeader *ch = reinterpret_cast<Ieee1905CmduHeader *>(packet.payload.iov_base);
+    LOG(DEBUG) << "GetRelayIndicator=" << ch->GetRelayIndicator();
     if (!ch->GetRelayIndicator()) {
         return true;
     }
@@ -665,6 +681,7 @@ bool Ieee1905Transport::forward_packet(Packet &packet)
     //    currently the only message which should be sent using reliable multicast. See Multi-AP
     //    specification Table 5
     auto host_order_messageType = ntohs(ch->messageType);
+    LOG(DEBUG) << "host_order_messageType=" << std::hex << host_order_messageType;
     if (host_order_messageType !=
             static_cast<uint16_t>(ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE) &&
         host_order_messageType !=
@@ -672,9 +689,11 @@ bool Ieee1905Transport::forward_packet(Packet &packet)
                 ieee1905_1::eMessageType::ASSOCIATION_STATUS_NOTIFICATION_MESSAGE)) {
         return true;
     }
+
     // 4. Message is locally generated - the spec says to duplicate the message as part
     // of the transmission procedure (section 7.3 of 1905.1) while relaying is part of
     // the reception procedure (section 7.6 of 1905.1).
+    LOG(DEBUG) << "packet.src_if_type=" << packet.src_if_type;
     if (packet.src_if_type != CmduRxMessage::IF_TYPE_LOCAL_BUS) {
         return true;
     }
@@ -683,6 +702,7 @@ bool Ieee1905Transport::forward_packet(Packet &packet)
     // Note - we are reusing the same packet, so this part has to come
     // after the original packet (relayed multicast) has been sent.
     // Change the packet destination each time to the neighbor AL MAC
+    MAPF_DBG("Second forward_packet_single");
     ch->SetRelayIndicator(false);
     for (const auto &neigh : neighbors_map_) {
         packet.dst = neigh.second.al_mac;
