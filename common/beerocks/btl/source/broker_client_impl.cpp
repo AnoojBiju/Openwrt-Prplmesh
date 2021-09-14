@@ -93,13 +93,18 @@ bool BrokerClientImpl::subscribe(const std::set<ieee1905_1::eMessageType> &msg_t
     return send_message(message);
 }
 
-bool BrokerClientImpl::configure_interfaces(const std::string &bridge_name)
+bool BrokerClientImpl::configure_interfaces(const std::string &iface_name,
+                                            const std::string &bridge_name, bool is_bridge,
+                                            bool add)
 {
     beerocks::transport::messages::InterfaceConfigurationRequestMessage message;
 
+    string_utils::copy_string(message.metadata()->iface_name, iface_name.c_str(), IF_NAMESIZE);
     string_utils::copy_string(message.metadata()->bridge_name, bridge_name.c_str(), IF_NAMESIZE);
+    message.metadata()->is_bridge = is_bridge;
+    message.metadata()->add       = add;
 
-    LOG(DEBUG) << "Configuring bridge " << bridge_name << " to ieee1905 transport";
+    LOG(DEBUG) << "Configuring bridge " << iface_name << " to ieee1905 transport";
 
     return send_message(message);
 }

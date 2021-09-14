@@ -63,7 +63,8 @@ public:
      *
      * @see BrokerClient::configure_interfaces()
      */
-    bool configure_interfaces(const std::string &bridge_name) override;
+    bool configure_interfaces(const std::string &iface_name, const std::string &bridge_name,
+                              bool is_bridge, bool add) override;
 
     /**
      * @brief Configures the transport process to bind a given local al_mac address.

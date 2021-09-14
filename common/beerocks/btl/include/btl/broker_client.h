@@ -123,15 +123,23 @@ public:
     /**
      * @brief Configures the transport process to use given network bridge.
      *
-     * Builds a configuration message including the name of the bridge provided and sends it to the.
-     * server. The transport process will read the network interfaces currently in the bridge and
-     * monitor the bridge for changes as interfaces are added to and/or removed from the bridge.
+     * Builds a configuration message which include an interface name.
+     * If @a iface_name is a bridge interface, the transport process will read the network
+     * interfaces currently in the bridge and monitor the bridge for changes as interfaces are added
+     * to and/or removed from the bridge.
+     * If @a iface_name is not a bridge interface, the Tranport will add or remove it from the
+     * its interfaces list according to the value of @a add.
      *
-     * @param bridge_name Name of the bridge to use in the transport process.
+     * @param iface_name The interface name.
+     * @param bridge_name The interfce bridge name if this interface is in a bridge.
+     * If the interface is a bridge or outside a bridge, it should be empty.
+     * @param is_bridge Is @a iface_name is a bridge interface.
+     * @param add true to add the interface, otherwise to remove.
      *
-     * @return true on success and false otherwise
+     * @return true on success and false otherwise.
      */
-    virtual bool configure_interfaces(const std::string &bridge_name) = 0;
+    virtual bool configure_interfaces(const std::string &iface_name, const std::string &bridge_name,
+                                      bool is_bridge, bool add) = 0;
 
     /**
      * @brief Configures the transport process to bind a given local bridge al_mac address.

@@ -331,17 +331,19 @@ private:
     // NETWORK INTERFACE STUFF
     //
     void update_network_interfaces(
-        const std::map<std::string, NetworkInterface> &updated_network_interfaces);
+        const std::map<std::string, NetworkInterface> &added_updated_network_interfaces,
+        const std::map<std::string, NetworkInterface> &removed_network_interfaces);
     /**
      * @brief Add or remove an interface to/from the transport.
      *
      * @param[in] bridge_name The bridge the interface is part of.
      * @param[in] ifname The name of the interface that was added/removed.
      * @param[in] iface_added true if the interface was added to the bridge, false otherwise.
+     * @param[in] is_bridge Shall be true if the interface is a bridge.
      * @return true on success and false otherwise.
      **/
     bool update_network_interface(const std::string &bridge_name, const std::string &ifname,
-                                  bool iface_added);
+                                  bool iface_added, bool is_bridge = false);
     /**
      * @brief Removes an interface from the transport.
      *
