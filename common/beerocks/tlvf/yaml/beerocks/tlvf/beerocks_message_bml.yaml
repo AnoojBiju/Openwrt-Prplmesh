@@ -28,7 +28,7 @@ cACTION_BML_NW_MAP_RESPONSE:
     _type: uint32_t
     _length_var: True
   buffer:
-    _type: char
+    _type: uint8_t
     _length: [buffer_size]
 
 cACTION_BML_NW_MAP_UPDATE:
@@ -38,7 +38,7 @@ cACTION_BML_NW_MAP_UPDATE:
     _type: uint32_t
     _length_var: True
   buffer:
-    _type: char
+    _type: uint8_t
     _length: [buffer_size]
 
 cACTION_BML_STATS_UPDATE:
@@ -48,7 +48,7 @@ cACTION_BML_STATS_UPDATE:
     _type: uint32_t
     _length_var: True
   buffer:
-    _type: char
+    _type: uint8_t
     _length: [buffer_size]
 
 cACTION_BML_EVENTS_UPDATE:
@@ -57,7 +57,7 @@ cACTION_BML_EVENTS_UPDATE:
     _type: uint32_t
     _length_var: True
   buffer:
-    _type: char
+    _type: uint8_t
     _length: [buffer_size]
 
 cACTION_BML_REGISTER_TO_NW_MAP_UPDATES_REQUEST:
@@ -355,7 +355,7 @@ cACTION_BML_STEERING_EVENTS_UPDATE:
     _type: uint32_t
     _length_var: True
   buffer:
-    _type: char
+    _type: uint8_t
     _length: [buffer_size]
 
 cACTION_BML_TRIGGER_TOPOLOGY_QUERY:
