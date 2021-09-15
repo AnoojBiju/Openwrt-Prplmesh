@@ -94,14 +94,15 @@ public:
         struct sBss {
             sBss()             = delete;
             sBss(const sBss &) = delete;
-            explicit sBss(const sMacAddr &bssid_,
+            explicit sBss(const sMacAddr &bssid_, sRadio &radio_,
                           int vap_id_ = beerocks::eBeeRocksIfaceIds::IFACE_ID_INVALID)
-                : bssid(bssid_), vap_id(vap_id_)
+                : bssid(bssid_), radio(radio_), vap_id(vap_id_)
             {
             }
 
             /** BSSID of the BSS. */
             const sMacAddr bssid;
+            sRadio &radio;
 
             /**
              * @brief VAP ID.

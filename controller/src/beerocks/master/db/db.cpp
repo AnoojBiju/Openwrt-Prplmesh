@@ -453,7 +453,13 @@ bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac)
 std::shared_ptr<Station> db::add_node_station(const sMacAddr &mac, const sMacAddr &parent_mac)
 {
     auto station = m_stations.add(mac);
+    auto bss     = get_bss(parent_mac);
 
+    if (!bss) {
+        LOG(ERROR) << "Failed to get sBss: " << parent_mac;
+    } else {
+        station->set_vap(bss);
+    }
     if (!add_node(mac, parent_mac, beerocks::TYPE_CLIENT)) {
         LOG(ERROR) << "Failed to add client node, mac: " << mac;
         return station;
@@ -4963,6 +4969,20 @@ std::shared_ptr<Agent::sRadio> db::get_radio_by_uid(const sMacAddr &radio_uid)
     }
 
     LOG(ERROR) << "radio " << radio_uid << " not found";
+    return {};
+}
+
+std::shared_ptr<Agent::sRadio::sBss> db::get_bss(const sMacAddr &bssid)
+{
+    for (const auto &agent : m_agents) {
+        for (const auto &radio : agent.second->radios) {
+            auto bss = radio.second->bsses.get(bssid);
+            if (bss) {
+                return bss;
+            }
+        }
+    }
+    LOG(WARNING) << "bss " << bssid << " not found";
     return {};
 }
 

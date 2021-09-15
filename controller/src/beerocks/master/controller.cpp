@@ -2890,7 +2890,7 @@ bool Controller::handle_cmdu_control_message(
             break;
         }
 
-        auto bss = radio->bsses.add(bssid, vap_id);
+        auto bss = radio->bsses.add(bssid, *radio, vap_id);
         LOG_IF(bss->vap_id != vap_id, ERROR)
             << "BSS " << bssid << " changed vap_id " << bss->vap_id << " -> " << vap_id;
         bss->ssid     = ssid;
@@ -2972,7 +2972,8 @@ bool Controller::handle_cmdu_control_message(
              vap_id++) {
             auto vap_mac = tlvf::mac_to_string(notification->params().vaps[vap_id].mac);
             if (vap_mac != beerocks::net::network_utils::ZERO_MAC_STRING) {
-                auto bss      = radio->bsses.add(notification->params().vaps[vap_id].mac, vap_id);
+                auto bss =
+                    radio->bsses.add(notification->params().vaps[vap_id].mac, *radio, vap_id);
                 bss->ssid     = std::string((char *)notification->params().vaps[vap_id].ssid);
                 bss->backhaul = notification->params().vaps[vap_id].backhaul_vap;
 
