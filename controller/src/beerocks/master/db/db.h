@@ -202,6 +202,18 @@ public:
         uint32_t m_retransmission_count = 0;
     } sAssociatedStaTrafficStats;
 
+    typedef struct {
+        std::string dm_path; /**< data model path */
+        sMacAddr original_bssid;
+        sMacAddr target_bssid;
+        std::string trigger_event;
+        std::string steering_approach;
+        std::chrono::seconds duration = {};
+        std::string timestamp;
+    } sStaSteeringEvent;
+
+    std::unordered_map<sMacAddr, std::vector<sStaSteeringEvent>> m_stations_steering_events;
+
     beerocks::mac_map<Agent> m_agents;
     beerocks::mac_map<Station> m_stations;
 
@@ -1759,6 +1771,28 @@ public:
      * @return True on success, false otherwise.
      */
     bool dm_set_agent_oui(std::shared_ptr<Agent> agent);
+
+    /**
+     * @brief Adds station steering event to database map and also for data model.
+     *
+     * Map stores events with maximum number MAX_EVENT_HISTORY_SIZE per station.
+     *
+     * @param sta_mac station mac address
+     * @param event station steering event
+     * @return True on success, false otherwise.
+     */
+    bool add_sta_steering_event(const sMacAddr &sta_mac, sStaSteeringEvent &event);
+
+    /**
+     * @brief Restores station steering event from database to add to new data model path of station.
+     *
+     * When station is steered/disassociated all data models are removed for that specific station.
+     * To recover old steering history, this method reads it from database and add old ones to data model.
+     *
+     * @param station Station object
+     * @return True on success, false otherwise.
+     */
+    bool dm_restore_sta_steering_event(const Station &station);
 
     //
     // tasks
