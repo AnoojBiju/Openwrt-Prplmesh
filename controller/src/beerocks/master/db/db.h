@@ -753,14 +753,14 @@ public:
     bool dm_clear_sta_stats(const sMacAddr &sta_mac);
 
     /**
-     * @brief Remove STA from datamodel with given MAC Address.
+     * @brief Remove STA from datamodel with given Station object.
      *
      * Path: Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}
      *
-     * @param sta_mac sta MAC address for node matching
+     * @param station Station object
      * @return true on success, false otherwise.
      */
-    bool dm_remove_sta(const sMacAddr &sta_mac);
+    bool dm_remove_sta(Station &station);
 
     /**
      * @brief Adds FailedConnectionEventData NBAPI object each time
@@ -1319,7 +1319,7 @@ public:
     /**
      * @brief Set the client's time-life delay.
      *
-     * @param mac MAC address of a client.
+     * @param client Station object representing a client.
      * @param time_life_delay_minutes Client-specific aging time.
      * @param save_to_persistent_db If set to true, update the persistent-db (write-through), default is true.
      * @return true on success, otherwise false.
@@ -2062,10 +2062,10 @@ private:
      * Data model path example: "Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.2.STA.3"
      *
      * @param bssid BSS mac address.
-     * @param client_mac Client mac address.
-     * @return Data model path on success, empty string otherwise
+     * @param station Station object
+     * @return True on success, false otherwise.
      */
-    std::string dm_add_sta_element(const sMacAddr &bssid, const sMacAddr &client_mac);
+    bool dm_add_sta_element(const sMacAddr &bssid, Station &station);
 
     /**
      * @brief Adds to data model an instance of object AssociationEventData.

@@ -516,6 +516,13 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
                              &new_event);
         }
 #endif
+
+        auto client = database.get_station(tlvf::mac_from_string(client_mac_str));
+        if (!client) {
+            LOG(ERROR) << "Station " << client_mac_str << " not found";
+            return false;
+        }
+
         /*
           TODO: Notify disconenction should be called if Disassociation Event TLV present
                 in Topology Notification Message.
@@ -526,7 +533,7 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
         }
 
         // After disassociation STA needs to be removed from data model.
-        if (!database.dm_remove_sta(tlvf::mac_from_string(client_mac_str))) {
+        if (!database.dm_remove_sta(*client)) {
             LOG(ERROR) << "Failed to remove STA from data model mac:" << client_mac_str;
         }
 
