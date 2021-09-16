@@ -44,8 +44,9 @@ private:
     void steer_sta();
     void print_steering_info();
 
-    /** @brief Set values for parameters of NBAPI SteerEvent object.
-     * 
+    /**
+     * @brief Set values for parameters of NBAPI SteerEvent object.
+     *
      * @param event_path Path to NBAPI SteerEvent object.
      * @return True on success, false otherwise.
      */
@@ -55,19 +56,18 @@ private:
      * @brief Set values for BTMAttempts and BlacklistAttempts parameters of MultiAPSteering object.
      * This parameter defined in TR-181 as:
      * "number of times BTM steer was attempted for particular Access Point."
-     * 
+     *
      * @param sta_11v_capable True if client support 11v, false otherwise.
      */
     void dm_update_multi_ap_steering_params(bool sta_11v_capable);
 
-    /** @brief Save data about client steet event to persistent db.
-     * 
-     * @param time_stamp Time when data was collected.
+    /**
+     * @brief Save data about client steer event to persistent db.
+     *
      * @param steer_origin Steer origin.
      * @param steer_type Steering type.
      */
-    void add_steer_history_to_persistent_db(const std::string &time_stamp,
-                                            const std::string &steer_origin,
+    void add_steer_history_to_persistent_db(const std::string &steer_origin,
                                             const std::string &steer_type);
 
     db &m_database;
@@ -87,6 +87,11 @@ private:
     bool m_steer_restricted    = false;
 
     /**
+     * @brief The timestamp of steering event in data model of steering events.
+     */
+    std::string m_dm_timestamp;
+
+    /**
      * @brief The timestamp when a STA disconnected.
      */
     std::chrono::steady_clock::time_point m_disassoc_ts;
@@ -99,7 +104,7 @@ private:
     std::chrono::milliseconds m_duration = {};
 
     /**
-     * @brief A flag to determine if a steer was actually performed or not since in case 
+     * @brief A flag to determine if a steer was actually performed or not since in case
      * that the client decided to move on its own to the target BSSID, we would not want
      * to flag it as non-responsive or consider the flow as failed.
      * This flag helps to differentiate between failed steer attempts and
