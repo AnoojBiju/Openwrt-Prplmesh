@@ -70,6 +70,12 @@ private:
     void add_steer_history_to_persistent_db(const std::string &steer_origin,
                                             const std::string &steer_type);
 
+    /**
+     * @brief Adds steering event in station event map of database.
+     * @return True on success, false otherwise.
+     */
+    bool add_sta_steer_event_to_db();
+
     db &m_database;
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
     task_pool &m_tasks;

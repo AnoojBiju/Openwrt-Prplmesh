@@ -109,6 +109,10 @@ void client_steering_task::work()
             LOG(ERROR) << "Failed to set parameters of Device.WiFi.DataElements.SteerEvent";
         }
 
+        if (!add_sta_steer_event_to_db()) {
+            LOG(ERROR) << "Failed to add MultiAPSteeringHistory for STA in database";
+        }
+
         print_steering_info();
 
         if (m_database.config.persistent_db) {
@@ -534,6 +538,35 @@ void client_steering_task::dm_update_multi_ap_steering_params(bool sta_11v_capab
         m_database.dm_uint64_param_one_up(bss_path, "BTMAttempts");
         m_database.dm_uint64_param_one_up(bss_path, "BlacklistAttempts");
     }
+}
+
+bool client_steering_task::add_sta_steer_event_to_db()
+{
+    db::sStaSteeringEvent steer_sta_event;
+
+    steer_sta_event.timestamp = m_dm_timestamp;
+
+    steer_sta_event.original_bssid = tlvf::mac_from_string(m_original_bssid);
+    steer_sta_event.target_bssid   = tlvf::mac_from_string(m_target_bssid);
+    steer_sta_event.duration       = std::chrono::duration_cast<std::chrono::seconds>(m_duration);
+
+    steer_sta_event.trigger_event = "Unknown";
+
+    // TODO 11v Async BTM Query is not supported (PPM-1611)
+    // And Blacklist events can not be identified
+    steer_sta_event.steering_approach = "BTM Request";
+
+    if (m_triggered_by.find("backhaul") != std::string::npos) {
+        steer_sta_event.trigger_event = "Backhaul Link Utilization";
+
+    } else if (m_triggered_by.find("DFS Rentry") != std::string::npos) {
+        steer_sta_event.trigger_event = "Wi-Fi Channel Utilization";
+
+    } else if (m_triggered_by.find("optimal_path_task") != std::string::npos) {
+        steer_sta_event.trigger_event = "Wi-Fi Link Quality";
+    }
+
+    return m_database.add_sta_steering_event(tlvf::mac_from_string(m_sta_mac), steer_sta_event);
 }
 
 bool client_steering_task::handle_ieee1905_1_msg(const sMacAddr &src_mac,
