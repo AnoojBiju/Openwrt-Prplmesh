@@ -91,6 +91,25 @@ public:
 
         bool is_acs_enabled = false;
 
+        class s_ap_stats_params {
+        public:
+            int active_sta_count                 = 0;
+            uint32_t rx_packets                  = 0;
+            uint32_t tx_packets                  = 0;
+            uint32_t rx_bytes                    = 0;
+            uint32_t tx_bytes                    = 0;
+            uint32_t errors_sent                 = 0;
+            uint32_t errors_received             = 0;
+            uint32_t retrans_count               = 0;
+            int8_t noise                         = 0;
+            uint8_t channel_load_percent         = 0;
+            uint8_t total_client_tx_load_percent = 0;
+            uint8_t total_client_rx_load_percent = 0;
+            uint16_t stats_delta_ms              = 0;
+            std::chrono::steady_clock::time_point timestamp;
+        };
+        std::shared_ptr<s_ap_stats_params> stats_info;
+
         struct sBss {
             sBss()             = delete;
             sBss(const sBss &) = delete;

@@ -4054,8 +4054,10 @@ bool db::set_hostap_stats_info(const sMacAddr &mac, const beerocks_message::sApS
 
     if (params == nullptr) { // clear stats
         n->hostap->stats_info = std::make_shared<node::radio::ap_stats_params>();
+        radio->stats_info     = std::make_shared<Agent::sRadio::s_ap_stats_params>();
     } else {
-        auto p                          = n->hostap->stats_info;
+        auto p = n->hostap->stats_info;
+
         p->active_sta_count             = params->active_client_count;
         p->rx_packets                   = params->rx_packets;
         p->tx_packets                   = params->tx_packets;
@@ -4070,6 +4072,22 @@ bool db::set_hostap_stats_info(const sMacAddr &mac, const beerocks_message::sApS
         p->total_client_rx_load_percent = params->client_rx_load_percent;
         p->stats_delta_ms               = params->stats_delta_ms;
         p->timestamp                    = std::chrono::steady_clock::now();
+
+        // Set the same information for sRadio
+        radio->stats_info->active_sta_count             = params->active_client_count;
+        radio->stats_info->rx_packets                   = params->rx_packets;
+        radio->stats_info->tx_packets                   = params->tx_packets;
+        radio->stats_info->rx_bytes                     = params->rx_bytes;
+        radio->stats_info->tx_bytes                     = params->tx_bytes;
+        radio->stats_info->errors_sent                  = params->errors_sent;
+        radio->stats_info->errors_received              = params->errors_received;
+        radio->stats_info->retrans_count                = params->retrans_count;
+        radio->stats_info->noise                        = params->noise;
+        radio->stats_info->channel_load_percent         = params->channel_load_percent;
+        radio->stats_info->total_client_tx_load_percent = params->client_tx_load_percent;
+        radio->stats_info->total_client_rx_load_percent = params->client_rx_load_percent;
+        radio->stats_info->stats_delta_ms               = params->stats_delta_ms;
+        radio->stats_info->timestamp                    = std::chrono::steady_clock::now();
     }
 
     return true;
