@@ -547,6 +547,23 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         for access_point_path in access_points:
             controller.nbapi_command(access_point_path, '_del', {})
 
+    def wait_ubus_object(self, path: str, timeout: int = 10):
+        deadline = time.monotonic() + timeout
+        controller = self.dev.lan.controller_entity
+        ubus_obj = None
+        while True:
+            try:
+                ubus_obj = controller.nbapi_command(path, "_get")
+            except subprocess.CalledProcessError as e:
+                debug(e)
+            finally:
+                if ubus_obj:
+                    return True
+                if time.monotonic() < deadline:
+                    time.sleep(.3)
+                else:
+                    return ubus_obj
+
     def configure_passphrase(self, ssid: str = 'Dummy_ssid',
                              vap_passphrase: str = 'prplmesh_pass'):
         '''Configures a new password on the controller
@@ -565,7 +582,9 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         '''
         controller = self.dev.lan.controller_entity
         ap_security_path = self.configure_ssid(ssid, "Fronthaul") + ".Security"
-        time.sleep(3)
+
+        self.wait_ubus_object(ap_security_path)
+
         controller.nbapi_set_parameters(ap_security_path,
                                         {"ModeEnabled": "WPA2-Personal"})
         controller.nbapi_set_parameters(ap_security_path,
