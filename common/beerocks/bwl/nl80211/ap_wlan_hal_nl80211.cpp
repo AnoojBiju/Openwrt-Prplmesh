@@ -106,7 +106,10 @@ static prplmesh::hostapd::Configuration load_hostapd_config(const std::string &r
 {
     std::vector<std::string> hostapd_cfg_names = {
         "/tmp/run/hostapd-phy0.conf", "/tmp/run/hostapd-phy1.conf", "/var/run/hostapd-phy0.conf",
-        "/var/run/hostapd-phy1.conf", "/var/run/hostapd-phy2.conf", "/var/run/hostapd-phy3.conf"};
+        "/var/run/hostapd-phy1.conf", "/var/run/hostapd-phy2.conf", "/var/run/hostapd-phy3.conf",
+        "/nvram/hostapd0.conf",       "/nvram/hostapd1.conf",       "/nvram/hostapd2.conf",
+        "/nvram/hostapd3.conf",       "/nvram/hostapd4.conf",       "/nvram/hostapd5.conf",
+        "/nvram/hostapd6.conf",       "/nvram/hostapd7.conf"};
 
     for (const auto &try_fname : hostapd_cfg_names) {
         LOG(DEBUG) << "Trying to load " << try_fname << "...";
