@@ -766,12 +766,12 @@ MAP-4.16.1_BH5GL_FH5GH:R2:axepoint:
     - when: manual
       allow_failure: true
       
-MAP-4.16.1_BH5GH_FH5GH:R2:axepoint:
+MAP-4.16.1_BH24G_FH5GL:R2:axepoint:
   extends: .certification:axepoint_r2
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.16.1_BH5GH_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.16.1_BH24G_FH5GL:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
