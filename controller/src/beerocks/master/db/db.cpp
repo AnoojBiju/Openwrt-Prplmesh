@@ -5986,6 +5986,11 @@ bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, cons
 
 void db::dm_uint64_param_one_up(const std::string &obj_path, const char *param_name)
 {
+    if (obj_path.empty()) {
+        LOG(WARNING) << "Path to data model object is empty.";
+        return;
+    }
+
     uint64_t ret_val;
 
     m_ambiorix_datamodel->read_param(obj_path, param_name, &ret_val);
