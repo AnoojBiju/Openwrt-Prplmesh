@@ -136,7 +136,7 @@ void client_steering_task::steer_sta()
     }
 
     if (m_database.get_node_type(m_sta_mac) != beerocks::TYPE_IRE_BACKHAUL) {
-        if (!m_database.set_node_handoff_flag(*client, true)) {
+        if (client && !m_database.set_node_handoff_flag(*client, true)) {
             LOG(ERROR) << "can't set handoff flag for " << m_sta_mac;
         }
     }
@@ -146,6 +146,9 @@ void client_steering_task::steer_sta()
         LOG(ERROR) << "parent radio for target-bssid=" << m_target_bssid
                    << " not found, exiting steering task";
         return;
+    }
+    if (client) {
+        dm_update_multi_ap_steering_params(m_database.get_node_11v_capability(*client));
     }
     // Send 17.1.27	Client Association Control Request
     if (!m_cmdu_tx.create(0,
@@ -396,6 +399,14 @@ void client_steering_task::handle_event(int event_type, void *obj)
     } else if (event_type == BTM_REPORT_RECEIVED) {
         m_btm_report_received = true;
         m_status_code         = *(uint8_t *)obj;
+
+        auto bss_path = m_database.get_node_data_model_path(m_target_bssid);
+
+        if (bss_path.empty()) {
+            LOG(WARNING) << "Path for BSS " << m_target_bssid << " not set";
+            return;
+        }
+        m_database.dm_uint64_param_one_up(bss_path, "BTMQueryResponses");
     }
 }
 
@@ -504,6 +515,21 @@ void client_steering_task::add_steer_history_to_persistent_db(const std::string 
     }
     if (!m_database.add_steer_event_to_persistent_db(values_map)) {
         LOG(ERROR) << "Failed to save steer_history to persistent db.";
+    }
+}
+
+void client_steering_task::dm_update_multi_ap_steering_params(bool sta_11v_capable)
+{
+    auto bss_path = m_database.get_node_data_model_path(m_target_bssid);
+
+    if (bss_path.empty()) {
+        LOG(WARNING) << "Path for BSS " << m_target_bssid << " not set";
+        return;
+    }
+    if (m_steering_type.find("BTM") != std::string::npos ||
+        (m_steering_type.empty() && sta_11v_capable)) {
+        m_database.dm_uint64_param_one_up(bss_path, "BTMAttempts");
+        m_database.dm_uint64_param_one_up(bss_path, "BlacklistAttempts");
     }
 }
 

@@ -287,6 +287,15 @@ public:
     static std::pair<std::string, int> get_dm_index_from_path(const std::string &dm_path);
 
     /**
+     * @brief Add plus one to value of specifed with param_name Data Model's parameter.
+     * 
+     * @param obj_path Path to object in Data Model which holds parameter.
+     * @param param_name Name of parameter, value of which will be increased by one.
+     * Parameter type should be uint64_t.
+     */
+    void dm_uint64_param_one_up(const std::string &obj_path, const char *param_name);
+
+    /**
      * @brief Get radio on a specific agent
      *
      * If no agent with the given al_mac exists, an error is logged (and nullptr returned). If no
