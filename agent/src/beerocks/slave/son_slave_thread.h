@@ -79,12 +79,19 @@ public:
     } sSlaveBackhaulParams;
 
     enum eSlaveState {
+        // General
         STATE_WAIT_BEFORE_INIT = 0,
         STATE_INIT,
+        STATE_LOAD_PLATFORM_CONFIGURATION,
         STATE_CONNECT_TO_PLATFORM_MANAGER,
-        STATE_WAIT_FOR_PLATFORM_MANAGER_ONBOARD_QUERY_RESPONSE,
         STATE_WAIT_FOR_PLATFORM_MANAGER_REGISTER_RESPONSE,
-        STATE_WAIT_FOR_PLATFORM_MANAGER_CREDENTIALS_UPDATE_RESPONSE,
+        STATE_STOPPED,
+
+        // This state is the last common state. It means the from now each radio will have a state
+        // of its own, specified under "Radio Specific" down below.
+        STATE_RADIO_SPECIFIC_FSM,
+
+        // Radio Specific
         STATE_CONNECT_TO_BACKHAUL_MANAGER,
         STATE_WAIT_RETRY_CONNECT_TO_BACKHAUL_MANAGER,
         STATE_WAIT_FOR_BACKHAUL_MANAGER_REGISTER_RESPONSE,
@@ -103,7 +110,6 @@ public:
         STATE_OPERATIONAL,
         STATE_VERSION_MISMATCH,
         STATE_SSID_MISMATCH,
-        STATE_STOPPED,
     };
 
     slave_thread(sAgentConfig conf, beerocks::logging &logger_);
@@ -125,8 +131,7 @@ private:
         const std::string &fronthaul_iface, Socket *sd,
         std::shared_ptr<beerocks::beerocks_header> beerocks_header);
     bool handle_cmdu_platform_manager_message(
-        const std::string &fronthaul_iface, Socket *sd,
-        std::shared_ptr<beerocks::beerocks_header> beerocks_header);
+        Socket *sd, std::shared_ptr<beerocks::beerocks_header> beerocks_header);
     bool handle_cmdu_ap_manager_message(const std::string &fronthaul_iface, Socket *sd,
                                         std::shared_ptr<beerocks::beerocks_header> beerocks_header);
     bool handle_cmdu_monitor_message(const std::string &fronthaul_iface, Socket *sd,
@@ -138,17 +143,17 @@ private:
                                                 ieee1905_1::CmduMessageRx &cmdu_rx);
 
     bool slave_fsm(const std::string &fronthaul_iface);
+    bool agent_fsm();
     void slave_reset(const std::string &fronthaul_iface);
     void stop_slave_thread();
     void backhaul_manager_stop(const std::string &fronthaul_iface);
-    void platform_manager_stop(const std::string &fronthaul_iface);
+    void platform_manager_stop();
     void hostap_services_off();
     bool hostap_services_on();
     void fronthaul_start(const std::string &fronthaul_iface);
     void fronthaul_stop(const std::string &fronthaul_iface);
     void log_son_config(const std::string &fronthaul_iface);
-    void platform_notify_error(const std::string &fronthaul_iface, beerocks::bpl::eErrorCode code,
-                               const std::string &error_data);
+    void platform_notify_error(beerocks::bpl::eErrorCode code, const std::string &error_data);
     bool monitor_heartbeat_check(const std::string &fronthaul_iface);
     bool ap_manager_heartbeat_check(const std::string &fronthaul_iface);
     bool send_cmdu_to_controller(const std::string &fronthaul_iface,
@@ -165,23 +170,28 @@ private:
     const int MONITOR_HEARTBEAT_RETRIES                               = 10;
     const int AP_MANAGER_HEARTBEAT_TIMEOUT_SEC                        = 10;
     const int AP_MANAGER_HEARTBEAT_RETRIES                            = 10;
-    const int CONNECT_PLATFORM_RETRY_SLEEP                            = 1000;
-    const int CONNECT_PLATFORM_RETRY_COUNT_MAX                        = 5;
+    const int CONNECT_PLATFORM_RETRY_SLEEP_MS                         = 1000;
 
     std::string backhaul_manager_uds;
     std::string platform_manager_uds;
 
+    SocketClient *m_platform_manager_socket = nullptr;
+
+    // Global FSM members:
+    eSlaveState m_agent_state;
+    std::chrono::steady_clock::time_point m_agent_state_timer_sec =
+        std::chrono::steady_clock::time_point::min();
+
     struct sManagedRadio {
         beerocks_message::sSonConfig son_config;
         int stop_on_failure_attempts;
-        int connect_platform_retry_counter = 0;
-        bool stopped                       = false;
-        bool is_backhaul_disconnected      = false;
-        bool is_slave_reset                = false;
-        bool is_backhaul_reconf            = false;
-        bool detach_on_conf_change         = false;
-        bool configuration_in_progress     = false;
-        bool is_backhaul_manager           = false;
+        bool stopped                   = false;
+        bool is_backhaul_disconnected  = false;
+        bool is_slave_reset            = false;
+        bool is_backhaul_reconf        = false;
+        bool detach_on_conf_change     = false;
+        bool configuration_in_progress = false;
+        bool is_backhaul_manager       = false;
         bool autoconfiguration_completed;
         //slave FSM //
         eSlaveState slave_state;
@@ -189,7 +199,6 @@ private:
         int slave_resets_counter = 0;
 
         sSlaveBackhaulParams backhaul_params;
-        SocketClient *platform_manager_socket = nullptr;
         SocketClient *backhaul_manager_socket = nullptr;
         SocketClient *master_socket           = nullptr;
 
@@ -249,6 +258,29 @@ private:
             }
             return m_radio_managers.begin()->first;
         }
+
+        /**
+         * @brief Preform an operation in context of each radio.
+         *
+         * @param operation An operation function that receives as input arguments the radio
+         * manager context and its fronthaul interface name.
+         * @return true if the operation succeeds in all radios, otherwise false.
+         */
+        bool do_on_each_radio_manager(
+            std::function<bool(sManagedRadio &radio_manager, const std::string &fronthaul_iface)>
+                operation)
+        {
+            auto success = true;
+            for (auto &radio : get()) {
+                success &= operation(radio.second, radio.first);
+            }
+            auto &zwdfs_radio = get_zwdfs();
+            if (!zwdfs_radio) {
+                return success;
+            }
+            success &= operation(zwdfs_radio->second, zwdfs_radio->first);
+            return success;
+        };
     } m_radio_managers;
 
     /**
@@ -306,6 +338,8 @@ private:
     bool send_error_response(
         const std::deque<std::pair<wfa_map::tlvProfile2ErrorCode::eReasonCode, sMacAddr>>
             &bss_errors);
+
+    bool read_platform_configuration();
 
     /**
      * @brief Save channel list into AgentDB from beerocks_message::cChannelList class.

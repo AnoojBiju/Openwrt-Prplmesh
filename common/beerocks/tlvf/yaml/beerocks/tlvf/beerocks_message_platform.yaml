@@ -18,15 +18,9 @@ cACTION_PLATFORM_SON_SLAVE_BACKHAUL_CONNECTION_COMPLETE_NOTIFICATION:
 
 cACTION_PLATFORM_SON_SLAVE_REGISTER_REQUEST:
   _type: class
-  iface_name:
-    _type: char
-    _length: ["beerocks::message::IFACE_NAME_LENGTH"]
 
 cACTION_PLATFORM_SON_SLAVE_REGISTER_RESPONSE:
   _type: class
-  valid:
-    _type: uint32_t
-    _comment: Indicate that all configuration saved on AgentDB has been read successfully
 
 cACTION_PLATFORM_ARP_MONITOR_NOTIFICATION:
   _type: class
@@ -34,6 +28,9 @@ cACTION_PLATFORM_ARP_MONITOR_NOTIFICATION:
 
 cACTION_PLATFORM_WLAN_PARAMS_CHANGED_NOTIFICATION:
   _type: class
+  iface_name:
+    _type: char
+    _length: ["beerocks::message::IFACE_NAME_LENGTH"]
   wlan_settings: sWlanSettings
 
 cACTION_PLATFORM_DHCP_MONITOR_NOTIFICATION:

@@ -57,10 +57,6 @@ class cACTION_PLATFORM_SON_SLAVE_REGISTER_REQUEST : public BaseClass
         static eActionOp_PLATFORM get_action_op(){
             return (eActionOp_PLATFORM)(ACTION_PLATFORM_SON_SLAVE_REGISTER_REQUEST);
         }
-        std::string iface_name_str();
-        char* iface_name(size_t length = 0);
-        bool set_iface_name(const std::string& str);
-        bool set_iface_name(const char buffer[], size_t size);
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -68,9 +64,6 @@ class cACTION_PLATFORM_SON_SLAVE_REGISTER_REQUEST : public BaseClass
     private:
         bool init();
         eActionOp_PLATFORM* m_action_op = nullptr;
-        char* m_iface_name = nullptr;
-        size_t m_iface_name_idx__ = 0;
-        int m_lock_order_counter__ = 0;
 };
 
 class cACTION_PLATFORM_SON_SLAVE_REGISTER_RESPONSE : public BaseClass
@@ -83,8 +76,6 @@ class cACTION_PLATFORM_SON_SLAVE_REGISTER_RESPONSE : public BaseClass
         static eActionOp_PLATFORM get_action_op(){
             return (eActionOp_PLATFORM)(ACTION_PLATFORM_SON_SLAVE_REGISTER_RESPONSE);
         }
-        //Indicate that all configuration saved on AgentDB has been read successfully
-        uint32_t& valid();
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -92,7 +83,6 @@ class cACTION_PLATFORM_SON_SLAVE_REGISTER_RESPONSE : public BaseClass
     private:
         bool init();
         eActionOp_PLATFORM* m_action_op = nullptr;
-        uint32_t* m_valid = nullptr;
 };
 
 class cACTION_PLATFORM_ARP_MONITOR_NOTIFICATION : public BaseClass
@@ -126,6 +116,10 @@ class cACTION_PLATFORM_WLAN_PARAMS_CHANGED_NOTIFICATION : public BaseClass
         static eActionOp_PLATFORM get_action_op(){
             return (eActionOp_PLATFORM)(ACTION_PLATFORM_WLAN_PARAMS_CHANGED_NOTIFICATION);
         }
+        std::string iface_name_str();
+        char* iface_name(size_t length = 0);
+        bool set_iface_name(const std::string& str);
+        bool set_iface_name(const char buffer[], size_t size);
         sWlanSettings& wlan_settings();
         void class_swap() override;
         bool finalize() override;
@@ -134,6 +128,9 @@ class cACTION_PLATFORM_WLAN_PARAMS_CHANGED_NOTIFICATION : public BaseClass
     private:
         bool init();
         eActionOp_PLATFORM* m_action_op = nullptr;
+        char* m_iface_name = nullptr;
+        size_t m_iface_name_idx__ = 0;
+        int m_lock_order_counter__ = 0;
         sWlanSettings* m_wlan_settings = nullptr;
 };
 

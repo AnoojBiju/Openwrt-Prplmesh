@@ -93,33 +93,6 @@ BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
 }
 cACTION_PLATFORM_SON_SLAVE_REGISTER_REQUEST::~cACTION_PLATFORM_SON_SLAVE_REGISTER_REQUEST() {
 }
-std::string cACTION_PLATFORM_SON_SLAVE_REGISTER_REQUEST::iface_name_str() {
-    char *iface_name_ = iface_name();
-    if (!iface_name_) { return std::string(); }
-    return std::string(iface_name_, m_iface_name_idx__);
-}
-
-char* cACTION_PLATFORM_SON_SLAVE_REGISTER_REQUEST::iface_name(size_t length) {
-    if( (m_iface_name_idx__ == 0) || (m_iface_name_idx__ < length) ) {
-        TLVF_LOG(ERROR) << "iface_name length is smaller than requested length";
-        return nullptr;
-    }
-    return ((char*)m_iface_name);
-}
-
-bool cACTION_PLATFORM_SON_SLAVE_REGISTER_REQUEST::set_iface_name(const std::string& str) { return set_iface_name(str.c_str(), str.size()); }
-bool cACTION_PLATFORM_SON_SLAVE_REGISTER_REQUEST::set_iface_name(const char str[], size_t size) {
-    if (str == nullptr) {
-        TLVF_LOG(WARNING) << "set_iface_name received a null pointer.";
-        return false;
-    }
-    if (size > beerocks::message::IFACE_NAME_LENGTH) {
-        TLVF_LOG(ERROR) << "Received buffer size is smaller than string length";
-        return false;
-    }
-    std::copy(str, str + size, m_iface_name);
-    return true;
-}
 void cACTION_PLATFORM_SON_SLAVE_REGISTER_REQUEST::class_swap()
 {
     tlvf_swap(8*sizeof(eActionOp_PLATFORM), reinterpret_cast<uint8_t*>(m_action_op));
@@ -155,7 +128,6 @@ bool cACTION_PLATFORM_SON_SLAVE_REGISTER_REQUEST::finalize()
 size_t cACTION_PLATFORM_SON_SLAVE_REGISTER_REQUEST::get_initial_size()
 {
     size_t class_size = 0;
-    class_size += beerocks::message::IFACE_NAME_LENGTH * sizeof(char); // iface_name
     return class_size;
 }
 
@@ -165,12 +137,6 @@ bool cACTION_PLATFORM_SON_SLAVE_REGISTER_REQUEST::init()
         TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
         return false;
     }
-    m_iface_name = reinterpret_cast<char*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(char) * (beerocks::message::IFACE_NAME_LENGTH))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (beerocks::message::IFACE_NAME_LENGTH) << ") Failed!";
-        return false;
-    }
-    m_iface_name_idx__  = beerocks::message::IFACE_NAME_LENGTH;
     if (m_parse__) { class_swap(); }
     return true;
 }
@@ -185,14 +151,9 @@ BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
 }
 cACTION_PLATFORM_SON_SLAVE_REGISTER_RESPONSE::~cACTION_PLATFORM_SON_SLAVE_REGISTER_RESPONSE() {
 }
-uint32_t& cACTION_PLATFORM_SON_SLAVE_REGISTER_RESPONSE::valid() {
-    return (uint32_t&)(*m_valid);
-}
-
 void cACTION_PLATFORM_SON_SLAVE_REGISTER_RESPONSE::class_swap()
 {
     tlvf_swap(8*sizeof(eActionOp_PLATFORM), reinterpret_cast<uint8_t*>(m_action_op));
-    tlvf_swap(32, reinterpret_cast<uint8_t*>(m_valid));
 }
 
 bool cACTION_PLATFORM_SON_SLAVE_REGISTER_RESPONSE::finalize()
@@ -225,7 +186,6 @@ bool cACTION_PLATFORM_SON_SLAVE_REGISTER_RESPONSE::finalize()
 size_t cACTION_PLATFORM_SON_SLAVE_REGISTER_RESPONSE::get_initial_size()
 {
     size_t class_size = 0;
-    class_size += sizeof(uint32_t); // valid
     return class_size;
 }
 
@@ -233,11 +193,6 @@ bool cACTION_PLATFORM_SON_SLAVE_REGISTER_RESPONSE::init()
 {
     if (getBuffRemainingBytes() < get_initial_size()) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
-        return false;
-    }
-    m_valid = reinterpret_cast<uint32_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint32_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint32_t) << ") Failed!";
         return false;
     }
     if (m_parse__) { class_swap(); }
@@ -324,6 +279,33 @@ BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
 }
 cACTION_PLATFORM_WLAN_PARAMS_CHANGED_NOTIFICATION::~cACTION_PLATFORM_WLAN_PARAMS_CHANGED_NOTIFICATION() {
 }
+std::string cACTION_PLATFORM_WLAN_PARAMS_CHANGED_NOTIFICATION::iface_name_str() {
+    char *iface_name_ = iface_name();
+    if (!iface_name_) { return std::string(); }
+    return std::string(iface_name_, m_iface_name_idx__);
+}
+
+char* cACTION_PLATFORM_WLAN_PARAMS_CHANGED_NOTIFICATION::iface_name(size_t length) {
+    if( (m_iface_name_idx__ == 0) || (m_iface_name_idx__ < length) ) {
+        TLVF_LOG(ERROR) << "iface_name length is smaller than requested length";
+        return nullptr;
+    }
+    return ((char*)m_iface_name);
+}
+
+bool cACTION_PLATFORM_WLAN_PARAMS_CHANGED_NOTIFICATION::set_iface_name(const std::string& str) { return set_iface_name(str.c_str(), str.size()); }
+bool cACTION_PLATFORM_WLAN_PARAMS_CHANGED_NOTIFICATION::set_iface_name(const char str[], size_t size) {
+    if (str == nullptr) {
+        TLVF_LOG(WARNING) << "set_iface_name received a null pointer.";
+        return false;
+    }
+    if (size > beerocks::message::IFACE_NAME_LENGTH) {
+        TLVF_LOG(ERROR) << "Received buffer size is smaller than string length";
+        return false;
+    }
+    std::copy(str, str + size, m_iface_name);
+    return true;
+}
 sWlanSettings& cACTION_PLATFORM_WLAN_PARAMS_CHANGED_NOTIFICATION::wlan_settings() {
     return (sWlanSettings&)(*m_wlan_settings);
 }
@@ -364,6 +346,7 @@ bool cACTION_PLATFORM_WLAN_PARAMS_CHANGED_NOTIFICATION::finalize()
 size_t cACTION_PLATFORM_WLAN_PARAMS_CHANGED_NOTIFICATION::get_initial_size()
 {
     size_t class_size = 0;
+    class_size += beerocks::message::IFACE_NAME_LENGTH * sizeof(char); // iface_name
     class_size += sizeof(sWlanSettings); // wlan_settings
     return class_size;
 }
@@ -374,6 +357,12 @@ bool cACTION_PLATFORM_WLAN_PARAMS_CHANGED_NOTIFICATION::init()
         TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
         return false;
     }
+    m_iface_name = reinterpret_cast<char*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(char) * (beerocks::message::IFACE_NAME_LENGTH))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (beerocks::message::IFACE_NAME_LENGTH) << ") Failed!";
+        return false;
+    }
+    m_iface_name_idx__  = beerocks::message::IFACE_NAME_LENGTH;
     m_wlan_settings = reinterpret_cast<sWlanSettings*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(sWlanSettings))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sWlanSettings) << ") Failed!";
