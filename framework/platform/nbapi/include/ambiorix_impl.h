@@ -134,6 +134,17 @@ public:
     bool remove_optional_subobject(const std::string &path_to_obj,
                                    const std::string &subobject_name) override;
 
+    /**
+     * @brief Reads and return from Data Model value of uint64 parameter for given object.
+     * 
+     * @param[in] obj_path Path to object.
+     * @param[in] param_name Name of the parametr.
+     * @param[out] param_val Value of parameter.
+     * @return True on success, false otherwise.
+    */
+    bool read_param(const std::string &obj_path, const char *param_name,
+                    uint64_t *param_val) override;
+
 private:
     // Methods
 

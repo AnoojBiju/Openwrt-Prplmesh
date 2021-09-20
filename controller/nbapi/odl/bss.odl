@@ -25,17 +25,11 @@
         }
 
         %read-only datetime TimeStamp = "2020-08-31T11:22:39Z";
-
         %read-only uint64 UnicastBytesSent = 0;
-
         %read-only uint64 UnicastBytesReceived = 0;
-
         %read-only uint64 MulticastBytesSent = 0;
-
         %read-only uint64 MulticastBytesReceived = 0;
-
         %read-only uint64 BroadcastBytesSent = 0;
-
         %read-only uint64 BroadcastBytesReceived = 0;
 
         %read-only uint32 EstServiceParametersBE = 0 {
@@ -56,6 +50,12 @@
 
         object STA [] {
             counted with NumberOfSTA;
+        }
+
+        %read-only object MultiAPSteering {
+           %read-only uint64 BlacklistAttempts = 0;
+           %read-only uint64 BTMAttempts = 0;
+           %read-only uint64 BTMQueryResponses = 0;
         }
     }
 }
