@@ -133,7 +133,7 @@ run-tests-on-altran-glinet-testbed:
     - !reference [.test-on-target, after_script]
     - ssh "$TARGET_DEVICE_NAME" 'wifi down'
   rules:
-    - if: '$ALTRAN_TESTS'
+    - if: '$ALTRAN_TESTS !~ /^\$/'
   tags:
     - test_flows_on_altran
   timeout: 90m
