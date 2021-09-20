@@ -5706,6 +5706,17 @@ std::string db::dm_add_steer_event()
     return event_path;
 }
 
+std::shared_ptr<db::sSteeringSummaryStats> db::get_steering_summary_stats(const sMacAddr &sta_mac)
+{
+    // auto steering_sumary_stats = m_steer_summary.get(sta_mac);
+
+    // if (!steering_sumary_stats) {
+    //     steering_sumary_stats    = std::make_shared<sSteeringSummaryStats>();
+    //     m_steer_summary[sta_mac] = steering_sumary_stats;
+    // }
+    return m_steer_summary.add(sta_mac);
+}
+
 bool db::dm_add_failed_connection_event(const sMacAddr &sta_mac, const uint16_t reason_code,
                                         const uint16_t status_code)
 {

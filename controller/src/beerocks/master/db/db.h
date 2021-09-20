@@ -214,6 +214,20 @@ public:
 
     std::unordered_map<sMacAddr, std::vector<sStaSteeringEvent>> m_stations_steering_events;
 
+    struct sSteeringSummaryStats {
+        explicit sSteeringSummaryStats(const sMacAddr &_sta_mac) : sta_mac(_sta_mac) {}
+        const sMacAddr sta_mac;
+        uint64_t blacklist_attempts;
+        uint64_t blacklist_successes;
+        uint64_t blacklist_failures;
+        uint64_t btm_attempts;
+        uint64_t btm_successes;
+        uint64_t btm_failures;
+        uint64_t btm_query_responses;
+        std::string last_steer_ts;
+    };
+
+    beerocks::mac_map<sSteeringSummaryStats> m_steer_summary;
     beerocks::mac_map<Agent> m_agents;
     beerocks::mac_map<Station> m_stations;
 
@@ -515,6 +529,14 @@ public:
     bool is_node_wireless(const std::string &mac);
 
     std::string node_to_string(const std::string &mac);
+
+    /**
+    * @brief Returns steering summary statistic of client with give mac address.
+    *
+    * @param sta_mac Mac address of STA steering summary of wich will be returned.
+    * @return Structure with steering summary statistic.
+    */
+    std::shared_ptr<sSteeringSummaryStats> get_steering_summary_stats(const sMacAddr &sta_mac);
 
     /**
      * @brief Get the link metric database
