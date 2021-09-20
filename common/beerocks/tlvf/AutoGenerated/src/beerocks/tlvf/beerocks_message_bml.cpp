@@ -207,23 +207,16 @@ uint32_t& cACTION_BML_NW_MAP_RESPONSE::buffer_size() {
     return (uint32_t&)(*m_buffer_size);
 }
 
-std::string cACTION_BML_NW_MAP_RESPONSE::buffer_str() {
-    char *buffer_ = buffer();
-    if (!buffer_) { return std::string(); }
-    return std::string(buffer_, m_buffer_idx__);
-}
-
-char* cACTION_BML_NW_MAP_RESPONSE::buffer(size_t length) {
-    if( (m_buffer_idx__ == 0) || (m_buffer_idx__ < length) ) {
-        TLVF_LOG(ERROR) << "buffer length is smaller than requested length";
+uint8_t* cACTION_BML_NW_MAP_RESPONSE::buffer(size_t idx) {
+    if ( (m_buffer_idx__ == 0) || (m_buffer_idx__ <= idx) ) {
+        TLVF_LOG(ERROR) << "Requested index is greater than the number of available entries";
         return nullptr;
     }
-    return ((char*)m_buffer);
+    return &(m_buffer[idx]);
 }
 
-bool cACTION_BML_NW_MAP_RESPONSE::set_buffer(const std::string& str) { return set_buffer(str.c_str(), str.size()); }
-bool cACTION_BML_NW_MAP_RESPONSE::set_buffer(const char str[], size_t size) {
-    if (str == nullptr) {
+bool cACTION_BML_NW_MAP_RESPONSE::set_buffer(const void* buffer, size_t size) {
+    if (buffer == nullptr) {
         TLVF_LOG(WARNING) << "set_buffer received a null pointer.";
         return false;
     }
@@ -232,7 +225,7 @@ bool cACTION_BML_NW_MAP_RESPONSE::set_buffer(const char str[], size_t size) {
         return false;
     }
     if (!alloc_buffer(size)) { return false; }
-    std::copy(str, str + size, m_buffer);
+    std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_buffer);
     return true;
 }
 bool cACTION_BML_NW_MAP_RESPONSE::alloc_buffer(size_t count) {
@@ -240,7 +233,7 @@ bool cACTION_BML_NW_MAP_RESPONSE::alloc_buffer(size_t count) {
         TLVF_LOG(ERROR) << "Out of order allocation for variable length list buffer, abort!";
         return false;
     }
-    size_t len = sizeof(char) * count;
+    size_t len = sizeof(uint8_t) * count;
     if(getBuffRemainingBytes() < len )  {
         TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
         return false;
@@ -320,12 +313,12 @@ bool cACTION_BML_NW_MAP_RESPONSE::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint32_t) << ") Failed!";
         return false;
     }
-    m_buffer = reinterpret_cast<char*>(m_buff_ptr__);
+    m_buffer = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     uint32_t buffer_size = *m_buffer_size;
     if (m_parse__) {  tlvf_swap(32, reinterpret_cast<uint8_t*>(&buffer_size)); }
     m_buffer_idx__ = buffer_size;
-    if (!buffPtrIncrementSafe(sizeof(char) * (buffer_size))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (buffer_size) << ") Failed!";
+    if (!buffPtrIncrementSafe(sizeof(uint8_t) * (buffer_size))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) * (buffer_size) << ") Failed!";
         return false;
     }
     if (m_parse__) { class_swap(); }
@@ -350,23 +343,16 @@ uint32_t& cACTION_BML_NW_MAP_UPDATE::buffer_size() {
     return (uint32_t&)(*m_buffer_size);
 }
 
-std::string cACTION_BML_NW_MAP_UPDATE::buffer_str() {
-    char *buffer_ = buffer();
-    if (!buffer_) { return std::string(); }
-    return std::string(buffer_, m_buffer_idx__);
-}
-
-char* cACTION_BML_NW_MAP_UPDATE::buffer(size_t length) {
-    if( (m_buffer_idx__ == 0) || (m_buffer_idx__ < length) ) {
-        TLVF_LOG(ERROR) << "buffer length is smaller than requested length";
+uint8_t* cACTION_BML_NW_MAP_UPDATE::buffer(size_t idx) {
+    if ( (m_buffer_idx__ == 0) || (m_buffer_idx__ <= idx) ) {
+        TLVF_LOG(ERROR) << "Requested index is greater than the number of available entries";
         return nullptr;
     }
-    return ((char*)m_buffer);
+    return &(m_buffer[idx]);
 }
 
-bool cACTION_BML_NW_MAP_UPDATE::set_buffer(const std::string& str) { return set_buffer(str.c_str(), str.size()); }
-bool cACTION_BML_NW_MAP_UPDATE::set_buffer(const char str[], size_t size) {
-    if (str == nullptr) {
+bool cACTION_BML_NW_MAP_UPDATE::set_buffer(const void* buffer, size_t size) {
+    if (buffer == nullptr) {
         TLVF_LOG(WARNING) << "set_buffer received a null pointer.";
         return false;
     }
@@ -375,7 +361,7 @@ bool cACTION_BML_NW_MAP_UPDATE::set_buffer(const char str[], size_t size) {
         return false;
     }
     if (!alloc_buffer(size)) { return false; }
-    std::copy(str, str + size, m_buffer);
+    std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_buffer);
     return true;
 }
 bool cACTION_BML_NW_MAP_UPDATE::alloc_buffer(size_t count) {
@@ -383,7 +369,7 @@ bool cACTION_BML_NW_MAP_UPDATE::alloc_buffer(size_t count) {
         TLVF_LOG(ERROR) << "Out of order allocation for variable length list buffer, abort!";
         return false;
     }
-    size_t len = sizeof(char) * count;
+    size_t len = sizeof(uint8_t) * count;
     if(getBuffRemainingBytes() < len )  {
         TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
         return false;
@@ -463,12 +449,12 @@ bool cACTION_BML_NW_MAP_UPDATE::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint32_t) << ") Failed!";
         return false;
     }
-    m_buffer = reinterpret_cast<char*>(m_buff_ptr__);
+    m_buffer = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     uint32_t buffer_size = *m_buffer_size;
     if (m_parse__) {  tlvf_swap(32, reinterpret_cast<uint8_t*>(&buffer_size)); }
     m_buffer_idx__ = buffer_size;
-    if (!buffPtrIncrementSafe(sizeof(char) * (buffer_size))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (buffer_size) << ") Failed!";
+    if (!buffPtrIncrementSafe(sizeof(uint8_t) * (buffer_size))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) * (buffer_size) << ") Failed!";
         return false;
     }
     if (m_parse__) { class_swap(); }
@@ -493,23 +479,16 @@ uint32_t& cACTION_BML_STATS_UPDATE::buffer_size() {
     return (uint32_t&)(*m_buffer_size);
 }
 
-std::string cACTION_BML_STATS_UPDATE::buffer_str() {
-    char *buffer_ = buffer();
-    if (!buffer_) { return std::string(); }
-    return std::string(buffer_, m_buffer_idx__);
-}
-
-char* cACTION_BML_STATS_UPDATE::buffer(size_t length) {
-    if( (m_buffer_idx__ == 0) || (m_buffer_idx__ < length) ) {
-        TLVF_LOG(ERROR) << "buffer length is smaller than requested length";
+uint8_t* cACTION_BML_STATS_UPDATE::buffer(size_t idx) {
+    if ( (m_buffer_idx__ == 0) || (m_buffer_idx__ <= idx) ) {
+        TLVF_LOG(ERROR) << "Requested index is greater than the number of available entries";
         return nullptr;
     }
-    return ((char*)m_buffer);
+    return &(m_buffer[idx]);
 }
 
-bool cACTION_BML_STATS_UPDATE::set_buffer(const std::string& str) { return set_buffer(str.c_str(), str.size()); }
-bool cACTION_BML_STATS_UPDATE::set_buffer(const char str[], size_t size) {
-    if (str == nullptr) {
+bool cACTION_BML_STATS_UPDATE::set_buffer(const void* buffer, size_t size) {
+    if (buffer == nullptr) {
         TLVF_LOG(WARNING) << "set_buffer received a null pointer.";
         return false;
     }
@@ -518,7 +497,7 @@ bool cACTION_BML_STATS_UPDATE::set_buffer(const char str[], size_t size) {
         return false;
     }
     if (!alloc_buffer(size)) { return false; }
-    std::copy(str, str + size, m_buffer);
+    std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_buffer);
     return true;
 }
 bool cACTION_BML_STATS_UPDATE::alloc_buffer(size_t count) {
@@ -526,7 +505,7 @@ bool cACTION_BML_STATS_UPDATE::alloc_buffer(size_t count) {
         TLVF_LOG(ERROR) << "Out of order allocation for variable length list buffer, abort!";
         return false;
     }
-    size_t len = sizeof(char) * count;
+    size_t len = sizeof(uint8_t) * count;
     if(getBuffRemainingBytes() < len )  {
         TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
         return false;
@@ -606,12 +585,12 @@ bool cACTION_BML_STATS_UPDATE::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint32_t) << ") Failed!";
         return false;
     }
-    m_buffer = reinterpret_cast<char*>(m_buff_ptr__);
+    m_buffer = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     uint32_t buffer_size = *m_buffer_size;
     if (m_parse__) {  tlvf_swap(32, reinterpret_cast<uint8_t*>(&buffer_size)); }
     m_buffer_idx__ = buffer_size;
-    if (!buffPtrIncrementSafe(sizeof(char) * (buffer_size))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (buffer_size) << ") Failed!";
+    if (!buffPtrIncrementSafe(sizeof(uint8_t) * (buffer_size))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) * (buffer_size) << ") Failed!";
         return false;
     }
     if (m_parse__) { class_swap(); }
@@ -632,23 +611,16 @@ uint32_t& cACTION_BML_EVENTS_UPDATE::buffer_size() {
     return (uint32_t&)(*m_buffer_size);
 }
 
-std::string cACTION_BML_EVENTS_UPDATE::buffer_str() {
-    char *buffer_ = buffer();
-    if (!buffer_) { return std::string(); }
-    return std::string(buffer_, m_buffer_idx__);
-}
-
-char* cACTION_BML_EVENTS_UPDATE::buffer(size_t length) {
-    if( (m_buffer_idx__ == 0) || (m_buffer_idx__ < length) ) {
-        TLVF_LOG(ERROR) << "buffer length is smaller than requested length";
+uint8_t* cACTION_BML_EVENTS_UPDATE::buffer(size_t idx) {
+    if ( (m_buffer_idx__ == 0) || (m_buffer_idx__ <= idx) ) {
+        TLVF_LOG(ERROR) << "Requested index is greater than the number of available entries";
         return nullptr;
     }
-    return ((char*)m_buffer);
+    return &(m_buffer[idx]);
 }
 
-bool cACTION_BML_EVENTS_UPDATE::set_buffer(const std::string& str) { return set_buffer(str.c_str(), str.size()); }
-bool cACTION_BML_EVENTS_UPDATE::set_buffer(const char str[], size_t size) {
-    if (str == nullptr) {
+bool cACTION_BML_EVENTS_UPDATE::set_buffer(const void* buffer, size_t size) {
+    if (buffer == nullptr) {
         TLVF_LOG(WARNING) << "set_buffer received a null pointer.";
         return false;
     }
@@ -657,7 +629,7 @@ bool cACTION_BML_EVENTS_UPDATE::set_buffer(const char str[], size_t size) {
         return false;
     }
     if (!alloc_buffer(size)) { return false; }
-    std::copy(str, str + size, m_buffer);
+    std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_buffer);
     return true;
 }
 bool cACTION_BML_EVENTS_UPDATE::alloc_buffer(size_t count) {
@@ -665,7 +637,7 @@ bool cACTION_BML_EVENTS_UPDATE::alloc_buffer(size_t count) {
         TLVF_LOG(ERROR) << "Out of order allocation for variable length list buffer, abort!";
         return false;
     }
-    size_t len = sizeof(char) * count;
+    size_t len = sizeof(uint8_t) * count;
     if(getBuffRemainingBytes() < len )  {
         TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
         return false;
@@ -738,12 +710,12 @@ bool cACTION_BML_EVENTS_UPDATE::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint32_t) << ") Failed!";
         return false;
     }
-    m_buffer = reinterpret_cast<char*>(m_buff_ptr__);
+    m_buffer = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     uint32_t buffer_size = *m_buffer_size;
     if (m_parse__) {  tlvf_swap(32, reinterpret_cast<uint8_t*>(&buffer_size)); }
     m_buffer_idx__ = buffer_size;
-    if (!buffPtrIncrementSafe(sizeof(char) * (buffer_size))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (buffer_size) << ") Failed!";
+    if (!buffPtrIncrementSafe(sizeof(uint8_t) * (buffer_size))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) * (buffer_size) << ") Failed!";
         return false;
     }
     if (m_parse__) { class_swap(); }
@@ -5416,23 +5388,16 @@ uint32_t& cACTION_BML_STEERING_EVENTS_UPDATE::buffer_size() {
     return (uint32_t&)(*m_buffer_size);
 }
 
-std::string cACTION_BML_STEERING_EVENTS_UPDATE::buffer_str() {
-    char *buffer_ = buffer();
-    if (!buffer_) { return std::string(); }
-    return std::string(buffer_, m_buffer_idx__);
-}
-
-char* cACTION_BML_STEERING_EVENTS_UPDATE::buffer(size_t length) {
-    if( (m_buffer_idx__ == 0) || (m_buffer_idx__ < length) ) {
-        TLVF_LOG(ERROR) << "buffer length is smaller than requested length";
+uint8_t* cACTION_BML_STEERING_EVENTS_UPDATE::buffer(size_t idx) {
+    if ( (m_buffer_idx__ == 0) || (m_buffer_idx__ <= idx) ) {
+        TLVF_LOG(ERROR) << "Requested index is greater than the number of available entries";
         return nullptr;
     }
-    return ((char*)m_buffer);
+    return &(m_buffer[idx]);
 }
 
-bool cACTION_BML_STEERING_EVENTS_UPDATE::set_buffer(const std::string& str) { return set_buffer(str.c_str(), str.size()); }
-bool cACTION_BML_STEERING_EVENTS_UPDATE::set_buffer(const char str[], size_t size) {
-    if (str == nullptr) {
+bool cACTION_BML_STEERING_EVENTS_UPDATE::set_buffer(const void* buffer, size_t size) {
+    if (buffer == nullptr) {
         TLVF_LOG(WARNING) << "set_buffer received a null pointer.";
         return false;
     }
@@ -5441,7 +5406,7 @@ bool cACTION_BML_STEERING_EVENTS_UPDATE::set_buffer(const char str[], size_t siz
         return false;
     }
     if (!alloc_buffer(size)) { return false; }
-    std::copy(str, str + size, m_buffer);
+    std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_buffer);
     return true;
 }
 bool cACTION_BML_STEERING_EVENTS_UPDATE::alloc_buffer(size_t count) {
@@ -5449,7 +5414,7 @@ bool cACTION_BML_STEERING_EVENTS_UPDATE::alloc_buffer(size_t count) {
         TLVF_LOG(ERROR) << "Out of order allocation for variable length list buffer, abort!";
         return false;
     }
-    size_t len = sizeof(char) * count;
+    size_t len = sizeof(uint8_t) * count;
     if(getBuffRemainingBytes() < len )  {
         TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
         return false;
@@ -5522,12 +5487,12 @@ bool cACTION_BML_STEERING_EVENTS_UPDATE::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint32_t) << ") Failed!";
         return false;
     }
-    m_buffer = reinterpret_cast<char*>(m_buff_ptr__);
+    m_buffer = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     uint32_t buffer_size = *m_buffer_size;
     if (m_parse__) {  tlvf_swap(32, reinterpret_cast<uint8_t*>(&buffer_size)); }
     m_buffer_idx__ = buffer_size;
-    if (!buffPtrIncrementSafe(sizeof(char) * (buffer_size))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (buffer_size) << ") Failed!";
+    if (!buffPtrIncrementSafe(sizeof(uint8_t) * (buffer_size))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) * (buffer_size) << ") Failed!";
         return false;
     }
     if (m_parse__) { class_swap(); }
