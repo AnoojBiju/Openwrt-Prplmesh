@@ -89,6 +89,17 @@ public:
      * Persistent configurations - end
      */
 
+    struct sSteeringSummaryStats {
+        uint64_t blacklist_attempts  = 0;
+        uint64_t blacklist_successes = 0;
+        uint64_t blacklist_failures  = 0;
+        uint64_t btm_attempts        = 0;
+        uint64_t btm_successes       = 0;
+        uint64_t btm_failures        = 0;
+        uint64_t btm_query_responses = 0;
+        std::string last_steer_ts    = {};
+    } steering_summary_stats;
+
     void assign_client_locating_task_id(int new_task_id, bool new_connection);
     int get_client_locating_task_id(bool new_connection);
 
