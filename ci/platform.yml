@@ -136,7 +136,7 @@ run-tests-on-altran-glinet-testbed:
     - if: '$ALTRAN_TESTS'
   tags:
     - test_flows_on_altran
-  timeout: 90m
+  timeout: 30m
 
 run-certification-tests-R1-platform-essensium:
   extends: .run-certification-tests-R1
