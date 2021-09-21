@@ -14,6 +14,15 @@
 
 #include <easylogging++.h>
 
+static std::string get_fd_name_print(std::string name)
+{
+
+    if (name.empty()) {
+        return {};
+    }
+    return name.insert(0, " of '").append("'");
+}
+
 namespace beerocks {
 
 //////////////////////////////////////////////////////////////////////////////
@@ -57,12 +66,14 @@ bool EventLoopImpl::register_handlers(int fd, const EventLoop::EventHandlers &ha
 
     // Make sure that the file descriptor is not already part of the poll
     if (m_fd_to_event_handlers.find(fd) != m_fd_to_event_handlers.end()) {
-        LOG(WARNING) << "Requested to add FD (" << fd << ") to the poll, but it's already there...";
-
+        LOG(WARNING) << "Requested to add FD (" << fd << ") to the poll, but it's already there";
         return false;
     }
 
-    // Helper lambda function for adding a fd to the poll, and register for the following events:
+    LOG(INFO) << "Register handlers for FD (" << fd << ")" << get_fd_name_print(handlers.name);
+
+    // Helper lambda function for adding a fd to the poll, and register for the following
+    // events:
     // EPOLLIN: The associated fd is available for read operations.
     // EPOLLOUT: The associated fd is available for write operations.
     // EPOLLRDHUP: Socket peer closed connection, or shut down writing half of connection.
@@ -84,7 +95,8 @@ bool EventLoopImpl::register_handlers(int fd, const EventLoop::EventHandlers &ha
         }
 
         if (epoll_ctl(m_epoll_fd, EPOLL_CTL_ADD, fd, &event) == -1) {
-            LOG(ERROR) << "Failed adding FD (" << fd << ") to the poll: " << strerror(errno);
+            LOG(ERROR) << "Failed adding FD (" << fd << ")" << get_fd_name_print(handlers.name)
+                       << " to the poll: " << strerror(errno);
             return false;
         }
 
@@ -121,15 +133,29 @@ bool EventLoopImpl::remove_handlers(int fd)
     // Delete the file descriptor from the poll
     auto error = false;
     if (epoll_ctl(m_epoll_fd, EPOLL_CTL_DEL, fd, nullptr) == -1) {
-        LOG(ERROR) << "Failed deleting FD (" << fd << ") from the poll: " << strerror(errno);
+        LOG(ERROR) << "Failed deleting FD (" << fd << ")" << get_fd_name_print(it->second.name)
+                   << " from the poll: " << strerror(errno);
 
         error = true;
     }
+    LOG(INFO) << "Removed handlers for FD (" << fd << ")" << get_fd_name_print(it->second.name);
 
     // Erase the file descriptor from the map
     m_fd_to_event_handlers.erase(fd);
 
     return !error;
+}
+
+bool EventLoopImpl::set_handler_name(int fd, const std::string &name)
+{
+    auto it = m_fd_to_event_handlers.find(fd);
+    if (it == m_fd_to_event_handlers.end()) {
+        LOG(ERROR) << "Unable to find fd " << fd << " in the registered handlers";
+        return false;
+    }
+
+    it->second.name = name;
+    return true;
 }
 
 int EventLoopImpl::run()
@@ -181,35 +207,45 @@ int EventLoopImpl::run()
 
             // Call the on_error handler of this file descriptor
             if (handlers.on_error && (!handlers.on_error(fd, *this))) {
+                LOG(ERROR) << "Error handler on FD (" << fd << ")"
+                           << get_fd_name_print(handlers.name) << " failed";
                 return -1;
             }
 
             // Handle disconnected sockets (stream socket peer closed connection)
         } else if ((events[i].events & EPOLLRDHUP) || (events[i].events & EPOLLHUP)) {
-            LOG(DEBUG) << "Socket with FD (" << fd << ") disconnected";
+            LOG(DEBUG) << "Socket with FD (" << fd << ")" << get_fd_name_print(handlers.name)
+                       << " disconnected";
 
             // Remove the file descriptor from the poll
             remove_handlers(fd);
 
             // Call the on_disconnect handler of this file descriptor
             if (handlers.on_disconnect && (!handlers.on_disconnect(fd, *this))) {
+                LOG(ERROR) << "Disconnect handler on FD (" << fd << ")"
+                           << get_fd_name_print(handlers.name) << " failed";
                 return -1;
             }
 
             // Handle incoming data
         } else if (events[i].events & EPOLLIN) {
             if (handlers.on_read && (!handlers.on_read(fd, *this))) {
+                LOG(ERROR) << "Read handler on FD (" << fd << ")"
+                           << get_fd_name_print(handlers.name) << " failed";
                 return -1;
             }
 
             // Handle write operations
         } else if (events[i].events & EPOLLOUT) {
             if (handlers.on_write && (!handlers.on_write(fd, *this))) {
+                LOG(ERROR) << "Write handler on FD (" << fd << ")"
+                           << get_fd_name_print(handlers.name) << " failed";
                 return -1;
             }
 
         } else {
-            LOG(ERROR) << "FD (" << fd << ") generated unknown event: " << events[i].events;
+            LOG(ERROR) << "FD (" << fd << ")" << get_fd_name_print(handlers.name)
+                       << " generated unknown event: " << events[i].events;
         }
     }
 

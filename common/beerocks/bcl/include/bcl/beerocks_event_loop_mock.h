@@ -20,6 +20,7 @@ public:
     MOCK_METHOD(bool, register_handlers, (int fd, const EventHandlers &handlers), (override));
     MOCK_METHOD(bool, remove_handlers, (int fd), (override));
     MOCK_METHOD(int, run, (), (override));
+    MOCK_METHOD(bool, set_handler_name, (int fd, const std::string &name), (override));
 };
 
 } // namespace beerocks

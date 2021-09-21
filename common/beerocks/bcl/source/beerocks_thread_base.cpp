@@ -51,6 +51,8 @@ void thread_base::stop(bool block)
 
 void thread_base::run()
 {
+    should_stop = !thread_init();
+
     while (!should_stop) {
         if (!work()) {
             break;

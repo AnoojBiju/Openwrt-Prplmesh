@@ -326,7 +326,7 @@ bool ApManager::start()
     beerocks::Transaction transaction;
 
     // Create a timer to run the FSM periodically
-    m_fsm_timer = m_timer_manager->add_timer(fsm_timer_period, fsm_timer_period,
+    m_fsm_timer = m_timer_manager->add_timer("AP Manager FSM", fsm_timer_period, fsm_timer_period,
                                              [&](int fd, beerocks::EventLoop &loop) {
                                                  bool continue_processing = true;
                                                  while (continue_processing) {
@@ -475,6 +475,7 @@ bool ApManager::ap_manager_fsm(bool &continue_processing)
         m_ap_hal_ext_events = ap_wlan_hal->get_ext_events_fd();
         if (m_ap_hal_ext_events > 0) {
             beerocks::EventLoop::EventHandlers ext_events_handlers{
+                .name = "ap_hal_ext_events",
                 .on_read =
                     [&](int fd, EventLoop &loop) {
                         if (!ap_wlan_hal->process_ext_events()) {
@@ -514,6 +515,7 @@ bool ApManager::ap_manager_fsm(bool &continue_processing)
         m_ap_hal_int_events = ap_wlan_hal->get_int_events_fd();
         if (m_ap_hal_int_events > 0) {
             beerocks::EventLoop::EventHandlers int_events_handlers{
+                .name = "ap_hal_int_events",
                 .on_read =
                     [&](int fd, EventLoop &loop) {
                         if (!ap_wlan_hal->process_int_events()) {

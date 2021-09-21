@@ -141,8 +141,8 @@ bool PlatformManager::start()
 
     // Create a timer to periodically check if WLAN parameters have changed
     m_check_wlan_params_changed_timer = m_timer_manager->add_timer(
-        check_wlan_params_changed_timer_interval, check_wlan_params_changed_timer_interval,
-        [&](int fd, beerocks::EventLoop &loop) {
+        "Platform Manager Periodic WLAN Check", check_wlan_params_changed_timer_interval,
+        check_wlan_params_changed_timer_interval, [&](int fd, beerocks::EventLoop &loop) {
             check_wlan_params_changed();
             return true;
         });
@@ -415,6 +415,10 @@ bool PlatformManager::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
             LOG(ERROR) << "addClass cACTION_PLATFORM_SON_SLAVE_REGISTER_REQUEST failed";
             return false;
         }
+
+        auto agent_name = std::move(std::string("agent socket"));
+        LOG(DEBUG) << "Assigning FD (" << fd << ") to " << agent_name;
+        m_cmdu_server->set_client_name(fd, agent_name);
 
         // Lock the Agent socket mutex to be able to work in parallel with the work queue.
         {
@@ -1042,6 +1046,9 @@ bool PlatformManager::init_arp_monitor()
             }
 
             beerocks::EventLoop::EventHandlers handlers;
+            // Handler name
+            handlers.name = "arp_raw";
+
             // Handle event
             handlers.on_read = [&](int fd, EventLoop &loop) {
                 if (!handle_arp_raw()) {
@@ -1079,6 +1086,9 @@ bool PlatformManager::init_arp_monitor()
             }
 
             beerocks::EventLoop::EventHandlers handlers;
+            // Handler name
+            handlers.name = "arp_monitor";
+
             // Handle event
             handlers.on_read = [&](int fd, EventLoop &loop) {
                 if (!handle_arp_monitor()) {
@@ -1115,8 +1125,8 @@ bool PlatformManager::init_arp_monitor()
 
         // Create a timer to periodically clean old ARP table entries
         m_clean_old_arp_entries_timer = m_timer_manager->add_timer(
-            clean_old_arp_entries_timer_interval, clean_old_arp_entries_timer_interval,
-            [&](int fd, beerocks::EventLoop &loop) {
+            "Clean Old ARP Entries", clean_old_arp_entries_timer_interval,
+            clean_old_arp_entries_timer_interval, [&](int fd, beerocks::EventLoop &loop) {
                 clean_old_arp_entries();
                 return true;
             });
@@ -1201,6 +1211,9 @@ bool PlatformManager::init_dhcp_monitor()
         }
 
         beerocks::EventLoop::EventHandlers handlers;
+        // Handler name
+        handlers.name = "dhcp_monitor";
+
         // Handle event
         handlers.on_read = [&](int fd, EventLoop &loop) {
             bpl::dhcp_mon_handle_event();

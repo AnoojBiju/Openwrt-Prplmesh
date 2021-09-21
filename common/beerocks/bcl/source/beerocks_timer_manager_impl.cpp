@@ -9,6 +9,8 @@
 #include <bcl/beerocks_timer_manager_impl.h>
 #include <bcl/network/timer_impl.h>
 
+#include <bcl/beerocks_string_utils.h>
+
 #include <easylogging++.h>
 
 namespace beerocks {
@@ -29,7 +31,8 @@ TimerManagerImpl::~TimerManagerImpl()
     }
 }
 
-int TimerManagerImpl::add_timer(std::chrono::milliseconds delay, std::chrono::milliseconds period,
+int TimerManagerImpl::add_timer(const std::string &timer_name, std::chrono::milliseconds delay,
+                                std::chrono::milliseconds period,
                                 const EventLoop::EventHandler &handler)
 {
     // 1.- Create the timer instance
@@ -48,6 +51,7 @@ int TimerManagerImpl::add_timer(std::chrono::milliseconds delay, std::chrono::mi
 
     // 3.- Register handlers for the timer in the event loop
     EventLoop::EventHandlers handlers{
+        .name = timer_name + " timer period_ms: " + std::to_string(period.count()),
         .on_read =
             [handler, this](int fd, EventLoop &loop) {
                 if (handle_read(fd)) {

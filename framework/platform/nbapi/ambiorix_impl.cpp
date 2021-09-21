@@ -127,6 +127,7 @@ bool AmbiorixImpl::init_event_loop()
     }
 
     EventLoop::EventHandlers handlers = {
+        .name = "ambiorix_events",
         .on_read =
             [&](int fd, EventLoop &loop) {
                 amxb_read(m_bus_ctx);
@@ -167,6 +168,7 @@ bool AmbiorixImpl::init_signal_loop()
     }
 
     EventLoop::EventHandlers handlers = {
+        .name = "ambiorix_signal",
         .on_read =
             [&](int fd, EventLoop &loop) {
                 amxp_signal_read();

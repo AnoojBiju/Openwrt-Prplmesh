@@ -31,12 +31,14 @@ public:
      * The file descriptor value returned by this method is required to remove the timer when no
      * longer used.
      *
+     * @param timer_name Time name.
      * @param delay Delay before timer elapses for the first time.
      * @param period Time between successive timer executions. Set to 0 for a one-shot timer.
      * @param handler Handler function to be called back when timer elapses.
      * @return On success, file descriptor of the timer object created and -1 on error.
      */
-    virtual int add_timer(std::chrono::milliseconds delay, std::chrono::milliseconds period,
+    virtual int add_timer(const std::string &timer_name, std::chrono::milliseconds delay,
+                          std::chrono::milliseconds period,
                           const EventLoop::EventHandler &handler) = 0;
 
     /**

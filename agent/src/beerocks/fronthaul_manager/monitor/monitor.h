@@ -37,7 +37,7 @@ public:
      *
      * @return true on success and false otherwise.
      */
-    virtual bool init() override;
+    virtual bool thread_init() override;
 
     /**
      * @brief Stops monitor.
