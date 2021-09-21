@@ -98,63 +98,10 @@ BackhaulManager::BackhaulManager(const config_file::sConfigSlave &config,
                                  int stop_on_failure_attempts_)
     : cmdu_tx(m_tx_buffer, sizeof(m_tx_buffer)),
       cert_cmdu_tx(m_cert_tx_buffer, sizeof(m_cert_tx_buffer)), slave_ap_ifaces(slave_ap_ifaces_),
-      slave_sta_ifaces(slave_sta_ifaces_), config_const_bh_slave(config.const_backhaul_slave)
+      slave_sta_ifaces(slave_sta_ifaces_), m_beerocks_temp_path(config.temp_path),
+      m_ucc_listener_port(string_utils::stoi(config.ucc_listener_port)),
+      config_const_bh_slave(config.const_backhaul_slave)
 {
-
-    // Create UDS address where the server socket will listen for incoming connection requests.
-    std::string backhaul_manager_server_uds_path =
-        config.temp_path + std::string(BEEROCKS_BACKHAUL_UDS);
-    m_cmdu_server_uds_address =
-        beerocks::net::UdsAddress::create_instance(backhaul_manager_server_uds_path);
-    LOG_IF(!m_cmdu_server_uds_address, FATAL)
-        << "Unable to create UDS server address for backhaul manager!";
-
-    // Create server to exchange CMDU messages with clients connected through a UDS socket
-    m_cmdu_server =
-        beerocks::CmduServerFactory::create_instance(m_cmdu_server_uds_address, m_event_loop);
-    LOG_IF(!m_cmdu_server, FATAL) << "Unable to create CMDU server for backhaul manager!";
-
-    // UCC server must be created if all the three following conditions are met:
-    // - Device has been configured to work in certification mode
-    // - A valid TCP port has been set
-    // - The controller is not running in this device
-    bool certification_mode = beerocks::bpl::cfg_get_certification_mode();
-    bool local_controller   = beerocks::bpl::cfg_is_master();
-    uint16_t port           = beerocks::string_utils::stoi(config.ucc_listener_port);
-    if (certification_mode && (port != 0) && (!local_controller)) {
-
-        LOG(INFO) << "Certification mode enabled (listening on port " << port << ")";
-
-        // Create server to exchange UCC commands and replies with clients connected through the
-        // socket
-        m_ucc_server = beerocks::UccServerFactory::create_instance(port, m_event_loop);
-        LOG_IF(!m_ucc_server, FATAL) << "Unable to create UCC server!";
-    }
-
-    // Create UDS address where the server socket will listen for incoming connection requests.
-    std::string platform_manager_uds_path = config.temp_path + std::string(BEEROCKS_PLATFORM_UDS);
-
-    // Create CMDU client factory to create CMDU clients connected to CMDU server running in
-    // platform manager when requested
-    m_platform_manager_cmdu_client_factory =
-        std::move(beerocks::create_cmdu_client_factory(platform_manager_uds_path, m_event_loop));
-    LOG_IF(!m_platform_manager_cmdu_client_factory, FATAL)
-        << "Unable to create CMDU client factory!";
-
-    // Create broker client factory to create broker clients when requested
-    std::string broker_uds_path = config.temp_path + std::string(BEEROCKS_BROKER_UDS);
-    m_broker_client_factory =
-        beerocks::btl::create_broker_client_factory(broker_uds_path, m_event_loop);
-    LOG_IF(!m_broker_client_factory, FATAL) << "Unable to create broker client factory!";
-
-    // Create timer factory to create instances of timers.
-    auto timer_factory = std::make_shared<beerocks::TimerFactoryImpl>();
-    LOG_IF(!timer_factory, FATAL) << "Unable to create timer factory!";
-
-    // Create timer manager to help using application timers.
-    m_timer_manager = std::make_shared<beerocks::TimerManagerImpl>(timer_factory, m_event_loop);
-    LOG_IF(!m_timer_manager, FATAL) << "Unable to create timer manager!";
-
     pending_slave_ifaces                   = slave_ap_ifaces_;
     configuration_stop_on_failure_attempts = stop_on_failure_attempts_;
     stop_on_failure_attempts               = stop_on_failure_attempts_;
@@ -183,8 +130,31 @@ BackhaulManager::BackhaulManager(const config_file::sConfigSlave &config,
         std::make_shared<switch_channel::SwitchChannelTask>(m_task_pool, *this, cmdu_tx));
     m_task_pool.add_task(
         std::make_shared<coordinated_cac::CoordinatedCacTask>(m_task_pool, *this, cmdu_tx));
+}
 
-    beerocks::CmduServer::EventHandlers handlers{
+BackhaulManager::~BackhaulManager()
+{
+    if (m_cmdu_server) {
+        m_cmdu_server->clear_handlers();
+    }
+}
+
+bool BackhaulManager::thread_init()
+{
+    // Create UDS address where the server socket will listen for incoming connection requests.
+    std::string backhaul_manager_server_uds_path =
+        m_beerocks_temp_path + std::string(BEEROCKS_BACKHAUL_UDS);
+    m_cmdu_server_uds_address =
+        beerocks::net::UdsAddress::create_instance(backhaul_manager_server_uds_path);
+    LOG_IF(!m_cmdu_server_uds_address, FATAL)
+        << "Unable to create UDS server address for backhaul manager!";
+
+    // Create server to exchange CMDU messages with clients connected through a UDS socket
+    m_cmdu_server =
+        beerocks::CmduServerFactory::create_instance(m_cmdu_server_uds_address, m_event_loop);
+    LOG_IF(!m_cmdu_server, FATAL) << "Unable to create CMDU server for backhaul manager!";
+
+    beerocks::CmduServer::EventHandlers cmdu_server_handlers{
         .on_client_connected    = [&](int fd) { handle_connected(fd); },
         .on_client_disconnected = [&](int fd) { handle_disconnected(fd); },
         .on_cmdu_received =
@@ -193,13 +163,49 @@ BackhaulManager::BackhaulManager(const config_file::sConfigSlave &config,
                 handle_cmdu(fd, iface_index, dst_mac, src_mac, cmdu_rx);
             },
     };
-    m_cmdu_server->set_handlers(handlers);
-}
+    m_cmdu_server->set_handlers(cmdu_server_handlers);
 
-BackhaulManager::~BackhaulManager() { m_cmdu_server->clear_handlers(); }
+    // UCC server must be created if all the three following conditions are met:
+    // - Device has been configured to work in certification mode
+    // - A valid TCP port has been set
+    // - The controller is not running in this device
+    bool certification_mode = beerocks::bpl::cfg_get_certification_mode();
+    bool local_controller   = beerocks::bpl::cfg_is_master();
+    if (certification_mode && (m_ucc_listener_port != 0) && (!local_controller)) {
 
-bool BackhaulManager::init()
-{
+        LOG(INFO) << "Certification mode enabled (listening on port " << m_ucc_listener_port << ")";
+
+        // Create server to exchange UCC commands and replies with clients connected through the
+        // socket
+        m_ucc_server =
+            beerocks::UccServerFactory::create_instance(m_ucc_listener_port, m_event_loop);
+        LOG_IF(!m_ucc_server, FATAL) << "Unable to create UCC server!";
+    }
+
+    // Create UDS address where the server socket will listen for incoming connection requests.
+    std::string platform_manager_uds_path =
+        m_beerocks_temp_path + std::string(BEEROCKS_PLATFORM_UDS);
+
+    // Create CMDU client factory to create CMDU clients connected to CMDU server running in
+    // platform manager when requested
+    m_platform_manager_cmdu_client_factory =
+        std::move(beerocks::create_cmdu_client_factory(platform_manager_uds_path, m_event_loop));
+    LOG_IF(!m_platform_manager_cmdu_client_factory, FATAL)
+        << "Unable to create CMDU client factory!";
+
+    // Create broker client factory to create broker clients when requested
+    std::string broker_uds_path = m_beerocks_temp_path + std::string(BEEROCKS_BROKER_UDS);
+    m_broker_client_factory =
+        beerocks::btl::create_broker_client_factory(broker_uds_path, m_event_loop);
+    LOG_IF(!m_broker_client_factory, FATAL) << "Unable to create broker client factory!";
+
+    // Create timer factory to create instances of timers.
+    auto timer_factory = std::make_shared<beerocks::TimerFactoryImpl>();
+    LOG_IF(!timer_factory, FATAL) << "Unable to create timer factory!";
+
+    // Create timer manager to help using application timers.
+    m_timer_manager = std::make_shared<beerocks::TimerManagerImpl>(timer_factory, m_event_loop);
+    LOG_IF(!m_timer_manager, FATAL) << "Unable to create timer manager!";
     // In case of error in one of the steps of this method, we have to undo all the previous steps
     // (like when rolling back a database transaction, where either all steps get executed or none
     // of them gets executed)
@@ -207,7 +213,8 @@ bool BackhaulManager::init()
 
     // Create a timer to run internal tasks periodically
     m_tasks_timer = m_timer_manager->add_timer(
-        tasks_timer_period, tasks_timer_period, [&](int fd, beerocks::EventLoop &loop) {
+        "Agent Tasks", tasks_timer_period, tasks_timer_period,
+        [&](int fd, beerocks::EventLoop &loop) {
             // Allow tasks to execute up to 80% of the timer period
             m_task_pool.run_tasks(int(double(tasks_timer_period.count()) * 0.8));
             return true;
@@ -220,17 +227,18 @@ bool BackhaulManager::init()
     transaction.add_rollback_action([&]() { m_timer_manager->remove_timer(m_tasks_timer); });
 
     // Create a timer to run the FSM periodically
-    m_fsm_timer = m_timer_manager->add_timer(fsm_timer_period, fsm_timer_period,
-                                             [&](int fd, beerocks::EventLoop &loop) {
-                                                 bool continue_processing = false;
-                                                 do {
-                                                     if (!backhaul_fsm_main(continue_processing)) {
-                                                         return false;
-                                                     }
-                                                 } while (continue_processing);
+    m_fsm_timer =
+        m_timer_manager->add_timer("Backhaul Manager FSM", fsm_timer_period, fsm_timer_period,
+                                   [&](int fd, beerocks::EventLoop &loop) {
+                                       bool continue_processing = false;
+                                       do {
+                                           if (!backhaul_fsm_main(continue_processing)) {
+                                               return false;
+                                           }
+                                       } while (continue_processing);
 
-                                                 return true;
-                                             });
+                                       return true;
+                                   });
     if (m_fsm_timer == beerocks::net::FileDescriptor::invalid_descriptor) {
         LOG(ERROR) << "Failed to create the FSM timer";
         return false;
@@ -247,21 +255,24 @@ bool BackhaulManager::init()
     }
     transaction.add_rollback_action([&]() { m_broker_client.reset(); });
 
-    beerocks::btl::BrokerClient::EventHandlers handlers;
+    beerocks::btl::BrokerClient::EventHandlers broker_client_handlers;
     // Install a CMDU-received event handler for CMDU messages received from the transport process.
     // These messages are actually been sent by a remote process and the broker server running in
     // the transport process just forwards them to the broker client.
-    handlers.on_cmdu_received = [&](uint32_t iface_index, const sMacAddr &dst_mac,
-                                    const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx) {
+    broker_client_handlers.on_cmdu_received = [&](uint32_t iface_index, const sMacAddr &dst_mac,
+                                                  const sMacAddr &src_mac,
+                                                  ieee1905_1::CmduMessageRx &cmdu_rx) {
         handle_cmdu_from_broker(iface_index, dst_mac, src_mac, cmdu_rx);
     };
 
     // Install a connection-closed event handler.
     // Currently there is no recovery mechanism if connection with broker server gets interrupted
     // (something that happens if the transport process dies). Just log a message and exit
-    handlers.on_connection_closed = [&]() { LOG(FATAL) << "Broker client got disconnected!"; };
+    broker_client_handlers.on_connection_closed = [&]() {
+        LOG(FATAL) << "Broker client got disconnected!";
+    };
 
-    m_broker_client->set_handlers(handlers);
+    m_broker_client->set_handlers(broker_client_handlers);
     transaction.add_rollback_action([&]() { m_broker_client->clear_handlers(); });
 
     // Subscribe for the reception of CMDU messages that this process is interested in
@@ -1278,6 +1289,7 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
                 int int_events_fd = soc->sta_wlan_hal->get_int_events_fd();
                 if (ext_events_fd >= 0 && int_events_fd) {
                     beerocks::EventLoop::EventHandlers ext_events_handlers{
+                        .name = "sta_hal_ext_events",
                         .on_read =
                             [soc](int fd, EventLoop &loop) {
                                 soc->sta_wlan_hal->process_ext_events();
@@ -1293,6 +1305,7 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
                     soc->sta_hal_ext_events = ext_events_fd;
 
                     beerocks::EventLoop::EventHandlers int_events_handlers{
+                        .name = "sta_hal_int_events",
                         .on_read =
                             [soc](int fd, EventLoop &loop) {
                                 soc->sta_wlan_hal->process_int_events();
@@ -1701,6 +1714,11 @@ bool BackhaulManager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo> 
 
         soc->sta_iface.assign(request->sta_iface(message::IFACE_NAME_LENGTH));
         soc->hostap_iface.assign(request->hostap_iface(message::IFACE_NAME_LENGTH));
+
+        auto agent_name = std::move(std::string("agent_").append(soc->hostap_iface));
+        LOG(DEBUG) << "Assigning FD (" << soc->slave << ") to " << agent_name;
+        m_cmdu_server->set_client_name(soc->slave, agent_name);
+
         onboarding = request->onboarding();
 
         // Add the slave socket to the backhaul configuration
@@ -2974,7 +2992,7 @@ bool BackhaulManager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx
 
     // Create a timer to check if this Backhaul Steering Request times out.
     m_backhaul_steering_timer = m_timer_manager->add_timer(
-        backhaul_steering_timeout, std::chrono::milliseconds::zero(),
+        "Backhaul Steering Timeout", backhaul_steering_timeout, std::chrono::milliseconds::zero(),
         [&](int fd, beerocks::EventLoop &loop) {
             cancel_backhaul_steering_operation();
 
@@ -3291,6 +3309,7 @@ void BackhaulManager::handle_dev_reset_default(
     }
 
     m_dev_reset_default_timer = m_timer_manager->add_timer(
+        "Dev Reset Default",
         std::chrono::duration_cast<std::chrono::milliseconds>(dev_reset_default_timeout),
         std::chrono::milliseconds::zero(), [&](int fd, beerocks::EventLoop &loop) {
             m_timer_manager->remove_timer(m_dev_reset_default_timer);

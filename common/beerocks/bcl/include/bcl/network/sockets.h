@@ -59,6 +59,13 @@ public:
         virtual socklen_t size() const = 0;
 
         /**
+         * @brief Returns the address name.
+         *
+         * @return std::string Address name.
+         */
+        virtual const std::string &name() const = 0;
+
+        /**
          * @brief Returns address of sockaddr structure.
          *
          * This is the non-const version of the method with the same name.
@@ -71,7 +78,8 @@ public:
              * This is a way to "Avoid Duplication in const and Non-const Member Function" as
              * described in "Effective C++, 3rd ed" by Scott Meyers.
              * The two casts and function call may be ugly but they're correct and the method is
-             * implemented in the interface class, so available to all implementation classes for free.
+             * implemented in the interface class, so available to all implementation classes for
+             * free.
              */
             return const_cast<struct sockaddr *>(const_cast<const Address *>(this)->sockaddr());
         }
@@ -87,13 +95,18 @@ public:
         {
             return const_cast<socklen_t &>(const_cast<const Address *>(this)->length());
         }
+
+    protected:
+        std::string m_name;
     };
 
     /**
      * Classes implementing this interface model either the socket connection established at the
-     * server side when accept() system call is called or at the client side when connect() is called.
+     * server side when accept() system call is called or at the client side when connect() is
+     * called.
      *
-     * The interface defines the methods to send data over a socket and to receive data from a socket.
+     * The interface defines the methods to send data over a socket and to receive data from a
+     * socket.
      */
     class Connection {
     public:
@@ -105,8 +118,8 @@ public:
         /**
          * @brief Returns the underlying socket used by this connection.
          *
-         * Access to the underlying socket is required to obtain the socket file descriptor with which
-         * wait for read or write events using select() or epoll() functions.
+         * Access to the underlying socket is required to obtain the socket file descriptor with
+         * which wait for read or write events using select() or epoll() functions.
          *
          * @return Socket used by the connection
          */
@@ -148,6 +161,8 @@ public:
          */
         virtual int send_to(const Buffer &buffer, const Address &address) = 0;
     };
+
+    std::string m_name;
 };
 
 class ServerSocket {

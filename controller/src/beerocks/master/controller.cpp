@@ -219,7 +219,8 @@ bool Controller::start()
 
     // Create a timer to run internal tasks periodically
     m_tasks_timer = m_timer_manager->add_timer(
-        tasks_timer_period, tasks_timer_period, [&](int fd, beerocks::EventLoop &loop) {
+        "Controller Tasks", tasks_timer_period, tasks_timer_period,
+        [&](int fd, beerocks::EventLoop &loop) {
             // Allow tasks to execute up to 80% of the timer period
             tasks.run_tasks(int(double(tasks_timer_period.count()) * 0.8));
             return true;
@@ -233,11 +234,12 @@ bool Controller::start()
 
     // Create a timer to execute periodic operations
     // TODO: as an enhancement, each periodic operation should have its own timer (PPM-717)
-    m_operations_timer = m_timer_manager->add_timer(
-        operations_timer_period, operations_timer_period, [&](int fd, beerocks::EventLoop &loop) {
-            operations.run_operations();
-            return true;
-        });
+    m_operations_timer =
+        m_timer_manager->add_timer("Periodic Operations", operations_timer_period,
+                                   operations_timer_period, [&](int fd, beerocks::EventLoop &loop) {
+                                       operations.run_operations();
+                                       return true;
+                                   });
     if (m_operations_timer == beerocks::net::FileDescriptor::invalid_descriptor) {
         LOG(ERROR) << "Failed to create the operations timer";
         return false;

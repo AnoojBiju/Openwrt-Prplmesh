@@ -37,21 +37,28 @@ public:
      *
      * Parameters to the event handler function are:
      * @param[in] fd The file descriptor of the OS resource where the event was originated at.
-     * @param[in] loop The event loop where the event was caught. Event handler can install new handlers, 
-     * remove existing handlers and even ask for loop termination.
-     * 
+     * @param[in] loop The event loop where the event was caught. Event handler can install new
+     * handlers, remove existing handlers and even ask for loop termination.
+     *
      * @returns True on success or false otherwise
      */
     using EventHandler = std::function<bool(int fd, EventLoop &loop)>;
 
     /**
      * Set of event handler functions, one function to handle each possible event happened.
-     * Handlers are grouped into a struct to facilitate passing them as a single parameter to the install and
-     * remove handlers functions of the event loop.
+     * Handlers are grouped into a struct to facilitate passing them as a single parameter to the
+     * install and remove handlers functions of the event loop.
      * Event handlers are optional and if not set for a given event, that event will be silently
      * ignored.
      */
     struct EventHandlers {
+
+        /**
+         * A common name for all handlers which will be associated with the EventLoop registered
+         * file descriptor.
+         */
+        std::string name;
+
         /**
          * Hook method that is called back by the event loop to handle read events.
          * Read events are dispatched for example when a socket is ready for a read operation (a
@@ -117,6 +124,15 @@ public:
      * @return >0 number of events processed during the call to this method.
      */
     virtual int run() = 0;
+
+    /**
+     * @brief Set the handler name on registered @c EventHandlers with @a fd.
+     *
+     * @param fd File Descriptor of EventHandler to name.
+     * @param name Handler name.
+     * @return true on success, otherwise false.
+     */
+    virtual bool set_handler_name(int fd, const std::string &name) = 0;
 };
 
 } // namespace beerocks

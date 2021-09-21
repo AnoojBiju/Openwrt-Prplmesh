@@ -26,6 +26,7 @@ CmduClientImpl::CmduClientImpl(std::unique_ptr<beerocks::net::Socket::Connection
 
     // Register event handlers for the client socket
     beerocks::EventLoop::EventHandlers handlers{
+        .name = m_connection->socket()->m_name,
         .on_read =
             [&](int fd, EventLoop &loop) {
                 handle_read(fd);

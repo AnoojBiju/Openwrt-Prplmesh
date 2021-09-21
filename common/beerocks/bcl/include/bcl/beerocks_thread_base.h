@@ -30,7 +30,20 @@ protected:
     std::string thread_name;
     bool should_stop;
 
-    virtual bool init() = 0;
+    /**
+     * @brief Perform initialization of the Class which will be done @b outside the thread context.
+     *
+     * @return true on success, otherwise false.
+     */
+    virtual bool init() { return true; }
+
+    /**
+     * @brief Perform initialization of the Class which will be done @b inside the thread context.
+     *
+     * @return true on success, otherwise false.
+     */
+    virtual bool thread_init() = 0;
+
     virtual bool work() = 0;
     virtual void before_stop() {}
     virtual void on_thread_stop() {}

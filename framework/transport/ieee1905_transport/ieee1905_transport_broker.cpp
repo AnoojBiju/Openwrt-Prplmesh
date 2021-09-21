@@ -55,6 +55,9 @@ BrokerServer::BrokerServer(std::shared_ptr<SocketServer> server_socket,
 bool BrokerServer::start()
 {
     EventLoop::EventHandlers handlers{
+        // Handlers name
+        .name = "BrokerServer Socket",
+
         // Accept incoming connections
         .on_read =
             [&](int fd, EventLoop &loop) {
@@ -282,6 +285,9 @@ bool BrokerServer::socket_connected()
 
     // Add the newly accepted socket into the poll
     EventLoop::EventHandlers handlers{
+        // Handlers name
+        .name = {},
+
         // Handle incoming data
         .on_read =
             [new_socket, this](int fd, EventLoop &loop) {

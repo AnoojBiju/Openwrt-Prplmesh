@@ -74,6 +74,13 @@ public:
     bool forward_cmdu(int fd, uint32_t iface_index, const sMacAddr &dst_mac,
                       const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx) override;
 
+    /**
+     * @brief Set the client name on EventLoop file descriptor handler.
+     *
+     * @see CmduServer::set_client_name
+     */
+    bool set_client_name(int fd, const std::string &client_name) override;
+
 private:
     /**
      * @brief Adds a new connection.

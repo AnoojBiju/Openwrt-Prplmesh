@@ -50,6 +50,11 @@ public:
     bool remove_handlers(int fd) override;
 
     /**
+     * @see EventLoop::set_handler_name
+     */
+    bool set_handler_name(int fd, const std::string &name) override;
+
+    /**
      * @brief Main event loop method.
      * @see EventLoop::run
      * 
@@ -71,7 +76,7 @@ private:
     /**
      * Map of registered event handlers.
      * Key value is the file descriptor and value is the EventHandlers structure containing the
-     * event handlers to deall with events occurred on that file descriptor.
+     * event handlers to deal with events occurred on that file descriptor.
      */
     std::unordered_map<int, EventHandlers> m_fd_to_event_handlers;
 };

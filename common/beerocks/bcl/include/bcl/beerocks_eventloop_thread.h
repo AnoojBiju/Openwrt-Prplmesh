@@ -19,7 +19,6 @@ public:
     EventLoopThread();
     virtual ~EventLoopThread();
 
-    // virtual bool init() override;
     virtual bool work() override;
 
 protected:

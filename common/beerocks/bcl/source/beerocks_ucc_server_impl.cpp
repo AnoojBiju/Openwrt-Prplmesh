@@ -31,6 +31,9 @@ UccServerImpl::UccServerImpl(std::unique_ptr<beerocks::net::ServerSocket> server
 
     // Register event handlers for the server socket
     beerocks::EventLoop::EventHandlers handlers{
+        // Name
+        .name = "UCC Server",
+
         // Accept incoming connections
         .on_read =
             [&](int fd, EventLoop &loop) {
@@ -153,6 +156,7 @@ void UccServerImpl::handle_connect(int fd)
               << address.port() << ", fd = " << connected_socket;
 
     beerocks::EventLoop::EventHandlers handlers;
+    handlers.name    = "UCC Client";
     handlers.on_read = [&](int fd, beerocks::EventLoop &loop) {
         handle_read(fd);
         return true;

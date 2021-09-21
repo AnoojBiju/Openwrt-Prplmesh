@@ -59,21 +59,6 @@ Monitor::Monitor(const std::string &monitor_iface_,
 #endif
       mon_stats(cmdu_tx)
 {
-    // Get Agent UDS file
-    std::string agent_uds_path = beerocks_slave_conf.temp_path + std::string(BEEROCKS_AGENT_UDS);
-
-    m_slave_cmdu_client_factory =
-        std::move(beerocks::create_cmdu_client_factory(agent_uds_path, m_event_loop));
-    LOG_IF(!m_slave_cmdu_client_factory, FATAL) << "Unable to create CMDU client factory!";
-
-    // Create timer factory to create instances of timers.
-    auto timer_factory = std::make_shared<beerocks::TimerFactoryImpl>();
-    LOG_IF(!timer_factory, FATAL) << "Unable to create timer factory!";
-
-    // Create timer manager to help using application timers.
-    m_timer_manager = std::make_shared<beerocks::TimerManagerImpl>(timer_factory, m_event_loop);
-    LOG_IF(!m_timer_manager, FATAL) << "Unable to create timer manager!";
-
     /**
      * Get the MAC address of the radio interface that this monitor instance operates on.
      * This MAC address will later on be used to, for example, extract the information in messages
@@ -121,8 +106,23 @@ bool Monitor::send_cmdu(ieee1905_1::CmduMessageTx &cmdu_tx)
     return m_slave_client->send_cmdu(cmdu_tx);
 }
 
-bool Monitor::init()
+bool Monitor::thread_init()
 {
+    // Get Agent UDS file
+    std::string agent_uds_path = beerocks_slave_conf.temp_path + std::string(BEEROCKS_AGENT_UDS);
+
+    m_slave_cmdu_client_factory =
+        std::move(beerocks::create_cmdu_client_factory(agent_uds_path, m_event_loop));
+    LOG_IF(!m_slave_cmdu_client_factory, FATAL) << "Unable to create CMDU client factory!";
+
+    // Create timer factory to create instances of timers.
+    auto timer_factory = std::make_shared<beerocks::TimerFactoryImpl>();
+    LOG_IF(!timer_factory, FATAL) << "Unable to create timer factory!";
+
+    // Create timer manager to help using application timers.
+    m_timer_manager = std::make_shared<beerocks::TimerManagerImpl>(timer_factory, m_event_loop);
+    LOG_IF(!m_timer_manager, FATAL) << "Unable to create timer manager!";
+
     if (m_slave_client) {
         LOG(ERROR) << "Monitor is already started";
         return false;
@@ -135,7 +135,7 @@ bool Monitor::init()
 
     // Create a timer to run the FSM periodically
     m_fsm_timer = m_timer_manager->add_timer(
-        fsm_timer_period, fsm_timer_period,
+        "Monitor FSM", fsm_timer_period, fsm_timer_period,
         [&](int fd, beerocks::EventLoop &loop) { return monitor_fsm(); });
     if (m_fsm_timer == beerocks::net::FileDescriptor::invalid_descriptor) {
         LOG(ERROR) << "Failed to create the FSM timer";
@@ -288,6 +288,7 @@ bool Monitor::monitor_fsm()
             m_mon_hal_ext_events = mon_wlan_hal->get_ext_events_fd();
             if (m_mon_hal_ext_events > 0) {
                 beerocks::EventLoop::EventHandlers ext_events_handlers{
+                    .name = "mon_hal_ext_events",
                     .on_read =
                         [&](int fd, EventLoop &loop) {
                             if (!mon_wlan_hal->process_ext_events()) {
@@ -330,6 +331,7 @@ bool Monitor::monitor_fsm()
             m_mon_hal_int_events = mon_wlan_hal->get_int_events_fd();
             if (m_mon_hal_int_events > 0) {
                 beerocks::EventLoop::EventHandlers int_events_handlers{
+                    .name = "mon_hal_int_events",
                     .on_read =
                         [&](int fd, EventLoop &loop) {
                             if (!mon_wlan_hal->process_int_events()) {
@@ -368,6 +370,7 @@ bool Monitor::monitor_fsm()
             m_mon_hal_nl_events = mon_wlan_hal->get_nl_events_fd();
             if (m_mon_hal_nl_events > 0) {
                 beerocks::EventLoop::EventHandlers nl_events_handlers{
+                    .name = "mon_hal_nl_events",
                     .on_read =
                         [&](int fd, EventLoop &loop) {
                             if (!mon_wlan_hal->process_nl_events()) {
@@ -432,6 +435,7 @@ bool Monitor::monitor_fsm()
             } else {
                 m_arp_fd = mon_rssi.get_arp_socket()->getSocketFd();
                 beerocks::EventLoop::EventHandlers arp_events_handlers{
+                    .name = "mon_arp_events",
                     .on_read =
                         [&](int fd, EventLoop &loop) {
                             mon_rssi.arp_recv();

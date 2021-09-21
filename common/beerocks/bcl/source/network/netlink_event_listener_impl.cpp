@@ -22,6 +22,7 @@ NetlinkEventListenerImpl::NetlinkEventListenerImpl(std::shared_ptr<Socket::Conne
     : m_connection(connection), m_event_loop(event_loop)
 {
     EventLoop::EventHandlers handlers;
+    handlers.name    = "Netlink Event Listener";
     handlers.on_read = [&](int fd, EventLoop &loop) -> bool {
         BufferImpl<netlink_buffer_size> buffer;
         if (m_connection->receive(buffer) > 0) {
