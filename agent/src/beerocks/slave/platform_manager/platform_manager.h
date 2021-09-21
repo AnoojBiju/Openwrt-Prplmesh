@@ -97,14 +97,11 @@ private:
      */
     bool handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
 
-    void add_slave_socket(int fd, const std::string &iface_name);
-    void del_slave_socket(int fd);
-    bool send_cmdu_safe(int fd, ieee1905_1::CmduMessageTx &cmdu_tx);
+    bool send_cmdu_to_agent_safe(ieee1905_1::CmduMessageTx &cmdu_tx);
     bool send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx);
-    int get_slave_socket_from_hostap_iface_name(const std::string &iface);
     bool socket_disconnected(int fd);
 
-    int get_backhaul_socket();
+    int get_agent_socket();
     void load_iface_params(const std::string &strIface, beerocks::eArpSource eType);
     std::string bridge_iface_from_mac(const sMacAddr &sMac);
     void send_dhcp_notification(const std::string &op, const std::string &mac,
@@ -166,8 +163,8 @@ private:
         std::chrono::steady_clock::time_point last_seen;
     };
 
-    // Connected slaves map (socket file descriptor/interface name)
-    std::unordered_map<int, std::string> m_mapSlaves; // value=iface_name
+    // Connected Agent file descriptor
+    int m_agent_fd = beerocks::net::FileDescriptor::invalid_descriptor;
     std::mutex m_mtxSlaves;
 
     // Interfaces
