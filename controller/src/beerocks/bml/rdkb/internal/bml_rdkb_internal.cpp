@@ -390,9 +390,9 @@ int bml_rdkb_internal::process_cmdu_header(std::shared_ptr<beerocks_header> beer
         switch (action_op) {
         case beerocks_message::ACTION_BML_STEERING_EVENTS_UPDATE: {
             auto response =
-                beerocks_header->addClass<beerocks_message::cACTION_BML_EVENTS_UPDATE>();
+                beerocks_header->addClass<beerocks_message::cACTION_BML_STEERING_EVENTS_UPDATE>();
             if (!response) {
-                LOG(ERROR) << "addClass cACTION_BML_EVENTS_UPDATE failed";
+                LOG(ERROR) << "addClass cACTION_BML_STEERING_EVENTS_UPDATE failed";
                 return BML_RET_OP_FAILED;
             }
 
