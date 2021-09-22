@@ -510,6 +510,53 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         for access_point_path in access_points:
             controller.nbapi_command(access_point_path, '_del', {})
 
+    def wait_ubus_object(self, path: str, timeout: int = 10):
+        deadline = time.monotonic() + timeout
+        controller = self.dev.lan.controller_entity
+        ubus_obj = None
+        while True:
+            try:
+                ubus_obj = controller.nbapi_command(path, "_get")
+            except subprocess.CalledProcessError as e:
+                debug(e)
+            finally:
+                if ubus_obj:
+                    return True
+                if time.monotonic() < deadline:
+                    time.sleep(.3)
+                else:
+                    return ubus_obj
+
+    def wait_radios_enabled(self, timeout: int = 10):
+        """Waits and checks in .3 intervals until the timeout
+        period is reached if all the radios come out as enabled
+        on a ubus call.
+        Parameters
+        ----------
+
+        timeout: int
+            maximum waiting period in seconds
+
+        Returns:
+        list(bool)
+            All radios state on the moment of the exit condition
+        """
+        deadline = time.monotonic() + timeout
+        controller = self.dev.lan.controller_entity
+        while True:
+            devices_status = []
+            topology = self.get_topology()
+            for device in topology.values():
+                for radio in device.radios.values():
+                    enabled = controller.nbapi_get_parameter(radio.path, "Enabled")
+                    devices_status.append(enabled)
+            if all(devices_status):
+                return devices_status
+            if time.monotonic() < deadline:
+                time.sleep(.3)
+            else:
+                return devices_status
+
     def configure_passphrase(self, ssid: str = 'Dummy_ssid',
                              vap_passphrase: str = 'prplmesh_pass'):
         '''Configures a new password on the controller
@@ -607,7 +654,7 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
             "Device.WiFi.DataElements.Network", "AccessPointCommit")
         # TODO check that renew was sent to all agents
         # TODO check that all agents have been configured with the SSIDs
-        time.sleep(5)  # Temporary until above TODOs are fixed
+        self.wait_radios_enabled()
 
     def assertEqual(self, path: str, name: str, expected: str):
         ''' Get specified with 'name' parameter of given in 'path' NBAPI object,
