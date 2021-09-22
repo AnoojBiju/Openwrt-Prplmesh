@@ -598,9 +598,13 @@ bool BackhaulManager::handle_cmdu_from_broker(uint32_t iface_index, const sMacAd
 
     // Forward cmdu to the agent on the first "son_slave" socket only, since only one thread is
     // actually exist.
-    auto soc_iter = *slaves_sockets.begin();
-    if (!forward_cmdu_to_uds(soc_iter->slave, iface_index, dst_mac, src_mac, cmdu_rx)) {
-        LOG(ERROR) << "forward_cmdu_to_uds() failed - fd=" << soc_iter->slave;
+    auto soc_iter = slaves_sockets.begin();
+    if (soc_iter == slaves_sockets.end() || !(*soc_iter)) {
+        LOG(INFO) << "No slave sockets, cmdu will not be forwarded.";
+        return true;
+    }
+    if (!forward_cmdu_to_uds((*soc_iter)->slave, iface_index, dst_mac, src_mac, cmdu_rx)) {
+        LOG(ERROR) << "forward_cmdu_to_uds() failed - fd=" << (*soc_iter)->slave;
     }
 
     return true;
