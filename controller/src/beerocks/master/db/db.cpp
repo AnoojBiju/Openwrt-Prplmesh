@@ -107,6 +107,18 @@ std::pair<std::string, int> db::get_dm_index_from_path(const std::string &dm_pat
 
 // static - end
 
+std::shared_ptr<Agent> db::get_agent_by_radio_uid(const sMacAddr &radio_uid)
+{
+    for (const auto &agent_map_element : m_agents) {
+        const auto &agent = agent_map_element.second;
+        if (agent->radios.find(radio_uid) != agent->radios.end()) {
+            return agent;
+        }
+    }
+    LOG(ERROR) << "No agent containing radio " << radio_uid << " found";
+    return {};
+}
+
 std::shared_ptr<Agent::sRadio> db::get_radio(const sMacAddr &al_mac, const sMacAddr &radio_uid)
 {
     auto agent = m_agents.get(al_mac);
@@ -116,6 +128,21 @@ std::shared_ptr<Agent::sRadio> db::get_radio(const sMacAddr &al_mac, const sMacA
     }
     auto radio = agent->radios.get(radio_uid);
     return radio;
+}
+
+std::shared_ptr<Agent::sRadio> db::get_radio_by_bssid(const sMacAddr &bssid)
+{
+    for (const auto &agent : m_agents) {
+        for (const auto &radio : agent.second->radios) {
+            auto bss = radio.second->bsses.get(bssid);
+            if (bss) {
+                return radio.second;
+            }
+        }
+    }
+
+    LOG(ERROR) << "Radio with BSSID " << bssid << " not found";
+    return {};
 }
 
 void db::set_log_level_state(const beerocks::eLogLevel &log_level, const bool &new_state)
@@ -918,55 +945,6 @@ bool db::is_hostap_active(const sMacAddr &mac)
         return false;
     }
     return n->hostap->active;
-}
-
-bool db::set_hostap_backhaul_manager(const sMacAddr &al_mac, const sMacAddr &mac,
-                                     bool is_backhaul_manager)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
-        return false;
-    }
-    n->hostap->is_backhaul_manager = is_backhaul_manager;
-    return true;
-}
-
-bool db::is_hostap_backhaul_manager(const sMacAddr &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
-        return false;
-    }
-    return n->hostap->is_backhaul_manager;
-}
-
-std::string db::get_hostap_backhaul_manager(const std::string &ire)
-{
-    auto n = get_node(ire);
-    if (!n) {
-        LOG(ERROR) << "node " << ire << " does not exist!";
-        return std::string();
-    } else if (n->get_type() != beerocks::TYPE_IRE && n->get_type() != beerocks::TYPE_GW) {
-        LOG(ERROR) << "ire " << ire << " not an IRE or GW";
-        return std::string();
-    }
-    auto ire_hostaps = get_node_children(ire, beerocks::TYPE_SLAVE);
-    for (auto &hostap : ire_hostaps) {
-        if ((is_hostap_backhaul_manager(tlvf::mac_from_string(hostap))) &&
-            get_node_state(hostap) == beerocks::STATE_CONNECTED) {
-            return hostap;
-        }
-    }
-    LOG(ERROR) << "ire " << ire << " return empty backhaul";
-    return std::string();
 }
 
 bool db::is_ap_out_of_band(const std::string &mac, const std::string &sta_mac)

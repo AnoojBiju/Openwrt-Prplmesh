@@ -15,6 +15,10 @@
 
 namespace bwl {
 
+constexpr char EVENT_KEYLESS_PARAM_OPCODE[] = "_opcode";
+constexpr char EVENT_KEYLESS_PARAM_MAC[]    = "_mac";
+constexpr char EVENT_KEYLESS_PARAM_IFACE[]  = "_iface";
+
 /**
  * @brief On KeyValueParser there are two types of object that can be parsed:
  * parsed_line_t - Shall be used on key-value data with unique keys for each element, seperated by

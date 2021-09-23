@@ -5,24 +5,29 @@
 # See LICENSE file for more details.
 ###############################################################
 
-from enum import Enum
+# Standard imports:
 import json
 import os
-import shlex
 import platform
 import re
+import shlex
 import subprocess
 import time
-import yaml
-import pexpect
-
-from capi import UCCSocket
 from collections import namedtuple
-from connmap import MapDevice
-from opts import opts, debug, err
+from enum import Enum
 from subprocess import PIPE, Popen
 from typing import Dict, Any, List
+
+
+# Third-party imports:
+import pexpect
+import yaml
+
+# Local imports:
 import sniffer
+from capi import UCCSocket
+from connmap import MapDevice
+from opts import opts, debug, err
 
 MemoryStat = namedtuple('MemoryStat', 'total_memory free_memory buffers cached used_memory')
 CpuStat = namedtuple('CpuStat', 'cpu_usage cpu_avg')
@@ -243,6 +248,14 @@ class Radio:
     def get_power_limit(self) -> int:
         '''Get the current tx_power information.'''
         raise NotImplementedError("get_power_limit is not implemented in abstract class Radio")
+
+    def disable(self) -> int:
+        '''Disable the radio.'''
+        raise NotImplementedError("Not implemented in abstract class.")
+
+    def enable(self) -> int:
+        '''Enable the radio and wait for it to be ready.'''
+        raise NotImplementedError("Not implemented in abstract class.")
 
     def update_vap_list(self):
         ''' Initialize / update VAP list '''
@@ -725,6 +738,12 @@ class RadioDocker(Radio):
         power_info = yaml.safe_load(self.read_tmp_file("tx_power"))
         return power_info["tx_power"]
 
+    def disable(self):
+        self.send_bwl_event("EVENT AP-DISABLED {}".format(self.iface_name))
+
+    def enable(self):
+        self.send_bwl_event("EVENT AP-ENABLED {}".format(self.iface_name))
+
 
 class BssType(Enum):
     Disabled = (0, 0)
@@ -1095,6 +1114,12 @@ class RadioHostapd(Radio):
         output = self.agent.command("iw", "dev", f"{self.iface_name}", "info")
         match = re.search(regex, output)
         return int(match.group('power_limit'))
+
+    def disable(self):
+        self.agent.command("hostapd_cli", "-i", self.iface_name, "disable")
+
+    def enable(self):
+        self.agent.command("hostapd_cli", "-i", self.iface_name, "enable")
 
 
 class VirtualAPHostapd(VirtualAP):

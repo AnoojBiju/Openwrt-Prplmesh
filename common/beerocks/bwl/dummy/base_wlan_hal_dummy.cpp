@@ -310,6 +310,7 @@ bool base_wlan_hal_dummy::fsm_setup() { return true; }
 
 HALState base_wlan_hal_dummy::attach(bool block)
 {
+    m_radio_info.radio_state = eRadioState::ENABLED;
     refresh_radio_info();
     return (m_hal_state = HALState::Operational);
 }
@@ -363,7 +364,6 @@ bool base_wlan_hal_dummy::process_nl_events()
 bool base_wlan_hal_dummy::refresh_radio_info()
 {
     m_radio_info.max_bandwidth = beerocks::eWiFiBandwidth::BANDWIDTH_40;
-    m_radio_info.radio_enabled = true;
 
     if (get_iface_name() == "wlan2") {
         m_radio_info.is_5ghz        = true;

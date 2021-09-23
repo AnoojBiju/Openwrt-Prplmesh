@@ -9,9 +9,6 @@
 #include <sstream>
 
 namespace bwl {
-constexpr char EVENT_KEYLESS_PARAM_OPCODE[] = "_opcode";
-constexpr char EVENT_KEYLESS_PARAM_MAC[]    = "_mac";
-constexpr char EVENT_KEYLESS_PARAM_IFACE[]  = "_iface";
 
 //////////////////////////////////////////////////////////////////////////////
 ////////////////////////// Local Module Functions ////////////////////////////

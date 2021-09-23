@@ -197,4 +197,23 @@ bool base_wlan_hal::is_BSS_monitored(const std::string &bssid)
     return (m_hal_conf.monitored_BSSs.find(bssid) != m_hal_conf.monitored_BSSs.end());
 }
 
+eRadioState base_wlan_hal::radio_state_from_string(const std::string &state)
+{
+    // clang-format off
+    const static std::unordered_map<std::string, eRadioState> string_eRadioState = {
+        { "UNINITIALIZED",  eRadioState::UNINITIALIZED  },
+        { "DISABLED",       eRadioState::DISABLED       },
+        { "COUNTRY_UPDATE", eRadioState::COUNTRY_UPDATE },
+        { "ACS",            eRadioState::ACS            },
+        { "ACS_DONE",       eRadioState::ACS_DONE       },
+        { "HT_SCAN",        eRadioState::HT_SCAN        },
+        { "DFS",            eRadioState::DFS            },
+        { "ENABLED",        eRadioState::ENABLED        },
+        { "UNKNOWN",        eRadioState::UNKNOWN        },
+    };
+    // clang-format on
+    auto state_it = string_eRadioState.find(state);
+    return state_it == string_eRadioState.end() ? eRadioState::UNKNOWN : state_it->second;
+}
+
 } // namespace bwl

@@ -2435,16 +2435,8 @@ bool Controller::handle_intel_slave_join(
     }
 
     if (backhaul_manager) {
-        // clear backhaul manager flag for all slaves except for this backhaul_manager slave
-        auto ire_hostaps = database.get_node_children(bridge_mac_str, beerocks::TYPE_SLAVE);
-        for (auto tmp_slave_mac : ire_hostaps) {
-            if (tlvf::mac_from_string(tmp_slave_mac) != radio_mac) {
-                database.set_hostap_backhaul_manager(bridge_mac,
-                                                     tlvf::mac_from_string(tmp_slave_mac), false);
-            }
-        }
+        agent->backhaul.wireless_backhaul_radio = radio;
     }
-    database.set_hostap_backhaul_manager(bridge_mac, radio_mac, backhaul_manager);
 
     database.set_node_state(tlvf::mac_to_string(radio_mac), beerocks::STATE_CONNECTED);
     database.set_node_backhaul_iface_type(tlvf::mac_to_string(radio_mac),
@@ -2733,7 +2725,6 @@ bool Controller::handle_non_intel_slave_join(
     }
 
     // TODO Assume no backhaul manager
-    database.set_hostap_backhaul_manager(bridge_mac, radio_mac, false);
 
     database.set_node_state(tlvf::mac_to_string(radio_mac), beerocks::STATE_CONNECTED);
     database.set_node_backhaul_iface_type(tlvf::mac_to_string(radio_mac),
@@ -3169,6 +3160,21 @@ bool Controller::handle_cmdu_control_message(
                           database.get_hostap_vap_mac(tlvf::mac_from_string(ap_mac),
                                                       notification->params().vap_id));
 
+        auto agent = database.m_agents.get(src_mac);
+        if (!agent) {
+            LOG(ERROR) << "agent " << src_mac << " not found";
+            break;
+        }
+
+        auto radio = database.get_radio_by_bssid(tlvf::mac_from_string(ap_mac));
+        if (!radio) {
+            LOG(ERROR) << "radio with bssid" << ap_mac << " not found";
+            break;
+        }
+
+        auto bh                  = agent->backhaul.wireless_backhaul_radio;
+        bool is_backhaul_manager = (bh && (bh->radio_uid == radio->radio_uid));
+
         LOG_CLI(DEBUG,
                 "rssi measurement response: "
                     << client_mac << " (sta) <-> (ap) " << ap_mac
@@ -3177,13 +3183,14 @@ bool Controller::handle_cmdu_control_message(
                     << " phy_rate_100kb (RX|TX)=" << int(notification->params().rx_phy_rate_100kb)
                     << " | " << int(notification->params().tx_phy_rate_100kb)
                     << " is_parent=" << (is_parent ? "1" : "0")
+                    << " is_backhaul_manager=" << (is_backhaul_manager ? "1" : "0")
                     << " src_module=" << int(notification->params().src_module)
                     << " id=" << int(beerocks_header->id())
                     << " bssid=" << database.get_node_parent(client_mac)
                     << " vap_id=" << int(notification->params().vap_id));
 
         //response return from slave backhaul manager , updating the matching same band sibling.
-        if (database.is_hostap_backhaul_manager(tlvf::mac_from_string(ap_mac)) &&
+        if (is_backhaul_manager &&
             database.is_node_wireless(database.get_node_parent_backhaul(ap_mac)) &&
             database.is_node_5ghz(client_mac)) {
             auto priv_ap_mac = ap_mac;
