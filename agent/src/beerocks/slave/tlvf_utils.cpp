@@ -137,8 +137,6 @@ bool tlvf_utils::add_ap_radio_basic_capabilities(ieee1905_1::CmduMessageTx &cmdu
         return false;
     }
     radio_basic_caps->radio_uid() = ruid;
-    //TODO get maximum supported VAPs from AP Capabilities from BWL
-    radio_basic_caps->maximum_number_of_bsss_supported() = 4;
 
     auto db    = AgentDB::get();
     auto radio = db->get_radio_by_mac(ruid);
@@ -146,6 +144,14 @@ bool tlvf_utils::add_ap_radio_basic_capabilities(ieee1905_1::CmduMessageTx &cmdu
         LOG(ERROR) << "ruid not found: " << ruid;
         return false;
     }
+
+    int num_bsses = std::count_if(radio->front.bssids.begin(), radio->front.bssids.end(),
+                                  [](beerocks::AgentDB::sRadio::sFront::sBssid b) {
+                                      return b.mac != net::network_utils::ZERO_MAC;
+                                  });
+    LOG(DEBUG) << "Radio reports " << num_bsses << " BSSes.";
+
+    radio_basic_caps->maximum_number_of_bsss_supported() = num_bsses;
     operating_classes = get_supported_operating_classes(radio->channels_list);
     LOG(DEBUG) << "Filling Supported operating classes on radio " << radio->front.iface_name << ":";
 
