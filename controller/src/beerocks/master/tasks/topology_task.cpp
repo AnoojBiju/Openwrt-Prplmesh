@@ -109,7 +109,7 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
 
         // TODO Name and Status of Interface should be add
         database.add_interface(al_mac, iface_mac, media_type);
-        LOG(DEBUG) << "CO: Interface is added al_mac:" << al_mac << " iface_mac:" << iface_mac;
+        LOG(DEBUG) << "Interface is added al_mac:" << al_mac << " iface_mac:" << iface_mac;
 
         // For wireless interface it is defined on IEEE 1905.1 that the size of the media info
         // is n=10 octets, which the size of s802_11SpecificInformation struct.
@@ -516,6 +516,13 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
                              &new_event);
         }
 #endif
+
+        auto client = database.get_station(tlvf::mac_from_string(client_mac_str));
+        if (!client) {
+            LOG(ERROR) << "Station " << client_mac_str << " not found";
+            return false;
+        }
+
         /*
           TODO: Notify disconenction should be called if Disassociation Event TLV present
                 in Topology Notification Message.
@@ -526,7 +533,7 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
         }
 
         // After disassociation STA needs to be removed from data model.
-        if (!database.dm_remove_sta(tlvf::mac_from_string(client_mac_str))) {
+        if (!database.dm_remove_sta(*client)) {
             LOG(ERROR) << "Failed to remove STA from data model mac:" << client_mac_str;
         }
 

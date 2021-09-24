@@ -202,6 +202,18 @@ public:
         uint32_t m_retransmission_count = 0;
     } sAssociatedStaTrafficStats;
 
+    typedef struct {
+        std::string dm_path; /**< data model path */
+        sMacAddr original_bssid;
+        sMacAddr target_bssid;
+        std::string trigger_event;
+        std::string steering_approach;
+        std::chrono::seconds duration = {};
+        std::string timestamp;
+    } sStaSteeringEvent;
+
+    std::unordered_map<sMacAddr, std::vector<sStaSteeringEvent>> m_stations_steering_events;
+
     beerocks::mac_map<Agent> m_agents;
     beerocks::mac_map<Station> m_stations;
 
@@ -769,14 +781,14 @@ public:
     bool dm_clear_sta_stats(const sMacAddr &sta_mac);
 
     /**
-     * @brief Remove STA from datamodel with given MAC Address.
+     * @brief Remove STA from datamodel with given Station object.
      *
      * Path: Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}
      *
-     * @param sta_mac sta MAC address for node matching
+     * @param station Station object
      * @return true on success, false otherwise.
      */
-    bool dm_remove_sta(const sMacAddr &sta_mac);
+    bool dm_remove_sta(Station &station);
 
     /**
      * @brief Adds FailedConnectionEventData NBAPI object each time
@@ -1335,7 +1347,7 @@ public:
     /**
      * @brief Set the client's time-life delay.
      *
-     * @param mac MAC address of a client.
+     * @param client Station object representing a client.
      * @param time_life_delay_minutes Client-specific aging time.
      * @param save_to_persistent_db If set to true, update the persistent-db (write-through), default is true.
      * @return true on success, otherwise false.
@@ -1776,6 +1788,28 @@ public:
      */
     bool dm_set_agent_oui(std::shared_ptr<Agent> agent);
 
+    /**
+     * @brief Adds station steering event to database map and also for data model.
+     *
+     * Map stores events with maximum number MAX_EVENT_HISTORY_SIZE per station.
+     *
+     * @param sta_mac station mac address
+     * @param event station steering event
+     * @return True on success, false otherwise.
+     */
+    bool add_sta_steering_event(const sMacAddr &sta_mac, sStaSteeringEvent &event);
+
+    /**
+     * @brief Restores station steering event from database to add to new data model path of station.
+     *
+     * When station is steered/disassociated all data models are removed for that specific station.
+     * To recover old steering history, this method reads it from database and add old ones to data model.
+     *
+     * @param station Station object
+     * @return True on success, false otherwise.
+     */
+    bool dm_restore_sta_steering_event(const Station &station);
+
     //
     // tasks
     //
@@ -2078,10 +2112,10 @@ private:
      * Data model path example: "Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.2.STA.3"
      *
      * @param bssid BSS mac address.
-     * @param client_mac Client mac address.
-     * @return Data model path on success, empty string otherwise
+     * @param station Station object
+     * @return True on success, false otherwise.
      */
-    std::string dm_add_sta_element(const sMacAddr &bssid, const sMacAddr &client_mac);
+    bool dm_add_sta_element(const sMacAddr &bssid, Station &station);
 
     /**
      * @brief Adds to data model an instance of object AssociationEventData.

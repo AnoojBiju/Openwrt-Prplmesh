@@ -40,6 +40,8 @@ public:
 
     const sMacAddr mac;
 
+    std::string dm_path; /**< data model path */
+
     std::string ipv6;
 
     int association_handling_task_id = -1;
