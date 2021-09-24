@@ -1874,7 +1874,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
         auto notification =
             beerocks_header->addClass<beerocks_message::cACTION_APMANAGER_UP_NOTIFICATION>();
         if (!notification) {
-            LOG(ERROR) << "addClass cACTION_APMANAGER_JOINED_NOTIFICATION failed";
+            LOG(ERROR) << "addClass cACTION_APMANAGER_UP_NOTIFICATION failed";
             return false;
         }
 
