@@ -109,6 +109,10 @@ void client_steering_task::work()
             LOG(ERROR) << "Failed to set parameters of Device.WiFi.DataElements.SteerEvent";
         }
 
+        if (!add_sta_steer_event_to_db()) {
+            LOG(ERROR) << "Failed to add MultiAPSteeringHistory for STA in database";
+        }
+
         print_steering_info();
 
         if (m_database.config.persistent_db) {
@@ -437,12 +441,17 @@ bool client_steering_task::dm_set_steer_event_params(const std::string &event_pa
         LOG(ERROR) << "Failed to get Controller Data Model object.";
         return false;
     }
+
+    m_dm_timestamp = ambiorix_dm->get_datamodel_time_format();
+
     ambiorix_dm->set(event_path, "DeviceId", m_sta_mac);
     ambiorix_dm->set(event_path, "SteeredFrom", m_original_bssid);
     ambiorix_dm->set(event_path, "SteeredTo", m_target_bssid);
     ambiorix_dm->set(event_path, "StatusCode", m_status_code);
+    ambiorix_dm->set(event_path, "TimeStamp", m_dm_timestamp);
+
     m_database.dm_set_status(event_path, m_status_code);
-    ambiorix_dm->set_current_time(event_path);
+
     if (m_steering_success) {
         ambiorix_dm->set(event_path, "Result", std::string("Success"));
         ambiorix_dm->set(event_path, "TimeTaken", m_duration.count());
@@ -456,7 +465,7 @@ bool client_steering_task::dm_set_steer_event_params(const std::string &event_pa
         }
 
         if (!station->get_cross_rx_rssi(m_target_bssid, rx_rssi, rx_packets)) {
-            TASK_LOG(ERROR) << "can't get cross_rx_rssi for bssi =" << m_target_bssid;
+            TASK_LOG(ERROR) << "can't get cross_rx_rssi for bssid =" << m_target_bssid;
         }
         ambiorix_dm->set(event_path, "NewLinkRate", rx_rssi);
     } else {
@@ -489,21 +498,19 @@ bool client_steering_task::dm_set_steer_event_params(const std::string &event_pa
     }
     ambiorix_dm->set(event_path, "SteeringOrigin", steer_origin);
     if (m_database.config.persistent_db) {
-        add_steer_history_to_persistent_db(ambiorix_dm->get_datamodel_time_format(), steer_origin,
-                                           steer_type);
+        add_steer_history_to_persistent_db(steer_origin, steer_type);
     }
     return true;
 }
 
-void client_steering_task::add_steer_history_to_persistent_db(const std::string &time_stamp,
-                                                              const std::string &steer_origin,
+void client_steering_task::add_steer_history_to_persistent_db(const std::string &steer_origin,
                                                               const std::string &steer_type)
 {
     db::ValuesMap values_map;
 
     values_map["device_id"]       = m_sta_mac;
     values_map["steered_from"]    = m_original_bssid;
-    values_map["time_stamp"]      = time_stamp;
+    values_map["time_stamp"]      = m_dm_timestamp;
     values_map["steered_to"]      = m_target_bssid;
     values_map["time_taken"]      = "0";
     values_map["steering_type"]   = steer_type;
@@ -531,6 +538,35 @@ void client_steering_task::dm_update_multi_ap_steering_params(bool sta_11v_capab
         m_database.dm_uint64_param_one_up(bss_path, "BTMAttempts");
         m_database.dm_uint64_param_one_up(bss_path, "BlacklistAttempts");
     }
+}
+
+bool client_steering_task::add_sta_steer_event_to_db()
+{
+    db::sStaSteeringEvent steer_sta_event;
+
+    steer_sta_event.timestamp = m_dm_timestamp;
+
+    steer_sta_event.original_bssid = tlvf::mac_from_string(m_original_bssid);
+    steer_sta_event.target_bssid   = tlvf::mac_from_string(m_target_bssid);
+    steer_sta_event.duration       = std::chrono::duration_cast<std::chrono::seconds>(m_duration);
+
+    steer_sta_event.trigger_event = "Unknown";
+
+    // TODO 11v Async BTM Query is not supported (PPM-1611)
+    // And Blacklist events can not be identified
+    steer_sta_event.steering_approach = "BTM Request";
+
+    if (m_triggered_by.find("backhaul") != std::string::npos) {
+        steer_sta_event.trigger_event = "Backhaul Link Utilization";
+
+    } else if (m_triggered_by.find("DFS Rentry") != std::string::npos) {
+        steer_sta_event.trigger_event = "Wi-Fi Channel Utilization";
+
+    } else if (m_triggered_by.find("optimal_path_task") != std::string::npos) {
+        steer_sta_event.trigger_event = "Wi-Fi Link Quality";
+    }
+
+    return m_database.add_sta_steering_event(tlvf::mac_from_string(m_sta_mac), steer_sta_event);
 }
 
 bool client_steering_task::handle_ieee1905_1_msg(const sMacAddr &src_mac,

@@ -838,7 +838,8 @@ TEST_F(DbTestRadio1Sta1, test_remove_sta)
         .WillRepeatedly(Return(true));
 
     //prepare scenario
-    EXPECT_TRUE(m_db->dm_remove_sta(tlvf::mac_from_string(g_client_mac)));
+    auto sta = m_db->get_station(tlvf::mac_from_string(g_client_mac));
+    EXPECT_TRUE(m_db->dm_remove_sta(*sta));
 }
 
 TEST_F(DbTestRadio1Sta1, test_dhcp_v4_lease_sta)

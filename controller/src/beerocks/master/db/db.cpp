@@ -480,18 +480,15 @@ std::shared_ptr<Station> db::add_node_station(const sMacAddr &mac, const sMacAdd
     }
 
     // Add STA to the controller data model via m_ambiorix_datamodel
-    // for connected station (WiFI client)
-    auto data_model_path = dm_add_sta_element(parent_mac, mac);
-    if (data_model_path.empty()) {
-        LOG(ERROR) << "Failed to add client instance, mac: " << mac;
-        return station;
+    // for connected station (WiFi client)
+    if (!dm_add_sta_element(parent_mac, *station)) {
+        LOG(ERROR) << "Failed to add station datamodel, mac: " << station->mac;
     }
+
     // Add the MAC to the association event */
     if (dm_add_association_event(parent_mac, mac).empty()) {
         LOG(ERROR) << "Failed to add association event, mac: " << mac;
     }
-
-    set_node_data_model_path(mac, data_model_path);
 
     return station;
 }
@@ -5597,54 +5594,78 @@ bool db::dm_set_device_multi_ap_capabilities(const std::string &device_mac)
     return return_val;
 }
 
-std::string db::dm_add_sta_element(const sMacAddr &bssid, const sMacAddr &client_mac)
+bool db::dm_add_sta_element(const sMacAddr &bssid, Station &station)
 {
 
     if (bssid == network_utils::ZERO_MAC) {
         LOG(WARNING) << "Client has empty parent bssid, not adding it to the data model, client="
-                     << client_mac;
-        return {};
+                     << station.mac;
+        return false;
     }
 
     std::string path_to_bss = dm_get_path_to_bss(bssid);
     if (path_to_bss.empty()) {
         LOG(ERROR) << "Failed get path to bss with mac: " << bssid;
-        return {};
+        return false;
     }
 
-    std::string path_to_sta = path_to_bss + "STA";
-    std::string sta_instance;
+    // TODO In refactoring Database nodes (PPM-1057),
+    // we need to make sure to remove datamodel index when database objects are deleted/removed.
+    // We are verifying STA datamodel path from database, so it should be consistent.
 
-    // TODO remove after refactoring Database nodes PPM-1057.
-    // Verifying a STA is already added or not with datamodel method is bad practice.
-    // Database node handling eliminate this action.
-    auto sta_index = m_ambiorix_datamodel->get_instance_index(
-        path_to_sta + ".[MACAddress == '%s'].", tlvf::mac_to_string(client_mac));
+    // Verify Station object data model path is changed or not.
+    if (!station.dm_path.empty()) {
 
-    if (sta_index) {
-        sta_instance = path_to_sta + "." + std::to_string(sta_index);
-    } else {
-        sta_instance = m_ambiorix_datamodel->add_instance(path_to_sta);
-        if (sta_instance.empty()) {
-            LOG(ERROR) << "Failed to add sta instance " << path_to_sta
-                       << ". STA mac: " << client_mac;
-            return {};
+        // Verify if STA is added under different BSS. If so, remove old data model.
+        if (station.dm_path.find(path_to_bss) == std::string::npos) {
+
+            LOG(DEBUG) << "Station is added to different BSS " << bssid
+                       << " remove previous object";
+
+            auto sta_path = get_dm_index_from_path(station.dm_path);
+
+            if (!m_ambiorix_datamodel->remove_instance(sta_path.first, sta_path.second)) {
+                LOG(ERROR) << "Failed to remove " << station.dm_path;
+            }
+            station.dm_path.clear();
         }
     }
 
-    if (!m_ambiorix_datamodel->set(sta_instance, "MACAddress", tlvf::mac_to_string(client_mac))) {
-        LOG(ERROR) << "Failed to set " << sta_instance << ".MACAddress: " << client_mac;
-        return {};
+    // If dm_path is empty, either it is steered or firstly added. New dm instance should be added.
+    if (station.dm_path.empty()) {
+
+        const std::string path_to_sta = path_to_bss + "STA";
+
+        station.dm_path = m_ambiorix_datamodel->add_instance(path_to_sta);
+        if (station.dm_path.empty()) {
+            LOG(ERROR) << "Failed to add sta instance " << path_to_sta
+                       << ". STA mac: " << station.mac;
+            return false;
+        }
+
+        dm_restore_sta_steering_event(station);
     }
 
-    m_ambiorix_datamodel->set_current_time(sta_instance);
+    // TODO: This method will be removed after old node architecture is deprecated (PPM-1057).
+    set_node_data_model_path(station.mac, station.dm_path);
+
+    LOG(DEBUG) << "Station is added with data model " << station.dm_path;
+
+    if (!m_ambiorix_datamodel->set(station.dm_path, "MACAddress",
+                                   tlvf::mac_to_string(station.mac))) {
+        LOG(ERROR) << "Failed to set " << station.dm_path << ".MACAddress: " << station.mac;
+        return false;
+    }
+
+    m_ambiorix_datamodel->set_current_time(station.dm_path);
 
     uint64_t add_sta_time = time(NULL);
-    if (!m_ambiorix_datamodel->set(sta_instance, "LastConnectTime", add_sta_time)) {
-        LOG(ERROR) << "Failed to set " << sta_instance << ".LastConnectTime: " << add_sta_time;
-        return {};
+    if (!m_ambiorix_datamodel->set(station.dm_path, "LastConnectTime", add_sta_time)) {
+        LOG(ERROR) << "Failed to set " << station.dm_path << ".LastConnectTime: " << add_sta_time;
+        return false;
     }
-    return sta_instance;
+
+    return true;
 }
 
 void db::dm_set_status(const std::string &event_path, const uint8_t status_code)
@@ -6545,23 +6566,12 @@ bool db::dm_clear_sta_stats(const sMacAddr &sta_mac)
     return true;
 }
 
-bool db::dm_remove_sta(const sMacAddr &sta_mac)
+bool db::dm_remove_sta(Station &station)
 {
-    auto sta_node = get_node(sta_mac);
+    auto instance = get_dm_index_from_path(station.dm_path);
+    station.dm_path.clear();
 
-    if (!sta_node || sta_node->get_type() != TYPE_CLIENT) {
-        LOG(ERROR) << "Failed to get station node with mac: " << sta_mac;
-        return false;
-    }
-
-    auto instance = get_dm_index_from_path(sta_node->dm_path);
-
-    if (!m_ambiorix_datamodel->remove_instance(instance.first, instance.second)) {
-        LOG(ERROR) << "Failed to remove " << sta_node->dm_path << " instance.";
-        return false;
-    }
-
-    return true;
+    return m_ambiorix_datamodel->remove_instance(instance.first, instance.second);
 }
 
 bool db::set_sta_dhcp_v4_lease(const sMacAddr &sta_mac, const std::string &host_name,
@@ -6751,4 +6761,99 @@ bool db::dm_set_agent_oui(std::shared_ptr<Agent> agent)
 
     return m_ambiorix_datamodel->set(agent->dm_path + ".MultiAPDevice", "ManufacturerOUI",
                                      oui_string);
+}
+
+bool db::add_sta_steering_event(const sMacAddr &sta_mac, sStaSteeringEvent &event)
+{
+
+    // Updating station steering event map
+    auto &sta_events = m_stations_steering_events[sta_mac];
+
+    // Derivative usage of dm_check_objects_limit()
+    while (MAX_EVENT_HISTORY_SIZE <= sta_events.size()) {
+
+        auto path = get_dm_index_from_path(sta_events.front().dm_path);
+        if (!m_ambiorix_datamodel->remove_instance(path.first, path.second)) {
+            LOG(ERROR) << "Failed to remove " << sta_events.front().dm_path;
+            return false;
+        }
+
+        sta_events.erase(sta_events.begin());
+    }
+
+    // Updating station datamodel incase of it is associated.
+    auto station = get_station(sta_mac);
+    if (!station) {
+        LOG(TRACE) << "Station " << sta_mac << " not found in database";
+        return false;
+    }
+
+    if (station->dm_path.empty()) {
+        return true;
+    }
+
+    bool ret_val          = true;
+    auto steering_history = station->dm_path + ".MultiAPSteeringHistory";
+
+    auto steering_event_path = m_ambiorix_datamodel->add_instance(steering_history);
+    if (steering_event_path.empty()) {
+        LOG(ERROR) << "Failed to add instance to " << steering_history;
+        return false;
+    }
+
+    LOG(DEBUG) << "Add station steering event to database sta:" << sta_mac;
+    sta_events.push_back(event);
+
+    // Update steering event data model path
+    sta_events.back().dm_path = steering_event_path;
+
+    ret_val &= m_ambiorix_datamodel->set(steering_event_path, "APOrigin",
+                                         tlvf::mac_to_string(event.original_bssid));
+    ret_val &= m_ambiorix_datamodel->set(steering_event_path, "APDestination",
+                                         tlvf::mac_to_string(event.target_bssid));
+    ret_val &=
+        m_ambiorix_datamodel->set(steering_event_path, "SteeringDuration", event.duration.count());
+    ret_val &=
+        m_ambiorix_datamodel->set(steering_event_path, "SteeringApproach", event.steering_approach);
+    ret_val &= m_ambiorix_datamodel->set(steering_event_path, "TriggerEvent", event.trigger_event);
+    ret_val &= m_ambiorix_datamodel->set(steering_event_path, "Time", event.timestamp);
+
+    return ret_val;
+}
+
+bool db::dm_restore_sta_steering_event(const Station &station)
+{
+    bool ret_val = true;
+
+    auto &sta_events      = m_stations_steering_events[station.mac];
+    auto steering_history = station.dm_path + ".MultiAPSteeringHistory";
+
+    LOG(DEBUG) << "Restore Station steering events sta: " << station.mac
+               << " event size:" << sta_events.size();
+
+    for (auto &event : sta_events) {
+
+        auto steering_event_path = m_ambiorix_datamodel->add_instance(steering_history);
+        if (steering_event_path.empty()) {
+            LOG(ERROR) << "Failed to add instance to " << steering_history;
+            return false;
+        }
+
+        // Set steering event data model path
+        event.dm_path = steering_event_path;
+
+        ret_val &= m_ambiorix_datamodel->set(steering_event_path, "APOrigin",
+                                             tlvf::mac_to_string(event.original_bssid));
+        ret_val &= m_ambiorix_datamodel->set(steering_event_path, "APDestination",
+                                             tlvf::mac_to_string(event.target_bssid));
+        ret_val &= m_ambiorix_datamodel->set(steering_event_path, "SteeringDuration",
+                                             event.duration.count());
+        ret_val &= m_ambiorix_datamodel->set(steering_event_path, "SteeringApproach",
+                                             event.steering_approach);
+        ret_val &=
+            m_ambiorix_datamodel->set(steering_event_path, "TriggerEvent", event.trigger_event);
+        ret_val &= m_ambiorix_datamodel->set(steering_event_path, "Time", event.timestamp);
+    }
+
+    return ret_val;
 }
