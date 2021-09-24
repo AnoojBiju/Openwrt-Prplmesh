@@ -94,11 +94,15 @@ void client_locating_task::work()
             if ((ire == client_mac) || (client_mac == database.get_node_parent_backhaul(ire))) {
                 continue;
             }
-            auto backhaul_manager_hostap = database.get_hostap_backhaul_manager(ire);
-            if (backhaul_manager_hostap.empty()) {
-                TASK_LOG(WARNING) << "backhaul_manager_hostap.empty()!";
+
+            if (!agent->backhaul.wireless_backhaul_radio) {
+                TASK_LOG(WARNING) << "backhaul manager radio is not set!";
                 continue;
             }
+
+            auto backhaul_manager_hostap =
+                tlvf::mac_to_string(agent->backhaul.wireless_backhaul_radio->radio_uid);
+
             auto agent_mac = database.get_node_parent_ire(backhaul_manager_hostap);
 
             son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, backhaul_manager_hostap);

@@ -905,22 +905,7 @@ bool base_wlan_hal_dwpal::refresh_radio_info()
         return false;
     }
 
-    // clang-format off
-        const static std::unordered_map<std::string, eRadioState> string_eRadioState = {
-            { "UNINITIALIZED",  eRadioState::UNINITIALIZED  },
-            { "DISABLED",       eRadioState::DISABLED       },
-            { "COUNTRY_UPDATE", eRadioState::COUNTRY_UPDATE },
-            { "ACS",            eRadioState::ACS            },
-            { "ACS_DONE",       eRadioState::ACS_DONE       },
-            { "HT_SCAN",        eRadioState::HT_SCAN        },
-            { "DFS",            eRadioState::DFS            },
-            { "ENABLED",        eRadioState::ENABLED        },
-            { "UNKNOWN",        eRadioState::UNKNOWN        },
-        };
-    // clang-format on
-    auto state_it = string_eRadioState.find(tmp_str);
-    m_radio_info.radio_state =
-        state_it == string_eRadioState.end() ? eRadioState::UNKNOWN : state_it->second;
+    m_radio_info.radio_state = radio_state_from_string(tmp_str);
 
     auto print_status = m_radio_info.radio_state != eRadioState::ENABLED &&
                         m_radio_info.radio_state != eRadioState::DISABLED;
@@ -929,8 +914,6 @@ bool base_wlan_hal_dwpal::refresh_radio_info()
     if (m_radio_info.radio_state == eRadioState::DISABLED) {
         return true;
     }
-
-    m_radio_info.radio_enabled = (m_radio_info.radio_state == eRadioState::ENABLED);
 
     if (!m_radio_info.available_vaps.size()) {
         if (!refresh_vaps_info(beerocks::IFACE_RADIO_ID)) {

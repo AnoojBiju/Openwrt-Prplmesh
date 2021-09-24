@@ -46,20 +46,22 @@ void network_health_check_task::work()
             if (agent->is_gateway) {
                 continue;
             }
-            auto ire                     = tlvf::mac_to_string(agent->al_mac);
-            auto backhaul_manager_hostap = database.get_hostap_backhaul_manager(ire);
-            if (backhaul_manager_hostap.empty()) {
-                TASK_LOG(DEBUG) << "backhaul_manager_hostap.empty()!";
+
+            if (!agent->backhaul.wireless_backhaul_radio) {
+                TASK_LOG(DEBUG) << "wireless backhaul radio is not set";
                 continue;
             }
+
+            auto backhaul_manager_hostap =
+                tlvf::mac_to_string(agent->backhaul.wireless_backhaul_radio->radio_uid);
 
             auto last_seen = database.get_node_last_seen(backhaul_manager_hostap);
             auto now       = std::chrono::steady_clock::now();
             auto last_seen_delta =
                 std::chrono::duration_cast<std::chrono::milliseconds>(now - last_seen).count();
             if (last_seen_delta > ire_last_seen_timeout_ms) {
-                auto backhaul = database.get_node_parent(ire);
-                TASK_LOG(DEBUG) << "handle_dead_node ire(backhaul) = " << ire
+                auto backhaul = database.get_node_parent(tlvf::mac_to_string(agent->al_mac));
+                TASK_LOG(DEBUG) << "handle_dead_node ire(backhaul) = " << agent->al_mac
                                 << " hostap = " << backhaul_manager_hostap
                                 << " backhaul = " << backhaul
                                 << " last_seen_delta=" << int(last_seen_delta);

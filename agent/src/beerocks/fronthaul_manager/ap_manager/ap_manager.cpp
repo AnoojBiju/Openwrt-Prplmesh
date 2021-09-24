@@ -1295,7 +1295,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
                 break;
             }
 
-            if (ap_wlan_hal->get_radio_info().radio_enabled) {
+            if (ap_wlan_hal->get_radio_info().radio_state == bwl::eRadioState::ENABLED) {
                 perform_update = true;
                 LOG(DEBUG) << "Radio is in enabled state, performing vap credentials update";
                 break;

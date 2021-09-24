@@ -11,6 +11,7 @@
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
 #include <bcl/son/son_wireless_utils.h>
+#include <bwl/key_value_parser.h>
 #include <cmath>
 #include <easylogging++.h>
 #include <hostapd/configuration.h>
@@ -1039,8 +1040,8 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
 {
     // Filter out empty events
     std::string opcode;
-    if (!(parsed_obj.find("_opcode") != parsed_obj.end() &&
-          !(opcode = parsed_obj["_opcode"]).empty())) {
+    if (!(parsed_obj.find(bwl::EVENT_KEYLESS_PARAM_OPCODE) != parsed_obj.end() &&
+          !(opcode = parsed_obj[bwl::EVENT_KEYLESS_PARAM_OPCODE]).empty())) {
         return true;
     }
 
@@ -1091,7 +1092,7 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
         memset(msg_buff.get(), 0, sizeof(sACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION));
 
         msg->params.vap_id = 0;
-        msg->params.mac    = tlvf::mac_from_string(parsed_obj["_mac"]);
+        msg->params.mac    = tlvf::mac_from_string(parsed_obj[bwl::EVENT_KEYLESS_PARAM_MAC]);
 
         // Add the latest association frame
         if (m_latest_assoc_frame.empty()) {
@@ -1122,7 +1123,7 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
 
         // Store the MAC address of the disconnected STA
         msg->params.vap_id = 0;
-        msg->params.mac    = tlvf::mac_from_string(parsed_obj["_mac"]);
+        msg->params.mac    = tlvf::mac_from_string(parsed_obj[bwl::EVENT_KEYLESS_PARAM_MAC]);
 
         // Add the message to the queue
         event_queue_push(Event::STA_Disconnected, msg_buff);
@@ -1132,14 +1133,14 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
     // BSS Transition Query (802.11v)
     case Event::BSS_TM_Query: {
 
-        auto val_iter = parsed_obj.find("_mac");
+        auto val_iter = parsed_obj.find(bwl::EVENT_KEYLESS_PARAM_MAC);
         if (val_iter == parsed_obj.end()) {
             LOG(ERROR) << "No STA mac found";
             return false;
         }
         const auto client_mac = val_iter->second;
 
-        val_iter = parsed_obj.find("_iface");
+        val_iter = parsed_obj.find(bwl::EVENT_KEYLESS_PARAM_IFACE);
         if (val_iter == parsed_obj.end()) {
             LOG(ERROR) << "No interface name found";
             return false;
@@ -1175,7 +1176,7 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
         memset(msg_buff.get(), 0, sizeof(sACTION_APMANAGER_CLIENT_BSS_STEER_RESPONSE));
 
         // Client params
-        msg->params.mac         = tlvf::mac_from_string(parsed_obj["_mac"]);
+        msg->params.mac         = tlvf::mac_from_string(parsed_obj[bwl::EVENT_KEYLESS_PARAM_MAC]);
         msg->params.status_code = beerocks::string_utils::stoi(parsed_obj["status_code"]);
 
         // Open source hostapd does not contain bssid where client connected
@@ -1214,6 +1215,39 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
     case Event::ACS_Failed: {
         // Forward to the AP manager
         event_queue_push(event);
+    } break;
+
+    case Event::AP_Disabled: {
+        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sHOSTAP_DISABLED_NOTIFICATION));
+        auto msg      = reinterpret_cast<sHOSTAP_DISABLED_NOTIFICATION *>(msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        memset(msg_buff.get(), 0, sizeof(sHOSTAP_DISABLED_NOTIFICATION));
+
+        std::string interface = parsed_obj[bwl::EVENT_KEYLESS_PARAM_IFACE];
+        if (interface.empty()) {
+            LOG(ERROR) << "Could not find interface name.";
+            return false;
+        }
+
+        auto iface_ids = beerocks::utils::get_ids_from_iface_string(interface);
+        msg->vap_id    = iface_ids.vap_id;
+
+        event_queue_push(Event::AP_Disabled, msg_buff); // send message to the AP manager
+
+    } break;
+    case Event::AP_Enabled: {
+        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sHOSTAP_ENABLED_NOTIFICATION));
+        auto msg      = reinterpret_cast<sHOSTAP_ENABLED_NOTIFICATION *>(msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        memset(msg_buff.get(), 0, sizeof(sHOSTAP_ENABLED_NOTIFICATION));
+
+        std::string interface = parsed_obj[bwl::EVENT_KEYLESS_PARAM_IFACE];
+        auto iface_ids        = beerocks::utils::get_ids_from_iface_string(interface);
+        msg->vap_id           = iface_ids.vap_id;
+
+        event_queue_push(Event::AP_Enabled, msg_buff);
     } break;
 
     // Gracefully ignore unhandled events

@@ -296,6 +296,16 @@ public:
     void dm_uint64_param_one_up(const std::string &obj_path, const char *param_name);
 
     /**
+     * @brief Get agent containing a specific radio
+     *
+     * If no radio with the given radio_uid exists, an error is logged (and nullptr returned).
+     *
+     * @param radio_uid Radio UID of the radio.
+     * @return The Agent object, or nullptr if it doesn't exist.
+     */
+    std::shared_ptr<Agent> get_agent_by_radio_uid(const sMacAddr &radio_uid);
+
+    /**
      * @brief Get radio on a specific agent
      *
      * If no agent with the given al_mac exists, an error is logged (and nullptr returned). If no
@@ -317,6 +327,17 @@ public:
      * @return The sRadio object, or nullptr if it doesn't exist.
      */
     std::shared_ptr<Agent::sRadio> get_radio_by_uid(const sMacAddr &radio_uid);
+
+    /**
+     * @brief Get radio containing a BSS with a specific BSSID
+     *
+     * Searches all Agent objects for sRadio object containing a BSS with the given BSSID.
+     * If no such radio found, nullptr is returned and an error is logged.
+     *
+     * @param bssid BSSID of one of BSSs of the radio.
+     * @return The sRadio object, or nullptr if it doesn't exist.
+     */
+    std::shared_ptr<Agent::sRadio> get_radio_by_bssid(const sMacAddr &bssid);
 
     /**
      * @brief Get station with a specific MAC address.
@@ -476,11 +497,6 @@ public:
 
     bool set_hostap_active(const sMacAddr &mac, bool active);
     bool is_hostap_active(const sMacAddr &mac);
-
-    bool set_hostap_backhaul_manager(const sMacAddr &al_mac, const sMacAddr &mac,
-                                     bool is_backhaul_manager);
-    bool is_hostap_backhaul_manager(const sMacAddr &mac);
-    std::string get_hostap_backhaul_manager(const std::string &ire);
 
     bool is_ap_out_of_band(const std::string &mac, const std::string &sta_mac);
 

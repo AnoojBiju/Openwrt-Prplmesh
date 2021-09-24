@@ -124,6 +124,17 @@ public:
         beerocks::mac_map<sBss> bsses;
     };
 
+    struct sBackhaul {
+        // Local radio the backhaul station use. If `nullptr` the backhaul is wired.
+        std::shared_ptr<Agent::sRadio> wireless_backhaul_radio;
+
+        // The BSSID which the backhaul station connected to. Could be an AP or LAN interface.
+        sMacAddr bssid;
+
+        // The Agent node that the backhaul station is connected to.
+        std::weak_ptr<Agent> parent_agent;
+    } backhaul;
+
     /** Radios reported on this agent. */
     beerocks::mac_map<sRadio> radios;
 

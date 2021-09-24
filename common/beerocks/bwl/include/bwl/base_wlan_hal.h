@@ -131,6 +131,11 @@ public:
      */
     virtual bool get_channel_utilization(uint8_t &channel_utilization) = 0;
 
+    /**
+     * @brief Converts a string-based radio state to an eRadioState.
+     */
+    eRadioState radio_state_from_string(const std::string &state);
+
     // Public getter methods:
 public:
     /*!

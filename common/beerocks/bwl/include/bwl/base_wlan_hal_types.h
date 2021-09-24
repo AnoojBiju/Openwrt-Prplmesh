@@ -138,7 +138,6 @@ struct RadioInfo {
     std::string iface_name;
     IfaceType iface_type               = IfaceType::Unsupported;
     eRadioState radio_state            = eRadioState::UNKNOWN;
-    bool radio_enabled                 = false;
     int wifi_ctrl_enabled              = 0; // Hostapd / wpa_supplicant
     bool tx_enabled                    = false;
     bool is_5ghz                       = false;
