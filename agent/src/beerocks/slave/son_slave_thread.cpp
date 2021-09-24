@@ -2107,33 +2107,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
         LOG(INFO) << "received ACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION "
                   << fronthaul_iface;
 
-        auto db    = AgentDB::get();
-        auto radio = db->radio(fronthaul_iface);
-        if (!radio) {
-            return false;
-        }
-        for (uint8_t vap_idx = 0; vap_idx < eBeeRocksIfaceIds::IFACE_TOTAL_VAPS; vap_idx++) {
-            auto &bss         = radio->front.bssids[vap_idx];
-            bss.mac           = notification_in->params().vaps[vap_idx].mac;
-            bss.ssid          = notification_in->params().vaps[vap_idx].ssid;
-            bss.fronthaul_bss = notification_in->params().vaps[vap_idx].fronthaul_vap;
-            bss.backhaul_bss  = notification_in->params().vaps[vap_idx].backhaul_vap;
-            bss.backhaul_bss_disallow_profile1_agent_association =
-                notification_in->params()
-                    .vaps[vap_idx]
-                    .profile1_backhaul_sta_association_disallowed;
-            bss.backhaul_bss_disallow_profile2_agent_association =
-                notification_in->params()
-                    .vaps[vap_idx]
-                    .profile2_backhaul_sta_association_disallowed;
-
-            if (notification_in->params().vaps[vap_idx].mac != network_utils::ZERO_MAC) {
-                LOG(DEBUG) << "BSS " << bss.mac << ", ssid:" << bss.ssid
-                           << ", fBSS: " << bss.fronthaul_bss << ", bBSS: " << bss.backhaul_bss
-                           << ", p1_dis: " << bss.backhaul_bss_disallow_profile1_agent_association
-                           << ", p2_dis: " << bss.backhaul_bss_disallow_profile2_agent_association;
-            }
-        }
+        update_vaps_info(fronthaul_iface, notification_in->params().vaps);
 
         TrafficSeparation::apply_traffic_separation(fronthaul_iface);
 
@@ -2164,6 +2138,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
             LOG(ERROR) << "addClass ieee1905_1::tlvAlMacAddress failed";
             return false;
         }
+        auto db                = AgentDB::get();
         tlvAlMacAddress->mac() = db->bridge.mac;
         send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
         break;
@@ -6347,4 +6322,33 @@ slave_thread::get_channel_preferences_from_channels_list(const std::string &fron
         }
     }
     return preferences;
+}
+
+bool slave_thread::update_vaps_info(const std::string &iface,
+                                    const beerocks_message::sVapInfo *vaps)
+{
+    auto db    = AgentDB::get();
+    auto radio = db->radio(iface);
+    if (!radio) {
+        return false;
+    }
+    for (uint8_t vap_idx = 0; vap_idx < eBeeRocksIfaceIds::IFACE_TOTAL_VAPS; vap_idx++) {
+        auto &bss         = radio->front.bssids[vap_idx];
+        bss.mac           = vaps[vap_idx].mac;
+        bss.ssid          = vaps[vap_idx].ssid;
+        bss.fronthaul_bss = vaps[vap_idx].fronthaul_vap;
+        bss.backhaul_bss  = vaps[vap_idx].backhaul_vap;
+        bss.backhaul_bss_disallow_profile1_agent_association =
+            vaps[vap_idx].profile1_backhaul_sta_association_disallowed;
+        bss.backhaul_bss_disallow_profile2_agent_association =
+            vaps[vap_idx].profile2_backhaul_sta_association_disallowed;
+
+        if (vaps[vap_idx].mac != network_utils::ZERO_MAC) {
+            LOG(DEBUG) << "BSS " << bss.mac << ", ssid:" << bss.ssid
+                       << ", fBSS: " << bss.fronthaul_bss << ", bBSS: " << bss.backhaul_bss
+                       << ", p1_dis: " << bss.backhaul_bss_disallow_profile1_agent_association
+                       << ", p2_dis: " << bss.backhaul_bss_disallow_profile2_agent_association;
+        }
+    }
+    return true;
 }
