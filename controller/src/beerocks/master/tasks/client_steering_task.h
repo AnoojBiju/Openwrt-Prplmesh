@@ -76,6 +76,12 @@ private:
      */
     bool add_sta_steer_event_to_db();
 
+    /**
+     * @brief Update steering summary statistics
+     * for BTM and CAC steering attempts, save last steering timestamp.
+     */
+    void update_steer_summary_stats(Station &station);
+
     db &m_database;
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
     task_pool &m_tasks;
