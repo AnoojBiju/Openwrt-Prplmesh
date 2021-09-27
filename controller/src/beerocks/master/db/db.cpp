@@ -5616,7 +5616,7 @@ bool db::dm_add_sta_element(const sMacAddr &bssid, Station &station)
     // Verify Station object data model path is changed or not.
     if (!station.dm_path.empty()) {
 
-        // Verify if STA is added under different BSS. If so, remove old data model.
+        // Verify if STA is added under different BSS. If so, remove old data model object.
         if (station.dm_path.find(path_to_bss) == std::string::npos) {
 
             LOG(DEBUG) << "Station is added to different BSS " << bssid
@@ -5645,6 +5645,7 @@ bool db::dm_add_sta_element(const sMacAddr &bssid, Station &station)
 
         dm_restore_sta_steering_event(station);
     }
+    dm_restore_steering_summary_stats(station);
 
     // TODO: This method will be removed after old node architecture is deprecated (PPM-1057).
     set_node_data_model_path(station.mac, station.dm_path);
@@ -5704,6 +5705,21 @@ std::string db::dm_add_steer_event()
     }
     m_steer_events.push(event_path);
     return event_path;
+}
+
+void db::dm_restore_steering_summary_stats(Station &station)
+{
+    auto steer_summary   = get_steering_summary_stats(station.mac);
+    std::string obj_path = station.dm_path + ".MultiAPSteeringSummaryStats";
+
+    m_ambiorix_datamodel->set(obj_path, "BlacklistAttempts", steer_summary->blacklist_attempts);
+    m_ambiorix_datamodel->set(obj_path, "BlacklistSuccesses", steer_summary->blacklist_successes);
+    m_ambiorix_datamodel->set(obj_path, "BlacklistFailures", steer_summary->blacklist_failures);
+    m_ambiorix_datamodel->set(obj_path, "BTMAttempts", steer_summary->btm_attempts);
+    m_ambiorix_datamodel->set(obj_path, "BTMSuccesses", steer_summary->btm_successes);
+    m_ambiorix_datamodel->set(obj_path, "BTMFailures", steer_summary->btm_failures);
+    m_ambiorix_datamodel->set(obj_path, "BTMQueryResponses", steer_summary->btm_query_responses);
+    m_ambiorix_datamodel->set(obj_path, "LastSteerTimeStamp", steer_summary->last_steer_ts);
 }
 
 std::shared_ptr<db::sSteeringSummaryStats> db::get_steering_summary_stats(const sMacAddr &sta_mac)

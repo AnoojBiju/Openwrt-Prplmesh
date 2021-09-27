@@ -732,6 +732,13 @@ public:
     std::string dm_add_steer_event();
 
     /**
+     * @brief Set values for parameters of NBAPI object MultiAPSteeringSummaryStats.
+     *
+     * @param station Station object.
+     */
+    void dm_restore_steering_summary_stats(Station &station);
+
+    /**
      * @brief Adds or updates instance of Neighbor inside Interface object.
      *
      * Path: Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.Neighbor.{i}
