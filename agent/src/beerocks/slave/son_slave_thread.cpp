@@ -1959,6 +1959,8 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
 
         fill_channel_list_to_agent_db(fronthaul_iface, notification->channel_list());
 
+        update_vaps_info(fronthaul_iface, notification->vap_list().vaps);
+
         // cac
         save_cac_capabilities_params_to_db(fronthaul_iface);
 
