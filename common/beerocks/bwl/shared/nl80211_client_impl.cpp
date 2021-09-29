@@ -225,7 +225,9 @@ bool nl80211_client_impl::get_radio_info(const std::string &interface_name, radi
             struct nlattr *nl_band;
             int rem_band;
 
-            nla_for_each_nested(nl_band, tb[NL80211_ATTR_WIPHY_BANDS], rem_band)
+            const struct nlattr *nla = tb[NL80211_ATTR_WIPHY_BANDS];
+            nla_for_each_attr(nl_band, static_cast<struct nlattr *>(nla_data(nla)), nla_len(nla),
+                              rem_band)
             {
                 struct nlattr *tb_band[NL80211_BAND_ATTR_MAX + 1];
 
@@ -327,7 +329,9 @@ bool nl80211_client_impl::get_radio_info(const std::string &interface_name, radi
                 struct nlattr *nl_freq;
                 int rem_freq;
 
-                nla_for_each_nested(nl_freq, tb_band[NL80211_BAND_ATTR_FREQS], rem_freq)
+                nla = tb_band[NL80211_BAND_ATTR_FREQS];
+                nla_for_each_attr(nl_freq, static_cast<struct nlattr *>(nla_data(nla)),
+                                  nla_len(nla), rem_freq)
                 {
                     struct nlattr *tb_freq[NL80211_FREQUENCY_ATTR_MAX + 1];
                     static auto freq_policy = []() {
