@@ -219,7 +219,7 @@ public:
                 bool backhaul_bss_disallow_profile1_agent_association;
                 bool backhaul_bss_disallow_profile2_agent_association;
             };
-            std::array<sBssid, eBeeRocksIfaceIds::IFACE_TOTAL_VAPS> bssids;
+            std::array<sBssid, eBeeRocksIfaceIds::IFACE_TOTAL_VAPS> bssids{};
         } front;
 
         struct sBack {

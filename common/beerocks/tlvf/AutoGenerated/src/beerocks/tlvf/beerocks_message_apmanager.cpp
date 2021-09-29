@@ -261,6 +261,7 @@ std::shared_ptr<cChannelList> cACTION_APMANAGER_JOINED_NOTIFICATION::create_chan
         size_t move_length = getBuffRemainingBytes(src) - len;
         std::copy_n(src, move_length, dst);
     }
+    m_vap_list = (sVapsList *)((uint8_t *)(m_vap_list) + len);
     return std::make_shared<cChannelList>(src, getBuffRemainingBytes(src), m_parse__);
 }
 
@@ -284,6 +285,7 @@ bool cACTION_APMANAGER_JOINED_NOTIFICATION::add_channel_list(std::shared_ptr<cCh
     }
     m_channel_list_init = true;
     size_t len = ptr->getLen();
+    m_vap_list = (sVapsList *)((uint8_t *)(m_vap_list) + len - ptr->get_initial_size());
     m_channel_list_ptr = ptr;
     if (!buffPtrIncrementSafe(len)) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
@@ -293,12 +295,17 @@ bool cACTION_APMANAGER_JOINED_NOTIFICATION::add_channel_list(std::shared_ptr<cCh
     return true;
 }
 
+sVapsList& cACTION_APMANAGER_JOINED_NOTIFICATION::vap_list() {
+    return (sVapsList&)(*m_vap_list);
+}
+
 void cACTION_APMANAGER_JOINED_NOTIFICATION::class_swap()
 {
     tlvf_swap(8*sizeof(eActionOp_APMANAGER), reinterpret_cast<uint8_t*>(m_action_op));
     m_params->struct_swap();
     m_cs_params->struct_swap();
     if (m_channel_list_ptr) { m_channel_list_ptr->class_swap(); }
+    m_vap_list->struct_swap();
 }
 
 bool cACTION_APMANAGER_JOINED_NOTIFICATION::finalize()
@@ -333,6 +340,7 @@ size_t cACTION_APMANAGER_JOINED_NOTIFICATION::get_initial_size()
     size_t class_size = 0;
     class_size += sizeof(sNodeHostap); // params
     class_size += sizeof(sApChannelSwitch); // cs_params
+    class_size += sizeof(sVapsList); // vap_list
     return class_size;
 }
 
@@ -368,6 +376,12 @@ bool cACTION_APMANAGER_JOINED_NOTIFICATION::init()
         // swap back since channel_list will be swapped as part of the whole class swap
         channel_list->class_swap();
     }
+    m_vap_list = reinterpret_cast<sVapsList*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(sVapsList))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sVapsList) << ") Failed!";
+        return false;
+    }
+    if (!m_parse__) { m_vap_list->struct_init(); }
     if (m_parse__) { class_swap(); }
     return true;
 }
