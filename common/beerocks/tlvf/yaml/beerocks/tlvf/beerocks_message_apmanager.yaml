@@ -37,6 +37,7 @@ cACTION_APMANAGER_JOINED_NOTIFICATION:
   params: sNodeHostap
   cs_params: sApChannelSwitch
   channel_list: cChannelList
+  vap_list: sVapsList
 
 cACTION_APMANAGER_ENABLE_APS_REQUEST:
   _type: class

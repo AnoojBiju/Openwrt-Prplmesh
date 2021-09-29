@@ -393,6 +393,14 @@ private:
     get_channel_preference(beerocks::message::sWifiChannel channel,
                            const sChannelPreference &preference,
                            const std::set<uint8_t> &preference_channels_list);
+
+    /**
+     * @brief Update the vaps in the Agent DB.
+     * @param iface The interface to use to find the radio in the DB.
+     * @param vaps the array of VAPs to use for the update.
+     * @return true on success, false on failure.
+     */
+    bool update_vaps_info(const std::string &iface, const beerocks_message::sVapInfo vaps[]);
 };
 
 } // namespace son
