@@ -137,6 +137,8 @@ run-tests-on-altran-glinet-testbed:
   tags:
     - test_flows_on_altran
   timeout: 90m
+  needs:
+    - job: build-for-glinet-b1300
 
 run-certification-tests-R1-platform-essensium:
   extends: .run-certification-tests-R1
