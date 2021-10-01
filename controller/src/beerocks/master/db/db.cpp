@@ -375,29 +375,26 @@ std::string db::dm_add_radio_element(const std::string &radio_mac, const std::st
 
 bool db::dm_add_sta_beacon_measurement(const beerocks_message::sBeaconResponse11k &beacon)
 {
-    auto sta_node = get_node(beacon.sta_mac);
+    auto sta = get_station(beacon.sta_mac);
 
-    if (!sta_node || sta_node->get_type() != TYPE_CLIENT) {
-        LOG(ERROR) << "Failed to get station node with mac: " << beacon.sta_mac;
+    if (!sta) {
+        LOG(ERROR) << "Failed to get station with mac: " << beacon.sta_mac;
         return false;
     }
-
-    std::string sta_path = sta_node->dm_path;
-
-    if (sta_path.empty()) {
+    if (sta->dm_path.empty()) {
         return true;
     }
 
     if (m_dialog_tokens[beacon.sta_mac] != beacon.dialog_token) {
-        m_ambiorix_datamodel->remove_all_instances(sta_path + ".MeasurementReport");
+        m_ambiorix_datamodel->remove_all_instances(sta->dm_path + ".MeasurementReport");
     }
     m_dialog_tokens[beacon.sta_mac] = beacon.dialog_token;
 
     std::string measurement_inst =
-        m_ambiorix_datamodel->add_instance(sta_path + ".MeasurementReport");
+        m_ambiorix_datamodel->add_instance(sta->dm_path + ".MeasurementReport");
 
     if (measurement_inst.empty()) {
-        LOG(ERROR) << "Failed to add: " << sta_path;
+        LOG(ERROR) << "Failed to add: " << sta->dm_path << ".MeasurementReport";
         return false;
     }
 
