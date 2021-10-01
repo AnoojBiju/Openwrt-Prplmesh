@@ -5,7 +5,7 @@
 # See LICENSE file for more details.
 ###############################################################
 
-FROM ubuntu:18.04
+FROM ubuntu:bionic-20210930
 
 ####
 ## Yocto pre-requisites and "rdk" user
