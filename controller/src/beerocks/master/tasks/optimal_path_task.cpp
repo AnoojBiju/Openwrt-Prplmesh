@@ -491,6 +491,9 @@ void optimal_path_task::work()
             }
         }
 
+        // The following log print is used by the automated testing
+        // Please do NOT change
+        TASK_LOG(DEBUG) << "Finished gathering 11k measurements";
         TASK_LOG(DEBUG) << "calculating estimate hostap dl rssi/rate for sta " << sta_mac;
 
         //calculate tx phy rate and find best_weighted_phy_rate
@@ -944,6 +947,9 @@ void optimal_path_task::work()
             calculate_measurement_delay_count = 0;
         }
 
+        // The following log print is used by the automated testing
+        // Please do NOT change
+        TASK_LOG(DEBUG) << "Finished gathering cross rssi measurements";
         TASK_LOG(DEBUG) << "calculating estimate hostap dl rssi/rate for sta " << sta_mac;
 
         //get sta parameters
