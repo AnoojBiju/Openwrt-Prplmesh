@@ -27,39 +27,46 @@ namespace transport {
 using namespace beerocks::transport::messages;
 
 void Ieee1905Transport::update_network_interfaces(
-    const std::map<std::string, NetworkInterface> &updated_network_interfaces)
+    const std::map<std::string, NetworkInterface> &added_updated_network_interfaces,
+    const std::map<std::string, NetworkInterface> &removed_network_interfaces)
 {
-    // find and remove interfaces that are no longer in use
-    for (auto it = network_interfaces_.begin(); it != network_interfaces_.end();) {
-        auto &network_interface = it->second;
-        auto &ifname            = network_interface.ifname;
 
-        if (updated_network_interfaces.count(ifname) == 0) {
-            MAPF_INFO("interface " << ifname << " is no longer used.");
-            if (network_interface.fd) {
-                m_event_loop->remove_handlers(network_interface.fd->getSocketFd());
-                network_interface.fd = nullptr;
-            }
-
-            it = network_interfaces_.erase(it);
-        } else {
-            ++it;
+    for (const auto &remove_net_if_element : removed_network_interfaces) {
+        auto &ifname = remove_net_if_element.second.ifname;
+        MAPF_INFO("interface " << ifname << " is no longer used.");
+        auto iface_it = network_interfaces_.find(ifname);
+        if (iface_it == network_interfaces_.end()) {
+            // Request to remove interface which was not added, ignore.
+            continue;
         }
+        auto &network_interface = iface_it->second;
+
+        if (network_interface.fd) {
+            m_event_loop->remove_handlers(network_interface.fd->getSocketFd());
+            network_interface.fd = nullptr;
+        }
+
+        network_interfaces_.erase(iface_it);
+
+        update_network_interface(network_interface.bridge_name, network_interface.ifname, false);
     }
 
-    // add new interfaces or update existing ones
-    for (const auto &entry : updated_network_interfaces) {
+    // Add new interfaces or update existing ones.
+    for (const auto &entry : added_updated_network_interfaces) {
         auto &updated_network_interface = entry.second;
 
         auto &bridge_name = updated_network_interface.bridge_name;
         auto &ifname      = updated_network_interface.ifname;
-
-        update_network_interface(bridge_name, ifname, true);
+        auto is_bridge    = updated_network_interface.is_bridge;
+        LOG(DEBUG) << "Adding iface " << ifname << ", is_bridge=" << is_bridge
+                   << ", bridge_name=" << bridge_name;
+        update_network_interface(bridge_name, ifname, true, is_bridge);
     }
 }
 
 bool Ieee1905Transport::update_network_interface(const std::string &bridge_name,
-                                                 const std::string &ifname, bool iface_added)
+                                                 const std::string &ifname, bool iface_added,
+                                                 bool is_bridge)
 {
     if (iface_added) {
         // Add the new interface to network_interfaces_
@@ -74,7 +81,7 @@ bool Ieee1905Transport::update_network_interface(const std::string &bridge_name,
             network_interfaces_[ifname]; // Creates the interface object if it doesn't exist yet..
         interface.ifname      = ifname;
         interface.bridge_name = bridge_name;
-        interface.is_bridge   = bridge_name.empty();
+        interface.is_bridge   = is_bridge;
 
         // must be called before open_interface_socket (address is used for packet filtering)
         if (!get_interface_mac_addr(if_index, interface.addr)) {
@@ -87,8 +94,8 @@ bool Ieee1905Transport::update_network_interface(const std::string &bridge_name,
         LOG(INFO) << "Interface " << ifname << " with index " << if_index << " and address "
                   << tlvf::mac_from_array(interface.addr) << " is used.";
 
-        // If the interface is in the bridge but it is not up and running, then do not activate it
-        // yet. Otherwise operations on the socket created for the interface would fail.
+        // If the interface is not up and running, then do not activate it yet, otherwise operations
+        // on the socket created for the interface would fail.
         // The interface will be activated later, when its state changes to up.
         bool iface_state;
         if (!m_interface_state_manager->read_state(ifname, iface_state)) {
@@ -103,14 +110,7 @@ bool Ieee1905Transport::update_network_interface(const std::string &bridge_name,
 
         activate_interface(interface);
     } else {
-        if (network_interfaces_.count(ifname) == 0) {
-            LOG(ERROR) << "Trying to remove interface " << ifname
-                       << " that has not been previously configured.";
-            return false;
-        }
-
         MAPF_INFO("Removing interface " << ifname << " from the transport");
-
         remove_network_interface(ifname);
     }
     return true;
@@ -274,7 +274,7 @@ void Ieee1905Transport::handle_bridge_state_change(const std::string &bridge_nam
               << iface_name << " " << (iface_added ? "added to" : "removed from") << " bridge "
               << bridge_name << ".");
 
-    update_network_interface(bridge_name, iface_name, iface_added);
+    update_network_interface(bridge_name, iface_name, iface_added, false);
 }
 
 void Ieee1905Transport::deactivate_interface(NetworkInterface &interface, bool remove_handlers)

@@ -443,7 +443,17 @@ class InterfaceConfigurationRequestMessage : public Message {
 public:
     struct Metadata {
         uint8_t version = kVersion;
+        // The bridge's interface name (if this interface is in a bridge)
         char bridge_name[IF_NAMESIZE];
+
+        // Interface name
+        char iface_name[IF_NAMESIZE];
+
+        // Is this interface a bridge interface
+        bool is_bridge;
+
+        // true for adding the interface to interfaces list, otherwise false.
+        bool add;
     };
 
     explicit InterfaceConfigurationRequestMessage(std::initializer_list<Frame> frames = {})

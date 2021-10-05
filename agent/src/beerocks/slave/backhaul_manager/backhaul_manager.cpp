@@ -1033,7 +1033,7 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
         if (!(db->device_conf.certification_mode && db->device_conf.local_controller)) {
             if (db->device_conf.management_mode != BPL_MGMT_MODE_NOT_MULTIAP) {
                 // Configure the transport process to use the network bridge
-                if (!m_broker_client->configure_interfaces(db->bridge.iface_name)) {
+                if (!m_broker_client->configure_interfaces(db->bridge.iface_name, {}, true, true)) {
                     LOG(ERROR) << "Failed configuring transport process!";
                     FSM_MOVE_STATE(RESTART);
                     break;
@@ -1070,7 +1070,7 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
         if (db->device_conf.certification_mode && db->device_conf.local_controller) {
             if (db->device_conf.management_mode != BPL_MGMT_MODE_NOT_MULTIAP) {
                 // Configure the transport process to use the network bridge
-                if (!m_broker_client->configure_interfaces(db->bridge.iface_name)) {
+                if (!m_broker_client->configure_interfaces(db->bridge.iface_name, {}, true, true)) {
                     LOG(ERROR) << "Failed configuring transport process!";
                     FSM_MOVE_STATE(RESTART);
                     break;

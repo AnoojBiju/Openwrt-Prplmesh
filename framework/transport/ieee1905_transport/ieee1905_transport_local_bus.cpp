@@ -96,27 +96,54 @@ void Ieee1905Transport::handle_broker_cmdu_tx_message(CmduTxMessage &msg)
 void Ieee1905Transport::handle_broker_interface_configuration_request_message(
     InterfaceConfigurationRequestMessage &msg)
 {
-    std::map<std::string, NetworkInterface> updated_network_interfaces;
+    std::map<std::string, NetworkInterface> added_updated_network_interfaces;
+    std::map<std::string, NetworkInterface> removed_network_interfaces;
 
-    auto bridge_name = msg.metadata()->bridge_name;
-    MAPF_INFO("Using bridge: " << bridge_name);
+    LOG(DEBUG) << "handle_broker_interface_configuration_request_message(): "
+               << "iface_name=" << msg.metadata()->iface_name << ", add= " << msg.metadata()->add;
 
-    // fill a set with the interfaces that are part of the bridge:
-    std::set<std::string> bridge_state{};
-    LOG_IF(!m_bridge_state_manager->read_state(bridge_name, bridge_state), ERROR)
-        << "Failed reading the bridge " << bridge_name << " state!";
+    if (msg.metadata()->is_bridge) {
+        auto bridge_name = msg.metadata()->iface_name;
+        MAPF_INFO("Using bridge: " << bridge_name);
 
-    updated_network_interfaces[bridge_name].ifname      = bridge_name;
-    updated_network_interfaces[bridge_name].bridge_name = std::string();
-    updated_network_interfaces[bridge_name].is_bridge   = true;
+        // fill a set with the interfaces that are part of the bridge:
+        std::set<std::string> bridge_state{};
+        auto bridge_state_ret = m_bridge_state_manager->read_state(bridge_name, bridge_state);
+        LOG_IF(!bridge_state_ret, ERROR)
+            << "Failed reading the bridge " << bridge_name << " state!";
 
-    for (const auto &ifname : bridge_state) {
-        MAPF_INFO("  Using interface: " << ifname);
-        updated_network_interfaces[ifname].ifname      = ifname;
-        updated_network_interfaces[ifname].bridge_name = bridge_name;
+        if (!bridge_state_ret || !msg.metadata()->add) {
+            for (const auto &net_if_element : network_interfaces_) {
+                removed_network_interfaces.insert(net_if_element);
+            }
+        } else {
+            added_updated_network_interfaces[bridge_name].ifname      = bridge_name;
+            added_updated_network_interfaces[bridge_name].bridge_name = {};
+            added_updated_network_interfaces[bridge_name].is_bridge   = true;
+
+            for (const auto &ifname : bridge_state) {
+                MAPF_INFO("  Using interface: " << ifname);
+                added_updated_network_interfaces[ifname].ifname      = ifname;
+                added_updated_network_interfaces[ifname].bridge_name = bridge_name;
+                added_updated_network_interfaces[ifname].is_bridge   = false;
+            }
+        }
+    }
+    // Interface is not on the bridge
+    else {
+        auto iface_name = msg.metadata()->iface_name;
+        if (msg.metadata()->add) {
+            added_updated_network_interfaces[iface_name].ifname      = iface_name;
+            added_updated_network_interfaces[iface_name].bridge_name = {};
+            added_updated_network_interfaces[iface_name].is_bridge   = false;
+        } else {
+            removed_network_interfaces[iface_name].ifname      = iface_name;
+            removed_network_interfaces[iface_name].bridge_name = {};
+            removed_network_interfaces[iface_name].is_bridge   = false;
+        }
     }
 
-    update_network_interfaces(updated_network_interfaces);
+    update_network_interfaces(added_updated_network_interfaces, removed_network_interfaces);
 }
 
 void Ieee1905Transport::handle_al_mac_addr_configuration_message(
