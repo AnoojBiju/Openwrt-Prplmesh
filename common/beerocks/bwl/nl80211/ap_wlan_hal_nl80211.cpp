@@ -548,7 +548,9 @@ bool ap_wlan_hal_nl80211::update_vap_credentials(
                 }
 
                 // escape III
-                if (conf.get_vap_value(vap, "bssid").empty()) {
+                // check explicit bssid value only in case of Multiple BSSID support
+                if ((!conf.get_vap_value(vap, "bss").empty()) &&
+                    conf.get_vap_value(vap, "bssid").empty()) {
                     LOG(ERROR) << "Failed to get BSSID for vap: " << vap;
                     abort = true;
                     return;
