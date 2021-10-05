@@ -264,7 +264,7 @@ void optimal_path_task::work()
 
                 chosen_method.append("Steer client imminently to initial radio " +
                                      tlvf::mac_to_string(client_initial_radio) + " ");
-                TASK_LOG(INFO) << chosen_method;
+                TASK_LOG(INFO) << "Resolving Optimal task on persistent preference: " << chosen_method;
                 break;
             }
             TASK_LOG(WARNING) << "Client's initial radio " << client_initial_radio
@@ -297,7 +297,7 @@ void optimal_path_task::work()
                     is_force_steer = true;
                     chosen_method.append("Found local radio " + std::string(sibling_it->data()) +
                                          " on selected bands, force steer client to that radio ");
-                    TASK_LOG(INFO) << chosen_method;
+                    TASK_LOG(INFO) << "Resolving Optimal task on persistent preference: " << chosen_method;
                     break;
                 }
                 TASK_LOG(WARNING) << "Couldnt find local radio on selected bands "
@@ -1059,7 +1059,7 @@ void optimal_path_task::work()
                 is_force_steer = true;
                 chosen_method.append("Steer client imminently to initial radio " +
                                      hostap_it->first + " ");
-                TASK_LOG(INFO) << chosen_method;
+                TASK_LOG(INFO) << "Resolving Optimal task on persistent preference: " << chosen_method;
                 break;
             }
             TASK_LOG(WARNING) << "Client's initial radio " << client_initial_radio
@@ -1093,7 +1093,7 @@ void optimal_path_task::work()
                     chosen_method.append("Found local radio " + std::string(sibling_it->data()) +
                                          " on selected bands, force steer client to that radio ");
 
-                    TASK_LOG(INFO) << chosen_method;
+                    TASK_LOG(INFO) << "Resolving Optimal task on persistent preference: " << chosen_method;
                     break;
                 }
                 TASK_LOG(WARNING) << "Couldnt find local radio on selected bands "
