@@ -5,11 +5,69 @@
  * This code is subject to the terms of the BSD+Patent license.
  * See LICENSE file for more details.
  */
+#include <bcl/beerocks_event_loop_impl.h>
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
+#include <btl/broker_client_factory_factory.h>
 
 #include "agent_db.h"
 #include "traffic_separation.h"
+
+constexpr char DOT_PVID_SUFFIX[] = ".pvid";
+#define PVID_SUFFIX &DOT_PVID_SUFFIX[1]
+
+/**
+ * @brief Configure interface on the Transport.
+ *
+ * @param iface Interface to configure.
+ * @param add true for adding interface, false to remove.
+ */
+static void configure_transport(const std::string &iface, bool add)
+{
+    // TODO: It would have been better if the traffic would be using the broker interface of caller
+    // instead of creating it every time.
+    // Since the Agent (son_slave) is the only user of the traffic sepaeration class, the broker
+    // interface cannot be provided, because the son_slave does not have it.
+    // It will be possible only after PPM-1529 will be done.
+
+    // Create broker client factory to create broker clients when requested
+    std::string broker_uds_path = std::string("/tmp/beerocks/") + std::string(BEEROCKS_BROKER_UDS);
+    auto event_loop             = std::make_shared<beerocks::EventLoopImpl>();
+    LOG_IF(!event_loop, FATAL) << "Unable to create event loop!";
+    auto broker_client_factory =
+        beerocks::btl::create_broker_client_factory(broker_uds_path, event_loop);
+    LOG_IF(!broker_client_factory, FATAL) << "Unable to create broker client factory!";
+    auto broker_client = broker_client_factory->create_instance();
+    LOG_IF(!broker_client, FATAL) << "Failed to create instance of broker client";
+    if (!broker_client->configure_interfaces(iface, {}, false, add)) {
+        LOG(ERROR) << "Failed configuring transport process!";
+    }
+}
+
+/**
+ * @brief Update interfaces configuration on the Transport of @a vlan_iface linked to @a iface.
+ *
+ * If @a vlan_add is true, add @a vlan_iface to the Transport, and remove @a iface.
+ * If @a vlan_add is false, remove  @a vlan_iface to the Transport, and add @a iface.
+ *
+ * @param iface Interface name.
+ * @param vlan_iface VLAN interface linked to @a iface.
+ * @param vlan_add true for adding @a vlan_iface to the Transport, and remove @a iface, false for
+ * the opposite.
+ */
+static void update_transport_configuration(const std::string &iface, const std::string &vlan_iface,
+                                           bool vlan_add)
+{
+    if (vlan_add) {
+        // Add the VLAN interface and remove the wireless backhaul interface so a packet will
+        // not be sent twice.
+        configure_transport(vlan_iface, true);
+        configure_transport(iface, false);
+        return;
+    }
+    configure_transport(vlan_iface, false);
+    configure_transport(iface, true);
+}
 
 namespace beerocks {
 namespace net {
@@ -93,12 +151,38 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
             LOG(ERROR) << "Could not find Backhaul Radio interface!";
             return;
         }
+
+        // Delete old VLAN interface, since it is not possible to modify the VLAN ID of an
+        // interface. Only removing and re-create it.
+        auto vlan_iface_name = db->backhaul.selected_iface_name + DOT_PVID_SUFFIX;
+        network_utils::delete_interface(vlan_iface_name);
+
+        bool vlan_iface_added = false;
+
         if (db->backhaul.bssid_multi_ap_profile > 1) {
+
+            // Since multicast messages are not bridged (c83c81fa), and instead of being sent to all
+            // interfaces, they will lack a VLAN tag. To overcome it, add a VLAN interface with the
+            // Primary VLAN on the backhaul interface. Only a Primary VLAN is needed since it is the
+            // only VLAN that IEEE 1905.1 messages could be sent on.
+            // Use ".pvid" suffix so it will be easy to change the VLAN ID if changed by the
+            // Controller.
+            // The same is done on any Profile 2 bAP interface.
+            network_utils::create_vlan_interface(db->backhaul.selected_iface_name,
+                                                 db->traffic_separation.primary_vlan_id,
+                                                 PVID_SUFFIX);
+            vlan_iface_added = true;
+
+            network_utils::linux_iface_ctrl(vlan_iface_name, true);
+
             set_vlan_policy(radio->back.iface_name, ePortMode::TAGGED_PORT_PRIMARY_TAGGED,
                             is_bridge);
         } else {
             set_vlan_policy(radio->back.iface_name, ePortMode::UNTAGGED_PORT, is_bridge);
         }
+
+        update_transport_configuration(db->backhaul.selected_iface_name, vlan_iface_name,
+                                       vlan_iface_added);
     }
 
     // If radio interface has not been given, then stop configuring the VLAN policy after finished
@@ -157,8 +241,32 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
                 network_utils::get_bss_ifaces(bss_iface, db->bridge.iface_name);
 
             for (const auto &bss_iface_netdev : bss_iface_netdevs) {
+
+                // Delete old VLAN interface, since it is not possible to modify the VLAN ID of an
+                // interface. Only removing and re-create it.
+                auto vlan_iface_name = db->backhaul.selected_iface_name + DOT_PVID_SUFFIX;
+                network_utils::delete_interface(vlan_iface_name);
+
+                auto vlan_iface_added = false;
+
                 // Profile-2 Backhaul BSS
                 if (bss.backhaul_bss_disallow_profile1_agent_association) {
+
+                    // Since multicast messages are not bridged (c83c81fa), and instead of being
+                    // sent to all interfaces, they will lack a VLAN tag. To overcome it, add a VLAN
+                    // interfacewith the Primary VLAN on the backhaul interface. Only a Primary VLAN
+                    // is needed since it is the only VLAN that IEEE 1905.1 messages could be sent
+                    // on.
+                    // Use ".pvid" suffix so it will be easy to change the VLAN ID if changed by the
+                    // Controller.
+                    // The same is done on the Profile 2 bSTA interface.
+                    network_utils::create_vlan_interface(db->backhaul.selected_iface_name,
+                                                         db->traffic_separation.primary_vlan_id,
+                                                         PVID_SUFFIX);
+                    vlan_iface_added = true;
+
+                    network_utils::linux_iface_ctrl(vlan_iface_name, true);
+
                     set_vlan_policy(bss_iface_netdev, ePortMode::TAGGED_PORT_PRIMARY_UNTAGGED,
                                     is_bridge);
                 }
@@ -167,11 +275,17 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
                     set_vlan_policy(bss_iface_netdev, ePortMode::UNTAGGED_PORT, is_bridge,
                                     db->traffic_separation.primary_vlan_id);
                 }
+
+                update_transport_configuration(db->backhaul.selected_iface_name, vlan_iface_name,
+                                               vlan_iface_added);
             }
         }
         // Combined fBSS & bBSS - Currently Support only Profile-1 (PPM-1418)
         else {
             if (!bss.backhaul_bss_disallow_profile2_agent_association) {
+
+                // Note: If Combined mode with profile 2 will be supported, need to create a VLAN
+                // interface for it to support tagging on multicast messages.
                 LOG(WARNING) << "bBSS invalid configuration! "
                              << "Combined BSS not supported with Profile-2 bBSS - Skip";
                 continue;
