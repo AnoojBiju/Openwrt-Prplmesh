@@ -2955,6 +2955,41 @@ int bml_internal::get_client_roaming(int &result)
     return (iRet);
 }
 
+int bml_internal::set_client_roaming_11k_support(bool enable)
+{
+    //CMDU message
+    auto request = message_com::create_vs_message<
+        beerocks_message::cACTION_BML_SET_CLIENT_ROAMING_11K_SUPPORT_REQUEST>(cmdu_tx);
+
+    if (request == nullptr) {
+        LOG(ERROR) << "Failed building ACTION_BML_SET_CLIENT_ROAMING_11K_SUPPORT_REQUEST message!";
+        return (-BML_RET_OP_FAILED);
+    }
+
+    request->isEnable() = enable;
+
+    int result;
+    int iRet = send_bml_cmdu(result, request->get_action_op());
+
+    return (iRet);
+}
+
+int bml_internal::get_client_roaming_11k_support(int &result)
+{
+    //CMDU message
+    auto request = message_com::create_vs_message<
+        beerocks_message::cACTION_BML_GET_CLIENT_ROAMING_11K_SUPPORT_REQUEST>(cmdu_tx);
+
+    if (request == nullptr) {
+        LOG(ERROR) << "Failed building ACTION_BML_GET_CLIENT_ROAMING_11K_SUPPORT_REQUEST message!";
+        return (-BML_RET_OP_FAILED);
+    }
+
+    int iRet = send_bml_cmdu(result, request->get_action_op());
+
+    return (iRet);
+}
+
 int bml_internal::set_legacy_client_roaming(bool enable)
 {
     //CMDU message
