@@ -740,19 +740,24 @@ void optimal_path_task::work()
             chosen_bssid = database.get_hostap_vap_with_ssid(tlvf::mac_from_string(chosen_hostap),
                                                              current_hostap_ssid);
             if (!database.settings_client_optimal_path_roaming_prefer_signal_strength()) {
-                LOG_CLI(DEBUG, "optimal_path_task:" << std::endl
-                                                    << "    best hostap for " << sta_mac << " is "
-                                                    << chosen_bssid << " with weighted_phy_rate="
-                                                    << (best_weighted_phy_rate / (1024.0 * 1024.0))
-                                                    << " [Mbps]" << std::endl
-                                                    << "    --> steering " << sta_mac << " to "
-                                                    << chosen_bssid << std::endl);
+                // The following log print is used by the automated testing
+                // Please do NOT change
+                LOG_CLI(DEBUG, "optimal_path_task: Found a better optimized path for the client."
+                                   << std::endl
+                                   << "    best hostap for " << sta_mac << " is " << chosen_bssid
+                                   << " with weighted_phy_rate="
+                                   << (best_weighted_phy_rate / (1024.0 * 1024.0)) << " [Mbps]"
+                                   << std::endl
+                                   << "    --> steering " << sta_mac << " to " << chosen_bssid
+                                   << std::endl);
             } else {
-                LOG_CLI(DEBUG,
-                        "optimal_path_task:" << std::endl
-                                             << "    best hostap (signal strength metric) for "
-                                             << sta_mac << " is " << chosen_bssid
-                                             << " with dl_rssi=" << (best_dl_rssi) << " [dBm]");
+                // The following log print is used by the automated testing
+                // Please do NOT change
+                LOG_CLI(DEBUG, "optimal_path_task: Found a better optimized path for the client."
+                                   << std::endl
+                                   << "    best hostap (signal strength metric) for " << sta_mac
+                                   << " is " << chosen_bssid << " with dl_rssi=" << (best_dl_rssi)
+                                   << " [dBm]");
             }
 
             state = SEND_STEER_ACTION;
@@ -1385,16 +1390,21 @@ void optimal_path_task::work()
         } else {
             if (!database.settings_client_optimal_path_roaming_prefer_signal_strength()) {
                 chosen_method.append(" PHY rate ");
-                LOG_CLI(DEBUG, "optimal_path_task:" << std::endl
-                                                    << "    best hostap for " << sta_mac << " is "
-                                                    << chosen_bssid << " with weighted_phy_rate="
-                                                    << (best_weighted_phy_rate / (1024.0 * 1024.0))
-                                                    << " [Mbps]" << std::endl
-                                                    << "    --> steering " << sta_mac << " to "
-                                                    << chosen_bssid << std::endl);
+                // The following log print is used by the automated testing
+                // Please do NOT change
+                LOG_CLI(DEBUG, "optimal_path_task: Found a better optimized path for the client."
+                                   << std::endl
+                                   << "    best hostap for " << sta_mac << " is " << chosen_bssid
+                                   << " with weighted_phy_rate="
+                                   << (best_weighted_phy_rate / (1024.0 * 1024.0)) << " [Mbps]"
+                                   << std::endl
+                                   << "    --> steering " << sta_mac << " to " << chosen_bssid
+                                   << std::endl);
             } else {
                 chosen_method.append(" link quality (RSSI) ");
-                LOG_CLI(DEBUG, "optimal_path_task:"
+                // The following log print is used by the automated testing
+                // Please do NOT change
+                LOG_CLI(DEBUG, "optimal_path_task: Found a better optimized path for the client."
                                    << std::endl
                                    << "    best hostap (signal strength metric) for " << sta_mac
                                    << " is " << chosen_bssid << " with ul_rssi=" << (best_ul_rssi)
