@@ -8,7 +8,7 @@
 ####
 ## OpenWrt pre-requisites and "openwrt" user
 ####
-FROM ubuntu:18.04 as openwrt-prerequisites
+FROM ubuntu:bionic-20210930 as openwrt-prerequisites
 
 RUN apt-get update \
     && apt-get -y install --no-install-recommends \
