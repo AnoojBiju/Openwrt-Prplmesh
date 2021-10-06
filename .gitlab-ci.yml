@@ -76,7 +76,10 @@ dco:
     - if: $CI_MERGE_REQUEST_ID
     - if: $CI_EXTERNAL_PULL_REQUEST_IID
   script:
-    - CI_MERGE_REQUEST_TARGET_BRANCH_SHA=$(git merge-base --fork-point origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME) dco-check --verbose -b origin/master
+    - export CI_MERGE_REQUEST_TARGET_BRANCH_SHA=$(git merge-base --fork-point origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME)
+    # if --forkpoint failed, fallback to just using merge-base:
+    - test -z "$CI_MERGE_REQUEST_TARGET_BRANCH_SHA" && export CI_MERGE_REQUEST_TARGET_BRANCH_SHA=$(git merge-base "origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" "origin/$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME")
+    - dco-check --verbose
 
 cppcheck:
   stage: build
