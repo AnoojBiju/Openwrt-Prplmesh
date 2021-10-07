@@ -395,4 +395,56 @@ bool AssocReqFrame::valid() const
     return true;
 }
 
+uint16_t &AssocReqFrame::listen_interval() { return getAttr<cCapInfoDmgSta>()->listen_interval(); }
+
+std::string AssocReqFrame::sta_ssid() { return getAttr<cSSID>()->ssid_str(); }
+
+std::shared_ptr<assoc_frame::cStaHtCapability> AssocReqFrame::sta_ht_capability()
+{
+    if (fields_present.ht_capability) {
+        return getAttr<cStaHtCapability>();
+    }
+    return {};
+}
+
+std::shared_ptr<assoc_frame::cStaVhtCapability> AssocReqFrame::sta_vht_capability()
+{
+    if (fields_present.vht_capability) {
+        return getAttr<cStaVhtCapability>();
+    }
+    return {};
+}
+
+uint8_t *AssocReqFrame::supported_rates()
+{
+    if (fields_present.supported_rates) {
+        return getAttr<cSupportRates>()->supported_rated();
+    };
+    return {};
+}
+
+std::shared_ptr<assoc_frame::cPowerCapability> AssocReqFrame::power_capability()
+{
+    if (fields_present.power_capability) {
+        return getAttr<cPowerCapability>();
+    };
+    return {};
+}
+
+std::shared_ptr<assoc_frame::cRmEnabledCaps> AssocReqFrame::rm_enabled_caps()
+{
+    if (fields_present.rm_enabled_caps) {
+        return getAttr<cRmEnabledCaps>();
+    };
+    return {};
+}
+
+std::shared_ptr<assoc_frame::cMultiBand> AssocReqFrame::multi_band()
+{
+    if (fields_present.multi_band) {
+        return getAttr<cMultiBand>();
+    };
+    return {};
+}
+
 }; // namespace assoc_frame

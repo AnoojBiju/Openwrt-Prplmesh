@@ -84,6 +84,14 @@ public:
                                                 const eFrameType frame_type = eFrameType::UNKNOWN);
     bool valid() const override;
     bool init();
+    uint16_t &listen_interval();
+    std::string sta_ssid();
+    std::shared_ptr<cStaHtCapability> sta_ht_capability();
+    std::shared_ptr<cStaVhtCapability> sta_vht_capability();
+    std::shared_ptr<cPowerCapability> power_capability();
+    std::shared_ptr<cRmEnabledCaps> rm_enabled_caps();
+    std::shared_ptr<cMultiBand> multi_band();
+    uint8_t *supported_rates();
 
     eFrameType type;
     sFieldsPresent fields_present;
