@@ -43,6 +43,7 @@
 #include <beerocks/tlvf/beerocks_message_1905_vs.h>
 #include <beerocks/tlvf/beerocks_message_control.h>
 
+#include <tlvf/AssociationRequestFrame/AssocReqFrame.h>
 #include <tlvf/ieee_1905_1/eMessageType.h>
 #include <tlvf/ieee_1905_1/tlvAlMacAddress.h>
 #include <tlvf/ieee_1905_1/tlvAutoconfigFreqBand.h>
@@ -1314,6 +1315,14 @@ bool Controller::handle_cmdu_1905_client_capability_report_message(
         << beerocks::utils::dump_buffer(client_capability_report_tlv->association_frame(),
                                         client_capability_report_tlv->association_frame_length());
 
+    auto assoc_frame =
+        assoc_frame::AssocReqFrame::parse(client_capability_report_tlv->association_frame(),
+                                          client_capability_report_tlv->association_frame_length());
+    if (!assoc_frame) {
+        LOG(ERROR) << "Failed to parse (Re)associaiton frame.";
+    } else {
+        LOG(DEBUG) << "SSID: " << assoc_frame->sta_ssid();
+    }
     return true;
 }
 
@@ -2048,6 +2057,24 @@ bool Controller::handle_cmdu_1905_tunnelled_message(const sMacAddr &src_mac,
                << data_tlv->data_length() << ", Data: " << std::endl
                << beerocks::utils::dump_buffer(data_tlv->data(0), data_tlv->data_length());
 
+    if (type_tlv->protocol_type() ==
+        wfa_map::tlvTunnelledProtocolType::eTunnelledProtocolType::ASSOCIATION_REQUEST) {
+        auto assoc_frame = assoc_frame::AssocReqFrame::parse(
+            data_tlv->data(), data_tlv->data_length(),
+            assoc_frame::AssocReqFrame::eFrameType::ASSOCIATION_REQUEST);
+        if (!assoc_frame) {
+            LOG(ERROR) << "Failed to parse Association Request frame";
+        }
+    }
+    if (type_tlv->protocol_type() ==
+        wfa_map::tlvTunnelledProtocolType::eTunnelledProtocolType::REASSOCIATION_REQUEST) {
+        auto reassoc_frame = assoc_frame::AssocReqFrame::parse(
+            data_tlv->data(), data_tlv->data_length(),
+            assoc_frame::AssocReqFrame::eFrameType::REASSOCIATION_REQUEST);
+        if (!reassoc_frame) {
+            LOG(ERROR) << "Failed to parse Reassociation Request frame";
+        }
+    }
     return true;
 }
 
