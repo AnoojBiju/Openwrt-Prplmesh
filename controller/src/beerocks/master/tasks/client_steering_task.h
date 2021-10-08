@@ -77,6 +77,12 @@ private:
     bool add_sta_steer_event_to_db();
 
     /**
+     * @brief Update steering stats.
+     * @return True on success, false otherwise.
+     */
+    bool update_sta_steer_stats();
+
+    /**
      * @brief Save station steering sammary statistics into database.
      * @return True on success, false otherwise.
      */

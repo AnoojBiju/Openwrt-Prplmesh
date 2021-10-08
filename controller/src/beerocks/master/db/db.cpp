@@ -4901,6 +4901,12 @@ bool db::dm_set_sta_link_metrics(const sMacAddr &sta_mac, uint32_t downlink_est_
         return {};
     }
 
+    auto client = get_station(sta_mac);
+    if (!client) {
+        LOG(WARNING) << "client " << sta_mac << " not found";
+        return false;
+    }
+
     std::string path_to_sta = sta_node->dm_path;
     bool return_val         = true;
 
@@ -4923,6 +4929,13 @@ bool db::dm_set_sta_link_metrics(const sMacAddr &sta_mac, uint32_t downlink_est_
         LOG(ERROR) << "Failed to set " << path_to_sta << ".SignalStrength: " << signal_strength;
         return_val = false;
     }
+    client->rcpi = signal_strength;
+    int64_t performance =
+        static_cast<int64_t>(signal_strength) - static_cast<int64_t>(client->last_steered_rcpi);
+
+    m_ambiorix_datamodel->set(path_to_sta + ".MultiAPSteeringSummaryStats", "RCPIPerformance",
+                              performance);
+
     return return_val;
 }
 
@@ -5720,6 +5733,11 @@ void db::dm_restore_steering_summary_stats(Station &station)
     m_ambiorix_datamodel->set(obj_path, "BTMFailures", steer_summary->btm_failures);
     m_ambiorix_datamodel->set(obj_path, "BTMQueryResponses", steer_summary->btm_query_responses);
     m_ambiorix_datamodel->set(obj_path, "LastSteerTimeStamp", steer_summary->last_steer_ts);
+    m_ambiorix_datamodel->set(obj_path, "BandSteersPerDay", steer_summary->band_steering_per_day);
+    m_ambiorix_datamodel->set(obj_path, "ClientSteersPerDay",
+                              steer_summary->client_steering_per_day);
+    m_ambiorix_datamodel->set(obj_path, "LastRCPIMeasurement", steer_summary->last_rcpi);
+    m_ambiorix_datamodel->set(obj_path, "RCPIPerformance", steer_summary->rcpi_performance);
 }
 
 std::shared_ptr<db::sSteeringSummaryStats> db::get_steering_summary_stats(const sMacAddr &sta_mac)

@@ -114,6 +114,11 @@
             %read-only uint64 LastSteerTime = 0 {
                 on action read call action_last_steer_time;
             }
+
+            %read-only uint64 ClientSteersPerDay = 0;
+            %read-only uint64 BandSteersPerDay = 0;
+            %read-only uint64 LastRCPIMeasurement = 0;
+            %read-only int64 RCPIPerformance = 0;
         }
     }
 }

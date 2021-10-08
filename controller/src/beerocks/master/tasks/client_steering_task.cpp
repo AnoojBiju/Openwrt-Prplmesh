@@ -120,6 +120,11 @@ void client_steering_task::work()
         if (!add_sta_steer_event_to_db()) {
             LOG(ERROR) << "Failed to add MultiAPSteeringHistory for STA in database";
         }
+
+        if (!update_sta_steer_stats()) {
+            LOG(ERROR) << "Failed to update Station Steering Stats";
+        }
+
         m_database.dm_restore_steering_summary_stats(*client);
 
         print_steering_info();
@@ -578,6 +583,38 @@ bool client_steering_task::add_sta_steer_event_to_db()
     return m_database.add_sta_steering_event(tlvf::mac_from_string(m_sta_mac), steer_sta_event);
 }
 
+bool client_steering_task::update_sta_steer_stats()
+{
+    auto client = m_database.get_station(tlvf::mac_from_string(m_sta_mac));
+
+    if (!client) {
+        LOG(ERROR) << "client " << m_sta_mac << " not found";
+        return false;
+    }
+
+    // TODO put lOG
+    m_summary_stats = m_database.get_steering_summary_stats(tlvf::mac_from_string(m_sta_mac));
+
+    auto original_radio = m_database.get_radio_by_bssid(tlvf::mac_from_string(m_original_bssid));
+    auto target_radio   = m_database.get_radio_by_bssid(tlvf::mac_from_string(m_target_bssid));
+    if (original_radio && target_radio) {
+
+        auto original_agent = m_database.get_agent_by_radio_uid(original_radio->radio_uid);
+        auto target_agent   = m_database.get_agent_by_radio_uid(target_radio->radio_uid);
+
+        if (original_agent == target_agent) {
+            m_summary_stats->band_steering_per_day++;
+        } else {
+            m_summary_stats->client_steering_per_day++;
+        }
+    } else {
+        LOG(ERROR) << "Radios are missing";
+        return false;
+    }
+
+    return true;
+}
+
 bool client_steering_task::add_sta_steer_summary_stats_to_db()
 {
     auto client = m_database.get_station(tlvf::mac_from_string(m_sta_mac));
@@ -596,9 +633,14 @@ bool client_steering_task::add_sta_steer_summary_stats_to_db()
         LOG(ERROR) << "Failed to get Controller Data Model object.";
         return false;
     }
-    m_summary_stats->last_steer_ts = ambiorix_dm->get_datamodel_time_format();
+    m_summary_stats->last_steer_ts = m_dm_timestamp;
     ambiorix_dm->set(client->dm_path + ".MultiAPSteeringSummaryStats", "LastSteerTimeStamp",
                      m_summary_stats->last_steer_ts);
+
+    m_summary_stats->last_rcpi = client->last_steered_rcpi = client->rcpi;
+    ambiorix_dm->set(client->dm_path + ".MultiAPSteeringSummaryStats", "LastRCPIMeasurement",
+                     m_summary_stats->last_rcpi);
+
     return true;
 }
 

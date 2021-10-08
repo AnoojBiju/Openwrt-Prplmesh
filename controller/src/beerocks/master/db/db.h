@@ -217,13 +217,17 @@ public:
     struct sSteeringSummaryStats {
         explicit sSteeringSummaryStats(const sMacAddr &_sta_mac) : sta_mac(_sta_mac) {}
         const sMacAddr sta_mac;
-        uint64_t blacklist_attempts;
-        uint64_t blacklist_successes;
-        uint64_t blacklist_failures;
-        uint64_t btm_attempts;
-        uint64_t btm_successes;
-        uint64_t btm_failures;
-        uint64_t btm_query_responses;
+        uint64_t blacklist_attempts{};
+        uint64_t blacklist_successes{};
+        uint64_t blacklist_failures{};
+        uint64_t btm_attempts{};
+        uint64_t btm_successes{};
+        uint64_t btm_failures{};
+        uint64_t btm_query_responses{};
+        uint64_t band_steering_per_day{};
+        uint64_t client_steering_per_day{};
+        uint64_t last_rcpi{};
+        int32_t rcpi_performance{};
         std::string last_steer_ts;
     };
 
@@ -314,7 +318,7 @@ public:
 
     /**
      * @brief Add plus one to value of specifed with param_name Data Model's parameter.
-     * 
+     *
      * @param obj_path Path to object in Data Model which holds parameter.
      * @param param_name Name of parameter, value of which will be increased by one.
      * Parameter type should be uint64_t.
