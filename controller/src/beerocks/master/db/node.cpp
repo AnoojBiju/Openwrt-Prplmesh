@@ -16,13 +16,7 @@ using namespace son;
 node::node(beerocks::eType type_, const std::string &mac_)
     : mac(mac_), capabilities(&m_sta_24ghz_capabilities) // deafult value
 {
-    type = type_;
-    if ((type == beerocks::TYPE_CLIENT) || (type == beerocks::TYPE_IRE_BACKHAUL)) {
-        stats_info = std::make_shared<sta_stats_params>();
-    } else if (type == beerocks::TYPE_SLAVE) {
-        hostap             = std::make_shared<radio>();
-        hostap->stats_info = std::make_shared<radio::ap_stats_params>();
-    }
+    type                           = type_;
     m_sta_5ghz_capabilities.valid  = false;
     m_sta_24ghz_capabilities.valid = false;
 }
