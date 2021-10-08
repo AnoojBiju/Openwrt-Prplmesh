@@ -87,33 +87,6 @@ class cPreferenceOperatingClasses : public BaseClass
             PREFERRED14 = 0xe,
             RESERVED = 0xf,
         };
-        // Enum AutoPrint generated code snippet begining- DON'T EDIT!
-        // clang-format off
-        static const char *ePreference_str(ePreference enum_value) {
-            switch (enum_value) {
-            case NON_OPERABLE: return "NON_OPERABLE";
-            case PREFERRED1:   return "PREFERRED1";
-            case PREFERRED2:   return "PREFERRED2";
-            case PREFERRED3:   return "PREFERRED3";
-            case PREFERRED4:   return "PREFERRED4";
-            case PREFERRED5:   return "PREFERRED5";
-            case PREFERRED6:   return "PREFERRED6";
-            case PREFERRED7:   return "PREFERRED7";
-            case PREFERRED8:   return "PREFERRED8";
-            case PREFERRED9:   return "PREFERRED9";
-            case PREFERRED10:  return "PREFERRED10";
-            case PREFERRED11:  return "PREFERRED11";
-            case PREFERRED12:  return "PREFERRED12";
-            case PREFERRED13:  return "PREFERRED13";
-            case PREFERRED14:  return "PREFERRED14";
-            case RESERVED:     return "RESERVED";
-            }
-            static std::string out_str = std::to_string(int(enum_value));
-            return out_str.c_str();
-        }
-        friend inline std::ostream &operator<<(std::ostream &out, ePreference value) { return out << ePreference_str(value); }
-        // clang-format on
-        // Enum AutoPrint generated code snippet end
         
         enum eReasonCode {
             UNSPECIFIED = 0x0,
@@ -128,28 +101,6 @@ class cPreferenceOperatingClasses : public BaseClass
             IMMEDIATE_OPERATION_POSSIBLE_ON_A_DFS_CHANNEL_CAC_HAS_BEEN_RUN__CHANNEL_HAS_BEEN_CLEARED_FOR_USE = 0x9,
             DFS_CHANNEL_STATE_UNKNOWN_CAC_HAS_NOT_RUN = 0xa,
         };
-        // Enum AutoPrint generated code snippet begining- DON'T EDIT!
-        // clang-format off
-        static const char *eReasonCode_str(eReasonCode enum_value) {
-            switch (enum_value) {
-            case UNSPECIFIED:                                                                                      return "UNSPECIFIED";
-            case PROXIMATE_NON_802_11_INTERFERER_IN_LOCAL_ENVIRONMENT:                                             return "PROXIMATE_NON_802_11_INTERFERER_IN_LOCAL_ENVIRONMENT";
-            case INTRA_NETWORK_802_11_OBSS_INTERFERENCE_MANAGEMENT:                                                return "INTRA_NETWORK_802_11_OBSS_INTERFERENCE_MANAGEMENT";
-            case EXTERNAL_NETWORK_802_11_OBSS_INTERFERENCE_MANAGEMENT:                                             return "EXTERNAL_NETWORK_802_11_OBSS_INTERFERENCE_MANAGEMENT";
-            case REDUCED_COVERAGE_LIMITED_TRANSMIT_POWER:                                                          return "REDUCED_COVERAGE_LIMITED_TRANSMIT_POWER";
-            case REDUCED_THROUGHPUT_LIMITED_CHANNEL_BANDWIDTH:                                                     return "REDUCED_THROUGHPUT_LIMITED_CHANNEL_BANDWIDTH";
-            case IN_DEVICE_INTERFERER_WITHIN_AP:                                                                   return "IN_DEVICE_INTERFERER_WITHIN_AP";
-            case OPERATION_DISALLOWED_DUE_TO_RADAR_DETECTION_ON_A_DFS_CHANNEL:                                     return "OPERATION_DISALLOWED_DUE_TO_RADAR_DETECTION_ON_A_DFS_CHANNEL";
-            case OPERATION_WOULD_PREVENT_BACKHAUL_OPERATION_USING_SHARED_RADIO:                                    return "OPERATION_WOULD_PREVENT_BACKHAUL_OPERATION_USING_SHARED_RADIO";
-            case IMMEDIATE_OPERATION_POSSIBLE_ON_A_DFS_CHANNEL_CAC_HAS_BEEN_RUN__CHANNEL_HAS_BEEN_CLEARED_FOR_USE: return "IMMEDIATE_OPERATION_POSSIBLE_ON_A_DFS_CHANNEL_CAC_HAS_BEEN_RUN__CHANNEL_HAS_BEEN_CLEARED_FOR_USE";
-            case DFS_CHANNEL_STATE_UNKNOWN_CAC_HAS_NOT_RUN:                                                        return "DFS_CHANNEL_STATE_UNKNOWN_CAC_HAS_NOT_RUN";
-            }
-            static std::string out_str = std::to_string(int(enum_value));
-            return out_str.c_str();
-        }
-        friend inline std::ostream &operator<<(std::ostream &out, eReasonCode value) { return out << eReasonCode_str(value); }
-        // clang-format on
-        // Enum AutoPrint generated code snippet end
         
         typedef struct sFlags {
             #if defined(__LITTLE_ENDIAN_BITFIELD)

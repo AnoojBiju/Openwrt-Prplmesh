@@ -112,7 +112,7 @@ public:
         STATE_SSID_MISMATCH,
     };
 
-    slave_thread(sAgentConfig conf, beerocks::logging &logger_);
+    slave_thread(const sAgentConfig &conf, beerocks::logging &logger_);
     virtual ~slave_thread();
 
     virtual bool init() override;

@@ -32,9 +32,10 @@ client_steering_task::client_steering_task(db &database, ieee1905_1::CmduMessage
     : task(task_name), m_database(database), m_cmdu_tx(cmdu_tx), m_tasks(tasks), m_sta_mac(sta_mac),
       m_target_bssid(target_bssid), //Chosen VAP BSSID to steer the client to
       m_triggered_by(triggered_by), m_steering_type(steering_type),
-      m_disassoc_imminent(disassoc_imminent), m_disassoc_timer_ms(disassoc_timer_ms),
-      m_steer_restricted(steer_restricted)
+      m_disassoc_imminent(disassoc_imminent), m_disassoc_timer_ms(disassoc_timer_ms)
 {
+      m_steer_restricted = steer_restricted;
+      m_status_code = 0;
 }
 
 void client_steering_task::work()
@@ -444,11 +445,16 @@ bool client_steering_task::dm_set_steer_event_params(const std::string &event_pa
 
     m_dm_timestamp = ambiorix_dm->get_datamodel_time_format();
 
-    ambiorix_dm->set(event_path, "DeviceId", m_sta_mac);
-    ambiorix_dm->set(event_path, "SteeredFrom", m_original_bssid);
-    ambiorix_dm->set(event_path, "SteeredTo", m_target_bssid);
-    ambiorix_dm->set(event_path, "StatusCode", m_status_code);
-    ambiorix_dm->set(event_path, "TimeStamp", m_dm_timestamp);
+    bool ok = true;
+    ok &= ambiorix_dm->set(event_path, "DeviceId", m_sta_mac);
+    ok &= ambiorix_dm->set(event_path, "SteeredFrom", m_original_bssid);
+    ok &= ambiorix_dm->set(event_path, "SteeredTo", m_target_bssid);
+    ok &= ambiorix_dm->set(event_path, "StatusCode", m_status_code);
+    ok &= ambiorix_dm->set(event_path, "TimeStamp", m_dm_timestamp);
+    if (!ok) {
+        LOG(ERROR) << "Failed to set parameter(s) on object " << event_path;
+        return false;
+    }
 
     m_database.dm_set_status(event_path, m_status_code);
 

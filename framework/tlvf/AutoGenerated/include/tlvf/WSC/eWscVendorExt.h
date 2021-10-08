@@ -28,39 +28,10 @@ enum eWscVendorExtSubelementBssType {
     PROFILE1_BACKHAUL_STA_ASSOCIATION_DISALLOWED = 0x8,
     PROFILE2_BACKHAUL_STA_ASSOCIATION_DISALLOWED = 0x4,
 };
-// Enum AutoPrint generated code snippet begining- DON'T EDIT!
-// clang-format off
-static const char *eWscVendorExtSubelementBssType_str(eWscVendorExtSubelementBssType enum_value) {
-    switch (enum_value) {
-    case BACKHAUL_STA:                                 return "BACKHAUL_STA";
-    case BACKHAUL_BSS:                                 return "BACKHAUL_BSS";
-    case FRONTHAUL_BSS:                                return "FRONTHAUL_BSS";
-    case TEARDOWN:                                     return "TEARDOWN";
-    case PROFILE1_BACKHAUL_STA_ASSOCIATION_DISALLOWED: return "PROFILE1_BACKHAUL_STA_ASSOCIATION_DISALLOWED";
-    case PROFILE2_BACKHAUL_STA_ASSOCIATION_DISALLOWED: return "PROFILE2_BACKHAUL_STA_ASSOCIATION_DISALLOWED";
-    }
-    static std::string out_str = std::to_string(int(enum_value));
-    return out_str.c_str();
-}
-inline std::ostream &operator<<(std::ostream &out, eWscVendorExtSubelementBssType value) { return out << eWscVendorExtSubelementBssType_str(value); }
-// clang-format on
-// Enum AutoPrint generated code snippet end
 
 enum eWscVendorExtVersionIE {
     WSC_VERSION2 = 0x20,
 };
-// Enum AutoPrint generated code snippet begining- DON'T EDIT!
-// clang-format off
-static const char *eWscVendorExtVersionIE_str(eWscVendorExtVersionIE enum_value) {
-    switch (enum_value) {
-    case WSC_VERSION2: return "WSC_VERSION2";
-    }
-    static std::string out_str = std::to_string(int(enum_value));
-    return out_str.c_str();
-}
-inline std::ostream &operator<<(std::ostream &out, eWscVendorExtVersionIE value) { return out << eWscVendorExtVersionIE_str(value); }
-// clang-format on
-// Enum AutoPrint generated code snippet end
 
 
 }; // close namespace: WSC

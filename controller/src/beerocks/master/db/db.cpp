@@ -3087,15 +3087,19 @@ static void dm_add_bss_neighbors(std::shared_ptr<beerocks::nbapi::Ambiorix> m_am
             LOG(ERROR) << "Failed to add NeighborBSS to " << channel_path;
             return;
         }
-        m_ambiorix_datamodel->set(neighbor_path, "BSSID", tlvf::mac_to_string(neighbor.bssid()));
-        m_ambiorix_datamodel->set(neighbor_path, "SSID", neighbor.ssid_str());
-        m_ambiorix_datamodel->set(neighbor_path, "SignalStrength", neighbor.signal_strength());
-        m_ambiorix_datamodel->set(neighbor_path, "ChannelBandwidth",
-                                  neighbor.channels_bw_list_str());
+        bool ok = true;
+        ok &= m_ambiorix_datamodel->set(neighbor_path, "BSSID", tlvf::mac_to_string(neighbor.bssid()));
+        ok &= m_ambiorix_datamodel->set(neighbor_path, "SSID", neighbor.ssid_str());
+        ok &= m_ambiorix_datamodel->set(neighbor_path, "SignalStrength", neighbor.signal_strength());
+        ok &= m_ambiorix_datamodel->set(neighbor_path, "ChannelBandwidth",
+                                        neighbor.channels_bw_list_str());
         if (neighbor.bss_load_element_present()) {
-            m_ambiorix_datamodel->set(neighbor_path, "ChannelUtilization",
-                                      neighbor.channel_utilization());
-            m_ambiorix_datamodel->set(neighbor_path, "StationCount", neighbor.station_count());
+            ok &= m_ambiorix_datamodel->set(neighbor_path, "ChannelUtilization",
+                                            neighbor.channel_utilization());
+            ok &= m_ambiorix_datamodel->set(neighbor_path, "StationCount", neighbor.station_count());
+        }
+        if (!ok) {
+            LOG(ERROR) << "Failed to set parameters for " << neighbor_path;
         }
     }
 }
@@ -3119,10 +3123,14 @@ dm_add_channel_scan(std::shared_ptr<beerocks::nbapi::Ambiorix> m_ambiorix_datamo
             return {};
         }
     }
-    m_ambiorix_datamodel->set(channel_path, "TimeStamp", ISO_8601_timestamp);
-    m_ambiorix_datamodel->set(channel_path, "Channel", channel);
-    m_ambiorix_datamodel->set(channel_path, "Utilization", utilization);
-    m_ambiorix_datamodel->set(channel_path, "Noise", noise);
+    bool ok = true;
+    ok &= m_ambiorix_datamodel->set(channel_path, "TimeStamp", ISO_8601_timestamp);
+    ok &= m_ambiorix_datamodel->set(channel_path, "Channel", channel);
+    ok &= m_ambiorix_datamodel->set(channel_path, "Utilization", utilization);
+    ok &= m_ambiorix_datamodel->set(channel_path, "Noise", noise);
+    if (!ok) {
+        LOG(ERROR) << "Failed to set data model parameters for channel scan, path " << channel_path;
+    }
     return channel_path;
 }
 
@@ -3145,7 +3153,9 @@ dm_add_op_class_scan(std::shared_ptr<beerocks::nbapi::Ambiorix> m_ambiorix_datam
             return {};
         }
     }
-    m_ambiorix_datamodel->set(class_path, "OperatingClass", operating_class);
+    if (!m_ambiorix_datamodel->set(class_path, "OperatingClass", operating_class)) {
+        LOG(ERROR) << "Failed to set OperationClass on " << class_path;
+    }
     return class_path;
 }
 
@@ -4886,9 +4896,11 @@ void db::disable_periodic_link_metrics_requests()
     beerocks::bpl::cfg_set_link_metrics_request_interval(
         config.link_metrics_request_interval_seconds);
 
-    m_ambiorix_datamodel->set("Device.WiFi.DataElements.Configuration",
-                              "LinkMetricsRequestInterval",
-                              config.link_metrics_request_interval_seconds.count());
+    if (!m_ambiorix_datamodel->set("Device.WiFi.DataElements.Configuration",
+                                   "LinkMetricsRequestInterval",
+                                   config.link_metrics_request_interval_seconds.count())) {
+        LOG(ERROR) << "Failed to set LinkMetricsRequestInterval in NBAPI Configuration";
+    }
 }
 
 bool db::dm_set_sta_link_metrics(const sMacAddr &sta_mac, uint32_t downlink_est_mac_data_rate,
@@ -5684,7 +5696,9 @@ void db::dm_set_status(const std::string &event_path, const uint8_t status_code)
 
     // By default status is in datamodel is 'Unknown'
     if (status_code < max_status_code) {
-        m_ambiorix_datamodel->set(event_path, "Status", m_status_code_vals[status_code]);
+        if (!m_ambiorix_datamodel->set(event_path, "Status", m_status_code_vals[status_code])) {
+            LOG(ERROR) << "Failed to set Status parameter on " << event_path;
+        }
     }
 }
 
@@ -6012,8 +6026,10 @@ void db::dm_uint64_param_one_up(const std::string &obj_path, const char *param_n
 {
     uint64_t ret_val;
 
-    m_ambiorix_datamodel->read_param(obj_path, param_name, &ret_val);
-    m_ambiorix_datamodel->set(obj_path, param_name, ret_val + 1);
+    if (!m_ambiorix_datamodel->read_param(obj_path, param_name, &ret_val) ||
+        !m_ambiorix_datamodel->set(obj_path, param_name, ret_val + 1)) {
+        LOG(ERROR) << "Failed to increase parameter " << param_name << " in " << obj_path;
+    }
 }
 
 bool db::set_radio_metrics(const sMacAddr &radio_mac, uint8_t noise, uint8_t transmit,

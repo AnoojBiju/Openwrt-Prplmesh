@@ -1417,17 +1417,16 @@ int cli_bml::client_clear_client_caller(int numOfArgs)
 
 int cli_bml::get_onboarding_status()
 {
-    onboard_status();
-    return is_onboarding;
+    return onboard_status();
 }
 
 bool cli_bml::is_pending_response() { return pending_response; }
 
 int cli_bml::onboard_status()
 {
-    is_onboarding = bml_onboard_status(ctx);
+    int is_onboarding = bml_onboard_status(ctx);
     std::cout << "onboard_status = " << is_onboarding << std::endl;
-    return 0;
+    return is_onboarding;
 }
 
 int cli_bml::ping()
