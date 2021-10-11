@@ -149,6 +149,43 @@ protected:
             .WillOnce(Return(true));
         EXPECT_CALL(*m_ambiorix, set_current_time(std::string(g_sta_path_1), _))
             .WillOnce(Return(true));
+        EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1 + ".MultiAPSteeringSummaryStats"),
+                                     "BlacklistAttempts", Matcher<const uint64_t &>(_)))
+            .WillRepeatedly(Return(true));
+        EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1 + ".MultiAPSteeringSummaryStats"),
+                                     "BlacklistSuccesses", Matcher<const uint64_t &>(_)))
+            .WillRepeatedly(Return(true));
+        EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1 + ".MultiAPSteeringSummaryStats"),
+                                     "BlacklistFailures", Matcher<const uint64_t &>(_)))
+            .WillRepeatedly(Return(true));
+        EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1 + ".MultiAPSteeringSummaryStats"),
+                                     "BTMAttempts", Matcher<const uint64_t &>(_)))
+            .WillRepeatedly(Return(true));
+        EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1 + ".MultiAPSteeringSummaryStats"),
+                                     "BTMSuccesses", Matcher<const uint64_t &>(_)))
+            .WillRepeatedly(Return(true));
+        EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1 + ".MultiAPSteeringSummaryStats"),
+                                     "BTMFailures", Matcher<const uint64_t &>(_)))
+            .WillRepeatedly(Return(true));
+        EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1 + ".MultiAPSteeringSummaryStats"),
+                                     "BTMQueryResponses", Matcher<const uint64_t &>(_)))
+            .WillRepeatedly(Return(true));
+        EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1 + ".MultiAPSteeringSummaryStats"),
+                                     "LastSteerTimeStamp", Matcher<const std::string &>(_)))
+            .WillRepeatedly(Return(true));
+        EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1 + ".MultiAPSteeringSummaryStats"),
+                                     "BandSteersPerDay", Matcher<const uint64_t &>(_)))
+            .WillRepeatedly(Return(true));
+        EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1 + ".MultiAPSteeringSummaryStats"),
+                                     "ClientSteersPerDay", Matcher<const uint64_t &>(_)))
+            .WillRepeatedly(Return(true));
+        EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1 + ".MultiAPSteeringSummaryStats"),
+                                     "LastRCPIMeasurement", Matcher<const uint64_t &>(_)))
+            .WillRepeatedly(Return(true));
+        EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1 + ".MultiAPSteeringSummaryStats"),
+                                     "RCPIPerformance", Matcher<const int64_t &>(_)))
+            .WillRepeatedly(Return(true));
+
         EXPECT_CALL(*m_ambiorix,
                     set(std::string(g_sta_path_1), "LastConnectTime", Matcher<const uint64_t &>(_)))
             .WillOnce(Return(true));
@@ -792,6 +829,10 @@ TEST_F(DbTestRadio1Sta1, test_set_sta_link_metrics)
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix,
                 set(std::string(g_sta_path_1), "SignalStrength", Matcher<const int32_t &>(3)))
+        .WillOnce(Return(true));
+
+    EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1) + ".MultiAPSteeringSummaryStats",
+                                 "RCPIPerformance", Matcher<const int64_t &>(_)))
         .WillOnce(Return(true));
 
     //execute test

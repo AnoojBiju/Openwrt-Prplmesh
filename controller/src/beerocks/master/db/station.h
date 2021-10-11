@@ -50,6 +50,8 @@ public:
 
     bool confined = false;
 
+    uint8_t rcpi                       = 0;
+    uint8_t last_steered_rcpi          = 0;
     uint16_t cross_rx_phy_rate_100kb   = 0;
     uint16_t cross_tx_phy_rate_100kb   = 0;
     double cross_estimated_rx_phy_rate = 0.0;

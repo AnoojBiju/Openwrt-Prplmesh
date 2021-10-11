@@ -4901,6 +4901,12 @@ bool db::dm_set_sta_link_metrics(const sMacAddr &sta_mac, uint32_t downlink_est_
         return {};
     }
 
+    auto client = get_station(sta_mac);
+    if (!client) {
+        LOG(WARNING) << "client " << sta_mac << " not found";
+        return false;
+    }
+
     std::string path_to_sta = sta_node->dm_path;
     bool return_val         = true;
 
@@ -4923,6 +4929,13 @@ bool db::dm_set_sta_link_metrics(const sMacAddr &sta_mac, uint32_t downlink_est_
         LOG(ERROR) << "Failed to set " << path_to_sta << ".SignalStrength: " << signal_strength;
         return_val = false;
     }
+    client->rcpi = signal_strength;
+    int64_t performance =
+        static_cast<int64_t>(signal_strength) - static_cast<int64_t>(client->last_steered_rcpi);
+
+    m_ambiorix_datamodel->set(path_to_sta + ".MultiAPSteeringSummaryStats", "RCPIPerformance",
+                              performance);
+
     return return_val;
 }
 
@@ -5616,7 +5629,7 @@ bool db::dm_add_sta_element(const sMacAddr &bssid, Station &station)
     // Verify Station object data model path is changed or not.
     if (!station.dm_path.empty()) {
 
-        // Verify if STA is added under different BSS. If so, remove old data model.
+        // Verify if STA is added under different BSS. If so, remove old data model object.
         if (station.dm_path.find(path_to_bss) == std::string::npos) {
 
             LOG(DEBUG) << "Station is added to different BSS " << bssid
@@ -5645,6 +5658,7 @@ bool db::dm_add_sta_element(const sMacAddr &bssid, Station &station)
 
         dm_restore_sta_steering_event(station);
     }
+    dm_restore_steering_summary_stats(station);
 
     // TODO: This method will be removed after old node architecture is deprecated (PPM-1057).
     set_node_data_model_path(station.mac, station.dm_path);
@@ -5704,6 +5718,37 @@ std::string db::dm_add_steer_event()
     }
     m_steer_events.push(event_path);
     return event_path;
+}
+
+void db::dm_restore_steering_summary_stats(Station &station)
+{
+    auto steer_summary   = get_steering_summary_stats(station.mac);
+    std::string obj_path = station.dm_path + ".MultiAPSteeringSummaryStats";
+
+    m_ambiorix_datamodel->set(obj_path, "BlacklistAttempts", steer_summary->blacklist_attempts);
+    m_ambiorix_datamodel->set(obj_path, "BlacklistSuccesses", steer_summary->blacklist_successes);
+    m_ambiorix_datamodel->set(obj_path, "BlacklistFailures", steer_summary->blacklist_failures);
+    m_ambiorix_datamodel->set(obj_path, "BTMAttempts", steer_summary->btm_attempts);
+    m_ambiorix_datamodel->set(obj_path, "BTMSuccesses", steer_summary->btm_successes);
+    m_ambiorix_datamodel->set(obj_path, "BTMFailures", steer_summary->btm_failures);
+    m_ambiorix_datamodel->set(obj_path, "BTMQueryResponses", steer_summary->btm_query_responses);
+    m_ambiorix_datamodel->set(obj_path, "LastSteerTimeStamp", steer_summary->last_steer_ts);
+    m_ambiorix_datamodel->set(obj_path, "BandSteersPerDay", steer_summary->band_steering_per_day);
+    m_ambiorix_datamodel->set(obj_path, "ClientSteersPerDay",
+                              steer_summary->client_steering_per_day);
+    m_ambiorix_datamodel->set(obj_path, "LastRCPIMeasurement", steer_summary->last_rcpi);
+    m_ambiorix_datamodel->set(obj_path, "RCPIPerformance", steer_summary->rcpi_performance);
+}
+
+std::shared_ptr<db::sSteeringSummaryStats> db::get_steering_summary_stats(const sMacAddr &sta_mac)
+{
+    // auto steering_sumary_stats = m_steer_summary.get(sta_mac);
+
+    // if (!steering_sumary_stats) {
+    //     steering_sumary_stats    = std::make_shared<sSteeringSummaryStats>();
+    //     m_steer_summary[sta_mac] = steering_sumary_stats;
+    // }
+    return m_steer_summary.add(sta_mac);
 }
 
 bool db::dm_add_failed_connection_event(const sMacAddr &sta_mac, const uint16_t reason_code,
@@ -6010,6 +6055,10 @@ bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, cons
 
 void db::dm_uint64_param_one_up(const std::string &obj_path, const char *param_name)
 {
+    if (obj_path.empty()) {
+        return;
+    }
+
     uint64_t ret_val;
 
     m_ambiorix_datamodel->read_param(obj_path, param_name, &ret_val);

@@ -76,6 +76,18 @@ private:
      */
     bool add_sta_steer_event_to_db();
 
+    /**
+     * @brief Update steering stats.
+     * @return True on success, false otherwise.
+     */
+    bool update_sta_steer_stats();
+
+    /**
+     * @brief Save station steering sammary statistics into database.
+     * @return True on success, false otherwise.
+     */
+    bool add_sta_steer_summary_stats_to_db();
+
     db &m_database;
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
     task_pool &m_tasks;
@@ -91,6 +103,8 @@ private:
     const int m_disassoc_timer_ms;
     bool m_btm_report_received = false;
     bool m_steer_restricted    = false;
+
+    std::shared_ptr<db::sSteeringSummaryStats> m_summary_stats = {};
 
     /**
      * @brief The timestamp of steering event in data model of steering events.
