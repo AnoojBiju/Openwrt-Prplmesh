@@ -570,7 +570,7 @@ void optimal_path_task::work()
                             << ", hostap: " << hostap;
                         continue;
                     }
-                    dl_rssi = network_utils::convert_rssi_from_rcpi(dl_rcpi);
+                    dl_rssi = wireless_utils::convert_rssi_from_rcpi(dl_rcpi);
 
                     TASK_LOG(DEBUG) << "bssid " << hostap << " dl_rssi: " << int(dl_rssi)
                                     << ", dl_snr:" << int(dl_snr);
@@ -657,7 +657,7 @@ void optimal_path_task::work()
                             << ", hostap: " << hostap;
                         continue;
                     }
-                    dl_rssi = network_utils::convert_rssi_from_rcpi(dl_rcpi);
+                    dl_rssi = wireless_utils::convert_rssi_from_rcpi(dl_rcpi);
 
                     TASK_LOG(DEBUG) << "bssid " << hostap << " dl_rssi: " << int(dl_rssi)
                                     << ", dl_snr:" << int(dl_snr);

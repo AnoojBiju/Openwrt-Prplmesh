@@ -6,6 +6,7 @@
  * See LICENSE file for more details.
  */
 
+#include <bcl/beerocks_defines.h>
 #include <bcl/beerocks_utils.h>
 #include <bcl/son/son_wireless_utils.h>
 
@@ -228,6 +229,12 @@ const std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, wireless_utils::sChan
 
 };
 // clang-format on
+
+/**
+ * @brief According to 802.11-2016 convertion table (Table 9-154), calculation equation parameters.
+ */
+constexpr int RCPI_EQUATION_COEF     = 2;
+constexpr int RCPI_EQUATION_CONSTANT = 110;
 
 constexpr beerocks::eWiFiAntNum
     wireless_utils::phy_rate_table_mode_to_ant_num[PHY_RATE_TABLE_ANT_MODE_MAX];
@@ -1121,4 +1128,38 @@ wireless_utils::center_channel_5g_to_beacon_channels(uint8_t center_channel,
     }
 
     return beacon_channels;
+}
+
+uint8_t wireless_utils::convert_rcpi_from_rssi(int8_t rssi)
+{
+    uint8_t rcpi;
+
+    // According to 802.11-2016 convertion table (Table 9-154).
+    constexpr int8_t lower_rssi_bound{-109}; // Standart defines as -109.5
+    constexpr int8_t upper_rssi_bound{0};
+
+    if (rssi < lower_rssi_bound) {
+
+        rcpi = beerocks::RCPI_MIN; //represents RSSI < -109dBm
+
+    } else if ((lower_rssi_bound <= rssi) && (rssi < upper_rssi_bound)) {
+
+        rcpi = RCPI_EQUATION_COEF * (rssi + RCPI_EQUATION_CONSTANT);
+
+    } else {
+
+        rcpi = beerocks::RCPI_MAX;
+    }
+
+    return rcpi;
+}
+
+int8_t wireless_utils::convert_rssi_from_rcpi(uint8_t rcpi)
+{
+    if (rcpi > beerocks::RCPI_MAX) {
+        LOG(ERROR) << "Invalid RCPI value in converion to RSSI.";
+        return beerocks::RSSI_INVALID;
+    }
+
+    return ((rcpi / RCPI_EQUATION_COEF) - RCPI_EQUATION_CONSTANT);
 }
