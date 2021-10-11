@@ -795,6 +795,40 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         controller_ctx->send_cmdu(sd, cmdu_tx);
     } break;
 
+    case beerocks_message::ACTION_BML_SET_CLIENT_ROAMING_11K_SUPPORT_REQUEST: {
+        auto request =
+            beerocks_header->addClass<beerocks_message::cACTION_BML_SET_CLIENT_ROAMING_11K_SUPPORT_REQUEST>();
+        if (request == nullptr) {
+            LOG(ERROR) << "addClass cACTION_BML_SET_CLIENT_ROAMING_11K_SUPPORT_REQUEST failed";
+            break;
+        }
+
+        database.settings_client_11k_roaming(request->isEnable());
+        LOG(INFO) << "BML client_11k_roaming to " << int(database.settings_client_11k_roaming());
+
+        auto response = message_com::create_vs_message<
+            beerocks_message::cACTION_BML_SET_CLIENT_ROAMING_11K_SUPPORT_RESPONSE>(cmdu_tx);
+
+        if (response == nullptr) {
+            LOG(ERROR) << "Failed building ACTION_BML_SET_CLIENT_ROAMING_11K_SUPPORT_RESPONSE message!";
+            break;
+        }
+
+        controller_ctx->send_cmdu(sd, cmdu_tx);
+    } break;
+
+    case beerocks_message::ACTION_BML_GET_CLIENT_ROAMING_11K_SUPPORT_REQUEST: {
+        auto response = message_com::create_vs_message<
+            beerocks_message::cACTION_BML_GET_CLIENT_ROAMING_11K_SUPPORT_RESPONSE>(cmdu_tx);
+        if (response == nullptr) {
+            LOG(ERROR) << "addClass ACTION_BML_GET_CLIENT_ROAMING_11K_SUPPORT_RESPONSE failed";
+            break;
+        }
+        response->isEnable() = database.settings_client_11k_roaming();
+
+        controller_ctx->send_cmdu(sd, cmdu_tx);
+    } break;
+
     case beerocks_message::ACTION_BML_SET_LEGACY_CLIENT_ROAMING_REQUEST: {
         auto request =
             beerocks_header

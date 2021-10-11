@@ -264,7 +264,7 @@ void optimal_path_task::work()
 
                 chosen_method.append("Steer client imminently to initial radio " +
                                      tlvf::mac_to_string(client_initial_radio) + " ");
-                TASK_LOG(INFO) << chosen_method;
+                TASK_LOG(INFO) << "Resolving Optimal task on persistent preference: " << chosen_method;
                 break;
             }
             TASK_LOG(WARNING) << "Client's initial radio " << client_initial_radio
@@ -297,7 +297,7 @@ void optimal_path_task::work()
                     is_force_steer = true;
                     chosen_method.append("Found local radio " + std::string(sibling_it->data()) +
                                          " on selected bands, force steer client to that radio ");
-                    TASK_LOG(INFO) << chosen_method;
+                    TASK_LOG(INFO) << "Resolving Optimal task on persistent preference: " << chosen_method;
                     break;
                 }
                 TASK_LOG(WARNING) << "Couldnt find local radio on selected bands "
@@ -485,6 +485,7 @@ void optimal_path_task::work()
             }
         }
 
+        TASK_LOG(DEBUG) << "Finished gathering 11k measurements";
         TASK_LOG(DEBUG) << "calculating estimate hostap dl rssi/rate for sta " << sta_mac;
 
         //calculate tx phy rate and find best_weighted_phy_rate
@@ -740,7 +741,7 @@ void optimal_path_task::work()
             chosen_bssid = database.get_hostap_vap_with_ssid(tlvf::mac_from_string(chosen_hostap),
                                                              current_hostap_ssid);
             if (!database.settings_client_optimal_path_roaming_prefer_signal_strength()) {
-                LOG_CLI(DEBUG, "optimal_path_task:" << std::endl
+                LOG_CLI(DEBUG, "optimal_path_task: Found a better optimized path for the client." << std::endl
                                                     << "    best hostap for " << sta_mac << " is "
                                                     << chosen_bssid << " with weighted_phy_rate="
                                                     << (best_weighted_phy_rate / (1024.0 * 1024.0))
@@ -749,7 +750,7 @@ void optimal_path_task::work()
                                                     << chosen_bssid << std::endl);
             } else {
                 LOG_CLI(DEBUG,
-                        "optimal_path_task:" << std::endl
+                        "optimal_path_task: Found a better optimized path for the client." << std::endl
                                              << "    best hostap (signal strength metric) for "
                                              << sta_mac << " is " << chosen_bssid
                                              << " with dl_rssi=" << (best_dl_rssi) << " [dBm]");
@@ -933,6 +934,7 @@ void optimal_path_task::work()
             calculate_measurement_delay_count = 0;
         }
 
+        TASK_LOG(DEBUG) << "Finished gathering cross rssi measurements";
         TASK_LOG(DEBUG) << "calculating estimate hostap dl rssi/rate for sta " << sta_mac;
 
         //get sta parameters
@@ -1059,7 +1061,7 @@ void optimal_path_task::work()
                 is_force_steer = true;
                 chosen_method.append("Steer client imminently to initial radio " +
                                      hostap_it->first + " ");
-                TASK_LOG(INFO) << chosen_method;
+                TASK_LOG(INFO) << "Resolving Optimal task on persistent preference: " << chosen_method;
                 break;
             }
             TASK_LOG(WARNING) << "Client's initial radio " << client_initial_radio
@@ -1093,7 +1095,7 @@ void optimal_path_task::work()
                     chosen_method.append("Found local radio " + std::string(sibling_it->data()) +
                                          " on selected bands, force steer client to that radio ");
 
-                    TASK_LOG(INFO) << chosen_method;
+                    TASK_LOG(INFO) << "Resolving Optimal task on persistent preference: " << chosen_method;
                     break;
                 }
                 TASK_LOG(WARNING) << "Couldnt find local radio on selected bands "
@@ -1385,7 +1387,7 @@ void optimal_path_task::work()
         } else {
             if (!database.settings_client_optimal_path_roaming_prefer_signal_strength()) {
                 chosen_method.append(" PHY rate ");
-                LOG_CLI(DEBUG, "optimal_path_task:" << std::endl
+                LOG_CLI(DEBUG, "optimal_path_task: Found a better optimized path for the client." << std::endl
                                                     << "    best hostap for " << sta_mac << " is "
                                                     << chosen_bssid << " with weighted_phy_rate="
                                                     << (best_weighted_phy_rate / (1024.0 * 1024.0))
@@ -1394,7 +1396,7 @@ void optimal_path_task::work()
                                                     << chosen_bssid << std::endl);
             } else {
                 chosen_method.append(" link quality (RSSI) ");
-                LOG_CLI(DEBUG, "optimal_path_task:"
+                LOG_CLI(DEBUG, "optimal_path_task: Found a better optimized path for the client."
                                    << std::endl
                                    << "    best hostap (signal strength metric) for " << sta_mac
                                    << " is " << chosen_bssid << " with ul_rssi=" << (best_ul_rssi)

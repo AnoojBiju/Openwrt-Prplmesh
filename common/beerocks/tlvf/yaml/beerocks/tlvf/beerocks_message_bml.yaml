@@ -515,3 +515,17 @@ cACTION_BML_CLIENT_CLEAR_CLIENT_RESPONSE:
   result:
     _type: uint8_t
     _comment: # 0 - Failure, 1 - Success
+
+cACTION_BML_SET_CLIENT_ROAMING_11K_SUPPORT_REQUEST:
+  _type: class
+  isEnable: uint8_t
+
+cACTION_BML_SET_CLIENT_ROAMING_11K_SUPPORT_RESPONSE:
+  _type: class
+
+cACTION_BML_GET_CLIENT_ROAMING_11K_SUPPORT_REQUEST:
+  _type: class
+
+cACTION_BML_GET_CLIENT_ROAMING_11K_SUPPORT_RESPONSE:
+  _type: class
+  isEnable: uint8_t

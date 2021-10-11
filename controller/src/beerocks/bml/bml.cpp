@@ -359,6 +359,28 @@ int bml_get_client_roaming(BML_CTX ctx, int *res)
     return (pBML->get_client_roaming(*res));
 }
 
+int bml_set_client_roaming_11k_support(BML_CTX ctx, int enable)
+{
+    // Validate input parameters
+    if (!ctx)
+        return (-BML_RET_INVALID_ARGS);
+
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
+    // Set the client roaming configuration
+    // TODO: Propogate error code from bml_internal...
+    return (pBML->set_client_roaming_11k_support(enable));
+}
+
+int bml_get_client_roaming_11k_support(BML_CTX ctx, int *res)
+{
+    // Validate input parameters
+    if (!ctx || !res)
+        return (-BML_RET_INVALID_ARGS);
+
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
+    return (pBML->get_client_roaming_11k_support(*res));
+}
+
 int bml_set_legacy_client_roaming(BML_CTX ctx, int enable)
 {
     // Validate input parameters
