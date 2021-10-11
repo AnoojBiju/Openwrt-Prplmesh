@@ -37,12 +37,6 @@ constexpr uint16_t MAX_VLAN_ID = 4094;
 
 // According to 802.11-2016 convertion table (Table 9-154).
 
-/**
- * @brief According to 802.11-2016 convertion table (Table 9-154), calculation equation parameters.
- */
-constexpr int RCPI_EQUATION_COEF     = 2;
-constexpr int RCPI_EQUATION_CONSTANT = 110;
-
 class network_utils {
 public:
     static const std::string ZERO_IP_STRING;
@@ -269,36 +263,6 @@ public:
      * @return true on success, false otherwise.
      */
     static bool set_vlan_packet_filter(bool set, const std::string &bss_iface, uint16_t vid = 0);
-
-    /**
-     * @brief Makes conversion from RSSI to RCPI.
-     *
-     * RCPI means Received channel power indicator.
-     * RSSI means Received signal strength indicator.
-     *
-     * This method can only return between 0-220 values.
-     *
-     * Between 221-254 values are reserved (MultiAP Spec.).
-     * 255 means measurement is not avaliable.
-     *
-     * @param rssi signal strength mostly negative value.
-     * @return converted rcpi value.
-     */
-    static uint8_t convert_rcpi_from_rssi(int8_t rssi);
-
-    /**
-     * @brief Makes conversion from RCPI to RSSI.
-     *
-     * RCPI means Received channel power indicator.
-     * RSSI means Received signal strength indicator.
-     *
-     * Between 221-254 values are reserved.
-     * In case of these values are requested to be converted, it returns RSSI_INVALID value.
-     *
-     * @param rcpi signal power indicator value.
-     * @return converted rssi value.
-     */
-    static int8_t convert_rssi_from_rcpi(uint8_t rcpi);
 };
 } // namespace net
 } // namespace beerocks
