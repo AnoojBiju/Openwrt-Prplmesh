@@ -183,7 +183,7 @@ public:
     /**
      * @brief A vector of overlapping channels and bandwidths.
      * E.g taken from wireless_utils::channels_table_5g (see the cpp file):
-     * {{104,beerocks::BANDWIDTH_80}, {112,beerocks::BANDWIDTH_40}, ... } 
+     * {{104,beerocks::BANDWIDTH_80}, {112,beerocks::BANDWIDTH_40}, ... }
      * they are both overlapping because both share channel 108.
      * Note: the common channel is NOT part of this structure
      */
@@ -201,7 +201,7 @@ public:
 
     /**
      * @brief Get a list of overlapping beacon channel for a given channel and bandwidth.
-     * 
+     *
      * @param beacon_channel Channel.
      * @param bw Bandwidth.
      * @return std::vector<uint8_t> List of overlapping beacon channels (20 MHz).
@@ -212,7 +212,7 @@ public:
     /**
      * @brief Get list of all possible beacon channels for a give center channel and bandwidth on
      * the 5G band.
-     * 
+     *
      * @param center_channel Center channel.
      * @param bw Bandwidth.
      * @return List of beacon channels that have the given center channel.
@@ -235,6 +235,36 @@ public:
 
     static bool has_operating_class_channel(const sOperatingClass &oper_class, uint8_t channel,
                                             beerocks::eWiFiBandwidth bw);
+
+    /**
+     * @brief Makes conversion from RSSI to RCPI.
+     *
+     * RCPI means Received channel power indicator.
+     * RSSI means Received signal strength indicator.
+     *
+     * This method can only return between 0-220 values.
+     *
+     * Between 221-254 values are reserved (MultiAP Spec.).
+     * 255 means measurement is not avaliable.
+     *
+     * @param rssi signal strength mostly negative value.
+     * @return converted rcpi value.
+     */
+    static uint8_t convert_rcpi_from_rssi(int8_t rssi);
+
+    /**
+     * @brief Makes conversion from RCPI to RSSI.
+     *
+     * RCPI means Received channel power indicator.
+     * RSSI means Received signal strength indicator.
+     *
+     * Between 221-254 values are reserved.
+     * In case of these values are requested to be converted, it returns RSSI_INVALID value.
+     *
+     * @param rcpi signal power indicator value.
+     * @return converted rssi value.
+     */
+    static int8_t convert_rssi_from_rcpi(uint8_t rcpi);
 
 private:
     enum eAntennaFactor {
@@ -310,8 +340,8 @@ private:
             {65,3},     {130,86},   {135,71},   {195,89},   {234,107},  {260,92},   {270,125},  {293,129},  {390,133},  {405,139},
             {520,140},  {540,141},  {585,146},  {650,147},  {780,148},  {810,151},  {878,151},  {1040,161}, {1080,172}, {1170,182},
             {1215,156}, {1300,189}, {1350,157}, {1560,196}, {1620,202}, {1755,208}, {1800,161}, {2160,213}, {2340,241}, {2430,220},
-            {2633,169}, {2700,232}, {2925,189}, {3240,237}, {3510,251}, {3600,246}, {3900,328}, {4680,251}, {5265,253}, {5850,261}, 
-            {7020,266}, {7800,266}  
+            {2633,169}, {2700,232}, {2925,189}, {3240,237}, {3510,251}, {3600,246}, {3900,328}, {4680,251}, {5265,253}, {5850,261},
+            {7020,266}, {7800,266}
     };
 
     // clang-format on
