@@ -99,6 +99,33 @@ public:
          * Obtained from NL80211_ATTR_WIPHY
          */
         uint32_t wiphy = 0;
+
+        /**
+         * frequency of the selected channel in MHz.
+         * Obtained from NL80211_ATTR_WIPHY_FREQ
+         */
+        uint32_t frequency = 0;
+        uint32_t channel   = 0;
+
+        /**
+         * current channel width.
+         * Obtained from NL80211_ATTR_CHANNEL_WIDTH
+         */
+        uint8_t bandwidth = 0;
+
+        /*
+         * Center frequency of the first part of the
+         * channel, used for anything but 20 MHz bandwidth
+         * Obtained from NL80211_ATTR_CENTER_FREQ1
+         */
+        uint32_t frequency_center1 = 0;
+
+        /*
+         * Center frequency of the second part of the
+         * channel, used only for 80+80 MHz bandwidth
+         * Obtained from NL80211_ATTR_CENTER_FREQ2
+         */
+        uint32_t frequency_center2 = 0;
     };
 
     /**
