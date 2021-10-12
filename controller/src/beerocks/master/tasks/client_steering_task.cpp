@@ -34,8 +34,8 @@ client_steering_task::client_steering_task(db &database, ieee1905_1::CmduMessage
       m_triggered_by(triggered_by), m_steering_type(steering_type),
       m_disassoc_imminent(disassoc_imminent), m_disassoc_timer_ms(disassoc_timer_ms)
 {
-      m_steer_restricted = steer_restricted;
-      m_status_code = 0;
+    m_steer_restricted = steer_restricted;
+    m_status_code      = 0;
 }
 
 void client_steering_task::work()

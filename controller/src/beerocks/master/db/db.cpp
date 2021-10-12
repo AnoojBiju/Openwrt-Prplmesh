@@ -3088,15 +3088,18 @@ static void dm_add_bss_neighbors(std::shared_ptr<beerocks::nbapi::Ambiorix> m_am
             return;
         }
         bool ok = true;
-        ok &= m_ambiorix_datamodel->set(neighbor_path, "BSSID", tlvf::mac_to_string(neighbor.bssid()));
+        ok &= m_ambiorix_datamodel->set(neighbor_path, "BSSID",
+                                        tlvf::mac_to_string(neighbor.bssid()));
         ok &= m_ambiorix_datamodel->set(neighbor_path, "SSID", neighbor.ssid_str());
-        ok &= m_ambiorix_datamodel->set(neighbor_path, "SignalStrength", neighbor.signal_strength());
+        ok &=
+            m_ambiorix_datamodel->set(neighbor_path, "SignalStrength", neighbor.signal_strength());
         ok &= m_ambiorix_datamodel->set(neighbor_path, "ChannelBandwidth",
                                         neighbor.channels_bw_list_str());
         if (neighbor.bss_load_element_present()) {
             ok &= m_ambiorix_datamodel->set(neighbor_path, "ChannelUtilization",
                                             neighbor.channel_utilization());
-            ok &= m_ambiorix_datamodel->set(neighbor_path, "StationCount", neighbor.station_count());
+            ok &=
+                m_ambiorix_datamodel->set(neighbor_path, "StationCount", neighbor.station_count());
         }
         if (!ok) {
             LOG(ERROR) << "Failed to set parameters for " << neighbor_path;

@@ -1415,10 +1415,7 @@ int cli_bml::client_clear_client_caller(int numOfArgs)
 // Functions
 //
 
-int cli_bml::get_onboarding_status()
-{
-    return onboard_status();
-}
+int cli_bml::get_onboarding_status() { return onboard_status(); }
 
 bool cli_bml::is_pending_response() { return pending_response; }
 
