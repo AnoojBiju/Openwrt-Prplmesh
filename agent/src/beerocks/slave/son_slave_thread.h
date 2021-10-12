@@ -128,8 +128,7 @@ private:
     bool handle_cmdu_control_message(Socket *sd,
                                      std::shared_ptr<beerocks::beerocks_header> beerocks_header);
     bool handle_cmdu_backhaul_manager_message(
-        const std::string &fronthaul_iface, Socket *sd,
-        std::shared_ptr<beerocks::beerocks_header> beerocks_header);
+        Socket *sd, std::shared_ptr<beerocks::beerocks_header> beerocks_header);
     bool handle_cmdu_platform_manager_message(
         Socket *sd, std::shared_ptr<beerocks::beerocks_header> beerocks_header);
     bool handle_cmdu_ap_manager_message(const std::string &fronthaul_iface, Socket *sd,
@@ -146,7 +145,7 @@ private:
     bool agent_fsm();
     void slave_reset(const std::string &fronthaul_iface);
     void stop_slave_thread();
-    void backhaul_manager_stop(const std::string &fronthaul_iface);
+    void backhaul_manager_stop();
     void platform_manager_stop();
     void hostap_services_off();
     bool hostap_services_on();
@@ -176,6 +175,10 @@ private:
     std::string platform_manager_uds;
 
     SocketClient *m_platform_manager_socket = nullptr;
+    SocketClient *m_backhaul_manager_socket = nullptr;
+    SocketClient *m_master_socket           = nullptr;
+
+    bool m_is_backhaul_disconnected = false;
 
     // Global FSM members:
     eSlaveState m_agent_state;
@@ -186,7 +189,6 @@ private:
         beerocks_message::sSonConfig son_config;
         int stop_on_failure_attempts;
         bool stopped                   = false;
-        bool is_backhaul_disconnected  = false;
         bool is_slave_reset            = false;
         bool is_backhaul_reconf        = false;
         bool detach_on_conf_change     = false;
@@ -199,9 +201,6 @@ private:
         int slave_resets_counter = 0;
 
         sSlaveBackhaulParams backhaul_params;
-        SocketClient *backhaul_manager_socket = nullptr;
-        SocketClient *master_socket           = nullptr;
-
         Socket *monitor_socket    = nullptr;
         Socket *ap_manager_socket = nullptr;
         std::chrono::steady_clock::time_point monitor_last_seen;
@@ -247,16 +246,6 @@ private:
             m_zwdfs_radio_manager  = std::make_unique<std::pair<std::string, sManagedRadio>>();
             *m_zwdfs_radio_manager = std::move(*it);
             m_radio_managers.erase(it);
-        }
-
-        const std::string &get_controller_socket_iface()
-        {
-            for (auto &radio : get()) {
-                if (radio.second.master_socket) {
-                    return radio.first;
-                }
-            }
-            return m_radio_managers.begin()->first;
         }
 
         /**
