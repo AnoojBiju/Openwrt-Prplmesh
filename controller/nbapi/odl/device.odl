@@ -48,6 +48,31 @@
             %read-only string AssocIEEE1905DeviceRef;
         }
 
+        %read-only object MultiAPBackhaul {
+
+            %read-only string BackhaulLinkType {
+                default "None";
+                on action validate call check_enum [
+                    "None",
+                    "Wi-Fi",
+                    "MoCA",
+                    "Ethernet",
+                    "G.hn",
+                    "HPNA",
+                    "HomePlug",
+                    "UPA"
+                ];
+            }
+
+            /**
+             * An empty string value is reserved for the APDevice instance
+             * that represents the Multi-AP Controller.
+             */
+            %read-only string BackhaulMACAddress = "";
+            %read-only string BackhaulDeviceID = "";
+            %read-only string MACAddress = "";
+        }
+
         /*
         ** The list of Radio objects.
         */
