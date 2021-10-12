@@ -3,6 +3,7 @@
 
 #include <bcl/beerocks_state_machine.h>
 #include <bcl/beerocks_string_utils.h>
+#include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
 
 #include <easylogging++.h>
@@ -168,7 +169,7 @@ void KeyValueParser::parse_event_keyless_params(const std::string &event_str, si
             opcode                                  = false;
         } else if (beerocks::net::network_utils::is_valid_mac(str_storage)) {
             parsed_line[EVENT_KEYLESS_PARAM_MAC] = str_storage;
-        } else if (!strncmp(str_storage.c_str(), "wlan", 4)) {
+        } else if (beerocks::utils::is_allowed_ifname_prefix(str_storage, true)) {
             parsed_line[EVENT_KEYLESS_PARAM_IFACE] = str_storage;
         }
     }

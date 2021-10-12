@@ -56,6 +56,34 @@ public:
     static beerocks::eIfaceType get_iface_type_from_string(std::string iface_type_name);
     static std::string get_iface_type_string(beerocks::eIfaceType iface_type);
     static bool is_node_wireless(beerocks::eIfaceType iface_type);
+    /**
+    * @brief This function will return the default prefix string for wireless interface names.
+    *
+    * @return std::string default prefix (the first element in the allowed prefix list).
+    */
+    static std::string get_default_ifname_prefix();
+    /**
+    * @brief This function will check if the interface name prefix is allowed.
+    * The check can de done by
+    * - a total match : prefix equals one of allowed prefix string list entries.
+    * - a partial match: prefix string starts with one of allowed prefix string list entries.
+    *
+    * @param[in] prefix : interface name prefix to be checked
+    * @param[in] partial: flag to require total or partial matching of the argument prefix in the allowed list.
+    * @return bool true if the prefix is allowed, false otherwise.
+    */
+    static bool is_allowed_ifname_prefix(const std::string &prefix, bool partial = false);
+    /**
+    * @brief This function will return the prefix string in the argument interface name
+    * following one of these patterns:
+    * - PREFIXn
+    * - PREFIXn.m
+    * where n and m are digit sequences
+    *
+    * @param[in] iface : interface name string
+    * @return std::string prefix if interface name matches the naming pattern, empty string otherwise.
+    */
+    static std::string get_prefix_from_iface_string(const std::string &iface);
     static sIfaceVapIds get_ids_from_iface_string(const std::string &iface);
     static std::string get_iface_string_from_iface_vap_ids(int8_t iface_id, int8_t vap_id);
     static std::string get_iface_string_from_iface_vap_ids(const std::string &iface, int8_t vap_id);
