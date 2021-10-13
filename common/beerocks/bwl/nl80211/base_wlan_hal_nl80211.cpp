@@ -660,8 +660,29 @@ bool base_wlan_hal_nl80211::refresh_radio_info()
         // 1 = 80 MHz channel width
         // 2 = 160 MHz channel width
         // 3 = 80+80 MHz channel width
-        int vht_oper_chwidth  = beerocks::string_utils::stoi(reply["vht_oper_chwidth"]);
-        int secondary_channel = beerocks::string_utils::stoi(reply["vht_oper_chwidth"]);
+        int vht_oper_chwidth  = 0;
+        int secondary_channel = 0;
+        nl80211_client::interface_info if_info;
+        auto iter = reply.find("vht_oper_chwidth");
+        if (iter != reply.end()) {
+            vht_oper_chwidth  = beerocks::string_utils::stoi(iter->second);
+            secondary_channel = beerocks::string_utils::stoi(iter->second);
+        } else if (m_nl80211_client->get_interface_info(get_iface_name(), if_info)) {
+            switch (if_info.bandwidth) {
+            case 40:
+                secondary_channel = 1;
+                break;
+            case 80:
+                vht_oper_chwidth = 1;
+                break;
+            case 160:
+                vht_oper_chwidth = 2;
+                break;
+            default:
+                break;
+            }
+            m_radio_info.vht_center_freq = if_info.frequency_center1;
+        }
 
         switch (vht_oper_chwidth) {
             // if vht_oper_chwidth is not set it defaults to 0
@@ -679,13 +700,19 @@ bool base_wlan_hal_nl80211::refresh_radio_info()
             m_radio_info.bandwidth = 160;
             break;
         default:
-            LOG(ERROR) << "Unknown bandwidth " << m_radio_info.bandwidth
-                       << ". Defaulting to 160Mhz.";
+            LOG(ERROR) << "Unknown vht_oper_chwidth " << vht_oper_chwidth
+                       << ". Defaulting bandwidth to 160Mhz.";
             m_radio_info.bandwidth = 160;
         }
 
-        m_radio_info.vht_center_freq =
-            beerocks::string_utils::stoi(reply["vht_oper_centr_freq_seg0_idx"]);
+        //center freq = 5 GHz + (5 * index)
+        iter = reply.find("vht_oper_centr_freq_seg0_idx");
+        if (iter != reply.end()) {
+            auto freq_idx = beerocks::string_utils::stoi(iter->second);
+            if (freq_idx > 0) {
+                m_radio_info.vht_center_freq = 5000 + (freq_idx * 5);
+            }
+        }
 
         LOG(DEBUG) << "radio " << m_radio_info.iface_name
                    << " bandwidth: " << m_radio_info.bandwidth;
