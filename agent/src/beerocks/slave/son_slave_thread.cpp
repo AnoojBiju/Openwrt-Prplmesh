@@ -1489,7 +1489,11 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
 
         response_out->params()            = response_in->params();
         response_out->params().src_module = beerocks::BEEROCKS_ENTITY_BACKHAUL_MANAGER;
-        send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
+
+        auto db = AgentDB::get();
+        // The Agent send the request message to the Controller only if the backhaul link is
+        // wireless. The Controller expects a response from the backhaul manager radio.
+        send_cmdu_to_controller(db->backhaul.selected_iface_name, cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_BACKHAUL_CLIENT_RX_RSSI_MEASUREMENT_CMD_RESPONSE: {
@@ -1512,7 +1516,10 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
             break;
         }
         response_out->mac() = response_in->mac();
-        send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
+        auto db = AgentDB::get();
+        // The Agent send the request message to the Controller only if the backhaul link is
+        // wireless. The Controller expects a response from the backhaul manager radio.
+        send_cmdu_to_controller(db->backhaul.selected_iface_name, cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_BACKHAUL_ASSOCIATED_STA_LINK_METRICS_REQUEST: {
