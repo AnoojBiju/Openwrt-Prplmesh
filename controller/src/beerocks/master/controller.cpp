@@ -3375,28 +3375,6 @@ bool Controller::handle_cmdu_control_message(
         }
         break;
     }
-    case beerocks_message::ACTION_CONTROL_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION: {
-        /* TODO decide what this code should do now that tx_rssi is no longer used
-            auto report = (beerocks::message::sACTION_CONTROL_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION*)rx_buffer;
-            std::string backhaul_mac = database.get_node_parent_backhaul(sd->hostap_mac());
-            std::string parent_mac = database.get_node_parent(backhaul_mac);
-
-            int prev_rssi = database.get_node_cross_tx_rssi(backhaul_mac, parent_mac);
-            int rssi = report->params.rssi;
-
-            if (prev_rssi == beerocks::RSSI_INVALID) {
-                prev_rssi = rssi;
-            }
-
-            //LOG(DEBUG) << "rssi report from ire " << ire_mac << " rssi=" << rssi << " prev_rssi=" << prev_rssi;
-            database.set_node_cross_tx_rssi(backhaul_mac, parent_mac, rssi);
-            if ((abs(prev_rssi - rssi) >= int(database.config.monitor_rx_rssi_notification_delta_db)) && database.settings_ire_roaming()) {
-                auto new_task = std::make_shared<optimal_path_task>(database, cmdu_tx, tasks, backhaul_mac, 0, "ire_rssi_report");
-                tasks.add_task(new_task);
-            }
-            */
-        break;
-    }
     case beerocks_message::ACTION_CONTROL_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION: {
         auto notification = beerocks_header->addClass<
             beerocks_message::cACTION_CONTROL_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION>();

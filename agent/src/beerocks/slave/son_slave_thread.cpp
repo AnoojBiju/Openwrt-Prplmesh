@@ -1528,32 +1528,6 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
         send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
         break;
     }
-
-    case beerocks_message::ACTION_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION: {
-        LOG(DEBUG) << "ACTION_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION";
-        auto notification_in =
-            beerocks_header
-                ->addClass<beerocks_message::cACTION_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION>();
-        if (!notification_in) {
-            LOG(ERROR) << "Failed building ACTION_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION message!";
-            return false;
-        }
-
-        auto notification_out = message_com::create_vs_message<
-            beerocks_message::cACTION_CONTROL_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION>(
-            cmdu_tx, beerocks_header->id());
-
-        if (!notification_out) {
-            LOG(ERROR)
-                << "Failed building ACTION_CONTROL_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION message!";
-            break;
-        }
-
-        notification_out->params() = notification_in->params();
-        send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
-
-        break;
-    }
     case beerocks_message::ACTION_BACKHAUL_ASSOCIATED_STA_LINK_METRICS_REQUEST: {
         LOG(DEBUG) << "ACTION_BACKHAUL_ASSOCIATED_STA_LINK_METRICS_REQUEST";
         auto &radio_mac = beerocks_header->actionhdr()->radio_mac();
@@ -1910,28 +1884,7 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
         message_com::send_cmdu(radio_manager.monitor_socket, cmdu_tx);
         break;
     }
-    case beerocks_message::ACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_REQUEST: {
-        LOG(TRACE) << "ACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_REQUEST";
-        auto request_in =
-            beerocks_header
-                ->addClass<beerocks_message::cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_REQUEST>();
-        if (!request_in) {
-            LOG(ERROR) << "addClass cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_REQUEST failed";
-            return false;
-        }
 
-        auto request_out = message_com::create_vs_message<
-            beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_DUMP_RESULTS_REQUEST>(cmdu_tx);
-        if (!request_out) {
-            LOG(ERROR)
-                << "Failed building cACTION_MONITOR_CHANNEL_SCAN_DUMP_RESULTS_REQUEST message!";
-            return false;
-        }
-
-        LOG(DEBUG) << "send cACTION_MONITOR_CHANNEL_SCAN_DUMP_RESULTS_REQUEST";
-        message_com::send_cmdu(radio_manager.monitor_socket, cmdu_tx);
-        break;
-    }
     case beerocks_message::ACTION_BACKHAUL_CHANNEL_SCAN_ABORT_REQUEST: {
         auto &radio_mac = beerocks_header->actionhdr()->radio_mac();
         auto db         = AgentDB::get();

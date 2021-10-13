@@ -564,10 +564,6 @@ sBackhaulParams:
     _type: beerocks::net::sScanResult
     _length: ["beerocks::message::BACKHAUL_SCAN_MEASUREMENT_MAX_LENGTH"]
 
-sBackhaulRssi:
-  _type: struct
-  rssi: int8_t
-
 sLoggingLevelChange:
   _type: struct
   mac: sMacAddr

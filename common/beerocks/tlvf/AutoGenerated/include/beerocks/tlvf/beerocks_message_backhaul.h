@@ -231,27 +231,6 @@ class cACTION_BACKHAUL_ENABLE_APS_REQUEST : public BaseClass
         uint8_t* m_center_channel = nullptr;
 };
 
-class cACTION_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION : public BaseClass
-{
-    public:
-        cACTION_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION(uint8_t* buff, size_t buff_len, bool parse = false);
-        explicit cACTION_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION(std::shared_ptr<BaseClass> base, bool parse = false);
-        ~cACTION_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION();
-
-        static eActionOp_BACKHAUL get_action_op(){
-            return (eActionOp_BACKHAUL)(ACTION_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION);
-        }
-        sBackhaulRssi& params();
-        void class_swap() override;
-        bool finalize() override;
-        static size_t get_initial_size();
-
-    private:
-        bool init();
-        eActionOp_BACKHAUL* m_action_op = nullptr;
-        sBackhaulRssi* m_params = nullptr;
-};
-
 class cACTION_BACKHAUL_UPDATE_STOP_ON_FAILURE_ATTEMPTS_REQUEST : public BaseClass
 {
     public:
@@ -805,25 +784,6 @@ class cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE : public BaseClass
         bool init();
         eActionOp_BACKHAUL* m_action_op = nullptr;
         uint8_t* m_success = nullptr;
-};
-
-class cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_REQUEST : public BaseClass
-{
-    public:
-        cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_REQUEST(uint8_t* buff, size_t buff_len, bool parse = false);
-        explicit cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_REQUEST(std::shared_ptr<BaseClass> base, bool parse = false);
-        ~cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_REQUEST();
-
-        static eActionOp_BACKHAUL get_action_op(){
-            return (eActionOp_BACKHAUL)(ACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_REQUEST);
-        }
-        void class_swap() override;
-        bool finalize() override;
-        static size_t get_initial_size();
-
-    private:
-        bool init();
-        eActionOp_BACKHAUL* m_action_op = nullptr;
 };
 
 class cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_RESPONSE : public BaseClass

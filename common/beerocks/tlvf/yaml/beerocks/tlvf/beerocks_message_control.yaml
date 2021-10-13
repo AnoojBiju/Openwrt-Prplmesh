@@ -51,10 +51,6 @@ cACTION_CONTROL_ARP_QUERY_RESPONSE:
   _type: class
   params: sArpMonitorData
 
-cACTION_CONTROL_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION:
-  _type: class
-  params: sBackhaulRssi
-
 cACTION_CONTROL_CHANGE_MODULE_LOGGING_LEVEL:
   _type: class
   params: sLoggingLevelChange
