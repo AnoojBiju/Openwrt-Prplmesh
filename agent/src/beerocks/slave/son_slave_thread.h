@@ -85,13 +85,6 @@ public:
         STATE_LOAD_PLATFORM_CONFIGURATION,
         STATE_CONNECT_TO_PLATFORM_MANAGER,
         STATE_WAIT_FOR_PLATFORM_MANAGER_REGISTER_RESPONSE,
-        STATE_STOPPED,
-
-        // This state is the last common state. It means the from now each radio will have a state
-        // of its own, specified under "Radio Specific" down below.
-        STATE_RADIO_SPECIFIC_FSM,
-
-        // Radio Specific
         STATE_CONNECT_TO_BACKHAUL_MANAGER,
         STATE_WAIT_RETRY_CONNECT_TO_BACKHAUL_MANAGER,
         STATE_WAIT_FOR_BACKHAUL_MANAGER_REGISTER_RESPONSE,
@@ -102,6 +95,13 @@ public:
         STATE_WAIT_FOR_BACKHAUL_MANAGER_CONNECTED_NOTIFICATION,
         STATE_BACKHAUL_MANAGER_CONNECTED,
         STATE_WAIT_BACKHAUL_MANAGER_BUSY,
+        STATE_STOPPED,
+
+        // This state is the last common state. It means the from now each radio will have a state
+        // of its own, specified under "Radio Specific" down below.
+        STATE_RADIO_SPECIFIC_FSM,
+
+        // Radio Specific
         STATE_WAIT_BEFORE_JOIN_MASTER,
         STATE_JOIN_MASTER,
         STATE_WAIT_FOR_JOINED_RESPONSE,
@@ -179,6 +179,7 @@ private:
     SocketClient *m_master_socket           = nullptr;
 
     bool m_is_backhaul_disconnected = false;
+    sSlaveBackhaulParams backhaul_params;
 
     // Global FSM members:
     eSlaveState m_agent_state;
@@ -197,7 +198,6 @@ private:
         std::chrono::steady_clock::time_point slave_state_timer;
         int slave_resets_counter = 0;
 
-        sSlaveBackhaulParams backhaul_params;
         Socket *monitor_socket    = nullptr;
         Socket *ap_manager_socket = nullptr;
         std::chrono::steady_clock::time_point monitor_last_seen;

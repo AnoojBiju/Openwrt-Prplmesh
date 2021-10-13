@@ -110,7 +110,7 @@ slave_thread::slave_thread(sAgentConfig conf, beerocks::logging &logger_)
 
         radio->sta_iface_filter_low = radio_conf.backhaul_wireless_iface_filter_low;
 
-        radio_manager.slave_state = STATE_INIT;
+        m_agent_state = STATE_INIT;
     }
     set_select_timeout(SELECT_TIMEOUT_MSEC);
 }
@@ -1301,7 +1301,8 @@ bool slave_thread::handle_cmdu_control_message(Socket *sd,
 }
 
 bool slave_thread::handle_cmdu_backhaul_manager_message(
-    Socket *sd, std::shared_ptr<beerocks_header> beerocks_header) {
+    Socket *sd, std::shared_ptr<beerocks_header> beerocks_header)
+{
     if (!m_backhaul_manager_socket) {
         LOG(ERROR) << "backhaul_socket == nullptr";
         return true;
@@ -1313,16 +1314,16 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
 
     switch (beerocks_header->action_op()) {
     case beerocks_message::ACTION_BACKHAUL_REGISTER_RESPONSE: {
-        LOG(DEBUG) << "ACTION_BACKHAUL_REGISTER_RESPONSE " << fronthaul_iface;
-        if (radio_manager.slave_state == STATE_WAIT_FOR_BACKHAUL_MANAGER_REGISTER_RESPONSE) {
+        LOG(DEBUG) << "received ACTION_BACKHAUL_REGISTER_RESPONSE";
+        if (m_agent_state == STATE_WAIT_FOR_BACKHAUL_MANAGER_REGISTER_RESPONSE) {
             auto response =
                 beerocks_header->addClass<beerocks_message::cACTION_BACKHAUL_REGISTER_RESPONSE>();
             if (!response) {
                 LOG(ERROR) << "Failed building message!";
                 return false;
             }
-            LOG(DEBUG) << "goto STATE_JOIN_INIT " << fronthaul_iface;
-            radio_manager.slave_state = STATE_JOIN_INIT;
+            LOG(DEBUG) << "goto STATE_JOIN_INIT";
+            m_agent_state = STATE_JOIN_INIT;
         } else {
             LOG(ERROR) << "slave_state != STATE_WAIT_FOR_BACKHAUL_MANAGER_REGISTER_RESPONSE";
         }
@@ -1370,74 +1371,57 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
             return false;
         }
 
-        LOG(DEBUG) << "ACTION_BACKHAUL_CONNECTED_NOTIFICATION " << fronthaul_iface;
+        LOG(DEBUG) << "received ACTION_BACKHAUL_CONNECTED_NOTIFICATION";
 
-        if (radio_manager.slave_state >= STATE_WAIT_FOR_BACKHAUL_MANAGER_CONNECTED_NOTIFICATION &&
-            radio_manager.slave_state <= STATE_OPERATIONAL) {
-
-
-            auto db = AgentDB::get();
-
-            radio_manager.backhaul_params.bridge_ipv4 =
-                network_utils::ipv4_to_string(notification->params().bridge_ipv4);
-            radio_manager.backhaul_params.backhaul_mac =
-                tlvf::mac_to_string(notification->params().backhaul_mac);
-            radio_manager.backhaul_params.backhaul_ipv4 =
-                network_utils::ipv4_to_string(notification->params().backhaul_ipv4);
-            radio_manager.backhaul_params.backhaul_bssid =
-                tlvf::mac_to_string(notification->params().backhaul_bssid);
-            // backhaul_params.backhaul_freq        = notification->params.backhaul_freq; // HACK temp disabled because of a bug on endian converter
-            radio_manager.backhaul_params.backhaul_channel =
-                notification->params().backhaul_channel;
-            radio_manager.backhaul_params.backhaul_is_wireless =
-                notification->params().backhaul_is_wireless;
-            radio_manager.backhaul_params.backhaul_iface_type =
-                notification->params().backhaul_iface_type;
-
-            std::copy_n(notification->params().backhaul_scan_measurement_list,
-                        beerocks::message::BACKHAUL_SCAN_MEASUREMENT_MAX_LENGTH,
-                        radio_manager.backhaul_params.backhaul_scan_measurement_list);
-
-            for (unsigned int i = 0; i < message::BACKHAUL_SCAN_MEASUREMENT_MAX_LENGTH; i++) {
-                if (radio_manager.backhaul_params.backhaul_scan_measurement_list[i].channel > 0) {
-                    LOG(DEBUG)
-                        << "mac = "
-                        << radio_manager.backhaul_params.backhaul_scan_measurement_list[i].mac
-                        << " channel = "
-                        << radio_manager.backhaul_params.backhaul_scan_measurement_list[i].channel
-                        << " rssi = "
-                        << radio_manager.backhaul_params.backhaul_scan_measurement_list[i].rssi;
-                }
-            }
-
-            if (notification->params().backhaul_is_wireless) {
-
-                radio_manager.backhaul_params.backhaul_iface =
-                    config.radios[fronthaul_iface].backhaul_wireless_iface;
-            } else {
-                radio_manager.backhaul_params.backhaul_iface = db->ethernet.wan.iface_name;
-            }
-
-            LOG(DEBUG) << "goto STATE_BACKHAUL_MANAGER_CONNECTED " << fronthaul_iface;
-            radio_manager.slave_state = STATE_BACKHAUL_MANAGER_CONNECTED;
-
-        } else {
-            LOG(WARNING) << "slave_state != STATE_WAIT_FOR_BACKHAUL_CONNECTED_NOTIFICATION";
+        if (m_agent_state != STATE_WAIT_FOR_BACKHAUL_MANAGER_CONNECTED_NOTIFICATION) {
+            LOG(WARNING) << "Unexpected Backhaul connected notification, Agent state="
+                         << m_agent_state;
         }
+
+        auto db = AgentDB::get();
+
+        backhaul_params.bridge_ipv4 =
+            network_utils::ipv4_to_string(notification->params().bridge_ipv4);
+        backhaul_params.backhaul_mac = tlvf::mac_to_string(notification->params().backhaul_mac);
+        backhaul_params.backhaul_ipv4 =
+            network_utils::ipv4_to_string(notification->params().backhaul_ipv4);
+        backhaul_params.backhaul_bssid = tlvf::mac_to_string(notification->params().backhaul_bssid);
+        // backhaul_params.backhaul_freq        = notification->params.backhaul_freq; // HACK temp
+        // disabled because of a bug on endian converter
+        backhaul_params.backhaul_channel     = notification->params().backhaul_channel;
+        backhaul_params.backhaul_is_wireless = notification->params().backhaul_is_wireless;
+        backhaul_params.backhaul_iface_type  = notification->params().backhaul_iface_type;
+
+        std::copy_n(notification->params().backhaul_scan_measurement_list,
+                    beerocks::message::BACKHAUL_SCAN_MEASUREMENT_MAX_LENGTH,
+                    backhaul_params.backhaul_scan_measurement_list);
+
+        for (unsigned int i = 0; i < message::BACKHAUL_SCAN_MEASUREMENT_MAX_LENGTH; i++) {
+            if (backhaul_params.backhaul_scan_measurement_list[i].channel > 0) {
+                LOG(DEBUG) << "mac = " << backhaul_params.backhaul_scan_measurement_list[i].mac
+                           << " channel = "
+                           << backhaul_params.backhaul_scan_measurement_list[i].channel
+                           << " rssi = " << backhaul_params.backhaul_scan_measurement_list[i].rssi;
+            }
+        }
+        backhaul_params.backhaul_iface = db->backhaul.selected_iface_name;
+
+        LOG(DEBUG) << "goto STATE_BACKHAUL_MANAGER_CONNECTED";
+        m_agent_state = STATE_BACKHAUL_MANAGER_CONNECTED;
+
         break;
     }
     case beerocks_message::ACTION_BACKHAUL_BUSY_NOTIFICATION: {
-        if (radio_manager.slave_state != STATE_WAIT_FOR_BACKHAUL_MANAGER_CONNECTED_NOTIFICATION) {
+        if (m_agent_state != STATE_WAIT_FOR_BACKHAUL_MANAGER_CONNECTED_NOTIFICATION) {
             LOG(WARNING) << "slave_state != STATE_WAIT_FOR_BACKHAUL_CONNECTED_NOTIFICATION";
             break;
         }
 
-        radio_manager.slave_state_timer =
-            std::chrono::steady_clock::now() +
-            std::chrono::seconds(WAIT_BEFORE_SEND_BH_ENABLE_NOTIFICATION_SEC);
+        m_agent_state_timer_sec = std::chrono::steady_clock::now() +
+                                  std::chrono::seconds(WAIT_BEFORE_SEND_BH_ENABLE_NOTIFICATION_SEC);
 
         LOG(DEBUG) << "goto STATE_WAIT_BACKHAUL_MANAGER_BUSY";
-        radio_manager.slave_state = STATE_WAIT_BACKHAUL_MANAGER_BUSY;
+        m_agent_state = STATE_WAIT_BACKHAUL_MANAGER_BUSY;
 
         break;
     }
@@ -1457,16 +1441,19 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
             return false;
         }
 
-        radio_manager.stopped |= bool(notification->stopped());
-
-        radio_manager.is_backhaul_disconnected = true;
-        radio_manager.slave_state_timer =
+        m_is_backhaul_disconnected = true;
+        m_agent_state_timer_sec =
             std::chrono::steady_clock::now() +
             std::chrono::milliseconds(beerocks::IRE_MAX_WIRELESS_RECONNECTION_TIME_MSC);
 
-        radio_manager.master_socket = nullptr;
+        m_master_socket = nullptr;
 
-        slave_reset(fronthaul_iface);
+        m_radio_managers.do_on_each_radio_manager(
+            [&](sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
+                radio_manager.stopped |= bool(notification->stopped());
+                slave_reset(fronthaul_iface);
+                return true;
+            });
         break;
     }
     case beerocks_message::ACTION_BACKHAUL_APPLY_VLAN_POLICY_REQUEST: {
@@ -1827,13 +1814,6 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
             return false;
         }
 
-        auto db = AgentDB::get();
-
-        auto radio = db->radio(fronthaul_iface);
-        if (!radio) {
-            return false;
-        }
-
         bool radio_5g = wireless_utils::is_frequency_band_5ghz(radio->freq_type);
 
         // If received scan request and ZWDFS CAC is about to finish refuse to start the
@@ -1863,7 +1843,7 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
                     return false;
                 }
 
-                send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
+                send_cmdu_to_controller(radio->front.iface_name, cmdu_tx);
                 break;
             }
         }
@@ -1957,21 +1937,16 @@ bool slave_thread::handle_cmdu_platform_manager_message(
                 db->ethernet.wan.mac = network_utils::ZERO_MAC;
             }
 
-            auto radio_operation = [&](sManagedRadio &radio_manager,
-                                       const std::string &fronthaul_iface) -> bool {
-                radio_manager.stop_on_failure_attempts = db->device_conf.stop_on_failure_attempts;
+            // Rest the stop_on_failure_attempts counter
+            m_radio_managers.do_on_each_radio_manager(
+                [&](sManagedRadio &radio_manager, const std::string &fronthaul_iface) -> bool {
+                    radio_manager.stop_on_failure_attempts =
+                        db->device_conf.stop_on_failure_attempts;
+                    return true;
+                });
 
-                // TODO: When unifying the backhaul manager socket, change the state move from radio
-                // specific to global. PPM-349.
-                LOG(TRACE) << "goto STATE_CONNECT_TO_BACKHAUL_MANAGER " << fronthaul_iface;
-                radio_manager.slave_state = STATE_CONNECT_TO_BACKHAUL_MANAGER;
-                return true;
-            };
-            m_radio_managers.do_on_each_radio_manager(radio_operation);
-
-            // TODO: When unifying the backhaul manager socket, change the state move from radio
-            // specific to global. PPM-349.
-            m_agent_state = STATE_RADIO_SPECIFIC_FSM;
+            LOG(TRACE) << "goto STATE_CONNECT_TO_BACKHAUL_MANAGER";
+            m_agent_state = STATE_CONNECT_TO_BACKHAUL_MANAGER;
         } else {
             LOG(ERROR) << "slave_state != STATE_WAIT_FOR_PLATFORM_MANAGER_REGISTER_RESPONSE";
         }
@@ -3223,7 +3198,7 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
 
         radio_manager.monitor_socket = sd;
 
-        if (radio_manager.slave_state != STATE_WAIT_FOR_FRONTHAUL_THREADS_JOINED) {
+        if (m_agent_state != STATE_WAIT_FOR_FRONTHAUL_THREADS_JOINED) {
             LOG(WARNING) << "ACTION_MONITOR_JOINED_NOTIFICATION, but slave_state != "
                             "STATE_WAIT_FOR_FRONTHAUL_THREADS_JOINED";
         }
@@ -4074,34 +4049,23 @@ bool slave_thread::agent_fsm()
         }
         break;
     }
-    default: {
-        LOG(ERROR) << "Unknown state!";
-        break;
-    }
-    }
-    return true;
-}
-
-bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
-{
-    auto &radio_manager = m_radio_managers[fronthaul_iface];
-
-    switch (radio_manager.slave_state) {
     case STATE_CONNECT_TO_BACKHAUL_MANAGER: {
-        radio_manager.is_backhaul_disconnected = false;
+        m_is_backhaul_disconnected = false;
 
         if (!m_backhaul_manager_socket) {
             LOG(DEBUG) << "create backhaul_manager_socket";
             m_backhaul_manager_socket = new SocketClient(backhaul_manager_uds);
-            std::string err = m_backhaul_manager_socket->getError();
+            std::string err           = m_backhaul_manager_socket->getError();
             if (!err.empty()) {
                 LOG(ERROR) << "backhaul_manager_socket: " << err;
                 backhaul_manager_stop();
-                platform_notify_error(bpl::eErrorCode::SLAVE_CONNECTING_TO_BACKHAUL_MANAGER,
-                                      "iface=" +
-                                          config.radios[fronthaul_iface].backhaul_wireless_iface);
-                radio_manager.stop_on_failure_attempts--;
-                slave_reset(fronthaul_iface);
+                platform_notify_error(bpl::eErrorCode::SLAVE_CONNECTING_TO_BACKHAUL_MANAGER, {});
+                m_radio_managers.do_on_each_radio_manager(
+                    [&](sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
+                        radio_manager.stop_on_failure_attempts--;
+                        slave_reset(fronthaul_iface);
+                        return true;
+                    });
                 break;
             } else {
                 add_socket(m_backhaul_manager_socket);
@@ -4123,18 +4087,6 @@ bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
 
         auto db = AgentDB::get();
 
-        if (db->device_conf.local_gw ||
-            config.radios[fronthaul_iface].backhaul_wireless_iface.empty()) {
-            memset(request->sta_iface(message::IFACE_NAME_LENGTH), 0, message::IFACE_NAME_LENGTH);
-        } else {
-            string_utils::copy_string(
-                request->sta_iface(message::IFACE_NAME_LENGTH),
-                config.radios[fronthaul_iface].backhaul_wireless_iface.c_str(),
-                message::IFACE_NAME_LENGTH);
-        }
-        string_utils::copy_string(request->hostap_iface(message::IFACE_NAME_LENGTH),
-                                  fronthaul_iface.c_str(), message::IFACE_NAME_LENGTH);
-
         request->onboarding() = 0;
 
         LOG(INFO) << "ACTION_BACKHAUL_REGISTER_REQUEST "
@@ -4143,17 +4095,17 @@ bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
                   << " onboarding=" << int(request->onboarding());
 
         message_com::send_cmdu(m_backhaul_manager_socket, cmdu_tx);
-        LOG(TRACE) << "send ACTION_BACKHAUL_REGISTER_REQUEST " << fronthaul_iface;
-        LOG(TRACE) << "goto STATE_WAIT_FOR_BACKHAUL_MANAGER_REGISTER_RESPONSE " << fronthaul_iface;
-        radio_manager.slave_state = STATE_WAIT_FOR_BACKHAUL_MANAGER_REGISTER_RESPONSE;
+        LOG(TRACE) << "send ACTION_BACKHAUL_REGISTER_REQUEST";
+        LOG(TRACE) << "goto STATE_WAIT_FOR_BACKHAUL_MANAGER_REGISTER_RESPONSE";
+        m_agent_state = STATE_WAIT_FOR_BACKHAUL_MANAGER_REGISTER_RESPONSE;
 
         break;
     }
     case STATE_WAIT_RETRY_CONNECT_TO_BACKHAUL_MANAGER: {
-        if (std::chrono::steady_clock::now() > radio_manager.slave_state_timer) {
+        if (std::chrono::steady_clock::now() > m_agent_state_timer_sec) {
             LOG(DEBUG) << "retrying to connect connecting to backhaul manager";
             LOG(TRACE) << "goto STATE_CONNECT_TO_BACKHAUL_MANAGER";
-            radio_manager.slave_state = STATE_CONNECT_TO_BACKHAUL_MANAGER;
+            m_agent_state = STATE_CONNECT_TO_BACKHAUL_MANAGER;
         }
         break;
     }
@@ -4162,24 +4114,38 @@ bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
     }
     case STATE_JOIN_INIT: {
 
-        auto db = AgentDB::get();
-        if (!db->device_conf.front_radio.config[fronthaul_iface].band_enabled) {
-            LOG(DEBUG) << "wlan_settings.band_enabled=false";
+        bool all_radios_disabled = true;
+        auto db                  = AgentDB::get();
+        for (const auto &radio_conf_element : db->device_conf.front_radio.config) {
+            auto &radio_iface = radio_conf_element.first;
+            auto &radio_conf  = radio_conf_element.second;
+            LOG_IF(!radio_conf.band_enabled, DEBUG) << "radio " << radio_iface << " is disabled";
+            all_radios_disabled &= !radio_conf.band_enabled;
+        }
+
+        if (all_radios_disabled) {
             LOG(TRACE) << "goto STATE_BACKHAUL_ENABLE";
-            radio_manager.slave_state = STATE_BACKHAUL_ENABLE;
+            m_agent_state = STATE_BACKHAUL_ENABLE;
             break;
         }
 
+        m_radio_managers.do_on_each_radio_manager(
+            [&](const sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
+                auto db = AgentDB::get();
+                if (!db->device_conf.front_radio.config[fronthaul_iface].band_enabled) {
+                    return true;
+                }
+                auto radio = db->radio(fronthaul_iface);
+                if (radio) {
+                    // Set zwdfs to initial value.
+                    radio->front.zwdfs = false;
+                }
+                fronthaul_start(fronthaul_iface);
+                return true;
+            });
 
-        auto radio = db->radio(fronthaul_iface);
-        if (radio) {
-            // Set zwdfs to initial value.
-            radio->front.zwdfs = false;
-        }
-        fronthaul_start(fronthaul_iface);
-
-        LOG(TRACE) << "goto STATE_WAIT_FOR_FRONTHAUL_THREADS_JOINED " << fronthaul_iface;
-        radio_manager.slave_state = STATE_WAIT_FOR_FRONTHAUL_THREADS_JOINED;
+        LOG(TRACE) << "goto STATE_WAIT_FOR_FRONTHAUL_THREADS_JOINED";
+        m_agent_state = STATE_WAIT_FOR_FRONTHAUL_THREADS_JOINED;
         break;
     }
     case STATE_WAIT_FOR_FRONTHAUL_THREADS_JOINED: {
@@ -4218,26 +4184,38 @@ bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
         auto db    = AgentDB::get();
 
         if (db->device_conf.local_gw) {
-            LOG(TRACE) << "goto STATE_SEND_BACKHAUL_MANAGER_ENABLE " << fronthaul_iface;
-            radio_manager.slave_state = STATE_SEND_BACKHAUL_MANAGER_ENABLE;
+            LOG(TRACE) << "goto STATE_SEND_BACKHAUL_MANAGER_ENABLE";
+            m_agent_state = STATE_SEND_BACKHAUL_MANAGER_ENABLE;
             break;
         }
 
-        if (db->ethernet.wan.iface_name.empty() &&
-            config.radios[fronthaul_iface].backhaul_wireless_iface.empty()) {
+        // Go over all the radios and check if at least for one of them a wireless backhaul is
+        // defined.
+        bool backhaul_wireless_iface_exist = false;
+        for (const auto &radio_conf_element : config.radios) {
+            if (!radio_conf_element.second.backhaul_wireless_iface.empty()) {
+                backhaul_wireless_iface_exist = true;
+                break;
+            }
+        }
+        if (db->ethernet.wan.iface_name.empty() && !backhaul_wireless_iface_exist) {
             LOG(DEBUG) << "No valid backhaul iface!";
             platform_notify_error(bpl::eErrorCode::CONFIG_NO_VALID_BACKHAUL_INTERFACE, "");
             error = true;
         }
 
         if (error) {
-            radio_manager.stop_on_failure_attempts--;
-            slave_reset(fronthaul_iface);
+            m_radio_managers.do_on_each_radio_manager(
+                [&](sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
+                    radio_manager.stop_on_failure_attempts--;
+                    slave_reset(fronthaul_iface);
+                    return true;
+                });
         } else {
-            // backhaul manager will request for backhaul iface and tx enable after receiving ACTION_BACKHAUL_ENABLE,
-            // when wireless connection is required
+            // backhaul manager will request for backhaul iface and tx enable after receiving
+            // ACTION_BACKHAUL_ENABLE, when wireless connection is required
             LOG(TRACE) << "goto STATE_SEND_BACKHAUL_MANAGER_ENABLE";
-            radio_manager.slave_state = STATE_SEND_BACKHAUL_MANAGER_ENABLE;
+            m_agent_state = STATE_SEND_BACKHAUL_MANAGER_ENABLE;
         }
         break;
     }
@@ -4251,115 +4229,121 @@ bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
             break;
         }
 
-        auto db    = AgentDB::get();
-        auto radio = db->radio(fronthaul_iface);
-        if (!radio) {
-            return false;
-        }
-
-        if (!db->device_conf.local_gw) {
-            // Wireless config
-
-            // TODO: On passive mode, mem_only_psk is always be set, so supplying the credentials
-            // to the backhaul manager will no longer be necessary, and therefore should be be
-            // removed completely from beerocks including the BPL.
-
-            string_utils::copy_string(bh_enable->wire_iface(message::IFACE_NAME_LENGTH),
-                                      db->ethernet.wan.iface_name.c_str(),
-                                      message::IFACE_NAME_LENGTH);
-        }
-
-        bh_enable->iface_mac() = radio->front.iface_mac;
-
-        string_utils::copy_string(bh_enable->sta_iface(message::IFACE_NAME_LENGTH),
-                                  config.radios[fronthaul_iface].backhaul_wireless_iface.c_str(),
-                                  message::IFACE_NAME_LENGTH);
+        auto db = AgentDB::get();
 
         // Send the message
         LOG(DEBUG) << "send ACTION_BACKHAUL_ENABLE";
         message_com::send_cmdu(m_backhaul_manager_socket, cmdu_tx);
 
         // Next state
-        LOG(TRACE) << "goto STATE_WAIT_FOR_BACKHAUL_MANAGER_CONNECTED_NOTIFICATION "
-                   << fronthaul_iface;
-        radio_manager.slave_state = STATE_WAIT_FOR_BACKHAUL_MANAGER_CONNECTED_NOTIFICATION;
+        LOG(TRACE) << "goto STATE_WAIT_FOR_BACKHAUL_MANAGER_CONNECTED_NOTIFICATION";
+        m_agent_state = STATE_WAIT_FOR_BACKHAUL_MANAGER_CONNECTED_NOTIFICATION;
         break;
     }
     case STATE_WAIT_FOR_BACKHAUL_MANAGER_CONNECTED_NOTIFICATION: {
         break;
     }
     case STATE_WAIT_BACKHAUL_MANAGER_BUSY: {
-        if (std::chrono::steady_clock::now() > radio_manager.slave_state_timer) {
+        if (std::chrono::steady_clock::now() > m_agent_state_timer_sec) {
             LOG(TRACE) << "goto STATE_SEND_BACKHAUL_MANAGER_ENABLE";
-            radio_manager.slave_state = STATE_SEND_BACKHAUL_MANAGER_ENABLE;
+            m_agent_state = STATE_SEND_BACKHAUL_MANAGER_ENABLE;
         }
         break;
     }
     case STATE_BACKHAUL_MANAGER_CONNECTED: {
+        LOG(TRACE) << "MASTER_CONNECTED";
+
         m_master_socket = m_backhaul_manager_socket;
 
-        radio_manager.master_socket = radio_manager.backhaul_manager_socket;
+        m_agent_state = STATE_RADIO_SPECIFIC_FSM;
 
         auto db = AgentDB::get();
-        if (!db->device_conf.front_radio.config[fronthaul_iface].band_enabled) {
-            LOG(TRACE) << "goto STATE_PRE_OPERATIONAL";
-            radio_manager.slave_state = STATE_PRE_OPERATIONAL;
-            break;
-        }
 
         if (db->device_conf.local_gw) {
-            //TODO get bridge_iface from platform manager
+            // TODO get bridge_iface from platform manager
             network_utils::iface_info bridge_info;
             network_utils::get_iface_info(bridge_info, db->bridge.iface_name);
 
-            radio_manager.backhaul_params.bridge_ipv4    = bridge_info.ip;
-            radio_manager.backhaul_params.backhaul_iface = db->bridge.iface_name;
-            radio_manager.backhaul_params.backhaul_mac   = bridge_info.mac;
-            radio_manager.backhaul_params.backhaul_ipv4  = bridge_info.ip;
-            radio_manager.backhaul_params.backhaul_bssid = network_utils::ZERO_MAC_STRING;
+            backhaul_params.bridge_ipv4    = bridge_info.ip;
+            backhaul_params.backhaul_iface = db->bridge.iface_name;
+            backhaul_params.backhaul_mac   = bridge_info.mac;
+            backhaul_params.backhaul_ipv4  = bridge_info.ip;
+            backhaul_params.backhaul_bssid = network_utils::ZERO_MAC_STRING;
             // radio_manager.backhaul_params.backhaul_freq           = 0; // HACK temp disabled because of a bug on endian converter
-            radio_manager.backhaul_params.backhaul_channel     = 0;
-            radio_manager.backhaul_params.backhaul_is_wireless = 0;
-            radio_manager.backhaul_params.backhaul_iface_type  = beerocks::IFACE_TYPE_GW_BRIDGE;
+            backhaul_params.backhaul_channel     = 0;
+            backhaul_params.backhaul_is_wireless = 0;
+            backhaul_params.backhaul_iface_type  = beerocks::IFACE_TYPE_GW_BRIDGE;
+            backhaul_params.backhaul_iface       = db->ethernet.wan.iface_name;
         }
 
         LOG(INFO) << "Backhaul Params Info:";
         LOG(INFO) << "controller_bridge_mac=" << db->controller_info.bridge_mac;
         LOG(INFO) << "prplmesh_controller=" << db->controller_info.prplmesh_controller;
         LOG(INFO) << "bridge_mac=" << db->bridge.mac;
-        LOG(INFO) << "bridge_ipv4=" << radio_manager.backhaul_params.bridge_ipv4;
-        LOG(INFO) << "backhaul_iface=" << radio_manager.backhaul_params.backhaul_iface;
-        LOG(INFO) << "backhaul_mac=" << radio_manager.backhaul_params.backhaul_mac;
-        LOG(INFO) << "backhaul_ipv4=" << radio_manager.backhaul_params.backhaul_ipv4;
-        LOG(INFO) << "backhaul_bssid=" << radio_manager.backhaul_params.backhaul_bssid;
-        LOG(INFO) << "backhaul_channel=" << radio_manager.backhaul_params.backhaul_channel;
-        LOG(INFO) << "backhaul_is_wireless=" << radio_manager.backhaul_params.backhaul_is_wireless;
-        LOG(INFO) << "backhaul_iface_type=" << radio_manager.backhaul_params.backhaul_iface_type;
-        LOG(INFO) << "is_backhaul_manager=" << radio_manager.is_backhaul_manager;
+        LOG(INFO) << "bridge_ipv4=" << backhaul_params.bridge_ipv4;
+        LOG(INFO) << "backhaul_iface=" << backhaul_params.backhaul_iface;
+        LOG(INFO) << "backhaul_mac=" << backhaul_params.backhaul_mac;
+        LOG(INFO) << "backhaul_ipv4=" << backhaul_params.backhaul_ipv4;
+        LOG(INFO) << "backhaul_bssid=" << backhaul_params.backhaul_bssid;
+        LOG(INFO) << "backhaul_channel=" << backhaul_params.backhaul_channel;
+        LOG(INFO) << "backhaul_is_wireless=" << backhaul_params.backhaul_is_wireless;
+        LOG(INFO) << "backhaul_iface_type=" << backhaul_params.backhaul_iface_type;
+        LOG(DEBUG) << "sending "
+                      "ACTION_PLATFORM_SON_SLAVE_BACKHAUL_CONNECTION_COMPLETE_NOTIFICATION to "
+                      "platform manager";
+        auto notification = message_com::create_vs_message<
+            beerocks_message::cACTION_PLATFORM_SON_SLAVE_BACKHAUL_CONNECTION_COMPLETE_NOTIFICATION>(
+            cmdu_tx);
 
-        if (radio_manager.is_backhaul_manager) {
-            LOG(DEBUG) << "sending "
-                          "ACTION_PLATFORM_SON_SLAVE_BACKHAUL_CONNECTION_COMPLETE_NOTIFICATION to "
-                          "platform manager";
-            auto notification = message_com::create_vs_message<
-                beerocks_message::
-                    cACTION_PLATFORM_SON_SLAVE_BACKHAUL_CONNECTION_COMPLETE_NOTIFICATION>(cmdu_tx);
-
-            if (notification == nullptr) {
-                LOG(ERROR) << "Failed building message!";
-                return false;
-            }
-
-            notification->is_backhaul_manager() =
-                radio_manager
-                    .is_backhaul_manager; //redundant for now but might be needed in the future
-            message_com::send_cmdu(m_platform_manager_socket, cmdu_tx);
+        if (notification == nullptr) {
+            LOG(ERROR) << "Failed building message!";
+            return false;
         }
+        message_com::send_cmdu(m_platform_manager_socket, cmdu_tx);
 
-        LOG(TRACE) << "goto STATE_JOIN_MASTER";
-        radio_manager.slave_state = STATE_JOIN_MASTER;
+        m_radio_managers.do_on_each_radio_manager(
+            [&](sManagedRadio &radio_manager, const std::string &fronthaul_iface) -> bool {
+                radio_manager.stop_on_failure_attempts = db->device_conf.stop_on_failure_attempts;
+
+                auto radio = db->radio(fronthaul_iface);
+                if (!radio) {
+                    return false;
+                }
+
+                if (!db->device_conf.front_radio.config[fronthaul_iface].band_enabled) {
+                    LOG(TRACE) << "goto STATE_PRE_OPERATIONAL on disabled band radio "
+                               << fronthaul_iface;
+                    radio_manager.slave_state = STATE_PRE_OPERATIONAL;
+                    return true;
+                }
+
+                if (radio->front.zwdfs) {
+                    LOG(TRACE) << "goto STATE_PRE_OPERATIONAL on zwdfs " << fronthaul_iface;
+                    radio_manager.slave_state = STATE_PRE_OPERATIONAL;
+                    return true;
+                }
+                LOG(TRACE) << "goto STATE_JOIN_MASTER " << fronthaul_iface;
+                radio_manager.slave_state = STATE_JOIN_MASTER;
+                return true;
+            });
         break;
     }
+    case STATE_STOPPED: {
+        break;
+    }
+    default: {
+        LOG(ERROR) << "Unknown state!";
+        break;
+    }
+    }
+    return true;
+}
+
+bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
+{
+    auto &radio_manager = m_radio_managers[fronthaul_iface];
+
+    switch (radio_manager.slave_state) {
     case STATE_WAIT_BEFORE_JOIN_MASTER: {
 
         if (std::chrono::steady_clock::now() > radio_manager.slave_state_timer) {
@@ -4480,27 +4464,26 @@ bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
             notification->backhaul_params().is_backhaul_manager =
                 wireless_bh_manager || wired_bh_manager;
             notification->backhaul_params().backhaul_iface_type =
-                radio_manager.backhaul_params.backhaul_iface_type;
+                backhaul_params.backhaul_iface_type;
             notification->backhaul_params().backhaul_mac =
-                tlvf::mac_from_string(radio_manager.backhaul_params.backhaul_mac);
-            notification->backhaul_params().backhaul_channel =
-                radio_manager.backhaul_params.backhaul_channel;
+                tlvf::mac_from_string(backhaul_params.backhaul_mac);
+            notification->backhaul_params().backhaul_channel = backhaul_params.backhaul_channel;
             notification->backhaul_params().backhaul_bssid =
-                tlvf::mac_from_string(radio_manager.backhaul_params.backhaul_bssid);
+                tlvf::mac_from_string(backhaul_params.backhaul_bssid);
             notification->backhaul_params().backhaul_is_wireless =
-                radio_manager.backhaul_params.backhaul_is_wireless;
+                backhaul_params.backhaul_is_wireless;
 
             if (!db->bridge.iface_name.empty()) {
                 notification->backhaul_params().bridge_ipv4 =
-                    network_utils::ipv4_from_string(radio_manager.backhaul_params.bridge_ipv4);
+                    network_utils::ipv4_from_string(backhaul_params.bridge_ipv4);
                 notification->backhaul_params().backhaul_ipv4 =
-                    network_utils::ipv4_from_string(radio_manager.backhaul_params.bridge_ipv4);
+                    network_utils::ipv4_from_string(backhaul_params.bridge_ipv4);
             } else {
                 notification->backhaul_params().backhaul_ipv4 =
-                    network_utils::ipv4_from_string(radio_manager.backhaul_params.backhaul_ipv4);
+                    network_utils::ipv4_from_string(backhaul_params.backhaul_ipv4);
             }
 
-            std::copy_n(radio_manager.backhaul_params.backhaul_scan_measurement_list,
+            std::copy_n(backhaul_params.backhaul_scan_measurement_list,
                         beerocks::message::BACKHAUL_SCAN_MEASUREMENT_MAX_LENGTH,
                         notification->backhaul_params().backhaul_scan_measurement_list);
 
@@ -4633,7 +4616,8 @@ bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
         break;
     }
     default: {
-        LOG(ERROR) << "Unknown state!";
+        LOG(ERROR) << "Unknown state " << radio_manager.slave_state << " ,iface "
+                   << fronthaul_iface;
         break;
     }
     }
@@ -4641,14 +4625,15 @@ bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
     return true;
 }
 
-void slave_thread::backhaul_manager_stop() {
+void slave_thread::backhaul_manager_stop()
+{
     if (m_backhaul_manager_socket) {
         LOG(DEBUG) << "removing backhaul_manager_socket";
         remove_socket(m_backhaul_manager_socket);
         delete m_backhaul_manager_socket;
     }
     m_backhaul_manager_socket = nullptr;
-    m_master_socket = nullptr;
+    m_master_socket           = nullptr;
 }
 
 void slave_thread::platform_manager_stop()
