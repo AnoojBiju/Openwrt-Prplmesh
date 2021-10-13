@@ -684,6 +684,33 @@ BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
 }
 cACTION_BACKHAUL_ENABLE_APS_REQUEST::~cACTION_BACKHAUL_ENABLE_APS_REQUEST() {
 }
+std::string cACTION_BACKHAUL_ENABLE_APS_REQUEST::iface_str() {
+    char *iface_ = iface();
+    if (!iface_) { return std::string(); }
+    return std::string(iface_, m_iface_idx__);
+}
+
+char* cACTION_BACKHAUL_ENABLE_APS_REQUEST::iface(size_t length) {
+    if( (m_iface_idx__ == 0) || (m_iface_idx__ < length) ) {
+        TLVF_LOG(ERROR) << "iface length is smaller than requested length";
+        return nullptr;
+    }
+    return ((char*)m_iface);
+}
+
+bool cACTION_BACKHAUL_ENABLE_APS_REQUEST::set_iface(const std::string& str) { return set_iface(str.c_str(), str.size()); }
+bool cACTION_BACKHAUL_ENABLE_APS_REQUEST::set_iface(const char str[], size_t size) {
+    if (str == nullptr) {
+        TLVF_LOG(WARNING) << "set_iface received a null pointer.";
+        return false;
+    }
+    if (size > beerocks::message::IFACE_NAME_LENGTH) {
+        TLVF_LOG(ERROR) << "Received buffer size is smaller than string length";
+        return false;
+    }
+    std::copy(str, str + size, m_iface);
+    return true;
+}
 uint8_t& cACTION_BACKHAUL_ENABLE_APS_REQUEST::channel() {
     return (uint8_t&)(*m_channel);
 }
@@ -732,6 +759,7 @@ bool cACTION_BACKHAUL_ENABLE_APS_REQUEST::finalize()
 size_t cACTION_BACKHAUL_ENABLE_APS_REQUEST::get_initial_size()
 {
     size_t class_size = 0;
+    class_size += beerocks::message::IFACE_NAME_LENGTH * sizeof(char); // iface
     class_size += sizeof(uint8_t); // channel
     class_size += sizeof(beerocks::eWiFiBandwidth); // bandwidth
     class_size += sizeof(uint8_t); // center_channel
@@ -744,6 +772,12 @@ bool cACTION_BACKHAUL_ENABLE_APS_REQUEST::init()
         TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
         return false;
     }
+    m_iface = reinterpret_cast<char*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(char) * (beerocks::message::IFACE_NAME_LENGTH))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (beerocks::message::IFACE_NAME_LENGTH) << ") Failed!";
+        return false;
+    }
+    m_iface_idx__  = beerocks::message::IFACE_NAME_LENGTH;
     m_channel = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
@@ -1347,6 +1381,33 @@ BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
 }
 cACTION_BACKHAUL_START_WPS_PBC_REQUEST::~cACTION_BACKHAUL_START_WPS_PBC_REQUEST() {
 }
+std::string cACTION_BACKHAUL_START_WPS_PBC_REQUEST::iface_str() {
+    char *iface_ = iface();
+    if (!iface_) { return std::string(); }
+    return std::string(iface_, m_iface_idx__);
+}
+
+char* cACTION_BACKHAUL_START_WPS_PBC_REQUEST::iface(size_t length) {
+    if( (m_iface_idx__ == 0) || (m_iface_idx__ < length) ) {
+        TLVF_LOG(ERROR) << "iface length is smaller than requested length";
+        return nullptr;
+    }
+    return ((char*)m_iface);
+}
+
+bool cACTION_BACKHAUL_START_WPS_PBC_REQUEST::set_iface(const std::string& str) { return set_iface(str.c_str(), str.size()); }
+bool cACTION_BACKHAUL_START_WPS_PBC_REQUEST::set_iface(const char str[], size_t size) {
+    if (str == nullptr) {
+        TLVF_LOG(WARNING) << "set_iface received a null pointer.";
+        return false;
+    }
+    if (size > beerocks::message::IFACE_NAME_LENGTH) {
+        TLVF_LOG(ERROR) << "Received buffer size is smaller than string length";
+        return false;
+    }
+    std::copy(str, str + size, m_iface);
+    return true;
+}
 void cACTION_BACKHAUL_START_WPS_PBC_REQUEST::class_swap()
 {
     tlvf_swap(8*sizeof(eActionOp_BACKHAUL), reinterpret_cast<uint8_t*>(m_action_op));
@@ -1382,6 +1443,7 @@ bool cACTION_BACKHAUL_START_WPS_PBC_REQUEST::finalize()
 size_t cACTION_BACKHAUL_START_WPS_PBC_REQUEST::get_initial_size()
 {
     size_t class_size = 0;
+    class_size += beerocks::message::IFACE_NAME_LENGTH * sizeof(char); // iface
     return class_size;
 }
 
@@ -1391,6 +1453,12 @@ bool cACTION_BACKHAUL_START_WPS_PBC_REQUEST::init()
         TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
         return false;
     }
+    m_iface = reinterpret_cast<char*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(char) * (beerocks::message::IFACE_NAME_LENGTH))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (beerocks::message::IFACE_NAME_LENGTH) << ") Failed!";
+        return false;
+    }
+    m_iface_idx__  = beerocks::message::IFACE_NAME_LENGTH;
     if (m_parse__) { class_swap(); }
     return true;
 }
@@ -2427,6 +2495,33 @@ BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
 }
 cACTION_BACKHAUL_RADIO_DISABLE_REQUEST::~cACTION_BACKHAUL_RADIO_DISABLE_REQUEST() {
 }
+std::string cACTION_BACKHAUL_RADIO_DISABLE_REQUEST::iface_str() {
+    char *iface_ = iface();
+    if (!iface_) { return std::string(); }
+    return std::string(iface_, m_iface_idx__);
+}
+
+char* cACTION_BACKHAUL_RADIO_DISABLE_REQUEST::iface(size_t length) {
+    if( (m_iface_idx__ == 0) || (m_iface_idx__ < length) ) {
+        TLVF_LOG(ERROR) << "iface length is smaller than requested length";
+        return nullptr;
+    }
+    return ((char*)m_iface);
+}
+
+bool cACTION_BACKHAUL_RADIO_DISABLE_REQUEST::set_iface(const std::string& str) { return set_iface(str.c_str(), str.size()); }
+bool cACTION_BACKHAUL_RADIO_DISABLE_REQUEST::set_iface(const char str[], size_t size) {
+    if (str == nullptr) {
+        TLVF_LOG(WARNING) << "set_iface received a null pointer.";
+        return false;
+    }
+    if (size > beerocks::message::IFACE_NAME_LENGTH) {
+        TLVF_LOG(ERROR) << "Received buffer size is smaller than string length";
+        return false;
+    }
+    std::copy(str, str + size, m_iface);
+    return true;
+}
 void cACTION_BACKHAUL_RADIO_DISABLE_REQUEST::class_swap()
 {
     tlvf_swap(8*sizeof(eActionOp_BACKHAUL), reinterpret_cast<uint8_t*>(m_action_op));
@@ -2462,6 +2557,7 @@ bool cACTION_BACKHAUL_RADIO_DISABLE_REQUEST::finalize()
 size_t cACTION_BACKHAUL_RADIO_DISABLE_REQUEST::get_initial_size()
 {
     size_t class_size = 0;
+    class_size += beerocks::message::IFACE_NAME_LENGTH * sizeof(char); // iface
     return class_size;
 }
 
@@ -2471,6 +2567,12 @@ bool cACTION_BACKHAUL_RADIO_DISABLE_REQUEST::init()
         TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
         return false;
     }
+    m_iface = reinterpret_cast<char*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(char) * (beerocks::message::IFACE_NAME_LENGTH))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (beerocks::message::IFACE_NAME_LENGTH) << ") Failed!";
+        return false;
+    }
+    m_iface_idx__  = beerocks::message::IFACE_NAME_LENGTH;
     if (m_parse__) { class_swap(); }
     return true;
 }

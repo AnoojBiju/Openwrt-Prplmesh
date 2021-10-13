@@ -2167,6 +2167,8 @@ bool BackhaulManager::send_slaves_enable()
             return false;
         }
 
+        notification->set_iface(soc->hostap_iface);
+
         // enable wireless backhaul interface on the selected channel
         if (soc->sta_iface == db->backhaul.selected_iface_name) {
             notification->channel() = iface_hal->get_channel();
@@ -3127,6 +3129,7 @@ bool BackhaulManager::start_wps_pbc(const sMacAddr &radio_mac)
             return false;
         }
 
+        msg->set_iface(soc->hostap_iface);
         LOG(DEBUG) << "Start WPS PBC registration on interface " << soc->hostap_iface;
         return send_cmdu(soc->slave, cmdu_tx);
     } else {
@@ -3137,8 +3140,9 @@ bool BackhaulManager::start_wps_pbc(const sMacAddr &radio_mac)
             return false;
         }
 
-        // Disable radio interface to make sure its not beaconing along while the supplicant is scanning.
-        // Disable rest of radio interfaces to prevent stations from connecting (there is no BH link anyway).
+        // Disable radio interface to make sure its not beaconing along while the supplicant is
+        // scanning.Disable rest of radio interfaces to prevent stations from connecting (there is
+        // no BH link anyway).
         // This is a temporary solution for axepoint (prplwrt) in order to pass wbh easymesh
         // certification tests (Need to be removed once PPM-643 or PPM-1580 are solved)
         for (auto slaves_socket : slaves_sockets) {
@@ -3148,6 +3152,8 @@ bool BackhaulManager::start_wps_pbc(const sMacAddr &radio_mac)
                 LOG(ERROR) << "Failed building cACTION_BACKHAUL_RADIO_DISABLE_REQUEST";
                 return false;
             }
+
+            msg->set_iface(slaves_socket->hostap_iface);
             LOG(DEBUG) << "Request Agent to disable the radio interface "
                        << slaves_socket->hostap_iface << " before WPS starts";
             if (!send_cmdu(slaves_socket->slave, cmdu_tx)) {

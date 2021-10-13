@@ -1337,6 +1337,11 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
             return false;
         }
 
+        auto front_iface_str = notification_in->iface();
+        LOG(DEBUG) << "Received ACTION_BACKHAUL_ENABLE_APS_REQUEST iface=" << front_iface_str;
+
+        auto &radio_manager = m_radio_managers[front_iface_str];
+
         auto notification_out =
             message_com::create_vs_message<beerocks_message::cACTION_APMANAGER_ENABLE_APS_REQUEST>(
                 cmdu_tx);
@@ -1576,14 +1581,24 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
         break;
     }
     case beerocks_message::ACTION_BACKHAUL_START_WPS_PBC_REQUEST: {
-        LOG(DEBUG) << "ACTION_BACKHAUL_START_WPS_PBC_REQUEST";
-        auto notification_out = message_com::create_vs_message<
+        auto request_in =
+            beerocks_header->addClass<beerocks_message::cACTION_BACKHAUL_START_WPS_PBC_REQUEST>();
+        if (!request_in) {
+            LOG(ERROR) << "addClass cACTION_BACKHAUL_START_WPS_PBC_REQUEST failed";
+            return false;
+        }
+        std::string iface = request_in->iface();
+
+        LOG(DEBUG) << "ACTION_BACKHAUL_START_WPS_PBC_REQUEST iface=" << iface;
+
+        auto request_out = message_com::create_vs_message<
             beerocks_message::cACTION_APMANAGER_START_WPS_PBC_REQUEST>(cmdu_tx);
 
-        if (!notification_out) {
+        if (!request_out) {
             LOG(ERROR) << "Failed building message cACTION_APMANAGER_START_WPS_PBC_REQUEST!";
             return false;
         }
+        auto &radio_manager = m_radio_managers[iface];
         message_com::send_cmdu(radio_manager.ap_manager_socket, cmdu_tx);
         break;
     }
@@ -1728,14 +1743,24 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
         break;
     }
     case beerocks_message::ACTION_BACKHAUL_RADIO_DISABLE_REQUEST: {
-        LOG(DEBUG) << "ACTION_BACKHAUL_RADIO_DISABLE_REQUEST";
-        auto notification_out = message_com::create_vs_message<
+        auto request_in =
+            beerocks_header->addClass<beerocks_message::cACTION_BACKHAUL_RADIO_DISABLE_REQUEST>();
+        if (!request_in) {
+            LOG(ERROR) << "addClass cACTION_BACKHAUL_RADIO_DISABLE_REQUEST failed";
+            return false;
+        }
+        std::string iface = request_in->iface();
+
+        LOG(DEBUG) << "ACTION_BACKHAUL_RADIO_DISABLE_REQUEST iface=" << iface;
+
+        auto request_out = message_com::create_vs_message<
             beerocks_message::cACTION_APMANAGER_RADIO_DISABLE_REQUEST>(cmdu_tx);
 
-        if (!notification_out) {
+        if (!request_out) {
             LOG(ERROR) << "Failed building message cACTION_APMANAGER_RADIO_DISABLE_REQUEST!";
             return false;
         }
+        auto &radio_manager                     = m_radio_managers[iface];
         radio_manager.configuration_in_progress = true;
         message_com::send_cmdu(radio_manager.ap_manager_socket, cmdu_tx);
         break;

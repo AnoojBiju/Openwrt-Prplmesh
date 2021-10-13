@@ -63,6 +63,9 @@ cACTION_BACKHAUL_DISCONNECTED_NOTIFICATION:
 
 cACTION_BACKHAUL_ENABLE_APS_REQUEST:
   _type: class
+  iface:
+    _type: char
+    _length: ["beerocks::message::IFACE_NAME_LENGTH"]
   channel: uint8_t
   bandwidth: beerocks::eWiFiBandwidth
   center_channel: uint8_t
@@ -106,6 +109,9 @@ cACTION_BACKHAUL_ASSOCIATED_STA_LINK_METRICS_RESPONSE:
 
 cACTION_BACKHAUL_START_WPS_PBC_REQUEST:
   _type: class
+  iface:
+    _type: char
+    _length: ["beerocks::message::IFACE_NAME_LENGTH"]
 
 cACTION_BACKHAUL_SET_ASSOC_DISALLOW_REQUEST:
   _type: class
@@ -170,6 +176,9 @@ cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE:
 
 cACTION_BACKHAUL_RADIO_DISABLE_REQUEST:
   _type: class
+  iface:
+    _type: char
+    _length: ["beerocks::message::IFACE_NAME_LENGTH"]
 
 cACTION_BACKHAUL_RADIO_TEAR_DOWN_REQUEST:
   _type: class

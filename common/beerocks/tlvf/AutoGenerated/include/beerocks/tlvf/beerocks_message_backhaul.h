@@ -209,6 +209,10 @@ class cACTION_BACKHAUL_ENABLE_APS_REQUEST : public BaseClass
         static eActionOp_BACKHAUL get_action_op(){
             return (eActionOp_BACKHAUL)(ACTION_BACKHAUL_ENABLE_APS_REQUEST);
         }
+        std::string iface_str();
+        char* iface(size_t length = 0);
+        bool set_iface(const std::string& str);
+        bool set_iface(const char buffer[], size_t size);
         uint8_t& channel();
         beerocks::eWiFiBandwidth& bandwidth();
         uint8_t& center_channel();
@@ -219,6 +223,9 @@ class cACTION_BACKHAUL_ENABLE_APS_REQUEST : public BaseClass
     private:
         bool init();
         eActionOp_BACKHAUL* m_action_op = nullptr;
+        char* m_iface = nullptr;
+        size_t m_iface_idx__ = 0;
+        int m_lock_order_counter__ = 0;
         uint8_t* m_channel = nullptr;
         beerocks::eWiFiBandwidth* m_bandwidth = nullptr;
         uint8_t* m_center_channel = nullptr;
@@ -392,6 +399,10 @@ class cACTION_BACKHAUL_START_WPS_PBC_REQUEST : public BaseClass
         static eActionOp_BACKHAUL get_action_op(){
             return (eActionOp_BACKHAUL)(ACTION_BACKHAUL_START_WPS_PBC_REQUEST);
         }
+        std::string iface_str();
+        char* iface(size_t length = 0);
+        bool set_iface(const std::string& str);
+        bool set_iface(const char buffer[], size_t size);
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -399,6 +410,9 @@ class cACTION_BACKHAUL_START_WPS_PBC_REQUEST : public BaseClass
     private:
         bool init();
         eActionOp_BACKHAUL* m_action_op = nullptr;
+        char* m_iface = nullptr;
+        size_t m_iface_idx__ = 0;
+        int m_lock_order_counter__ = 0;
 };
 
 class cACTION_BACKHAUL_SET_ASSOC_DISALLOW_REQUEST : public BaseClass
@@ -716,6 +730,10 @@ class cACTION_BACKHAUL_RADIO_DISABLE_REQUEST : public BaseClass
         static eActionOp_BACKHAUL get_action_op(){
             return (eActionOp_BACKHAUL)(ACTION_BACKHAUL_RADIO_DISABLE_REQUEST);
         }
+        std::string iface_str();
+        char* iface(size_t length = 0);
+        bool set_iface(const std::string& str);
+        bool set_iface(const char buffer[], size_t size);
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -723,6 +741,9 @@ class cACTION_BACKHAUL_RADIO_DISABLE_REQUEST : public BaseClass
     private:
         bool init();
         eActionOp_BACKHAUL* m_action_op = nullptr;
+        char* m_iface = nullptr;
+        size_t m_iface_idx__ = 0;
+        int m_lock_order_counter__ = 0;
 };
 
 class cACTION_BACKHAUL_RADIO_TEAR_DOWN_REQUEST : public BaseClass
