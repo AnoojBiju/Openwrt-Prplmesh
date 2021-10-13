@@ -257,7 +257,14 @@ void ChannelSelectionTask::handle_vs_csa_notification(
         return;
     }
 
-    auto sender_iface_name = socket_to_front_iface_name(fd);
+    auto db = AgentDB::get();
+    auto radio =
+        db->get_radio_by_mac(beerocks_header->actionhdr()->radio_mac(), AgentDB::eMacType::RADIO);
+    if (!radio) {
+        return;
+    }
+
+    const auto &sender_iface_name = radio->front.iface_name;
 
     LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_CSA_NOTIFICATION from " << sender_iface_name;
 
@@ -273,8 +280,6 @@ void ChannelSelectionTask::handle_vs_csa_notification(
     switch_channel_notification->switched          = true;
     m_btl_ctx.m_task_pool.send_event(eTaskEvent::SWITCH_CHANNEL_NOTIFICATION_EVENT,
                                      switch_channel_notification);
-
-    auto db = AgentDB::get();
 
     auto sender_radio = db->radio(sender_iface_name);
     if (!sender_radio) {
@@ -333,7 +338,14 @@ void ChannelSelectionTask::handle_vs_csa_error_notification(
         return;
     }
 
-    auto sender_iface_name = socket_to_front_iface_name(fd);
+    auto db = AgentDB::get();
+    auto radio =
+        db->get_radio_by_mac(beerocks_header->actionhdr()->radio_mac(), AgentDB::eMacType::RADIO);
+    if (!radio) {
+        return;
+    }
+
+    const auto &sender_iface_name = radio->front.iface_name;
 
     LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_DFS_CSA_ERROR_NOTIFICATION from "
                << sender_iface_name;
@@ -410,7 +422,14 @@ void ChannelSelectionTask::handle_vs_cac_started_notification(
         return;
     }
 
-    auto sender_iface_name = socket_to_front_iface_name(fd);
+    auto db = AgentDB::get();
+    auto radio =
+        db->get_radio_by_mac(beerocks_header->actionhdr()->radio_mac(), AgentDB::eMacType::RADIO);
+    if (!radio) {
+        return;
+    }
+
+    const auto &sender_iface_name = radio->front.iface_name;
 
     LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION from "
                << sender_iface_name;
@@ -435,7 +454,6 @@ void ChannelSelectionTask::handle_vs_cac_started_notification(
     }
 
     if (m_zwdfs_state == eZwdfsState::WAIT_FOR_ZWDFS_CAC_STARTED) {
-        auto db = AgentDB::get();
         // Set timeout for CAC-COMPLETED notification with the CAC duration received on this
         // this notification, multiplied in factor of 1.2.
         constexpr float CAC_DURATION_FACTOR = 1.2;
@@ -462,7 +480,14 @@ void ChannelSelectionTask::handle_vs_dfs_cac_completed_notification(
         return;
     }
 
-    auto sender_iface_name = socket_to_front_iface_name(fd);
+    auto db = AgentDB::get();
+    auto radio =
+        db->get_radio_by_mac(beerocks_header->actionhdr()->radio_mac(), AgentDB::eMacType::RADIO);
+    if (!radio) {
+        return;
+    }
+
+    const auto &sender_iface_name = radio->front.iface_name;
 
     LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION from "
                << sender_iface_name << ", status=" << notification->params().success;
@@ -480,7 +505,6 @@ void ChannelSelectionTask::handle_vs_dfs_cac_completed_notification(
                                      cac_completed_notification);
 
     if (m_zwdfs_state == eZwdfsState::WAIT_FOR_ZWDFS_CAC_COMPLETED) {
-        auto db                                   = AgentDB::get();
         db->statuses.zwdfs_cac_remaining_time_sec = 0;
         if (notification->params().success != 1) {
             LOG(ERROR) << "CAC has failed! Trying next-best-channel";
@@ -494,7 +518,13 @@ void ChannelSelectionTask::handle_vs_dfs_cac_completed_notification(
 void ChannelSelectionTask::handle_vs_channels_list_response(
     ieee1905_1::CmduMessageRx &cmdu_rx, int fd, std::shared_ptr<beerocks_header> beerocks_header)
 {
-    auto sender_iface_name = socket_to_front_iface_name(fd);
+    auto db = AgentDB::get();
+    auto radio =
+        db->get_radio_by_mac(beerocks_header->actionhdr()->radio_mac(), AgentDB::eMacType::RADIO);
+    if (!radio) {
+        return;
+    }
+    const auto &sender_iface_name = radio->front.iface_name;
     LOG(TRACE) << "received ACTION_APMANAGER_CHANNELS_LIST_RESPONSE from " << sender_iface_name;
 
     if (m_zwdfs_state == eZwdfsState::WAIT_FOR_CHANNELS_LIST) {
@@ -512,7 +542,13 @@ void ChannelSelectionTask::handle_vs_zwdfs_ant_channel_switch_response(
         return;
     }
 
-    auto sender_iface_name = socket_to_front_iface_name(fd);
+    auto db = AgentDB::get();
+    auto radio =
+        db->get_radio_by_mac(beerocks_header->actionhdr()->radio_mac(), AgentDB::eMacType::RADIO);
+    if (!radio) {
+        return;
+    }
+    const auto &sender_iface_name = radio->front.iface_name;
     LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE from "
                << sender_iface_name;
 
@@ -694,6 +730,15 @@ void ChannelSelectionTask::zwdfs_fsm()
             ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
             break;
         }
+
+        // Filling the radio mac. This is temporary the task will be moved to the agent (PPM-1680).
+        auto db    = AgentDB::get();
+        auto radio = db->radio(m_zwdfs_primary_radio_iface);
+        if (!radio) {
+            break;
+        }
+        auto action_header         = message_com::get_beerocks_header(m_cmdu_tx)->actionhdr();
+        action_header->radio_mac() = radio->front.iface_mac;
 
         m_btl_ctx.send_cmdu(fronthaul_sd, m_cmdu_tx);
 
@@ -970,6 +1015,15 @@ void ChannelSelectionTask::zwdfs_fsm()
             ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
             break;
         }
+
+        // Filling the radio mac. This is temporary the task will be moved to the agent (PPM-1680).
+        auto db    = AgentDB::get();
+        auto radio = db->radio(m_zwdfs_primary_radio_iface);
+        if (!radio) {
+            break;
+        }
+        auto action_header         = message_com::get_beerocks_header(m_cmdu_tx)->actionhdr();
+        action_header->radio_mac() = radio->front.iface_mac;
 
         m_btl_ctx.send_cmdu(fronthaul_sd, m_cmdu_tx);
 

@@ -338,6 +338,16 @@ void CacFsm::config_fsm()
                     return true;
                 }
 
+                // Filling the radio mac. This is temporary the task will be moved to the agent
+                // (PPM-1680).
+                auto db    = AgentDB::get();
+                auto radio = db->radio(m_ifname);
+                if (!radio) {
+                    return false;
+                }
+                auto action_header = message_com::get_beerocks_header(m_cmdu_tx)->actionhdr();
+                action_header->radio_mac() = radio->front.iface_mac;
+
                 // send the cmdu using the fd
                 bool cmdu_sent = m_backhaul_manager.send_cmdu(ifname_fd, m_cmdu_tx);
                 if (!cmdu_sent) {
@@ -454,6 +464,15 @@ bool CacFsm::send_preference_report()
         LOG(DEBUG) << "socket to " << m_ifname << " wasn't found";
         return false;
     }
+
+    // Filling the radio mac. This is temporary the task will be moved to the agent (PPM-1680).
+    auto db    = AgentDB::get();
+    auto radio = db->radio(m_ifname);
+    if (!radio) {
+        return false;
+    }
+    auto action_header         = message_com::get_beerocks_header(m_cmdu_tx)->actionhdr();
+    action_header->radio_mac() = radio->front.iface_mac;
 
     m_backhaul_manager.send_cmdu(ifname_sd, m_cmdu_tx);
 

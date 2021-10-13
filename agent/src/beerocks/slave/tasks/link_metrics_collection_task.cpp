@@ -508,6 +508,9 @@ void LinkMetricsCollectionTask::handle_associated_sta_link_metrics_query(
      * When link metric collection task moves to agent context
      * send the message to fronthaul, not slave.
      */
+    // Filling the radio mac. This is temporary the task will be moved to the agent (PPM-1681).
+    auto action_header         = message_com::get_beerocks_header(m_cmdu_tx)->actionhdr();
+    action_header->radio_mac() = radio->front.iface_mac;
 
     m_btl_ctx.send_cmdu(radio_info->slave, m_cmdu_tx);
 }

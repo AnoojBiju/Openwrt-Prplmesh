@@ -1556,6 +1556,14 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
     }
     case beerocks_message::ACTION_BACKHAUL_ASSOCIATED_STA_LINK_METRICS_REQUEST: {
         LOG(DEBUG) << "ACTION_BACKHAUL_ASSOCIATED_STA_LINK_METRICS_REQUEST";
+        auto &radio_mac = beerocks_header->actionhdr()->radio_mac();
+        auto db         = AgentDB::get();
+        auto radio      = db->get_radio_by_mac(radio_mac, AgentDB::eMacType::RADIO);
+        if (!radio) {
+            break;
+        }
+        auto &radio_manager = m_radio_managers[radio->front.iface_name];
+
         if (!radio_manager.monitor_socket) {
             LOG(ERROR) << "monitor_socket is null";
             return false;
@@ -1603,6 +1611,14 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
         break;
     }
     case beerocks_message::ACTION_BACKHAUL_SET_ASSOC_DISALLOW_REQUEST: {
+        auto &radio_mac = beerocks_header->actionhdr()->radio_mac();
+        auto db         = AgentDB::get();
+        auto radio      = db->get_radio_by_mac(radio_mac, AgentDB::eMacType::RADIO);
+        if (!radio) {
+            break;
+        }
+        auto &radio_manager = m_radio_managers[radio->front.iface_name];
+
         if (!radio_manager.ap_manager_socket) {
             LOG(ERROR) << "ap_manager_socket is null";
             return false;
@@ -1629,6 +1645,14 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
         break;
     }
     case beerocks_message::ACTION_BACKHAUL_CHANNELS_LIST_REQUEST: {
+        auto &radio_mac = beerocks_header->actionhdr()->radio_mac();
+        auto db         = AgentDB::get();
+        auto radio      = db->get_radio_by_mac(radio_mac, AgentDB::eMacType::RADIO);
+        if (!radio) {
+            break;
+        }
+        auto &radio_manager = m_radio_managers[radio->front.iface_name];
+
         auto request_in =
             beerocks_header->addClass<beerocks_message::cACTION_BACKHAUL_CHANNELS_LIST_REQUEST>();
         if (!request_in) {
@@ -1650,6 +1674,14 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
         break;
     }
     case beerocks_message::ACTION_BACKHAUL_HOSTAP_CHANNEL_SWITCH_ACS_START: {
+        auto &radio_mac = beerocks_header->actionhdr()->radio_mac();
+        auto db         = AgentDB::get();
+        auto radio      = db->get_radio_by_mac(radio_mac, AgentDB::eMacType::RADIO);
+        if (!radio) {
+            break;
+        }
+        auto &radio_manager = m_radio_managers[radio->front.iface_name];
+
         LOG(DEBUG) << "received ACTION_BACKHAUL_HOSTAP_CHANNEL_SWITCH_ACS_START";
         auto request_in =
             beerocks_header
@@ -1673,6 +1705,14 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
     }
 
     case beerocks_message::ACTION_BACKHAUL_HOSTAP_CANCEL_ACTIVE_CAC_REQUEST: {
+        auto &radio_mac = beerocks_header->actionhdr()->radio_mac();
+        auto db         = AgentDB::get();
+        auto radio      = db->get_radio_by_mac(radio_mac, AgentDB::eMacType::RADIO);
+        if (!radio) {
+            break;
+        }
+        auto &radio_manager = m_radio_managers[radio->front.iface_name];
+
         LOG(DEBUG) << "received ACTION_BACKHAUL_HOSTAP_CANCEL_ACTIVE_CAC_REQUEST";
         auto request_in =
             beerocks_header
@@ -1796,6 +1836,14 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
         break;
     }
     case beerocks_message::ACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST: {
+        auto &radio_mac = beerocks_header->actionhdr()->radio_mac();
+        auto db         = AgentDB::get();
+        auto radio      = db->get_radio_by_mac(radio_mac, AgentDB::eMacType::RADIO);
+        if (!radio) {
+            break;
+        }
+        auto &radio_manager = m_radio_managers[radio->front.iface_name];
+
         LOG(TRACE) << "ACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST";
         auto request_in =
             beerocks_header
@@ -1885,6 +1933,14 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
         break;
     }
     case beerocks_message::ACTION_BACKHAUL_CHANNEL_SCAN_ABORT_REQUEST: {
+        auto &radio_mac = beerocks_header->actionhdr()->radio_mac();
+        auto db         = AgentDB::get();
+        auto radio      = db->get_radio_by_mac(radio_mac, AgentDB::eMacType::RADIO);
+        if (!radio) {
+            break;
+        }
+        auto &radio_manager = m_radio_managers[radio->front.iface_name];
+
         LOG(TRACE) << "ACTION_BACKHAUL_CHANNEL_SCAN_ABORT_REQUEST";
         auto request_in =
             beerocks_header
@@ -2421,6 +2477,14 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
         }
         notification_out_bhm->cs_params() = notification_in->cs_params();
 
+        auto db    = AgentDB::get();
+        auto radio = db->radio(fronthaul_iface);
+        if (!radio) {
+            break;
+        }
+        auto action_header         = message_com::get_beerocks_header(cmdu_tx)->actionhdr();
+        action_header->radio_mac() = radio->front.iface_mac;
+
         message_com::send_cmdu(m_backhaul_manager_socket, cmdu_tx);
         break;
     }
@@ -2454,6 +2518,14 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
             return false;
         }
         notification_out_bhm->cs_params() = notification_in->cs_params();
+
+        auto db    = AgentDB::get();
+        auto radio = db->radio(fronthaul_iface);
+        if (!radio) {
+            break;
+        }
+        auto action_header         = message_com::get_beerocks_header(cmdu_tx)->actionhdr();
+        action_header->radio_mac() = radio->front.iface_mac;
 
         message_com::send_cmdu(m_backhaul_manager_socket, cmdu_tx);
         break;
@@ -2752,6 +2824,9 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
         }
         notification_out_bhm->params() = notification_in->params();
 
+        auto action_header         = message_com::get_beerocks_header(cmdu_tx)->actionhdr();
+        action_header->radio_mac() = radio->front.iface_mac;
+
         message_com::send_cmdu(m_backhaul_manager_socket, cmdu_tx);
         break;
     }
@@ -2962,6 +3037,14 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
             LOG(ERROR) << "Failed to build message";
             break;
         }
+        auto db    = AgentDB::get();
+        auto radio = db->radio(fronthaul_iface);
+        if (!radio) {
+            break;
+        }
+        auto action_header         = message_com::get_beerocks_header(cmdu_tx)->actionhdr();
+        action_header->radio_mac() = radio->front.iface_mac;
+
         message_com::send_cmdu(m_backhaul_manager_socket, cmdu_tx);
 
         // build channel preference report
@@ -2981,11 +3064,6 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
             return false;
         }
 
-        auto db    = AgentDB::get();
-        auto radio = db->radio(fronthaul_iface);
-        if (!radio) {
-            return false;
-        }
         channel_preference_tlv->radio_uid() = radio->front.iface_mac;
 
         for (const auto &preference : preferences) {
@@ -3149,6 +3227,14 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
             return false;
         }
         notification_out_bhm->success() = notification_in->success();
+
+        auto db    = AgentDB::get();
+        auto radio = db->radio(fronthaul_iface);
+        if (!radio) {
+            break;
+        }
+        auto action_header         = message_com::get_beerocks_header(cmdu_tx)->actionhdr();
+        action_header->radio_mac() = radio->front.iface_mac;
 
         message_com::send_cmdu(m_backhaul_manager_socket, cmdu_tx);
         break;

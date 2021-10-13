@@ -538,6 +538,15 @@ bool ChannelScanTask::abort_scan_request(const std::shared_ptr<sScanRequest> req
             return false;
         }
 
+        // Filling the radio mac. This is temporary the task will be moved to the agent (PPM-1679).
+        auto db    = AgentDB::get();
+        auto radio = db->radio(radio_iface);
+        if (!radio) {
+            return false;
+        }
+        auto action_header         = message_com::get_beerocks_header(m_cmdu_tx)->actionhdr();
+        action_header->radio_mac() = radio->front.iface_mac;
+
         if (!m_btl_ctx.send_cmdu(fronthaul_sd, m_cmdu_tx)) {
             LOG(ERROR) << "Failed to send cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_REQUEST for "
                        << radio_iface;
@@ -618,6 +627,10 @@ bool ChannelScanTask::trigger_radio_scan(const std::string &radio_iface,
         set_radio_scan_status(radio_scan_info, eScanStatus::SCAN_NOT_COMPLETED);
         return false;
     }
+
+    // Filling the radio mac. This is temporary the task will be moved to the agent (PPM-1679).
+    auto action_header         = message_com::get_beerocks_header(m_cmdu_tx)->actionhdr();
+    action_header->radio_mac() = radio->front.iface_mac;
 
     /**
      * Copy the channel list within the operating class vector in the found Radio Scan info.

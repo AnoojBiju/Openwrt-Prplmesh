@@ -3194,6 +3194,10 @@ bool BackhaulManager::set_mbo_assoc_disallow(const sMacAddr &radio_mac, const sM
     msg->enable() = enable;
     msg->bssid()  = bssid;
 
+    // Filling the radio mac. This is temporary until UCC listener will be moved to agent (PPM-1678)
+    auto action_header         = message_com::get_beerocks_header(cmdu_tx)->actionhdr();
+    action_header->radio_mac() = radio_mac;
+
     LOG(DEBUG) << "Set MBO ASSOC_DISALLOW on interface " << soc->hostap_iface << " to " << enable;
     send_cmdu(soc->slave, cmdu_tx);
 
