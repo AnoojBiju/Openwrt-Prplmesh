@@ -1452,3 +1452,22 @@ bool network_utils::set_vlan_packet_filter(bool set, const std::string &bss_ifac
     os_utils::system_call(cmd);
     return true;
 }
+
+sMacAddr network_utils::get_eth_sw_mac_from_bridge_mac(const sMacAddr &bridge_mac)
+{
+    sMacAddr mac = bridge_mac;
+    /*
+     * if bridge mac is already locally administrated,
+     * then swap it to create base mac for eth switch
+     * (as OUI is not relevant here anyway)
+     */
+    if (mac.oct[0] & 0x2) {
+        size_t size = sizeof(mac.oct);
+        for (size_t i = 0; i < size / 2; i++) {
+            std::swap(mac.oct[i], mac.oct[size - 1 - i]);
+        }
+    }
+    //then force the locally administrated mac address flag
+    mac.oct[0] |= 0x2;
+    return mac;
+}
