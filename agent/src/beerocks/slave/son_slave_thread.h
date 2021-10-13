@@ -189,7 +189,6 @@ private:
         beerocks_message::sSonConfig son_config;
         int stop_on_failure_attempts;
         bool stopped                   = false;
-        bool is_slave_reset            = false;
         bool detach_on_conf_change     = false;
         bool configuration_in_progress = false;
         bool autoconfiguration_completed;

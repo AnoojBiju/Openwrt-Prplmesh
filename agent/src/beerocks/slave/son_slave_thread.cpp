@@ -203,7 +203,6 @@ void slave_thread::slave_reset(const std::string &fronthaul_iface)
         m_agent_state = STATE_INIT;
     }
 
-    radio_manager.is_slave_reset = true;
     LOG(DEBUG) << "slave_reset() #" << radio_manager.slave_resets_counter << " - done";
 }
 
@@ -1439,8 +1438,9 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
     }
     case beerocks_message::ACTION_BACKHAUL_DISCONNECTED_NOTIFICATION: {
 
-        if (radio_manager.is_slave_reset)
+        if (m_agent_state <= STATE_JOIN_INIT) {
             break;
+        }
 
         LOG(DEBUG) << "ACTION_BACKHAUL_DISCONNECTED_NOTIFICATION";
 
@@ -4113,8 +4113,6 @@ bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
             radio->front.zwdfs = false;
         }
         fronthaul_start(fronthaul_iface);
-
-        radio_manager.is_slave_reset = false;
 
         LOG(TRACE) << "goto STATE_WAIT_FOR_FRONTHAUL_THREADS_JOINED " << fronthaul_iface;
         radio_manager.slave_state = STATE_WAIT_FOR_FRONTHAUL_THREADS_JOINED;
