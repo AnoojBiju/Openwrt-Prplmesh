@@ -2168,11 +2168,24 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
         save_cac_capabilities_params_to_db(fronthaul_iface);
 
         if (radio->front.zwdfs) {
+            auto request = message_com::create_vs_message<
+                beerocks_message::cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED>(cmdu_tx);
+
+            if (!request) {
+                LOG(ERROR) << "Failed building message!";
+                break;
+            }
+            request->set_front_iface_name(fronthaul_iface);
+            LOG(DEBUG) << "send ACTION_BACKHAUL_ZWDFS_RADIO_DETECTED for mac " << fronthaul_iface;
+            message_com::send_cmdu(m_backhaul_manager_socket, cmdu_tx);
+
+            db->remove_radio_from_radios_list(fronthaul_iface);
+
             auto &radio_managers = m_radio_managers.get();
             auto radio_ctx_iter  = radio_managers.find(fronthaul_iface);
 
-            // If getting here, it must be the code below must be the last in this function, so the
-            // deleted radio context will not be accessed.
+            // If getting here, the code below must be the last in this function, so the deleted
+            // radio context will not be accessed.
             m_radio_managers.set_zwdfs(radio_ctx_iter);
             return true;
         }
@@ -4149,33 +4162,29 @@ bool slave_thread::agent_fsm()
         break;
     }
     case STATE_WAIT_FOR_FRONTHAUL_THREADS_JOINED: {
-        if (radio_manager.ap_manager_socket && radio_manager.monitor_socket) {
-            LOG(TRACE) << "goto STATE_BACKHAUL_ENABLE " << fronthaul_iface;
-            radio_manager.slave_state = STATE_BACKHAUL_ENABLE;
-            break;
-        }
-        auto db    = AgentDB::get();
-        auto radio = db->radio(fronthaul_iface);
 
-        const auto &zwdfs_radio_manager = m_radio_managers.get_zwdfs();
-        if (radio && radio->front.zwdfs && zwdfs_radio_manager &&
-            zwdfs_radio_manager->second.ap_manager_socket) {
-            auto request = message_com::create_vs_message<
-                beerocks_message::cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED>(cmdu_tx);
+        bool all_fronthauls_joined = true;
+        m_radio_managers.do_on_each_radio_manager(
+            [&](const sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
+                auto db = AgentDB::get();
+                if (!db->device_conf.front_radio.config[fronthaul_iface].band_enabled) {
+                    return true;
+                }
 
-            if (!request) {
-                LOG(ERROR) << "Failed building message!";
-                break;
-            }
-            request->set_front_iface_name(fronthaul_iface);
-            LOG(DEBUG) << "send ACTION_BACKHAUL_ZWDFS_RADIO_DETECTED for mac " << fronthaul_iface;
-            message_com::send_cmdu(radio_manager.backhaul_manager_socket, cmdu_tx);
+                // ZWDFS Monitor will not join
+                auto radio = db->radio(fronthaul_iface);
+                if (radio && radio->front.zwdfs) {
+                    return true;
+                }
 
-            db->remove_radio_from_radios_list(fronthaul_iface);
+                all_fronthauls_joined &=
+                    (radio_manager.ap_manager_socket && radio_manager.monitor_socket);
+                return true;
+            });
 
-            LOG(TRACE) << "goto STATE_PRE_OPERATIONAL";
-            radio_manager.slave_state = STATE_PRE_OPERATIONAL;
-            break;
+        if (all_fronthauls_joined) {
+            LOG(TRACE) << "goto STATE_BACKHAUL_ENABLE";
+            m_agent_state = STATE_BACKHAUL_ENABLE;
         }
         break;
     }
