@@ -464,6 +464,9 @@ enum class eChannelScanOperationCode : uint8_t {
 
 constexpr int PARAMETER_NOT_CONFIGURED = -1;
 
+// array of allowed ifname prefix strings
+static const char *const ifname_prefix_list[] = {"wlan", "wl"};
+
 } // namespace beerocks
 
 #endif //_BEEROCKS_DEFINES_H_

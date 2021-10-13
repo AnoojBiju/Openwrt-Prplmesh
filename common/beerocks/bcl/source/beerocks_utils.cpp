@@ -78,6 +78,43 @@ bool utils::is_node_wireless(beerocks::eIfaceType iface_type)
             (iface_type < beerocks::IFACE_TYPE_WIFI_END));
 }
 
+std::string utils::get_default_ifname_prefix() { return (beerocks::ifname_prefix_list[0]); }
+
+bool utils::is_allowed_ifname_prefix(const std::string &prefix, bool partial)
+{
+    if (prefix.empty()) {
+        return false;
+    }
+    std::set<std::string> const allowed_list(std::begin(beerocks::ifname_prefix_list),
+                                             std::end(beerocks::ifname_prefix_list));
+    if (!partial) {
+        return (allowed_list.find(prefix) != allowed_list.end());
+    }
+    for (auto allowed_entry : allowed_list) {
+        if (prefix.compare(0, allowed_entry.size(), allowed_entry) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+std::string utils::get_prefix_from_iface_string(const std::string &iface)
+{
+    // "IFx" or IFx.x"
+    std::string result("");
+    auto pos = iface.rfind(".");
+    if (pos != std::string::npos) {
+        if (iface.substr(pos, std::string::npos).find_first_not_of("0123456789.") !=
+            std::string::npos) {
+            return result;
+        }
+    }
+    auto prefix_num = iface.substr(0, pos);
+    pos             = prefix_num.find_last_not_of("0123456789");
+    result          = prefix_num.substr(0, pos + 1);
+    return result;
+}
+
 utils::sIfaceVapIds utils::get_ids_from_iface_string(const std::string &iface)
 {
     utils::sIfaceVapIds ids;
@@ -86,13 +123,13 @@ utils::sIfaceVapIds utils::get_ids_from_iface_string(const std::string &iface)
         return ids;
     }
 
-    std::string::size_type pos = iface.find("wlan");
-    if (pos == std::string::npos) {
-        LOG(ERROR) << "iface does not contain the string 'wlan', function input string: " << iface;
+    auto prefix_str = get_prefix_from_iface_string(iface);
+    if (!is_allowed_ifname_prefix(prefix_str)) {
+        LOG(ERROR) << "iface does not contain any allowed prefix, function input string: " << iface;
         return ids;
     }
 
-    auto iface_num_str = iface.substr(pos + sizeof("wlan") - 1); // "x" or x.x"
+    auto iface_num_str = iface.substr(prefix_str.length(), std::string::npos);
     auto iface_num_vec = string_utils::str_split(iface_num_str, '.');
     if (iface_num_vec.size() == 0) {
         LOG(ERROR) << "Invalid interface name " << iface;
@@ -122,7 +159,8 @@ std::string utils::get_iface_string_from_iface_vap_ids(int8_t iface_id, int8_t v
         LOG(ERROR) << "function input is not valid! iface_id=" << int(iface_id)
                    << ", vap_id=" << int(vap_id);
     } else {
-        ifname = "wlan" + std::to_string(iface_id) + "." + std::to_string(vap_id);
+        ifname =
+            get_default_ifname_prefix() + std::to_string(iface_id) + "." + std::to_string(vap_id);
     }
 
     return ifname;
@@ -135,7 +173,8 @@ std::string utils::get_iface_string_from_iface_vap_ids(const std::string &iface,
     }
 
     std::string ifname;
-    if ((iface.find("wlan") == std::string::npos) || (vap_id < beerocks::IFACE_VAP_ID_MIN) ||
+    auto prefix = get_prefix_from_iface_string(iface);
+    if ((!is_allowed_ifname_prefix(prefix)) || (vap_id < beerocks::IFACE_VAP_ID_MIN) ||
         (vap_id > beerocks::IFACE_VAP_ID_MAX)) {
         LOG(ERROR) << "function input is not valid! iface=" << iface << ", vap_id=" << int(vap_id);
     } else {

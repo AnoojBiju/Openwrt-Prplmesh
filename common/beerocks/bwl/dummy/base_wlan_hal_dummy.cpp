@@ -139,7 +139,7 @@ static void map_event_obj_parser(std::string event_str, parsed_obj_map_t &map_ob
             opcode                                    = false;
         } else if (beerocks::net::network_utils::is_valid_mac(str_storage)) {
             map_obj[DUMMY_EVENT_KEYLESS_PARAM_MAC] = str_storage;
-        } else if (!strncmp(str_storage.c_str(), "wlan", 4)) {
+        } else if (beerocks::utils::is_allowed_ifname_prefix(str_storage, true)) {
             map_obj[DUMMY_EVENT_KEYLESS_PARAM_IFACE] = str_storage;
         }
     }
