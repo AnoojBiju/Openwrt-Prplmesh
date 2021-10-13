@@ -1371,10 +1371,6 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
         if (radio_manager.slave_state >= STATE_WAIT_FOR_BACKHAUL_MANAGER_CONNECTED_NOTIFICATION &&
             radio_manager.slave_state <= STATE_OPERATIONAL) {
 
-            // Already sent join_master request, mark as reconfiguration
-            if (radio_manager.slave_state >= STATE_WAIT_FOR_JOINED_RESPONSE &&
-                radio_manager.slave_state <= STATE_OPERATIONAL)
-                radio_manager.is_backhaul_reconf = true;
 
             auto db = AgentDB::get();
 
@@ -4403,9 +4399,6 @@ bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
                 LOG(ERROR) << "Failed building cACTION_CONTROL_SLAVE_JOINED_NOTIFICATION!";
                 return false;
             }
-
-            notification->is_slave_reconf()  = radio_manager.is_backhaul_reconf;
-            radio_manager.is_backhaul_reconf = false;
 
             // Version
             string_utils::copy_string(notification->slave_version(message::VERSION_LENGTH),
