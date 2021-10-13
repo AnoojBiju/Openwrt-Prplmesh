@@ -174,11 +174,6 @@ private:
     std::unordered_map<sMacAddr, std::shared_ptr<SArpEntry>> m_mapArpEntries;
     std::chrono::steady_clock::time_point m_tpArpEntriesCleanup;
 
-    /**
-     * File descriptor of the socket connecting to the backhaul manager
-     */
-    int m_backhaul_manager_socket = beerocks::net::FileDescriptor::invalid_descriptor;
-
     bpl::BPL_ARP_MON_CTX m_ctxArpMon = nullptr;
 
     uint32_t m_uiArpMonIP;

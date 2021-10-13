@@ -14,7 +14,6 @@ _multi_class_auto_insert:
 
 cACTION_PLATFORM_SON_SLAVE_BACKHAUL_CONNECTION_COMPLETE_NOTIFICATION:
   _type: class
-  is_backhaul_manager: uint8_t
 
 cACTION_PLATFORM_SON_SLAVE_REGISTER_REQUEST:
   _type: class

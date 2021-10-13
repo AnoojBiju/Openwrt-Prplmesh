@@ -193,7 +193,6 @@ private:
         bool is_backhaul_reconf        = false;
         bool detach_on_conf_change     = false;
         bool configuration_in_progress = false;
-        bool is_backhaul_manager       = false;
         bool autoconfiguration_completed;
         //slave FSM //
         eSlaveState slave_state;

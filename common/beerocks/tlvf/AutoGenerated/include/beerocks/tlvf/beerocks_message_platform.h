@@ -36,7 +36,6 @@ class cACTION_PLATFORM_SON_SLAVE_BACKHAUL_CONNECTION_COMPLETE_NOTIFICATION : pub
         static eActionOp_PLATFORM get_action_op(){
             return (eActionOp_PLATFORM)(ACTION_PLATFORM_SON_SLAVE_BACKHAUL_CONNECTION_COMPLETE_NOTIFICATION);
         }
-        uint8_t& is_backhaul_manager();
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -44,7 +43,6 @@ class cACTION_PLATFORM_SON_SLAVE_BACKHAUL_CONNECTION_COMPLETE_NOTIFICATION : pub
     private:
         bool init();
         eActionOp_PLATFORM* m_action_op = nullptr;
-        uint8_t* m_is_backhaul_manager = nullptr;
 };
 
 class cACTION_PLATFORM_SON_SLAVE_REGISTER_REQUEST : public BaseClass

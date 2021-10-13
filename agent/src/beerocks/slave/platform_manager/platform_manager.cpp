@@ -383,9 +383,6 @@ void PlatformManager::handle_disconnected(int fd)
         LOG(INFO) << "Agent socket disconnected! fd = " << fd;
         m_agent_fd = beerocks::net::FileDescriptor::invalid_descriptor;
         bpl_iface_wlan_params_map.clear();
-    } else if (m_backhaul_manager_socket == fd) {
-        LOG(INFO) << "Backhaul manager socket disconnected! fd = " << fd;
-        m_backhaul_manager_socket = beerocks::net::FileDescriptor::invalid_descriptor;
     } else {
         LOG(ERROR) << "Unkown socket disconnected! fd = " << fd;
         return;
@@ -567,24 +564,19 @@ bool PlatformManager::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
                           "failed";
             return false;
         }
-        if (notification->is_backhaul_manager()) {
-            LOG(DEBUG) << "slave is backhaul manager, updating";
-            m_backhaul_manager_socket = fd;
-
-            // Start ARP monitor
-            if (enable_arp_monitor) {
-                if (!init_arp_monitor()) {
-                    LOG(ERROR) << "can't start ARP monitor";
-                    return false;
-                }
+        // Start ARP monitor
+        if (enable_arp_monitor) {
+            if (!init_arp_monitor()) {
+                LOG(ERROR) << "can't start ARP monitor";
+                return false;
             }
+        }
 
-            // Start DHCP monitor
-            if (AgentDB::get()->device_conf.local_gw) {
-                if (!init_dhcp_monitor()) {
-                    LOG(ERROR) << "can't start DHCP monitor";
-                    return false;
-                }
+        // Start DHCP monitor
+        if (AgentDB::get()->device_conf.local_gw) {
+            if (!init_dhcp_monitor()) {
+                LOG(ERROR) << "can't start DHCP monitor";
+                return false;
             }
         }
     } break;

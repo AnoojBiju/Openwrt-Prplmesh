@@ -172,7 +172,6 @@ void slave_thread::slave_reset(const std::string &fronthaul_iface)
     platform_manager_stop();
     hostap_services_off();
     fronthaul_stop(fronthaul_iface);
-    radio_manager.is_backhaul_manager   = false;
     radio_manager.detach_on_conf_change = false;
 
     auto db = AgentDB::get();
@@ -846,11 +845,9 @@ bool slave_thread::handle_cmdu_control_message(Socket *sd,
             LOG(ERROR) << "addClass ACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_REQUEST failed";
             return false;
         }
-        bool forbackhaul = (radio_manager.is_backhaul_manager &&
-                            radio_manager.backhaul_params.backhaul_is_wireless);
 
         if (request_in->params().cross && (request_in->params().ipv4.oct[0] == 0) &&
-            forbackhaul) { //if backhaul manager and wireless send to backhaul else front.
+            backhaul_params.backhaul_is_wireless) {
             auto request_out = message_com::create_vs_message<
                 beerocks_message::cACTION_BACKHAUL_CLIENT_RX_RSSI_MEASUREMENT_REQUEST>(
                 cmdu_tx, beerocks_header->id());
@@ -1095,17 +1092,15 @@ bool slave_thread::handle_cmdu_control_message(Socket *sd,
         LOG(DEBUG) << "stop_on_failure_attempts new value: "
                    << db->device_conf.stop_on_failure_attempts;
 
-        if (radio_manager.is_backhaul_manager) {
-            auto request_out = message_com::create_vs_message<
-                beerocks_message::cACTION_BACKHAUL_UPDATE_STOP_ON_FAILURE_ATTEMPTS_REQUEST>(
-                cmdu_tx);
-            if (request_out == nullptr) {
-                LOG(ERROR) << "Failed building message!";
-                return false;
-            }
+        auto request_out = message_com::create_vs_message<
+            beerocks_message::cACTION_BACKHAUL_UPDATE_STOP_ON_FAILURE_ATTEMPTS_REQUEST>(cmdu_tx);
+        if (request_out == nullptr) {
+            LOG(ERROR) << "Failed building message!";
+            return false;
+        }
 
-            request_out->attempts() = request_in->attempts();
-            message_com::send_cmdu(m_backhaul_manager_socket, cmdu_tx);
+        request_out->attempts() = request_in->attempts();
+        message_com::send_cmdu(m_backhaul_manager_socket, cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_CONTROL_STEERING_CLIENT_SET_GROUP_REQUEST: {
@@ -1380,9 +1375,6 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
             if (radio_manager.slave_state >= STATE_WAIT_FOR_JOINED_RESPONSE &&
                 radio_manager.slave_state <= STATE_OPERATIONAL)
                 radio_manager.is_backhaul_reconf = true;
-
-            radio_manager.is_backhaul_manager = (bool)notification->params().is_backhaul_manager;
-            LOG_IF(radio_manager.is_backhaul_manager, DEBUG) << "Selected as backhaul manager";
 
             auto db = AgentDB::get();
 
@@ -4118,9 +4110,6 @@ bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
             break;
         }
 
-        if (!db->device_conf.local_gw) {
-            radio_manager.is_backhaul_manager = false;
-        }
 
         auto radio = db->radio(fronthaul_iface);
         if (radio) {
@@ -4274,9 +4263,6 @@ bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
             radio_manager.backhaul_params.backhaul_channel     = 0;
             radio_manager.backhaul_params.backhaul_is_wireless = 0;
             radio_manager.backhaul_params.backhaul_iface_type  = beerocks::IFACE_TYPE_GW_BRIDGE;
-            if (radio_manager.is_backhaul_manager) {
-                radio_manager.backhaul_params.backhaul_iface = db->ethernet.wan.iface_name;
-            }
         }
 
         LOG(INFO) << "Backhaul Params Info:";
@@ -4432,7 +4418,12 @@ bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
                 config.radios[fronthaul_iface].enable_repeater_mode;
 
             // Backhaul Params
-            notification->backhaul_params().is_backhaul_manager = radio_manager.is_backhaul_manager;
+            bool wireless_bh_manager =
+                db->backhaul.connection_type == AgentDB::sBackhaul::eConnectionType::Wireless &&
+                radio->back.iface_name == db->backhaul.selected_iface_name;
+            bool wired_bh_manager = m_radio_managers.get().begin()->first == fronthaul_iface;
+            notification->backhaul_params().is_backhaul_manager =
+                wireless_bh_manager || wired_bh_manager;
             notification->backhaul_params().backhaul_iface_type =
                 radio_manager.backhaul_params.backhaul_iface_type;
             notification->backhaul_params().backhaul_mac =
