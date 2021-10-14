@@ -122,6 +122,7 @@ private:
 
     int enable_legacy_client_roaming_caller(int numOfArgs);
     int enable_client_roaming_caller(int numOfArgs);
+    int enable_client_roaming_11k_support_caller(int numOfArgs);
     int enable_client_roaming_prefer_signal_strength_caller(int numOfArgs);
     int enable_client_band_steering_caller(int numOfArgs);
     int enable_ire_roaming_caller(int numOfArgs);
@@ -180,6 +181,7 @@ private:
 
     int enable_legacy_client_roaming(int8_t isEnable = -1);
     int enable_client_roaming(int8_t isEnable = -1);
+    int enable_client_roaming_11k_support(int8_t isEnable = -1);
     int enable_client_roaming_prefer_signal_strength(int8_t isEnable = -1);
     int enable_client_band_steering(int8_t isEnable = -1);
     int enable_ire_roaming(int8_t isEnable = -1);

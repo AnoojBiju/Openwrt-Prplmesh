@@ -574,6 +574,10 @@ void cli_bml::setFunctionsMapAndArray()
                        "Clear persistent configuration for the client with the given STA MAC",
                        static_cast<pFunction>(&cli_bml::client_clear_client_caller), 1, 1,
                        STRING_ARG);
+    insertCommandToMap(
+        "bml_enable_11k_support", "[<1 or 0>]",
+        "if input was given - enable/disable the 802.11k support, prints current value",
+        static_cast<pFunction>(&cli_bml::enable_client_roaming_11k_support_caller), 0, 1, INT_ARG);
     //bool insertCommandToMap(std::string command, std::string help_args, std::string help,  pFunction funcPtr, uint8_t minNumOfArgs, uint8_t maxNumOfArgs,
 }
 
@@ -1053,6 +1057,15 @@ int cli_bml::enable_client_roaming_caller(int numOfArgs)
     else if (numOfArgs == 0)
         return enable_client_roaming();
     return enable_client_roaming(args.intArgs[0]);
+}
+
+int cli_bml::enable_client_roaming_11k_support_caller(int numOfArgs)
+{
+    if (numOfArgs < 0)
+        return -1;
+    else if (numOfArgs == 0)
+        return enable_client_roaming_11k_support();
+    return enable_client_roaming_11k_support(args.intArgs[0]);
 }
 
 int cli_bml::enable_client_roaming_prefer_signal_strength_caller(int numOfArgs)
@@ -1639,6 +1652,17 @@ int cli_bml::enable_client_roaming(int8_t isEnable)
     printBmlReturnVals("bml_enable_client_roaming", ret);
     if (isEnable < 0 && ret == BML_RET_OK)
         std::cout << "client_roaming mode = " << result << std::endl;
+    return 0;
+}
+
+int cli_bml::enable_client_roaming_11k_support(int8_t isEnable)
+{
+    int result = -1;
+    int ret    = (isEnable < 0) ? bml_get_client_roaming_11k_support(ctx, &result)
+                             : bml_set_client_roaming_11k_support(ctx, isEnable);
+    printBmlReturnVals("bml_enable_client_roaming_11k_support", ret);
+    if (isEnable < 0 && ret == BML_RET_OK)
+        std::cout << "client_roaming_11k_support mode = " << result << std::endl;
     return 0;
 }
 

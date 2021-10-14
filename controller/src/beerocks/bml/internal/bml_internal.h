@@ -110,6 +110,12 @@ public:
 
     // Return client roaming status (in res)
     int get_client_roaming(int &res);
+
+    // Enable/Disable 11k feature support
+    int set_client_roaming_11k_support(bool enable);
+
+    // Return client 11k feature support (in res)
+    int get_client_roaming_11k_support(int &res);
     //
     // Enable/Disable legacy client roaming
     int set_legacy_client_roaming(bool enable);

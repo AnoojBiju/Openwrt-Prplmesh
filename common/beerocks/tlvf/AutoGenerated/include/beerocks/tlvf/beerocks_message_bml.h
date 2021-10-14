@@ -2234,6 +2234,86 @@ class cACTION_BML_CLIENT_CLEAR_CLIENT_RESPONSE : public BaseClass
         uint8_t* m_result = nullptr;
 };
 
+class cACTION_BML_SET_CLIENT_ROAMING_11K_SUPPORT_REQUEST : public BaseClass
+{
+    public:
+        cACTION_BML_SET_CLIENT_ROAMING_11K_SUPPORT_REQUEST(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_BML_SET_CLIENT_ROAMING_11K_SUPPORT_REQUEST(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_BML_SET_CLIENT_ROAMING_11K_SUPPORT_REQUEST();
+
+        static eActionOp_BML get_action_op(){
+            return (eActionOp_BML)(ACTION_BML_SET_CLIENT_ROAMING_11K_SUPPORT_REQUEST);
+        }
+        uint8_t& isEnable();
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_BML* m_action_op = nullptr;
+        uint8_t* m_isEnable = nullptr;
+};
+
+class cACTION_BML_SET_CLIENT_ROAMING_11K_SUPPORT_RESPONSE : public BaseClass
+{
+    public:
+        cACTION_BML_SET_CLIENT_ROAMING_11K_SUPPORT_RESPONSE(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_BML_SET_CLIENT_ROAMING_11K_SUPPORT_RESPONSE(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_BML_SET_CLIENT_ROAMING_11K_SUPPORT_RESPONSE();
+
+        static eActionOp_BML get_action_op(){
+            return (eActionOp_BML)(ACTION_BML_SET_CLIENT_ROAMING_11K_SUPPORT_RESPONSE);
+        }
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_BML* m_action_op = nullptr;
+};
+
+class cACTION_BML_GET_CLIENT_ROAMING_11K_SUPPORT_REQUEST : public BaseClass
+{
+    public:
+        cACTION_BML_GET_CLIENT_ROAMING_11K_SUPPORT_REQUEST(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_BML_GET_CLIENT_ROAMING_11K_SUPPORT_REQUEST(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_BML_GET_CLIENT_ROAMING_11K_SUPPORT_REQUEST();
+
+        static eActionOp_BML get_action_op(){
+            return (eActionOp_BML)(ACTION_BML_GET_CLIENT_ROAMING_11K_SUPPORT_REQUEST);
+        }
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_BML* m_action_op = nullptr;
+};
+
+class cACTION_BML_GET_CLIENT_ROAMING_11K_SUPPORT_RESPONSE : public BaseClass
+{
+    public:
+        cACTION_BML_GET_CLIENT_ROAMING_11K_SUPPORT_RESPONSE(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_BML_GET_CLIENT_ROAMING_11K_SUPPORT_RESPONSE(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_BML_GET_CLIENT_ROAMING_11K_SUPPORT_RESPONSE();
+
+        static eActionOp_BML get_action_op(){
+            return (eActionOp_BML)(ACTION_BML_GET_CLIENT_ROAMING_11K_SUPPORT_RESPONSE);
+        }
+        uint8_t& isEnable();
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_BML* m_action_op = nullptr;
+        uint8_t* m_isEnable = nullptr;
+};
+
 }; // close namespace: beerocks_message
 
 #endif //_BEEROCKS/TLVF_BEEROCKS_MESSAGE_BML_H_

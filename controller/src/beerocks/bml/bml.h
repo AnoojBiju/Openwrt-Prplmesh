@@ -267,6 +267,26 @@ int bml_set_client_roaming(BML_CTX ctx, int enable);
 int bml_get_client_roaming(BML_CTX ctx, int *res);
 
 /**
+ * Enables or disables beerocks 11k feature support.
+ *
+ * @param [in] ctx BML Context.
+ * @param [in] enable 1 to enable or 0 to disable.
+ *
+ * @return BML_RET_OK on success.
+ */
+int bml_set_client_roaming_11k_support(BML_CTX ctx, int enable);
+
+/**
+ * Returns beerocks 11k feature support.
+ *
+ * @param [in] ctx BML Context.
+ * @param [in] res A reference for the result to be stored in.
+ *
+ * @return BML_RET_OK on success.
+ */
+int bml_get_client_roaming_11k_support(BML_CTX ctx, int *res);
+
+/**
  * Enables or disables beerocks legacy (forced) client roaming.
  *
  * @param [in] ctx BML Context.
