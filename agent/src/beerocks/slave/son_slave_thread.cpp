@@ -73,7 +73,7 @@ using namespace beerocks;
 using namespace net;
 using namespace son;
 
-slave_thread::slave_thread(sAgentConfig conf, beerocks::logging &logger_)
+slave_thread::slave_thread(const sAgentConfig &conf, beerocks::logging &logger_)
     : socket_thread(conf.temp_path + std::string(BEEROCKS_AGENT_UDS)), config(conf), logger(logger_)
 {
     thread_name          = BEEROCKS_AGENT;
@@ -4227,7 +4227,10 @@ bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
         if (db->device_conf.local_gw) {
             //TODO get bridge_iface from platform manager
             network_utils::iface_info bridge_info;
-            network_utils::get_iface_info(bridge_info, db->bridge.iface_name);
+            if (!network_utils::get_iface_info(bridge_info, db->bridge.iface_name)) {
+                LOG(ERROR) << "Unable to get interface info about bridge";
+                break;
+            }
 
             radio_manager.backhaul_params.bridge_ipv4    = bridge_info.ip;
             radio_manager.backhaul_params.backhaul_iface = db->bridge.iface_name;

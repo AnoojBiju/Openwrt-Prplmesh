@@ -39,20 +39,6 @@ class tlvProfile2ApCapability : public BaseClass
             KIBIBYTES = 0x1,
             MEBIBYTES = 0x2,
         };
-        // Enum AutoPrint generated code snippet begining- DON'T EDIT!
-        // clang-format off
-        static const char *eByteCounterUnits_str(eByteCounterUnits enum_value) {
-            switch (enum_value) {
-            case BYTES:     return "BYTES";
-            case KIBIBYTES: return "KIBIBYTES";
-            case MEBIBYTES: return "MEBIBYTES";
-            }
-            static std::string out_str = std::to_string(int(enum_value));
-            return out_str.c_str();
-        }
-        friend inline std::ostream &operator<<(std::ostream &out, eByteCounterUnits value) { return out << eByteCounterUnits_str(value); }
-        // clang-format on
-        // Enum AutoPrint generated code snippet end
         
         typedef struct sCapabilitiesBitsField {
             #if defined(__LITTLE_ENDIAN_BITFIELD)

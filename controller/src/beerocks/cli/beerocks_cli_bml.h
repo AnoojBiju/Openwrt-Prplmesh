@@ -227,7 +227,6 @@ private:
     std::string beerocks_conf_path;
     BML_CTX ctx = nullptr;
     char print_buffer[PRINT_BUFFER_LENGTH];
-    int is_onboarding;
     bool pending_response = false;
 
     bool is_analyzer = false;

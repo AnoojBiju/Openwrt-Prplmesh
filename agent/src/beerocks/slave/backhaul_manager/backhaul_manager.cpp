@@ -100,7 +100,7 @@ BackhaulManager::BackhaulManager(const config_file::sConfigSlave &config,
       cert_cmdu_tx(m_cert_tx_buffer, sizeof(m_cert_tx_buffer)), slave_ap_ifaces(slave_ap_ifaces_),
       slave_sta_ifaces(slave_sta_ifaces_), m_beerocks_temp_path(config.temp_path),
       m_ucc_listener_port(string_utils::stoi(config.ucc_listener_port)),
-      config_const_bh_slave(config.const_backhaul_slave)
+      config_const_bh_slave(config.const_backhaul_slave), roam_selected_bssid_channel(0)
 {
     pending_slave_ifaces                   = slave_ap_ifaces_;
     configuration_stop_on_failure_attempts = stop_on_failure_attempts_;
