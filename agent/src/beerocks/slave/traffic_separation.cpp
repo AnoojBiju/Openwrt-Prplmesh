@@ -21,8 +21,9 @@ constexpr char DOT_PVID_SUFFIX[] = ".pvid";
  *
  * @param iface Interface to configure.
  * @param add true for adding interface, false to remove.
+ * @param bridge Bridge name if the interface is inside a bridge, otherwise should be empty.
  */
-static void configure_transport(const std::string &iface, bool add)
+static void configure_transport(const std::string &iface, bool add, const std::string bridge)
 {
     // TODO: It would have been better if the traffic would be using the broker interface of caller
     // instead of creating it every time.
@@ -39,7 +40,7 @@ static void configure_transport(const std::string &iface, bool add)
     LOG_IF(!broker_client_factory, FATAL) << "Unable to create broker client factory!";
     auto broker_client = broker_client_factory->create_instance();
     LOG_IF(!broker_client, FATAL) << "Failed to create instance of broker client";
-    if (!broker_client->configure_interfaces(iface, {}, false, add)) {
+    if (!broker_client->configure_interfaces(iface, bridge, false, add)) {
         LOG(ERROR) << "Failed configuring transport process!";
     }
 }
@@ -58,15 +59,16 @@ static void configure_transport(const std::string &iface, bool add)
 static void update_transport_configuration(const std::string &iface, const std::string &vlan_iface,
                                            bool vlan_add)
 {
+    auto db = beerocks::AgentDB::get();
     if (vlan_add) {
         // Add the VLAN interface and remove the wireless backhaul interface so a packet will
         // not be sent twice.
-        configure_transport(vlan_iface, true);
-        configure_transport(iface, false);
+        configure_transport(vlan_iface, true, db->bridge.iface_name);
+        configure_transport(iface, false, db->bridge.iface_name);
         return;
     }
-    configure_transport(vlan_iface, false);
-    configure_transport(iface, true);
+    configure_transport(vlan_iface, false, db->bridge.iface_name);
+    configure_transport(iface, true, db->bridge.iface_name);
 }
 
 namespace beerocks {
@@ -173,7 +175,16 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
                                                  PVID_SUFFIX);
             vlan_iface_added = true;
 
-            network_utils::linux_iface_ctrl(vlan_iface_name, true);
+            if (!network_utils::linux_iface_ctrl(vlan_iface_name, true)) {
+                LOG(ERROR) << "Failed to bring up iface " << vlan_iface_name;
+            }
+
+            if (!beerocks::net::network_utils::linux_add_iface_to_bridge(db->bridge.iface_name,
+                                                                         vlan_iface_name)) {
+                LOG(ERROR) << "Failed to add iface " << vlan_iface_name << " to bridge "
+                           << db->bridge.iface_name;
+                return;
+            }
 
             set_vlan_policy(radio->back.iface_name, ePortMode::TAGGED_PORT_PRIMARY_TAGGED,
                             is_bridge);
@@ -265,7 +276,16 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
                                                          PVID_SUFFIX);
                     vlan_iface_added = true;
 
-                    network_utils::linux_iface_ctrl(vlan_iface_name, true);
+                    if (!network_utils::linux_iface_ctrl(vlan_iface_name, true)) {
+                        LOG(ERROR) << "Failed to bring up iface " << vlan_iface_name;
+                    }
+
+                    if (!beerocks::net::network_utils::linux_add_iface_to_bridge(
+                            db->bridge.iface_name, vlan_iface_name)) {
+                        LOG(ERROR) << "Failed to add iface " << vlan_iface_name << " to bridge "
+                                   << db->bridge.iface_name;
+                        return;
+                    }
 
                     set_vlan_policy(bss_iface_netdev, ePortMode::TAGGED_PORT_PRIMARY_UNTAGGED,
                                     is_bridge);
