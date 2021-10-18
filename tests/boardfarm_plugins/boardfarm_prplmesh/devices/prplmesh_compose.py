@@ -19,6 +19,8 @@ class PrplMeshCompose(PrplMeshBase):
     model = ("prplmesh_compose")
     agent_entity = None
     controller_entity = None
+    scripts_path = os.path.abspath(
+        os.path.join(os.getcwd(), '../build/install/scripts'))
 
     def __init__(self, *args, **kwargs):
         self.args = args
@@ -42,8 +44,8 @@ class PrplMeshCompose(PrplMeshBase):
         self.docker_network = "prplMesh-net-{}".format(self.unique_id)
 
         if self.role == "controller":
-            self.controller_entity = \
-                ALEntityDocker(self.docker_name, device=self, is_controller=True, compose=True)
+            self.controller_entity = ALEntityDocker(
+                self.docker_name, device=self, is_controller=True, compose=True)
         else:
             self.agent_entity = ALEntityDocker(self.docker_name, device=self,
                                                is_controller=False, compose=True)
@@ -64,3 +66,9 @@ class PrplMeshCompose(PrplMeshBase):
     def prprlmesh_status_check(self):
         self.check_status()
         return True
+
+    def roll_logs(self, test_name):
+        """Rolls the current log file on the device, appending the test name to it
+        """
+        self.get_active_entity().command(
+            self.scripts_path + '/prplmesh_utils.sh', 'roll_logs', test_name)
