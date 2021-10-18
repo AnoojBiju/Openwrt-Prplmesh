@@ -403,8 +403,56 @@ bool mon_wlan_hal_nl80211::sta_link_measurements_11k_request(const std::string &
 bool mon_wlan_hal_nl80211::channel_scan_trigger(int dwell_time_msec,
                                                 const std::vector<unsigned int> &channel_pool)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
-    return false;
+    LOG(DEBUG) << "nl80211 Scan trigger: received on interface=" << m_radio_info.iface_name;
+
+    // TODO: build background scan parameters (dwell_time ...)
+
+    auto ret = nl80211_channel_scan_trigger(
+        // Create the message
+        [&](struct nl_msg *msg) -> bool {
+            LOG(DEBUG) << "nl80211 Scan trigger: Create the nl message !";
+            struct nlattr *freqs;
+
+            freqs = nla_nest_start(msg, NL80211_ATTR_SCAN_FREQUENCIES);
+            if (freqs == NULL) {
+                LOG(ERROR) << "nl80211 Scan trigger: nl nest start freq failed";
+                return false;
+            }
+            int freq_index = 0;
+            for (auto channel : channel_pool) {
+                //channel validation
+                LOG(DEBUG) << "nl80211 Scan trigger: validating pool channel=" << channel;
+                if (son::wireless_utils::which_freq(m_radio_info.channel) !=
+                    son::wireless_utils::which_freq(channel)) {
+                    LOG(ERROR) << "nl80211 Scan trigger: cannot scan channel = " << channel
+                               << " not on the same radio interface =  " << m_radio_info.iface_name;
+                    return false;
+                }
+
+                auto freq = son::wireless_utils::channel_to_freq(int(channel));
+                LOG(DEBUG) << "nl80211 Scan trigger: put scan frequency " << freq << "MHz";
+                freq_index++;
+                if (nla_put_u32(msg, freq_index, freq) != 0) {
+                    LOG(ERROR) << "nl80211 Scan trigger: nla put failed";
+                    return false;
+                }
+            }
+            nla_nest_end(msg, freqs);
+            return true;
+        },
+        // Handle the reponse
+        [&](struct nl_msg *msg) -> bool {
+            LOG(DEBUG) << "nl80211 Scan trigger: Handle the reponse !";
+            // TODO: process nl event
+            return true;
+        });
+
+    if (!ret) {
+        LOG(ERROR) << "nl80211 Scan trigger: cmd failed";
+        return false;
+    }
+
+    return true;
 }
 
 bool mon_wlan_hal_nl80211::channel_scan_dump_cached_results()

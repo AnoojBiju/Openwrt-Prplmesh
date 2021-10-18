@@ -24,6 +24,12 @@ struct wpa_ctrl;
 struct nl_sock;
 struct nl_msg;
 
+struct scan_trigger_results {
+    int done;
+    int aborted;
+    std::function<bool(struct nl_msg *msg)> msg_handle;
+};
+
 namespace bwl {
 namespace nl80211 {
 
@@ -92,6 +98,9 @@ protected:
     bool send_nl80211_msg(uint8_t command, int flags,
                           std::function<bool(struct nl_msg *msg)> msg_create,
                           std::function<bool(struct nl_msg *msg)> msg_handle);
+
+    bool nl80211_channel_scan_trigger(std::function<bool(struct nl_msg *msg)> msg_create,
+                                      std::function<bool(struct nl_msg *msg)> msg_handle);
 
     std::unique_ptr<nl80211_client> m_nl80211_client;
 

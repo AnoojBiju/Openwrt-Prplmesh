@@ -996,6 +996,122 @@ bool base_wlan_hal_nl80211::send_nl80211_msg(uint8_t command, int flags,
     return true;
 }
 
+bool base_wlan_hal_nl80211::nl80211_channel_scan_trigger(
+    std::function<bool(struct nl_msg *msg)> msg_create,
+    std::function<bool(struct nl_msg *msg)> msg_handle)
+{
+    // Netlink Message
+    std::shared_ptr<nl_msg> nl_message =
+        std::shared_ptr<struct nl_msg>(nlmsg_alloc(), [](struct nl_msg *obj) {
+            if (obj) {
+                nlmsg_free(obj);
+            }
+        });
+    LOG_IF(!nl_message, FATAL) << "Failed creating netlink message!";
+
+    // Netlink Callback
+    std::shared_ptr<nl_cb> nl_callback =
+        std::shared_ptr<struct nl_cb>(nl_cb_alloc(NL_CB_DEFAULT), [](struct nl_cb *obj) {
+            if (obj) {
+                nl_cb_put(obj);
+            }
+        });
+    LOG_IF(!nl_callback, FATAL) << "Failed creating netlink callback!";
+
+    int mcid = genl_ctrl_resolve_grp(m_nl80211_sock.get(), "nl80211", "scan");
+    nl_socket_add_membership(m_nl80211_sock.get(), mcid);
+
+    // Create standard callbacks
+    int err                             = 1;
+    int ret                             = 1;
+    struct scan_trigger_results results = {.done = 0, .aborted = 0, msg_handle};
+    static auto nl_err_cb = [](struct sockaddr_nl *nla, struct nlmsgerr *err, void *arg) -> int {
+        int *ret = (int *)arg;
+        *ret     = err->error;
+        return NL_STOP;
+    };
+
+    static auto nl_finish_cb = [](struct nl_msg *msg, void *arg) -> int {
+        int *ret = (int *)arg;
+        *ret     = 0;
+        return NL_SKIP;
+    };
+
+    static auto nl_ack_cb = [](struct nl_msg *msg, void *arg) -> int {
+        int *ret = (int *)arg;
+        *ret     = 0;
+        return NL_STOP;
+    };
+
+    static auto nl_seq_check = [](struct nl_msg *msg, void *arg) -> int { return NL_OK; };
+
+    // Response handler
+    auto nl_handler_cb = [](struct nl_msg *msg, void *arg) -> int {
+        struct nlmsghdr *nlh                         = nlmsg_hdr(msg);
+        struct genlmsghdr *gnlh                      = (genlmsghdr *)nlmsg_data(nlh);
+        struct scan_trigger_results *scan_tr_results = (struct scan_trigger_results *)arg;
+
+        if (gnlh->cmd == NL80211_CMD_SCAN_ABORTED) {
+            scan_tr_results->done    = 1;
+            scan_tr_results->aborted = 1;
+        } else if (gnlh->cmd == NL80211_CMD_NEW_SCAN_RESULTS) {
+            scan_tr_results->done    = 1;
+            scan_tr_results->aborted = 0;
+        }
+
+        if (!scan_tr_results->msg_handle(msg)) {
+            LOG(ERROR) << "User's netlink handler function failed!";
+        }
+        return NL_SKIP;
+    };
+
+    // Initialize the netlink message
+    if (!genlmsg_put(nl_message.get(), 0, 0, m_nl80211_id, 0, 0, NL80211_CMD_TRIGGER_SCAN, 0) ||
+        nla_put_u32(nl_message.get(), NL80211_ATTR_IFINDEX, m_iface_index) != 0) {
+        LOG(ERROR) << "Failed initializing the netlink message!";
+        return false;
+    }
+
+    // Call the user's message create function
+    if (!msg_create(nl_message.get())) {
+        LOG(ERROR) << "User's netlink create function failed!";
+        return false;
+    }
+
+    // Add the callback.
+    nl_cb_set(nl_callback.get(), NL_CB_VALID, NL_CB_CUSTOM, nl_handler_cb, &results);
+    nl_cb_err(nl_callback.get(), NL_CB_CUSTOM, nl_err_cb, &err);
+    nl_cb_set(nl_callback.get(), NL_CB_FINISH, NL_CB_CUSTOM, nl_finish_cb, &err);
+    nl_cb_set(nl_callback.get(), NL_CB_ACK, NL_CB_CUSTOM, nl_ack_cb, &err);
+    nl_cb_set(nl_callback.get(), NL_CB_SEQ_CHECK, NL_CB_CUSTOM, nl_seq_check, NULL);
+
+    err = 1;
+    ret = nl_send_auto(m_nl80211_sock.get(), nl_message.get());
+
+    // TODO: Probably should be changed to select/epoll...
+    while (err > 0)
+        ret = nl_recvmsgs(m_nl80211_sock.get(), nl_callback.get());
+    if (err < 0) {
+        LOG(WARNING) << "nl_recvmsgs err has a value of " << err;
+    }
+    if (ret < 0) {
+        LOG(ERROR) << "nl_recvmsgs returned " << ret << " " << nl_geterror(-ret);
+        return false;
+    }
+    while (!results.done)
+        nl_recvmsgs(m_nl80211_sock.get(), nl_callback.get());
+    if (results.aborted) {
+        LOG(ERROR) << "Scan is aborted";
+        return false;
+    }
+
+    LOG(DEBUG) << "Scan is done";
+
+    nl_socket_drop_membership(m_nl80211_sock.get(), mcid);
+
+    return true;
+}
+
 bool base_wlan_hal_nl80211::get_channel_utilization(uint8_t &channel_utilization)
 {
     nl80211_client::SurveyInfo survey_info;
