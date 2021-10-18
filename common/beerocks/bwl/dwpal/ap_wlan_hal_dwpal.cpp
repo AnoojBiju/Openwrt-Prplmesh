@@ -3332,7 +3332,6 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         // Add the message to the queue
         event_queue_push(Event::STA_Info_Reply, msg_buff);
         break;
-    
     }
 
     // Gracefully ignore unhandled events
