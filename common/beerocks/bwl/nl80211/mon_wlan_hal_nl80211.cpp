@@ -463,8 +463,22 @@ bool mon_wlan_hal_nl80211::channel_scan_dump_cached_results()
 
 bool mon_wlan_hal_nl80211::channel_scan_dump_results()
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
-    return false;
+    LOG(DEBUG) << "nl80211 Scan dump results: received on interface=" << m_radio_info.iface_name;
+
+    auto ret = nl80211_channel_scan_dump_results(
+        // Handle the reponse
+        [&](struct nl_msg *msg) -> bool {
+            LOG(DEBUG) << "nl80211 Scan dump results: Handle the reponse !";
+            // TODO: process nl event
+            return true;
+        });
+
+    if (!ret) {
+        LOG(ERROR) << "nl80211 Scan dump results: cmd failed";
+        return false;
+    }
+
+    return true;
 }
 
 bool mon_wlan_hal_nl80211::generate_connected_clients_events(

@@ -102,6 +102,8 @@ protected:
     bool nl80211_channel_scan_trigger(std::function<bool(struct nl_msg *msg)> msg_create,
                                       std::function<bool(struct nl_msg *msg)> msg_handle);
 
+    bool nl80211_channel_scan_dump_results(std::function<bool(struct nl_msg *msg)> msg_handle);
+
     std::unique_ptr<nl80211_client> m_nl80211_client;
 
     // Private data-members:

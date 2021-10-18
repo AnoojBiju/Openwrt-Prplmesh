@@ -1112,6 +1112,62 @@ bool base_wlan_hal_nl80211::nl80211_channel_scan_trigger(
     return true;
 }
 
+bool base_wlan_hal_nl80211::nl80211_channel_scan_dump_results(
+    std::function<bool(struct nl_msg *msg)> msg_handle)
+{
+    // Netlink Message
+    std::shared_ptr<nl_msg> nl_message =
+        std::shared_ptr<struct nl_msg>(nlmsg_alloc(), [](struct nl_msg *obj) {
+            if (obj) {
+                nlmsg_free(obj);
+            }
+        });
+    LOG_IF(!nl_message, FATAL) << "Failed creating netlink message!";
+
+    // Netlink Callback
+    std::shared_ptr<nl_cb> nl_callback =
+        std::shared_ptr<struct nl_cb>(nl_cb_alloc(NL_CB_DEFAULT), [](struct nl_cb *obj) {
+            if (obj) {
+                nl_cb_put(obj);
+            }
+        });
+    LOG_IF(!nl_callback, FATAL) << "Failed creating netlink callback!";
+
+    int ret            = 1;
+    auto nl_handler_cb = [](struct nl_msg *msg, void *arg) -> int {
+        auto msg_handle = static_cast<std::function<bool(struct nl_msg * msg)> *>(arg);
+        if (!(*msg_handle)(msg)) {
+            LOG(ERROR) << "User's netlink handler function failed!";
+        }
+        return NL_SKIP;
+    };
+
+    // Initialize the netlink message
+    if (!genlmsg_put(nl_message.get(), 0, 0, m_nl80211_id, 0, NLM_F_DUMP, NL80211_CMD_GET_SCAN,
+                     0) ||
+        nla_put_u32(nl_message.get(), NL80211_ATTR_IFINDEX, m_iface_index) != 0) {
+        LOG(ERROR) << "Failed initializing the netlink message!";
+        return false;
+    }
+
+    // Add the callback
+    nl_socket_modify_cb(m_nl80211_sock.get(), NL_CB_VALID, NL_CB_CUSTOM, nl_handler_cb,
+                        &msg_handle);
+
+    ret = nl_send_auto(m_nl80211_sock.get(), nl_message.get());
+    if (ret < 0) {
+        LOG(ERROR) << "nl_send_auto failed: " << ret;
+        return false;
+    }
+    ret = nl_recvmsgs_default(m_nl80211_sock.get());
+    if (ret < 0) {
+        LOG(ERROR) << "nl_recvmsgs_default returned " << ret << " " << nl_geterror(-ret);
+        return false;
+    }
+
+    return true;
+}
+
 bool base_wlan_hal_nl80211::get_channel_utilization(uint8_t &channel_utilization)
 {
     nl80211_client::SurveyInfo survey_info;
