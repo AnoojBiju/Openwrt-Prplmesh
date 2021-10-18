@@ -689,7 +689,11 @@ bool mon_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
 
 bool mon_wlan_hal_nl80211::channel_scan_abort()
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    if (!m_nl80211_client->channel_scan_abort(get_iface_name())) {
+        LOG(ERROR) << "Channel scan abort failed";
+        return false;
+    }
+
     return true;
 }
 
