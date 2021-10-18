@@ -71,6 +71,15 @@ TODO: translate this presentation into markdown format (.md)
 - send 0x0006 (1905 Topology Notification message) to repeater 1 as Gateway
 - check log repeater 1 wlan2 tear down radio
 
+### ap_config_bss_tear_down_nbapi
+- clear all AccessPoint instances in the northbound API
+- setup an AccessPoint on 2.4GHz band
+- wait until all radios are enabled
+- check if all bands expect 2.4GHz are clear of a SSID
+- clear all AccessPoint instances in the northbound API
+- wait until all radios are enabled
+- check if all bands are clear of a SSID
+
 ### channel_selection
 - send 0x8004 (Channel Preference Query message) to repeater 1 as Gateway
 - check log repeater 1 wlan0 message CHANNEL_PREFERENCE_QUERY_MESSAGE received
