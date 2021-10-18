@@ -2009,6 +2009,25 @@ bool ap_wlan_hal_dwpal::set_radio_mbo_assoc_disallow(bool enable)
     return true;
 }
 
+//Hemanth
+//“STA_INFO_QUERY <string: sta_mac> add_network_info=<int: 0/1>”
+bool ap_wlan_hal_dwpal::get_sta_device_info (std::string &sta_mac , int nw_info) {
+    std::string cmd1;
+    LOG(DEBUG) << "GET STA DEVICE INFO";
+    if (nw_info == 0 ) {
+        cmd1 == "OFF";
+    } else {
+        cmd1 == "ON";
+    }
+    std::string cmd = "STA_INFO_QUERY" + " " + cmd1 ;
+    if (!dwpal_send_cmd(cmd)) {
+        LOG(ERROR) << "GET STA DEVICE INFO FAILED ..!";
+        return false;
+    }
+    return true;
+    
+}
+
 bool ap_wlan_hal_dwpal::set_primary_vlan_id(uint16_t primary_vlan_id)
 {
     LOG(DEBUG) << "set_primary_vlan_id " << primary_vlan_id;
@@ -3253,6 +3272,67 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         event_queue_push(Event::AP_Sta_Possible_Psk_Mismatch,
                          msg_buff); // send message to the AP manager
         break;
+    }
+    //Hemanth
+    case Event::STA_Info_Reply: {
+               auto msg_buff =
+            ALLOC_SMART_BUFFER(sizeof(sSTA_Info_Reply));
+        auto msg = reinterpret_cast<sSTA_Info_Reply *>(
+            msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        // Initialize the message
+        memset(msg_buff.get(), 0,
+               sizeof(sSTA_Info_Reply));
+
+        size_t numOfValidArgs[11]      = {0};
+        FieldsToParse fieldsToParse[] = {
+            {NULL /*opCode*/, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
+            {NULL, &numOfValidArgs[1], DWPAL_STR_PARAM, NULL, 0},
+            {(void *)&msg->dev_params.bss, &numOfValidArgs[2], DWPAL_STR_PARAM, "bss=", 0},
+            {(void *)&msg->dev_params.mac, &numOfValidArgs[3], DWPAL_STR_PARAM,
+             "mac=", 0},
+            {(void *)&msg->dev_params.device_name, &numOfValidArgs[4], DWPAL_CHAR_PARAM, "dev_name=", 0},
+            {(void *)&msg->dev_params.os_name, &numOfValidArgs[5], DWPAL_STR_PARAM,
+             "os_name=", 0},
+             {(void *)&msg->dev_params.vendor_name, &numOfValidArgs[6], DWPAL_STR_PARAM,
+             "vendor_name=", 0},
+             {(void *)&msg->dev_params.days_since_last_reset, &numOfValidArgs[7], DWPAL_INT_PARAM,
+             "last_reset=", 0},
+             {(void *)&msg->nw_params.ip_v4, &numOfValidArgs[8], DWPAL_STR_PARAM,
+             "ip_v4=", 0},
+             {(void *)&msg->nw_params.default_gateway, &numOfValidArgs[9], DWPAL_STR_PARAM,
+             "default_gw=", 0},
+             {(void *)&msg->nw_params.subnet_mask, &numOfValidArgs[10], DWPAL_STR_PARAM,
+             "subnet_mask=", 0},
+            /* Must be at the end */
+            {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
+
+        if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse, sizeof(int)) ==
+            DWPAL_FAILURE) {
+            LOG(ERROR) << "DWPAL parse error ==> Abort";
+            return false;
+        }
+
+        /* TEMP: Traces... */
+        LOG(DEBUG) << "numOfValidArgs[2]= " << numOfValidArgs[2]
+                   << " bss= " << (string)msg->dev_params.bss;
+        LOG(DEBUG) << "numOfValidArgs[3]= " << numOfValidArgs[3]
+                   << " mac= " << (string)msg->dev_params.mac;
+        LOG(DEBUG) << "numOfValidArgs[4]= " << numOfValidArgs[4]
+                   << " device_name= " << (string)msg->dev_params.device_name;
+
+        for (uint8_t i = 0; i < (sizeof(numOfValidArgs) / sizeof(size_t)); i++) {
+            if (numOfValidArgs[i] == 0) {
+                LOG(ERROR) << "Failed reading parsed parameter " << (int)i << " ==> Abort";
+                return false;
+            }
+        }
+
+        // Add the message to the queue
+        event_queue_push(Event::STA_Info_Reply, msg_buff);
+        break;
+    
     }
 
     // Gracefully ignore unhandled events

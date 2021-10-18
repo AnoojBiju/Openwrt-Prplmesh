@@ -312,6 +312,7 @@ bool ap_wlan_hal_dummy::set_vap_enable(const std::string &iface_name, const bool
 
 bool ap_wlan_hal_dummy::get_vap_enable(const std::string &iface_name, bool &enable) { return true; }
 
+
 bool ap_wlan_hal_dummy::generate_connected_clients_events(
     bool &is_finished_all_clients, std::chrono::steady_clock::time_point max_iteration_timeout)
 {

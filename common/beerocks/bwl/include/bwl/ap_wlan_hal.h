@@ -56,7 +56,9 @@ public:
         DFS_RADAR_Detected,
         AP_MGMT_FRAME_RECEIVED,
 
-        MGMT_Frame /**< 802.11 management frame payload */
+        MGMT_Frame, /**< 802.11 management frame payload */
+        //HEMANTH
+        STA_Info_Reply
     };
 
     // Public methods
