@@ -893,13 +893,14 @@ bool network_utils::linux_iface_get_speed(const std::string &iface, uint32_t &sp
         LOG(ERROR) << "Can't create SOCK_DGRAM socket: " << strerror(errno);
     } else {
         struct ifreq ifr;
+        int rc;
+
+        string_utils::copy_string(ifr.ifr_name, iface.c_str(), sizeof(ifr.ifr_name));
+#ifdef ETHTOOL_GLINKSETTINGS
         struct {
             struct ethtool_link_settings req;
             __u32 link_mode_data[3 * ETHTOOL_LINK_MODE_MASK_MAX_KERNEL_NU32];
         } ecmd;
-        int rc;
-
-        string_utils::copy_string(ifr.ifr_name, iface.c_str(), sizeof(ifr.ifr_name));
         ifr.ifr_data = reinterpret_cast<char *>(&ecmd);
 
         /* Handshake with kernel to determine number of words for link
@@ -930,22 +931,27 @@ bool network_utils::linux_iface_get_speed(const std::string &iface, uint32_t &sp
                 }
             }
         }
+#endif
 
         /**
          * ETHTOOL_GSET is deprecated and must be used only if ETHTOOL_GLINKSETTINGS
          * didn't work
+         * or when not supported
          */
-        if (!result) {
-            struct ethtool_cmd ecmd;
+#ifdef ETHTOOL_GLINKSETTINGS
+        if (!result)
+#endif
+        {
+            struct ethtool_cmd ecmd_legacy;
 
-            ifr.ifr_data = reinterpret_cast<char *>(&ecmd);
+            ifr.ifr_data = reinterpret_cast<char *>(&ecmd_legacy);
 
-            memset(&ecmd, 0, sizeof(ecmd));
-            ecmd.cmd = ETHTOOL_GSET;
+            memset(&ecmd_legacy, 0, sizeof(ecmd_legacy));
+            ecmd_legacy.cmd = ETHTOOL_GSET;
 
             rc = ioctl(sock, SIOCETHTOOL, &ifr);
             if (0 == rc) {
-                speed  = ethtool_cmd_speed(&ecmd);
+                speed  = ethtool_cmd_speed(&ecmd_legacy);
                 result = true;
             }
         }

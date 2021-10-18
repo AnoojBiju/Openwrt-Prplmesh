@@ -332,8 +332,7 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
                 node->data.gw_ire.radio[i].ap_active = r->active;
 
                 // Copy the radio identifier string
-                tlvf::mac_from_string(node->data.gw_ire.radio[i].radio_identifier,
-                                      c->radio_identifier);
+                tlvf::mac_from_string(node->data.gw_ire.radio[i].radio_identifier, c->mac);
 
                 ++i;
             }

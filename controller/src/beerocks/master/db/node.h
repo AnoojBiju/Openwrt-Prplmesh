@@ -59,7 +59,6 @@ public:
     std::string parent_mac;          // hostap
     std::string dm_path;             // data model path without dot in the end
     std::string previous_parent_mac; //hostap
-    std::string radio_identifier;
 
     std::string ipv4;
     std::string manufacturer;

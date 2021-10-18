@@ -170,8 +170,46 @@ bool nl80211_client_impl::get_interface_info(const std::string &interface_name,
                 LOG(DEBUG) << "NL80211_ATTR_WIPHY attribute is missing";
             }
 
-            // Unused attributes:
-            // NL80211_ATTR_CHANNEL_WIDTH, NL80211_ATTR_CENTER_FREQ1, NL80211_ATTR_CENTER_FREQ2
+            if (tb[NL80211_ATTR_WIPHY_FREQ]) {
+                interface_info.frequency = nla_get_u32(tb[NL80211_ATTR_WIPHY_FREQ]);
+                interface_info.channel =
+                    son::wireless_utils::freq_to_channel(interface_info.frequency);
+                if (tb[NL80211_ATTR_CHANNEL_WIDTH]) {
+
+                    // NL80211_ATTR_CENTER_FREQ1 attribute must be provided for bw 40 80 160
+                    // NL80211_ATTR_CENTER_FREQ2 attribute must be provided for bw 80P80
+                    switch (nla_get_u32(tb[NL80211_ATTR_CHANNEL_WIDTH])) {
+                    case NL80211_CHAN_WIDTH_20_NOHT:
+                    case NL80211_CHAN_WIDTH_20:
+                        interface_info.bandwidth = 20;
+                        break;
+                    case NL80211_CHAN_WIDTH_40:
+                        interface_info.bandwidth = 40;
+                        break;
+                    case NL80211_CHAN_WIDTH_80:
+                        interface_info.bandwidth = 80;
+                        break;
+                    case NL80211_CHAN_WIDTH_80P80:
+                        if (tb[NL80211_ATTR_CENTER_FREQ2]) {
+                            interface_info.frequency_center2 =
+                                nla_get_u32(tb[NL80211_ATTR_CENTER_FREQ2]);
+                        }
+                        interface_info.bandwidth = 160;
+                        break;
+                    case NL80211_CHAN_WIDTH_160:
+                        interface_info.bandwidth = 160;
+                        break;
+                    default:
+                        //unsupported values: ofdm bw 5 and 10
+                        interface_info.bandwidth = 0;
+                        break;
+                    }
+                    if (interface_info.bandwidth > 20 && tb[NL80211_ATTR_CENTER_FREQ1]) {
+                        interface_info.frequency_center1 =
+                            nla_get_u32(tb[NL80211_ATTR_CENTER_FREQ1]);
+                    }
+                }
+            }
         });
 }
 
