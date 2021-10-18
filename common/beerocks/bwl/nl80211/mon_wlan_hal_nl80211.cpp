@@ -33,6 +33,28 @@ namespace nl80211 {
 ////////////////////////// Local Module Definitions //////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
+enum ie_type : uint8_t {
+    TYPE_SSID                     = 0,
+    TYPE_SUPPORTED_RATES          = 1,
+    TYPE_TIM                      = 5,
+    TYPE_BSS_LOAD                 = 11,
+    TYPE_RSN                      = 48,
+    TYPE_EXTENDED_SUPPORTED_RATES = 50,
+    TYPE_HT_OPERATION             = 61,
+    TYPE_VHT_OPERATION            = 192,
+    TYPE_VENDOR                   = 221,
+    TYPE_EXTENISON                = 255
+};
+/* Element ID Extension (EID 255) values */
+enum ie_id_extension_values : uint8_t { TYPE_EXT_HE_CAPABILITIES = 35, TYPE_EXT_HE_OPERATION = 36 };
+
+#ifndef BIT
+// BIT(0) -> 0x1, BIT(1) -> 0x10, BIT(2) -> 0x100, etc.
+#define BIT(x) (1ULL << (x))
+#endif
+#define WLAN_CAPABILITY_ESS BIT(0)
+#define WLAN_CAPABILITY_IBSS BIT(1)
+#define WLAN_CAPABILITY_PRIVACY BIT(4)
 #define GET_OP_CLASS(channel) ((channel < 14) ? 4 : 5)
 #define BUFFER_SIZE 4096
 
@@ -54,6 +76,444 @@ static mon_wlan_hal::Event wav_to_bwl_event(const std::string &opcode)
     // } else if (opcode == "RRM-LINK-MEASUREMENT-RECEIVED") {
 
     return mon_wlan_hal::Event::Invalid;
+}
+
+static mon_wlan_hal::Event scan_nl_to_bwl_event(uint8_t cmd)
+{
+    switch (cmd) {
+    case NL80211_CMD_TRIGGER_SCAN:
+        return mon_wlan_hal::Event::Channel_Scan_Triggered;
+    case NL80211_CMD_NEW_SCAN_RESULTS:
+        return mon_wlan_hal::Event::Channel_Scan_Dump_Result;
+    case NL80211_CMD_SCAN_ABORTED:
+        return mon_wlan_hal::Event::Channel_Scan_Aborted;
+    default:
+        LOG(ERROR) << "Unknown event received: " << int(cmd);
+        return mon_wlan_hal::Event::Invalid;
+    }
+}
+
+/**
++ * @brief get channel pool frquencies for channel scan parameters.
++ *
++ * @param [in] channel_pool list of channels to be scanned.
++ * @param [in] curr_channel channel teh radio is currently on.
++ * @param [in] iface radio interface name.
++ * @param [out] scan_params for saving channel frequencies for next scan.
++ * @return true on success
++ */
+static bool read_nl_data_from_msg(struct nlattr **bss, struct nl_msg *msg)
+{
+    struct genlmsghdr *gnlh = (genlmsghdr *)nlmsg_data(nlmsg_hdr(msg));
+    struct nlattr *tb[NL80211_ATTR_MAX + 1];
+    static struct nla_policy bss_policy[NL80211_BSS_MAX + 1];
+
+    if (!bss || !msg) {
+        LOG(ERROR) << "invalid input bss=" << bss << ", msg=" << msg;
+        return false;
+    }
+
+    bss_policy[NL80211_BSS_BSSID]                = {};
+    bss_policy[NL80211_BSS_FREQUENCY].type       = NLA_U32;
+    bss_policy[NL80211_BSS_TSF].type             = NLA_U64;
+    bss_policy[NL80211_BSS_BEACON_INTERVAL].type = NLA_U16;
+    bss_policy[NL80211_BSS_CAPABILITY].type      = NLA_U16;
+    bss_policy[NL80211_BSS_INFORMATION_ELEMENTS] = {};
+    bss_policy[NL80211_BSS_SIGNAL_MBM].type      = NLA_U32;
+    bss_policy[NL80211_BSS_SIGNAL_UNSPEC].type   = NLA_U8;
+    bss_policy[NL80211_BSS_STATUS].type          = NLA_U32;
+    bss_policy[NL80211_BSS_SEEN_MS_AGO].type     = NLA_U32;
+    bss_policy[NL80211_BSS_BEACON_IES]           = {};
+
+    nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0), genlmsg_attrlen(gnlh, 0), NULL);
+
+    if (!tb[NL80211_ATTR_BSS]) {
+        LOG(ERROR) << "netlink message is missing the BSS attribute";
+        return false;
+    }
+    if (nla_parse_nested(bss, NL80211_BSS_MAX, tb[NL80211_ATTR_BSS], bss_policy)) {
+        LOG(ERROR) << "Failed parsing nested netlink BSS attribute";
+        return false;
+    }
+    if (!bss[NL80211_BSS_BSSID]) {
+        LOG(ERROR) << "netlink message is missing the BSSID attribute";
+        return false;
+    }
+
+    return true;
+}
+
+static void get_ht_oper(const uint8_t *data, sChannelScanResults &results)
+{
+    if (!data) {
+        LOG(ERROR) << "data buffer is NULL";
+        return;
+    }
+
+    if (!(data[1] & 0x3)) {
+        results.operating_channel_bandwidth =
+            eChannelScanResultChannelBandwidth::eChannel_Bandwidth_20MHz;
+    } else if ((data[1] & 0x3) != 2) {
+        results.operating_channel_bandwidth =
+            eChannelScanResultChannelBandwidth::eChannel_Bandwidth_40MHz;
+    }
+
+    results.supported_standards.push_back(eChannelScanResultStandards::eStandard_802_11n);
+    results.operating_standards = eChannelScanResultStandards::eStandard_802_11n;
+}
+
+static void get_vht_oper(const uint8_t *data, sChannelScanResults &results)
+{
+    if (!data) {
+        LOG(ERROR) << "data buffer is NULL";
+        return;
+    }
+
+    if (data[0] == 0x01) {
+        if (data[2]) {
+            results.operating_channel_bandwidth =
+                eChannelScanResultChannelBandwidth::eChannel_Bandwidth_160MHz;
+        } else {
+            results.operating_channel_bandwidth =
+                eChannelScanResultChannelBandwidth::eChannel_Bandwidth_80MHz;
+        }
+    }
+
+    if (data[0] == 0x02) {
+        results.operating_channel_bandwidth =
+            eChannelScanResultChannelBandwidth::eChannel_Bandwidth_80MHz;
+    }
+
+    if (data[0] == 0x03) {
+        results.operating_channel_bandwidth =
+            eChannelScanResultChannelBandwidth::eChannel_Bandwidth_80_80;
+    }
+
+    if (data[0] > 0x03) {
+        LOG(ERROR) << "illegal TYPE_VHT_OPERATION value=" << data[0];
+    }
+
+    if (results.operating_frequency_band ==
+        eChannelScanResultOperatingFrequencyBand::eOperating_Freq_Band_5GHz) {
+        results.supported_standards.push_back(eChannelScanResultStandards::eStandard_802_11ac);
+        results.operating_standards = eChannelScanResultStandards::eStandard_802_11ac;
+    }
+}
+
+static void get_supprates(const uint8_t *data, uint8_t len, sChannelScanResults &results)
+{
+    if (!data) {
+        LOG(ERROR) << "data buffer is NULL";
+        return;
+    }
+
+    for (int i = 0; i < len; i++) {
+        uint8_t rate_mbs_fp_8_1 = data[i] & 0x7f;
+
+        if (rate_mbs_fp_8_1 / 2 == 11) {
+            if (results.operating_frequency_band ==
+                eChannelScanResultOperatingFrequencyBand::eOperating_Freq_Band_2_4GHz) {
+                results.supported_standards.push_back(
+                    eChannelScanResultStandards::eStandard_802_11b);
+                results.operating_standards = eChannelScanResultStandards::eStandard_802_11b;
+            }
+        } else if (rate_mbs_fp_8_1 / 2 == 54) {
+            if (results.operating_frequency_band ==
+                eChannelScanResultOperatingFrequencyBand::eOperating_Freq_Band_5GHz) {
+                results.supported_standards.push_back(
+                    eChannelScanResultStandards::eStandard_802_11a);
+                results.operating_standards = eChannelScanResultStandards::eStandard_802_11a;
+            }
+        }
+
+        /**
+         * rate_mbs_fp_8_1 is tx data rate in mbps
+         * represented with fixed point u<8,1>.
+         * converting to kbps (no fixpoint) for simplicity u<8,0>
+         */
+        uint32_t rate_kbs = (rate_mbs_fp_8_1 / 2) * 1000 + (5 * (rate_mbs_fp_8_1 & 1)) * 100;
+
+        if (data[i] & 0x80) {
+            results.basic_data_transfer_rates_kbps.push_back(rate_kbs);
+        } else {
+            results.supported_data_transfer_rates_kbps.push_back(rate_kbs);
+        }
+    }
+}
+
+// Allow parsing for the neighbor's HE capabilities information
+static void get_he_capabilities(const uint8_t *data, uint8_t len, sChannelScanResults &results)
+{
+    if (len <= 7) {
+        LOG(ERROR) << "Length of he capabilities elem is " << len << " <= 7";
+        return;
+    }
+    /**
+     * [0] = elem_id ; [1-6] = MAC capab ; [7-17] = PHY capab
+     * PHY_capab[0] = 1 BIT resv + 7 BITs for Supported Channel Width Set
+     */
+
+    // TODO Add wifi capabilities to ChannelScanResults
+
+    results.supported_standards.push_back(eChannelScanResultStandards::eStandard_802_11ax);
+    results.operating_standards = eChannelScanResultStandards::eStandard_802_11ax;
+}
+
+// Allow parsing for the neighbor's HE operation information
+static void get_he_operation(const uint8_t *data, uint8_t len, sChannelScanResults &results)
+{
+    if (len <= 4) {
+        LOG(ERROR) << "Length of he operation elem is " << len << " <= 4";
+        return;
+    }
+
+    /**
+     * [0] = elem_id ; [1-3] = HE Oper Params ; [4-4] = BSS color; [5-6] = MCS NSS; [7-9] VHT oper info;
+     * HE_Oper_Params.bits[14] = VHT Oper Info Present boolean
+     */
+    if (results.operating_frequency_band !=
+            eChannelScanResultOperatingFrequencyBand::eOperating_Freq_Band_5GHz ||
+        !(data[2] & BIT(6))) {
+        LOG(ERROR) << "Unable to parse the HE operation element";
+        return;
+    }
+
+    if (len <= 9) {
+        LOG(INFO) << "VHT oper info present bit is on, by len is " << len;
+    }
+
+    int center_freq_seg0 = data[7];
+    int center_freq_seg1 = data[8];
+    switch (center_freq_seg0) {
+    // Set to 1 for 80 MHz, 160 MHz or 80+80 MHz BSS bandwidth
+    case 1: {
+        if (center_freq_seg1) {
+            if (abs(center_freq_seg1 - center_freq_seg0) == 16) {
+                results.operating_channel_bandwidth =
+                    eChannelScanResultChannelBandwidth::eChannel_Bandwidth_160MHz;
+            } else {
+                results.operating_channel_bandwidth =
+                    eChannelScanResultChannelBandwidth::eChannel_Bandwidth_80_80;
+            }
+        } else {
+            results.operating_channel_bandwidth =
+                eChannelScanResultChannelBandwidth::eChannel_Bandwidth_80MHz;
+        }
+    } break;
+    case 2: {
+        results.operating_channel_bandwidth =
+            eChannelScanResultChannelBandwidth::eChannel_Bandwidth_160MHz;
+    } break;
+    case 3: {
+        results.operating_channel_bandwidth =
+            eChannelScanResultChannelBandwidth::eChannel_Bandwidth_80_80;
+    } break;
+    default: {
+        if (center_freq_seg0) {
+            LOG(ERROR) << "illegal, values in the range 4 to 255 are reserved.";
+        }
+    } break;
+    }
+    results.supported_standards.push_back(eChannelScanResultStandards::eStandard_802_11ax);
+    results.operating_standards = eChannelScanResultStandards::eStandard_802_11ax;
+}
+
+static void parse_info_elements(unsigned char *ie, int ielen, sChannelScanResults &results)
+{
+    if (!ie) {
+        LOG(ERROR) << "info elements buffer is NULL";
+        return;
+    }
+
+    while (ielen >= 2 && ielen >= ie[1]) {
+        auto key      = ie[0];
+        auto length   = ie[1];
+        uint8_t *data = ie + 2;
+
+        switch (key) {
+        case ie_type::TYPE_SSID: {
+            if (length > 32) {
+                LOG(ERROR) << "TYPE_SSID doesn't match min and max length criteria";
+                break;
+            }
+            std::copy_n(data, length, results.ssid);
+        } break;
+
+        case ie_type::TYPE_SUPPORTED_RATES: {
+            get_supprates(data, length, results);
+        } break;
+
+        case ie_type::TYPE_TIM: {
+            if (length < 4) {
+                LOG(ERROR) << "TYPE_TIM doesn't match min and max length criteria";
+                break;
+            }
+            results.dtim_period = (uint32_t)data[1];
+        } break;
+
+        case ie_type::TYPE_BSS_LOAD: {
+            if (length != 5) {
+                LOG(ERROR) << "TYPE_BSS_LOAD doesn't match min and max length criteria";
+                break;
+            }
+            results.channel_utilization = (uint32_t)(data[2] / 255);
+        } break;
+
+        case ie_type::TYPE_RSN: {
+            if (length < 2) {
+                LOG(ERROR) << "TYPE_RSN doesn't match min and max length criteria";
+                break;
+            }
+            results.encryption_mode.push_back(
+                eChannelScanResultEncryptionMode::eEncryption_Mode_AES);
+            results.security_mode_enabled.push_back(
+                eChannelScanResultSecurityMode::eSecurity_Mode_WPA2);
+        } break;
+
+        case ie_type::TYPE_EXTENDED_SUPPORTED_RATES: {
+
+            if (results.operating_frequency_band ==
+                eChannelScanResultOperatingFrequencyBand::eOperating_Freq_Band_2_4GHz) {
+                results.supported_standards.push_back(
+                    eChannelScanResultStandards::eStandard_802_11g);
+                results.operating_standards = eChannelScanResultStandards::eStandard_802_11g;
+            }
+
+            get_supprates(data, length, results);
+
+        } break;
+
+        case ie_type::TYPE_HT_OPERATION: {
+            if (length != 22) {
+                LOG(ERROR) << "TYPE_HT_OPERATION doesn't match min and max length criteria";
+                break;
+            }
+            get_ht_oper(data, results);
+        } break;
+
+        case ie_type::TYPE_VHT_OPERATION: {
+            if (length < 5) {
+                LOG(ERROR) << "TYPE_VHT_OPERATION doesn't match min and max length criteria";
+                break;
+            }
+            get_vht_oper(data, results);
+        } break;
+
+        case ie_type::TYPE_EXTENISON: {
+            if (length == 0) {
+                LOG(ERROR) << "TYPE_EXTENISON doesn't match min and max length criteria";
+                break;
+            }
+            if (data[0] == ie_id_extension_values::TYPE_EXT_HE_CAPABILITIES) {
+                get_he_capabilities(data, length, results);
+            } else if (data[0] == ie_id_extension_values::TYPE_EXT_HE_OPERATION) {
+                get_he_operation(data, length, results);
+            }
+        } break;
+
+        default: {
+            // Ignoring received element as it is unhandled
+            // LOG(DEBUG) << "Unhandled element received: " << int(key);
+        } break;
+        }
+
+        ielen -= length + 2;
+        ie += length + 2;
+    }
+}
+
+static bool translate_nl_data_to_bwl_results(sChannelScanResults &results,
+                                             const struct nlattr **bss)
+{
+    if (!bss[NL80211_BSS_BSSID]) {
+        LOG(ERROR) << "Invalid BSSID in the netlink message";
+        return false;
+    }
+
+    std::copy_n(reinterpret_cast<unsigned char *>(nla_data(bss[NL80211_BSS_BSSID])),
+                sizeof(results.bssid), results.bssid.oct);
+
+    //get channel and operating frequency band
+    if (bss[NL80211_BSS_FREQUENCY]) {
+        int freq = nla_get_u32(bss[NL80211_BSS_FREQUENCY]);
+        if (freq >= 5180) {
+            results.operating_frequency_band =
+                eChannelScanResultOperatingFrequencyBand::eOperating_Freq_Band_5GHz;
+        } else {
+            results.operating_frequency_band =
+                eChannelScanResultOperatingFrequencyBand::eOperating_Freq_Band_2_4GHz;
+        }
+        results.channel = son::wireless_utils::freq_to_channel(freq);
+    }
+
+    // get beacon period
+    if (bss[NL80211_BSS_BEACON_INTERVAL]) {
+        results.beacon_period_ms = (unsigned int)nla_get_u16(bss[NL80211_BSS_BEACON_INTERVAL]);
+    }
+
+    // get signal strength, signal strength units not specified, scaled to 0-100
+    if (bss[NL80211_BSS_SIGNAL_UNSPEC]) {
+        //signal strength of the probe response/beacon in unspecified units, scaled to 0..100 <u8>
+        results.signal_strength_dBm = int32_t(nla_get_u8(bss[NL80211_BSS_SIGNAL_UNSPEC]));
+    } else if (bss[NL80211_BSS_SIGNAL_MBM]) {
+        //signal strength of probe response/beacon in mBm (100 * dBm) <s32>
+        results.signal_strength_dBm = int32_t(nla_get_u32(bss[NL80211_BSS_SIGNAL_MBM])) / 100;
+    }
+
+    //get information elements from information-elements-buffer or from beacon
+    if (bss[NL80211_BSS_BEACON_IES] || bss[NL80211_BSS_INFORMATION_ELEMENTS]) {
+        enum nl80211_bss ies_index = (bss[NL80211_BSS_INFORMATION_ELEMENTS])
+                                         ? NL80211_BSS_INFORMATION_ELEMENTS
+                                         : NL80211_BSS_BEACON_IES;
+        parse_info_elements((unsigned char *)nla_data(bss[ies_index]), nla_len(bss[ies_index]),
+                            results);
+    }
+
+    //get capabilities: mode, security_mode_enabled
+    if (bss[NL80211_BSS_CAPABILITY]) {
+        uint16_t capa = nla_get_u16(bss[NL80211_BSS_CAPABILITY]);
+
+        if (capa & WLAN_CAPABILITY_IBSS) {
+            results.mode = eChannelScanResultMode::eMode_AdHoc;
+        } else if (capa & WLAN_CAPABILITY_ESS) {
+            results.mode = eChannelScanResultMode::eMode_Infrastructure;
+        }
+
+        if (results.security_mode_enabled.size() == 0) {
+            if (capa & WLAN_CAPABILITY_PRIVACY) {
+                results.security_mode_enabled.push_back(
+                    eChannelScanResultSecurityMode::eSecurity_Mode_WEP);
+            } else {
+                results.security_mode_enabled.push_back(
+                    eChannelScanResultSecurityMode::eSecurity_Mode_None);
+            }
+        }
+    }
+
+    return true;
+}
+
+static bool get_scan_results_from_nl_msg(sChannelScanResults &results, struct nl_msg *msg)
+{
+    struct nlattr *bss[NL80211_BSS_MAX + 1];
+
+    if (!msg) {
+        LOG(ERROR) << "invalid input: msg==NULL" << msg;
+        return false;
+    }
+
+    //read msg buffer into nl attributes struct
+    if (!read_nl_data_from_msg(bss, msg)) {
+        LOG(ERROR) << "failed to parse netlink message";
+        return false;
+    }
+
+    if (!translate_nl_data_to_bwl_results(results, (const nlattr **)bss)) {
+        LOG(ERROR) << "failed to translate nl data to BWL results";
+        return false;
+    }
+
+    return true;
 }
 
 #if 0
@@ -443,7 +903,10 @@ bool mon_wlan_hal_nl80211::channel_scan_trigger(int dwell_time_msec,
         // Handle the reponse
         [&](struct nl_msg *msg) -> bool {
             LOG(DEBUG) << "nl80211 Scan trigger: Handle the reponse !";
-            // TODO: process nl event
+            if (!process_scan_nl_event(msg)) {
+                LOG(ERROR) << "nl80211 Scan trigger: User's netlink handler function failed!";
+                return false;
+            }
             return true;
         });
 
@@ -452,13 +915,16 @@ bool mon_wlan_hal_nl80211::channel_scan_trigger(int dwell_time_msec,
         return false;
     }
 
+    m_scan_was_triggered_internally = true;
+
     return true;
 }
 
 bool mon_wlan_hal_nl80211::channel_scan_dump_cached_results()
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
-    return false;
+    m_nl_seq                        = 0;
+    m_scan_was_triggered_internally = true;
+    return channel_scan_dump_results();
 }
 
 bool mon_wlan_hal_nl80211::channel_scan_dump_results()
@@ -469,7 +935,10 @@ bool mon_wlan_hal_nl80211::channel_scan_dump_results()
         // Handle the reponse
         [&](struct nl_msg *msg) -> bool {
             LOG(DEBUG) << "nl80211 Scan dump results: Handle the reponse !";
-            // TODO: process nl event
+            if (!process_scan_nl_event(msg)) {
+                LOG(ERROR) << "nl80211 Scan dump results: User's netlink handler function failed!";
+                return false;
+            }
             return true;
         });
 
@@ -477,6 +946,17 @@ bool mon_wlan_hal_nl80211::channel_scan_dump_results()
         LOG(ERROR) << "nl80211 Scan dump results: cmd failed";
         return false;
     }
+
+    // If scan dump succeeded need to manually send the finished event
+    LOG(DEBUG) << "nl80211 Scan dump results: Scan sequence: " << (int)m_nl_seq
+               << " finished, sending Finish notification.";
+
+    //reset scan indicators for next scan
+    m_nl_seq                        = 0;
+    m_scan_dump_in_progress         = false;
+    m_scan_was_triggered_internally = false;
+
+    event_queue_push(Event::Channel_Scan_Finished);
 
     return true;
 }
@@ -684,6 +1164,142 @@ bool mon_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
     };
     }
 
+    return true;
+}
+
+bool mon_wlan_hal_nl80211::process_scan_nl_event(struct nl_msg *msg)
+{
+    struct nlmsghdr *nlh    = nlmsg_hdr(msg);
+    struct genlmsghdr *gnlh = (genlmsghdr *)nlmsg_data(nlh);
+    std::string iface_name;
+
+    struct nlattr *tb[NL80211_ATTR_MAX + 1];
+    nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0), genlmsg_attrlen(gnlh, 0), NULL);
+
+    if (tb[NL80211_ATTR_IFINDEX]) {
+        auto index = nla_get_u32(tb[NL80211_ATTR_IFINDEX]);
+        iface_name = beerocks::net::network_utils::linux_get_iface_name(index);
+    }
+
+    auto event = scan_nl_to_bwl_event(gnlh->cmd);
+
+    switch (event) {
+    case Event::Channel_Scan_Triggered: {
+        if (m_radio_info.iface_name != iface_name) {
+            // ifname doesn't match current interface
+            // meaning the event was received for a diffrent channel
+            return true;
+        }
+        if (!m_scan_was_triggered_internally) {
+            // Scan was not triggered internally, no need to handle the event
+            return true;
+        }
+        LOG(DEBUG) << "nl80211 event channel scan triggered";
+
+        //start new sequence of dump results
+        m_nl_seq = 0;
+        event_queue_push(event);
+        break;
+    }
+    case Event::Channel_Scan_Dump_Result: {
+        if (m_radio_info.iface_name != iface_name) {
+            // ifname doesn't match current interface
+            // meaning the event was received for a diffrent channel
+            return true;
+        }
+        if (!m_scan_was_triggered_internally) {
+            // Scan was not triggered internally, no need to handle the event
+            return true;
+        }
+
+        if (m_nl_seq == 0) {
+            if (nlh->nlmsg_seq == 0) {
+                // First "empty" Channel_Scan_Dump_Result message
+                LOG(DEBUG) << "Results dump are ready";
+                event_queue_push(Event::Channel_Scan_New_Results_Ready);
+                m_scan_dump_in_progress = true;
+                channel_scan_dump_results();
+                return true;
+            } else {
+                //2nd -> Nth Channel_Scan_Dump_Result
+                LOG(DEBUG) << "Results dump new sequence:" << int(nlh->nlmsg_seq);
+                m_nl_seq = nlh->nlmsg_seq;
+            }
+        }
+
+        // Check if current Channel_Scan_Dump_Result is part of the dump sequence.
+        if (m_nl_seq != nlh->nlmsg_seq) {
+            LOG(ERROR) << "channel scan results dump received with unexpected seq number";
+            return false;
+        }
+
+        LOG(DEBUG) << "nl80211 event channel scan results dump, seq = " << int(nlh->nlmsg_seq);
+
+        auto results = std::make_shared<sCHANNEL_SCAN_RESULTS_NOTIFICATION>();
+
+        if (!get_scan_results_from_nl_msg(results->channel_scan_results, msg)) {
+            LOG(ERROR) << "read NL msg to monitor msg failed!";
+            return false;
+        }
+
+        LOG(DEBUG) << "Processing results for BSSID:" << results->channel_scan_results.bssid
+                   << " on Channel: " << results->channel_scan_results.channel;
+        event_queue_push(event, results);
+        break;
+    }
+    case Event::Channel_Scan_Aborted: {
+
+        if (m_radio_info.iface_name != iface_name) {
+            // ifname doesn't match current interface
+            // meaning the event was recevied for a diffrent channel
+            return true;
+        }
+        if (!m_scan_was_triggered_internally) {
+            // Scan was not triggered internally, no need to handle the event
+            return true;
+        }
+        LOG(DEBUG) << "802.11 NL event channel scan aborted";
+
+        //reset scan indicators for next scan
+        m_nl_seq                        = 0;
+        m_scan_dump_in_progress         = false;
+        m_scan_was_triggered_internally = false;
+        event_queue_push(event);
+        break;
+    }
+    case Event::Channel_Scan_Finished: {
+        if (!m_scan_was_triggered_internally) {
+            // Scan was not triggered internally, no need to handle the event
+            return true;
+        }
+        // We are not in a dump sequence, ignoring the message
+        if (!m_scan_dump_in_progress) {
+            return true;
+        }
+
+        // ifname is invalid  for Channel_Scan_Finished event using nlh->nlmsg_seq instead.
+        // In case there are no results first check if current sequence number was set.
+        if (m_nl_seq != 0 && nlh->nlmsg_seq != m_nl_seq) {
+            // Current event has a sequence number not matching the current sequence number
+            // meaning the event was recevied for a diffrent channel
+            return true;
+        }
+
+        LOG(DEBUG) << "nl80211 event channel scan results finished for sequence: "
+                   << (int)nlh->nlmsg_seq;
+
+        //reset scan indicators for next scan
+        m_nl_seq                        = 0;
+        m_scan_dump_in_progress         = false;
+        m_scan_was_triggered_internally = false;
+        event_queue_push(event);
+        break;
+    }
+    // Gracefully ignore unhandled events
+    default:
+        LOG(ERROR) << "Unknown nl80211 NL event received: " << int(event);
+        break;
+    }
     return true;
 }
 
