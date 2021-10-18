@@ -187,6 +187,7 @@ roll_logs_function()
     cd @BEEROCKS_LOG_FILES_PATH@ || exit
 
     # Check if log roll already in progress
+ 
     if ! mkdir "$ROLL_PROGRESS_DIR"
     then
         echo "Roll already in progress... Exiting..."
@@ -196,16 +197,35 @@ roll_logs_function()
     # Symlinks point to all log files that can be rotated
     links=$(for file in *; do readlink "$file" > /dev/null && echo "$file"; done)
 
-    for link in $links; do
-        # Keep the last 3 versions of the log file
-        echo "$link" | sed -e 's/log$/*/' | xargs find . -name | sort -r | awk 'NR>3' | xargs rm -f
-    done
+    # If there's no function argument, only the last 3 versions will be kept
+    if [ -z "$1" ]
+    then
+        for link in $links; do
+            # Keep the last 3 versions of the log file
+            echo "$link" | sed -e 's/log$/*/' | xargs find . -name | sort -r | awk 'NR>3' | xargs rm -f
+        done
+    else
+    # If there's an argument, it'll be used as the log subfix
+        for link in $links; do
+            # We're skipping beerocks_cli.log because it's getting split
+            # by a different logic other than one on prplmesh_utils so
+            # naming it once per test would lead into inconsistent results
+            if [ ! "$link" = "beerocks_cli.log" ]
+            then
+                oldname=$(readlink -f "$link")
+                newname=$(echo "$oldname" | sed -r "s/\.log$/\_$1\.log/g")
+                mv "$oldname" "$newname"
+                ln -sf "$newname" "$link"
+            fi
+        done
+    fi
 
     # Send USR1 signals to the beerocks processes to trigger log rolling
     killall_program beerocks_controller USR1
     killall_program beerocks_agent USR1
     killall_program beerocks_fronthaul USR1
 
+    sleep 2
     # Cleanup
     rm -r $ROLL_PROGRESS_DIR
 }
@@ -401,7 +421,7 @@ main() {
             status_function "$2"
             ;;
         "roll_logs")
-            roll_logs_function
+            roll_logs_function "$2"
 	    return $?
             ;;
         *)
