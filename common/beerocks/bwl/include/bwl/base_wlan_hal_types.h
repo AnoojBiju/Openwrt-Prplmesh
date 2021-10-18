@@ -354,6 +354,7 @@ typedef struct {
     std::string subnet_mask;
     std::string default_gateway;
 } sNetworkInfo;
+
 typedef struct {
     sDeviceInfo dev_params;
     sNetworkInfo nw_params;
