@@ -34,6 +34,7 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
     agent_entity = None
     controller_entity = None
     beerocks_logs_location = '/tmp/beerocks/logs'
+    scripts_path = '/opt/prplmesh/scripts'
 
     def __init__(self, *args, **kwargs):
         """Initialize device."""
@@ -314,3 +315,9 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
         command = ["rm", "-rf", "{}/*".format(self.beerocks_logs_location)]
         self.sendline(" ".join(command))
         self.expect(self.prompt, timeout=10)
+
+    def roll_logs(self, test_name):
+        """Rolls the current log file on the device, appending the test name to it
+        """
+        self.get_active_entity().command(
+            self.scripts_path + '/prplmesh_utils.sh', 'roll_logs', test_name)
