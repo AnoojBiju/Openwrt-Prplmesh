@@ -122,11 +122,16 @@ bool Ieee1905Transport::remove_network_interface(const std::string &ifname)
         return false;
     }
 
-    auto &interface = network_interfaces_[ifname];
+    auto interface = network_interfaces_.find(ifname);
+    if (interface == network_interfaces_.end()) {
+        MAPF_WARN("Can't remove interface " << ifname
+                                            << " from transport since it's not on the list.");
+        return false;
+    }
 
-    deactivate_interface(interface);
-
-    network_interfaces_.erase(ifname);
+    auto &network_interface = interface->second;
+    deactivate_interface(network_interface);
+    network_interfaces_.erase(interface);
 
     return true;
 }
