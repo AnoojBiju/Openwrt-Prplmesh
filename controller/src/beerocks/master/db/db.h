@@ -300,7 +300,7 @@ public:
 
     /**
      * @brief Add plus one to value of specifed with param_name Data Model's parameter.
-     * 
+     *
      * @param obj_path Path to object in Data Model which holds parameter.
      * @param param_name Name of parameter, value of which will be increased by one.
      * Parameter type should be uint64_t.
@@ -1815,6 +1815,27 @@ public:
      * @return True on success, false otherwise.
      */
     bool dm_restore_sta_steering_event(const Station &station);
+
+    /**
+     * @brief Sets multi ap backhaul datamodel of devices.
+     *
+     * Controller does not have any Backhaul, so it left empty as standard requested.
+     *
+     * BackhaulMACAddress -> Parent Backhaul MAC Address (Parent's BH BSS, or ETH MAC)
+     * BackhaulDeviceID -> Parent Device ID (AL_MAC)
+     * MACAddress -> Current Device's Backhaul Interface MAC (BH STA or ETH MAC)
+     *
+     * DM path : "Device.WiFi.DataElements.Network.Device.{i}.MultiAPBackhaul"
+     *
+     * @param agent agent whose multi ap backhaul object is set
+     * @param parent_bssid parent BSSID of the backhaul STA interface
+     * @param backhaul_mac backhaul interface mac
+     * @param interface_type backhaul link/interface type
+     * @return True on success, false otherwise.
+     */
+    bool dm_set_device_multi_ap_backhaul(const Agent &agent, const sMacAddr &parent_bssid,
+                                         const sMacAddr &backhaul_mac,
+                                         const beerocks::eIfaceType &interface_type);
 
     //
     // tasks

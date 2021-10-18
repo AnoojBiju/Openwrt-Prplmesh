@@ -6838,3 +6838,75 @@ bool db::dm_restore_sta_steering_event(const Station &station)
 
     return ret_val;
 }
+
+bool db::dm_set_device_multi_ap_backhaul(const Agent &agent, const sMacAddr &parent_bssid,
+                                         const sMacAddr &backhaul_mac,
+                                         const beerocks::eIfaceType &interface_type)
+{
+    bool ret_val = true;
+
+    if (agent.dm_path.empty()) {
+        return true;
+    }
+
+    const auto multiap_backhaul_path = agent.dm_path + ".MultiAPBackhaul";
+
+    // Controller does not have any Backhaul, so leave it as empty
+    if (agent.is_gateway) {
+        ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "BackhaulLinkType", "None");
+        ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "MACAddress", std::string{});
+        ret_val &=
+            m_ambiorix_datamodel->set(multiap_backhaul_path, "BackhaulMACAddress", std::string{});
+        ret_val &=
+            m_ambiorix_datamodel->set(multiap_backhaul_path, "BackhaulDeviceID", std::string{});
+        return ret_val;
+    }
+
+    // TODO: Implement different link types (PPM-1656)
+    std::string iface_link_str;
+    switch (interface_type) {
+    case beerocks::IFACE_TYPE_WIFI_INTEL:
+        iface_link_str = "Wi-Fi";
+        break;
+    case beerocks::IFACE_TYPE_ETHERNET:
+        iface_link_str = "Ethernet";
+        break;
+    default:
+        LOG(INFO) << "Uncovered interface link type " << interface_type << " assign as None";
+        iface_link_str = "None";
+        break;
+    }
+
+    ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "BackhaulLinkType", iface_link_str);
+    ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "MACAddress",
+                                         tlvf::mac_to_string(backhaul_mac));
+
+    // TODO: Ethernet link BackhaulMACAddress retrieved as empty, also parent of the node assigned as local bridge (PPM-1658)
+    ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "BackhaulMACAddress",
+                                         tlvf::mac_to_string(parent_bssid));
+
+    // TODO: Refactor with new database model of Agent->sBackhaul->parent_agent (PPM-1057)
+    auto parent_radio = get_node(parent_bssid);
+    if (parent_radio) {
+
+        auto parent_agent = get_agent_by_radio_uid(tlvf::mac_from_string(parent_radio->mac));
+        if (parent_agent) {
+            ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "BackhaulDeviceID",
+                                                 tlvf::mac_to_string(parent_agent->al_mac));
+        }
+        LOG_IF(!parent_agent, ERROR) << "Parent Agent is not found with RUID " << parent_radio->mac;
+
+    } else {
+        LOG(INFO) << "Parent ID is empty, use Gateway ID instead. Link type: " << iface_link_str;
+
+        // TODO: Assing GW as parent, incase of it is empty (PPM-1658)
+        auto gateway = get_gw();
+        if (gateway) {
+            ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "BackhaulDeviceID",
+                                                 tlvf::mac_to_string(gateway->al_mac));
+        }
+        LOG_IF(!gateway, FATAL) << "Gateway is not found on database";
+    }
+
+    return ret_val;
+}
