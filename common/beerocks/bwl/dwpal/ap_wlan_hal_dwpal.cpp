@@ -2015,9 +2015,9 @@ bool ap_wlan_hal_dwpal::get_sta_device_info (std::string &sta_mac , int nw_info)
     std::string cmd1;
     LOG(DEBUG) << "GET STA DEVICE INFO";
     if (nw_info == 0 ) {
-        cmd1 == "OFF";
+        cmd1 == "NW_OFF";
     } else {
-        cmd1 == "ON";
+        cmd1 == "NW_ON";
     }
     std::string cmd = "STA_INFO_QUERY" + " " + sta_mac + " " + cmd1 ;
     if (!dwpal_send_cmd(cmd)) {
