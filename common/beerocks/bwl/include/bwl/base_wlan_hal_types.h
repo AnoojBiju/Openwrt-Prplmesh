@@ -239,6 +239,17 @@ typedef struct {
 } sSteeringEvProbeReq;
 
 typedef struct {
+   sMacAddr sta_mac; 
+   std::string bss;
+   std::string os_name;
+   std::string device_name;
+   std::string vendor_name;
+   std::string default_gw;
+   std:::string subnet_mask;
+   beerocks::net::sIpv4Addr ipv4;
+} sSTA_Info_Reply;
+
+typedef struct {
     sSteeringEvProbeReq params;
 } sACTION_APMANAGER_STEERING_EVENT_PROBE_REQ_NOTIFICATION;
 

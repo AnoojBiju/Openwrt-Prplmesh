@@ -114,6 +114,24 @@ bool agent_ucc_listener::handle_dev_get_param(std::unordered_map<std::string, st
     return false;
 }
 
+bool agent_ucc_listener::handle_device_get_sta_info(
+    const std::unordered_map<std::string, std::string> &params, std::string &err_string)
+{
+    auto request_out = message_com::create_vs_message<
+                beerocks_message::cACTION_APMANAGER_STA_INFO_QUERY>(
+                m_cmdu_tx,0);
+            if (request_out == nullptr) {
+                LOG(ERROR)
+                    << "Failed building ACTION_APMANAGER_STA_INFO_QUERY message!";
+                return false;
+            }
+            
+            agent_ucc_listener::send_cmdu_to_destination(m_cmdu_tx,nullptr);
+            
+    return false;
+}
+
+
 /**
  * @brief Send CMDU to destined Agent.
  *

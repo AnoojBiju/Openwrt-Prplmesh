@@ -50,6 +50,10 @@ public:
     using DevResetDefaultHandler =
         std::function<void(int fd, const std::unordered_map<std::string, std::string> &params)>;
 
+    using DevStaInfoQuery = std::function<bool(
+        const std::unordered_map<std::string, std::string> &params, std::string &err_string)>;
+
+
     /**
      * @brief Handler function for "dev_set_config" WFA-CA command.
      *
@@ -79,6 +83,7 @@ public:
          * Handler function called back by the UCC listener to process "dev_set_config".
          */
         DevSetConfigHandler on_dev_set_config;
+        DevStaInfoQuery on_dev_sta_info_query;
     };
 
     beerocks_ucc_listener(ieee1905_1::CmduMessageTx &cmdu,
@@ -183,6 +188,8 @@ protected:
                                       std::string &value)                              = 0;
     virtual bool handle_dev_set_rfeature(const std::unordered_map<std::string, std::string> &params,
                                          std::string &err_string)                      = 0;
+    virtual bool handle_device_get_sta_info(const std::unordered_map<std::string, std::string> &params,
+                                         std::string &err_string)                      = 0;
 
     enum class eUccListenerRunOn : uint8_t {
         CONTROLLER,
@@ -215,7 +222,7 @@ private:
         START_WPS_REGISTRATION,
         DEV_SET_RFEATURE,
         WFA_CA_COMMAND_MAX,
-        STA_INFO_REPLY,
+        DEVICE_GET_STA_INFO,
     };
     static eWfaCaCommand wfa_ca_command_from_string(std::string command);
 

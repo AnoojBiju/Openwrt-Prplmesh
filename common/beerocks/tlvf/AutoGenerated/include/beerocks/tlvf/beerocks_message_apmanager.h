@@ -609,6 +609,53 @@ class cACTION_APMANAGER_HOSTAP_SET_PRIMARY_VLAN_ID_REQUEST : public BaseClass
         uint16_t* m_primary_vlan_id = nullptr;
 };
 
+class cACTION_APMANAGER_STA_INFO_QUERY : public BaseClass
+{
+    public:
+        cACTION_APMANAGER_STA_INFO_QUERY(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_APMANAGER_STA_INFO_QUERY(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_APMANAGER_STA_INFO_QUERY();
+
+        static eActionOp_APMANAGER get_action_op(){
+            return (eActionOp_APMANAGER)(ACTION_APMANAGER_STA_INFO_QUERY);
+        }
+        sMacAddr*& sta_mac();
+        int& nw_info();
+        void class_swap() overrid;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_APMANAGER* m_action_op = nullptr;
+        sMacAddr* sta_mac = nullptr;
+        int* nw_info = nullptr;
+};
+
+class cACTION_APMANAGER_STA_INFO_REPLY : public BaseClass
+{
+    public:
+        cACTION_APMANAGER_STA_INFO_REPLY(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_APMANAGER_STA_INFO_REPLY(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_APMANAGER_STA_INFO_REPLY();
+
+        static eActionOp_APMANAGER get_action_op(){
+            return (eActionOp_MONITOR)(ACTION_MONITOR_STA_INFO_REPLY);
+        }
+        sMacAddr& mac();
+        beerocks::net::sIpv4Addr& ipv4();
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_APMANAGER* m_action_op = nullptr;
+        sMacAddr* sta_mac = nullptr;
+        beerocks::net::sIpv4Addr* m_ipv4 = nullptr;
+};
+
+
 class cACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION : public BaseClass
 {
     public:

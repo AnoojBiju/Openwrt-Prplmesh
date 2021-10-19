@@ -193,6 +193,8 @@ public:
                                               int vht_center_frequency, int delay,
                                               int window_size) = 0;
 
+    virtual bool get_sta_device_info (std::string &sta_mac , int nw_info);
+
     /**
      * @brief Add a station to softblock list
      * 
