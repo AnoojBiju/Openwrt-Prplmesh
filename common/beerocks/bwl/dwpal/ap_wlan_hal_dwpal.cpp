@@ -2019,7 +2019,7 @@ bool ap_wlan_hal_dwpal::get_sta_device_info (std::string &sta_mac , int nw_info)
     } else {
         cmd1 == "ON";
     }
-    std::string cmd = "STA_INFO_QUERY" + " " + cmd1 ;
+    std::string cmd = "STA_INFO_QUERY" + " " + sta_mac + " " + cmd1 ;
     if (!dwpal_send_cmd(cmd)) {
         LOG(ERROR) << "GET STA DEVICE INFO FAILED ..!";
         return false;
