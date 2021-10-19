@@ -215,6 +215,7 @@ private:
         START_WPS_REGISTRATION,
         DEV_SET_RFEATURE,
         WFA_CA_COMMAND_MAX,
+        STA_INFO_REPLY,
     };
     static eWfaCaCommand wfa_ca_command_from_string(std::string command);
 
