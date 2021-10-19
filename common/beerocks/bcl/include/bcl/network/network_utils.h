@@ -263,6 +263,18 @@ public:
      * @return true on success, false otherwise.
      */
     static bool set_vlan_packet_filter(bool set, const std::string &bss_iface, uint16_t vid = 0);
+
+    /**
+     * @brief Generate a locally administrated mac address
+     * for ethernet switch node (eth backhaul) derived from the bridge mac address.
+     *
+     * If the bridge mac is already a locally administrated address (having U/L bit set)
+     * then swap the bridge mac bytes, before setting the U/L bit flag.
+     *
+     * @param bridgeMac the bridge mac address value.
+     * @return generated mac address value.
+     */
+    static sMacAddr get_eth_sw_mac_from_bridge_mac(const sMacAddr &bridge_mac);
 };
 } // namespace net
 } // namespace beerocks

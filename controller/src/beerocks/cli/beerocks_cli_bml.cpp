@@ -168,8 +168,9 @@ static void bml_utils_dump_conn_map(
                << ", mac: " << node->mac << ", ipv4: " << node->ip_v4 << std::endl;
 
             // ETHERNET
-            auto eth_sw_mac_binary = tlvf::mac_from_string(node->mac);
-            ++eth_sw_mac_binary.oct[5]; // generate eth address from bridge address
+            // generate eth address from bridge address
+            auto eth_sw_mac_binary =
+                network_utils::get_eth_sw_mac_from_bridge_mac(tlvf::mac_from_string(node->mac));
             auto eth_mac = tlvf::mac_to_string(eth_sw_mac_binary);
             ss << ind_inc(ind_str) << "ETHERNET:"
                << " mac: " << eth_mac << std::endl;

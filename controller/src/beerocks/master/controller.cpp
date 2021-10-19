@@ -2306,8 +2306,9 @@ bool Controller::handle_intel_slave_join(
         database.set_node_name(bridge_mac_str, slave_name);
 
         //TODO slave should include eth switch mac in the message
-        auto eth_sw_mac_binary = bridge_mac;
-        ++eth_sw_mac_binary.oct[5];
+        //until then, generate eth address from bridge address
+        auto eth_sw_mac_binary =
+            beerocks::net::network_utils::get_eth_sw_mac_from_bridge_mac(bridge_mac);
 
         std::string eth_switch_mac = tlvf::mac_to_string(eth_sw_mac_binary);
         database.add_node_wired_backhaul(tlvf::mac_from_string(eth_switch_mac), bridge_mac);
@@ -2651,8 +2652,9 @@ bool Controller::handle_non_intel_slave_join(
     sMacAddr mac        = bridge_mac;
     mac.oct[5]++;
     std::string backhaul_mac = tlvf::mac_to_string(mac);
-    mac.oct[5]++;
-    std::string eth_switch_mac = tlvf::mac_to_string(mac);
+    // generate eth address from bridge address
+    auto eth_switch_mac_binary = beerocks::net::network_utils::get_eth_sw_mac_from_bridge_mac(mac);
+    std::string eth_switch_mac = tlvf::mac_to_string(eth_switch_mac_binary);
     LOG(INFO) << "IRE generic Slave joined" << std::endl
               << "    manufacturer=" << agent->manufacturer << std::endl
               << "    al_mac=" << bridge_mac << std::endl
