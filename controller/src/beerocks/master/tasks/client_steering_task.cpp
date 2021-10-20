@@ -54,11 +54,15 @@ void client_steering_task::work()
 
         m_original_bssid = m_database.get_node_parent(m_sta_mac);
         m_ssid_name      = m_database.get_hostap_ssid(tlvf::mac_from_string(m_original_bssid));
+        update_steer_summary_stats(*station);
 
         if (m_original_bssid == m_target_bssid) {
             TASK_LOG(DEBUG) << "Target and original BSSIDs are the same:" << m_target_bssid
                             << ". Aborting steering task.";
             m_steer_try_performed = false;
+            (m_database.get_node_11v_capability(*station))
+                ? station->steering_summary_stats.btm_failures++
+                : station->steering_summary_stats.blacklist_failures++;
             finish();
             break;
         }
@@ -87,6 +91,9 @@ void client_steering_task::work()
         if (!m_steering_success && m_disassoc_imminent) {
             TASK_LOG(DEBUG) << "steering failed for " << m_sta_mac << " from " << m_original_bssid
                             << " to " << m_target_bssid;
+            (m_database.get_node_11v_capability(*client))
+                ? client->steering_summary_stats.btm_failures++
+                : client->steering_summary_stats.blacklist_failures++;
 
             /*
                  * might need to split this logic to high and low bands of 5GHz
@@ -103,6 +110,10 @@ void client_steering_task::work()
                                    "steering attempt";
                 m_database.update_node_failed_24ghz_steer_attempt(m_sta_mac);
             }
+        } else {
+            (m_database.get_node_11v_capability(*client))
+                ? client->steering_summary_stats.btm_successes++
+                : client->steering_summary_stats.blacklist_successes++;
         }
 
         if (!dm_set_steer_event_params(m_database.dm_add_steer_event())) {
@@ -112,6 +123,7 @@ void client_steering_task::work()
         if (!add_sta_steer_event_to_db()) {
             LOG(ERROR) << "Failed to add MultiAPSteeringHistory for STA in database";
         }
+        m_database.dm_restore_steering_summary_stats(*client);
 
         print_steering_info();
 
@@ -567,6 +579,24 @@ bool client_steering_task::add_sta_steer_event_to_db()
     }
 
     return m_database.add_sta_steering_event(tlvf::mac_from_string(m_sta_mac), steer_sta_event);
+}
+
+void client_steering_task::update_steer_summary_stats(Station &station)
+{
+    auto ambiorix_dm = m_database.get_ambiorix_obj();
+
+    if (!ambiorix_dm) {
+        LOG(ERROR) << "Failed to get Controller Data Model object.";
+        return;
+    }
+    station.steering_summary_stats.last_steer_ts = ambiorix_dm->get_datamodel_time_format();
+    ambiorix_dm->set(station.dm_path + ".MultiAPSteeringSummaryStats", "LastSteerTimeStamp",
+                     station.steering_summary_stats.last_steer_ts);
+    if (m_database.get_node_11v_capability(station)) {
+        station.steering_summary_stats.btm_attempts++;
+    } else {
+        station.steering_summary_stats.blacklist_attempts++;
+    }
 }
 
 bool client_steering_task::handle_ieee1905_1_msg(const sMacAddr &src_mac,
