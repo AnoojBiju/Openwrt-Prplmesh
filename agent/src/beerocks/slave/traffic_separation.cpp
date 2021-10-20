@@ -45,32 +45,6 @@ static void configure_transport(const std::string &iface, bool add, const std::s
     }
 }
 
-/**
- * @brief Update interfaces configuration on the Transport of @a vlan_iface linked to @a iface.
- *
- * If @a vlan_add is true, add @a vlan_iface to the Transport, and remove @a iface.
- * If @a vlan_add is false, remove  @a vlan_iface to the Transport, and add @a iface.
- *
- * @param iface Interface name.
- * @param vlan_iface VLAN interface linked to @a iface.
- * @param vlan_add true for adding @a vlan_iface to the Transport, and remove @a iface, false for
- * the opposite.
- */
-static void update_transport_configuration(const std::string &iface, const std::string &vlan_iface,
-                                           bool vlan_add)
-{
-    auto db = beerocks::AgentDB::get();
-    if (vlan_add) {
-        // Add the VLAN interface and remove the wireless backhaul interface so a packet will
-        // not be sent twice.
-        configure_transport(vlan_iface, true, db->bridge.iface_name);
-        configure_transport(iface, false, db->bridge.iface_name);
-        return;
-    }
-    configure_transport(vlan_iface, false, db->bridge.iface_name);
-    configure_transport(iface, true, db->bridge.iface_name);
-}
-
 namespace beerocks {
 namespace net {
 
@@ -192,8 +166,10 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
             set_vlan_policy(radio->back.iface_name, ePortMode::UNTAGGED_PORT, is_bridge);
         }
 
-        update_transport_configuration(db->backhaul.selected_iface_name, vlan_iface_name,
-                                       vlan_iface_added);
+        // If a VLAN interface has beed added remove the wireless interface from transport
+        // monitoring so a packet will not be sent twice, otherwise add it.
+        configure_transport(db->backhaul.selected_iface_name, !vlan_iface_added,
+                            db->bridge.iface_name);
     }
 
     // If radio interface has not been given, then stop configuring the VLAN policy after finished
@@ -296,8 +272,10 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
                                     db->traffic_separation.primary_vlan_id);
                 }
 
-                update_transport_configuration(db->backhaul.selected_iface_name, vlan_iface_name,
-                                               vlan_iface_added);
+                // If a VLAN interface has beed added remove the wireless interface from transport
+                // monitoring so a packet will not be sent twice, otherwise add it.
+                configure_transport(db->backhaul.selected_iface_name, !vlan_iface_added,
+                                    db->bridge.iface_name);
             }
         }
         // Combined fBSS & bBSS - Currently Support only Profile-1 (PPM-1418)
