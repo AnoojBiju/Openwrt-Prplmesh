@@ -42,7 +42,7 @@ inline void swap_16(int16_t &v) { v = htons(v); }
 
 inline void swap_16(uint16_t &v) { v = htons(v); }
 
-inline void __attribute__((optimize("Os"))) tlvf_swap(uint8_t size, uint8_t *ptr)
+inline void tlvf_swap(uint8_t size, uint8_t *ptr)
 {
     switch (size) {
     case 16: {
@@ -65,7 +65,7 @@ inline void __attribute__((optimize("Os"))) tlvf_swap(uint8_t size, uint8_t *ptr
     }
 }
 
-inline void __attribute__((optimize("Os"))) tlvf_swap(uint8_t size, int8_t *ptr)
+inline void tlvf_swap(uint8_t size, int8_t *ptr)
 {
     switch (size) {
     case 16: {
