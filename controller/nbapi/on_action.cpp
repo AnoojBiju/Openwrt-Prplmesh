@@ -10,6 +10,8 @@
 
 #include <beerocks/tlvf/beerocks_message_bml.h>
 #include <chrono>
+#include <locale.h>
+#include <time.h>
 
 using namespace beerocks;
 using namespace net;
@@ -21,6 +23,54 @@ namespace actions {
 // Actions
 
 son::db *g_database = nullptr;
+
+/*
+** Set the number of seconds since this Associated Device was last attempted to be steered.
+*/
+static amxd_status_t action_last_steer_time(amxd_object_t *object, amxd_param_t *param,
+                                            amxd_action_t reason, const amxc_var_t *const args,
+                                            amxc_var_t *const retval, void *priv)
+{
+    if (reason != action_param_read) {
+        LOG(WARNING) << "Failed to get data, incorrect reason: " << reason;
+        return amxd_status_function_not_implemented;
+    }
+    if (!param) {
+        LOG(WARNING) << "Missing value of amxd_param_t in action_last_steer_time.";
+        return amxd_status_parameter_not_found;
+    }
+
+    auto status = amxd_action_param_read(object, param, reason, args, retval, priv);
+    if (status != amxd_status_ok) {
+        return status;
+    }
+
+    status = amxd_object_get_param(object, "LastSteerTimeStamp", retval);
+    if (status != amxd_status_ok) {
+        return status;
+    }
+
+    std::string last_streer_ts_str = amxc_var_constcast(cstring_t, retval);
+
+    // Check if default timestampt, then steering didn't occur for this STA yet.
+    if (last_streer_ts_str.find("2020-08-31T11:22:39Z") != std::string::npos) {
+        amxc_var_set(uint64_t, retval, 0);
+        return amxd_status_ok;
+    }
+
+    time_t now              = time(NULL);
+    struct tm last_steer    = {};
+    const char *time_format = "%Y-%m-%dT%T%Z";
+
+    strptime(last_streer_ts_str.c_str(), time_format, &last_steer);
+    last_steer.tm_isdst = -1;
+
+    auto last_steer_seconds = mktime(&last_steer);
+    auto result             = now - last_steer_seconds;
+
+    amxc_var_set(uint64_t, retval, result);
+    return amxd_status_ok;
+}
 
 static amxd_status_t action_read_last_change(amxd_object_t *object, amxd_param_t *param,
                                              amxd_action_t reason, const amxc_var_t *const args,
@@ -385,6 +435,7 @@ std::vector<beerocks::nbapi::sActionsCallback> get_actions_callback_list(void)
 {
     const std::vector<beerocks::nbapi::sActionsCallback> actions_list = {
         {"action_read_last_change", action_read_last_change},
+        {"action_last_steer_time", action_last_steer_time},
     };
     return actions_list;
 }

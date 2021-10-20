@@ -100,5 +100,20 @@
             %read-only uint32 SteeringDuration = 0;
             counted with NumberOfMultiAPSteeringHistory;
         }
+
+        %read-only object MultiAPSteeringSummaryStats {
+            %read-only uint64 NoCandidateAPFailures = 0;
+            %read-only uint64 BlacklistAttempts = 0;
+            %read-only uint64 BlacklistSuccesses = 0;
+            %read-only uint64 BlacklistFailures = 0;
+            %read-only uint64 BTMAttempts = 0;
+            %read-only uint64 BTMSuccesses = 0;
+            %read-only uint64 BTMFailures = 0;
+            %read-only uint64 BTMQueryResponses = 0;
+            %read-only string LastSteerTimeStamp = "2020-08-31T11:22:39Z";
+            %read-only uint64 LastSteerTime = 0 {
+                on action read call action_last_steer_time;
+            }
+        }
     }
 }

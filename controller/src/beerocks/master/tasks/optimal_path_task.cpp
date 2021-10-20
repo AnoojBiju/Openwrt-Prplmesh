@@ -320,6 +320,8 @@ void optimal_path_task::work()
         const auto hostap_candidates_size = potential_11k_aps.size();
         if (hostap_candidates_size == 0) {
             TASK_LOG(WARNING) << "Candidates list is empty, aborting optimal path task";
+            database.dm_uint64_param_one_up(station->dm_path + ".MultiAPSteeringSummaryStats",
+                                            "NoCandidateAPFailures");
             finish();
             break;
         }
@@ -328,6 +330,8 @@ void optimal_path_task::work()
             TASK_LOG(WARNING)
                 << "Current hostap " << current_hostap
                 << "is the only steering candidate left on the list, aborting optimal path task";
+            database.dm_uint64_param_one_up(station->dm_path + ".MultiAPSteeringSummaryStats",
+                                            "NoCandidateAPFailures");
             finish();
             break;
         }
@@ -744,6 +748,8 @@ void optimal_path_task::work()
         if (chosen_hostap.empty() || (chosen_hostap == current_hostap)) {
             LOG_CLI(DEBUG, "optimal_path_task:"
                                << " could not find a better path for sta " << sta_mac << std::endl);
+            database.dm_uint64_param_one_up(station->dm_path + ".MultiAPSteeringSummaryStats",
+                                            "NoCandidateAPFailures");
             finish();
         } else {
             chosen_bssid = database.get_hostap_vap_with_ssid(tlvf::mac_from_string(chosen_hostap),
@@ -1133,6 +1139,8 @@ void optimal_path_task::work()
         const auto hostap_candidates_size = hostap_candidates.size();
         if (hostap_candidates_size == 0) {
             TASK_LOG(WARNING) << "Candidates list is empty, aborting optimal path task";
+            database.dm_uint64_param_one_up(station->dm_path + ".MultiAPSteeringSummaryStats",
+                                            "NoCandidateAPFailures");
             finish();
             break;
         }
@@ -1141,6 +1149,8 @@ void optimal_path_task::work()
             TASK_LOG(DEBUG)
                 << "Current hostap " << current_hostap
                 << "is the only steering candidate left on the list, aborting optimal path task";
+            database.dm_uint64_param_one_up(station->dm_path + ".MultiAPSteeringSummaryStats",
+                                            "NoCandidateAPFailures");
             finish();
             break;
         }
@@ -1404,6 +1414,8 @@ void optimal_path_task::work()
             LOG_CLI(DEBUG, "optimal_path_task:" << std::endl
                                                 << "   could not find a better path for sta "
                                                 << sta_mac << std::endl);
+            database.dm_uint64_param_one_up(station->dm_path + ".MultiAPSteeringSummaryStats",
+                                            "NoCandidateAPFailures");
             finish();
         } else {
             if (!database.settings_client_optimal_path_roaming_prefer_signal_strength()) {
