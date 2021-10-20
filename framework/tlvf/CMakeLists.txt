@@ -1,10 +1,6 @@
 project(tlvf VERSION ${prplmesh_VERSION})
 
-if ((TARGET_PLATFORM_TYPE STREQUAL "ugw") OR (TARGET_PLATFORM STREQUAL "rdkb"))
-    find_package(PythonInterp REQUIRED)
-else()
-    set(PYTHON_EXECUTABLE python3)
-endif()
+set(PYTHON_EXECUTABLE python3)
 
 set(TLVF_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(PythonTlvf ${TLVF_DIR}/tlvf.py)
@@ -13,6 +9,11 @@ set(TLVF_COMMAND ${PYTHON_EXECUTABLE} ${PythonTlvf} ${TLVF_DIR}/src ${TLVF_DIR}/
 
 set(ENUM_AUTO_PRINT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../external/enumAutoPrint)
 set(ENUM_AUTO_PRINT_COMMAND ${ENUM_AUTO_PRINT_DIR}/enum_auto_print.py)
+
+execute_process(
+    COMMAND ${PYTHON_EXECUTABLE} --version
+    COMMAND_ECHO STDOUT
+)
 
 message("-- Running ${TLVF_COMMAND} --print-dependencies...")
 execute_process(
