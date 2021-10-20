@@ -3683,6 +3683,14 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
             return false;
         }
 
+        auto radio = db->radio(fronthaul_iface);
+        if (!radio) {
+            LOG(ERROR) << "Failed to retrive radio from the Agent DB";
+            return false;
+        }
+
+        auto action_header               = message_com::get_beerocks_header(cmdu_tx)->actionhdr();
+        action_header->radio_mac()       = radio->front.iface_mac;
         response_out_backhaul->success() = response_in->success();
 
         message_com::send_cmdu(radio_manager.backhaul_manager_socket, cmdu_tx);
@@ -3704,6 +3712,14 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
             return false;
         }
 
+        auto radio = db->radio(fronthaul_iface);
+        if (!radio) {
+            LOG(ERROR) << "Failed to retrive radio from the Agent DB";
+            return false;
+        }
+
+        auto action_header               = message_com::get_beerocks_header(cmdu_tx)->actionhdr();
+        action_header->radio_mac()       = radio->front.iface_mac;
         response_out_backhaul->success() = response_in->success();
 
         message_com::send_cmdu(radio_manager.backhaul_manager_socket, cmdu_tx);
@@ -3725,7 +3741,16 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
             return false;
         }
 
+        auto radio = db->radio(fronthaul_iface);
+        if (!radio) {
+            LOG(ERROR) << "Failed to retrive radio from the Agent DB";
+            return false;
+        }
+        
+        auto action_header               = message_com::get_beerocks_header(cmdu_tx)->actionhdr();
+        action_header->radio_mac()       = radio->front.iface_mac;
         response_out_backhaul->success() = response_in->success();
+
         message_com::send_cmdu(radio_manager.backhaul_manager_socket, cmdu_tx);
         break;
     }
@@ -3752,6 +3777,15 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
             LOG(ERROR) << "Failed building cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGERED_NOTIFICATION !";
             return false;
         }
+
+        auto radio = db->radio(fronthaul_iface);
+        if (!radio) {
+            LOG(ERROR) << "Failed to retrive radio from the Agent DB";
+            return false;
+        }
+        
+        auto action_header         = message_com::get_beerocks_header(cmdu_tx)->actionhdr();
+        action_header->radio_mac() = radio->front.iface_mac;
 
         message_com::send_cmdu(radio_manager.backhaul_manager_socket, cmdu_tx);
         break;
@@ -3784,8 +3818,17 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
             return false;
         }
 
+        auto radio = db->radio(fronthaul_iface);
+        if (!radio) {
+            LOG(ERROR) << "Failed to retrive radio from the Agent DB";
+            return false;
+        }
+
+        auto action_header = message_com::get_beerocks_header(cmdu_tx)->actionhdr();
+        action_header->radio_mac()                = radio->front.iface_mac;
         notification_out_backhaul->scan_results() = notification_in->scan_results();
         notification_out_backhaul->is_dump()      = notification_in->is_dump();
+
         message_com::send_cmdu(radio_manager.backhaul_manager_socket, cmdu_tx);
         break;
     }
@@ -3813,6 +3856,15 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
             LOG(ERROR) << "Failed building cACTION_BACKHAUL_CHANNEL_SCAN_FINISHED_NOTIFICATION !";
             return false;
         }
+
+        auto radio = db->radio(fronthaul_iface);
+        if (!radio) {
+            LOG(ERROR) << "Failed to retrive radio from the Agent DB";
+            return false;
+        }
+
+        auto action_header         = message_com::get_beerocks_header(cmdu_tx)->actionhdr();
+        action_header->radio_mac() = radio->front.iface_mac;
 
         message_com::send_cmdu(radio_manager.backhaul_manager_socket, cmdu_tx);
         break;
@@ -3845,6 +3897,15 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
             return false;
         }
 
+        auto radio = db->radio(fronthaul_iface);
+        if (!radio) {
+            LOG(ERROR) << "Failed to retrive radio from the Agent DB";
+            return false;
+        }
+        
+        auto action_header         = message_com::get_beerocks_header(cmdu_tx)->actionhdr();
+        action_header->radio_mac() = radio->front.iface_mac;
+        
         message_com::send_cmdu(radio_manager.backhaul_manager_socket, cmdu_tx);
         break;
     }
