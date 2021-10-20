@@ -580,6 +580,12 @@ void cli_bml::setFunctionsMapAndArray()
         "if input was given - enable/disable the 802.11k support, prints current value",
         static_cast<pFunction>(&cli_bml::enable_client_roaming_11k_support_caller), 0, 1, INT_ARG);
     //bool insertCommandToMap(std::string command, std::string help_args, std::string help,  pFunction funcPtr, uint8_t minNumOfArgs, uint8_t maxNumOfArgs,
+
+    //Hemanth 
+    insertCommandToMap("bml_get_test_config", "", "Get dummy test_config",
+                       static_cast<pFunction>(&cli_bml::get_bml_test_config), 0, 0);
+    insertCommandToMap("bml_set_test_config", "", "set dummy test_config",
+                       static_cast<pFunction>(&cli_bml::set_bml_test_config), 0, 1, STRING_ARG);   
 }
 
 void cli_bml::printBmlReturnVals(const std::string &func_name, int ret_val)
@@ -2384,6 +2390,35 @@ int cli_bml::client_clear_client(const std::string &sta_mac)
     printBmlReturnVals("bml_client_clear_client", ret);
 
     return ret;
+}
+
+//Hemanth
+int cli_bml::get_bml_test_config(int numOfArgs)
+{
+    if (numOfArgs != 0)
+        return -1;
+    return get_test_config();
+}
+
+//Hemanth
+int cli_bml::set_bml_test_config(int numOfArgs)
+{
+    if (numOfArgs != 1)
+        return -1;
+    return set_test_config(args.stringArgs[0]);
+}
+
+//Hemanth
+int cli_bml::get_test_config()
+{
+    std::cout << "Hemanth get dummy test config  .. !" << std::endl;
+    return 0;
+}
+
+int cli_bml::set_test_config(const std::string &test_config_val)
+{
+    std::cout << "Hemanth set dummy test config =  " << test_config_val << std::endl;
+    return 0;
 }
 
 template <typename T> const std::string cli_bml::string_from_int_array(T *arr, size_t arr_max_size)

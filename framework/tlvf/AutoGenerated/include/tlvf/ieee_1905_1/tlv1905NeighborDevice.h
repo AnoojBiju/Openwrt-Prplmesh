@@ -39,19 +39,6 @@ class tlv1905NeighborDevice : public BaseClass
             NO_BRIDGES_EXIST = 0x0,
             AT_LEAST_ONE_BRIDGES_EXIST = 0x80,
         };
-        // Enum AutoPrint generated code snippet begining- DON'T EDIT!
-        // clang-format off
-        static const char *eBridgesExist_str(eBridgesExist enum_value) {
-            switch (enum_value) {
-            case NO_BRIDGES_EXIST:           return "NO_BRIDGES_EXIST";
-            case AT_LEAST_ONE_BRIDGES_EXIST: return "AT_LEAST_ONE_BRIDGES_EXIST";
-            }
-            static std::string out_str = std::to_string(int(enum_value));
-            return out_str.c_str();
-        }
-        friend inline std::ostream &operator<<(std::ostream &out, eBridgesExist value) { return out << eBridgesExist_str(value); }
-        // clang-format on
-        // Enum AutoPrint generated code snippet end
         
         typedef struct sMacAl1905Device {
             sMacAddr mac;

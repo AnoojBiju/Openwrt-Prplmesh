@@ -84,24 +84,6 @@ class cCacCompletionReportRadio : public BaseClass
             OTHER_ERROR = 0x5,
             NOT_PERFORMED = 0xff,
         };
-        // Enum AutoPrint generated code snippet begining- DON'T EDIT!
-        // clang-format off
-        static const char *eCompletionStatus_str(eCompletionStatus enum_value) {
-            switch (enum_value) {
-            case SUCCESSFUL:           return "SUCCESSFUL";
-            case RADAR_DETECTED:       return "RADAR_DETECTED";
-            case CAC_NOT_SUPPORTED:    return "CAC_NOT_SUPPORTED";
-            case RADIO_TOO_BUSY:       return "RADIO_TOO_BUSY";
-            case NOT_UNDER_REGULATION: return "NOT_UNDER_REGULATION";
-            case OTHER_ERROR:          return "OTHER_ERROR";
-            case NOT_PERFORMED:        return "NOT_PERFORMED";
-            }
-            static std::string out_str = std::to_string(int(enum_value));
-            return out_str.c_str();
-        }
-        friend inline std::ostream &operator<<(std::ostream &out, eCompletionStatus value) { return out << eCompletionStatus_str(value); }
-        // clang-format on
-        // Enum AutoPrint generated code snippet end
         
         sMacAddr& radio_uid();
         uint8_t& operating_class();

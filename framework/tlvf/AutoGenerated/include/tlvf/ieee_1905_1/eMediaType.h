@@ -37,32 +37,6 @@ enum eMediaType: uint16_t {
     MOCA_V1_1 = 0x300,
     UNKNOWN_MEDIA = 0xffff,
 };
-// Enum AutoPrint generated code snippet begining- DON'T EDIT!
-// clang-format off
-static const char *eMediaType_str(eMediaType enum_value) {
-    switch (enum_value) {
-    case IEEE_802_3U_FAST_ETHERNET:     return "IEEE_802_3U_FAST_ETHERNET";
-    case IEEE_802_3AB_GIGABIT_ETHERNET: return "IEEE_802_3AB_GIGABIT_ETHERNET";
-    case IEEE_802_11B_2_4_GHZ:          return "IEEE_802_11B_2_4_GHZ";
-    case IEEE_802_11G_2_4_GHZ:          return "IEEE_802_11G_2_4_GHZ";
-    case IEEE_802_11A_5_GHZ:            return "IEEE_802_11A_5_GHZ";
-    case IEEE_802_11N_2_4_GHZ:          return "IEEE_802_11N_2_4_GHZ";
-    case IEEE_802_11N_5_GHZ:            return "IEEE_802_11N_5_GHZ";
-    case IEEE_802_11AC_5_GHZ:           return "IEEE_802_11AC_5_GHZ";
-    case IEEE_802_11AD_60_GHZ:          return "IEEE_802_11AD_60_GHZ";
-    case IEEE_802_11AF:                 return "IEEE_802_11AF";
-    case IEEE_802_11AX:                 return "IEEE_802_11AX";
-    case IEEE_1901_WAVELET:             return "IEEE_1901_WAVELET";
-    case IEEE_1901_FFT:                 return "IEEE_1901_FFT";
-    case MOCA_V1_1:                     return "MOCA_V1_1";
-    case UNKNOWN_MEDIA:                 return "UNKNOWN_MEDIA";
-    }
-    static std::string out_str = std::to_string(int(enum_value));
-    return out_str.c_str();
-}
-inline std::ostream &operator<<(std::ostream &out, eMediaType value) { return out << eMediaType_str(value); }
-// clang-format on
-// Enum AutoPrint generated code snippet end
 
 enum eMediaTypeGroup: uint8_t {
     IEEE_802_3 = 0x0,
@@ -71,22 +45,6 @@ enum eMediaTypeGroup: uint8_t {
     MoCA = 0x3,
     UNKNOWN = 0xff,
 };
-// Enum AutoPrint generated code snippet begining- DON'T EDIT!
-// clang-format off
-static const char *eMediaTypeGroup_str(eMediaTypeGroup enum_value) {
-    switch (enum_value) {
-    case IEEE_802_3:  return "IEEE_802_3";
-    case IEEE_802_11: return "IEEE_802_11";
-    case IEEE_1901:   return "IEEE_1901";
-    case MoCA:        return "MoCA";
-    case UNKNOWN:     return "UNKNOWN";
-    }
-    static std::string out_str = std::to_string(int(enum_value));
-    return out_str.c_str();
-}
-inline std::ostream &operator<<(std::ostream &out, eMediaTypeGroup value) { return out << eMediaTypeGroup_str(value); }
-// clang-format on
-// Enum AutoPrint generated code snippet end
 
 
 }; // close namespace: ieee1905_1

@@ -92,21 +92,6 @@ class cRadiosWithScanCapabilities : public BaseClass
             SCAN_IMPACT_TIME_SLICING_IMPAIRMENT = 0x2,
             SCAN_IMPACT_RADIO_UNAVAILABLE = 0x3,
         };
-        // Enum AutoPrint generated code snippet begining- DON'T EDIT!
-        // clang-format off
-        static const char *eScanImpact_str(eScanImpact enum_value) {
-            switch (enum_value) {
-            case SCAN_IMPACT_NO_IMPACT:                        return "SCAN_IMPACT_NO_IMPACT";
-            case SCAN_IMPACT_REDUCED_NUMBER_OF_SPATIAL_STREAM: return "SCAN_IMPACT_REDUCED_NUMBER_OF_SPATIAL_STREAM";
-            case SCAN_IMPACT_TIME_SLICING_IMPAIRMENT:          return "SCAN_IMPACT_TIME_SLICING_IMPAIRMENT";
-            case SCAN_IMPACT_RADIO_UNAVAILABLE:                return "SCAN_IMPACT_RADIO_UNAVAILABLE";
-            }
-            static std::string out_str = std::to_string(int(enum_value));
-            return out_str.c_str();
-        }
-        friend inline std::ostream &operator<<(std::ostream &out, eScanImpact value) { return out << eScanImpact_str(value); }
-        // clang-format on
-        // Enum AutoPrint generated code snippet end
         
         sMacAddr& radio_uid();
         sCapabilities& capabilities();

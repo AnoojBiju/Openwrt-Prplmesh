@@ -82,6 +82,8 @@ public:
         std::string credentials_change_timeout_sec;
         //[log]
         SConfigLog sLog;
+        //Hemanth
+        std::string test_config;
     } sConfigMaster;
 
     typedef struct { // slave

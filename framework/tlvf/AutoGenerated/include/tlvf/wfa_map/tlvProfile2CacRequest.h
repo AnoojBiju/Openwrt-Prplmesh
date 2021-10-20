@@ -41,19 +41,6 @@ class tlvProfile2CacRequest : public BaseClass
             REMAIN_ON_CHANNEL = 0x0,
             RETURN_PREVIOUS_CHANNEL = 0x1,
         };
-        // Enum AutoPrint generated code snippet begining- DON'T EDIT!
-        // clang-format off
-        static const char *eCacCompletionAction_str(eCacCompletionAction enum_value) {
-            switch (enum_value) {
-            case REMAIN_ON_CHANNEL:       return "REMAIN_ON_CHANNEL";
-            case RETURN_PREVIOUS_CHANNEL: return "RETURN_PREVIOUS_CHANNEL";
-            }
-            static std::string out_str = std::to_string(int(enum_value));
-            return out_str.c_str();
-        }
-        friend inline std::ostream &operator<<(std::ostream &out, eCacCompletionAction value) { return out << eCacCompletionAction_str(value); }
-        // clang-format on
-        // Enum AutoPrint generated code snippet end
         
         typedef struct sCacMethod {
             #if defined(__LITTLE_ENDIAN_BITFIELD)

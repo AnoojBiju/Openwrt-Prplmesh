@@ -28,22 +28,6 @@ enum eRole: uint8_t {
     WI_FI_P2P_GROUP_OWNER = 0x90,
     IEEE_802_11AD_PCP = 0xa0,
 };
-// Enum AutoPrint generated code snippet begining- DON'T EDIT!
-// clang-format off
-static const char *eRole_str(eRole enum_value) {
-    switch (enum_value) {
-    case AP:                    return "AP";
-    case NON_AP_NON_PCP_STA:    return "NON_AP_NON_PCP_STA";
-    case WI_FI_P2P_CLIENT:      return "WI_FI_P2P_CLIENT";
-    case WI_FI_P2P_GROUP_OWNER: return "WI_FI_P2P_GROUP_OWNER";
-    case IEEE_802_11AD_PCP:     return "IEEE_802_11AD_PCP";
-    }
-    static std::string out_str = std::to_string(int(enum_value));
-    return out_str.c_str();
-}
-inline std::ostream &operator<<(std::ostream &out, eRole value) { return out << eRole_str(value); }
-// clang-format on
-// Enum AutoPrint generated code snippet end
 
 typedef struct s802_11SpecificInformation {
     sMacAddr network_membership;
