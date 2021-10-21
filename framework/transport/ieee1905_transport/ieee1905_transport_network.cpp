@@ -46,8 +46,6 @@ void Ieee1905Transport::update_network_interfaces(
             network_interface.fd = nullptr;
         }
 
-        network_interfaces_.erase(iface_it);
-
         update_network_interface(network_interface.bridge_name, network_interface.ifname, false);
     }
 
