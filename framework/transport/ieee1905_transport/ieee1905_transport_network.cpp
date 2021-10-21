@@ -116,6 +116,7 @@ bool Ieee1905Transport::update_network_interface(const std::string &bridge_name,
 
 bool Ieee1905Transport::remove_network_interface(const std::string &ifname)
 {
+    LOG(DEBUG) << "Removing iface " << ifname << " monitoring";
     if (network_interfaces_.count(ifname) == 0) {
         return false;
     }
@@ -130,6 +131,7 @@ bool Ieee1905Transport::remove_network_interface(const std::string &ifname)
     auto &network_interface = interface->second;
     deactivate_interface(network_interface);
     network_interfaces_.erase(interface);
+    LOG(DEBUG) << "Remove iface " << ifname << " monitoring finished";
 
     return true;
 }
