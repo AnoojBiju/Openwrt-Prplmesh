@@ -231,7 +231,7 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
 
                 // Delete old VLAN interface, since it is not possible to modify the VLAN ID of an
                 // interface. Only removing and re-create it.
-                auto vlan_iface_name = db->backhaul.selected_iface_name + DOT_PVID_SUFFIX;
+                auto vlan_iface_name = bss_iface_netdev + DOT_PVID_SUFFIX;
                 network_utils::delete_interface(vlan_iface_name);
 
                 auto vlan_iface_added = false;
@@ -247,9 +247,8 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
                     // Use ".pvid" suffix so it will be easy to change the VLAN ID if changed by the
                     // Controller.
                     // The same is done on the Profile 2 bSTA interface.
-                    network_utils::create_vlan_interface(db->backhaul.selected_iface_name,
-                                                         db->traffic_separation.primary_vlan_id,
-                                                         PVID_SUFFIX);
+                    network_utils::create_vlan_interface(
+                        bss_iface_netdev, db->traffic_separation.primary_vlan_id, PVID_SUFFIX);
                     vlan_iface_added = true;
 
                     if (!network_utils::linux_iface_ctrl(vlan_iface_name, true)) {
@@ -274,8 +273,7 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
 
                 // If a VLAN interface has beed added remove the wireless interface from transport
                 // monitoring so a packet will not be sent twice, otherwise add it.
-                configure_transport(db->backhaul.selected_iface_name, !vlan_iface_added,
-                                    db->bridge.iface_name);
+                configure_transport(bss_iface_netdev, !vlan_iface_added, db->bridge.iface_name);
             }
         }
         // Combined fBSS & bBSS - Currently Support only Profile-1 (PPM-1418)
