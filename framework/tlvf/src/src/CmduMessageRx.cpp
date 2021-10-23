@@ -6,8 +6,8 @@
  * See LICENSE file for more details.
  */
 
+#include <tlvf/AttrList.h>
 #include <tlvf/CmduMessageRx.h>
-#include <tlvf/WSC/AttrList.h>
 #include <tlvf/ieee_1905_1/eTlvType.h>
 #include <tlvf/ieee_1905_1/tlv1905NeighborDevice.h>
 #include <tlvf/ieee_1905_1/tlvAlMacAddress.h>

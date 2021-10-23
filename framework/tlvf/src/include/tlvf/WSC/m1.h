@@ -9,11 +9,11 @@
 #ifndef _TLVF_WSC_M1_H_
 #define _TLVF_WSC_M1_H_
 
-#include <tlvf/WSC/AttrList.h>
+#include <tlvf/WscAttrList.h>
 
 namespace WSC {
 
-class m1 : public AttrList {
+class m1 : public WscAttrList {
 
 public:
     struct config {
@@ -37,11 +37,11 @@ public:
         uint8_t iv[WSC_ENCRYPTED_SETTINGS_IV_LENGTH];
     };
 
-    m1(uint8_t *buff, size_t buff_len, bool parse) : AttrList(buff, buff_len, parse) {}
+    m1(uint8_t *buff, size_t buff_len, bool parse) : WscAttrList(buff, buff_len, parse) {}
     virtual ~m1() = default;
 
     bool init(const config &cfg);
-    bool init() { return AttrList::init(); };
+    bool init() { return WscAttrList::init(); };
     bool valid() const override;
     static std::shared_ptr<m1> create(ieee1905_1::tlvWsc &tlv, const config &cfg);
     static std::shared_ptr<m1> parse(ieee1905_1::tlvWsc &tlv);

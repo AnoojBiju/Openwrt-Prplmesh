@@ -9,11 +9,11 @@
 #ifndef _TLVF_WSC_M2_H_
 #define _TLVF_WSC_M2_H_
 
-#include <tlvf/WSC/AttrList.h>
+#include <tlvf/WscAttrList.h>
 
 namespace WSC {
 
-class m2 : public AttrList {
+class m2 : public WscAttrList {
 public:
     struct config {
         eWscMessageType msg_type;
@@ -35,11 +35,11 @@ public:
         std::vector<uint8_t> encrypted_settings;
         uint8_t iv[WSC_ENCRYPTED_SETTINGS_IV_LENGTH];
     };
-    m2(uint8_t *buff, size_t buff_len, bool parse) : AttrList(buff, buff_len, parse) {}
+    m2(uint8_t *buff, size_t buff_len, bool parse) : WscAttrList(buff, buff_len, parse) {}
     virtual ~m2() = default;
 
     bool init(const config &cfg);
-    bool init() { return AttrList::init(); };
+    bool init() { return WscAttrList::init(); };
     bool valid() const override;
     static std::shared_ptr<m2> create(ieee1905_1::tlvWsc &tlv, const config &cfg);
     static std::shared_ptr<m2> parse(ieee1905_1::tlvWsc &tlv);

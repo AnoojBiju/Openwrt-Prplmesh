@@ -26,7 +26,7 @@
 #include <beerocks/tlvf/beerocks_message_platform.h>
 #include <easylogging++.h>
 #include <mapf/common/utils.h>
-#include <tlvf/WSC/AttrList.h>
+#include <tlvf/AttrList.h>
 #include <tlvf/ieee_1905_1/tlvAlMacAddress.h>
 #include <tlvf/ieee_1905_1/tlvSupportedFreqBand.h>
 #include <tlvf/ieee_1905_1/tlvSupportedRole.h>
