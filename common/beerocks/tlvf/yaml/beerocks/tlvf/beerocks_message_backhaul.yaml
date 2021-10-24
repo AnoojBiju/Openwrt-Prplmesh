@@ -17,41 +17,12 @@ _multi_class_auto_insert:
 
 cACTION_BACKHAUL_REGISTER_REQUEST:
   _type: class
-  sta_iface:
-    _type: char
-    _length: ["beerocks::message::IFACE_NAME_LENGTH"]
-  hostap_iface:
-    _type: char
-    _length: ["beerocks::message::IFACE_NAME_LENGTH"]
-  onboarding: uint8_t
 
 cACTION_BACKHAUL_REGISTER_RESPONSE:
-  _type: class
-  is_backhaul_manager: uint8_t
-
-cACTION_BACKHAUL_BUSY_NOTIFICATION:
   _type: class
 
 cACTION_BACKHAUL_ENABLE:
   _type: class
-  iface_mac: sMacAddr
-  wire_iface:
-    _type: char
-    _length: ["beerocks::message::IFACE_NAME_LENGTH"]
-  sta_iface:
-    _type: char
-    _length: ["beerocks::message::IFACE_NAME_LENGTH"]
-  ssid:
-    _type: char
-    _length: ["beerocks::message::WIFI_SSID_MAX_LENGTH"]
-  pass:
-    _type: char
-    _length: ["beerocks::message::WIFI_PASS_MAX_LENGTH"]
-  security_type: uint32_t # bwl::sta_wlan_hal::Security
-  mem_only_psk: uint8_t
-  backhaul_preferred_radio_band: uint8_t
-  frequency_band: beerocks::eFreqType
-  max_bandwidth: beerocks::eWiFiBandwidth
 
 cACTION_BACKHAUL_CONNECTED_NOTIFICATION:
   _type: class

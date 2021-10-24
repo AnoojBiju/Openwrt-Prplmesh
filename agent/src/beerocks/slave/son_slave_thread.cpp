@@ -4105,12 +4105,7 @@ bool slave_thread::agent_fsm()
 
         auto db = AgentDB::get();
 
-        request->onboarding() = 0;
-
-        LOG(INFO) << "ACTION_BACKHAUL_REGISTER_REQUEST "
-                  << " hostap_iface=" << request->hostap_iface(message::IFACE_NAME_LENGTH)
-                  << " sta_iface=" << request->sta_iface(message::IFACE_NAME_LENGTH)
-                  << " onboarding=" << int(request->onboarding());
+        LOG(INFO) << "ACTION_BACKHAUL_REGISTER_REQUEST";
 
         message_com::send_cmdu(m_backhaul_manager_socket, cmdu_tx);
         LOG(TRACE) << "send ACTION_BACKHAUL_REGISTER_REQUEST";
