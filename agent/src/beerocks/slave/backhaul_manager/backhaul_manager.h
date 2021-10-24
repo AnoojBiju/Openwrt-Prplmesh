@@ -283,7 +283,6 @@ private:
     const std::set<std::string> slave_sta_ifaces;
 
     //used for several states independently
-    std::set<std::string> pending_slave_ifaces;
     std::set<std::string> pending_slave_sta_ifaces;
 
     const std::string m_beerocks_temp_path;
@@ -294,8 +293,6 @@ public:
     int get_agent_fd() { return m_agent_fd; }
 
 private:
-    std::list<std::shared_ptr<sRadioInfo>> m_slaves_sockets_to_finalize;
-
     int m_agent_fd = beerocks::net::FileDescriptor::invalid_descriptor;
 
     /**
@@ -373,7 +370,6 @@ private:
     // https://github.com/prplfoundation/prplMesh/issues/866
     // std::chrono::steady_clock::time_point eth_link_poll_timer;
     // bool m_eth_link_up  = false;
-    bool pending_enable = false;
 
     std::string bssid_bridge_mac;
 
@@ -477,7 +473,6 @@ private:
     STATE(WAIT_FOR_AUTOCONFIG_COMPLETE)                                                            \
     STATE(CONNECT_TO_MASTER)                                                                       \
     STATE(CONNECTED)                                                                               \
-    STATE(PRE_OPERATIONAL)                                                                         \
     STATE(OPERATIONAL)                                                                             \
     STATE(RESTART)                                                                                 \
     STATE(STOPPED)

@@ -102,7 +102,6 @@ BackhaulManager::BackhaulManager(const config_file::sConfigSlave &config,
       m_ucc_listener_port(string_utils::stoi(config.ucc_listener_port)),
       config_const_bh_slave(config.const_backhaul_slave)
 {
-    pending_slave_ifaces                   = slave_ap_ifaces_;
     configuration_stop_on_failure_attempts = stop_on_failure_attempts_;
     stop_on_failure_attempts               = stop_on_failure_attempts_;
     LOG(DEBUG) << "stop_on_failure_attempts=" << stop_on_failure_attempts;
@@ -776,17 +775,6 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
     }
     // Wait for Enable command
     case EState::WAIT_ENABLE: {
-        auto db = AgentDB::get();
-        if (!onboarding && !db->device_conf.local_gw &&
-            std::chrono::steady_clock::now() > state_time_stamp_timeout) {
-            LOG(ERROR) << STATE_WAIT_ENABLE_TIMEOUT_SECONDS
-                       << " seconds has passed on state WAIT_ENABLE, stopping thread!";
-            return false;
-        } else if (pending_enable) {
-            LOG(DEBUG) << "pending_enable = " << int(pending_enable);
-            pending_enable = false;
-            FSM_MOVE_STATE(ENABLED);
-        }
         break;
     }
     // Received Backhaul Enable command
@@ -821,72 +809,72 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
             FSM_MOVE_STATE(MASTER_DISCOVERY);
             db->backhaul.connection_type = AgentDB::sBackhaul::eConnectionType::Invalid;
             db->backhaul.selected_iface_name.clear();
-        } else { // link establish
+            break;
+        }
 
-            auto ifaces = beerocks::net::network_utils::linux_get_iface_list_from_bridge(
-                db->bridge.iface_name);
+        // link establish
+        auto ifaces =
+            beerocks::net::network_utils::linux_get_iface_list_from_bridge(db->bridge.iface_name);
 
-            // If a wired (WAN) interface was provided, try it first, check if the interface is UP
-            wan_monitor::ELinkState wired_link_state = wan_monitor::ELinkState::eInvalid;
-            if (!db->device_conf.local_gw && !db->ethernet.wan.iface_name.empty()) {
-                wired_link_state = wan_mon.initialize(db->ethernet.wan.iface_name);
-                // Failure might be due to insufficient permissions, datailed error message is being
-                // printed inside.
-                if (wired_link_state == wan_monitor::ELinkState::eInvalid) {
-                    LOG(WARNING) << "wan_mon.initialize() failed, skip wired link establishment";
-                }
+        // If a wired (WAN) interface was provided, try it first, check if the interface is UP
+        wan_monitor::ELinkState wired_link_state = wan_monitor::ELinkState::eInvalid;
+        if (!db->device_conf.local_gw && !db->ethernet.wan.iface_name.empty()) {
+            wired_link_state = wan_mon.initialize(db->ethernet.wan.iface_name);
+            // Failure might be due to insufficient permissions, datailed error message is being
+            // printed inside.
+            if (wired_link_state == wan_monitor::ELinkState::eInvalid) {
+                LOG(WARNING) << "wan_mon.initialize() failed, skip wired link establishment";
             }
-            if ((wired_link_state == wan_monitor::ELinkState::eUp) &&
-                (m_selected_backhaul.empty() || m_selected_backhaul == DEV_SET_ETH)) {
+        }
+        if ((wired_link_state == wan_monitor::ELinkState::eUp) &&
+            (m_selected_backhaul.empty() || m_selected_backhaul == DEV_SET_ETH)) {
 
-                auto it = std::find(ifaces.begin(), ifaces.end(), db->ethernet.wan.iface_name);
-                if (it == ifaces.end()) {
-                    LOG(ERROR) << "wire iface " << db->ethernet.wan.iface_name
-                               << " is not on the bridge";
+            auto it = std::find(ifaces.begin(), ifaces.end(), db->ethernet.wan.iface_name);
+            if (it == ifaces.end()) {
+                LOG(ERROR) << "wire iface " << db->ethernet.wan.iface_name
+                           << " is not on the bridge";
+                FSM_MOVE_STATE(RESTART);
+                break;
+            }
+
+            // Mark the connection as WIRED
+            db->backhaul.connection_type     = AgentDB::sBackhaul::eConnectionType::Wired;
+            db->backhaul.selected_iface_name = db->ethernet.wan.iface_name;
+
+        } else {
+            // If no wired backhaul is configured, or it is down, we get into this else branch.
+
+            // If selected backhaul is not empty, it's because we are in certification mode and
+            // it was given with "dev_set_config".
+            // If the RUID of the selected backhaul is null, then restart instead of continuing
+            // with the preferred backhaul.
+            if (!m_selected_backhaul.empty()) {
+                auto selected_ruid = db->get_radio_by_mac(
+                    tlvf::mac_from_string(m_selected_backhaul), AgentDB::eMacType::RADIO);
+
+                if (!selected_ruid) {
+                    LOG(ERROR) << "UCC configured backhaul RUID which is not enabled";
+                    // Restart state will update the onboarding status to failure.
                     FSM_MOVE_STATE(RESTART);
                     break;
                 }
 
-                // Mark the connection as WIRED
-                db->backhaul.connection_type     = AgentDB::sBackhaul::eConnectionType::Wired;
-                db->backhaul.selected_iface_name = db->ethernet.wan.iface_name;
-
-            } else {
-                // If no wired backhaul is configured, or it is down, we get into this else branch.
-
-                // If selected backhaul is not empty, it's because we are in certification mode and
-                // it was given with "dev_set_config".
-                // If the RUID of the selected backhaul is null, then restart instead of continuing
-                // with the preferred backhaul.
-                if (!m_selected_backhaul.empty()) {
-                    auto selected_ruid = db->get_radio_by_mac(
-                        tlvf::mac_from_string(m_selected_backhaul), AgentDB::eMacType::RADIO);
-
-                    if (!selected_ruid) {
-                        LOG(ERROR) << "UCC configured backhaul RUID which is not enabled";
-                        // Restart state will update the onboarding status to failure.
-                        FSM_MOVE_STATE(RESTART);
-                        break;
-                    }
-
-                    // Override backhaul_preferred_radio_band if UCC set it
-                    db->device_conf.back_radio.backhaul_preferred_radio_band =
-                        selected_ruid->freq_type;
-                }
-
-                // Mark the connection as WIRELESS
-                db->backhaul.connection_type = AgentDB::sBackhaul::eConnectionType::Wireless;
+                // Override backhaul_preferred_radio_band if UCC set it
+                db->device_conf.back_radio.backhaul_preferred_radio_band = selected_ruid->freq_type;
             }
 
-            // Move to the next state immediately
-            if (db->backhaul.connection_type == AgentDB::sBackhaul::eConnectionType::Wireless) {
-                FSM_MOVE_STATE(INIT_HAL);
-            } else { // EType::Wired
-                FSM_MOVE_STATE(MASTER_DISCOVERY);
-            }
-
-            skip_select = true;
+            // Mark the connection as WIRELESS
+            db->backhaul.connection_type = AgentDB::sBackhaul::eConnectionType::Wireless;
         }
+
+        // Move to the next state immediately
+        if (db->backhaul.connection_type == AgentDB::sBackhaul::eConnectionType::Wireless) {
+            FSM_MOVE_STATE(INIT_HAL);
+        } else { // EType::Wired
+            FSM_MOVE_STATE(MASTER_DISCOVERY);
+        }
+
+        skip_select = true;
         break;
     }
     case EState::MASTER_DISCOVERY: {
@@ -1000,28 +988,7 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
         //     m_eth_link_up       = beerocks::net::network_utils::linux_iface_is_up_and_running(
         //         db->ethernet.wan.iface_name);
         // }
-        FSM_MOVE_STATE(PRE_OPERATIONAL);
-        break;
-    }
-    case EState::PRE_OPERATIONAL: {
-        auto db = AgentDB::get();
-
-        // if ap-autoconfiguration is completed and there are slaves to be finalized, finalize them as connected
-        if (db->statuses.ap_autoconfiguration_completed && !m_slaves_sockets_to_finalize.empty()) {
-            for (auto slave : m_slaves_sockets_to_finalize) {
-                finalize_slaves_connect_state(true, slave);
-            }
-            m_slaves_sockets_to_finalize.clear();
-        }
-
-        if (pending_enable &&
-            db->backhaul.connection_type != AgentDB::sBackhaul::eConnectionType::Invalid) {
-            pending_enable = false;
-        }
-
-        if (m_slaves_sockets_to_finalize.empty() && !pending_enable) {
-            FSM_MOVE_STATE(OPERATIONAL);
-        }
+        FSM_MOVE_STATE(OPERATIONAL);
         break;
     }
     // Backhaul manager is OPERATIONAL!
@@ -1102,10 +1069,6 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
         // wait again for enable from each slave before proceeding to attach
         pending_slave_sta_ifaces.clear();
         pending_slave_sta_ifaces = slave_sta_ifaces;
-
-        pending_slave_ifaces.clear();
-        pending_slave_ifaces = slave_ap_ifaces;
-        pending_enable       = false;
 
         if (configuration_stop_on_failure_attempts && !stop_on_failure_attempts) {
             LOG(ERROR) << "Reached to max stop on failure attempts!";
@@ -1687,58 +1650,42 @@ bool BackhaulManager::handle_slave_backhaul_message(int fd, ieee1905_1::CmduMess
         }
 
         // If we're already connected, send a notification to the slave
-        if (FSM_IS_IN_STATE(OPERATIONAL) || FSM_IS_IN_STATE(PRE_OPERATIONAL)) {
+        if (FSM_IS_IN_STATE(OPERATIONAL)) {
             m_task_pool.send_event(eTaskType::AP_AUTOCONFIGURATION,
-                                   ApAutoConfigurationTask::eEvent::START_AP_AUTOCONFIGURATION,
-                                   &radio->front.iface_name);
-            // finalize current slave after ap-autoconfiguration is complete
-            m_slaves_sockets_to_finalize.push_back(soc);
-            FSM_MOVE_STATE(PRE_OPERATIONAL);
-        } else if (pending_enable) {
-            auto notification = message_com::create_vs_message<
-                beerocks_message::cACTION_BACKHAUL_BUSY_NOTIFICATION>(cmdu_tx);
-            if (notification == nullptr) {
-                LOG(ERROR) << "Failed building cACTION_BACKHAUL_BUSY_NOTIFICATION message!";
-                break;
-            }
-            send_cmdu(soc->slave, cmdu_tx);
-        } else {
-            pending_slave_ifaces.erase(soc->hostap_iface);
+                                   ApAutoConfigurationTask::eEvent::START_AP_AUTOCONFIGURATION);
 
-            if (pending_slave_ifaces.empty()) {
-
-                LOG(DEBUG) << "All pending slaves have sent us backhaul enable!";
-
-                // All pending slaves have sent us backhaul enable which means we can proceed to
-                // the scan->connect->operational flow.
-                pending_enable = true;
-
-                if (db->device_conf.local_gw) {
-                    LOG(DEBUG) << "All slaves ready, proceeding, local GW, Bridge: "
-                               << db->bridge.iface_name;
-                } else {
-                    if (db->device_conf.back_radio.backhaul_preferred_radio_band ==
-                        beerocks::eFreqType::FREQ_UNKNOWN) {
-                        LOG(DEBUG) << "Unknown backhaul preferred radio band, setting to auto";
-                        m_sConfig.backhaul_preferred_radio_band = beerocks::eFreqType::FREQ_AUTO;
-                    } else {
-                        m_sConfig.backhaul_preferred_radio_band =
-                            db->device_conf.back_radio.backhaul_preferred_radio_band;
-                    }
-
-                    // Change mixed state to WPA2
-                    if (db->device_conf.back_radio.security_type == bwl::WiFiSec::WPA_WPA2_PSK) {
-                        db->device_conf.back_radio.security_type = bwl::WiFiSec::WPA2_PSK;
-                    }
-
-                    LOG(DEBUG) << "All slaves ready, proceeding" << std::endl
-                               << "SSID: " << db->device_conf.back_radio.ssid << ", Pass: ****"
-                               << ", Security: " << db->device_conf.back_radio.security_type
-                               << ", Bridge: " << db->bridge.iface_name
-                               << ", Wired: " << db->ethernet.wan.iface_name;
-                }
-            }
+            // When the Auto-Configuration completes, a connection notification will be sent to the
+            // Agent.
+            FSM_MOVE_STATE(WAIT_FOR_AUTOCONFIG_COMPLETE);
+            break;
         }
+
+        if (db->device_conf.local_gw) {
+            FSM_MOVE_STATE(ENABLED);
+            break;
+        }
+
+        if (db->device_conf.back_radio.backhaul_preferred_radio_band ==
+            beerocks::eFreqType::FREQ_UNKNOWN) {
+            LOG(DEBUG) << "Unknown backhaul preferred radio band, setting to auto";
+            m_sConfig.backhaul_preferred_radio_band = beerocks::eFreqType::FREQ_AUTO;
+        } else {
+            m_sConfig.backhaul_preferred_radio_band =
+                db->device_conf.back_radio.backhaul_preferred_radio_band;
+        }
+
+        // Change mixed state to WPA2
+        if (db->device_conf.back_radio.security_type == bwl::WiFiSec::WPA_WPA2_PSK) {
+            db->device_conf.back_radio.security_type = bwl::WiFiSec::WPA2_PSK;
+        }
+
+        LOG(DEBUG) << "Agent is ready, proceeding" << std::endl
+                   << "SSID: " << db->device_conf.back_radio.ssid << ", Pass: ****"
+                   << ", Security: " << db->device_conf.back_radio.security_type
+                   << ", Bridge: " << db->bridge.iface_name
+                   << ", Wired: " << db->ethernet.wan.iface_name;
+
+        FSM_MOVE_STATE(ENABLED);
         break;
     }
     case beerocks_message::ACTION_BACKHAUL_UPDATE_STOP_ON_FAILURE_ATTEMPTS_REQUEST: {
@@ -2206,7 +2153,7 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
             if (db->device_conf.local_controller && !db->device_conf.local_gw) {
                 FSM_MOVE_STATE(CONNECT_TO_MASTER);
             } else {
-                FSM_MOVE_STATE(PRE_OPERATIONAL);
+                FSM_MOVE_STATE(OPERATIONAL);
             }
         }
     } break;
@@ -2217,8 +2164,7 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
         }
         auto db = AgentDB::get();
         if (iface == db->backhaul.selected_iface_name) {
-            if (FSM_IS_IN_STATE(OPERATIONAL) || FSM_IS_IN_STATE(PRE_OPERATIONAL) ||
-                FSM_IS_IN_STATE(CONNECTED)) {
+            if (FSM_IS_IN_STATE(OPERATIONAL) || FSM_IS_IN_STATE(CONNECTED)) {
 
                 // If this event comes as a result of a steering request, then do not consider it
                 // as an error.

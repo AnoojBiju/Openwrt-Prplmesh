@@ -94,7 +94,6 @@ public:
         STATE_SEND_BACKHAUL_MANAGER_ENABLE,
         STATE_WAIT_FOR_BACKHAUL_MANAGER_CONNECTED_NOTIFICATION,
         STATE_BACKHAUL_MANAGER_CONNECTED,
-        STATE_WAIT_BACKHAUL_MANAGER_BUSY,
         STATE_STOPPED,
 
         // This state is the last common state. It means the from now each radio will have a state

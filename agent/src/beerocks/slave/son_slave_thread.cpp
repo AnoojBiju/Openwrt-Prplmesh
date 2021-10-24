@@ -1411,20 +1411,6 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
 
         break;
     }
-    case beerocks_message::ACTION_BACKHAUL_BUSY_NOTIFICATION: {
-        if (m_agent_state != STATE_WAIT_FOR_BACKHAUL_MANAGER_CONNECTED_NOTIFICATION) {
-            LOG(WARNING) << "slave_state != STATE_WAIT_FOR_BACKHAUL_CONNECTED_NOTIFICATION";
-            break;
-        }
-
-        m_agent_state_timer_sec = std::chrono::steady_clock::now() +
-                                  std::chrono::seconds(WAIT_BEFORE_SEND_BH_ENABLE_NOTIFICATION_SEC);
-
-        LOG(DEBUG) << "goto STATE_WAIT_BACKHAUL_MANAGER_BUSY";
-        m_agent_state = STATE_WAIT_BACKHAUL_MANAGER_BUSY;
-
-        break;
-    }
     case beerocks_message::ACTION_BACKHAUL_DISCONNECTED_NOTIFICATION: {
 
         if (m_agent_state <= STATE_JOIN_INIT) {
@@ -4257,13 +4243,6 @@ bool slave_thread::agent_fsm()
         break;
     }
     case STATE_WAIT_FOR_BACKHAUL_MANAGER_CONNECTED_NOTIFICATION: {
-        break;
-    }
-    case STATE_WAIT_BACKHAUL_MANAGER_BUSY: {
-        if (std::chrono::steady_clock::now() > m_agent_state_timer_sec) {
-            LOG(TRACE) << "goto STATE_SEND_BACKHAUL_MANAGER_ENABLE";
-            m_agent_state = STATE_SEND_BACKHAUL_MANAGER_ENABLE;
-        }
         break;
     }
     case STATE_BACKHAUL_MANAGER_CONNECTED: {
