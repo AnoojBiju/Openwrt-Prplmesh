@@ -81,15 +81,15 @@ slave_thread::slave_thread(sAgentConfig conf, beerocks::logging &logger_)
     platform_manager_uds = conf.temp_path + std::string(BEEROCKS_PLATFORM_UDS);
 
     m_backhaul_manager_socket = nullptr;
-    m_master_socket = nullptr;
+    m_master_socket           = nullptr;
 
     for (const auto &radio_map_element : config.radios) {
 
         const auto &fronthaul_iface = radio_map_element.first;
         const auto &radio_conf      = radio_map_element.second;
 
-        auto &radio_manager = m_radio_managers[fronthaul_iface];
-        radio_manager.monitor_socket = nullptr;
+        auto &radio_manager             = m_radio_managers[fronthaul_iface];
+        radio_manager.monitor_socket    = nullptr;
         radio_manager.ap_manager_socket = nullptr;
 
         // Set configuration on Agent database.
@@ -1502,7 +1502,7 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
             break;
         }
         response_out->mac() = response_in->mac();
-        auto db = AgentDB::get();
+        auto db             = AgentDB::get();
         // The Agent send the request message to the Controller only if the backhaul link is
         // wireless. The Controller expects a response from the backhaul manager radio.
         send_cmdu_to_controller(db->backhaul.selected_iface_name, cmdu_tx);
@@ -1989,7 +1989,7 @@ bool slave_thread::handle_cmdu_platform_manager_message(
 
         // slave only reacts to band_enabled change
         auto db = AgentDB::get();
-        if (db->device_conf.front_radio.config[fronthaul_iface].band_enabled !=
+        if (db->device_conf.front_radio.config.at(fronthaul_iface).band_enabled !=
             notification->wlan_settings().band_enabled) {
             LOG(DEBUG) << "band_enabled changed - performing slave_reset()";
             slave_reset(fronthaul_iface);
@@ -2079,9 +2079,9 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
             return false;
         }
 
-        auto &radio_manager = m_radio_managers[notification->iface_name()];
-        LOG(INFO) << "received ACTION_APMANAGER_UP_NOTIFICATION from fronthaul "
-                  << notification->iface_name();
+        auto iface          = notification->iface_name();
+        auto &radio_manager = m_radio_managers[iface];
+        LOG(INFO) << "received ACTION_APMANAGER_UP_NOTIFICATION from fronthaul " << iface;
         if (radio_manager.ap_manager_socket) {
             LOG(ERROR) << "AP manager opened new socket altough there is already open socket to it";
             remove_socket(radio_manager.ap_manager_socket);
@@ -2099,9 +2099,8 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
             return false;
         }
 
-        auto db = AgentDB::get();
-        config_msg->channel() =
-            db->device_conf.front_radio.config[fronthaul_iface].configured_channel;
+        auto db               = AgentDB::get();
+        config_msg->channel() = db->device_conf.front_radio.config.at(iface).configured_channel;
 
         return message_com::send_cmdu(radio_manager.ap_manager_socket, cmdu_tx);
     }
@@ -4145,7 +4144,7 @@ bool slave_thread::agent_fsm()
         m_radio_managers.do_on_each_radio_manager(
             [&](const sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
                 auto db = AgentDB::get();
-                if (!db->device_conf.front_radio.config[fronthaul_iface].band_enabled) {
+                if (!db->device_conf.front_radio.config.at(fronthaul_iface).band_enabled) {
                     return true;
                 }
                 auto radio = db->radio(fronthaul_iface);
@@ -4167,7 +4166,7 @@ bool slave_thread::agent_fsm()
         m_radio_managers.do_on_each_radio_manager(
             [&](const sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
                 auto db = AgentDB::get();
-                if (!db->device_conf.front_radio.config[fronthaul_iface].band_enabled) {
+                if (!db->device_conf.front_radio.config.at(fronthaul_iface).band_enabled) {
                     return true;
                 }
 
@@ -4312,7 +4311,7 @@ bool slave_thread::agent_fsm()
                     return false;
                 }
 
-                if (!db->device_conf.front_radio.config[fronthaul_iface].band_enabled) {
+                if (!db->device_conf.front_radio.config.at(fronthaul_iface).band_enabled) {
                     LOG(TRACE) << "goto STATE_PRE_OPERATIONAL on disabled band radio "
                                << fronthaul_iface;
                     radio_manager.slave_state = STATE_PRE_OPERATIONAL;
@@ -4406,14 +4405,15 @@ bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
             }
 
             // If a Multi-AP Agent that implements Profile-2 sends a Profile-2 AP Capability TLV
-            // shall set the Byte Counter Units field to 0x01 (KiB (kibibytes)). Section 9.1 of the spec.
+            // shall set the Byte Counter Units field to 0x01 (KiB (kibibytes)). Section 9.1 of
+            // the spec.
             db->device_conf.byte_counter_units =
                 wfa_map::tlvProfile2ApCapability::eByteCounterUnits::KIBIBYTES;
             profile2_ap_capability_tlv->capabilities_bit_field().byte_counter_units =
                 db->device_conf.byte_counter_units;
 
-            // Calculate max total number of VLANs which can be configured on the Agent, and save it on
-            // on the AgentDB.
+            // Calculate max total number of VLANs which can be configured on the Agent, and
+            // save it on on the AgentDB.
             db->traffic_separation.max_number_of_vlans_ids =
                 db->get_radios_list().size() * eBeeRocksIfaceIds::IFACE_TOTAL_VAPS;
 
@@ -4504,7 +4504,7 @@ bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
                                    .rssi);
                 }
 
-                //Platform Settings
+                // Platform Settings
                 notification->platform_settings().client_band_steering_enabled =
                     db->device_conf.client_band_steering_enabled;
                 notification->platform_settings().client_optimal_path_roaming_enabled =
@@ -4523,11 +4523,11 @@ bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
 
                 notification->platform_settings().local_master = db->device_conf.local_controller;
 
-                //Wlan Settings
+                // Wlan Settings
                 notification->wlan_settings().band_enabled =
-                    db->device_conf.front_radio.config[fronthaul_iface].band_enabled;
+                    db->device_conf.front_radio.config.at(fronthaul_iface).band_enabled;
                 notification->wlan_settings().channel =
-                    db->device_conf.front_radio.config[fronthaul_iface].configured_channel;
+                    db->device_conf.front_radio.config.at(fronthaul_iface).configured_channel;
                 // Hostap Params
                 string_utils::copy_string(notification->hostap().iface_name,
                                           radio->front.iface_name.c_str(),
@@ -4871,10 +4871,10 @@ bool slave_thread::autoconfig_wsc_authenticate(const std::string &fronthaul_ifac
     uint8_t buf[radio_manager.m1_auth_buf_len + m2.getMessageLength() -
                 WSC::cWscAttrAuthenticator::get_initial_size()];
     auto next = std::copy_n(radio_manager.m1_auth_buf, radio_manager.m1_auth_buf_len, buf);
-    m2.swap(); //swap to get network byte order
+    m2.swap(); // swap to get network byte order
     std::copy_n(m2.getMessageBuff(),
                 m2.getMessageLength() - WSC::cWscAttrAuthenticator::get_initial_size(), next);
-    m2.swap(); //swap back
+    m2.swap(); // swap back
 
     uint8_t kwa[WSC::WSC_AUTHENTICATOR_LENGTH];
     // Add KWA which is the 1st 64 bits of HMAC of config_data using AuthKey
@@ -5480,7 +5480,7 @@ bool slave_thread::parse_intel_join_response(const std::string &fronthaul_iface,
         LOG(DEBUG) << "goto STATE_SSID_MISMATCH";
         radio_manager.slave_state = STATE_SSID_MISMATCH;
     } else {
-        //Send master version + slave version to platform manager
+        // Send master version + slave version to platform manager
         auto notification = message_com::create_vs_message<
             beerocks_message::cACTION_PLATFORM_MASTER_SLAVE_VERSIONS_NOTIFICATION>(cmdu_tx);
         if (notification == nullptr) {
@@ -5525,9 +5525,11 @@ bool slave_thread::parse_non_intel_join_response(const std::string &fronthaul_if
     //            LOG(ERROR) << "Failed building message!";
     //            return false;
     //        }
-    //        string_utils::copy_string(notification->versions().master_version, master_version.c_str(),
+    //        string_utils::copy_string(notification->versions().master_version,
+    //        master_version.c_str(),
     //                                  sizeof(beerocks_message::sVersions::master_version));
-    //        string_utils::copy_string(notification->versions().slave_version, BEEROCKS_VERSION,
+    //        string_utils::copy_string(notification->versions().slave_version,
+    //        BEEROCKS_VERSION,
     //                                  sizeof(beerocks_message::sVersions::slave_version));
     //        message_com::send_cmdu(m_platform_manager_socket, cmdu_tx);
     //        LOG(DEBUG) << "send ACTION_PLATFORM_MASTER_SLAVE_VERSIONS_NOTIFICATION";
@@ -5706,7 +5708,7 @@ bool slave_thread::handle_1905_higher_layer_data_message(Socket &sd,
 
 bool slave_thread::handle_ack_message(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
 {
-    //TODO - this is a stub handler for the purpose of controller certification testing,
+    // TODO - this is a stub handler for the purpose of controller certification testing,
     //       will be implemented later on agent certification
     const auto mid = cmdu_rx.getMessageId();
     LOG(DEBUG) << "Received ACK_MESSAGE, mid=" << std::dec << int(mid);
@@ -5733,7 +5735,7 @@ bool slave_thread::handle_client_steering_request(Socket *sd, ieee1905_1::CmduMe
 
     if (request_mode ==
         wfa_map::tlvSteeringRequest::REQUEST_IS_A_STEERING_MANDATE_TO_TRIGGER_STEERING) {
-        //TODO Handle 0 or more then 1 sta in list, currenlty cli steers only 1 client
+        // TODO Handle 0 or more then 1 sta in list, currenlty cli steers only 1 client
         LOG(DEBUG) << "Request Mode bit is set - Steering Mandate";
 
         auto request_out = message_com::create_vs_message<
@@ -6333,7 +6335,8 @@ bool slave_thread::send_operating_channel_report(const std::string &fronthaul_if
     auto operating_class      = wireless_utils::get_operating_class_by_channel(channel);
 
     operating_class_entry.operating_class = operating_class;
-    // operating classes 128,129,130 use center channel **unlike the other classes** (See Table E-4 in 802.11 spec)
+    // operating classes 128,129,130 use center channel **unlike the other classes** (See Table
+    // E-4 in 802.11 spec)
     operating_class_entry.channel_number =
         (operating_class == 128 || operating_class == 129 || operating_class == 130)
             ? center_channel

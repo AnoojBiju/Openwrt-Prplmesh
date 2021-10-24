@@ -220,9 +220,16 @@ private:
 
         sManagedRadio &get_radio_context(const std::string &fronthaul_iface)
         {
-            return m_zwdfs_radio_manager && m_zwdfs_radio_manager->first == fronthaul_iface
-                       ? m_zwdfs_radio_manager->second
-                       : m_radio_managers[fronthaul_iface];
+            auto zwdfs = m_zwdfs_radio_manager && m_zwdfs_radio_manager->first == fronthaul_iface;
+
+            auto it = m_radio_managers.find(fronthaul_iface);
+            if (!zwdfs && it == m_radio_managers.end()) {
+                LOG(DEBUG) << "Added new interface to radio managers: " << fronthaul_iface;
+                // Insert empty new element
+                it = m_radio_managers.emplace(fronthaul_iface, sManagedRadio{}).first;
+            }
+
+            return zwdfs ? m_zwdfs_radio_manager->second : it->second;
         }
 
     public:

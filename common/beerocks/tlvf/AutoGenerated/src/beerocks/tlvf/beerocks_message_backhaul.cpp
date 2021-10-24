@@ -2954,3 +2954,5 @@ bool cACTION_BACKHAUL_CHANNEL_SCAN_FINISHED_NOTIFICATION::init()
     if (m_parse__) { class_swap(); }
     return true;
 }
+
+

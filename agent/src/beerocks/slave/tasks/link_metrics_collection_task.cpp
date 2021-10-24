@@ -738,12 +738,12 @@ void LinkMetricsCollectionTask::handle_multi_ap_policy_config_request(
         m_btl_ctx.unsuccessful_association_policy.last_reporting_time_point =
             std::chrono::steady_clock::time_point::min(); // way in the past
 
-        LOG(DEBUG) << "Unsuccessul Association Policy tlv found, mid: " << mid << "\n Report: "
+        LOG(DEBUG) << "Unsuccessful Association Policy tlv found, mid: " << mid << "\n Report: "
                    << m_btl_ctx.unsuccessful_association_policy.report_unsuccessful_association
                    << "; maximum reporting rate: "
                    << m_btl_ctx.unsuccessful_association_policy.maximum_reporting_rate;
     } else {
-        LOG(DEBUG) << "Unsuccessul Association Policy tlv not found in the request, mid" << mid;
+        LOG(DEBUG) << "Unsuccessful Association Policy tlv not found in the request, mid" << mid;
     }
 }
 
