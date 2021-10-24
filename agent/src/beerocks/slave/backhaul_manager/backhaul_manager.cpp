@@ -1871,6 +1871,22 @@ bool BackhaulManager::handle_slave_backhaul_message(int fd, ieee1905_1::CmduMess
 
         break;
     }
+    case beerocks_message::ACTION_BACKHAUL_AP_DISABLED_NOTIFICATION: {
+        auto msg_in = beerocks_header
+                          ->addClass<beerocks_message::cACTION_BACKHAUL_AP_DISABLED_NOTIFICATION>();
+        if (!msg_in) {
+            LOG(ERROR) << "addClass cACTION_BACKHAUL_AP_DISABLED_NOTIFICATION failed";
+            return false;
+        }
+
+        // TODO: Remove when moving channel selection task to Agent context as part of PPM-1680.
+        auto front_iface_name = msg_in->iface_str();
+        // notify channel selection task on radio disconnect
+        m_task_pool.send_event(eTaskType::CHANNEL_SELECTION,
+                               ChannelSelectionTask::eEvent::AP_DISABLED, &front_iface_name);
+
+        break;
+    }
     default: {
         bool handled =
             m_task_pool.handle_cmdu(cmdu_rx, 0, sMacAddr(), sMacAddr(), fd, beerocks_header);

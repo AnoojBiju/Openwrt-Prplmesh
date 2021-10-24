@@ -811,6 +811,98 @@ bool cACTION_BACKHAUL_UPDATE_STOP_ON_FAILURE_ATTEMPTS_REQUEST::init()
     return true;
 }
 
+cACTION_BACKHAUL_AP_DISABLED_NOTIFICATION::cACTION_BACKHAUL_AP_DISABLED_NOTIFICATION(uint8_t* buff, size_t buff_len, bool parse) :
+    BaseClass(buff, buff_len, parse) {
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_AP_DISABLED_NOTIFICATION::cACTION_BACKHAUL_AP_DISABLED_NOTIFICATION(std::shared_ptr<BaseClass> base, bool parse) :
+BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_AP_DISABLED_NOTIFICATION::~cACTION_BACKHAUL_AP_DISABLED_NOTIFICATION() {
+}
+std::string cACTION_BACKHAUL_AP_DISABLED_NOTIFICATION::iface_str() {
+    char *iface_ = iface();
+    if (!iface_) { return std::string(); }
+    return std::string(iface_, m_iface_idx__);
+}
+
+char* cACTION_BACKHAUL_AP_DISABLED_NOTIFICATION::iface(size_t length) {
+    if( (m_iface_idx__ == 0) || (m_iface_idx__ < length) ) {
+        TLVF_LOG(ERROR) << "iface length is smaller than requested length";
+        return nullptr;
+    }
+    return ((char*)m_iface);
+}
+
+bool cACTION_BACKHAUL_AP_DISABLED_NOTIFICATION::set_iface(const std::string& str) { return set_iface(str.c_str(), str.size()); }
+bool cACTION_BACKHAUL_AP_DISABLED_NOTIFICATION::set_iface(const char str[], size_t size) {
+    if (str == nullptr) {
+        TLVF_LOG(WARNING) << "set_iface received a null pointer.";
+        return false;
+    }
+    if (size > beerocks::message::IFACE_NAME_LENGTH) {
+        TLVF_LOG(ERROR) << "Received buffer size is smaller than string length";
+        return false;
+    }
+    std::copy(str, str + size, m_iface);
+    return true;
+}
+void cACTION_BACKHAUL_AP_DISABLED_NOTIFICATION::class_swap()
+{
+    tlvf_swap(8*sizeof(eActionOp_BACKHAUL), reinterpret_cast<uint8_t*>(m_action_op));
+}
+
+bool cACTION_BACKHAUL_AP_DISABLED_NOTIFICATION::finalize()
+{
+    if (m_parse__) {
+        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
+        return true;
+    }
+    if (m_finalized__) {
+        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
+        return true;
+    }
+    if (!isPostInitSucceeded()) {
+        TLVF_LOG(ERROR) << "post init check failed";
+        return false;
+    }
+    if (m_inner__) {
+        if (!m_inner__->finalize()) {
+            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
+            return false;
+        }
+        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
+        m_buff_ptr__ -= tailroom;
+    }
+    class_swap();
+    m_finalized__ = true;
+    return true;
+}
+
+size_t cACTION_BACKHAUL_AP_DISABLED_NOTIFICATION::get_initial_size()
+{
+    size_t class_size = 0;
+    class_size += beerocks::message::IFACE_NAME_LENGTH * sizeof(char); // iface
+    return class_size;
+}
+
+bool cACTION_BACKHAUL_AP_DISABLED_NOTIFICATION::init()
+{
+    if (getBuffRemainingBytes() < get_initial_size()) {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
+        return false;
+    }
+    m_iface = reinterpret_cast<char*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(char) * (beerocks::message::IFACE_NAME_LENGTH))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (beerocks::message::IFACE_NAME_LENGTH) << ") Failed!";
+        return false;
+    }
+    m_iface_idx__  = beerocks::message::IFACE_NAME_LENGTH;
+    if (m_parse__) { class_swap(); }
+    return true;
+}
+
 cACTION_BACKHAUL_CLIENT_RX_RSSI_MEASUREMENT_REQUEST::cACTION_BACKHAUL_CLIENT_RX_RSSI_MEASUREMENT_REQUEST(uint8_t* buff, size_t buff_len, bool parse) :
     BaseClass(buff, buff_len, parse) {
     m_init_succeeded = init();

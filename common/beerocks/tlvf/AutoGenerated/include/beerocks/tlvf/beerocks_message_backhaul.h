@@ -252,6 +252,32 @@ class cACTION_BACKHAUL_UPDATE_STOP_ON_FAILURE_ATTEMPTS_REQUEST : public BaseClas
         uint32_t* m_attempts = nullptr;
 };
 
+class cACTION_BACKHAUL_AP_DISABLED_NOTIFICATION : public BaseClass
+{
+    public:
+        cACTION_BACKHAUL_AP_DISABLED_NOTIFICATION(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_BACKHAUL_AP_DISABLED_NOTIFICATION(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_BACKHAUL_AP_DISABLED_NOTIFICATION();
+
+        static eActionOp_BACKHAUL get_action_op(){
+            return (eActionOp_BACKHAUL)(ACTION_BACKHAUL_AP_DISABLED_NOTIFICATION);
+        }
+        std::string iface_str();
+        char* iface(size_t length = 0);
+        bool set_iface(const std::string& str);
+        bool set_iface(const char buffer[], size_t size);
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_BACKHAUL* m_action_op = nullptr;
+        char* m_iface = nullptr;
+        size_t m_iface_idx__ = 0;
+        int m_lock_order_counter__ = 0;
+};
+
 class cACTION_BACKHAUL_CLIENT_RX_RSSI_MEASUREMENT_REQUEST : public BaseClass
 {
     public:

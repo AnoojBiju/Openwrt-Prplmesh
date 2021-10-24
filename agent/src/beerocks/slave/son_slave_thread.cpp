@@ -2223,6 +2223,13 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
         LOG(INFO) << "received ACTION_APMANAGER_HOSTAP_AP_DISABLED_NOTIFICATION on vap_id="
                   << int(notification_in->vap_id());
         if (notification_in->vap_id() == beerocks::IFACE_RADIO_ID) {
+
+            auto notification_out = message_com::create_vs_message<
+                beerocks_message::cACTION_BACKHAUL_AP_DISABLED_NOTIFICATION>(cmdu_tx);
+
+            notification_out->set_iface(fronthaul_iface);
+            message_com::send_cmdu(m_backhaul_manager_socket, cmdu_tx);
+
             LOG(WARNING) << __FUNCTION__ << "AP_Disabled on radio, slave reset";
             if (radio_manager.configuration_in_progress) {
                 LOG(INFO) << "configuration in progress, ignoring";
