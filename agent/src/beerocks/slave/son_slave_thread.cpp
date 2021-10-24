@@ -1777,16 +1777,21 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
             break;
         }
 
-        // Tear down all VAPS in the radio by sending an update request with an empty configuration.
-        auto request_out = message_com::create_vs_message<
-            beerocks_message::cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST>(cmdu_tx);
-        if (!request_out) {
-            LOG(ERROR)
-                << "Failed building message cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST!";
-            return false;
+        for (const auto &radio_manager_element : m_radio_managers.get()) {
+            // Tear down all VAPS in the radio by sending an update request with an empty
+            // configuration.
+            auto request_out = message_com::create_vs_message<
+                beerocks_message::cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST>(cmdu_tx);
+            if (!request_out) {
+                LOG(ERROR)
+                    << "Failed building message cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST!";
+                return false;
+            }
+
+            auto &radio_manager = radio_manager_element.second;
+            message_com::send_cmdu(radio_manager.ap_manager_socket, cmdu_tx);
         }
 
-        message_com::send_cmdu(radio_manager.ap_manager_socket, cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST: {

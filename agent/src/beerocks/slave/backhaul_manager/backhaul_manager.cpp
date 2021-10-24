@@ -1995,18 +1995,17 @@ bool BackhaulManager::send_slaves_enable()
 
 bool BackhaulManager::send_slaves_tear_down()
 {
-    for (const auto &soc : slaves_sockets) {
-        auto msg = message_com::create_vs_message<
-            beerocks_message::cACTION_BACKHAUL_RADIO_TEAR_DOWN_REQUEST>(cmdu_tx);
-        if (!msg) {
-            LOG(ERROR) << "Failed building cACTION_BACKHAUL_RADIO_TEAR_DOWN_REQUEST";
-            return false;
-        }
-        LOG(DEBUG) << "Request agent to tear down the radio interface " << soc->hostap_iface;
-        if (!send_cmdu(soc->slave, cmdu_tx)) {
-            LOG(ERROR) << "Failed to send cACTION_BACKHAUL_RADIO_TEAR_DOWN_REQUEST";
-            return false;
-        }
+    auto msg =
+        message_com::create_vs_message<beerocks_message::cACTION_BACKHAUL_RADIO_TEAR_DOWN_REQUEST>(
+            cmdu_tx);
+    if (!msg) {
+        LOG(ERROR) << "Failed building cACTION_BACKHAUL_RADIO_TEAR_DOWN_REQUEST";
+        return false;
+    }
+    LOG(DEBUG) << "Request agent to tear down";
+    if (!send_cmdu(m_agent_fd, cmdu_tx)) {
+        LOG(ERROR) << "Failed to send cACTION_BACKHAUL_RADIO_TEAR_DOWN_REQUEST";
+        return false;
     }
 
     return true;
