@@ -192,13 +192,10 @@ void SwitchChannelFsm::config_fsm()
                     return true;
                 }
 
-                // find fd using the if-name
-                int ifname_fd = m_backhaul_manager.front_iface_name_to_socket(m_ifname);
-
-                if (ifname_fd == beerocks::net::FileDescriptor::invalid_descriptor) {
-                    LOG(ERROR) << "can't find a socket for front interface name: " << m_ifname;
+                auto agent_fd = m_backhaul_manager.get_agent_fd();
+                if (agent_fd == beerocks::net::FileDescriptor::invalid_descriptor) {
+                    LOG(ERROR) << "socket to Agent not found";
                     transition.change_destination(fsm_state::ERROR);
-
                     return true;
                 }
 
@@ -213,7 +210,7 @@ void SwitchChannelFsm::config_fsm()
                 action_header->radio_mac() = radio->front.iface_mac;
 
                 // send the cmdu using the fd
-                bool cmdu_sent = m_backhaul_manager.send_cmdu(ifname_fd, m_cmdu_tx);
+                bool cmdu_sent = m_backhaul_manager.send_cmdu(agent_fd, m_cmdu_tx);
                 if (!cmdu_sent) {
                     LOG(ERROR) << "Failed to send switch channel request";
                     transition.change_destination(fsm_state::ERROR);

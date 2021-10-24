@@ -641,38 +641,6 @@ void ChannelSelectionTask::handle_ap_enable_event(const std::string &iface)
     }
 }
 
-const std::string ChannelSelectionTask::socket_to_front_iface_name(int fd)
-{
-    for (const auto &soc : m_btl_ctx.slaves_sockets) {
-        if (soc->slave == fd) {
-            return soc->hostap_iface;
-        }
-    }
-
-    for (const auto &slave_element : m_btl_ctx.m_disabled_slave_sockets) {
-        if (slave_element.second->slave == fd) {
-            return slave_element.first;
-        }
-    }
-
-    return std::string();
-}
-
-int ChannelSelectionTask::front_iface_name_to_socket(const std::string &iface_name)
-{
-    for (const auto &soc : m_btl_ctx.slaves_sockets) {
-        if (soc->hostap_iface == iface_name) {
-            return soc->slave;
-        }
-    }
-    for (const auto &slave_element : m_btl_ctx.m_disabled_slave_sockets) {
-        if (slave_element.first == iface_name) {
-            return slave_element.second->slave;
-        }
-    }
-    return beerocks::net::FileDescriptor::invalid_descriptor;
-}
-
 bool ChannelSelectionTask::radio_scan_in_progress(eFreqType band)
 {
     auto db = AgentDB::get();
@@ -724,9 +692,9 @@ void ChannelSelectionTask::zwdfs_fsm()
             break;
         }
 
-        auto fronthaul_sd = front_iface_name_to_socket(m_zwdfs_primary_radio_iface);
-        if (fronthaul_sd == beerocks::net::FileDescriptor::invalid_descriptor) {
-            LOG(DEBUG) << "socket to fronthaul not found: " << m_zwdfs_primary_radio_iface;
+        auto agent_fd = m_btl_ctx.get_agent_fd();
+        if (agent_fd == beerocks::net::FileDescriptor::invalid_descriptor) {
+            LOG(DEBUG) << "socket to Agent not found";
             ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
             break;
         }
@@ -740,7 +708,7 @@ void ChannelSelectionTask::zwdfs_fsm()
         auto action_header         = message_com::get_beerocks_header(m_cmdu_tx)->actionhdr();
         action_header->radio_mac() = radio->front.iface_mac;
 
-        m_btl_ctx.send_cmdu(fronthaul_sd, m_cmdu_tx);
+        m_btl_ctx.send_cmdu(agent_fd, m_cmdu_tx);
 
         constexpr uint8_t CHANNELS_LIST_RESPONSE_TIMEOUT_SEC = 3;
 
@@ -892,9 +860,9 @@ void ChannelSelectionTask::zwdfs_fsm()
             break;
         }
 
-        auto fronthaul_sd = front_iface_name_to_socket(m_zwdfs_iface);
-        if (fronthaul_sd == beerocks::net::FileDescriptor::invalid_descriptor) {
-            LOG(DEBUG) << "socket to fronthaul not found: " << m_zwdfs_iface;
+        auto agent_fd = m_btl_ctx.get_agent_fd();
+        if (agent_fd == beerocks::net::FileDescriptor::invalid_descriptor) {
+            LOG(DEBUG) << "socket to Agent not found";
             ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
             break;
         }
@@ -921,7 +889,7 @@ void ChannelSelectionTask::zwdfs_fsm()
                    << ", bw=" << utils::convert_bandwidth_to_int(m_selected_channel.bw);
 
         m_zwdfs_ant_in_use = true;
-        m_btl_ctx.send_cmdu(fronthaul_sd, m_cmdu_tx);
+        m_btl_ctx.send_cmdu(agent_fd, m_cmdu_tx);
 
         constexpr uint8_t CAC_STARTED_TIMEOUT_SEC = 10;
         m_zwdfs_fsm_timeout =
@@ -1009,9 +977,9 @@ void ChannelSelectionTask::zwdfs_fsm()
         request->cs_params().vht_center_frequency =
             son::wireless_utils::channel_to_freq(center_channel);
 
-        auto fronthaul_sd = front_iface_name_to_socket(m_zwdfs_primary_radio_iface);
-        if (fronthaul_sd == beerocks::net::FileDescriptor::invalid_descriptor) {
-            LOG(DEBUG) << "socket to fronthaul not found: " << m_zwdfs_primary_radio_iface;
+        auto agent_fd = m_btl_ctx.get_agent_fd();
+        if (agent_fd == beerocks::net::FileDescriptor::invalid_descriptor) {
+            LOG(DEBUG) << "socket to Agent not found";
             ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
             break;
         }
@@ -1025,7 +993,7 @@ void ChannelSelectionTask::zwdfs_fsm()
         auto action_header         = message_com::get_beerocks_header(m_cmdu_tx)->actionhdr();
         action_header->radio_mac() = radio->front.iface_mac;
 
-        m_btl_ctx.send_cmdu(fronthaul_sd, m_cmdu_tx);
+        m_btl_ctx.send_cmdu(agent_fd, m_cmdu_tx);
 
         constexpr uint8_t SWITCH_CHANNEL_PRIMARY_RADIO_TIMEOUT_SEC = 3;
         m_zwdfs_fsm_timeout = std::chrono::steady_clock::now() +
@@ -1086,9 +1054,9 @@ void ChannelSelectionTask::zwdfs_fsm()
         }
 
         LOG(DEBUG) << "Sending ZWDFS antenna switch off request";
-        auto fronthaul_sd = front_iface_name_to_socket(m_zwdfs_iface);
-        if (fronthaul_sd == beerocks::net::FileDescriptor::invalid_descriptor) {
-            LOG(DEBUG) << "socket to fronthaul not found: " << m_zwdfs_iface;
+        auto agent_fd = m_btl_ctx.get_agent_fd();
+        if (agent_fd == beerocks::net::FileDescriptor::invalid_descriptor) {
+            LOG(DEBUG) << "socket to Agent not found";
             ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
             break;
         }
@@ -1102,7 +1070,7 @@ void ChannelSelectionTask::zwdfs_fsm()
 
         request->ant_switch_on() = false;
 
-        m_btl_ctx.send_cmdu(fronthaul_sd, m_cmdu_tx);
+        m_btl_ctx.send_cmdu(agent_fd, m_cmdu_tx);
 
         constexpr uint8_t ZWDFS_SWITCH_ANT_OFF_RESPONSE_SEC = 3;
 

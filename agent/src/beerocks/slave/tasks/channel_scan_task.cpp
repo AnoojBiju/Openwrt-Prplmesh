@@ -525,9 +525,9 @@ bool ChannelScanTask::abort_scan_request(const std::shared_ptr<sScanRequest> req
         const auto &radio_iface = radio_scan.first;
         LOG(TRACE) << "Request scan abort on " << radio_iface;
 
-        auto fronthaul_sd = m_btl_ctx.front_iface_name_to_socket(radio_iface);
-        if (fronthaul_sd == beerocks::net::FileDescriptor::invalid_descriptor) {
-            LOG(DEBUG) << "socket to fronthaul not found: " << radio_iface;
+        auto agent_fd = m_btl_ctx.get_agent_fd();
+        if (agent_fd == beerocks::net::FileDescriptor::invalid_descriptor) {
+            LOG(DEBUG) << "socket to Agent not found";
             return false;
         }
 
@@ -547,7 +547,7 @@ bool ChannelScanTask::abort_scan_request(const std::shared_ptr<sScanRequest> req
         auto action_header         = message_com::get_beerocks_header(m_cmdu_tx)->actionhdr();
         action_header->radio_mac() = radio->front.iface_mac;
 
-        if (!m_btl_ctx.send_cmdu(fronthaul_sd, m_cmdu_tx)) {
+        if (!m_btl_ctx.send_cmdu(agent_fd, m_cmdu_tx)) {
             LOG(ERROR) << "Failed to send cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_REQUEST for "
                        << radio_iface;
             return false;
@@ -607,9 +607,9 @@ bool ChannelScanTask::set_radio_scan_status(const std::shared_ptr<sRadioScan> ra
 bool ChannelScanTask::trigger_radio_scan(const std::string &radio_iface,
                                          const std::shared_ptr<sRadioScan> radio_scan_info)
 {
-    auto fronthaul_sd = m_btl_ctx.front_iface_name_to_socket(radio_iface);
-    if (fronthaul_sd == beerocks::net::FileDescriptor::invalid_descriptor) {
-        LOG(DEBUG) << "socket to fronthaul not found: " << radio_iface;
+    auto agent_fd = m_btl_ctx.get_agent_fd();
+    if (agent_fd == beerocks::net::FileDescriptor::invalid_descriptor) {
+        LOG(DEBUG) << "socket to Agent not found";
         return false;
     }
     auto db    = AgentDB::get();
@@ -681,7 +681,7 @@ bool ChannelScanTask::trigger_radio_scan(const std::string &radio_iface,
                              trigger_request->scan_params().channel_pool_size);
 
     // Send CMDU
-    if (!m_btl_ctx.send_cmdu(fronthaul_sd, m_cmdu_tx)) {
+    if (!m_btl_ctx.send_cmdu(agent_fd, m_cmdu_tx)) {
         set_radio_scan_status(radio_scan_info, eScanStatus::SCAN_NOT_COMPLETED);
         return false;
     }

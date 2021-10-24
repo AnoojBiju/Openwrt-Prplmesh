@@ -156,13 +156,6 @@ private:
     std::shared_ptr<bwl::sta_wlan_hal> get_selected_backhaul_sta_wlan_hal();
 
     /**
-     * @brief Handles the client-connected event in the CMDU server.
-     *
-     * @param fd File descriptor of the socket that got connected.
-     */
-    void handle_connected(int fd);
-
-    /**
      * @brief Handles the client-disconnected event in the CMDU server.
      *
      * @param fd File descriptor of the socket that got disconnected.
@@ -202,9 +195,7 @@ private:
     bool backhaul_fsm_wired(bool &skip_select);
     bool backhaul_fsm_wireless(bool &skip_select);
     bool is_front_radio(std::string mac);
-    bool
-    finalize_slaves_connect_state(bool fConnected,
-                                  std::shared_ptr<sRadioInfo> pSocket = nullptr); // cmdu_duplicate
+    bool finalize_slaves_connect_state(bool fConnected); // cmdu_duplicate
 
     /**
      * @brief Creates Backhaul STA Steering Response message with 2 tlvs Steering Response
@@ -225,8 +216,7 @@ private:
     // cmdu handlers
     bool handle_master_message(ieee1905_1::CmduMessageRx &cmdu_rx,
                                std::shared_ptr<beerocks_message::cACTION_HEADER> beerocks_header);
-    bool handle_slave_backhaul_message(std::shared_ptr<sRadioInfo> soc,
-                                       ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool handle_slave_backhaul_message(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_slave_1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t iface_index,
                                      const sMacAddr &dst_mac, const sMacAddr &src_mac);
     bool handle_1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t iface_index,
@@ -284,14 +274,8 @@ private:
         bwl::WiFiSec security_type;
         bool mem_only_psk;
         eFreqType backhaul_preferred_radio_band;
-
-        // Slave handling the active wireless connection
-        // std::shared_ptr<bwl::sta_wlan_hal> active_slave_hal;
-        std::unordered_map<std::string, std::shared_ptr<sRadioInfo>> slave_iface_socket;
-
     } m_sConfig;
 
-    int m_unassociated_measurement_slave_soc    = beerocks::net::FileDescriptor::invalid_descriptor;
     int unassociated_rssi_measurement_header_id = -1;
 
     //comes from config file
@@ -306,16 +290,13 @@ private:
     const uint16_t m_ucc_listener_port;
 
 public:
-    std::list<std::shared_ptr<sRadioInfo>> slaves_sockets;
-    int front_iface_name_to_socket(const std::string &iface_name);
-    std::string socket_to_front_iface_name(int fd);
+    std::vector<std::shared_ptr<sRadioInfo>> m_radios_info;
+    int get_agent_fd() { return m_agent_fd; }
 
 private:
     std::list<std::shared_ptr<sRadioInfo>> m_slaves_sockets_to_finalize;
 
-    // TODO: Temporary change, will be removed on Unified Agent PPM-351.
-    // Key: front radio iface name, Value: sRadioInfo object
-    std::unordered_map<std::string, std::shared_ptr<sRadioInfo>> m_disabled_slave_sockets;
+    int m_agent_fd = beerocks::net::FileDescriptor::invalid_descriptor;
 
     /**
      * CMDU client connected to the the CMDU server running in platform manager.
@@ -439,8 +420,6 @@ public:
      * the TLVs to include in notification messages or responses to CMDU query messages.
      */
     struct sRadioInfo {
-        int slave = beerocks::net::FileDescriptor::
-            invalid_descriptor; /**< File descriptor of the socket connection established from the slave to the CMDU server. */
         sMacAddr radio_mac;       /**< Radio ID (= radio MAC address) */
         std::string hostap_iface; /**< Name of the radio interface */
         std::string sta_iface;    /**< Name of the bSTA interface on the radio (if any) */
@@ -450,15 +429,6 @@ public:
         int sta_hal_ext_events = beerocks::net::FileDescriptor::invalid_descriptor;
         int sta_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
     };
-
-public:
-    /**
-     * @brief Gets radio info for the radio with given MAC address
-     *
-     * @param[in] radio_mac MAC address of the radio
-     * @return shared pointer to radio info in case of success or nullptr otherwise
-     */
-    std::shared_ptr<sRadioInfo> get_radio(const sMacAddr &radio_mac) const;
 
 private:
     /**
