@@ -313,7 +313,6 @@ private:
     const std::string config_const_bh_slave;
 
     int stop_on_failure_attempts;
-    bool onboarding = true;
 
     //backlist bssid and timers (remove con(or wrong passphrase) ap from select bssid for limited time )
     struct ap_blacklist_entry {

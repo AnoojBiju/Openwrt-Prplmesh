@@ -1251,7 +1251,7 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
     // Wait for WPS command
     case EState::WAIT_WPS: {
         auto db = AgentDB::get();
-        if (!onboarding && !db->device_conf.local_gw &&
+        if (!db->device_conf.local_gw &&
             std::chrono::steady_clock::now() > state_time_stamp_timeout) {
             LOG(ERROR) << STATE_WAIT_WPS_TIMEOUT_SECONDS
                        << " seconds has passed on state WAIT_WPS, stopping thread!";
