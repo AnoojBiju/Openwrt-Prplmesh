@@ -18,6 +18,7 @@
 #include <bcl/network/network_utils.h>
 #include <bcl/son/son_wireless_utils.h>
 
+#include <tlvf/AssociationRequestFrame/AssocReqFrame.h>
 #include <tlvf/wfa_map/tlvApHeCapabilities.h>
 #include <tlvf/wfa_map/tlvApHtCapabilities.h>
 #include <tlvf/wfa_map/tlvApOperationalBSS.h>
@@ -212,8 +213,18 @@ public:
         std::string timestamp;
     } sStaSteeringEvent;
 
-    std::unordered_map<sMacAddr, std::vector<sStaSteeringEvent>> m_stations_steering_events;
+    typedef struct sStaCap {
+        sStaCap() = delete;
+        explicit sStaCap(const sMacAddr _sta_mac) : mac(_sta_mac) {}
+        const sMacAddr mac;
+        bool ht_cap_present  = false;
+        bool vht_cap_present = false;
+        assoc_frame::sStaHtCapabilityInfo sta_ht_cap;
+        assoc_frame::sStaVhtCapInfo sta_vht_cap;
+    } sStaCap;
 
+    std::unordered_map<sMacAddr, std::vector<sStaSteeringEvent>> m_stations_steering_events;
+    beerocks::mac_map<sStaCap> m_sta_cap;
     beerocks::mac_map<Agent> m_agents;
     beerocks::mac_map<Station> m_stations;
 
