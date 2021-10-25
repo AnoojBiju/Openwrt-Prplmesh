@@ -6,6 +6,7 @@
     "testWorkspaceRoot": "test/",
     "formatter_open_direction": "// clang-format off",
     "formatter_close_direction": "// clang-format on",
+    "encoding": "ascii",
     "redirect_stdout_to_log_file": true,
     "excluded_files": [
         "${testWorkspaceRoot}/subfolder/test.h",

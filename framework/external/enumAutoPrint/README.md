@@ -58,6 +58,7 @@ The script uses a JSON configuration file with the following properties:
 | `spaces_in_tab` | yes | 4 | The width of a hard tab character in source code. |
 | `testWorkspaceRoot` | Only for test mode | NA | An alternate root path for testing the script. |
 | `formatter_open_direction`<br/>`formatter_close_direction` | No | "" | A direction to the formatter which will be added to the auto generated code beginning  and end. For example "// clang-format off". |
+| `encoding` | no | utf-8 | The encoding of the files to read. Could be any of mentioned in Python's [Standard Encodings Table](https://docs.python.org/3/library/codecs.html#standard-encodings). |
 | `redirect_stdout_to_log_file` | No | False | If "True" script output will be directed to a log file "output.log", otherwise to the console. |
 | `excluded_files` | No | NA | List of files and folders to ignore. |
 
