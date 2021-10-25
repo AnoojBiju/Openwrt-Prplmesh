@@ -10,6 +10,7 @@
 #include "../son_actions.h"
 
 #include <bcl/beerocks_utils.h>
+#include <tlvf/AssociationRequestFrame/AssocReqFrame.h>
 #include <tlvf/wfa_map/tlvClientAssociationEvent.h>
 #include <tlvf/wfa_map/tlvClientCapabilityReport.h>
 #include <tlvf/wfa_map/tlvClientInfo.h>
@@ -134,6 +135,25 @@ bool client_association_task::handle_cmdu_1905_client_capability_report_message(
         << "(Re)Association Request frame= "
         << beerocks::utils::dump_buffer(client_capability_report_tlv->association_frame(),
                                         client_capability_report_tlv->association_frame_length());
+    auto assoc_frame = assoc_frame::AssocReqFrame::parse(
+        client_capability_report_tlv->association_frame(),
+        client_capability_report_tlv->association_frame_length(),
+        assoc_frame::AssocReqFrame::eFrameType::ASSOCIATION_REQUEST);
 
+    if (!assoc_frame) {
+        LOG(ERROR) << "Failed to parse Associaiton Request frame.";
+        return false;
+    }
+
+    auto sta_cap = m_database.m_sta_cap.add(client_info_tlv->client_mac());
+
+    if (assoc_frame->fields_present.ht_capability) {
+        sta_cap->sta_ht_cap     = assoc_frame->sta_ht_capability()->ht_cap_info();
+        sta_cap->ht_cap_present = true;
+    }
+    if (assoc_frame->fields_present.vht_capability) {
+        sta_cap->sta_vht_cap     = assoc_frame->sta_vht_capability()->vht_cap_info();
+        sta_cap->vht_cap_present = true;
+    }
     return true;
 }
