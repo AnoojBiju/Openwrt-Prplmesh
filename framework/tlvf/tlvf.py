@@ -23,7 +23,7 @@ import pprint
 import logging
 import traceback
 import shutil
-from enumAutoPrint.enum_auto_print import EnumAutoPrint
+from external.enumAutoPrint.enum_auto_print import EnumAutoPrint
 
 # https://pyyaml.org/wiki/PyYAMLDocumentation
 # https://learnxinyminutes.com/docs/yaml/
