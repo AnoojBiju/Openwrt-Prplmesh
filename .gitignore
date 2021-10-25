@@ -4,6 +4,7 @@ analyzer-venv
 /build/
 /logs/
 output.log
+tlvf_output.log
 _GO_KW
 .kwlp
 .kwps
