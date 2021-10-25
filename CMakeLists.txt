@@ -100,6 +100,14 @@ if(TARGET_PLATFORM STREQUAL "linux")
     set(INSTALL_PATH "${CMAKE_INSTALL_PREFIX}")
 endif()
 
+# Enum Auto Print Generator
+set(ENUM_AUTO_PRINT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/framework/tlvf/external/enumAutoPrint)
+set(ENUM_AUTO_PRINT_COMMAND ${ENUM_AUTO_PRINT_DIR}/enum_auto_print.py)
+message("${BoldCyan}Running EnumAutoPrint ${ColourReset}")
+execute_process(
+    COMMAND ${ENUM_AUTO_PRINT_COMMAND}
+)
+
 # Default values
 set(BEEROCKS_REPEATER_MODE 0)
 set(BEEROCKS_MONITOR_POLLING_RATE_MSEC 250)
