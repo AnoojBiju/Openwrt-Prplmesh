@@ -23,6 +23,7 @@ import pprint
 import logging
 import traceback
 import shutil
+from enumAutoPrint.enum_auto_print import EnumAutoPrint
 
 # https://pyyaml.org/wiki/PyYAMLDocumentation
 # https://learnxinyminutes.com/docs/yaml/
@@ -446,6 +447,15 @@ class TlvF:
 
     def generateCode(self):
         logConsole("Generating source code...\n")
+        
+        # Prepare EnumAutoPrint
+        eap = EnumAutoPrint()
+        eap.conf.test_mode = False
+        eap.conf.formatter_open_str = "// clang-format off"
+        eap.conf.formatter_close_str = "// clang-format on"
+        eap.conf.encoding = "ascii"
+
+
         for filename in self.yaml_file_list:
             self.openFile(filename)
             # first iteration: list local objects in order
@@ -488,7 +498,16 @@ class TlvF:
                 self.generateObject(obj_meta, dict_value)
 
                 self.closeObject(obj_meta)
-            self.closeFile()
+            files = self.closeFile()
+
+            for file in files:
+                self.logger.debug("eap.upgrade_enum: %s" % file)
+                if "common" in file:
+                    break
+                std_out = sys.stdout
+                eap.redirect_stdout_to_file("tlvf_output.log")
+                eap.upgrade_enum(file)
+                sys.stdout = std_out
 
         logConsole("Done\n")
 
@@ -1786,8 +1805,16 @@ class TlvF:
         self.closeNamespace()
         self.appendLineH("")
         self.appendLineH("#endif //_%s_%s_H_" % (self.yaml_path.upper(), self.yaml_fname.upper()))
-        self.writeFile(self.code_template_h, ".h")
-        self.writeFile(self.code_template_cpp, ".cpp")
+        files = list()
+        h_file = self.writeFile(self.code_template_h, ".h")
+        if isinstance(h_file, str) and len(h_file) != 0:
+            files.append(h_file)
+
+        cpp_file = self.writeFile(self.code_template_cpp, ".cpp")
+        if isinstance(cpp_file, str) and len(cpp_file) != 0:
+            files.append(cpp_file)
+
+        return files
 
     def openNamespace(self, namespace):
         if self.namespace:
@@ -2237,7 +2264,7 @@ class TlvF:
             self.output_directories_h.append(p)
         else:
             if len(code_lines) == 0:
-                return
+                return str()
             file_path = os.path.join(self.conf_output_path_src, self.yaml_path)
             p = os.path.relpath(self.conf_output_path_src, self.conf_output_path)
             p = os.path.join(p, self.yaml_path)
@@ -2284,6 +2311,8 @@ class TlvF:
                         continue
                 f.write(line + "\n")
             f.close()
+            return file_path
+        return str()
 
     def logObject(self, obj, name=""):
         self.logger.debug("=======%s=========" % name)
