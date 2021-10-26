@@ -1633,6 +1633,120 @@ bool db::dm_set_sta_vht_capabilities(const std::string &path_to_sta,
     return return_val;
 }
 
+bool db::dm_set_sta_ht_cap(const std::string &path_to_event, const sMacAddr &sta_mac)
+{
+    auto sta_caps = m_sta_cap.get(sta_mac);
+
+    if (!sta_caps) {
+        LOG(WARNING) << "No sStaCap found for station: " << sta_mac;
+        return false;
+    }
+
+    auto sta_ht_cap = sta_caps->sta_ht_cap;
+
+    if (!m_ambiorix_datamodel->add_optional_subobject(path_to_event, "HTCapabilities")) {
+        LOG(ERROR) << "Failed to add sub-object " << path_to_event << "HTCapabilities";
+        return false;
+    }
+
+    std::string path_to_ht_cap = path_to_event + "HTCapabilities.";
+
+    if (!m_ambiorix_datamodel->set(path_to_ht_cap, "tx_spatial_streams", sta_ht_cap.tx_stbc)) {
+        LOG(ERROR) << "Failed to set " << path_to_ht_cap
+                   << "tx_spatial_streams: " << sta_ht_cap.tx_stbc;
+        return false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_ht_cap, "rx_spatial_streams", sta_ht_cap.rx_stbc)) {
+        LOG(ERROR) << "Failed to set " << path_to_ht_cap
+                   << "rx_spatial_streams: " << sta_ht_cap.rx_stbc;
+        return false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_ht_cap, "GI_20_MHz",
+                                   static_cast<bool>(sta_ht_cap.short_gi20mhz))) {
+        LOG(ERROR) << "Failed to set " << path_to_ht_cap << "GI_20_MHz.";
+        return false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_ht_cap, "GI_40_MHz",
+                                   static_cast<bool>(sta_ht_cap.short_gi40mhz))) {
+        LOG(ERROR) << "Failed to set " << path_to_ht_cap << "GI_40_MHz.";
+        return false;
+    }
+    // Set to 1 if both 20 MHz and 40 MHz operation is supported
+    if (!m_ambiorix_datamodel->set(path_to_ht_cap, "HT_40_Mhz",
+                                   static_cast<bool>(sta_ht_cap.support_ch_width_set))) {
+        LOG(ERROR) << "Failed to set " << path_to_ht_cap << "HT_40_Mhz.";
+        return false;
+    }
+    return true;
+}
+
+bool db::dm_set_sta_vht_cap(const std::string &path_to_event, const sMacAddr &sta_mac)
+{
+    auto sta_caps = m_sta_cap.get(sta_mac);
+
+    if (!sta_caps) {
+        LOG(WARNING) << "No sStaCap found for station: " << sta_mac;
+        return false;
+    }
+
+    auto sta_vht_cap = sta_caps->sta_vht_cap;
+
+    if (!m_ambiorix_datamodel->add_optional_subobject(path_to_event, "HTCapabilities")) {
+        LOG(ERROR) << "Failed to add sub-object " << path_to_event << "HTCapabilities";
+        return false;
+    }
+
+    std::string path_to_ht_cap = path_to_event + "VHTCapabilities.";
+
+    if (!m_ambiorix_datamodel->set(path_to_ht_cap, "VHT_Tx_MCS", sta_vht_cap.tx_stbc)) {
+        LOG(ERROR) << "Failed to set " << path_to_ht_cap << "VHT_Tx_MCS: " << sta_vht_cap.tx_stbc;
+        return false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_ht_cap, "VHT_Rx_MCS", sta_vht_cap.rx_stbc)) {
+        LOG(ERROR) << "Failed to set " << path_to_ht_cap << "VHT_Rx_MCS: " << sta_vht_cap.rx_stbc;
+        return false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_ht_cap, "tx_spatial_streams", sta_vht_cap.tx_stbc)) {
+        LOG(ERROR) << "Failed to set " << path_to_ht_cap << "tx_spatial_streams.";
+        return false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_ht_cap, "rx_spatial_streams", sta_vht_cap.rx_stbc)) {
+        LOG(ERROR) << "Failed to set " << path_to_ht_cap << "rx_spatial_streams.";
+        return false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_ht_cap, "GI_80_MHz",
+                                   static_cast<bool>(sta_vht_cap.short_gi80mhz_tvht_mode4c))) {
+        LOG(ERROR) << "Failed to set " << path_to_ht_cap << "GI_80_MHz.";
+        return false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_ht_cap, "GI_160_MHz",
+                                   static_cast<bool>(sta_vht_cap.short_gi160mhz80_80mhz))) {
+        LOG(ERROR) << "Failed to set " << path_to_ht_cap << "GI_160_MHz.";
+        return false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_ht_cap, "VHT_80_80_MHz",
+                                   static_cast<bool>(sta_vht_cap.short_gi160mhz80_80mhz))) {
+        LOG(ERROR) << "Failed to set " << path_to_ht_cap << "VHT_80_80_MHz.";
+        return false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_ht_cap, "VHT_160_MHz",
+                                   static_cast<bool>(sta_vht_cap.short_gi160mhz80_80mhz))) {
+        LOG(ERROR) << "Failed to set " << path_to_ht_cap << "VHT_160_MHz.";
+        return false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_ht_cap, "SU_beamformer",
+                                   static_cast<bool>(sta_vht_cap.su_beamformer))) {
+        LOG(ERROR) << "Failed to set " << path_to_ht_cap << "SU_beamformer.";
+        return false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_ht_cap, "MU_beamformer",
+                                   static_cast<bool>(sta_vht_cap.mu_beamformer))) {
+        LOG(ERROR) << "Failed to set " << path_to_ht_cap << "MU_beamformer.";
+        return false;
+    }
+    return true;
+}
+
 bool db::set_station_capabilities(const std::string &client_mac,
                                   const beerocks::message::sRadioCapabilities &sta_cap)
 {
@@ -5923,7 +6037,8 @@ bool db::dm_add_failed_connection_event(const sMacAddr &sta_mac, const uint16_t 
     return ret_val;
 }
 
-std::string db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_mac)
+std::string db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_mac,
+                                         const std::string assoc_ts)
 {
     std::string path_association_event =
         "Device.WiFi.DataElements.Notification.AssociationEvent.AssociationEventData";
@@ -5937,7 +6052,6 @@ std::string db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &
     if (path_association_event.empty()) {
         return {};
     }
-
     m_assoc_events.push(path_association_event);
     if (!m_ambiorix_datamodel->set(path_association_event, "BSSID", tlvf::mac_to_string(bssid))) {
         LOG(ERROR) << "Failed to set " << path_association_event << ".BSSID: " << bssid;
@@ -5946,6 +6060,10 @@ std::string db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &
     if (!m_ambiorix_datamodel->set(path_association_event, "MACAddress",
                                    tlvf::mac_to_string(client_mac))) {
         LOG(ERROR) << "Failed to set " << path_association_event << ".MACAddress: " << client_mac;
+        return {};
+    }
+    if (!m_ambiorix_datamodel->set(path_association_event, "TimeStamp", assoc_ts)) {
+        LOG(ERROR) << "Failed to set " << path_association_event << ".TimeStamp: " << client_mac;
         return {};
     }
 
@@ -5959,7 +6077,9 @@ std::string db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &
         LOG(ERROR) << "Failed to set " << path_association_event << ".StatusCode: " << 0;
         return {};
     }
-    m_ambiorix_datamodel->set_current_time(path_association_event);
+    if (assoc_ts.empty()) {
+        m_ambiorix_datamodel->set_current_time(path_association_event);
+    }
 
     auto index = get_dm_index_from_path(path_association_event);
 
