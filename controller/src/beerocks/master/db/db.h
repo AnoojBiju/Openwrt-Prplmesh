@@ -859,6 +859,24 @@ public:
                                         const uint16_t status_code);
 
     /**
+     * @brief Sets value for parameters of optional sub-object STA HTCapabilities.
+     *
+     * @param path_to_obj Path to object which contains STA HTCapabilities sub-object.
+     * @param sta_mac MAC address of the station.
+     * @return True on success, false otherwise.
+     */
+    bool dm_set_sta_ht_cap(const std::string &path_to_obj, const sMacAddr &sta_mac);
+
+    /**
+     * @brief Sets value for parameters of optional sub-object STA VHTCapabilities.
+     *
+     * @param path_to_obj Path to object which contains STA VHTCapabilities sub-object.
+     * @param sta_mac MAC address of the station.
+     * @return True on success, false otherwise.
+     */
+    bool dm_set_sta_vht_cap(const std::string &path_to_obj, const sMacAddr &sta_mac);
+
+    /**
      * @brief Set STA DHCPv4 lease information for both node and datamodel.
      *
      * Path: Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}
@@ -1915,6 +1933,21 @@ public:
                                          const sMacAddr &backhaul_mac,
                                          const beerocks::eIfaceType &interface_type);
 
+    /**
+     * @brief Adds to data model an instance of object AssociationEventData.
+     *
+     * This object describes an event generated when a STA associates to a BSS.
+     * Example of full path to object:
+     * 'Device.WiFi.DataElements.Notification.AssociationEvent.AssociationEventData.1'.
+     *
+     * @param bssid BSS mac address.
+     * @param client_mac Client mac address.
+     * @param assoc_ts Timesamp in Data Model time format of station association.
+     * @return Path to object on success, empty sring otherwise.
+     */
+    std::string dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_mac,
+                                         const std::string assoc_ts = {});
+
     //
     // tasks
     //
@@ -2219,19 +2252,6 @@ private:
      * @return True on success, false otherwise.
      */
     bool dm_add_sta_element(const sMacAddr &bssid, Station &station);
-
-    /**
-     * @brief Adds to data model an instance of object AssociationEventData.
-     *
-     * This object describes an event generated when a STA associates to a BSS.
-     * Example of full path to object:
-     * 'Device.WiFi.DataElements.Notification.AssociationEvent.AssociationEventData.1'.
-     *
-     * @param bssid BSS mac address.
-     * @param client_mac Client mac address.
-     * @return Path to object on success, empty sring otherwise.
-     */
-    std::string dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_mac);
 
     /**
      * @brief Prepares path to the BSS data element with correct index (i).
