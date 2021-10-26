@@ -27,8 +27,9 @@ bool ieee802_3_link_metrics_collector::get_link_metrics(
     /**
      * Get interface speed into PHY rate.
      */
-    uint32_t phy_rate_mbps = UINT32_MAX;
-    net::network_utils::linux_iface_get_speed(local_interface_name, phy_rate_mbps);
+    uint32_t phy_rate_mbps  = UINT32_MAX;
+    uint32_t max_speed_mbps = UINT32_MAX;
+    net::network_utils::linux_iface_get_speed(local_interface_name, phy_rate_mbps, max_speed_mbps);
 
     /**
      * Note: The MAC throughput capacity is a function of the physical data rate and
