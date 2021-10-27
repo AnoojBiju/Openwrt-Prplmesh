@@ -25,26 +25,29 @@ constexpr char DOT_PVID_SUFFIX[] = ".pvid";
  */
 static void configure_transport(const std::string &iface, bool add, const std::string bridge)
 {
+    // Since this function currently is suspicious to crash the transport process comment it out for
+    // now.
+
     // TODO: It would have been better if the traffic would be using the broker interface of caller
     // instead of creating it every time.
     // Since the Agent (son_slave) is the only user of the traffic sepaeration class, the broker
     // interface cannot be provided, because the son_slave does not have it.
     // It will be possible only after PPM-1529 will be done.
 
-    // Create broker client factory to create broker clients when requested
-    std::string broker_uds_path = std::string("/tmp/beerocks/") + std::string(BEEROCKS_BROKER_UDS);
-    auto event_loop             = std::make_shared<beerocks::EventLoopImpl>();
-    LOG_IF(!event_loop, FATAL) << "Unable to create event loop!";
-    auto broker_client_factory =
-        beerocks::btl::create_broker_client_factory(broker_uds_path, event_loop);
-    LOG_IF(!broker_client_factory, FATAL) << "Unable to create broker client factory!";
-    auto broker_client = broker_client_factory->create_instance();
-    LOG_IF(!broker_client, FATAL) << "Failed to create instance of broker client";
-    LOG(DEBUG) << (add ? "Add" : "Remove") << " iface '" << iface << "' Transport monitoring";
-    if (!broker_client->configure_interfaces(iface, bridge, false, add)) {
-        LOG(ERROR) << "Failed configuring transport process!";
-    }
-    LOG(DEBUG) << "Transport configuration message sent for iface=" << iface;
+    // // Create broker client factory to create broker clients when requested
+    // std::string broker_uds_path = std::string("/tmp/beerocks/") + std::string(BEEROCKS_BROKER_UDS);
+    // auto event_loop             = std::make_shared<beerocks::EventLoopImpl>();
+    // LOG_IF(!event_loop, FATAL) << "Unable to create event loop!";
+    // auto broker_client_factory =
+    //     beerocks::btl::create_broker_client_factory(broker_uds_path, event_loop);
+    // LOG_IF(!broker_client_factory, FATAL) << "Unable to create broker client factory!";
+    // auto broker_client = broker_client_factory->create_instance();
+    // LOG_IF(!broker_client, FATAL) << "Failed to create instance of broker client";
+    // LOG(DEBUG) << (add ? "Add" : "Remove") << " iface '" << iface << "' Transport monitoring";
+    // if (!broker_client->configure_interfaces(iface, bridge, false, add)) {
+    //     LOG(ERROR) << "Failed configuring transport process!";
+    // }
+    // LOG(DEBUG) << "Transport configuration message sent for iface=" << iface;
 }
 
 namespace beerocks {
