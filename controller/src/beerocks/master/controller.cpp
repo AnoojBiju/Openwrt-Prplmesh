@@ -499,6 +499,8 @@ bool Controller::handle_cmdu_1905_1_message(const sMacAddr &src_mac,
     case ieee1905_1::eMessageType::TOPOLOGY_RESPONSE_MESSAGE:
     case ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE:
     case ieee1905_1::eMessageType::LINK_METRIC_RESPONSE_MESSAGE:
+    case ieee1905_1::eMessageType::CLIENT_CAPABILITY_REPORT_MESSAGE:
+
         return true;
     default:
         break;

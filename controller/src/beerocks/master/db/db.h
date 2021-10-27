@@ -1936,7 +1936,7 @@ public:
      * @return Path to object on success, empty sring otherwise.
      */
     std::string dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_mac,
-                                         const std::string assoc_ts = {});
+                                         const std::string &assoc_ts = {});
 
     //
     // tasks
@@ -2389,11 +2389,6 @@ private:
     std::queue<std::string> m_steer_history;
 
     std::shared_ptr<beerocks::nbapi::Ambiorix> m_ambiorix_datamodel;
-
-    /**
-     * @brief key = client mac, value = index of NBAPI AssociationEventData
-     */
-    std::map<std::string, std::list<int>> m_assoc_indx;
 
     /**
      * @brief Maximum amount of events registered on the system bus NBAPI

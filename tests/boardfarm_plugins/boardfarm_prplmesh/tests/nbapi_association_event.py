@@ -84,9 +84,7 @@ class NbapiAssociationEvent(PrplMeshBaseTest):
                     self.fail(f'Fail. NBAPI time stamp has unncorrect format: {time_stamp}')
         assert 0 < event_present and event_present <= 2,\
             f"Wrong amount of AssociationEvents [{event_present}] registered for client: {sta.mac}"
-        # TO DO: PPM-792 Currently, just check that those fields are present.
-        self.get_nbapi_ht_capabilities(association_data_list[0])
-        self.get_nbapi_vht_capabilities(association_data_list[0])
+        # TO DO: PPM-1773 Add tests to check ht_capabilities vht_capabilities.
 
         sta.wifi_disconnect(vap1)
         self.check_log(

@@ -495,11 +495,6 @@ std::shared_ptr<Station> db::add_node_station(const sMacAddr &mac, const sMacAdd
         LOG(ERROR) << "Failed to add station datamodel, mac: " << station->mac;
     }
 
-    // Add the MAC to the association event */
-    if (dm_add_association_event(parent_mac, mac).empty()) {
-        LOG(ERROR) << "Failed to add association event, mac: " << mac;
-    }
-
     return station;
 }
 
@@ -1798,41 +1793,7 @@ bool db::set_station_capabilities(const std::string &client_mac,
         LOG(ERROR) << "Failed to set station VHT Capabilities";
         return false;
     }
-
     // TODO: Fill up HE Capabilities for STA, PPM-567
-
-    std::string path_to_eventdata =
-        "Device.WiFi.DataElements.Notification.AssociationEvent.AssociationEventData.";
-    int index = m_assoc_indx[client_mac].back();
-
-    if (index) {
-        path_to_eventdata += std::to_string(index) + '.';
-    } else {
-        path_to_eventdata = dm_add_association_event(tlvf::mac_from_string(parent_radio),
-                                                     tlvf::mac_from_string(client_mac));
-        if (path_to_eventdata.empty()) {
-            return false;
-        }
-    }
-
-    // Remove previous entry
-    m_ambiorix_datamodel->remove_optional_subobject(path_to_eventdata, "HTCapabilities");
-    m_ambiorix_datamodel->remove_optional_subobject(path_to_eventdata, "VHTCapabilities");
-    // TODO: Remove HECapabilities before setting new one.
-
-    // Fill up HT Capabilities for Device.WiFi.DataElements.Notification.AssociationEvent.AssociationEventData.1
-    if (sta_cap.ht_bw != 0xFF && !dm_set_sta_ht_capabilities(path_to_eventdata, sta_cap)) {
-        LOG(ERROR) << "Failed to set station HT Capabilities into " << path_to_eventdata;
-        return false;
-    }
-    // Fill up VHT Capabilities for Device.WiFi.DataElements.Notification.AssociationEvent.AssociationEventData.1
-    if (sta_cap.vht_bw != 0xFF && !dm_set_sta_vht_capabilities(path_to_eventdata, sta_cap)) {
-        LOG(ERROR) << "Failed to set station VHT Capabilities into " << path_to_eventdata;
-        return false;
-    }
-
-    // TODO: Fill up HE Capabilities for Device.WiFi.DataElements.Notification.AssociationEvent, PPM-567
-
     return true;
 }
 
@@ -6038,7 +5999,7 @@ bool db::dm_add_failed_connection_event(const sMacAddr &sta_mac, const uint16_t 
 }
 
 std::string db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_mac,
-                                         const std::string assoc_ts)
+                                         const std::string &assoc_ts)
 {
     std::string path_association_event =
         "Device.WiFi.DataElements.Notification.AssociationEvent.AssociationEventData";
@@ -6062,6 +6023,7 @@ std::string db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &
         LOG(ERROR) << "Failed to set " << path_association_event << ".MACAddress: " << client_mac;
         return {};
     }
+
     if (!m_ambiorix_datamodel->set(path_association_event, "TimeStamp", assoc_ts)) {
         LOG(ERROR) << "Failed to set " << path_association_event << ".TimeStamp: " << client_mac;
         return {};
@@ -6077,16 +6039,6 @@ std::string db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &
         LOG(ERROR) << "Failed to set " << path_association_event << ".StatusCode: " << 0;
         return {};
     }
-    if (assoc_ts.empty()) {
-        m_ambiorix_datamodel->set_current_time(path_association_event);
-    }
-
-    auto index = get_dm_index_from_path(path_association_event);
-
-    if (MAX_EVENT_HISTORY_SIZE < m_assoc_indx.size()) {
-        m_assoc_indx.clear();
-    }
-    m_assoc_indx[tlvf::mac_to_string(client_mac)].push_back(index.second);
     return path_association_event;
 }
 

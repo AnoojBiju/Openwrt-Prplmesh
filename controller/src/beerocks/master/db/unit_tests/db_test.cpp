@@ -188,8 +188,6 @@ protected:
         EXPECT_CALL(*m_ambiorix, set(std::string(g_assoc_event_path_1), "StatusCode",
                                      Matcher<const uint32_t &>(0U)))
             .WillRepeatedly(Return(true));
-        EXPECT_CALL(*m_ambiorix, set_current_time(std::string(g_assoc_event_path_1), _))
-            .WillOnce(Return(true));
 
         //prepare scenario
         EXPECT_TRUE(m_db->add_node_station(tlvf::mac_from_string(g_client_mac),
