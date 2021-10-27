@@ -299,6 +299,7 @@ void Ieee1905Transport::deactivate_interface(NetworkInterface &interface, bool r
             m_event_loop->remove_handlers(interface.fd->getSocketFd());
         }
     }
+    close(interface.fd->getSocketFd());
     interface.fd = nullptr;
 }
 
