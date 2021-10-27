@@ -57,6 +57,16 @@ private:
 
     bool handle_cmdu_1905_client_capability_report_message(const sMacAddr &src_mac,
                                                            ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief Adds AssociationEventData data model object, if needed also adds
+     * additional sub-objects STA HT(VHT)Capabilities.
+     * 
+     * @param src_mac STA MAC.
+     * @param bssid BSSID of BSS with which STA associated.
+     * @return True on success, false otherwise.
+     */
+    bool dm_add_sta_association_event(const sMacAddr &sta_mac, const sMacAddr &bssid);
 };
 
 } // namespace son

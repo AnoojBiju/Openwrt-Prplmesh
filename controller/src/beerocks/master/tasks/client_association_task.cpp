@@ -65,6 +65,7 @@ bool client_association_task::verify_sta_association(const sMacAddr &src_mac,
         if (m_assoc_sta.find(sta_assoc_tlv->client_mac()) != m_assoc_sta.end()) {
             // STA Reassociate
             m_assoc_sta[sta_assoc_tlv->client_mac()] = ambiorix_dm->get_datamodel_time_format();
+            dm_add_sta_association_event(sta_assoc_tlv->client_mac(), sta_assoc_tlv->bssid());
             return false;
         }
         m_assoc_sta[sta_assoc_tlv->client_mac()] = ambiorix_dm->get_datamodel_time_format();
@@ -123,10 +124,11 @@ bool client_association_task::handle_cmdu_1905_client_capability_report_message(
         return false;
     }
 
+    auto sta_mac = client_info_tlv->client_mac();
+
     //log the details so it can be checked in the test_flows
     LOG(INFO) << "Received CLIENT_CAPABILITY_REPORT_MESSAGE, mid=" << std::hex << int(mid)
-              << ", Result Code= " << result_code
-              << ", client MAC= " << client_info_tlv->client_mac()
+              << ", Result Code= " << result_code << ", client MAC= " << sta_mac
               << ", BSSID= " << client_info_tlv->bssid();
 
     LOG_IF(client_capability_report_tlv->result_code() ==
@@ -135,6 +137,7 @@ bool client_association_task::handle_cmdu_1905_client_capability_report_message(
         << "(Re)Association Request frame= "
         << beerocks::utils::dump_buffer(client_capability_report_tlv->association_frame(),
                                         client_capability_report_tlv->association_frame_length());
+
     auto assoc_frame = assoc_frame::AssocReqFrame::parse(
         client_capability_report_tlv->association_frame(),
         client_capability_report_tlv->association_frame_length(),
@@ -144,7 +147,6 @@ bool client_association_task::handle_cmdu_1905_client_capability_report_message(
         LOG(ERROR) << "Failed to parse Associaiton Request frame.";
         return false;
     }
-
     auto sta_cap = m_database.m_sta_cap.add(client_info_tlv->client_mac());
 
     if (assoc_frame->fields_present.ht_capability) {
@@ -155,5 +157,45 @@ bool client_association_task::handle_cmdu_1905_client_capability_report_message(
         sta_cap->sta_vht_cap     = assoc_frame->sta_vht_capability()->vht_cap_info();
         sta_cap->vht_cap_present = true;
     }
+    return true;
+}
+
+bool client_association_task::dm_add_sta_association_event(const sMacAddr &sta_mac,
+                                                           const sMacAddr &bssid)
+{
+    // Add AssociationEventData data model object
+    auto assoc_timestamp  = m_assoc_sta[sta_mac];
+    auto assoc_event_path = m_database.dm_add_association_event(sta_mac, bssid, assoc_timestamp);
+
+    if (assoc_event_path.empty()) {
+        LOG(ERROR) << "Failed to add AssociationEventData for sta: " << sta_mac;
+        return false;
+    }
+
+    auto ambiorix_dm = m_database.get_ambiorix_obj();
+
+    if (!ambiorix_dm) {
+        LOG(ERROR) << "Failed to get Ambiorix datamodel";
+        return false;
+    }
+
+    // Remove previous entry
+    ambiorix_dm->remove_optional_subobject(assoc_event_path, "HTCapabilities");
+    ambiorix_dm->remove_optional_subobject(assoc_event_path, "VHTCapabilities");
+
+    // Add optional HT(VHT)Capabilities data model sub-object(s)
+    auto sta_cap = m_database.m_sta_cap.get(sta_mac);
+
+    if (!sta_cap) {
+        LOG(WARNING) << "No sStaCap found for station: " << sta_mac;
+        return false;
+    }
+    if (sta_cap->ht_cap_present) {
+        m_database.dm_set_sta_ht_cap(assoc_event_path, sta_mac);
+    }
+    if (sta_cap->vht_cap_present) {
+        m_database.dm_set_sta_vht_cap(assoc_event_path, sta_mac);
+    }
+    // TODO: Fill up HE Capabilities for AssociationEvent, PPM-567
     return true;
 }
