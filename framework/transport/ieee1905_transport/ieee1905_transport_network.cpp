@@ -117,9 +117,6 @@ bool Ieee1905Transport::update_network_interface(const std::string &bridge_name,
 bool Ieee1905Transport::remove_network_interface(const std::string &ifname)
 {
     LOG(DEBUG) << "Removing iface " << ifname << " monitoring";
-    if (network_interfaces_.count(ifname) == 0) {
-        return false;
-    }
 
     auto interface = network_interfaces_.find(ifname);
     if (interface == network_interfaces_.end()) {
@@ -127,9 +124,14 @@ bool Ieee1905Transport::remove_network_interface(const std::string &ifname)
                                             << " from transport since it's not on the list.");
         return false;
     }
+    LOG(DEBUG) << "iface " << ifname << " iterator found";
 
     auto &network_interface = interface->second;
+
+    LOG(DEBUG) << "Deactivating iface " << ifname;
     deactivate_interface(network_interface);
+
+    LOG(DEBUG) << "Removing iface " << ifname << " from network_interfaces_ container";
     network_interfaces_.erase(interface);
     LOG(DEBUG) << "Remove iface " << ifname << " monitoring finished";
 
@@ -285,10 +287,11 @@ void Ieee1905Transport::handle_bridge_state_change(const std::string &bridge_nam
 void Ieee1905Transport::deactivate_interface(NetworkInterface &interface, bool remove_handlers)
 {
     if (!interface.fd) {
+        MAPF_INFO("interface " << interface.ifname << " socket is nullptr");
         return;
     }
 
-    MAPF_INFO("Deactivating interface " << interface.ifname << ".");
+    MAPF_INFO("Deactivating interface " << interface.ifname << " start");
 
     // The bridge interface is not used for receiving but for sending packets only. Since no
     // event handlers were registered when the socket was open, neither they have to be removed
@@ -299,8 +302,12 @@ void Ieee1905Transport::deactivate_interface(NetworkInterface &interface, bool r
             m_event_loop->remove_handlers(interface.fd->getSocketFd());
         }
     }
+    MAPF_INFO("Closing interface " << interface.ifname
+                                   << " socket fd=" << interface.fd->getSocketFd());
     close(interface.fd->getSocketFd());
+    MAPF_INFO("FD " << interface.fd->getSocketFd() << " closed");
     interface.fd = nullptr;
+    MAPF_INFO("Deactivating interface " << interface.ifname << " finished");
 }
 
 void Ieee1905Transport::activate_interface(NetworkInterface &interface)
