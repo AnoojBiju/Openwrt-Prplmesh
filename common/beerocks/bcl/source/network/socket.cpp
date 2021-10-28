@@ -153,6 +153,7 @@ bool Socket::setReadTimeout(long msec)
 void Socket::closeSocket()
 {
     if ((m_socket != INVALID_SOCKET) && ((!m_external_handler) || (m_accepted_socket))) {
+        LOG(DEBUG) << "Socket DTOR closing socket fd=" << m_socket;
         closesocket(m_socket);
         m_socket = INVALID_SOCKET;
     }
