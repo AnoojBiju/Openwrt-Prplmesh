@@ -24,6 +24,7 @@ usage() {
     echo "      -i|--image - build the docker image only"
     echo "      -o|--openwrt-version - the openwrt version to use"
     echo "      -r|--openwrt-repository - the openwrt repository to use"
+    echo "      -s|--shell-only - don't build prplMesh, drop into a shell instead"
     echo "      -t|--tag - the tag to use for the builder image"
     echo "      --mmx - enable mmx as part of builds"
     echo " -d is always required."
@@ -52,9 +53,20 @@ build_image() {
 build_prplmesh() {
     build_dir="$1"
     container_name="prplmesh-builder-${TARGET_DEVICE}-$(uuidgen)"
+    local command interactive
+    if [ "$SHELL_ONLY" == true ] ; then
+        command="bash"
+        # to get an interactive shell, we have to use `-it`:
+        interactive="-it"
+    else
+        command="./build_scripts/build.sh"
+        # when doing non-interactive builds (e.g. in CI), `-t` can't
+        # be used:
+        interactive="-i"
+    fi
     dbg "Container name will be $container_name"
     trap 'docker rm -f $container_name' EXIT
-    docker run -i \
+    docker run "$interactive" \
            --name "$container_name" \
            -e TARGET_SYSTEM \
            -e OPENWRT_VERSION \
@@ -62,7 +74,7 @@ build_prplmesh() {
            -v "$scriptdir/scripts:/home/openwrt/openwrt/build_scripts/:ro" \
            -v "${rootdir}:/home/openwrt/prplMesh_source:ro" \
            "$image_tag" \
-           ./build_scripts/build.sh
+           "$command"
     mkdir -p "$build_dir"
     # Note: docker cp does not support globbing, so we need to copy the folder
     docker cp "${container_name}:/home/openwrt/openwrt/artifacts/" "$build_dir"
@@ -83,7 +95,7 @@ main() {
         exit 1
     fi
 
-    if ! OPTS=$(getopt -o 'hvd:io:r:t:' --long help,verbose,target-device:,docker-target-stage:,mmx,image,openwrt-version:,openwrt-repository:,tag: -n 'parse-options' -- "$@"); then
+    if ! OPTS=$(getopt -o 'hvd:io:r:st:' --long help,verbose,target-device:,docker-target-stage:,mmx,image,openwrt-version:,openwrt-repository:,shell,tag: -n 'parse-options' -- "$@"); then
         err "Failed parsing options." >&2
         usage
         exit 1
@@ -102,12 +114,19 @@ main() {
             -i | --image)              IMAGE_ONLY=true; shift ;;
             -o | --openwrt-version)    OPENWRT_VERSION="$2"; shift; shift ;;
             -r | --openwrt-repository) OPENWRT_REPOSITORY="$2"; shift; shift ;;
+            -s | --shell)              SHELL_ONLY=true; shift ;;
             -t | --tag)                TAG="$2"; shift ; shift ;;
             --mmx)                     MMX_ENABLE=true; shift ;;
             -- ) shift; break ;;
             * ) err "unsupported argument $1"; usage; exit 1 ;;
         esac
     done
+
+    if [ "$SHELL_ONLY" == true ] && [ "$IMAGE_ONLY" == true ] ; then
+        err "--shell and --image cannot be used together."
+        usage
+        exit 1
+    fi
 
     case "$TARGET_DEVICE" in
         turris-omnia)
@@ -169,5 +188,6 @@ OPENWRT_REPOSITORY='https://gitlab.com/prpl-foundation/prplwrt/prplwrt.git'
 OPENWRT_VERSION='096301732a20020194fd1ae8e4fa62575bc5b62a'
 PRPLMESH_VARIANT="-nl80211"
 DOCKER_TARGET_STAGE="prplmesh-builder"
+SHELL_ONLY=false
 
 main "$@"
