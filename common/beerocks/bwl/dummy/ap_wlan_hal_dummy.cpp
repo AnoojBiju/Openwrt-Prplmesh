@@ -344,6 +344,13 @@ bool ap_wlan_hal_dummy::set_primary_vlan_id(uint16_t primary_vlan_id)
     return true;
 }
 
+bool ap_wlan_hal_dummy::get_sta_device_info(std::string &sta_mac , int nw_info) 
+{
+    LOG(DEBUG) << "get_sta_device_info " << sta_mac;
+    LOG(DEBUG) << "get_sta_device_info " << nw_info;
+    return true;
+}
+
 bool ap_wlan_hal_dummy::process_dummy_data(parsed_obj_map_t &parsed_obj) { return true; }
 
 bool ap_wlan_hal_dummy::process_dummy_event(parsed_obj_map_t &parsed_obj)

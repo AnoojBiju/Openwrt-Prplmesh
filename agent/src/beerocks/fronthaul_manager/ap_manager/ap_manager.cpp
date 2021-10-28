@@ -1494,6 +1494,16 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
         ap_wlan_hal->set_primary_vlan_id(request->primary_vlan_id());
         break;
     }
+    case beerocks_message::ACTION_APMANAGER_HOSTAP_STA_INFO_QUERY: {
+        auto request = beerocks_header->addClass<
+            beerocks_message::cACTION_APMANAGER_HOSTAP_STA_INFO_QUERY>();
+        if (!request) {
+            LOG(ERROR) << "addClass has failed";
+            return;
+        }
+        ap_wlan_hal->get_sta_device_info (request->sta_mac() , request->nw_info());
+        break;
+    }
     default: {
         LOG(ERROR) << "Unsupported header action_op: " << int(beerocks_header->action_op());
         break;
@@ -2097,6 +2107,48 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
         // Send the mismatched message
         send_cmdu(cmdu_tx);
     } break;
+
+    case Event::STA_Info_Reply: {
+
+        if (!data) {
+            LOG(ERROR) << "STA_Info_Reply without data!";
+            return false;
+        }
+
+        auto msg = static_cast<bwl::sACTION_APMANAGER_HOSTAP_STA_INFO_REPLY *>(data);
+        std::string mac = tlvf::mac_to_string(msg->params.sta_mac);
+        LOG(INFO) << "STA_Info_Reply client " << mac;
+
+        auto reply = message_com::create_vs_message<
+            beerocks_message::cACTION_APMANAGER_HOSTAP_STA_INFO_REPLY>(cmdu_tx);
+
+        if (reply == nullptr) {
+            LOG(ERROR) << "Failed building message!";
+            return false;
+        }
+
+        reply->params().sta_mac    = msg->params.sta_mac;
+        string_utils::copy_string(reply->params().bss,
+                              msg->params.bss.c_str(), message::WIFI_STA_BSS_NAME_LENGTH);
+        string_utils::copy_string(reply->params().vendor_name,
+                              msg->params.vendor_name.c_str(), message::WIFI_STA_VENDOR_NAME_LENGTH);
+        string_utils::copy_string(reply->params().os_name,
+                              msg->params.os_name.c_str(), message::WIFI_STA_OS_NAME_LENGTH);
+        string_utils::copy_string(reply->params().device_name,
+                              msg->params.device_name.c_str(), message::WIFI_STA_DEVICE_NAME_LENGTH);
+        #if 0                      
+        reply->sdi_params().bss  = msg->params.bss;
+        reply->sdi_params().os_name = msg->params.os_name;
+        reply->sdi_params().vendor_name = msg->params.vendor_name;
+        reply->sdi_params().device_name = msg->params.device_name;
+        #endif
+        reply->params().days_since_last_reset   = msg->params.days_since_last_reset;
+        reply->params().default_gateway = msg->params.default_gateway;
+        reply->params().subnet_mask = msg->params.subnet_mask;
+        reply->params().ip_v4 = msg->params.ip_v4;
+        send_cmdu(cmdu_tx);
+    } break;
+
     // Unhandled events
     default:
         LOG(ERROR) << "Unhandled event: " << int(event);

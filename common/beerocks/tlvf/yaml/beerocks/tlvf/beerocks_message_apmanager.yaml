@@ -137,6 +137,15 @@ cACTION_APMANAGER_HOSTAP_SET_PRIMARY_VLAN_ID_REQUEST:
   _type: class
   primary_vlan_id: uint16_t
 
+cACTION_APMANAGER_HOSTAP_STA_INFO_QUERY:
+  _type: class
+  nw_info: uint8_t
+  sta_mac: sMacAddr
+
+cACTION_APMANAGER_HOSTAP_STA_INFO_REPLY:
+  _type: class
+  params: sStaDeviceInfo
+
 cACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION:
   _type: class
   mac: sMacAddr
