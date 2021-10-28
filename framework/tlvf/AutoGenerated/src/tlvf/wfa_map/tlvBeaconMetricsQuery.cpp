@@ -60,7 +60,12 @@ uint8_t& tlvBeaconMetricsQuery::ssid_length() {
 std::string tlvBeaconMetricsQuery::ssid_str() {
     char *ssid_ = ssid();
     if (!ssid_) { return std::string(); }
-    return std::string(ssid_, m_ssid_idx__);
+    auto str = std::string(ssid_, m_ssid_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* tlvBeaconMetricsQuery::ssid(size_t length) {

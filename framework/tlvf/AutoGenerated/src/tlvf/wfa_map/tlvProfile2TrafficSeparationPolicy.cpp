@@ -221,7 +221,12 @@ uint8_t& cSsidVlanId::ssid_name_length() {
 std::string cSsidVlanId::ssid_name_str() {
     char *ssid_name_ = ssid_name();
     if (!ssid_name_) { return std::string(); }
-    return std::string(ssid_name_, m_ssid_name_idx__);
+    auto str = std::string(ssid_name_, m_ssid_name_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* cSsidVlanId::ssid_name(size_t length) {

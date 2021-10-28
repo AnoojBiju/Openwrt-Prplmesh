@@ -3251,7 +3251,12 @@ uint8_t& cACTION_BML_WIFI_CREDENTIALS_SET_REQUEST::ssid_size() {
 std::string cACTION_BML_WIFI_CREDENTIALS_SET_REQUEST::ssid_str() {
     char *ssid_ = ssid();
     if (!ssid_) { return std::string(); }
-    return std::string(ssid_, m_ssid_idx__);
+    auto str = std::string(ssid_, m_ssid_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* cACTION_BML_WIFI_CREDENTIALS_SET_REQUEST::ssid(size_t length) {
@@ -3313,7 +3318,12 @@ uint8_t& cACTION_BML_WIFI_CREDENTIALS_SET_REQUEST::network_key_size() {
 std::string cACTION_BML_WIFI_CREDENTIALS_SET_REQUEST::network_key_str() {
     char *network_key_ = network_key();
     if (!network_key_) { return std::string(); }
-    return std::string(network_key_, m_network_key_idx__);
+    auto str = std::string(network_key_, m_network_key_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* cACTION_BML_WIFI_CREDENTIALS_SET_REQUEST::network_key(size_t length) {

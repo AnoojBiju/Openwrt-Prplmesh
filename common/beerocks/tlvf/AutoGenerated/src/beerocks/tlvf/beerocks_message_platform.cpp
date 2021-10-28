@@ -272,7 +272,12 @@ cACTION_PLATFORM_WLAN_PARAMS_CHANGED_NOTIFICATION::~cACTION_PLATFORM_WLAN_PARAMS
 std::string cACTION_PLATFORM_WLAN_PARAMS_CHANGED_NOTIFICATION::iface_name_str() {
     char *iface_name_ = iface_name();
     if (!iface_name_) { return std::string(); }
-    return std::string(iface_name_, m_iface_name_idx__);
+    auto str = std::string(iface_name_, m_iface_name_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* cACTION_PLATFORM_WLAN_PARAMS_CHANGED_NOTIFICATION::iface_name(size_t length) {
@@ -392,7 +397,12 @@ beerocks::net::sIpv4Addr& cACTION_PLATFORM_DHCP_MONITOR_NOTIFICATION::ipv4() {
 std::string cACTION_PLATFORM_DHCP_MONITOR_NOTIFICATION::hostname_str() {
     char *hostname_ = hostname();
     if (!hostname_) { return std::string(); }
-    return std::string(hostname_, m_hostname_idx__);
+    auto str = std::string(hostname_, m_hostname_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* cACTION_PLATFORM_DHCP_MONITOR_NOTIFICATION::hostname(size_t length) {
@@ -922,7 +932,12 @@ cACTION_PLATFORM_WPS_ONBOARDING_REQUEST::~cACTION_PLATFORM_WPS_ONBOARDING_REQUES
 std::string cACTION_PLATFORM_WPS_ONBOARDING_REQUEST::iface_name_str() {
     char *iface_name_ = iface_name();
     if (!iface_name_) { return std::string(); }
-    return std::string(iface_name_, m_iface_name_idx__);
+    auto str = std::string(iface_name_, m_iface_name_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* cACTION_PLATFORM_WPS_ONBOARDING_REQUEST::iface_name(size_t length) {
@@ -1653,7 +1668,12 @@ uint32_t& cACTION_PLATFORM_ERROR_NOTIFICATION::code() {
 std::string cACTION_PLATFORM_ERROR_NOTIFICATION::data_str() {
     char *data_ = data();
     if (!data_) { return std::string(); }
-    return std::string(data_, m_data_idx__);
+    auto str = std::string(data_, m_data_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* cACTION_PLATFORM_ERROR_NOTIFICATION::data(size_t length) {

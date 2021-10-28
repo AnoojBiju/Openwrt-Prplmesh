@@ -315,7 +315,12 @@ uint32_t& cACTION_CLI_RESPONSE_STR::buffer_size() {
 std::string cACTION_CLI_RESPONSE_STR::buffer_str() {
     char *buffer_ = buffer();
     if (!buffer_) { return std::string(); }
-    return std::string(buffer_, m_buffer_idx__);
+    auto str = std::string(buffer_, m_buffer_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* cACTION_CLI_RESPONSE_STR::buffer(size_t length) {

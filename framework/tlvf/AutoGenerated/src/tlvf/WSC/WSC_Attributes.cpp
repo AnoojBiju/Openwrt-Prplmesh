@@ -324,7 +324,12 @@ uint16_t& cConfigData::ssid_length() {
 std::string cConfigData::ssid_str() {
     char *ssid_ = ssid();
     if (!ssid_) { return std::string(); }
-    return std::string(ssid_, m_ssid_idx__);
+    auto str = std::string(ssid_, m_ssid_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* cConfigData::ssid(size_t length) {
@@ -409,7 +414,12 @@ uint16_t& cConfigData::network_key_length() {
 std::string cConfigData::network_key_str() {
     char *network_key_ = network_key();
     if (!network_key_) { return std::string(); }
-    return std::string(network_key_, m_network_key_idx__);
+    auto str = std::string(network_key_, m_network_key_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* cConfigData::network_key(size_t length) {
@@ -625,7 +635,12 @@ const uint16_t& cWscAttrEncryptedSettings::length() {
 std::string cWscAttrEncryptedSettings::iv_str() {
     char *iv_ = iv();
     if (!iv_) { return std::string(); }
-    return std::string(iv_, m_iv_idx__);
+    auto str = std::string(iv_, m_iv_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* cWscAttrEncryptedSettings::iv(size_t length) {
@@ -652,7 +667,12 @@ bool cWscAttrEncryptedSettings::set_iv(const char str[], size_t size) {
 std::string cWscAttrEncryptedSettings::encrypted_settings_str() {
     char *encrypted_settings_ = encrypted_settings();
     if (!encrypted_settings_) { return std::string(); }
-    return std::string(encrypted_settings_, m_encrypted_settings_idx__);
+    auto str = std::string(encrypted_settings_, m_encrypted_settings_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* cWscAttrEncryptedSettings::encrypted_settings(size_t length) {
@@ -1606,7 +1626,12 @@ const uint16_t& cWscAttrManufacturer::length() {
 std::string cWscAttrManufacturer::manufacturer_str() {
     char *manufacturer_ = manufacturer();
     if (!manufacturer_) { return std::string(); }
-    return std::string(manufacturer_, m_manufacturer_idx__);
+    auto str = std::string(manufacturer_, m_manufacturer_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* cWscAttrManufacturer::manufacturer(size_t length) {
@@ -1753,7 +1778,12 @@ const uint16_t& cWscAttrModelName::length() {
 std::string cWscAttrModelName::model_str() {
     char *model_ = model();
     if (!model_) { return std::string(); }
-    return std::string(model_, m_model_idx__);
+    auto str = std::string(model_, m_model_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* cWscAttrModelName::model(size_t length) {
@@ -1900,7 +1930,12 @@ const uint16_t& cWscAttrModelNumber::length() {
 std::string cWscAttrModelNumber::model_number_str() {
     char *model_number_ = model_number();
     if (!model_number_) { return std::string(); }
-    return std::string(model_number_, m_model_number_idx__);
+    auto str = std::string(model_number_, m_model_number_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* cWscAttrModelNumber::model_number(size_t length) {
@@ -2047,7 +2082,12 @@ const uint16_t& cWscAttrSerialNumber::length() {
 std::string cWscAttrSerialNumber::serial_number_str() {
     char *serial_number_ = serial_number();
     if (!serial_number_) { return std::string(); }
-    return std::string(serial_number_, m_serial_number_idx__);
+    auto str = std::string(serial_number_, m_serial_number_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* cWscAttrSerialNumber::serial_number(size_t length) {
@@ -2314,7 +2354,12 @@ const uint16_t& cWscAttrDeviceName::length() {
 std::string cWscAttrDeviceName::device_name_str() {
     char *device_name_ = device_name();
     if (!device_name_) { return std::string(); }
-    return std::string(device_name_, m_device_name_idx__);
+    auto str = std::string(device_name_, m_device_name_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* cWscAttrDeviceName::device_name(size_t length) {
@@ -3571,7 +3616,12 @@ const uint16_t& cWscAttrSsid::length() {
 std::string cWscAttrSsid::ssid_str() {
     char *ssid_ = ssid();
     if (!ssid_) { return std::string(); }
-    return std::string(ssid_, m_ssid_idx__);
+    auto str = std::string(ssid_, m_ssid_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* cWscAttrSsid::ssid(size_t length) {
@@ -3908,7 +3958,12 @@ const uint16_t& cWscAttrNetworkKey::length() {
 std::string cWscAttrNetworkKey::key_str() {
     char *key_ = key();
     if (!key_) { return std::string(); }
-    return std::string(key_, m_key_idx__);
+    auto str = std::string(key_, m_key_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* cWscAttrNetworkKey::key(size_t length) {

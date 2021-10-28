@@ -56,7 +56,12 @@ uint8_t& tlvProfile2ChannelScanResult::timestamp_length() {
 std::string tlvProfile2ChannelScanResult::timestamp_str() {
     char *timestamp_ = timestamp();
     if (!timestamp_) { return std::string(); }
-    return std::string(timestamp_, m_timestamp_idx__);
+    auto str = std::string(timestamp_, m_timestamp_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* tlvProfile2ChannelScanResult::timestamp(size_t length) {
@@ -404,7 +409,12 @@ uint8_t& cNeighbors::ssid_length() {
 std::string cNeighbors::ssid_str() {
     char *ssid_ = ssid();
     if (!ssid_) { return std::string(); }
-    return std::string(ssid_, m_ssid_idx__);
+    auto str = std::string(ssid_, m_ssid_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* cNeighbors::ssid(size_t length) {
@@ -472,7 +482,12 @@ uint8_t& cNeighbors::channel_bw_length() {
 std::string cNeighbors::channels_bw_list_str() {
     char *channels_bw_list_ = channels_bw_list();
     if (!channels_bw_list_) { return std::string(); }
-    return std::string(channels_bw_list_, m_channels_bw_list_idx__);
+    auto str = std::string(channels_bw_list_, m_channels_bw_list_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* cNeighbors::channels_bw_list(size_t length) {
