@@ -129,16 +129,17 @@ void Ieee1905Transport::handle_broker_interface_configuration_request_message(
             }
         }
     }
-    // Interface is not on the bridge
+    // Interface is not a bridge
     else {
-        auto iface_name = msg.metadata()->iface_name;
+        auto iface_name  = msg.metadata()->iface_name;
+        auto bridge_name = msg.metadata()->bridge_name;
         if (msg.metadata()->add) {
             added_updated_network_interfaces[iface_name].ifname      = iface_name;
-            added_updated_network_interfaces[iface_name].bridge_name = {};
+            added_updated_network_interfaces[iface_name].bridge_name = bridge_name;
             added_updated_network_interfaces[iface_name].is_bridge   = false;
         } else {
             removed_network_interfaces[iface_name].ifname      = iface_name;
-            removed_network_interfaces[iface_name].bridge_name = {};
+            removed_network_interfaces[iface_name].bridge_name = bridge_name;
             removed_network_interfaces[iface_name].is_bridge   = false;
         }
     }
