@@ -17,6 +17,7 @@
 #include <tlvf/common/sMacAddr.h>
 #include <unordered_map>
 
+#include "agent.h"
 #include "node.h"
 
 namespace son {
@@ -108,6 +109,8 @@ public:
     bool get_cross_rx_rssi(const std::string &ap_mac_, int8_t &rssi, int8_t &rx_packets);
     void set_cross_rx_rssi(const std::string &ap_mac_, int8_t rssi, int8_t rx_packets);
     void clear_cross_rssi();
+    void set_vap(std::shared_ptr<Agent::sRadio::sBss> bss);
+    std::shared_ptr<Agent::sRadio::sBss> get_bss();
 
     friend class ::son::db;
 
@@ -126,6 +129,7 @@ private:
 
     class rssi_measurement;
     std::unordered_map<std::string, std::shared_ptr<rssi_measurement>> m_cross_rx_rssi;
+    std::weak_ptr<Agent::sRadio::sBss> m_bss;
 };
 
 } // namespace db

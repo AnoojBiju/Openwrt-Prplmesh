@@ -341,8 +341,15 @@ public:
     std::shared_ptr<Agent::sRadio> get_radio_by_uid(const sMacAddr &radio_uid);
 
     /**
-     * @brief Get radio containing a BSS with a specific BSSID
+     * @brief Finds and returns sBss with a specified BSSID.
      *
+     * @param bssid BSSID of searched BSS.
+     * @return The sBss object, or nullptr if it doesn't exist.
+     */
+    std::shared_ptr<Agent::sRadio::sBss> get_bss(const sMacAddr &bssid);
+
+    /**
+     * @brief Get radio containing a BSS with a specific BSSID
      * Searches all Agent objects for sRadio object containing a BSS with the given BSSID.
      * If no such radio found, nullptr is returned and an error is logged.
      *
@@ -403,6 +410,25 @@ public:
     * @return True on success, false otherwise.
     */
     bool dm_add_sta_beacon_measurement(const beerocks_message::sBeaconResponse11k &beacon_response);
+
+    /**
+    * @brief Calculate value for TR-181* declares Noise parameter of MultiApSta object as: An indicator
+    * of the average radio noise plus interference power measured on
+    * the uplink from the Associated Device (STA) to the Access Point (AP).
+    * Encoded as defined for ANPI in [Section 11.11.9.4/802.11].
+
+    * It's possible to get value for ANPI with RCPI and RSNI based on formuladescribed
+    * in 9.4.2.41 RSNI element of [Section 9.4.2.41 RSNI element/802.11].
+    * RSNI = (10 * log ((RCPI – ANPI) / ANPI) + 10) * 2;
+    * From RSNI formula possible to get ANPI.
+    * ANPI = RCPI/(1 + 10^((RSNI / 20.00) - 1))
+    *
+    * @param station Station object.
+    * @param rcpi RCPI.
+    * @param rsni RSNI.
+    * @return True on success, false otherwise.
+    */
+    bool dm_set_multi_ap_sta_noise_param(Station &station, const uint8_t rcpi, const uint8_t rsni);
 
     /**
      * @brief add gateway node and Agent object.
