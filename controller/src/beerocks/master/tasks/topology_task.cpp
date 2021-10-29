@@ -188,7 +188,7 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
                                << " BSS " << bss_entry.radio_bssid() << " SSID "
                                << bss_entry.ssid_str();
                 }
-                auto bss  = radio->bsses.add(bss_entry.radio_bssid());
+                auto bss  = radio->bsses.add(bss_entry.radio_bssid(), *radio);
                 bss->ssid = bss_entry.ssid_str();
                 // backhaul is not reported in this message. Leave it unchanged.
             }

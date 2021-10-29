@@ -13,6 +13,7 @@ if (BUILD_TESTS)
         ${CMAKE_CURRENT_LIST_DIR}/db_test.cpp
         ${CMAKE_CURRENT_LIST_DIR}/../db.cpp
         ${CMAKE_CURRENT_LIST_DIR}/../node.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/../station.cpp
     )
 
     add_executable(${PROJECT_NAME}
