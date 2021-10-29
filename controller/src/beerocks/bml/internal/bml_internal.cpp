@@ -1808,7 +1808,7 @@ int bml_internal::get_dcs_scan_results(const sMacAddr &mac, BML_NEIGHBOR_AP *res
     }
 
     iRet = prmChannelScanResultsGet.get_value();
-    LOG(DEBUG) << "Promise resolved, recived results info: ["
+    LOG(DEBUG) << "Promise resolved, received results info: ["
                << "total count: " << scan_results.size() << ", "
                << "results status: " << int(result_status) << ", "
                << "results opt code: " << int(iRet) << "].";

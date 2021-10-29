@@ -795,8 +795,8 @@ void LinkMetricsCollectionTask::recalculate_byte_units(ieee1905_1::CmduMessageRx
             LOG(ERROR) << "Failed to get class list for tlvAssociatedStaTrafficStats";
             continue;
         }
-        sta_traffic->byte_sent()    = recalculate_byte_units(sta_traffic->byte_sent());
-        sta_traffic->byte_recived() = recalculate_byte_units(sta_traffic->byte_recived());
+        sta_traffic->byte_sent()     = recalculate_byte_units(sta_traffic->byte_sent());
+        sta_traffic->byte_received() = recalculate_byte_units(sta_traffic->byte_received());
     }
 
     for (auto &extended_metric : cmdu_rx.getClassList<wfa_map::tlvApExtendedMetrics>()) {
@@ -928,8 +928,8 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
 
             traffic_stats_response.push_back(
                 {sta_traffic->sta_mac(), recalculate_byte_units(sta_traffic->byte_sent()),
-                 recalculate_byte_units(sta_traffic->byte_recived()), sta_traffic->packets_sent(),
-                 sta_traffic->packets_recived(), sta_traffic->tx_packets_error(),
+                 recalculate_byte_units(sta_traffic->byte_received()), sta_traffic->packets_sent(),
+                 sta_traffic->packets_received(), sta_traffic->tx_packets_error(),
                  sta_traffic->rx_packets_error(), sta_traffic->retransmission_count()});
         }
 
@@ -1027,9 +1027,9 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
 
             sta_traffic_response_tlv->sta_mac()              = stat.sta_mac;
             sta_traffic_response_tlv->byte_sent()            = stat.byte_sent;
-            sta_traffic_response_tlv->byte_recived()         = stat.byte_recived;
+            sta_traffic_response_tlv->byte_received()        = stat.byte_received;
             sta_traffic_response_tlv->packets_sent()         = stat.packets_sent;
-            sta_traffic_response_tlv->packets_recived()      = stat.packets_recived;
+            sta_traffic_response_tlv->packets_received()     = stat.packets_received;
             sta_traffic_response_tlv->tx_packets_error()     = stat.tx_packets_error;
             sta_traffic_response_tlv->rx_packets_error()     = stat.rx_packets_error;
             sta_traffic_response_tlv->retransmission_count() = stat.retransmission_count;

@@ -1796,12 +1796,12 @@ bool Controller::handle_tlv_associated_sta_traffic_stats(const sMacAddr &src_mac
 
         // Recalculate counters according to Agent Byte Units.
         stats.m_byte_received = database.recalculate_attr_to_byte_units(
-            agent->byte_counter_units, sta_traffic_stat->byte_recived());
+            agent->byte_counter_units, sta_traffic_stat->byte_received());
 
         stats.m_byte_sent = database.recalculate_attr_to_byte_units(agent->byte_counter_units,
                                                                     sta_traffic_stat->byte_sent());
 
-        stats.m_packets_received     = sta_traffic_stat->packets_recived();
+        stats.m_packets_received     = sta_traffic_stat->packets_received();
         stats.m_packets_sent         = sta_traffic_stat->packets_sent();
         stats.m_retransmission_count = sta_traffic_stat->retransmission_count();
         stats.m_rx_packets_error     = sta_traffic_stat->rx_packets_error();

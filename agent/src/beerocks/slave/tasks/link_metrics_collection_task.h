@@ -219,9 +219,9 @@ private:
     struct sStaTrafficStats {
         sMacAddr sta_mac;
         uint32_t byte_sent;
-        uint32_t byte_recived;
+        uint32_t byte_received;
         uint32_t packets_sent;
-        uint32_t packets_recived;
+        uint32_t packets_received;
         uint32_t tx_packets_error;
         uint32_t rx_packets_error;
         uint32_t retransmission_count;
