@@ -1126,7 +1126,7 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
         }
 
         if (m_slaves_sockets_to_finalize.empty() && !pending_enable) {
-            FSM_MOVE_STATE(OPERATIONAL);
+            //FSM_MOVE_STATE(OPERATIONAL);
         }
         break;
     }
