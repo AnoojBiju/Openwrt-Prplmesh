@@ -783,14 +783,6 @@ typedef struct sBackhaulParams {
     }
 } __attribute__((packed)) sBackhaulParams;
 
-typedef struct sBackhaulRssi {
-    int8_t rssi;
-    void struct_swap(){
-    }
-    void struct_init(){
-    }
-} __attribute__((packed)) sBackhaulRssi;
-
 typedef struct sLoggingLevelChange {
     sMacAddr mac;
     uint8_t module_name;

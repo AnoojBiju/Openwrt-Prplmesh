@@ -85,7 +85,6 @@ class cACTION_CONTROL_SLAVE_JOINED_NOTIFICATION : public BaseClass
         sApChannelSwitch& cs_params();
         uint8_t& low_pass_filter_on();
         uint8_t& enable_repeater_mode();
-        uint8_t& is_slave_reconf();
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -103,7 +102,6 @@ class cACTION_CONTROL_SLAVE_JOINED_NOTIFICATION : public BaseClass
         sApChannelSwitch* m_cs_params = nullptr;
         uint8_t* m_low_pass_filter_on = nullptr;
         uint8_t* m_enable_repeater_mode = nullptr;
-        uint8_t* m_is_slave_reconf = nullptr;
 };
 
 class cACTION_CONTROL_SLAVE_JOINED_RESPONSE : public BaseClass
@@ -176,27 +174,6 @@ class cACTION_CONTROL_ARP_QUERY_RESPONSE : public BaseClass
         bool init();
         eActionOp_CONTROL* m_action_op = nullptr;
         sArpMonitorData* m_params = nullptr;
-};
-
-class cACTION_CONTROL_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION : public BaseClass
-{
-    public:
-        cACTION_CONTROL_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION(uint8_t* buff, size_t buff_len, bool parse = false);
-        explicit cACTION_CONTROL_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION(std::shared_ptr<BaseClass> base, bool parse = false);
-        ~cACTION_CONTROL_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION();
-
-        static eActionOp_CONTROL get_action_op(){
-            return (eActionOp_CONTROL)(ACTION_CONTROL_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION);
-        }
-        sBackhaulRssi& params();
-        void class_swap() override;
-        bool finalize() override;
-        static size_t get_initial_size();
-
-    private:
-        bool init();
-        eActionOp_CONTROL* m_action_op = nullptr;
-        sBackhaulRssi* m_params = nullptr;
 };
 
 class cACTION_CONTROL_CHANGE_MODULE_LOGGING_LEVEL : public BaseClass

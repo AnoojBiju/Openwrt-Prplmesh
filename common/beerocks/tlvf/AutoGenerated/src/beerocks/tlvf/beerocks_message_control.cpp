@@ -196,10 +196,6 @@ uint8_t& cACTION_CONTROL_SLAVE_JOINED_NOTIFICATION::enable_repeater_mode() {
     return (uint8_t&)(*m_enable_repeater_mode);
 }
 
-uint8_t& cACTION_CONTROL_SLAVE_JOINED_NOTIFICATION::is_slave_reconf() {
-    return (uint8_t&)(*m_is_slave_reconf);
-}
-
 void cACTION_CONTROL_SLAVE_JOINED_NOTIFICATION::class_swap()
 {
     tlvf_swap(8*sizeof(eActionOp_CONTROL), reinterpret_cast<uint8_t*>(m_action_op));
@@ -248,7 +244,6 @@ size_t cACTION_CONTROL_SLAVE_JOINED_NOTIFICATION::get_initial_size()
     class_size += sizeof(sApChannelSwitch); // cs_params
     class_size += sizeof(uint8_t); // low_pass_filter_on
     class_size += sizeof(uint8_t); // enable_repeater_mode
-    class_size += sizeof(uint8_t); // is_slave_reconf
     return class_size;
 }
 
@@ -300,11 +295,6 @@ bool cACTION_CONTROL_SLAVE_JOINED_NOTIFICATION::init()
         return false;
     }
     m_enable_repeater_mode = reinterpret_cast<uint8_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
-        return false;
-    }
-    m_is_slave_reconf = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
@@ -560,76 +550,6 @@ bool cACTION_CONTROL_ARP_QUERY_RESPONSE::init()
     m_params = reinterpret_cast<sArpMonitorData*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(sArpMonitorData))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sArpMonitorData) << ") Failed!";
-        return false;
-    }
-    if (!m_parse__) { m_params->struct_init(); }
-    if (m_parse__) { class_swap(); }
-    return true;
-}
-
-cACTION_CONTROL_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION::cACTION_CONTROL_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION(uint8_t* buff, size_t buff_len, bool parse) :
-    BaseClass(buff, buff_len, parse) {
-    m_init_succeeded = init();
-}
-cACTION_CONTROL_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION::cACTION_CONTROL_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION(std::shared_ptr<BaseClass> base, bool parse) :
-BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
-    m_init_succeeded = init();
-}
-cACTION_CONTROL_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION::~cACTION_CONTROL_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION() {
-}
-sBackhaulRssi& cACTION_CONTROL_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION::params() {
-    return (sBackhaulRssi&)(*m_params);
-}
-
-void cACTION_CONTROL_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION::class_swap()
-{
-    tlvf_swap(8*sizeof(eActionOp_CONTROL), reinterpret_cast<uint8_t*>(m_action_op));
-    m_params->struct_swap();
-}
-
-bool cACTION_CONTROL_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION::finalize()
-{
-    if (m_parse__) {
-        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
-        return true;
-    }
-    if (m_finalized__) {
-        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
-        return true;
-    }
-    if (!isPostInitSucceeded()) {
-        TLVF_LOG(ERROR) << "post init check failed";
-        return false;
-    }
-    if (m_inner__) {
-        if (!m_inner__->finalize()) {
-            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
-            return false;
-        }
-        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
-        m_buff_ptr__ -= tailroom;
-    }
-    class_swap();
-    m_finalized__ = true;
-    return true;
-}
-
-size_t cACTION_CONTROL_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION::get_initial_size()
-{
-    size_t class_size = 0;
-    class_size += sizeof(sBackhaulRssi); // params
-    return class_size;
-}
-
-bool cACTION_CONTROL_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION::init()
-{
-    if (getBuffRemainingBytes() < get_initial_size()) {
-        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
-        return false;
-    }
-    m_params = reinterpret_cast<sBackhaulRssi*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(sBackhaulRssi))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sBackhaulRssi) << ") Failed!";
         return false;
     }
     if (!m_parse__) { m_params->struct_init(); }

@@ -207,10 +207,6 @@ private:
     sApMetricsReportingInfo m_ap_metrics_reporting_info;
 
     struct sApMetricsQuery {
-        /**
-         * File descriptor of the socket connection established from the slave to the CMDU server.
-         */
-        int slave;
         sMacAddr bssid;
     };
 
