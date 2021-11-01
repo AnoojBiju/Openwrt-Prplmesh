@@ -5835,7 +5835,7 @@ bool slave_thread::handle_beacon_metrics_query(Socket *sd, ieee1905_1::CmduMessa
     }
 
     if (!gate::load(request_out, cmdu_rx)) {
-        LOG(ERROR) << "failed translating 1905 message to vs message";
+        LOG(ERROR) << "Failed translating 1905 message to vs message";
         return false;
     }
 
@@ -6239,7 +6239,7 @@ bool slave_thread::handle_channel_selection_request(Socket *sd, ieee1905_1::Cmdu
         channel_selection_response_tlv->response_code() = response_code;
         // Send ack back to the sender.
         if (!message_com::send_cmdu(sd, cmdu_tx)) {
-            LOG(ERROR) << "failed to send CHANNEL_SELECTION_RESPONSE_MESSAGE";
+            LOG(ERROR) << "Failed to send CHANNEL_SELECTION_RESPONSE_MESSAGE";
             return false;
         }
 
