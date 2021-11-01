@@ -37,9 +37,9 @@ class tlvAssociatedStaTrafficStats : public BaseClass
         const uint16_t& length();
         sMacAddr& sta_mac();
         uint32_t& byte_sent();
-        uint32_t& byte_recived();
+        uint32_t& byte_received();
         uint32_t& packets_sent();
-        uint32_t& packets_recived();
+        uint32_t& packets_received();
         uint32_t& tx_packets_error();
         uint32_t& rx_packets_error();
         uint32_t& retransmission_count();
@@ -53,9 +53,9 @@ class tlvAssociatedStaTrafficStats : public BaseClass
         uint16_t* m_length = nullptr;
         sMacAddr* m_sta_mac = nullptr;
         uint32_t* m_byte_sent = nullptr;
-        uint32_t* m_byte_recived = nullptr;
+        uint32_t* m_byte_received = nullptr;
         uint32_t* m_packets_sent = nullptr;
-        uint32_t* m_packets_recived = nullptr;
+        uint32_t* m_packets_received = nullptr;
         uint32_t* m_tx_packets_error = nullptr;
         uint32_t* m_rx_packets_error = nullptr;
         uint32_t* m_retransmission_count = nullptr;
