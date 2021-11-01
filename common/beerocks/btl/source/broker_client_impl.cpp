@@ -47,7 +47,9 @@ BrokerClientImpl::BrokerClientImpl(std::unique_ptr<beerocks::net::Socket::Connec
             [&](int fd, EventLoop &loop) {
                 LOG(ERROR) << "Client socket disconnected!";
                 handle_close(fd);
-                return true;
+                // Return false to stop event-loop and controller process.
+                // This is since controller is strictly dependant on the broker and cannot recover it.
+                return false;
             },
         .on_error =
             [&](int fd, EventLoop &loop) {
