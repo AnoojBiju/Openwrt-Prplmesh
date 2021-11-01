@@ -481,12 +481,12 @@ bool monitor_stats::add_ap_assoc_sta_traffic_stat(ieee1905_1::CmduMessageTx &cmd
         LOG(ERROR) << "Couldn't addClass tlvAssociatedStaTrafficStats";
         return false;
     }
-    auto stat                                        = sta_node.get_stats().hal_stats;
-    ap_assoc_sta_traffic_stat_tlv->sta_mac()         = tlvf::mac_from_string(sta_node.get_mac());
-    ap_assoc_sta_traffic_stat_tlv->byte_sent()       = stat.tx_bytes_cnt;
-    ap_assoc_sta_traffic_stat_tlv->byte_recived()    = stat.rx_bytes_cnt;
-    ap_assoc_sta_traffic_stat_tlv->packets_sent()    = stat.tx_packets_cnt;
-    ap_assoc_sta_traffic_stat_tlv->packets_recived() = stat.rx_packets_cnt;
+    auto stat                                         = sta_node.get_stats().hal_stats;
+    ap_assoc_sta_traffic_stat_tlv->sta_mac()          = tlvf::mac_from_string(sta_node.get_mac());
+    ap_assoc_sta_traffic_stat_tlv->byte_sent()        = stat.tx_bytes_cnt;
+    ap_assoc_sta_traffic_stat_tlv->byte_received()    = stat.rx_bytes_cnt;
+    ap_assoc_sta_traffic_stat_tlv->packets_sent()     = stat.tx_packets_cnt;
+    ap_assoc_sta_traffic_stat_tlv->packets_received() = stat.rx_packets_cnt;
     //TODO: add tx_packets_error in bwl::SStaStats
     ap_assoc_sta_traffic_stat_tlv->tx_packets_error() = 0;
     //TODO: rx_packets_error in bwl::SStaStats

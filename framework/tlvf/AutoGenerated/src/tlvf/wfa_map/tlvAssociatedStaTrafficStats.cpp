@@ -41,16 +41,16 @@ uint32_t& tlvAssociatedStaTrafficStats::byte_sent() {
     return (uint32_t&)(*m_byte_sent);
 }
 
-uint32_t& tlvAssociatedStaTrafficStats::byte_recived() {
-    return (uint32_t&)(*m_byte_recived);
+uint32_t& tlvAssociatedStaTrafficStats::byte_received() {
+    return (uint32_t&)(*m_byte_received);
 }
 
 uint32_t& tlvAssociatedStaTrafficStats::packets_sent() {
     return (uint32_t&)(*m_packets_sent);
 }
 
-uint32_t& tlvAssociatedStaTrafficStats::packets_recived() {
-    return (uint32_t&)(*m_packets_recived);
+uint32_t& tlvAssociatedStaTrafficStats::packets_received() {
+    return (uint32_t&)(*m_packets_received);
 }
 
 uint32_t& tlvAssociatedStaTrafficStats::tx_packets_error() {
@@ -70,9 +70,9 @@ void tlvAssociatedStaTrafficStats::class_swap()
     tlvf_swap(16, reinterpret_cast<uint8_t*>(m_length));
     m_sta_mac->struct_swap();
     tlvf_swap(32, reinterpret_cast<uint8_t*>(m_byte_sent));
-    tlvf_swap(32, reinterpret_cast<uint8_t*>(m_byte_recived));
+    tlvf_swap(32, reinterpret_cast<uint8_t*>(m_byte_received));
     tlvf_swap(32, reinterpret_cast<uint8_t*>(m_packets_sent));
-    tlvf_swap(32, reinterpret_cast<uint8_t*>(m_packets_recived));
+    tlvf_swap(32, reinterpret_cast<uint8_t*>(m_packets_received));
     tlvf_swap(32, reinterpret_cast<uint8_t*>(m_tx_packets_error));
     tlvf_swap(32, reinterpret_cast<uint8_t*>(m_rx_packets_error));
     tlvf_swap(32, reinterpret_cast<uint8_t*>(m_retransmission_count));
@@ -113,9 +113,9 @@ size_t tlvAssociatedStaTrafficStats::get_initial_size()
     class_size += sizeof(uint16_t); // length
     class_size += sizeof(sMacAddr); // sta_mac
     class_size += sizeof(uint32_t); // byte_sent
-    class_size += sizeof(uint32_t); // byte_recived
+    class_size += sizeof(uint32_t); // byte_received
     class_size += sizeof(uint32_t); // packets_sent
-    class_size += sizeof(uint32_t); // packets_recived
+    class_size += sizeof(uint32_t); // packets_received
     class_size += sizeof(uint32_t); // tx_packets_error
     class_size += sizeof(uint32_t); // rx_packets_error
     class_size += sizeof(uint32_t); // retransmission_count
@@ -153,7 +153,7 @@ bool tlvAssociatedStaTrafficStats::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint32_t); }
-    m_byte_recived = reinterpret_cast<uint32_t*>(m_buff_ptr__);
+    m_byte_received = reinterpret_cast<uint32_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint32_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint32_t) << ") Failed!";
         return false;
@@ -165,7 +165,7 @@ bool tlvAssociatedStaTrafficStats::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint32_t); }
-    m_packets_recived = reinterpret_cast<uint32_t*>(m_buff_ptr__);
+    m_packets_received = reinterpret_cast<uint32_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint32_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint32_t) << ") Failed!";
         return false;
