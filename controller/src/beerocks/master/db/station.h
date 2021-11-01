@@ -109,7 +109,7 @@ public:
     bool get_cross_rx_rssi(const std::string &ap_mac_, int8_t &rssi, int8_t &rx_packets);
     void set_cross_rx_rssi(const std::string &ap_mac_, int8_t rssi, int8_t rx_packets);
     void clear_cross_rssi();
-    void set_vap(std::shared_ptr<Agent::sRadio::sBss> bss);
+    void set_bss(std::shared_ptr<Agent::sRadio::sBss> bss);
     std::shared_ptr<Agent::sRadio::sBss> get_bss();
 
     friend class ::son::db;
