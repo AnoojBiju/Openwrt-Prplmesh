@@ -268,7 +268,10 @@ bool Controller::start()
     // Install a connection-closed event handler.
     // Currently there is no recovery mechanism if connection with broker server gets interrupted
     // (something that happens if the transport process dies). Just log a message and exit
-    handlers.on_connection_closed = [&]() { LOG(FATAL) << "Broker client got disconnected!"; };
+    handlers.on_connection_closed = [&]() {
+        LOG(ERROR) << "Broker client got disconnected!";
+        return false;
+    };
 
     m_broker_client->set_handlers(handlers);
     transaction.add_rollback_action([&]() { m_broker_client->clear_handlers(); });
