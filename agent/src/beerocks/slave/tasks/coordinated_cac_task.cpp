@@ -328,18 +328,25 @@ void CacFsm::config_fsm()
                 cancel_cac_request->cs_params().channel_ext_above_primary =
                     m_original_secondary_channel_offset;
 
-                // find fd using the if-name
-                int ifname_fd = m_backhaul_manager.front_iface_name_to_socket(m_ifname);
-
-                if (ifname_fd == beerocks::net::FileDescriptor::invalid_descriptor) {
-                    LOG(ERROR) << "can't find a socket for front interface name: " << m_ifname;
+                auto agent_fd = m_backhaul_manager.get_agent_fd();
+                if (agent_fd == beerocks::net::FileDescriptor::invalid_descriptor) {
+                    LOG(DEBUG) << "socket to Agent not found";
                     transition.change_destination(fsm_state::ERROR);
-
                     return true;
                 }
 
+                // Filling the radio mac. This is temporary the task will be moved to the agent
+                // (PPM-1680).
+                auto db    = AgentDB::get();
+                auto radio = db->radio(m_ifname);
+                if (!radio) {
+                    return false;
+                }
+                auto action_header = message_com::get_beerocks_header(m_cmdu_tx)->actionhdr();
+                action_header->radio_mac() = radio->front.iface_mac;
+
                 // send the cmdu using the fd
-                bool cmdu_sent = m_backhaul_manager.send_cmdu(ifname_fd, m_cmdu_tx);
+                bool cmdu_sent = m_backhaul_manager.send_cmdu(agent_fd, m_cmdu_tx);
                 if (!cmdu_sent) {
                     LOG(ERROR) << "Failed to send cancel cac request";
                     transition.change_destination(fsm_state::ERROR);
@@ -449,13 +456,22 @@ bool CacFsm::send_preference_report()
         LOG(ERROR) << "Failed to build message";
     }
 
-    auto ifname_sd = m_backhaul_manager.front_iface_name_to_socket(m_ifname);
-    if (ifname_sd == beerocks::net::FileDescriptor::invalid_descriptor) {
-        LOG(DEBUG) << "socket to " << m_ifname << " wasn't found";
+    auto agent_fd = m_backhaul_manager.get_agent_fd();
+    if (agent_fd == beerocks::net::FileDescriptor::invalid_descriptor) {
+        LOG(DEBUG) << "socket to Agent not found";
         return false;
     }
 
-    m_backhaul_manager.send_cmdu(ifname_sd, m_cmdu_tx);
+    // Filling the radio mac. This is temporary the task will be moved to the agent (PPM-1680).
+    auto db    = AgentDB::get();
+    auto radio = db->radio(m_ifname);
+    if (!radio) {
+        return false;
+    }
+    auto action_header         = message_com::get_beerocks_header(m_cmdu_tx)->actionhdr();
+    action_header->radio_mac() = radio->front.iface_mac;
+
+    m_backhaul_manager.send_cmdu(agent_fd, m_cmdu_tx);
 
     return true;
 }

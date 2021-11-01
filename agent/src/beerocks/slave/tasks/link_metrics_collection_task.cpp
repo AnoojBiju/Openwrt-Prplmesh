@@ -399,26 +399,10 @@ void LinkMetricsCollectionTask::handle_beacon_metrics_query(ieee1905_1::CmduMess
      * send the message to fronthaul, not slave.
      */
 
-    auto radio_info = m_btl_ctx.get_radio(radio->front.iface_mac);
-    if (!radio_info) {
-        LOG(ERROR) << "Failed to get radio info for " << radio->front.iface_mac;
-        return;
-    }
-    auto forward_to = radio_info->slave;
-
-    if (forward_to != beerocks::net::FileDescriptor::invalid_descriptor) {
-        // Forward only to the desired destination
-        if (!m_btl_ctx.forward_cmdu_to_uds(forward_to, 0, db->bridge.mac, src_mac, cmdu_rx)) {
-            LOG(ERROR) << "forward_cmdu_to_uds() failed - fd=" << forward_to;
-        }
-    } else {
-        // Forward cmdu to all slaves how it is on UDS, without changing it
-        for (auto soc_iter : m_btl_ctx.slaves_sockets) {
-            if (!m_btl_ctx.forward_cmdu_to_uds(soc_iter->slave, 0, db->bridge.mac, src_mac,
-                                               cmdu_rx)) {
-                LOG(ERROR) << "forward_cmdu_to_uds() failed - fd=" << soc_iter->slave;
-            }
-        }
+    // Forward only to the desired destination
+    if (!m_btl_ctx.forward_cmdu_to_uds(m_btl_ctx.get_agent_fd(), 0, db->bridge.mac, src_mac,
+                                       cmdu_rx)) {
+        LOG(ERROR) << "forward_cmdu_to_uds() to agent failed - fd=" << m_btl_ctx.get_agent_fd();
     }
 }
 
@@ -497,19 +481,17 @@ void LinkMetricsCollectionTask::handle_associated_sta_link_metrics_query(
     request_out->sync()    = true;
     request_out->sta_mac() = mac->sta_mac();
 
-    auto radio_info = m_btl_ctx.get_radio(radio->front.iface_mac);
-    if (!radio_info) {
-        LOG(ERROR) << "Failed to get radio info for " << radio->front.iface_mac;
-        return;
-    }
     /*
      * TODO: https://jira.prplfoundation.org/browse/PPM-657
      *
      * When link metric collection task moves to agent context
      * send the message to fronthaul, not slave.
      */
+    // Filling the radio mac. This is temporary the task will be moved to the agent (PPM-1681).
+    auto action_header         = message_com::get_beerocks_header(m_cmdu_tx)->actionhdr();
+    action_header->radio_mac() = radio->front.iface_mac;
 
-    m_btl_ctx.send_cmdu(radio_info->slave, m_cmdu_tx);
+    m_btl_ctx.send_cmdu(m_btl_ctx.get_agent_fd(), m_cmdu_tx);
 }
 
 void LinkMetricsCollectionTask::handle_ap_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx,
@@ -596,13 +578,6 @@ bool LinkMetricsCollectionTask::send_ap_metric_query_message(
             return false;
         }
 
-        // find radio-info of this radio
-        auto radio_info = m_btl_ctx.get_radio(radio->front.iface_mac);
-        if (!radio_info) {
-            LOG(ERROR) << "Failed to get radio info for " << radio->front.iface_mac;
-            return false;
-        }
-
         // pack all bssids in the query
         for (size_t i = 0; i < bssid_query_size; ++i) {
             auto list = query->bssid_list(i);
@@ -613,7 +588,7 @@ bool LinkMetricsCollectionTask::send_ap_metric_query_message(
 
             // responses are coming one by one - each bssid alone,
             // so we keep track of each bssid in the query
-            m_ap_metric_query.push_back({radio_info->slave, bssid_query[i]});
+            m_ap_metric_query.push_back({bssid_query[i]});
         }
 
         /*
@@ -622,7 +597,7 @@ bool LinkMetricsCollectionTask::send_ap_metric_query_message(
          * When link metric collection task moves to agent context
          * send the message to fronthaul, not slave.
          */
-        if (!m_btl_ctx.send_cmdu(radio_info->slave, m_cmdu_tx)) {
+        if (!m_btl_ctx.send_cmdu(m_btl_ctx.get_agent_fd(), m_cmdu_tx)) {
             LOG(ERROR) << "Failed forwarding AP_METRICS_QUERY_MESSAGE message to fronthaul";
         }
     }
@@ -660,26 +635,26 @@ void LinkMetricsCollectionTask::handle_multi_ap_policy_config_request(
             }
 
             auto metrics_reporting_conf = std::get<1>(tuple);
+            auto db                     = AgentDB::get();
 
-            std::shared_ptr<BackhaulManager::sRadioInfo> radio =
-                m_btl_ctx.get_radio(metrics_reporting_conf.radio_uid);
+            auto radio =
+                db->get_radio_by_mac(metrics_reporting_conf.radio_uid, AgentDB::eMacType::RADIO);
             if (radio) {
-                auto db = AgentDB::get();
 
-                if (!m_btl_ctx.forward_cmdu_to_uds(radio->slave, 0, db->bridge.mac, src_mac,
-                                                   cmdu_rx)) {
+                if (!m_btl_ctx.forward_cmdu_to_uds(m_btl_ctx.get_agent_fd(), 0, db->bridge.mac,
+                                                   src_mac, cmdu_rx)) {
                     /*
                      * TODO: https://jira.prplfoundation.org/browse/PPM-657
                      *
                      * Send message to fronthaul instead of slave
                      */
-                    LOG(ERROR) << "Failed to forward message to fronthaul " << radio->radio_mac;
+                    LOG(ERROR) << "Failed to forward message to fronthaul "
+                               << radio->front.iface_name;
                 } else {
-                    LOG(DEBUG) << "Forwarding MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE to son_slave "
-                               << radio->hostap_iface;
+                    LOG(DEBUG) << "Forwarding MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE to radio "
+                               << radio->front.iface_name;
                     msg_forwarded_to_son_slave.insert(metrics_reporting_conf.radio_uid);
                 }
-
             } else {
                 LOG(INFO) << "Radio Unique Identifier " << metrics_reporting_conf.radio_uid
                           << " not found";
@@ -729,16 +704,12 @@ void LinkMetricsCollectionTask::handle_multi_ap_policy_config_request(
                 msg_forwarded_to_son_slave.end()) {
                 continue;
             }
-            auto radio_info = m_btl_ctx.get_radio(radio->front.iface_mac);
-            if (!radio_info) {
-                LOG(ERROR) << "Radio info of " << radio->front.iface_name << " not found!";
-                return;
-            }
+
             LOG(DEBUG) << "Forwarding MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE to son_slave "
-                       << radio_info->hostap_iface;
-            if (!m_btl_ctx.forward_cmdu_to_uds(radio_info->slave, 0, db->bridge.mac, src_mac,
+                       << radio->front.iface_name;
+            if (!m_btl_ctx.forward_cmdu_to_uds(m_btl_ctx.get_agent_fd(), 0, db->bridge.mac, src_mac,
                                                cmdu_rx)) {
-                LOG(ERROR) << "Failed to forward message to fronthaul " << radio_info->hostap_iface;
+                LOG(ERROR) << "Failed to forward message to fronthaul " << radio->front.iface_name;
             }
         }
     }
@@ -767,12 +738,12 @@ void LinkMetricsCollectionTask::handle_multi_ap_policy_config_request(
         m_btl_ctx.unsuccessful_association_policy.last_reporting_time_point =
             std::chrono::steady_clock::time_point::min(); // way in the past
 
-        LOG(DEBUG) << "Unsuccessul Association Policy tlv found, mid: " << mid << "\n Report: "
+        LOG(DEBUG) << "Unsuccessful Association Policy tlv found, mid: " << mid << "\n Report: "
                    << m_btl_ctx.unsuccessful_association_policy.report_unsuccessful_association
                    << "; maximum reporting rate: "
                    << m_btl_ctx.unsuccessful_association_policy.maximum_reporting_rate;
     } else {
-        LOG(DEBUG) << "Unsuccessul Association Policy tlv not found in the request, mid" << mid;
+        LOG(DEBUG) << "Unsuccessful Association Policy tlv not found in the request, mid" << mid;
     }
 }
 

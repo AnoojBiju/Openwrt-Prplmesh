@@ -37,15 +37,6 @@ class cACTION_BACKHAUL_REGISTER_REQUEST : public BaseClass
         static eActionOp_BACKHAUL get_action_op(){
             return (eActionOp_BACKHAUL)(ACTION_BACKHAUL_REGISTER_REQUEST);
         }
-        std::string sta_iface_str();
-        char* sta_iface(size_t length = 0);
-        bool set_sta_iface(const std::string& str);
-        bool set_sta_iface(const char buffer[], size_t size);
-        std::string hostap_iface_str();
-        char* hostap_iface(size_t length = 0);
-        bool set_hostap_iface(const std::string& str);
-        bool set_hostap_iface(const char buffer[], size_t size);
-        uint8_t& onboarding();
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -53,12 +44,6 @@ class cACTION_BACKHAUL_REGISTER_REQUEST : public BaseClass
     private:
         bool init();
         eActionOp_BACKHAUL* m_action_op = nullptr;
-        char* m_sta_iface = nullptr;
-        size_t m_sta_iface_idx__ = 0;
-        int m_lock_order_counter__ = 0;
-        char* m_hostap_iface = nullptr;
-        size_t m_hostap_iface_idx__ = 0;
-        uint8_t* m_onboarding = nullptr;
 };
 
 class cACTION_BACKHAUL_REGISTER_RESPONSE : public BaseClass
@@ -70,27 +55,6 @@ class cACTION_BACKHAUL_REGISTER_RESPONSE : public BaseClass
 
         static eActionOp_BACKHAUL get_action_op(){
             return (eActionOp_BACKHAUL)(ACTION_BACKHAUL_REGISTER_RESPONSE);
-        }
-        uint8_t& is_backhaul_manager();
-        void class_swap() override;
-        bool finalize() override;
-        static size_t get_initial_size();
-
-    private:
-        bool init();
-        eActionOp_BACKHAUL* m_action_op = nullptr;
-        uint8_t* m_is_backhaul_manager = nullptr;
-};
-
-class cACTION_BACKHAUL_BUSY_NOTIFICATION : public BaseClass
-{
-    public:
-        cACTION_BACKHAUL_BUSY_NOTIFICATION(uint8_t* buff, size_t buff_len, bool parse = false);
-        explicit cACTION_BACKHAUL_BUSY_NOTIFICATION(std::shared_ptr<BaseClass> base, bool parse = false);
-        ~cACTION_BACKHAUL_BUSY_NOTIFICATION();
-
-        static eActionOp_BACKHAUL get_action_op(){
-            return (eActionOp_BACKHAUL)(ACTION_BACKHAUL_BUSY_NOTIFICATION);
         }
         void class_swap() override;
         bool finalize() override;
@@ -111,28 +75,6 @@ class cACTION_BACKHAUL_ENABLE : public BaseClass
         static eActionOp_BACKHAUL get_action_op(){
             return (eActionOp_BACKHAUL)(ACTION_BACKHAUL_ENABLE);
         }
-        sMacAddr& iface_mac();
-        std::string wire_iface_str();
-        char* wire_iface(size_t length = 0);
-        bool set_wire_iface(const std::string& str);
-        bool set_wire_iface(const char buffer[], size_t size);
-        std::string sta_iface_str();
-        char* sta_iface(size_t length = 0);
-        bool set_sta_iface(const std::string& str);
-        bool set_sta_iface(const char buffer[], size_t size);
-        std::string ssid_str();
-        char* ssid(size_t length = 0);
-        bool set_ssid(const std::string& str);
-        bool set_ssid(const char buffer[], size_t size);
-        std::string pass_str();
-        char* pass(size_t length = 0);
-        bool set_pass(const std::string& str);
-        bool set_pass(const char buffer[], size_t size);
-        uint32_t& security_type();
-        uint8_t& mem_only_psk();
-        uint8_t& backhaul_preferred_radio_band();
-        beerocks::eFreqType& frequency_band();
-        beerocks::eWiFiBandwidth& max_bandwidth();
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -140,21 +82,6 @@ class cACTION_BACKHAUL_ENABLE : public BaseClass
     private:
         bool init();
         eActionOp_BACKHAUL* m_action_op = nullptr;
-        sMacAddr* m_iface_mac = nullptr;
-        char* m_wire_iface = nullptr;
-        size_t m_wire_iface_idx__ = 0;
-        int m_lock_order_counter__ = 0;
-        char* m_sta_iface = nullptr;
-        size_t m_sta_iface_idx__ = 0;
-        char* m_ssid = nullptr;
-        size_t m_ssid_idx__ = 0;
-        char* m_pass = nullptr;
-        size_t m_pass_idx__ = 0;
-        uint32_t* m_security_type = nullptr;
-        uint8_t* m_mem_only_psk = nullptr;
-        uint8_t* m_backhaul_preferred_radio_band = nullptr;
-        beerocks::eFreqType* m_frequency_band = nullptr;
-        beerocks::eWiFiBandwidth* m_max_bandwidth = nullptr;
 };
 
 class cACTION_BACKHAUL_CONNECTED_NOTIFICATION : public BaseClass
@@ -209,6 +136,10 @@ class cACTION_BACKHAUL_ENABLE_APS_REQUEST : public BaseClass
         static eActionOp_BACKHAUL get_action_op(){
             return (eActionOp_BACKHAUL)(ACTION_BACKHAUL_ENABLE_APS_REQUEST);
         }
+        std::string iface_str();
+        char* iface(size_t length = 0);
+        bool set_iface(const std::string& str);
+        bool set_iface(const char buffer[], size_t size);
         uint8_t& channel();
         beerocks::eWiFiBandwidth& bandwidth();
         uint8_t& center_channel();
@@ -219,30 +150,12 @@ class cACTION_BACKHAUL_ENABLE_APS_REQUEST : public BaseClass
     private:
         bool init();
         eActionOp_BACKHAUL* m_action_op = nullptr;
+        char* m_iface = nullptr;
+        size_t m_iface_idx__ = 0;
+        int m_lock_order_counter__ = 0;
         uint8_t* m_channel = nullptr;
         beerocks::eWiFiBandwidth* m_bandwidth = nullptr;
         uint8_t* m_center_channel = nullptr;
-};
-
-class cACTION_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION : public BaseClass
-{
-    public:
-        cACTION_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION(uint8_t* buff, size_t buff_len, bool parse = false);
-        explicit cACTION_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION(std::shared_ptr<BaseClass> base, bool parse = false);
-        ~cACTION_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION();
-
-        static eActionOp_BACKHAUL get_action_op(){
-            return (eActionOp_BACKHAUL)(ACTION_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION);
-        }
-        sBackhaulRssi& params();
-        void class_swap() override;
-        bool finalize() override;
-        static size_t get_initial_size();
-
-    private:
-        bool init();
-        eActionOp_BACKHAUL* m_action_op = nullptr;
-        sBackhaulRssi* m_params = nullptr;
 };
 
 class cACTION_BACKHAUL_UPDATE_STOP_ON_FAILURE_ATTEMPTS_REQUEST : public BaseClass
@@ -264,6 +177,32 @@ class cACTION_BACKHAUL_UPDATE_STOP_ON_FAILURE_ATTEMPTS_REQUEST : public BaseClas
         bool init();
         eActionOp_BACKHAUL* m_action_op = nullptr;
         uint32_t* m_attempts = nullptr;
+};
+
+class cACTION_BACKHAUL_AP_DISABLED_NOTIFICATION : public BaseClass
+{
+    public:
+        cACTION_BACKHAUL_AP_DISABLED_NOTIFICATION(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_BACKHAUL_AP_DISABLED_NOTIFICATION(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_BACKHAUL_AP_DISABLED_NOTIFICATION();
+
+        static eActionOp_BACKHAUL get_action_op(){
+            return (eActionOp_BACKHAUL)(ACTION_BACKHAUL_AP_DISABLED_NOTIFICATION);
+        }
+        std::string iface_str();
+        char* iface(size_t length = 0);
+        bool set_iface(const std::string& str);
+        bool set_iface(const char buffer[], size_t size);
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_BACKHAUL* m_action_op = nullptr;
+        char* m_iface = nullptr;
+        size_t m_iface_idx__ = 0;
+        int m_lock_order_counter__ = 0;
 };
 
 class cACTION_BACKHAUL_CLIENT_RX_RSSI_MEASUREMENT_REQUEST : public BaseClass
@@ -392,6 +331,10 @@ class cACTION_BACKHAUL_START_WPS_PBC_REQUEST : public BaseClass
         static eActionOp_BACKHAUL get_action_op(){
             return (eActionOp_BACKHAUL)(ACTION_BACKHAUL_START_WPS_PBC_REQUEST);
         }
+        std::string iface_str();
+        char* iface(size_t length = 0);
+        bool set_iface(const std::string& str);
+        bool set_iface(const char buffer[], size_t size);
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -399,6 +342,9 @@ class cACTION_BACKHAUL_START_WPS_PBC_REQUEST : public BaseClass
     private:
         bool init();
         eActionOp_BACKHAUL* m_action_op = nullptr;
+        char* m_iface = nullptr;
+        size_t m_iface_idx__ = 0;
+        int m_lock_order_counter__ = 0;
 };
 
 class cACTION_BACKHAUL_SET_ASSOC_DISALLOW_REQUEST : public BaseClass
@@ -716,6 +662,10 @@ class cACTION_BACKHAUL_RADIO_DISABLE_REQUEST : public BaseClass
         static eActionOp_BACKHAUL get_action_op(){
             return (eActionOp_BACKHAUL)(ACTION_BACKHAUL_RADIO_DISABLE_REQUEST);
         }
+        std::string iface_str();
+        char* iface(size_t length = 0);
+        bool set_iface(const std::string& str);
+        bool set_iface(const char buffer[], size_t size);
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -723,6 +673,9 @@ class cACTION_BACKHAUL_RADIO_DISABLE_REQUEST : public BaseClass
     private:
         bool init();
         eActionOp_BACKHAUL* m_action_op = nullptr;
+        char* m_iface = nullptr;
+        size_t m_iface_idx__ = 0;
+        int m_lock_order_counter__ = 0;
 };
 
 class cACTION_BACKHAUL_RADIO_TEAR_DOWN_REQUEST : public BaseClass
@@ -784,25 +737,6 @@ class cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE : public BaseClass
         bool init();
         eActionOp_BACKHAUL* m_action_op = nullptr;
         uint8_t* m_success = nullptr;
-};
-
-class cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_REQUEST : public BaseClass
-{
-    public:
-        cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_REQUEST(uint8_t* buff, size_t buff_len, bool parse = false);
-        explicit cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_REQUEST(std::shared_ptr<BaseClass> base, bool parse = false);
-        ~cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_REQUEST();
-
-        static eActionOp_BACKHAUL get_action_op(){
-            return (eActionOp_BACKHAUL)(ACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_REQUEST);
-        }
-        void class_swap() override;
-        bool finalize() override;
-        static size_t get_initial_size();
-
-    private:
-        bool init();
-        eActionOp_BACKHAUL* m_action_op = nullptr;
 };
 
 class cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_RESPONSE : public BaseClass

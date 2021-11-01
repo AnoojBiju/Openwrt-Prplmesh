@@ -102,7 +102,6 @@ BackhaulManager::BackhaulManager(const config_file::sConfigSlave &config,
       m_ucc_listener_port(string_utils::stoi(config.ucc_listener_port)),
       config_const_bh_slave(config.const_backhaul_slave)
 {
-    pending_slave_ifaces                   = slave_ap_ifaces_;
     configuration_stop_on_failure_attempts = stop_on_failure_attempts_;
     stop_on_failure_attempts               = stop_on_failure_attempts_;
     LOG(DEBUG) << "stop_on_failure_attempts=" << stop_on_failure_attempts;
@@ -155,7 +154,7 @@ bool BackhaulManager::thread_init()
     LOG_IF(!m_cmdu_server, FATAL) << "Unable to create CMDU server for backhaul manager!";
 
     beerocks::CmduServer::EventHandlers cmdu_server_handlers{
-        .on_client_connected    = [&](int fd) { handle_connected(fd); },
+        .on_client_connected    = nullptr,
         .on_client_disconnected = [&](int fd) { handle_disconnected(fd); },
         .on_cmdu_received =
             [&](int fd, uint32_t iface_index, const sMacAddr &dst_mac, const sMacAddr &src_mac,
@@ -316,27 +315,30 @@ bool BackhaulManager::thread_init()
 
 void BackhaulManager::on_thread_stop()
 {
-    while (slaves_sockets.size() > 0) {
-        auto soc = slaves_sockets.back();
-        if (soc) {
-            LOG(DEBUG) << "Closing interface " << soc->sta_iface << " sockets";
+    if (m_agent_fd != beerocks::net::FileDescriptor::invalid_descriptor) {
+        m_cmdu_server->disconnect(m_agent_fd);
+    }
 
-            if (soc->slave != beerocks::net::FileDescriptor::invalid_descriptor) {
-                m_cmdu_server->disconnect(soc->slave);
+    while (m_radios_info.size() > 0) {
+        auto radio_info = m_radios_info.back();
+        if (radio_info) {
+            LOG(DEBUG) << "Closing interface " << radio_info->sta_iface << " bwl";
+
+            if (radio_info->sta_wlan_hal) {
+                radio_info->sta_wlan_hal.reset();
             }
-            if (soc->sta_wlan_hal) {
-                soc->sta_wlan_hal.reset();
+            if (radio_info->sta_hal_ext_events !=
+                beerocks::net::FileDescriptor::invalid_descriptor) {
+                m_event_loop->remove_handlers(radio_info->sta_hal_ext_events);
+                radio_info->sta_hal_ext_events = beerocks::net::FileDescriptor::invalid_descriptor;
             }
-            if (soc->sta_hal_ext_events != beerocks::net::FileDescriptor::invalid_descriptor) {
-                m_event_loop->remove_handlers(soc->sta_hal_ext_events);
-                soc->sta_hal_ext_events = beerocks::net::FileDescriptor::invalid_descriptor;
-            }
-            if (soc->sta_hal_int_events != beerocks::net::FileDescriptor::invalid_descriptor) {
-                m_event_loop->remove_handlers(soc->sta_hal_int_events);
-                soc->sta_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
+            if (radio_info->sta_hal_int_events !=
+                beerocks::net::FileDescriptor::invalid_descriptor) {
+                m_event_loop->remove_handlers(radio_info->sta_hal_int_events);
+                radio_info->sta_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
             }
         }
-        slaves_sockets.pop_back();
+        m_radios_info.pop_back();
     }
 
     if (m_platform_manager_client) {
@@ -359,15 +361,6 @@ void BackhaulManager::on_thread_stop()
     LOG(DEBUG) << "stopped";
 
     return;
-}
-
-void BackhaulManager::handle_connected(int fd)
-{
-    LOG(INFO) << "UDS socket connected, fd = " << fd;
-
-    auto soc   = std::make_shared<sRadioInfo>();
-    soc->slave = fd;
-    slaves_sockets.push_back(soc);
 }
 
 bool BackhaulManager::send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
@@ -435,85 +428,42 @@ bool BackhaulManager::forward_cmdu_to_broker(ieee1905_1::CmduMessageRx &cmdu_rx,
 
 void BackhaulManager::handle_disconnected(int fd)
 {
-    LOG(INFO) << "UDS socket disconnected, fd = " << fd;
+    if (m_agent_fd != fd) {
+        LOG(INFO) << "Unkown socket disconnected, fd=" << fd;
+        return;
+    }
+
+    LOG(INFO) << "Agent socket disconnected";
 
     auto db = AgentDB::get();
 
-    for (auto it = slaves_sockets.begin(); it != slaves_sockets.end();) {
-        auto soc          = *it;
-        std::string iface = soc->hostap_iface;
-        if (soc->slave == fd) {
-            LOG(INFO) << "slave disconnected, iface=" << iface
-                      << " backhaul_manager=" << int(soc->slave_is_backhaul_manager);
-            if (soc->sta_wlan_hal) {
-                LOG(INFO) << "dereferencing sta_wlan_hal";
-                soc->sta_wlan_hal.reset();
-            }
-            if (soc->sta_hal_ext_events != beerocks::net::FileDescriptor::invalid_descriptor) {
-                m_event_loop->remove_handlers(soc->sta_hal_ext_events);
-                soc->sta_hal_ext_events = beerocks::net::FileDescriptor::invalid_descriptor;
-            }
-            if (soc->sta_hal_int_events != beerocks::net::FileDescriptor::invalid_descriptor) {
-                m_event_loop->remove_handlers(soc->sta_hal_int_events);
-                soc->sta_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
-            }
+    for (auto radio_info : m_radios_info) {
 
-            // Remove the socket reference from the backhaul configuration
-            m_sConfig.slave_iface_socket.erase(iface);
+        if (!(FSM_IS_IN_STATE(OPERATIONAL) || FSM_IS_IN_STATE(CONNECTED))) {
+            if (radio_info->sta_wlan_hal) {
+                LOG(INFO) << "dereferencing sta_wlan_hal";
+                radio_info->sta_wlan_hal.reset();
+            }
+            if (radio_info->sta_hal_ext_events !=
+                beerocks::net::FileDescriptor::invalid_descriptor) {
+                m_event_loop->remove_handlers(radio_info->sta_hal_ext_events);
+                radio_info->sta_hal_ext_events = beerocks::net::FileDescriptor::invalid_descriptor;
+            }
+            if (radio_info->sta_hal_int_events !=
+                beerocks::net::FileDescriptor::invalid_descriptor) {
+                m_event_loop->remove_handlers(radio_info->sta_hal_int_events);
+                radio_info->sta_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
+            }
 
             if (!m_agent_ucc_listener) {
-                LOG(INFO) << "sending platform_notify: slave socket disconnected " << iface;
+                LOG(INFO) << "sending platform_notify: Agent disconnected";
                 platform_notify_error(bpl::eErrorCode::BH_SLAVE_SOCKET_DISCONNECTED,
-                                      "slave socket disconnected " + iface);
+                                      "Agent socket disconnected");
             }
-
-            it = slaves_sockets.erase(it);
-            if ((m_eFSMState > EState::_WIRELESS_START_ && m_eFSMState < EState::_WIRELESS_END_) ||
-                (soc->slave_is_backhaul_manager &&
-                 db->backhaul.connection_type == AgentDB::sBackhaul::eConnectionType::Wireless)) {
-                LOG(INFO) << "Not in operational state OR backhaul manager slave disconnected, "
-                             "restarting backhaul manager. Backhaul connection is probably lost";
+            if (m_eFSMState > EState::WAIT_ENABLE) {
                 FSM_MOVE_STATE(RESTART);
-            } else if (soc->slave_is_backhaul_manager &&
-                       !slaves_sockets.empty()) { // bh_manager socket in Wired backhaul mode
-                LOG(INFO)
-                    << "backhaul manager slave disconnected on wired backhaul, Replacing it...";
-                finalize_slaves_connect_state(true, slaves_sockets.front());
             }
-            LOG(INFO) << "disconnected slave sockets has been deleted";
-
-            if (m_eFSMState >= EState::CONNECT_TO_MASTER) {
-                LOG(INFO) << "Sending topology notification on son_slave disconnect";
-                m_task_pool.send_event(eTaskType::TOPOLOGY,
-                                       TopologyTask::eEvent::AGENT_RADIO_STATE_CHANGED);
-            }
-
-            // notify channel selection task on radio disconnect (NON-ZWDFS)
-            auto radio = db->radio(soc->hostap_iface);
-            if (!radio) {
-                return;
-            }
-            m_task_pool.send_event(eTaskType::CHANNEL_SELECTION,
-                                   ChannelSelectionTask::eEvent::AP_DISABLED,
-                                   &radio->front.iface_name);
-            return;
-        } else {
-            ++it;
         }
-    }
-
-    for (auto it = m_disabled_slave_sockets.begin(); it != m_disabled_slave_sockets.end();) {
-        if (it->second->slave == fd) {
-
-            // notify channel selection task on ZWDFS radio disconnect
-            m_task_pool.send_event(eTaskType::CHANNEL_SELECTION,
-                                   ChannelSelectionTask::eEvent::AP_DISABLED,
-                                   &it->second->hostap_iface);
-
-            it = m_disabled_slave_sockets.erase(it);
-            return;
-        }
-        it++;
     }
     return;
 }
@@ -523,31 +473,8 @@ bool BackhaulManager::handle_cmdu(int fd, uint32_t iface_index, const sMacAddr &
 {
     // Check for local handling
     if (dst_mac == beerocks::net::network_utils::ZERO_MAC) {
-        std::shared_ptr<sRadioInfo> soc;
-
-        auto it = std::find_if(
-            slaves_sockets.begin(), slaves_sockets.end(),
-            [fd](const std::shared_ptr<sRadioInfo> &radio) { return (radio->slave == fd); });
-        if (it != slaves_sockets.end()) {
-            soc = *it;
-
-        } else {
-            // check the disabled sockets container as well
-            auto it2 =
-                std::find_if(m_disabled_slave_sockets.begin(), m_disabled_slave_sockets.end(),
-                             [fd](const std::pair<std::string, std::shared_ptr<sRadioInfo>> &elm) {
-                                 return (elm.second->slave == fd);
-                             });
-
-            if (it2 == m_disabled_slave_sockets.end()) {
-                LOG(ERROR) << "Slave socket descriptor not found, fd = " << fd;
-                return false;
-            }
-            soc = it2->second;
-        }
-
         if (cmdu_rx.getMessageType() == ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE) {
-            return handle_slave_backhaul_message(soc, cmdu_rx);
+            return handle_slave_backhaul_message(fd, cmdu_rx);
         } else {
             return handle_slave_1905_1_message(cmdu_rx, iface_index, dst_mac, src_mac);
         }
@@ -597,15 +524,12 @@ bool BackhaulManager::handle_cmdu_from_broker(uint32_t iface_index, const sMacAd
 
     ////////// If got here, message needs to be forwarded //////////
 
-    // Forward cmdu to the agent on the first "son_slave" socket only, since only one thread is
-    // actually exist.
-    auto soc_iter = slaves_sockets.begin();
-    if (soc_iter == slaves_sockets.end() || !(*soc_iter)) {
+    if (m_agent_fd == beerocks::net::FileDescriptor::invalid_descriptor) {
         LOG(INFO) << "No slave sockets, cmdu will not be forwarded.";
         return true;
     }
-    if (!forward_cmdu_to_uds((*soc_iter)->slave, iface_index, dst_mac, src_mac, cmdu_rx)) {
-        LOG(ERROR) << "forward_cmdu_to_uds() failed - fd=" << (*soc_iter)->slave;
+    if (!forward_cmdu_to_uds(m_agent_fd, iface_index, dst_mac, src_mac, cmdu_rx)) {
+        LOG(ERROR) << "forward_cmdu_to_uds() failed - fd=" << m_agent_fd;
     }
 
     return true;
@@ -638,11 +562,9 @@ void BackhaulManager::platform_notify_error(bpl::eErrorCode code, const std::str
     m_platform_manager_client->send_cmdu(cmdu_tx);
 }
 
-bool BackhaulManager::finalize_slaves_connect_state(bool fConnected,
-                                                    std::shared_ptr<sRadioInfo> pSocket)
+bool BackhaulManager::finalize_slaves_connect_state(bool fConnected)
 {
-    LOG(TRACE) << __func__ << ": fConnected=" << int(fConnected) << std::hex
-               << ", pSocket=" << pSocket;
+    LOG(TRACE) << __func__ << ": fConnected=" << fConnected;
     // Backhaul Connected Notification
     if (fConnected) {
 
@@ -679,37 +601,40 @@ bool BackhaulManager::finalize_slaves_connect_state(bool fConnected,
                     tlvf::mac_from_string(beerocks::net::network_utils::ZERO_MAC_STRING);
                 notification->params().backhaul_iface_type  = IFACE_TYPE_ETHERNET;
                 notification->params().backhaul_is_wireless = 0;
-                for (auto soc : slaves_sockets) {
+                for (auto &radio_info : m_radios_info) {
 
-                    if (soc->sta_wlan_hal) {
-                        soc->sta_wlan_hal.reset();
+                    if (radio_info->sta_wlan_hal) {
+                        radio_info->sta_wlan_hal.reset();
                     }
-                    if (soc->sta_hal_ext_events !=
+                    if (radio_info->sta_hal_ext_events !=
                         beerocks::net::FileDescriptor::invalid_descriptor) {
-                        m_event_loop->remove_handlers(soc->sta_hal_ext_events);
-                        soc->sta_hal_ext_events = beerocks::net::FileDescriptor::invalid_descriptor;
+                        m_event_loop->remove_handlers(radio_info->sta_hal_ext_events);
+                        radio_info->sta_hal_ext_events =
+                            beerocks::net::FileDescriptor::invalid_descriptor;
                     }
-                    if (soc->sta_hal_int_events !=
+                    if (radio_info->sta_hal_int_events !=
                         beerocks::net::FileDescriptor::invalid_descriptor) {
-                        m_event_loop->remove_handlers(soc->sta_hal_int_events);
-                        soc->sta_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
+                        m_event_loop->remove_handlers(radio_info->sta_hal_int_events);
+                        radio_info->sta_hal_int_events =
+                            beerocks::net::FileDescriptor::invalid_descriptor;
                     }
                 }
 
             } else {
 
                 // Find the slave handling the wireless interface
-                for (auto soc : slaves_sockets) {
-                    if (soc->sta_iface == db->backhaul.selected_iface_name) {
+                for (auto &radio_info : m_radios_info) {
+                    if (radio_info->sta_iface == db->backhaul.selected_iface_name) {
 
                         // Mark the slave as the backhaul manager
-                        soc->slave_is_backhaul_manager = true;
-                        backhaul_manager_exist         = true;
+                        radio_info->slave_is_backhaul_manager = true;
+                        backhaul_manager_exist                = true;
 
                         notification->params().backhaul_bssid =
-                            tlvf::mac_from_string(soc->sta_wlan_hal->get_bssid());
+                            tlvf::mac_from_string(radio_info->sta_wlan_hal->get_bssid());
                         // notification->params().backhaul_freq          = son::wireless_utils::channel_to_freq(soc->sta_wlan_hal->get_channel()); // HACK temp disabled because of a bug on endian converter
-                        notification->params().backhaul_channel = soc->sta_wlan_hal->get_channel();
+                        notification->params().backhaul_channel =
+                            radio_info->sta_wlan_hal->get_channel();
                         // TODO - Specify true WiFi model from config (safe to derive from hostap_iface_type?)
                         notification->params().backhaul_iface_type  = IFACE_TYPE_WIFI_INTEL;
                         notification->params().backhaul_is_wireless = 1;
@@ -717,21 +642,21 @@ bool BackhaulManager::finalize_slaves_connect_state(bool fConnected,
                         // HACK - needs to be controlled from slave
 
                         // Mark the slave as non backhaul manager
-                        soc->slave_is_backhaul_manager = false;
+                        radio_info->slave_is_backhaul_manager = false;
                         // detach from unused stations
-                        if (soc->sta_wlan_hal) {
-                            soc->sta_wlan_hal.reset();
+                        if (radio_info->sta_wlan_hal) {
+                            radio_info->sta_wlan_hal.reset();
                         }
-                        if (soc->sta_hal_ext_events !=
+                        if (radio_info->sta_hal_ext_events !=
                             beerocks::net::FileDescriptor::invalid_descriptor) {
-                            m_event_loop->remove_handlers(soc->sta_hal_ext_events);
-                            soc->sta_hal_ext_events =
+                            m_event_loop->remove_handlers(radio_info->sta_hal_ext_events);
+                            radio_info->sta_hal_ext_events =
                                 beerocks::net::FileDescriptor::invalid_descriptor;
                         }
-                        if (soc->sta_hal_int_events !=
+                        if (radio_info->sta_hal_int_events !=
                             beerocks::net::FileDescriptor::invalid_descriptor) {
-                            m_event_loop->remove_handlers(soc->sta_hal_int_events);
-                            soc->sta_hal_int_events =
+                            m_event_loop->remove_handlers(radio_info->sta_hal_int_events);
+                            radio_info->sta_hal_int_events =
                                 beerocks::net::FileDescriptor::invalid_descriptor;
                         }
                     }
@@ -754,75 +679,42 @@ bool BackhaulManager::finalize_slaves_connect_state(bool fConnected,
         // handle case when backhaul manager slave is not selected
         if (!backhaul_manager_exist) {
             if (!config_const_bh_slave.empty()) {
-                for (auto &soc : slaves_sockets) {
-                    if (soc->hostap_iface == config_const_bh_slave) {
+                for (auto &radio_info : m_radios_info) {
+                    if (radio_info->hostap_iface == config_const_bh_slave) {
                         LOG(INFO) << "Configured slave for constant BH manager was found: "
                                   << config_const_bh_slave;
-                        soc->slave_is_backhaul_manager = true;
+                        radio_info->slave_is_backhaul_manager = true;
                         break;
                     }
                 }
             } else {
-                if (!slaves_sockets.empty()) {
+                if (!m_radios_info.empty()) {
                     LOG(WARNING)
                         << "backhaul_manager slave was not found, select first connected slave: "
-                        << "hostap_iface=" << slaves_sockets.front()->hostap_iface
-                        << ", sta_iface=" << slaves_sockets.front()->hostap_iface;
-                    slaves_sockets.front()->slave_is_backhaul_manager = true;
+                        << "hostap_iface=" << m_radios_info.front()->hostap_iface
+                        << ", sta_iface=" << m_radios_info.front()->sta_iface;
+                    m_radios_info.front()->slave_is_backhaul_manager = true;
                 }
             }
         }
 
-        // Send the message(s)
-        for (auto sc : slaves_sockets) {
-
-            LOG(DEBUG) << "Iterating on slave " << sc->hostap_iface;
-
-            // If the notification should be sent to a specific socket, skip all other
-            if (pSocket != nullptr && pSocket != sc) {
-                LOG(DEBUG) << "notification should be sent to slave " << pSocket->hostap_iface
-                           << " skipping " << sc->hostap_iface;
-                continue;
-            }
-
-            // note: On wired connections ore GW, the first connected slave is selected as the backhaul manager
-            notification->params().is_backhaul_manager = sc->slave_is_backhaul_manager;
-
-            if (db->device_conf.local_gw) {
-                LOG(DEBUG) << "Sending GW_MASTER CONNECTED notification to slave of '"
-                           << sc->hostap_iface << "'";
-            } else {
-
-                LOG(DEBUG) << "Sending CONNECTED notification to slave of '" << sc->sta_iface
-                           << "' - Mac: " << iface_info.mac << ", IP: " << bridge_info.ip
-                           << ", GW_IP: " << bridge_info.ip_gw
-                           << ", Slave is Backhaul Manager: " << int(sc->slave_is_backhaul_manager);
-            }
-            send_cmdu(sc->slave, cmdu_tx);
-
-        } // end for (auto sc : slaves_sockets)
+        // Send the message
+        send_cmdu(m_agent_fd, cmdu_tx);
 
         // Backhaul Disconnected Notification
     } else {
 
-        for (auto sc : slaves_sockets) {
-            // If the notification should be sent to a specific socket, skip all other
-            if (pSocket != nullptr && pSocket != sc) {
-                continue;
-            }
-
-            auto notification = message_com::create_vs_message<
-                beerocks_message::cACTION_BACKHAUL_DISCONNECTED_NOTIFICATION>(cmdu_tx);
-            if (notification == nullptr) {
-                LOG(ERROR) << "Failed building message!";
-                return false;
-            }
-
-            notification->stopped() =
-                (uint8_t)(configuration_stop_on_failure_attempts && !stop_on_failure_attempts);
-            LOG(DEBUG) << "Sending DISCONNECTED notification to slave of " << sc->hostap_iface;
-            send_cmdu(sc->slave, cmdu_tx);
+        auto notification = message_com::create_vs_message<
+            beerocks_message::cACTION_BACKHAUL_DISCONNECTED_NOTIFICATION>(cmdu_tx);
+        if (notification == nullptr) {
+            LOG(ERROR) << "Failed building message!";
+            return false;
         }
+
+        notification->stopped() =
+            (uint8_t)(configuration_stop_on_failure_attempts && !stop_on_failure_attempts);
+        LOG(DEBUG) << "Sending DISCONNECTED notification";
+        send_cmdu(m_agent_fd, cmdu_tx);
     }
 
     return true;
@@ -883,17 +775,6 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
     }
     // Wait for Enable command
     case EState::WAIT_ENABLE: {
-        auto db = AgentDB::get();
-        if (!onboarding && !db->device_conf.local_gw &&
-            std::chrono::steady_clock::now() > state_time_stamp_timeout) {
-            LOG(ERROR) << STATE_WAIT_ENABLE_TIMEOUT_SECONDS
-                       << " seconds has passed on state WAIT_ENABLE, stopping thread!";
-            return false;
-        } else if (pending_enable) {
-            LOG(DEBUG) << "pending_enable = " << int(pending_enable);
-            pending_enable = false;
-            FSM_MOVE_STATE(ENABLED);
-        }
         break;
     }
     // Received Backhaul Enable command
@@ -928,72 +809,72 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
             FSM_MOVE_STATE(MASTER_DISCOVERY);
             db->backhaul.connection_type = AgentDB::sBackhaul::eConnectionType::Invalid;
             db->backhaul.selected_iface_name.clear();
-        } else { // link establish
+            break;
+        }
 
-            auto ifaces = beerocks::net::network_utils::linux_get_iface_list_from_bridge(
-                db->bridge.iface_name);
+        // link establish
+        auto ifaces =
+            beerocks::net::network_utils::linux_get_iface_list_from_bridge(db->bridge.iface_name);
 
-            // If a wired (WAN) interface was provided, try it first, check if the interface is UP
-            wan_monitor::ELinkState wired_link_state = wan_monitor::ELinkState::eInvalid;
-            if (!db->device_conf.local_gw && !db->ethernet.wan.iface_name.empty()) {
-                wired_link_state = wan_mon.initialize(db->ethernet.wan.iface_name);
-                // Failure might be due to insufficient permissions, datailed error message is being
-                // printed inside.
-                if (wired_link_state == wan_monitor::ELinkState::eInvalid) {
-                    LOG(WARNING) << "wan_mon.initialize() failed, skip wired link establishment";
-                }
+        // If a wired (WAN) interface was provided, try it first, check if the interface is UP
+        wan_monitor::ELinkState wired_link_state = wan_monitor::ELinkState::eInvalid;
+        if (!db->device_conf.local_gw && !db->ethernet.wan.iface_name.empty()) {
+            wired_link_state = wan_mon.initialize(db->ethernet.wan.iface_name);
+            // Failure might be due to insufficient permissions, datailed error message is being
+            // printed inside.
+            if (wired_link_state == wan_monitor::ELinkState::eInvalid) {
+                LOG(WARNING) << "wan_mon.initialize() failed, skip wired link establishment";
             }
-            if ((wired_link_state == wan_monitor::ELinkState::eUp) &&
-                (m_selected_backhaul.empty() || m_selected_backhaul == DEV_SET_ETH)) {
+        }
+        if ((wired_link_state == wan_monitor::ELinkState::eUp) &&
+            (m_selected_backhaul.empty() || m_selected_backhaul == DEV_SET_ETH)) {
 
-                auto it = std::find(ifaces.begin(), ifaces.end(), db->ethernet.wan.iface_name);
-                if (it == ifaces.end()) {
-                    LOG(ERROR) << "wire iface " << db->ethernet.wan.iface_name
-                               << " is not on the bridge";
+            auto it = std::find(ifaces.begin(), ifaces.end(), db->ethernet.wan.iface_name);
+            if (it == ifaces.end()) {
+                LOG(ERROR) << "wire iface " << db->ethernet.wan.iface_name
+                           << " is not on the bridge";
+                FSM_MOVE_STATE(RESTART);
+                break;
+            }
+
+            // Mark the connection as WIRED
+            db->backhaul.connection_type     = AgentDB::sBackhaul::eConnectionType::Wired;
+            db->backhaul.selected_iface_name = db->ethernet.wan.iface_name;
+
+        } else {
+            // If no wired backhaul is configured, or it is down, we get into this else branch.
+
+            // If selected backhaul is not empty, it's because we are in certification mode and
+            // it was given with "dev_set_config".
+            // If the RUID of the selected backhaul is null, then restart instead of continuing
+            // with the preferred backhaul.
+            if (!m_selected_backhaul.empty()) {
+                auto selected_ruid = db->get_radio_by_mac(
+                    tlvf::mac_from_string(m_selected_backhaul), AgentDB::eMacType::RADIO);
+
+                if (!selected_ruid) {
+                    LOG(ERROR) << "UCC configured backhaul RUID which is not enabled";
+                    // Restart state will update the onboarding status to failure.
                     FSM_MOVE_STATE(RESTART);
                     break;
                 }
 
-                // Mark the connection as WIRED
-                db->backhaul.connection_type     = AgentDB::sBackhaul::eConnectionType::Wired;
-                db->backhaul.selected_iface_name = db->ethernet.wan.iface_name;
-
-            } else {
-                // If no wired backhaul is configured, or it is down, we get into this else branch.
-
-                // If selected backhaul is not empty, it's because we are in certification mode and
-                // it was given with "dev_set_config".
-                // If the RUID of the selected backhaul is null, then restart instead of continuing
-                // with the preferred backhaul.
-                if (!m_selected_backhaul.empty()) {
-                    auto selected_ruid = db->get_radio_by_mac(
-                        tlvf::mac_from_string(m_selected_backhaul), AgentDB::eMacType::RADIO);
-
-                    if (!selected_ruid) {
-                        LOG(ERROR) << "UCC configured backhaul RUID which is not enabled";
-                        // Restart state will update the onboarding status to failure.
-                        FSM_MOVE_STATE(RESTART);
-                        break;
-                    }
-
-                    // Override backhaul_preferred_radio_band if UCC set it
-                    db->device_conf.back_radio.backhaul_preferred_radio_band =
-                        selected_ruid->freq_type;
-                }
-
-                // Mark the connection as WIRELESS
-                db->backhaul.connection_type = AgentDB::sBackhaul::eConnectionType::Wireless;
+                // Override backhaul_preferred_radio_band if UCC set it
+                db->device_conf.back_radio.backhaul_preferred_radio_band = selected_ruid->freq_type;
             }
 
-            // Move to the next state immediately
-            if (db->backhaul.connection_type == AgentDB::sBackhaul::eConnectionType::Wireless) {
-                FSM_MOVE_STATE(INIT_HAL);
-            } else { // EType::Wired
-                FSM_MOVE_STATE(MASTER_DISCOVERY);
-            }
-
-            skip_select = true;
+            // Mark the connection as WIRELESS
+            db->backhaul.connection_type = AgentDB::sBackhaul::eConnectionType::Wireless;
         }
+
+        // Move to the next state immediately
+        if (db->backhaul.connection_type == AgentDB::sBackhaul::eConnectionType::Wireless) {
+            FSM_MOVE_STATE(INIT_HAL);
+        } else { // EType::Wired
+            FSM_MOVE_STATE(MASTER_DISCOVERY);
+        }
+
+        skip_select = true;
         break;
     }
     case EState::MASTER_DISCOVERY: {
@@ -1107,28 +988,7 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
         //     m_eth_link_up       = beerocks::net::network_utils::linux_iface_is_up_and_running(
         //         db->ethernet.wan.iface_name);
         // }
-        FSM_MOVE_STATE(PRE_OPERATIONAL);
-        break;
-    }
-    case EState::PRE_OPERATIONAL: {
-        auto db = AgentDB::get();
-
-        // if ap-autoconfiguration is completed and there are slaves to be finalized, finalize them as connected
-        if (db->statuses.ap_autoconfiguration_completed && !m_slaves_sockets_to_finalize.empty()) {
-            for (auto slave : m_slaves_sockets_to_finalize) {
-                finalize_slaves_connect_state(true, slave);
-            }
-            m_slaves_sockets_to_finalize.clear();
-        }
-
-        if (pending_enable &&
-            db->backhaul.connection_type != AgentDB::sBackhaul::eConnectionType::Invalid) {
-            pending_enable = false;
-        }
-
-        if (m_slaves_sockets_to_finalize.empty() && !pending_enable) {
-            FSM_MOVE_STATE(OPERATIONAL);
-        }
+        FSM_MOVE_STATE(OPERATIONAL);
         break;
     }
     // Backhaul manager is OPERATIONAL!
@@ -1179,30 +1039,29 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
 
         auto db = AgentDB::get();
 
-        for (auto soc : slaves_sockets) {
-            std::string iface = soc->sta_iface;
-
-            auto radio = db->radio(soc->sta_iface);
+        for (auto &radio_info : m_radios_info) {
+            auto radio = db->radio(radio_info->sta_iface);
             if (!radio) {
-                LOG(DEBUG) << "Radio of iface " << soc->sta_iface << " does not exist on the db";
                 continue;
             }
             // Clear the backhaul interface mac.
             radio->back.iface_mac = beerocks::net::network_utils::ZERO_MAC;
 
-            if (soc->sta_wlan_hal) {
-                soc->sta_wlan_hal.reset();
+            if (radio_info->sta_wlan_hal) {
+                radio_info->sta_wlan_hal.reset();
             }
-            if (soc->sta_hal_ext_events != beerocks::net::FileDescriptor::invalid_descriptor) {
-                m_event_loop->remove_handlers(soc->sta_hal_ext_events);
-                soc->sta_hal_ext_events = beerocks::net::FileDescriptor::invalid_descriptor;
+            if (radio_info->sta_hal_ext_events !=
+                beerocks::net::FileDescriptor::invalid_descriptor) {
+                m_event_loop->remove_handlers(radio_info->sta_hal_ext_events);
+                radio_info->sta_hal_ext_events = beerocks::net::FileDescriptor::invalid_descriptor;
             }
-            if (soc->sta_hal_int_events != beerocks::net::FileDescriptor::invalid_descriptor) {
-                m_event_loop->remove_handlers(soc->sta_hal_int_events);
-                soc->sta_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
+            if (radio_info->sta_hal_int_events !=
+                beerocks::net::FileDescriptor::invalid_descriptor) {
+                m_event_loop->remove_handlers(radio_info->sta_hal_int_events);
+                radio_info->sta_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
             }
 
-            soc->slave_is_backhaul_manager = false;
+            radio_info->slave_is_backhaul_manager = false;
         }
 
         finalize_slaves_connect_state(false); //send disconnect to all connected slaves
@@ -1210,10 +1069,6 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
         // wait again for enable from each slave before proceeding to attach
         pending_slave_sta_ifaces.clear();
         pending_slave_sta_ifaces = slave_sta_ifaces;
-
-        pending_slave_ifaces.clear();
-        pending_slave_ifaces = slave_ap_ifaces;
-        pending_enable       = false;
 
         if (configuration_stop_on_failure_attempts && !stop_on_failure_attempts) {
             LOG(ERROR) << "Reached to max stop on failure attempts!";
@@ -1258,46 +1113,47 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
 
         auto db = AgentDB::get();
 
-        for (auto soc : slaves_sockets) {
-            std::string iface = soc->sta_iface;
-            if (iface.empty())
+        for (auto &radio_info : m_radios_info) {
+            std::string iface = radio_info->sta_iface;
+            if (radio_info->sta_iface.empty())
                 continue;
 
-            LOG(DEBUG) << FSM_CURR_STATE_STR << " iface: " << iface;
+            LOG(DEBUG) << FSM_CURR_STATE_STR << " iface: " << radio_info->sta_iface;
 
             // Create a HAL instance if doesn't exists
-            if (!soc->sta_wlan_hal) {
+            if (!radio_info->sta_wlan_hal) {
 
                 bwl::hal_conf_t hal_conf;
 
-                if (!beerocks::bpl::bpl_cfg_get_wpa_supplicant_ctrl_path(iface,
+                if (!beerocks::bpl::bpl_cfg_get_wpa_supplicant_ctrl_path(radio_info->sta_iface,
                                                                          hal_conf.wpa_ctrl_path)) {
                     LOG(ERROR) << "Couldn't get hostapd control path";
                     return false;
                 }
 
                 using namespace std::placeholders; // for `_1`
-                soc->sta_wlan_hal = bwl::sta_wlan_hal_create(
-                    iface, std::bind(&BackhaulManager::hal_event_handler, this, _1, iface),
+                radio_info->sta_wlan_hal = bwl::sta_wlan_hal_create(
+                    radio_info->sta_iface,
+                    std::bind(&BackhaulManager::hal_event_handler, this, _1, radio_info->sta_iface),
                     hal_conf);
-                LOG_IF(!soc->sta_wlan_hal, FATAL) << "Failed creating HAL instance!";
+                LOG_IF(!radio_info->sta_wlan_hal, FATAL) << "Failed creating HAL instance!";
             } else {
                 LOG(DEBUG) << "STA HAL exists...";
             }
 
             // Attach in BLOCKING mode
-            auto attach_state = soc->sta_wlan_hal->attach(true);
+            auto attach_state = radio_info->sta_wlan_hal->attach(true);
             if (attach_state == bwl::HALState::Operational) {
 
                 // Events
-                int ext_events_fd = soc->sta_wlan_hal->get_ext_events_fd();
-                int int_events_fd = soc->sta_wlan_hal->get_int_events_fd();
+                int ext_events_fd = radio_info->sta_wlan_hal->get_ext_events_fd();
+                int int_events_fd = radio_info->sta_wlan_hal->get_int_events_fd();
                 if (ext_events_fd >= 0 && int_events_fd) {
                     beerocks::EventLoop::EventHandlers ext_events_handlers{
                         .name = "sta_hal_ext_events",
                         .on_read =
-                            [soc](int fd, EventLoop &loop) {
-                                soc->sta_wlan_hal->process_ext_events();
+                            [radio_info](int fd, EventLoop &loop) {
+                                radio_info->sta_wlan_hal->process_ext_events();
                                 return true;
                             },
                     };
@@ -1307,13 +1163,13 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
                     }
 
                     LOG(DEBUG) << "External events queue with fd = " << ext_events_fd;
-                    soc->sta_hal_ext_events = ext_events_fd;
+                    radio_info->sta_hal_ext_events = ext_events_fd;
 
                     beerocks::EventLoop::EventHandlers int_events_handlers{
                         .name = "sta_hal_int_events",
                         .on_read =
-                            [soc](int fd, EventLoop &loop) {
-                                soc->sta_wlan_hal->process_int_events();
+                            [radio_info](int fd, EventLoop &loop) {
+                                radio_info->sta_wlan_hal->process_int_events();
                                 return true;
                             },
                     };
@@ -1323,7 +1179,7 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
                     }
 
                     LOG(DEBUG) << "Internal events queue with fd = " << int_events_fd;
-                    soc->sta_hal_int_events = int_events_fd;
+                    radio_info->sta_hal_int_events = int_events_fd;
                 } else {
                     LOG(ERROR) << "Invalid event file descriptors - "
                                << "External = " << ext_events_fd
@@ -1355,18 +1211,19 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
                 //     break;
                 // }
 
-                auto radio = db->radio(soc->sta_iface);
+                auto radio = db->radio(radio_info->sta_iface);
                 if (!radio) {
-                    LOG(DEBUG) << "Radio of iface " << soc->sta_iface
+                    LOG(DEBUG) << "Radio of iface " << radio_info->sta_iface
                                << " does not exist on the db";
                     continue;
                 }
                 // Update the backhaul interface mac.
-                radio->back.iface_mac = tlvf::mac_from_string(soc->sta_wlan_hal->get_radio_mac());
+                radio->back.iface_mac =
+                    tlvf::mac_from_string(radio_info->sta_wlan_hal->get_radio_mac());
 
             } else if (attach_state == bwl::HALState::Failed) {
                 // Delete the HAL instance
-                soc->sta_wlan_hal.reset();
+                radio_info->sta_wlan_hal.reset();
                 success = false;
                 break;
             }
@@ -1394,7 +1251,7 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
     // Wait for WPS command
     case EState::WAIT_WPS: {
         auto db = AgentDB::get();
-        if (!onboarding && !db->device_conf.local_gw &&
+        if (!db->device_conf.local_gw &&
             std::chrono::steady_clock::now() > state_time_stamp_timeout) {
             LOG(ERROR) << STATE_WAIT_WPS_TIMEOUT_SECONDS
                        << " seconds has passed on state WAIT_WPS, stopping thread!";
@@ -1436,14 +1293,14 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
             beerocks::eFreqType::FREQ_AUTO) {
             preferred_band_is_available = true;
         } else {
-            for (auto soc : slaves_sockets) {
-                if (soc->sta_iface.empty())
+            for (const auto &radios_info : m_radios_info) {
+                if (radios_info->sta_iface.empty())
                     continue;
-                if (!soc->sta_wlan_hal) {
-                    LOG(WARNING) << "Sta_hal of " << soc->sta_iface << " is null";
+                if (!radios_info->sta_wlan_hal) {
+                    LOG(WARNING) << "Sta_hal of " << radios_info->sta_iface << " is null";
                     continue;
                 }
-                auto radio = db->radio(soc->hostap_iface);
+                auto radio = db->radio(radios_info->hostap_iface);
                 if (!radio) {
                     continue;
                 }
@@ -1458,16 +1315,16 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
         bool success        = true;
         bool scan_triggered = false;
 
-        for (auto soc : slaves_sockets) {
-            if (soc->sta_iface.empty())
+        for (const auto &radios_info : m_radios_info) {
+            if (radios_info->sta_iface.empty())
                 continue;
 
-            if (!soc->sta_wlan_hal) {
-                LOG(WARNING) << "Sta_hal of " << soc->sta_iface << " is null";
+            if (!radios_info->sta_wlan_hal) {
+                LOG(WARNING) << "Sta_hal of " << radios_info->sta_iface << " is null";
                 continue;
             }
 
-            auto radio = db->radio(soc->hostap_iface);
+            auto radio = db->radio(radios_info->hostap_iface);
             if (!radio) {
                 continue;
             }
@@ -1476,23 +1333,22 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
                 db->device_conf.back_radio.backhaul_preferred_radio_band !=
                     beerocks::eFreqType::FREQ_AUTO &&
                 db->device_conf.back_radio.backhaul_preferred_radio_band != radio->freq_type) {
-                LOG(DEBUG) << "slave iface=" << soc->sta_iface
+                LOG(DEBUG) << "slave iface=" << radios_info->sta_iface
                            << " is not of the preferred backhaul band";
                 continue;
             }
 
-            std::string iface = soc->sta_iface;
-            pending_slave_sta_ifaces.insert(iface);
+            pending_slave_sta_ifaces.insert(radios_info->sta_iface);
 
-            if (!soc->sta_wlan_hal->initiate_scan()) {
-                LOG(ERROR) << "initiate_scan for iface " << iface << " failed!";
+            if (!radios_info->sta_wlan_hal->initiate_scan()) {
+                LOG(ERROR) << "initiate_scan for iface " << radios_info->sta_iface << " failed!";
                 platform_notify_error(bpl::eErrorCode::BH_SCAN_FAILED_TO_INITIATE_SCAN,
-                                      "iface='" + iface + "'");
+                                      "iface='" + radios_info->sta_iface + "'");
                 success = false;
                 break;
             }
             scan_triggered = true;
-            LOG(INFO) << "wait for scan results on iface " << iface;
+            LOG(INFO) << "wait for scan results on iface " << radios_info->sta_iface;
         }
 
         if (!success || !scan_triggered) {
@@ -1525,12 +1381,12 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
 
         // Disconnect is necessary before changing 4addr mode, to make sure wpa_supplicant is not using the iface
         if (hidden_ssid) {
-            for (auto soc : slaves_sockets) {
-                if (!soc->sta_wlan_hal || soc->sta_iface.empty())
+            for (auto &radios_info : m_radios_info) {
+                if (!radios_info->sta_wlan_hal || radios_info->sta_iface.empty())
                     continue;
-                std::string iface = soc->sta_iface;
-                soc->sta_wlan_hal->disconnect();
-                soc->sta_wlan_hal->set_4addr_mode(true);
+                std::string iface = radios_info->sta_iface;
+                radios_info->sta_wlan_hal->disconnect();
+                radios_info->sta_wlan_hal->set_4addr_mode(true);
             }
         } else {
             auto active_hal = get_wireless_hal();
@@ -1683,15 +1539,8 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
     return (true);
 }
 
-bool BackhaulManager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo> soc,
-                                                    ieee1905_1::CmduMessageRx &cmdu_rx)
+bool BackhaulManager::handle_slave_backhaul_message(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
 {
-    // Validate Socket
-    if (!soc) {
-        LOG(ERROR) << "slave socket is nullptr!";
-        return false;
-    }
-
     auto beerocks_header = message_com::parse_intel_vs_message(cmdu_rx);
     if (!beerocks_header) {
         LOG(WARNING) << "Not a beerocks vendor specific message";
@@ -1708,26 +1557,11 @@ bool BackhaulManager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo> 
     // Handle messages
     switch (beerocks_header->action_op()) {
     case beerocks_message::ACTION_BACKHAUL_REGISTER_REQUEST: {
-        auto request =
-            beerocks_header->addClass<beerocks_message::cACTION_BACKHAUL_REGISTER_REQUEST>();
-        if (!request) {
-            LOG(ERROR) << "addClass cACTION_BACKHAUL_REGISTER_REQUEST failed";
-            return false;
-        }
 
-        auto db = AgentDB::get();
-
-        soc->sta_iface.assign(request->sta_iface(message::IFACE_NAME_LENGTH));
-        soc->hostap_iface.assign(request->hostap_iface(message::IFACE_NAME_LENGTH));
-
-        auto agent_name = std::move(std::string("agent_").append(soc->hostap_iface));
-        LOG(DEBUG) << "Assigning FD (" << soc->slave << ") to " << agent_name;
-        m_cmdu_server->set_client_name(soc->slave, agent_name);
-
-        onboarding = request->onboarding();
-
-        // Add the slave socket to the backhaul configuration
-        m_sConfig.slave_iface_socket[soc->sta_iface] = soc;
+        m_agent_fd      = fd;
+        auto agent_name = std::move(std::string("agent"));
+        LOG(DEBUG) << "Assigning FD (" << fd << ") to " << agent_name;
+        m_cmdu_server->set_client_name(fd, agent_name);
 
         if (!m_agent_ucc_listener && m_ucc_server) {
             m_agent_ucc_listener =
@@ -1749,8 +1583,7 @@ bool BackhaulManager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo> 
             m_agent_ucc_listener->set_handlers(handlers);
         }
 
-        LOG(DEBUG) << "ACTION_BACKHAUL_REGISTER_REQUEST sta_iface=" << soc->sta_iface
-                   << " hostap_iface=" << soc->hostap_iface;
+        LOG(DEBUG) << "Received ACTION_BACKHAUL_REGISTER_REQUEST";
 
         auto register_response =
             message_com::create_vs_message<beerocks_message::cACTION_BACKHAUL_REGISTER_RESPONSE>(
@@ -1761,29 +1594,54 @@ bool BackhaulManager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo> 
             return false;
         }
 
-        send_cmdu(soc->slave, cmdu_tx);
+        send_cmdu(fd, cmdu_tx);
+        LOG(DEBUG) << "Sent ACTION_BACKHAUL_REGISTER_RESPONSE";
         break;
     }
 
     case beerocks_message::ACTION_BACKHAUL_ENABLE: {
 
-        auto request = beerocks_header->addClass<beerocks_message::cACTION_BACKHAUL_ENABLE>();
-        if (!request) {
-            LOG(ERROR) << "addClass cACTION_BACKHAUL_ENABLE failed";
-            return false;
+        LOG(DEBUG) << "Received ACTION_BACKHAUL_ENABLE";
+
+        auto db = AgentDB::get();
+
+        // Adding only radios which does not exist in the backhaul m_radios_info list.
+        // This allows to keep the backhaul connection if exists and report "connected" to the Agent
+        // immediately.
+        for (auto radio : db->get_radios_list()) {
+            if (!radio) {
+                continue;
+            }
+
+            auto found =
+                std::find_if(m_radios_info.begin(), m_radios_info.end(),
+                             [&](const std::shared_ptr<sRadioInfo> &radio_info) {
+                                 if ((!radio->front.iface_name.empty() &&
+                                      radio_info->hostap_iface == radio->front.iface_name) ||
+                                     (!radio_info->sta_iface.empty() &&
+                                      radio_info->sta_iface == radio->back.iface_name)) {
+                                     return true;
+                                 }
+                                 return false;
+                             });
+
+            LOG(DEBUG) << "Radio found=" << (found != m_radios_info.end());
+
+            auto radio_info = std::shared_ptr<sRadioInfo>();
+            if (found == m_radios_info.end()) {
+                // If a radio hasn't been found in the radios_info lists then add it.
+                radio_info               = std::make_shared<sRadioInfo>();
+                radio_info->hostap_iface = radio->front.iface_name;
+                radio_info->sta_iface    = radio->back.iface_name;
+                LOG(DEBUG) << "Pushing new Radio";
+                m_radios_info.push_back(radio_info);
+            } else {
+                radio_info = *found;
+                LOG(DEBUG) << "Updating new Radio";
+            }
+
+            radio_info->radio_mac = radio->front.iface_mac;
         }
-
-        auto db    = AgentDB::get();
-        auto radio = db->radio(soc->hostap_iface);
-        if (!radio) {
-            LOG(DEBUG) << "Radio of iface " << soc->hostap_iface << " does not exist on the db";
-            return false;
-        }
-
-        soc->radio_mac = request->iface_mac();
-
-        LOG(DEBUG) << "ACTION_BACKHAUL_ENABLE hostap_iface=" << soc->hostap_iface
-                   << " sta_iface=" << soc->sta_iface << " band=" << int(request->frequency_band());
 
         if (m_eFSMState >= EState::CONNECT_TO_MASTER) {
             LOG(INFO) << "Sending topology notification on reconnected son_slave";
@@ -1792,63 +1650,46 @@ bool BackhaulManager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo> 
         }
 
         // If we're already connected, send a notification to the slave
-        if (FSM_IS_IN_STATE(OPERATIONAL) || FSM_IS_IN_STATE(PRE_OPERATIONAL)) {
+        if (FSM_IS_IN_STATE(OPERATIONAL)) {
             m_task_pool.send_event(eTaskType::AP_AUTOCONFIGURATION,
-                                   ApAutoConfigurationTask::eEvent::START_AP_AUTOCONFIGURATION,
-                                   &radio->front.iface_name);
-            // finalize current slave after ap-autoconfiguration is complete
-            m_slaves_sockets_to_finalize.push_back(soc);
-            FSM_MOVE_STATE(PRE_OPERATIONAL);
-        } else if (pending_enable) {
-            auto notification = message_com::create_vs_message<
-                beerocks_message::cACTION_BACKHAUL_BUSY_NOTIFICATION>(cmdu_tx);
-            if (notification == nullptr) {
-                LOG(ERROR) << "Failed building cACTION_BACKHAUL_BUSY_NOTIFICATION message!";
-                break;
-            }
-            send_cmdu(soc->slave, cmdu_tx);
-        } else {
-            pending_slave_ifaces.erase(soc->hostap_iface);
+                                   ApAutoConfigurationTask::eEvent::START_AP_AUTOCONFIGURATION);
 
-            if (pending_slave_ifaces.empty()) {
-
-                LOG(DEBUG) << "All pending slaves have sent us backhaul enable!";
-
-                // All pending slaves have sent us backhaul enable which means we can proceed to
-                // the scan->connect->operational flow.
-                pending_enable = true;
-
-                if (db->device_conf.local_gw) {
-                    LOG(DEBUG) << "All slaves ready, proceeding, local GW, Bridge: "
-                               << db->bridge.iface_name;
-                } else {
-                    if (db->device_conf.back_radio.backhaul_preferred_radio_band ==
-                        beerocks::eFreqType::FREQ_UNKNOWN) {
-                        LOG(DEBUG) << "Unknown backhaul preferred radio band, setting to auto";
-                        m_sConfig.backhaul_preferred_radio_band = beerocks::eFreqType::FREQ_AUTO;
-                    } else {
-                        m_sConfig.backhaul_preferred_radio_band =
-                            db->device_conf.back_radio.backhaul_preferred_radio_band;
-                    }
-
-                    // Change mixed state to WPA2
-                    if (db->device_conf.back_radio.security_type == bwl::WiFiSec::WPA_WPA2_PSK) {
-                        db->device_conf.back_radio.security_type = bwl::WiFiSec::WPA2_PSK;
-                    }
-
-                    LOG(DEBUG) << "All slaves ready, proceeding" << std::endl
-                               << "SSID: " << db->device_conf.back_radio.ssid << ", Pass: ****"
-                               << ", Security: " << db->device_conf.back_radio.security_type
-                               << ", Bridge: " << db->bridge.iface_name
-                               << ", Wired: " << db->ethernet.wan.iface_name;
-                }
-            }
+            // When the Auto-Configuration completes, a connection notification will be sent to the
+            // Agent.
+            FSM_MOVE_STATE(WAIT_FOR_AUTOCONFIG_COMPLETE);
+            break;
         }
+
+        if (db->device_conf.local_gw) {
+            FSM_MOVE_STATE(ENABLED);
+            break;
+        }
+
+        if (db->device_conf.back_radio.backhaul_preferred_radio_band ==
+            beerocks::eFreqType::FREQ_UNKNOWN) {
+            LOG(DEBUG) << "Unknown backhaul preferred radio band, setting to auto";
+            m_sConfig.backhaul_preferred_radio_band = beerocks::eFreqType::FREQ_AUTO;
+        } else {
+            m_sConfig.backhaul_preferred_radio_band =
+                db->device_conf.back_radio.backhaul_preferred_radio_band;
+        }
+
+        // Change mixed state to WPA2
+        if (db->device_conf.back_radio.security_type == bwl::WiFiSec::WPA_WPA2_PSK) {
+            db->device_conf.back_radio.security_type = bwl::WiFiSec::WPA2_PSK;
+        }
+
+        LOG(DEBUG) << "Agent is ready, proceeding" << std::endl
+                   << "SSID: " << db->device_conf.back_radio.ssid << ", Pass: ****"
+                   << ", Security: " << db->device_conf.back_radio.security_type
+                   << ", Bridge: " << db->bridge.iface_name
+                   << ", Wired: " << db->ethernet.wan.iface_name;
+
+        FSM_MOVE_STATE(ENABLED);
         break;
     }
     case beerocks_message::ACTION_BACKHAUL_UPDATE_STOP_ON_FAILURE_ATTEMPTS_REQUEST: {
-        LOG(DEBUG) << "ACTION_BACKHAUL_UPDATE_STOP_ON_FAILURE_ATTEMPTS_REQUEST received from iface "
-                   << soc->sta_iface;
+        LOG(DEBUG) << "Received ACTION_BACKHAUL_UPDATE_STOP_ON_FAILURE_ATTEMPTS_REQUEST";
         auto request_in = beerocks_header->addClass<
             beerocks_message::cACTION_BACKHAUL_UPDATE_STOP_ON_FAILURE_ATTEMPTS_REQUEST>();
         if (!request_in) {
@@ -1882,7 +1723,7 @@ bool BackhaulManager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo> 
                 break;
             }
             response->mac() = tlvf::mac_from_string(sta_mac);
-            send_cmdu(soc->slave, cmdu_tx);
+            send_cmdu(m_agent_fd, cmdu_tx);
             LOG(DEBUG) << "send ACTION_BACKHAUL_CLIENT_RX_RSSI_MEASUREMENT_CMD_RESPONSE, sta_mac = "
                        << sta_mac;
             int bandwidth = beerocks::utils::convert_bandwidth_to_int(
@@ -1891,7 +1732,6 @@ bool BackhaulManager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo> 
                     sta_mac, request->params().channel, bandwidth,
                     request->params().vht_center_frequency, request->params().measurement_delay,
                     request->params().mon_ping_burst_pkt_num)) {
-                m_unassociated_measurement_slave_soc = soc->slave;
             } else {
                 bwl_error = true;
                 LOG(ERROR) << "unassociated_sta_rssi_measurement failed!";
@@ -1922,7 +1762,7 @@ bool BackhaulManager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo> 
             response->params().rx_rssi    = beerocks::RSSI_INVALID;
             response->params().rx_snr     = beerocks::SNR_INVALID;
             response->params().rx_packets = -1;
-            send_cmdu(soc->slave, cmdu_tx);
+            send_cmdu(m_agent_fd, cmdu_tx);
         }
         break;
     }
@@ -2013,52 +1853,43 @@ bool BackhaulManager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo> 
             return false;
         }
 
-        auto front_iface_name = msg_in->front_iface_name();
+        auto front_iface_name = msg_in->front_iface_name_str();
 
         LOG(DEBUG) << "Received ACTION_BACKHAUL_ZWDFS_RADIO_DETECTED from front_radio="
                    << front_iface_name;
 
-        // Erase the Radio interface from the pending radio interfaces list which is used to block
-        // the Backhaul manager to establish the backhaul link until all the Agent radios has sent
-        // the "Backhaul Enable" message.
-        // In case all other radio has enabled the backhaul already, mark 'pending_enable' to true,
-        // so the Backhaul manager will not stay hanged.
-        pending_slave_ifaces.erase(front_iface_name);
-        if (pending_slave_ifaces.empty()) {
-            LOG(DEBUG) << "All pending slaves have sent us backhaul enable!";
-            // All pending slaves have sent us backhaul enable, which means we can proceed to the
-            // scan->connect->operational flow.
-            pending_enable = true;
-        }
+        auto removed_it = std::remove_if(m_radios_info.begin(), m_radios_info.end(),
+                                         [&](const std::shared_ptr<sRadioInfo> &radio_info) {
+                                             return radio_info->hostap_iface == front_iface_name;
+                                         });
 
-        for (auto it = slaves_sockets.begin(); it != slaves_sockets.end();) {
-            auto slave_soc = *it;
-            if (slave_soc->hostap_iface == front_iface_name) {
-                // Backup the socket, on disabled sockets list
-                m_disabled_slave_sockets[front_iface_name] = slave_soc;
-
-                // Remove the socket reference from the backhaul
-                m_sConfig.slave_iface_socket.erase(front_iface_name);
-                it = slaves_sockets.erase(it);
-                break;
-            }
-            it++;
-        }
+        m_radios_info.erase(removed_it, m_radios_info.end());
 
         // Notify channel selection task on zwdfs radio re-connect
-        auto db    = AgentDB::get();
-        auto radio = db->radio(soc->hostap_iface);
-        if (!radio) {
-            break;
-        }
         m_task_pool.send_event(eTaskType::CHANNEL_SELECTION,
-                               ChannelSelectionTask::eEvent::AP_ENABLED, &radio->front.iface_name);
+                               ChannelSelectionTask::eEvent::AP_ENABLED, &front_iface_name);
+
+        break;
+    }
+    case beerocks_message::ACTION_BACKHAUL_AP_DISABLED_NOTIFICATION: {
+        auto msg_in = beerocks_header
+                          ->addClass<beerocks_message::cACTION_BACKHAUL_AP_DISABLED_NOTIFICATION>();
+        if (!msg_in) {
+            LOG(ERROR) << "addClass cACTION_BACKHAUL_AP_DISABLED_NOTIFICATION failed";
+            return false;
+        }
+
+        // TODO: Remove when moving channel selection task to Agent context as part of PPM-1680.
+        auto front_iface_name = msg_in->iface_str();
+        // notify channel selection task on radio disconnect
+        m_task_pool.send_event(eTaskType::CHANNEL_SELECTION,
+                               ChannelSelectionTask::eEvent::AP_DISABLED, &front_iface_name);
 
         break;
     }
     default: {
-        bool handled = m_task_pool.handle_cmdu(cmdu_rx, 0, sMacAddr(), sMacAddr(), soc->slave,
-                                               beerocks_header);
+        bool handled =
+            m_task_pool.handle_cmdu(cmdu_rx, 0, sMacAddr(), sMacAddr(), fd, beerocks_header);
         if (!handled) {
             LOG(ERROR) << "Unhandled message received from the Agent: "
                        << int(beerocks_header->action_op());
@@ -2142,22 +1973,12 @@ bool BackhaulManager::handle_slave_1905_1_message(ieee1905_1::CmduMessageRx &cmd
     }
 }
 
-std::shared_ptr<BackhaulManager::sRadioInfo>
-BackhaulManager::get_radio(const sMacAddr &radio_mac) const
-{
-    auto it = std::find_if(slaves_sockets.begin(), slaves_sockets.end(),
-                           [&radio_mac](const std::shared_ptr<sRadioInfo> &radio_info) {
-                               return radio_info->radio_mac == radio_mac;
-                           });
-    return it != slaves_sockets.end() ? *it : nullptr;
-}
-
 bool BackhaulManager::send_slaves_enable()
 {
     auto iface_hal = get_wireless_hal();
 
     auto db = AgentDB::get();
-    for (auto soc : slaves_sockets) {
+    for (const auto &radio_info : m_radios_info) {
         auto notification =
             message_com::create_vs_message<beerocks_message::cACTION_BACKHAUL_ENABLE_APS_REQUEST>(
                 cmdu_tx);
@@ -2167,8 +1988,10 @@ bool BackhaulManager::send_slaves_enable()
             return false;
         }
 
+        notification->set_iface(radio_info->hostap_iface);
+
         // enable wireless backhaul interface on the selected channel
-        if (soc->sta_iface == db->backhaul.selected_iface_name) {
+        if (radio_info->sta_iface == db->backhaul.selected_iface_name) {
             notification->channel() = iface_hal->get_channel();
             // Set default bw 0 (20Mhz) to cover most cases.
             // Since channel operates in 20Mhz center_channel is the same as the main channel.
@@ -2176,11 +1999,11 @@ bool BackhaulManager::send_slaves_enable()
             notification->bandwidth()      = eWiFiBandwidth::BANDWIDTH_20;
             notification->center_channel() = notification->channel();
         }
-        LOG(DEBUG) << "Send enable to slave " << soc->hostap_iface
+        LOG(DEBUG) << "Send enable to radio " << radio_info->hostap_iface
                    << ", channel = " << int(notification->channel())
                    << ", center_channel = " << int(notification->center_channel());
 
-        send_cmdu(soc->slave, cmdu_tx);
+        send_cmdu(m_agent_fd, cmdu_tx);
     }
 
     return true;
@@ -2188,18 +2011,17 @@ bool BackhaulManager::send_slaves_enable()
 
 bool BackhaulManager::send_slaves_tear_down()
 {
-    for (const auto &soc : slaves_sockets) {
-        auto msg = message_com::create_vs_message<
-            beerocks_message::cACTION_BACKHAUL_RADIO_TEAR_DOWN_REQUEST>(cmdu_tx);
-        if (!msg) {
-            LOG(ERROR) << "Failed building cACTION_BACKHAUL_RADIO_TEAR_DOWN_REQUEST";
-            return false;
-        }
-        LOG(DEBUG) << "Request agent to tear down the radio interface " << soc->hostap_iface;
-        if (!send_cmdu(soc->slave, cmdu_tx)) {
-            LOG(ERROR) << "Failed to send cACTION_BACKHAUL_RADIO_TEAR_DOWN_REQUEST";
-            return false;
-        }
+    auto msg =
+        message_com::create_vs_message<beerocks_message::cACTION_BACKHAUL_RADIO_TEAR_DOWN_REQUEST>(
+            cmdu_tx);
+    if (!msg) {
+        LOG(ERROR) << "Failed building cACTION_BACKHAUL_RADIO_TEAR_DOWN_REQUEST";
+        return false;
+    }
+    LOG(DEBUG) << "Request agent to tear down";
+    if (!send_cmdu(m_agent_fd, cmdu_tx)) {
+        LOG(ERROR) << "Failed to send cACTION_BACKHAUL_RADIO_TEAR_DOWN_REQUEST";
+        return false;
     }
 
     return true;
@@ -2272,7 +2094,7 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
                 beerocks_message::cACTION_BACKHAUL_APPLY_VLAN_POLICY_REQUEST>(cmdu_tx);
 
             // Send the message to one of the son_slaves.
-            send_cmdu(slaves_sockets.back()->slave, cmdu_tx);
+            send_cmdu(m_agent_fd, cmdu_tx);
         }
 
         if (FSM_IS_IN_STATE(WAIT_WPS)) {
@@ -2289,18 +2111,18 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
             LOG(DEBUG) << "successful connect on iface=" << iface;
             if (hidden_ssid) {
                 iface_hal->refresh_radio_info();
-                const auto &radio_info = iface_hal->get_radio_info();
-                for (auto soc : slaves_sockets) {
-                    if (soc->sta_iface == iface) {
+                const auto &bwl_radio_info = iface_hal->get_radio_info();
+                for (const auto &radio_info : m_radios_info) {
+                    if (radio_info->sta_iface == iface) {
                         auto radio = db->radio(iface);
                         if (!radio) {
                             continue;
                         }
                         /* prevent low filter radio from connecting to high band in any case */
-                        if (son::wireless_utils::which_freq(radio_info.channel) ==
+                        if (son::wireless_utils::which_freq(bwl_radio_info.channel) ==
                                 beerocks::FREQ_5G &&
                             radio->sta_iface_filter_low &&
-                            !son::wireless_utils::is_low_subband(radio_info.channel)) {
+                            !son::wireless_utils::is_low_subband(bwl_radio_info.channel)) {
                             LOG(DEBUG) << "iface " << iface
                                        << " is connected on low 5G band with filter, aborting";
                             FSM_MOVE_STATE(WIRELESS_CONFIG_4ADDR_MODE);
@@ -2319,10 +2141,10 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
                                 sta_iface_count_5ghz++;
                             }
                         }
-                        if (son::wireless_utils::which_freq(radio_info.channel) ==
+                        if (son::wireless_utils::which_freq(bwl_radio_info.channel) ==
                                 beerocks::FREQ_5G &&
                             !radio->sta_iface_filter_low &&
-                            son::wireless_utils::is_low_subband(radio_info.channel) &&
+                            son::wireless_utils::is_low_subband(bwl_radio_info.channel) &&
                             sta_iface_count_5ghz > 1) {
                             LOG(DEBUG) << "iface " << iface
                                        << " is connected on low 5G band with filter, aborting";
@@ -2346,7 +2168,7 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
             if (db->device_conf.local_controller && !db->device_conf.local_gw) {
                 FSM_MOVE_STATE(CONNECT_TO_MASTER);
             } else {
-                FSM_MOVE_STATE(PRE_OPERATIONAL);
+                FSM_MOVE_STATE(OPERATIONAL);
             }
         }
     } break;
@@ -2357,8 +2179,7 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
         }
         auto db = AgentDB::get();
         if (iface == db->backhaul.selected_iface_name) {
-            if (FSM_IS_IN_STATE(OPERATIONAL) || FSM_IS_IN_STATE(PRE_OPERATIONAL) ||
-                FSM_IS_IN_STATE(CONNECTED)) {
+            if (FSM_IS_IN_STATE(OPERATIONAL) || FSM_IS_IN_STATE(CONNECTED)) {
 
                 // If this event comes as a result of a steering request, then do not consider it
                 // as an error.
@@ -2522,19 +2343,10 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
             response->params().rx_packets        = msg->params.rx_packets;
             response->params().src_module        = msg->params.src_module;
 
-            if (m_unassociated_measurement_slave_soc !=
-                beerocks::net::FileDescriptor::invalid_descriptor) {
-                send_cmdu(m_unassociated_measurement_slave_soc, cmdu_tx);
-            } else {
-                LOG(ERROR) << "m_unassociated_measurement_slave_soc == invalid_descriptor!!!";
-            }
+            send_cmdu(m_agent_fd, cmdu_tx);
         } else {
             LOG(ERROR) << "sta_unassociated_rssi_measurement_header_id == -1";
         }
-
-        unassociated_rssi_measurement_header_id = -1;
-        m_unassociated_measurement_slave_soc    = beerocks::net::FileDescriptor::invalid_descriptor;
-
     } break;
 
     // Unhandled events
@@ -2565,18 +2377,18 @@ bool BackhaulManager::select_bssid()
 
     LOG(DEBUG) << "select_bssid: SSID = " << db->device_conf.back_radio.ssid;
 
-    for (auto soc : slaves_sockets) {
+    for (const auto &radio_info : m_radios_info) {
 
-        if (soc->sta_iface.empty() || !soc->sta_wlan_hal) {
+        if (radio_info->sta_iface.empty() || !radio_info->sta_wlan_hal) {
             LOG(DEBUG) << "skipping empty iface";
             continue;
         }
 
-        std::string iface = soc->sta_iface;
+        std::string &iface = radio_info->sta_iface;
 
         LOG(DEBUG) << "select_bssid: iface  = " << iface;
-        int num_of_results =
-            soc->sta_wlan_hal->get_scan_results(db->device_conf.back_radio.ssid, scan_results);
+        int num_of_results = radio_info->sta_wlan_hal->get_scan_results(
+            db->device_conf.back_radio.ssid, scan_results);
         LOG(DEBUG) << "Scan Results: " << num_of_results;
 
         for (auto &scan_result : scan_results) {
@@ -2616,7 +2428,7 @@ bool BackhaulManager::select_bssid()
                 db->backhaul.selected_iface_name = iface;
                 return true;
             } else if (son::wireless_utils::which_freq(scan_result.channel) == eFreqType::FREQ_5G) {
-                auto radio = db->radio(soc->sta_iface);
+                auto radio = db->radio(radio_info->sta_iface);
                 if (!radio) {
                     return false;
                 }
@@ -2767,20 +2579,20 @@ void BackhaulManager::get_scan_measurement()
 
     LOG(DEBUG) << "get_scan_measurement: SSID = " << db->device_conf.back_radio.ssid;
     scan_measurement_list.clear();
-    for (auto &soc : slaves_sockets) {
+    for (auto &radio_info : m_radios_info) {
 
-        if (soc->sta_iface.empty()) {
+        if (radio_info->sta_iface.empty()) {
             LOG(DEBUG) << "skipping empty iface";
             continue;
         }
-        if (!soc->sta_wlan_hal) {
+        if (!radio_info->sta_wlan_hal) {
             continue;
         }
 
-        std::string iface = soc->sta_iface;
+        std::string &iface = radio_info->sta_iface;
         LOG(DEBUG) << "get_scan_measurement: iface  = " << iface;
-        int num_of_results =
-            soc->sta_wlan_hal->get_scan_results(db->device_conf.back_radio.ssid, scan_results);
+        int num_of_results = radio_info->sta_wlan_hal->get_scan_results(
+            db->device_conf.back_radio.ssid, scan_results);
         LOG(DEBUG) << "Scan Results: " << int(num_of_results);
         if (num_of_results < 0) {
             LOG(ERROR) << "get_scan_results failed!";
@@ -2823,18 +2635,18 @@ void BackhaulManager::get_scan_measurement()
 
 std::shared_ptr<bwl::sta_wlan_hal> BackhaulManager::get_wireless_hal(std::string iface)
 {
-    // If the iface argument is empty, use the default wireless interface
+    // If the iface argument is empty, use the selected wireless interface
     auto db = AgentDB::get();
     if (iface.empty()) {
         iface = db->backhaul.selected_iface_name;
     }
 
-    auto slave_sk = m_sConfig.slave_iface_socket.find(iface);
-    if (slave_sk == m_sConfig.slave_iface_socket.end()) {
-        return {};
+    for (auto &radio_info : m_radios_info) {
+        if (radio_info->sta_iface == iface) {
+            return radio_info->sta_wlan_hal;
+        }
     }
-
-    return slave_sk->second->sta_wlan_hal;
+    return {};
 }
 
 bool BackhaulManager::handle_slave_failed_connection_message(ieee1905_1::CmduMessageRx &cmdu_rx,
@@ -3108,17 +2920,18 @@ std::string BackhaulManager::freq_to_radio_mac(eFreqType freq) const
 
 bool BackhaulManager::start_wps_pbc(const sMacAddr &radio_mac)
 {
-    auto it = std::find_if(
-        slaves_sockets.begin(), slaves_sockets.end(),
-        [&](std::shared_ptr<sRadioInfo> slave) { return slave->radio_mac == radio_mac; });
-    if (it == slaves_sockets.end()) {
-        LOG(ERROR) << "couldn't find slave for radio mac " << radio_mac;
-        return false;
-    }
-
-    // Store the socket to the slave managing the requested radio
-    auto soc = *it;
     if ((m_eFSMState == EState::OPERATIONAL)) {
+        auto it = std::find_if(m_radios_info.begin(), m_radios_info.end(),
+                               [&](std::shared_ptr<sRadioInfo> radio_info) {
+                                   return radio_info->radio_mac == radio_mac;
+                               });
+        if (it == m_radios_info.end()) {
+            LOG(ERROR) << "couldn't find slave for radio mac " << radio_mac;
+            return false;
+        }
+
+        // Store the socket to the slave managing the requested radio
+        auto &radio_info = *it;
         // WPS PBC registration on AP interface
         auto msg = message_com::create_vs_message<
             beerocks_message::cACTION_BACKHAUL_START_WPS_PBC_REQUEST>(cmdu_tx);
@@ -3127,8 +2940,9 @@ bool BackhaulManager::start_wps_pbc(const sMacAddr &radio_mac)
             return false;
         }
 
-        LOG(DEBUG) << "Start WPS PBC registration on interface " << soc->hostap_iface;
-        return send_cmdu(soc->slave, cmdu_tx);
+        msg->set_iface(radio_info->hostap_iface);
+        LOG(DEBUG) << "Start WPS PBC registration on interface " << radio_info->hostap_iface;
+        return send_cmdu(m_agent_fd, cmdu_tx);
     } else {
         // WPS PBC registration on STA interface
         auto sta_wlan_hal = get_selected_backhaul_sta_wlan_hal();
@@ -3137,20 +2951,23 @@ bool BackhaulManager::start_wps_pbc(const sMacAddr &radio_mac)
             return false;
         }
 
-        // Disable radio interface to make sure its not beaconing along while the supplicant is scanning.
-        // Disable rest of radio interfaces to prevent stations from connecting (there is no BH link anyway).
+        // Disable radio interface to make sure its not beaconing along while the supplicant is
+        // scanning.Disable rest of radio interfaces to prevent stations from connecting (there is
+        // no BH link anyway).
         // This is a temporary solution for axepoint (prplwrt) in order to pass wbh easymesh
         // certification tests (Need to be removed once PPM-643 or PPM-1580 are solved)
-        for (auto slaves_socket : slaves_sockets) {
+        for (const auto &radio_info : m_radios_info) {
             auto msg = message_com::create_vs_message<
                 beerocks_message::cACTION_BACKHAUL_RADIO_DISABLE_REQUEST>(cmdu_tx);
             if (!msg) {
                 LOG(ERROR) << "Failed building cACTION_BACKHAUL_RADIO_DISABLE_REQUEST";
                 return false;
             }
+
+            msg->set_iface(radio_info->hostap_iface);
             LOG(DEBUG) << "Request Agent to disable the radio interface "
-                       << slaves_socket->hostap_iface << " before WPS starts";
-            if (!send_cmdu(slaves_socket->slave, cmdu_tx)) {
+                       << radio_info->hostap_iface << " before WPS starts";
+            if (!send_cmdu(m_agent_fd, cmdu_tx)) {
                 LOG(ERROR) << "Failed to send cACTION_BACKHAUL_RADIO_DISABLE_REQUEST";
                 return false;
             }
@@ -3168,15 +2985,15 @@ bool BackhaulManager::set_mbo_assoc_disallow(const sMacAddr &radio_mac, const sM
                                              bool enable)
 {
     auto it = std::find_if(
-        slaves_sockets.begin(), slaves_sockets.end(),
-        [&](std::shared_ptr<sRadioInfo> slave) { return slave->radio_mac == radio_mac; });
-    if (it == slaves_sockets.end()) {
+        m_radios_info.begin(), m_radios_info.end(),
+        [&](std::shared_ptr<sRadioInfo> radio_info) { return radio_info->radio_mac == radio_mac; });
+    if (it == m_radios_info.end()) {
         LOG(ERROR) << "couldn't find slave for radio mac " << radio_mac;
         return false;
     }
 
     // Store the socket to the slave managing the requested radio
-    auto soc = *it;
+    const auto &radio_info = *it;
 
     auto msg = message_com::create_vs_message<
         beerocks_message::cACTION_BACKHAUL_SET_ASSOC_DISALLOW_REQUEST>(cmdu_tx);
@@ -3188,8 +3005,13 @@ bool BackhaulManager::set_mbo_assoc_disallow(const sMacAddr &radio_mac, const sM
     msg->enable() = enable;
     msg->bssid()  = bssid;
 
-    LOG(DEBUG) << "Set MBO ASSOC_DISALLOW on interface " << soc->hostap_iface << " to " << enable;
-    send_cmdu(soc->slave, cmdu_tx);
+    // Filling the radio mac. This is temporary until UCC listener will be moved to agent (PPM-1678)
+    auto action_header         = message_com::get_beerocks_header(cmdu_tx)->actionhdr();
+    action_header->radio_mac() = radio_mac;
+
+    LOG(DEBUG) << "Set MBO ASSOC_DISALLOW on interface " << radio_info->hostap_iface << " to "
+               << enable;
+    send_cmdu(m_agent_fd, cmdu_tx);
 
     if (!cmdu_tx.create(0, ieee1905_1::eMessageType::ASSOCIATION_STATUS_NOTIFICATION_MESSAGE)) {
         LOG(ERROR) << "Failed building message!";
@@ -3228,48 +3050,16 @@ bool BackhaulManager::set_mbo_assoc_disallow(const sMacAddr &radio_mac, const sM
 
 std::shared_ptr<bwl::sta_wlan_hal> BackhaulManager::get_selected_backhaul_sta_wlan_hal()
 {
-    auto selected_backhaul_it = std::find_if(
-        slaves_sockets.begin(), slaves_sockets.end(), [&](const std::shared_ptr<sRadioInfo> &soc) {
-            return tlvf::mac_from_string(m_selected_backhaul) == soc->radio_mac;
-        });
-    if (selected_backhaul_it == slaves_sockets.end()) {
+    auto selected_backhaul_it =
+        std::find_if(m_radios_info.begin(), m_radios_info.end(),
+                     [&](const std::shared_ptr<sRadioInfo> &radio_info) {
+                         return tlvf::mac_from_string(m_selected_backhaul) == radio_info->radio_mac;
+                     });
+    if (selected_backhaul_it == m_radios_info.end()) {
         LOG(ERROR) << "Invalid backhaul";
         return nullptr;
     }
     return (*selected_backhaul_it)->sta_wlan_hal;
-}
-
-int BackhaulManager::front_iface_name_to_socket(const std::string &iface_name)
-{
-    for (const auto &soc : slaves_sockets) {
-        if (soc->hostap_iface == iface_name) {
-            return soc->slave;
-        }
-    }
-    for (const auto &slave_element : m_disabled_slave_sockets) {
-        if (slave_element.first == iface_name) {
-            return slave_element.second->slave;
-        }
-    }
-
-    return beerocks::net::FileDescriptor::invalid_descriptor;
-}
-
-std::string BackhaulManager::socket_to_front_iface_name(int fd)
-{
-    for (const auto &soc : slaves_sockets) {
-        if (soc->slave == fd) {
-            return soc->hostap_iface;
-        }
-    }
-
-    for (const auto &slave_element : m_disabled_slave_sockets) {
-        if (slave_element.second->slave == fd) {
-            return slave_element.first;
-        }
-    }
-
-    return {};
 }
 
 void BackhaulManager::handle_dev_reset_default(

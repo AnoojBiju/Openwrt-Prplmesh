@@ -249,7 +249,8 @@ bool base_wlan_hal_dwpal::fsm_setup()
                     }
                 }
 
-                if (error || (std::chrono::steady_clock::now() >= m_state_timeout)) {
+                if (error || (m_radio_info.radio_state != eRadioState::DFS &&
+                              std::chrono::steady_clock::now() >= m_state_timeout)) {
                     return (transition.change_destination(dwpal_fsm_state::Detach));
                 }
 

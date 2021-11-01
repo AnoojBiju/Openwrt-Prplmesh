@@ -165,9 +165,9 @@ void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
 
     // 1. The tlvs created in the loop are created per radio and are
     // defined in the specification as "Zero Or More" (multi-ap specification v2, 17.1.7)
-    for (const auto &slave : m_btl_ctx.slaves_sockets) {
+    for (const auto &radio_info : m_btl_ctx.m_radios_info) {
         // TODO skip slaves that are not operational
-        auto radio_mac = slave->radio_mac;
+        auto &radio_mac = radio_info->radio_mac;
 
         auto radio = db->get_radio_by_mac(radio_mac);
         if (!radio) {
@@ -205,8 +205,8 @@ void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
     }
 
     // Add Channel Scan Capabilities
-    for (const auto &slave : m_btl_ctx.slaves_sockets) {
-        add_channel_scan_capabilities(slave->hostap_iface, *channel_scan_capabilities_tlv);
+    for (const auto &radio_info : m_btl_ctx.m_radios_info) {
+        add_channel_scan_capabilities(radio_info->hostap_iface, *channel_scan_capabilities_tlv);
     }
 
     // 2.2 radio independent tlvs

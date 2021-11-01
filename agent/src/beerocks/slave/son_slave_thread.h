@@ -85,13 +85,6 @@ public:
         STATE_LOAD_PLATFORM_CONFIGURATION,
         STATE_CONNECT_TO_PLATFORM_MANAGER,
         STATE_WAIT_FOR_PLATFORM_MANAGER_REGISTER_RESPONSE,
-        STATE_STOPPED,
-
-        // This state is the last common state. It means the from now each radio will have a state
-        // of its own, specified under "Radio Specific" down below.
-        STATE_RADIO_SPECIFIC_FSM,
-
-        // Radio Specific
         STATE_CONNECT_TO_BACKHAUL_MANAGER,
         STATE_WAIT_RETRY_CONNECT_TO_BACKHAUL_MANAGER,
         STATE_WAIT_FOR_BACKHAUL_MANAGER_REGISTER_RESPONSE,
@@ -101,7 +94,13 @@ public:
         STATE_SEND_BACKHAUL_MANAGER_ENABLE,
         STATE_WAIT_FOR_BACKHAUL_MANAGER_CONNECTED_NOTIFICATION,
         STATE_BACKHAUL_MANAGER_CONNECTED,
-        STATE_WAIT_BACKHAUL_MANAGER_BUSY,
+        STATE_STOPPED,
+
+        // This state is the last common state. It means the from now each radio will have a state
+        // of its own, specified under "Radio Specific" down below.
+        STATE_RADIO_SPECIFIC_FSM,
+
+        // Radio Specific
         STATE_WAIT_BEFORE_JOIN_MASTER,
         STATE_JOIN_MASTER,
         STATE_WAIT_FOR_JOINED_RESPONSE,
@@ -128,8 +127,7 @@ private:
     bool handle_cmdu_control_message(Socket *sd,
                                      std::shared_ptr<beerocks::beerocks_header> beerocks_header);
     bool handle_cmdu_backhaul_manager_message(
-        const std::string &fronthaul_iface, Socket *sd,
-        std::shared_ptr<beerocks::beerocks_header> beerocks_header);
+        Socket *sd, std::shared_ptr<beerocks::beerocks_header> beerocks_header);
     bool handle_cmdu_platform_manager_message(
         Socket *sd, std::shared_ptr<beerocks::beerocks_header> beerocks_header);
     bool handle_cmdu_ap_manager_message(const std::string &fronthaul_iface, Socket *sd,
@@ -146,7 +144,7 @@ private:
     bool agent_fsm();
     void slave_reset(const std::string &fronthaul_iface);
     void stop_slave_thread();
-    void backhaul_manager_stop(const std::string &fronthaul_iface);
+    void backhaul_manager_stop();
     void platform_manager_stop();
     void hostap_services_off();
     bool hostap_services_on();
@@ -176,6 +174,11 @@ private:
     std::string platform_manager_uds;
 
     SocketClient *m_platform_manager_socket = nullptr;
+    SocketClient *m_backhaul_manager_socket = nullptr;
+    SocketClient *m_master_socket           = nullptr;
+
+    bool m_is_backhaul_disconnected = false;
+    sSlaveBackhaulParams backhaul_params;
 
     // Global FSM members:
     eSlaveState m_agent_state;
@@ -186,21 +189,13 @@ private:
         beerocks_message::sSonConfig son_config;
         int stop_on_failure_attempts;
         bool stopped                   = false;
-        bool is_backhaul_disconnected  = false;
-        bool is_slave_reset            = false;
-        bool is_backhaul_reconf        = false;
         bool detach_on_conf_change     = false;
         bool configuration_in_progress = false;
-        bool is_backhaul_manager       = false;
         bool autoconfiguration_completed;
         //slave FSM //
         eSlaveState slave_state;
         std::chrono::steady_clock::time_point slave_state_timer;
         int slave_resets_counter = 0;
-
-        sSlaveBackhaulParams backhaul_params;
-        SocketClient *backhaul_manager_socket = nullptr;
-        SocketClient *master_socket           = nullptr;
 
         Socket *monitor_socket    = nullptr;
         Socket *ap_manager_socket = nullptr;
@@ -225,9 +220,16 @@ private:
 
         sManagedRadio &get_radio_context(const std::string &fronthaul_iface)
         {
-            return m_zwdfs_radio_manager && m_zwdfs_radio_manager->first == fronthaul_iface
-                       ? m_zwdfs_radio_manager->second
-                       : m_radio_managers[fronthaul_iface];
+            auto zwdfs = m_zwdfs_radio_manager && m_zwdfs_radio_manager->first == fronthaul_iface;
+
+            auto it = m_radio_managers.find(fronthaul_iface);
+            if (!zwdfs && it == m_radio_managers.end()) {
+                LOG(DEBUG) << "Added new interface to radio managers: " << fronthaul_iface;
+                // Insert empty new element
+                it = m_radio_managers.emplace(fronthaul_iface, sManagedRadio{}).first;
+            }
+
+            return zwdfs ? m_zwdfs_radio_manager->second : it->second;
         }
 
     public:
@@ -247,16 +249,6 @@ private:
             m_zwdfs_radio_manager  = std::make_unique<std::pair<std::string, sManagedRadio>>();
             *m_zwdfs_radio_manager = std::move(*it);
             m_radio_managers.erase(it);
-        }
-
-        const std::string &get_controller_socket_iface()
-        {
-            for (auto &radio : get()) {
-                if (radio.second.master_socket) {
-                    return radio.first;
-                }
-            }
-            return m_radio_managers.begin()->first;
         }
 
         /**

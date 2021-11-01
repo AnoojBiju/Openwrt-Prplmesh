@@ -2432,12 +2432,9 @@ bool Controller::handle_intel_slave_join(
     }
 
     radio->is_acs_enabled = acs_enabled;
-
-    if (!notification->is_slave_reconf()) {
-        son_actions::set_hostap_active(database, tasks, tlvf::mac_to_string(radio_mac),
-                                       false); // make sure AP is marked as not active
-    }
-
+    // Make sure AP is marked as not active. It will be set as active after setting all the
+    // radio parameters on the database.
+    son_actions::set_hostap_active(database, tasks, tlvf::mac_to_string(radio_mac), false);
     if (backhaul_manager) {
         agent->backhaul.wireless_backhaul_radio = radio;
     }
@@ -2521,54 +2518,49 @@ bool Controller::handle_intel_slave_join(
     tasks.push_event(database.get_bml_task_id(), bml_task::CONNECTION_CHANGE, &bml_new_event);
     LOG(DEBUG) << "BML, sending IRE connect CONNECTION_CHANGE for mac " << bml_new_event.mac;
 
-    if (!notification->is_slave_reconf()) {
-        //sending event to CS task
-        LOG(DEBUG) << "CS_task,sending SLAVE_JOINED_EVENT for mac " << radio_mac;
-        auto cs_new_event                  = new channel_selection_task::sSlaveJoined_event;
-        cs_new_event->backhaul_is_wireless = beerocks::utils::is_node_wireless(backhaul_iface_type);
-        cs_new_event->backhaul_channel     = backhaul_channel;
-        cs_new_event->channel              = notification->cs_params().channel;
-        cs_new_event->low_pass_filter_on   = notification->low_pass_filter_on();
-        LOG(DEBUG) << "cs_new_event->low_pass_filter_on = " << int(cs_new_event->low_pass_filter_on)
-                   << " cs_new_event = " << intptr_t(cs_new_event);
-        cs_new_event->hostap_mac = radio_mac;
-        cs_new_event->cs_params  = notification->cs_params();
+    // sending event to CS task
+    LOG(DEBUG) << "CS_task,sending SLAVE_JOINED_EVENT for mac " << radio_mac;
+    auto cs_new_event                  = new channel_selection_task::sSlaveJoined_event;
+    cs_new_event->backhaul_is_wireless = beerocks::utils::is_node_wireless(backhaul_iface_type);
+    cs_new_event->backhaul_channel     = backhaul_channel;
+    cs_new_event->channel              = notification->cs_params().channel;
+    cs_new_event->low_pass_filter_on   = notification->low_pass_filter_on();
+    LOG(DEBUG) << "cs_new_event->low_pass_filter_on = " << int(cs_new_event->low_pass_filter_on)
+               << " cs_new_event = " << intptr_t(cs_new_event);
+    cs_new_event->hostap_mac = radio_mac;
+    cs_new_event->cs_params  = notification->cs_params();
 
-        std::copy_n(notification->backhaul_params().backhaul_scan_measurement_list,
-                    beerocks::message::BACKHAUL_SCAN_MEASUREMENT_MAX_LENGTH,
-                    cs_new_event->backhaul_scan_measurement_list);
+    std::copy_n(notification->backhaul_params().backhaul_scan_measurement_list,
+                beerocks::message::BACKHAUL_SCAN_MEASUREMENT_MAX_LENGTH,
+                cs_new_event->backhaul_scan_measurement_list);
 
-        for (unsigned int i = 0; i < beerocks::message::BACKHAUL_SCAN_MEASUREMENT_MAX_LENGTH; i++) {
-            if (cs_new_event->backhaul_scan_measurement_list[i].channel > 0) {
-                LOG(DEBUG) << "mac = " << cs_new_event->backhaul_scan_measurement_list[i].mac
-                           << " channel = "
-                           << int(cs_new_event->backhaul_scan_measurement_list[i].channel)
-                           << " rssi = "
-                           << int(cs_new_event->backhaul_scan_measurement_list[i].rssi);
-            }
+    for (unsigned int i = 0; i < beerocks::message::BACKHAUL_SCAN_MEASUREMENT_MAX_LENGTH; i++) {
+        if (cs_new_event->backhaul_scan_measurement_list[i].channel > 0) {
+            LOG(DEBUG) << "mac = " << cs_new_event->backhaul_scan_measurement_list[i].mac
+                       << " channel = "
+                       << int(cs_new_event->backhaul_scan_measurement_list[i].channel)
+                       << " rssi = " << int(cs_new_event->backhaul_scan_measurement_list[i].rssi);
         }
-        tasks.push_event(database.get_channel_selection_task_id(),
-                         (int)channel_selection_task::eEvent::SLAVE_JOINED_EVENT,
-                         (void *)cs_new_event);
-#ifdef BEEROCKS_RDKB
-        //sending event to rdkb_wlan_task
-        if (database.settings_rdkb_extensions()) {
-            LOG(DEBUG) << "rdkb_wlan_task,sending STEERING_SLAVE_JOIN for mac " << radio_mac;
-            rdkb_wlan_task::steering_slave_join_event new_event{};
-            new_event.radio_mac = tlvf::mac_to_string(radio_mac);
-            tasks.push_event(database.get_rdkb_wlan_task_id(),
-                             rdkb_wlan_task::events::STEERING_SLAVE_JOIN, &new_event);
-        }
-#endif
-    } else {
-        // In the case where wireless-BH is lost and agents reconnect to the controller
-        // it is required to re-activate the AP in the nodes-map since it is set as not-active
-        // when the topology-response not containing it is received by the controller.
-        // When it joins the controller we need to activate it if not activated.
-        database.set_hostap_active(radio_mac, true);
     }
+    tasks.push_event(database.get_channel_selection_task_id(),
+                     (int)channel_selection_task::eEvent::SLAVE_JOINED_EVENT, (void *)cs_new_event);
+#ifdef BEEROCKS_RDKB
+    // sending event to rdkb_wlan_task
+    if (database.settings_rdkb_extensions()) {
+        LOG(DEBUG) << "rdkb_wlan_task,sending STEERING_SLAVE_JOIN for mac " << radio_mac;
+        rdkb_wlan_task::steering_slave_join_event new_event{};
+        new_event.radio_mac = tlvf::mac_to_string(radio_mac);
+        tasks.push_event(database.get_rdkb_wlan_task_id(),
+                         rdkb_wlan_task::events::STEERING_SLAVE_JOIN, &new_event);
+    }
+#endif
+    // In the case where wireless-BH is lost and agents reconnect to the controller
+    // it is required to re-activate the AP in the nodes-map since it is set as not-active
+    // when the topology-response not containing it is received by the controller.
+    // When it joins the controller we need to activate it if not activated.
+    database.set_hostap_active(radio_mac, true);
 
-    //Update all (Slaves) last seen timestamp
+    // Update all (Slaves) last seen timestamp
     if (database.get_node_type(tlvf::mac_to_string(radio_mac)) == beerocks::TYPE_SLAVE) {
         database.update_node_last_seen(tlvf::mac_to_string(radio_mac));
     }
@@ -3381,28 +3373,6 @@ bool Controller::handle_cmdu_control_message(
                 tasks.add_task(new_task);
             }
         }
-        break;
-    }
-    case beerocks_message::ACTION_CONTROL_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION: {
-        /* TODO decide what this code should do now that tx_rssi is no longer used
-            auto report = (beerocks::message::sACTION_CONTROL_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION*)rx_buffer;
-            std::string backhaul_mac = database.get_node_parent_backhaul(sd->hostap_mac());
-            std::string parent_mac = database.get_node_parent(backhaul_mac);
-
-            int prev_rssi = database.get_node_cross_tx_rssi(backhaul_mac, parent_mac);
-            int rssi = report->params.rssi;
-
-            if (prev_rssi == beerocks::RSSI_INVALID) {
-                prev_rssi = rssi;
-            }
-
-            //LOG(DEBUG) << "rssi report from ire " << ire_mac << " rssi=" << rssi << " prev_rssi=" << prev_rssi;
-            database.set_node_cross_tx_rssi(backhaul_mac, parent_mac, rssi);
-            if ((abs(prev_rssi - rssi) >= int(database.config.monitor_rx_rssi_notification_delta_db)) && database.settings_ire_roaming()) {
-                auto new_task = std::make_shared<optimal_path_task>(database, cmdu_tx, tasks, backhaul_mac, 0, "ire_rssi_report");
-                tasks.add_task(new_task);
-            }
-            */
         break;
     }
     case beerocks_message::ACTION_CONTROL_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION: {
