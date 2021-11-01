@@ -116,7 +116,7 @@
             }
         }
 
-        %read-only object MultiApSta {
+        %read-only object MultiAPSTA {
             %read-only string AssociationTime = "2020-08-31T11:22:39Z";
             %read-only uint32 Noise = 0;
         }
