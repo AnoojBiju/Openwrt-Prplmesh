@@ -376,15 +376,21 @@ std::string db::dm_add_radio_element(const std::string &radio_mac, const std::st
 
 bool db::dm_set_multi_ap_sta_noise_param(Station &station, const uint8_t rcpi, const uint8_t rsni)
 {
-    auto bss = get_bss(station.mac);
+    auto bss = station.get_bss();
 
     if (!bss) {
+        LOG(INFO) << "BSS of the Station is empty mac: " << station.mac;
+        return false;
+    }
+
+    if (station.dm_path.empty()) {
         return true;
     }
+
     uint32_t anpi = rcpi / (1 + std::pow(10, (rsni / 20.0) - 1));
-    m_ambiorix_datamodel->set(station.dm_path + ".MultiApSta", "Noise",
-                              anpi + bss->radio.stats_info->noise);
-    return true;
+
+    return m_ambiorix_datamodel->set(station.dm_path + ".MultiApSta", "Noise",
+                                     anpi + bss->radio.stats_info->noise);
 }
 
 bool db::dm_add_sta_beacon_measurement(const beerocks_message::sBeaconResponse11k &beacon)
@@ -470,7 +476,7 @@ std::shared_ptr<Station> db::add_node_station(const sMacAddr &mac, const sMacAdd
     if (!bss) {
         LOG(ERROR) << "Failed to get sBss: " << parent_mac;
     } else {
-        station->set_vap(bss);
+        station->set_bss(bss);
     }
     if (!add_node(mac, parent_mac, beerocks::TYPE_CLIENT)) {
         LOG(ERROR) << "Failed to add client node, mac: " << mac;
@@ -4085,21 +4091,26 @@ bool db::set_hostap_stats_info(const sMacAddr &mac, const beerocks_message::sApS
         p->stats_delta_ms               = params->stats_delta_ms;
         p->timestamp                    = std::chrono::steady_clock::now();
 
-        // Set the same information for sRadio
-        radio->stats_info->active_sta_count             = params->active_client_count;
-        radio->stats_info->rx_packets                   = params->rx_packets;
-        radio->stats_info->tx_packets                   = params->tx_packets;
-        radio->stats_info->rx_bytes                     = params->rx_bytes;
-        radio->stats_info->tx_bytes                     = params->tx_bytes;
-        radio->stats_info->errors_sent                  = params->errors_sent;
-        radio->stats_info->errors_received              = params->errors_received;
-        radio->stats_info->retrans_count                = params->retrans_count;
-        radio->stats_info->noise                        = params->noise;
-        radio->stats_info->channel_load_percent         = params->channel_load_percent;
-        radio->stats_info->total_client_tx_load_percent = params->client_tx_load_percent;
-        radio->stats_info->total_client_rx_load_percent = params->client_rx_load_percent;
-        radio->stats_info->stats_delta_ms               = params->stats_delta_ms;
-        radio->stats_info->timestamp                    = std::chrono::steady_clock::now();
+        // TODO: Duplicated Stats for Node and Database object (PPM-1057).
+        // Also be aware of VS messages to replace with EM messages.
+        if (radio->stats_info) {
+
+            // Set the same information for sRadio
+            radio->stats_info->active_sta_count             = params->active_client_count;
+            radio->stats_info->rx_packets                   = params->rx_packets;
+            radio->stats_info->tx_packets                   = params->tx_packets;
+            radio->stats_info->rx_bytes                     = params->rx_bytes;
+            radio->stats_info->tx_bytes                     = params->tx_bytes;
+            radio->stats_info->errors_sent                  = params->errors_sent;
+            radio->stats_info->errors_received              = params->errors_received;
+            radio->stats_info->retrans_count                = params->retrans_count;
+            radio->stats_info->noise                        = params->noise;
+            radio->stats_info->channel_load_percent         = params->channel_load_percent;
+            radio->stats_info->total_client_tx_load_percent = params->client_tx_load_percent;
+            radio->stats_info->total_client_rx_load_percent = params->client_rx_load_percent;
+            radio->stats_info->stats_delta_ms               = params->stats_delta_ms;
+            radio->stats_info->timestamp                    = std::chrono::steady_clock::now();
+        }
     }
 
     return true;
@@ -5012,7 +5023,7 @@ std::shared_ptr<Agent::sRadio::sBss> db::get_bss(const sMacAddr &bssid)
             }
         }
     }
-    LOG(WARNING) << "bss " << bssid << " not found";
+    LOG(INFO) << "BSS " << bssid << " not found in db";
     return {};
 }
 

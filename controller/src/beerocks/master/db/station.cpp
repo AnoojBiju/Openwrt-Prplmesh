@@ -122,7 +122,7 @@ void Station::clear_cross_rssi()
     m_beacon_measurements.clear();
 }
 
-void Station::set_vap(std::shared_ptr<Agent::sRadio::sBss> bss) { m_bss = bss; }
+void Station::set_bss(std::shared_ptr<Agent::sRadio::sBss> bss) { m_bss = bss; }
 
 std::shared_ptr<Agent::sRadio::sBss> Station::get_bss() { return m_bss.lock(); }
 
