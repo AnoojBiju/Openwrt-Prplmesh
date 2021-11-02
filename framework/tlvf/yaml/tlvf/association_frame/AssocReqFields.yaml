@@ -1,0 +1,244 @@
+#
+---
+_include: {
+  tlvf/association_frame/eElementID.h,
+  tlvf/AssociationRequestFrame/assoc_frame_bitfields.h,
+}
+_namespace: assoc_frame
+
+cSSID:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eElementID
+    _value: ID_SSID
+  length:
+    _type: uint8_t
+    _length_var: True
+  ssid:
+    _type: char
+    _length: [ length ]
+    _length_max: 0x20
+
+cSupportedChannels:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eElementID
+    _value: ID_SUP_CHANNELS
+  length:
+    _type: uint8_t
+  first_ch_num:
+    _type: uint8_t
+    _comment: First channel number
+  channels_number:
+    _type: uint8_t
+
+cRSN:
+  _comment: |
+    The RSNE is present if dot11RSNAActivated is true.
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eElementID
+    _value: ID_RSN
+  length:
+    _type: uint8_t
+    _length_var: True
+  version:
+    _type: uint16_t
+  optional:
+    _type: uint16_t
+    _length: []
+
+cSupportedOpClasses:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eElementID
+    _value: ID_SUP_OP_CLASSES
+  length:
+    _type: uint8_t
+  current_op_class: uint8_t
+  op_classes:
+    _type: uint8_t
+    _length: []
+
+cSupportRates:
+  _comment: |
+    Supported Rates and BSS Membership Selectors
+    This field is not present if dot11DMGOptionImplemented is true
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eElementID
+    _value: ID_SUPPORT_RATES
+  length:
+    _type: uint8_t
+  supported_rated:
+    _type: uint8_t
+    _length: [ length ]
+
+cExtendedSupportRates:
+  _comment: |
+   Extended supported rates and BSS Membership Selectors
+   This field is not present if dot11DMGOptionImplemented is true
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eElementID
+    _value: ID_EXTENDED_SUP_RATES
+  length:
+    _type: uint8_t
+  extended_suport_rated:
+    _type: uint8_t
+    _length: [ length ]
+
+cPowerCapability:
+  _comment: |
+    This element is present if dot11SpectrumManagementRequired
+    is true or dot11RadioMeasurementActivated is true.
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eElementID
+    _value: ID_POWER_CAPABILITY
+  length:
+    _type: uint8_t
+  min_tx_power:
+    _type: uint8_t
+  max_tx_power:
+    _type: uint8_t
+
+cBssCoexistence20_40:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eElementID
+    _value: ID_BSS_COEXISTENCE20_40
+  length:
+    _type: uint8_t
+  info_field: uint8_t
+
+cQosTrafficCap:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eElementID
+    _value: ID_QOS_TRAFFIC_CAP
+  length:
+    _type: uint8_t
+  flags:
+    _comment: |
+      QoS traffic capability bitmask/flags
+    _type: uint8_t
+  ac_sta_count_list:
+    _comment: |
+      Total number of nonzero bits in Bits 0-1 of 'flags'
+    _type: uint8_t
+
+cTimBroadcastRequest:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eElementID
+    _value: ID_TIM_BROADCAST_REQUEST
+  length:
+    _type: uint8_t
+  tim_brdcast_interval:
+    _type: uint8_t
+
+cInterworking:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eElementID
+    _value: ID_INTERWORKING
+  length:
+    _type: uint8_t
+  ac_network_options:
+    _type: uint8_t
+  optional_params:
+    _type: uint8_t
+    _length: []
+
+cMultiBand:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eElementID
+    _value: ID_MULTI_BAND
+  length:
+    _type: uint8_t
+  multi_band_control:
+    _type: uint8_t
+  band_id:
+    _type: uint8_t
+  op_class:
+    _type: uint8_t
+  channel_num:
+    _type: uint8_t
+  bssid:
+    _type: char
+    _length: ["assoc_frame::MAC_ADDR_LEN"]
+  beacon_interval:
+    _type: uint8_t
+  tsf_offset:
+    _type: uint8_t
+    _length: [8]
+  multi_band_con_cap:
+    _type: uint8_t
+  fst_session_timeout:
+    _type: uint8_t
+  optional:
+    _type: uint8_t
+
+cDmgCapabilities:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eElementID
+    _value: ID_DMG_CAPS
+  length: uint8_t
+  bssid:
+    _type: char
+    _length: ["assoc_frame::MAC_ADDR_LEN"]
+  aid: uint8_t
+  dmg_sta_cap_info:
+    _type: uint8_t
+    _length: [8]
+  dmg_ap:
+    _comment: |
+      DMG AP or PCP capability info
+    _type: uint16_t
+  dmg_sta_beam_track_time_lim: uint16_t
+  extended_sc_mcs_cap: uint8_t
+  basic_amsdu_subframe_max_num: uint8_t
+  short_amsdu_subframe_max_num: uint8_t
+
+cMultipleMacSublayers:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eElementID
+    _value: ID_MMS
+  length:
+    _type: uint8_t
+  mms_control: uint8_t
+  sta_mac:
+    _type: char
+    _length: ["assoc_frame::MAC_ADDR_LEN"]
+  interface_addr:
+    _type: uint8_t
+    _length: []
+
+cOperatingModeNotify:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eElementID
+    _value: ID_OP_MODE_NOTIFICATION
+  length:
+    _type: uint8_t
+  op_mode:
+    _type: uint8_t

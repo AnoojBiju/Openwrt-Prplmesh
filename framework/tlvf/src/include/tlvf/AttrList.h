@@ -17,23 +17,18 @@
 
 namespace WSC {
 
-typedef struct sWscAttrHeader {
-    uint16_t type;
-    uint16_t length;
-    uint8_t *data() { return ((uint8_t *)this + sizeof(*this)); }
-} __attribute__((packed)) sWscAttrHeader;
+template <typename T, typename D> struct sAttrHeader {
+    T type;
+    T length;
+    D *data() { return ((D *)this + sizeof(*this)); }
+} __attribute__((packed));
 
-/**
- * @brief wsc configuration
- * 
- */
-class AttrList : public ClassList {
+template <typename TT, typename TD> class AttrList : public ClassList {
 protected:
     AttrList(uint8_t *buff, size_t buff_len, bool parse) : ClassList(buff, buff_len, parse) {}
 
 public:
     virtual ~AttrList() = default;
-    bool init();
 
     template <class T> std::list<std::shared_ptr<T>> getAttrList() const
     {
@@ -47,9 +42,9 @@ public:
     virtual bool valid() const = 0;
 
 protected:
-    sWscAttrHeader *getNextAttrHdr()
+    sAttrHeader<TT, TD> *getNextAttrHdr()
     {
-        return reinterpret_cast<sWscAttrHeader *>(
+        return reinterpret_cast<sAttrHeader<TT, TD> *>(
             m_class_vector.empty() ? getMessageBuff() : m_class_vector.back()->getBuffPtr());
     }
     uint16_t getNextAttrType() { return ntohs(getNextAttrHdr()->type); };

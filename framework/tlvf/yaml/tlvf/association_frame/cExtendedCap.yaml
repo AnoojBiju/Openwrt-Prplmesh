@@ -1,0 +1,33 @@
+#
+---
+_include: {
+  tlvf/association_frame/eElementID.h,
+  tlvf/AssociationRequestFrame/assoc_frame_bitfields.h,
+}
+_namespace: assoc_frame
+
+cExtendedCap:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eElementID
+    _value: ID_EXTENDED_CAPABILITY
+  length:
+    _type: uint8_t
+  extended_cap_field:
+    _type: uint8_t
+    _length: []
+
+sExtendedCapField:
+  _type: struct
+  _bit_field: uint8_t
+  reserved:
+    _bit_range: [7,7]
+  radio_measurement:
+    _bit_range: [6,6]
+  reserved:
+    _bit_range: [5,5]
+  triggered_unscheduled_ps:
+    _bit_range: [4,4]
+  spectrum_management:
+    _bit_range: [3,3]
