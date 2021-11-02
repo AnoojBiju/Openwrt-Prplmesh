@@ -412,7 +412,7 @@ public:
     bool dm_add_sta_beacon_measurement(const beerocks_message::sBeaconResponse11k &beacon_response);
 
     /**
-    * @brief Calculate value for TR-181* declares Noise parameter of MultiApSta object as: An indicator
+    * @brief Calculate value for TR-181* declares Noise parameter of MultiAPSTA object as: An indicator
     * of the average radio noise plus interference power measured on
     * the uplink from the Associated Device (STA) to the Access Point (AP).
     * Encoded as defined for ANPI in [Section 11.11.9.4/802.11].

@@ -389,7 +389,7 @@ bool db::dm_set_multi_ap_sta_noise_param(Station &station, const uint8_t rcpi, c
 
     uint32_t anpi = rcpi / (1 + std::pow(10, (rsni / 20.0) - 1));
 
-    return m_ambiorix_datamodel->set(station.dm_path + ".MultiApSta", "Noise",
+    return m_ambiorix_datamodel->set(station.dm_path + ".MultiAPSTA", "Noise",
                                      anpi + bss->radio.stats_info->noise);
 }
 
@@ -417,9 +417,9 @@ bool db::dm_add_sta_beacon_measurement(const beerocks_message::sBeaconResponse11
         LOG(ERROR) << "Failed to add: " << sta->dm_path << ".MeasurementReport";
         return false;
     }
-
-    dm_set_multi_ap_sta_noise_param(*sta, beacon.rcpi, beacon.rsni);
     bool ret_val = true;
+
+    ret_val &= dm_set_multi_ap_sta_noise_param(*sta, beacon.rcpi, beacon.rsni);
 
     ret_val &=
         m_ambiorix_datamodel->set(measurement_inst, "BSSID", tlvf::mac_to_string(beacon.bssid));
@@ -5680,7 +5680,7 @@ bool db::dm_add_sta_element(const sMacAddr &bssid, Station &station)
     }
 
     m_ambiorix_datamodel->set_current_time(station.dm_path);
-    m_ambiorix_datamodel->set_current_time(station.dm_path + ".MultiApSta", "AssociationTime");
+    m_ambiorix_datamodel->set_current_time(station.dm_path + ".MultiAPSTA", "AssociationTime");
 
     uint64_t add_sta_time = time(NULL);
     if (!m_ambiorix_datamodel->set(station.dm_path, "LastConnectTime", add_sta_time)) {
