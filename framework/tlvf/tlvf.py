@@ -1268,8 +1268,15 @@ class TlvF:
                                  (self.getIndentation(1), param_name, param_name))
                 lines_cpp.append("%sif (!%s_) { return std::string(); }" %
                                  (self.getIndentation(1), param_name))
-                lines_cpp.append("%sreturn std::string(%s_, m_%s_idx__);" %
+
+                lines_cpp.append("%sauto str = std::string(%s_, m_%s_idx__);" %
                                  (self.getIndentation(1), param_name, param_name))
+                lines_cpp.append("%sauto pos = str.find_first_of('\\0');" %
+                                 (self.getIndentation(1)))
+                lines_cpp.append("%sif (pos != std::string::npos) {" % (self.getIndentation(1)))
+                lines_cpp.append("%sstr.erase(pos);" % (self.getIndentation(2)))
+                lines_cpp.append("%s}" % (self.getIndentation(1)))
+                lines_cpp.append("%sreturn str;" % (self.getIndentation(1)))
                 lines_cpp.append("}")
                 lines_cpp.append("")
 

@@ -340,7 +340,12 @@ cACTION_BACKHAUL_ENABLE_APS_REQUEST::~cACTION_BACKHAUL_ENABLE_APS_REQUEST() {
 std::string cACTION_BACKHAUL_ENABLE_APS_REQUEST::iface_str() {
     char *iface_ = iface();
     if (!iface_) { return std::string(); }
-    return std::string(iface_, m_iface_idx__);
+    auto str = std::string(iface_, m_iface_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* cACTION_BACKHAUL_ENABLE_APS_REQUEST::iface(size_t length) {
@@ -532,7 +537,12 @@ cACTION_BACKHAUL_AP_DISABLED_NOTIFICATION::~cACTION_BACKHAUL_AP_DISABLED_NOTIFIC
 std::string cACTION_BACKHAUL_AP_DISABLED_NOTIFICATION::iface_str() {
     char *iface_ = iface();
     if (!iface_) { return std::string(); }
-    return std::string(iface_, m_iface_idx__);
+    auto str = std::string(iface_, m_iface_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* cACTION_BACKHAUL_AP_DISABLED_NOTIFICATION::iface(size_t length) {
@@ -1059,7 +1069,12 @@ cACTION_BACKHAUL_START_WPS_PBC_REQUEST::~cACTION_BACKHAUL_START_WPS_PBC_REQUEST(
 std::string cACTION_BACKHAUL_START_WPS_PBC_REQUEST::iface_str() {
     char *iface_ = iface();
     if (!iface_) { return std::string(); }
-    return std::string(iface_, m_iface_idx__);
+    auto str = std::string(iface_, m_iface_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* cACTION_BACKHAUL_START_WPS_PBC_REQUEST::iface(size_t length) {
@@ -1289,7 +1304,12 @@ cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED::~cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED() 
 std::string cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED::front_iface_name_str() {
     char *front_iface_name_ = front_iface_name();
     if (!front_iface_name_) { return std::string(); }
-    return std::string(front_iface_name_, m_front_iface_name_idx__);
+    auto str = std::string(front_iface_name_, m_front_iface_name_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED::front_iface_name(size_t length) {
@@ -2173,7 +2193,12 @@ cACTION_BACKHAUL_RADIO_DISABLE_REQUEST::~cACTION_BACKHAUL_RADIO_DISABLE_REQUEST(
 std::string cACTION_BACKHAUL_RADIO_DISABLE_REQUEST::iface_str() {
     char *iface_ = iface();
     if (!iface_) { return std::string(); }
-    return std::string(iface_, m_iface_idx__);
+    auto str = std::string(iface_, m_iface_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* cACTION_BACKHAUL_RADIO_DISABLE_REQUEST::iface(size_t length) {

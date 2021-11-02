@@ -93,7 +93,12 @@ uint8_t& tlvTestVarList::test_string_length() {
 std::string tlvTestVarList::test_string_str() {
     char *test_string_ = test_string();
     if (!test_string_) { return std::string(); }
-    return std::string(test_string_, m_test_string_idx__);
+    auto str = std::string(test_string_, m_test_string_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* tlvTestVarList::test_string(size_t length) {
@@ -735,7 +740,12 @@ uint32_t& cInner::var1() {
 std::string cInner::unknown_length_list_inner_str() {
     char *unknown_length_list_inner_ = unknown_length_list_inner();
     if (!unknown_length_list_inner_) { return std::string(); }
-    return std::string(unknown_length_list_inner_, m_unknown_length_list_inner_idx__);
+    auto str = std::string(unknown_length_list_inner_, m_unknown_length_list_inner_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* cInner::unknown_length_list_inner(size_t length) {

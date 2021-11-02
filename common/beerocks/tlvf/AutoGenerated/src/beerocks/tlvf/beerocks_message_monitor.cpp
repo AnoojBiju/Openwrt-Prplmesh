@@ -100,7 +100,12 @@ uint8_t& cACTION_MONITOR_JOINED_NOTIFICATION::iface_name_length() {
 std::string cACTION_MONITOR_JOINED_NOTIFICATION::iface_name_str() {
     char *iface_name_ = iface_name();
     if (!iface_name_) { return std::string(); }
-    return std::string(iface_name_, m_iface_name_idx__);
+    auto str = std::string(iface_name_, m_iface_name_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* cACTION_MONITOR_JOINED_NOTIFICATION::iface_name(size_t length) {

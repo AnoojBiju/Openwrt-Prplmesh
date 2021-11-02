@@ -144,7 +144,12 @@ cACTION_CONTROL_SLAVE_JOINED_NOTIFICATION::~cACTION_CONTROL_SLAVE_JOINED_NOTIFIC
 std::string cACTION_CONTROL_SLAVE_JOINED_NOTIFICATION::slave_version_str() {
     char *slave_version_ = slave_version();
     if (!slave_version_) { return std::string(); }
-    return std::string(slave_version_, m_slave_version_idx__);
+    auto str = std::string(slave_version_, m_slave_version_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* cACTION_CONTROL_SLAVE_JOINED_NOTIFICATION::slave_version(size_t length) {
@@ -316,7 +321,12 @@ cACTION_CONTROL_SLAVE_JOINED_RESPONSE::~cACTION_CONTROL_SLAVE_JOINED_RESPONSE() 
 std::string cACTION_CONTROL_SLAVE_JOINED_RESPONSE::master_version_str() {
     char *master_version_ = master_version();
     if (!master_version_) { return std::string(); }
-    return std::string(master_version_, m_master_version_idx__);
+    auto str = std::string(master_version_, m_master_version_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* cACTION_CONTROL_SLAVE_JOINED_RESPONSE::master_version(size_t length) {
@@ -2901,7 +2911,12 @@ beerocks::net::sIpv4Addr& cACTION_CONTROL_CLIENT_DHCP_COMPLETE_NOTIFICATION::ipv
 std::string cACTION_CONTROL_CLIENT_DHCP_COMPLETE_NOTIFICATION::name_str() {
     char *name_ = name();
     if (!name_) { return std::string(); }
-    return std::string(name_, m_name_idx__);
+    auto str = std::string(name_, m_name_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* cACTION_CONTROL_CLIENT_DHCP_COMPLETE_NOTIFICATION::name(size_t length) {
