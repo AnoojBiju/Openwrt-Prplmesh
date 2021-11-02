@@ -17,6 +17,11 @@
 import argparse
 import sys
 import os
+
+sys.stderr.write(str(sys.executable) + "\n")
+sys.stderr.write(str(sys.version_info) + "\n")
+sys.stderr.write(str(sys.path) + "\n")
+
 import yaml
 import yaml.constructor
 import pprint
