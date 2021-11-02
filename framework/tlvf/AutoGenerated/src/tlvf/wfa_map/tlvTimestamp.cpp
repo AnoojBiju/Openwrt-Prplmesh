@@ -40,7 +40,12 @@ uint8_t& tlvTimestamp::timestamp_length() {
 std::string tlvTimestamp::timestamp_str() {
     char *timestamp_ = timestamp();
     if (!timestamp_) { return std::string(); }
-    return std::string(timestamp_, m_timestamp_idx__);
+    auto str = std::string(timestamp_, m_timestamp_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* tlvTimestamp::timestamp(size_t length) {

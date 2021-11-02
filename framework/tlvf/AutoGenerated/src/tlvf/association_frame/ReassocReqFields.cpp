@@ -28,7 +28,12 @@ cCurrentApAddress::~cCurrentApAddress() {
 std::string cCurrentApAddress::ap_addr_str() {
     char *ap_addr_ = ap_addr();
     if (!ap_addr_) { return std::string(); }
-    return std::string(ap_addr_, m_ap_addr_idx__);
+    auto str = std::string(ap_addr_, m_ap_addr_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* cCurrentApAddress::ap_addr(size_t length) {

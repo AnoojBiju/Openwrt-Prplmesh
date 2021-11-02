@@ -36,7 +36,12 @@ const uint8_t& cSSID::length() {
 std::string cSSID::ssid_str() {
     char *ssid_ = ssid();
     if (!ssid_) { return std::string(); }
-    return std::string(ssid_, m_ssid_idx__);
+    auto str = std::string(ssid_, m_ssid_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* cSSID::ssid(size_t length) {
@@ -1398,7 +1403,12 @@ uint8_t& cMultiBand::channel_num() {
 std::string cMultiBand::bssid_str() {
     char *bssid_ = bssid();
     if (!bssid_) { return std::string(); }
-    return std::string(bssid_, m_bssid_idx__);
+    auto str = std::string(bssid_, m_bssid_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* cMultiBand::bssid(size_t length) {
@@ -1617,7 +1627,12 @@ const uint8_t& cDmgCapabilities::length() {
 std::string cDmgCapabilities::bssid_str() {
     char *bssid_ = bssid();
     if (!bssid_) { return std::string(); }
-    return std::string(bssid_, m_bssid_idx__);
+    auto str = std::string(bssid_, m_bssid_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* cDmgCapabilities::bssid(size_t length) {
@@ -1836,7 +1851,12 @@ uint8_t& cMultipleMacSublayers::mms_control() {
 std::string cMultipleMacSublayers::sta_mac_str() {
     char *sta_mac_ = sta_mac();
     if (!sta_mac_) { return std::string(); }
-    return std::string(sta_mac_, m_sta_mac_idx__);
+    auto str = std::string(sta_mac_, m_sta_mac_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
 }
 
 char* cMultipleMacSublayers::sta_mac(size_t length) {
