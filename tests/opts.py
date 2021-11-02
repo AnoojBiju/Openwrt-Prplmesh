@@ -5,6 +5,8 @@
 # See LICENSE file for more details.
 ###############################################################
 
+from datetime import datetime
+
 
 class opts:
     '''Static class that encodes the global options.'''
@@ -15,10 +17,14 @@ class opts:
 
 def message(msg: str, color: int = 0, end='\n'):
     '''Print a message, optionally in a color.'''
+    # Get local time and transform it to string. Remove the 3 least significant microsecods digits
+    # to get milliseconds value.
+    time_str = datetime.now().strftime("%H:%M:%S:%f")[:-3]
+
     if color:
-        print('\x1b[1;{}m{}\x1b[0m'.format(color, msg), end=end)
+        print('\x1b[1;{}m{}: {}\x1b[0m'.format(color, time_str, msg), end=end)
     else:
-        print(msg, end=end)
+        print('{}: {}'.format(time_str, msg), end=end)
 
 
 def debug(msg: str, end='\n'):
