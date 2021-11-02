@@ -6,6 +6,12 @@
 # See LICENSE file for more details.
 ###############################################################
 
+# Consistent with the Git Protocol Security Improvement on GitHub
+# we can no longer use git://github. There are many places
+# in the rdk-b recipes that use git: instead of https:
+# As a temporary fix, we add the following line to the git config
+git config --global url."https://github".insteadOf git://github
+
 printf '\033[1;35m%s Configuring RDK-B\n\033[0m' "$(date --iso-8601=seconds --universal)"
 
 export MACHINE=turris
