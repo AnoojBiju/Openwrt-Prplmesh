@@ -6,6 +6,17 @@ include_yaml_path: {
     "tlvf/common/",
     "tlvf/ieee_1905_1/",
     "tlvf/test/",
+    "tlvf/association_frame/AssocReqFields.yaml",
+    "tlvf/association_frame/cMobilityDomain.yaml",
+    "tlvf/association_frame/eElementID.yaml",
+    "tlvf/association_frame/cCapInfoDmgSta.yaml",
+    "tlvf/association_frame/cQosCapability.yaml",
+    "tlvf/association_frame/cStaHtCapability.yaml",
+    "tlvf/association_frame/cStaVhtCapability.yaml",
+    "tlvf/association_frame/cRmEnabledCaps.yaml",
+    "tlvf/association_frame/cExtendedCap.yaml",
+    "tlvf/association_frame/ReassocReqFields.yaml",
+
     #
     # "wfa_map/",
     "tlvf/wfa_map/eTlvTypeMap.yaml",

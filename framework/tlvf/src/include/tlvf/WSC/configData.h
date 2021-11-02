@@ -9,12 +9,12 @@
 #ifndef _TLVF_WSC_CONFIGDATA_H_
 #define _TLVF_WSC_CONFIGDATA_H_
 
-#include <tlvf/WSC/AttrList.h>
+#include <tlvf/WscAttrList.h>
 #include <tlvf/tlvflogging.h>
 
 namespace WSC {
 
-class configData : public AttrList {
+class configData : public WscAttrList {
 
 public:
     struct config {
@@ -26,11 +26,11 @@ public:
         uint8_t bss_type;
     };
 
-    configData(uint8_t *buff, size_t buff_len, bool parse) : AttrList(buff, buff_len, parse) {}
+    configData(uint8_t *buff, size_t buff_len, bool parse) : WscAttrList(buff, buff_len, parse) {}
     virtual ~configData() = default;
 
     bool init(const config &cfg);
-    bool init() { return AttrList::init(); };
+    bool init() { return WscAttrList::init(); };
     bool valid() const override;
     static std::shared_ptr<configData> create(const config &cfg, uint8_t *buff, size_t buff_len);
     static std::shared_ptr<configData> parse(uint8_t *buff, size_t buff_len);
