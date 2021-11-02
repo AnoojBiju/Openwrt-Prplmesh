@@ -6,6 +6,7 @@ import re
 import time
 from enum import Enum
 from typing import Dict, Union
+from opts import debug
 
 logger = logging.getLogger(__name__)
 
@@ -198,6 +199,8 @@ class UCCSocket:
 
     def cmd_reply(self, command: str, verbose: bool = False, timeout: int = 120) -> Dict[str, str]:
         """Open the connection, send a command and wait for the reply."""
+
+        debug("Sending CAPI command: '{}'".format(command))
         with self:
             self.send_cmd(command)
             return self.get_reply(verbose, timeout)
