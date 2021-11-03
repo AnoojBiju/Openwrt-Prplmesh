@@ -100,6 +100,26 @@ public:
      */
     virtual bool send_cmdu(ieee1905_1::CmduMessageTx &cmdu_tx) = 0;
 
+    /**
+     * @brief Forwards a CMDU message that was sent by another thread or process.
+     *
+     * Forwards a received CMDU message to a server.
+     *
+     * The CMDU message was originally sent by a remote entity running in a different thread or
+     * process.
+     *
+     * @param cmdu_rx The received CMDU message to forward.
+     * @return true on success and false otherwise.
+     */
+    virtual bool forward_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx) = 0;
+
+    /**
+     * @brief Get the file descriptor of the client.
+     * 
+     * @return Client file descriptor.
+     */
+    virtual int get_fd() = 0;
+
 protected:
     /**
      * @brief Notifies a CMDU-received event.
