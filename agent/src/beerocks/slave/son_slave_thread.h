@@ -232,6 +232,14 @@ private:
     void platform_notify_error(beerocks::bpl::eErrorCode code, const std::string &error_data);
     bool monitor_heartbeat_check(const std::string &fronthaul_iface);
     bool ap_manager_heartbeat_check(const std::string &fronthaul_iface);
+
+public:
+    /**
+     * @brief Checks if there is a link to the Multi-AP Controller.
+     * 
+     * @return true if there is a link to the Controller, otherwise false.
+     */
+    bool link_to_controller();
     bool send_cmdu_to_controller(const std::string &fronthaul_iface,
                                  ieee1905_1::CmduMessageTx &cmdu_tx);
 

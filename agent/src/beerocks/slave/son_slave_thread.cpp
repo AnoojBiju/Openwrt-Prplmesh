@@ -2073,7 +2073,7 @@ bool slave_thread::handle_cmdu_platform_manager_message(
     }
     case beerocks_message::ACTION_PLATFORM_ARP_MONITOR_NOTIFICATION: {
         // LOG(TRACE) << "ACTION_PLATFORM_ARP_MONITOR_NOTIFICATION";
-        if (!m_master_socket) {
+        if (!link_to_controller()) {
             return true;
         }
         auto notification_in =
@@ -2637,7 +2637,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
         LOG(INFO) << "client disconnected sta_mac=" << client_mac << " from bssid=" << bssid;
 
         // notify master
-        if (!m_master_socket) {
+        if (!link_to_controller()) {
             LOG(DEBUG) << "Controller is not connected";
             return true;
         }
@@ -2936,7 +2936,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
             // configure the bBSS to support it on L2.
         }
 
-        if (!m_master_socket) {
+        if (!link_to_controller()) {
             LOG(DEBUG) << "Controller is not connected";
             return true;
         }
@@ -4109,6 +4109,9 @@ bool slave_thread::agent_fsm()
             db->ethernet.wan.mac = tlvf::mac_from_string(iface_mac);
         }
 
+        // Reset Statuses
+        db->statuses.ap_autoconfiguration_completed = false;
+
         // Reset the traffic separation configuration as they will be reconfigured on
         // autoconfiguration.
         TrafficSeparation::traffic_seperation_configuration_clear();
@@ -4491,8 +4494,8 @@ bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
     case STATE_JOIN_MASTER: {
 
         radio_manager.autoconfiguration_completed = false;
-        if (!m_master_socket) {
-            LOG(ERROR) << "master_socket == nullptr";
+        if (!link_to_controller()) {
+            LOG(ERROR) << "No link to Multi-AP Controller";
             platform_notify_error(bpl::eErrorCode::SLAVE_INVALID_MASTER_SOCKET,
                                   "Invalid master socket");
             radio_manager.stop_on_failure_attempts--;
@@ -4917,11 +4920,17 @@ bool slave_thread::ap_manager_heartbeat_check(const std::string &fronthaul_iface
     return true;
 }
 
+bool slave_thread::link_to_controller()
+{
+    auto db = AgentDB::get();
+    return db->statuses.ap_autoconfiguration_completed;
+}
+
 bool slave_thread::send_cmdu_to_controller(const std::string &fronthaul_iface,
                                            ieee1905_1::CmduMessageTx &cmdu_tx)
 {
-    if (!m_master_socket) {
-        LOG(ERROR) << "socket to master is nullptr";
+    if (!link_to_controller()) {
+        LOG(ERROR) << "No link to Multi-AP Controller";
         return false;
     }
 
@@ -5167,21 +5176,20 @@ bool slave_thread::handle_autoconfiguration_renew(Socket *sd, ieee1905_1::CmduMe
         return false;
     }
 
+    // TODO: as part of PPM-350, use
+    // ap_autoconfiguration_completed instead of
+    // master_socket. See:
+    // https://gitlab.com/prpl-foundation/prplmesh/prplMesh/-/merge_requests/2629#note_666550951
+    if (!link_to_controller()) {
+        LOG(INFO) << "No link to Multi-AP Controller, ignoring renew.";
+        return true;
+    }
+
     for (const auto radio : db->get_radios_list()) {
         if (!radio) {
             return false;
         }
         auto &radio_manager = m_radio_managers[radio->front.iface_name];
-
-        if (!m_master_socket) {
-            // TODO: as part of PPM-350, use
-            // ap_autoconfiguration_completed instead of
-            // master_socket. See:
-            // https://gitlab.com/prpl-foundation/prplmesh/prplMesh/-/merge_requests/2629#note_666550951
-            LOG(INFO) << "slave for " << radio->front.iface_name
-                      << " not connected to master yet, ignoring renew.";
-            return true;
-        }
 
         LOG(TRACE) << "goto STATE_JOIN_MASTER";
         radio_manager.slave_state = STATE_JOIN_MASTER;
