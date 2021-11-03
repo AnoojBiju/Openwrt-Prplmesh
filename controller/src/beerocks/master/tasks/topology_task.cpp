@@ -445,8 +445,15 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
 
         LOG(INFO) << "client connected, mac=" << client_mac_str << ", bssid=" << bssid_str;
 
-        database.set_node_channel_bw(client_mac, database.get_node_channel(bssid_str),
-                                     database.get_node_bw(bssid_str),
+        auto bss_bw    = database.get_node_bw(bssid_str);
+        auto client_bw = bss_bw;
+        if (vs_tlv) {
+            if (son::wireless_utils::get_station_max_supported_bw(vs_tlv->capabilities(),
+                                                                  client_bw)) {
+                client_bw = std::min(client_bw, bss_bw);
+            }
+        }
+        database.set_node_channel_bw(client_mac, database.get_node_channel(bssid_str), client_bw,
                                      database.get_node_channel_ext_above_secondary(bssid_str), 0,
                                      database.get_hostap_vht_center_frequency(bssid));
 

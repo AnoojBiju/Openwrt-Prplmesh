@@ -1663,6 +1663,7 @@ public:
     bool set_node_channel_bw(const sMacAddr &mac, int channel, beerocks::eWiFiBandwidth bw,
                              bool channel_ext_above_secondary, int8_t channel_ext_above_primary,
                              uint16_t vht_center_frequency);
+    bool update_node_bw(const sMacAddr &mac, beerocks::eWiFiBandwidth bw);
     beerocks::eWiFiBandwidth get_node_bw(const std::string &mac);
     bool get_hostap_channel_ext_above_primary(const sMacAddr &hostap_mac);
     bool get_node_channel_ext_above_secondary(const std::string &mac);
