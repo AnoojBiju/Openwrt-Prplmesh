@@ -614,8 +614,10 @@ bool nl80211_client_impl::get_sta_info(const std::string &interface_name,
             }
 
             // Bit rate parsing helper function
-            auto parse_bitrate_func = [&](struct nlattr *bitrate_attr) -> int {
-                int rate = 0;
+            auto parse_bitrate_func = [&](struct nlattr *bitrate_attr, int &rate,
+                                          uint8_t &bw) -> void {
+                rate = 0;
+                bw   = 0;
 
                 struct nlattr *rinfo[NL80211_RATE_INFO_MAX + 1];
                 static auto rate_policy = []() {
@@ -624,8 +626,12 @@ bool nl80211_client_impl::get_sta_info(const std::string &interface_name,
                     if (!initialized) {
                         initialized = true;
 
-                        rate_policy[NL80211_RATE_INFO_BITRATE]   = {NLA_U16, 0, 0};
-                        rate_policy[NL80211_RATE_INFO_BITRATE32] = {NLA_U32, 0, 0};
+                        rate_policy[NL80211_RATE_INFO_BITRATE]         = {NLA_U16, 0, 0};
+                        rate_policy[NL80211_RATE_INFO_BITRATE32]       = {NLA_U32, 0, 0};
+                        rate_policy[NL80211_RATE_INFO_40_MHZ_WIDTH]    = {NLA_FLAG, 0, 0};
+                        rate_policy[NL80211_RATE_INFO_80_MHZ_WIDTH]    = {NLA_FLAG, 0, 0};
+                        rate_policy[NL80211_RATE_INFO_80P80_MHZ_WIDTH] = {NLA_FLAG, 0, 0};
+                        rate_policy[NL80211_RATE_INFO_160_MHZ_WIDTH]   = {NLA_FLAG, 0, 0};
                     }
 
                     return rate_policy;
@@ -641,19 +647,33 @@ bool nl80211_client_impl::get_sta_info(const std::string &interface_name,
                     LOG(DEBUG) << "NL80211_RATE_INFO_BITRATE attribute is missing";
                 }
 
-                return rate;
+                bw = beerocks::BANDWIDTH_20;
+                if (rinfo[NL80211_RATE_INFO_40_MHZ_WIDTH]) {
+                    bw = beerocks::BANDWIDTH_40;
+                } else if (rinfo[NL80211_RATE_INFO_80_MHZ_WIDTH]) {
+                    bw = beerocks::BANDWIDTH_80;
+                } else if ((rinfo[NL80211_RATE_INFO_80P80_MHZ_WIDTH]) ||
+                           (rinfo[NL80211_RATE_INFO_160_MHZ_WIDTH])) {
+                    bw = beerocks::BANDWIDTH_160;
+                } else if ((rinfo[NL80211_RATE_INFO_5_MHZ_WIDTH]) ||
+                           (rinfo[NL80211_RATE_INFO_10_MHZ_WIDTH])) {
+                    bw = beerocks::BANDWIDTH_UNKNOWN;
+                }
             };
 
+            int rate;
+            uint8_t bw;
             if (sinfo[NL80211_STA_INFO_TX_BITRATE]) {
-                sta_info.tx_bitrate_100kbps =
-                    parse_bitrate_func(sinfo[NL80211_STA_INFO_TX_BITRATE]);
+                parse_bitrate_func(sinfo[NL80211_STA_INFO_TX_BITRATE], rate, bw);
+                sta_info.tx_bitrate_100kbps = rate;
+                sta_info.dl_bandwidth       = bw;
             } else {
                 LOG(DEBUG) << "NL80211_STA_INFO_TX_BITRATE attribute is missing";
             }
 
             if (sinfo[NL80211_STA_INFO_RX_BITRATE]) {
-                sta_info.rx_bitrate_100kbps =
-                    parse_bitrate_func(sinfo[NL80211_STA_INFO_RX_BITRATE]);
+                parse_bitrate_func(sinfo[NL80211_STA_INFO_RX_BITRATE], rate, bw);
+                sta_info.rx_bitrate_100kbps = rate;
             } else {
                 LOG(DEBUG) << "NL80211_STA_INFO_RX_BITRATE attribute is missing";
             }
