@@ -14,9 +14,15 @@
 #include "cac_status_database.h"
 #include "gate/1905_beacon_query_to_vs.h"
 #include "gate/vs_beacon_response_to_1905.h"
+#include <bcl/beerocks_cmdu_client_factory_factory.h>
+#include <bcl/beerocks_cmdu_server_factory.h>
+#include <bcl/beerocks_timer_factory_impl.h>
+#include <bcl/beerocks_timer_manager_impl.h>
 #include <bcl/beerocks_utils.h>
 #include <bcl/beerocks_version.h>
 #include <bcl/network/network_utils.h>
+#include <btl/broker_client_factory_factory.h>
+
 #include <beerocks/tlvf/beerocks_message.h>
 #include <beerocks/tlvf/beerocks_message_1905_vs.h>
 #include <beerocks/tlvf/beerocks_message_apmanager.h>
@@ -74,23 +80,15 @@ using namespace net;
 using namespace son;
 
 slave_thread::slave_thread(sAgentConfig conf, beerocks::logging &logger_)
-    : config(conf), logger(logger_)
+    : cmdu_tx(m_tx_buffer, sizeof(m_tx_buffer)), config(conf), logger(logger_)
 {
-    thread_name          = BEEROCKS_AGENT;
-    backhaul_manager_uds = conf.temp_path + std::string(BEEROCKS_BACKHAUL_UDS);
-    platform_manager_uds = conf.temp_path + std::string(BEEROCKS_PLATFORM_UDS);
-
-    m_backhaul_manager_socket = nullptr;
-    m_master_socket           = nullptr;
-
+    thread_name = BEEROCKS_AGENT;
     for (const auto &radio_map_element : config.radios) {
 
         const auto &fronthaul_iface = radio_map_element.first;
         const auto &radio_conf      = radio_map_element.second;
 
-        auto &radio_manager             = m_radio_managers[fronthaul_iface];
-        radio_manager.monitor_socket    = nullptr;
-        radio_manager.ap_manager_socket = nullptr;
+        auto &radio_manager = m_radio_managers[fronthaul_iface];
 
         // Set configuration on Agent database.
         auto db = AgentDB::get();
@@ -109,8 +107,6 @@ slave_thread::slave_thread(sAgentConfig conf, beerocks::logging &logger_)
         }
 
         radio->sta_iface_filter_low = radio_conf.backhaul_wireless_iface_filter_low;
-
-        m_agent_state = STATE_INIT;
     }
 }
 
@@ -144,6 +140,117 @@ bool slave_thread::thread_init()
             return false;
         }
     }
+    /**  Broker Client  **/
+
+    // Create broker client factory to create broker clients when requested
+    std::string broker_uds_path = config.temp_path + std::string(BEEROCKS_BROKER_UDS);
+    m_broker_client_factory =
+        beerocks::btl::create_broker_client_factory(broker_uds_path, m_event_loop);
+    LOG_IF(!m_broker_client_factory, FATAL) << "Unable to create broker client factory!";
+
+    // Create an instance of a broker client connected to the broker server that is running in the
+    // transport process
+    m_broker_client = m_broker_client_factory->create_instance();
+    LOG_IF(!m_broker_client, FATAL) << "Failed to create instance of broker client";
+
+    beerocks::btl::BrokerClient::EventHandlers broker_client_handlers;
+    // Install a CMDU-received event handler for CMDU messages received from the transport process.
+    // These messages are actually been sent by a remote process and the broker server running in
+    // the transport process just forwards them to the broker client.
+    broker_client_handlers.on_cmdu_received = [&](uint32_t iface_index, const sMacAddr &dst_mac,
+                                                  const sMacAddr &src_mac,
+                                                  ieee1905_1::CmduMessageRx &cmdu_rx) {
+        handle_cmdu_from_broker(iface_index, dst_mac, src_mac, cmdu_rx);
+    };
+
+    // Install a connection-closed event handler.
+    // Currently there is no recovery mechanism if connection with broker server gets interrupted
+    // (something that happens if the transport process dies). Just log a message and exit
+    broker_client_handlers.on_connection_closed = [&]() {
+        LOG(FATAL) << "Broker client got disconnected!";
+    };
+
+    m_broker_client->set_handlers(broker_client_handlers);
+
+    // Subscribe for the reception of CMDU messages that this process is interested in
+    if (!m_broker_client->subscribe(std::set<ieee1905_1::eMessageType>{
+            ieee1905_1::eMessageType::TOPOLOGY_DISCOVERY_MESSAGE,
+        })) {
+        LOG(FATAL) << "Failed subscribing to the Bus";
+    }
+
+    /** CMDU Server **/
+
+    // Create UDS address where the server socket will listen for incoming connection requests.
+    std::string agent_server_uds_path = config.temp_path + std::string(BEEROCKS_AGENT_UDS);
+    m_cmdu_server_uds_address = beerocks::net::UdsAddress::create_instance(agent_server_uds_path);
+    LOG_IF(!m_cmdu_server_uds_address, FATAL)
+        << "Unable to create UDS server address for backhaul manager!";
+
+    // Create server to exchange CMDU messages with clients connected through a UDS socket
+    m_cmdu_server =
+        beerocks::CmduServerFactory::create_instance(m_cmdu_server_uds_address, m_event_loop);
+    LOG_IF(!m_cmdu_server, FATAL) << "Unable to create CMDU server for backhaul manager!";
+
+    beerocks::CmduServer::EventHandlers cmdu_server_handlers{
+        .on_client_connected    = nullptr,
+        .on_client_disconnected = [&](int fd) { handle_client_disconnected(fd); },
+        .on_cmdu_received       = [&](int fd, uint32_t iface_index, const sMacAddr &dst_mac,
+                                const sMacAddr &src_mac,
+                                ieee1905_1::CmduMessageRx &cmdu_rx) { handle_cmdu(fd, cmdu_rx); },
+    };
+    m_cmdu_server->set_handlers(cmdu_server_handlers);
+
+    /** Platform Manager Client Factory **/
+
+    // Create UDS address where the server socket will listen for incoming connection requests.
+    std::string platform_manager_uds_path = config.temp_path + std::string(BEEROCKS_PLATFORM_UDS);
+
+    // Create CMDU client factory to create CMDU clients connected to CMDU server running in
+    // platform manager when requested
+    m_platform_manager_cmdu_client_factory =
+        std::move(beerocks::create_cmdu_client_factory(platform_manager_uds_path, m_event_loop));
+    LOG_IF(!m_platform_manager_cmdu_client_factory, FATAL)
+        << "Unable to create CMDU client factory!";
+
+    /** Backhaul Manager Client Factory **/
+
+    // Create UDS address where the server socket will listen for incoming connection requests.
+    std::string backhaul_manager_uds_path = config.temp_path + std::string(BEEROCKS_BACKHAUL_UDS);
+
+    // Create CMDU client factory to create CMDU clients connected to CMDU server running in
+    // platform manager when requested
+    m_backhaul_manager_cmdu_client_factory =
+        std::move(beerocks::create_cmdu_client_factory(backhaul_manager_uds_path, m_event_loop));
+    LOG_IF(!m_backhaul_manager_cmdu_client_factory, FATAL)
+        << "Unable to create CMDU client factory!";
+
+    /** FSM Timer **/
+
+    // Create timer factory to create instances of timers.
+    auto timer_factory = std::make_shared<beerocks::TimerFactoryImpl>();
+    LOG_IF(!timer_factory, FATAL) << "Unable to create timer factory!";
+
+    // Create timer manager to help using application timers.
+    m_timer_manager = std::make_shared<beerocks::TimerManagerImpl>(timer_factory, m_event_loop);
+    LOG_IF(!m_timer_manager, FATAL) << "Unable to create timer manager!";
+
+    // Create a timer to run the FSM periodically
+    constexpr auto fsm_timer_period = std::chrono::milliseconds(200);
+    m_fsm_timer = m_timer_manager->add_timer("Agent FSM", fsm_timer_period, fsm_timer_period,
+                                             [&](int fd, beerocks::EventLoop &loop) {
+                                                 fsm_all();
+                                                 return true;
+                                             });
+    LOG_IF(m_fsm_timer == beerocks::net::FileDescriptor::invalid_descriptor, FATAL)
+        << "Failed to create the FSM timer";
+
+    LOG(DEBUG) << "FSM timer created with fd=" << m_fsm_timer;
+
+    m_agent_state = STATE_INIT;
+    LOG(DEBUG) << "Agent Started";
+
+    return true;
 }
 
 void slave_thread::stop_slave_thread()
@@ -604,6 +711,34 @@ bool slave_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
         // Handle IEEE 1905.1 messages from the Controller
         return handle_cmdu_control_ieee1905_1_message(sd, cmdu_rx);
     }
+    return true;
+}
+
+bool slave_thread::handle_cmdu_from_broker(uint32_t iface_index, const sMacAddr &dst_mac,
+                                           const sMacAddr &src_mac,
+                                           ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    if (cmdu_rx.getMessageType() == ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE) {
+        auto beerocks_header = message_com::parse_intel_vs_message(cmdu_rx);
+
+        if (!beerocks_header) {
+            LOG(ERROR) << "Not a vendor specific message";
+            return false;
+        }
+
+        if (beerocks_header->action() != beerocks_message::ACTION_CONTROL) {
+            LOG(ERROR) << "Unknown message, action: " << std::hex << int(beerocks_header->action());
+            return false;
+        }
+
+        // Currently there aren't Controller messages from the broker handled directly in the Agent
+        // context.
+        return true;
+    }
+
+    // Standard messages handling:
+    // Currently there aren't any standard messages from the broker handled directly in the Agent
+    // context.
     return true;
 }
 
@@ -4005,21 +4140,32 @@ bool slave_thread::agent_fsm()
     }
     case STATE_CONNECT_TO_PLATFORM_MANAGER: {
         LOG(DEBUG) << "STATE_CONNECT_TO_PLATFORM_MANAGER";
-        m_platform_manager_socket = new SocketClient(platform_manager_uds);
-        LOG(DEBUG) << "new platform socket, sd=" << intptr_t(m_platform_manager_socket)
-                   << " fd=" << m_platform_manager_socket->getSocketFd();
-        std::string err = m_platform_manager_socket->getError();
-        if (!err.empty()) {
-            delete m_platform_manager_socket;
-            m_platform_manager_socket = nullptr;
 
-            LOG(WARNING) << "Unable to connect to Platform Manager: " << err;
-            LOG(INFO) << "Retrying in " << CONNECT_PLATFORM_RETRY_SLEEP_MS << " milliseconds";
-            UTILS_SLEEP_MSEC(CONNECT_PLATFORM_RETRY_SLEEP_MS);
-            break;
+        // Connect/Reconnect to the platform manager
+        if (!m_platform_manager_client) {
+            m_platform_manager_client = m_platform_manager_cmdu_client_factory->create_instance();
+
+            LOG_IF(!m_platform_manager_client, FATAL) << "Failed connecting to Platform Manager!";
+
+            beerocks::CmduClient::EventHandlers handlers;
+            handlers.on_cmdu_received = [&](uint32_t iface_index, const sMacAddr &dst_mac,
+                                            const sMacAddr &src_mac,
+                                            ieee1905_1::CmduMessageRx &cmdu_rx) {
+                handle_cmdu(m_platform_manager_client->get_fd(), cmdu_rx);
+            };
+
+            handlers.on_connection_closed = [&]() {
+                LOG(ERROR) << "Client to Platform Manager disconnected, restarting "
+                              "Agent";
+                m_platform_manager_client.reset();
+                LOG(DEBUG) << "goto STATE_STOPPED";
+                m_agent_state = STATE_STOPPED;
+                return true;
+            };
+            m_platform_manager_client->set_handlers(handlers);
+        } else {
+            LOG(DEBUG) << "Using existing client to Platform Manager";
         }
-
-        add_socket(m_platform_manager_socket);
 
         // CMDU Message
         auto request = message_com::create_vs_message<
@@ -4055,27 +4201,29 @@ bool slave_thread::agent_fsm()
     case STATE_CONNECT_TO_BACKHAUL_MANAGER: {
         m_is_backhaul_disconnected = false;
 
-        if (!m_backhaul_manager_socket) {
-            LOG(DEBUG) << "create backhaul_manager_socket";
-            m_backhaul_manager_socket = new SocketClient(backhaul_manager_uds);
-            std::string err           = m_backhaul_manager_socket->getError();
-            if (!err.empty()) {
-                LOG(ERROR) << "backhaul_manager_socket: " << err;
-                backhaul_manager_stop();
-                platform_notify_error(bpl::eErrorCode::SLAVE_CONNECTING_TO_BACKHAUL_MANAGER, {});
-                m_radio_managers.do_on_each_radio_manager(
-                    [&](sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
-                        radio_manager.stop_on_failure_attempts--;
-                        slave_reset(fronthaul_iface);
-                        return true;
-                    });
-                break;
-            } else {
-                add_socket(m_backhaul_manager_socket);
-            }
+        // Connect/Reconnect to the backhaul manager
+        if (!m_backhaul_manager_client) {
+            m_backhaul_manager_client = m_backhaul_manager_cmdu_client_factory->create_instance();
+
+            LOG_IF(!m_backhaul_manager_client, FATAL) << "Failed connecting to Backhaul Manager!";
+
+            beerocks::CmduClient::EventHandlers handlers;
+            handlers.on_cmdu_received = [&](uint32_t iface_index, const sMacAddr &dst_mac,
+                                            const sMacAddr &src_mac,
+                                            ieee1905_1::CmduMessageRx &cmdu_rx) {
+                handle_cmdu(m_backhaul_manager_client->get_fd(), cmdu_rx);
+            };
+            handlers.on_connection_closed = [&]() {
+                LOG(ERROR) << "Client to Backhaul Manager disconnected, restarting "
+                              "Agent";
+                m_backhaul_manager_client.reset();
+                LOG(DEBUG) << "goto STATE_STOPPED";
+                m_agent_state = STATE_STOPPED;
+                return true;
+            };
+            m_backhaul_manager_client->set_handlers(handlers);
         } else {
-            LOG(DEBUG) << "using existing backhaul_manager_socket=0x"
-                       << intptr_t(m_backhaul_manager_socket);
+            LOG(DEBUG) << "Using existing client to Backhaul Manager";
         }
 
         // CMDU Message
@@ -4798,11 +4946,14 @@ bool slave_thread::send_cmdu_to_controller(const std::string &fronthaul_iface,
 
     auto dst_addr =
         cmdu_tx.getMessageType() == ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE
-            ? tlvf::mac_to_string(network_utils::MULTICAST_1905_MAC_ADDR)
-            : tlvf::mac_to_string(db->controller_info.bridge_mac);
+bool slave_thread::send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
+{
+    return m_cmdu_server->send_cmdu(fd, cmdu_tx);
+}
 
-    return message_com::send_cmdu(m_master_socket, cmdu_tx, dst_addr,
-                                  tlvf::mac_to_string(db->bridge.mac));
+bool slave_thread::forward_cmdu_to_uds(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    return m_cmdu_server->forward_cmdu(fd, 0, {}, {}, cmdu_rx);
 }
 
 /**
