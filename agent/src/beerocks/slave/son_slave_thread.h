@@ -10,8 +10,8 @@
 #define _SON_SLAVE_THREAD_H
 
 #include <bcl/beerocks_backport.h>
+#include <bcl/beerocks_eventloop_thread.h>
 #include <bcl/beerocks_logging.h>
-#include <bcl/beerocks_socket_thread.h>
 
 #include <beerocks/tlvf/beerocks_header.h>
 
@@ -35,7 +35,7 @@ enum class eErrorCode;
 } // namespace beerocks
 
 namespace son {
-class slave_thread : public beerocks::socket_thread {
+class slave_thread final : public beerocks::EventLoopThread {
 
 public:
     struct sAgentConfig {
@@ -114,14 +114,18 @@ public:
     slave_thread(sAgentConfig conf, beerocks::logging &logger_);
     virtual ~slave_thread();
 
-    virtual bool init() override;
-    virtual bool work() override;
+    /**
+     * @brief Initialize the Agent.
+     *
+     * @return true on success and false otherwise.
+     */
+    bool thread_init() override;
 
 protected:
     virtual bool handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx) override;
     virtual void on_thread_stop() override;
     virtual bool socket_disconnected(Socket *sd) override;
-    virtual std::string print_cmdu_types(const beerocks::message::sUdsHeader *cmdu_header) override;
+    
 
 private:
     bool handle_cmdu_control_message(Socket *sd,
@@ -140,6 +144,7 @@ private:
     bool handle_cmdu_monitor_ieee1905_1_message(const std::string &fronthaul_iface, Socket &sd,
                                                 ieee1905_1::CmduMessageRx &cmdu_rx);
 
+    bool fsm_all();
     bool slave_fsm(const std::string &fronthaul_iface);
     bool agent_fsm();
     void slave_reset(const std::string &fronthaul_iface);
@@ -286,7 +291,6 @@ private:
 
     beerocks::logging &logger;
     std::string master_version;
-    bool m_logger_configured = false;
 
     // Encryption support - move to common library
     bool autoconfig_wsc_calculate_keys(const std::string &fronthaul_iface, WSC::m2 &m2,

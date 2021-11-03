@@ -74,7 +74,7 @@ using namespace net;
 using namespace son;
 
 slave_thread::slave_thread(sAgentConfig conf, beerocks::logging &logger_)
-    : socket_thread(conf.temp_path + std::string(BEEROCKS_AGENT_UDS)), config(conf), logger(logger_)
+    : config(conf), logger(logger_)
 {
     thread_name          = BEEROCKS_AGENT;
     backhaul_manager_uds = conf.temp_path + std::string(BEEROCKS_BACKHAUL_UDS);
@@ -112,7 +112,6 @@ slave_thread::slave_thread(sAgentConfig conf, beerocks::logging &logger_)
 
         m_agent_state = STATE_INIT;
     }
-    set_select_timeout(SELECT_TIMEOUT_MSEC);
 }
 
 slave_thread::~slave_thread()
@@ -121,8 +120,12 @@ slave_thread::~slave_thread()
     stop_slave_thread();
 }
 
-bool slave_thread::init()
+bool slave_thread::thread_init()
 {
+    /** Logger Initialization **/
+    logger.set_thread_name(logger.get_module_name());
+    logger.attach_current_thread_to_logger_id();
+
     if (m_constructor_failed) {
         LOG(ERROR) << "Not initalizing the Agent. There was an error in the constructor";
         return false;
@@ -141,8 +144,6 @@ bool slave_thread::init()
             return false;
         }
     }
-
-    return socket_thread::init();
 }
 
 void slave_thread::stop_slave_thread()
@@ -518,19 +519,8 @@ bool slave_thread::socket_disconnected(Socket *sd)
     return true;
 }
 
-std::string slave_thread::print_cmdu_types(const message::sUdsHeader *cmdu_header)
+bool slave_thread::fsm_all()
 {
-    return message_com::print_cmdu_types(cmdu_header);
-}
-
-bool slave_thread::work()
-{
-    if (!m_logger_configured) {
-        logger.set_thread_name(logger.get_module_name());
-        logger.attach_current_thread_to_logger_id();
-        m_logger_configured = true;
-    }
-
     auto radio_fsm = [&](sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
         if (!monitor_heartbeat_check(fronthaul_iface) ||
             !ap_manager_heartbeat_check(fronthaul_iface)) {
@@ -553,10 +543,6 @@ bool slave_thread::work()
         if (!m_radio_managers.do_on_each_radio_manager(radio_fsm)) {
             return false;
         }
-    }
-
-    if (!socket_thread::work()) {
-        return false;
     }
 
     return true;
