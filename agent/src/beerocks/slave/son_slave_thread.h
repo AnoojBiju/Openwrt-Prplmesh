@@ -220,12 +220,8 @@ private:
     bool fsm_all();
     bool slave_fsm(const std::string &fronthaul_iface);
     bool agent_fsm();
-    void slave_reset(const std::string &fronthaul_iface);
+    void agent_reset();
     void stop_slave_thread();
-    void backhaul_manager_stop();
-    void platform_manager_stop();
-    void hostap_services_off();
-    bool hostap_services_on();
     void fronthaul_start(const std::string &fronthaul_iface);
     void fronthaul_stop(const std::string &fronthaul_iface);
     void log_son_config(const std::string &fronthaul_iface);
@@ -322,6 +318,7 @@ private:
     std::unique_ptr<beerocks::CmduClient> m_backhaul_manager_client;
 
     bool m_is_backhaul_disconnected = false;
+    int m_agent_resets_counter      = 0;
     sSlaveBackhaulParams backhaul_params;
 
     // Global FSM members:
@@ -333,13 +330,11 @@ private:
         beerocks_message::sSonConfig son_config;
         int stop_on_failure_attempts;
         bool stopped                   = false;
-        bool detach_on_conf_change     = false;
         bool configuration_in_progress = false;
         bool autoconfiguration_completed;
         //slave FSM //
         eSlaveState slave_state;
         std::chrono::steady_clock::time_point slave_state_timer;
-        int slave_resets_counter = 0;
 
         int monitor_fd    = beerocks::net::FileDescriptor::invalid_descriptor;
         int ap_manager_fd = beerocks::net::FileDescriptor::invalid_descriptor;

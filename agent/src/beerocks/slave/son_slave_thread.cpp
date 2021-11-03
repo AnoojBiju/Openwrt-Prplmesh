@@ -112,7 +112,7 @@ slave_thread::slave_thread(sAgentConfig conf, beerocks::logging &logger_)
 
 slave_thread::~slave_thread()
 {
-    LOG(DEBUG) << "destructor - slave_reset()";
+    LOG(DEBUG) << "destructor - agent_reset()";
     stop_slave_thread();
 }
 
@@ -255,53 +255,47 @@ bool slave_thread::thread_init()
 
 void slave_thread::stop_slave_thread()
 {
-    LOG(DEBUG) << "stop_slave_thread()";
-    for (auto &radio_manager_map_element : m_radio_managers.get()) {
-        const auto &fronthaul_iface = radio_manager_map_element.first;
-        slave_reset(fronthaul_iface);
-    }
-
-    const auto &zwdfs_radio_manager = m_radio_managers.get_zwdfs();
-    if (zwdfs_radio_manager) {
-        slave_reset(zwdfs_radio_manager->first);
-    }
+    agent_reset();
     should_stop = true;
 }
 
-void slave_thread::slave_reset(const std::string &fronthaul_iface)
+void slave_thread::agent_reset()
 {
-    auto &radio_manager = m_radio_managers[fronthaul_iface];
-
-    radio_manager.slave_resets_counter++;
-    LOG(DEBUG) << "slave_reset() #" << radio_manager.slave_resets_counter << " - start";
-    if (!radio_manager.detach_on_conf_change) {
-        backhaul_manager_stop();
-    }
-    platform_manager_stop();
-    hostap_services_off();
-    fronthaul_stop(fronthaul_iface);
-    radio_manager.detach_on_conf_change = false;
+    m_agent_resets_counter++;
+    LOG(DEBUG) << "agent_reset() #" << m_agent_resets_counter << " - start";
 
     auto db = AgentDB::get();
 
-    auto radio = db->radio(fronthaul_iface);
-    if (!radio) {
-        LOG(ERROR) << "Radio of iface " << fronthaul_iface << " does not exist on the db";
+    m_radio_managers.do_on_each_radio_manager([&](sManagedRadio &radio_manager,
+                                                  const std::string &fronthaul_iface) {
+        auto radio = db->radio(fronthaul_iface);
+
+        if (!radio) {
+            LOG(ERROR) << "Radio of iface " << fronthaul_iface << " does not exist on the db";
+            return false;
+        }
+        // Clear the front interface mac.
+        radio->front.iface_mac = network_utils::ZERO_MAC;
+
+        fronthaul_stop(fronthaul_iface);
+
+        if (db->device_conf.stop_on_failure_attempts && !radio_manager.stop_on_failure_attempts) {
+            LOG(ERROR) << "Reached to max stop on failure attempts!";
+            radio_manager.stopped = true;
+        }
+
+        if (radio_manager.stopped && m_agent_state != STATE_INIT) {
+            LOG(DEBUG) << "goto STATE_STOPPED";
+            m_agent_state = STATE_STOPPED;
+        }
+        return true;
+    });
+
+    if (m_agent_state == STATE_STOPPED) {
+        platform_notify_error(beerocks::bpl::eErrorCode::SLAVE_STOPPED, "");
         return;
     }
-    // Clear the front interface mac.
-    radio->front.iface_mac = network_utils::ZERO_MAC;
-
-    if (db->device_conf.stop_on_failure_attempts && !radio_manager.stop_on_failure_attempts) {
-        LOG(ERROR) << "Reached to max stop on failure attempts!";
-        radio_manager.stopped = true;
-    }
-
-    if (radio_manager.stopped && m_agent_state != STATE_INIT) {
-        platform_notify_error(beerocks::bpl::eErrorCode::SLAVE_STOPPED, "");
-        LOG(DEBUG) << "goto STATE_STOPPED";
-        m_agent_state = STATE_STOPPED;
-    } else if (m_is_backhaul_disconnected) {
+    if (m_is_backhaul_disconnected) {
         m_agent_state_timer_sec =
             std::chrono::steady_clock::now() + std::chrono::seconds(SLAVE_INIT_DELAY_SEC);
         LOG(DEBUG) << "goto STATE_WAIT_BEFORE_INIT";
@@ -311,7 +305,7 @@ void slave_thread::slave_reset(const std::string &fronthaul_iface)
         m_agent_state = STATE_INIT;
     }
 
-    LOG(DEBUG) << "slave_reset() #" << radio_manager.slave_resets_counter << " - done";
+    LOG(DEBUG) << "agent_reset() #" << m_agent_resets_counter << " - done";
 }
 
 bool slave_thread::read_platform_configuration()
@@ -595,16 +589,16 @@ bool slave_thread::socket_disconnected(Socket *sd)
         if (sd == m_backhaul_manager_socket) {
             LOG(DEBUG) << "backhaul manager & master socket disconnected! - slave_reset()";
             platform_notify_error(bpl::eErrorCode::SLAVE_SLAVE_BACKHAUL_MANAGER_DISCONNECTED, "");
-            slave_reset(fronthaul_iface);
+            agent_reset();
             return false;
         } else if (sd == m_platform_manager_socket) {
             LOG(DEBUG) << "platform_manager disconnected! - slave_reset()";
-            slave_reset(fronthaul_iface);
+            agent_reset();
             return false;
         } else if (sd == radio_manager.ap_manager_socket || sd == radio_manager.monitor_socket) {
             LOG(DEBUG) << (sd == radio_manager.ap_manager_socket ? "ap_manager" : "monitor")
                        << " socket disconnected - slave_reset()";
-            slave_reset(fronthaul_iface);
+            agent_reset();
             return false;
         }
         return true;
@@ -631,7 +625,7 @@ bool slave_thread::fsm_all()
     auto radio_fsm = [&](sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
         if (!monitor_heartbeat_check(fronthaul_iface) ||
             !ap_manager_heartbeat_check(fronthaul_iface)) {
-            slave_reset(fronthaul_iface);
+            agent_reset();
         }
 
         if (!slave_fsm(fronthaul_iface)) {
@@ -1553,14 +1547,12 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
             std::chrono::steady_clock::now() +
             std::chrono::milliseconds(beerocks::IRE_MAX_WIRELESS_RECONNECTION_TIME_MSC);
 
-        m_master_socket = nullptr;
-
         m_radio_managers.do_on_each_radio_manager(
             [&](sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
                 radio_manager.stopped |= bool(notification->stopped());
-                slave_reset(fronthaul_iface);
                 return true;
             });
+        agent_reset();
         break;
     }
     case beerocks_message::ACTION_BACKHAUL_APPLY_VLAN_POLICY_REQUEST: {
@@ -2112,8 +2104,8 @@ bool slave_thread::handle_cmdu_platform_manager_message(
         auto db = AgentDB::get();
         if (db->device_conf.front_radio.config.at(fronthaul_iface).band_enabled !=
             notification->wlan_settings().band_enabled) {
-            LOG(DEBUG) << "band_enabled changed - performing slave_reset()";
-            slave_reset(fronthaul_iface);
+            LOG(DEBUG) << "band_enabled changed - performing agent_reset";
+            agent_reset();
         }
         break;
     }
@@ -2353,10 +2345,9 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
             LOG(WARNING) << __FUNCTION__ << "AP_Disabled on radio, slave reset";
             if (radio_manager.configuration_in_progress) {
                 LOG(INFO) << "configuration in progress, ignoring";
-                radio_manager.detach_on_conf_change = true;
                 break;
             }
-            slave_reset(fronthaul_iface);
+            agent_reset();
         } else {
             auto notification_out = message_com::create_vs_message<
                 beerocks_message::cACTION_CONTROL_HOSTAP_AP_DISABLED_NOTIFICATION>(cmdu_tx);
@@ -2383,7 +2374,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
 
         if (!response->success()) {
             LOG(ERROR) << "failed to enable APs";
-            slave_reset(fronthaul_iface);
+            agent_reset();
         }
 
         break;
@@ -3271,7 +3262,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
         // take actions when the cancelation failed
         if (!response_in->success()) {
             LOG(ERROR) << "cancel active cac failed - resetting the slave";
-            slave_reset(fronthaul_iface);
+            agent_reset();
         }
 
         break;
@@ -3383,10 +3374,9 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
             LOG(WARNING) << __FUNCTION__ << "AP_Disabled on radio, slave reset";
             if (radio_manager.configuration_in_progress) {
                 LOG(INFO) << "configuration is in progress, ignoring";
-                radio_manager.detach_on_conf_change = true;
                 break;
             }
-            slave_reset(fronthaul_iface);
+            agent_reset();
         }
         break;
     }
@@ -4081,9 +4071,9 @@ bool slave_thread::agent_fsm()
             m_radio_managers.do_on_each_radio_manager(
                 [&](sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
                     radio_manager.stop_on_failure_attempts--;
-                    slave_reset(fronthaul_iface);
                     return true;
                 });
+            agent_reset();
             break;
         }
 
@@ -4100,9 +4090,9 @@ bool slave_thread::agent_fsm()
                 m_radio_managers.do_on_each_radio_manager(
                     [&](sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
                         radio_manager.stop_on_failure_attempts--;
-                        slave_reset(fronthaul_iface);
                         return true;
                     });
+                agent_reset();
             }
 
             // Update wan parameters on AgentDB.
@@ -4195,9 +4185,9 @@ bool slave_thread::agent_fsm()
             m_radio_managers.do_on_each_radio_manager(
                 [&](sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
                     radio_manager.stop_on_failure_attempts--;
-                    slave_reset(fronthaul_iface);
                     return true;
                 });
+            agent_reset();
         }
         break;
     }
@@ -4353,9 +4343,9 @@ bool slave_thread::agent_fsm()
             m_radio_managers.do_on_each_radio_manager(
                 [&](sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
                     radio_manager.stop_on_failure_attempts--;
-                    slave_reset(fronthaul_iface);
                     return true;
                 });
+            agent_reset();
         } else {
             // backhaul manager will request for backhaul iface and tx enable after receiving
             // ACTION_BACKHAUL_ENABLE, when wireless connection is required
@@ -4499,7 +4489,7 @@ bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
             platform_notify_error(bpl::eErrorCode::SLAVE_INVALID_MASTER_SOCKET,
                                   "Invalid master socket");
             radio_manager.stop_on_failure_attempts--;
-            slave_reset(fronthaul_iface);
+            agent_reset();
             break;
         }
 
@@ -4764,36 +4754,6 @@ bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
     return true;
 }
 
-void slave_thread::backhaul_manager_stop()
-{
-    if (m_backhaul_manager_socket) {
-        LOG(DEBUG) << "removing backhaul_manager_socket";
-        remove_socket(m_backhaul_manager_socket);
-        delete m_backhaul_manager_socket;
-    }
-    m_backhaul_manager_socket = nullptr;
-    m_master_socket           = nullptr;
-}
-
-void slave_thread::platform_manager_stop()
-{
-    if (m_platform_manager_socket) {
-        LOG(DEBUG) << "removing platform_manager_socket";
-        remove_socket(m_platform_manager_socket);
-        delete m_platform_manager_socket;
-        m_platform_manager_socket = nullptr;
-    }
-}
-
-void slave_thread::hostap_services_off() { LOG(DEBUG) << "hostap_services_off() - done"; }
-
-bool slave_thread::hostap_services_on()
-{
-    bool success = true;
-    LOG(DEBUG) << "hostap_services_on() - done";
-    return success;
-}
-
 void slave_thread::fronthaul_stop(const std::string &fronthaul_iface)
 {
     LOG(INFO) << "fronthaul stop " << fronthaul_iface;
@@ -4885,7 +4845,7 @@ bool slave_thread::monitor_heartbeat_check(const std::string &fronthaul_iface)
     if (radio_manager.monitor_retries_counter >= MONITOR_HEARTBEAT_RETRIES) {
         LOG(INFO)
             << "monitor_retries_counter >= MONITOR_HEARTBEAT_RETRIES monitor_retries_counter = "
-            << radio_manager.monitor_retries_counter << " slave_reset!!";
+            << radio_manager.monitor_retries_counter << " agent_reset!";
         radio_manager.monitor_retries_counter = 0;
         return false;
     }
@@ -4913,7 +4873,7 @@ bool slave_thread::ap_manager_heartbeat_check(const std::string &fronthaul_iface
     if (radio_manager.ap_manager_retries_counter >= AP_MANAGER_HEARTBEAT_RETRIES) {
         LOG(INFO) << "ap_manager_retries_counter >= AP_MANAGER_HEARTBEAT_RETRIES "
                      "ap_manager_retries_counter = "
-                  << radio_manager.ap_manager_retries_counter << " slave_reset!!";
+                  << radio_manager.ap_manager_retries_counter << " agent_reset!";
         radio_manager.ap_manager_retries_counter = 0;
         return false;
     }
