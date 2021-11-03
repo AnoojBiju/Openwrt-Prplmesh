@@ -4800,6 +4800,38 @@ bool db::set_node_channel_bw(const sMacAddr &mac, int channel, beerocks::eWiFiBa
     return true;
 }
 
+bool db::update_node_bw(const sMacAddr &mac, beerocks::eWiFiBandwidth bw)
+{
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        return false;
+    }
+    if (wireless_utils::which_freq(n->channel) == eFreqType::FREQ_UNKNOWN) {
+        LOG(ERROR) << "frequency type unknown, channel=" << int(n->channel);
+        return false;
+    }
+    if (bw == n->bandwidth) {
+        return true;
+    }
+    if (n->get_type() == beerocks::TYPE_SLAVE) {
+        if (n->hostap != nullptr) {
+            //calculate new vht center freq with the new channel width
+            n->hostap->vht_center_frequency = wireless_utils::channel_to_vht_center_freq(
+                n->channel, bw, n->channel_ext_above_secondary);
+        } else {
+            LOG(ERROR) << __FUNCTION__ << " - node " << mac << " is null!";
+            return false;
+        }
+    }
+    n->bandwidth  = bw;
+    auto children = get_node_children(n);
+    for (auto child : children) {
+        child->bandwidth = bw;
+    }
+    return true;
+}
+
 beerocks::eWiFiBandwidth db::get_node_bw(const std::string &mac)
 {
     auto n = get_node(mac);

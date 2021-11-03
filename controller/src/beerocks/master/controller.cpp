@@ -3468,6 +3468,14 @@ bool Controller::handle_cmdu_control_message(
                            << ", update is invalid!";
                 continue;
             }
+
+            //update station bandwidth from the current downlink bandwidth
+            if ((sta_stats.dl_bandwidth != beerocks::BANDWIDTH_UNKNOWN) &&
+                (sta_stats.dl_bandwidth < beerocks::BANDWIDTH_MAX)) {
+                database.update_node_bw(
+                    sta_stats.mac, static_cast<beerocks::eWiFiBandwidth>(sta_stats.dl_bandwidth));
+            }
+
             // Note: The Database node stats and the Datamodels' stats are not the same.
             // Therefore, client information in data model and in node DB might differ.
             database.set_node_stats_info(sta_stats.mac, &sta_stats);
