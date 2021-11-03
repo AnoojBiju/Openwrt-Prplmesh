@@ -574,7 +574,7 @@ void slave_thread::handle_client_disconnected(int fd)
 {
 
     auto handle_disconnect = [&](const std::string &fronthaul_iface) {
-        auto &radio_manager = m_radio_managers[fronthaul_iface];
+        const auto &radio_manager = m_radio_managers[fronthaul_iface];
 
         bool found_fd = false;
         if (fd == radio_manager.ap_manager_fd) {
@@ -5444,7 +5444,7 @@ bool slave_thread::handle_autoconfiguration_wsc(int fd, ieee1905_1::CmduMessageR
     // All EasyMesh VAPs will be stored in the platform DB.
     // All other VAPs are manual, AKA should not be modified by prplMesh
     ////////////////////////////////////////////////////////////////////
-    auto &radio_manager = m_radio_managers[radio->front.iface_name];
+    const auto &radio_manager = m_radio_managers[radio->front.iface_name];
     if (db->device_conf.management_mode != BPL_MGMT_MODE_NOT_MULTIAP) {
         send_cmdu(radio_manager.ap_manager_fd, cmdu_tx);
     } else {
@@ -5732,7 +5732,7 @@ bool slave_thread::handle_client_association_request(int fd, ieee1905_1::CmduMes
         LOG(ERROR) << "BSSID " << bssid << " was not found in any of the Agent radios";
         return false;
     }
-    auto &radio_manager = m_radio_managers[radio->front.iface_name];
+    const auto &radio_manager = m_radio_managers[radio->front.iface_name];
 
     send_cmdu(radio_manager.ap_manager_fd, cmdu_tx);
 
