@@ -128,10 +128,6 @@ public:
      */
     bool thread_init() override;
 
-protected:
-    virtual bool handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx) override;
-    virtual void on_thread_stop() override;
-    virtual bool socket_disconnected(Socket *sd) override;
     /**
      * @brief Sends given CMDU message through the specified socket connection.
      *
@@ -160,6 +156,15 @@ protected:
     bool send_ack_to_controller(ieee1905_1::CmduMessageTx &cmdu_tx, uint32_t mid);
 
 private:
+    /**
+     * @brief Handles received CMDU message.
+     *
+     * @param fd File descriptor of the socket connection the CMDU was received through.
+     * @param cmdu_rx Received CMDU to be handled.
+     * @return true on success and false otherwise.
+     */
+    bool handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
+
     /**
      * @brief Sends CMDU to transport for dispatching.
      *
@@ -201,20 +206,30 @@ private:
      */
     bool handle_cmdu_from_broker(uint32_t iface_index, const sMacAddr &dst_mac,
                                  const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_cmdu_control_message(Socket *sd,
+
+    void on_thread_stop() override;
+
+    /**
+     * @brief Handles the client-disconnected event in the CMDU server.
+     *
+     * @param fd File descriptor of the socket that got disconnected.
+     */
+    void handle_client_disconnected(int fd);
+
+    bool handle_cmdu_control_message(int fd,
                                      std::shared_ptr<beerocks::beerocks_header> beerocks_header);
     bool handle_cmdu_backhaul_manager_message(
-        Socket *sd, std::shared_ptr<beerocks::beerocks_header> beerocks_header);
+        int fd, std::shared_ptr<beerocks::beerocks_header> beerocks_header);
     bool handle_cmdu_platform_manager_message(
-        Socket *sd, std::shared_ptr<beerocks::beerocks_header> beerocks_header);
-    bool handle_cmdu_ap_manager_message(const std::string &fronthaul_iface, Socket *sd,
+        int fd, std::shared_ptr<beerocks::beerocks_header> beerocks_header);
+    bool handle_cmdu_ap_manager_message(const std::string &fronthaul_iface, int fd,
                                         std::shared_ptr<beerocks::beerocks_header> beerocks_header);
-    bool handle_cmdu_monitor_message(const std::string &fronthaul_iface, Socket *sd,
+    bool handle_cmdu_monitor_message(const std::string &fronthaul_iface, int fd,
                                      std::shared_ptr<beerocks::beerocks_header> beerocks_header);
-    bool handle_cmdu_control_ieee1905_1_message(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_cmdu_ap_manager_ieee1905_1_message(const std::string &fronthaul_iface, Socket &sd,
+    bool handle_cmdu_control_ieee1905_1_message(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool handle_cmdu_ap_manager_ieee1905_1_message(const std::string &fronthaul_iface, int fd,
                                                    ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_cmdu_monitor_ieee1905_1_message(const std::string &fronthaul_iface, Socket &sd,
+    bool handle_cmdu_monitor_ieee1905_1_message(const std::string &fronthaul_iface, int fd,
                                                 ieee1905_1::CmduMessageRx &cmdu_rx);
 
     bool fsm_all();
@@ -435,18 +450,18 @@ private:
     bool autoconfig_wsc_authenticate(const std::string &fronthaul_iface, WSC::m2 &m2,
                                      uint8_t authkey[32]);
 
-    bool parse_intel_join_response(const std::string &fronthaul_iface, Socket *sd,
+    bool parse_intel_join_response(const std::string &fronthaul_iface,
                                    beerocks::beerocks_header &beerocks_header);
-    bool parse_non_intel_join_response(const std::string &fronthaul_iface, Socket *sd);
-    bool handle_autoconfiguration_wsc(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_autoconfiguration_renew(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool parse_non_intel_join_response(const std::string &fronthaul_iface);
+    bool handle_autoconfiguration_wsc(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool handle_autoconfiguration_renew(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool autoconfig_wsc_add_m1(const std::string &fronthaul_iface);
     bool send_operating_channel_report(const std::string &fronthaul_iface);
-    bool handle_ap_metrics_query(Socket &sd, ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_monitor_ap_metrics_response(const std::string &fronthaul_iface, Socket &sd,
+    bool handle_ap_metrics_query(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool handle_monitor_ap_metrics_response(const std::string &fronthaul_iface, int fd,
                                             ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_channel_preference_query(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_channel_selection_request(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool handle_channel_preference_query(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool handle_channel_selection_request(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool get_controller_channel_preference(const std::string &fronthaul_iface,
                                            ieee1905_1::CmduMessageRx &cmdu_rx);
     bool channel_selection_get_transmit_power_limit(const std::string &fronthaul_iface,
@@ -455,12 +470,12 @@ private:
     bool channel_selection_current_channel_restricted(const std::string &fronthaul_iface);
     beerocks::message::sWifiChannel
     channel_selection_select_channel(const std::string &fronthaul_iface);
-    bool handle_multi_ap_policy_config_request(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_client_association_request(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_1905_higher_layer_data_message(Socket &sd, ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_client_steering_request(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_beacon_metrics_query(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_ack_message(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool handle_multi_ap_policy_config_request(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool handle_client_association_request(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool handle_1905_higher_layer_data_message(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool handle_client_steering_request(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool handle_beacon_metrics_query(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool handle_ack_message(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_profile2_default_802dotq_settings_tlv(ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_profile2_traffic_separation_policy_tlv(
         ieee1905_1::CmduMessageRx &cmdu_rx, std::unordered_set<std::string> &misconfigured_ssids);
