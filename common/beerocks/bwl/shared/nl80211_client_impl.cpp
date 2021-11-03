@@ -861,12 +861,13 @@ bool nl80211_client_impl::channel_scan_abort(const std::string &interface_name)
         return false;
     }
 
-    return m_socket.get()->send_receive_msg(NL80211_CMD_ABORT_SCAN, 0,
-                                            [&](struct nl_msg *msg) -> bool {
-                                                nla_put_u32(msg, NL80211_ATTR_IFINDEX, iface_index);
-                                                return true;
-                                            },
-                                            [&](struct nl_msg *msg) {});
+    return m_socket.get()->send_receive_msg(
+        NL80211_CMD_ABORT_SCAN, 0,
+        [&](struct nl_msg *msg) -> bool {
+            nla_put_u32(msg, NL80211_ATTR_IFINDEX, iface_index);
+            return true;
+        },
+        [&](struct nl_msg *msg) {});
 }
 
 } // namespace bwl

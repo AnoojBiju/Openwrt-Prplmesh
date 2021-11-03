@@ -43,7 +43,7 @@ As an alternative to the manual steps outlined below, [tools/maptools.py](tools/
 
 ### Requirements
 
-An up-to-date list of packages you need to build prplMesh on Ubuntu (18.04) is available in the [Dockerfile](tools/docker/builder/ubuntu/bionic/Dockerfile)
+An up-to-date list of packages you need to build prplMesh on Ubuntu (18.04) is available in the [Dockerfile](tools/docker/builder/ubuntu/focal/Dockerfile)
 This is used in our automated builds, so is guaranteed to be up to date.
 As of the time of writing, it includes the following packages:
 

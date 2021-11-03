@@ -3,7 +3,7 @@
 prplMesh provides docker images and helper scripts for building and running prplMesh using docker.
 
 The `./image-build.sh` supports building several images. The most used image is
-`prplMesh-builder-ubuntu-bionic`. It contains everything needed to build and to run prplMesh.
+`prplMesh-builder-ubuntu-focal`. It contains everything needed to build and to run prplMesh.
 Wrapper scripts exist to start the containers with appropriate mounting of volumes.
 
 If you don't build the images first, they will be pulled from the prplmesh registry on gitlab.com.
