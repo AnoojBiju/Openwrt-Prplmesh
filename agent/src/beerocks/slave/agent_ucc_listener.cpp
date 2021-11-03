@@ -228,3 +228,17 @@ bool agent_ucc_listener::handle_dev_set_rfeature(
     }
     return true;
 }
+
+bool agent_ucc_listener::handle_get_device_sta_info(
+    const std::unordered_map<std::string, std::string> &params, std::string &err_string)
+{
+    err_string = "Hemanth handle device_get_sta_info called";
+    auto sta_mac_it = params.at("sta_mac");
+    auto nw_info_it = params.at("nw_info");
+    int nw_info = std::stoi(nw_info_it);
+    sMacAddr sta_mac = tlvf::mac_from_string(sta_mac_it);
+    LOG(ERROR) << err_string;
+    m_btl_ctx.get_sta_device_info(sta_mac, nw_info);
+
+    return true;
+}

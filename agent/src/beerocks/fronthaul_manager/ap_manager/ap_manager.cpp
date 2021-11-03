@@ -1501,7 +1501,8 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             LOG(ERROR) << "addClass has failed";
             return;
         }
-        ap_wlan_hal->get_sta_device_info (request->sta_mac() , request->nw_info());
+        std::string sta_mac_m = tlvf::mac_to_string(request->sta_mac());
+        ap_wlan_hal->get_sta_device_info (sta_mac_m , request->nw_info());
         break;
     }
     default: {

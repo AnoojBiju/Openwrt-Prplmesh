@@ -35,6 +35,8 @@ private:
                               std::string &value) override;
     bool handle_dev_set_rfeature(const std::unordered_map<std::string, std::string> &params,
                                  std::string &err_string) override;
+    bool handle_get_device_sta_info(const std::unordered_map<std::string, std::string> &params,
+                                    std::string &err_string) override;
 
     BackhaulManager &m_btl_ctx;
 };
