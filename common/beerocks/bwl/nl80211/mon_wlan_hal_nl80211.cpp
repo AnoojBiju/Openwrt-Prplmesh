@@ -153,11 +153,14 @@ bool mon_wlan_hal_nl80211::update_stations_stats(const std::string &vap_iface_na
     stats_policy[NL80211_STA_INFO_CHAIN_SIGNAL_AVG] = {NLA_NESTED, 0, 0};
 
     static struct nla_policy rate_policy[NL80211_RATE_INFO_MAX + 1];
-    rate_policy[NL80211_RATE_INFO_BITRATE]      = {NLA_U16, 0, 0};
-    rate_policy[NL80211_RATE_INFO_BITRATE32]    = {NLA_U32, 0, 0};
-    rate_policy[NL80211_RATE_INFO_MCS]          = {NLA_U8, 0, 0};
-    rate_policy[NL80211_RATE_INFO_40_MHZ_WIDTH] = {NLA_FLAG, 0, 0};
-    rate_policy[NL80211_RATE_INFO_SHORT_GI]     = {NLA_FLAG, 0, 0};
+    rate_policy[NL80211_RATE_INFO_BITRATE]         = {NLA_U16, 0, 0};
+    rate_policy[NL80211_RATE_INFO_BITRATE32]       = {NLA_U32, 0, 0};
+    rate_policy[NL80211_RATE_INFO_MCS]             = {NLA_U8, 0, 0};
+    rate_policy[NL80211_RATE_INFO_40_MHZ_WIDTH]    = {NLA_FLAG, 0, 0};
+    rate_policy[NL80211_RATE_INFO_80_MHZ_WIDTH]    = {NLA_FLAG, 0, 0};
+    rate_policy[NL80211_RATE_INFO_80P80_MHZ_WIDTH] = {NLA_FLAG, 0, 0};
+    rate_policy[NL80211_RATE_INFO_160_MHZ_WIDTH]   = {NLA_FLAG, 0, 0};
+    rate_policy[NL80211_RATE_INFO_SHORT_GI]        = {NLA_FLAG, 0, 0};
 
     auto ret = send_nl80211_msg(
         NL80211_CMD_GET_STATION, 0,
@@ -202,31 +205,48 @@ bool mon_wlan_hal_nl80211::update_stations_stats(const std::string &vap_iface_na
             sta_stats.rx_snr_watt_samples_cnt = 0;
 
             // Bitrate parsing helper function
-            auto parse_bitrate_func = [&](struct nlattr *bitrate_attr) -> int {
+            auto parse_bitrate_func = [&](struct nlattr *bitrate_attr, int &rate,
+                                          uint8_t &bw) -> void {
+                rate = 0;
+                bw   = 0;
                 if (nla_parse_nested(rinfo, NL80211_RATE_INFO_MAX, bitrate_attr, rate_policy)) {
                     LOG(ERROR) << "Failed to parse nested rate attributes!";
-                    return 0;
+                    return;
                 }
 
-                int rate = 0;
+                //rate is returned with unit 100kbps
                 if (rinfo[NL80211_RATE_INFO_BITRATE32])
                     rate = nla_get_u32(rinfo[NL80211_RATE_INFO_BITRATE32]);
                 else if (rinfo[NL80211_RATE_INFO_BITRATE])
                     rate = nla_get_u16(rinfo[NL80211_RATE_INFO_BITRATE]);
 
-                return rate;
+                bw = beerocks::BANDWIDTH_20;
+                if (rinfo[NL80211_RATE_INFO_40_MHZ_WIDTH]) {
+                    bw = beerocks::BANDWIDTH_40;
+                } else if (rinfo[NL80211_RATE_INFO_80_MHZ_WIDTH]) {
+                    bw = beerocks::BANDWIDTH_80;
+                } else if ((rinfo[NL80211_RATE_INFO_80P80_MHZ_WIDTH]) ||
+                           (rinfo[NL80211_RATE_INFO_160_MHZ_WIDTH])) {
+                    bw = beerocks::BANDWIDTH_160;
+                } else if ((rinfo[NL80211_RATE_INFO_5_MHZ_WIDTH]) ||
+                           (rinfo[NL80211_RATE_INFO_10_MHZ_WIDTH])) {
+                    bw = beerocks::BANDWIDTH_UNKNOWN;
+                }
             };
 
+            int rate;
+            uint8_t bw;
             // TX Phy Rate
             if (sinfo[NL80211_STA_INFO_TX_BITRATE]) {
-                sta_stats.tx_phy_rate_100kb =
-                    parse_bitrate_func(sinfo[NL80211_STA_INFO_TX_BITRATE]) / 100;
+                parse_bitrate_func(sinfo[NL80211_STA_INFO_TX_BITRATE], rate, bw);
+                sta_stats.tx_phy_rate_100kb = rate;
+                sta_stats.dl_bandwidth      = bw;
             }
 
             // RX Phy Rate
             if (sinfo[NL80211_STA_INFO_RX_BITRATE]) {
-                sta_stats.rx_phy_rate_100kb =
-                    parse_bitrate_func(sinfo[NL80211_STA_INFO_RX_BITRATE]) / 100;
+                parse_bitrate_func(sinfo[NL80211_STA_INFO_RX_BITRATE], rate, bw);
+                sta_stats.rx_phy_rate_100kb = rate;
             }
 
             // Traffic values calculations helper function
