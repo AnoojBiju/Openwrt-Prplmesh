@@ -336,7 +336,7 @@ status_function() {
         error=0
         report "Main agent operational" main_agent_operational $LOGS_PATH
         # For each existing slave log file, check if they are OPERATIONAL:
-        main_agent_log="$LOGS_PATH/beerocks_backhaul@BEEROCKS_LOG_FILES_SUFFIX@"
+        main_agent_log="$LOGS_PATH/beerocks_agent@BEEROCKS_LOG_FILES_SUFFIX@"
         # skip files that aren't symlinks (and skip the literal glob if there is no matching file):
         [ -L "$main_agent_log" ] || return
         radios=$(grep 'fronthaul_iface=' "$main_agent_log"  | cut -d "=" -f2)
