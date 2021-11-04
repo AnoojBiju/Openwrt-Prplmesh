@@ -123,6 +123,27 @@ sClientDisconnectionParams:
   source: uint8_t
   type: uint8_t
 
+sStaDeviceInfo:
+  _type: struct
+  sta_mac: sMacAddr
+  default_gateway: sMacAddr
+  subnet_mask: sMacAddr
+  bss:
+    _type: char
+    _length: ["beerocks::message::WIFI_STA_BSS_NAME_LENGTH"]
+  device_name:
+    _type: char
+    _length: ["beerocks::message::WIFI_STA_DEVICE_NAME_LENGTH"]
+  os_name:
+    _type: char
+    _length: ["beerocks::message::WIFI_STA_OS_NAME_LENGTH"]
+  vendor_name:
+    _type: char
+    _length: ["beerocks::message::WIFI_STA_VENDOR_NAME_LENGTH"]
+  ip_v4: beerocks::net::sIpv4Addr
+  days_since_last_reset: int8_t
+  
+
 sClientMonitoringParams:
   _type: struct
   mac: sMacAddr

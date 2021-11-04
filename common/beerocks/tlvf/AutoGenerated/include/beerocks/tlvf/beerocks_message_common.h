@@ -177,6 +177,30 @@ typedef struct sClientDisconnectionParams {
     }
 } __attribute__((packed)) sClientDisconnectionParams;
 
+typedef struct sStaDeviceInfo {
+    sMacAddr sta_mac;
+    sMacAddr default_gateway;
+    sMacAddr subnet_mask;
+    char bss[beerocks::message::WIFI_STA_BSS_NAME_LENGTH];
+    char device_name[beerocks::message::WIFI_STA_DEVICE_NAME_LENGTH];
+    char os_name[beerocks::message::WIFI_STA_OS_NAME_LENGTH];
+    char vendor_name[beerocks::message::WIFI_STA_VENDOR_NAME_LENGTH];
+    beerocks::net::sIpv4Addr ip_v4;
+    int8_t days_since_last_reset;
+    void struct_swap(){
+        sta_mac.struct_swap();
+        default_gateway.struct_swap();
+        subnet_mask.struct_swap();
+        ip_v4.struct_swap();
+    }
+    void struct_init(){
+        sta_mac.struct_init();
+        default_gateway.struct_init();
+        subnet_mask.struct_init();
+        ip_v4.struct_init();
+    }
+} __attribute__((packed)) sStaDeviceInfo;
+
 typedef struct sClientMonitoringParams {
     sMacAddr mac;
     sMacAddr bridge_4addr_mac;

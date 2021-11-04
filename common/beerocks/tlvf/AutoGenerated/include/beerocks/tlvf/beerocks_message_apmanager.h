@@ -609,6 +609,50 @@ class cACTION_APMANAGER_HOSTAP_SET_PRIMARY_VLAN_ID_REQUEST : public BaseClass
         uint16_t* m_primary_vlan_id = nullptr;
 };
 
+class cACTION_APMANAGER_HOSTAP_STA_INFO_QUERY : public BaseClass
+{
+    public:
+        cACTION_APMANAGER_HOSTAP_STA_INFO_QUERY(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_APMANAGER_HOSTAP_STA_INFO_QUERY(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_APMANAGER_HOSTAP_STA_INFO_QUERY();
+
+        static eActionOp_APMANAGER get_action_op(){
+            return (eActionOp_APMANAGER)(ACTION_APMANAGER_HOSTAP_STA_INFO_QUERY);
+        }
+        uint8_t& nw_info();
+        sMacAddr& sta_mac();
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_APMANAGER* m_action_op = nullptr;
+        uint8_t* m_nw_info = nullptr;
+        sMacAddr* m_sta_mac = nullptr;
+};
+
+class cACTION_APMANAGER_HOSTAP_STA_INFO_REPLY : public BaseClass
+{
+    public:
+        cACTION_APMANAGER_HOSTAP_STA_INFO_REPLY(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_APMANAGER_HOSTAP_STA_INFO_REPLY(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_APMANAGER_HOSTAP_STA_INFO_REPLY();
+
+        static eActionOp_APMANAGER get_action_op(){
+            return (eActionOp_APMANAGER)(ACTION_APMANAGER_HOSTAP_STA_INFO_REPLY);
+        }
+        sStaDeviceInfo& params();
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_APMANAGER* m_action_op = nullptr;
+        sStaDeviceInfo* m_params = nullptr;
+};
+
 class cACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION : public BaseClass
 {
     public:

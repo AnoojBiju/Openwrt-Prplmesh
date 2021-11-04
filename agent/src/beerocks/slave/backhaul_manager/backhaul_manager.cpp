@@ -3187,4 +3187,11 @@ bool BackhaulManager::handle_dev_set_config(
     return true;
 }
 
+
+bool BackhaulManager::get_sta_device_info(const sMacAddr &sta_mac, int nw_info)
+{
+    LOG(DEBUG) << "Inside get_sta_device_info " << sta_mac;
+    return true;
+}
+
 } // namespace beerocks

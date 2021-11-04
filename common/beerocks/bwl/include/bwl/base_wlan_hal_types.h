@@ -388,6 +388,22 @@ struct sMGMT_FRAME_NOTIFICATION {
 struct sSTA_MISMATCH_PSK {
     sMacAddr sta_mac; /**< The MAC address of the station */
 };
+
+typedef struct {
+    std::string bss;
+    sMacAddr sta_mac;
+    std::string device_name;
+    std::string os_name;
+    std::string vendor_name;
+    int days_since_last_reset;
+    beerocks::net::sIpv4Addr ip_v4;
+    sMacAddr subnet_mask;
+    sMacAddr default_gateway;    
+}sSTA_Info_Reply;
+
+typedef struct {
+    sSTA_Info_Reply params;
+} sACTION_APMANAGER_HOSTAP_STA_INFO_REPLY;
 } // namespace bwl
 
 #endif // _BWL_BASE_WLAN_HAL_TYPES_H_

@@ -84,6 +84,8 @@ static ap_wlan_hal::Event dwpal_to_bwl_event(const std::string &opcode)
         return ap_wlan_hal::Event::MGMT_Frame;
     } else if (opcode == "AP-STA-POSSIBLE-PSK-MISMATCH") {
         return ap_wlan_hal::Event::AP_Sta_Possible_Psk_Mismatch;
+    } else if (opcode == "STA_INFO_REPLY") {
+        return ap_wlan_hal::Event::STA_Info_Reply;
     }
 
     return ap_wlan_hal::Event::Invalid;
@@ -2009,6 +2011,22 @@ bool ap_wlan_hal_dwpal::set_radio_mbo_assoc_disallow(bool enable)
     return true;
 }
 
+//Hemanth
+//“STA_INFO_QUERY <string: sta_mac> add_network_info=<int: 0/1>”
+bool ap_wlan_hal_dwpal::get_sta_device_info(std::string &sta_mac , int nw_info) 
+{
+    std::string cmd1;
+    LOG(DEBUG) << "GET STA DEVICE INFO";
+    //Prepare command
+    std::string cmd = "STA_INFO_QUERY " + sta_mac + " add_network_info=" + std::to_string(nw_info);
+    //send command
+    if (!dwpal_send_cmd(cmd)) {
+        LOG(ERROR) << "GET STA DEVICE INFO FAILED ..!";
+        return false;
+    }
+    return true;
+}
+
 bool ap_wlan_hal_dwpal::set_primary_vlan_id(uint16_t primary_vlan_id)
 {
     LOG(DEBUG) << "set_primary_vlan_id " << primary_vlan_id;
@@ -3252,6 +3270,84 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
 
         event_queue_push(Event::AP_Sta_Possible_Psk_Mismatch,
                          msg_buff); // send message to the AP manager
+        break;
+    }
+
+      //Hemanth
+    case Event::STA_Info_Reply: {
+        LOG(DEBUG) << buffer;
+
+        parsed_line_t parsed_obj;
+        parse_event(buffer, parsed_obj);
+
+        // TODO: Change to HAL objects
+        auto msg_buff =
+            ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_HOSTAP_STA_INFO_REPLY));
+        auto msg = reinterpret_cast<sACTION_APMANAGER_HOSTAP_STA_INFO_REPLY *>(
+            msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+        // Initialize the message
+        memset(msg_buff.get(), 0, sizeof(sACTION_APMANAGER_HOSTAP_STA_INFO_REPLY));
+
+        const char *client_mac_str;
+        const char *client_ip_str;
+
+        if (!read_param("bss", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading 'bss' parameter!";
+            return false;
+        }
+        msg->params.bss = tmp_str;
+
+        if (!read_param("mac", parsed_obj, &client_mac_str)) {
+            LOG(ERROR) << "Failed reading 'station mac' parameter!";
+            return false;
+        }
+        msg->params.sta_mac = tlvf::mac_from_string(client_mac_str);
+
+        if (!read_param("device_name", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading 'device_name' parameter!";
+            return false;
+        }
+        msg->params.device_name = tmp_str;
+
+        if (!read_param("os_name", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading 'os_name' parameter!";
+            return false;
+        }
+        msg->params.os_name = tmp_str;
+
+        if (!read_param("vendor_name", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading 'vendor_name' parameter!";
+            return false;
+        }
+        msg->params.vendor_name = tmp_str; 
+
+        if (!read_param("last_reset", parsed_obj, tmp_int)) {
+            LOG(ERROR) << "Failed reading 'last_reset' parameter!";
+            return false;
+        }
+        msg->params.days_since_last_reset = tmp_int;
+
+        if (!read_param("default_gw", parsed_obj, &client_mac_str)) {
+            LOG(ERROR) << "Failed reading 'default_gw' parameter!";
+            return false;
+        }
+        msg->params.default_gateway = tlvf::mac_from_string(client_mac_str); 
+
+        if (!read_param("subnet_mask", parsed_obj, &client_mac_str)) {
+            LOG(ERROR) << "Failed reading 'default_gw' parameter!";
+            return false;
+        }
+        msg->params.subnet_mask = tlvf::mac_from_string(client_mac_str); 
+
+        if (!read_param("ipv4", parsed_obj, &client_ip_str)) {
+            LOG(ERROR) << "Failed reading 'default_gw' parameter!";
+            return false;
+        }
+        msg->params.ip_v4 = beerocks::net::network_utils::ipv4_from_string(client_ip_str);     
+
+        // Add the message to the queue
+        event_queue_push(Event::STA_Info_Reply, msg_buff);
         break;
     }
 

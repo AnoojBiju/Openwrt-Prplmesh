@@ -149,6 +149,8 @@ public:
      */
     bool set_mbo_assoc_disallow(const sMacAddr &radio_mac, const sMacAddr &bssid, bool enable);
 
+    bool get_sta_device_info(const sMacAddr &sta_mac, int nw_info);
+
     // Forward declaration
     struct sRadioInfo;
 

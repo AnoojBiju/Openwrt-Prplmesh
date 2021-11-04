@@ -78,6 +78,10 @@ enum eStructsConsts {
     HT_MCS_SET_SIZE                      = 16,
     VHT_MCS_SET_SIZE                     = 32,
     DEV_MAX_RADIOS                       = 3,
+    WIFI_STA_DEVICE_NAME_LENGTH  = 32,
+    WIFI_STA_OS_NAME_LENGTH      = 32,
+    WIFI_STA_VENDOR_NAME_LENGTH  = 32,
+    WIFI_STA_BSS_NAME_LENGTH     = 32,
 };
 
 enum eMessageConsts {
