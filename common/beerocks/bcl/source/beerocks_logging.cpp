@@ -61,17 +61,6 @@ public:
 
         // Get current file size
         auto logFileSize = el::base::utils::File::getSizeOfFile(m_fsLogFileStream);
-	auto pid = ::getpid();
-
-	// Check if rolling should be triggered
-	system("echo =======check_if_triggered >> /tmp/beerocks/logs/cpp_debug.log");
-	char command[256];
-	snprintf(command, 256, "echo pid %d >> /tmp/beerocks/logs/cpp_debug.log", pid);
-	system(command);
-	snprintf(command, 256, "echo max_size %ld >> /tmp/beerocks/logs/cpp_debug.log", m_szRollLogFileSize);
-	system(command);
-	snprintf(command, 256, "echo current_size %ld >> /tmp/beerocks/logs/cpp_debug.log", logFileSize);
-	system(command);
 
         // Check if rolling should be triggered
         if (logFileSize >= m_szRollLogFileSize) {
@@ -83,17 +72,8 @@ public:
 
             if (bytes >= 0 && m_szRollLogFileSize > 0) {
                 // remove process name from process path to get process dir path
-		
-		system("echo =======logFileSize>=m_szRollLogFileSize >> /tmp/beerocks/logs/cpp_debug.log");
-		snprintf(command, 256, "echo current_dir %s >> /tmp/beerocks/logs/cpp_debug.log", process_dir);
-		system(command);
-
                 std::string process_dir_str(process_dir);
                 process_dir_str.erase(process_dir_str.rfind("/"));
-		snprintf(command, 256, "echo max_size_fail %ld >> /tmp/beerocks/logs/cpp_debug.log", m_szRollLogFileSize);
-		system(command);
-		snprintf(command, 256, "echo current_size_fail %ld >> /tmp/beerocks/logs/cpp_debug.log", logFileSize);
-		system(command);
 
                 std::string fullPathCmd(process_dir_str +
                                         std::string("/../scripts/prplmesh_utils.sh roll_logs&"));
@@ -752,4 +732,3 @@ void logging::eval_settings()
         m_syslog_enabled = "false"; // If no module specific setting, accept a global, then default
     }
 }
-
