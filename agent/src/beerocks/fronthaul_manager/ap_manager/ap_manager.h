@@ -157,7 +157,7 @@ private:
     int sta_unassociated_rssi_measurement_header_id = -1;
 
     std::shared_ptr<bwl::ap_wlan_hal> ap_wlan_hal;
-
+    
     std::chrono::steady_clock::time_point next_heartbeat_notification_timestamp;
 
     const uint8_t HEARTBEAT_NOTIFICATION_DELAY_SEC = 1;

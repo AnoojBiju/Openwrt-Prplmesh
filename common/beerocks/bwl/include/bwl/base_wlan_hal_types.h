@@ -239,6 +239,17 @@ typedef struct {
 } sSteeringEvProbeReq;
 
 typedef struct {
+   sMacAddr sta_mac; 
+   std::string bss;
+   std::string os_name;
+   std::string device_name;
+   std::string vendor_name;
+   std::string default_gw;
+   std:::string subnet_mask;
+   beerocks::net::sIpv4Addr ipv4;
+} sSTA_Info_Reply;
+
+typedef struct {
     sSteeringEvProbeReq params;
 } sACTION_APMANAGER_STEERING_EVENT_PROBE_REQ_NOTIFICATION;
 
@@ -339,6 +350,26 @@ typedef struct {
 typedef struct {
     sDfsChannelAvailable params;
 } sACTION_APMANAGER_HOSTAP_DFS_CHANNEL_AVAILABLE_NOTIFICATION;
+
+typedef struct {
+    std::string bss;
+    std::string mac;
+    std::string device_name;
+    std::string os_name;
+    std::string vendor_name;
+    int days_since_last_reset;
+} sDeviceInfo;
+
+typedef struct {
+    std::string ip_v4;
+    std::string subnet_mask;
+    std::string default_gateway;
+} sNetworkInfo;
+
+typedef struct {
+    sDeviceInfo dev_params;
+    sNetworkInfo nw_params;
+} sSTA_Info_Reply;
 
 typedef struct {
     int8_t vap_id;

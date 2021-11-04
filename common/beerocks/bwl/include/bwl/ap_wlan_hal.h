@@ -56,7 +56,9 @@ public:
         DFS_RADAR_Detected,
         AP_MGMT_FRAME_RECEIVED,
 
-        MGMT_Frame /**< 802.11 management frame payload */
+        MGMT_Frame, /**< 802.11 management frame payload */
+        //HEMANTH
+        STA_Info_Reply
     };
 
     // Public methods
@@ -190,6 +192,8 @@ public:
     virtual bool sta_unassoc_rssi_measurement(const std::string &mac, int chan, int bw,
                                               int vht_center_frequency, int delay,
                                               int window_size) = 0;
+
+    virtual bool get_sta_device_info (std::string &sta_mac , int nw_info);
 
     /**
      * @brief Add a station to softblock list

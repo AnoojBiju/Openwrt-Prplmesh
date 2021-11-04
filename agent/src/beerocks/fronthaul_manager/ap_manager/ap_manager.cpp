@@ -1494,6 +1494,30 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
         ap_wlan_hal->set_primary_vlan_id(request->primary_vlan_id());
         break;
     }
+
+    case beerocks_message::ACTION_APMANAGER_STA_INFO_REPLY: {
+        std::cout << sta_info_reply" << std::endl;
+        break;
+    }
+    case beerocks_message::ACTION_APMANAGER_STA_INFO_QUERY: {
+        LOG(TRACE) << "received ACTION_APMANAGER_STA_INFO_QUERY";
+        std::cout << " sta_info_query" << std::endl;
+        auto request = beerocks_header->addClass<
+            beerocks_message::cACTION_APMANAGER_STA_INFO_QUERY>();
+        if (!request) {
+            LOG(ERROR)
+                << "addClass ACTION_APMANAGER_STA_INFO_QUERY failed";
+            return;
+        }
+        request->success() = true;
+        if(!ap_wlan_hal->get_sta_device_info(request->sta_mac(), request->nw_info()) {
+                  LOG(ERROR) << "get_sta_device_info failed!";
+                  request->success() = false;
+        }
+        send_cmdu(cmdu_tx);
+        break;
+    }
+
     default: {
         LOG(ERROR) << "Unsupported header action_op: " << int(beerocks_header->action_op());
         break;
@@ -2097,6 +2121,44 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
         // Send the mismatched message
         send_cmdu(cmdu_tx);
     } break;
+
+    case Event::STA_Info_Reply: {
+        if (!data) {
+            LOG(ERROR) << "STA_Info_Reply without data!";
+            return false;
+        }
+
+        auto msg =
+            static_cast<bwl::sSTA_Info_Reply *>(data);
+        LOG(INFO) << "STA_INFO_REPLY "
+                  << " bss = " << str(msg->dev_params.bss) 
+                  << " mac = " << int(msg->dev_params.mac);
+
+        auto response = message_com::create_vs_message<
+            beerocks_message::cACTION_APMANAGER_STA_Info_Reply>(cmdu_tx);
+        if (response == nullptr) {
+            LOG(ERROR) << "Failed building" 
+                          "sSTA_Info_Reply message!";
+            break;
+        }
+
+        response->params().bss            = msg->dev_params.bss;
+        response->params().mac              = msg->dev_params.mac;
+        response->params().device_name            = msg->dev_params.device_name;
+        response->params().os_name   = msg->dev_params.os_name;
+        response->params().vendor_name   = msg->dev_params.vendor_name;
+
+        response->params().ipv4            = msg->nw_params.ipv4;
+        response->params().subnet_mask              = msg->nw_params.subnet_mask;
+        response->params().default_gw            = msg->nw_params.default_gw;
+
+
+        
+
+        send_cmdu(cmdu_tx);
+        break;
+
+    }
     // Unhandled events
     default:
         LOG(ERROR) << "Unhandled event: " << int(event);
