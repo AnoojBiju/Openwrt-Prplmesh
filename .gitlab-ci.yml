@@ -221,6 +221,7 @@ db_unit_tests:
 
 boardfarm-tests:
   stage: test
+  parallel: 5
   script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     - ./dctest.py
