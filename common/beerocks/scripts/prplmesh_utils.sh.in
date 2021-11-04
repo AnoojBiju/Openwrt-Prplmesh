@@ -202,7 +202,7 @@ roll_logs_function()
     then
         for link in $links; do
             # Keep the last 3 versions of the log file
-            echo "$link" | sed -e 's/log$/*/' | xargs find . -name | sort -r | awk 'NR>3' | xargs rm -f
+            echo "$link" | sed -e 's/log$/*/' | xargs find . -name | grep -Ee '^[^_].*' | sort -r | awk 'NR>3' | xargs rm -f
         done
     else
     # If there's an argument, it'll be used as the log subfix
@@ -212,12 +212,13 @@ roll_logs_function()
             # naming it once per test would lead into inconsistent results
             if [ ! "$link" = "beerocks_cli.log" ]
             then
-                oldname=$(readlink -f "$link")
-                newname=$(echo "$oldname" | sed -r "s/\.log$/\_$1\.log/g")
+                oldname=$(readlink "$link")
+                newname=$(echo _"$oldname" | sed -r "s/\.log$/\_$1\.log/g")
                 mv "$oldname" "$newname"
                 ln -sf "$newname" "$link"
             fi
         done
+        for file in *; do echo "$file" >> debug_log.log; done
     fi
 
     # Send USR1 signals to the beerocks processes to trigger log rolling
