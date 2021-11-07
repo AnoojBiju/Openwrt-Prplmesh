@@ -1,10 +1,12 @@
 project(tlvf VERSION ${prplmesh_VERSION})
 
-if ((TARGET_PLATFORM_TYPE STREQUAL "ugw") OR (TARGET_PLATFORM STREQUAL "rdkb"))
-    find_package(PythonInterp REQUIRED)
-else()
-    set(PYTHON_EXECUTABLE python3)
+find_package (Python3)
+
+if(!Python3_Interpreter_FOUND)
+	message(FATAL_ERROR "python3 not found!")
 endif()
+
+set(PYTHON_EXECUTABLE ${Python3_EXECUTABLE})
 
 set(TLVF_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(PythonTlvf ${TLVF_DIR}/tlvf.py)

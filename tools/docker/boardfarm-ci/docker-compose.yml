@@ -11,7 +11,7 @@ networks:
         driver: bridge
 
 x-prplmesh: &prplmesh # Template for the prplmesh services
-    image: registry.gitlab.com/prpl-foundation/prplmesh/prplmesh/prplmesh-builder-ubuntu-bionic:${IMAGE_TAG}
+    image: registry.gitlab.com/prpl-foundation/prplmesh/prplmesh/prplmesh-builder-ubuntu-focal:${IMAGE_TAG}
     privileged: true    # For the creation of the bridge to work
     networks:
         - ucc

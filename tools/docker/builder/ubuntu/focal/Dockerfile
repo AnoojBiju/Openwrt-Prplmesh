@@ -5,7 +5,7 @@
 # See LICENSE file for more details.
 ###############################################################
 
-FROM ubuntu:bionic-20210930
+FROM ubuntu:focal-20211006
 
 ARG PACKAGES_FOR_BUILD="\
     binutils \
@@ -27,14 +27,16 @@ ARG PACKAGES_FOR_BUILD="\
 
 ARG PACKAGES_FOR_AMBIORIX="\
     bison \
+    build-essential \
     curl \
     flex \
     libevent-dev \
+    liblua5.1-0-dev \
+    liburiparser-dev \
+    libxml2-dev \
     libyajl-dev \
     lua5.1 \
-    liblua5.1-0-dev \
-    build-essential \
-    libxml2-dev \
+    python-is-python3 \
     "
 
 ARG PACKAGES_FOR_TEST="\
@@ -69,13 +71,8 @@ ARG PACKAGES="\
     $PACKAGES_FOR_DEBUG\
     "
 
-RUN apt-get update && apt-get install -y $PACKAGES && \
-    # We need liburiparser-dev > v. 9.0 which isn't avalaible in default
-    # 18.04 Ubuntu repos. So add Ubuntu 19.10 repo which has v. 0.9.3-2
-    echo "deb http://old-releases.ubuntu.com/ubuntu eoan main universe" | tee -a  /etc/apt/sources.list && \
-    apt-get update && \
-    apt-get install -y \
-    liburiparser-dev && \
+RUN apt-get update && \
+	DEBIAN_FRONTEND="noninteractive" apt-get install -y $PACKAGES && \
     rm -rf /var/lib/apt/lists/*
 
 RUN curl https://storage.googleapis.com/git-repo-downloads/repo > /usr/bin/repo && \
