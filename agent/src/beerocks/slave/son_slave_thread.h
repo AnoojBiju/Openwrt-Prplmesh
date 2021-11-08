@@ -298,6 +298,16 @@ private:
     std::shared_ptr<beerocks::net::UdsAddress> m_cmdu_server_uds_address;
 
     /**
+     * @note There is a difference in the use of a client socket the Agent holds to another server
+     * (Broker/Backhaul Manager/Platform Manager) and clients that are connected to the Agent CMDU
+     * server (AP Manager/Monitor).
+     * On a client we hold, we need to use the internal client object function send()/forward(),
+     * whereas, for clients that are connected to the Agent, the Agent only hold their file
+     * descriptor so for sending them a CMDU, need to use m_cmdu_server send_cmdu()/forward_cmdu()
+     * which this class have wrapper function for.
+     */
+
+    /**
      * CMDU server to exchange CMDU messages with clients through socket connections.
      */
     std::unique_ptr<beerocks::CmduServer> m_cmdu_server;
@@ -306,17 +316,6 @@ private:
      * Broker client to exchange CMDU messages with broker server running in transport process.
      */
     std::unique_ptr<beerocks::btl::BrokerClient> m_broker_client;
-
-    const int SLAVE_INIT_DELAY_SEC                                    = 4;
-    const int WAIT_FOR_JOINED_RESPONSE_TIMEOUT_SEC                    = 5;
-    const int WAIT_BEFORE_SEND_SLAVE_JOINED_NOTIFICATION_SEC          = 1;
-    const int WAIT_BEFORE_SEND_BH_ENABLE_NOTIFICATION_SEC             = 1;
-    const int WAIT_FOR_PLATFORM_MANAGER_REGISTER_RESPONSE_TIMEOUT_SEC = 600;
-    const int MONITOR_HEARTBEAT_TIMEOUT_SEC                           = 10;
-    const int MONITOR_HEARTBEAT_RETRIES                               = 10;
-    const int AP_MANAGER_HEARTBEAT_TIMEOUT_SEC                        = 10;
-    const int AP_MANAGER_HEARTBEAT_RETRIES                            = 10;
-    const int CONNECT_PLATFORM_RETRY_SLEEP_MS                         = 1000;
 
     /**
      * CMDU client connected to the the CMDU server running in platform manager.

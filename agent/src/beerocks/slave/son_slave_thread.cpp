@@ -68,6 +68,21 @@
 #include <bpl/bpl_err.h>
 
 //////////////////////////////////////////////////////////////////////////////
+///////////////////////////////// Constatnts /////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+
+constexpr int SLAVE_INIT_DELAY_SEC                                    = 4;
+constexpr int WAIT_FOR_JOINED_RESPONSE_TIMEOUT_SEC                    = 5;
+constexpr int WAIT_BEFORE_SEND_SLAVE_JOINED_NOTIFICATION_SEC          = 1;
+constexpr int WAIT_BEFORE_SEND_BH_ENABLE_NOTIFICATION_SEC             = 1;
+constexpr int WAIT_FOR_PLATFORM_MANAGER_REGISTER_RESPONSE_TIMEOUT_SEC = 600;
+constexpr int MONITOR_HEARTBEAT_TIMEOUT_SEC                           = 10;
+constexpr int MONITOR_HEARTBEAT_RETRIES                               = 10;
+constexpr int AP_MANAGER_HEARTBEAT_TIMEOUT_SEC                        = 10;
+constexpr int AP_MANAGER_HEARTBEAT_RETRIES                            = 10;
+constexpr int CONNECT_PLATFORM_RETRY_SLEEP_MS                         = 1000;
+
+//////////////////////////////////////////////////////////////////////////////
 /////////////////////////// Local Module Functions ///////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
