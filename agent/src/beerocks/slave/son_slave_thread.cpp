@@ -1526,9 +1526,6 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
         }
 
         m_is_backhaul_disconnected = true;
-        m_agent_state_timer_sec =
-            std::chrono::steady_clock::now() +
-            std::chrono::milliseconds(beerocks::IRE_MAX_WIRELESS_RECONNECTION_TIME_MSC);
 
         m_radio_managers.do_on_each_radio_manager(
             [&](sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
