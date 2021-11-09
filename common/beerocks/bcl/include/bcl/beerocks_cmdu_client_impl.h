@@ -53,6 +53,18 @@ public:
      */
     bool send_cmdu(ieee1905_1::CmduMessageTx &cmdu_tx) override;
 
+    /**
+     * @brief Forwards a CMDU message to the connected server.
+     * @see CmduClient::forward_cmdu
+     */
+    bool forward_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx) override;
+
+    /**
+     * @brief Get the file descriptor of the client.
+     * @see CmduClient::get_fd
+     */
+    int get_fd() override { return m_connection->socket()->fd(); }
+
 private:
     /**
      * @brief Handles the read event in the connected socket.

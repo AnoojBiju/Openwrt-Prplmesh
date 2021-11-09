@@ -10,8 +10,15 @@
 #define _SON_SLAVE_THREAD_H
 
 #include <bcl/beerocks_backport.h>
+#include <bcl/beerocks_cmdu_client.h>
+#include <bcl/beerocks_cmdu_client_factory.h>
+#include <bcl/beerocks_cmdu_server.h>
+#include <bcl/beerocks_eventloop_thread.h>
 #include <bcl/beerocks_logging.h>
-#include <bcl/beerocks_socket_thread.h>
+#include <bcl/beerocks_timer_manager.h>
+#include <bcl/network/sockets_impl.h>
+#include <btl/broker_client.h>
+#include <btl/broker_client_factory.h>
 
 #include <beerocks/tlvf/beerocks_header.h>
 
@@ -35,7 +42,7 @@ enum class eErrorCode;
 } // namespace beerocks
 
 namespace son {
-class slave_thread : public beerocks::socket_thread {
+class slave_thread final : public beerocks::EventLoopThread {
 
 public:
     struct sAgentConfig {
@@ -114,70 +121,218 @@ public:
     slave_thread(sAgentConfig conf, beerocks::logging &logger_);
     virtual ~slave_thread();
 
-    virtual bool init() override;
-    virtual bool work() override;
+    /**
+     * @brief Initialize the Agent.
+     *
+     * @return true on success and false otherwise.
+     */
+    bool thread_init() override;
 
-protected:
-    virtual bool handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx) override;
-    virtual void on_thread_stop() override;
-    virtual bool socket_disconnected(Socket *sd) override;
-    virtual std::string print_cmdu_types(const beerocks::message::sUdsHeader *cmdu_header) override;
+    /**
+     * @brief Sends given CMDU message through the specified socket connection.
+     *
+     * @param fd File descriptor of the connected socket.
+     * @param cmdu_tx CMDU message to send.
+     * @return true on success and false otherwise.
+     */
+    bool send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx);
+
+    /**
+     * @brief Forwards given received CMDU message through the specified socket connection.
+     *
+     * @param fd File descriptor of the connected socket.
+     * @param cmdu_rx Received CMDU message to forward.
+     * @return true on success and false otherwise.
+     */
+    bool forward_cmdu_to_uds(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief Sends ACK CMDU to controller
+     *
+     * @param cmdu CMDU message to send.
+     * @param mid The message id to attach to the ACK
+     * @return true on success and false otherwise.
+     */
+    bool send_ack_to_controller(ieee1905_1::CmduMessageTx &cmdu_tx, uint32_t mid);
 
 private:
-    bool handle_cmdu_control_message(Socket *sd,
+    /**
+     * @brief Handles received CMDU message.
+     *
+     * @param fd File descriptor of the socket connection the CMDU was received through.
+     * @param cmdu_rx Received CMDU to be handled.
+     * @return true on success and false otherwise.
+     */
+    bool handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief Sends CMDU to transport for dispatching.
+     *
+     * @param cmdu CMDU message to send.
+     * @param dst_mac Destination MAC address.
+     * @param src_mac Source MAC address.
+     * @param iface_name Name of the network interface to use (set to empty string to send on all
+     * available interfaces).
+     * @return true on success and false otherwise.
+     */
+    bool send_cmdu_to_broker(ieee1905_1::CmduMessageTx &cmdu, const sMacAddr &dst_mac,
+                             const sMacAddr &src_mac, const std::string &iface_name = "");
+
+    /**
+     * @brief Forwards given received CMDU message to the broker server for dispatching.
+     *
+     * @param cmdu_rx Received CMDU message to forward.
+     * @param dst_mac Destination MAC address.
+     * @param src_mac Source MAC address.
+     * @param iface_name Name of the network interface to use (set to empty string to send on all
+     * available interfaces).
+     * @return true on success and false otherwise.
+     */
+    bool forward_cmdu_to_broker(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &dst_mac,
+                                const sMacAddr &src_mac, const std::string &iface_name = "");
+
+    /**
+     * @brief Handles CMDU message received from broker.
+     *
+     * This handler is slightly different than the handler for CMDU messages received from other
+     * processes as it checks the source and destination MAC addresses set by the original sender.
+     * It also filters out messages that are not addressed to the controller.
+     *
+     * @param iface_index Index of the network interface that the CMDU message was received on.
+     * @param dst_mac Destination MAC address.
+     * @param src_mac Source MAC address.
+     * @param cmdu_rx Received CMDU to be handled.
+     * @return true on success and false otherwise.
+     */
+    bool handle_cmdu_from_broker(uint32_t iface_index, const sMacAddr &dst_mac,
+                                 const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    void on_thread_stop() override;
+
+    /**
+     * @brief Handles the client-disconnected event in the CMDU server.
+     *
+     * @param fd File descriptor of the socket that got disconnected.
+     */
+    void handle_client_disconnected(int fd);
+
+    bool handle_cmdu_control_message(int fd,
                                      std::shared_ptr<beerocks::beerocks_header> beerocks_header);
     bool handle_cmdu_backhaul_manager_message(
-        Socket *sd, std::shared_ptr<beerocks::beerocks_header> beerocks_header);
+        int fd, std::shared_ptr<beerocks::beerocks_header> beerocks_header);
     bool handle_cmdu_platform_manager_message(
-        Socket *sd, std::shared_ptr<beerocks::beerocks_header> beerocks_header);
-    bool handle_cmdu_ap_manager_message(const std::string &fronthaul_iface, Socket *sd,
+        int fd, std::shared_ptr<beerocks::beerocks_header> beerocks_header);
+    bool handle_cmdu_ap_manager_message(const std::string &fronthaul_iface, int fd,
                                         std::shared_ptr<beerocks::beerocks_header> beerocks_header);
-    bool handle_cmdu_monitor_message(const std::string &fronthaul_iface, Socket *sd,
+    bool handle_cmdu_monitor_message(const std::string &fronthaul_iface, int fd,
                                      std::shared_ptr<beerocks::beerocks_header> beerocks_header);
-    bool handle_cmdu_control_ieee1905_1_message(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_cmdu_ap_manager_ieee1905_1_message(const std::string &fronthaul_iface, Socket &sd,
+    bool handle_cmdu_control_ieee1905_1_message(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool handle_cmdu_ap_manager_ieee1905_1_message(const std::string &fronthaul_iface, int fd,
                                                    ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_cmdu_monitor_ieee1905_1_message(const std::string &fronthaul_iface, Socket &sd,
+    bool handle_cmdu_monitor_ieee1905_1_message(const std::string &fronthaul_iface, int fd,
                                                 ieee1905_1::CmduMessageRx &cmdu_rx);
 
+    bool fsm_all();
     bool slave_fsm(const std::string &fronthaul_iface);
     bool agent_fsm();
-    void slave_reset(const std::string &fronthaul_iface);
+    void agent_reset();
     void stop_slave_thread();
-    void backhaul_manager_stop();
-    void platform_manager_stop();
-    void hostap_services_off();
-    bool hostap_services_on();
     void fronthaul_start(const std::string &fronthaul_iface);
     void fronthaul_stop(const std::string &fronthaul_iface);
     void log_son_config(const std::string &fronthaul_iface);
     void platform_notify_error(beerocks::bpl::eErrorCode code, const std::string &error_data);
     bool monitor_heartbeat_check(const std::string &fronthaul_iface);
     bool ap_manager_heartbeat_check(const std::string &fronthaul_iface);
+
+public:
+    /**
+     * @brief Checks if there is a link to the Multi-AP Controller.
+     * 
+     * @return true if there is a link to the Controller, otherwise false.
+     */
+    bool link_to_controller();
     bool send_cmdu_to_controller(const std::string &fronthaul_iface,
                                  ieee1905_1::CmduMessageTx &cmdu_tx);
 
 private:
-    const int SELECT_TIMEOUT_MSEC                                     = 200;
-    const int SLAVE_INIT_DELAY_SEC                                    = 4;
-    const int WAIT_FOR_JOINED_RESPONSE_TIMEOUT_SEC                    = 5;
-    const int WAIT_BEFORE_SEND_SLAVE_JOINED_NOTIFICATION_SEC          = 1;
-    const int WAIT_BEFORE_SEND_BH_ENABLE_NOTIFICATION_SEC             = 1;
-    const int WAIT_FOR_PLATFORM_MANAGER_REGISTER_RESPONSE_TIMEOUT_SEC = 600;
-    const int MONITOR_HEARTBEAT_TIMEOUT_SEC                           = 10;
-    const int MONITOR_HEARTBEAT_RETRIES                               = 10;
-    const int AP_MANAGER_HEARTBEAT_TIMEOUT_SEC                        = 10;
-    const int AP_MANAGER_HEARTBEAT_RETRIES                            = 10;
-    const int CONNECT_PLATFORM_RETRY_SLEEP_MS                         = 1000;
+    /**
+     * Buffer to hold CMDU to be transmitted.
+     */
+    uint8_t m_tx_buffer[beerocks::message::MESSAGE_BUFFER_LENGTH];
 
-    std::string backhaul_manager_uds;
-    std::string platform_manager_uds;
+    /**
+     * CMDU to be transmitted.
+     */
+    ieee1905_1::CmduMessageTx cmdu_tx;
 
-    SocketClient *m_platform_manager_socket = nullptr;
-    SocketClient *m_backhaul_manager_socket = nullptr;
-    SocketClient *m_master_socket           = nullptr;
+    /**
+     * Timer manager to help using application timers.
+     */
+    std::shared_ptr<beerocks::TimerManager> m_timer_manager;
+
+    /**
+     * File descriptor of the timer to run the Finite State Machine.
+     */
+    int m_fsm_timer = beerocks::net::FileDescriptor::invalid_descriptor;
+
+    /**
+     * Factory to create broker client instances connected to broker server.
+     * Broker client instances are used to exchange CMDU messages with remote processes running in
+     * other devices in the network via the broker server running in the transport process.
+     */
+    std::unique_ptr<beerocks::btl::BrokerClientFactory> m_broker_client_factory;
+
+    /**
+     * Factory to create CMDU client instances connected to CMDU server running in platform manager.
+     */
+    std::unique_ptr<beerocks::CmduClientFactory> m_platform_manager_cmdu_client_factory;
+
+    /**
+     * Factory to create CMDU client instances connected to CMDU server running in backhaul manager.
+     */
+    std::unique_ptr<beerocks::CmduClientFactory> m_backhaul_manager_cmdu_client_factory;
+
+    /**
+     * CMDU server address used by CmduServer `m_cmdu_server`.
+     */
+    std::shared_ptr<beerocks::net::UdsAddress> m_cmdu_server_uds_address;
+
+    /**
+     * @note There is a difference in the use of a client socket the Agent holds to another server
+     * (Broker/Backhaul Manager/Platform Manager) and clients that are connected to the Agent CMDU
+     * server (AP Manager/Monitor).
+     * On a client we hold, we need to use the internal client object function send()/forward(),
+     * whereas, for clients that are connected to the Agent, the Agent only hold their file
+     * descriptor so for sending them a CMDU, need to use m_cmdu_server send_cmdu()/forward_cmdu()
+     * which this class have wrapper function for.
+     */
+
+    /**
+     * CMDU server to exchange CMDU messages with clients through socket connections.
+     */
+    std::unique_ptr<beerocks::CmduServer> m_cmdu_server;
+
+    /**
+     * Broker client to exchange CMDU messages with broker server running in transport process.
+     */
+    std::unique_ptr<beerocks::btl::BrokerClient> m_broker_client;
+
+    /**
+     * CMDU client connected to the the CMDU server running in platform manager.
+     * This object is dynamically created using the CMDU client factory for the platform manager
+     * provided in class constructor.
+     */
+    std::unique_ptr<beerocks::CmduClient> m_platform_manager_client;
+
+    /**
+     * CMDU client connected to the the CMDU server running in backhaul manager.
+     * This object is dynamically created using the CMDU client factory for the backhaul manager
+     * provided in class constructor.
+     */
+    std::unique_ptr<beerocks::CmduClient> m_backhaul_manager_client;
 
     bool m_is_backhaul_disconnected = false;
+    int m_agent_resets_counter      = 0;
     sSlaveBackhaulParams backhaul_params;
 
     // Global FSM members:
@@ -189,16 +344,14 @@ private:
         beerocks_message::sSonConfig son_config;
         int stop_on_failure_attempts;
         bool stopped                   = false;
-        bool detach_on_conf_change     = false;
         bool configuration_in_progress = false;
         bool autoconfiguration_completed;
         //slave FSM //
         eSlaveState slave_state;
         std::chrono::steady_clock::time_point slave_state_timer;
-        int slave_resets_counter = 0;
 
-        Socket *monitor_socket    = nullptr;
-        Socket *ap_manager_socket = nullptr;
+        int monitor_fd    = beerocks::net::FileDescriptor::invalid_descriptor;
+        int ap_manager_fd = beerocks::net::FileDescriptor::invalid_descriptor;
         std::chrono::steady_clock::time_point monitor_last_seen;
         std::chrono::steady_clock::time_point ap_manager_last_seen;
         int monitor_retries_counter    = 0;
@@ -286,7 +439,6 @@ private:
 
     beerocks::logging &logger;
     std::string master_version;
-    bool m_logger_configured = false;
 
     // Encryption support - move to common library
     bool autoconfig_wsc_calculate_keys(const std::string &fronthaul_iface, WSC::m2 &m2,
@@ -297,18 +449,18 @@ private:
     bool autoconfig_wsc_authenticate(const std::string &fronthaul_iface, WSC::m2 &m2,
                                      uint8_t authkey[32]);
 
-    bool parse_intel_join_response(const std::string &fronthaul_iface, Socket *sd,
+    bool parse_intel_join_response(const std::string &fronthaul_iface,
                                    beerocks::beerocks_header &beerocks_header);
-    bool parse_non_intel_join_response(const std::string &fronthaul_iface, Socket *sd);
-    bool handle_autoconfiguration_wsc(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_autoconfiguration_renew(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool parse_non_intel_join_response(const std::string &fronthaul_iface);
+    bool handle_autoconfiguration_wsc(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool handle_autoconfiguration_renew(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool autoconfig_wsc_add_m1(const std::string &fronthaul_iface);
     bool send_operating_channel_report(const std::string &fronthaul_iface);
-    bool handle_ap_metrics_query(Socket &sd, ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_monitor_ap_metrics_response(const std::string &fronthaul_iface, Socket &sd,
+    bool handle_ap_metrics_query(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool handle_monitor_ap_metrics_response(const std::string &fronthaul_iface, int fd,
                                             ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_channel_preference_query(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_channel_selection_request(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool handle_channel_preference_query(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool handle_channel_selection_request(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool get_controller_channel_preference(const std::string &fronthaul_iface,
                                            ieee1905_1::CmduMessageRx &cmdu_rx);
     bool channel_selection_get_transmit_power_limit(const std::string &fronthaul_iface,
@@ -317,12 +469,12 @@ private:
     bool channel_selection_current_channel_restricted(const std::string &fronthaul_iface);
     beerocks::message::sWifiChannel
     channel_selection_select_channel(const std::string &fronthaul_iface);
-    bool handle_multi_ap_policy_config_request(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_client_association_request(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_1905_higher_layer_data_message(Socket &sd, ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_client_steering_request(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_beacon_metrics_query(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_ack_message(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool handle_multi_ap_policy_config_request(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool handle_client_association_request(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool handle_1905_higher_layer_data_message(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool handle_client_steering_request(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool handle_beacon_metrics_query(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool handle_ack_message(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_profile2_default_802dotq_settings_tlv(ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_profile2_traffic_separation_policy_tlv(
         ieee1905_1::CmduMessageRx &cmdu_rx, std::unordered_set<std::string> &misconfigured_ssids);
