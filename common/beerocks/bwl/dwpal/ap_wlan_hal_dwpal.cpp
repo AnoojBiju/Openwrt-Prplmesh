@@ -950,8 +950,8 @@ bool ap_wlan_hal_dwpal::refresh_radio_info()
             auto &channel_info        = m_radio_info.channels_list[supported_channel_info.number];
             channel_info.tx_power_dbm = supported_channel_info.tx_power;
             channel_info.dfs_state    = supported_channel_info.is_dfs
-                                         ? supported_channel_info.dfs_state
-                                         : beerocks::eDfsState::DFS_STATE_MAX;
+                                            ? supported_channel_info.dfs_state
+                                            : beerocks::eDfsState::DFS_STATE_MAX;
 
             for (auto bw : supported_channel_info.supported_bandwidths) {
                 // If rank does not exist, set it to -1. It will be set by "read_acs_report()".
@@ -1036,6 +1036,12 @@ bool ap_wlan_hal_dwpal::set_wifi_bw(beerocks::eWiFiBandwidth bw)
         return false;
     }
 
+    // manual channel set in 80211.ax mode is not supported yet
+    // set he_ parameters same as vht_ for now (PPM-1784)
+    if (!set("he_oper_chwidth", std::to_string(wifi_bw))) {
+        LOG(ERROR) << "Failed setting vht_oper_chwidth";
+        return false;
+    }
     if (!set("vht_oper_chwidth", std::to_string(wifi_bw))) {
         LOG(ERROR) << "Failed setting vht_oper_chwidth";
         return false;
@@ -1066,7 +1072,21 @@ bool ap_wlan_hal_dwpal::set_channel(int chan, beerocks::eWiFiBandwidth bw, int c
         return false;
     }
 
+    // Until PPM-643 is fixed setting secondary_channel for 20Mhz should be enough.
+    if (bw == beerocks::eWiFiBandwidth::BANDWIDTH_20) {
+        if (!set("secondary_channel", "0")) {
+            LOG(ERROR) << "Failed setting secondary channel offset 0";
+            return false;
+        }
+    }
+
     if (center_channel > 0) {
+        // manual channel set in 80211.ax mode is not supported yet
+        // set he_ parameters same as vht_ for now (PPM-1784)
+        if (!set("he_oper_centr_freq_seg0_idx", std::to_string(center_channel))) {
+            LOG(ERROR) << "Failed setting vht center frequency " << center_channel;
+            return false;
+        }
         if (!set("vht_oper_centr_freq_seg0_idx", std::to_string(center_channel))) {
             LOG(ERROR) << "Failed setting vht_oper_centr_freq_seg0_idx";
             return false;
@@ -1678,6 +1698,12 @@ bool ap_wlan_hal_dwpal::cancel_cac(int chan, beerocks::eWiFiBandwidth bw, int vh
         return false;
     }
 
+    // manual channel set in 80211.ax mode is not supported yet
+    // set he_ parameters same as vht_ for now (PPM-1784)
+    if (!set("he_oper_centr_freq_seg0_idx", std::to_string(center_channel))) {
+        LOG(ERROR) << "Failed setting vht center frequency " << center_channel;
+        return false;
+    }
     if (!set("vht_oper_centr_freq_seg0_idx", std::to_string(center_channel))) {
         LOG(ERROR) << "Failed setting vht center frequency " << center_channel;
         return false;
@@ -2152,7 +2178,7 @@ bool ap_wlan_hal_dwpal::generate_connected_clients_events(
 
             int32_t result = generate_association_event_result::SUCCESS;
             auto msg_buff  = generate_client_assoc_event(reply, m_vap_id_in_progress,
-                                                        get_radio_info().is_5ghz, result);
+                                                         get_radio_info().is_5ghz, result);
 
             if (!msg_buff) {
                 LOG(DEBUG) << "Failed to generate client association event from reply";
