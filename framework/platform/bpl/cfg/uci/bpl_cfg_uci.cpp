@@ -13,6 +13,9 @@
 
 #include <string>
 
+#include <dirent.h>
+#include <sys/types.h>
+
 extern "C" {
 #include <uci.h>
 }
@@ -88,11 +91,13 @@ int cfg_uci_get_wireless_from_ifname(enum paramType type, const char *interface_
         return RETURN_ERR;
     }
 
-    bool is_section_found = false;
-    struct uci_package *p = ptr.p;
-    struct uci_element *e = nullptr;
-    struct uci_element *n = nullptr;
-    struct uci_section *s = nullptr;
+    bool is_section_found           = false;
+    struct uci_package *p           = ptr.p;
+    struct uci_element *e           = nullptr;
+    struct uci_element *n           = nullptr;
+    struct uci_section *s           = nullptr;
+    std::string path_interface_name = "";
+
     // Iterate over all wireless sections in the UCI DB
     uci_foreach_element(&p->sections, e)
     {
@@ -109,7 +114,6 @@ int cfg_uci_get_wireless_from_ifname(enum paramType type, const char *interface_
             if (o->type != UCI_TYPE_STRING)
                 continue;
 
-            // TODO: wireless.ifname is missing for Non-Intel Platforms (PPM-1458).
             if (strncmp(n->name, "ifname", MAX_UCI_BUF_LEN))
                 continue;
 
@@ -126,8 +130,64 @@ int cfg_uci_get_wireless_from_ifname(enum paramType type, const char *interface_
         }
     }
 
+    // If interface not found in etc/config/wireless 'config wifi-iface'.
+    // Try to get ifname using option path from 'config wifi-device'.
+    // This doesn't work for RDK-B, since there is no etc/config/wireless file.
+    if (!is_section_found) {
+
+        DIR *dir;
+        struct dirent *ent = NULL;
+
+        uci_foreach_element(&p->sections, e)
+        {
+            s = uci_to_section(e);
+
+            if (strncmp(s->type, "wifi-device", MAX_UCI_BUF_LEN))
+                continue;
+
+            // Iterate over all the options in the section wifi-device
+            uci_foreach_element(&s->options, n)
+            {
+                struct uci_option *o = uci_to_option(n);
+
+                if (o->type != UCI_TYPE_STRING)
+                    continue;
+
+                if (strncmp(n->name, "path", MAX_UCI_BUF_LEN))
+                    continue;
+
+                path_interface_name = "/sys/devices/platform/" + std::string(o->v.string) + "/net";
+
+                if ((dir = opendir(path_interface_name.c_str())) != NULL) {
+                    while ((ent = readdir(dir)) != NULL) {
+                        if (strcmp(ent->d_name, ".") != 0 && strcmp(ent->d_name, "..") != 0) {
+                            break;
+                        }
+                    }
+                    closedir(dir);
+                } else {
+                    // Could not open directory
+                    ERROR("%s, could not open directory %s \n", __FUNCTION__,
+                          path_interface_name.c_str());
+                    return RETURN_ERR;
+                }
+
+                if (ent == NULL)
+                    continue;
+
+                if (strncmp(interface_name, ent->d_name, MAX_UCI_BUF_LEN))
+                    continue;
+
+                // We reached the section containing the requested ifname(path to ifname)
+                is_section_found = true;
+                break;
+            }
+        }
+    }
+
     //if interface not found in wireless
     if (!is_section_found) {
+        ERROR("%s, interface(%s) not found in wireless", __FUNCTION__, interface_name);
         uci_free_context(ctx);
         return RETURN_ERR;
     }
