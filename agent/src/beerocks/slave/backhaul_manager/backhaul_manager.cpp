@@ -2071,6 +2071,14 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
                          << ", hidden_ssid=" << hidden_ssid;
         }
 
+        // Try adding wireless backhaul STA interface to the bridge in case there is no
+        // entity (hostadp) that adds it automaticaly.
+        auto bridge        = db->bridge.iface_name;
+        auto bridge_ifaces = beerocks::net::network_utils::linux_get_iface_list_from_bridge(bridge);
+        if (!beerocks::net::network_utils::linux_add_iface_to_bridge(bridge, iface)) {
+            LOG(INFO) << "The wireless interface " << iface << " is already in the bridge";
+        }
+
         // This event may come as a result of enabling the backhaul, but also as a result
         // of steering. *Only* in case it was the result of steering, we need to send a steering
         // response.
