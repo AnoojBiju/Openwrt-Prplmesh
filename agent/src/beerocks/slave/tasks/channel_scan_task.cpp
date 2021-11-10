@@ -647,8 +647,33 @@ bool ChannelScanTask::store_radio_scan_result(const std::shared_ptr<sScanRequest
         LOG(ERROR) << "Failed to get radio info from Agent DB for " << radio_mac;
         return false;
     }
-    auto radio_scan_info = request->radio_scans[radio->front.iface_name];
-    radio_scan_info->cached_results[results.channel].push_back(results);
+    auto radio_scan_info_iter = request->radio_scans.find(radio->front.iface_name);
+    if (radio_scan_info_iter == request->radio_scans.end()) {
+        LOG(ERROR) << "Could not find radio: " << radio->front.iface_name << ", MAC: " << radio_mac
+                   << " in the current scan request.";
+        return false;
+    }
+
+    for (const auto &op_cls : radio_scan_info_iter->second->operating_classes) {
+        for (const auto &ch_elem : op_cls.channel_list) {
+            std::unordered_set<uint8_t> _20MHz_channels;
+            son::wireless_utils::get_subset_20MHz_channels(
+                ch_elem.channel_number, op_cls.operating_class, op_cls.bw, _20MHz_channels);
+            /**
+             * To store the result in the correct radio scan, we need too check if the results'
+             * channel exists in the channel element's 20MHz channel subset.
+             * If it does that we add the result to the current radio scan's cached results under
+             * the channel element's channel number.
+             */
+            if (_20MHz_channels.find(results.channel) != _20MHz_channels.end()) {
+                LOG(TRACE) << "Setting result in channel " << ch_elem.channel_number;
+                radio_scan_info_iter->second->cached_results[ch_elem.channel_number].push_back(
+                    results);
+                // Move on to next operating class in radio scan
+                break;
+            }
+        }
+    }
     return true;
 }
 
@@ -711,6 +736,8 @@ bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmd
             if (!son::wireless_utils::is_channel_in_operating_class(operating_class,
                                                                     channel_number) ||
                 db_radio->channels_list.find(channel_number) == db_radio->channels_list.end()) {
+                LOG(DEBUG) << "Channel #" << channel_number << " in operating class #"
+                           << operating_class << " is not supported on this radio";
                 channel_vector.emplace_back(
                     channel_number,
                     eScanStatus::
@@ -1347,26 +1374,18 @@ ChannelScanTask::get_scan_results_for_request(const std::shared_ptr<sScanRequest
                                     scan_status, request_timestamp);
                     continue;
                 }
-                std::unordered_set<uint8_t> subchannels_20MHz;
-                if (!son::wireless_utils::get_subset_20MHz_channels(channel_number, operating_class, bw, subchannels_20MHz)) {
-                    // This shouldn't be reached as it would have been handled in trigger_radio_scan
+                auto channel_results_iter = results.find(channel_number);
+                if (channel_results_iter == results.end()) {
+                    LOG(DEBUG) << "No results found for channel " << channel_number
+                               << ", adding blank results";
+                    add_scan_result(fresh_scan_requested, ruid, operating_class, channel_number,
+                                    scan_status, request_timestamp);
                     continue;
                 }
-                for (const uint8_t primary_channel : subchannels_20MHz) {
-                    // Validate channel exists in results
-                    auto channel_results_iter = results.find(primary_channel);
-                    if (channel_results_iter == results.end()) {
-                        LOG(DEBUG) << "No results found for channel " << primary_channel
-                                   << ", adding blank results";
-                        add_scan_result(fresh_scan_requested, ruid, operating_class,
-                                        primary_channel, scan_status, request_timestamp);
-                        continue;
-                    }
-                    auto channel_results = channel_results_iter->second;
-                    add_scan_result(fresh_scan_requested, ruid, operating_class, primary_channel,
-                                    scan_status, request_timestamp, channel_results.first,
-                                    channel_results.second);
-                }
+                auto &channel_results = channel_results_iter->second;
+                add_scan_result(fresh_scan_requested, ruid, operating_class, channel_number,
+                                scan_status, request_timestamp, channel_results.first,
+                                channel_results.second);
             }
         };
 
