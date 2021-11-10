@@ -475,7 +475,7 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
                 // Get current scan request dwell time from DB
                 int32_t dwell_time_msec = database.get_channel_scan_dwell_time_msec(
                     radio_mac, radio_scan_request.second.is_single_scan);
-                if (dwell_time_msec <= 0) {
+                if (dwell_time_msec < 0) {
                     LOG(ERROR) << "invalid dwell_time=" << int(dwell_time_msec);
                     success = false;
                     break;
@@ -566,24 +566,22 @@ bool dynamic_channel_selection_r2_task::handle_single_scan_request_event(
         // Add agent to the queue
         m_agents_status_map[ire_mac] = sAgentScanStatus();
     }
-
-    auto agent_it = m_agents_status_map.find(ire_mac);
-    if (agent_it != m_agents_status_map.end()) {
-        const auto &scan_it = m_agents_status_map[ire_mac].single_radio_scans.find(radio_mac);
-        if (scan_it != m_agents_status_map[ire_mac].single_radio_scans.cend()) {
-            return false;
-        }
+    const auto &scan_it = m_agents_status_map[ire_mac].single_radio_scans.find(radio_mac);
+    if (scan_it != m_agents_status_map[ire_mac].single_radio_scans.cend()) {
+        LOG(WARNING) << "A single scan on agent: " << ire_mac << " radio: " << radio_mac
+                     << " is already pending.";
+        return false;
     }
 
     const auto &pool = database.get_channel_scan_pool(scan_request_event.radio_mac, true);
     if (pool.empty()) {
-        LOG(TRACE) << "continuous_scan cannot proceed without channel_scan list";
+        LOG(TRACE) << "single scan cannot proceed without channel_scan list";
         return false;
     }
 
     int32_t dwell_time_msec = database.get_channel_scan_dwell_time_msec(radio_mac, true);
-    if (dwell_time_msec <= 0) {
-        LOG(TRACE) << "continuous_scan cannot proceed without dwell_time value";
+    if (dwell_time_msec < 0) {
+        LOG(TRACE) << "single scan cannot proceed without dwell_time value";
         return false;
     }
 
@@ -653,7 +651,7 @@ bool dynamic_channel_selection_r2_task::handle_continuous_scan_request_event(
     }
 
     int32_t dwell_time_msec = database.get_channel_scan_dwell_time_msec(radio_mac, false);
-    if (dwell_time_msec <= 0) {
+    if (dwell_time_msec < 0) {
         LOG(ERROR) << "continuous_scan cannot proceed without dwell_time value";
         return false;
     }
