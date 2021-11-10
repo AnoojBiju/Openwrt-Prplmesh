@@ -1163,3 +1163,50 @@ int8_t wireless_utils::convert_rssi_from_rcpi(uint8_t rcpi)
 
     return ((rcpi / RCPI_EQUATION_COEF) - RCPI_EQUATION_CONSTANT);
 }
+
+bool wireless_utils::get_subset_20MHz_channels(const uint8_t channel_number,
+                                               const uint8_t operating_class,
+                                               const beerocks::eWiFiBandwidth operating_bandwidth,
+                                               std::unordered_set<uint8_t> &resulting_channels)
+{
+    auto get_range = [&resulting_channels](std::pair<uint8_t, uint8_t> channels_range) {
+        constexpr uint8_t channel_range_delta_20MHz = 4;
+        for (auto iter = channels_range.first; iter <= channels_range.second;
+             iter += channel_range_delta_20MHz) {
+            resulting_channels.insert(iter);
+        }
+    };
+
+    // If the channel is already 20MHz
+    if (operating_bandwidth == beerocks::eWiFiBandwidth::BANDWIDTH_20) {
+        // "channel_number" is an actual channel
+        resulting_channels.insert(channel_number);
+        return true;
+    }
+
+    // If the channel is using a 2.4GHz operating class
+    if (operating_class < 115) {
+        // "channel_number" is an actual channel
+        resulting_channels.insert(channel_number);
+        return true;
+    }
+
+    // The given channel number is a central channel
+    // Iterate over the 5GHz channel table.
+    for (const auto &channel_it : son::wireless_utils::channels_table_5g) {
+        // Find the bandwidth within the channel
+        const auto bw_channel_elem = channel_it.second.find(operating_bandwidth);
+        if (bw_channel_elem == channel_it.second.end()) {
+            continue;
+        }
+        // Check if the central channel matches the found bandwidth element
+        if (bw_channel_elem->second.center_channel != channel_number) {
+            continue;
+        }
+        // Get the range of the subset of 20MHz channels
+        get_range(bw_channel_elem->second.overlap_beacon_channels_range);
+        return true;
+    }
+    // No matching elements were found
+    return false;
+}

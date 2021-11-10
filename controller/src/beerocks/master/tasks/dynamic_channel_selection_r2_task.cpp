@@ -8,6 +8,7 @@
 
 #include "dynamic_channel_selection_r2_task.h"
 #include "../son_actions.h"
+#include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
 #include <beerocks/tlvf/beerocks_message_1905_vs.h>
 #include <easylogging++.h>
