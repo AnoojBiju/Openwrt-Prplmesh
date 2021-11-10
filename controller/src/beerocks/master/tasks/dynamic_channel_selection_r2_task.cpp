@@ -280,15 +280,40 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
                     return false;
                 }
 
+                auto print_pool =
+                    [](const std::unordered_set<uint8_t> &channel_pool) -> std::string {
+                    std::ostringstream oss;
+                    oss << "[ ";
+                    for (const auto &elem : channel_pool) {
+                        oss << int(elem) << " ";
+                    }
+                    oss << "]";
+                    return oss.str();
+                };
+                LOG(ERROR) << "Found channel pool: " << print_pool(current_channel_pool);
+
                 // Convert channels list to operating_class: channels list
                 std::unordered_map<uint8_t, std::set<uint8_t>> operating_class_to_classes_map;
 
                 for (auto const &ch : current_channel_pool) {
                     auto operating_class = wireless_utils::get_operating_class_by_channel(
-                        beerocks::message::sWifiChannel(
-                            ch, database.get_node_bw(tlvf::mac_to_string(radio_mac))));
+                        beerocks::message::sWifiChannel(ch,
+                                                        beerocks::eWiFiBandwidth::BANDWIDTH_20));
+                    // Check if channel has a valid operating class in a 20MHz band
+                    if (operating_class == 0) {
+                        // Skip unsupported channel
+                        continue;
+                    }
                     operating_class_to_classes_map[operating_class].insert(ch);
-                    LOG(INFO) << " => op_class:" << operating_class;
+                    // Add Operating-Class & Channel-Number pair to the scan report index.
+                    // This will be used later when handling the report back.
+                    scan_report_index.insert(std::make_pair(operating_class, ch));
+                    LOG(INFO) << "Setting channel: " << ch << " => op_class:" << operating_class;
+                }
+
+                if (operating_class_to_classes_map.empty()) {
+                    LOG(ERROR) << "Unable to send request with no Operating Classes";
+                    return false;
                 }
 
                 for (auto const &op_class : operating_class_to_classes_map) {
