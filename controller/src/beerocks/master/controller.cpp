@@ -1426,8 +1426,8 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const sMacAddr &src_mac,
                                                       ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto current_message_mid = cmdu_rx.getMessageId();
-    LOG(INFO) << "Received CHANNEL_SCAN_REPORT_MESSAGE, src_mac=" << src_mac << ", mid=" << std::hex
-              << current_message_mid;
+    LOG(INFO) << "Received CHANNEL_SCAN_REPORT_MESSAGE, agent src_mac=" << src_mac
+              << ", mid=" << std::hex << current_message_mid;
 
     // get Timestamp TLV
     auto timestamp_tlv = cmdu_rx.getClass<wfa_map::tlvTimestamp>();
@@ -1438,28 +1438,6 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const sMacAddr &src_mac,
     auto ISO_8601_timestamp = timestamp_tlv->timestamp_str();
     LOG(INFO) << "Report Timestamp: " << ISO_8601_timestamp;
 
-    /**
-     * To correctly store the results of the most current report, we need to know whether to
-     * override any existing records.
-     * In case of fragmentation in prplmesh the entire report could be split into several report
-     * messages, thus to confirm if we should override the existing records we compare the recorded
-     * timestamp against the received timestamp as fragmented reports share the same timestamp.
-     */
-    bool should_override_existing_records = true;
-    int report_mid                        = current_message_mid;
-    if (database.has_channel_report_record(ISO_8601_timestamp)) {
-        LOG(DEBUG) << "Report record found for " << ISO_8601_timestamp
-                   << ", Not overriding existing records";
-        should_override_existing_records = false;
-        report_mid = database.get_channel_report_record_mid(ISO_8601_timestamp);
-        LOG(DEBUG) << "Active report mid: " << std::hex << report_mid;
-    } else {
-        LOG(DEBUG) << "No previous report record were found for " << ISO_8601_timestamp
-                   << ", Setting mid: " << std::hex << current_message_mid
-                   << " as active report mid";
-        database.set_channel_report_record_mid(ISO_8601_timestamp, current_message_mid);
-    }
-
     int result_count = 0;
     for (auto const result_tlv : cmdu_rx.getClassList<wfa_map::tlvProfile2ChannelScanResult>()) {
         auto neighbors_list_length = result_tlv->neighbors_list_length();
@@ -1468,6 +1446,26 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const sMacAddr &src_mac,
                    << "Operating Class: " << result_tlv->operating_class() << ", "
                    << "Channel: " << result_tlv->channel() << ", "
                    << " containing " << neighbors_list_length << " neighbors";
+        /**
+         * To correctly store the results of the most current report, we need to know whether to
+         * override any existing records.
+         * In case of fragmentation in prplmesh the entire report could be split into several
+         * report messages, thus to confirm if we should override the existing records we compare
+         * the recorded timestamp against the received timestamp as fragmented reports share the
+         * same timestamp.
+         * 
+         * Reports with the same timestamp are recorded in the report-record-index
+         */
+        bool should_override_existing_records = true;
+        if (database.has_channel_report_record(result_tlv->radio_uid(), ISO_8601_timestamp)) {
+            LOG(DEBUG) << "Report record found for " << ISO_8601_timestamp
+                       << " from radio: " << result_tlv->radio_uid()
+                       << ", Not overriding existing records.";
+            should_override_existing_records = false;
+        } else {
+            LOG(DEBUG) << "No previous report record were found for " << ISO_8601_timestamp
+                       << " from radio:" << result_tlv->radio_uid() << ".";
+        }
 
         std::vector<wfa_map::cNeighbors> neighbor_vec;
         for (int nbr_idx = 0; nbr_idx < neighbors_list_length; nbr_idx++) {
@@ -1477,12 +1475,12 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const sMacAddr &src_mac,
                 return false;
             }
 
-            auto &neighbor = std::get<1>(neighbor_tuple);
+            auto neighbor = std::get<1>(neighbor_tuple);
             neighbor_vec.push_back(neighbor);
         }
         if (!database.add_channel_report(result_tlv->radio_uid(), result_tlv->operating_class(),
                                          result_tlv->channel(), neighbor_vec, result_tlv->noise(),
-                                         result_tlv->utilization(),
+                                         result_tlv->utilization(), ISO_8601_timestamp,
                                          should_override_existing_records)) {
             LOG(ERROR) << "Failed to add channel report entry #" << result_count << "!";
             return false;
@@ -1544,14 +1542,11 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const sMacAddr &src_mac,
     if (report_done) {
         LOG(DEBUG) << "Sending RECEIVED_CHANNEL_SCAN_REPORT event to DCS R2 task.";
         dynamic_channel_selection_r2_task::sScanReportEvent new_event = {};
-
-        new_event.mid       = report_mid;
-        new_event.agent_mac = src_mac;
+        new_event.ISO_8601_timestamp                                  = ISO_8601_timestamp;
+        new_event.agent_mac                                           = src_mac;
         tasks.push_event(database.get_dynamic_channel_selection_r2_task_id(),
                          dynamic_channel_selection_r2_task::eEvent::RECEIVED_CHANNEL_SCAN_REPORT,
                          &new_event);
-        LOG(DEBUG) << "Clearing channel report record";
-        database.clear_channel_report_record(ISO_8601_timestamp);
     }
     LOG(DEBUG) << "Report handling is done";
     return true;
