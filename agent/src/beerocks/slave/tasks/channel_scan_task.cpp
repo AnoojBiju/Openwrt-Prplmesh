@@ -860,6 +860,7 @@ bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmd
             delete ptr;
         });
         new_radio_scan->radio_mac     = radio_mac;
+        new_radio_scan->dwell_time    = PREFERRED_DWELLTIME_MS;
         new_radio_scan->current_state = eState::PENDING_TRIGGER;
 
         if (!perform_fresh_scan) {
@@ -881,6 +882,62 @@ bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmd
 
         // Add radio scan info to radio scans map in the request
         new_request->radio_scans.emplace(radio_iface, new_radio_scan);
+    }
+
+    auto handle_scan_request_extension_tlv = [this, &new_request,
+                                              &db](ieee1905_1::CmduMessageRx &cmdu_rx) -> bool {
+        auto beerocks_header = beerocks::message_com::parse_intel_vs_message(cmdu_rx);
+        if (!beerocks_header) {
+            LOG(ERROR) << "expecting beerocks_message::tlvVsChannelScanRequestExtension";
+            return false;
+        }
+        auto channel_scan_request_extension_vs_tlv =
+            beerocks_header->addClass<beerocks_message::tlvVsChannelScanRequestExtension>();
+        if (!channel_scan_request_extension_vs_tlv) {
+            LOG(ERROR) << "addClass beerocks_message::tlvVsChannelScanRequestExtension failed";
+            return false;
+        }
+
+        const auto &extension_list_length =
+            channel_scan_request_extension_vs_tlv->scan_requests_list_length();
+        for (int extention_list_i = 0; extention_list_i < extension_list_length;
+             ++extention_list_i) {
+            const auto &extension_tuple =
+                channel_scan_request_extension_vs_tlv->scan_requests_list(extention_list_i);
+            if (!std::get<0>(extension_tuple)) {
+                LOG(ERROR) << "Failed to get scan request extention[" << extention_list_i
+                           << "]. Continuing...";
+                continue;
+            }
+            auto &extension_entry = std::get<1>(extension_tuple);
+
+            LOG(DEBUG) << "Found scan request extention for radio: " << extension_entry.radio_mac;
+
+            const auto radio = db->get_radio_by_mac(extension_entry.radio_mac);
+            if (!radio) {
+                LOG(ERROR) << "Failed to get radio entry for MAC: " << extension_entry.radio_mac;
+                return false;
+            }
+            auto radio_scan_info_iter = new_request->radio_scans.find(radio->front.iface_name);
+            if (radio_scan_info_iter == new_request->radio_scans.end()) {
+                LOG(ERROR) << "Could not find radio: " << radio->front.iface_name
+                           << ", MAC: " << extension_entry.radio_mac
+                           << " in the current scan request.";
+                continue;
+            }
+
+            radio_scan_info_iter->second->dwell_time = extension_entry.dwell_time_ms;
+            LOG(DEBUG) << "Set Dwell-time " << extension_entry.dwell_time_ms
+                       << " ms for radio: " << radio->front.iface_name;
+        }
+        return true;
+    };
+
+    // For prplmesh controller, we wish to support a custome Dwell-Time parameter.
+    if (db->controller_info.prplmesh_controller) {
+        if (!handle_scan_request_extension_tlv(cmdu_rx)) {
+            LOG(WARNING) << "Failed to handle tlvVsChannelScanRequestExtension!";
+        }
     }
 
     // Should return all the currently stored results in the DB for the requested radios
