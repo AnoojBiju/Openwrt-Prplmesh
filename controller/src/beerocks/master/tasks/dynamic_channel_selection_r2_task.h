@@ -44,7 +44,7 @@ public:
 
     struct sScanReportEvent {
         sMacAddr agent_mac;
-        uint16_t mid;
+        std::string ISO_8601_timestamp;
     };
 
     enum eEvent : uint8_t {
@@ -66,6 +66,7 @@ public:
             eRadioScanStatus status                              = eRadioScanStatus::PENDING;
             std::chrono::system_clock::time_point next_time_scan = {};
             bool is_single_scan                                  = true;
+            std::set<node::radio::channel_scan_report::channel_scan_report_key> scan_report_index;
         };
 
         /**
@@ -113,14 +114,6 @@ public:
      * Value:   agent status as sAgentScanStatus struct.
      */
     std::unordered_map<sMacAddr, sAgentScanStatus> m_agents_status_map;
-
-    /**
-     * @brief Map of outgoing mids to agents.
-     * 
-     * Key:     mid (message id) value.
-     * Value:   agent mac.
-     */
-    std::unordered_map<uint16_t, sMacAddr> mid_to_agent_map;
 
 protected:
     virtual void work() override;

@@ -73,8 +73,8 @@ void dynamic_channel_selection_r2_task::handle_event(int event_enum_value, void 
     case RECEIVED_CHANNEL_SCAN_REPORT: {
         auto scan_report_event = reinterpret_cast<const sScanReportEvent *>(event_obj);
         LOG(TRACE) << "Received RECEIVED_SCAN_RESULTS event from agent mac:"
-                   << scan_report_event->agent_mac << ", mid: " << std::hex
-                   << scan_report_event->mid;
+                   << scan_report_event->agent_mac
+                   << ", timestamp: " << scan_report_event->ISO_8601_timestamp;
 
         handle_scan_report_event(*scan_report_event);
         break;
@@ -248,6 +248,8 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
             agent.second.status = eAgentStatus::IDLE;
         };
 
+        std::set<node::radio::channel_scan_report::channel_scan_report_key> scan_report_index;
+
         // Helper lambda - Add a new radio to the channel scan request tlv.
         auto add_radio_to_channel_scan_request_tlv =
             [&](std::shared_ptr<wfa_map::tlvProfile2ChannelScanRequest> &channel_scan_request_tlv,
@@ -419,6 +421,16 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
                 success = false;
                 break;
             }
+
+            // Add the report index to the radio scan element.
+            // The index contains a set of [Operating-Class,Channel-Number] pairs.
+            // Later we will use the index to match an incoming report to its matching request.
+            if (radio_scan_request.second.is_single_scan) {
+                agent.second.single_radio_scans[radio_mac].scan_report_index = scan_report_index;
+            } else {
+                agent.second.continuous_radio_scans[radio_mac].scan_report_index =
+                    scan_report_index;
+            }
         }
         if (!success) {
             abort_active_scans_in_current_agent();
@@ -494,7 +506,6 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
         agent.second.status  = eAgentStatus::BUSY;
         agent.second.timeout = std::chrono::system_clock::now() +
                                std::chrono::seconds(CHANNEL_SCAN_REPORT_WAIT_TIME_SEC);
-        mid_to_agent_map[mid] = agent_mac;
         LOG(DEBUG) << "Triggered a scan for agent " << agent_mac;
     }
     return true;
