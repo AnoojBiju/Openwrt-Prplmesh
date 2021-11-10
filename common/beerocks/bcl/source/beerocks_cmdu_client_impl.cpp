@@ -69,6 +69,19 @@ bool CmduClientImpl::send_cmdu(ieee1905_1::CmduMessageTx &cmdu_tx)
     return m_peer.send_cmdu(*m_connection, cmdu_tx);
 }
 
+bool CmduClientImpl::forward_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    // Check if connection with server is still open
+    if (!m_connection) {
+        LOG(ERROR) << "Connection with server has been closed!";
+    }
+
+    /** 
+     * Fill @a iface_index, @a dst_mac and @a arc_mac with empty values since they are irrelevant.
+     */
+    return m_peer.forward_cmdu(*m_connection, 0, {}, {}, cmdu_rx);
+}
+
 void CmduClientImpl::handle_read(int fd)
 {
     // Read all CMDU messages received and notify their reception
