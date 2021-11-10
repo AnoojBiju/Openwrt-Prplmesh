@@ -2486,14 +2486,6 @@ bool Controller::handle_intel_slave_join(
     }
     autoconfig_wsc_parse_radio_caps(radio_mac, radio_caps);
 
-    if (tasks.is_task_running(database.get_dynamic_channel_selection_task_id(radio_mac))) {
-        LOG(DEBUG) << "dynamic channel selection task already running for " << radio_mac;
-    } else {
-        auto new_task =
-            std::make_shared<dynamic_channel_selection_task>(database, cmdu_tx, tasks, radio_mac);
-        tasks.add_task(new_task);
-    }
-
     // send JOINED_RESPONSE with son config
     {
 
@@ -3813,131 +3805,17 @@ bool Controller::handle_cmdu_control_message(
         break;
     }
     case beerocks_message::ACTION_CONTROL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE: {
-        LOG(TRACE) << "ACTION_CONTROL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE for mac " << radio_mac;
-        auto response =
-            beerocks_header
-                ->addClass<beerocks_message::cACTION_CONTROL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE>();
-        if (!response) {
-            LOG(ERROR) << "addClass cACTION_CONTROL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE failed";
-            return false;
-        }
-
-        if (!response->success()) {
-            LOG(ERROR) << "Failed to trigger scan on radio (" << radio_mac
-                       << "): sending notification to DCS task";
-
-            dynamic_channel_selection_task::sScanEvent new_event;
-            new_event.radio_mac = radio_mac;
-            auto taskId         = database.get_dynamic_channel_selection_task_id(radio_mac);
-            if (taskId == -1) {
-                LOG(ERROR) << "No DCS task for the requested mac (" << radio_mac
-                           << ") is currently running!";
-                break;
-            }
-
-            tasks.push_event(taskId,
-                             int(dynamic_channel_selection_task::eEvent::SCAN_TRIGGER_FAILED),
-                             static_cast<void *>(&new_event));
-            break;
-        }
         break;
     }
     case beerocks_message::ACTION_CONTROL_CHANNEL_SCAN_TRIGGERED_NOTIFICATION: {
-        LOG(TRACE) << "DCS_task, sending SCAN_TRIGGERED for mac " << radio_mac;
-        auto notification =
-            beerocks_header
-                ->addClass<beerocks_message::cACTION_CONTROL_CHANNEL_SCAN_TRIGGERED_NOTIFICATION>();
-        if (!notification) {
-            LOG(ERROR) << "addClass cACTION_CONTROL_CHANNEL_SCAN_TRIGGERED_NOTIFICATION failed";
-            return false;
-        }
-
-        dynamic_channel_selection_task::sScanEvent new_event;
-        new_event.radio_mac = radio_mac;
-        auto taskID         = database.get_dynamic_channel_selection_task_id(radio_mac);
-        if (taskID == -1) {
-            LOG(ERROR) << "No DCS task for the requested mac (" << radio_mac
-                       << ") is currently running!";
-        } else {
-            tasks.push_event(taskID, (int)dynamic_channel_selection_task::eEvent::SCAN_TRIGGERED,
-                             (void *)&new_event);
-        }
-        break;
     }
     case beerocks_message::ACTION_CONTROL_CHANNEL_SCAN_RESULTS_NOTIFICATION: {
-        LOG(TRACE) << "ACTION_CONTROL_CHANNEL_SCAN_RESULTS_NOTIFICATION for mac " << radio_mac;
-        auto notification =
-            beerocks_header
-                ->addClass<beerocks_message::cACTION_CONTROL_CHANNEL_SCAN_RESULTS_NOTIFICATION>();
-        if (!notification) {
-            LOG(ERROR) << "addClass cACTION_CONTROL_CHANNEL_SCAN_RESULTS_NOTIFICATION failed";
-            return false;
-        }
-
-        LOG(DEBUG) << "Scan results " << (notification->is_dump() == 1 ? "dump." : "are ready.");
-
-        //send results to dcs task if no scan is in progress for both the
-        //single scan (mac, single_scan = true) and the continuous scan (mac, single_scan = false)
-        //for the given radio mac
-        if (database.get_channel_scan_in_progress(radio_mac, false) ||
-            database.get_channel_scan_in_progress(radio_mac, true)) {
-
-            dynamic_channel_selection_task::sScanEvent new_event;
-            dynamic_channel_selection_task::eEvent new_event_type;
-            new_event.radio_mac = radio_mac;
-
-            if (notification->is_dump() == 1) {
-                new_event_type = dynamic_channel_selection_task::eEvent::SCAN_RESULTS_DUMP;
-                new_event.udata.scan_results = notification->scan_results();
-            } else {
-                new_event_type = dynamic_channel_selection_task::eEvent::SCAN_RESULTS_READY;
-            }
-
-            //push event to dcs task
-            tasks.push_event(database.get_dynamic_channel_selection_task_id(radio_mac),
-                             int(new_event_type), static_cast<void *>(&new_event));
-
-        } else {
-            LOG(DEBUG) << "received scan results while the scan is in progress, ignoring."
-                       << " hostap_mac=" << radio_mac;
-        }
-
         break;
     }
     case beerocks_message::ACTION_CONTROL_CHANNEL_SCAN_FINISHED_NOTIFICATION: {
-        LOG(DEBUG) << "DCS_task, sending SCAN_FINISHED for mac " << radio_mac;
-        auto notification =
-            beerocks_header
-                ->addClass<beerocks_message::cACTION_CONTROL_CHANNEL_SCAN_FINISHED_NOTIFICATION>();
-        if (!notification) {
-            LOG(ERROR) << "addClass cACTION_CONTROL_CHANNEL_SCAN_FINISHED_NOTIFICATION failed";
-            return false;
-        }
-
-        dynamic_channel_selection_task::sScanEvent new_event;
-        new_event.radio_mac = radio_mac;
-
-        tasks.push_event(database.get_dynamic_channel_selection_task_id(radio_mac),
-                         int(dynamic_channel_selection_task::eEvent::SCAN_FINISHED),
-                         static_cast<void *>(&new_event));
         break;
     }
     case beerocks_message::ACTION_CONTROL_CHANNEL_SCAN_ABORT_NOTIFICATION: {
-        LOG(DEBUG) << "DCS_task, sending SCAN_ABORTED for mac " << radio_mac;
-        auto notification =
-            beerocks_header
-                ->addClass<beerocks_message::cACTION_CONTROL_CHANNEL_SCAN_ABORT_NOTIFICATION>();
-        if (!notification) {
-            LOG(ERROR) << "addClass cACTION_CONTROL_CHANNEL_SCAN_ABORT_NOTIFICATION failed";
-            return false;
-        }
-
-        dynamic_channel_selection_task::sScanEvent new_event;
-        new_event.radio_mac = radio_mac;
-
-        tasks.push_event(database.get_dynamic_channel_selection_task_id(radio_mac),
-                         int(dynamic_channel_selection_task::eEvent::SCAN_ABORTED),
-                         static_cast<void *>(&new_event));
         break;
     }
     case beerocks_message::ACTION_CONTROL_CLIENT_START_MONITORING_RESPONSE: {
