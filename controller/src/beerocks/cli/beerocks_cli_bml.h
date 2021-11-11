@@ -222,6 +222,14 @@ private:
                           int8_t stay_on_initial_radio, int32_t time_life_delay_minutes);
     int client_get_client(const std::string &sta_mac);
     int client_clear_client(const std::string &sta_mac);
+    //Hemanth
+    int get_bml_test_config(int numOfArgs);
+    int set_bml_test_config(int numOfArgs);
+
+    //Hemanth
+    int get_test_config();
+    int set_test_config(const std::string &test_config_val);
+    
     template <typename T> const std::string string_from_int_array(T *arr, size_t arr_max_size);
     // Variable
     std::string beerocks_conf_path;

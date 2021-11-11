@@ -405,6 +405,7 @@ int main(int argc, char *argv[])
             std::cout << "config file '" << master_config_file_path << "' args error." << std::endl;
             return 1;
         }
+        std::cout << "Hemanth dummy test_config_val = " << beerocks_master_conf.test_config << std::endl;
     }
 
     // read slave config file

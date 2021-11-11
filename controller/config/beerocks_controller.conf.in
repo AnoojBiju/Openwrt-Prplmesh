@@ -71,6 +71,7 @@ credentials_change_timeout_sec=300
 fail_safe_5G_frequency=5180
 fail_safe_5G_bw=80
 fail_safe_5G_vht_frequency=5210
+test_config=Hemanth_Dummy_String
 
 [log]
 log_global_levels=error,info,warning,fatal,trace,debug
