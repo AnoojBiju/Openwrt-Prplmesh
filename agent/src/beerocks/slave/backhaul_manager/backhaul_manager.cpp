@@ -110,6 +110,8 @@ BackhaulManager::BackhaulManager(const config_file::sConfigSlave &config,
     db->device_conf.vendor            = config.vendor;
     db->device_conf.model             = config.model;
 
+    m_eFSMState = EState::INIT;
+
     std::string bridge_mac;
     if (!beerocks::net::network_utils::linux_iface_get_mac(config.bridge_iface, bridge_mac)) {
         LOG(ERROR) << "Failed getting MAC address for interface: " << config.bridge_iface;
@@ -117,8 +119,14 @@ BackhaulManager::BackhaulManager(const config_file::sConfigSlave &config,
         db->dm_set_agent_mac(bridge_mac);
     }
 
-    m_eFSMState = EState::INIT;
+    if (db->device_conf.management_mode == BPL_MGMT_MODE_MULTIAP_CONTROLLER) {
 
+        // TODO: DHCP management is handled in ApAutoConfigurationTask for MaxLinear platforms (PPM-1777)
+        LOG(INFO) << "Controller only mode is activated and agent is dummy. Do not run any tasks!";
+        return;
+    }
+
+    // Agent tasks
     m_task_pool.add_task(std::make_shared<TopologyTask>(*this, cmdu_tx));
     m_task_pool.add_task(std::make_shared<ApAutoConfigurationTask>(*this, cmdu_tx));
     m_task_pool.add_task(std::make_shared<ChannelSelectionTask>(*this, cmdu_tx));
