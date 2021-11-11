@@ -331,6 +331,13 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
         master_conf.steering_disassoc_timer_msec =
             beerocks::bpl::DEFAULT_STEERING_DISASSOC_TIMER_MSEC;
     }
+
+    if ((master_conf.management_mode = beerocks::bpl::cfg_get_management_mode()) < 0) {
+        LOG(DEBUG) << "Failed to read management mode, setting to default value: "
+                   << BPL_MGMT_MODE_MULTIAP_CONTROLLER_AGENT;
+
+        master_conf.management_mode = BPL_MGMT_MODE_MULTIAP_CONTROLLER_AGENT;
+    }
 }
 
 /**
