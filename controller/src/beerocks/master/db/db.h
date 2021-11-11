@@ -150,6 +150,7 @@ public:
         std::chrono::seconds link_metrics_request_interval_seconds;
         std::chrono::seconds dhcp_monitor_interval_seconds;
         std::chrono::milliseconds steering_disassoc_timer_msec;
+        int management_mode;
     } sDbMasterConfig;
 
     typedef struct {
