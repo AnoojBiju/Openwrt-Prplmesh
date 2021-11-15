@@ -585,19 +585,29 @@ bool ChannelScanTask::trigger_radio_scan(const std::string &radio_iface,
      * Using an unordered_set since we do not want duplicated channels in out channel pool
      */
     std::unordered_set<uint8_t> channels_to_be_scanned;
-    std::for_each(
-        radio_scan_info->operating_classes.begin(), radio_scan_info->operating_classes.end(),
-        [&channels_to_be_scanned, &radio, this](sOperatingClass &operating_class) {
-            for (auto &channel_element : operating_class.channel_list) {
-                // Scan only the channels without an error status
-                // Scan status is per channel on operating class
-                if (channel_element.scan_status !=
-                    eScanStatus::
-                        SCAN_NOT_SUPPORTED_ON_THIS_OPERATING_CLASS_AND_CHANNEL_ON_THIS_RADIO) {
-                    channels_to_be_scanned.insert(channel_element.channel_number);
-                }
+    for (auto &operating_class : radio_scan_info->operating_classes) {
+        for (auto &channel_element : operating_class.channel_list) {
+            // Scan only the channels without an error status
+            // Scan status is per channel on operating class
+            if (channel_element.scan_status ==
+                eScanStatus::SCAN_NOT_SUPPORTED_ON_THIS_OPERATING_CLASS_AND_CHANNEL_ON_THIS_RADIO) {
+                continue;
             }
-        });
+            // Covert a central channel to 20MHz channels
+            if (operating_class.bw >= beerocks::eWiFiBandwidth::BANDWIDTH_80) {
+                LOG(TRACE) << "Channel " << channel_element.channel_number
+                           << " is a central channel";
+                std::unordered_set<uint8_t> subchannels_20MHz;
+                son::wireless_utils::get_subset_20MHz_channels(
+                    channel_element.channel_number, operating_class.operating_class,
+                    operating_class.bw, subchannels_20MHz);
+                channels_to_be_scanned.insert(subchannels_20MHz.begin(), subchannels_20MHz.end());
+            } else {
+                channels_to_be_scanned.insert(channel_element.channel_number);
+            }
+        }
+    }
+
     if (channels_to_be_scanned.empty()) {
         LOG(TRACE) << "There were no channels to be scanned";
         FSM_MOVE_STATE(radio_scan_info, eState::SCAN_DONE);
