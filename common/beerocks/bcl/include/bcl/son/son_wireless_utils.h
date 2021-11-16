@@ -266,6 +266,19 @@ public:
      */
     static int8_t convert_rssi_from_rcpi(uint8_t rcpi);
 
+    /**
+     * @brief Retrive the subset of 20MHz channels of the given channel & bandwidth
+     * 
+     * @param [in] channel_number Central channel number.
+     * @param [in] operating_bandwidth Bandwidth of the given channel.
+     * @param [out] resulting_channels set containing the resulting 20MHz channels
+     * @return true if the operation was successful, otherwise false. 
+     */
+    static bool get_subset_20MHz_channels(const uint8_t channel_number,
+                                          const uint8_t operating_class,
+                                          const beerocks::eWiFiBandwidth operating_bandwidth,
+                                          std::unordered_set<uint8_t> &resulting_channels);
+
 private:
     enum eAntennaFactor {
         ANT_FACTOR_1X1 = 0,

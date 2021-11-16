@@ -14,6 +14,7 @@
 #endif
 #include "db/network_map.h"
 #include "tasks/channel_selection_task.h"
+#include "tasks/dynamic_channel_selection_r2_task.h"
 #include "tasks/dynamic_channel_selection_task.h"
 #include "tasks/ire_network_optimization_task.h"
 #include "tasks/load_balancer_task.h"
@@ -1754,16 +1755,15 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         response->op_error_code() =
             uint8_t((success) ? eChannelScanOperationCode::SUCCESS
                               : eChannelScanOperationCode::INVALID_PARAMS_ENABLE);
+        if (success) {
+            dynamic_channel_selection_r2_task::sContinuousScanRequestStateChangeEvent new_event;
+            new_event.enable    = enable;
+            new_event.radio_mac = radio_mac;
 
-        // on DCS enable - "reset" the interval wait of the task
-        // (will perform scan right after change to enable)
-        if (enable && success) {
-            dynamic_channel_selection_task::sScanEvent new_event;
-            new_event.radio_mac = request->radio_mac();
-
-            tasks.push_event(database.get_dynamic_channel_selection_task_id(radio_mac),
-                             (int)dynamic_channel_selection_task::eEvent::SCAN_ENABLE_CHANGE,
-                             (void *)&new_event);
+            tasks.push_event(
+                database.get_dynamic_channel_selection_r2_task_id(),
+                (int)dynamic_channel_selection_r2_task::eEvent::CONTINUOUS_STATE_CHANGED_PER_RADIO,
+                (void *)&new_event);
         }
         //send response to bml
         controller_ctx->send_cmdu(sd, cmdu_tx);
@@ -1832,7 +1832,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         }
 
         // Get results
-        auto scan_results      = database.get_channel_scan_results(radio_mac, is_single_scan);
+        auto scan_results      = database.get_channel_scan_report(radio_mac, is_single_scan);
         auto scan_results_size = scan_results.size();
 
         LOG(DEBUG) << "scan_results received for hostap_mac= " << radio_mac << std::endl
@@ -1990,11 +1990,11 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         }
 
         LOG(DEBUG) << "Triggering Scan in task";
-        dynamic_channel_selection_task::sScanEvent new_event;
+        dynamic_channel_selection_r2_task::sSingleScanRequestEvent new_event;
         new_event.radio_mac = radio_mac;
-        tasks.push_event(database.get_dynamic_channel_selection_task_id(radio_mac),
-                         (int)dynamic_channel_selection_task::eEvent::TRIGGER_SINGLE_SCAN,
-                         (void *)&new_event);
+        tasks.push_event(database.get_dynamic_channel_selection_r2_task_id(),
+                         dynamic_channel_selection_r2_task::eEvent::TRIGGER_SINGLE_SCAN,
+                         &new_event);
         response->op_error_code() = uint8_t(eChannelScanOperationCode::SUCCESS);
         controller_ctx->send_cmdu(sd, cmdu_tx);
         break;

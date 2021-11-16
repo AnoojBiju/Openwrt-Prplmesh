@@ -1426,8 +1426,8 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const sMacAddr &src_mac,
                                                       ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto current_message_mid = cmdu_rx.getMessageId();
-    LOG(INFO) << "Received CHANNEL_SCAN_REPORT_MESSAGE, src_mac=" << src_mac << ", mid=" << std::hex
-              << current_message_mid;
+    LOG(INFO) << "Received CHANNEL_SCAN_REPORT_MESSAGE, agent src_mac=" << src_mac
+              << ", mid=" << std::hex << current_message_mid;
 
     // get Timestamp TLV
     auto timestamp_tlv = cmdu_rx.getClass<wfa_map::tlvTimestamp>();
@@ -1438,28 +1438,6 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const sMacAddr &src_mac,
     auto ISO_8601_timestamp = timestamp_tlv->timestamp_str();
     LOG(INFO) << "Report Timestamp: " << ISO_8601_timestamp;
 
-    /**
-     * To correctly store the results of the most current report, we need to know whether to
-     * override any existing records.
-     * In case of fragmentation in prplmesh the entire report could be split into several report
-     * messages, thus to confirm if we should override the existing records we compare the recorded
-     * timestamp against the received timestamp as fragmented reports share the same timestamp.
-     */
-    bool should_override_existing_records = true;
-    int report_mid                        = current_message_mid;
-    if (database.has_channel_report_record(ISO_8601_timestamp)) {
-        LOG(DEBUG) << "Report record found for " << ISO_8601_timestamp
-                   << ", Not overriding existing records";
-        should_override_existing_records = false;
-        report_mid = database.get_channel_report_record_mid(ISO_8601_timestamp);
-        LOG(DEBUG) << "Active report mid: " << std::hex << report_mid;
-    } else {
-        LOG(DEBUG) << "No previous report record were found for " << ISO_8601_timestamp
-                   << ", Setting mid: " << std::hex << current_message_mid
-                   << " as active report mid";
-        database.set_channel_report_record_mid(ISO_8601_timestamp, current_message_mid);
-    }
-
     int result_count = 0;
     for (auto const result_tlv : cmdu_rx.getClassList<wfa_map::tlvProfile2ChannelScanResult>()) {
         auto neighbors_list_length = result_tlv->neighbors_list_length();
@@ -1468,6 +1446,26 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const sMacAddr &src_mac,
                    << "Operating Class: " << result_tlv->operating_class() << ", "
                    << "Channel: " << result_tlv->channel() << ", "
                    << " containing " << neighbors_list_length << " neighbors";
+        /**
+         * To correctly store the results of the most current report, we need to know whether to
+         * override any existing records.
+         * In case of fragmentation in prplmesh the entire report could be split into several
+         * report messages, thus to confirm if we should override the existing records we compare
+         * the recorded timestamp against the received timestamp as fragmented reports share the
+         * same timestamp.
+         * 
+         * Reports with the same timestamp are recorded in the report-record-index
+         */
+        bool should_override_existing_records = true;
+        if (database.has_channel_report_record(result_tlv->radio_uid(), ISO_8601_timestamp)) {
+            LOG(DEBUG) << "Report record found for " << ISO_8601_timestamp
+                       << " from radio: " << result_tlv->radio_uid()
+                       << ", Not overriding existing records.";
+            should_override_existing_records = false;
+        } else {
+            LOG(DEBUG) << "No previous report record were found for " << ISO_8601_timestamp
+                       << " from radio:" << result_tlv->radio_uid() << ".";
+        }
 
         std::vector<wfa_map::cNeighbors> neighbor_vec;
         for (int nbr_idx = 0; nbr_idx < neighbors_list_length; nbr_idx++) {
@@ -1477,12 +1475,12 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const sMacAddr &src_mac,
                 return false;
             }
 
-            auto &neighbor = std::get<1>(neighbor_tuple);
+            auto neighbor = std::get<1>(neighbor_tuple);
             neighbor_vec.push_back(neighbor);
         }
         if (!database.add_channel_report(result_tlv->radio_uid(), result_tlv->operating_class(),
                                          result_tlv->channel(), neighbor_vec, result_tlv->noise(),
-                                         result_tlv->utilization(),
+                                         result_tlv->utilization(), ISO_8601_timestamp,
                                          should_override_existing_records)) {
             LOG(ERROR) << "Failed to add channel report entry #" << result_count << "!";
             return false;
@@ -1544,14 +1542,11 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const sMacAddr &src_mac,
     if (report_done) {
         LOG(DEBUG) << "Sending RECEIVED_CHANNEL_SCAN_REPORT event to DCS R2 task.";
         dynamic_channel_selection_r2_task::sScanReportEvent new_event = {};
-
-        new_event.mid       = report_mid;
-        new_event.agent_mac = src_mac;
+        new_event.ISO_8601_timestamp                                  = ISO_8601_timestamp;
+        new_event.agent_mac                                           = src_mac;
         tasks.push_event(database.get_dynamic_channel_selection_r2_task_id(),
                          dynamic_channel_selection_r2_task::eEvent::RECEIVED_CHANNEL_SCAN_REPORT,
                          &new_event);
-        LOG(DEBUG) << "Clearing channel report record";
-        database.clear_channel_report_record(ISO_8601_timestamp);
     }
     LOG(DEBUG) << "Report handling is done";
     return true;
@@ -2490,14 +2485,6 @@ bool Controller::handle_intel_slave_join(
                                             beerocks::SUBBAND_CAPABILITY_UNKNOWN);
     }
     autoconfig_wsc_parse_radio_caps(radio_mac, radio_caps);
-
-    if (tasks.is_task_running(database.get_dynamic_channel_selection_task_id(radio_mac))) {
-        LOG(DEBUG) << "dynamic channel selection task already running for " << radio_mac;
-    } else {
-        auto new_task =
-            std::make_shared<dynamic_channel_selection_task>(database, cmdu_tx, tasks, radio_mac);
-        tasks.add_task(new_task);
-    }
 
     // send JOINED_RESPONSE with son config
     {
@@ -3818,131 +3805,17 @@ bool Controller::handle_cmdu_control_message(
         break;
     }
     case beerocks_message::ACTION_CONTROL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE: {
-        LOG(TRACE) << "ACTION_CONTROL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE for mac " << radio_mac;
-        auto response =
-            beerocks_header
-                ->addClass<beerocks_message::cACTION_CONTROL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE>();
-        if (!response) {
-            LOG(ERROR) << "addClass cACTION_CONTROL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE failed";
-            return false;
-        }
-
-        if (!response->success()) {
-            LOG(ERROR) << "Failed to trigger scan on radio (" << radio_mac
-                       << "): sending notification to DCS task";
-
-            dynamic_channel_selection_task::sScanEvent new_event;
-            new_event.radio_mac = radio_mac;
-            auto taskId         = database.get_dynamic_channel_selection_task_id(radio_mac);
-            if (taskId == -1) {
-                LOG(ERROR) << "No DCS task for the requested mac (" << radio_mac
-                           << ") is currently running!";
-                break;
-            }
-
-            tasks.push_event(taskId,
-                             int(dynamic_channel_selection_task::eEvent::SCAN_TRIGGER_FAILED),
-                             static_cast<void *>(&new_event));
-            break;
-        }
         break;
     }
     case beerocks_message::ACTION_CONTROL_CHANNEL_SCAN_TRIGGERED_NOTIFICATION: {
-        LOG(TRACE) << "DCS_task, sending SCAN_TRIGGERED for mac " << radio_mac;
-        auto notification =
-            beerocks_header
-                ->addClass<beerocks_message::cACTION_CONTROL_CHANNEL_SCAN_TRIGGERED_NOTIFICATION>();
-        if (!notification) {
-            LOG(ERROR) << "addClass cACTION_CONTROL_CHANNEL_SCAN_TRIGGERED_NOTIFICATION failed";
-            return false;
-        }
-
-        dynamic_channel_selection_task::sScanEvent new_event;
-        new_event.radio_mac = radio_mac;
-        auto taskID         = database.get_dynamic_channel_selection_task_id(radio_mac);
-        if (taskID == -1) {
-            LOG(ERROR) << "No DCS task for the requested mac (" << radio_mac
-                       << ") is currently running!";
-        } else {
-            tasks.push_event(taskID, (int)dynamic_channel_selection_task::eEvent::SCAN_TRIGGERED,
-                             (void *)&new_event);
-        }
-        break;
     }
     case beerocks_message::ACTION_CONTROL_CHANNEL_SCAN_RESULTS_NOTIFICATION: {
-        LOG(TRACE) << "ACTION_CONTROL_CHANNEL_SCAN_RESULTS_NOTIFICATION for mac " << radio_mac;
-        auto notification =
-            beerocks_header
-                ->addClass<beerocks_message::cACTION_CONTROL_CHANNEL_SCAN_RESULTS_NOTIFICATION>();
-        if (!notification) {
-            LOG(ERROR) << "addClass cACTION_CONTROL_CHANNEL_SCAN_RESULTS_NOTIFICATION failed";
-            return false;
-        }
-
-        LOG(DEBUG) << "Scan results " << (notification->is_dump() == 1 ? "dump." : "are ready.");
-
-        //send results to dcs task if no scan is in progress for both the
-        //single scan (mac, single_scan = true) and the continuous scan (mac, single_scan = false)
-        //for the given radio mac
-        if (database.get_channel_scan_in_progress(radio_mac, false) ||
-            database.get_channel_scan_in_progress(radio_mac, true)) {
-
-            dynamic_channel_selection_task::sScanEvent new_event;
-            dynamic_channel_selection_task::eEvent new_event_type;
-            new_event.radio_mac = radio_mac;
-
-            if (notification->is_dump() == 1) {
-                new_event_type = dynamic_channel_selection_task::eEvent::SCAN_RESULTS_DUMP;
-                new_event.udata.scan_results = notification->scan_results();
-            } else {
-                new_event_type = dynamic_channel_selection_task::eEvent::SCAN_RESULTS_READY;
-            }
-
-            //push event to dcs task
-            tasks.push_event(database.get_dynamic_channel_selection_task_id(radio_mac),
-                             int(new_event_type), static_cast<void *>(&new_event));
-
-        } else {
-            LOG(DEBUG) << "received scan results while the scan is in progress, ignoring."
-                       << " hostap_mac=" << radio_mac;
-        }
-
         break;
     }
     case beerocks_message::ACTION_CONTROL_CHANNEL_SCAN_FINISHED_NOTIFICATION: {
-        LOG(DEBUG) << "DCS_task, sending SCAN_FINISHED for mac " << radio_mac;
-        auto notification =
-            beerocks_header
-                ->addClass<beerocks_message::cACTION_CONTROL_CHANNEL_SCAN_FINISHED_NOTIFICATION>();
-        if (!notification) {
-            LOG(ERROR) << "addClass cACTION_CONTROL_CHANNEL_SCAN_FINISHED_NOTIFICATION failed";
-            return false;
-        }
-
-        dynamic_channel_selection_task::sScanEvent new_event;
-        new_event.radio_mac = radio_mac;
-
-        tasks.push_event(database.get_dynamic_channel_selection_task_id(radio_mac),
-                         int(dynamic_channel_selection_task::eEvent::SCAN_FINISHED),
-                         static_cast<void *>(&new_event));
         break;
     }
     case beerocks_message::ACTION_CONTROL_CHANNEL_SCAN_ABORT_NOTIFICATION: {
-        LOG(DEBUG) << "DCS_task, sending SCAN_ABORTED for mac " << radio_mac;
-        auto notification =
-            beerocks_header
-                ->addClass<beerocks_message::cACTION_CONTROL_CHANNEL_SCAN_ABORT_NOTIFICATION>();
-        if (!notification) {
-            LOG(ERROR) << "addClass cACTION_CONTROL_CHANNEL_SCAN_ABORT_NOTIFICATION failed";
-            return false;
-        }
-
-        dynamic_channel_selection_task::sScanEvent new_event;
-        new_event.radio_mac = radio_mac;
-
-        tasks.push_event(database.get_dynamic_channel_selection_task_id(radio_mac),
-                         int(dynamic_channel_selection_task::eEvent::SCAN_ABORTED),
-                         static_cast<void *>(&new_event));
         break;
     }
     case beerocks_message::ACTION_CONTROL_CLIENT_START_MONITORING_RESPONSE: {

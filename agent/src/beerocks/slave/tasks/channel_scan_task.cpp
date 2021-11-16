@@ -83,58 +83,6 @@ constexpr size_t TLV_HEADER            = 3; // Bytes;
 // should be fragmented into smaller than 1500 bytes fragments.
 constexpr size_t MAX_TLV_FRAGMENT_SIZE = 1500;
 
-/**
- * @brief Retrive the subset of 20MHz channels of the given channel & bandwidth
- * 
- * @param [in] channel_number Central channel number.
- * @param [in] operating_bandwidth Bandwidth of the given channel.
- * @param [out] resulting_channels set containing the resulting 20MHz channels
- * @return true if the operation was successful, otherwise false. 
- */
-static bool get_20MHz_channels(const uint8_t channel_number,
-                               const beerocks::eWiFiBandwidth operating_bandwidth,
-                               std::unordered_set<uint8_t> &resulting_channels)
-{
-    auto get_range = [&resulting_channels](std::pair<uint8_t, uint8_t> channels_range) {
-        constexpr uint8_t channel_range_delta_20MHz = 4;
-        for (auto iter = channels_range.first; iter <= channels_range.second;
-             iter += channel_range_delta_20MHz) {
-            resulting_channels.insert(iter);
-        }
-    };
-    if (operating_bandwidth >= beerocks::eWiFiBandwidth::BANDWIDTH_80) {
-        // "channel_number" is a central channel
-        for (const auto &channel_it : son::wireless_utils::channels_table_5g) {
-            const auto bw_channel_elem = channel_it.second.find(operating_bandwidth);
-            if (bw_channel_elem == channel_it.second.end()) {
-                continue;
-            }
-            if (bw_channel_elem->second.center_channel != channel_number) {
-                continue;
-            }
-            get_range(bw_channel_elem->second.overlap_beacon_channels_range);
-            return true;
-        }
-    } else if (operating_bandwidth == beerocks::eWiFiBandwidth::BANDWIDTH_40) {
-        // "channel_number" in an actual channel, but we need to get the whole bandwidth
-        const auto &channel_elem = son::wireless_utils::channels_table_5g.find(channel_number);
-        if (channel_elem == son::wireless_utils::channels_table_5g.end()) {
-            return false;
-        }
-        const auto bw_channel_elem = channel_elem->second.find(operating_bandwidth);
-        if (bw_channel_elem == channel_elem->second.end()) {
-            return false;
-        }
-        get_range(bw_channel_elem->second.overlap_beacon_channels_range);
-        return true;
-    } else /* operating_bandwidth == beerocks::eWiFiBandwidth::BANDWIDTH_20 */ {
-        // "channel_number" is an actual channel
-        resulting_channels.insert(channel_number);
-        return true;
-    }
-    return false;
-};
-
 ChannelScanTask::ChannelScanTask(BackhaulManager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu_tx)
     : Task(eTaskType::CHANNEL_SCAN), m_btl_ctx(btl_ctx), m_cmdu_tx(cmdu_tx)
 {
@@ -488,6 +436,32 @@ bool ChannelScanTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
     }
     case beerocks_message::ACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_RESPONSE: {
         LOG(TRACE) << "ACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_RESPONSE from mac " << src_mac;
+
+        auto response =
+            beerocks_header
+                ->addClass<beerocks_message::cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_RESPONSE>();
+        if (!response) {
+            LOG(ERROR) << "addClass cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_RESPONSE failed";
+            return false;
+        }
+
+        if (!is_current_scan_running() || !does_current_scan_match_incoming_src(src_mac) ||
+            !is_current_scan_in_state(eState::PENDING_TRIGGER)) {
+            return false;
+        }
+
+        if (!response->success()) {
+            LOG(ERROR) << "Failed to trigger dump results on radio (" << src_mac << ")";
+            // Expand the response reason to give a better scan status in the report as part of PPM-1324.
+            set_radio_scan_status(m_current_scan_info.radio_scan, eScanStatus::SCAN_NOT_COMPLETED);
+            FSM_MOVE_STATE(m_current_scan_info.radio_scan, eState::SCAN_FAILED);
+            return true;
+        }
+
+        LOG(INFO) << "Scan results dump request recived successfully, wait for "
+                     "RESULTS_READY_NOTIFICATION.";
+        FSM_MOVE_TIMEOUT_STATE(m_current_scan_info.radio_scan, eState::WAIT_FOR_RESULTS_READY,
+                               SCAN_RESULTS_DUMP_WAIT_TIME);
         break;
     }
     case beerocks_message::ACTION_BACKHAUL_CHANNEL_SCAN_ABORT_RESPONSE: {
@@ -620,65 +594,90 @@ bool ChannelScanTask::trigger_radio_scan(const std::string &radio_iface,
         return false;
     }
 
-    auto trigger_request = beerocks::message_com::create_vs_message<
-        beerocks_message::cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST>(m_cmdu_tx);
-    if (!trigger_request) {
-        LOG(ERROR) << "Failed to build cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_REQUEST";
-        set_radio_scan_status(radio_scan_info, eScanStatus::SCAN_NOT_COMPLETED);
-        return false;
+    bool is_dump_request = radio_scan_info->dwell_time == 0;
+
+    if (is_dump_request) {
+        auto request_dump = beerocks::message_com::create_vs_message<
+            beerocks_message::cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_REQUEST>(m_cmdu_tx);
+        if (!request_dump) {
+            LOG(ERROR) << "Failed to build cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_REQUEST";
+            set_radio_scan_status(radio_scan_info, eScanStatus::SCAN_NOT_COMPLETED);
+            return false;
+        }
+        LOG(DEBUG) << "Sending \"Scan Dump\" request.";
+    } else {
+        auto trigger_request = beerocks::message_com::create_vs_message<
+            beerocks_message::cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST>(m_cmdu_tx);
+        if (!trigger_request) {
+            LOG(ERROR) << "Failed to build cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_REQUEST";
+            set_radio_scan_status(radio_scan_info, eScanStatus::SCAN_NOT_COMPLETED);
+            return false;
+        }
+
+        /**
+         * Copy the channel list within the operating class vector in the found Radio Scan info.
+         * Using an unordered_set since we do not want duplicated channels in out channel pool
+         */
+        std::unordered_set<uint8_t> channels_to_be_scanned;
+        for (auto &operating_class : radio_scan_info->operating_classes) {
+            for (auto &channel_element : operating_class.channel_list) {
+                // Scan only the channels without an error status
+                // Scan status is per channel on operating class
+                if (channel_element.scan_status ==
+                    eScanStatus::
+                        SCAN_NOT_SUPPORTED_ON_THIS_OPERATING_CLASS_AND_CHANNEL_ON_THIS_RADIO) {
+                    continue;
+                }
+                // Covert a central channel to 20MHz channels
+                if (operating_class.bw >= beerocks::eWiFiBandwidth::BANDWIDTH_80) {
+                    LOG(TRACE) << "Channel " << channel_element.channel_number
+                               << " is a central channel";
+                    std::unordered_set<uint8_t> subchannels_20MHz;
+                    son::wireless_utils::get_subset_20MHz_channels(
+                        channel_element.channel_number, operating_class.operating_class,
+                        operating_class.bw, subchannels_20MHz);
+                    channels_to_be_scanned.insert(subchannels_20MHz.begin(),
+                                                  subchannels_20MHz.end());
+                } else {
+                    channels_to_be_scanned.insert(channel_element.channel_number);
+                }
+            }
+        }
+
+        if (channels_to_be_scanned.empty()) {
+            LOG(TRACE) << "There were no channels to be scanned";
+            FSM_MOVE_STATE(radio_scan_info, eState::SCAN_DONE);
+            return true;
+        }
+
+        // Set scan params in CMDU
+        trigger_request->scan_params().radio_mac         = radio_scan_info->radio_mac;
+        trigger_request->scan_params().dwell_time_ms     = radio_scan_info->dwell_time;
+        trigger_request->scan_params().channel_pool_size = channels_to_be_scanned.size();
+        std::copy(channels_to_be_scanned.begin(), channels_to_be_scanned.end(),
+                  trigger_request->scan_params().channel_pool);
+
+        // Print CMDU scan parameters
+        auto print_pool = [](uint8_t *pool, uint8_t size) -> std::string {
+            std::stringstream ss;
+            ss << "[ ";
+            for (int ch_idx = 0; ch_idx < size; ch_idx++) {
+                ss << int(pool[ch_idx]) << " ";
+            }
+            ss << "]";
+            return ss.str();
+        };
+        LOG(DEBUG) << "Sending \"Scan Trigger\" request for the following:" << std::endl
+                   << "- Radio MAC: " << trigger_request->scan_params().radio_mac << std::endl
+                   << "- Dwell time: " << trigger_request->scan_params().dwell_time_ms << std::endl
+                   << "- Channels: "
+                   << print_pool(trigger_request->scan_params().channel_pool,
+                                 trigger_request->scan_params().channel_pool_size);
     }
 
     // Filling the radio mac. This is temporary the task will be moved to the agent (PPM-1679).
     auto action_header         = message_com::get_beerocks_header(m_cmdu_tx)->actionhdr();
     action_header->radio_mac() = radio->front.iface_mac;
-
-    /**
-     * Copy the channel list within the operating class vector in the found Radio Scan info.
-     * Using an unordered_set since we do not want duplicated channels in out channel pool
-     */
-    std::unordered_set<uint8_t> channels_to_be_scanned;
-    std::for_each(
-        radio_scan_info->operating_classes.begin(), radio_scan_info->operating_classes.end(),
-        [&channels_to_be_scanned, &radio, this](sOperatingClass &operating_class) {
-            for (auto &channel_element : operating_class.channel_list) {
-                // Scan only the channels without an error status
-                // Scan status is per channel on operating class
-                if (channel_element.scan_status !=
-                    eScanStatus::
-                        SCAN_NOT_SUPPORTED_ON_THIS_OPERATING_CLASS_AND_CHANNEL_ON_THIS_RADIO) {
-                    channels_to_be_scanned.insert(channel_element.channel_number);
-                }
-            }
-        });
-    if (channels_to_be_scanned.empty()) {
-        LOG(TRACE) << "There were no channels to be scanned";
-        FSM_MOVE_STATE(radio_scan_info, eState::SCAN_DONE);
-        return true;
-    }
-
-    // Set scan params in CMDU
-    trigger_request->scan_params().radio_mac         = radio_scan_info->radio_mac;
-    trigger_request->scan_params().dwell_time_ms     = PREFERRED_DWELLTIME_MS;
-    trigger_request->scan_params().channel_pool_size = channels_to_be_scanned.size();
-    std::copy(channels_to_be_scanned.begin(), channels_to_be_scanned.end(),
-              trigger_request->scan_params().channel_pool);
-
-    // Print CMDU scan parameters
-    auto print_pool = [](uint8_t *pool, uint8_t size) -> std::string {
-        std::stringstream ss;
-        ss << "[ ";
-        for (int ch_idx = 0; ch_idx < size; ch_idx++) {
-            ss << int(pool[ch_idx]) << " ";
-        }
-        ss << "]";
-        return ss.str();
-    };
-    LOG(DEBUG) << "Sending \"Scan Trigger\" request for the following:" << std::endl
-               << "- Radio MAC: " << trigger_request->scan_params().radio_mac << std::endl
-               << "- Dwell time: " << trigger_request->scan_params().dwell_time_ms << std::endl
-               << "- Channels: "
-               << print_pool(trigger_request->scan_params().channel_pool,
-                             trigger_request->scan_params().channel_pool_size);
 
     // Send CMDU
     if (!m_btl_ctx.send_cmdu(agent_fd, m_cmdu_tx)) {
@@ -699,8 +698,33 @@ bool ChannelScanTask::store_radio_scan_result(const std::shared_ptr<sScanRequest
         LOG(ERROR) << "Failed to get radio info from Agent DB for " << radio_mac;
         return false;
     }
-    auto radio_scan_info = request->radio_scans[radio->front.iface_name];
-    radio_scan_info->cached_results[results.channel].push_back(results);
+    auto radio_scan_info_iter = request->radio_scans.find(radio->front.iface_name);
+    if (radio_scan_info_iter == request->radio_scans.end()) {
+        LOG(ERROR) << "Could not find radio: " << radio->front.iface_name << ", MAC: " << radio_mac
+                   << " in the current scan request.";
+        return false;
+    }
+
+    for (const auto &op_cls : radio_scan_info_iter->second->operating_classes) {
+        for (const auto &ch_elem : op_cls.channel_list) {
+            std::unordered_set<uint8_t> _20MHz_channels;
+            son::wireless_utils::get_subset_20MHz_channels(
+                ch_elem.channel_number, op_cls.operating_class, op_cls.bw, _20MHz_channels);
+            /**
+             * To store the result in the correct radio scan, we need too check if the results'
+             * channel exists in the channel element's 20MHz channel subset.
+             * If it does that we add the result to the current radio scan's cached results under
+             * the channel element's channel number.
+             */
+            if (_20MHz_channels.find(results.channel) != _20MHz_channels.end()) {
+                LOG(TRACE) << "Setting result in channel " << ch_elem.channel_number;
+                radio_scan_info_iter->second->cached_results[ch_elem.channel_number].push_back(
+                    results);
+                // Move on to next operating class in radio scan
+                break;
+            }
+        }
+    }
     return true;
 }
 
@@ -734,7 +758,8 @@ bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmd
             for (const auto channel_number : operating_class_channels) {
                 std::unordered_set<uint8_t> operating_class_20MHz_channels;
                 LOG(DEBUG) << "Getting 20MHz channels for central channel: " << channel_number;
-                get_20MHz_channels(channel_number, bw, operating_class_20MHz_channels);
+                son::wireless_utils::get_subset_20MHz_channels(channel_number, operating_class, bw,
+                                                               operating_class_20MHz_channels);
                 for (const auto operating_class_20MHz_channel : operating_class_20MHz_channels) {
                     LOG(DEBUG) << "Checking if 20MHz channel " << operating_class_20MHz_channel
                                << " is supported";
@@ -760,8 +785,7 @@ bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmd
         }
         for (const auto channel_number : channel_list) {
             if (!son::wireless_utils::is_channel_in_operating_class(operating_class,
-                                                                    channel_number) ||
-                db_radio->channels_list.find(channel_number) == db_radio->channels_list.end()) {
+                                                                    channel_number)) {
                 channel_vector.emplace_back(
                     channel_number,
                     eScanStatus::
@@ -911,6 +935,7 @@ bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmd
             delete ptr;
         });
         new_radio_scan->radio_mac     = radio_mac;
+        new_radio_scan->dwell_time    = PREFERRED_DWELLTIME_MS;
         new_radio_scan->current_state = eState::PENDING_TRIGGER;
 
         if (!perform_fresh_scan) {
@@ -932,6 +957,63 @@ bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmd
 
         // Add radio scan info to radio scans map in the request
         new_request->radio_scans.emplace(radio_iface, new_radio_scan);
+    }
+
+    auto handle_scan_request_extension_tlv = [this, &new_request,
+                                              &db](ieee1905_1::CmduMessageRx &cmdu_rx) -> bool {
+        auto beerocks_header = beerocks::message_com::parse_intel_vs_message(cmdu_rx);
+        if (!beerocks_header) {
+            LOG(ERROR) << "expecting beerocks_message::tlvVsChannelScanRequestExtension";
+            return false;
+        }
+        auto channel_scan_request_extension_vs_tlv =
+            beerocks_header->addClass<beerocks_message::tlvVsChannelScanRequestExtension>();
+        if (!channel_scan_request_extension_vs_tlv) {
+            LOG(ERROR) << "addClass beerocks_message::tlvVsChannelScanRequestExtension failed";
+            return false;
+        }
+
+        const auto &extension_list_length =
+            channel_scan_request_extension_vs_tlv->scan_requests_list_length();
+        for (int extention_list_i = 0; extention_list_i < extension_list_length;
+             ++extention_list_i) {
+            const auto &extension_tuple =
+                channel_scan_request_extension_vs_tlv->scan_requests_list(extention_list_i);
+            if (!std::get<0>(extension_tuple)) {
+                LOG(ERROR) << "Failed to get scan request extention[" << extention_list_i
+                           << "]. Continuing...";
+                continue;
+            }
+            auto &extension_entry = std::get<1>(extension_tuple);
+
+            LOG(TRACE) << "Found scan request extention for radio: " << extension_entry.radio_mac;
+
+            const auto radio = db->get_radio_by_mac(extension_entry.radio_mac);
+            if (!radio) {
+                LOG(ERROR) << "Failed to get radio entry for MAC: " << extension_entry.radio_mac;
+                return false;
+            }
+            auto radio_scan_info_iter = new_request->radio_scans.find(radio->front.iface_name);
+            if (radio_scan_info_iter == new_request->radio_scans.end()) {
+                LOG(ERROR) << "Could not find radio: " << radio->front.iface_name
+                           << ", MAC: " << extension_entry.radio_mac
+                           << " in the current scan request.";
+                continue;
+            }
+
+            radio_scan_info_iter->second->dwell_time = extension_entry.dwell_time_ms;
+            LOG(TRACE) << "Set Dwell-time " << extension_entry.dwell_time_ms
+                       << " ms for radio: " << radio->front.iface_name;
+        }
+        return true;
+    };
+
+    // For prplmesh controller, we wish to support a custome Dwell-Time parameter.
+    if (db->controller_info.prplmesh_controller) {
+        if (!handle_scan_request_extension_tlv(cmdu_rx)) {
+            LOG(WARNING) << "Failed to handle tlvVsChannelScanRequestExtension!";
+            // return false;
+        }
     }
 
     // Should return all the currently stored results in the DB for the requested radios
@@ -1341,26 +1423,18 @@ ChannelScanTask::get_scan_results_for_request(const std::shared_ptr<sScanRequest
                                     scan_status, request_timestamp);
                     continue;
                 }
-                std::unordered_set<uint8_t> subchannels_20MHz;
-                if (!get_20MHz_channels(channel_number, bw, subchannels_20MHz)) {
-                    // This shouldn't be reached as it would have been handled in trigger_radio_scan
+                auto channel_results_iter = results.find(channel_number);
+                if (channel_results_iter == results.end()) {
+                    LOG(DEBUG) << "No results found for channel " << channel_number
+                               << ", adding blank results";
+                    add_scan_result(fresh_scan_requested, ruid, operating_class, channel_number,
+                                    scan_status, request_timestamp);
                     continue;
                 }
-                for (const uint8_t primary_channel : subchannels_20MHz) {
-                    // Validate channel exists in results
-                    auto channel_results_iter = results.find(primary_channel);
-                    if (channel_results_iter == results.end()) {
-                        LOG(DEBUG) << "No results found for channel " << primary_channel
-                                   << ", adding blank results";
-                        add_scan_result(fresh_scan_requested, ruid, operating_class,
-                                        primary_channel, scan_status, request_timestamp);
-                        continue;
-                    }
-                    auto channel_results = channel_results_iter->second;
-                    add_scan_result(fresh_scan_requested, ruid, operating_class, primary_channel,
-                                    scan_status, request_timestamp, channel_results.first,
-                                    channel_results.second);
-                }
+                auto &channel_results = channel_results_iter->second;
+                add_scan_result(fresh_scan_requested, ruid, operating_class, channel_number,
+                                scan_status, request_timestamp, channel_results.first,
+                                channel_results.second);
             }
         };
 

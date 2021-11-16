@@ -70,6 +70,7 @@ static void translate_channel_scan_results(const beerocks_message::sChannelScanR
 {
     string_utils::copy_string(res_out.ap_SSID, res_in.ssid,
                               beerocks::message::WIFI_SSID_MAX_LENGTH);
+    LOG(DEBUG) << "SSID_IN: " << res_in.ssid << ", SSID_OUT :" << res_out.ap_SSID;
     tlvf::mac_to_array(res_in.bssid, res_out.ap_BSSID);
     std::copy_n(res_in.security_mode_enabled, beerocks::message::CHANNEL_SCAN_LIST_LENGTH,
                 res_out.ap_SecurityModeEnabled);
