@@ -1913,9 +1913,10 @@ bool db::add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t
     auto class_bw           = wireless_utils::operating_class_to_bandwidth(operating_class);
     // Update current channels
     for (auto c : channel_set) {
-        auto channel = std::find_if(
-            supported_channels.begin(), supported_channels.end(),
-            [&c](const beerocks::message::sWifiChannel &ch) { return ch.channel == c; });
+        auto channel = std::find_if(supported_channels.begin(), supported_channels.end(),
+                                    [&c, &class_bw](const beerocks::message::sWifiChannel &ch) {
+                                        return ch.channel == c && ch.channel_bandwidth == class_bw;
+                                    });
         if (channel != supported_channels.end()) {
             channel->tx_pow            = tx_power;
             channel->channel_bandwidth = class_bw;
@@ -3047,7 +3048,15 @@ bool db::get_pool_of_all_supported_channels(std::unordered_set<uint8_t> &channel
         LOG(ERROR) << "Supported channel list is empty, failed to set channel pool!";
         return false;
     }
-    std::transform(all_channels.begin(), all_channels.end(),
+    // Take only the 20MHz channels
+    std::vector<beerocks::message::sWifiChannel> subset_20MHz_channels;
+    std::copy_if(all_channels.begin(), all_channels.end(),
+                 std::back_inserter(subset_20MHz_channels),
+                 [](const beerocks::message::sWifiChannel &c) -> bool {
+                     return c.channel_bandwidth == eWiFiBandwidth::BANDWIDTH_20;
+                 });
+    // Convert from beerocks::message::sWifiChannel to uint8_t
+    std::transform(subset_20MHz_channels.begin(), subset_20MHz_channels.end(),
                    std::inserter(channel_pool_set, channel_pool_set.end()),
                    [](const beerocks::message::sWifiChannel &c) -> uint8_t { return c.channel; });
     return true;
