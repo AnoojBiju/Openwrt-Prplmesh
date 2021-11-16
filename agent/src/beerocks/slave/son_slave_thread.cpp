@@ -4529,7 +4529,7 @@ bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
         db->device_conf.byte_counter_units =
             wfa_map::tlvProfile2ApCapability::eByteCounterUnits::BYTES;
 
-        if (db->controller_info.profile_support ==
+        if (db->controller_info.profile_support >=
             wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_2) {
             /* One Profile-2 AP Capability TLV */
             auto profile2_ap_capability_tlv = cmdu_tx.addClass<wfa_map::tlvProfile2ApCapability>();
