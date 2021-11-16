@@ -211,7 +211,7 @@ void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
 
     // 2.2 radio independent tlvs
 
-    if (db->controller_info.profile_support ==
+    if (db->controller_info.profile_support >=
         wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_2) {
 
         // profile 2 ap capability
