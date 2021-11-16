@@ -146,6 +146,9 @@ public:
 
         std::string vendor;
         std::string model;
+        std::string software_version;
+        std::string operating_system;
+        std::string device_serial_number;
         uint16_t ucc_listener_port;
         CountryCode country_code;
         wfa_map::tlvProfile2ApCapability::eByteCounterUnits byte_counter_units;
@@ -306,6 +309,8 @@ public:
         // Information on the last channel switch request which containing the requested channel
         // and bandwidth.
         std::shared_ptr<sSwitchChannelRequest> last_switch_channel_request;
+
+        std::string chipset_vendor;
     };
     struct {
         uint16_t max_number_of_vlans_ids;
