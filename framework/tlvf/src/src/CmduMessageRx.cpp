@@ -57,6 +57,7 @@
 #include <tlvf/wfa_map/tlvClientAssociationEvent.h>
 #include <tlvf/wfa_map/tlvClientCapabilityReport.h>
 #include <tlvf/wfa_map/tlvClientInfo.h>
+#include <tlvf/wfa_map/tlvDeviceInventory.h>
 #include <tlvf/wfa_map/tlvErrorCode.h>
 #include <tlvf/wfa_map/tlvHigherLayerData.h>
 #include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
@@ -401,6 +402,9 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     }
     case (wfa_map::eTlvTypeMap::TLV_PROFILE2_REASON_CODE): {
         return msg.addClass<wfa_map::tlvProfile2ReasonCode>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_DEVICE_INVENTORY): {
+        return msg.addClass<wfa_map::tlvDeviceInventory>();
     }
     }
     LOG(FATAL) << "Unknown TLV type: " << unsigned(tlv_type);
