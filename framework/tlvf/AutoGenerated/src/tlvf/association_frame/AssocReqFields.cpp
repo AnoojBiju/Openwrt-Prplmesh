@@ -399,8 +399,9 @@ bool cRSN::init()
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint16_t); }
     m_optional = reinterpret_cast<uint16_t*>(m_buff_ptr__);
     if (m_length && m_parse__) {
-        size_t len = *m_length;
-        tlvf_swap(16, reinterpret_cast<uint8_t*>(&len));
+        auto swap_len = *m_length;
+        tlvf_swap((sizeof(swap_len) * 8), reinterpret_cast<uint8_t*>(&swap_len));
+        size_t len = swap_len;
         len -= (m_buff_ptr__ - sizeof(*m_type) - sizeof(*m_length) - m_buff__);
         m_optional_idx__ = len/sizeof(uint16_t);
         if (!buffPtrIncrementSafe(len)) {
@@ -548,8 +549,9 @@ bool cSupportedOpClasses::init()
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
     m_op_classes = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (m_length && m_parse__) {
-        size_t len = *m_length;
-        tlvf_swap(16, reinterpret_cast<uint8_t*>(&len));
+        auto swap_len = *m_length;
+        tlvf_swap((sizeof(swap_len) * 8), reinterpret_cast<uint8_t*>(&swap_len));
+        size_t len = swap_len;
         len -= (m_buff_ptr__ - sizeof(*m_type) - sizeof(*m_length) - m_buff__);
         m_op_classes_idx__ = len/sizeof(uint8_t);
         if (!buffPtrIncrementSafe(len)) {
@@ -1353,8 +1355,9 @@ bool cInterworking::init()
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
     m_optional_params = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (m_length && m_parse__) {
-        size_t len = *m_length;
-        tlvf_swap(16, reinterpret_cast<uint8_t*>(&len));
+        auto swap_len = *m_length;
+        tlvf_swap((sizeof(swap_len) * 8), reinterpret_cast<uint8_t*>(&swap_len));
+        size_t len = swap_len;
         len -= (m_buff_ptr__ - sizeof(*m_type) - sizeof(*m_length) - m_buff__);
         m_optional_params_idx__ = len/sizeof(uint8_t);
         if (!buffPtrIncrementSafe(len)) {
@@ -2004,8 +2007,9 @@ bool cMultipleMacSublayers::init()
     }
     m_interface_addr = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (m_length && m_parse__) {
-        size_t len = *m_length;
-        tlvf_swap(16, reinterpret_cast<uint8_t*>(&len));
+        auto swap_len = *m_length;
+        tlvf_swap((sizeof(swap_len) * 8), reinterpret_cast<uint8_t*>(&swap_len));
+        size_t len = swap_len;
         len -= (m_buff_ptr__ - sizeof(*m_type) - sizeof(*m_length) - m_buff__);
         m_interface_addr_idx__ = len/sizeof(uint8_t);
         if (!buffPtrIncrementSafe(len)) {
