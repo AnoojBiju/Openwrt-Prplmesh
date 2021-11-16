@@ -3100,13 +3100,13 @@ bool db::add_channel_report(const sMacAddr &RUID, const uint8_t &operating_class
     };
 
     for (auto src_neighbor : neighbors) {
-        sChannelScanResults neighbor_result;
+        sChannelScanResults neighbor_result = {0};
 
         neighbor_result.channel = channel;
 
         neighbor_result.bssid = src_neighbor.bssid();
 
-        auto neighbor_ssid_str = (src_neighbor.ssid_length() > 0 ? src_neighbor.ssid_str() : "") + "\0";
+        const auto neighbor_ssid_str = (src_neighbor.ssid_length() > 0 ? src_neighbor.ssid_str() : "") + "\0";
         neighbor_ssid_str.copy(neighbor_result.ssid, beerocks::message::WIFI_SSID_MAX_LENGTH);
 
         neighbor_result.signal_strength_dBm = src_neighbor.signal_strength();
