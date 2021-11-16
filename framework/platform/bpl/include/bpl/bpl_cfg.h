@@ -771,6 +771,30 @@ bool cfg_get_clients_measurement_mode(eClientsMeasurementMode &clients_measureme
 bool bpl_cfg_get_monitored_BSSs_by_radio_iface(const std::string &iface,
                                                std::set<std::string> &monitored_BSSs);
 
+/**
+ * @brief Get a string identifying the particular device that is unique for the indicated model
+ * and manufacturer.
+ * 
+ * @note It is the manufacturer responsability to override implementation of this function and
+ * and return a correct string.
+ * 
+ * @param [out] serial_number  Serial number of the device.
+ * @return true on success, otherwise false.
+ */
+bool get_serial_number(std::string &serial_number);
+
+/**
+ * @brief Get a string identifying the Wi-Fi chip vendor a radio.
+ * 
+ * @note It is the manufacturer responsability to override implementation of this function and
+ * and return a correct string.
+ * 
+ * @param [in] ruid  Radio UID of the radio to get the chipset vendor from.
+ * @param [out] chipset_vendor  Chipset vendor of the radio specified by @a ruid.
+ * @return true on success, otherwise false.
+ */
+bool get_ruid_chipset_vendor(const sMacAddr &ruid, std::string &chipset_vendor);
+
 } // namespace bpl
 } // namespace beerocks
 
