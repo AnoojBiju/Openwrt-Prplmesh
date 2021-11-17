@@ -1246,6 +1246,16 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
         state_time_stamp_timeout =
             std::chrono::steady_clock::now() + std::chrono::seconds(STATE_WAIT_WPS_TIMEOUT_SECONDS);
         FSM_MOVE_STATE(WAIT_WPS);
+		for (auto &radio_info : m_radios_info) {
+			// check if the STA is already connected
+			if(radio_info->sta_wlan_hal->is_connected()){
+				LOG(INFO) << "Radio already connected before prplMesh started, reconnecting.";
+				radio_info->sta_wlan_hal->disconnect();
+				UTILS_SLEEP_MSEC(3000);
+				radio_info->sta_wlan_hal->connect();
+			}
+		}
+
         break;
     }
     // Wait for WPS command
