@@ -184,8 +184,8 @@ main() {
 
 VERBOSE=false
 IMAGE_ONLY=false
-OPENWRT_REPOSITORY='https://gitlab.com/prpl-foundation/prplwrt/prplwrt.git'
-OPENWRT_VERSION='51fbb11b7eeceddf94661d04875e8e6456565fc6'
+OPENWRT_REPOSITORY='https://gitlab.com/prpl-foundation/prplos/prplos.git'
+OPENWRT_VERSION='1961cd00e97672fa4d64732422285d614414da3f'
 PRPLMESH_VARIANT="-nl80211"
 DOCKER_TARGET_STAGE="prplmesh-builder"
 SHELL_ONLY=false
