@@ -13,17 +13,18 @@ tlvBackhaulStaRadioCapabilities:
     _type: sMacAddr
     _comment: Radio Unique Identifier of the radio for which capabilities are reported.
   sta_mac_included:
-    _type: sStaMacIncluded
+    _type: eStaMacIncluded
   sta_mac:
     _type: sMacAddr
+    _condition:
+      _field_name: sta_mac_included
+      _field_value: eStaMacIncluded::FIELD_PRESENT
     _comment: |
       Mac Address of the backhaul STA on this radio.
       This field is included if the MAC address included field is set to 1.
 
-sStaMacIncluded:
-  _type: struct
-  _bit_field: uint8_t
-  mac_included:
-    _bit_range: [7, 7]
-  reserved:
-    _bit_range: [6, 0]
+eStaMacIncluded:
+  _type: enum
+  _enum_storage: uint8_t
+  FIELD_PRESENT: 0x80
+  FIELD_NOT_PRESENT: 0x00
