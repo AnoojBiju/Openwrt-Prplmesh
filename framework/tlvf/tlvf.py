@@ -881,6 +881,10 @@ class TlvF:
                 lines_cpp.append("%sreturn false;" % (self.getIndentation(1)))
                 lines_cpp.append("%s}" % (self.getIndentation(0)))
 
+                if TypeInfo(param_type).type == TypeInfo.STRUCT:
+                    lines_cpp.append(
+                        "if (!m_%s__) { m_%s->struct_init(); }" % (self.MEMBER_PARSE, param_name))
+
                 self.insertLineCpp(obj_meta.name, self.CODE_CLASS_INIT_FUNC_INSERT, lines_cpp)
 
                 lines_h = []
@@ -945,10 +949,10 @@ class TlvF:
                     swap_func_lines.append("if (*m_%s == %s) {" % (
                         param_meta.condition[MetaData.CONDITION_NAME],
                         param_meta.condition[MetaData.CONDITION_VALUE]))
-                    swap_func_lines.append("%s%sm_%s%s;" % (
-                        self.getIndentation(1),
-                        param_type_info.swap_prefix,
-                        param_name,
+                    t_name = ("m_%s->" %
+                              param_name) if param_type_info.swap_is_func else ("m_%s" % param_name)
+                    swap_func_lines.append("%s%s%s%s;" % (
+                        self.getIndentation(1), param_type_info.swap_prefix, t_name,
                         param_type_info.swap_suffix))
                     swap_func_lines.append("}")
 
