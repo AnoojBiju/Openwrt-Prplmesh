@@ -37,20 +37,59 @@ sMacAddr& tlvBackhaulStaRadioCapabilities::ruid() {
     return (sMacAddr&)(*m_ruid);
 }
 
-tlvBackhaulStaRadioCapabilities::sStaMacIncluded& tlvBackhaulStaRadioCapabilities::sta_mac_included() {
-    return (sStaMacIncluded&)(*m_sta_mac_included);
+tlvBackhaulStaRadioCapabilities::eStaMacIncluded& tlvBackhaulStaRadioCapabilities::sta_mac_included() {
+    return (eStaMacIncluded&)(*m_sta_mac_included);
 }
 
-sMacAddr& tlvBackhaulStaRadioCapabilities::sta_mac() {
-    return (sMacAddr&)(*m_sta_mac);
+bool tlvBackhaulStaRadioCapabilities::alloc_sta_mac() {
+    if (m_sta_mac_allocated) {
+        LOG(ERROR) << "sta_mac already allocated!";
+        return false;
+    }
+    size_t len = sizeof(sMacAddr);
+    if(getBuffRemainingBytes() < len )  {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
+        return false;
+    }
+    uint8_t *src = (uint8_t *)m_sta_mac;
+    uint8_t *dst = src + len;
+    if (!m_parse__) {
+        size_t move_length = getBuffRemainingBytes(src) - len;
+        std::copy_n(src, move_length, dst);
+    }
+    if (!buffPtrIncrementSafe(len)) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
+        return false;
+    }
+    m_sta_mac_allocated = true;
+    return true;
+}
+
+sMacAddr* tlvBackhaulStaRadioCapabilities::sta_mac() {
+    if (!m_sta_mac_included || *m_sta_mac_included != eStaMacIncluded::FIELD_PRESENT) {
+        TLVF_LOG(ERROR) << "sta_mac requested but sta_mac_included != eStaMacIncluded::FIELD_PRESENT";
+        return nullptr;
+    }
+    return (sMacAddr*)(m_sta_mac);
+}
+
+bool tlvBackhaulStaRadioCapabilities::set_sta_mac(const sMacAddr sta_mac) {
+    if (!m_sta_mac_allocated && !alloc_sta_mac()) {
+        LOG(ERROR) << "Could not allocate sta_mac!";
+        return false;
+    }
+    *m_sta_mac_included = eStaMacIncluded::FIELD_PRESENT;
+    *m_sta_mac = sta_mac;
+    return true;
 }
 
 void tlvBackhaulStaRadioCapabilities::class_swap()
 {
     tlvf_swap(16, reinterpret_cast<uint8_t*>(m_length));
     m_ruid->struct_swap();
-    m_sta_mac_included->struct_swap();
-    m_sta_mac->struct_swap();
+    if (*m_sta_mac_included == eStaMacIncluded::FIELD_PRESENT) {
+        m_sta_mac->struct_swap();
+    }
 }
 
 bool tlvBackhaulStaRadioCapabilities::finalize()
@@ -87,8 +126,7 @@ size_t tlvBackhaulStaRadioCapabilities::get_initial_size()
     class_size += sizeof(eTlvTypeMap); // type
     class_size += sizeof(uint16_t); // length
     class_size += sizeof(sMacAddr); // ruid
-    class_size += sizeof(sStaMacIncluded); // sta_mac_included
-    class_size += sizeof(sMacAddr); // sta_mac
+    class_size += sizeof(eStaMacIncluded); // sta_mac_included
     return class_size;
 }
 
@@ -117,19 +155,17 @@ bool tlvBackhaulStaRadioCapabilities::init()
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(sMacAddr); }
     if (!m_parse__) { m_ruid->struct_init(); }
-    m_sta_mac_included = reinterpret_cast<sStaMacIncluded*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(sStaMacIncluded))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sStaMacIncluded) << ") Failed!";
+    m_sta_mac_included = reinterpret_cast<eStaMacIncluded*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(eStaMacIncluded))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(eStaMacIncluded) << ") Failed!";
         return false;
     }
-    if(m_length && !m_parse__){ (*m_length) += sizeof(sStaMacIncluded); }
-    if (!m_parse__) { m_sta_mac_included->struct_init(); }
+    if(m_length && !m_parse__){ (*m_length) += sizeof(eStaMacIncluded); }
     m_sta_mac = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(sMacAddr))) {
+    if (*m_sta_mac_included == eStaMacIncluded::FIELD_PRESENT && !buffPtrIncrementSafe(sizeof(sMacAddr))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sMacAddr) << ") Failed!";
         return false;
     }
-    if(m_length && !m_parse__){ (*m_length) += sizeof(sMacAddr); }
     if (!m_parse__) { m_sta_mac->struct_init(); }
     if (m_parse__) { class_swap(); }
     if (m_parse__) {
