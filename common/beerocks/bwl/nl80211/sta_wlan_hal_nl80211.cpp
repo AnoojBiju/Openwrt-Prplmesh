@@ -109,99 +109,26 @@ bool sta_wlan_hal_nl80211::connect(const std::string &ssid, const std::string &p
                                    bool mem_only_psk, const std::string &bssid, uint8_t channel,
                                    bool hidden_ssid)
 {
-    LOG(DEBUG) << "Connect interface " << get_iface_name() << " to SSID = " << ssid
-               << ", BSSID = " << bssid << ", Channel = " << int(channel)
-               << ", Sec = " << nl80211_security_val(sec) << ", mem_only_psk=" << int(mem_only_psk);
+	LOG(TRACE) << "Reconnecting on interface " << get_iface_name();
 
-    if (ssid.empty() || bssid.empty() || sec == WiFiSec::Invalid) {
-        LOG(ERROR) << "Invalid params!";
-        return false;
-    }
-
-    // First disconnect (or do nothing if not connected)
-    if (!disconnect()) {
-        LOG(WARNING) << "Failed disconnecting before connecting to the new BSSID";
-        return false;
-    }
-
-    // Add a new network
-    auto network_id = add_network();
-    if (network_id < 0) {
-        LOG(ERROR) << "Failed (" << network_id
-                   << ") adding new network to interface: " << get_iface_name();
-        return false;
-    }
-
-    auto freq = son::wireless_utils::channel_to_freq(int(channel));
-
-    // Update network parameters
-    if (!set_network_params(network_id, ssid, bssid, sec, mem_only_psk, pass, hidden_ssid, freq)) {
-        LOG(ERROR) << "Failed setting network id = " << network_id
-                   << " on interface: " << get_iface_name();
-        return false;
-    }
-
-    // Enable the network
-    if (!enable_network(network_id)) {
-        LOG(ERROR) << "Failed enabling network id = " << network_id
-                   << " on interface: " << get_iface_name();
-        return false;
-    }
-
-    LOG(DEBUG) << "Network with id " << network_id << " has been added and enabled on interface "
-               << get_iface_name();
-
-    // Update active network parameters
-    m_active_ssid.assign(ssid);
-    m_active_bssid.assign(bssid);
-    m_active_pass.assign(pass);
-    m_active_channel    = channel;
-    m_active_network_id = network_id;
-
-    return true;
-}
-
-bool sta_wlan_hal_nl80211::disconnect()
-{
-    LOG(TRACE) << "Disconnect network id " << m_active_network_id
-               << " on interface: " << get_iface_name();
-
-    ConnectionStatus connection_status;
-    if (!read_status(connection_status)) {
-        LOG(ERROR) << "Failed reading status for " << get_iface_name() << "! can't disconnect";
-        return false;
-    }
-
-    // Return gracefully if network state is not connected
-    if (!is_connected(connection_status.wpa_state)) {
-        LOG(DEBUG) << "Active network is not connected";
-        return true;
-    }
-
-    // Return gracefully if no network is connected
-    if (m_active_network_id < 0) {
-        LOG(DEBUG) << "Active network does not exist";
-        return true;
-    }
-
-    // Connection status id must be the same as the active network id
-    if (m_active_network_id != connection_status.id) {
-        LOG(ERROR) << "Network id mismatch: m_active_network_id(" << m_active_network_id << ") != "
-                   << "connection_status.id(" << connection_status.id << ")";
-        return false;
-    }
-
-    const std::string cmd = "REMOVE_NETWORK " + std::to_string(m_active_network_id);
+    const std::string cmd = "RECONNECT";
     if (!wpa_ctrl_send_msg(cmd)) {
         LOG(ERROR) << "WPA command '" << cmd << "' failed";
     }
 
-    // Clear state
-    m_active_ssid       = "";
-    m_active_bssid      = "";
-    m_active_pass       = "";
-    m_active_channel    = 0;
-    m_active_network_id = -1;
+	return true;
+}
+
+
+bool sta_wlan_hal_nl80211::disconnect()
+{
+    LOG(TRACE) << "Disconnect"
+               << " on interface: " << get_iface_name();
+
+    const std::string cmd = "DISCONNECT";
+    if (!wpa_ctrl_send_msg(cmd)) {
+        LOG(ERROR) << "WPA command '" << cmd << "' failed";
+    }
 
     return true;
 }
