@@ -37,14 +37,14 @@ assoc_frame::sStaVhtCapInfo& cStaVhtCapability::vht_cap_info() {
     return (assoc_frame::sStaVhtCapInfo&)(*m_vht_cap_info);
 }
 
-uint32_t& cStaVhtCapability::supported_vht_mcs() {
-    return (uint32_t&)(*m_supported_vht_mcs);
+assoc_frame::sSupportedVhtMcsSet& cStaVhtCapability::supported_vht_mcs() {
+    return (assoc_frame::sSupportedVhtMcsSet&)(*m_supported_vht_mcs);
 }
 
 void cStaVhtCapability::class_swap()
 {
     m_vht_cap_info->struct_swap();
-    tlvf_swap(32, reinterpret_cast<uint8_t*>(m_supported_vht_mcs));
+    m_supported_vht_mcs->struct_swap();
 }
 
 bool cStaVhtCapability::finalize()
@@ -80,7 +80,7 @@ size_t cStaVhtCapability::get_initial_size()
     class_size += sizeof(eElementID); // type
     class_size += sizeof(uint8_t); // length
     class_size += sizeof(assoc_frame::sStaVhtCapInfo); // vht_cap_info
-    class_size += sizeof(uint32_t); // supported_vht_mcs
+    class_size += sizeof(assoc_frame::sSupportedVhtMcsSet); // supported_vht_mcs
     return class_size;
 }
 
@@ -107,11 +107,12 @@ bool cStaVhtCapability::init()
         return false;
     }
     if (!m_parse__) { m_vht_cap_info->struct_init(); }
-    m_supported_vht_mcs = reinterpret_cast<uint32_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint32_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint32_t) << ") Failed!";
+    m_supported_vht_mcs = reinterpret_cast<assoc_frame::sSupportedVhtMcsSet*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(assoc_frame::sSupportedVhtMcsSet))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(assoc_frame::sSupportedVhtMcsSet) << ") Failed!";
         return false;
     }
+    if (!m_parse__) { m_supported_vht_mcs->struct_init(); }
     if (m_parse__) { class_swap(); }
     return true;
 }
