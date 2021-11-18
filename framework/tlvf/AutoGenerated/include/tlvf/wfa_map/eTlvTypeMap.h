@@ -62,6 +62,7 @@ enum class eTlvTypeMap : uint8_t {
     TLV_CHANNEL_SCAN_REQUEST = 0xa6,
     TLV_CHANNEL_SCAN_RESULT = 0xa7,
     TLV_TIMESTAMP = 0xa8,
+    TLV_BACKHAUL_BSS_CONFIGURATION = 0xa9,
     TLV_PROFILE2_CAC_REQUEST = 0xad,
     TLV_PROFILE2_CAC_TERMINATION = 0xae,
     TLV_PROFILE2_CAC_COMPLETION_REPORT = 0xaf,
@@ -131,6 +132,7 @@ static const char *eTlvTypeMap_str(eTlvTypeMap enum_value) {
     case eTlvTypeMap::TLV_CHANNEL_SCAN_REQUEST:                     return "eTlvTypeMap::TLV_CHANNEL_SCAN_REQUEST";
     case eTlvTypeMap::TLV_CHANNEL_SCAN_RESULT:                      return "eTlvTypeMap::TLV_CHANNEL_SCAN_RESULT";
     case eTlvTypeMap::TLV_TIMESTAMP:                                return "eTlvTypeMap::TLV_TIMESTAMP";
+    case eTlvTypeMap::TLV_BACKHAUL_BSS_CONFIGURATION:               return "eTlvTypeMap::TLV_BACKHAUL_BSS_CONFIGURATION";
     case eTlvTypeMap::TLV_PROFILE2_CAC_REQUEST:                     return "eTlvTypeMap::TLV_PROFILE2_CAC_REQUEST";
     case eTlvTypeMap::TLV_PROFILE2_CAC_TERMINATION:                 return "eTlvTypeMap::TLV_PROFILE2_CAC_TERMINATION";
     case eTlvTypeMap::TLV_PROFILE2_CAC_COMPLETION_REPORT:           return "eTlvTypeMap::TLV_PROFILE2_CAC_COMPLETION_REPORT";
@@ -207,6 +209,7 @@ public:
         case 0xa6:
         case 0xa7:
         case 0xa8:
+        case 0xa9:
         case 0xad:
         case 0xae:
         case 0xaf:
