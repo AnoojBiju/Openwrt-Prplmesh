@@ -20,20 +20,6 @@ cSSID:
     _length: [ length ]
     _length_max: 0x20
 
-cSupportedChannels:
-  _type: class
-  _is_tlv_class: True
-  type:
-    _type: eElementID
-    _value: ID_SUP_CHANNELS
-  length:
-    _type: uint8_t
-  first_ch_num:
-    _type: uint8_t
-    _comment: First channel number
-  channels_number:
-    _type: uint8_t
-
 cRSN:
   _comment: |
     The RSNE is present if dot11RSNAActivated is true.

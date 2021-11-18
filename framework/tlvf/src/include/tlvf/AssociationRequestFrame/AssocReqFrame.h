@@ -20,6 +20,7 @@
 #include <tlvf/association_frame/cRmEnabledCaps.h>
 #include <tlvf/association_frame/cStaHtCapability.h>
 #include <tlvf/association_frame/cStaVhtCapability.h>
+#include <tlvf/association_frame/cSupportedChannels.h>
 #include <tlvf/association_frame/eElementID.h>
 #include <tlvf/common/sMacAddr.h>
 #include <tlvf/wfa_map/tlvTunnelledData.h>

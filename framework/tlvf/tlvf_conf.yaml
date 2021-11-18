@@ -13,6 +13,7 @@ include_yaml_path: {
     "tlvf/association_frame/cQosCapability.yaml",
     "tlvf/association_frame/cStaHtCapability.yaml",
     "tlvf/association_frame/cStaVhtCapability.yaml",
+    "tlvf/association_frame/cSupportedChannels.yaml",
     "tlvf/association_frame/cRmEnabledCaps.yaml",
     "tlvf/association_frame/cExtendedCap.yaml",
     "tlvf/association_frame/ReassocReqFields.yaml",
