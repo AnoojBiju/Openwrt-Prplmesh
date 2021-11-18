@@ -162,15 +162,20 @@ public:
     static bool linux_iface_is_up_and_running(const std::string &iface);
 
     /**
-     * @brief Gets the speed of a network interface.
+     * @brief Gets the current link speed and the maximum advertised speed
+     * of a network interface.
      *
      * @param[in] iface Name of the network interface.
-     * @param[out] speed On success, speed in Mbps of the network interface as defined in SPEED_*
-     * macros included in ethtool.h
+     * @param[out] link_speed On success, current link speed in Mbps of the network interface
+     * as defined in SPEED_* macros included in ethtool.h.
+     * It equals SPEED_UNKNOWN if the interface's link is down.
+     * @param[out] max_advertised_speed On success, maximum advertised speed in Mbps of the network interface
+     * as defined in SPEED_* macros included in ethtool.h.
      *
      * @return True if speed could be successfully obtained and false otherwise.
      */
-    static bool linux_iface_get_speed(const std::string &iface, uint32_t &speed);
+    static bool linux_iface_get_speed(const std::string &iface, uint32_t &link_speed,
+                                      uint32_t &max_advertised_speed);
 
     /**
      * @brief Gets interface statistics for the given network interface.

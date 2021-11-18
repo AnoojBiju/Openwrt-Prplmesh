@@ -68,11 +68,12 @@ bool MediaType::get_media_type(const std::string &interface_name,
     media_type  = ieee1905_1::eMediaType::UNKNOWN_MEDIA;
 
     if (ieee1905_1::eMediaTypeGroup::IEEE_802_3 == media_type_group) {
-        uint32_t speed;
-        if (net::network_utils::linux_iface_get_speed(interface_name, speed)) {
-            if (SPEED_100 == speed) {
+        uint32_t link_speed;
+        uint32_t max_speed;
+        if (net::network_utils::linux_iface_get_speed(interface_name, link_speed, max_speed)) {
+            if (SPEED_100 == max_speed) {
                 media_type = ieee1905_1::eMediaType::IEEE_802_3U_FAST_ETHERNET;
-            } else if (SPEED_1000 <= speed) {
+            } else if (SPEED_1000 <= max_speed) {
                 media_type = ieee1905_1::eMediaType::IEEE_802_3AB_GIGABIT_ETHERNET;
             }
         }
