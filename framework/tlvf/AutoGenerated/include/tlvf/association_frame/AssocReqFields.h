@@ -26,7 +26,6 @@
 
 namespace assoc_frame {
 
-class cSupportedChannels;
 class cRSN;
 class cSupportedOpClasses;
 class cSupportRates;
@@ -66,30 +65,6 @@ class cSSID : public BaseClass
         char* m_ssid = nullptr;
         size_t m_ssid_idx__ = 0;
         int m_lock_order_counter__ = 0;
-};
-
-class cSupportedChannels : public BaseClass
-{
-    public:
-        cSupportedChannels(uint8_t* buff, size_t buff_len, bool parse = false);
-        explicit cSupportedChannels(std::shared_ptr<BaseClass> base, bool parse = false);
-        ~cSupportedChannels();
-
-        eElementID& type();
-        const uint8_t& length();
-        //First channel number
-        uint8_t& first_ch_num();
-        uint8_t& channels_number();
-        void class_swap() override;
-        bool finalize() override;
-        static size_t get_initial_size();
-
-    private:
-        bool init();
-        eElementID* m_type = nullptr;
-        uint8_t* m_length = nullptr;
-        uint8_t* m_first_ch_num = nullptr;
-        uint8_t* m_channels_number = nullptr;
 };
 
 class cRSN : public BaseClass
