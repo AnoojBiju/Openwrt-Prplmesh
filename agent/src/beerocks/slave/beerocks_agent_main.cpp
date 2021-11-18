@@ -152,7 +152,7 @@ static std::string get_sta_iface_from_hostap_iface(const std::string &hostap_ifa
 }
 
 static void fill_son_slave_config(const beerocks::config_file::sConfigSlave &beerocks_slave_conf,
-                                  son::slave_thread::sAgentConfig &agent_conf,
+                                  beerocks::slave_thread::sAgentConfig &agent_conf,
                                   const std::unordered_map<int, std::string> &interfaces_map)
 {
     agent_conf.temp_path = beerocks_slave_conf.temp_path;
@@ -273,7 +273,7 @@ static int system_hang_test(const beerocks::config_file::sConfigSlave &beerocks_
     return 0;
 }
 
-static std::shared_ptr<son::slave_thread>
+static std::shared_ptr<beerocks::slave_thread>
 start_agent_thread(const std::unordered_map<int, std::string> &interfaces_map,
                    const beerocks::config_file::sConfigSlave &beerocks_slave_conf, int argc,
                    char *argv[])
@@ -288,12 +288,12 @@ start_agent_thread(const std::unordered_map<int, std::string> &interfaces_map,
     }
     g_loggers.push_back(logger);
 
-    son::slave_thread::sAgentConfig agent_conf;
+    beerocks::slave_thread::sAgentConfig agent_conf;
     fill_son_slave_config(beerocks_slave_conf, agent_conf, interfaces_map);
 
-    auto son_slave = std::make_shared<son::slave_thread>(agent_conf, *logger);
+    auto son_slave = std::make_shared<beerocks::slave_thread>(agent_conf, *logger);
     if (!son_slave) {
-        CLOG(ERROR, logger->get_logger_id()) << "son::slave_thread allocating has failed!";
+        CLOG(ERROR, logger->get_logger_id()) << "beerocks::slave_thread allocating has failed!";
         return nullptr;
     }
 

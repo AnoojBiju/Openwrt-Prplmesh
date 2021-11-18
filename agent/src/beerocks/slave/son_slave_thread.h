@@ -39,10 +39,8 @@ namespace beerocks {
 namespace bpl {
 enum class eErrorCode;
 }
-} // namespace beerocks
 
-namespace son {
-class slave_thread final : public beerocks::EventLoopThread {
+class slave_thread final : public EventLoopThread {
 
 public:
     struct sAgentConfig {
@@ -60,7 +58,7 @@ public:
             std::string backhaul_wireless_iface;
             int hostap_ant_gain;
             bool enable_repeater_mode;
-            beerocks::eIfaceType hostap_iface_type;
+            eIfaceType hostap_iface_type;
 
             // This parameter does not exist on the configuration file.
             // Need to check if it still needded. Meanwhile keep it. PPM-1550.
@@ -81,8 +79,8 @@ public:
         uint8_t backhaul_channel;
         uint8_t backhaul_is_wireless;
         uint8_t backhaul_iface_type;
-        beerocks::net::sScanResult
-            backhaul_scan_measurement_list[beerocks::message::BACKHAUL_SCAN_MEASUREMENT_MAX_LENGTH];
+        net::sScanResult
+            backhaul_scan_measurement_list[message::BACKHAUL_SCAN_MEASUREMENT_MAX_LENGTH];
     } sSlaveBackhaulParams;
 
     enum eSlaveState {
@@ -118,7 +116,7 @@ public:
         STATE_SSID_MISMATCH,
     };
 
-    slave_thread(sAgentConfig conf, beerocks::logging &logger_);
+    slave_thread(sAgentConfig conf, logging &logger_);
     virtual ~slave_thread();
 
     /**
@@ -216,16 +214,15 @@ private:
      */
     void handle_client_disconnected(int fd);
 
-    bool handle_cmdu_control_message(int fd,
-                                     std::shared_ptr<beerocks::beerocks_header> beerocks_header);
-    bool handle_cmdu_backhaul_manager_message(
-        int fd, std::shared_ptr<beerocks::beerocks_header> beerocks_header);
-    bool handle_cmdu_platform_manager_message(
-        int fd, std::shared_ptr<beerocks::beerocks_header> beerocks_header);
+    bool handle_cmdu_control_message(int fd, std::shared_ptr<beerocks_header> beerocks_header);
+    bool handle_cmdu_backhaul_manager_message(int fd,
+                                              std::shared_ptr<beerocks_header> beerocks_header);
+    bool handle_cmdu_platform_manager_message(int fd,
+                                              std::shared_ptr<beerocks_header> beerocks_header);
     bool handle_cmdu_ap_manager_message(const std::string &fronthaul_iface, int fd,
-                                        std::shared_ptr<beerocks::beerocks_header> beerocks_header);
+                                        std::shared_ptr<beerocks_header> beerocks_header);
     bool handle_cmdu_monitor_message(const std::string &fronthaul_iface, int fd,
-                                     std::shared_ptr<beerocks::beerocks_header> beerocks_header);
+                                     std::shared_ptr<beerocks_header> beerocks_header);
     bool handle_cmdu_control_ieee1905_1_message(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_cmdu_ap_manager_ieee1905_1_message(const std::string &fronthaul_iface, int fd,
                                                    ieee1905_1::CmduMessageRx &cmdu_rx);
@@ -240,7 +237,7 @@ private:
     void fronthaul_start(const std::string &fronthaul_iface);
     void fronthaul_stop(const std::string &fronthaul_iface);
     void log_son_config(const std::string &fronthaul_iface);
-    void platform_notify_error(beerocks::bpl::eErrorCode code, const std::string &error_data);
+    void platform_notify_error(bpl::eErrorCode code, const std::string &error_data);
     bool monitor_heartbeat_check(const std::string &fronthaul_iface);
     bool ap_manager_heartbeat_check(const std::string &fronthaul_iface);
 
@@ -258,7 +255,7 @@ private:
     /**
      * Buffer to hold CMDU to be transmitted.
      */
-    uint8_t m_tx_buffer[beerocks::message::MESSAGE_BUFFER_LENGTH];
+    uint8_t m_tx_buffer[message::MESSAGE_BUFFER_LENGTH];
 
     /**
      * CMDU to be transmitted.
@@ -268,34 +265,39 @@ private:
     /**
      * Timer manager to help using application timers.
      */
-    std::shared_ptr<beerocks::TimerManager> m_timer_manager;
+    std::shared_ptr<TimerManager> m_timer_manager;
 
     /**
      * File descriptor of the timer to run the Finite State Machine.
      */
-    int m_fsm_timer = beerocks::net::FileDescriptor::invalid_descriptor;
+    int m_fsm_timer = net::FileDescriptor::invalid_descriptor;
+
+    /**
+     * File descriptor of the timer to run internal tasks periodically.
+     */
+    int m_tasks_timer = net::FileDescriptor::invalid_descriptor;
 
     /**
      * Factory to create broker client instances connected to broker server.
      * Broker client instances are used to exchange CMDU messages with remote processes running in
      * other devices in the network via the broker server running in the transport process.
      */
-    std::unique_ptr<beerocks::btl::BrokerClientFactory> m_broker_client_factory;
+    std::unique_ptr<btl::BrokerClientFactory> m_broker_client_factory;
 
     /**
      * Factory to create CMDU client instances connected to CMDU server running in platform manager.
      */
-    std::unique_ptr<beerocks::CmduClientFactory> m_platform_manager_cmdu_client_factory;
+    std::unique_ptr<CmduClientFactory> m_platform_manager_cmdu_client_factory;
 
     /**
      * Factory to create CMDU client instances connected to CMDU server running in backhaul manager.
      */
-    std::unique_ptr<beerocks::CmduClientFactory> m_backhaul_manager_cmdu_client_factory;
+    std::unique_ptr<CmduClientFactory> m_backhaul_manager_cmdu_client_factory;
 
     /**
      * CMDU server address used by CmduServer `m_cmdu_server`.
      */
-    std::shared_ptr<beerocks::net::UdsAddress> m_cmdu_server_uds_address;
+    std::shared_ptr<net::UdsAddress> m_cmdu_server_uds_address;
 
     /**
      * @note There is a difference in the use of a client socket the Agent holds to another server
@@ -310,26 +312,26 @@ private:
     /**
      * CMDU server to exchange CMDU messages with clients through socket connections.
      */
-    std::unique_ptr<beerocks::CmduServer> m_cmdu_server;
+    std::unique_ptr<CmduServer> m_cmdu_server;
 
     /**
      * Broker client to exchange CMDU messages with broker server running in transport process.
      */
-    std::unique_ptr<beerocks::btl::BrokerClient> m_broker_client;
+    std::unique_ptr<btl::BrokerClient> m_broker_client;
 
     /**
      * CMDU client connected to the the CMDU server running in platform manager.
      * This object is dynamically created using the CMDU client factory for the platform manager
      * provided in class constructor.
      */
-    std::unique_ptr<beerocks::CmduClient> m_platform_manager_client;
+    std::unique_ptr<CmduClient> m_platform_manager_client;
 
     /**
      * CMDU client connected to the the CMDU server running in backhaul manager.
      * This object is dynamically created using the CMDU client factory for the backhaul manager
      * provided in class constructor.
      */
-    std::unique_ptr<beerocks::CmduClient> m_backhaul_manager_client;
+    std::unique_ptr<CmduClient> m_backhaul_manager_client;
 
     bool m_is_backhaul_disconnected = false;
     int m_agent_resets_counter      = 0;
@@ -350,14 +352,14 @@ private:
         eSlaveState slave_state;
         std::chrono::steady_clock::time_point slave_state_timer;
 
-        int monitor_fd    = beerocks::net::FileDescriptor::invalid_descriptor;
-        int ap_manager_fd = beerocks::net::FileDescriptor::invalid_descriptor;
+        int monitor_fd    = net::FileDescriptor::invalid_descriptor;
+        int ap_manager_fd = net::FileDescriptor::invalid_descriptor;
         std::chrono::steady_clock::time_point monitor_last_seen;
         std::chrono::steady_clock::time_point ap_manager_last_seen;
         int monitor_retries_counter    = 0;
         int ap_manager_retries_counter = 0;
 
-        int last_reported_backhaul_rssi = beerocks::RSSI_INVALID;
+        int last_reported_backhaul_rssi = RSSI_INVALID;
 
         std::unique_ptr<mapf::encryption::diffie_hellman> dh = nullptr;
         //copy of M1 message used for authentication
@@ -437,7 +439,7 @@ private:
 
     sAgentConfig config;
 
-    beerocks::logging &logger;
+    logging &logger;
     std::string master_version;
 
     // Encryption support - move to common library
@@ -450,11 +452,10 @@ private:
                                      uint8_t authkey[32]);
 
     bool parse_intel_join_response(const std::string &fronthaul_iface,
-                                   beerocks::beerocks_header &beerocks_header);
+                                   beerocks_header &beerocks_header);
     bool parse_non_intel_join_response(const std::string &fronthaul_iface);
     bool handle_autoconfiguration_wsc(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_autoconfiguration_renew(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool autoconfig_wsc_add_m1(const std::string &fronthaul_iface);
     bool send_operating_channel_report(const std::string &fronthaul_iface);
     bool handle_ap_metrics_query(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_monitor_ap_metrics_response(const std::string &fronthaul_iface, int fd,
@@ -467,8 +468,7 @@ private:
                                                     ieee1905_1::CmduMessageRx &cmdu_rx,
                                                     int &power_limit);
     bool channel_selection_current_channel_restricted(const std::string &fronthaul_iface);
-    beerocks::message::sWifiChannel
-    channel_selection_select_channel(const std::string &fronthaul_iface);
+    message::sWifiChannel channel_selection_select_channel(const std::string &fronthaul_iface);
     bool handle_multi_ap_policy_config_request(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_client_association_request(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_1905_higher_layer_data_message(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
@@ -568,8 +568,7 @@ private:
      * @return NON_OPERABLE if channel is restricted, channel preference otherwise.
      */
     wfa_map::cPreferenceOperatingClasses::ePreference
-    get_channel_preference(beerocks::message::sWifiChannel channel,
-                           const sChannelPreference &preference,
+    get_channel_preference(message::sWifiChannel channel, const sChannelPreference &preference,
                            const std::set<uint8_t> &preference_channels_list);
 
     /**
@@ -581,6 +580,6 @@ private:
     bool update_vaps_info(const std::string &iface, const beerocks_message::sVapInfo vaps[]);
 };
 
-} // namespace son
+} // namespace beerocks
 
 #endif
