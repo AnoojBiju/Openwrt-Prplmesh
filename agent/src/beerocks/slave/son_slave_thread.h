@@ -99,21 +99,9 @@ public:
         STATE_SEND_BACKHAUL_MANAGER_ENABLE,
         STATE_WAIT_FOR_BACKHAUL_MANAGER_CONNECTED_NOTIFICATION,
         STATE_BACKHAUL_MANAGER_CONNECTED,
-        STATE_STOPPED,
-
-        // This state is the last common state. It means the from now each radio will have a state
-        // of its own, specified under "Radio Specific" down below.
-        STATE_RADIO_SPECIFIC_FSM,
-
-        // Radio Specific
-        STATE_WAIT_BEFORE_JOIN_MASTER,
-        STATE_JOIN_MASTER,
-        STATE_WAIT_FOR_JOINED_RESPONSE,
-        STATE_UPDATE_MONITOR_SON_CONFIG,
-        STATE_PRE_OPERATIONAL,
+        STATE_WAIT_FOR_AUTO_CONFIGURATION_COMPLETE,
         STATE_OPERATIONAL,
-        STATE_VERSION_MISMATCH,
-        STATE_SSID_MISMATCH,
+        STATE_STOPPED,
     };
 
     slave_thread(sAgentConfig conf, logging &logger_);
@@ -230,7 +218,6 @@ private:
                                                 ieee1905_1::CmduMessageRx &cmdu_rx);
 
     bool fsm_all();
-    bool slave_fsm(const std::string &fronthaul_iface);
     bool agent_fsm();
     void agent_reset();
     void stop_slave_thread();
@@ -342,15 +329,13 @@ private:
     std::chrono::steady_clock::time_point m_agent_state_timer_sec =
         std::chrono::steady_clock::time_point::min();
 
+    bool m_stopped = false;
+
     struct sManagedRadio {
         beerocks_message::sSonConfig son_config;
         int stop_on_failure_attempts;
-        bool stopped                   = false;
         bool configuration_in_progress = false;
         bool autoconfiguration_completed;
-        //slave FSM //
-        eSlaveState slave_state;
-        std::chrono::steady_clock::time_point slave_state_timer;
 
         int monitor_fd    = net::FileDescriptor::invalid_descriptor;
         int ap_manager_fd = net::FileDescriptor::invalid_descriptor;

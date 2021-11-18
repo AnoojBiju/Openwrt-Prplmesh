@@ -296,15 +296,16 @@ void slave_thread::agent_reset()
 
         if (db->device_conf.stop_on_failure_attempts && !radio_manager.stop_on_failure_attempts) {
             LOG(ERROR) << "Reached to max stop on failure attempts!";
-            radio_manager.stopped = true;
+            m_stopped = true;
         }
 
-        if (radio_manager.stopped && m_agent_state != STATE_INIT) {
-            LOG(DEBUG) << "goto STATE_STOPPED";
-            m_agent_state = STATE_STOPPED;
-        }
         return true;
     });
+
+    if (m_stopped && m_agent_state != STATE_INIT) {
+        LOG(DEBUG) << "goto STATE_STOPPED";
+        m_agent_state = STATE_STOPPED;
+    }
 
     if (m_agent_state == STATE_STOPPED) {
         platform_notify_error(beerocks::bpl::eErrorCode::SLAVE_STOPPED, "");
@@ -625,16 +626,13 @@ bool slave_thread::fsm_all()
             !ap_manager_heartbeat_check(fronthaul_iface)) {
             agent_reset();
         }
-
-        if (!slave_fsm(fronthaul_iface)) {
-            return false;
-        }
-
         return true;
     };
 
-    // If the common state reached to state STATE_RADIO_SPECIFIC_FSM, then the radio fsm will run.
-    if (m_agent_state != eSlaveState::STATE_RADIO_SPECIFIC_FSM) {
+    // Running the FSM only if not on STATE_OPERATIONAL, to perform this state only once.
+    // The state will execute once from the state STATE_WAIT_FOR_AUTO_CONFIGURATION_COMPLETE once
+    // after the Agent is configured.
+    if (m_agent_state != eSlaveState::STATE_OPERATIONAL) {
         if (!agent_fsm()) {
             return false;
         }
@@ -841,7 +839,7 @@ bool slave_thread::handle_cmdu_control_message(int fd,
 
     auto &radio_manager = m_radio_managers[fronthaul_iface];
 
-    if (radio_manager.slave_state == STATE_STOPPED) {
+    if (m_agent_state == STATE_STOPPED) {
         return true;
     }
 
@@ -1537,11 +1535,8 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
 
         m_is_backhaul_disconnected = true;
 
-        m_radio_managers.do_on_each_radio_manager(
-            [&](sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
-                radio_manager.stopped |= bool(notification->stopped());
-                return true;
-            });
+        m_stopped |= bool(notification->stopped());
+
         agent_reset();
         break;
     }
@@ -4405,7 +4400,8 @@ bool slave_thread::agent_fsm()
     case STATE_BACKHAUL_MANAGER_CONNECTED: {
         LOG(TRACE) << "MASTER_CONNECTED";
 
-        m_agent_state = STATE_RADIO_SPECIFIC_FSM;
+        LOG(TRACE) << "goto STATE_WAIT_FOR_AUTO_CONFIGURATION_COMPLETE";
+        m_agent_state = STATE_WAIT_FOR_AUTO_CONFIGURATION_COMPLETE;
 
         auto db = AgentDB::get();
 
@@ -4459,21 +4455,23 @@ bool slave_thread::agent_fsm()
                 if (!radio) {
                     return false;
                 }
+    case STATE_WAIT_FOR_AUTO_CONFIGURATION_COMPLETE: {
+        auto db = AgentDB::get();
+        if (db->statuses.ap_autoconfiguration_completed) {
+            LOG(TRACE) << "goto STATE_OPERATIONAL";
+            m_agent_state = STATE_OPERATIONAL;
 
-                if (!db->device_conf.front_radio.config.at(fronthaul_iface).band_enabled) {
-                    LOG(TRACE) << "goto STATE_PRE_OPERATIONAL on disabled band radio "
-                               << fronthaul_iface;
-                    radio_manager.slave_state = STATE_PRE_OPERATIONAL;
-                    return true;
-                }
-
-                if (radio->front.zwdfs) {
-                    LOG(TRACE) << "goto STATE_PRE_OPERATIONAL on zwdfs " << fronthaul_iface;
-                    radio_manager.slave_state = STATE_PRE_OPERATIONAL;
-                    return true;
-                }
-                LOG(TRACE) << "goto STATE_JOIN_MASTER " << fronthaul_iface;
-                radio_manager.slave_state = STATE_JOIN_MASTER;
+            // Make sure OPERATIONAL state will be done right away.
+            return agent_fsm();
+        }
+        break;
+    }
+    case STATE_OPERATIONAL: {
+        LOG(TRACE) << "Agent is in STATE_OPERATIONAL";
+        m_radio_managers.do_on_each_radio_manager(
+            [&](sManagedRadio &radio_manager, const std::string &fronthaul_iface) -> bool {
+                auto db                                = AgentDB::get();
+                radio_manager.stop_on_failure_attempts = db->device_conf.stop_on_failure_attempts;
                 return true;
             });
         break;
@@ -5601,12 +5599,12 @@ bool slave_thread::parse_intel_join_response(const std::string &fronthaul_iface,
     if (joined_response->err_code() == beerocks::JOIN_RESP_VERSION_MISMATCH) {
         LOG(ERROR) << "Mismatch version! slave_version=" << std::string(BEEROCKS_VERSION)
                    << " master_version=" << master_version;
-        LOG(DEBUG) << "goto STATE_VERSION_MISMATCH";
-        radio_manager.slave_state = STATE_VERSION_MISMATCH;
+        LOG(DEBUG) << "goto STATE_STOPPED";
+        m_agent_state = STATE_STOPPED;
     } else if (joined_response->err_code() == beerocks::JOIN_RESP_SSID_MISMATCH) {
         LOG(ERROR) << "Mismatch SSID!";
-        LOG(DEBUG) << "goto STATE_SSID_MISMATCH";
-        radio_manager.slave_state = STATE_SSID_MISMATCH;
+        LOG(DEBUG) << "goto STATE_STOPPED";
+        m_agent_state = STATE_STOPPED;
     } else {
         // Send master version + slave version to platform manager
         auto notification = message_com::create_vs_message<
