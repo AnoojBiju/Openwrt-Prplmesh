@@ -59,9 +59,9 @@ typedef struct sStaVhtCapInfo {
     uint32_t rx_stbc : 3;
     uint32_t su_beamformer : 1;           // SU beamformer capable
     uint32_t su_beamformee : 1;           // SU beamformee capable
-    uint32_t beamformee_sts : 1;          // Beamformee STS capability
+    uint32_t beamformee_sts : 3;          // Beamformee STS capability
     uint32_t sound_dimensions : 3;        // Number of sounding dimensions
-    uint32_t mu_beamformer : 3;           // MU beamformer capable
+    uint32_t mu_beamformer : 1;           // MU beamformer capable
     uint32_t mu_beamformee : 1;           // MU beamformee capable
     uint32_t txop_ps : 1;                 // TXOP PS
     uint32_t htc_vht : 1;                 // +HTC VHT capable
@@ -79,9 +79,9 @@ typedef struct sStaVhtCapInfo {
     uint32_t htc_vht : 1;
     uint32_t txop_ps : 1;
     uint32_t mu_beamformee : 1;
-    uint32_t mu_beamformer : 3;
+    uint32_t mu_beamformer : 1;
     uint32_t sound_dimensions : 3;
-    uint32_t beamformee_sts : 1;
+    uint32_t beamformee_sts : 3;
     uint32_t su_beamformee : 1;
     uint32_t su_beamformer : 1;
     uint32_t rx_stbc : 3;
@@ -95,6 +95,28 @@ typedef struct sStaVhtCapInfo {
     void struct_swap() {}
     void struct_init() {}
 } __attribute__((packed)) sStaVhtCapInfo;
+
+typedef struct sSupportedVhtMcsSet {
+#if defined(__LITTLE_ENDIAN_BITFIELD)
+    uint64_t rx_mcs_map : 16;
+    uint64_t rx_highest_supp_long_gi_data_rate : 13;
+    uint64_t max_nsts_total : 3;
+    uint64_t tx_mcs_map : 16;
+    uint64_t tx_highest_supp_long_gi_data_rate : 13;
+    uint64_t extended_nss_bw_capable : 1;
+    uint64_t reserved : 2;
+#elif defined(__BIG_ENDIAN_BITFIELD)
+    uint64_t reserved : 2;
+    uint64_t extended_nss_bw_capable : 1;
+    uint64_t tx_highest_supp_long_gi_data_rate : 13;
+    uint64_t tx_mcs_map : 16;
+    uint64_t max_nsts_total : 3;
+    uint64_t rx_highest_supp_long_gi_data_rate : 13;
+    uint64_t rx_mcs_map : 16;
+#endif
+    void struct_swap() {}
+    void struct_init() {}
+} __attribute__((packed)) sSupportedVhtMcsSet;
 
 ////////////////////////////////////////////////
 // Capability Information field for non DMG STA

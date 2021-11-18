@@ -15,4 +15,4 @@ cStaVhtCapability:
     _type: uint8_t
   vht_cap_info: assoc_frame::sStaVhtCapInfo
   supported_vht_mcs:
-    _type: uint32_t
+    _type: assoc_frame::sSupportedVhtMcsSet
