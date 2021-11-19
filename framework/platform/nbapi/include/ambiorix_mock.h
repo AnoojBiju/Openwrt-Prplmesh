@@ -62,7 +62,7 @@ public:
     MOCK_METHOD(bool, set_current_time,
                 (const std::string &path_to_object, const std::string &object), (override));
     MOCK_METHOD(bool, read_param,
-                (const std::string &path_to_object, const char *object, uint64_t *param_val),
+                (const std::string &path_to_object, const std::string &object, uint64_t *param_val),
                 (override));
 };
 
