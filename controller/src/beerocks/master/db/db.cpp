@@ -6246,17 +6246,24 @@ bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, cons
     return true;
 }
 
-void db::dm_uint64_param_one_up(const std::string &obj_path, const char *param_name)
+bool db::dm_uint64_param_one_up(const std::string &obj_path, const std::string &param_name)
 {
     if (obj_path.empty()) {
         LOG(WARNING) << "Path to data model object is empty.";
-        return;
+        return false;
     }
 
     uint64_t ret_val;
 
-    m_ambiorix_datamodel->read_param(obj_path, param_name, &ret_val);
-    m_ambiorix_datamodel->set(obj_path, param_name, ret_val + 1);
+    if (!m_ambiorix_datamodel->read_param(obj_path, param_name, &ret_val)) {
+        LOG(WARNING) << "Failed to get " << obj_path << "." << param_name;
+        return false;
+    }
+    if (!m_ambiorix_datamodel->set(obj_path, param_name, ret_val + 1)) {
+        LOG(WARNING) << "Failed to increment " << obj_path << "." << param_name;
+        return false;
+    }
+    return true;
 }
 
 bool db::set_radio_metrics(const sMacAddr &radio_mac, uint8_t noise, uint8_t transmit,
