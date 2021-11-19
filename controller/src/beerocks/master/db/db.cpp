@@ -5908,6 +5908,12 @@ void db::dm_restore_steering_summary_stats(Station &station)
     m_ambiorix_datamodel->set(obj_path, "LastSteerTimeStamp", steer_summary.last_steer_ts);
 }
 
+void db::dm_increment_steer_summary_stats(const std::string &param_name)
+{
+    dm_uint64_param_one_up("Device.WiFi.DataElements.Network.MultiAPSteeringSummaryStats",
+                           param_name);
+}
+
 bool db::dm_add_failed_connection_event(const sMacAddr &sta_mac, const uint16_t reason_code,
                                         const uint16_t status_code)
 {
