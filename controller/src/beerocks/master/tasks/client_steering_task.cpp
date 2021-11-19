@@ -60,9 +60,13 @@ void client_steering_task::work()
             TASK_LOG(DEBUG) << "Target and original BSSIDs are the same:" << m_target_bssid
                             << ". Aborting steering task.";
             m_steer_try_performed = false;
-            (m_database.get_node_11v_capability(*station))
-                ? station->steering_summary_stats.btm_failures++
-                : station->steering_summary_stats.blacklist_failures++;
+            if (m_database.get_node_11v_capability(*station)) {
+                station->steering_summary_stats.btm_failures++;
+                m_database.dm_increment_steer_summary_stats("BTMFailures");
+            } else {
+                station->steering_summary_stats.blacklist_failures++;
+                m_database.dm_increment_steer_summary_stats("BlacklistFailures");
+            }
             finish();
             break;
         }
@@ -91,10 +95,13 @@ void client_steering_task::work()
         if (!m_steering_success && m_disassoc_imminent) {
             TASK_LOG(DEBUG) << "steering failed for " << m_sta_mac << " from " << m_original_bssid
                             << " to " << m_target_bssid;
-            (m_database.get_node_11v_capability(*client))
-                ? client->steering_summary_stats.btm_failures++
-                : client->steering_summary_stats.blacklist_failures++;
-
+            if (m_database.get_node_11v_capability(*client)) {
+                client->steering_summary_stats.btm_failures++;
+                m_database.dm_increment_steer_summary_stats("BTMFailures");
+            } else {
+                client->steering_summary_stats.blacklist_failures++;
+                m_database.dm_increment_steer_summary_stats("BlacklistFailures");
+            }
             /*
                  * might need to split this logic to high and low bands of 5GHz
                  * since some clients can support one but not the other
@@ -111,9 +118,13 @@ void client_steering_task::work()
                 m_database.update_node_failed_24ghz_steer_attempt(m_sta_mac);
             }
         } else {
-            (m_database.get_node_11v_capability(*client))
-                ? client->steering_summary_stats.btm_successes++
-                : client->steering_summary_stats.blacklist_successes++;
+            if (m_database.get_node_11v_capability(*client)) {
+                client->steering_summary_stats.btm_successes++;
+                m_database.dm_increment_steer_summary_stats("BTMSuccesses");
+            } else {
+                client->steering_summary_stats.blacklist_successes++;
+                m_database.dm_increment_steer_summary_stats("BlacklistSuccesses");
+            }
         }
 
         if (!dm_set_steer_event_params(m_database.dm_add_steer_event())) {
@@ -423,6 +434,7 @@ void client_steering_task::handle_event(int event_type, void *obj)
             return;
         }
         m_database.dm_uint64_param_one_up(bss_path, "BTMQueryResponses");
+        m_database.dm_increment_steer_summary_stats("BTMQueryResponses");
     }
 }
 
@@ -548,7 +560,9 @@ void client_steering_task::dm_update_multi_ap_steering_params(bool sta_11v_capab
     if (m_steering_type.find("BTM") != std::string::npos ||
         (m_steering_type.empty() && sta_11v_capable)) {
         m_database.dm_uint64_param_one_up(bss_path, "BTMAttempts");
+        m_database.dm_increment_steer_summary_stats("BTMAttempts");
         m_database.dm_uint64_param_one_up(bss_path, "BlacklistAttempts");
+        m_database.dm_increment_steer_summary_stats("BlacklistAttempts");
     }
 }
 
@@ -594,8 +608,10 @@ void client_steering_task::update_sta_steer_attempt_stats(Station &station)
                      station.steering_summary_stats.last_steer_ts);
     if (m_database.get_node_11v_capability(station)) {
         station.steering_summary_stats.btm_attempts++;
+        m_database.dm_increment_steer_summary_stats("BTMAttempts");
     } else {
         station.steering_summary_stats.blacklist_attempts++;
+        m_database.dm_increment_steer_summary_stats("BlacklistAttempts");
     }
 }
 
