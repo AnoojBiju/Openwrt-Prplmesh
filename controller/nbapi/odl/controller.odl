@@ -138,8 +138,18 @@
                         %in %mandatory string station_mac,
                         %in %mandatory string target_bssid
                     );
-                }
 
+                    %read-only object MultiAPSteeringSummaryStats {
+                        %read-only uint64 NoCandidateAPFailures = 0;
+                        %read-only uint64 BlacklistAttempts = 0;
+                        %read-only uint64 BlacklistSuccesses = 0;
+                        %read-only uint64 BlacklistFailures = 0;
+                        %read-only uint64 BTMAttempts = 0;
+                        %read-only uint64 BTMSuccesses = 0;
+                        %read-only uint64 BTMFailures = 0;
+                        %read-only uint64 BTMQueryResponses = 0;
+                    }
+                }
                 %persistent %read-only object SteerEvent[] {
                     counted with NumberSteerEvents;
                     %persistent %read-only string DeviceId = "00:00:00:00:00:00";
