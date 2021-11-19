@@ -881,12 +881,86 @@ bool network_utils::linux_iface_is_up_and_running(const std::string &iface)
 
 #define ETHTOOL_LINK_MODE_MASK_MAX_KERNEL_NU32 (SCHAR_MAX)
 
-bool network_utils::linux_iface_get_speed(const std::string &iface, uint32_t &speed)
+static bool linux_iface_get_max_speed_from_link_modes(const uint32_t *link_mode_flags,
+                                                      uint32_t link_mode_flags_nwords,
+                                                      uint32_t &max_speed)
+{
+    if (!link_mode_flags || link_mode_flags_nwords < 1) {
+        return false;
+    }
+
+    /*
+     * map speed to common legacy ethtool link mode masks
+     */
+    const std::map<uint32_t, std::vector<uint32_t>, std::greater<uint32_t>>
+        legacy_link_modes_to_speed_mapping = {
+            {SPEED_10,
+             {
+                 ADVERTISED_10baseT_Half,
+                 ADVERTISED_10baseT_Full,
+             }},
+            {SPEED_100,
+             {
+                 ADVERTISED_100baseT_Half,
+                 ADVERTISED_100baseT_Full,
+             }},
+            {SPEED_1000,
+             {
+                 ADVERTISED_1000baseT_Half,
+                 ADVERTISED_1000baseT_Full,
+                 ADVERTISED_1000baseKX_Full,
+             }},
+            {SPEED_2500,
+             {
+                 ADVERTISED_2500baseX_Full,
+             }},
+            {SPEED_10000,
+             {
+                 ADVERTISED_10000baseT_Full,
+                 ADVERTISED_10000baseKX4_Full,
+                 ADVERTISED_10000baseKR_Full,
+                 ADVERTISED_10000baseR_FEC,
+             }},
+            {SPEED_20000,
+             {
+                 ADVERTISED_20000baseMLD2_Full,
+                 ADVERTISED_20000baseKR2_Full,
+             }},
+            {SPEED_40000,
+             {
+                 ADVERTISED_40000baseKR4_Full,
+                 ADVERTISED_40000baseCR4_Full,
+                 ADVERTISED_40000baseSR4_Full,
+                 ADVERTISED_40000baseLR4_Full,
+             }},
+            {SPEED_56000,
+             {
+                 ADVERTISED_56000baseKR4_Full,
+                 ADVERTISED_56000baseCR4_Full,
+                 ADVERTISED_56000baseSR4_Full,
+                 ADVERTISED_56000baseLR4_Full,
+             }},
+        };
+    for (const auto &link_mode_speed : legacy_link_modes_to_speed_mapping) {
+        for (const auto &mask : link_mode_speed.second) {
+            if (link_mode_flags[0] & mask) {
+                max_speed = link_mode_speed.first;
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+bool network_utils::linux_iface_get_speed(const std::string &iface, uint32_t &link_speed,
+                                          uint32_t &max_advertised_speed)
 {
     int sock;
     bool result = false;
 
-    speed = SPEED_UNKNOWN;
+    link_speed           = SPEED_UNKNOWN;
+    max_advertised_speed = link_speed;
 
     sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
     if (sock < 0) {
@@ -925,8 +999,22 @@ bool network_utils::linux_iface_get_speed(const std::string &iface, uint32_t &sp
                 ecmd.req.cmd                    = ETHTOOL_GLINKSETTINGS;
                 ecmd.req.link_mode_masks_nwords = -ecmd.req.link_mode_masks_nwords;
                 rc                              = ioctl(sock, SIOCETHTOOL, &ifr);
-                if (0 == rc) {
-                    speed  = ecmd.req.speed;
+                if ((0 != rc) || (ecmd.req.link_mode_masks_nwords <= 0) ||
+                    (ecmd.req.cmd != ETHTOOL_GLINKSETTINGS)) {
+                    LOG(ERROR) << "ETHTOOL_GLINKSETTINGS request failed";
+                } else {
+                    link_speed = ecmd.req.speed;
+
+                    /* layout of link_mode_data fields:
+                     * __u32 map_supported[link_mode_masks_nwords];
+                     * __u32 map_advertising[link_mode_masks_nwords];
+                     * __u32 map_lp_advertising[link_mode_masks_nwords];
+                     */
+                    max_advertised_speed = link_speed;
+                    const __u32 *map_advertising =
+                        &ecmd.link_mode_data[ecmd.req.link_mode_masks_nwords];
+                    linux_iface_get_max_speed_from_link_modes(
+                        map_advertising, ecmd.req.link_mode_masks_nwords, max_advertised_speed);
                     result = true;
                 }
             }
@@ -951,7 +1039,10 @@ bool network_utils::linux_iface_get_speed(const std::string &iface, uint32_t &sp
 
             rc = ioctl(sock, SIOCETHTOOL, &ifr);
             if (0 == rc) {
-                speed  = ethtool_cmd_speed(&ecmd_legacy);
+                link_speed           = ethtool_cmd_speed(&ecmd_legacy);
+                max_advertised_speed = link_speed;
+                linux_iface_get_max_speed_from_link_modes(&ecmd_legacy.advertising, 1,
+                                                          max_advertised_speed);
                 result = true;
             }
         }
@@ -962,6 +1053,9 @@ bool network_utils::linux_iface_get_speed(const std::string &iface, uint32_t &sp
 
         close(sock);
     }
+
+    LOG(DEBUG) << "iface " << iface << " has speed current: " << link_speed
+               << " max: " << max_advertised_speed << " result: " << result;
 
     return result;
 }
