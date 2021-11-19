@@ -54,7 +54,7 @@ void client_steering_task::work()
 
         m_original_bssid = m_database.get_node_parent(m_sta_mac);
         m_ssid_name      = m_database.get_hostap_ssid(tlvf::mac_from_string(m_original_bssid));
-        update_steer_summary_stats(*station);
+        update_sta_steer_attempt_stats(*station);
 
         if (m_original_bssid == m_target_bssid) {
             TASK_LOG(DEBUG) << "Target and original BSSIDs are the same:" << m_target_bssid
@@ -581,7 +581,7 @@ bool client_steering_task::add_sta_steer_event_to_db()
     return m_database.add_sta_steering_event(tlvf::mac_from_string(m_sta_mac), steer_sta_event);
 }
 
-void client_steering_task::update_steer_summary_stats(Station &station)
+void client_steering_task::update_sta_steer_attempt_stats(Station &station)
 {
     auto ambiorix_dm = m_database.get_ambiorix_obj();
 
