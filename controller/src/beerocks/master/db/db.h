@@ -745,6 +745,13 @@ public:
     void dm_restore_steering_summary_stats(Station &station);
 
     /**
+     * @brief Update global steering summary statistics for one parameter
+     * 
+     * @param param_name Name of parameter, value of which will be increased by one.
+     */
+    void dm_increment_steer_summary_stats(const std::string &param_name);
+
+    /**
      * @brief Adds or updates instance of Neighbor inside Interface object.
      *
      * Path: Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.Neighbor.{i}
