@@ -12,6 +12,7 @@
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/sockets.h>
 #include <bcl/son/son_wireless_utils.h>
+#include <beerocks/tlvf/beerocks_message.h>
 #include <bpl/bpl_cfg.h>
 #include <bpl/bpl_db.h>
 #include <cmath>
@@ -1912,9 +1913,10 @@ bool db::add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t
     auto class_bw           = wireless_utils::operating_class_to_bandwidth(operating_class);
     // Update current channels
     for (auto c : channel_set) {
-        auto channel = std::find_if(
-            supported_channels.begin(), supported_channels.end(),
-            [&c](const beerocks::message::sWifiChannel &ch) { return ch.channel == c; });
+        auto channel = std::find_if(supported_channels.begin(), supported_channels.end(),
+                                    [&c, &class_bw](const beerocks::message::sWifiChannel &ch) {
+                                        return ch.channel == c && ch.channel_bandwidth == class_bw;
+                                    });
         if (channel != supported_channels.end()) {
             channel->tx_pow            = tx_power;
             channel->channel_bandwidth = class_bw;
@@ -2997,35 +2999,43 @@ const std::list<sChannelScanResults> &db::get_channel_scan_results(const sMacAdd
     return (single_scan ? radio->single_scan_results : radio->continuous_scan_results);
 }
 
-bool db::has_channel_report_record(const std::string &ISO_8601_timestamp)
+bool db::has_channel_report_record(const sMacAddr &mac, const std::string &ISO_8601_timestamp)
 {
-    return m_channel_scan_report_records.find(ISO_8601_timestamp) !=
-           m_channel_scan_report_records.end();
-}
-
-int db::get_channel_report_record_mid(const std::string &ISO_8601_timestamp)
-{
-    auto report_record_iter = m_channel_scan_report_records.find(ISO_8601_timestamp);
-    if (report_record_iter == m_channel_scan_report_records.end()) {
-        return -1;
-    }
-    return report_record_iter->second;
-}
-
-bool db::set_channel_report_record_mid(const std::string &ISO_8601_timestamp, int mid)
-{
-    if (mid) {
-        LOG(ERROR) << "Cannot associate mid = 0";
+    auto radio = get_hostap(mac);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << mac;
         return false;
     }
-    m_channel_scan_report_records[ISO_8601_timestamp] = mid;
-    return true;
+    return radio->channel_scan_report_records.find(ISO_8601_timestamp) !=
+           radio->channel_scan_report_records.end();
 }
 
-bool db::clear_channel_report_record(const std::string &ISO_8601_timestamp)
+bool db::clear_channel_report_record(const sMacAddr &mac, const std::string &ISO_8601_timestamp)
 {
+    auto radio = get_hostap(mac);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << mac;
+        return false;
+    }
     // unordered_map::erase(const key_type& k) returns the number of elements erased
-    return m_channel_scan_report_records.erase(ISO_8601_timestamp) == 1;
+    return (radio->channel_scan_report_records.erase(ISO_8601_timestamp) == 1);
+}
+
+bool db::get_channel_report_record(const sMacAddr &mac, const std::string &ISO_8601_timestamp,
+                                   node::radio::channel_scan_report_index &report_index)
+{
+    auto radio = get_hostap(mac);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << mac;
+        return false;
+    }
+    const auto &report_record_iter = radio->channel_scan_report_records.find(ISO_8601_timestamp);
+    if (report_record_iter == radio->channel_scan_report_records.end()) {
+        LOG(ERROR) << "unable to get record at timestamp: " << ISO_8601_timestamp;
+        return false;
+    }
+    report_index = report_record_iter->second;
+    return true;
 }
 
 bool db::get_pool_of_all_supported_channels(std::unordered_set<uint8_t> &channel_pool_set,
@@ -3038,7 +3048,15 @@ bool db::get_pool_of_all_supported_channels(std::unordered_set<uint8_t> &channel
         LOG(ERROR) << "Supported channel list is empty, failed to set channel pool!";
         return false;
     }
-    std::transform(all_channels.begin(), all_channels.end(),
+    // Take only the 20MHz channels
+    std::vector<beerocks::message::sWifiChannel> subset_20MHz_channels;
+    std::copy_if(all_channels.begin(), all_channels.end(),
+                 std::back_inserter(subset_20MHz_channels),
+                 [](const beerocks::message::sWifiChannel &c) -> bool {
+                     return c.channel_bandwidth == eWiFiBandwidth::BANDWIDTH_20;
+                 });
+    // Convert from beerocks::message::sWifiChannel to uint8_t
+    std::transform(subset_20MHz_channels.begin(), subset_20MHz_channels.end(),
                    std::inserter(channel_pool_set, channel_pool_set.end()),
                    [](const beerocks::message::sWifiChannel &c) -> uint8_t { return c.channel; });
     return true;
@@ -3047,7 +3065,8 @@ bool db::get_pool_of_all_supported_channels(std::unordered_set<uint8_t> &channel
 bool db::add_channel_report(const sMacAddr &RUID, const uint8_t &operating_class,
                             const uint8_t &channel,
                             const std::vector<wfa_map::cNeighbors> &neighbors, uint8_t avg_noise,
-                            uint8_t avg_utilization, bool override_existing_data)
+                            uint8_t avg_utilization, const std::string &ISO_8601_timestamp,
+                            bool override_existing_data)
 {
     auto radio = get_hostap(RUID);
     if (!radio) {
@@ -3062,11 +3081,124 @@ bool db::add_channel_report(const sMacAddr &RUID, const uint8_t &operating_class
         // Clear neighbors if Override flag is set.
         db_report.neighbors.clear();
     }
-    std::copy(neighbors.begin(), neighbors.end(), std::back_inserter(db_report.neighbors));
-    db_report.noise       = avg_noise;
-    db_report.utilization = avg_utilization;
+
+    auto get_bandwidth_from_str =
+        [](const std::string &bw) -> beerocks_message::eChannelScanResultChannelBandwidth {
+        if (bw == "20Mz") {
+            return beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_20MHz;
+        } else if (bw == "40Mz") {
+            return beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_40MHz;
+        } else if (bw == "80Mz") {
+            return beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_80MHz;
+        } else if (bw == "80+80Mz") {
+            return beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_80_80;
+        } else if (bw == "160Mz") {
+            return beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_160MHz;
+        } else {
+            return beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_NA;
+        }
+    };
+
+    for (auto src_neighbor : neighbors) {
+        sChannelScanResults neighbor_result = {0};
+
+        neighbor_result.channel = channel;
+
+        neighbor_result.bssid = src_neighbor.bssid();
+
+        const auto neighbor_ssid_str =
+            (src_neighbor.ssid_length() > 0 ? src_neighbor.ssid_str() : "") + "\0";
+        neighbor_ssid_str.copy(neighbor_result.ssid, beerocks::message::WIFI_SSID_MAX_LENGTH);
+
+        neighbor_result.signal_strength_dBm = src_neighbor.signal_strength();
+
+        neighbor_result.operating_channel_bandwidth =
+            get_bandwidth_from_str(src_neighbor.channels_bw_list_str());
+
+        neighbor_result.noise_dBm = avg_noise;
+
+        neighbor_result.channel_utilization = avg_utilization;
+
+        db_report.neighbors.push_back(neighbor_result);
+    }
+
+    // Find any existing report key to channel scan report record
+    const auto &report_record_iter = radio->channel_scan_report_records.find(ISO_8601_timestamp);
+    if (report_record_iter == radio->channel_scan_report_records.end()) {
+        // If record does not exist, create a new one.
+        radio->channel_scan_report_records.emplace(
+            ISO_8601_timestamp,
+            std::set<node::radio::channel_scan_report::channel_scan_report_key>{});
+    }
+    // Insert the key into the record
+    radio->channel_scan_report_records[ISO_8601_timestamp].insert(key);
 
     return true;
+}
+
+const std::vector<sChannelScanResults>
+db::get_channel_scan_report(const sMacAddr &RUID,
+                            const node::radio::channel_scan_report_index &index)
+{
+    static std::vector<sChannelScanResults> empty_report;
+
+    auto radio = get_hostap(RUID);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << RUID;
+        return empty_report;
+    }
+
+    std::vector<sChannelScanResults> final_report;
+
+    for (const auto &key : index) {
+        if (radio->scan_report.find(key) == radio->scan_report.end()) {
+            LOG(ERROR) << "Cannot find matching report for key: [" << key.first << ',' << key.second
+                       << "].";
+            continue;
+        }
+        auto report_neighbors = radio->scan_report[key].neighbors;
+        LOG(DEBUG) << "Adding " << report_neighbors.size() << " neighbors from key: [" << key.first
+                   << ',' << key.second << "].";
+        final_report.insert(final_report.end(), report_neighbors.begin(), report_neighbors.end());
+    }
+    return final_report;
+}
+
+const std::vector<sChannelScanResults>
+db::get_channel_scan_report(const sMacAddr &RUID, const std::string &ISO_8601_timestamp)
+{
+    static std::vector<sChannelScanResults> empty_report;
+    auto radio = get_hostap(RUID);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << RUID;
+        return empty_report;
+    }
+    const auto &report_record_iter = radio->channel_scan_report_records.find(ISO_8601_timestamp);
+    if (report_record_iter == radio->channel_scan_report_records.end()) {
+        LOG(ERROR) << "unable to get record at timestamp: " << ISO_8601_timestamp;
+        return empty_report;
+    }
+    return get_channel_scan_report(RUID, report_record_iter->second);
+}
+
+const std::vector<sChannelScanResults> db::get_channel_scan_report(const sMacAddr &RUID,
+                                                                   bool single_scan)
+{
+    static std::vector<sChannelScanResults> empty_report;
+    auto radio = get_hostap(RUID);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << RUID;
+        return empty_report;
+    }
+
+    node::radio::channel_scan_report_index index;
+    const auto &pool = get_channel_scan_pool(RUID, single_scan);
+    for (const auto &channel : pool) {
+        auto operating_class = wireless_utils::get_operating_class_by_channel(
+            beerocks::message::sWifiChannel(channel, eWiFiBandwidth::BANDWIDTH_20));
+        index.insert(std::make_pair(operating_class, channel));
+    }
+    return get_channel_scan_report(RUID, index);
 }
 
 static void dm_add_bss_neighbors(std::shared_ptr<beerocks::nbapi::Ambiorix> m_ambiorix_datamodel,

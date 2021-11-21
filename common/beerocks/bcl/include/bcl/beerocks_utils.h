@@ -18,6 +18,7 @@
 #include <string>
 #include <type_traits>
 #include <typeinfo>
+#include <unordered_set>
 
 namespace beerocks {
 class utils {
