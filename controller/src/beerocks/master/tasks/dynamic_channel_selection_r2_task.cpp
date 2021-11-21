@@ -8,6 +8,7 @@
 
 #include "dynamic_channel_selection_r2_task.h"
 #include "../son_actions.h"
+#include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
 #include <beerocks/tlvf/beerocks_message_1905_vs.h>
 #include <easylogging++.h>
@@ -72,8 +73,8 @@ void dynamic_channel_selection_r2_task::handle_event(int event_enum_value, void 
     case RECEIVED_CHANNEL_SCAN_REPORT: {
         auto scan_report_event = reinterpret_cast<const sScanReportEvent *>(event_obj);
         LOG(TRACE) << "Received RECEIVED_SCAN_RESULTS event from agent mac:"
-                   << scan_report_event->agent_mac << ", mid: " << std::hex
-                   << scan_report_event->mid;
+                   << scan_report_event->agent_mac
+                   << ", timestamp: " << scan_report_event->ISO_8601_timestamp;
 
         handle_scan_report_event(*scan_report_event);
         break;
@@ -247,6 +248,8 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
             agent.second.status = eAgentStatus::IDLE;
         };
 
+        std::set<node::radio::channel_scan_report::channel_scan_report_key> scan_report_index;
+
         // Helper lambda - Add a new radio to the channel scan request tlv.
         auto add_radio_to_channel_scan_request_tlv =
             [&](std::shared_ptr<wfa_map::tlvProfile2ChannelScanRequest> &channel_scan_request_tlv,
@@ -279,15 +282,40 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
                     return false;
                 }
 
+                auto print_pool =
+                    [](const std::unordered_set<uint8_t> &channel_pool) -> std::string {
+                    std::ostringstream oss;
+                    oss << "[ ";
+                    for (const auto &elem : channel_pool) {
+                        oss << int(elem) << " ";
+                    }
+                    oss << "]";
+                    return oss.str();
+                };
+                LOG(ERROR) << "Found channel pool: " << print_pool(current_channel_pool);
+
                 // Convert channels list to operating_class: channels list
                 std::unordered_map<uint8_t, std::set<uint8_t>> operating_class_to_classes_map;
 
                 for (auto const &ch : current_channel_pool) {
                     auto operating_class = wireless_utils::get_operating_class_by_channel(
-                        beerocks::message::sWifiChannel(
-                            ch, database.get_node_bw(tlvf::mac_to_string(radio_mac))));
+                        beerocks::message::sWifiChannel(ch,
+                                                        beerocks::eWiFiBandwidth::BANDWIDTH_20));
+                    // Check if channel has a valid operating class in a 20MHz band
+                    if (operating_class == 0) {
+                        // Skip unsupported channel
+                        continue;
+                    }
                     operating_class_to_classes_map[operating_class].insert(ch);
-                    LOG(INFO) << " => op_class:" << operating_class;
+                    // Add Operating-Class & Channel-Number pair to the scan report index.
+                    // This will be used later when handling the report back.
+                    scan_report_index.insert(std::make_pair(operating_class, ch));
+                    LOG(INFO) << "Setting channel: " << ch << " => op_class:" << operating_class;
+                }
+
+                if (operating_class_to_classes_map.empty()) {
+                    LOG(ERROR) << "Unable to send request with no Operating Classes";
+                    return false;
                 }
 
                 for (auto const &op_class : operating_class_to_classes_map) {
@@ -393,6 +421,16 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
                 success = false;
                 break;
             }
+
+            // Add the report index to the radio scan element.
+            // The index contains a set of [Operating-Class,Channel-Number] pairs.
+            // Later we will use the index to match an incoming report to its matching request.
+            if (radio_scan_request.second.is_single_scan) {
+                agent.second.single_radio_scans[radio_mac].scan_report_index = scan_report_index;
+            } else {
+                agent.second.continuous_radio_scans[radio_mac].scan_report_index =
+                    scan_report_index;
+            }
         }
         if (!success) {
             abort_active_scans_in_current_agent();
@@ -437,7 +475,7 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
                 // Get current scan request dwell time from DB
                 int32_t dwell_time_msec = database.get_channel_scan_dwell_time_msec(
                     radio_mac, radio_scan_request.second.is_single_scan);
-                if (dwell_time_msec <= 0) {
+                if (dwell_time_msec < 0) {
                     LOG(ERROR) << "invalid dwell_time=" << int(dwell_time_msec);
                     success = false;
                     break;
@@ -468,7 +506,6 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
         agent.second.status  = eAgentStatus::BUSY;
         agent.second.timeout = std::chrono::system_clock::now() +
                                std::chrono::seconds(CHANNEL_SCAN_REPORT_WAIT_TIME_SEC);
-        mid_to_agent_map[mid] = agent_mac;
         LOG(DEBUG) << "Triggered a scan for agent " << agent_mac;
     }
     return true;
@@ -529,24 +566,22 @@ bool dynamic_channel_selection_r2_task::handle_single_scan_request_event(
         // Add agent to the queue
         m_agents_status_map[ire_mac] = sAgentScanStatus();
     }
-
-    auto agent_it = m_agents_status_map.find(ire_mac);
-    if (agent_it != m_agents_status_map.end()) {
-        const auto &scan_it = m_agents_status_map[ire_mac].single_radio_scans.find(radio_mac);
-        if (scan_it != m_agents_status_map[ire_mac].single_radio_scans.cend()) {
-            return false;
-        }
+    const auto &scan_it = m_agents_status_map[ire_mac].single_radio_scans.find(radio_mac);
+    if (scan_it != m_agents_status_map[ire_mac].single_radio_scans.cend()) {
+        LOG(WARNING) << "A single scan on agent: " << ire_mac << " radio: " << radio_mac
+                     << " is already pending.";
+        return false;
     }
 
     const auto &pool = database.get_channel_scan_pool(scan_request_event.radio_mac, true);
     if (pool.empty()) {
-        LOG(TRACE) << "continuous_scan cannot proceed without channel_scan list";
+        LOG(TRACE) << "single scan cannot proceed without channel_scan list";
         return false;
     }
 
     int32_t dwell_time_msec = database.get_channel_scan_dwell_time_msec(radio_mac, true);
-    if (dwell_time_msec <= 0) {
-        LOG(TRACE) << "continuous_scan cannot proceed without dwell_time value";
+    if (dwell_time_msec < 0) {
+        LOG(TRACE) << "single scan cannot proceed without dwell_time value";
         return false;
     }
 
@@ -616,7 +651,7 @@ bool dynamic_channel_selection_r2_task::handle_continuous_scan_request_event(
     }
 
     int32_t dwell_time_msec = database.get_channel_scan_dwell_time_msec(radio_mac, false);
-    if (dwell_time_msec <= 0) {
+    if (dwell_time_msec < 0) {
         LOG(ERROR) << "continuous_scan cannot proceed without dwell_time value";
         return false;
     }
@@ -633,77 +668,123 @@ bool dynamic_channel_selection_r2_task::handle_continuous_scan_request_event(
 bool dynamic_channel_selection_r2_task::handle_scan_report_event(
     const sScanReportEvent &scan_report_event)
 {
-    // Remove all active scans from the agent and mark it as idle.
+    const auto &agent_mac          = scan_report_event.agent_mac;
+    const auto &ISO_8601_timestamp = scan_report_event.ISO_8601_timestamp;
 
-    //TODO: Insert mid_to_agent_map validation here when mid of outgoing request messages is known.
-    //      If radio scan in progress, assume the agent is expecting the current scan report for now.
+    auto agent_status_it = m_agents_status_map.find(agent_mac);
+    if (agent_status_it == m_agents_status_map.end()) {
+        LOG(ERROR) << "Agent " << agent_mac << " is not found in active scans";
+        return false;
+    }
+    auto &agent_status = m_agents_status_map[agent_mac];
 
-    auto &agent_mac = scan_report_event.agent_mac;
+    auto has_matching_report_index =
+        [this, &ISO_8601_timestamp](
+            std::pair<sMacAddr, sAgentScanStatus::sRadioScanRequest> const &radio_scan_request_iter)
+        -> bool {
+        const auto &radio_mac          = radio_scan_request_iter.first;
+        const auto &radio_scan_request = radio_scan_request_iter.second;
+        auto request_scan_report_copy  = radio_scan_request.scan_report_index;
+        node::radio::channel_scan_report_index stored_report_index;
+        // Get the report record according to the given timestamp.
+        if (!database.get_channel_report_record(radio_mac, ISO_8601_timestamp,
+                                                stored_report_index)) {
+            LOG(ERROR) << "There is no scan in radio: " << radio_mac
+                       << " with timestamp: " << ISO_8601_timestamp;
+            return false;
+        }
+        // Remove the stored_report_key from request_scan_report_copy
+        // If an entry is not found that means that the request does not match the report.
+        for (const auto &stored_report_key : stored_report_index) {
+            if (request_scan_report_copy.erase(stored_report_key) != 1) {
+                LOG(DEBUG) << "Request has missing stored report keys: " << stored_report_key.first
+                           << "-" << stored_report_key.second;
+                return false;
+            }
+        }
+        // If we iterated over the report and all the keys are found in the request and the
+        // request is empty, that means the request and report are matching
+        if (!request_scan_report_copy.empty()) {
+            LOG(DEBUG) << "Stored report does not contain all requested record keys";
+            for (const auto &request_report_key : request_scan_report_copy) {
+                LOG(DEBUG) << request_report_key.first << "-" << request_report_key.second;
+            }
+            return false;
+        }
+        return true;
+    };
+    sMacAddr radio_mac = beerocks::net::network_utils::ZERO_MAC;
+    std::shared_ptr<sAgentScanStatus::sRadioScanRequest> scan_req_ptr(nullptr);
+    if (!agent_status.single_radio_scans.empty()) {
+        auto radio_scan_it =
+            std::find_if(agent_status.single_radio_scans.begin(),
+                         agent_status.single_radio_scans.end(), has_matching_report_index);
+        if (radio_scan_it == std::end(agent_status.single_radio_scans)) {
+            LOG(WARNING) << "No matching scan found in agent's single scans";
+        } else {
+            radio_mac    = radio_scan_it->first;
+            scan_req_ptr = std::make_shared<sAgentScanStatus::sRadioScanRequest>(
+                agent_status.single_radio_scans[radio_mac]);
+        }
+    }
+    if (!agent_status.continuous_radio_scans.empty()) {
+        auto radio_scan_it =
+            std::find_if(agent_status.continuous_radio_scans.begin(),
+                         agent_status.continuous_radio_scans.end(), has_matching_report_index);
+        if (radio_scan_it == std::end(agent_status.continuous_radio_scans)) {
+            LOG(WARNING) << "No matching scan found in agent's continuous scans";
+        } else {
+            radio_mac    = radio_scan_it->first;
+            scan_req_ptr = std::make_shared<sAgentScanStatus::sRadioScanRequest>(
+                agent_status.continuous_radio_scans[radio_mac]);
+        }
+    }
 
-    auto agent_it = m_agents_status_map.find(agent_mac);
-    if (agent_it == m_agents_status_map.end()) {
-        // Ignore external scan reports - agent_mac not found in status container;
+    // If no scan request was found, return with a false result.
+    if (!scan_req_ptr) {
+        LOG(ERROR) << "No radio scan that matches the received report!";
         return false;
     }
 
-    auto agent_status = agent_it->second;
-
-    if (!agent_status.single_radio_scans.empty()) {
-        // remove all radio_scan_request in-progress from agent queue
-        auto scan_it = agent_it->second.single_radio_scans.begin();
-        while (scan_it != agent_it->second.single_radio_scans.end()) {
-            if (scan_it->second.status == eRadioScanStatus::SCAN_IN_PROGRESS) {
-                auto radio_mac = scan_it->first;
-                database.set_channel_scan_in_progress(radio_mac, false,
-                                                      scan_it->second.is_single_scan);
-                database.set_channel_scan_results_status(radio_mac,
-                                                         beerocks::eChannelScanStatusCode::SUCCESS,
-                                                         scan_it->second.is_single_scan);
-
-                scan_it = m_agents_status_map[agent_mac].single_radio_scans.erase(scan_it);
-            } else {
-                ++scan_it;
-            }
-        }
+    if (scan_req_ptr->status != eRadioScanStatus::SCAN_IN_PROGRESS) {
+        LOG(ERROR) << "The selected scan is not in progress, a report should have not been sent";
+        return false;
     }
 
-    if (!agent_status.continuous_radio_scans.empty()) {
-        auto scan_it = agent_it->second.continuous_radio_scans.begin();
-        while (scan_it != agent_it->second.continuous_radio_scans.end()) {
-            if (scan_it->second.status == eRadioScanStatus::SCAN_IN_PROGRESS) {
-                auto radio_mac = scan_it->first;
-                database.set_channel_scan_in_progress(radio_mac, false,
-                                                      scan_it->second.is_single_scan);
-                database.set_channel_scan_results_status(radio_mac,
-                                                         beerocks::eChannelScanStatusCode::SUCCESS,
-                                                         scan_it->second.is_single_scan);
-
-                if (database.get_channel_scan_is_enabled(radio_mac)) {
-                    // Reschedule continuous scan
-                    auto interval =
-                        std::chrono::seconds(database.get_channel_scan_interval_sec(radio_mac));
-                    m_agents_status_map[agent_mac].continuous_radio_scans[radio_mac].status =
-                        eRadioScanStatus::PENDING;
-
-                    m_agents_status_map[agent_mac]
-                        .continuous_radio_scans[radio_mac]
-                        .next_time_scan = std::chrono::system_clock::now() + interval;
-                    ++scan_it;
-                } else {
-                    scan_it = m_agents_status_map[agent_mac].continuous_radio_scans.erase(scan_it);
-                }
-            } else {
-                ++scan_it;
-            }
+    /**
+     * After a scan's report has been stored validated, need to clear the stored scan request
+     * handler. If the scan is a single scan, we can simply remove it from the radio's scan map.
+     * If the scan is a continuous scan, we need to check if the scan is still unabled.
+     * If the continuous scan is still enabled, we don't delete the scan request handler, but
+     * instead set the interval for its next iteration.
+     */
+    if (!scan_req_ptr->is_single_scan) {
+        if (database.get_channel_scan_is_enabled(radio_mac)) {
+            LOG(DEBUG) << "Continuous scans on radio " << radio_mac << " are still enabled";
+            auto interval = std::chrono::seconds(database.get_channel_scan_interval_sec(radio_mac));
+            auto &continuous_scan          = agent_status.continuous_radio_scans[radio_mac];
+            continuous_scan.status         = eRadioScanStatus::PENDING;
+            continuous_scan.next_time_scan = std::chrono::system_clock::now() + interval;
+        } else {
+            LOG(DEBUG) << "Removing continuous scan for radio " << radio_mac << " from agent";
+            agent_status.continuous_radio_scans.erase(radio_mac);
         }
-    }
 
-    agent_it->second.status = eAgentStatus::IDLE;
+    } else {
+        LOG(DEBUG) << "Removing single scan for radio " << radio_mac << " from agent";
+        agent_status.single_radio_scans.erase(radio_mac);
+    }
+    database.set_channel_scan_in_progress(radio_mac, false, scan_req_ptr->is_single_scan);
 
     // Remove an empty sAgentScanStatus object
-    if (agent_it->second.single_radio_scans.empty() &&
-        agent_it->second.continuous_radio_scans.empty()) {
-        m_agents_status_map.erase(agent_it);
+    if (agent_status.single_radio_scans.empty() && agent_status.continuous_radio_scans.empty()) {
+        LOG(TRACE) << "Agent " << agent_mac
+                   << " has no remaining scans, removing agent status handler";
+        m_agents_status_map.erase(agent_status_it);
+    } else {
+        LOG(TRACE) << "Agent " << agent_mac
+                   << " has remaining scans, clearing status but not removing";
+        agent_status.status = eAgentStatus::IDLE;
     }
 
     return true;
@@ -760,66 +841,64 @@ bool dynamic_channel_selection_r2_task::handle_timeout_in_busy_agents()
         auto &agent_mac    = agent.first;
         auto &agent_status = agent.second;
 
-        if (agent_status.status == eAgentStatus::BUSY &&
-            agent_status.timeout <= std::chrono::system_clock::now()) {
-
-            timeout_found = true;
-            LOG(ERROR) << "Scan request timeout for agent: " << agent_mac
-                       << " - aborting in progress scans";
-
-            if (!agent.second.single_radio_scans.empty()) {
-                auto scan_it = agent.second.single_radio_scans.begin();
-                while (scan_it != agent_status.single_radio_scans.end()) {
-                    if (scan_it->second.status != eRadioScanStatus::PENDING) {
-                        auto &radio_mac = scan_it->first;
-                        LOG(ERROR) << "Scan request timeout for radio: " << radio_mac
-                                   << " - aborting scan";
-                        database.set_channel_scan_in_progress(radio_mac, false,
-                                                              scan_it->second.is_single_scan);
-                        database.set_channel_scan_results_status(
-                            radio_mac,
-                            beerocks::eChannelScanStatusCode::CHANNEL_SCAN_REPORT_TIMEOUT,
-                            scan_it->second.is_single_scan);
-
-                        scan_it = agent_status.single_radio_scans.erase(scan_it);
-                    } else {
-                        ++scan_it;
-                    }
-                }
-            }
-
-            if (!agent.second.continuous_radio_scans.empty()) {
-                auto scan_it = agent.second.continuous_radio_scans.begin();
-                while (scan_it != agent_status.continuous_radio_scans.end()) {
-                    if (scan_it->second.status != eRadioScanStatus::PENDING) {
-                        auto &radio_mac = scan_it->first;
-                        database.set_channel_scan_in_progress(radio_mac, false,
-                                                              scan_it->second.is_single_scan);
-                        database.set_channel_scan_results_status(
-                            radio_mac,
-                            beerocks::eChannelScanStatusCode::CHANNEL_SCAN_REPORT_TIMEOUT,
-                            scan_it->second.is_single_scan);
-
-                        if (database.get_channel_scan_is_enabled(scan_it->first)) {
-                            LOG(ERROR)
-                                << "Scan request timeout for radio: " << radio_mac
-                                << " - aborting scan and it is delayed by"
-                                << INTERVAL_TIME_BETWEEN_RETRIES_ON_FAILURE_SEC / 60 << "minutes.";
-
-                            scan_it->second.next_time_scan =
-                                std::chrono::system_clock::now() +
-                                std::chrono::seconds(INTERVAL_TIME_BETWEEN_RETRIES_ON_FAILURE_SEC);
-                        } else {
-                            LOG(ERROR) << "Scan request timeout for radio: " << radio_mac
-                                       << " - aborting scan";
-                            scan_it = agent.second.continuous_radio_scans.erase(scan_it);
-                        }
-                    }
-                }
-
-                agent_status.status = eAgentStatus::IDLE;
-            }
+        if (!(agent_status.status == eAgentStatus::BUSY &&
+              agent_status.timeout <= std::chrono::system_clock::now())) {
+            continue;
         }
+
+        timeout_found = true;
+        LOG(ERROR) << "Scan request timeout for agent: " << agent_mac
+                   << " - aborting in progress scans";
+
+        auto abort_radio_scans = [this, &agent_mac](sAgentScanStatus::RadioScanMap &scan_map,
+                                                    const std::string &scan_type) {
+            if (scan_map.empty()) {
+                LOG(TRACE) << "No " << scan_type << " scans avaliable for agent: " << agent_mac;
+                return;
+            }
+            /**
+             * Iterate over the radio scan iterators in the given radio scan map.
+             * Abort the "in progress" scans that are present.
+             */
+            auto scan_it = scan_map.begin();
+            while (scan_it != scan_map.end()) {
+                auto &radio_mac = scan_it->first;
+                auto &radio_req = scan_it->second;
+                if (radio_req.status == eRadioScanStatus::PENDING) {
+                    // Skip PENDING radio scans, need to abort only active scans
+                    scan_it++;
+                    continue;
+                }
+                LOG(ERROR) << "Scan request timeout for radio: " << radio_mac << " - aborting scan";
+                database.set_channel_scan_in_progress(radio_mac, false, radio_req.is_single_scan);
+                database.set_channel_scan_results_status(
+                    radio_mac, beerocks::eChannelScanStatusCode::CHANNEL_SCAN_REPORT_TIMEOUT,
+                    radio_req.is_single_scan);
+
+                if (!radio_req.is_single_scan && database.get_channel_scan_is_enabled(radio_mac)) {
+                    // If scan type is continuous & scan is enabled, add delay to next iteration but don't remote
+                    LOG(ERROR) << "Scan request timeout for radio: " << radio_mac
+                               << " - aborting scan and it is delayed by "
+                               << INTERVAL_TIME_BETWEEN_RETRIES_ON_FAILURE_SEC / 60 << " minutes.";
+
+                    radio_req.status = eRadioScanStatus::PENDING;
+                    radio_req.next_time_scan =
+                        std::chrono::system_clock::now() +
+                        std::chrono::seconds(INTERVAL_TIME_BETWEEN_RETRIES_ON_FAILURE_SEC);
+                    // Move on to next scan iterator
+                    scan_it++;
+                } else {
+                    // Remove from scan list single and disabled scans
+                    // Move on to next scan iterator
+                    scan_it = scan_map.erase(scan_it);
+                }
+            }
+        };
+        abort_radio_scans(agent_status.single_radio_scans, "single");
+        abort_radio_scans(agent_status.continuous_radio_scans, "continuous");
+
+        // Clear agent status
+        agent_status.status = eAgentStatus::IDLE;
     }
 
     return timeout_found;

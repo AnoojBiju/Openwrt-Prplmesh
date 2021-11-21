@@ -1265,44 +1265,40 @@ public:
                                   bool single_scan);
 
     /**
-     * @brief Check if the report records have the given timestamp.
+     * @brief Get the report records for a given radio using a given timestamp.
      *
+     * @param mac MAC address of radio.
      * @param ISO_8601_timestamp Channel scan report's timestamp.
      * @return True if record exists, false otherwise.
      */
-    bool has_channel_report_record(const std::string &ISO_8601_timestamp);
-
-    /**
-     * @brief Get the channel scan report's MID.
-     *
-     * @param ISO_8601_timestamp Channel scan report's timestamp.
-     * @return -1 if the timestamp was not found in the records.
-     * @return MID value of the found channel scan report record.
-     */
-    int get_channel_report_record_mid(const std::string &ISO_8601_timestamp);
-
-    /**
-     * @brief Set the channel scan report's MID.
-     *
-     * @param ISO_8601_timestamp Channel scan report's timestamp.
-     * @param mid Channel scan report's MID.
-     * @return True on success, false otherwise.
-     */
-    bool set_channel_report_record_mid(const std::string &ISO_8601_timestamp, int mid);
+    bool has_channel_report_record(const sMacAddr &mac, const std::string &ISO_8601_timestamp);
 
     /**
      * @brief Clear the channel scan report record for the given timestamp.
      *
+     * @param mac MAC address of radio.
      * @param ISO_8601_timestamp Channel scan report's timestamp.
      * @return True on success, false otherwise.
      */
-    bool clear_channel_report_record(const std::string &ISO_8601_timestamp);
+    bool clear_channel_report_record(const sMacAddr &mac, const std::string &ISO_8601_timestamp);
+
+    /**
+     * @brief Get the channel scan report for the given radio and timestamp
+     * 
+     * @param mac MAC address of radio.
+     * @param ISO_8601_timestamp Channel scan report's timestamp.
+     * @param[out] report_index  Copy of the report index.
+     * @return True on success, false otherwise.
+     * 
+     */
+    bool get_channel_report_record(const sMacAddr &mac, const std::string &ISO_8601_timestamp,
+                                   node::radio::channel_scan_report_index &report_index);
 
     /**
      * @brief Get the channel pool containing all the supported channels.
      *
-     * @param[out] channel_pool_set  Set containing the current channel pool.
-     * @param[in] radio_mac         MAC address of radio.
+     * @param[out] channel_pool_set Set containing the current channel pool.
+     * @param[in] radio_mac MAC address of radio.
      */
     bool get_pool_of_all_supported_channels(std::unordered_set<uint8_t> &channel_pool_set,
                                             const sMacAddr &radio_mac);
@@ -1320,12 +1316,44 @@ public:
     bool add_channel_report(const sMacAddr &RUID, const uint8_t &operating_class,
                             const uint8_t &channel,
                             const std::vector<wfa_map::cNeighbors> &neighbors, uint8_t avg_noise,
-                            uint8_t avg_utilization, bool override_existing_data = true);
+                            uint8_t avg_utilization, const std::string &ISO_8601_timestamp,
+                            bool override_existing_data = true);
+
+    /**
+     * @brief Get the report records for a given radio using the scan's index.
+     *
+     * @param RUID MAC address of radio.
+     * @param index Channel scan report's index, set of pair<uint8_t, uint8_t>
+     * @return True if record exists, false otherwise.
+     */
+    const std::vector<sChannelScanResults>
+    get_channel_scan_report(const sMacAddr &RUID,
+                            const node::radio::channel_scan_report_index &index);
+
+    /**
+     * @brief Get the report records for a given radio using a given timestamp.
+     *
+     * @param RUID MAC address of radio.
+     * @param ISO_8601_timestamp Channel scan report's timestamp.
+     * @return True if record exists, false otherwise.
+     */
+    const std::vector<sChannelScanResults>
+    get_channel_scan_report(const sMacAddr &RUID, const std::string &ISO_8601_timestamp);
+
+    /**
+     * @brief Get the report records for a given radio using its channel-list as the key.
+     *
+     * @param RUID MAC address of radio.
+     * @param single_scan Indicated if to use single scan or continuous
+     * @return True if record exists, false otherwise.
+     */
+    const std::vector<sChannelScanResults> get_channel_scan_report(const sMacAddr &RUID,
+                                                                   bool single_scan);
 
     /**
      * @brief Get the channel scan results object
      *
-     * @param mac:         MAC address of radio
+     * @param mac: MAC address of radio
      * @param single_scan: Indicated if to use single scan or continuous
      * @return const std::list<sChannelScanResults>&
      */
@@ -2327,10 +2355,6 @@ private:
     std::queue<std::string> m_steer_history;
 
     std::shared_ptr<beerocks::nbapi::Ambiorix> m_ambiorix_datamodel;
-
-    // Key:     std::string ISO-8601-timestamp
-    // Value:   int         Report-message-MID
-    std::unordered_map<std::string, int> m_channel_scan_report_records;
 
     /**
      * @brief key = client mac, value = index of NBAPI AssociationEventData

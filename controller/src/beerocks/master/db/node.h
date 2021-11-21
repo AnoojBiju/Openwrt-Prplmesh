@@ -173,6 +173,10 @@ public:
         };
         channel_scan_capabilities scan_capabilities;
 
+        /* The channel_scan_report structure holds channel scan report information
+         * The channel_scan_report_key is comprised of an operating-class & channel-number pair
+         * The channel_scan_report_hash is the hash function that resolves the pair's hash for the mapping function
+         */
         class channel_scan_report {
         public:
             typedef std::pair<uint8_t, uint8_t> channel_scan_report_key;
@@ -182,14 +186,15 @@ public:
                     return std::hash<uint8_t>()(pair.first) ^ std::hash<uint8_t>()(pair.second);
                 }
             };
-            std::vector<wfa_map::cNeighbors> neighbors;
-            uint8_t noise;
-            uint8_t utilization;
+            std::vector<beerocks_message::sChannelScanResults> neighbors;
         };
-
+        typedef std::set<channel_scan_report::channel_scan_report_key> channel_scan_report_index;
         std::unordered_map<channel_scan_report::channel_scan_report_key, channel_scan_report,
                            channel_scan_report::channel_scan_report_hash>
             scan_report;
+        // Key:     std::string ISO-8601-timestamp
+        // Value:   std::set<std::pair> Report index
+        std::unordered_map<std::string, channel_scan_report_index> channel_scan_report_records;
 
         struct channel_scan_config {
             bool is_enabled = false;
