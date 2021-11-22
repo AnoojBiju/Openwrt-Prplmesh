@@ -76,6 +76,7 @@ enum class eMessageType : uint16_t {
     ASSOCIATION_STATUS_NOTIFICATION_MESSAGE = 0x8025,
     TUNNELLED_MESSAGE = 0x8026,
     FAILED_CONNECTION_MESSAGE = 0x8033,
+    TEAMS_MEMBERS = 0x80dd,
 };
 // Enum AutoPrint generated code snippet begining- DON'T EDIT!
 // clang-format off
@@ -136,6 +137,7 @@ static const char *eMessageType_str(eMessageType enum_value) {
     case eMessageType::ASSOCIATION_STATUS_NOTIFICATION_MESSAGE:        return "eMessageType::ASSOCIATION_STATUS_NOTIFICATION_MESSAGE";
     case eMessageType::TUNNELLED_MESSAGE:                              return "eMessageType::TUNNELLED_MESSAGE";
     case eMessageType::FAILED_CONNECTION_MESSAGE:                      return "eMessageType::FAILED_CONNECTION_MESSAGE";
+    case eMessageType::TEAMS_MEMBERS:                                  return "eMessageType::TEAMS_MEMBERS";
     }
     static std::string out_str = std::to_string(int(enum_value));
     return out_str.c_str();
@@ -203,6 +205,7 @@ public:
         case 0x8025:
         case 0x8026:
         case 0x8033:
+        case 0x80dd:
                 ret = true;
                 break;
             default:
