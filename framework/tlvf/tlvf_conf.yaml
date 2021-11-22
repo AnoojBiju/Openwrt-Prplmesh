@@ -81,8 +81,9 @@ include_yaml_path: {
     "tlvf/wfa_map/tlvTunnelledSourceInfo.yaml",
     "tlvf/wfa_map/tlvProfile2ErrorCode.yaml",
     "tlvf/wfa_map/tlvProfile2MultiApProfile.yaml",
-    "tlvf/wfa_map/tlvApExtendedMetrics.yaml"
-}
+    "tlvf/wfa_map/tlvApExtendedMetrics.yaml",
+    "tlvf/wfa_map/tlvTeamsMembers.yaml",
+  }
 
 # Relative to tlvf.py src_path variable
 source_license_header: "intel/license.txt"
