@@ -371,3 +371,10 @@ controller_ucc_listener::parse_bss_info(const std::string &bss_info_str,
 
     return al_mac;
 }
+
+bool controller_ucc_listener::handle_get_device_sta_info(
+    const std::unordered_map<std::string, std::string> &params, std::string &err_string)
+{
+    err_string = "handle_get_device_sta_info not supported in controller mode";
+    return false;
+}
