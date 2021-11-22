@@ -438,6 +438,9 @@ int main(int argc, char *argv[])
     beerocks::logging logger(base_master_name, beerocks_master_conf.sLog);
     s_pLogger = &logger;
     logger.apply_settings();
+
+    LOG(INFO) << "Yoni's First Print Message :)" << std::endl;
+
     LOG(INFO) << std::endl
               << "Running " << base_master_name << " Version " << BEEROCKS_VERSION << " Build date "
               << BEEROCKS_BUILD_DATE << std::endl
