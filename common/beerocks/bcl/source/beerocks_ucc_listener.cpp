@@ -188,6 +188,8 @@ beerocks_ucc_listener::wfa_ca_command_from_string(std::string command)
         return eWfaCaCommand::START_WPS_REGISTRATION;
     } else if (command == "DEV_SET_RFEATURE") {
         return eWfaCaCommand::DEV_SET_RFEATURE;
+    } else if (command == "GET_DEVICE_STA_INFO") {
+        return eWfaCaCommand::GET_DEVICE_STA_INFO;
     }
 
     return eWfaCaCommand::WFA_CA_COMMAND_MAX;
@@ -771,6 +773,19 @@ void beerocks_ucc_listener::handle_wfa_ca_command(int fd, const std::string &com
 
         // Send back second reply
         reply_ucc(fd, eWfaCaStatus::COMPLETE);
+        break;
+    }
+    case eWfaCaCommand::GET_DEVICE_STA_INFO: {
+        std::unordered_map<std::string, std::string> params{{"sta_mac", std::string()}};
+
+        if (!parse_params(cmd_tokens_vec, params, err_string)) {
+            LOG(ERROR) << err_string;
+            reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
+            break;
+        }
+
+        handle_get_device_sta_info(params, err_string);
+        reply_ucc(fd, eWfaCaStatus::RUNNING, err_string);
         break;
     }
     default: {
