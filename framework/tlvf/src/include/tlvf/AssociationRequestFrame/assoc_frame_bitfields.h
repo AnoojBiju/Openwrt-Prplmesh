@@ -186,21 +186,23 @@ typedef struct sRmEnabledCaps1 {
     uint32_t trigger_tx : 1;   // Triggered tx stream/category measurement capability enabled
     uint32_t ap_ch_report : 1; // AP channel report capability enabled
     uint32_t rm_mib : 1;
-    uint32_t op_ch_max_measure_dur : 2;    // Operating channel Max measurement Duration
-    uint32_t nonop_ch_max_measure_dur : 2; // Nonoperating channel Max measurement Duration
-    uint32_t measure_pilot_cap : 2;        // Measurement pilot Capability
+    uint32_t op_ch_max_measure_dur : 3;    // Operating channel Max measurement Duration
+    uint32_t nonop_ch_max_measure_dur : 3; // Nonoperating channel Max measurement Duration
+    uint32_t measure_pilot_cap : 3;        // Measurement pilot Capability
     uint32_t measure_pilot_trans_info : 1; // Measurement pilot Transmission information cap enabled
     uint32_t neighbor_report_tsf_offset : 1;
     uint32_t rcpi_measure : 1;
     uint32_t rsni_measure : 1;
+    uint32_t bss_average_ac_delay : 1;
 #elif defined(__BIG_ENDIAN_BITFIELD)
+    uint32_t bss_average_ac_delay : 1;
     uint32_t rsni_measure : 1;
     uint32_t rcpi_measure : 1;
     uint32_t neighbor_report_tsf_offset : 1;
     uint32_t measure_pilot_trans_info : 1;
-    uint32_t measure_pilot_cap : 2;
-    uint32_t nonop_ch_max_measure_dur : 2;
-    uint32_t op_ch_max_measure_dur : 2;
+    uint32_t measure_pilot_cap : 3;
+    uint32_t nonop_ch_max_measure_dur : 3;
+    uint32_t op_ch_max_measure_dur : 3;
     uint32_t rm_mib : 1;
     uint32_t ap_ch_report : 1;
     uint32_t trigger_tx : 1;
@@ -227,19 +229,17 @@ typedef struct sRmEnabledCaps1 {
 
 typedef struct sRmEnabledCaps2 {
 #if defined(__LITTLE_ENDIAN_BITFIELD)
-    uint8_t bss_average_ac_delay : 1;
     uint8_t bss_available_adm_capacity : 1;
     uint8_t antenna : 1;
     uint8_t ftm_range_report : 1;
     uint8_t civic_location_measure : 1;
-    uint8_t reserved : 3;
+    uint8_t reserved : 4;
 #elif defined(__BIG_ENDIAN_BITFIELD)
-    uint8_t reserved : 3;
+    uint8_t reserved : 4;
     uint8_t civic_location_measure : 1;
     uint8_t ftm_range_report : 1;
     uint8_t antenna : 1;
     uint8_t bss_available_adm_capacity : 1;
-    uint8_t bss_average_ac_delay : 1;
 #endif
     // sRmEnabledCaps2(){};
     void struct_swap() {}
