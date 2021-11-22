@@ -228,3 +228,18 @@ bool agent_ucc_listener::handle_dev_set_rfeature(
     }
     return true;
 }
+
+//UCC Command : "device_get_sta_info,sta_mac,<sta_mac>"
+bool agent_ucc_listener::handle_get_device_sta_info(
+    const std::unordered_map<std::string, std::string> &params, std::string &err_string)
+{
+    auto sta_mac_it = params.at("sta_mac");
+    if (sta_mac_it.empty()) {
+        LOG(ERROR) << "sta_mac is empty";
+        return false;
+    }
+    sMacAddr sta_mac = tlvf::mac_from_string(sta_mac_it);
+    m_btl_ctx.get_sta_device_info(sta_mac);
+
+    return true;
+}
