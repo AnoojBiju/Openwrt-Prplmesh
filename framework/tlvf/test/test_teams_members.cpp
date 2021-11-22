@@ -48,11 +48,8 @@ void test_teams_members_parse(uint8_t *rx_buffer, size_t size)
     auto tlv_rx = received_message.getClass<tlvTeamsMembers>();
     LOG(DEBUG) << "rx:" << tlv_rx << "size:" << size;
     LOG(DEBUG) << "rx:len" << tlv_rx->getLen();
-    auto team_id_rx = tlv_rx->team_id();
-    //LOG(DEBUG) << "num_team_id:" << team_id_rx->num_team_id();
 
-    //for (int i = 0; i < team_id_rx->num_team_id(); i++) {
-    for (int i = 0; i < team_id_rx; i++) {
+    for (int i = 0; i < tlv_rx->team_id(); i++) {
         auto &team_details_rx = std::get<1>(tlv_rx->team_details(i));
         LOG(DEBUG) << "team_name:" << team_details_rx.team_name();
         LOG(DEBUG) << "num_dev:" << team_details_rx.num_dev();
@@ -77,10 +74,6 @@ uint8_t test_teams_members_build(uint8_t *tx_buffer, size_t len)
     msg.create(0, ieee1905_1::eMessageType::TEAMS_MEMBERS);
     //tlv
     auto tlv = msg.addClass<tlvTeamsMembers>();
-
-    //create team id
-    //auto team_id      = tlv->create_team_id();
-    //auto team_details = team_id->create_team_details();
     auto team_details = tlv->create_team_details();
     team_details->set_team_name("PRPLMESH-BLR");
     //create dev
@@ -99,8 +92,6 @@ uint8_t test_teams_members_build(uint8_t *tx_buffer, size_t len)
     team_details->add_dev_details(dev_details);
     tlv->add_team_details(team_details);
 
-    //create team-id-1
-    //team_details = team_id->create_team_details();
     team_details = tlv->create_team_details();
     team_details->set_team_name("PRPLMESH-ISL");
     //create dev1
@@ -117,9 +108,7 @@ uint8_t test_teams_members_build(uint8_t *tx_buffer, size_t len)
     dev_prev_companies->set_comp_name("INFI");
     dev_details->add_previous_companies(dev_prev_companies);
     team_details->add_dev_details(dev_details);
-    //team_id->add_team_details(team_details);
     tlv->add_team_details(team_details);
-    //tlv->add_team_id(team_id);
     msg.finalize();
 
     return msg.getMessageLength();
