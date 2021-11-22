@@ -351,7 +351,25 @@ bool ap_wlan_hal_dummy::get_sta_device_info(std::string &sta_mac, bool nw_info)
         LOG(ERROR) << "sta_mac is empty";
         return false;
     }
-    event_queue_push(Event::STA_Info_Reply);
+
+    // TODO: Change to HAL objects
+    auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_HOSTAP_STA_INFO_REPLY));
+    auto msg      = reinterpret_cast<sACTION_APMANAGER_HOSTAP_STA_INFO_REPLY *>(msg_buff.get());
+    LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+    // Initialize the message
+    *msg = {};
+
+    msg->params.bss                   = "wlan0.1";
+    msg->params.sta_mac               = tlvf::mac_from_string("01:02:03:04:05:06");
+    msg->params.device_name           = "AX3000";
+    msg->params.os_name               = "linux";
+    msg->params.vendor_name           = "MAXLINEAR";
+    msg->params.days_since_last_reset = 5;
+    msg->params.default_gateway = beerocks::net::network_utils::ipv4_from_string("192.168.0.1");
+    msg->params.subnet_mask     = beerocks::net::network_utils::ipv4_from_string("255.255.255.0");
+    msg->params.ip_v4           = beerocks::net::network_utils::ipv4_from_string("192.168.1.3");
+
+    event_queue_push(Event::STA_Info_Reply, msg_buff);
     return true;
 }
 
