@@ -344,6 +344,17 @@ bool ap_wlan_hal_dummy::set_primary_vlan_id(uint16_t primary_vlan_id)
     return true;
 }
 
+bool ap_wlan_hal_dummy::get_sta_device_info(std::string &sta_mac, bool nw_info)
+{
+    LOG(DEBUG) << "Get STA DEVICE INFO for mac " << sta_mac;
+    if (sta_mac.empty()) {
+        LOG(ERROR) << "sta_mac is empty";
+        return false;
+    }
+    event_queue_push(Event::STA_Info_Reply);
+    return true;
+}
+
 bool ap_wlan_hal_dummy::process_dummy_data(parsed_obj_map_t &parsed_obj) { return true; }
 
 bool ap_wlan_hal_dummy::process_dummy_event(parsed_obj_map_t &parsed_obj)
