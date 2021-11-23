@@ -387,9 +387,9 @@ void topology_task::handle_dead_neighbors(const sMacAddr &src_mac, const sMacAdd
             continue;
         }
 
-        LOG(DEBUG) << "known neighbor al_mac  " << neighbor_al_mac_on_db
-                   << " is not reported on 1905 Neighbor Device TLV, removing the al_mac node";
-        son_actions::handle_dead_node(backhhaul_mac, true, database, cmdu_tx, tasks);
+        // LOG(DEBUG) << "known neighbor al_mac  " << neighbor_al_mac_on_db
+        //            << " is not reported on 1905 Neighbor Device TLV, removing the al_mac node";
+        // son_actions::handle_dead_node(backhhaul_mac, true, database, cmdu_tx, tasks);
     }
 }
 
