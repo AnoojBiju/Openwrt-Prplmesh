@@ -44,6 +44,7 @@
 #include <tlvf/wfa_map/tlvAssociatedStaExtendedLinkMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaTrafficStats.h>
+#include <tlvf/wfa_map/tlvBackhaulBssConfiguration.h>
 #include <tlvf/wfa_map/tlvBackhaulSteeringRequest.h>
 #include <tlvf/wfa_map/tlvBackhaulSteeringResponse.h>
 #include <tlvf/wfa_map/tlvBeaconMetricsQuery.h>
@@ -325,6 +326,9 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     }
     case (wfa_map::eTlvTypeMap::TLV_CHANNEL_SCAN_RESULT): {
         return msg.addClass<wfa_map::tlvProfile2ChannelScanResult>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_BACKHAUL_BSS_CONFIGURATION): {
+        return msg.addClass<wfa_map::tlvBackhaulBssConfiguration>();
     }
     case (wfa_map::eTlvTypeMap::TLV_TIMESTAMP): {
         return msg.addClass<wfa_map::tlvTimestamp>();

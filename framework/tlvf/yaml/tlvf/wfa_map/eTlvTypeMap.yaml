@@ -71,5 +71,5 @@ eTlvTypeMap:
   TLV_ASSOCIATED_STA_EXTENDED_LINK_METRICS: 0xC8
   TLV_PROFILE2_STATUS_CODE: 0xC9
   TLV_PROFILE2_REASON_CODE: 0xCA
-
+  TLV_BACKHAUL_BSS_CONFIGURATION: 0xD0
   # When adding values, make sure to also update CmduMessageRx::parseNextTlv !
