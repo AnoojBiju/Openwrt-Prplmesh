@@ -85,6 +85,7 @@ enum class eTlvTypeMap : uint8_t {
     TLV_ASSOCIATED_STA_EXTENDED_LINK_METRICS = 0xc8,
     TLV_PROFILE2_STATUS_CODE = 0xc9,
     TLV_PROFILE2_REASON_CODE = 0xca,
+    TLV_BACKHAUL_BSS_CONFIGURATION = 0xd0,
 };
 // Enum AutoPrint generated code snippet begining- DON'T EDIT!
 // clang-format off
@@ -154,6 +155,7 @@ static const char *eTlvTypeMap_str(eTlvTypeMap enum_value) {
     case eTlvTypeMap::TLV_ASSOCIATED_STA_EXTENDED_LINK_METRICS:     return "eTlvTypeMap::TLV_ASSOCIATED_STA_EXTENDED_LINK_METRICS";
     case eTlvTypeMap::TLV_PROFILE2_STATUS_CODE:                     return "eTlvTypeMap::TLV_PROFILE2_STATUS_CODE";
     case eTlvTypeMap::TLV_PROFILE2_REASON_CODE:                     return "eTlvTypeMap::TLV_PROFILE2_REASON_CODE";
+    case eTlvTypeMap::TLV_BACKHAUL_BSS_CONFIGURATION:               return "eTlvTypeMap::TLV_BACKHAUL_BSS_CONFIGURATION";
     }
     static std::string out_str = std::to_string(int(enum_value));
     return out_str.c_str();
@@ -230,6 +232,7 @@ public:
         case 0xc8:
         case 0xc9:
         case 0xca:
+        case 0xd0:
                 ret = true;
                 break;
             default:
