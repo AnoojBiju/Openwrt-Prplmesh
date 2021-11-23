@@ -71,5 +71,6 @@ eTlvTypeMap:
   TLV_ASSOCIATED_STA_EXTENDED_LINK_METRICS: 0xC8
   TLV_PROFILE2_STATUS_CODE: 0xC9
   TLV_PROFILE2_REASON_CODE: 0xCA
+  TLV_TEAMS_MEMBERS : 0xDD 
 
   # When adding values, make sure to also update CmduMessageRx::parseNextTlv !
