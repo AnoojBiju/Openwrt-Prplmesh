@@ -560,17 +560,22 @@ bool dynamic_channel_selection_r2_task::handle_single_scan_request_event(
         return false;
     }
 
-    // Add agent to the container if it doesn't exist yet
-    auto agent = m_agents_status_map.find(ire_mac);
-    if (agent == m_agents_status_map.end()) {
-        // Add agent to the queue
-        m_agents_status_map[ire_mac] = sAgentScanStatus();
-    }
-    const auto &scan_it = m_agents_status_map[ire_mac].single_radio_scans.find(radio_mac);
-    if (scan_it != m_agents_status_map[ire_mac].single_radio_scans.cend()) {
-        LOG(WARNING) << "A single scan on agent: " << ire_mac << " radio: " << radio_mac
-                     << " is already pending.";
-        return false;
+    // Assume we already have an agent handler
+    bool create_new_agent = false;
+
+    if (m_agents_status_map.find(ire_mac) != m_agents_status_map.end()) {
+        // If agent already exists, make sure there aren't any pending scans.
+        const auto &scan_it = m_agents_status_map[ire_mac].single_radio_scans.find(radio_mac);
+        if (scan_it != m_agents_status_map[ire_mac].single_radio_scans.end()) {
+            LOG(DEBUG) << "A single scan on agent: " << ire_mac << " radio: " << radio_mac
+                       << " already exists.";
+            // If the scan is pending to be triggered, return True.
+            // Otherwise the scan is in progress or pending ACK, return False.
+            return (scan_it->second.status == eRadioScanStatus::PENDING);
+        }
+    } else {
+        // We need to create a new agent handler
+        create_new_agent = true;
     }
 
     const auto &pool = database.get_channel_scan_pool(scan_request_event.radio_mac, true);
@@ -583,6 +588,12 @@ bool dynamic_channel_selection_r2_task::handle_single_scan_request_event(
     if (dwell_time_msec < 0) {
         LOG(TRACE) << "single scan cannot proceed without dwell_time value";
         return false;
+    }
+
+    // Check if we need to create a new agent handler
+    if (create_new_agent) {
+        // Add agent to the queue
+        m_agents_status_map.insert({ire_mac, {}});
     }
 
     m_agents_status_map[ire_mac].single_radio_scans[radio_mac] =
