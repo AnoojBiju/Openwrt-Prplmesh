@@ -212,26 +212,26 @@ bool agent_monitoring_task::start_task(const sMacAddr &src_mac, std::shared_ptr<
     if (!send_tlv_empty_channel_selection_request(src_mac, cmdu_tx)) {
         LOG(ERROR) << "Failed to send Channel Selection Request to radio agent=" << src_mac;
     }
-    if (!database.setting_certification_mode()) {
-        // trigger Topology query
-        LOG(TRACE) << "Sending Topology Query to " << src_mac;
-        son_actions::send_topology_query_msg(src_mac, cmdu_tx, database);
+    // if (!database.setting_certification_mode()) {
+    //     // trigger Topology query
+    LOG(TRACE) << "Sending Topology Query to " << src_mac;
+    son_actions::send_topology_query_msg(src_mac, cmdu_tx, database);
 
-        // trigger channel selection
-        if (!cmdu_tx.create(0, ieee1905_1::eMessageType::CHANNEL_PREFERENCE_QUERY_MESSAGE)) {
-            LOG(ERROR) << "Failed building message!";
-            return false;
-        }
-        son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
-    }
-    if (!database.setting_certification_mode()) {
-        // trigger AP capability query
-        if (!cmdu_tx.create(0, ieee1905_1::eMessageType::AP_CAPABILITY_QUERY_MESSAGE)) {
-            LOG(ERROR) << "Failed building message!";
-            return false;
-        }
-        son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
-    }
+    //     // trigger channel selection
+    //     if (!cmdu_tx.create(0, ieee1905_1::eMessageType::CHANNEL_PREFERENCE_QUERY_MESSAGE)) {
+    //         LOG(ERROR) << "Failed building message!";
+    //         return false;
+    //     }
+    //     son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
+    // }
+    // if (!database.setting_certification_mode()) {
+    //     // trigger AP capability query
+    //     if (!cmdu_tx.create(0, ieee1905_1::eMessageType::AP_CAPABILITY_QUERY_MESSAGE)) {
+    //         LOG(ERROR) << "Failed building message!";
+    //         return false;
+    //     }
+    //     son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
+    // }
     return true;
 }
 

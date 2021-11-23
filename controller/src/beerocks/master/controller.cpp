@@ -126,14 +126,14 @@ Controller::Controller(db &database_,
     LOG_IF(!tasks.add_task(std::make_shared<bml_task>(database, cmdu_tx, tasks)), FATAL)
         << "Failed adding BML task!";
 
-    LOG_IF(!tasks.add_task(std::make_shared<channel_selection_task>(database, cmdu_tx, tasks)),
-           FATAL)
-        << "Failed adding channel selection task!";
+    // LOG_IF(!tasks.add_task(std::make_shared<channel_selection_task>(database, cmdu_tx, tasks)),
+    //        FATAL)
+    //     << "Failed adding channel selection task!";
 
-    LOG_IF(!tasks.add_task(
-               std::make_shared<dynamic_channel_selection_r2_task>(database, cmdu_tx, tasks)),
-           FATAL)
-        << "Failed adding dynamic channel selection r2 task!";
+    // LOG_IF(!tasks.add_task(
+    //            std::make_shared<dynamic_channel_selection_r2_task>(database, cmdu_tx, tasks)),
+    //        FATAL)
+    //     << "Failed adding dynamic channel selection r2 task!";
 
     LOG_IF(!tasks.add_task(std::make_shared<topology_task>(database, cmdu_tx, tasks)), FATAL)
         << "Failed adding topology task!";
@@ -151,8 +151,8 @@ Controller::Controller(db &database_,
         LOG(DEBUG) << "Health check is DISABLED!";
     }
 
-    m_link_metrics_task = std::make_shared<LinkMetricsTask>(database, cmdu_tx, cert_cmdu_tx, tasks);
-    LOG_IF(!tasks.add_task(m_link_metrics_task), FATAL) << "Failed adding link metrics task!";
+    // m_link_metrics_task = std::make_shared<LinkMetricsTask>(database, cmdu_tx, cert_cmdu_tx, tasks);
+    // LOG_IF(!tasks.add_task(m_link_metrics_task), FATAL) << "Failed adding link metrics task!";
 
     LOG_IF(!tasks.add_task(std::make_shared<DhcpTask>(database, timer_manager)), FATAL)
         << "Failed adding dhcp task!";
@@ -283,16 +283,16 @@ bool Controller::start()
             ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_SEARCH_MESSAGE,
             ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_WSC_MESSAGE,
             ieee1905_1::eMessageType::AP_CAPABILITY_REPORT_MESSAGE,
-            ieee1905_1::eMessageType::AP_METRICS_RESPONSE_MESSAGE,
+            // ieee1905_1::eMessageType::AP_METRICS_RESPONSE_MESSAGE,
             ieee1905_1::eMessageType::BEACON_METRICS_RESPONSE_MESSAGE,
-            ieee1905_1::eMessageType::CHANNEL_PREFERENCE_REPORT_MESSAGE,
-            ieee1905_1::eMessageType::CHANNEL_SELECTION_RESPONSE_MESSAGE,
-            ieee1905_1::eMessageType::CHANNEL_SCAN_REPORT_MESSAGE,
+            // ieee1905_1::eMessageType::CHANNEL_PREFERENCE_REPORT_MESSAGE,
+            // ieee1905_1::eMessageType::CHANNEL_SELECTION_RESPONSE_MESSAGE,
+            // ieee1905_1::eMessageType::CHANNEL_SCAN_REPORT_MESSAGE,
             ieee1905_1::eMessageType::CLIENT_CAPABILITY_REPORT_MESSAGE,
             ieee1905_1::eMessageType::CLIENT_STEERING_BTM_REPORT_MESSAGE,
             ieee1905_1::eMessageType::HIGHER_LAYER_DATA_MESSAGE,
-            ieee1905_1::eMessageType::LINK_METRIC_RESPONSE_MESSAGE,
-            ieee1905_1::eMessageType::OPERATING_CHANNEL_REPORT_MESSAGE,
+            // ieee1905_1::eMessageType::LINK_METRIC_RESPONSE_MESSAGE,
+            // ieee1905_1::eMessageType::OPERATING_CHANNEL_REPORT_MESSAGE,
             ieee1905_1::eMessageType::STEERING_COMPLETED_MESSAGE,
             ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE,
             ieee1905_1::eMessageType::TOPOLOGY_RESPONSE_MESSAGE,
@@ -2491,13 +2491,13 @@ bool Controller::handle_intel_slave_join(
     }
     autoconfig_wsc_parse_radio_caps(radio_mac, radio_caps);
 
-    if (tasks.is_task_running(database.get_dynamic_channel_selection_task_id(radio_mac))) {
-        LOG(DEBUG) << "dynamic channel selection task already running for " << radio_mac;
-    } else {
-        auto new_task =
-            std::make_shared<dynamic_channel_selection_task>(database, cmdu_tx, tasks, radio_mac);
-        tasks.add_task(new_task);
-    }
+    // if (tasks.is_task_running(database.get_dynamic_channel_selection_task_id(radio_mac))) {
+    //     LOG(DEBUG) << "dynamic channel selection task already running for " << radio_mac;
+    // } else {
+    //     auto new_task =
+    //         std::make_shared<dynamic_channel_selection_task>(database, cmdu_tx, tasks, radio_mac);
+    //     tasks.add_task(new_task);
+    // }
 
     // send JOINED_RESPONSE with son config
     {
