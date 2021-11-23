@@ -104,7 +104,7 @@ bool dynamic_channel_selection_r2_task::is_agent_idle_with_pending_radio_scans(
 
     if (agent_scan_status.single_radio_scans.empty() &&
         agent_scan_status.continuous_radio_scans.empty()) {
-        LOG(WARNING) << "agent is idle without any pending scans";
+        //LOG(WARNING) << "agent is idle without any pending scans";
         return false;
     }
 
