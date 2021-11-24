@@ -12,6 +12,9 @@ import time
 
 class ClientSteeringDummy(PrplMeshBaseTest):
     """
+        This test reproduces and tests client steering
+        Also, it checks MultiAPSteeringSummaryStats NBAPI object
+
         Devices used in test setup:
         STA1 - WIFI repeater
         AP1 - Agent1 [DUT]
@@ -23,12 +26,14 @@ class ClientSteeringDummy(PrplMeshBaseTest):
         A steer request is sent to AP1 radio 1
         Dummy STA is disconnected from wlan0
         Dummy STA is connected to AP1 wlan2
+        Original values of MultiAPSteeringSummaryStats parameters are saved
         All APs radios should get a disallow request, except for AP1 radio 1
         Client Steering Request message is checked of AP1 radio 0
         BTM Report message is checked on GW controller
         ACK message is checked on AP1 radio 0
         GW controller should have a steering a disconnected message refering to STA1
         After 25 seconds all disallowed APs radios should have an allow message
+        Value of BTMSuccesses should be incremented by one
     """
 
     def runTest(self):
@@ -58,11 +63,17 @@ class ClientSteeringDummy(PrplMeshBaseTest):
                                          sta, env.StationEvent.CONNECT,
                                          agent1.radios[0].vaps[0].bssid)
 
+        # Save MultiAPSteeringSummaryStats values before client steering
+        steer_summ_stats = controller.nbapi_get(
+            "Device.WiFi.DataElements.Network.MultiAPSteeringSummaryStats")
+
         self.checkpoint()
 
         debug("Send steer request ")
-        controller.beerocks_cli_command("steer_client {} {}".format(sta.mac,
-                                                                    agent1.radios[1].mac))
+        controller.nbapi_command("Device.WiFi.DataElements.Network", "ClientSteering",
+                                 {"station_mac": sta.mac,
+                                  "target_bssid": agent1.radios[1].mac})
+
         time.sleep(1)
         debug("Disconnect dummy STA from wlan0")
         sta.wifi_disconnect(agent1.radios[0].vaps[0])
@@ -122,3 +133,26 @@ class ClientSteeringDummy(PrplMeshBaseTest):
         self.check_log(agent2.radios[1], r"Got client allow request")
 
         sta.wifi_disconnect(agent1.radios[1].vaps[0])
+
+        # Check MultiAPSteeringSummaryStats values after client steering
+        final_steer_summ_stats = controller.nbapi_get(
+            "Device.WiFi.DataElements.Network.MultiAPSteeringSummaryStats")
+        for param in final_steer_summ_stats:
+
+            debug(f"Checking parameter '{param}', original value is '{steer_summ_stats[param]}'")
+
+            if param == 'BTMSuccesses':
+                assert steer_summ_stats[param] + 1 == final_steer_summ_stats[param], \
+                    f"Value of '{param}' should be '{steer_summ_stats[param] + 1}'" \
+                    f" not '{final_steer_summ_stats[param]}'"
+                continue
+
+            """
+            TODO: Check other values of MultiAPSteeringSummaryStats parameters
+            Other params values are currently set incorrectly, so there is no way to check them yet.
+            PPM-1761
+
+            assert steer_summ_stats[param] == fin_steer_summ_stats[param], \
+                f"Value of '{param}' should be '{steer_summ_stats[param]}'" \
+                f" not '{fin_steer_summ_stats[param]}'"
+            """
