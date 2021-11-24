@@ -149,7 +149,13 @@ static void get_ht_mcs_capabilities(int *HT_MCS, std::string &ht_cap_str,
 
     if (!ht_cap_str.empty() && (HT_MCS != nullptr)) {
         uint16_t ht_cap = uint16_t(std::strtoul(ht_cap_str.c_str(), nullptr, 16));
-        sta_caps.ht_bw  = (ht_cap & HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET) != 0; // 20 == 0 / 40 == 1
+
+        // flag supported channel width set: 0 ==> 20 / 1 ==> 40
+        if (ht_cap & HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET) {
+            sta_caps.ht_bw = beerocks::BANDWIDTH_40;
+        } else {
+            sta_caps.ht_bw = beerocks::BANDWIDTH_20;
+        }
         sta_caps.ht_sm_power_save = ((ht_cap & HT_CAP_INFO_SMPS_MASK) >> 2) &
                                     0x03; // 0=static, 1=dynamic, 2=reserved, 3=disabled
         sta_caps.ht_low_bw_short_gi =
@@ -201,7 +207,11 @@ static void get_vht_mcs_capabilities(int16_t *VHT_MCS, std::string &vht_cap_str,
         }
 
         // if supported_bw_bits=0 max bw is 80 Mhz, else max bw is 160 Mhz
-        sta_caps.vht_bw               = (beerocks::BANDWIDTH_80 + (supported_bw_bits > 0 ? 1 : 0));
+        if (supported_bw_bits == 0) {
+            sta_caps.vht_bw = beerocks::BANDWIDTH_80;
+        } else {
+            sta_caps.vht_bw = beerocks::BANDWIDTH_160;
+        }
         sta_caps.vht_low_bw_short_gi  = (vht_cap >> 5) & 0x01; // 80 Mhz
         sta_caps.vht_high_bw_short_gi = (vht_cap >> 6) & 0x01; // 160 Mhz
 
