@@ -1551,9 +1551,10 @@ bool db::dm_set_sta_ht_capabilities(const std::string &path_to_sta,
                    << "GI_40_MHz: " << static_cast<bool>(sta_cap.ht_high_bw_short_gi);
         return_val = false;
     }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "HT_40_Mhz", static_cast<bool>(sta_cap.ht_bw))) {
+    if (!m_ambiorix_datamodel->set(path_to_obj, "HT_40_Mhz",
+                                   (sta_cap.ht_bw == beerocks::BANDWIDTH_40))) {
         LOG(ERROR) << "Failed to set " << path_to_obj
-                   << "HT_40_Mhz: " << static_cast<bool>(sta_cap.ht_bw);
+                   << "HT_40_Mhz: " << (sta_cap.ht_bw == beerocks::BANDWIDTH_40);
         return_val = false;
     }
     // TODO: find value for tx_spatial_streams PPM-792.
