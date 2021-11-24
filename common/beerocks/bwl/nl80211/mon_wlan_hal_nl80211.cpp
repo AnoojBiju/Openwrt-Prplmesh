@@ -400,6 +400,11 @@ bool mon_wlan_hal_nl80211::sta_link_measurements_11k_request(const std::string &
     return true;
 }
 
+void mon_wlan_hal_nl80211::sta_info_query(const std::string &sta_mac)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+}
+
 bool mon_wlan_hal_nl80211::channel_scan_trigger(int dwell_time_msec,
                                                 const std::vector<unsigned int> &channel_pool)
 {

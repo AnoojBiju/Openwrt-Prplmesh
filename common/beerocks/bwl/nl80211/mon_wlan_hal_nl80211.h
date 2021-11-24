@@ -44,6 +44,7 @@ public:
                                       const std::vector<unsigned int> &channel_pool) override;
     virtual bool channel_scan_dump_results() override;
     virtual bool channel_scan_dump_cached_results() override;
+    virtual void sta_info_query(const std::string &sta_mac) override;
 
     /**
      * @brief Generates connected events for already connected clients.
