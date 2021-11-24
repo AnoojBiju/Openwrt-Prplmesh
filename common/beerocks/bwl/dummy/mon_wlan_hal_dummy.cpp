@@ -41,6 +41,8 @@ static mon_wlan_hal::Event dummy_to_bwl_event(const std::string &opcode)
         return mon_wlan_hal_dummy::Event::STA_Connected;
     else if (opcode == "AP-STA-DISCONNECTED")
         return mon_wlan_hal_dummy::Event::STA_Disconnected;
+    else if (opcode == "STA-INFO-REPLY")
+        return mon_wlan_hal_dummy::Event::STA_Info_Reply;
 
     return mon_wlan_hal::Event::Invalid;
 }
@@ -148,6 +150,26 @@ bool mon_wlan_hal_dummy::sta_link_measurements_11k_request(const std::string &st
 {
     LOG(TRACE) << __func__;
     return true;
+}
+
+void mon_wlan_hal_dummy::sta_info_query(const std::string &sta_mac)
+{
+    LOG(TRACE) << __func__;
+    auto sta_info_reply_buf = ALLOC_SMART_BUFFER(sizeof(sACTION_MONITOR_CLIENT_INFO_REPLY));
+    auto sta_info_reply =
+        reinterpret_cast<sACTION_MONITOR_CLIENT_INFO_REPLY *>(sta_info_reply_buf.get());
+    sta_info_reply->params.bss.assign("wlan0.0");
+    sta_info_reply->params.sta_mac = tlvf::mac_from_string("11:22:33:44:55:66");
+    sta_info_reply->params.os_name.assign("linux");
+    sta_info_reply->params.device_name.assign("lgm");
+    sta_info_reply->params.vendor.assign("mxl");
+    sta_info_reply->params.days_since_last_reset = 1;
+    sta_info_reply->params.ipv4 = beerocks::net::network_utils::ipv4_from_string("192.168.1.2");
+    sta_info_reply->params.subnet_mask =
+        beerocks::net::network_utils::ipv4_from_string("255.255.255.0");
+    sta_info_reply->params.default_gw =
+        beerocks::net::network_utils::ipv4_from_string("192.168.1.1");
+    event_queue_push(Event::STA_Info_Reply, sta_info_reply_buf);
 }
 
 bool mon_wlan_hal_dummy::channel_scan_trigger(int dwell_time_msec,
