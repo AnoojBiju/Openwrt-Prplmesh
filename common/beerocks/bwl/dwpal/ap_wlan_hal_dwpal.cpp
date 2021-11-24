@@ -950,8 +950,8 @@ bool ap_wlan_hal_dwpal::refresh_radio_info()
             auto &channel_info        = m_radio_info.channels_list[supported_channel_info.number];
             channel_info.tx_power_dbm = supported_channel_info.tx_power;
             channel_info.dfs_state    = supported_channel_info.is_dfs
-                                            ? supported_channel_info.dfs_state
-                                            : beerocks::eDfsState::DFS_STATE_MAX;
+                                         ? supported_channel_info.dfs_state
+                                         : beerocks::eDfsState::DFS_STATE_MAX;
 
             for (auto bw : supported_channel_info.supported_bandwidths) {
                 // If rank does not exist, set it to -1. It will be set by "read_acs_report()".
@@ -1677,11 +1677,11 @@ bool ap_wlan_hal_dwpal::cancel_cac(int chan, beerocks::eWiFiBandwidth bw, int vh
     // get center channel from the center frequency
     auto center_channel = son::wireless_utils::freq_to_channel(vht_center_frequency);
 
-    LOG(DEBUG) << "canceling cac with the following parameters:"
-               << "channel: " << chan << "bandwidth (eWiFiBandwidth): " << bw
-               << "vht center frequency (input but not used directly): " << vht_center_frequency
-               << "center channel (computed from vht_center_frequency): " << center_channel
-               << "secondary_chan_offset: " << secondary_chan_offset;
+    LOG(DEBUG) << "Canceling cac with the following parameters:\n"
+               << "channel: " << chan << " bandwidth (eWiFiBandwidth): " << bw
+               << " vht center frequency (input but not used directly): " << vht_center_frequency
+               << " center channel (computed from vht_center_frequency): " << center_channel
+               << " secondary_chan_offset: " << secondary_chan_offset;
 
     if (!disable()) {
         LOG(ERROR) << "Failed disabling radio";
@@ -2178,7 +2178,7 @@ bool ap_wlan_hal_dwpal::generate_connected_clients_events(
 
             int32_t result = generate_association_event_result::SUCCESS;
             auto msg_buff  = generate_client_assoc_event(reply, m_vap_id_in_progress,
-                                                         get_radio_info().is_5ghz, result);
+                                                        get_radio_info().is_5ghz, result);
 
             if (!msg_buff) {
                 LOG(DEBUG) << "Failed to generate client association event from reply";
