@@ -228,6 +228,138 @@ const std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, wireless_utils::sChan
 
 
 };
+
+const wireless_utils::sPhyRateTableEntry wireless_utils::phy_rate_table[PHY_RATE_TABLE_ANT_MODE_MAX][PHY_RATE_TABLE_MCS_MAX] = {
+    // 1X1_SS1_table
+    {//MCS 0-9:{TX_power 2.4/5 ,{{20_rate_long/short,20_RSSI},{40_rate_long/short,40_RSSI},{80_rate_long/short,80_RSSI},{160_rate_long/short,160_RSSI}}}
+    {18, 16,    {
+        {beerocks::BANDWIDTH_20,  {65,   72,   -892}}, {beerocks::BANDWIDTH_40,  {135,   150,   -860}},
+        {beerocks::BANDWIDTH_80,  {293,  325,  -824}}, {beerocks::BANDWIDTH_160, {585,   650,   -794}},
+    }},
+    {18, 16,    {
+        {beerocks::BANDWIDTH_20,  {130,  144,  -865}}, {beerocks::BANDWIDTH_40,  {270,   300,   -841}},
+        {beerocks::BANDWIDTH_80,  {585,  650,  -805}}, {beerocks::BANDWIDTH_160, {1170,  1300,  -775}},
+    }},
+    {17, 15,    {
+        {beerocks::BANDWIDTH_20,  {195,  217,  -808}}, {beerocks::BANDWIDTH_40,  {405,   450,   -787}},
+        {beerocks::BANDWIDTH_80,  {878,  975,  -756}}, {beerocks::BANDWIDTH_160, {1175,  1950,  -726}},
+    }},
+    {17, 15,    {
+        {beerocks::BANDWIDTH_20,  {260,  289,  -811}}, {beerocks::BANDWIDTH_40,  {540,   600,   -790}},
+        {beerocks::BANDWIDTH_80,  {1170, 1300, -753}}, {beerocks::BANDWIDTH_160, {2340,  2600,  -723}},
+    }},
+    {17, 15,    {
+        {beerocks::BANDWIDTH_20,  {390,  433,  -755}}, {beerocks::BANDWIDTH_40,  {810,   900,   -727}},
+        {beerocks::BANDWIDTH_80,  {1755, 1950, -698}}, {beerocks::BANDWIDTH_160, {3510,  3900,  -668}},
+    }},
+    {17, 15,    {
+        {beerocks::BANDWIDTH_20,  {520,  578,  -717}}, {beerocks::BANDWIDTH_40,  {1080,  1200,  -686}},
+        {beerocks::BANDWIDTH_80,  {2340, 2600, -656}}, {beerocks::BANDWIDTH_160, {4680,  5200,  -626}},
+    }},
+    {17, 14,    {
+        {beerocks::BANDWIDTH_20,  {585,  650,  -698}}, {beerocks::BANDWIDTH_40,  {1215,  1350,  -672}},
+        {beerocks::BANDWIDTH_80,  {2633, 2925, -641}}, {beerocks::BANDWIDTH_160, {5265,  5850,  -611}},
+    }},
+    {16, 13,    {
+        {beerocks::BANDWIDTH_20,  {650,  722,  -673}}, {beerocks::BANDWIDTH_40,  {1350,  1500,  -647}},
+        {beerocks::BANDWIDTH_80,  {2925, 3250, -632}}, {beerocks::BANDWIDTH_160, {5850,  6500,  -602}},
+    }},
+    {0,  10,    {
+        {beerocks::BANDWIDTH_20,  {780,  867,  -644}}, {beerocks::BANDWIDTH_40,  {1620,  1800,  -619}},
+        {beerocks::BANDWIDTH_80,  {3510, 3900, -587}}, {beerocks::BANDWIDTH_160, {7020,  7800,  -557}},
+    }},
+    {0,  8,     {
+        {beerocks::BANDWIDTH_20,  {0,    0,    0   }}, {beerocks::BANDWIDTH_40,  {1800,  2000,  -599}},
+        {beerocks::BANDWIDTH_80,  {3900, 4333, -558}}, {beerocks::BANDWIDTH_160, {7800,  8667,  -528}},
+    }},
+    },
+    // 2X2_SS1_table
+    {//MCS 0-9:{TX_power,{{20_rate_long/short,20_RSSI},{40_rate_long/short,40_RSSI},{80_rate_long/short,80_RSSI},{160_rate_long/short,160_RSSI}}}
+    {18, 16,    {
+        {beerocks::BANDWIDTH_20,  {65,   72,   -912}}, {beerocks::BANDWIDTH_40,  {135,   150,   -894}},
+        {beerocks::BANDWIDTH_80,  {293,  325,  -855}}, {beerocks::BANDWIDTH_160, {585,   650,   -825}},
+    }},
+    {18, 16,    {
+        {beerocks::BANDWIDTH_20,  {130,  144,  -900}}, {beerocks::BANDWIDTH_40,  {270,   300,   -879}},
+        {beerocks::BANDWIDTH_80,  {585,  650,  -840}}, {beerocks::BANDWIDTH_160, {1170,  1300,  -810}},
+    }},
+    {17, 15,    {
+        {beerocks::BANDWIDTH_20,  {195,  217,  -869}}, {beerocks::BANDWIDTH_40,  {405,   450,   -843}},
+        {beerocks::BANDWIDTH_80,  {878,  975,  -805}}, {beerocks::BANDWIDTH_160, {1175,  1950,  -775}},
+    }},
+    {17, 15,    {
+        {beerocks::BANDWIDTH_20,  {260,  289,  -858}}, {beerocks::BANDWIDTH_40,  {540,   600,   -831}},
+        {beerocks::BANDWIDTH_80,  {1170, 1300, -792}}, {beerocks::BANDWIDTH_160, {2340,  2600,  -762}},
+    }},
+    {17, 15,    {
+        {beerocks::BANDWIDTH_20,  {390,  433,  -810}}, {beerocks::BANDWIDTH_40,  {810,   900,   -785}},
+        {beerocks::BANDWIDTH_80,  {1755, 1950, -748}}, {beerocks::BANDWIDTH_160, {3510,  3900,  -718}},
+    }},
+    {17, 15,    {
+        {beerocks::BANDWIDTH_20,  {520,  578,  -773}}, {beerocks::BANDWIDTH_40,  {1080,  1200,  -742}},
+        {beerocks::BANDWIDTH_80,  {2340, 2600, -704}}, {beerocks::BANDWIDTH_160, {4680,  5200,  -674}},
+    }},
+    {17, 14,    {
+        {beerocks::BANDWIDTH_20,  {585,  650,  -756}}, {beerocks::BANDWIDTH_40,  {1215,  1350,  -729}},
+        {beerocks::BANDWIDTH_80,  {2633, 2925, -692}}, {beerocks::BANDWIDTH_160, {5265,  5850,  -662}},
+    }},
+    {16, 13,    {
+        {beerocks::BANDWIDTH_20,  {650,  722,  -735}}, {beerocks::BANDWIDTH_40,  {1350,  1500,  -709}},
+        {beerocks::BANDWIDTH_80,  {2925, 3250, -684}}, {beerocks::BANDWIDTH_160, {5850,  6500,  -654}},
+    }},
+    {0,  10,    {
+        {beerocks::BANDWIDTH_20,  {780,  867,  -699}}, {beerocks::BANDWIDTH_40,  {1620,  1800,  -674}},
+        {beerocks::BANDWIDTH_80,  {3510, 3900, -637}}, {beerocks::BANDWIDTH_160, {7020,  7800,  -607}},
+    }},
+    {0,  8,     {
+        {beerocks::BANDWIDTH_20,  {0,    0,    0   }}, {beerocks::BANDWIDTH_40,  {1800,  2000,  -659}},
+        {beerocks::BANDWIDTH_80,  {3900, 4333, -614}}, {beerocks::BANDWIDTH_160, {7800,  8667,  -584}},
+    }},
+    },
+    // 2X2_SS2_table
+    {//MCS 0-9:{TX_power,{{20_rate_long/short,20_RSSI},{40_rate_long/short,40_RSSI},{80_rate_long/short,80_RSSI},{160_rate_long/short,160_RSSI}}}
+    {18, 16,    {
+        {beerocks::BANDWIDTH_20,  {130,  144,  -890}}, {beerocks::BANDWIDTH_40,  {270,   300,   -861}},
+        {beerocks::BANDWIDTH_80,  {585,  650,  -834}}, {beerocks::BANDWIDTH_160, {1170,  1300,  -804}},
+    }},
+    {18, 16,    {
+        {beerocks::BANDWIDTH_20,  {260,  288,  -855}}, {beerocks::BANDWIDTH_40,  {540,   600,   -828}},
+        {beerocks::BANDWIDTH_80,  {1170, 1300, -795}}, {beerocks::BANDWIDTH_160, {2340,  2600,  -765}},
+    }},
+    {17, 15,    {
+        {beerocks::BANDWIDTH_20,  {390,  434,  -815}}, {beerocks::BANDWIDTH_40,  {810,   900,   -784}},
+        {beerocks::BANDWIDTH_80,  {1755, 1950, -756}}, {beerocks::BANDWIDTH_160, {3510,  3900,  -726}},
+    }},
+    {17, 15,    {
+        {beerocks::BANDWIDTH_20,  {520,  578,  -774}}, {beerocks::BANDWIDTH_40,  {1080,  1200,  -755}},
+        {beerocks::BANDWIDTH_80,  {2340, 2600, -718}}, {beerocks::BANDWIDTH_160, {4680,  5200,  -688}},
+    }},
+    {17, 15,    {
+        {beerocks::BANDWIDTH_20,  {780,  866,  -720}}, {beerocks::BANDWIDTH_40,  {1620,  1800,  -699}},
+        {beerocks::BANDWIDTH_80,  {3510, 3900, -669}}, {beerocks::BANDWIDTH_160, {7020,  7800,  -639}},
+    }},
+    {17, 15,    {
+        {beerocks::BANDWIDTH_20,  {1040, 1156, -657}}, {beerocks::BANDWIDTH_40,  {2160,  2400,  -640}},
+        {beerocks::BANDWIDTH_80,  {4680, 5200, -604}}, {beerocks::BANDWIDTH_160, {9360,  10400, -574}},
+    }},
+    {17, 14,    {
+        {beerocks::BANDWIDTH_20,  {1170, 1300, -648}}, {beerocks::BANDWIDTH_40,  {2430,  2700,  -628}},
+        {beerocks::BANDWIDTH_80,  {5265, 5850, -594}}, {beerocks::BANDWIDTH_160, {10530, 11700, -564}},
+    }},
+    {16, 13,    {
+        {beerocks::BANDWIDTH_20,  {1300, 1444, -634}}, {beerocks::BANDWIDTH_40,  {2700,  3000,  -617}},
+        {beerocks::BANDWIDTH_80,  {5850, 6500, -574}}, {beerocks::BANDWIDTH_160, {11700, 13000, -544}},
+    }},
+    {0,  10,    {
+        {beerocks::BANDWIDTH_20,  {1560, 1733, -581}}, {beerocks::BANDWIDTH_40,  {3240,  3600,  -584}},
+        {beerocks::BANDWIDTH_80,  {7020, 7800, -525}}, {beerocks::BANDWIDTH_160, {14040, 15600, -495}},
+    }},
+    {0,  8,     {
+        {beerocks::BANDWIDTH_20,  {0,    0,    0   }}, {beerocks::BANDWIDTH_40,  {3600,  4000,  -556}},
+        {beerocks::BANDWIDTH_80,  {7800, 8666, -497}}, {beerocks::BANDWIDTH_160, {15600, 17333, -467}},
+    }},
+    },
+};
 // clang-format on
 
 /**
@@ -239,8 +371,6 @@ constexpr int RCPI_EQUATION_CONSTANT = 110;
 constexpr beerocks::eWiFiAntNum
     wireless_utils::phy_rate_table_mode_to_ant_num[PHY_RATE_TABLE_ANT_MODE_MAX];
 constexpr beerocks::eWiFiSS wireless_utils::phy_rate_table_mode_to_ss[PHY_RATE_TABLE_ANT_MODE_MAX];
-constexpr wireless_utils::sPhyRateTableEntry
-    wireless_utils::phy_rate_table[PHY_RATE_TABLE_ANT_MODE_MAX][PHY_RATE_TABLE_MCS_MAX];
 constexpr wireless_utils::sPhyRateBitRateEntry
     wireless_utils::bit_rate_max_table_mbps[BIT_RATE_MAX_TABLE_SIZE];
 
@@ -289,9 +419,9 @@ wireless_utils::estimate_ul_params(int ul_rssi, uint16_t sta_phy_tx_rate_100kb,
     const int max_mcs = (is_5ghz && (sta_capabilities->wifi_standard & int(beerocks::STANDARD_AC)))
                             ? sta_capabilities->vht_mcs
                             : sta_capabilities->ht_mcs;
-    int max_bw = (is_5ghz && (sta_capabilities->wifi_standard & int(beerocks::STANDARD_AC)))
-                     ? sta_capabilities->vht_bw
-                     : sta_capabilities->ht_bw;
+    uint8_t max_bw = (is_5ghz && (sta_capabilities->wifi_standard & int(beerocks::STANDARD_AC)))
+                         ? sta_capabilities->vht_bw
+                         : sta_capabilities->ht_bw;
     if (ap_bw < max_bw) {
         max_bw = ap_bw;
     }
@@ -311,29 +441,34 @@ wireless_utils::estimate_ul_params(int ul_rssi, uint16_t sta_phy_tx_rate_100kb,
     }
 
     // If station phyrate value is below table's minimum, return minimal estimation
-    if (sta_phy_tx_rate_100kb < phy_rate_table[0][0].bw_values[0].gi_long_rate) {
+    if (sta_phy_tx_rate_100kb < phy_rate_table[0][0].bw_values.begin()->second.gi_long_rate) {
         LOG(DEBUG) << "Can not estimate UL parameters (STA phyrate is too low)";
         estimation.tx_power =
             is_5ghz ? phy_rate_table[0][0].tx_power_5 : phy_rate_table[0][0].tx_power_2_4;
-        estimation.rssi   = int(ceil(phy_rate_table[0][0].bw_values[0].rssi / 10.0));
+        estimation.rssi   = int(ceil(phy_rate_table[0][0].bw_values.begin()->second.rssi / 10.0));
         estimation.status = ESTIMATION_FAILURE_BELOW_RANGE;
 
         return estimation;
     }
 
     // If station phyrate value is above table's maximum, return maximal estimation
+    auto const &bw_values_limit = phy_rate_table[max_ant_mode][max_mcs].bw_values;
+    if (bw_values_limit.find(max_bw) == bw_values_limit.end()) {
+        LOG(ERROR) << "Can not estimate UL parameters: unsupported bw " << max_bw;
+        return estimation;
+    }
     if (sta_phy_tx_rate_100kb >
-        phy_rate_table[max_ant_mode][max_mcs].bw_values[max_bw].gi_short_rate) {
+        phy_rate_table[max_ant_mode][max_mcs].bw_values.at(max_bw).gi_short_rate) {
         LOG(DEBUG) << "STA phy rate (" << sta_phy_tx_rate_100kb / 10
                    << " Mbps) is above maximum possible in current MCS/NSS/BW mode ("
-                   << phy_rate_table[max_ant_mode][max_mcs].bw_values[max_bw].gi_short_rate / 10
+                   << phy_rate_table[max_ant_mode][max_mcs].bw_values.at(max_bw).gi_short_rate / 10
                    << " Mbps)";
 
         estimation.status   = ESTIMATION_SUCCESS;
         estimation.tx_power = is_5ghz ? phy_rate_table[max_ant_mode][max_mcs].tx_power_5
                                       : phy_rate_table[max_ant_mode][max_mcs].tx_power_2_4;
         estimation.rssi =
-            int(ceil(phy_rate_table[max_ant_mode][max_mcs].bw_values[max_bw].rssi / 10.0));
+            int(ceil(phy_rate_table[max_ant_mode][max_mcs].bw_values.at(max_bw).rssi / 10.0));
 
         LOG(DEBUG) << "Return maximal estimation values | tx_power:" << estimation.tx_power
                    << " | RSSI:" << estimation.rssi;
@@ -341,15 +476,20 @@ wireless_utils::estimate_ul_params(int ul_rssi, uint16_t sta_phy_tx_rate_100kb,
         return estimation;
     }
 
-    for (int ant_mode = max_ant_mode; ant_mode > -1; ant_mode--) { // filter by ant_mode
-        for (int bw = max_bw; bw > -1; bw--) {                     // filter by max_bw
-            for (int mcs = max_mcs; mcs > -1; mcs--) {             // filter by mcs
+    for (int ant_mode = max_ant_mode; ant_mode > -1; ant_mode--) {   // filter by ant_mode
+        for (auto bw = max_bw; bw >= beerocks::BANDWIDTH_20; bw--) { // filter by max_bw
+            // skip un-handled intermediate bw values
+            auto const &bw_values_max = phy_rate_table[ant_mode][max_mcs].bw_values;
+            if (bw_values_max.find(bw) == bw_values_max.end()) {
+                continue;
+            }
+            for (int mcs = max_mcs; mcs > -1; mcs--) { // filter by mcs
 
-                estimated_ul_rssi_lut       = phy_rate_table[ant_mode][mcs].bw_values[bw].rssi;
+                estimated_ul_rssi_lut       = phy_rate_table[ant_mode][mcs].bw_values.at(bw).rssi;
                 estimated_ul_rssi_lut_delta = std::abs(ul_rssi_lut - estimated_ul_rssi_lut);
 
-                auto gi_long_rate  = phy_rate_table[ant_mode][mcs].bw_values[bw].gi_long_rate;
-                auto gi_short_rate = phy_rate_table[ant_mode][mcs].bw_values[bw].gi_short_rate;
+                auto gi_long_rate  = phy_rate_table[ant_mode][mcs].bw_values.at(bw).gi_long_rate;
+                auto gi_short_rate = phy_rate_table[ant_mode][mcs].bw_values.at(bw).gi_short_rate;
 
                 // Check if the current rate is between the gi_long_rate to the gi_short_rate
                 if ((sta_phy_tx_rate_100kb >= gi_long_rate) &&
@@ -376,13 +516,13 @@ wireless_utils::estimate_ul_params(int ul_rssi, uint16_t sta_phy_tx_rate_100kb,
                 // (mcs -1) gi_short_rate.
                 if (!((sta_phy_tx_rate_100kb <= gi_long_rate) &&
                       (sta_phy_tx_rate_100kb >=
-                       phy_rate_table[ant_mode][mcs - 1].bw_values[bw].gi_short_rate))) {
+                       phy_rate_table[ant_mode][mcs - 1].bw_values.at(bw).gi_short_rate))) {
                     continue;
                 }
 
                 // update rssi estimation and delta
-                estimated_ul_rssi_lut = (phy_rate_table[ant_mode][mcs].bw_values[bw].rssi +
-                                         phy_rate_table[ant_mode][mcs - 1].bw_values[bw].rssi) /
+                estimated_ul_rssi_lut = (phy_rate_table[ant_mode][mcs].bw_values.at(bw).rssi +
+                                         phy_rate_table[ant_mode][mcs - 1].bw_values.at(bw).rssi) /
                                         2;
 
                 estimated_ul_rssi_lut_delta = std::abs(ul_rssi_lut - estimated_ul_rssi_lut);
@@ -451,9 +591,9 @@ double wireless_utils::estimate_ap_tx_phy_rate(
     int max_mcs = (is_5ghz && (sta_capabilities->wifi_standard & int(beerocks::STANDARD_AC)))
                       ? sta_capabilities->vht_mcs
                       : sta_capabilities->ht_mcs;
-    int max_bw = (is_5ghz && (sta_capabilities->wifi_standard & int(beerocks::STANDARD_AC)))
-                     ? sta_capabilities->vht_bw
-                     : sta_capabilities->ht_bw;
+    uint8_t max_bw = (is_5ghz && (sta_capabilities->wifi_standard & int(beerocks::STANDARD_AC)))
+                         ? sta_capabilities->vht_bw
+                         : sta_capabilities->ht_bw;
     if (ap_bw < max_bw) {
         max_bw = ap_bw;
     }
@@ -461,15 +601,20 @@ double wireless_utils::estimate_ap_tx_phy_rate(
     // Beerocks is not supporting estimation above 80 Mhz
     max_bw = (max_bw > beerocks::BANDWIDTH_160 ? beerocks::BANDWIDTH_160 : max_bw);
 
-    for (int ant_mode = max_ant_mode; ant_mode > -1; ant_mode--) { // filter by ant_num
-        for (int bw = max_bw; bw > -1; bw--) {                     // filter by mac_bw
-            for (int mcs = max_mcs; mcs > -1; mcs--) {             // filter by mcs
+    for (int ant_mode = max_ant_mode; ant_mode > -1; ant_mode--) {   // filter by ant_mode
+        for (auto bw = max_bw; bw >= beerocks::BANDWIDTH_20; bw--) { // filter by max_bw
+            // skip un-handled intermediate bw values
+            auto const &bw_values_max = phy_rate_table[ant_mode][max_mcs].bw_values;
+            if (bw_values_max.find(bw) == bw_values_max.end()) {
+                continue;
+            }
+            for (int mcs = max_mcs; mcs > -1; mcs--) { // filter by mcs
 
-                dl_rssi_lut = phy_rate_table[ant_mode][mcs].bw_values[bw].rssi;
+                dl_rssi_lut = phy_rate_table[ant_mode][mcs].bw_values.at(bw).rssi;
                 // same rate && min rssi_delta
                 if (estimated_dl_rssi_lut >= dl_rssi_lut) {
                     estimated_phy_rate =
-                        1e+5 * double(phy_rate_table[ant_mode][mcs].bw_values[bw].gi_short_rate);
+                        1e+5 * double(phy_rate_table[ant_mode][mcs].bw_values.at(bw).gi_short_rate);
                     break;
                 }
             }
@@ -481,7 +626,8 @@ double wireless_utils::estimate_ap_tx_phy_rate(
     }
 
     if (estimated_phy_rate == 0) {
-        estimated_phy_rate = 1e+5 * double(phy_rate_table[0][0].bw_values[0].gi_short_rate);
+        estimated_phy_rate =
+            1e+5 * double(phy_rate_table[0][0].bw_values.begin()->second.gi_short_rate);
     }
 
     LOG(DEBUG) << "estimated DL RSSI:" << int(estimated_dl_rssi)
@@ -521,29 +667,33 @@ bool wireless_utils::get_mcs_from_rate(const uint16_t rate, const beerocks::eWiF
                                        const beerocks::eWiFiBandwidth bw, uint8_t &mcs,
                                        uint8_t &short_gi)
 {
-    uint16_t rate_temp;
-    uint16_t diff_temp;
     uint16_t nearest_diff = 0xFFFF;
     for (int mcs_idx = 0; mcs_idx < 8; mcs_idx++) {
-        if (phy_rate_table[ant_mode][mcs_idx].bw_values[bw].gi_short_rate == rate) {
+        auto const &bw_values = phy_rate_table[ant_mode][mcs_idx].bw_values;
+        auto iter_bw          = bw_values.find(bw);
+        if (iter_bw == bw_values.end()) {
+            continue;
+        }
+
+        if (iter_bw->second.gi_short_rate == rate) {
             mcs      = mcs_idx;
             short_gi = 1;
             return true;
-        } else if (phy_rate_table[ant_mode][mcs_idx].bw_values[bw].gi_long_rate == rate) {
+        } else if (iter_bw->second.gi_long_rate == rate) {
             mcs      = mcs_idx;
-            short_gi = 1;
+            short_gi = 0;
             return true;
         }
 
-        rate_temp = phy_rate_table[ant_mode][mcs_idx].bw_values[bw].gi_short_rate;
-        diff_temp = abs(rate - rate_temp);
+        uint16_t rate_temp = iter_bw->second.gi_short_rate;
+        uint16_t diff_temp = abs(rate - rate_temp);
         if (diff_temp < nearest_diff) {
             nearest_diff = diff_temp;
             mcs          = mcs_idx;
             short_gi     = 1;
         }
 
-        rate_temp = phy_rate_table[ant_mode][mcs_idx].bw_values[bw].gi_long_rate;
+        rate_temp = iter_bw->second.gi_long_rate;
         diff_temp = abs(rate - rate_temp);
         if (diff_temp < nearest_diff) {
             nearest_diff = diff_temp;
