@@ -6,9 +6,11 @@
  * See LICENSE file for more details.
  */
 
+#include "test_teams_members.h"
 #include "tlvf/CmduMessageRx.h"
 #include "tlvf/CmduMessageTx.h"
 #include "tlvf/tlvftypes.h"
+
 #include <cstring>
 #include <iostream>
 #include <sstream>
@@ -25,6 +27,7 @@
 #include "tlvf/ieee_1905_1/tlvWsc.h"
 #include "tlvf/wfa_map/tlvApCapability.h"
 #include "tlvf/wfa_map/tlvProfile2ChannelScanResult.h"
+#include "tlvf/wfa_map/tlvTeamsMembers.h"
 #include <tlvf/test/tlvVarList.h>
 #include <tlvf/tlvftypes.h>
 
@@ -1098,6 +1101,15 @@ int test_conditional_parameters_rx_tx()
     return errors;
 }
 
+void test_teams_members()
+{
+    uint8_t tx_buffer[4096];
+    uint8_t len;
+    memset(tx_buffer, 0, 4096);
+    len = test_teams_members_build(tx_buffer, 4096);
+    test_teams_members_parse(tx_buffer, len);
+}
+
 int main(int argc, char *argv[])
 {
     int errors = 0;
@@ -1110,6 +1122,7 @@ int main(int argc, char *argv[])
     errors += test_mac_from_string();
     errors += test_conditional_parameters_rx_tx();
     errors += test_channel_scan_results();
+    test_teams_members();
     MAPF_INFO(__FUNCTION__ << " Finished, errors = " << errors << std::endl);
     return errors;
 }
