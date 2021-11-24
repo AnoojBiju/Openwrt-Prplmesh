@@ -1,0 +1,71 @@
+---
+_namespace: wfa_map
+
+tlvTeamsMembers:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_TEAMS_MEMBERS
+  length: uint16_t
+  team_id:
+    _type: uint8_t
+    _length_var: True
+  team_profile:
+    _type: cTeamProfile
+    _length: [team_id]
+
+cTeamProfile:
+  _type: class
+  team_name:
+    _type: char
+    _length: [16]
+  num_of_dev:
+    _type: uint8_t
+    _length_var: True
+  dev_profile:
+    _type: cDevProfile
+    _length: [num_of_dev]
+
+cDevProfile:
+  _type: class
+  dev_name_len:
+    _type: uint8_t
+    _length_var: True
+  dev_name:
+    _type: char
+    _length: [dev_name_len]
+  work_exp:
+    _type: sDevProfile
+  age: uint8_t
+  prev_comp_list_len:
+    _type: uint8_t
+    _length_var: True
+  previous_companies:
+    _type: cCompanyName
+    _length: [prev_comp_list_len]
+
+eWorkLocation:
+  _type: enum
+  ISRAEL: 0
+  INDIA: 1
+  EUROPE: 2
+  USA: 3
+
+sDevProfile:
+  _type: struct
+  _bit_field: uint8_t
+  years_of_experience:
+    _bit_range: [7, 2]
+  work_location:
+    _bit_range: [1, 0]
+    _bit_field_enum: eWorkLocation
+
+cCompanyName:
+  _type: class
+  comp_name_len:
+    _type: uint8_t
+    _length_var: True
+  comp_name:
+    _type: char
+    _length: [comp_name_len]
