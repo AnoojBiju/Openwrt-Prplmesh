@@ -31,7 +31,7 @@ uint8_t test_teams_members_build(uint8_t *tx_buffer, size_t len)
 {
     CmduMessageTx msg = CmduMessageTx(tx_buffer, len);
     msg.create(0, ieee1905_1::eMessageType::TEAMS_MEMBERS);
-    
+
     auto tlv          = msg.addClass<tlvTeamsMembers>();
     auto team_profile = tlv->create_team_profile();
     team_profile->set_team_name("PRPLMESH-BLR");
@@ -59,7 +59,7 @@ uint8_t test_teams_members_build(uint8_t *tx_buffer, size_t len)
     dev_profile->age()                          = 35;
     dev_profile->work_exp().work_location       = wfa_map::cDevProfile::eWorkLocation::ISRAEL;
     dev_profile->work_exp().years_of_experience = 12;
-    
+
     dev_prev_companies = dev_profile->create_previous_companies();
     dev_prev_companies->set_comp_name("INTEL");
     dev_profile->add_previous_companies(dev_prev_companies);
