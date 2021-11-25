@@ -272,6 +272,27 @@ class cACTION_CLI_BACKHAUL_ROAM_REQUEST : public BaseClass
         sMacAddr* m_bssid = nullptr;
 };
 
+class cACTION_CLI_TEST_CONF : public BaseClass
+{
+    public:
+        cACTION_CLI_TEST_CONF(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_CLI_TEST_CONF(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_CLI_TEST_CONF();
+
+        static eActionOp_CLI get_action_op(){
+            return (eActionOp_CLI)(ACTION_CLI_TEST_CONF);
+        }
+        uint8_t& value();
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_CLI* m_action_op = nullptr;
+        uint8_t* m_value = nullptr;
+};
+
 class cACTION_CLI_CLIENT_ALLOW_REQUEST : public BaseClass
 {
     public:
