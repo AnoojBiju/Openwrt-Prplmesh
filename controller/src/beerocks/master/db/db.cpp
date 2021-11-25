@@ -1465,7 +1465,7 @@ db::get_station_current_capabilities(const std::string &mac)
     if (!n) {
         return nullptr;
     }
-    return (&n->capabilities);
+    return (n->capabilities);
 }
 
 bool db::dm_set_sta_he_capabilities(const std::string &path_to_sta,
@@ -1653,12 +1653,12 @@ bool db::set_station_capabilities(const std::string &client_mac,
     if (is_node_5ghz(parent_radio)) {
         n->m_sta_5ghz_capabilities       = sta_cap;
         n->m_sta_5ghz_capabilities.valid = true;
-        n->capabilities                  = n->m_sta_5ghz_capabilities;
+        n->capabilities                  = &n->m_sta_5ghz_capabilities;
 
     } else {
         n->m_sta_24ghz_capabilities       = sta_cap;
         n->m_sta_24ghz_capabilities.valid = true;
-        n->capabilities                   = n->m_sta_24ghz_capabilities;
+        n->capabilities                   = &n->m_sta_24ghz_capabilities;
     }
 
     // Prepare path to the STA
@@ -1756,8 +1756,11 @@ bool db::set_hostap_ant_num(const sMacAddr &mac, beerocks::eWiFiAntNum ant_num)
     } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
         LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return false;
+    } else if (n->capabilities == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << mac << " has no current capabilities!";
+        return false;
     }
-    n->capabilities.ant_num = ant_num;
+    n->capabilities->ant_num = ant_num;
     return true;
 }
 
@@ -1770,8 +1773,11 @@ beerocks::eWiFiAntNum db::get_hostap_ant_num(const sMacAddr &mac)
     } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
         LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return beerocks::ANT_NONE;
+    } else if (n->capabilities == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << mac << " has no current capabilities!";
+        return beerocks::ANT_NONE;
     }
-    return beerocks::eWiFiAntNum(n->capabilities.ant_num);
+    return beerocks::eWiFiAntNum(n->capabilities->ant_num);
 }
 
 bool db::set_hostap_ant_gain(const sMacAddr &al_mac, const sMacAddr &mac, int ant_gain)

@@ -558,6 +558,7 @@ void optimal_path_task::work()
                                 << (hostap_is_5ghz ? "5GHz" : "2.4GHz");
                 sta_capabilities = database.get_station_capabilities(sta_mac, hostap_is_5ghz);
                 if (sta_capabilities == nullptr) {
+                    TASK_LOG(WARNING) << "STA capabilities are empty - use default capabilities";
                     get_station_default_capabilities(hostap_is_5ghz, default_sta_cap);
                     sta_capabilities = &default_sta_cap;
                 }
