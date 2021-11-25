@@ -1196,20 +1196,25 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
                  * to MASTER_DISCOVERY state, otherwise to INITIATE_SCAN.
                  */
 
-                // if (!roam_flag && soc->sta_wlan_hal->is_connected()) {
-                //     if (!soc->sta_wlan_hal->update_status()) {
-                //         LOG(ERROR) << "failed to update sta status";
-                //         success = false;
-                //         break;
-                //     }
-                //     connected                        = true;
-                //     db->backhaul.selected_iface_name = iface;
-                //     db->backhaul.connection_type   = AgentDB::sBackhaul::eConnectionType::Wireless;
-                //     selected_bssid                 = soc->sta_wlan_hal->get_bssid();
-                //     selected_bssid_channel         = soc->sta_wlan_hal->get_channel();
-                //     soc->slave_is_backhaul_manager = true;
-                //     break;
-                // }
+                if (!roam_flag && radio_info->sta_wlan_hal->is_connected()) {
+                    if (!radio_info->sta_wlan_hal->update_status()) {
+                        LOG(ERROR) << "failed to update sta status";
+                        success = false;
+                        break;
+                    }
+                    db->backhaul.selected_iface_name = iface;
+                    db->backhaul.connection_type   = AgentDB::sBackhaul::eConnectionType::Wireless;
+                    selected_bssid                 = radio_info->sta_wlan_hal->get_bssid();
+                    selected_bssid_channel         = radio_info->sta_wlan_hal->get_channel();
+                    radio_info->slave_is_backhaul_manager = true;
+                    // TODO we're missing primary VLAN ID and multi-AP profile that we normally
+                    // get from the Connected message
+                    // Send slaves to enable the AP's
+                    send_slaves_enable();
+
+                    FSM_MOVE_STATE(MASTER_DISCOVERY);
+                    return true;
+                }
 
                 auto radio = db->radio(radio_info->sta_iface);
                 if (!radio) {
@@ -1246,6 +1251,18 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
         state_time_stamp_timeout =
             std::chrono::steady_clock::now() + std::chrono::seconds(STATE_WAIT_WPS_TIMEOUT_SECONDS);
         FSM_MOVE_STATE(WAIT_WPS);
+//		for (auto &radio_info : m_radios_info) {
+//			// check if the STA is already connected
+//			if(radio_info->sta_wlan_hal->is_connected()){
+//                            auto ssid = radio_info->sta_wlan_hal->get_ssid();
+//                            auto bssid = radio_info->sta_wlan_hal->get_bssid();
+//				LOG(INFO) << "Radio already connected before prplMesh started, reconnecting.";
+//				radio_info->sta_wlan_hal->disconnect();
+//				UTILS_SLEEP_MSEC(3000);
+//				radio_info->sta_wlan_hal->connect(ssid, pass, sec, false, bssid, 0, false);
+//			}
+//		}
+
         break;
     }
     // Wait for WPS command

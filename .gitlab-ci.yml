@@ -50,9 +50,7 @@ image-build-cppcheck:
 platform:
   stage: platform
   needs:
-    - build-in-docker
     - image-build-boardfarm-ci
-  rules: *expensive-job
   variables:
     ALTRAN_TESTS: $ALTRAN_TESTS
     TESTS_TO_RUN_ESSENSIUM: $TESTS_TO_RUN_ESSENSIUM
