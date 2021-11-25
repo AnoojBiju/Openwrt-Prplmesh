@@ -47,6 +47,8 @@ private:
 
     int set_stop_on_failure_attempts_caller(int numOfArgs);
 
+    int test_conf_caller(int numOfArgs);
+
     int enable_diagnostics_measurements_caller(int numOfArgs);
 
     int dump_node_info_caller(int numOfArgs);
@@ -84,6 +86,8 @@ private:
     int enable_debug(int8_t isEnable = -1);
 
     int set_stop_on_failure_attempts(int32_t attempts = -1);
+
+    int test_conf(uint8_t test_conf = -1);
 
     int enable_diagnostics_measurements(int8_t isEnable = -1);
 

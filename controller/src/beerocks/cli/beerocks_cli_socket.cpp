@@ -8,10 +8,12 @@
 
 #include "beerocks_cli_socket.h"
 
+#include <bcl/beerocks_config_file.h>
 #include <bcl/beerocks_string_utils.h>
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
 #include <bcl/son/son_wireless_utils.h>
+#include <mapf/common/utils.h>
 
 #include <easylogging++.h>
 
@@ -174,6 +176,10 @@ void cli_socket::setFunctionsMapAndArray()
                        "remove 'bssid' from  11k neighbor list of 'hostap_mac' 'vap_id'",
                        static_cast<pFunction>(&cli_socket::rm_neighbor_11k_caller), 3, 3,
                        STRING_ARG, STRING_ARG);
+    insertCommandToMap(
+        "test_conf", "test_conf <set_value>",
+        "If set_value not given then current value will be printed, set_value range 0 to 254",
+        static_cast<pFunction>(&cli_socket::test_conf_caller), 0, 1);
 }
 
 bool cli_socket::waitResponseReady()
@@ -435,6 +441,17 @@ int cli_socket::rm_neighbor_11k_caller(int numOfArgs)
         return rm_neighbor_11k(args.stringArgs[0], args.stringArgs[1], args.intArgs[2]);
     }
     return -1;
+}
+
+int cli_socket::test_conf_caller(int numOfArgs)
+{
+    if (numOfArgs == 0) {
+        return test_conf();
+    }
+    if (numOfArgs == 1) {
+        return test_conf(args.intArgs[0]);
+    }
+    return 0;
 }
 
 //
@@ -759,6 +776,20 @@ int cli_socket::rm_neighbor_11k(std::string ap_mac, std::string bssid, int8_t va
     request->bssid()  = tlvf::mac_from_string(bssid);
     request->vap_id() = vap_id;
     wait_response     = true;
+    message_com::send_cmdu(master_socket, cmdu_tx);
+    waitResponseReady();
+    return 0;
+}
+
+int cli_socket::test_conf(uint8_t test_conf)
+{
+    auto request = message_com::create_vs_message<beerocks_message::cACTION_CLI_TEST_CONF>(cmdu_tx);
+    if (request == nullptr) {
+        LOG(ERROR) << "Failed building cACTION_CLI_TEST_CONF message!";
+        return -1;
+    }
+    request->value() = test_conf;
+    wait_response    = true;
     message_com::send_cmdu(master_socket, cmdu_tx);
     waitResponseReady();
     return 0;
