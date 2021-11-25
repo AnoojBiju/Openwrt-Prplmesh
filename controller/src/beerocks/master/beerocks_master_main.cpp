@@ -210,6 +210,7 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
         beerocks::string_utils::stoi(main_master_conf.roaming_sticky_client_rssi_threshold);
     master_conf.credentials_change_timeout_sec =
         beerocks::string_utils::stoi(main_master_conf.credentials_change_timeout_sec);
+    master_conf.test_conf = beerocks::string_utils::stoi(main_master_conf.test_conf);
     // get channel vector
     std::string s         = main_master_conf.global_restricted_channels;
     std::string delimiter = ",";
