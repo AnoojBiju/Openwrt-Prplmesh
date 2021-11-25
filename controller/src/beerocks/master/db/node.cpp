@@ -14,7 +14,7 @@ using namespace beerocks;
 using namespace son;
 
 node::node(beerocks::eType type_, const std::string &mac_)
-    : mac(mac_), capabilities(m_sta_24ghz_capabilities) // deafult value
+    : mac(mac_), capabilities(&m_sta_24ghz_capabilities) // deafult value
 {
     type = type_;
     if ((type == beerocks::TYPE_CLIENT) || (type == beerocks::TYPE_IRE_BACKHAUL)) {
