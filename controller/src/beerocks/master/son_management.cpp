@@ -624,6 +624,24 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
                                std::string(), disassoc_imminent);
         break;
     }
+    case beerocks_message::ACTION_CLI_TEST_CONF: {
+        auto request = beerocks_header->addClass<beerocks_message::cACTION_CLI_TEST_CONF>();
+        if (request == nullptr) {
+            LOG(ERROR) << "addClass cACTION_CLI_TEST_CONF failed";
+            isOK = false;
+            break;
+        }
+#define TEST_CONF_INVALID 255
+        /* beerocks_cli: test_conf <set_value> range:0 to 254.
+           If set_value is not supplied then default argument value is 255. test_conf(set_value=255)
+           So, here if we receive 255 meaning user wants to get test_conf value and not set.
+        */
+        if (request->value() != TEST_CONF_INVALID) {
+            database.config.test_conf = request->value();
+        }
+        currentValue = database.config.test_conf;
+        break;
+    }
     case beerocks_message::ACTION_CLI_CLIENT_BSS_STEER_REQUEST: {
         auto request =
             beerocks_header->addClass<beerocks_message::cACTION_CLI_CLIENT_BSS_STEER_REQUEST>();
