@@ -1051,15 +1051,6 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
 
     auto event = nl80211_to_bwl_event(opcode);
 
-    if (event != Event::AP_MGMT_FRAME_RECEIVED && event != Event::STA_Connected) {
-        // we only need to keep the association frame from the time we
-        // receive AP_MGMT_FRAME_RECEIVED, to the time we receive
-        // STA_Connected.
-        if (!m_latest_assoc_frame.empty()) {
-            m_latest_assoc_frame = {};
-        }
-    }
-
     switch (event) {
 
     case Event::AP_MGMT_FRAME_RECEIVED: {
@@ -1096,14 +1087,16 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
         msg->params.vap_id = 0;
         msg->params.mac    = tlvf::mac_from_string(parsed_obj[bwl::EVENT_KEYLESS_PARAM_MAC]);
 
-        // Add the latest association frame
         if (m_latest_assoc_frame.empty()) {
-            LOG(ERROR) << "STA-CONNECTED without previously receiving a (re-)association frame!";
-            return false;
+            LOG(WARNING) << "STA-CONNECTED without previously receiving a (re-)association frame!";
+            msg->params.association_frame_length = 0;
+        } else {
+            // Add the latest association frame
+            // PPM-1718: parse the association frame and make sure it belongs to the right MAC address.
+            auto assoc_req = get_binary_association_frame(m_latest_assoc_frame.c_str());
+            msg->params.association_frame_length = assoc_req.length();
+            std::copy_n(&assoc_req[0], assoc_req.length(), msg->params.association_frame);
         }
-        auto assoc_req = get_binary_association_frame(m_latest_assoc_frame.c_str());
-        msg->params.association_frame_length = assoc_req.length();
-        std::copy_n(&assoc_req[0], assoc_req.length(), msg->params.association_frame);
 
         // Add the message to the queue
         event_queue_push(Event::STA_Connected, msg_buff);
