@@ -11,7 +11,6 @@ variables:
   GLINET_B1300_FULLIMAGE: "openwrt-ipq40xx-generic-glinet_gl-b1300-squashfs-sysupgrade.bin"
   AXEPOINT_FULLIMAGE: "AX3000_1600_ETH_11AXUCI-squashfs-fullimage.img"
   NEC_WX3000HP_FULLIMAGE: "AX3000_1600_ETH_11AXUCI_ASURADA-squashfs-fullimage.img"
-  NETGEAR_RAX40_FULLIMAGE: "NETGEAR_RAX40-squashfs-fullimage.img"
 
 workflow:
   rules:
@@ -92,12 +91,12 @@ test-on-glinet-b1300:
     OPENWRT_IMAGE: openwrt-ipq40xx-generic-glinet_gl-b1300-squashfs-sysupgrade.bin
   needs: ["build-for-glinet-b1300"]
 
-boardfarm-on-netgear-rax40:
+boardfarm-on-nec-wx3000hp:
  extends: .test-on-target
  variables:
-   TARGET_DEVICE: netgear-rax40
-   TARGET_DEVICE_NAME: netgear-rax40-1
-   OPENWRT_IMAGE: NETGEAR_RAX40-squashfs-fullimage.img
+   TARGET_DEVICE: nec-wx3000hp
+   TARGET_DEVICE_NAME: nec-wx3000hp-1
+   OPENWRT_IMAGE: $NEC_WX3000HP_FULLIMAGE
  script:
    - |
        echo "Retrieving the job ID for 'build-in-docker'."
@@ -113,7 +112,7 @@ boardfarm-on-netgear-rax40:
        echo Done
    # TODO: set the BH iface in UCI once https://jira.prplfoundation.org/browse/PPM-230 is done:
    - ssh "$TARGET_DEVICE_NAME" "sed -ri 's/backhaul_wire_iface=eth1/backhaul_wire_iface=eth0_1/' /opt/prplmesh/config/beerocks_agent.conf"
-   - ./dctest.py --dut netgear-rax40-1 --test-suite test_flows_on_prplwrt
+   - ./dctest.py --dut "$TARGET_DEVICE_NAME" --test-suite test_flows_on_prplwrt
    - ssh "$TARGET_DEVICE_NAME" 'wifi down'
  needs:
    - build-for-intel-mips
@@ -206,7 +205,6 @@ upload-release-artifacts:
     - upload_command "glinet-b1300" "$GLINET_B1300_FULLIMAGE"
     - upload_command "axepoint" "$AXEPOINT_FULLIMAGE"
     - upload_command "nec-wx3000hp" "$NEC_WX3000HP_FULLIMAGE"
-    - upload_command "netgear-rax40" "$NETGEAR_RAX40_FULLIMAGE"
   needs:
     - job: build-for-turris-omnia
     - job: build-for-glinet-b1300
@@ -227,8 +225,6 @@ release:
         --assets-link "{\"name\":\"turris-omnia prplmesh ipk\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/turris-omnia/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_turris-omnia.ipk\"}" \
         --assets-link "{\"name\":\"turris-omnia fullimage\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/turris-omnia/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$TURRIS_OMNIA_FULLIMAGE\"}" \
         --assets-link "{\"name\":\"nec-wx3000hp prplmesh ipk\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/nec-wx3000hp/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_nec-wx3000hp.ipk\"}" \
-        --assets-link "{\"name\":\"nec-wx3000hp fullimage\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/nec-wx3000hp/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$NEC_WX3000HP_FULLIMAGE\"}" \
-        --assets-link "{\"name\":\"netgear-rax40 prplmesh ipk\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/netgear-rax40/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_netgear-rax40.ipk\"}" \
-        --assets-link "{\"name\":\"netgear-rax40 fullimage\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/netgear-rax40/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$NETGEAR_RAX40_FULLIMAGE\"}"
+        --assets-link "{\"name\":\"nec-wx3000hp fullimage\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/nec-wx3000hp/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$NEC_WX3000HP_FULLIMAGE\"}"
   needs:
     - job: upload-release-artifacts
