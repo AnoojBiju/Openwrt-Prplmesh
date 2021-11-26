@@ -391,7 +391,7 @@ void agent_monitoring_task::dm_add_sta_to_agent_connected_event(
                     return;
                 }
                 ambiorix_dm->set_current_time(sta_path);
-                ambiorix_dm->set(sta_path, "MACAddress", tlvf::mac_to_string(sta.mac()));
+                ambiorix_dm->set(sta_path, "MACAddress", sta.mac());
                 ambiorix_dm->set(sta_path, "TimeSinceLastAssocSec",
                                  sta.time_since_last_association_sec());
             }
@@ -426,7 +426,7 @@ std::string agent_monitoring_task::dm_add_agent_connected_event(
         return {};
     }
 
-    ambiorix_dm->set(agent_connected_path, "ID", tlvf::mac_to_string(agent_mac));
+    ambiorix_dm->set(agent_connected_path, "ID", agent_mac);
     ambiorix_dm->set_current_time(agent_connected_path);
     for (int i = 0; i < ap_op_bss_tlv->radio_list_length(); i++) {
         auto radio      = std::get<1>(ap_op_bss_tlv->radio_list(i));
@@ -437,7 +437,7 @@ std::string agent_monitoring_task::dm_add_agent_connected_event(
                        << ".Radio, mac: " << radio.radio_uid();
             return agent_connected_path;
         }
-        ambiorix_dm->set(radio_path, "MACAddress", tlvf::mac_to_string(radio.radio_uid()));
+        ambiorix_dm->set(radio_path, "MACAddress", radio.radio_uid());
         for (int j = 0; j < radio.radio_bss_list_length(); j++) {
             auto bss      = std::get<1>(radio.radio_bss_list(j));
             auto bss_path = ambiorix_dm->add_instance(radio_path + ".BSS");
@@ -446,7 +446,7 @@ std::string agent_monitoring_task::dm_add_agent_connected_event(
                 LOG(ERROR) << "Failed to add " << radio_path << ".BSS BSSID: " << bss.radio_bssid();
                 return agent_connected_path;
             }
-            ambiorix_dm->set(bss_path, "BSSID", tlvf::mac_to_string(bss.radio_bssid()));
+            ambiorix_dm->set(bss_path, "BSSID", bss.radio_bssid());
             ambiorix_dm->set(bss_path, "SSID", bss.ssid_str());
             if (tlv_assoc_client) {
                 dm_add_sta_to_agent_connected_event(bss_path, bss.radio_bssid(), tlv_assoc_client);
@@ -489,7 +489,7 @@ bool agent_monitoring_task::dm_add_neighbor_to_agent_connected_event(
                 LOG(ERROR) << "Failed to add " << event_path << ".Neighbor";
                 return false;
             }
-            if (!ambiorix_dm->set(neighbor_path, "ID", tlvf::mac_to_string(neighbor_mac))) {
+            if (!ambiorix_dm->set(neighbor_path, "ID", neighbor_mac)) {
                 LOG(ERROR) << "Failed to set ID for : " << neighbor_path;
                 return false;
             }
@@ -565,7 +565,7 @@ bool agent_monitoring_task::dm_add_agent_disconnected_event(const sMacAddr &agen
         return false;
     }
     m_disconnected.push(agent_discon_path);
-    if (!ambiorix_dm->set(agent_discon_path, "ID", tlvf::mac_to_string(agent_mac))) {
+    if (!ambiorix_dm->set(agent_discon_path, "ID", agent_mac)) {
         LOG(ERROR) << "Failed to set " << agent_discon_path << "ID";
         return false;
     }
@@ -601,7 +601,7 @@ bool agent_monitoring_task::dm_set_agent_disconnected_event_params(
                        << ". MAC: " << radio.first;
             return false;
         }
-        ok &= ambiorix_dm->set(radio_path, "MACAddress", tlvf::mac_to_string(radio.first));
+        ok &= ambiorix_dm->set(radio_path, "MACAddress", radio.first);
         auto radio_stats = m_radio_stats.get(radio.first);
 
         if (radio_stats) {
@@ -624,7 +624,7 @@ bool agent_monitoring_task::dm_set_agent_disconnected_event_params(
                            << ". BSSID: " << bss.first;
                 return false;
             }
-            ok &= ambiorix_dm->set(bss_path, "BSSID", tlvf::mac_to_string(bss.first));
+            ok &= ambiorix_dm->set(bss_path, "BSSID", bss.first);
             auto bss_stats = m_bss_stats.get(bss.first);
 
             if (bss_stats) {
@@ -653,7 +653,7 @@ bool agent_monitoring_task::dm_set_agent_disconnected_event_params(
                                << ". MAC: " << sta.first;
                     return false;
                 }
-                if (!ambiorix_dm->set(sta_path, "MACAddress", tlvf::mac_to_string(sta.first))) {
+                if (!ambiorix_dm->set(sta_path, "MACAddress", sta.first)) {
                     LOG(ERROR) << "Failed to set MACAddress for " << sta_path;
                     return false;
                 }
@@ -671,7 +671,7 @@ bool agent_monitoring_task::dm_set_agent_disconnected_event_params(
                        << ". MAC: " << neighbor;
             return false;
         }
-        ok &= ambiorix_dm->set(neighbor_path, "ID", tlvf::mac_to_string(neighbor));
+        ok &= ambiorix_dm->set(neighbor_path, "ID", neighbor);
     }
     if (!ok) {
         LOG(ERROR) << "Failed to set some of parameter for " << agent_discon_path;
