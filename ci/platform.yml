@@ -92,12 +92,10 @@ test-on-glinet-b1300:
     OPENWRT_IMAGE: openwrt-ipq40xx-generic-glinet_gl-b1300-squashfs-sysupgrade.bin
   needs: ["build-for-glinet-b1300"]
 
-boardfarm-on-netgear-rax40:
+.boardfarm-on-prplos:
+  # Extending jobs should set TARGET_DEVICE, TARGET_DEVICE_NAME, and
+  # OPENWRT_IMAGE.
  extends: .test-on-target
- variables:
-   TARGET_DEVICE: netgear-rax40
-   TARGET_DEVICE_NAME: netgear-rax40-1
-   OPENWRT_IMAGE: NETGEAR_RAX40-squashfs-fullimage.img
  script:
    - |
        echo "Retrieving the job ID for 'build-in-docker'."
@@ -113,10 +111,27 @@ boardfarm-on-netgear-rax40:
        echo Done
    # TODO: set the BH iface in UCI once https://jira.prplfoundation.org/browse/PPM-230 is done:
    - ssh "$TARGET_DEVICE_NAME" "sed -ri 's/backhaul_wire_iface=eth1/backhaul_wire_iface=eth0_1/' /opt/prplmesh/config/beerocks_agent.conf"
-   - ./dctest.py --dut netgear-rax40-1 --test-suite test_flows_on_prplwrt
+   - ./dctest.py --dut $TARGET_DEVICE_NAME --test-suite test_flows_on_prplwrt
    - ssh "$TARGET_DEVICE_NAME" 'wifi down'
  needs:
    - build-for-intel-mips
+
+boardfarm-on-netgear-rax40:
+  extends: .boardfarm-on-prplos
+  variables:
+    TARGET_DEVICE: netgear-rax40
+    TARGET_DEVICE_NAME: netgear-rax40-1
+    OPENWRT_IMAGE: NETGEAR_RAX40-squashfs-fullimage.img
+
+boardfarm-on-axepoint:
+  extends: .boardfarm-on-prplos
+  variables:
+    TARGET_DEVICE: axepoint
+    TARGET_DEVICE_NAME: netgear-rax40-1
+    OPENWRT_IMAGE: "$AXEPOINT_FULLIMAGE"
+  when: manual
+  tags:
+    - boardfarm-isr
 
 run-tests-on-altran-glinet-testbed:
   extends: .test-on-target
