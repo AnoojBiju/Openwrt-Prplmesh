@@ -9,6 +9,7 @@
 #ifndef AMBIORIX_H
 #define AMBIORIX_H
 
+#include "tlvf/common/sMacAddr.h"
 #include <easylogging++.h>
 
 namespace beerocks {
@@ -47,6 +48,8 @@ public:
                      const bool &value)        = 0;
     virtual bool set(const std::string &relative_path, const std::string &parameter,
                      const double &value)      = 0;
+    virtual bool set(const std::string &relative_path, const std::string &parameter,
+                     const sMacAddr &value)    = 0;
 
     /* @brief Add instance to the data model object with type list
      *
