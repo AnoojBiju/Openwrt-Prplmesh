@@ -336,7 +336,7 @@ That means the following conditions must hold.
 * Unit tests run successfully. Automatic with gitlab CI.
 * For each new flow being added, `tests/test_flows.py` must be updated accordingly to test the new flow, and the corresponding certification test (if any) must be added to `tests/certification/passing_agent_tests.txt` or to `tests/certification/passing_agent_tests_wifi_bh.txt` if it is a wireless backhaul test.
 * Run clang-format.sh. If it fixes lines you did not change, commit that separately.
-* Code builds for Turris Omnia, GL.inet B1300, and Netgear Nighthawk RAX40. Automatic with gitlab CI.
+* Code builds for Turris Omnia, GL.inet B1300, and Axepoint-based devices. Automatic with gitlab CI.
 * Test at least one agent test in the CI testbed covering the changes done, if applicable.
 * TODO valgrind / klockwork / clang-tidy / etc
 
