@@ -1121,7 +1121,7 @@ class RadioHostapd(Radio):
             iwinfo_output = self.agent.command('/usr/sbin/iw', 'dev', vap_iface, 'info')
 
             if re.search('dummy_ssid', iwinfo_output):
-                # On MaxLinear devices (e.g. Netgear RAX40) wlan0 and wlan2 are dummy interfaces.
+                # On MaxLinear devices (e.g. Axepoint) wlan0 and wlan2 are dummy interfaces.
                 # They are not VAPs.
                 # These interfaces have SSIDs "dummy_ssid_0" and "dummy_ssid_2".
                 debug(f"Skip {vap_iface} since it has dummy SSID")
@@ -1138,7 +1138,7 @@ class RadioHostapd(Radio):
             VirtualAPHostapd(self, vap_mac)
 
         if len(self.vaps) == 1:
-            # On RAX40 wlan2 has no SSID until it obtains real VAPs
+            # On Axepoint-based devices wlan2 has no SSID until it obtains real VAPs
             # wlan2 is not a VAP itself, remove it.
             #
             # TODO: PPM-1312: find a better way to detect this.
