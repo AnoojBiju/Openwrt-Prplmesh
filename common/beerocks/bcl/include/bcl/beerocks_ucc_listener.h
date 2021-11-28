@@ -183,7 +183,9 @@ protected:
                                       std::string &value)                              = 0;
     virtual bool handle_dev_set_rfeature(const std::unordered_map<std::string, std::string> &params,
                                          std::string &err_string)                      = 0;
-
+    virtual void
+    handle_device_get_sta_info(const std::unordered_map<std::string, std::string> &params,
+                               std::string &err_string) = 0;
     enum class eUccListenerRunOn : uint8_t {
         CONTROLLER,
         AGENT,
@@ -214,6 +216,7 @@ private:
         DEV_SET_CONFIG,
         START_WPS_REGISTRATION,
         DEV_SET_RFEATURE,
+        DEVICE_GET_STA_INFO,
         WFA_CA_COMMAND_MAX,
     };
     static eWfaCaCommand wfa_ca_command_from_string(std::string command);

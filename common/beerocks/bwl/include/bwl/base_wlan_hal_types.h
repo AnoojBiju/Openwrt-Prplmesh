@@ -256,6 +256,18 @@ typedef struct {
 } sACTION_APMANAGER_STEERING_EVENT_AUTH_FAIL_NOTIFICATION;
 
 typedef struct {
+    std::string bss;
+    sMacAddr sta_mac;
+    std::string device_name;
+    std::string os_name;
+    std::string vendor;
+    uint32_t days_since_last_reset;
+    beerocks::net::sIpv4Addr ipv4;
+    beerocks::net::sIpv4Addr subnet_mask;
+    beerocks::net::sIpv4Addr default_gw;
+} sStaInfoReply;
+
+typedef struct {
     sMacAddr mac;
     sMacAddr bssid;
     beerocks::message::sRadioCapabilities capabilities;
@@ -291,6 +303,10 @@ typedef struct {
 typedef struct {
     sMacAddr mac;
 } sACTION_MONITOR_CLIENT_DISCONNECTED_NOTIFICATION;
+
+typedef struct {
+    sStaInfoReply params;
+} sACTION_MONITOR_CLIENT_INFO_REPLY;
 
 typedef struct {
     sMacAddr mac;

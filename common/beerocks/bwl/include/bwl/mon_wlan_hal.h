@@ -39,7 +39,8 @@ public:
         Channel_Scan_New_Results_Ready,
         Channel_Scan_Dump_Result,
         Channel_Scan_Aborted,
-        Channel_Scan_Finished
+        Channel_Scan_Finished,
+        STA_Info_Reply
     };
 
     // Public methods:
@@ -58,6 +59,7 @@ public:
                                       const std::vector<unsigned int> &channel_pool)     = 0;
     virtual bool channel_scan_dump_results()                                             = 0;
     virtual bool channel_scan_dump_cached_results()                                      = 0;
+    virtual void sta_info_query(const std::string &sta_mac)                              = 0;
     /**
      * @brief Abort the in-progress channel scan for the interface
      *

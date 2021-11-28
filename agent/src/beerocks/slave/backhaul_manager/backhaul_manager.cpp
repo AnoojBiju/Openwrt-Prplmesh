@@ -2981,6 +2981,11 @@ bool BackhaulManager::start_wps_pbc(const sMacAddr &radio_mac)
     }
 }
 
+void BackhaulManager::sta_info_query(const sMacAddr &sta_mac)
+{
+    LOG(DEBUG) << "Received sta_info_query for " << sta_mac;
+}
+
 bool BackhaulManager::set_mbo_assoc_disallow(const sMacAddr &radio_mac, const sMacAddr &bssid,
                                              bool enable)
 {

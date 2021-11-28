@@ -147,6 +147,12 @@ bool controller_ucc_listener::handle_dev_set_rfeature(
     return false;
 }
 
+void controller_ucc_listener::handle_device_get_sta_info(
+    const std::unordered_map<std::string, std::string> &params, std::string &err_string)
+{
+    err_string = "device_get_sta_info not supported in controller mode";
+}
+
 void controller_ucc_listener::handle_dev_reset_default(
     int fd, const std::unordered_map<std::string, std::string> &params)
 {

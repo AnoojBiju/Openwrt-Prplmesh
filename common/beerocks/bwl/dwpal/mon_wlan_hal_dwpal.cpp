@@ -75,6 +75,8 @@ static mon_wlan_hal::Event dwpal_to_bwl_event(const std::string &opcode)
         return mon_wlan_hal::Event::STA_Connected;
     } else if (opcode == "AP-STA-DISCONNECTED") {
         return mon_wlan_hal::Event::STA_Disconnected;
+    } else if (opcode == "STA-INFO-REPLY") {
+        return mon_wlan_hal::Event::STA_Info_Reply;
     }
 
     return mon_wlan_hal::Event::Invalid;
@@ -977,6 +979,17 @@ bool mon_wlan_hal_dwpal::sta_beacon_11k_request(const SBeaconRequest11k &req, in
     return true;
 }
 
+void mon_wlan_hal_dwpal::sta_info_query(const std::string &sta_mac)
+{
+    std::string cmd = "sta_info_query " + sta_mac + " add_network_info=1";
+
+    LOG(DEBUG) << " the command: " << cmd;
+    // send command
+    if (!dwpal_send_cmd(cmd)) {
+        LOG(ERROR) << __func__ << " failed";
+    }
+}
+
 bool mon_wlan_hal_dwpal::sta_link_measurements_11k_request(const std::string &sta_mac)
 {
     LOG(TRACE) << __func__;
@@ -1519,6 +1532,76 @@ bool mon_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std
     }
     case Event::RRM_Channel_Load_Response:
         break;
+    case Event::STA_Info_Reply: {
+        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_MONITOR_CLIENT_INFO_REPLY));
+        auto msg      = reinterpret_cast<sACTION_MONITOR_CLIENT_INFO_REPLY *>(msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        // Initialize the message
+        *msg = {};
+        parsed_line_t parsed_obj;
+        const char *tmp_str;
+        int64_t tmp_int;
+        parse_event(buffer, parsed_obj);
+
+        if (!read_param("bss", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading mac parameter!";
+            return false;
+        }
+        msg->params.bss.assign(tmp_str);
+
+        if (!read_param("sta_mac", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading mac parameter!";
+            return false;
+        }
+        msg->params.sta_mac = tlvf::mac_from_string(tmp_str);
+
+        if (!read_param("device_name", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading mac parameter!";
+            return false;
+        }
+        msg->params.device_name.assign(tmp_str);
+
+        if (!read_param("os_name", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading mac parameter!";
+            return false;
+        }
+        msg->params.os_name.assign(tmp_str);
+
+        if (!read_param("vendor", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading mac parameter!";
+            return false;
+        }
+        msg->params.vendor.assign(tmp_str);
+
+        if (!read_param("days_since_last_reset", parsed_obj, tmp_int)) {
+            LOG(ERROR) << "Failed reading mac parameter!";
+            return false;
+        }
+        msg->params.days_since_last_reset = tmp_int;
+
+        if (!read_param("ipv4", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading mac parameter!";
+            return false;
+        }
+        msg->params.ipv4 = beerocks::net::network_utils::ipv4_from_string(tmp_str);
+
+        if (!read_param("subnet_mask", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading mac parameter!";
+            return false;
+        }
+        msg->params.subnet_mask = beerocks::net::network_utils::ipv4_from_string(tmp_str);
+
+        if (!read_param("default_gw", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading mac parameter!";
+            return false;
+        }
+        msg->params.default_gw = beerocks::net::network_utils::ipv4_from_string(tmp_str);
+
+        // Add the message to the queue
+        event_queue_push(Event::STA_Info_Reply, msg_buff);
+        break;
+    }
     // Gracefully ignore unhandled events
     // TODO: Probably should be changed to an error once dwpal will stop
     //       sending empty or irrelevant events...

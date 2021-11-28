@@ -141,6 +141,12 @@ static enum eFreqType band_to_freq(const std::string &band)
     }
 }
 
+void agent_ucc_listener::handle_device_get_sta_info(
+    const std::unordered_map<std::string, std::string> &params, std::string &err_string)
+{
+    sMacAddr sta_mac = tlvf::mac_from_string(params.at("sta_mac"));
+    m_btl_ctx.sta_info_query(sta_mac);
+}
 bool agent_ucc_listener::handle_start_wps_registration(const std::string &band,
                                                        std::string &err_string)
 {
