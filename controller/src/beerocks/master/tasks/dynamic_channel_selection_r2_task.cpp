@@ -560,17 +560,22 @@ bool dynamic_channel_selection_r2_task::handle_single_scan_request_event(
         return false;
     }
 
-    // Add agent to the container if it doesn't exist yet
-    auto agent = m_agents_status_map.find(ire_mac);
-    if (agent == m_agents_status_map.end()) {
-        // Add agent to the queue
-        m_agents_status_map[ire_mac] = sAgentScanStatus();
-    }
-    const auto &scan_it = m_agents_status_map[ire_mac].single_radio_scans.find(radio_mac);
-    if (scan_it != m_agents_status_map[ire_mac].single_radio_scans.cend()) {
-        LOG(WARNING) << "A single scan on agent: " << ire_mac << " radio: " << radio_mac
-                     << " is already pending.";
-        return false;
+    // Assume we already have an agent handler
+    bool create_new_agent = false;
+
+    if (m_agents_status_map.find(ire_mac) != m_agents_status_map.end()) {
+        // If agent already exists, make sure there aren't any pending scans.
+        const auto &scan_it = m_agents_status_map[ire_mac].single_radio_scans.find(radio_mac);
+        if (scan_it != m_agents_status_map[ire_mac].single_radio_scans.end()) {
+            LOG(DEBUG) << "A single scan on agent: " << ire_mac << " radio: " << radio_mac
+                       << " already exists.";
+            // If the scan is pending to be triggered, return True.
+            // Otherwise the scan is in progress or pending ACK, return False.
+            return (scan_it->second.status == eRadioScanStatus::PENDING);
+        }
+    } else {
+        // We need to create a new agent handler
+        create_new_agent = true;
     }
 
     const auto &pool = database.get_channel_scan_pool(scan_request_event.radio_mac, true);
@@ -583,6 +588,12 @@ bool dynamic_channel_selection_r2_task::handle_single_scan_request_event(
     if (dwell_time_msec < 0) {
         LOG(TRACE) << "single scan cannot proceed without dwell_time value";
         return false;
+    }
+
+    // Check if we need to create a new agent handler
+    if (create_new_agent) {
+        // Add agent to the queue
+        m_agents_status_map.insert({ire_mac, {}});
     }
 
     m_agents_status_map[ire_mac].single_radio_scans[radio_mac] =
@@ -606,37 +617,51 @@ bool dynamic_channel_selection_r2_task::handle_continuous_scan_request_event(
         return false;
     }
 
+    bool create_new_agent = false;
+
     // If received "enable" add the continuous radio request (and the agent that manages it if it doesn't exist yet).
     // If received "disable" and the radio is in the agent's status map and not in progress, remove it. If after
     // the removal the agent has no radio scan requests (is empty) then it will also be removed.
     // If continuous radio scan request is in progress then we will not remove it and it will be removed when the scan
     // is complete. Otherwise, do nothing.
     const auto &agent = m_agents_status_map.find(agent_mac);
-    if (agent == m_agents_status_map.cend()) {
-        // Add agent to the queue
-        m_agents_status_map[agent_mac] = sAgentScanStatus();
-    }
-    // If the instruction is to disable the request, remove if pending.
-    // If not pending then will be removed when current scan is completed/aborted.
-    if (!scan_request_event.enable) {
-        // If it's not in the container stop.
+    if (agent != m_agents_status_map.end()) {
+        // Find the scan element within the agent.
         const auto &scan_it = m_agents_status_map[agent_mac].continuous_radio_scans.find(
             scan_request_event.radio_mac);
-        if (scan_it == m_agents_status_map[agent_mac].continuous_radio_scans.cend()) {
-            return false;
-        }
-        // If it's not pending stop
-        if (scan_it->second.status != eRadioScanStatus::PENDING) {
-            LOG(WARNING) << "scan is currently pending will be removed at the next response";
-            return false;
+        if (!scan_request_event.enable) {
+            // The instruction is to disable the request
+
+            // If the scan does not exists, return true as there is no scan to disable.
+            if (scan_it == m_agents_status_map[agent_mac].continuous_radio_scans.end()) {
+                // Cannot find the requested scan
+                return true;
+            }
+
+            // If the scan is busy, return false because the scan cannot be disabled.
+            if (scan_it->second.status != eRadioScanStatus::PENDING) {
+                LOG(WARNING) << "scan is currently waiting for response, will be removed at the "
+                                "next response";
+                return false;
+            }
+
+            // Scan is safe to remove, return true in the end.
+            m_agents_status_map[agent_mac].continuous_radio_scans.erase(
+                scan_request_event.radio_mac);
+
+            LOG(DEBUG) << "Continuous Radio Scan"
+                       << " mac: " << scan_it->first
+                       << " was successfully deleted from the container";
+            return true;
         }
 
-        // We can remove it now
-        m_agents_status_map[agent_mac].continuous_radio_scans.erase(scan_request_event.radio_mac);
-
-        LOG(DEBUG) << "Continuous Radio Scan"
-                   << " mac: " << scan_it->first << " was succesfuly deleted from the container";
-        return false;
+        LOG(WARNING) << "A continuous scan on agent: " << agent_mac << " radio: " << radio_mac
+                     << " already exists.";
+        // If the scan is pending to be triggered, return True.
+        // Otherwise the scan is busy (in progress or pending ACK), return False.
+        return (scan_it->second.status == eRadioScanStatus::PENDING);
+    } else {
+        create_new_agent = true;
     }
 
     if (database.get_channel_scan_interval_sec(scan_request_event.radio_mac) <= 0) {
@@ -654,6 +679,12 @@ bool dynamic_channel_selection_r2_task::handle_continuous_scan_request_event(
     if (dwell_time_msec < 0) {
         LOG(ERROR) << "continuous_scan cannot proceed without dwell_time value";
         return false;
+    }
+
+    // Check if we need to create a new agent handler
+    if (create_new_agent) {
+        // Add agent to the queue
+        m_agents_status_map.insert({agent_mac, {}});
     }
 
     m_agents_status_map[agent_mac].continuous_radio_scans[radio_mac] =
