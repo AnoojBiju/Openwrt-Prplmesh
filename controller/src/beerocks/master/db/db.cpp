@@ -2999,15 +2999,31 @@ const std::list<sChannelScanResults> &db::get_channel_scan_results(const sMacAdd
     return (single_scan ? radio->single_scan_results : radio->continuous_scan_results);
 }
 
-bool db::has_channel_report_record(const sMacAddr &mac, const std::string &ISO_8601_timestamp)
+bool db::has_channel_report_record(const sMacAddr &mac, const std::string &ISO_8601_timestamp,
+                                   const uint8_t operating_class, const uint8_t channel)
 {
     auto radio = get_hostap(mac);
     if (!radio) {
         LOG(ERROR) << "unable to get radio " << mac;
         return false;
     }
-    return radio->channel_scan_report_records.find(ISO_8601_timestamp) !=
-           radio->channel_scan_report_records.end();
+
+    // Find record by timestamp
+    auto report_record_iter = radio->channel_scan_report_records.find(ISO_8601_timestamp);
+    if (report_record_iter == radio->channel_scan_report_records.end()) {
+        // The radio does not contain a record of the given timestamp
+        return false;
+    }
+
+    // Find report for key
+    auto key               = std::make_pair(operating_class, channel);
+    auto report_index_iter = report_record_iter->second.find(key);
+    if (report_index_iter == report_record_iter->second.end()) {
+        // The record does not contain a report of the given key
+        return false;
+    }
+
+    return true;
 }
 
 bool db::clear_channel_report_record(const sMacAddr &mac, const std::string &ISO_8601_timestamp)
@@ -3017,6 +3033,18 @@ bool db::clear_channel_report_record(const sMacAddr &mac, const std::string &ISO
         LOG(ERROR) << "unable to get radio " << mac;
         return false;
     }
+
+    auto report_record_iter = radio->channel_scan_report_records.find(ISO_8601_timestamp);
+    if (report_record_iter == radio->channel_scan_report_records.end()) {
+        LOG(ERROR) << "unable to get record at timestamp: " << ISO_8601_timestamp;
+        return false;
+    }
+
+    // Clear the report for the found record
+    for (const auto &report_key : report_record_iter->second) {
+        radio->scan_report[report_key].neighbors.clear();
+    }
+
     // unordered_map::erase(const key_type& k) returns the number of elements erased
     return (radio->channel_scan_report_records.erase(ISO_8601_timestamp) == 1);
 }
@@ -3074,12 +3102,10 @@ bool db::add_channel_report(const sMacAddr &RUID, const uint8_t &operating_class
         return false;
     }
     const auto &key = std::make_pair(operating_class, channel);
-    // Get report as reference.
-    // if not report exist of the given key, this will create a new report.
-    auto &db_report = radio->scan_report[key];
     if (override_existing_data) {
         // Clear neighbors if Override flag is set.
-        db_report.neighbors.clear();
+        LOG(DEBUG) << "Clearing neighbors for [" << key.first << "," << key.second << "]";
+        radio->scan_report[key].neighbors.clear();
     }
 
     auto get_bandwidth_from_str =
@@ -3119,7 +3145,7 @@ bool db::add_channel_report(const sMacAddr &RUID, const uint8_t &operating_class
 
         neighbor_result.channel_utilization = avg_utilization;
 
-        db_report.neighbors.push_back(neighbor_result);
+        radio->scan_report[key].neighbors.push_back(neighbor_result);
     }
 
     // Find any existing report key to channel scan report record

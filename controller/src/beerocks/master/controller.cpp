@@ -1457,13 +1457,17 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const sMacAddr &src_mac,
          * Reports with the same timestamp are recorded in the report-record-index
          */
         bool should_override_existing_records = true;
-        if (database.has_channel_report_record(result_tlv->radio_uid(), ISO_8601_timestamp)) {
-            LOG(DEBUG) << "Report record found for " << ISO_8601_timestamp
+        if (database.has_channel_report_record(result_tlv->radio_uid(), ISO_8601_timestamp,
+                                               result_tlv->operating_class(),
+                                               result_tlv->channel())) {
+            LOG(DEBUG) << "Report record found for " << ISO_8601_timestamp << " ["
+                       << result_tlv->operating_class() << "," << result_tlv->channel() << "] "
                        << " from radio: " << result_tlv->radio_uid()
                        << ", Not overriding existing records.";
             should_override_existing_records = false;
         } else {
-            LOG(DEBUG) << "No previous report record were found for " << ISO_8601_timestamp
+            LOG(DEBUG) << "No previous report record were found for " << ISO_8601_timestamp << " ["
+                       << result_tlv->operating_class() << "," << result_tlv->channel() << "] "
                        << " from radio:" << result_tlv->radio_uid() << ".";
         }
 
