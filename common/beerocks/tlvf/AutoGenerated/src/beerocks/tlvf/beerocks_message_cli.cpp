@@ -879,6 +879,202 @@ bool cACTION_CLI_BACKHAUL_ROAM_REQUEST::init()
     return true;
 }
 
+cACTION_CLI_GET_MY_VAR::cACTION_CLI_GET_MY_VAR(uint8_t* buff, size_t buff_len, bool parse) :
+    BaseClass(buff, buff_len, parse) {
+    m_init_succeeded = init();
+}
+cACTION_CLI_GET_MY_VAR::cACTION_CLI_GET_MY_VAR(std::shared_ptr<BaseClass> base, bool parse) :
+BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
+    m_init_succeeded = init();
+}
+cACTION_CLI_GET_MY_VAR::~cACTION_CLI_GET_MY_VAR() {
+}
+void cACTION_CLI_GET_MY_VAR::class_swap()
+{
+    tlvf_swap(8*sizeof(eActionOp_CLI), reinterpret_cast<uint8_t*>(m_action_op));
+}
+
+bool cACTION_CLI_GET_MY_VAR::finalize()
+{
+    if (m_parse__) {
+        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
+        return true;
+    }
+    if (m_finalized__) {
+        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
+        return true;
+    }
+    if (!isPostInitSucceeded()) {
+        TLVF_LOG(ERROR) << "post init check failed";
+        return false;
+    }
+    if (m_inner__) {
+        if (!m_inner__->finalize()) {
+            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
+            return false;
+        }
+        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
+        m_buff_ptr__ -= tailroom;
+    }
+    class_swap();
+    m_finalized__ = true;
+    return true;
+}
+
+size_t cACTION_CLI_GET_MY_VAR::get_initial_size()
+{
+    size_t class_size = 0;
+    return class_size;
+}
+
+bool cACTION_CLI_GET_MY_VAR::init()
+{
+    if (getBuffRemainingBytes() < get_initial_size()) {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
+        return false;
+    }
+    if (m_parse__) { class_swap(); }
+    return true;
+}
+
+cACTION_CLI_SET_MY_VAR::cACTION_CLI_SET_MY_VAR(uint8_t* buff, size_t buff_len, bool parse) :
+    BaseClass(buff, buff_len, parse) {
+    m_init_succeeded = init();
+}
+cACTION_CLI_SET_MY_VAR::cACTION_CLI_SET_MY_VAR(std::shared_ptr<BaseClass> base, bool parse) :
+BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
+    m_init_succeeded = init();
+}
+cACTION_CLI_SET_MY_VAR::~cACTION_CLI_SET_MY_VAR() {
+}
+uint32_t& cACTION_CLI_SET_MY_VAR::my_var() {
+    return (uint32_t&)(*m_my_var);
+}
+
+void cACTION_CLI_SET_MY_VAR::class_swap()
+{
+    tlvf_swap(8*sizeof(eActionOp_CLI), reinterpret_cast<uint8_t*>(m_action_op));
+    tlvf_swap(32, reinterpret_cast<uint8_t*>(m_my_var));
+}
+
+bool cACTION_CLI_SET_MY_VAR::finalize()
+{
+    if (m_parse__) {
+        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
+        return true;
+    }
+    if (m_finalized__) {
+        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
+        return true;
+    }
+    if (!isPostInitSucceeded()) {
+        TLVF_LOG(ERROR) << "post init check failed";
+        return false;
+    }
+    if (m_inner__) {
+        if (!m_inner__->finalize()) {
+            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
+            return false;
+        }
+        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
+        m_buff_ptr__ -= tailroom;
+    }
+    class_swap();
+    m_finalized__ = true;
+    return true;
+}
+
+size_t cACTION_CLI_SET_MY_VAR::get_initial_size()
+{
+    size_t class_size = 0;
+    class_size += sizeof(uint32_t); // my_var
+    return class_size;
+}
+
+bool cACTION_CLI_SET_MY_VAR::init()
+{
+    if (getBuffRemainingBytes() < get_initial_size()) {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
+        return false;
+    }
+    m_my_var = reinterpret_cast<uint32_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint32_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint32_t) << ") Failed!";
+        return false;
+    }
+    if (m_parse__) { class_swap(); }
+    return true;
+}
+
+cACTION_CLI_RESPONSE_MY_VAR_VALUE::cACTION_CLI_RESPONSE_MY_VAR_VALUE(uint8_t* buff, size_t buff_len, bool parse) :
+    BaseClass(buff, buff_len, parse) {
+    m_init_succeeded = init();
+}
+cACTION_CLI_RESPONSE_MY_VAR_VALUE::cACTION_CLI_RESPONSE_MY_VAR_VALUE(std::shared_ptr<BaseClass> base, bool parse) :
+BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
+    m_init_succeeded = init();
+}
+cACTION_CLI_RESPONSE_MY_VAR_VALUE::~cACTION_CLI_RESPONSE_MY_VAR_VALUE() {
+}
+uint32_t& cACTION_CLI_RESPONSE_MY_VAR_VALUE::my_var_value() {
+    return (uint32_t&)(*m_my_var_value);
+}
+
+void cACTION_CLI_RESPONSE_MY_VAR_VALUE::class_swap()
+{
+    tlvf_swap(8*sizeof(eActionOp_CLI), reinterpret_cast<uint8_t*>(m_action_op));
+    tlvf_swap(32, reinterpret_cast<uint8_t*>(m_my_var_value));
+}
+
+bool cACTION_CLI_RESPONSE_MY_VAR_VALUE::finalize()
+{
+    if (m_parse__) {
+        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
+        return true;
+    }
+    if (m_finalized__) {
+        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
+        return true;
+    }
+    if (!isPostInitSucceeded()) {
+        TLVF_LOG(ERROR) << "post init check failed";
+        return false;
+    }
+    if (m_inner__) {
+        if (!m_inner__->finalize()) {
+            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
+            return false;
+        }
+        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
+        m_buff_ptr__ -= tailroom;
+    }
+    class_swap();
+    m_finalized__ = true;
+    return true;
+}
+
+size_t cACTION_CLI_RESPONSE_MY_VAR_VALUE::get_initial_size()
+{
+    size_t class_size = 0;
+    class_size += sizeof(uint32_t); // my_var_value
+    return class_size;
+}
+
+bool cACTION_CLI_RESPONSE_MY_VAR_VALUE::init()
+{
+    if (getBuffRemainingBytes() < get_initial_size()) {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
+        return false;
+    }
+    m_my_var_value = reinterpret_cast<uint32_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint32_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint32_t) << ") Failed!";
+        return false;
+    }
+    if (m_parse__) { class_swap(); }
+    return true;
+}
+
 cACTION_CLI_CLIENT_ALLOW_REQUEST::cACTION_CLI_CLIENT_ALLOW_REQUEST(uint8_t* buff, size_t buff_len, bool parse) :
     BaseClass(buff, buff_len, parse) {
     m_init_succeeded = init();
