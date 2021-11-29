@@ -63,7 +63,10 @@ if (TARGET_PLATFORM STREQUAL "openwrt")
         endif()
 
         # UCI BPL
-        file(GLOB_RECURSE bpl_platform_sources ${MODULE_PATH}/*/uci/*.c*)
+        file(GLOB_RECURSE bpl_platform_sources 
+            ${MODULE_PATH}/*/uci/*.c*
+            ${MODULE_PATH}/cfg/vendor/*.c*
+        )
 
         # UGW specific libraries
         find_package(ubus REQUIRED)
@@ -84,6 +87,7 @@ if (TARGET_PLATFORM STREQUAL "openwrt")
           ${MODULE_PATH}/dhcp/luci_rpc/*.c*
           ${MODULE_PATH}/db/uci/*.c*
           ${MODULE_PATH}/cfg/uci/*.c*
+          ${MODULE_PATH}/cfg/vendor/*.c*
           ${MODULE_PATH}/common/uci/*.c*
         )
 
@@ -105,7 +109,10 @@ elseif (TARGET_PLATFORM STREQUAL "rdkb")
     include_directories(${PLATFORM_INCLUDE_DIR}/bridge-utils)
 
     # UCI BPL
-    file(GLOB_RECURSE bpl_platform_sources ${MODULE_PATH}/*/uci/*.c*)
+    file(GLOB_RECURSE bpl_platform_sources 
+        ${MODULE_PATH}/*/uci/*.c*
+        ${MODULE_PATH}/cfg/vendor/*.c*
+    )
 
     # RDKB specific libraries
     find_package(ubus REQUIRED)
@@ -127,7 +134,10 @@ elseif (TARGET_PLATFORM STREQUAL "linux")
     # Platform definitions
     add_definitions(-DBEEROCKS_LINUX)
 
-    file(GLOB_RECURSE bpl_platform_sources ${MODULE_PATH}/*/linux/*.c*)
+    file(GLOB_RECURSE bpl_platform_sources 
+        ${MODULE_PATH}/*/linux/*.c*
+        ${MODULE_PATH}/cfg/vendor/*.c*
+    )
 
     add_definitions(-DPLATFORM_DB_PATH_TEMP="${TMP_PATH}/prplmesh_platform_db")
 

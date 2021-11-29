@@ -91,11 +91,18 @@ private:
         wfa_map::tlvChannelScanCapabilities &channel_scan_capabilities_tlv);
 
     /**
-     * @brief Adds cac-capabilities to AP Capability Report message.
+     * @brief Adds CAC-Capabilities TLV to AP Capability Report message.
      * 
-     * @return true if the tlv was added, otherwise false.
+     * @return true on success, otherwise false.
      */
     bool add_cac_capabilities_tlv();
+
+    /**
+     * @brief Adds Device Inventory TLVF to AP Capability Report message.
+     * 
+     * @return true on success, otherwise false.
+     */
+    bool add_device_inventory_tlv();
 
 public:
     /* Note:

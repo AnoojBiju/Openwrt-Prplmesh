@@ -232,3 +232,25 @@ void os_utils::remove_residual_files(const std::string &path, const std::string 
         }
     }
 }
+
+std::string os_utils::get_os_name()
+{
+    constexpr char os_info_file[] = "/etc/os-release";
+    std::ifstream file(os_info_file);
+    if (!file.is_open()) {
+        return {};
+    }
+
+    std::string line;
+    while (std::getline(file, line)) {
+        constexpr char os_release_field[] = "PRETTY_NAME=\"";
+        auto pos = line.find(os_release_field, 0, sizeof(os_release_field) - 1);
+        if (pos == std::string::npos) {
+            continue;
+        }
+
+        return line.substr(sizeof(os_release_field) - 1, line.size() - sizeof(os_release_field));
+    }
+
+    return {};
+}

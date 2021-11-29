@@ -127,6 +127,17 @@ public:
      * @param file_name Name of the file to be removed if exist.
      */
     static void remove_residual_files(const std::string &path, const std::string &file_name);
+
+    /**
+     * @brief Get the operating system name and version.
+     * 
+     * @details Most of Linux distribution have the file "/etc/os-release" which contain the name
+     * of the operating system and the version. This function extract it from the file and return
+     * it.
+     * 
+     * @return std::string containing operating system name and version. 
+     */
+    static std::string get_os_name();
 };
 } // namespace beerocks
 

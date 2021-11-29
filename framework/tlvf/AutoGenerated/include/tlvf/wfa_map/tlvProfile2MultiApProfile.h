@@ -37,6 +37,7 @@ class tlvProfile2MultiApProfile : public BaseClass
             PRPLMESH_PROFILE_UNKNOWN = 0x0,
             MULTIAP_PROFILE_1 = 0x1,
             MULTIAP_PROFILE_2 = 0x2,
+            MULTIAP_PROFILE_3 = 0x3,
         };
         // Enum AutoPrint generated code snippet begining- DON'T EDIT!
         // clang-format off
@@ -45,6 +46,7 @@ class tlvProfile2MultiApProfile : public BaseClass
             case PRPLMESH_PROFILE_UNKNOWN: return "PRPLMESH_PROFILE_UNKNOWN";
             case MULTIAP_PROFILE_1:        return "MULTIAP_PROFILE_1";
             case MULTIAP_PROFILE_2:        return "MULTIAP_PROFILE_2";
+            case MULTIAP_PROFILE_3:        return "MULTIAP_PROFILE_3";
             }
             static std::string out_str = std::to_string(int(enum_value));
             return out_str.c_str();

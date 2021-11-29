@@ -2292,6 +2292,10 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
         // cac
         save_cac_capabilities_params_to_db(fronthaul_iface);
 
+        if (radio->chipset_vendor.empty()) {
+            beerocks::bpl::get_ruid_chipset_vendor(radio->front.iface_mac, radio->chipset_vendor);
+        }
+
         if (radio->front.zwdfs) {
             auto request = message_com::create_vs_message<
                 beerocks_message::cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED>(cmdu_tx);
@@ -4529,7 +4533,7 @@ bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
         db->device_conf.byte_counter_units =
             wfa_map::tlvProfile2ApCapability::eByteCounterUnits::BYTES;
 
-        if (db->controller_info.profile_support ==
+        if (db->controller_info.profile_support >=
             wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_2) {
             /* One Profile-2 AP Capability TLV */
             auto profile2_ap_capability_tlv = cmdu_tx.addClass<wfa_map::tlvProfile2ApCapability>();
@@ -6485,7 +6489,7 @@ bool slave_thread::autoconfig_wsc_add_m1(const std::string &fronthaul_iface)
     cfg.manufacturer        = "prplMesh";
     cfg.model_name          = "Ubuntu";
     cfg.model_number        = "18.04";
-    cfg.serial_number       = "prpl12345";
+    cfg.serial_number       = db->device_conf.device_serial_number;
     cfg.primary_dev_type_id = WSC::WSC_DEV_NETWORK_INFRA_AP;
     cfg.device_name         = "prplmesh-agent";
     cfg.bands = wireless_utils::is_frequency_band_5ghz(radio->freq_type) ? WSC::WSC_RF_BAND_5GHZ
