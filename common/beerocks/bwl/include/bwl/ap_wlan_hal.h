@@ -56,7 +56,8 @@ public:
         DFS_RADAR_Detected,
         AP_MGMT_FRAME_RECEIVED,
 
-        MGMT_Frame /**< 802.11 management frame payload */
+        MGMT_Frame, /**< 802.11 management frame payload */
+        STA_Info_Reply
     };
 
     // Public methods
@@ -395,7 +396,8 @@ public:
      * @param primary_vlan_id Primary VLAN ID.
      * @return true on success, false otherwise.
      */
-    virtual bool set_primary_vlan_id(uint16_t primary_vlan_id) = 0;
+    virtual bool set_primary_vlan_id(uint16_t primary_vlan_id)           = 0;
+    virtual bool get_sta_device_info(std::string &sta_mac, bool nw_info) = 0;
 
 private:
     static const int tagged_patameters_idx = 56;

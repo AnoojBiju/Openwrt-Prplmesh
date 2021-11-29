@@ -38,7 +38,8 @@ private:
     static std::string parse_bss_info(const std::string &bss_info_str,
                                       son::wireless_utils::sBssInfoConf &bss_info_conf,
                                       std::string &err_string);
-
+    bool handle_get_device_sta_info(const std::unordered_map<std::string, std::string> &params,
+                                    std::string &err_string) override;
     db &m_database;
     std::unordered_set<sMacAddr> m_bss_info_cleared_mac;
 

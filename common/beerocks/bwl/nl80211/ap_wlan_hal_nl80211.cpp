@@ -1000,6 +1000,24 @@ bool ap_wlan_hal_nl80211::set_radio_mbo_assoc_disallow(bool enable)
     return true;
 }
 
+bool ap_wlan_hal_nl80211::get_sta_device_info(std::string &sta_mac, bool nw_info)
+{
+    LOG(TRACE) << __func__;
+    if (sta_mac.empty()) {
+        LOG(ERROR) << "sta_mac is empty";
+        return false;
+    }
+    //Prepare command
+    std::string cmd = "STA_INFO_QUERY " + sta_mac + " add_network_info=" + std::to_string(nw_info);
+    // Send command
+    if (!wpa_ctrl_send_msg(cmd)) {
+        LOG(ERROR) << "wpa_ctrl_send_msg() failed!";
+        return false;
+    }
+
+    return true;
+}
+
 bool ap_wlan_hal_nl80211::set_primary_vlan_id(uint16_t primary_vlan_id)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
@@ -1243,6 +1261,75 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
         msg->vap_id           = iface_ids.vap_id;
 
         event_queue_push(Event::AP_Enabled, msg_buff);
+    } break;
+
+    case Event::STA_Info_Reply: {
+        // TODO: Change to HAL objects
+        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_HOSTAP_STA_INFO_REPLY));
+        auto msg      = reinterpret_cast<sACTION_APMANAGER_HOSTAP_STA_INFO_REPLY *>(msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+        // Initialize the message
+        *msg = {};
+        const char *client_mac_str;
+        const char *client_ip_str;
+        int64_t tmp_int;
+
+        if (!read_param("bss", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading 'bss' parameter!";
+            return false;
+        }
+        msg->params.bss = tmp_str;
+
+        if (!read_param("mac", parsed_obj, &client_mac_str)) {
+            LOG(ERROR) << "Failed reading 'station mac' parameter!";
+            return false;
+        }
+        msg->params.sta_mac = tlvf::mac_from_string(client_mac_str);
+
+        if (!read_param("device_name", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading 'device_name' parameter!";
+            return false;
+        }
+        msg->params.device_name = tmp_str;
+
+        if (!read_param("os_name", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading 'os_name' parameter!";
+            return false;
+        }
+        msg->params.os_name = tmp_str;
+
+        if (!read_param("vendor_name", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading 'vendor_name' parameter!";
+            return false;
+        }
+        msg->params.vendor_name = tmp_str;
+
+        if (!read_param("last_reset", parsed_obj, tmp_int)) {
+            LOG(ERROR) << "Failed reading 'last_reset' parameter!";
+            return false;
+        }
+        msg->params.days_since_last_reset = tmp_int;
+
+        if (!read_param("default_gw", parsed_obj, &client_ip_str)) {
+            LOG(ERROR) << "Failed reading 'default_gw' parameter!";
+            return false;
+        }
+        msg->params.default_gateway = beerocks::net::network_utils::ipv4_from_string(client_ip_str);
+
+        if (!read_param("subnet_mask", parsed_obj, &client_ip_str)) {
+            LOG(ERROR) << "Failed reading 'default_gw' parameter!";
+            return false;
+        }
+        msg->params.subnet_mask = beerocks::net::network_utils::ipv4_from_string(client_ip_str);
+
+        if (!read_param("ipv4", parsed_obj, &client_ip_str)) {
+            LOG(ERROR) << "Failed reading 'default_gw' parameter!";
+            return false;
+        }
+        msg->params.ip_v4 = beerocks::net::network_utils::ipv4_from_string(client_ip_str);
+
+        // Add the message to the queue
+        event_queue_push(Event::STA_Info_Reply, msg_buff);
     } break;
 
     // Gracefully ignore unhandled events
