@@ -2247,8 +2247,8 @@ int cli_bml::get_dcs_scan_results(const std::string &radio_mac, uint32_t max_res
  */
 int cli_bml::client_get_client_list()
 {
-    char client_list[256];
-    unsigned int client_list_size;
+    char client_list[256]         = {0};
+    unsigned int client_list_size = 256;
 
     int ret = bml_client_get_client_list(ctx, client_list, &client_list_size);
     auto client_list_vec =
