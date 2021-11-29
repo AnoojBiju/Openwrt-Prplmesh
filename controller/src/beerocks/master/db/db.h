@@ -1270,9 +1270,12 @@ public:
      *
      * @param mac MAC address of radio.
      * @param ISO_8601_timestamp Channel scan report's timestamp.
+     * @param operating_class Operating class of the report.
+     * @param channel Channel of the report.
      * @return True if record exists, false otherwise.
      */
-    bool has_channel_report_record(const sMacAddr &mac, const std::string &ISO_8601_timestamp);
+    bool has_channel_report_record(const sMacAddr &mac, const std::string &ISO_8601_timestamp,
+                                   const uint8_t operating_class, const uint8_t channel);
 
     /**
      * @brief Clear the channel scan report record for the given timestamp.
