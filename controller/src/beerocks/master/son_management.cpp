@@ -645,6 +645,20 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
 
         break;
     }
+    case beerocks_message::ACTION_CLI_GET_MY_VAR: {
+        auto response =
+            message_com::create_vs_message<beerocks_message::cACTION_CLI_RESPONSE_MY_VAR_VALUE>(
+                cmdu_tx);
+        response->my_var_value() = database.get_my_var();
+        controller_ctx->send_cmdu(sd, cmdu_tx);
+        break;
+    }
+    case beerocks_message::ACTION_CLI_SET_MY_VAR: {
+        auto request = beerocks_header->addClass<beerocks_message::cACTION_CLI_SET_MY_VAR>();
+        database.set_my_var(request->my_var());
+        LOG(INFO) << "my_var was set to " << request->my_var();
+        break;
+    }
     default: {
         LOG(ERROR) << "Unsupported CLI action_op:" << int(beerocks_header->action_op());
         isOK = false;
