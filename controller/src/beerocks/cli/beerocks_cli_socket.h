@@ -77,9 +77,17 @@ private:
 
     int set_neighbor_11k_caller(int numOfArgs);
 
+    int get_my_var_caller(int numOfArgs);
+
+    int set_my_var_caller(int numOfArgs);
+
     int client_beacon_11k_req_caller(int numOfArgs);
 
     // Functions
+
+    int get_my_var();
+
+    int set_my_var(int val);
 
     int enable_debug(int8_t isEnable = -1);
 
@@ -120,6 +128,10 @@ private:
     int client_beacon_11k_req(std::string client_mac, std::string bssid, uint8_t channel,
                               std::string ssid, uint16_t duration, uint16_t rand_ival,
                               uint16_t repeats, int16_t op_class, std::string mode);
+
+    int client_get_my_var(std::string client_mac, std::string bssid, uint8_t channel,
+                          std::string ssid, uint16_t duration, uint16_t rand_ival, uint16_t repeats,
+                          int16_t op_class, const std::string &mode);
 
     // Variables
     std::string temp_path;
