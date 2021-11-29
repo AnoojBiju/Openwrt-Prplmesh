@@ -98,7 +98,7 @@ bool tlvProfile2MultiApProfile::init()
         return false;
     }
     m_profile = reinterpret_cast<eMultiApProfile*>(m_buff_ptr__);
-    if (!m_parse__) *m_profile = eMultiApProfile::MULTIAP_PROFILE_2;
+    if (!m_parse__) *m_profile = eMultiApProfile::MULTIAP_PROFILE_3;
     if (!buffPtrIncrementSafe(sizeof(eMultiApProfile))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(eMultiApProfile) << ") Failed!";
         return false;

@@ -38,6 +38,7 @@
 #include <tlvf/wfa_map/tlvChannelScanCapabilities.h>
 #include <tlvf/wfa_map/tlvClientCapabilityReport.h>
 #include <tlvf/wfa_map/tlvClientInfo.h>
+#include <tlvf/wfa_map/tlvDeviceInventory.h>
 #include <tlvf/wfa_map/tlvProfile2ApCapability.h>
 #include <tlvf/wfa_map/tlvProfile2CacCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2MetricCollectionInterval.h>
@@ -211,7 +212,7 @@ void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
 
     // 2.2 radio independent tlvs
 
-    if (db->controller_info.profile_support ==
+    if (db->controller_info.profile_support >=
         wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_2) {
 
         // profile 2 ap capability
@@ -231,6 +232,14 @@ void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
         // 3. tlvs added by external sources
         if (!add_cac_capabilities_tlv()) {
             LOG(ERROR) << "error filling cac capabilities tlv";
+            return;
+        }
+    }
+
+    if (db->controller_info.profile_support >=
+        wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_3) {
+
+        if (!add_device_inventory_tlv()) {
             return;
         }
     }
@@ -461,6 +470,29 @@ bool CapabilityReportingTask::add_cac_capabilities_tlv()
             return false;
         }
     }
+    return true;
+}
+
+bool CapabilityReportingTask::add_device_inventory_tlv()
+{
+    auto device_inventory_tlv = m_cmdu_tx.addClass<wfa_map::tlvDeviceInventory>();
+    if (!device_inventory_tlv) {
+        LOG(ERROR) << "Failed building message!";
+        return false;
+    }
+    auto db = AgentDB::get();
+
+    device_inventory_tlv->set_serial_number(db->device_conf.device_serial_number);
+    device_inventory_tlv->set_software_version(db->device_conf.software_version);
+    device_inventory_tlv->set_execution_environment(db->device_conf.operating_system);
+
+    for (auto radio : db->get_radios_list()) {
+        auto radio_vendor    = device_inventory_tlv->create_radios_vendor_info();
+        radio_vendor->ruid() = radio->front.iface_mac;
+        radio_vendor->set_chipset_vendor(radio->chipset_vendor);
+        device_inventory_tlv->add_radios_vendor_info(radio_vendor);
+    }
+
     return true;
 }
 

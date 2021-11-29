@@ -6,6 +6,7 @@
  * See LICENSE file for more details.
  */
 
+#include "agent_db.h"
 #include "backhaul_manager/backhaul_manager.h"
 #include "platform_manager/platform_manager.h"
 #include "son_slave_thread.h"
@@ -190,6 +191,12 @@ static void fill_son_slave_config(const beerocks::config_file::sConfigSlave &bee
                       beerocks_slave_conf.sta_iface_filter_low[fronthaul_num])
                 : 0;
     }
+
+    auto db = beerocks::AgentDB::get();
+
+    db->device_conf.operating_system = beerocks::os_utils::get_os_name();
+    db->device_conf.software_version = beerocks::version::get_module_version();
+    beerocks::bpl::get_serial_number(db->device_conf.device_serial_number);
 }
 
 static std::shared_ptr<beerocks::logging>

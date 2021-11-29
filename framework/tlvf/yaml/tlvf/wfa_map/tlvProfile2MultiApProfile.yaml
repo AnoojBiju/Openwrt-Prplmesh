@@ -14,7 +14,7 @@ tlvProfile2MultiApProfile:
   length: uint16_t
   profile: 
     _type: eMultiApProfile
-    _value: eMultiApProfile::MULTIAP_PROFILE_2
+    _value: eMultiApProfile::MULTIAP_PROFILE_3
 
 eMultiApProfile:
   _type: enum
@@ -22,3 +22,4 @@ eMultiApProfile:
   PRPLMESH_PROFILE_UNKNOWN: 0x0
   MULTIAP_PROFILE_1: 0x1
   MULTIAP_PROFILE_2: 0x2
+  MULTIAP_PROFILE_3: 0x3
