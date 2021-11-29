@@ -3033,6 +3033,18 @@ bool db::clear_channel_report_record(const sMacAddr &mac, const std::string &ISO
         LOG(ERROR) << "unable to get radio " << mac;
         return false;
     }
+
+    auto report_record_iter = radio->channel_scan_report_records.find(ISO_8601_timestamp);
+    if (report_record_iter == radio->channel_scan_report_records.end()) {
+        LOG(ERROR) << "unable to get record at timestamp: " << ISO_8601_timestamp;
+        return false;
+    }
+
+    // Clear the report for the found record
+    for (const auto &report_key : report_record_iter->second) {
+        radio->scan_report[report_key].neighbors.clear();
+    }
+
     // unordered_map::erase(const key_type& k) returns the number of elements erased
     return (radio->channel_scan_report_records.erase(ISO_8601_timestamp) == 1);
 }
