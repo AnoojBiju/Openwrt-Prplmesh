@@ -338,6 +338,9 @@ eActionOp_CLI:
   ACTION_CLI_HOSTAP_STATS_MEASUREMENT: 125
 
   ACTION_CLI_ENUM_END: 126
+  ACTION_CLI_GET_MY_VAR: 127
+  ACTION_CLI_SET_MY_VAR: 128
+  ACTION_CLI_RESPONSE_MY_VAR_VALUE: 129
 
 ####################################################
 ####################################################
