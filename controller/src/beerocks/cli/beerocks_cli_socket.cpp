@@ -174,6 +174,8 @@ void cli_socket::setFunctionsMapAndArray()
                        "remove 'bssid' from  11k neighbor list of 'hostap_mac' 'vap_id'",
                        static_cast<pFunction>(&cli_socket::rm_neighbor_11k_caller), 3, 3,
                        STRING_ARG, STRING_ARG);
+    insertCommandToMap("test_config", "", "retrieve test_config value",
+                       static_cast<pFunction>(&cli_socket::get_test_config_caller), 0, 1);
 }
 
 bool cli_socket::waitResponseReady()
@@ -759,6 +761,36 @@ int cli_socket::rm_neighbor_11k(std::string ap_mac, std::string bssid, int8_t va
     request->bssid()  = tlvf::mac_from_string(bssid);
     request->vap_id() = vap_id;
     wait_response     = true;
+    message_com::send_cmdu(master_socket, cmdu_tx);
+    waitResponseReady();
+    return 0;
+}
+
+int cli_socket::get_test_config_caller(int numOfArgs)
+{
+    if (numOfArgs < 0) {
+        return -1;
+    }    
+    else if (numOfArgs == 0) {
+        return test_config();
+    }
+    if (numOfArgs == 1) {
+        LOG(DEBUG) << "test_config = " << args.intArgs[0];
+        return test_config(args.intArgs[0]);
+    }
+    return 0;
+}
+
+int cli_socket::test_config(uint8_t test_config)
+{
+    LOG(DEBUG) << test_config;
+    auto request = message_com::create_vs_message<beerocks_message::cACTION_CLI_TEST_CONFIG>(cmdu_tx);
+    if (request == nullptr) {
+        LOG(ERROR) << "Failed building cACTION_CLI_TEST_CONFIG message!";
+        return -1;
+    }
+    request->value() = test_config;
+    wait_response    = true;
     message_com::send_cmdu(master_socket, cmdu_tx);
     waitResponseReady();
     return 0;
