@@ -48,21 +48,21 @@
             }
         ]
     },
-    "netgear-rax40-1": {
-        "name": "agent-rax40",
+    "nec-wx3000hp-1": {
+        "name": "agent-nec",
         "board_type": "prplWRT",
         "role": "agent",
-        "docker_network": "prplMesh-net-rax40-1",
-        "conn_cmd": "cu -s 115200 -l /dev/netgear-rax40-1 -f",
+        "docker_network": "prplMesh-net-nec",
+        "conn_cmd": "cu -s 115200 -l /dev/nec-wx3000hp-1 -f",
         "delay": "30",
         "iface_to_device": "to-dut",
-        "control_ip": "192.168.200.120",
+        "control_ip": "192.168.200.130",
         "devices": [
             {
                 "name": "lan",
                 "type": "prplmesh_compose",
                 "role": "controller",
-                "docker_network": "prplMesh-net-rax40-1",
+                "docker_network": "prplMesh-net-nec-1",
                 "conn_cmd": ""
             },
             {

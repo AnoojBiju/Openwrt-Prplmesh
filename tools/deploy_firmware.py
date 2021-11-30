@@ -186,7 +186,7 @@ class PrplwrtDevice:
         Parameters
         -----------
         device: str
-            The name of the platform (example: netgear-rax40).
+            The name of the platform (example: nec-wx3000hp).
         name: str
             The name of the device (it should ne reachable through ssh without a password).
         image: str
@@ -289,10 +289,10 @@ class PrplwrtDevice:
         raise NotImplementedError
 
 
-class NetgearRax40(PrplwrtDevice):
-    """A Netgear rax40.
+class Axepoint(PrplwrtDevice):
+    """An axepoint or any similar device (e.g. NEC WX3000HP).
 
-    At the moment, the rax40 can only be updated through uboot using a tftp server.
+    At the moment, the device can only be updated through uboot using a tftp server.
     """
 
     tftp_dir = "/srv/tftp"
@@ -834,8 +834,8 @@ def main():
                                      description="""Update a prplWrt device, either through u-boot
                                      or using sysupgrade, depending on the target device.""")
     parser.add_argument('-d', '--device',
-                        help="""Device to upgrade. Currently supported targets are: netgear-rax40
-                        glinet-b1300 turris-omnia""", required=True)
+                        help="""Device to upgrade. Currently supported targets are: nec-wx3000hp
+                        glinet-b1300 turris-omnia axepoint""", required=True)
     parser.add_argument(
         '-t',
         '--target-name',
@@ -860,8 +860,8 @@ def main():
 
     args = parser.parse_args()
 
-    if args.device in ["netgear-rax40", "axepoint", "nec-wx3000hp"]:
-        dev = NetgearRax40(args.device, args.target_name, args.image)
+    if args.device in ["axepoint", "nec-wx3000hp"]:
+        dev = Axepoint(args.device, args.target_name, args.image)
     elif args.os_type == "rdkb":
         dev = TurrisRdkb(args.device, args.target_name, args.image, args.kernel)
     else:

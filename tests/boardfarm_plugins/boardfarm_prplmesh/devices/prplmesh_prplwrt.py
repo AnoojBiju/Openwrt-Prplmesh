@@ -57,7 +57,7 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
             raise CodeError("Interface to the device not specified. \
             Please provide the interface on the host that connects to the prplWrt device.")
 
-        self.name = "-".join((config.get("name", "netgear-rax40"), self.unique_id))
+        self.name = "-".join((config.get("name", "nec-wx3000hp-1"), self.unique_id))
         try:
             self.delay = int(config.get("delay", 30))
         except ValueError as err:
