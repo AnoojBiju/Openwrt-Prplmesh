@@ -82,7 +82,7 @@ build_prplmesh() {
     rm -r "$build_dir/artifacts/"
     if [ "$TARGET_SYSTEM" = "intel_mips" ] ; then
         #TODO: remove once PPM-1121 is done
-        for device in axepoint netgear-rax40 nec-wx3000hp ; do
+        for device in axepoint nec-wx3000hp ; do
             ln -s intel_mips "$build_dir/../$device"
         done
     fi
@@ -103,7 +103,7 @@ main() {
 
     eval set -- "$OPTS"
 
-    SUPPORTED_TARGETS="turris-omnia glinet-b1300 netgear-rax40 axepoint nec-wx3000hp intel_mips"
+    SUPPORTED_TARGETS="turris-omnia glinet-b1300 axepoint nec-wx3000hp intel_mips"
 
     while true; do
         case "$1" in
@@ -135,7 +135,7 @@ main() {
         glinet-b1300)
             TARGET_SYSTEM=ipq40xx
             ;;
-        netgear-rax40|axepoint|intel_mips|nec-wx3000hp)
+        axepoint|intel_mips|nec-wx3000hp)
             TARGET_SYSTEM=intel_mips
             ;;
         *)

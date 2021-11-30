@@ -19,7 +19,7 @@ usage() {
     echo "      -h|--help - show this help menu"
     echo "      -v|--verbose - add verbosity"
     echo "      --branch  - branch to use (default master)"
-    echo "      --device  - device to use (default netgear-rax40)"
+    echo "      --device  - device to use (default turris-omnia)"
     echo "      --remote  - remote to use - owncloud or gitlab (default owncloud)"
     echo "      --path    - path to copy ipk to (default .)"
     
@@ -91,7 +91,7 @@ main() {
     fi
 }
 
-DEVICE=netgear-rax40
+DEVICE=turris-omnia
 BRANCH=master
 DOWNLOAD_PATH=.
 QUIET=true
