@@ -506,6 +506,27 @@ class cACTION_CLI_HOSTAP_STATS_MEASUREMENT : public BaseClass
         sMacAddr* m_ap_mac = nullptr;
 };
 
+class cACTION_CLI_TEST_CONFIG : public BaseClass
+{
+    public:
+        cACTION_CLI_TEST_CONFIG(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_CLI_TEST_CONFIG(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_CLI_TEST_CONFIG();
+
+        static eActionOp_CLI get_action_op(){
+            return (eActionOp_CLI)(ACTION_CLI_TEST_CONFIG);
+        }
+        uint8_t& value();
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_CLI* m_action_op = nullptr;
+        uint8_t* m_value = nullptr;
+};
+
 }; // close namespace: beerocks_message
 
 #endif //_BEEROCKS/TLVF_BEEROCKS_MESSAGE_CLI_H_
