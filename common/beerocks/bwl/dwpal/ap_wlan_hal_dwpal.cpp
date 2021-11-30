@@ -145,7 +145,7 @@ static void get_ht_mcs_capabilities(int *HT_MCS, std::string &ht_cap_str,
 {
     bool break_upper_loop = false;
     sta_caps              = {};
-    sta_caps.ht_bw        = 0xFF;
+    sta_caps.ht_bw        = beerocks::BANDWIDTH_UNKNOWN;
 
     if (!ht_cap_str.empty() && (HT_MCS != nullptr)) {
         uint16_t ht_cap = uint16_t(std::strtoul(ht_cap_str.c_str(), nullptr, 16));
@@ -196,7 +196,7 @@ static void get_ht_mcs_capabilities(int *HT_MCS, std::string &ht_cap_str,
 static void get_vht_mcs_capabilities(int16_t *VHT_MCS, std::string &vht_cap_str,
                                      beerocks::message::sRadioCapabilities &sta_caps)
 {
-    sta_caps.vht_bw = 0xFF;
+    sta_caps.vht_bw = beerocks::BANDWIDTH_UNKNOWN;
 
     if (!vht_cap_str.empty() && (VHT_MCS != nullptr)) {
         uint32_t vht_cap          = uint16_t(std::strtoul(vht_cap_str.c_str(), nullptr, 16));
@@ -260,7 +260,7 @@ static void print_sta_capabilities(beerocks::message::sRadioCapabilities &sta_ca
                << "ht_ss = " << ((int(sta_caps.ht_ss)) ? std::to_string(sta_caps.ht_ss) : "n/a")
                << std::endl
                << "ht_bw = "
-               << ((sta_caps.ht_bw != 0xFF)
+               << ((sta_caps.ht_bw != beerocks::BANDWIDTH_UNKNOWN)
                        ? std::to_string(beerocks::utils::convert_bandwidth_to_int(
                              beerocks::eWiFiBandwidth(sta_caps.ht_bw)))
                        : "n/a")
@@ -288,7 +288,7 @@ static void print_sta_capabilities(beerocks::message::sRadioCapabilities &sta_ca
                << "vht_mcs = "
                << ((int(sta_caps.vht_mcs)) ? std::to_string(sta_caps.vht_mcs) : "n/a") << std::endl
                << "vht_bw = "
-               << ((sta_caps.vht_bw != 0xFF)
+               << ((sta_caps.vht_bw != beerocks::BANDWIDTH_UNKNOWN)
                        ? std::to_string(beerocks::utils::convert_bandwidth_to_int(
                              beerocks::eWiFiBandwidth(sta_caps.vht_bw)))
                        : "n/a");

@@ -39,21 +39,6 @@ class tlvProfile2MultiApProfile : public BaseClass
             MULTIAP_PROFILE_2 = 0x2,
             MULTIAP_PROFILE_3 = 0x3,
         };
-        // Enum AutoPrint generated code snippet begining- DON'T EDIT!
-        // clang-format off
-        static const char *eMultiApProfile_str(eMultiApProfile enum_value) {
-            switch (enum_value) {
-            case PRPLMESH_PROFILE_UNKNOWN: return "PRPLMESH_PROFILE_UNKNOWN";
-            case MULTIAP_PROFILE_1:        return "MULTIAP_PROFILE_1";
-            case MULTIAP_PROFILE_2:        return "MULTIAP_PROFILE_2";
-            case MULTIAP_PROFILE_3:        return "MULTIAP_PROFILE_3";
-            }
-            static std::string out_str = std::to_string(int(enum_value));
-            return out_str.c_str();
-        }
-        friend inline std::ostream &operator<<(std::ostream &out, eMultiApProfile value) { return out << eMultiApProfile_str(value); }
-        // clang-format on
-        // Enum AutoPrint generated code snippet end
         
         const eTlvTypeMap& type();
         const uint16_t& length();

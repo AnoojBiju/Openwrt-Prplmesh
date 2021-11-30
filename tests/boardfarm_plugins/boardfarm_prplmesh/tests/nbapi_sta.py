@@ -27,7 +27,7 @@ class NbapiSta(PrplMeshBaseTest):
             agent = self.dev.DUT.agent_entity
             sta1 = self.dev.wifi
             controller = self.dev.lan.controller_entity
-            vap1 = agent.radios[0].vaps[0]
+            vap1 = agent.radios[1].vaps[0]
         except AttributeError as ae:
             raise SkipTest(ae)
 

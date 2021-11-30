@@ -41,36 +41,6 @@ enum class eTlvType : uint8_t {
     TLV_PUSH_BUTTON_EVENT_NOTIFICATION = 0x12,
     TLV_PUSH_BUTTON_JOIN_NOTIFICATION = 0x13,
 };
-// Enum AutoPrint generated code snippet begining- DON'T EDIT!
-// clang-format off
-static const char *eTlvType_str(eTlvType enum_value) {
-    switch (enum_value) {
-    case eTlvType::TLV_END_OF_MESSAGE:                 return "eTlvType::TLV_END_OF_MESSAGE";
-    case eTlvType::TLV_AL_MAC_ADDRESS:                 return "eTlvType::TLV_AL_MAC_ADDRESS";
-    case eTlvType::TLV_MAC_ADDRESS:                    return "eTlvType::TLV_MAC_ADDRESS";
-    case eTlvType::TLV_DEVICE_INFORMATION:             return "eTlvType::TLV_DEVICE_INFORMATION";
-    case eTlvType::TLV_DEVICE_BRIDGING_CAPABILITY:     return "eTlvType::TLV_DEVICE_BRIDGING_CAPABILITY";
-    case eTlvType::TLV_NON_1905_NEIGHBOR_DEVICE_LIST:  return "eTlvType::TLV_NON_1905_NEIGHBOR_DEVICE_LIST";
-    case eTlvType::TLV_1905_NEIGHBOR_DEVICE:           return "eTlvType::TLV_1905_NEIGHBOR_DEVICE";
-    case eTlvType::TLV_LINK_METRIC_QUERY:              return "eTlvType::TLV_LINK_METRIC_QUERY";
-    case eTlvType::TLV_TRANSMITTER_LINK_METRIC:        return "eTlvType::TLV_TRANSMITTER_LINK_METRIC";
-    case eTlvType::TLV_RECEIVER_LINK_METRIC:           return "eTlvType::TLV_RECEIVER_LINK_METRIC";
-    case eTlvType::TLV_VENDOR_SPECIFIC:                return "eTlvType::TLV_VENDOR_SPECIFIC";
-    case eTlvType::TLV_LINK_METRIC_RESULT_CODE:        return "eTlvType::TLV_LINK_METRIC_RESULT_CODE";
-    case eTlvType::TLV_SEARCHED_ROLE:                  return "eTlvType::TLV_SEARCHED_ROLE";
-    case eTlvType::TLV_AUTOCONFIG_FREQ_BAND:           return "eTlvType::TLV_AUTOCONFIG_FREQ_BAND";
-    case eTlvType::TLV_SUPPORTED_ROLE:                 return "eTlvType::TLV_SUPPORTED_ROLE";
-    case eTlvType::TLV_SUPPORTED_FREQ_BAND:            return "eTlvType::TLV_SUPPORTED_FREQ_BAND";
-    case eTlvType::TLV_WSC:                            return "eTlvType::TLV_WSC";
-    case eTlvType::TLV_PUSH_BUTTON_EVENT_NOTIFICATION: return "eTlvType::TLV_PUSH_BUTTON_EVENT_NOTIFICATION";
-    case eTlvType::TLV_PUSH_BUTTON_JOIN_NOTIFICATION:  return "eTlvType::TLV_PUSH_BUTTON_JOIN_NOTIFICATION";
-    }
-    static std::string out_str = std::to_string(int(enum_value));
-    return out_str.c_str();
-}
-inline std::ostream &operator<<(std::ostream &out, eTlvType value) { return out << eTlvType_str(value); }
-// clang-format on
-// Enum AutoPrint generated code snippet end
 class eTlvTypeValidate {
 public:
     static bool check(uint8_t value) {
