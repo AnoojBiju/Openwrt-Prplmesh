@@ -1677,11 +1677,13 @@ bool db::set_station_capabilities(const std::string &client_mac,
 
     // TODO: Remove HECapabilities before setting new one.
 
-    if (sta_cap.ht_bw != 0xFF && !dm_set_sta_ht_capabilities(path_to_sta, sta_cap)) {
+    if (sta_cap.ht_bw != beerocks::BANDWIDTH_UNKNOWN &&
+        !dm_set_sta_ht_capabilities(path_to_sta, sta_cap)) {
         LOG(ERROR) << "Failed to set station HT Capabilities";
         return false;
     }
-    if (sta_cap.vht_bw != 0xFF && !dm_set_sta_vht_capabilities(path_to_sta, sta_cap)) {
+    if (sta_cap.vht_bw != beerocks::BANDWIDTH_UNKNOWN &&
+        !dm_set_sta_vht_capabilities(path_to_sta, sta_cap)) {
         LOG(ERROR) << "Failed to set station VHT Capabilities";
         return false;
     }
@@ -1708,12 +1710,14 @@ bool db::set_station_capabilities(const std::string &client_mac,
     // TODO: Remove HECapabilities before setting new one.
 
     // Fill up HT Capabilities for Device.WiFi.DataElements.Notification.AssociationEvent.AssociationEventData.1
-    if (sta_cap.ht_bw != 0xFF && !dm_set_sta_ht_capabilities(path_to_eventdata, sta_cap)) {
+    if (sta_cap.ht_bw != beerocks::BANDWIDTH_UNKNOWN &&
+        !dm_set_sta_ht_capabilities(path_to_eventdata, sta_cap)) {
         LOG(ERROR) << "Failed to set station HT Capabilities into " << path_to_eventdata;
         return false;
     }
     // Fill up VHT Capabilities for Device.WiFi.DataElements.Notification.AssociationEvent.AssociationEventData.1
-    if (sta_cap.vht_bw != 0xFF && !dm_set_sta_vht_capabilities(path_to_eventdata, sta_cap)) {
+    if (sta_cap.vht_bw != beerocks::BANDWIDTH_UNKNOWN &&
+        !dm_set_sta_vht_capabilities(path_to_eventdata, sta_cap)) {
         LOG(ERROR) << "Failed to set station VHT Capabilities into " << path_to_eventdata;
         return false;
     }
