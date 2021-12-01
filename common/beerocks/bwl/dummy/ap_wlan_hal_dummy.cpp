@@ -257,6 +257,24 @@ bool ap_wlan_hal_dummy::sta_softblock_remove(const std::string &vap_name,
     return true;
 }
 
+bool ap_wlan_hal_dummy::sta_query_info(const std::string &sta_mac)
+{
+    std::string cmd = "STA_INFO_QUERY " + sta_mac + " add_network_info=" + get_iface_name();
+    LOG(TRACE) << __func__ << cmd;
+
+    sSTA_INFO_REPLY reply = {}; // dummy values are initialized to zero
+    std::stringstream value;
+    value << "STA_INFO_REPLY: " << reply.bss << " " << sta_mac << " " << reply.device_name << " "
+          << reply.os_name << " " << reply.vendor << " " << reply.days_since_last_reset
+          << " [ ipv4=" << beerocks::net::network_utils::ipv4_to_string(reply.ipv4)
+          << " subnet mask=" << beerocks::net::network_utils::ipv4_to_string(reply.subnet_mask)
+          << "default_gw" << beerocks::net::network_utils::ipv4_to_string(reply.default_gw)
+          << std::endl;
+
+    write_status_file("EVENT", value.str());
+    return true;
+}
+
 bool ap_wlan_hal_dummy::switch_channel(int chan, int bw, int vht_center_frequency)
 {
     LOG(TRACE) << __func__ << " channel: " << chan << ", bw: " << bw
