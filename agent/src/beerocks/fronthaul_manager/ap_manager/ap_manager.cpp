@@ -957,7 +957,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
         LOG(WARNING) << "UNIMPLEMENTED - ACTION_APMANAGER_HOSTAP_REMOVE_NEIGHBOR_11K_REQUEST";
         // auto request = (message::sACTION_APMANAGER_HOSTAP_REMOVE_NEIGHBOR_11K_REQUEST*)rx_buffer;
         // if (!ap_man_hal.neighbor_remove(request->params)){
-        //     LOG(ERROR) << "Failed to set neighbor!";
+        //     LOG(ERROR) << "Failed to set neighbour!";
         // }
         break;
     }
