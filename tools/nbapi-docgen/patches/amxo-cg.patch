@@ -1,0 +1,22 @@
+diff --git a/src/makefile b/src/makefile
+index f9b8cbe..c12febb 100644
+--- a/src/makefile
++++ b/src/makefile
+@@ -7,7 +7,7 @@ TARGET = $(COMPONENT)-$(VERSION)
+ # source directories
+ SRCDIR = .
+ INCDIR_PRIV = ../include_priv
+-INCDIRS = $(INCDIR_PRIV)
++INCDIRS = $(INCDIR_PRIV) $(STAGINGDIR)/usr/include
+ 
+ # build destination directories
+ OBJDIR = ../output/$(MACHINE)
+@@ -36,7 +36,7 @@ else
+ 	CFLAGS += -Wstrict-prototypes -Wold-style-definition -Wnested-externs -std=gnu11 
+ endif
+ 
+-LDFLAGS += -lamxc -lamxd -lamxo $(shell pkg-config --libs libxml-2.0)
++LDFLAGS += -fuse-ld=gold -L$(STAGINGDIR)/usr/lib -lamxc -lamxd -lamxo $(shell pkg-config --libs libxml-2.0)
+ 
+ # targets
+ all: ../include_priv/version.h $(COMPONENT)
