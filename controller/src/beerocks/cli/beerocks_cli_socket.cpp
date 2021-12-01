@@ -447,7 +447,13 @@ int cli_socket::rm_neighbor_11k_caller(int numOfArgs)
     return -1;
 }
 
-int cli_socket::get_my_var_caller(int numOfArgs) { return get_my_var(); }
+int cli_socket::get_my_var_caller(int numOfArgs)
+{
+    if (numOfArgs == 0) {
+        return get_my_var();
+    }
+    return -1;
+}
 
 int cli_socket::set_my_var_caller(int numOfArgs)
 {
