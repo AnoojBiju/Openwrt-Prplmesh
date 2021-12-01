@@ -200,6 +200,18 @@ typedef struct {
     sNodeRssiMeasurement params;
 } sACTION_BACKHAUL_CLIENT_RX_RSSI_MEASUREMENT_RESPONSE;
 
+typedef struct {
+    std::string bss;
+    sMacAddr mac;
+    std::string device_name;
+    std::string os_name;
+    std::string vendor;
+    uint32_t days_since_last_reset;
+    beerocks::net::sIpv4Addr ipv4;
+    beerocks::net::sIpv4Addr subnet_mask;
+    beerocks::net::sIpv4Addr default_gw;
+} sSTA_INFO_REPLY;
+
 //ap_wlan_hal
 
 enum eWiFiStandard : uint8_t {
