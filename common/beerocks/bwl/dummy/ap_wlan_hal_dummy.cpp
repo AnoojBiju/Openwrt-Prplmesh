@@ -492,6 +492,63 @@ bool ap_wlan_hal_dummy::process_dummy_event(parsed_obj_map_t &parsed_obj)
         event_queue_push(Event::STA_Disconnected, msg_buff);
     } break;
 
+    case Event::STA_INFO_REPLY: {
+        int64_t days_since_last_reset;
+        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sSTA_INFO_REPLY));
+        auto msg      = reinterpret_cast<sSTA_INFO_REPLY *>(msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        if (!dummy_obj_read_str("bss", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading BSS parameter!";
+            return false;
+        }
+        msg->bss = tmp_str;
+
+        if (!dummy_obj_read_str("mac", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading MAC parameter!";
+            return false;
+        }
+        msg->mac = tlvf::mac_from_string(tmp_str);
+
+        if (!dummy_obj_read_str("device_name", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading device name parameter!";
+            return false;
+        }
+        msg->device_name = tmp_str;
+
+        if (!dummy_obj_read_str("vendor", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading vendor parameter!";
+            return false;
+        }
+        msg->vendor = tmp_str;
+
+        if (!dummy_obj_read_int("days_since_last_reset", parsed_obj, days_since_last_reset)) {
+            LOG(ERROR) << "Failed reading days_since_last_reset parameter!";
+            return false;
+        }
+        msg->days_since_last_reset = static_cast<uint32_t>(days_since_last_reset);
+
+        if (!dummy_obj_read_str("ipv4", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading ipv4 parameter!";
+            return false;
+        }
+        msg->ipv4 = beerocks::net::network_utils::ipv4_from_string(tmp_str);
+
+        if (!dummy_obj_read_str("subnet_mask", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading vendor parameter!";
+            return false;
+        }
+        msg->subnet_mask = beerocks::net::network_utils::ipv4_from_string(tmp_str);
+
+        if (!dummy_obj_read_str("default_gw", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading default gateway parameter!";
+            return false;
+        }
+        msg->default_gw = beerocks::net::network_utils::ipv4_from_string(tmp_str);
+
+        event_queue_push(Event::STA_INFO_REPLY, msg_buff);
+    } break;
+
     // STA 802.11 management frame event
     case Event::MGMT_Frame: {
         // Read frame data
