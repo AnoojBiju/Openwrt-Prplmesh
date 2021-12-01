@@ -147,6 +147,22 @@ bool controller_ucc_listener::handle_dev_set_rfeature(
     return false;
 }
 
+/**
+ * @brief Handle DEVICE_GET_STA_INFO command.
+ * 
+ * @param params [in] Commnad Parameters
+ * @param dev_name [out] station name 
+ * @param ip_addr [out] station's IP address
+ * @return true on success
+ * @return false on failure
+ */
+bool controller_ucc_listener::handle_dev_sta_info(
+    std::unordered_map<std::string, std::string> &params, std::string &err_string)
+{
+    err_string = "dev set rfeature not supported in controller mode";
+    return false;
+}
+
 void controller_ucc_listener::handle_dev_reset_default(
     int fd, const std::unordered_map<std::string, std::string> &params)
 {
