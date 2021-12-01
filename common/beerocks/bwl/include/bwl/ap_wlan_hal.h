@@ -221,6 +221,14 @@ public:
      */
     virtual bool sta_softblock_remove(const std::string &vap_name,
                                       const std::string &client_mac) = 0;
+
+    /**
+     * @brief Query information from a connected device.
+     * 
+     * @param sta_mac Station MAC address.
+     * @return true on success, otherwise false.
+     */
+    virtual bool sta_query_info(const std::string &sta_mac) = 0;
     /**
      * @brief Switch the AP to the given channel.
      *
