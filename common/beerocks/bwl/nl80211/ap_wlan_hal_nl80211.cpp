@@ -496,6 +496,16 @@ bool ap_wlan_hal_nl80211::sta_bss_steer(const std::string &mac, const std::strin
     return true;
 }
 
+bool ap_wlan_hal_nl80211::sta_query_info(const std::string &sta_mac)
+{
+    std::string cmd = "STA_INFO_QUERY " + sta_mac + " add_network_info=" + get_iface_name();
+    if (!wpa_ctrl_send_msg(cmd)) {
+        LOG(ERROR) << "sta_query_info() failed!";
+        return false;
+    }
+    return true;
+}
+
 bool ap_wlan_hal_nl80211::update_vap_credentials(
     std::list<son::wireless_utils::sBssInfoConf> &bss_info_conf_list,
     const std::string &backhaul_wps_ssid, const std::string &backhaul_wps_passphrase)
