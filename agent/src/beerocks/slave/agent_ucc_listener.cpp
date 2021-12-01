@@ -228,3 +228,20 @@ bool agent_ucc_listener::handle_dev_set_rfeature(
     }
     return true;
 }
+
+/**
+ * @brief Handle DEVICE_GET_STA_INFO command.
+ * 
+ * @param params Commnad Parameters
+ * @return true on success
+ * @return false on failure
+ */
+bool agent_ucc_listener::handle_dev_sta_info(std::unordered_map<std::string, std::string> &params,
+                                             std::string &err_string)
+{
+    std::string device_name;
+    beerocks::net::sIpv4Addr ip_addr;
+    sMacAddr sta_mac = tlvf::mac_from_string(params["sta_mac"]);
+    m_btl_ctx.get_device_sta_info(sta_mac, device_name, ip_addr);
+    return true;
+}
