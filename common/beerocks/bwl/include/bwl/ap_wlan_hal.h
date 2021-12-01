@@ -36,6 +36,7 @@ public:
         STA_Softblock_Drop,
         STA_Steering_Probe_Req,
         STA_Steering_Auth_Fail,
+        STA_INFO_REPLY,
 
         Interface_Enabled,
         Interface_Disabled,
