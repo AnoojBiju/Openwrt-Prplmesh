@@ -4403,7 +4403,11 @@ bool db::set_node_stats_info(const sMacAddr &mac, const beerocks_message::sStaSt
     if (params == nullptr) { // clear stats
         n->clear_node_stats_info();
     } else {
-        auto p               = n->stats_info;
+        auto p = n->stats_info;
+        if (!p) {
+            LOG(ERROR) << "node has no stats_info!";
+            return false;
+        }
         p->rx_packets        = params->rx_packets;
         p->tx_packets        = params->tx_packets;
         p->tx_bytes          = params->tx_bytes;
