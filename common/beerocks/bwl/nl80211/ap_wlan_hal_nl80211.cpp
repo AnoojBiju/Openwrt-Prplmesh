@@ -1177,6 +1177,26 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
         break;
     }
 
+    case Event::STA_INFO_REPLY: {
+        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sSTA_INFO_REPLY));
+        auto msg      = reinterpret_cast<sSTA_INFO_REPLY *>(msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        // Initialize the message
+        msg->bss         = parsed_obj["bss"];
+        msg->mac         = tlvf::mac_from_string(parsed_obj["mac"]);
+        msg->device_name = parsed_obj["device_name"];
+        msg->vendor      = parsed_obj["vendor"];
+        msg->days_since_last_reset =
+            beerocks::string_utils::stoi(parsed_obj["days_since_last_reset"]);
+        msg->ipv4 = beerocks::net::network_utils::ipv4_from_string(parsed_obj["ipv4"]);
+        msg->subnet_mask =
+            beerocks::net::network_utils::ipv4_from_string(parsed_obj["subnet_mask"]);
+        msg->default_gw = beerocks::net::network_utils::ipv4_from_string(parsed_obj["default_gw"]);
+        event_queue_push(Event::STA_INFO_REPLY, msg_buff);
+        break;
+    }
+
     // BSS Transition (802.11v)
     case Event::BSS_TM_Response: {
 
