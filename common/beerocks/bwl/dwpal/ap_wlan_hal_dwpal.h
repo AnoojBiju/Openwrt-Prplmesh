@@ -50,6 +50,7 @@ public:
     virtual bool sta_bss_steer(const std::string &mac, const std::string &bssid, int oper_class,
                                int chan, int disassoc_timer_btt, int valid_int_btt,
                                int reason) override;
+    virtual bool sta_query_info(const std::string &sta_mac) override;
     virtual bool
     update_vap_credentials(std::list<son::wireless_utils::sBssInfoConf> &bss_info_conf_list,
                            const std::string &backhaul_wps_ssid,

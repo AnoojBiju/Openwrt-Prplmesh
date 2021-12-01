@@ -1179,6 +1179,16 @@ bool ap_wlan_hal_dwpal::sta_bss_steer(const std::string &mac, const std::string 
     return true;
 }
 
+bool ap_wlan_hal_dwpal::sta_query_info(const std::string &sta_mac)
+{
+    std::string cmd = "STA_INFO_QUERY " + sta_mac + " add_network_info=" + get_iface_name();
+    if (!dwpal_send_cmd(cmd)) {
+        LOG(ERROR) << "sta_query_info() failed!";
+        return false;
+    }
+    return true;
+}
+
 static bool set_vap_multiap_mode(std::vector<std::string> &vap_hostapd_config, bool fronthaul,
                                  bool backhaul, std::string &backhaul_wps_ssid,
                                  const std::string &backhaul_wps_passphrase, bool disallow_profile1,
@@ -2901,6 +2911,68 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         // current VAP, there is no need to notify the upper layer.
         // disassoc_timer_btt = 0 valid_int_btt=2 (200ms) reason=0 (not specified)
         sta_bss_steer(client_mac_str, bssid, op_class, m_radio_info.channel, 0, 2, 0);
+        break;
+    }
+
+    case Event::STA_INFO_REPLY: {
+        parsed_line_t parsed_obj;
+        int64_t days_since_last_reset;
+        parse_event(buffer, parsed_obj);
+
+        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sSTA_INFO_REPLY));
+        auto msg      = reinterpret_cast<sSTA_INFO_REPLY *>(msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        // Initialize the message
+        *msg = {};
+
+        if (!read_param("bss", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading BSS parameter!";
+            return false;
+        }
+
+        if (!read_param("mac", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading MAC parameter!";
+            return false;
+        }
+        msg->mac = tlvf::mac_from_string(tmp_str);
+
+        if (!read_param("device_name", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading device name parameter!";
+            return false;
+        }
+        msg->device_name = tmp_str;
+
+        if (!read_param("vendor", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading vendor parameter!";
+            return false;
+        }
+        msg->vendor = tmp_str;
+
+        if (!read_param("days_since_last_reset", parsed_obj, days_since_last_reset)) {
+            LOG(ERROR) << "Failed reading days_since_last_reset parameter!";
+            return false;
+        }
+        msg->days_since_last_reset = static_cast<uint32_t>(days_since_last_reset);
+
+        if (!read_param("ipv4", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading ipv4 parameter!";
+            return false;
+        }
+        msg->ipv4 = beerocks::net::network_utils::ipv4_from_string(tmp_str);
+
+        if (!read_param("subnet_mask", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading vendor parameter!";
+            return false;
+        }
+        msg->subnet_mask = tmp_str;
+
+        if (!read_param("default_gw", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading default gateway parameter!";
+            return false;
+        }
+        msg->default_gw = tmp_str;
+        event_queue_push(Event::STA_INFO_REPLY, msg_buff);
         break;
     }
 
