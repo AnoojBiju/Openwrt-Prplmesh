@@ -45,7 +45,7 @@ public:
                                    const std::string &subobject_name) override;
     bool set_current_time(const std::string &path_to_object,
                           const std::string &param = "TimeStamp") override;
-    bool read_param(const std::string &obj_path, const char *param_name,
+    bool read_param(const std::string &obj_path, const std::string &param_name,
                     uint64_t *param_val) override;
 };
 
