@@ -27,10 +27,6 @@ for COMPONENT in libamxc libamxj libamxp libamxd libamxo amxo-cg amxo-xml-to; do
         fi
     fi
     pushd $COMPONENT || exit 1
-    if [ -f ../patches/${COMPONENT}.patch ]; then
-        echo "*** running git apply ***"
-        git apply ../patches/${COMPONENT}.patch;
-    fi
     make && make install;
     popd || exit 1
 done
