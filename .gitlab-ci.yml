@@ -125,14 +125,14 @@ flake8:
 
 nbapi-docgen:
   stage: build
+  extends: .in-prplmesh-builder
+  variables:
+    VERSION: $CI_COMMIT_REF_NAME-$CI_COMMIT_TIMESTAMP
   script:
-  - apt-get update && apt-get -y install libyajl2 libyajl-dev bash git build-essential flex bison libxml2-dev libxslt1-dev zip
-  - cd tools/nbapi-docgen
-  - ./parse_api.sh
+    - tools/nbapi-docgen/parse_api.sh
   artifacts:
     paths:
-      - tools/nbapi-docgen/build/html
-      - tools/nbapi-docgen/ppm_controller_nbapi_docs.zip
+      - build/html
     when: always
 
 pages:
@@ -140,7 +140,7 @@ pages:
   needs: ["nbapi-docgen"]
   script:
     - mkdir .public
-    - cp -r tools/nbapi-docgen/build/html/* .public
+    - cp -r build/html/* .public
     - rm -rf public
     - mv .public public
   artifacts:
