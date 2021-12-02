@@ -31,11 +31,6 @@ private:
     task_pool &m_tasks;
 
     /**
-     * @brief Timestamps in NBAPI format of the STA association events.
-     */
-    std::unordered_map<sMacAddr, std::string> m_assoc_sta;
-
-    /**
      * @brief If STA associate first time send Client Capability Query message.
      * Save mac address and timestamp of associated STA.
      * 
@@ -46,7 +41,7 @@ private:
     bool verify_sta_association(const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
-     * @brief Fill up Client Info TLV with all needed inforamation, add this TLV
+     * @brief Fill up Client Info TLV with all needed information, add this TLV
      * to the Client Capability Query Message, send this message to the Agent.
      * 
      * @param src_mac MAC address of Agent which reported new client association.

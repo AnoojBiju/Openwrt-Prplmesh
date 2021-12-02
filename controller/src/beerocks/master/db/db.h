@@ -18,7 +18,6 @@
 #include <bcl/network/network_utils.h>
 #include <bcl/son/son_wireless_utils.h>
 
-#include <tlvf/AssociationRequestFrame/AssocReqFrame.h>
 #include <tlvf/wfa_map/tlvApHeCapabilities.h>
 #include <tlvf/wfa_map/tlvApHtCapabilities.h>
 #include <tlvf/wfa_map/tlvApOperationalBSS.h>
@@ -213,18 +212,8 @@ public:
         std::string timestamp;
     } sStaSteeringEvent;
 
-    typedef struct sStaCap {
-        sStaCap() = delete;
-        explicit sStaCap(const sMacAddr _sta_mac) : mac(_sta_mac) {}
-        const sMacAddr mac;
-        bool ht_cap_present  = false;
-        bool vht_cap_present = false;
-        assoc_frame::sStaHtCapabilityInfo sta_ht_cap;
-        assoc_frame::sStaVhtCapInfo sta_vht_cap;
-    } sStaCap;
-
     std::unordered_map<sMacAddr, std::vector<sStaSteeringEvent>> m_stations_steering_events;
-    beerocks::mac_map<sStaCap> m_sta_cap;
+
     beerocks::mac_map<Agent> m_agents;
     beerocks::mac_map<Station> m_stations;
 
@@ -852,20 +841,20 @@ public:
     /**
      * @brief Sets value for parameters of optional sub-object STA HTCapabilities.
      *
-     * @param path_to_obj Path to object which contains STA HTCapabilities sub-object.
+     * @param path_to_event Path to event which contains STA HTCapabilities sub-object.
      * @param sta_mac MAC address of the station.
      * @return True on success, false otherwise.
      */
-    bool dm_set_sta_ht_cap(const std::string &path_to_obj, const sMacAddr &sta_mac);
+    bool dm_set_assoc_event_sta_ht_cap(const std::string &path_to_event, const sMacAddr &sta_mac);
 
     /**
      * @brief Sets value for parameters of optional sub-object STA VHTCapabilities.
      *
-     * @param path_to_obj Path to object which contains STA VHTCapabilities sub-object.
+     * @param path_to_event Path to event which contains STA VHTCapabilities sub-object.
      * @param sta_mac MAC address of the station.
      * @return True on success, false otherwise.
      */
-    bool dm_set_sta_vht_cap(const std::string &path_to_obj, const sMacAddr &sta_mac);
+    bool dm_set_assoc_event_sta_vht_cap(const std::string &path_to_event, const sMacAddr &sta_mac);
 
     /**
      * @brief Set STA DHCPv4 lease information for both node and datamodel.
