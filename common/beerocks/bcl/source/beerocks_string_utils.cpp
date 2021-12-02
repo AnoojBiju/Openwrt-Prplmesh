@@ -92,7 +92,14 @@ int64_t string_utils::stoi(const std::string &str, const char *calling_file, int
                      << " caller: " << caller_file_name << "[" << calling_line << "]";
         return 0;
     }
-    if (str.find_first_not_of("-0123456789") != std::string::npos) {
+
+    /* There could be a leading space/tab in string
+        eg: "1 " or " 1". We need to remove such space/tab and then
+        have substring which can be parsed
+    */
+    std::string trimmed_str = str;
+    string_utils::trim(trimmed_str, "");
+    if (trimmed_str.find_first_not_of("-0123456789") != std::string::npos) {
         auto calling_file_str       = std::string(calling_file);
         const auto caller_file_name = calling_file_str.substr(calling_file_str.rfind('/') + 1);
         LOG(WARNING) << "string_utils::stoi(), string \"" << str
@@ -100,7 +107,8 @@ int64_t string_utils::stoi(const std::string &str, const char *calling_file, int
                      << calling_line << "]";
         return 0;
     }
-    std::stringstream val_s(str);
+    std::stringstream val_s(trimmed_str);
+
     int64_t val;
     val_s >> val;
     if (val_s.fail()) {
