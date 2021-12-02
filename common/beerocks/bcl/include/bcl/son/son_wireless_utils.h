@@ -237,6 +237,19 @@ public:
                                             beerocks::eWiFiBandwidth bw);
 
     /**
+     * @brief get max supported bandwidth in station capabilities.
+     * in this order:
+     * - max_ch_width (valid even for a/b/g)
+     * - vht_bw (valid for ac)
+     * - ht_bw (valid for n)
+     * @param sta_caps in station capabilities
+     * @param max_bw out filled max supported bandwidth
+     * @return false if none of above is valid bw (+unchanged out param)
+     */
+    static bool get_station_max_supported_bw(beerocks::message::sRadioCapabilities &sta_caps,
+                                             beerocks::eWiFiBandwidth &max_bw);
+
+    /**
      * @brief Makes conversion from RSSI to RCPI.
      *
      * RCPI means Received channel power indicator.

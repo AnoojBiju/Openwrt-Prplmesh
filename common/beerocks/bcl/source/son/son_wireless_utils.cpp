@@ -1210,3 +1210,27 @@ bool wireless_utils::get_subset_20MHz_channels(const uint8_t channel_number,
     // No matching elements were found
     return false;
 }
+
+/**
+ * @brief get max supported bandwidth in station capabilities.
+ * in this order:
+ * - max_ch_width (valid even for a/b/g)
+ * - vht_bw (valid for ac)
+ * - ht_bw (valid for n)
+ * @param sta_caps in station capabilities
+ * @param max_bw out filled max supported bandwidth
+ * @return false if none of above is valid bw (+unchanged out param)
+ */
+bool wireless_utils::get_station_max_supported_bw(beerocks::message::sRadioCapabilities &sta_caps,
+                                                  beerocks::eWiFiBandwidth &max_bw)
+{
+    auto max_bw_hdlr = [](uint8_t in_bw, beerocks::eWiFiBandwidth &out_bw) -> bool {
+        if (in_bw != beerocks::BANDWIDTH_UNKNOWN && in_bw < beerocks::BANDWIDTH_MAX) {
+            out_bw = beerocks::eWiFiBandwidth(in_bw);
+            return true;
+        }
+        return false;
+    };
+    return (max_bw_hdlr(sta_caps.max_ch_width, max_bw) || max_bw_hdlr(sta_caps.vht_bw, max_bw) ||
+            max_bw_hdlr(sta_caps.ht_bw, max_bw));
+}
