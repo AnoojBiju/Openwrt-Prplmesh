@@ -123,6 +123,19 @@ flake8:
       xargs -0 -t flake8 --verbose
   needs: []
 
+nbapi-docgen:
+  stage: build
+  script:
+  - apt-get update && apt-get -y install libyajl2 libyajl-dev bash git build-essential flex bison libxml2-dev libxslt1-dev zip
+  - cd tools/nbapi-docgen
+  - ./parse_api.sh
+  needs: []
+  artifacts:
+    paths:
+      - tools/nbapi-docgen/build/html
+      - tools/nbapi-docgen/ppm_controller_nbapi_docs.zip
+    when: always
+
 shellcheck:
   stage: build
   image: koalaman/shellcheck-alpine:v0.7.1
