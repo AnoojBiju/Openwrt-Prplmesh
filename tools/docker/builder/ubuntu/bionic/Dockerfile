@@ -31,6 +31,7 @@ ARG PACKAGES_FOR_AMBIORIX="\
     flex \
     libevent-dev \
     libyajl-dev \
+    libxslt1-dev \
     lua5.1 \
     liblua5.1-0-dev \
     build-essential \
@@ -103,8 +104,8 @@ RUN \
 # As they have some internal dependencies - we should build & install
 # them in specific order.
 RUN \
-    repo init -u https://gitlab.com/soft.at.home/ambiorix/ambiorix.git \
-        -b refs/tags/v1.4.0 < /dev/null && \
+    repo init -u https://gitlab.com/prpl-foundation/components/ambiorix/ambiorix.git \
+        -b refs/tags/v1.15.2 < /dev/null && \
     repo sync && \
     make install -C libraries/libamxc && \
     make install -C libraries/libamxp && \
@@ -114,6 +115,7 @@ RUN \
     make install -C libraries/libamxb && \
     make install -C applications/amxb-inspect && \
     make install -C applications/amxo-cg && \
+    make install -C applications/amxo-xml-to && \
     make -C bus_adaptors/amxb_ubus && \
     make install -C bus_adaptors/amxb_ubus
 
