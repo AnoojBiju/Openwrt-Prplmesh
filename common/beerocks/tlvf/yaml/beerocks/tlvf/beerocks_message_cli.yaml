@@ -136,3 +136,7 @@ cACTION_CLI_HOSTAP_REMOVE_NEIGHBOR_11K_REQUEST:
 cACTION_CLI_HOSTAP_STATS_MEASUREMENT:
   _type: class
   ap_mac: sMacAddr
+
+cACTION_CLI_TEST_CONFIG:
+  _type: class
+  value: uint8_t

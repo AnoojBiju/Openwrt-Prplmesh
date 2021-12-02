@@ -645,6 +645,22 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
 
         break;
     }
+    case beerocks_message::ACTION_CLI_TEST_CONFIG: {
+        auto request = beerocks_header->addClass<beerocks_message::cACTION_CLI_TEST_CONFIG>();
+        if (request == nullptr) {
+            LOG(ERROR) << "addClass cACTION_CLI_TEST_CONFIG failed";
+            isOK = false;
+            break;
+        }
+        //check if there is value available in the request.
+        if (request->value()) {
+            database.config.test_config = request->value();
+            break;
+        }
+        //if the request has value 0 or no value get the value from db.
+        currentValue = database.config.test_config;
+        break;
+    }
     default: {
         LOG(ERROR) << "Unsupported CLI action_op:" << int(beerocks_header->action_op());
         isOK = false;

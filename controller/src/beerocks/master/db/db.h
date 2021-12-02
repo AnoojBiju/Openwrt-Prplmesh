@@ -150,6 +150,7 @@ public:
         std::chrono::seconds link_metrics_request_interval_seconds;
         std::chrono::seconds dhcp_monitor_interval_seconds;
         std::chrono::milliseconds steering_disassoc_timer_msec;
+        uint8_t test_config;
     } sDbMasterConfig;
 
     typedef struct {
@@ -1529,6 +1530,7 @@ public:
     int get_cli_socket_at(int idx);
     void set_slave_stop_on_failure_attempts(int attempts);
     int get_slave_stop_on_failure_attempts();
+    int test_config();
 
     //
     // BML
