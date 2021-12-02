@@ -1628,9 +1628,16 @@ bool db::dm_set_sta_vht_capabilities(const std::string &path_to_sta,
     return return_val;
 }
 
-bool db::dm_set_sta_ht_cap(const std::string &path_to_event, const sMacAddr &sta_mac)
+bool db::dm_set_assoc_event_sta_ht_cap(const std::string &path_to_event, const sMacAddr &sta_mac)
 {
-    auto sta_caps = m_sta_cap.get(sta_mac);
+    bool ret_val = true;
+    auto client  = get_station(sta_mac);
+    if (!client) {
+        LOG(WARNING) << "client " << sta_mac << " not found";
+        return false;
+    }
+
+    auto sta_caps = client->m_sta_cap.get(sta_mac);
 
     if (!sta_caps) {
         LOG(WARNING) << "No sStaCap found for station: " << sta_mac;
@@ -1646,38 +1653,30 @@ bool db::dm_set_sta_ht_cap(const std::string &path_to_event, const sMacAddr &sta
 
     std::string path_to_ht_cap = path_to_event + "HTCapabilities.";
 
-    if (!m_ambiorix_datamodel->set(path_to_ht_cap, "tx_spatial_streams", sta_ht_cap.tx_stbc)) {
-        LOG(ERROR) << "Failed to set " << path_to_ht_cap
-                   << "tx_spatial_streams: " << sta_ht_cap.tx_stbc;
-        return false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_ht_cap, "rx_spatial_streams", sta_ht_cap.rx_stbc)) {
-        LOG(ERROR) << "Failed to set " << path_to_ht_cap
-                   << "rx_spatial_streams: " << sta_ht_cap.rx_stbc;
-        return false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_ht_cap, "GI_20_MHz",
-                                   static_cast<bool>(sta_ht_cap.short_gi20mhz))) {
-        LOG(ERROR) << "Failed to set " << path_to_ht_cap << "GI_20_MHz.";
-        return false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_ht_cap, "GI_40_MHz",
-                                   static_cast<bool>(sta_ht_cap.short_gi40mhz))) {
-        LOG(ERROR) << "Failed to set " << path_to_ht_cap << "GI_40_MHz.";
-        return false;
-    }
+    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "tx_spatial_streams", sta_ht_cap.tx_stbc);
+    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "rx_spatial_streams", sta_ht_cap.rx_stbc);
+    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "GI_20_MHz",
+                                         static_cast<bool>(sta_ht_cap.short_gi20mhz));
+    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "GI_40_MHz",
+                                         static_cast<bool>(sta_ht_cap.short_gi40mhz));
+
     // Set to 1 if both 20 MHz and 40 MHz operation is supported
-    if (!m_ambiorix_datamodel->set(path_to_ht_cap, "HT_40_Mhz",
-                                   static_cast<bool>(sta_ht_cap.support_ch_width_set))) {
-        LOG(ERROR) << "Failed to set " << path_to_ht_cap << "HT_40_Mhz.";
-        return false;
-    }
-    return true;
+    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "HT_40_Mhz",
+                                         static_cast<bool>(sta_ht_cap.support_ch_width_set));
+
+    return ret_val;
 }
 
-bool db::dm_set_sta_vht_cap(const std::string &path_to_event, const sMacAddr &sta_mac)
+bool db::dm_set_assoc_event_sta_vht_cap(const std::string &path_to_event, const sMacAddr &sta_mac)
 {
-    auto sta_caps = m_sta_cap.get(sta_mac);
+    bool ret_val = true;
+    auto client  = get_station(sta_mac);
+    if (!client) {
+        LOG(WARNING) << "client " << sta_mac << " not found";
+        return false;
+    }
+
+    auto sta_caps = client->m_sta_cap.get(sta_mac);
 
     if (!sta_caps) {
         LOG(WARNING) << "No sStaCap found for station: " << sta_mac;
@@ -1693,53 +1692,24 @@ bool db::dm_set_sta_vht_cap(const std::string &path_to_event, const sMacAddr &st
 
     std::string path_to_ht_cap = path_to_event + "VHTCapabilities.";
 
-    if (!m_ambiorix_datamodel->set(path_to_ht_cap, "VHT_Tx_MCS", sta_vht_cap.tx_stbc)) {
-        LOG(ERROR) << "Failed to set " << path_to_ht_cap << "VHT_Tx_MCS: " << sta_vht_cap.tx_stbc;
-        return false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_ht_cap, "VHT_Rx_MCS", sta_vht_cap.rx_stbc)) {
-        LOG(ERROR) << "Failed to set " << path_to_ht_cap << "VHT_Rx_MCS: " << sta_vht_cap.rx_stbc;
-        return false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_ht_cap, "tx_spatial_streams", sta_vht_cap.tx_stbc)) {
-        LOG(ERROR) << "Failed to set " << path_to_ht_cap << "tx_spatial_streams.";
-        return false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_ht_cap, "rx_spatial_streams", sta_vht_cap.rx_stbc)) {
-        LOG(ERROR) << "Failed to set " << path_to_ht_cap << "rx_spatial_streams.";
-        return false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_ht_cap, "GI_80_MHz",
-                                   static_cast<bool>(sta_vht_cap.short_gi80mhz_tvht_mode4c))) {
-        LOG(ERROR) << "Failed to set " << path_to_ht_cap << "GI_80_MHz.";
-        return false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_ht_cap, "GI_160_MHz",
-                                   static_cast<bool>(sta_vht_cap.short_gi160mhz80_80mhz))) {
-        LOG(ERROR) << "Failed to set " << path_to_ht_cap << "GI_160_MHz.";
-        return false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_ht_cap, "VHT_80_80_MHz",
-                                   static_cast<bool>(sta_vht_cap.short_gi160mhz80_80mhz))) {
-        LOG(ERROR) << "Failed to set " << path_to_ht_cap << "VHT_80_80_MHz.";
-        return false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_ht_cap, "VHT_160_MHz",
-                                   static_cast<bool>(sta_vht_cap.short_gi160mhz80_80mhz))) {
-        LOG(ERROR) << "Failed to set " << path_to_ht_cap << "VHT_160_MHz.";
-        return false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_ht_cap, "SU_beamformer",
-                                   static_cast<bool>(sta_vht_cap.su_beamformer))) {
-        LOG(ERROR) << "Failed to set " << path_to_ht_cap << "SU_beamformer.";
-        return false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_ht_cap, "MU_beamformer",
-                                   static_cast<bool>(sta_vht_cap.mu_beamformer))) {
-        LOG(ERROR) << "Failed to set " << path_to_ht_cap << "MU_beamformer.";
-        return false;
-    }
-    return true;
+    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "VHT_Tx_MCS", sta_vht_cap.tx_stbc);
+    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "VHT_Rx_MCS", sta_vht_cap.rx_stbc);
+    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "tx_spatial_streams", sta_vht_cap.tx_stbc);
+    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "rx_spatial_streams", sta_vht_cap.rx_stbc);
+    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "GI_80_MHz",
+                                         static_cast<bool>(sta_vht_cap.short_gi80mhz_tvht_mode4c));
+    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "GI_160_MHz",
+                                         static_cast<bool>(sta_vht_cap.short_gi160mhz80_80mhz));
+    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "VHT_80_80_MHz",
+                                         static_cast<bool>(sta_vht_cap.short_gi160mhz80_80mhz));
+    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "VHT_160_MHz",
+                                         static_cast<bool>(sta_vht_cap.short_gi160mhz80_80mhz));
+    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "SU_beamformer",
+                                         static_cast<bool>(sta_vht_cap.su_beamformer));
+    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "MU_beamformer",
+                                         static_cast<bool>(sta_vht_cap.mu_beamformer));
+
+    return ret_val;
 }
 
 bool db::set_station_capabilities(const std::string &client_mac,
@@ -6023,7 +5993,6 @@ std::string db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &
     if (!dm_check_objects_limit(m_assoc_events, MAX_EVENT_HISTORY_SIZE)) {
         return {};
     }
-
     path_association_event = m_ambiorix_datamodel->add_instance(path_association_event);
 
     if (path_association_event.empty()) {
