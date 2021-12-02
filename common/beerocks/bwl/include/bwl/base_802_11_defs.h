@@ -135,6 +135,21 @@ struct s80211MgmtFrame {
     } __attribute__((packed)) body;
 } __attribute__((packed));
 
+/*
+ * @brief channel width number from the standard IEEE 802.11-2020
+ * (Table 9-175 HT/VHT Operation Information subfields).
+ * (values 5-255 are reserved)
+ */
+enum eChanWidthNr : uint8_t {
+    NR_CHAN_WIDTH_20    = 0,
+    NR_CHAN_WIDTH_40    = 1,
+    NR_CHAN_WIDTH_80    = 2,
+    NR_CHAN_WIDTH_160   = 3,
+    NR_CHAN_WIDTH_80P80 = 4,
+    NR_CHAN_WIDTH_MAX,
+    NR_CHAN_WIDTH_UNKNOWN = 0xFF,
+};
+
 #define BIT(x) (1U << (x))
 
 /* HT Capabilities Info field within HT Capabilities element */
