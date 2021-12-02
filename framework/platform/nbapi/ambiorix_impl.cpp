@@ -654,12 +654,12 @@ bool AmbiorixImpl::remove_all_instances(const std::string &relative_path)
     return true;
 }
 
-bool AmbiorixImpl::read_param(const std::string &obj_path, const char *param_name,
+bool AmbiorixImpl::read_param(const std::string &obj_path, const std::string &param_name,
                               uint64_t *param_val)
 {
     amxc_var_t ret_val;
     amxd_object_t *obj   = find_object(obj_path);
-    amxd_status_t status = amxd_object_get_param(obj, param_name, &ret_val);
+    amxd_status_t status = amxd_object_get_param(obj, param_name.c_str(), &ret_val);
 
     if (status != amxd_status_ok) {
         LOG(ERROR) << "Failed to get param [" << param_name << "] of object: " << obj_path;
