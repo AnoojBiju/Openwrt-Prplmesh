@@ -70,6 +70,9 @@ cACTION_CLI_BACKHAUL_ROAM_REQUEST:
   slave_mac: sMacAddr
   bssid: sMacAddr
 
+cACTION_CLI_TEST_CONF:
+  _type: class
+  value: uint8_t
 #################################################
 # CLIENT
 #################################################
