@@ -290,8 +290,16 @@ bool AssocReqFrame::init()
             break;
 
         case ID_VENDOR_SPECIFIC:
-            LOG(DEBUG) << "Received last field assuming end of fields list";
-            return true;
+            // store vendor specific IEs to manage those common
+            // like MS.Corp WMM/WME
+            // They may be multiple, so shall be accessed
+            // by iteration loop over indexes
+            if (!addAttr<cVendorSpecific>()) {
+                TLVF_LOG(ERROR) << "Failed to add cVendorSpecific";
+                return false;
+            }
+            fields_present.vendor_specific = 1;
+            break;
         // Other fields are not expected, if so ignore them silently
         default:
             TLVF_LOG(DEBUG) << "Unknown field " << getNextAttrType()
@@ -390,6 +398,10 @@ bool AssocReqFrame::valid() const
     }
     if (fields_present.op_mode_notification && !getAttr<cOperatingModeNotify>()) {
         TLVF_LOG(ERROR) << "getAttr<cOperatingModeNotify> failed";
+        return false;
+    }
+    if (fields_present.vendor_specific && !getAttr<cVendorSpecific>()) {
+        TLVF_LOG(ERROR) << "getAttr<cVendorSpecific> failed";
         return false;
     }
     return true;
