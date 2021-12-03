@@ -142,7 +142,7 @@ set(BEEROCKS_LOG_FILES_AUTO_ROLL "true" CACHE STRING "Auto rollback prplMesh log
 set(BEEROCKS_LOG_STDOUT_ENABLED  "false" CACHE STRING "Print logs to stdout")
 set(BEEROCKS_LOG_SYSLOG_ENABLED  "false" CACHE STRING "Send logs to syslog")
 if (TARGET_PLATFORM STREQUAL "linux")
-    set(BEEROCKS_CONTROLLER_LOG_SIZE "10000000" CACHE STRING "Max controller log size")
+    set(BEEROCKS_CONTROLLER_LOG_SIZE "30000000" CACHE STRING "Max controller log size")
 else()
     set(BEEROCKS_CONTROLLER_LOG_SIZE "1000000" CACHE STRING "Max controller log size")
 endif()
