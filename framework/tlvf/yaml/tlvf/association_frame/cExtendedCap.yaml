@@ -18,16 +18,22 @@ cExtendedCap:
     _type: uint8_t
     _length: []
 
-sExtendedCapField:
+sExtendedCapFieldB3:
   _type: struct
   _bit_field: uint8_t
-  reserved:
+  timing_meas:
     _bit_range: [7,7]
-  radio_measurement:
+  multi_bssid:
     _bit_range: [6,6]
-  reserved:
+  ac_sta_count:
     _bit_range: [5,5]
-  triggered_unscheduled_ps:
+  qos_traffic_cap:
     _bit_range: [4,4]
-  spectrum_management:
+  bss_transition:
     _bit_range: [3,3]
+  tim_broadcast:
+    _bit_range: [2,2]
+  wnm_sleep_mode:
+    _bit_range: [1,1]
+  tfs:
+    _bit_range: [0,0]
