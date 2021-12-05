@@ -51,7 +51,7 @@ public:
      * @brief Sends a CMDU message to the connected server.
      * @see CmduClient::send_cmdu
      */
-    bool send_cmdu(ieee1905_1::CmduMessageTx &cmdu_tx) override;
+    bool send_cmdu(ieee1905_1::CmduMessageTx &cmdu_tx) const override;
 
     /**
      * @brief Forwards a CMDU message to the connected server.

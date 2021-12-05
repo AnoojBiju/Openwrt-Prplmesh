@@ -98,7 +98,7 @@ public:
      * @param cmdu_tx The CMDU message to send.
      * @return true on success and false otherwise.
      */
-    virtual bool send_cmdu(ieee1905_1::CmduMessageTx &cmdu_tx) = 0;
+    virtual bool send_cmdu(ieee1905_1::CmduMessageTx &cmdu_tx) const = 0;
 
     /**
      * @brief Forwards a CMDU message that was sent by another thread or process.

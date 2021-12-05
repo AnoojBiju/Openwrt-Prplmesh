@@ -57,7 +57,7 @@ CmduClientImpl::CmduClientImpl(std::unique_ptr<beerocks::net::Socket::Connection
 
 CmduClientImpl::~CmduClientImpl() { close_connection(true); }
 
-bool CmduClientImpl::send_cmdu(ieee1905_1::CmduMessageTx &cmdu_tx)
+bool CmduClientImpl::send_cmdu(ieee1905_1::CmduMessageTx &cmdu_tx) const
 {
     // Check if connection with server is still open
     if (!m_connection) {

@@ -66,7 +66,7 @@ public:
      * @return true on success and false otherwise.
      */
     bool send_cmdu(beerocks::net::Socket::Connection &connection,
-                   ieee1905_1::CmduMessageTx &cmdu_tx);
+                   ieee1905_1::CmduMessageTx &cmdu_tx) const;
 
     /**
      * @brief Forwards a CMDU message that was sent by a remote process.
