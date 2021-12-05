@@ -38,17 +38,15 @@ bool nl80211_socket::connect()
     // Connect the socket
     bool result = netlink_socket::connect();
 
-    // Increase the socket's internal buffer size
     if (result) {
+        // Increase the socket's internal buffer size
         int rc =
             nl_socket_set_buffer_size(m_nl_socket.get(), netlink_buffer_size, netlink_buffer_size);
         if (rc < 0) {
             LOG(ERROR) << "Failed to set buffer size! Error: " << rc;
         }
-    }
 
-    // Resolve the generic nl80211 family id
-    if (result) {
+        // Resolve the generic nl80211 family id
         const char *family_name = "nl80211";
 
         m_family_id = genl_ctrl_resolve(m_nl_socket.get(), family_name);
