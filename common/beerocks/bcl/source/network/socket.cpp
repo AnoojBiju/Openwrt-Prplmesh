@@ -509,8 +509,8 @@ void SocketSelect::addSocket(Socket *s)
 
 void SocketSelect::removeSocket(Socket *s)
 {
-    unsigned i;
     if (s) {
+        unsigned i;
         for (i = 0; i < m_socketVec.size(); i++) {
             if (m_socketVec[i] == s) {
                 break;
