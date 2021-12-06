@@ -35,7 +35,7 @@ using namespace beerocks;
 /**
  * ToDo: Remove this "default" parameter after PPM-747 is resolved.
  */
-constexpr int PREFERRED_DWELLTIME_MS                       = 40; // 40 Millisec
+constexpr int PREFERRED_DWELLTIME_MS                       = 103; // 103 Millisec
 constexpr std::chrono::seconds SCAN_TRIGGERED_WAIT_TIME    = std::chrono::seconds(20);  // 20 Sec
 constexpr std::chrono::seconds SCAN_RESULTS_DUMP_WAIT_TIME = std::chrono::seconds(210); // 3.5 Min
 /**
