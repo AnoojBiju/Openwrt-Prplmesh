@@ -15,6 +15,11 @@ namespace assoc_frame {
 std::shared_ptr<AssocReqFrame> AssocReqFrame::parse(uint8_t *assoc_frame_buff,
                                                     size_t assoc_frame_len, const eFrameType type)
 {
+    if (!assoc_frame_buff) {
+        TLVF_LOG(WARNING) << "Frame data buffer is null";
+        return {};
+    }
+
     if (!assoc_frame_len) {
         TLVF_LOG(WARNING) << "Frame data length is 0";
         return {};
@@ -124,6 +129,7 @@ bool AssocReqFrame::add_ssid_field()
 
 bool AssocReqFrame::init()
 {
+    fields_present = {};
     // Parse optional fields.
     while (getRemainingBytes() > 0) {
         switch (getNextAttrType()) {
