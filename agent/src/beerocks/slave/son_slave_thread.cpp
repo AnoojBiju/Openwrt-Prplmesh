@@ -14,6 +14,7 @@
 #include "cac_status_database.h"
 #include "gate/1905_beacon_query_to_vs.h"
 #include "gate/vs_beacon_response_to_1905.h"
+#include "tasks/ap_autoconfiguration_task.h"
 #include <bcl/beerocks_cmdu_client_factory_factory.h>
 #include <bcl/beerocks_cmdu_server_factory.h>
 #include <bcl/beerocks_timer_factory_impl.h>
@@ -190,6 +191,10 @@ bool slave_thread::thread_init()
     // Subscribe for the reception of CMDU messages that this process is interested in
     if (!m_broker_client->subscribe(std::set<ieee1905_1::eMessageType>{
             ieee1905_1::eMessageType::TOPOLOGY_DISCOVERY_MESSAGE,
+            ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_RESPONSE_MESSAGE,
+            ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_WSC_MESSAGE,
+            ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_RENEW_MESSAGE,
+            ieee1905_1::eMessageType::MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE,
         })) {
         LOG(FATAL) << "Failed subscribing to the Bus";
     }
@@ -261,6 +266,24 @@ bool slave_thread::thread_init()
         << "Failed to create the FSM timer";
 
     LOG(DEBUG) << "FSM timer created with fd=" << m_fsm_timer;
+
+    // Create a timer to run internal tasks periodically
+    constexpr auto tasks_timer_period = std::chrono::milliseconds(500);
+
+    m_tasks_timer = m_timer_manager->add_timer(
+        "Agent Tasks", tasks_timer_period, tasks_timer_period,
+        [&](int fd, beerocks::EventLoop &loop) {
+            // Allow tasks to execute up to 80% of the timer period
+            m_task_pool.run_tasks(int(double(tasks_timer_period.count()) * 0.8));
+            return true;
+        });
+
+    if (m_tasks_timer == beerocks::net::FileDescriptor::invalid_descriptor) {
+        LOG(FATAL) << "Failed to create the tasks timer";
+        return false;
+    }
+
+    m_task_pool.add_task(std::make_shared<ApAutoConfigurationTask>(*this, cmdu_tx));
 
     m_agent_state = STATE_INIT;
     LOG(DEBUG) << "Agent Started";
@@ -707,7 +730,19 @@ bool slave_thread::handle_cmdu_from_broker(uint32_t iface_index, const sMacAddr 
                                            const sMacAddr &src_mac,
                                            ieee1905_1::CmduMessageRx &cmdu_rx)
 {
-    if (cmdu_rx.getMessageType() == ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE) {
+    {
+        auto db = AgentDB::get();
+        // Filter messages which are not destined to this agent
+        if (dst_mac != beerocks::net::network_utils::MULTICAST_1905_MAC_ADDR &&
+            dst_mac != db->bridge.mac) {
+            LOG(DEBUG) << "handle_cmdu() - dropping msg, dst_mac=" << dst_mac
+                       << ", local_bridge_mac=" << db->bridge.mac;
+            return true;
+        }
+    }
+
+    switch (cmdu_rx.getMessageType()) {
+    case ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE: {
         auto beerocks_header = message_com::parse_intel_vs_message(cmdu_rx);
 
         if (!beerocks_header) {
@@ -720,14 +755,15 @@ bool slave_thread::handle_cmdu_from_broker(uint32_t iface_index, const sMacAddr 
             return false;
         }
 
-        // Currently there aren't Controller messages from the broker handled directly in the Agent
-        // context.
+        m_task_pool.handle_cmdu(cmdu_rx, iface_index, dst_mac, src_mac,
+                                beerocks::net::FileDescriptor::invalid_descriptor, beerocks_header);
         return true;
     }
-
-    // Standard messages handling:
-    // Currently there aren't any standard messages from the broker handled directly in the Agent
-    // context.
+    default: {
+        m_task_pool.handle_cmdu(cmdu_rx, iface_index, dst_mac, src_mac,
+                                beerocks::net::FileDescriptor::invalid_descriptor);
+    }
+    }
     return true;
 }
 

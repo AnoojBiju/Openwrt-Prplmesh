@@ -9,6 +9,8 @@
 #ifndef _SON_SLAVE_THREAD_H
 #define _SON_SLAVE_THREAD_H
 
+#include "tasks/task_pool.h"
+
 #include <bcl/beerocks_backport.h>
 #include <bcl/beerocks_cmdu_client.h>
 #include <bcl/beerocks_cmdu_client_factory.h>
@@ -309,6 +311,7 @@ private:
     bool m_is_backhaul_disconnected = false;
     int m_agent_resets_counter      = 0;
     sSlaveBackhaulParams backhaul_params;
+    TaskPool m_task_pool;
 
     // Global FSM members:
     eSlaveState m_agent_state;
