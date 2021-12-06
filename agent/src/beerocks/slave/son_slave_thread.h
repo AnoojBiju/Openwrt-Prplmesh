@@ -334,11 +334,6 @@ private:
         int ap_manager_retries_counter = 0;
 
         int last_reported_backhaul_rssi = RSSI_INVALID;
-
-        std::unique_ptr<mapf::encryption::diffie_hellman> dh = nullptr;
-        //copy of M1 message used for authentication
-        uint8_t *m1_auth_buf   = nullptr;
-        size_t m1_auth_buf_len = 0;
     };
 
     class cRadioManagers {

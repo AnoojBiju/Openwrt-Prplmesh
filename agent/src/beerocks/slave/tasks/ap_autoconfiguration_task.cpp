@@ -33,9 +33,9 @@ static constexpr uint8_t AUTOCONFIG_DISCOVERY_TIMEOUT_SECONDS = 3;
 #define FSM_MOVE_STATE(radio_iface, new_state)                                                     \
     ({                                                                                             \
         LOG(TRACE) << "AP_AUTOCONFIGURATION " << radio_iface                                       \
-                   << " FSM: " << fsm_state_to_string(m_state[radio_iface].state) << " --> "       \
-                   << fsm_state_to_string(new_state);                                              \
-        m_state[radio_iface].state = new_state;                                                    \
+                   << " FSM: " << fsm_state_to_string(m_radios_conf_params[radio_iface].state)     \
+                   << " --> " << fsm_state_to_string(new_state);                                   \
+        m_radios_conf_params[radio_iface].state = new_state;                                       \
     })
 
 const std::string ApAutoConfigurationTask::fsm_state_to_string(eState status)
@@ -47,10 +47,10 @@ const std::string ApAutoConfigurationTask::fsm_state_to_string(eState status)
         return "CONTROLLER_DISCOVERY";
     case eState::WAIT_FOR_CONTROLLER_DISCOVERY_COMPLETE:
         return "WAIT_FOR_CONTROLLER_DISCOVERY_COMPLETE";
-    case eState::AP_CONFIGURATION:
-        return "AP_CONFIGURATION";
-    case eState::WAIT_FOR_AP_CONFIGURATION_COMPLETE:
-        return "WAIT_FOR_AP_CONFIGURATION_COMPLETE";
+    case eState::SEND_AP_AUTOCONFIGURATION_WSC_M1:
+        return "SEND_AP_AUTOCONFIGURATION_WSC_M1";
+    case eState::WAIT_AP_AUTOCONFIGURATION_WSC_M2:
+        return "WAIT_AP_AUTOCONFIGURATION_WSC_M2";
     case eState::CONFIGIRED:
         return "CONFIGIRED";
     default:
@@ -60,7 +60,7 @@ const std::string ApAutoConfigurationTask::fsm_state_to_string(eState status)
     return std::string();
 }
 
-ApAutoConfigurationTask::ApAutoConfigurationTask(BackhaulManager &btl_ctx,
+ApAutoConfigurationTask::ApAutoConfigurationTask(slave_thread &btl_ctx,
                                                  ieee1905_1::CmduMessageTx &cmdu_tx)
     : Task(eTaskType::AP_AUTOCONFIGURATION), m_btl_ctx(btl_ctx), m_cmdu_tx(cmdu_tx)
 {
@@ -68,11 +68,15 @@ ApAutoConfigurationTask::ApAutoConfigurationTask(BackhaulManager &btl_ctx,
 
 void ApAutoConfigurationTask::work()
 {
+    if (!m_task_is_active) {
+        return;
+    }
+
     uint8_t configured_aps_count = 0;
-    for (auto &state_kv : m_state) {
-        const auto &radio_iface = state_kv.first;
-        auto &state_status      = state_kv.second;
-        switch (state_status.state) {
+    for (auto &radios_conf_param_kv : m_radios_conf_params) {
+        const auto &radio_iface = radios_conf_param_kv.first;
+        auto &conf_params       = radios_conf_param_kv.second;
+        switch (conf_params.state) {
         case eState::UNCONFIGURED: {
             break;
         }
@@ -87,7 +91,7 @@ void ApAutoConfigurationTask::work()
             // If another radio with same band already finished the discovery phase, we can skip
             // directly to next phase (AP_CONFIGURATION).
             if (m_discovery_status[radio->freq_type].completed) {
-                FSM_MOVE_STATE(radio_iface, eState::AP_CONFIGURATION);
+                FSM_MOVE_STATE(radio_iface, eState::SEND_AP_AUTOCONFIGURATION_WSC_M1);
             }
 
             // If another radio with same band already have sent the
@@ -100,8 +104,8 @@ void ApAutoConfigurationTask::work()
                 m_discovery_status[radio->freq_type].msg_sent = true;
             }
 
-            state_status.timeout = std::chrono::steady_clock::now() +
-                                   std::chrono::seconds(AUTOCONFIG_DISCOVERY_TIMEOUT_SECONDS);
+            conf_params.timeout = std::chrono::steady_clock::now() +
+                                  std::chrono::seconds(AUTOCONFIG_DISCOVERY_TIMEOUT_SECONDS);
 
             FSM_MOVE_STATE(radio_iface, eState::WAIT_FOR_CONTROLLER_DISCOVERY_COMPLETE);
             break;
@@ -113,24 +117,21 @@ void ApAutoConfigurationTask::work()
                 continue;
             }
             if (m_discovery_status[radio->freq_type].completed) {
-                FSM_MOVE_STATE(radio_iface, eState::AP_CONFIGURATION);
+                FSM_MOVE_STATE(radio_iface, eState::SEND_AP_AUTOCONFIGURATION_WSC_M1);
                 break;
             }
 
-            if (std::chrono::steady_clock::now() > state_status.timeout) {
+            if (std::chrono::steady_clock::now() > conf_params.timeout) {
                 FSM_MOVE_STATE(radio_iface, eState::CONTROLLER_DISCOVERY);
                 m_discovery_status[radio->freq_type].msg_sent = false;
             }
             break;
         }
-        case eState::AP_CONFIGURATION: {
-            // TODO: This is a temporary implementation, since currently the son_slave is handling
-            // the configuration flow. When the son_slave will be unified, the configuration flow
-            // will move to here.
-            FSM_MOVE_STATE(radio_iface, eState::CONFIGIRED);
+        case eState::SEND_AP_AUTOCONFIGURATION_WSC_M1: {
+            FSM_MOVE_STATE(radio_iface, eState::WAIT_AP_AUTOCONFIGURATION_WSC_M2);
             break;
         }
-        case eState::WAIT_FOR_AP_CONFIGURATION_COMPLETE: {
+        case eState::WAIT_AP_AUTOCONFIGURATION_WSC_M2: {
             break;
         }
         case eState::CONFIGIRED: {
@@ -143,13 +144,28 @@ void ApAutoConfigurationTask::work()
     }
 
     // Update status on the database.
-    auto db                                     = AgentDB::get();
-    db->statuses.ap_autoconfiguration_completed = configured_aps_count == m_state.size();
+    auto db = AgentDB::get();
+    if (configured_aps_count > 0 && configured_aps_count == m_radios_conf_params.size()) {
+        db->statuses.ap_autoconfiguration_completed = true;
+        m_task_is_active                            = false;
+    }
 }
 
 void ApAutoConfigurationTask::handle_event(uint8_t event_enum_value, const void *event_obj)
 {
     switch (eEvent(event_enum_value)) {
+    case INIT_TASK: {
+        auto db = AgentDB::get();
+
+        db->statuses.ap_autoconfiguration_completed = false;
+
+        // Reset the discovery statuses.
+        for (auto &discovery_status : m_discovery_status) {
+            discovery_status.second = {};
+        }
+        m_task_is_active = false;
+        break;
+    }
     case START_AP_AUTOCONFIGURATION: {
         auto db = AgentDB::get();
         for (const auto radio : db->get_radios_list()) {
@@ -166,9 +182,7 @@ void ApAutoConfigurationTask::handle_event(uint8_t event_enum_value, const void 
 
             LOG(DEBUG) << "starting discovery sequence on radio_iface=" << radio->front.iface_name;
             FSM_MOVE_STATE(radio->front.iface_name, eState::CONTROLLER_DISCOVERY);
-
-            // Reset the discovery statuses.
-            m_discovery_status[radio->freq_type] = {};
+            m_task_is_active = true;
         }
         // Call work() to not waste time, and send_ap_autoconfiguration_search_message immediately.
         work();

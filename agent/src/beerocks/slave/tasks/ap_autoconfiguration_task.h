@@ -26,6 +26,7 @@ public:
     void work() override;
 
     enum eEvent : uint8_t {
+        INIT_TASK,
         START_AP_AUTOCONFIGURATION,
     };
 
@@ -50,14 +51,19 @@ private:
         UNCONFIGURED,
         CONTROLLER_DISCOVERY,
         WAIT_FOR_CONTROLLER_DISCOVERY_COMPLETE,
-        AP_CONFIGURATION,
-        WAIT_FOR_AP_CONFIGURATION_COMPLETE,
+        SEND_AP_AUTOCONFIGURATION_WSC_M1,
+        WAIT_AP_AUTOCONFIGURATION_WSC_M2,
+        SEND_MONITOR_SON_CONFIG,
         CONFIGIRED
     };
 
-    struct sStateStatus {
+    struct sConfigurationParams {
         eState state = eState::UNCONFIGURED;
         std::chrono::steady_clock::time_point timeout;
+        std::unique_ptr<mapf::encryption::diffie_hellman> dh = nullptr;
+        //copy of M1 message used for authentication
+        uint8_t *m1_auth_buf   = nullptr;
+        size_t m1_auth_buf_len = 0;
     };
 
     /**
@@ -68,10 +74,10 @@ private:
      * 
      * According to IEEE 1905.1-2013, the AP-Autoconfiguration routine shall occur separately
      * for every 1905.1 device supported band. Multi-AP standard extend the definition and add that
-     * the 'AP_CONFIGURATION' phase shall be occur for each radio of the Multi-AP device
-     * (instead of a band).
+     * the 'AP_CONFIGURATION' phase shall occur for each radio of the Multi-AP device (instead of
+     * a band).
      */
-    std::unordered_map<std::string, sStateStatus> m_state;
+    std::unordered_map<std::string, sConfigurationParams> m_radios_conf_params;
 
     /**
      * @brief Convert enum of task state to string.
@@ -101,10 +107,12 @@ private:
     // template argument.
     std::unordered_map<eFreqType, sDiscoveryStatus, std::hash<int>> m_discovery_status;
 
-    BackhaulManager &m_btl_ctx;
+    bool m_task_is_active = false;
+
+    slave_thread &m_btl_ctx;
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
 
-    /* 1905.1 message handlers: */
+    /* Message handlers: */
 
     /**
     * @brief Handles 1905 AP Autoconfiguration message.
