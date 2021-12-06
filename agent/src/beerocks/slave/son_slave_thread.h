@@ -69,20 +69,6 @@ public:
         std::unordered_map<std::string, sRadioConfig> radios;
     };
 
-    typedef struct {
-        std::string bridge_ipv4;
-        std::string backhaul_iface;
-        std::string backhaul_mac;
-        std::string backhaul_ipv4;
-        std::string backhaul_bssid;
-        uint32_t backhaul_freq;
-        uint8_t backhaul_channel;
-        uint8_t backhaul_is_wireless;
-        uint8_t backhaul_iface_type;
-        net::sScanResult
-            backhaul_scan_measurement_list[message::BACKHAUL_SCAN_MEASUREMENT_MAX_LENGTH];
-    } sSlaveBackhaulParams;
-
     enum eSlaveState {
         // General
         STATE_WAIT_BEFORE_INIT = 0,

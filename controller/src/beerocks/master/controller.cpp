@@ -2536,20 +2536,6 @@ bool Controller::handle_intel_slave_join(
     cs_new_event->hostap_mac = radio_mac;
     cs_new_event->cs_params  = notification->cs_params();
 
-    std::copy_n(notification->backhaul_params().backhaul_scan_measurement_list,
-                beerocks::message::BACKHAUL_SCAN_MEASUREMENT_MAX_LENGTH,
-                cs_new_event->backhaul_scan_measurement_list);
-
-    for (unsigned int i = 0; i < beerocks::message::BACKHAUL_SCAN_MEASUREMENT_MAX_LENGTH; i++) {
-        if (cs_new_event->backhaul_scan_measurement_list[i].channel > 0) {
-            LOG(DEBUG) << "mac = " << cs_new_event->backhaul_scan_measurement_list[i].mac
-                       << " channel = "
-                       << int(cs_new_event->backhaul_scan_measurement_list[i].channel)
-                       << " rssi = " << int(cs_new_event->backhaul_scan_measurement_list[i].rssi);
-        }
-    }
-    tasks.push_event(database.get_channel_selection_task_id(),
-                     (int)channel_selection_task::eEvent::SLAVE_JOINED_EVENT, (void *)cs_new_event);
 #ifdef BEEROCKS_RDKB
     // sending event to rdkb_wlan_task
     if (database.settings_rdkb_extensions()) {

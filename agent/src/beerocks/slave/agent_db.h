@@ -179,6 +179,7 @@ public:
         std::string selected_iface_name;
         sMacAddr preferred_bssid;
         uint8_t bssid_multi_ap_profile;
+        sMacAddr backhaul_bssid;
     } backhaul;
 
     struct {

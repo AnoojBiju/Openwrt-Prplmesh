@@ -588,120 +588,39 @@ bool BackhaulManager::finalize_slaves_connect_state(bool fConnected)
         auto db = AgentDB::get();
 
         beerocks::net::network_utils::iface_info iface_info;
-        bool backhaul_manager_exist = false;
 
-        if (!db->device_conf.local_gw) {
-            // Read the IP addresses of the bridge interface
-            if (beerocks::net::network_utils::get_iface_info(
-                    iface_info, db->backhaul.selected_iface_name) != 0) {
-                LOG(ERROR) << "Failed reading addresses for: " << db->backhaul.selected_iface_name;
-                return false;
-            }
+        LOG_IF(!db->device_conf.local_controller && db->backhaul.selected_iface_name.empty(), FATAL)
+            << "selected_iface_name is empty";
 
-            notification->params().bridge_ipv4 =
-                beerocks::net::network_utils::ipv4_from_string(bridge_info.ip);
-            notification->params().backhaul_mac = tlvf::mac_from_string(iface_info.mac);
-            notification->params().backhaul_ipv4 =
-                beerocks::net::network_utils::ipv4_from_string(iface_info.ip);
+        // Update the backhaul BSSID on the AgentDB and detach from any sta_bwl not used for
+        // by wireless connection:
 
-            if (db->backhaul.connection_type == AgentDB::sBackhaul::eConnectionType::Wired) {
-                notification->params().backhaul_bssid =
-                    tlvf::mac_from_string(beerocks::net::network_utils::ZERO_MAC_STRING);
-                notification->params().backhaul_iface_type  = IFACE_TYPE_ETHERNET;
-                notification->params().backhaul_is_wireless = 0;
-                for (auto &radio_info : m_radios_info) {
+        // Initialize backhaul bssid to empty in case in the connecten type is wired. If it is not,
+        // will be overriden in the loop below.
+        db->backhaul.backhaul_bssid = {};
 
-                    if (radio_info->sta_wlan_hal) {
-                        radio_info->sta_wlan_hal.reset();
-                    }
-                    if (radio_info->sta_hal_ext_events !=
-                        beerocks::net::FileDescriptor::invalid_descriptor) {
-                        m_event_loop->remove_handlers(radio_info->sta_hal_ext_events);
-                        radio_info->sta_hal_ext_events =
-                            beerocks::net::FileDescriptor::invalid_descriptor;
-                    }
-                    if (radio_info->sta_hal_int_events !=
-                        beerocks::net::FileDescriptor::invalid_descriptor) {
-                        m_event_loop->remove_handlers(radio_info->sta_hal_int_events);
-                        radio_info->sta_hal_int_events =
-                            beerocks::net::FileDescriptor::invalid_descriptor;
-                    }
+        for (auto &radio_info : m_radios_info) {
+            if (db->backhaul.connection_type == AgentDB::sBackhaul::eConnectionType::Wireless &&
+                radio_info->sta_iface == db->backhaul.selected_iface_name) {
+                LOG_IF(!radio_info->sta_wlan_hal, FATAL) << "selected sta_hal is nullptr";
+                db->backhaul.backhaul_bssid =
+                    tlvf::mac_from_string(radio_info->sta_wlan_hal->get_bssid());
+            } else { // Detach from unused stations
+
+                if (radio_info->sta_wlan_hal) {
+                    radio_info->sta_wlan_hal.reset();
                 }
-
-            } else {
-
-                // Find the slave handling the wireless interface
-                for (auto &radio_info : m_radios_info) {
-                    if (radio_info->sta_iface == db->backhaul.selected_iface_name) {
-
-                        // Mark the slave as the backhaul manager
-                        radio_info->slave_is_backhaul_manager = true;
-                        backhaul_manager_exist                = true;
-
-                        notification->params().backhaul_bssid =
-                            tlvf::mac_from_string(radio_info->sta_wlan_hal->get_bssid());
-                        // notification->params().backhaul_freq          = son::wireless_utils::channel_to_freq(soc->sta_wlan_hal->get_channel()); // HACK temp disabled because of a bug on endian converter
-                        notification->params().backhaul_channel =
-                            radio_info->sta_wlan_hal->get_channel();
-                        // TODO - Specify true WiFi model from config (safe to derive from hostap_iface_type?)
-                        notification->params().backhaul_iface_type  = IFACE_TYPE_WIFI_INTEL;
-                        notification->params().backhaul_is_wireless = 1;
-                    } else {
-                        // HACK - needs to be controlled from slave
-
-                        // Mark the slave as non backhaul manager
-                        radio_info->slave_is_backhaul_manager = false;
-                        // detach from unused stations
-                        if (radio_info->sta_wlan_hal) {
-                            radio_info->sta_wlan_hal.reset();
-                        }
-                        if (radio_info->sta_hal_ext_events !=
-                            beerocks::net::FileDescriptor::invalid_descriptor) {
-                            m_event_loop->remove_handlers(radio_info->sta_hal_ext_events);
-                            radio_info->sta_hal_ext_events =
-                                beerocks::net::FileDescriptor::invalid_descriptor;
-                        }
-                        if (radio_info->sta_hal_int_events !=
-                            beerocks::net::FileDescriptor::invalid_descriptor) {
-                            m_event_loop->remove_handlers(radio_info->sta_hal_int_events);
-                            radio_info->sta_hal_int_events =
-                                beerocks::net::FileDescriptor::invalid_descriptor;
-                        }
-                    }
+                if (radio_info->sta_hal_ext_events !=
+                    beerocks::net::FileDescriptor::invalid_descriptor) {
+                    m_event_loop->remove_handlers(radio_info->sta_hal_ext_events);
+                    radio_info->sta_hal_ext_events =
+                        beerocks::net::FileDescriptor::invalid_descriptor;
                 }
-            }
-        }
-
-        int i = 0;
-        memset(notification->params().backhaul_scan_measurement_list, 0,
-               sizeof(beerocks_message::sBackhaulParams::backhaul_scan_measurement_list));
-        for (auto scan_measurement_entry : scan_measurement_list) {
-            LOG(DEBUG) << "copy scan list to slaves = " << scan_measurement_entry.first
-                       << " channel = " << int(scan_measurement_entry.second.channel)
-                       << " rssi = " << int(scan_measurement_entry.second.rssi);
-            notification->params().backhaul_scan_measurement_list[i].mac =
-                scan_measurement_entry.second.mac;
-            i++;
-        }
-
-        // handle case when backhaul manager slave is not selected
-        if (!backhaul_manager_exist) {
-            if (!config_const_bh_slave.empty()) {
-                for (auto &radio_info : m_radios_info) {
-                    if (radio_info->hostap_iface == config_const_bh_slave) {
-                        LOG(INFO) << "Configured slave for constant BH manager was found: "
-                                  << config_const_bh_slave;
-                        radio_info->slave_is_backhaul_manager = true;
-                        break;
-                    }
-                }
-            } else {
-                if (!m_radios_info.empty()) {
-                    LOG(WARNING)
-                        << "backhaul_manager slave was not found, select first connected slave: "
-                        << "hostap_iface=" << m_radios_info.front()->hostap_iface
-                        << ", sta_iface=" << m_radios_info.front()->sta_iface;
-                    m_radios_info.front()->slave_is_backhaul_manager = true;
+                if (radio_info->sta_hal_int_events !=
+                    beerocks::net::FileDescriptor::invalid_descriptor) {
+                    m_event_loop->remove_handlers(radio_info->sta_hal_int_events);
+                    radio_info->sta_hal_int_events =
+                        beerocks::net::FileDescriptor::invalid_descriptor;
                 }
             }
         }
@@ -1068,8 +987,6 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
                 m_event_loop->remove_handlers(radio_info->sta_hal_int_events);
                 radio_info->sta_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
             }
-
-            radio_info->slave_is_backhaul_manager = false;
         }
 
         finalize_slaves_connect_state(false); //send disconnect to all connected slaves

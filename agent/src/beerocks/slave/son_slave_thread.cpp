@@ -953,8 +953,9 @@ bool slave_thread::handle_cmdu_control_message(int fd,
             return false;
         }
 
+        auto db = AgentDB::get();
         if (request_in->params().cross && (request_in->params().ipv4.oct[0] == 0) &&
-            backhaul_params.backhaul_is_wireless) {
+            db->backhaul.connection_type == AgentDB::sBackhaul::eConnectionType::Wireless) {
             auto request_out = message_com::create_vs_message<
                 beerocks_message::cACTION_BACKHAUL_CLIENT_RX_RSSI_MEASUREMENT_REQUEST>(
                 cmdu_tx, beerocks_header->id());
@@ -1483,34 +1484,6 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
             LOG(WARNING) << "Unexpected Backhaul connected notification, Agent state="
                          << m_agent_state;
         }
-
-        auto db = AgentDB::get();
-
-        backhaul_params.bridge_ipv4 =
-            network_utils::ipv4_to_string(notification->params().bridge_ipv4);
-        backhaul_params.backhaul_mac = tlvf::mac_to_string(notification->params().backhaul_mac);
-        backhaul_params.backhaul_ipv4 =
-            network_utils::ipv4_to_string(notification->params().backhaul_ipv4);
-        backhaul_params.backhaul_bssid = tlvf::mac_to_string(notification->params().backhaul_bssid);
-        // backhaul_params.backhaul_freq        = notification->params.backhaul_freq; // HACK temp
-        // disabled because of a bug on endian converter
-        backhaul_params.backhaul_channel     = notification->params().backhaul_channel;
-        backhaul_params.backhaul_is_wireless = notification->params().backhaul_is_wireless;
-        backhaul_params.backhaul_iface_type  = notification->params().backhaul_iface_type;
-
-        std::copy_n(notification->params().backhaul_scan_measurement_list,
-                    beerocks::message::BACKHAUL_SCAN_MEASUREMENT_MAX_LENGTH,
-                    backhaul_params.backhaul_scan_measurement_list);
-
-        for (unsigned int i = 0; i < message::BACKHAUL_SCAN_MEASUREMENT_MAX_LENGTH; i++) {
-            if (backhaul_params.backhaul_scan_measurement_list[i].channel > 0) {
-                LOG(DEBUG) << "mac = " << backhaul_params.backhaul_scan_measurement_list[i].mac
-                           << " channel = "
-                           << backhaul_params.backhaul_scan_measurement_list[i].channel
-                           << " rssi = " << backhaul_params.backhaul_scan_measurement_list[i].rssi;
-            }
-        }
-        backhaul_params.backhaul_iface = db->backhaul.selected_iface_name;
 
         LOG(DEBUG) << "goto STATE_BACKHAUL_MANAGER_CONNECTED";
         m_agent_state = STATE_BACKHAUL_MANAGER_CONNECTED;
@@ -4398,42 +4371,8 @@ bool slave_thread::agent_fsm()
         break;
     }
     case STATE_BACKHAUL_MANAGER_CONNECTED: {
-        LOG(TRACE) << "MASTER_CONNECTED";
+        LOG(TRACE) << "BACKHAUL LINK CONNECTED";
 
-        LOG(TRACE) << "goto STATE_WAIT_FOR_AUTO_CONFIGURATION_COMPLETE";
-        m_agent_state = STATE_WAIT_FOR_AUTO_CONFIGURATION_COMPLETE;
-
-        auto db = AgentDB::get();
-
-        if (db->device_conf.local_gw) {
-            // TODO get bridge_iface from platform manager
-            network_utils::iface_info bridge_info;
-            network_utils::get_iface_info(bridge_info, db->bridge.iface_name);
-
-            backhaul_params.bridge_ipv4    = bridge_info.ip;
-            backhaul_params.backhaul_iface = db->bridge.iface_name;
-            backhaul_params.backhaul_mac   = bridge_info.mac;
-            backhaul_params.backhaul_ipv4  = bridge_info.ip;
-            backhaul_params.backhaul_bssid = network_utils::ZERO_MAC_STRING;
-            // radio_manager.backhaul_params.backhaul_freq           = 0; // HACK temp disabled because of a bug on endian converter
-            backhaul_params.backhaul_channel     = 0;
-            backhaul_params.backhaul_is_wireless = 0;
-            backhaul_params.backhaul_iface_type  = beerocks::IFACE_TYPE_GW_BRIDGE;
-            backhaul_params.backhaul_iface       = db->ethernet.wan.iface_name;
-        }
-
-        LOG(INFO) << "Backhaul Params Info:";
-        LOG(INFO) << "controller_bridge_mac=" << db->controller_info.bridge_mac;
-        LOG(INFO) << "prplmesh_controller=" << db->controller_info.prplmesh_controller;
-        LOG(INFO) << "bridge_mac=" << db->bridge.mac;
-        LOG(INFO) << "bridge_ipv4=" << backhaul_params.bridge_ipv4;
-        LOG(INFO) << "backhaul_iface=" << backhaul_params.backhaul_iface;
-        LOG(INFO) << "backhaul_mac=" << backhaul_params.backhaul_mac;
-        LOG(INFO) << "backhaul_ipv4=" << backhaul_params.backhaul_ipv4;
-        LOG(INFO) << "backhaul_bssid=" << backhaul_params.backhaul_bssid;
-        LOG(INFO) << "backhaul_channel=" << backhaul_params.backhaul_channel;
-        LOG(INFO) << "backhaul_is_wireless=" << backhaul_params.backhaul_is_wireless;
-        LOG(INFO) << "backhaul_iface_type=" << backhaul_params.backhaul_iface_type;
         LOG(DEBUG) << "sending "
                       "ACTION_PLATFORM_SON_SLAVE_BACKHAUL_CONNECTION_COMPLETE_NOTIFICATION to "
                       "platform manager";

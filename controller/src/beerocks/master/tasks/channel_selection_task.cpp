@@ -357,16 +357,6 @@ void channel_selection_task::work()
         TASK_LOG(DEBUG) << "hostap_mac = " << slave_joined_event->hostap_mac
                         << " channel_ext_above_primary = "
                         << int(slave_joined_event->cs_params.channel_ext_above_primary);
-        for (int i = 0; i < beerocks::message::BACKHAUL_SCAN_MEASUREMENT_MAX_LENGTH; i++) {
-            if (slave_joined_event->backhaul_scan_measurement_list[i].channel > 0) {
-                TASK_LOG(DEBUG)
-                    << "mac = " << slave_joined_event->backhaul_scan_measurement_list[i].mac
-                    << " channel = "
-                    << int(slave_joined_event->backhaul_scan_measurement_list[i].channel)
-                    << " rssi = "
-                    << int(slave_joined_event->backhaul_scan_measurement_list[i].rssi);
-            }
-        }
         FSM_MOVE_STATE(ON_HOSTAP_CHANNEL_REQUEST);
         break;
     }
@@ -1153,17 +1143,6 @@ void channel_selection_task::get_hostap_params()
         hostap_params.backhaul_channel     = slave_joined_event->backhaul_channel;
         hostap_params.low_pass_filter_on   = slave_joined_event->low_pass_filter_on;
         hostap_params.bandwidth            = slave_joined_event->cs_params.bandwidth;
-        backhaul_scan_measurement_list.clear();
-        for (auto i = 0; i < beerocks::message::BACKHAUL_SCAN_MEASUREMENT_MAX_LENGTH; i++) {
-            if (slave_joined_event->backhaul_scan_measurement_list[i].channel != 0) {
-                auto mac =
-                    tlvf::mac_to_string(slave_joined_event->backhaul_scan_measurement_list[i].mac);
-                backhaul_scan_measurement_list[mac].channel =
-                    slave_joined_event->backhaul_scan_measurement_list[i].channel;
-                backhaul_scan_measurement_list[mac].rssi =
-                    slave_joined_event->backhaul_scan_measurement_list[i].rssi;
-            }
-        }
         TASK_LOG(DEBUG) << "hostap_params.low_pass_filter_on = "
                         << int(hostap_params.low_pass_filter_on)
                         << " slave_joined_event->low_pass_filter_on = "

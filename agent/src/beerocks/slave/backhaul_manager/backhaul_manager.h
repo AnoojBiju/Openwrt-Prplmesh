@@ -418,7 +418,6 @@ public:
         sMacAddr radio_mac;       /**< Radio ID (= radio MAC address) */
         std::string hostap_iface; /**< Name of the radio interface */
         std::string sta_iface;    /**< Name of the bSTA interface on the radio (if any) */
-        bool slave_is_backhaul_manager = false;
 
         std::shared_ptr<bwl::sta_wlan_hal> sta_wlan_hal;
         int sta_hal_ext_events = beerocks::net::FileDescriptor::invalid_descriptor;
