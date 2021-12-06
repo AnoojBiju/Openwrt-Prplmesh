@@ -4879,14 +4879,7 @@ bool slave_thread::link_to_controller()
 bool slave_thread::send_cmdu_to_controller(const std::string &fronthaul_iface,
                                            ieee1905_1::CmduMessageTx &cmdu_tx)
 {
-    if (!link_to_controller()) {
-        LOG(ERROR) << "No link to Multi-AP Controller";
-        return false;
-    }
-
-    auto db    = AgentDB::get();
-    auto radio = db->radio(fronthaul_iface);
-
+    auto db = AgentDB::get();
     if (cmdu_tx.getMessageType() == ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE) {
         if (!db->controller_info.prplmesh_controller) {
             return true; // don't send VS messages to non prplmesh controllers
@@ -4897,16 +4890,24 @@ bool slave_thread::send_cmdu_to_controller(const std::string &fronthaul_iface,
             return false;
         }
 
+        auto radio = db->radio(fronthaul_iface);
         if (radio) {
             beerocks_header->actionhdr()->radio_mac() = radio->front.iface_mac;
         }
         beerocks_header->actionhdr()->direction() = beerocks::BEEROCKS_DIRECTION_CONTROLLER;
     }
 
-    auto dst_addr =
-        cmdu_tx.getMessageType() == ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE
-            ? network_utils::MULTICAST_1905_MAC_ADDR
-            : db->controller_info.bridge_mac;
+    sMacAddr dst_addr;
+    switch (cmdu_tx.getMessageType()) {
+    case ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE:
+    case ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_SEARCH_MESSAGE:
+    case ieee1905_1::eMessageType::ASSOCIATION_STATUS_NOTIFICATION_MESSAGE:
+        dst_addr = network_utils::MULTICAST_1905_MAC_ADDR;
+        break;
+    default:
+        dst_addr = db->controller_info.bridge_mac;
+        break;
+    }
 
     return m_broker_client->send_cmdu(cmdu_tx, dst_addr, db->bridge.mac);
 }
@@ -4921,6 +4922,23 @@ bool slave_thread::forward_cmdu_to_uds(int fd, ieee1905_1::CmduMessageRx &cmdu_r
     return m_cmdu_server->forward_cmdu(fd, 0, {}, {}, cmdu_rx);
 }
 
+bool slave_thread::forward_cmdu_to_controller(ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto db = AgentDB::get();
+    sMacAddr dst_addr;
+    switch (cmdu_tx.getMessageType()) {
+    case ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE:
+    case ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_SEARCH_MESSAGE:
+    case ieee1905_1::eMessageType::ASSOCIATION_STATUS_NOTIFICATION_MESSAGE:
+        dst_addr = network_utils::MULTICAST_1905_MAC_ADDR;
+        break;
+    default:
+        dst_addr = db->controller_info.bridge_mac;
+        break;
+    }
+
+    return m_broker_client->forward_cmdu(cmdu_rx, dst_addr, db->bridge.mac);
+}
 /**
  * @brief Diffie-Hellman public key exchange keys calculation
  *        class member params authkey and keywrapauth are computed

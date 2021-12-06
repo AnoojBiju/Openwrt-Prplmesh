@@ -153,17 +153,13 @@ private:
                              const sMacAddr &src_mac, const std::string &iface_name = "");
 
     /**
-     * @brief Forwards given received CMDU message to the broker server for dispatching.
+     * @brief Forwards given received CMDU message to the broker server for dispatching which
+     * eventually will be sent to the Controller.
      *
      * @param cmdu_rx Received CMDU message to forward.
-     * @param dst_mac Destination MAC address.
-     * @param src_mac Source MAC address.
-     * @param iface_name Name of the network interface to use (set to empty string to send on all
-     * available interfaces).
      * @return true on success and false otherwise.
      */
-    bool forward_cmdu_to_broker(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &dst_mac,
-                                const sMacAddr &src_mac, const std::string &iface_name = "");
+    bool forward_cmdu_to_controller(ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
      * @brief Handles CMDU message received from broker.
@@ -225,6 +221,30 @@ public:
     bool link_to_controller();
     bool send_cmdu_to_controller(const std::string &fronthaul_iface,
                                  ieee1905_1::CmduMessageTx &cmdu_tx);
+
+    inline int get_ap_manager_fd(const std::string &fronthaul_iface)
+    {
+        return m_radio_managers[fronthaul_iface].ap_manager_fd;
+    }
+
+    inline int get_monitor_fd(const std::string &fronthaul_iface)
+    {
+        return m_radio_managers[fronthaul_iface].monitor_fd;
+    }
+
+    inline const CmduClient *get_backhaul_manager_cmdu_client(const std::string &fronthaul_iface)
+    {
+        return m_backhaul_manager_client.get();
+    }
+
+    inline const CmduClient *get_platform_manager_cmdu_client(const std::string &fronthaul_iface)
+    {
+        return m_platform_manager_client.get();
+    }
+
+    inline const sAgentConfig &get_agent_conf() { return config; }
+
+    inline void fsm_stop() { m_agent_state = STATE_STOPPED; }
 
 private:
     /**
