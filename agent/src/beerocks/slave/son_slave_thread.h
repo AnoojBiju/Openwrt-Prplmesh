@@ -23,14 +23,7 @@
 #include <btl/broker_client_factory.h>
 
 #include <beerocks/tlvf/beerocks_header.h>
-
-#include <mapf/common/encryption.h>
-#include <tlvf/WSC/configData.h>
-#include <tlvf/WSC/m1.h>
-#include <tlvf/WSC/m2.h>
-#include <tlvf/ieee_1905_1/tlvWsc.h>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
-#include <tlvf/wfa_map/tlvProfile2ErrorCode.h>
 
 // Forward decleration
 namespace beerocks_message {
@@ -429,22 +422,7 @@ private:
     sAgentConfig config;
 
     logging &logger;
-    std::string master_version;
 
-    // Encryption support - move to common library
-    bool autoconfig_wsc_calculate_keys(const std::string &fronthaul_iface, WSC::m2 &m2,
-                                       uint8_t authkey[32], uint8_t keywrapkey[16]);
-    bool autoconfig_wsc_parse_m2_encrypted_settings(WSC::m2 &m2, uint8_t authkey[32],
-                                                    uint8_t keywrapkey[16],
-                                                    WSC::configData::config &config);
-    bool autoconfig_wsc_authenticate(const std::string &fronthaul_iface, WSC::m2 &m2,
-                                     uint8_t authkey[32]);
-
-    bool parse_intel_join_response(const std::string &fronthaul_iface,
-                                   beerocks_header &beerocks_header);
-    bool parse_non_intel_join_response(const std::string &fronthaul_iface);
-    bool handle_autoconfiguration_wsc(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_autoconfiguration_renew(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool send_operating_channel_report(const std::string &fronthaul_iface);
     bool handle_ap_metrics_query(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_monitor_ap_metrics_response(const std::string &fronthaul_iface, int fd,
@@ -458,19 +436,11 @@ private:
                                                     int &power_limit);
     bool channel_selection_current_channel_restricted(const std::string &fronthaul_iface);
     message::sWifiChannel channel_selection_select_channel(const std::string &fronthaul_iface);
-    bool handle_multi_ap_policy_config_request(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_client_association_request(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_1905_higher_layer_data_message(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_client_steering_request(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_beacon_metrics_query(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_ack_message(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_profile2_default_802dotq_settings_tlv(ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_profile2_traffic_separation_policy_tlv(
-        ieee1905_1::CmduMessageRx &cmdu_rx, std::unordered_set<std::string> &misconfigured_ssids);
-
-    bool send_error_response(
-        const std::deque<std::pair<wfa_map::tlvProfile2ErrorCode::eReasonCode, sMacAddr>>
-            &bss_errors);
 
     bool read_platform_configuration();
 

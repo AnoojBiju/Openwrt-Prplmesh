@@ -2579,42 +2579,43 @@ std::shared_ptr<bwl::sta_wlan_hal> BackhaulManager::get_wireless_hal(std::string
 bool BackhaulManager::handle_slave_failed_connection_message(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                              const sMacAddr &src_mac)
 {
-    if (!unsuccessful_association_policy.report_unsuccessful_association) {
+    // TODO: need to move this function to the link metrics task after the task will be moved to the
+    // Agent context. PPM-1681.
+    auto db = AgentDB::get();
+    if (!db->link_metrics_policy.report_unsuccessful_associations) {
         // do nothing, no need to report
         return true;
     }
 
     // Calculate if reporting is needed
-    auto now            = std::chrono::steady_clock::now();
-    auto elapsed_time_m = std::chrono::duration_cast<std::chrono::minutes>(
-                              now - unsuccessful_association_policy.last_reporting_time_point)
-                              .count();
+    auto now = std::chrono::steady_clock::now();
+    auto elapsed_time_m =
+        std::chrono::duration_cast<std::chrono::minutes>(
+            now - db->link_metrics_policy.failed_association_last_reporting_time_point)
+            .count();
 
-    // start the counting from begining if
-    // the last report was more then a minute ago
-    // also sets the last reporting time to now
+    // Start the counting from the beginning if the last report was more then a minute ago also sets
+    // the last reporting time to now.
     if (elapsed_time_m > 1) {
-        unsuccessful_association_policy.number_of_reports_in_last_minute = 0;
-        unsuccessful_association_policy.last_reporting_time_point        = now;
+        db->link_metrics_policy.number_of_reports_in_last_minute             = 0;
+        db->link_metrics_policy.failed_association_last_reporting_time_point = now;
     }
 
-    if (unsuccessful_association_policy.number_of_reports_in_last_minute >
-        unsuccessful_association_policy.maximum_reporting_rate) {
+    if (db->link_metrics_policy.number_of_reports_in_last_minute >
+        db->link_metrics_policy.failed_associations_maximum_reporting_rate) {
         // we exceeded the maximum reports allowed
         // do nothing, no need to report
         LOG(WARNING)
             << "received failed connection, but exceeded the maximum number of reports in a minute:"
-            << unsuccessful_association_policy.maximum_reporting_rate;
+            << db->link_metrics_policy.failed_associations_maximum_reporting_rate;
         return true;
     }
 
     // report
-    ++unsuccessful_association_policy.number_of_reports_in_last_minute;
+    db->link_metrics_policy.number_of_reports_in_last_minute++;
 
     const auto mid = cmdu_rx.getMessageId();
     LOG(DEBUG) << "Sending FAILED_CONNECTION_MESSAGE, mid=" << std::hex << int(mid);
-
-    auto db = AgentDB::get();
 
     return forward_cmdu_to_broker(cmdu_rx, db->controller_info.bridge_mac, db->bridge.mac,
                                   db->bridge.iface_name);

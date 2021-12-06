@@ -11,7 +11,11 @@
 
 #include "task.h"
 
+#include <mapf/common/encryption.h>
 #include <tlvf/CmduMessageTx.h>
+#include <tlvf/WSC/configData.h>
+#include <tlvf/WSC/m2.h>
+#include <tlvf/wfa_map/tlvProfile2ErrorCode.h>
 
 namespace beerocks {
 
@@ -123,8 +127,108 @@ private:
     void handle_ap_autoconfiguration_response(ieee1905_1::CmduMessageRx &cmdu_rx,
                                               const sMacAddr &src_mac);
 
+    /**
+     * @brief Parse AP-Autoconfiguration and apply configuration if M2 is present.
+     *
+     * @param cmdu_rx Received CMDU.
+     * @return true on success, otherwise false.
+     */
+    void handle_ap_autoconfiguration_wsc(ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief Parse AP-Autoconfiguration Renew message.
+     *
+     * This function checks the TLVs in the AP-Autoconfiguration Renew message. If OK, it triggers
+     * autoconfiguration.
+     *
+     * @param cmdu_rx received CMDU containing AP-Autoconfiguration Renew.
+     */
+    void handle_ap_autoconfiguration_wsc_renew(ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief Parse Multi-AP Policy Configuration message.
+     * 
+     * The function parse the message, set it on the database and apply it on the Agent platform.
+     * 
+     * @param cmdu_rx received CMDU containing AP-Autoconfiguration Renew.
+     */
+    void handle_multi_ap_policy_config_request(ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /* TLV handlers: */
+    bool handle_profile2_default_802dotq_settings_tlv(ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool handle_profile2_traffic_separation_policy_tlv(
+        ieee1905_1::CmduMessageRx &cmdu_rx, std::unordered_set<std::string> &misconfigured_ssids);
+    bool handle_wsc_m2_tlv(ieee1905_1::CmduMessageRx &cmdu_rx, const std::string &radio_iface,
+                           const std::vector<WSC::m2> &m2_list,
+                           std::vector<WSC::configData::config> &configs,
+                           std::unordered_set<std::string> &misconfigured_ssids);
+
+    bool handle_ap_autoconfiguration_wsc_vs_extension_tlv(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                                          const std::string &radio_iface);
+
     /* Helper functions */
     bool send_ap_autoconfiguration_search_message(const std::string &radio_iface);
+
+    bool send_ap_autoconfiguration_wsc_m1_message(const std::string &radio_iface);
+
+    bool send_ap_bss_configuration_message(const std::string &radio_iface,
+                                           const std::vector<WSC::configData::config> &configs);
+
+    bool send_ap_bss_info_update_request(const std::string &radio_iface);
+
+    bool send_ap_connected_sta_notifications_request(const std::string &radio_iface);
+
+    bool send_platform_version_notification(const std::string &radio_iface,
+                                            const std::string &controller_version);
+
+    bool send_monitor_son_config(const std::string &radio_iface,
+                                 const beerocks_message::sSonConfig &son_config);
+
+    bool send_error_response_message(
+        const std::vector<std::pair<wfa_map::tlvProfile2ErrorCode::eReasonCode, sMacAddr>>
+            &bss_errors);
+
+    /**
+     * @brief Diffie-Hellman public key exchange keys calculation class member params authkey and
+     * keywrapauth are computed on success.
+     *
+     * @param[in] m2 WSC M2 received from the controller.
+     * @param[out] authkey 32 bytes calculated authentication key.
+     * @param[out] keywrapkey 16 bytes calculated key wrap key.
+     * @return true on success, otherwise false.
+     */
+    bool ap_autoconfiguration_wsc_calculate_keys(const std::string &fronthaul_iface, WSC::m2 &m2,
+                                                 uint8_t authkey[32], uint8_t keywrapkey[16]);
+
+    /**
+     * @brief ap autoconfiguration global authenticator attribute calculation.
+     *
+     * Calculate authentication on the Full M1 || M2* whereas M2* = M2 without the authenticator
+     * attribute. M1 is a saved buffer of the swapped M1 sent in the WSC autoconfiguration sent by
+     * the agent.
+     *
+     * @param [in] m2 WSC M2 attribute list from the Controller.
+     * @param [out] authkey Authentication key.
+     * @return true on success, otherwise false.
+     */
+    bool ap_autoconfiguration_wsc_authenticate(const std::string &fronthaul_iface, WSC::m2 &m2,
+                                               uint8_t authkey[32]);
+
+    /**
+     * @brief Parse the encrypted settings from m2, and load the into the BSS configuration
+     * @a config.
+     * 
+     * @param [in] m2 WSC M2 attribute list from the Controller.
+     * @param [in] authkey Authentication key.
+     * @param [in] keywrapkey Key wrapper.
+     * @param [out] config BSS configuration.
+     * @return true on success, otherwise false.
+     */
+    bool ap_autoconfiguration_wsc_parse_encrypted_settings(WSC::m2 &m2, uint8_t authkey[32],
+                                                           uint8_t keywrapkey[16],
+                                                           WSC::configData::config &config);
+
+    bool add_wsc_m1_tlv(const std::string &radio_iface);
 };
 
 } // namespace beerocks

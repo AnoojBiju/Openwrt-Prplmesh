@@ -323,8 +323,14 @@ public:
     } traffic_separation;
 
     struct {
-        bool report_indepent_scans_policy = false;
-    } channel_scan_policy;
+        uint32_t reporting_interval_sec;
+        bool report_independent_channel_scans               = false;
+        bool report_unsuccessful_associations               = false;
+        uint32_t failed_associations_maximum_reporting_rate = 0;
+        std::chrono::steady_clock::time_point failed_association_last_reporting_time_point =
+            std::chrono::steady_clock::time_point::min();
+        uint32_t number_of_reports_in_last_minute = 0;
+    } link_metrics_policy;
 
     /**
      * @brief Get pointer to the radio data struct of a specific interface. The function can
