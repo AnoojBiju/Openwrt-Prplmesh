@@ -398,15 +398,22 @@ public:
     virtual bool set_primary_vlan_id(uint16_t primary_vlan_id) = 0;
 
 private:
-    static const int tagged_patameters_idx = 56;
-    static const int wifi_alliance_tag_len = 18;
+    static const int frame_body_idx = (sizeof(s80211MgmtFrame::sHeader) * 2);
 
-protected:
-    std::string get_binary_association_frame(const char assoc_req[])
+public:
+    /**
+     * @brief Return the Management Request frame body
+     *
+     * @param assoc_req input assumed (Re)Association request hex string buffer
+     * @return string containing bytes of frame body.
+     */
+    static std::string get_binary_association_frame(const char assoc_req[])
     {
-        auto sub_str_len = strnlen(assoc_req, ASSOCIATION_FRAME_SIZE) -
-                           ap_wlan_hal::tagged_patameters_idx - ap_wlan_hal::wifi_alliance_tag_len;
-        auto sub_str = std::string(&assoc_req[ap_wlan_hal::tagged_patameters_idx], sub_str_len);
+        auto sub_str = std::string(assoc_req).substr(0, ASSOCIATION_FRAME_SIZE - 1);
+        if (sub_str.length() <= frame_body_idx) {
+            return {};
+        }
+        sub_str.erase(0, frame_body_idx);
 
         //convert the hex string to binary
         return beerocks::string_utils::hex_to_bytes<std::string>(sub_str);
