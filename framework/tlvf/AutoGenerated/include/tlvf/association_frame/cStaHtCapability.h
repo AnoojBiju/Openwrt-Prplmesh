@@ -37,13 +37,13 @@ class cStaHtCapability : public BaseClass
 
         typedef struct sA_MpduParam {
             #if defined(__LITTLE_ENDIAN_BITFIELD)
-            uint8_t queue_request : 3;
-            uint8_t txop_request : 3;
-            uint8_t reserved : 2;
+            uint8_t max_ampdu_len_expo : 2;
+            uint8_t min_mpdu_start_spacing : 3;
+            uint8_t reserved : 3;
             #elif defined(__BIG_ENDIAN_BITFIELD)
-            uint8_t reserved : 2;
-            uint8_t txop_request : 3;
-            uint8_t queue_request : 3;
+            uint8_t reserved : 3;
+            uint8_t min_mpdu_start_spacing : 3;
+            uint8_t max_ampdu_len_expo : 2;
             #else
             #error "Bitfield macros are not defined"
             #endif
