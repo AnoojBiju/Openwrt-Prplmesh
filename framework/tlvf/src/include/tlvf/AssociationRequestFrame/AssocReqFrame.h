@@ -18,10 +18,12 @@
 #include <tlvf/association_frame/cMobilityDomain.h>
 #include <tlvf/association_frame/cQosCapability.h>
 #include <tlvf/association_frame/cRmEnabledCaps.h>
+#include <tlvf/association_frame/cStaHeCapability.h>
 #include <tlvf/association_frame/cStaHtCapability.h>
 #include <tlvf/association_frame/cStaVhtCapability.h>
 #include <tlvf/association_frame/cSupportedChannels.h>
 #include <tlvf/association_frame/eElementID.h>
+#include <tlvf/association_frame/eExtElementID.h>
 #include <tlvf/common/sMacAddr.h>
 #include <tlvf/wfa_map/tlvTunnelledData.h>
 
@@ -54,6 +56,7 @@ public:
         uint32_t fms_request : 1;
         uint32_t dms_request : 1;
         uint32_t vendor_specific : 1;
+        uint32_t he_capability : 1;
     } __attribute__((packed)) sFieldsPresent;
 
     enum eFrameType : uint8_t {
@@ -89,6 +92,7 @@ public:
     std::string sta_ssid();
     std::shared_ptr<cStaHtCapability> sta_ht_capability();
     std::shared_ptr<cStaVhtCapability> sta_vht_capability();
+    std::shared_ptr<cStaHeCapability> sta_he_capability();
     std::shared_ptr<cPowerCapability> power_capability();
     std::shared_ptr<cRmEnabledCaps> rm_enabled_caps();
     std::shared_ptr<cMultiBand> multi_band();
