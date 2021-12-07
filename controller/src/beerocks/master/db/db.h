@@ -150,6 +150,7 @@ public:
         std::chrono::seconds link_metrics_request_interval_seconds;
         std::chrono::seconds dhcp_monitor_interval_seconds;
         std::chrono::milliseconds steering_disassoc_timer_msec;
+        int my_var;
     } sDbMasterConfig;
 
     typedef struct {
@@ -2075,6 +2076,9 @@ public:
     Controller *get_controller_ctx() { return m_controller_ctx; }
 
     const sMacAddr &get_local_bridge_mac() { return m_local_bridge_mac; }
+
+    void set_my_var(int val) { config.my_var = val; }
+    int get_my_var() { return config.my_var; }
 
     //
     // vars

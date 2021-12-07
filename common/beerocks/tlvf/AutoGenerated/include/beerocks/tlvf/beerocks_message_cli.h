@@ -272,6 +272,67 @@ class cACTION_CLI_BACKHAUL_ROAM_REQUEST : public BaseClass
         sMacAddr* m_bssid = nullptr;
 };
 
+class cACTION_CLI_GET_MY_VAR : public BaseClass
+{
+    public:
+        cACTION_CLI_GET_MY_VAR(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_CLI_GET_MY_VAR(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_CLI_GET_MY_VAR();
+
+        static eActionOp_CLI get_action_op(){
+            return (eActionOp_CLI)(ACTION_CLI_GET_MY_VAR);
+        }
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_CLI* m_action_op = nullptr;
+};
+
+class cACTION_CLI_SET_MY_VAR : public BaseClass
+{
+    public:
+        cACTION_CLI_SET_MY_VAR(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_CLI_SET_MY_VAR(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_CLI_SET_MY_VAR();
+
+        static eActionOp_CLI get_action_op(){
+            return (eActionOp_CLI)(ACTION_CLI_SET_MY_VAR);
+        }
+        uint32_t& my_var();
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_CLI* m_action_op = nullptr;
+        uint32_t* m_my_var = nullptr;
+};
+
+class cACTION_CLI_RESPONSE_MY_VAR_VALUE : public BaseClass
+{
+    public:
+        cACTION_CLI_RESPONSE_MY_VAR_VALUE(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_CLI_RESPONSE_MY_VAR_VALUE(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_CLI_RESPONSE_MY_VAR_VALUE();
+
+        static eActionOp_CLI get_action_op(){
+            return (eActionOp_CLI)(ACTION_CLI_RESPONSE_MY_VAR_VALUE);
+        }
+        uint32_t& my_var_value();
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_CLI* m_action_op = nullptr;
+        uint32_t* m_my_var_value = nullptr;
+};
+
 class cACTION_CLI_CLIENT_ALLOW_REQUEST : public BaseClass
 {
     public:
