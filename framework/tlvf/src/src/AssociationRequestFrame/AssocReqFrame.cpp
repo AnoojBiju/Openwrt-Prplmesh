@@ -300,11 +300,19 @@ bool AssocReqFrame::init()
             }
             fields_present.vendor_specific = 1;
             break;
-        // Other fields are not expected, if so ignore them silently
+        // Other fields (un-handled) are stored as unknown IE (raw data)
+        // to continue parsing (IEs may be nested)
         default:
-            TLVF_LOG(DEBUG) << "Unknown field " << getNextAttrType()
-                            << " assuming end of the FieldList";
-            return true;
+            TLVF_LOG(DEBUG) << "Unhandled field " << getNextAttrType()
+                            << " : store it and parse next IEs"
+                            << " in RemainingBytes: " << getRemainingBytes();
+            if (!addAttr<cUnknownField>()) {
+                TLVF_LOG(DEBUG) << "Failed to add cUnknownField for ID " << getNextAttrType();
+                // ignore failure appending unhandled fields
+                // and return the available FieldList
+                return true;
+            }
+            break;
         }
     }
     return true;
