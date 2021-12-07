@@ -54,7 +54,7 @@ class cStaHtCapability : public BaseClass
         } __attribute__((packed)) sA_MpduParam;
         
         eElementID& type();
-        uint8_t& length();
+        const uint8_t& length();
         assoc_frame::sStaHtCapabilityInfo& ht_cap_info();
         sA_MpduParam& a_mpdu_param();
         uint8_t* ht_mcs_set(size_t idx = 0);

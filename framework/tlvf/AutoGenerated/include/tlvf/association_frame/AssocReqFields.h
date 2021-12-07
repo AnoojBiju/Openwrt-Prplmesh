@@ -49,6 +49,7 @@ class cSSID : public BaseClass
 
         eElementID& type();
         const uint8_t& length();
+        size_t ssid_length() { return m_ssid_idx__ * sizeof(char); }
         std::string ssid_str();
         char* ssid(size_t length = 0);
         bool set_ssid(const std::string& str);
@@ -77,8 +78,9 @@ class cRSN : public BaseClass
         eElementID& type();
         const uint8_t& length();
         uint16_t& version();
-        size_t optional_length() { return m_optional_idx__ * sizeof(uint16_t); }
-        uint16_t* optional(size_t idx = 0);
+        size_t optional_length() { return m_optional_idx__ * sizeof(uint8_t); }
+        uint8_t* optional(size_t idx = 0);
+        bool set_optional(const void* buffer, size_t size);
         bool alloc_optional(size_t count = 1);
         void class_swap() override;
         bool finalize() override;
@@ -89,7 +91,7 @@ class cRSN : public BaseClass
         eElementID* m_type = nullptr;
         uint8_t* m_length = nullptr;
         uint16_t* m_version = nullptr;
-        uint16_t* m_optional = nullptr;
+        uint8_t* m_optional = nullptr;
         size_t m_optional_idx__ = 0;
         int m_lock_order_counter__ = 0;
 };
@@ -131,6 +133,7 @@ class cSupportRates : public BaseClass
 
         eElementID& type();
         const uint8_t& length();
+        size_t supported_rated_length() { return m_supported_rated_idx__ * sizeof(uint8_t); }
         uint8_t* supported_rated(size_t idx = 0);
         bool set_supported_rated(const void* buffer, size_t size);
         bool alloc_supported_rated(size_t count = 1);
@@ -156,6 +159,7 @@ class cExtendedSupportRates : public BaseClass
 
         eElementID& type();
         const uint8_t& length();
+        size_t extended_suport_rated_length() { return m_extended_suport_rated_idx__ * sizeof(uint8_t); }
         uint8_t* extended_suport_rated(size_t idx = 0);
         bool set_extended_suport_rated(const void* buffer, size_t size);
         bool alloc_extended_suport_rated(size_t count = 1);

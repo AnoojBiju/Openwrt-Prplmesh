@@ -85,14 +85,13 @@ bool cSSID::alloc_ssid(size_t count) {
         return false;
     }
     m_lock_order_counter__ = 0;
-    uint8_t *src = (uint8_t *)&m_ssid[*m_length];
+    uint8_t *src = (uint8_t *)&m_ssid[m_ssid_idx__];
     uint8_t *dst = src + len;
     if (!m_parse__) {
         size_t move_length = getBuffRemainingBytes(src) - len;
         std::copy_n(src, move_length, dst);
     }
     m_ssid_idx__ += count;
-    *m_length += count;
     if (!buffPtrIncrementSafe(len)) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
         return false;
@@ -160,11 +159,16 @@ bool cSSID::init()
         return false;
     }
     m_ssid = reinterpret_cast<char*>(m_buff_ptr__);
-    uint8_t length = *m_length;
-    m_ssid_idx__ = length;
-    if (!buffPtrIncrementSafe(sizeof(char) * (length))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (length) << ") Failed!";
-        return false;
+    if (m_length && m_parse__) {
+        auto swap_len = *m_length;
+        tlvf_swap((sizeof(swap_len) * 8), reinterpret_cast<uint8_t*>(&swap_len));
+        size_t len = swap_len;
+        len -= (m_buff_ptr__ - sizeof(*m_type) - sizeof(*m_length) - m_buff__);
+        m_ssid_idx__ = len/sizeof(char);
+        if (!buffPtrIncrementSafe(len)) {
+            LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
+            return false;
+        }
     }
     if (m_parse__) { class_swap(); }
     return true;
@@ -192,7 +196,7 @@ uint16_t& cRSN::version() {
     return (uint16_t&)(*m_version);
 }
 
-uint16_t* cRSN::optional(size_t idx) {
+uint8_t* cRSN::optional(size_t idx) {
     if ( (m_optional_idx__ == 0) || (m_optional_idx__ <= idx) ) {
         TLVF_LOG(ERROR) << "Requested index is greater than the number of available entries";
         return nullptr;
@@ -200,12 +204,25 @@ uint16_t* cRSN::optional(size_t idx) {
     return &(m_optional[idx]);
 }
 
+bool cRSN::set_optional(const void* buffer, size_t size) {
+    if (buffer == nullptr) {
+        TLVF_LOG(WARNING) << "set_optional received a null pointer.";
+        return false;
+    }
+    if (m_optional_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_optional was already allocated!";
+        return false;
+    }
+    if (!alloc_optional(size)) { return false; }
+    std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_optional);
+    return true;
+}
 bool cRSN::alloc_optional(size_t count) {
     if (m_lock_order_counter__ > 0) {;
         TLVF_LOG(ERROR) << "Out of order allocation for variable length list optional, abort!";
         return false;
     }
-    size_t len = sizeof(uint16_t) * count;
+    size_t len = sizeof(uint8_t) * count;
     if(getBuffRemainingBytes() < len )  {
         TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
         return false;
@@ -229,9 +246,6 @@ bool cRSN::alloc_optional(size_t count) {
 void cRSN::class_swap()
 {
     tlvf_swap(16, reinterpret_cast<uint8_t*>(m_version));
-    for (size_t i = 0; i < m_optional_idx__; i++){
-        tlvf_swap(16, reinterpret_cast<uint8_t*>(&m_optional[i]));
-    }
 }
 
 bool cRSN::finalize()
@@ -295,13 +309,13 @@ bool cRSN::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint16_t); }
-    m_optional = reinterpret_cast<uint16_t*>(m_buff_ptr__);
+    m_optional = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (m_length && m_parse__) {
         auto swap_len = *m_length;
         tlvf_swap((sizeof(swap_len) * 8), reinterpret_cast<uint8_t*>(&swap_len));
         size_t len = swap_len;
         len -= (m_buff_ptr__ - sizeof(*m_type) - sizeof(*m_length) - m_buff__);
-        m_optional_idx__ = len/sizeof(uint16_t);
+        m_optional_idx__ = len/sizeof(uint8_t);
         if (!buffPtrIncrementSafe(len)) {
             LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
             return false;
@@ -511,14 +525,13 @@ bool cSupportRates::alloc_supported_rated(size_t count) {
         return false;
     }
     m_lock_order_counter__ = 0;
-    uint8_t *src = (uint8_t *)&m_supported_rated[*m_length];
+    uint8_t *src = (uint8_t *)&m_supported_rated[m_supported_rated_idx__];
     uint8_t *dst = src + len;
     if (!m_parse__) {
         size_t move_length = getBuffRemainingBytes(src) - len;
         std::copy_n(src, move_length, dst);
     }
     m_supported_rated_idx__ += count;
-    *m_length += count;
     if (!buffPtrIncrementSafe(len)) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
         return false;
@@ -586,11 +599,16 @@ bool cSupportRates::init()
         return false;
     }
     m_supported_rated = reinterpret_cast<uint8_t*>(m_buff_ptr__);
-    uint8_t length = *m_length;
-    m_supported_rated_idx__ = length;
-    if (!buffPtrIncrementSafe(sizeof(uint8_t) * (length))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) * (length) << ") Failed!";
-        return false;
+    if (m_length && m_parse__) {
+        auto swap_len = *m_length;
+        tlvf_swap((sizeof(swap_len) * 8), reinterpret_cast<uint8_t*>(&swap_len));
+        size_t len = swap_len;
+        len -= (m_buff_ptr__ - sizeof(*m_type) - sizeof(*m_length) - m_buff__);
+        m_supported_rated_idx__ = len/sizeof(uint8_t);
+        if (!buffPtrIncrementSafe(len)) {
+            LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
+            return false;
+        }
     }
     if (m_parse__) { class_swap(); }
     return true;
@@ -646,14 +664,13 @@ bool cExtendedSupportRates::alloc_extended_suport_rated(size_t count) {
         return false;
     }
     m_lock_order_counter__ = 0;
-    uint8_t *src = (uint8_t *)&m_extended_suport_rated[*m_length];
+    uint8_t *src = (uint8_t *)&m_extended_suport_rated[m_extended_suport_rated_idx__];
     uint8_t *dst = src + len;
     if (!m_parse__) {
         size_t move_length = getBuffRemainingBytes(src) - len;
         std::copy_n(src, move_length, dst);
     }
     m_extended_suport_rated_idx__ += count;
-    *m_length += count;
     if (!buffPtrIncrementSafe(len)) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
         return false;
@@ -721,11 +738,16 @@ bool cExtendedSupportRates::init()
         return false;
     }
     m_extended_suport_rated = reinterpret_cast<uint8_t*>(m_buff_ptr__);
-    uint8_t length = *m_length;
-    m_extended_suport_rated_idx__ = length;
-    if (!buffPtrIncrementSafe(sizeof(uint8_t) * (length))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) * (length) << ") Failed!";
-        return false;
+    if (m_length && m_parse__) {
+        auto swap_len = *m_length;
+        tlvf_swap((sizeof(swap_len) * 8), reinterpret_cast<uint8_t*>(&swap_len));
+        size_t len = swap_len;
+        len -= (m_buff_ptr__ - sizeof(*m_type) - sizeof(*m_length) - m_buff__);
+        m_extended_suport_rated_idx__ = len/sizeof(uint8_t);
+        if (!buffPtrIncrementSafe(len)) {
+            LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
+            return false;
+        }
     }
     if (m_parse__) { class_swap(); }
     return true;

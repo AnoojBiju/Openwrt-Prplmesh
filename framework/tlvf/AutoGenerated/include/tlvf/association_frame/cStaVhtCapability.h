@@ -34,7 +34,7 @@ class cStaVhtCapability : public BaseClass
         ~cStaVhtCapability();
 
         eElementID& type();
-        uint8_t& length();
+        const uint8_t& length();
         assoc_frame::sStaVhtCapInfo& vht_cap_info();
         assoc_frame::sSupportedVhtMcsSet& supported_vht_mcs();
         void class_swap() override;

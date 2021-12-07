@@ -29,8 +29,8 @@ eElementID& cStaVhtCapability::type() {
     return (eElementID&)(*m_type);
 }
 
-uint8_t& cStaVhtCapability::length() {
-    return (uint8_t&)(*m_length);
+const uint8_t& cStaVhtCapability::length() {
+    return (const uint8_t&)(*m_length);
 }
 
 assoc_frame::sStaVhtCapInfo& cStaVhtCapability::vht_cap_info() {
@@ -68,6 +68,7 @@ bool cStaVhtCapability::finalize()
         }
         auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
         m_buff_ptr__ -= tailroom;
+        *m_length -= tailroom;
     }
     class_swap();
     m_finalized__ = true;
@@ -97,6 +98,7 @@ bool cStaVhtCapability::init()
         return false;
     }
     m_length = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!m_parse__) *m_length = 0;
     if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
@@ -106,12 +108,14 @@ bool cStaVhtCapability::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(assoc_frame::sStaVhtCapInfo) << ") Failed!";
         return false;
     }
+    if(m_length && !m_parse__){ (*m_length) += sizeof(assoc_frame::sStaVhtCapInfo); }
     if (!m_parse__) { m_vht_cap_info->struct_init(); }
     m_supported_vht_mcs = reinterpret_cast<assoc_frame::sSupportedVhtMcsSet*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(assoc_frame::sSupportedVhtMcsSet))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(assoc_frame::sSupportedVhtMcsSet) << ") Failed!";
         return false;
     }
+    if(m_length && !m_parse__){ (*m_length) += sizeof(assoc_frame::sSupportedVhtMcsSet); }
     if (!m_parse__) { m_supported_vht_mcs->struct_init(); }
     if (m_parse__) { class_swap(); }
     return true;

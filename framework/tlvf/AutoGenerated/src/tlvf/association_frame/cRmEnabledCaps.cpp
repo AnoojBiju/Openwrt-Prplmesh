@@ -29,8 +29,8 @@ eElementID& cRmEnabledCaps::type() {
     return (eElementID&)(*m_type);
 }
 
-uint8_t& cRmEnabledCaps::length() {
-    return (uint8_t&)(*m_length);
+const uint8_t& cRmEnabledCaps::length() {
+    return (const uint8_t&)(*m_length);
 }
 
 assoc_frame::sRmEnabledCaps1& cRmEnabledCaps::data1() {
@@ -68,6 +68,7 @@ bool cRmEnabledCaps::finalize()
         }
         auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
         m_buff_ptr__ -= tailroom;
+        *m_length -= tailroom;
     }
     class_swap();
     m_finalized__ = true;
@@ -97,6 +98,7 @@ bool cRmEnabledCaps::init()
         return false;
     }
     m_length = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!m_parse__) *m_length = 0;
     if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
@@ -106,12 +108,14 @@ bool cRmEnabledCaps::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(assoc_frame::sRmEnabledCaps1) << ") Failed!";
         return false;
     }
+    if(m_length && !m_parse__){ (*m_length) += sizeof(assoc_frame::sRmEnabledCaps1); }
     if (!m_parse__) { m_data1->struct_init(); }
     m_data2 = reinterpret_cast<assoc_frame::sRmEnabledCaps2*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(assoc_frame::sRmEnabledCaps2))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(assoc_frame::sRmEnabledCaps2) << ") Failed!";
         return false;
     }
+    if(m_length && !m_parse__){ (*m_length) += sizeof(assoc_frame::sRmEnabledCaps2); }
     if (!m_parse__) { m_data2->struct_init(); }
     if (m_parse__) { class_swap(); }
     return true;
