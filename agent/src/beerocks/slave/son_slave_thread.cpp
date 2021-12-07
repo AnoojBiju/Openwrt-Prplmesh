@@ -294,7 +294,7 @@ void slave_thread::agent_reset()
 
     auto db = AgentDB::get();
 
-    m_radio_managers.do_on_each_radio_manager([&](sManagedRadio &radio_manager,
+    m_radio_managers.do_on_each_radio_manager([&](const sManagedRadio &radio_manager,
                                                   const std::string &fronthaul_iface) {
         auto radio = db->radio(fronthaul_iface);
 
@@ -3349,7 +3349,6 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
     }
 
     if (!link_to_controller()) {
-        LOG(WARNING) << "There is no link to the Controller " << int(beerocks_header->action_op());
         return true;
     }
 

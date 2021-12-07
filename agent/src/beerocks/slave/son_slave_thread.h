@@ -323,7 +323,7 @@ private:
 
     bool m_is_backhaul_disconnected = false;
     int m_agent_resets_counter      = 0;
-    sSlaveBackhaulParams backhaul_params;
+
     TaskPool m_task_pool;
 
     // Global FSM members:
@@ -334,7 +334,6 @@ private:
     bool m_stopped = false;
 
     struct sManagedRadio {
-        beerocks_message::sSonConfig son_config;
         int stop_on_failure_attempts;
         bool configuration_in_progress = false;
 

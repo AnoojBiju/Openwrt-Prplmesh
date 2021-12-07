@@ -310,7 +310,6 @@ private:
     int configuration_stop_on_failure_attempts;
 
     int stop_on_failure_attempts;
-    const std::string config_const_bh_slave;
 
     //backlist bssid and timers (remove con(or wrong passphrase) ap from select bssid for limited time )
     struct ap_blacklist_entry {
