@@ -422,8 +422,7 @@ bool db::dm_add_sta_beacon_measurement(const beerocks_message::sBeaconResponse11
 
     ret_val &= dm_set_multi_ap_sta_noise_param(*sta, beacon.rcpi, beacon.rsni);
 
-    ret_val &=
-        m_ambiorix_datamodel->set(measurement_inst, "BSSID", tlvf::mac_to_string(beacon.bssid));
+    ret_val &= m_ambiorix_datamodel->set(measurement_inst, "BSSID", beacon.bssid);
     ret_val &=
         m_ambiorix_datamodel->set(measurement_inst, "MeasurementToken", beacon.measurement_token);
     ret_val &= m_ambiorix_datamodel->set(measurement_inst, "RCPI", beacon.rcpi);
@@ -3290,7 +3289,7 @@ static void dm_add_bss_neighbors(std::shared_ptr<beerocks::nbapi::Ambiorix> m_am
             LOG(ERROR) << "Failed to add NeighborBSS to " << channel_path;
             return;
         }
-        m_ambiorix_datamodel->set(neighbor_path, "BSSID", tlvf::mac_to_string(neighbor.bssid()));
+        m_ambiorix_datamodel->set(neighbor_path, "BSSID", neighbor.bssid());
         m_ambiorix_datamodel->set(neighbor_path, "SSID", neighbor.ssid_str());
         m_ambiorix_datamodel->set(neighbor_path, "SignalStrength", neighbor.signal_strength());
         m_ambiorix_datamodel->set(neighbor_path, "ChannelBandwidth",
@@ -5886,8 +5885,7 @@ bool db::dm_add_sta_element(const sMacAddr &bssid, Station &station)
 
     LOG(DEBUG) << "Station is added with data model " << station.dm_path;
 
-    if (!m_ambiorix_datamodel->set(station.dm_path, "MACAddress",
-                                   tlvf::mac_to_string(station.mac))) {
+    if (!m_ambiorix_datamodel->set(station.dm_path, "MACAddress", station.mac)) {
         LOG(ERROR) << "Failed to set " << station.dm_path << ".MACAddress: " << station.mac;
         return false;
     }
@@ -5978,7 +5976,7 @@ bool db::dm_add_failed_connection_event(const sMacAddr &sta_mac, const uint16_t 
     bool ret_val = true;
 
     ret_val &= m_ambiorix_datamodel->set_current_time(event_path);
-    ret_val &= m_ambiorix_datamodel->set(event_path, "MACAddress", tlvf::mac_to_string(sta_mac));
+    ret_val &= m_ambiorix_datamodel->set(event_path, "MACAddress", sta_mac);
     ret_val &= m_ambiorix_datamodel->set(event_path, "StatusCode", status_code);
     ret_val &= m_ambiorix_datamodel->set(event_path, "ReasonCode", reason_code);
     return ret_val;
@@ -5999,12 +5997,11 @@ std::string db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &
         return {};
     }
     m_assoc_events.push(path_association_event);
-    if (!m_ambiorix_datamodel->set(path_association_event, "BSSID", tlvf::mac_to_string(bssid))) {
+    if (!m_ambiorix_datamodel->set(path_association_event, "BSSID", bssid)) {
         LOG(ERROR) << "Failed to set " << path_association_event << ".BSSID: " << bssid;
         return {};
     }
-    if (!m_ambiorix_datamodel->set(path_association_event, "MACAddress",
-                                   tlvf::mac_to_string(client_mac))) {
+    if (!m_ambiorix_datamodel->set(path_association_event, "MACAddress", client_mac)) {
         LOG(ERROR) << "Failed to set " << path_association_event << ".MACAddress: " << client_mac;
         return {};
     }
@@ -6043,7 +6040,7 @@ std::string db::dm_add_device_element(const sMacAddr &mac)
         return {};
     }
 
-    if (!m_ambiorix_datamodel->set(device_path, "ID", tlvf::mac_to_string(mac))) {
+    if (!m_ambiorix_datamodel->set(device_path, "ID", mac)) {
         LOG(ERROR) << "Failed to set " << device_path << ".ID: " << mac;
         return {};
     }
@@ -6223,7 +6220,7 @@ bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, cons
         Set value for BSSID variable
         Example: Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.1.BSSID
     */
-    if (!m_ambiorix_datamodel->set(bss_instance, "BSSID", tlvf::mac_to_string(bssid))) {
+    if (!m_ambiorix_datamodel->set(bss_instance, "BSSID", bssid)) {
         LOG(ERROR) << "Failed to set " << bss_instance << "BSSID: " << bssid;
         return false;
     }
@@ -6454,17 +6451,23 @@ bool db::dm_add_interface_element(const sMacAddr &device_mac, const sMacAddr &in
         return false;
     }
     // Prepare path to the Interface object MACAddress, like Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.MACAddress
-    if (!m_ambiorix_datamodel->set(iface->m_dm_path, "MACAddress",
-                                   tlvf::mac_to_string(interface_mac))) {
+    if (!m_ambiorix_datamodel->set(iface->m_dm_path, "MACAddress", interface_mac)) {
         LOG(ERROR) << "Failed to set " << iface->m_dm_path << ".MACAddress: " << interface_mac;
         return false;
     }
     // Prepare path to the Interface object Name, like Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.Name
-    if (!m_ambiorix_datamodel->set(iface->m_dm_path, "Name",
-                                   (name.empty() ? tlvf::mac_to_string(interface_mac) : name))) {
-        LOG(ERROR) << "Failed to set " << iface->m_dm_path << ".Name: " << name;
-        return false;
+    if (name.empty()) {
+        if (!m_ambiorix_datamodel->set(iface->m_dm_path, "Name", interface_mac)) {
+            LOG(ERROR) << "Failed to set " << iface->m_dm_path << ".Name: " << name;
+            return false;
+        }
+    } else {
+        if (!m_ambiorix_datamodel->set(iface->m_dm_path, "Name", name)) {
+            LOG(ERROR) << "Failed to set " << iface->m_dm_path << ".Name: " << name;
+            return false;
+        }
     }
+
     // Prepare path to the Interface object MediaType, like Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.MediaType
     if (!m_ambiorix_datamodel->set(iface->m_dm_path, "MediaType", media_type)) {
         LOG(ERROR) << "Failed to set " << iface->m_dm_path << ".MediaType: " << media_type;
@@ -6666,7 +6669,7 @@ bool db::dm_add_interface_neighbor(
     }
 
     // Set value for the path as Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.Neighbor.{i}.ID
-    if (!m_ambiorix_datamodel->set(neighbor->dm_path, "ID", tlvf::mac_to_string(neighbor->mac))) {
+    if (!m_ambiorix_datamodel->set(neighbor->dm_path, "ID", neighbor->mac)) {
         LOG(ERROR) << "Failed to set " << neighbor->dm_path << ".ID: " << neighbor->mac;
         return false;
     }
@@ -7072,10 +7075,8 @@ bool db::add_sta_steering_event(const sMacAddr &sta_mac, sStaSteeringEvent &even
     // Update steering event data model path
     sta_events.back().dm_path = steering_event_path;
 
-    ret_val &= m_ambiorix_datamodel->set(steering_event_path, "APOrigin",
-                                         tlvf::mac_to_string(event.original_bssid));
-    ret_val &= m_ambiorix_datamodel->set(steering_event_path, "APDestination",
-                                         tlvf::mac_to_string(event.target_bssid));
+    ret_val &= m_ambiorix_datamodel->set(steering_event_path, "APOrigin", event.original_bssid);
+    ret_val &= m_ambiorix_datamodel->set(steering_event_path, "APDestination", event.target_bssid);
     ret_val &=
         m_ambiorix_datamodel->set(steering_event_path, "SteeringDuration", event.duration.count());
     ret_val &=
@@ -7162,12 +7163,10 @@ bool db::dm_set_device_multi_ap_backhaul(const Agent &agent, const sMacAddr &par
     }
 
     ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "BackhaulLinkType", iface_link_str);
-    ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "MACAddress",
-                                         tlvf::mac_to_string(backhaul_mac));
+    ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "MACAddress", backhaul_mac);
 
     // TODO: Ethernet link BackhaulMACAddress retrieved as empty, also parent of the node assigned as local bridge (PPM-1658)
-    ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "BackhaulMACAddress",
-                                         tlvf::mac_to_string(parent_bssid));
+    ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "BackhaulMACAddress", parent_bssid);
 
     // TODO: Refactor with new database model of Agent->sBackhaul->parent_agent (PPM-1057)
     auto parent_radio = get_node(parent_bssid);
@@ -7176,7 +7175,7 @@ bool db::dm_set_device_multi_ap_backhaul(const Agent &agent, const sMacAddr &par
         auto parent_agent = get_agent_by_radio_uid(tlvf::mac_from_string(parent_radio->mac));
         if (parent_agent) {
             ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "BackhaulDeviceID",
-                                                 tlvf::mac_to_string(parent_agent->al_mac));
+                                                 parent_agent->al_mac);
         }
         LOG_IF(!parent_agent, ERROR) << "Parent Agent is not found with RUID " << parent_radio->mac;
 
@@ -7187,7 +7186,7 @@ bool db::dm_set_device_multi_ap_backhaul(const Agent &agent, const sMacAddr &par
         auto gateway = get_gw();
         if (gateway) {
             ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "BackhaulDeviceID",
-                                                 tlvf::mac_to_string(gateway->al_mac));
+                                                 gateway->al_mac);
         }
         LOG_IF(!gateway, FATAL) << "Gateway is not found on database";
     }
