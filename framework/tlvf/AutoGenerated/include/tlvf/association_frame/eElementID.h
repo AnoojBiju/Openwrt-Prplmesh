@@ -45,6 +45,7 @@ enum eElementID: uint8_t {
     ID_DMG_CAPS = 0xc2,
     ID_OP_MODE_NOTIFICATION = 0xc7,
     ID_VENDOR_SPECIFIC = 0xdd,
+    ID_EID_EXTENSION = 0xff,
 };
 // Enum AutoPrint generated code snippet begining- DON'T EDIT!
 // clang-format off
@@ -77,6 +78,7 @@ static const char *eElementID_str(eElementID enum_value) {
     case ID_DMG_CAPS:              return "ID_DMG_CAPS";
     case ID_OP_MODE_NOTIFICATION:  return "ID_OP_MODE_NOTIFICATION";
     case ID_VENDOR_SPECIFIC:       return "ID_VENDOR_SPECIFIC";
+    case ID_EID_EXTENSION:         return "ID_EID_EXTENSION";
     }
     static std::string out_str = std::to_string(int(enum_value));
     return out_str.c_str();

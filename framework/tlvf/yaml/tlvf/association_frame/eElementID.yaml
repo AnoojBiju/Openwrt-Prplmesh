@@ -36,3 +36,6 @@ eElementID:
   ID_DMG_CAPS: 194
   ID_OP_MODE_NOTIFICATION: 199
   ID_VENDOR_SPECIFIC: 221
+  ID_EID_EXTENSION: 255
+  _comment: |
+    Element ID Extension (inc. subElems like HE capabilities)
