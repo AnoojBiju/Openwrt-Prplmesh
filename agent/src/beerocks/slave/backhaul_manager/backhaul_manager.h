@@ -307,12 +307,10 @@ private:
      */
     std::shared_ptr<beerocks::TimerManager> m_timer_manager;
 
-    net::network_utils::iface_info bridge_info;
-
     int configuration_stop_on_failure_attempts;
-    const std::string config_const_bh_slave;
 
     int stop_on_failure_attempts;
+    const std::string config_const_bh_slave;
 
     //backlist bssid and timers (remove con(or wrong passphrase) ap from select bssid for limited time )
     struct ap_blacklist_entry {

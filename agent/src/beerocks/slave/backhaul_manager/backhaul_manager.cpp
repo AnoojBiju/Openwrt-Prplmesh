@@ -406,8 +406,7 @@ bool BackhaulManager::send_ack_to_controller(ieee1905_1::CmduMessageTx &cmdu_tx,
     auto db = AgentDB::get();
 
     LOG(DEBUG) << "Sending ACK message to the controller, mid=" << std::hex << mid;
-    bool ret = send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac,
-                                   tlvf::mac_from_string(bridge_info.mac));
+    bool ret = send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac, db->bridge.mac);
     return ret;
 }
 
@@ -1928,8 +1927,7 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
             create_backhaul_steering_response(wfa_map::tlvErrorCode::eReasonCode::RESERVED, bssid);
 
             LOG(DEBUG) << "Sending BACKHAUL_STA_STEERING_RESPONSE_MESSAGE";
-            send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac,
-                                tlvf::mac_from_string(bridge_info.mac));
+            send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac, db->bridge.mac);
         }
 
         // TODO: Need to unite WAIT_WPS and WIRELESS_ASSOCIATE_4ADDR_WAIT handling
@@ -2127,8 +2125,7 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
                 }
 
                 auto db = AgentDB::get();
-                send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac,
-                                    tlvf::mac_from_string(bridge_info.mac));
+                send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac, db->bridge.mac);
 
                 // Steering operation has failed so cancel it to avoid sending a second reply when
                 // timer expires.
@@ -2572,8 +2569,7 @@ bool BackhaulManager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx
     auto db = AgentDB::get();
 
     LOG(DEBUG) << "Sending ACK message to the originator, mid=" << std::hex << mid;
-    send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac,
-                        tlvf::mac_from_string(bridge_info.mac));
+    send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac, db->bridge.mac);
 
     auto channel    = bh_sta_steering_req->target_channel_number();
     auto oper_class = bh_sta_steering_req->operating_class();
@@ -2596,8 +2592,7 @@ bool BackhaulManager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx
             return false;
         }
 
-        send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac,
-                            tlvf::mac_from_string(bridge_info.mac));
+        send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac, db->bridge.mac);
 
         return false;
     }
@@ -2625,8 +2620,7 @@ bool BackhaulManager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx
             return false;
         }
 
-        send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac,
-                            tlvf::mac_from_string(bridge_info.mac));
+        send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac, db->bridge.mac);
 
         return true;
     }
@@ -2679,8 +2673,7 @@ bool BackhaulManager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx
             LOG(DEBUG)
                 << "Steering request timed out. Sending BACKHAUL_STA_STEERING_RESPONSE_MESSAGE";
             auto db = AgentDB::get();
-            send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac,
-                                tlvf::mac_from_string(bridge_info.mac));
+            send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac, db->bridge.mac);
             return true;
         });
     if (m_backhaul_steering_timer == beerocks::net::FileDescriptor::invalid_descriptor) {
