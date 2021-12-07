@@ -653,7 +653,6 @@ bool ApAutoConfigurationTask::add_wsc_m1_tlv(const std::string &radio_iface)
 void ApAutoConfigurationTask::handle_ap_autoconfiguration_response(
     ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac)
 {
-    LOG(DEBUG) << "Received autoconfiguration response message";
     auto db = AgentDB::get();
     if (db->controller_info.bridge_mac != network_utils::ZERO_MAC &&
         src_mac != db->controller_info.bridge_mac) {
@@ -671,21 +670,6 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_response(
     if (tlvSupportedRole->value() != ieee1905_1::tlvSupportedRole::REGISTRAR) {
         LOG(ERROR) << "invalid tlvSupportedRole value";
         return;
-    }
-
-    // Set prplmesh_controller to false by default. If "SLAVE_HANDSHAKE_RESPONSE" is received, mark
-    // it to 'true'.
-    bool prplmesh_controller = false;
-
-    auto beerocks_header = message_com::parse_intel_vs_message(cmdu_rx);
-    if (beerocks_header &&
-        beerocks_header->action_op() == beerocks_message::ACTION_CONTROL_SLAVE_HANDSHAKE_RESPONSE) {
-        // Mark controller as prplMesh.
-        LOG(DEBUG) << "prplMesh controller: received ACTION_CONTROL_SLAVE_HANDSHAKE_RESPONSE from "
-                   << src_mac;
-        prplmesh_controller = true;
-    } else {
-        LOG(DEBUG) << "Not prplMesh controller " << src_mac;
     }
 
     auto tlvSupportedFreqBand = cmdu_rx.getClass<ieee1905_1::tlvSupportedFreqBand>();
@@ -712,7 +696,37 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_response(
         LOG(ERROR) << "invalid tlvSupportedFreqBand value";
         return;
     }
+
+    // We are sending the search message multiple times to support diffrent Profiles Controllers.
+    // As a result we might get several responses. If we already completed the discovery return
+    // right away to prevent redundant processing and log printing.
+    auto discovery_status_it = m_discovery_status.find(freq_type);
+    if (discovery_status_it != m_discovery_status.end() && discovery_status_it->second.completed) {
+        return;
+    }
+    m_discovery_status[freq_type].completed = true;
+
     LOG(DEBUG) << "received ap_autoconfiguration response for " << band_name << " band";
+
+    // Set prplmesh_controller to false by default. If "SLAVE_HANDSHAKE_RESPONSE" is received, mark
+    // it to 'true'.
+    bool prplmesh_controller = false;
+
+    auto beerocks_header = message_com::parse_intel_vs_message(cmdu_rx);
+    if (beerocks_header &&
+        beerocks_header->action_op() == beerocks_message::ACTION_CONTROL_SLAVE_HANDSHAKE_RESPONSE) {
+        // Mark controller as prplMesh.
+        LOG(DEBUG) << "prplMesh controller: received ACTION_CONTROL_SLAVE_HANDSHAKE_RESPONSE from "
+                   << src_mac;
+        prplmesh_controller = true;
+    } else {
+        LOG(DEBUG) << "Not prplMesh controller " << src_mac;
+    }
+
+    auto tlvProfile2MultiApProfile = cmdu_rx.getClass<wfa_map::tlvProfile2MultiApProfile>();
+    if (tlvProfile2MultiApProfile) {
+        db->controller_info.profile_support = tlvProfile2MultiApProfile->profile();
+    }
 
     auto tlvSupportedService = cmdu_rx.getClass<wfa_map::tlvSupportedService>();
     if (!tlvSupportedService) {
