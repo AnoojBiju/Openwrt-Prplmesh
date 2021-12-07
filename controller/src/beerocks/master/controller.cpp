@@ -14,6 +14,7 @@
 #include "tasks/agent_monitoring_task.h"
 #include "tasks/bml_task.h"
 #include "tasks/channel_selection_task.h"
+#include "tasks/client_association_task.h"
 #include "tasks/client_steering_task.h"
 #include "tasks/dhcp_task.h"
 #include "tasks/load_balancer_task.h"
@@ -137,6 +138,10 @@ Controller::Controller(db &database_,
 
     LOG_IF(!tasks.add_task(std::make_shared<topology_task>(database, cmdu_tx, tasks)), FATAL)
         << "Failed adding topology task!";
+
+    LOG_IF(!tasks.add_task(std::make_shared<client_association_task>(database, cmdu_tx, tasks)),
+           FATAL)
+        << "Failed adding client association task!";
 
     LOG_IF(!tasks.add_task(std::make_shared<agent_monitoring_task>(database, cmdu_tx, tasks)),
            FATAL)
@@ -473,8 +478,6 @@ bool Controller::handle_cmdu_1905_1_message(const sMacAddr &src_mac,
         return handle_cmdu_1905_channel_selection_response(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::CHANNEL_SCAN_REPORT_MESSAGE:
         return handle_cmdu_1905_channel_scan_report(src_mac, cmdu_rx);
-    case ieee1905_1::eMessageType::CLIENT_CAPABILITY_REPORT_MESSAGE:
-        return handle_cmdu_1905_client_capability_report_message(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::CLIENT_STEERING_BTM_REPORT_MESSAGE:
         return handle_cmdu_1905_client_steering_btm_report_message(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::HIGHER_LAYER_DATA_MESSAGE:
@@ -496,6 +499,8 @@ bool Controller::handle_cmdu_1905_1_message(const sMacAddr &src_mac,
     case ieee1905_1::eMessageType::TOPOLOGY_RESPONSE_MESSAGE:
     case ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE:
     case ieee1905_1::eMessageType::LINK_METRIC_RESPONSE_MESSAGE:
+    case ieee1905_1::eMessageType::CLIENT_CAPABILITY_REPORT_MESSAGE:
+
         return true;
     default:
         break;
@@ -1279,51 +1284,6 @@ bool Controller::handle_cmdu_1905_steering_completed_message(const sMacAddr &src
     }
     LOG(DEBUG) << "sending ACK message back to agent, mid=" << std::hex << int(mid);
     return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
-}
-
-bool Controller::handle_cmdu_1905_client_capability_report_message(
-    const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
-{
-    auto mid                          = cmdu_rx.getMessageId();
-    auto client_capability_report_tlv = cmdu_rx.getClass<wfa_map::tlvClientCapabilityReport>();
-    if (!client_capability_report_tlv) {
-        LOG(ERROR) << "getClass wfa_map::tlvClientCapabilityReport has failed";
-        return false;
-    }
-
-    std::string result_code =
-        (client_capability_report_tlv->result_code() == wfa_map::tlvClientCapabilityReport::SUCCESS)
-            ? "SUCCESS"
-            : "FAILURE";
-
-    auto client_info_tlv = cmdu_rx.getClass<wfa_map::tlvClientInfo>();
-    if (!client_info_tlv) {
-        LOG(ERROR) << "getClass wfa_map::tlvClientInfo failed";
-        return false;
-    }
-
-    //log the details so it can be checked in the test_flows
-    LOG(INFO) << "Received CLIENT_CAPABILITY_REPORT_MESSAGE, mid=" << std::hex << int(mid)
-              << ", Result Code= " << result_code
-              << ", client MAC= " << client_info_tlv->client_mac()
-              << ", BSSID= " << client_info_tlv->bssid();
-
-    LOG_IF(client_capability_report_tlv->result_code() ==
-               wfa_map::tlvClientCapabilityReport::SUCCESS,
-           DEBUG)
-        << "(Re)Association Request frame= "
-        << beerocks::utils::dump_buffer(client_capability_report_tlv->association_frame(),
-                                        client_capability_report_tlv->association_frame_length());
-
-    auto assoc_frame =
-        assoc_frame::AssocReqFrame::parse(client_capability_report_tlv->association_frame(),
-                                          client_capability_report_tlv->association_frame_length());
-    if (!assoc_frame) {
-        LOG(ERROR) << "Failed to parse (Re)associaiton frame.";
-    } else {
-        LOG(DEBUG) << "SSID: " << assoc_frame->sta_ssid();
-    }
-    return true;
 }
 
 bool Controller::handle_cmdu_1905_client_steering_btm_report_message(

@@ -14,6 +14,7 @@
 #include <chrono>
 #include <memory>
 #include <string>
+#include <tlvf/AssociationRequestFrame/AssocReqFrame.h>
 #include <tlvf/common/sMacAddr.h>
 #include <unordered_map>
 
@@ -100,6 +101,20 @@ public:
         uint64_t btm_query_responses = 0;
         std::string last_steer_ts    = {};
     } steering_summary_stats;
+
+    std::string assoc_timestamp;
+
+    typedef struct sStaCap {
+        sStaCap() = delete;
+        explicit sStaCap(const sMacAddr _sta_mac) : mac(_sta_mac) {}
+        const sMacAddr mac;
+        bool ht_cap_present  = false;
+        bool vht_cap_present = false;
+        assoc_frame::sStaHtCapabilityInfo sta_ht_cap;
+        assoc_frame::sStaVhtCapInfo sta_vht_cap;
+    } sStaCap;
+
+    beerocks::mac_map<sStaCap> m_sta_cap;
 
     void assign_client_locating_task_id(int new_task_id, bool new_connection);
     int get_client_locating_task_id(bool new_connection);
