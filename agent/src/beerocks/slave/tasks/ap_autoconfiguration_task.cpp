@@ -346,20 +346,29 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_search_message(
         }
         auto beerocks_header                      = message_com::get_beerocks_header(m_cmdu_tx);
         beerocks_header->actionhdr()->direction() = beerocks::BEEROCKS_DIRECTION_CONTROLLER;
-        LOG(DEBUG) << "sending autoconfig search message, bridge_mac=" << db->bridge.mac;
         return true;
     };
 
-    create_autoconfig_search();
+    if (!create_autoconfig_search()) {
+        LOG(ERROR) << "Failed creating search message";
+        return false;
+    }
     if (db->controller_info.profile_support ==
         wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1) {
+        LOG(DEBUG) << "sending autoconfig search message, bridge_mac=" << db->bridge.mac;
         return m_btl_ctx.send_cmdu_to_controller({}, m_cmdu_tx);
     } else if (db->controller_info.profile_support ==
                wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::PRPLMESH_PROFILE_UNKNOWN) {
         // If we still don't know which profile the controller supports, send 2 autoconfig search
         // messages: one without the MultiAp profile TLV and one with it.
+        // We do this since we came across certified agents that don't respond to a search message
+        // that contains the newly added TLV. So to make sure we will get a response send both
+        // options.
         m_btl_ctx.send_cmdu_to_controller({}, m_cmdu_tx);
-        create_autoconfig_search();
+        if (!create_autoconfig_search()) {
+            LOG(ERROR) << "Failed creating search message";
+            return false;
+        }
     }
 
     auto tlvProfile2MultiApProfile = m_cmdu_tx.addClass<wfa_map::tlvProfile2MultiApProfile>();
@@ -367,6 +376,7 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_search_message(
         LOG(ERROR) << "addClass wfa_map::tlvProfile2MultiApProfile failed";
         return false;
     }
+
     LOG(DEBUG) << "sending autoconfig search message, bridge_mac=" << db->bridge.mac
                << " with Profile TLV";
     return m_btl_ctx.send_cmdu_to_controller({}, m_cmdu_tx);
