@@ -14,10 +14,9 @@ cSSID:
     _value: ID_SSID
   length:
     _type: uint8_t
-    _length_var: True
   ssid:
     _type: char
-    _length: [ length ]
+    _length: []
     _length_max: 0x20
 
 cRSN:
@@ -30,11 +29,10 @@ cRSN:
     _value: ID_RSN
   length:
     _type: uint8_t
-    _length_var: True
   version:
     _type: uint16_t
   optional:
-    _type: uint16_t
+    _type: uint8_t
     _length: []
 
 cSupportedOpClasses:
@@ -63,7 +61,7 @@ cSupportRates:
     _type: uint8_t
   supported_rated:
     _type: uint8_t
-    _length: [ length ]
+    _length: []
 
 cExtendedSupportRates:
   _comment: |
@@ -78,7 +76,7 @@ cExtendedSupportRates:
     _type: uint8_t
   extended_suport_rated:
     _type: uint8_t
-    _length: [ length ]
+    _length: []
 
 cPowerCapability:
   _comment: |

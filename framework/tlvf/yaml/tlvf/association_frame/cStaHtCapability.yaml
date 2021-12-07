@@ -8,6 +8,7 @@ _namespace: assoc_frame
 
 cStaHtCapability:
   _type: class
+  _is_tlv_class: True
   type:
     _type: eElementID
     _value: ID_HT_CAPABILITY

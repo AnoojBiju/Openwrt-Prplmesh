@@ -21,7 +21,6 @@ cFastBssTrans:
     _value: ID_FAST_BSS_TRANS
   length:
     _type: uint8_t
-    _length_var: True
   data:
     _type: uint8_t
     _length: []
@@ -34,7 +33,6 @@ cFmsRequest:
     _value: ID_FMS_REQUEST
   length:
     _type: uint8_t
-    _length_var: True
   fms_token:
     _type: uint8_t
   fms_request_subelem:
@@ -49,7 +47,6 @@ cDmsRequest:
     _value: ID_DMS_REQUEST
   length:
     _type: uint8_t
-    _length_var: True
   dms_descrip_list:
     _type: uint8_t
     _length: []
