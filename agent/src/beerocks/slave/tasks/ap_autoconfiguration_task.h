@@ -19,12 +19,12 @@
 
 namespace beerocks {
 
-// Forward declaration for BackhaulManager context saving
-class BackhaulManager;
+// Forward declaration for Agent context saving
+class slave_thread;
 
 class ApAutoConfigurationTask : public Task {
 public:
-    ApAutoConfigurationTask(BackhaulManager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu_tx);
+    ApAutoConfigurationTask(slave_thread &btl_ctx, ieee1905_1::CmduMessageTx &cmdu_tx);
     ~ApAutoConfigurationTask() {}
 
     void work() override;

@@ -762,16 +762,12 @@ typedef struct sBackhaulParams {
     uint8_t backhaul_iface_type;
     uint8_t is_backhaul_manager;
     uint8_t is_prplmesh_controller;
-    beerocks::net::sScanResult backhaul_scan_measurement_list[beerocks::message::BACKHAUL_SCAN_MEASUREMENT_MAX_LENGTH];
     void struct_swap(){
         controller_bridge_mac.struct_swap();
         bridge_ipv4.struct_swap();
         backhaul_mac.struct_swap();
         backhaul_ipv4.struct_swap();
         backhaul_bssid.struct_swap();
-        for (size_t i = 0; i < beerocks::message::BACKHAUL_SCAN_MEASUREMENT_MAX_LENGTH; i++){
-            (backhaul_scan_measurement_list[i]).struct_swap();
-        }
     }
     void struct_init(){
         controller_bridge_mac.struct_init();
@@ -779,9 +775,6 @@ typedef struct sBackhaulParams {
         backhaul_mac.struct_init();
         backhaul_ipv4.struct_init();
         backhaul_bssid.struct_init();
-            for (size_t i = 0; i < beerocks::message::BACKHAUL_SCAN_MEASUREMENT_MAX_LENGTH; i++) {
-                (backhaul_scan_measurement_list[i]).struct_init();
-            }
     }
 } __attribute__((packed)) sBackhaulParams;
 

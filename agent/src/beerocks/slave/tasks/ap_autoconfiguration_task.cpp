@@ -632,9 +632,9 @@ bool ApAutoConfigurationTask::add_wsc_m1_tlv(const std::string &radio_iface)
     cfg.primary_dev_type_id = WSC::WSC_DEV_NETWORK_INFRA_AP;
     cfg.device_name         = "prplmesh-agent";
     cfg.bands               = son::wireless_utils::is_frequency_band_5ghz(radio->freq_type)
-                                  ? WSC::WSC_RF_BAND_5GHZ
-                                  : WSC::WSC_RF_BAND_2GHZ;
-    auto attributes         = WSC::m1::create(*tlv, cfg);
+                    ? WSC::WSC_RF_BAND_5GHZ
+                    : WSC::WSC_RF_BAND_2GHZ;
+    auto attributes = WSC::m1::create(*tlv, cfg);
     if (!attributes)
         return false;
 
