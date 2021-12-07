@@ -847,6 +847,24 @@ public:
                                         const uint16_t status_code);
 
     /**
+     * @brief Sets value for parameters of optional sub-object STA HTCapabilities.
+     *
+     * @param path_to_event Path to event which contains STA HTCapabilities sub-object.
+     * @param sta_mac MAC address of the station.
+     * @return True on success, false otherwise.
+     */
+    bool dm_set_assoc_event_sta_ht_cap(const std::string &path_to_event, const sMacAddr &sta_mac);
+
+    /**
+     * @brief Sets value for parameters of optional sub-object STA VHTCapabilities.
+     *
+     * @param path_to_event Path to event which contains STA VHTCapabilities sub-object.
+     * @param sta_mac MAC address of the station.
+     * @return True on success, false otherwise.
+     */
+    bool dm_set_assoc_event_sta_vht_cap(const std::string &path_to_event, const sMacAddr &sta_mac);
+
+    /**
      * @brief Set STA DHCPv4 lease information for both node and datamodel.
      *
      * Path: Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}
@@ -1902,6 +1920,21 @@ public:
                                          const sMacAddr &backhaul_mac,
                                          const beerocks::eIfaceType &interface_type);
 
+    /**
+     * @brief Adds to data model an instance of object AssociationEventData.
+     *
+     * This object describes an event generated when a STA associates to a BSS.
+     * Example of full path to object:
+     * 'Device.WiFi.DataElements.Notification.AssociationEvent.AssociationEventData.1'.
+     *
+     * @param bssid BSS mac address.
+     * @param client_mac Client mac address.
+     * @param assoc_ts Timesamp in Data Model time format of station association.
+     * @return Path to object on success, empty sring otherwise.
+     */
+    std::string dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_mac,
+                                         const std::string &assoc_ts = {});
+
     //
     // tasks
     //
@@ -2208,19 +2241,6 @@ private:
     bool dm_add_sta_element(const sMacAddr &bssid, Station &station);
 
     /**
-     * @brief Adds to data model an instance of object AssociationEventData.
-     *
-     * This object describes an event generated when a STA associates to a BSS.
-     * Example of full path to object:
-     * 'Device.WiFi.DataElements.Notification.AssociationEvent.AssociationEventData.1'.
-     *
-     * @param bssid BSS mac address.
-     * @param client_mac Client mac address.
-     * @return Path to object on success, empty sring otherwise.
-     */
-    std::string dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_mac);
-
-    /**
      * @brief Prepares path to the BSS data element with correct index (i).
      *
      * Data model path example: "Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.2."
@@ -2366,11 +2386,6 @@ private:
     std::queue<std::string> m_steer_history;
 
     std::shared_ptr<beerocks::nbapi::Ambiorix> m_ambiorix_datamodel;
-
-    /**
-     * @brief key = client mac, value = index of NBAPI AssociationEventData
-     */
-    std::map<std::string, std::list<int>> m_assoc_indx;
 
     /**
      * @brief Maximum amount of events registered on the system bus NBAPI
