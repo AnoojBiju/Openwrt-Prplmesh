@@ -467,9 +467,6 @@ private:
     STATE(WIRELESS_WAIT_FOR_RECONNECT)                                                             \
     STATE(_WIRELESS_END_)                                                                          \
                                                                                                    \
-    STATE(MASTER_DISCOVERY)                                                                        \
-    STATE(WAIT_FOR_AUTOCONFIG_COMPLETE)                                                            \
-    STATE(CONNECT_TO_MASTER)                                                                       \
     STATE(CONNECTED)                                                                               \
     STATE(OPERATIONAL)                                                                             \
     STATE(RESTART)                                                                                 \

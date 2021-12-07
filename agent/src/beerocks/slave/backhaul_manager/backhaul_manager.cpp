@@ -727,7 +727,7 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
         // Ignore 'selected_backhaul' since this case is not covered by certification flows
         if (db->device_conf.local_controller && db->device_conf.local_gw) {
             LOG(DEBUG) << "local controller && local gw";
-            FSM_MOVE_STATE(MASTER_DISCOVERY);
+            FSM_MOVE_STATE(CONNECTED);
             db->backhaul.connection_type = AgentDB::sBackhaul::eConnectionType::Invalid;
             db->backhaul.selected_iface_name.clear();
             break;
@@ -792,14 +792,14 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
         if (db->backhaul.connection_type == AgentDB::sBackhaul::eConnectionType::Wireless) {
             FSM_MOVE_STATE(INIT_HAL);
         } else { // EType::Wired
-            FSM_MOVE_STATE(MASTER_DISCOVERY);
+            FSM_MOVE_STATE(CONNECTED);
         }
 
         skip_select = true;
         break;
     }
-    case EState::MASTER_DISCOVERY: {
-
+    // Backhaul Link exists
+    case EState::CONNECTED: {
         auto db = AgentDB::get();
 
         bool wired_backhaul =
@@ -814,72 +814,11 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
             }
         }
 
-        if (beerocks::net::network_utils::get_iface_info(bridge_info, db->bridge.iface_name) != 0) {
-            LOG(ERROR) << "Failed reading addresses from the bridge!";
-            platform_notify_error(bpl::eErrorCode::BH_READING_DATA_FROM_THE_BRIDGE, "");
-            stop_on_failure_attempts--;
-            FSM_MOVE_STATE(RESTART);
-            break;
-        }
+        finalize_slaves_connect_state(true);
+        stop_on_failure_attempts = configuration_stop_on_failure_attempts;
 
-        // Configure the transport process to bind the al_mac address
-        if (!m_broker_client->configure_al_mac(db->bridge.mac)) {
-            LOG(ERROR) << "Failed configuring transport process!";
-            FSM_MOVE_STATE(RESTART);
-            break;
-        }
-
-        // In certification mode, if prplMesh is configured with local controller, do not enable the
-        // transport process until agent has connected to controller. This way we prevent the agent
-        // from connecting to another controller in the testbed, which might still be running from a
-        // previous test.
-        if (!(db->device_conf.certification_mode && db->device_conf.local_controller)) {
-            if (db->device_conf.management_mode != BPL_MGMT_MODE_NOT_MULTIAP) {
-                // Configure the transport process to use the network bridge
-                if (!m_broker_client->configure_interfaces(db->bridge.iface_name, {}, true, true)) {
-                    LOG(ERROR) << "Failed configuring transport process!";
-                    FSM_MOVE_STATE(RESTART);
-                    break;
-                }
-            }
-        }
-
-        FSM_MOVE_STATE(WAIT_FOR_AUTOCONFIG_COMPLETE);
-        m_task_pool.send_event(eTaskType::AP_AUTOCONFIGURATION,
-                               ApAutoConfigurationTask::eEvent::START_AP_AUTOCONFIGURATION);
-        break;
-    }
-    case EState::WAIT_FOR_AUTOCONFIG_COMPLETE: {
-        auto db = AgentDB::get();
-        if (db->statuses.ap_autoconfiguration_completed) {
-            finalize_slaves_connect_state(true);
-            FSM_MOVE_STATE(CONNECT_TO_MASTER);
-            break;
-        }
-        break;
-    }
-    case EState::CONNECT_TO_MASTER: {
-        FSM_MOVE_STATE(CONNECTED);
-        break;
-    }
-    // Successfully connected to the master
-    case EState::CONNECTED: {
-        auto db = AgentDB::get();
-
-        // In certification mode, if prplMesh is configured with local controller, do not enable the
-        // transport process until agent has connected to controller. This way we prevent the agent
-        // from connecting to another controller in the testbed, which might still be running from a
-        // previous test.
-        if (db->device_conf.certification_mode && db->device_conf.local_controller) {
-            if (db->device_conf.management_mode != BPL_MGMT_MODE_NOT_MULTIAP) {
-                // Configure the transport process to use the network bridge
-                if (!m_broker_client->configure_interfaces(db->bridge.iface_name, {}, true, true)) {
-                    LOG(ERROR) << "Failed configuring transport process!";
-                    FSM_MOVE_STATE(RESTART);
-                    break;
-                }
-            }
-        }
+        LOG(DEBUG) << "clearing blacklist";
+        ap_blacklist.clear();
 
         /**
          * According to the 1905.1 specification section 8.2.1.1 - A 1905.1 management entity shall
@@ -889,11 +828,6 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
          * message.
          */
         m_task_pool.send_event(eTaskType::TOPOLOGY, TopologyTask::eEvent::AGENT_DEVICE_INITIALIZED);
-
-        stop_on_failure_attempts = configuration_stop_on_failure_attempts;
-
-        LOG(DEBUG) << "clearing blacklist";
-        ap_blacklist.clear();
 
         // This snippet is commented out since the only place that use it, is also commented out.
         // An event-driven solution will be implemented as part of the task:
@@ -1562,20 +1496,14 @@ bool BackhaulManager::handle_slave_backhaul_message(int fd, ieee1905_1::CmduMess
             radio_info->radio_mac = radio->front.iface_mac;
         }
 
-        if (m_eFSMState >= EState::CONNECT_TO_MASTER) {
-            LOG(INFO) << "Sending topology notification on reconnected son_slave";
-            m_task_pool.send_event(eTaskType::TOPOLOGY,
-                                   TopologyTask::eEvent::AGENT_RADIO_STATE_CHANGED);
+        if (m_eFSMState >= EState::CONNECTED) {
         }
 
         // If we're already connected, send a notification to the slave
         if (FSM_IS_IN_STATE(OPERATIONAL)) {
-            m_task_pool.send_event(eTaskType::AP_AUTOCONFIGURATION,
-                                   ApAutoConfigurationTask::eEvent::START_AP_AUTOCONFIGURATION);
 
-            // When the Auto-Configuration completes, a connection notification will be sent to the
-            // Agent.
-            FSM_MOVE_STATE(WAIT_FOR_AUTOCONFIG_COMPLETE);
+            // Send a connection notification to the Agent right away.
+            FSM_MOVE_STATE(CONNECTED);
             break;
         }
 
@@ -2032,7 +1960,7 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
 
             // Send slave enable the AP's
             send_slaves_enable();
-            FSM_MOVE_STATE(MASTER_DISCOVERY);
+            FSM_MOVE_STATE(CONNECTED);
         }
         if (FSM_IS_IN_STATE(WIRELESS_ASSOCIATE_4ADDR_WAIT)) {
             LOG(DEBUG) << "successful connect on iface=" << iface;
@@ -2087,13 +2015,13 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
             // Send slaves to enable the AP's
             send_slaves_enable();
 
-            FSM_MOVE_STATE(MASTER_DISCOVERY);
+            FSM_MOVE_STATE(CONNECTED);
         } else if (FSM_IS_IN_STATE(WIRELESS_WAIT_FOR_RECONNECT)) {
             LOG(DEBUG) << "reconnected successfully, continuing";
 
             // IRE running controller
             if (db->device_conf.local_controller && !db->device_conf.local_gw) {
-                FSM_MOVE_STATE(CONNECT_TO_MASTER);
+                FSM_MOVE_STATE(CONNECTED);
             } else {
                 FSM_MOVE_STATE(OPERATIONAL);
             }

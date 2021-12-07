@@ -337,7 +337,6 @@ private:
         beerocks_message::sSonConfig son_config;
         int stop_on_failure_attempts;
         bool configuration_in_progress = false;
-        bool autoconfiguration_completed;
 
         int monitor_fd    = net::FileDescriptor::invalid_descriptor;
         int ap_manager_fd = net::FileDescriptor::invalid_descriptor;

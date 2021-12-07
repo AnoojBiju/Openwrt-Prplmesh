@@ -149,6 +149,7 @@ void ApAutoConfigurationTask::work()
             break;
         }
         case eState::SEND_AP_AUTOCONFIGURATION_WSC_M1: {
+            send_ap_autoconfiguration_wsc_m1_message(radio_iface);
             FSM_MOVE_STATE(radio_iface, eState::WAIT_AP_AUTOCONFIGURATION_WSC_M2);
             break;
         }
