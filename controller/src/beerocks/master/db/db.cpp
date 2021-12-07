@@ -345,11 +345,11 @@ bool db::add_node_wired_backhaul(const sMacAddr &mac, const sMacAddr &parent_mac
     return true;
 }
 
-std::string db::dm_add_radio_element(const std::string &radio_mac, const std::string &device_mac)
+std::string db::dm_add_radio_element(const sMacAddr &radio_mac, const sMacAddr &device_mac)
 {
     std::string path_to_obj = "Device.WiFi.DataElements.Network.Device.";
-    uint32_t index =
-        m_ambiorix_datamodel->get_instance_index(path_to_obj + "[ID == '%s'].", device_mac);
+    uint32_t index = m_ambiorix_datamodel->get_instance_index(path_to_obj + "[ID == '%s'].",
+                                                              tlvf::mac_to_string(device_mac));
 
     if (!index) {
         LOG(ERROR) << "Failed to get Device.WiFi.DataElements.Network.Device index for mac: "
@@ -368,7 +368,7 @@ std::string db::dm_add_radio_element(const std::string &radio_mac, const std::st
 
     // Prepare path to the Radio object ID, like Device.Network.{i}.Radio.{i}.ID
     if (!m_ambiorix_datamodel->set(radio_instance, "ID", radio_mac)) {
-        LOG(ERROR) << "Failed to set " << radio_instance << "ID: " << radio_mac;
+        LOG(ERROR) << "Failed to set " << radio_instance << " ID: " << radio_mac;
         return {};
     }
 
@@ -454,8 +454,7 @@ bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac)
 
     auto radio = agent->radios.add(mac);
 
-    auto data_model_path =
-        dm_add_radio_element(tlvf::mac_to_string(mac), tlvf::mac_to_string(parent_mac));
+    auto data_model_path = dm_add_radio_element(mac, parent_mac);
 
     if (data_model_path.empty()) {
         LOG(ERROR) << "Failed to add radio element, mac: " << mac;
