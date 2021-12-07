@@ -403,7 +403,7 @@ public:
      * @param mac address of device
      * @return data model path if radio instance was successfully added, empty string otherwise
      */
-    std::string dm_add_radio_element(const std::string &radio_mac, const std::string &device_mac);
+    std::string dm_add_radio_element(const sMacAddr &radio_mac, const sMacAddr &device_mac);
 
     /**
     * @brief Add instance of data element 'MeasurementReport'.
