@@ -165,7 +165,7 @@ bool client_association_task::dm_add_sta_association_event(const sMacAddr &sta_m
 {
     // Add AssociationEventData data model object
     auto assoc_timestamp  = m_assoc_sta[sta_mac];
-    auto assoc_event_path = m_database.dm_add_association_event(sta_mac, bssid, assoc_timestamp);
+    auto assoc_event_path = m_database.dm_add_association_event(bssid, sta_mac, assoc_timestamp);
 
     if (assoc_event_path.empty()) {
         LOG(ERROR) << "Failed to add AssociationEventData for sta: " << sta_mac;
