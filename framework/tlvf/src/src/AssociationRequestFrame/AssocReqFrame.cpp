@@ -65,6 +65,13 @@ std::shared_ptr<AssocReqFrame> AssocReqFrame::parse(uint8_t *assoc_frame_buff,
         return {};
     }
     LOG(DEBUG) << fields->type << " parsed successfully";
+
+    /*
+     * swap once to host byte order
+     */
+    if (!fields->is_swapped()) {
+        fields->swap();
+    }
     return fields;
 }
 
@@ -441,6 +448,20 @@ bool AssocReqFrame::valid() const
     if (fields_present.he_capability && !getAttr<cStaHeCapability>()) {
         TLVF_LOG(ERROR) << "getAttr<cStaHeCapability> failed";
         return false;
+    }
+    return true;
+}
+
+bool AssocReqFrame::finalize()
+{
+    //finalize last added attribute
+    if (!this->ClassList::finalize()) {
+        return false;
+    }
+
+    //swap once to network byte order
+    if (!this->is_swapped()) {
+        this->swap();
     }
     return true;
 }

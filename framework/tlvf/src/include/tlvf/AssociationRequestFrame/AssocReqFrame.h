@@ -88,6 +88,7 @@ public:
                                                 const eFrameType frame_type = eFrameType::UNKNOWN);
     bool valid() const override;
     bool init();
+    bool finalize();
     uint16_t &listen_interval();
     std::string sta_ssid();
     std::shared_ptr<cStaHtCapability> sta_ht_capability();
