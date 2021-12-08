@@ -1905,14 +1905,14 @@ bool ap_wlan_hal_dwpal::read_acs_report()
     parsed_multiline_t reply;
     int64_t tmp_int;
 
-    std::string cmd = "GET_ACS_REPORT";
+    std::string cmd = "GET_ACS_REPORT_ALL_CH";
 
     // Send command
     if (!dwpal_send_cmd(cmd, reply)) {
         LOG(ERROR) << "read_acs_report() failed!";
         return false;
     }
-    LOG(DEBUG) << "GET_ACS_REPORT reply:";
+    LOG(DEBUG) << "GET_ACS_REPORT_ALL_CH reply:";
 
     uint32_t ch_idx = 0;
     for (auto &line : reply) {
