@@ -744,6 +744,11 @@ bool network_utils::linux_iface_get_mac(const std::string &iface, std::string &m
 
     mac.clear();
 
+    if (iface.empty()) {
+        LOG(ERROR) << "Empty interface name";
+        return false;
+    }
+
     if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
         LOG(ERROR) << "Can't open SOCK_DGRAM socket";
         return false;

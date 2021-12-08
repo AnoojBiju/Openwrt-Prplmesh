@@ -223,6 +223,26 @@ bool Controller::start()
         }
     }
 
+    // GW & GW Switch nodes are need to be added in case of Controller only mode
+    // Normally node/database objects are added with SLAVE JOIN messages
+    // In case of Controller only mode, prplMesh agent will not start JOIN process.
+    if (database.config.management_mode == BPL_MGMT_MODE_MULTIAP_CONTROLLER) {
+        LOG(INFO) << "Controller only Mode is selected. Add GW node to database";
+
+        auto agent = database.m_agents.add(database.get_local_bridge_mac());
+        database.set_prplmesh(database.get_local_bridge_mac());
+        database.set_agent_manufacturer(*agent, "prplMesh");
+        agent->is_gateway = true;
+
+        auto eth_switch_mac = beerocks::net::network_utils::get_eth_sw_mac_from_bridge_mac(
+            database.get_local_bridge_mac());
+        auto eth_switch_mac_str = tlvf::mac_to_string(eth_switch_mac);
+        database.add_node_wired_backhaul(eth_switch_mac, database.get_local_bridge_mac());
+        database.set_node_state(eth_switch_mac_str, beerocks::STATE_CONNECTED);
+        database.set_node_name(eth_switch_mac_str, "GW_CONTROLLER_ETH");
+        database.set_node_manufacturer(eth_switch_mac_str, agent->manufacturer);
+    }
+
     // Create a timer to run internal tasks periodically
     m_tasks_timer = m_timer_manager->add_timer(
         "Controller Tasks", tasks_timer_period, tasks_timer_period,
