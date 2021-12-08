@@ -98,21 +98,20 @@ slave_thread::slave_thread(sAgentConfig conf, beerocks::logging &logger_)
     : cmdu_tx(m_tx_buffer, sizeof(m_tx_buffer)), config(conf), logger(logger_)
 {
     thread_name = BEEROCKS_AGENT;
+
+    // Set configuration on Agent database.
+    auto db                                  = AgentDB::get();
+    db->bridge.iface_name                    = conf.bridge_iface;
+    db->backhaul.preferred_bssid             = tlvf::mac_from_string(conf.backhaul_preferred_bssid);
+    db->device_conf.stop_on_failure_attempts = conf.stop_on_failure_attempts;
+
     for (const auto &radio_map_element : config.radios) {
 
         const auto &fronthaul_iface = radio_map_element.first;
         const auto &radio_conf      = radio_map_element.second;
 
-        auto &radio_manager = m_radio_managers[fronthaul_iface];
-
-        // Set configuration on Agent database.
-        auto db = AgentDB::get();
-
-        db->device_conf.stop_on_failure_attempts = conf.stop_on_failure_attempts;
-        radio_manager.stop_on_failure_attempts   = db->device_conf.stop_on_failure_attempts;
-
-        db->bridge.iface_name        = conf.bridge_iface;
-        db->backhaul.preferred_bssid = tlvf::mac_from_string(conf.backhaul_preferred_bssid);
+        auto &radio_manager                    = m_radio_managers[fronthaul_iface];
+        radio_manager.stop_on_failure_attempts = db->device_conf.stop_on_failure_attempts;
 
         auto radio = db->add_radio(fronthaul_iface, radio_conf.backhaul_wireless_iface);
         if (!radio) {
@@ -451,11 +450,6 @@ bool slave_thread::read_platform_configuration()
         return false;
     }
     db->device_conf.local_controller = temp_int;
-    if ((temp_int = bpl::cfg_get_management_mode()) < 0) {
-        LOG(ERROR) << "Failed reading 'management_mode'";
-        return false;
-    }
-    db->device_conf.management_mode = temp_int;
     if ((temp_int = bpl::cfg_get_operating_mode()) < 0) {
         LOG(ERROR) << "Failed reading 'operating_mode'";
         return false;
@@ -4267,6 +4261,14 @@ bool slave_thread::agent_fsm()
 
         bool all_radios_disabled = true;
         auto db                  = AgentDB::get();
+
+        // Controller only mode skips fronthaul management
+        if (db->device_conf.management_mode == BPL_MGMT_MODE_MULTIAP_CONTROLLER) {
+            LOG(TRACE) << "Controller Only Mode goto STATE_BACKHAUL_ENABLE";
+            m_agent_state = STATE_BACKHAUL_ENABLE;
+            break;
+        }
+
         for (const auto &radio_conf_element : db->device_conf.front_radio.config) {
             auto &radio_iface = radio_conf_element.first;
             auto &radio_conf  = radio_conf_element.second;
@@ -5440,7 +5442,7 @@ bool slave_thread::handle_autoconfiguration_wsc(int fd, ieee1905_1::CmduMessageR
              * When we are configured in a way we don't support, we should tear down the BSS, and
              * send an error response on that BSS.
              * Currently R2 certified controllers (Mediatek/Marvel) have a bug (PPM-1389) that ends
-             * up sending M2 with both profile 1/2 disallow flags set to false although we report 
+             * up sending M2 with both profile 1/2 disallow flags set to false although we report
              * combined_profile1_and_profile2 = 0 in ap_radio_advanced_capabilities_tlv.
              * To deal with it, temporarily comment the lines above and allow the BSS to be
              * configured successfully until PPM-1389 is resolved.
