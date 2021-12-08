@@ -166,6 +166,9 @@ sStaStatsParams:
   rx_load_percent: uint8_t
   stats_delta_ms: uint16_t
   rx_rssi: int8_t
+  dl_bandwidth:
+    _type: uint8_t
+    _comment: beerocks::eWiFiBandwidth, indicates the station's downlink bandwidth.
 
 sApStatsParams:
   _type: struct

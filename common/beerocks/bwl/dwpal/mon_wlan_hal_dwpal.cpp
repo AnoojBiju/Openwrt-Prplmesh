@@ -852,6 +852,12 @@ bool mon_wlan_hal_dwpal::update_stations_stats(const std::string &vap_iface_name
     }
     sta_stats.retrans_count = tmp_int;
 
+    //Optional: Current link bandwidth
+    sta_stats.dl_bandwidth = beerocks::BANDWIDTH_UNKNOWN;
+    if (read_param("CbwMHz", reply, tmp_int, true) && (tmp_int > 0)) {
+        sta_stats.dl_bandwidth = beerocks::utils::convert_bandwidth_to_enum(int(tmp_int));
+    }
+
     return true;
 }
 

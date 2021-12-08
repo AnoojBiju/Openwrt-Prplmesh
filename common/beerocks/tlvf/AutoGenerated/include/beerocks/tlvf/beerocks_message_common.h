@@ -222,6 +222,8 @@ typedef struct sStaStatsParams {
     uint8_t rx_load_percent;
     uint16_t stats_delta_ms;
     int8_t rx_rssi;
+    //beerocks::eWiFiBandwidth, indicates the station's downlink bandwidth.
+    uint8_t dl_bandwidth;
     void struct_swap(){
         mac.struct_swap();
         tlvf_swap(32, reinterpret_cast<uint8_t*>(&rx_packets));
