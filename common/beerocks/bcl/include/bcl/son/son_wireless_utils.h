@@ -292,6 +292,14 @@ public:
                                           const beerocks::eWiFiBandwidth operating_bandwidth,
                                           std::unordered_set<uint8_t> &resulting_channels);
 
+    /**
+     * @brief Print station capabilities.
+     *
+     * @param sta_caps Capabilities to be displayed.
+     * @return void.
+     */
+    static void print_station_capabilities(beerocks::message::sRadioCapabilities &sta_caps);
+
 private:
     enum eAntennaFactor {
         ANT_FACTOR_1X1 = 0,
