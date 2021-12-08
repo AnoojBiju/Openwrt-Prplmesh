@@ -239,10 +239,10 @@ monitor_db::~monitor_db()
 void monitor_db::clear()
 {
     LOG(DEBUG) << "db clear()";
-    poll_id                = 0;
     poll_cnt               = 0;
     poll_next_time         = std::chrono::steady_clock::now();
     last_stats_update_time = std::chrono::steady_clock::now();
+    ap_poll_next_time      = std::chrono::steady_clock::now();
 
     sta_erase_all();
     vap_erase_all();
@@ -379,11 +379,21 @@ void monitor_db::set_ap_poll_next_time(std::chrono::steady_clock::time_point pt,
     ap_poll_next_time = pt;
 }
 
+std::chrono::steady_clock::time_point monitor_db::get_last_stats_update_time()
+{
+    return last_stats_update_time;
+}
+
+void monitor_db::set_last_stats_update_time(std::chrono::steady_clock::time_point pt,
+                                            bool reset_poll)
+{
+    last_stats_update_time = pt;
+}
+
 bool monitor_db::poll_done()
 {
-    if (((poll_cnt + 1) * m_poll_rate_msec) >= m_measurement_window_msec) {
+    if (is_last_poll()) {
         poll_cnt = 0;
-        poll_id++;
         return true;
     } else {
         poll_cnt++;
@@ -391,14 +401,11 @@ bool monitor_db::poll_done()
     }
 }
 
-uint32_t monitor_db::get_poll_id() { return poll_id; }
-
 uint8_t monitor_db::get_poll_cnt() { return poll_cnt; }
 
 bool monitor_db::is_last_poll()
 {
-    bool poll_last = (((poll_cnt + 1) * m_poll_rate_msec) >= m_measurement_window_msec);
-    return poll_last;
+    return (((poll_cnt + 1) * m_poll_rate_msec) >= m_measurement_window_msec);
 }
 
 uint32_t monitor_sta_node::get_tx_packets() const
