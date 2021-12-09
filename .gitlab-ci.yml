@@ -141,6 +141,7 @@ nbapi-docgen:
 
 # Updates gitlab pages with the NBAPI documentation:
 # https://prpl-foundation.gitlab.io/prplmesh/prplMesh/
+# Only run on the master branch, to avoid unneccesary pushes.
 pages:
   stage: upload
   needs: ["nbapi-docgen"]
@@ -149,8 +150,8 @@ pages:
   artifacts:
     paths:
       - public
-#  rules:
-#    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 shellcheck:
   stage: build
