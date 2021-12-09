@@ -6,6 +6,7 @@
  * See LICENSE file for more details.
  */
 #include "ambiorix_impl.h"
+#include "tlvf/tlvftypes.h"
 
 namespace beerocks {
 namespace nbapi {
@@ -515,6 +516,12 @@ bool AmbiorixImpl::set(const std::string &relative_path, const std::string &para
     }
 
     return true;
+}
+
+bool AmbiorixImpl::set(const std::string &relative_path, const std::string &parameter,
+                       const sMacAddr &value)
+{
+    return set(relative_path, parameter, tlvf::mac_to_string(value));
 }
 
 std::string AmbiorixImpl::add_instance(const std::string &relative_path)
