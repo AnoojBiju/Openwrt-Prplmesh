@@ -329,6 +329,7 @@ public:
         uint8_t signal_avg_dbm      = 0;
         uint16_t tx_bitrate_100kbps = 0;
         uint16_t rx_bitrate_100kbps = 0;
+        uint8_t dl_bandwidth        = 0; //beerocks::eWiFiBandwidth
     };
 
     /**

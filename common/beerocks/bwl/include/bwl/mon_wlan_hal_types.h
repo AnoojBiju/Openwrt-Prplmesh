@@ -90,6 +90,7 @@ struct SStaStats {
     // uint8_t  tx_load_percent_prev=0;
     // uint8_t  rx_load_percent_curr=0;
     // uint8_t  rx_load_percent_prev=0;
+    uint8_t dl_bandwidth = 0; //beerocks::eWiFiBandwidth
 };
 
 struct SStaChannelLoadRequest11k {

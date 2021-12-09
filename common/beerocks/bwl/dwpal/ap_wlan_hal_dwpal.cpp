@@ -112,6 +112,34 @@ static uint8_t dwpal_bw_to_beerocks_bw(const uint8_t chan_width)
     return it->second;
 }
 
+/*
+ * @brief convert standard channel width number (Cf. IEEE 802.11-2020 Table 9-175)
+ * to beerocks bandwidth enum
+ *
+ * @param chan_width_nr standard channel width number enum
+ * @return BANDWIDTH_UNKNOWN if no match was found
+ */
+static beerocks::eWiFiBandwidth dwpal_ch_width_nr_to_beerocks_bw(const uint8_t chan_width_nr)
+{
+    // clang-format off
+    std::map<uint8_t, beerocks::eWiFiBandwidth> bandwidths {
+        { NR_CHAN_WIDTH_20,    beerocks::BANDWIDTH_20 },
+        { NR_CHAN_WIDTH_40,    beerocks::BANDWIDTH_40 },
+        { NR_CHAN_WIDTH_80,    beerocks::BANDWIDTH_80 },
+        { NR_CHAN_WIDTH_160,   beerocks::BANDWIDTH_160 },
+        { NR_CHAN_WIDTH_80P80, beerocks::BANDWIDTH_80_80 },
+    };
+    // clang-format on
+
+    auto it = bandwidths.find(chan_width_nr);
+    if (bandwidths.end() == it) {
+        LOG(ERROR) << "Invalid bandwidth nr value: " << chan_width_nr;
+        return beerocks::BANDWIDTH_UNKNOWN;
+    }
+
+    return it->second;
+}
+
 static void get_ht_mcs_capabilities(int *HT_MCS, std::string &ht_cap_str,
                                     beerocks::message::sRadioCapabilities &sta_caps)
 {
@@ -1905,14 +1933,14 @@ bool ap_wlan_hal_dwpal::read_acs_report()
     parsed_multiline_t reply;
     int64_t tmp_int;
 
-    std::string cmd = "GET_ACS_REPORT";
+    std::string cmd = "GET_ACS_REPORT_ALL_CH";
 
     // Send command
     if (!dwpal_send_cmd(cmd, reply)) {
         LOG(ERROR) << "read_acs_report() failed!";
         return false;
     }
-    LOG(DEBUG) << "GET_ACS_REPORT reply:";
+    LOG(DEBUG) << "GET_ACS_REPORT_ALL_CH reply:";
 
     uint32_t ch_idx = 0;
     for (auto &line : reply) {
@@ -2359,7 +2387,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
 
         // Initialize the message
         memset(msg_buff.get(), 0, sizeof(sACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION));
-        memset((char *)&msg->params.capabilities, 0, sizeof(msg->params.capabilities));
+        msg->params.capabilities = {};
 
         char VAP[SSID_MAX_SIZE]                = {0};
         char MACAddress[MAC_ADDR_SIZE]         = {0};
@@ -2371,6 +2399,9 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         char vht_cap[16]                       = {0};
         size_t numOfValidArgs[22]              = {0};
         char assoc_req[ASSOCIATION_FRAME_SIZE] = {0};
+
+        //force to unknown if not available
+        uint8_t max_ch_width = NR_CHAN_WIDTH_UNKNOWN;
 
         FieldsToParse fieldsToParse[] = {
             {NULL /*opCode*/, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
@@ -2398,8 +2429,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
              DWPAL_CHAR_PARAM, "band_5g_capable=", 0},
             {(void *)&msg->params.capabilities.rrm_supported, &numOfValidArgs[14], DWPAL_CHAR_PARAM,
              "rrm_supported=", 0},
-            {(void *)&msg->params.capabilities.max_ch_width, &numOfValidArgs[15], DWPAL_CHAR_PARAM,
-             "max_ch_width=", 0},
+            {(void *)&max_ch_width, &numOfValidArgs[15], DWPAL_CHAR_PARAM, "max_ch_width=", 0},
             {(void *)&msg->params.capabilities.max_streams, &numOfValidArgs[16], DWPAL_CHAR_PARAM,
              "max_streams=", 0},
             {(void *)&msg->params.capabilities.phy_mode, &numOfValidArgs[17], DWPAL_CHAR_PARAM,
@@ -2420,6 +2450,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
             LOG(ERROR) << "DWPAL parse error ==> Abort";
             return false;
         }
+        msg->params.capabilities.max_ch_width = dwpal_ch_width_nr_to_beerocks_bw(max_ch_width);
 
         LOG(DEBUG) << "vap_id           : " << VAP;
         LOG(DEBUG) << "MACAddress       : " << MACAddress;
@@ -2458,9 +2489,8 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
             }
         }
 
-        msg->params.vap_id       = beerocks::utils::get_ids_from_iface_string(VAP).vap_id;
-        msg->params.mac          = tlvf::mac_from_string(MACAddress);
-        msg->params.capabilities = {};
+        msg->params.vap_id = beerocks::utils::get_ids_from_iface_string(VAP).vap_id;
+        msg->params.mac    = tlvf::mac_from_string(MACAddress);
 
         //convert the hex string to binary
         auto binary_str                      = get_binary_association_frame(assoc_req);
