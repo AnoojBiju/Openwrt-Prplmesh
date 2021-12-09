@@ -226,6 +226,8 @@ start_function() {
         C | c)
             prplmesh_platform_db_init "Multi-AP-Controller"
             prplmesh_controller_start
+            # Dummy agent configures transport layer
+            prplmesh_agent_start
             ;;
         A | a)
             prplmesh_platform_db_init "Multi-AP-Agent" "WDS-Repeater"
@@ -292,7 +294,7 @@ status_function() {
     ARGUMENT_LEN=${#1}
     if [ "$ARGUMENT_LEN" -ne "0" ]; then
         BRIDGE_MAC=$1
-    else 
+    else
         BRIDGE_MAC="$(ip link show dev @BEEROCKS_BRIDGE_IFACE@ | awk '/^ *link\/ether / {print $2}')"
     fi
 
