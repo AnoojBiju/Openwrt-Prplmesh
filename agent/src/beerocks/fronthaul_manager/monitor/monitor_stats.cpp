@@ -150,6 +150,7 @@ void monitor_stats::send_hostap_measurements(const sMeasurementsRequest &request
         sta_stats_msg.tx_bytes          = sta_stats.hal_stats.tx_bytes;
         sta_stats_msg.rx_bytes          = sta_stats.hal_stats.rx_bytes;
         sta_stats_msg.retrans_count     = sta_stats.hal_stats.retrans_count;
+        sta_stats_msg.dl_bandwidth      = sta_stats.hal_stats.dl_bandwidth;
         sta_stats_msg.tx_phy_rate_100kb = sta_stats.tx_phy_rate_100kb_avg;
         sta_stats_msg.rx_phy_rate_100kb = sta_stats.rx_phy_rate_100kb_avg;
         sta_stats_msg.tx_load_percent   = sta_stats.tx_load_percent_curr;
