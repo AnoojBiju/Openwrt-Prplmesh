@@ -46,6 +46,9 @@ public:
     static const uint16_t kCmduHeaderLength = 8;
     static const uint16_t kTlvHeaderLength  = 3;
 
+    // Time (in seconds) when the CMDU was received.
+    std::chrono::time_point<std::chrono::system_clock> received_time = {};
+
 protected:
     ClassList msg;
 };
