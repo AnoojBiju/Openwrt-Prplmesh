@@ -29,6 +29,26 @@
 
 namespace assoc_frame {
 
+/**
+ * @brief Convert source value to mapped equally sized type
+ * (usefull to map bitmapped struct to number value).
+ *
+ * @param source input in initial type.
+ * @return output in resulting type (overloaded value).
+ */
+template <typename TS, typename TR>
+static inline typename std::enable_if<sizeof(TS) == sizeof(TR), TR>::type const
+convert(const TS source)
+{
+    union {
+        TS src;
+        TR res;
+    } mapper = {
+        source,
+    };
+    return mapper.res;
+}
+
 class AssocReqFrame : public WSC::AttrList<uint8_t, uint8_t> {
 public:
     typedef struct sFieldsPresent {
