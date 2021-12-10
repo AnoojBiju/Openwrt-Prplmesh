@@ -74,8 +74,9 @@ protected:
         EXPECT_CALL(*m_ambiorix, get_instance_index(_, g_bridge_mac)).WillRepeatedly(Return(0));
         EXPECT_CALL(*m_ambiorix, add_instance(g_device_path))
             .WillOnce(Return(std::string(g_device_path) + ".1"));
-        EXPECT_CALL(*m_ambiorix, set(std::string(g_device_path) + ".1", "ID",
-                                     Matcher<const std::string &>(g_bridge_mac)))
+        EXPECT_CALL(*m_ambiorix,
+                    set(std::string(g_device_path) + ".1", "ID",
+                        Matcher<const sMacAddr &>(tlvf::mac_from_string(g_bridge_mac))))
             .WillOnce(Return(true));
         EXPECT_CALL(*m_ambiorix, set(g_device_path_multiapcaps, "AgentInitiatedRCPIBasedSteering",
                                      Matcher<const bool &>(false)))
@@ -118,8 +119,9 @@ protected:
         EXPECT_CALL(*m_ambiorix, get_instance_index(_, g_radio_mac_1)).WillRepeatedly(Return(1));
         EXPECT_CALL(*m_ambiorix, add_instance(std::string(g_device_path) + ".1.Radio"))
             .WillOnce(Return(g_radio_path_1));
-        EXPECT_CALL(*m_ambiorix, set(std::string(g_radio_path_1), "ID",
-                                     Matcher<const std::string &>(g_radio_mac_1)))
+        EXPECT_CALL(*m_ambiorix,
+                    set(std::string(g_radio_path_1), "ID",
+                        Matcher<const sMacAddr &>(tlvf::mac_from_string(g_radio_mac_1))))
             .WillOnce(Return(true));
 
         //prepare scenario
@@ -144,8 +146,9 @@ protected:
         EXPECT_CALL(*m_ambiorix, get_instance_index(_, g_client_mac)).WillRepeatedly(Return(0));
         EXPECT_CALL(*m_ambiorix, add_instance(std::string(g_radio_1_bss_path_1) + ".STA"))
             .WillOnce(Return(std::string(g_radio_1_bss_path_1) + ".STA.1"));
-        EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1), "MACAddress",
-                                     Matcher<const std::string &>(g_client_mac)))
+        EXPECT_CALL(*m_ambiorix,
+                    set(std::string(g_sta_path_1), "MACAddress",
+                        Matcher<const sMacAddr &>(tlvf::mac_from_string(g_client_mac))))
             .WillOnce(Return(true));
         EXPECT_CALL(*m_ambiorix, set_current_time(std::string(g_sta_path_1), _))
             .WillOnce(Return(true));
@@ -179,11 +182,13 @@ protected:
 
         EXPECT_CALL(*m_ambiorix, add_instance(std::string(g_assoc_event_path)))
             .WillRepeatedly(Return(std::string(g_assoc_event_path_1)));
-        EXPECT_CALL(*m_ambiorix, set(std::string(g_assoc_event_path_1), "BSSID",
-                                     Matcher<const std::string &>(g_radio_mac_1)))
+        EXPECT_CALL(*m_ambiorix,
+                    set(std::string(g_assoc_event_path_1), "BSSID",
+                        Matcher<const sMacAddr &>(tlvf::mac_from_string(g_radio_mac_1))))
             .WillRepeatedly(Return(true));
-        EXPECT_CALL(*m_ambiorix, set(std::string(g_assoc_event_path_1), "MACAddress",
-                                     Matcher<const std::string &>(g_client_mac)))
+        EXPECT_CALL(*m_ambiorix,
+                    set(std::string(g_assoc_event_path_1), "MACAddress",
+                        Matcher<const sMacAddr &>(tlvf::mac_from_string(g_client_mac))))
             .WillRepeatedly(Return(true));
         EXPECT_CALL(*m_ambiorix, set(std::string(g_assoc_event_path_1), "StatusCode",
                                      Matcher<const uint32_t &>(0U)))
@@ -216,7 +221,7 @@ TEST_F(DbTest, test_add_node_radio)
     EXPECT_CALL(*m_ambiorix, add_instance(std::string(radio_path)))
         .WillOnce(Return(std::string(radio_path) + ".1"));
     EXPECT_CALL(*m_ambiorix, set(std::string(radio_path) + ".1", "ID",
-                                 Matcher<const std::string &>(g_radio_mac_1)))
+                                 Matcher<const sMacAddr &>(tlvf::mac_from_string(g_radio_mac_1))))
         .WillOnce(Return(true));
 
     //add radio node
@@ -247,7 +252,7 @@ TEST_F(DbTest, test_add_vap)
     EXPECT_CALL(*m_ambiorix, add_instance(std::string(radio_path)))
         .WillOnce(Return(std::string(radio_path) + ".1"));
     EXPECT_CALL(*m_ambiorix, set(std::string(radio_path) + ".1", "ID",
-                                 Matcher<const std::string &>(g_radio_mac_1)))
+                                 Matcher<const sMacAddr &>(tlvf::mac_from_string(g_radio_mac_1))))
         .WillOnce(Return(true));
 
     //prepare scenario
@@ -259,8 +264,8 @@ TEST_F(DbTest, test_add_vap)
     //expectations for add_vap
     EXPECT_CALL(*m_ambiorix, add_instance(bss_path)).WillOnce(Return(bss_path + ".1"));
     EXPECT_CALL(*m_ambiorix, get_instance_index(_, g_bssid_1)).WillOnce(Return(0));
-    EXPECT_CALL(*m_ambiorix,
-                set(std::string(bss_path) + ".1", "BSSID", Matcher<const std::string &>(g_bssid_1)))
+    EXPECT_CALL(*m_ambiorix, set(std::string(bss_path) + ".1", "BSSID",
+                                 Matcher<const sMacAddr &>(tlvf::mac_from_string(g_bssid_1))))
         .WillOnce(Return(true));
 
     EXPECT_CALL(*m_ambiorix,
@@ -319,11 +324,11 @@ TEST_F(DbTest, test_set_ap_ht_capabilities)
     EXPECT_CALL(*m_ambiorix, add_instance(std::string(g_device_path) + ".1.Radio"))
         .WillOnce(Return(std::string(g_device_path) + ".1.Radio.1"))
         .WillOnce(Return(std::string(g_device_path) + ".1.Radio.2"));
-    EXPECT_CALL(*m_ambiorix,
-                set(std::string(g_radio_path_1), "ID", Matcher<const std::string &>(g_radio_mac_1)))
+    EXPECT_CALL(*m_ambiorix, set(std::string(g_radio_path_1), "ID",
+                                 Matcher<const sMacAddr &>(tlvf::mac_from_string(g_radio_mac_1))))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix,
-                set(std::string(g_radio_path_2), "ID", Matcher<const std::string &>(g_radio_mac_2)))
+    EXPECT_CALL(*m_ambiorix, set(std::string(g_radio_path_2), "ID",
+                                 Matcher<const sMacAddr &>(tlvf::mac_from_string(g_radio_mac_2))))
         .WillOnce(Return(true));
 
     //prepare scenario
@@ -396,8 +401,8 @@ TEST_F(DbTest, test_add_hostap_supported_operating_class)
     EXPECT_CALL(*m_ambiorix, get_instance_index(_, g_radio_mac_1)).WillRepeatedly(Return(1));
     EXPECT_CALL(*m_ambiorix, add_instance(std::string(g_device_path) + ".1.Radio"))
         .WillOnce(Return(std::string(g_device_path) + ".1.Radio.1"));
-    EXPECT_CALL(*m_ambiorix,
-                set(std::string(g_radio_path_1), "ID", Matcher<const std::string &>(g_radio_mac_1)))
+    EXPECT_CALL(*m_ambiorix, set(std::string(g_radio_path_1), "ID",
+                                 Matcher<const sMacAddr &>(tlvf::mac_from_string(g_radio_mac_1))))
         .WillOnce(Return(true));
 
     //prepare scenario
@@ -450,8 +455,8 @@ TEST_F(DbTest, test_set_ap_he_capabilities)
     EXPECT_CALL(*m_ambiorix, add_instance(std::string(g_device_path) + ".1.Radio"))
         .WillOnce(Return(std::string(g_device_path) + ".1.Radio.1"));
 
-    EXPECT_CALL(*m_ambiorix,
-                set(std::string(g_radio_path_1), "ID", Matcher<const std::string &>(g_radio_mac_1)))
+    EXPECT_CALL(*m_ambiorix, set(std::string(g_radio_path_1), "ID",
+                                 Matcher<const sMacAddr &>(tlvf::mac_from_string(g_radio_mac_1))))
         .WillOnce(Return(true));
 
     //prepare scenario
@@ -537,8 +542,8 @@ TEST_F(DbTest, test_add_current_op_class)
     EXPECT_CALL(*m_ambiorix, get_instance_index(_, g_radio_mac_1)).WillRepeatedly(Return(1));
     EXPECT_CALL(*m_ambiorix, add_instance(std::string(g_device_path) + ".1.Radio"))
         .WillOnce(Return(g_radio_path_1));
-    EXPECT_CALL(*m_ambiorix,
-                set(std::string(g_radio_path_1), "ID", Matcher<const std::string &>(g_radio_mac_1)))
+    EXPECT_CALL(*m_ambiorix, set(std::string(g_radio_path_1), "ID",
+                                 Matcher<const sMacAddr &>(tlvf::mac_from_string(g_radio_mac_1))))
         .WillOnce(Return(true));
 
     //prepare scenario
@@ -645,7 +650,7 @@ TEST_F(DbTest, test_set_vap_stats_info)
     EXPECT_CALL(*m_ambiorix, add_instance(std::string(radio_path)))
         .WillOnce(Return(std::string(radio_path) + ".1"));
     EXPECT_CALL(*m_ambiorix, set(std::string(radio_path) + ".1", "ID",
-                                 Matcher<const std::string &>(g_radio_mac_1)))
+                                 Matcher<const sMacAddr &>(tlvf::mac_from_string(g_radio_mac_1))))
         .WillOnce(Return(true));
 
     //prepare scenario
@@ -657,8 +662,11 @@ TEST_F(DbTest, test_set_vap_stats_info)
     //expectations for add_vap
     EXPECT_CALL(*m_ambiorix, add_instance(bss_path)).WillOnce(Return(bss_path + ".1"));
     EXPECT_CALL(*m_ambiorix, get_instance_index(_, g_bssid_1)).WillOnce(Return(0));
-    EXPECT_CALL(*m_ambiorix, set(_, _, Matcher<const std::string &>(_)))
-        .WillRepeatedly(Return(true));
+    EXPECT_CALL(*m_ambiorix, set(bss_path + ".1", "BSSID",
+                                 Matcher<const sMacAddr &>(tlvf::mac_from_string(g_bssid_1))))
+        .WillOnce(Return(true));
+    EXPECT_CALL(*m_ambiorix, set(bss_path + ".1", "SSID", Matcher<const std::string &>(g_ssid_1)))
+        .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(_, _, Matcher<const bool &>(_))).WillRepeatedly(Return(true));
     EXPECT_CALL(*m_ambiorix, set(_, _, Matcher<const uint64_t &>(_))).WillRepeatedly(Return(true));
     EXPECT_CALL(*m_ambiorix, set_current_time(_, _)).WillOnce(Return(true));
@@ -827,7 +835,7 @@ TEST_F(DbTestRadio1Sta1, test_add_sta_twice_with_same_mac)
 
     //expectations for add_node_station second time
     EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1), "MACAddress",
-                                 Matcher<const std::string &>(g_client_mac)))
+                                 Matcher<const sMacAddr &>(tlvf::mac_from_string(g_client_mac))))
         .WillOnce(Return(true));
 
     EXPECT_CALL(*m_ambiorix, set_current_time(std::string(g_sta_path_1), _)).WillOnce(Return(true));
@@ -836,10 +844,10 @@ TEST_F(DbTestRadio1Sta1, test_add_sta_twice_with_same_mac)
         .WillOnce(Return(true));
 
     EXPECT_CALL(*m_ambiorix, set(std::string(g_assoc_event_path_1), "BSSID",
-                                 Matcher<const std::string &>(g_radio_mac_1)))
+                                 Matcher<const sMacAddr &>(tlvf::mac_from_string(g_radio_mac_1))))
         .WillRepeatedly(Return(true));
     EXPECT_CALL(*m_ambiorix, set(std::string(g_assoc_event_path_1), "MACAddress",
-                                 Matcher<const std::string &>(g_client_mac)))
+                                 Matcher<const sMacAddr &>(tlvf::mac_from_string(g_client_mac))))
         .WillRepeatedly(Return(true));
     EXPECT_CALL(*m_ambiorix,
                 set(std::string(g_assoc_event_path_1), "StatusCode", Matcher<const uint32_t &>(0U)))
