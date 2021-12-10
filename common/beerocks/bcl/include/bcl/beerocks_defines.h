@@ -46,7 +46,8 @@ constexpr char BEEROCKS_BACKHAUL_UDS[]   = "uds_backhaul";
 namespace beerocks {
 namespace ieee1905_1_consts {
 static constexpr int DISCOVERY_NOTIFICATION_TIMEOUT_SEC = 60;
-}
+static constexpr uint8_t AUTOCONFIG_M2_TIMEOUT_SECONDS  = 5;
+} // namespace ieee1905_1_consts
 
 namespace message {
 
