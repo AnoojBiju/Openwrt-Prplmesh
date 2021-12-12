@@ -478,7 +478,6 @@ public:
     std::chrono::steady_clock::time_point get_poll_next_time();
     void set_poll_next_time(std::chrono::steady_clock::time_point pt, bool reset_poll = false);
     bool poll_done();
-    uint32_t get_poll_id();
     uint8_t get_poll_cnt();
     bool is_last_poll();
 
@@ -490,6 +489,10 @@ public:
     }
     uint32_t get_measurement_window_msec() { return m_measurement_window_msec; }
 
+    std::chrono::steady_clock::time_point get_last_stats_update_time();
+    void set_last_stats_update_time(std::chrono::steady_clock::time_point pt,
+                                    bool reset_poll = false);
+
     std::chrono::steady_clock::time_point get_ap_poll_next_time();
     void set_ap_poll_next_time(std::chrono::steady_clock::time_point pt, bool reset_poll = false);
 
@@ -500,7 +503,7 @@ public:
     eClientsMeasurementMode get_clients_measuremet_mode() { return m_clients_measurement_mode; }
 
     const int MONITOR_LAST_CHANGE_TIMEOUT_MSEC                            = 30000;
-    const int MONITOR_DB_AP_POLLING_RATE_SEC                              = 5;
+    const int MONITOR_DB_AP_POLLING_RATE_SEC                              = 60;
     static constexpr int MONITOR_DB_DEFAULT_POLLING_RATE_MSEC             = 250;
     static constexpr int MONITOR_DB_DEFAULT_MEASUREMENT_WINDOW_POLL_COUNT = 4;
 
@@ -512,7 +515,6 @@ public:
     const int MONITOR_ARP_RETRY_COUNT   = 10;
 
 private:
-    uint32_t poll_id          = 0;
     int8_t poll_cnt           = 0;
     uint32_t m_poll_rate_msec = MONITOR_DB_DEFAULT_POLLING_RATE_MSEC;
     uint32_t m_measurement_window_msec =

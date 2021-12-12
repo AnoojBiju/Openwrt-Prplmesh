@@ -78,7 +78,7 @@ void monitor_rdkb_hal::print_debug_info(mon_rdkb_debug_info_t &mdi, bool pkts_co
     LOG(DEBUG) << ss.str();
 }
 
-void monitor_rdkb_hal::process()
+void monitor_rdkb_hal::process(std::chrono::steady_clock::time_point awake_timeout)
 {
 
     if (mon_db == nullptr) {
@@ -86,14 +86,32 @@ void monitor_rdkb_hal::process()
         return;
     }
     //snr didn't update yet.
-    if (mon_db->is_last_poll() == false) {
+    if (!mon_db->is_last_poll()) {
         return;
     }
 
+    LOG(DEBUG) << "monitor_rdkb_hal::process: sta_num=" << conf_stas.size();
     for (auto it : conf_stas) {
 
         auto sta_mac     = it.first;
         auto conf_client = it.second;
+
+        // if thread awake time is too long - return
+        if (std::chrono::steady_clock::now() > awake_timeout) {
+            LOG(DEBUG) << "Thread is awake too long - will continue on next wakeup, next sta to "
+                          "be processeed: "
+                       << sta_mac;
+            m_sta_mac_process_next = sta_mac;
+            return;
+        }
+
+        // For faireness - if we previously stopped in middle of processing,
+        // skip already processes STAs and start from where we left off
+        if (!m_sta_mac_process_next.empty() && m_sta_mac_process_next != sta_mac) {
+            continue;
+        }
+
+        LOG(DEBUG) << "monitor_rdkb_hal::process: client mac:" << sta_mac;
 
         auto sta_node = mon_db->sta_find(sta_mac);
         //client not connected.
@@ -213,6 +231,8 @@ void monitor_rdkb_hal::process()
         conf_client->setAccumulatedPackets(0);
         conf_client->setSample(0);
     }
+
+    m_sta_mac_process_next.clear();
 }
 
 void monitor_rdkb_hal::send_activity_event(const std::string &sta_mac, bool active, int8_t vap_id)

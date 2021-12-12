@@ -220,6 +220,8 @@ void dynamic_channel_selection_task::work()
     case eState::ABORT_SCAN: {
         LOG(ERROR) << "aborting scan for mac=" << m_radio_mac << ", last_scan_timestamp is not set";
 
+        m_last_scan_error_code = beerocks::eChannelScanStatusCode::ABORTED_BY_DRIVER;
+
         fsm_move_state(eState::FINISH);
         break;
     }
