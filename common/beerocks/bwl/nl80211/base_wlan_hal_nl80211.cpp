@@ -378,7 +378,7 @@ bool base_wlan_hal_nl80211::fsm_setup()
                 }
 
                 // Get the wpa_supplicant/hostapd event interface file descriptor
-                m_fd_ext_events = wpa_ctrl_get_fd((wpa_ctrl *)m_wpa_ctrl_event);
+                m_fd_ext_events = wpa_ctrl_get_fd(static_cast<wpa_ctrl *>(m_wpa_ctrl_event));
 
                 // Attach to the control interface for events receiving
                 int result;
