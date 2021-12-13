@@ -422,11 +422,14 @@ wireless_utils::estimate_ul_params(int ul_rssi, uint16_t sta_phy_tx_rate_100kb,
     uint8_t max_bw = (is_5ghz && (sta_capabilities->wifi_standard & int(beerocks::STANDARD_AC)))
                          ? sta_capabilities->vht_bw
                          : sta_capabilities->ht_bw;
-    if (ap_bw < max_bw) {
+    if ((ap_bw < max_bw) || (max_bw == beerocks::BANDWIDTH_UNKNOWN)) {
         max_bw = ap_bw;
     }
 
-    max_bw = (max_bw > beerocks::BANDWIDTH_160 ? beerocks::BANDWIDTH_160 : max_bw);
+    //enums beyond 80 (80P80, 160) are assumed 160
+    if (max_bw > beerocks::BANDWIDTH_80) {
+        max_bw = beerocks::BANDWIDTH_160;
+    }
 
     LOG(DEBUG) << "UL RSSI:" << ul_rssi << " | sta_phy_tx_rate:" << sta_phy_tx_rate_100kb / 10
                << " Mbps | AP BW:"
@@ -594,12 +597,15 @@ double wireless_utils::estimate_ap_tx_phy_rate(
     uint8_t max_bw = (is_5ghz && (sta_capabilities->wifi_standard & int(beerocks::STANDARD_AC)))
                          ? sta_capabilities->vht_bw
                          : sta_capabilities->ht_bw;
-    if (ap_bw < max_bw) {
+    if ((ap_bw < max_bw) || (max_bw == beerocks::BANDWIDTH_UNKNOWN)) {
         max_bw = ap_bw;
     }
 
-    // Beerocks is not supporting estimation above 80 Mhz
-    max_bw = (max_bw > beerocks::BANDWIDTH_160 ? beerocks::BANDWIDTH_160 : max_bw);
+    // Beerocks is not supporting estimation above 160 Mhz
+    // enums beyond 80 (80P80, 160) are assumed 160
+    if (max_bw > beerocks::BANDWIDTH_80) {
+        max_bw = beerocks::BANDWIDTH_160;
+    }
 
     for (int ant_mode = max_ant_mode; ant_mode > -1; ant_mode--) {   // filter by ant_mode
         for (auto bw = max_bw; bw >= beerocks::BANDWIDTH_20; bw--) { // filter by max_bw
