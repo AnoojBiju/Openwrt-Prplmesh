@@ -1752,7 +1752,7 @@ bool Controller::handle_tlv_associated_sta_link_metrics(const sMacAddr &src_mac,
         auto bssid_info = std::get<1>(response_list);
 
         // Verify reported BSSID and data model registered STAs BSSID is same.
-        if (database.get_node_parent_radio(tlvf::mac_to_string(sta_link_metric->sta_mac())) !=
+        if (database.get_node_parent(tlvf::mac_to_string(sta_link_metric->sta_mac())) !=
             tlvf::mac_to_string(bssid_info.bssid)) {
             LOG(INFO) << "Reported STA BSSID is not matching with datamodel. Reported bssid:"
                       << bssid_info.bssid;
@@ -1792,7 +1792,7 @@ bool Controller::handle_tlv_associated_sta_extended_link_metrics(const sMacAddr 
         auto metrics = std::get<1>(metrics_list);
 
         // Verify reported BSSID and data model registered STAs BSSID is same.
-        if (database.get_node_parent_radio(
+        if (database.get_node_parent(
                 tlvf::mac_to_string(sta_extended_link_metric->associated_sta())) !=
             tlvf::mac_to_string(metrics.bssid)) {
             LOG(INFO) << "Reported STA BSSID is not matching with datamodel. Reported bssid:"
