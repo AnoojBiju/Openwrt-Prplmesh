@@ -6,7 +6,6 @@ common/beerocks/bwl/dummy/mon_wlan_hal_dummy.cpp: style: The scope of the variab
 common/beerocks/bwl/dwpal/ap_wlan_hal_dwpal.cpp: information: This file is not analyzed. Cppcheck failed to extract a valid configuration. Use -v for more details. [noValidConfiguration]
 common/beerocks/bwl/dwpal/mon_wlan_hal_dwpal.cpp: style: The scope of the variable 'rate_kbs' can be reduced. [variableScope]    uint32_t rate_kbs;
 common/beerocks/bwl/dwpal/mon_wlan_hal_dwpal.cpp: style: The scope of the variable 'rate_mbs_fp_8_1' can be reduced. [variableScope]    uint8_t rate_mbs_fp_8_1;
-common/beerocks/bwl/nl80211/base_wlan_hal_nl80211.cpp: style: C-style pointer casting [cstyleCast]                m_fd_ext_events = wpa_ctrl_get_fd((wpa_ctrl *)m_wpa_ctrl_event);
 common/beerocks/bwl/shared/netlink_socket.cpp: style: Local variable 'rc' shadows outer variable [shadowVariable]        int rc = nl_recvmsgs(m_nl_socket.get(), nl_callback.get());
 common/beerocks/bwl/shared/nl80211_socket.cpp: style: The if condition is the same as the previous if condition [duplicateCondition]    if (result) {
 common/beerocks/tlvf/src/src/beerocks_message.cpp: style: Parameter 'cmdu_rx' can be declared with const [constParameter]bool message_com::forward_cmdu_to_uds(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx,
