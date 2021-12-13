@@ -931,9 +931,10 @@ bool base_wlan_hal_nl80211::send_nl80211_msg(uint8_t command, int flags,
 
     // Create standard callbacks
     int err               = 1;
-    static auto nl_err_cb = [](struct sockaddr_nl *nla, struct nlmsgerr *err, void *arg) -> int {
+    static auto nl_err_cb = [](struct sockaddr_nl *nla, struct nlmsgerr *msg_err,
+                               void *arg) -> int {
         int *ret = (int *)arg;
-        *ret     = err->error;
+        *ret     = msg_err->error;
         return NL_STOP;
     };
 
