@@ -26,7 +26,7 @@ using namespace son;
 #define REQUEST_RSSI_MEASUREMENT_MAX_ATTEMPTS 5
 #define REQUEST_RSSI_MEASUREMENT_DELAY 10000
 #define START_MONITORING_RESPONSE_TIMEOUT_MSEC 3000
-#define START_MONITORING_MAX_ATTEMPTS (60 * START_MONITORING_RESPONSE_TIMEOUT_MSEC) // 3 minutes
+#define START_MONITORING_MAX_ATTEMPTS 5
 
 association_handling_task::association_handling_task(db &database_,
                                                      ieee1905_1::CmduMessageTx &cmdu_tx_,

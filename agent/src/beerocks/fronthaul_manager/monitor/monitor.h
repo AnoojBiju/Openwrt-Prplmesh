@@ -174,8 +174,8 @@ private:
     std::chrono::steady_clock::time_point m_sta_stats_polling_start_timestamp;
     bool m_sta_stats_polling_completed = true;
 
-    const uint8_t GENERATE_CONNECTED_EVENTS_WORK_TIME_LIMIT_MSEC = 50;
-    const uint8_t GENERATE_CONNECTED_EVENTS_DELAY_MSEC           = 100;
+    const uint8_t GENERATE_CONNECTED_EVENTS_WORK_TIME_LIMIT_MSEC = 5;
+    const uint16_t GENERATE_CONNECTED_EVENTS_DELAY_MSEC          = 500;
     bool m_generate_connected_clients_events                     = false;
     std::chrono::steady_clock::time_point m_next_generate_connected_events_time =
         std::chrono::steady_clock::time_point::min();

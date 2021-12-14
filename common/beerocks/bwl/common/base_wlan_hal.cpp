@@ -152,30 +152,51 @@ base_wlan_hal::create_mgmt_frame_notification(const char *mgmt_frame_hex)
 
 bool base_wlan_hal::process_int_events()
 {
-    // Read the counter value of the eventfd
-    uint64_t counter = 0;
-    if (read(m_fd_int_events, &counter, sizeof(counter)) < 0) {
-        LOG(ERROR) << "Failed reading eventfd counter: " << strerror(errno);
-        return false;
-    }
+    uint64_t counter                           = 0;
+    bool ret                                   = true;
+    constexpr uint8_t MAX_EVENTS_PER_ITERATION = 250;
+    uint8_t events_received                    = 0;
 
-    // Pop an event from the queue
-    auto event = m_queue_events.pop(false);
-
-    if (!event || !counter) {
-        LOG(WARNING) << "process_int_events() called by the event queue pointer is " << event
-                     << " and/or eventfd counter = " << counter;
-
-        return false;
-    }
-
-    // Call the callback for handling the event
     if (!m_int_event_cb) {
         LOG(ERROR) << "Event callback not registered!";
         return false;
     }
 
-    return m_int_event_cb(event);
+    if (m_queue_events.empty()) {
+        LOG(WARNING) << "process_int_events() called but queue is empty";
+        return true;
+    }
+
+    do {
+        // Read the counter value of the eventfd
+        if (read(m_fd_int_events, &counter, sizeof(counter)) < 0) {
+            LOG(ERROR) << "Failed reading eventfd counter: " << strerror(errno);
+            return false;
+        }
+
+        if (!counter) {
+            LOG(WARNING) << "process_int_events() called but counter is 0";
+            return false;
+        }
+        // Pop an event from the queue
+        auto event = m_queue_events.pop(true, 250);
+
+        if (!event) {
+            LOG(WARNING) << "process_int_events() called but event is nullptr";
+            return false;
+        }
+
+        ++events_received;
+
+        // Call the callback for handling the event
+        ret &= m_int_event_cb(event);
+    } while (!m_queue_events.empty() && (events_received < MAX_EVENTS_PER_ITERATION));
+
+    if (events_received < MAX_EVENTS_PER_ITERATION) {
+        LOG(DEBUG) << "All events received, events= " << events_received;
+    }
+
+    return ret;
 }
 
 void base_wlan_hal::calc_curr_traffic(uint64_t val, uint64_t &total, uint32_t &curr)
