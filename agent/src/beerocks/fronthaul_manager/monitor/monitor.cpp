@@ -43,11 +43,6 @@ using namespace son;
  */
 static constexpr uint8_t ap_metrics_channel_utilization_measurement_period_s = 10;
 
-/**
- * Time between successive timer executions of the FSM timer
- */
-constexpr auto fsm_timer_period = std::chrono::milliseconds(250);
-
 Monitor::Monitor(const std::string &monitor_iface_,
                  beerocks::config_file::sConfigSlave &beerocks_slave_conf_,
                  beerocks::logging &logger_)
@@ -133,6 +128,10 @@ bool Monitor::thread_init()
     // of them gets executed)
     beerocks::Transaction transaction;
 
+    /**
+     * Time between successive timer executions of the FSM timer
+     */
+    auto fsm_timer_period = std::chrono::milliseconds(mon_db.get_polling_rate_msec());
     // Create a timer to run the FSM periodically
     m_fsm_timer = m_timer_manager->add_timer(
         "Monitor FSM", fsm_timer_period, fsm_timer_period,
@@ -280,6 +279,8 @@ bool Monitor::monitor_fsm()
         if (attach_state == bwl::HALState::Operational) {
 
             LOG(DEBUG) << "attach_state == bwl::HALState::Operational";
+
+            mon_db.clear();
 
             // Initialize VAPs in the DB
             update_vaps_in_db();
@@ -504,15 +505,16 @@ bool Monitor::monitor_fsm()
             }
         }
 
+        auto now = std::chrono::steady_clock::now();
         // Long running operations prevent the event loop from doing anything else (i.e.: the
         // event loop is not able to react to any incoming request in the meantime).
         // Therefore, limit the maximum amount of time that the following method can run,
         // instead of letting it run non-stop for what could be quite a long time if there
         // are many clients already connected.
-        auto max_iteration_timeout = std::chrono::steady_clock::now() + fsm_timer_period / 2;
+        auto max_iteration_timeout =
+            now + std::chrono::milliseconds(mon_db.get_polling_rate_msec() / 2);
 
-        if (m_generate_connected_clients_events &&
-            (m_next_generate_connected_events_time < std::chrono::steady_clock::now())) {
+        if (m_generate_connected_clients_events && (m_next_generate_connected_events_time < now)) {
             bool is_finished_all_clients = false;
             // If there is not enough time to generate all events, the method will be called in the
             // next FSM iteration, and so on until all connected clients are eventually reported.
@@ -533,8 +535,6 @@ bool Monitor::monitor_fsm()
             // Reset the flag if finished to generate all clients' events
             m_generate_connected_clients_events = !is_finished_all_clients;
         }
-
-        auto now = std::chrono::steady_clock::now();
 
         // Update DB - Polling
         if (now >= mon_db.get_poll_next_time()) {
@@ -601,10 +601,23 @@ bool Monitor::monitor_fsm()
             }
         }
 
+        if (!mon_db.is_last_poll()) {
+            return true;
+        }
+
+        // Break if measurement_window_msec didn't pass
+        if (now < mon_db.get_last_stats_update_time()) {
+            return true;
+        }
+        mon_db.set_last_stats_update_time(
+            now + std::chrono::milliseconds(mon_db.get_measurement_window_msec()));
+
+        //Reach here only after measurement_window_msec has passed and is_last_poll
+
         mon_rssi.process();
         mon_stats.process();
 #ifdef BEEROCKS_RDKB
-        mon_rdkb_hal.process();
+        mon_rdkb_hal.process(max_iteration_timeout);
 #endif
 
         /**

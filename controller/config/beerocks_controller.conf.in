@@ -42,7 +42,7 @@ load_service_fairness=0
 load_rdkb_extensions=1
 
 # Config Parameters
-diagnostics_measurements_polling_rate_sec=1
+diagnostics_measurements_polling_rate_sec=10
 ire_rssi_report_rate_sec=30
 global_restricted_channels=
 roaming_unconnected_client_rssi_compensation_db=0

@@ -24,8 +24,7 @@ using namespace son;
 
 monitor_stats::monitor_stats(ieee1905_1::CmduMessageTx &cmdu_tx_) : cmdu_tx(cmdu_tx_)
 {
-    mon_db       = nullptr;
-    next_poll_id = 1;
+    mon_db = nullptr;
 }
 
 void monitor_stats::stop()
@@ -52,8 +51,8 @@ void monitor_stats::add_request(uint16_t id, uint8_t sync, const sMacAddr &sta_m
             LOG(WARNING) << "monitor is not attached yet, mon_db=nullptr";
             return;
         }
-        next_poll_id = mon_db->get_poll_id() + 1;
     }
+    stats_requested = true;
     requests_list.push_back(sMeasurementsRequest(id, sta_mac));
 }
 
@@ -218,15 +217,15 @@ void monitor_stats::send_associated_sta_link_metrics(const sMeasurementsRequest 
 
 void monitor_stats::process()
 {
-
-    //LOG(DEBUG) << "monitor_stats::process() 2 : db_poll_id=" << int(mon_db->get_poll_id()) << ", next_poll_id=" << int(next_poll_id);
-
-    //check if dd has updates
-    auto db_poll_id = mon_db->get_poll_id();
-    if (db_poll_id != next_poll_id) {
+    if (!mon_db->is_last_poll()) {
         return;
     }
-    next_poll_id++;
+
+    if (!stats_requested) {
+        return;
+    }
+
+    LOG(DEBUG) << "monitor_stats::process()";
 
     // Radio
     auto radio_node = mon_db->get_radio_node();
@@ -437,6 +436,9 @@ void monitor_stats::process()
 
         m_slave_client->send_cmdu(cmdu_tx);
     }
+
+    // Clear stats_requested
+    stats_requested = false;
 }
 
 bool monitor_stats::add_ap_metrics(ieee1905_1::CmduMessageTx &cmdu_tx,

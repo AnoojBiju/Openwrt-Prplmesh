@@ -835,6 +835,7 @@ bool base_wlan_hal_dwpal::refresh_radio_info()
         return true;
     }
 
+    LOG(DEBUG) << "GET_RADIO_INFO";
     if (!dwpal_send_cmd("GET_RADIO_INFO", &reply)) {
         LOG(ERROR) << __func__ << " failed";
         return false;
@@ -986,6 +987,7 @@ bool base_wlan_hal_dwpal::refresh_vap_info(int vap_id)
         {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
     std::string cmd = "GET_VAP_MEASUREMENTS " + ifname;
 
+    LOG(DEBUG) << cmd;
     // Read the VAP information
     if (!dwpal_send_cmd(cmd, &reply) || reply[0] == '\0') {
         // If the command failed, assume that it doesn't exist, and return

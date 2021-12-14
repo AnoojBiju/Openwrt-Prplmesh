@@ -641,6 +641,7 @@ bool mon_wlan_hal_dwpal::update_radio_stats(SRadioStats &radio_stats)
 {
     char *reply = nullptr;
 
+    LOG(DEBUG) << "GET_RADIO_INFO";
     if (!dwpal_send_cmd("GET_RADIO_INFO", &reply)) {
         LOG(ERROR) << " failed";
         return false;
@@ -700,6 +701,7 @@ bool mon_wlan_hal_dwpal::update_vap_stats(const std::string &vap_iface_name, SVa
 
     std::string cmd = "GET_VAP_MEASUREMENTS " + vap_iface_name;
 
+    LOG(DEBUG) << cmd;
     if (!dwpal_send_cmd(cmd, &reply)) {
         LOG(ERROR) << __func__ << " failed";
         return false;
@@ -768,6 +770,7 @@ bool mon_wlan_hal_dwpal::update_stations_stats(const std::string &vap_iface_name
 
     std::string cmd = "GET_STA_MEASUREMENTS " + vap_iface_name + " " + sta_mac;
 
+    LOG(DEBUG) << cmd;
     if (!dwpal_send_cmd(cmd, reply)) {
         LOG(ERROR) << "cmd: " << cmd << " failed";
         return false;
