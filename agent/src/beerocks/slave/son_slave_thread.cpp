@@ -5671,6 +5671,7 @@ slave_thread::get_channel_preference(beerocks::message::sWifiChannel channel,
 beerocks::message::sWifiChannel
 slave_thread::channel_selection_select_channel(const std::string &fronthaul_iface)
 {
+    // dummy comment to create MR
     auto db    = AgentDB::get();
     auto radio = db->radio(fronthaul_iface);
     if (!radio) {
