@@ -120,14 +120,11 @@ boardfarm-on-nec-wx3000hp:
 run-tests-on-altran-glinet-testbed:
   extends: .test-on-target
   variables:
-    TARGET_DEVICE: glinet-b1300
-    TARGET_DEVICE_NAME: glinet-b1300-1
-    OPENWRT_IMAGE: openwrt-ipq40xx-generic-glinet_gl-b1300-squashfs-sysupgrade.bin
+    TARGET_DEVICE: turris-omnia
+    TARGET_DEVICE_NAME: turris-omnia-1
+    OPENWRT_IMAGE: openwrt-mvebu-cortexa9-cznic_turris-omnia-sysupgrade.img.gz
   script:
-    - ./tools/docker/build.sh -v -j 4 -f ENABLE_NBAPI=ON
-    - ./tools/docker/image-build.sh -t $PARENT_PIPELINE_ID -i boardfarm-ci
-    - ./tools/docker/image-build.sh -t $PARENT_PIPELINE_ID -i builder/ubuntu/bionic
-    - ./dctest.py --dut glinet-b1300-1-remote --test-suite test_flows_on_altran
+    - echo skip
   after_script:
     - !reference [.test-on-target, after_script]
     - ssh "$TARGET_DEVICE_NAME" 'wifi down'
@@ -137,7 +134,7 @@ run-tests-on-altran-glinet-testbed:
     - test_flows_on_altran
   timeout: 90m
   needs:
-    - job: build-for-glinet-b1300
+    - job: build-for-turris-omnia
 
 run-certification-tests-R1-platform-essensium:
   extends: .run-certification-tests-R1
