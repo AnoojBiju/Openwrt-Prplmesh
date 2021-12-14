@@ -66,14 +66,13 @@ private:
                                int active_sta_th);
 
     std::string parent_thread_name;
-    monitor_db *mon_db = nullptr;
+    monitor_db *mon_db   = nullptr;
+    bool stats_requested = false;
 
     /**
      * CMDU client to send messages to the CMDU server running in slave.
      */
     std::shared_ptr<beerocks::CmduClient> m_slave_client;
-
-    uint32_t next_poll_id;
 
     struct sMeasurementsRequest {
         sMeasurementsRequest(uint16_t _mid, const sMacAddr &_mac) : message_id(_mid), mac(_mac) {}

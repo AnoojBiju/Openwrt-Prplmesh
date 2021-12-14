@@ -186,10 +186,16 @@ void monitor_rssi::arp_recv()
     }
 }
 
-// enter every poll event done (~1sec or on req)
+// enter every m_measurement_window_msec
 void monitor_rssi::process()
 {
     bool poll_last = mon_db->is_last_poll();
+
+    if (!poll_last) {
+        return;
+    }
+
+    LOG(DEBUG) << "monitor_rssi::process get_sta_count=" << mon_db->get_sta_count();
 
     for (auto it = mon_db->sta_begin(); it != mon_db->sta_end(); ++it) {
         auto sta_mac  = it->first;
@@ -207,9 +213,6 @@ void monitor_rssi::process()
         auto &sta_stats = sta_node->get_stats();
 
         if (arp_state == monitor_sta_node::IDLE) {
-            if (!poll_last)
-                continue;
-
             //LOG(DEBUG) << ">> monitor_sta_node::IDLE MAC: " << sta_mac;
             if (sta_stats.rx_rssi_curr != sta_stats.rx_rssi_prev) {
                 if (sta_stats.rx_rssi_prev == beerocks::RSSI_INVALID) {

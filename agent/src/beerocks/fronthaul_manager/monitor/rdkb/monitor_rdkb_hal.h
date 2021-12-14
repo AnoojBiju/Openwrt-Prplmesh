@@ -138,7 +138,7 @@ public:
     bool start(monitor_db *mon_db_, std::shared_ptr<beerocks::CmduClient> slave_client);
     void stop();
 
-    void process();
+    void process(std::chrono::steady_clock::time_point awake_timeout);
 
     std::shared_ptr<rdkb_hal_sta_config> conf_add_client(const std::string &sta_mac);
     std::shared_ptr<rdkb_hal_sta_config> conf_get_client(const std::string &sta_mac);
@@ -165,6 +165,7 @@ private:
     std::shared_ptr<beerocks::CmduClient> m_slave_client;
 
     ieee1905_1::CmduMessageTx &cmdu_tx;
+    std::string m_sta_mac_process_next;
 
     void sta_erase_all();
     std::unordered_map<std::string, std::shared_ptr<son::rdkb_hal_sta_config>> conf_stas;
