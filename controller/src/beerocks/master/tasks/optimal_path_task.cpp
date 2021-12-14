@@ -1179,9 +1179,9 @@ void optimal_path_task::work()
         sticky_roaming_rssi = 0;
 
         // hostap's in this list are in order, current_hostap is first
-        for (auto it : hostap_candidates) {
-            auto hostap         = it.first;
-            auto hostap_sibling = it.second;
+        for (auto hostap_it : hostap_candidates) {
+            auto hostap         = hostap_it.first;
+            auto hostap_sibling = hostap_it.second;
 
             auto radio_mac = tlvf::mac_from_string(hostap);
 

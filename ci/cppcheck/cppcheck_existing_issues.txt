@@ -16,7 +16,6 @@ controller/src/beerocks/master/tasks/channel_selection_task.cpp: style: The scop
 controller/src/beerocks/master/tasks/load_balancer_task.cpp: style: The scope of the variable 'chosen_hostap_bytes_per_second_gained' can be reduced. [variableScope]        int chosen_hostap_bytes_per_second_gained = INT32_MIN;
 controller/src/beerocks/master/tasks/load_balancer_task.cpp: style: Variable 'client_efficiency_ratio' is reassigned a value before the old one has been used. [redundantAssignment]                client_efficiency_ratio =
 controller/src/beerocks/master/tasks/network_health_check_task.cpp: style: Redundant checking of STL container element existence before removing it. [redundantIfRemove]            if (suspected_dis_clients.find(pending_node) != suspected_dis_clients.end()) {
-controller/src/beerocks/master/tasks/optimal_path_task.cpp: style: Local variable 'it' shadows outer variable [shadowVariable]        for (auto it : hostap_candidates) {
 controller/src/beerocks/master/tasks/rdkb/rdkb_wlan_task.cpp: style: Local variable 'update' shadows outer variable [shadowVariable]            auto update = message_com::create_vs_message<
 framework/platform/bpl/arp/uci/monitor/arp_monitor.cpp: style: The scope of the variable 'type' can be reduced. [variableScope]        unsigned short type;
 framework/platform/bpl/db/linux/bpl_db.cpp: style: Parameter 'nested_params' can be declared with const [constParameter]    std::unordered_map<std::string, std::unordered_map<std::string, std::string>> &nested_params)
