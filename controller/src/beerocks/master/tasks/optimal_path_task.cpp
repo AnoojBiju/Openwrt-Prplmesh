@@ -1196,9 +1196,9 @@ void optimal_path_task::work()
         bool failed_to_get_measurements = false;
 
         // hostap's in this list are in order, current_hostap is first
-        for (auto it : hostap_candidates) {
-            auto hostap         = it.first;
-            auto hostap_sibling = it.second;
+        for (auto hostap_it : hostap_candidates) {
+            auto hostap         = hostap_it.first;
+            auto hostap_sibling = hostap_it.second;
 
             auto radio_mac = tlvf::mac_from_string(hostap);
 
