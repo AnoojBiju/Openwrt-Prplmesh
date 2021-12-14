@@ -168,7 +168,7 @@ static int repeated_cmd_parser(std::string &cmd)
             commandTokens.erase(token);
             break;
 
-        } else if ((pos = token->find("!")) != std::string::npos) {
+        } else if ((token->find("!")) != std::string::npos) {
             executions      = -1;
             g_loop_cmd_exec = true;
             commandTokens.erase(token);

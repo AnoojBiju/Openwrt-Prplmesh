@@ -10,7 +10,6 @@ common/beerocks/bwl/nl80211/base_wlan_hal_nl80211.cpp: style: C-style pointer ca
 common/beerocks/bwl/shared/netlink_socket.cpp: style: Local variable 'rc' shadows outer variable [shadowVariable]        int rc = nl_recvmsgs(m_nl_socket.get(), nl_callback.get());
 common/beerocks/bwl/shared/nl80211_socket.cpp: style: The if condition is the same as the previous if condition [duplicateCondition]    if (result) {
 common/beerocks/tlvf/src/src/beerocks_message.cpp: style: Parameter 'cmdu_rx' can be declared with const [constParameter]bool message_com::forward_cmdu_to_uds(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx,
-controller/src/beerocks/cli/beerocks_cli_main.cpp: style: Variable 'pos' is assigned a value that is never used. [unreadVariable]        } else if ((pos = token->find("!")) != std::string::npos) {
 controller/src/beerocks/cli/beerocks_cli_socket.cpp: performance: Function parameter 'mode' should be passed by const reference. [passedByValue]                                      uint16_t repeats, int16_t op_class, std::string mode)
 controller/src/beerocks/master/tasks/bml_task.cpp: style: Local variable 'idx' shadows outer variable [shadowVariable]            int idx = 0;
 controller/src/beerocks/master/tasks/channel_selection_task.cpp: style: The scope of the variable 'channel_80Mhz_step' can be reduced. [variableScope]    auto channel_80Mhz_step = CHANNEL_80MHZ_STEP;
