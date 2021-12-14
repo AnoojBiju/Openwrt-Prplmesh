@@ -694,7 +694,7 @@ int cli_socket::ire_network_optimization_task()
 
 int cli_socket::client_beacon_11k_req(std::string client_mac, std::string bssid, uint8_t channel,
                                       std::string ssid, uint16_t duration, uint16_t rand_ival,
-                                      uint16_t repeats, int16_t op_class, std::string mode)
+                                      uint16_t repeats, int16_t op_class, const std::string &mode)
 {
     auto request =
         message_com::create_vs_message<beerocks_message::cACTION_CLI_CLIENT_BEACON_11K_REQUEST>(
