@@ -5670,7 +5670,8 @@ bool slave_thread::handle_multi_ap_policy_config_request(int fd, ieee1905_1::Cmd
      * radios which Radio Unique Identifier has been specified.
      */
     auto mid = cmdu_rx.getMessageId();
-    LOG(DEBUG) << "Received MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE, mid=" << std::hex << int(mid);
+    LOG(DEBUG) << "YES! Received MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE, mid=" << std::hex
+               << int(mid);
 
     if (!handle_profile2_default_802dotq_settings_tlv(cmdu_rx)) {
         LOG(ERROR) << "handle_profile2_default_802dotq_settings_tlv has failed!";
