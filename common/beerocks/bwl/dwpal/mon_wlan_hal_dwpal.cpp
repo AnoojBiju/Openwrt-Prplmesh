@@ -1641,7 +1641,7 @@ bool mon_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)
 
         if (m_radio_info.iface_name != iface_name) {
             // ifname doesn't match current interface
-            // meaning the event was recevied for a diffrent channel
+            // meaning the event was received for a diffrent channel
             return true;
         }
         if (!m_scan_was_triggered_internally) {
@@ -1671,7 +1671,7 @@ bool mon_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)
         // In case there are no results first check if current sequence number was set.
         if (m_nl_seq != 0 && nlh->nlmsg_seq != m_nl_seq) {
             // Current event has a sequence number not matching the current sequence number
-            // meaning the event was recevied for a diffrent channel
+            // meaning the event was received for a diffrent channel
             return true;
         }
 
