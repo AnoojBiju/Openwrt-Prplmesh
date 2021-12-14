@@ -90,7 +90,7 @@ void bml_task::handle_event(int event_type, void *obj)
         if (obj) {
             auto event_obj = static_cast<stats_info_available_event *>(obj);
 
-            int idx = 0;
+            idx = 0;
             std::vector<int> stats_updates_listeners;
             int fd;
             while ((fd = database.get_bml_socket_at(idx)) !=

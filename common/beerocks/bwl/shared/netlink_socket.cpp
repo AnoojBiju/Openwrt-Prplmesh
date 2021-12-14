@@ -117,8 +117,9 @@ bool netlink_socket::send_receive_msg(std::function<bool(struct nl_msg *msg)> ms
     nl_cb_set(nl_callback.get(), NL_CB_ACK, NL_CB_CUSTOM, nl_ack_cb, &error);
     nl_cb_set(nl_callback.get(), NL_CB_VALID, NL_CB_CUSTOM, nl_handler_cb, &msg_handle);
 
+    int rc = 0;
     // Send the netlink message
-    int rc = nl_send_auto_complete(m_nl_socket.get(), nl_message.get());
+    rc = nl_send_auto_complete(m_nl_socket.get(), nl_message.get());
     if (rc < 0) {
         LOG(ERROR) << "Failed to send netlink message! Error: " << rc;
         return false;
@@ -133,7 +134,7 @@ bool netlink_socket::send_receive_msg(std::function<bool(struct nl_msg *msg)> ms
     // Loop is required just in case more than one message is received. Handling callback must
     // process them all.
     while (error > 0) {
-        int rc = nl_recvmsgs(m_nl_socket.get(), nl_callback.get());
+        rc = nl_recvmsgs(m_nl_socket.get(), nl_callback.get());
         if (rc < 0) {
             LOG(ERROR) << "Failed to receive netlink messages! Error: " << rc;
             return false;

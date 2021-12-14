@@ -1639,9 +1639,9 @@ void channel_selection_task::align_channel_to_80Mhz()
     bool high_band          = wireless_utils::is_high_subband(least_used_channel);
     uint8_t end_channel     = high_band ? END_OF_HIGH_BAND_NON_DFS : END_OF_LOW_BAND_NON_DFS;
     auto channel_step       = CHANNEL_20MHZ_STEP;
-    auto channel_80Mhz_step = CHANNEL_80MHZ_STEP;
 
     if ((end_channel - least_used_channel) > channel_step) {
+        auto channel_80Mhz_step        = CHANNEL_80MHZ_STEP;
         channel_switch_request.channel = end_channel - channel_80Mhz_step;
     } else {
         channel_switch_request.channel = end_channel;

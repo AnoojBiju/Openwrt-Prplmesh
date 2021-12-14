@@ -305,8 +305,9 @@ public:
      * @param obj_path Path to object in Data Model which holds parameter.
      * @param param_name Name of parameter, value of which will be increased by one.
      * Parameter type should be uint64_t.
+     * @return true on success, false otherwise.
      */
-    void dm_uint64_param_one_up(const std::string &obj_path, const char *param_name);
+    bool dm_uint64_param_one_up(const std::string &obj_path, const std::string &param_name);
 
     /**
      * @brief Get agent containing a specific radio
@@ -742,6 +743,13 @@ public:
      * @param station Station object.
      */
     void dm_restore_steering_summary_stats(Station &station);
+
+    /**
+     * @brief Update global steering summary statistics for one parameter
+     * 
+     * @param param_name Name of parameter, value of which will be increased by one.
+     */
+    void dm_increment_steer_summary_stats(const std::string &param_name);
 
     /**
      * @brief Adds or updates instance of Neighbor inside Interface object.

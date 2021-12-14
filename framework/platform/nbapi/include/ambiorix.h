@@ -124,7 +124,7 @@ public:
     virtual bool set_current_time(const std::string &path_to_object,
                                   const std::string &param = "TimeStamp") = 0;
 
-    virtual bool read_param(const std::string &obj_path, const char *param_name,
+    virtual bool read_param(const std::string &obj_path, const std::string &param_name,
                             uint64_t *param_val) = 0;
 };
 
