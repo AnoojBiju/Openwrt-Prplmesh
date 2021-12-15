@@ -190,8 +190,12 @@ void load_balancer_task::work()
                         (double(client_rx_bytes) / double(client_tx_bytes + client_rx_bytes));
                 }
 
-                client_efficiency_ratio =
-                    (float)client_bytes_percentage / (float)client_airtime_percentage;
+                /* Added the change only to address the cpp-check issue but if this flow is utilized in the future,
+                there is a need to review the entire function logic. */
+                if (client_rx_bitrate <= 0 && client_tx_bitrate <= 0) {
+                    client_efficiency_ratio =
+                        (float)client_bytes_percentage / (float)client_airtime_percentage;
+                }
             }
 
             //TASK_LOG(DEBUG) << "client_bytes_percentage=" << client_bytes_percentage;
