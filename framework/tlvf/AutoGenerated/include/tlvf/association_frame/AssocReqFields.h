@@ -42,6 +42,7 @@ class cDmgCapabilities;
 class cMultipleMacSublayers;
 class cOperatingModeNotify;
 class cVendorSpecific;
+class cUnknownField;
 
 class cSSID : public BaseClass
 {
@@ -487,6 +488,32 @@ class cVendorSpecific : public BaseClass
         uint8_t* m_oui_type = nullptr;
         uint8_t* m_data = nullptr;
         size_t m_data_idx__ = 0;
+};
+
+class cUnknownField : public BaseClass
+{
+    public:
+        cUnknownField(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cUnknownField(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cUnknownField();
+
+        eElementID& type();
+        const uint8_t& length();
+        size_t data_length() { return m_data_idx__ * sizeof(uint8_t); }
+        uint8_t* data(size_t idx = 0);
+        bool set_data(const void* buffer, size_t size);
+        bool alloc_data(size_t count = 1);
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eElementID* m_type = nullptr;
+        uint8_t* m_length = nullptr;
+        uint8_t* m_data = nullptr;
+        size_t m_data_idx__ = 0;
+        int m_lock_order_counter__ = 0;
 };
 
 }; // close namespace: assoc_frame
