@@ -41,6 +41,7 @@ class cMultiBand;
 class cDmgCapabilities;
 class cMultipleMacSublayers;
 class cOperatingModeNotify;
+class cVendorSpecific;
 
 class cSSID : public BaseClass
 {
@@ -454,6 +455,38 @@ class cOperatingModeNotify : public BaseClass
         eElementID* m_type = nullptr;
         uint8_t* m_length = nullptr;
         uint8_t* m_op_mode = nullptr;
+};
+
+class cVendorSpecific : public BaseClass
+{
+    public:
+        cVendorSpecific(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cVendorSpecific(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cVendorSpecific();
+
+        eElementID& type();
+        const uint8_t& length();
+        uint8_t* oui(size_t idx = 0);
+        bool set_oui(const void* buffer, size_t size);
+        uint8_t& oui_type();
+        size_t data_length() { return m_data_idx__ * sizeof(uint8_t); }
+        uint8_t* data(size_t idx = 0);
+        bool set_data(const void* buffer, size_t size);
+        bool alloc_data(size_t count = 1);
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eElementID* m_type = nullptr;
+        uint8_t* m_length = nullptr;
+        uint8_t* m_oui = nullptr;
+        size_t m_oui_idx__ = 0;
+        int m_lock_order_counter__ = 0;
+        uint8_t* m_oui_type = nullptr;
+        uint8_t* m_data = nullptr;
+        size_t m_data_idx__ = 0;
 };
 
 }; // close namespace: assoc_frame
