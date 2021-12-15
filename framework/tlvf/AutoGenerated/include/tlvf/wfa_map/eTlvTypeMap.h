@@ -85,6 +85,7 @@ enum class eTlvTypeMap : uint8_t {
     TLV_ASSOCIATED_STA_EXTENDED_LINK_METRICS = 0xc8,
     TLV_PROFILE2_STATUS_CODE = 0xc9,
     TLV_PROFILE2_REASON_CODE = 0xca,
+    TLV_BACKHAUL_STA_RADIO_CAPABILITIES = 0xcb,
     TLV_BACKHAUL_BSS_CONFIGURATION = 0xd0,
     TLV_DEVICE_INVENTORY = 0xd4,
 };
@@ -156,6 +157,7 @@ static const char *eTlvTypeMap_str(eTlvTypeMap enum_value) {
     case eTlvTypeMap::TLV_ASSOCIATED_STA_EXTENDED_LINK_METRICS:     return "eTlvTypeMap::TLV_ASSOCIATED_STA_EXTENDED_LINK_METRICS";
     case eTlvTypeMap::TLV_PROFILE2_STATUS_CODE:                     return "eTlvTypeMap::TLV_PROFILE2_STATUS_CODE";
     case eTlvTypeMap::TLV_PROFILE2_REASON_CODE:                     return "eTlvTypeMap::TLV_PROFILE2_REASON_CODE";
+    case eTlvTypeMap::TLV_BACKHAUL_STA_RADIO_CAPABILITIES:          return "eTlvTypeMap::TLV_BACKHAUL_STA_RADIO_CAPABILITIES";
     case eTlvTypeMap::TLV_BACKHAUL_BSS_CONFIGURATION:               return "eTlvTypeMap::TLV_BACKHAUL_BSS_CONFIGURATION";
     case eTlvTypeMap::TLV_DEVICE_INVENTORY:                         return "eTlvTypeMap::TLV_DEVICE_INVENTORY";
     }
@@ -234,6 +236,7 @@ public:
         case 0xc8:
         case 0xc9:
         case 0xca:
+        case 0xcb:
         case 0xd0:
         case 0xd4:
                 ret = true;
