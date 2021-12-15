@@ -1,6 +1,7 @@
 #
 ---
 _include: {
+  tlvf/common/sMacAddr.h,
   tlvf/association_frame/eElementID.h,
   tlvf/AssociationRequestFrame/assoc_frame_bitfields.h,
 }
@@ -9,9 +10,7 @@ _namespace: assoc_frame
 
 cCurrentApAddress:
   _type: class
-  ap_addr:
-    _type: char
-    _length: ["assoc_frame::MAC_ADDR_LEN"]
+  ap_addr: sMacAddr
 
 cFastBssTrans:
   _type: class

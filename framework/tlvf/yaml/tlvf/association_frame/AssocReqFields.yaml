@@ -1,6 +1,7 @@
 #
 ---
 _include: {
+  tlvf/common/sMacAddr.h,
   tlvf/association_frame/eElementID.h,
   tlvf/AssociationRequestFrame/assoc_frame_bitfields.h,
 }
@@ -162,9 +163,7 @@ cMultiBand:
     _type: uint8_t
   channel_num:
     _type: uint8_t
-  bssid:
-    _type: char
-    _length: ["assoc_frame::MAC_ADDR_LEN"]
+  bssid: sMacAddr
   beacon_interval:
     _type: uint8_t
   tsf_offset:
@@ -184,9 +183,7 @@ cDmgCapabilities:
     _type: eElementID
     _value: ID_DMG_CAPS
   length: uint8_t
-  bssid:
-    _type: char
-    _length: ["assoc_frame::MAC_ADDR_LEN"]
+  bssid: sMacAddr
   aid: uint8_t
   dmg_sta_cap_info:
     _type: uint8_t
@@ -209,9 +206,7 @@ cMultipleMacSublayers:
   length:
     _type: uint8_t
   mms_control: uint8_t
-  sta_mac:
-    _type: char
-    _length: ["assoc_frame::MAC_ADDR_LEN"]
+  sta_mac: sMacAddr
   interface_addr:
     _type: uint8_t
     _length: []
