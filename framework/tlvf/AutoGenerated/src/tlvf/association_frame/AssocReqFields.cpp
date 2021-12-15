@@ -1323,38 +1323,10 @@ uint8_t& cMultiBand::channel_num() {
     return (uint8_t&)(*m_channel_num);
 }
 
-std::string cMultiBand::bssid_str() {
-    char *bssid_ = bssid();
-    if (!bssid_) { return std::string(); }
-    auto str = std::string(bssid_, m_bssid_idx__);
-    auto pos = str.find_first_of('\0');
-    if (pos != std::string::npos) {
-        str.erase(pos);
-    }
-    return str;
+sMacAddr& cMultiBand::bssid() {
+    return (sMacAddr&)(*m_bssid);
 }
 
-char* cMultiBand::bssid(size_t length) {
-    if( (m_bssid_idx__ == 0) || (m_bssid_idx__ < length) ) {
-        TLVF_LOG(ERROR) << "bssid length is smaller than requested length";
-        return nullptr;
-    }
-    return ((char*)m_bssid);
-}
-
-bool cMultiBand::set_bssid(const std::string& str) { return set_bssid(str.c_str(), str.size()); }
-bool cMultiBand::set_bssid(const char str[], size_t size) {
-    if (str == nullptr) {
-        TLVF_LOG(WARNING) << "set_bssid received a null pointer.";
-        return false;
-    }
-    if (size > assoc_frame::MAC_ADDR_LEN) {
-        TLVF_LOG(ERROR) << "Received buffer size is smaller than string length";
-        return false;
-    }
-    std::copy(str, str + size, m_bssid);
-    return true;
-}
 uint8_t& cMultiBand::beacon_interval() {
     return (uint8_t&)(*m_beacon_interval);
 }
@@ -1393,6 +1365,7 @@ uint8_t& cMultiBand::optional() {
 
 void cMultiBand::class_swap()
 {
+    m_bssid->struct_swap();
 }
 
 bool cMultiBand::finalize()
@@ -1432,7 +1405,7 @@ size_t cMultiBand::get_initial_size()
     class_size += sizeof(uint8_t); // band_id
     class_size += sizeof(uint8_t); // op_class
     class_size += sizeof(uint8_t); // channel_num
-    class_size += assoc_frame::MAC_ADDR_LEN * sizeof(char); // bssid
+    class_size += sizeof(sMacAddr); // bssid
     class_size += sizeof(uint8_t); // beacon_interval
     class_size += 8 * sizeof(uint8_t); // tsf_offset
     class_size += sizeof(uint8_t); // multi_band_con_cap
@@ -1483,15 +1456,13 @@ bool cMultiBand::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_bssid = reinterpret_cast<char*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(char) * (assoc_frame::MAC_ADDR_LEN))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (assoc_frame::MAC_ADDR_LEN) << ") Failed!";
+    m_bssid = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(sMacAddr))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sMacAddr) << ") Failed!";
         return false;
     }
-    m_bssid_idx__  = assoc_frame::MAC_ADDR_LEN;
-    if (!m_parse__) {
-        if (m_length) { (*m_length) += (sizeof(char) * assoc_frame::MAC_ADDR_LEN); }
-    }
+    if(m_length && !m_parse__){ (*m_length) += sizeof(sMacAddr); }
+    if (!m_parse__) { m_bssid->struct_init(); }
     m_beacon_interval = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
@@ -1547,38 +1518,10 @@ const uint8_t& cDmgCapabilities::length() {
     return (const uint8_t&)(*m_length);
 }
 
-std::string cDmgCapabilities::bssid_str() {
-    char *bssid_ = bssid();
-    if (!bssid_) { return std::string(); }
-    auto str = std::string(bssid_, m_bssid_idx__);
-    auto pos = str.find_first_of('\0');
-    if (pos != std::string::npos) {
-        str.erase(pos);
-    }
-    return str;
+sMacAddr& cDmgCapabilities::bssid() {
+    return (sMacAddr&)(*m_bssid);
 }
 
-char* cDmgCapabilities::bssid(size_t length) {
-    if( (m_bssid_idx__ == 0) || (m_bssid_idx__ < length) ) {
-        TLVF_LOG(ERROR) << "bssid length is smaller than requested length";
-        return nullptr;
-    }
-    return ((char*)m_bssid);
-}
-
-bool cDmgCapabilities::set_bssid(const std::string& str) { return set_bssid(str.c_str(), str.size()); }
-bool cDmgCapabilities::set_bssid(const char str[], size_t size) {
-    if (str == nullptr) {
-        TLVF_LOG(WARNING) << "set_bssid received a null pointer.";
-        return false;
-    }
-    if (size > assoc_frame::MAC_ADDR_LEN) {
-        TLVF_LOG(ERROR) << "Received buffer size is smaller than string length";
-        return false;
-    }
-    std::copy(str, str + size, m_bssid);
-    return true;
-}
 uint8_t& cDmgCapabilities::aid() {
     return (uint8_t&)(*m_aid);
 }
@@ -1625,6 +1568,7 @@ uint8_t& cDmgCapabilities::short_amsdu_subframe_max_num() {
 
 void cDmgCapabilities::class_swap()
 {
+    m_bssid->struct_swap();
     tlvf_swap(16, reinterpret_cast<uint8_t*>(m_dmg_ap));
     tlvf_swap(16, reinterpret_cast<uint8_t*>(m_dmg_sta_beam_track_time_lim));
 }
@@ -1662,7 +1606,7 @@ size_t cDmgCapabilities::get_initial_size()
     size_t class_size = 0;
     class_size += sizeof(eElementID); // type
     class_size += sizeof(uint8_t); // length
-    class_size += assoc_frame::MAC_ADDR_LEN * sizeof(char); // bssid
+    class_size += sizeof(sMacAddr); // bssid
     class_size += sizeof(uint8_t); // aid
     class_size += 8 * sizeof(uint8_t); // dmg_sta_cap_info
     class_size += sizeof(uint16_t); // dmg_ap
@@ -1691,15 +1635,13 @@ bool cDmgCapabilities::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_bssid = reinterpret_cast<char*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(char) * (assoc_frame::MAC_ADDR_LEN))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (assoc_frame::MAC_ADDR_LEN) << ") Failed!";
+    m_bssid = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(sMacAddr))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sMacAddr) << ") Failed!";
         return false;
     }
-    m_bssid_idx__  = assoc_frame::MAC_ADDR_LEN;
-    if (!m_parse__) {
-        if (m_length) { (*m_length) += (sizeof(char) * assoc_frame::MAC_ADDR_LEN); }
-    }
+    if(m_length && !m_parse__){ (*m_length) += sizeof(sMacAddr); }
+    if (!m_parse__) { m_bssid->struct_init(); }
     m_aid = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
@@ -1771,38 +1713,10 @@ uint8_t& cMultipleMacSublayers::mms_control() {
     return (uint8_t&)(*m_mms_control);
 }
 
-std::string cMultipleMacSublayers::sta_mac_str() {
-    char *sta_mac_ = sta_mac();
-    if (!sta_mac_) { return std::string(); }
-    auto str = std::string(sta_mac_, m_sta_mac_idx__);
-    auto pos = str.find_first_of('\0');
-    if (pos != std::string::npos) {
-        str.erase(pos);
-    }
-    return str;
+sMacAddr& cMultipleMacSublayers::sta_mac() {
+    return (sMacAddr&)(*m_sta_mac);
 }
 
-char* cMultipleMacSublayers::sta_mac(size_t length) {
-    if( (m_sta_mac_idx__ == 0) || (m_sta_mac_idx__ < length) ) {
-        TLVF_LOG(ERROR) << "sta_mac length is smaller than requested length";
-        return nullptr;
-    }
-    return ((char*)m_sta_mac);
-}
-
-bool cMultipleMacSublayers::set_sta_mac(const std::string& str) { return set_sta_mac(str.c_str(), str.size()); }
-bool cMultipleMacSublayers::set_sta_mac(const char str[], size_t size) {
-    if (str == nullptr) {
-        TLVF_LOG(WARNING) << "set_sta_mac received a null pointer.";
-        return false;
-    }
-    if (size > assoc_frame::MAC_ADDR_LEN) {
-        TLVF_LOG(ERROR) << "Received buffer size is smaller than string length";
-        return false;
-    }
-    std::copy(str, str + size, m_sta_mac);
-    return true;
-}
 uint8_t* cMultipleMacSublayers::interface_addr(size_t idx) {
     if ( (m_interface_addr_idx__ == 0) || (m_interface_addr_idx__ <= idx) ) {
         TLVF_LOG(ERROR) << "Requested index is greater than the number of available entries";
@@ -1852,6 +1766,7 @@ bool cMultipleMacSublayers::alloc_interface_addr(size_t count) {
 
 void cMultipleMacSublayers::class_swap()
 {
+    m_sta_mac->struct_swap();
 }
 
 bool cMultipleMacSublayers::finalize()
@@ -1888,7 +1803,7 @@ size_t cMultipleMacSublayers::get_initial_size()
     class_size += sizeof(eElementID); // type
     class_size += sizeof(uint8_t); // length
     class_size += sizeof(uint8_t); // mms_control
-    class_size += assoc_frame::MAC_ADDR_LEN * sizeof(char); // sta_mac
+    class_size += sizeof(sMacAddr); // sta_mac
     return class_size;
 }
 
@@ -1916,15 +1831,13 @@ bool cMultipleMacSublayers::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_sta_mac = reinterpret_cast<char*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(char) * (assoc_frame::MAC_ADDR_LEN))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (assoc_frame::MAC_ADDR_LEN) << ") Failed!";
+    m_sta_mac = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(sMacAddr))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sMacAddr) << ") Failed!";
         return false;
     }
-    m_sta_mac_idx__  = assoc_frame::MAC_ADDR_LEN;
-    if (!m_parse__) {
-        if (m_length) { (*m_length) += (sizeof(char) * assoc_frame::MAC_ADDR_LEN); }
-    }
+    if(m_length && !m_parse__){ (*m_length) += sizeof(sMacAddr); }
+    if (!m_parse__) { m_sta_mac->struct_init(); }
     m_interface_addr = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (m_length && m_parse__) {
         auto swap_len = *m_length;

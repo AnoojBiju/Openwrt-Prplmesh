@@ -25,40 +25,13 @@ BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
 }
 cCurrentApAddress::~cCurrentApAddress() {
 }
-std::string cCurrentApAddress::ap_addr_str() {
-    char *ap_addr_ = ap_addr();
-    if (!ap_addr_) { return std::string(); }
-    auto str = std::string(ap_addr_, m_ap_addr_idx__);
-    auto pos = str.find_first_of('\0');
-    if (pos != std::string::npos) {
-        str.erase(pos);
-    }
-    return str;
+sMacAddr& cCurrentApAddress::ap_addr() {
+    return (sMacAddr&)(*m_ap_addr);
 }
 
-char* cCurrentApAddress::ap_addr(size_t length) {
-    if( (m_ap_addr_idx__ == 0) || (m_ap_addr_idx__ < length) ) {
-        TLVF_LOG(ERROR) << "ap_addr length is smaller than requested length";
-        return nullptr;
-    }
-    return ((char*)m_ap_addr);
-}
-
-bool cCurrentApAddress::set_ap_addr(const std::string& str) { return set_ap_addr(str.c_str(), str.size()); }
-bool cCurrentApAddress::set_ap_addr(const char str[], size_t size) {
-    if (str == nullptr) {
-        TLVF_LOG(WARNING) << "set_ap_addr received a null pointer.";
-        return false;
-    }
-    if (size > assoc_frame::MAC_ADDR_LEN) {
-        TLVF_LOG(ERROR) << "Received buffer size is smaller than string length";
-        return false;
-    }
-    std::copy(str, str + size, m_ap_addr);
-    return true;
-}
 void cCurrentApAddress::class_swap()
 {
+    m_ap_addr->struct_swap();
 }
 
 bool cCurrentApAddress::finalize()
@@ -91,7 +64,7 @@ bool cCurrentApAddress::finalize()
 size_t cCurrentApAddress::get_initial_size()
 {
     size_t class_size = 0;
-    class_size += assoc_frame::MAC_ADDR_LEN * sizeof(char); // ap_addr
+    class_size += sizeof(sMacAddr); // ap_addr
     return class_size;
 }
 
@@ -101,12 +74,12 @@ bool cCurrentApAddress::init()
         TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
         return false;
     }
-    m_ap_addr = reinterpret_cast<char*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(char) * (assoc_frame::MAC_ADDR_LEN))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (assoc_frame::MAC_ADDR_LEN) << ") Failed!";
+    m_ap_addr = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(sMacAddr))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sMacAddr) << ") Failed!";
         return false;
     }
-    m_ap_addr_idx__  = assoc_frame::MAC_ADDR_LEN;
+    if (!m_parse__) { m_ap_addr->struct_init(); }
     if (m_parse__) { class_swap(); }
     return true;
 }

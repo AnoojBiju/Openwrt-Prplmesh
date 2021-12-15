@@ -21,6 +21,7 @@
 #include <tlvf/BaseClass.h>
 #include <tlvf/ClassList.h>
 #include <tuple>
+#include "tlvf/common/sMacAddr.h"
 #include "tlvf/association_frame/eElementID.h"
 #include "tlvf/AssociationRequestFrame/assoc_frame_bitfields.h"
 
@@ -307,10 +308,7 @@ class cMultiBand : public BaseClass
         uint8_t& band_id();
         uint8_t& op_class();
         uint8_t& channel_num();
-        std::string bssid_str();
-        char* bssid(size_t length = 0);
-        bool set_bssid(const std::string& str);
-        bool set_bssid(const char buffer[], size_t size);
+        sMacAddr& bssid();
         uint8_t& beacon_interval();
         uint8_t* tsf_offset(size_t idx = 0);
         bool set_tsf_offset(const void* buffer, size_t size);
@@ -329,12 +327,11 @@ class cMultiBand : public BaseClass
         uint8_t* m_band_id = nullptr;
         uint8_t* m_op_class = nullptr;
         uint8_t* m_channel_num = nullptr;
-        char* m_bssid = nullptr;
-        size_t m_bssid_idx__ = 0;
-        int m_lock_order_counter__ = 0;
+        sMacAddr* m_bssid = nullptr;
         uint8_t* m_beacon_interval = nullptr;
         uint8_t* m_tsf_offset = nullptr;
         size_t m_tsf_offset_idx__ = 0;
+        int m_lock_order_counter__ = 0;
         uint8_t* m_multi_band_con_cap = nullptr;
         uint8_t* m_fst_session_timeout = nullptr;
         uint8_t* m_optional = nullptr;
@@ -349,10 +346,7 @@ class cDmgCapabilities : public BaseClass
 
         eElementID& type();
         const uint8_t& length();
-        std::string bssid_str();
-        char* bssid(size_t length = 0);
-        bool set_bssid(const std::string& str);
-        bool set_bssid(const char buffer[], size_t size);
+        sMacAddr& bssid();
         uint8_t& aid();
         uint8_t* dmg_sta_cap_info(size_t idx = 0);
         bool set_dmg_sta_cap_info(const void* buffer, size_t size);
@@ -370,12 +364,11 @@ class cDmgCapabilities : public BaseClass
         bool init();
         eElementID* m_type = nullptr;
         uint8_t* m_length = nullptr;
-        char* m_bssid = nullptr;
-        size_t m_bssid_idx__ = 0;
-        int m_lock_order_counter__ = 0;
+        sMacAddr* m_bssid = nullptr;
         uint8_t* m_aid = nullptr;
         uint8_t* m_dmg_sta_cap_info = nullptr;
         size_t m_dmg_sta_cap_info_idx__ = 0;
+        int m_lock_order_counter__ = 0;
         uint16_t* m_dmg_ap = nullptr;
         uint16_t* m_dmg_sta_beam_track_time_lim = nullptr;
         uint8_t* m_extended_sc_mcs_cap = nullptr;
@@ -393,10 +386,7 @@ class cMultipleMacSublayers : public BaseClass
         eElementID& type();
         const uint8_t& length();
         uint8_t& mms_control();
-        std::string sta_mac_str();
-        char* sta_mac(size_t length = 0);
-        bool set_sta_mac(const std::string& str);
-        bool set_sta_mac(const char buffer[], size_t size);
+        sMacAddr& sta_mac();
         size_t interface_addr_length() { return m_interface_addr_idx__ * sizeof(uint8_t); }
         uint8_t* interface_addr(size_t idx = 0);
         bool set_interface_addr(const void* buffer, size_t size);
@@ -410,11 +400,10 @@ class cMultipleMacSublayers : public BaseClass
         eElementID* m_type = nullptr;
         uint8_t* m_length = nullptr;
         uint8_t* m_mms_control = nullptr;
-        char* m_sta_mac = nullptr;
-        size_t m_sta_mac_idx__ = 0;
-        int m_lock_order_counter__ = 0;
+        sMacAddr* m_sta_mac = nullptr;
         uint8_t* m_interface_addr = nullptr;
         size_t m_interface_addr_idx__ = 0;
+        int m_lock_order_counter__ = 0;
 };
 
 class cOperatingModeNotify : public BaseClass
