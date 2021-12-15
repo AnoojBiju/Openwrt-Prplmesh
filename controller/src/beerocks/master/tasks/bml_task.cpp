@@ -90,15 +90,15 @@ void bml_task::handle_event(int event_type, void *obj)
         if (obj) {
             auto event_obj = static_cast<stats_info_available_event *>(obj);
 
-            int idx = 0;
+            int index = 0;
             std::vector<int> stats_updates_listeners;
             int fd;
-            while ((fd = database.get_bml_socket_at(idx)) !=
+            while ((fd = database.get_bml_socket_at(index)) !=
                    beerocks::net::FileDescriptor::invalid_descriptor) {
                 if (database.get_bml_stats_update_enable(fd)) {
                     stats_updates_listeners.push_back(fd);
                 }
-                idx++;
+                index++;
             }
             if (!stats_updates_listeners.empty()) {
                 network_map::send_bml_nodes_statistics_message_to_listeners(
