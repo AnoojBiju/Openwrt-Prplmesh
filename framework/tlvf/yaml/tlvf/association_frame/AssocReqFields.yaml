@@ -176,6 +176,20 @@ cMultiBand:
   optional:
     _type: uint8_t
 
+eMultiBandId:
+  _type: enum
+  _enum_storage: uint8_t
+  _comment: |
+    The Band ID field provides the identification of the frequency band related to the Operating Class and
+    channel Number fields. The Band ID field is defined in 9.4.1.45. (Cf80211-2020 Table 9-67)
+  BAND_TV_WHITE_SPACES: 0
+  BAND_SUB_1_GHZ: 1
+  BAND_2_4_GHZ: 2
+  BAND_3_6_GHZ: 3
+  BAND_4_9_AND_5_GHZ: 4
+  BAND_60_GHZ : 5
+  BAND_45_GHZ : 6
+
 cDmgCapabilities:
   _type: class
   _is_tlv_class: True
