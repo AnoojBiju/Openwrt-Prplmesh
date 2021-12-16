@@ -2466,10 +2466,12 @@ bool Controller::handle_intel_slave_join(
             database.set_node_type(tlvf::mac_to_string(radio_mac), beerocks::TYPE_SLAVE);
             LOG(ERROR) << "Existing mac node is not TYPE_SLAVE";
         }
-        database.clear_hostap_stats_info(bridge_mac, radio_mac);
     } else {
         database.add_node_radio(radio_mac, bridge_mac);
     }
+
+    //reset/init radio stats when adding slave's radio node
+    database.clear_hostap_stats_info(bridge_mac, radio_mac);
 
     auto radio = database.get_radio(bridge_mac, radio_mac);
     if (!radio) {
@@ -2759,10 +2761,12 @@ bool Controller::handle_non_intel_slave_join(
             database.set_node_type(tlvf::mac_to_string(radio_mac), beerocks::TYPE_SLAVE);
             LOG(ERROR) << "Existing mac node is not TYPE_SLAVE";
         }
-        database.clear_hostap_stats_info(bridge_mac, radio_mac);
     } else {
         database.add_node_radio(radio_mac, bridge_mac);
     }
+
+    //reset/init radio stats when adding slave's radio node
+    database.clear_hostap_stats_info(bridge_mac, radio_mac);
 
     // TODO Assume no backhaul manager
 
