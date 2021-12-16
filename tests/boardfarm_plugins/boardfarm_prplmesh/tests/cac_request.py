@@ -30,14 +30,18 @@ class CacRequest(PrplMeshBaseTest):
             '0x{:02x} {} 0x{:01x} 0x{:01x} 0x00'
             .format(number_of_radios, agent.radios[1].mac, operating_class, channel))
 
-        print("CAC Request TLV: ", cac_request_tlv)
+        print("Hemanth CAC Request TLV: ", cac_request_tlv)
 
         req_mid = controller.dev_send_1905(
             agent.mac, self.ieee1905['eMessageType']['CAC_REQUEST_MESSAGE'], cac_request_tlv)
         time.sleep(1)
 
+        print("Hemanth CAC request TLV sent ")
+
         self.check_cmdu_type_single("ACK", self.ieee1905['eMessageType']['ACK_MESSAGE'],
                                     agent.mac, controller.mac, req_mid)
+
+        print("Hemanth check CAC request TLV recieved ")
 
         time.sleep(2)
 
@@ -46,15 +50,18 @@ class CacRequest(PrplMeshBaseTest):
             '0x{:02x} {} 0x{:01x} 0x{:01x} 0x00'
             .format(number_of_radios, agent.radios[1].mac, operating_class, channel))
 
-        print("CAC Termination TLV: ", cac_termination_tlv)
+        print("Hemanth CAC Termination TLV: ", cac_termination_tlv)
 
         req_mid = controller.dev_send_1905(agent.mac,
                                            self.ieee1905['eMessageType']['CAC_TERMINATION_MESSAGE'],
                                            cac_termination_tlv)
         time.sleep(1)
 
+        print("Hemanth CAC Termination TLV sent ")
+
         self.check_cmdu_type_single("ACK", self.ieee1905['eMessageType']['ACK_MESSAGE'],
                                     agent.mac, controller.mac, req_mid)
 
+        print("Hemanth check CAC Termination TLV")
         # TODO
         # verify that the agent sends beacons
