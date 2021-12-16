@@ -1011,18 +1011,17 @@ bool rdkb_wlan_task::send_steering_conf_to_agent(const std::string &radio_mac)
         son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, radio_mac);
         //sending client configuration for specifc group
         for (auto client_entry : client_list) {
-            auto update = message_com::create_vs_message<
+            auto steer_client_update = message_com::create_vs_message<
                 beerocks_message::cACTION_CONTROL_STEERING_CLIENT_SET_REQUEST>(cmdu_tx);
-            if (update == nullptr) {
+            if (steer_client_update == nullptr) {
                 TASK_LOG(ERROR) << "Failed building message!";
                 return false;
             }
 
-            update->params().steeringGroupIndex = steering_group.first;
-            update->params().bssid              = tlvf::mac_from_string(bssid);
-            update->params().client_mac         = tlvf::mac_from_string(client_entry.first);
-            ;
-            update->params().config = *(client_entry.second->get_client_config());
+            steer_client_update->params().steeringGroupIndex = steering_group.first;
+            steer_client_update->params().bssid              = tlvf::mac_from_string(bssid);
+            steer_client_update->params().client_mac = tlvf::mac_from_string(client_entry.first);
+            steer_client_update->params().config     = *(client_entry.second->get_client_config());
             TASK_LOG(DEBUG) << "send cACTION_CONTROL_STEERING_CLIENT_SET to agent " << agent_mac
                             << " radio_mac " << radio_mac;
             son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, radio_mac);
