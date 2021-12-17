@@ -10,6 +10,8 @@
 
 #include <beerocks/tlvf/beerocks_message_bml.h>
 #include <chrono>
+#include <iomanip>
+#include <iostream>
 #include <locale.h>
 #include <time.h>
 
@@ -46,31 +48,80 @@ static amxd_status_t action_last_steer_time(amxd_object_t *object, amxd_param_t 
     }
 
     // Get param value directly without going though the object action handlers
-    auto last_streer_ts = amxd_object_get_param_def(object, "LastSteerTimeStamp");
-    if (!last_streer_ts) {
+    auto last_steer_ts = amxd_object_get_param_def(object, "LastSteerTimeStamp");
+    if (!last_steer_ts) {
         LOG(WARNING) << "Missing value of LastSteerTimeStamp in action_last_steer_time.";
         return amxd_status_parameter_not_found;
     }
 
-    std::string last_streer_ts_str = amxc_var_constcast(cstring_t, &last_streer_ts->value);
-
-    // Check if default timestampt, then steering didn't occur for this STA yet.
-    if (last_streer_ts_str.find("2020-08-31T11:22:39Z") != std::string::npos) {
+    std::string last_steer_ts_str = amxc_var_constcast(cstring_t, &last_steer_ts->value);
+    if (last_steer_ts_str.empty()) {
         amxc_var_set(uint64_t, retval, 0);
         return amxd_status_ok;
     }
 
-    time_t now              = time(NULL);
-    struct tm last_steer    = {};
-    const char *time_format = "%Y-%m-%dT%T%Z";
+    amxc_ts_t ts_steer, ts_now;
+    amxc_ts_parse(&ts_steer, last_steer_ts_str.c_str(), last_steer_ts_str.length());
+    amxc_ts_now(&ts_now);
 
-    strptime(last_streer_ts_str.c_str(), time_format, &last_steer);
-    last_steer.tm_isdst = -1;
+    amxc_var_set(uint64_t, retval, (ts_now.sec - ts_steer.sec));
+    return amxd_status_ok;
+}
 
-    auto last_steer_seconds = mktime(&last_steer);
-    auto result             = now - last_steer_seconds;
+/*
+** Set (LastConnectTime) the number of seconds since station is associated. It is created from assoc. time of station object
+*/
+static amxd_status_t action_read_assoc_time(amxd_object_t *object, amxd_param_t *param,
+                                            amxd_action_t reason, const amxc_var_t *const args,
+                                            amxc_var_t *const retval, void *priv)
+{
 
-    amxc_var_set(uint64_t, retval, result);
+    if (reason != action_param_read) {
+        LOG(ERROR) << "Failed to get data, incorrect reason: " << reason;
+        return amxd_status_function_not_implemented;
+    }
+    if (!param) {
+        return amxd_status_parameter_not_found;
+    }
+
+    auto status = amxd_action_param_read(object, param, reason, args, retval, priv);
+    if (status != amxd_status_ok) {
+        return status;
+    }
+
+    // Initialization of ambiorix triggers read action and it leads un-initalized 1db object
+    if (!g_database) {
+        return amxd_status_unknown_error;
+    }
+
+    amxd_param_t *mac_param = amxd_object_get_param_def(object, "MACAddress");
+    if (mac_param == nullptr) {
+        LOG(ERROR) << "MACAddress can not be read in STA datamodel";
+        return amxd_status_parameter_not_found;
+    }
+    auto sta_mac = tlvf::mac_from_string(amxc_var_constcast(cstring_t, &mac_param->value));
+
+    // Initialization of ambiorix objects triggers read action and it leads un-initalized values
+    if (sta_mac == beerocks::net::network_utils::ZERO_MAC) {
+        return amxd_status_object_not_found;
+    }
+
+    auto station = g_database->get_station(sta_mac);
+    if (!station) {
+        LOG(ERROR) << "Station is not found on db with mac: " << sta_mac;
+        return amxd_status_object_not_found;
+    }
+
+    if (station->assoc_timestamp.empty()) {
+        amxc_var_set(uint64_t, retval, 0);
+        return amxd_status_ok;
+    }
+
+    amxc_ts_t ts_assoc, ts_now;
+    amxc_ts_parse(&ts_assoc, station->assoc_timestamp.c_str(), station->assoc_timestamp.length());
+    amxc_ts_now(&ts_now);
+
+    amxc_var_set(uint64_t, retval, (ts_now.sec - ts_assoc.sec));
     return amxd_status_ok;
 }
 
@@ -436,6 +487,7 @@ static void event_configuration_changed(const char *const sig_name, const amxc_v
 std::vector<beerocks::nbapi::sActionsCallback> get_actions_callback_list(void)
 {
     const std::vector<beerocks::nbapi::sActionsCallback> actions_list = {
+        {"action_read_assoc_time", action_read_assoc_time},
         {"action_read_last_change", action_read_last_change},
         {"action_last_steer_time", action_last_steer_time},
     };
