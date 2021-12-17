@@ -45,12 +45,14 @@ static amxd_status_t action_last_steer_time(amxd_object_t *object, amxd_param_t 
         return status;
     }
 
-    status = amxd_object_get_param(object, "LastSteerTimeStamp", retval);
-    if (status != amxd_status_ok) {
-        return status;
+    // Get param value directly without going though the object action handlers
+    auto last_streer_ts = amxd_object_get_param_def(object, "LastSteerTimeStamp");
+    if (!last_streer_ts) {
+        LOG(WARNING) << "Missing value of LastSteerTimeStamp in action_last_steer_time.";
+        return amxd_status_parameter_not_found;
     }
 
-    std::string last_streer_ts_str = amxc_var_constcast(cstring_t, retval);
+    std::string last_streer_ts_str = amxc_var_constcast(cstring_t, &last_streer_ts->value);
 
     // Check if default timestampt, then steering didn't occur for this STA yet.
     if (last_streer_ts_str.find("2020-08-31T11:22:39Z") != std::string::npos) {
