@@ -5976,19 +5976,33 @@ std::string db::dm_add_steer_event()
     return event_path;
 }
 
-void db::dm_restore_steering_summary_stats(Station &station)
+bool db::dm_restore_steering_summary_stats(Station &station)
 {
+    bool ret_val = true;
+
+    if (station.dm_path.empty()) {
+        LOG(DEBUG) << "Empty station dm_path";
+        return true;
+    }
+
     auto steer_summary = station.steering_summary_stats;
     auto obj_path      = station.dm_path + ".MultiAPSteeringSummaryStats";
 
-    m_ambiorix_datamodel->set(obj_path, "BlacklistAttempts", steer_summary.blacklist_attempts);
-    m_ambiorix_datamodel->set(obj_path, "BlacklistSuccesses", steer_summary.blacklist_successes);
-    m_ambiorix_datamodel->set(obj_path, "BlacklistFailures", steer_summary.blacklist_failures);
-    m_ambiorix_datamodel->set(obj_path, "BTMAttempts", steer_summary.btm_attempts);
-    m_ambiorix_datamodel->set(obj_path, "BTMSuccesses", steer_summary.btm_successes);
-    m_ambiorix_datamodel->set(obj_path, "BTMFailures", steer_summary.btm_failures);
-    m_ambiorix_datamodel->set(obj_path, "BTMQueryResponses", steer_summary.btm_query_responses);
-    m_ambiorix_datamodel->set(obj_path, "LastSteerTimeStamp", steer_summary.last_steer_ts);
+    ret_val &=
+        m_ambiorix_datamodel->set(obj_path, "BlacklistAttempts", steer_summary.blacklist_attempts);
+    ret_val &= m_ambiorix_datamodel->set(obj_path, "BlacklistSuccesses",
+                                         steer_summary.blacklist_successes);
+    ret_val &=
+        m_ambiorix_datamodel->set(obj_path, "BlacklistFailures", steer_summary.blacklist_failures);
+    ret_val &= m_ambiorix_datamodel->set(obj_path, "BTMAttempts", steer_summary.btm_attempts);
+    ret_val &= m_ambiorix_datamodel->set(obj_path, "BTMSuccesses", steer_summary.btm_successes);
+    ret_val &= m_ambiorix_datamodel->set(obj_path, "BTMFailures", steer_summary.btm_failures);
+    ret_val &=
+        m_ambiorix_datamodel->set(obj_path, "BTMQueryResponses", steer_summary.btm_query_responses);
+    ret_val &=
+        m_ambiorix_datamodel->set(obj_path, "LastSteerTimeStamp", steer_summary.last_steer_ts);
+
+    return ret_val;
 }
 
 void db::dm_increment_steer_summary_stats(const std::string &param_name)
