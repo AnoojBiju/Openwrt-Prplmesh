@@ -390,6 +390,11 @@ bool db::dm_set_multi_ap_sta_noise_param(Station &station, const uint8_t rcpi, c
 
     uint32_t anpi = rcpi / (1 + std::pow(10, (rsni / 20.0) - 1));
 
+    if (!bss->radio.stats_info) {
+        LOG(ERROR) << "Failed to get stats of hosting radio " << bss->radio.radio_uid;
+        return false;
+    }
+
     return m_ambiorix_datamodel->set(station.dm_path + ".MultiAPSTA", "Noise",
                                      anpi + bss->radio.stats_info->noise);
 }
