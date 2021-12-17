@@ -741,12 +741,13 @@ public:
      * @brief Set values for parameters of NBAPI object MultiAPSteeringSummaryStats.
      *
      * @param station Station object.
+     * @return True on success, false otherwise.
      */
-    void dm_restore_steering_summary_stats(Station &station);
+    bool dm_restore_steering_summary_stats(Station &station);
 
     /**
      * @brief Update global steering summary statistics for one parameter
-     * 
+     *
      * @param param_name Name of parameter, value of which will be increased by one.
      */
     void dm_increment_steer_summary_stats(const std::string &param_name);
@@ -1314,12 +1315,12 @@ public:
 
     /**
      * @brief Get the channel scan report for the given radio and timestamp
-     * 
+     *
      * @param mac MAC address of radio.
      * @param ISO_8601_timestamp Channel scan report's timestamp.
      * @param[out] report_index  Copy of the report index.
      * @return True on success, false otherwise.
-     * 
+     *
      */
     bool get_channel_report_record(const sMacAddr &mac, const std::string &ISO_8601_timestamp,
                                    node::radio::channel_scan_report_index &report_index);
