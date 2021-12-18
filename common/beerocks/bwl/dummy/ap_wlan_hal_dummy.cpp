@@ -438,9 +438,22 @@ bool ap_wlan_hal_dummy::process_dummy_event(parsed_obj_map_t &parsed_obj)
             LOG(ERROR) << "One or more of required capability strings is missing!";
 
             // Setting minimum default values
-            msg->params.capabilities.ant_num       = 1;
-            msg->params.capabilities.wifi_standard = STANDARD_N;
-            msg->params.capabilities.default_mcs   = MCS_6;
+            msg->params.capabilities.ant_num             = 1;
+            msg->params.capabilities.wifi_standard       = STANDARD_N;
+            msg->params.capabilities.default_mcs         = MCS_6;
+            msg->params.capabilities.ht_ss               = 1;
+            msg->params.capabilities.ht_bw               = beerocks::BANDWIDTH_20;
+            msg->params.capabilities.ht_mcs              = beerocks::MCS_7;
+            msg->params.capabilities.ht_low_bw_short_gi  = 1;
+            msg->params.capabilities.ht_high_bw_short_gi = 0;
+            if (m_radio_info.is_5ghz) {
+                msg->params.capabilities.wifi_standard |= STANDARD_AC;
+                msg->params.capabilities.vht_ss               = 1;
+                msg->params.capabilities.vht_bw               = beerocks::BANDWIDTH_80;
+                msg->params.capabilities.vht_mcs              = beerocks::MCS_9;
+                msg->params.capabilities.vht_low_bw_short_gi  = 1;
+                msg->params.capabilities.vht_high_bw_short_gi = 0;
+            }
         }
 
         // Add the message to the queue
