@@ -343,4 +343,127 @@ TEST(overlapping_channels, channel_112)
                               128, beerocks::BANDWIDTH_160)) != result.end());
 }
 
+// clang-format off
+const auto staCaps_2_4 = []() {
+    beerocks::message::sRadioCapabilities caps;
+    caps.ant_num             = 1;
+    caps.wifi_standard       = beerocks::STANDARD_N;
+    caps.ht_ss               = 1;
+    caps.ht_mcs              = beerocks::MCS_7;
+    caps.ht_bw               = beerocks::BANDWIDTH_40;
+    caps.ht_low_bw_short_gi  = 1;
+    caps.ht_high_bw_short_gi = 1;
+    return caps;
+}();
+
+const auto staCaps_5 = []() {
+    beerocks::message::sRadioCapabilities caps;
+    caps.ant_num              = 2;
+    caps.wifi_standard        = beerocks::STANDARD_N |
+                                beerocks::STANDARD_AC;
+    caps.ht_ss                = 2;
+    caps.ht_mcs               = beerocks::MCS_7;
+    caps.ht_bw                = beerocks::BANDWIDTH_40;
+    caps.ht_low_bw_short_gi   = 1;
+    caps.ht_high_bw_short_gi  = 1;
+    caps.vht_ss               = 2;
+    caps.vht_mcs              = beerocks::MCS_9;
+    caps.vht_bw               = beerocks::BANDWIDTH_160;
+    caps.vht_low_bw_short_gi  = 1;
+    caps.vht_high_bw_short_gi = 0;
+    return caps;
+}();
+// clang-format on
+
+TEST(estimate_ul_params, too_low_phy_rate)
+{
+    /*
+     * phy_rate is below the lowest limit in phy_rate_table
+     * => then the lowest ul_params are returned
+     */
+    son::wireless_utils::sPhyUlParams result = son::wireless_utils::estimate_ul_params(
+        -60, 60, &staCaps_2_4, beerocks::BANDWIDTH_40, false);
+    son::wireless_utils::sPhyUlParams result_min = son::wireless_utils::estimate_ul_params(
+        -60, 65, &staCaps_2_4, beerocks::BANDWIDTH_20, false);
+
+    EXPECT_EQ(result.status, son::wireless_utils::ESTIMATION_FAILURE_BELOW_RANGE);
+    EXPECT_EQ(result.rssi, result_min.rssi);
+    EXPECT_EQ(result.tx_power, result_min.tx_power);
+}
+
+TEST(estimate_ul_params, too_high_phy_rate)
+{
+    /*
+     * phy_rate is beyond the highest supported rate in phy_rate_table
+     * => then the highest ul_params are returned
+     */
+    son::wireless_utils::sPhyUlParams result = son::wireless_utils::estimate_ul_params(
+        -30, 18000, &staCaps_5, beerocks::BANDWIDTH_160, true);
+    son::wireless_utils::sPhyUlParams result_max = son::wireless_utils::estimate_ul_params(
+        -30, 17333, &staCaps_5, beerocks::BANDWIDTH_160, true);
+
+    EXPECT_EQ(result.status, son::wireless_utils::ESTIMATION_SUCCESS);
+    EXPECT_EQ(result.rssi, result_max.rssi);
+    EXPECT_EQ(result.tx_power, result_max.tx_power);
+}
+
+TEST(estimate_ap_tx_phy_rate, match_rssi_to_rate)
+{
+    /*
+     * provided dl_rssi matches a phy_rate_table entry
+     * but it corresponds to a lower channel width
+     */
+    double result = son::wireless_utils::estimate_ap_tx_phy_rate(-81, &staCaps_5,
+                                                                 beerocks::BANDWIDTH_160, true);
+    double approx =
+        son::wireless_utils::estimate_ap_tx_phy_rate(-81, &staCaps_5, beerocks::BANDWIDTH_80, true);
+
+    EXPECT_EQ(result, approx);
+}
+
+TEST(estimate_ap_tx_phy_rate, no_match_rssi_to_rate)
+{
+    /*
+     * provided dl_rssi is too low and does not match any entry
+     * => the lowest estimation of phy rate is returned
+     */
+    double result      = son::wireless_utils::estimate_ap_tx_phy_rate(-100, &staCaps_2_4,
+                                                                 beerocks::BANDWIDTH_40, false);
+    double lower_limit = son::wireless_utils::estimate_ap_tx_phy_rate(
+        -89, &staCaps_2_4, beerocks::BANDWIDTH_20, false);
+
+    EXPECT_EQ(result, lower_limit);
+}
+
+TEST(mcs_from_rate, matched_mcs_from_rate)
+{
+    /*
+     * exact rate matched while iterating through phy rate entries
+     */
+    uint8_t mcs;
+    uint8_t short_gi;
+    auto result = son::wireless_utils::get_mcs_from_rate(1350, beerocks::ANT_MODE_1X1_SS1,
+                                                         beerocks::BANDWIDTH_40, mcs, short_gi);
+
+    EXPECT_TRUE(result);
+    EXPECT_EQ(mcs, beerocks::MCS_6);
+    EXPECT_EQ(short_gi, 1);
+}
+
+TEST(mcs_from_rate, neerest_mcs_from_rate)
+{
+    /*
+     * no exact rate matched while iterating through phy rate entries
+     * => get neerest rate and return its mcs
+     */
+    uint8_t mcs;
+    uint8_t short_gi;
+    auto result = son::wireless_utils::get_mcs_from_rate(7030, beerocks::ANT_MODE_2X2_SS2,
+                                                         beerocks::BANDWIDTH_160, mcs, short_gi);
+
+    EXPECT_FALSE(result);
+    EXPECT_EQ(mcs, beerocks::MCS_4);
+    EXPECT_EQ(short_gi, 0);
+}
+
 } // namespace
