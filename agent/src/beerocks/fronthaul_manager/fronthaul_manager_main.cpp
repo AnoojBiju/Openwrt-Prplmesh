@@ -247,7 +247,7 @@ int main(int argc, char *argv[])
         beerocks_slave_conf.temp_path + "pid/" + base_fronthaul_name; // For file touching
 
     // Create application event loop to wait for blocking I/O operations.
-    auto event_loop = std::make_shared<beerocks::EventLoopImpl>();
+    auto event_loop = std::make_shared<beerocks::EventLoopImpl>(beerocks::el_default_timeout);
     LOG_IF(!event_loop, FATAL) << "Unable to create event loop!";
 
     // Create timer factory to create instances of timers.
