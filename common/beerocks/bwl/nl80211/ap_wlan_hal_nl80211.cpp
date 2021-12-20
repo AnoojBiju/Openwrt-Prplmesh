@@ -84,6 +84,8 @@ static ap_wlan_hal::Event nl80211_to_bwl_event(const std::string &opcode)
         return ap_wlan_hal::Event::DFS_NOP_Finished;
     } else if (opcode == "AP-MGMT-FRAME-RECEIVED") {
         return ap_wlan_hal::Event::AP_MGMT_FRAME_RECEIVED;
+    } else if (opcode == "STA_INFO_REPLY") {
+        return ap_wlan_hal::Event::STA_INFO_REPLY;
     }
 
     return ap_wlan_hal::Event::Invalid;

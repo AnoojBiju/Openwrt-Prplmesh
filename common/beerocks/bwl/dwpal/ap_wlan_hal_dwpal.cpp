@@ -84,6 +84,8 @@ static ap_wlan_hal::Event dwpal_to_bwl_event(const std::string &opcode)
         return ap_wlan_hal::Event::MGMT_Frame;
     } else if (opcode == "AP-STA-POSSIBLE-PSK-MISMATCH") {
         return ap_wlan_hal::Event::AP_Sta_Possible_Psk_Mismatch;
+    } else if (opcode == "STA_INFO_REPLY") {
+        return ap_wlan_hal::Event::STA_INFO_REPLY;
     }
 
     return ap_wlan_hal::Event::Invalid;
