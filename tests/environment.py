@@ -1036,11 +1036,11 @@ class ALEntityRDKB(ALEntity):
         else:
             self.config_file_name = '/opt/prplmesh/config/beerocks_agent.conf'
 
-        ucc_port_raw = self.command("grep \"ucc_listener_port\" {}".format(self.config_file_name))
+        ucc_port_raw = self.command("grep", "ucc_listener_port", self.config_file_name)
         ucc_port = int(re.search(r'ucc_listener_port=(?P<port>[0-9]+)',
                                  ucc_port_raw).group('port'))
         log_folder_raw = self.command(
-            "grep log_files_path {}".format(self.config_file_name))
+            "grep", "log_files_path", self.config_file_name)
         self.log_folder = re.search(r'log_files_path=(?P<log_path>[a-zA-Z0-9_\/]+)',
                                     log_folder_raw).group('log_path')
         ucc_socket = UCCSocket(str(self.device.control_ip), int(ucc_port))
@@ -1058,9 +1058,7 @@ class ALEntityRDKB(ALEntity):
     def command(self, *command: str) -> str:
         """Execute `command` in device and return its output."""
 
-        command_str = " ".join(command)
-        debug("--- Executing command: {}".format(command_str))
-
+        command_str = shlex.join(command)
         return subprocess.check_output(["ssh", self.device.control_ip, command_str]).decode()
 
     def wait_for_log(self, regex: str, start_line: int, timeout: float,
