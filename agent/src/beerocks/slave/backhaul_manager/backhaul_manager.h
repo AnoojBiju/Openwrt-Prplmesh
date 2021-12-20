@@ -149,6 +149,17 @@ public:
      */
     bool set_mbo_assoc_disallow(const sMacAddr &radio_mac, const sMacAddr &bssid, bool enable);
 
+    /**
+     * @brief Get the device sta info object from AP manager
+     * 
+     * @param [in] sta_mac requested station MAC
+     * @param [out] device_name device name of the station MAC
+     * @param [out] ip_addr IP address of the station MAC
+     * @return true on success, false on failure
+     */
+    bool get_device_sta_info(const sMacAddr &sta_mac, std::string &device_name,
+                             beerocks::net::sIpv4Addr &ip_addr);
+
     // Forward declaration
     struct sRadioInfo;
 

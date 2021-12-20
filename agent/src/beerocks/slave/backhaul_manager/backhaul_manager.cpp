@@ -3048,6 +3048,12 @@ bool BackhaulManager::set_mbo_assoc_disallow(const sMacAddr &radio_mac, const sM
     return true;
 }
 
+bool BackhaulManager::get_device_sta_info(const sMacAddr &sta_mac, std::string &device_name,
+                                          beerocks::net::sIpv4Addr &ip_addr)
+{
+    return true;
+}
+
 std::shared_ptr<bwl::sta_wlan_hal> BackhaulManager::get_selected_backhaul_sta_wlan_hal()
 {
     auto selected_backhaul_it =
