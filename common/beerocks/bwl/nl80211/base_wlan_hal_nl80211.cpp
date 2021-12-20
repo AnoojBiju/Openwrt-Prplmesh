@@ -378,7 +378,7 @@ bool base_wlan_hal_nl80211::fsm_setup()
                 }
 
                 // Get the wpa_supplicant/hostapd event interface file descriptor
-                m_fd_ext_events = wpa_ctrl_get_fd((wpa_ctrl *)m_wpa_ctrl_event);
+                m_fd_ext_events = wpa_ctrl_get_fd(static_cast<wpa_ctrl *>(m_wpa_ctrl_event));
 
                 // Attach to the control interface for events receiving
                 int result;
@@ -931,9 +931,10 @@ bool base_wlan_hal_nl80211::send_nl80211_msg(uint8_t command, int flags,
 
     // Create standard callbacks
     int err               = 1;
-    static auto nl_err_cb = [](struct sockaddr_nl *nla, struct nlmsgerr *err, void *arg) -> int {
+    static auto nl_err_cb = [](struct sockaddr_nl *nla, struct nlmsgerr *msg_err,
+                               void *arg) -> int {
         int *ret = (int *)arg;
-        *ret     = err->error;
+        *ret     = msg_err->error;
         return NL_STOP;
     };
 
