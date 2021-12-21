@@ -129,10 +129,6 @@ private:
                               std::string ssid, uint16_t duration, uint16_t rand_ival,
                               uint16_t repeats, int16_t op_class, std::string mode);
 
-    int client_get_my_var(std::string client_mac, std::string bssid, uint8_t channel,
-                          std::string ssid, uint16_t duration, uint16_t rand_ival, uint16_t repeats,
-                          int16_t op_class, const std::string &mode);
-
     // Variables
     std::string temp_path;
     SocketClient *master_socket = nullptr;

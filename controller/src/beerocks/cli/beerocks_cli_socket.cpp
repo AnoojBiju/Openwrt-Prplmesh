@@ -449,18 +449,18 @@ int cli_socket::rm_neighbor_11k_caller(int numOfArgs)
 
 int cli_socket::get_my_var_caller(int numOfArgs)
 {
-    if (numOfArgs == 0) {
-        return get_my_var();
+    if (numOfArgs != 0) {
+        return -1;
     }
-    return -1;
+    return get_my_var();
 }
 
 int cli_socket::set_my_var_caller(int numOfArgs)
 {
-    if (numOfArgs == 1) {
-        return set_my_var(args.intArgs[0]);
+    if (numOfArgs != 1) {
+        return -1;
     }
-    return -1;
+    return set_my_var(args.intArgs[0]);
 }
 
 //
@@ -750,42 +750,6 @@ int cli_socket::ire_network_optimization_task()
 int cli_socket::client_beacon_11k_req(std::string client_mac, std::string bssid, uint8_t channel,
                                       std::string ssid, uint16_t duration, uint16_t rand_ival,
                                       uint16_t repeats, int16_t op_class, std::string mode)
-{
-    auto request =
-        message_com::create_vs_message<beerocks_message::cACTION_CLI_CLIENT_BEACON_11K_REQUEST>(
-            cmdu_tx);
-    if (request == nullptr) {
-        LOG(ERROR) << "Failed building cACTION_CLI_CLIENT_BEACON_11K_REQUEST message!";
-        return -1;
-    }
-    request->client_mac() = tlvf::mac_from_string(client_mac);
-    request->bssid()      = tlvf::mac_from_string(bssid);
-    request->channel()    = channel;
-    request->duration()   = duration;
-    request->rand_ival()  = rand_ival;
-    request->repeats()    = repeats;
-    request->op_class()   = op_class;
-    if (mode == "passive")
-        request->measurement_mode() = beerocks::MEASURE_MODE_PASSIVE;
-    else if (mode == "table")
-        request->measurement_mode() = beerocks::MEASURE_MODE_TABLE;
-    else //deafult "active"
-        request->measurement_mode() = beerocks::MEASURE_MODE_ACTIVE;
-
-    if (!ssid.empty()) {
-        request->use_optional_ssid() = true;
-        string_utils::copy_string(reinterpret_cast<char *>(request->ssid()), ssid.c_str(),
-                                  message::WIFI_SSID_MAX_LENGTH);
-    }
-    wait_response = true;
-    message_com::send_cmdu(master_socket, cmdu_tx);
-    waitResponseReady();
-    return 0;
-}
-
-int cli_socket::client_get_my_var(std::string client_mac, std::string bssid, uint8_t channel,
-                                  std::string ssid, uint16_t duration, uint16_t rand_ival,
-                                  uint16_t repeats, int16_t op_class, const std::string &mode)
 {
     auto request =
         message_com::create_vs_message<beerocks_message::cACTION_CLI_CLIENT_BEACON_11K_REQUEST>(
