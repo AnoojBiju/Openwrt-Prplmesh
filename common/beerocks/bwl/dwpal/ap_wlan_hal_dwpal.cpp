@@ -2965,13 +2965,13 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
             LOG(ERROR) << "Failed reading vendor parameter!";
             return false;
         }
-        msg->subnet_mask = tmp_str;
+        msg->subnet_mask = beerocks::net::network_utils::ipv4_from_string(tmp_str);
 
         if (!read_param("default_gw", parsed_obj, &tmp_str)) {
             LOG(ERROR) << "Failed reading default gateway parameter!";
             return false;
         }
-        msg->default_gw = tmp_str;
+        msg->default_gw = beerocks::net::network_utils::ipv4_from_string(tmp_str);
         event_queue_push(Event::STA_INFO_REPLY, msg_buff);
         break;
     }
