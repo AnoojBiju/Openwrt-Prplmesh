@@ -156,15 +156,13 @@ bool base_wlan_hal_dwpal::fsm_setup()
                     }
                 }
 
+                // detach if wlan (hostapd/supplicant) was not attached
                 if (attached) {
                     if (get_type() != HALType::Station) {
-                        transition.change_destination(dwpal_fsm_state::GetRadioInfo);
+                        return (transition.change_destination(dwpal_fsm_state::GetRadioInfo));
                     }
                     return true;
-                }
-
-                // False if timeout not reached yet, and True otherwise (switch state)
-                if (std::chrono::steady_clock::now() >= m_state_timeout) {
+                } else {
                     LOG(ERROR) << "Failed attaching to the hostapd control interface of "
                                << m_radio_info.iface_name;
                     return (transition.change_destination(dwpal_fsm_state::Detach));

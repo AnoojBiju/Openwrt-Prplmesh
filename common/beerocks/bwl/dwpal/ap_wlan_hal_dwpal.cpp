@@ -1036,6 +1036,12 @@ bool ap_wlan_hal_dwpal::set_wifi_bw(beerocks::eWiFiBandwidth bw)
         return false;
     }
 
+    // manual channel set in 80211.ax mode is not supported yet
+    // set he_ parameters same as vht_ for now (PPM-1784)
+    if (!set("he_oper_chwidth", std::to_string(wifi_bw))) {
+        LOG(ERROR) << "Failed setting vht_oper_chwidth";
+        return false;
+    }
     if (!set("vht_oper_chwidth", std::to_string(wifi_bw))) {
         LOG(ERROR) << "Failed setting vht_oper_chwidth";
         return false;
@@ -1066,7 +1072,21 @@ bool ap_wlan_hal_dwpal::set_channel(int chan, beerocks::eWiFiBandwidth bw, int c
         return false;
     }
 
+    // Until PPM-643 is fixed setting secondary_channel for 20Mhz should be enough.
+    if (bw == beerocks::eWiFiBandwidth::BANDWIDTH_20) {
+        if (!set("secondary_channel", "0")) {
+            LOG(ERROR) << "Failed setting secondary channel offset 0";
+            return false;
+        }
+    }
+
     if (center_channel > 0) {
+        // manual channel set in 80211.ax mode is not supported yet
+        // set he_ parameters same as vht_ for now (PPM-1784)
+        if (!set("he_oper_centr_freq_seg0_idx", std::to_string(center_channel))) {
+            LOG(ERROR) << "Failed setting vht center frequency " << center_channel;
+            return false;
+        }
         if (!set("vht_oper_centr_freq_seg0_idx", std::to_string(center_channel))) {
             LOG(ERROR) << "Failed setting vht_oper_centr_freq_seg0_idx";
             return false;
@@ -1657,11 +1677,11 @@ bool ap_wlan_hal_dwpal::cancel_cac(int chan, beerocks::eWiFiBandwidth bw, int vh
     // get center channel from the center frequency
     auto center_channel = son::wireless_utils::freq_to_channel(vht_center_frequency);
 
-    LOG(DEBUG) << "canceling cac with the following parameters:"
-               << "channel: " << chan << "bandwidth (eWiFiBandwidth): " << bw
-               << "vht center frequency (input but not used directly): " << vht_center_frequency
-               << "center channel (computed from vht_center_frequency): " << center_channel
-               << "secondary_chan_offset: " << secondary_chan_offset;
+    LOG(DEBUG) << "Canceling cac with the following parameters:\n"
+               << "channel: " << chan << " bandwidth (eWiFiBandwidth): " << bw
+               << " vht center frequency (input but not used directly): " << vht_center_frequency
+               << " center channel (computed from vht_center_frequency): " << center_channel
+               << " secondary_chan_offset: " << secondary_chan_offset;
 
     if (!disable()) {
         LOG(ERROR) << "Failed disabling radio";
@@ -1678,6 +1698,12 @@ bool ap_wlan_hal_dwpal::cancel_cac(int chan, beerocks::eWiFiBandwidth bw, int vh
         return false;
     }
 
+    // manual channel set in 80211.ax mode is not supported yet
+    // set he_ parameters same as vht_ for now (PPM-1784)
+    if (!set("he_oper_centr_freq_seg0_idx", std::to_string(center_channel))) {
+        LOG(ERROR) << "Failed setting vht center frequency " << center_channel;
+        return false;
+    }
     if (!set("vht_oper_centr_freq_seg0_idx", std::to_string(center_channel))) {
         LOG(ERROR) << "Failed setting vht center frequency " << center_channel;
         return false;

@@ -875,7 +875,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
         }
         bool cancel_cac_success = false;
 
-        if (ap_wlan_hal->cancel_cac(
+        if (!ap_wlan_hal->cancel_cac(
                 request->cs_params().channel,
                 utils::convert_bandwidth_to_enum(request->cs_params().bandwidth),
                 request->cs_params().vht_center_frequency,

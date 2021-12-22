@@ -2851,6 +2851,14 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
         }
         notification_out_bhm->params() = notification_in->params();
 
+        auto db    = AgentDB::get();
+        auto radio = db->radio(fronthaul_iface);
+        if (!radio) {
+            break;
+        }
+        auto action_header         = message_com::get_beerocks_header(cmdu_tx)->actionhdr();
+        action_header->radio_mac() = radio->front.iface_mac;
+
         m_backhaul_manager_client->send_cmdu(cmdu_tx);
         break;
     }
