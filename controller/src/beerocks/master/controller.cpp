@@ -3218,9 +3218,9 @@ bool Controller::handle_cmdu_control_message(
             break;
         }
 
-        auto radio = database.get_radio_by_bssid(tlvf::mac_from_string(ap_mac));
+        auto radio = database.get_radio(src_mac, radio_mac);
         if (!radio) {
-            LOG(ERROR) << "radio with bssid" << ap_mac << " not found";
+            LOG(ERROR) << "No radio found with uid " << radio_mac << " on " << src_mac;
             break;
         }
 
