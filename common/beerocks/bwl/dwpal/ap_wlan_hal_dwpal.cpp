@@ -144,7 +144,6 @@ static void get_ht_mcs_capabilities(int *HT_MCS, std::string &ht_cap_str,
                                     beerocks::message::sRadioCapabilities &sta_caps)
 {
     bool break_upper_loop = false;
-    sta_caps              = {};
     sta_caps.ht_bw        = beerocks::BANDWIDTH_UNKNOWN;
 
     if (!ht_cap_str.empty() && (HT_MCS != nullptr)) {
@@ -432,9 +431,8 @@ static std::shared_ptr<char> generate_client_assoc_event(const std::string &even
         }
     }
 
-    msg->params.vap_id       = vap_id;
-    msg->params.mac          = tlvf::mac_from_string(client_mac);
-    msg->params.capabilities = {};
+    msg->params.vap_id = vap_id;
+    msg->params.mac    = tlvf::mac_from_string(client_mac);
     std::string ht_cap_str(ht_cap);
     get_ht_mcs_capabilities(HT_MCS, ht_cap_str, msg->params.capabilities);
 
@@ -2397,7 +2395,6 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
 
         // Initialize the message
         memset(msg_buff.get(), 0, sizeof(sACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION));
-        msg->params.capabilities = {};
 
         char VAP[SSID_MAX_SIZE]                = {0};
         char MACAddress[MAC_ADDR_SIZE]         = {0};
