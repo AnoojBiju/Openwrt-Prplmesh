@@ -40,6 +40,21 @@ class tlvProfile2ErrorCode : public BaseClass
             TRAFFIC_SEPARATION_ON_COMBINED_FRONTHAUL_AND_PROFILE1_BACKHAUL_UNSUPPORTED = 0x7,
             TRAFFIC_SEPARATION_ON_COMBINED_PROFILE1_BACKHAUL_AND_PROFILE2_BACKHAUL_UNSUPPORTED = 0x8,
         };
+        // Enum AutoPrint generated code snippet begining- DON'T EDIT!
+        // clang-format off
+        static const char *eReasonCode_str(eReasonCode enum_value) {
+            switch (enum_value) {
+            case DEFAULT_PCP_OR_PRIMARY_VLAN_ID_NOT_PROVIDED:                                        return "DEFAULT_PCP_OR_PRIMARY_VLAN_ID_NOT_PROVIDED";
+            case NUMBER_OF_UNIQUE_VLAN_ID_EXCEEDS_MAXIMUM_SUPPORTED:                                 return "NUMBER_OF_UNIQUE_VLAN_ID_EXCEEDS_MAXIMUM_SUPPORTED";
+            case TRAFFIC_SEPARATION_ON_COMBINED_FRONTHAUL_AND_PROFILE1_BACKHAUL_UNSUPPORTED:         return "TRAFFIC_SEPARATION_ON_COMBINED_FRONTHAUL_AND_PROFILE1_BACKHAUL_UNSUPPORTED";
+            case TRAFFIC_SEPARATION_ON_COMBINED_PROFILE1_BACKHAUL_AND_PROFILE2_BACKHAUL_UNSUPPORTED: return "TRAFFIC_SEPARATION_ON_COMBINED_PROFILE1_BACKHAUL_AND_PROFILE2_BACKHAUL_UNSUPPORTED";
+            }
+            static std::string out_str = std::to_string(int(enum_value));
+            return out_str.c_str();
+        }
+        friend inline std::ostream &operator<<(std::ostream &out, eReasonCode value) { return out << eReasonCode_str(value); }
+        // clang-format on
+        // Enum AutoPrint generated code snippet end
         
         const eTlvTypeMap& type();
         const uint16_t& length();

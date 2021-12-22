@@ -40,6 +40,20 @@ class tlvSteeringPolicy : public BaseClass
             AGENT_INITIATED_RCPI_BASED_STEERING_MANDATED = 0x1,
             AGENT_INITIATED_RCPI_BASED_STEERING_ALLOWED = 0x2,
         };
+        // Enum AutoPrint generated code snippet begining- DON'T EDIT!
+        // clang-format off
+        static const char *eSteeringPolicy_str(eSteeringPolicy enum_value) {
+            switch (enum_value) {
+            case AGENT_INITIATED_STEERING_DISALLOWED:          return "AGENT_INITIATED_STEERING_DISALLOWED";
+            case AGENT_INITIATED_RCPI_BASED_STEERING_MANDATED: return "AGENT_INITIATED_RCPI_BASED_STEERING_MANDATED";
+            case AGENT_INITIATED_RCPI_BASED_STEERING_ALLOWED:  return "AGENT_INITIATED_RCPI_BASED_STEERING_ALLOWED";
+            }
+            static std::string out_str = std::to_string(int(enum_value));
+            return out_str.c_str();
+        }
+        friend inline std::ostream &operator<<(std::ostream &out, eSteeringPolicy value) { return out << eSteeringPolicy_str(value); }
+        // clang-format on
+        // Enum AutoPrint generated code snippet end
         
         typedef struct sRadioApControlPolicy {
             sMacAddr radio_ap_mac;

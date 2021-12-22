@@ -38,6 +38,20 @@ class tlvSupportedFreqBand : public BaseClass
             BAND_5G = 0x1,
             BAND_60G = 0x2,
         };
+        // Enum AutoPrint generated code snippet begining- DON'T EDIT!
+        // clang-format off
+        static const char *eValue_str(eValue enum_value) {
+            switch (enum_value) {
+            case BAND_2_4G: return "BAND_2_4G";
+            case BAND_5G:   return "BAND_5G";
+            case BAND_60G:  return "BAND_60G";
+            }
+            static std::string out_str = std::to_string(int(enum_value));
+            return out_str.c_str();
+        }
+        friend inline std::ostream &operator<<(std::ostream &out, eValue value) { return out << eValue_str(value); }
+        // clang-format on
+        // Enum AutoPrint generated code snippet end
         
         const eTlvType& type();
         const uint16_t& length();

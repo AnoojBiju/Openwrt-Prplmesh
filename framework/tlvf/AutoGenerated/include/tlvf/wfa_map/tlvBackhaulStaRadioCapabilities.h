@@ -38,6 +38,19 @@ class tlvBackhaulStaRadioCapabilities : public BaseClass
             FIELD_PRESENT = 0x80,
             FIELD_NOT_PRESENT = 0x0,
         };
+        // Enum AutoPrint generated code snippet begining- DON'T EDIT!
+        // clang-format off
+        static const char *eStaMacIncluded_str(eStaMacIncluded enum_value) {
+            switch (enum_value) {
+            case FIELD_PRESENT:     return "FIELD_PRESENT";
+            case FIELD_NOT_PRESENT: return "FIELD_NOT_PRESENT";
+            }
+            static std::string out_str = std::to_string(int(enum_value));
+            return out_str.c_str();
+        }
+        friend inline std::ostream &operator<<(std::ostream &out, eStaMacIncluded value) { return out << eStaMacIncluded_str(value); }
+        // clang-format on
+        // Enum AutoPrint generated code snippet end
         
         const eTlvTypeMap& type();
         const uint16_t& length();

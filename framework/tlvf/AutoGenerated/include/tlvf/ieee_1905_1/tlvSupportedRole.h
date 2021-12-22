@@ -36,6 +36,18 @@ class tlvSupportedRole : public BaseClass
         enum eValue: uint8_t {
             REGISTRAR = 0x0,
         };
+        // Enum AutoPrint generated code snippet begining- DON'T EDIT!
+        // clang-format off
+        static const char *eValue_str(eValue enum_value) {
+            switch (enum_value) {
+            case REGISTRAR: return "REGISTRAR";
+            }
+            static std::string out_str = std::to_string(int(enum_value));
+            return out_str.c_str();
+        }
+        friend inline std::ostream &operator<<(std::ostream &out, eValue value) { return out << eValue_str(value); }
+        // clang-format on
+        // Enum AutoPrint generated code snippet end
         
         const eTlvType& type();
         const uint16_t& length();

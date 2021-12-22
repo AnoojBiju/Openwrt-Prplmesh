@@ -39,6 +39,19 @@ class tlvProfile2AssociationStatusNotification : public BaseClass
             NO_MORE_ASSOCIATIONS_ALLOWED = 0x0,
             ASSOCIATIONS_ALLOWED = 0x1,
         };
+        // Enum AutoPrint generated code snippet begining- DON'T EDIT!
+        // clang-format off
+        static const char *eAssociationAllowanceStatus_str(eAssociationAllowanceStatus enum_value) {
+            switch (enum_value) {
+            case NO_MORE_ASSOCIATIONS_ALLOWED: return "NO_MORE_ASSOCIATIONS_ALLOWED";
+            case ASSOCIATIONS_ALLOWED:         return "ASSOCIATIONS_ALLOWED";
+            }
+            static std::string out_str = std::to_string(int(enum_value));
+            return out_str.c_str();
+        }
+        friend inline std::ostream &operator<<(std::ostream &out, eAssociationAllowanceStatus value) { return out << eAssociationAllowanceStatus_str(value); }
+        // clang-format on
+        // Enum AutoPrint generated code snippet end
         
         typedef struct sBssidStatus {
             sMacAddr bssid;

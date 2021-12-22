@@ -38,6 +38,19 @@ class tlvBackhaulSteeringResponse : public BaseClass
             SUCCESS = 0x0,
             FAILURE = 0x1,
         };
+        // Enum AutoPrint generated code snippet begining- DON'T EDIT!
+        // clang-format off
+        static const char *eResultCode_str(eResultCode enum_value) {
+            switch (enum_value) {
+            case SUCCESS: return "SUCCESS";
+            case FAILURE: return "FAILURE";
+            }
+            static std::string out_str = std::to_string(int(enum_value));
+            return out_str.c_str();
+        }
+        friend inline std::ostream &operator<<(std::ostream &out, eResultCode value) { return out << eResultCode_str(value); }
+        // clang-format on
+        // Enum AutoPrint generated code snippet end
         
         const eTlvTypeMap& type();
         const uint16_t& length();
