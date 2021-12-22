@@ -153,9 +153,9 @@ static amxd_status_t action_read_last_change(amxd_object_t *object, amxd_param_t
                             std::chrono::steady_clock::now().time_since_epoch())
                             .count();
 
-    uint32_t last_change = current_time - creation_time;
+    uint64_t last_change = current_time - creation_time;
 
-    amxc_var_set(uint32_t, retval, last_change);
+    amxc_var_set(uint64_t, retval, last_change);
 
     return amxd_status_ok;
 }
