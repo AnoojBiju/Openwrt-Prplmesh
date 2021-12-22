@@ -6266,32 +6266,24 @@ bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, cons
         bss_instance = bss_path + "." + std::to_string(bss_index) + ".";
     }
 
+    auto ret_val = true;
     /*
         Set value for BSSID variable
         Example: Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.1.BSSID
     */
-    if (!m_ambiorix_datamodel->set(bss_instance, "BSSID", bssid)) {
-        LOG(ERROR) << "Failed to set " << bss_instance << "BSSID: " << bssid;
-        return false;
-    }
+    ret_val &= m_ambiorix_datamodel->set(bss_instance, "BSSID", bssid);
 
     /*
         Set value for SSID variable
         Example: Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.1.SSID
     */
-    if (!m_ambiorix_datamodel->set(bss_instance, "SSID", ssid)) {
-        LOG(ERROR) << "Failed to set " << bss_instance << "SSID: " << ssid;
-        return false;
-    }
+    ret_val &= m_ambiorix_datamodel->set(bss_instance, "SSID", ssid);
 
     /*
         Set value for Enabled variable
         Example: Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.1.Enabled
     */
-    if (!m_ambiorix_datamodel->set(bss_instance, "Enabled", !ssid.empty())) {
-        LOG(ERROR) << "Failed to set " << bss_instance << "Enabled: " << !ssid.empty();
-        return false;
-    }
+    ret_val &= m_ambiorix_datamodel->set(bss_instance, "Enabled", !ssid.empty());
 
     /*
         Set value for LastChange variable - it is creation time, when someone will
@@ -6299,13 +6291,12 @@ bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, cons
         from creation moment.
         Example: Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.1.LastChange
     */
-    uint64_t creation_time = time(NULL);
-    if (!m_ambiorix_datamodel->set(bss_instance, "LastChange", creation_time)) {
-        LOG(ERROR) << "Failed to set " << bss_instance << "LastChange: " << creation_time;
-        return false;
-    }
-    m_ambiorix_datamodel->set_current_time(bss_instance);
-    return true;
+    uint64_t creation_time = std::chrono::duration_cast<std::chrono::seconds>(
+                                 std::chrono::steady_clock::now().time_since_epoch())
+                                 .count();
+    ret_val &= m_ambiorix_datamodel->set(bss_instance, "LastChange", creation_time);
+    ret_val &= m_ambiorix_datamodel->set_current_time(bss_instance);
+    return ret_val;
 }
 
 bool db::dm_uint64_param_one_up(const std::string &obj_path, const std::string &param_name)
