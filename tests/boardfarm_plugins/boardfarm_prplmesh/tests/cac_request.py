@@ -32,6 +32,9 @@ class CacRequest(PrplMeshBaseTest):
 
         print("CAC Request TLV: ", cac_request_tlv)
 
+        time.sleep(30)
+        print("sleep for 30 seconds...")
+
         req_mid = controller.dev_send_1905(
             agent.mac, self.ieee1905['eMessageType']['CAC_REQUEST_MESSAGE'], cac_request_tlv)
         time.sleep(1)
