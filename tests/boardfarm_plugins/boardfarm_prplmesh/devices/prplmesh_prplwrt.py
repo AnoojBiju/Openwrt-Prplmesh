@@ -59,7 +59,7 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
 
         self.name = "-".join((config.get("name", "nec-wx3000hp-1"), self.unique_id))
         try:
-            self.delay = int(config.get("delay", 30))
+            self.delay = int(config.get("delay", 70))
         except ValueError as err:
             raise CodeError("Invalid delay specified: {}".format(str(err)))
 

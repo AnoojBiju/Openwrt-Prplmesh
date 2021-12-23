@@ -144,12 +144,17 @@ static void get_ht_mcs_capabilities(int *HT_MCS, std::string &ht_cap_str,
                                     beerocks::message::sRadioCapabilities &sta_caps)
 {
     bool break_upper_loop = false;
-    sta_caps              = {};
-    sta_caps.ht_bw        = 0xFF;
+    sta_caps.ht_bw        = beerocks::BANDWIDTH_UNKNOWN;
 
     if (!ht_cap_str.empty() && (HT_MCS != nullptr)) {
         uint16_t ht_cap = uint16_t(std::strtoul(ht_cap_str.c_str(), nullptr, 16));
-        sta_caps.ht_bw  = (ht_cap & HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET) != 0; // 20 == 0 / 40 == 1
+
+        // flag supported channel width set: 0 ==> 20 / 1 ==> 40
+        if (ht_cap & HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET) {
+            sta_caps.ht_bw = beerocks::BANDWIDTH_40;
+        } else {
+            sta_caps.ht_bw = beerocks::BANDWIDTH_20;
+        }
         sta_caps.ht_sm_power_save = ((ht_cap & HT_CAP_INFO_SMPS_MASK) >> 2) &
                                     0x03; // 0=static, 1=dynamic, 2=reserved, 3=disabled
         sta_caps.ht_low_bw_short_gi =
@@ -190,7 +195,7 @@ static void get_ht_mcs_capabilities(int *HT_MCS, std::string &ht_cap_str,
 static void get_vht_mcs_capabilities(int16_t *VHT_MCS, std::string &vht_cap_str,
                                      beerocks::message::sRadioCapabilities &sta_caps)
 {
-    sta_caps.vht_bw = 0xFF;
+    sta_caps.vht_bw = beerocks::BANDWIDTH_UNKNOWN;
 
     if (!vht_cap_str.empty() && (VHT_MCS != nullptr)) {
         uint32_t vht_cap          = uint16_t(std::strtoul(vht_cap_str.c_str(), nullptr, 16));
@@ -201,7 +206,11 @@ static void get_vht_mcs_capabilities(int16_t *VHT_MCS, std::string &vht_cap_str,
         }
 
         // if supported_bw_bits=0 max bw is 80 Mhz, else max bw is 160 Mhz
-        sta_caps.vht_bw               = (beerocks::BANDWIDTH_80 + (supported_bw_bits > 0 ? 1 : 0));
+        if (supported_bw_bits == 0) {
+            sta_caps.vht_bw = beerocks::BANDWIDTH_80;
+        } else {
+            sta_caps.vht_bw = beerocks::BANDWIDTH_160;
+        }
         sta_caps.vht_low_bw_short_gi  = (vht_cap >> 5) & 0x01; // 80 Mhz
         sta_caps.vht_high_bw_short_gi = (vht_cap >> 6) & 0x01; // 160 Mhz
 
@@ -250,7 +259,7 @@ static void print_sta_capabilities(beerocks::message::sRadioCapabilities &sta_ca
                << "ht_ss = " << ((int(sta_caps.ht_ss)) ? std::to_string(sta_caps.ht_ss) : "n/a")
                << std::endl
                << "ht_bw = "
-               << ((sta_caps.ht_bw != 0xFF)
+               << ((sta_caps.ht_bw != beerocks::BANDWIDTH_UNKNOWN)
                        ? std::to_string(beerocks::utils::convert_bandwidth_to_int(
                              beerocks::eWiFiBandwidth(sta_caps.ht_bw)))
                        : "n/a")
@@ -278,7 +287,7 @@ static void print_sta_capabilities(beerocks::message::sRadioCapabilities &sta_ca
                << "vht_mcs = "
                << ((int(sta_caps.vht_mcs)) ? std::to_string(sta_caps.vht_mcs) : "n/a") << std::endl
                << "vht_bw = "
-               << ((sta_caps.vht_bw != 0xFF)
+               << ((sta_caps.vht_bw != beerocks::BANDWIDTH_UNKNOWN)
                        ? std::to_string(beerocks::utils::convert_bandwidth_to_int(
                              beerocks::eWiFiBandwidth(sta_caps.vht_bw)))
                        : "n/a");
@@ -422,9 +431,8 @@ static std::shared_ptr<char> generate_client_assoc_event(const std::string &even
         }
     }
 
-    msg->params.vap_id       = vap_id;
-    msg->params.mac          = tlvf::mac_from_string(client_mac);
-    msg->params.capabilities = {};
+    msg->params.vap_id = vap_id;
+    msg->params.mac    = tlvf::mac_from_string(client_mac);
     std::string ht_cap_str(ht_cap);
     get_ht_mcs_capabilities(HT_MCS, ht_cap_str, msg->params.capabilities);
 
@@ -1026,6 +1034,12 @@ bool ap_wlan_hal_dwpal::set_wifi_bw(beerocks::eWiFiBandwidth bw)
         return false;
     }
 
+    // manual channel set in 80211.ax mode is not supported yet
+    // set he_ parameters same as vht_ for now (PPM-1784)
+    if (!set("he_oper_chwidth", std::to_string(wifi_bw))) {
+        LOG(ERROR) << "Failed setting vht_oper_chwidth";
+        return false;
+    }
     if (!set("vht_oper_chwidth", std::to_string(wifi_bw))) {
         LOG(ERROR) << "Failed setting vht_oper_chwidth";
         return false;
@@ -1056,7 +1070,21 @@ bool ap_wlan_hal_dwpal::set_channel(int chan, beerocks::eWiFiBandwidth bw, int c
         return false;
     }
 
+    // Until PPM-643 is fixed setting secondary_channel for 20Mhz should be enough.
+    if (bw == beerocks::eWiFiBandwidth::BANDWIDTH_20) {
+        if (!set("secondary_channel", "0")) {
+            LOG(ERROR) << "Failed setting secondary channel offset 0";
+            return false;
+        }
+    }
+
     if (center_channel > 0) {
+        // manual channel set in 80211.ax mode is not supported yet
+        // set he_ parameters same as vht_ for now (PPM-1784)
+        if (!set("he_oper_centr_freq_seg0_idx", std::to_string(center_channel))) {
+            LOG(ERROR) << "Failed setting vht center frequency " << center_channel;
+            return false;
+        }
         if (!set("vht_oper_centr_freq_seg0_idx", std::to_string(center_channel))) {
             LOG(ERROR) << "Failed setting vht_oper_centr_freq_seg0_idx";
             return false;
@@ -1647,11 +1675,11 @@ bool ap_wlan_hal_dwpal::cancel_cac(int chan, beerocks::eWiFiBandwidth bw, int vh
     // get center channel from the center frequency
     auto center_channel = son::wireless_utils::freq_to_channel(vht_center_frequency);
 
-    LOG(DEBUG) << "canceling cac with the following parameters:"
-               << "channel: " << chan << "bandwidth (eWiFiBandwidth): " << bw
-               << "vht center frequency (input but not used directly): " << vht_center_frequency
-               << "center channel (computed from vht_center_frequency): " << center_channel
-               << "secondary_chan_offset: " << secondary_chan_offset;
+    LOG(DEBUG) << "Canceling cac with the following parameters:\n"
+               << "channel: " << chan << " bandwidth (eWiFiBandwidth): " << bw
+               << " vht center frequency (input but not used directly): " << vht_center_frequency
+               << " center channel (computed from vht_center_frequency): " << center_channel
+               << " secondary_chan_offset: " << secondary_chan_offset;
 
     if (!disable()) {
         LOG(ERROR) << "Failed disabling radio";
@@ -1668,6 +1696,12 @@ bool ap_wlan_hal_dwpal::cancel_cac(int chan, beerocks::eWiFiBandwidth bw, int vh
         return false;
     }
 
+    // manual channel set in 80211.ax mode is not supported yet
+    // set he_ parameters same as vht_ for now (PPM-1784)
+    if (!set("he_oper_centr_freq_seg0_idx", std::to_string(center_channel))) {
+        LOG(ERROR) << "Failed setting vht center frequency " << center_channel;
+        return false;
+    }
     if (!set("vht_oper_centr_freq_seg0_idx", std::to_string(center_channel))) {
         LOG(ERROR) << "Failed setting vht center frequency " << center_channel;
         return false;
@@ -2387,7 +2421,6 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
 
         // Initialize the message
         memset(msg_buff.get(), 0, sizeof(sACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION));
-        msg->params.capabilities = {};
 
         char VAP[SSID_MAX_SIZE]                = {0};
         char MACAddress[MAC_ADDR_SIZE]         = {0};

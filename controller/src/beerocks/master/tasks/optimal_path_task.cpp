@@ -1194,9 +1194,9 @@ void optimal_path_task::work()
         sticky_roaming_rssi = 0;
 
         // hostap's in this list are in order, current_hostap is first
-        for (auto it : hostap_candidates) {
-            auto hostap         = it.first;
-            auto hostap_sibling = it.second;
+        for (auto hostap_it : hostap_candidates) {
+            auto hostap         = hostap_it.first;
+            auto hostap_sibling = hostap_it.second;
 
             auto radio_mac = tlvf::mac_from_string(hostap);
 
@@ -1961,8 +1961,8 @@ bool optimal_path_task::get_station_default_capabilities(
         default_sta_cap.vht_mcs              = 9;
         default_sta_cap.ht_ss                = 2;
         default_sta_cap.vht_ss               = 2;
-        default_sta_cap.ht_bw                = 1;
-        default_sta_cap.vht_bw               = 2;
+        default_sta_cap.ht_bw                = beerocks::BANDWIDTH_40;
+        default_sta_cap.vht_bw               = beerocks::BANDWIDTH_80;
         default_sta_cap.ht_low_bw_short_gi   = 1;
         default_sta_cap.ht_high_bw_short_gi  = 1;
         default_sta_cap.vht_low_bw_short_gi  = 1;
@@ -1976,8 +1976,8 @@ bool optimal_path_task::get_station_default_capabilities(
         default_sta_cap.vht_mcs              = 0;
         default_sta_cap.ht_ss                = 1;
         default_sta_cap.vht_ss               = 0;
-        default_sta_cap.ht_bw                = 0;
-        default_sta_cap.vht_bw               = 0;
+        default_sta_cap.ht_bw                = beerocks::BANDWIDTH_20;
+        default_sta_cap.vht_bw               = beerocks::BANDWIDTH_UNKNOWN;
         default_sta_cap.ht_low_bw_short_gi   = 1;
         default_sta_cap.ht_high_bw_short_gi  = 0;
         default_sta_cap.vht_low_bw_short_gi  = 0;

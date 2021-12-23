@@ -2071,6 +2071,14 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
                          << ", hidden_ssid=" << hidden_ssid;
         }
 
+        // Try adding wireless backhaul STA interface to the bridge in case there is no
+        // entity (hostadp) that adds it automaticaly.
+        auto bridge        = db->bridge.iface_name;
+        auto bridge_ifaces = beerocks::net::network_utils::linux_get_iface_list_from_bridge(bridge);
+        if (!beerocks::net::network_utils::linux_add_iface_to_bridge(bridge, iface)) {
+            LOG(INFO) << "The wireless interface " << iface << " is already in the bridge";
+        }
+
         // This event may come as a result of enabling the backhaul, but also as a result
         // of steering. *Only* in case it was the result of steering, we need to send a steering
         // response.
@@ -3096,6 +3104,21 @@ void BackhaulManager::handle_dev_reset_default(
     auto bridge        = db->bridge.iface_name;
     auto bridge_ifaces = beerocks::net::network_utils::linux_get_iface_list_from_bridge(bridge);
     auto eth_iface     = db->ethernet.wan.iface_name;
+
+    //check if wired interface is enabled or try to enable it.
+    if (!beerocks::net::network_utils::linux_iface_is_up_and_running(eth_iface)) {
+        LOG(INFO) << "The wired interface " << eth_iface << " is not up, lets try to enable it";
+        beerocks::net::network_utils::set_interface_state(eth_iface, true);
+
+        UTILS_SLEEP_MSEC(1000);
+        if (!beerocks::net::network_utils::linux_iface_is_up_and_running(eth_iface)) {
+            LOG(ERROR) << "The wired interface is not yet running after 1 sec";
+            m_agent_ucc_listener->send_reply(
+                fd, beerocks::beerocks_ucc_listener::command_failed_error_string);
+            return;
+        }
+    }
+
     if (std::find(bridge_ifaces.begin(), bridge_ifaces.end(), eth_iface) != bridge_ifaces.end()) {
         LOG(INFO) << "The wired interface is already in the bridge";
     } else {
@@ -3186,6 +3209,16 @@ bool BackhaulManager::handle_dev_set_config(
             }
         } else {
             LOG(INFO) << "Interface '" << eth_iface << "' not found in bridge '" << bridge << "' !";
+        }
+
+        // Disable wired interface for wireless backhaul connection.
+        // It will be enabled back if in case we want to establish wired bh connection.
+        beerocks::net::network_utils::set_interface_state(eth_iface, false);
+
+        UTILS_SLEEP_MSEC(1000);
+        if (beerocks::net::network_utils::linux_iface_is_up_and_running(eth_iface)) {
+            LOG(ERROR) << "The wired interface is not yet down after 1 sec";
+            return false;
         }
     }
 
