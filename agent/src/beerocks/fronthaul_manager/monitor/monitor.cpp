@@ -830,30 +830,30 @@ bool Monitor::update_sta_stats(const std::chrono::steady_clock::time_point &time
         }
         sta_stats.poll_cnt++;
 
-        // Update TX Phy Rate
+        // Update TX Phy Rate min
         auto val = sta_stats.hal_stats.tx_phy_rate_100kb;
         if (poll_cnt == 0 || val < sta_stats.tx_phy_rate_100kb_min) {
             sta_stats.tx_phy_rate_100kb_min = val;
         }
         sta_stats.tx_phy_rate_100kb_acc += val;
-        if (poll_last) {
-            sta_stats.tx_phy_rate_100kb_avg =
-                float(sta_stats.tx_phy_rate_100kb_acc) / float(sta_stats.poll_cnt);
-        }
 
-        // Update RX Phy Rate
+        // Update RX Phy Rate min
         val = sta_stats.hal_stats.rx_phy_rate_100kb;
         if (poll_cnt == 0 || val < sta_stats.rx_phy_rate_100kb_min) {
             sta_stats.rx_phy_rate_100kb_min = val;
         }
         sta_stats.rx_phy_rate_100kb_acc += val;
+
         if (poll_last) {
+            // Update TX Phy Rate avg
+            sta_stats.tx_phy_rate_100kb_avg =
+                float(sta_stats.tx_phy_rate_100kb_acc) / float(sta_stats.poll_cnt);
+
+            // Update RX Phy Rate avg
             sta_stats.rx_phy_rate_100kb_avg =
                 float(sta_stats.rx_phy_rate_100kb_acc) / float(sta_stats.poll_cnt);
-        }
 
-        // Update RSSI
-        if (poll_last) {
+            // Update RSSI
             if (sta_stats.hal_stats.rx_rssi_watt_samples_cnt > 0) {
                 float rssi_watt = sta_stats.hal_stats.rx_rssi_watt /
                                   float(sta_stats.hal_stats.rx_rssi_watt_samples_cnt);
@@ -866,10 +866,8 @@ bool Monitor::update_sta_stats(const std::chrono::steady_clock::time_point &time
             }
 
             sta_node->set_rx_rssi_ready(true);
-        }
 
-        // Update SNR
-        if (poll_last) {
+            // Update SNR
             if (sta_stats.hal_stats.rx_snr_watt_samples_cnt > 0) {
                 float snr_watt = sta_stats.hal_stats.rx_snr_watt /
                                  float(sta_stats.hal_stats.rx_snr_watt_samples_cnt);
