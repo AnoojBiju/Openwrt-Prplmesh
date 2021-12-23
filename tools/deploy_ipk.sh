@@ -44,6 +44,7 @@ rm -rf /opt/prplmesh
 . /etc/os-release >/dev/null 2>&1
 if [ "$ID" = "rdk" ]; then FORCE_DEPENDS=true; fi
 
+echo "FORCE_DEPENDS = opkg install -V2 ${FORCE_DEPENDS:+--force-depends} $DEST_FOLDER/$IPK_FILENAME"
 opkg install -V2 ${FORCE_DEPENDS:+--force-depends} "$DEST_FOLDER/$IPK_FILENAME"
 EOF
 
