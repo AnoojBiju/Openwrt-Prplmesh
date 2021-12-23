@@ -30,10 +30,15 @@ deploy() {
     echo "Copying $IPK to $TARGET:$DEST_FOLDER/$IPK_FILENAME"
     eval scp "$SSH_OPTIONS" "$IPK" "$TARGET:$DEST_FOLDER/$IPK_FILENAME"
 
+    # get board type
+    BOARD_TYPE=$(eval ssh "$SSH_OPTIONS" "$TARGET" \""grep '^ID' -- /etc/os-release | cut -d '=' -f 2"\")
+    echo "BOARD_TYPE=$BOARD_TYPE"
+
     eval ssh "$SSH_OPTIONS" "$TARGET" <<EOF
+
 # we don't want opkg to stay locked with a previous failed invocation.
 # when using this, make sure no one is using opkg in the meantime!
-pgrep opkg | xargs kill -SIGINT
+pgrep opkg | xargs kill -s INT
 # remove any previously installed prplmesh. Use force-depends in case
 # there are packages depending on prplmesh which will cause opkg remove
 # to fail without this:
@@ -41,22 +46,24 @@ opkg remove --force-depends prplmesh prplmesh-dwpal prplmesh-nl80211
 # currently opkg remove does not remove everything from /opt/prplmesh:
 rm -rf /opt/prplmesh
 # rdkb platforms require --force-dependencies
-. /etc/os-release >/dev/null 2>&1
-if [ "$ID" = "rdk" ]; then FORCE_DEPENDS=true; fi
-
-opkg install -V2 ${FORCE_DEPENDS:+--force-depends} "$DEST_FOLDER/$IPK_FILENAME"
+if [ "$BOARD_TYPE" = "rdk" ]; then 
+    opkg install -V2 --force-depends "$DEST_FOLDER/$IPK_FILENAME"; 
+else
+    opkg install -V2  "$DEST_FOLDER/$IPK_FILENAME"; 
+fi
 EOF
 
-    if [ "$CERTIFICATION_MODE" = true ] ; then
+    if [ "$CERTIFICATION_MODE" = true ] && [ "$BOARD_TYPE" != "rdk" ]; then
         echo "Certification mode will be enabled on the target"
         eval ssh "$SSH_OPTIONS" "$TARGET" \""uci set prplmesh.config.certification_mode=1 && uci commit"\"
         echo "Certification mode enabled on the target."
     fi
 
-    echo "Restarting networking"
-    eval ssh "$SSH_OPTIONS" "$TARGET" \""/etc/init.d/network restart"\"
-
-    echo "Done"
+    if [ "$BOARD_TYPE" != "rdk" ]; then
+        echo "Restarting networking"
+        eval ssh "$SSH_OPTIONS" "$TARGET" \""/etc/init.d/network restart"\"
+        echo "Done"
+    fi
 }
 
 main() {
