@@ -155,9 +155,11 @@ Controller::Controller(db &database_,
     } else {
         LOG(DEBUG) << "Health check is DISABLED!";
     }
-
-    m_link_metrics_task = std::make_shared<LinkMetricsTask>(database, cmdu_tx, cert_cmdu_tx, tasks);
-    LOG_IF(!tasks.add_task(m_link_metrics_task), FATAL) << "Failed adding link metrics task!";
+    if (database.config.management_mode != BPL_MGMT_MODE_NOT_MULTIAP) {
+        m_link_metrics_task =
+            std::make_shared<LinkMetricsTask>(database, cmdu_tx, cert_cmdu_tx, tasks);
+        LOG_IF(!tasks.add_task(m_link_metrics_task), FATAL) << "Failed adding link metrics task!";
+    }
 
     LOG_IF(!tasks.add_task(std::make_shared<DhcpTask>(database, timer_manager)), FATAL)
         << "Failed adding dhcp task!";
@@ -1623,8 +1625,10 @@ bool Controller::handle_cmdu_1905_ap_metric_response(const sMacAddr &src_mac,
     ret_val &= handle_tlv_associated_sta_traffic_stats(src_mac, cmdu_rx);
 
     // For now, this is only used for certification so update the certification cmdu.
-    if (database.setting_certification_mode())
+    if (database.setting_certification_mode() &&
+        (database.config.management_mode != BPL_MGMT_MODE_NOT_MULTIAP)) {
         m_link_metrics_task->construct_combined_infra_metric();
+    }
 
     return ret_val;
 }
