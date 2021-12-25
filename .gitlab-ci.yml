@@ -123,6 +123,36 @@ flake8:
       xargs -0 -t flake8 --verbose
   needs: []
 
+# This step both generates documentation from ODL files,
+# but also verifies that the ODL files are parse-able.
+# For this reason, it makes sense to run this on all MRs,
+# so that no-one accidentally checks in an ODL file with syntax errors
+nbapi-docgen:
+  stage: build
+  extends: .in-prplmesh-builder
+  variables:
+    VERSION: $CI_COMMIT_REF_NAME-$CI_COMMIT_TIMESTAMP
+  script:
+    - tools/nbapi-docgen/parse_api.sh
+  artifacts:
+    paths:
+      - build/html
+    when: always
+
+# Updates gitlab pages with the NBAPI documentation:
+# https://prpl-foundation.gitlab.io/prplmesh/prplMesh/
+# Only run on the master branch, to avoid unneccesary pushes.
+pages:
+  stage: upload
+  needs: ["nbapi-docgen"]
+  script:
+    - mv build/html public
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
 shellcheck:
   stage: build
   image: koalaman/shellcheck-alpine:v0.7.1

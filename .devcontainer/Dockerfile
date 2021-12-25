@@ -19,7 +19,7 @@ RUN apt-get update && apt-get -y upgrade \
     bash-completion locales ninja-build pkg-config shellcheck \
     flake8 clang-format vim bridge-utils \
     # Ambiorix dependecies
-    bison curl flex libevent-dev libyajl-dev lua5.1 liblua5.1-0-dev liburiparser-dev libxml2-dev \
+    bison curl flex libevent-dev libyajl-dev libxslt1-dev lua5.1 liblua5.1-0-dev liburiparser-dev libxml2-dev \
     # Network capturing
     tcpdump tshark wireshark-common openssh-server
 
@@ -76,8 +76,8 @@ RUN git clone git://git.openwrt.org/project/ubus.git && \
 # Fetch and intall Bus Agnostic API libs, applications.
 # As they have some internal dependencies - we should build & install
 # them in specific order.
-RUN repo init -u https://gitlab.com/soft.at.home/ambiorix/ambiorix.git \
-    -b refs/tags/v1.4.0 < /dev/null && \
+RUN repo init -u https://gitlab.com/prpl-foundation/components/ambiorix/ambiorix.git \
+    -b refs/tags/v1.15.2 < /dev/null && \
     repo sync && \
     make install -C libraries/libamxc && \
     make install -C libraries/libamxp && \
@@ -87,6 +87,7 @@ RUN repo init -u https://gitlab.com/soft.at.home/ambiorix/ambiorix.git \
     make install -C libraries/libamxb && \
     make install -C applications/amxb-inspect && \
     make install -C applications/amxo-cg && \
+    make install -C applications/amxo-xml-to && \
     make -C bus_adaptors/amxb_ubus && \
     make install -C bus_adaptors/amxb_ubus
 
