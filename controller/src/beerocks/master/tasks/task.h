@@ -9,7 +9,9 @@
 #ifndef _TASK_H_
 #define _TASK_H_
 
-#define TASK_LOG(a) (LOG(a) << "task " << task_name << " id " << id << ": ")
+#define TASK_LOG(LEVEL) (LOG(LEVEL) << "task " << task_name << " id " << id << ": ")
+#define TASK_LOG_IF(condition, LEVEL)                                                              \
+    LOG_IF(condition, LEVEL) << "task " << task_name << " id " << id << ": "
 
 #include <beerocks/tlvf/beerocks_message.h>
 #include <beerocks/tlvf/beerocks_message_control.h>
