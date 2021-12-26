@@ -16,7 +16,7 @@ using namespace beerocks;
 EventLoopThread::EventLoopThread() : thread_base()
 {
     // Create application event loop to wait for blocking I/O operations.
-    m_event_loop = std::make_shared<beerocks::EventLoopImpl>();
+    m_event_loop = std::make_shared<beerocks::EventLoopImpl>(beerocks::el_default_timeout);
     LOG_IF(!m_event_loop, FATAL) << "Unable to create event loop!";
 }
 

@@ -9,6 +9,7 @@
 #ifndef _BEEROCKS_DEFINES_H_
 #define _BEEROCKS_DEFINES_H_
 
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <stdint.h>
@@ -465,6 +466,8 @@ constexpr int PARAMETER_NOT_CONFIGURED = -1;
 
 // array of allowed ifname prefix strings
 static const char *const ifname_prefix_list[] = {"wlan", "wl"};
+
+constexpr std::chrono::milliseconds el_default_timeout = std::chrono::milliseconds(250);
 
 } // namespace beerocks
 

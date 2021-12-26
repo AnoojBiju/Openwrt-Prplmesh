@@ -470,7 +470,7 @@ int main(int argc, char *argv[])
     fill_master_config(master_conf, beerocks_master_conf);
 
     // Create application event loop to wait for blocking I/O operations.
-    auto event_loop = std::make_shared<beerocks::EventLoopImpl>();
+    auto event_loop = std::make_shared<beerocks::EventLoopImpl>(beerocks::el_default_timeout);
     LOG_IF(!event_loop, FATAL) << "Unable to create event loop!";
 
     // Create timer factory to create instances of timers.
