@@ -1,0 +1,61 @@
+#
+---
+_namespace: wfa_map
+
+tlvTeamsMember:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_TEAMS_MEMBER
+  length: uint16_t
+  teams:
+    _type: cTeam
+    _length: [ ]
+
+cTeam:
+  _type: class
+  id: uint16_t
+  name:
+    _type: char
+    _length: [ 16 ]
+  numOfDevelopers:
+    _type: uint8_t
+    _length_var: True
+  developers:
+    _type: cDeveloper
+    _length: [ numOfDevelopers ]
+
+cDeveloper:
+  _type: class
+  name_length:
+    _type: uint8_t
+    _length_var: true
+  name:
+    _type: char
+    _length: [ name_length ]
+  misc: sMisc
+  age: uint8_t
+  previousCompaniesLength:
+    _type: uint8_t
+    _length_var: true
+  previousCompanies:
+    _type: cPreviousCompany
+    _length: [ previousCompaniesLength ]
+  
+sMisc:
+  _type: struct
+  _bit_field: uint8_t
+  workingLocation:
+    _bit_range: [1, 0]
+  yearsOfExperice:
+    _bit_range: [7, 2]
+
+cPreviousCompany:
+  _type: class
+  name_length:
+    _type: uint8_t
+    _length_var: True
+  name:
+    _type: char
+    _length: [ name_length ]
