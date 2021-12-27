@@ -12,5 +12,13 @@
  */
 int build_cmdu();
 
+/**
+ * @brief Parses TEAM_MEMBERS_MESSAGE and print it's content.
+ * 
+ * @param rx_buf a buffer which contains raw CMDU message
+ * @param buf_len the length of the buffer
+ * @return 0 on success, -1 on fail
+ */
+int parse_and_print_cmdu(uint8_t *rx_buf, size_t buf_len);
 
 #endif
