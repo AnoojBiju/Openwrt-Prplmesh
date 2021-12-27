@@ -19,6 +19,7 @@
 #include "tasks/ire_network_optimization_task.h"
 #include "tasks/load_balancer_task.h"
 #include "tasks/optimal_path_task.h"
+#include "tasks/statistics_polling_task.h"
 
 #include <beerocks/tlvf/beerocks_message_1905_vs.h>
 #include <beerocks/tlvf/beerocks_message_bml.h>
@@ -451,11 +452,29 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
         if (request->isEnable() >= 0) {
+#ifndef BEEROCKS_LINUX
+            // If received request is to disable task,
+            // and currenlty it is enable, then kill it
+            if (!request->isEnable() && database.settings_diagnostics_measurements()) {
+                tasks.kill_task(database.get_statistics_polling_task_id());
+                LOG(DEBUG) << "Killed statistics polling task";
+            }
+            // If received request is to enable task,
+            // and currenlty it is disable, then add task
+            if (request->isEnable() && !database.settings_diagnostics_measurements()) {
+                if (!tasks.add_task(
+                        std::make_shared<statistics_polling_task>(database, cmdu_tx, tasks))) {
+                    LOG(FATAL) << "Failed adding statistics polling task!";
+                }
+                LOG(DEBUG) << "Statistics polling task is added";
+            }
+#endif
             database.settings_diagnostics_measurements(request->isEnable());
             LOG(INFO) << "CLI load_diagnostics_measurements changed to "
                       << int(database.settings_diagnostics_measurements());
         }
         currentValue = database.settings_diagnostics_measurements();
+
         break;
     }
     case beerocks_message::ACTION_CLI_ENABLE_DEBUG: {
