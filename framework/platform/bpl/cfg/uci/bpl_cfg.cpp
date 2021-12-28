@@ -989,6 +989,19 @@ bool cfg_get_clients_measurement_mode(eClientsMeasurementMode &clients_measureme
     return true;
 }
 
+bool cfg_get_radio_stats_enable(bool &radio_stats_enable)
+{
+    int val = -1;
+    if (cfg_get_prplmesh_param_int_default("radio_stats_enable", &val, int(true)) == RETURN_ERR) {
+        LOG(ERROR) << "Failed to read radio_stats_enable parameter, setting default value true";
+        radio_stats_enable = true;
+        return false;
+    }
+
+    radio_stats_enable = bool(val == 1);
+    return true;
+}
+
 bool bpl_cfg_get_monitored_BSSs_by_radio_iface(const std::string &iface,
                                                std::set<std::string> &monitored_BSSs)
 {
