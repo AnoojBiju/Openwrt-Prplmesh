@@ -200,6 +200,14 @@ bool Monitor::thread_init()
     mon_db.set_clients_measuremet_mode(
         (monitor_db::eClientsMeasurementMode)clients_measuremet_mode);
 
+    bool radio_stats_enable;
+    if (!beerocks::bpl::cfg_get_radio_stats_enable(radio_stats_enable)) {
+        LOG(DEBUG) << "Failed to read radio_stats_enable - using default value: true ";
+        radio_stats_enable = true;
+    }
+
+    mon_db.set_radio_stats_enable(radio_stats_enable);
+
     LOG(DEBUG) << "started";
 
     return true;
@@ -552,7 +560,7 @@ bool Monitor::monitor_fsm()
             }
 
             // NOTE: Radio & VAP statistics are updated only on last poll cycle
-            if (mon_db.is_last_poll())
+            if (mon_db.get_radio_stats_enable() && mon_db.is_last_poll())
                 update_ap_stats();
 
             send_heartbeat();
