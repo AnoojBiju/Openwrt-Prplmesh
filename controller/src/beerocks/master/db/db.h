@@ -838,7 +838,7 @@ public:
      * when station failed to associate. Set values for parameters of this object.
      *
      * Data model path example:
-     * "Device.WiFi.DataElements.Notification.FailedConnectionEvent.FailedConnectionEventData"
+     * "Device.WiFi.DataElements.FailedConnectionEvent.FailedConnectionEventData"
      *
      * @param sta_mac Client mac address.
      * @param reason_code Reason code of clients failed association.
@@ -1928,7 +1928,7 @@ public:
      *
      * This object describes an event generated when a STA associates to a BSS.
      * Example of full path to object:
-     * 'Device.WiFi.DataElements.Notification.AssociationEvent.AssociationEventData.1'.
+     * 'Device.WiFi.DataElements.AssociationEvent.AssociationEventData.1'.
      *
      * @param bssid BSS mac address.
      * @param client_mac Client mac address.

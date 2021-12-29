@@ -84,7 +84,7 @@ class NbapiDisassociationEvent(PrplMeshBaseTest):
             self.fail(f'Fail. Network time stamp has incorrect format: {network_time_stamp}')
 
         # Test for NBAPI DisassociationEventData.
-        disassoc_data_path = "Device.WiFi.DataElements.Notification."\
+        disassoc_data_path = "Device.WiFi.DataElements."\
             + "DisassociationEvent.DisassociationEventData"
         disassoc_data_paths_list = controller.nbapi_get_list_instances(disassoc_data_path)
         events_count = 0

@@ -4356,7 +4356,7 @@ bool db::notify_disconnection(const std::string &client_mac)
     }
 
     std::string path_to_disassoc_event_data =
-        "Device.WiFi.DataElements.Notification.DisassociationEvent.DisassociationEventData";
+        "Device.WiFi.DataElements.DisassociationEvent.DisassociationEventData";
 
     if (!dm_check_objects_limit(m_disassoc_events, MAX_EVENT_HISTORY_SIZE)) {
         return false;
@@ -6015,7 +6015,7 @@ bool db::dm_add_failed_connection_event(const sMacAddr &sta_mac, const uint16_t 
                                         const uint16_t status_code)
 {
     std::string event_path =
-        "Device.WiFi.DataElements.Notification.FailedConnectionEvent.FailedConnectionEventData";
+        "Device.WiFi.DataElements.FailedConnectionEvent.FailedConnectionEventData";
 
     event_path = m_ambiorix_datamodel->add_instance(event_path);
 
@@ -6036,7 +6036,7 @@ std::string db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &
                                          const std::string &assoc_ts)
 {
     std::string path_association_event =
-        "Device.WiFi.DataElements.Notification.AssociationEvent.AssociationEventData";
+        "Device.WiFi.DataElements.AssociationEvent.AssociationEventData";
 
     if (!dm_check_objects_limit(m_assoc_events, MAX_EVENT_HISTORY_SIZE)) {
         return {};

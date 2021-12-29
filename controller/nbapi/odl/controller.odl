@@ -183,7 +183,6 @@
                         ];
                     }
                 }
-                %read-only object Notification;
                 %read-only object AgentConnectedEvent[];
                 %read-only object AgentDisconnectedEvent[];
             }
