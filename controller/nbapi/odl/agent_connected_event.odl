@@ -27,7 +27,7 @@
                         counted with STANumberOfEntries;
                         %read-only string MACAddress = "00:00:00:00:00:00";
                         %read-only string TimeStamp = "2020-08-31T11:22:39Z";
-                        %read-only int16 TimeSinceLastAssocSec = 0;
+                        %read-only uint32 LastConnectTime = 0;
                     }
                 }
             }

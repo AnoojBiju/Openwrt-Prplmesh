@@ -392,7 +392,7 @@ void agent_monitoring_task::dm_add_sta_to_agent_connected_event(
                 }
                 ambiorix_dm->set_current_time(sta_path);
                 ambiorix_dm->set(sta_path, "MACAddress", sta.mac());
-                ambiorix_dm->set(sta_path, "TimeSinceLastAssocSec",
+                ambiorix_dm->set(sta_path, "LastConnectTime",
                                  sta.time_since_last_association_sec());
             }
             return;
