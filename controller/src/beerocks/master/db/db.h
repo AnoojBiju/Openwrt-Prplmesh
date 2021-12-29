@@ -1818,7 +1818,7 @@ public:
     /**
      * @brief Clears CAC Status Report data model.
      *
-     * Remove all indexes in AvailableChannels and updates timestamp.
+     * Remove all indexes in CACAvailableChannel and updates timestamp.
      *
      * Data model path : "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.CACStatus" defined in radio.odl
      *
@@ -1828,9 +1828,9 @@ public:
     bool dm_clear_cac_status_report(std::shared_ptr<Agent::sRadio> radio);
 
     /**
-     * @brief Adds instance for CACStatus.AvailableChannels and fullfills it.
+     * @brief Adds instance for CACStatus.CACAvailableChannel and fullfills it.
      *
-     * Data model path : "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.CACStatus.AvailableChannels.{i}"
+     * Data model path : "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.CACStatus.CACAvailableChannel.{i}"
      *
      * @param[in] radio radio db object
      * @param[in] operating_class operating class

@@ -68,20 +68,21 @@
             counted with ScanResultNumberOfEntries;
         }
 
+        /**
+        ** CACStatus object decided to leave at Radio layer
+        ** (not correspond to TR-181, should be at Device layer)
+        **/
         %read-only object CACStatus {
             %read-only datetime TimeStamp = "2020-08-31T11:22:39Z";
 
-            %read-only object AvailableChannels [] {
-
-                %read-only uint32 OperatingClass = 0 {
+            %read-only object CACAvailableChannel [] {
+                counted with CACAvailableChannelNumberOfEntries;
+                %read-only uint32 OpClass = 0 {
                     on action validate call check_range [0, 255];
                 }
-
                 %read-only uint32 Channel = 0 {
                     on action validate call check_range [0, 255];
                 }
-
-                counted with NumberOfAvailableChannels;
             }
         }
     }
