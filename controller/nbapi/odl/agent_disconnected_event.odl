@@ -15,7 +15,7 @@
 
             %read-only object Radio [] {
                 counted with RadioNumberOfEntries;
-                %read-only string MACAddress = "00:00:00:00:00:00";
+                %read-only string ID = "00:00:00:00:00:00";
                 %read-only uint32 Utilization = 0 {
                     on action validate call check_range [0, 255];
                 }

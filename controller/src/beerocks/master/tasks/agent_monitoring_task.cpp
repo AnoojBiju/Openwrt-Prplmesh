@@ -601,7 +601,7 @@ bool agent_monitoring_task::dm_set_agent_disconnected_event_params(
                        << ". MAC: " << radio.first;
             return false;
         }
-        ok &= ambiorix_dm->set(radio_path, "MACAddress", radio.first);
+        ok &= ambiorix_dm->set(radio_path, "ID", radio.first);
         auto radio_stats = m_radio_stats.get(radio.first);
 
         if (radio_stats) {
