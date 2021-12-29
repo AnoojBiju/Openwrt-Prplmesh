@@ -972,10 +972,10 @@ bool cfg_get_clients_measurement_mode(eClientsMeasurementMode &clients_measureme
     if (cfg_get_prplmesh_param_int_default("clients_measurement_mode", &val,
                                            int(eClientsMeasurementMode::ENABLE_ALL)) ==
         RETURN_ERR) {
-        LOG(ERROR) << "Failed to read clients_measurement_mode parameter - setting "
-                      "default value: ENABLE_ALL";
         clients_measurement_mode = eClientsMeasurementMode::ENABLE_ALL;
-        return true;
+        LOG(ERROR) << "Failed to read clients_measurement_mode parameter, "
+                      "default value: ENABLE_ALL";
+        return false;
     }
 
     if (val > int(eClientsMeasurementMode::ONLY_CLIENTS_SELECTED_FOR_STEERING)) {
