@@ -60,7 +60,7 @@
             counted with BSSNumberOfEntries;
         }
 
-        object BackhaulSTA {
+        object BackhaulSta {
             %read-only string MACAddress = "";
         }
 
