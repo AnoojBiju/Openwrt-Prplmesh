@@ -46,7 +46,7 @@
                     %read-only uint32 ChannelUtilization = 0 {
                         on action validate call check_range [0, 255];
                     }
-                    %read-only uint16 StationCount = 0;
+                    %read-only uint32 StationCount = 0;
                 }
             }
         }

@@ -36,12 +36,12 @@
                     counted with BSSNumberOfEntries;
                     %read-only string BSSID = "00:00:00:00:00:00";
                     %read-only string SSID = "0";
-                    %read-only uint32 UnicastBytesSent = 0;
-                    %read-only uint32 UnicastBytesReceived = 0;
-                    %read-only uint32 MulticastBytesSent = 0;
-                    %read-only uint32 MulticastBytesReceived = 0;
-                    %read-only uint32 BroadcastBytesSent = 0;
-                    %read-only uint32 BroadcastBytesReceived = 0;
+                    %read-only uint64 UnicastBytesSent = 0;
+                    %read-only uint64 UnicastBytesReceived = 0;
+                    %read-only uint64 MulticastBytesSent = 0;
+                    %read-only uint64 MulticastBytesReceived = 0;
+                    %read-only uint64 BroadcastBytesSent = 0;
+                    %read-only uint64 BroadcastBytesReceived = 0;
 
                     %read-only object STA [] {
                         counted with STANumberOfEntries;

@@ -25,11 +25,11 @@
 
         %read-only uint32 LastDataDownlinkRate = 0;
         %read-only uint32 LastDataUplinkRate = 0;
-        %read-only uint32 UtilizationReceive = 0 {
+        %read-only uint64 UtilizationReceive = 0 {
             on action validate call check_minimum 0;
         }
 
-        %read-only uint32 UtilizationTransmit = 0 {
+        %read-only uint64 UtilizationTransmit = 0 {
             on action validate call check_minimum 0;
         }
 
@@ -48,9 +48,9 @@
         %read-only uint64 BytesReceived = 0;
         %read-only uint64 PacketsSent = 0;
         %read-only uint64 PacketsReceived = 0;
-        %read-only uint32 ErrorsSent = 0;
-        %read-only uint32 ErrorsReceived = 0;
-        %read-only uint32 RetransCount = 0;
+        %read-only uint64 ErrorsSent = 0;
+        %read-only uint64 ErrorsReceived = 0;
+        %read-only uint64 RetransCount = 0;
         %read-only string IPV4Address = "0";
         %read-only string IPV6Address = "0";
         %read-only string Hostname = "0";
@@ -115,7 +115,7 @@
                 %read-only uint64 BTMFailures = 0;
                 %read-only uint64 BTMQueryResponses = 0;
                 %read-only string LastSteerTimeStamp = "2020-08-31T11:22:39Z";
-                %read-only uint64 LastSteerTime = 0 {
+                %read-only uint32 LastSteerTime = 0 {
                     on action read call action_last_steer_time;
                 }
             }

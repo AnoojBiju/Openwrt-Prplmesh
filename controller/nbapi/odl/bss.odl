@@ -20,7 +20,7 @@
         %read-only string BSSID = "0";
         %read-only string SSID = "0";
         bool Enabled = false;
-        %read-only uint64 LastChange = 0 {
+        %read-only uint32 LastChange = 0 {
             on action read call action_read_last_change;
         }
 
