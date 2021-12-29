@@ -75,21 +75,21 @@ build-for-intel-mips-mmx:
   variables:
     TARGET_DEVICE: "intel_mips"
 
-test-on-turris-omnia:
-  extends: .test-on-target
-  variables:
-    TARGET_DEVICE: turris-omnia
-    TARGET_DEVICE_NAME: turris-omnia-1
-    OPENWRT_IMAGE: openwrt-mvebu-cortexa9-cznic_turris-omnia-sysupgrade.img.gz
-  needs: ["build-for-turris-omnia"]
+# test-on-turris-omnia:
+#   extends: .test-on-target
+#   variables:
+#     TARGET_DEVICE: turris-omnia
+#     TARGET_DEVICE_NAME: turris-omnia-1
+#     OPENWRT_IMAGE: openwrt-mvebu-cortexa9-cznic_turris-omnia-sysupgrade.img.gz
+#   needs: ["build-for-turris-omnia"]
 
-test-on-glinet-b1300:
-  extends: .test-on-target
-  variables:
-    TARGET_DEVICE: glinet-b1300
-    TARGET_DEVICE_NAME: glinet-b1300-1
-    OPENWRT_IMAGE: openwrt-ipq40xx-generic-glinet_gl-b1300-squashfs-sysupgrade.bin
-  needs: ["build-for-glinet-b1300"]
+# test-on-glinet-b1300:
+#   extends: .test-on-target
+#   variables:
+#     TARGET_DEVICE: glinet-b1300
+#     TARGET_DEVICE_NAME: glinet-b1300-1
+#     OPENWRT_IMAGE: openwrt-ipq40xx-generic-glinet_gl-b1300-squashfs-sysupgrade.bin
+#   needs: ["build-for-glinet-b1300"]
 
 # boardfarm-on-nec-wx3000hp:
 #  extends: .test-on-target
