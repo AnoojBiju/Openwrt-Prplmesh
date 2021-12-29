@@ -7179,7 +7179,7 @@ bool db::dm_set_device_multi_ap_backhaul(const Agent &agent, const sMacAddr &par
 
     // Controller does not have any Backhaul, so leave it as empty
     if (agent.is_gateway) {
-        ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "BackhaulLinkType", "None");
+        ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "LinkType", "None");
         ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "MACAddress", std::string{});
         ret_val &=
             m_ambiorix_datamodel->set(multiap_backhaul_path, "BackhaulMACAddress", std::string{});
@@ -7203,7 +7203,7 @@ bool db::dm_set_device_multi_ap_backhaul(const Agent &agent, const sMacAddr &par
         break;
     }
 
-    ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "BackhaulLinkType", iface_link_str);
+    ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "LinkType", iface_link_str);
     ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "MACAddress", backhaul_mac);
 
     // TODO: Ethernet link BackhaulMACAddress retrieved as empty, also parent of the node assigned as local bridge (PPM-1658)

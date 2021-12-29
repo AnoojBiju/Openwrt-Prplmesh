@@ -47,7 +47,7 @@
             %read-only string AssocIEEE1905DeviceRef;
 
             %read-only object Backhaul {
-                %read-only string BackhaulLinkType {
+                %read-only string LinkType {
                     default "None";
                     on action validate call check_enum [
                         "None",
