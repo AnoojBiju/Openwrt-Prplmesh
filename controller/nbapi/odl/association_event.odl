@@ -18,6 +18,7 @@
         // The events generated when a STA associates to a BSS.
         object AssociationEvent {
             object AssociationEventData[] {
+                counted with AssociationEventDataNumberOfEntries;
                 /**
                 ** Need to add here HTCapabilities, VHTCapabilities, HECapabilities
                 ** from mids which defined in controller.odl
@@ -29,7 +30,6 @@
                                                 latest Association Response frame */
                 // The time this event was collected
                 %read-only string TimeStamp = "2020-08-31T11:22:39Z";
-                counted with AssociationEventDataNumberOfEntries;
             }
         }
     }

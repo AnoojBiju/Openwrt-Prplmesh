@@ -77,13 +77,14 @@
         ** The list of Radio objects.
         */
         object Radio [] {
-            counted with NumberOfRadios;
+            counted with RadioNumberOfEntries;
         }
 
         /*
         ** The list of Interface objects.
         */
         object Interface [] {
+            counted with InterfaceNumberOfEntries;
             %read-only string Status {
                 default "Down";
                 on action validate call check_enum [
@@ -114,16 +115,13 @@
             }
 
             object Neighbor [] {
-
                 /*
                 ** Neighbor AL-MAC address.
                 */
+                counted with NeighborNumberOfEntries;
                 %read-only string ID = "00:00:00:00:00:00";
                 %read-only bool IsIEEE1905 = false;
-                counted with NumberOfNeighbors;
             }
-
-            counted with NumberOfInterfaces;
         }
 
         /*

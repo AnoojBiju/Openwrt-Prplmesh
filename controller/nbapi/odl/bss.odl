@@ -49,7 +49,7 @@
         }
 
         object STA [] {
-            counted with NumberOfSTA;
+            counted with STANumberOfEntries;
         }
 
         %read-only object MultiAPSteering {

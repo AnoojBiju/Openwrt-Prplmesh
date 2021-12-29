@@ -56,6 +56,7 @@
         %read-only string Hostname = "0";
 
         %read-only object MeasurementReport [] {
+            counted with MeasurementReportNumberOfEntries;
             %read-only string BSSID = "00:00:00:00:00:00";
             %read-only uint16 Channel = 0;
             %read-only uint16 OpClass = 0;
@@ -68,7 +69,6 @@
             %read-only uint16 AntId = 0;
             %read-only uint16 Duration = 0;
             %read-only uint64 StartTime = 0;
-            counted with NumberOfMeasureReports;
         }
 
         %read-only object MultiAPSteeringHistory [] {

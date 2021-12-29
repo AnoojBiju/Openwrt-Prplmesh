@@ -10,11 +10,11 @@
 %define {
     select Device.WiFi.DataElements.AgentDisconnectedEvent {
         %read-only object AgentDisconnected [] {
-            counted with NumberOfAgentDisconnected;
+            counted with AgentDisconnectedNumberOfEntries;
             %read-only string ID = "00:00:00:00:00:00";
 
             %read-only object Radio [] {
-                counted with NumberOfRadios;
+                counted with RadioNumberOfEntries;
                 %read-only string MACAddress = "00:00:00:00:00:00";
                 %read-only uint32 Utilization = 0 {
                     on action validate call check_range [0, 255];
@@ -33,7 +33,7 @@
                 }
 
                 %read-only object BSS [] {
-                    counted with NumberOfBSS;
+                    counted with BSSNumberOfEntries;
                     %read-only string BSSID = "00:00:00:00:00:00";
                     %read-only string SSID = "0";
                     %read-only uint32 UnicastBytesSent = 0;
@@ -44,14 +44,14 @@
                     %read-only uint32 BroadcastBytesReceived = 0;
 
                     %read-only object STA [] {
-                        counted with NumberOfSTA;
+                        counted with STANumberOfEntries;
                         %read-only string MACAddress = "00:00:00:00:00:00";
                         %read-only datetime TimeStamp = "2020-08-31T11:22:39Z";
                     }
                 }
             }
             %read-only object Neighbor [] {
-                counted with NumberOfNeighbors;
+                counted with NeighborNumberOfEntries;
                 %read-only string ID = "00:00:00:00:00:00";
             }
         }
