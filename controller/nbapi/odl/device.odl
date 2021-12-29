@@ -41,36 +41,33 @@
         }
 
         %read-only object MultiAPDevice {
-
             /* Represented as a six hexadecimal-digit value using all upper-case letters [0-9A-F] {6} */
             %read-only string ManufacturerOUI;
             %read-only string LastContactTime = "2020-08-31T11:22:39Z";
             %read-only string AssocIEEE1905DeviceRef;
-        }
 
-        %read-only object MultiAPBackhaul {
-
-            %read-only string BackhaulLinkType {
-                default "None";
-                on action validate call check_enum [
-                    "None",
-                    "Wi-Fi",
-                    "MoCA",
-                    "Ethernet",
-                    "G.hn",
-                    "HPNA",
-                    "HomePlug",
-                    "UPA"
-                ];
+            %read-only object Backhaul {
+                %read-only string BackhaulLinkType {
+                    default "None";
+                    on action validate call check_enum [
+                        "None",
+                        "Wi-Fi",
+                        "MoCA",
+                        "Ethernet",
+                        "G.hn",
+                        "HPNA",
+                        "HomePlug",
+                        "UPA"
+                    ];
+                }
+                /**
+                * An empty string value is reserved for the APDevice instance
+                * that represents the Multi-AP Controller.
+                */
+                %read-only string BackhaulMACAddress = "";
+                %read-only string BackhaulDeviceID = "";
+                %read-only string MACAddress = "";
             }
-
-            /**
-             * An empty string value is reserved for the APDevice instance
-             * that represents the Multi-AP Controller.
-             */
-            %read-only string BackhaulMACAddress = "";
-            %read-only string BackhaulDeviceID = "";
-            %read-only string MACAddress = "";
         }
 
         /*

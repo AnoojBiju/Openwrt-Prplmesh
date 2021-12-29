@@ -1911,7 +1911,7 @@ public:
      * BackhaulDeviceID -> Parent Device ID (AL_MAC)
      * MACAddress -> Current Device's Backhaul Interface MAC (BH STA or ETH MAC)
      *
-     * DM path : "Device.WiFi.DataElements.Network.Device.{i}.MultiAPBackhaul"
+     * DM path : "Device.WiFi.DataElements.Network.Device.{i}.MultiAPDevice.Backhaul"
      *
      * @param agent agent whose multi ap backhaul object is set
      * @param parent_bssid parent BSSID of the backhaul STA interface

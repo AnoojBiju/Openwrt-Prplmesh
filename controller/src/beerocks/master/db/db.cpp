@@ -7175,7 +7175,7 @@ bool db::dm_set_device_multi_ap_backhaul(const Agent &agent, const sMacAddr &par
         return true;
     }
 
-    const auto multiap_backhaul_path = agent.dm_path + ".MultiAPBackhaul";
+    const auto multiap_backhaul_path = agent.dm_path + ".MultiAPDevice.Backhaul";
 
     // Controller does not have any Backhaul, so leave it as empty
     if (agent.is_gateway) {
