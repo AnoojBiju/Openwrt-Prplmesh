@@ -604,7 +604,7 @@ void client_steering_task::update_sta_steer_attempt_stats(Station &station)
         return;
     }
     station.steering_summary_stats.last_steer_ts = ambiorix_dm->get_datamodel_time_format();
-    ambiorix_dm->set(station.dm_path + ".MultiAPSteeringSummaryStats", "LastSteerTimeStamp",
+    ambiorix_dm->set(station.dm_path + ".MultiAPSTA.SteeringSummaryStats", "LastSteerTimeStamp",
                      station.steering_summary_stats.last_steer_ts);
     if (m_database.get_node_11v_capability(station)) {
         station.steering_summary_stats.btm_attempts++;

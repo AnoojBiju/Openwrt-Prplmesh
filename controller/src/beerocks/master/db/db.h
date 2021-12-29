@@ -738,7 +738,7 @@ public:
     std::string dm_add_steer_event();
 
     /**
-     * @brief Set values for parameters of NBAPI object MultiAPSteeringSummaryStats.
+     * @brief Set values for parameters of NBAPI object MultiAPSTA.SteeringSummaryStats.
      *
      * @param station Station object.
      * @return True on success, false otherwise.

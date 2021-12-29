@@ -5986,7 +5986,7 @@ bool db::dm_restore_steering_summary_stats(Station &station)
     }
 
     auto steer_summary = station.steering_summary_stats;
-    auto obj_path      = station.dm_path + ".MultiAPSteeringSummaryStats";
+    auto obj_path      = station.dm_path + ".MultiAPSTA.SteeringSummaryStats";
 
     ret_val &=
         m_ambiorix_datamodel->set(obj_path, "BlacklistAttempts", steer_summary.blacklist_attempts);
