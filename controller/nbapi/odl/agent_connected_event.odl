@@ -26,7 +26,7 @@
                     %read-only object STA [] {
                         counted with STANumberOfEntries;
                         %read-only string MACAddress = "00:00:00:00:00:00";
-                        %read-only string TimeStamp = "2020-08-31T11:22:39Z";
+                        %read-only datetime TimeStamp = "2020-08-31T11:22:39Z";
                         %read-only uint32 LastConnectTime = 0;
                     }
                 }

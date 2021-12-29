@@ -15,7 +15,7 @@
 
 %define {
     select Device.WiFi.DataElements.Network.Device.Radio.ScanResult {
-        %read-only datetime TimeStamp = "2020-08-31T11:22:39Z";
+        %read-only string TimeStamp = "2020-08-31T11:22:39Z";
 
         %read-only object OpClassScan [] {
             counted with OpClassScanNumberOfEntries;

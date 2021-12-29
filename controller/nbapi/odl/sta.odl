@@ -72,12 +72,12 @@
         }
 
         %read-only object MultiAPSTA {
-            %read-only string AssociationTime = "2020-08-31T11:22:39Z";
+            %read-only datetime AssociationTime = "2020-08-31T11:22:39Z";
             %read-only uint32 Noise = 0;
 
             %read-only object SteeringHistory [] {
                 counted with SteeringHistoryNumberOfEntries;
-                %read-only string Time = "2020-08-31T11:22:39Z";
+                %read-only datetime Time = "2020-08-31T11:22:39Z";
 
                 /* The BSSID of the Access Point that initiated the steering. */
                 %read-only string APOrigin = "00:00:00:00:00:00";

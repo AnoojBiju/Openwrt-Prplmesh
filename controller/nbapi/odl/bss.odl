@@ -24,7 +24,7 @@
             on action read call action_read_last_change;
         }
 
-        %read-only datetime TimeStamp = "2020-08-31T11:22:39Z";
+        %read-only string TimeStamp = "2020-08-31T11:22:39Z";
         %read-only uint64 UnicastBytesSent = 0;
         %read-only uint64 UnicastBytesReceived = 0;
         %read-only uint64 MulticastBytesSent = 0;
