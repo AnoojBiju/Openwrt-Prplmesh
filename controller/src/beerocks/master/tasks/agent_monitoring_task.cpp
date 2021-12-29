@@ -437,7 +437,7 @@ std::string agent_monitoring_task::dm_add_agent_connected_event(
                        << ".Radio, mac: " << radio.radio_uid();
             return agent_connected_path;
         }
-        ambiorix_dm->set(radio_path, "MACAddress", radio.radio_uid());
+        ambiorix_dm->set(radio_path, "ID", radio.radio_uid());
         for (int j = 0; j < radio.radio_bss_list_length(); j++) {
             auto bss      = std::get<1>(radio.radio_bss_list(j));
             auto bss_path = ambiorix_dm->add_instance(radio_path + ".BSS");
