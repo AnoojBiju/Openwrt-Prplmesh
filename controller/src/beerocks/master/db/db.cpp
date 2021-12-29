@@ -7102,7 +7102,7 @@ bool db::add_sta_steering_event(const sMacAddr &sta_mac, sStaSteeringEvent &even
     }
 
     bool ret_val          = true;
-    auto steering_history = station->dm_path + ".MultiAPSteeringHistory";
+    auto steering_history = station->dm_path + ".MultiAPSTA.SteeringHistory";
 
     auto steering_event_path = m_ambiorix_datamodel->add_instance(steering_history);
     if (steering_event_path.empty()) {
@@ -7133,7 +7133,7 @@ bool db::dm_restore_sta_steering_event(const Station &station)
     bool ret_val = true;
 
     auto &sta_events      = m_stations_steering_events[station.mac];
-    auto steering_history = station.dm_path + ".MultiAPSteeringHistory";
+    auto steering_history = station.dm_path + ".MultiAPSTA.SteeringHistory";
 
     LOG(DEBUG) << "Restore Station steering events sta: " << station.mac
                << " event size:" << sta_events.size();

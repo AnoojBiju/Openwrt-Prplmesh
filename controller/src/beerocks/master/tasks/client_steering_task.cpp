@@ -132,7 +132,7 @@ void client_steering_task::work()
         }
 
         if (!add_sta_steer_event_to_db()) {
-            LOG(ERROR) << "Failed to add MultiAPSteeringHistory for STA in database";
+            LOG(ERROR) << "Failed to add MultiAPSTA.SteeringHistory for STA in database";
         }
         m_database.dm_restore_steering_summary_stats(*client);
 
