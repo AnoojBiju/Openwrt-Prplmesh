@@ -6,6 +6,7 @@
 ###############################################################
 
 import boardfarm
+import datetime
 import json
 import os
 import pexpect
@@ -99,6 +100,9 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
         # Result: boardfarm will log communication in separate file
         self.logfile_read = sys.stdout
 
+        # Sync DUT date with the device running boardfarm
+        self.set_device_date()
+
         # We need to add the interface to the actual device to the
         # docker bridge the docker controller is in, to allow them to
         # communicate:
@@ -186,6 +190,13 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
         inspect_json = json.loads(inspect_raw.stdout)
 
         return IPv4Network(inspect_json[0]["IPAM"]["Config"][0]["Subnet"])
+
+    def set_device_date(self):
+        """Set device internal date."""
+        cmd = f"date -s '@{int(datetime.datetime.now().timestamp())}'"
+
+        self.sendline(cmd)
+        self.expect(self.prompt, timeout=10)
 
     def add_host_iface_to_bridge(self, iface: str, bridge: str):
         """Add specified local interface to the specified bridge.
