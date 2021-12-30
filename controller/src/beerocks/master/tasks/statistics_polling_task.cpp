@@ -23,6 +23,7 @@ statistics_polling_task::statistics_polling_task(db &database_, ieee1905_1::Cmdu
                                                  task_pool &tasks_)
     : task("statistics polling task"), database(database_), cmdu_tx(cmdu_tx_), tasks(tasks_)
 {
+    database.assign_statistics_polling_task_id(id);
 }
 
 void statistics_polling_task::work()

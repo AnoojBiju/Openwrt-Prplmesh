@@ -119,9 +119,11 @@ Controller::Controller(db &database_,
     database.set_controller_ctx(this);
 
 #ifndef BEEROCKS_LINUX
-    LOG_IF(!tasks.add_task(std::make_shared<statistics_polling_task>(database, cmdu_tx, tasks)),
-           FATAL)
-        << "Failed adding statistics polling task!";
+    if (database.settings_diagnostics_measurements()) {
+        LOG_IF(!tasks.add_task(std::make_shared<statistics_polling_task>(database, cmdu_tx, tasks)),
+               FATAL)
+            << "Failed adding statistics polling task!";
+    }
 #endif
 
     LOG_IF(!tasks.add_task(std::make_shared<bml_task>(database, cmdu_tx, tasks)), FATAL)
