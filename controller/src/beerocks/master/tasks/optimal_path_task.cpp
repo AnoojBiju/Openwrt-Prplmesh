@@ -1192,6 +1192,8 @@ void optimal_path_task::work()
         bool all_hostaps_below_cutoff = true;
         std::string chosen_hostap_below_cutoff;
         sticky_roaming_rssi = 0;
+        // Assume measurements are valid.
+        bool failed_to_get_measurements = false;
 
         // hostap's in this list are in order, current_hostap is first
         for (auto it : hostap_candidates) {
@@ -1238,6 +1240,7 @@ void optimal_path_task::work()
                 int8_t rx_rssi, rx_packets;
                 if (!station->get_cross_rx_rssi(hostap, rx_rssi, rx_packets)) {
                     TASK_LOG(ERROR) << "can't get cross_rx_rssi for hostap " << hostap;
+                    failed_to_get_measurements = true;
                     continue;
                 } else {
                     TASK_LOG(DEBUG) << "hostap: " << hostap << ", rx_rssi=" << int(rx_rssi)
@@ -1275,6 +1278,7 @@ void optimal_path_task::work()
 
             if (ul_rssi == beerocks::RSSI_INVALID) {
                 TASK_LOG(ERROR) << "ul_rssi for hostap " << hostap << " is invalid, skip it!";
+                failed_to_get_measurements = true;
                 continue;
             }
 
@@ -1334,7 +1338,6 @@ void optimal_path_task::work()
                         chosen_hostap          = hostap;
                     }
                 }
-
                 LOG_CLI(DEBUG,
                         "optimal_path_task:"
                             << std::endl
@@ -1395,11 +1398,14 @@ void optimal_path_task::work()
                                            ? "  ** below cutoff"
                                            : ""));
             } else {
+                failed_to_get_measurements = true;
                 continue; // in case of estimation returns ESTIMATION_FAILURE_INVALID_RSSI
             }
         }
 
         TASK_LOG(DEBUG) << "end of hostap candidate list";
+        TASK_LOG_IF(failed_to_get_measurements, WARNING)
+            << "Did not get valid measurements for atleast one candidate";
 
         if (all_hostaps_below_cutoff && current_hostap_is_5ghz) {
             best_weighted_phy_rate = best_weighted_phy_rate_below_cutoff;
