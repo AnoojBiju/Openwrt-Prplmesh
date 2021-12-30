@@ -1974,6 +1974,9 @@ public:
     bool assign_agent_monitoring_task_id(int new_task_id);
     int get_agent_monitoring_task_id();
 
+    bool assign_statistics_polling_task_id(int new_task_id);
+    int get_statistics_polling_task_id();
+
     void lock();
     void unlock();
 
@@ -2309,6 +2312,7 @@ private:
     int persistent_db_data_commit_operation_id = -1;
     int dhcp_task_id                           = -1;
     int agent_monitoring_task_id               = -1;
+    int statistics_polling_task_id             = -1;
 
     std::shared_ptr<node> last_accessed_node;
     std::string last_accessed_node_mac;
