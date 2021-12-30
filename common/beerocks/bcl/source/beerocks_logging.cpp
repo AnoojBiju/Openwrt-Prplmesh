@@ -70,7 +70,7 @@ public:
             char process_dir[1024] = {0};
             int bytes = readlink(exe_path.str().c_str(), process_dir, sizeof(process_dir));
 
-            if (bytes >= 0) {
+            if (bytes >= 0 && m_szRollLogFileSize > 0) {
                 // remove process name from process path to get process dir path
                 std::string process_dir_str(process_dir);
                 process_dir_str.erase(process_dir_str.rfind("/"));

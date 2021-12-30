@@ -60,6 +60,10 @@ class NbapiAccessPoint(PrplMeshBaseTest):
 
         ''' Test Access Point object '''
 
+        # import ptvsd
+        # ptvsd.enable_attach()
+        # ptvsd.wait_for_attach()
+
         # Add Access Point object and set up parameters for it
         self.configure_ssids_clear()
 
@@ -76,6 +80,8 @@ class NbapiAccessPoint(PrplMeshBaseTest):
         self.configure_ssid(ssid["5GL"], "Fronthaul", {"Band5GL": True})
         self.configure_ssid(ssid["6G"], "Fronthaul", {"Band6G": True})
         self.configure_ssid(ssid["F+B"], "Fronthaul+Backhaul")
+
+        self.wait_radios_enabled()
 
         controller.nbapi_set_parameters(all_bands_security_obj_path,
                                         {"ModeEnabled": "WPA2-Personal"})

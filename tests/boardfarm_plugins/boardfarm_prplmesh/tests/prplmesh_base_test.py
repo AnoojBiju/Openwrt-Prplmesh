@@ -789,6 +789,11 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
 
         print("Sniffer - stop")
         test.dev.DUT.wired_sniffer.stop()
+
+        for dev in test.dev:
+            if hasattr(dev, 'role'):
+                dev.roll_logs(test.__class__.__name__)
+
         # Send additional Ctrl+C to the device to terminate "tail -f"
         # Which is used to read log from device. Required only for tests on HW
         try:
