@@ -181,7 +181,8 @@ bool slave_thread::thread_init()
     // Currently there is no recovery mechanism if connection with broker server gets interrupted
     // (something that happens if the transport process dies). Just log a message and exit
     broker_client_handlers.on_connection_closed = [&]() {
-        LOG(FATAL) << "Broker client got disconnected!";
+        LOG(ERROR) << "Broker client got disconnected!";
+        return false;
     };
 
     m_broker_client->set_handlers(broker_client_handlers);
