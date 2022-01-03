@@ -194,7 +194,6 @@ bool mon_wlan_hal_dummy::process_dummy_data(parsed_obj_map_t &parsed_obj)
     char *tmp_str;
     char *sta_mac;
     char *bssid;
-    int64_t tmp_int;
     // Filter out empty data
     std::string opcode;
     if (!(parsed_obj.find(DUMMY_EVENT_KEYLESS_PARAM_OPCODE) != parsed_obj.end() &&
@@ -207,6 +206,7 @@ bool mon_wlan_hal_dummy::process_dummy_data(parsed_obj_map_t &parsed_obj)
 
     switch (data) {
     case Data::STA_Update_Stats: {
+        int64_t tmp_int;
         if (!dummy_obj_read_str(DUMMY_EVENT_KEYLESS_PARAM_MAC, parsed_obj, &sta_mac)) {
             LOG(ERROR) << "Failed reading mac parameter!";
             return false;
@@ -284,7 +284,6 @@ bool mon_wlan_hal_dummy::process_dummy_data(parsed_obj_map_t &parsed_obj)
 bool mon_wlan_hal_dummy::process_dummy_event(parsed_obj_map_t &parsed_obj)
 {
     char *tmp_str;
-    int64_t tmp_int;
     // Filter out empty events
     std::string opcode;
     if (!(parsed_obj.find(DUMMY_EVENT_KEYLESS_PARAM_OPCODE) != parsed_obj.end() &&
@@ -297,6 +296,7 @@ bool mon_wlan_hal_dummy::process_dummy_event(parsed_obj_map_t &parsed_obj)
 
     switch (event) {
     case Event::RRM_Beacon_Response: {
+        int64_t tmp_int;
         // Allocate response object
         auto resp_buff = ALLOC_SMART_BUFFER(sizeof(SBeaconResponse11k));
         auto resp      = reinterpret_cast<SBeaconResponse11k *>(resp_buff.get());
