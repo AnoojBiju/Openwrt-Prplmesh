@@ -230,7 +230,6 @@ static void get_vht_oper(const uint8_t *data, sChannelScanResults &results)
 static void get_supprates(const uint8_t *data, uint8_t len, sChannelScanResults &results)
 {
     uint8_t rate_mbs_fp_8_1;
-    uint32_t rate_kbs;
 
     if (!data) {
         LOG(ERROR) << "data buffer is NULL";
@@ -238,6 +237,7 @@ static void get_supprates(const uint8_t *data, uint8_t len, sChannelScanResults 
     }
 
     for (int i = 0; i < len; i++) {
+        uint32_t rate_kbs;
         rate_mbs_fp_8_1 = data[i] & 0x7f;
 
         if (rate_mbs_fp_8_1 / 2 == 11) {
