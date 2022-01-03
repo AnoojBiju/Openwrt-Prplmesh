@@ -413,7 +413,7 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_wsc_m1_message(
     // in bytes. Section 9.1 of the spec.
     db->device_conf.byte_counter_units = wfa_map::tlvProfile2ApCapability::eByteCounterUnits::BYTES;
 
-    if (db->controller_info.profile_support ==
+    if (db->controller_info.profile_support >=
         wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_2) {
         /* One Profile-2 AP Capability TLV */
         auto profile2_ap_capability_tlv = m_cmdu_tx.addClass<wfa_map::tlvProfile2ApCapability>();
