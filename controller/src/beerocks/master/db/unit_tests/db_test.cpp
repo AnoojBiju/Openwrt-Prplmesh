@@ -710,6 +710,9 @@ TEST_F(DbTestRadio1Sta1, test_set_station_capabilities)
 
     //expectations for set_node_stats_info
     beerocks::message::sRadioCapabilities sta_cap;
+    //hint: set ht_bw and vht_bw to add HT and VHT mibs
+    sta_cap.ht_bw  = beerocks::BANDWIDTH_20;
+    sta_cap.vht_bw = beerocks::BANDWIDTH_80;
 
     EXPECT_CALL(*m_ambiorix, remove_optional_subobject(g_sta_path_1 + '.', "HTCapabilities"))
         .WillOnce(Return(true));

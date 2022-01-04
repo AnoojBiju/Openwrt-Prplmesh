@@ -233,6 +233,14 @@ public:
     static void delete_interface(const std::string &iface);
 
     /**
+     * @brief sets interface state (up/down)
+     *
+     * @param iface Interface.
+     * @param is_up true up false down.
+     */
+    static void set_interface_state(const std::string &iface, bool is_up);
+
+    /**
      * @brief Enable or disable "vlan_filtering" on the bridge.
      *
      * @param default_vlan_id If 'default_vlan_id is not zero, turn on "vlan_filtering" and set the
