@@ -521,10 +521,10 @@ bool wireless_utils::get_mcs_from_rate(const uint16_t rate, const beerocks::eWiF
                                        const beerocks::eWiFiBandwidth bw, uint8_t &mcs,
                                        uint8_t &short_gi)
 {
-    uint16_t rate_temp;
-    uint16_t diff_temp;
     uint16_t nearest_diff = 0xFFFF;
     for (int mcs_idx = 0; mcs_idx < 8; mcs_idx++) {
+        uint16_t rate_temp;
+        uint16_t diff_temp;
         if (phy_rate_table[ant_mode][mcs_idx].bw_values[bw].gi_short_rate == rate) {
             mcs      = mcs_idx;
             short_gi = 1;
