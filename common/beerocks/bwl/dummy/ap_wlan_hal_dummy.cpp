@@ -91,6 +91,9 @@ ap_wlan_hal_dummy::ap_wlan_hal_dummy(const std::string &iface_name, hal_event_cb
     : base_wlan_hal(bwl::HALType::AccessPoint, iface_name, IfaceType::Intel, callback, hal_conf),
       base_wlan_hal_dummy(bwl::HALType::AccessPoint, iface_name, callback, hal_conf)
 {
+    auto filtered_events = [
+    ];
+    m_filtered_events.insert(std::begin(filtered_events), std::end(filtered_events));
 }
 
 ap_wlan_hal_dummy::~ap_wlan_hal_dummy() {}

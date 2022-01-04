@@ -136,6 +136,13 @@ public:
      */
     eRadioState radio_state_from_string(const std::string &state);
 
+    /**
+     * Validate that the incoming event is valid.
+     * 
+     * @return true if the event is valid, otherwise false.
+     */
+    bool is_filtered_event(const std::string &opcode) = 0;
+
     // Public getter methods:
 public:
     /*!
@@ -261,6 +268,7 @@ protected:
     int m_fd_nl_events  = -1;
 
     hal_conf_t m_hal_conf;
+    std::set<std::string> m_filtered_events;
 
     // Private data-members:
 private:

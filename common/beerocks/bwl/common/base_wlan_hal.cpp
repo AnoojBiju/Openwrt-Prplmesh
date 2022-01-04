@@ -237,4 +237,8 @@ eRadioState base_wlan_hal::radio_state_from_string(const std::string &state)
     return state_it == string_eRadioState.end() ? eRadioState::UNKNOWN : state_it->second;
 }
 
+bool base_wlan_hal::is_filtered_event(const std::string &opcode) {
+    return m_filtered_events.find(opcode) != m_filtered_events.end();
+}
+
 } // namespace bwl
