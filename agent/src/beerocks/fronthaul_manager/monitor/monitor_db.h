@@ -502,6 +502,9 @@ public:
     }
     eClientsMeasurementMode get_clients_measuremet_mode() { return m_clients_measurement_mode; }
 
+    void set_radio_stats_enable(bool enable) { m_radio_stats_enable = enable; }
+    bool get_radio_stats_enable() { return m_radio_stats_enable; }
+
     const int MONITOR_LAST_CHANGE_TIMEOUT_MSEC                            = 30000;
     const int MONITOR_DB_AP_POLLING_RATE_SEC                              = 60;
     static constexpr int MONITOR_DB_DEFAULT_POLLING_RATE_MSEC             = 250;
@@ -538,6 +541,8 @@ private:
      * The default value is set to ENABLE_ALL.
     */
     eClientsMeasurementMode m_clients_measurement_mode = eClientsMeasurementMode::ENABLE_ALL;
+
+    bool m_radio_stats_enable = true;
 };
 
 } // namespace son
