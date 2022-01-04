@@ -124,7 +124,10 @@
     - ALL_TARGETS="turris-omnia-1 turris-omnia-2 glinet-b1300-1 netgear-rax40-1 nec-wx3000hp-1"
     # kill prplmesh on each target to make sure they don't interfere with the test
     - for i in $ALL_TARGETS ; do ssh "$i" 'pgrep -f beerocks | xargs kill -9 2>/dev/null' || true ; done
-    - tools/deploy_ipk.sh $TARGET_DEVICE_NAME build/turris-omnia-rdk/prplmesh_*.ipk
+    - export RDKB_IMAGE_PATH=$(ls build/turris-omnia-rdk/rdkb-generic-broadband-image_rdkb*.rootfs.tar.gz)
+    - export RDKB_IMAGE_NAME=${RDKB_IMAGE_PATH##*/}
+    - tools/deploy_firmware.py --device turris-omnia-rdk --target-name "$TARGET_DEVICE_NAME" --image $RDKB_IMAGE_NAME --os-type rdkb --kernel zImage
+    # tools/deploy_ipk.sh $TARGET_DEVICE_NAME build/turris-omnia-rdk/prplmesh_*.ipk
   script:
   after_script:
   artifacts:

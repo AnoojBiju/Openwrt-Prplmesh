@@ -33,7 +33,7 @@ class PrplMeshRDKB(OpenWrtRouter, PrplMeshBase):
     linesep = "\r"
     agent_entity = None
     controller_entity = None
-    beerocks_logs_location = '/tmp/beerocks/logs'
+    beerocks_logs_location = '/rdklogs/logs'
 
     def __init__(self, *args, **kwargs):
         """Initialize device."""
@@ -119,7 +119,7 @@ class PrplMeshRDKB(OpenWrtRouter, PrplMeshBase):
 
     def _prplMesh_exec(self, mode: str):
         """Send line to prplmesh initd script."""
-        self.sendline("systemctl stop prplmesh")
+        self.sendline("/opt/prplmesh/scripts/prplmesh_utils.sh stop")
         time.sleep(5)
         self.sendline("/opt/prplmesh/scripts/prplmesh_utils.sh start {}".format(mode))
 
