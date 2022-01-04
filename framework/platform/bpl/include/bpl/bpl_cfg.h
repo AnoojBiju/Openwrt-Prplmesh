@@ -761,6 +761,8 @@ bool cfg_set_steering_disassoc_timer_msec(std::chrono::milliseconds &steering_di
  */
 bool cfg_get_clients_measurement_mode(eClientsMeasurementMode &clients_measurement_mode);
 
+bool cfg_get_radio_stats_enable(bool &radio_stats_enable);
+
 /**
  * @brief Get radio's monitored BSSIDs by radio's interface.
  * 
