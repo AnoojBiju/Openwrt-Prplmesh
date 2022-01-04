@@ -1407,6 +1407,28 @@ void network_utils::delete_interface(const std::string &iface)
     beerocks::os_utils::system_call(cmd);
 }
 
+void network_utils::set_interface_state(const std::string &iface, bool is_up)
+{
+    if (iface.empty()) {
+        LOG(ERROR) << "iface is empty!";
+        return;
+    }
+
+    std::string cmd;
+    // Reserve 32 bytes for appended data to prevent reallocations.
+    cmd.reserve(32);
+
+    // TODO: replace with non system calls PPM-1799
+    cmd.assign("ip link set ").append(iface);
+    if (is_up) {
+        cmd.append(" up");
+    } else {
+        cmd.append(" down");
+    }
+
+    beerocks::os_utils::system_call(cmd);
+}
+
 bool network_utils::set_vlan_filtering(const std::string &bridge_iface, uint16_t default_vlan_id)
 {
     if (bridge_iface.empty()) {

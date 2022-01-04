@@ -1018,7 +1018,8 @@ bool mon_wlan_hal_dwpal::channel_scan_trigger(int dwell_time_msec,
         params_bg.passive_dwell_time != dwell_time_msec) {
         params_bg.active_dwell_time  = dwell_time_msec;
         params_bg.passive_dwell_time = dwell_time_msec;
-        LOG(DEBUG) << "Setting NEW scan params, dwell=" << dwell_time_msec;
+        LOG(DEBUG) << "Setting NEW scan params, updating default dwell_time from "
+                   << params_bg.active_dwell_time << " to " << dwell_time_msec;
         if (!dwpal_set_scan_params_bg(params_bg, bg_size)) {
             LOG(ERROR) << "Failed setting new scan parameters";
             return false;

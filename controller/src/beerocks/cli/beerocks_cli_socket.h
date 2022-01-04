@@ -119,7 +119,7 @@ private:
 
     int client_beacon_11k_req(std::string client_mac, std::string bssid, uint8_t channel,
                               std::string ssid, uint16_t duration, uint16_t rand_ival,
-                              uint16_t repeats, int16_t op_class, std::string mode);
+                              uint16_t repeats, int16_t op_class, const std::string &mode);
 
     // Variables
     std::string temp_path;
