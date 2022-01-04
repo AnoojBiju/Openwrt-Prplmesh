@@ -91,31 +91,31 @@ test-on-glinet-b1300:
     OPENWRT_IMAGE: openwrt-ipq40xx-generic-glinet_gl-b1300-squashfs-sysupgrade.bin
   needs: ["build-for-glinet-b1300"]
 
-# boardfarm-on-nec-wx3000hp:
-#  extends: .test-on-target
-#  variables:
-#    TARGET_DEVICE: nec-wx3000hp
-#    TARGET_DEVICE_NAME: nec-wx3000hp-1
-#    OPENWRT_IMAGE: $NEC_WX3000HP_FULLIMAGE
-#  script:
-#    - |
-#        echo "Retrieving the job ID for 'build-in-docker'."
-#        PARENT_PIPELINE_JOBS_URL="$CI_API_V4_URL/projects/$CI_PROJECT_ID/pipelines/$PARENT_PIPELINE_ID/jobs?per_page=100"
-#        echo "PARENT_PIPELINE_JOBS_URL: $PARENT_PIPELINE_JOBS_URL"
-#        BUILD_IN_DOCKER_JOB_ID=$(curl  --retry 3 --location --header "PRIVATE-TOKEN: $ARTIFACTS_DOWNLOADER_TOKEN" "$PARENT_PIPELINE_JOBS_URL" | jq -c '.[] | select( .name == "build-in-docker" ) | .id')
-#        echo "BUILD_IN_DOCKER_JOB_ID: $BUILD_IN_DOCKER_JOB_ID"
-#        BUILD_IN_DOCKER_DOWNLOAD_URL="$CI_API_V4_URL/projects/$CI_PROJECT_ID/jobs/$BUILD_IN_DOCKER_JOB_ID/artifacts"
-#        echo "BUILD_IN_DOCKER_DOWNLOAD_URL: $BUILD_IN_DOCKER_DOWNLOAD_URL"
-#        echo "Downloading 'build-in-docker' artifacts."
-#        curl --location  --header "PRIVATE-TOKEN: $ARTIFACTS_DOWNLOADER_TOKEN" "$BUILD_IN_DOCKER_DOWNLOAD_URL" --output artifacts.zip
-#        unzip artifacts.zip && rm artifacts.zip
-#        echo Done
-#    # TODO: set the BH iface in UCI once https://jira.prplfoundation.org/browse/PPM-230 is done:
-#    - ssh "$TARGET_DEVICE_NAME" "sed -ri 's/backhaul_wire_iface=eth1/backhaul_wire_iface=eth0_1/' /opt/prplmesh/config/beerocks_agent.conf"
-#    - ./dctest.py --dut "$TARGET_DEVICE_NAME" --test-suite test_flows_on_prplwrt
-#    - ssh "$TARGET_DEVICE_NAME" 'wifi down'
-#  needs:
-#    - build-for-intel-mips
+boardfarm-on-nec-wx3000hp:
+ extends: .test-on-target
+ variables:
+   TARGET_DEVICE: nec-wx3000hp
+   TARGET_DEVICE_NAME: nec-wx3000hp-1
+   OPENWRT_IMAGE: $NEC_WX3000HP_FULLIMAGE
+ script:
+   - |
+       echo "Retrieving the job ID for 'build-in-docker'."
+       PARENT_PIPELINE_JOBS_URL="$CI_API_V4_URL/projects/$CI_PROJECT_ID/pipelines/$PARENT_PIPELINE_ID/jobs?per_page=100"
+       echo "PARENT_PIPELINE_JOBS_URL: $PARENT_PIPELINE_JOBS_URL"
+       BUILD_IN_DOCKER_JOB_ID=$(curl  --retry 3 --location --header "PRIVATE-TOKEN: $ARTIFACTS_DOWNLOADER_TOKEN" "$PARENT_PIPELINE_JOBS_URL" | jq -c '.[] | select( .name == "build-in-docker" ) | .id')
+       echo "BUILD_IN_DOCKER_JOB_ID: $BUILD_IN_DOCKER_JOB_ID"
+       BUILD_IN_DOCKER_DOWNLOAD_URL="$CI_API_V4_URL/projects/$CI_PROJECT_ID/jobs/$BUILD_IN_DOCKER_JOB_ID/artifacts"
+       echo "BUILD_IN_DOCKER_DOWNLOAD_URL: $BUILD_IN_DOCKER_DOWNLOAD_URL"
+       echo "Downloading 'build-in-docker' artifacts."
+       curl --location  --header "PRIVATE-TOKEN: $ARTIFACTS_DOWNLOADER_TOKEN" "$BUILD_IN_DOCKER_DOWNLOAD_URL" --output artifacts.zip
+       unzip artifacts.zip && rm artifacts.zip
+       echo Done
+   # TODO: set the BH iface in UCI once https://jira.prplfoundation.org/browse/PPM-230 is done:
+   - ssh "$TARGET_DEVICE_NAME" "sed -ri 's/backhaul_wire_iface=eth1/backhaul_wire_iface=eth0_1/' /opt/prplmesh/config/beerocks_agent.conf"
+   - ./dctest.py --dut "$TARGET_DEVICE_NAME" --test-suite test_flows_on_prplwrt
+   - ssh "$TARGET_DEVICE_NAME" 'wifi down'
+ needs:
+   - build-for-intel-mips
 
 run-tests-on-altran-glinet-testbed:
   extends: .test-on-target
