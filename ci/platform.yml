@@ -206,10 +206,14 @@ upload-release-artifacts:
     - upload_command "glinet-b1300" "$GLINET_B1300_FULLIMAGE"
     - upload_command "axepoint" "$AXEPOINT_FULLIMAGE"
     - upload_command "nec-wx3000hp" "$NEC_WX3000HP_FULLIMAGE"
+    - tools/gen_changelog.py > CHANGELOG.md
   needs:
     - job: build-for-turris-omnia
     - job: build-for-glinet-b1300
     - job: build-for-intel-mips
+  artifacts:
+    paths:
+      - CHANGELOG.md
 
 release:
   stage: release
@@ -218,14 +222,14 @@ release:
     - if: $CI_COMMIT_TAG
   script:
     - |
-      release-cli create --name "Release $CI_COMMIT_TAG" --tag-name $CI_COMMIT_TAG \
-        --assets-link "{\"name\":\"axepoint prplmesh ipk\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/axepoint/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_axepoint.ipk\"}" \
-        --assets-link "{\"name\":\"axepoint fullimage\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/axepoint/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$AXEPOINT_FULLIMAGE\"}" \
-        --assets-link "{\"name\":\"glinet-b1300 prplmesh ipk\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/glinet-b1300/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_glinet-b1300.ipk\"}" \
-        --assets-link "{\"name\":\"glinet-b1300 fullimage\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/glinet-b1300/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$GLINET_B1300_FULLIMAGE\"}" \
-        --assets-link "{\"name\":\"turris-omnia prplmesh ipk\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/turris-omnia/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_turris-omnia.ipk\"}" \
-        --assets-link "{\"name\":\"turris-omnia fullimage\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/turris-omnia/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$TURRIS_OMNIA_FULLIMAGE\"}" \
-        --assets-link "{\"name\":\"nec-wx3000hp prplmesh ipk\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/nec-wx3000hp/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_nec-wx3000hp.ipk\"}" \
-        --assets-link "{\"name\":\"nec-wx3000hp fullimage\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/nec-wx3000hp/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$NEC_WX3000HP_FULLIMAGE\"}"
+      release-cli create --name "Release $CI_COMMIT_TAG" --description CHANGELOG.md --tag-name $CI_COMMIT_TAG \
+        --assets-link "{\"name\":\"axepoint prplmesh ipk\",\"type\":\"package\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/axepoint/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_axepoint.ipk\"}" \
+        --assets-link "{\"name\":\"axepoint fullimage\",\"type\":\"image\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/axepoint/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$AXEPOINT_FULLIMAGE\"}" \
+        --assets-link "{\"name\":\"glinet-b1300 prplmesh ipk\",\"type\":\"package\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/glinet-b1300/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_glinet-b1300.ipk\"}" \
+        --assets-link "{\"name\":\"glinet-b1300 fullimage\",\"type\":\"image\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/glinet-b1300/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$GLINET_B1300_FULLIMAGE\"}" \
+        --assets-link "{\"name\":\"turris-omnia prplmesh ipk\",\"type\":\"package\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/turris-omnia/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_turris-omnia.ipk\"}" \
+        --assets-link "{\"name\":\"turris-omnia fullimage\",\"type\":\"image\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/turris-omnia/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$TURRIS_OMNIA_FULLIMAGE\"}" \
+        --assets-link "{\"name\":\"nec-wx3000hp prplmesh ipk\",\"type\":\"package\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/nec-wx3000hp/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_nec-wx3000hp.ipk\"}" \
+        --assets-link "{\"name\":\"nec-wx3000hp fullimage\",\"type\":\"image\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/nec-wx3000hp/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$NEC_WX3000HP_FULLIMAGE\"}"
   needs:
     - job: upload-release-artifacts
