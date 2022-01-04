@@ -251,7 +251,7 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
 
         print("Starting prplmesh as {}".format(mode))
         self._prplMesh_exec("certification_mode {}".format(mode))
-        self.expect(self.prompt)
+        self.expect(self.prompt, timeout=120)
         if self.delay:
             print("Waiting {} seconds for prplMesh to initialize".format(self.delay))
             time.sleep(self.delay)
