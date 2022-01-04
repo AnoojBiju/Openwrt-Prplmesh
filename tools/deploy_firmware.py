@@ -658,9 +658,9 @@ class TurrisRdkb(PrplwrtDevice):
 
         self.reset_board(check_serial_type(self.name, self.BAUDRATE, self.PROMPT_RE))
 
-        common_bridge_ip = "192.168.1.1"
+        common_bridge_ip = "192.168.200.140"
         common_net_mask = "24"
-        rdkb_bridge = "brlan0"
+        rdkb_bridge = "lan4.200"
 
         serial_path = f"/dev/{self.name}"
         if not os.path.exists(serial_path):
@@ -677,18 +677,20 @@ class TurrisRdkb(PrplwrtDevice):
             shell.expect(self.UBOOT_PROMPT)
 
             check_uboot_var(shell, "yocto_bootargs", "yocto_bootargs=earlyprintk")
-            check_uboot_var(shell, "yocto_mmcboot", "yocto_mmcboot=run")
+            check_uboot_var(shell, "mmcboot", "mmcboot=run")
             check_uboot_var(shell, "yocto_mmcload", "yocto_mmcload=setenv")
 
-            shell.sendline("run yocto_mmcboot")
+            shell.sendline("run mmcboot")
             shell.expect(["TurrisOmnia-GW login", pexpect.TIMEOUT])
 
-            # Add standard ip address for brlan0 bridge. Will be used for SSH connection
+            # Add vlan. Will be used for SSH connection
+            shell.sendline(f"ip link add link lan4 name {rdkb_bridge} type vlan id 200")
+            shell.expect(f"ip link add link lan4 name {rdkb_bridge} type vlan id 200")
             shell.sendline(f"ip a a {common_bridge_ip}/{common_net_mask} dev {rdkb_bridge}")
             shell.expect([f"ip a a {common_bridge_ip}/{common_net_mask} dev {rdkb_bridge}"])
             # Remove firewall rule which blocks SSH connection
-            shell.sendline(f"iptables -D INPUT -i {rdkb_bridge} -p tcp -m tcp --dport 22 -j DROP")
-            shell.expect([f"iptables -D INPUT -i {rdkb_bridge} -p tcp -m tcp --dport 22 -j DROP"])
+            shell.sendline(f"iptables -D INPUT -i brlan0 -p tcp -m tcp --dport 22 -j DROP")
+            shell.expect([f"iptables -D INPUT -i brlan0 -p tcp -m tcp --dport 22 -j DROP"])
             shell.sendline("iptables -D INPUT -i lan0 -p tcp -m tcp --dport 22 -j DROP")
             shell.expect("iptables -D INPUT -i lan0 -p tcp -m tcp --dport 22 -j DROP")
 
