@@ -136,6 +136,13 @@ public:
      */
     eRadioState radio_state_from_string(const std::string &state);
 
+    /**
+     * Check if the given event (by OpCode) should be filtered.
+     * 
+     * @return true if the event should be filtered, otherwise false.
+     */
+    bool is_filtered_event(const std::string &opcode);
+
     // Public getter methods:
 public:
     /*!
@@ -261,6 +268,7 @@ protected:
     int m_fd_nl_events  = -1;
 
     hal_conf_t m_hal_conf;
+    std::set<std::string> m_filtered_events;
 
     // Private data-members:
 private:
