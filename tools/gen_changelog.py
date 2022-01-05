@@ -10,6 +10,7 @@ import sys
 import subprocess
 import re
 import datetime
+import argparse
 
 generation_datetime = datetime.datetime.now().isoformat(sep=' ', timespec='minutes')
 preamble = f"""\
@@ -62,14 +63,43 @@ def get_log_entry(current_version: str, prev_version: str):
 
 
 def main():
+    parser = argparse.ArgumentParser(prog=sys.argv[0],
+                                     description="Generate a changelog in Markdown format.")
+    parser.add_argument('-s', '--start-version', type=str, default=None,
+                        help="Display the changelog since this version")
+    parser.add_argument('-l', '--latest-version', action='store_true',
+                        help="Only show the changes in the latest version (since latest-1)")
+    parser.add_argument('-U', '--no-unreleased', action='store_true',
+                        help="By default, we start with 'unreleased' changes."
+                             "This option suppresses that.")
+    args = parser.parse_args()
+
     # Get all tags in logical order, remove ones that are not releases (x.y.z)
     tags = subprocess.run(['git', 'tag', '--sort=upstream'], capture_output=True, text=True).stdout
     versions = [tag for tag in tags.split('\n') if re.match(r'^\d+.\d+.\d+$', tag)]
-    # Pretend that 'HEAD' is also a version, so we can get stats about unreleased changes from git
-    versions.append('HEAD')
+
+    if args.start_version and args.latest_version:
+        raise argparse.ArgumentError("-s and -l are mutually exclusive options!")
+    if args.latest_version:
+        versions = versions[-2:]
+    if args.start_version and args.start_version not in versions:
+        raise argparse.ArgumentError(f"{parser.start_version} is not a valid version!"
+                                     f"Must be one of: {str(versions)}")
+    if args.start_version:
+        versions = versions[versions.index(args.start_version):]
+    if not args.no_unreleased:
+        # Pretend 'HEAD' is also a version, so we can get stats about unreleased changes from git
+        versions.append('HEAD')
+
     prev = None
     output = []
     for version in versions:
+        # Skip the first version, since otherwise we would list ALL changes
+        # before the first selected version as belonging to that version, which is usually wrong
+        if version == versions[0]:
+            prev = version
+            continue
+
         release_date = subprocess.run(
                             ['git', 'tag', '-l', '--format=%(taggerdate:iso8601)', version],
                             capture_output=True,
@@ -78,7 +108,6 @@ def main():
             f"(https://gitlab.com/prpl-foundation/prplmesh/prplMesh/-/releases/{version})"\
             f" - {release_date}\n"\
             if version != "HEAD" else "## Unreleased\n"
-
         changes = get_log_entry(version, prev)
         bugs = [c for c in changes if c[0] in ('Bugfix', 'Hotfix')]
         features = [c for c in changes if c[0] == 'Feature']
