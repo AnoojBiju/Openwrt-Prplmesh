@@ -4415,7 +4415,6 @@ bool slave_thread::agent_fsm()
                 }
             }
         }
-
         LOG(TRACE) << "goto STATE_WAIT_FOR_AUTO_CONFIGURATION_COMPLETE";
         m_agent_state = STATE_WAIT_FOR_AUTO_CONFIGURATION_COMPLETE;
         m_task_pool.send_event(eTaskType::AP_AUTOCONFIGURATION,

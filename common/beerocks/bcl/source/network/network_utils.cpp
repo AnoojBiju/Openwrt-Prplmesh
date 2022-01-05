@@ -757,7 +757,7 @@ bool network_utils::linux_iface_get_mac(const std::string &iface, std::string &m
     ifr.ifr_addr.sa_family = AF_INET;
     string_utils::copy_string(ifr.ifr_name, iface.c_str(), IFNAMSIZ);
     if (ioctl(fd, SIOCGIFHWADDR, &ifr) == -1) {
-        LOG(ERROR) << "SIOCGIFHWADDR";
+        LOG(ERROR) << "SIOCGIFHWADDR. iface: " << iface;
         close(fd);
         return false;
     }
