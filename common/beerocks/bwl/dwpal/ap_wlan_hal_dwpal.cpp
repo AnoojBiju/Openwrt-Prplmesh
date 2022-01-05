@@ -737,6 +737,9 @@ ap_wlan_hal_dwpal::ap_wlan_hal_dwpal(const std::string &iface_name, hal_event_cb
     : base_wlan_hal(bwl::HALType::AccessPoint, iface_name, IfaceType::Intel, callback, hal_conf),
       base_wlan_hal_dwpal(bwl::HALType::AccessPoint, iface_name, callback, hal_conf)
 {
+    std::string events[] = {};
+    int events_size      = sizeof(events) / sizeof(std::string);
+    m_filtered_events.insert(events, events + events_size);
 }
 
 ap_wlan_hal_dwpal::~ap_wlan_hal_dwpal() {}

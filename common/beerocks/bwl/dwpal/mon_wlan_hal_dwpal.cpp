@@ -633,6 +633,9 @@ mon_wlan_hal_dwpal::mon_wlan_hal_dwpal(const std::string &iface_name, hal_event_
     : base_wlan_hal(bwl::HALType::Monitor, iface_name, IfaceType::Intel, callback, hal_conf),
       base_wlan_hal_dwpal(bwl::HALType::Monitor, iface_name, callback, hal_conf)
 {
+    std::string events[] = {};
+    int events_size      = sizeof(events) / sizeof(std::string);
+    m_filtered_events.insert(events, events + events_size);
 }
 
 mon_wlan_hal_dwpal::~mon_wlan_hal_dwpal() {}
