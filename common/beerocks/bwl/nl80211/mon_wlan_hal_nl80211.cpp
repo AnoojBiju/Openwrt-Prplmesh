@@ -82,6 +82,9 @@ mon_wlan_hal_nl80211::mon_wlan_hal_nl80211(const std::string &iface_name, hal_ev
     : base_wlan_hal(bwl::HALType::Monitor, iface_name, IfaceType::Intel, callback, hal_conf),
       base_wlan_hal_nl80211(bwl::HALType::Monitor, iface_name, callback, BUFFER_SIZE, hal_conf)
 {
+    std::string events[] = {};
+    int events_size      = sizeof(events) / sizeof(std::string);
+    m_filtered_events.insert(events, events + events_size);
 }
 
 mon_wlan_hal_nl80211::~mon_wlan_hal_nl80211() {}
