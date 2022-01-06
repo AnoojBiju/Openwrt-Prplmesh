@@ -629,14 +629,19 @@ bool dynamic_channel_selection_r2_task::handle_continuous_scan_request_event(
         // Find the scan element within the agent.
         const auto &scan_it = m_agents_status_map[agent_mac].continuous_radio_scans.find(
             scan_request_event.radio_mac);
+        // Check if the scan exists
+        if (scan_it == m_agents_status_map[agent_mac].continuous_radio_scans.end()) {
+            // If we want to enable the scan but the scan does not exist
+            // we need to return false as there is no scan to enable.
+
+            // If we want to disable the scan and the scan does not exist
+            // we need to return true as there is no scan to disable.
+
+            return !scan_request_event.enable;
+        }
+
         if (!scan_request_event.enable) {
             // The instruction is to disable the request
-
-            // If the scan does not exists, return true as there is no scan to disable.
-            if (scan_it == m_agents_status_map[agent_mac].continuous_radio_scans.end()) {
-                // Cannot find the requested scan
-                return true;
-            }
 
             // If the scan is busy, return false because the scan cannot be disabled.
             if (scan_it->second.status != eRadioScanStatus::PENDING) {
