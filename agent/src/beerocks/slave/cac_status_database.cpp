@@ -59,9 +59,10 @@ CacCompletionStatus CacStatusDatabase::get_completion_status(const sMacAddr &rad
         return ret;
     }
 
+    // TODO: We shall not reach below condition, please check PPM-1833 jira for more detail
     if (!radio->last_switch_channel_request) {
-        LOG(ERROR) << "No switch channel request to relate to, thus completion status is empty"
-                   << " for radio " << radio_mac;
+        LOG(WARNING) << "No switch channel request to relate to, thus completion status is empty"
+                     << " for radio " << radio_mac;
         return ret;
     }
     uint8_t main_channel = radio->last_switch_channel_request->channel;
