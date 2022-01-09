@@ -1554,6 +1554,13 @@ bool network_utils::set_vlan_packet_filter(bool set, const std::string &bss_ifac
         // Append rule.
         cmd.append("-A ");
     } else {
+        // Before removing an entry, check if it exists
+        std::string vlan_filter_entry_cmd = cmd + "-L PREROUTING | grep " + bss_iface;
+        std::string vlan_filter_entry_cmd_output =
+            os_utils::system_call_with_output(vlan_filter_entry_cmd, true);
+        if (vlan_filter_entry_cmd_output.empty()) {
+            return true;
+        }
         // Delete rule.
         cmd.append("-D ");
     }
