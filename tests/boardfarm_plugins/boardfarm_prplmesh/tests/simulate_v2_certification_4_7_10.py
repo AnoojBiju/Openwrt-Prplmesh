@@ -94,7 +94,7 @@ class V2Certification_4_7_10(CommonFlows):
 
         metric_reporting_policy_tlv = tlv(self.ieee1905['eTlvTypeMap']
                                           ['TLV_METRIC_REPORTING_POLICY'],
-                                          '0x0a 0x01 {} 0x00 0x00 0x00 0x00 0x0f'
+                                          '0x0a 0x01 {} 0x00 0x00 0x00 0x00'
                                           .format(agent.radios[0].mac))
         unsuccessful_association_policy_tlv = tlv(self.ieee1905['eTlvTypeMap']
                                                   ['TLV_PROFILE2_UNSUCCESSFUL_ASSOCIATION_POLICY'],

@@ -32,6 +32,8 @@ using namespace beerocks;
 using namespace net;
 using namespace son;
 
+constexpr uint8_t TOPOLOGY_DISCOVERY_TX_CYCLE_SEC = 60;
+
 TopologyTask::TopologyTask(BackhaulManager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu_tx)
     : Task(eTaskType::TOPOLOGY), m_btl_ctx(btl_ctx), m_cmdu_tx(cmdu_tx)
 {
@@ -39,15 +41,19 @@ TopologyTask::TopologyTask(BackhaulManager &btl_ctx, ieee1905_1::CmduMessageTx &
 
 void TopologyTask::work()
 {
+    auto db = AgentDB::get();
+
+    // Don't send topology discovery if the Controller hasn't been discovered.
+    if (db->controller_info.bridge_mac == network_utils::ZERO_MAC) {
+        return;
+    }
+
     auto now = std::chrono::steady_clock::now();
 
     // Send topology discovery every 60 seconds according to IEEE_Std_1905.1-2013 specification
-    constexpr uint8_t TOPOLOGY_DISCOVERY_TX_CYCLE_SEC = 60;
-    static std::chrono::steady_clock::time_point discovery_timestamp =
-        std::chrono::steady_clock::now();
-
-    if (now - discovery_timestamp > std::chrono::seconds(TOPOLOGY_DISCOVERY_TX_CYCLE_SEC)) {
-        discovery_timestamp = now;
+    if (now - m_periodic_discovery_timestamp >
+        std::chrono::seconds(TOPOLOGY_DISCOVERY_TX_CYCLE_SEC)) {
+        m_periodic_discovery_timestamp = now;
         send_topology_discovery();
     }
 
@@ -58,8 +64,6 @@ void TopologyTask::work()
     // and send a Topology Notification message.
     static constexpr uint8_t DISCOVERY_NEIGHBOUR_REMOVAL_TIMEOUT_SEC =
         ieee1905_1_consts::DISCOVERY_NOTIFICATION_TIMEOUT_SEC + 3; // 3 seconds grace period.
-
-    auto db = AgentDB::get();
 
     bool neighbors_list_changed = false;
     for (auto &neighbors_on_local_iface_entry : db->neighbor_devices) {
@@ -92,7 +96,9 @@ void TopologyTask::handle_event(uint8_t event_enum_value, const void *event_obj)
         break;
     }
     case AGENT_DEVICE_INITIALIZED: {
-        send_topology_discovery();
+        m_periodic_discovery_timestamp = std::chrono::steady_clock::now() -
+                                         std::chrono::seconds(TOPOLOGY_DISCOVERY_TX_CYCLE_SEC);
+        send_topology_notification();
         break;
     }
     default: {

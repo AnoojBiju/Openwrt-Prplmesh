@@ -199,14 +199,9 @@ BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
 }
 cACTION_BACKHAUL_CONNECTED_NOTIFICATION::~cACTION_BACKHAUL_CONNECTED_NOTIFICATION() {
 }
-sBackhaulParams& cACTION_BACKHAUL_CONNECTED_NOTIFICATION::params() {
-    return (sBackhaulParams&)(*m_params);
-}
-
 void cACTION_BACKHAUL_CONNECTED_NOTIFICATION::class_swap()
 {
     tlvf_swap(8*sizeof(eActionOp_BACKHAUL), reinterpret_cast<uint8_t*>(m_action_op));
-    m_params->struct_swap();
 }
 
 bool cACTION_BACKHAUL_CONNECTED_NOTIFICATION::finalize()
@@ -239,7 +234,6 @@ bool cACTION_BACKHAUL_CONNECTED_NOTIFICATION::finalize()
 size_t cACTION_BACKHAUL_CONNECTED_NOTIFICATION::get_initial_size()
 {
     size_t class_size = 0;
-    class_size += sizeof(sBackhaulParams); // params
     return class_size;
 }
 
@@ -249,12 +243,6 @@ bool cACTION_BACKHAUL_CONNECTED_NOTIFICATION::init()
         TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
         return false;
     }
-    m_params = reinterpret_cast<sBackhaulParams*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(sBackhaulParams))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sBackhaulParams) << ") Failed!";
-        return false;
-    }
-    if (!m_parse__) { m_params->struct_init(); }
     if (m_parse__) { class_swap(); }
     return true;
 }

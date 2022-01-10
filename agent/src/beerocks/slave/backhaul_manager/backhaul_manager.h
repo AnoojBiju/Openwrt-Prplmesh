@@ -307,10 +307,7 @@ private:
      */
     std::shared_ptr<beerocks::TimerManager> m_timer_manager;
 
-    net::network_utils::iface_info bridge_info;
-
     int configuration_stop_on_failure_attempts;
-    const std::string config_const_bh_slave;
 
     int stop_on_failure_attempts;
 
@@ -418,7 +415,6 @@ public:
         sMacAddr radio_mac;       /**< Radio ID (= radio MAC address) */
         std::string hostap_iface; /**< Name of the radio interface */
         std::string sta_iface;    /**< Name of the bSTA interface on the radio (if any) */
-        bool slave_is_backhaul_manager = false;
 
         std::shared_ptr<bwl::sta_wlan_hal> sta_wlan_hal;
         int sta_hal_ext_events = beerocks::net::FileDescriptor::invalid_descriptor;
@@ -468,9 +464,6 @@ private:
     STATE(WIRELESS_WAIT_FOR_RECONNECT)                                                             \
     STATE(_WIRELESS_END_)                                                                          \
                                                                                                    \
-    STATE(MASTER_DISCOVERY)                                                                        \
-    STATE(WAIT_FOR_AUTOCONFIG_COMPLETE)                                                            \
-    STATE(CONNECT_TO_MASTER)                                                                       \
     STATE(CONNECTED)                                                                               \
     STATE(OPERATIONAL)                                                                             \
     STATE(RESTART)                                                                                 \

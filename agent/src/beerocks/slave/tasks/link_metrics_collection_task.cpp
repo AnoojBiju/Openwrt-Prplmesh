@@ -26,14 +26,11 @@
 #include <tlvf/wfa_map/tlvAssociatedStaExtendedLinkMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaTrafficStats.h>
 #include <tlvf/wfa_map/tlvBeaconMetricsQuery.h>
-#include <tlvf/wfa_map/tlvChannelScanReportingPolicy.h>
 #include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
 #include <tlvf/wfa_map/tlvProfile2Default802dotQSettings.h>
 #include <tlvf/wfa_map/tlvProfile2RadioMetrics.h>
 #include <tlvf/wfa_map/tlvProfile2TrafficSeparationPolicy.h>
-#include <tlvf/wfa_map/tlvProfile2UnsuccessfulAssociationPolicy.h>
 #include <tlvf/wfa_map/tlvStaMacAddressType.h>
-#include <tlvf/wfa_map/tlvSteeringPolicy.h>
 
 namespace beerocks {
 
@@ -69,10 +66,6 @@ bool LinkMetricsCollectionTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx,
         handle_ap_metrics_query(cmdu_rx, src_mac);
         break;
     }
-    case ieee1905_1::eMessageType::MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE: {
-        handle_multi_ap_policy_config_request(cmdu_rx, src_mac);
-        break;
-    }
     case ieee1905_1::eMessageType::AP_METRICS_RESPONSE_MESSAGE: {
         handle_ap_metrics_response(cmdu_rx, src_mac);
         break;
@@ -103,6 +96,12 @@ void LinkMetricsCollectionTask::work()
      * If periodic AP metrics reporting is enabled, check if time interval has elapsed and if
      * so, then report AP metrics.
      */
+    if (db->link_metrics_policy.reporting_interval_sec !=
+        m_ap_metrics_reporting_info.reporting_interval_s) {
+        m_ap_metrics_reporting_info.reporting_interval_s =
+            db->link_metrics_policy.reporting_interval_sec;
+        m_ap_metrics_reporting_info.last_reporting_time_point = std::chrono::steady_clock::now();
+    }
     if (0 == m_ap_metrics_reporting_info.reporting_interval_s) {
         return;
     }
@@ -602,149 +601,6 @@ bool LinkMetricsCollectionTask::send_ap_metric_query_message(
         }
     }
     return true;
-}
-
-void LinkMetricsCollectionTask::handle_multi_ap_policy_config_request(
-    ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac)
-{
-    auto mid = cmdu_rx.getMessageId();
-    LOG(DEBUG) << "Received MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE, mid=" << std::hex << mid;
-
-    std::unordered_set<sMacAddr> msg_forwarded_to_son_slave;
-
-    auto steering_policy_tlv = cmdu_rx.getClass<wfa_map::tlvSteeringPolicy>();
-    if (steering_policy_tlv) {
-        // For the time being, agent doesn't do steering so steering policy is ignored.
-    }
-
-    auto metric_reporting_policy_tlv = cmdu_rx.getClass<wfa_map::tlvMetricReportingPolicy>();
-    if (metric_reporting_policy_tlv) {
-        /**
-         * The Multi-AP Policy Config Request message containing a Metric Reporting Policy TLV is
-         * sent by the controller and received by the backhaul manager.
-         * The backhaul manager forwards the request message "as is" to all the slaves managing the
-         * radios which Radio Unique Identifier has been specified.
-         */
-        for (size_t i = 0; i < metric_reporting_policy_tlv->metrics_reporting_conf_list_length();
-             i++) {
-            auto tuple = metric_reporting_policy_tlv->metrics_reporting_conf_list(i);
-            if (!std::get<0>(tuple)) {
-                LOG(ERROR) << "Failed to get metrics_reporting_conf[" << i
-                           << "] from TLV_METRIC_REPORTING_POLICY";
-                return;
-            }
-
-            auto metrics_reporting_conf = std::get<1>(tuple);
-            auto db                     = AgentDB::get();
-
-            auto radio =
-                db->get_radio_by_mac(metrics_reporting_conf.radio_uid, AgentDB::eMacType::RADIO);
-            if (radio) {
-
-                if (!m_btl_ctx.forward_cmdu_to_uds(m_btl_ctx.get_agent_fd(), 0, db->bridge.mac,
-                                                   src_mac, cmdu_rx)) {
-                    /*
-                     * TODO: https://jira.prplfoundation.org/browse/PPM-657
-                     *
-                     * Send message to fronthaul instead of slave
-                     */
-                    LOG(ERROR) << "Failed to forward message to fronthaul "
-                               << radio->front.iface_name;
-                } else {
-                    LOG(DEBUG) << "Forwarding MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE to radio "
-                               << radio->front.iface_name;
-                    msg_forwarded_to_son_slave.insert(metrics_reporting_conf.radio_uid);
-                }
-            } else {
-                LOG(INFO) << "Radio Unique Identifier " << metrics_reporting_conf.radio_uid
-                          << " not found";
-            }
-        }
-
-        /**
-         * The AP Metrics Reporting Interval field indicates if periodic AP metrics reporting is
-         * to be enabled, and if so the cadence.
-         *
-         * Store configured interval value and restart the timer.
-         *
-         * Reporting interval value works just for enabling/disabling auto sending AP Metrics
-         * Response, which will be send every 500 ms.
-         */
-        m_ap_metrics_reporting_info.reporting_interval_s =
-            metric_reporting_policy_tlv->metrics_reporting_interval_sec();
-        m_ap_metrics_reporting_info.last_reporting_time_point = std::chrono::steady_clock::now();
-    }
-
-    auto db                           = AgentDB::get();
-    auto channel_scan_reporing_policy = cmdu_rx.getClass<wfa_map::tlvChannelScanReportingPolicy>();
-    if (channel_scan_reporing_policy) {
-        db->channel_scan_policy.report_indepent_scans_policy =
-            (channel_scan_reporing_policy->report_independent_channel_scans() ==
-             channel_scan_reporing_policy->REPORT_INDEPENDENT_CHANNEL_SCANS);
-    }
-
-    /** 
-     * Currently the traffic separation is handled on the son_slave. So if this traffic TLVs,
-     * exists in the CMDU, and the message has not been forwarded to on of the son_slaves, then
-     * forward it here.
-    **/
-    auto tlvProfile2Default802dotQSettings =
-        cmdu_rx.getClass<wfa_map::tlvProfile2Default802dotQSettings>();
-    auto tlvProfile2TrafficSeparationPolicy =
-        cmdu_rx.getClass<wfa_map::tlvProfile2TrafficSeparationPolicy>();
-
-    if (tlvProfile2Default802dotQSettings || tlvProfile2TrafficSeparationPolicy) {
-        net::TrafficSeparation::traffic_seperation_configuration_clear();
-        for (auto radio : db->get_radios_list()) {
-            if (!radio) {
-                continue;
-            }
-            // If we sent this already to this son_slave, skip.
-            if (msg_forwarded_to_son_slave.find(radio->front.iface_mac) !=
-                msg_forwarded_to_son_slave.end()) {
-                continue;
-            }
-
-            LOG(DEBUG) << "Forwarding MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE to son_slave "
-                       << radio->front.iface_name;
-            if (!m_btl_ctx.forward_cmdu_to_uds(m_btl_ctx.get_agent_fd(), 0, db->bridge.mac, src_mac,
-                                               cmdu_rx)) {
-                LOG(ERROR) << "Failed to forward message to fronthaul " << radio->front.iface_name;
-            }
-        }
-    }
-
-    // send ACK_MESSAGE back to the controller
-    if (!m_cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE)) {
-        LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
-        return;
-    }
-
-    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, db->bridge.mac);
-
-    const auto unsuccessful_association_policy_tlv =
-        cmdu_rx.getClass<wfa_map::tlvProfile2UnsuccessfulAssociationPolicy>();
-    if (unsuccessful_association_policy_tlv) {
-        // Set enable/disable
-        m_btl_ctx.unsuccessful_association_policy.report_unsuccessful_association =
-            unsuccessful_association_policy_tlv->report_unsuccessful_associations().report;
-
-        // Set reporting rate
-        m_btl_ctx.unsuccessful_association_policy.maximum_reporting_rate =
-            unsuccessful_association_policy_tlv->maximum_reporting_rate();
-
-        // Reset internal counters
-        m_btl_ctx.unsuccessful_association_policy.number_of_reports_in_last_minute = 0;
-        m_btl_ctx.unsuccessful_association_policy.last_reporting_time_point =
-            std::chrono::steady_clock::time_point::min(); // way in the past
-
-        LOG(DEBUG) << "Unsuccessful Association Policy tlv found, mid: " << mid << "\n Report: "
-                   << m_btl_ctx.unsuccessful_association_policy.report_unsuccessful_association
-                   << "; maximum reporting rate: "
-                   << m_btl_ctx.unsuccessful_association_policy.maximum_reporting_rate;
-    } else {
-        LOG(DEBUG) << "Unsuccessful Association Policy tlv not found in the request, mid" << mid;
-    }
 }
 
 uint32_t LinkMetricsCollectionTask::recalculate_byte_units(uint32_t bytes)
