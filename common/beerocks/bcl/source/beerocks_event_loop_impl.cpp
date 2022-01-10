@@ -186,6 +186,10 @@ int EventLoopImpl::run()
         return 0;
     }
 
+    if (num_events > 1) {
+        LOG(DEBUG) << "num_events=" << num_events;
+    }
+
     // Trigger event handlers
     for (int i = 0; i < num_events; i++) {
         int fd = events[i].data.fd;
