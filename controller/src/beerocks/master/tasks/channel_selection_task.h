@@ -73,8 +73,6 @@ public:
         beerocks_message::sApChannelSwitch cs_params;
         beerocks::message::sWifiChannel
             supported_channels[beerocks::message::SUPPORTED_CHANNELS_LENGTH];
-        beerocks::net::sScanResult
-            backhaul_scan_measurement_list[beerocks::message::BACKHAUL_SCAN_MEASUREMENT_MAX_LENGTH];
     } sSlaveJoined_event;
 
     typedef struct {
@@ -257,7 +255,6 @@ private:
     sMacAddr radio_mac;
     sHostapParams hostap_params;
     std::unordered_map<uint8_t, sCandidateChannel> ccl;
-    std::unordered_map<std::string, sScanList> backhaul_scan_measurement_list;
 
     beerocks_message::sApChannelSwitch channel_switch_request = {};
 

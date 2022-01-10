@@ -10,6 +10,7 @@
 #define _TOPOLOGY_TASK_H_
 
 #include "task.h"
+#include <chrono>
 
 #include <tlvf/CmduMessageTx.h>
 
@@ -128,6 +129,7 @@ private:
      */
     bool add_associated_clients_tlv();
 
+    std::chrono::steady_clock::time_point m_periodic_discovery_timestamp;
     BackhaulManager &m_btl_ctx;
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
 };

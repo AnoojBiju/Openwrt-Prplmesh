@@ -95,7 +95,6 @@ public:
         std::string bridge_iface;
         std::string backhaul_preferred_bssid;
         std::string enable_system_hang_test;
-        std::string const_backhaul_slave;
         std::string monitor_polling_rate_msec;
         std::string monitor_measurement_window_poll_count;
         //[slaveX]

@@ -9,7 +9,6 @@
 #include "backhaul_manager.h"
 #include "../agent_db.h"
 
-#include "../tasks/ap_autoconfiguration_task.h"
 #include "../tasks/capability_reporting_task.h"
 #include "../tasks/channel_scan_task.h"
 #include "../tasks/channel_selection_task.h"
@@ -99,8 +98,7 @@ BackhaulManager::BackhaulManager(const config_file::sConfigSlave &config,
     : cmdu_tx(m_tx_buffer, sizeof(m_tx_buffer)),
       cert_cmdu_tx(m_cert_tx_buffer, sizeof(m_cert_tx_buffer)), slave_ap_ifaces(slave_ap_ifaces_),
       slave_sta_ifaces(slave_sta_ifaces_), m_beerocks_temp_path(config.temp_path),
-      m_ucc_listener_port(string_utils::stoi(config.ucc_listener_port)),
-      config_const_bh_slave(config.const_backhaul_slave)
+      m_ucc_listener_port(string_utils::stoi(config.ucc_listener_port))
 {
     configuration_stop_on_failure_attempts = stop_on_failure_attempts_;
     stop_on_failure_attempts               = stop_on_failure_attempts_;
@@ -128,7 +126,6 @@ BackhaulManager::BackhaulManager(const config_file::sConfigSlave &config,
 
     // Agent tasks
     m_task_pool.add_task(std::make_shared<TopologyTask>(*this, cmdu_tx));
-    m_task_pool.add_task(std::make_shared<ApAutoConfigurationTask>(*this, cmdu_tx));
     m_task_pool.add_task(std::make_shared<ChannelSelectionTask>(*this, cmdu_tx));
     m_task_pool.add_task(std::make_shared<ChannelScanTask>(*this, cmdu_tx));
     m_task_pool.add_task(std::make_shared<CapabilityReportingTask>(*this, cmdu_tx));
@@ -286,9 +283,6 @@ bool BackhaulManager::thread_init()
     // Subscribe for the reception of CMDU messages that this process is interested in
     if (!m_broker_client->subscribe(std::set<ieee1905_1::eMessageType>{
             ieee1905_1::eMessageType::ACK_MESSAGE,
-            ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_RENEW_MESSAGE,
-            ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_RESPONSE_MESSAGE,
-            ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_WSC_MESSAGE,
             ieee1905_1::eMessageType::AP_CAPABILITY_QUERY_MESSAGE,
             ieee1905_1::eMessageType::AP_METRICS_QUERY_MESSAGE,
             ieee1905_1::eMessageType::ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE,
@@ -305,7 +299,6 @@ bool BackhaulManager::thread_init()
             ieee1905_1::eMessageType::COMBINED_INFRASTRUCTURE_METRICS_MESSAGE,
             ieee1905_1::eMessageType::HIGHER_LAYER_DATA_MESSAGE,
             ieee1905_1::eMessageType::LINK_METRIC_QUERY_MESSAGE,
-            ieee1905_1::eMessageType::MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE,
             ieee1905_1::eMessageType::TOPOLOGY_DISCOVERY_MESSAGE,
             ieee1905_1::eMessageType::TOPOLOGY_QUERY_MESSAGE,
             ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE,
@@ -412,8 +405,7 @@ bool BackhaulManager::send_ack_to_controller(ieee1905_1::CmduMessageTx &cmdu_tx,
     auto db = AgentDB::get();
 
     LOG(DEBUG) << "Sending ACK message to the controller, mid=" << std::hex << mid;
-    bool ret = send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac,
-                                   tlvf::mac_from_string(bridge_info.mac));
+    bool ret = send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac, db->bridge.mac);
     return ret;
 }
 
@@ -588,120 +580,39 @@ bool BackhaulManager::finalize_slaves_connect_state(bool fConnected)
         auto db = AgentDB::get();
 
         beerocks::net::network_utils::iface_info iface_info;
-        bool backhaul_manager_exist = false;
 
-        if (!db->device_conf.local_gw) {
-            // Read the IP addresses of the bridge interface
-            if (beerocks::net::network_utils::get_iface_info(
-                    iface_info, db->backhaul.selected_iface_name) != 0) {
-                LOG(ERROR) << "Failed reading addresses for: " << db->backhaul.selected_iface_name;
-                return false;
-            }
+        LOG_IF(!db->device_conf.local_controller && db->backhaul.selected_iface_name.empty(), FATAL)
+            << "selected_iface_name is empty";
 
-            notification->params().bridge_ipv4 =
-                beerocks::net::network_utils::ipv4_from_string(bridge_info.ip);
-            notification->params().backhaul_mac = tlvf::mac_from_string(iface_info.mac);
-            notification->params().backhaul_ipv4 =
-                beerocks::net::network_utils::ipv4_from_string(iface_info.ip);
+        // Update the backhaul BSSID on the AgentDB and detach from any sta_bwl not used for
+        // by wireless connection:
 
-            if (db->backhaul.connection_type == AgentDB::sBackhaul::eConnectionType::Wired) {
-                notification->params().backhaul_bssid =
-                    tlvf::mac_from_string(beerocks::net::network_utils::ZERO_MAC_STRING);
-                notification->params().backhaul_iface_type  = IFACE_TYPE_ETHERNET;
-                notification->params().backhaul_is_wireless = 0;
-                for (auto &radio_info : m_radios_info) {
+        // Initialize backhaul bssid to empty in case in the connecten type is wired. If it is not,
+        // will be overriden in the loop below.
+        db->backhaul.backhaul_bssid = {};
 
-                    if (radio_info->sta_wlan_hal) {
-                        radio_info->sta_wlan_hal.reset();
-                    }
-                    if (radio_info->sta_hal_ext_events !=
-                        beerocks::net::FileDescriptor::invalid_descriptor) {
-                        m_event_loop->remove_handlers(radio_info->sta_hal_ext_events);
-                        radio_info->sta_hal_ext_events =
-                            beerocks::net::FileDescriptor::invalid_descriptor;
-                    }
-                    if (radio_info->sta_hal_int_events !=
-                        beerocks::net::FileDescriptor::invalid_descriptor) {
-                        m_event_loop->remove_handlers(radio_info->sta_hal_int_events);
-                        radio_info->sta_hal_int_events =
-                            beerocks::net::FileDescriptor::invalid_descriptor;
-                    }
+        for (auto &radio_info : m_radios_info) {
+            if (db->backhaul.connection_type == AgentDB::sBackhaul::eConnectionType::Wireless &&
+                radio_info->sta_iface == db->backhaul.selected_iface_name) {
+                LOG_IF(!radio_info->sta_wlan_hal, FATAL) << "selected sta_hal is nullptr";
+                db->backhaul.backhaul_bssid =
+                    tlvf::mac_from_string(radio_info->sta_wlan_hal->get_bssid());
+            } else { // Detach from unused stations
+
+                if (radio_info->sta_wlan_hal) {
+                    radio_info->sta_wlan_hal.reset();
                 }
-
-            } else {
-
-                // Find the slave handling the wireless interface
-                for (auto &radio_info : m_radios_info) {
-                    if (radio_info->sta_iface == db->backhaul.selected_iface_name) {
-
-                        // Mark the slave as the backhaul manager
-                        radio_info->slave_is_backhaul_manager = true;
-                        backhaul_manager_exist                = true;
-
-                        notification->params().backhaul_bssid =
-                            tlvf::mac_from_string(radio_info->sta_wlan_hal->get_bssid());
-                        // notification->params().backhaul_freq          = son::wireless_utils::channel_to_freq(soc->sta_wlan_hal->get_channel()); // HACK temp disabled because of a bug on endian converter
-                        notification->params().backhaul_channel =
-                            radio_info->sta_wlan_hal->get_channel();
-                        // TODO - Specify true WiFi model from config (safe to derive from hostap_iface_type?)
-                        notification->params().backhaul_iface_type  = IFACE_TYPE_WIFI_INTEL;
-                        notification->params().backhaul_is_wireless = 1;
-                    } else {
-                        // HACK - needs to be controlled from slave
-
-                        // Mark the slave as non backhaul manager
-                        radio_info->slave_is_backhaul_manager = false;
-                        // detach from unused stations
-                        if (radio_info->sta_wlan_hal) {
-                            radio_info->sta_wlan_hal.reset();
-                        }
-                        if (radio_info->sta_hal_ext_events !=
-                            beerocks::net::FileDescriptor::invalid_descriptor) {
-                            m_event_loop->remove_handlers(radio_info->sta_hal_ext_events);
-                            radio_info->sta_hal_ext_events =
-                                beerocks::net::FileDescriptor::invalid_descriptor;
-                        }
-                        if (radio_info->sta_hal_int_events !=
-                            beerocks::net::FileDescriptor::invalid_descriptor) {
-                            m_event_loop->remove_handlers(radio_info->sta_hal_int_events);
-                            radio_info->sta_hal_int_events =
-                                beerocks::net::FileDescriptor::invalid_descriptor;
-                        }
-                    }
+                if (radio_info->sta_hal_ext_events !=
+                    beerocks::net::FileDescriptor::invalid_descriptor) {
+                    m_event_loop->remove_handlers(radio_info->sta_hal_ext_events);
+                    radio_info->sta_hal_ext_events =
+                        beerocks::net::FileDescriptor::invalid_descriptor;
                 }
-            }
-        }
-
-        int i = 0;
-        memset(notification->params().backhaul_scan_measurement_list, 0,
-               sizeof(beerocks_message::sBackhaulParams::backhaul_scan_measurement_list));
-        for (auto scan_measurement_entry : scan_measurement_list) {
-            LOG(DEBUG) << "copy scan list to slaves = " << scan_measurement_entry.first
-                       << " channel = " << int(scan_measurement_entry.second.channel)
-                       << " rssi = " << int(scan_measurement_entry.second.rssi);
-            notification->params().backhaul_scan_measurement_list[i].mac =
-                scan_measurement_entry.second.mac;
-            i++;
-        }
-
-        // handle case when backhaul manager slave is not selected
-        if (!backhaul_manager_exist) {
-            if (!config_const_bh_slave.empty()) {
-                for (auto &radio_info : m_radios_info) {
-                    if (radio_info->hostap_iface == config_const_bh_slave) {
-                        LOG(INFO) << "Configured slave for constant BH manager was found: "
-                                  << config_const_bh_slave;
-                        radio_info->slave_is_backhaul_manager = true;
-                        break;
-                    }
-                }
-            } else {
-                if (!m_radios_info.empty()) {
-                    LOG(WARNING)
-                        << "backhaul_manager slave was not found, select first connected slave: "
-                        << "hostap_iface=" << m_radios_info.front()->hostap_iface
-                        << ", sta_iface=" << m_radios_info.front()->sta_iface;
-                    m_radios_info.front()->slave_is_backhaul_manager = true;
+                if (radio_info->sta_hal_int_events !=
+                    beerocks::net::FileDescriptor::invalid_descriptor) {
+                    m_event_loop->remove_handlers(radio_info->sta_hal_int_events);
+                    radio_info->sta_hal_int_events =
+                        beerocks::net::FileDescriptor::invalid_descriptor;
                 }
             }
         }
@@ -814,7 +725,7 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
         // Ignore 'selected_backhaul' since this case is not covered by certification flows
         if (db->device_conf.local_controller && db->device_conf.local_gw) {
             LOG(DEBUG) << "local controller && local gw";
-            FSM_MOVE_STATE(MASTER_DISCOVERY);
+            FSM_MOVE_STATE(CONNECTED);
             db->backhaul.connection_type = AgentDB::sBackhaul::eConnectionType::Invalid;
             db->backhaul.selected_iface_name.clear();
             break;
@@ -879,14 +790,14 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
         if (db->backhaul.connection_type == AgentDB::sBackhaul::eConnectionType::Wireless) {
             FSM_MOVE_STATE(INIT_HAL);
         } else { // EType::Wired
-            FSM_MOVE_STATE(MASTER_DISCOVERY);
+            FSM_MOVE_STATE(CONNECTED);
         }
 
         skip_select = true;
         break;
     }
-    case EState::MASTER_DISCOVERY: {
-
+    // Backhaul Link exists
+    case EState::CONNECTED: {
         auto db = AgentDB::get();
 
         bool wired_backhaul =
@@ -901,72 +812,11 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
             }
         }
 
-        if (beerocks::net::network_utils::get_iface_info(bridge_info, db->bridge.iface_name) != 0) {
-            LOG(ERROR) << "Failed reading addresses from the bridge!";
-            platform_notify_error(bpl::eErrorCode::BH_READING_DATA_FROM_THE_BRIDGE, "");
-            stop_on_failure_attempts--;
-            FSM_MOVE_STATE(RESTART);
-            break;
-        }
+        finalize_slaves_connect_state(true);
+        stop_on_failure_attempts = configuration_stop_on_failure_attempts;
 
-        // Configure the transport process to bind the al_mac address
-        if (!m_broker_client->configure_al_mac(db->bridge.mac)) {
-            LOG(ERROR) << "Failed configuring transport process!";
-            FSM_MOVE_STATE(RESTART);
-            break;
-        }
-
-        // In certification mode, if prplMesh is configured with local controller, do not enable the
-        // transport process until agent has connected to controller. This way we prevent the agent
-        // from connecting to another controller in the testbed, which might still be running from a
-        // previous test.
-        if (!(db->device_conf.certification_mode && db->device_conf.local_controller)) {
-            if (db->device_conf.management_mode != BPL_MGMT_MODE_NOT_MULTIAP) {
-                // Configure the transport process to use the network bridge
-                if (!m_broker_client->configure_interfaces(db->bridge.iface_name, {}, true, true)) {
-                    LOG(ERROR) << "Failed configuring transport process!";
-                    FSM_MOVE_STATE(RESTART);
-                    break;
-                }
-            }
-        }
-
-        FSM_MOVE_STATE(WAIT_FOR_AUTOCONFIG_COMPLETE);
-        m_task_pool.send_event(eTaskType::AP_AUTOCONFIGURATION,
-                               ApAutoConfigurationTask::eEvent::START_AP_AUTOCONFIGURATION);
-        break;
-    }
-    case EState::WAIT_FOR_AUTOCONFIG_COMPLETE: {
-        auto db = AgentDB::get();
-        if (db->statuses.ap_autoconfiguration_completed) {
-            finalize_slaves_connect_state(true);
-            FSM_MOVE_STATE(CONNECT_TO_MASTER);
-            break;
-        }
-        break;
-    }
-    case EState::CONNECT_TO_MASTER: {
-        FSM_MOVE_STATE(CONNECTED);
-        break;
-    }
-    // Successfully connected to the master
-    case EState::CONNECTED: {
-        auto db = AgentDB::get();
-
-        // In certification mode, if prplMesh is configured with local controller, do not enable the
-        // transport process until agent has connected to controller. This way we prevent the agent
-        // from connecting to another controller in the testbed, which might still be running from a
-        // previous test.
-        if (db->device_conf.certification_mode && db->device_conf.local_controller) {
-            if (db->device_conf.management_mode != BPL_MGMT_MODE_NOT_MULTIAP) {
-                // Configure the transport process to use the network bridge
-                if (!m_broker_client->configure_interfaces(db->bridge.iface_name, {}, true, true)) {
-                    LOG(ERROR) << "Failed configuring transport process!";
-                    FSM_MOVE_STATE(RESTART);
-                    break;
-                }
-            }
-        }
+        LOG(DEBUG) << "clearing blacklist";
+        ap_blacklist.clear();
 
         /**
          * According to the 1905.1 specification section 8.2.1.1 - A 1905.1 management entity shall
@@ -976,11 +826,6 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
          * message.
          */
         m_task_pool.send_event(eTaskType::TOPOLOGY, TopologyTask::eEvent::AGENT_DEVICE_INITIALIZED);
-
-        stop_on_failure_attempts = configuration_stop_on_failure_attempts;
-
-        LOG(DEBUG) << "clearing blacklist";
-        ap_blacklist.clear();
 
         // This snippet is commented out since the only place that use it, is also commented out.
         // An event-driven solution will be implemented as part of the task:
@@ -1068,8 +913,6 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
                 m_event_loop->remove_handlers(radio_info->sta_hal_int_events);
                 radio_info->sta_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
             }
-
-            radio_info->slave_is_backhaul_manager = false;
         }
 
         finalize_slaves_connect_state(false); //send disconnect to all connected slaves
@@ -1651,20 +1494,14 @@ bool BackhaulManager::handle_slave_backhaul_message(int fd, ieee1905_1::CmduMess
             radio_info->radio_mac = radio->front.iface_mac;
         }
 
-        if (m_eFSMState >= EState::CONNECT_TO_MASTER) {
-            LOG(INFO) << "Sending topology notification on reconnected son_slave";
-            m_task_pool.send_event(eTaskType::TOPOLOGY,
-                                   TopologyTask::eEvent::AGENT_RADIO_STATE_CHANGED);
+        if (m_eFSMState >= EState::CONNECTED) {
         }
 
         // If we're already connected, send a notification to the slave
         if (FSM_IS_IN_STATE(OPERATIONAL)) {
-            m_task_pool.send_event(eTaskType::AP_AUTOCONFIGURATION,
-                                   ApAutoConfigurationTask::eEvent::START_AP_AUTOCONFIGURATION);
 
-            // When the Auto-Configuration completes, a connection notification will be sent to the
-            // Agent.
-            FSM_MOVE_STATE(WAIT_FOR_AUTOCONFIG_COMPLETE);
+            // Send a connection notification to the Agent right away.
+            FSM_MOVE_STATE(CONNECTED);
             break;
         }
 
@@ -2089,8 +1926,7 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
             create_backhaul_steering_response(wfa_map::tlvErrorCode::eReasonCode::RESERVED, bssid);
 
             LOG(DEBUG) << "Sending BACKHAUL_STA_STEERING_RESPONSE_MESSAGE";
-            send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac,
-                                tlvf::mac_from_string(bridge_info.mac));
+            send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac, db->bridge.mac);
         }
 
         // TODO: Need to unite WAIT_WPS and WIRELESS_ASSOCIATE_4ADDR_WAIT handling
@@ -2121,7 +1957,7 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
 
             // Send slave enable the AP's
             send_slaves_enable();
-            FSM_MOVE_STATE(MASTER_DISCOVERY);
+            FSM_MOVE_STATE(CONNECTED);
         }
         if (FSM_IS_IN_STATE(WIRELESS_ASSOCIATE_4ADDR_WAIT)) {
             LOG(DEBUG) << "successful connect on iface=" << iface;
@@ -2176,13 +2012,13 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
             // Send slaves to enable the AP's
             send_slaves_enable();
 
-            FSM_MOVE_STATE(MASTER_DISCOVERY);
+            FSM_MOVE_STATE(CONNECTED);
         } else if (FSM_IS_IN_STATE(WIRELESS_WAIT_FOR_RECONNECT)) {
             LOG(DEBUG) << "reconnected successfully, continuing";
 
             // IRE running controller
             if (db->device_conf.local_controller && !db->device_conf.local_gw) {
-                FSM_MOVE_STATE(CONNECT_TO_MASTER);
+                FSM_MOVE_STATE(CONNECTED);
             } else {
                 FSM_MOVE_STATE(OPERATIONAL);
             }
@@ -2288,8 +2124,7 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
                 }
 
                 auto db = AgentDB::get();
-                send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac,
-                                    tlvf::mac_from_string(bridge_info.mac));
+                send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac, db->bridge.mac);
 
                 // Steering operation has failed so cancel it to avoid sending a second reply when
                 // timer expires.
@@ -2668,42 +2503,43 @@ std::shared_ptr<bwl::sta_wlan_hal> BackhaulManager::get_wireless_hal(std::string
 bool BackhaulManager::handle_slave_failed_connection_message(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                              const sMacAddr &src_mac)
 {
-    if (!unsuccessful_association_policy.report_unsuccessful_association) {
+    // TODO: need to move this function to the link metrics task after the task will be moved to the
+    // Agent context. PPM-1681.
+    auto db = AgentDB::get();
+    if (!db->link_metrics_policy.report_unsuccessful_associations) {
         // do nothing, no need to report
         return true;
     }
 
     // Calculate if reporting is needed
-    auto now            = std::chrono::steady_clock::now();
-    auto elapsed_time_m = std::chrono::duration_cast<std::chrono::minutes>(
-                              now - unsuccessful_association_policy.last_reporting_time_point)
-                              .count();
+    auto now = std::chrono::steady_clock::now();
+    auto elapsed_time_m =
+        std::chrono::duration_cast<std::chrono::minutes>(
+            now - db->link_metrics_policy.failed_association_last_reporting_time_point)
+            .count();
 
-    // start the counting from begining if
-    // the last report was more then a minute ago
-    // also sets the last reporting time to now
+    // Start the counting from the beginning if the last report was more then a minute ago also sets
+    // the last reporting time to now.
     if (elapsed_time_m > 1) {
-        unsuccessful_association_policy.number_of_reports_in_last_minute = 0;
-        unsuccessful_association_policy.last_reporting_time_point        = now;
+        db->link_metrics_policy.number_of_reports_in_last_minute             = 0;
+        db->link_metrics_policy.failed_association_last_reporting_time_point = now;
     }
 
-    if (unsuccessful_association_policy.number_of_reports_in_last_minute >
-        unsuccessful_association_policy.maximum_reporting_rate) {
+    if (db->link_metrics_policy.number_of_reports_in_last_minute >
+        db->link_metrics_policy.failed_associations_maximum_reporting_rate) {
         // we exceeded the maximum reports allowed
         // do nothing, no need to report
         LOG(WARNING)
             << "received failed connection, but exceeded the maximum number of reports in a minute:"
-            << unsuccessful_association_policy.maximum_reporting_rate;
+            << db->link_metrics_policy.failed_associations_maximum_reporting_rate;
         return true;
     }
 
     // report
-    ++unsuccessful_association_policy.number_of_reports_in_last_minute;
+    db->link_metrics_policy.number_of_reports_in_last_minute++;
 
     const auto mid = cmdu_rx.getMessageId();
     LOG(DEBUG) << "Sending FAILED_CONNECTION_MESSAGE, mid=" << std::hex << int(mid);
-
-    auto db = AgentDB::get();
 
     return forward_cmdu_to_broker(cmdu_rx, db->controller_info.bridge_mac, db->bridge.mac,
                                   db->bridge.iface_name);
@@ -2732,8 +2568,7 @@ bool BackhaulManager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx
     auto db = AgentDB::get();
 
     LOG(DEBUG) << "Sending ACK message to the originator, mid=" << std::hex << mid;
-    send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac,
-                        tlvf::mac_from_string(bridge_info.mac));
+    send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac, db->bridge.mac);
 
     auto channel    = bh_sta_steering_req->target_channel_number();
     auto oper_class = bh_sta_steering_req->operating_class();
@@ -2756,8 +2591,7 @@ bool BackhaulManager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx
             return false;
         }
 
-        send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac,
-                            tlvf::mac_from_string(bridge_info.mac));
+        send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac, db->bridge.mac);
 
         return false;
     }
@@ -2785,8 +2619,7 @@ bool BackhaulManager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx
             return false;
         }
 
-        send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac,
-                            tlvf::mac_from_string(bridge_info.mac));
+        send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac, db->bridge.mac);
 
         return true;
     }
@@ -2839,8 +2672,7 @@ bool BackhaulManager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx
             LOG(DEBUG)
                 << "Steering request timed out. Sending BACKHAUL_STA_STEERING_RESPONSE_MESSAGE";
             auto db = AgentDB::get();
-            send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac,
-                                tlvf::mac_from_string(bridge_info.mac));
+            send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac, db->bridge.mac);
             return true;
         });
     if (m_backhaul_steering_timer == beerocks::net::FileDescriptor::invalid_descriptor) {

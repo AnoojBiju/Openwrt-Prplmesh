@@ -94,7 +94,6 @@ class cACTION_BACKHAUL_CONNECTED_NOTIFICATION : public BaseClass
         static eActionOp_BACKHAUL get_action_op(){
             return (eActionOp_BACKHAUL)(ACTION_BACKHAUL_CONNECTED_NOTIFICATION);
         }
-        sBackhaulParams& params();
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -102,7 +101,6 @@ class cACTION_BACKHAUL_CONNECTED_NOTIFICATION : public BaseClass
     private:
         bool init();
         eActionOp_BACKHAUL* m_action_op = nullptr;
-        sBackhaulParams* m_params = nullptr;
 };
 
 class cACTION_BACKHAUL_DISCONNECTED_NOTIFICATION : public BaseClass

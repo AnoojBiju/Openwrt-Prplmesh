@@ -9,17 +9,15 @@
 
 #include "agent_db.h"
 
-#include "tlvf_utils.h"
-
 #include "cac_status_database.h"
 #include "gate/1905_beacon_query_to_vs.h"
 #include "gate/vs_beacon_response_to_1905.h"
+#include "tasks/ap_autoconfiguration_task.h"
 #include <bcl/beerocks_cmdu_client_factory_factory.h>
 #include <bcl/beerocks_cmdu_server_factory.h>
 #include <bcl/beerocks_timer_factory_impl.h>
 #include <bcl/beerocks_timer_manager_impl.h>
 #include <bcl/beerocks_utils.h>
-#include <bcl/beerocks_version.h>
 #include <bcl/network/network_utils.h>
 #include <btl/broker_client_factory_factory.h>
 
@@ -34,10 +32,7 @@
 #include <mapf/common/utils.h>
 #include <tlvf/AttrList.h>
 #include <tlvf/ieee_1905_1/tlvAlMacAddress.h>
-#include <tlvf/ieee_1905_1/tlvSupportedFreqBand.h>
-#include <tlvf/ieee_1905_1/tlvSupportedRole.h>
 #include <tlvf/wfa_map/tlvApMetricQuery.h>
-#include <tlvf/wfa_map/tlvApRadioIdentifier.h>
 #include <tlvf/wfa_map/tlvAssociatedStaTrafficStats.h>
 #include <tlvf/wfa_map/tlvBeaconMetricsResponse.h>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
@@ -46,14 +41,10 @@
 #include <tlvf/wfa_map/tlvClientAssociationEvent.h>
 #include <tlvf/wfa_map/tlvHigherLayerData.h>
 #include <tlvf/wfa_map/tlvOperatingChannelReport.h>
-#include <tlvf/wfa_map/tlvProfile2ApCapability.h>
-#include <tlvf/wfa_map/tlvProfile2ApRadioAdvancedCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2CacCompletionReport.h>
 #include <tlvf/wfa_map/tlvProfile2CacStatusReport.h>
-#include <tlvf/wfa_map/tlvProfile2Default802dotQSettings.h>
 #include <tlvf/wfa_map/tlvProfile2ReasonCode.h>
 #include <tlvf/wfa_map/tlvProfile2SteeringRequest.h>
-#include <tlvf/wfa_map/tlvProfile2TrafficSeparationPolicy.h>
 #include <tlvf/wfa_map/tlvStaMacAddressType.h>
 #include <tlvf/wfa_map/tlvSteeringBTMReport.h>
 #include <tlvf/wfa_map/tlvSteeringRequest.h>
@@ -190,6 +181,10 @@ bool slave_thread::thread_init()
     // Subscribe for the reception of CMDU messages that this process is interested in
     if (!m_broker_client->subscribe(std::set<ieee1905_1::eMessageType>{
             ieee1905_1::eMessageType::TOPOLOGY_DISCOVERY_MESSAGE,
+            ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_RESPONSE_MESSAGE,
+            ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_WSC_MESSAGE,
+            ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_RENEW_MESSAGE,
+            ieee1905_1::eMessageType::MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE,
         })) {
         LOG(FATAL) << "Failed subscribing to the Bus";
     }
@@ -262,6 +257,24 @@ bool slave_thread::thread_init()
 
     LOG(DEBUG) << "FSM timer created with fd=" << m_fsm_timer;
 
+    // Create a timer to run internal tasks periodically
+    constexpr auto tasks_timer_period = std::chrono::milliseconds(500);
+
+    m_tasks_timer = m_timer_manager->add_timer(
+        "Agent Tasks", tasks_timer_period, tasks_timer_period,
+        [&](int fd, beerocks::EventLoop &loop) {
+            // Allow tasks to execute up to 80% of the timer period
+            m_task_pool.run_tasks(int(double(tasks_timer_period.count()) * 0.8));
+            return true;
+        });
+
+    if (m_tasks_timer == beerocks::net::FileDescriptor::invalid_descriptor) {
+        LOG(FATAL) << "Failed to create the tasks timer";
+        return false;
+    }
+
+    m_task_pool.add_task(std::make_shared<ApAutoConfigurationTask>(*this, cmdu_tx));
+
     m_agent_state = STATE_INIT;
     LOG(DEBUG) << "Agent Started";
 
@@ -281,7 +294,7 @@ void slave_thread::agent_reset()
 
     auto db = AgentDB::get();
 
-    m_radio_managers.do_on_each_radio_manager([&](sManagedRadio &radio_manager,
+    m_radio_managers.do_on_each_radio_manager([&](const sManagedRadio &radio_manager,
                                                   const std::string &fronthaul_iface) {
         auto radio = db->radio(fronthaul_iface);
 
@@ -296,15 +309,16 @@ void slave_thread::agent_reset()
 
         if (db->device_conf.stop_on_failure_attempts && !radio_manager.stop_on_failure_attempts) {
             LOG(ERROR) << "Reached to max stop on failure attempts!";
-            radio_manager.stopped = true;
+            m_stopped = true;
         }
 
-        if (radio_manager.stopped && m_agent_state != STATE_INIT) {
-            LOG(DEBUG) << "goto STATE_STOPPED";
-            m_agent_state = STATE_STOPPED;
-        }
         return true;
     });
+
+    if (m_stopped && m_agent_state != STATE_INIT) {
+        LOG(DEBUG) << "goto STATE_STOPPED";
+        m_agent_state = STATE_STOPPED;
+    }
 
     if (m_agent_state == STATE_STOPPED) {
         platform_notify_error(beerocks::bpl::eErrorCode::SLAVE_STOPPED, "");
@@ -625,16 +639,13 @@ bool slave_thread::fsm_all()
             !ap_manager_heartbeat_check(fronthaul_iface)) {
             agent_reset();
         }
-
-        if (!slave_fsm(fronthaul_iface)) {
-            return false;
-        }
-
         return true;
     };
 
-    // If the common state reached to state STATE_RADIO_SPECIFIC_FSM, then the radio fsm will run.
-    if (m_agent_state != eSlaveState::STATE_RADIO_SPECIFIC_FSM) {
+    // Running the FSM only if not on STATE_OPERATIONAL, to perform this state only once.
+    // The state will execute once from the state STATE_WAIT_FOR_AUTO_CONFIGURATION_COMPLETE once
+    // after the Agent is configured.
+    if (m_agent_state != eSlaveState::STATE_OPERATIONAL) {
         if (!agent_fsm()) {
             return false;
         }
@@ -709,7 +720,19 @@ bool slave_thread::handle_cmdu_from_broker(uint32_t iface_index, const sMacAddr 
                                            const sMacAddr &src_mac,
                                            ieee1905_1::CmduMessageRx &cmdu_rx)
 {
-    if (cmdu_rx.getMessageType() == ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE) {
+    {
+        auto db = AgentDB::get();
+        // Filter messages which are not destined to this agent
+        if (dst_mac != beerocks::net::network_utils::MULTICAST_1905_MAC_ADDR &&
+            dst_mac != db->bridge.mac) {
+            LOG(DEBUG) << "handle_cmdu() - dropping msg, dst_mac=" << dst_mac
+                       << ", local_bridge_mac=" << db->bridge.mac;
+            return true;
+        }
+    }
+
+    switch (cmdu_rx.getMessageType()) {
+    case ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE: {
         auto beerocks_header = message_com::parse_intel_vs_message(cmdu_rx);
 
         if (!beerocks_header) {
@@ -722,14 +745,15 @@ bool slave_thread::handle_cmdu_from_broker(uint32_t iface_index, const sMacAddr 
             return false;
         }
 
-        // Currently there aren't Controller messages from the broker handled directly in the Agent
-        // context.
+        m_task_pool.handle_cmdu(cmdu_rx, iface_index, dst_mac, src_mac,
+                                beerocks::net::FileDescriptor::invalid_descriptor, beerocks_header);
         return true;
     }
-
-    // Standard messages handling:
-    // Currently there aren't any standard messages from the broker handled directly in the Agent
-    // context.
+    default: {
+        m_task_pool.handle_cmdu(cmdu_rx, iface_index, dst_mac, src_mac,
+                                beerocks::net::FileDescriptor::invalid_descriptor);
+    }
+    }
     return true;
 }
 
@@ -745,10 +769,6 @@ bool slave_thread::handle_cmdu_control_ieee1905_1_message(int fd,
     switch (cmdu_message_type) {
     case ieee1905_1::eMessageType::ACK_MESSAGE:
         return handle_ack_message(fd, cmdu_rx);
-    case ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_RENEW_MESSAGE:
-        return handle_autoconfiguration_renew(fd, cmdu_rx);
-    case ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_WSC_MESSAGE:
-        return handle_autoconfiguration_wsc(fd, cmdu_rx);
     case ieee1905_1::eMessageType::AP_METRICS_QUERY_MESSAGE:
         return handle_ap_metrics_query(fd, cmdu_rx);
     case ieee1905_1::eMessageType::BEACON_METRICS_QUERY_MESSAGE:
@@ -763,9 +783,6 @@ bool slave_thread::handle_cmdu_control_ieee1905_1_message(int fd,
         return handle_client_steering_request(fd, cmdu_rx);
     case ieee1905_1::eMessageType::HIGHER_LAYER_DATA_MESSAGE:
         return handle_1905_higher_layer_data_message(fd, cmdu_rx);
-    case ieee1905_1::eMessageType::MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE:
-        return handle_multi_ap_policy_config_request(fd, cmdu_rx);
-
     default:
         LOG(ERROR) << "Unknown CMDU message type: " << std::hex << int(cmdu_message_type);
         return false;
@@ -841,7 +858,7 @@ bool slave_thread::handle_cmdu_control_message(int fd,
 
     auto &radio_manager = m_radio_managers[fronthaul_iface];
 
-    if (radio_manager.slave_state == STATE_STOPPED) {
+    if (m_agent_state == STATE_STOPPED) {
         return true;
     }
 
@@ -955,8 +972,9 @@ bool slave_thread::handle_cmdu_control_message(int fd,
             return false;
         }
 
+        auto db = AgentDB::get();
         if (request_in->params().cross && (request_in->params().ipv4.oct[0] == 0) &&
-            backhaul_params.backhaul_is_wireless) {
+            db->backhaul.connection_type == AgentDB::sBackhaul::eConnectionType::Wireless) {
             auto request_out = message_com::create_vs_message<
                 beerocks_message::cACTION_BACKHAUL_CLIENT_RX_RSSI_MEASUREMENT_REQUEST>(
                 cmdu_tx, beerocks_header->id());
@@ -1486,34 +1504,6 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
                          << m_agent_state;
         }
 
-        auto db = AgentDB::get();
-
-        backhaul_params.bridge_ipv4 =
-            network_utils::ipv4_to_string(notification->params().bridge_ipv4);
-        backhaul_params.backhaul_mac = tlvf::mac_to_string(notification->params().backhaul_mac);
-        backhaul_params.backhaul_ipv4 =
-            network_utils::ipv4_to_string(notification->params().backhaul_ipv4);
-        backhaul_params.backhaul_bssid = tlvf::mac_to_string(notification->params().backhaul_bssid);
-        // backhaul_params.backhaul_freq        = notification->params.backhaul_freq; // HACK temp
-        // disabled because of a bug on endian converter
-        backhaul_params.backhaul_channel     = notification->params().backhaul_channel;
-        backhaul_params.backhaul_is_wireless = notification->params().backhaul_is_wireless;
-        backhaul_params.backhaul_iface_type  = notification->params().backhaul_iface_type;
-
-        std::copy_n(notification->params().backhaul_scan_measurement_list,
-                    beerocks::message::BACKHAUL_SCAN_MEASUREMENT_MAX_LENGTH,
-                    backhaul_params.backhaul_scan_measurement_list);
-
-        for (unsigned int i = 0; i < message::BACKHAUL_SCAN_MEASUREMENT_MAX_LENGTH; i++) {
-            if (backhaul_params.backhaul_scan_measurement_list[i].channel > 0) {
-                LOG(DEBUG) << "mac = " << backhaul_params.backhaul_scan_measurement_list[i].mac
-                           << " channel = "
-                           << backhaul_params.backhaul_scan_measurement_list[i].channel
-                           << " rssi = " << backhaul_params.backhaul_scan_measurement_list[i].rssi;
-            }
-        }
-        backhaul_params.backhaul_iface = db->backhaul.selected_iface_name;
-
         LOG(DEBUG) << "goto STATE_BACKHAUL_MANAGER_CONNECTED";
         m_agent_state = STATE_BACKHAUL_MANAGER_CONNECTED;
 
@@ -1537,11 +1527,8 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
 
         m_is_backhaul_disconnected = true;
 
-        m_radio_managers.do_on_each_radio_manager(
-            [&](sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
-                radio_manager.stopped |= bool(notification->stopped());
-                return true;
-            });
+        m_stopped |= bool(notification->stopped());
+
         agent_reset();
         break;
     }
@@ -2459,10 +2446,6 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
 
         TrafficSeparation::apply_traffic_separation(fronthaul_iface);
 
-        // When the AP-Manager sends VAPS_LIST_UPDATE_NOTIFICATION the autoconfiguration is
-        // is completed
-        radio_manager.autoconfiguration_completed = true;
-
         auto notification_out = message_com::create_vs_message<
             beerocks_message::cACTION_CONTROL_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION>(cmdu_tx);
         if (!notification_out) {
@@ -3366,7 +3349,6 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
     }
 
     if (!link_to_controller()) {
-        LOG(WARNING) << "There is no link to the Controller " << int(beerocks_header->action_op());
         return true;
     }
 
@@ -4114,8 +4096,8 @@ bool slave_thread::agent_fsm()
             db->ethernet.wan.mac = tlvf::mac_from_string(iface_mac);
         }
 
-        // Reset Statuses
-        db->statuses.ap_autoconfiguration_completed = false;
+        m_task_pool.send_event(eTaskType::AP_AUTOCONFIGURATION,
+                               ApAutoConfigurationTask::eEvent::INIT_TASK);
 
         // Reset the traffic separation configuration as they will be reconfigured on
         // autoconfiguration.
@@ -4403,41 +4385,8 @@ bool slave_thread::agent_fsm()
         break;
     }
     case STATE_BACKHAUL_MANAGER_CONNECTED: {
-        LOG(TRACE) << "MASTER_CONNECTED";
+        LOG(TRACE) << "BACKHAUL LINK CONNECTED";
 
-        m_agent_state = STATE_RADIO_SPECIFIC_FSM;
-
-        auto db = AgentDB::get();
-
-        if (db->device_conf.local_gw) {
-            // TODO get bridge_iface from platform manager
-            network_utils::iface_info bridge_info;
-            network_utils::get_iface_info(bridge_info, db->bridge.iface_name);
-
-            backhaul_params.bridge_ipv4    = bridge_info.ip;
-            backhaul_params.backhaul_iface = db->bridge.iface_name;
-            backhaul_params.backhaul_mac   = bridge_info.mac;
-            backhaul_params.backhaul_ipv4  = bridge_info.ip;
-            backhaul_params.backhaul_bssid = network_utils::ZERO_MAC_STRING;
-            // radio_manager.backhaul_params.backhaul_freq           = 0; // HACK temp disabled because of a bug on endian converter
-            backhaul_params.backhaul_channel     = 0;
-            backhaul_params.backhaul_is_wireless = 0;
-            backhaul_params.backhaul_iface_type  = beerocks::IFACE_TYPE_GW_BRIDGE;
-            backhaul_params.backhaul_iface       = db->ethernet.wan.iface_name;
-        }
-
-        LOG(INFO) << "Backhaul Params Info:";
-        LOG(INFO) << "controller_bridge_mac=" << db->controller_info.bridge_mac;
-        LOG(INFO) << "prplmesh_controller=" << db->controller_info.prplmesh_controller;
-        LOG(INFO) << "bridge_mac=" << db->bridge.mac;
-        LOG(INFO) << "bridge_ipv4=" << backhaul_params.bridge_ipv4;
-        LOG(INFO) << "backhaul_iface=" << backhaul_params.backhaul_iface;
-        LOG(INFO) << "backhaul_mac=" << backhaul_params.backhaul_mac;
-        LOG(INFO) << "backhaul_ipv4=" << backhaul_params.backhaul_ipv4;
-        LOG(INFO) << "backhaul_bssid=" << backhaul_params.backhaul_bssid;
-        LOG(INFO) << "backhaul_channel=" << backhaul_params.backhaul_channel;
-        LOG(INFO) << "backhaul_is_wireless=" << backhaul_params.backhaul_is_wireless;
-        LOG(INFO) << "backhaul_iface_type=" << backhaul_params.backhaul_iface_type;
         LOG(DEBUG) << "sending "
                       "ACTION_PLATFORM_SON_SLAVE_BACKHAUL_CONNECTION_COMPLETE_NOTIFICATION to "
                       "platform manager";
@@ -4451,29 +4400,66 @@ bool slave_thread::agent_fsm()
         }
         m_platform_manager_client->send_cmdu(cmdu_tx);
 
+        auto db = AgentDB::get();
+
+        // Configure the transport process to bind the al_mac address
+        if (!m_broker_client->configure_al_mac(db->bridge.mac)) {
+            LOG(FATAL) << "Failed configuring transport process!";
+        }
+
+        // In certification mode, if prplMesh is configured with local controller, do not enable
+        // the transport process until agent has connected to controller. This way we prevent
+        // the agent from connecting to another controller in the testbed, which might still be
+        // running from a previous test.
+        if (!(db->device_conf.certification_mode && db->device_conf.local_controller)) {
+            if (db->device_conf.management_mode != BPL_MGMT_MODE_NOT_MULTIAP) {
+                // Configure the transport process to use the network bridge
+                if (!m_broker_client->configure_interfaces(db->bridge.iface_name, {}, true, true)) {
+                    LOG(FATAL) << "Failed configuring transport process!";
+                }
+            }
+        }
+
+        LOG(TRACE) << "goto STATE_WAIT_FOR_AUTO_CONFIGURATION_COMPLETE";
+        m_agent_state = STATE_WAIT_FOR_AUTO_CONFIGURATION_COMPLETE;
+        m_task_pool.send_event(eTaskType::AP_AUTOCONFIGURATION,
+                               ApAutoConfigurationTask::eEvent::START_AP_AUTOCONFIGURATION);
+        break;
+    }
+    case STATE_WAIT_FOR_AUTO_CONFIGURATION_COMPLETE: {
+        auto db = AgentDB::get();
+        if (db->statuses.ap_autoconfiguration_completed) {
+            LOG(TRACE) << "goto STATE_OPERATIONAL";
+            m_agent_state = STATE_OPERATIONAL;
+
+            // Make sure OPERATIONAL state will be done right away.
+            return agent_fsm();
+        }
+        break;
+    }
+    // Note: The state STATE_OPERATIONAL occurs only once after every Agent reset.
+    // See state STATE_WAIT_FOR_AUTO_CONFIGURATION_COMPLETE.
+    case STATE_OPERATIONAL: {
+        LOG(TRACE) << "Agent is in STATE_OPERATIONAL";
+
+        // In certification mode, if prplMesh is configured with local controller, do not enable the
+        // transport process until agent has connected to controller. This way we prevent the agent
+        // from connecting to another controller in the testbed, which might still be running from a
+        // previous test.
+        auto db = AgentDB::get();
+        if (db->device_conf.certification_mode && db->device_conf.local_controller) {
+            if (db->device_conf.management_mode != BPL_MGMT_MODE_NOT_MULTIAP) {
+                // Configure the transport process to use the network bridge
+                if (!m_broker_client->configure_interfaces(db->bridge.iface_name, {}, true, true)) {
+                    LOG(FATAL) << "Failed configuring transport process!";
+                    break;
+                }
+            }
+        }
         m_radio_managers.do_on_each_radio_manager(
             [&](sManagedRadio &radio_manager, const std::string &fronthaul_iface) -> bool {
+                auto db                                = AgentDB::get();
                 radio_manager.stop_on_failure_attempts = db->device_conf.stop_on_failure_attempts;
-
-                auto radio = db->radio(fronthaul_iface);
-                if (!radio) {
-                    return false;
-                }
-
-                if (!db->device_conf.front_radio.config.at(fronthaul_iface).band_enabled) {
-                    LOG(TRACE) << "goto STATE_PRE_OPERATIONAL on disabled band radio "
-                               << fronthaul_iface;
-                    radio_manager.slave_state = STATE_PRE_OPERATIONAL;
-                    return true;
-                }
-
-                if (radio->front.zwdfs) {
-                    LOG(TRACE) << "goto STATE_PRE_OPERATIONAL on zwdfs " << fronthaul_iface;
-                    radio_manager.slave_state = STATE_PRE_OPERATIONAL;
-                    return true;
-                }
-                LOG(TRACE) << "goto STATE_JOIN_MASTER " << fronthaul_iface;
-                radio_manager.slave_state = STATE_JOIN_MASTER;
                 return true;
             });
         break;
@@ -4486,293 +4472,6 @@ bool slave_thread::agent_fsm()
         break;
     }
     }
-    return true;
-}
-
-bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
-{
-    auto &radio_manager = m_radio_managers[fronthaul_iface];
-
-    switch (radio_manager.slave_state) {
-    case STATE_WAIT_BEFORE_JOIN_MASTER: {
-
-        if (std::chrono::steady_clock::now() > radio_manager.slave_state_timer) {
-            LOG(TRACE) << "goto STATE_JOIN_MASTER";
-            radio_manager.slave_state = STATE_JOIN_MASTER;
-        }
-
-        break;
-    }
-    case STATE_JOIN_MASTER: {
-
-        radio_manager.autoconfiguration_completed = false;
-        if (!link_to_controller()) {
-            LOG(ERROR) << "No link to Multi-AP Controller";
-            platform_notify_error(bpl::eErrorCode::SLAVE_INVALID_MASTER_SOCKET,
-                                  "Invalid master socket");
-            radio_manager.stop_on_failure_attempts--;
-            agent_reset();
-            break;
-        }
-
-        LOG(DEBUG) << "Sending AP_AUTOCONFIGURATION_WSC_MESSAGE with M1 " << fronthaul_iface;
-        if (!cmdu_tx.create(0, ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_WSC_MESSAGE)) {
-            LOG(ERROR) << "Failed creating AP_AUTOCONFIGURATION_WSC_MESSAGE";
-            return false;
-        }
-
-        auto db    = AgentDB::get();
-        auto radio = db->radio(fronthaul_iface);
-        if (!radio) {
-            return false;
-        }
-
-        if (!tlvf_utils::add_ap_radio_basic_capabilities(cmdu_tx, radio->front.iface_mac)) {
-            LOG(ERROR) << "Failed adding AP Radio Basic Capabilities TLV";
-            return false;
-        }
-
-        if (!autoconfig_wsc_add_m1(fronthaul_iface)) {
-            LOG(ERROR) << "Failed adding WSC M1 TLV";
-            return false;
-        }
-
-        // If the Multi-AP Agent onboards to a Multi-AP Controller that implements Profile-1, the
-        // Multi-AP Agent shall set the Byte Counter Units field to 0x00 (bytes) and report the
-        // values of the BytesSent and BytesReceived fields in the Associated STA Traffic Stats TLV
-        // in bytes. Section 9.1 of the spec.
-        db->device_conf.byte_counter_units =
-            wfa_map::tlvProfile2ApCapability::eByteCounterUnits::BYTES;
-
-        if (db->controller_info.profile_support >=
-            wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_2) {
-            /* One Profile-2 AP Capability TLV */
-            auto profile2_ap_capability_tlv = cmdu_tx.addClass<wfa_map::tlvProfile2ApCapability>();
-            if (!profile2_ap_capability_tlv) {
-                LOG(ERROR) << "Failed building message!";
-                return false;
-            }
-
-            // If a Multi-AP Agent that implements Profile-2 sends a Profile-2 AP Capability TLV
-            // shall set the Byte Counter Units field to 0x01 (KiB (kibibytes)). Section 9.1 of
-            // the spec.
-            db->device_conf.byte_counter_units =
-                wfa_map::tlvProfile2ApCapability::eByteCounterUnits::KIBIBYTES;
-            profile2_ap_capability_tlv->capabilities_bit_field().byte_counter_units =
-                db->device_conf.byte_counter_units;
-
-            // Calculate max total number of VLANs which can be configured on the Agent, and
-            // save it on on the AgentDB.
-            db->traffic_separation.max_number_of_vlans_ids =
-                db->get_radios_list().size() * eBeeRocksIfaceIds::IFACE_TOTAL_VAPS;
-
-            profile2_ap_capability_tlv->max_total_number_of_vids() =
-                db->traffic_separation.max_number_of_vlans_ids;
-
-            /* One AP Radio Advanced Capabilities TLV */
-            auto ap_radio_advanced_capabilities_tlv =
-                cmdu_tx.addClass<wfa_map::tlvProfile2ApRadioAdvancedCapabilities>();
-            if (!ap_radio_advanced_capabilities_tlv) {
-                LOG(ERROR) << "Failed building message!";
-                return false;
-            }
-
-            ap_radio_advanced_capabilities_tlv->radio_uid() = radio->front.iface_mac;
-
-            // Currently Set the flag as we don't support traffic separation.
-            ap_radio_advanced_capabilities_tlv->traffic_separation_flag().combined_front_back =
-                radio->front.hybrid_mode_supported;
-            ap_radio_advanced_capabilities_tlv->traffic_separation_flag()
-                .combined_profile1_and_profile2 = 0;
-        }
-
-        if (!db->controller_info.prplmesh_controller) {
-            LOG(INFO) << "Configured as non-prplMesh, not sending SLAVE_JOINED_NOTIFICATION";
-        } else {
-            auto notification = message_com::add_vs_tlv<
-                beerocks_message::cACTION_CONTROL_SLAVE_JOINED_NOTIFICATION>(cmdu_tx);
-
-            if (!notification) {
-                LOG(ERROR) << "Failed building cACTION_CONTROL_SLAVE_JOINED_NOTIFICATION!";
-                return false;
-            }
-
-            // Version
-            string_utils::copy_string(notification->slave_version(message::VERSION_LENGTH),
-                                      BEEROCKS_VERSION, message::VERSION_LENGTH);
-
-            // Platform Configuration
-            notification->low_pass_filter_on() =
-                config.radios[fronthaul_iface].backhaul_wireless_iface_filter_low;
-            notification->enable_repeater_mode() =
-                config.radios[fronthaul_iface].enable_repeater_mode;
-
-            // Backhaul Params
-            bool wireless_bh_manager =
-                db->backhaul.connection_type == AgentDB::sBackhaul::eConnectionType::Wireless &&
-                radio->back.iface_name == db->backhaul.selected_iface_name;
-            bool wired_bh_manager = m_radio_managers.get().begin()->first == fronthaul_iface;
-            notification->backhaul_params().is_backhaul_manager =
-                wireless_bh_manager || wired_bh_manager;
-            notification->backhaul_params().backhaul_iface_type =
-                backhaul_params.backhaul_iface_type;
-            notification->backhaul_params().backhaul_mac =
-                tlvf::mac_from_string(backhaul_params.backhaul_mac);
-            notification->backhaul_params().backhaul_channel = backhaul_params.backhaul_channel;
-            notification->backhaul_params().backhaul_bssid =
-                tlvf::mac_from_string(backhaul_params.backhaul_bssid);
-            notification->backhaul_params().backhaul_is_wireless =
-                backhaul_params.backhaul_is_wireless;
-
-            if (!db->bridge.iface_name.empty()) {
-                notification->backhaul_params().bridge_ipv4 =
-                    network_utils::ipv4_from_string(backhaul_params.bridge_ipv4);
-                notification->backhaul_params().backhaul_ipv4 =
-                    network_utils::ipv4_from_string(backhaul_params.bridge_ipv4);
-            } else {
-                notification->backhaul_params().backhaul_ipv4 =
-                    network_utils::ipv4_from_string(backhaul_params.backhaul_ipv4);
-            }
-
-            std::copy_n(backhaul_params.backhaul_scan_measurement_list,
-                        beerocks::message::BACKHAUL_SCAN_MEASUREMENT_MAX_LENGTH,
-                        notification->backhaul_params().backhaul_scan_measurement_list);
-
-            for (unsigned int i = 0; i < message::BACKHAUL_SCAN_MEASUREMENT_MAX_LENGTH; i++) {
-                if (notification->backhaul_params().backhaul_scan_measurement_list[i].channel > 0) {
-                    LOG(DEBUG)
-                        << "mac = "
-                        << notification->backhaul_params().backhaul_scan_measurement_list[i].mac.oct
-                        << " channel = "
-                        << int(notification->backhaul_params()
-                                   .backhaul_scan_measurement_list[i]
-                                   .channel)
-                        << " rssi = "
-                        << int(notification->backhaul_params()
-                                   .backhaul_scan_measurement_list[i]
-                                   .rssi);
-                }
-
-                // Platform Settings
-                notification->platform_settings().client_band_steering_enabled =
-                    db->device_conf.client_band_steering_enabled;
-                notification->platform_settings().client_optimal_path_roaming_enabled =
-                    db->device_conf.client_optimal_path_roaming_enabled;
-                notification->platform_settings()
-                    .client_optimal_path_roaming_prefer_signal_strength_enabled =
-                    db->device_conf.client_optimal_path_roaming_prefer_signal_strength_enabled;
-                notification->platform_settings().client_11k_roaming_enabled =
-                    db->device_conf.client_11k_roaming_enabled;
-                notification->platform_settings().load_balancing_enabled =
-                    db->device_conf.load_balancing_enabled;
-                notification->platform_settings().service_fairness_enabled =
-                    db->device_conf.service_fairness_enabled;
-                notification->platform_settings().rdkb_extensions_enabled =
-                    db->device_conf.rdkb_extensions_enabled;
-
-                notification->platform_settings().local_master = db->device_conf.local_controller;
-
-                // Wlan Settings
-                notification->wlan_settings().band_enabled =
-                    db->device_conf.front_radio.config.at(fronthaul_iface).band_enabled;
-                notification->wlan_settings().channel =
-                    db->device_conf.front_radio.config.at(fronthaul_iface).configured_channel;
-                // Hostap Params
-                string_utils::copy_string(notification->hostap().iface_name,
-                                          radio->front.iface_name.c_str(),
-                                          beerocks::message::IFACE_NAME_LENGTH);
-                notification->hostap().iface_mac = radio->front.iface_mac;
-                notification->hostap().iface_is_5ghz =
-                    wireless_utils::is_frequency_band_5ghz(radio->freq_type);
-                notification->hostap().ant_num        = radio->number_of_antennas;
-                notification->hostap().tx_power       = radio->tx_power_dB;
-                notification->hostap().frequency_band = radio->freq_type;
-                notification->hostap().max_bandwidth  = radio->max_supported_bw;
-                notification->hostap().ht_supported   = radio->ht_supported;
-                notification->hostap().ht_capability  = radio->ht_capability;
-                std::copy_n(radio->ht_mcs_set.begin(), beerocks::message::HT_MCS_SET_SIZE,
-                            notification->hostap().ht_mcs_set);
-                notification->hostap().vht_supported  = radio->vht_supported;
-                notification->hostap().vht_capability = radio->vht_capability;
-                std::copy_n(radio->vht_mcs_set.begin(), beerocks::message::VHT_MCS_SET_SIZE,
-                            notification->hostap().vht_mcs_set);
-
-                notification->hostap().ant_gain = config.radios[fronthaul_iface].hostap_ant_gain;
-
-                // Channel Selection Params
-                notification->cs_params().channel   = radio->channel;
-                notification->cs_params().bandwidth = radio->bandwidth;
-                notification->cs_params().channel_ext_above_primary =
-                    radio->channel_ext_above_primary;
-                notification->cs_params().vht_center_frequency = radio->vht_center_frequency;
-                notification->cs_params().tx_power             = radio->tx_power_dB;
-            }
-        }
-
-        send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
-        LOG(DEBUG) << "sending WSC M1 Size=" << int(cmdu_tx.getMessageLength());
-
-        LOG(TRACE) << "goto STATE_WAIT_FOR_JOINED_RESPONSE" << fronthaul_iface;
-        radio_manager.slave_state_timer =
-            std::chrono::steady_clock::now() +
-            std::chrono::seconds(WAIT_FOR_JOINED_RESPONSE_TIMEOUT_SEC);
-
-        radio_manager.slave_state = STATE_WAIT_FOR_JOINED_RESPONSE;
-        break;
-    }
-    case STATE_WAIT_FOR_JOINED_RESPONSE: {
-        if (std::chrono::steady_clock::now() > radio_manager.slave_state_timer) {
-            LOG(INFO) << "STATE_WAIT_FOR_JOINED_RESPONSE timeout!";
-            LOG(TRACE) << "goto STATE_JOIN_MASTER";
-            radio_manager.slave_state = STATE_JOIN_MASTER;
-        }
-        break;
-    }
-    case STATE_UPDATE_MONITOR_SON_CONFIG: {
-        LOG(INFO) << "sending ACTION_MONITOR_SON_CONFIG_UPDATE " << fronthaul_iface;
-
-        auto update =
-            message_com::create_vs_message<beerocks_message::cACTION_MONITOR_SON_CONFIG_UPDATE>(
-                cmdu_tx);
-        if (update == nullptr) {
-            LOG(ERROR) << "Failed building message!";
-            return false;
-        }
-
-        update->config() = radio_manager.son_config;
-        send_cmdu(radio_manager.monitor_fd, cmdu_tx);
-        LOG(TRACE) << "goto STATE_PRE_OPERATIONAL " << fronthaul_iface;
-        radio_manager.slave_state = STATE_PRE_OPERATIONAL;
-        break;
-    }
-
-    case STATE_PRE_OPERATIONAL: {
-        auto db                                = AgentDB::get();
-        radio_manager.stop_on_failure_attempts = db->device_conf.stop_on_failure_attempts;
-
-        LOG(TRACE) << "goto STATE_OPERATIONAL " << fronthaul_iface;
-        radio_manager.slave_state = STATE_OPERATIONAL;
-        break;
-    }
-    case STATE_OPERATIONAL: {
-        break;
-    }
-    case STATE_VERSION_MISMATCH: {
-        break;
-    }
-    case STATE_SSID_MISMATCH: {
-        break;
-    }
-    case STATE_STOPPED: {
-        break;
-    }
-    default: {
-        LOG(ERROR) << "Unknown state " << radio_manager.slave_state << " ,iface "
-                   << fronthaul_iface;
-        break;
-    }
-    }
-
     return true;
 }
 
@@ -4807,40 +4506,6 @@ void slave_thread::fronthaul_start(const std::string &fronthaul_iface)
     }
     std::string cmd = file_name + " -i " + fronthaul_iface;
     SYSTEM_CALL(cmd, true);
-}
-
-void slave_thread::log_son_config(const std::string &fronthaul_iface)
-{
-    const auto &radio_manager = m_radio_managers[fronthaul_iface];
-    LOG(DEBUG) << "SON_CONFIG_UPDATE " << fronthaul_iface << ":" << std::endl
-               << "monitor_total_ch_load_notification_th_hi_percent="
-               << radio_manager.son_config.monitor_total_ch_load_notification_lo_th_percent
-               << std::endl
-               << "monitor_total_ch_load_notification_th_lo_percent="
-               << radio_manager.son_config.monitor_total_ch_load_notification_hi_th_percent
-               << std::endl
-               << "monitor_total_ch_load_notification_delta_th_percent="
-               << radio_manager.son_config.monitor_total_ch_load_notification_delta_th_percent
-               << std::endl
-               << "monitor_min_active_clients="
-               << radio_manager.son_config.monitor_min_active_clients << std::endl
-               << "monitor_active_client_th=" << radio_manager.son_config.monitor_active_client_th
-               << std::endl
-               << "monitor_client_load_notification_delta_th_percent="
-               << radio_manager.son_config.monitor_client_load_notification_delta_th_percent
-               << std::endl
-               << "monitor_rx_rssi_notification_threshold_dbm="
-               << radio_manager.son_config.monitor_rx_rssi_notification_threshold_dbm << std::endl
-               << "monitor_rx_rssi_notification_delta_db="
-               << radio_manager.son_config.monitor_rx_rssi_notification_delta_db << std::endl
-               << "monitor_ap_idle_threshold_B="
-               << radio_manager.son_config.monitor_ap_idle_threshold_B << std::endl
-               << "monitor_ap_active_threshold_B="
-               << radio_manager.son_config.monitor_ap_active_threshold_B << std::endl
-               << "monitor_ap_idle_stable_time_sec="
-               << radio_manager.son_config.monitor_ap_idle_stable_time_sec << std::endl
-               << "monitor_disable_initiative_arp="
-               << radio_manager.son_config.monitor_disable_initiative_arp << std::endl;
 }
 
 bool slave_thread::monitor_heartbeat_check(const std::string &fronthaul_iface)
@@ -4906,14 +4571,7 @@ bool slave_thread::link_to_controller()
 bool slave_thread::send_cmdu_to_controller(const std::string &fronthaul_iface,
                                            ieee1905_1::CmduMessageTx &cmdu_tx)
 {
-    if (!link_to_controller()) {
-        LOG(ERROR) << "No link to Multi-AP Controller";
-        return false;
-    }
-
-    auto db    = AgentDB::get();
-    auto radio = db->radio(fronthaul_iface);
-
+    auto db = AgentDB::get();
     if (cmdu_tx.getMessageType() == ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE) {
         if (!db->controller_info.prplmesh_controller) {
             return true; // don't send VS messages to non prplmesh controllers
@@ -4924,16 +4582,24 @@ bool slave_thread::send_cmdu_to_controller(const std::string &fronthaul_iface,
             return false;
         }
 
+        auto radio = db->radio(fronthaul_iface);
         if (radio) {
             beerocks_header->actionhdr()->radio_mac() = radio->front.iface_mac;
         }
         beerocks_header->actionhdr()->direction() = beerocks::BEEROCKS_DIRECTION_CONTROLLER;
     }
 
-    auto dst_addr =
-        cmdu_tx.getMessageType() == ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE
-            ? network_utils::MULTICAST_1905_MAC_ADDR
-            : db->controller_info.bridge_mac;
+    sMacAddr dst_addr;
+    switch (cmdu_tx.getMessageType()) {
+    case ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE:
+    case ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_SEARCH_MESSAGE:
+    case ieee1905_1::eMessageType::ASSOCIATION_STATUS_NOTIFICATION_MESSAGE:
+        dst_addr = network_utils::MULTICAST_1905_MAC_ADDR;
+        break;
+    default:
+        dst_addr = db->controller_info.bridge_mac;
+        break;
+    }
 
     return m_broker_client->send_cmdu(cmdu_tx, dst_addr, db->bridge.mac);
 }
@@ -4948,800 +4614,22 @@ bool slave_thread::forward_cmdu_to_uds(int fd, ieee1905_1::CmduMessageRx &cmdu_r
     return m_cmdu_server->forward_cmdu(fd, 0, {}, {}, cmdu_rx);
 }
 
-/**
- * @brief Diffie-Hellman public key exchange keys calculation
- *        class member params authkey and keywrapauth are computed
- *        on success.
- *
- * @param[in] m2 WSC M2 received from the controller
- * @param[out] authkey 32 bytes calculated authentication key
- * @param[out] keywrapkey 16 bytes calculated key wrap key
- * @return true on success
- * @return false on failure
- */
-bool slave_thread::autoconfig_wsc_calculate_keys(const std::string &fronthaul_iface, WSC::m2 &m2,
-                                                 uint8_t authkey[32], uint8_t keywrapkey[16])
-{
-    const auto &radio_manager = m_radio_managers[fronthaul_iface];
-    if (!radio_manager.dh) {
-        LOG(ERROR) << "diffie hellman member not initialized";
-        return false;
-    }
-
-    auto db = AgentDB::get();
-    mapf::encryption::wps_calculate_keys(
-        *radio_manager.dh, m2.public_key(), WSC::eWscLengths::WSC_PUBLIC_KEY_LENGTH,
-        radio_manager.dh->nonce(), db->bridge.mac.oct, m2.registrar_nonce(), authkey, keywrapkey);
-
-    return true;
-}
-
-/**
- * @brief autoconfig global authenticator attribute calculation
- *
- * Calculate authentication on the Full M1 || M2* whereas M2* = M2 without the authenticator
- * attribute. M1 is a saved buffer of the swapped M1 sent in the WSC autoconfig sent by the agent.
- *
- * @param m2 WSC M2 attribute list from the controller
- * @param authkey authentication key
- * @return true on success
- * @return false on failure
- */
-bool slave_thread::autoconfig_wsc_authenticate(const std::string &fronthaul_iface, WSC::m2 &m2,
-                                               uint8_t authkey[32])
-{
-    const auto &radio_manager = m_radio_managers[fronthaul_iface];
-    if (!radio_manager.m1_auth_buf) {
-        LOG(ERROR) << "Invalid M1";
-        return false;
-    }
-
-    // This is the content of M1 and M2, without the type and length.
-    uint8_t buf[radio_manager.m1_auth_buf_len + m2.getMessageLength() -
-                WSC::cWscAttrAuthenticator::get_initial_size()];
-    auto next = std::copy_n(radio_manager.m1_auth_buf, radio_manager.m1_auth_buf_len, buf);
-    m2.swap(); // swap to get network byte order
-    std::copy_n(m2.getMessageBuff(),
-                m2.getMessageLength() - WSC::cWscAttrAuthenticator::get_initial_size(), next);
-    m2.swap(); // swap back
-
-    uint8_t kwa[WSC::WSC_AUTHENTICATOR_LENGTH];
-    // Add KWA which is the 1st 64 bits of HMAC of config_data using AuthKey
-    if (!mapf::encryption::kwa_compute(authkey, buf, sizeof(buf), kwa)) {
-        LOG(ERROR) << "kwa_compute failure";
-        return false;
-    }
-
-    if (!std::equal(kwa, kwa + sizeof(kwa), reinterpret_cast<uint8_t *>(m2.authenticator()))) {
-        LOG(ERROR) << "WSC Global authentication failed";
-        LOG(DEBUG) << "authenticator: "
-                   << utils::dump_buffer(reinterpret_cast<uint8_t *>(m2.authenticator()),
-                                         WSC::WSC_AUTHENTICATOR_LENGTH);
-        LOG(DEBUG) << "calculated:    " << utils::dump_buffer(kwa, WSC::WSC_AUTHENTICATOR_LENGTH);
-        LOG(DEBUG) << "authenticator key: " << utils::dump_buffer(authkey, 32);
-        LOG(DEBUG) << "authenticator buf:" << std::endl << utils::dump_buffer(buf, sizeof(buf));
-        return false;
-    }
-
-    LOG(DEBUG) << "WSC Global authentication success";
-    return true;
-}
-
-bool slave_thread::autoconfig_wsc_parse_m2_encrypted_settings(WSC::m2 &m2, uint8_t authkey[32],
-                                                              uint8_t keywrapkey[16],
-                                                              WSC::configData::config &config)
-{
-    auto encrypted_settings = m2.encrypted_settings();
-    uint8_t *iv             = reinterpret_cast<uint8_t *>(encrypted_settings.iv());
-    auto ciphertext         = reinterpret_cast<uint8_t *>(encrypted_settings.encrypted_settings());
-    int cipherlen           = encrypted_settings.encrypted_settings_length();
-    // leave room for up to 16 bytes internal padding length - see aes_decrypt()
-    int datalen = cipherlen + 16;
-    uint8_t decrypted[datalen];
-
-    LOG(DEBUG) << "M2 Parse: received encrypted settings with length " << cipherlen;
-
-    LOG(DEBUG) << "M2 Parse: aes decrypt";
-    if (!mapf::encryption::aes_decrypt(keywrapkey, iv, ciphertext, cipherlen, decrypted, datalen)) {
-        LOG(ERROR) << "aes decrypt failure";
-        return false;
-    }
-
-    LOG(DEBUG) << "M2 Parse: parse config_data, len = " << datalen;
-    LOG(DEBUG) << "decrypted config_data buffer: " << std::endl
-               << utils::dump_buffer(decrypted, datalen);
-
-    // Parsing failure means that the config data is invalid,
-    // in which case it is unclear what we should do.
-    // In practice, some controllers simply send an empty config data
-    // when the radio should be tore down, so let the caller handle this
-    // by returning true with a warning for now.
-    auto config_data = WSC::configData::parse(decrypted, datalen);
-    if (!config_data) {
-        LOG(WARNING) << "Invalid config data, skip it";
-        return true;
-    }
-
-    // get length of config_data for KWA authentication
-    size_t len = config_data->getMessageLength();
-    // Protect against M2 buffer overflow attacks
-    if (len > size_t(datalen)) {
-        LOG(ERROR) << "invalid config data length";
-        return false;
-    }
-    // Update VAP configuration
-    config.auth_type   = config_data->auth_type();
-    config.encr_type   = config_data->encr_type();
-    config.bssid       = config_data->bssid();
-    config.network_key = config_data->network_key();
-    config.ssid        = config_data->ssid();
-    config.bss_type    = config_data->bss_type();
-
-    // Get the Key Wrap Authenticator data
-    auto kwa_data = config_data->key_wrap_authenticator();
-    if (!kwa_data) {
-        LOG(ERROR) << "No KeyWrapAuthenticator in config_data";
-        return false;
-    }
-
-    // The keywrap authenticator is part of the config_data (last member of the
-    // config_data to be precise).
-    // However, since we need to calculate it over the part of config_data without the keywrap
-    // authenticator, substruct it's size from the computation length
-    size_t config_data_len_for_kwa = len - config_data->key_wrap_authenticator_size();
-
-    // Swap to network byte order for KWA HMAC calculation
-    // from this point config data is not readable!
-    config_data->swap();
-    uint8_t kwa[WSC::WSC_AUTHENTICATOR_LENGTH];
-    // Compute KWA based on decrypted settings
-    if (!mapf::encryption::kwa_compute(authkey, decrypted, config_data_len_for_kwa, kwa)) {
-        LOG(ERROR) << "kwa compute";
-        return false;
-    }
-
-    if (!std::equal(kwa, kwa + sizeof(kwa), kwa_data)) {
-        LOG(ERROR) << "WSC KWA (Key Wrap Auth) failure";
-        return false;
-    }
-    LOG(DEBUG) << "KWA (Key Wrap Auth) success";
-
-    return true;
-}
-
-/**
- * @brief Parse AP-Autoconfiguration Renew message
- *
- * This function checks the TLVs in the AP-Autoconfiguration Renew message. If OK, it triggers
- * autoconfiguration.
- *
- * @param sd socket descriptor
- * @param cmdu_rx received CMDU containing AP-Autoconfiguration Renew
- * @return true on success
- * @return false on failure
- */
-bool slave_thread::handle_autoconfiguration_renew(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
-{
-    LOG(INFO) << "received autoconfig renew message";
-
-    auto tlvAlMac = cmdu_rx.getClass<ieee1905_1::tlvAlMacAddress>();
-    if (!tlvAlMac) {
-        LOG(ERROR) << "tlvAlMac missing - ignoring autconfig renew message";
-        return false;
-    }
-
-    const auto &src_mac = tlvAlMac->mac();
-    LOG(DEBUG) << "AP-Autoconfiguration Renew Message from Controller " << src_mac;
-    auto db = AgentDB::get();
-    if (src_mac != db->controller_info.bridge_mac) {
-        LOG(ERROR) << "Ignoring AP-Autoconfiguration Renew Message from an unknown controller";
-        return false;
-    }
-
-    auto tlvSupportedRole = cmdu_rx.getClass<ieee1905_1::tlvSupportedRole>();
-    if (!tlvSupportedRole) {
-        LOG(ERROR) << "tlvSupportedRole missing - ignoring autconfig renew message";
-        return false;
-    }
-
-    LOG(DEBUG) << "tlvSupportedRole->value()=" << int(tlvSupportedRole->value());
-    if (tlvSupportedRole->value() != ieee1905_1::tlvSupportedRole::REGISTRAR) {
-        LOG(ERROR) << "invalid tlvSupportedRole value, supporting only REGISTRAR controllers";
-        return false;
-    }
-
-    // Not reading tlvSupportedFreqBand since the Multi-AP Specification Version 2.0 section 7.1
-    // defines that should reply with AP-Autoconfiguration WSC message "for each of its radios,
-    // irrespective of the value specified in the SupportedFreqBand TLV.
-    auto tlvSupportedFreqBand = cmdu_rx.getClass<ieee1905_1::tlvSupportedFreqBand>();
-    if (!tlvSupportedFreqBand) {
-        LOG(ERROR) << "tlvSupportedFreqBand missing - ignoring autoconfig renew message";
-        return false;
-    }
-
-    // TODO: as part of PPM-350, use
-    // ap_autoconfiguration_completed instead of
-    // master_socket. See:
-    // https://gitlab.com/prpl-foundation/prplmesh/prplMesh/-/merge_requests/2629#note_666550951
-    if (!link_to_controller()) {
-        LOG(INFO) << "No link to Multi-AP Controller, ignoring renew.";
-        return true;
-    }
-
-    for (const auto radio : db->get_radios_list()) {
-        if (!radio) {
-            return false;
-        }
-        auto &radio_manager = m_radio_managers[radio->front.iface_name];
-
-        LOG(TRACE) << "goto STATE_JOIN_MASTER";
-        radio_manager.slave_state = STATE_JOIN_MASTER;
-    }
-    return true;
-}
-
-bool slave_thread::handle_profile2_default_802dotq_settings_tlv(ieee1905_1::CmduMessageRx &cmdu_rx)
+bool slave_thread::forward_cmdu_to_controller(ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto db = AgentDB::get();
-
-    auto dot1q_settings = cmdu_rx.getClass<wfa_map::tlvProfile2Default802dotQSettings>();
-    // tlvProfile2Default802dotQSettings is not mandatory.
-    if (!dot1q_settings) {
-        LOG(INFO) << "No tlvProfile2Default802dotQSettings";
-        return true;
+    sMacAddr dst_addr;
+    switch (cmdu_tx.getMessageType()) {
+    case ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE:
+    case ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_SEARCH_MESSAGE:
+    case ieee1905_1::eMessageType::ASSOCIATION_STATUS_NOTIFICATION_MESSAGE:
+        dst_addr = network_utils::MULTICAST_1905_MAC_ADDR;
+        break;
+    default:
+        dst_addr = db->controller_info.bridge_mac;
+        break;
     }
 
-    LOG(DEBUG) << "Primary VLAN ID: " << dot1q_settings->primary_vlan_id()
-               << ", PCP: " << dot1q_settings->default_pcp();
-
-    db->traffic_separation.primary_vlan_id = dot1q_settings->primary_vlan_id();
-    db->traffic_separation.default_pcp     = dot1q_settings->default_pcp();
-
-    for (auto &radio_manager_map_element : m_radio_managers.get()) {
-        auto &radio_manager   = radio_manager_map_element.second;
-        auto pvid_set_request = message_com::create_vs_message<
-            beerocks_message::cACTION_APMANAGER_HOSTAP_SET_PRIMARY_VLAN_ID_REQUEST>(cmdu_tx);
-        if (!pvid_set_request) {
-            LOG(ERROR) << "Failed building message!";
-            return false;
-        }
-
-        pvid_set_request->primary_vlan_id() = dot1q_settings->primary_vlan_id();
-
-        // Send ACTION_APMANAGER_HOSTAP_SET_PRIMARY_VLAN_ID_REQUEST.
-        send_cmdu(radio_manager.ap_manager_fd, cmdu_tx);
-    }
-
-    return true;
-}
-
-bool slave_thread::handle_profile2_traffic_separation_policy_tlv(
-    ieee1905_1::CmduMessageRx &cmdu_rx, std::unordered_set<std::string> &misconfigured_ssids)
-{
-    auto traffic_seperation_policy =
-        cmdu_rx.getClass<wfa_map::tlvProfile2TrafficSeparationPolicy>();
-
-    if (!traffic_seperation_policy) {
-        LOG(ERROR) << "tlvProfile2TrafficSeparationPolicy not found!";
-        return false;
-    }
-
-    auto db = AgentDB::get();
-
-    std::unordered_map<std::string, uint16_t> tmp_ssid_vid_mapping;
-    for (int i = 0; i < traffic_seperation_policy->ssids_vlan_id_list_length(); i++) {
-        auto ssid_vid_tuple = traffic_seperation_policy->ssids_vlan_id_list(i);
-        if (!std::get<0>(ssid_vid_tuple)) {
-            LOG(ERROR) << "Failed to get ssid_vid mapping, idx=" << i;
-            return false;
-        }
-        auto &ssid_vid_mapping = std::get<1>(ssid_vid_tuple);
-
-        tmp_ssid_vid_mapping[ssid_vid_mapping.ssid_name_str()] = ssid_vid_mapping.vlan_id();
-        LOG(DEBUG) << "SSID: " << ssid_vid_mapping.ssid_name_str()
-                   << ", VID: " << ssid_vid_mapping.vlan_id();
-    }
-
-    // Overwriting the whole container instead of pushing one by one, since we need to remove
-    // old configuration from previous configurations messages.
-    db->traffic_separation.ssid_vid_mapping = tmp_ssid_vid_mapping;
-
-    // Fill secondary VLANs IDs to the database.
-    for (const auto &ssid_vid_pair : db->traffic_separation.ssid_vid_mapping) {
-        auto vlan_id = ssid_vid_pair.second;
-        if (vlan_id != db->traffic_separation.primary_vlan_id) {
-            db->traffic_separation.secondary_vlans_ids.insert(vlan_id);
-        }
-    }
-
-    // Erase excessive secondary VIDs.
-    if (db->traffic_separation.ssid_vid_mapping.size() >
-        db->traffic_separation.max_number_of_vlans_ids) {
-
-        for (auto it = std::next(db->traffic_separation.ssid_vid_mapping.begin(),
-                                 db->traffic_separation.max_number_of_vlans_ids);
-             it != db->traffic_separation.ssid_vid_mapping.end();) {
-
-            auto &ssid = it->first;
-            misconfigured_ssids.insert(ssid);
-            it = db->traffic_separation.ssid_vid_mapping.erase(it);
-        }
-    }
-    return true;
-}
-
-bool slave_thread::send_error_response(
-    const std::deque<std::pair<wfa_map::tlvProfile2ErrorCode::eReasonCode, sMacAddr>> &bss_errors)
-{
-    if (!cmdu_tx.create(0, ieee1905_1::eMessageType::ERROR_RESPONSE_MESSAGE)) {
-        LOG(ERROR) << "cmdu creation has failed";
-        return false;
-    }
-
-    LOG(INFO) << "Sending ERROR_RESPONSE_MESSAGE to the controller on:";
-    for (const auto &bss_error : bss_errors) {
-        auto &reason = bss_error.first;
-        auto &bssid  = bss_error.second;
-        LOG(INFO) << "reason : " << reason << ", bssid: " << bssid;
-
-        auto profile2_error_code_tlv = cmdu_tx.addClass<wfa_map::tlvProfile2ErrorCode>();
-        if (!profile2_error_code_tlv) {
-            LOG(ERROR) << "addClass has failed";
-            return false;
-        }
-
-        profile2_error_code_tlv->reason_code() = reason;
-        profile2_error_code_tlv->bssid()       = bssid;
-
-        send_cmdu_to_controller({}, cmdu_tx);
-    }
-    return true;
-}
-
-/**
- * @brief Parse AP-Autoconfiguration WSC which should include one AP Radio Identifier
- *        TLV and one or more WSC TLV containing M2
- *
- * @param sd socket descriptor
- * @param cmdu_rx received CMDU containing M2
- * @return true on success
- * @return false on failure
- */
-bool slave_thread::handle_autoconfiguration_wsc(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
-{
-    auto ruid = cmdu_rx.getClass<wfa_map::tlvApRadioIdentifier>();
-    if (!ruid) {
-        LOG(ERROR) << "getClass<wfa_map::tlvApRadioIdentifier> failed";
-        return false;
-    }
-
-    auto db = AgentDB::get();
-
-    auto radio = db->get_radio_by_mac(ruid->radio_uid(), AgentDB::eMacType::RADIO);
-    if (!radio) {
-        LOG(ERROR) << "Failed to find ruid " << ruid->radio_uid() << " in the Agent";
-        return false;
-    }
-    LOG(DEBUG) << "Received AP_AUTOCONFIGURATION_WSC_MESSAGE for iface " << radio->front.iface_name;
-
-    std::list<WSC::m2> m2_list;
-    for (auto tlv : cmdu_rx.getClassList<ieee1905_1::tlvWsc>()) {
-        auto m2 = WSC::m2::parse(*tlv);
-        if (!m2) {
-            LOG(INFO) << "Not a valid M2 - Ignoring WSC CMDU";
-            continue;
-        }
-        m2_list.push_back(*m2);
-    }
-    if (m2_list.empty()) {
-        LOG(ERROR) << "No M2s present";
-        return false;
-    }
-
-    if (!handle_profile2_default_802dotq_settings_tlv(cmdu_rx)) {
-        LOG(ERROR) << "handle_profile2_default_802dotq_settings_tlv has failed!";
-        return false;
-    }
-
-    std::unordered_set<std::string> misconfigured_ssids;
-    // tlvProfile2TrafficSeparationPolicy is not mandatory.
-    if (!cmdu_rx.getClass<wfa_map::tlvProfile2TrafficSeparationPolicy>()) {
-        LOG(INFO) << "tlvProfile2TrafficSeparationPolicy not found";
-    } else if (!handle_profile2_traffic_separation_policy_tlv(cmdu_rx, misconfigured_ssids)) {
-        LOG(ERROR) << "handle_profile2_traffic_separation_policy_tlv has failed!";
-        return false;
-    }
-
-    std::deque<std::pair<wfa_map::tlvProfile2ErrorCode::eReasonCode, sMacAddr>> bss_errors;
-    std::vector<WSC::configData::config> configs;
-    for (auto m2 : m2_list) {
-        LOG(DEBUG) << "M2 Parse " << m2.manufacturer()
-                   << " Controller configuration (WSC M2 Encrypted Settings)";
-        uint8_t authkey[32];
-        uint8_t keywrapkey[16];
-        LOG(DEBUG) << "M2 Parse: calculate keys";
-        if (!autoconfig_wsc_calculate_keys(radio->front.iface_name, m2, authkey, keywrapkey))
-            return false;
-
-        if (!autoconfig_wsc_authenticate(radio->front.iface_name, m2, authkey))
-            return false;
-
-        WSC::configData::config config;
-        if (!autoconfig_wsc_parse_m2_encrypted_settings(m2, authkey, keywrapkey, config)) {
-            LOG(ERROR) << "Invalid config data, skip it";
-            continue;
-        }
-
-        bool bSTA = bool(config.bss_type & WSC::eWscVendorExtSubelementBssType::BACKHAUL_STA);
-        bool fBSS = bool(config.bss_type & WSC::eWscVendorExtSubelementBssType::FRONTHAUL_BSS);
-        bool bBSS = bool(config.bss_type & WSC::eWscVendorExtSubelementBssType::BACKHAUL_BSS);
-        bool bBSS_p1_disallowed =
-            bool(config.bss_type &
-                 WSC::eWscVendorExtSubelementBssType::PROFILE1_BACKHAUL_STA_ASSOCIATION_DISALLOWED);
-        bool bBSS_p2_disallowed =
-            bool(config.bss_type &
-                 WSC::eWscVendorExtSubelementBssType::PROFILE2_BACKHAUL_STA_ASSOCIATION_DISALLOWED);
-        bool teardown = bool(config.bss_type & WSC::eWscVendorExtSubelementBssType::TEARDOWN);
-
-        LOG(INFO) << "BSS configuration - ";
-        LOG(INFO) << "bssid: " << config.bssid;
-        LOG(INFO) << "ssid: " << config.ssid;
-        LOG(INFO) << "fBSS: " << fBSS;
-        LOG(INFO) << "bBSS: " << bBSS;
-        LOG(INFO) << "Teardown: " << teardown;
-        if (bBSS) {
-            LOG(INFO) << "profile1_backhaul_sta_association_disallowed: " << bBSS_p1_disallowed;
-            LOG(INFO) << "profile2_backhaul_sta_association_disallowed: " << bBSS_p2_disallowed;
-        }
-
-        // TODO - revisit this in the future
-        // In practice, some controllers simply send an empty config data when asked for tear down,
-        // so tear down the radio if the SSID is empty.
-        if (config.ssid.empty()) {
-            LOG(INFO) << "Empty config data, tear down radio";
-            configs.clear();
-            break;
-        }
-
-        LOG(INFO) << "bss_type: " << std::hex << int(config.bss_type);
-        if (teardown) {
-            LOG(INFO) << "Teardown bit set, tear down radio";
-            configs.clear();
-            break;
-        }
-        // BACKHAUL_STA bit is not expected to be set
-        if (bSTA) {
-            LOG(WARNING) << "Unexpected backhaul STA bit";
-        }
-
-        if (misconfigured_ssids.find(config.ssid) != misconfigured_ssids.end()) {
-            bss_errors.push_back({wfa_map::tlvProfile2ErrorCode::eReasonCode::
-                                      NUMBER_OF_UNIQUE_VLAN_ID_EXCEEDS_MAXIMUM_SUPPORTED,
-                                  config.bssid});
-
-            // Multi-AP standard requires to tear down any misconfigured BSS.
-            config.bss_type = WSC::eWscVendorExtSubelementBssType::TEARDOWN;
-        } else if (fBSS && bBSS && !radio->front.hybrid_mode_supported) {
-            LOG(WARNING) << "Controller configured hybrid mode, but it is not supported!";
-            bss_errors.push_back(
-                {wfa_map::tlvProfile2ErrorCode::eReasonCode::
-                     TRAFFIC_SEPARATION_ON_COMBINED_FRONTHAUL_AND_PROFILE1_BACKHAUL_UNSUPPORTED,
-                 config.bssid});
-
-            // Multi-AP standard requires to tear down any misconfigured BSS.
-            config.bss_type = WSC::eWscVendorExtSubelementBssType::TEARDOWN;
-
-        } else if (db->controller_info.profile_support !=
-                       wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
-                   bBSS && !bBSS_p1_disallowed && !bBSS_p2_disallowed) {
-
-            LOG(WARNING) << "Controller configured Backhaul BSS for combined Profile1 and "
-                         << "Profile2, but it is not supported!";
-            // bss_errors.push_back(
-            //     {wfa_map::tlvProfile2ErrorCode::eReasonCode::
-            //          TRAFFIC_SEPARATION_ON_COMBINED_PROFILE1_BACKHAUL_AND_PROFILE2_BACKHAUL_UNSUPPORTED,
-            //      config.bssid});
-
-            // // Multi-AP standard requires to tear down any misconfigured BSS.
-            // config.bss_type = WSC::eWscVendorExtSubelementBssType::TEARDOWN;
-
-            /**
-             * We currently do not support bBSS with both profile 1/2 disallow
-             * flags set to false (Combined Profile bBSS mode).
-             * When we are configured in a way we don't support, we should tear down the BSS, and
-             * send an error response on that BSS.
-             * Currently R2 certified controllers (Mediatek/Marvel) have a bug (PPM-1389) that ends
-             * up sending M2 with both profile 1/2 disallow flags set to false although we report
-             * combined_profile1_and_profile2 = 0 in ap_radio_advanced_capabilities_tlv.
-             * To deal with it, temporarily comment the lines above and allow the BSS to be
-             * configured successfully until PPM-1389 is resolved.
-             */
-            LOG(DEBUG) << "Currently ignore bad configuration";
-        }
-
-        LOG(DEBUG) << m2.manufacturer() << " config data:" << std::endl
-                   << " ssid: " << config.ssid << ", bssid: " << config.bssid
-                   << ", authentication_type: " << std::hex << int(config.auth_type)
-                   << ", encryption_type: " << int(config.encr_type);
-        configs.push_back(config);
-    }
-
-    if (bss_errors.size()) {
-        send_error_response(bss_errors);
-    }
-
-    auto request = message_com::create_vs_message<
-        beerocks_message::cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST>(cmdu_tx);
-    if (!request) {
-        LOG(ERROR) << "Failed building message!";
-        return false;
-    }
-    for (auto config : configs) {
-        auto c = request->create_wifi_credentials();
-        if (!c) {
-            LOG(ERROR) << "Failed building message!";
-            return false;
-        }
-        c->set_ssid(config.ssid);
-        c->set_network_key(config.network_key);
-        c->bssid_attr().data               = config.bssid;
-        c->authentication_type_attr().data = config.auth_type;
-        c->encryption_type_attr().data     = config.encr_type;
-        c->bss_type()                      = config.bss_type;
-        request->add_wifi_credentials(c);
-    }
-
-    ///////////////////////////////////////////////////////////////////
-    // TODO https://github.com/prplfoundation/prplMesh/issues/797
-    //
-    // Short term solution
-    // In non-EasyMesh mode, never modify hostapd configuration
-    // and in this case VAPs credentials
-    //
-    // Long term solution
-    // All EasyMesh VAPs will be stored in the platform DB.
-    // All other VAPs are manual, AKA should not be modified by prplMesh
-    ////////////////////////////////////////////////////////////////////
-    const auto &radio_manager = m_radio_managers[radio->front.iface_name];
-    if (db->device_conf.management_mode != BPL_MGMT_MODE_NOT_MULTIAP) {
-        send_cmdu(radio_manager.ap_manager_fd, cmdu_tx);
-    } else {
-        LOG(WARNING) << "non-EasyMesh mode - skip updating VAP credentials";
-    }
-
-    if (radio_manager.slave_state != STATE_WAIT_FOR_JOINED_RESPONSE) {
-        LOG(ERROR) << "slave_state != STATE_WAIT_FOR_JOINED_RESPONSE";
-        return false;
-    }
-
-    auto beerocks_header = message_com::parse_intel_vs_message(cmdu_rx);
-    if (beerocks_header) {
-        LOG(INFO) << "Intel controller join response";
-        if (!parse_intel_join_response(radio->front.iface_name, *beerocks_header)) {
-            LOG(ERROR) << "Parse join response failed";
-            return false;
-        }
-    } else {
-        LOG(INFO) << "Non-Intel controller join response";
-        if (!parse_non_intel_join_response(radio->front.iface_name)) {
-            LOG(ERROR) << "Parse join response failed";
-            return false;
-        }
-    }
-
-    return true;
-}
-
-bool slave_thread::parse_intel_join_response(const std::string &fronthaul_iface,
-                                             beerocks::beerocks_header &beerocks_header)
-{
-    LOG(DEBUG) << "ACTION_CONTROL_SLAVE_JOINED_RESPONSE " << fronthaul_iface;
-    auto &radio_manager = m_radio_managers[fronthaul_iface];
-    if (radio_manager.slave_state != STATE_WAIT_FOR_JOINED_RESPONSE) {
-        LOG(ERROR) << "slave_state != STATE_WAIT_FOR_JOINED_RESPONSE";
-        return false;
-    }
-
-    if (beerocks_header.action_op() != beerocks_message::ACTION_CONTROL_SLAVE_JOINED_RESPONSE) {
-        LOG(ERROR) << "Unexpected Intel action op " << beerocks_header.action_op();
-        return false;
-    }
-
-    auto joined_response =
-        beerocks_header.addClass<beerocks_message::cACTION_CONTROL_SLAVE_JOINED_RESPONSE>();
-    if (joined_response == nullptr) {
-        LOG(ERROR) << "addClass cACTION_CONTROL_SLAVE_JOINED_RESPONSE failed";
-        return false;
-    }
-
-    // check master rejection
-    if (joined_response->err_code() == beerocks::JOIN_RESP_REJECT) {
-        radio_manager.slave_state_timer =
-            std::chrono::steady_clock::now() +
-            std::chrono::seconds(WAIT_BEFORE_SEND_SLAVE_JOINED_NOTIFICATION_SEC);
-        LOG(DEBUG) << "STATE_WAIT_FOR_JOINED_RESPONSE: join rejected!";
-        LOG(DEBUG) << "goto STATE_WAIT_BEFORE_JOIN_MASTER";
-        radio_manager.slave_state = STATE_WAIT_BEFORE_JOIN_MASTER;
-        return true;
-    }
-
-    // request the current vap list from ap_manager
-    auto request = message_com::create_vs_message<
-        beerocks_message::cACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_REQUEST>(cmdu_tx);
-    if (request == nullptr) {
-        LOG(ERROR) << "Failed building cACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_REQUEST message!";
-        return false;
-    }
-    send_cmdu(radio_manager.ap_manager_fd, cmdu_tx);
-
-    auto client_notifications_request = message_com::create_vs_message<
-        beerocks_message::
-            cACTION_APMANAGER_HOSTAP_GENERATE_CLIENT_ASSOCIATION_NOTIFICATIONS_REQUEST>(cmdu_tx);
-    if (!client_notifications_request) {
-        LOG(ERROR) << "Failed building message!";
-        return false;
-    }
-    send_cmdu(radio_manager.ap_manager_fd, cmdu_tx);
-
-    master_version.assign(joined_response->master_version(message::VERSION_LENGTH));
-
-    LOG(DEBUG) << "Version (Master/Slave): " << master_version << "/" << BEEROCKS_VERSION;
-    auto slave_version_s  = version::version_from_string(BEEROCKS_VERSION);
-    auto master_version_s = version::version_from_string(master_version);
-
-    // check for mismatch
-    if (master_version_s.major != slave_version_s.major ||
-        master_version_s.minor != slave_version_s.minor ||
-        master_version_s.build_number != slave_version_s.build_number) {
-        LOG(WARNING) << "master_version != slave_version";
-        LOG(WARNING) << "Version (Master/Slave): " << master_version << "/" << BEEROCKS_VERSION;
-    }
-
-    // check if fatal mismatch
-    if (joined_response->err_code() == beerocks::JOIN_RESP_VERSION_MISMATCH) {
-        LOG(ERROR) << "Mismatch version! slave_version=" << std::string(BEEROCKS_VERSION)
-                   << " master_version=" << master_version;
-        LOG(DEBUG) << "goto STATE_VERSION_MISMATCH";
-        radio_manager.slave_state = STATE_VERSION_MISMATCH;
-    } else if (joined_response->err_code() == beerocks::JOIN_RESP_SSID_MISMATCH) {
-        LOG(ERROR) << "Mismatch SSID!";
-        LOG(DEBUG) << "goto STATE_SSID_MISMATCH";
-        radio_manager.slave_state = STATE_SSID_MISMATCH;
-    } else {
-        // Send master version + slave version to platform manager
-        auto notification = message_com::create_vs_message<
-            beerocks_message::cACTION_PLATFORM_MASTER_SLAVE_VERSIONS_NOTIFICATION>(cmdu_tx);
-        if (notification == nullptr) {
-            LOG(ERROR) << "Failed building message!";
-            return false;
-        }
-        string_utils::copy_string(notification->versions().master_version, master_version.c_str(),
-                                  sizeof(beerocks_message::sVersions::master_version));
-        string_utils::copy_string(notification->versions().slave_version, BEEROCKS_VERSION,
-                                  sizeof(beerocks_message::sVersions::slave_version));
-        m_platform_manager_client->send_cmdu(cmdu_tx);
-        LOG(DEBUG) << "send ACTION_PLATFORM_MASTER_SLAVE_VERSIONS_NOTIFICATION " << fronthaul_iface;
-
-        radio_manager.son_config = joined_response->config();
-        log_son_config(fronthaul_iface);
-
-        radio_manager.slave_state = STATE_UPDATE_MONITOR_SON_CONFIG;
-    }
-
-    return true;
-}
-
-bool slave_thread::parse_non_intel_join_response(const std::string &fronthaul_iface)
-{
-    // request the current vap list from ap_manager
-    auto request = message_com::create_vs_message<
-        beerocks_message::cACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_REQUEST>(cmdu_tx);
-    if (request == nullptr) {
-        LOG(ERROR) << "Failed building cACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_REQUEST message!";
-        return false;
-    }
-
-    auto &radio_manager = m_radio_managers[fronthaul_iface];
-    send_cmdu(radio_manager.ap_manager_fd, cmdu_tx);
-
-    // No version checking for non-Intel controller
-
-    // TODO
-    //        auto notification = message_com::create_vs_message<
-    //            beerocks_message::cACTION_PLATFORM_MASTER_SLAVE_VERSIONS_NOTIFICATION>(cmdu_tx);
-    //        if (notification == nullptr) {
-    //            LOG(ERROR) << "Failed building message!";
-    //            return false;
-    //        }
-    //        string_utils::copy_string(notification->versions().master_version,
-    //        master_version.c_str(),
-    //                                  sizeof(beerocks_message::sVersions::master_version));
-    //        string_utils::copy_string(notification->versions().slave_version,
-    //        BEEROCKS_VERSION,
-    //                                  sizeof(beerocks_message::sVersions::slave_version));
-    //        m_platform_manager_client->send_cmdu(cmdu_tx);
-    //        LOG(DEBUG) << "send ACTION_PLATFORM_MASTER_SLAVE_VERSIONS_NOTIFICATION";
-
-    // TODO set son_config
-    log_son_config(fronthaul_iface);
-
-    radio_manager.slave_state = STATE_UPDATE_MONITOR_SON_CONFIG;
-
-    return true;
-}
-
-bool slave_thread::handle_multi_ap_policy_config_request(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
-{
-    /**
-     * The Multi-AP Policy Config Request message is sent by the controller and received by the
-     * backhaul manager.
-     * The backhaul manager forwards the request message "as is" to all the slaves managing the
-     * radios which Radio Unique Identifier has been specified.
-     */
-    auto mid = cmdu_rx.getMessageId();
-    LOG(DEBUG) << "Received MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE, mid=" << std::hex << int(mid);
-
-    if (!handle_profile2_default_802dotq_settings_tlv(cmdu_rx)) {
-        LOG(ERROR) << "handle_profile2_default_802dotq_settings_tlv has failed!";
-        return false;
-    }
-
-    std::unordered_set<std::string> misconfigured_ssids;
-    auto db = AgentDB::get();
-    // tlvProfile2TrafficSeparationPolicy is not mandatory. But if it does not exist, need to clear
-    // traffic separation settings.
-    if (!cmdu_rx.getClass<wfa_map::tlvProfile2TrafficSeparationPolicy>()) {
-        LOG(INFO) << "tlvProfile2TrafficSeparationPolicy not found";
-        db->traffic_separation.ssid_vid_mapping.clear();
-    } else if (!handle_profile2_traffic_separation_policy_tlv(cmdu_rx, misconfigured_ssids)) {
-        LOG(ERROR) << "handle_profile2_traffic_separation_policy_tlv has failed!";
-        return false;
-    }
-
-    if (db->traffic_separation.ssid_vid_mapping.empty()) {
-        // If SSID VID map is empty, need to clear traffic separation policy.
-        db->traffic_separation.primary_vlan_id = 0;
-        db->traffic_separation.default_pcp     = 0;
-    }
-
-    std::deque<std::pair<wfa_map::tlvProfile2ErrorCode::eReasonCode, sMacAddr>> bss_errors;
-    if (!misconfigured_ssids.empty()) {
-        bss_errors.push_back({wfa_map::tlvProfile2ErrorCode::eReasonCode::
-                                  NUMBER_OF_UNIQUE_VLAN_ID_EXCEEDS_MAXIMUM_SUPPORTED,
-                              sMacAddr()});
-    }
-
-    if (bss_errors.size()) {
-        send_error_response(bss_errors);
-        return false;
-    }
-
-    for (auto &radio_manager_map_element : m_radio_managers.get()) {
-        const auto &fronthaul_iface = radio_manager_map_element.first;
-        auto &radio_manager         = radio_manager_map_element.second;
-
-        /**
-         * The slave in turn, forwards the request message again "as is" to the monitor thread.
-         */
-        if (radio_manager.monitor_fd == beerocks::net::FileDescriptor::invalid_descriptor) {
-            LOG(ERROR) << "monitor_socket is null";
-            return false;
-        }
-
-        if (!forward_cmdu_to_uds(radio_manager.monitor_fd, cmdu_rx)) {
-            LOG(ERROR) << "Failed to forward message to monitor";
-            return false;
-        }
-
-        if (radio_manager.autoconfiguration_completed) {
-            TrafficSeparation::apply_traffic_separation(fronthaul_iface);
-        } else {
-            LOG(WARNING) << "autoconfiguration procedure is not completed yet, traffic separation "
-                         << "policy cannot be applied";
-        }
-    }
-
-    return true;
+    return m_broker_client->forward_cmdu(cmdu_rx, dst_addr, db->bridge.mac);
 }
 
 bool slave_thread::handle_client_association_request(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
@@ -6460,63 +5348,6 @@ bool slave_thread::send_operating_channel_report(const std::string &fronthaul_if
     operating_channel_report_tlv->current_transmit_power() = radio->tx_power_dB;
 
     return send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
-}
-
-bool slave_thread::autoconfig_wsc_add_m1(const std::string &fronthaul_iface)
-{
-    auto tlv = cmdu_tx.addClass<ieee1905_1::tlvWsc>();
-    if (tlv == nullptr) {
-        LOG(ERROR) << "Error creating tlvWsc";
-        return false;
-    }
-
-    // Allocate maximum allowed length for the payload, so it can accommodate variable length
-    // data inside the internal TLV list.
-    // On finalize(), the buffer is shrunk back to its real size.
-    size_t payload_length =
-        tlv->getBuffRemainingBytes() - ieee1905_1::tlvEndOfMessage::get_initial_size();
-    tlv->alloc_payload(payload_length);
-
-    WSC::m1::config cfg;
-    auto db    = AgentDB::get();
-    auto radio = db->radio(fronthaul_iface);
-    if (!radio) {
-        LOG(ERROR) << "Cannot find radio for " << fronthaul_iface;
-        return false;
-    }
-
-    auto &radio_manager = m_radio_managers[fronthaul_iface];
-
-    cfg.msg_type     = WSC::eWscMessageType::WSC_MSG_TYPE_M1;
-    cfg.mac          = db->bridge.mac;
-    radio_manager.dh = std::make_unique<mapf::encryption::diffie_hellman>();
-    std::copy(radio_manager.dh->nonce(),
-              radio_manager.dh->nonce() + radio_manager.dh->nonce_length(), cfg.enrollee_nonce);
-    copy_pubkey(*radio_manager.dh, cfg.pub_key);
-    cfg.auth_type_flags =
-        WSC::eWscAuth(WSC::eWscAuth::WSC_AUTH_OPEN | WSC::eWscAuth::WSC_AUTH_WPA2PSK |
-                      WSC::eWscAuth::WSC_AUTH_SAE);
-    cfg.encr_type_flags     = uint16_t(WSC::eWscEncr::WSC_ENCR_AES);
-    cfg.manufacturer        = "prplMesh";
-    cfg.model_name          = "Ubuntu";
-    cfg.model_number        = "18.04";
-    cfg.serial_number       = db->device_conf.device_serial_number;
-    cfg.primary_dev_type_id = WSC::WSC_DEV_NETWORK_INFRA_AP;
-    cfg.device_name         = "prplmesh-agent";
-    cfg.bands = wireless_utils::is_frequency_band_5ghz(radio->freq_type) ? WSC::WSC_RF_BAND_5GHZ
-                                                                         : WSC::WSC_RF_BAND_2GHZ;
-    auto attributes = WSC::m1::create(*tlv, cfg);
-    if (!attributes)
-        return false;
-
-    // Authentication support - store swapped M1 for later M1 || M2* authentication
-    // This is the content of M1, without the type and length.
-    if (radio_manager.m1_auth_buf)
-        delete[] radio_manager.m1_auth_buf;
-    radio_manager.m1_auth_buf_len = attributes->len();
-    radio_manager.m1_auth_buf     = new uint8_t[radio_manager.m1_auth_buf_len];
-    std::copy_n(attributes->buffer(), radio_manager.m1_auth_buf_len, radio_manager.m1_auth_buf);
-    return true;
 }
 
 void slave_thread::fill_channel_list_to_agent_db(

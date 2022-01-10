@@ -26,7 +26,7 @@ CmduPeer::CmduPeer(std::shared_ptr<beerocks::net::CmduParser> cmdu_parser,
 }
 
 bool CmduPeer::send_cmdu(beerocks::net::Socket::Connection &connection,
-                         ieee1905_1::CmduMessageTx &cmdu_tx)
+                         ieee1905_1::CmduMessageTx &cmdu_tx) const
 {
     // Finalize CMDU
     size_t cmdu_length = cmdu_tx.getMessageLength();

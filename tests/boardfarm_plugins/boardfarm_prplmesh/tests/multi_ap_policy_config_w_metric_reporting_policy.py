@@ -25,4 +25,4 @@ class MultiApPolicyConfigWMetricReportingPolicy(CommonFlows):
 
         self.dev.DUT.wired_sniffer.start(self.__class__.__name__ + "-" + self.dev.DUT.name)
 
-        self.send_and_check_policy_config_metric_reporting(agent, controller, True, True)
+        self.send_and_check_policy_config_metric_reporting(controller, agent, True, True)
