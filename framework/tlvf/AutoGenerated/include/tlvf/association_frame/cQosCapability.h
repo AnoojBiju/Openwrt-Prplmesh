@@ -56,7 +56,7 @@ class cQosCapability : public BaseClass
         } __attribute__((packed)) sQosInfo;
         
         eElementID& type();
-        uint8_t& length();
+        const uint8_t& length();
         sQosInfo& qos_info();
         void class_swap() override;
         bool finalize() override;

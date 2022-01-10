@@ -35,17 +35,25 @@ class cExtendedCap : public BaseClass
         explicit cExtendedCap(std::shared_ptr<BaseClass> base, bool parse = false);
         ~cExtendedCap();
 
-        typedef struct sExtendedCapField {
+        typedef struct sExtendedCapFieldB3 {
             #if defined(__LITTLE_ENDIAN_BITFIELD)
-            uint8_t spectrum_management : 1;
-            uint8_t triggered_unscheduled_ps : 1;
-            uint8_t radio_measurement : 1;
-            uint8_t reserved : 1;
+            uint8_t tfs : 1;
+            uint8_t wnm_sleep_mode : 1;
+            uint8_t tim_broadcast : 1;
+            uint8_t bss_transition : 1;
+            uint8_t qos_traffic_cap : 1;
+            uint8_t ac_sta_count : 1;
+            uint8_t multi_bssid : 1;
+            uint8_t timing_meas : 1;
             #elif defined(__BIG_ENDIAN_BITFIELD)
-            uint8_t reserved : 1;
-            uint8_t radio_measurement : 1;
-            uint8_t triggered_unscheduled_ps : 1;
-            uint8_t spectrum_management : 1;
+            uint8_t timing_meas : 1;
+            uint8_t multi_bssid : 1;
+            uint8_t ac_sta_count : 1;
+            uint8_t qos_traffic_cap : 1;
+            uint8_t bss_transition : 1;
+            uint8_t tim_broadcast : 1;
+            uint8_t wnm_sleep_mode : 1;
+            uint8_t tfs : 1;
             #else
             #error "Bitfield macros are not defined"
             #endif
@@ -53,7 +61,7 @@ class cExtendedCap : public BaseClass
             }
             void struct_init(){
             }
-        } __attribute__((packed)) sExtendedCapField;
+        } __attribute__((packed)) sExtendedCapFieldB3;
         
         eElementID& type();
         const uint8_t& length();

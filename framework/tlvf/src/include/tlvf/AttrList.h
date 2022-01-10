@@ -47,7 +47,14 @@ protected:
         return reinterpret_cast<sAttrHeader<TT, TD> *>(
             m_class_vector.empty() ? getMessageBuff() : m_class_vector.back()->getBuffPtr());
     }
-    uint16_t getNextAttrType() { return ntohs(getNextAttrHdr()->type); };
+    uint16_t getNextAttrType()
+    {
+        auto type = getNextAttrHdr()->type;
+        if (m_parse) {
+            tlvf_swap((sizeof(type) * 8), reinterpret_cast<uint8_t *>(&type));
+        }
+        return static_cast<uint16_t>(type);
+    };
     size_t getRemainingBytes()
     {
         return m_class_vector.empty() ? getMessageBuffLength()

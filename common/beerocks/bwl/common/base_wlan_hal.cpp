@@ -92,6 +92,9 @@ base_wlan_hal::create_mgmt_frame_notification(const char *mgmt_frame_hex)
     // Store the STA MAC address
     mgmt_frame->mac = mgmt_frame_header->header.sa;
 
+    // Store the AP MAC address
+    mgmt_frame->bssid = mgmt_frame_header->header.bssid;
+
     // Check the frame subtype and update the frame type accordingly
     auto mgmt_frame_subtype =
         s80211MgmtFrame::eType(mgmt_frame_header->header.frame_control.bits.subtype);

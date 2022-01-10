@@ -8,6 +8,7 @@ _namespace: assoc_frame
 
 cStaVhtCapability:
   _type: class
+  _is_tlv_class: True
   type:
     _type: eElementID
     _value: ID_VHT_CAPS
@@ -15,4 +16,4 @@ cStaVhtCapability:
     _type: uint8_t
   vht_cap_info: assoc_frame::sStaVhtCapInfo
   supported_vht_mcs:
-    _type: uint32_t
+    _type: assoc_frame::sSupportedVhtMcsSet

@@ -1,6 +1,7 @@
 #
 ---
 _include: {
+  tlvf/common/sMacAddr.h,
   tlvf/association_frame/eElementID.h,
   tlvf/AssociationRequestFrame/assoc_frame_bitfields.h,
 }
@@ -9,9 +10,7 @@ _namespace: assoc_frame
 
 cCurrentApAddress:
   _type: class
-  ap_addr:
-    _type: char
-    _length: ["assoc_frame::MAC_ADDR_LEN"]
+  ap_addr: sMacAddr
 
 cFastBssTrans:
   _type: class
@@ -21,7 +20,6 @@ cFastBssTrans:
     _value: ID_FAST_BSS_TRANS
   length:
     _type: uint8_t
-    _length_var: True
   data:
     _type: uint8_t
     _length: []
@@ -34,7 +32,6 @@ cFmsRequest:
     _value: ID_FMS_REQUEST
   length:
     _type: uint8_t
-    _length_var: True
   fms_token:
     _type: uint8_t
   fms_request_subelem:
@@ -49,7 +46,6 @@ cDmsRequest:
     _value: ID_DMS_REQUEST
   length:
     _type: uint8_t
-    _length_var: True
   dms_descrip_list:
     _type: uint8_t
     _length: []

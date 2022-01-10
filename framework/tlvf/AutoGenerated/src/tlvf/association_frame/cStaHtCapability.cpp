@@ -29,8 +29,8 @@ eElementID& cStaHtCapability::type() {
     return (eElementID&)(*m_type);
 }
 
-uint8_t& cStaHtCapability::length() {
-    return (uint8_t&)(*m_length);
+const uint8_t& cStaHtCapability::length() {
+    return (const uint8_t&)(*m_length);
 }
 
 assoc_frame::sStaHtCapabilityInfo& cStaHtCapability::ht_cap_info() {
@@ -102,6 +102,7 @@ bool cStaHtCapability::finalize()
         }
         auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
         m_buff_ptr__ -= tailroom;
+        *m_length -= tailroom;
     }
     class_swap();
     m_finalized__ = true;
@@ -135,6 +136,7 @@ bool cStaHtCapability::init()
         return false;
     }
     m_length = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!m_parse__) *m_length = 0;
     if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
@@ -144,12 +146,14 @@ bool cStaHtCapability::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(assoc_frame::sStaHtCapabilityInfo) << ") Failed!";
         return false;
     }
+    if(m_length && !m_parse__){ (*m_length) += sizeof(assoc_frame::sStaHtCapabilityInfo); }
     if (!m_parse__) { m_ht_cap_info->struct_init(); }
     m_a_mpdu_param = reinterpret_cast<sA_MpduParam*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(sA_MpduParam))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sA_MpduParam) << ") Failed!";
         return false;
     }
+    if(m_length && !m_parse__){ (*m_length) += sizeof(sA_MpduParam); }
     if (!m_parse__) { m_a_mpdu_param->struct_init(); }
     m_ht_mcs_set = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint8_t) * (16))) {
@@ -157,21 +161,27 @@ bool cStaHtCapability::init()
         return false;
     }
     m_ht_mcs_set_idx__  = 16;
+    if (!m_parse__) {
+        if (m_length) { (*m_length) += (sizeof(uint8_t) * 16); }
+    }
     m_ht_extended_caps = reinterpret_cast<uint16_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint16_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
         return false;
     }
+    if(m_length && !m_parse__){ (*m_length) += sizeof(uint16_t); }
     m_tx_beamforming_caps = reinterpret_cast<uint32_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint32_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint32_t) << ") Failed!";
         return false;
     }
+    if(m_length && !m_parse__){ (*m_length) += sizeof(uint32_t); }
     m_asel_caps = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
+    if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
     if (m_parse__) { class_swap(); }
     return true;
 }

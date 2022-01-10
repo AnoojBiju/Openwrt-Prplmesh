@@ -154,8 +154,9 @@ bool tlvVendorSpecific::init()
     if (!m_parse__) { m_vendor_oui->struct_init(); }
     m_payload = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (m_length && m_parse__) {
-        size_t len = *m_length;
-        tlvf_swap(16, reinterpret_cast<uint8_t*>(&len));
+        auto swap_len = *m_length;
+        tlvf_swap((sizeof(swap_len) * 8), reinterpret_cast<uint8_t*>(&swap_len));
+        size_t len = swap_len;
         len -= (m_buff_ptr__ - sizeof(*m_type) - sizeof(*m_length) - m_buff__);
         m_payload_idx__ = len/sizeof(uint8_t);
         if (!buffPtrIncrementSafe(len)) {

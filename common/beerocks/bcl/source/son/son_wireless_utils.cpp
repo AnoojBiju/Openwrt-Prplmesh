@@ -1390,3 +1390,65 @@ bool wireless_utils::get_station_max_supported_bw(beerocks::message::sRadioCapab
     return (max_bw_hdlr(sta_caps.max_ch_width, max_bw) || max_bw_hdlr(sta_caps.vht_bw, max_bw) ||
             max_bw_hdlr(sta_caps.ht_bw, max_bw));
 }
+
+void wireless_utils::print_station_capabilities(beerocks::message::sRadioCapabilities &sta_caps)
+{
+    LOG(DEBUG) << "sta HT_CAPS:" << std::endl
+               << "bw20 short gi = " << (sta_caps.ht_low_bw_short_gi ? "true" : "false")
+               << std::endl
+               << "bw40 short gi = " << (sta_caps.ht_high_bw_short_gi ? "true" : "false")
+               << std::endl
+               << "ht_mcs = " << ((int(sta_caps.ht_mcs)) ? std::to_string(sta_caps.ht_mcs) : "n/a")
+               << std::endl
+               << "ht_ss = " << ((int(sta_caps.ht_ss)) ? std::to_string(sta_caps.ht_ss) : "n/a")
+               << std::endl
+               << "ht_bw = "
+               << ((sta_caps.ht_bw != beerocks::BANDWIDTH_UNKNOWN &&
+                    sta_caps.ht_bw < beerocks::BANDWIDTH_MAX)
+                       ? std::to_string(beerocks::utils::convert_bandwidth_to_int(
+                             beerocks::eWiFiBandwidth(sta_caps.ht_bw)))
+                       : "n/a")
+               << std::endl
+               << "ht_sm_power_save = " << ([](uint8_t n) {
+                      switch (n) {
+                      case beerocks::HT_SM_POWER_SAVE_MODE_STATIC:
+                          return "static";
+                      case beerocks::HT_SM_POWER_SAVE_MODE_DYNAMIC:
+                          return "dynamic";
+                      case beerocks::HT_SM_POWER_SAVE_MODE_RESERVED:
+                          return "reserved(ERROR)";
+                      case beerocks::HT_SM_POWER_SAVE_MODE_DISABLED:
+                          return "disabled";
+                      }
+                      return "ERROR";
+                  })(sta_caps.ht_sm_power_save);
+    LOG(DEBUG) << "sta VHT_CAPS:" << std::endl
+               << "bw80 short gi = " << (sta_caps.vht_low_bw_short_gi ? "true" : "false")
+               << std::endl
+               << "bw160 short gi = " << (sta_caps.vht_high_bw_short_gi ? "true" : "false")
+               << std::endl
+               << "vht_ss = " << ((int(sta_caps.vht_ss)) ? std::to_string(sta_caps.vht_ss) : "n/a")
+               << std::endl
+               << "vht_mcs = "
+               << ((int(sta_caps.vht_mcs)) ? std::to_string(sta_caps.vht_mcs) : "n/a") << std::endl
+               << "vht_bw = "
+               << ((sta_caps.vht_bw != beerocks::BANDWIDTH_UNKNOWN &&
+                    sta_caps.vht_bw < beerocks::BANDWIDTH_MAX)
+                       ? std::to_string(beerocks::utils::convert_bandwidth_to_int(
+                             beerocks::eWiFiBandwidth(sta_caps.vht_bw)))
+                       : "n/a");
+    LOG(DEBUG) << "sta DEFAULT_CAPS:" << std::endl
+               << "default_mcs = " << int(sta_caps.default_mcs) << std::endl
+               << "default_short_gi = " << int(sta_caps.default_short_gi);
+    LOG(DEBUG) << "sta OTHER_CAPS:" << std::endl
+               << "wifi_standard [enum] = " << int(sta_caps.wifi_standard) << std::endl
+               << "btm_supported = " << (sta_caps.btm_supported ? "true" : "false") << std::endl
+               << "nr_enabled = " << (sta_caps.nr_enabled ? "true" : "false") << std::endl
+               << "cell_capa = " << int(sta_caps.cell_capa) << std::endl
+               << "link_meas = " << int(sta_caps.link_meas) << std::endl
+               << "beacon_report_passive = " << int(sta_caps.beacon_report_passive) << std::endl
+               << "beacon_report_active = " << int(sta_caps.beacon_report_active) << std::endl
+               << "beacon_report_table = " << int(sta_caps.beacon_report_table) << std::endl
+               << "lci_meas = " << int(sta_caps.lci_meas) << std::endl
+               << "fmt_range_report = " << int(sta_caps.fmt_range_report);
+}

@@ -167,6 +167,7 @@ if (BUILD_TESTS)
         ${bwl_common_sources} 
         ${bwl_platform_sources} 
         ${MODULE_PATH}/unit_tests/action_frame_parsing_test.cpp
+        ${MODULE_PATH}/unit_tests/assoc_frame_body_extract_test.cpp
         ${MODULE_PATH}/unit_tests/nl80211_client_impl_test.cpp
         ${MODULE_PATH}/unit_tests/nl80211_client_test.cpp
     )

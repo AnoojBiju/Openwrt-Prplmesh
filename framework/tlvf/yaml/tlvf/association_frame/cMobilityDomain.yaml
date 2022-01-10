@@ -7,6 +7,7 @@ _namespace: assoc_frame
 
 cMobilityDomain:
   _type: class
+  _is_tlv_class: True
   type:
     _type: eElementID
     _value: ID_MOBILITY_DOMAIN

@@ -21,6 +21,7 @@
 #include <tlvf/BaseClass.h>
 #include <tlvf/ClassList.h>
 #include <tuple>
+#include "tlvf/common/sMacAddr.h"
 #include "tlvf/association_frame/eElementID.h"
 #include "tlvf/AssociationRequestFrame/assoc_frame_bitfields.h"
 
@@ -37,19 +38,14 @@ class cCurrentApAddress : public BaseClass
         explicit cCurrentApAddress(std::shared_ptr<BaseClass> base, bool parse = false);
         ~cCurrentApAddress();
 
-        std::string ap_addr_str();
-        char* ap_addr(size_t length = 0);
-        bool set_ap_addr(const std::string& str);
-        bool set_ap_addr(const char buffer[], size_t size);
+        sMacAddr& ap_addr();
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
 
     private:
         bool init();
-        char* m_ap_addr = nullptr;
-        size_t m_ap_addr_idx__ = 0;
-        int m_lock_order_counter__ = 0;
+        sMacAddr* m_ap_addr = nullptr;
 };
 
 class cFastBssTrans : public BaseClass

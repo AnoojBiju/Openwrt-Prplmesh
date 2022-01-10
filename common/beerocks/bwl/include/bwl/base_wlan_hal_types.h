@@ -375,6 +375,7 @@ enum class eManagementFrameType {
  */
 struct sMGMT_FRAME_NOTIFICATION {
     sMacAddr mac;              /**< The MAC address of the station */
+    sMacAddr bssid;            /**< The MAC address of the AP */
     eManagementFrameType type; /**< The type of the management frame */
     std::vector<uint8_t> data; /**< Frame body */
 };

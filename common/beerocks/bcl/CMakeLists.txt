@@ -63,6 +63,7 @@ if (BUILD_TESTS)
         ${MODULE_PATH}/unit_tests/ucc_server_impl_test.cpp
         ${MODULE_PATH}/unit_tests/wireless_utils_test.cpp
         ${MODULE_PATH}/unit_tests/beerocks_utils_test.cpp
+        ${MODULE_PATH}/unit_tests/assoc_frame_utils_test.cpp
     )
     add_executable(${TEST_PROJECT_NAME}
         ${unit_tests_sources}

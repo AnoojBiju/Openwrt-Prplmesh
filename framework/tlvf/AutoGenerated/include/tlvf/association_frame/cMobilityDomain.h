@@ -52,7 +52,7 @@ class cMobilityDomain : public BaseClass
         } __attribute__((packed)) sFtCapabilityPolicy;
         
         eElementID& type();
-        uint8_t& length();
+        const uint8_t& length();
         uint16_t& mdid();
         sFtCapabilityPolicy& ft_cap_policy();
         void class_swap() override;

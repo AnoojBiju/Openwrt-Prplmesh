@@ -629,8 +629,9 @@ bool tlvTestVarList::init()
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint32_t); }
     m_unknown_length_list = reinterpret_cast<cInner*>(m_buff_ptr__);
     if (m_length && m_parse__) {
-        size_t len = *m_length;
-        tlvf_swap(16, reinterpret_cast<uint8_t*>(&len));
+        auto swap_len = *m_length;
+        tlvf_swap((sizeof(swap_len) * 8), reinterpret_cast<uint8_t*>(&swap_len));
+        size_t len = swap_len;
         len -= (m_buff_ptr__ - sizeof(*m_type) - sizeof(*m_length) - m_buff__);
         while (len > 0) {
             if (len < cInner::get_initial_size()) {
@@ -880,8 +881,9 @@ bool cInner::init()
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint32_t); }
     m_unknown_length_list_inner = reinterpret_cast<char*>(m_buff_ptr__);
     if (m_length && m_parse__) {
-        size_t len = *m_length;
-        tlvf_swap(16, reinterpret_cast<uint8_t*>(&len));
+        auto swap_len = *m_length;
+        tlvf_swap((sizeof(swap_len) * 8), reinterpret_cast<uint8_t*>(&swap_len));
+        size_t len = swap_len;
         len -= (m_buff_ptr__ - sizeof(*m_type) - sizeof(*m_length) - m_buff__);
         m_unknown_length_list_inner_idx__ = len/sizeof(char);
         if (!buffPtrIncrementSafe(len)) {

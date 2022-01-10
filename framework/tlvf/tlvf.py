@@ -1091,9 +1091,10 @@ class TlvF:
             if is_dynamic_len:
                 if obj_meta.is_tlv_class:
                     lines_cpp.append("if (m_length && m_%s__) {" % self.MEMBER_PARSE)
-                    lines_cpp.append("%ssize_t len = *m_length;" % (self.getIndentation(1)))
-                    lines_cpp.append("%stlvf_swap(16, reinterpret_cast<uint8_t*>(&len));" %
+                    lines_cpp.append("%sauto swap_len = *m_length;" % (self.getIndentation(1)))
+                    lines_cpp.append("%stlvf_swap((sizeof(swap_len) * 8), reinterpret_cast<uint8_t*>(&swap_len));" %
                                      (self.getIndentation(1)))
+                    lines_cpp.append("%ssize_t len = swap_len;" % (self.getIndentation(1)))
                     lines_cpp.append("%slen -= (m_%s__ - sizeof(*m_type) - sizeof(*m_length) - m_%s__);" %
                                      (self.getIndentation(1), self.MEMBER_BUFF_PTR, self.MEMBER_BUFF))
                 else:

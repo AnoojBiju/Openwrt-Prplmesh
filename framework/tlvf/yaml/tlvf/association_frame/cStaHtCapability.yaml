@@ -8,6 +8,7 @@ _namespace: assoc_frame
 
 cStaHtCapability:
   _type: class
+  _is_tlv_class: True
   type:
     _type: eElementID
     _value: ID_HT_CAPABILITY
@@ -27,8 +28,8 @@ sA_MpduParam:
   _type: struct
   _bit_field: uint8_t
   reserved:
-    _bit_range: [1,0]
-  txop_request:
-    _bit_range: [4,2]
-  queue_request:
     _bit_range: [7,5]
+  min_mpdu_start_spacing:
+    _bit_range: [4,2]
+  max_ampdu_len_expo:
+    _bit_range: [1,0]

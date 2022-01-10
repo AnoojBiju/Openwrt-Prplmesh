@@ -85,14 +85,13 @@ bool cSSID::alloc_ssid(size_t count) {
         return false;
     }
     m_lock_order_counter__ = 0;
-    uint8_t *src = (uint8_t *)&m_ssid[*m_length];
+    uint8_t *src = (uint8_t *)&m_ssid[m_ssid_idx__];
     uint8_t *dst = src + len;
     if (!m_parse__) {
         size_t move_length = getBuffRemainingBytes(src) - len;
         std::copy_n(src, move_length, dst);
     }
     m_ssid_idx__ += count;
-    *m_length += count;
     if (!buffPtrIncrementSafe(len)) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
         return false;
@@ -160,114 +159,17 @@ bool cSSID::init()
         return false;
     }
     m_ssid = reinterpret_cast<char*>(m_buff_ptr__);
-    uint8_t length = *m_length;
-    m_ssid_idx__ = length;
-    if (!buffPtrIncrementSafe(sizeof(char) * (length))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (length) << ") Failed!";
-        return false;
-    }
-    if (m_parse__) { class_swap(); }
-    return true;
-}
-
-cSupportedChannels::cSupportedChannels(uint8_t* buff, size_t buff_len, bool parse) :
-    BaseClass(buff, buff_len, parse) {
-    m_init_succeeded = init();
-}
-cSupportedChannels::cSupportedChannels(std::shared_ptr<BaseClass> base, bool parse) :
-BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
-    m_init_succeeded = init();
-}
-cSupportedChannels::~cSupportedChannels() {
-}
-eElementID& cSupportedChannels::type() {
-    return (eElementID&)(*m_type);
-}
-
-const uint8_t& cSupportedChannels::length() {
-    return (const uint8_t&)(*m_length);
-}
-
-uint8_t& cSupportedChannels::first_ch_num() {
-    return (uint8_t&)(*m_first_ch_num);
-}
-
-uint8_t& cSupportedChannels::channels_number() {
-    return (uint8_t&)(*m_channels_number);
-}
-
-void cSupportedChannels::class_swap()
-{
-}
-
-bool cSupportedChannels::finalize()
-{
-    if (m_parse__) {
-        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
-        return true;
-    }
-    if (m_finalized__) {
-        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
-        return true;
-    }
-    if (!isPostInitSucceeded()) {
-        TLVF_LOG(ERROR) << "post init check failed";
-        return false;
-    }
-    if (m_inner__) {
-        if (!m_inner__->finalize()) {
-            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
+    if (m_length && m_parse__) {
+        auto swap_len = *m_length;
+        tlvf_swap((sizeof(swap_len) * 8), reinterpret_cast<uint8_t*>(&swap_len));
+        size_t len = swap_len;
+        len -= (m_buff_ptr__ - sizeof(*m_type) - sizeof(*m_length) - m_buff__);
+        m_ssid_idx__ = len/sizeof(char);
+        if (!buffPtrIncrementSafe(len)) {
+            LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
             return false;
         }
-        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
-        m_buff_ptr__ -= tailroom;
-        *m_length -= tailroom;
     }
-    class_swap();
-    m_finalized__ = true;
-    return true;
-}
-
-size_t cSupportedChannels::get_initial_size()
-{
-    size_t class_size = 0;
-    class_size += sizeof(eElementID); // type
-    class_size += sizeof(uint8_t); // length
-    class_size += sizeof(uint8_t); // first_ch_num
-    class_size += sizeof(uint8_t); // channels_number
-    return class_size;
-}
-
-bool cSupportedChannels::init()
-{
-    if (getBuffRemainingBytes() < get_initial_size()) {
-        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
-        return false;
-    }
-    m_type = reinterpret_cast<eElementID*>(m_buff_ptr__);
-    if (!m_parse__) *m_type = ID_SUP_CHANNELS;
-    if (!buffPtrIncrementSafe(sizeof(eElementID))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(eElementID) << ") Failed!";
-        return false;
-    }
-    m_length = reinterpret_cast<uint8_t*>(m_buff_ptr__);
-    if (!m_parse__) *m_length = 0;
-    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
-        return false;
-    }
-    m_first_ch_num = reinterpret_cast<uint8_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
-        return false;
-    }
-    if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_channels_number = reinterpret_cast<uint8_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
-        return false;
-    }
-    if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
     if (m_parse__) { class_swap(); }
     return true;
 }
@@ -294,7 +196,7 @@ uint16_t& cRSN::version() {
     return (uint16_t&)(*m_version);
 }
 
-uint16_t* cRSN::optional(size_t idx) {
+uint8_t* cRSN::optional(size_t idx) {
     if ( (m_optional_idx__ == 0) || (m_optional_idx__ <= idx) ) {
         TLVF_LOG(ERROR) << "Requested index is greater than the number of available entries";
         return nullptr;
@@ -302,12 +204,25 @@ uint16_t* cRSN::optional(size_t idx) {
     return &(m_optional[idx]);
 }
 
+bool cRSN::set_optional(const void* buffer, size_t size) {
+    if (buffer == nullptr) {
+        TLVF_LOG(WARNING) << "set_optional received a null pointer.";
+        return false;
+    }
+    if (m_optional_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_optional was already allocated!";
+        return false;
+    }
+    if (!alloc_optional(size)) { return false; }
+    std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_optional);
+    return true;
+}
 bool cRSN::alloc_optional(size_t count) {
     if (m_lock_order_counter__ > 0) {;
         TLVF_LOG(ERROR) << "Out of order allocation for variable length list optional, abort!";
         return false;
     }
-    size_t len = sizeof(uint16_t) * count;
+    size_t len = sizeof(uint8_t) * count;
     if(getBuffRemainingBytes() < len )  {
         TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
         return false;
@@ -331,9 +246,6 @@ bool cRSN::alloc_optional(size_t count) {
 void cRSN::class_swap()
 {
     tlvf_swap(16, reinterpret_cast<uint8_t*>(m_version));
-    for (size_t i = 0; i < m_optional_idx__; i++){
-        tlvf_swap(16, reinterpret_cast<uint8_t*>(&m_optional[i]));
-    }
 }
 
 bool cRSN::finalize()
@@ -397,12 +309,13 @@ bool cRSN::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint16_t); }
-    m_optional = reinterpret_cast<uint16_t*>(m_buff_ptr__);
+    m_optional = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (m_length && m_parse__) {
-        size_t len = *m_length;
-        tlvf_swap(16, reinterpret_cast<uint8_t*>(&len));
+        auto swap_len = *m_length;
+        tlvf_swap((sizeof(swap_len) * 8), reinterpret_cast<uint8_t*>(&swap_len));
+        size_t len = swap_len;
         len -= (m_buff_ptr__ - sizeof(*m_type) - sizeof(*m_length) - m_buff__);
-        m_optional_idx__ = len/sizeof(uint16_t);
+        m_optional_idx__ = len/sizeof(uint8_t);
         if (!buffPtrIncrementSafe(len)) {
             LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
             return false;
@@ -548,8 +461,9 @@ bool cSupportedOpClasses::init()
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
     m_op_classes = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (m_length && m_parse__) {
-        size_t len = *m_length;
-        tlvf_swap(16, reinterpret_cast<uint8_t*>(&len));
+        auto swap_len = *m_length;
+        tlvf_swap((sizeof(swap_len) * 8), reinterpret_cast<uint8_t*>(&swap_len));
+        size_t len = swap_len;
         len -= (m_buff_ptr__ - sizeof(*m_type) - sizeof(*m_length) - m_buff__);
         m_op_classes_idx__ = len/sizeof(uint8_t);
         if (!buffPtrIncrementSafe(len)) {
@@ -611,14 +525,13 @@ bool cSupportRates::alloc_supported_rated(size_t count) {
         return false;
     }
     m_lock_order_counter__ = 0;
-    uint8_t *src = (uint8_t *)&m_supported_rated[*m_length];
+    uint8_t *src = (uint8_t *)&m_supported_rated[m_supported_rated_idx__];
     uint8_t *dst = src + len;
     if (!m_parse__) {
         size_t move_length = getBuffRemainingBytes(src) - len;
         std::copy_n(src, move_length, dst);
     }
     m_supported_rated_idx__ += count;
-    *m_length += count;
     if (!buffPtrIncrementSafe(len)) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
         return false;
@@ -686,11 +599,16 @@ bool cSupportRates::init()
         return false;
     }
     m_supported_rated = reinterpret_cast<uint8_t*>(m_buff_ptr__);
-    uint8_t length = *m_length;
-    m_supported_rated_idx__ = length;
-    if (!buffPtrIncrementSafe(sizeof(uint8_t) * (length))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) * (length) << ") Failed!";
-        return false;
+    if (m_length && m_parse__) {
+        auto swap_len = *m_length;
+        tlvf_swap((sizeof(swap_len) * 8), reinterpret_cast<uint8_t*>(&swap_len));
+        size_t len = swap_len;
+        len -= (m_buff_ptr__ - sizeof(*m_type) - sizeof(*m_length) - m_buff__);
+        m_supported_rated_idx__ = len/sizeof(uint8_t);
+        if (!buffPtrIncrementSafe(len)) {
+            LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
+            return false;
+        }
     }
     if (m_parse__) { class_swap(); }
     return true;
@@ -746,14 +664,13 @@ bool cExtendedSupportRates::alloc_extended_suport_rated(size_t count) {
         return false;
     }
     m_lock_order_counter__ = 0;
-    uint8_t *src = (uint8_t *)&m_extended_suport_rated[*m_length];
+    uint8_t *src = (uint8_t *)&m_extended_suport_rated[m_extended_suport_rated_idx__];
     uint8_t *dst = src + len;
     if (!m_parse__) {
         size_t move_length = getBuffRemainingBytes(src) - len;
         std::copy_n(src, move_length, dst);
     }
     m_extended_suport_rated_idx__ += count;
-    *m_length += count;
     if (!buffPtrIncrementSafe(len)) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
         return false;
@@ -821,11 +738,16 @@ bool cExtendedSupportRates::init()
         return false;
     }
     m_extended_suport_rated = reinterpret_cast<uint8_t*>(m_buff_ptr__);
-    uint8_t length = *m_length;
-    m_extended_suport_rated_idx__ = length;
-    if (!buffPtrIncrementSafe(sizeof(uint8_t) * (length))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) * (length) << ") Failed!";
-        return false;
+    if (m_length && m_parse__) {
+        auto swap_len = *m_length;
+        tlvf_swap((sizeof(swap_len) * 8), reinterpret_cast<uint8_t*>(&swap_len));
+        size_t len = swap_len;
+        len -= (m_buff_ptr__ - sizeof(*m_type) - sizeof(*m_length) - m_buff__);
+        m_extended_suport_rated_idx__ = len/sizeof(uint8_t);
+        if (!buffPtrIncrementSafe(len)) {
+            LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
+            return false;
+        }
     }
     if (m_parse__) { class_swap(); }
     return true;
@@ -1353,8 +1275,9 @@ bool cInterworking::init()
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
     m_optional_params = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (m_length && m_parse__) {
-        size_t len = *m_length;
-        tlvf_swap(16, reinterpret_cast<uint8_t*>(&len));
+        auto swap_len = *m_length;
+        tlvf_swap((sizeof(swap_len) * 8), reinterpret_cast<uint8_t*>(&swap_len));
+        size_t len = swap_len;
         len -= (m_buff_ptr__ - sizeof(*m_type) - sizeof(*m_length) - m_buff__);
         m_optional_params_idx__ = len/sizeof(uint8_t);
         if (!buffPtrIncrementSafe(len)) {
@@ -1400,38 +1323,10 @@ uint8_t& cMultiBand::channel_num() {
     return (uint8_t&)(*m_channel_num);
 }
 
-std::string cMultiBand::bssid_str() {
-    char *bssid_ = bssid();
-    if (!bssid_) { return std::string(); }
-    auto str = std::string(bssid_, m_bssid_idx__);
-    auto pos = str.find_first_of('\0');
-    if (pos != std::string::npos) {
-        str.erase(pos);
-    }
-    return str;
+sMacAddr& cMultiBand::bssid() {
+    return (sMacAddr&)(*m_bssid);
 }
 
-char* cMultiBand::bssid(size_t length) {
-    if( (m_bssid_idx__ == 0) || (m_bssid_idx__ < length) ) {
-        TLVF_LOG(ERROR) << "bssid length is smaller than requested length";
-        return nullptr;
-    }
-    return ((char*)m_bssid);
-}
-
-bool cMultiBand::set_bssid(const std::string& str) { return set_bssid(str.c_str(), str.size()); }
-bool cMultiBand::set_bssid(const char str[], size_t size) {
-    if (str == nullptr) {
-        TLVF_LOG(WARNING) << "set_bssid received a null pointer.";
-        return false;
-    }
-    if (size > assoc_frame::MAC_ADDR_LEN) {
-        TLVF_LOG(ERROR) << "Received buffer size is smaller than string length";
-        return false;
-    }
-    std::copy(str, str + size, m_bssid);
-    return true;
-}
 uint8_t& cMultiBand::beacon_interval() {
     return (uint8_t&)(*m_beacon_interval);
 }
@@ -1470,6 +1365,7 @@ uint8_t& cMultiBand::optional() {
 
 void cMultiBand::class_swap()
 {
+    m_bssid->struct_swap();
 }
 
 bool cMultiBand::finalize()
@@ -1509,7 +1405,7 @@ size_t cMultiBand::get_initial_size()
     class_size += sizeof(uint8_t); // band_id
     class_size += sizeof(uint8_t); // op_class
     class_size += sizeof(uint8_t); // channel_num
-    class_size += assoc_frame::MAC_ADDR_LEN * sizeof(char); // bssid
+    class_size += sizeof(sMacAddr); // bssid
     class_size += sizeof(uint8_t); // beacon_interval
     class_size += 8 * sizeof(uint8_t); // tsf_offset
     class_size += sizeof(uint8_t); // multi_band_con_cap
@@ -1560,15 +1456,13 @@ bool cMultiBand::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_bssid = reinterpret_cast<char*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(char) * (assoc_frame::MAC_ADDR_LEN))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (assoc_frame::MAC_ADDR_LEN) << ") Failed!";
+    m_bssid = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(sMacAddr))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sMacAddr) << ") Failed!";
         return false;
     }
-    m_bssid_idx__  = assoc_frame::MAC_ADDR_LEN;
-    if (!m_parse__) {
-        if (m_length) { (*m_length) += (sizeof(char) * assoc_frame::MAC_ADDR_LEN); }
-    }
+    if(m_length && !m_parse__){ (*m_length) += sizeof(sMacAddr); }
+    if (!m_parse__) { m_bssid->struct_init(); }
     m_beacon_interval = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
@@ -1624,38 +1518,10 @@ const uint8_t& cDmgCapabilities::length() {
     return (const uint8_t&)(*m_length);
 }
 
-std::string cDmgCapabilities::bssid_str() {
-    char *bssid_ = bssid();
-    if (!bssid_) { return std::string(); }
-    auto str = std::string(bssid_, m_bssid_idx__);
-    auto pos = str.find_first_of('\0');
-    if (pos != std::string::npos) {
-        str.erase(pos);
-    }
-    return str;
+sMacAddr& cDmgCapabilities::bssid() {
+    return (sMacAddr&)(*m_bssid);
 }
 
-char* cDmgCapabilities::bssid(size_t length) {
-    if( (m_bssid_idx__ == 0) || (m_bssid_idx__ < length) ) {
-        TLVF_LOG(ERROR) << "bssid length is smaller than requested length";
-        return nullptr;
-    }
-    return ((char*)m_bssid);
-}
-
-bool cDmgCapabilities::set_bssid(const std::string& str) { return set_bssid(str.c_str(), str.size()); }
-bool cDmgCapabilities::set_bssid(const char str[], size_t size) {
-    if (str == nullptr) {
-        TLVF_LOG(WARNING) << "set_bssid received a null pointer.";
-        return false;
-    }
-    if (size > assoc_frame::MAC_ADDR_LEN) {
-        TLVF_LOG(ERROR) << "Received buffer size is smaller than string length";
-        return false;
-    }
-    std::copy(str, str + size, m_bssid);
-    return true;
-}
 uint8_t& cDmgCapabilities::aid() {
     return (uint8_t&)(*m_aid);
 }
@@ -1702,6 +1568,7 @@ uint8_t& cDmgCapabilities::short_amsdu_subframe_max_num() {
 
 void cDmgCapabilities::class_swap()
 {
+    m_bssid->struct_swap();
     tlvf_swap(16, reinterpret_cast<uint8_t*>(m_dmg_ap));
     tlvf_swap(16, reinterpret_cast<uint8_t*>(m_dmg_sta_beam_track_time_lim));
 }
@@ -1739,7 +1606,7 @@ size_t cDmgCapabilities::get_initial_size()
     size_t class_size = 0;
     class_size += sizeof(eElementID); // type
     class_size += sizeof(uint8_t); // length
-    class_size += assoc_frame::MAC_ADDR_LEN * sizeof(char); // bssid
+    class_size += sizeof(sMacAddr); // bssid
     class_size += sizeof(uint8_t); // aid
     class_size += 8 * sizeof(uint8_t); // dmg_sta_cap_info
     class_size += sizeof(uint16_t); // dmg_ap
@@ -1768,15 +1635,13 @@ bool cDmgCapabilities::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_bssid = reinterpret_cast<char*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(char) * (assoc_frame::MAC_ADDR_LEN))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (assoc_frame::MAC_ADDR_LEN) << ") Failed!";
+    m_bssid = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(sMacAddr))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sMacAddr) << ") Failed!";
         return false;
     }
-    m_bssid_idx__  = assoc_frame::MAC_ADDR_LEN;
-    if (!m_parse__) {
-        if (m_length) { (*m_length) += (sizeof(char) * assoc_frame::MAC_ADDR_LEN); }
-    }
+    if(m_length && !m_parse__){ (*m_length) += sizeof(sMacAddr); }
+    if (!m_parse__) { m_bssid->struct_init(); }
     m_aid = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
@@ -1848,38 +1713,10 @@ uint8_t& cMultipleMacSublayers::mms_control() {
     return (uint8_t&)(*m_mms_control);
 }
 
-std::string cMultipleMacSublayers::sta_mac_str() {
-    char *sta_mac_ = sta_mac();
-    if (!sta_mac_) { return std::string(); }
-    auto str = std::string(sta_mac_, m_sta_mac_idx__);
-    auto pos = str.find_first_of('\0');
-    if (pos != std::string::npos) {
-        str.erase(pos);
-    }
-    return str;
+sMacAddr& cMultipleMacSublayers::sta_mac() {
+    return (sMacAddr&)(*m_sta_mac);
 }
 
-char* cMultipleMacSublayers::sta_mac(size_t length) {
-    if( (m_sta_mac_idx__ == 0) || (m_sta_mac_idx__ < length) ) {
-        TLVF_LOG(ERROR) << "sta_mac length is smaller than requested length";
-        return nullptr;
-    }
-    return ((char*)m_sta_mac);
-}
-
-bool cMultipleMacSublayers::set_sta_mac(const std::string& str) { return set_sta_mac(str.c_str(), str.size()); }
-bool cMultipleMacSublayers::set_sta_mac(const char str[], size_t size) {
-    if (str == nullptr) {
-        TLVF_LOG(WARNING) << "set_sta_mac received a null pointer.";
-        return false;
-    }
-    if (size > assoc_frame::MAC_ADDR_LEN) {
-        TLVF_LOG(ERROR) << "Received buffer size is smaller than string length";
-        return false;
-    }
-    std::copy(str, str + size, m_sta_mac);
-    return true;
-}
 uint8_t* cMultipleMacSublayers::interface_addr(size_t idx) {
     if ( (m_interface_addr_idx__ == 0) || (m_interface_addr_idx__ <= idx) ) {
         TLVF_LOG(ERROR) << "Requested index is greater than the number of available entries";
@@ -1929,6 +1766,7 @@ bool cMultipleMacSublayers::alloc_interface_addr(size_t count) {
 
 void cMultipleMacSublayers::class_swap()
 {
+    m_sta_mac->struct_swap();
 }
 
 bool cMultipleMacSublayers::finalize()
@@ -1965,7 +1803,7 @@ size_t cMultipleMacSublayers::get_initial_size()
     class_size += sizeof(eElementID); // type
     class_size += sizeof(uint8_t); // length
     class_size += sizeof(uint8_t); // mms_control
-    class_size += assoc_frame::MAC_ADDR_LEN * sizeof(char); // sta_mac
+    class_size += sizeof(sMacAddr); // sta_mac
     return class_size;
 }
 
@@ -1993,19 +1831,18 @@ bool cMultipleMacSublayers::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_sta_mac = reinterpret_cast<char*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(char) * (assoc_frame::MAC_ADDR_LEN))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (assoc_frame::MAC_ADDR_LEN) << ") Failed!";
+    m_sta_mac = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(sMacAddr))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sMacAddr) << ") Failed!";
         return false;
     }
-    m_sta_mac_idx__  = assoc_frame::MAC_ADDR_LEN;
-    if (!m_parse__) {
-        if (m_length) { (*m_length) += (sizeof(char) * assoc_frame::MAC_ADDR_LEN); }
-    }
+    if(m_length && !m_parse__){ (*m_length) += sizeof(sMacAddr); }
+    if (!m_parse__) { m_sta_mac->struct_init(); }
     m_interface_addr = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (m_length && m_parse__) {
-        size_t len = *m_length;
-        tlvf_swap(16, reinterpret_cast<uint8_t*>(&len));
+        auto swap_len = *m_length;
+        tlvf_swap((sizeof(swap_len) * 8), reinterpret_cast<uint8_t*>(&swap_len));
+        size_t len = swap_len;
         len -= (m_buff_ptr__ - sizeof(*m_type) - sizeof(*m_length) - m_buff__);
         m_interface_addr_idx__ = len/sizeof(uint8_t);
         if (!buffPtrIncrementSafe(len)) {
@@ -2104,6 +1941,324 @@ bool cOperatingModeNotify::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
+    if (m_parse__) { class_swap(); }
+    return true;
+}
+
+cVendorSpecific::cVendorSpecific(uint8_t* buff, size_t buff_len, bool parse) :
+    BaseClass(buff, buff_len, parse) {
+    m_init_succeeded = init();
+}
+cVendorSpecific::cVendorSpecific(std::shared_ptr<BaseClass> base, bool parse) :
+BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
+    m_init_succeeded = init();
+}
+cVendorSpecific::~cVendorSpecific() {
+}
+eElementID& cVendorSpecific::type() {
+    return (eElementID&)(*m_type);
+}
+
+const uint8_t& cVendorSpecific::length() {
+    return (const uint8_t&)(*m_length);
+}
+
+uint8_t* cVendorSpecific::oui(size_t idx) {
+    if ( (m_oui_idx__ == 0) || (m_oui_idx__ <= idx) ) {
+        TLVF_LOG(ERROR) << "Requested index is greater than the number of available entries";
+        return nullptr;
+    }
+    return &(m_oui[idx]);
+}
+
+bool cVendorSpecific::set_oui(const void* buffer, size_t size) {
+    if (buffer == nullptr) {
+        TLVF_LOG(WARNING) << "set_oui received a null pointer.";
+        return false;
+    }
+    if (size > 3) {
+        TLVF_LOG(ERROR) << "Received buffer size is smaller than buffer length";
+        return false;
+    }
+    std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_oui);
+    return true;
+}
+uint8_t& cVendorSpecific::oui_type() {
+    return (uint8_t&)(*m_oui_type);
+}
+
+uint8_t* cVendorSpecific::data(size_t idx) {
+    if ( (m_data_idx__ == 0) || (m_data_idx__ <= idx) ) {
+        TLVF_LOG(ERROR) << "Requested index is greater than the number of available entries";
+        return nullptr;
+    }
+    return &(m_data[idx]);
+}
+
+bool cVendorSpecific::set_data(const void* buffer, size_t size) {
+    if (buffer == nullptr) {
+        TLVF_LOG(WARNING) << "set_data received a null pointer.";
+        return false;
+    }
+    if (m_data_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_data was already allocated!";
+        return false;
+    }
+    if (!alloc_data(size)) { return false; }
+    std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_data);
+    return true;
+}
+bool cVendorSpecific::alloc_data(size_t count) {
+    if (m_lock_order_counter__ > 0) {;
+        TLVF_LOG(ERROR) << "Out of order allocation for variable length list data, abort!";
+        return false;
+    }
+    size_t len = sizeof(uint8_t) * count;
+    if(getBuffRemainingBytes() < len )  {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
+        return false;
+    }
+    m_lock_order_counter__ = 0;
+    uint8_t *src = (uint8_t *)&m_data[m_data_idx__];
+    uint8_t *dst = src + len;
+    if (!m_parse__) {
+        size_t move_length = getBuffRemainingBytes(src) - len;
+        std::copy_n(src, move_length, dst);
+    }
+    m_data_idx__ += count;
+    if (!buffPtrIncrementSafe(len)) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
+        return false;
+    }
+    if(m_length){ (*m_length) += len; }
+    return true;
+}
+
+void cVendorSpecific::class_swap()
+{
+}
+
+bool cVendorSpecific::finalize()
+{
+    if (m_parse__) {
+        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
+        return true;
+    }
+    if (m_finalized__) {
+        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
+        return true;
+    }
+    if (!isPostInitSucceeded()) {
+        TLVF_LOG(ERROR) << "post init check failed";
+        return false;
+    }
+    if (m_inner__) {
+        if (!m_inner__->finalize()) {
+            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
+            return false;
+        }
+        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
+        m_buff_ptr__ -= tailroom;
+        *m_length -= tailroom;
+    }
+    class_swap();
+    m_finalized__ = true;
+    return true;
+}
+
+size_t cVendorSpecific::get_initial_size()
+{
+    size_t class_size = 0;
+    class_size += sizeof(eElementID); // type
+    class_size += sizeof(uint8_t); // length
+    class_size += 3 * sizeof(uint8_t); // oui
+    class_size += sizeof(uint8_t); // oui_type
+    return class_size;
+}
+
+bool cVendorSpecific::init()
+{
+    if (getBuffRemainingBytes() < get_initial_size()) {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
+        return false;
+    }
+    m_type = reinterpret_cast<eElementID*>(m_buff_ptr__);
+    if (!m_parse__) *m_type = ID_VENDOR_SPECIFIC;
+    if (!buffPtrIncrementSafe(sizeof(eElementID))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(eElementID) << ") Failed!";
+        return false;
+    }
+    m_length = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!m_parse__) *m_length = 0;
+    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
+        return false;
+    }
+    m_oui = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint8_t) * (3))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) * (3) << ") Failed!";
+        return false;
+    }
+    m_oui_idx__  = 3;
+    if (!m_parse__) {
+        if (m_length) { (*m_length) += (sizeof(uint8_t) * 3); }
+    }
+    m_oui_type = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
+        return false;
+    }
+    if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
+    m_data = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (m_length && m_parse__) {
+        auto swap_len = *m_length;
+        tlvf_swap((sizeof(swap_len) * 8), reinterpret_cast<uint8_t*>(&swap_len));
+        size_t len = swap_len;
+        len -= (m_buff_ptr__ - sizeof(*m_type) - sizeof(*m_length) - m_buff__);
+        m_data_idx__ = len/sizeof(uint8_t);
+        if (!buffPtrIncrementSafe(len)) {
+            LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
+            return false;
+        }
+    }
+    if (m_parse__) { class_swap(); }
+    return true;
+}
+
+cUnknownField::cUnknownField(uint8_t* buff, size_t buff_len, bool parse) :
+    BaseClass(buff, buff_len, parse) {
+    m_init_succeeded = init();
+}
+cUnknownField::cUnknownField(std::shared_ptr<BaseClass> base, bool parse) :
+BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
+    m_init_succeeded = init();
+}
+cUnknownField::~cUnknownField() {
+}
+eElementID& cUnknownField::type() {
+    return (eElementID&)(*m_type);
+}
+
+const uint8_t& cUnknownField::length() {
+    return (const uint8_t&)(*m_length);
+}
+
+uint8_t* cUnknownField::data(size_t idx) {
+    if ( (m_data_idx__ == 0) || (m_data_idx__ <= idx) ) {
+        TLVF_LOG(ERROR) << "Requested index is greater than the number of available entries";
+        return nullptr;
+    }
+    return &(m_data[idx]);
+}
+
+bool cUnknownField::set_data(const void* buffer, size_t size) {
+    if (buffer == nullptr) {
+        TLVF_LOG(WARNING) << "set_data received a null pointer.";
+        return false;
+    }
+    if (m_data_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_data was already allocated!";
+        return false;
+    }
+    if (!alloc_data(size)) { return false; }
+    std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_data);
+    return true;
+}
+bool cUnknownField::alloc_data(size_t count) {
+    if (m_lock_order_counter__ > 0) {;
+        TLVF_LOG(ERROR) << "Out of order allocation for variable length list data, abort!";
+        return false;
+    }
+    size_t len = sizeof(uint8_t) * count;
+    if(getBuffRemainingBytes() < len )  {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
+        return false;
+    }
+    m_lock_order_counter__ = 0;
+    uint8_t *src = (uint8_t *)&m_data[m_data_idx__];
+    uint8_t *dst = src + len;
+    if (!m_parse__) {
+        size_t move_length = getBuffRemainingBytes(src) - len;
+        std::copy_n(src, move_length, dst);
+    }
+    m_data_idx__ += count;
+    if (!buffPtrIncrementSafe(len)) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
+        return false;
+    }
+    if(m_length){ (*m_length) += len; }
+    return true;
+}
+
+void cUnknownField::class_swap()
+{
+}
+
+bool cUnknownField::finalize()
+{
+    if (m_parse__) {
+        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
+        return true;
+    }
+    if (m_finalized__) {
+        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
+        return true;
+    }
+    if (!isPostInitSucceeded()) {
+        TLVF_LOG(ERROR) << "post init check failed";
+        return false;
+    }
+    if (m_inner__) {
+        if (!m_inner__->finalize()) {
+            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
+            return false;
+        }
+        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
+        m_buff_ptr__ -= tailroom;
+        *m_length -= tailroom;
+    }
+    class_swap();
+    m_finalized__ = true;
+    return true;
+}
+
+size_t cUnknownField::get_initial_size()
+{
+    size_t class_size = 0;
+    class_size += sizeof(eElementID); // type
+    class_size += sizeof(uint8_t); // length
+    return class_size;
+}
+
+bool cUnknownField::init()
+{
+    if (getBuffRemainingBytes() < get_initial_size()) {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
+        return false;
+    }
+    m_type = reinterpret_cast<eElementID*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(eElementID))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(eElementID) << ") Failed!";
+        return false;
+    }
+    m_length = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!m_parse__) *m_length = 0;
+    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
+        return false;
+    }
+    m_data = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (m_length && m_parse__) {
+        auto swap_len = *m_length;
+        tlvf_swap((sizeof(swap_len) * 8), reinterpret_cast<uint8_t*>(&swap_len));
+        size_t len = swap_len;
+        len -= (m_buff_ptr__ - sizeof(*m_type) - sizeof(*m_length) - m_buff__);
+        m_data_idx__ = len/sizeof(uint8_t);
+        if (!buffPtrIncrementSafe(len)) {
+            LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
+            return false;
+        }
+    }
     if (m_parse__) { class_swap(); }
     return true;
 }
