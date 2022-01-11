@@ -50,6 +50,7 @@ using namespace beerocks;
 using namespace net;
 
 static constexpr uint8_t AUTOCONFIG_DISCOVERY_TIMEOUT_SECONDS = 3;
+static constexpr uint8_t AUTOCONFIG_M2_TIMEOUT_SECONDS        = 5;
 
 #define FSM_MOVE_STATE(radio_iface, new_state)                                                     \
     ({                                                                                             \
@@ -150,10 +151,15 @@ void ApAutoConfigurationTask::work()
         }
         case eState::SEND_AP_AUTOCONFIGURATION_WSC_M1: {
             send_ap_autoconfiguration_wsc_m1_message(radio_iface);
+            conf_params.timeout = std::chrono::steady_clock::now() +
+                                  std::chrono::seconds(AUTOCONFIG_M2_TIMEOUT_SECONDS);
             FSM_MOVE_STATE(radio_iface, eState::WAIT_AP_AUTOCONFIGURATION_WSC_M2);
             break;
         }
         case eState::WAIT_AP_AUTOCONFIGURATION_WSC_M2: {
+            if (std::chrono::steady_clock::now() > conf_params.timeout) {
+                FSM_MOVE_STATE(radio_iface, eState::SEND_AP_AUTOCONFIGURATION_WSC_M1);
+            }
             break;
         }
         case eState::CONFIGIRED: {
