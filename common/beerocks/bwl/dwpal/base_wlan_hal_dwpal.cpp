@@ -1108,26 +1108,9 @@ bool base_wlan_hal_dwpal::process_ext_events()
         } else if (status != DWPAL_NO_PENDING_MESSAGES) {
             ++events_received;
 
-            /* Silencing unhandled multiple events */
-            if (!strncmp(opCode, "WPS-ENROLLEE-SEEN", sizeof(opCode))) {
-                LOG_EVERY_N(UNHANDLED_EVENTS_LOGS, DEBUG)
-                    << "DWPAL unhandled event opcode received: " << opCode;
-                return true;
-            } else if (!strncmp(opCode, "AP-PROBE-REQ-RECEIVED", sizeof(opCode))) {
-                LOG_EVERY_N(UNHANDLED_EVENTS_LOGS, DEBUG)
-                    << "DWPAL unhandled event opcode received: " << opCode;
-                return true;
-            } else if (!strncmp(opCode, "BEACON-REQ-TX-STATUS", sizeof(opCode))) {
-                LOG_EVERY_N(UNHANDLED_EVENTS_LOGS, DEBUG)
-                    << "DWPAL unhandled event opcode received: " << opCode;
-                return true;
-            } else if (!strncmp(opCode, "CTRL-EVENT-BSS-ADDED", sizeof(opCode))) {
-                LOG_EVERY_N(UNHANDLED_EVENTS_LOGS, DEBUG)
-                    << "DWPAL unhandled event opcode received: " << opCode;
-                return true;
-            } else if (!strncmp(opCode, "CTRL-EVENT-BSS-REMOVED", sizeof(opCode))) {
-                LOG_EVERY_N(UNHANDLED_EVENTS_LOGS, DEBUG)
-                    << "DWPAL unhandled event opcode received: " << opCode;
+            /* Silencing unhandled filtered events */
+            if (is_filtered_event(opCode)) {
+                //LOG(DEBUG) << "DWPAL unhandled event opcode received: " << opCode;
                 return true;
             }
 
