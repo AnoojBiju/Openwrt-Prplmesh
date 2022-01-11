@@ -15,6 +15,11 @@ namespace assoc_frame {
 std::shared_ptr<AssocReqFrame> AssocReqFrame::parse(uint8_t *assoc_frame_buff,
                                                     size_t assoc_frame_len, const eFrameType type)
 {
+    if (!assoc_frame_buff) {
+        TLVF_LOG(WARNING) << "Frame data buffer is null";
+        return {};
+    }
+
     if (!assoc_frame_len) {
         TLVF_LOG(WARNING) << "Frame data length is 0";
         return {};
@@ -60,6 +65,13 @@ std::shared_ptr<AssocReqFrame> AssocReqFrame::parse(uint8_t *assoc_frame_buff,
         return {};
     }
     LOG(DEBUG) << fields->type << " parsed successfully";
+
+    /*
+     * swap once to host byte order
+     */
+    if (!fields->is_swapped()) {
+        fields->swap();
+    }
     return fields;
 }
 
@@ -124,6 +136,7 @@ bool AssocReqFrame::add_ssid_field()
 
 bool AssocReqFrame::init()
 {
+    fields_present = {};
     // Parse optional fields.
     while (getRemainingBytes() > 0) {
         switch (getNextAttrType()) {
@@ -290,13 +303,49 @@ bool AssocReqFrame::init()
             break;
 
         case ID_VENDOR_SPECIFIC:
-            LOG(DEBUG) << "Received last field assuming end of fields list";
-            return true;
-        // Other fields are not expected, if so ignore them silently
+            // store vendor specific IEs to manage those common
+            // like MS.Corp WMM/WME
+            // They may be multiple, so shall be accessed
+            // by iteration loop over indexes
+            if (!addAttr<cVendorSpecific>()) {
+                TLVF_LOG(ERROR) << "Failed to add cVendorSpecific";
+                return false;
+            }
+            fields_present.vendor_specific = 1;
+            break;
+        case ID_EID_EXTENSION:
+            switch (getNextAttrHdr()->data()[0]) {
+            case EXTID_HE_CAPABILITIES:
+                if (!addAttr<cStaHeCapability>()) {
+                    TLVF_LOG(ERROR) << "Failed to add cStaHeCapability";
+                    return false;
+                }
+                fields_present.he_capability = 1;
+                break;
+            default:
+                // if Element ID extension is un-handled
+                // then store it like unknown field
+                if (!addAttr<cUnknownField>()) {
+                    TLVF_LOG(DEBUG) << "Failed to add unhandled Element ID extension "
+                                    << getNextAttrHdr()->data()[0];
+                    return false;
+                }
+                break;
+            }
+            break;
+        // Other fields (un-handled) are stored as unknown IE (raw data)
+        // to continue parsing (IEs may be nested)
         default:
-            TLVF_LOG(DEBUG) << "Unknown field " << getNextAttrType()
-                            << " assuming end of the FieldList";
-            return true;
+            TLVF_LOG(DEBUG) << "Unhandled field " << getNextAttrType()
+                            << " : store it and parse next IEs"
+                            << " in RemainingBytes: " << getRemainingBytes();
+            if (!addAttr<cUnknownField>()) {
+                TLVF_LOG(DEBUG) << "Failed to add cUnknownField for ID " << getNextAttrType();
+                // ignore failure appending unhandled fields
+                // and return the available FieldList
+                return true;
+            }
+            break;
         }
     }
     return true;
@@ -392,6 +441,28 @@ bool AssocReqFrame::valid() const
         TLVF_LOG(ERROR) << "getAttr<cOperatingModeNotify> failed";
         return false;
     }
+    if (fields_present.vendor_specific && !getAttr<cVendorSpecific>()) {
+        TLVF_LOG(ERROR) << "getAttr<cVendorSpecific> failed";
+        return false;
+    }
+    if (fields_present.he_capability && !getAttr<cStaHeCapability>()) {
+        TLVF_LOG(ERROR) << "getAttr<cStaHeCapability> failed";
+        return false;
+    }
+    return true;
+}
+
+bool AssocReqFrame::finalize()
+{
+    //finalize last added attribute
+    if (!this->ClassList::finalize()) {
+        return false;
+    }
+
+    //swap once to network byte order
+    if (!this->is_swapped()) {
+        this->swap();
+    }
     return true;
 }
 
@@ -444,6 +515,14 @@ std::shared_ptr<assoc_frame::cMultiBand> AssocReqFrame::multi_band()
     if (fields_present.multi_band) {
         return getAttr<cMultiBand>();
     };
+    return {};
+}
+
+std::shared_ptr<assoc_frame::cStaHeCapability> AssocReqFrame::sta_he_capability()
+{
+    if (fields_present.he_capability) {
+        return getAttr<cStaHeCapability>();
+    }
     return {};
 }
 

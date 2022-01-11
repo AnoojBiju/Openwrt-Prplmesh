@@ -10,6 +10,7 @@ cQosCapability:
     The QoS Capability element is present if
     dot11QosOptionImplemented is true.
   _type: class
+  _is_tlv_class: True
   type:
     _type: eElementID
     _value: ID_RSN

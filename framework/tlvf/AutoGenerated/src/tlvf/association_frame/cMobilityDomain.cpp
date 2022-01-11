@@ -29,8 +29,8 @@ eElementID& cMobilityDomain::type() {
     return (eElementID&)(*m_type);
 }
 
-uint8_t& cMobilityDomain::length() {
-    return (uint8_t&)(*m_length);
+const uint8_t& cMobilityDomain::length() {
+    return (const uint8_t&)(*m_length);
 }
 
 uint16_t& cMobilityDomain::mdid() {
@@ -68,6 +68,7 @@ bool cMobilityDomain::finalize()
         }
         auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
         m_buff_ptr__ -= tailroom;
+        *m_length -= tailroom;
     }
     class_swap();
     m_finalized__ = true;
@@ -97,6 +98,7 @@ bool cMobilityDomain::init()
         return false;
     }
     m_length = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!m_parse__) *m_length = 0;
     if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
@@ -106,11 +108,13 @@ bool cMobilityDomain::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
         return false;
     }
+    if(m_length && !m_parse__){ (*m_length) += sizeof(uint16_t); }
     m_ft_cap_policy = reinterpret_cast<sFtCapabilityPolicy*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(sFtCapabilityPolicy))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sFtCapabilityPolicy) << ") Failed!";
         return false;
     }
+    if(m_length && !m_parse__){ (*m_length) += sizeof(sFtCapabilityPolicy); }
     if (!m_parse__) { m_ft_cap_policy->struct_init(); }
     if (m_parse__) { class_swap(); }
     return true;

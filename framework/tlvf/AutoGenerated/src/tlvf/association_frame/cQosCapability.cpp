@@ -29,8 +29,8 @@ eElementID& cQosCapability::type() {
     return (eElementID&)(*m_type);
 }
 
-uint8_t& cQosCapability::length() {
-    return (uint8_t&)(*m_length);
+const uint8_t& cQosCapability::length() {
+    return (const uint8_t&)(*m_length);
 }
 
 cQosCapability::sQosInfo& cQosCapability::qos_info() {
@@ -63,6 +63,7 @@ bool cQosCapability::finalize()
         }
         auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
         m_buff_ptr__ -= tailroom;
+        *m_length -= tailroom;
     }
     class_swap();
     m_finalized__ = true;
@@ -91,6 +92,7 @@ bool cQosCapability::init()
         return false;
     }
     m_length = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!m_parse__) *m_length = 0;
     if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
@@ -100,6 +102,7 @@ bool cQosCapability::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sQosInfo) << ") Failed!";
         return false;
     }
+    if(m_length && !m_parse__){ (*m_length) += sizeof(sQosInfo); }
     if (!m_parse__) { m_qos_info->struct_init(); }
     if (m_parse__) { class_swap(); }
     return true;

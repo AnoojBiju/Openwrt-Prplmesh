@@ -10,6 +10,7 @@
 #include <bcl/beerocks_os_utils.h>
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
+#include <bcl/son/son_assoc_frame_utils.h>
 #include <bcl/son/son_wireless_utils.h>
 #include <bwl/key_value_parser.h>
 #include <cmath>
@@ -1064,16 +1065,18 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
             LOG(ERROR) << "Management frame without data!";
             return false;
         }
-        // ignore anything other than re-association (02) and association (00) frames:
-        if (parsed_obj["buf"].rfind("00") == std::string::npos &&
-            parsed_obj["buf"].rfind("02") == std::string::npos) {
-            LOG(TRACE) << "Ignored management frame other than (re-)association request.";
-            return true;
-        };
-
-        // Save it as a string, it will be converted to binary in STA-CONNECTED:
-        m_latest_assoc_frame = parsed_obj["buf"];
-        LOG(DEBUG) << "Saved assoc frame";
+        // Tunnel the Management request to the controller
+        auto mgmt_frame = create_mgmt_frame_notification(parsed_obj["buf"].c_str());
+        if (mgmt_frame) {
+            event_queue_push(Event::MGMT_Frame, mgmt_frame);
+            // only save association and re-association request frames:
+            if ((mgmt_frame->type == eManagementFrameType::ASSOCIATION_REQUEST) ||
+                (mgmt_frame->type == eManagementFrameType::REASSOCIATION_REQUEST)) {
+                std::string src_mac           = tlvf::mac_to_string(mgmt_frame->mac);
+                m_latest_assoc_frame[src_mac] = mgmt_frame;
+                LOG(DEBUG) << "Saved assoc frame";
+            }
+        }
 
     } break;
 
@@ -1090,18 +1093,46 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
         // Initialize the message
         memset(msg_buff.get(), 0, sizeof(sACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION));
 
-        msg->params.vap_id = 0;
-        msg->params.mac    = tlvf::mac_from_string(parsed_obj[bwl::EVENT_KEYLESS_PARAM_MAC]);
+        std::string src_mac      = parsed_obj[bwl::EVENT_KEYLESS_PARAM_MAC];
+        msg->params.vap_id       = 0;
+        msg->params.mac          = tlvf::mac_from_string(src_mac);
+        msg->params.capabilities = {};
 
-        if (m_latest_assoc_frame.empty()) {
+        //init the freq band cap with the target radio freq band info
+        msg->params.capabilities.band_5g_capable = m_radio_info.is_5ghz;
+        msg->params.capabilities.band_2g_capable =
+            (son::wireless_utils::which_freq(m_radio_info.channel) ==
+             beerocks::eFreqType::FREQ_24G);
+
+        auto assoc_frame_type = assoc_frame::AssocReqFrame::UNKNOWN;
+
+        if (m_latest_assoc_frame.find(src_mac) == m_latest_assoc_frame.end()) {
             LOG(WARNING) << "STA-CONNECTED without previously receiving a (re-)association frame!";
             msg->params.association_frame_length = 0;
         } else {
             // Add the latest association frame
             // PPM-1718: parse the association frame and make sure it belongs to the right MAC address.
-            auto assoc_req = get_binary_association_frame(m_latest_assoc_frame.c_str());
-            msg->params.association_frame_length = assoc_req.length();
-            std::copy_n(&assoc_req[0], assoc_req.length(), msg->params.association_frame);
+            auto &frame_info  = m_latest_assoc_frame[src_mac];
+            msg->params.bssid = frame_info->bssid;
+            auto &frame_body  = frame_info->data;
+            // Add the latest association frame
+            std::copy(frame_body.begin(), frame_body.end(), msg->params.association_frame);
+            msg->params.association_frame_length = frame_body.size();
+            assoc_frame_type                     = assoc_frame::AssocReqFrame::ASSOCIATION_REQUEST;
+            if (frame_info->type == eManagementFrameType::REASSOCIATION_REQUEST) {
+                assoc_frame_type = assoc_frame::AssocReqFrame::REASSOCIATION_REQUEST;
+            }
+        }
+
+        auto assoc_frame = assoc_frame::AssocReqFrame::parse(
+            msg->params.association_frame, msg->params.association_frame_length, assoc_frame_type);
+
+        auto res = son::assoc_frame_utils::get_station_capabilities_from_assoc_frame(
+            assoc_frame, msg->params.capabilities);
+        if (!res) {
+            LOG(ERROR) << "Failed to get station capabilities.";
+        } else {
+            son::wireless_utils::print_station_capabilities(msg->params.capabilities);
         }
 
         // Add the message to the queue
@@ -1128,6 +1159,8 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
 
         // Add the message to the queue
         event_queue_push(Event::STA_Disconnected, msg_buff);
+
+        m_latest_assoc_frame.erase(parsed_obj[bwl::EVENT_KEYLESS_PARAM_MAC]);
 
     } break;
 

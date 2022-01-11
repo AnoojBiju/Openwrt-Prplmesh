@@ -18,13 +18,36 @@
 #include <tlvf/association_frame/cMobilityDomain.h>
 #include <tlvf/association_frame/cQosCapability.h>
 #include <tlvf/association_frame/cRmEnabledCaps.h>
+#include <tlvf/association_frame/cStaHeCapability.h>
 #include <tlvf/association_frame/cStaHtCapability.h>
 #include <tlvf/association_frame/cStaVhtCapability.h>
+#include <tlvf/association_frame/cSupportedChannels.h>
 #include <tlvf/association_frame/eElementID.h>
+#include <tlvf/association_frame/eExtElementID.h>
 #include <tlvf/common/sMacAddr.h>
 #include <tlvf/wfa_map/tlvTunnelledData.h>
 
 namespace assoc_frame {
+
+/**
+ * @brief Convert source value to mapped equally sized type
+ * (usefull to map bitmapped struct to number value).
+ *
+ * @param source input in initial type.
+ * @return output in resulting type (overloaded value).
+ */
+template <typename TS, typename TR>
+static inline typename std::enable_if<sizeof(TS) == sizeof(TR), TR>::type const
+convert(const TS source)
+{
+    union {
+        TS src;
+        TR res;
+    } mapper = {
+        source,
+    };
+    return mapper.res;
+}
 
 class AssocReqFrame : public WSC::AttrList<uint8_t, uint8_t> {
 public:
@@ -53,6 +76,7 @@ public:
         uint32_t fms_request : 1;
         uint32_t dms_request : 1;
         uint32_t vendor_specific : 1;
+        uint32_t he_capability : 1;
     } __attribute__((packed)) sFieldsPresent;
 
     enum eFrameType : uint8_t {
@@ -84,10 +108,12 @@ public:
                                                 const eFrameType frame_type = eFrameType::UNKNOWN);
     bool valid() const override;
     bool init();
+    bool finalize();
     uint16_t &listen_interval();
     std::string sta_ssid();
     std::shared_ptr<cStaHtCapability> sta_ht_capability();
     std::shared_ptr<cStaVhtCapability> sta_vht_capability();
+    std::shared_ptr<cStaHeCapability> sta_he_capability();
     std::shared_ptr<cPowerCapability> power_capability();
     std::shared_ptr<cRmEnabledCaps> rm_enabled_caps();
     std::shared_ptr<cMultiBand> multi_band();

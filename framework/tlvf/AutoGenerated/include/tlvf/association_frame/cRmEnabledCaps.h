@@ -34,7 +34,7 @@ class cRmEnabledCaps : public BaseClass
         ~cRmEnabledCaps();
 
         eElementID& type();
-        uint8_t& length();
+        const uint8_t& length();
         assoc_frame::sRmEnabledCaps1& data1();
         assoc_frame::sRmEnabledCaps2& data2();
         void class_swap() override;

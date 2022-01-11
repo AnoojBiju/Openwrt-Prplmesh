@@ -21,12 +21,13 @@
 #include <tlvf/BaseClass.h>
 #include <tlvf/ClassList.h>
 #include <tuple>
+#include <ostream>
+#include "tlvf/common/sMacAddr.h"
 #include "tlvf/association_frame/eElementID.h"
 #include "tlvf/AssociationRequestFrame/assoc_frame_bitfields.h"
 
 namespace assoc_frame {
 
-class cSupportedChannels;
 class cRSN;
 class cSupportedOpClasses;
 class cSupportRates;
@@ -40,6 +41,8 @@ class cMultiBand;
 class cDmgCapabilities;
 class cMultipleMacSublayers;
 class cOperatingModeNotify;
+class cVendorSpecific;
+class cUnknownField;
 
 class cSSID : public BaseClass
 {
@@ -50,6 +53,7 @@ class cSSID : public BaseClass
 
         eElementID& type();
         const uint8_t& length();
+        size_t ssid_length() { return m_ssid_idx__ * sizeof(char); }
         std::string ssid_str();
         char* ssid(size_t length = 0);
         bool set_ssid(const std::string& str);
@@ -68,30 +72,6 @@ class cSSID : public BaseClass
         int m_lock_order_counter__ = 0;
 };
 
-class cSupportedChannels : public BaseClass
-{
-    public:
-        cSupportedChannels(uint8_t* buff, size_t buff_len, bool parse = false);
-        explicit cSupportedChannels(std::shared_ptr<BaseClass> base, bool parse = false);
-        ~cSupportedChannels();
-
-        eElementID& type();
-        const uint8_t& length();
-        //First channel number
-        uint8_t& first_ch_num();
-        uint8_t& channels_number();
-        void class_swap() override;
-        bool finalize() override;
-        static size_t get_initial_size();
-
-    private:
-        bool init();
-        eElementID* m_type = nullptr;
-        uint8_t* m_length = nullptr;
-        uint8_t* m_first_ch_num = nullptr;
-        uint8_t* m_channels_number = nullptr;
-};
-
 class cRSN : public BaseClass
 {
     public:
@@ -102,8 +82,9 @@ class cRSN : public BaseClass
         eElementID& type();
         const uint8_t& length();
         uint16_t& version();
-        size_t optional_length() { return m_optional_idx__ * sizeof(uint16_t); }
-        uint16_t* optional(size_t idx = 0);
+        size_t optional_length() { return m_optional_idx__ * sizeof(uint8_t); }
+        uint8_t* optional(size_t idx = 0);
+        bool set_optional(const void* buffer, size_t size);
         bool alloc_optional(size_t count = 1);
         void class_swap() override;
         bool finalize() override;
@@ -114,7 +95,7 @@ class cRSN : public BaseClass
         eElementID* m_type = nullptr;
         uint8_t* m_length = nullptr;
         uint16_t* m_version = nullptr;
-        uint16_t* m_optional = nullptr;
+        uint8_t* m_optional = nullptr;
         size_t m_optional_idx__ = 0;
         int m_lock_order_counter__ = 0;
 };
@@ -156,6 +137,7 @@ class cSupportRates : public BaseClass
 
         eElementID& type();
         const uint8_t& length();
+        size_t supported_rated_length() { return m_supported_rated_idx__ * sizeof(uint8_t); }
         uint8_t* supported_rated(size_t idx = 0);
         bool set_supported_rated(const void* buffer, size_t size);
         bool alloc_supported_rated(size_t count = 1);
@@ -181,6 +163,7 @@ class cExtendedSupportRates : public BaseClass
 
         eElementID& type();
         const uint8_t& length();
+        size_t extended_suport_rated_length() { return m_extended_suport_rated_idx__ * sizeof(uint8_t); }
         uint8_t* extended_suport_rated(size_t idx = 0);
         bool set_extended_suport_rated(const void* buffer, size_t size);
         bool alloc_extended_suport_rated(size_t count = 1);
@@ -322,16 +305,41 @@ class cMultiBand : public BaseClass
         explicit cMultiBand(std::shared_ptr<BaseClass> base, bool parse = false);
         ~cMultiBand();
 
+        enum eMultiBandId: uint8_t {
+            BAND_TV_WHITE_SPACES = 0x0,
+            BAND_SUB_1_GHZ = 0x1,
+            BAND_2_4_GHZ = 0x2,
+            BAND_3_6_GHZ = 0x3,
+            BAND_4_9_AND_5_GHZ = 0x4,
+            BAND_60_GHZ = 0x5,
+            BAND_45_GHZ = 0x6,
+        };
+        // Enum AutoPrint generated code snippet begining- DON'T EDIT!
+        // clang-format off
+        static const char *eMultiBandId_str(eMultiBandId enum_value) {
+            switch (enum_value) {
+            case BAND_TV_WHITE_SPACES: return "BAND_TV_WHITE_SPACES";
+            case BAND_SUB_1_GHZ:       return "BAND_SUB_1_GHZ";
+            case BAND_2_4_GHZ:         return "BAND_2_4_GHZ";
+            case BAND_3_6_GHZ:         return "BAND_3_6_GHZ";
+            case BAND_4_9_AND_5_GHZ:   return "BAND_4_9_AND_5_GHZ";
+            case BAND_60_GHZ:          return "BAND_60_GHZ";
+            case BAND_45_GHZ:          return "BAND_45_GHZ";
+            }
+            static std::string out_str = std::to_string(int(enum_value));
+            return out_str.c_str();
+        }
+        friend inline std::ostream &operator<<(std::ostream &out, eMultiBandId value) { return out << eMultiBandId_str(value); }
+        // clang-format on
+        // Enum AutoPrint generated code snippet end
+        
         eElementID& type();
         const uint8_t& length();
         uint8_t& multi_band_control();
         uint8_t& band_id();
         uint8_t& op_class();
         uint8_t& channel_num();
-        std::string bssid_str();
-        char* bssid(size_t length = 0);
-        bool set_bssid(const std::string& str);
-        bool set_bssid(const char buffer[], size_t size);
+        sMacAddr& bssid();
         uint8_t& beacon_interval();
         uint8_t* tsf_offset(size_t idx = 0);
         bool set_tsf_offset(const void* buffer, size_t size);
@@ -350,12 +358,11 @@ class cMultiBand : public BaseClass
         uint8_t* m_band_id = nullptr;
         uint8_t* m_op_class = nullptr;
         uint8_t* m_channel_num = nullptr;
-        char* m_bssid = nullptr;
-        size_t m_bssid_idx__ = 0;
-        int m_lock_order_counter__ = 0;
+        sMacAddr* m_bssid = nullptr;
         uint8_t* m_beacon_interval = nullptr;
         uint8_t* m_tsf_offset = nullptr;
         size_t m_tsf_offset_idx__ = 0;
+        int m_lock_order_counter__ = 0;
         uint8_t* m_multi_band_con_cap = nullptr;
         uint8_t* m_fst_session_timeout = nullptr;
         uint8_t* m_optional = nullptr;
@@ -370,10 +377,7 @@ class cDmgCapabilities : public BaseClass
 
         eElementID& type();
         const uint8_t& length();
-        std::string bssid_str();
-        char* bssid(size_t length = 0);
-        bool set_bssid(const std::string& str);
-        bool set_bssid(const char buffer[], size_t size);
+        sMacAddr& bssid();
         uint8_t& aid();
         uint8_t* dmg_sta_cap_info(size_t idx = 0);
         bool set_dmg_sta_cap_info(const void* buffer, size_t size);
@@ -391,12 +395,11 @@ class cDmgCapabilities : public BaseClass
         bool init();
         eElementID* m_type = nullptr;
         uint8_t* m_length = nullptr;
-        char* m_bssid = nullptr;
-        size_t m_bssid_idx__ = 0;
-        int m_lock_order_counter__ = 0;
+        sMacAddr* m_bssid = nullptr;
         uint8_t* m_aid = nullptr;
         uint8_t* m_dmg_sta_cap_info = nullptr;
         size_t m_dmg_sta_cap_info_idx__ = 0;
+        int m_lock_order_counter__ = 0;
         uint16_t* m_dmg_ap = nullptr;
         uint16_t* m_dmg_sta_beam_track_time_lim = nullptr;
         uint8_t* m_extended_sc_mcs_cap = nullptr;
@@ -414,10 +417,7 @@ class cMultipleMacSublayers : public BaseClass
         eElementID& type();
         const uint8_t& length();
         uint8_t& mms_control();
-        std::string sta_mac_str();
-        char* sta_mac(size_t length = 0);
-        bool set_sta_mac(const std::string& str);
-        bool set_sta_mac(const char buffer[], size_t size);
+        sMacAddr& sta_mac();
         size_t interface_addr_length() { return m_interface_addr_idx__ * sizeof(uint8_t); }
         uint8_t* interface_addr(size_t idx = 0);
         bool set_interface_addr(const void* buffer, size_t size);
@@ -431,11 +431,10 @@ class cMultipleMacSublayers : public BaseClass
         eElementID* m_type = nullptr;
         uint8_t* m_length = nullptr;
         uint8_t* m_mms_control = nullptr;
-        char* m_sta_mac = nullptr;
-        size_t m_sta_mac_idx__ = 0;
-        int m_lock_order_counter__ = 0;
+        sMacAddr* m_sta_mac = nullptr;
         uint8_t* m_interface_addr = nullptr;
         size_t m_interface_addr_idx__ = 0;
+        int m_lock_order_counter__ = 0;
 };
 
 class cOperatingModeNotify : public BaseClass
@@ -457,6 +456,64 @@ class cOperatingModeNotify : public BaseClass
         eElementID* m_type = nullptr;
         uint8_t* m_length = nullptr;
         uint8_t* m_op_mode = nullptr;
+};
+
+class cVendorSpecific : public BaseClass
+{
+    public:
+        cVendorSpecific(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cVendorSpecific(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cVendorSpecific();
+
+        eElementID& type();
+        const uint8_t& length();
+        uint8_t* oui(size_t idx = 0);
+        bool set_oui(const void* buffer, size_t size);
+        uint8_t& oui_type();
+        size_t data_length() { return m_data_idx__ * sizeof(uint8_t); }
+        uint8_t* data(size_t idx = 0);
+        bool set_data(const void* buffer, size_t size);
+        bool alloc_data(size_t count = 1);
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eElementID* m_type = nullptr;
+        uint8_t* m_length = nullptr;
+        uint8_t* m_oui = nullptr;
+        size_t m_oui_idx__ = 0;
+        int m_lock_order_counter__ = 0;
+        uint8_t* m_oui_type = nullptr;
+        uint8_t* m_data = nullptr;
+        size_t m_data_idx__ = 0;
+};
+
+class cUnknownField : public BaseClass
+{
+    public:
+        cUnknownField(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cUnknownField(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cUnknownField();
+
+        eElementID& type();
+        const uint8_t& length();
+        size_t data_length() { return m_data_idx__ * sizeof(uint8_t); }
+        uint8_t* data(size_t idx = 0);
+        bool set_data(const void* buffer, size_t size);
+        bool alloc_data(size_t count = 1);
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eElementID* m_type = nullptr;
+        uint8_t* m_length = nullptr;
+        uint8_t* m_data = nullptr;
+        size_t m_data_idx__ = 0;
+        int m_lock_order_counter__ = 0;
 };
 
 }; // close namespace: assoc_frame

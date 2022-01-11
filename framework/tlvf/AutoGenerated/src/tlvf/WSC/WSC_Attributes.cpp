@@ -290,8 +290,9 @@ bool cWscAttrVendorExtension::init()
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
     m_vendor_data = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (m_length && m_parse__) {
-        size_t len = *m_length;
-        tlvf_swap(16, reinterpret_cast<uint8_t*>(&len));
+        auto swap_len = *m_length;
+        tlvf_swap((sizeof(swap_len) * 8), reinterpret_cast<uint8_t*>(&swap_len));
+        size_t len = swap_len;
         len -= (m_buff_ptr__ - sizeof(*m_type) - sizeof(*m_length) - m_buff__);
         m_vendor_data_idx__ = len/sizeof(uint8_t);
         if (!buffPtrIncrementSafe(len)) {
@@ -795,8 +796,9 @@ bool cWscAttrEncryptedSettings::init()
     }
     m_encrypted_settings = reinterpret_cast<char*>(m_buff_ptr__);
     if (m_length && m_parse__) {
-        size_t len = *m_length;
-        tlvf_swap(16, reinterpret_cast<uint8_t*>(&len));
+        auto swap_len = *m_length;
+        tlvf_swap((sizeof(swap_len) * 8), reinterpret_cast<uint8_t*>(&swap_len));
+        size_t len = swap_len;
         len -= (m_buff_ptr__ - sizeof(*m_type) - sizeof(*m_length) - m_buff__);
         m_encrypted_settings_idx__ = len/sizeof(char);
         if (!buffPtrIncrementSafe(len)) {
@@ -1744,8 +1746,9 @@ bool cWscAttrManufacturer::init()
     }
     m_manufacturer = reinterpret_cast<char*>(m_buff_ptr__);
     if (m_length && m_parse__) {
-        size_t len = *m_length;
-        tlvf_swap(16, reinterpret_cast<uint8_t*>(&len));
+        auto swap_len = *m_length;
+        tlvf_swap((sizeof(swap_len) * 8), reinterpret_cast<uint8_t*>(&swap_len));
+        size_t len = swap_len;
         len -= (m_buff_ptr__ - sizeof(*m_type) - sizeof(*m_length) - m_buff__);
         m_manufacturer_idx__ = len/sizeof(char);
         if (!buffPtrIncrementSafe(len)) {
@@ -1896,8 +1899,9 @@ bool cWscAttrModelName::init()
     }
     m_model = reinterpret_cast<char*>(m_buff_ptr__);
     if (m_length && m_parse__) {
-        size_t len = *m_length;
-        tlvf_swap(16, reinterpret_cast<uint8_t*>(&len));
+        auto swap_len = *m_length;
+        tlvf_swap((sizeof(swap_len) * 8), reinterpret_cast<uint8_t*>(&swap_len));
+        size_t len = swap_len;
         len -= (m_buff_ptr__ - sizeof(*m_type) - sizeof(*m_length) - m_buff__);
         m_model_idx__ = len/sizeof(char);
         if (!buffPtrIncrementSafe(len)) {
@@ -2048,8 +2052,9 @@ bool cWscAttrModelNumber::init()
     }
     m_model_number = reinterpret_cast<char*>(m_buff_ptr__);
     if (m_length && m_parse__) {
-        size_t len = *m_length;
-        tlvf_swap(16, reinterpret_cast<uint8_t*>(&len));
+        auto swap_len = *m_length;
+        tlvf_swap((sizeof(swap_len) * 8), reinterpret_cast<uint8_t*>(&swap_len));
+        size_t len = swap_len;
         len -= (m_buff_ptr__ - sizeof(*m_type) - sizeof(*m_length) - m_buff__);
         m_model_number_idx__ = len/sizeof(char);
         if (!buffPtrIncrementSafe(len)) {
@@ -2200,8 +2205,9 @@ bool cWscAttrSerialNumber::init()
     }
     m_serial_number = reinterpret_cast<char*>(m_buff_ptr__);
     if (m_length && m_parse__) {
-        size_t len = *m_length;
-        tlvf_swap(16, reinterpret_cast<uint8_t*>(&len));
+        auto swap_len = *m_length;
+        tlvf_swap((sizeof(swap_len) * 8), reinterpret_cast<uint8_t*>(&swap_len));
+        size_t len = swap_len;
         len -= (m_buff_ptr__ - sizeof(*m_type) - sizeof(*m_length) - m_buff__);
         m_serial_number_idx__ = len/sizeof(char);
         if (!buffPtrIncrementSafe(len)) {
@@ -2472,8 +2478,9 @@ bool cWscAttrDeviceName::init()
     }
     m_device_name = reinterpret_cast<char*>(m_buff_ptr__);
     if (m_length && m_parse__) {
-        size_t len = *m_length;
-        tlvf_swap(16, reinterpret_cast<uint8_t*>(&len));
+        auto swap_len = *m_length;
+        tlvf_swap((sizeof(swap_len) * 8), reinterpret_cast<uint8_t*>(&swap_len));
+        size_t len = swap_len;
         len -= (m_buff_ptr__ - sizeof(*m_type) - sizeof(*m_length) - m_buff__);
         m_device_name_idx__ = len/sizeof(char);
         if (!buffPtrIncrementSafe(len)) {
@@ -3734,8 +3741,9 @@ bool cWscAttrSsid::init()
     }
     m_ssid = reinterpret_cast<char*>(m_buff_ptr__);
     if (m_length && m_parse__) {
-        size_t len = *m_length;
-        tlvf_swap(16, reinterpret_cast<uint8_t*>(&len));
+        auto swap_len = *m_length;
+        tlvf_swap((sizeof(swap_len) * 8), reinterpret_cast<uint8_t*>(&swap_len));
+        size_t len = swap_len;
         len -= (m_buff_ptr__ - sizeof(*m_type) - sizeof(*m_length) - m_buff__);
         m_ssid_idx__ = len/sizeof(char);
         if (!buffPtrIncrementSafe(len)) {
@@ -4076,8 +4084,9 @@ bool cWscAttrNetworkKey::init()
     }
     m_key = reinterpret_cast<char*>(m_buff_ptr__);
     if (m_length && m_parse__) {
-        size_t len = *m_length;
-        tlvf_swap(16, reinterpret_cast<uint8_t*>(&len));
+        auto swap_len = *m_length;
+        tlvf_swap((sizeof(swap_len) * 8), reinterpret_cast<uint8_t*>(&swap_len));
+        size_t len = swap_len;
         len -= (m_buff_ptr__ - sizeof(*m_type) - sizeof(*m_length) - m_buff__);
         m_key_idx__ = len/sizeof(char);
         if (!buffPtrIncrementSafe(len)) {

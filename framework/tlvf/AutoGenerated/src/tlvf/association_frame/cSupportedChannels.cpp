@@ -10,82 +10,75 @@
  * See LICENSE file for more details.
  */
 
-#include <tlvf/wfa_map/tlvTunnelledData.h>
+#include <tlvf/association_frame/cSupportedChannels.h>
 #include <tlvf/tlvflogging.h>
 
-using namespace wfa_map;
+using namespace assoc_frame;
 
-tlvTunnelledData::tlvTunnelledData(uint8_t* buff, size_t buff_len, bool parse) :
+cSupportedChannels::cSupportedChannels(uint8_t* buff, size_t buff_len, bool parse) :
     BaseClass(buff, buff_len, parse) {
     m_init_succeeded = init();
 }
-tlvTunnelledData::tlvTunnelledData(std::shared_ptr<BaseClass> base, bool parse) :
+cSupportedChannels::cSupportedChannels(std::shared_ptr<BaseClass> base, bool parse) :
 BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
     m_init_succeeded = init();
 }
-tlvTunnelledData::~tlvTunnelledData() {
+cSupportedChannels::~cSupportedChannels() {
 }
-const eTlvTypeMap& tlvTunnelledData::type() {
-    return (const eTlvTypeMap&)(*m_type);
-}
-
-const uint16_t& tlvTunnelledData::length() {
-    return (const uint16_t&)(*m_length);
+eElementID& cSupportedChannels::type() {
+    return (eElementID&)(*m_type);
 }
 
-uint8_t* tlvTunnelledData::data(size_t idx) {
-    if ( (m_data_idx__ == 0) || (m_data_idx__ <= idx) ) {
+const uint8_t& cSupportedChannels::length() {
+    return (const uint8_t&)(*m_length);
+}
+
+std::tuple<bool, cSupportedChannels::sSupportedChannelsSet&> cSupportedChannels::supported_channel_sets(size_t idx) {
+    bool ret_success = ( (m_supported_channel_sets_idx__ > 0) && (m_supported_channel_sets_idx__ > idx) );
+    size_t ret_idx = ret_success ? idx : 0;
+    if (!ret_success) {
         TLVF_LOG(ERROR) << "Requested index is greater than the number of available entries";
-        return nullptr;
     }
-    return &(m_data[idx]);
+    return std::forward_as_tuple(ret_success, m_supported_channel_sets[ret_idx]);
 }
 
-bool tlvTunnelledData::set_data(const void* buffer, size_t size) {
-    if (buffer == nullptr) {
-        TLVF_LOG(WARNING) << "set_data received a null pointer.";
-        return false;
-    }
-    if (m_data_idx__ != 0) {
-        TLVF_LOG(ERROR) << "set_data was already allocated!";
-        return false;
-    }
-    if (!alloc_data(size)) { return false; }
-    std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_data);
-    return true;
-}
-bool tlvTunnelledData::alloc_data(size_t count) {
+bool cSupportedChannels::alloc_supported_channel_sets(size_t count) {
     if (m_lock_order_counter__ > 0) {;
-        TLVF_LOG(ERROR) << "Out of order allocation for variable length list data, abort!";
+        TLVF_LOG(ERROR) << "Out of order allocation for variable length list supported_channel_sets, abort!";
         return false;
     }
-    size_t len = sizeof(uint8_t) * count;
+    size_t len = sizeof(sSupportedChannelsSet) * count;
     if(getBuffRemainingBytes() < len )  {
         TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
         return false;
     }
     m_lock_order_counter__ = 0;
-    uint8_t *src = (uint8_t *)&m_data[m_data_idx__];
+    uint8_t *src = (uint8_t *)&m_supported_channel_sets[m_supported_channel_sets_idx__];
     uint8_t *dst = src + len;
     if (!m_parse__) {
         size_t move_length = getBuffRemainingBytes(src) - len;
         std::copy_n(src, move_length, dst);
     }
-    m_data_idx__ += count;
+    m_supported_channel_sets_idx__ += count;
     if (!buffPtrIncrementSafe(len)) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
         return false;
     }
     if(m_length){ (*m_length) += len; }
+    if (!m_parse__) { 
+        for (size_t i = m_supported_channel_sets_idx__ - count; i < m_supported_channel_sets_idx__; i++) { m_supported_channel_sets[i].struct_init(); }
+    }
     return true;
 }
 
-void tlvTunnelledData::class_swap()
+void cSupportedChannels::class_swap()
 {
-    tlvf_swap(16, reinterpret_cast<uint8_t*>(m_length));
+    for (size_t i = 0; i < m_supported_channel_sets_idx__; i++){
+        m_supported_channel_sets[i].struct_swap();
+    }
 }
 
-bool tlvTunnelledData::finalize()
+bool cSupportedChannels::finalize()
 {
     if (m_parse__) {
         TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
@@ -113,51 +106,45 @@ bool tlvTunnelledData::finalize()
     return true;
 }
 
-size_t tlvTunnelledData::get_initial_size()
+size_t cSupportedChannels::get_initial_size()
 {
     size_t class_size = 0;
-    class_size += sizeof(eTlvTypeMap); // type
-    class_size += sizeof(uint16_t); // length
+    class_size += sizeof(eElementID); // type
+    class_size += sizeof(uint8_t); // length
     return class_size;
 }
 
-bool tlvTunnelledData::init()
+bool cSupportedChannels::init()
 {
     if (getBuffRemainingBytes() < get_initial_size()) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
         return false;
     }
-    m_type = reinterpret_cast<eTlvTypeMap*>(m_buff_ptr__);
-    if (!m_parse__) *m_type = eTlvTypeMap::TLV_TUNNELLED_DATA;
-    if (!buffPtrIncrementSafe(sizeof(eTlvTypeMap))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(eTlvTypeMap) << ") Failed!";
+    m_type = reinterpret_cast<eElementID*>(m_buff_ptr__);
+    if (!m_parse__) *m_type = ID_SUP_CHANNELS;
+    if (!buffPtrIncrementSafe(sizeof(eElementID))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(eElementID) << ") Failed!";
         return false;
     }
-    m_length = reinterpret_cast<uint16_t*>(m_buff_ptr__);
+    m_length = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (!m_parse__) *m_length = 0;
-    if (!buffPtrIncrementSafe(sizeof(uint16_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
+    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_data = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    m_supported_channel_sets = reinterpret_cast<sSupportedChannelsSet*>(m_buff_ptr__);
     if (m_length && m_parse__) {
         auto swap_len = *m_length;
         tlvf_swap((sizeof(swap_len) * 8), reinterpret_cast<uint8_t*>(&swap_len));
         size_t len = swap_len;
         len -= (m_buff_ptr__ - sizeof(*m_type) - sizeof(*m_length) - m_buff__);
-        m_data_idx__ = len/sizeof(uint8_t);
+        m_supported_channel_sets_idx__ = len/sizeof(sSupportedChannelsSet);
         if (!buffPtrIncrementSafe(len)) {
             LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
             return false;
         }
     }
     if (m_parse__) { class_swap(); }
-    if (m_parse__) {
-        if (*m_type != eTlvTypeMap::TLV_TUNNELLED_DATA) {
-            TLVF_LOG(ERROR) << "TLV type mismatch. Expected value: " << int(eTlvTypeMap::TLV_TUNNELLED_DATA) << ", received value: " << int(*m_type);
-            return false;
-        }
-    }
     return true;
 }
 

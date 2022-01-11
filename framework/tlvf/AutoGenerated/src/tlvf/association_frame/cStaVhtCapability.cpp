@@ -29,22 +29,22 @@ eElementID& cStaVhtCapability::type() {
     return (eElementID&)(*m_type);
 }
 
-uint8_t& cStaVhtCapability::length() {
-    return (uint8_t&)(*m_length);
+const uint8_t& cStaVhtCapability::length() {
+    return (const uint8_t&)(*m_length);
 }
 
 assoc_frame::sStaVhtCapInfo& cStaVhtCapability::vht_cap_info() {
     return (assoc_frame::sStaVhtCapInfo&)(*m_vht_cap_info);
 }
 
-uint32_t& cStaVhtCapability::supported_vht_mcs() {
-    return (uint32_t&)(*m_supported_vht_mcs);
+assoc_frame::sSupportedVhtMcsSet& cStaVhtCapability::supported_vht_mcs() {
+    return (assoc_frame::sSupportedVhtMcsSet&)(*m_supported_vht_mcs);
 }
 
 void cStaVhtCapability::class_swap()
 {
     m_vht_cap_info->struct_swap();
-    tlvf_swap(32, reinterpret_cast<uint8_t*>(m_supported_vht_mcs));
+    m_supported_vht_mcs->struct_swap();
 }
 
 bool cStaVhtCapability::finalize()
@@ -68,6 +68,7 @@ bool cStaVhtCapability::finalize()
         }
         auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
         m_buff_ptr__ -= tailroom;
+        *m_length -= tailroom;
     }
     class_swap();
     m_finalized__ = true;
@@ -80,7 +81,7 @@ size_t cStaVhtCapability::get_initial_size()
     class_size += sizeof(eElementID); // type
     class_size += sizeof(uint8_t); // length
     class_size += sizeof(assoc_frame::sStaVhtCapInfo); // vht_cap_info
-    class_size += sizeof(uint32_t); // supported_vht_mcs
+    class_size += sizeof(assoc_frame::sSupportedVhtMcsSet); // supported_vht_mcs
     return class_size;
 }
 
@@ -97,6 +98,7 @@ bool cStaVhtCapability::init()
         return false;
     }
     m_length = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!m_parse__) *m_length = 0;
     if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
@@ -106,12 +108,15 @@ bool cStaVhtCapability::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(assoc_frame::sStaVhtCapInfo) << ") Failed!";
         return false;
     }
+    if(m_length && !m_parse__){ (*m_length) += sizeof(assoc_frame::sStaVhtCapInfo); }
     if (!m_parse__) { m_vht_cap_info->struct_init(); }
-    m_supported_vht_mcs = reinterpret_cast<uint32_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint32_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint32_t) << ") Failed!";
+    m_supported_vht_mcs = reinterpret_cast<assoc_frame::sSupportedVhtMcsSet*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(assoc_frame::sSupportedVhtMcsSet))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(assoc_frame::sSupportedVhtMcsSet) << ") Failed!";
         return false;
     }
+    if(m_length && !m_parse__){ (*m_length) += sizeof(assoc_frame::sSupportedVhtMcsSet); }
+    if (!m_parse__) { m_supported_vht_mcs->struct_init(); }
     if (m_parse__) { class_swap(); }
     return true;
 }

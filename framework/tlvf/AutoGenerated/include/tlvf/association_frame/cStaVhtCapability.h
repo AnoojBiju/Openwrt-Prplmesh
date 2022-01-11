@@ -34,9 +34,9 @@ class cStaVhtCapability : public BaseClass
         ~cStaVhtCapability();
 
         eElementID& type();
-        uint8_t& length();
+        const uint8_t& length();
         assoc_frame::sStaVhtCapInfo& vht_cap_info();
-        uint32_t& supported_vht_mcs();
+        assoc_frame::sSupportedVhtMcsSet& supported_vht_mcs();
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -46,7 +46,7 @@ class cStaVhtCapability : public BaseClass
         eElementID* m_type = nullptr;
         uint8_t* m_length = nullptr;
         assoc_frame::sStaVhtCapInfo* m_vht_cap_info = nullptr;
-        uint32_t* m_supported_vht_mcs = nullptr;
+        assoc_frame::sSupportedVhtMcsSet* m_supported_vht_mcs = nullptr;
 };
 
 }; // close namespace: assoc_frame

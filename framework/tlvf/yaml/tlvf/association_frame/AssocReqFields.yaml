@@ -1,6 +1,7 @@
 #
 ---
 _include: {
+  tlvf/common/sMacAddr.h,
   tlvf/association_frame/eElementID.h,
   tlvf/AssociationRequestFrame/assoc_frame_bitfields.h,
 }
@@ -14,25 +15,10 @@ cSSID:
     _value: ID_SSID
   length:
     _type: uint8_t
-    _length_var: True
   ssid:
     _type: char
-    _length: [ length ]
+    _length: []
     _length_max: 0x20
-
-cSupportedChannels:
-  _type: class
-  _is_tlv_class: True
-  type:
-    _type: eElementID
-    _value: ID_SUP_CHANNELS
-  length:
-    _type: uint8_t
-  first_ch_num:
-    _type: uint8_t
-    _comment: First channel number
-  channels_number:
-    _type: uint8_t
 
 cRSN:
   _comment: |
@@ -44,11 +30,10 @@ cRSN:
     _value: ID_RSN
   length:
     _type: uint8_t
-    _length_var: True
   version:
     _type: uint16_t
   optional:
-    _type: uint16_t
+    _type: uint8_t
     _length: []
 
 cSupportedOpClasses:
@@ -77,7 +62,7 @@ cSupportRates:
     _type: uint8_t
   supported_rated:
     _type: uint8_t
-    _length: [ length ]
+    _length: []
 
 cExtendedSupportRates:
   _comment: |
@@ -92,7 +77,7 @@ cExtendedSupportRates:
     _type: uint8_t
   extended_suport_rated:
     _type: uint8_t
-    _length: [ length ]
+    _length: []
 
 cPowerCapability:
   _comment: |
@@ -178,9 +163,7 @@ cMultiBand:
     _type: uint8_t
   channel_num:
     _type: uint8_t
-  bssid:
-    _type: char
-    _length: ["assoc_frame::MAC_ADDR_LEN"]
+  bssid: sMacAddr
   beacon_interval:
     _type: uint8_t
   tsf_offset:
@@ -193,6 +176,20 @@ cMultiBand:
   optional:
     _type: uint8_t
 
+eMultiBandId:
+  _type: enum
+  _enum_storage: uint8_t
+  _comment: |
+    The Band ID field provides the identification of the frequency band related to the Operating Class and
+    channel Number fields. The Band ID field is defined in 9.4.1.45. (Cf80211-2020 Table 9-67)
+  BAND_TV_WHITE_SPACES: 0
+  BAND_SUB_1_GHZ: 1
+  BAND_2_4_GHZ: 2
+  BAND_3_6_GHZ: 3
+  BAND_4_9_AND_5_GHZ: 4
+  BAND_60_GHZ : 5
+  BAND_45_GHZ : 6
+
 cDmgCapabilities:
   _type: class
   _is_tlv_class: True
@@ -200,9 +197,7 @@ cDmgCapabilities:
     _type: eElementID
     _value: ID_DMG_CAPS
   length: uint8_t
-  bssid:
-    _type: char
-    _length: ["assoc_frame::MAC_ADDR_LEN"]
+  bssid: sMacAddr
   aid: uint8_t
   dmg_sta_cap_info:
     _type: uint8_t
@@ -225,9 +220,7 @@ cMultipleMacSublayers:
   length:
     _type: uint8_t
   mms_control: uint8_t
-  sta_mac:
-    _type: char
-    _length: ["assoc_frame::MAC_ADDR_LEN"]
+  sta_mac: sMacAddr
   interface_addr:
     _type: uint8_t
     _length: []
@@ -242,3 +235,34 @@ cOperatingModeNotify:
     _type: uint8_t
   op_mode:
     _type: uint8_t
+
+cVendorSpecific:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eElementID
+    _value: ID_VENDOR_SPECIFIC
+  length:
+    _type: uint8_t
+  oui:
+    _type: uint8_t
+    _length: [3]
+  oui_type:
+    _type: uint8_t
+  data:
+    _type: uint8_t
+    _length: []
+
+cUnknownField:
+  _comment: |
+   Dummy class used to store unknown (unhandled) IEs
+   as raw data
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eElementID
+  length:
+    _type: uint8_t
+  data:
+    _type: uint8_t
+    _length: []
