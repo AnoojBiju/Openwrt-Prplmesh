@@ -34,7 +34,6 @@ static amxd_status_t action_last_steer_time(amxd_object_t *object, amxd_param_t 
                                             amxc_var_t *const retval, void *priv)
 {
     if (reason != action_param_read) {
-        LOG(WARNING) << "Failed to get data, incorrect reason: " << reason;
         return amxd_status_function_not_implemented;
     }
     if (!param) {
@@ -77,7 +76,6 @@ static amxd_status_t action_read_assoc_time(amxd_object_t *object, amxd_param_t 
 {
 
     if (reason != action_param_read) {
-        LOG(ERROR) << "Failed to get data, incorrect reason: " << reason;
         return amxd_status_function_not_implemented;
     }
     if (!param) {
@@ -136,7 +134,6 @@ static amxd_status_t action_read_last_change(amxd_object_t *object, amxd_param_t
         from creation in seconds.
     */
     if (reason != action_param_read) {
-        LOG(ERROR) << "Failed to get data, incorrect reason: " << reason;
         return amxd_status_function_not_implemented;
     }
     if (!param) {
