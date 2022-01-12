@@ -987,6 +987,18 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
         LOG(INFO) << "Not a valid M1 - Ignoring WSC CMDU";
         return false;
     }
+
+    auto time_since_m1 = std::chrono::duration_cast<std::chrono::seconds>(
+        std::chrono::system_clock::now() - cmdu_rx.received_time);
+    if (time_since_m1 >
+        std::chrono::seconds{beerocks::ieee1905_1_consts::AUTOCONFIG_M2_TIMEOUT_SECONDS}) {
+        LOG(INFO) << "Time since M1 was received (" << time_since_m1.count()
+                  << " seconds) is more than "
+                  << beerocks::ieee1905_1_consts::AUTOCONFIG_M2_TIMEOUT_SECONDS
+                  << " seconds, ignoring M1.";
+        return false;
+    }
+
     auto radio_basic_caps = cmdu_rx.getClass<wfa_map::tlvApRadioBasicCapabilities>();
     if (!radio_basic_caps) {
         LOG(ERROR) << "getClass<wfa_map::tlvApRadioBasicCapabilities> failed";

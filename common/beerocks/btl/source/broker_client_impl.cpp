@@ -236,6 +236,9 @@ void BrokerClientImpl::handle_message(const beerocks::transport::messages::Messa
         return;
     }
 
+    cmdu_rx.received_time = std::chrono::time_point<std::chrono::system_clock>(
+        std::chrono::seconds(cmdu_rx_msg->metadata()->received_time));
+
     // Set the rest of fields to notify
     uint32_t iface_index = cmdu_rx_msg->metadata()->if_index;
     sMacAddr dst_mac     = tlvf::mac_from_array(cmdu_rx_msg->metadata()->dst);
