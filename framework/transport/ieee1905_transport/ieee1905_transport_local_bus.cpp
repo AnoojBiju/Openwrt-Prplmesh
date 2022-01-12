@@ -9,6 +9,7 @@
 #include "ieee1905_transport.h"
 
 #include <arpa/inet.h>
+#include <chrono>
 #include <net/if.h>
 
 namespace beerocks {
@@ -164,10 +165,13 @@ bool Ieee1905Transport::send_packet_to_broker(Packet &packet)
     tlvf::mac_to_array(packet.src, msg.metadata()->src);
     tlvf::mac_to_array(packet.dst, msg.metadata()->dst);
 
-    msg.metadata()->ether_type = packet.ether_type;
-    msg.metadata()->if_type    = packet.src_if_type;
-    msg.metadata()->if_index   = packet.src_if_index;
-    msg.metadata()->length     = packet.payload.iov_len;
+    msg.metadata()->ether_type    = packet.ether_type;
+    msg.metadata()->if_type       = packet.src_if_type;
+    msg.metadata()->if_index      = packet.src_if_index;
+    msg.metadata()->length        = packet.payload.iov_len;
+    msg.metadata()->received_time = std::chrono::duration_cast<std::chrono::seconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
     std::copy_n((uint8_t *)packet.payload.iov_base, packet.payload.iov_len, msg.data());
 
     if (packet.ether_type == ETH_P_1905_1) {

@@ -208,6 +208,7 @@ public:
         uint32_t if_index = 0; // network interface index (set to 0 to let transport decide)
         uint16_t length =
             0; // payload length (including IEEE1905 header, excluding Ethernet header)
+        uint64_t received_time = {}; // time since epoch (in seconds) when a packet was received.
     };
 
     explicit CmduXxMessage(Type type, std::initializer_list<Frame> frames = {})
