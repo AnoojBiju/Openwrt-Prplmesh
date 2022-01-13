@@ -99,12 +99,14 @@ endif()
 
 # Default values
 set(BEEROCKS_REPEATER_MODE 0)
+set(BEEROCKS_MONITOR_POLLING_RATE_MSEC 250)
 
 # Platform specific flags
 if (TARGET_PLATFORM STREQUAL "openwrt")
     if (TARGET_PLATFORM_TYPE STREQUAL "ugw")
         add_definitions(-DBEEROCKS_UGW)
         set(BEEROCKS_REPEATER_MODE 1)
+        set(BEEROCKS_MONITOR_POLLING_RATE_MSEC 1000)
     else()
         set(BEEROCKS_WLAN2_IFACE "wlan1")
         set(BEEROCKS_WLAN2_STEERING_VAPS "wlan1.0")
@@ -121,6 +123,7 @@ elseif (TARGET_PLATFORM STREQUAL "rdkb")
     set(BEEROCKS_LOG_FILES_AUTO_ROLL "false" CACHE STRING "Auto rollback prplMesh logs")
     set(BEEROCKS_LOG_FILES_PATH "/rdklogs/logs" CACHE PATH "prplMesh logs directory")
     set(BEEROCKS_LOG_FILES_SUFFIX ".txt.0" CACHE STRING "prplMesh logs filenames suffix")
+    set(BEEROCKS_MONITOR_POLLING_RATE_MSEC 1000)
     set(CMAKE_SKIP_RPATH TRUE)
 elseif (TARGET_PLATFORM STREQUAL "linux")
     add_definitions(-DBEEROCKS_LINUX)
