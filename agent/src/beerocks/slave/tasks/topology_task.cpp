@@ -130,6 +130,8 @@ void TopologyTask::handle_topology_discovery(ieee1905_1::CmduMessageRx &cmdu_rx,
                                              uint32_t iface_index, const sMacAddr &dst_mac,
                                              const sMacAddr &src_mac)
 {
+    auto start = std::chrono::steady_clock::now();
+    LOG(DEBUG) << "enter handle_topology_discovery()";
     auto tlvAlMac = cmdu_rx.getClass<ieee1905_1::tlvAlMacAddress>();
     if (!tlvAlMac) {
         LOG(ERROR) << "getClass tlvAlMacAddress failed";
@@ -210,6 +212,10 @@ void TopologyTask::handle_topology_discovery(ieee1905_1::CmduMessageRx &cmdu_rx,
         m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, network_utils::MULTICAST_1905_MAC_ADDR,
                                       db->bridge.mac);
     }
+    auto dt = std::chrono::duration_cast<std::chrono::microseconds>(
+                  std::chrono::steady_clock::now() - start)
+                  .count();
+    LOG(DEBUG) << "exit handle_topology_discovery(), dt_usec=" << dt;
 }
 
 void TopologyTask::handle_topology_query(ieee1905_1::CmduMessageRx &cmdu_rx,
