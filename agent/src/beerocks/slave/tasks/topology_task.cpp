@@ -729,6 +729,10 @@ bool TopologyTask::add_associated_clients_tlv()
             }
 
             for (const auto &bssid : radio->front.bssids) {
+                if (bssid.mac == network_utils::ZERO_MAC) {
+                    continue;
+                }
+
                 auto bss_list     = tlvAssociatedClients->create_bss_list();
                 bss_list->bssid() = bssid.mac;
 
