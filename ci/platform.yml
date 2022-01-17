@@ -142,7 +142,6 @@ boardfarm-on-turris-omnia-rdkb:
        echo Done
     - ssh "$TARGET_DEVICE_NAME" sed -ri 's/backhaul_wire_iface=erouter0/backhaul_wire_iface=lan4/' /opt/prplmesh/share/prplmesh_platform_db
     - ./dctest.py --dut $TARGET_DEVICE --test-suite test_flows_on_rdkb
-    - ssh "$TARGET_DEVICE_NAME" 'wifi down'
  needs:
    - build-for-rdkb-turris-omnia
 
