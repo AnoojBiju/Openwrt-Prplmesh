@@ -67,16 +67,12 @@ void Ieee1905Transport::update_neighbours(const Packet &packet)
     // Add new neighbors
     auto neighbor_iter = neighbors_map_.find(packet.src);
     if (neighbor_iter == neighbors_map_.end()) {
-        Ieee1905Transport::ieee1905_neighbor neigh = {0};
-        neigh.al_mac                               = packet.src;
-        neigh.if_index                             = packet.src_if_index;
-        neigh.last_seen                            = std::chrono::steady_clock::now();
         MAPF_INFO("Adding new neighbor with AL MAC " << packet.src);
-        neighbors_map_[packet.src] = neigh;
+        neighbors_map_.emplace(packet.src, ieee1905_neighbor{packet.src, packet.src_if_index, now});
     } else {
         // Update last seen for new / updated neighbors
         MAPF_DBG("Updating last seen for neighbor with AL MAC " << packet.src);
-        neighbors_map_[packet.src].last_seen = std::chrono::steady_clock::now();
+        neighbor_iter->second.last_seen = now;
     }
 }
 
