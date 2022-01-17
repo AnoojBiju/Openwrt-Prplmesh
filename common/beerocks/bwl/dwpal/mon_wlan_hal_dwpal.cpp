@@ -229,8 +229,6 @@ static void get_vht_oper(const uint8_t *data, sChannelScanResults &results)
 
 static void get_supprates(const uint8_t *data, uint8_t len, sChannelScanResults &results)
 {
-    uint32_t rate_kbs;
-
     if (!data) {
         LOG(ERROR) << "data buffer is NULL";
         return;
@@ -260,7 +258,7 @@ static void get_supprates(const uint8_t *data, uint8_t len, sChannelScanResults 
          * represented with fixed point u<8,1>.
          * converting to kbps (no fixpoint) for simplicity u<8,0>
          */
-        rate_kbs = (rate_mbs_fp_8_1 / 2) * 1000 + (5 * (rate_mbs_fp_8_1 & 1)) * 100;
+        uint32_t rate_kbs = (rate_mbs_fp_8_1 / 2) * 1000 + (5 * (rate_mbs_fp_8_1 & 1)) * 100;
 
         if (data[i] & 0x80) {
             results.basic_data_transfer_rates_kbps.push_back(rate_kbs);
