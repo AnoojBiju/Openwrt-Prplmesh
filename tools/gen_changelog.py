@@ -34,7 +34,7 @@ def get_log_entry(current_version: str, prev_version: str):
     items = []
     version_filter = f"{prev_version}..{current_version}" if prev_version else current_version
     # For each 'git log' line between the two versions ...
-    with subprocess.Popen(["git", "log", "--oneline", version_filter],
+    with subprocess.Popen(["git", "log", "--oneline", "--merges", version_filter],
                           stdout=subprocess.PIPE,
                           universal_newlines=True) as log:
         for line in log.stdout.readlines():
@@ -79,12 +79,12 @@ def main():
     versions = [tag for tag in tags.split('\n') if re.match(r'^\d+.\d+.\d+$', tag)]
 
     if args.start_version and args.latest_version:
-        raise argparse.ArgumentError("-s and -l are mutually exclusive options!")
+        raise argparse.ArgumentError('-s', "-s and -l are mutually exclusive options!")
     if args.latest_version:
         versions = versions[-2:]
     if args.start_version and args.start_version not in versions:
-        raise argparse.ArgumentError(f"{parser.start_version} is not a valid version!"
-                                     f"Must be one of: {str(versions)}")
+        raise argparse.ArgumentError('-s', f"{parser.start_version} is not a valid version!"
+                                           f"Must be one of: {str(versions)}")
     if args.start_version:
         versions = versions[versions.index(args.start_version):]
     if not args.no_unreleased:
