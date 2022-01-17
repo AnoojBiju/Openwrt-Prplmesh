@@ -57,6 +57,11 @@ void TopologyTask::work()
         send_topology_discovery();
     }
 
+    if (m_pending_to_send_topology_notification) {
+        send_topology_notification();
+        return;
+    }
+
     // Each platform must send Topology Discovery message every 60 seconds to its first circle
     // 1905.1 neighbors.
     // Iterate on each of known 1905.1 neighbors and check if we have received in the last
@@ -78,7 +83,7 @@ void TopologyTask::work()
                 neighbors_list_changed = true;
                 continue;
             }
-            it++;
+            ++it;
         }
     }
 
@@ -199,21 +204,7 @@ void TopologyTask::handle_topology_discovery(ieee1905_1::CmduMessageRx &cmdu_rx,
     // Topology Notification Message.
     if (new_device) {
         LOG(INFO) << "Sending Topology Notification on newly discovered 1905.1 device";
-        auto cmdu_header =
-            m_cmdu_tx.create(0, ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE);
-        if (!cmdu_header) {
-            LOG(ERROR) << "cmdu creation of type TOPOLOGY_NOTIFICATION_MESSAGE, has failed";
-            return;
-        }
-
-        auto tlvAlMacAddress = m_cmdu_tx.addClass<ieee1905_1::tlvAlMacAddress>();
-        if (!tlvAlMacAddress) {
-            LOG(ERROR) << "addClass ieee1905_1::tlvAlMacAddress failed";
-            return;
-        }
-        tlvAlMacAddress->mac() = db->bridge.mac;
-        m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, network_utils::MULTICAST_1905_MAC_ADDR,
-                                      db->bridge.mac);
+        send_topology_notification();
     }
 }
 
@@ -370,6 +361,24 @@ void TopologyTask::send_topology_discovery()
 
 void TopologyTask::send_topology_notification()
 {
+    // According to IEEE_Std_1905.1-2013 specification, if some information specified in the
+    // Topology Response message has changed, then within one second, a Topology Notification must
+    // be sent.
+    // If it happens a lot of times in one second period, it could lead to a flood of Topology
+    // Notifications on the network, and to a system slow down, since Topology Notification is a
+    // 'reliable multicast' message, which means, it also needs to be sent as unicast to all
+    // the 1905.1 neighbors.
+    // To prevent such situation, we limit sending more than one Topology Notification in a second.
+    auto now = std::chrono::steady_clock::now();
+    if (now < m_topology_notification_timeout) {
+        m_pending_to_send_topology_notification = true;
+        return;
+    }
+    constexpr uint8_t TOPOLOGY_NOTIFICATION_MAX_DELAY_SEC = 1;
+    m_topology_notification_timeout =
+        now + std::chrono::seconds(TOPOLOGY_NOTIFICATION_MAX_DELAY_SEC);
+    m_pending_to_send_topology_notification = false;
+
     auto cmdu_header = m_cmdu_tx.create(0, ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE);
     if (!cmdu_header) {
         LOG(ERROR) << "cmdu creation of type TOPOLOGY_NOTIFICATION_MESSAGE, has failed";
