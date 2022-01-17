@@ -227,6 +227,9 @@ private:
 
     std::unordered_map<sMacAddr, ieee1905_neighbor> neighbors_map_;
 
+    std::chrono::steady_clock::time_point removed_aged_neighbors_timeout_ =
+        std::chrono::steady_clock::now();
+
     // According to the ieee1905.1 specification section 8.2.1.1, a 1905.1 management entity shall
     // transmit a topology discovery message *at least* once every 60 seconds. Since any message from
     // the neighbor will update it's last_seen, in practice it should be safe to consider it dead and
