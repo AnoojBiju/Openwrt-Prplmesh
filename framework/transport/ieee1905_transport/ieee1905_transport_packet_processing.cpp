@@ -642,6 +642,14 @@ bool Ieee1905Transport::forward_packet_single(Packet &packet)
                         return false;
                     }
                 }
+
+                // Assuming there is only one bridge, and the bridge is the first on
+                // 'network_interfaces_' list, breaking the loop for optimization in case that
+                // forwarding is only required to the bridge.
+                if (network_interface.is_bridge && forward_to_bridge &&
+                    !forward_to_network_interfaces) {
+                    break;
+                }
             }
         }
     }
