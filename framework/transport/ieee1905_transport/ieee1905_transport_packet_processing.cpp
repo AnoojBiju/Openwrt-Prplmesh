@@ -73,6 +73,7 @@ void Ieee1905Transport::update_neighbours(const Packet &packet)
         // Update last seen for new / updated neighbors
         MAPF_DBG("Updating last seen for neighbor with AL MAC " << packet.src);
         neighbor_iter->second.last_seen = now;
+        neighbor_iter->second.if_index  = packet.src_if_index;
     }
 }
 
