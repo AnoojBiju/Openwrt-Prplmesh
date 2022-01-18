@@ -136,13 +136,6 @@ private:
     std::pair<bool, int> check_for_pending_events(int event);
     void pending_event_check_timeout();
 
-    enum states {
-        START = 0,
-        IDLE,
-        LISTENING,
-    };
-    int state = START;
-
     db &database;
     ieee1905_1::CmduMessageTx &cmdu_tx;
     task_pool &tasks;

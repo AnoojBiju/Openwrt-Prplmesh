@@ -28,6 +28,11 @@ rdkb_wlan_task::rdkb_wlan_task(db &database_, ieee1905_1::CmduMessageTx &cmdu_tx
                                task_pool &tasks_)
     : task("rdkb wlan task"), database(database_), cmdu_tx(cmdu_tx_), tasks(tasks_)
 {
+    int prev_task_id = database.get_rdkb_wlan_task_id();
+    if (prev_task_id != -1) {
+        tasks.kill_task(prev_task_id);
+    }
+    database_.assign_rdkb_wlan_task_id(this->id);
 }
 
 void rdkb_wlan_task::work()
@@ -38,20 +43,7 @@ void rdkb_wlan_task::work()
         return;
     }
 
-    switch (state) {
-    case START: {
-        int prev_task_id = database.get_rdkb_wlan_task_id();
-        tasks.kill_task(prev_task_id);
-        database.assign_rdkb_wlan_task_id(id);
-
-        state = IDLE;
-        break;
-    }
-    case IDLE: {
-        pending_event_check_timeout();
-        break;
-    }
-    }
+    pending_event_check_timeout();
 }
 
 void rdkb_wlan_task::handle_event(int event_type, void *obj)
@@ -95,9 +87,6 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
                 break;
             }
             send_bml_response(event_type, event_obj->sd);
-            if (!is_bml_rdkb_wlan_listener_exist()) {
-                state = IDLE;
-            }
         }
         break;
     }
@@ -435,10 +424,6 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
                 }
 
                 remove_bml_rdkb_wlan_socket(event_obj->sd);
-
-                if (!is_bml_rdkb_wlan_listener_exist()) {
-                    state = IDLE;
-                }
             }
         }
         break;
