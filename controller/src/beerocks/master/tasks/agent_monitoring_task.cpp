@@ -392,7 +392,7 @@ void agent_monitoring_task::dm_add_sta_to_agent_connected_event(
                 }
                 ambiorix_dm->set_current_time(sta_path);
                 ambiorix_dm->set(sta_path, "MACAddress", sta.mac());
-                ambiorix_dm->set(sta_path, "TimeSinceLastAssocSec",
+                ambiorix_dm->set(sta_path, "LastConnectTime",
                                  sta.time_since_last_association_sec());
             }
             return;
@@ -437,7 +437,7 @@ std::string agent_monitoring_task::dm_add_agent_connected_event(
                        << ".Radio, mac: " << radio.radio_uid();
             return agent_connected_path;
         }
-        ambiorix_dm->set(radio_path, "MACAddress", radio.radio_uid());
+        ambiorix_dm->set(radio_path, "ID", radio.radio_uid());
         for (int j = 0; j < radio.radio_bss_list_length(); j++) {
             auto bss      = std::get<1>(radio.radio_bss_list(j));
             auto bss_path = ambiorix_dm->add_instance(radio_path + ".BSS");
@@ -601,7 +601,7 @@ bool agent_monitoring_task::dm_set_agent_disconnected_event_params(
                        << ". MAC: " << radio.first;
             return false;
         }
-        ok &= ambiorix_dm->set(radio_path, "MACAddress", radio.first);
+        ok &= ambiorix_dm->set(radio_path, "ID", radio.first);
         auto radio_stats = m_radio_stats.get(radio.first);
 
         if (radio_stats) {

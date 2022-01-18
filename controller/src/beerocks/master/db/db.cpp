@@ -4360,7 +4360,7 @@ bool db::notify_disconnection(const std::string &client_mac)
     }
 
     std::string path_to_disassoc_event_data =
-        "Device.WiFi.DataElements.Notification.DisassociationEvent.DisassociationEventData";
+        "Device.WiFi.DataElements.DisassociationEvent.DisassociationEventData";
 
     if (!dm_check_objects_limit(m_disassoc_events, MAX_EVENT_HISTORY_SIZE)) {
         return false;
@@ -5998,7 +5998,7 @@ bool db::dm_restore_steering_summary_stats(Station &station)
     }
 
     auto steer_summary = station.steering_summary_stats;
-    auto obj_path      = station.dm_path + ".MultiAPSteeringSummaryStats";
+    auto obj_path      = station.dm_path + ".MultiAPSTA.SteeringSummaryStats";
 
     ret_val &=
         m_ambiorix_datamodel->set(obj_path, "BlacklistAttempts", steer_summary.blacklist_attempts);
@@ -6027,7 +6027,7 @@ bool db::dm_add_failed_connection_event(const sMacAddr &sta_mac, const uint16_t 
                                         const uint16_t status_code)
 {
     std::string event_path =
-        "Device.WiFi.DataElements.Notification.FailedConnectionEvent.FailedConnectionEventData";
+        "Device.WiFi.DataElements.FailedConnectionEvent.FailedConnectionEventData";
 
     event_path = m_ambiorix_datamodel->add_instance(event_path);
 
@@ -6048,7 +6048,7 @@ std::string db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &
                                          const std::string &assoc_ts)
 {
     std::string path_association_event =
-        "Device.WiFi.DataElements.Notification.AssociationEvent.AssociationEventData";
+        "Device.WiFi.DataElements.AssociationEvent.AssociationEventData";
 
     if (!dm_check_objects_limit(m_assoc_events, MAX_EVENT_HISTORY_SIZE)) {
         return {};
@@ -7011,7 +7011,7 @@ bool db::dm_clear_cac_status_report(std::shared_ptr<Agent::sRadio> radio)
         return true;
     }
 
-    auto available_channel_list = radio->dm_path + ".CACStatus.AvailableChannels";
+    auto available_channel_list = radio->dm_path + ".CACStatus.CACAvailableChannel";
     if (!m_ambiorix_datamodel->remove_all_instances(available_channel_list)) {
         LOG(ERROR) << "Failed to remove all instances for: " << available_channel_list;
         return false;
@@ -7029,7 +7029,7 @@ bool db::dm_add_cac_status_available_channel(std::shared_ptr<Agent::sRadio> radi
     }
 
     bool ret_val                = true;
-    auto available_channel_list = radio->dm_path + ".CACStatus.AvailableChannels";
+    auto available_channel_list = radio->dm_path + ".CACStatus.CACAvailableChannel";
 
     auto available_channel = m_ambiorix_datamodel->add_instance(available_channel_list);
     if (available_channel.empty()) {
@@ -7037,7 +7037,7 @@ bool db::dm_add_cac_status_available_channel(std::shared_ptr<Agent::sRadio> radi
         return false;
     }
 
-    ret_val &= m_ambiorix_datamodel->set(available_channel, "OperatingClass", operating_class);
+    ret_val &= m_ambiorix_datamodel->set(available_channel, "OpClass", operating_class);
     ret_val &= m_ambiorix_datamodel->set(available_channel, "Channel", channel);
     ret_val &= m_ambiorix_datamodel->set_current_time(radio->dm_path + ".CACStatus");
     return ret_val;
@@ -7114,7 +7114,7 @@ bool db::add_sta_steering_event(const sMacAddr &sta_mac, sStaSteeringEvent &even
     }
 
     bool ret_val          = true;
-    auto steering_history = station->dm_path + ".MultiAPSteeringHistory";
+    auto steering_history = station->dm_path + ".MultiAPSTA.SteeringHistory";
 
     auto steering_event_path = m_ambiorix_datamodel->add_instance(steering_history);
     if (steering_event_path.empty()) {
@@ -7145,7 +7145,7 @@ bool db::dm_restore_sta_steering_event(const Station &station)
     bool ret_val = true;
 
     auto &sta_events      = m_stations_steering_events[station.mac];
-    auto steering_history = station.dm_path + ".MultiAPSteeringHistory";
+    auto steering_history = station.dm_path + ".MultiAPSTA.SteeringHistory";
 
     LOG(DEBUG) << "Restore Station steering events sta: " << station.mac
                << " event size:" << sta_events.size();
@@ -7187,11 +7187,11 @@ bool db::dm_set_device_multi_ap_backhaul(const Agent &agent, const sMacAddr &par
         return true;
     }
 
-    const auto multiap_backhaul_path = agent.dm_path + ".MultiAPBackhaul";
+    const auto multiap_backhaul_path = agent.dm_path + ".MultiAPDevice.Backhaul";
 
     // Controller does not have any Backhaul, so leave it as empty
     if (agent.is_gateway) {
-        ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "BackhaulLinkType", "None");
+        ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "LinkType", "None");
         ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "MACAddress", std::string{});
         ret_val &=
             m_ambiorix_datamodel->set(multiap_backhaul_path, "BackhaulMACAddress", std::string{});
@@ -7215,7 +7215,7 @@ bool db::dm_set_device_multi_ap_backhaul(const Agent &agent, const sMacAddr &par
         break;
     }
 
-    ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "BackhaulLinkType", iface_link_str);
+    ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "LinkType", iface_link_str);
     ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "MACAddress", backhaul_mac);
 
     // TODO: Ethernet link BackhaulMACAddress retrieved as empty, also parent of the node assigned as local bridge (PPM-1658)

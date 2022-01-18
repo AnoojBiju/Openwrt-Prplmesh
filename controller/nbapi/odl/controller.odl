@@ -120,16 +120,11 @@
                         Network devices list.
                     */
                     object Device[] {
-
-                        /*
-                        NumberOfDevices variable calculated by
-                        nubmer of entries in Device list
-                        */
-                        counted with NumberOfDevices;
+                        counted with DeviceNumberOfEntries;
                     }
 
                     object AccessPoint[] {
-                        counted with NumberOfAccessPoints;
+                        counted with AccessPointNumberOfEntries;
                     }
 
                     void AccessPointCommit();
@@ -151,7 +146,7 @@
                     }
                 }
                 %persistent %read-only object SteerEvent[] {
-                    counted with NumberSteerEvents;
+                    counted with SteerEventNumberOfEntries;
                     %persistent %read-only string DeviceId = "00:00:00:00:00:00";
                     %persistent %read-only string TimeStamp = "2020-08-31T11:22:39Z";
                     %persistent %read-only string SteeredFrom = "00:00:00:00:00:00";
@@ -188,7 +183,6 @@
                         ];
                     }
                 }
-                %read-only object Notification;
                 %read-only object AgentConnectedEvent[];
                 %read-only object AgentDisconnectedEvent[];
             }

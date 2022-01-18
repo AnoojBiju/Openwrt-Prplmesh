@@ -14,10 +14,11 @@
 }
 
 %define {
-    select Device.WiFi.DataElements.Notification  {
+    select Device.WiFi.DataElements {
         // The events generated when a STA disassociates from a BSS.
         object DisassociationEvent {
             object DisassociationEventData[] {
+                counted with DisassociationEventDataNumberOfEntries;
                 %read-only string BSSID = "00:00:00:00:00:00";
                 %read-only string MACAddress = "00:00:00:00:00:00";
                 %read-only uint32 ReasonCode = 0 {
@@ -32,7 +33,6 @@
                 %read-only uint32 RetransCount = 0;
                 // The time this event was collected
                 %read-only string TimeStamp = "2020-08-31T11:22:39Z";
-                counted with DisassociationEventDataNumberOfEntries;
             }
         }
     }

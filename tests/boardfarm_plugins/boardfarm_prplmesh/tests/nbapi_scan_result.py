@@ -93,7 +93,7 @@ class NbapiScanResult(PrplMeshBaseTest):
         neighbors_num = int(ch_scan_tlv.tlv_data[ts_len + 7: ts_len + 11], 16)
 
         self.assertEqual(matching_channel[0] + ".NeighborBSS",
-                         "NumberOfNeighbors", neighbors_num)
+                         "NeighborNumberOfEntries", neighbors_num)
         self.assertEqual(matching_channel[0], "Utilization", utilization)
         self.assertEqual(matching_channel[0], "Noise", noise)
 
