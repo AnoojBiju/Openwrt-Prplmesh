@@ -25,11 +25,11 @@
 
         %read-only uint32 LastDataDownlinkRate = 0;
         %read-only uint32 LastDataUplinkRate = 0;
-        %read-only uint32 UtilizationReceive = 0 {
+        %read-only uint64 UtilizationReceive = 0 {
             on action validate call check_minimum 0;
         }
 
-        %read-only uint32 UtilizationTransmit = 0 {
+        %read-only uint64 UtilizationTransmit = 0 {
             on action validate call check_minimum 0;
         }
 
@@ -48,14 +48,15 @@
         %read-only uint64 BytesReceived = 0;
         %read-only uint64 PacketsSent = 0;
         %read-only uint64 PacketsReceived = 0;
-        %read-only uint32 ErrorsSent = 0;
-        %read-only uint32 ErrorsReceived = 0;
-        %read-only uint32 RetransCount = 0;
+        %read-only uint64 ErrorsSent = 0;
+        %read-only uint64 ErrorsReceived = 0;
+        %read-only uint64 RetransCount = 0;
         %read-only string IPV4Address = "0";
         %read-only string IPV6Address = "0";
         %read-only string Hostname = "0";
 
         %read-only object MeasurementReport [] {
+            counted with MeasurementReportNumberOfEntries;
             %read-only string BSSID = "00:00:00:00:00:00";
             %read-only uint16 Channel = 0;
             %read-only uint16 OpClass = 0;
@@ -68,57 +69,56 @@
             %read-only uint16 AntId = 0;
             %read-only uint16 Duration = 0;
             %read-only uint64 StartTime = 0;
-            counted with NumberOfMeasureReports;
-        }
-
-        %read-only object MultiAPSteeringHistory [] {
-            %read-only string Time = "2020-08-31T11:22:39Z";
-
-            /* The BSSID of the Access Point that initiated the steering. */
-            %read-only string APOrigin = "00:00:00:00:00:00";
-
-            /*  This might be Unknown for BTM Query Response steers. */
-            %read-only string TriggerEvent {
-                default "Unknown";
-                on action validate call check_enum [
-                    "Unknown",
-                    "Wi-Fi Channel Utilization",
-                    "Wi-Fi Link Quality",
-                    "Backhaul Link Utilization"
-                ];
-            }
-
-            %read-only string SteeringApproach {
-                default "BTM Request";
-                on action validate call check_enum [
-                    "Blacklist",
-                    "BTM Request",
-                    "Async BTM Query"
-                ];
-            }
-            %read-only string APDestination = "00:00:00:00:00:00";
-            %read-only uint32 SteeringDuration = 0;
-            counted with NumberOfMultiAPSteeringHistory;
-        }
-
-        %read-only object MultiAPSteeringSummaryStats {
-            %read-only uint64 NoCandidateAPFailures = 0;
-            %read-only uint64 BlacklistAttempts = 0;
-            %read-only uint64 BlacklistSuccesses = 0;
-            %read-only uint64 BlacklistFailures = 0;
-            %read-only uint64 BTMAttempts = 0;
-            %read-only uint64 BTMSuccesses = 0;
-            %read-only uint64 BTMFailures = 0;
-            %read-only uint64 BTMQueryResponses = 0;
-            %read-only string LastSteerTimeStamp = "2020-08-31T11:22:39Z";
-            %read-only uint64 LastSteerTime = 0 {
-                on action read call action_last_steer_time;
-            }
         }
 
         %read-only object MultiAPSTA {
-            %read-only string AssociationTime = "2020-08-31T11:22:39Z";
+            %read-only datetime AssociationTime = "2020-08-31T11:22:39Z";
             %read-only uint32 Noise = 0;
+
+            %read-only object SteeringHistory [] {
+                counted with SteeringHistoryNumberOfEntries;
+                %read-only datetime Time = "2020-08-31T11:22:39Z";
+
+                /* The BSSID of the Access Point that initiated the steering. */
+                %read-only string APOrigin = "00:00:00:00:00:00";
+
+                /*  This might be Unknown for BTM Query Response steers. */
+                %read-only string TriggerEvent {
+                    default "Unknown";
+                    on action validate call check_enum [
+                        "Unknown",
+                        "Wi-Fi Channel Utilization",
+                        "Wi-Fi Link Quality",
+                        "Backhaul Link Utilization"
+                    ];
+                }
+
+                %read-only string SteeringApproach {
+                    default "BTM Request";
+                    on action validate call check_enum [
+                        "Blacklist",
+                        "BTM Request",
+                        "Async BTM Query"
+                    ];
+                }
+                %read-only string APDestination = "00:00:00:00:00:00";
+                %read-only uint32 SteeringDuration = 0;
+            }
+
+            %read-only object SteeringSummaryStats {
+                %read-only uint64 NoCandidateAPFailures = 0;
+                %read-only uint64 BlacklistAttempts = 0;
+                %read-only uint64 BlacklistSuccesses = 0;
+                %read-only uint64 BlacklistFailures = 0;
+                %read-only uint64 BTMAttempts = 0;
+                %read-only uint64 BTMSuccesses = 0;
+                %read-only uint64 BTMFailures = 0;
+                %read-only uint64 BTMQueryResponses = 0;
+                %read-only string LastSteerTimeStamp = "2020-08-31T11:22:39Z";
+                %read-only uint32 LastSteerTime = 0 {
+                    on action read call action_last_steer_time;
+                }
+            }
         }
     }
 }

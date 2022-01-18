@@ -58,7 +58,7 @@ class NbapiAssociationEvent(PrplMeshBaseTest):
         for device in topology.values():
             print(device)
 
-        association_data_path = "Device.WiFi.DataElements.Notification."\
+        association_data_path = "Device.WiFi.DataElements."\
             + "AssociationEvent.AssociationEventData"
         association_data_list = controller.nbapi_get_list_instances(association_data_path)
         event_present = False

@@ -408,7 +408,7 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         ht_cap_path: str
             Path to HT Capabilties object.
             Example:
-            "Device.WiFi.DataElements.Notification.AssociationEvent.AssociationEventData.8"
+            "Device.WiFi.DataElements.AssociationEvent.AssociationEventData.8"
 
         Returns
         -------
@@ -434,7 +434,7 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         vht_cap_path: str
             Path to VHT Capabilties object.
             Example:
-            "Device.WiFi.DataElements.Notification.AssociationEvent.AssociationEventData.9"
+            "Device.WiFi.DataElements.AssociationEvent.AssociationEventData.9"
 
         Returns
         -------

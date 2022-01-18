@@ -738,7 +738,7 @@ public:
     std::string dm_add_steer_event();
 
     /**
-     * @brief Set values for parameters of NBAPI object MultiAPSteeringSummaryStats.
+     * @brief Set values for parameters of NBAPI object MultiAPSTA.SteeringSummaryStats.
      *
      * @param station Station object.
      * @return True on success, false otherwise.
@@ -838,7 +838,7 @@ public:
      * when station failed to associate. Set values for parameters of this object.
      *
      * Data model path example:
-     * "Device.WiFi.DataElements.Notification.FailedConnectionEvent.FailedConnectionEventData"
+     * "Device.WiFi.DataElements.FailedConnectionEvent.FailedConnectionEventData"
      *
      * @param sta_mac Client mac address.
      * @param reason_code Reason code of clients failed association.
@@ -1818,7 +1818,7 @@ public:
     /**
      * @brief Clears CAC Status Report data model.
      *
-     * Remove all indexes in AvailableChannels and updates timestamp.
+     * Remove all indexes in CACAvailableChannel and updates timestamp.
      *
      * Data model path : "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.CACStatus" defined in radio.odl
      *
@@ -1828,9 +1828,9 @@ public:
     bool dm_clear_cac_status_report(std::shared_ptr<Agent::sRadio> radio);
 
     /**
-     * @brief Adds instance for CACStatus.AvailableChannels and fullfills it.
+     * @brief Adds instance for CACStatus.CACAvailableChannel and fullfills it.
      *
-     * Data model path : "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.CACStatus.AvailableChannels.{i}"
+     * Data model path : "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.CACStatus.CACAvailableChannel.{i}"
      *
      * @param[in] radio radio db object
      * @param[in] operating_class operating class
@@ -1911,7 +1911,7 @@ public:
      * BackhaulDeviceID -> Parent Device ID (AL_MAC)
      * MACAddress -> Current Device's Backhaul Interface MAC (BH STA or ETH MAC)
      *
-     * DM path : "Device.WiFi.DataElements.Network.Device.{i}.MultiAPBackhaul"
+     * DM path : "Device.WiFi.DataElements.Network.Device.{i}.MultiAPDevice.Backhaul"
      *
      * @param agent agent whose multi ap backhaul object is set
      * @param parent_bssid parent BSSID of the backhaul STA interface
@@ -1928,7 +1928,7 @@ public:
      *
      * This object describes an event generated when a STA associates to a BSS.
      * Example of full path to object:
-     * 'Device.WiFi.DataElements.Notification.AssociationEvent.AssociationEventData.1'.
+     * 'Device.WiFi.DataElements.AssociationEvent.AssociationEventData.1'.
      *
      * @param bssid BSS mac address.
      * @param client_mac Client mac address.
