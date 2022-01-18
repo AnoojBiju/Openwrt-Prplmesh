@@ -98,7 +98,6 @@ void TopologyTask::handle_event(uint8_t event_enum_value, const void *event_obj)
     case AGENT_DEVICE_INITIALIZED: {
         m_periodic_discovery_timestamp = std::chrono::steady_clock::now() -
                                          std::chrono::seconds(TOPOLOGY_DISCOVERY_TX_CYCLE_SEC);
-        send_topology_notification();
         break;
     }
     default: {
