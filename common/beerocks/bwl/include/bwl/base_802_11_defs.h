@@ -24,7 +24,7 @@ struct s80211MgmtFrame {
     /**
      * @brief Management frame types
      */
-    enum class eType {
+    enum class eType : uint8_t {
         ASSOC_REQ    = 0,  /*<< Association Request */
         ASSOC_RESP   = 1,  /*<< Association Response */
         REASSOC_REQ  = 2,  /*<< Re-association Request */

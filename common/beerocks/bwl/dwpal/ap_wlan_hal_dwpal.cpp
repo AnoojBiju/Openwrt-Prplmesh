@@ -2674,7 +2674,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         char vap_bssid[MAC_ADDR_SIZE]                       = {0};
         char vap_name[beerocks::message::IFACE_NAME_LENGTH] = {0};
         s80211MgmtFrame::eType message_type;
-        size_t numOfValidArgsForMsgType[5] = {0};
+        size_t numOfValidArgsForMsgType[2] = {0};
 
         FieldsToParse fieldsToParseForMsgType[] = {
             {NULL /*opCode*/, &numOfValidArgsForMsgType[0], DWPAL_STR_PARAM, NULL, 0},
@@ -2691,7 +2691,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
 
         /* TEMP: Traces... */
         LOG(DEBUG) << "numOfValidArgs[1]=" << numOfValidArgsForMsgType[1]
-                   << ", message_type=" << (int)message_type;
+                   << ", message_type=" << (uint8_t)message_type;
 
         if (message_type == s80211MgmtFrame::eType::PROBE_REQ) {
 
@@ -3207,7 +3207,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
 
         char vap[beerocks::message::IFACE_NAME_LENGTH] = {0};
         char frame[ASSOCIATION_FRAME_SIZE]             = {0};
-        size_t numOfValidArgs[2]                       = {0};
+        size_t numOfValidArgs[3]                       = {0};
 
         FieldsToParse fieldsToParse[] = {
             {NULL /*opCode*/, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
