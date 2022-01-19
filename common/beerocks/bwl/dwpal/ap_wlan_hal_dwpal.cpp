@@ -2691,7 +2691,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
 
         /* TEMP: Traces... */
         LOG(DEBUG) << "numOfValidArgs[1]=" << numOfValidArgsForMsgType[1]
-                   << ", message_type=" << (int)message_type;
+                   << ", message_type=" << (uint8_t)message_type;
 
         if (message_type == s80211MgmtFrame::eType::PROBE_REQ) {
 
