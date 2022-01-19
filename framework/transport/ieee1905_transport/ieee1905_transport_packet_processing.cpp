@@ -37,33 +37,43 @@ void Ieee1905Transport::update_neighbours(const Packet &packet)
         return;
     }
 
-    // Delete aged neighbors
-    for (auto neigh = neighbors_map_.begin(); neigh != neighbors_map_.end();) {
-        if (neigh->first != packet.src) {
-            auto age = std::chrono::duration_cast<std::chrono::seconds>(
-                std::chrono::steady_clock::now() - neigh->second.last_seen);
-            if (age > kMaximumNeighbourAge) {
-                MAPF_INFO("Deleting aged out neighbor with AL MAC " << neigh->first);
-                neigh = neighbors_map_.erase(neigh);
-                continue;
+    auto now = std::chrono::steady_clock::now();
+
+    // Start iterating on the neighbors map to delete aged neighbors if more than the time it will
+    // take for the most aged neighbor to expire and non less than 1 seconds has passed since last
+    // time entered here.
+    if (now > removed_aged_neighbors_timeout_) {
+        auto oldest_neighbor_wait_sec = kMaximumNeighbourAge;
+        for (auto neigh = neighbors_map_.begin(); neigh != neighbors_map_.end();) {
+            if (neigh->first != packet.src) {
+                auto age =
+                    std::chrono::duration_cast<std::chrono::seconds>(now - neigh->second.last_seen);
+                if (age > kMaximumNeighbourAge) {
+                    MAPF_INFO("Deleting aged out neighbor with AL MAC " << neigh->first);
+                    neigh = neighbors_map_.erase(neigh);
+                    continue;
+                }
+                auto diff_sec            = kMaximumNeighbourAge - age;
+                oldest_neighbor_wait_sec = std::min(oldest_neighbor_wait_sec, diff_sec);
             }
+            ++neigh;
         }
-        ++neigh;
+        constexpr uint8_t REMOVE_AGED_NEIGHBORS_CYCLES_SEC = 1;
+        removed_aged_neighbors_timeout_ =
+            now + std::max(oldest_neighbor_wait_sec,
+                           std::chrono::seconds(REMOVE_AGED_NEIGHBORS_CYCLES_SEC));
     }
 
     // Add new neighbors
     auto neighbor_iter = neighbors_map_.find(packet.src);
     if (neighbor_iter == neighbors_map_.end()) {
-        Ieee1905Transport::ieee1905_neighbor neigh = {0};
-        neigh.al_mac                               = packet.src;
-        neigh.if_index                             = packet.src_if_index;
-        neigh.last_seen                            = std::chrono::steady_clock::now();
         MAPF_INFO("Adding new neighbor with AL MAC " << packet.src);
-        neighbors_map_[packet.src] = neigh;
+        neighbors_map_.emplace(packet.src, ieee1905_neighbor{packet.src, packet.src_if_index, now});
     } else {
         // Update last seen for new / updated neighbors
         MAPF_DBG("Updating last seen for neighbor with AL MAC " << packet.src);
-        neighbors_map_[packet.src].last_seen = std::chrono::steady_clock::now();
+        neighbor_iter->second.last_seen = now;
+        neighbor_iter->second.if_index  = packet.src_if_index;
     }
 }
 
@@ -628,6 +638,14 @@ bool Ieee1905Transport::forward_packet_single(Packet &packet)
                         MAPF_ERR("cannot forward packet to network inteface " << ifname << ".");
                         return false;
                     }
+                }
+
+                // Assuming there is only one bridge, and the bridge is the first on
+                // 'network_interfaces_' list, breaking the loop for optimization in case that
+                // forwarding is only required to the bridge.
+                if (network_interface.is_bridge && forward_to_bridge &&
+                    !forward_to_network_interfaces) {
+                    break;
                 }
             }
         }
