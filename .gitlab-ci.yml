@@ -47,6 +47,9 @@ image-build-boardfarm-ci:
 image-build-cppcheck:
   extends: .image-build
 
+image-build-scripts:
+  extends: .image-build
+
 platform:
   stage: platform
   needs:
