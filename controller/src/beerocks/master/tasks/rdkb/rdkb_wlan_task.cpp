@@ -440,7 +440,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
                            << " group index " << int(group_index);
 
             if (events_updates_listeners.empty()) {
-                TASK_LOG(ERROR) << "STEERING_EVENT_CLIENT_ACTIVITY_AVAILABLE no listener ignoring";
+                TASK_LOG(DEBUG) << "STEERING_EVENT_CLIENT_ACTIVITY_AVAILABLE no listener ignoring";
                 break;
             }
 
@@ -494,7 +494,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
                            << " bssid = " << bssid << " group index " << int(group_index);
 
             if (events_updates_listeners.empty()) {
-                TASK_LOG(ERROR) << "STEERING_EVENT_SNR_XING_AVAILABLE no listener ignoring";
+                TASK_LOG(DEBUG) << "STEERING_EVENT_SNR_XING_AVAILABLE no listener ignoring";
                 break;
             }
 
@@ -553,7 +553,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
                            << " bssid = " << bssid << " group index " << int(group_index);
 
             if (events_updates_listeners.empty()) {
-                TASK_LOG(ERROR) << "STEERING_EVENT_SNR_AVAILABLE no listener ignoring";
+                TASK_LOG(DEBUG) << "STEERING_EVENT_SNR_AVAILABLE no listener ignoring";
                 break;
             }
 
@@ -605,7 +605,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
                            << " bssid = " << bssid << " group index " << int(group_index);
 
             if (events_updates_listeners.empty()) {
-                TASK_LOG(ERROR) << "STEERING_EVENT_PROBE_REQ_AVAILABLE no listener ignoring";
+                TASK_LOG(DEBUG) << "STEERING_EVENT_PROBE_REQ_AVAILABLE no listener ignoring";
                 break;
             }
 
@@ -717,7 +717,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
                            << " bssid = " << bssid << " group index " << int(group_index);
 
             if (events_updates_listeners.empty()) {
-                TASK_LOG(ERROR) << "STEERING_EVENT_CLIENT_CONNECT_AVAILABLE no listener ignoring";
+                TASK_LOG(DEBUG) << "STEERING_EVENT_CLIENT_CONNECT_AVAILABLE no listener ignoring";
                 break;
             }
 
@@ -794,7 +794,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
                            << int(event_obj->source) << " type " << int(event_obj->type);
 
             if (events_updates_listeners.empty()) {
-                TASK_LOG(ERROR)
+                TASK_LOG(DEBUG)
                     << "STEERING_EVENT_CLIENT_DISCONNECT_AVAILABLE no listener ignoring";
                 break;
             }
