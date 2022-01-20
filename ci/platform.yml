@@ -39,6 +39,10 @@ include:
   - local: "/ci/certification/R2/nec-wx3000hp.yml"
   - local: "/ci/certification/R2/axepoint.yml"
 
+.rules-for-releases: &onrelease
+  - if: '$CI_COMMIT_TAG =~ /\A\d+\.\d+\.\d+\z/'
+  - when: manual
+
 build-for-rdkb-turris-omnia:
   extends: .build-for-rdkb
   variables:
@@ -188,44 +192,57 @@ run-certification-tests-R1-platform-isr:
     - when: manual
       allow_failure: true
 
+changelog:
+  stage: build
+  image: $CI_REGISTRY_IMAGE/prplmesh-scripts:$PARENT_PIPELINE_ID
+  rules: *onrelease
+  needs:
+    - pipeline: $PARENT_PIPELINE_ID
+      job: image-build-scripts
+  script:
+    - tools/gen_changelog.py --latest-version > CHANGELOG.md
+  artifacts:
+    paths:
+      - CHANGELOG.md
+
 upload-release-artifacts:
   stage: upload
-  image: curlimages/curl:7.74.0
-  rules:
-    - if: '$CI_COMMIT_TAG =~ /\A\d+\.\d+\.\d+\z/'
+  image: $CI_REGISTRY_IMAGE/prplmesh-scripts:$PARENT_PIPELINE_ID
+  rules: *onrelease
   script:
-    - |
-      upload_command() {
-        # $1 is the target name under 'build/'. It will also be used for the name of the uploaded fullimage.
-        export PACKAGE_REGISTRY_URL="${PACKAGE_REGISTRY_BASE_URL}/$1/${CI_COMMIT_TAG}"
-        curl --fail --show-error --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file "build/$1/prplmesh.ipk" "${PACKAGE_REGISTRY_URL}/prplmesh_${CI_COMMIT_TAG}_$1.ipk"
-        # $2 is the name of the fullimage.
-        curl --fail --show-error --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file "build/$1/$2" "${PACKAGE_REGISTRY_URL}/$CI_COMMIT_TAG-$2"
-      }
-    - upload_command "turris-omnia" "$TURRIS_OMNIA_FULLIMAGE"
-    - upload_command "glinet-b1300" "$GLINET_B1300_FULLIMAGE"
-    - upload_command "axepoint" "$AXEPOINT_FULLIMAGE"
-    - upload_command "nec-wx3000hp" "$NEC_WX3000HP_FULLIMAGE"
+   - |
+     upload_command() {
+       # $1 is the target name under 'build/'. It will also be used for the name of the uploaded fullimage.
+       export PACKAGE_REGISTRY_URL="${PACKAGE_REGISTRY_BASE_URL}/$1/${CI_COMMIT_TAG}"
+       curl --fail --show-error --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file "build/$1/prplmesh.ipk" "${PACKAGE_REGISTRY_URL}/prplmesh_${CI_COMMIT_TAG}_$1.ipk"
+       # $2 is the name of the fullimage.
+       curl --fail --show-error --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file "build/$1/$2" "${PACKAGE_REGISTRY_URL}/$CI_COMMIT_TAG-$2"
+     }
+   - upload_command "turris-omnia" "$TURRIS_OMNIA_FULLIMAGE"
+   - upload_command "glinet-b1300" "$GLINET_B1300_FULLIMAGE"
+   - upload_command "axepoint" "$AXEPOINT_FULLIMAGE"
+   - upload_command "nec-wx3000hp" "$NEC_WX3000HP_FULLIMAGE"
   needs:
     - job: build-for-turris-omnia
     - job: build-for-glinet-b1300
     - job: build-for-intel-mips
 
+
 release:
   stage: release
   image: registry.gitlab.com/gitlab-org/release-cli:v0.5.0
-  rules:
-    - if: $CI_COMMIT_TAG
+  rules: *onrelease
   script:
     - |
-      release-cli create --name "Release $CI_COMMIT_TAG" --tag-name $CI_COMMIT_TAG \
-        --assets-link "{\"name\":\"axepoint prplmesh ipk\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/axepoint/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_axepoint.ipk\"}" \
-        --assets-link "{\"name\":\"axepoint fullimage\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/axepoint/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$AXEPOINT_FULLIMAGE\"}" \
-        --assets-link "{\"name\":\"glinet-b1300 prplmesh ipk\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/glinet-b1300/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_glinet-b1300.ipk\"}" \
-        --assets-link "{\"name\":\"glinet-b1300 fullimage\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/glinet-b1300/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$GLINET_B1300_FULLIMAGE\"}" \
-        --assets-link "{\"name\":\"turris-omnia prplmesh ipk\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/turris-omnia/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_turris-omnia.ipk\"}" \
-        --assets-link "{\"name\":\"turris-omnia fullimage\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/turris-omnia/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$TURRIS_OMNIA_FULLIMAGE\"}" \
-        --assets-link "{\"name\":\"nec-wx3000hp prplmesh ipk\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/nec-wx3000hp/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_nec-wx3000hp.ipk\"}" \
-        --assets-link "{\"name\":\"nec-wx3000hp fullimage\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/nec-wx3000hp/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$NEC_WX3000HP_FULLIMAGE\"}"
+      release-cli create --name "Release $CI_COMMIT_TAG" --description CHANGELOG.md --tag-name $CI_COMMIT_TAG \
+        --assets-link "{\"name\":\"axepoint prplmesh ipk\",\"type\":\"package\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/axepoint/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_axepoint.ipk\"}" \
+        --assets-link "{\"name\":\"axepoint fullimage\",\"type\":\"image\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/axepoint/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$AXEPOINT_FULLIMAGE\"}" \
+        --assets-link "{\"name\":\"glinet-b1300 prplmesh ipk\",\"type\":\"package\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/glinet-b1300/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_glinet-b1300.ipk\"}" \
+        --assets-link "{\"name\":\"glinet-b1300 fullimage\",\"type\":\"image\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/glinet-b1300/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$GLINET_B1300_FULLIMAGE\"}" \
+        --assets-link "{\"name\":\"turris-omnia prplmesh ipk\",\"type\":\"package\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/turris-omnia/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_turris-omnia.ipk\"}" \
+        --assets-link "{\"name\":\"turris-omnia fullimage\",\"type\":\"image\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/turris-omnia/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$TURRIS_OMNIA_FULLIMAGE\"}" \
+        --assets-link "{\"name\":\"nec-wx3000hp prplmesh ipk\",\"type\":\"package\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/nec-wx3000hp/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_nec-wx3000hp.ipk\"}" \
+        --assets-link "{\"name\":\"nec-wx3000hp fullimage\",\"type\":\"image\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/nec-wx3000hp/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$NEC_WX3000HP_FULLIMAGE\"}"
   needs:
     - job: upload-release-artifacts
+    - job: changelog
