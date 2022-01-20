@@ -322,7 +322,9 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
                 TASK_LOG(ERROR) << "unexpected event STEERING_CLIENT_DISCONNECT_RESPONSE ";
                 break;
             } else if (!res.first && res.second) {
-                send_bml_response(event_type, res.second, -BML_RET_TIMEOUT);
+                if (res.second != beerocks::net::FileDescriptor::invalid_descriptor) {
+                    send_bml_response(event_type, res.second, -BML_RET_TIMEOUT);
+                }
             } else if (res.first && !res.second) {
                 TASK_LOG(ERROR)
                     << "not suppose to happen for STEERING_CLIENT_DISCONNECT_RESPONSE event!!";
@@ -331,7 +333,9 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
                 send_bml_response(event_type, res.second, -BML_RET_OP_FAILED);
                 break;
             }
-            send_bml_response(event_type, res.second);
+            if (res.second != beerocks::net::FileDescriptor::invalid_descriptor) {
+                send_bml_response(event_type, res.second);
+            }
         }
         break;
     }
