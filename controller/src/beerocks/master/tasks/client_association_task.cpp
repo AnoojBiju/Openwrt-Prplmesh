@@ -10,7 +10,7 @@
 #include "../son_actions.h"
 
 #include <bcl/beerocks_utils.h>
-#include <tlvf/AssociationRequestFrame/AssocReqFrame.h>
+#include <bcl/son/son_assoc_frame_utils.h>
 #include <tlvf/wfa_map/tlvClientAssociationEvent.h>
 #include <tlvf/wfa_map/tlvClientCapabilityReport.h>
 #include <tlvf/wfa_map/tlvClientInfo.h>
@@ -135,22 +135,58 @@ bool client_association_task::handle_cmdu_1905_client_capability_report_message(
               << ", Result Code= " << result_code << ", client MAC= " << sta_mac
               << ", BSSID= " << client_info_tlv->bssid();
 
-    LOG_IF(client_capability_report_tlv->result_code() ==
-               wfa_map::tlvClientCapabilityReport::SUCCESS,
-           DEBUG)
-        << "(Re)Association Request frame= "
-        << beerocks::utils::dump_buffer(client_capability_report_tlv->association_frame(),
-                                        client_capability_report_tlv->association_frame_length());
+    /*
+     * The remote agent reports no client capability data so return here.
+     */
+    if (client_capability_report_tlv->result_code() !=
+        wfa_map::tlvClientCapabilityReport::SUCCESS) {
+        return true;
+    }
 
-    auto assoc_frame = assoc_frame::AssocReqFrame::parse(
-        client_capability_report_tlv->association_frame(),
-        client_capability_report_tlv->association_frame_length(),
-        assoc_frame::AssocReqFrame::eFrameType::ASSOCIATION_REQUEST);
+    LOG(DEBUG) << "(Re)Association Request frame= "
+               << beerocks::utils::dump_buffer(
+                      client_capability_report_tlv->association_frame(),
+                      client_capability_report_tlv->association_frame_length());
+
+    /*
+     * Client capability data is latest assoc/reassoc request frame data
+     * so assume unknown assoc frame type to cover both cases.
+     */
+    auto assoc_frame =
+        assoc_frame::AssocReqFrame::parse(client_capability_report_tlv->association_frame(),
+                                          client_capability_report_tlv->association_frame_length());
 
     if (!assoc_frame) {
-        LOG(ERROR) << "Failed to parse Associaiton Request frame.";
+        LOG(ERROR) << "Failed to parse Association Request frame.";
         return false;
     }
+
+    beerocks::message::sRadioCapabilities capabilities = {};
+    auto result = son::assoc_frame_utils::get_station_capabilities_from_assoc_frame(assoc_frame,
+                                                                                    capabilities);
+    if (!result) {
+        LOG(ERROR) << "Failed to parse station capabilities.";
+        return false;
+    }
+    son::wireless_utils::print_station_capabilities(capabilities);
+
+    // Save latest station capabilities to Station object
+    auto sta_mac_str = tlvf::mac_to_string(sta_mac);
+    result           = m_database.set_station_capabilities(sta_mac_str, capabilities);
+    if (!result) {
+        LOG(ERROR) << "Failed to save capabilities.";
+        return false;
+    }
+
+    // Update the station's link bw with the received caps
+    auto client_bw     = m_database.get_node_bw(sta_mac_str);
+    auto client_bw_max = client_bw;
+    if (son::wireless_utils::get_station_max_supported_bw(capabilities, client_bw_max)) {
+        if (client_bw_max < client_bw) {
+            m_database.update_node_bw(sta_mac, client_bw_max);
+        }
+    }
+
     auto station = m_database.get_station(sta_mac);
     auto sta_cap = station->m_sta_cap.add(client_info_tlv->client_mac());
 
