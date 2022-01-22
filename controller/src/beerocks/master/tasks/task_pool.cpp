@@ -69,8 +69,7 @@ void task_pool::pending_task_ended(int task_id)
 void task_pool::response_received(std::string mac,
                                   std::shared_ptr<beerocks::beerocks_header> beerocks_header)
 {
-    std::unordered_map<int, std::shared_ptr<task>>::const_iterator got =
-        m_scheduled_tasks.find(beerocks_header->id());
+    auto got = m_scheduled_tasks.find(beerocks_header->id());
     if (got != m_scheduled_tasks.end()) {
         got->second->response_received(mac, beerocks_header);
     }
