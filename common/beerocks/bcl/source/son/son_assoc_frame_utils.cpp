@@ -26,6 +26,7 @@ void assoc_frame_utils::get_default_mcs_from_supported_rates(const std::vector<u
                                            beerocks::BANDWIDTH_20, default_mcs, default_short_gi);
 }
 
+namespace son {
 template <>
 bool assoc_frame_utils::get_station_capabilities_from_assoc_field<>(
     const std::shared_ptr<assoc_frame::cSupportedChannels> &suppChans,
@@ -253,6 +254,7 @@ bool assoc_frame_utils::get_station_capabilities_from_assoc_field<>(
     // Partial DL MU-MIMO, Partial/Full UL MU-MO
     return true;
 }
+} // namespace son
 
 bool assoc_frame_utils::get_station_capabilities_from_assoc_frame(
     const std::shared_ptr<assoc_frame::AssocReqFrame> &assoc_frame,
