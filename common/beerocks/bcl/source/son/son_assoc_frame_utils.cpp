@@ -222,6 +222,9 @@ bool assoc_frame_utils::get_station_capabilities_from_assoc_field<>(
     sta_caps.max_mcs      = sta_caps.vht_mcs;
     sta_caps.max_streams  = sta_caps.vht_ss;
     sta_caps.max_ch_width = sta_caps.vht_bw;
+
+    sta_caps.vht_su_beamformer = vht_cap_info.su_beamformer;
+    sta_caps.vht_mu_beamformer = vht_cap_info.mu_beamformer;
     // 11ac-wave2: mumimo_supported if mu_beamformer or mu_beamformee ?
     return true;
 }

@@ -1578,12 +1578,13 @@ bool db::dm_set_sta_vht_capabilities(const std::string &path_to_sta,
         return false;
     }
     std::string path_to_obj = path_to_sta + "VHTCapabilities.";
-    if (!m_ambiorix_datamodel->set(path_to_obj, "VHT_Tx_MCS", sta_cap.default_mcs)) {
-        LOG(ERROR) << "Failed to set " << path_to_obj << "VHT_Tx_MCS: " << sta_cap.default_mcs;
+    auto vht_mcs_set        = son::wireless_utils::get_vht_mcs_set(sta_cap.vht_mcs, sta_cap.vht_ss);
+    if (!m_ambiorix_datamodel->set(path_to_obj, "VHT_Tx_MCS", vht_mcs_set)) {
+        LOG(ERROR) << "Failed to set " << path_to_obj << "VHT_Tx_MCS: " << vht_mcs_set;
         return_val = false;
     }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "VHT_Rx_MCS", sta_cap.vht_mcs)) {
-        LOG(ERROR) << "Failed to set " << path_to_obj << "VHT_Rx_MCS: " << sta_cap.vht_mcs;
+    if (!m_ambiorix_datamodel->set(path_to_obj, "VHT_Rx_MCS", vht_mcs_set)) {
+        LOG(ERROR) << "Failed to set " << path_to_obj << "VHT_Rx_MCS: " << vht_mcs_set;
         return_val = false;
     }
     // TODO: find value for tx_spatial_streams PPM-792.
@@ -1619,14 +1620,16 @@ bool db::dm_set_sta_vht_capabilities(const std::string &path_to_sta,
                    << "VHT_160_MHz: " << (BANDWIDTH_160 <= sta_cap.vht_bw);
         return_val = false;
     }
-    // TODO: find value for SU_beamformer and MU_beamformer PPM-792.
-    // Parse the (Re)Association Request frame.
-    if (!m_ambiorix_datamodel->set(path_to_obj, "SU_beamformer", false)) {
-        LOG(ERROR) << "Failed to set " << path_to_obj << "SU_beamformer: " << false;
+    if (!m_ambiorix_datamodel->set(path_to_obj, "SU_beamformer",
+                                   static_cast<bool>(sta_cap.vht_su_beamformer))) {
+        LOG(ERROR) << "Failed to set " << path_to_obj
+                   << "SU_beamformer: " << static_cast<bool>(sta_cap.vht_su_beamformer);
         return_val = false;
     }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "MU_beamformer", false)) {
-        LOG(ERROR) << "Failed to set " << path_to_obj << "MU_beamformer: " << false;
+    if (!m_ambiorix_datamodel->set(path_to_obj, "MU_beamformer",
+                                   static_cast<bool>(sta_cap.vht_mu_beamformer))) {
+        LOG(ERROR) << "Failed to set " << path_to_obj
+                   << "MU_beamformer: " << static_cast<bool>(sta_cap.vht_mu_beamformer);
         return_val = false;
     }
     return return_val;

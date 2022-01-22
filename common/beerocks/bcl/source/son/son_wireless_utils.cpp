@@ -1431,6 +1431,10 @@ void wireless_utils::print_station_capabilities(beerocks::message::sRadioCapabil
                << std::endl
                << "vht_mcs = "
                << ((int(sta_caps.vht_mcs)) ? std::to_string(sta_caps.vht_mcs) : "n/a") << std::endl
+               << "vht_su_beamformer = " << (sta_caps.vht_su_beamformer ? "true" : "false")
+               << std::endl
+               << "vht_mu_beamformer = " << (sta_caps.vht_mu_beamformer ? "true" : "false")
+               << std::endl
                << "vht_bw = "
                << ((sta_caps.vht_bw != beerocks::BANDWIDTH_UNKNOWN &&
                     sta_caps.vht_bw < beerocks::BANDWIDTH_MAX)
@@ -1451,4 +1455,13 @@ void wireless_utils::print_station_capabilities(beerocks::message::sRadioCapabil
                << "beacon_report_table = " << int(sta_caps.beacon_report_table) << std::endl
                << "lci_meas = " << int(sta_caps.lci_meas) << std::endl
                << "fmt_range_report = " << int(sta_caps.fmt_range_report);
+}
+
+uint16_t wireless_utils::get_vht_mcs_set(uint8_t vht_mcs, uint8_t vht_ss)
+{
+    uint16_t vht_mcs_set = 0xffff;
+    for (auto i = 0; vht_mcs < 10 && i < vht_ss && i < 8; i++) {
+        vht_mcs_set &= ~(((10 - vht_mcs) & 0x03) << (i * 2));
+    }
+    return vht_mcs_set;
 }
