@@ -285,10 +285,13 @@ void slave_thread::stop_slave_thread()
 
 void slave_thread::agent_reset()
 {
-    m_agent_resets_counter++;
-    LOG(DEBUG) << "agent_reset() #" << m_agent_resets_counter << " - start";
+    // If already during reset, return.
+    if (m_agent_state < eSlaveState::STATE_LOAD_PLATFORM_CONFIGURATION) {
+        return;
+    }
 
-    auto db = AgentDB::get();
+    m_agent_resets_counter++;
+    LOG(DEBUG) << "agent_reset() #" << m_agent_resets_counter;
 
     m_radio_managers.do_on_each_radio_manager([&](const sManagedRadio &radio_manager,
                                                   const std::string &fronthaul_iface) {
@@ -330,7 +333,6 @@ void slave_thread::agent_reset()
         m_agent_state = STATE_INIT;
     }
 
-    LOG(DEBUG) << "agent_reset() #" << m_agent_resets_counter << " - done";
 }
 
 bool slave_thread::read_platform_configuration()
