@@ -4284,8 +4284,12 @@ bool slave_thread::agent_fsm()
                     // Set zwdfs to initial value.
                     radio->front.zwdfs = false;
                 }
-                fronthaul_stop(fronthaul_iface);
-                fronthaul_start(fronthaul_iface);
+                if (radio_manager.ap_manager_fd == net::FileDescriptor::invalid_descriptor ||
+                    radio_manager.monitor_fd == net::FileDescriptor::invalid_descriptor) {
+                    // Start the fronthaul process. Before starting, kill the existing one.
+                    fronthaul_stop(fronthaul_iface);
+                    fronthaul_start(fronthaul_iface);
+                }
                 return true;
             });
 
