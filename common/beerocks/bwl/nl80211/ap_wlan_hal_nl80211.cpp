@@ -85,6 +85,8 @@ static ap_wlan_hal::Event nl80211_to_bwl_event(const std::string &opcode)
         return ap_wlan_hal::Event::DFS_NOP_Finished;
     } else if (opcode == "AP-MGMT-FRAME-RECEIVED") {
         return ap_wlan_hal::Event::AP_MGMT_FRAME_RECEIVED;
+    } else if (opcode == "STA_INFO_REPLY") {
+        return ap_wlan_hal::Event::STA_INFO_REPLY;
     }
 
     return ap_wlan_hal::Event::Invalid;
@@ -495,6 +497,16 @@ bool ap_wlan_hal_nl80211::sta_bss_steer(const std::string &mac, const std::strin
         return false;
     }
 
+    return true;
+}
+
+bool ap_wlan_hal_nl80211::sta_query_info(const std::string &sta_mac)
+{
+    std::string cmd = "STA_INFO_QUERY " + sta_mac + " add_network_info=" + get_iface_name();
+    if (!wpa_ctrl_send_msg(cmd)) {
+        LOG(ERROR) << "sta_query_info() failed!";
+        return false;
+    }
     return true;
 }
 
@@ -1198,6 +1210,26 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
         // current VAP, there is no need to notify the upper layer.
         // disassoc_timer_btt = 0 valid_int_btt=2 (200ms) reason=0 (not specified)
         sta_bss_steer(client_mac, bssid, op_class, m_radio_info.channel, 0, 2, 0);
+        break;
+    }
+
+    case Event::STA_INFO_REPLY: {
+        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sSTA_INFO_REPLY));
+        auto msg      = reinterpret_cast<sSTA_INFO_REPLY *>(msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        // Initialize the message
+        msg->bss         = parsed_obj["bss"];
+        msg->mac         = tlvf::mac_from_string(parsed_obj["mac"]);
+        msg->device_name = parsed_obj["device_name"];
+        msg->vendor      = parsed_obj["vendor"];
+        msg->days_since_last_reset =
+            beerocks::string_utils::stoi(parsed_obj["days_since_last_reset"]);
+        msg->ipv4 = beerocks::net::network_utils::ipv4_from_string(parsed_obj["ipv4"]);
+        msg->subnet_mask =
+            beerocks::net::network_utils::ipv4_from_string(parsed_obj["subnet_mask"]);
+        msg->default_gw = beerocks::net::network_utils::ipv4_from_string(parsed_obj["default_gw"]);
+        event_queue_push(Event::STA_INFO_REPLY, msg_buff);
         break;
     }
 
