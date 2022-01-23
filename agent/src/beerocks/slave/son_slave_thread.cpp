@@ -4118,7 +4118,9 @@ bool slave_thread::agent_fsm()
                 if (!radio) {
                     return false;
                 }
-                radio->channels_list.clear();
+                if (radio_manager.ap_manager_fd == FileDescriptor::invalid_descriptor) {
+                    radio->channels_list.clear();
+                }
                 return true;
             });
 
