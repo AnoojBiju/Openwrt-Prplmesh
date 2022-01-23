@@ -634,7 +634,7 @@ void slave_thread::handle_client_disconnected(int fd)
 
 bool slave_thread::fsm_all()
 {
-    auto radio_fsm = [&](sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
+    auto radio_fsm = [&](const sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
         if (!monitor_heartbeat_check(fronthaul_iface) ||
             !ap_manager_heartbeat_check(fronthaul_iface)) {
             fronthaul_reset(radio_manager);
@@ -4113,7 +4113,7 @@ bool slave_thread::agent_fsm()
         // Must clear the map to prevent residues of previous country configuration.
         // This is needed since the map is not cleared when read.
         m_radio_managers.do_on_each_radio_manager(
-            [&](sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
+            [&](const sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
                 auto radio = db->radio(fronthaul_iface);
                 if (!radio) {
                     return false;
