@@ -4482,13 +4482,6 @@ bool slave_thread::agent_fsm()
 void slave_thread::fronthaul_stop(const std::string &fronthaul_iface)
 {
     LOG(INFO) << "fronthaul stop " << fronthaul_iface;
-    auto &radio_manager = m_radio_managers[fronthaul_iface];
-
-    m_cmdu_server->disconnect(radio_manager.ap_manager_fd);
-    radio_manager.ap_manager_fd = beerocks::net::FileDescriptor::invalid_descriptor;
-
-    m_cmdu_server->disconnect(radio_manager.monitor_fd);
-    radio_manager.monitor_fd = beerocks::net::FileDescriptor::invalid_descriptor;
 
     // Kill Fronthaul pid
     os_utils::kill_pid(config.temp_path + "pid/",
