@@ -295,44 +295,38 @@ void slave_thread::agent_reset()
 
     m_radio_managers.do_on_each_radio_manager([&](const sManagedRadio &radio_manager,
                                                   const std::string &fronthaul_iface) {
-        auto radio = db->radio(fronthaul_iface);
-
-        if (!radio) {
-            LOG(ERROR) << "Radio of iface " << fronthaul_iface << " does not exist on the db";
-            return false;
-        }
-        // Clear the front interface mac.
-        radio->front.iface_mac = network_utils::ZERO_MAC;
-
-        fronthaul_stop(fronthaul_iface);
+        auto db = AgentDB::get();
 
         if (db->device_conf.stop_on_failure_attempts && !radio_manager.stop_on_failure_attempts) {
             LOG(ERROR) << "Reached to max stop on failure attempts!";
             m_stopped = true;
         }
 
+        // If stopped, close the fronthaul.
+        if (m_stopped) {
+            fronthaul_stop(fronthaul_iface);
+        }
         return true;
     });
 
-    if (m_stopped && m_agent_state != STATE_INIT) {
+    // If stopped, move to STATE_STOPPED.
+    if (m_stopped) {
         LOG(DEBUG) << "goto STATE_STOPPED";
         m_agent_state = STATE_STOPPED;
-    }
-
-    if (m_agent_state == STATE_STOPPED) {
         platform_notify_error(beerocks::bpl::eErrorCode::SLAVE_STOPPED, "");
         return;
     }
+
     if (m_is_backhaul_disconnected) {
         m_agent_state_timer_sec =
             std::chrono::steady_clock::now() + std::chrono::seconds(SLAVE_INIT_DELAY_SEC);
         LOG(DEBUG) << "goto STATE_WAIT_BEFORE_INIT";
         m_agent_state = STATE_WAIT_BEFORE_INIT;
-    } else {
-        LOG(DEBUG) << "goto STATE_INIT";
-        m_agent_state = STATE_INIT;
+        return;
     }
 
+    LOG(DEBUG) << "goto STATE_INIT";
+    m_agent_state = STATE_INIT;
 }
 
 bool slave_thread::read_platform_configuration()
