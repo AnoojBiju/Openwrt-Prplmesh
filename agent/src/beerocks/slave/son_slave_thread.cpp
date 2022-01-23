@@ -637,7 +637,7 @@ bool slave_thread::fsm_all()
     auto radio_fsm = [&](sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
         if (!monitor_heartbeat_check(fronthaul_iface) ||
             !ap_manager_heartbeat_check(fronthaul_iface)) {
-            agent_reset();
+            m_cmdu_server->disconnect(radio_manager.ap_manager_fd);
         }
         return true;
     };
@@ -2348,7 +2348,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
                 LOG(INFO) << "configuration in progress, ignoring";
                 break;
             }
-            agent_reset();
+            m_cmdu_server->disconnect(radio_manager.ap_manager_fd);
         } else {
             auto notification_out = message_com::create_vs_message<
                 beerocks_message::cACTION_CONTROL_HOSTAP_AP_DISABLED_NOTIFICATION>(cmdu_tx);
@@ -2375,7 +2375,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
 
         if (!response->success()) {
             LOG(ERROR) << "failed to enable APs";
-            agent_reset();
+            m_cmdu_server->disconnect(radio_manager.ap_manager_fd);
         }
 
         break;
@@ -3267,7 +3267,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
         // take actions when the cancelation failed
         if (!response_in->success()) {
             LOG(ERROR) << "cancel active cac failed - resetting the slave";
-            agent_reset();
+            m_cmdu_server->disconnect(radio_manager.ap_manager_fd);
         }
 
         break;
@@ -3373,7 +3373,7 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
                 LOG(INFO) << "configuration is in progress, ignoring";
                 break;
             }
-            agent_reset();
+            m_cmdu_server->disconnect(radio_manager.ap_manager_fd);
         }
         break;
     }
