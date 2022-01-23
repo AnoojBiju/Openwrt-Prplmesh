@@ -590,14 +590,22 @@ void slave_thread::handle_client_disconnected(int fd)
 {
 
     auto handle_disconnect = [&](const std::string &fronthaul_iface) {
-        const auto &radio_manager = m_radio_managers[fronthaul_iface];
+        auto &radio_manager = m_radio_managers[fronthaul_iface];
 
         bool found_fd = false;
         if (fd == radio_manager.ap_manager_fd) {
             LOG(DEBUG) << "AP Manager " << fronthaul_iface << " disconnected";
+            radio_manager.ap_manager_fd = net::FileDescriptor::invalid_descriptor;
+            if (radio_manager.monitor_fd != net::FileDescriptor::invalid_descriptor) {
+                m_cmdu_server->disconnect(radio_manager.monitor_fd);
+            }
             found_fd = true;
         } else if (fd == radio_manager.monitor_fd) {
             LOG(DEBUG) << "Monitor " << fronthaul_iface << " disconnected";
+            radio_manager.monitor_fd = net::FileDescriptor::invalid_descriptor;
+            if (radio_manager.ap_manager_fd != net::FileDescriptor::invalid_descriptor) {
+                m_cmdu_server->disconnect(radio_manager.ap_manager_fd);
+            }
             found_fd = true;
         }
         if (found_fd) {
