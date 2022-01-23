@@ -2203,6 +2203,9 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
 
         radio_manager.ap_manager_fd = fd;
 
+        static const std::string client_name("ap manager ");
+        m_cmdu_server->set_client_name(fd, client_name + iface);
+
         auto config_msg =
             message_com::create_vs_message<beerocks_message::cACTION_APMANAGER_CONFIGURE>(cmdu_tx);
         if (!config_msg) {
@@ -3328,6 +3331,8 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
         }
 
         radio_manager.monitor_fd = fd;
+        static const std::string client_name("monitor ");
+        m_cmdu_server->set_client_name(fd, client_name + notification->iface_name());
 
         if (m_agent_state != STATE_WAIT_FOR_FRONTHAUL_THREADS_JOINED) {
             LOG(WARNING) << "ACTION_MONITOR_JOINED_NOTIFICATION, but slave_state != "
