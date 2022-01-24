@@ -37,6 +37,7 @@
 #include <bcl/network/sockets.h>
 #include <bcl/son/son_wireless_utils.h>
 #include <bcl/transaction.h>
+#include <bpl/bpl_board.h>
 #include <bpl/bpl_cfg.h>
 
 #include <easylogging++.h>
@@ -1104,6 +1105,10 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
             return false;
         }
     }
+
+    beerocks::bpl::sDeviceInfo device_info = {m1->manufacturer(), m1->serial_number(),
+                                              m1->model_name()};
+    database.dm_set_device_board_info(*agent, device_info);
 
     return true;
 }
