@@ -74,5 +74,6 @@ eTlvTypeMap:
   TLV_BACKHAUL_STA_RADIO_CAPABILITIES: 0xCB
   TLV_BACKHAUL_BSS_CONFIGURATION: 0xD0
   TLV_DEVICE_INVENTORY: 0xD4
+  TLV_TEAMS_MEMBER: 0xDD
 
   # When adding values, make sure to also update CmduMessageRx::parseNextTlv !

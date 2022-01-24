@@ -88,6 +88,7 @@ enum class eTlvTypeMap : uint8_t {
     TLV_BACKHAUL_STA_RADIO_CAPABILITIES = 0xcb,
     TLV_BACKHAUL_BSS_CONFIGURATION = 0xd0,
     TLV_DEVICE_INVENTORY = 0xd4,
+    TLV_TEAMS_MEMBER = 0xdd,
 };
 // Enum AutoPrint generated code snippet begining- DON'T EDIT!
 // clang-format off
@@ -239,6 +240,7 @@ public:
         case 0xcb:
         case 0xd0:
         case 0xd4:
+        case 0xdd:
                 ret = true;
                 break;
             default:

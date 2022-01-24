@@ -90,6 +90,7 @@
 #include <tlvf/wfa_map/tlvSteeringPolicy.h>
 #include <tlvf/wfa_map/tlvSteeringRequest.h>
 #include <tlvf/wfa_map/tlvSupportedService.h>
+#include <tlvf/wfa_map/tlvTeamsMember.h>
 #include <tlvf/wfa_map/tlvTimestamp.h>
 #include <tlvf/wfa_map/tlvTransmitPowerLimit.h>
 #include <tlvf/wfa_map/tlvTunnelledData.h>
@@ -409,6 +410,9 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     }
     case (wfa_map::eTlvTypeMap::TLV_DEVICE_INVENTORY): {
         return msg.addClass<wfa_map::tlvDeviceInventory>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_TEAMS_MEMBER): {
+        return msg.addClass<wfa_map::tlvTeamsMember>();
     }
     }
     LOG(FATAL) << "Unknown TLV type: " << unsigned(tlv_type);

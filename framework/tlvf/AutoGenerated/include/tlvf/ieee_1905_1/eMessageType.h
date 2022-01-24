@@ -76,6 +76,7 @@ enum class eMessageType : uint16_t {
     ASSOCIATION_STATUS_NOTIFICATION_MESSAGE = 0x8025,
     TUNNELLED_MESSAGE = 0x8026,
     FAILED_CONNECTION_MESSAGE = 0x8033,
+    TEAM_MEMBERS_MESSAGE = 0x8044,
 };
 // Enum AutoPrint generated code snippet begining- DON'T EDIT!
 // clang-format off
@@ -202,6 +203,7 @@ public:
         case 0x8024:
         case 0x8025:
         case 0x8026:
+        case 0x8044:
         case 0x8033:
                 ret = true;
                 break;
