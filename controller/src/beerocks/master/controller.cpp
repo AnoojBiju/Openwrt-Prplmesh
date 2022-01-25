@@ -2548,6 +2548,8 @@ bool Controller::handle_intel_slave_join(
     cs_new_event->hostap_mac = radio_mac;
     cs_new_event->cs_params  = notification->cs_params();
 
+    tasks.push_event(database.get_channel_selection_task_id(),
+                     (int)channel_selection_task::eEvent::SLAVE_JOINED_EVENT, (void *)cs_new_event);
 #ifdef BEEROCKS_RDKB
     // sending event to rdkb_wlan_task
     if (database.settings_rdkb_extensions()) {
