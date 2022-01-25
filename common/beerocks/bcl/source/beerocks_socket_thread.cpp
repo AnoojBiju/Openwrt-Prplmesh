@@ -257,8 +257,7 @@ bool socket_thread::verify_cmdu(message::sUdsHeader *uds_header)
     } while ((uint8_t *)tlv <= (uint8_t *)first_tlv + uds_header->length);
 
     THREAD_LOG(ERROR) << "TLV end of message not found! tlv_type=" << int(tlv->type)
-                      << ", tlv_length=" << int(tlv->length) << ", "
-                      << print_cmdu_types(uds_header);
+                      << ", tlv_length=" << int(tlv->length);
 
     std::ptrdiff_t available_bytes = uds_header->length + sizeof(message::sUdsHeader);
     LOG(DEBUG) << "hex_dump (" + std::to_string(available_bytes) + " bytes):" << std::endl
