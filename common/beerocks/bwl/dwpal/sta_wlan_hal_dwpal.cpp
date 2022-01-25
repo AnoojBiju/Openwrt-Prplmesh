@@ -15,6 +15,7 @@
 
 extern "C" {
 #include <dwpal.h>
+#include <dwpald_client.h>
 }
 
 #define LOGGING_ID sta_wlan_hal_dwpal
@@ -93,6 +94,8 @@ sta_wlan_hal_dwpal::sta_wlan_hal_dwpal(const std::string &iface_name, hal_event_
                             "CTRL-EVENT-BSS-ADDED", "CTRL-EVENT-BSS-REMOVED"};
     int events_size      = sizeof(events) / sizeof(std::string);
     m_filtered_events.insert(events, events + events_size);
+    dwpald_connect("sta_hal");
+
 }
 
 sta_wlan_hal_dwpal::~sta_wlan_hal_dwpal() {}

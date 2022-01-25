@@ -51,12 +51,14 @@ if(BWL_TYPE STREQUAL "DWPAL")
         ${bwl_platform_sources}
         ${MODULE_PATH}/shared/*.c*
         ${MODULE_PATH}/dwpal/*.c*
+        ${MODULE_PATH}/dwpal/daemon/*.c*
+        ${MODULE_PATH}/dwpal/wv_ipc/*.c*
     )
 
     find_package(dwpal REQUIRED)
     find_package(nl-3 REQUIRED)
     find_package(nl-genl-3 REQUIRED)
-    list(APPEND BWL_LIBS dwpal nl-3 nl-genl-3)
+    list(APPEND BWL_LIBS dwpal dwpald_client wv_core nl-3 nl-genl-3)
 
     # safec library can come from either libsafec or slibc
     find_package(safec QUIET)
