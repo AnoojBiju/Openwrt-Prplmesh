@@ -35,6 +35,9 @@ private:
                               std::string &value) override;
     bool handle_dev_set_rfeature(const std::unordered_map<std::string, std::string> &params,
                                  std::string &err_string) override;
+
+    bool handle_custom_command(const std::unordered_map<std::string, std::string> &params,
+                               std::string &err_string) override;
     static std::string parse_bss_info(const std::string &bss_info_str,
                                       son::wireless_utils::sBssInfoConf &bss_info_conf,
                                       std::string &err_string);
