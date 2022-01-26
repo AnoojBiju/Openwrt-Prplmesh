@@ -89,6 +89,7 @@ if (TARGET_PLATFORM STREQUAL "openwrt")
           ${MODULE_PATH}/cfg/uci/*.c*
           ${MODULE_PATH}/cfg/vendor/*.c*
           ${MODULE_PATH}/common/uci/*.c*
+          ${MODULE_PATH}/board/system_ubus/*.c*
         )
 
         find_package(ubus REQUIRED)

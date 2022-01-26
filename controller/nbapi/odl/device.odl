@@ -20,6 +20,9 @@
         ** within the Wi-Fi network
         */
         %read-only string ID = "00:00:00:00:00:00";
+        %read-only string Manufacturer;
+        %read-only string SerialNumber;
+        %read-only string ManufacturerModel;
 
         /*
         ** The Multi-AP capabilities supported by this device

@@ -42,6 +42,7 @@
 
 #include <beerocks/tlvf/beerocks_message_control.h>
 
+#include <bpl/bpl_board.h>
 #include <bpl/bpl_cfg.h>
 
 #include <easylogging++.h>
@@ -630,11 +631,15 @@ bool ApAutoConfigurationTask::add_wsc_m1_tlv(const std::string &radio_iface)
     cfg.auth_type_flags =
         WSC::eWscAuth(WSC::eWscAuth::WSC_AUTH_OPEN | WSC::eWscAuth::WSC_AUTH_WPA2PSK |
                       WSC::eWscAuth::WSC_AUTH_SAE);
-    cfg.encr_type_flags     = uint16_t(WSC::eWscEncr::WSC_ENCR_AES);
-    cfg.manufacturer        = "prplMesh";
-    cfg.model_name          = "Ubuntu";
+    cfg.encr_type_flags = uint16_t(WSC::eWscEncr::WSC_ENCR_AES);
+
+    bpl::sDeviceInfo device_info;
+    bpl::get_board_info(device_info);
+
+    cfg.manufacturer        = device_info.manufacturer;
+    cfg.model_name          = device_info.manufacturer_model;
     cfg.model_number        = "18.04";
-    cfg.serial_number       = "prpl12345";
+    cfg.serial_number       = device_info.serial_number;
     cfg.primary_dev_type_id = WSC::WSC_DEV_NETWORK_INFRA_AP;
     cfg.device_name         = "prplmesh-agent";
     cfg.bands               = son::wireless_utils::is_frequency_band_5ghz(radio->freq_type)
