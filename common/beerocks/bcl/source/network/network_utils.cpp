@@ -757,7 +757,7 @@ bool network_utils::linux_iface_get_mac(const std::string &iface, std::string &m
     ifr.ifr_addr.sa_family = AF_INET;
     string_utils::copy_string(ifr.ifr_name, iface.c_str(), IFNAMSIZ);
     if (ioctl(fd, SIOCGIFHWADDR, &ifr) == -1) {
-        LOG(ERROR) << "SIOCGIFHWADDR";
+        LOG(ERROR) << "SIOCGIFHWADDR. iface: " << iface;
         close(fd);
         return false;
     }
@@ -1554,6 +1554,13 @@ bool network_utils::set_vlan_packet_filter(bool set, const std::string &bss_ifac
         // Append rule.
         cmd.append("-A ");
     } else {
+        // Before removing an entry, check if it exists
+        std::string vlan_filter_entry_cmd = cmd + "-L PREROUTING | grep " + bss_iface;
+        std::string vlan_filter_entry_cmd_output =
+            os_utils::system_call_with_output(vlan_filter_entry_cmd, true);
+        if (vlan_filter_entry_cmd_output.empty()) {
+            return true;
+        }
         // Delete rule.
         cmd.append("-D ");
     }

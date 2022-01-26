@@ -4280,6 +4280,7 @@ bool slave_thread::agent_fsm()
                     // Set zwdfs to initial value.
                     radio->front.zwdfs = false;
                 }
+                fronthaul_stop(fronthaul_iface);
                 fronthaul_start(fronthaul_iface);
                 return true;
             });
@@ -4415,7 +4416,6 @@ bool slave_thread::agent_fsm()
                 }
             }
         }
-
         LOG(TRACE) << "goto STATE_WAIT_FOR_AUTO_CONFIGURATION_COMPLETE";
         m_agent_state = STATE_WAIT_FOR_AUTO_CONFIGURATION_COMPLETE;
         m_task_pool.send_event(eTaskType::AP_AUTOCONFIGURATION,
@@ -4476,11 +4476,15 @@ void slave_thread::fronthaul_stop(const std::string &fronthaul_iface)
     LOG(INFO) << "fronthaul stop " << fronthaul_iface;
     auto &radio_manager = m_radio_managers[fronthaul_iface];
 
-    m_cmdu_server->disconnect(radio_manager.ap_manager_fd);
-    radio_manager.ap_manager_fd = beerocks::net::FileDescriptor::invalid_descriptor;
+    if (radio_manager.ap_manager_fd != beerocks::net::FileDescriptor::invalid_descriptor) {
+        m_cmdu_server->disconnect(radio_manager.ap_manager_fd);
+        radio_manager.ap_manager_fd = beerocks::net::FileDescriptor::invalid_descriptor;
+    }
 
-    m_cmdu_server->disconnect(radio_manager.monitor_fd);
-    radio_manager.monitor_fd = beerocks::net::FileDescriptor::invalid_descriptor;
+    if (radio_manager.monitor_fd != beerocks::net::FileDescriptor::invalid_descriptor) {
+        m_cmdu_server->disconnect(radio_manager.monitor_fd);
+        radio_manager.monitor_fd = beerocks::net::FileDescriptor::invalid_descriptor;
+    }
 
     // Kill Fronthaul pid
     os_utils::kill_pid(config.temp_path + "pid/",
@@ -4489,8 +4493,6 @@ void slave_thread::fronthaul_stop(const std::string &fronthaul_iface)
 
 void slave_thread::fronthaul_start(const std::string &fronthaul_iface)
 {
-    fronthaul_stop(fronthaul_iface);
-
     LOG(INFO) << "fronthaul start " << fronthaul_iface;
 
     // Start new Fronthaul process
