@@ -1105,8 +1105,8 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
         if (!db->device_conf.local_gw &&
             std::chrono::steady_clock::now() > state_time_stamp_timeout) {
             LOG(ERROR) << STATE_WAIT_WPS_TIMEOUT_SECONDS
-                       << " seconds has passed on state WAIT_WPS, stopping thread!";
-            return false;
+                       << " seconds has passed on state WAIT_WPS, move state to RESTART!";
+            FSM_MOVE_STATE(RESTART);
         }
         break;
     }
