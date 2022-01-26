@@ -7246,3 +7246,20 @@ bool db::dm_set_device_multi_ap_backhaul(const Agent &agent, const sMacAddr &par
 
     return ret_val;
 }
+
+bool db::dm_set_device_board_info(const Agent &agent, const beerocks::bpl::sDeviceInfo &device_info)
+{
+    bool ret_val = true;
+
+    if (agent.dm_path.empty()) {
+        return true;
+    }
+
+    const auto device_path = agent.dm_path;
+
+    ret_val &= m_ambiorix_datamodel->set(device_path, "Manufacturer", device_info.manufacturer);
+    ret_val &= m_ambiorix_datamodel->set(device_path, "SerialNumber", device_info.serial_number);
+    ret_val &=
+        m_ambiorix_datamodel->set(device_path, "ManufacturerModel", device_info.manufacturer_model);
+    return ret_val;
+}
