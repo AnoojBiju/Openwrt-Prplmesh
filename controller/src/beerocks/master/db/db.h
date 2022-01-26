@@ -17,6 +17,7 @@
 #include <bcl/beerocks_logging.h>
 #include <bcl/network/network_utils.h>
 #include <bcl/son/son_wireless_utils.h>
+#include <bpl/bpl_board.h>
 
 #include <tlvf/wfa_map/tlvApHeCapabilities.h>
 #include <tlvf/wfa_map/tlvApHtCapabilities.h>
@@ -1922,6 +1923,18 @@ public:
     bool dm_set_device_multi_ap_backhaul(const Agent &agent, const sMacAddr &parent_bssid,
                                          const sMacAddr &backhaul_mac,
                                          const beerocks::eIfaceType &interface_type);
+
+    /**
+     * @brief Sets Device datamodel board info parameters.
+     *
+     * DM path : "Device.WiFi.DataElements.Network.Device.{i}"
+     *
+     * @param agent agent whose Device object is set
+     * @param device_info struct with values of board info parameters
+     * @return True on success, false otherwise.
+     */
+    bool dm_set_device_board_info(const Agent &agent,
+                                  const beerocks::bpl::sDeviceInfo &device_info);
 
     /**
      * @brief Adds to data model an instance of object AssociationEventData.
