@@ -140,6 +140,8 @@ void TopologyTask::handle_topology_discovery(ieee1905_1::CmduMessageRx &cmdu_rx,
                                              uint32_t iface_index, const sMacAddr &dst_mac,
                                              const sMacAddr &src_mac)
 {
+    auto start = std::chrono::steady_clock::now();
+    LOG(DEBUG) << "enter handle_topology_discovery()";
     auto tlvAlMac = cmdu_rx.getClass<ieee1905_1::tlvAlMacAddress>();
     if (!tlvAlMac) {
         LOG(ERROR) << "getClass tlvAlMacAddress failed";
@@ -206,6 +208,10 @@ void TopologyTask::handle_topology_discovery(ieee1905_1::CmduMessageRx &cmdu_rx,
         LOG(INFO) << "Sending Topology Notification on newly discovered 1905.1 device";
         send_topology_notification();
     }
+    auto dt = std::chrono::duration_cast<std::chrono::microseconds>(
+                  std::chrono::steady_clock::now() - start)
+                  .count();
+    LOG(DEBUG) << "exit handle_topology_discovery(), dt_usec=" << dt;
 }
 
 void TopologyTask::handle_topology_query(ieee1905_1::CmduMessageRx &cmdu_rx,

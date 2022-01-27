@@ -164,7 +164,13 @@ bool BackhaulManager::thread_init()
         .on_cmdu_received =
             [&](int fd, uint32_t iface_index, const sMacAddr &dst_mac, const sMacAddr &src_mac,
                 ieee1905_1::CmduMessageRx &cmdu_rx) {
+                auto start = std::chrono::steady_clock::now();
+                LOG(DEBUG) << "entry handle_cmdu()";
                 handle_cmdu(fd, iface_index, dst_mac, src_mac, cmdu_rx);
+                auto dt = std::chrono::duration_cast<std::chrono::microseconds>(
+                              std::chrono::steady_clock::now() - start)
+                              .count();
+                LOG(DEBUG) << "exit handle_cmdu(), dt_usec=" << dt;
             },
     };
     m_cmdu_server->set_handlers(cmdu_server_handlers);
@@ -234,13 +240,19 @@ bool BackhaulManager::thread_init()
     m_fsm_timer =
         m_timer_manager->add_timer("Backhaul Manager FSM", fsm_timer_period, fsm_timer_period,
                                    [&](int fd, beerocks::EventLoop &loop) {
+                                       auto start = std::chrono::steady_clock::now();
+                                       LOG(DEBUG) << "entry backhaul_fsm_main()";
                                        bool continue_processing = false;
                                        do {
                                            if (!backhaul_fsm_main(continue_processing)) {
                                                return false;
                                            }
                                        } while (continue_processing);
-
+                                       auto dt =
+                                           std::chrono::duration_cast<std::chrono::microseconds>(
+                                               std::chrono::steady_clock::now() - start)
+                                               .count();
+                                       LOG(DEBUG) << "exit backhaul_fsm_main(), dt_usec=" << dt;
                                        return true;
                                    });
     if (m_fsm_timer == beerocks::net::FileDescriptor::invalid_descriptor) {
@@ -266,7 +278,13 @@ bool BackhaulManager::thread_init()
     broker_client_handlers.on_cmdu_received = [&](uint32_t iface_index, const sMacAddr &dst_mac,
                                                   const sMacAddr &src_mac,
                                                   ieee1905_1::CmduMessageRx &cmdu_rx) {
+        auto start = std::chrono::steady_clock::now();
+        LOG(DEBUG) << "entry handle_cmdu_from_broker()";
         handle_cmdu_from_broker(iface_index, dst_mac, src_mac, cmdu_rx);
+        auto dt = std::chrono::duration_cast<std::chrono::microseconds>(
+                      std::chrono::steady_clock::now() - start)
+                      .count();
+        LOG(DEBUG) << "exit handle_cmdu_from_broker(), dt_usec=" << dt;
     };
 
     // Install a connection-closed event handler.
@@ -531,7 +549,6 @@ bool BackhaulManager::handle_cmdu_from_broker(uint32_t iface_index, const sMacAd
     if (!forward_cmdu_to_uds(m_agent_fd, iface_index, dst_mac, src_mac, cmdu_rx)) {
         LOG(ERROR) << "forward_cmdu_to_uds() failed - fd=" << m_agent_fd;
     }
-
     return true;
 }
 
