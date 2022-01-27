@@ -41,7 +41,6 @@ include:
 
 .rules-for-releases: &onrelease
   - if: '$CI_COMMIT_TAG =~ /\A\d+\.\d+\.\d+\z/'
-  - when: manual
 
 build-for-rdkb-turris-omnia:
   extends: .build-for-rdkb
@@ -195,7 +194,10 @@ run-certification-tests-R1-platform-isr:
 changelog:
   stage: build
   image: $CI_REGISTRY_IMAGE/prplmesh-scripts:$PARENT_PIPELINE_ID
-  rules: *onrelease
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /\A\d+\.\d+\.\d+\z/'
+    - when: manual
+      allow_failure: true
   needs:
     - pipeline: $PARENT_PIPELINE_ID
       job: image-build-scripts
