@@ -26,7 +26,7 @@ class NbapiAssociationEvent(PrplMeshBaseTest):
         try:
             controller = self.dev.lan.controller_entity
             agent = self.dev.DUT.agent_entity
-            vap1 = agent.radios[0].vaps[0]
+            vap1 = agent.radios[1].vaps[0]
             sta = self.dev.wifi
         except AttributeError as ae:
             raise SkipTest(ae)
@@ -82,9 +82,10 @@ class NbapiAssociationEvent(PrplMeshBaseTest):
                 time_format = r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d+(Z|[-+]\d{2}:\d{2})'
                 if re.match(time_format, time_stamp) is None:
                     self.fail(f'Fail. NBAPI time stamp has unncorrect format: {time_stamp}')
+                self.get_nbapi_ht_capabilities(assoc_data)
+                self.get_nbapi_vht_capabilities(assoc_data)
         assert 0 < event_present and event_present <= 2,\
             f"Wrong amount of AssociationEvents [{event_present}] registered for client: {sta.mac}"
-        # TO DO: PPM-1773 Add tests to check ht_capabilities vht_capabilities.
 
         sta.wifi_disconnect(vap1)
         self.check_log(

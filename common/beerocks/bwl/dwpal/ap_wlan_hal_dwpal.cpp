@@ -232,6 +232,8 @@ static void get_vht_mcs_capabilities(int16_t *VHT_MCS, std::string &vht_cap_str,
                 break;
             }
         }
+        sta_caps.vht_su_beamformer = (vht_cap >> 11) & 0x01;
+        sta_caps.vht_mu_beamformer = (vht_cap >> 19) & 0x01;
     } else {
         // Use default value
         sta_caps.ant_num = 1;

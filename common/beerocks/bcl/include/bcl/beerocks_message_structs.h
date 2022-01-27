@@ -67,6 +67,8 @@ typedef struct sRadioCapabilities {
     uint8_t fmt_range_report      = 0;
     uint8_t mumimo_supported      = 0;
     uint8_t max_streams           = 0;
+    uint8_t vht_su_beamformer     = 0;
+    uint8_t vht_mu_beamformer     = 0;
     sRadioCapabilities() {}
     void struct_swap() {}
     void struct_init()

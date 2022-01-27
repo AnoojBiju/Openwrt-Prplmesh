@@ -10,7 +10,7 @@
 #include "../son_actions.h"
 
 #include <bcl/beerocks_utils.h>
-#include <tlvf/AssociationRequestFrame/AssocReqFrame.h>
+#include <bcl/son/son_assoc_frame_utils.h>
 #include <tlvf/wfa_map/tlvClientAssociationEvent.h>
 #include <tlvf/wfa_map/tlvClientCapabilityReport.h>
 #include <tlvf/wfa_map/tlvClientInfo.h>
@@ -73,6 +73,20 @@ bool client_association_task::verify_sta_association(const sMacAddr &src_mac,
         station->assoc_timestamp = ambiorix_dm->get_datamodel_time_format();
         dm_add_sta_association_event(sta_assoc_tlv->client_mac(), sta_assoc_tlv->bssid());
 
+        /*
+         * If sta capabilities are available, then add sta cap sub-objects to created assoc event object
+         * (i.e station associated to prplmesh agent => caps retrieved in a VS field
+         * so no need to query again for station caps).
+         */
+        if (dm_add_sta_association_event_caps(sta_assoc_tlv->client_mac(),
+                                              sta_assoc_tlv->bssid())) {
+            return true;
+        }
+
+        /*
+         * otherwise, (case of generic easymesh agent), query client capabilities
+         * to fill station caps in STA object and AssocEvent object
+         */
         if (!send_sta_capability_query(src_mac, cmdu_rx)) {
             LOG(ERROR) << "Failed to send Client Capability Query.";
             return false;
@@ -135,33 +149,61 @@ bool client_association_task::handle_cmdu_1905_client_capability_report_message(
               << ", Result Code= " << result_code << ", client MAC= " << sta_mac
               << ", BSSID= " << client_info_tlv->bssid();
 
-    LOG_IF(client_capability_report_tlv->result_code() ==
-               wfa_map::tlvClientCapabilityReport::SUCCESS,
-           DEBUG)
-        << "(Re)Association Request frame= "
-        << beerocks::utils::dump_buffer(client_capability_report_tlv->association_frame(),
-                                        client_capability_report_tlv->association_frame_length());
+    /*
+     * The remote agent reports no client capability data so return here.
+     */
+    if (client_capability_report_tlv->result_code() !=
+        wfa_map::tlvClientCapabilityReport::SUCCESS) {
+        return true;
+    }
 
-    auto assoc_frame = assoc_frame::AssocReqFrame::parse(
-        client_capability_report_tlv->association_frame(),
-        client_capability_report_tlv->association_frame_length(),
-        assoc_frame::AssocReqFrame::eFrameType::ASSOCIATION_REQUEST);
+    LOG(DEBUG) << "(Re)Association Request frame= "
+               << beerocks::utils::dump_buffer(
+                      client_capability_report_tlv->association_frame(),
+                      client_capability_report_tlv->association_frame_length());
+
+    /*
+     * Client capability data is latest assoc/reassoc request frame data
+     * so assume unknown assoc frame type to cover both cases.
+     */
+    auto assoc_frame =
+        assoc_frame::AssocReqFrame::parse(client_capability_report_tlv->association_frame(),
+                                          client_capability_report_tlv->association_frame_length());
 
     if (!assoc_frame) {
-        LOG(ERROR) << "Failed to parse Associaiton Request frame.";
+        LOG(ERROR) << "Failed to parse Association Request frame.";
         return false;
     }
-    auto station = m_database.get_station(sta_mac);
-    auto sta_cap = station->m_sta_cap.add(client_info_tlv->client_mac());
 
-    if (assoc_frame->fields_present.ht_capability) {
-        sta_cap->sta_ht_cap     = assoc_frame->sta_ht_capability()->ht_cap_info();
-        sta_cap->ht_cap_present = true;
+    beerocks::message::sRadioCapabilities capabilities = {};
+    auto result = son::assoc_frame_utils::get_station_capabilities_from_assoc_frame(assoc_frame,
+                                                                                    capabilities);
+    if (!result) {
+        LOG(ERROR) << "Failed to parse station capabilities.";
+        return false;
     }
-    if (assoc_frame->fields_present.vht_capability) {
-        sta_cap->sta_vht_cap     = assoc_frame->sta_vht_capability()->vht_cap_info();
-        sta_cap->vht_cap_present = true;
+    son::wireless_utils::print_station_capabilities(capabilities);
+
+    // Save latest station capabilities to Station object
+    auto sta_mac_str = tlvf::mac_to_string(sta_mac);
+    result           = m_database.set_station_capabilities(sta_mac_str, capabilities);
+    if (!result) {
+        LOG(ERROR) << "Failed to save capabilities.";
+        return false;
     }
+
+    // Save station capabilities into DM AssocEvent object
+    dm_add_sta_association_event_caps(client_info_tlv->client_mac(), client_info_tlv->bssid());
+
+    // Update the station's link bw with the received caps
+    auto client_bw     = m_database.get_node_bw(sta_mac_str);
+    auto client_bw_max = client_bw;
+    if (son::wireless_utils::get_station_max_supported_bw(capabilities, client_bw_max)) {
+        if (client_bw_max < client_bw) {
+            m_database.update_node_bw(sta_mac, client_bw_max);
+        }
+    }
+
     return true;
 }
 
@@ -170,39 +212,47 @@ bool client_association_task::dm_add_sta_association_event(const sMacAddr &sta_m
 {
     // Add AssociationEventData data model object
     auto station = m_database.get_station(sta_mac);
-    auto assoc_event_path =
+    station->assoc_event_path =
         m_database.dm_add_association_event(bssid, sta_mac, station->assoc_timestamp);
 
-    if (assoc_event_path.empty()) {
+    if (station->assoc_event_path.empty()) {
         LOG(ERROR) << "Failed to add AssociationEventData for sta: " << sta_mac;
         return false;
     }
 
-    auto ambiorix_dm = m_database.get_ambiorix_obj();
-
-    if (!ambiorix_dm) {
-        LOG(ERROR) << "Failed to get Ambiorix datamodel";
-        return false;
-    }
-
-    // Remove previous entry
-    ambiorix_dm->remove_optional_subobject(assoc_event_path, "HTCapabilities");
-    ambiorix_dm->remove_optional_subobject(assoc_event_path, "VHTCapabilities");
-
-    // Add optional HT(VHT)Capabilities data model sub-object(s)
-    auto sta_cap = station->m_sta_cap.get(sta_mac);
-
-    if (!sta_cap) {
-        LOG(WARNING) << "No sStaCap found for station: " << sta_mac;
-        return false;
-    }
-    if (sta_cap->ht_cap_present) {
-        m_database.dm_set_assoc_event_sta_ht_cap(assoc_event_path, sta_mac);
-    }
-    if (sta_cap->vht_cap_present) {
-        m_database.dm_set_assoc_event_sta_vht_cap(assoc_event_path, sta_mac);
-    }
-
-    // TODO: Fill up HE Capabilities for AssociationEvent, PPM-567
     return true;
+}
+
+bool client_association_task::dm_add_sta_association_event_caps(const sMacAddr &sta_mac,
+                                                                const sMacAddr &bssid)
+{
+    auto station = m_database.get_station(sta_mac);
+    if (!station) {
+        return false;
+    }
+
+    auto assoc_event_path = station->assoc_event_path;
+    if (assoc_event_path.empty()) {
+        return false;
+    }
+
+    auto sta_mac_str = tlvf::mac_to_string(sta_mac);
+
+    auto parent_radio = m_database.get_node_parent_radio(tlvf::mac_to_string(bssid));
+    if (parent_radio.empty()) {
+        return false;
+    }
+
+    /* if station caps are available here
+     * 1) caps were retrieved from VS field in BSS_JOIN notification
+     * 2) station was previously associated to same freq band, so caps won't change
+     * Otherwise, controller has to query agent for client capabilities
+     */
+    auto capabilities =
+        m_database.get_station_capabilities(sta_mac_str, m_database.is_node_5ghz(parent_radio));
+    if (!capabilities || !capabilities->valid) {
+        return false;
+    }
+
+    return m_database.dm_add_assoc_event_sta_caps(assoc_event_path, *capabilities);
 }
