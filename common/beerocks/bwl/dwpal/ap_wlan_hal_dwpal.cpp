@@ -742,7 +742,7 @@ ap_wlan_hal_dwpal::ap_wlan_hal_dwpal(const std::string &iface_name, hal_event_cb
                             "CTRL-EVENT-BSS-ADDED", "CTRL-EVENT-BSS-REMOVED"};
     int events_size      = sizeof(events) / sizeof(std::string);
     m_filtered_events.insert(events, events + events_size);
-    dwpald_connect("ap_manager");
+    LOG(ERROR) << "Anant:Return of connect" << dwpald_connect("ap_manager");
 }
 
 ap_wlan_hal_dwpal::~ap_wlan_hal_dwpal() {}

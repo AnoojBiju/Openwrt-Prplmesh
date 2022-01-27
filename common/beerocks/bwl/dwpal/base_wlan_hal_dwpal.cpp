@@ -19,6 +19,7 @@
 
 extern "C" {
 #include <dwpal.h>
+#include <dwpald_client.h>
 }
 
 #define UNHANDLED_EVENTS_LOGS 20
@@ -554,6 +555,17 @@ bool base_wlan_hal_dwpal::dwpal_send_cmd(const std::string &cmd, char **reply, i
     return true;
 }
 
+static int my_clb(char *ifname, char *op_code, char *msg, size_t len)
+{
+    LOG(ERROR) << "Anant recevied clb" << ifname << op_code;
+    return 0;
+}
+char myevt[] = "INTERFACE-DISABLED";
+static dwpald_hostap_event my_event[] =
+{
+    
+    {myevt,sizeof("INTERFACE-DISABLED") -1 ,my_clb},
+};
 bool base_wlan_hal_dwpal::attach_ctrl_interface(int vap_id)
 {
     int ctx_index = vap_id + 1;
@@ -570,7 +582,10 @@ bool base_wlan_hal_dwpal::attach_ctrl_interface(int vap_id)
     const std::string ifname =
         beerocks::utils::get_iface_string_from_iface_vap_ids(m_radio_info.iface_name, vap_id);
     int result = dwpal_hostap_interface_attach(&m_dwpal_ctx[ctx_index], ifname.c_str(), nullptr);
+    dwpald_start_listener();
+    
 
+    LOG(ERROR) << "Anant hostap attach" << ifname.c_str() << "return value" << dwpald_hostap_attach(ifname.c_str(),1,my_event,0);
     if ((result == 0) && m_dwpal_ctx[ctx_index]) {
         LOG(DEBUG) << "dwpal_hostap_interface_attach() success for: " << ifname;
     } else if (result != 0) {
