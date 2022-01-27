@@ -39,7 +39,7 @@ public:
     void handle_ieee1905_1_msg(const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
 
 private:
-    std::unordered_map<int, std::shared_ptr<task>> m_scheduled_tasks;
+    std::map<int, std::shared_ptr<task>> m_scheduled_tasks;
 
     /**
      * Used to mark the beginning of an execution iteration.

@@ -850,22 +850,17 @@ public:
                                         const uint16_t status_code);
 
     /**
-     * @brief Sets value for parameters of optional sub-object STA HTCapabilities.
+     * @brief Adds station capabilities sub-objects into data model
+     * under instance of object AssociationEventData.
      *
-     * @param path_to_event Path to event which contains STA HTCapabilities sub-object.
-     * @param sta_mac MAC address of the station.
+     * @param assoc_event_path Path to instantiated AssociationEvent object.
+     * Example of full path to object:
+     * 'Device.WiFi.DataElements.AssociationEvent.AssociationEventData.1'.
+     * @param sta_cap Structure with station HT Capabilities.
      * @return True on success, false otherwise.
      */
-    bool dm_set_assoc_event_sta_ht_cap(const std::string &path_to_event, const sMacAddr &sta_mac);
-
-    /**
-     * @brief Sets value for parameters of optional sub-object STA VHTCapabilities.
-     *
-     * @param path_to_event Path to event which contains STA VHTCapabilities sub-object.
-     * @param sta_mac MAC address of the station.
-     * @return True on success, false otherwise.
-     */
-    bool dm_set_assoc_event_sta_vht_cap(const std::string &path_to_event, const sMacAddr &sta_mac);
+    bool dm_add_assoc_event_sta_caps(const std::string &assoc_event_path,
+                                     const beerocks::message::sRadioCapabilities &sta_cap);
 
     /**
      * @brief Set STA DHCPv4 lease information for both node and datamodel.
@@ -2247,6 +2242,26 @@ private:
      */
     bool dm_set_sta_vht_capabilities(const std::string &path_to_obj,
                                      const beerocks::message::sRadioCapabilities &sta_cap);
+
+    /**
+     * @brief Sets value for parameters of optional sub-object STA HTCapabilities.
+     *
+     * @param path_to_event Path to event which contains STA HTCapabilities sub-object.
+     * @param sta_cap Structure with station HT Capabilities.
+     * @return True on success, false otherwise.
+     */
+    bool dm_set_assoc_event_sta_ht_cap(const std::string &path_to_event,
+                                       const beerocks::message::sRadioCapabilities &sta_cap);
+
+    /**
+     * @brief Sets value for parameters of optional sub-object STA VHTCapabilities.
+     *
+     * @param path_to_event Path to event which contains STA VHTCapabilities sub-object.
+     * @param sta_cap Structure with station VHT Capabilities.
+     * @return True on success, false otherwise.
+     */
+    bool dm_set_assoc_event_sta_vht_cap(const std::string &path_to_event,
+                                        const beerocks::message::sRadioCapabilities &sta_cap);
 
     /**
      * @brief Adds STA instance to the datamodel.
