@@ -300,6 +300,17 @@ public:
      */
     static void print_station_capabilities(beerocks::message::sRadioCapabilities &sta_caps);
 
+    /**
+     * @brief Calculate the vht MCS set (mask of 16bits)
+     * using the maximum supported MCS and number of Spatial streams
+     * (Cf. IEEE802.11-2016 Figure 9-562—Rx VHT-MCS Map and Tx VHT-MCS Map subfields).
+     *
+     * @param vht_mcs_max Maximum supported MCS value.
+     * @param vht_ss_max Maximum supported number of spatial stream.
+     * @return Calculated VHT MCS set 16 bits mask.
+     */
+    static uint16_t get_vht_mcs_set(uint8_t vht_mcs, uint8_t vht_ss);
+
 private:
     enum eAntennaFactor {
         ANT_FACTOR_1X1 = 0,

@@ -32,7 +32,7 @@ using namespace net;
 using namespace son;
 
 topology_task::topology_task(db &database_, ieee1905_1::CmduMessageTx &cmdu_tx_, task_pool &tasks_)
-    : database(database_), cmdu_tx(cmdu_tx_), tasks(tasks_)
+    : task("topology_task"), database(database_), cmdu_tx(cmdu_tx_), tasks(tasks_)
 {
 }
 

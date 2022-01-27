@@ -54,14 +54,23 @@ private:
                                                            ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
-     * @brief Adds AssociationEventData data model object, if needed also adds
-     * additional sub-objects STA HT(VHT)Capabilities.
+     * @brief Adds AssociationEventData data model object
      * 
      * @param src_mac STA MAC.
      * @param bssid BSSID of BSS with which STA associated.
      * @return True on success, false otherwise.
      */
     bool dm_add_sta_association_event(const sMacAddr &sta_mac, const sMacAddr &bssid);
+
+    /**
+     * @brief Creates additional sub-objects STA HT(VHT)Capabilities
+     * to AssociationEventData data model object.
+     *
+     * @param src_mac STA MAC.
+     * @param bssid BSSID of BSS with which STA associated.
+     * @return True on success, false otherwise.
+     */
+    bool dm_add_sta_association_event_caps(const sMacAddr &sta_mac, const sMacAddr &bssid);
 };
 
 } // namespace son
