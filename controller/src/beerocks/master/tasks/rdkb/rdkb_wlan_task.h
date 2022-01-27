@@ -118,7 +118,6 @@ private:
 
     std::vector<sBmlRdkbWlanListener> bml_rdkb_wlan_listeners_sockets;
 
-    bool is_bml_rdkb_wlan_listener_exist();
     bool is_bml_rdkb_wlan_listener_socket(int sd);
     int get_bml_rdkb_wlan_socket_at(uint32_t idx);
     bool get_bml_rdkb_wlan_events_update_enable(int sd);
@@ -135,13 +134,6 @@ private:
     void add_pending_events(int event, int bml_sd, uint32_t amount = 1);
     std::pair<bool, int> check_for_pending_events(int event);
     void pending_event_check_timeout();
-
-    enum states {
-        START = 0,
-        IDLE,
-        LISTENING,
-    };
-    int state = START;
 
     db &database;
     ieee1905_1::CmduMessageTx &cmdu_tx;

@@ -1,5 +1,6 @@
 #include "bpl_uci.h"
 
+#include <bcl/beerocks_string_utils.h>
 #include <mapf/common/logger.h>
 
 extern "C" {
@@ -377,18 +378,20 @@ bool uci_get_option(const std::string &package_name, const std::string &section_
         return false;
     }
 
-    char opt_path[MAX_UCI_BUF_LEN] = {0};
+    char opt_path[MAX_UCI_BUF_LEN]         = {0};
+    char copy_of_opt_path[MAX_UCI_BUF_LEN] = {0}; // original opt_path is changed in the following
     // Generate a uci path to the option we wish to lookup
     if (snprintf(opt_path, MAX_UCI_BUF_LEN, option_path, package_name.c_str(), section_name.c_str(),
                  option_name.c_str()) <= 0) {
         LOG(ERROR) << "Failed to compose path";
         return false;
     }
+    beerocks::string_utils::copy_string(copy_of_opt_path, opt_path, MAX_UCI_BUF_LEN);
 
     uci_ptr opt_ptr;
     // Initialize option pointer from path & validate option existace
     if (uci_lookup_ptr(ctx.get(), &opt_ptr, opt_path, true) != UCI_OK || !opt_ptr.o) {
-        LOG(ERROR) << "UCI failed to lookup ptr for path: " << opt_path << std::endl
+        LOG(ERROR) << "UCI failed to lookup ptr for path: " << copy_of_opt_path << std::endl
                    << uci_get_error(ctx.get());
         return false;
     }

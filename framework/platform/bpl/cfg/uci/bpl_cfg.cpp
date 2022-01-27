@@ -777,26 +777,36 @@ bool bpl_cfg_get_wireless_settings(std::list<son::wireless_utils::sBssInfoConf> 
         }
 
         // Multi - AP
-        std::string multi_ap;
-        uci_get_option(package_name, section_type, section_name, "multi_ap", multi_ap);
-        if (multi_ap.empty()) {
-            LOG(INFO) << "multi_ap configuration is not found, assign as only fronthaul support";
-        }
-
-        if (multi_ap == "1") {
-            configuration.fronthaul = false;
-            configuration.backhaul  = true;
-        } else if (multi_ap == "2") {
+        std::string management_mode;
+        uci_get_option("prplmesh", "prplmesh", "config", "management_mode", management_mode);
+        if (management_mode == "Not-Multi-AP") {
             configuration.fronthaul = true;
             configuration.backhaul  = false;
-        } else if (multi_ap == "3") {
-            configuration.fronthaul = true;
-            configuration.backhaul  = true;
         } else {
-            LOG(ERROR) << "multi_ap configuration value is unrecognized " << multi_ap
-                       << ", assign as only fronthaul support";
-            configuration.fronthaul = true;
-            configuration.backhaul  = false;
+            std::string multi_ap;
+            uci_get_option(package_name, section_type, section_name, "multi_ap", multi_ap);
+            if (multi_ap.empty()) {
+                LOG(INFO)
+                    << "multi_ap configuration is not found, assign as only fronthaul support";
+                configuration.fronthaul = true;
+                configuration.backhaul  = false;
+            } else {
+                if (multi_ap == "1") {
+                    configuration.fronthaul = false;
+                    configuration.backhaul  = true;
+                } else if (multi_ap == "2") {
+                    configuration.fronthaul = true;
+                    configuration.backhaul  = false;
+                } else if (multi_ap == "3") {
+                    configuration.fronthaul = true;
+                    configuration.backhaul  = true;
+                } else {
+                    LOG(ERROR) << "multi_ap configuration value is unrecognized " << multi_ap
+                               << ", assign as only fronthaul support";
+                    configuration.fronthaul = true;
+                    configuration.backhaul  = false;
+                }
+            }
         }
 
         wireless_settings.push_back(configuration);

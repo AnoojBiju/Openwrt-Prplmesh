@@ -28,6 +28,11 @@ rdkb_wlan_task::rdkb_wlan_task(db &database_, ieee1905_1::CmduMessageTx &cmdu_tx
                                task_pool &tasks_)
     : task("rdkb wlan task"), database(database_), cmdu_tx(cmdu_tx_), tasks(tasks_)
 {
+    int prev_task_id = database.get_rdkb_wlan_task_id();
+    if (prev_task_id != -1) {
+        tasks.kill_task(prev_task_id);
+    }
+    database_.assign_rdkb_wlan_task_id(this->id);
 }
 
 void rdkb_wlan_task::work()
@@ -38,20 +43,7 @@ void rdkb_wlan_task::work()
         return;
     }
 
-    switch (state) {
-    case START: {
-        int prev_task_id = database.get_rdkb_wlan_task_id();
-        tasks.kill_task(prev_task_id);
-        database.assign_rdkb_wlan_task_id(id);
-
-        state = IDLE;
-        break;
-    }
-    case IDLE: {
-        pending_event_check_timeout();
-        break;
-    }
-    }
+    pending_event_check_timeout();
 }
 
 void rdkb_wlan_task::handle_event(int event_type, void *obj)
@@ -95,9 +87,6 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
                 break;
             }
             send_bml_response(event_type, event_obj->sd);
-            if (!is_bml_rdkb_wlan_listener_exist()) {
-                state = IDLE;
-            }
         }
         break;
     }
@@ -333,7 +322,9 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
                 TASK_LOG(ERROR) << "unexpected event STEERING_CLIENT_DISCONNECT_RESPONSE ";
                 break;
             } else if (!res.first && res.second) {
-                send_bml_response(event_type, res.second, -BML_RET_TIMEOUT);
+                if (res.second != beerocks::net::FileDescriptor::invalid_descriptor) {
+                    send_bml_response(event_type, res.second, -BML_RET_TIMEOUT);
+                }
             } else if (res.first && !res.second) {
                 TASK_LOG(ERROR)
                     << "not suppose to happen for STEERING_CLIENT_DISCONNECT_RESPONSE event!!";
@@ -342,7 +333,9 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
                 send_bml_response(event_type, res.second, -BML_RET_OP_FAILED);
                 break;
             }
-            send_bml_response(event_type, res.second);
+            if (res.second != beerocks::net::FileDescriptor::invalid_descriptor) {
+                send_bml_response(event_type, res.second);
+            }
         }
         break;
     }
@@ -435,10 +428,6 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
                 }
 
                 remove_bml_rdkb_wlan_socket(event_obj->sd);
-
-                if (!is_bml_rdkb_wlan_listener_exist()) {
-                    state = IDLE;
-                }
             }
         }
         break;
@@ -455,7 +444,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
                            << " group index " << int(group_index);
 
             if (events_updates_listeners.empty()) {
-                TASK_LOG(ERROR) << "STEERING_EVENT_CLIENT_ACTIVITY_AVAILABLE no listener ignoring";
+                TASK_LOG(DEBUG) << "STEERING_EVENT_CLIENT_ACTIVITY_AVAILABLE no listener ignoring";
                 break;
             }
 
@@ -509,7 +498,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
                            << " bssid = " << bssid << " group index " << int(group_index);
 
             if (events_updates_listeners.empty()) {
-                TASK_LOG(ERROR) << "STEERING_EVENT_SNR_XING_AVAILABLE no listener ignoring";
+                TASK_LOG(DEBUG) << "STEERING_EVENT_SNR_XING_AVAILABLE no listener ignoring";
                 break;
             }
 
@@ -568,7 +557,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
                            << " bssid = " << bssid << " group index " << int(group_index);
 
             if (events_updates_listeners.empty()) {
-                TASK_LOG(ERROR) << "STEERING_EVENT_SNR_AVAILABLE no listener ignoring";
+                TASK_LOG(DEBUG) << "STEERING_EVENT_SNR_AVAILABLE no listener ignoring";
                 break;
             }
 
@@ -620,7 +609,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
                            << " bssid = " << bssid << " group index " << int(group_index);
 
             if (events_updates_listeners.empty()) {
-                TASK_LOG(ERROR) << "STEERING_EVENT_PROBE_REQ_AVAILABLE no listener ignoring";
+                TASK_LOG(DEBUG) << "STEERING_EVENT_PROBE_REQ_AVAILABLE no listener ignoring";
                 break;
             }
 
@@ -732,7 +721,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
                            << " bssid = " << bssid << " group index " << int(group_index);
 
             if (events_updates_listeners.empty()) {
-                TASK_LOG(ERROR) << "STEERING_EVENT_CLIENT_CONNECT_AVAILABLE no listener ignoring";
+                TASK_LOG(DEBUG) << "STEERING_EVENT_CLIENT_CONNECT_AVAILABLE no listener ignoring";
                 break;
             }
 
@@ -809,7 +798,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
                            << int(event_obj->source) << " type " << int(event_obj->type);
 
             if (events_updates_listeners.empty()) {
-                TASK_LOG(ERROR)
+                TASK_LOG(DEBUG)
                     << "STEERING_EVENT_CLIENT_DISCONNECT_AVAILABLE no listener ignoring";
                 break;
             }
@@ -880,18 +869,6 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
         break;
     }
     }
-}
-
-bool rdkb_wlan_task::is_bml_rdkb_wlan_listener_exist()
-{
-    for (auto it = bml_rdkb_wlan_listeners_sockets.begin();
-         it < bml_rdkb_wlan_listeners_sockets.end(); it++) {
-        bool listener_exist = (*it).events_updates;
-        if (listener_exist) {
-            return true;
-        }
-    }
-    return false;
 }
 
 bool rdkb_wlan_task::is_bml_rdkb_wlan_listener_socket(int sd)
