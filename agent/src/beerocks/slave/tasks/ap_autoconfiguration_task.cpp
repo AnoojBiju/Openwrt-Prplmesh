@@ -781,7 +781,8 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_wsc(ieee1905_1::CmduMe
 {
     auto ruid = cmdu_rx.getClass<wfa_map::tlvApRadioIdentifier>();
     if (!ruid) {
-        LOG(ERROR) << "getClass<wfa_map::tlvApRadioIdentifier> failed";
+        LOG(INFO) << "tlvApRadioIdentifier is part of M2 CMDU sent by the controller, Ignore M1 "
+                     "CMDU sent by the agent";
         return;
     }
 
