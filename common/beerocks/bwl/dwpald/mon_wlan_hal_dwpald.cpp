@@ -6,7 +6,7 @@
  * See LICENSE file for more details.
  */
 
-#include "mon_wlan_hal_dwpal.h"
+#include "mon_wlan_hal_dwpald.h"
 
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
@@ -20,6 +20,7 @@
 
 extern "C" {
 #include <dwpal.h>
+#include <dwpald_client.h>
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -634,6 +635,8 @@ mon_wlan_hal_dwpal::mon_wlan_hal_dwpal(const std::string &iface_name, hal_event_
                             "CTRL-EVENT-BSS-ADDED", "CTRL-EVENT-BSS-REMOVED"};
     int events_size      = sizeof(events) / sizeof(std::string);
     m_filtered_events.insert(events, events + events_size);
+    dwpald_connect("mon_hal");
+
 }
 
 mon_wlan_hal_dwpal::~mon_wlan_hal_dwpal() {}
