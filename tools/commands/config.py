@@ -287,7 +287,7 @@ class mapcfg(object):
             f.write('PLATFORM_TOOLCHAIN_PREFIX={}\n'.format(toolchain_prefix))
             f.write('PLATFORM_BASE_DIR={}\n'.format(base_dir))
             f.write('PLATFORM_BUILD_NAME={}\n'.format(build_name))
-            f.write('BWL_TYPE=DWPALD')
+            f.write('BWL_TYPE=DWPAL')
 
     def __gen_deploy_yaml(self, output_path, toolchain_path):
         ''' Generate deploy.yaml (for multiap deploy) '''
