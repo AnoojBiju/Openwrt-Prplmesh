@@ -1388,6 +1388,100 @@ int test_parse_assoc_frame()
     return errors;
 }
 
+int test_parse_reassoc_frame()
+{
+    int errors = 0;
+    MAPF_INFO(__FUNCTION__ << " start");
+
+    /*
+     * frame raw buffer in network byte order
+     */
+    std::vector<uint8_t> reassoc_req_frame_body_buffer = {
+        0x11, 0x11, 0x0a, 0x00, 0x08, 0xbe, 0xac, 0x1b, 0xc6, 0xa2, 0x00, 0x08, 0x70, 0x72,
+        0x70, 0x6c, 0x6d, 0x65, 0x73, 0x68, 0x01, 0x08, 0x8c, 0x92, 0x98, 0xa4, 0xb0, 0xc8,
+        0xe0, 0xec, 0x21, 0x02, 0x0a, 0x14, 0x24, 0x0a, 0x24, 0x04, 0x34, 0x04, 0x64, 0x0b,
+        0x95, 0x04, 0xa5, 0x01, 0x30, 0x14, 0x01, 0x00, 0x00, 0x0f, 0xac, 0x04, 0x01, 0x00,
+        0x00, 0x0f, 0xac, 0x04, 0x01, 0x00, 0x00, 0x0f, 0xac, 0x02, 0x8c, 0x00, 0x46, 0x05,
+        0x73, 0x08, 0x01, 0x00, 0x00, 0x3b, 0x15, 0x73, 0x70, 0x73, 0x74, 0x75, 0x7c, 0x7d,
+        0x7e, 0x7f, 0x80, 0x81, 0x82, 0x76, 0x77, 0x78, 0x79, 0x7a, 0x7b, 0x51, 0x53, 0x54,
+        0x2d, 0x1a, 0x6f, 0x00, 0x1b, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x7f, 0x0a, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x40, 0x00, 0x20, 0xbf, 0x0c,
+        0x32, 0x78, 0x91, 0x0f, 0xfa, 0xff, 0x00, 0x00, 0xfa, 0xff, 0x00, 0x00, 0xc7, 0x01,
+        0x10, 0xdd, 0x0b, 0x00, 0x00, 0xf0, 0x22, 0x00, 0x01, 0x04, 0x00, 0x00, 0x00, 0x07,
+        0xdd, 0x05, 0x00, 0x90, 0x4c, 0x04, 0x17, 0xdd, 0x0a, 0x00, 0x10, 0x18, 0x02, 0x00,
+        0x00, 0x10, 0x00, 0x00, 0x00, 0xdd, 0x07, 0x00, 0x50, 0xf2, 0x02, 0x00, 0x01, 0x00};
+
+    auto reassoc_frame = assoc_frame::AssocReqFrame::parse(reassoc_req_frame_body_buffer.data(),
+                                                           reassoc_req_frame_body_buffer.size());
+    if (!reassoc_frame) {
+        MAPF_ERR("Failed to parse reassociation frame.");
+        errors++;
+    } else {
+
+        /*
+         * Frame Body:
+         * 1111 => capability info
+         * 0a00 => listen interval
+         */
+        auto capInfoDmgStaField = reassoc_frame->getAttr<assoc_frame::cCapInfoDmgSta>();
+        if (!capInfoDmgStaField) {
+            MAPF_ERR("no capInfo field.");
+            errors++;
+        } else {
+            errors += check_field<uint8_t>(capInfoDmgStaField->cap_info().radio_measurement, 1,
+                                           "radio_measurement");
+        }
+
+        /*
+         * 08 be ac 1b c6 a2
+         * => currenBSSID:  08:be:ac:1b:c6:a2
+         */
+        auto currentApAddress = reassoc_frame->getAttr<assoc_frame::cCurrentApAddress>();
+        if (!currentApAddress) {
+            MAPF_ERR("no currentAP field.");
+            errors++;
+        } else {
+            std::vector<uint8_t> bssid = {0x08, 0xbe, 0xac, 0x1b, 0xc6, 0xa2};
+            std::vector<uint8_t> currBssid(currentApAddress->ap_addr().oct,
+                                           currentApAddress->ap_addr().oct + 6);
+            errors += check_field<std::vector<uint8_t>>(bssid, currBssid, "currentBSSID");
+        }
+
+        /*
+         * 00 08 7072706c6d657368
+         * => ID_SSID "prplmesh"
+         */
+        errors += check_field<std::string>(reassoc_frame->sta_ssid(), "prplmesh", "ssid");
+
+        /*
+         * 2d 1a 6f00 1b ffff0000000000000000000000000000 0000 00000000 00
+         * => ID_HT_CAPABILITY: capinfo 006f sm_power disable, 20mhz(+shortGI),
+         *                      40mhz (+shortGI), nss_2, mcs 0-15
+         */
+        auto htcap = reassoc_frame->sta_ht_capability();
+        if (!htcap) {
+            MAPF_ERR("no HT capability field.");
+            errors++;
+        } else {
+            errors += check_field<uint8_t>(htcap->ht_cap_info().support_ch_width_set, 1,
+                                           "support_ch_width_set");
+            errors += check_field<uint8_t>(htcap->ht_cap_info().short_gi20mhz, 1, "short_gi20mhz");
+            errors += check_field<uint8_t>(htcap->ht_cap_info().short_gi40mhz, 1, "short_gi40mhz");
+            std::vector<uint8_t> values = {
+                0xff,
+                0xff,
+                0x00,
+                0x00,
+            };
+            std::vector<uint8_t> mcs_rx_1_4(htcap->ht_mcs_set(), htcap->ht_mcs_set() + 4);
+            errors += check_field<std::vector<uint8_t>>(mcs_rx_1_4, values, "mcs_rx_1_4");
+        }
+    }
+    MAPF_INFO(__FUNCTION__ << " Finished, errors = " << errors << std::endl);
+    return errors;
+}
+
 int test_build_assoc_frame()
 {
     int errors = 0;
@@ -1642,6 +1736,7 @@ int main(int argc, char *argv[])
     errors += test_channel_scan_results();
     errors += test_parse_assoc_frame();
     errors += test_build_assoc_frame();
+    errors += test_parse_reassoc_frame();
     MAPF_INFO(__FUNCTION__ << " Finished, errors = " << errors << std::endl);
     return errors;
 }
