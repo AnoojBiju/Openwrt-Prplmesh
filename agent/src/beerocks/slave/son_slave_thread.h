@@ -336,9 +336,9 @@ private:
     struct sManagedRadio {
         int stop_on_failure_attempts;
         bool configuration_in_progress = false;
-
-        int monitor_fd    = net::FileDescriptor::invalid_descriptor;
-        int ap_manager_fd = net::FileDescriptor::invalid_descriptor;
+        bool fronthaul_started         = false;
+        int monitor_fd                 = net::FileDescriptor::invalid_descriptor;
+        int ap_manager_fd              = net::FileDescriptor::invalid_descriptor;
         std::chrono::steady_clock::time_point monitor_last_seen;
         std::chrono::steady_clock::time_point ap_manager_last_seen;
         int monitor_retries_counter    = 0;

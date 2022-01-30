@@ -302,8 +302,8 @@ void slave_thread::agent_reset()
             m_stopped = true;
         }
 
-        // If stopped, close the fronthaul.
-        if (m_stopped) {
+        // If stopped, or backhaul disconnected close the fronthaul.
+        if (m_stopped || m_is_backhaul_disconnected) {
             fronthaul_stop(fronthaul_iface);
         }
         return true;
@@ -610,6 +610,7 @@ void slave_thread::handle_client_disconnected(int fd)
         }
         if (found_fd) {
             LOG(DEBUG) << "agent_reset!";
+            radio_manager.fronthaul_started = false;
             agent_reset();
             return true;
         }
@@ -629,7 +630,7 @@ void slave_thread::handle_client_disconnected(int fd)
             return;
         }
     }
-    LOG(FATAL) << "Uknown client socket disconnected!";
+    LOG(INFO) << "Uknown client socket disconnected!";
 }
 
 bool slave_thread::fsm_all()
@@ -4291,8 +4292,7 @@ bool slave_thread::agent_fsm()
                     // Set zwdfs to initial value.
                     radio->front.zwdfs = false;
                 }
-                if (radio_manager.ap_manager_fd == net::FileDescriptor::invalid_descriptor ||
-                    radio_manager.monitor_fd == net::FileDescriptor::invalid_descriptor) {
+                if (!radio_manager.fronthaul_started) {
                     // Start the fronthaul process. Before starting, kill the existing one.
                     fronthaul_stop(fronthaul_iface);
                     fronthaul_start(fronthaul_iface);
@@ -4498,6 +4498,8 @@ void slave_thread::fronthaul_stop(const std::string &fronthaul_iface)
 void slave_thread::fronthaul_start(const std::string &fronthaul_iface)
 {
     LOG(INFO) << "fronthaul start " << fronthaul_iface;
+
+    m_radio_managers[fronthaul_iface].fronthaul_started = true;
 
     // Start new Fronthaul process
     std::string file_name = "./" + std::string(BEEROCKS_FRONTHAUL);
