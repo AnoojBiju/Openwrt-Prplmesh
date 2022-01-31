@@ -298,6 +298,7 @@ bool base_wlan_hal_dwpal::fsm_setup()
             {dwpal_fsm_state::Operational, dwpal_fsm_state::Delay, dwpal_fsm_state::Detach},
             [&](TTransition &transition, const void *args) -> bool {
                 // Get the wpa_supplicant/hostapd event interface file descriptor
+                #if 0
                 if (m_dwpal_ctx[0] != nullptr) {
                     if (dwpal_hostap_event_fd_get(m_dwpal_ctx[0], &m_fd_ext_events)) {
                         LOG(ERROR) << "dwpal_hostap_event_fd_get() failed for: "
@@ -308,8 +309,9 @@ bool base_wlan_hal_dwpal::fsm_setup()
                     LOG(ERROR) << "Can't get event fd since dwpal ctx is NULL!";
                     return (transition.change_destination(dwpal_fsm_state::Detach));
                 }
-
+                #endif
                 // Success
+                m_fd_ext_events = 0;
                 LOG(DEBUG)
                     << "Open and attach an event interface to wpa_supplicant/hostapd - SUCCESS!";
 
@@ -365,7 +367,7 @@ bool base_wlan_hal_dwpal::fsm_setup()
                 }
             }
 
-            m_fd_ext_events = -1;
+            m_fd_ext_events = 0;
 
             // detach nl socket from main vap
             if (m_dwpal_nl_ctx) {
@@ -1097,6 +1099,7 @@ bool base_wlan_hal_dwpal::refresh_vaps_info(int id)
 
 bool base_wlan_hal_dwpal::process_ext_events()
 {
+    #if 0
     constexpr uint8_t MAX_EVENTS_PER_ITERATION = 5;
 
     char opCode[DWPAL_OPCODE_STRING_LENGTH] = {0};
@@ -1105,7 +1108,7 @@ bool base_wlan_hal_dwpal::process_ext_events()
         LOG(ERROR) << "Invalid WPA Control socket (m_dwpal_ctx == nullptr)";
         return false;
     }
-
+    
     uint8_t events_received = 0;
     int status              = DWPAL_SUCCESS;
 
@@ -1141,9 +1144,9 @@ bool base_wlan_hal_dwpal::process_ext_events()
         // No pending messages
         LOG(WARNING) << "base_wlan_hal_dwpal::process_ext_events() called but there are no pending "
                         "messages...";
-        return false;
+        return true;
     }
-
+    #endif
     return true;
 }
 
