@@ -285,52 +285,48 @@ void slave_thread::stop_slave_thread()
 
 void slave_thread::agent_reset()
 {
-    m_agent_resets_counter++;
-    LOG(DEBUG) << "agent_reset() #" << m_agent_resets_counter << " - start";
+    // If already during reset, return.
+    if (m_agent_state < eSlaveState::STATE_LOAD_PLATFORM_CONFIGURATION) {
+        return;
+    }
 
-    auto db = AgentDB::get();
+    m_agent_resets_counter++;
+    LOG(DEBUG) << "agent_reset() #" << m_agent_resets_counter;
 
     m_radio_managers.do_on_each_radio_manager([&](const sManagedRadio &radio_manager,
                                                   const std::string &fronthaul_iface) {
-        auto radio = db->radio(fronthaul_iface);
-
-        if (!radio) {
-            LOG(ERROR) << "Radio of iface " << fronthaul_iface << " does not exist on the db";
-            return false;
-        }
-        // Clear the front interface mac.
-        radio->front.iface_mac = network_utils::ZERO_MAC;
-
-        fronthaul_stop(fronthaul_iface);
+        auto db = AgentDB::get();
 
         if (db->device_conf.stop_on_failure_attempts && !radio_manager.stop_on_failure_attempts) {
             LOG(ERROR) << "Reached to max stop on failure attempts!";
             m_stopped = true;
         }
 
+        // If stopped, or backhaul disconnected close the fronthaul.
+        if (m_stopped || m_is_backhaul_disconnected) {
+            fronthaul_stop(fronthaul_iface);
+        }
         return true;
     });
 
-    if (m_stopped && m_agent_state != STATE_INIT) {
+    // If stopped, move to STATE_STOPPED.
+    if (m_stopped) {
         LOG(DEBUG) << "goto STATE_STOPPED";
         m_agent_state = STATE_STOPPED;
-    }
-
-    if (m_agent_state == STATE_STOPPED) {
         platform_notify_error(beerocks::bpl::eErrorCode::SLAVE_STOPPED, "");
         return;
     }
+
     if (m_is_backhaul_disconnected) {
         m_agent_state_timer_sec =
             std::chrono::steady_clock::now() + std::chrono::seconds(SLAVE_INIT_DELAY_SEC);
         LOG(DEBUG) << "goto STATE_WAIT_BEFORE_INIT";
         m_agent_state = STATE_WAIT_BEFORE_INIT;
-    } else {
-        LOG(DEBUG) << "goto STATE_INIT";
-        m_agent_state = STATE_INIT;
+        return;
     }
 
-    LOG(DEBUG) << "agent_reset() #" << m_agent_resets_counter << " - done";
+    LOG(DEBUG) << "goto STATE_INIT";
+    m_agent_state = STATE_INIT;
 }
 
 bool slave_thread::read_platform_configuration()
@@ -594,18 +590,27 @@ void slave_thread::handle_client_disconnected(int fd)
 {
 
     auto handle_disconnect = [&](const std::string &fronthaul_iface) {
-        const auto &radio_manager = m_radio_managers[fronthaul_iface];
+        auto &radio_manager = m_radio_managers[fronthaul_iface];
 
         bool found_fd = false;
         if (fd == radio_manager.ap_manager_fd) {
             LOG(DEBUG) << "AP Manager " << fronthaul_iface << " disconnected";
+            radio_manager.ap_manager_fd = net::FileDescriptor::invalid_descriptor;
+            if (radio_manager.monitor_fd != net::FileDescriptor::invalid_descriptor) {
+                m_cmdu_server->disconnect(radio_manager.monitor_fd);
+            }
             found_fd = true;
         } else if (fd == radio_manager.monitor_fd) {
             LOG(DEBUG) << "Monitor " << fronthaul_iface << " disconnected";
+            radio_manager.monitor_fd = net::FileDescriptor::invalid_descriptor;
+            if (radio_manager.ap_manager_fd != net::FileDescriptor::invalid_descriptor) {
+                m_cmdu_server->disconnect(radio_manager.ap_manager_fd);
+            }
             found_fd = true;
         }
         if (found_fd) {
             LOG(DEBUG) << "agent_reset!";
+            radio_manager.fronthaul_started = false;
             agent_reset();
             return true;
         }
@@ -625,15 +630,15 @@ void slave_thread::handle_client_disconnected(int fd)
             return;
         }
     }
-    LOG(FATAL) << "Uknown client socket disconnected!";
+    LOG(INFO) << "Uknown client socket disconnected!";
 }
 
 bool slave_thread::fsm_all()
 {
-    auto radio_fsm = [&](sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
+    auto radio_fsm = [&](const sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
         if (!monitor_heartbeat_check(fronthaul_iface) ||
             !ap_manager_heartbeat_check(fronthaul_iface)) {
-            agent_reset();
+            fronthaul_reset(radio_manager);
         }
         return true;
     };
@@ -2199,6 +2204,9 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
 
         radio_manager.ap_manager_fd = fd;
 
+        static const std::string client_name("ap manager ");
+        m_cmdu_server->set_client_name(fd, client_name + iface);
+
         auto config_msg =
             message_com::create_vs_message<beerocks_message::cACTION_APMANAGER_CONFIGURE>(cmdu_tx);
         if (!config_msg) {
@@ -2344,7 +2352,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
                 LOG(INFO) << "configuration in progress, ignoring";
                 break;
             }
-            agent_reset();
+            fronthaul_reset(radio_manager);
         } else {
             auto notification_out = message_com::create_vs_message<
                 beerocks_message::cACTION_CONTROL_HOSTAP_AP_DISABLED_NOTIFICATION>(cmdu_tx);
@@ -2371,7 +2379,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
 
         if (!response->success()) {
             LOG(ERROR) << "failed to enable APs";
-            agent_reset();
+            fronthaul_reset(radio_manager);
         }
 
         break;
@@ -3263,7 +3271,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
         // take actions when the cancelation failed
         if (!response_in->success()) {
             LOG(ERROR) << "cancel active cac failed - resetting the slave";
-            agent_reset();
+            fronthaul_reset(radio_manager);
         }
 
         break;
@@ -3324,6 +3332,8 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
         }
 
         radio_manager.monitor_fd = fd;
+        static const std::string client_name("monitor ");
+        m_cmdu_server->set_client_name(fd, client_name + notification->iface_name());
 
         if (m_agent_state != STATE_WAIT_FOR_FRONTHAUL_THREADS_JOINED) {
             LOG(WARNING) << "ACTION_MONITOR_JOINED_NOTIFICATION, but slave_state != "
@@ -3369,7 +3379,7 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
                 LOG(INFO) << "configuration is in progress, ignoring";
                 break;
             }
-            agent_reset();
+            fronthaul_reset(radio_manager);
         }
         break;
     }
@@ -4104,12 +4114,14 @@ bool slave_thread::agent_fsm()
         // Must clear the map to prevent residues of previous country configuration.
         // This is needed since the map is not cleared when read.
         m_radio_managers.do_on_each_radio_manager(
-            [&](sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
+            [&](const sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
                 auto radio = db->radio(fronthaul_iface);
                 if (!radio) {
                     return false;
                 }
-                radio->channels_list.clear();
+                if (radio_manager.ap_manager_fd == FileDescriptor::invalid_descriptor) {
+                    radio->channels_list.clear();
+                }
                 return true;
             });
 
@@ -4280,8 +4292,11 @@ bool slave_thread::agent_fsm()
                     // Set zwdfs to initial value.
                     radio->front.zwdfs = false;
                 }
-                fronthaul_stop(fronthaul_iface);
-                fronthaul_start(fronthaul_iface);
+                if (!radio_manager.fronthaul_started) {
+                    // Start the fronthaul process. Before starting, kill the existing one.
+                    fronthaul_stop(fronthaul_iface);
+                    fronthaul_start(fronthaul_iface);
+                }
                 return true;
             });
 
@@ -4474,17 +4489,6 @@ bool slave_thread::agent_fsm()
 void slave_thread::fronthaul_stop(const std::string &fronthaul_iface)
 {
     LOG(INFO) << "fronthaul stop " << fronthaul_iface;
-    auto &radio_manager = m_radio_managers[fronthaul_iface];
-
-    if (radio_manager.ap_manager_fd != beerocks::net::FileDescriptor::invalid_descriptor) {
-        m_cmdu_server->disconnect(radio_manager.ap_manager_fd);
-        radio_manager.ap_manager_fd = beerocks::net::FileDescriptor::invalid_descriptor;
-    }
-
-    if (radio_manager.monitor_fd != beerocks::net::FileDescriptor::invalid_descriptor) {
-        m_cmdu_server->disconnect(radio_manager.monitor_fd);
-        radio_manager.monitor_fd = beerocks::net::FileDescriptor::invalid_descriptor;
-    }
 
     // Kill Fronthaul pid
     os_utils::kill_pid(config.temp_path + "pid/",
@@ -4494,6 +4498,8 @@ void slave_thread::fronthaul_stop(const std::string &fronthaul_iface)
 void slave_thread::fronthaul_start(const std::string &fronthaul_iface)
 {
     LOG(INFO) << "fronthaul start " << fronthaul_iface;
+
+    m_radio_managers[fronthaul_iface].fronthaul_started = true;
 
     // Start new Fronthaul process
     std::string file_name = "./" + std::string(BEEROCKS_FRONTHAUL);

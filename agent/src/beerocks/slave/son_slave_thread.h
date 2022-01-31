@@ -336,9 +336,9 @@ private:
     struct sManagedRadio {
         int stop_on_failure_attempts;
         bool configuration_in_progress = false;
-
-        int monitor_fd    = net::FileDescriptor::invalid_descriptor;
-        int ap_manager_fd = net::FileDescriptor::invalid_descriptor;
+        bool fronthaul_started         = false;
+        int monitor_fd                 = net::FileDescriptor::invalid_descriptor;
+        int ap_manager_fd              = net::FileDescriptor::invalid_descriptor;
         std::chrono::steady_clock::time_point monitor_last_seen;
         std::chrono::steady_clock::time_point ap_manager_last_seen;
         int monitor_retries_counter    = 0;
@@ -420,6 +420,21 @@ private:
     sAgentConfig config;
 
     logging &logger;
+
+    /**
+     * @brief Reset a Fronthaul by disconnecting a socket to one of its threads.
+     * 
+     * @details When disconnecting a socket to one of the Fronthaul threads, the disconnect handler
+     * will disconnect the other one too, and call to agent_reset(). The choice which one to
+     * disconnect is arbitrary.
+     * 
+     * @param parameter A radio manager struct containing the fronthaul threads socket file
+     * descriptors.
+     */
+    inline void fronthaul_reset(const sManagedRadio &radio_manager) const
+    {
+        m_cmdu_server->disconnect(radio_manager.ap_manager_fd);
+    }
 
     bool send_operating_channel_report(const std::string &fronthaul_iface);
     bool handle_ap_metrics_query(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
