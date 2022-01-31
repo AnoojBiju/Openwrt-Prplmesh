@@ -733,6 +733,156 @@ update_vap_credentials_configure_wpa(const std::string &vap_if,
 
 // NOTE: Since *base_wlan_hal_dwpal* inherits *base_wlan_hal* virtually, we
 //       need to explicitly call it's from any deriving class
+
+ap_wlan_hal_dwpal::~ap_wlan_hal_dwpal() {}
+
+int hap_evt_ap_enabled_clb(char *ifname, char *op_code, char *msg, size_t len)
+{
+    LOG(ERROR) << "Either entity shall register not for " << op_code
+               << "event or if register then override base class callback";
+    return 0;
+}
+
+int hap_evt_ap_disabled_clb(char *ifname, char *op_code, char *msg, size_t len)
+{
+    LOG(ERROR) << "Either entity shall register not for " << op_code
+               << "event or if register then override base class callback";
+    return 0;
+}
+
+int hap_evt_ap_sta_connected_clb(char *ifname, char *op_code, char *msg,
+                                                      size_t len)
+{
+    LOG(ERROR) << "Either entity shall register not for " << op_code
+               << "event or if register then override base class callback";
+    return 0;
+}
+
+int hap_evt_ap_sta_disconnected_clb(char *ifname, char *op_code, char *msg,
+                                                         size_t len)
+{
+    LOG(ERROR) << "Either entity shall register not for " << op_code
+               << "event or if register then override base class callback";
+    return 0;
+}
+
+int hap_evt_interface_enabled_clb(char *ifname, char *op_code, char *msg,
+                                                       size_t len)
+{
+    LOG(ERROR) << "Either entity shall register not for " << op_code
+               << "event or if register then override base class callback";
+    return 0;
+}
+
+int hap_evt_interface_disabled_clb(char *ifname, char *op_code, char *msg,
+                                                        size_t len)
+{
+    LOG(ERROR) << "Either entity shall register not for " << op_code
+               << "event or if register then override base class callback";
+    return 0;
+}
+
+int hap_evt_acs_started_clb(char *ifname, char *op_code, char *msg, size_t len)
+{
+    LOG(ERROR) << "Either entity shall register not for " << op_code
+               << "event or if register then override base class callback";
+    return 0;
+}
+
+int hap_evt_acs_completed_clb(char *ifname, char *op_code, char *msg,
+                                                   size_t len)
+{
+    LOG(ERROR) << "Either entity shall register not for " << op_code
+               << "event or if register then override base class callback";
+    return 0;
+}
+
+int hap_evt_acs_failed_clb(char *ifname, char *op_code, char *msg, size_t len)
+{
+    LOG(ERROR) << "Either entity shall register not for " << op_code
+               << "event or if register then override base class callback";
+    return 0;
+}
+
+int hap_evt_ap_csa_finished_clb(char *ifname, char *op_code, char *msg,
+                                                     size_t len)
+{
+    LOG(ERROR) << "Either entity shall register not for " << op_code
+               << "event or if register then override base class callback";
+    return 0;
+}
+
+int hap_evt_bss_tm_query_clb(char *ifname, char *op_code, char *msg,
+                                                  size_t len)
+{
+    LOG(ERROR) << "Either entity shall register not for " << op_code
+               << "event or if register then override base class callback";
+    return 0;
+}
+
+int hap_evt_bss_tm_resp_clb(char *ifname, char *op_code, char *msg, size_t len)
+{
+    LOG(ERROR) << "Either entity shall register not for " << op_code
+               << "event or if register then override base class callback";
+    return 0;
+}
+
+int hap_evt_dfs_cac_start_clb(char *ifname, char *op_code, char *msg,
+                                                   size_t len)
+{
+    LOG(ERROR) << "Either entity shall register not for " << op_code
+               << "event or if register then override base class callback";
+    return 0;
+}
+
+int hap_evt_dfs_cac_completed_clb(char *ifname, char *op_code, char *msg,
+                                                       size_t len)
+{
+    LOG(ERROR) << "Either entity shall register not for " << op_code
+               << "event or if register then override base class callback";
+    return 0;
+}
+
+int hap_evt_dfs_nop_finished_clb(char *ifname, char *op_code, char *msg,
+                                                      size_t len)
+{
+    LOG(ERROR) << "Either entity shall register not for " << op_code
+               << "event or if register then override base class callback";
+    return 0;
+}
+
+int hap_evt_ltq_softblock_drop_clb(char *ifname, char *op_code, char *msg,
+                                                        size_t len)
+{
+    LOG(ERROR) << "Either entity shall register not for " << op_code
+               << "event or if register then override base class callback";
+    return 0;
+}
+
+int hap_evt_unconnected_sta_rssi_clb(char *ifname, char *op_code, char *msg,
+                                                          size_t len)
+{
+    LOG(ERROR) << "Either entity shall register not for " << op_code
+               << "event or if register then override base class callback";
+    return 0;
+}
+
+int hap_evt_ap_action_frame_received_clb(char *ifname, char *op_code,
+                                                              char *msg, size_t len)
+{
+    LOG(ERROR) << "Either entity shall register not for " << op_code
+               << "event or if register then override base class callback";
+    return 0;
+}
+
+int hap_evt_ap_sta_possible_psk_mismatch_clb(char *ifname, char *op_code,
+                                                                  char *msg, size_t len)
+{
+    LOG(ERROR) << "Either entity shall register not for " << op_code
+               << "event or if register then override base class callback";
+    return 0;
+}
+
 ap_wlan_hal_dwpal::ap_wlan_hal_dwpal(const std::string &iface_name, hal_event_cb_t callback,
                                      const hal_conf_t &hal_conf)
     : base_wlan_hal(bwl::HALType::AccessPoint, iface_name, IfaceType::Intel, callback, hal_conf),
@@ -743,9 +893,38 @@ ap_wlan_hal_dwpal::ap_wlan_hal_dwpal(const std::string &iface_name, hal_event_cb
     int events_size      = sizeof(events) / sizeof(std::string);
     m_filtered_events.insert(events, events + events_size);
     LOG(ERROR) << "Anant:Return of connect" << dwpald_connect("ap_manager");
+    static dwpald_hostap_event hostap_event_handlers[] = {
+        {(char *)"AP-ENABLED", sizeof("AP-ENABLED") - 1, hap_evt_ap_enabled_clb},
+        {(char *)"AP-DISABLED", sizeof("AP-DISABLED") - 1, hap_evt_ap_disabled_clb},
+        {(char *)"AP-STA-CONNECTED", sizeof("AP-STA-CONNECTED") - 1, hap_evt_ap_sta_connected_clb},
+        {(char *)"AP-STA-DISCONNECTED", sizeof("AP-STA-DISCONNECTED") - 1,
+         hap_evt_ap_sta_disconnected_clb},
+        {(char *)"UNCONNECTED-STA-RSSI", sizeof("UNCONNECTED-STA-RSSI") - 1,
+         hap_evt_unconnected_sta_rssi_clb},
+        {(char *)"INTERFACE-ENABLED", sizeof("INTERFACE-ENABLED") - 1,
+         hap_evt_interface_enabled_clb},
+        {(char *)"INTERFACE-DISABLED", sizeof("INTERFACE-DISABLED") - 1,
+         hap_evt_interface_disabled_clb},
+        {(char *)"ACS-STARTED", sizeof("ACS-STARTED") - 1, hap_evt_acs_started_clb},
+        {(char *)"ACS-COMPLETED", sizeof("ACS-COMPLETED") - 1, hap_evt_acs_completed_clb},
+        {(char *)"ACS-FAILED", sizeof("ACS-FAILED") - 1, hap_evt_acs_failed_clb},
+        {(char *)"AP-CSA-FINISHED", sizeof("AP-CSA-FINISHED") - 1, hap_evt_ap_csa_finished_clb},
+        {(char *)"BSS-TM-QUERY", sizeof("BSS-TM-QUERY") - 1, hap_evt_bss_tm_query_clb},
+        {(char *)"BSS-TM-RESP", sizeof("BSS-TM-RESP") - 1, hap_evt_bss_tm_resp_clb},
+        {(char *)"DFS-CAC-START", sizeof("DFS-CAC-START") - 1, hap_evt_dfs_cac_start_clb},
+        {(char *)"DFS-CAC-COMPLETED", sizeof("DFS-CAC-COMPLETED") - 1,
+         hap_evt_dfs_cac_completed_clb},
+        {(char *)"DFS-NOP-FINISHED", sizeof("DFS-NOP-FINISHED") - 1, hap_evt_dfs_nop_finished_clb},
+        {(char *)"LTQ-SOFTBLOCK-DROP", sizeof("LTQ-SOFTBLOCK-DROP") - 1,
+         hap_evt_ltq_softblock_drop_clb},
+        {(char *)"AP-ACTION-FRAME-RECEIVED", sizeof("AP-ACTION-FRAME-RECEIVED") - 1,
+         hap_evt_ap_action_frame_received_clb},
+        {(char *)"AP-STA-POSSIBLE-PSK-MISMATCH", sizeof("AP-STA-POSSIBLE-PSK-MISMATCH") - 1,
+         hap_evt_ap_sta_possible_psk_mismatch_clb}};
+    m_hostap_event_handlers     = hostap_event_handlers;
+    m_num_hostap_event_handlers = sizeof(hostap_event_handlers) / sizeof(dwpald_hostap_event);
 }
 
-ap_wlan_hal_dwpal::~ap_wlan_hal_dwpal() {}
 
 HALState ap_wlan_hal_dwpal::attach(bool block)
 {

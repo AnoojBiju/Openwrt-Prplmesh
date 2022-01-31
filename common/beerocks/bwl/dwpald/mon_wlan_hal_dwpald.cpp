@@ -636,7 +636,6 @@ mon_wlan_hal_dwpal::mon_wlan_hal_dwpal(const std::string &iface_name, hal_event_
     int events_size      = sizeof(events) / sizeof(std::string);
     m_filtered_events.insert(events, events + events_size);
     dwpald_connect("mon_hal");
-
 }
 
 mon_wlan_hal_dwpal::~mon_wlan_hal_dwpal() {}

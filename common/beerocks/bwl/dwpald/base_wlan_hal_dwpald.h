@@ -19,6 +19,7 @@
 
 extern "C" {
 #include <dwpal.h>
+#include <dwpald_client.h>
 }
 
 #include <chrono>
@@ -77,6 +78,29 @@ public:
      * @return True on success and false otherwise.
      */
     bool get_channel_utilization(uint8_t &channel_utilization) override;
+    // list of hostap event callback
+    virtual int base_hap_evt_ap_enabled_clb(char *ifname, char *op_code, char *msg, size_t len);
+    virtual int base_hap_evt_ap_disabled_clb(char *ifname, char *op_code, char *msg, size_t len);
+    virtual int base_hap_evt_ap_sta_connected_clb(char *ifname, char *op_code, char *msg, size_t len);
+    virtual int base_hap_evt_ap_sta_disconnected_clb(char *ifname, char *op_code, char *msg, size_t len);
+    virtual int base_hap_evt_interface_enabled_clb(char *ifname, char *op_code, char *msg, size_t len);
+    virtual int base_hap_evt_interface_disabled_clb(char *ifname, char *op_code, char *msg, size_t len);
+    virtual int base_hap_evt_acs_started_clb(char *ifname, char *op_code, char *msg, size_t len);
+    virtual int base_hap_evt_acs_completed_clb(char *ifname, char *op_code, char *msg, size_t len);
+    virtual int base_hap_evt_acs_failed_clb(char *ifname, char *op_code, char *msg, size_t len);
+    virtual int base_hap_evt_ap_csa_finished_clb(char *ifname, char *op_code, char *msg, size_t len);
+    virtual int base_hap_evt_bss_tm_query_clb(char *ifname, char *op_code, char *msg, size_t len);
+    virtual int base_hap_evt_bss_tm_resp_clb(char *ifname, char *op_code, char *msg, size_t len);
+    virtual int base_hap_evt_dfs_cac_start_clb(char *ifname, char *op_code, char *msg, size_t len);
+    virtual int base_hap_evt_dfs_cac_completed_clb(char *ifname, char *op_code, char *msg, size_t len);
+    virtual int base_hap_evt_dfs_nop_finished_clb(char *ifname, char *op_code, char *msg, size_t len);
+    virtual int base_hap_evt_ltq_softblock_drop_clb(char *ifname, char *op_code, char *msg, size_t len);
+    virtual int base_hap_evt_unconnected_sta_rssi_clb(char *ifname, char *op_code, char *msg,
+                                                 size_t len);
+    virtual int base_hap_evt_ap_action_frame_received_clb(char *ifname, char *op_code, char *msg,
+                                                     size_t len);
+    virtual int base_hap_evt_ap_sta_possible_psk_mismatch_clb(char *ifname, char *op_code, char *msg,
+                                                         size_t len);
 
     // Protected methods
 protected:
@@ -146,6 +170,12 @@ protected:
      */
     unsigned char m_nl_buffer[NL_MAX_REPLY_BUFFSIZE] = {'\0'};
 
+    /**
+     * @brief Structure to hold event and callback mapping
+     * This will be used while registering using dwpald_hostap_attach.
+     */
+    dwpald_hostap_event *m_hostap_event_handlers = NULL;
+    int m_num_hostap_event_handlers              = 0;
     // Private data-members:
 private:
     bool get_vap_type(const std::string &ifname, bool &fronthaul, bool &backhaul);

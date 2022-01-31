@@ -95,7 +95,6 @@ sta_wlan_hal_dwpal::sta_wlan_hal_dwpal(const std::string &iface_name, hal_event_
     int events_size      = sizeof(events) / sizeof(std::string);
     m_filtered_events.insert(events, events + events_size);
     dwpald_connect("sta_hal");
-
 }
 
 sta_wlan_hal_dwpal::~sta_wlan_hal_dwpal() {}
