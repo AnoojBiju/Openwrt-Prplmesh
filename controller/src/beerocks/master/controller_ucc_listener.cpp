@@ -9,6 +9,8 @@
 #include "controller_ucc_listener.h"
 #include "son_actions.h"
 
+#include <tlvf/ieee_1905_1/tlvAlMacAddress.h>
+#include <tlvf/ieee_1905_1/tlvMacAddress.h>
 #include <tlvf/wfa_map/tlvProfile2Default802dotQSettings.h>
 #include <tlvf/wfa_map/tlvProfile2TrafficSeparationPolicy.h>
 
@@ -145,6 +147,83 @@ bool controller_ucc_listener::handle_dev_set_rfeature(
 {
     err_string = "dev set rfeature not supported in controller mode";
     return false;
+}
+
+bool controller_ucc_listener::handle_custom_command(
+    const std::unordered_map<std::string, std::string> &params, std::string &err_string)
+{
+    const auto &cmd = params.at("cmd");
+    if (cmd == "discovery_burst") {
+        /**
+         * @brief Send a burst of a given number @a repeats of Topology Discovery message from a
+         * given basic source mac @a base_mac.
+         * 
+         * @param base_mac Basic mac that will be used as source mac address and will be included
+         * in the TLV content. For every repeat, the mac least significate byte will increment.
+         * @param repeats Number of messages that will be sent. Limited to 255.
+         */
+
+        // Extract command parameters
+        static const std::string base_mac_param("base_mac");
+        auto it = params.find(base_mac_param);
+        if (it == params.end()) {
+            err_string = "missing " + base_mac_param;
+            return false;
+        }
+        auto base_mac = tlvf::mac_from_string(it->second);
+
+        static const std::string repeats_param("repeats");
+        it = params.find(repeats_param);
+        if (it == params.end()) {
+            err_string = "missing " + repeats_param;
+            return false;
+        }
+        unsigned repeats = beerocks::string_utils::stoi(it->second);
+        repeats &= 0xFF;
+
+        static const std::string dst_param("dst");
+        it       = params.find(dst_param);
+        auto dst = it == params.end() ? net::network_utils::MULTICAST_1905_MAC_ADDR
+                                      : tlvf::mac_from_string(it->second);
+
+        // Creatring the message
+        auto cmdu_hdr = m_cmdu_tx.create(0, ieee1905_1::eMessageType::TOPOLOGY_DISCOVERY_MESSAGE);
+        auto tlvAlMacAddress = m_cmdu_tx.addClass<ieee1905_1::tlvAlMacAddress>();
+        if (!tlvAlMacAddress) {
+            LOG(ERROR) << "Failed to create tlvAlMacAddress tlv";
+            return false;
+        }
+        tlvAlMacAddress->mac() = base_mac;
+
+        auto tlvMacAddress = m_cmdu_tx.addClass<ieee1905_1::tlvMacAddress>();
+        if (!tlvMacAddress) {
+            LOG(ERROR) << "Failed to create tlvMacAddress tlv";
+            return false;
+        }
+        tlvMacAddress->mac() = base_mac;
+
+        auto controller_ctx = m_database.get_controller_ctx();
+        if (!controller_ctx) {
+            LOG(ERROR) << "controller_ctx == nullptr";
+            return false;
+        }
+
+        auto start = std::chrono::steady_clock::now();
+
+        for (uint8_t i = 0; i < repeats; ++i) {
+            cmdu_hdr->message_id() = i;
+            cmdu_hdr->class_swap();
+            tlvAlMacAddress->mac().oct[5] = i;
+            tlvMacAddress->mac().oct[5]   = i;
+            controller_ctx->send_cmdu_to_broker(m_cmdu_tx, dst, tlvAlMacAddress->mac());
+        }
+
+        auto delta = std::chrono::duration_cast<std::chrono::microseconds>(
+                         std::chrono::steady_clock::now() - start)
+                         .count();
+        LOG(DEBUG) << "Sent " << repeats << " discovery messages in " << delta << " us";
+    }
+    return true;
 }
 
 void controller_ucc_listener::handle_dev_reset_default(
