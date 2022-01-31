@@ -102,6 +102,7 @@ void agent_monitoring_task::handle_event(int event_type, void *obj)
             return;
         }
         dm_add_agent_disconnected_event(tlvf::mac_from_string(agent_mac));
+        dm_remove_agent(tlvf::mac_from_string(agent_mac));
         break;
     }
     default:
@@ -677,4 +678,28 @@ bool agent_monitoring_task::dm_set_agent_disconnected_event_params(
         LOG(ERROR) << "Failed to set some of parameter for " << agent_discon_path;
     }
     return ok;
+}
+
+bool agent_monitoring_task::dm_remove_agent(const sMacAddr &agent_mac)
+{
+    auto ambiorix_dm = database.get_ambiorix_obj();
+
+    if (!ambiorix_dm) {
+        LOG(ERROR) << "Failed to get Ambiorix datamodel";
+        return false;
+    }
+
+    std::string dm_path = "Device.WiFi.DataElements.Network.Device.";
+    auto index =
+        ambiorix_dm->get_instance_index(dm_path + ".[ID == '%s'].", tlvf::mac_to_string(agent_mac));
+    if (!index) {
+        LOG(ERROR) << "Failed to get Network.Device index for mac: " << agent_mac;
+        return false;
+    }
+
+    if (!ambiorix_dm->remove_instance(dm_path, index)) {
+        LOG(ERROR) << "Failed to remove Network.Device." << index << " instance.";
+        return false;
+    }
+    return true;
 }
