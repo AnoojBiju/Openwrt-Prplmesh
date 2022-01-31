@@ -1093,6 +1093,7 @@ class RadioHostapd(Radio):
 
         self.logfilenames = [
             "{}/beerocks_agent.log".format(self.log_folder),
+            "{}/beerocks_backhaul.log".format(self.log_folder),
             "{}/beerocks_ap_manager_{}.log".format(self.log_folder, self.iface_name)
         ]
 
