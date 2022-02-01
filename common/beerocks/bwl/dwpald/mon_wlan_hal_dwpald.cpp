@@ -1244,7 +1244,7 @@ bool mon_wlan_hal_dwpal::pre_generate_connected_clients_events()
 
     return true;
 }
-
+void mon_wlan_hal_dwpal::hostap_attach(char *ifname) { return; }
 bool mon_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std::string &opcode)
 {
     LOG(TRACE) << __func__ << " - opcode: |" << opcode << "|";

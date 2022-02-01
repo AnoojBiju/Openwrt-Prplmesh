@@ -573,11 +573,11 @@ bool base_wlan_hal_dwpal::attach_ctrl_interface(int vap_id)
     const std::string ifname =
         beerocks::utils::get_iface_string_from_iface_vap_ids(m_radio_info.iface_name, vap_id);
     int result = dwpal_hostap_interface_attach(&m_dwpal_ctx[ctx_index], ifname.c_str(), nullptr);
-    dwpald_start_listener();
-
-    LOG(ERROR) << "Anant hostap attach" << ifname.c_str() << "return value"
-               << dwpald_hostap_attach(ifname.c_str(), m_num_hostap_event_handlers,
-                                       m_hostap_event_handlers, 0);
+    //dwpald_start_listener();
+    hostap_attach((char *)ifname.c_str());
+    //LOG(ERROR) << "Anant hostap attach" << ifname.c_str() << "return value"
+    //         << dwpald_hostap_attach(ifname.c_str(), m_num_hostap_event_handlers,
+    //                               m_hostap_event_handlers, 0);
     if ((result == 0) && m_dwpal_ctx[ctx_index]) {
         LOG(DEBUG) << "dwpal_hostap_interface_attach() success for: " << ifname;
     } else if (result != 0) {
@@ -1178,21 +1178,21 @@ bool base_wlan_hal_dwpal::dwpal_get_phy_chan_status(sPhyChanStatus &status)
     return true;
 }
 
-int base_wlan_hal_dwpal::base_hap_evt_ap_enabled_clb(char *ifname, char *op_code, char *msg, size_t len)
+int base_wlan_hal_dwpal::hap_evt_ap_enabled_clb(char *ifname, char *op_code, char *msg, size_t len)
 {
     LOG(ERROR) << "Either entity shall register not for " << op_code
                << "event or if register then override base class callback";
     return 0;
 }
 
-int base_wlan_hal_dwpal::base_hap_evt_ap_disabled_clb(char *ifname, char *op_code, char *msg, size_t len)
+int base_wlan_hal_dwpal::hap_evt_ap_disabled_clb(char *ifname, char *op_code, char *msg, size_t len)
 {
     LOG(ERROR) << "Either entity shall register not for " << op_code
                << "event or if register then override base class callback";
     return 0;
 }
 
-int base_wlan_hal_dwpal::base_hap_evt_ap_sta_connected_clb(char *ifname, char *op_code, char *msg,
+int base_wlan_hal_dwpal::hap_evt_ap_sta_connected_clb(char *ifname, char *op_code, char *msg,
                                                       size_t len)
 {
     LOG(ERROR) << "Either entity shall register not for " << op_code
@@ -1200,7 +1200,7 @@ int base_wlan_hal_dwpal::base_hap_evt_ap_sta_connected_clb(char *ifname, char *o
     return 0;
 }
 
-int base_wlan_hal_dwpal::base_hap_evt_ap_sta_disconnected_clb(char *ifname, char *op_code, char *msg,
+int base_wlan_hal_dwpal::hap_evt_ap_sta_disconnected_clb(char *ifname, char *op_code, char *msg,
                                                          size_t len)
 {
     LOG(ERROR) << "Either entity shall register not for " << op_code
@@ -1208,7 +1208,7 @@ int base_wlan_hal_dwpal::base_hap_evt_ap_sta_disconnected_clb(char *ifname, char
     return 0;
 }
 
-int base_wlan_hal_dwpal::base_hap_evt_interface_enabled_clb(char *ifname, char *op_code, char *msg,
+int base_wlan_hal_dwpal::hap_evt_interface_enabled_clb(char *ifname, char *op_code, char *msg,
                                                        size_t len)
 {
     LOG(ERROR) << "Either entity shall register not for " << op_code
@@ -1216,7 +1216,7 @@ int base_wlan_hal_dwpal::base_hap_evt_interface_enabled_clb(char *ifname, char *
     return 0;
 }
 
-int base_wlan_hal_dwpal::base_hap_evt_interface_disabled_clb(char *ifname, char *op_code, char *msg,
+int base_wlan_hal_dwpal::hap_evt_interface_disabled_clb(char *ifname, char *op_code, char *msg,
                                                         size_t len)
 {
     LOG(ERROR) << "Either entity shall register not for " << op_code
@@ -1224,14 +1224,14 @@ int base_wlan_hal_dwpal::base_hap_evt_interface_disabled_clb(char *ifname, char 
     return 0;
 }
 
-int base_wlan_hal_dwpal::base_hap_evt_acs_started_clb(char *ifname, char *op_code, char *msg, size_t len)
+int base_wlan_hal_dwpal::hap_evt_acs_started_clb(char *ifname, char *op_code, char *msg, size_t len)
 {
     LOG(ERROR) << "Either entity shall register not for " << op_code
                << "event or if register then override base class callback";
     return 0;
 }
 
-int base_wlan_hal_dwpal::base_hap_evt_acs_completed_clb(char *ifname, char *op_code, char *msg,
+int base_wlan_hal_dwpal::hap_evt_acs_completed_clb(char *ifname, char *op_code, char *msg,
                                                    size_t len)
 {
     LOG(ERROR) << "Either entity shall register not for " << op_code
@@ -1239,14 +1239,14 @@ int base_wlan_hal_dwpal::base_hap_evt_acs_completed_clb(char *ifname, char *op_c
     return 0;
 }
 
-int base_wlan_hal_dwpal::base_hap_evt_acs_failed_clb(char *ifname, char *op_code, char *msg, size_t len)
+int base_wlan_hal_dwpal::hap_evt_acs_failed_clb(char *ifname, char *op_code, char *msg, size_t len)
 {
     LOG(ERROR) << "Either entity shall register not for " << op_code
                << "event or if register then override base class callback";
     return 0;
 }
 
-int base_wlan_hal_dwpal::base_hap_evt_ap_csa_finished_clb(char *ifname, char *op_code, char *msg,
+int base_wlan_hal_dwpal::hap_evt_ap_csa_finished_clb(char *ifname, char *op_code, char *msg,
                                                      size_t len)
 {
     LOG(ERROR) << "Either entity shall register not for " << op_code
@@ -1254,7 +1254,7 @@ int base_wlan_hal_dwpal::base_hap_evt_ap_csa_finished_clb(char *ifname, char *op
     return 0;
 }
 
-int base_wlan_hal_dwpal::base_hap_evt_bss_tm_query_clb(char *ifname, char *op_code, char *msg,
+int base_wlan_hal_dwpal::hap_evt_bss_tm_query_clb(char *ifname, char *op_code, char *msg,
                                                   size_t len)
 {
     LOG(ERROR) << "Either entity shall register not for " << op_code
@@ -1262,14 +1262,14 @@ int base_wlan_hal_dwpal::base_hap_evt_bss_tm_query_clb(char *ifname, char *op_co
     return 0;
 }
 
-int base_wlan_hal_dwpal::base_hap_evt_bss_tm_resp_clb(char *ifname, char *op_code, char *msg, size_t len)
+int base_wlan_hal_dwpal::hap_evt_bss_tm_resp_clb(char *ifname, char *op_code, char *msg, size_t len)
 {
     LOG(ERROR) << "Either entity shall register not for " << op_code
                << "event or if register then override base class callback";
     return 0;
 }
 
-int base_wlan_hal_dwpal::base_hap_evt_dfs_cac_start_clb(char *ifname, char *op_code, char *msg,
+int base_wlan_hal_dwpal::hap_evt_dfs_cac_start_clb(char *ifname, char *op_code, char *msg,
                                                    size_t len)
 {
     LOG(ERROR) << "Either entity shall register not for " << op_code
@@ -1277,7 +1277,7 @@ int base_wlan_hal_dwpal::base_hap_evt_dfs_cac_start_clb(char *ifname, char *op_c
     return 0;
 }
 
-int base_wlan_hal_dwpal::base_hap_evt_dfs_cac_completed_clb(char *ifname, char *op_code, char *msg,
+int base_wlan_hal_dwpal::hap_evt_dfs_cac_completed_clb(char *ifname, char *op_code, char *msg,
                                                        size_t len)
 {
     LOG(ERROR) << "Either entity shall register not for " << op_code
@@ -1285,7 +1285,7 @@ int base_wlan_hal_dwpal::base_hap_evt_dfs_cac_completed_clb(char *ifname, char *
     return 0;
 }
 
-int base_wlan_hal_dwpal::base_hap_evt_dfs_nop_finished_clb(char *ifname, char *op_code, char *msg,
+int base_wlan_hal_dwpal::hap_evt_dfs_nop_finished_clb(char *ifname, char *op_code, char *msg,
                                                       size_t len)
 {
     LOG(ERROR) << "Either entity shall register not for " << op_code
@@ -1293,7 +1293,7 @@ int base_wlan_hal_dwpal::base_hap_evt_dfs_nop_finished_clb(char *ifname, char *o
     return 0;
 }
 
-int base_wlan_hal_dwpal::base_hap_evt_ltq_softblock_drop_clb(char *ifname, char *op_code, char *msg,
+int base_wlan_hal_dwpal::hap_evt_ltq_softblock_drop_clb(char *ifname, char *op_code, char *msg,
                                                         size_t len)
 {
     LOG(ERROR) << "Either entity shall register not for " << op_code
@@ -1301,7 +1301,7 @@ int base_wlan_hal_dwpal::base_hap_evt_ltq_softblock_drop_clb(char *ifname, char 
     return 0;
 }
 
-int base_wlan_hal_dwpal::base_hap_evt_unconnected_sta_rssi_clb(char *ifname, char *op_code, char *msg,
+int base_wlan_hal_dwpal::hap_evt_unconnected_sta_rssi_clb(char *ifname, char *op_code, char *msg,
                                                           size_t len)
 {
     LOG(ERROR) << "Either entity shall register not for " << op_code
@@ -1309,7 +1309,7 @@ int base_wlan_hal_dwpal::base_hap_evt_unconnected_sta_rssi_clb(char *ifname, cha
     return 0;
 }
 
-int base_wlan_hal_dwpal::base_hap_evt_ap_action_frame_received_clb(char *ifname, char *op_code,
+int base_wlan_hal_dwpal::hap_evt_ap_action_frame_received_clb(char *ifname, char *op_code,
                                                               char *msg, size_t len)
 {
     LOG(ERROR) << "Either entity shall register not for " << op_code
@@ -1317,7 +1317,7 @@ int base_wlan_hal_dwpal::base_hap_evt_ap_action_frame_received_clb(char *ifname,
     return 0;
 }
 
-int base_wlan_hal_dwpal::base_hap_evt_ap_sta_possible_psk_mismatch_clb(char *ifname, char *op_code,
+int base_wlan_hal_dwpal::hap_evt_ap_sta_possible_psk_mismatch_clb(char *ifname, char *op_code,
                                                                   char *msg, size_t len)
 {
     LOG(ERROR) << "Either entity shall register not for " << op_code

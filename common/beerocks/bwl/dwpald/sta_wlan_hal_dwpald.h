@@ -59,6 +59,7 @@ public:
 
     std::string get_ssid() override;
     std::string get_bssid() override;
+    virtual void hostap_attach(char *ifname) override;
 
 protected:
     virtual bool process_dwpal_event(char *buffer, int bufLen, const std::string &opcode) override;
