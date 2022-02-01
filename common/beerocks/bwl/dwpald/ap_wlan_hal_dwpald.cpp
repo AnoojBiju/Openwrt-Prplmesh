@@ -876,26 +876,11 @@ int ap_wlan_hal_dwpal::hap_evt_ap_csa_finished_clb(char *ifname, char *op_code, 
 
 
 #if 0
-
-
-
-
-
-
-
 int ap_wlan_hal_dwpal::hap_evt_interface_enabled_clb(char *ifname, char *op_code, char *msg,
                                                      size_t len)
 {
     LOG(ERROR) << "Either entity shall register not for " << op_code
                << "event or if register then override base class callback";
-    return 0;
-}
-
-int ap_wlan_hal_dwpal::hap_evt_interface_disabled_clb(char *ifname, char *op_code, char *msg,
-                                                      size_t len)
-{
-    LOG(DEBUG) << ifname << ": " << msg;
-    event_queue_push(event); // Forward to the AP manager
     return 0;
 }
 
@@ -905,34 +890,8 @@ int ap_wlan_hal_dwpal::hap_evt_acs_started_clb(char *ifname, char *op_code, char
                << "event or if register then override base class callback";
     return 0;
 }
-
-int ap_wlan_hal_dwpal::hap_evt_acs_failed_clb(char *ifname, char *op_code, char *msg, size_t len)
-{
-    LOG(ERROR) << "Either entity shall register not for " << op_code
-               << "event or if register then override base class callback";
-    return 0;
-}
-
-int ap_wlan_hal_dwpal::hap_evt_ap_csa_finished_clb(char *ifname, char *op_code, char *msg,
-                                                   size_t len)
-{
-    LOG(ERROR) << "Either entity shall register not for " << op_code
-               << "event or if register then override base class callback";
-    return 0;
-}
-
-
-
-
-
-
-
-
-
-
-
-
 #endif
+
 ap_wlan_hal_dwpal::ap_wlan_hal_dwpal(const std::string &iface_name, hal_event_cb_t callback,
                                      const hal_conf_t &hal_conf)
     : base_wlan_hal(bwl::HALType::AccessPoint, iface_name, IfaceType::Intel, callback, hal_conf),
@@ -4446,73 +4405,62 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
     }
     auto event    = dwpal_to_bwl_event(op_code);
     switch (event) {
-    case ap_wlan_hal_dwpal::Event::ACS_Failed: {
-        ctx->hap_evt_acs_failed_clb(ifname, op_code, buffer, len);
+        case ap_wlan_hal_dwpal::Event::ACS_Failed: {
+            ctx->hap_evt_acs_failed_clb(ifname, op_code, buffer, len);
         } break;
-    case ap_wlan_hal_dwpal::Event::Interface_Disabled: {
-        ctx->hap_evt_interface_disabled_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::ACS_Completed: {
-        ctx->hap_evt_acs_completed_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::CSA_Finished: {
-        ctx->hap_evt_ap_csa_finished_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::STA_Disconnected: {
-        ctx->hap_evt_ap_sta_disconnected_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::STA_Connected: {
-        ctx->hap_evt_ap_sta_disconnected_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::STA_Unassoc_RSSI: {
-        ctx->hap_evt_unconnected_sta_rssi_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::STA_Softblock_Drop: {
-        ctx->hap_evt_ltq_softblock_drop_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::BSS_TM_Query: {
-        ctx->hap_evt_bss_tm_query_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::BSS_TM_Response: {
-        ctx->hap_evt_bss_tm_resp_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::DFS_CAC_Started: {
-        ctx->hap_evt_dfs_cac_start_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::DFS_CAC_Completed: {
-        ctx->hap_evt_dfs_cac_completed_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::DFS_NOP_Finished: {
-        ctx->hap_evt_dfs_nop_finished_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::AP_Disabled: {
-        ctx->hap_evt_ap_disabled_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::AP_Enabled: {
-        ctx->hap_evt_ap_enabled_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::MGMT_Frame: {
-        ctx->hap_evt_ap_action_frame_received_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::AP_Sta_Possible_Psk_Mismatch: {
-        ctx->hap_evt_ap_sta_possible_psk_mismatch_clb(ifname, op_code, buffer, len);
-    } break;
-    default: {
-    } break;
+        case ap_wlan_hal_dwpal::Event::Interface_Disabled: {
+            ctx->hap_evt_interface_disabled_clb(ifname, op_code, buffer, len);
+        } break;
+        case ap_wlan_hal_dwpal::Event::ACS_Completed: {
+            ctx->hap_evt_acs_completed_clb(ifname, op_code, buffer, len);
+        } break;
+        case ap_wlan_hal_dwpal::Event::CSA_Finished: {
+            ctx->hap_evt_ap_csa_finished_clb(ifname, op_code, buffer, len);
+        } break;
+        case ap_wlan_hal_dwpal::Event::STA_Disconnected: {
+            ctx->hap_evt_ap_sta_disconnected_clb(ifname, op_code, buffer, len);
+        } break;
+        case ap_wlan_hal_dwpal::Event::STA_Connected: {
+            ctx->hap_evt_ap_sta_disconnected_clb(ifname, op_code, buffer, len);
+        } break;
+        case ap_wlan_hal_dwpal::Event::STA_Unassoc_RSSI: {
+            ctx->hap_evt_unconnected_sta_rssi_clb(ifname, op_code, buffer, len);
+        } break;
+        case ap_wlan_hal_dwpal::Event::STA_Softblock_Drop: {
+            ctx->hap_evt_ltq_softblock_drop_clb(ifname, op_code, buffer, len);
+        } break;
+        case ap_wlan_hal_dwpal::Event::BSS_TM_Query: {
+            ctx->hap_evt_bss_tm_query_clb(ifname, op_code, buffer, len);
+        } break;
+        case ap_wlan_hal_dwpal::Event::BSS_TM_Response: {
+            ctx->hap_evt_bss_tm_resp_clb(ifname, op_code, buffer, len);
+        } break;
+        case ap_wlan_hal_dwpal::Event::DFS_CAC_Started: {
+            ctx->hap_evt_dfs_cac_start_clb(ifname, op_code, buffer, len);
+        } break;
+        case ap_wlan_hal_dwpal::Event::DFS_CAC_Completed: {
+            ctx->hap_evt_dfs_cac_completed_clb(ifname, op_code, buffer, len);
+        } break;
+        case ap_wlan_hal_dwpal::Event::DFS_NOP_Finished: {
+            ctx->hap_evt_dfs_nop_finished_clb(ifname, op_code, buffer, len);
+        } break;
+        case ap_wlan_hal_dwpal::Event::AP_Disabled: {
+            ctx->hap_evt_ap_disabled_clb(ifname, op_code, buffer, len);
+        } break;
+        case ap_wlan_hal_dwpal::Event::AP_Enabled: {
+            ctx->hap_evt_ap_enabled_clb(ifname, op_code, buffer, len);
+        } break;
+        case ap_wlan_hal_dwpal::Event::MGMT_Frame: {
+            ctx->hap_evt_ap_action_frame_received_clb(ifname, op_code, buffer, len);
+        } break;
+        case ap_wlan_hal_dwpal::Event::AP_Sta_Possible_Psk_Mismatch: {
+            ctx->hap_evt_ap_sta_possible_psk_mismatch_clb(ifname, op_code, buffer, len);
+        } break;
+        default: {
+            LOG(ERROR) << "Code should not reach here, event " << op_code 
+            << "Not registered yet received";
+        } break;
     }
-#if 0
-    
-
-    // Gracefully ignore unhandled events
-    // TODO: Probably should be changed to an error once dwpal will stop
-    //       sending empty or irrelevant events...
-    default:
-        LOG(DEBUG) << "Unhandled event received: " << opcode;
-        break;
-    }
-
-    return true;
-#endif
     return 0;
 }
 
