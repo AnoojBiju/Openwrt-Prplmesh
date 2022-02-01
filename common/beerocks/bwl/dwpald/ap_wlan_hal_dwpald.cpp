@@ -976,13 +976,7 @@ int ap_wlan_hal_dwpal::hap_evt_ltq_softblock_drop_clb(char *ifname, char *op_cod
     return 0;
 }
 
-int ap_wlan_hal_dwpal::hap_evt_unconnected_sta_rssi_clb(char *ifname, char *op_code, char *msg,
-                                                        size_t len)
-{
-    LOG(ERROR) << "Either entity shall register not for " << op_code
-               << "event or if register then override base class callback";
-    return 0;
-}
+
 
 int ap_wlan_hal_dwpal::hap_evt_ap_action_frame_received_clb(char *ifname, char *op_code, char *msg,
                                                             size_t len)
@@ -3561,6 +3555,116 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
 
     return true;
 }
+int ap_wlan_hal_dwpal::hap_evt_unconnected_sta_rssi_clb(char *ifname, char *op_code, char *buffer,
+                                                        size_t bufLen)
+{
+    // TODO: Change to HAL objects
+    auto msg_buff =
+        ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_CLIENT_RX_RSSI_MEASUREMENT_RESPONSE));
+    auto msg = reinterpret_cast<sACTION_APMANAGER_CLIENT_RX_RSSI_MEASUREMENT_RESPONSE *>(
+        msg_buff.get());
+    LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+    // Initialize the message
+    memset(msg_buff.get(), 0, sizeof(sACTION_APMANAGER_CLIENT_RX_RSSI_MEASUREMENT_RESPONSE));
+
+    char MACAddress[MAC_ADDR_SIZE] = {0};
+    char rssi[24]                  = {0};
+    uint64_t rx_packets            = 0;
+    size_t numOfValidArgs[5]       = {0};
+    FieldsToParse fieldsToParse[]  = {
+        {NULL /*opCode*/, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
+        {NULL, &numOfValidArgs[1], DWPAL_STR_PARAM, NULL, 0},
+        {(void *)MACAddress, &numOfValidArgs[2], DWPAL_STR_PARAM, NULL, sizeof(MACAddress)},
+        {(void *)rssi, &numOfValidArgs[3], DWPAL_STR_PARAM, "rssi=", sizeof(rssi)},
+        {(void *)&rx_packets, &numOfValidArgs[4], DWPAL_LONG_LONG_INT_PARAM, "rx_packets=", 0},
+        /* Must be at the end */
+        {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
+
+    if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse, sizeof(MACAddress)) ==
+        DWPAL_FAILURE) {
+        LOG(ERROR) << "DWPAL parse error ==> Abort";
+        return false;
+    }
+
+    /* TEMP: Traces... */
+    LOG(DEBUG) << "numOfValidArgs[2]= " << numOfValidArgs[2] << " MACAddress= " << MACAddress;
+    LOG(DEBUG) << "numOfValidArgs[3]= " << numOfValidArgs[3] << " rssi= " << rssi;
+    LOG(DEBUG) << "numOfValidArgs[4]= " << numOfValidArgs[4] << " rx_packets= " << rx_packets;
+
+    for (uint8_t i = 0; i < (sizeof(numOfValidArgs) / sizeof(size_t)); i++) {
+        if (numOfValidArgs[i] == 0) {
+            LOG(ERROR) << "Failed reading parsed parameter " << (int)i << " ==> Abort";
+            return false;
+        }
+    }
+
+    msg->params.rx_rssi    = beerocks::RSSI_INVALID;
+    msg->params.rx_snr     = beerocks::SNR_INVALID;
+    msg->params.result.mac = tlvf::mac_from_string(MACAddress);
+
+    // Split the RSSI values
+    auto rssiVec = beerocks::string_utils::str_split(rssi, ' ');
+    auto snrVec  = beerocks::string_utils::str_split(rssi, ' ');
+    auto unassoc_measure_start = ctx->get_unassoc_measure_start();
+    auto unassoc_measure_window_size = ctx->get_unassoc_measure_window_size();
+    auto unassoc_measure_delay = ctx->get_unassoc_measure_delay();
+
+    // -128 -128 -128 -128
+    int rssi_cnt    = 0;
+    float rssi_watt = 0;
+    float rssi_tmp  = 0;
+    for (auto v : rssiVec) {
+        rssi_tmp = float(beerocks::string_utils::stoi(v));
+        if (rssi_tmp > beerocks::RSSI_MIN) {
+            rssi_watt += pow(10, rssi_tmp / float(10));
+            rssi_cnt++;
+        }
+    }
+
+    msg->params.rx_packets = (rx_packets >= 127) ? 127 : rx_packets;
+
+    // Measurement succeeded
+    if ((rssi_cnt > 0) && (msg->params.rx_packets > 1)) {
+        rssi_watt           = (rssi_watt / float(rssi_cnt));
+        msg->params.rx_rssi = int(10 * log10(rssi_watt));
+        // TODO: add snr measurements when implementing unconnected station measurement on rdkb
+    } else { // Measurement failed
+        auto now = std::chrono::steady_clock::now();
+        auto delta =
+            std::chrono::duration_cast<std::chrono::milliseconds>(now - unassoc_measure_start)
+                .count();
+        auto temp_sum_delay = (delta - unassoc_measure_delay);
+        if (temp_sum_delay > unassoc_measure_window_size) {
+            LOG(ERROR) << "event_obj->params.rx_packets = -2 , delay = " << int(temp_sum_delay);
+            msg->params.rx_packets =
+                -2; // means the actual measurment started later then aspected
+        }
+    }
+
+    // Measurement succeeded
+    if ((rssi_cnt > 0) && (msg->params.rx_packets > 1)) {
+        rssi_watt           = (rssi_watt / float(rssi_cnt));
+        msg->params.rx_rssi = int(10 * log10(rssi_watt));
+        // TODO: add snr measurements when implementing unconnected station measurement on rdkb
+    } else { // Measurement failed
+        auto now = std::chrono::steady_clock::now();
+        auto delta =
+            std::chrono::duration_cast<std::chrono::milliseconds>(now - unassoc_measure_start)
+                .count();
+        auto temp_sum_delay = (delta - unassoc_measure_delay);
+
+        if (temp_sum_delay > unassoc_measure_window_size) {
+            LOG(ERROR) << "event_obj->params.rx_packets = -2 , delay = " << int(temp_sum_delay);
+            msg->params.rx_packets =
+                -2; // means the actual measurment started later then aspected
+        }
+    }
+
+    // Add the message to the queue
+    ctx->event_queue_push(Event::STA_Unassoc_RSSI, msg_buff);
+     return 0;
+}
 int ap_wlan_hal_dwpal::hap_evt_ap_sta_disconnected_clb(char *ifname, char *op_code, char *buffer,
                                                        size_t bufLen)
 {
@@ -3793,7 +3897,11 @@ int ap_wlan_hal_dwpal::hap_evt_ap_sta_connected_clb(char *ifname, char *op_code,
 #endif
 static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t len)
 {
-    ctx->filter_bss_msg(buffer, len, op_code);
+    auto result = ctx->filter_bss_msg(buffer, len, op_code);
+    if(result <= 0)
+    {
+        return result;
+    }
     auto event    = dwpal_to_bwl_event(op_code);
     switch (event) {
     case ap_wlan_hal_dwpal::Event::ACS_Failed: {
@@ -3814,167 +3922,14 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
     case ap_wlan_hal_dwpal::Event::STA_Connected: {
         ctx->hap_evt_ap_sta_disconnected_clb(ifname, op_code, buffer, len);
     } break;
+    case ap_wlan_hal_dwpal::Event::STA_Unassoc_RSSI: {
+        ctx->hap_evt_unconnected_sta_rssi_clb(ifname, op_code, buffer, len);
+    } break;
     default: {
     } break;
     }
 #if 0
-
-    case Event::STA_Disconnected: {
-        // TODO: Change to HAL objects
-        auto msg_buff =
-            ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_CLIENT_DISCONNECTED_NOTIFICATION));
-        auto msg =
-            reinterpret_cast<sACTION_APMANAGER_CLIENT_DISCONNECTED_NOTIFICATION *>(msg_buff.get());
-        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
-
-        // Initialize the message
-        memset(msg_buff.get(), 0, sizeof(sACTION_APMANAGER_CLIENT_DISCONNECTED_NOTIFICATION));
-
-        char VAP[SSID_MAX_SIZE]        = {0};
-        char MACAddress[MAC_ADDR_SIZE] = {0};
-        size_t numOfValidArgs[6]       = {0};
-        FieldsToParse fieldsToParse[]  = {
-            {NULL /*opCode*/, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
-            {(void *)VAP, &numOfValidArgs[1], DWPAL_STR_PARAM, NULL, sizeof(VAP)},
-            {(void *)MACAddress, &numOfValidArgs[2], DWPAL_STR_PARAM, NULL, sizeof(MACAddress)},
-            {(void *)&msg->params.reason, &numOfValidArgs[3], DWPAL_CHAR_PARAM, "reason=", 0},
-            {(void *)&msg->params.source, &numOfValidArgs[4], DWPAL_CHAR_PARAM, "source=", 0},
-            {(void *)&msg->params.type, &numOfValidArgs[5], DWPAL_CHAR_PARAM, "type=", 0},
-            /* Must be at the end */
-            {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
-
-        if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse, sizeof(VAP)) ==
-            DWPAL_FAILURE) {
-            LOG(ERROR) << "DWPAL parse error ==> Abort";
-            return false;
-        }
-
-        LOG(DEBUG) << "vap_id     : " << VAP;
-        LOG(DEBUG) << "MACAddress : " << MACAddress;
-        LOG(DEBUG) << "reason     : " << int(msg->params.reason);
-        LOG(DEBUG) << "source     : " << int(msg->params.source);
-        LOG(DEBUG) << "type       : " << int(msg->params.type);
-
-        for (uint8_t i = 0; i < (sizeof(numOfValidArgs) / sizeof(size_t)); i++) {
-            if (numOfValidArgs[i] == 0) {
-                LOG(ERROR) << "Failed reading parsed parameter " << (int)i << " ==> Abort";
-                return false;
-            }
-        }
-
-        msg->params.vap_id = beerocks::utils::get_ids_from_iface_string(VAP).vap_id;
-        msg->params.mac    = tlvf::mac_from_string(MACAddress);
-
-        event_queue_push(Event::STA_Disconnected, msg_buff); // send message to the AP manager
-        break;
-    }
-
-    case Event::STA_Unassoc_RSSI: {
-        // TODO: Change to HAL objects
-        auto msg_buff =
-            ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_CLIENT_RX_RSSI_MEASUREMENT_RESPONSE));
-        auto msg = reinterpret_cast<sACTION_APMANAGER_CLIENT_RX_RSSI_MEASUREMENT_RESPONSE *>(
-            msg_buff.get());
-        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
-
-        // Initialize the message
-        memset(msg_buff.get(), 0, sizeof(sACTION_APMANAGER_CLIENT_RX_RSSI_MEASUREMENT_RESPONSE));
-
-        char MACAddress[MAC_ADDR_SIZE] = {0};
-        char rssi[24]                  = {0};
-        uint64_t rx_packets            = 0;
-        size_t numOfValidArgs[5]       = {0};
-        FieldsToParse fieldsToParse[]  = {
-            {NULL /*opCode*/, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
-            {NULL, &numOfValidArgs[1], DWPAL_STR_PARAM, NULL, 0},
-            {(void *)MACAddress, &numOfValidArgs[2], DWPAL_STR_PARAM, NULL, sizeof(MACAddress)},
-            {(void *)rssi, &numOfValidArgs[3], DWPAL_STR_PARAM, "rssi=", sizeof(rssi)},
-            {(void *)&rx_packets, &numOfValidArgs[4], DWPAL_LONG_LONG_INT_PARAM, "rx_packets=", 0},
-            /* Must be at the end */
-            {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
-
-        if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse, sizeof(MACAddress)) ==
-            DWPAL_FAILURE) {
-            LOG(ERROR) << "DWPAL parse error ==> Abort";
-            return false;
-        }
-
-        /* TEMP: Traces... */
-        LOG(DEBUG) << "numOfValidArgs[2]= " << numOfValidArgs[2] << " MACAddress= " << MACAddress;
-        LOG(DEBUG) << "numOfValidArgs[3]= " << numOfValidArgs[3] << " rssi= " << rssi;
-        LOG(DEBUG) << "numOfValidArgs[4]= " << numOfValidArgs[4] << " rx_packets= " << rx_packets;
-
-        for (uint8_t i = 0; i < (sizeof(numOfValidArgs) / sizeof(size_t)); i++) {
-            if (numOfValidArgs[i] == 0) {
-                LOG(ERROR) << "Failed reading parsed parameter " << (int)i << " ==> Abort";
-                return false;
-            }
-        }
-
-        msg->params.rx_rssi    = beerocks::RSSI_INVALID;
-        msg->params.rx_snr     = beerocks::SNR_INVALID;
-        msg->params.result.mac = tlvf::mac_from_string(MACAddress);
-
-        // Split the RSSI values
-        auto rssiVec = beerocks::string_utils::str_split(rssi, ' ');
-        auto snrVec  = beerocks::string_utils::str_split(rssi, ' ');
-
-        // -128 -128 -128 -128
-        int rssi_cnt    = 0;
-        float rssi_watt = 0;
-        float rssi_tmp  = 0;
-        for (auto v : rssiVec) {
-            rssi_tmp = float(beerocks::string_utils::stoi(v));
-            if (rssi_tmp > beerocks::RSSI_MIN) {
-                rssi_watt += pow(10, rssi_tmp / float(10));
-                rssi_cnt++;
-            }
-        }
-
-        msg->params.rx_packets = (rx_packets >= 127) ? 127 : rx_packets;
-
-        // Measurement succeeded
-        if ((rssi_cnt > 0) && (msg->params.rx_packets > 1)) {
-            rssi_watt           = (rssi_watt / float(rssi_cnt));
-            msg->params.rx_rssi = int(10 * log10(rssi_watt));
-            // TODO: add snr measurements when implementing unconnected station measurement on rdkb
-        } else { // Measurement failed
-            auto now = std::chrono::steady_clock::now();
-            auto delta =
-                std::chrono::duration_cast<std::chrono::milliseconds>(now - m_unassoc_measure_start)
-                    .count();
-            auto temp_sum_delay = (delta - m_unassoc_measure_delay);
-
-            if (temp_sum_delay > m_unassoc_measure_window_size) {
-                LOG(ERROR) << "event_obj->params.rx_packets = -2 , delay = " << int(temp_sum_delay);
-                msg->params.rx_packets =
-                    -2; // means the actual measurment started later then aspected
-            }
-        }
-
-        // Measurement succeeded
-        if ((rssi_cnt > 0) && (msg->params.rx_packets > 1)) {
-            rssi_watt           = (rssi_watt / float(rssi_cnt));
-            msg->params.rx_rssi = int(10 * log10(rssi_watt));
-            // TODO: add snr measurements when implementing unconnected station measurement on rdkb
-        } else { // Measurement failed
-            auto now = std::chrono::steady_clock::now();
-            auto delta =
-                std::chrono::duration_cast<std::chrono::milliseconds>(now - m_unassoc_measure_start)
-                    .count();
-            auto temp_sum_delay = (delta - m_unassoc_measure_delay);
-
-            if (temp_sum_delay > m_unassoc_measure_window_size) {
-                LOG(ERROR) << "event_obj->params.rx_packets = -2 , delay = " << int(temp_sum_delay);
-                msg->params.rx_packets =
-                    -2; // means the actual measurment started later then aspected
-            }
-        }
-
-        // Add the message to the queue
-        event_queue_push(Event::STA_Unassoc_RSSI, msg_buff);
-        break;
-    }
+    
 
     case Event::STA_Softblock_Drop: {
         LOG(DEBUG) << buffer;
