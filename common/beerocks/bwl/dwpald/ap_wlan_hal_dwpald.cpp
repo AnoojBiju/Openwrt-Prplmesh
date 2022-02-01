@@ -968,13 +968,7 @@ int ap_wlan_hal_dwpal::hap_evt_dfs_nop_finished_clb(char *ifname, char *op_code,
     return 0;
 }
 
-int ap_wlan_hal_dwpal::hap_evt_ltq_softblock_drop_clb(char *ifname, char *op_code, char *msg,
-                                                      size_t len)
-{
-    LOG(ERROR) << "Either entity shall register not for " << op_code
-               << "event or if register then override base class callback";
-    return 0;
-}
+
 
 
 
@@ -3665,6 +3659,216 @@ int ap_wlan_hal_dwpal::hap_evt_unconnected_sta_rssi_clb(char *ifname, char *op_c
     ctx->event_queue_push(Event::STA_Unassoc_RSSI, msg_buff);
      return 0;
 }
+int ap_wlan_hal_dwpal::hap_evt_ltq_softblock_drop_clb(char *ifname, char *op_code, char *buffer,
+                                                      size_t bufLen)
+{
+    LOG(DEBUG) << buffer;
+
+    char client_mac[MAC_ADDR_SIZE]                      = {0};
+    char vap_bssid[MAC_ADDR_SIZE]                       = {0};
+    char vap_name[beerocks::message::IFACE_NAME_LENGTH] = {0};
+    s80211MgmtFrame::eType message_type;
+    size_t numOfValidArgsForMsgType[2] = {0};
+
+    FieldsToParse fieldsToParseForMsgType[] = {
+        {NULL /*opCode*/, &numOfValidArgsForMsgType[0], DWPAL_STR_PARAM, NULL, 0},
+        {(void *)&message_type, &numOfValidArgsForMsgType[1], DWPAL_UNSIGNED_CHAR_PARAM,
+            "msg_type=", 0},
+        /* Must be at the end */
+        {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
+
+    if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParseForMsgType,
+                                        sizeof(message_type)) == DWPAL_FAILURE) {
+        LOG(ERROR) << "DWPAL parse error ==> Abort";
+        return false;
+    }
+
+    /* TEMP: Traces... */
+    LOG(DEBUG) << "numOfValidArgs[1]=" << numOfValidArgsForMsgType[1]
+                << ", message_type=" << (uint8_t)message_type;
+
+    if (message_type == s80211MgmtFrame::eType::PROBE_REQ) {
+
+        auto msg_buff =
+            ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_STEERING_EVENT_PROBE_REQ_NOTIFICATION));
+        auto msg = reinterpret_cast<sACTION_APMANAGER_STEERING_EVENT_PROBE_REQ_NOTIFICATION *>(
+            msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+        // Initialize the message
+        memset(msg_buff.get(), 0,
+                sizeof(sACTION_APMANAGER_STEERING_EVENT_PROBE_REQ_NOTIFICATION));
+
+        size_t numOfValidArgs[6] = {0};
+
+        FieldsToParse fieldsToParse[] = {
+            {(void *)vap_name, &numOfValidArgs[0], DWPAL_STR_PARAM, "VAP=", sizeof(vap_name)},
+            {(void *)vap_bssid, &numOfValidArgs[1], DWPAL_STR_PARAM,
+                "VAP_BSSID=", sizeof(vap_bssid)},
+            {(void *)client_mac, &numOfValidArgs[2], DWPAL_STR_PARAM,
+                "addr=", sizeof(client_mac)},
+            {
+                (void *)&msg->params.rx_snr,
+                &numOfValidArgs[3],
+                DWPAL_UNSIGNED_CHAR_PARAM,
+                "snr=",
+                0,
+            },
+            {
+                (void *)&msg->params.blocked,
+                &numOfValidArgs[4],
+                DWPAL_UNSIGNED_CHAR_PARAM,
+                "blocked=",
+                0,
+            },
+            {
+                (void *)&msg->params.broadcast,
+                &numOfValidArgs[5],
+                DWPAL_UNSIGNED_CHAR_PARAM,
+                "broadcast=",
+                0,
+            },
+            /* Must be at the end */
+            {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
+
+        if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse, sizeof(vap_name)) ==
+            DWPAL_FAILURE) {
+            LOG(ERROR) << "DWPAL parse error ==> Abort";
+            return false;
+        }
+
+        for (uint8_t i = 0; i < (sizeof(numOfValidArgs) / sizeof(size_t)); i++) {
+            if (numOfValidArgs[i] == 0) {
+                LOG(ERROR) << "Failed reading parsed parameter " << (int)i << " ==> Abort";
+                return false;
+            }
+        }
+
+        LOG(DEBUG) << "numOfValidArgs[0]=" << numOfValidArgs[0] << ", VAP=" << vap_name;
+        LOG(DEBUG) << "numOfValidArgs[1]=" << numOfValidArgs[1] << ", VAP_BSSID=" << vap_bssid;
+        LOG(DEBUG) << "numOfValidArgs[2]=" << numOfValidArgs[2] << ", addr=" << client_mac;
+        LOG(DEBUG) << "numOfValidArgs[3]=" << numOfValidArgs[3]
+                    << ", rx_snr=" << (int)msg->params.rx_snr;
+        LOG(DEBUG) << "numOfValidArgs[4]=" << numOfValidArgs[4]
+                    << ", blocked=" << (int)msg->params.blocked;
+        LOG(DEBUG) << "numOfValidArgs[5]=" << numOfValidArgs[5]
+                    << ", broadcast=" << (int)msg->params.broadcast;
+
+        // Check if the BSS is valid
+        if (beerocks::utils::get_ids_from_iface_string(vap_name).vap_id ==
+            beerocks::IFACE_ID_INVALID) {
+            LOG(ERROR) << "Event received on invalid VAP ID, should handle the event!";
+            return true;
+        }
+        // Check if the BSS is monitored
+        if (!ctx->is_BSS_monitored(vap_name)) {
+            LOG(DEBUG) << "Event received on non-monitored BSS, skipping!";
+        }
+
+        msg->params.client_mac = tlvf::mac_from_string(client_mac);
+        //TODO need to add VAP name parsing to  this WLAN_FC_STYPE_PROBE_REQ event - WLANRTSYS-9170
+        msg->params.bssid = tlvf::mac_from_string(vap_bssid);
+
+        // Add the message to the queue
+        ctx->event_queue_push(ap_wlan_hal_dwpal::Event::STA_Steering_Probe_Req, msg_buff);
+
+    } else if (message_type == s80211MgmtFrame::eType::AUTH) {
+
+        auto msg_buff =
+            ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_STEERING_EVENT_AUTH_FAIL_NOTIFICATION));
+        auto msg = reinterpret_cast<sACTION_APMANAGER_STEERING_EVENT_AUTH_FAIL_NOTIFICATION *>(
+            msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+        // Initialize the message
+        memset(msg_buff.get(), 0,
+                sizeof(sACTION_APMANAGER_STEERING_EVENT_AUTH_FAIL_NOTIFICATION));
+
+        size_t numOfValidArgs[7] = {0};
+
+        FieldsToParse fieldsToParse[] = {
+            {(void *)vap_name, &numOfValidArgs[0], DWPAL_STR_PARAM, "VAP=", sizeof(vap_name)},
+            {(void *)vap_bssid, &numOfValidArgs[1], DWPAL_STR_PARAM,
+                "VAP_BSSID=", sizeof(vap_bssid)},
+            {(void *)client_mac, &numOfValidArgs[2], DWPAL_STR_PARAM,
+                "addr=", sizeof(client_mac)},
+            {
+                (void *)&msg->params.rx_snr,
+                &numOfValidArgs[3],
+                DWPAL_UNSIGNED_CHAR_PARAM,
+                "snr=",
+                0,
+            },
+            {
+                (void *)&msg->params.blocked,
+                &numOfValidArgs[4],
+                DWPAL_UNSIGNED_CHAR_PARAM,
+                "blocked=",
+                0,
+            },
+            {
+                (void *)&msg->params.reject,
+                &numOfValidArgs[5],
+                DWPAL_UNSIGNED_CHAR_PARAM,
+                "rejected=",
+                0,
+            },
+            {
+                (void *)&msg->params.reason,
+                &numOfValidArgs[6],
+                DWPAL_UNSIGNED_CHAR_PARAM,
+                "reason=",
+                0,
+            },
+            /* Must be at the end */
+            {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
+
+        if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse, sizeof(vap_name)) ==
+            DWPAL_FAILURE) {
+            LOG(ERROR) << "DWPAL parse error ==> Abort";
+            return false;
+        }
+
+        for (uint8_t i = 0; i < (sizeof(numOfValidArgs) / sizeof(size_t)); i++) {
+            if (numOfValidArgs[i] == 0) {
+                LOG(ERROR) << "Failed reading parsed parameter " << (int)i << " ==> Abort";
+                return false;
+            }
+        }
+
+        LOG(DEBUG) << "numOfValidArgs[0]=" << numOfValidArgs[0] << ", VAP=" << vap_name;
+        LOG(DEBUG) << "numOfValidArgs[1]=" << numOfValidArgs[1] << ", VAP_BSSID=" << vap_bssid;
+        LOG(DEBUG) << "numOfValidArgs[2]=" << numOfValidArgs[2]
+                    << ", client_mac=" << client_mac;
+        LOG(DEBUG) << "numOfValidArgs[3]=" << numOfValidArgs[3]
+                    << ", rx_snr=" << (int)msg->params.rx_snr;
+        LOG(DEBUG) << "numOfValidArgs[4]=" << numOfValidArgs[4]
+                    << ", blocked=" << (int)msg->params.blocked;
+        LOG(DEBUG) << "numOfValidArgs[5]=" << numOfValidArgs[5]
+                    << ", rejected=" << (int)msg->params.reject;
+        LOG(DEBUG) << "numOfValidArgs[6]=" << numOfValidArgs[6]
+                    << ", reason=" << (int)msg->params.reason;
+
+        // Check if the BSS is valid
+        if (beerocks::utils::get_ids_from_iface_string(vap_name).vap_id ==
+            beerocks::IFACE_ID_INVALID) {
+            LOG(ERROR) << "Event received on invalid VAP ID, should handle the event!";
+            return true;
+        }
+        // Check if the BSS is monitored
+        if (!ctx->is_BSS_monitored(vap_name)) {
+            LOG(DEBUG) << "Event received on non-monitored BSS, skipping!";
+        }
+
+        msg->params.client_mac = tlvf::mac_from_string(client_mac);
+        //TODO need to add VAP name parsing to  this WLAN_FC_STYPE_AUTH event - WLANRTSYS-9170
+        msg->params.bssid = tlvf::mac_from_string(vap_bssid);
+
+        // Add the message to the queue
+        ctx->event_queue_push(ap_wlan_hal_dwpal::Event::STA_Steering_Auth_Fail, msg_buff);
+    } else {
+        LOG(ERROR) << "Unknown message type!";
+    }    
+    return 0;
+}
 int ap_wlan_hal_dwpal::hap_evt_ap_sta_disconnected_clb(char *ifname, char *op_code, char *buffer,
                                                        size_t bufLen)
 {
@@ -3925,222 +4129,15 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
     case ap_wlan_hal_dwpal::Event::STA_Unassoc_RSSI: {
         ctx->hap_evt_unconnected_sta_rssi_clb(ifname, op_code, buffer, len);
     } break;
+    case ap_wlan_hal_dwpal::Event::STA_Softblock_Drop: {
+        ctx->hap_evt_ltq_softblock_drop_clb(ifname, op_code, buffer, len);
+    } break;
     default: {
     } break;
     }
 #if 0
     
-
-    case Event::STA_Softblock_Drop: {
-        LOG(DEBUG) << buffer;
-
-        char client_mac[MAC_ADDR_SIZE]                      = {0};
-        char vap_bssid[MAC_ADDR_SIZE]                       = {0};
-        char vap_name[beerocks::message::IFACE_NAME_LENGTH] = {0};
-        s80211MgmtFrame::eType message_type;
-        size_t numOfValidArgsForMsgType[2] = {0};
-
-        FieldsToParse fieldsToParseForMsgType[] = {
-            {NULL /*opCode*/, &numOfValidArgsForMsgType[0], DWPAL_STR_PARAM, NULL, 0},
-            {(void *)&message_type, &numOfValidArgsForMsgType[1], DWPAL_UNSIGNED_CHAR_PARAM,
-             "msg_type=", 0},
-            /* Must be at the end */
-            {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
-
-        if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParseForMsgType,
-                                         sizeof(message_type)) == DWPAL_FAILURE) {
-            LOG(ERROR) << "DWPAL parse error ==> Abort";
-            return false;
-        }
-
-        /* TEMP: Traces... */
-        LOG(DEBUG) << "numOfValidArgs[1]=" << numOfValidArgsForMsgType[1]
-                   << ", message_type=" << (uint8_t)message_type;
-
-        if (message_type == s80211MgmtFrame::eType::PROBE_REQ) {
-
-            auto msg_buff =
-                ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_STEERING_EVENT_PROBE_REQ_NOTIFICATION));
-            auto msg = reinterpret_cast<sACTION_APMANAGER_STEERING_EVENT_PROBE_REQ_NOTIFICATION *>(
-                msg_buff.get());
-            LOG_IF(!msg, FATAL) << "Memory allocation failed!";
-            // Initialize the message
-            memset(msg_buff.get(), 0,
-                   sizeof(sACTION_APMANAGER_STEERING_EVENT_PROBE_REQ_NOTIFICATION));
-
-            size_t numOfValidArgs[6] = {0};
-
-            FieldsToParse fieldsToParse[] = {
-                {(void *)vap_name, &numOfValidArgs[0], DWPAL_STR_PARAM, "VAP=", sizeof(vap_name)},
-                {(void *)vap_bssid, &numOfValidArgs[1], DWPAL_STR_PARAM,
-                 "VAP_BSSID=", sizeof(vap_bssid)},
-                {(void *)client_mac, &numOfValidArgs[2], DWPAL_STR_PARAM,
-                 "addr=", sizeof(client_mac)},
-                {
-                    (void *)&msg->params.rx_snr,
-                    &numOfValidArgs[3],
-                    DWPAL_UNSIGNED_CHAR_PARAM,
-                    "snr=",
-                    0,
-                },
-                {
-                    (void *)&msg->params.blocked,
-                    &numOfValidArgs[4],
-                    DWPAL_UNSIGNED_CHAR_PARAM,
-                    "blocked=",
-                    0,
-                },
-                {
-                    (void *)&msg->params.broadcast,
-                    &numOfValidArgs[5],
-                    DWPAL_UNSIGNED_CHAR_PARAM,
-                    "broadcast=",
-                    0,
-                },
-                /* Must be at the end */
-                {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
-
-            if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse, sizeof(vap_name)) ==
-                DWPAL_FAILURE) {
-                LOG(ERROR) << "DWPAL parse error ==> Abort";
-                return false;
-            }
-
-            for (uint8_t i = 0; i < (sizeof(numOfValidArgs) / sizeof(size_t)); i++) {
-                if (numOfValidArgs[i] == 0) {
-                    LOG(ERROR) << "Failed reading parsed parameter " << (int)i << " ==> Abort";
-                    return false;
-                }
-            }
-
-            LOG(DEBUG) << "numOfValidArgs[0]=" << numOfValidArgs[0] << ", VAP=" << vap_name;
-            LOG(DEBUG) << "numOfValidArgs[1]=" << numOfValidArgs[1] << ", VAP_BSSID=" << vap_bssid;
-            LOG(DEBUG) << "numOfValidArgs[2]=" << numOfValidArgs[2] << ", addr=" << client_mac;
-            LOG(DEBUG) << "numOfValidArgs[3]=" << numOfValidArgs[3]
-                       << ", rx_snr=" << (int)msg->params.rx_snr;
-            LOG(DEBUG) << "numOfValidArgs[4]=" << numOfValidArgs[4]
-                       << ", blocked=" << (int)msg->params.blocked;
-            LOG(DEBUG) << "numOfValidArgs[5]=" << numOfValidArgs[5]
-                       << ", broadcast=" << (int)msg->params.broadcast;
-
-            // Check if the BSS is valid
-            if (beerocks::utils::get_ids_from_iface_string(vap_name).vap_id ==
-                beerocks::IFACE_ID_INVALID) {
-                LOG(ERROR) << "Event received on invalid VAP ID, should handle the event!";
-                return true;
-            }
-            // Check if the BSS is monitored
-            if (!is_BSS_monitored(vap_name)) {
-                LOG(DEBUG) << "Event received on non-monitored BSS, skipping!";
-            }
-
-            msg->params.client_mac = tlvf::mac_from_string(client_mac);
-            //TODO need to add VAP name parsing to  this WLAN_FC_STYPE_PROBE_REQ event - WLANRTSYS-9170
-            msg->params.bssid = tlvf::mac_from_string(vap_bssid);
-
-            // Add the message to the queue
-            event_queue_push(Event::STA_Steering_Probe_Req, msg_buff);
-
-        } else if (message_type == s80211MgmtFrame::eType::AUTH) {
-
-            auto msg_buff =
-                ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_STEERING_EVENT_AUTH_FAIL_NOTIFICATION));
-            auto msg = reinterpret_cast<sACTION_APMANAGER_STEERING_EVENT_AUTH_FAIL_NOTIFICATION *>(
-                msg_buff.get());
-            LOG_IF(!msg, FATAL) << "Memory allocation failed!";
-            // Initialize the message
-            memset(msg_buff.get(), 0,
-                   sizeof(sACTION_APMANAGER_STEERING_EVENT_AUTH_FAIL_NOTIFICATION));
-
-            size_t numOfValidArgs[7] = {0};
-
-            FieldsToParse fieldsToParse[] = {
-                {(void *)vap_name, &numOfValidArgs[0], DWPAL_STR_PARAM, "VAP=", sizeof(vap_name)},
-                {(void *)vap_bssid, &numOfValidArgs[1], DWPAL_STR_PARAM,
-                 "VAP_BSSID=", sizeof(vap_bssid)},
-                {(void *)client_mac, &numOfValidArgs[2], DWPAL_STR_PARAM,
-                 "addr=", sizeof(client_mac)},
-                {
-                    (void *)&msg->params.rx_snr,
-                    &numOfValidArgs[3],
-                    DWPAL_UNSIGNED_CHAR_PARAM,
-                    "snr=",
-                    0,
-                },
-                {
-                    (void *)&msg->params.blocked,
-                    &numOfValidArgs[4],
-                    DWPAL_UNSIGNED_CHAR_PARAM,
-                    "blocked=",
-                    0,
-                },
-                {
-                    (void *)&msg->params.reject,
-                    &numOfValidArgs[5],
-                    DWPAL_UNSIGNED_CHAR_PARAM,
-                    "rejected=",
-                    0,
-                },
-                {
-                    (void *)&msg->params.reason,
-                    &numOfValidArgs[6],
-                    DWPAL_UNSIGNED_CHAR_PARAM,
-                    "reason=",
-                    0,
-                },
-                /* Must be at the end */
-                {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
-
-            if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse, sizeof(vap_name)) ==
-                DWPAL_FAILURE) {
-                LOG(ERROR) << "DWPAL parse error ==> Abort";
-                return false;
-            }
-
-            for (uint8_t i = 0; i < (sizeof(numOfValidArgs) / sizeof(size_t)); i++) {
-                if (numOfValidArgs[i] == 0) {
-                    LOG(ERROR) << "Failed reading parsed parameter " << (int)i << " ==> Abort";
-                    return false;
-                }
-            }
-
-            LOG(DEBUG) << "numOfValidArgs[0]=" << numOfValidArgs[0] << ", VAP=" << vap_name;
-            LOG(DEBUG) << "numOfValidArgs[1]=" << numOfValidArgs[1] << ", VAP_BSSID=" << vap_bssid;
-            LOG(DEBUG) << "numOfValidArgs[2]=" << numOfValidArgs[2]
-                       << ", client_mac=" << client_mac;
-            LOG(DEBUG) << "numOfValidArgs[3]=" << numOfValidArgs[3]
-                       << ", rx_snr=" << (int)msg->params.rx_snr;
-            LOG(DEBUG) << "numOfValidArgs[4]=" << numOfValidArgs[4]
-                       << ", blocked=" << (int)msg->params.blocked;
-            LOG(DEBUG) << "numOfValidArgs[5]=" << numOfValidArgs[5]
-                       << ", rejected=" << (int)msg->params.reject;
-            LOG(DEBUG) << "numOfValidArgs[6]=" << numOfValidArgs[6]
-                       << ", reason=" << (int)msg->params.reason;
-
-            // Check if the BSS is valid
-            if (beerocks::utils::get_ids_from_iface_string(vap_name).vap_id ==
-                beerocks::IFACE_ID_INVALID) {
-                LOG(ERROR) << "Event received on invalid VAP ID, should handle the event!";
-                return true;
-            }
-            // Check if the BSS is monitored
-            if (!is_BSS_monitored(vap_name)) {
-                LOG(DEBUG) << "Event received on non-monitored BSS, skipping!";
-            }
-
-            msg->params.client_mac = tlvf::mac_from_string(client_mac);
-            //TODO need to add VAP name parsing to  this WLAN_FC_STYPE_AUTH event - WLANRTSYS-9170
-            msg->params.bssid = tlvf::mac_from_string(vap_bssid);
-
-            // Add the message to the queue
-            event_queue_push(Event::STA_Steering_Auth_Fail, msg_buff);
-        } else {
-            LOG(ERROR) << "Unknown message type!";
-            break;
-        }
-
-        break;
-    }
+    
 
     case Event::BSS_TM_Query: {
         parsed_line_t parsed_obj;
