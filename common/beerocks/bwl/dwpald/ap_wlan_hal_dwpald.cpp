@@ -934,13 +934,7 @@ int ap_wlan_hal_dwpal::hap_evt_ap_csa_finished_clb(char *ifname, char *op_code, 
 
 
 
-int ap_wlan_hal_dwpal::hap_evt_dfs_nop_finished_clb(char *ifname, char *op_code, char *msg,
-                                                    size_t len)
-{
-    LOG(ERROR) << "Either entity shall register not for " << op_code
-               << "event or if register then override base class callback";
-    return 0;
-}
+
 
 
 
@@ -4058,6 +4052,60 @@ int ap_wlan_hal_dwpal::hap_evt_bss_tm_resp_clb(char *ifname, char *op_code, char
     ctx->event_queue_push(ap_wlan_hal_dwpal::Event::BSS_TM_Response, msg_buff);
     return 0;
 }
+int ap_wlan_hal_dwpal::hap_evt_dfs_nop_finished_clb(char *ifname, char *op_code, char *buffer,
+                                                    size_t bufLen)
+{
+    // TODO: Change to HAL object
+    auto msg_buff =
+        ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_HOSTAP_DFS_CHANNEL_AVAILABLE_NOTIFICATION));
+    auto msg = reinterpret_cast<sACTION_APMANAGER_HOSTAP_DFS_CHANNEL_AVAILABLE_NOTIFICATION *>(
+        msg_buff.get());
+    LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+    // Initialize the message
+    memset(msg_buff.get(), 0,
+            sizeof(sACTION_APMANAGER_HOSTAP_DFS_CHANNEL_AVAILABLE_NOTIFICATION));
+
+    uint8_t chan_width            = 0;
+    size_t numOfValidArgs[5]      = {0};
+    FieldsToParse fieldsToParse[] = {
+        {NULL /*opCode*/, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
+        {NULL, &numOfValidArgs[1], DWPAL_STR_PARAM, NULL, 0},
+        {(void *)&msg->params.frequency, &numOfValidArgs[2], DWPAL_INT_PARAM, "freq=", 0},
+        {(void *)&msg->params.vht_center_frequency, &numOfValidArgs[3], DWPAL_SHORT_INT_PARAM,
+            "cf1=", 0},
+        {(void *)&chan_width, &numOfValidArgs[4], DWPAL_CHAR_PARAM, "chan_width=", 0},
+        /* Must be at the end */
+        {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
+
+    if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse, sizeof(int)) ==
+        DWPAL_FAILURE) {
+        LOG(ERROR) << "DWPAL parse error ==> Abort";
+        return false;
+    }
+
+    /* TEMP: Traces... */
+    LOG(DEBUG) << "numOfValidArgs[2]= " << numOfValidArgs[2]
+                << " freq= " << (int)msg->params.frequency;
+    LOG(DEBUG) << "numOfValidArgs[3]= " << numOfValidArgs[3]
+                << " cf1= " << (int)msg->params.vht_center_frequency;
+    LOG(DEBUG) << "numOfValidArgs[4]= " << numOfValidArgs[4]
+                << " chan_width= " << (int)chan_width;
+
+    for (uint8_t i = 0; i < (sizeof(numOfValidArgs) / sizeof(size_t)); i++) {
+        if (numOfValidArgs[i] == 0) {
+            LOG(ERROR) << "Failed reading parsed parameter " << (int)i << " ==> Abort";
+            return false;
+        }
+    }
+
+    msg->params.channel   = son::wireless_utils::freq_to_channel(msg->params.frequency);
+    msg->params.bandwidth = dwpal_bw_to_beerocks_bw(chan_width);
+
+    // Add the message to the queue
+    ctx->event_queue_push(ap_wlan_hal_dwpal::Event::DFS_NOP_Finished, msg_buff);
+    return 0;
+}
 int ap_wlan_hal_dwpal::hap_evt_ap_sta_disconnected_clb(char *ifname, char *op_code, char *buffer,
                                                        size_t bufLen)
 {
@@ -4333,63 +4381,14 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
     case ap_wlan_hal_dwpal::Event::DFS_CAC_Completed: {
         ctx->hap_evt_dfs_cac_completed_clb(ifname, op_code, buffer, len);
     } break;
+    case ap_wlan_hal_dwpal::Event::DFS_NOP_Finished: {
+        ctx->hap_evt_dfs_nop_finished_clb(ifname, op_code, buffer, len);
+    } break;
     default: {
     } break;
     }
 #if 0
     
-    case ap_wlan_hal_dwpal::Event::DFS_NOP_Finished: {
-        // TODO: Change to HAL objects
-        auto msg_buff =
-            ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_HOSTAP_DFS_CHANNEL_AVAILABLE_NOTIFICATION));
-        auto msg = reinterpret_cast<sACTION_APMANAGER_HOSTAP_DFS_CHANNEL_AVAILABLE_NOTIFICATION *>(
-            msg_buff.get());
-        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
-
-        // Initialize the message
-        memset(msg_buff.get(), 0,
-               sizeof(sACTION_APMANAGER_HOSTAP_DFS_CHANNEL_AVAILABLE_NOTIFICATION));
-
-        uint8_t chan_width            = 0;
-        size_t numOfValidArgs[5]      = {0};
-        FieldsToParse fieldsToParse[] = {
-            {NULL /*opCode*/, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
-            {NULL, &numOfValidArgs[1], DWPAL_STR_PARAM, NULL, 0},
-            {(void *)&msg->params.frequency, &numOfValidArgs[2], DWPAL_INT_PARAM, "freq=", 0},
-            {(void *)&msg->params.vht_center_frequency, &numOfValidArgs[3], DWPAL_SHORT_INT_PARAM,
-             "cf1=", 0},
-            {(void *)&chan_width, &numOfValidArgs[4], DWPAL_CHAR_PARAM, "chan_width=", 0},
-            /* Must be at the end */
-            {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
-
-        if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse, sizeof(int)) ==
-            DWPAL_FAILURE) {
-            LOG(ERROR) << "DWPAL parse error ==> Abort";
-            return false;
-        }
-
-        /* TEMP: Traces... */
-        LOG(DEBUG) << "numOfValidArgs[2]= " << numOfValidArgs[2]
-                   << " freq= " << (int)msg->params.frequency;
-        LOG(DEBUG) << "numOfValidArgs[3]= " << numOfValidArgs[3]
-                   << " cf1= " << (int)msg->params.vht_center_frequency;
-        LOG(DEBUG) << "numOfValidArgs[4]= " << numOfValidArgs[4]
-                   << " chan_width= " << (int)chan_width;
-
-        for (uint8_t i = 0; i < (sizeof(numOfValidArgs) / sizeof(size_t)); i++) {
-            if (numOfValidArgs[i] == 0) {
-                LOG(ERROR) << "Failed reading parsed parameter " << (int)i << " ==> Abort";
-                return false;
-            }
-        }
-
-        msg->params.channel   = son::wireless_utils::freq_to_channel(msg->params.frequency);
-        msg->params.bandwidth = dwpal_bw_to_beerocks_bw(chan_width);
-
-        // Add the message to the queue
-        event_queue_push(ap_wlan_hal_dwpal::Event::DFS_NOP_Finished, msg_buff);
-        break;
-    }
 
     case ap_wlan_hal_dwpal::Event::AP_Disabled: {
         auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sHOSTAP_DISABLED_NOTIFICATION));
