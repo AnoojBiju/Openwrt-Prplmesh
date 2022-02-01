@@ -932,13 +932,7 @@ int ap_wlan_hal_dwpal::hap_evt_ap_csa_finished_clb(char *ifname, char *op_code, 
 }
 
 
-int ap_wlan_hal_dwpal::hap_evt_dfs_cac_completed_clb(char *ifname, char *op_code, char *msg,
-                                                     size_t len)
-{
-    LOG(ERROR) << "Either entity shall register not for " << op_code
-               << "event or if register then override base class callback";
-    return 0;
-}
+
 
 int ap_wlan_hal_dwpal::hap_evt_dfs_nop_finished_clb(char *ifname, char *op_code, char *msg,
                                                     size_t len)
@@ -3882,7 +3876,75 @@ int ap_wlan_hal_dwpal::hap_evt_bss_tm_query_clb(char *ifname, char *op_code, cha
     ctx->sta_bss_steer(client_mac_str, bssid, op_class, radio_info.channel, 0, 2, 0);
     return 0;
 }
+int ap_wlan_hal_dwpal::hap_evt_dfs_cac_completed_clb(char *ifname, char *op_code, char *buffer,
+                                                     size_t bufLen)
+{
+    LOG(DEBUG) << buffer;
 
+    parsed_line_t parsed_obj;
+    parse_event(buffer, parsed_obj);
+    int64_t tmp_int;
+    
+    if (!ctx->get_radio_info().is_5ghz) {
+        LOG(WARNING) << "DFS event on 2.4Ghz radio. Ignoring...";
+        return true;
+    }
+
+    // TODO: Change to HAL objects
+    auto msg_buff =
+        ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION));
+    auto msg = reinterpret_cast<sACTION_APMANAGER_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION *>(
+        msg_buff.get());
+    LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+    // Initialize the message
+    memset(msg_buff.get(), 0, sizeof(sACTION_APMANAGER_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION));
+
+    if (!read_param("cac_status", parsed_obj, tmp_int)) {
+        // older intel hostapd versions still use "success" parameter
+        // same as the original openWrt syntax , we should support it as well.
+        if (!read_param("success", parsed_obj, tmp_int)) {
+            LOG(ERROR) << "Failed reading cac finished success parameter!";
+            return false;
+        }
+    }
+    msg->params.success = tmp_int;
+
+    if (!read_param("freq", parsed_obj, tmp_int)) {
+        LOG(ERROR) << "Failed reading freq parameter!";
+        return false;
+    }
+    msg->params.frequency = tmp_int;
+
+    if (!read_param("cf1", parsed_obj, tmp_int)) {
+        LOG(ERROR) << "Failed reading 'cf1' parameter!";
+        return false;
+    }
+    msg->params.center_frequency1 = tmp_int;
+
+    if (!read_param("cf2", parsed_obj, tmp_int)) {
+        LOG(ERROR) << "Failed reading 'cf2 parameter!";
+        return false;
+    }
+    msg->params.center_frequency2 = tmp_int;
+
+    msg->params.channel = son::wireless_utils::freq_to_channel(msg->params.frequency);
+
+    if (!read_param("timeout", parsed_obj, tmp_int)) {
+        LOG(ERROR) << "Failed reading timeout parameter!";
+        return false;
+    }
+    msg->params.timeout = tmp_int;
+
+    if (!read_param("chan_width", parsed_obj, tmp_int)) {
+        LOG(ERROR) << "Failed reading chan_width parameter!";
+        return false;
+    }
+    msg->params.bandwidth = dwpal_bw_to_beerocks_bw(tmp_int);
+
+    // Add the message to the queue
+    ctx->event_queue_push(ap_wlan_hal_dwpal::Event::DFS_CAC_Completed, msg_buff);
+    return 0;
+}
 int ap_wlan_hal_dwpal::hap_evt_dfs_cac_start_clb(char *ifname, char *op_code, char *buffer, size_t bufLen)
 {
     LOG(DEBUG) << buffer;
@@ -4268,78 +4330,14 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
     case ap_wlan_hal_dwpal::Event::DFS_CAC_Started: {
         ctx->hap_evt_dfs_cac_start_clb(ifname, op_code, buffer, len);
     } break;
+    case ap_wlan_hal_dwpal::Event::DFS_CAC_Completed: {
+        ctx->hap_evt_dfs_cac_completed_clb(ifname, op_code, buffer, len);
+    } break;
     default: {
     } break;
     }
 #if 0
     
-    case ap_wlan_hal_dwpal::Event::DFS_CAC_Completed: {
-        LOG(DEBUG) << buffer;
-
-        parsed_line_t parsed_obj;
-        parse_event(buffer, parsed_obj);
-
-        if (!get_radio_info().is_5ghz) {
-            LOG(WARNING) << "DFS event on 2.4Ghz radio. Ignoring...";
-            return true;
-        }
-
-        // TODO: Change to HAL objects
-        auto msg_buff =
-            ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION));
-        auto msg = reinterpret_cast<sACTION_APMANAGER_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION *>(
-            msg_buff.get());
-        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
-        // Initialize the message
-        memset(msg_buff.get(), 0, sizeof(sACTION_APMANAGER_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION));
-
-        if (!read_param("cac_status", parsed_obj, tmp_int)) {
-            // older intel hostapd versions still use "success" parameter
-            // same as the original openWrt syntax , we should support it as well.
-            if (!read_param("success", parsed_obj, tmp_int)) {
-                LOG(ERROR) << "Failed reading cac finished success parameter!";
-                return false;
-            }
-        }
-        msg->params.success = tmp_int;
-
-        if (!read_param("freq", parsed_obj, tmp_int)) {
-            LOG(ERROR) << "Failed reading freq parameter!";
-            return false;
-        }
-        msg->params.frequency = tmp_int;
-
-        if (!read_param("cf1", parsed_obj, tmp_int)) {
-            LOG(ERROR) << "Failed reading 'cf1' parameter!";
-            return false;
-        }
-        msg->params.center_frequency1 = tmp_int;
-
-        if (!read_param("cf2", parsed_obj, tmp_int)) {
-            LOG(ERROR) << "Failed reading 'cf2 parameter!";
-            return false;
-        }
-        msg->params.center_frequency2 = tmp_int;
-
-        msg->params.channel = son::wireless_utils::freq_to_channel(msg->params.frequency);
-
-        if (!read_param("timeout", parsed_obj, tmp_int)) {
-            LOG(ERROR) << "Failed reading timeout parameter!";
-            return false;
-        }
-        msg->params.timeout = tmp_int;
-
-        if (!read_param("chan_width", parsed_obj, tmp_int)) {
-            LOG(ERROR) << "Failed reading chan_width parameter!";
-            return false;
-        }
-        msg->params.bandwidth = dwpal_bw_to_beerocks_bw(tmp_int);
-
-        // Add the message to the queue
-        event_queue_push(ap_wlan_hal_dwpal::Event::DFS_CAC_Completed, msg_buff);
-        break;
-    }
-
     case ap_wlan_hal_dwpal::Event::DFS_NOP_Finished: {
         // TODO: Change to HAL objects
         auto msg_buff =
