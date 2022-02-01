@@ -745,6 +745,10 @@ int ap_wlan_hal_dwpal::hap_evt_interface_disabled_clb(char *ifname, char *op_cod
     ctx->event_queue_push(event); // Forward to the AP manager
     return 0;
 }
+int ap_wlan_hal_dwpal::hap_evt_acs_failed_clb(char *ifname, char *op_code, char *msg, size_t len)
+{
+    return hap_evt_interface_disabled_clb(ifname, op_code, msg, len);
+}
 static bool is_acs_completed_scan(char *buffer, int bufLen)
 {
     size_t numOfValidArgs[3]      = {0};
@@ -3635,6 +3639,9 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
         }
     }
     switch (event) {
+    case ap_wlan_hal_dwpal::Event::ACS_Failed: {
+        ctx->hap_evt_acs_failed_clb(ifname, op_code, buffer, len);
+        } break;
     case ap_wlan_hal_dwpal::Event::Interface_Disabled: {
         ctx->hap_evt_interface_disabled_clb(ifname, op_code, buffer, len);
     } break;
