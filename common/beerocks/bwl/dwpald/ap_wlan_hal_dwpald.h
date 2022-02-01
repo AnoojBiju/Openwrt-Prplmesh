@@ -113,10 +113,11 @@ public:
     virtual int hap_evt_acs_completed_clb(char *ifname, char *op_code, char *msg, size_t len) override;
     virtual int hap_evt_ap_csa_finished_clb(char *ifname, char *op_code, char *msg, size_t len) override;
     virtual int hap_evt_acs_failed_clb(char *ifname, char *op_code, char *msg, size_t len) override;
+    virtual int hap_evt_ap_sta_connected_clb(char *ifname, char *op_code, char *msg, size_t len) override;
 #if 0
     virtual int hap_evt_ap_enabled_clb(char *ifname, char *op_code, char *msg, size_t len) override;
     virtual int hap_evt_ap_disabled_clb(char *ifname, char *op_code, char *msg, size_t len) override;
-    virtual int hap_evt_ap_sta_connected_clb(char *ifname, char *op_code, char *msg, size_t len) override;
+    
     virtual int hap_evt_ap_sta_disconnected_clb(char *ifname, char *op_code, char *msg, size_t len) override;
     virtual int hap_evt_interface_enabled_clb(char *ifname, char *op_code, char *msg, size_t len) override;
     virtual int hap_evt_interface_disabled_clb(char *ifname, char *op_code, char *msg, size_t len) override;
@@ -137,13 +138,21 @@ public:
     virtual int hap_evt_ap_sta_possible_psk_mismatch_clb(char *ifname, char *op_code, char *msg,
                                                          size_t len) override;
 #endif
-    std::chrono::steady_clock::time_point get_csa_event_filtering_timestamp()
+    std::chrono::steady_clock::time_point &get_csa_event_filtering_timestamp()
     {
         return m_csa_event_filtering_timestamp;
     }
-    bool get_drop_csa()
+    bool &get_drop_csa()
     {
         return m_drop_csa;
+    }
+    std::set<int> &get_completed_vap()
+    {
+        return m_completed_vaps;
+    }
+    std::unordered_set<sMacAddr> &get_handled_clients()
+    {
+        return m_handled_clients;
     }
     // Protected methods:
 protected:
