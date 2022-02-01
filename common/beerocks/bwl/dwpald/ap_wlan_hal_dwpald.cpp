@@ -932,16 +932,6 @@ int ap_wlan_hal_dwpal::hap_evt_ap_csa_finished_clb(char *ifname, char *op_code, 
 }
 
 
-
-
-
-int ap_wlan_hal_dwpal::hap_evt_dfs_cac_start_clb(char *ifname, char *op_code, char *msg, size_t len)
-{
-    LOG(ERROR) << "Either entity shall register not for " << op_code
-               << "event or if register then override base class callback";
-    return 0;
-}
-
 int ap_wlan_hal_dwpal::hap_evt_dfs_cac_completed_clb(char *ifname, char *op_code, char *msg,
                                                      size_t len)
 {
@@ -3233,6 +3223,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         LOG(DEBUG) << buffer;
 
         std::string tmp_string;
+        
 
         parsed_line_t parsed_obj;
         parse_event(buffer, parsed_obj);
@@ -3891,6 +3882,66 @@ int ap_wlan_hal_dwpal::hap_evt_bss_tm_query_clb(char *ifname, char *op_code, cha
     ctx->sta_bss_steer(client_mac_str, bssid, op_class, radio_info.channel, 0, 2, 0);
     return 0;
 }
+
+int ap_wlan_hal_dwpal::hap_evt_dfs_cac_start_clb(char *ifname, char *op_code, char *buffer, size_t bufLen)
+{
+    LOG(DEBUG) << buffer;
+
+    std::string tmp_string;
+    int64_t tmp_int;
+    const char *tmp_str;
+
+    parsed_line_t parsed_obj;
+    parse_event(buffer, parsed_obj);
+
+    auto msg_buff =
+        ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION));
+    auto msg = reinterpret_cast<sACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION *>(
+        msg_buff.get());
+    LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+    // Initialize the message
+    memset(msg_buff.get(), 0, sizeof(sACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION));
+
+    // Channel
+    if (!read_param("chan", parsed_obj, tmp_int)) {
+        LOG(ERROR) << "Failed reading 'channel' parameter!";
+        return false;
+    }
+    msg->params.channel = tmp_int;
+
+    // Secondary Channel
+    if (!read_param("sec_chan", parsed_obj, &tmp_str)) {
+        LOG(ERROR) << "Failed reading 'secondary_channel' parameter!";
+        return false;
+    }
+    tmp_string = tmp_str;
+    beerocks::string_utils::rtrim(tmp_string, ",");
+    msg->params.secondary_channel = beerocks::string_utils::stoi(tmp_string);
+
+    // Bandwidth
+    if (!read_param("width", parsed_obj, &tmp_str)) {
+        LOG(ERROR) << "Failed reading 'bandwidth' parameter!";
+        return false;
+    }
+    tmp_string = tmp_str;
+    beerocks::string_utils::rtrim(tmp_string, ",");
+    tmp_int               = beerocks::string_utils::stoi(tmp_string);
+    msg->params.bandwidth = beerocks::eWiFiBandwidth(dwpal_bw_to_beerocks_bw(tmp_int));
+
+    // CAC Duration
+    if (!read_param("cac_time", parsed_obj, &tmp_str)) {
+        LOG(ERROR) << "Failed reading 'cac_duration_sec' parameter!";
+        return false;
+    }
+    tmp_string = tmp_str;
+    beerocks::string_utils::rtrim(tmp_string, "s");
+    msg->params.cac_duration_sec = beerocks::string_utils::stoi(tmp_string);
+
+    // Add the message to the queue
+    ctx->event_queue_push(ap_wlan_hal_dwpal::Event::DFS_CAC_Started, msg_buff);
+    return 0;
+}
+
 int ap_wlan_hal_dwpal::hap_evt_bss_tm_resp_clb(char *ifname, char *op_code, char *buffer, size_t bufLen)
 {
     // TODO: Change to HAL objects
@@ -4214,66 +4265,14 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
     case ap_wlan_hal_dwpal::Event::BSS_TM_Response: {
         ctx->hap_evt_bss_tm_resp_clb(ifname, op_code, buffer, len);
     } break;
+    case ap_wlan_hal_dwpal::Event::DFS_CAC_Started: {
+        ctx->hap_evt_dfs_cac_start_clb(ifname, op_code, buffer, len);
+    } break;
     default: {
     } break;
     }
 #if 0
     
-    case ap_wlan_hal_dwpal::Event::DFS_CAC_Started: {
-        LOG(DEBUG) << buffer;
-
-        std::string tmp_string;
-
-        parsed_line_t parsed_obj;
-        parse_event(buffer, parsed_obj);
-
-        auto msg_buff =
-            ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION));
-        auto msg = reinterpret_cast<sACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION *>(
-            msg_buff.get());
-        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
-        // Initialize the message
-        memset(msg_buff.get(), 0, sizeof(sACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION));
-
-        // Channel
-        if (!read_param("chan", parsed_obj, tmp_int)) {
-            LOG(ERROR) << "Failed reading 'channel' parameter!";
-            return false;
-        }
-        msg->params.channel = tmp_int;
-
-        // Secondary Channel
-        if (!read_param("sec_chan", parsed_obj, &tmp_str)) {
-            LOG(ERROR) << "Failed reading 'secondary_channel' parameter!";
-            return false;
-        }
-        tmp_string = tmp_str;
-        beerocks::string_utils::rtrim(tmp_string, ",");
-        msg->params.secondary_channel = beerocks::string_utils::stoi(tmp_string);
-
-        // Bandwidth
-        if (!read_param("width", parsed_obj, &tmp_str)) {
-            LOG(ERROR) << "Failed reading 'bandwidth' parameter!";
-            return false;
-        }
-        tmp_string = tmp_str;
-        beerocks::string_utils::rtrim(tmp_string, ",");
-        tmp_int               = beerocks::string_utils::stoi(tmp_string);
-        msg->params.bandwidth = beerocks::eWiFiBandwidth(dwpal_bw_to_beerocks_bw(tmp_int));
-
-        // CAC Duration
-        if (!read_param("cac_time", parsed_obj, &tmp_str)) {
-            LOG(ERROR) << "Failed reading 'cac_duration_sec' parameter!";
-            return false;
-        }
-        tmp_string = tmp_str;
-        beerocks::string_utils::rtrim(tmp_string, "s");
-        msg->params.cac_duration_sec = beerocks::string_utils::stoi(tmp_string);
-
-        // Add the message to the queue
-        event_queue_push(ap_wlan_hal_dwpal::Event::DFS_CAC_Started, msg_buff);
-        break;
-    }
     case ap_wlan_hal_dwpal::Event::DFS_CAC_Completed: {
         LOG(DEBUG) << buffer;
 
