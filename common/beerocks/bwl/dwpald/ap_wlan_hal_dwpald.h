@@ -118,6 +118,7 @@ public:
     virtual int hap_evt_unconnected_sta_rssi_clb(char *ifname, char *op_code, char *msg,
                                                  size_t len) override;
     virtual int hap_evt_ltq_softblock_drop_clb(char *ifname, char *op_code, char *msg, size_t len) override;
+    virtual int hap_evt_bss_tm_query_clb(char *ifname, char *op_code, char *msg, size_t len) override;
 #if 0
     virtual int hap_evt_ap_enabled_clb(char *ifname, char *op_code, char *msg, size_t len) override;
     virtual int hap_evt_ap_disabled_clb(char *ifname, char *op_code, char *msg, size_t len) override;
@@ -127,13 +128,10 @@ public:
     virtual int hap_evt_acs_completed_clb(char *ifname, char *op_code, char *msg, size_t len) override;
     virtual int hap_evt_acs_failed_clb(char *ifname, char *op_code, char *msg, size_t len) override;
     virtual int hap_evt_ap_csa_finished_clb(char *ifname, char *op_code, char *msg, size_t len) override;
-    virtual int hap_evt_bss_tm_query_clb(char *ifname, char *op_code, char *msg, size_t len) override;
     virtual int hap_evt_bss_tm_resp_clb(char *ifname, char *op_code, char *msg, size_t len) override;
     virtual int hap_evt_dfs_cac_start_clb(char *ifname, char *op_code, char *msg, size_t len) override;
     virtual int hap_evt_dfs_cac_completed_clb(char *ifname, char *op_code, char *msg, size_t len) override;
     virtual int hap_evt_dfs_nop_finished_clb(char *ifname, char *op_code, char *msg, size_t len) override;
-    
-    
     virtual int hap_evt_ap_action_frame_received_clb(char *ifname, char *op_code, char *msg,
                                                      size_t len) override;
     virtual int hap_evt_ap_sta_possible_psk_mismatch_clb(char *ifname, char *op_code, char *msg,

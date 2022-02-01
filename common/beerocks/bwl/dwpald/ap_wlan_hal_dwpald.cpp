@@ -931,12 +931,7 @@ int ap_wlan_hal_dwpal::hap_evt_ap_csa_finished_clb(char *ifname, char *op_code, 
     return 0;
 }
 
-int ap_wlan_hal_dwpal::hap_evt_bss_tm_query_clb(char *ifname, char *op_code, char *msg, size_t len)
-{
-    LOG(ERROR) << "Either entity shall register not for " << op_code
-               << "event or if register then override base class callback";
-    return 0;
-}
+
 
 int ap_wlan_hal_dwpal::hap_evt_bss_tm_resp_clb(char *ifname, char *op_code, char *msg, size_t len)
 {
@@ -2456,8 +2451,8 @@ int ap_wlan_hal_dwpal::filter_bss_msg(char *buffer, int bufLen, const std::strin
 
     // If there is monitored BSSs list, monitor all BSSs
     if (!m_hal_conf.monitored_BSSs.empty()) {
-        if (event == Event::STA_Connected || event == Event::STA_Disconnected ||
-            event == Event::AP_Disabled || event == Event::AP_Enabled) {
+        if (event == ap_wlan_hal_dwpal::Event::STA_Connected || event == ap_wlan_hal_dwpal::Event::STA_Disconnected ||
+            event == ap_wlan_hal_dwpal::Event::AP_Disabled || event == ap_wlan_hal_dwpal::Event::AP_Enabled) {
 
             std::string tmp_buffer(buffer, MAX_TEMP_BUFFER_SIZE);
             auto BSS_str_begin = tmp_buffer.find(BSS_IFNAME_PREFIX);
@@ -2499,8 +2494,8 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
 
     // If there is monitored BSSs list, monitor all BSSs
     if (!m_hal_conf.monitored_BSSs.empty()) {
-        if (event == Event::STA_Connected || event == Event::STA_Disconnected ||
-            event == Event::AP_Disabled || event == Event::AP_Enabled) {
+        if (event == ap_wlan_hal_dwpal::Event::STA_Connected || event == ap_wlan_hal_dwpal::Event::STA_Disconnected ||
+            event == ap_wlan_hal_dwpal::Event::AP_Disabled || event == ap_wlan_hal_dwpal::Event::AP_Enabled) {
 
             std::string tmp_buffer(buffer, MAX_TEMP_BUFFER_SIZE);
             auto BSS_str_begin = tmp_buffer.find(BSS_IFNAME_PREFIX);
@@ -2530,11 +2525,11 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
     }
 
     switch (event) {
-    case Event::ACS_Completed:
-    case Event::CSA_Finished: {
+    case ap_wlan_hal_dwpal::Event::ACS_Completed:
+    case ap_wlan_hal_dwpal::Event::CSA_Finished: {
         LOG(DEBUG) << buffer;
 
-        if (event == Event::CSA_Finished) {
+        if (event == ap_wlan_hal_dwpal::Event::CSA_Finished) {
             if (std::chrono::steady_clock::now() <
                     (m_csa_event_filtering_timestamp +
                      std::chrono::milliseconds(CSA_EVENT_FILTERING_TIMEOUT_MS)) &&
@@ -2553,7 +2548,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
 
         char reason[32]               = {0};
         char VAP[SSID_MAX_SIZE]       = {0};
-        std::string channelStr        = (event == Event::CSA_Finished) ? "Channel=" : "channel=";
+        std::string channelStr        = (event == ap_wlan_hal_dwpal::Event::CSA_Finished) ? "Channel=" : "channel=";
         size_t numOfValidArgs[8]      = {0};
         FieldsToParse fieldsToParse[] = {
             {NULL /*opCode*/, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
@@ -2624,14 +2619,14 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         event_queue_push(event);
 
         // TODO: WHY?!
-        if (event == Event::ACS_Completed) {
+        if (event == ap_wlan_hal_dwpal::Event::ACS_Completed) {
             LOG(DEBUG) << "ACS_COMPLETED >>> adding CSA_FINISHED event as well";
             event_queue_push(Event::CSA_Finished);
         }
         break;
     }
 
-    case Event::STA_Connected: {
+    case ap_wlan_hal_dwpal::Event::STA_Connected: {
 
         // TODO: Change to HAL objects
         auto msg_buff =
@@ -2787,7 +2782,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         break;
     }
 
-    case Event::STA_Disconnected: {
+    case ap_wlan_hal_dwpal::Event::STA_Disconnected: {
         // TODO: Change to HAL objects
         auto msg_buff =
             ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_CLIENT_DISCONNECTED_NOTIFICATION));
@@ -2837,7 +2832,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         break;
     }
 
-    case Event::STA_Unassoc_RSSI: {
+    case ap_wlan_hal_dwpal::Event::STA_Unassoc_RSSI: {
         // TODO: Change to HAL objects
         auto msg_buff =
             ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_CLIENT_RX_RSSI_MEASUREMENT_RESPONSE));
@@ -2944,7 +2939,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         break;
     }
 
-    case Event::STA_Softblock_Drop: {
+    case ap_wlan_hal_dwpal::Event::STA_Softblock_Drop: {
         LOG(DEBUG) << buffer;
 
         char client_mac[MAC_ADDR_SIZE]                      = {0};
@@ -3155,7 +3150,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         break;
     }
 
-    case Event::BSS_TM_Query: {
+    case ap_wlan_hal_dwpal::Event::BSS_TM_Query: {
         parsed_line_t parsed_obj;
         parse_event(buffer, parsed_obj);
 
@@ -3186,7 +3181,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         break;
     }
 
-    case Event::BSS_TM_Response: {
+    case ap_wlan_hal_dwpal::Event::BSS_TM_Response: {
         // TODO: Change to HAL objects
         auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_CLIENT_BSS_STEER_RESPONSE));
         auto msg = reinterpret_cast<sACTION_APMANAGER_CLIENT_BSS_STEER_RESPONSE *>(msg_buff.get());
@@ -3239,7 +3234,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         event_queue_push(Event::BSS_TM_Response, msg_buff);
         break;
     }
-    case Event::DFS_CAC_Started: {
+    case ap_wlan_hal_dwpal::Event::DFS_CAC_Started: {
         LOG(DEBUG) << buffer;
 
         std::string tmp_string;
@@ -3294,7 +3289,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         event_queue_push(Event::DFS_CAC_Started, msg_buff);
         break;
     }
-    case Event::DFS_CAC_Completed: {
+    case ap_wlan_hal_dwpal::Event::DFS_CAC_Completed: {
         LOG(DEBUG) << buffer;
 
         parsed_line_t parsed_obj;
@@ -3361,7 +3356,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         break;
     }
 
-    case Event::DFS_NOP_Finished: {
+    case ap_wlan_hal_dwpal::Event::DFS_NOP_Finished: {
         // TODO: Change to HAL objects
         auto msg_buff =
             ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_HOSTAP_DFS_CHANNEL_AVAILABLE_NOTIFICATION));
@@ -3414,7 +3409,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         break;
     }
 
-    case Event::AP_Disabled: {
+    case ap_wlan_hal_dwpal::Event::AP_Disabled: {
         auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sHOSTAP_DISABLED_NOTIFICATION));
         auto msg      = reinterpret_cast<sHOSTAP_DISABLED_NOTIFICATION *>(msg_buff.get());
         LOG_IF(!msg, FATAL) << "Memory allocation failed!";
@@ -3441,7 +3436,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         event_queue_push(Event::AP_Disabled, msg_buff); // send message to the AP manager
 
     } break;
-    case Event::AP_Enabled: {
+    case ap_wlan_hal_dwpal::Event::AP_Enabled: {
         auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sHOSTAP_ENABLED_NOTIFICATION));
         auto msg      = reinterpret_cast<sHOSTAP_ENABLED_NOTIFICATION *>(msg_buff.get());
         LOG_IF(!msg, FATAL) << "Memory allocation failed!";
@@ -3474,13 +3469,13 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         event_queue_push(Event::AP_Enabled, msg_buff);
     } break;
 
-    case Event::Interface_Disabled:
-    case Event::ACS_Failed: {
+    case ap_wlan_hal_dwpal::Event::Interface_Disabled:
+    case ap_wlan_hal_dwpal::Event::ACS_Failed: {
         LOG(DEBUG) << buffer;
         event_queue_push(event); // Forward to the AP manager
     } break;
 
-    case Event::MGMT_Frame: {
+    case ap_wlan_hal_dwpal::Event::MGMT_Frame: {
 
         char vap[beerocks::message::IFACE_NAME_LENGTH] = {0};
         char frame[ASSOCIATION_FRAME_SIZE]             = {0};
@@ -3514,7 +3509,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         event_queue_push(Event::MGMT_Frame, mgmt_frame);
     } break;
 
-    case Event::AP_Sta_Possible_Psk_Mismatch: {
+    case ap_wlan_hal_dwpal::Event::AP_Sta_Possible_Psk_Mismatch: {
 
         parsed_line_t parsed_obj;
         parse_event(buffer, parsed_obj);
@@ -3869,6 +3864,38 @@ int ap_wlan_hal_dwpal::hap_evt_ltq_softblock_drop_clb(char *ifname, char *op_cod
     }    
     return 0;
 }
+int ap_wlan_hal_dwpal::hap_evt_bss_tm_query_clb(char *ifname, char *op_code, char *buffer, size_t bufLen)
+{
+    parsed_line_t parsed_obj;
+    parse_event(buffer, parsed_obj);
+
+    const char *client_mac_str;
+    if (!read_param("_mac", parsed_obj, &client_mac_str)) {
+        return false;
+    }
+
+    const char *vap_name;
+    if (!read_param("_iface", parsed_obj, &vap_name)) {
+        return false;
+    }
+
+    auto iface_ids    = beerocks::utils::get_ids_from_iface_string(vap_name);
+    auto radio_info = ctx->get_radio_info();
+    std::string bssid = radio_info.available_vaps[iface_ids.vap_id].mac;
+
+    auto op_class = son::wireless_utils::get_operating_class_by_channel(
+        beerocks::message::sWifiChannel(radio_info.channel, radio_info.bandwidth));
+    // According to easymesh R2 specification when STA sends BSS_TM_QUERY
+    // AP should respond with BSS_TM_REQ with at least one neighbor AP.
+    // This commit adds the answer to the BSS_TM_QUERY. The answer adds only
+    // one neighbor to the BSS_TM_REQ - the current VAP that the STA is
+    // connected to, which in turn makes the STA to stay on the current VAP.
+    // Since it's not an "active" transition and it makes the STA stay on the
+    // current VAP, there is no need to notify the upper layer.
+    // disassoc_timer_btt = 0 valid_int_btt=2 (200ms) reason=0 (not specified)
+    ctx->sta_bss_steer(client_mac_str, bssid, op_class, radio_info.channel, 0, 2, 0);
+    return 0;
+}
 int ap_wlan_hal_dwpal::hap_evt_ap_sta_disconnected_clb(char *ifname, char *op_code, char *buffer,
                                                        size_t bufLen)
 {
@@ -4132,45 +4159,16 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
     case ap_wlan_hal_dwpal::Event::STA_Softblock_Drop: {
         ctx->hap_evt_ltq_softblock_drop_clb(ifname, op_code, buffer, len);
     } break;
+    case ap_wlan_hal_dwpal::Event::BSS_TM_Query: {
+        ctx->hap_evt_bss_tm_query_clb(ifname, op_code, buffer, len);
+    } break;
     default: {
     } break;
     }
 #if 0
     
-    
 
-    case Event::BSS_TM_Query: {
-        parsed_line_t parsed_obj;
-        parse_event(buffer, parsed_obj);
-
-        const char *client_mac_str;
-        if (!read_param("_mac", parsed_obj, &client_mac_str)) {
-            return false;
-        }
-
-        const char *vap_name;
-        if (!read_param("_iface", parsed_obj, &vap_name)) {
-            return false;
-        }
-
-        auto iface_ids    = beerocks::utils::get_ids_from_iface_string(vap_name);
-        std::string bssid = m_radio_info.available_vaps[iface_ids.vap_id].mac;
-
-        auto op_class = son::wireless_utils::get_operating_class_by_channel(
-            beerocks::message::sWifiChannel(m_radio_info.channel, m_radio_info.bandwidth));
-        // According to easymesh R2 specification when STA sends BSS_TM_QUERY
-        // AP should respond with BSS_TM_REQ with at least one neighbor AP.
-        // This commit adds the answer to the BSS_TM_QUERY. The answer adds only
-        // one neighbor to the BSS_TM_REQ - the current VAP that the STA is
-        // connected to, which in turn makes the STA to stay on the current VAP.
-        // Since it's not an "active" transition and it makes the STA stay on the
-        // current VAP, there is no need to notify the upper layer.
-        // disassoc_timer_btt = 0 valid_int_btt=2 (200ms) reason=0 (not specified)
-        sta_bss_steer(client_mac_str, bssid, op_class, m_radio_info.channel, 0, 2, 0);
-        break;
-    }
-
-    case Event::BSS_TM_Response: {
+    case ap_wlan_hal_dwpal::Event::BSS_TM_Response: {
         // TODO: Change to HAL objects
         auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_CLIENT_BSS_STEER_RESPONSE));
         auto msg = reinterpret_cast<sACTION_APMANAGER_CLIENT_BSS_STEER_RESPONSE *>(msg_buff.get());
@@ -4223,7 +4221,7 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
         event_queue_push(Event::BSS_TM_Response, msg_buff);
         break;
     }
-    case Event::DFS_CAC_Started: {
+    case ap_wlan_hal_dwpal::Event::DFS_CAC_Started: {
         LOG(DEBUG) << buffer;
 
         std::string tmp_string;
@@ -4278,7 +4276,7 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
         event_queue_push(Event::DFS_CAC_Started, msg_buff);
         break;
     }
-    case Event::DFS_CAC_Completed: {
+    case ap_wlan_hal_dwpal::Event::DFS_CAC_Completed: {
         LOG(DEBUG) << buffer;
 
         parsed_line_t parsed_obj;
@@ -4345,7 +4343,7 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
         break;
     }
 
-    case Event::DFS_NOP_Finished: {
+    case ap_wlan_hal_dwpal::Event::DFS_NOP_Finished: {
         // TODO: Change to HAL objects
         auto msg_buff =
             ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_HOSTAP_DFS_CHANNEL_AVAILABLE_NOTIFICATION));
@@ -4398,7 +4396,7 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
         break;
     }
 
-    case Event::AP_Disabled: {
+    case ap_wlan_hal_dwpal::Event::AP_Disabled: {
         auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sHOSTAP_DISABLED_NOTIFICATION));
         auto msg      = reinterpret_cast<sHOSTAP_DISABLED_NOTIFICATION *>(msg_buff.get());
         LOG_IF(!msg, FATAL) << "Memory allocation failed!";
@@ -4425,7 +4423,7 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
         event_queue_push(Event::AP_Disabled, msg_buff); // send message to the AP manager
 
     } break;
-    case Event::AP_Enabled: {
+    case ap_wlan_hal_dwpal::Event::AP_Enabled: {
         auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sHOSTAP_ENABLED_NOTIFICATION));
         auto msg      = reinterpret_cast<sHOSTAP_ENABLED_NOTIFICATION *>(msg_buff.get());
         LOG_IF(!msg, FATAL) << "Memory allocation failed!";
@@ -4458,13 +4456,13 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
         event_queue_push(Event::AP_Enabled, msg_buff);
     } break;
 
-    case Event::Interface_Disabled:
-    case Event::ACS_Failed: {
+    case ap_wlan_hal_dwpal::Event::Interface_Disabled:
+    case ap_wlan_hal_dwpal::Event::ACS_Failed: {
         LOG(DEBUG) << buffer;
         event_queue_push(event); // Forward to the AP manager
     } break;
 
-    case Event::MGMT_Frame: {
+    case ap_wlan_hal_dwpal::Event::MGMT_Frame: {
 
         char vap[beerocks::message::IFACE_NAME_LENGTH] = {0};
         char frame[ASSOCIATION_FRAME_SIZE]             = {0};
@@ -4498,7 +4496,7 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
         event_queue_push(Event::MGMT_Frame, mgmt_frame);
     } break;
 
-    case Event::AP_Sta_Possible_Psk_Mismatch: {
+    case ap_wlan_hal_dwpal::Event::AP_Sta_Possible_Psk_Mismatch: {
 
         parsed_line_t parsed_obj;
         parse_event(buffer, parsed_obj);
