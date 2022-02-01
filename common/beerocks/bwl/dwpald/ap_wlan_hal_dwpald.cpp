@@ -932,13 +932,6 @@ int ap_wlan_hal_dwpal::hap_evt_ap_csa_finished_clb(char *ifname, char *op_code, 
 
 
 
-int ap_wlan_hal_dwpal::hap_evt_ap_sta_possible_psk_mismatch_clb(char *ifname, char *op_code,
-                                                                char *msg, size_t len)
-{
-    LOG(ERROR) << "Either entity shall register not for " << op_code
-               << "event or if register then override base class callback";
-    return 0;
-}
 #endif
 ap_wlan_hal_dwpal::ap_wlan_hal_dwpal(const std::string &iface_name, hal_event_cb_t callback,
                                      const hal_conf_t &hal_conf)
@@ -4188,6 +4181,32 @@ int ap_wlan_hal_dwpal::hap_evt_ap_action_frame_received_clb(char *ifname, char *
     ctx->event_queue_push(ap_wlan_hal_dwpal::Event::MGMT_Frame, mgmt_frame);
     return 0;
 }
+
+int ap_wlan_hal_dwpal::hap_evt_ap_sta_possible_psk_mismatch_clb(char *ifname, char *op_code,
+                                                                char *buffer, size_t bufLen)
+{
+        parsed_line_t parsed_obj;
+        parse_event(buffer, parsed_obj);
+
+        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sSTA_MISMATCH_PSK));
+        auto msg      = reinterpret_cast<sSTA_MISMATCH_PSK *>(msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        // Initialize the message
+        memset(msg_buff.get(), 0, sizeof(sSTA_MISMATCH_PSK));
+
+        const char *client_mac_str;
+
+        if (!read_param("_mac", parsed_obj, &client_mac_str)) {
+            return false;
+        }
+        msg->sta_mac = tlvf::mac_from_string(client_mac_str);
+        LOG(DEBUG) << "sta possible psk mismatch: offending STA mac: " << msg->sta_mac;
+
+        ctx->event_queue_push(ap_wlan_hal_dwpal::Event::AP_Sta_Possible_Psk_Mismatch,
+                         msg_buff); // send message to the AP manager
+    return 0;
+}
 int ap_wlan_hal_dwpal::hap_evt_ap_sta_disconnected_clb(char *ifname, char *op_code, char *buffer,
                                                        size_t bufLen)
 {
@@ -4475,36 +4494,14 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
     case ap_wlan_hal_dwpal::Event::MGMT_Frame: {
         ctx->hap_evt_ap_action_frame_received_clb(ifname, op_code, buffer, len);
     } break;
+    case ap_wlan_hal_dwpal::Event::AP_Sta_Possible_Psk_Mismatch: {
+        ctx->hap_evt_ap_sta_possible_psk_mismatch_clb(ifname, op_code, buffer, len);
+    } break;
     default: {
     } break;
     }
 #if 0
     
-
-    case ap_wlan_hal_dwpal::Event::AP_Sta_Possible_Psk_Mismatch: {
-
-        parsed_line_t parsed_obj;
-        parse_event(buffer, parsed_obj);
-
-        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sSTA_MISMATCH_PSK));
-        auto msg      = reinterpret_cast<sSTA_MISMATCH_PSK *>(msg_buff.get());
-        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
-
-        // Initialize the message
-        memset(msg_buff.get(), 0, sizeof(sSTA_MISMATCH_PSK));
-
-        const char *client_mac_str;
-
-        if (!read_param("_mac", parsed_obj, &client_mac_str)) {
-            return false;
-        }
-        msg->sta_mac = tlvf::mac_from_string(client_mac_str);
-        LOG(DEBUG) << "sta possible psk mismatch: offending STA mac: " << msg->sta_mac;
-
-        event_queue_push(ap_wlan_hal_dwpal::Event::AP_Sta_Possible_Psk_Mismatch,
-                         msg_buff); // send message to the AP manager
-        break;
-    }
 
     // Gracefully ignore unhandled events
     // TODO: Probably should be changed to an error once dwpal will stop
