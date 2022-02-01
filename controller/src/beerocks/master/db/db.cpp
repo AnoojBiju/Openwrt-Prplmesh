@@ -6090,6 +6090,12 @@ std::string db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &
 
 std::string db::dm_add_device_element(const sMacAddr &mac)
 {
+    auto agent = m_agents.add(mac);
+    if (!agent->dm_path.empty()) {
+        LOG(DEBUG) << "Agent dm_path already exists, mac: " << mac;
+        return agent->dm_path;
+    }
+
     auto index = m_ambiorix_datamodel->get_instance_index(
         "Device.WiFi.DataElements.Network.Device.[ID == '%s'].", tlvf::mac_to_string(mac));
     if (index) {
