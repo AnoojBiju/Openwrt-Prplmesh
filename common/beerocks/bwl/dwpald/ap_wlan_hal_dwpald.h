@@ -124,9 +124,10 @@ public:
     virtual int hap_evt_dfs_cac_completed_clb(char *ifname, char *op_code, char *msg, size_t len) override;
     virtual int hap_evt_dfs_nop_finished_clb(char *ifname, char *op_code, char *msg, size_t len) override;
     virtual int hap_evt_ap_disabled_clb(char *ifname, char *op_code, char *msg, size_t len) override;
-#if 0
     virtual int hap_evt_ap_enabled_clb(char *ifname, char *op_code, char *msg, size_t len) override;
-    
+    virtual int hap_evt_ap_action_frame_received_clb(char *ifname, char *op_code, char *msg,
+                                                     size_t len) override;
+#if 0
     virtual int hap_evt_interface_enabled_clb(char *ifname, char *op_code, char *msg, size_t len) override;
     virtual int hap_evt_interface_disabled_clb(char *ifname, char *op_code, char *msg, size_t len) override;
     virtual int hap_evt_acs_started_clb(char *ifname, char *op_code, char *msg, size_t len) override;
@@ -134,8 +135,6 @@ public:
     virtual int hap_evt_acs_failed_clb(char *ifname, char *op_code, char *msg, size_t len) override;
     virtual int hap_evt_ap_csa_finished_clb(char *ifname, char *op_code, char *msg, size_t len) override;
     
-    virtual int hap_evt_ap_action_frame_received_clb(char *ifname, char *op_code, char *msg,
-                                                     size_t len) override;
     virtual int hap_evt_ap_sta_possible_psk_mismatch_clb(char *ifname, char *op_code, char *msg,
                                                          size_t len) override;
 #endif

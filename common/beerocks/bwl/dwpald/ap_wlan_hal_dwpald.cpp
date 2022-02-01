@@ -876,12 +876,7 @@ int ap_wlan_hal_dwpal::hap_evt_ap_csa_finished_clb(char *ifname, char *op_code, 
 
 
 #if 0
-int ap_wlan_hal_dwpal::hap_evt_ap_enabled_clb(char *ifname, char *op_code, char *msg, size_t len)
-{
-    LOG(ERROR) << "Either entity shall register not for " << op_code
-               << "event or if register then override base class callback";
-    return 0;
-}
+
 
 
 
@@ -935,13 +930,7 @@ int ap_wlan_hal_dwpal::hap_evt_ap_csa_finished_clb(char *ifname, char *op_code, 
 
 
 
-int ap_wlan_hal_dwpal::hap_evt_ap_action_frame_received_clb(char *ifname, char *op_code, char *msg,
-                                                            size_t len)
-{
-    LOG(ERROR) << "Either entity shall register not for " << op_code
-               << "event or if register then override base class callback";
-    return 0;
-}
+
 
 int ap_wlan_hal_dwpal::hap_evt_ap_sta_possible_psk_mismatch_clb(char *ifname, char *op_code,
                                                                 char *msg, size_t len)
@@ -4130,6 +4119,75 @@ int ap_wlan_hal_dwpal::hap_evt_dfs_nop_finished_clb(char *ifname, char *op_code,
     ctx->event_queue_push(ap_wlan_hal_dwpal::Event::DFS_NOP_Finished, msg_buff);
     return 0;
 }
+int ap_wlan_hal_dwpal::hap_evt_ap_enabled_clb(char *ifname, char *op_code, char *buffer, size_t bufLen)
+{
+    auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sHOSTAP_ENABLED_NOTIFICATION));
+    auto msg      = reinterpret_cast<sHOSTAP_ENABLED_NOTIFICATION *>(msg_buff.get());
+    LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+    memset(msg_buff.get(), 0, sizeof(sHOSTAP_ENABLED_NOTIFICATION));
+
+    char interface[SSID_MAX_SIZE] = {0};
+    size_t numOfValidArgs[2]      = {0};
+    FieldsToParse fieldsToParse[] = {
+        {NULL /*opCode*/, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
+        {(void *)interface, &numOfValidArgs[1], DWPAL_STR_PARAM, NULL, sizeof(interface)},
+
+        /* Must be at the end */
+        {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
+
+    if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse, sizeof(interface)) ==
+        DWPAL_FAILURE) {
+        LOG(ERROR) << "DWPAL parse error ==> Abort";
+        return false;
+    }
+
+    auto iface_ids = beerocks::utils::get_ids_from_iface_string(interface);
+    msg->vap_id    = iface_ids.vap_id;
+
+    if (iface_ids.vap_id == beerocks::IFACE_RADIO_ID) {
+        // Ignore AP-ENABLED on radio
+        return true;
+    }
+
+    ctx->event_queue_push(ap_wlan_hal_dwpal::Event::AP_Enabled, msg_buff);
+    return 0;
+}
+int ap_wlan_hal_dwpal::hap_evt_ap_action_frame_received_clb(char *ifname, char *op_code, char *buffer,
+                                                            size_t bufLen)
+{
+    char vap[beerocks::message::IFACE_NAME_LENGTH] = {0};
+    char frame[ASSOCIATION_FRAME_SIZE]             = {0};
+    size_t numOfValidArgs[3]                       = {0};
+
+    FieldsToParse fieldsToParse[] = {
+        {NULL /*opCode*/, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
+        {(void *)vap, &numOfValidArgs[1], DWPAL_STR_PARAM, NULL, sizeof(vap)},
+        {(void *)frame, &numOfValidArgs[2], DWPAL_STR_PARAM, NULL, sizeof(frame)},
+        /* Must be at the end */
+        {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
+
+    if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse, sizeof(vap)) ==
+        DWPAL_FAILURE) {
+        LOG(ERROR) << "DWPAL parse error ==> Abort";
+        return false;
+    }
+
+    // Create the management frame notification event
+    if (frame[0] == 0) {
+        LOG(WARNING) << "Management frame received without data: " << buffer;
+        return true; // Just a warning, do not fail
+    }
+
+    auto mgmt_frame = ctx->create_mgmt_frame_notification(frame);
+    if (!mgmt_frame) {
+        LOG(WARNING) << "Failed creating management frame notification!";
+        return true; // Just a warning, do not fail
+    }
+
+    ctx->event_queue_push(ap_wlan_hal_dwpal::Event::MGMT_Frame, mgmt_frame);
+    return 0;
+}
 int ap_wlan_hal_dwpal::hap_evt_ap_sta_disconnected_clb(char *ifname, char *op_code, char *buffer,
                                                        size_t bufLen)
 {
@@ -4411,83 +4469,17 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
     case ap_wlan_hal_dwpal::Event::AP_Disabled: {
         ctx->hap_evt_ap_disabled_clb(ifname, op_code, buffer, len);
     } break;
+    case ap_wlan_hal_dwpal::Event::AP_Enabled: {
+        ctx->hap_evt_ap_enabled_clb(ifname, op_code, buffer, len);
+    } break;
+    case ap_wlan_hal_dwpal::Event::MGMT_Frame: {
+        ctx->hap_evt_ap_action_frame_received_clb(ifname, op_code, buffer, len);
+    } break;
     default: {
     } break;
     }
 #if 0
     
-    case ap_wlan_hal_dwpal::Event::AP_Enabled: {
-        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sHOSTAP_ENABLED_NOTIFICATION));
-        auto msg      = reinterpret_cast<sHOSTAP_ENABLED_NOTIFICATION *>(msg_buff.get());
-        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
-
-        memset(msg_buff.get(), 0, sizeof(sHOSTAP_ENABLED_NOTIFICATION));
-
-        char interface[SSID_MAX_SIZE] = {0};
-        size_t numOfValidArgs[2]      = {0};
-        FieldsToParse fieldsToParse[] = {
-            {NULL /*opCode*/, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
-            {(void *)interface, &numOfValidArgs[1], DWPAL_STR_PARAM, NULL, sizeof(interface)},
-
-            /* Must be at the end */
-            {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
-
-        if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse, sizeof(interface)) ==
-            DWPAL_FAILURE) {
-            LOG(ERROR) << "DWPAL parse error ==> Abort";
-            return false;
-        }
-
-        auto iface_ids = beerocks::utils::get_ids_from_iface_string(interface);
-        msg->vap_id    = iface_ids.vap_id;
-
-        if (iface_ids.vap_id == beerocks::IFACE_RADIO_ID) {
-            // Ignore AP-ENABLED on radio
-            return true;
-        }
-
-        event_queue_push(ap_wlan_hal_dwpal::Event::AP_Enabled, msg_buff);
-    } break;
-
-    case ap_wlan_hal_dwpal::Event::Interface_Disabled:
-    case ap_wlan_hal_dwpal::Event::ACS_Failed: {
-        LOG(DEBUG) << buffer;
-        event_queue_push(event); // Forward to the AP manager
-    } break;
-
-    case ap_wlan_hal_dwpal::Event::MGMT_Frame: {
-
-        char vap[beerocks::message::IFACE_NAME_LENGTH] = {0};
-        char frame[ASSOCIATION_FRAME_SIZE]             = {0};
-        size_t numOfValidArgs[3]                       = {0};
-
-        FieldsToParse fieldsToParse[] = {
-            {NULL /*opCode*/, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
-            {(void *)vap, &numOfValidArgs[1], DWPAL_STR_PARAM, NULL, sizeof(vap)},
-            {(void *)frame, &numOfValidArgs[2], DWPAL_STR_PARAM, NULL, sizeof(frame)},
-            /* Must be at the end */
-            {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
-
-        if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse, sizeof(vap)) ==
-            DWPAL_FAILURE) {
-            LOG(ERROR) << "DWPAL parse error ==> Abort";
-            return false;
-        }
-
-        // Create the management frame notification event
-        if (frame[0] == 0) {
-            LOG(WARNING) << "Management frame received without data: " << buffer;
-            return true; // Just a warning, do not fail
-        }
-
-        auto mgmt_frame = create_mgmt_frame_notification(frame);
-        if (!mgmt_frame) {
-            LOG(WARNING) << "Failed creating management frame notification!";
-            return true; // Just a warning, do not fail
-        }
-
-        event_queue_push(ap_wlan_hal_dwpal::Event::MGMT_Frame, mgmt_frame);
-    } break;
 
     case ap_wlan_hal_dwpal::Event::AP_Sta_Possible_Psk_Mismatch: {
 
