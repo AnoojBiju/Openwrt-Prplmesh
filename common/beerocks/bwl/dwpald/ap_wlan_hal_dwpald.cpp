@@ -891,13 +891,7 @@ int ap_wlan_hal_dwpal::hap_evt_ap_disabled_clb(char *ifname, char *op_code, char
 }
 
 
-int ap_wlan_hal_dwpal::hap_evt_ap_sta_disconnected_clb(char *ifname, char *op_code, char *msg,
-                                                       size_t len)
-{
-    LOG(ERROR) << "Either entity shall register not for " << op_code
-               << "event or if register then override base class callback";
-    return 0;
-}
+
 
 int ap_wlan_hal_dwpal::hap_evt_interface_enabled_clb(char *ifname, char *op_code, char *msg,
                                                      size_t len)
@@ -3567,7 +3561,57 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
 
     return true;
 }
+int ap_wlan_hal_dwpal::hap_evt_ap_sta_disconnected_clb(char *ifname, char *op_code, char *buffer,
+                                                       size_t bufLen)
+{
+    // TODO: Change to HAL objects
+    auto msg_buff =
+        ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_CLIENT_DISCONNECTED_NOTIFICATION));
+    auto msg =
+        reinterpret_cast<sACTION_APMANAGER_CLIENT_DISCONNECTED_NOTIFICATION *>(msg_buff.get());
+    LOG_IF(!msg, FATAL) << "Memory allocation failed!";
 
+    // Initialize the message
+    memset(msg_buff.get(), 0, sizeof(sACTION_APMANAGER_CLIENT_DISCONNECTED_NOTIFICATION));
+
+    char VAP[SSID_MAX_SIZE]        = {0};
+    char MACAddress[MAC_ADDR_SIZE] = {0};
+    size_t numOfValidArgs[6]       = {0};
+    FieldsToParse fieldsToParse[]  = {
+        {NULL /*opCode*/, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
+        {(void *)VAP, &numOfValidArgs[1], DWPAL_STR_PARAM, NULL, sizeof(VAP)},
+        {(void *)MACAddress, &numOfValidArgs[2], DWPAL_STR_PARAM, NULL, sizeof(MACAddress)},
+        {(void *)&msg->params.reason, &numOfValidArgs[3], DWPAL_CHAR_PARAM, "reason=", 0},
+        {(void *)&msg->params.source, &numOfValidArgs[4], DWPAL_CHAR_PARAM, "source=", 0},
+        {(void *)&msg->params.type, &numOfValidArgs[5], DWPAL_CHAR_PARAM, "type=", 0},
+        /* Must be at the end */
+        {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
+
+    if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse, sizeof(VAP)) ==
+        DWPAL_FAILURE) {
+        LOG(ERROR) << "DWPAL parse error ==> Abort";
+        return false;
+    }
+
+    LOG(DEBUG) << "vap_id     : " << VAP;
+    LOG(DEBUG) << "MACAddress : " << MACAddress;
+    LOG(DEBUG) << "reason     : " << int(msg->params.reason);
+    LOG(DEBUG) << "source     : " << int(msg->params.source);
+    LOG(DEBUG) << "type       : " << int(msg->params.type);
+
+    for (uint8_t i = 0; i < (sizeof(numOfValidArgs) / sizeof(size_t)); i++) {
+        if (numOfValidArgs[i] == 0) {
+            LOG(ERROR) << "Failed reading parsed parameter " << (int)i << " ==> Abort";
+            return false;
+        }
+    }
+
+    msg->params.vap_id = beerocks::utils::get_ids_from_iface_string(VAP).vap_id;
+    msg->params.mac    = tlvf::mac_from_string(MACAddress);
+
+    ctx->event_queue_push(Event::STA_Disconnected, msg_buff); // send message to the AP manager
+    return 0;
+}
 int ap_wlan_hal_dwpal::hap_evt_ap_sta_connected_clb(char *ifname, char *op_code, char *buffer,
                                                     size_t bufLen)
 {
@@ -3749,48 +3793,8 @@ int ap_wlan_hal_dwpal::hap_evt_ap_sta_connected_clb(char *ifname, char *op_code,
 #endif
 static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t len)
 {
-    LOG(TRACE) << __func__ << " - opcode: |" << op_code << "|";
-
-    // For key-value parser.
-    //int64_t tmp_int;
-    //const char *tmp_str;
-
+    ctx->filter_bss_msg(buffer, len, op_code);
     auto event    = dwpal_to_bwl_event(op_code);
-    auto hal_conf = ctx->get_hal_conf();
-
-    // If there is monitored BSSs list, monitor all BSSs
-    if (!hal_conf.monitored_BSSs.empty()) {
-        if (event == ap_wlan_hal::Event::STA_Connected ||
-            event == ap_wlan_hal_dwpal::Event::STA_Disconnected ||
-            event == ap_wlan_hal_dwpal::Event::AP_Disabled ||
-            event == ap_wlan_hal_dwpal::Event::AP_Enabled) {
-
-            std::string tmp_buffer(buffer, MAX_TEMP_BUFFER_SIZE);
-            auto BSS_str_begin = tmp_buffer.find(BSS_IFNAME_PREFIX);
-            if (BSS_str_begin == std::string::npos) {
-                LOG(ERROR) << "No valid BSS information was found";
-                return -1;
-            }
-            auto BSS_str_end = tmp_buffer.find(" ", BSS_str_begin);
-            if (BSS_str_end == std::string::npos) {
-                LOG(ERROR) << "No valid BSS information was found";
-                return -1;
-            }
-            auto BSS_str   = std::string(tmp_buffer, BSS_str_begin, BSS_str_end - BSS_str_begin);
-            auto iface_ids = beerocks::utils::get_ids_from_iface_string(BSS_str);
-            if (iface_ids.vap_id == beerocks::IFACE_ID_INVALID) {
-                LOG(DEBUG) << "Event received on invalid BSS ifname, should not process the event!";
-                return 0;
-            }
-
-            // Check if the event's BSSID is present in the monitored BSSIDs list.
-            if (hal_conf.monitored_BSSs.find(BSS_str) == hal_conf.monitored_BSSs.end()) {
-                // Log print commented as to not flood the logs
-                //LOG(DEBUG) << "Event received on BSS " << BSS_str << " that is not on monitored BSSs list, ignoring";
-                return 0;
-            }
-        }
-    }
     switch (event) {
     case ap_wlan_hal_dwpal::Event::ACS_Failed: {
         ctx->hap_evt_acs_failed_clb(ifname, op_code, buffer, len);
@@ -3804,165 +3808,16 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
     case ap_wlan_hal_dwpal::Event::CSA_Finished: {
         ctx->hap_evt_ap_csa_finished_clb(ifname, op_code, buffer, len);
     } break;
+    case ap_wlan_hal_dwpal::Event::STA_Disconnected: {
+        ctx->hap_evt_ap_sta_disconnected_clb(ifname, op_code, buffer, len);
+    } break;
+    case ap_wlan_hal_dwpal::Event::STA_Connected: {
+        ctx->hap_evt_ap_sta_disconnected_clb(ifname, op_code, buffer, len);
+    } break;
     default: {
     } break;
     }
 #if 0
-    case Event::STA_Connected: {
-
-        // TODO: Change to HAL objects
-        auto msg_buff =
-            ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION));
-        auto msg =
-            reinterpret_cast<sACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION *>(msg_buff.get());
-        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
-
-        // Initialize the message
-        memset(msg_buff.get(), 0, sizeof(sACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION));
-
-        char VAP[SSID_MAX_SIZE]                = {0};
-        char MACAddress[MAC_ADDR_SIZE]         = {0};
-        int supported_rates[16]                = {0};
-        int RRM_CAP[8]                         = {0};
-        int HT_MCS[16]                         = {0};
-        int16_t VHT_MCS[16]                    = {0};
-        char ht_cap[8]                         = {0};
-        char vht_cap[16]                       = {0};
-        size_t numOfValidArgs[22]              = {0};
-        char assoc_req[ASSOCIATION_FRAME_SIZE] = {0};
-
-        //force to unknown if not available
-        uint8_t max_ch_width = NR_CHAN_WIDTH_UNKNOWN;
-
-        FieldsToParse fieldsToParse[] = {
-            {NULL /*opCode*/, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
-            {(void *)VAP, &numOfValidArgs[1], DWPAL_STR_PARAM, NULL, sizeof(VAP)},
-            {(void *)MACAddress, &numOfValidArgs[2], DWPAL_STR_PARAM, NULL, sizeof(MACAddress)},
-            {(void *)supported_rates, &numOfValidArgs[3], DWPAL_INT_ARRAY_PARAM,
-             "SupportedRates=", sizeof(supported_rates)},
-            {(void *)RRM_CAP, &numOfValidArgs[4], DWPAL_INT_HEX_ARRAY_PARAM,
-             "rrm_cap=", sizeof(RRM_CAP)},
-            {(void *)HT_MCS, &numOfValidArgs[5], DWPAL_INT_HEX_ARRAY_PARAM,
-             "HT_MCS=", sizeof(HT_MCS)},
-            {(void *)VHT_MCS, &numOfValidArgs[6], DWPAL_INT_HEX_ARRAY_PARAM,
-             "VHT_MCS=", sizeof(VHT_MCS)},
-            {(void *)ht_cap, &numOfValidArgs[7], DWPAL_STR_PARAM, "HT_CAP=", sizeof(ht_cap)},
-            {(void *)vht_cap, &numOfValidArgs[8], DWPAL_STR_PARAM, "VHT_CAP=", sizeof(vht_cap)},
-            {(void *)assoc_req, &numOfValidArgs[9], DWPAL_STR_PARAM,
-             "assoc_req=", sizeof(assoc_req)},
-            {(void *)&msg->params.capabilities.btm_supported, &numOfValidArgs[10], DWPAL_CHAR_PARAM,
-             "btm_supported=", 0},
-            {(void *)&msg->params.capabilities.cell_capa, &numOfValidArgs[11], DWPAL_CHAR_PARAM,
-             "cell_capa=", 0},
-            {(void *)&msg->params.capabilities.band_2g_capable, &numOfValidArgs[12],
-             DWPAL_CHAR_PARAM, "band_2g_capable=", 0},
-            {(void *)&msg->params.capabilities.band_5g_capable, &numOfValidArgs[13],
-             DWPAL_CHAR_PARAM, "band_5g_capable=", 0},
-            {(void *)&msg->params.capabilities.rrm_supported, &numOfValidArgs[14], DWPAL_CHAR_PARAM,
-             "rrm_supported=", 0},
-            {(void *)&max_ch_width, &numOfValidArgs[15], DWPAL_CHAR_PARAM, "max_ch_width=", 0},
-            {(void *)&msg->params.capabilities.max_streams, &numOfValidArgs[16], DWPAL_CHAR_PARAM,
-             "max_streams=", 0},
-            {(void *)&msg->params.capabilities.phy_mode, &numOfValidArgs[17], DWPAL_CHAR_PARAM,
-             "phy_mode=", 0},
-            {(void *)&msg->params.capabilities.max_mcs, &numOfValidArgs[18], DWPAL_CHAR_PARAM,
-             "max_mcs=", 0},
-            {(void *)&msg->params.capabilities.max_tx_power, &numOfValidArgs[19], DWPAL_CHAR_PARAM,
-             "max_tx_power=", 0},
-            {(void *)&msg->params.capabilities.mumimo_supported, &numOfValidArgs[20],
-             DWPAL_CHAR_PARAM, "mu_mimo=", 0},
-            {(void *)&msg->params.multi_ap_profile, &numOfValidArgs[21], DWPAL_INT_PARAM,
-             "multi_ap_profile=", 0},
-            /* Must be at the end */
-            {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
-
-        if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse, sizeof(VAP)) ==
-            DWPAL_FAILURE) {
-            LOG(ERROR) << "DWPAL parse error ==> Abort";
-            return false;
-        }
-        msg->params.capabilities.max_ch_width = dwpal_ch_width_nr_to_beerocks_bw(max_ch_width);
-
-        LOG(DEBUG) << "vap_id           : " << VAP;
-        LOG(DEBUG) << "MACAddress       : " << MACAddress;
-        LOG(DEBUG) << "supported_rates  : " << std::dec << supported_rates[0]
-                   << " (first element only)";
-        LOG(DEBUG) << "RRM_CAP          : 0x" << std::hex << RRM_CAP[0] << " (first element only)";
-        LOG(DEBUG) << "HT_MCS           : 0x" << std::hex << HT_MCS[0] << " (first element only)";
-        LOG(DEBUG) << "VHT_MCS          : 0x" << std::hex << VHT_MCS[0] << " (first element only)";
-        LOG(DEBUG) << "HT_CAP           : " << ht_cap;
-        LOG(DEBUG) << "VHT_CAP          : " << vht_cap;
-        LOG(DEBUG) << "btm_supported    : " << (int)msg->params.capabilities.btm_supported;
-        LOG(DEBUG) << "cell_capa        : " << (int)msg->params.capabilities.cell_capa;
-        LOG(DEBUG) << "band_2g_capable  : " << (int)msg->params.capabilities.band_2g_capable;
-        LOG(DEBUG) << "band_5g_capable  : " << (int)msg->params.capabilities.band_5g_capable;
-        LOG(DEBUG) << "rrm_supported    : " << (int)msg->params.capabilities.rrm_supported;
-        LOG(DEBUG) << "max_ch_width     : " << (int)msg->params.capabilities.max_ch_width;
-        LOG(DEBUG) << "max_streams      : " << (int)msg->params.capabilities.max_streams;
-        LOG(DEBUG) << "phy_mode         : " << (int)msg->params.capabilities.phy_mode;
-        LOG(DEBUG) << "max_mcs          : " << (int)msg->params.capabilities.max_mcs;
-        LOG(DEBUG) << "max_tx_power     : " << (int)msg->params.capabilities.max_tx_power;
-        LOG(DEBUG) << "mumimo_supported : " << (int)msg->params.capabilities.mumimo_supported;
-        LOG(DEBUG) << "multi_ap_profile : " << (int)msg->params.multi_ap_profile;
-        LOG(DEBUG) << "assoc_req: " << assoc_req;
-
-        for (uint8_t i = 0; i < (sizeof(numOfValidArgs) / sizeof(size_t)); i++) {
-            if (numOfValidArgs[i] == 0) {
-                // Skip validation on multi-ap profile since it is not mandatory.
-                if (i == 21) {
-                    // If the validation check fails, set the profile parameter to zero (not a Mult-AP
-                    // Station), to make sure DWPAL did not put garbage there.
-                    msg->params.multi_ap_profile = 0;
-                    continue;
-                }
-                LOG(ERROR) << "Failed reading parsed parameter " << (int)i
-                           << " ==> Continue with default values";
-            }
-        }
-
-        msg->params.vap_id = beerocks::utils::get_ids_from_iface_string(VAP).vap_id;
-        msg->params.mac    = tlvf::mac_from_string(MACAddress);
-
-        //convert the hex string to binary
-        auto binary_str                      = get_binary_association_frame(assoc_req);
-        msg->params.association_frame_length = binary_str.length();
-
-        std::copy_n(&binary_str[0], binary_str.length(), msg->params.association_frame);
-
-        std::string ht_cap_str(ht_cap);
-        get_ht_mcs_capabilities(HT_MCS, ht_cap_str, msg->params.capabilities);
-
-        if (get_radio_info().is_5ghz) {
-            std::string vht_cap_str(vht_cap);
-            get_vht_mcs_capabilities(VHT_MCS, vht_cap_str, msg->params.capabilities);
-        }
-
-        get_mcs_from_supported_rates(supported_rates, msg->params.capabilities);
-
-        parse_rrm_capabilities(RRM_CAP, msg->params.capabilities);
-
-        son::wireless_utils::print_station_capabilities(msg->params.capabilities);
-
-        // No need to store clients forever - may cause very big memory usage
-        if (m_completed_vaps.find(msg->params.vap_id) != m_completed_vaps.end()) {
-            // To prevent duplication of generation of connected event for clients,
-            // need to add associated clients to the "handled_clients" set
-            m_handled_clients.insert(msg->params.mac);
-        }
-
-        // Send the event to the AP manager
-        event_queue_push(Event::STA_Connected, msg_buff);
-
-        // Tunnel the association/re-association request to the controller
-        if (assoc_req[0] != 0) {
-            auto mgmt_frame = create_mgmt_frame_notification(assoc_req);
-            if (mgmt_frame) {
-                event_queue_push(Event::MGMT_Frame, mgmt_frame);
-            }
-        }
-
-        break;
-    }
 
     case Event::STA_Disconnected: {
         // TODO: Change to HAL objects
