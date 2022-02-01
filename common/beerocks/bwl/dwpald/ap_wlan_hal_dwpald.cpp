@@ -745,6 +745,130 @@ int ap_wlan_hal_dwpal::hap_evt_interface_disabled_clb(char *ifname, char *op_cod
     ctx->event_queue_push(event); // Forward to the AP manager
     return 0;
 }
+static bool is_acs_completed_scan(char *buffer, int bufLen)
+{
+    size_t numOfValidArgs[3]      = {0};
+    char scan[32]                 = {0};
+    FieldsToParse fieldsToParse[] = {
+        {NULL /* opCode */, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
+        {NULL /* iface */, &numOfValidArgs[1], DWPAL_STR_PARAM, NULL, 0},
+        {scan /* sub operation */, &numOfValidArgs[2], DWPAL_STR_PARAM, NULL, sizeof(scan)},
+        /* Must be at the end */
+        {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
+
+    if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse, sizeof(scan)) == DWPAL_FAILURE)
+        return false;
+
+    return !strncmp(scan, "SCAN", 4);
+}
+int ap_wlan_hal_dwpal::hap_evt_acs_completed_clb(char *ifname, char *op_code, char *buffer,
+                                                 size_t bufLen)
+{
+    LOG(DEBUG) << buffer;
+    auto event = dwpal_to_bwl_event(op_code);
+    auto csa_event_filtering_timestamp = ctx->get_csa_event_filtering_timestamp();
+    bool drop_csa = ctx->get_drop_csa();
+
+    if (event == ap_wlan_hal_dwpal::Event::CSA_Finished) {
+        if (std::chrono::steady_clock::now() <
+                (csa_event_filtering_timestamp +
+                 std::chrono::milliseconds(CSA_EVENT_FILTERING_TIMEOUT_MS)) &&
+            drop_csa) {
+            LOG(DEBUG) << "CSA_Finished - dump event - arrive on csa filtering timeout window";
+            return 0;
+        }
+    } else {
+        csa_event_filtering_timestamp = std::chrono::steady_clock::now();
+        // ignore ACS_COMPLETED <iface> SCAN
+        if (is_acs_completed_scan(buffer, bufLen)) {
+            LOG(DEBUG) << "Received ACS_COMPLETED SCAN event, ignoring";
+            return 0;
+        }
+    }
+
+    char reason[32]               = {0};
+    char VAP[SSID_MAX_SIZE]       = {0};
+    std::string channelStr        = (event == ap_wlan_hal_dwpal::Event::CSA_Finished) ? "Channel=" : "channel=";
+    size_t numOfValidArgs[8]      = {0};
+    FieldsToParse fieldsToParse[] = {
+        {NULL /*opCode*/, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
+        {(void *)VAP, &numOfValidArgs[1], DWPAL_STR_PARAM, NULL, sizeof(VAP)},
+        {(void *)&m_radio_info.channel, &numOfValidArgs[2], DWPAL_INT_PARAM, channelStr.c_str(), 0},
+        {(void *)&m_radio_info.bandwidth, &numOfValidArgs[3], DWPAL_INT_PARAM,
+         "OperatingChannelBandwidt=", 0},
+        {(void *)&m_radio_info.channel_ext_above, &numOfValidArgs[4], DWPAL_INT_PARAM,
+         "ExtensionChannel=", 0},
+        {(void *)&m_radio_info.vht_center_freq, &numOfValidArgs[5], DWPAL_INT_PARAM, "cf1=", 0},
+        {(void *)&m_radio_info.is_dfs_channel, &numOfValidArgs[6], DWPAL_BOOL_PARAM,
+         "dfs_chan=", 0},
+        {(void *)&reason, &numOfValidArgs[7], DWPAL_STR_PARAM, "reason=", sizeof(reason)},
+        /* Must be at the end */
+        {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
+    auto radio_info = ctx->get_radio_info();
+    if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse, sizeof(radio_info)) ==
+        DWPAL_FAILURE) {
+        LOG(ERROR) << "DWPAL parse error ==> Abort";
+        return -1;
+    }
+
+    /* TEMP: Traces... */
+    LOG(DEBUG) << "numOfValidArgs[1]= " << numOfValidArgs[1] << " " << VAP;
+    LOG(DEBUG) << "numOfValidArgs[2]= " << numOfValidArgs[2] << " " << channelStr
+               << radio_info.channel;
+    LOG(DEBUG) << "numOfValidArgs[3]= " << numOfValidArgs[3]
+               << " OperatingChannelBandwidt= " << (int)radio_info.bandwidth;
+    LOG(DEBUG) << "numOfValidArgs[4]= " << numOfValidArgs[4]
+               << " ExtensionChannel= " << (int)radio_info.channel_ext_above;
+    LOG(DEBUG) << "numOfValidArgs[5]= " << numOfValidArgs[5]
+               << " cf1= " << (int)radio_info.vht_center_freq;
+    LOG(DEBUG) << "numOfValidArgs[6]= " << numOfValidArgs[6]
+               << " dfs_chan= " << (int)radio_info.is_dfs_channel;
+    LOG(DEBUG) << "numOfValidArgs[7]= " << numOfValidArgs[7] << " reason= " << reason;
+    /* End of TEMP: Traces... */
+
+    for (uint8_t i = 0; i < (sizeof(numOfValidArgs) / sizeof(size_t)); i++) {
+        if (numOfValidArgs[i] == 0) {
+            LOG(ERROR) << "Failed reading parsed parameter " << (int)i << " ==> Abort";
+            return -1;
+        }
+    }
+
+    if (beerocks::utils::get_ids_from_iface_string(VAP).vap_id != beerocks::IFACE_RADIO_ID) {
+        LOG(INFO) << "Ignoring ACS/CSA events on non Radio interface";
+        return 0;
+    }
+
+    // Channel switch reason
+    ChanSwReason chanSwReason = ChanSwReason::Unknown;
+    auto tmpStr               = std::string(reason);
+    if (tmpStr.find("RADAR") != std::string::npos) {
+        chanSwReason = ChanSwReason::Radar;
+    } else if (tmpStr.find("20_COEXISTANCE") != std::string::npos) {
+        chanSwReason = ChanSwReason::CoEx_20;
+    } else if (tmpStr.find("40_COEXISTANCE") != std::string::npos) {
+        chanSwReason = ChanSwReason::CoEx_40;
+    }
+    radio_info.last_csa_sw_reason = chanSwReason;
+
+    // Update the radio information structure
+    if (son::wireless_utils::which_freq(radio_info.channel) == beerocks::eFreqType::FREQ_5G) {
+        radio_info.is_5ghz = true;
+    }
+
+    ctx->event_queue_push(event);
+
+    // TODO: WHY?!
+    if (event == ap_wlan_hal_dwpal::Event::ACS_Completed) {
+        LOG(DEBUG) << "ACS_COMPLETED >>> adding CSA_FINISHED event as well";
+        ctx->event_queue_push(ap_wlan_hal_dwpal::Event::CSA_Finished);
+    }
+    return 0;
+}
+int ap_wlan_hal_dwpal::hap_evt_ap_csa_finished_clb(char *ifname, char *op_code, char *msg,
+                                                   size_t len)
+{
+    return ctx->hap_evt_acs_completed_clb(ifname, op_code, msg, len);
+}
 #if 0
 int ap_wlan_hal_dwpal::hap_evt_ap_enabled_clb(char *ifname, char *op_code, char *msg, size_t len)
 {
@@ -793,13 +917,6 @@ int ap_wlan_hal_dwpal::hap_evt_interface_disabled_clb(char *ifname, char *op_cod
 }
 
 int ap_wlan_hal_dwpal::hap_evt_acs_started_clb(char *ifname, char *op_code, char *msg, size_t len)
-{
-    LOG(ERROR) << "Either entity shall register not for " << op_code
-               << "event or if register then override base class callback";
-    return 0;
-}
-
-int ap_wlan_hal_dwpal::hap_evt_acs_completed_clb(char *ifname, char *op_code, char *msg, size_t len)
 {
     LOG(ERROR) << "Either entity shall register not for " << op_code
                << "event or if register then override base class callback";
@@ -2350,23 +2467,6 @@ bool ap_wlan_hal_dwpal::start_wps_pbc()
     return true;
 }
 
-static bool is_acs_completed_scan(char *buffer, int bufLen)
-{
-    size_t numOfValidArgs[3]      = {0};
-    char scan[32]                 = {0};
-    FieldsToParse fieldsToParse[] = {
-        {NULL /* opCode */, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
-        {NULL /* iface */, &numOfValidArgs[1], DWPAL_STR_PARAM, NULL, 0},
-        {scan /* sub operation */, &numOfValidArgs[2], DWPAL_STR_PARAM, NULL, sizeof(scan)},
-        /* Must be at the end */
-        {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
-
-    if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse, sizeof(scan)) == DWPAL_FAILURE)
-        return false;
-
-    return !strncmp(scan, "SCAN", 4);
-}
-
 int ap_wlan_hal_dwpal::filter_bss_msg(char *buffer, int bufLen, const std::string &opcode)
 {
     LOG(TRACE) << __func__ << " - opcode: |" << opcode << "|";
@@ -3498,13 +3598,15 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
     //int64_t tmp_int;
     //const char *tmp_str;
 
-    auto event = dwpal_to_bwl_event(op_code);
+    auto event    = dwpal_to_bwl_event(op_code);
     auto hal_conf = ctx->get_hal_conf();
 
     // If there is monitored BSSs list, monitor all BSSs
     if (!hal_conf.monitored_BSSs.empty()) {
-        if (event == ap_wlan_hal::Event::STA_Connected || event == ap_wlan_hal_dwpal::Event::STA_Disconnected ||
-            event == ap_wlan_hal_dwpal::Event::AP_Disabled || event == ap_wlan_hal_dwpal::Event::AP_Enabled) {
+        if (event == ap_wlan_hal::Event::STA_Connected ||
+            event == ap_wlan_hal_dwpal::Event::STA_Disconnected ||
+            event == ap_wlan_hal_dwpal::Event::AP_Disabled ||
+            event == ap_wlan_hal_dwpal::Event::AP_Enabled) {
 
             std::string tmp_buffer(buffer, MAX_TEMP_BUFFER_SIZE);
             auto BSS_str_begin = tmp_buffer.find(BSS_IFNAME_PREFIX);
@@ -3533,10 +3635,16 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
         }
     }
     switch (event) {
-    case ap_wlan_hal_dwpal::Event::Interface_Disabled:{
+    case ap_wlan_hal_dwpal::Event::Interface_Disabled: {
         ctx->hap_evt_interface_disabled_clb(ifname, op_code, buffer, len);
     } break;
-    default:{
+    case ap_wlan_hal_dwpal::Event::ACS_Completed: {
+        ctx->hap_evt_acs_completed_clb(ifname, op_code, buffer, len);
+    } break;
+    case ap_wlan_hal_dwpal::Event::CSA_Finished: {
+        ctx->hap_evt_ap_csa_finished_clb(ifname, op_code, buffer, len);
+    } break;
+    default: {
     } break;
     }
 #if 0
@@ -4559,41 +4667,39 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
     }
 
     return true;
-    #endif
+#endif
     return 0;
 }
-
 
 void ap_wlan_hal_dwpal::hostap_attach(char *ifname)
 {
     LOG(ERROR) << "Anant:Return of connect" << dwpald_connect("ap_manager");
     static dwpald_hostap_event hostap_event_handlers[] = {
         {EVENT("AP-ENABLED"), hap_evt_callback},
-            {EVENT("AP-DISABLED"), hap_evt_callback},
-            {EVENT("AP-STA-CONNECTED"), hap_evt_callback},
-            {EVENT("AP-STA-DISCONNECTED"), hap_evt_callback},
-            {EVENT("UNCONNECTED-STA-RSSI"), hap_evt_callback},
-            {EVENT("INTERFACE-ENABLED"), hap_evt_callback},
-            {EVENT("INTERFACE-DISABLED"), hap_evt_callback},
-            {EVENT("ACS-STARTED"), hap_evt_callback},
-            {EVENT("ACS-COMPLETED"), hap_evt_callback},
-            {EVENT("ACS-FAILED"), hap_evt_callback},
-            {EVENT("AP-CSA-FINISHED"), hap_evt_callback},
-            {EVENT("BSS-TM-QUERY"), hap_evt_callback},
-            {EVENT("BSS-TM-RESP"), hap_evt_callback},
-            {EVENT("DFS-CAC-START"), hap_evt_callback},
-            {EVENT("DFS-CAC-COMPLETED"), hap_evt_callback},
-            {EVENT("DFS-NOP-FINISHED"), hap_evt_callback},
-            {EVENT("LTQ-SOFTBLOCK-DROP"), hap_evt_callback},
-            {EVENT("AP-ACTION-FRAME-RECEIVED"), hap_evt_callback},
-            {EVENT("AP-STA-POSSIBLE-PSK-MISMATCH"), hap_evt_callback}};
-        m_hostap_event_handlers     = hostap_event_handlers;
+        {EVENT("AP-DISABLED"), hap_evt_callback},
+        {EVENT("AP-STA-CONNECTED"), hap_evt_callback},
+        {EVENT("AP-STA-DISCONNECTED"), hap_evt_callback},
+        {EVENT("UNCONNECTED-STA-RSSI"), hap_evt_callback},
+        {EVENT("INTERFACE-ENABLED"), hap_evt_callback},
+        {EVENT("INTERFACE-DISABLED"), hap_evt_callback},
+        {EVENT("ACS-STARTED"), hap_evt_callback},
+        {EVENT("ACS-COMPLETED"), hap_evt_callback},
+        {EVENT("ACS-FAILED"), hap_evt_callback},
+        {EVENT("AP-CSA-FINISHED"), hap_evt_callback},
+        {EVENT("BSS-TM-QUERY"), hap_evt_callback},
+        {EVENT("BSS-TM-RESP"), hap_evt_callback},
+        {EVENT("DFS-CAC-START"), hap_evt_callback},
+        {EVENT("DFS-CAC-COMPLETED"), hap_evt_callback},
+        {EVENT("DFS-NOP-FINISHED"), hap_evt_callback},
+        {EVENT("LTQ-SOFTBLOCK-DROP"), hap_evt_callback},
+        {EVENT("AP-ACTION-FRAME-RECEIVED"), hap_evt_callback},
+        {EVENT("AP-STA-POSSIBLE-PSK-MISMATCH"), hap_evt_callback}};
+    m_hostap_event_handlers     = hostap_event_handlers;
     m_num_hostap_event_handlers = sizeof(hostap_event_handlers) / sizeof(dwpald_hostap_event);
     dwpald_start_listener();
     LOG(ERROR) << "Anant hostap attach" << ifname << "return value"
                << dwpald_hostap_attach(ifname, m_num_hostap_event_handlers, m_hostap_event_handlers,
                                        0);
-    
 }
 
 bool ap_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)
@@ -4602,7 +4708,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)
     return false;
 }
 
-} // namespace dwpal
+} // namespace bwl
 
 std::shared_ptr<ap_wlan_hal> ap_wlan_hal_create(std::string iface_name, hal_conf_t hal_conf,
                                                 base_wlan_hal::hal_event_cb_t callback)

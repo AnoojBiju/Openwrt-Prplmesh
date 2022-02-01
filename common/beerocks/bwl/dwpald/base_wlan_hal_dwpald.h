@@ -102,7 +102,7 @@ public:
     virtual int hap_evt_ap_sta_possible_psk_mismatch_clb(char *ifname, char *op_code, char *msg,
                                                          size_t len);
     virtual void hostap_attach(char *ifname) = 0;
-    
+
     /**
      * @brief Structure to hold event and callback mapping
      * This will be used while registering using dwpald_hostap_attach.
