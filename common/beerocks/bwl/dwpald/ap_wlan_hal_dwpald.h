@@ -110,23 +110,34 @@ public:
     int filter_bss_msg(char *buffer, int bufLen, const std::string &opcode);
     virtual int hap_evt_interface_disabled_clb(char *ifname, char *op_code, char *msg,
                                                size_t len) override;
-    virtual int hap_evt_acs_completed_clb(char *ifname, char *op_code, char *msg, size_t len) override;
-    virtual int hap_evt_ap_csa_finished_clb(char *ifname, char *op_code, char *msg, size_t len) override;
+    virtual int hap_evt_acs_completed_clb(char *ifname, char *op_code, char *msg,
+                                          size_t len) override;
+    virtual int hap_evt_ap_csa_finished_clb(char *ifname, char *op_code, char *msg,
+                                            size_t len) override;
     virtual int hap_evt_acs_failed_clb(char *ifname, char *op_code, char *msg, size_t len) override;
-    virtual int hap_evt_ap_sta_connected_clb(char *ifname, char *op_code, char *msg, size_t len) override;
-    virtual int hap_evt_ap_sta_disconnected_clb(char *ifname, char *op_code, char *msg, size_t len) override;
+    virtual int hap_evt_ap_sta_connected_clb(char *ifname, char *op_code, char *msg,
+                                             size_t len) override;
+    virtual int hap_evt_ap_sta_disconnected_clb(char *ifname, char *op_code, char *msg,
+                                                size_t len) override;
     virtual int hap_evt_unconnected_sta_rssi_clb(char *ifname, char *op_code, char *msg,
                                                  size_t len) override;
-    virtual int hap_evt_ltq_softblock_drop_clb(char *ifname, char *op_code, char *msg, size_t len) override;
-    virtual int hap_evt_bss_tm_query_clb(char *ifname, char *op_code, char *msg, size_t len) override;
-    virtual int hap_evt_bss_tm_resp_clb(char *ifname, char *op_code, char *msg, size_t len) override;
-    virtual int hap_evt_dfs_cac_start_clb(char *ifname, char *op_code, char *msg, size_t len) override;
-    virtual int hap_evt_dfs_cac_completed_clb(char *ifname, char *op_code, char *msg, size_t len) override;
-    virtual int hap_evt_dfs_nop_finished_clb(char *ifname, char *op_code, char *msg, size_t len) override;
-    virtual int hap_evt_ap_disabled_clb(char *ifname, char *op_code, char *msg, size_t len) override;
+    virtual int hap_evt_ltq_softblock_drop_clb(char *ifname, char *op_code, char *msg,
+                                               size_t len) override;
+    virtual int hap_evt_bss_tm_query_clb(char *ifname, char *op_code, char *msg,
+                                         size_t len) override;
+    virtual int hap_evt_bss_tm_resp_clb(char *ifname, char *op_code, char *msg,
+                                        size_t len) override;
+    virtual int hap_evt_dfs_cac_start_clb(char *ifname, char *op_code, char *msg,
+                                          size_t len) override;
+    virtual int hap_evt_dfs_cac_completed_clb(char *ifname, char *op_code, char *msg,
+                                              size_t len) override;
+    virtual int hap_evt_dfs_nop_finished_clb(char *ifname, char *op_code, char *msg,
+                                             size_t len) override;
+    virtual int hap_evt_ap_disabled_clb(char *ifname, char *op_code, char *msg,
+                                        size_t len) override;
     virtual int hap_evt_ap_enabled_clb(char *ifname, char *op_code, char *msg, size_t len) override;
     virtual int hap_evt_ap_action_frame_received_clb(char *ifname, char *op_code, char *msg,
-                                                     size_t len) override;                                                     
+                                                     size_t len) override;
     virtual int hap_evt_ap_sta_possible_psk_mismatch_clb(char *ifname, char *op_code, char *msg,
                                                          size_t len) override;
 #if 0
@@ -136,36 +147,21 @@ public:
     virtual int hap_evt_acs_completed_clb(char *ifname, char *op_code, char *msg, size_t len) override;
     virtual int hap_evt_acs_failed_clb(char *ifname, char *op_code, char *msg, size_t len) override;
     virtual int hap_evt_ap_csa_finished_clb(char *ifname, char *op_code, char *msg, size_t len) override;
-    
+
 #endif
     std::chrono::steady_clock::time_point &get_csa_event_filtering_timestamp()
     {
         return m_csa_event_filtering_timestamp;
     }
-    bool &get_drop_csa()
-    {
-        return m_drop_csa;
-    }
-    std::set<int> &get_completed_vap()
-    {
-        return m_completed_vaps;
-    }
-    std::unordered_set<sMacAddr> &get_handled_clients()
-    {
-        return m_handled_clients;
-    }
+    bool &get_drop_csa() { return m_drop_csa; }
+    std::set<int> &get_completed_vap() { return m_completed_vaps; }
+    std::unordered_set<sMacAddr> &get_handled_clients() { return m_handled_clients; }
     std::chrono::steady_clock::time_point &get_unassoc_measure_start()
     {
         return m_unassoc_measure_start;
     }
-    int &get_unassoc_measure_window_size()
-    {
-        return m_unassoc_measure_window_size;
-    }
-    int &get_unassoc_measure_delay()
-    {
-        return m_unassoc_measure_delay;
-    }
+    int &get_unassoc_measure_window_size() { return m_unassoc_measure_window_size; }
+    int &get_unassoc_measure_delay() { return m_unassoc_measure_delay; }
     // Protected methods:
 protected:
     virtual bool process_dwpal_event(char *buffer, int bufLen, const std::string &opcode) override;
