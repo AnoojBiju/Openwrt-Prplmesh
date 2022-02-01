@@ -933,12 +933,7 @@ int ap_wlan_hal_dwpal::hap_evt_ap_csa_finished_clb(char *ifname, char *op_code, 
 
 
 
-int ap_wlan_hal_dwpal::hap_evt_bss_tm_resp_clb(char *ifname, char *op_code, char *msg, size_t len)
-{
-    LOG(ERROR) << "Either entity shall register not for " << op_code
-               << "event or if register then override base class callback";
-    return 0;
-}
+
 
 int ap_wlan_hal_dwpal::hap_evt_dfs_cac_start_clb(char *ifname, char *op_code, char *msg, size_t len)
 {
@@ -1001,7 +996,7 @@ HALState ap_wlan_hal_dwpal::attach(bool block)
 
     // On Operational send the AP_Attached event to the AP Manager
     if (state == HALState::Operational) {
-        event_queue_push(Event::AP_Attached);
+        event_queue_push(ap_wlan_hal_dwpal::Event::AP_Attached);
     }
 
     return state;
@@ -2395,7 +2390,7 @@ bool ap_wlan_hal_dwpal::generate_connected_clients_events(
                 continue;
             }
 
-            event_queue_push(Event::STA_Connected, msg_buff); // send message to the AP manager
+            event_queue_push(ap_wlan_hal_dwpal::Event::STA_Connected, msg_buff); // send message to the AP manager
 
         } while (replyLen > 0);
 
@@ -2621,7 +2616,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         // TODO: WHY?!
         if (event == ap_wlan_hal_dwpal::Event::ACS_Completed) {
             LOG(DEBUG) << "ACS_COMPLETED >>> adding CSA_FINISHED event as well";
-            event_queue_push(Event::CSA_Finished);
+            event_queue_push(ap_wlan_hal_dwpal::Event::CSA_Finished);
         }
         break;
     }
@@ -2769,13 +2764,13 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         }
 
         // Send the event to the AP manager
-        event_queue_push(Event::STA_Connected, msg_buff);
+        event_queue_push(ap_wlan_hal_dwpal::Event::STA_Connected, msg_buff);
 
         // Tunnel the association/re-association request to the controller
         if (assoc_req[0] != 0) {
             auto mgmt_frame = create_mgmt_frame_notification(assoc_req);
             if (mgmt_frame) {
-                event_queue_push(Event::MGMT_Frame, mgmt_frame);
+                event_queue_push(ap_wlan_hal_dwpal::Event::MGMT_Frame, mgmt_frame);
             }
         }
 
@@ -2828,7 +2823,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         msg->params.vap_id = beerocks::utils::get_ids_from_iface_string(VAP).vap_id;
         msg->params.mac    = tlvf::mac_from_string(MACAddress);
 
-        event_queue_push(Event::STA_Disconnected, msg_buff); // send message to the AP manager
+        event_queue_push(ap_wlan_hal_dwpal::Event::STA_Disconnected, msg_buff); // send message to the AP manager
         break;
     }
 
@@ -2935,7 +2930,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         }
 
         // Add the message to the queue
-        event_queue_push(Event::STA_Unassoc_RSSI, msg_buff);
+        event_queue_push(ap_wlan_hal_dwpal::Event::STA_Unassoc_RSSI, msg_buff);
         break;
     }
 
@@ -3047,7 +3042,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
             msg->params.bssid = tlvf::mac_from_string(vap_bssid);
 
             // Add the message to the queue
-            event_queue_push(Event::STA_Steering_Probe_Req, msg_buff);
+            event_queue_push(ap_wlan_hal_dwpal::Event::STA_Steering_Probe_Req, msg_buff);
 
         } else if (message_type == s80211MgmtFrame::eType::AUTH) {
 
@@ -3141,7 +3136,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
             msg->params.bssid = tlvf::mac_from_string(vap_bssid);
 
             // Add the message to the queue
-            event_queue_push(Event::STA_Steering_Auth_Fail, msg_buff);
+            event_queue_push(ap_wlan_hal_dwpal::Event::STA_Steering_Auth_Fail, msg_buff);
         } else {
             LOG(ERROR) << "Unknown message type!";
             break;
@@ -3231,7 +3226,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         msg->params.source_bssid = tlvf::mac_from_string(bssid);
 
         // Add the message to the queue
-        event_queue_push(Event::BSS_TM_Response, msg_buff);
+        event_queue_push(ap_wlan_hal_dwpal::Event::BSS_TM_Response, msg_buff);
         break;
     }
     case ap_wlan_hal_dwpal::Event::DFS_CAC_Started: {
@@ -3286,7 +3281,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         msg->params.cac_duration_sec = beerocks::string_utils::stoi(tmp_string);
 
         // Add the message to the queue
-        event_queue_push(Event::DFS_CAC_Started, msg_buff);
+        event_queue_push(ap_wlan_hal_dwpal::Event::DFS_CAC_Started, msg_buff);
         break;
     }
     case ap_wlan_hal_dwpal::Event::DFS_CAC_Completed: {
@@ -3352,7 +3347,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         msg->params.bandwidth = dwpal_bw_to_beerocks_bw(tmp_int);
 
         // Add the message to the queue
-        event_queue_push(Event::DFS_CAC_Completed, msg_buff);
+        event_queue_push(ap_wlan_hal_dwpal::Event::DFS_CAC_Completed, msg_buff);
         break;
     }
 
@@ -3405,7 +3400,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         msg->params.bandwidth = dwpal_bw_to_beerocks_bw(chan_width);
 
         // Add the message to the queue
-        event_queue_push(Event::DFS_NOP_Finished, msg_buff);
+        event_queue_push(ap_wlan_hal_dwpal::Event::DFS_NOP_Finished, msg_buff);
         break;
     }
 
@@ -3433,7 +3428,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         auto iface_ids = beerocks::utils::get_ids_from_iface_string(interface);
         msg->vap_id    = iface_ids.vap_id;
 
-        event_queue_push(Event::AP_Disabled, msg_buff); // send message to the AP manager
+        event_queue_push(ap_wlan_hal_dwpal::Event::AP_Disabled, msg_buff); // send message to the AP manager
 
     } break;
     case ap_wlan_hal_dwpal::Event::AP_Enabled: {
@@ -3466,7 +3461,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
             return true;
         }
 
-        event_queue_push(Event::AP_Enabled, msg_buff);
+        event_queue_push(ap_wlan_hal_dwpal::Event::AP_Enabled, msg_buff);
     } break;
 
     case ap_wlan_hal_dwpal::Event::Interface_Disabled:
@@ -3506,7 +3501,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
             return true; // Just a warning, do not fail
         }
 
-        event_queue_push(Event::MGMT_Frame, mgmt_frame);
+        event_queue_push(ap_wlan_hal_dwpal::Event::MGMT_Frame, mgmt_frame);
     } break;
 
     case ap_wlan_hal_dwpal::Event::AP_Sta_Possible_Psk_Mismatch: {
@@ -3529,7 +3524,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         msg->sta_mac = tlvf::mac_from_string(client_mac_str);
         LOG(DEBUG) << "sta possible psk mismatch: offending STA mac: " << msg->sta_mac;
 
-        event_queue_push(Event::AP_Sta_Possible_Psk_Mismatch,
+        event_queue_push(ap_wlan_hal_dwpal::Event::AP_Sta_Possible_Psk_Mismatch,
                          msg_buff); // send message to the AP manager
         break;
     }
@@ -3651,7 +3646,7 @@ int ap_wlan_hal_dwpal::hap_evt_unconnected_sta_rssi_clb(char *ifname, char *op_c
     }
 
     // Add the message to the queue
-    ctx->event_queue_push(Event::STA_Unassoc_RSSI, msg_buff);
+    ctx->event_queue_push(ap_wlan_hal_dwpal::Event::STA_Unassoc_RSSI, msg_buff);
      return 0;
 }
 int ap_wlan_hal_dwpal::hap_evt_ltq_softblock_drop_clb(char *ifname, char *op_code, char *buffer,
@@ -3896,6 +3891,60 @@ int ap_wlan_hal_dwpal::hap_evt_bss_tm_query_clb(char *ifname, char *op_code, cha
     ctx->sta_bss_steer(client_mac_str, bssid, op_class, radio_info.channel, 0, 2, 0);
     return 0;
 }
+int ap_wlan_hal_dwpal::hap_evt_bss_tm_resp_clb(char *ifname, char *op_code, char *buffer, size_t bufLen)
+{
+    // TODO: Change to HAL objects
+    auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_CLIENT_BSS_STEER_RESPONSE));
+    auto msg = reinterpret_cast<sACTION_APMANAGER_CLIENT_BSS_STEER_RESPONSE *>(msg_buff.get());
+    LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+    // Initialize the message
+    memset(msg_buff.get(), 0, sizeof(sACTION_APMANAGER_CLIENT_BSS_STEER_RESPONSE));
+
+    char MACAddress[MAC_ADDR_SIZE]                      = {0};
+    int status_code                                     = 0;
+    char vap_name[beerocks::message::IFACE_NAME_LENGTH] = {0};
+    size_t numOfValidArgs[4]                            = {0};
+    FieldsToParse fieldsToParse[]                       = {
+        {NULL /*opCode*/, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
+        {(void *)vap_name, &numOfValidArgs[1], DWPAL_STR_PARAM, NULL,
+            beerocks::message::IFACE_NAME_LENGTH},
+        {(void *)MACAddress, &numOfValidArgs[2], DWPAL_STR_PARAM, NULL, sizeof(MACAddress)},
+        {(void *)&status_code, &numOfValidArgs[3], DWPAL_INT_PARAM, "status_code=", 0},
+        /* Must be at the end */
+        {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
+
+    if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse,
+                                        sizeof(vap_name) + sizeof(MACAddress) +
+                                            sizeof(status_code)) == DWPAL_FAILURE) {
+        LOG(ERROR) << "DWPAL parse error ==> Abort";
+        return false;
+    }
+
+    /* TEMP: Traces... */
+    LOG(DEBUG) << "numOfValidArgs[1]= " << numOfValidArgs[1] << " VAP name= " << vap_name;
+    LOG(DEBUG) << "numOfValidArgs[2]= " << numOfValidArgs[2] << " MACAddress= " << MACAddress;
+    LOG(DEBUG) << "numOfValidArgs[3]= " << numOfValidArgs[3]
+                << " status_code= " << int(status_code);
+
+    for (uint8_t i = 0; i < (sizeof(numOfValidArgs) / sizeof(size_t)); i++) {
+        if (numOfValidArgs[i] == 0) {
+            LOG(ERROR) << "Failed reading parsed parameter " << (int)i << " ==> Abort";
+            return false;
+        }
+    }
+
+    msg->params.mac         = tlvf::mac_from_string(MACAddress);
+    msg->params.status_code = status_code;
+    std::string bssid;
+    beerocks::net::network_utils::linux_iface_get_mac(vap_name, bssid);
+    LOG(DEBUG) << "BTM response source BSSID: " << bssid;
+    msg->params.source_bssid = tlvf::mac_from_string(bssid);
+
+    // Add the message to the queue
+    ctx->event_queue_push(ap_wlan_hal_dwpal::Event::BSS_TM_Response, msg_buff);
+    return 0;
+}
 int ap_wlan_hal_dwpal::hap_evt_ap_sta_disconnected_clb(char *ifname, char *op_code, char *buffer,
                                                        size_t bufLen)
 {
@@ -3944,7 +3993,7 @@ int ap_wlan_hal_dwpal::hap_evt_ap_sta_disconnected_clb(char *ifname, char *op_co
     msg->params.vap_id = beerocks::utils::get_ids_from_iface_string(VAP).vap_id;
     msg->params.mac    = tlvf::mac_from_string(MACAddress);
 
-    ctx->event_queue_push(Event::STA_Disconnected, msg_buff); // send message to the AP manager
+    ctx->event_queue_push(ap_wlan_hal_dwpal::Event::STA_Disconnected, msg_buff); // send message to the AP manager
     return 0;
 }
 int ap_wlan_hal_dwpal::hap_evt_ap_sta_connected_clb(char *ifname, char *op_code, char *buffer,
@@ -4162,65 +4211,14 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
     case ap_wlan_hal_dwpal::Event::BSS_TM_Query: {
         ctx->hap_evt_bss_tm_query_clb(ifname, op_code, buffer, len);
     } break;
+    case ap_wlan_hal_dwpal::Event::BSS_TM_Response: {
+        ctx->hap_evt_bss_tm_resp_clb(ifname, op_code, buffer, len);
+    } break;
     default: {
     } break;
     }
 #if 0
     
-
-    case ap_wlan_hal_dwpal::Event::BSS_TM_Response: {
-        // TODO: Change to HAL objects
-        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_CLIENT_BSS_STEER_RESPONSE));
-        auto msg = reinterpret_cast<sACTION_APMANAGER_CLIENT_BSS_STEER_RESPONSE *>(msg_buff.get());
-        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
-
-        // Initialize the message
-        memset(msg_buff.get(), 0, sizeof(sACTION_APMANAGER_CLIENT_BSS_STEER_RESPONSE));
-
-        char MACAddress[MAC_ADDR_SIZE]                      = {0};
-        int status_code                                     = 0;
-        char vap_name[beerocks::message::IFACE_NAME_LENGTH] = {0};
-        size_t numOfValidArgs[4]                            = {0};
-        FieldsToParse fieldsToParse[]                       = {
-            {NULL /*opCode*/, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
-            {(void *)vap_name, &numOfValidArgs[1], DWPAL_STR_PARAM, NULL,
-             beerocks::message::IFACE_NAME_LENGTH},
-            {(void *)MACAddress, &numOfValidArgs[2], DWPAL_STR_PARAM, NULL, sizeof(MACAddress)},
-            {(void *)&status_code, &numOfValidArgs[3], DWPAL_INT_PARAM, "status_code=", 0},
-            /* Must be at the end */
-            {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
-
-        if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse,
-                                         sizeof(vap_name) + sizeof(MACAddress) +
-                                             sizeof(status_code)) == DWPAL_FAILURE) {
-            LOG(ERROR) << "DWPAL parse error ==> Abort";
-            return false;
-        }
-
-        /* TEMP: Traces... */
-        LOG(DEBUG) << "numOfValidArgs[1]= " << numOfValidArgs[1] << " VAP name= " << vap_name;
-        LOG(DEBUG) << "numOfValidArgs[2]= " << numOfValidArgs[2] << " MACAddress= " << MACAddress;
-        LOG(DEBUG) << "numOfValidArgs[3]= " << numOfValidArgs[3]
-                   << " status_code= " << int(status_code);
-
-        for (uint8_t i = 0; i < (sizeof(numOfValidArgs) / sizeof(size_t)); i++) {
-            if (numOfValidArgs[i] == 0) {
-                LOG(ERROR) << "Failed reading parsed parameter " << (int)i << " ==> Abort";
-                return false;
-            }
-        }
-
-        msg->params.mac         = tlvf::mac_from_string(MACAddress);
-        msg->params.status_code = status_code;
-        std::string bssid;
-        beerocks::net::network_utils::linux_iface_get_mac(vap_name, bssid);
-        LOG(DEBUG) << "BTM response source BSSID: " << bssid;
-        msg->params.source_bssid = tlvf::mac_from_string(bssid);
-
-        // Add the message to the queue
-        event_queue_push(Event::BSS_TM_Response, msg_buff);
-        break;
-    }
     case ap_wlan_hal_dwpal::Event::DFS_CAC_Started: {
         LOG(DEBUG) << buffer;
 
@@ -4273,7 +4271,7 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
         msg->params.cac_duration_sec = beerocks::string_utils::stoi(tmp_string);
 
         // Add the message to the queue
-        event_queue_push(Event::DFS_CAC_Started, msg_buff);
+        event_queue_push(ap_wlan_hal_dwpal::Event::DFS_CAC_Started, msg_buff);
         break;
     }
     case ap_wlan_hal_dwpal::Event::DFS_CAC_Completed: {
@@ -4339,7 +4337,7 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
         msg->params.bandwidth = dwpal_bw_to_beerocks_bw(tmp_int);
 
         // Add the message to the queue
-        event_queue_push(Event::DFS_CAC_Completed, msg_buff);
+        event_queue_push(ap_wlan_hal_dwpal::Event::DFS_CAC_Completed, msg_buff);
         break;
     }
 
@@ -4392,7 +4390,7 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
         msg->params.bandwidth = dwpal_bw_to_beerocks_bw(chan_width);
 
         // Add the message to the queue
-        event_queue_push(Event::DFS_NOP_Finished, msg_buff);
+        event_queue_push(ap_wlan_hal_dwpal::Event::DFS_NOP_Finished, msg_buff);
         break;
     }
 
@@ -4420,7 +4418,7 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
         auto iface_ids = beerocks::utils::get_ids_from_iface_string(interface);
         msg->vap_id    = iface_ids.vap_id;
 
-        event_queue_push(Event::AP_Disabled, msg_buff); // send message to the AP manager
+        event_queue_push(ap_wlan_hal_dwpal::Event::AP_Disabled, msg_buff); // send message to the AP manager
 
     } break;
     case ap_wlan_hal_dwpal::Event::AP_Enabled: {
@@ -4453,7 +4451,7 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
             return true;
         }
 
-        event_queue_push(Event::AP_Enabled, msg_buff);
+        event_queue_push(ap_wlan_hal_dwpal::Event::AP_Enabled, msg_buff);
     } break;
 
     case ap_wlan_hal_dwpal::Event::Interface_Disabled:
@@ -4493,7 +4491,7 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
             return true; // Just a warning, do not fail
         }
 
-        event_queue_push(Event::MGMT_Frame, mgmt_frame);
+        event_queue_push(ap_wlan_hal_dwpal::Event::MGMT_Frame, mgmt_frame);
     } break;
 
     case ap_wlan_hal_dwpal::Event::AP_Sta_Possible_Psk_Mismatch: {
@@ -4516,7 +4514,7 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
         msg->sta_mac = tlvf::mac_from_string(client_mac_str);
         LOG(DEBUG) << "sta possible psk mismatch: offending STA mac: " << msg->sta_mac;
 
-        event_queue_push(Event::AP_Sta_Possible_Psk_Mismatch,
+        event_queue_push(ap_wlan_hal_dwpal::Event::AP_Sta_Possible_Psk_Mismatch,
                          msg_buff); // send message to the AP manager
         break;
     }
