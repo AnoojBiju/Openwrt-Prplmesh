@@ -4416,7 +4416,7 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
         ctx->hap_evt_ap_sta_disconnected_clb(ifname, op_code, buffer, len);
     } break;
     case ap_wlan_hal_dwpal::Event::STA_Connected: {
-        ctx->hap_evt_ap_sta_disconnected_clb(ifname, op_code, buffer, len);
+        ctx->hap_evt_ap_sta_connected_clb(ifname, op_code, buffer, len);
     } break;
     case ap_wlan_hal_dwpal::Event::STA_Unassoc_RSSI: {
         ctx->hap_evt_unconnected_sta_rssi_clb(ifname, op_code, buffer, len);

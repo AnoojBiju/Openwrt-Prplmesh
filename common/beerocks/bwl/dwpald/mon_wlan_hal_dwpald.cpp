@@ -1287,6 +1287,62 @@ int mon_wlan_hal_dwpal::filter_bss_msg(char *buffer, int bufLen, const std::stri
     }
     return 1; /* >0 is pass */
 }
+
+int mon_wlan_hal_dwpal::hap_evt_ap_sta_connected_clb(char *ifname, char *op_code, char *buffer,
+                                                size_t bufLen)
+{
+        // TODO: Change to HAL objects
+        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_MONITOR_CLIENT_ASSOCIATED_NOTIFICATION));
+        auto msg =
+            reinterpret_cast<sACTION_MONITOR_CLIENT_ASSOCIATED_NOTIFICATION *>(msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        // Initialize the message
+        memset(msg_buff.get(), 0, sizeof(sACTION_MONITOR_CLIENT_ASSOCIATED_NOTIFICATION));
+
+        char VAP[SSID_MAX_SIZE]        = {0};
+        char MACAddress[MAC_ADDR_SIZE] = {0};
+        size_t numOfValidArgs[3]       = {0};
+
+        FieldsToParse fieldsToParse[] = {
+            {NULL /*opCode*/, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
+            {(void *)VAP, &numOfValidArgs[1], DWPAL_STR_PARAM, NULL, sizeof(VAP)},
+            {(void *)MACAddress, &numOfValidArgs[2], DWPAL_STR_PARAM, NULL, sizeof(MACAddress)},
+            /* Must be at the end */
+            {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
+
+        if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse, sizeof(VAP)) ==
+            DWPAL_FAILURE) {
+            LOG(ERROR) << "DWPAL parse error ==> Abort";
+            return -1;
+        }
+
+        LOG(DEBUG) << "vap_id           : " << VAP;
+        LOG(DEBUG) << "MACAddress       : " << MACAddress;
+
+        for (uint8_t i = 0; i < (sizeof(numOfValidArgs) / sizeof(size_t)); i++) {
+            if (numOfValidArgs[i] == 0) {
+                LOG(ERROR) << "Failed reading parsed parameter " << static_cast<int>(i);
+                return -1;
+            }
+        }
+
+        msg->vap_id = beerocks::utils::get_ids_from_iface_string(VAP).vap_id;
+        msg->mac    = tlvf::mac_from_string(MACAddress);
+
+        // No need to store clients forever - may cause very big memory usage
+        if (m_completed_vaps.find(msg->vap_id) != m_completed_vaps.end()) {
+            // To prevent duplication of generation of connected event for clients,
+            // need to add associated clients to the "handled_clients" set
+            m_handled_clients.insert(msg->mac);
+        }
+
+        ctx->event_queue_push(mon_wlan_hal_dwpal::Event::STA_Connected,
+                         msg_buff); // send message to the AP manager
+
+        return 0;
+    }
+
 int mon_wlan_hal_dwpal::hap_evt_ap_disabled_clb(char *ifname, char *op_code, char *buffer,
                                                 size_t bufLen)
 {
@@ -1504,6 +1560,9 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
     case mon_wlan_hal_dwpal::Event::RRM_Beacon_Response: {
         ctx->hap_evt_rrm_beacon_rep_received_clb(ifname, op_code, buffer, len);
     } break;
+    case mon_wlan_hal_dwpal::Event::STA_Connected: {
+        ctx->hap_evt_ap_sta_connected_clb(ifname, op_code, buffer, len);
+    } break;
     default: {
         LOG(ERROR) << "Code should not reach here, event " << op_code
                    << "Not registered yet received";
@@ -1576,101 +1635,9 @@ void mon_wlan_hal_dwpal::hostap_attach(char *ifname)
 
 bool mon_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std::string &opcode)
 {
-    LOG(TRACE) << __func__ << " - opcode: |" << opcode << "|";
-
-    auto event = dwpal_to_bwl_event(opcode);
-
-    // If there is monitored BSSs list, monitor all BSSs
-    if (!m_hal_conf.monitored_BSSs.empty()) {
-        if (event == mon_wlan_hal_dwpal::Event::STA_Connected ||
-            event == mon_wlan_hal_dwpal::Event::STA_Disconnected ||
-            event == mon_wlan_hal_dwpal::Event::AP_Disabled ||
-            event == mon_wlan_hal_dwpal::Event::AP_Enabled) {
-
-            std::string tmp_buffer(buffer, MAX_TEMP_BUFFER_SIZE);
-            auto BSS_str_begin = tmp_buffer.find(BSS_IFNAME_PREFIX);
-            if (BSS_str_begin == std::string::npos) {
-                LOG(ERROR) << "No valid BSS information was found";
-                return false;
-            }
-            auto BSS_str_end = tmp_buffer.find(" ", BSS_str_begin);
-            if (BSS_str_end == std::string::npos) {
-                LOG(ERROR) << "No valid BSS information was found";
-                return false;
-            }
-            auto BSS_str   = std::string(tmp_buffer, BSS_str_begin, BSS_str_end - BSS_str_begin);
-            auto iface_ids = beerocks::utils::get_ids_from_iface_string(BSS_str);
-            if (iface_ids.vap_id == beerocks::IFACE_ID_INVALID) {
-                LOG(DEBUG) << "Event received on invalid BSS ifname, should not process the event!";
-                return true;
-            }
-
-            // Check if the event's BSSID is present in the monitored BSSIDs list.
-            if (m_hal_conf.monitored_BSSs.find(BSS_str) == m_hal_conf.monitored_BSSs.end()) {
-                // Log print commented as to not flood the logs
-                //LOG(DEBUG) << "Event received on BSS " << BSS_str << " that is not on monitored BSSs list, ignoring";
-                return true;
-            }
-        }
-    }
-
-    // Handle the event
-    switch (event) {
-
-    case mon_wlan_hal_dwpal::Event::STA_Connected: {
-
-        // TODO: Change to HAL objects
-        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_MONITOR_CLIENT_ASSOCIATED_NOTIFICATION));
-        auto msg =
-            reinterpret_cast<sACTION_MONITOR_CLIENT_ASSOCIATED_NOTIFICATION *>(msg_buff.get());
-        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
-
-        // Initialize the message
-        memset(msg_buff.get(), 0, sizeof(sACTION_MONITOR_CLIENT_ASSOCIATED_NOTIFICATION));
-
-        char VAP[SSID_MAX_SIZE]        = {0};
-        char MACAddress[MAC_ADDR_SIZE] = {0};
-        size_t numOfValidArgs[3]       = {0};
-
-        FieldsToParse fieldsToParse[] = {
-            {NULL /*opCode*/, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
-            {(void *)VAP, &numOfValidArgs[1], DWPAL_STR_PARAM, NULL, sizeof(VAP)},
-            {(void *)MACAddress, &numOfValidArgs[2], DWPAL_STR_PARAM, NULL, sizeof(MACAddress)},
-            /* Must be at the end */
-            {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
-
-        if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse, sizeof(VAP)) ==
-            DWPAL_FAILURE) {
-            LOG(ERROR) << "DWPAL parse error ==> Abort";
-            return false;
-        }
-
-        LOG(DEBUG) << "vap_id           : " << VAP;
-        LOG(DEBUG) << "MACAddress       : " << MACAddress;
-
-        for (uint8_t i = 0; i < (sizeof(numOfValidArgs) / sizeof(size_t)); i++) {
-            if (numOfValidArgs[i] == 0) {
-                LOG(ERROR) << "Failed reading parsed parameter " << static_cast<int>(i);
-                return false;
-            }
-        }
-
-        msg->vap_id = beerocks::utils::get_ids_from_iface_string(VAP).vap_id;
-        msg->mac    = tlvf::mac_from_string(MACAddress);
-
-        // No need to store clients forever - may cause very big memory usage
-        if (m_completed_vaps.find(msg->vap_id) != m_completed_vaps.end()) {
-            // To prevent duplication of generation of connected event for clients,
-            // need to add associated clients to the "handled_clients" set
-            m_handled_clients.insert(msg->mac);
-        }
-
-        event_queue_push(mon_wlan_hal_dwpal::Event::STA_Connected,
-                         msg_buff); // send message to the AP manager
-
-        break;
-    }
-
+    
+   auto event = dwpal_to_bwl_event(opcode);
+   switch(event) {
     case mon_wlan_hal_dwpal::Event::STA_Disconnected: {
         // TODO: Change to HAL objects
         auto msg_buff =
