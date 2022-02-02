@@ -1095,6 +1095,7 @@ class RadioHostapd(Radio):
 
         self.logfilenames = [
             "{}/beerocks_agent.log".format(self.log_folder),
+            "{}/beerocks_backhaul.log".format(self.log_folder),
             "{}/beerocks_ap_manager_{}.log".format(self.log_folder, self.iface_name)
         ]
 
@@ -1105,7 +1106,9 @@ class RadioHostapd(Radio):
 
         self.vaps = []
 
-        output = self.agent.command('sh', '-c', f'/sbin/ip a | grep "{iface_name}"')
+        print("Test sleep 5 sec")
+        time.sleep(5)
+        output = self.agent.command(f'/sbin/ip a | grep "{iface_name}"')
         output = re.findall(r"wlan[0-9]+[^\s]+", output)
         result = ""
         for i in output:
