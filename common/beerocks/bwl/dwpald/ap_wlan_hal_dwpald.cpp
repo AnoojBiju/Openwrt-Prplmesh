@@ -4462,8 +4462,10 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
 void ap_wlan_hal_dwpal::hostap_attach(char *ifname)
 {
     LOG(ERROR) << "Anant:Return of connect" << dwpald_connect("ap_manager");
-    static dwpald_hostap_event hostap_event_handlers[] = {
-        {EVENT("AP-ENABLED"), hap_evt_callback},
+    auto iface_ids = beerocks::utils::get_ids_from_iface_string(ifname);
+
+    static dwpald_hostap_event hostap_radio_event_handlers[] = {
+        //{EVENT("AP-ENABLED"), hap_evt_callback},
         {EVENT("AP-DISABLED"), hap_evt_callback},
         {EVENT("AP-STA-CONNECTED"), hap_evt_callback},
         {EVENT("AP-STA-DISCONNECTED"), hap_evt_callback},
@@ -4482,8 +4484,35 @@ void ap_wlan_hal_dwpal::hostap_attach(char *ifname)
         {EVENT("LTQ-SOFTBLOCK-DROP"), hap_evt_callback},
         {EVENT("AP-ACTION-FRAME-RECEIVED"), hap_evt_callback},
         {EVENT("AP-STA-POSSIBLE-PSK-MISMATCH"), hap_evt_callback}};
-    m_hostap_event_handlers     = hostap_event_handlers;
-    m_num_hostap_event_handlers = sizeof(hostap_event_handlers) / sizeof(dwpald_hostap_event);
+    static dwpald_hostap_event hostap_vap_event_handlers[] = {
+        {EVENT("AP-ENABLED"), hap_evt_callback},
+        {EVENT("AP-DISABLED"), hap_evt_callback},
+        {EVENT("AP-STA-CONNECTED"), hap_evt_callback},
+        {EVENT("AP-STA-DISCONNECTED"), hap_evt_callback},
+        {EVENT("UNCONNECTED-STA-RSSI"), hap_evt_callback},
+        {EVENT("INTERFACE-ENABLED"), hap_evt_callback},
+        {EVENT("INTERFACE-DISABLED"), hap_evt_callback},
+        {EVENT("ACS-STARTED"), hap_evt_callback},
+        //{EVENT("ACS-COMPLETED"), hap_evt_callback},
+        {EVENT("ACS-FAILED"), hap_evt_callback},
+        //{EVENT("AP-CSA-FINISHED"), hap_evt_callback},
+        {EVENT("BSS-TM-QUERY"), hap_evt_callback},
+        {EVENT("BSS-TM-RESP"), hap_evt_callback},
+        {EVENT("DFS-CAC-START"), hap_evt_callback},
+        {EVENT("DFS-CAC-COMPLETED"), hap_evt_callback},
+        {EVENT("DFS-NOP-FINISHED"), hap_evt_callback},
+        {EVENT("LTQ-SOFTBLOCK-DROP"), hap_evt_callback},
+        {EVENT("AP-ACTION-FRAME-RECEIVED"), hap_evt_callback},
+        {EVENT("AP-STA-POSSIBLE-PSK-MISMATCH"), hap_evt_callback}};
+    
+    if (iface_ids.vap_id == beerocks::IFACE_RADIO_ID) {
+        m_hostap_event_handlers     = hostap_radio_event_handlers;
+        m_num_hostap_event_handlers = sizeof(hostap_radio_event_handlers) / sizeof(dwpald_hostap_event);
+    }
+    else {
+        m_hostap_event_handlers     = hostap_vap_event_handlers;
+        m_num_hostap_event_handlers = sizeof(hostap_vap_event_handlers) / sizeof(dwpald_hostap_event);
+    }
     dwpald_start_listener();
     LOG(ERROR) << "Anant hostap attach" << ifname << "return value"
                << dwpald_hostap_attach(ifname, m_num_hostap_event_handlers, m_hostap_event_handlers,
