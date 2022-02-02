@@ -84,7 +84,7 @@ static std::string dwpal_security_val(WiFiSec sec)
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////////// Implementation ///////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
-
+static sta_wlan_hal_dwpal *ctx = nullptr;
 sta_wlan_hal_dwpal::sta_wlan_hal_dwpal(const std::string &iface_name, hal_event_cb_t callback,
                                        const bwl::hal_conf_t &hal_conf)
     : base_wlan_hal(bwl::HALType::Station, iface_name, IfaceType::Intel, callback, hal_conf),
@@ -94,7 +94,7 @@ sta_wlan_hal_dwpal::sta_wlan_hal_dwpal(const std::string &iface_name, hal_event_
                             "CTRL-EVENT-BSS-ADDED", "CTRL-EVENT-BSS-REMOVED"};
     int events_size      = sizeof(events) / sizeof(std::string);
     m_filtered_events.insert(events, events + events_size);
-    dwpald_connect("sta_hal");
+    ctx = this;
 }
 
 sta_wlan_hal_dwpal::~sta_wlan_hal_dwpal() {}
@@ -462,133 +462,196 @@ bool sta_wlan_hal_dwpal::update_status()
 std::string sta_wlan_hal_dwpal::get_ssid() { return m_active_ssid; }
 
 std::string sta_wlan_hal_dwpal::get_bssid() { return m_active_bssid; }
-void sta_wlan_hal_dwpal::hostap_attach(char *ifname) { return; }
-bool sta_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std::string &opcode)
+
+int sta_wlan_hal_dwpal::hap_evt_connected_clb(char *ifname, char *op_code, char *buffer, size_t bufLen)
 {
-    LOG(TRACE) << __func__ << " " << get_iface_name() << " - opcode: |" << opcode << "|";
-
-    auto event = dwpal_to_bwl_event(opcode);
-
-    switch (event) {
-    // Client Connected
-    case Event::Connected: {
-
-        ConnectionStatus connection_status;
-        if (!read_status(connection_status)) {
-            LOG(ERROR) << "Failed reading connection status for iface: " << get_iface_name();
-            return false;
-        }
-
-        LOG(DEBUG) << get_iface_name() << " - Connected: bssid = " << connection_status.bssid
-                   << ", freq = " << connection_status.freq;
-
-        update_status(connection_status);
-
-        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_BACKHAUL_CONNECTED_NOTIFICATION));
-        auto msg      = reinterpret_cast<sACTION_BACKHAUL_CONNECTED_NOTIFICATION *>(msg_buff.get());
-        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
-
-        // Initialize the message
-        memset(msg_buff.get(), 0, sizeof(sACTION_BACKHAUL_CONNECTED_NOTIFICATION));
-
-        // Parse the event
-        parsed_line_t parsed_obj;
-        int64_t tmp_int;
-
-        parse_event(buffer, parsed_obj);
-
-        // Since prplwrt does not include the changes on the wpa_supplicant which add the Multi-AP
-        // Profile to the association response, do not fail if it does not exist, and put default
-        // value of profile-1.
-        // TODO: When the changes will be ported to prplwrt, need to treat the "Multi-AP Profile"
-        // parameter as mandatory.
-
-        // Multi-AP Profile
-        if (read_param("multi_ap_profile", parsed_obj, tmp_int)) {
-            msg->multi_ap_profile = tmp_int;
-        } else {
-            msg->multi_ap_profile = 1;
-            LOG(ERROR) << "Failed reading 'multi_ap_profile' parameter!";
-        }
-
-        // Multi-AP Primary VLAN ID - Not mandatory
-        if (read_param("multi_ap_primary_vlanid", parsed_obj, tmp_int)) {
-            msg->multi_ap_primary_vlan_id = tmp_int;
-        } else {
-            msg->multi_ap_primary_vlan_id = 0;
-        }
-
-        // Forward the event
-        event_queue_push(event, msg_buff);
-    } break;
-
-    // Client disconnected
-    case Event::Disconnected: {
-
-        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_BACKHAUL_DISCONNECT_REASON_NOTIFICATION));
-        auto msg =
-            reinterpret_cast<sACTION_BACKHAUL_DISCONNECT_REASON_NOTIFICATION *>(msg_buff.get());
-        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
-
-        // Initialize the message
-        memset(msg_buff.get(), 0, sizeof(sACTION_BACKHAUL_DISCONNECT_REASON_NOTIFICATION));
-
-        // Read the disconnect reason value
-        size_t numOfValidArgs[2]      = {0};
-        char bssid[MAC_ADDR_SIZE]     = {0};
-        FieldsToParse fieldsToParse[] = {
-            {(void *)&bssid, &numOfValidArgs[0], DWPAL_STR_PARAM, "bssid=", sizeof(bssid)},
-            {(void *)&msg->disconnect_reason, &numOfValidArgs[1], DWPAL_INT_PARAM, "reason=", 0},
-
-            /* Must be at the end */
-            {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
-
-        // TODO: fieldsToParse.field should be contained in one struct and struct size should be
-        //       passed to the dwpal_string_to_struct_parse - a security fix for multiline reply
-        if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse,
-                                         sizeof(msg->disconnect_reason)) == DWPAL_FAILURE) {
-            LOG(ERROR) << "DWPAL parse error ==> Abort";
-            return false;
-        }
-
-        /* TEMP: Traces... */
-        LOG(DEBUG) << get_iface_name() << "CTRL-EVENT-DISCONNECTED buffer= \n" << buffer;
-        LOG(DEBUG) << "numOfValidArgs[0]= " << numOfValidArgs[0]
-                   << " bssid= " << std::string(bssid);
-        LOG(DEBUG) << "numOfValidArgs[1]= " << numOfValidArgs[1]
-                   << " disconnect_reason= " << msg->disconnect_reason;
-        /* End of TEMP: Traces... */
-
-        for (uint8_t i = 0; i < (sizeof(numOfValidArgs) / sizeof(size_t)); i++) {
-            if (numOfValidArgs[i] == 0) {
-                LOG(ERROR) << "Failed reading parsed parameter " << (int)i << "!";
-                return false;
-            }
-        }
-
-        msg->bssid = tlvf::mac_from_string(bssid);
-
-        // Forward the event
-        event_queue_push(event, msg_buff);
-
-    } break;
-
-    case Event::Terminating:
-    case Event::ScanResults:
-    case Event::ChannelSwitch: {
-        // Forward the event
-        event_queue_push(event);
-
-    } break;
-
-    // Gracefully ignore unhandled events
-    // TODO: Probably should be changed to an error once dwpal will stop
-    //       sending empty or irrelevant events...
-    default:
-        LOG(WARNING) << "Unhandled event received: " << opcode;
-        break;
+    ConnectionStatus connection_status;
+    auto event = dwpal_to_bwl_event(op_code);
+    if (!read_status(connection_status)) {
+        LOG(ERROR) << "Failed reading connection status for iface: " << get_iface_name();
+        return -1;
     }
 
+    LOG(DEBUG) << get_iface_name() << " - Connected: bssid = " << connection_status.bssid
+               << ", freq = " << connection_status.freq;
+
+    update_status(connection_status);
+
+    auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_BACKHAUL_CONNECTED_NOTIFICATION));
+    auto msg      = reinterpret_cast<sACTION_BACKHAUL_CONNECTED_NOTIFICATION *>(msg_buff.get());
+    LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+    // Initialize the message
+    memset(msg_buff.get(), 0, sizeof(sACTION_BACKHAUL_CONNECTED_NOTIFICATION));
+
+    // Parse the event
+    parsed_line_t parsed_obj;
+    int64_t tmp_int;
+
+    parse_event(buffer, parsed_obj);
+
+    // Since prplwrt does not include the changes on the wpa_supplicant which add the Multi-AP
+    // Profile to the association response, do not fail if it does not exist, and put default
+    // value of profile-1.
+    // TODO: When the changes will be ported to prplwrt, need to treat the "Multi-AP Profile"
+    // parameter as mandatory.
+
+    // Multi-AP Profile
+    if (read_param("multi_ap_profile", parsed_obj, tmp_int)) {
+        msg->multi_ap_profile = tmp_int;
+    } else {
+        msg->multi_ap_profile = 1;
+        LOG(ERROR) << "Failed reading 'multi_ap_profile' parameter!";
+    }
+
+    // Multi-AP Primary VLAN ID - Not mandatory
+    if (read_param("multi_ap_primary_vlanid", parsed_obj, tmp_int)) {
+        msg->multi_ap_primary_vlan_id = tmp_int;
+    } else {
+        msg->multi_ap_primary_vlan_id = 0;
+    }
+
+    // Forward the event
+    ctx->event_queue_push(event, msg_buff);
+    return 0;
+}
+int sta_wlan_hal_dwpal::hap_evt_disconnected_clb(char *ifname, char *op_code, char *buffer, size_t bufLen)
+{
+    // Client disconnected
+    auto event = dwpal_to_bwl_event(op_code);
+    auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_BACKHAUL_DISCONNECT_REASON_NOTIFICATION));
+    auto msg = reinterpret_cast<sACTION_BACKHAUL_DISCONNECT_REASON_NOTIFICATION *>(msg_buff.get());
+    LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+    // Initialize the message
+    memset(msg_buff.get(), 0, sizeof(sACTION_BACKHAUL_DISCONNECT_REASON_NOTIFICATION));
+
+    // Read the disconnect reason value
+    size_t numOfValidArgs[2]      = {0};
+    char bssid[MAC_ADDR_SIZE]     = {0};
+    FieldsToParse fieldsToParse[] = {
+        {(void *)&bssid, &numOfValidArgs[0], DWPAL_STR_PARAM, "bssid=", sizeof(bssid)},
+        {(void *)&msg->disconnect_reason, &numOfValidArgs[1], DWPAL_INT_PARAM, "reason=", 0},
+
+        /* Must be at the end */
+        {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
+
+    // TODO: fieldsToParse.field should be contained in one struct and struct size should be
+    //       passed to the dwpal_string_to_struct_parse - a security fix for multiline reply
+    if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse,
+                                     sizeof(msg->disconnect_reason)) == DWPAL_FAILURE) {
+        LOG(ERROR) << "DWPAL parse error ==> Abort";
+        return -1;
+    }
+
+    /* TEMP: Traces... */
+    LOG(DEBUG) << get_iface_name() << "CTRL-EVENT-DISCONNECTED buffer= \n" << buffer;
+    LOG(DEBUG) << "numOfValidArgs[0]= " << numOfValidArgs[0] << " bssid= " << std::string(bssid);
+    LOG(DEBUG) << "numOfValidArgs[1]= " << numOfValidArgs[1]
+               << " disconnect_reason= " << msg->disconnect_reason;
+    /* End of TEMP: Traces... */
+
+    for (uint8_t i = 0; i < (sizeof(numOfValidArgs) / sizeof(size_t)); i++) {
+        if (numOfValidArgs[i] == 0) {
+            LOG(ERROR) << "Failed reading parsed parameter " << (int)i << "!";
+            return -1;
+        }
+    }
+
+    msg->bssid = tlvf::mac_from_string(bssid);
+
+    // Forward the event
+    ctx->event_queue_push(event, msg_buff);
+    return 0;
+
+}
+int sta_wlan_hal_dwpal::hap_evt_terminating_clb(char *ifname, char *op_code, char *msg, size_t len)
+{
+    auto event = dwpal_to_bwl_event(op_code);
+    ctx->event_queue_push(event);
+    return 0;
+}
+int sta_wlan_hal_dwpal::hap_evt_scan_results_clb(char *ifname, char *op_code, char *msg, size_t len)
+{
+    auto event = dwpal_to_bwl_event(op_code);
+    ctx->event_queue_push(event);    
+    return 0;
+}
+int sta_wlan_hal_dwpal::hap_evt_channel_switch_clb(char *ifname, char *op_code, char *msg, size_t len)
+{
+    auto event = dwpal_to_bwl_event(op_code);
+    ctx->event_queue_push(event);
+    return 0;
+}
+static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t len)
+{
+    auto event = dwpal_to_bwl_event(op_code);
+    switch (event) {
+    case sta_wlan_hal_dwpal::Event::Connected: {
+        ctx->hap_evt_connected_clb(ifname, op_code, buffer, len);
+    } break;
+    case sta_wlan_hal_dwpal::Event::Disconnected: {
+        ctx->hap_evt_disconnected_clb(ifname, op_code, buffer, len);
+    } break;
+    case sta_wlan_hal_dwpal::Event::Terminating: {
+        ctx->hap_evt_terminating_clb(ifname, op_code, buffer, len);
+    } break;
+    case sta_wlan_hal_dwpal::Event::ScanResults: {
+        ctx->hap_evt_scan_results_clb(ifname, op_code, buffer, len);
+    } break;
+    case sta_wlan_hal_dwpal::Event::ChannelSwitch: {
+        ctx->hap_evt_channel_switch_clb(ifname, op_code, buffer, len);
+    } break;
+    default: {
+        LOG(ERROR) << "Code should not reach here, event " << op_code
+                   << "Not registered yet received";
+    } break;
+    }
+    return 0;
+}
+#define EVENT(event) (char *)event, sizeof(event) - 1, hap_evt_callback
+void sta_wlan_hal_dwpal::hostap_attach(char *ifname)
+{
+    std::string dwpald_client_name = "sta_hal_";
+    dwpald_client_name.append(ifname);
+    LOG(ERROR) << "Anant:Return of connect" << dwpald_client_name << ":"
+               << dwpald_connect(dwpald_client_name.c_str());
+    auto iface_ids = beerocks::utils::get_ids_from_iface_string(ifname);
+
+    static dwpald_hostap_event hostap_radio_event_handlers[] = {
+        {EVENT("RRM-BEACON-REP-RECEIVED")},
+        {EVENT("RRM-CHANNEL-LOAD-RECEIVED")},
+        //{EVENT("AP-ENABLED")},
+        {EVENT("AP-DISABLED")},
+        {EVENT("AP-STA-CONNECTED")},
+        {EVENT("AP-STA-DISCONNECTED")},
+    };
+
+    static dwpald_hostap_event hostap_vap_event_handlers[] = {
+        {EVENT("RRM-BEACON-REP-RECEIVED")},
+        {EVENT("RRM-CHANNEL-LOAD-RECEIVED")},
+        {EVENT("AP-ENABLED")},
+        {EVENT("AP-DISABLED")},
+        {EVENT("AP-STA-CONNECTED")},
+        {EVENT("AP-STA-DISCONNECTED")},
+    };
+
+    if (iface_ids.vap_id == beerocks::IFACE_RADIO_ID) {
+        m_hostap_event_handlers = hostap_radio_event_handlers;
+        m_num_hostap_event_handlers =
+            sizeof(hostap_radio_event_handlers) / sizeof(dwpald_hostap_event);
+    } else {
+        m_hostap_event_handlers = hostap_vap_event_handlers;
+        m_num_hostap_event_handlers =
+            sizeof(hostap_vap_event_handlers) / sizeof(dwpald_hostap_event);
+    }
+    dwpald_start_listener();
+    LOG(ERROR) << "Anant hostap attach" << ifname << "return value"
+               << dwpald_hostap_attach(ifname, m_num_hostap_event_handlers, m_hostap_event_handlers,
+                                       0);
+}
+bool sta_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std::string &opcode)
+{
     return true;
 }
 

@@ -60,6 +60,11 @@ public:
     std::string get_ssid() override;
     std::string get_bssid() override;
     virtual void hostap_attach(char *ifname) override;
+    virtual int hap_evt_connected_clb(char *ifname, char *op_code, char *msg, size_t len) override;
+    virtual int hap_evt_disconnected_clb(char *ifname, char *op_code, char *msg, size_t len) override;
+    virtual int hap_evt_terminating_clb(char *ifname, char *op_code, char *msg, size_t len) override;
+    virtual int hap_evt_scan_results_clb(char *ifname, char *op_code, char *msg, size_t len) override;
+    virtual int hap_evt_channel_switch_clb(char *ifname, char *op_code, char *msg, size_t len) override;
 
 protected:
     virtual bool process_dwpal_event(char *buffer, int bufLen, const std::string &opcode) override;

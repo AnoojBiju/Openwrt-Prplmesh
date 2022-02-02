@@ -1177,165 +1177,149 @@ bool base_wlan_hal_dwpal::dwpal_get_phy_chan_status(sPhyChanStatus &status)
     std::copy_n(m_nl_buffer, sizeof(status), reinterpret_cast<unsigned char *>(&status));
     return true;
 }
-int base_wlan_hal_dwpal::hap_evt_rrm_channel_load_received_clb(char *ifname, char *op_code, char *msg,
-                                        size_t len)
+
+static int not_supported(std::string op_code)
 {
     LOG(ERROR) << "Either entity shall register not for " << op_code
                << "event or if register then override base class callback";
     return 0;
+}
+int base_wlan_hal_dwpal::hap_evt_rrm_channel_load_received_clb(char *ifname, char *op_code,
+                                                               char *msg, size_t len)
+{
+    return not_supported(op_code);
+}
+int base_wlan_hal_dwpal::hap_evt_connected_clb(char *ifname, char *op_code, char *msg, size_t len)
+{
+    return not_supported(op_code);
+}
+int base_wlan_hal_dwpal::hap_evt_disconnected_clb(char *ifname, char *op_code, char *msg, size_t len)
+{
+    return not_supported(op_code);
+}
+int base_wlan_hal_dwpal::hap_evt_terminating_clb(char *ifname, char *op_code, char *msg, size_t len)
+{
+    return not_supported(op_code);
+}
+int base_wlan_hal_dwpal::hap_evt_scan_results_clb(char *ifname, char *op_code, char *msg, size_t len)
+{
+    return not_supported(op_code);
+}
+int base_wlan_hal_dwpal::hap_evt_channel_switch_clb(char *ifname, char *op_code, char *msg, size_t len)
+{
+    return not_supported(op_code);
 }
 int base_wlan_hal_dwpal::hap_evt_rrm_beacon_rep_received_clb(char *ifname, char *op_code,
                                                              char *buffer, size_t bufLen)
 {
-    LOG(ERROR) << "Either entity shall register not for " << op_code
-               << "event or if register then override base class callback";
-    return 0;
+    return not_supported(op_code);
 }
 int base_wlan_hal_dwpal::hap_evt_ap_enabled_clb(char *ifname, char *op_code, char *msg, size_t len)
 {
-    LOG(ERROR) << "Either entity shall register not for " << op_code
-               << "event or if register then override base class callback";
-    return 0;
+    return not_supported(op_code);
 }
-
 int base_wlan_hal_dwpal::hap_evt_ap_disabled_clb(char *ifname, char *op_code, char *msg, size_t len)
 {
-    LOG(ERROR) << "Either entity shall register not for " << op_code
-               << "event or if register then override base class callback";
-    return 0;
+    return not_supported(op_code);
 }
 
 int base_wlan_hal_dwpal::hap_evt_ap_sta_connected_clb(char *ifname, char *op_code, char *msg,
                                                       size_t len)
 {
-    LOG(ERROR) << "Either entity shall register not for " << op_code
-               << "event or if register then override base class callback";
-    return 0;
+    return not_supported(op_code);
 }
 
 int base_wlan_hal_dwpal::hap_evt_ap_sta_disconnected_clb(char *ifname, char *op_code, char *msg,
                                                          size_t len)
 {
-    LOG(ERROR) << "Either entity shall register not for " << op_code
-               << "event or if register then override base class callback";
-    return 0;
+    return not_supported(op_code);
 }
 
 int base_wlan_hal_dwpal::hap_evt_interface_enabled_clb(char *ifname, char *op_code, char *msg,
                                                        size_t len)
 {
-    LOG(ERROR) << "Either entity shall register not for " << op_code
-               << "event or if register then override base class callback";
-    return 0;
+    return not_supported(op_code);
 }
 
 int base_wlan_hal_dwpal::hap_evt_interface_disabled_clb(char *ifname, char *op_code, char *msg,
                                                         size_t len)
 {
-    LOG(ERROR) << "Either entity shall register not for " << op_code
-               << "event or if register then override base class callback";
-    return 0;
+    return not_supported(op_code);
 }
 
 int base_wlan_hal_dwpal::hap_evt_acs_started_clb(char *ifname, char *op_code, char *msg, size_t len)
 {
-    LOG(ERROR) << "Either entity shall register not for " << op_code
-               << "event or if register then override base class callback";
-    return 0;
+    return not_supported(op_code);
 }
 
 int base_wlan_hal_dwpal::hap_evt_acs_completed_clb(char *ifname, char *op_code, char *msg,
                                                    size_t len)
 {
-    LOG(ERROR) << "Either entity shall register not for " << op_code
-               << "event or if register then override base class callback";
-    return 0;
+    return not_supported(op_code);
 }
 
 int base_wlan_hal_dwpal::hap_evt_acs_failed_clb(char *ifname, char *op_code, char *msg, size_t len)
 {
-    LOG(ERROR) << "Either entity shall register not for " << op_code
-               << "event or if register then override base class callback";
-    return 0;
+    return not_supported(op_code);
 }
 
 int base_wlan_hal_dwpal::hap_evt_ap_csa_finished_clb(char *ifname, char *op_code, char *msg,
                                                      size_t len)
 {
-    LOG(ERROR) << "Either entity shall register not for " << op_code
-               << "event or if register then override base class callback";
-    return 0;
+    return not_supported(op_code);
 }
 
 int base_wlan_hal_dwpal::hap_evt_bss_tm_query_clb(char *ifname, char *op_code, char *msg,
                                                   size_t len)
 {
-    LOG(ERROR) << "Either entity shall register not for " << op_code
-               << "event or if register then override base class callback";
-    return 0;
+    return not_supported(op_code);
 }
 
 int base_wlan_hal_dwpal::hap_evt_bss_tm_resp_clb(char *ifname, char *op_code, char *msg, size_t len)
 {
-    LOG(ERROR) << "Either entity shall register not for " << op_code
-               << "event or if register then override base class callback";
-    return 0;
+    return not_supported(op_code);
 }
 
 int base_wlan_hal_dwpal::hap_evt_dfs_cac_start_clb(char *ifname, char *op_code, char *msg,
                                                    size_t len)
 {
-    LOG(ERROR) << "Either entity shall register not for " << op_code
-               << "event or if register then override base class callback";
-    return 0;
+    return not_supported(op_code);
 }
 
 int base_wlan_hal_dwpal::hap_evt_dfs_cac_completed_clb(char *ifname, char *op_code, char *msg,
                                                        size_t len)
 {
-    LOG(ERROR) << "Either entity shall register not for " << op_code
-               << "event or if register then override base class callback";
-    return 0;
+    return not_supported(op_code);
 }
 
 int base_wlan_hal_dwpal::hap_evt_dfs_nop_finished_clb(char *ifname, char *op_code, char *msg,
                                                       size_t len)
 {
-    LOG(ERROR) << "Either entity shall register not for " << op_code
-               << "event or if register then override base class callback";
-    return 0;
+    return not_supported(op_code);
 }
 
 int base_wlan_hal_dwpal::hap_evt_ltq_softblock_drop_clb(char *ifname, char *op_code, char *msg,
                                                         size_t len)
 {
-    LOG(ERROR) << "Either entity shall register not for " << op_code
-               << "event or if register then override base class callback";
-    return 0;
+    return not_supported(op_code);
 }
 
 int base_wlan_hal_dwpal::hap_evt_unconnected_sta_rssi_clb(char *ifname, char *op_code, char *msg,
                                                           size_t len)
 {
-    LOG(ERROR) << "Either entity shall register not for " << op_code
-               << "event or if register then override base class callback";
-    return 0;
+    return not_supported(op_code);
 }
 
 int base_wlan_hal_dwpal::hap_evt_ap_action_frame_received_clb(char *ifname, char *op_code,
                                                               char *msg, size_t len)
 {
-    LOG(ERROR) << "Either entity shall register not for " << op_code
-               << "event or if register then override base class callback";
-    return 0;
+    return not_supported(op_code);
 }
 
 int base_wlan_hal_dwpal::hap_evt_ap_sta_possible_psk_mismatch_clb(char *ifname, char *op_code,
                                                                   char *msg, size_t len)
 {
-    LOG(ERROR) << "Either entity shall register not for " << op_code
-               << "event or if register then override base class callback";
-    return 0;
+    return not_supported(op_code);
 }
 
 } // namespace dwpal

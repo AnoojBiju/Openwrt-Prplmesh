@@ -104,7 +104,13 @@ public:
     virtual int hap_evt_rrm_beacon_rep_received_clb(char *ifname, char *op_code, char *buffer,
                                                     size_t bufLen);
     virtual int hap_evt_rrm_channel_load_received_clb(char *ifname, char *op_code, char *msg,
-                                        size_t len);                                                
+                                                      size_t len);
+    virtual int hap_evt_connected_clb(char *ifname, char *op_code, char *msg, size_t len);
+
+    virtual int hap_evt_disconnected_clb(char *ifname, char *op_code, char *msg, size_t len);
+    virtual int hap_evt_terminating_clb(char *ifname, char *op_code, char *msg, size_t len);
+    virtual int hap_evt_scan_results_clb(char *ifname, char *op_code, char *msg, size_t len);
+    virtual int hap_evt_channel_switch_clb(char *ifname, char *op_code, char *msg, size_t len);
     virtual void hostap_attach(char *ifname) = 0;
 
     /**
