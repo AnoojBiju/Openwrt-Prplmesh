@@ -1587,45 +1587,20 @@ void mon_wlan_hal_dwpal::hostap_attach(char *ifname)
 
     static dwpald_hostap_event hostap_radio_event_handlers[] = {
         {EVENT("RRM-BEACON-REP-RECEIVED")},
+        {EVENT("RRM-CHANNEL-LOAD-RECEIVED")},
         //{EVENT("AP-ENABLED")},
         {EVENT("AP-DISABLED")},
         {EVENT("AP-STA-CONNECTED")},
-        {EVENT("AP-STA-DISCONNECTED")},
-        {EVENT("UNCONNECTED-STA-RSSI")},
-        {EVENT("INTERFACE-ENABLED")},
-        {EVENT("INTERFACE-DISABLED")},
-        {EVENT("ACS-STARTED")},
-        {EVENT("ACS-COMPLETED")},
-        {EVENT("ACS-FAILED")},
-        {EVENT("AP-CSA-FINISHED")},
-        {EVENT("BSS-TM-QUERY")},
-        {EVENT("BSS-TM-RESP")},
-        {EVENT("DFS-CAC-START")},
-        {EVENT("DFS-CAC-COMPLETED")},
-        {EVENT("DFS-NOP-FINISHED")},
-        {EVENT("LTQ-SOFTBLOCK-DROP")},
-        {EVENT("AP-ACTION-FRAME-RECEIVED")},
-        {EVENT("AP-STA-POSSIBLE-PSK-MISMATCH")}};
+        {EVENT("AP-STA-DISCONNECTED")},};
+        
     static dwpald_hostap_event hostap_vap_event_handlers[] = {
+        {EVENT("RRM-BEACON-REP-RECEIVED")},
+        {EVENT("RRM-CHANNEL-LOAD-RECEIVED")},
         {EVENT("AP-ENABLED")},
         {EVENT("AP-DISABLED")},
         {EVENT("AP-STA-CONNECTED")},
         {EVENT("AP-STA-DISCONNECTED")},
-        {EVENT("UNCONNECTED-STA-RSSI")},
-        {EVENT("INTERFACE-ENABLED")},
-        {EVENT("INTERFACE-DISABLED")},
-        {EVENT("ACS-STARTED")},
-        //{EVENT("ACS-COMPLETED")},
-        {EVENT("ACS-FAILED")},
-        //{EVENT("AP-CSA-FINISHED")},
-        {EVENT("BSS-TM-QUERY")},
-        {EVENT("BSS-TM-RESP")},
-        {EVENT("DFS-CAC-START")},
-        {EVENT("DFS-CAC-COMPLETED")},
-        {EVENT("DFS-NOP-FINISHED")},
-        {EVENT("LTQ-SOFTBLOCK-DROP")},
-        {EVENT("AP-ACTION-FRAME-RECEIVED")},
-        {EVENT("AP-STA-POSSIBLE-PSK-MISMATCH")}};
+        };
 
     if (iface_ids.vap_id == beerocks::IFACE_RADIO_ID) {
         m_hostap_event_handlers = hostap_radio_event_handlers;
