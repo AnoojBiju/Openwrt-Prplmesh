@@ -1582,7 +1582,7 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
 #define EVENT(event) (char *)event, sizeof(event) - 1, hap_evt_callback
 void mon_wlan_hal_dwpal::hostap_attach(char *ifname)
 {
-    LOG(ERROR) << "Anant:Return of connect" << dwpald_connect("ap_manager");
+    LOG(ERROR) << "Anant:Return of connect" << dwpald_connect("monitor");
     auto iface_ids = beerocks::utils::get_ids_from_iface_string(ifname);
 
     static dwpald_hostap_event hostap_radio_event_handlers[] = {
