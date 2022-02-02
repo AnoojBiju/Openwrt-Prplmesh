@@ -69,6 +69,8 @@ public:
     virtual int hap_evt_rrm_beacon_rep_received_clb(char *ifname, char *op_code, char *buffer,
                                                     size_t bufLen) override;
     virtual int hap_evt_ap_enabled_clb(char *ifname, char *op_code, char *msg, size_t len) override;
+    virtual int hap_evt_ap_disabled_clb(char *ifname, char *op_code, char *msg,
+                                        size_t len) override;
     int filter_bss_msg(char *buffer, int bufLen, const std::string &opcode);
     // Protected methods:
 protected:

@@ -1287,10 +1287,50 @@ int mon_wlan_hal_dwpal::filter_bss_msg(char *buffer, int bufLen, const std::stri
     }
     return 1; /* >0 is pass */
 }
+int mon_wlan_hal_dwpal::hap_evt_ap_disabled_clb(char *ifname, char *op_code, char *buffer,
+                                                size_t bufLen)
+{
+    auto event    = dwpal_to_bwl_event(op_code);
+    auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sHOSTAP_DISABLED_NOTIFICATION));
+    if (!msg_buff) {
+        LOG(FATAL) << "Memory allocation failed!";
+        return -1;
+    }
+
+    auto msg = reinterpret_cast<sHOSTAP_DISABLED_NOTIFICATION *>(msg_buff.get());
+    if (!msg) {
+        LOG(FATAL) << "Memory allocation failed!";
+        return -1;
+    }
+
+    memset(msg_buff.get(), 0, sizeof(sHOSTAP_DISABLED_NOTIFICATION));
+    LOG(INFO) << "AP_Disabled buffer= \n" << buffer;
+
+    char interface[SSID_MAX_SIZE] = {0};
+    size_t numOfValidArgs[2]      = {0};
+    FieldsToParse fieldsToParse[] = {
+        {NULL /*opCode*/, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
+        {(void *)interface, &numOfValidArgs[1], DWPAL_STR_PARAM, NULL, sizeof(interface)},
+
+        /* Must be at the end */
+        {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
+
+    if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse, sizeof(interface)) ==
+        DWPAL_FAILURE) {
+        LOG(ERROR) << "DWPAL parse error ==> Abort";
+        return -1;
+    }
+
+    auto iface_ids = beerocks::utils::get_ids_from_iface_string(interface);
+    msg->vap_id    = iface_ids.vap_id;
+
+    ctx->event_queue_push(event, msg_buff);
+    return 0;
+}
 int mon_wlan_hal_dwpal::hap_evt_ap_enabled_clb(char *ifname, char *op_code, char *buffer,
                                                size_t bufLen)
 {
-    auto event = dwpal_to_bwl_event(op_code);
+    auto event    = dwpal_to_bwl_event(op_code);
     auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sHOSTAP_ENABLED_NOTIFICATION));
     if (!msg_buff) {
         LOG(FATAL) << "Memory allocation failed!";
@@ -1448,9 +1488,6 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
     case mon_wlan_hal_dwpal::Event::DFS_NOP_Finished: {
         ctx->hap_evt_dfs_nop_finished_clb(ifname, op_code, buffer, len);
     } break;
-    case mon_wlan_hal_dwpal::Event::AP_Disabled: {
-        ctx->hap_evt_ap_disabled_clb(ifname, op_code, buffer, len);
-    } break;
     case mon_wlan_hal_dwpal::Event::MGMT_Frame: {
         ctx->hap_evt_ap_action_frame_received_clb(ifname, op_code, buffer, len);
     } break;
@@ -1458,6 +1495,9 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
         ctx->hap_evt_ap_sta_possible_psk_mismatch_clb(ifname, op_code, buffer, len);
     } break;
 #endif
+    case mon_wlan_hal_dwpal::Event::AP_Disabled: {
+        ctx->hap_evt_ap_disabled_clb(ifname, op_code, buffer, len);
+    } break;
     case mon_wlan_hal_dwpal::Event::AP_Enabled: {
         ctx->hap_evt_ap_enabled_clb(ifname, op_code, buffer, len);
     } break;
@@ -1576,44 +1616,6 @@ bool mon_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std
 
     // Handle the event
     switch (event) {
-
-    case mon_wlan_hal_dwpal::Event::AP_Disabled: {
-        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sHOSTAP_DISABLED_NOTIFICATION));
-        if (!msg_buff) {
-            LOG(FATAL) << "Memory allocation failed!";
-            return false;
-        }
-
-        auto msg = reinterpret_cast<sHOSTAP_DISABLED_NOTIFICATION *>(msg_buff.get());
-        if (!msg) {
-            LOG(FATAL) << "Memory allocation failed!";
-            return false;
-        }
-
-        memset(msg_buff.get(), 0, sizeof(sHOSTAP_DISABLED_NOTIFICATION));
-        LOG(INFO) << "AP_Disabled buffer= \n" << buffer;
-
-        char interface[SSID_MAX_SIZE] = {0};
-        size_t numOfValidArgs[2]      = {0};
-        FieldsToParse fieldsToParse[] = {
-            {NULL /*opCode*/, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
-            {(void *)interface, &numOfValidArgs[1], DWPAL_STR_PARAM, NULL, sizeof(interface)},
-
-            /* Must be at the end */
-            {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
-
-        if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse, sizeof(interface)) ==
-            DWPAL_FAILURE) {
-            LOG(ERROR) << "DWPAL parse error ==> Abort";
-            return false;
-        }
-
-        auto iface_ids = beerocks::utils::get_ids_from_iface_string(interface);
-        msg->vap_id    = iface_ids.vap_id;
-
-        event_queue_push(event, msg_buff);
-        break;
-    }
 
     case mon_wlan_hal_dwpal::Event::STA_Connected: {
 
