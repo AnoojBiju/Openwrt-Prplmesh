@@ -282,8 +282,14 @@ TEST_F(DbTest, test_add_vap)
         .WillOnce(Return(true));
 
     //add virtual AP to radio
-    EXPECT_TRUE(m_db->add_vap(g_radio_mac_1, g_vap_id_1, g_bssid_1, g_ssid_1, false));
+    // Update BSSes in the Agent otherwise, add_vap fails.
+    auto radio =
+        m_db->get_radio(tlvf::mac_from_string(g_bridge_mac), tlvf::mac_from_string(g_radio_mac_1));
+    if (radio) {
+        radio->bsses.add(tlvf::mac_from_string(g_bssid_1), *radio, g_vap_id_1);
+    }
 
+    EXPECT_TRUE(m_db->add_vap(g_radio_mac_1, g_vap_id_1, g_bssid_1, g_ssid_1, false));
     //BSS node and path must exist
     EXPECT_TRUE(m_db->has_node(tlvf::mac_from_string(g_bssid_1)));
 }
@@ -670,7 +676,15 @@ TEST_F(DbTest, test_set_vap_stats_info)
     EXPECT_CALL(*m_ambiorix, set(_, _, Matcher<const bool &>(_))).WillRepeatedly(Return(true));
     EXPECT_CALL(*m_ambiorix, set(_, _, Matcher<const uint64_t &>(_))).WillRepeatedly(Return(true));
     EXPECT_CALL(*m_ambiorix, set_current_time(_, _)).WillOnce(Return(true));
+
     //add virtual AP to radio
+    // Update BSSes in the Agent otherwise, add_vap fails.
+    auto radio =
+        m_db->get_radio(tlvf::mac_from_string(g_bridge_mac), tlvf::mac_from_string(g_radio_mac_1));
+    if (radio) {
+        radio->bsses.add(tlvf::mac_from_string(g_bssid_1), *radio, g_vap_id_1);
+    }
+
     EXPECT_TRUE(m_db->add_vap(g_radio_mac_1, g_vap_id_1, g_bssid_1, g_ssid_1, false));
 
     //expectations for set_vap_stats_info
