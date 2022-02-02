@@ -4463,9 +4463,23 @@ void ap_wlan_hal_dwpal::hostap_attach(char *ifname)
 {
     LOG(ERROR) << "Anant:Return of connect" << dwpald_connect("ap_manager");
     auto iface_ids = beerocks::utils::get_ids_from_iface_string(ifname);
-
+    #if 0
+    // Passing a lambda with capture is not supported for standard C function
+    // pointers. As a workaround, we create a static (but thread local) wrapper
+    // function that calls the capturing lambda function.
+    static __thread std::function<int(char *ifname, char *op_code, char *msg, size_t len)> hapd_evt_callback;
+    hapd_evt_callback = [&](char *ifname, char *op_code, char *msg, size_t len) -> int {
+        if (!hap_evt_ap_enabled_clb(ifname,op_code,msg,len)) {
+            LOG(ERROR) << " ap_enabled handler function failed!";
+            return -1;
+        }
+        return 0;
+    };
+    auto ap_enabled_clb = [](char *ifname, char *op_code, char *msg, size_t len) -> int { return hapd_evt_callback(ifname,op_code,msg,len); };
+    #endif
     static dwpald_hostap_event hostap_radio_event_handlers[] = {
         //{EVENT("AP-ENABLED"), hap_evt_callback},
+        //{(char *)"AP-ENABLED",sizeof("AP-ENABLED")-1,ap_enabled_clb},
         {EVENT("AP-DISABLED"), hap_evt_callback},
         {EVENT("AP-STA-CONNECTED"), hap_evt_callback},
         {EVENT("AP-STA-DISCONNECTED"), hap_evt_callback},
