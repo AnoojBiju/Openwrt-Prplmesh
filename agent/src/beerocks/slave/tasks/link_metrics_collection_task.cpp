@@ -1049,12 +1049,14 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
         for (const auto &neighbors_on_local_iface : db->neighbor_devices) {
             auto &neighbors = neighbors_on_local_iface.second;
             for (const auto &neighbor_entry : neighbors) {
-                sLinkNeighbor neighbor;
-                neighbor.al_mac    = neighbor_entry.first;
-                neighbor.iface_mac = neighbor_entry.second.transmitting_iface_mac;
-                if ((neighbor_mac_filter == net::network_utils::ZERO_MAC) ||
-                    (neighbor_mac_filter == neighbor.al_mac)) {
-                    neighbor_links_map[wired_interface].push_back(neighbor);
+                if (neighbor_entry.second.receiving_iface_name == iface_name) {
+                    sLinkNeighbor neighbor;
+                    neighbor.al_mac    = neighbor_entry.first;
+                    neighbor.iface_mac = neighbor_entry.second.transmitting_iface_mac;
+                    if ((neighbor_mac_filter == net::network_utils::ZERO_MAC) ||
+                        (neighbor_mac_filter == neighbor.al_mac)) {
+                        neighbor_links_map[wired_interface].push_back(neighbor);
+                    }
                 }
             }
         }
