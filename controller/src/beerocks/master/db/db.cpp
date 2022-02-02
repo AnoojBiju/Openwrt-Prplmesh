@@ -5577,6 +5577,8 @@ bool db::remove_client_entry_and_update_counter(const std::string &entry_name)
                << " from persistent db, total clients count in persisttent-db: "
                << m_persistent_db_clients_count;
 
+    persistent_db_changes_made = true;
+
     return true;
 }
 
