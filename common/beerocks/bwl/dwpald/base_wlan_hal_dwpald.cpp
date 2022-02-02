@@ -359,7 +359,6 @@ bool base_wlan_hal_dwpal::fsm_setup()
                     DWPAL_Ret ret = dwpal_hostap_socket_close(&m_dwpal_ctx[i]);
                     dwpald_hostap_detach(get_iface_name().c_str());
                     dwpald_disconnect();
-                    
 
                     if (ret == DWPAL_SUCCESS) {
                         m_dwpal_ctx[i] = nullptr;
@@ -522,8 +521,9 @@ bool base_wlan_hal_dwpal::dwpal_send_cmd(const std::string &cmd, int vap_id)
             LOG(DEBUG) << "Failed to send cmd to DWPAL: " << cmd << " ctx_index=" << ctx_index
                        << " --> Retry";
         }
-        dwpald_hostap_cmd(get_iface_name().c_str(),cmd.c_str(),sizeof(cmd.c_str()),buffer,&buff_size_copy);
-        
+        dwpald_hostap_cmd(get_iface_name().c_str(), cmd.c_str(), sizeof(cmd.c_str()), buffer,
+                          &buff_size_copy);
+
     } while (result != 0 && ++try_cnt < 3);
 
     if (result < 0) {
@@ -1198,7 +1198,8 @@ int base_wlan_hal_dwpal::hap_evt_connected_clb(char *ifname, char *op_code, char
 {
     return not_supported(op_code);
 }
-int base_wlan_hal_dwpal::hap_evt_disconnected_clb(char *ifname, char *op_code, char *msg, size_t len)
+int base_wlan_hal_dwpal::hap_evt_disconnected_clb(char *ifname, char *op_code, char *msg,
+                                                  size_t len)
 {
     return not_supported(op_code);
 }
@@ -1206,11 +1207,13 @@ int base_wlan_hal_dwpal::hap_evt_terminating_clb(char *ifname, char *op_code, ch
 {
     return not_supported(op_code);
 }
-int base_wlan_hal_dwpal::hap_evt_scan_results_clb(char *ifname, char *op_code, char *msg, size_t len)
+int base_wlan_hal_dwpal::hap_evt_scan_results_clb(char *ifname, char *op_code, char *msg,
+                                                  size_t len)
 {
     return not_supported(op_code);
 }
-int base_wlan_hal_dwpal::hap_evt_channel_switch_clb(char *ifname, char *op_code, char *msg, size_t len)
+int base_wlan_hal_dwpal::hap_evt_channel_switch_clb(char *ifname, char *op_code, char *msg,
+                                                    size_t len)
 {
     return not_supported(op_code);
 }

@@ -463,7 +463,8 @@ std::string sta_wlan_hal_dwpal::get_ssid() { return m_active_ssid; }
 
 std::string sta_wlan_hal_dwpal::get_bssid() { return m_active_bssid; }
 
-int sta_wlan_hal_dwpal::hap_evt_connected_clb(char *ifname, char *op_code, char *buffer, size_t bufLen)
+int sta_wlan_hal_dwpal::hap_evt_connected_clb(char *ifname, char *op_code, char *buffer,
+                                              size_t bufLen)
 {
     ConnectionStatus connection_status;
     auto event = dwpal_to_bwl_event(op_code);
@@ -515,10 +516,11 @@ int sta_wlan_hal_dwpal::hap_evt_connected_clb(char *ifname, char *op_code, char 
     ctx->event_queue_push(event, msg_buff);
     return 0;
 }
-int sta_wlan_hal_dwpal::hap_evt_disconnected_clb(char *ifname, char *op_code, char *buffer, size_t bufLen)
+int sta_wlan_hal_dwpal::hap_evt_disconnected_clb(char *ifname, char *op_code, char *buffer,
+                                                 size_t bufLen)
 {
     // Client disconnected
-    auto event = dwpal_to_bwl_event(op_code);
+    auto event    = dwpal_to_bwl_event(op_code);
     auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_BACKHAUL_DISCONNECT_REASON_NOTIFICATION));
     auto msg = reinterpret_cast<sACTION_BACKHAUL_DISCONNECT_REASON_NOTIFICATION *>(msg_buff.get());
     LOG_IF(!msg, FATAL) << "Memory allocation failed!";
@@ -563,7 +565,6 @@ int sta_wlan_hal_dwpal::hap_evt_disconnected_clb(char *ifname, char *op_code, ch
     // Forward the event
     ctx->event_queue_push(event, msg_buff);
     return 0;
-
 }
 int sta_wlan_hal_dwpal::hap_evt_terminating_clb(char *ifname, char *op_code, char *msg, size_t len)
 {
@@ -574,10 +575,11 @@ int sta_wlan_hal_dwpal::hap_evt_terminating_clb(char *ifname, char *op_code, cha
 int sta_wlan_hal_dwpal::hap_evt_scan_results_clb(char *ifname, char *op_code, char *msg, size_t len)
 {
     auto event = dwpal_to_bwl_event(op_code);
-    ctx->event_queue_push(event);    
+    ctx->event_queue_push(event);
     return 0;
 }
-int sta_wlan_hal_dwpal::hap_evt_channel_switch_clb(char *ifname, char *op_code, char *msg, size_t len)
+int sta_wlan_hal_dwpal::hap_evt_channel_switch_clb(char *ifname, char *op_code, char *msg,
+                                                   size_t len)
 {
     auto event = dwpal_to_bwl_event(op_code);
     ctx->event_queue_push(event);
