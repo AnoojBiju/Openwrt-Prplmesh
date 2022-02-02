@@ -357,6 +357,9 @@ bool base_wlan_hal_dwpal::fsm_setup()
                 if (m_dwpal_ctx[i]) {
                     LOG(INFO) << "Call DWPAL socket close";
                     DWPAL_Ret ret = dwpal_hostap_socket_close(&m_dwpal_ctx[i]);
+                    dwpald_hostap_detach(get_iface_name().c_str());
+                    dwpald_disconnect();
+                    
 
                     if (ret == DWPAL_SUCCESS) {
                         m_dwpal_ctx[i] = nullptr;
