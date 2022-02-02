@@ -101,6 +101,8 @@ public:
                                                      size_t len);
     virtual int hap_evt_ap_sta_possible_psk_mismatch_clb(char *ifname, char *op_code, char *msg,
                                                          size_t len);
+    virtual int hap_evt_rrm_beacon_rep_received_clb(char *ifname, char *op_code, char *buffer,
+                                                    size_t bufLen);
     virtual void hostap_attach(char *ifname) = 0;
 
     /**

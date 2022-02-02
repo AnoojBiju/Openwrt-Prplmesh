@@ -4504,14 +4504,15 @@ void ap_wlan_hal_dwpal::hostap_attach(char *ifname)
         {EVENT("LTQ-SOFTBLOCK-DROP"), hap_evt_callback},
         {EVENT("AP-ACTION-FRAME-RECEIVED"), hap_evt_callback},
         {EVENT("AP-STA-POSSIBLE-PSK-MISMATCH"), hap_evt_callback}};
-    
+
     if (iface_ids.vap_id == beerocks::IFACE_RADIO_ID) {
-        m_hostap_event_handlers     = hostap_radio_event_handlers;
-        m_num_hostap_event_handlers = sizeof(hostap_radio_event_handlers) / sizeof(dwpald_hostap_event);
-    }
-    else {
-        m_hostap_event_handlers     = hostap_vap_event_handlers;
-        m_num_hostap_event_handlers = sizeof(hostap_vap_event_handlers) / sizeof(dwpald_hostap_event);
+        m_hostap_event_handlers = hostap_radio_event_handlers;
+        m_num_hostap_event_handlers =
+            sizeof(hostap_radio_event_handlers) / sizeof(dwpald_hostap_event);
+    } else {
+        m_hostap_event_handlers = hostap_vap_event_handlers;
+        m_num_hostap_event_handlers =
+            sizeof(hostap_vap_event_handlers) / sizeof(dwpald_hostap_event);
     }
     dwpald_start_listener();
     LOG(ERROR) << "Anant hostap attach" << ifname << "return value"

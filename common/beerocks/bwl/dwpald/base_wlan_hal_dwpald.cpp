@@ -1177,7 +1177,13 @@ bool base_wlan_hal_dwpal::dwpal_get_phy_chan_status(sPhyChanStatus &status)
     std::copy_n(m_nl_buffer, sizeof(status), reinterpret_cast<unsigned char *>(&status));
     return true;
 }
-
+int base_wlan_hal_dwpal::hap_evt_rrm_beacon_rep_received_clb(char *ifname, char *op_code,
+                                                             char *buffer, size_t bufLen)
+{
+    LOG(ERROR) << "Either entity shall register not for " << op_code
+               << "event or if register then override base class callback";
+    return 0;
+}
 int base_wlan_hal_dwpal::hap_evt_ap_enabled_clb(char *ifname, char *op_code, char *msg, size_t len)
 {
     LOG(ERROR) << "Either entity shall register not for " << op_code

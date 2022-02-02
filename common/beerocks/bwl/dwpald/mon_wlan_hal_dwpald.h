@@ -66,6 +66,9 @@ public:
     virtual bool channel_scan_abort() override;
     virtual bool set_estimated_service_parameters(uint8_t *esp_info_field) override;
     virtual void hostap_attach(char *ifname) override;
+    virtual int hap_evt_rrm_beacon_rep_received_clb(char *ifname, char *op_code, char *buffer,
+                                                size_t bufLen) override;
+    int filter_bss_msg(char *buffer, int bufLen, const std::string &opcode);
     // Protected methods:
 protected:
     virtual bool process_dwpal_event(char *buffer, int bufLen, const std::string &opcode) override;
