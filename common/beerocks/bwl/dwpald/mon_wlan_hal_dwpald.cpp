@@ -1287,7 +1287,57 @@ int mon_wlan_hal_dwpal::filter_bss_msg(char *buffer, int bufLen, const std::stri
     }
     return 1; /* >0 is pass */
 }
+int mon_wlan_hal_dwpal::hap_evt_ap_sta_disconnected_clb(char *ifname, char *op_code, char *buffer,
+                                                size_t bufLen)
+{
 
+        // TODO: Change to HAL objects
+        auto msg_buff =
+            ALLOC_SMART_BUFFER(sizeof(sACTION_MONITOR_CLIENT_DISCONNECTED_NOTIFICATION));
+        auto msg =
+            reinterpret_cast<sACTION_MONITOR_CLIENT_DISCONNECTED_NOTIFICATION *>(msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        // Initialize the message
+        memset(msg_buff.get(), 0, sizeof(sACTION_MONITOR_CLIENT_DISCONNECTED_NOTIFICATION));
+
+        char VAP[SSID_MAX_SIZE]        = {0};
+        char MACAddress[MAC_ADDR_SIZE] = {0};
+        size_t numOfValidArgs[3]       = {0};
+        FieldsToParse fieldsToParse[]  = {
+            {NULL /*opCode*/, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
+            {(void *)VAP, &numOfValidArgs[1], DWPAL_STR_PARAM, NULL, sizeof(VAP)},
+            {(void *)MACAddress, &numOfValidArgs[2], DWPAL_STR_PARAM, NULL, sizeof(MACAddress)},
+            /* Must be at the end */
+            {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
+
+        if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse, sizeof(VAP)) ==
+            DWPAL_FAILURE) {
+            LOG(ERROR) << "DWPAL parse error ==> Abort";
+            return false;
+        }
+
+        LOG(DEBUG) << "vap_id     : " << VAP;
+        LOG(DEBUG) << "MACAddress : " << MACAddress;
+
+        for (uint8_t i = 0; i < (sizeof(numOfValidArgs) / sizeof(size_t)); i++) {
+            if (numOfValidArgs[i] == 0) {
+                LOG(ERROR) << "Failed reading parsed parameter " << (int)i << " ==> Abort";
+                return false;
+            }
+        }
+
+        msg->mac = tlvf::mac_from_string(MACAddress);
+
+        ctx->event_queue_push(mon_wlan_hal_dwpal::Event::STA_Disconnected,
+                         msg_buff); // send message to the AP manager
+        return 0;
+}
+int mon_wlan_hal_dwpal::hap_evt_rrm_channel_load_received_clb(char *ifname, char *op_code, char *buffer,
+                                                size_t bufLen)
+{
+    return 0;
+}
 int mon_wlan_hal_dwpal::hap_evt_ap_sta_connected_clb(char *ifname, char *op_code, char *buffer,
                                                 size_t bufLen)
 {
@@ -1504,53 +1554,6 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
     }
     auto event = dwpal_to_bwl_event(op_code);
     switch (event) {
-#if 0
-    case mon_wlan_hal_dwpal::Event::ACS_Failed: {
-        ctx->hap_evt_acs_failed_clb(ifname, op_code, buffer, len);
-    } break;
-    case mon_wlan_hal_dwpal::Event::Interface_Disabled: {
-        ctx->hap_evt_interface_disabled_clb(ifname, op_code, buffer, len);
-    } break;
-    case mon_wlan_hal_dwpal::Event::ACS_Completed: {
-        ctx->hap_evt_acs_completed_clb(ifname, op_code, buffer, len);
-    } break;
-    case mon_wlan_hal_dwpal::Event::CSA_Finished: {
-        ctx->hap_evt_ap_csa_finished_clb(ifname, op_code, buffer, len);
-    } break;
-    case mon_wlan_hal_dwpal::Event::STA_Disconnected: {
-        ctx->hap_evt_ap_sta_disconnected_clb(ifname, op_code, buffer, len);
-    } break;
-    case mon_wlan_hal_dwpal::Event::STA_Connected: {
-        ctx->hap_evt_ap_sta_disconnected_clb(ifname, op_code, buffer, len);
-    } break;
-    case mon_wlan_hal_dwpal::Event::STA_Unassoc_RSSI: {
-        ctx->hap_evt_unconnected_sta_rssi_clb(ifname, op_code, buffer, len);
-    } break;
-    case mon_wlan_hal_dwpal::Event::STA_Softblock_Drop: {
-        ctx->hap_evt_ltq_softblock_drop_clb(ifname, op_code, buffer, len);
-    } break;
-    case mon_wlan_hal_dwpal::Event::BSS_TM_Query: {
-        ctx->hap_evt_bss_tm_query_clb(ifname, op_code, buffer, len);
-    } break;
-    case mon_wlan_hal_dwpal::Event::BSS_TM_Response: {
-        ctx->hap_evt_bss_tm_resp_clb(ifname, op_code, buffer, len);
-    } break;
-    case mon_wlan_hal_dwpal::Event::DFS_CAC_Started: {
-        ctx->hap_evt_dfs_cac_start_clb(ifname, op_code, buffer, len);
-    } break;
-    case mon_wlan_hal_dwpal::Event::DFS_CAC_Completed: {
-        ctx->hap_evt_dfs_cac_completed_clb(ifname, op_code, buffer, len);
-    } break;
-    case mon_wlan_hal_dwpal::Event::DFS_NOP_Finished: {
-        ctx->hap_evt_dfs_nop_finished_clb(ifname, op_code, buffer, len);
-    } break;
-    case mon_wlan_hal_dwpal::Event::MGMT_Frame: {
-        ctx->hap_evt_ap_action_frame_received_clb(ifname, op_code, buffer, len);
-    } break;
-    case mon_wlan_hal_dwpal::Event::AP_Sta_Possible_Psk_Mismatch: {
-        ctx->hap_evt_ap_sta_possible_psk_mismatch_clb(ifname, op_code, buffer, len);
-    } break;
-#endif
     case mon_wlan_hal_dwpal::Event::AP_Disabled: {
         ctx->hap_evt_ap_disabled_clb(ifname, op_code, buffer, len);
     } break;
@@ -1562,6 +1565,12 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
     } break;
     case mon_wlan_hal_dwpal::Event::STA_Connected: {
         ctx->hap_evt_ap_sta_connected_clb(ifname, op_code, buffer, len);
+    } break;
+    case mon_wlan_hal_dwpal::Event::STA_Disconnected: {
+        ctx->hap_evt_ap_sta_disconnected_clb(ifname, op_code, buffer, len);
+    } break;
+    case mon_wlan_hal_dwpal::Event::RRM_Channel_Load_Response: {
+        ctx->hap_evt_rrm_channel_load_received_clb(ifname, op_code, buffer, len);
     } break;
     default: {
         LOG(ERROR) << "Code should not reach here, event " << op_code
@@ -1635,63 +1644,9 @@ void mon_wlan_hal_dwpal::hostap_attach(char *ifname)
 
 bool mon_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std::string &opcode)
 {
-    
-   auto event = dwpal_to_bwl_event(opcode);
-   switch(event) {
-    case mon_wlan_hal_dwpal::Event::STA_Disconnected: {
-        // TODO: Change to HAL objects
-        auto msg_buff =
-            ALLOC_SMART_BUFFER(sizeof(sACTION_MONITOR_CLIENT_DISCONNECTED_NOTIFICATION));
-        auto msg =
-            reinterpret_cast<sACTION_MONITOR_CLIENT_DISCONNECTED_NOTIFICATION *>(msg_buff.get());
-        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
-
-        // Initialize the message
-        memset(msg_buff.get(), 0, sizeof(sACTION_MONITOR_CLIENT_DISCONNECTED_NOTIFICATION));
-
-        char VAP[SSID_MAX_SIZE]        = {0};
-        char MACAddress[MAC_ADDR_SIZE] = {0};
-        size_t numOfValidArgs[3]       = {0};
-        FieldsToParse fieldsToParse[]  = {
-            {NULL /*opCode*/, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
-            {(void *)VAP, &numOfValidArgs[1], DWPAL_STR_PARAM, NULL, sizeof(VAP)},
-            {(void *)MACAddress, &numOfValidArgs[2], DWPAL_STR_PARAM, NULL, sizeof(MACAddress)},
-            /* Must be at the end */
-            {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
-
-        if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse, sizeof(VAP)) ==
-            DWPAL_FAILURE) {
-            LOG(ERROR) << "DWPAL parse error ==> Abort";
-            return false;
-        }
-
-        LOG(DEBUG) << "vap_id     : " << VAP;
-        LOG(DEBUG) << "MACAddress : " << MACAddress;
-
-        for (uint8_t i = 0; i < (sizeof(numOfValidArgs) / sizeof(size_t)); i++) {
-            if (numOfValidArgs[i] == 0) {
-                LOG(ERROR) << "Failed reading parsed parameter " << (int)i << " ==> Abort";
-                return false;
-            }
-        }
-
-        msg->mac = tlvf::mac_from_string(MACAddress);
-
-        event_queue_push(mon_wlan_hal_dwpal::Event::STA_Disconnected,
-                         msg_buff); // send message to the AP manager
-        break;
-    }
-    case mon_wlan_hal_dwpal::Event::RRM_Channel_Load_Response:
-        break;
-    // Gracefully ignore unhandled events
-    // TODO: Probably should be changed to an error once dwpal will stop
-    //       sending empty or irrelevant events...
-    default:
-        LOG(DEBUG) << "Unhandled event received: " << opcode;
-        break;
-    }
-
     return true;
+    
+
 }
 
 bool mon_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)

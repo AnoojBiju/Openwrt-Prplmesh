@@ -73,6 +73,10 @@ public:
                                         size_t len) override;
     virtual int hap_evt_ap_sta_connected_clb(char *ifname, char *op_code, char *msg,
                                         size_t len) override;
+    virtual int hap_evt_ap_sta_disconnected_clb(char *ifname, char *op_code, char *msg,
+                                        size_t len) override;
+    virtual int hap_evt_rrm_channel_load_received_clb(char *ifname, char *op_code, char *msg,
+                                        size_t len) override;
         
     int filter_bss_msg(char *buffer, int bufLen, const std::string &opcode);
     // Protected methods:
