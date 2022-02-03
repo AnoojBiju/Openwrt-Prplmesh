@@ -735,12 +735,14 @@ update_vap_credentials_configure_wpa(const std::string &vap_if,
 
 ap_wlan_hal_dwpal::~ap_wlan_hal_dwpal() {}
 
+static ap_wlan_hal_dwpal *ctx = nullptr;
+
 int ap_wlan_hal_dwpal::hap_evt_interface_disabled_clb(char *ifname, char *op_code, char *msg,
                                                       size_t len)
 {
     LOG(DEBUG) << ifname << ": " << msg;
     auto event = dwpal_to_bwl_event(op_code);
-    event_queue_push(event); // Forward to the AP manager
+    ctx->event_queue_push(event); // Forward to the AP manager
     return 0;
 }
 int ap_wlan_hal_dwpal::hap_evt_acs_failed_clb(char *ifname, char *op_code, char *msg, size_t len)
@@ -768,8 +770,8 @@ int ap_wlan_hal_dwpal::hap_evt_acs_completed_clb(char *ifname, char *op_code, ch
 {
     LOG(DEBUG) << buffer;
     auto event                         = dwpal_to_bwl_event(op_code);
-    auto csa_event_filtering_timestamp = get_csa_event_filtering_timestamp();
-    bool drop_csa                      = get_drop_csa();
+    auto csa_event_filtering_timestamp = ctx->get_csa_event_filtering_timestamp();
+    bool drop_csa                      = ctx->get_drop_csa();
 
     if (event == ap_wlan_hal_dwpal::Event::CSA_Finished) {
         if (std::chrono::steady_clock::now() <
@@ -807,7 +809,7 @@ int ap_wlan_hal_dwpal::hap_evt_acs_completed_clb(char *ifname, char *op_code, ch
         {(void *)&reason, &numOfValidArgs[7], DWPAL_STR_PARAM, "reason=", sizeof(reason)},
         /* Must be at the end */
         {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
-    auto radio_info = get_radio_info();
+    auto radio_info = ctx->get_radio_info();
     if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse, sizeof(radio_info)) ==
         DWPAL_FAILURE) {
         LOG(ERROR) << "DWPAL parse error ==> Abort";
@@ -858,19 +860,19 @@ int ap_wlan_hal_dwpal::hap_evt_acs_completed_clb(char *ifname, char *op_code, ch
         radio_info.is_5ghz = true;
     }
 
-    event_queue_push(event);
+    ctx->event_queue_push(event);
 
     // TODO: WHY?!
     if (event == ap_wlan_hal_dwpal::Event::ACS_Completed) {
         LOG(DEBUG) << "ACS_COMPLETED >>> adding CSA_FINISHED event as well";
-        event_queue_push(ap_wlan_hal_dwpal::Event::CSA_Finished);
+        ctx->event_queue_push(ap_wlan_hal_dwpal::Event::CSA_Finished);
     }
     return 0;
 }
 int ap_wlan_hal_dwpal::hap_evt_ap_csa_finished_clb(char *ifname, char *op_code, char *msg,
                                                    size_t len)
 {
-    return hap_evt_acs_completed_clb(ifname, op_code, msg, len);
+    return ctx->hap_evt_acs_completed_clb(ifname, op_code, msg, len);
 }
 
 #if 0
@@ -899,6 +901,7 @@ ap_wlan_hal_dwpal::ap_wlan_hal_dwpal(const std::string &iface_name, hal_event_cb
                             "CTRL-EVENT-BSS-ADDED", "CTRL-EVENT-BSS-REMOVED"};
     int events_size      = sizeof(events) / sizeof(std::string);
     m_filtered_events.insert(events, events + events_size);
+    ctx = this;
 }
 
 HALState ap_wlan_hal_dwpal::attach(bool block)
@@ -3509,9 +3512,9 @@ int ap_wlan_hal_dwpal::hap_evt_unconnected_sta_rssi_clb(char *ifname, char *op_c
     // Split the RSSI values
     auto rssiVec                     = beerocks::string_utils::str_split(rssi, ' ');
     auto snrVec                      = beerocks::string_utils::str_split(rssi, ' ');
-    auto unassoc_measure_start       = get_unassoc_measure_start();
-    auto unassoc_measure_window_size = get_unassoc_measure_window_size();
-    auto unassoc_measure_delay       = get_unassoc_measure_delay();
+    auto unassoc_measure_start       = ctx->get_unassoc_measure_start();
+    auto unassoc_measure_window_size = ctx->get_unassoc_measure_window_size();
+    auto unassoc_measure_delay       = ctx->get_unassoc_measure_delay();
 
     // -128 -128 -128 -128
     int rssi_cnt    = 0;
@@ -3563,7 +3566,7 @@ int ap_wlan_hal_dwpal::hap_evt_unconnected_sta_rssi_clb(char *ifname, char *op_c
     }
 
     // Add the message to the queue
-    event_queue_push(ap_wlan_hal_dwpal::Event::STA_Unassoc_RSSI, msg_buff);
+    ctx->event_queue_push(ap_wlan_hal_dwpal::Event::STA_Unassoc_RSSI, msg_buff);
     return 0;
 }
 int ap_wlan_hal_dwpal::hap_evt_ltq_softblock_drop_clb(char *ifname, char *op_code, char *buffer,
@@ -3665,7 +3668,7 @@ int ap_wlan_hal_dwpal::hap_evt_ltq_softblock_drop_clb(char *ifname, char *op_cod
             return true;
         }
         // Check if the BSS is monitored
-        if (!is_BSS_monitored(vap_name)) {
+        if (!ctx->is_BSS_monitored(vap_name)) {
             LOG(DEBUG) << "Event received on non-monitored BSS, skipping!";
         }
 
@@ -3674,7 +3677,7 @@ int ap_wlan_hal_dwpal::hap_evt_ltq_softblock_drop_clb(char *ifname, char *op_cod
         msg->params.bssid = tlvf::mac_from_string(vap_bssid);
 
         // Add the message to the queue
-        event_queue_push(ap_wlan_hal_dwpal::Event::STA_Steering_Probe_Req, msg_buff);
+        ctx->event_queue_push(ap_wlan_hal_dwpal::Event::STA_Steering_Probe_Req, msg_buff);
 
     } else if (message_type == s80211MgmtFrame::eType::AUTH) {
 
@@ -3756,7 +3759,7 @@ int ap_wlan_hal_dwpal::hap_evt_ltq_softblock_drop_clb(char *ifname, char *op_cod
             return true;
         }
         // Check if the BSS is monitored
-        if (!is_BSS_monitored(vap_name)) {
+        if (!ctx->is_BSS_monitored(vap_name)) {
             LOG(DEBUG) << "Event received on non-monitored BSS, skipping!";
         }
 
@@ -3765,7 +3768,7 @@ int ap_wlan_hal_dwpal::hap_evt_ltq_softblock_drop_clb(char *ifname, char *op_cod
         msg->params.bssid = tlvf::mac_from_string(vap_bssid);
 
         // Add the message to the queue
-        event_queue_push(ap_wlan_hal_dwpal::Event::STA_Steering_Auth_Fail, msg_buff);
+        ctx->event_queue_push(ap_wlan_hal_dwpal::Event::STA_Steering_Auth_Fail, msg_buff);
     } else {
         LOG(ERROR) << "Unknown message type!";
     }
@@ -3788,7 +3791,7 @@ int ap_wlan_hal_dwpal::hap_evt_bss_tm_query_clb(char *ifname, char *op_code, cha
     }
 
     auto iface_ids    = beerocks::utils::get_ids_from_iface_string(vap_name);
-    auto radio_info   = get_radio_info();
+    auto radio_info   = ctx->get_radio_info();
     std::string bssid = radio_info.available_vaps[iface_ids.vap_id].mac;
 
     auto op_class = son::wireless_utils::get_operating_class_by_channel(
@@ -3801,7 +3804,7 @@ int ap_wlan_hal_dwpal::hap_evt_bss_tm_query_clb(char *ifname, char *op_code, cha
     // Since it's not an "active" transition and it makes the STA stay on the
     // current VAP, there is no need to notify the upper layer.
     // disassoc_timer_btt = 0 valid_int_btt=2 (200ms) reason=0 (not specified)
-    sta_bss_steer(client_mac_str, bssid, op_class, radio_info.channel, 0, 2, 0);
+    ctx->sta_bss_steer(client_mac_str, bssid, op_class, radio_info.channel, 0, 2, 0);
     return 0;
 }
 
@@ -3831,7 +3834,7 @@ int ap_wlan_hal_dwpal::hap_evt_ap_disabled_clb(char *ifname, char *op_code, char
     auto iface_ids = beerocks::utils::get_ids_from_iface_string(interface);
     msg->vap_id    = iface_ids.vap_id;
 
-    event_queue_push(ap_wlan_hal_dwpal::Event::AP_Disabled,
+    ctx->event_queue_push(ap_wlan_hal_dwpal::Event::AP_Disabled,
                           msg_buff); // send message to the AP manager
     return 0;
 }
@@ -3844,7 +3847,7 @@ int ap_wlan_hal_dwpal::hap_evt_dfs_cac_completed_clb(char *ifname, char *op_code
     parse_event(buffer, parsed_obj);
     int64_t tmp_int;
 
-    if (!get_radio_info().is_5ghz) {
+    if (!ctx->get_radio_info().is_5ghz) {
         LOG(WARNING) << "DFS event on 2.4Ghz radio. Ignoring...";
         return true;
     }
@@ -3901,7 +3904,7 @@ int ap_wlan_hal_dwpal::hap_evt_dfs_cac_completed_clb(char *ifname, char *op_code
     msg->params.bandwidth = dwpal_bw_to_beerocks_bw(tmp_int);
 
     // Add the message to the queue
-    event_queue_push(ap_wlan_hal_dwpal::Event::DFS_CAC_Completed, msg_buff);
+    ctx->event_queue_push(ap_wlan_hal_dwpal::Event::DFS_CAC_Completed, msg_buff);
     return 0;
 }
 int ap_wlan_hal_dwpal::hap_evt_dfs_cac_start_clb(char *ifname, char *op_code, char *buffer,
@@ -3960,7 +3963,7 @@ int ap_wlan_hal_dwpal::hap_evt_dfs_cac_start_clb(char *ifname, char *op_code, ch
     msg->params.cac_duration_sec = beerocks::string_utils::stoi(tmp_string);
 
     // Add the message to the queue
-    event_queue_push(ap_wlan_hal_dwpal::Event::DFS_CAC_Started, msg_buff);
+    ctx->event_queue_push(ap_wlan_hal_dwpal::Event::DFS_CAC_Started, msg_buff);
     return 0;
 }
 
@@ -4016,7 +4019,7 @@ int ap_wlan_hal_dwpal::hap_evt_bss_tm_resp_clb(char *ifname, char *op_code, char
     msg->params.source_bssid = tlvf::mac_from_string(bssid);
 
     // Add the message to the queue
-    event_queue_push(ap_wlan_hal_dwpal::Event::BSS_TM_Response, msg_buff);
+    ctx->event_queue_push(ap_wlan_hal_dwpal::Event::BSS_TM_Response, msg_buff);
     return 0;
 }
 int ap_wlan_hal_dwpal::hap_evt_dfs_nop_finished_clb(char *ifname, char *op_code, char *buffer,
@@ -4067,7 +4070,7 @@ int ap_wlan_hal_dwpal::hap_evt_dfs_nop_finished_clb(char *ifname, char *op_code,
     msg->params.bandwidth = dwpal_bw_to_beerocks_bw(chan_width);
 
     // Add the message to the queue
-    event_queue_push(ap_wlan_hal_dwpal::Event::DFS_NOP_Finished, msg_buff);
+    ctx->event_queue_push(ap_wlan_hal_dwpal::Event::DFS_NOP_Finished, msg_buff);
     return 0;
 }
 int ap_wlan_hal_dwpal::hap_evt_ap_enabled_clb(char *ifname, char *op_code, char *buffer,
@@ -4102,7 +4105,7 @@ int ap_wlan_hal_dwpal::hap_evt_ap_enabled_clb(char *ifname, char *op_code, char 
         return true;
     }
 
-    event_queue_push(ap_wlan_hal_dwpal::Event::AP_Enabled, msg_buff);
+    ctx->event_queue_push(ap_wlan_hal_dwpal::Event::AP_Enabled, msg_buff);
     return 0;
 }
 int ap_wlan_hal_dwpal::hap_evt_ap_action_frame_received_clb(char *ifname, char *op_code,
@@ -4130,13 +4133,13 @@ int ap_wlan_hal_dwpal::hap_evt_ap_action_frame_received_clb(char *ifname, char *
         return true; // Just a warning, do not fail
     }
 
-    auto mgmt_frame = create_mgmt_frame_notification(frame);
+    auto mgmt_frame = ctx->create_mgmt_frame_notification(frame);
     if (!mgmt_frame) {
         LOG(WARNING) << "Failed creating management frame notification!";
         return true; // Just a warning, do not fail
     }
 
-    event_queue_push(ap_wlan_hal_dwpal::Event::MGMT_Frame, mgmt_frame);
+    ctx->event_queue_push(ap_wlan_hal_dwpal::Event::MGMT_Frame, mgmt_frame);
     return 0;
 }
 
@@ -4161,7 +4164,7 @@ int ap_wlan_hal_dwpal::hap_evt_ap_sta_possible_psk_mismatch_clb(char *ifname, ch
     msg->sta_mac = tlvf::mac_from_string(client_mac_str);
     LOG(DEBUG) << "sta possible psk mismatch: offending STA mac: " << msg->sta_mac;
 
-    event_queue_push(ap_wlan_hal_dwpal::Event::AP_Sta_Possible_Psk_Mismatch,
+    ctx->event_queue_push(ap_wlan_hal_dwpal::Event::AP_Sta_Possible_Psk_Mismatch,
                           msg_buff); // send message to the AP manager
     return 0;
 }
@@ -4211,7 +4214,7 @@ int ap_wlan_hal_dwpal::hap_evt_ap_sta_disconnected_clb(char *ifname, char *op_co
     msg->params.vap_id = beerocks::utils::get_ids_from_iface_string(VAP).vap_id;
     msg->params.mac    = tlvf::mac_from_string(MACAddress);
 
-    event_queue_push(ap_wlan_hal_dwpal::Event::STA_Disconnected,
+    ctx->event_queue_push(ap_wlan_hal_dwpal::Event::STA_Disconnected,
                           msg_buff); // send message to the AP manager
     return 0;
 }
@@ -4327,7 +4330,7 @@ int ap_wlan_hal_dwpal::hap_evt_ap_sta_connected_clb(char *ifname, char *op_code,
     msg->params.mac    = tlvf::mac_from_string(MACAddress);
 
     //convert the hex string to binary
-    auto binary_str                      = get_binary_association_frame(assoc_req);
+    auto binary_str                      = ctx->get_binary_association_frame(assoc_req);
     msg->params.association_frame_length = binary_str.length();
 
     std::copy_n(&binary_str[0], binary_str.length(), msg->params.association_frame);
@@ -4335,7 +4338,7 @@ int ap_wlan_hal_dwpal::hap_evt_ap_sta_connected_clb(char *ifname, char *op_code,
     std::string ht_cap_str(ht_cap);
     get_ht_mcs_capabilities(HT_MCS, ht_cap_str, msg->params.capabilities);
 
-    if (get_radio_info().is_5ghz) {
+    if (ctx->get_radio_info().is_5ghz) {
         std::string vht_cap_str(vht_cap);
         get_vht_mcs_capabilities(VHT_MCS, vht_cap_str, msg->params.capabilities);
     }
@@ -4346,8 +4349,8 @@ int ap_wlan_hal_dwpal::hap_evt_ap_sta_connected_clb(char *ifname, char *op_code,
 
     son::wireless_utils::print_station_capabilities(msg->params.capabilities);
 
-    auto completed_vaps  = get_completed_vap();
-    auto handled_clients = get_handled_clients();
+    auto completed_vaps  = ctx->get_completed_vap();
+    auto handled_clients = ctx->get_handled_clients();
     // No need to store clients forever - may cause very big memory usage
     if (completed_vaps.find(msg->params.vap_id) != completed_vaps.end()) {
         // To prevent duplication of generation of connected event for clients,
@@ -4356,96 +4359,97 @@ int ap_wlan_hal_dwpal::hap_evt_ap_sta_connected_clb(char *ifname, char *op_code,
     }
 
     // Send the event to the AP manager
-    event_queue_push(ap_wlan_hal_dwpal::Event::STA_Connected, msg_buff);
+    ctx->event_queue_push(ap_wlan_hal_dwpal::Event::STA_Connected, msg_buff);
 
     // Tunnel the association/re-association request to the controller
     if (assoc_req[0] != 0) {
-        auto mgmt_frame = create_mgmt_frame_notification(assoc_req);
+        auto mgmt_frame = ctx->create_mgmt_frame_notification(assoc_req);
         if (mgmt_frame) {
-            event_queue_push(ap_wlan_hal_dwpal::Event::MGMT_Frame, mgmt_frame);
+            ctx->event_queue_push(ap_wlan_hal_dwpal::Event::MGMT_Frame, mgmt_frame);
         }
     }
     return 0;
 }
-#define EVENT(event) (char *)event, sizeof(event) - 1, hapd_evt_clb
+#define EVENT(event) (char *)event, sizeof(event) - 1
 #if 0
-    {EVENT("AP-ENABLED"), hap_evt_ap_enabled_clb},
-    {EVENT("AP-DISABLED"), hap_evt_ap_disabled_clb},
-    {EVENT("AP-STA-CONNECTED"), hap_evt_ap_sta_connected_clb},
-    {EVENT("AP-STA-DISCONNECTED"), hap_evt_ap_sta_disconnected_clb},
-    {EVENT("UNCONNECTED-STA-RSSI"), hap_evt_unconnected_sta_rssi_clb},
-    {EVENT("INTERFACE-ENABLED"), hap_evt_interface_enabled_clb},
-    {EVENT("INTERFACE-DISABLED"), hap_evt_interface_disabled_clb},
-    {EVENT("ACS-STARTED"), hap_evt_acs_started_clb},
-    {EVENT("ACS-COMPLETED"), hap_evt_acs_completed_clb},
-    {EVENT("ACS-FAILED"), hap_evt_acs_failed_clb},
-    {EVENT("AP-CSA-FINISHED"), hap_evt_ap_csa_finished_clb},
-    {EVENT("BSS-TM-QUERY"), hap_evt_bss_tm_query_clb},
-    {EVENT("BSS-TM-RESP"), hap_evt_bss_tm_resp_clb},
-    {EVENT("DFS-CAC-START"), hap_evt_dfs_cac_start_clb},
-    {EVENT("DFS-CAC-COMPLETED"), hap_evt_dfs_cac_completed_clb},
-    {EVENT("DFS-NOP-FINISHED"), hap_evt_dfs_nop_finished_clb},
-    {EVENT("LTQ-SOFTBLOCK-DROP"), hap_evt_ltq_softblock_drop_clb},
-    {EVENT("AP-ACTION-FRAME-RECEIVED"), hap_evt_ap_action_frame_received_clb},
-    {EVENT("AP-STA-POSSIBLE-PSK-MISMATCH"), hap_evt_ap_sta_possible_psk_mismatch_clb}};
+    {EVENT("AP-ENABLED"), ctx->hap_evt_ap_enabled_clb},
+    {EVENT("AP-DISABLED"), ctx->hap_evt_ap_disabled_clb},
+    {EVENT("AP-STA-CONNECTED"), ctx->hap_evt_ap_sta_connected_clb},
+    {EVENT("AP-STA-DISCONNECTED"), ctx->hap_evt_ap_sta_disconnected_clb},
+    {EVENT("UNCONNECTED-STA-RSSI"), ctx->hap_evt_unconnected_sta_rssi_clb},
+    {EVENT("INTERFACE-ENABLED"), ctx->hap_evt_interface_enabled_clb},
+    {EVENT("INTERFACE-DISABLED"), ctx->hap_evt_interface_disabled_clb},
+    {EVENT("ACS-STARTED"), ctx->hap_evt_acs_started_clb},
+    {EVENT("ACS-COMPLETED"), ctx->hap_evt_acs_completed_clb},
+    {EVENT("ACS-FAILED"), ctx->hap_evt_acs_failed_clb},
+    {EVENT("AP-CSA-FINISHED"), ctx->hap_evt_ap_csa_finished_clb},
+    {EVENT("BSS-TM-QUERY"), ctx->hap_evt_bss_tm_query_clb},
+    {EVENT("BSS-TM-RESP"), ctx->hap_evt_bss_tm_resp_clb},
+    {EVENT("DFS-CAC-START"), ctx->hap_evt_dfs_cac_start_clb},
+    {EVENT("DFS-CAC-COMPLETED"), ctx->hap_evt_dfs_cac_completed_clb},
+    {EVENT("DFS-NOP-FINISHED"), ctx->hap_evt_dfs_nop_finished_clb},
+    {EVENT("LTQ-SOFTBLOCK-DROP"), ctx->hap_evt_ltq_softblock_drop_clb},
+    {EVENT("AP-ACTION-FRAME-RECEIVED"), ctx->hap_evt_ap_action_frame_received_clb},
+    {EVENT("AP-STA-POSSIBLE-PSK-MISMATCH"), ctx->hap_evt_ap_sta_possible_psk_mismatch_clb}};
+#endif
 static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t len)
 {
-    auto result = filter_bss_msg(buffer, len, op_code);
+    auto result = ctx->filter_bss_msg(buffer, len, op_code);
     if (result <= 0) {
         return result;
     }
     auto event = dwpal_to_bwl_event(op_code);
     switch (event) {
     case ap_wlan_hal_dwpal::Event::ACS_Failed: {
-        hap_evt_acs_failed_clb(ifname, op_code, buffer, len);
+        ctx->hap_evt_acs_failed_clb(ifname, op_code, buffer, len);
     } break;
     case ap_wlan_hal_dwpal::Event::Interface_Disabled: {
-        hap_evt_interface_disabled_clb(ifname, op_code, buffer, len);
+        ctx->hap_evt_interface_disabled_clb(ifname, op_code, buffer, len);
     } break;
     case ap_wlan_hal_dwpal::Event::ACS_Completed: {
-        hap_evt_acs_completed_clb(ifname, op_code, buffer, len);
+        ctx->hap_evt_acs_completed_clb(ifname, op_code, buffer, len);
     } break;
     case ap_wlan_hal_dwpal::Event::CSA_Finished: {
-        hap_evt_ap_csa_finished_clb(ifname, op_code, buffer, len);
+        ctx->hap_evt_ap_csa_finished_clb(ifname, op_code, buffer, len);
     } break;
     case ap_wlan_hal_dwpal::Event::STA_Disconnected: {
-        hap_evt_ap_sta_disconnected_clb(ifname, op_code, buffer, len);
+        ctx->hap_evt_ap_sta_disconnected_clb(ifname, op_code, buffer, len);
     } break;
     case ap_wlan_hal_dwpal::Event::STA_Connected: {
-        hap_evt_ap_sta_connected_clb(ifname, op_code, buffer, len);
+        ctx->hap_evt_ap_sta_connected_clb(ifname, op_code, buffer, len);
     } break;
     case ap_wlan_hal_dwpal::Event::STA_Unassoc_RSSI: {
-        hap_evt_unconnected_sta_rssi_clb(ifname, op_code, buffer, len);
+        ctx->hap_evt_unconnected_sta_rssi_clb(ifname, op_code, buffer, len);
     } break;
     case ap_wlan_hal_dwpal::Event::STA_Softblock_Drop: {
-        hap_evt_ltq_softblock_drop_clb(ifname, op_code, buffer, len);
+        ctx->hap_evt_ltq_softblock_drop_clb(ifname, op_code, buffer, len);
     } break;
     case ap_wlan_hal_dwpal::Event::BSS_TM_Query: {
-        hap_evt_bss_tm_query_clb(ifname, op_code, buffer, len);
+        ctx->hap_evt_bss_tm_query_clb(ifname, op_code, buffer, len);
     } break;
     case ap_wlan_hal_dwpal::Event::BSS_TM_Response: {
-        hap_evt_bss_tm_resp_clb(ifname, op_code, buffer, len);
+        ctx->hap_evt_bss_tm_resp_clb(ifname, op_code, buffer, len);
     } break;
     case ap_wlan_hal_dwpal::Event::DFS_CAC_Started: {
-        hap_evt_dfs_cac_start_clb(ifname, op_code, buffer, len);
+        ctx->hap_evt_dfs_cac_start_clb(ifname, op_code, buffer, len);
     } break;
     case ap_wlan_hal_dwpal::Event::DFS_CAC_Completed: {
-        hap_evt_dfs_cac_completed_clb(ifname, op_code, buffer, len);
+        ctx->hap_evt_dfs_cac_completed_clb(ifname, op_code, buffer, len);
     } break;
     case ap_wlan_hal_dwpal::Event::DFS_NOP_Finished: {
-        hap_evt_dfs_nop_finished_clb(ifname, op_code, buffer, len);
+        ctx->hap_evt_dfs_nop_finished_clb(ifname, op_code, buffer, len);
     } break;
     case ap_wlan_hal_dwpal::Event::AP_Disabled: {
-        hap_evt_ap_disabled_clb(ifname, op_code, buffer, len);
+        ctx->hap_evt_ap_disabled_clb(ifname, op_code, buffer, len);
     } break;
     case ap_wlan_hal_dwpal::Event::AP_Enabled: {
-        hap_evt_ap_enabled_clb(ifname, op_code, buffer, len);
+        ctx->hap_evt_ap_enabled_clb(ifname, op_code, buffer, len);
     } break;
     case ap_wlan_hal_dwpal::Event::MGMT_Frame: {
-        hap_evt_ap_action_frame_received_clb(ifname, op_code, buffer, len);
+        ctx->hap_evt_ap_action_frame_received_clb(ifname, op_code, buffer, len);
     } break;
     case ap_wlan_hal_dwpal::Event::AP_Sta_Possible_Psk_Mismatch: {
-        hap_evt_ap_sta_possible_psk_mismatch_clb(ifname, op_code, buffer, len);
+        ctx->hap_evt_ap_sta_possible_psk_mismatch_clb(ifname, op_code, buffer, len);
     } break;
     default: {
         LOG(ERROR) << "Code should not reach here, event " << op_code
@@ -4454,125 +4458,66 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
     }
     return 0;
 }
-#endif
 
 void ap_wlan_hal_dwpal::hostap_attach(char *ifname)
 {
     LOG(ERROR) << "Anant:Return of connect" << dwpald_connect("ap_manager");
     auto iface_ids = beerocks::utils::get_ids_from_iface_string(ifname);
-    #if 1
+    #if 0
     // Passing a lambda with capture is not supported for standard C function
     // pointers. As a workaround, we create a static (but thread local) wrapper
     // function that calls the capturing lambda function.
-    static __thread std::function<int(char *ifname, char *op_code, char *buffer, size_t len)> hapd_evt_callback;
-    hapd_evt_callback = [&](char *ifname, char *op_code, char *buffer, size_t len) -> int {
-        auto result = filter_bss_msg(buffer, len, op_code);
-    if (result <= 0) {
-        return result;
-    }
-    auto event = dwpal_to_bwl_event(op_code);
-    switch (event) {
-    case ap_wlan_hal_dwpal::Event::ACS_Failed: {
-        hap_evt_acs_failed_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::Interface_Disabled: {
-        hap_evt_interface_disabled_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::ACS_Completed: {
-        hap_evt_acs_completed_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::CSA_Finished: {
-        hap_evt_ap_csa_finished_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::STA_Disconnected: {
-        hap_evt_ap_sta_disconnected_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::STA_Connected: {
-        hap_evt_ap_sta_connected_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::STA_Unassoc_RSSI: {
-        hap_evt_unconnected_sta_rssi_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::STA_Softblock_Drop: {
-        hap_evt_ltq_softblock_drop_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::BSS_TM_Query: {
-        hap_evt_bss_tm_query_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::BSS_TM_Response: {
-        hap_evt_bss_tm_resp_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::DFS_CAC_Started: {
-        hap_evt_dfs_cac_start_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::DFS_CAC_Completed: {
-        hap_evt_dfs_cac_completed_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::DFS_NOP_Finished: {
-        hap_evt_dfs_nop_finished_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::AP_Disabled: {
-        hap_evt_ap_disabled_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::AP_Enabled: {
-        hap_evt_ap_enabled_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::MGMT_Frame: {
-        hap_evt_ap_action_frame_received_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::AP_Sta_Possible_Psk_Mismatch: {
-        hap_evt_ap_sta_possible_psk_mismatch_clb(ifname, op_code, buffer, len);
-    } break;
-    default: {
-        LOG(ERROR) << "Code should not reach here, event " << op_code
-                   << "Not registered yet received";
-    } break;
-    }
+    static __thread std::function<int(char *ifname, char *op_code, char *msg, size_t len)> hapd_evt_callback;
+    hapd_evt_callback = [&](char *ifname, char *op_code, char *msg, size_t len) -> int {
+        if (!hap_evt_ap_enabled_clb(ifname,op_code,msg,len)) {
+            LOG(ERROR) << " ap_enabled handler function failed!";
+            return -1;
+        }
         return 0;
     };
-    auto hapd_evt_clb = [](char *ifname, char *op_code, char *msg, size_t len) -> int { return hapd_evt_callback(ifname,op_code,msg,len); };
+    auto ap_enabled_clb = [](char *ifname, char *op_code, char *msg, size_t len) -> int { return hapd_evt_callback(ifname,op_code,msg,len); };
     #endif
     static dwpald_hostap_event hostap_radio_event_handlers[] = {
-        //{EVENT("AP-ENABLED")},
-        {EVENT("AP-ENABLED")},
-        {EVENT("AP-DISABLED")},
-        {EVENT("AP-STA-CONNECTED")},
-        {EVENT("AP-STA-DISCONNECTED")},
-        {EVENT("UNCONNECTED-STA-RSSI")},
-        {EVENT("INTERFACE-ENABLED")},
-        {EVENT("INTERFACE-DISABLED")},
-        {EVENT("ACS-STARTED")},
-        {EVENT("ACS-COMPLETED")},
-        {EVENT("ACS-FAILED")},
-        {EVENT("AP-CSA-FINISHED")},
-        {EVENT("BSS-TM-QUERY")},
-        {EVENT("BSS-TM-RESP")},
-        {EVENT("DFS-CAC-START")},
-        {EVENT("DFS-CAC-COMPLETED")},
-        {EVENT("DFS-NOP-FINISHED")},
-        {EVENT("LTQ-SOFTBLOCK-DROP")},
-        {EVENT("AP-ACTION-FRAME-RECEIVED")},
-        {EVENT("AP-STA-POSSIBLE-PSK-MISMATCH")}};
+        //{EVENT("AP-ENABLED"), hap_evt_callback},
+        //{(char *)"AP-ENABLED",sizeof("AP-ENABLED")-1,ap_enabled_clb},
+        {EVENT("AP-DISABLED"), hap_evt_callback},
+        {EVENT("AP-STA-CONNECTED"), hap_evt_callback},
+        {EVENT("AP-STA-DISCONNECTED"), hap_evt_callback},
+        {EVENT("UNCONNECTED-STA-RSSI"), hap_evt_callback},
+        {EVENT("INTERFACE-ENABLED"), hap_evt_callback},
+        {EVENT("INTERFACE-DISABLED"), hap_evt_callback},
+        {EVENT("ACS-STARTED"), hap_evt_callback},
+        {EVENT("ACS-COMPLETED"), hap_evt_callback},
+        {EVENT("ACS-FAILED"), hap_evt_callback},
+        {EVENT("AP-CSA-FINISHED"), hap_evt_callback},
+        {EVENT("BSS-TM-QUERY"), hap_evt_callback},
+        {EVENT("BSS-TM-RESP"), hap_evt_callback},
+        {EVENT("DFS-CAC-START"), hap_evt_callback},
+        {EVENT("DFS-CAC-COMPLETED"), hap_evt_callback},
+        {EVENT("DFS-NOP-FINISHED"), hap_evt_callback},
+        {EVENT("LTQ-SOFTBLOCK-DROP"), hap_evt_callback},
+        {EVENT("AP-ACTION-FRAME-RECEIVED"), hap_evt_callback},
+        {EVENT("AP-STA-POSSIBLE-PSK-MISMATCH"), hap_evt_callback}};
     static dwpald_hostap_event hostap_vap_event_handlers[] = {
-        {EVENT("AP-ENABLED")},
-        {EVENT("AP-DISABLED")},
-        {EVENT("AP-STA-CONNECTED")},
-        {EVENT("AP-STA-DISCONNECTED")},
-        {EVENT("UNCONNECTED-STA-RSSI")},
-        {EVENT("INTERFACE-ENABLED")},
-        {EVENT("INTERFACE-DISABLED")},
-        {EVENT("ACS-STARTED")},
-        //{EVENT("ACS-COMPLETED")},
-        {EVENT("ACS-FAILED")},
-        //{EVENT("AP-CSA-FINISHED")},
-        {EVENT("BSS-TM-QUERY")},
-        {EVENT("BSS-TM-RESP")},
-        {EVENT("DFS-CAC-START")},
-        {EVENT("DFS-CAC-COMPLETED")},
-        {EVENT("DFS-NOP-FINISHED")},
-        {EVENT("LTQ-SOFTBLOCK-DROP")},
-        {EVENT("AP-ACTION-FRAME-RECEIVED")},
-        {EVENT("AP-STA-POSSIBLE-PSK-MISMATCH")}};
+        {EVENT("AP-ENABLED"), hap_evt_callback},
+        {EVENT("AP-DISABLED"), hap_evt_callback},
+        {EVENT("AP-STA-CONNECTED"), hap_evt_callback},
+        {EVENT("AP-STA-DISCONNECTED"), hap_evt_callback},
+        {EVENT("UNCONNECTED-STA-RSSI"), hap_evt_callback},
+        {EVENT("INTERFACE-ENABLED"), hap_evt_callback},
+        {EVENT("INTERFACE-DISABLED"), hap_evt_callback},
+        {EVENT("ACS-STARTED"), hap_evt_callback},
+        //{EVENT("ACS-COMPLETED"), hap_evt_callback},
+        {EVENT("ACS-FAILED"), hap_evt_callback},
+        //{EVENT("AP-CSA-FINISHED"), hap_evt_callback},
+        {EVENT("BSS-TM-QUERY"), hap_evt_callback},
+        {EVENT("BSS-TM-RESP"), hap_evt_callback},
+        {EVENT("DFS-CAC-START"), hap_evt_callback},
+        {EVENT("DFS-CAC-COMPLETED"), hap_evt_callback},
+        {EVENT("DFS-NOP-FINISHED"), hap_evt_callback},
+        {EVENT("LTQ-SOFTBLOCK-DROP"), hap_evt_callback},
+        {EVENT("AP-ACTION-FRAME-RECEIVED"), hap_evt_callback},
+        {EVENT("AP-STA-POSSIBLE-PSK-MISMATCH"), hap_evt_callback}};
 
     if (iface_ids.vap_id == beerocks::IFACE_RADIO_ID) {
         m_hostap_event_handlers = hostap_radio_event_handlers;
