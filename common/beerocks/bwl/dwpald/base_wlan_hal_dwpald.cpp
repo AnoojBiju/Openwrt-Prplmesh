@@ -521,8 +521,8 @@ bool base_wlan_hal_dwpal::dwpal_send_cmd(const std::string &cmd, int vap_id)
             LOG(DEBUG) << "Failed to send cmd to DWPAL: " << cmd << " ctx_index=" << ctx_index
                        << " --> Retry";
         }
-        dwpald_hostap_cmd(get_iface_name().c_str(), cmd.c_str(), sizeof(cmd.c_str()), buffer,
-                          &buff_size_copy);
+        //dwpald_hostap_cmd(get_iface_name().c_str(), cmd.c_str(), sizeof(cmd.c_str()), buffer,
+                         // &buff_size_copy);
 
     } while (result != 0 && ++try_cnt < 3);
 
