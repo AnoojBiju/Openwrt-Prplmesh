@@ -25,19 +25,8 @@
 
 // Monitor HAL
 #include <bwl/mon_wlan_hal.h>
-#include <bcl/beerocks_thread_base.h>
-
-
 
 namespace son {
-
-class Test : public beerocks::thread_base {
-    public:
-    Test(beerocks::logging &logger_) :logger(logger_) {}
-    bool thread_init() override;
-    bool work() override{return true;}
-    beerocks::logging &logger;
-};
 class Monitor : public beerocks::EventLoopThread {
 public:
     Monitor(const std::string &monitor_iface_,
@@ -218,8 +207,6 @@ private:
      * class constructor.
      */
     std::shared_ptr<beerocks::CmduClient> m_slave_client;
-
-    Test test;
 };
 } // namespace son
 

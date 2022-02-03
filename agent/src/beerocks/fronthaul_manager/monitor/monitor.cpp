@@ -52,7 +52,7 @@ Monitor::Monitor(const std::string &monitor_iface_,
 #ifdef BEEROCKS_RDKB
       mon_rdkb_hal(cmdu_tx),
 #endif
-      mon_stats(cmdu_tx), test(logger_)
+      mon_stats(cmdu_tx)
 {
     /**
      * Get the MAC address of the radio interface that this monitor instance operates on.
@@ -255,20 +255,12 @@ void Monitor::on_thread_stop()
     return;
 }
 
-bool Test::thread_init() {
-    logger.attach_current_thread_to_logger_id();
-   LOG(DEBUG) << "I love bananas!"; 
-   
-   return true;
-}
-
 bool Monitor::monitor_fsm()
 {
     if (!m_logger_configured) {
         logger.set_thread_name(thread_name);
         logger.attach_current_thread_to_logger_id();
         m_logger_configured = true;
-        test.start();
     }
 
     if (!m_slave_client) {
