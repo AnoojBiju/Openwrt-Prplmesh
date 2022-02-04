@@ -81,6 +81,7 @@ bool AssocReqFrame::init_assoc_frame()
         TLVF_LOG(ERROR) << "init() called but m_parse is not set!";
         return false;
     }
+    reset(m_parse);
 
     // Parse first mandatory fields
     // Here need to be checked if sta is dmg, if it's not
@@ -102,6 +103,7 @@ bool AssocReqFrame::init_reassoc_frame()
         TLVF_LOG(ERROR) << "init() called but m_parse is not set!";
         return false;
     }
+    reset(m_parse);
     if (getRemainingBytes() > 0 && !addAttr<cCapInfoDmgSta>()) {
         TLVF_LOG(ERROR) << "Failed to add mandatory field cCapInfoDmgSta";
         return false;
