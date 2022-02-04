@@ -515,14 +515,16 @@ bool base_wlan_hal_dwpal::dwpal_send_cmd(const std::string &cmd, int vap_id)
 
     do {
         //LOG(DEBUG) << "Send dwpal cmd: " << cmd.c_str();
-        result = dwpal_hostap_cmd_send(m_dwpal_ctx[ctx_index], cmd.c_str(), NULL, buffer,
-                                       &buff_size_copy);
+        //result = dwpal_hostap_cmd_send(m_dwpal_ctx[ctx_index], cmd.c_str(), NULL, buffer,
+          //                             &buff_size_copy);
+        
+        result = dwpald_hostap_cmd(get_iface_name().c_str(), cmd.c_str(), cmd.length() , buffer,
+                          &buff_size_copy);
         if (result != 0) {
             LOG(DEBUG) << "Failed to send cmd to DWPAL: " << cmd << " ctx_index=" << ctx_index
                        << " --> Retry";
         }
-        //dwpald_hostap_cmd(get_iface_name().c_str(), cmd.c_str(), sizeof(cmd.c_str()), buffer,
-                         // &buff_size_copy);
+        
 
     } while (result != 0 && ++try_cnt < 3);
 
