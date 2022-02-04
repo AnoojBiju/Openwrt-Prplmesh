@@ -135,12 +135,12 @@ bool base_wlan_hal_dwpal::fsm_setup()
                 // Open and attach a control interface to wpa_supplicant/hostapd.
                 // Check if not exist before
                 bool attached = false;
-                if (m_dwpal_ctx[0] == nullptr) {
+                //if (m_dwpal_ctx[0] == nullptr) {
                     attached = attach_ctrl_interface(beerocks::IFACE_RADIO_ID);
-                } else {
+                //} else {
                     //Already attached
-                    attached = true;
-                }
+                    //attached = true;
+                //}
 
                 //Attach NL interface
                 if (!m_dwpal_nl_ctx) {
@@ -352,7 +352,7 @@ bool base_wlan_hal_dwpal::fsm_setup()
             bool success = true;
 
             LOG(DEBUG) << "dwpal_fsm_state::Detach";
-
+#if 0
             for (int i = 0; i < DWPAL_CONTEXTS_MAX_SIZE; i++) {
                 if (m_dwpal_ctx[i]) {
                     LOG(INFO) << "Call DWPAL socket close";
@@ -368,7 +368,7 @@ bool base_wlan_hal_dwpal::fsm_setup()
                     }
                 }
             }
-
+#endif
             m_fd_ext_events = 0;
 
             // detach nl socket from main vap
@@ -381,7 +381,7 @@ bool base_wlan_hal_dwpal::fsm_setup()
                 m_fd_nl_events  = -1;
                 m_fd_nl_cmd_get = -1;
             }
-
+            dwpald_disconnect();
             return success;
         })
 
@@ -507,12 +507,12 @@ bool base_wlan_hal_dwpal::dwpal_send_cmd(const std::string &cmd, int vap_id)
         LOG(ERROR) << "ctx_index " << ctx_index << " is out of bounds";
         return false;
     }
-
+#if 0
     if (!m_dwpal_ctx[ctx_index]) {
         LOG(ERROR) << "m_dwpal_ctx[" << ctx_index << "]=nullptr";
         return false;
     }
-
+#endif
     do {
         //LOG(DEBUG) << "Send dwpal cmd: " << cmd.c_str();
         //result = dwpal_hostap_cmd_send(m_dwpal_ctx[ctx_index], cmd.c_str(), NULL, buffer,
@@ -571,20 +571,25 @@ bool base_wlan_hal_dwpal::attach_ctrl_interface(int vap_id)
         LOG(ERROR) << "ctx_index " << ctx_index << " is out of bounds";
         return false;
     }
-
+    #if 0
     if (m_dwpal_ctx[ctx_index]) {
         LOG(ERROR) << "m_dwpal_ctx[" << ctx_index << "] already attached";
         return false;
     }
-
+    
     const std::string ifname =
         beerocks::utils::get_iface_string_from_iface_vap_ids(m_radio_info.iface_name, vap_id);
     int result = dwpal_hostap_interface_attach(&m_dwpal_ctx[ctx_index], ifname.c_str(), nullptr);
+    #endif
     //dwpald_start_listener();
+    
+    const std::string ifname =
+        beerocks::utils::get_iface_string_from_iface_vap_ids(m_radio_info.iface_name, vap_id);
     hostap_attach((char *)ifname.c_str());
     //LOG(ERROR) << "Anant hostap attach" << ifname.c_str() << "return value"
     //         << dwpald_hostap_attach(ifname.c_str(), m_num_hostap_event_handlers,
     //                               m_hostap_event_handlers, 0);
+    #if 0
     if ((result == 0) && m_dwpal_ctx[ctx_index]) {
         LOG(DEBUG) << "dwpal_hostap_interface_attach() success for: " << ifname;
     } else if (result != 0) {
@@ -595,7 +600,7 @@ bool base_wlan_hal_dwpal::attach_ctrl_interface(int vap_id)
                    << " but context is NULL!";
         return false;
     }
-
+    #endif
     return true;
 }
 

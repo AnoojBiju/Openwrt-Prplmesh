@@ -201,7 +201,7 @@ private:
 
     std::chrono::steady_clock::time_point m_state_timeout;
 
-    void *m_dwpal_ctx[DWPAL_CONTEXTS_MAX_SIZE] = {nullptr};
+    //void *m_dwpal_ctx[DWPAL_CONTEXTS_MAX_SIZE] = {nullptr};
     void *m_dwpal_nl_ctx                       = nullptr;
 
     int m_fd_nl_cmd_get = -1;
