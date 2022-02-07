@@ -1576,8 +1576,9 @@ public:
     /**
      * @brief Notify about client disconnection.
      * @param mac String with STA mac address.
+     * @param reason_code Reason code of clients failed association/connection.
      */
-    bool notify_disconnection(const std::string &mac);
+    bool notify_disconnection(const std::string &mac, const uint16_t reason_code);
 
     /**
      * @brief Update the node stats info

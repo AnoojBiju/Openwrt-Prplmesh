@@ -4356,7 +4356,7 @@ bool db::dm_check_objects_limit(std::queue<std::string> &paths, uint8_t limit)
     return true;
 }
 
-bool db::notify_disconnection(const std::string &client_mac)
+bool db::notify_disconnection(const std::string &client_mac, const uint16_t reason_code)
 {
     auto n = get_node(client_mac);
     if (!n) {
@@ -4392,10 +4392,10 @@ bool db::notify_disconnection(const std::string &client_mac)
             reason Code TLV but since we do not have this data Reason Code
             set to 1 (UNSPECIFIED_REASON - IEEE802.11-16, Table 9.45).
             Should be fixed after PPM-864.
+      TODO: ReasonCode should be tested after PPM-1905 for nl80211 platforms.
     */
-    if (!m_ambiorix_datamodel->set(path_to_eventdata, "ReasonCode", static_cast<uint32_t>(1))) {
-        LOG(ERROR) << "Failed to set " << path_to_eventdata
-                   << ".ReasonCode: " << static_cast<uint32_t>(1);
+    if (!m_ambiorix_datamodel->set(path_to_eventdata, "ReasonCode", reason_code)) {
+        LOG(ERROR) << "Failed to set " << path_to_eventdata << ".ReasonCode: " << reason_code;
         return false;
     }
 
