@@ -4378,14 +4378,10 @@ bool db::notify_disconnection(const std::string &client_mac, const uint16_t reas
 
     m_disassoc_events.push(path_to_eventdata);
 
-    if (!m_ambiorix_datamodel->set(path_to_eventdata, "BSSID", n->parent_mac)) {
-        LOG(ERROR) << "Failed to set " << path_to_eventdata << ".BSSID: " << n->parent_mac;
-        return false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_eventdata, "MACAddress", client_mac)) {
-        LOG(ERROR) << "Failed to set " << path_to_eventdata << ".MACAddress: " << client_mac;
-        return false;
-    }
+    bool ret_val = true;
+
+    ret_val &= m_ambiorix_datamodel->set(path_to_eventdata, "BSSID", n->parent_mac);
+    ret_val &= m_ambiorix_datamodel->set(path_to_eventdata, "MACAddress", client_mac);
 
     /*
       TODO: Reason code should come from Client Disassociation Stats message in
@@ -4394,59 +4390,24 @@ bool db::notify_disconnection(const std::string &client_mac, const uint16_t reas
             Should be fixed after PPM-864.
       TODO: ReasonCode should be tested after PPM-1905 for nl80211 platforms.
     */
-    if (!m_ambiorix_datamodel->set(path_to_eventdata, "ReasonCode", reason_code)) {
-        LOG(ERROR) << "Failed to set " << path_to_eventdata << ".ReasonCode: " << reason_code;
-        return false;
-    }
+    ret_val &= m_ambiorix_datamodel->set(path_to_eventdata, "ReasonCode", reason_code);
+    ret_val &= m_ambiorix_datamodel->set(path_to_eventdata, "BytesSent", n->stats_info->tx_bytes);
+    ret_val &=
+        m_ambiorix_datamodel->set(path_to_eventdata, "BytesReceived", n->stats_info->rx_bytes);
+    ret_val &=
+        m_ambiorix_datamodel->set(path_to_eventdata, "PacketsSent", n->stats_info->tx_packets);
+    ret_val &=
+        m_ambiorix_datamodel->set(path_to_eventdata, "PacketsReceived", n->stats_info->rx_packets);
 
-    if (!m_ambiorix_datamodel->set(path_to_eventdata, "BytesSent", n->stats_info->tx_bytes)) {
-        LOG(ERROR) << "Failed to set " << path_to_eventdata
-                   << ".BytesSent: " << n->stats_info->tx_bytes;
-        return false;
-    }
+    // ErrorsSent and ErrorsReceived are not available yet on stats_info
+    ret_val &= m_ambiorix_datamodel->set(path_to_eventdata, "ErrorsSent", static_cast<uint32_t>(0));
+    ret_val &=
+        m_ambiorix_datamodel->set(path_to_eventdata, "ErrorsReceived", static_cast<uint32_t>(0));
+    ret_val &=
+        m_ambiorix_datamodel->set(path_to_eventdata, "RetransCount", n->stats_info->retrans_count);
+    ret_val &= m_ambiorix_datamodel->set_current_time(path_to_eventdata);
 
-    if (!m_ambiorix_datamodel->set(path_to_eventdata, "BytesReceived", n->stats_info->rx_bytes)) {
-        LOG(ERROR) << "Failed to set " << path_to_eventdata
-                   << ".BytesReceived: " << n->stats_info->rx_bytes;
-        return false;
-    }
-
-    if (!m_ambiorix_datamodel->set(path_to_eventdata, "PacketsSent", n->stats_info->tx_packets)) {
-        LOG(ERROR) << "Failed to set " << path_to_eventdata
-                   << ".PacketsSent: " << n->stats_info->tx_packets;
-        return false;
-    }
-
-    if (!m_ambiorix_datamodel->set(path_to_eventdata, "PacketsReceived",
-                                   n->stats_info->rx_packets)) {
-        LOG(ERROR) << "Failed to set " << path_to_eventdata
-                   << ".PacketsReceived: " << n->stats_info->rx_packets;
-        return false;
-    }
-
-    /*
-        ErrorsSent and ErrorsReceived are not available yet on stats_info
-    */
-    if (!m_ambiorix_datamodel->set(path_to_eventdata, "ErrorsSent", static_cast<uint32_t>(0))) {
-        LOG(ERROR) << "Failed to set " << path_to_eventdata
-                   << ".ErrorsSent: " << static_cast<uint32_t>(0);
-        return false;
-    }
-
-    if (!m_ambiorix_datamodel->set(path_to_eventdata, "ErrorsReceived", static_cast<uint32_t>(0))) {
-        LOG(ERROR) << "Failed to set " << path_to_eventdata
-                   << ".ErrorsReceived: " << static_cast<uint32_t>(0);
-        return false;
-    }
-
-    if (!m_ambiorix_datamodel->set(path_to_eventdata, "RetransCount",
-                                   n->stats_info->retrans_count)) {
-        LOG(ERROR) << "Failed to set " << path_to_eventdata
-                   << ".RetransCount: " << n->stats_info->retrans_count;
-        return false;
-    }
-    m_ambiorix_datamodel->set_current_time(path_to_eventdata);
-    return true;
+    return ret_val;
 }
 
 bool db::set_node_stats_info(const sMacAddr &mac, const beerocks_message::sStaStatsParams *params)
