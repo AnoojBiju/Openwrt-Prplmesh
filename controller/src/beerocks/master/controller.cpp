@@ -2092,7 +2092,7 @@ bool Controller::handle_cmdu_1905_failed_connection_message(const sMacAddr &src_
     }
 
     auto status_code              = 0x0001; // Set default to Unspecified failure.
-    auto profile2_status_code_tlv = cmdu_tx.getClass<wfa_map::tlvProfile2StatusCode>();
+    auto profile2_status_code_tlv = cmdu_rx.getClass<wfa_map::tlvProfile2StatusCode>();
     auto agent                    = database.m_agents.get(src_mac);
 
     if (!agent) {
@@ -2109,7 +2109,7 @@ bool Controller::handle_cmdu_1905_failed_connection_message(const sMacAddr &src_
     }
 
     auto reason_code              = wfa_map::tlvProfile2ReasonCode::UNSPECIFIED_REASON;
-    auto profile2_reason_code_tlv = cmdu_tx.getClass<wfa_map::tlvProfile2ReasonCode>();
+    auto profile2_reason_code_tlv = cmdu_rx.getClass<wfa_map::tlvProfile2ReasonCode>();
 
     if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
         !profile2_reason_code_tlv) {
