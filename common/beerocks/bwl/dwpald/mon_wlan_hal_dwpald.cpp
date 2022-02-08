@@ -1039,15 +1039,17 @@ bool mon_wlan_hal_dwpal::channel_scan_trigger(int dwell_time_msec,
 
     // must as single wifi won't allow scan on ap without this flag
     channel_scan_params.ap_force = 1;
-
+    #if 0
     int cmd_res = 0;
     auto ret    = dwpal_driver_nl_scan_trigger_sync(get_dwpal_nl_ctx(),
                                                  (char *)m_radio_info.iface_name.c_str(), &cmd_res,
                                                  &channel_scan_params);
+
     if (ret != DWPAL_SUCCESS && cmd_res != 0) {
         LOG(ERROR) << " scan trigger failed! Abort scan";
         return false;
     }
+    #endif
     m_scan_was_triggered_internally = true;
     LOG(DEBUG) << "Scan trigger request sent";
 
@@ -1541,6 +1543,174 @@ int mon_wlan_hal_dwpal::hap_evt_rrm_beacon_rep_received_clb(char *ifname, char *
     ctx->event_queue_push(event, resp_buff);
     return 0;
 }
+
+int mon_wlan_hal_dwpal::nl_callback(struct nl_msg *msg)
+{
+
+
+
+    struct nlmsghdr *nlh    = nlmsg_hdr(msg);
+    struct genlmsghdr *gnlh = (genlmsghdr *)nlmsg_data(nlh);
+    std::string iface_name;
+
+    struct nlattr *tb[NL80211_ATTR_MAX + 1];
+    nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0), genlmsg_attrlen(gnlh, 0), NULL);
+
+    if (tb[NL80211_ATTR_IFINDEX]) {
+        auto index = nla_get_u32(tb[NL80211_ATTR_IFINDEX]);
+        iface_name = beerocks::net::network_utils::linux_get_iface_name(index);
+    }
+
+    auto event = dwpal_nl_to_bwl_event(gnlh->cmd);
+    auto radio_info = ctx->get_radio_info();
+    auto scan_was_triggered_internally = ctx->get_scan_was_triggered_internally();
+    auto scan_dump_in_progress = ctx->get_scan_dump_in_progress();
+    auto nl_seq = ctx->get_nl_seq();
+    switch (event) {
+    case mon_wlan_hal_dwpal::Event::Channel_Scan_Triggered: {
+        if (radio_info.iface_name != iface_name) {
+            // ifname doesn't match current interface
+            // meaning the event was received for a diffrent channel
+            return true;
+        }
+        if (!scan_was_triggered_internally) {
+            // Scan was not triggered internally, no need to handle the event
+            return true;
+        }
+        LOG(DEBUG) << "DWPAL NL event channel scan triggered";
+
+        //start new sequence of dump results
+        
+        nl_seq = 0;
+        ctx->event_queue_push(event);
+        break;
+    }
+    case mon_wlan_hal_dwpal::Event::Channel_Scan_Dump_Result: {
+        if (radio_info.iface_name != iface_name) {
+            // ifname doesn't match current interface
+            // meaning the event was received for a diffrent channel
+            return true;
+        }
+        if (!scan_was_triggered_internally) {
+            // Scan was not triggered internally, no need to handle the event
+            return true;
+        }
+
+        /*
+            As part of the scan results dump sequence, we always receive at least two messages.
+            NL80211_CMD_NEW_SCAN_RESULTS (Channel_Scan_Dump_Result) & SCAN_FINISH_CB
+            (Channel_Scan_Finished).
+
+            We receive the Channel_Scan_Dump_Result once to alert us that we have pending results
+            waiting, so on the first occurrence of the message, we request the rest of the dump results.
+
+            On the 2nd->Nth Channel_Scan_Dump_Result we receive a sequence number which we can use
+            to indicate the current message is part of the active dump sequence.
+
+            The last message received as part of the dump sequence is Channel_Scan_Finished, which
+            indicates that there are no more pending scan dumps.
+
+            In case we have no neighboring beacons for a particular scan we would only receive
+            the initial Channel_Scan_Dump_Result followed right after by a Channel_Scan_Finished.
+            This can cause an issue since we would not have an initial sequence number to later
+            validate against.
+
+            To solve this issue we add a "scan dump in progress flag" to verify against later on.
+        */
+        if (nl_seq == 0) {
+            if (nlh->nlmsg_seq == 0) {
+                // First "empty" Channel_Scan_Dump_Result message
+                LOG(DEBUG) << "Results dump are ready";
+                ctx->event_queue_push(mon_wlan_hal_dwpal::Event::Channel_Scan_New_Results_Ready);
+                scan_dump_in_progress = true;
+                ctx->channel_scan_dump_results();
+                return true;
+            } else {
+                //2nd -> Nth Channel_Scan_Dump_Result
+                LOG(DEBUG) << "Results dump new sequence:" << int(nlh->nlmsg_seq);
+                nl_seq = nlh->nlmsg_seq;
+            }
+        }
+
+        // Check if current Channel_Scan_Dump_Result is part of the dump sequence.
+        if (nl_seq != nlh->nlmsg_seq) {
+            LOG(ERROR) << "channel scan results dump received with unexpected seq number";
+            return false;
+        }
+
+        LOG(DEBUG) << "DWPAL NL event channel scan results dump, seq = " << int(nlh->nlmsg_seq);
+
+        auto results = std::make_shared<sCHANNEL_SCAN_RESULTS_NOTIFICATION>();
+
+        if (!get_scan_results_from_nl_msg(results->channel_scan_results, msg)) {
+            LOG(ERROR) << "read NL msg to monitor msg failed!";
+            return false;
+        }
+
+        LOG(DEBUG) << "Processing results for BSSID:" << results->channel_scan_results.bssid
+                   << " on Channel: " << results->channel_scan_results.channel;
+        ctx->event_queue_push(event, results);
+        break;
+    }
+    case mon_wlan_hal_dwpal::Event::Channel_Scan_Aborted: {
+
+        if (radio_info.iface_name != iface_name) {
+            // ifname doesn't match current interface
+            // meaning the event was recevied for a diffrent channel
+            return true;
+        }
+        if (!scan_was_triggered_internally) {
+            // Scan was not triggered internally, no need to handle the event
+            return true;
+        }
+        LOG(DEBUG) << "DWPAL NL event channel scan aborted";
+
+        //reset scan indicators for next scan
+        nl_seq                        = 0;
+        scan_dump_in_progress         = false;
+        scan_was_triggered_internally = false;
+        ctx->event_queue_push(event);
+        break;
+    }
+    case mon_wlan_hal_dwpal::Event::Channel_Scan_Finished: {
+        if (!scan_was_triggered_internally) {
+            // Scan was not triggered internally, no need to handle the event
+            return true;
+        }
+        // We are not in a dump sequence, ignoring the message
+        if (!scan_dump_in_progress) {
+            return true;
+        }
+
+        // ifname is invalid  for Channel_Scan_Finished event using nlh->nlmsg_seq instead.
+        // In case there are no results first check if current sequence number was set.
+        if (nl_seq != 0 && nlh->nlmsg_seq != nl_seq) {
+            // Current event has a sequence number not matching the current sequence number
+            // meaning the event was recevied for a diffrent channel
+            return true;
+        }
+
+        LOG(DEBUG) << "DWPAL NL event channel scan results finished for sequence: "
+                   << (int)nlh->nlmsg_seq;
+
+        //reset scan indicators for next scan
+        nl_seq                        = 0;
+        scan_dump_in_progress         = false;
+        scan_was_triggered_internally = false;
+        ctx->event_queue_push(event);
+        break;
+    }
+    // Gracefully ignore unhandled events
+    default:
+        LOG(ERROR) << "Unknown DWPAL NL event received: " << int(event);
+        break;
+    }
+    return 0;
+}
+static int drv_evt_callback(struct nl_msg *msg)
+{
+    return ctx->nl_callback(msg);
+}
 static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t len)
 {
     auto result = ctx->filter_bss_msg(buffer, len, op_code);
@@ -1574,28 +1744,30 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
     }
     return 0;
 }
-#define EVENT(event) (char *)event, sizeof(event) - 1, hap_evt_callback
+
+#define HAP_EVENT(event) (char *)event, sizeof(event) - 1, hap_evt_callback
+#define NL_EVENT(event) event , nl_evt_callback
 void mon_wlan_hal_dwpal::hostap_attach(char *ifname)
 {
     LOG(ERROR) << "Anant:Return of connect" << dwpald_connect("monitor");
     auto iface_ids = beerocks::utils::get_ids_from_iface_string(ifname);
 
     static dwpald_hostap_event hostap_radio_event_handlers[] = {
-        {EVENT("RRM-BEACON-REP-RECEIVED")},
-        {EVENT("RRM-CHANNEL-LOAD-RECEIVED")},
-        //{EVENT("AP-ENABLED")},
-        {EVENT("AP-DISABLED")},
-        {EVENT("AP-STA-CONNECTED")},
-        {EVENT("AP-STA-DISCONNECTED")},
+        {HAP_EVENT("RRM-BEACON-REP-RECEIVED")},
+        {HAP_EVENT("RRM-CHANNEL-LOAD-RECEIVED")},
+        //{HAP_EVENT("AP-ENABLED")},
+        {HAP_EVENT("AP-DISABLED")},
+        {HAP_EVENT("AP-STA-CONNECTED")},
+        {HAP_EVENT("AP-STA-DISCONNECTED")},
     };
 
     static dwpald_hostap_event hostap_vap_event_handlers[] = {
-        {EVENT("RRM-BEACON-REP-RECEIVED")},
-        {EVENT("RRM-CHANNEL-LOAD-RECEIVED")},
-        {EVENT("AP-ENABLED")},
-        {EVENT("AP-DISABLED")},
-        {EVENT("AP-STA-CONNECTED")},
-        {EVENT("AP-STA-DISCONNECTED")},
+        {HAP_EVENT("RRM-BEACON-REP-RECEIVED")},
+        {HAP_EVENT("RRM-CHANNEL-LOAD-RECEIVED")},
+        {HAP_EVENT("AP-ENABLED")},
+        {HAP_EVENT("AP-DISABLED")},
+        {HAP_EVENT("AP-STA-CONNECTED")},
+        {HAP_EVENT("AP-STA-DISCONNECTED")},
     };
 
     if (iface_ids.vap_id == beerocks::IFACE_RADIO_ID) {
@@ -1611,6 +1783,22 @@ void mon_wlan_hal_dwpal::hostap_attach(char *ifname)
     LOG(ERROR) << "Anant hostap attach" << ifname << "return value"
                << dwpald_hostap_attach(ifname, m_num_hostap_event_handlers, m_hostap_event_handlers,
                                        0);
+        #if 0
+        // Passing a lambda with capture is not supported for standard C function
+    // pointers. As a workaround, we create a static (but thread local) wrapper
+    // function that calls the capturing lambda function.
+    static __thread std::function<dwpald_ret(struct nl_msg * msg)> nl_handler_cb_wrapper;
+    nl_handler_cb_wrapper = [&](struct nl_msg *msg) -> dwpald_ret {
+        if (!process_dwpal_nl_event(msg)) {
+            LOG(ERROR) << "User's netlink handler function failed!";
+            return DWPALD_DWPAL_FAILURE;
+        }
+        return DWPALD_SUCCESS;
+        };
+    auto nl_handler_cb = [](struct nl_msg *msg) -> dwpald_ret { return nl_handler_cb_wrapper(msg); };
+    auto ret = -1;
+    #endif
+    dwpald_nl_drv_attach(0, NULL, drv_evt_callback);
 }
 
 bool mon_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std::string &opcode)
@@ -1620,158 +1808,7 @@ bool mon_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std
 
 bool mon_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)
 {
-    struct nlmsghdr *nlh    = nlmsg_hdr(msg);
-    struct genlmsghdr *gnlh = (genlmsghdr *)nlmsg_data(nlh);
-    std::string iface_name;
-
-    struct nlattr *tb[NL80211_ATTR_MAX + 1];
-    nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0), genlmsg_attrlen(gnlh, 0), NULL);
-
-    if (tb[NL80211_ATTR_IFINDEX]) {
-        auto index = nla_get_u32(tb[NL80211_ATTR_IFINDEX]);
-        iface_name = beerocks::net::network_utils::linux_get_iface_name(index);
-    }
-
-    auto event = dwpal_nl_to_bwl_event(gnlh->cmd);
-
-    switch (event) {
-    case mon_wlan_hal_dwpal::Event::Channel_Scan_Triggered: {
-        if (m_radio_info.iface_name != iface_name) {
-            // ifname doesn't match current interface
-            // meaning the event was received for a diffrent channel
-            return true;
-        }
-        if (!m_scan_was_triggered_internally) {
-            // Scan was not triggered internally, no need to handle the event
-            return true;
-        }
-        LOG(DEBUG) << "DWPAL NL event channel scan triggered";
-
-        //start new sequence of dump results
-        m_nl_seq = 0;
-        event_queue_push(event);
-        break;
-    }
-    case mon_wlan_hal_dwpal::Event::Channel_Scan_Dump_Result: {
-        if (m_radio_info.iface_name != iface_name) {
-            // ifname doesn't match current interface
-            // meaning the event was received for a diffrent channel
-            return true;
-        }
-        if (!m_scan_was_triggered_internally) {
-            // Scan was not triggered internally, no need to handle the event
-            return true;
-        }
-
-        /*
-            As part of the scan results dump sequence, we always receive at least two messages.
-            NL80211_CMD_NEW_SCAN_RESULTS (Channel_Scan_Dump_Result) & SCAN_FINISH_CB
-            (Channel_Scan_Finished).
-
-            We receive the Channel_Scan_Dump_Result once to alert us that we have pending results
-            waiting, so on the first occurrence of the message, we request the rest of the dump results.
-
-            On the 2nd->Nth Channel_Scan_Dump_Result we receive a sequence number which we can use
-            to indicate the current message is part of the active dump sequence.
-
-            The last message received as part of the dump sequence is Channel_Scan_Finished, which
-            indicates that there are no more pending scan dumps.
-
-            In case we have no neighboring beacons for a particular scan we would only receive
-            the initial Channel_Scan_Dump_Result followed right after by a Channel_Scan_Finished.
-            This can cause an issue since we would not have an initial sequence number to later
-            validate against.
-
-            To solve this issue we add a "scan dump in progress flag" to verify against later on.
-        */
-        if (m_nl_seq == 0) {
-            if (nlh->nlmsg_seq == 0) {
-                // First "empty" Channel_Scan_Dump_Result message
-                LOG(DEBUG) << "Results dump are ready";
-                event_queue_push(mon_wlan_hal_dwpal::Event::Channel_Scan_New_Results_Ready);
-                m_scan_dump_in_progress = true;
-                channel_scan_dump_results();
-                return true;
-            } else {
-                //2nd -> Nth Channel_Scan_Dump_Result
-                LOG(DEBUG) << "Results dump new sequence:" << int(nlh->nlmsg_seq);
-                m_nl_seq = nlh->nlmsg_seq;
-            }
-        }
-
-        // Check if current Channel_Scan_Dump_Result is part of the dump sequence.
-        if (m_nl_seq != nlh->nlmsg_seq) {
-            LOG(ERROR) << "channel scan results dump received with unexpected seq number";
-            return false;
-        }
-
-        LOG(DEBUG) << "DWPAL NL event channel scan results dump, seq = " << int(nlh->nlmsg_seq);
-
-        auto results = std::make_shared<sCHANNEL_SCAN_RESULTS_NOTIFICATION>();
-
-        if (!get_scan_results_from_nl_msg(results->channel_scan_results, msg)) {
-            LOG(ERROR) << "read NL msg to monitor msg failed!";
-            return false;
-        }
-
-        LOG(DEBUG) << "Processing results for BSSID:" << results->channel_scan_results.bssid
-                   << " on Channel: " << results->channel_scan_results.channel;
-        event_queue_push(event, results);
-        break;
-    }
-    case mon_wlan_hal_dwpal::Event::Channel_Scan_Aborted: {
-
-        if (m_radio_info.iface_name != iface_name) {
-            // ifname doesn't match current interface
-            // meaning the event was recevied for a diffrent channel
-            return true;
-        }
-        if (!m_scan_was_triggered_internally) {
-            // Scan was not triggered internally, no need to handle the event
-            return true;
-        }
-        LOG(DEBUG) << "DWPAL NL event channel scan aborted";
-
-        //reset scan indicators for next scan
-        m_nl_seq                        = 0;
-        m_scan_dump_in_progress         = false;
-        m_scan_was_triggered_internally = false;
-        event_queue_push(event);
-        break;
-    }
-    case mon_wlan_hal_dwpal::Event::Channel_Scan_Finished: {
-        if (!m_scan_was_triggered_internally) {
-            // Scan was not triggered internally, no need to handle the event
-            return true;
-        }
-        // We are not in a dump sequence, ignoring the message
-        if (!m_scan_dump_in_progress) {
-            return true;
-        }
-
-        // ifname is invalid  for Channel_Scan_Finished event using nlh->nlmsg_seq instead.
-        // In case there are no results first check if current sequence number was set.
-        if (m_nl_seq != 0 && nlh->nlmsg_seq != m_nl_seq) {
-            // Current event has a sequence number not matching the current sequence number
-            // meaning the event was recevied for a diffrent channel
-            return true;
-        }
-
-        LOG(DEBUG) << "DWPAL NL event channel scan results finished for sequence: "
-                   << (int)nlh->nlmsg_seq;
-
-        //reset scan indicators for next scan
-        m_nl_seq                        = 0;
-        m_scan_dump_in_progress         = false;
-        m_scan_was_triggered_internally = false;
-        event_queue_push(event);
-        break;
-    }
-    // Gracefully ignore unhandled events
-    default:
-        LOG(ERROR) << "Unknown DWPAL NL event received: " << int(event);
-        break;
-    }
+    
     return true;
 }
 

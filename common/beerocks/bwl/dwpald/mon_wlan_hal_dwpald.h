@@ -79,6 +79,11 @@ public:
                                                       size_t len) override;
 
     int filter_bss_msg(char *buffer, int bufLen, const std::string &opcode);
+    
+    bool &get_scan_was_triggered_internally() { return m_scan_was_triggered_internally; }
+    bool &get_scan_dump_in_progress() { return m_scan_dump_in_progress;}
+    uint32_t &get_nl_seq() { return m_nl_seq;}
+    int nl_callback(struct nl_msg *msg);
     // Protected methods:
 protected:
     virtual bool process_dwpal_event(char *buffer, int bufLen, const std::string &opcode) override;
@@ -89,7 +94,6 @@ protected:
     {
         return base_wlan_hal::event_queue_push(int(event), data);
     }
-
     // Private data-members:
 private:
     bool dwpal_get_scan_params_fg(sScanCfgParams &params, size_t &result_size)

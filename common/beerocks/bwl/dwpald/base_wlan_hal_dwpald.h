@@ -178,7 +178,7 @@ protected:
                                     void *callback_args);
 
     bool dwpal_nl_cmd_scan_dump();
-    void *get_dwpal_nl_ctx() const { return (m_dwpal_nl_ctx); }
+    //void *get_dwpal_nl_ctx() const { return (m_dwpal_nl_ctx); }
 
     std::unique_ptr<nl80211_client> m_nl80211_client;
 
@@ -202,7 +202,7 @@ private:
     std::chrono::steady_clock::time_point m_state_timeout;
 
     //void *m_dwpal_ctx[DWPAL_CONTEXTS_MAX_SIZE] = {nullptr};
-    void *m_dwpal_nl_ctx                       = nullptr;
+    //void *m_dwpal_nl_ctx                       = nullptr;
 
     int m_fd_nl_cmd_get = -1;
 

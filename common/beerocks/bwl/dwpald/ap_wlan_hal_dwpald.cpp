@@ -1932,13 +1932,13 @@ static int get_zwdfs_supported_from_wiphy_dump_cb(struct nl_msg *msg, void *arg)
 bool ap_wlan_hal_dwpal::is_zwdfs_supported()
 {
     bool supported = false;
+    
     if (!dwpal_nl_cmd_send_and_recv(NL80211_CMD_GET_WIPHY, get_zwdfs_supported_from_wiphy_dump_cb,
                                     &supported)) {
         LOG(ERROR) << "Failed to check if zwdfs supported by reading NL wiphy info, default value "
                       "is set to 'false'";
         return false;
     }
-
     LOG(DEBUG) << "ZWDFS is" << ((supported) ? "" : " not") << " supported";
 
     return supported;
@@ -4532,6 +4532,7 @@ void ap_wlan_hal_dwpal::hostap_attach(char *ifname)
     LOG(ERROR) << "Anant hostap attach" << ifname << "return value"
                << dwpald_hostap_attach(ifname, m_num_hostap_event_handlers, m_hostap_event_handlers,
                                        0);
+    
 }
 
 bool ap_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)

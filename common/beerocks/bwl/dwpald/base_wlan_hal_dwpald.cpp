@@ -141,7 +141,7 @@ bool base_wlan_hal_dwpal::fsm_setup()
                     //Already attached
                     //attached = true;
                 //}
-
+                #if 0
                 //Attach NL interface
                 if (!m_dwpal_nl_ctx) {
                     //Attach nl interface
@@ -156,7 +156,7 @@ bool base_wlan_hal_dwpal::fsm_setup()
                             << ", nl_context = " << m_dwpal_nl_ctx;
                     }
                 }
-
+                #endif
                 // detach if wlan (hostapd/supplicant) was not attached
                 if (attached) {
                     if (get_type() != HALType::Station) {
@@ -309,7 +309,6 @@ bool base_wlan_hal_dwpal::fsm_setup()
                     LOG(ERROR) << "Can't get event fd since dwpal ctx is NULL!";
                     return (transition.change_destination(dwpal_fsm_state::Detach));
                 }
-#endif
                 // Success
                 m_fd_ext_events = 0;
                 LOG(DEBUG)
@@ -329,7 +328,9 @@ bool base_wlan_hal_dwpal::fsm_setup()
                 } else {
                     LOG(ERROR) << "NL ctx is NULL! netlink is disabled for this platform";
                 }
-
+#endif
+                m_fd_ext_events = 0;
+                //m_fd_nl_cmd_get = 0;
                 return true;
             })
 
@@ -368,7 +369,7 @@ bool base_wlan_hal_dwpal::fsm_setup()
                     }
                 }
             }
-#endif
+
             m_fd_ext_events = 0;
 
             // detach nl socket from main vap
@@ -381,6 +382,7 @@ bool base_wlan_hal_dwpal::fsm_setup()
                 m_fd_nl_events  = -1;
                 m_fd_nl_cmd_get = -1;
             }
+            #endif
             dwpald_disconnect();
             return success;
         })
@@ -606,6 +608,7 @@ bool base_wlan_hal_dwpal::attach_ctrl_interface(int vap_id)
 
 bool base_wlan_hal_dwpal::process_nl_events()
 {
+    #if 0
     if (!m_dwpal_nl_ctx) {
         LOG(ERROR) << "Invalid Netlink socket used for nl events (m_dwpal_nl_ctx == nullptr)";
         return false;
@@ -653,7 +656,7 @@ bool base_wlan_hal_dwpal::process_nl_events()
     } else {
         m_nl_get_failed_attempts = 0;
     }
-
+    #endif
     return true;
 }
 
@@ -664,7 +667,7 @@ bool base_wlan_hal_dwpal::dwpal_nl_cmd_set(const std::string &ifname, unsigned i
         LOG(ERROR) << "vendor_data is NULL ==> Abort!";
         return false;
     }
-
+#if 0
     if (dwpal_driver_nl_cmd_send(
             m_dwpal_nl_ctx, DWPAL_NL_UNSOLICITED_EVENT, (char *)ifname.c_str(), NL80211_CMD_VENDOR,
             DWPAL_NETDEV_ID, ltq_nl80211_vendor_subcmds(nl_cmd),
@@ -673,7 +676,14 @@ bool base_wlan_hal_dwpal::dwpal_nl_cmd_set(const std::string &ifname, unsigned i
         LOG(ERROR) << "ERROR for cmd = " << nl_cmd;
         return false;
     }
-
+#endif
+    auto res = -1;
+    if (dwpald_drv_set((char *)ifname.c_str(), ltq_nl80211_vendor_subcmds(nl_cmd),
+			     &res, vendor_data, vendor_data_size) != DWPALD_SUCCESS)
+    {
+        LOG(ERROR) << "ERROR for cmd = " << nl_cmd;
+        return false;             
+    }
     return true;
 }
 
@@ -687,7 +697,7 @@ ssize_t base_wlan_hal_dwpal::dwpal_nl_cmd_get(const std::string &ifname, unsigne
         LOG(ERROR) << "out_buffer is invalid ==> Abort!";
         return -1;
     }
-
+#if 0
     /* Handle a command which invokes an event with the output data */
     if (dwpal_driver_nl_cmd_send(
             m_dwpal_nl_ctx, DWPAL_NL_SOLICITED_EVENT, (char *)ifname.c_str(), NL80211_CMD_VENDOR,
@@ -695,7 +705,16 @@ ssize_t base_wlan_hal_dwpal::dwpal_nl_cmd_get(const std::string &ifname, unsigne
         LOG(ERROR) << "ERROR for cmd = " << nl_cmd;
         return -1;
     }
-
+    
+#endif
+    auto res = -1;
+    if (dwpald_drv_get((char *)ifname.c_str(), (enum ltq_nl80211_vendor_subcmds)nl_cmd,
+			     &res, NULL, 0, out_buffer, (size_t *)&max_buffer_size) != DWPALD_SUCCESS)
+    {
+        LOG(ERROR) << "ERROR for cmd = " << nl_cmd;
+        return -1;
+    }
+    #if 0
     // Passing a lambda with capture is not supported for standard C function
     // pointers. As a workaround, we create a static (but thread local) wrapper
     // function that calls the capturing lambda function.
@@ -725,6 +744,7 @@ ssize_t base_wlan_hal_dwpal::dwpal_nl_cmd_get(const std::string &ifname, unsigne
         }
         return DWPAL_SUCCESS;
     };
+
     auto nl_handler_cb = [](char *ifname, int event, int subevent, size_t len,
                             unsigned char *data) -> DWPAL_Ret {
         return nl_handler_cb_wrapper(ifname, event, subevent, len, data);
@@ -739,14 +759,16 @@ ssize_t base_wlan_hal_dwpal::dwpal_nl_cmd_get(const std::string &ifname, unsigne
     auto timeout = std::chrono::steady_clock::now() + std::chrono::seconds(1);
     while ((data_size == 0) && std::chrono::steady_clock::now() < timeout) {
         //parsing will be done in callback func
+        
         if (dwpal_driver_nl_msg_get(m_dwpal_nl_ctx, DWPAL_NL_SOLICITED_EVENT, nl_handler_cb,
                                     NULL) == DWPAL_FAILURE) {
             LOG(ERROR) << " dwpal_driver_nl_msg_get failed,"
                        << " ctx=" << m_dwpal_nl_ctx;
             return -1;
         }
+     
     }
-
+   #endif
     return data_size;
 }
 
@@ -768,7 +790,17 @@ bool base_wlan_hal_dwpal::dwpal_nl_cmd_send_and_recv(int command, DWPAL_nl80211C
     }
 
     int nl80211_id = -1;
+    #if 0
     if (dwpal_nl80211_id_get(m_dwpal_nl_ctx, &nl80211_id) == DWPAL_FAILURE) {
+        LOG(ERROR) << "getting nl id failed for: " << m_radio_info.iface_name
+                   << ", unable to send nl command, nl80211_id=" << nl80211_id;
+        nlmsg_free(msg);
+        return false;
+    }
+    
+    #endif
+
+    if (dwpald_nl80211_id_get(&nl80211_id) == DWPALD_DWPAL_FAILURE) {
         LOG(ERROR) << "getting nl id failed for: " << m_radio_info.iface_name
                    << ", unable to send nl command, nl80211_id=" << nl80211_id;
         nlmsg_free(msg);
@@ -791,14 +823,21 @@ bool base_wlan_hal_dwpal::dwpal_nl_cmd_send_and_recv(int command, DWPAL_nl80211C
         nlmsg_free(msg);
         return false;
     }
-
+    #if 0
     int cmd_res = 0;
     ret         = dwpal_nl80211_cmd_send(m_dwpal_nl_ctx, msg, &cmd_res, nl_callback, callback_args);
     if (ret != DWPAL_SUCCESS && cmd_res != 0) {
         LOG(ERROR) << "dwpal_nl80211_cmd_send failed, msg=" << msg << ", cmd_res=" << cmd_res;
         return false;
     }
-
+    #endif
+    int cmd_res = 0;
+    ret =dwpald_nl80211_cmd_send(msg, nl_callback,
+				   &cmd_res, callback_args);
+    if (ret != DWPALD_SUCCESS && cmd_res != 0) {
+        LOG(ERROR) << "dwpal_nl80211_cmd_send failed, msg=" << msg << ", cmd_res=" << cmd_res;
+        return false;
+    }
     return true;
 }
 
@@ -815,10 +854,11 @@ bool base_wlan_hal_dwpal::dwpal_nl_cmd_scan_dump()
         }
         return DWPAL_SUCCESS;
     };
+    #if 0
     auto nl_handler_cb = [](struct nl_msg *msg, void *arg) -> int {
         return nl_handler_cb_wrapper(msg, arg);
     };
-
+    
     int cmd_res = 0;
     auto ret    = dwpal_driver_nl_scan_dump_sync(
         m_dwpal_nl_ctx, (char *)m_radio_info.iface_name.c_str(), &cmd_res, nl_handler_cb, nullptr);
@@ -826,7 +866,7 @@ bool base_wlan_hal_dwpal::dwpal_nl_cmd_scan_dump()
         LOG(ERROR) << "dwpal_driver_nl_scan_dump Failed to request the nl scan dump";
         return false;
     }
-
+    #endif
     return true;
 }
 
