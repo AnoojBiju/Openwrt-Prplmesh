@@ -888,18 +888,18 @@ bool Monitor::update_sta_stats(const std::chrono::steady_clock::time_point &time
             return true;
         }
 
+        // Reset STA poll data
+        if (poll_cnt == 0) {
+            sta_node->reset_poll_data();
+        }
+        sta_stats.poll_cnt++;
+
         // Update the stats
         if (!mon_wlan_hal->update_stations_stats(vap_node->get_iface(), sta_mac,
                                                  sta_stats.hal_stats)) {
             LOG(ERROR) << "Failed updating STA (" << sta_mac << ") statistics!";
             continue;
         }
-
-        // Reset STA poll data
-        if (poll_cnt == 0) {
-            sta_node->reset_poll_data();
-        }
-        sta_stats.poll_cnt++;
 
         // Update TX Phy Rate min
         auto val = sta_stats.hal_stats.tx_phy_rate_100kb;
