@@ -90,7 +90,7 @@ enum eMessageConsts {
 
 enum eGlobals {
     HIERARCHY_MAX                           = 14,
-    IRE_MAX_SLAVES                          = 3,
+    IRE_MAX_SLAVES                          = 4,
     RSSI_MAX                                = 20,
     RSSI_MIN                                = -100,
     RSSI_INVALID                            = -127,
