@@ -9,6 +9,7 @@
 #include <climits>
 #include <iomanip>
 #include <linux/if_ether.h>
+#include <tlvf/ieee_1905_1/eMediaType.h>
 #include <tlvf/tlvftypes.h>
 
 namespace tlvf {
@@ -119,5 +120,23 @@ sMacAddr mac_from_array(const uint8_t array[sizeof(sMacAddr::oct)])
     mac_from_array(array, ret);
     return ret;
 }
+
+std::string print_media_type_group(const int media_type_group)
+{
+    switch (media_type_group) {
+    case ieee1905_1::eMediaTypeGroup::IEEE_802_3:
+        return "IEEE 802.3";
+    case ieee1905_1::eMediaTypeGroup::IEEE_802_11:
+        return "IEEE 802.11";
+    case ieee1905_1::eMediaTypeGroup::IEEE_1901:
+        return "IEEE 1901";
+    case ieee1905_1::eMediaTypeGroup::MoCA:
+        return "MoCA";
+    case ieee1905_1::eMediaTypeGroup::UNKNOWN:
+        return "Unknown";
+    default:
+        return "NA";
+    }
+};
 
 } // namespace tlvf

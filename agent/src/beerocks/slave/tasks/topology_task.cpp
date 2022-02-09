@@ -487,7 +487,8 @@ bool TopologyTask::add_device_information_tlv()
 
         // Iterate on front radio iface and then switch to back radio iface
         auto fill_radio_iface_info = [&](ieee1905_1::eMediaType media_type, bool front_iface) {
-            LOG(DEBUG) << "filling interface information on radio="
+            LOG(DEBUG) << "filling " << (front_iface ? "fronthaul" : "backhaul")
+                       << " information on radio="
                        << (front_iface ? radio->front.iface_name : radio->back.iface_name);
 
             if ((front_iface && radio->front.iface_mac == network_utils::ZERO_MAC) ||
@@ -503,59 +504,73 @@ bool TopologyTask::add_device_information_tlv()
                 return true;
             }
 
-            auto localInterfaceInfo = tlvDeviceInformation->create_local_interface_list();
+            auto fill_bss_info = [&](ieee1905_1::eMediaType media_type, const sMacAddr &mac,
+                                     bool front_iface) {
+                auto localInterfaceInfo = tlvDeviceInformation->create_local_interface_list();
 
-            localInterfaceInfo->mac() =
-                front_iface ? radio->front.iface_mac : radio->back.iface_mac;
+                localInterfaceInfo->mac()        = mac;
+                localInterfaceInfo->media_type() = media_type;
 
-            LOG(DEBUG) << "Added radio interface to tlvDeviceInformation: "
-                       << localInterfaceInfo->mac();
+                ieee1905_1::s802_11SpecificInformation media_info = {};
+                localInterfaceInfo->alloc_media_info(sizeof(media_info));
 
-            localInterfaceInfo->media_type() = media_type;
-
-            ieee1905_1::s802_11SpecificInformation media_info = {};
-            localInterfaceInfo->alloc_media_info(sizeof(media_info));
-
-            // BSSID field is not defined well for interface. The common definition is in simple
-            // words "the AP/ETH mac that we are connected to".
-            // For fronthaul radio interface or unused backhaul interface put zero mac.
-            if (db->device_conf.local_gw ||
-                db->backhaul.connection_type == AgentDB::sBackhaul::eConnectionType::Wired ||
-                front_iface ||
-                (db->backhaul.connection_type == AgentDB::sBackhaul::eConnectionType::Wireless &&
-                 radio->back.iface_name != db->backhaul.selected_iface_name)) {
-                media_info.network_membership = network_utils::ZERO_MAC;
-            } else {
-                if (db->backhaul.connection_type == AgentDB::sBackhaul::eConnectionType::Wireless &&
-                    radio->back.iface_name == db->backhaul.selected_iface_name) {
-                    // backhaul STA
-                    media_info.network_membership = db->backhaul.backhaul_bssid;
+                // BSSID field is not defined well for interface. The common definition is in simple
+                // words "the AP/ETH mac that we are connected to".
+                // For fronthaul radio interface or unused backhaul interface put zero mac.
+                if (db->device_conf.local_gw ||
+                    db->backhaul.connection_type == AgentDB::sBackhaul::eConnectionType::Wired ||
+                    front_iface ||
+                    (db->backhaul.connection_type ==
+                         AgentDB::sBackhaul::eConnectionType::Wireless &&
+                     radio->back.iface_name != db->backhaul.selected_iface_name)) {
+                    media_info.network_membership = network_utils::ZERO_MAC;
                 } else {
-                    media_info.network_membership = radio->back.iface_mac;
+                    if (db->backhaul.connection_type ==
+                            AgentDB::sBackhaul::eConnectionType::Wireless &&
+                        radio->back.iface_name == db->backhaul.selected_iface_name) {
+                        // backhaul STA
+                        media_info.network_membership = db->backhaul.backhaul_bssid;
+                    } else {
+                        media_info.network_membership = radio->back.iface_mac;
+                    }
                 }
+
+                media_info.role =
+                    front_iface ? ieee1905_1::eRole::AP : ieee1905_1::eRole::NON_AP_NON_PCP_STA;
+
+                // TODO: The Backhaul manager does not hold the information on the front radios.
+                // For now, put zeros and when the Agent management will be move to unified Agent thread
+                // this field will be filled. PPM-83
+                media_info.ap_channel_bandwidth               = 0;
+                media_info.ap_channel_center_frequency_index1 = 0;
+                media_info.ap_channel_center_frequency_index2 = 0;
+
+                auto *media_info_ptr = localInterfaceInfo->media_info(0);
+                if (media_info_ptr == nullptr) {
+                    LOG(ERROR) << "media_info is nullptr";
+                    return false;
+                }
+
+                std::copy_n(reinterpret_cast<uint8_t *>(&media_info), sizeof(media_info),
+                            media_info_ptr);
+
+                LOG(DEBUG) << "Adding " << (front_iface ? "fronthaul" : "backhaul") << " BSS "
+                           << mac << " media type: " << media_type
+                           << " group: " << tlvf::print_media_type_group((media_type >> 8))
+                           << " info length: " << sizeof(media_info);
+                tlvDeviceInformation->add_local_interface_list(localInterfaceInfo);
+                return true;
+            };
+
+            if (front_iface) {
+                for (beerocks::AgentDB::sRadio::sFront::sBssid &bssid : radio->front.bssids) {
+                    if ((bssid.mac != network_utils::ZERO_MAC) && !bssid.ssid.empty()) {
+                        fill_bss_info(media_type, bssid.mac, front_iface);
+                    }
+                }
+            } else {
+                fill_bss_info(media_type, radio->back.iface_mac, front_iface);
             }
-
-            media_info.role =
-                front_iface ? ieee1905_1::eRole::AP : ieee1905_1::eRole::NON_AP_NON_PCP_STA;
-
-            // TODO: The Backhaul manager does not hold the information on the front radios.
-            // For now, put zeros and when the Agent management will be move to unified Agent thread
-            // this field will be filled. #435
-            media_info.ap_channel_bandwidth               = 0;
-            media_info.ap_channel_center_frequency_index1 = 0;
-            media_info.ap_channel_center_frequency_index2 = 0;
-
-            auto *media_info_ptr = localInterfaceInfo->media_info(0);
-            if (media_info_ptr == nullptr) {
-                LOG(ERROR) << "media_info is nullptr";
-                return false;
-            }
-
-            std::copy_n(reinterpret_cast<uint8_t *>(&media_info), sizeof(media_info),
-                        media_info_ptr);
-
-            tlvDeviceInformation->add_local_interface_list(localInterfaceInfo);
-
             return true;
         };
 
