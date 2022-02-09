@@ -152,6 +152,7 @@ public:
         std::chrono::seconds dhcp_monitor_interval_seconds;
         std::chrono::milliseconds steering_disassoc_timer_msec;
         int management_mode;
+        bool unsuccessful_assoc_report_policy;
     } sDbMasterConfig;
 
     typedef struct {

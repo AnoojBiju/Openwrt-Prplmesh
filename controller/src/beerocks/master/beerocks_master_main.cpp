@@ -338,6 +338,16 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
 
         master_conf.management_mode = BPL_MGMT_MODE_MULTIAP_CONTROLLER_AGENT;
     }
+
+    if (!beerocks::bpl::cfg_get_unsuccessful_assoc_report_policy(
+            master_conf.unsuccessful_assoc_report_policy)) {
+        LOG(DEBUG) << "Failed to read unsuccessful_assoc_report_policy, setting to "
+                      "default value: "
+                   << beerocks::bpl::DEFAULT_UNSUCCESSFUL_ASSOC_REPORT_POLICY;
+
+        master_conf.unsuccessful_assoc_report_policy =
+            beerocks::bpl::DEFAULT_UNSUCCESSFUL_ASSOC_REPORT_POLICY;
+    }
 }
 
 /**

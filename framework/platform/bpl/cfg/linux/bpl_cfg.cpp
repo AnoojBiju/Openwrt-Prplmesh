@@ -682,6 +682,25 @@ bool cfg_set_link_metrics_request_interval(std::chrono::seconds &link_metrics_re
     return true;
 }
 
+bool cfg_get_unsuccessful_assoc_report_policy(bool &unsuccessful_assoc_report_policy)
+{
+    int retVal = -1;
+    if (cfg_get_param_int("unsuccessful_assoc_report_policy", retVal) == RETURN_ERR) {
+        MAPF_INFO("Failed to read unsuccessful_assoc_report_policy parameter - setting "
+                  "default value");
+        return false;
+    }
+
+    unsuccessful_assoc_report_policy = (retVal == 1);
+
+    return true;
+}
+
+bool cfg_set_unsuccessful_assoc_report_policy(bool &unsuccessful_assoc_report_policy)
+{
+    return true;
+}
+
 bool bpl_cfg_set_wifi_credentials(const std::string &iface,
                                   const son::wireless_utils::sBssInfoConf &configuration)
 {

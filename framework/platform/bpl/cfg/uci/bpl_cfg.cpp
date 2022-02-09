@@ -616,6 +616,30 @@ bool cfg_set_link_metrics_request_interval(std::chrono::seconds &link_metrics_re
     return cfg_set_prplmesh_config(option, value);
 }
 
+bool cfg_get_unsuccessful_assoc_report_policy(bool &unsuccessful_assoc_report_policy)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int_default("unsuccessful_assoc_report_policy", &retVal,
+                                           DEFAULT_UNSUCCESSFUL_ASSOC_REPORT_POLICY) ==
+        RETURN_ERR) {
+        MAPF_INFO("Failed to read unsuccessful_assoc_report_policy parameter - setting "
+                  "default value");
+        return false;
+    }
+
+    unsuccessful_assoc_report_policy = (retVal == 1);
+    LOG(DEBUG) << "get unsuccessful_assoc_report_policy: " << unsuccessful_assoc_report_policy;
+    return true;
+}
+
+bool cfg_set_unsuccessful_assoc_report_policy(bool &unsuccessful_assoc_report_policy)
+{
+    std::string option = "unsuccessful_assoc_report_policy";
+    std::string value  = std::to_string((int)unsuccessful_assoc_report_policy);
+    LOG(DEBUG) << "set unsuccessful_assoc_report_policy: " << value;
+    return cfg_set_prplmesh_config(option, value);
+}
+
 static bool bpl_cfg_get_bss_configuration(const std::string &section_name,
                                           son::wireless_utils::sBssInfoConf &configuration)
 {

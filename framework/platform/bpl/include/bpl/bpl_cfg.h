@@ -165,6 +165,9 @@ constexpr char DEFAULT_LINUX_LAN_INTERFACE_NAMES[] = "eth0_1 eth0_2 eth0_3 eth0_
 // Default DHCP tasks process lease information with this interval.
 constexpr std::chrono::seconds DEFAULT_DHCP_MONITOR_INTERVAL_VALUE_SEC{300};
 
+// Default policy for report unsuccessful associations.
+constexpr int DEFAULT_UNSUCCESSFUL_ASSOC_REPORT_POLICY = 1;
+
 /****************************************************************************/
 /******************************* Structures *********************************/
 /****************************************************************************/
@@ -678,6 +681,22 @@ bool cfg_get_link_metrics_request_interval(std::chrono::seconds &link_metrics_re
  * @return true on success, otherwise false
  */
 bool cfg_set_link_metrics_request_interval(std::chrono::seconds &link_metrics_request_interval_sec);
+
+/**
+ * @brief Reads policy setting for report unsuccessful associations.
+ *
+ * @param [out] unsuccessful_assoc_report_policy Policy setting for report unsuccessful associations.
+ * @return true on success, otherwise false
+ */
+bool cfg_get_unsuccessful_assoc_report_policy(bool &unsuccessful_assoc_report_policy);
+
+/**
+ * @brief Sets policy setting for report unsuccessful associations.
+ *
+ * @param [in] unsuccessful_assoc_report_policy Policy setting for report unsuccessful associations to set.
+ * @return true on success, otherwise false
+ */
+bool cfg_set_unsuccessful_assoc_report_policy(bool &unsuccessful_assoc_report_policy);
 
 /**
  * @brief Reads lan interfaces names from bridge configuration.
