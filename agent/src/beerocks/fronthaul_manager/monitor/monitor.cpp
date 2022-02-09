@@ -527,8 +527,7 @@ bool Monitor::monitor_fsm()
             // If there is not enough time to generate all events, the method will be called in the
             // next FSM iteration, and so on until all connected clients are eventually reported.
             auto max_generate_timeout =
-                (std::chrono::steady_clock::now() +
-                 std::chrono::milliseconds(GENERATE_CONNECTED_EVENTS_WORK_TIME_LIMIT_MSEC));
+                now + std::chrono::milliseconds(GENERATE_CONNECTED_EVENTS_WORK_TIME_LIMIT_MSEC);
             max_generate_timeout = std::min(max_generate_timeout, max_iteration_timeout);
             // If there is not enough time to generate all events, the method will be called in the
             // next FSM iteration, and so on until all connected clients are eventually reported.
@@ -538,8 +537,7 @@ bool Monitor::monitor_fsm()
                 return false;
             }
             m_next_generate_connected_events_time =
-                std::chrono::steady_clock::now() +
-                std::chrono::milliseconds(GENERATE_CONNECTED_EVENTS_DELAY_MSEC);
+                now + std::chrono::milliseconds(GENERATE_CONNECTED_EVENTS_DELAY_MSEC);
             // Reset the flag if finished to generate all clients' events
             m_generate_connected_clients_events = !is_finished_all_clients;
         }
@@ -547,7 +545,7 @@ bool Monitor::monitor_fsm()
         // Update DB - Polling
         if (now >= mon_db.get_poll_next_time()) {
 
-            mon_db.set_poll_next_time(std::chrono::steady_clock::now() +
+            mon_db.set_poll_next_time(now +
                                       std::chrono::milliseconds(mon_db.get_polling_rate_msec()));
 
             // If clients measurement mode is disabled - no need to call update_sta_stats.
@@ -570,8 +568,7 @@ bool Monitor::monitor_fsm()
 
         if (now >= mon_db.get_ap_poll_next_time()) {
             mon_db.set_ap_poll_next_time(
-                std::chrono::steady_clock::now() +
-                std::chrono::seconds(mon_db.MONITOR_DB_AP_POLLING_RATE_SEC));
+                now + std::chrono::seconds(mon_db.MONITOR_DB_AP_POLLING_RATE_SEC));
 
             // Updated tx state in mon_man_hal
             if (!mon_wlan_hal->refresh_radio_info()) {
