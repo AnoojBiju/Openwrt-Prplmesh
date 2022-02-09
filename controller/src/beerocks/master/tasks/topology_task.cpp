@@ -130,26 +130,9 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
         // TODO Name and Status of Interface should be add
         database.add_interface(al_mac, iface_mac, media_type);
 
-        auto print_media_type_group = [](const int media_type_group) -> std::string {
-            switch (media_type_group) {
-            case ieee1905_1::eMediaTypeGroup::IEEE_802_3:
-                return "IEEE 802.3";
-            case ieee1905_1::eMediaTypeGroup::IEEE_802_11:
-                return "IEEE 802.11";
-            case ieee1905_1::eMediaTypeGroup::IEEE_1901:
-                return "IEEE 1901";
-            case ieee1905_1::eMediaTypeGroup::MoCA:
-                return "MoCA";
-            case ieee1905_1::eMediaTypeGroup::UNKNOWN:
-                return "Unknown";
-            default:
-                return "NA";
-            }
-        };
-
         LOG(DEBUG) << "Interface is added al_mac:" << al_mac << " iface_mac:" << iface_mac;
         LOG(DEBUG) << "media type: " << media_type
-                   << " group: " << print_media_type_group(media_type_group)
+                   << " group: " << tlvf::print_media_type_group(media_type_group)
                    << " info length: " << iface_info.media_info_length();
 
         // Check that the interface belongs to the IEEE 802.3 group.

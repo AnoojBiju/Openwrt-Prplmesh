@@ -98,6 +98,13 @@ void mac_from_array(const uint8_t array[sizeof(sMacAddr::oct)], sMacAddr &mac);
  */
 sMacAddr mac_from_array(const uint8_t array[sizeof(sMacAddr::oct)]);
 
+/**
+ * @brief Return the string representation of a media type group
+ * @param media_type_group The value to stringify
+ * @return std::string String representation of the media type group
+ */
+std::string print_media_type_group(const int media_type_group);
+
 } // namespace tlvf
 
 inline std::ostream &operator<<(std::ostream &os, const sMacAddr &addr)
