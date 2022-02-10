@@ -55,6 +55,7 @@ typedef struct sRadioCapabilities {
     uint8_t rrm_supported         = 0;
     uint8_t band_2g_capable       = 0;
     uint8_t band_5g_capable       = 0;
+    uint8_t band_6g_capable       = 0;
     uint8_t max_ch_width          = 0; //beerocks::eWiFiBandwidth
     uint8_t phy_mode              = 0;
     uint8_t max_mcs               = 0;
