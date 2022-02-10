@@ -59,6 +59,7 @@
 #include <tlvf/wfa_map/tlvClientCapabilityReport.h>
 #include <tlvf/wfa_map/tlvClientInfo.h>
 #include <tlvf/wfa_map/tlvDeviceInventory.h>
+#include <tlvf/wfa_map/tlvDscpMappingTable.h>
 #include <tlvf/wfa_map/tlvErrorCode.h>
 #include <tlvf/wfa_map/tlvHigherLayerData.h>
 #include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
@@ -85,6 +86,7 @@
 #include <tlvf/wfa_map/tlvProfile2UnsuccessfulAssociationPolicy.h>
 #include <tlvf/wfa_map/tlvRadioOperationRestriction.h>
 #include <tlvf/wfa_map/tlvSearchedService.h>
+#include <tlvf/wfa_map/tlvServicePrioritizationRule.h>
 #include <tlvf/wfa_map/tlvStaMacAddressType.h>
 #include <tlvf/wfa_map/tlvSteeringBTMReport.h>
 #include <tlvf/wfa_map/tlvSteeringPolicy.h>
@@ -361,6 +363,12 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     }
     case (wfa_map::eTlvTypeMap::TLV_PROFILE2_TRAFFIC_SEPARATION_POLICY): {
         return msg.addClass<wfa_map::tlvProfile2TrafficSeparationPolicy>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_SERVICE_PRIORITIZATION_RULE): {
+        return msg.addClass<wfa_map::tlvServicePrioritizationRule>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_DSCP_MAPPING_TABLE): {
+        return msg.addClass<wfa_map::tlvDscpMappingTable>();
     }
     case (wfa_map::eTlvTypeMap::TLV_PROFILE2_ERROR_CODE): {
         return msg.addClass<wfa_map::tlvProfile2ErrorCode>();
