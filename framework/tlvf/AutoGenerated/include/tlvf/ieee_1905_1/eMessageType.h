@@ -72,6 +72,7 @@ enum class eMessageType : uint16_t {
     CAC_REQUEST_MESSAGE = 0x8020,
     CAC_TERMINATION_MESSAGE = 0x8021,
     CLIENT_DISASSOCIATION_STATS_MESSAGE = 0x8022,
+    SERVICE_PRIORITIZATION_REQUEST_MESSAGE = 0x8023,
     ERROR_RESPONSE_MESSAGE = 0x8024,
     ASSOCIATION_STATUS_NOTIFICATION_MESSAGE = 0x8025,
     TUNNELLED_MESSAGE = 0x8026,
@@ -132,6 +133,7 @@ static const char *eMessageType_str(eMessageType enum_value) {
     case eMessageType::CAC_REQUEST_MESSAGE:                            return "eMessageType::CAC_REQUEST_MESSAGE";
     case eMessageType::CAC_TERMINATION_MESSAGE:                        return "eMessageType::CAC_TERMINATION_MESSAGE";
     case eMessageType::CLIENT_DISASSOCIATION_STATS_MESSAGE:            return "eMessageType::CLIENT_DISASSOCIATION_STATS_MESSAGE";
+    case eMessageType::SERVICE_PRIORITIZATION_REQUEST_MESSAGE:         return "eMessageType::SERVICE_PRIORITIZATION_REQUEST_MESSAGE";
     case eMessageType::ERROR_RESPONSE_MESSAGE:                         return "eMessageType::ERROR_RESPONSE_MESSAGE";
     case eMessageType::ASSOCIATION_STATUS_NOTIFICATION_MESSAGE:        return "eMessageType::ASSOCIATION_STATUS_NOTIFICATION_MESSAGE";
     case eMessageType::TUNNELLED_MESSAGE:                              return "eMessageType::TUNNELLED_MESSAGE";
@@ -199,6 +201,7 @@ public:
         case 0x8020:
         case 0x8021:
         case 0x8022:
+        case 0x8023:
         case 0x8024:
         case 0x8025:
         case 0x8026:
