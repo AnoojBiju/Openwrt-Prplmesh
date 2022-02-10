@@ -2376,7 +2376,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         int16_t VHT_MCS[16]                    = {0};
         char ht_cap[8]                         = {0};
         char vht_cap[16]                       = {0};
-        size_t numOfValidArgs[22]              = {0};
+        size_t numOfValidArgs[23]              = {0};
         char assoc_req[ASSOCIATION_FRAME_SIZE] = {0};
 
         //force to unknown if not available
@@ -2406,20 +2406,22 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
              DWPAL_CHAR_PARAM, "band_2g_capable=", 0},
             {(void *)&msg->params.capabilities.band_5g_capable, &numOfValidArgs[13],
              DWPAL_CHAR_PARAM, "band_5g_capable=", 0},
-            {(void *)&msg->params.capabilities.rrm_supported, &numOfValidArgs[14], DWPAL_CHAR_PARAM,
+            {(void *)&msg->params.capabilities.band_6g_capable, &numOfValidArgs[14],
+             DWPAL_CHAR_PARAM, "band_6g_capable=", 0},
+            {(void *)&msg->params.capabilities.rrm_supported, &numOfValidArgs[15], DWPAL_CHAR_PARAM,
              "rrm_supported=", 0},
-            {(void *)&max_ch_width, &numOfValidArgs[15], DWPAL_CHAR_PARAM, "max_ch_width=", 0},
-            {(void *)&msg->params.capabilities.max_streams, &numOfValidArgs[16], DWPAL_CHAR_PARAM,
+            {(void *)&max_ch_width, &numOfValidArgs[16], DWPAL_CHAR_PARAM, "max_ch_width=", 0},
+            {(void *)&msg->params.capabilities.max_streams, &numOfValidArgs[17], DWPAL_CHAR_PARAM,
              "max_streams=", 0},
-            {(void *)&msg->params.capabilities.phy_mode, &numOfValidArgs[17], DWPAL_CHAR_PARAM,
+            {(void *)&msg->params.capabilities.phy_mode, &numOfValidArgs[18], DWPAL_CHAR_PARAM,
              "phy_mode=", 0},
-            {(void *)&msg->params.capabilities.max_mcs, &numOfValidArgs[18], DWPAL_CHAR_PARAM,
+            {(void *)&msg->params.capabilities.max_mcs, &numOfValidArgs[19], DWPAL_CHAR_PARAM,
              "max_mcs=", 0},
-            {(void *)&msg->params.capabilities.max_tx_power, &numOfValidArgs[19], DWPAL_CHAR_PARAM,
+            {(void *)&msg->params.capabilities.max_tx_power, &numOfValidArgs[20], DWPAL_CHAR_PARAM,
              "max_tx_power=", 0},
-            {(void *)&msg->params.capabilities.mumimo_supported, &numOfValidArgs[20],
+            {(void *)&msg->params.capabilities.mumimo_supported, &numOfValidArgs[21],
              DWPAL_CHAR_PARAM, "mu_mimo=", 0},
-            {(void *)&msg->params.multi_ap_profile, &numOfValidArgs[21], DWPAL_INT_PARAM,
+            {(void *)&msg->params.multi_ap_profile, &numOfValidArgs[22], DWPAL_INT_PARAM,
              "multi_ap_profile=", 0},
             /* Must be at the end */
             {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
@@ -2444,6 +2446,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         LOG(DEBUG) << "cell_capa        : " << (int)msg->params.capabilities.cell_capa;
         LOG(DEBUG) << "band_2g_capable  : " << (int)msg->params.capabilities.band_2g_capable;
         LOG(DEBUG) << "band_5g_capable  : " << (int)msg->params.capabilities.band_5g_capable;
+        LOG(DEBUG) << "band_6g_capable  : " << (int)msg->params.capabilities.band_6g_capable;
         LOG(DEBUG) << "rrm_supported    : " << (int)msg->params.capabilities.rrm_supported;
         LOG(DEBUG) << "max_ch_width     : " << (int)msg->params.capabilities.max_ch_width;
         LOG(DEBUG) << "max_streams      : " << (int)msg->params.capabilities.max_streams;
