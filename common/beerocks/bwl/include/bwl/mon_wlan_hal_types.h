@@ -60,6 +60,12 @@ struct SVapStats {
     // bool active_client_count_is_above_th=false;
     // int active_client_count_prev=0;
     // int active_client_count_curr=0;
+    uint64_t tx_ucast_bytes;
+    uint64_t rx_ucast_bytes;
+    uint64_t tx_mcast_bytes;
+    uint64_t rx_mcast_bytes;
+    uint64_t tx_bcast_bytes;
+    uint64_t rx_bcast_bytes;
 };
 
 struct SStaStats {

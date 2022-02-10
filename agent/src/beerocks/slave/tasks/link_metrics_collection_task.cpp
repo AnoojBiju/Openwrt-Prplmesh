@@ -660,6 +660,8 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
         return;
     }
 
+    recalculate_byte_units(cmdu_rx);
+
     /**
      * If AP Metrics Response message does not correspond to a previously received and forwarded
      * AP Metrics Query message (which we know because message id is not set), then forward message
@@ -668,7 +670,6 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
      * periodic metrics reporting interval has elapsed.
      */
     if (0 == mid) {
-        recalculate_byte_units(cmdu_rx);
         m_btl_ctx.forward_cmdu_to_broker(cmdu_rx, db->controller_info.bridge_mac, db->bridge.mac);
         return;
     }
@@ -704,8 +705,19 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
     if (ap_metrics_tlv_list.empty()) {
         LOG(WARNING) << "got empty ap metrics response for mid=" << std::hex << mid;
     }
+    auto ap_extended_metrics_tlv_list = cmdu_rx.getClassList<wfa_map::tlvApExtendedMetrics>();
+    if (ap_extended_metrics_tlv_list.empty()) {
+        LOG(WARNING) << "got empty ap extended metrics response for mid=" << std::hex << mid;
+    }
 
     for (auto ap_metrics_tlv : ap_metrics_tlv_list) {
+        std::shared_ptr<wfa_map::tlvApExtendedMetrics> ap_extended_metrics_tlv;
+        for (auto tmp : ap_extended_metrics_tlv_list) {
+            if (tmp->bssid() == ap_metrics_tlv->bssid()) {
+                ap_extended_metrics_tlv = tmp;
+                break;
+            }
+        }
 
         if (!ap_metrics_tlv) {
             LOG(WARNING) << "found null ap_metrics_tlv in response, skipping. mid=" << std::hex
@@ -724,16 +736,22 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
             return;
         }
 
-        sApExtendedMetrics extended_metrics;
+        // Zero-initialize the struct to make sure values are meaningful
+        sApExtendedMetrics extended_metrics{};
+        extended_metrics.bssid =
+            ap_metrics_tlv->bssid(); // Same as ap_extended_metrics_tlv->bssid() if it exists
 
-        //TO DO: PPM-1388 Set correct values for this params.
-        extended_metrics.bssid                    = ap_metrics_tlv->bssid();
-        extended_metrics.broadcast_bytes_sent     = 0;
-        extended_metrics.broadcast_bytes_received = 0;
-        extended_metrics.multicast_bytes_sent     = 0;
-        extended_metrics.multicast_bytes_received = 0;
-        extended_metrics.unicast_bytes_sent       = 0;
-        extended_metrics.unicast_bytes_received   = 0;
+        if (ap_extended_metrics_tlv) {
+            extended_metrics.broadcast_bytes_sent = ap_extended_metrics_tlv->broadcast_bytes_sent();
+            extended_metrics.broadcast_bytes_received =
+                ap_extended_metrics_tlv->broadcast_bytes_received();
+            extended_metrics.multicast_bytes_sent = ap_extended_metrics_tlv->multicast_bytes_sent();
+            extended_metrics.multicast_bytes_received =
+                ap_extended_metrics_tlv->multicast_bytes_received();
+            extended_metrics.unicast_bytes_sent = ap_extended_metrics_tlv->unicast_bytes_sent();
+            extended_metrics.unicast_bytes_received =
+                ap_extended_metrics_tlv->unicast_bytes_received();
+        }
 
         sApMetrics metric;
         // Copy data to the response vector
@@ -755,10 +773,10 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
             }
 
             traffic_stats_response.push_back(
-                {sta_traffic->sta_mac(), recalculate_byte_units(sta_traffic->byte_sent()),
-                 recalculate_byte_units(sta_traffic->byte_received()), sta_traffic->packets_sent(),
-                 sta_traffic->packets_received(), sta_traffic->tx_packets_error(),
-                 sta_traffic->rx_packets_error(), sta_traffic->retransmission_count()});
+                {sta_traffic->sta_mac(), sta_traffic->byte_sent(), sta_traffic->byte_received(),
+                 sta_traffic->packets_sent(), sta_traffic->packets_received(),
+                 sta_traffic->tx_packets_error(), sta_traffic->rx_packets_error(),
+                 sta_traffic->retransmission_count()});
         }
 
         std::vector<sStaLinkMetrics> link_metrics_response;
