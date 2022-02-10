@@ -153,6 +153,7 @@ public:
         std::chrono::milliseconds steering_disassoc_timer_msec;
         int management_mode;
         bool unsuccessful_assoc_report_policy;
+        int unsuccessful_assoc_max_reporting_rate;
     } sDbMasterConfig;
 
     typedef struct {

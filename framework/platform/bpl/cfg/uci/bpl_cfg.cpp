@@ -640,6 +640,30 @@ bool cfg_set_unsuccessful_assoc_report_policy(bool &unsuccessful_assoc_report_po
     return cfg_set_prplmesh_config(option, value);
 }
 
+bool cfg_get_unsuccessful_assoc_max_reporting_rate(int &unsuccessful_assoc_max_reporting_rate)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int_default("unsuccessful_assoc_max_reporting_rate", &retVal,
+                                           DEFAULT_UNSUCCESSFUL_ASSOC_MAX_REPORTING_RATE) ==
+        RETURN_ERR) {
+        MAPF_INFO("Failed to read unsuccessful_assoc_max_reporting_rate parameter - setting "
+                  "default value");
+        return false;
+    }
+
+    unsuccessful_assoc_max_reporting_rate = retVal;
+
+    return true;
+}
+
+bool cfg_set_unsuccessful_assoc_max_reporting_rate(int &unsuccessful_assoc_max_reporting_rate)
+{
+    std::string option = "unsuccessful_assoc_max_reporting_rate";
+    std::string value  = std::to_string(unsuccessful_assoc_max_reporting_rate);
+
+    return cfg_set_prplmesh_config(option, value);
+}
+
 static bool bpl_cfg_get_bss_configuration(const std::string &section_name,
                                           son::wireless_utils::sBssInfoConf &configuration)
 {

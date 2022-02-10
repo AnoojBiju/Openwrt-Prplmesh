@@ -168,6 +168,9 @@ constexpr std::chrono::seconds DEFAULT_DHCP_MONITOR_INTERVAL_VALUE_SEC{300};
 // Default policy for report unsuccessful associations.
 constexpr int DEFAULT_UNSUCCESSFUL_ASSOC_REPORT_POLICY = 1;
 
+// Default value in attempts per minute for maximum rate for reporting unsuccessful association attempts
+constexpr int DEFAULT_UNSUCCESSFUL_ASSOC_MAX_REPORTING_RATE = 30;
+
 /****************************************************************************/
 /******************************* Structures *********************************/
 /****************************************************************************/
@@ -697,6 +700,22 @@ bool cfg_get_unsuccessful_assoc_report_policy(bool &unsuccessful_assoc_report_po
  * @return true on success, otherwise false
  */
 bool cfg_set_unsuccessful_assoc_report_policy(bool &unsuccessful_assoc_report_policy);
+
+/**
+ * @brief Reads maximum rate for reporting unsuccessful association attempts.
+ *
+ * @param [out] max_reporting_rate Maximum reporting rate.value in attempts per minute.
+ * @return true on success, otherwise false
+ */
+bool cfg_get_unsuccessful_assoc_max_reporting_rate(int &max_reporting_rate);
+
+/**
+ * @brief Sets maximum rate for reporting unsuccessful association attempts.
+ *
+ * @param [in] max_reporting_rate Maximum reporting rate.value in attempts per minute.
+ * @return true on success, otherwise false
+ */
+bool cfg_set_unsuccessful_assoc_max_reporting_rate(int &max_reporting_rate);
 
 /**
  * @brief Reads lan interfaces names from bridge configuration.

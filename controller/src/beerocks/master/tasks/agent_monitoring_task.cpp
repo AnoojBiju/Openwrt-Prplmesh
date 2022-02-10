@@ -309,6 +309,9 @@ bool agent_monitoring_task::send_tlv_metric_reporting_policy(const sMacAddr &dst
 
         unsuccessful_association_policy_tlv->report_unsuccessful_associations().report =
             database.config.unsuccessful_assoc_report_policy;
+
+        unsuccessful_association_policy_tlv->maximum_reporting_rate() =
+            database.config.unsuccessful_assoc_max_reporting_rate;
     }
 
     auto tuple = metric_reporting_policy_tlv->metrics_reporting_conf_list(0);

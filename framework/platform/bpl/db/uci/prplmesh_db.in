@@ -29,6 +29,7 @@ config prplmesh 'config'
     option clients_measurement_mode '1'
     option radio_stats_enable '1'
     option unsuccessful_assoc_report_policy '1'
+    option unsuccessful_assoc_max_reporting_rate '30'
 
 config wifi-device 'radio0'
     option hostap_iface 'wlan0'
