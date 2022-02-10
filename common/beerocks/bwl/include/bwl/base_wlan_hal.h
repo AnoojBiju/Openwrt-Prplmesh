@@ -220,6 +220,40 @@ public:
      */
     virtual std::string get_radio_mac() = 0;
 
+    /*!
+     * Returns vap id using vap bssid.
+     */
+    int get_vap_id_with_mac(const std::string &bssid) const
+    {
+        for (auto &it : m_radio_info.available_vaps) {
+            if (it.second.mac == bssid) {
+                return it.first;
+            }
+        }
+        return beerocks::IFACE_ID_INVALID;
+    }
+
+    /*!
+     * Returns vap id using vap interface name.
+     */
+    int get_vap_id_with_bss(const std::string &bss) const
+    {
+        for (auto &it : m_radio_info.available_vaps) {
+            if (it.second.bss == bss) {
+                return it.first;
+            }
+        }
+        return beerocks::IFACE_ID_INVALID;
+    }
+
+    /*!
+     * Returns true if vap_id exists.
+     */
+    bool check_vap_id(int vap_id) const
+    {
+        return (m_radio_info.available_vaps.find(vap_id) != m_radio_info.available_vaps.end());
+    }
+
     // Protected methods
 protected:
     /*!
