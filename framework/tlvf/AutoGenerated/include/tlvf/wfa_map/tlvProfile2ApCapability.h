@@ -56,11 +56,13 @@ class tlvProfile2ApCapability : public BaseClass
         
         typedef struct sCapabilitiesBitsField {
             #if defined(__LITTLE_ENDIAN_BITFIELD)
-            uint8_t reserved : 6;
+            uint8_t reserved : 5;
+            uint8_t prioritization : 1;
             uint8_t byte_counter_units : 2;
             #elif defined(__BIG_ENDIAN_BITFIELD)
             uint8_t byte_counter_units : 2;
-            uint8_t reserved : 6;
+            uint8_t prioritization : 1;
+            uint8_t reserved : 5;
             #else
             #error "Bitfield macros are not defined"
             #endif
@@ -72,7 +74,9 @@ class tlvProfile2ApCapability : public BaseClass
         
         const eTlvTypeMap& type();
         const uint16_t& length();
-        uint16_t& reserved();
+        //The maximum total number of service prioritization rules supported by the Multi-AP Agent
+        uint8_t& max_prioritization_rules();
+        uint8_t& reserved();
         sCapabilitiesBitsField& capabilities_bit_field();
         //Max Total Number of unique VLAN identifiers the Multi-AP Agent supports
         uint8_t& max_total_number_of_vids();
@@ -84,7 +88,8 @@ class tlvProfile2ApCapability : public BaseClass
         bool init();
         eTlvTypeMap* m_type = nullptr;
         uint16_t* m_length = nullptr;
-        uint16_t* m_reserved = nullptr;
+        uint8_t* m_max_prioritization_rules = nullptr;
+        uint8_t* m_reserved = nullptr;
         sCapabilitiesBitsField* m_capabilities_bit_field = nullptr;
         uint8_t* m_max_total_number_of_vids = nullptr;
 };

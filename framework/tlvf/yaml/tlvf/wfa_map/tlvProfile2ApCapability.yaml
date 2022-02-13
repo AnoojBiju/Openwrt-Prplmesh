@@ -9,7 +9,11 @@ tlvProfile2ApCapability:
     _type: eTlvTypeMap
     _value_const: TLV_PROFILE2_AP_CAPABILITY
   length: uint16_t
-  reserved: uint16_t
+  max_prioritization_rules:
+    _type: uint8_t
+    _comment: |
+      The maximum total number of service prioritization rules supported by the Multi-AP Agent
+  reserved: uint8_t
   capabilities_bit_field: sCapabilitiesBitsField
   max_total_number_of_vids:
     _type: uint8_t
@@ -32,5 +36,7 @@ sCapabilitiesBitsField:
       1: kibibytes (KiB)
       2: mebibytes (MiB)
       3: reserved
+  prioritization:
+    _bit_range: [5, 5]
   reserved:
-    _bit_range: [5, 0]
+    _bit_range: [4, 0]
