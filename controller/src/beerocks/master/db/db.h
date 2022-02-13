@@ -1047,6 +1047,7 @@ public:
     bool get_node_24ghz_support(const std::string &mac);
     bool is_node_5ghz(const std::string &mac);
     bool is_node_24ghz(const std::string &mac);
+    bool is_node_6ghz(const std::string &mac);
     bool update_node_failed_5ghz_steer_attempt(const std::string &mac);
     bool update_node_failed_24ghz_steer_attempt(const std::string &mac);
 
