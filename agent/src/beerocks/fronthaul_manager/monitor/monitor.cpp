@@ -1599,6 +1599,9 @@ void Monitor::handle_multi_ap_policy_config_request(ieee1905_1::CmduMessageRx &c
             info.include_associated_sta_traffic_stats_tlv_in_ap_metrics_response =
                 metrics_reporting_conf.policy
                     .include_associated_sta_traffic_stats_tlv_in_ap_metrics_response;
+            info.include_associated_wifi_6_sta_status_report_tlv_in_ap_metrics_response =
+                metrics_reporting_conf.policy
+                    .include_associated_wifi_6_sta_status_report_tlv_in_ap_metrics_response;
 
             break;
         }

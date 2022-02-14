@@ -302,6 +302,8 @@ bool agent_monitoring_task::send_tlv_metric_reporting_policy(const sMacAddr &dst
     reporting_conf.radio_uid = ruid;
     reporting_conf.policy.include_associated_sta_link_metrics_tlv_in_ap_metrics_response  = 1;
     reporting_conf.policy.include_associated_sta_traffic_stats_tlv_in_ap_metrics_response = 1;
+    reporting_conf.policy.include_associated_wifi_6_sta_status_report_tlv_in_ap_metrics_response =
+        1;
 
     reporting_conf.sta_metrics_reporting_rcpi_threshold                  = 0;
     reporting_conf.sta_metrics_reporting_rcpi_hysteresis_margin_override = 0;
