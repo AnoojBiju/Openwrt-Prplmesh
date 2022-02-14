@@ -281,9 +281,8 @@ bool agent_monitoring_task::send_tlv_metric_reporting_policy(const sMacAddr &dst
         return false;
     }
 
-    // TODO Settings needs to be changable (PPM-1140)
     metric_reporting_policy_tlv->metrics_reporting_interval_sec() =
-        beerocks::bpl::DEFAULT_LINK_METRICS_REQUEST_INTERVAL_VALUE_SEC.count();
+        database.config.link_metrics_request_interval_seconds.count();
 
     // Add one radio configuration to list
     // TODO Multiple radio can be implemented within one message (PPM-1139)
