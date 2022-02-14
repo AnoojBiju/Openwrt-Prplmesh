@@ -4395,6 +4395,7 @@ int ap_wlan_hal_dwpal::hap_evt_ap_sta_connected_clb(char *ifname, char *op_code,
 static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t len)
 {
     auto result = ctx->filter_bss_msg(buffer, len, op_code);
+    LOG(ERROR) << "Anant: tid " << pthread_self();
     if (result <= 0) {
         return result;
     }

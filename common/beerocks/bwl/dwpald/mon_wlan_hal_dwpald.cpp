@@ -1714,6 +1714,7 @@ static int drv_evt_callback(struct nl_msg *msg)
 static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t len)
 {
     auto result = ctx->filter_bss_msg(buffer, len, op_code);
+    LOG(ERROR) << "Anant: tid " << pthread_self();
     if (result <= 0) {
         return result;
     }
@@ -1749,7 +1750,6 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
 #define NL_EVENT(event) event , nl_evt_callback
 void mon_wlan_hal_dwpal::hostap_attach(char *ifname)
 {
-    LOG(ERROR) << "Anant:Return of connect" << dwpald_connect("monitor");
     auto iface_ids = beerocks::utils::get_ids_from_iface_string(ifname);
 
     static dwpald_hostap_event hostap_radio_event_handlers[] = {
@@ -1779,10 +1779,9 @@ void mon_wlan_hal_dwpal::hostap_attach(char *ifname)
         m_num_hostap_event_handlers =
             sizeof(hostap_vap_event_handlers) / sizeof(dwpald_hostap_event);
     }
-    dwpald_start_listener();
     LOG(ERROR) << "Anant hostap attach" << ifname << "return value"
-               << dwpald_hostap_attach(ifname, m_num_hostap_event_handlers, m_hostap_event_handlers,
-                                       0);
+               << dwpald_hostap_attach_with_id(ifname, m_num_hostap_event_handlers, m_hostap_event_handlers,
+                                       0, (unsigned int)pthread_self());
         #if 0
         // Passing a lambda with capture is not supported for standard C function
     // pointers. As a workaround, we create a static (but thread local) wrapper
