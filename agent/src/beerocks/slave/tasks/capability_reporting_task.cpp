@@ -530,6 +530,12 @@ bool CapabilityReportingTask::add_profile2_ap_capability_tlv(ieee1905_1::CmduMes
 
     profile2_ap_capability_tlv->max_total_number_of_vids() =
         db->traffic_separation.max_number_of_vlans_ids;
+
+    // On EasyMesh standard 9.1 it is said that a Multi-AP Agent that implements Profile-3, need to:
+    // 1. "Set Service Prioritization bit of the Profile-2 AP Capability TLV to one".
+    // 2. "Set Max Total Number Service Prioritization Rules to one".
+    profile2_ap_capability_tlv->max_prioritization_rules()              = 1;
+    profile2_ap_capability_tlv->capabilities_bit_field().prioritization = 1;
     return true;
 }
 

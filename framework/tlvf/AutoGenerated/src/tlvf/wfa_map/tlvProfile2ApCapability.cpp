@@ -33,8 +33,12 @@ const uint16_t& tlvProfile2ApCapability::length() {
     return (const uint16_t&)(*m_length);
 }
 
-uint16_t& tlvProfile2ApCapability::reserved() {
-    return (uint16_t&)(*m_reserved);
+uint8_t& tlvProfile2ApCapability::max_prioritization_rules() {
+    return (uint8_t&)(*m_max_prioritization_rules);
+}
+
+uint8_t& tlvProfile2ApCapability::reserved() {
+    return (uint8_t&)(*m_reserved);
 }
 
 tlvProfile2ApCapability::sCapabilitiesBitsField& tlvProfile2ApCapability::capabilities_bit_field() {
@@ -48,7 +52,6 @@ uint8_t& tlvProfile2ApCapability::max_total_number_of_vids() {
 void tlvProfile2ApCapability::class_swap()
 {
     tlvf_swap(16, reinterpret_cast<uint8_t*>(m_length));
-    tlvf_swap(16, reinterpret_cast<uint8_t*>(m_reserved));
     m_capabilities_bit_field->struct_swap();
 }
 
@@ -85,7 +88,8 @@ size_t tlvProfile2ApCapability::get_initial_size()
     size_t class_size = 0;
     class_size += sizeof(eTlvTypeMap); // type
     class_size += sizeof(uint16_t); // length
-    class_size += sizeof(uint16_t); // reserved
+    class_size += sizeof(uint8_t); // max_prioritization_rules
+    class_size += sizeof(uint8_t); // reserved
     class_size += sizeof(sCapabilitiesBitsField); // capabilities_bit_field
     class_size += sizeof(uint8_t); // max_total_number_of_vids
     return class_size;
@@ -109,12 +113,18 @@ bool tlvProfile2ApCapability::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
         return false;
     }
-    m_reserved = reinterpret_cast<uint16_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint16_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
+    m_max_prioritization_rules = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    if(m_length && !m_parse__){ (*m_length) += sizeof(uint16_t); }
+    if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
+    m_reserved = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
+        return false;
+    }
+    if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
     m_capabilities_bit_field = reinterpret_cast<sCapabilitiesBitsField*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(sCapabilitiesBitsField))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sCapabilitiesBitsField) << ") Failed!";

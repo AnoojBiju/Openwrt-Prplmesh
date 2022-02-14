@@ -87,7 +87,9 @@ include_yaml_path: {
     "tlvf/wfa_map/tlvProfile2MultiApProfile.yaml",
     "tlvf/wfa_map/tlvApExtendedMetrics.yaml",
     "tlvf/wfa_map/tlvDeviceInventory.yaml",
-    "tlvf/wfa_map/tlvBackhaulStaRadioCapabilities.yaml"
+    "tlvf/wfa_map/tlvBackhaulStaRadioCapabilities.yaml",
+    "tlvf/wfa_map/tlvServicePrioritizationRule.yaml",
+    "tlvf/wfa_map/tlvDscpMappingTable.yaml"
 }
 
 # Relative to tlvf.py src_path variable
