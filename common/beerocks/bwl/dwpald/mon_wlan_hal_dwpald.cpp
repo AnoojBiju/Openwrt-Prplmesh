@@ -1779,9 +1779,10 @@ void mon_wlan_hal_dwpal::hostap_attach(char *ifname)
         m_num_hostap_event_handlers =
             sizeof(hostap_vap_event_handlers) / sizeof(dwpald_hostap_event);
     }
-    LOG(ERROR) << "Anant hostap attach" << ifname << "return value"
+    #define MONITOR_ATTACH_ID 1
+    LOG(ERROR) << "Anant hostap attach-id " << MONITOR_ATTACH_ID << ifname << " return value"
                << dwpald_hostap_attach_with_id(ifname, m_num_hostap_event_handlers, m_hostap_event_handlers,
-                                       0, (unsigned int)pthread_self());
+                                       0, MONITOR_ATTACH_ID);
         #if 0
         // Passing a lambda with capture is not supported for standard C function
     // pointers. As a workaround, we create a static (but thread local) wrapper
