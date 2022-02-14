@@ -37,13 +37,15 @@ class tlvMetricReportingPolicy : public BaseClass
 
         typedef struct sPolicy {
             #if defined(__LITTLE_ENDIAN_BITFIELD)
-            uint8_t reserved : 6;
+            uint8_t reserved : 5;
+            uint8_t include_associated_wifi_6_sta_status_report_tlv_in_ap_metrics_response : 1;
             uint8_t include_associated_sta_link_metrics_tlv_in_ap_metrics_response : 1;
             uint8_t include_associated_sta_traffic_stats_tlv_in_ap_metrics_response : 1;
             #elif defined(__BIG_ENDIAN_BITFIELD)
             uint8_t include_associated_sta_traffic_stats_tlv_in_ap_metrics_response : 1;
             uint8_t include_associated_sta_link_metrics_tlv_in_ap_metrics_response : 1;
-            uint8_t reserved : 6;
+            uint8_t include_associated_wifi_6_sta_status_report_tlv_in_ap_metrics_response : 1;
+            uint8_t reserved : 5;
             #else
             #error "Bitfield macros are not defined"
             #endif
