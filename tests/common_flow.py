@@ -19,13 +19,16 @@ class CommonFlows(prplmesh_base_test.PrplMeshBaseTest):
 
     def send_and_check_policy_config_metric_reporting(self, controller,
                                                       agent, include_sta_traffic_stats=True,
-                                                      include_sta_link_metrics=True):
+                                                      include_sta_link_metrics=True,
+                                                      include_sta_wifi6_status_report=False):
         debug("Send multi-ap policy config request with metric reporting policy to agent")
         reporting_value = 0
         if include_sta_traffic_stats:
             reporting_value |= 0x80
         if include_sta_link_metrics:
             reporting_value |= 0x40
+        if include_sta_wifi6_status_report:
+            reporting_value |= 0x20
         radio_policies = ["{%s 0x00 0x00 0x01 0x%02x}" % (radio.mac, reporting_value)
                           for radio in agent.radios]
         metric_reporting_tlv = tlv(self.ieee1905['eTlvTypeMap']['TLV_METRIC_REPORTING_POLICY'],

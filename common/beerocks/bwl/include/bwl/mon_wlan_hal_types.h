@@ -15,7 +15,7 @@
 namespace bwl {
 
 const int WIFI_SSID_MAX_LENGTH = 32 + 1 + 3; // 1 byte for null termination + 3 for alignment
-constexpr int TID_UP_MAX       = 8;          // Maximum number of user priorities
+constexpr uint8_t TID_UP_MAX   = 8;          // Maximum number of user priorities
 
 struct SMacAddr {
     uint8_t oct[6];

@@ -717,7 +717,8 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
 
     def send_and_check_policy_config_metric_reporting(self, controller,
                                                       agent, include_sta_traffic_stats=True,
-                                                      include_sta_link_metrics=True):
+                                                      include_sta_link_metrics=True,
+                                                      include_sta_wifi6_status_report=False):
         '''Configure SSIDs on all agents.
 
         Send multi-ap policy config request with metric reporting policy to agent
@@ -740,6 +741,8 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
             reporting_value |= 0x80
         if include_sta_link_metrics:
             reporting_value |= 0x40
+        if include_sta_wifi6_status_report:
+            reporting_value |= 0x20
         radio_policies = ["{%s 0x00 0x00 0x01 0x%02x}" % (radio.mac, reporting_value)
                           for radio in agent.radios]
         metric_reporting_tlv = tlv(0x8a,
