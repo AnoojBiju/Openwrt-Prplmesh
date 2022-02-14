@@ -676,8 +676,7 @@ bool Monitor::monitor_fsm()
          */
         auto radio_node = mon_db.get_radio_node();
         auto &info      = radio_node->ap_metrics_reporting_info();
-        if (radio_node->get_stats().vap_stats_available &&
-            (0 != info.ap_channel_utilization_reporting_threshold)) {
+        if (radio_node->get_stats().vap_stats_available) {
             int elapsed_time_s =
                 std::chrono::duration_cast<std::chrono::seconds>(
                     now - info.ap_metrics_channel_utilization_last_reporting_time_point)
@@ -714,16 +713,19 @@ void Monitor::on_channel_utilization_measurement_period_elapsed()
     auto radio_node        = mon_db.get_radio_node();
     auto &info             = radio_node->ap_metrics_reporting_info();
     bool threshold_crossed = false;
-    if (channel_utilization > info.ap_channel_utilization_reporting_threshold) {
-        if (info.ap_metrics_channel_utilization_reporting_value <=
-            info.ap_channel_utilization_reporting_threshold) {
+
+    // Check if a threshold has been set
+    if (0 != info.ap_channel_utilization_reporting_threshold) {
+        if (channel_utilization > info.ap_channel_utilization_reporting_threshold) {
+            if (info.ap_metrics_channel_utilization_reporting_value <=
+                info.ap_channel_utilization_reporting_threshold) {
+                threshold_crossed = true;
+            }
+        } else if (info.ap_metrics_channel_utilization_reporting_value >
+                   info.ap_channel_utilization_reporting_threshold) {
             threshold_crossed = true;
         }
-    } else if (info.ap_metrics_channel_utilization_reporting_value >
-               info.ap_channel_utilization_reporting_threshold) {
-        threshold_crossed = true;
     }
-
     LOG(DEBUG) << "Channel utilization: previous_value="
                << std::to_string(info.ap_metrics_channel_utilization_reporting_value)
                << ", current_value=" << std::to_string(channel_utilization) << ", threshold_value="
