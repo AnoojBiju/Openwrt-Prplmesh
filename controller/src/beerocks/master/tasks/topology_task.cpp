@@ -535,7 +535,7 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
                 in Topology Notification Message.
                 Should be fixed after PPM-864.
         */
-        if (!database.notify_disconnection(client_mac_str)) {
+        if (!database.notify_disconnection(client_mac_str, vs_tlv->disconnect_reason())) {
             LOG(WARNING) << "Failed to notify disconnection event.";
         }
 

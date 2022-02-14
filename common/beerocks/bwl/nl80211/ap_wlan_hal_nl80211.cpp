@@ -85,6 +85,8 @@ static ap_wlan_hal::Event nl80211_to_bwl_event(const std::string &opcode)
         return ap_wlan_hal::Event::DFS_NOP_Finished;
     } else if (opcode == "AP-MGMT-FRAME-RECEIVED") {
         return ap_wlan_hal::Event::AP_MGMT_FRAME_RECEIVED;
+    } else if (opcode == "AP-STA-POSSIBLE-PSK-MISMATCH") {
+        return ap_wlan_hal::Event::AP_Sta_Possible_Psk_Mismatch;
     }
 
     return ap_wlan_hal::Event::Invalid;
@@ -1286,6 +1288,21 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
 
         event_queue_push(Event::AP_Enabled, msg_buff);
     } break;
+
+    case Event::AP_Sta_Possible_Psk_Mismatch: {
+
+        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sSTA_MISMATCH_PSK));
+        auto msg      = reinterpret_cast<sSTA_MISMATCH_PSK *>(msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        memset(msg_buff.get(), 0, sizeof(sSTA_MISMATCH_PSK));
+
+        msg->sta_mac = tlvf::mac_from_string(parsed_obj[bwl::EVENT_KEYLESS_PARAM_MAC]);
+        LOG(DEBUG) << "STA possible PSK mismatch: offending MAC: " << msg->sta_mac;
+
+        event_queue_push(Event::AP_Sta_Possible_Psk_Mismatch, msg_buff);
+        break;
+    }
 
     // Gracefully ignore unhandled events
     // TODO: Probably should be changed to an error once WAV will stop

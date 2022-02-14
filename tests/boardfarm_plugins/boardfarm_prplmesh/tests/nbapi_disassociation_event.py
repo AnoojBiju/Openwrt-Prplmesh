@@ -109,7 +109,8 @@ class NbapiDisassociationEvent(PrplMeshBaseTest):
                                  traffic_stats.assoc_sta_traffic_stats_tx_pkt_errs)
                 self.assertEqual(disassoc_data_path, "RetransCount",
                                  traffic_stats.assoc_sta_traffic_stats_retrans_count)
-                self.assertEqual(disassoc_data_path, "ReasonCode", 1)
+                # Need to re-check after PPM-1905
+                self.assertEqual(disassoc_data_path, "ReasonCode", 0)
 
                 bssid = controller.nbapi_get_parameter(disassoc_data_path, "BSSID")
                 sta_mac = controller.nbapi_get_parameter(disassoc_data_path, "MACAddress")

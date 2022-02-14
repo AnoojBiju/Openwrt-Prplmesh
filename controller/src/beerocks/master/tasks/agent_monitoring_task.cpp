@@ -21,6 +21,7 @@
 #include <tlvf/wfa_map/tlvProfile2Default802dotQSettings.h>
 #include <tlvf/wfa_map/tlvProfile2RadioMetrics.h>
 #include <tlvf/wfa_map/tlvProfile2TrafficSeparationPolicy.h>
+#include <tlvf/wfa_map/tlvProfile2UnsuccessfulAssociationPolicy.h>
 
 using namespace beerocks;
 using namespace net;
@@ -280,15 +281,36 @@ bool agent_monitoring_task::send_tlv_metric_reporting_policy(const sMacAddr &dst
         return false;
     }
 
-    // TODO Settings needs to be changable (PPM-1140)
     metric_reporting_policy_tlv->metrics_reporting_interval_sec() =
-        beerocks::bpl::DEFAULT_LINK_METRICS_REQUEST_INTERVAL_VALUE_SEC.count();
+        database.config.link_metrics_request_interval_seconds.count();
 
     // Add one radio configuration to list
     // TODO Multiple radio can be implemented within one message (PPM-1139)
     if (!metric_reporting_policy_tlv->alloc_metrics_reporting_conf_list()) {
         LOG(ERROR) << "Failed to add metrics_reporting_conf to tlvMetricReportingPolicy";
         return false;
+    }
+
+    auto agent = database.m_agents.get(dst_mac);
+    if (!agent) {
+        LOG(ERROR) << "Agent with mac is not found in database mac=" << dst_mac;
+        return false;
+    }
+
+    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1) {
+        auto unsuccessful_association_policy_tlv =
+            cmdu_tx.addClass<wfa_map::tlvProfile2UnsuccessfulAssociationPolicy>();
+
+        if (!unsuccessful_association_policy_tlv) {
+            LOG(ERROR) << "addClass wfa_map::tlvProfile2UnsuccessfulAssociationPolicy has failed";
+            return false;
+        }
+
+        unsuccessful_association_policy_tlv->report_unsuccessful_associations().report =
+            database.config.unsuccessful_assoc_report_policy;
+
+        unsuccessful_association_policy_tlv->maximum_reporting_rate() =
+            database.config.unsuccessful_assoc_max_reporting_rate;
     }
 
     auto tuple = metric_reporting_policy_tlv->metrics_reporting_conf_list(0);
