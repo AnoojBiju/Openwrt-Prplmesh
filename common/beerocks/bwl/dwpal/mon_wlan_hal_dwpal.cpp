@@ -1759,6 +1759,17 @@ bool mon_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)
     return true;
 }
 
+bool mon_wlan_hal_dwpal::set_available_estimated_service_parameters(
+    wfa_map::tlvApMetrics::sEstimatedService &estimated_service_parameters)
+{
+    estimated_service_parameters.include_ac_bk = 1;
+    estimated_service_parameters.include_ac_be = 1;
+    estimated_service_parameters.include_ac_vo = 1;
+    estimated_service_parameters.include_ac_vi = 1;
+
+    return true;
+}
+
 bool mon_wlan_hal_dwpal::set_estimated_service_parameters(uint8_t *esp_info_field)
 {
     // TO DO: Implement with PPM-1499

@@ -71,6 +71,8 @@ public:
     virtual bool pre_generate_connected_clients_events() override;
 
     virtual bool channel_scan_abort() override;
+    virtual bool set_available_estimated_service_parameters(
+        wfa_map::tlvApMetrics::sEstimatedService &estimated_service_parameters) override;
     virtual bool set_estimated_service_parameters(uint8_t *esp_info_field) override;
 
     bool sta_unassoc_rssi_measurement(std::unordered_map<std::string, uint8_t> &new_list) final;
