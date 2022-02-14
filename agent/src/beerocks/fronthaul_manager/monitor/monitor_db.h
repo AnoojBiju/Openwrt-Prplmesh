@@ -18,6 +18,8 @@
 #include <unordered_map>
 #include <vector>
 
+constexpr uint8_t TID_UP_MAX = 8;
+
 namespace son {
 ////////////////////////////////////////////
 ////////////////////////////////////////////
@@ -119,9 +121,16 @@ public:
         uint8_t rx_load_percent_prev = 0;
     };
 
+    struct SStaQosCtrlParams {
+        uint8_t tid_queue_size_list[TID_UP_MAX];
+        bwl::SStaQosCtrlParams hal_qos_ctrl_params = {};
+    };
+
     SStaStats &get_stats() { return m_sta_stats; }
     const SStaStats &get_stats() const { return m_sta_stats; }
 
+    SStaQosCtrlParams &get_qos_ctrl_params() { return m_sta_qos_ctrl_params; }
+    const SStaQosCtrlParams &get_qos_ctrl_params() const { return m_sta_qos_ctrl_params; }
     // Idle stations //
     bool idle_detected       = false;
     bool enable_idle_monitor = false;
@@ -146,6 +155,7 @@ private:
     std::chrono::steady_clock::time_point last_change_time;
     std::chrono::steady_clock::time_point arp_time = std::chrono::steady_clock::now();
     SStaStats m_sta_stats;
+    SStaQosCtrlParams m_sta_qos_ctrl_params;
     bool m_measure_sta_enable = false;
 };
 

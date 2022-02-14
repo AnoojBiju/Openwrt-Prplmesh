@@ -16,6 +16,7 @@
 #include <tlvf/wfa_map/tlvApMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaTrafficStats.h>
+#include <tlvf/wfa_map/tlvAssociatedWiFi6StaStatusReport.h>
 #include <tlvf/wfa_map/tlvProfile2RadioMetrics.h>
 
 using namespace beerocks;
@@ -529,6 +530,43 @@ bool monitor_stats::add_ap_assoc_sta_link_metric(ieee1905_1::CmduMessageTx &cmdu
     bss_info.sta_measured_uplink_rcpi_dbm_enc =
         wireless_utils::convert_rcpi_from_rssi(sta_stats.rx_rssi_curr);
 
+    return true;
+}
+
+bool monitor_stats::add_ap_assoc_wifi_6_sta_status_report(ieee1905_1::CmduMessageTx &cmdu_tx,
+                                                          const monitor_sta_node &sta_node)
+{
+    auto ap_assoc_wifi_6_sta_status_report_tlv =
+        cmdu_tx.addClass<wfa_map::tlvAssociatedWiFi6StaStatusReport>();
+    if (!ap_assoc_wifi_6_sta_status_report_tlv) {
+        LOG(ERROR) << "Couldn't addClass tlvAssociatedWiFi6StaStatusReport";
+        return false;
+    }
+
+    ap_assoc_wifi_6_sta_status_report_tlv->sta_mac() = tlvf::mac_from_string(sta_node.get_mac());
+
+    const auto &sta_qos_ctrl_params = sta_node.get_qos_ctrl_params();
+    uint8_t tid_queue_size_list_len = TID_UP_MAX;
+
+    for (uint8_t n = 0; n < tid_queue_size_list_len; n++) {
+
+        auto ap_assoc_wifi_6_sta_status_report =
+            ap_assoc_wifi_6_sta_status_report_tlv->create_tid_queue_size_list();
+        if (!ap_assoc_wifi_6_sta_status_report) {
+            LOG(ERROR) << "create_tid_queue_size_list() has failed!";
+            return false;
+        }
+
+        ap_assoc_wifi_6_sta_status_report->tid() = n;
+        ap_assoc_wifi_6_sta_status_report->queue_size() =
+            sta_qos_ctrl_params.tid_queue_size_list[n];
+
+        if (!ap_assoc_wifi_6_sta_status_report_tlv->add_tid_queue_size_list(
+                ap_assoc_wifi_6_sta_status_report)) {
+            LOG(ERROR) << "Failed add_tid_queue_size_list";
+            return false;
+        }
+    }
     return true;
 }
 

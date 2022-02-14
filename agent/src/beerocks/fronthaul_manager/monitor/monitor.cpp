@@ -551,6 +551,9 @@ bool Monitor::monitor_fsm()
             // If clients measurement mode is disabled - no need to call update_sta_stats.
             // The differentiation between measure all clients and only specific clients is done
             // as internally in the update_sta_stats.
+
+            update_sta_qos_ctrl_params();
+
             if (mon_db.get_clients_measuremet_mode() !=
                 monitor_db::eClientsMeasurementMode::DISABLE_ALL) {
                 // Update the statistics
@@ -743,8 +746,11 @@ bool Monitor::create_ap_metrics_response(uint16_t mid, const std::vector<sMacAdd
             reporting_info.include_associated_sta_traffic_stats_tlv_in_ap_metrics_response;
         auto include_sta_link_metrics_tlv =
             reporting_info.include_associated_sta_link_metrics_tlv_in_ap_metrics_response;
+        auto include_wifi_6_sta_status_report_tlv =
+            reporting_info.include_associated_wifi_6_sta_status_report_tlv_in_ap_metrics_response;
 
-        if (include_sta_traffic_stats_tlv || include_sta_link_metrics_tlv) {
+        if (include_sta_traffic_stats_tlv || include_sta_link_metrics_tlv ||
+            include_wifi_6_sta_status_report_tlv) {
             for (auto it = mon_db.sta_begin(); it != mon_db.sta_end(); ++it) {
                 const auto &sta_mac  = it->first;
                 const auto &sta_node = it->second;
@@ -769,6 +775,12 @@ bool Monitor::create_ap_metrics_response(uint16_t mid, const std::vector<sMacAdd
                         LOG(ERROR) << "Failed to add sta_link_metric tlv";
                     }
                 }
+                if (include_wifi_6_sta_status_report_tlv) {
+                    LOG(TRACE) << "Include Wifi 6 STA status report for " << sta_node->get_mac();
+                    if (!mon_stats.add_ap_assoc_wifi_6_sta_status_report(cmdu_tx, *sta_node)) {
+                        LOG(ERROR) << "Failed to add wifi_6_sta_status_report tlv";
+                    }
+                }
             }
         }
     }
@@ -776,6 +788,41 @@ bool Monitor::create_ap_metrics_response(uint16_t mid, const std::vector<sMacAdd
     if (!mon_stats.add_radio_metrics(cmdu_tx, m_radio_mac, *mon_db.get_radio_node())) {
         LOG(ERROR) << "Failed to add radio metrics.";
         return false;
+    }
+    return true;
+}
+
+bool Monitor::update_sta_qos_ctrl_params()
+{
+    for (auto it = mon_db.sta_begin(); it != mon_db.sta_end(); ++it) {
+
+        auto sta_mac  = it->first;
+        auto sta_node = it->second;
+
+        if (sta_node == nullptr) {
+            LOG(WARNING) << "Invalid node pointer for STA = " << sta_mac;
+            continue;
+        }
+
+        auto vap_node             = mon_db.vap_get_by_id(sta_node->get_vap_id());
+        auto &sta_qos_ctrl_params = sta_node->get_qos_ctrl_params();
+
+        // Skip non-wifi-6 STAs
+        if (!sta_qos_ctrl_params.hal_qos_ctrl_params.is_wifi6_sta) {
+            continue;
+        }
+
+        // Update the stats
+        if (!mon_wlan_hal->update_station_qos_control_params(
+                vap_node->get_iface(), sta_mac, sta_qos_ctrl_params.hal_qos_ctrl_params)) {
+            LOG(ERROR) << "Failed updating STA (" << sta_mac << ") QoS control params!";
+            continue;
+        }
+
+        for (uint8_t tid_index = 0; tid_index < TID_UP_MAX; tid_index++) {
+            sta_qos_ctrl_params.tid_queue_size_list[tid_index] =
+                sta_qos_ctrl_params.hal_qos_ctrl_params.tid_queue_size[tid_index];
+        }
     }
     return true;
 }
