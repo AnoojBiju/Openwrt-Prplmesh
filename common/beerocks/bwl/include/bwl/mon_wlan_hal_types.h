@@ -15,6 +15,7 @@
 namespace bwl {
 
 const int WIFI_SSID_MAX_LENGTH = 32 + 1 + 3; // 1 byte for null termination + 3 for alignment
+constexpr int TID_UP_MAX       = 8;          // Maximum number of user priorities
 
 struct SMacAddr {
     uint8_t oct[6];
@@ -91,6 +92,13 @@ struct SStaStats {
     // uint8_t  rx_load_percent_curr=0;
     // uint8_t  rx_load_percent_prev=0;
     uint8_t dl_bandwidth = 0; //beerocks::eWiFiBandwidth
+};
+
+struct SStaQosCtrlParams {
+    uint8_t tid_queue_size[TID_UP_MAX];
+    sMacAddr sta_mac;
+    bool is_wifi6_sta;
+    std::string vap_iface_name;
 };
 
 struct SStaChannelLoadRequest11k {

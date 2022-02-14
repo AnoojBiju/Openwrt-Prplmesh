@@ -865,6 +865,23 @@ bool mon_wlan_hal_dwpal::update_stations_stats(const std::string &vap_iface_name
     return true;
 }
 
+bool mon_wlan_hal_dwpal::update_station_qos_control_params(const std::string &vap_iface_name,
+                                                           const std::string &sta_mac,
+                                                           SStaQosCtrlParams &sta_qos_ctrl_params)
+{
+    sta_qos_ctrl_params.vap_iface_name.assign(vap_iface_name);
+    sta_qos_ctrl_params.sta_mac = tlvf::mac_from_string(sta_mac);
+
+    // To Do: HOSTAPD call to update SStaQosCtrlParams to be handled as part of PPM-1941.
+
+    // Setting dummy values to SStaQosCtrlParams until PPM-1941 is closed.
+    for (uint8_t tid_index = 0; tid_index < TID_UP_MAX; tid_index++) {
+        sta_qos_ctrl_params.tid_queue_size[tid_index] = tid_index;
+    }
+
+    return true;
+}
+
 bool mon_wlan_hal_dwpal::sta_channel_load_11k_request(const SStaChannelLoadRequest11k &req)
 {
     LOG(TRACE) << __func__;
