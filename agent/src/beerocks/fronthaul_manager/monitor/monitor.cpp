@@ -36,6 +36,9 @@ using namespace son;
 #define OPERATION_FAIL -1
 #define MAX_RADIO_DISBALED_TIMEOUT_SEC 4
 
+// To allow the monitor FSM to not skip a polling iteration due to a small drift, need to use a safety margin buffer
+static constexpr std::chrono::milliseconds polling_timer_buffer_msec = std::chrono::milliseconds(5);
+
 /**
  * Implementation-specific measurement period of channel utilization.
  * Currently we use this constant value but a more elaborate solution should read it from
@@ -543,7 +546,7 @@ bool Monitor::monitor_fsm()
         }
 
         // Update DB - Polling
-        if (now >= mon_db.get_poll_next_time()) {
+        if (now >= (mon_db.get_poll_next_time() - polling_timer_buffer_msec)) {
 
             mon_db.set_poll_next_time(now +
                                       std::chrono::milliseconds(mon_db.get_polling_rate_msec()));
