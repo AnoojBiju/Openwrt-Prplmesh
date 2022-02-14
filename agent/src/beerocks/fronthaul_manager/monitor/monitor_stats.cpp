@@ -457,22 +457,37 @@ bool monitor_stats::add_ap_metrics(ieee1905_1::CmduMessageTx &cmdu_tx,
     auto channel_utilization = radio_node.get_channel_utilization();
     auto sta_count           = vap_node.sta_get_count();
 
-    ap_metrics_response_tlv->bssid()                                      = bssid;
-    ap_metrics_response_tlv->channel_utilization()                        = channel_utilization;
-    ap_metrics_response_tlv->number_of_stas_currently_associated()        = sta_count;
-    ap_metrics_response_tlv->estimated_service_parameters().include_ac_bk = 1;
-    ap_metrics_response_tlv->estimated_service_parameters().include_ac_be = 1;
-    ap_metrics_response_tlv->estimated_service_parameters().include_ac_vo = 1;
-    ap_metrics_response_tlv->estimated_service_parameters().include_ac_vi = 1;
-
-    if (!ap_metrics_response_tlv->alloc_estimated_service_info_field(12)) {
-        LOG(ERROR)
-            << "Couldn't allocate ap_metrics_response_tlv->alloc_estimated_service_info_field";
-        return false;
+    ap_metrics_response_tlv->bssid()                               = bssid;
+    ap_metrics_response_tlv->channel_utilization()                 = channel_utilization;
+    ap_metrics_response_tlv->number_of_stas_currently_associated() = sta_count;
+    mon_wlan_hal->set_available_estimated_service_parameters(
+        ap_metrics_response_tlv->estimated_service_parameters());
+    uint8_t estimated_service_info_field_size = 0;
+    if (ap_metrics_response_tlv->estimated_service_parameters().include_ac_bk) {
+        estimated_service_info_field_size += 3;
     }
-    std::fill_n(ap_metrics_response_tlv->estimated_service_info_field(), 12, 0);
-    mon_wlan_hal->set_estimated_service_parameters(
-        ap_metrics_response_tlv->estimated_service_info_field());
+    if (ap_metrics_response_tlv->estimated_service_parameters().include_ac_be) {
+        estimated_service_info_field_size += 3;
+    }
+    if (ap_metrics_response_tlv->estimated_service_parameters().include_ac_vo) {
+        estimated_service_info_field_size += 3;
+    }
+    if (ap_metrics_response_tlv->estimated_service_parameters().include_ac_vi) {
+        estimated_service_info_field_size += 3;
+    }
+    if (estimated_service_info_field_size != 0) {
+        if (!ap_metrics_response_tlv->alloc_estimated_service_info_field(
+                estimated_service_info_field_size)) {
+            LOG(ERROR)
+                << "Couldn't allocate ap_metrics_response_tlv->alloc_estimated_service_info_field";
+            return false;
+        }
+        std::fill_n(ap_metrics_response_tlv->estimated_service_info_field(),
+                    estimated_service_info_field_size, 0);
+        mon_wlan_hal->set_estimated_service_parameters(
+            ap_metrics_response_tlv->estimated_service_info_field());
+    }
+
     return true;
 }
 

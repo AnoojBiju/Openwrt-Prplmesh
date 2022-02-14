@@ -71,6 +71,8 @@ public:
     virtual bool pre_generate_connected_clients_events() override;
 
     virtual bool channel_scan_abort() override;
+    virtual bool set_available_estimated_service_parameters(
+        wfa_map::tlvApMetrics::sEstimatedService &estimated_service_parameters) override;
     virtual bool set_estimated_service_parameters(uint8_t *esp_info_field) override;
     virtual bool process_dwpal_nl_event(struct nl_msg *msg, void *arg = nullptr) override;
     virtual bool process_dwpal_event(char *ifname, char *buffer, int bufLen,
