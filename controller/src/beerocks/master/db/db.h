@@ -152,6 +152,8 @@ public:
         std::chrono::seconds dhcp_monitor_interval_seconds;
         std::chrono::milliseconds steering_disassoc_timer_msec;
         int management_mode;
+        bool unsuccessful_assoc_report_policy;
+        int unsuccessful_assoc_max_reporting_rate;
     } sDbMasterConfig;
 
     typedef struct {
@@ -1576,8 +1578,9 @@ public:
     /**
      * @brief Notify about client disconnection.
      * @param mac String with STA mac address.
+     * @param reason_code Reason code of clients failed association/connection.
      */
-    bool notify_disconnection(const std::string &mac);
+    bool notify_disconnection(const std::string &mac, const uint16_t reason_code);
 
     /**
      * @brief Update the node stats info

@@ -46,6 +46,8 @@ In the following table, "default" means default value used within prplMesh if it
 | link_metrics_request_interval_sec            | integer | no       | 60              | Interval for periodic link metrics requests from all agents (set to 0 to disable).                                                                    |
 | clients_measurement_mode                     | integer | no       | 1               | Client measurements mode. `0` disables, `1` enables the measurements for all clients.`2` enables measurements only for clients selected for steering. |
 | mandatory_interfaces                         | string  | no       | *empty*         | Comma-separated list of wireless interfaces that prplMesh should use. If empty, try to use all of them.                                               |
+| unsuccessful_assoc_report_policy                         | bool  | no       | 1         | If set to 1, enable reporting for unsuccessful associations.                                               |
+| unsuccessful_assoc_max_reporting_rate                         | int  | no       | 30         | Maximum rate for reporting unsuccessful association in attempts per minute.                                               |
 
 ### Radio-specific configuration options (UCI only).
 
