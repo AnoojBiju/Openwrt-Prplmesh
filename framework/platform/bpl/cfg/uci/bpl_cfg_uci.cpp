@@ -156,11 +156,16 @@ int cfg_uci_get_wireless_from_ifname(enum paramType type, const char *interface_
                 if (strncmp(n->name, "path", MAX_UCI_BUF_LEN))
                     continue;
 
-                path_interface_name = "/sys/devices/platform/" + std::string(o->v.string) + "/net";
+                // Different platform has different option path. We take only soc/* part.
+                size_t pos = std::string(o->v.string).find("soc/");
+                path_interface_name =
+                    "/sys/devices/platform/" + std::string(o->v.string).substr(pos) + "/net";
 
                 if ((dir = opendir(path_interface_name.c_str())) != NULL) {
                     while ((ent = readdir(dir)) != NULL) {
-                        if (strcmp(ent->d_name, ".") != 0 && strcmp(ent->d_name, "..") != 0) {
+                        if (!strncmp(interface_name, ent->d_name, MAX_UCI_BUF_LEN)) {
+                            // We reached the section containing the requested ifname(path to ifname)
+                            is_section_found = true;
                             break;
                         }
                     }
@@ -172,14 +177,9 @@ int cfg_uci_get_wireless_from_ifname(enum paramType type, const char *interface_
                     return RETURN_ERR;
                 }
 
-                if (ent == NULL)
+                if (!is_section_found)
                     continue;
 
-                if (strncmp(interface_name, ent->d_name, MAX_UCI_BUF_LEN))
-                    continue;
-
-                // We reached the section containing the requested ifname(path to ifname)
-                is_section_found = true;
                 break;
             }
         }
