@@ -731,14 +731,14 @@ int test_all()
             MAPF_ERR("TLV4 has no complex 1");
             errors++;
         } else {
-            auto cmplx = std::get<1>(tlv4->complex_list(1));
-            if (cmplx.list_length() != 0) {
-                MAPF_ERR("TLV4 complex 1 list length is " << unsigned(cmplx.list_length())
+            auto cmplx_tlv4_1 = std::get<1>(tlv4->complex_list(1));
+            if (cmplx_tlv4_1.list_length() != 0) {
+                MAPF_ERR("TLV4 complex 1 list length is " << unsigned(cmplx_tlv4_1.list_length())
                                                           << " instead of 0");
                 errors++;
             }
-            if (cmplx.var1() != 0xa11ad11d) {
-                MAPF_ERR("TLV4 complex 1 var1 is " << std::hex << cmplx.var1()
+            if (cmplx_tlv4_1.var1() != 0xa11ad11d) {
+                MAPF_ERR("TLV4 complex 1 var1 is " << std::hex << cmplx_tlv4_1.var1()
                                                    << " instead of 0xa11ad11d");
                 errors++;
             }
