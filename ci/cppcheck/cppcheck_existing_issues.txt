@@ -9,7 +9,6 @@ controller/src/beerocks/master/tasks/network_health_check_task.cpp: style: Redun
 framework/platform/bpl/db/linux/bpl_db.cpp: style: Parameter 'nested_params' can be declared with const [constParameter]    std::unordered_map<std::string, std::unordered_map<std::string, std::string>> &nested_params)
 framework/platform/bpl/test/bpl_test.cpp: portability: fflush() called on input stream 'stdin' may result in undefined behaviour on non-linux systems. [fflushOnInputStream]            fflush(stdin);
 framework/platform/bpl/test/bpl_test.cpp: portability: fflush() called on input stream 'stdin' may result in undefined behaviour on non-linux systems. [fflushOnInputStream]        fflush(stdin);
-framework/tlvf/test/tlvf_test.cpp: style: Local variable 'cmplx' shadows outer variable [shadowVariable]            auto cmplx = std::get<1>(tlv4->complex_list(0));
 framework/tlvf/test/tlvf_test.cpp: style: Local variable 'cmplx' shadows outer variable [shadowVariable]            auto cmplx = std::get<1>(tlv4->complex_list(1));
 framework/tlvf/test/tlvf_test.cpp: style: Local variable 'cmplx' shadows outer variable [shadowVariable]        auto cmplx = std::get<1>(tlv4->complex_list(i));
 framework/tlvf/test/tlvf_test.cpp: style: The scope of the variable 'expected' can be reduced. [variableScope]            uint16_t expected = 0x0bb0;

@@ -188,9 +188,9 @@ int test_complex_list()
         return ++errors;
     }
     for (int i = 0; i < complex_list_entries; i++) {
-        auto cmplx = std::get<1>(tlv4->complex_list(i));
-        if (cmplx.var1() != 0xbbbbaaaa) {
-            MAPF_ERR("wrong value for cmplx->var1 " << std::hex << cmplx.var1());
+        auto cmplx_tlv4_i = std::get<1>(tlv4->complex_list(i));
+        if (cmplx_tlv4_i.var1() != 0xbbbbaaaa) {
+            MAPF_ERR("wrong value for cmplx_tlv4_i.var1 " << std::hex << cmplx_tlv4_i.var1());
             errors++;
         }
     }
@@ -699,19 +699,19 @@ int test_all()
             MAPF_ERR("TLV4 has no complex 0");
             errors++;
         } else {
-            auto cmplx = std::get<1>(tlv4->complex_list(0));
-            if (cmplx.list_length() != 6) {
-                MAPF_ERR("TLV4 complex 0 list length is " << unsigned(cmplx.list_length())
+            auto cmplx_tlv4_0 = std::get<1>(tlv4->complex_list(0));
+            if (cmplx_tlv4_0.list_length() != 6) {
+                MAPF_ERR("TLV4 complex 0 list length is " << unsigned(cmplx_tlv4_0.list_length())
                                                           << " instead of 6");
                 errors++;
             }
             uint8_t expected = 0xc0;
-            for (uint8_t list_idx = 0; list_idx < cmplx.list_length(); list_idx++) {
-                if (!cmplx.list(list_idx)) {
+            for (uint8_t list_idx = 0; list_idx < cmplx_tlv4_0.list_length(); list_idx++) {
+                if (!cmplx_tlv4_0.list(list_idx)) {
                     MAPF_ERR("TLV4 complex 0 has no list[" << list_idx << "]");
                     errors++;
                 } else {
-                    auto value = cmplx.list(list_idx);
+                    auto value = cmplx_tlv4_0.list(list_idx);
                     if (*value != expected + list_idx) {
                         MAPF_ERR("TLV4 complex 0 list ")
                             << list_idx << " has value " << std::hex << *value << " instead of "
@@ -721,8 +721,8 @@ int test_all()
                 }
             }
 
-            if (cmplx.var1() != 0xd00d) {
-                MAPF_ERR("TLV4 complex 0 var1 is " << std::hex << cmplx.var1()
+            if (cmplx_tlv4_0.var1() != 0xd00d) {
+                MAPF_ERR("TLV4 complex 0 var1 is " << std::hex << cmplx_tlv4_0.var1()
                                                    << " instead of 0xd00d");
                 errors++;
             }
