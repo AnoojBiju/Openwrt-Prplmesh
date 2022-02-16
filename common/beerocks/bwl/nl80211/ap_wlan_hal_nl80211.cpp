@@ -304,6 +304,14 @@ bool ap_wlan_hal_nl80211::set_channel(int chan, beerocks::eWiFiBandwidth bw, int
         return false;
     }
 
+    // ACS is triggered in BackhaulManager::send_slaves_enable() on radio which does not have BH link
+    if (chan == 0) {
+        LOG(INFO) << "ACS is not supported";
+
+        // TODO: Returning false exits whole AP initialization (PPM-1928)
+        return true;
+    }
+
     // Load hostapd config for the radio
     prplmesh::hostapd::Configuration conf = load_hostapd_config(m_radio_info.iface_name);
     if (!conf) {
