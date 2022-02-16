@@ -217,6 +217,28 @@ start_function() {
     # shellcheck disable=SC2050
     [ "@BWL_TYPE@" = "DUMMY" ] && [ "$PLATFORM_INIT" = "true" ] && platform_init
     prplmesh_framework_init
+    UCI_MODE=$(uci get prplmesh.config.management_mode)
+    if [ -n "$UCI_MODE" ] && [ -z "$PRPLMESH_MODE" ]; then
+        case "$UCI_MODE" in
+            Multi-AP-Controller-and-Agent)
+                PRPLMESH_MODE="CA"
+                ;;
+            Multi-AP-Controller)
+                PRPLMESH_MODE="C"
+                ;;
+            Multi-AP-Agent)
+                PRPLMESH_MODE="A"
+                ;;
+            Not-Multi-AP)
+                prplmesh_platform_db_init "Not-Multi-AP"
+                prplmesh_agent_start
+                return
+                ;;
+            * ) err "unsupported mode: $UCI_MODE"; exit 1 ;;
+        esac
+    else
+        [ -z "$PRPLMESH_MODE" ] && PRPLMESH_MODE=$PRPLMESH_DEFAULT_MODE
+    fi
     case "$PRPLMESH_MODE" in
         CA | ca)
             prplmesh_platform_db_init "Multi-AP-Controller-and-Agent"
@@ -423,6 +445,6 @@ PLATFORM_INIT=@BEEROCKS_PLATFORM_INIT@
 DELETE_LOGS=false
 CONTROL_IFACE=
 DATA_IFACE=
-PRPLMESH_MODE="CA" # CA = Controller & Agent, A = Agent only, C = Controller only
+PRPLMESH_DEFAULT_MODE="CA" # CA = Controller & Agent, A = Agent only, C = Controller only
 
 main "$@"
