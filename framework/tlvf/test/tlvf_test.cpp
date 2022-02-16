@@ -666,12 +666,12 @@ int test_all()
             errors++;
         }
         for (uint8_t list_idx = 0; list_idx < tlv4->simple_list_length(); list_idx++) {
-            uint16_t expected = 0x0bb0;
             if (!tlv4->simple_list(list_idx)) {
                 MAPF_ERR("TLV4 has no simple " << list_idx);
                 errors++;
             } else {
-                auto value = tlv4->simple_list(list_idx);
+                uint16_t expected = 0x0bb0;
+                auto value        = tlv4->simple_list(list_idx);
                 if (*value != expected + list_idx) {
                     MAPF_ERR("TLV4 simple ") << list_idx << " has value " << std::hex << *value
                                              << " instead of " << std::hex << expected + list_idx;
