@@ -1844,6 +1844,11 @@ bool BackhaulManager::send_slaves_enable()
             notification->bandwidth()      = eWiFiBandwidth::BANDWIDTH_20;
             notification->center_channel() = notification->channel();
         }
+
+        // Uninitialized CMDU parameters remain zero.
+        // Channel zero is used to trigger ACS on radio which does not have BH link
+        // TODO: This flow is valid only for MxL platforms (PPM-1928)
+
         LOG(DEBUG) << "Send enable to radio " << radio_info->hostap_iface
                    << ", channel = " << int(notification->channel())
                    << ", center_channel = " << int(notification->center_channel());
