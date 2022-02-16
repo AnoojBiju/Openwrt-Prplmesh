@@ -195,6 +195,7 @@ void TopologyTask::handle_topology_discovery(ieee1905_1::CmduMessageRx &cmdu_rx,
     AgentDB::sNeighborDevice neighbor_device;
     neighbor_device.transmitting_iface_mac = tlvMac->mac();
     neighbor_device.timestamp              = std::chrono::steady_clock::now();
+    neighbor_device.receiving_iface_name   = local_receiving_iface_name;
 
     auto &neighbor_devices_by_al_mac =
         db->neighbor_devices[tlvf::mac_from_string(local_receiving_iface_mac_str)];

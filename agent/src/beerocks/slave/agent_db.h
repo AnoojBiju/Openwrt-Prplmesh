@@ -433,6 +433,9 @@ public:
 
         // Timestamp of the last Topology Discovery message received from this neighbor device.
         std::chrono::steady_clock::time_point timestamp;
+
+        // Name of the network interface on which the neighbor has been seen
+        std::string receiving_iface_name;
     };
 
     /**
