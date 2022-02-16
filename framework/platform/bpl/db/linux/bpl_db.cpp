@@ -38,7 +38,7 @@ bool db_set_entry(const std::string &entry_type, const std::string &entry_name,
 }
 
 bool db_get_entry(const std::string &entry_type, const std::string &entry_name,
-                  std::unordered_map<std::string, std::string> &params)
+                  const std::unordered_map<std::string, std::string> &params)
 {
     LOG(TRACE) << " - NOT IMPLEMENTED!";
     return true;

@@ -71,7 +71,7 @@ bool db_set_entry(const std::string &entry_type, const std::string &entry_name,
  * @return true on success, false otherwise.
  */
 bool db_get_entry(const std::string &entry_type, const std::string &entry_name,
-                  std::unordered_map<std::string, std::string> &params);
+                  const std::unordered_map<std::string, std::string> &params);
 
 /**
  * @brief Get all entries by type as a nested map <Entry-name, <Attrebute-name, value>>.
