@@ -829,7 +829,7 @@ bool base_wlan_hal_nl80211::refresh_vaps_info(int id)
     return true;
 }
 
-bool base_wlan_hal_nl80211::process_ext_events()
+bool base_wlan_hal_nl80211::process_ext_events(int fd)
 {
     if (!m_wpa_ctrl_event) {
         LOG(ERROR) << "Invalid WPA Control socket (m_wpa_ctrl_event == nullptr)";

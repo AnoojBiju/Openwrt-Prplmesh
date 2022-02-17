@@ -48,7 +48,7 @@ public:
     virtual bool ping() override;
     virtual bool refresh_radio_info() override;
     virtual bool refresh_vaps_info(int id) override;
-    virtual bool process_ext_events() override;
+    virtual bool process_ext_events(int fd = 0) override;
     virtual bool process_nl_events() override;
     virtual std::string get_radio_mac() override;
 

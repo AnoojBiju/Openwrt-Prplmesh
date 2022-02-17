@@ -303,8 +303,8 @@ bool Monitor::monitor_fsm()
                     .name = "mon_hal_ext_events",
                     .on_read =
                         [&](int fd, EventLoop &loop) {
-                            if (!mon_wlan_hal->process_ext_events()) {
-                                LOG(ERROR) << "process_ext_events() failed!";
+                            if (!mon_wlan_hal->process_ext_events(fd)) {
+                                LOG(ERROR) << "process_ext_events(" << fd << " failed!";
                                 return false;
                             }
                             return true;
@@ -312,14 +312,14 @@ bool Monitor::monitor_fsm()
                     .on_write = nullptr,
                     .on_disconnect =
                         [&](int fd, EventLoop &loop) {
-                            LOG(ERROR) << "mon_hal_ext_events disconnected!";
+                            LOG(ERROR) << "mon_hal_ext_events disconnected! on fd " << fd;
                             m_mon_hal_ext_events =
                                 beerocks::net::FileDescriptor::invalid_descriptor;
                             return false;
                         },
                     .on_error =
                         [&](int fd, EventLoop &loop) {
-                            LOG(ERROR) << "mon_hal_ext_events error!";
+                            LOG(ERROR) << "mon_hal_ext_events error! on fd " << fd;
                             m_mon_hal_ext_events =
                                 beerocks::net::FileDescriptor::invalid_descriptor;
                             return false;

@@ -478,8 +478,8 @@ bool ApManager::ap_manager_fsm(bool &continue_processing)
                 .name = "ap_hal_ext_events",
                 .on_read =
                     [&](int fd, EventLoop &loop) {
-                        if (!ap_wlan_hal->process_ext_events()) {
-                            LOG(ERROR) << "process_ext_events() failed!";
+                        if (!ap_wlan_hal->process_ext_events(fd)) {
+                            LOG(ERROR) << "process_ext_events(" << fd << ") failed!";
                             return false;
                         }
                         return true;
@@ -487,13 +487,13 @@ bool ApManager::ap_manager_fsm(bool &continue_processing)
                 .on_write = nullptr,
                 .on_disconnect =
                     [&](int fd, EventLoop &loop) {
-                        LOG(ERROR) << "ap_hal_ext_events disconnected!";
+                        LOG(ERROR) << "ap_hal_ext_event disconnected! on fd " << fd;
                         m_ap_hal_ext_events = beerocks::net::FileDescriptor::invalid_descriptor;
                         return false;
                     },
                 .on_error =
                     [&](int fd, EventLoop &loop) {
-                        LOG(ERROR) << "ap_hal_ext_events error!";
+                        LOG(ERROR) << "ap_hal_ext_events error! on fd " << fd;
                         m_ap_hal_ext_events = beerocks::net::FileDescriptor::invalid_descriptor;
                         return false;
                     },

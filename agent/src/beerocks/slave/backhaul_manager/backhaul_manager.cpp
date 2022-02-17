@@ -1004,7 +1004,7 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
                         .name = "sta_hal_ext_events",
                         .on_read =
                             [radio_info](int fd, EventLoop &loop) {
-                                radio_info->sta_wlan_hal->process_ext_events();
+                                radio_info->sta_wlan_hal->process_ext_events(fd);
                                 return true;
                             },
                     };

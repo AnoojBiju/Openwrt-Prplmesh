@@ -1080,7 +1080,7 @@ bool base_wlan_hal_dwpal::refresh_vaps_info(int id)
     return true;
 }
 
-bool base_wlan_hal_dwpal::process_ext_events()
+bool base_wlan_hal_dwpal::process_ext_events(int fd)
 {
     constexpr uint8_t MAX_EVENTS_PER_ITERATION = 5;
 

@@ -437,7 +437,7 @@ bool base_wlan_hal_dummy::refresh_vaps_info(int id) { return true; }
  * @return true on success
  * @return false on failure
  */
-bool base_wlan_hal_dummy::process_ext_events()
+bool base_wlan_hal_dummy::process_ext_events(int fd)
 {
     LOG(TRACE) << "Processing external dummy event...";
 

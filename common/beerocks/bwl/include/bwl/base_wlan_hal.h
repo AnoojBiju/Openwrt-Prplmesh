@@ -95,9 +95,12 @@ public:
      * This method should be called if the file descriptor returned by
      * get_ext_events_fd() generated an event.
      *
+     * @param [in] fd File descriptor receiving the incoming event.
+     * The value (0) trigger polling for new events on all external fds.
+     *
      * @return true on success or false on error.
      */
-    virtual bool process_ext_events() = 0;
+    virtual bool process_ext_events(int fd = 0) = 0;
 
     /*!
      * Process incoming nl events from the underlying hardware/middleware.
