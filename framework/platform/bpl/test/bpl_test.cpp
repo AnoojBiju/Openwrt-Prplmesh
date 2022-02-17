@@ -39,7 +39,7 @@ int main()
         case 9:
             memset(&wlan_params, 0, sizeof(wlan_params));
             printf("Interface : ");
-            fflush(stdin);
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
             getString(inputInterface, sizeof(inputInterface));
             if (beerocks::bpl::cfg_get_wifi_params(inputInterface, &wlan_params) != 0) {
                 MAPF_ERR("Failed to retrieve WiFi params for " << inputInterface << "\n");
