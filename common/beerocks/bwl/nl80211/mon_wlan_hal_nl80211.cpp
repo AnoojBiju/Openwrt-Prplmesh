@@ -303,13 +303,15 @@ bool mon_wlan_hal_nl80211::update_stations_stats(const std::string &vap_iface_na
     return true;
 }
 
-bool mon_wlan_hal_nl80211::sta_channel_load_11k_request(const SStaChannelLoadRequest11k &req)
+bool mon_wlan_hal_nl80211::sta_channel_load_11k_request(const std::string &vap_iface_name,
+                                                        const SStaChannelLoadRequest11k &req)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return true;
 }
 
-bool mon_wlan_hal_nl80211::sta_beacon_11k_request(const SBeaconRequest11k &req, int &dialog_token)
+bool mon_wlan_hal_nl80211::sta_beacon_11k_request(const std::string &vap_iface_name,
+                                                  const SBeaconRequest11k &req, int &dialog_token)
 {
     LOG(TRACE) << __func__;
 
@@ -408,7 +410,7 @@ bool mon_wlan_hal_nl80211::sta_beacon_11k_request(const SBeaconRequest11k &req, 
 
     // Send the command
     parsed_obj_map_t reply;
-    if (!wpa_ctrl_send_msg(cmd, reply)) {
+    if (!wpa_ctrl_send_msg(cmd, reply, vap_iface_name)) {
         LOG(ERROR) << __func__ << " failed";
         return false;
     }
@@ -418,7 +420,8 @@ bool mon_wlan_hal_nl80211::sta_beacon_11k_request(const SBeaconRequest11k &req, 
     return true;
 }
 
-bool mon_wlan_hal_nl80211::sta_link_measurements_11k_request(const std::string &sta_mac)
+bool mon_wlan_hal_nl80211::sta_link_measurements_11k_request(const std::string &vap_iface_name,
+                                                             const std::string &sta_mac)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return true;

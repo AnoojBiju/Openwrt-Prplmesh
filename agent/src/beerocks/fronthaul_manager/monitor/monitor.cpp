@@ -1364,6 +1364,19 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
             return;
         }
 
+        std::string sta_mac = tlvf::mac_to_string(request->params().sta_mac);
+        auto sta_node       = mon_db.sta_find(sta_mac);
+        if (sta_node == nullptr) {
+            LOG(ERROR) << "CLIENT_BEACON_11K_REQUEST sta_mac=" << sta_mac
+                       << " sta not assoc, id=" << beerocks_header->id();
+            return;
+        }
+        auto vap_node = mon_db.vap_get_by_id(sta_node->get_vap_id());
+        if (!vap_node) {
+            LOG(ERROR) << "station " << sta_mac << " has no vap";
+            return;
+        }
+
         int dialog_token;
 
         // TODO: TEMPORARY CONVERSION!
@@ -1398,7 +1411,7 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
         bwl_request.new_ch_center_freq_seg_1 = request->params().new_ch_center_freq_seg_1;
         bwl_request.reporting_detail         = request->params().reporting_detail;
 
-        mon_wlan_hal->sta_beacon_11k_request(bwl_request, dialog_token);
+        mon_wlan_hal->sta_beacon_11k_request(vap_node->get_iface(), bwl_request, dialog_token);
 
         sEvent11k event_11k = {tlvf::mac_to_string(request->params().sta_mac), dialog_token,
                                std::chrono::steady_clock::now(), beerocks_header->id()};
@@ -1421,6 +1434,18 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
         }
 
         // debug_channel_load_11k_request(request);
+        std::string sta_mac = tlvf::mac_to_string(request->params().sta_mac);
+        auto sta_node       = mon_db.sta_find(sta_mac);
+        if (sta_node == nullptr) {
+            LOG(ERROR) << "CLIENT_CHANNEL_LOAD_11K_REQUEST sta_mac=" << sta_mac
+                       << " sta not assoc, id=" << beerocks_header->id();
+            return;
+        }
+        auto vap_node = mon_db.vap_get_by_id(sta_node->get_vap_id());
+        if (!vap_node) {
+            LOG(ERROR) << "station " << sta_mac << " has no vap";
+            return;
+        }
 
         // TODO: TEMPORARY CONVERSION!
         bwl::SStaChannelLoadRequest11k bwl_request;
@@ -1445,7 +1470,7 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
         bwl_request.new_ch_center_freq_seg_1 = request->params().new_ch_center_freq_seg_1;
         tlvf::mac_to_array(request->params().sta_mac, bwl_request.sta_mac.oct);
 
-        mon_wlan_hal->sta_channel_load_11k_request(bwl_request);
+        mon_wlan_hal->sta_channel_load_11k_request(vap_node->get_iface(), bwl_request);
         break;
     }
     case beerocks_message::ACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST: {
