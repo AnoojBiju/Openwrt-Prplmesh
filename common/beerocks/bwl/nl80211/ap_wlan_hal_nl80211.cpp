@@ -1071,6 +1071,20 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
 
     auto event = nl80211_to_bwl_event(opcode);
 
+    std::string interface;
+    if (parsed_obj.find(bwl::EVENT_KEYLESS_PARAM_IFACE) != parsed_obj.end()) {
+        interface = parsed_obj.at(bwl::EVENT_KEYLESS_PARAM_IFACE);
+    }
+    if (interface.empty()) {
+        LOG(DEBUG) << "Could not find interface name.";
+    }
+
+    auto vap_id    = get_vap_id_with_bss(interface);
+    auto iface_ids = beerocks::utils::get_ids_from_iface_string(interface);
+    if ((vap_id < 0) && (iface_ids.vap_id != beerocks::IFACE_RADIO_ID)) {
+        LOG(DEBUG) << "Unknown vap_id " << vap_id;
+    }
+
     switch (event) {
 
     case Event::AP_MGMT_FRAME_RECEIVED: {
@@ -1106,8 +1120,13 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
         // Initialize the message
         memset(msg_buff.get(), 0, sizeof(sACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION));
 
+        if (vap_id < 0) {
+            LOG(ERROR) << "Invalid vap_id " << vap_id;
+            return false;
+        }
+
         std::string src_mac      = parsed_obj[bwl::EVENT_KEYLESS_PARAM_MAC];
-        msg->params.vap_id       = 0;
+        msg->params.vap_id       = vap_id;
         msg->params.mac          = tlvf::mac_from_string(src_mac);
         msg->params.capabilities = {};
 
@@ -1166,8 +1185,13 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
         // Initialize the message
         memset(msg_buff.get(), 0, sizeof(sACTION_APMANAGER_CLIENT_DISCONNECTED_NOTIFICATION));
 
+        if (vap_id < 0) {
+            LOG(ERROR) << "Invalid vap_id " << vap_id;
+            return false;
+        }
+
         // Store the MAC address of the disconnected STA
-        msg->params.vap_id = 0;
+        msg->params.vap_id = vap_id;
         msg->params.mac    = tlvf::mac_from_string(parsed_obj[bwl::EVENT_KEYLESS_PARAM_MAC]);
 
         // Add the message to the queue
@@ -1187,15 +1211,17 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
         }
         const auto client_mac = val_iter->second;
 
-        val_iter = parsed_obj.find(bwl::EVENT_KEYLESS_PARAM_IFACE);
-        if (val_iter == parsed_obj.end()) {
+        if (interface.empty()) {
             LOG(ERROR) << "No interface name found";
             return false;
         }
-        const auto vap_name = val_iter->second;
+        const auto vap_name = interface;
 
-        auto iface_ids    = beerocks::utils::get_ids_from_iface_string(vap_name);
-        std::string bssid = m_radio_info.available_vaps[iface_ids.vap_id].mac;
+        if (vap_id < 0) {
+            LOG(ERROR) << "Invalid vap_id " << vap_id;
+            return false;
+        }
+        std::string bssid = m_radio_info.available_vaps[vap_id].mac;
 
         auto op_class = son::wireless_utils::get_operating_class_by_channel(
             beerocks::message::sWifiChannel(m_radio_info.channel, m_radio_info.bandwidth));
@@ -1271,14 +1297,20 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
 
         memset(msg_buff.get(), 0, sizeof(sHOSTAP_DISABLED_NOTIFICATION));
 
-        std::string interface = parsed_obj[bwl::EVENT_KEYLESS_PARAM_IFACE];
         if (interface.empty()) {
             LOG(ERROR) << "Could not find interface name.";
             return false;
         }
 
-        auto iface_ids = beerocks::utils::get_ids_from_iface_string(interface);
-        msg->vap_id    = iface_ids.vap_id;
+        // Case of boards where main VAP and radio have same name
+        if (vap_id == 0 && iface_ids.vap_id == beerocks::IFACE_RADIO_ID) {
+            vap_id = beerocks::IFACE_RADIO_ID;
+        }
+        if (vap_id == beerocks::IFACE_ID_INVALID) {
+            LOG(ERROR) << "Invalid vap_id " << vap_id;
+            return false;
+        }
+        msg->vap_id = vap_id;
 
         event_queue_push(Event::AP_Disabled, msg_buff); // send message to the AP manager
 
@@ -1290,9 +1322,21 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
 
         memset(msg_buff.get(), 0, sizeof(sHOSTAP_ENABLED_NOTIFICATION));
 
-        std::string interface = parsed_obj[bwl::EVENT_KEYLESS_PARAM_IFACE];
-        auto iface_ids        = beerocks::utils::get_ids_from_iface_string(interface);
-        msg->vap_id           = iface_ids.vap_id;
+        // Case of boards where main VAP and radio have same name
+        if (vap_id == 0 && iface_ids.vap_id == beerocks::IFACE_RADIO_ID) {
+            vap_id = beerocks::IFACE_RADIO_ID;
+        }
+        if (vap_id == beerocks::IFACE_ID_INVALID) {
+            LOG(ERROR) << "Invalid vap_id " << vap_id;
+            return false;
+        }
+        msg->vap_id = vap_id;
+
+        // same as in dwpal: AP enabling is done per vap
+        if (msg->vap_id == beerocks::IFACE_RADIO_ID) {
+            // Ignore AP-ENABLED on radio
+            return true;
+        }
 
         event_queue_push(Event::AP_Enabled, msg_buff);
     } break;

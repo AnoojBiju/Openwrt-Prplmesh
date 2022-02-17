@@ -853,10 +853,14 @@ bool base_wlan_hal_nl80211::process_ext_events(int fd)
         return false;
     }
 
-    LOG(DEBUG) << "event received:" << buffer;
+    std::string interface = m_wpa_ctrl_client.get_interface(fd);
+    LOG(DEBUG) << "(" << interface << ") event received:" << buffer;
 
     parsed_obj_map_t event_obj;
     map_event_obj_parser(buffer, event_obj);
+
+    // append interface name if missing
+    event_obj.emplace(bwl::EVENT_KEYLESS_PARAM_IFACE, interface);
 
     // parsed_obj_debug(event_obj);
 

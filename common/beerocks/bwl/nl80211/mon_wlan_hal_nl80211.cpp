@@ -10,6 +10,7 @@
 
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
+#include <bwl/key_value_parser.h>
 
 #include <easylogging++.h>
 
@@ -477,6 +478,19 @@ bool mon_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
 
     auto event = wav_to_bwl_event(opcode);
 
+    std::string interface;
+    if (parsed_obj.find(bwl::EVENT_KEYLESS_PARAM_IFACE) != parsed_obj.end()) {
+        interface = parsed_obj.at(bwl::EVENT_KEYLESS_PARAM_IFACE);
+    }
+    if (interface.empty()) {
+        LOG(DEBUG) << "Could not find interface name.";
+    }
+
+    auto vap_id = get_vap_id_with_bss(interface);
+    if (vap_id < 0) {
+        LOG(DEBUG) << "Unknown vap_id " << vap_id;
+    }
+
     // Handle the event
     switch (event) {
 
@@ -491,7 +505,11 @@ bool mon_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
         // Initialize the message
         memset(msg_buff.get(), 0, sizeof(sACTION_MONITOR_CLIENT_ASSOCIATED_NOTIFICATION));
 
-        msg->vap_id = 0;
+        if (vap_id < 0) {
+            LOG(ERROR) << "Invalid vap_id " << vap_id;
+            return false;
+        }
+        msg->vap_id = vap_id;
         msg->mac    = tlvf::mac_from_string(parsed_obj["_mac"]);
 
         // Add the message to the queue
