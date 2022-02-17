@@ -427,13 +427,17 @@ void client_steering_task::handle_event(int event_type, void *obj)
         m_btm_report_received = true;
         m_status_code         = *(uint8_t *)obj;
 
-        auto bss_path = m_database.get_node_data_model_path(m_target_bssid);
+        auto bss = m_database.get_bss(tlvf::mac_from_string(m_target_bssid));
+        if (!bss) {
+            LOG(ERROR) << "Failed to get BSS with mac: " << m_target_bssid;
+            return;
+        }
 
-        if (bss_path.empty()) {
+        if (bss->dm_path.empty()) {
             LOG(WARNING) << "Path for BSS " << m_target_bssid << " not set";
             return;
         }
-        m_database.dm_uint64_param_one_up(bss_path, "BTMQueryResponses");
+        m_database.dm_uint64_param_one_up(bss->dm_path + ".MultiAPSteering", "BTMQueryResponses");
         m_database.dm_increment_steer_summary_stats("BTMQueryResponses");
     }
 }
@@ -551,17 +555,22 @@ void client_steering_task::add_steer_history_to_persistent_db(const std::string 
 
 void client_steering_task::dm_update_multi_ap_steering_params(bool sta_11v_capable)
 {
-    auto bss_path = m_database.get_node_data_model_path(m_target_bssid);
+    auto bss = m_database.get_bss(tlvf::mac_from_string(m_target_bssid));
+    if (!bss) {
+        LOG(ERROR) << "Failed to get BSS with mac: " << m_target_bssid;
+        return;
+    }
 
-    if (bss_path.empty()) {
+    if (bss->dm_path.empty()) {
         LOG(WARNING) << "Path for BSS " << m_target_bssid << " not set";
         return;
     }
+
     if (m_steering_type.find("BTM") != std::string::npos ||
         (m_steering_type.empty() && sta_11v_capable)) {
-        m_database.dm_uint64_param_one_up(bss_path, "BTMAttempts");
+        m_database.dm_uint64_param_one_up(bss->dm_path + ".MultiAPSteering", "BTMAttempts");
         m_database.dm_increment_steer_summary_stats("BTMAttempts");
-        m_database.dm_uint64_param_one_up(bss_path, "BlacklistAttempts");
+        m_database.dm_uint64_param_one_up(bss->dm_path + ".MultiAPSteering", "BlacklistAttempts");
         m_database.dm_increment_steer_summary_stats("BlacklistAttempts");
     }
 }
