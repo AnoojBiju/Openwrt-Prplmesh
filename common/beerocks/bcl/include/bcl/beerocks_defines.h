@@ -467,6 +467,9 @@ constexpr int PARAMETER_NOT_CONFIGURED = -1;
 // array of allowed ifname prefix strings
 static const char *const ifname_prefix_list[] = {"wlan", "wl"};
 
+// string of separator characters delimiting the ifname prefix
+static const char *const ifname_separators = ".-";
+
 } // namespace beerocks
 
 #endif //_BEEROCKS_DEFINES_H_

@@ -81,6 +81,8 @@ bool utils::is_node_wireless(beerocks::eIfaceType iface_type)
 
 std::string utils::get_default_ifname_prefix() { return (beerocks::ifname_prefix_list[0]); }
 
+char utils::get_default_ifname_separator() { return (beerocks::ifname_separators[0]); }
+
 bool utils::is_allowed_ifname_prefix(const std::string &prefix, bool partial)
 {
     if (prefix.empty()) {
@@ -103,15 +105,16 @@ std::string utils::get_prefix_from_iface_string(const std::string &iface)
 {
     // "IFx" or IFx.x"
     std::string result("");
-    auto pos = iface.rfind(".");
+    std::string digits("0123456789");
+    auto pos = iface.find_last_of(beerocks::ifname_separators);
     if (pos != std::string::npos) {
-        if (iface.substr(pos, std::string::npos).find_first_not_of("0123456789.") !=
-            std::string::npos) {
+        auto sep = iface.at(pos);
+        if (iface.substr(pos).find_first_not_of(digits + sep) != std::string::npos) {
             return result;
         }
     }
     auto prefix_num = iface.substr(0, pos);
-    pos             = prefix_num.find_last_not_of("0123456789");
+    pos             = prefix_num.find_last_not_of(digits);
     result          = prefix_num.substr(0, pos + 1);
     return result;
 }
@@ -131,14 +134,21 @@ utils::sIfaceVapIds utils::get_ids_from_iface_string(const std::string &iface)
     }
 
     auto iface_num_str = iface.substr(prefix_str.length(), std::string::npos);
-    auto iface_num_vec = string_utils::str_split(iface_num_str, '.');
+    auto sep           = get_default_ifname_separator();
+    auto pos           = iface_num_str.find_first_of(beerocks::ifname_separators);
+    if (pos != std::string::npos) {
+        sep = iface_num_str.at(pos);
+    }
+    auto iface_num_vec = string_utils::str_split(iface_num_str, sep);
     if (iface_num_vec.size() == 0) {
         LOG(ERROR) << "Invalid interface name " << iface;
         return ids;
     }
 
-    ids.iface_id = string_utils::stoi(iface_num_vec[0]);
-    ids.vap_id   = beerocks::IFACE_RADIO_ID;
+    ids.iface_prefix = prefix_str;
+    ids.iface_sep    = sep;
+    ids.iface_id     = string_utils::stoi(iface_num_vec[0]);
+    ids.vap_id       = beerocks::IFACE_RADIO_ID;
     if (iface_num_vec.size() == 2) {
         int8_t vap_id = string_utils::stoi(iface_num_vec[1]);
         if ((vap_id < beerocks::IFACE_VAP_ID_MIN) || (vap_id > beerocks::IFACE_VAP_ID_MAX)) {
@@ -156,12 +166,15 @@ std::string utils::get_iface_string_from_iface_vap_ids(int8_t iface_id, int8_t v
 {
     std::string ifname;
 
-    if ((vap_id < beerocks::IFACE_VAP_ID_MIN) || (vap_id > beerocks::IFACE_VAP_ID_MAX)) {
+    if ((iface_id < 0) || (vap_id < beerocks::IFACE_RADIO_ID) ||
+        (vap_id > beerocks::IFACE_VAP_ID_MAX)) {
         LOG(ERROR) << "function input is not valid! iface_id=" << int(iface_id)
                    << ", vap_id=" << int(vap_id);
     } else {
-        ifname =
-            get_default_ifname_prefix() + std::to_string(iface_id) + "." + std::to_string(vap_id);
+        ifname = get_default_ifname_prefix() + std::to_string(iface_id);
+        if (vap_id >= beerocks::IFACE_VAP_ID_MIN) {
+            ifname += get_default_ifname_separator() + std::to_string(vap_id);
+        }
     }
 
     return ifname;
@@ -169,17 +182,18 @@ std::string utils::get_iface_string_from_iface_vap_ids(int8_t iface_id, int8_t v
 
 std::string utils::get_iface_string_from_iface_vap_ids(const std::string &iface, int8_t vap_id)
 {
-    if (vap_id == beerocks::IFACE_RADIO_ID) {
-        return iface;
-    }
-
     std::string ifname;
-    auto prefix = get_prefix_from_iface_string(iface);
-    if ((!is_allowed_ifname_prefix(prefix)) || (vap_id < beerocks::IFACE_VAP_ID_MIN) ||
+    auto iface_ids = beerocks::utils::get_ids_from_iface_string(iface);
+    if ((iface_ids.iface_id < 0) || (vap_id < beerocks::IFACE_RADIO_ID) ||
         (vap_id > beerocks::IFACE_VAP_ID_MAX)) {
         LOG(ERROR) << "function input is not valid! iface=" << iface << ", vap_id=" << int(vap_id);
+    } else if (vap_id == iface_ids.vap_id) {
+        ifname = iface;
     } else {
-        ifname = iface + "." + std::to_string(vap_id);
+        ifname = iface_ids.iface_prefix + std::to_string(iface_ids.iface_id);
+        if (vap_id >= beerocks::IFACE_VAP_ID_MIN) {
+            ifname += iface_ids.iface_sep + std::to_string(vap_id);
+        }
     }
 
     return ifname;

@@ -43,6 +43,8 @@ public:
     }
 
     typedef struct {
+        std::string iface_prefix;
+        char iface_sep  = 0;
         int8_t iface_id = beerocks::IFACE_ID_INVALID;
         int8_t vap_id   = beerocks::IFACE_ID_INVALID;
     } sIfaceVapIds;
@@ -63,6 +65,14 @@ public:
     * @return std::string default prefix (the first element in the allowed prefix list).
     */
     static std::string get_default_ifname_prefix();
+
+    /**
+    * @brief This function will return the default prefix separator character for wireless VAP interface names.
+    *
+    * @return char default prefix separator (the first element in the allowed prefix separators list).
+    */
+    static char get_default_ifname_separator();
+
     /**
     * @brief This function will check if the interface name prefix is allowed.
     * The check can de done by
