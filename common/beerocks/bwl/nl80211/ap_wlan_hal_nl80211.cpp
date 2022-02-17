@@ -392,8 +392,15 @@ bool ap_wlan_hal_nl80211::sta_allow(const std::string &mac, const std::string &b
     // We use the DENY_ACL list only
     const std::string cmd = "DENY_ACL DEL_MAC " + mac;
 
+    auto vap_id = get_vap_id_with_mac(bssid);
+    if (vap_id < 0) {
+        LOG(ERROR) << "no vap has bssid " << bssid;
+        return false;
+    }
+    std::string ifname = m_radio_info.available_vaps[vap_id].bss;
+
     // Send command
-    if (!wpa_ctrl_send_msg(cmd)) {
+    if (!wpa_ctrl_send_msg(cmd, ifname)) {
         LOG(ERROR) << "sta_allow() failed!";
         return false;
     }
@@ -409,8 +416,15 @@ bool ap_wlan_hal_nl80211::sta_deny(const std::string &mac, const std::string &bs
     // We use the DENY_ACL list only
     const std::string cmd = "DENY_ACL ADD_MAC " + mac;
 
+    auto vap_id = get_vap_id_with_mac(bssid);
+    if (vap_id < 0) {
+        LOG(ERROR) << "no vap has bssid " << bssid;
+        return false;
+    }
+    std::string ifname = m_radio_info.available_vaps[vap_id].bss;
+
     // Send command
-    if (!wpa_ctrl_send_msg(cmd)) {
+    if (!wpa_ctrl_send_msg(cmd, ifname)) {
         LOG(ERROR) << "sta_deny() failed!";
         return false;
     }
@@ -420,13 +434,20 @@ bool ap_wlan_hal_nl80211::sta_deny(const std::string &mac, const std::string &bs
 
 bool ap_wlan_hal_nl80211::sta_disassoc(int8_t vap_id, const std::string &mac, uint32_t reason)
 {
-    LOG(TRACE) << __func__ << " mac: " << mac;
+    LOG(TRACE) << __func__ << " mac: " << mac << " vap_id: " << vap_id;
+
+    if (!check_vap_id(vap_id)) {
+        LOG(ERROR) << "invalid vap_id " << vap_id;
+        return false;
+    }
 
     // Build command string
     const std::string cmd = "DISASSOCIATE " + mac + " reason=" + std::to_string(reason) + " tx=0";
 
+    std::string ifname = m_radio_info.available_vaps[vap_id].bss;
+
     // Send command
-    if (!wpa_ctrl_send_msg(cmd)) {
+    if (!wpa_ctrl_send_msg(cmd, ifname)) {
         LOG(ERROR) << "sta_disassoc() failed!";
         return false;
     }
@@ -436,13 +457,20 @@ bool ap_wlan_hal_nl80211::sta_disassoc(int8_t vap_id, const std::string &mac, ui
 
 bool ap_wlan_hal_nl80211::sta_deauth(int8_t vap_id, const std::string &mac, uint32_t reason)
 {
-    LOG(TRACE) << __func__ << " mac: " << mac;
+    LOG(TRACE) << __func__ << " mac: " << mac << " vap_id: " << vap_id;
+
+    if (!check_vap_id(vap_id)) {
+        LOG(ERROR) << "invalid vap_id " << vap_id;
+        return false;
+    }
 
     // Build command string
     const std::string cmd = "DEAUTHENTICATE " + mac + " reason=" + std::to_string(reason) + " tx=0";
 
+    std::string ifname = m_radio_info.available_vaps[vap_id].bss;
+
     // Send command
-    if (!wpa_ctrl_send_msg(cmd)) {
+    if (!wpa_ctrl_send_msg(cmd, ifname)) {
         LOG(ERROR) << "sta_disassoc() failed!";
         return false;
     }
