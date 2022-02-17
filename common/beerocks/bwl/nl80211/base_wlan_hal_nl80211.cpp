@@ -378,7 +378,7 @@ bool base_wlan_hal_nl80211::fsm_setup()
                 }
 
                 // Get the wpa_supplicant/hostapd event interface file descriptor
-                m_fd_ext_events = wpa_ctrl_get_fd(static_cast<wpa_ctrl *>(m_wpa_ctrl_event));
+                m_fds_ext_events[0] = wpa_ctrl_get_fd(static_cast<wpa_ctrl *>(m_wpa_ctrl_event));
 
                 // Attach to the control interface for events receiving
                 int result;
@@ -446,7 +446,8 @@ bool base_wlan_hal_nl80211::fsm_setup()
             m_wpa_ctrl_event = nullptr;
             m_wpa_ctrl_cmd   = nullptr;
 
-            m_fd_ext_events = -1;
+            // Init ext event FDS queue
+            m_fds_ext_events = {-1};
 
             return true;
         })

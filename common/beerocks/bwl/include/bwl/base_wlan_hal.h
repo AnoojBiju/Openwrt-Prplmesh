@@ -156,13 +156,19 @@ public:
     HALState get_state() const { return (m_hal_state); }
 
     /*!
-     * Returns a file descriptor to the external events queue, 0 is events
+     * Returns indexed file descriptor to the external events queue, 0 is events
      * should processed synchronously (by directly calling the process method),
      * or -1 on error.
      * 
      * The returned file descriptor supports select(), poll() and epoll().
      */
-    int get_ext_events_fd() const { return (m_fd_ext_events); }
+    int get_ext_events_fd(size_t pos = 0) const
+    {
+        if (pos >= m_fds_ext_events.size()) {
+            return -1;
+        }
+        return (m_fds_ext_events[pos]);
+    }
 
     /*!
      * Returns a file descriptor to the internal events queue, or -1 on error.
@@ -264,8 +270,9 @@ protected:
 
     HALState m_hal_state = HALState::Uninitialized;
 
-    int m_fd_ext_events = -1;
-    int m_fd_nl_events  = -1;
+    std::vector<int> m_fds_ext_events = {-1};
+
+    int m_fd_nl_events = -1;
 
     hal_conf_t m_hal_conf;
     std::set<std::string> m_filtered_events;
