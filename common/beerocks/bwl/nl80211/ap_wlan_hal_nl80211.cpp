@@ -450,14 +450,19 @@ bool ap_wlan_hal_nl80211::sta_deauth(int8_t vap_id, const std::string &mac, uint
     return true;
 }
 
-bool ap_wlan_hal_nl80211::sta_bss_steer(const std::string &mac, const std::string &bssid,
-                                        int oper_class, int chan, int disassoc_timer_btt,
-                                        int valid_int_btt, int reason)
+bool ap_wlan_hal_nl80211::sta_bss_steer(int8_t vap_id, const std::string &mac,
+                                        const std::string &bssid, int oper_class, int chan,
+                                        int disassoc_timer_btt, int valid_int_btt, int reason)
 {
-    LOG(TRACE) << __func__ << " mac: " << mac << ", BSS: " << bssid
+    LOG(TRACE) << __func__ << " vap_id: " << vap_id << " mac: " << mac << ", BSS: " << bssid
                << ", oper_class: " << oper_class << ", channel: " << chan
                << ", disassoc: " << disassoc_timer_btt << ", valid_int: " << valid_int_btt
                << ", reason: " << reason;
+
+    if (!check_vap_id(vap_id)) {
+        LOG(ERROR) << "invalid source vap_id " << vap_id;
+        return false;
+    }
 
     // Build command string
     std::string cmd =
@@ -500,7 +505,7 @@ bool ap_wlan_hal_nl80211::sta_bss_steer(const std::string &mac, const std::strin
            std::to_string(chan) + ",0";
 
     // Send command
-    if (!wpa_ctrl_send_msg(cmd)) {
+    if (!wpa_ctrl_send_msg(cmd, m_radio_info.available_vaps[vap_id].bss)) {
         LOG(ERROR) << "sta_bss_steer() failed!";
         return false;
     }
@@ -1233,7 +1238,7 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
         // Since it's not an "active" transition and it makes the STA stay on the
         // current VAP, there is no need to notify the upper layer.
         // disassoc_timer_btt = 0 valid_int_btt=2 (200ms) reason=0 (not specified)
-        sta_bss_steer(client_mac, bssid, op_class, m_radio_info.channel, 0, 2, 0);
+        sta_bss_steer(vap_id, client_mac, bssid, op_class, m_radio_info.channel, 0, 2, 0);
         break;
     }
 

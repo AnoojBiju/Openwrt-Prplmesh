@@ -1244,7 +1244,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
                    << " to bssid = " << target_bssid
                    << " channel = " << int(request->params().target.channel);
         ap_wlan_hal->sta_bss_steer(
-            sta_mac, target_bssid, request->params().target.operating_class,
+            it->first, sta_mac, target_bssid, request->params().target.operating_class,
             request->params().target.channel,
             (disassoc_imminent) ? (request->params().disassoc_timer_ms / BEACON_TRANSMIT_TIME_MS)
                                 : 0,

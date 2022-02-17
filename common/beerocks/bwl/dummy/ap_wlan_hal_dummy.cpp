@@ -159,9 +159,9 @@ bool ap_wlan_hal_dummy::sta_deauth(int8_t vap_id, const std::string &mac, uint32
     return true;
 }
 
-bool ap_wlan_hal_dummy::sta_bss_steer(const std::string &mac, const std::string &bssid,
-                                      int oper_class, int chan, int disassoc_timer_btt,
-                                      int valid_int_btt, int reason)
+bool ap_wlan_hal_dummy::sta_bss_steer(int8_t vap_id, const std::string &mac,
+                                      const std::string &bssid, int oper_class, int chan,
+                                      int disassoc_timer_btt, int valid_int_btt, int reason)
 {
     LOG(DEBUG) << "Got steer request for " << mac << " steer to " << bssid;
 
