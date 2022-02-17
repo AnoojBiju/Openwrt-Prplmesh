@@ -685,7 +685,9 @@ class TurrisRdkb(PrplwrtDevice):
 
             # Add vlan. Will be used for SSH connection
             shell.sendline(f"ip link add link lan4 name {rdkb_bridge} type vlan id 200")
-            shell.expect(f"ip link add link lan4 name {rdkb_bridge} type vlan id 200")
+            shell.sendline(f"RES=$?")
+            shell.sendline(f"echo PRPL=$RES")
+            shell.expect(f"PRPL=0")
             shell.sendline(f"ip a a {common_bridge_ip}/{common_net_mask} dev {rdkb_bridge}")
             shell.expect([f"ip a a {common_bridge_ip}/{common_net_mask} dev {rdkb_bridge}"])
             # Remove firewall rule which blocks SSH connection
