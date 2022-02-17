@@ -302,6 +302,142 @@ private:
     bool detach();
 };
 
+/**
+ * @brief wpa_ctrl client class.
+ *
+ * This class manages the wpa_ctrl connections to hostapd/wpa_supplicate for all registered VAPs
+ * using wpa_client APIs.
+ * Each registered VAP is managed using wpa_ctrl sockets for:
+ * - synchronous requests command
+ * - unsolicited events
+ */
+class wpa_ctrl_client {
+public:
+    /**
+     * @brief Default destructor of wpa_ctrl client object.
+     * Resources cleanup is done on object destruction.
+     */
+    virtual ~wpa_ctrl_client() = default;
+
+    /**
+     * @brief Register interface to wpa_ctrl client.
+     * This method creates resources (sockets) for handling command and events
+     * of this interface, to/from hostapd/wpa_supplicant.
+     *
+     * @param[in] interface Name of the interface.
+     * @param[in] path Wpa_ctrl socket file path (commonly: /var/run/<hostapd/wpa_supplicant>/<ifName>).
+     * @param[in] event_fds Reference to vector of file descriptors to be filled, for event monitoring.
+     *
+     * @return bool True if interface is added , or exists with same path, False othewise.
+     */
+    bool add_interface(const std::string &interface, const std::string &path,
+                       std::vector<int> &event_fds);
+
+    /**
+     * @brief Unregister interface from wpa_ctrl client.
+     * This method free resources (sockets) used for handling command and events
+     * of this interface, to/from hostapd/wpa_supplicant.
+     *
+     * @param[in] interface Name of the interface.
+     *
+     * @return bool True if interface is/was deleted , False otherwise.
+     */
+    bool del_interface(const std::string &interface);
+
+    /**
+     * @brief Checks whether the interface was registered to wpa_ctrl client.
+     *
+     * @param[in] interface Name of the interface.
+     *
+     * @return bool True if interface is registered , False otherwise.
+     */
+    bool has_interface(const std::string &interface) const;
+
+    /**
+     * @brief Clears (enforced) all registered interface in wpa_ctrl client.
+     *
+     * @return void.
+     */
+    void clear_interfaces();
+
+    /**
+     * @brief Fetches cmd socket using the relative interface name.
+     *
+     * @param[in] interface Name of the interface.
+     *
+     * @return shared pointer to socket object if found, empty result otherwise.
+     */
+    const std::shared_ptr<wpa_ctrl_socket_cmd> get_socket_cmd(const std::string &interface) const;
+
+    /**
+     * @brief Fetches event socket using the relative interface name.
+     *
+     * @param[in] interface Name of the interface.
+     *
+     * @return shared pointer to socket object if found, empty result otherwise.
+     */
+    const std::shared_ptr<wpa_ctrl_socket_event>
+    get_socket_event(const std::string &interface) const;
+
+    /**
+     * @brief Fetches event socket using the relative file descriptor as selector.
+     *
+     * @param[in] fd File descriptor of the interface.
+     *
+     * @return shared pointer to socket object if found, empty result otherwise.
+     */
+    const std::shared_ptr<wpa_ctrl_socket_event> get_socket_event(int fd) const;
+
+    /**
+     * @brief Returns the interface name using socket file descriptor as
+     *
+     * @param[in] interface Name of the interface.
+     *
+     * @return string Wpa_ctrl socket file path, or empty string is interface is not registered
+     */
+    const std::string get_interface(int fd) const;
+
+private:
+    /**
+     * @brief Private type: wpa_ctrl interface information.
+     *
+     * This structure includes all the socket instances created to manage command/events
+     * of one interface.
+     */
+    struct sWpaCtrlIface {
+        /*
+         * @brief Remove constructor with no arguments.
+         */
+        sWpaCtrlIface() = delete;
+
+        /*
+         * @brief mandatory wpa_ctrl interface info struct constructor.
+         * @param[in] sock_path Path of wpa_ctrl socket file.
+         * @param[in] event_fds Queue of event FDs to be updated with open/closed socket fd.
+         */
+        sWpaCtrlIface(const std::string &sock_path, std::vector<int> &event_fds)
+        {
+            cmd   = std::make_shared<wpa_ctrl_socket_cmd>(sock_path);
+            event = std::make_shared<wpa_ctrl_socket_event>(sock_path, event_fds);
+        }
+
+        /**
+         * Command socket
+         */
+        std::shared_ptr<wpa_ctrl_socket_cmd> cmd;
+
+        /**
+         * Eventing socket
+         */
+        std::shared_ptr<wpa_ctrl_socket_event> event;
+    };
+
+    /**
+     * Map of wpa_ctrl interfaces handled by this client
+     */
+    std::map<std::string, sWpaCtrlIface> m_wpa_ctrl;
+};
+
 } // namespace nl80211
 } // namespace bwl
 

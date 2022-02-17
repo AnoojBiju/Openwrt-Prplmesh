@@ -235,5 +235,93 @@ void wpa_ctrl_socket_event::del_event_fd(int fd)
     }
 }
 
+bool wpa_ctrl_client::add_interface(const std::string &interface, const std::string &path,
+                                    std::vector<int> &event_fds)
+{
+    auto wpa_ctrl_iface = sWpaCtrlIface(path, event_fds);
+    auto ret            = m_wpa_ctrl.insert(std::make_pair(interface, wpa_ctrl_iface));
+    if (ret.second == false) {
+        LOG(DEBUG) << "wpa_ctrl info already exists for interface " << interface << " with path "
+                   << path;
+
+        // even if interface exists, return success if wpa_ctrl path is the same
+        auto &saved_path = ret.first->second.cmd->path();
+        if (saved_path.compare(path) != 0) {
+            LOG(ERROR) << "WPA ctrl " << interface << " socket new path " << path
+                       << " mismatches saved path " << saved_path;
+            return false;
+        }
+    }
+    LOG(DEBUG) << "WPA ctrl socket is added with path " << path << " for " << interface;
+    return true;
+}
+
+bool wpa_ctrl_client::del_interface(const std::string &interface)
+{
+    auto ret = m_wpa_ctrl.erase(interface);
+    if (ret == 0) {
+        LOG(WARNING) << "no found wpa_ctrl info for interface " << interface;
+    }
+    return (ret > 0);
+}
+
+bool wpa_ctrl_client::has_interface(const std::string &interface) const
+{
+    return (m_wpa_ctrl.find(interface) != m_wpa_ctrl.end());
+}
+
+void wpa_ctrl_client::clear_interfaces() { m_wpa_ctrl.clear(); }
+
+const std::shared_ptr<wpa_ctrl_socket_cmd>
+wpa_ctrl_client::get_socket_cmd(const std::string &interface) const
+{
+    auto it = m_wpa_ctrl.find(interface);
+    if (it != m_wpa_ctrl.end()) {
+        return it->second.cmd;
+    }
+    return {};
+}
+
+const std::shared_ptr<wpa_ctrl_socket_event>
+wpa_ctrl_client::get_socket_event(const std::string &interface) const
+{
+    auto it = m_wpa_ctrl.find(interface);
+    if (it != m_wpa_ctrl.end()) {
+        return it->second.event;
+    }
+    return {};
+}
+
+const std::shared_ptr<wpa_ctrl_socket_event> wpa_ctrl_client::get_socket_event(int fd) const
+{
+    if (fd < 0) {
+        return {};
+    }
+    for (auto &it : m_wpa_ctrl) {
+        /*
+         * if file descriptor is equal to 0,
+         * then check that event socket has pending data to be processed
+         * otherwise fetch event socket matching the same file descriptor.
+         */
+        if (((fd == 0) && it.second.event->pending()) || (fd == it.second.event->fd())) {
+            return it.second.event;
+        }
+    }
+    return {};
+}
+
+const std::string wpa_ctrl_client::get_interface(int fd) const
+{
+    if (fd < 0) {
+        return {};
+    }
+    for (auto &it : m_wpa_ctrl) {
+        if ((fd == it.second.event->fd()) || (fd == it.second.cmd->fd())) {
+            return it.first;
+        }
+    }
+    return {};
+}
+
 } // namespace nl80211
 } // namespace bwl
