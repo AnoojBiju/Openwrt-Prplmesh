@@ -174,6 +174,16 @@ public:
     }
 
     /*!
+     * Returns a vector of external events file descriptors, where:
+     * - Empty or only including 0 values, means that events should 
+     * be processed synchronously (by directly calling the process method).
+     * - only including -1 indicates error.
+     *
+     * The returned file descriptors support select(), poll() and epoll().
+     */
+    const std::vector<int> &get_ext_events_fds() const { return (m_fds_ext_events); }
+
+    /*!
      * Returns a file descriptor to the internal events queue, or -1 on error.
      * The returned file descriptor supports select(), poll() and epoll().
      */

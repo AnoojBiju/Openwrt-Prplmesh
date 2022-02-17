@@ -231,8 +231,10 @@ void Monitor::on_thread_stop()
             m_event_loop->remove_handlers(m_arp_fd);
         }
 
-        if (m_mon_hal_ext_events > 0) {
-            m_event_loop->remove_handlers(m_mon_hal_ext_events);
+        for (auto &fd : m_mon_hal_ext_events) {
+            if (fd > 0) {
+                m_event_loop->remove_handlers(fd);
+            }
         }
 
         if (m_mon_hal_int_events > 0) {
@@ -297,8 +299,13 @@ bool Monitor::monitor_fsm()
             update_vaps_in_db();
 
             // External events
-            m_mon_hal_ext_events = mon_wlan_hal->get_ext_events_fd();
-            if (m_mon_hal_ext_events > 0) {
+            int ext_event_fd_max = -1;
+            m_mon_hal_ext_events = mon_wlan_hal->get_ext_events_fds();
+            if (m_mon_hal_ext_events.empty()) {
+                ext_event_fd_max = 0;
+                LOG(DEBUG)
+                    << "No external event FD is available, periodic polling will be done instead.";
+            } else {
                 beerocks::EventLoop::EventHandlers ext_events_handlers{
                     .name = "mon_hal_ext_events",
                     .on_read =
@@ -313,29 +320,43 @@ bool Monitor::monitor_fsm()
                     .on_disconnect =
                         [&](int fd, EventLoop &loop) {
                             LOG(ERROR) << "mon_hal_ext_events disconnected! on fd " << fd;
-                            m_mon_hal_ext_events =
-                                beerocks::net::FileDescriptor::invalid_descriptor;
+                            auto it = std::find(m_mon_hal_ext_events.begin(),
+                                                m_mon_hal_ext_events.end(), fd);
+                            if (it != m_mon_hal_ext_events.end()) {
+                                *it = beerocks::net::FileDescriptor::invalid_descriptor;
+                            }
                             return false;
                         },
                     .on_error =
                         [&](int fd, EventLoop &loop) {
                             LOG(ERROR) << "mon_hal_ext_events error! on fd " << fd;
-                            m_mon_hal_ext_events =
-                                beerocks::net::FileDescriptor::invalid_descriptor;
+                            auto it = std::find(m_mon_hal_ext_events.begin(),
+                                                m_mon_hal_ext_events.end(), fd);
+                            if (it != m_mon_hal_ext_events.end()) {
+                                *it = beerocks::net::FileDescriptor::invalid_descriptor;
+                            }
                             return false;
                         },
                 };
-                if (!m_event_loop->register_handlers(m_mon_hal_ext_events, ext_events_handlers)) {
-                    LOG(ERROR) << "Unable to register handlers for external events queue!";
-                    return false;
+                for (auto &ext_event_fd : m_mon_hal_ext_events) {
+                    if (ext_event_fd > 0) {
+                        if (!m_event_loop->register_handlers(ext_event_fd, ext_events_handlers)) {
+                            LOG(ERROR) << "Unable to register handlers for external events fd "
+                                       << ext_event_fd;
+                            return false;
+                        }
+                        LOG(DEBUG) << "External events queue with fd = " << ext_event_fd;
+                    } else if (ext_event_fd < 0) {
+                        ext_event_fd = beerocks::net::FileDescriptor::invalid_descriptor;
+                    }
+                    ext_event_fd_max = std::max(ext_event_fd_max, ext_event_fd);
                 }
-                LOG(DEBUG) << "External events queue with fd = " << m_mon_hal_ext_events;
-            } else if (m_mon_hal_ext_events == 0) {
+            }
+            if (ext_event_fd_max == 0) {
                 LOG(DEBUG)
                     << "No external event FD is available, periodic polling will be done instead.";
-            } else {
-                LOG(ERROR) << "Invalid external event file descriptor: " << m_mon_hal_ext_events;
-                m_mon_hal_ext_events = beerocks::net::FileDescriptor::invalid_descriptor;
+            } else if (ext_event_fd_max < 0) {
+                LOG(ERROR) << "Invalid external event file descriptors: " << ext_event_fd_max;
                 return false;
             }
 
@@ -496,7 +517,9 @@ bool Monitor::monitor_fsm()
     } else {
 
         // Process external events
-        if (m_mon_hal_ext_events == 0) {
+        auto itFdMax =
+            std::max_element(std::begin(m_mon_hal_ext_events), std::end(m_mon_hal_ext_events));
+        if (itFdMax == std::end(m_mon_hal_ext_events) || *itFdMax == 0) {
             // There is no socket for external events, so we simply try
             // to process any available periodically
             if (!mon_wlan_hal->process_ext_events()) {
