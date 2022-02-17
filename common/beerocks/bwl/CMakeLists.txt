@@ -11,19 +11,19 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11")
 
 # Default defaults
 set(BWL_TYPE "DUMMY" CACHE STRING "BWL type")
-set_property(CACHE BWL_TYPE PROPERTY STRINGS "DUMMY" "NL80211" "DWPAL")
+set_property(CACHE BWL_TYPE PROPERTY STRINGS "DUMMY" "NL80211" "DWPAL" "DWPALD")
 add_definitions(-DBEEROCKS_TMP_PATH="${TMP_PATH}")
 
 if (TARGET_PLATFORM STREQUAL "rdkb")
 
-    set(BWL_TYPE "DWPAL")
+    set(BWL_TYPE "DWPALD")
     # Extra libraries
     list(APPEND BWL_LIBS rt dl)
 
 elseif(TARGET_PLATFORM STREQUAL "openwrt")
 
     if (TARGET_PLATFORM_TYPE STREQUAL "ugw")
-        set(BWL_TYPE "DWPAL")
+        set(BWL_TYPE "DWPALD")
     else()
         set(BWL_TYPE "NL80211")
     endif()
@@ -35,8 +35,44 @@ set(BWL_TYPE ${BWL_TYPE} CACHE STRING "Which BWL backend to use")
 ##########################################################################
 ##########################################################################
 ##########################################################################
+if(BWL_TYPE STREQUAL "DWPALD")
+    
+    file(GLOB HOSTAPD_SEARCH_PATHS "${PLATFORM_BUILD_DIR}/hostapd*/hostapd-*")
+    find_path(HOSTAPD_INCLUDE_DIR NAMES "src/common/wpa_ctrl.h" PATHS ${HOSTAPD_SEARCH_PATHS} NO_CMAKE_FIND_ROOT_PATH)
+    set(HOSTAPD_DIR "${HOSTAPD_INCLUDE_DIR}")
 
-if(BWL_TYPE STREQUAL "DWPAL")
+    include_directories(
+        ${HOSTAPD_DIR}/src/drivers
+        ${PLATFORM_BUILD_DIR}/iwlwav-iw-4.14
+    )
+
+    file(GLOB bwl_platform_sources
+        ${bwl_platform_sources}
+        ${MODULE_PATH}/shared/*.c*
+        ${MODULE_PATH}/dwpald/*.c*
+    )
+
+    find_package(dwpald REQUIRED)
+    find_package(nl-3 REQUIRED)
+    find_package(nl-genl-3 REQUIRED)
+    list(APPEND BWL_LIBS dwpal dwpald_client wv_core nl-3 nl-genl-3)
+
+    # safec library can come from either libsafec or slibc
+    find_package(safec QUIET)
+    if (safec_FOUND)
+        list(APPEND BWL_LIBS safec)
+        add_definitions(-DUSE_LIBSAFEC)
+
+        # Signal libsafec that we support the C99 standard
+        add_definitions(-DHAVE_C99)
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
+    else()
+        find_package(slibc REQUIRED)
+        list(APPEND BWL_LIBS slibc)
+        add_definitions(-DUSE_SLIBC)
+    endif()
+
+elseif(BWL_TYPE STREQUAL "DWPAL")
     
     file(GLOB HOSTAPD_SEARCH_PATHS "${PLATFORM_BUILD_DIR}/hostapd*/hostapd-*")
     find_path(HOSTAPD_INCLUDE_DIR NAMES "src/common/wpa_ctrl.h" PATHS ${HOSTAPD_SEARCH_PATHS} NO_CMAKE_FIND_ROOT_PATH)
@@ -51,12 +87,14 @@ if(BWL_TYPE STREQUAL "DWPAL")
         ${bwl_platform_sources}
         ${MODULE_PATH}/shared/*.c*
         ${MODULE_PATH}/dwpal/*.c*
+        ${MODULE_PATH}/dwpal/daemon/*.c*
+        ${MODULE_PATH}/dwpal/wv_ipc/*.c*
     )
 
     find_package(dwpal REQUIRED)
     find_package(nl-3 REQUIRED)
     find_package(nl-genl-3 REQUIRED)
-    list(APPEND BWL_LIBS dwpal nl-3 nl-genl-3)
+    list(APPEND BWL_LIBS dwpal dwpald_client wv_core nl-3 nl-genl-3)
 
     # safec library can come from either libsafec or slibc
     find_package(safec QUIET)
