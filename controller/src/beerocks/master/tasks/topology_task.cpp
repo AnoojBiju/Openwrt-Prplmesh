@@ -539,14 +539,17 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
             LOG(WARNING) << "Failed to notify disconnection event.";
         }
 
-        // After disassociation STA needs to be removed from data model.
-        if (!database.dm_remove_sta(*client)) {
+        // STA only needs to be removed if the BSSID reported in the disconnection event matches
+        // the BSSID the station is currently connected to.
+        // Otherwise, the station has probably already re-connected to another BSS in the meantime
+        // and we should not remove it.
+        bool reported_by_parent = bssid_str == database.get_node_parent(client_mac_str);
+
+        if (reported_by_parent && !database.dm_remove_sta(*client)) {
             LOG(ERROR) << "Failed to remove STA from data model mac:" << client_mac_str;
         }
 
-        bool reported_by_parent = bssid_str == database.get_node_parent(client_mac_str);
-        // TODO this is probably wrong - if reported_by_parent is true, the client has already
-        // connected to something else so it is not dead at all.
+        // TODO: Validate usages of reported_by_parent flag usages (PPM-1948)
         son_actions::handle_dead_node(client_mac_str, reported_by_parent, database, cmdu_tx, tasks);
     }
 
