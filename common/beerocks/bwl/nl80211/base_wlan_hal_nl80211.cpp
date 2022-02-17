@@ -8,6 +8,7 @@
 
 #include "base_wlan_hal_nl80211.h"
 
+#include "wpa_ctrl_client.h"
 #include <bcl/beerocks_string_utils.h>
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
@@ -1012,6 +1013,53 @@ bool base_wlan_hal_nl80211::get_channel_utilization(uint8_t &channel_utilization
         return false;
     }
 
+    return true;
+}
+
+bool base_wlan_hal_nl80211::register_wpa_ctrl_interface(const std::string &interface)
+{
+
+    switch (get_type()) {
+    case HALType::AccessPoint:
+    case HALType::Monitor: {
+
+        // If configured, allow only BSSs to be monitored.
+        if ((!m_hal_conf.monitored_BSSs.empty()) &&
+            (m_hal_conf.monitored_BSSs.find(interface) == m_hal_conf.monitored_BSSs.end())) {
+            return false;
+        }
+        break;
+    }
+    case HALType::Station:
+        // no specific checks for ESS
+        break;
+    default:
+        LOG(ERROR) << "Unsupported interface type " << int(get_type());
+        return false;
+    }
+    if (m_wpa_ctrl_client.has_interface(interface)) {
+        return true;
+    }
+
+    auto wpa_ctrl_path = m_hal_conf.wpa_ctrl_path;
+
+    // Build wpa_ctrl path for secondary BSSs.
+    if (interface.compare(get_iface_name()) != 0) {
+
+        // Get wpa_ctrl socket directory:
+        // including all socket files.
+        auto pos = wpa_ctrl_path.find_last_of("/");
+        if (pos != std::string::npos) {
+            pos += 1;
+        }
+
+        // Append the interface name to the path.
+        wpa_ctrl_path = wpa_ctrl_path.substr(0, pos) + interface;
+        LOG(DEBUG) << "Built wpa_ctrl_path " << wpa_ctrl_path << " for interface " << interface;
+    }
+    if (!m_wpa_ctrl_client.add_interface(interface, wpa_ctrl_path, m_fds_ext_events)) {
+        return false;
+    }
     return true;
 }
 

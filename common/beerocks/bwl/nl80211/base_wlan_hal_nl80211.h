@@ -9,6 +9,7 @@
 #ifndef _BWL_BASE_WLAN_HAL_NL80211_H_
 #define _BWL_BASE_WLAN_HAL_NL80211_H_
 
+#include "wpa_ctrl_client.h"
 #include <bwl/base_wlan_hal.h>
 #include <bwl/nl80211_client.h>
 
@@ -107,6 +108,9 @@ private:
     struct wpa_ctrl *m_wpa_ctrl_cmd   = nullptr;
     struct wpa_ctrl *m_wpa_ctrl_event = nullptr;
 
+    // Manager of WPA Control Interface Objects
+    wpa_ctrl_client m_wpa_ctrl_client;
+
     // NL80211 Socket
     std::shared_ptr<struct nl_sock> m_nl80211_sock;
     int m_nl80211_id  = 0;
@@ -118,6 +122,21 @@ private:
 
     // Path for the WPA Control Interface Socket
     std::string m_wpa_ctrl_path;
+
+    /**
+     * @brief Register interface for WPA Control handling.
+     * WPA Ctrl socket file path is:
+     * - read from hal_conf for primary BSS.
+     * - deduced (same directory) for secondary BSSs.
+     *
+     * @param[in] interface Interface name.
+     *
+     * @return True on success and false:
+     * - BSS interface name not suffixed with the main interface name.
+     * - BSS interface not to be monitored, in hal_conf.
+     * - Wpa_ctrl client failed to add interface.
+     */
+    bool register_wpa_ctrl_interface(const std::string &interface);
 };
 
 } // namespace nl80211
