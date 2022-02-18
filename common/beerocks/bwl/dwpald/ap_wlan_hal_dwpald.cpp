@@ -17,6 +17,7 @@
 #include <easylogging++.h>
 #include <math.h>
 #include <net/if.h> // if_nametoindex
+#include <sys/eventfd.h>
 
 #ifdef USE_LIBSAFEC
 #define restrict __restrict
@@ -923,6 +924,61 @@ ap_wlan_hal_dwpal::ap_wlan_hal_dwpal(const std::string &iface_name, hal_event_cb
     }
     LOG(ERROR) << "Anant: connect and listener done";
     ctx = this;
+    #if 0
+    // Create an eventfd for internal events
+    if (mkdir(get_status_dir().c_str(), S_IRWXU | S_IRWXG | S_IWOTH | S_IXOTH) == -1) {
+        if (errno != EEXIST) { // Do NOT fail if the directory already exists
+            LOG(FATAL) << "Failed creating events directory: " << strerror(errno);
+        }
+    }
+    static constexpr char EVENT_FILE_NAME[] = "EVENT";
+    m_dummy_event_file = get_status_dir(EVENT_FILE_NAME);
+
+        m_dummy_event_file += "_AP";
+    
+    // Remove previously created FIFO for the events file and create a new one
+    if (unlink(m_dummy_event_file.c_str()) == -1) {
+        LOG_IF(errno != ENOENT, FATAL)
+            << "Failed removing previous events FIFO: " << strerror(errno);
+    }
+
+    // Create the dummy events FIFO file, with Read-Write permissions to Owner/Group and
+    // Write-Only permissions to Others.
+    if (mkfifo(m_dummy_event_file.c_str(), S_IREAD | S_IWRITE | S_IRGRP | S_IWGRP | S_IWOTH) ==
+        -1) {
+        LOG(FATAL) << "Failed creating events FIFO: " << strerror(errno);
+    }
+
+    // Open the events FIFO for Read-Write. This is necessary to ensure that the FIFO file
+    // always has at-least one "writer". Otherwise the FIFO is automatically closed by the
+    // OS when writing data externally using "echo".
+    if ((m_fd_ext_events = open(m_dummy_event_file.c_str(), O_RDWR | O_NONBLOCK)) == -1) {
+        LOG(FATAL) << "Failed opening events file: " << strerror(errno);
+    }
+    
+    if (pipe(m_pfd)) {
+        LOG(FATAL) << "Failed creating eventfd: " << strerror(errno);
+        return;
+    }
+    else {
+        auto flags = fcntl(m_pfd[0], F_GETFD);
+        flags |= O_NONBLOCK;
+        if (fcntl(m_pfd[0], F_SETFD, flags))
+        {
+            LOG(ERROR) << "fcntl failed" << strerror(errno);
+            return;
+        }
+        flags = fcntl(m_pfd[1], F_GETFD);
+        flags |= O_NONBLOCK;
+        if (fcntl(m_pfd[1], F_SETFD, flags))
+        {
+            LOG(ERROR) << "fcntl failed" << strerror(errno);
+            return;
+        }
+        m_fd_ext_events = m_pfd[0];
+        LOG(ERROR) << "Anant: fd is " << m_fd_ext_events;
+    }
+    #endif
 }
 
 HALState ap_wlan_hal_dwpal::attach(bool block)
@@ -4416,6 +4472,17 @@ int ap_wlan_hal_dwpal::hap_evt_ap_sta_connected_clb(char *ifname, char *op_code,
 static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t len)
 {
     auto result = ctx->filter_bss_msg(buffer, len, op_code);
+    LOG(ERROR) << "Anant writing to fd " << ctx->get_ext_events_fd();
+    if( 0 > write(ctx->get_ext_events_fd(), op_code, strlen(op_code)))
+        return -1;
+    if( 0 > write(ctx->get_ext_events_fd(), "\n", strlen("\n")))
+        return -1;
+    if( 0 > write(ctx->get_ext_events_fd(), buffer, len))
+        return -1;
+    else {
+        LOG(ERROR) << "Anant: success write hostap callback " << op_code;
+        return 0;
+    }
     LOG(ERROR) << "Anant: tid " << pthread_self();
     if (result <= 0) {
         return result;

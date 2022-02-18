@@ -158,6 +158,17 @@ public:
     }
     int &get_unassoc_measure_window_size() { return m_unassoc_measure_window_size; }
     int &get_unassoc_measure_delay() { return m_unassoc_measure_delay; }
+    
+    int get_ext_events_write_fd()
+    {
+        return m_pfd[1];
+    }
+    
+    std::string get_status_dir(const std::string &filename = {}) const
+    {
+        return std::string(BEEROCKS_TMP_PATH) + "/" + get_iface_name() +
+               (!filename.empty() ? "/" + filename : "");
+    }
     // Protected methods:
 protected:
     virtual bool process_dwpal_event(char *buffer, int bufLen, const std::string &opcode) override;
@@ -168,6 +179,7 @@ protected:
     {
         return base_wlan_hal::event_queue_push(int(event), data);
     }
+
 
 private:
     bool set_wifi_bw(beerocks::eWiFiBandwidth);
@@ -188,6 +200,8 @@ private:
     sMacAddr m_prev_client_mac = beerocks::net::network_utils::ZERO_MAC;
     bool m_queried_first       = false;
     int m_vap_id_in_progress   = INVALID_VAP_ID;
+    std::string m_dummy_event_file;
+    int m_pfd[2];
 };
 
 } // namespace dwpal

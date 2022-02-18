@@ -297,6 +297,44 @@ bool base_wlan_hal_dwpal::fsm_setup()
         .on(dwpal_fsm_event::Attach,
             {dwpal_fsm_state::Operational, dwpal_fsm_state::Delay, dwpal_fsm_state::Detach},
             [&](TTransition &transition, const void *args) -> bool {
+                
+    // Create an eventfd for internal events
+    if (mkdir(get_status_dir().c_str(), S_IRWXU | S_IRWXG | S_IWOTH | S_IXOTH) == -1) {
+        if (errno != EEXIST) { // Do NOT fail if the directory already exists
+            LOG(FATAL) << "Failed creating events directory: " << strerror(errno);
+        }
+    }
+    static constexpr char EVENT_FILE_NAME[] = "EVENT";
+    m_dummy_event_file = get_status_dir(EVENT_FILE_NAME);
+
+    if(get_type() == HALType::AccessPoint)
+        m_dummy_event_file += "_AP";
+        
+    if(get_type() == HALType::Station)
+        m_dummy_event_file += "_STA";
+        
+    if(get_type() == HALType::Monitor)
+        m_dummy_event_file += "_MON";
+     
+    // Remove previously created FIFO for the events file and create a new one
+    if (unlink(m_dummy_event_file.c_str()) == -1) {
+        LOG_IF(errno != ENOENT, FATAL)
+            << "Failed removing previous events FIFO: " << strerror(errno);
+    }
+
+    // Create the dummy events FIFO file, with Read-Write permissions to Owner/Group and
+    // Write-Only permissions to Others.
+    if (mkfifo(m_dummy_event_file.c_str(), S_IREAD | S_IWRITE | S_IRGRP | S_IWGRP | S_IWOTH) ==
+        -1) {
+        LOG(FATAL) << "Failed creating events FIFO: " << strerror(errno);
+    }
+
+    // Open the events FIFO for Read-Write. This is necessary to ensure that the FIFO file
+    // always has at-least one "writer". Otherwise the FIFO is automatically closed by the
+    // OS when writing data externally using "echo".
+    if ((m_fd_ext_events = open(m_dummy_event_file.c_str(), O_RDWR | O_NONBLOCK)) == -1) {
+        LOG(FATAL) << "Failed opening events file: " << strerror(errno);
+    }
 // Get the wpa_supplicant/hostapd event interface file descriptor
 #if 0
                 if (m_dwpal_ctx[0] != nullptr) {
@@ -329,7 +367,7 @@ bool base_wlan_hal_dwpal::fsm_setup()
                     LOG(ERROR) << "NL ctx is NULL! netlink is disabled for this platform";
                 }
 #endif
-                m_fd_ext_events = 0;
+                    
                 //m_fd_nl_cmd_get = 0;
                 return true;
             })
@@ -1141,54 +1179,29 @@ bool base_wlan_hal_dwpal::refresh_vaps_info(int id)
 
 bool base_wlan_hal_dwpal::process_ext_events()
 {
-#if 0
-    constexpr uint8_t MAX_EVENTS_PER_ITERATION = 5;
-
-    char opCode[DWPAL_OPCODE_STRING_LENGTH] = {0};
-
-    if (!m_dwpal_ctx[0]) {
-        LOG(ERROR) << "Invalid WPA Control socket (m_dwpal_ctx == nullptr)";
-        return false;
-    }
-    
-    uint8_t events_received = 0;
-    int status              = DWPAL_SUCCESS;
-
-    do {
         auto buffer         = m_wpa_ctrl_buffer;
         auto buff_size_copy = m_wpa_ctrl_buffer_size;
-
-        // Check if there are pending event and get it
-        status = dwpal_hostap_event_get(m_dwpal_ctx[0], buffer, &buff_size_copy, opCode);
-
-        if (status == DWPAL_FAILURE) {
-            LOG(ERROR) << "Failed reading event from DWPAL socket --> detaching!";
-            detach();
-            return false;
-        } else if (status != DWPAL_NO_PENDING_MESSAGES) {
-            ++events_received;
-
-            /* Silencing unhandled filtered events */
-            if (is_filtered_event(opCode)) {
-                //LOG(DEBUG) << "DWPAL unhandled event opcode received: " << opCode;
-                return true;
-            }
-
+    int read_bytes = read(m_fd_ext_events, buffer, buff_size_copy);
+    if (read_bytes <= 0) {
+        LOG(ERROR) << "Failed reading event: " << strerror(errno);
+        return false;
+    }
+    int i=0;
+    std::string event;
+    LOG(ERROR) << "recived " << buffer;
+    for(i=0;i<read_bytes;i++)
+    {
+        if(buffer[i] == '\n')
+            break;
+        event += buffer[i];
+    }
+    
+    LOG(DEBUG) << "Received event " << event;
             // Process the event with the DWPAL parser
-            if (!process_dwpal_event(buffer, buff_size_copy, std::string(opCode))) {
+            if (!process_dwpal_event(&buffer[i], read_bytes - event.length(), event)) {
                 LOG(ERROR) << "Failed processing DWPAL event with DWPAL parser";
                 return false;
             }
-        }
-    } while ((status != DWPAL_NO_PENDING_MESSAGES) && (events_received < MAX_EVENTS_PER_ITERATION));
-
-    if (events_received == 0) {
-        // No pending messages
-        LOG(WARNING) << "base_wlan_hal_dwpal::process_ext_events() called but there are no pending "
-                        "messages...";
-        return true;
-    }
-#endif
     return true;
 }
 

@@ -1731,6 +1731,17 @@ static int drv_evt_callback(struct nl_msg *msg)
 static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t len)
 {
     auto result = ctx->filter_bss_msg(buffer, len, op_code);
+    LOG(ERROR) << "Anant writing to fd " << ctx->get_ext_events_fd();
+    if( 0 > write(ctx->get_ext_events_fd(), op_code, strlen(op_code)))
+        return -1;
+    if( 0 > write(ctx->get_ext_events_fd(), "\n", strlen("\n")))
+        return -1;
+    if( 0 > write(ctx->get_ext_events_fd(), buffer, len))
+        return -1;
+    else {
+        LOG(ERROR) << "Anant: success write hostap callback " << op_code;
+        return 0;
+    }
     LOG(ERROR) << "Anant: tid " << pthread_self();
     if (result <= 0) {
         return result;

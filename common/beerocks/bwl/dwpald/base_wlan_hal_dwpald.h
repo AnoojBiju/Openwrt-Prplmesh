@@ -119,7 +119,13 @@ public:
      */
     dwpald_hostap_event *m_hostap_event_handlers = NULL;
     int m_num_hostap_event_handlers              = 0;
+    std::string get_status_dir(const std::string &filename = {}) const
+    {
+        return std::string(BEEROCKS_TMP_PATH) + "/" + get_iface_name() +
+               (!filename.empty() ? "/" + filename : "");
+    }
     // Protected methods
+
 protected:
     base_wlan_hal_dwpal(HALType type, const std::string &iface_name, hal_event_cb_t callback,
                         const hal_conf_t &hal_conf = {});
@@ -221,6 +227,7 @@ private:
      * @return True on success and false otherwise.
      */
     bool dwpal_get_phy_chan_status(sPhyChanStatus &status);
+    std::string m_dummy_event_file;
 };
 
 } // namespace dwpal
