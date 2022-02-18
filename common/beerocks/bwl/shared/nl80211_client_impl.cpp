@@ -819,7 +819,7 @@ bool nl80211_client_impl::set_tx_power_limit(const std::string &interface_name, 
         [&](struct nl_msg *msg) {});
 }
 
-bool nl80211_client_impl::get_tx_power_limit_dbm(const std::string &interface_name, uint32_t &limit)
+bool nl80211_client_impl::get_tx_power_dbm(const std::string &interface_name, uint32_t &power)
 {
     if (!m_socket) {
         LOG(ERROR) << "Socket is NULL!";
@@ -856,7 +856,7 @@ bool nl80211_client_impl::get_tx_power_limit_dbm(const std::string &interface_na
                 LOG(WARNING) << "Failed to get tx power!";
                 return;
             }
-            limit = nla_get_u32(tb[NL80211_ATTR_WIPHY_TX_POWER_LEVEL]) * 0.01; // mBm to dBm
+            power = nla_get_u32(tb[NL80211_ATTR_WIPHY_TX_POWER_LEVEL]) * 0.01; // mBm to dBm
         });
 }
 
