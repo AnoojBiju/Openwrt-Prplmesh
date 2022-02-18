@@ -314,24 +314,6 @@ class cMultiBand : public BaseClass
             BAND_60_GHZ = 0x5,
             BAND_45_GHZ = 0x6,
         };
-        // Enum AutoPrint generated code snippet begining- DON'T EDIT!
-        // clang-format off
-        static const char *eMultiBandId_str(eMultiBandId enum_value) {
-            switch (enum_value) {
-            case BAND_TV_WHITE_SPACES: return "BAND_TV_WHITE_SPACES";
-            case BAND_SUB_1_GHZ:       return "BAND_SUB_1_GHZ";
-            case BAND_2_4_GHZ:         return "BAND_2_4_GHZ";
-            case BAND_3_6_GHZ:         return "BAND_3_6_GHZ";
-            case BAND_4_9_AND_5_GHZ:   return "BAND_4_9_AND_5_GHZ";
-            case BAND_60_GHZ:          return "BAND_60_GHZ";
-            case BAND_45_GHZ:          return "BAND_45_GHZ";
-            }
-            static std::string out_str = std::to_string(int(enum_value));
-            return out_str.c_str();
-        }
-        friend inline std::ostream &operator<<(std::ostream &out, eMultiBandId value) { return out << eMultiBandId_str(value); }
-        // clang-format on
-        // Enum AutoPrint generated code snippet end
         
         eElementID& type();
         const uint8_t& length();

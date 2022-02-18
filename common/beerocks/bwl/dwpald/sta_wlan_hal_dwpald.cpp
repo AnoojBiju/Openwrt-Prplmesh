@@ -95,9 +95,25 @@ sta_wlan_hal_dwpal::sta_wlan_hal_dwpal(const std::string &iface_name, hal_event_
     int events_size      = sizeof(events) / sizeof(std::string);
     m_filtered_events.insert(events, events + events_size);
     ctx = this;
+    if(dwpald_connect("sta_wlan_hal"))
+        LOG(ERROR) << "Failed to connect to dwpald";
+    if(dwpald_start_listener())
+        LOG(ERROR) << "Failed to start listener thread in dwpald";
 }
 
-sta_wlan_hal_dwpal::~sta_wlan_hal_dwpal() {}
+sta_wlan_hal_dwpal::~sta_wlan_hal_dwpal() {
+    /* Agent process has single attach, so we can disconnect but let app decide*/
+    //if(dwpald_disconnect())
+        //LOG(ERROR) << " Failed to disconnect from dwpald";
+        
+     for (const auto &vap : m_radio_info.available_vaps) {
+         std::string vap_name = beerocks::utils::get_iface_string_from_iface_vap_ids(m_radio_info.iface_name, vap.first);
+        if(dwpald_hostap_detach(vap_name.c_str()))
+            LOG(ERROR) << " Failed to detach from dwpald for interface" << vap.first;
+        else
+            LOG(ERROR) << " success to detach from dwpald for interface" << vap.first;
+     }
+}
 
 bool sta_wlan_hal_dwpal::start_wps_pbc()
 {
@@ -587,6 +603,17 @@ int sta_wlan_hal_dwpal::hap_evt_channel_switch_clb(char *ifname, char *op_code, 
 }
 static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t len)
 {
+    const std::string &opcode = op_code;
+    if (opcode == "INTERFACE_DISCONNECTED") {
+        LOG(ERROR) << "Interface disconnected" << ifname;
+        return 0;
+    } else if (opcode == "INTERFACE_RECONNECTED_OK") {
+        LOG(ERROR) << "Interface reconnected" << ifname;
+        return 0;
+    } else if (opcode == "INTERFACE_CONNECTED_OK") {
+        LOG(ERROR) << "Interface connected " << ifname;
+        return 0;
+    }
     auto event = dwpal_to_bwl_event(op_code);
     switch (event) {
     case sta_wlan_hal_dwpal::Event::Connected: {
@@ -614,10 +641,6 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
 #define EVENT(event) (char *)event, sizeof(event) - 1, hap_evt_callback
 void sta_wlan_hal_dwpal::hostap_attach(char *ifname)
 {
-    std::string dwpald_client_name = "sta_hal_";
-    dwpald_client_name.append(ifname);
-    LOG(ERROR) << "Anant:Return of connect" << dwpald_client_name << ":"
-               << dwpald_connect(dwpald_client_name.c_str());
     auto iface_ids = beerocks::utils::get_ids_from_iface_string(ifname);
 
     static dwpald_hostap_event hostap_radio_event_handlers[] = {
@@ -627,6 +650,9 @@ void sta_wlan_hal_dwpal::hostap_attach(char *ifname)
         {EVENT("AP-DISABLED")},
         {EVENT("AP-STA-CONNECTED")},
         {EVENT("AP-STA-DISCONNECTED")},
+        {EVENT("INTERFACE_RECONNECTED_OK")},
+        {EVENT("INTERFACE_CONNECTED_OK")},
+        {EVENT("INTERFACE_DISCONNECTED")}
     };
 
     static dwpald_hostap_event hostap_vap_event_handlers[] = {
@@ -636,6 +662,9 @@ void sta_wlan_hal_dwpal::hostap_attach(char *ifname)
         {EVENT("AP-DISABLED")},
         {EVENT("AP-STA-CONNECTED")},
         {EVENT("AP-STA-DISCONNECTED")},
+        {EVENT("INTERFACE_RECONNECTED_OK")},
+        {EVENT("INTERFACE_CONNECTED_OK")},
+        {EVENT("INTERFACE_DISCONNECTED")}
     };
 
     if (iface_ids.vap_id == beerocks::IFACE_RADIO_ID) {
@@ -647,10 +676,11 @@ void sta_wlan_hal_dwpal::hostap_attach(char *ifname)
         m_num_hostap_event_handlers =
             sizeof(hostap_vap_event_handlers) / sizeof(dwpald_hostap_event);
     }
-    dwpald_start_listener();
-    LOG(ERROR) << "Anant hostap attach" << ifname << "return value"
-               << dwpald_hostap_attach(ifname, m_num_hostap_event_handlers, m_hostap_event_handlers,
-                                       0);
+    
+    if(dwpald_hostap_attach(ifname, m_num_hostap_event_handlers, m_hostap_event_handlers, 0))
+        LOG(ERROR) << "Failed to attach to dwpald for interface " << ifname;
+    else
+        LOG(ERROR) << "Anant: successfully attached to interface " << ifname;
 }
 bool sta_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std::string &opcode)
 {

@@ -383,7 +383,7 @@ bool base_wlan_hal_dwpal::fsm_setup()
                 m_fd_nl_cmd_get = -1;
             }
             #endif
-            dwpald_disconnect();
+            //dwpald_disconnect();
             return success;
         })
 

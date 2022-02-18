@@ -37,18 +37,6 @@ class tlvHigherLayerData : public BaseClass
         enum eProtocol: uint8_t {
             TR_181 = 0x1,
         };
-        // Enum AutoPrint generated code snippet begining- DON'T EDIT!
-        // clang-format off
-        static const char *eProtocol_str(eProtocol enum_value) {
-            switch (enum_value) {
-            case TR_181: return "TR_181";
-            }
-            static std::string out_str = std::to_string(int(enum_value));
-            return out_str.c_str();
-        }
-        friend inline std::ostream &operator<<(std::ostream &out, eProtocol value) { return out << eProtocol_str(value); }
-        // clang-format on
-        // Enum AutoPrint generated code snippet end
         
         const eTlvTypeMap& type();
         const uint16_t& length();

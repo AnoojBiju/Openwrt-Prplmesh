@@ -40,22 +40,6 @@ class tlvTunnelledProtocolType : public BaseClass
             WNM_REQUEST = 0x3,
             ANQP_REQUEST = 0x4,
         };
-        // Enum AutoPrint generated code snippet begining- DON'T EDIT!
-        // clang-format off
-        static const char *eTunnelledProtocolType_str(eTunnelledProtocolType enum_value) {
-            switch (enum_value) {
-            case ASSOCIATION_REQUEST:   return "ASSOCIATION_REQUEST";
-            case REASSOCIATION_REQUEST: return "REASSOCIATION_REQUEST";
-            case BTM_QUERY:             return "BTM_QUERY";
-            case WNM_REQUEST:           return "WNM_REQUEST";
-            case ANQP_REQUEST:          return "ANQP_REQUEST";
-            }
-            static std::string out_str = std::to_string(int(enum_value));
-            return out_str.c_str();
-        }
-        friend inline std::ostream &operator<<(std::ostream &out, eTunnelledProtocolType value) { return out << eTunnelledProtocolType_str(value); }
-        // clang-format on
-        // Enum AutoPrint generated code snippet end
         
         const eTlvTypeMap& type();
         const uint16_t& length();
