@@ -733,7 +733,19 @@ update_vap_credentials_configure_wpa(const std::string &vap_if,
 // NOTE: Since *base_wlan_hal_dwpal* inherits *base_wlan_hal* virtually, we
 //       need to explicitly call it's from any deriving class
 
-ap_wlan_hal_dwpal::~ap_wlan_hal_dwpal() {}
+ap_wlan_hal_dwpal::~ap_wlan_hal_dwpal() {
+     for (const auto &vap : m_radio_info.available_vaps) {
+         std::string vap_name = beerocks::utils::get_iface_string_from_iface_vap_ids(m_radio_info.iface_name, vap.first);
+        if(dwpald_hostap_detach(vap_name.c_str()))
+            LOG(ERROR) << " Failed to detach from dwpald for interface" << vap.first;
+        else
+            LOG(ERROR) << " success to detach from dwpald for interface" << vap.first;
+     }
+    /* Let dwpald handle disconnect upon fronthaul process going down */
+    //if(dwpald_disconnect())
+        //LOG(ERROR) << " Failed to disconnect from dwpald";
+    
+}
 
 static ap_wlan_hal_dwpal *ctx = nullptr;
 
@@ -742,7 +754,9 @@ int ap_wlan_hal_dwpal::hap_evt_interface_disabled_clb(char *ifname, char *op_cod
 {
     LOG(DEBUG) << ifname << ": " << msg;
     auto event = dwpal_to_bwl_event(op_code);
+    
     ctx->event_queue_push(event); // Forward to the AP manager
+
     return 0;
 }
 int ap_wlan_hal_dwpal::hap_evt_acs_failed_clb(char *ifname, char *op_code, char *msg, size_t len)
@@ -901,6 +915,13 @@ ap_wlan_hal_dwpal::ap_wlan_hal_dwpal(const std::string &iface_name, hal_event_cb
                             "CTRL-EVENT-BSS-ADDED", "CTRL-EVENT-BSS-REMOVED"};
     int events_size      = sizeof(events) / sizeof(std::string);
     m_filtered_events.insert(events, events + events_size);
+    if(dwpald_connect("ap_wlan_hal"))
+        LOG(ERROR) << "Failed to connect to dwpald";
+    else {
+        if(dwpald_start_listener())
+            LOG(ERROR) << "Failed to start listener thread in dwpald";
+    }
+    LOG(ERROR) << "Anant: connect and listener done";
     ctx = this;
 }
 
@@ -4370,27 +4391,27 @@ int ap_wlan_hal_dwpal::hap_evt_ap_sta_connected_clb(char *ifname, char *op_code,
     }
     return 0;
 }
-#define EVENT(event) (char *)event, sizeof(event) - 1
+
 #if 0
-    {EVENT("AP-ENABLED"), ctx->hap_evt_ap_enabled_clb},
-    {EVENT("AP-DISABLED"), ctx->hap_evt_ap_disabled_clb},
-    {EVENT("AP-STA-CONNECTED"), ctx->hap_evt_ap_sta_connected_clb},
-    {EVENT("AP-STA-DISCONNECTED"), ctx->hap_evt_ap_sta_disconnected_clb},
-    {EVENT("UNCONNECTED-STA-RSSI"), ctx->hap_evt_unconnected_sta_rssi_clb},
-    {EVENT("INTERFACE-ENABLED"), ctx->hap_evt_interface_enabled_clb},
-    {EVENT("INTERFACE-DISABLED"), ctx->hap_evt_interface_disabled_clb},
-    {EVENT("ACS-STARTED"), ctx->hap_evt_acs_started_clb},
-    {EVENT("ACS-COMPLETED"), ctx->hap_evt_acs_completed_clb},
-    {EVENT("ACS-FAILED"), ctx->hap_evt_acs_failed_clb},
-    {EVENT("AP-CSA-FINISHED"), ctx->hap_evt_ap_csa_finished_clb},
-    {EVENT("BSS-TM-QUERY"), ctx->hap_evt_bss_tm_query_clb},
-    {EVENT("BSS-TM-RESP"), ctx->hap_evt_bss_tm_resp_clb},
-    {EVENT("DFS-CAC-START"), ctx->hap_evt_dfs_cac_start_clb},
-    {EVENT("DFS-CAC-COMPLETED"), ctx->hap_evt_dfs_cac_completed_clb},
-    {EVENT("DFS-NOP-FINISHED"), ctx->hap_evt_dfs_nop_finished_clb},
-    {EVENT("LTQ-SOFTBLOCK-DROP"), ctx->hap_evt_ltq_softblock_drop_clb},
-    {EVENT("AP-ACTION-FRAME-RECEIVED"), ctx->hap_evt_ap_action_frame_received_clb},
-    {EVENT("AP-STA-POSSIBLE-PSK-MISMATCH"), ctx->hap_evt_ap_sta_possible_psk_mismatch_clb}};
+    {HAP_EVENT("AP-ENABLED"), ctx->hap_evt_ap_enabled_clb},
+    {HAP_EVENT("AP-DISABLED"), ctx->hap_evt_ap_disabled_clb},
+    {HAP_EVENT("AP-STA-CONNECTED"), ctx->hap_evt_ap_sta_connected_clb},
+    {HAP_EVENT("AP-STA-DISCONNECTED"), ctx->hap_evt_ap_sta_disconnected_clb},
+    {HAP_EVENT("UNCONNECTED-STA-RSSI"), ctx->hap_evt_unconnected_sta_rssi_clb},
+    {HAP_EVENT("INTERFACE-ENABLED"), ctx->hap_evt_interface_enabled_clb},
+    {HAP_EVENT("INTERFACE-DISABLED"), ctx->hap_evt_interface_disabled_clb},
+    {HAP_EVENT("ACS-STARTED"), ctx->hap_evt_acs_started_clb},
+    {HAP_EVENT("ACS-COMPLETED"), ctx->hap_evt_acs_completed_clb},
+    {HAP_EVENT("ACS-FAILED"), ctx->hap_evt_acs_failed_clb},
+    {HAP_EVENT("AP-CSA-FINISHED"), ctx->hap_evt_ap_csa_finished_clb},
+    {HAP_EVENT("BSS-TM-QUERY"), ctx->hap_evt_bss_tm_query_clb},
+    {HAP_EVENT("BSS-TM-RESP"), ctx->hap_evt_bss_tm_resp_clb},
+    {HAP_EVENT("DFS-CAC-START"), ctx->hap_evt_dfs_cac_start_clb},
+    {HAP_EVENT("DFS-CAC-COMPLETED"), ctx->hap_evt_dfs_cac_completed_clb},
+    {HAP_EVENT("DFS-NOP-FINISHED"), ctx->hap_evt_dfs_nop_finished_clb},
+    {HAP_EVENT("LTQ-SOFTBLOCK-DROP"), ctx->hap_evt_ltq_softblock_drop_clb},
+    {HAP_EVENT("AP-ACTION-FRAME-RECEIVED"), ctx->hap_evt_ap_action_frame_received_clb},
+    {HAP_EVENT("AP-STA-POSSIBLE-PSK-MISMATCH"), ctx->hap_evt_ap_sta_possible_psk_mismatch_clb}};
 #endif
 static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t len)
 {
@@ -4399,70 +4420,83 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
     if (result <= 0) {
         return result;
     }
+    const std::string &opcode = op_code;
+    if (opcode == "INTERFACE_DISCONNECTED") {
+        LOG(ERROR) << "Interface disconnected" << ifname;
+        return 0;
+    } else if (opcode == "INTERFACE_RECONNECTED_OK") {
+        LOG(ERROR) << "Interface reconnected" << ifname;
+        return 0;
+    } else if (opcode == "INTERFACE_CONNECTED_OK") {
+        LOG(ERROR) << "Interface connected " << ifname;
+        return 0;
+    }
+    
     auto event = dwpal_to_bwl_event(op_code);
     switch (event) {
-    case ap_wlan_hal_dwpal::Event::ACS_Failed: {
-        ctx->hap_evt_acs_failed_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::Interface_Disabled: {
-        ctx->hap_evt_interface_disabled_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::ACS_Completed: {
-        ctx->hap_evt_acs_completed_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::CSA_Finished: {
-        ctx->hap_evt_ap_csa_finished_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::STA_Disconnected: {
-        ctx->hap_evt_ap_sta_disconnected_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::STA_Connected: {
-        ctx->hap_evt_ap_sta_connected_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::STA_Unassoc_RSSI: {
-        ctx->hap_evt_unconnected_sta_rssi_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::STA_Softblock_Drop: {
-        ctx->hap_evt_ltq_softblock_drop_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::BSS_TM_Query: {
-        ctx->hap_evt_bss_tm_query_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::BSS_TM_Response: {
-        ctx->hap_evt_bss_tm_resp_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::DFS_CAC_Started: {
-        ctx->hap_evt_dfs_cac_start_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::DFS_CAC_Completed: {
-        ctx->hap_evt_dfs_cac_completed_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::DFS_NOP_Finished: {
-        ctx->hap_evt_dfs_nop_finished_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::AP_Disabled: {
-        ctx->hap_evt_ap_disabled_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::AP_Enabled: {
-        ctx->hap_evt_ap_enabled_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::MGMT_Frame: {
-        ctx->hap_evt_ap_action_frame_received_clb(ifname, op_code, buffer, len);
-    } break;
-    case ap_wlan_hal_dwpal::Event::AP_Sta_Possible_Psk_Mismatch: {
-        ctx->hap_evt_ap_sta_possible_psk_mismatch_clb(ifname, op_code, buffer, len);
-    } break;
-    default: {
-        LOG(ERROR) << "Code should not reach here, event " << op_code
-                   << "Not registered yet received";
-    } break;
+        case ap_wlan_hal_dwpal::Event::ACS_Failed: {
+            return ctx->hap_evt_acs_failed_clb(ifname, op_code, buffer, len);
+        } break;
+        case ap_wlan_hal_dwpal::Event::Interface_Disabled: {
+            return ctx->hap_evt_interface_disabled_clb(ifname, op_code, buffer, len);
+        } break;
+        case ap_wlan_hal_dwpal::Event::ACS_Completed: {
+            return ctx->hap_evt_acs_completed_clb(ifname, op_code, buffer, len);
+        } break;
+        case ap_wlan_hal_dwpal::Event::CSA_Finished: {
+            return ctx->hap_evt_ap_csa_finished_clb(ifname, op_code, buffer, len);
+        } break;
+        case ap_wlan_hal_dwpal::Event::STA_Disconnected: {
+            return ctx->hap_evt_ap_sta_disconnected_clb(ifname, op_code, buffer, len);
+        } break;
+        case ap_wlan_hal_dwpal::Event::STA_Connected: {
+            return ctx->hap_evt_ap_sta_connected_clb(ifname, op_code, buffer, len);
+        } break;
+        case ap_wlan_hal_dwpal::Event::STA_Unassoc_RSSI: {
+            return ctx->hap_evt_unconnected_sta_rssi_clb(ifname, op_code, buffer, len);
+        } break;
+        case ap_wlan_hal_dwpal::Event::STA_Softblock_Drop: {
+            return ctx->hap_evt_ltq_softblock_drop_clb(ifname, op_code, buffer, len);
+        } break;
+        case ap_wlan_hal_dwpal::Event::BSS_TM_Query: {
+            return ctx->hap_evt_bss_tm_query_clb(ifname, op_code, buffer, len);
+        } break;
+        case ap_wlan_hal_dwpal::Event::BSS_TM_Response: {
+            return ctx->hap_evt_bss_tm_resp_clb(ifname, op_code, buffer, len);
+        } break;
+        case ap_wlan_hal_dwpal::Event::DFS_CAC_Started: {
+            return ctx->hap_evt_dfs_cac_start_clb(ifname, op_code, buffer, len);
+        } break;
+        case ap_wlan_hal_dwpal::Event::DFS_CAC_Completed: {
+            return ctx->hap_evt_dfs_cac_completed_clb(ifname, op_code, buffer, len);
+        } break;
+        case ap_wlan_hal_dwpal::Event::DFS_NOP_Finished: {
+            return ctx->hap_evt_dfs_nop_finished_clb(ifname, op_code, buffer, len);
+        } break;
+        case ap_wlan_hal_dwpal::Event::AP_Disabled: {
+            return ctx->hap_evt_ap_disabled_clb(ifname, op_code, buffer, len);
+        } break;
+        case ap_wlan_hal_dwpal::Event::AP_Enabled: {
+            return ctx->hap_evt_ap_enabled_clb(ifname, op_code, buffer, len);
+        } break;
+        case ap_wlan_hal_dwpal::Event::MGMT_Frame: {
+            return ctx->hap_evt_ap_action_frame_received_clb(ifname, op_code, buffer, len);
+        } break;
+        case ap_wlan_hal_dwpal::Event::AP_Sta_Possible_Psk_Mismatch: {
+            return ctx->hap_evt_ap_sta_possible_psk_mismatch_clb(ifname, op_code, buffer, len);
+        } break;
+        default: {
+            LOG(ERROR) << "Code should not reach here, event " << op_code
+                        << "Not registered yet received";
+            return -1;
+        } break;
     }
-    return 0;
 }
+
+#define HAP_EVENT(event) (char *)event, sizeof(event) - 1, hap_evt_callback
 
 void ap_wlan_hal_dwpal::hostap_attach(char *ifname)
 {
-    LOG(ERROR) << "Anant:Return of connect" << dwpald_connect("ap_manager");
     auto iface_ids = beerocks::utils::get_ids_from_iface_string(ifname);
     #if 0
     // Passing a lambda with capture is not supported for standard C function
@@ -4479,46 +4513,53 @@ void ap_wlan_hal_dwpal::hostap_attach(char *ifname)
     auto ap_enabled_clb = [](char *ifname, char *op_code, char *msg, size_t len) -> int { return hapd_evt_callback(ifname,op_code,msg,len); };
     #endif
     static dwpald_hostap_event hostap_radio_event_handlers[] = {
-        //{EVENT("AP-ENABLED"), hap_evt_callback},
+        //{HAP_EVENT("AP-ENABLED")},
         //{(char *)"AP-ENABLED",sizeof("AP-ENABLED")-1,ap_enabled_clb},
-        {EVENT("AP-DISABLED"), hap_evt_callback},
-        {EVENT("AP-STA-CONNECTED"), hap_evt_callback},
-        {EVENT("AP-STA-DISCONNECTED"), hap_evt_callback},
-        {EVENT("UNCONNECTED-STA-RSSI"), hap_evt_callback},
-        {EVENT("INTERFACE-ENABLED"), hap_evt_callback},
-        {EVENT("INTERFACE-DISABLED"), hap_evt_callback},
-        {EVENT("ACS-STARTED"), hap_evt_callback},
-        {EVENT("ACS-COMPLETED"), hap_evt_callback},
-        {EVENT("ACS-FAILED"), hap_evt_callback},
-        {EVENT("AP-CSA-FINISHED"), hap_evt_callback},
-        {EVENT("BSS-TM-QUERY"), hap_evt_callback},
-        {EVENT("BSS-TM-RESP"), hap_evt_callback},
-        {EVENT("DFS-CAC-START"), hap_evt_callback},
-        {EVENT("DFS-CAC-COMPLETED"), hap_evt_callback},
-        {EVENT("DFS-NOP-FINISHED"), hap_evt_callback},
-        {EVENT("LTQ-SOFTBLOCK-DROP"), hap_evt_callback},
-        {EVENT("AP-ACTION-FRAME-RECEIVED"), hap_evt_callback},
-        {EVENT("AP-STA-POSSIBLE-PSK-MISMATCH"), hap_evt_callback}};
+        {HAP_EVENT("AP-DISABLED")},
+        {HAP_EVENT("AP-STA-CONNECTED")},
+        {HAP_EVENT("AP-STA-DISCONNECTED")},
+        {HAP_EVENT("UNCONNECTED-STA-RSSI")},
+        {HAP_EVENT("INTERFACE-ENABLED")},
+        {HAP_EVENT("INTERFACE-DISABLED")},
+        {HAP_EVENT("ACS-STARTED")},
+        {HAP_EVENT("ACS-COMPLETED")},
+        {HAP_EVENT("ACS-FAILED")},
+        {HAP_EVENT("AP-CSA-FINISHED")},
+        {HAP_EVENT("BSS-TM-QUERY")},
+        {HAP_EVENT("BSS-TM-RESP")},
+        {HAP_EVENT("DFS-CAC-START")},
+        {HAP_EVENT("DFS-CAC-COMPLETED")},
+        {HAP_EVENT("DFS-NOP-FINISHED")},
+        {HAP_EVENT("LTQ-SOFTBLOCK-DROP")},
+        {HAP_EVENT("AP-ACTION-FRAME-RECEIVED")},
+        {HAP_EVENT("AP-STA-POSSIBLE-PSK-MISMATCH")},
+        {HAP_EVENT("INTERFACE_RECONNECTED_OK")},
+        {HAP_EVENT("INTERFACE_CONNECTED_OK")},
+        {HAP_EVENT("INTERFACE_DISCONNECTED")}
+        };
     static dwpald_hostap_event hostap_vap_event_handlers[] = {
-        {EVENT("AP-ENABLED"), hap_evt_callback},
-        {EVENT("AP-DISABLED"), hap_evt_callback},
-        {EVENT("AP-STA-CONNECTED"), hap_evt_callback},
-        {EVENT("AP-STA-DISCONNECTED"), hap_evt_callback},
-        {EVENT("UNCONNECTED-STA-RSSI"), hap_evt_callback},
-        {EVENT("INTERFACE-ENABLED"), hap_evt_callback},
-        {EVENT("INTERFACE-DISABLED"), hap_evt_callback},
-        {EVENT("ACS-STARTED"), hap_evt_callback},
-        //{EVENT("ACS-COMPLETED"), hap_evt_callback},
-        {EVENT("ACS-FAILED"), hap_evt_callback},
-        //{EVENT("AP-CSA-FINISHED"), hap_evt_callback},
-        {EVENT("BSS-TM-QUERY"), hap_evt_callback},
-        {EVENT("BSS-TM-RESP"), hap_evt_callback},
-        {EVENT("DFS-CAC-START"), hap_evt_callback},
-        {EVENT("DFS-CAC-COMPLETED"), hap_evt_callback},
-        {EVENT("DFS-NOP-FINISHED"), hap_evt_callback},
-        {EVENT("LTQ-SOFTBLOCK-DROP"), hap_evt_callback},
-        {EVENT("AP-ACTION-FRAME-RECEIVED"), hap_evt_callback},
-        {EVENT("AP-STA-POSSIBLE-PSK-MISMATCH"), hap_evt_callback}};
+        {HAP_EVENT("AP-ENABLED")},
+        {HAP_EVENT("AP-DISABLED")},
+        {HAP_EVENT("AP-STA-CONNECTED")},
+        {HAP_EVENT("AP-STA-DISCONNECTED")},
+        {HAP_EVENT("UNCONNECTED-STA-RSSI")},
+        {HAP_EVENT("INTERFACE-ENABLED")},
+        {HAP_EVENT("INTERFACE-DISABLED")},
+        {HAP_EVENT("ACS-STARTED")},
+        //{HAP_EVENT("ACS-COMPLETED")},
+        {HAP_EVENT("ACS-FAILED")},
+        //{HAP_EVENT("AP-CSA-FINISHED")},
+        {HAP_EVENT("BSS-TM-QUERY")},
+        {HAP_EVENT("BSS-TM-RESP")},
+        {HAP_EVENT("DFS-CAC-START")},
+        {HAP_EVENT("DFS-CAC-COMPLETED")},
+        {HAP_EVENT("DFS-NOP-FINISHED")},
+        {HAP_EVENT("LTQ-SOFTBLOCK-DROP")},
+        {HAP_EVENT("AP-ACTION-FRAME-RECEIVED")},
+        {HAP_EVENT("AP-STA-POSSIBLE-PSK-MISMATCH")},
+        {HAP_EVENT("INTERFACE_RECONNECTED_OK")},
+        {HAP_EVENT("INTERFACE_CONNECTED_OK")},
+        {HAP_EVENT("INTERFACE_DISCONNECTED")}};
 
     if (iface_ids.vap_id == beerocks::IFACE_RADIO_ID) {
         m_hostap_event_handlers = hostap_radio_event_handlers;
@@ -4529,10 +4570,11 @@ void ap_wlan_hal_dwpal::hostap_attach(char *ifname)
         m_num_hostap_event_handlers =
             sizeof(hostap_vap_event_handlers) / sizeof(dwpald_hostap_event);
     }
-    dwpald_start_listener();
-    LOG(ERROR) << "Anant hostap attach" << ifname << "return value"
-               << dwpald_hostap_attach(ifname, m_num_hostap_event_handlers, m_hostap_event_handlers,
-                                       0);
+    
+    if(dwpald_hostap_attach(ifname, m_num_hostap_event_handlers, m_hostap_event_handlers, 0))
+        LOG(ERROR) << "Failed to attach to dwpald for interface " << ifname;
+    else
+        LOG(ERROR) << "Anant: successfully attached to interface " << ifname;
     
 }
 

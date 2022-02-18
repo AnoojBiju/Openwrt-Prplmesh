@@ -23,6 +23,7 @@ extern "C" {
 #include <dwpald_client.h>
 }
 
+#define MONITOR_ATTACH_ID 1
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////// DWPAL////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -639,7 +640,20 @@ mon_wlan_hal_dwpal::mon_wlan_hal_dwpal(const std::string &iface_name, hal_event_
     ctx = this;
 }
 
-mon_wlan_hal_dwpal::~mon_wlan_hal_dwpal() {}
+mon_wlan_hal_dwpal::~mon_wlan_hal_dwpal() {
+    
+     for (const auto &vap : m_radio_info.available_vaps) {
+         std::string vap_name = beerocks::utils::get_iface_string_from_iface_vap_ids(m_radio_info.iface_name, vap.first);
+        if(dwpald_hostap_detach(vap_name.c_str()))
+            LOG(ERROR) << " Failed to detach from dwpald for interface" << vap.first;
+        else
+            LOG(ERROR) << " success to detach from dwpald for interface" << vap.first;
+     }
+    
+    /* Let dwpald handle disconnect upon fronthaul process going down */
+    //if(dwpald_disconnect())
+        //LOG(ERROR) << " Failed to disconnect from dwpald";
+}
 
 bool mon_wlan_hal_dwpal::update_radio_stats(SRadioStats &radio_stats)
 {
@@ -1408,7 +1422,7 @@ int mon_wlan_hal_dwpal::hap_evt_ap_disabled_clb(char *ifname, char *op_code, cha
 
     memset(msg_buff.get(), 0, sizeof(sHOSTAP_DISABLED_NOTIFICATION));
     LOG(INFO) << "AP_Disabled buffer= \n" << buffer;
-
+#if 0
     char interface[SSID_MAX_SIZE] = {0};
     size_t numOfValidArgs[2]      = {0};
     FieldsToParse fieldsToParse[] = {
@@ -1423,11 +1437,14 @@ int mon_wlan_hal_dwpal::hap_evt_ap_disabled_clb(char *ifname, char *op_code, cha
         LOG(ERROR) << "DWPAL parse error ==> Abort";
         return -1;
     }
-
-    auto iface_ids = beerocks::utils::get_ids_from_iface_string(interface);
+#endif
+    auto iface_ids = beerocks::utils::get_ids_from_iface_string(ifname);
     msg->vap_id    = iface_ids.vap_id;
+    
 
     ctx->event_queue_push(event, msg_buff);
+    
+
     return 0;
 }
 int mon_wlan_hal_dwpal::hap_evt_ap_enabled_clb(char *ifname, char *op_code, char *buffer,
@@ -1779,10 +1796,11 @@ void mon_wlan_hal_dwpal::hostap_attach(char *ifname)
         m_num_hostap_event_handlers =
             sizeof(hostap_vap_event_handlers) / sizeof(dwpald_hostap_event);
     }
-    #define MONITOR_ATTACH_ID 1
-    LOG(ERROR) << "Anant hostap attach-id " << MONITOR_ATTACH_ID << ifname << " return value"
-               << dwpald_hostap_attach_with_id(ifname, m_num_hostap_event_handlers, m_hostap_event_handlers,
-                                       0, MONITOR_ATTACH_ID);
+    
+    if(dwpald_hostap_attach_with_id(ifname, m_num_hostap_event_handlers, m_hostap_event_handlers, 0, MONITOR_ATTACH_ID))
+        LOG(ERROR) << "Failed to attach to dwpald for interface " << ifname;
+    else
+        LOG(ERROR) << "Anant: successfully attached to interface " << ifname;
         #if 0
         // Passing a lambda with capture is not supported for standard C function
     // pointers. As a workaround, we create a static (but thread local) wrapper
