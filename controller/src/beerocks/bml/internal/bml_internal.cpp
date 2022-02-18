@@ -1250,6 +1250,38 @@ int bml_internal::process_cmdu_header(std::shared_ptr<beerocks_header> beerocks_
                                 "but no one is waiting...";
             }
         } break;
+        case beerocks_message::ACTION_BML_SET_CLIENT_ROAMING_11K_SUPPORT_RESPONSE: {
+            LOG(DEBUG) << "ACTION_BML_SET_CLIENT_ROAMING_11K_SUPPORT_RESPONSE received";
+
+            auto response = beerocks_header->addClass<
+                beerocks_message::cACTION_BML_SET_CLIENT_ROAMING_11K_SUPPORT_RESPONSE>();
+            if (!response) {
+                LOG(ERROR) << "addClass cACTION_BML_SET_CLIENT_ROAMING_11K_SUPPORT_RESPONSE failed";
+                return (-BML_RET_OP_FAILED);
+            }
+
+            if (!wake_up(beerocks_message::ACTION_BML_SET_CLIENT_ROAMING_11K_SUPPORT_RESPONSE, 0)) {
+                LOG(WARNING)
+                    << "Received ACTION_BML_SET_CLIENT_ROAMING_11K_SUPPORT_RESPONSE response, "
+                       "but no one is waiting...";
+            }
+        } break;
+        case beerocks_message::ACTION_BML_GET_CLIENT_ROAMING_11K_SUPPORT_RESPONSE: {
+            LOG(DEBUG) << "ACTION_BML_GET_CLIENT_ROAMING_11K_SUPPORT_RESPONSE received";
+
+            auto response = beerocks_header->addClass<
+                beerocks_message::cACTION_BML_GET_CLIENT_ROAMING_11K_SUPPORT_RESPONSE>();
+            if (!response) {
+                LOG(ERROR) << "addClass cACTION_BML_GET_CLIENT_ROAMING_11K_SUPPORT_RESPONSE failed";
+                return (-BML_RET_OP_FAILED);
+            }
+            if (!wake_up(beerocks_message::ACTION_BML_GET_CLIENT_ROAMING_11K_SUPPORT_RESPONSE,
+                         response->isEnable())) {
+                LOG(WARNING)
+                    << "Received ACTION_BML_GET_CLIENT_ROAMING_11K_SUPPORT_RESPONSE response, "
+                       "but no one is waiting...";
+            }
+        } break;
         default: {
             LOG(WARNING) << "unhandled header BML action type 0x" << std::hex
                          << int(beerocks_header->action_op());
