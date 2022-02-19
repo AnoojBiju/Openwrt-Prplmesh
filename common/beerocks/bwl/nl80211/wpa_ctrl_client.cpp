@@ -54,5 +54,44 @@ int wpa_ctrl_socket::fd() const
     return wpa_ctrl_get_fd(m_ctx);
 }
 
+wpa_ctrl_socket_cmd::wpa_ctrl_socket_cmd(const std::string &path) : wpa_ctrl_socket(path) {}
+
+bool wpa_ctrl_socket_cmd::connect() { return open(); }
+
+bool wpa_ctrl_socket_cmd::disconnect(bool force)
+{
+    close();
+    return true;
+}
+
+bool wpa_ctrl_socket_cmd::request(const std::string &cmd, char *buffer, size_t buff_size)
+{
+    if (!m_ctx) {
+        LOG(ERROR) << "Control socket not available!";
+        return false;
+    }
+
+    int result;
+    int try_cnt         = 0;
+    auto buff_size_copy = buff_size;
+    do {
+        result = wpa_ctrl_request(m_ctx, cmd.c_str(), cmd.size(), buffer, &buff_size_copy, NULL);
+    } while (result == -2 && ++try_cnt < WPA_CTRL_READ_RETRY_MAX);
+
+    if (result < 0) {
+        LOG(ERROR) << "can't send wpa_ctrl_request with cmd: " << cmd;
+        return false;
+    }
+
+    if (buff_size_copy >= buff_size) {
+        LOG(ERROR) << "wpa_ctrl_request returned reply of size " << buff_size_copy;
+        return false;
+    }
+
+    // the wpa_ctrl does not put null terminator at the and of the string
+    buffer[buff_size_copy] = 0;
+    return true;
+}
+
 } // namespace nl80211
 } // namespace bwl

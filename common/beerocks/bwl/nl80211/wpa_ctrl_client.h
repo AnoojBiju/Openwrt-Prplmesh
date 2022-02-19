@@ -120,6 +120,60 @@ private:
     std::string m_path;
 };
 
+/**
+ * @brief WPA Ctrl Command socket Class.
+ *
+ * This class derives from Base wpa_ctrl_socket class, and it is exclusively used for
+ * sending request and receiving synchronous replies.
+ */
+class wpa_ctrl_socket_cmd : public wpa_ctrl_socket {
+public:
+    /**
+     * @brief Constructor wpa_ctrl command socket object.
+     *
+     * @param[in] path The WPA Ctrl socket file path
+     */
+    explicit wpa_ctrl_socket_cmd(const std::string &path);
+
+    /**
+     * @brief Default destructor of wpa_ctrl command socket object.
+     */
+    virtual ~wpa_ctrl_socket_cmd() = default;
+
+    /**
+     * @brief Connect socket to hostapd/wpa_supplicant deamon.
+     * This implementation implies opening the socket.
+     *
+     * @return True on success and false otherwise.
+     */
+    virtual bool connect() override;
+
+    /**
+     * @brief Disconnect socket from hostapd/wpa_supplicant deamon.
+     * This implementation implies closing the socket.
+     *
+     * @param[in] force Enforce closing the socket.
+     *
+     * @return True on success and false otherwise.
+     */
+    virtual bool disconnect(bool force = false) override;
+
+    /**
+     * @brief Send request with synchronous reply, on wpa_ctrl socket.
+     *
+     * @param[in] cmd String to be sent over the opened socket.
+     * @param[in/out] buffer Buffer data to be filled with received answer.
+     * @param[in] buff_size Maximum data size to be saved in the buffer.
+     *
+     * @return True on success and false if:
+     * - socket is not opened
+     * - or sending failed
+     * - or time outed while waiting for reply
+     * - or received data size exceeds the buffer size
+     */
+    bool request(const std::string &cmd, char *buffer, size_t buff_size);
+};
+
 } // namespace nl80211
 } // namespace bwl
 
