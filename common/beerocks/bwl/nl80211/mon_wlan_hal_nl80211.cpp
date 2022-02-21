@@ -293,7 +293,8 @@ bool mon_wlan_hal_nl80211::update_stations_stats(const std::string &vap_iface_na
             }
 
             return true;
-        });
+        },
+        vap_iface_name);
 
     if (!ret) {
         LOG(ERROR) << "Failed updating stats for station: " << sta_mac;

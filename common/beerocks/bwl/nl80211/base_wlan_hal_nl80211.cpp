@@ -295,12 +295,14 @@ bool base_wlan_hal_nl80211::fsm_setup()
                     }
 
                     // Store the current interface index
-                    if ((m_iface_index = if_nametoindex(get_iface_name().c_str())) == 0) {
+                    int iface_index = if_nametoindex(get_iface_name().c_str());
+                    if (iface_index <= 0) {
                         LOG(ERROR) << "Failed reading the index of interface " << get_iface_name()
                                    << ": " << strerror(errno);
 
                         return false;
                     }
+                    m_iface_index.emplace(get_iface_name(), iface_index);
                 }
 
                 // Open a control interface to wpa_supplicant/hostapd.
@@ -434,6 +436,9 @@ bool base_wlan_hal_nl80211::fsm_setup()
             // Clear the WPA control interfaces:
             // That will disconnects all opened wpa_ctrl sockets.
             m_wpa_ctrl_client.clear_interfaces();
+
+            // Clear saved interface index
+            m_iface_index.clear();
 
             // Init ext event FDS queue
             m_fds_ext_events = {-1};
@@ -760,6 +765,7 @@ bool base_wlan_hal_nl80211::refresh_vaps_info(int id)
                 // clean wpa_ctrl_sockets which relative BSS is more valid (null mac)
                 auto &ifname = m_radio_info.available_vaps.at(vap_id).bss;
                 m_wpa_ctrl_client.del_interface(ifname);
+                m_iface_index.erase(ifname);
                 m_radio_info.available_vaps.erase(vap_id);
             }
 
@@ -786,6 +792,17 @@ bool base_wlan_hal_nl80211::refresh_vaps_info(int id)
             // and we can immediately connect to them (i.e attach)
             m_wpa_ctrl_client.get_socket_cmd(vap_element.bss)->connect();
             m_wpa_ctrl_client.get_socket_event(vap_element.bss)->connect();
+
+            // get vap interface index if not yet retrieved
+            if (m_iface_index.find(vap_element.bss) == m_iface_index.end()) {
+                int iface_index = if_nametoindex(vap_element.bss.c_str());
+                if (iface_index == 0) {
+                    LOG(ERROR) << "Failed reading the index of interface " << vap_element.bss
+                               << ": " << strerror(errno);
+                } else {
+                    m_iface_index.emplace(vap_element.bss, iface_index);
+                }
+            }
         }
 
         auto &mapped_vap_element = m_radio_info.available_vaps[vap_id];
@@ -908,8 +925,22 @@ void base_wlan_hal_nl80211::send_ctrl_iface_cmd(std::string cmd)
 
 bool base_wlan_hal_nl80211::send_nl80211_msg(uint8_t command, int flags,
                                              std::function<bool(struct nl_msg *msg)> msg_create,
-                                             std::function<bool(struct nl_msg *msg)> msg_handle)
+                                             std::function<bool(struct nl_msg *msg)> msg_handle,
+                                             const std::string &ifName)
 {
+
+    std::string iface_name = ifName;
+    if (ifName.empty()) {
+        iface_name = get_iface_name();
+    }
+    int iface_index;
+    if ((m_iface_index.find(iface_name) == m_iface_index.end()) ||
+        ((iface_index = m_iface_index.at(iface_name)) <= 0)) {
+        LOG(ERROR) << "Failed getting the index of interface " << iface_name;
+
+        return false;
+    }
+
     // Netlink Message
     std::shared_ptr<nl_msg> nl_message =
         std::shared_ptr<struct nl_msg>(nlmsg_alloc(), [](struct nl_msg *obj) {
@@ -961,7 +992,7 @@ bool base_wlan_hal_nl80211::send_nl80211_msg(uint8_t command, int flags,
 
     // Initialize the netlink message
     if (!genlmsg_put(nl_message.get(), 0, 0, m_nl80211_id, 0, flags, command, 0) ||
-        nla_put_u32(nl_message.get(), NL80211_ATTR_IFINDEX, m_iface_index) != 0) {
+        nla_put_u32(nl_message.get(), NL80211_ATTR_IFINDEX, iface_index) != 0) {
         LOG(ERROR) << "Failed initializing the netlink message!";
         return false;
     }

@@ -91,10 +91,12 @@ protected:
 
     virtual void send_ctrl_iface_cmd(std::string cmd); // HACK for development, to be removed
 
-    // Send NL80211 message
+    // Send NL80211 message to vap interface
+    // (default: Empty ifname will send msg to radio/MainBSS interface)
     bool send_nl80211_msg(uint8_t command, int flags,
                           std::function<bool(struct nl_msg *msg)> msg_create,
-                          std::function<bool(struct nl_msg *msg)> msg_handle);
+                          std::function<bool(struct nl_msg *msg)> msg_handle,
+                          const std::string &ifName = {});
 
     std::unique_ptr<nl80211_client> m_nl80211_client;
 
@@ -111,8 +113,10 @@ private:
 
     // NL80211 Socket
     std::shared_ptr<struct nl_sock> m_nl80211_sock;
-    int m_nl80211_id  = 0;
-    int m_iface_index = 0;
+    int m_nl80211_id = 0;
+
+    // map of network interface index of vap interfaces
+    std::map<std::string, int> m_iface_index;
 
     // WPA Control Interface Communication Buffer
     std::shared_ptr<char> m_wpa_ctrl_buffer;
