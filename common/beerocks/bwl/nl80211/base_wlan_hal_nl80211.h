@@ -21,7 +21,6 @@
 #include <unordered_map>
 
 // Forward declaration
-struct wpa_ctrl;
 struct nl_sock;
 struct nl_msg;
 
@@ -81,11 +80,14 @@ protected:
     bool set(const std::string &param, const std::string &value,
              int vap_id = beerocks::IFACE_RADIO_ID);
 
-    // Send a message via the WPA Control Interface
-    bool wpa_ctrl_send_msg(const std::string &cmd, parsed_obj_map_t &reply);
-    bool wpa_ctrl_send_msg(const std::string &cmd, parsed_obj_listed_map_t &reply);
-    bool wpa_ctrl_send_msg(const std::string &cmd, char **reply); // for external process
-    bool wpa_ctrl_send_msg(const std::string &cmd);
+    // Send a message via WPA Control Interface
+    // (default: Empty ifname will send msg to radio/MainBSS interface)
+    bool wpa_ctrl_send_msg(const std::string &cmd, parsed_obj_map_t &reply,
+                           const std::string &ifname = {});
+    bool wpa_ctrl_send_msg(const std::string &cmd, parsed_obj_listed_map_t &reply,
+                           const std::string &ifname = {});
+    bool wpa_ctrl_send_msg(const std::string &cmd, char **reply, const std::string &ifname = {});
+    bool wpa_ctrl_send_msg(const std::string &cmd, const std::string &ifname = {});
 
     virtual void send_ctrl_iface_cmd(std::string cmd); // HACK for development, to be removed
 
@@ -104,10 +106,6 @@ private:
     nl80211_fsm_state m_last_attach_state = nl80211_fsm_state::Detach;
     std::chrono::steady_clock::time_point m_state_timeout;
 
-    // WPA Control Interface Objects
-    struct wpa_ctrl *m_wpa_ctrl_cmd   = nullptr;
-    struct wpa_ctrl *m_wpa_ctrl_event = nullptr;
-
     // Manager of WPA Control Interface Objects
     wpa_ctrl_client m_wpa_ctrl_client;
 
@@ -119,9 +117,6 @@ private:
     // WPA Control Interface Communication Buffer
     std::shared_ptr<char> m_wpa_ctrl_buffer;
     size_t m_wpa_ctrl_buffer_size = 0;
-
-    // Path for the WPA Control Interface Socket
-    std::string m_wpa_ctrl_path;
 
     /**
      * @brief Register interface for WPA Control handling.

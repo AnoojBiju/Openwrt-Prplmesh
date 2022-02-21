@@ -13,13 +13,10 @@
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
 #include <bcl/son/son_wireless_utils.h>
+#include <bwl/key_value_parser.h>
 #include <bwl/nl80211_client_factory.h>
 
 #include <easylogging++.h>
-
-extern "C" {
-#include <wpa_ctrl.h>
-}
 
 #include <linux/nl80211.h>
 #include <net/if.h>
@@ -147,11 +144,11 @@ static void map_event_obj_parser(std::string event_str,
         auto idx = str_storage.find_first_of('=', idx_start);
         if (idx == std::string::npos) {
             if (!opcode) {
-                map_obj["_opcode"] = str_storage;
-                opcode             = true;
+                map_obj[bwl::EVENT_KEYLESS_PARAM_OPCODE] = str_storage;
+                opcode                                   = true;
             } else if (!mac && beerocks::net::network_utils::is_valid_mac(str_storage)) {
-                map_obj["_mac"] = str_storage;
-                mac             = true;
+                map_obj[bwl::EVENT_KEYLESS_PARAM_MAC] = str_storage;
+                mac                                   = true;
             } else {
                 map_obj["_arg" + std::to_string(arg++)] = str_storage;
             }
@@ -219,7 +216,7 @@ base_wlan_hal_nl80211::base_wlan_hal_nl80211(HALType type, const std::string &if
         });
     }
 
-    m_wpa_ctrl_path = hal_conf.wpa_ctrl_path;
+    register_wpa_ctrl_interface(iface_name);
 
     // Initialize the FSM
     fsm_setup();
@@ -307,13 +304,20 @@ bool base_wlan_hal_nl80211::fsm_setup()
                 }
 
                 // Open a control interface to wpa_supplicant/hostapd.
-                if ((m_wpa_ctrl_cmd = wpa_ctrl_open(m_wpa_ctrl_path.c_str()))) {
+                auto wpa_ctrl_cmd = m_wpa_ctrl_client.get_socket_cmd(get_iface_name());
+                if (!wpa_ctrl_cmd) {
+                    LOG(ERROR) << "wpa_ctrl socket not found for interface " << get_iface_name();
+                    return false;
+                }
+                if (wpa_ctrl_cmd->connect()) {
                     if (get_type() != HALType::Station) {
                         transition.change_destination(nl80211_fsm_state::GetRadioInfo);
                     }
                     return true;
                 } else {
-                    LOG(DEBUG) << "wpa_ctrl_open() failed, ctrl_iface_path: " << m_wpa_ctrl_path;
+                    LOG(DEBUG)
+                        << "fail to open a wpa_ctrl_cmd sock to hostapd/wpa_sup, ctrl_iface_path:"
+                        << wpa_ctrl_cmd->path();
                 }
 
                 // False if timeout not reached yet, and True otherwise (switch state)
@@ -373,25 +377,26 @@ bool base_wlan_hal_nl80211::fsm_setup()
         .on(nl80211_fsm_event::Attach, {nl80211_fsm_state::Operational, nl80211_fsm_state::Delay},
             [&](TTransition &transition, const void *args) -> bool {
                 // Open a event interface to wpa_supplicant/hostapd.
-                if (!(m_wpa_ctrl_event = wpa_ctrl_open(m_wpa_ctrl_path.c_str()))) {
-                    LOG(DEBUG) << "wpa_ctrl_open() failed, ctrl_iface_path: " << m_wpa_ctrl_path;
+                auto wpa_ctrl_event = m_wpa_ctrl_client.get_socket_event(get_iface_name());
+                if (!wpa_ctrl_event) {
+                    LOG(ERROR) << "wpa_ctrl_event socket not found for interface "
+                               << get_iface_name();
+                    return false;
+                }
+
+                // Connect to wpa_supplicant/hostapd for events receiving
+                int result = wpa_ctrl_event->connect();
+
+                // Opened fd is auto added by wpa_ctrl_client to ext_fds list
+                if (wpa_ctrl_event->fd() == -1) {
+                    LOG(DEBUG) << "Open a event sock to hostapd/wpa_sup: "
+                               << wpa_ctrl_event->path();
                     return (transition.change_destination(nl80211_fsm_state::Delay));
                 }
 
-                // Get the wpa_supplicant/hostapd event interface file descriptor
-                m_fds_ext_events[0] = wpa_ctrl_get_fd(static_cast<wpa_ctrl *>(m_wpa_ctrl_event));
-
-                // Attach to the control interface for events receiving
-                int result;
-                int try_cnt = 0;
-                do {
-                    result = wpa_ctrl_attach(
-                        m_wpa_ctrl_event); // return values: 0 on success, -1 on failure, -2 on timeout
-                } while (result == -2 && ++try_cnt < 3);
-
-                if (result < 0) {
+                if (result == 0) {
                     // Return with error
-                    LOG(ERROR) << "Failed attaching to control interface of "
+                    LOG(ERROR) << "Failed attaching to event interface of "
                                << m_radio_info.iface_name;
                     return (transition.change_destination(nl80211_fsm_state::Delay));
                 }
@@ -420,35 +425,22 @@ bool base_wlan_hal_nl80211::fsm_setup()
         .entry([&](const void *args) -> bool {
             LOG(DEBUG) << "nl80211_attach_fsm - Detaching...";
 
-            // Detach from the WPA control interface
-            if (m_wpa_ctrl_event) {
-                int result;
-                int try_cnt = 0;
-                do {
-                    result = wpa_ctrl_detach(
-                        m_wpa_ctrl_event); // return values: 0 on success, -1 on failure, -2 on timeout
-                } while (result == -2 && ++try_cnt < 3);
-
-                if (result < 0) {
-                    LOG(WARNING) << "can't detach wpa_ctrl_event";
-                }
-            }
-
             // Release the nl80211 socket
             if (m_nl80211_sock) {
                 m_nl80211_sock.reset();
                 m_nl80211_id = 0;
             }
 
-            // Close the events control interface
-            wpa_ctrl_close(m_wpa_ctrl_event);
-            wpa_ctrl_close(m_wpa_ctrl_cmd);
-
-            m_wpa_ctrl_event = nullptr;
-            m_wpa_ctrl_cmd   = nullptr;
+            // Clear the WPA control interfaces:
+            // That will disconnects all opened wpa_ctrl sockets.
+            m_wpa_ctrl_client.clear_interfaces();
 
             // Init ext event FDS queue
             m_fds_ext_events = {-1};
+
+            // Re-register primary vap entry
+            // to be ready for new FSM Attach
+            register_wpa_ctrl_interface(get_iface_name());
 
             return true;
         })
@@ -527,37 +519,26 @@ bool base_wlan_hal_nl80211::ping()
     return true;
 }
 
-bool base_wlan_hal_nl80211::wpa_ctrl_send_msg(const std::string &cmd)
+bool base_wlan_hal_nl80211::wpa_ctrl_send_msg(const std::string &cmd, const std::string &ifname)
 {
-    int result;
-    int try_cnt = 0;
+    std::string iface_name = ifname;
+    if (ifname.empty()) {
+        iface_name = get_iface_name();
+    }
 
-    if (!m_wpa_ctrl_cmd) {
+    auto wpa_ctrl_cmd = m_wpa_ctrl_client.get_socket_cmd(iface_name);
+    if (!wpa_ctrl_cmd) {
         LOG(ERROR) << "Control socket not available!";
         return false;
     }
 
     auto buffer = m_wpa_ctrl_buffer.get();
 
-    auto buff_size_copy = m_wpa_ctrl_buffer_size;
-    do {
-        result = wpa_ctrl_request(m_wpa_ctrl_cmd, cmd.c_str(), cmd.size(), buffer, &buff_size_copy,
-                                  NULL);
-    } while (result == -2 && ++try_cnt < 3);
-
-    if (result < 0) {
+    if (!wpa_ctrl_cmd->request(cmd, buffer, m_wpa_ctrl_buffer_size)) {
         LOG(ERROR) << "can't send wpa_ctrl_request";
         LOG(ERROR) << "failed cmd: " << cmd;
         return false;
     }
-
-    if (buff_size_copy >= m_wpa_ctrl_buffer_size) {
-        LOG(ERROR) << "wpa_ctrl_request returned reply of size " << buff_size_copy;
-        return false;
-    }
-
-    buffer[buff_size_copy] =
-        0; // the wpa_ctrl does not put null terminator at the and of the string
 
     if ((!strncmp(buffer, "FAIL", 4)) || (!strncmp(buffer, "UNKNOWN", 7))) {
         LOG(DEBUG) << std::endl << "cmd failed: " << cmd;
@@ -568,9 +549,10 @@ bool base_wlan_hal_nl80211::wpa_ctrl_send_msg(const std::string &cmd)
     return true;
 }
 
-bool base_wlan_hal_nl80211::wpa_ctrl_send_msg(const std::string &cmd, parsed_obj_map_t &reply)
+bool base_wlan_hal_nl80211::wpa_ctrl_send_msg(const std::string &cmd, parsed_obj_map_t &reply,
+                                              const std::string &ifname)
 {
-    if (!wpa_ctrl_send_msg(cmd)) {
+    if (!wpa_ctrl_send_msg(cmd, ifname)) {
         return false;
     }
 
@@ -584,9 +566,10 @@ bool base_wlan_hal_nl80211::wpa_ctrl_send_msg(const std::string &cmd, parsed_obj
 }
 
 bool base_wlan_hal_nl80211::wpa_ctrl_send_msg(const std::string &cmd,
-                                              parsed_obj_listed_map_t &reply)
+                                              parsed_obj_listed_map_t &reply,
+                                              const std::string &ifname)
 {
-    if (!wpa_ctrl_send_msg(cmd)) {
+    if (!wpa_ctrl_send_msg(cmd, ifname)) {
         return false;
     }
 
@@ -599,14 +582,15 @@ bool base_wlan_hal_nl80211::wpa_ctrl_send_msg(const std::string &cmd,
     return true;
 }
 
-bool base_wlan_hal_nl80211::wpa_ctrl_send_msg(const std::string &cmd, char **reply)
+bool base_wlan_hal_nl80211::wpa_ctrl_send_msg(const std::string &cmd, char **reply,
+                                              const std::string &ifname)
 {
     if (!reply || !(*reply)) {
         LOG(ERROR) << "Invalid reply pointer!";
         return false;
     }
 
-    if (!wpa_ctrl_send_msg(cmd)) {
+    if (!wpa_ctrl_send_msg(cmd, ifname)) {
         return false;
     }
 
@@ -772,6 +756,10 @@ bool base_wlan_hal_nl80211::refresh_vaps_info(int id)
         // VAP does not exists
         if (vap_element.mac.empty()) {
             if (m_radio_info.available_vaps.find(vap_id) != m_radio_info.available_vaps.end()) {
+
+                // clean wpa_ctrl_sockets which relative BSS is more valid (null mac)
+                auto &ifname = m_radio_info.available_vaps.at(vap_id).bss;
+                m_wpa_ctrl_client.del_interface(ifname);
                 m_radio_info.available_vaps.erase(vap_id);
             }
 
@@ -786,6 +774,19 @@ bool base_wlan_hal_nl80211::refresh_vaps_info(int id)
         // was pre-inserted when configured the BSSs. Therefore, not overriding the whole struct at
         // the mapped value of "available_vaps[vap_id]", instead copy the struct members one by one,
         // if possible.
+
+        // Secondary BSSs are detected in STATUS reply.
+        // At that time, the relative wpa_ctrl socket files are created.
+        // Only refresh primary BSS or those BSSs to be monitored.
+        if (!register_wpa_ctrl_interface(vap_element.bss)) {
+            LOG(DEBUG) << "Skip non-monitored VAP ID (" << vap_id << ") - BSS: " << vap_element.bss;
+            return true;
+        } else {
+
+            // and we can immediately connect to them (i.e attach)
+            m_wpa_ctrl_client.get_socket_cmd(vap_element.bss)->connect();
+            m_wpa_ctrl_client.get_socket_event(vap_element.bss)->connect();
+        }
 
         auto &mapped_vap_element = m_radio_info.available_vaps[vap_id];
         if (mapped_vap_element.bss.empty()) {
@@ -831,34 +832,26 @@ bool base_wlan_hal_nl80211::refresh_vaps_info(int id)
 
 bool base_wlan_hal_nl80211::process_ext_events(int fd)
 {
-    if (!m_wpa_ctrl_event) {
-        LOG(ERROR) << "Invalid WPA Control socket (m_wpa_ctrl_event == nullptr)";
+    auto wpa_ctrl_event = m_wpa_ctrl_client.get_socket_event(fd);
+    if (!wpa_ctrl_event) {
+        LOG(ERROR) << "Invalid wpa_ctrl_event socket";
         return false;
     }
 
     // Check if there are pending events
-    int status = wpa_ctrl_pending(m_wpa_ctrl_event);
+    int status = wpa_ctrl_event->pending();
 
     // No pending messages
     if (status == 0) {
         LOG(WARNING) << "Process external events called but there are no pending messages...";
         return false;
-    } else if (status < 0) {
-        LOG(ERROR) << "Invalid WPA Control socket status: " << status << " --> detaching!";
-        detach();
-        return false;
     }
 
-    auto buffer         = m_wpa_ctrl_buffer.get();
-    auto buff_size_copy = m_wpa_ctrl_buffer_size;
-
-    if (wpa_ctrl_recv(m_wpa_ctrl_event, buffer, &buff_size_copy) < 0) {
+    auto buffer = m_wpa_ctrl_buffer.get();
+    if (wpa_ctrl_event->receive(buffer, m_wpa_ctrl_buffer_size) == 0) {
         LOG(ERROR) << "wpa_ctrl_recv() failed!";
         return false;
     }
-
-    // the wpa_ctrl does not put null termintaor at the and of the string
-    buffer[buff_size_copy] = 0;
 
     LOG(DEBUG) << "event received:" << buffer;
 
