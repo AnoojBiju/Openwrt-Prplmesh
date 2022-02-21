@@ -569,7 +569,7 @@ bool Monitor::monitor_fsm()
             mon_db.poll_done();
         }
 
-        if (now >= mon_db.get_ap_poll_next_time()) {
+        if (now >= (mon_db.get_ap_poll_next_time() - polling_timer_buffer_msec)) {
             mon_db.set_ap_poll_next_time(
                 now + std::chrono::seconds(mon_db.MONITOR_DB_AP_POLLING_RATE_SEC));
 
@@ -614,7 +614,7 @@ bool Monitor::monitor_fsm()
         }
 
         // Break if measurement_window_msec didn't pass
-        if (now < mon_db.get_last_stats_update_time()) {
+        if (now < (mon_db.get_last_stats_update_time() - polling_timer_buffer_msec)) {
             return true;
         }
         mon_db.set_last_stats_update_time(
