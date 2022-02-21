@@ -146,10 +146,9 @@ bool nl80211_client_dummy::set_tx_power_limit(const std::string &interface_name,
     return true;
 }
 
-bool nl80211_client_dummy::get_tx_power_limit_dbm(const std::string &interface_name,
-                                                  uint32_t &limit)
+bool nl80211_client_dummy::get_tx_power_dbm(const std::string &interface_name, uint32_t &power)
 {
-    limit = 10;
+    power = 10;
     return true;
 }
 

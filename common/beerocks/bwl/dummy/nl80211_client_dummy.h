@@ -90,13 +90,13 @@ public:
     bool set_tx_power_limit(const std::string &interface_name, uint32_t limit) override;
 
     /**
-     * @brief Get the tx power limit
+     * @brief Get the tx power
      *
      * @param[in] interface_name radio interface name.
-     * @param[out] limit tx power limit in dBm.
+     * @param[out] power tx power in dBm.
      * @return true success and false otherwise
      */
-    bool get_tx_power_limit_dbm(const std::string &interface_name, uint32_t &limit) override;
+    bool get_tx_power_dbm(const std::string &interface_name, uint32_t &power) override;
 
     bool channel_scan_abort(const std::string &interface_name) override;
 };

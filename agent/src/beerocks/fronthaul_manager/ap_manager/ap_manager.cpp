@@ -1306,8 +1306,20 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
         if (perform_update) {
             ap_wlan_hal->update_vap_credentials(bss_info_conf_list, backhaul_wps_ssid,
                                                 backhaul_wps_passphrase);
-        }
 
+            // hostapd is enabled and started radio beaconing after autoconfiguration
+            // then radio tx power is updated, so to keep agent DB updated send CSA notification
+            // like it is handled in cACTION_APMANAGER_ENABLE_APS_REQUEST.
+            auto csa_notification = message_com::create_vs_message<
+                beerocks_message::cACTION_APMANAGER_HOSTAP_CSA_NOTIFICATION>(cmdu_tx);
+            if (!csa_notification) {
+                LOG(ERROR) << "Failed building message!";
+                return;
+            }
+            ap_wlan_hal->refresh_radio_info();
+            fill_cs_params(csa_notification->cs_params());
+            send_cmdu(cmdu_tx);
+        }
         break;
     }
     case beerocks_message::ACTION_APMANAGER_START_WPS_PBC_REQUEST: {

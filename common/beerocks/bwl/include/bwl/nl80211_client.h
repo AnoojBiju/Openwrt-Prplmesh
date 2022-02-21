@@ -494,19 +494,19 @@ public:
     virtual bool set_tx_power_limit(const std::string &interface_name, uint32_t limit) = 0;
 
     /**
-     * @brief Get the tx power limit
+     * @brief Get the tx power
      *
      * @param[in] interface_name radio interface name.
-     * @param[out] limit tx power limit in dBm.
+     * @param[out] power tx power in dBm.
      * @return true success and false otherwise
      */
-    virtual bool get_tx_power_limit_dbm(const std::string &interface_name, uint32_t &limit) = 0;
+    virtual bool get_tx_power_dbm(const std::string &interface_name, uint32_t &power) = 0;
 
     /**
      * @brief Abort the in-progress channel scan for the interface
      *
      * @param[in] interface_name radio interface name.
-     * 
+     *
      * @return true on success and false otherwise.
      */
     virtual bool channel_scan_abort(const std::string &interface_name) = 0;
