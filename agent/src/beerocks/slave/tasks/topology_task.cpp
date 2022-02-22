@@ -511,7 +511,13 @@ bool TopologyTask::add_device_information_tlv()
                  radio->back.iface_name != db->backhaul.selected_iface_name)) {
                 media_info.network_membership = network_utils::ZERO_MAC;
             } else {
-                media_info.network_membership = radio->back.iface_mac;
+                if (db->backhaul.connection_type == AgentDB::sBackhaul::eConnectionType::Wireless &&
+                    radio->back.iface_name == db->backhaul.selected_iface_name) {
+                    // backhaul STA
+                    media_info.network_membership = db->backhaul.backhaul_bssid;
+                } else {
+                    media_info.network_membership = radio->back.iface_mac;
+                }
             }
 
             media_info.role =
