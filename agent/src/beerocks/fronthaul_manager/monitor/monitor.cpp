@@ -231,8 +231,10 @@ void Monitor::on_thread_stop()
             m_event_loop->remove_handlers(m_arp_fd);
         }
 
-        if (m_mon_hal_ext_events > 0) {
-            m_event_loop->remove_handlers(m_mon_hal_ext_events);
+        for (auto &fd : m_mon_hal_ext_events) {
+            if (fd > 0) {
+                m_event_loop->remove_handlers(fd);
+            }
         }
 
         if (m_mon_hal_int_events > 0) {
@@ -297,14 +299,19 @@ bool Monitor::monitor_fsm()
             update_vaps_in_db();
 
             // External events
-            m_mon_hal_ext_events = mon_wlan_hal->get_ext_events_fd();
-            if (m_mon_hal_ext_events > 0) {
+            int ext_event_fd_max = -1;
+            m_mon_hal_ext_events = mon_wlan_hal->get_ext_events_fds();
+            if (m_mon_hal_ext_events.empty()) {
+                ext_event_fd_max = 0;
+                LOG(DEBUG)
+                    << "No external event FD is available, periodic polling will be done instead.";
+            } else {
                 beerocks::EventLoop::EventHandlers ext_events_handlers{
                     .name = "mon_hal_ext_events",
                     .on_read =
                         [&](int fd, EventLoop &loop) {
-                            if (!mon_wlan_hal->process_ext_events()) {
-                                LOG(ERROR) << "process_ext_events() failed!";
+                            if (!mon_wlan_hal->process_ext_events(fd)) {
+                                LOG(ERROR) << "process_ext_events(" << fd << " failed!";
                                 return false;
                             }
                             return true;
@@ -312,30 +319,44 @@ bool Monitor::monitor_fsm()
                     .on_write = nullptr,
                     .on_disconnect =
                         [&](int fd, EventLoop &loop) {
-                            LOG(ERROR) << "mon_hal_ext_events disconnected!";
-                            m_mon_hal_ext_events =
-                                beerocks::net::FileDescriptor::invalid_descriptor;
+                            LOG(ERROR) << "mon_hal_ext_events disconnected! on fd " << fd;
+                            auto it = std::find(m_mon_hal_ext_events.begin(),
+                                                m_mon_hal_ext_events.end(), fd);
+                            if (it != m_mon_hal_ext_events.end()) {
+                                *it = beerocks::net::FileDescriptor::invalid_descriptor;
+                            }
                             return false;
                         },
                     .on_error =
                         [&](int fd, EventLoop &loop) {
-                            LOG(ERROR) << "mon_hal_ext_events error!";
-                            m_mon_hal_ext_events =
-                                beerocks::net::FileDescriptor::invalid_descriptor;
+                            LOG(ERROR) << "mon_hal_ext_events error! on fd " << fd;
+                            auto it = std::find(m_mon_hal_ext_events.begin(),
+                                                m_mon_hal_ext_events.end(), fd);
+                            if (it != m_mon_hal_ext_events.end()) {
+                                *it = beerocks::net::FileDescriptor::invalid_descriptor;
+                            }
                             return false;
                         },
                 };
-                if (!m_event_loop->register_handlers(m_mon_hal_ext_events, ext_events_handlers)) {
-                    LOG(ERROR) << "Unable to register handlers for external events queue!";
-                    return false;
+                for (auto &ext_event_fd : m_mon_hal_ext_events) {
+                    if (ext_event_fd > 0) {
+                        if (!m_event_loop->register_handlers(ext_event_fd, ext_events_handlers)) {
+                            LOG(ERROR) << "Unable to register handlers for external events fd "
+                                       << ext_event_fd;
+                            return false;
+                        }
+                        LOG(DEBUG) << "External events queue with fd = " << ext_event_fd;
+                    } else if (ext_event_fd < 0) {
+                        ext_event_fd = beerocks::net::FileDescriptor::invalid_descriptor;
+                    }
+                    ext_event_fd_max = std::max(ext_event_fd_max, ext_event_fd);
                 }
-                LOG(DEBUG) << "External events queue with fd = " << m_mon_hal_ext_events;
-            } else if (m_mon_hal_ext_events == 0) {
+            }
+            if (ext_event_fd_max == 0) {
                 LOG(DEBUG)
                     << "No external event FD is available, periodic polling will be done instead.";
-            } else {
-                LOG(ERROR) << "Invalid external event file descriptor: " << m_mon_hal_ext_events;
-                m_mon_hal_ext_events = beerocks::net::FileDescriptor::invalid_descriptor;
+            } else if (ext_event_fd_max < 0) {
+                LOG(ERROR) << "Invalid external event file descriptors: " << ext_event_fd_max;
                 return false;
             }
 
@@ -496,7 +517,9 @@ bool Monitor::monitor_fsm()
     } else {
 
         // Process external events
-        if (m_mon_hal_ext_events == 0) {
+        auto itFdMax =
+            std::max_element(std::begin(m_mon_hal_ext_events), std::end(m_mon_hal_ext_events));
+        if (itFdMax == std::end(m_mon_hal_ext_events) || *itFdMax == 0) {
             // There is no socket for external events, so we simply try
             // to process any available periodically
             if (!mon_wlan_hal->process_ext_events()) {
@@ -1341,6 +1364,19 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
             return;
         }
 
+        std::string sta_mac = tlvf::mac_to_string(request->params().sta_mac);
+        auto sta_node       = mon_db.sta_find(sta_mac);
+        if (sta_node == nullptr) {
+            LOG(ERROR) << "CLIENT_BEACON_11K_REQUEST sta_mac=" << sta_mac
+                       << " sta not assoc, id=" << beerocks_header->id();
+            return;
+        }
+        auto vap_node = mon_db.vap_get_by_id(sta_node->get_vap_id());
+        if (!vap_node) {
+            LOG(ERROR) << "station " << sta_mac << " has no vap";
+            return;
+        }
+
         int dialog_token;
 
         // TODO: TEMPORARY CONVERSION!
@@ -1375,7 +1411,7 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
         bwl_request.new_ch_center_freq_seg_1 = request->params().new_ch_center_freq_seg_1;
         bwl_request.reporting_detail         = request->params().reporting_detail;
 
-        mon_wlan_hal->sta_beacon_11k_request(bwl_request, dialog_token);
+        mon_wlan_hal->sta_beacon_11k_request(vap_node->get_iface(), bwl_request, dialog_token);
 
         sEvent11k event_11k = {tlvf::mac_to_string(request->params().sta_mac), dialog_token,
                                std::chrono::steady_clock::now(), beerocks_header->id()};
@@ -1398,6 +1434,18 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
         }
 
         // debug_channel_load_11k_request(request);
+        std::string sta_mac = tlvf::mac_to_string(request->params().sta_mac);
+        auto sta_node       = mon_db.sta_find(sta_mac);
+        if (sta_node == nullptr) {
+            LOG(ERROR) << "CLIENT_CHANNEL_LOAD_11K_REQUEST sta_mac=" << sta_mac
+                       << " sta not assoc, id=" << beerocks_header->id();
+            return;
+        }
+        auto vap_node = mon_db.vap_get_by_id(sta_node->get_vap_id());
+        if (!vap_node) {
+            LOG(ERROR) << "station " << sta_mac << " has no vap";
+            return;
+        }
 
         // TODO: TEMPORARY CONVERSION!
         bwl::SStaChannelLoadRequest11k bwl_request;
@@ -1422,7 +1470,7 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
         bwl_request.new_ch_center_freq_seg_1 = request->params().new_ch_center_freq_seg_1;
         tlvf::mac_to_array(request->params().sta_mac, bwl_request.sta_mac.oct);
 
-        mon_wlan_hal->sta_channel_load_11k_request(bwl_request);
+        mon_wlan_hal->sta_channel_load_11k_request(vap_node->get_iface(), bwl_request);
         break;
     }
     case beerocks_message::ACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST: {

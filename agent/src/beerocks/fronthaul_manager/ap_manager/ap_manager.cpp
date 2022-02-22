@@ -391,8 +391,10 @@ bool ApManager::stop()
     }
 
     if (ap_wlan_hal) {
-        if (m_ap_hal_ext_events > 0) {
-            m_event_loop->remove_handlers(m_ap_hal_ext_events);
+        for (auto &fd : m_ap_hal_ext_events) {
+            if (fd > 0) {
+                m_event_loop->remove_handlers(fd);
+            }
         }
 
         if (m_ap_hal_int_events > 0) {
@@ -472,14 +474,17 @@ bool ApManager::ap_manager_fsm(bool &continue_processing)
     }
     case eApManagerState::ATTACHED: {
         // External events
-        m_ap_hal_ext_events = ap_wlan_hal->get_ext_events_fd();
-        if (m_ap_hal_ext_events > 0) {
+        int ext_event_fd_max = -1;
+        m_ap_hal_ext_events  = ap_wlan_hal->get_ext_events_fds();
+        if (m_ap_hal_ext_events.empty()) {
+            ext_event_fd_max = 0;
+        } else {
             beerocks::EventLoop::EventHandlers ext_events_handlers{
                 .name = "ap_hal_ext_events",
                 .on_read =
                     [&](int fd, EventLoop &loop) {
-                        if (!ap_wlan_hal->process_ext_events()) {
-                            LOG(ERROR) << "process_ext_events() failed!";
+                        if (!ap_wlan_hal->process_ext_events(fd)) {
+                            LOG(ERROR) << "process_ext_events(" << fd << ") failed!";
                             return false;
                         }
                         return true;
@@ -487,27 +492,44 @@ bool ApManager::ap_manager_fsm(bool &continue_processing)
                 .on_write = nullptr,
                 .on_disconnect =
                     [&](int fd, EventLoop &loop) {
-                        LOG(ERROR) << "ap_hal_ext_events disconnected!";
-                        m_ap_hal_ext_events = beerocks::net::FileDescriptor::invalid_descriptor;
+                        LOG(ERROR) << "ap_hal_ext_event disconnected! on fd " << fd;
+                        auto it =
+                            std::find(m_ap_hal_ext_events.begin(), m_ap_hal_ext_events.end(), fd);
+                        if (it != m_ap_hal_ext_events.end()) {
+                            *it = beerocks::net::FileDescriptor::invalid_descriptor;
+                        }
                         return false;
                     },
                 .on_error =
                     [&](int fd, EventLoop &loop) {
-                        LOG(ERROR) << "ap_hal_ext_events error!";
-                        m_ap_hal_ext_events = beerocks::net::FileDescriptor::invalid_descriptor;
+                        LOG(ERROR) << "ap_hal_ext_events error! on fd " << fd;
+                        auto it =
+                            std::find(m_ap_hal_ext_events.begin(), m_ap_hal_ext_events.end(), fd);
+                        if (it != m_ap_hal_ext_events.end()) {
+                            *it = beerocks::net::FileDescriptor::invalid_descriptor;
+                        }
                         return false;
                     },
             };
-            if (!m_event_loop->register_handlers(m_ap_hal_ext_events, ext_events_handlers)) {
-                LOG(ERROR) << "Unable to register handlers for external events queue!";
-                return false;
+            for (auto &ext_event_fd : m_ap_hal_ext_events) {
+                if (ext_event_fd > 0) {
+                    if (!m_event_loop->register_handlers(ext_event_fd, ext_events_handlers)) {
+                        LOG(ERROR)
+                            << "Unable to register handlers for external event fd " << ext_event_fd;
+                        return false;
+                    } else if (ext_event_fd < 0) {
+                        ext_event_fd = beerocks::net::FileDescriptor::invalid_descriptor;
+                    }
+                    LOG(DEBUG) << "External events queue with fd = " << ext_event_fd;
+                }
+                ext_event_fd_max = std::max(ext_event_fd_max, ext_event_fd);
             }
-            LOG(DEBUG) << "External events queue with fd = " << m_ap_hal_ext_events;
-        } else if (m_ap_hal_ext_events == 0) {
+        }
+        if (ext_event_fd_max == 0) {
             LOG(DEBUG)
                 << "No external event FD is available, periodic polling will be done instead.";
-        } else {
-            LOG(ERROR) << "Invalid external event file descriptor: " << m_ap_hal_ext_events;
+        } else if (ext_event_fd_max < 0) {
+            LOG(ERROR) << "Invalid external event file descriptors: " << ext_event_fd_max;
             return false;
         }
 
@@ -564,7 +586,9 @@ bool ApManager::ap_manager_fsm(bool &continue_processing)
     }
     case eApManagerState::OPERATIONAL: {
         // Process external events
-        if (m_ap_hal_ext_events == 0) {
+        auto itFdMax =
+            std::max_element(std::begin(m_ap_hal_ext_events), std::end(m_ap_hal_ext_events));
+        if (itFdMax == std::end(m_ap_hal_ext_events) || *itFdMax == 0) {
             // There is no socket for external events, so we simply try
             // to process any available periodically
             if (!ap_wlan_hal->process_ext_events()) {
@@ -1220,7 +1244,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
                    << " to bssid = " << target_bssid
                    << " channel = " << int(request->params().target.channel);
         ap_wlan_hal->sta_bss_steer(
-            sta_mac, target_bssid, request->params().target.operating_class,
+            it->first, sta_mac, target_bssid, request->params().target.operating_class,
             request->params().target.channel,
             (disassoc_imminent) ? (request->params().disassoc_timer_ms / BEACON_TRANSMIT_TIME_MS)
                                 : 0,

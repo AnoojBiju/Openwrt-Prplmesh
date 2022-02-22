@@ -147,7 +147,7 @@ private:
     /**
      * File descriptor to the external events queue.
      */
-    int m_ap_hal_ext_events = beerocks::net::FileDescriptor::invalid_descriptor;
+    std::vector<int> m_ap_hal_ext_events = {beerocks::net::FileDescriptor::invalid_descriptor};
 
     /**
      * File descriptor to the internal events queue.

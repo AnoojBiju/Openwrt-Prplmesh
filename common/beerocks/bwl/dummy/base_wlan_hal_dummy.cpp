@@ -284,7 +284,7 @@ base_wlan_hal_dummy::base_wlan_hal_dummy(HALType type, const std::string &iface_
     // Open the events FIFO for Read-Write. This is necessary to ensure that the FIFO file
     // always has at-least one "writer". Otherwise the FIFO is automatically closed by the
     // OS when writing data externally using "echo".
-    if ((m_fd_ext_events = open(m_dummy_event_file.c_str(), O_RDWR | O_NONBLOCK)) == -1) {
+    if ((m_fds_ext_events[0] = open(m_dummy_event_file.c_str(), O_RDWR | O_NONBLOCK)) == -1) {
         LOG(FATAL) << "Failed opening events file: " << strerror(errno);
     }
 
@@ -295,9 +295,9 @@ base_wlan_hal_dummy::base_wlan_hal_dummy(HALType type, const std::string &iface_
 base_wlan_hal_dummy::~base_wlan_hal_dummy()
 {
     // Close the dummy events FIFO
-    if (m_fd_ext_events != -1) {
-        close(m_fd_ext_events);
-        m_fd_ext_events = -1;
+    if (m_fds_ext_events[0] != -1) {
+        close(m_fds_ext_events[0]);
+        m_fds_ext_events[0] = -1;
 
         // Remove the FIFO file
         unlink(m_dummy_event_file.c_str());
@@ -437,13 +437,13 @@ bool base_wlan_hal_dummy::refresh_vaps_info(int id) { return true; }
  * @return true on success
  * @return false on failure
  */
-bool base_wlan_hal_dummy::process_ext_events()
+bool base_wlan_hal_dummy::process_ext_events(int fd)
 {
     LOG(TRACE) << "Processing external dummy event...";
 
     // Read the event from the FIFO
     memset(m_event_data, 0, sizeof(m_event_data));
-    int read_bytes = read(m_fd_ext_events, m_event_data, sizeof(m_event_data));
+    int read_bytes = read(m_fds_ext_events[0], m_event_data, sizeof(m_event_data));
     if (read_bytes <= 0) {
         LOG(ERROR) << "Failed reading event: " << strerror(errno);
         return false;

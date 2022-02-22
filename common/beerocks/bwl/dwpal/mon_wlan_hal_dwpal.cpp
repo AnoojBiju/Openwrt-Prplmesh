@@ -865,14 +865,16 @@ bool mon_wlan_hal_dwpal::update_stations_stats(const std::string &vap_iface_name
     return true;
 }
 
-bool mon_wlan_hal_dwpal::sta_channel_load_11k_request(const SStaChannelLoadRequest11k &req)
+bool mon_wlan_hal_dwpal::sta_channel_load_11k_request(const std::string &vap_iface_name,
+                                                      const SStaChannelLoadRequest11k &req)
 {
     LOG(TRACE) << __func__;
 
     return true;
 }
 
-bool mon_wlan_hal_dwpal::sta_beacon_11k_request(const SBeaconRequest11k &req, int &dialog_token)
+bool mon_wlan_hal_dwpal::sta_beacon_11k_request(const std::string &vap_iface_name,
+                                                const SBeaconRequest11k &req, int &dialog_token)
 {
     LOG(TRACE) << __func__;
     char *reply = nullptr;
@@ -987,7 +989,8 @@ bool mon_wlan_hal_dwpal::sta_beacon_11k_request(const SBeaconRequest11k &req, in
     return true;
 }
 
-bool mon_wlan_hal_dwpal::sta_link_measurements_11k_request(const std::string &sta_mac)
+bool mon_wlan_hal_dwpal::sta_link_measurements_11k_request(const std::string &vap_iface_name,
+                                                           const std::string &sta_mac)
 {
     LOG(TRACE) << __func__;
     return true;

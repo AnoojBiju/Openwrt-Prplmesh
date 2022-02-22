@@ -10,6 +10,7 @@
 
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
+#include <bwl/key_value_parser.h>
 
 #include <easylogging++.h>
 
@@ -292,7 +293,8 @@ bool mon_wlan_hal_nl80211::update_stations_stats(const std::string &vap_iface_na
             }
 
             return true;
-        });
+        },
+        vap_iface_name);
 
     if (!ret) {
         LOG(ERROR) << "Failed updating stats for station: " << sta_mac;
@@ -302,13 +304,15 @@ bool mon_wlan_hal_nl80211::update_stations_stats(const std::string &vap_iface_na
     return true;
 }
 
-bool mon_wlan_hal_nl80211::sta_channel_load_11k_request(const SStaChannelLoadRequest11k &req)
+bool mon_wlan_hal_nl80211::sta_channel_load_11k_request(const std::string &vap_iface_name,
+                                                        const SStaChannelLoadRequest11k &req)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return true;
 }
 
-bool mon_wlan_hal_nl80211::sta_beacon_11k_request(const SBeaconRequest11k &req, int &dialog_token)
+bool mon_wlan_hal_nl80211::sta_beacon_11k_request(const std::string &vap_iface_name,
+                                                  const SBeaconRequest11k &req, int &dialog_token)
 {
     LOG(TRACE) << __func__;
 
@@ -407,7 +411,7 @@ bool mon_wlan_hal_nl80211::sta_beacon_11k_request(const SBeaconRequest11k &req, 
 
     // Send the command
     parsed_obj_map_t reply;
-    if (!wpa_ctrl_send_msg(cmd, reply)) {
+    if (!wpa_ctrl_send_msg(cmd, reply, vap_iface_name)) {
         LOG(ERROR) << __func__ << " failed";
         return false;
     }
@@ -417,7 +421,8 @@ bool mon_wlan_hal_nl80211::sta_beacon_11k_request(const SBeaconRequest11k &req, 
     return true;
 }
 
-bool mon_wlan_hal_nl80211::sta_link_measurements_11k_request(const std::string &sta_mac)
+bool mon_wlan_hal_nl80211::sta_link_measurements_11k_request(const std::string &vap_iface_name,
+                                                             const std::string &sta_mac)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return true;
@@ -477,6 +482,19 @@ bool mon_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
 
     auto event = wav_to_bwl_event(opcode);
 
+    std::string interface;
+    if (parsed_obj.find(bwl::EVENT_KEYLESS_PARAM_IFACE) != parsed_obj.end()) {
+        interface = parsed_obj.at(bwl::EVENT_KEYLESS_PARAM_IFACE);
+    }
+    if (interface.empty()) {
+        LOG(DEBUG) << "Could not find interface name.";
+    }
+
+    auto vap_id = get_vap_id_with_bss(interface);
+    if (vap_id < 0) {
+        LOG(DEBUG) << "Unknown vap_id " << vap_id;
+    }
+
     // Handle the event
     switch (event) {
 
@@ -491,7 +509,11 @@ bool mon_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
         // Initialize the message
         memset(msg_buff.get(), 0, sizeof(sACTION_MONITOR_CLIENT_ASSOCIATED_NOTIFICATION));
 
-        msg->vap_id = 0;
+        if (vap_id < 0) {
+            LOG(ERROR) << "Invalid vap_id " << vap_id;
+            return false;
+        }
+        msg->vap_id = vap_id;
         msg->mac    = tlvf::mac_from_string(parsed_obj["_mac"]);
 
         // Add the message to the queue

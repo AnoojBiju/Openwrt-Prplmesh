@@ -95,9 +95,12 @@ public:
      * This method should be called if the file descriptor returned by
      * get_ext_events_fd() generated an event.
      *
+     * @param [in] fd File descriptor receiving the incoming event.
+     * The value (0) trigger polling for new events on all external fds.
+     *
      * @return true on success or false on error.
      */
-    virtual bool process_ext_events() = 0;
+    virtual bool process_ext_events(int fd = 0) = 0;
 
     /*!
      * Process incoming nl events from the underlying hardware/middleware.
@@ -156,13 +159,29 @@ public:
     HALState get_state() const { return (m_hal_state); }
 
     /*!
-     * Returns a file descriptor to the external events queue, 0 is events
+     * Returns indexed file descriptor to the external events queue, 0 is events
      * should processed synchronously (by directly calling the process method),
      * or -1 on error.
      * 
      * The returned file descriptor supports select(), poll() and epoll().
      */
-    int get_ext_events_fd() const { return (m_fd_ext_events); }
+    int get_ext_events_fd(size_t pos = 0) const
+    {
+        if (pos >= m_fds_ext_events.size()) {
+            return -1;
+        }
+        return (m_fds_ext_events[pos]);
+    }
+
+    /*!
+     * Returns a vector of external events file descriptors, where:
+     * - Empty or only including 0 values, means that events should 
+     * be processed synchronously (by directly calling the process method).
+     * - only including -1 indicates error.
+     *
+     * The returned file descriptors support select(), poll() and epoll().
+     */
+    const std::vector<int> &get_ext_events_fds() const { return (m_fds_ext_events); }
 
     /*!
      * Returns a file descriptor to the internal events queue, or -1 on error.
@@ -200,6 +219,40 @@ public:
      * Returns the Radio's main MAC address.
      */
     virtual std::string get_radio_mac() = 0;
+
+    /*!
+     * Returns vap id using vap bssid.
+     */
+    int get_vap_id_with_mac(const std::string &bssid) const
+    {
+        for (auto &it : m_radio_info.available_vaps) {
+            if (it.second.mac == bssid) {
+                return it.first;
+            }
+        }
+        return beerocks::IFACE_ID_INVALID;
+    }
+
+    /*!
+     * Returns vap id using vap interface name.
+     */
+    int get_vap_id_with_bss(const std::string &bss) const
+    {
+        for (auto &it : m_radio_info.available_vaps) {
+            if (it.second.bss == bss) {
+                return it.first;
+            }
+        }
+        return beerocks::IFACE_ID_INVALID;
+    }
+
+    /*!
+     * Returns true if vap_id exists.
+     */
+    bool check_vap_id(int vap_id) const
+    {
+        return (m_radio_info.available_vaps.find(vap_id) != m_radio_info.available_vaps.end());
+    }
 
     // Protected methods
 protected:
@@ -264,8 +317,9 @@ protected:
 
     HALState m_hal_state = HALState::Uninitialized;
 
-    int m_fd_ext_events = -1;
-    int m_fd_nl_events  = -1;
+    std::vector<int> m_fds_ext_events = {-1};
+
+    int m_fd_nl_events = -1;
 
     hal_conf_t m_hal_conf;
     std::set<std::string> m_filtered_events;

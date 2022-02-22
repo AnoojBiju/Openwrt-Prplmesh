@@ -134,7 +134,7 @@ abstract class base_wlan_hal {
     +get_radio_info()
     #event_queue_push()
     
-    #m_fd_ext_events
+    #m_fds_ext_events
     -m_fd_int_events
     -m_queue_events
     -m_int_event_cb

@@ -298,7 +298,7 @@ bool base_wlan_hal_dwpal::fsm_setup()
             [&](TTransition &transition, const void *args) -> bool {
                 // Get the wpa_supplicant/hostapd event interface file descriptor
                 if (m_dwpal_ctx[0] != nullptr) {
-                    if (dwpal_hostap_event_fd_get(m_dwpal_ctx[0], &m_fd_ext_events)) {
+                    if (dwpal_hostap_event_fd_get(m_dwpal_ctx[0], &m_fds_ext_events[0])) {
                         LOG(ERROR) << "dwpal_hostap_event_fd_get() failed for: "
                                    << m_radio_info.iface_name;
                         return (transition.change_destination(dwpal_fsm_state::Detach));
@@ -364,7 +364,7 @@ bool base_wlan_hal_dwpal::fsm_setup()
                 }
             }
 
-            m_fd_ext_events = -1;
+            m_fds_ext_events[0] = -1;
 
             // detach nl socket from main vap
             if (m_dwpal_nl_ctx) {
@@ -1080,7 +1080,7 @@ bool base_wlan_hal_dwpal::refresh_vaps_info(int id)
     return true;
 }
 
-bool base_wlan_hal_dwpal::process_ext_events()
+bool base_wlan_hal_dwpal::process_ext_events(int fd)
 {
     constexpr uint8_t MAX_EVENTS_PER_ITERATION = 5;
 
