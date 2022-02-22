@@ -51,9 +51,12 @@ public:
     virtual bool update_stations_stats(const std::string &vap_iface_name,
                                        const std::string &sta_mac, SStaStats &sta_stats)   = 0;
 
-    virtual bool sta_channel_load_11k_request(const SStaChannelLoadRequest11k &req)      = 0;
-    virtual bool sta_beacon_11k_request(const SBeaconRequest11k &req, int &dialog_token) = 0;
-    virtual bool sta_link_measurements_11k_request(const std::string &sta_mac)           = 0;
+    virtual bool sta_channel_load_11k_request(const std::string &vap_iface_name,
+                                              const SStaChannelLoadRequest11k &req)      = 0;
+    virtual bool sta_beacon_11k_request(const std::string &vap_iface_name,
+                                        const SBeaconRequest11k &req, int &dialog_token) = 0;
+    virtual bool sta_link_measurements_11k_request(const std::string &vap_iface_name,
+                                                   const std::string &sta_mac)           = 0;
     virtual bool channel_scan_trigger(int dwell_time_msec,
                                       const std::vector<unsigned int> &channel_pool)     = 0;
     virtual bool channel_scan_dump_results()                                             = 0;

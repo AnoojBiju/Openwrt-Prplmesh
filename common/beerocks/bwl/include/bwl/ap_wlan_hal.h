@@ -143,6 +143,7 @@ public:
     /**
      * @brief Send a 802.11v steer request (BSS Transition) to a connected station.
      *
+     * @param [in] vap_id The VAP index of source AP.
      * @param [in] mac The MAC address of the station.
      * @param [in] bssid The MAC address of the target AP.
      * @param [in] chan The channel of the target AP.
@@ -155,8 +156,9 @@ public:
      * @param [in] reason The reason code for the steer based on Table 18 @ Wi-Fi Agile Multiband Technical Specification
      * @return true on success or false on error.
      */
-    virtual bool sta_bss_steer(const std::string &mac, const std::string &bssid, int oper_class,
-                               int chan, int disassoc_timer_btt, int valid_int_btt, int reason) = 0;
+    virtual bool sta_bss_steer(int8_t vap_id, const std::string &mac, const std::string &bssid,
+                               int oper_class, int chan, int disassoc_timer_btt, int valid_int_btt,
+                               int reason) = 0;
 
     /**
      * @brief Update wifi credentials.

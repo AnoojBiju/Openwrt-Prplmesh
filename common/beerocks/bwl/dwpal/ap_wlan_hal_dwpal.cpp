@@ -1120,9 +1120,9 @@ bool ap_wlan_hal_dwpal::sta_deauth(int8_t vap_id, const std::string &mac, uint32
     return true;
 }
 
-bool ap_wlan_hal_dwpal::sta_bss_steer(const std::string &mac, const std::string &bssid,
-                                      int oper_class, int chan, int disassoc_timer_btt,
-                                      int valid_int_btt, int reason)
+bool ap_wlan_hal_dwpal::sta_bss_steer(int8_t vap_id, const std::string &mac,
+                                      const std::string &bssid, int oper_class, int chan,
+                                      int disassoc_timer_btt, int valid_int_btt, int reason)
 {
 
     LOG(TRACE) << __func__ << " mac: " << mac << ", BSS: " << bssid
@@ -2907,7 +2907,8 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         // Since it's not an "active" transition and it makes the STA stay on the
         // current VAP, there is no need to notify the upper layer.
         // disassoc_timer_btt = 0 valid_int_btt=2 (200ms) reason=0 (not specified)
-        sta_bss_steer(client_mac_str, bssid, op_class, m_radio_info.channel, 0, 2, 0);
+        sta_bss_steer(iface_ids.vap_id, client_mac_str, bssid, op_class, m_radio_info.channel, 0, 2,
+                      0);
         break;
     }
 
