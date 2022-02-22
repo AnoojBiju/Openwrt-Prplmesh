@@ -641,7 +641,10 @@ mon_wlan_hal_dwpal::mon_wlan_hal_dwpal(const std::string &iface_name, hal_event_
 }
 
 mon_wlan_hal_dwpal::~mon_wlan_hal_dwpal() {
-    
+    if(dwpald_hostap_detach(m_radio_info.iface_name.c_str()))
+        LOG(ERROR) << " Failed to detach from dwpald for interface" << m_radio_info.iface_name;
+    else
+        LOG(ERROR) << " success to detach from dwpald for interface" << m_radio_info.iface_name;
      for (const auto &vap : m_radio_info.available_vaps) {
          std::string vap_name = beerocks::utils::get_iface_string_from_iface_vap_ids(m_radio_info.iface_name, vap.first);
         if(dwpald_hostap_detach(vap_name.c_str()))
@@ -1731,6 +1734,12 @@ static int drv_evt_callback(struct nl_msg *msg)
 static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t len)
 {
     auto result = ctx->filter_bss_msg(buffer, len, op_code);
+    LOG(ERROR) << "Anant: org buffer len " << len;
+    if ( write(ctx->get_ext_evt_write_pfd(), buffer, len) )
+        return -1;
+    else
+        return 0;
+    #if 0
     LOG(ERROR) << "Anant writing to fd " << ctx->get_ext_events_fd();
     if( 0 > write(ctx->get_ext_events_fd(), op_code, strlen(op_code)))
         return -1;
@@ -1742,6 +1751,7 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
         LOG(ERROR) << "Anant: success write hostap callback " << op_code;
         return 0;
     }
+    #endif
     LOG(ERROR) << "Anant: tid " << pthread_self();
     if (result <= 0) {
         return result;
@@ -1786,7 +1796,7 @@ void mon_wlan_hal_dwpal::hostap_attach(char *ifname)
         //{HAP_EVENT("AP-ENABLED")},
         {HAP_EVENT("AP-DISABLED")},
         {HAP_EVENT("AP-STA-CONNECTED")},
-        {HAP_EVENT("AP-STA-DISCONNECTED")},
+        {HAP_EVENT("AP-STA-DISCONNECTED")}
     };
 
     static dwpald_hostap_event hostap_vap_event_handlers[] = {
@@ -1795,7 +1805,7 @@ void mon_wlan_hal_dwpal::hostap_attach(char *ifname)
         {HAP_EVENT("AP-ENABLED")},
         {HAP_EVENT("AP-DISABLED")},
         {HAP_EVENT("AP-STA-CONNECTED")},
-        {HAP_EVENT("AP-STA-DISCONNECTED")},
+        {HAP_EVENT("AP-STA-DISCONNECTED")}
     };
 
     if (iface_ids.vap_id == beerocks::IFACE_RADIO_ID) {
@@ -1832,6 +1842,7 @@ void mon_wlan_hal_dwpal::hostap_attach(char *ifname)
 
 bool mon_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std::string &opcode)
 {
+    LOG(ERROR) << "Anant: received buffer" << buffer;
     return true;
 }
 

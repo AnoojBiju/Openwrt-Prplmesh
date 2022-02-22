@@ -125,7 +125,7 @@ public:
                (!filename.empty() ? "/" + filename : "");
     }
     // Protected methods
-
+    int get_ext_evt_write_pfd() { return m_pfd[1];}
 protected:
     base_wlan_hal_dwpal(HALType type, const std::string &iface_name, hal_event_cb_t callback,
                         const hal_conf_t &hal_conf = {});
@@ -227,7 +227,8 @@ private:
      * @return True on success and false otherwise.
      */
     bool dwpal_get_phy_chan_status(sPhyChanStatus &status);
-    std::string m_dummy_event_file;
+    //std::string m_dummy_event_file;
+    int m_pfd[2];
 };
 
 } // namespace dwpal

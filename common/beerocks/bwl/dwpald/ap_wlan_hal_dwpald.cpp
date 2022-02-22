@@ -735,12 +735,16 @@ update_vap_credentials_configure_wpa(const std::string &vap_if,
 //       need to explicitly call it's from any deriving class
 
 ap_wlan_hal_dwpal::~ap_wlan_hal_dwpal() {
+    if(dwpald_hostap_detach(m_radio_info.iface_name.c_str()))
+        LOG(ERROR) << " Failed to detach from dwpald for interface" << m_radio_info.iface_name;
+    else
+        LOG(ERROR) << " success to detach from dwpald for interface" << m_radio_info.iface_name;
      for (const auto &vap : m_radio_info.available_vaps) {
          std::string vap_name = beerocks::utils::get_iface_string_from_iface_vap_ids(m_radio_info.iface_name, vap.first);
         if(dwpald_hostap_detach(vap_name.c_str()))
-            LOG(ERROR) << " Failed to detach from dwpald for interface" << vap.first;
+            LOG(ERROR) << " Failed to detach from dwpald for interface" << vap_name;
         else
-            LOG(ERROR) << " success to detach from dwpald for interface" << vap.first;
+            LOG(ERROR) << " success to detach from dwpald for interface" << vap_name;
      }
     /* Let dwpald handle disconnect upon fronthaul process going down */
     //if(dwpald_disconnect())
@@ -4472,6 +4476,9 @@ int ap_wlan_hal_dwpal::hap_evt_ap_sta_connected_clb(char *ifname, char *op_code,
 static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t len)
 {
     auto result = ctx->filter_bss_msg(buffer, len, op_code);
+    LOG(ERROR) << "Anant: org buffer len " << len << " op-code " << op_code;
+    return write(ctx->get_ext_evt_write_pfd(), buffer, len);
+    #if 0
     LOG(ERROR) << "Anant writing to fd " << ctx->get_ext_events_fd();
     if( 0 > write(ctx->get_ext_events_fd(), op_code, strlen(op_code)))
         return -1;
@@ -4483,6 +4490,8 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
         LOG(ERROR) << "Anant: success write hostap callback " << op_code;
         return 0;
     }
+    #endif
+    
     LOG(ERROR) << "Anant: tid " << pthread_self();
     if (result <= 0) {
         return result;
@@ -4586,7 +4595,7 @@ void ap_wlan_hal_dwpal::hostap_attach(char *ifname)
         {HAP_EVENT("AP-STA-CONNECTED")},
         {HAP_EVENT("AP-STA-DISCONNECTED")},
         {HAP_EVENT("UNCONNECTED-STA-RSSI")},
-        {HAP_EVENT("INTERFACE-ENABLED")},
+        //{HAP_EVENT("INTERFACE-ENABLED")},
         {HAP_EVENT("INTERFACE-DISABLED")},
         {HAP_EVENT("ACS-STARTED")},
         {HAP_EVENT("ACS-COMPLETED")},
@@ -4599,10 +4608,7 @@ void ap_wlan_hal_dwpal::hostap_attach(char *ifname)
         {HAP_EVENT("DFS-NOP-FINISHED")},
         {HAP_EVENT("LTQ-SOFTBLOCK-DROP")},
         {HAP_EVENT("AP-ACTION-FRAME-RECEIVED")},
-        {HAP_EVENT("AP-STA-POSSIBLE-PSK-MISMATCH")},
-        {HAP_EVENT("INTERFACE_RECONNECTED_OK")},
-        {HAP_EVENT("INTERFACE_CONNECTED_OK")},
-        {HAP_EVENT("INTERFACE_DISCONNECTED")}
+        {HAP_EVENT("AP-STA-POSSIBLE-PSK-MISMATCH")}
         };
     static dwpald_hostap_event hostap_vap_event_handlers[] = {
         {HAP_EVENT("AP-ENABLED")},
@@ -4610,7 +4616,7 @@ void ap_wlan_hal_dwpal::hostap_attach(char *ifname)
         {HAP_EVENT("AP-STA-CONNECTED")},
         {HAP_EVENT("AP-STA-DISCONNECTED")},
         {HAP_EVENT("UNCONNECTED-STA-RSSI")},
-        {HAP_EVENT("INTERFACE-ENABLED")},
+        //{HAP_EVENT("INTERFACE-ENABLED")},
         {HAP_EVENT("INTERFACE-DISABLED")},
         {HAP_EVENT("ACS-STARTED")},
         //{HAP_EVENT("ACS-COMPLETED")},
@@ -4623,10 +4629,8 @@ void ap_wlan_hal_dwpal::hostap_attach(char *ifname)
         {HAP_EVENT("DFS-NOP-FINISHED")},
         {HAP_EVENT("LTQ-SOFTBLOCK-DROP")},
         {HAP_EVENT("AP-ACTION-FRAME-RECEIVED")},
-        {HAP_EVENT("AP-STA-POSSIBLE-PSK-MISMATCH")},
-        {HAP_EVENT("INTERFACE_RECONNECTED_OK")},
-        {HAP_EVENT("INTERFACE_CONNECTED_OK")},
-        {HAP_EVENT("INTERFACE_DISCONNECTED")}};
+        {HAP_EVENT("AP-STA-POSSIBLE-PSK-MISMATCH")}
+    };
 
     if (iface_ids.vap_id == beerocks::IFACE_RADIO_ID) {
         m_hostap_event_handlers = hostap_radio_event_handlers;

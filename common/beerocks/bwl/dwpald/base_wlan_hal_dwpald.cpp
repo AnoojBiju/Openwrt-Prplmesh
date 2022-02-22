@@ -297,7 +297,29 @@ bool base_wlan_hal_dwpal::fsm_setup()
         .on(dwpal_fsm_event::Attach,
             {dwpal_fsm_state::Operational, dwpal_fsm_state::Delay, dwpal_fsm_state::Detach},
             [&](TTransition &transition, const void *args) -> bool {
-                
+if (pipe(m_pfd)) {
+        LOG(ERROR) << "Failed creating eventfd: " << strerror(errno);
+        return (transition.change_destination(dwpal_fsm_state::Detach));
+    }
+    else {
+        auto flags = fcntl(m_pfd[0], F_GETFD);
+        flags |= O_NONBLOCK;
+        if (fcntl(m_pfd[0], F_SETFD, flags))
+        {
+            LOG(ERROR) << "fcntl failed" << strerror(errno);
+            return (transition.change_destination(dwpal_fsm_state::Detach));
+        }
+        flags = fcntl(m_pfd[1], F_GETFD);
+        flags |= O_NONBLOCK;
+        if (fcntl(m_pfd[1], F_SETFD, flags))
+        {
+            LOG(ERROR) << "fcntl failed" << strerror(errno);
+            return (transition.change_destination(dwpal_fsm_state::Detach));
+        }
+        m_fd_ext_events = m_pfd[0];
+        LOG(ERROR) << "Anant: fd is " << m_fd_ext_events;
+    }
+          #if 0      
     // Create an eventfd for internal events
     if (mkdir(get_status_dir().c_str(), S_IRWXU | S_IRWXG | S_IWOTH | S_IXOTH) == -1) {
         if (errno != EEXIST) { // Do NOT fail if the directory already exists
@@ -335,6 +357,7 @@ bool base_wlan_hal_dwpal::fsm_setup()
     if ((m_fd_ext_events = open(m_dummy_event_file.c_str(), O_RDWR | O_NONBLOCK)) == -1) {
         LOG(FATAL) << "Failed opening events file: " << strerror(errno);
     }
+    #endif
 // Get the wpa_supplicant/hostapd event interface file descriptor
 #if 0
                 if (m_dwpal_ctx[0] != nullptr) {
@@ -838,7 +861,7 @@ bool base_wlan_hal_dwpal::dwpal_nl_cmd_send_and_recv(int command, DWPAL_nl80211C
     
     #endif
 
-    if (dwpald_nl80211_id_get(&nl80211_id) == DWPALD_DWPAL_FAILURE) {
+    if (dwpald_nl80211_id_get(&nl80211_id) != DWPALD_SUCCESS) {
         LOG(ERROR) << "getting nl id failed for: " << m_radio_info.iface_name
                    << ", unable to send nl command, nl80211_id=" << nl80211_id;
         nlmsg_free(msg);
@@ -1188,17 +1211,25 @@ bool base_wlan_hal_dwpal::process_ext_events()
     }
     int i=0;
     std::string event;
+    int found=0;
     LOG(ERROR) << "recived " << buffer;
     for(i=0;i<read_bytes;i++)
     {
-        if(buffer[i] == '\n')
+        if(buffer[i] == '>')
+        {
+            found=1;
+            continue;
+        }
+        if(buffer[i] == ' ')
             break;
+        if(found)
         event += buffer[i];
     }
+    i++;
     
     LOG(DEBUG) << "Received event " << event;
             // Process the event with the DWPAL parser
-            if (!process_dwpal_event(&buffer[i], read_bytes - event.length(), event)) {
+            if (!process_dwpal_event(&buffer[i], read_bytes - i, event)) {
                 LOG(ERROR) << "Failed processing DWPAL event with DWPAL parser";
                 return false;
             }

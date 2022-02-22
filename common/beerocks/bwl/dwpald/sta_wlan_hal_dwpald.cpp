@@ -105,7 +105,10 @@ sta_wlan_hal_dwpal::~sta_wlan_hal_dwpal() {
     /* Agent process has single attach, so we can disconnect but let app decide*/
     //if(dwpald_disconnect())
         //LOG(ERROR) << " Failed to disconnect from dwpald";
-        
+    if(dwpald_hostap_detach(m_radio_info.iface_name.c_str()))
+        LOG(ERROR) << " Failed to detach from dwpald for interface" << m_radio_info.iface_name;
+    else
+        LOG(ERROR) << " success to detach from dwpald for interface" << m_radio_info.iface_name;
      for (const auto &vap : m_radio_info.available_vaps) {
          std::string vap_name = beerocks::utils::get_iface_string_from_iface_vap_ids(m_radio_info.iface_name, vap.first);
         if(dwpald_hostap_detach(vap_name.c_str()))
@@ -649,10 +652,7 @@ void sta_wlan_hal_dwpal::hostap_attach(char *ifname)
         //{EVENT("AP-ENABLED")},
         {EVENT("AP-DISABLED")},
         {EVENT("AP-STA-CONNECTED")},
-        {EVENT("AP-STA-DISCONNECTED")},
-        {EVENT("INTERFACE_RECONNECTED_OK")},
-        {EVENT("INTERFACE_CONNECTED_OK")},
-        {EVENT("INTERFACE_DISCONNECTED")}
+        {EVENT("AP-STA-DISCONNECTED")}
     };
 
     static dwpald_hostap_event hostap_vap_event_handlers[] = {
@@ -661,10 +661,7 @@ void sta_wlan_hal_dwpal::hostap_attach(char *ifname)
         {EVENT("AP-ENABLED")},
         {EVENT("AP-DISABLED")},
         {EVENT("AP-STA-CONNECTED")},
-        {EVENT("AP-STA-DISCONNECTED")},
-        {EVENT("INTERFACE_RECONNECTED_OK")},
-        {EVENT("INTERFACE_CONNECTED_OK")},
-        {EVENT("INTERFACE_DISCONNECTED")}
+        {EVENT("AP-STA-DISCONNECTED")}
     };
 
     if (iface_ids.vap_id == beerocks::IFACE_RADIO_ID) {
