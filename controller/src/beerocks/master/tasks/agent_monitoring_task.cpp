@@ -98,11 +98,13 @@ void agent_monitoring_task::handle_event(int event_type, void *obj)
     case (STATE_DISCONNECTED): {
         std::string agent_mac = *static_cast<std::string *>(obj);
 
-        if (agent_mac.empty()) {
-            LOG(ERROR) << "Empty agent mac";
+        auto agent = database.m_agents.get(tlvf::mac_from_string(agent_mac));
+        if (!agent) {
+            LOG(INFO) << "Agent with mac is not found in database mac=" << agent_mac;
             return;
         }
-        dm_add_agent_disconnected_event(tlvf::mac_from_string(agent_mac));
+
+        dm_add_agent_disconnected_event(agent->al_mac);
         break;
     }
     default:
