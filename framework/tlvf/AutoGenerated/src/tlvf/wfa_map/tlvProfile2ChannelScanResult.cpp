@@ -571,8 +571,8 @@ bool cNeighbors::alloc_channel_utilization() {
 }
 
 uint8_t* cNeighbors::channel_utilization() {
-    if (!m_bss_load_element_present || *m_bss_load_element_present != eBssLoadElementPresent::FIELD_PRESENT) {
-        TLVF_LOG(ERROR) << "channel_utilization requested but bss_load_element_present != eBssLoadElementPresent::FIELD_PRESENT";
+    if (!m_bss_load_element_present || !(*m_bss_load_element_present == eBssLoadElementPresent::FIELD_PRESENT)) {
+        TLVF_LOG(ERROR) << "channel_utilization requested but condition not met: *m_bss_load_element_present == eBssLoadElementPresent::FIELD_PRESENT";
         return nullptr;
     }
     return (uint8_t*)(m_channel_utilization);
@@ -583,7 +583,6 @@ bool cNeighbors::set_channel_utilization(const uint8_t channel_utilization) {
         LOG(ERROR) << "Could not allocate channel_utilization!";
         return false;
     }
-    *m_bss_load_element_present = eBssLoadElementPresent::FIELD_PRESENT;
     *m_channel_utilization = channel_utilization;
     return true;
 }
@@ -613,8 +612,8 @@ bool cNeighbors::alloc_station_count() {
 }
 
 uint16_t* cNeighbors::station_count() {
-    if (!m_bss_load_element_present || *m_bss_load_element_present != eBssLoadElementPresent::FIELD_PRESENT) {
-        TLVF_LOG(ERROR) << "station_count requested but bss_load_element_present != eBssLoadElementPresent::FIELD_PRESENT";
+    if (!m_bss_load_element_present || !(*m_bss_load_element_present == eBssLoadElementPresent::FIELD_PRESENT)) {
+        TLVF_LOG(ERROR) << "station_count requested but condition not met: *m_bss_load_element_present == eBssLoadElementPresent::FIELD_PRESENT";
         return nullptr;
     }
     return (uint16_t*)(m_station_count);
@@ -625,7 +624,6 @@ bool cNeighbors::set_station_count(const uint16_t station_count) {
         LOG(ERROR) << "Could not allocate station_count!";
         return false;
     }
-    *m_bss_load_element_present = eBssLoadElementPresent::FIELD_PRESENT;
     *m_station_count = station_count;
     return true;
 }
@@ -726,12 +724,12 @@ bool cNeighbors::init()
         return false;
     }
     m_channel_utilization = reinterpret_cast<uint8_t*>(m_buff_ptr__);
-    if (*m_bss_load_element_present == eBssLoadElementPresent::FIELD_PRESENT && !buffPtrIncrementSafe(sizeof(uint8_t))) {
+    if ((*m_bss_load_element_present == eBssLoadElementPresent::FIELD_PRESENT) && !buffPtrIncrementSafe(sizeof(uint8_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
     m_station_count = reinterpret_cast<uint16_t*>(m_buff_ptr__);
-    if (*m_bss_load_element_present == eBssLoadElementPresent::FIELD_PRESENT && !buffPtrIncrementSafe(sizeof(uint16_t))) {
+    if ((*m_bss_load_element_present == eBssLoadElementPresent::FIELD_PRESENT) && !buffPtrIncrementSafe(sizeof(uint16_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
         return false;
     }

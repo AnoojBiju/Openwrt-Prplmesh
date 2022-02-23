@@ -59,9 +59,9 @@ class tlvProfile2ErrorCode : public BaseClass
         const eTlvTypeMap& type();
         const uint16_t& length();
         eReasonCode& reason_code();
-        //BSSID this error refers to.
-        //This field shall be included if the reason code field is set to 0x07 or 0x08.
-        sMacAddr& bssid();
+        bool alloc_bssid();
+        sMacAddr* bssid();
+        bool set_bssid(const sMacAddr bssid);
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -72,6 +72,7 @@ class tlvProfile2ErrorCode : public BaseClass
         uint16_t* m_length = nullptr;
         eReasonCode* m_reason_code = nullptr;
         sMacAddr* m_bssid = nullptr;
+        bool m_bssid_allocated = false;
 };
 
 }; // close namespace: wfa_map
