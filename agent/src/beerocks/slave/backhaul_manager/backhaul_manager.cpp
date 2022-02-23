@@ -50,7 +50,7 @@ namespace beerocks {
 /**
  * Time between successive timer executions of the tasks timer
  */
-constexpr auto tasks_timer_period = std::chrono::milliseconds(500);
+constexpr auto tasks_timer_period = std::chrono::milliseconds(90);
 
 /**
  * Time between successive timer executions of the FSM timer

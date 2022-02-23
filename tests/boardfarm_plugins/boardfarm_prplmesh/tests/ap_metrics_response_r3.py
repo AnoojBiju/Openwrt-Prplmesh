@@ -73,7 +73,7 @@ class ApMetricsResponseR3(PrplMeshBaseTest):
 
         debug("Send AP Metrics query message to agent 1 expecting"
               "Traffic Stats for {}".format(sta1.mac))
-        self.send_and_check_policy_config_metric_reporting(controller, agent1, True, False, False)
+        self.send_and_check_policy_config_metric_reporting(controller, agent1, True, True, True)
         mid = controller.dev_send_1905(agent1.mac,
                                        self.ieee1905['eMessageType']['AP_METRICS_QUERY_MESSAGE'],
                                        tlv(self.ieee1905['eTlvTypeMap']['TLV_AP_METRIC_QUERY'],
@@ -101,16 +101,17 @@ class ApMetricsResponseR3(PrplMeshBaseTest):
             if sta_stats_1.assoc_sta_traffic_stats_mac_addr != sta1.mac:
                 self.fail("STA traffic stats with wrong MAC {} instead of {}".format(
                     sta_stats_1.assoc_sta_traffic_stats_mac_addr, sta1.mac))
-
+        time.sleep(32)
+        """
         debug("Send AP Metrics query message to agent 2 expecting"
               " STA Metrics for {}".format(sta2.mac))
+        time.sleep(22)
         self.send_and_check_policy_config_metric_reporting(controller, agent2, False, True, False)
         mid = controller.dev_send_1905(agent2.mac,
                                        self.ieee1905['eMessageType']['AP_METRICS_QUERY_MESSAGE'],
                                        tlv(self.ieee1905['eTlvTypeMap']['TLV_AP_METRIC_QUERY'],
                                            "0x01 {%s}" % vap2.bssid))
 
-        time.sleep(1)
         response = self.check_cmdu_type_single("AP metrics response",
                                                self.ieee1905['eMessageType']
                                                ['AP_METRICS_RESPONSE_MESSAGE'], agent2.mac,
@@ -139,6 +140,7 @@ class ApMetricsResponseR3(PrplMeshBaseTest):
 
         debug("Send AP Metrics query message to agent 2 expecting"
               " STA WIFI 6 Status report for {}".format(sta2.mac))
+        time.sleep(22)
         self.send_and_check_policy_config_metric_reporting(controller, agent2, False, False, True)
         mid = controller.dev_send_1905(agent2.mac,
                                        self.ieee1905['eMessageType']['AP_METRICS_QUERY_MESSAGE'],
@@ -164,6 +166,7 @@ class ApMetricsResponseR3(PrplMeshBaseTest):
                                                     ['TLV_ASSOCIATED_WIFI_6_STA_STATUS_REPORT'])
         if sta_report:
             debug("AP Metrics Response message contains STA WIFI 6 STATUS REPORT TLV")
+        """
 
         sta1.wifi_disconnect(vap1)
         sta2.wifi_disconnect(vap2)

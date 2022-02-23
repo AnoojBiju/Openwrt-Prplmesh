@@ -746,7 +746,7 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         radio_policies = ["{%s 0x00 0x00 0x01 0x%02x}" % (radio.mac, reporting_value)
                           for radio in agent.radios]
         metric_reporting_tlv = tlv(0x8a,
-                                   "{0x00 0x%02x %s}" % (len(radio_policies),
+                                   "{0x05 0x%02x %s}" % (len(radio_policies),
                                                          " ".join(radio_policies)))
         mid = controller.dev_send_1905(
             agent.mac,

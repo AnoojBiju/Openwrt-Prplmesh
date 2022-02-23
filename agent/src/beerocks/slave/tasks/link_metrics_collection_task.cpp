@@ -81,6 +81,7 @@ bool LinkMetricsCollectionTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx,
 
 void LinkMetricsCollectionTask::work()
 {
+    LOG(DEBUG) << "Entry : LinkMetricsCollectionTask::work()";
     auto db = AgentDB::get();
 
     if (!db->statuses.ap_autoconfiguration_completed) {
@@ -136,6 +137,8 @@ void LinkMetricsCollectionTask::work()
 
     // Send ap_metrics query on all bssids exists on the Agent.
     send_ap_metric_query_message(UINT16_MAX);
+    auto time_now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    LOG(DEBUG) << "Time at LinkMetricsCollectionTask::work() while exit = " << ctime(&time_now);
 }
 
 void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessageRx &cmdu_rx,
@@ -961,6 +964,8 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
     m_radio_ap_metric_response.clear();
 
     LOG(DEBUG) << "Sending AP_METRICS_RESPONSE_MESSAGE, mid=" << std::hex << mid;
+    auto time_now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    LOG(DEBUG) << "AP Metrics Response message time = " << ctime(&time_now);
     m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, db->controller_info.bridge_mac, db->bridge.mac);
 }
 
