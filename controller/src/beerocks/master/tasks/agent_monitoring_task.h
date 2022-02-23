@@ -207,6 +207,13 @@ private:
      */
     bool dm_set_agent_disconnected_event_params(const std::string &agent_discon_path,
                                                 const sMacAddr &agent_mac);
+
+    /**
+     * @brief Removed Device object from data model for the specified agent.
+     * @param agent_mac Mac address of agent for which Device object will be removed.
+     * @return True on success, false otherwise.
+     */
+    bool dm_remove_agent(const sMacAddr &agent_mac);
 };
 
 } // namespace son

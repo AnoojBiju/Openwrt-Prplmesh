@@ -122,6 +122,7 @@ public:
             /** BSSID of the BSS. */
             const sMacAddr bssid;
             sRadio &radio;
+            std::string dm_path; /**< data model path */
 
             /**
              * @brief VAP ID.

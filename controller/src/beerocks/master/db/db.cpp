@@ -2214,6 +2214,8 @@ bool db::remove_vap(Agent::sRadio &radio, int vap_id)
 
     auto radio_path = radio.dm_path;
     if (!radio_path.empty()) {
+
+        // TODO: get_bss(), bss->dm_path PPM-1057, do not search bssid on dm
         /*
             Prepare path to the BSS instance.
             Example: Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.
@@ -6057,6 +6059,12 @@ std::string db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &
 
 std::string db::dm_add_device_element(const sMacAddr &mac)
 {
+    auto agent = m_agents.add(mac);
+    if (!agent->dm_path.empty()) {
+        LOG(DEBUG) << "Agent dm_path already exists, mac: " << mac;
+        return agent->dm_path;
+    }
+
     auto index = m_ambiorix_datamodel->get_instance_index(
         "Device.WiFi.DataElements.Network.Device.[ID == '%s'].", tlvf::mac_to_string(mac));
     if (index) {
@@ -6216,6 +6224,10 @@ bool db::set_radio_utilization(const sMacAddr &bssid, uint8_t utilization)
 
 bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, const std::string &ssid)
 {
+
+    // TODO: part of refactoring (PPM-1057), remove radio_mac parameter
+    // use bss->radio.dm_path instead of searching radio
+
     auto radio = get_radio_by_uid(radio_mac);
     if (!radio) {
         LOG(ERROR) << "Failed to get radio with mac: " << radio_mac;
@@ -6226,6 +6238,15 @@ bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, cons
     if (radio_path.empty()) {
         return true;
     }
+
+    auto bss = get_bss(bssid);
+    if (!bss) {
+        LOG(ERROR) << "Failed to get BSS with mac: " << bssid;
+        return false;
+    }
+
+    // TODO: part of refactoring (PPM-1057), check bss->dm_path to understand it is already added or not.
+    // Do not search it on ambiorix!
 
     /*
         Prepare path to the BSS instance.
@@ -6244,10 +6265,11 @@ bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, cons
         }
     } else {
         LOG(DEBUG) << "BSS instance exists for BSSID: " << bssid << ". Updating Data Model.";
-        bss_instance = bss_path + "." + std::to_string(bss_index) + ".";
+        bss_instance = bss_path + "." + std::to_string(bss_index);
     }
-
     auto ret_val = true;
+    bss->dm_path = bss_instance;
+
     /*
         Set value for BSSID variable
         Example: Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.1.BSSID

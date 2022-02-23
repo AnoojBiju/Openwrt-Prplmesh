@@ -103,6 +103,7 @@ void agent_monitoring_task::handle_event(int event_type, void *obj)
             return;
         }
         dm_add_agent_disconnected_event(tlvf::mac_from_string(agent_mac));
+        dm_remove_agent(tlvf::mac_from_string(agent_mac));
         break;
     }
     default:
@@ -699,4 +700,41 @@ bool agent_monitoring_task::dm_set_agent_disconnected_event_params(
         LOG(ERROR) << "Failed to set some of parameter for " << agent_discon_path;
     }
     return ok;
+}
+
+bool agent_monitoring_task::dm_remove_agent(const sMacAddr &agent_mac)
+{
+    auto ambiorix_dm = database.get_ambiorix_obj();
+    if (!ambiorix_dm) {
+        LOG(ERROR) << "Failed to get Ambiorix datamodel";
+        return false;
+    }
+
+    auto agent = database.m_agents.get(agent_mac);
+    if (!agent) {
+        LOG(ERROR) << "Agent is not found in database for mac: " << agent_mac;
+        return false;
+    }
+
+    auto agent_path = database.get_dm_index_from_path(agent->dm_path);
+
+    if (!ambiorix_dm->remove_instance(agent_path.first, agent_path.second)) {
+        LOG(ERROR) << "Failed to remove " << agent->dm_path << " instance.";
+        return false;
+    }
+
+    agent->dm_path.clear();
+    LOG(DEBUG) << "Agent dm_path was cleared for mac: " << agent_mac;
+
+    for (const auto &radio : agent->radios) {
+        radio.second->dm_path.clear();
+        for (const auto &bss : radio.second->bsses) {
+            bss.second->dm_path.clear();
+            for (const auto &sta : bss.second->connected_stations) {
+                sta.second->dm_path.clear();
+            }
+        }
+    }
+    LOG(DEBUG) << "Radio, sta dm_paths were cleared for mac: " << agent_mac;
+    return true;
 }
