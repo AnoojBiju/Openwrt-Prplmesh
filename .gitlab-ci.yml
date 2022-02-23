@@ -66,6 +66,7 @@ platform:
     DEVICE_UNDER_TEST_R2_ESSENSIUM: $DEVICE_UNDER_TEST_R2_ESSENSIUM
     PARENT_PIPELINE_ID: $CI_PIPELINE_ID
     CI_PARENT_PIPELINE_SOURCE: $CI_PIPELINE_SOURCE
+    BUILD_CGR: $BUILD_CGR
   trigger:
     include: "ci/platform.yml"
     strategy: depend
