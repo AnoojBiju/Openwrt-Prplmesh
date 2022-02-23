@@ -16,6 +16,7 @@
       - [Additional parameters](#additional-parameters)
       - [Bit-field structs](#bit-field-structs)
     - [Classes](#classes)
+      - [Conditional variable](#conditional-variable)
       - [Variable Length lists](#variable-length-lists)
       - [TLV Class](#tlv-class)
       - [Multi class file](#multi-class-file)
@@ -259,10 +260,36 @@ The parameters:
 `_value` – default value for the member.
 `_length` – define an array or a list of this type.
 `_comment` – comment that will be written near this member in the .h file.
-
 `_value_const` – marks the member as const with the given value.
 `_class_const` – defines a static const class member with the given value.
 `_length_var` – a member which is marked with _length_var: True will represent a list length and will be automatically updated when new entries are inserted to the list.
+`_condition` - Marks the member as a conditional parameter that will be placed if some condition is met.
+
+#### Conditional variable
+
+The following YAML shows an example to define a conditioned variable in a TLV:
+
+```yaml
+member1: uint8_t
+member2: uint8_t
+member3: uint8_t
+my_element:
+_condition:
+  _using_members: member1 member2 member3
+  _phrase: ( member1 == member2 ) && member3 > 3
+```
+
+Under `_using_members` need to specify which members are participating in the condition phrase separated by spaces.
+Under `_phrase` need to put any conditional phrase with C++ syntax that uses the member under `_using_members`.
+
+**NOTE**
+
+1. Within the `_phrase` part, must separate any TLV parameter or C++ operator from others by space.
+2. It is reccomended to double-quote the phrase (e.g. _phrase: "member1 == member2 && member3 > 3")
+It's not mandatory, but it would avoid problems if the phrase includes characters either forbidden
+or interpreted in a special way by the yaml syntax.
+3. When building a TLV, it's the responsibility of the user to make sure that the condition remains
+true when setting values.
 
 #### Variable Length lists
 
