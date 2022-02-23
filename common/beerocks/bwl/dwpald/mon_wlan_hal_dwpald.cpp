@@ -1586,6 +1586,7 @@ int mon_wlan_hal_dwpal::nl_callback(struct nl_msg *msg)
     auto scan_was_triggered_internally = ctx->get_scan_was_triggered_internally();
     auto scan_dump_in_progress = ctx->get_scan_dump_in_progress();
     auto nl_seq = ctx->get_nl_seq();
+    LOG(ERROR) << "Anant: nl event called " << gnlh->cmd; 
     switch (event) {
     case mon_wlan_hal_dwpal::Event::Channel_Scan_Triggered: {
         if (radio_info.iface_name != iface_name) {
@@ -1837,7 +1838,8 @@ void mon_wlan_hal_dwpal::hostap_attach(char *ifname)
     auto nl_handler_cb = [](struct nl_msg *msg) -> dwpald_ret { return nl_handler_cb_wrapper(msg); };
     auto ret = -1;
     #endif
-    dwpald_nl_drv_attach(0, NULL, drv_evt_callback);
+    if (iface_ids.vap_id == beerocks::IFACE_RADIO_ID) 
+        dwpald_nl_drv_attach_with_id(0, NULL, drv_evt_callback, MONITOR_ATTACH_ID);
 }
 
 bool mon_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std::string &opcode)

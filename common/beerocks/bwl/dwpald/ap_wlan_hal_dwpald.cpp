@@ -983,6 +983,7 @@ ap_wlan_hal_dwpal::ap_wlan_hal_dwpal(const std::string &iface_name, hal_event_cb
         LOG(ERROR) << "Anant: fd is " << m_fd_ext_events;
     }
     #endif
+    
 }
 
 HALState ap_wlan_hal_dwpal::attach(bool block)
@@ -4646,7 +4647,8 @@ void ap_wlan_hal_dwpal::hostap_attach(char *ifname)
         LOG(ERROR) << "Failed to attach to dwpald for interface " << ifname;
     else
         LOG(ERROR) << "Anant: successfully attached to interface " << ifname;
-    
+    if (iface_ids.vap_id == beerocks::IFACE_RADIO_ID) 
+        dwpald_nl_drv_attach(0, NULL, NULL);
 }
 
 bool ap_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)

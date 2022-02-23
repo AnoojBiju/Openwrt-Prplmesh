@@ -99,6 +99,7 @@ sta_wlan_hal_dwpal::sta_wlan_hal_dwpal(const std::string &iface_name, hal_event_
         LOG(ERROR) << "Failed to connect to dwpald";
     if(dwpald_start_listener())
         LOG(ERROR) << "Failed to start listener thread in dwpald";
+    
 }
 
 sta_wlan_hal_dwpal::~sta_wlan_hal_dwpal() {
@@ -678,6 +679,8 @@ void sta_wlan_hal_dwpal::hostap_attach(char *ifname)
         LOG(ERROR) << "Failed to attach to dwpald for interface " << ifname;
     else
         LOG(ERROR) << "Anant: successfully attached to interface " << ifname;
+    if (iface_ids.vap_id == beerocks::IFACE_RADIO_ID)
+        dwpald_nl_drv_attach(0, NULL, NULL);
 }
 bool sta_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std::string &opcode)
 {
