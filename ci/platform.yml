@@ -78,6 +78,17 @@ build-for-intel-mips-mmx:
   variables:
     TARGET_DEVICE: "intel_mips"
 
+build-for-cgr:
+  stage: build
+  variables:
+    PRPLMESH_REVISION: $CI_COMMIT_SHA
+  trigger:
+    project: essensium-mind/prplmesh/puma7
+    strategy: depend
+  needs: []
+  rules:
+    - if: '$CI_PARENT_PIPELINE_SOURCE == "schedule" && $BUILD_CGR == "yes"'
+
 test-on-turris-omnia:
   extends: .test-on-target
   variables:
