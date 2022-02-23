@@ -937,10 +937,6 @@ class TlvF:
                 lines_cpp.append('%sreturn false;' % self.getIndentation(2))
                 lines_cpp.append("%s}" % self.getIndentation(1))
 
-                lines_cpp.append("%s*m_%s = %s;" % (
-                    self.getIndentation(1),
-                    param_meta.condition[MetaData.CONDITION_NAME],
-                    param_meta.condition[MetaData.CONDITION_VALUE]))
                 lines_cpp.append("%s*m_%s = %s;" % (self.getIndentation(1), param_name, param_name))
                 lines_cpp.append("%sreturn true;" % self.getIndentation(1))
                 lines_cpp.append("}")
