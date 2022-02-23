@@ -189,8 +189,8 @@ class MetaData:
     KEY_LENGTH_VAR = "_length_var"
     KEY_LENGTH_MAX = "_length_max"
     KEY_CONDITION = "_condition"
-    CONDITION_NAME = "_field_name"
-    CONDITION_VALUE = "_field_value"
+    CONDITION_USING_MEMBERS = "_using_members"
+    CONDITION_PHRASE = "_phrase"
     LENGTH_TYPE_INT = "_int_"
     LENGTH_TYPE_CONST = "_const_"
     LENGTH_TYPE_VAR = "_var_"
@@ -309,12 +309,20 @@ class MetaData:
                 elif key == MetaData.KEY_CLASS_CONST:
                     self.class_const = True
                 elif key == MetaData.KEY_CONDITION:
-                    if set(value.keys()) != set([MetaData.CONDITION_NAME
-                                                   , MetaData.CONDITION_VALUE]):
+                    if set(value.keys()) != set([MetaData.CONDITION_USING_MEMBERS, MetaData.CONDITION_PHRASE]):
                         self.error = self.errPrefix() \
                             + "unknown condition keys: %s, dict: %s" % (key, dict)
                     else:
                         self.condition = value
+                        raw_members = self.condition[MetaData.CONDITION_USING_MEMBERS].strip().split(
+                            ' ')
+                        self.condition[MetaData.CONDITION_USING_MEMBERS] = [
+                            "m_" + m for m in raw_members]
+
+                        s = self.condition[MetaData.CONDITION_PHRASE].replace(
+                            '\n', '').strip().strip('"')
+                        cond_parts = ["*m_" + e if e in raw_members else e for e in s.split(" ")]
+                        self.condition[MetaData.CONDITION_PHRASE] = ' '.join(cond_parts)
                 else:
                     self.error = self.errPrefix() + "unknown key: %s, dict: %s" % (key, dict)
 
@@ -870,10 +878,9 @@ class TlvF:
                 lines_cpp.append("m_%s = reinterpret_cast<%s*>(m_%s__);" %
                                  (param_name, param_type, self.MEMBER_BUFF_PTR))
                 lines_cpp.append(
-                    "%sif (*m_%s == %s && !buffPtrIncrementSafe(sizeof(%s))) {" % (
+                    "%sif ((%s) && !buffPtrIncrementSafe(sizeof(%s))) {" % (
                         self.getIndentation(0),
-                        param_meta.condition[MetaData.CONDITION_NAME],
-                        param_meta.condition[MetaData.CONDITION_VALUE],
+                        param_meta.condition[MetaData.CONDITION_PHRASE],
                         param_type))
                 lines_cpp.append("%sLOG(ERROR) << \"buffPtrIncrementSafe(\" << std::dec << sizeof(%s) << \") Failed!\";" % (
                     self.getIndentation(1),
@@ -890,20 +897,18 @@ class TlvF:
                 lines_h = []
                 lines_cpp = []
 
-
                 # Add getters:
                 lines_h.append("%s* %s();" % (param_type, param_name))
                 lines_cpp.append("%s* %s::%s() {" % (param_type_full, obj_meta.name, param_name))
-                lines_cpp.append("%sif (!m_%s || *m_%s != %s) {" % (
-                    self.getIndentation(1),
-                    param_meta.condition[MetaData.CONDITION_NAME],
-                    param_meta.condition[MetaData.CONDITION_NAME],
-                    param_meta.condition[MetaData.CONDITION_VALUE]))
-                lines_cpp.append('%sTLVF_LOG(ERROR) << "%s requested but %s != %s";' % (
-                    self.getIndentation(2),
-                    param_name,
-                    param_meta.condition[MetaData.CONDITION_NAME],
-                    param_meta.condition[MetaData.CONDITION_VALUE]))
+                if_statement = "%sif (" % self.getIndentation(1)
+                for member in param_meta.condition[MetaData.CONDITION_USING_MEMBERS]:
+                    if_statement += ("!%s || " % member)
+                if_statement += "!(%s)) {" % param_meta.condition[MetaData.CONDITION_PHRASE]
+                lines_cpp.append(if_statement)
+                lines_cpp.append('%sTLVF_LOG(ERROR) << "%s requested but condition not met: %s";' %
+                                 (self.getIndentation(2),
+                                  param_name,
+                                  param_meta.condition[MetaData.CONDITION_PHRASE]))
                 lines_cpp.append("%sreturn nullptr;" % self.getIndentation(2))
                 lines_cpp.append("%s}" % self.getIndentation(1))
                 lines_cpp.append("%sreturn (%s*)(m_%s);" %
@@ -946,9 +951,8 @@ class TlvF:
 
                 # Add swap methods:
                 if param_type_info.swap_needed:
-                    swap_func_lines.append("if (*m_%s == %s) {" % (
-                        param_meta.condition[MetaData.CONDITION_NAME],
-                        param_meta.condition[MetaData.CONDITION_VALUE]))
+                    swap_func_lines.append("if (%s) {" % (
+                        param_meta.condition[MetaData.CONDITION_PHRASE]))
                     t_name = ("m_%s->" %
                               param_name) if param_type_info.swap_is_func else ("m_%s" % param_name)
                     swap_func_lines.append("%s%s%s%s;" % (
@@ -958,7 +962,6 @@ class TlvF:
 
                 lines_h = []
                 lines_cpp = []
-
 
             else:
                 # add private pointer
