@@ -899,8 +899,16 @@ int _test_conditional_parameters_rx_tx(uint8_t *rx_buffer, size_t rx_size)
         tx_neigh->set_channels_bw_list(rx_neigh.channels_bw_list_str());
         if (rx_neigh.bss_load_element_present() ==
             wfa_map::cNeighbors::eBssLoadElementPresent::FIELD_PRESENT) {
-            tx_neigh->set_channel_utilization(*rx_neigh.channel_utilization());
-            tx_neigh->set_station_count(*rx_neigh.station_count());
+            tx_neigh->bss_load_element_present() =
+                wfa_map::cNeighbors::eBssLoadElementPresent::FIELD_PRESENT;
+            if (!tx_neigh->set_channel_utilization(*rx_neigh.channel_utilization())) {
+                MAPF_ERR("Failed to set_channel_utilization");
+                errors++;
+            }
+            if (!tx_neigh->set_station_count(*rx_neigh.station_count())) {
+                MAPF_ERR("Failed to set_station_count");
+                errors++;
+            }
         }
 
         tlv_tx.add_neighbors_list(tx_neigh);
