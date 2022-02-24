@@ -268,20 +268,27 @@ bool CapabilityReportingTask::add_ap_ht_capabilities(const std::string &iface_na
     }
 
     tlv->radio_uid() = radio->front.iface_mac;
-
+    struct beerocks::net::sHTCapabilities *HTCaps =
+        (struct beerocks::net::sHTCapabilities *)(&radio->ht_capability);
     /**
      * See iw/util.c for details on how to compute fields.
      * Code has been preserved as close as possible to that in the iw command line tool.
-     */
-    bool tx_mcs_set_defined = !!(radio->ht_mcs_set[12] & (1 << 0));
-    if (tx_mcs_set_defined) {
-        tlv->flags().max_num_of_supported_tx_spatial_streams = (radio->ht_mcs_set[12] >> 2) & 3;
-        tlv->flags().max_num_of_supported_rx_spatial_streams = 0; // TODO: Compute value (#1163)
-    }
-    tlv->flags().short_gi_support_20mhz = radio->ht_capability & BIT(5);
-    tlv->flags().short_gi_support_40mhz = radio->ht_capability & BIT(6);
-    tlv->flags().ht_support_40mhz       = radio->ht_capability & BIT(1);
-
+     * AP HT Capabilities TLV Format : (Multi-AP Specification 1.0)
+     * tlvValue :
+     * Bits 7-6 : Maximum number of supported Tx spatial streams
+     * Bits 5-4 : Maximum number of supported Rx spatial streams
+     * Bit  3   : Short GI Support for 20 MHz.
+     * Bit  2   : Short GI Support for 40 MHz.
+     * Bit  1   : HT support for 40MHz
+     * Bit  0   : Reserved
+    */
+    tlv->flags().max_num_of_supported_tx_spatial_streams =
+        HTCaps->max_num_of_supported_tx_spatial_streams;
+    tlv->flags().max_num_of_supported_rx_spatial_streams =
+        HTCaps->max_num_of_supported_rx_spatial_streams;
+    tlv->flags().short_gi_support_20mhz = HTCaps->short_gi_support_20mhz;
+    tlv->flags().short_gi_support_40mhz = HTCaps->short_gi_support_40mhz;
+    tlv->flags().ht_support_40mhz       = HTCaps->ht_support_40mhz;
     return true;
 }
 
@@ -304,21 +311,37 @@ bool CapabilityReportingTask::add_ap_vht_capabilities(const std::string &iface_n
     }
 
     tlv->radio_uid() = radio->front.iface_mac;
-
+    struct beerocks::net::sVHTCapabilities *VHTCaps =
+        (struct beerocks::net::sVHTCapabilities *)(&radio->vht_capability);
     /**
      * See iw/util.c for details on how to compute fields
      * Code has been preserved as close as possible to that in the iw command line tool.
+     * AP VHT Capabilities TLV Format 16 bits: (Multi-AP Specification 3.0)
+     * tlvValue (Flag1) :
+     * Bits 15-13 : Maximum number of supported Tx spatial streams
+     * Bits 12-10 : Maximum number of supported Rx spatial streams
+     * Bit  9     : Short GI Support for 80 MHz.
+     * Bit  8     : Short GI Support for 160Mhz and 80+80 MHz.
+     * tlvValue (Flag2) :
+     * Bit  7     : VHT support for 80+80 MHz.
+     * Bit  6     : VHT support for 160 MHz.
+     * Bit  5     : SU beamformer capable.
+     * Bit  4     : MU beamformer capable.
+     * Bit  3-0   : Reserved
      */
-    tlv->supported_vht_tx_mcs() = radio->vht_mcs_set[4] | (radio->vht_mcs_set[5] << 8);
-    tlv->supported_vht_rx_mcs() = radio->vht_mcs_set[0] | (radio->vht_mcs_set[1] << 8);
-    tlv->flags1().max_num_of_supported_tx_spatial_streams = 0; // TODO: Compute value (#1163)
-    tlv->flags1().max_num_of_supported_rx_spatial_streams = 0; // TODO: Compute value (#1163)
-    tlv->flags1().short_gi_support_80mhz                  = radio->vht_capability & BIT(5);
-    tlv->flags1().short_gi_support_160mhz_and_80_80mhz    = radio->vht_capability & BIT(6);
-    tlv->flags2().vht_support_80_80mhz                    = ((radio->vht_capability >> 2) & 3) == 2;
-    tlv->flags2().vht_support_160mhz                      = ((radio->vht_capability >> 2) & 3) == 1;
-    tlv->flags2().su_beamformer_capable                   = radio->vht_capability & BIT(11);
-    tlv->flags2().mu_beamformer_capable                   = radio->vht_capability & BIT(19);
+    tlv->supported_vht_tx_mcs() = radio->vht_mcs_set[0] | (radio->vht_mcs_set[1] << 8);
+    tlv->supported_vht_rx_mcs() = radio->vht_mcs_set[2] | (radio->vht_mcs_set[3] << 8);
+    tlv->flags1().max_num_of_supported_tx_spatial_streams =
+        VHTCaps->max_num_of_supported_tx_spatial_streams;
+    tlv->flags1().max_num_of_supported_rx_spatial_streams =
+        VHTCaps->max_num_of_supported_rx_spatial_streams;
+    tlv->flags1().short_gi_support_80mhz = VHTCaps->short_gi_support_80mhz;
+    tlv->flags1().short_gi_support_160mhz_and_80_80mhz =
+        VHTCaps->short_gi_support_160mhz_and_80_80mhz;
+    tlv->flags2().vht_support_80_80mhz  = VHTCaps->vht_support_80_80mhz;
+    tlv->flags2().vht_support_160mhz    = VHTCaps->vht_support_160mhz;
+    tlv->flags2().su_beamformer_capable = VHTCaps->su_beamformer_capable;
+    tlv->flags2().mu_beamformer_capable = VHTCaps->mu_beamformer_capable;
 
     return true;
 }
@@ -342,9 +365,40 @@ bool CapabilityReportingTask::add_ap_he_capabilities(const std::string &iface_na
     }
 
     tlv->radio_uid() = radio->front.iface_mac;
+    struct beerocks::net::sHECapabilities *HECaps =
+        (struct beerocks::net::sHECapabilities *)(&radio->he_capability);
+    /**
+     * HE_MCS_SET[]: 13 Bytes with the first byte contains K-Bytes number
+     * AP HE Capabilities TLV Format 16 bits: (Multi-AP Specification 1.0)
+     * tlvValue (Flag1) :
+     * Bits 15-13 : Maximum number of supported Tx spatial streams.
+     * Bits 12-10 : Maximum number of supported Rx spatial streams.
+     * Bit  9     : HE support for 80+80 MHz.
+     * Bit  8     : HE support for 160 MHz..
+     * tlvValue (Flag2) :
+     * Bit  7     : SU beamformer capable.
+     * Bit  6     : MU beamformer capable.
+     * Bit  5     : UL MU-MIMO capable.
+     * Bit  4     : UL MU-MIMO + OFDMA capable.
+     * Bit  3     : DL MU-MIMO + OFDMA capable.
+     * Bit  2     : UL OFDMA capable.
+     * Bit  1     : DL OFDMA capable.
+    */
 
-    // TODO: Fetch the AP HE Capabilities from the Wi-Fi driver via the Netlink socket and include
-    // them into AP HE Capabilities TLV (#1162)
+    tlv->set_supported_he_mcs(&radio->he_mcs_set[1], radio->he_mcs_set[0]);
+    tlv->flags1().max_num_of_supported_tx_spatial_streams =
+        HECaps->max_num_of_supported_tx_spatial_streams;
+    tlv->flags1().max_num_of_supported_rx_spatial_streams =
+        HECaps->max_num_of_supported_rx_spatial_streams;
+    tlv->flags1().he_support_80_80mhz         = HECaps->he_support_80_80mhz;
+    tlv->flags1().he_support_160mhz           = HECaps->he_support_160mhz;
+    tlv->flags2().dl_ofdm_capable             = HECaps->dl_ofdm_capable;
+    tlv->flags2().ul_ofdm_capable             = HECaps->ul_ofdm_capable;
+    tlv->flags2().dl_mu_mimo_and_ofdm_capable = HECaps->dl_mu_mimo_and_ofdm_capable;
+    tlv->flags2().ul_mu_mimo_and_ofdm_capable = HECaps->ul_mu_mimo_and_ofdm_capable;
+    tlv->flags2().ul_mu_mimo_capable          = HECaps->ul_mu_mimo_capable;
+    tlv->flags2().mu_beamformer_capable       = HECaps->mu_beamformer_capable;
+    tlv->flags2().su_beamformer_capable       = HECaps->su_beamformer_capable;
 
     return true;
 }
