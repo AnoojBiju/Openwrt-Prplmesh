@@ -76,6 +76,8 @@ enum class eMessageType : uint16_t {
     ERROR_RESPONSE_MESSAGE = 0x8024,
     ASSOCIATION_STATUS_NOTIFICATION_MESSAGE = 0x8025,
     TUNNELLED_MESSAGE = 0x8026,
+    BACKHAUL_STA_CAPABILITY_QUERY_MESSAGE = 0x8027,
+    BACKHAUL_STA_CAPABILITY_REPORT_MESSAGE = 0x8028,
     FAILED_CONNECTION_MESSAGE = 0x8033,
 };
 // Enum AutoPrint generated code snippet begining- DON'T EDIT!
@@ -137,6 +139,8 @@ static const char *eMessageType_str(eMessageType enum_value) {
     case eMessageType::ERROR_RESPONSE_MESSAGE:                         return "eMessageType::ERROR_RESPONSE_MESSAGE";
     case eMessageType::ASSOCIATION_STATUS_NOTIFICATION_MESSAGE:        return "eMessageType::ASSOCIATION_STATUS_NOTIFICATION_MESSAGE";
     case eMessageType::TUNNELLED_MESSAGE:                              return "eMessageType::TUNNELLED_MESSAGE";
+    case eMessageType::BACKHAUL_STA_CAPABILITY_QUERY_MESSAGE:          return "eMessageType::BACKHAUL_STA_CAPABILITY_QUERY_MESSAGE";
+    case eMessageType::BACKHAUL_STA_CAPABILITY_REPORT_MESSAGE:         return "eMessageType::BACKHAUL_STA_CAPABILITY_REPORT_MESSAGE";
     case eMessageType::FAILED_CONNECTION_MESSAGE:                      return "eMessageType::FAILED_CONNECTION_MESSAGE";
     }
     static std::string out_str = std::to_string(int(enum_value));
@@ -205,6 +209,8 @@ public:
         case 0x8024:
         case 0x8025:
         case 0x8026:
+        case 0x8027:
+        case 0x8028:
         case 0x8033:
                 ret = true;
                 break;
