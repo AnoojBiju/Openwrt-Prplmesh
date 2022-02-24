@@ -297,26 +297,26 @@ bool base_wlan_hal_dwpal::fsm_setup()
         .on(dwpal_fsm_event::Attach,
             {dwpal_fsm_state::Operational, dwpal_fsm_state::Delay, dwpal_fsm_state::Detach},
             [&](TTransition &transition, const void *args) -> bool {
-if (pipe(m_pfd)) {
+if (pipe(m_dwpal_event_pfd)) {
         LOG(ERROR) << "Failed creating eventfd: " << strerror(errno);
         return (transition.change_destination(dwpal_fsm_state::Detach));
     }
     else {
-        auto flags = fcntl(m_pfd[0], F_GETFD);
+        auto flags = fcntl(m_dwpal_event_pfd[0], F_GETFD);
         flags |= O_NONBLOCK;
-        if (fcntl(m_pfd[0], F_SETFD, flags))
+        if (fcntl(m_dwpal_event_pfd[0], F_SETFD, flags))
         {
             LOG(ERROR) << "fcntl failed" << strerror(errno);
             return (transition.change_destination(dwpal_fsm_state::Detach));
         }
-        flags = fcntl(m_pfd[1], F_GETFD);
+        flags = fcntl(m_dwpal_event_pfd[1], F_GETFD);
         flags |= O_NONBLOCK;
-        if (fcntl(m_pfd[1], F_SETFD, flags))
+        if (fcntl(m_dwpal_event_pfd[1], F_SETFD, flags))
         {
             LOG(ERROR) << "fcntl failed" << strerror(errno);
             return (transition.change_destination(dwpal_fsm_state::Detach));
         }
-        m_fd_ext_events = m_pfd[0];
+        m_fd_ext_events = m_dwpal_event_pfd[0];
         LOG(ERROR) << "Anant: fd is " << m_fd_ext_events;
     }
           #if 0      
@@ -392,6 +392,29 @@ if (pipe(m_pfd)) {
 #endif
                     
                 //m_fd_nl_cmd_get = 0;
+                
+     if (pipe(m_nl_event_pfd)) {
+        LOG(ERROR) << "Failed creating eventfd: " << strerror(errno);
+        return (transition.change_destination(dwpal_fsm_state::Detach));
+    }
+    else {
+        auto flags = fcntl(m_nl_event_pfd[0], F_GETFD);
+        flags |= O_NONBLOCK;
+        if (fcntl(m_nl_event_pfd[0], F_SETFD, flags))
+        {
+            LOG(ERROR) << "fcntl failed" << strerror(errno);
+            return (transition.change_destination(dwpal_fsm_state::Detach));
+        }
+        flags = fcntl(m_nl_event_pfd[1], F_GETFD);
+        flags |= O_NONBLOCK;
+        if (fcntl(m_nl_event_pfd[1], F_SETFD, flags))
+        {
+            LOG(ERROR) << "fcntl failed" << strerror(errno);
+            return (transition.change_destination(dwpal_fsm_state::Detach));
+        }
+        m_fd_nl_events = m_nl_event_pfd[0];
+        LOG(ERROR) << "Anant: fd is " << m_fd_nl_events;
+    }           
                 return true;
             })
 
@@ -669,10 +692,19 @@ bool base_wlan_hal_dwpal::attach_ctrl_interface(int vap_id)
 
 bool base_wlan_hal_dwpal::process_nl_events()
 {
+    LOG(ERROR) << "Anant read fd is " << m_fd_nl_events;
+    int read_bytes = read(m_fd_nl_events, m_nl_buffer, NL_MAX_REPLY_BUFFSIZE);
+    LOG(ERROR) << " bytes read " << read_bytes;
+    if (read_bytes <= 0) {
+        LOG(ERROR) << "Failed reading event: " << strerror(errno);
+        return false;
+    }
+    
+    process_dwpal_nl_event((struct nl_msg *)m_nl_buffer, this);
     #if 0
     if (!m_dwpal_nl_ctx) {
         LOG(ERROR) << "Invalid Netlink socket used for nl events (m_dwpal_nl_ctx == nullptr)";
-        return false;
+     ++-   return false;
     }
 
     // check if there is nothing to proccess

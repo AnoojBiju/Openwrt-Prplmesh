@@ -86,12 +86,18 @@ static mon_wlan_hal::Event dwpal_nl_to_bwl_event(uint8_t cmd)
 {
     switch (cmd) {
     case NL80211_CMD_TRIGGER_SCAN:
+        LOG(ERROR) << "scan trigger";
         return mon_wlan_hal::Event::Channel_Scan_Triggered;
     case NL80211_CMD_NEW_SCAN_RESULTS:
+    LOG(ERROR) << "scan result";
         return mon_wlan_hal::Event::Channel_Scan_Dump_Result;
+        
     case NL80211_CMD_SCAN_ABORTED:
+    LOG(ERROR) << "scan abort";
         return mon_wlan_hal::Event::Channel_Scan_Aborted;
+        
     case SCAN_FINISH_CB:
+    LOG(ERROR) << "scan finish";
         return mon_wlan_hal::Event::Channel_Scan_Finished;
     default:
         LOG(ERROR) << "Unknown event received: " << int(cmd);
@@ -1566,9 +1572,13 @@ int mon_wlan_hal_dwpal::hap_evt_rrm_beacon_rep_received_clb(char *ifname, char *
 
 int mon_wlan_hal_dwpal::nl_callback(struct nl_msg *msg)
 {
-
-
-
+    int i=0;
+    char *ptr=(char *)msg;
+    for(i=0;i<156;i++)
+    {
+        LOG(ERROR) << (unsigned char)*ptr;
+        ptr++;
+    }
     struct nlmsghdr *nlh    = nlmsg_hdr(msg);
     struct genlmsghdr *gnlh = (genlmsghdr *)nlmsg_data(nlh);
     std::string iface_name;
@@ -1586,7 +1596,7 @@ int mon_wlan_hal_dwpal::nl_callback(struct nl_msg *msg)
     auto scan_was_triggered_internally = ctx->get_scan_was_triggered_internally();
     auto scan_dump_in_progress = ctx->get_scan_dump_in_progress();
     auto nl_seq = ctx->get_nl_seq();
-    LOG(ERROR) << "Anant: nl event called " << gnlh->cmd; 
+    LOG(ERROR) << "Anant: nl event called "<< (int)event;
     switch (event) {
     case mon_wlan_hal_dwpal::Event::Channel_Scan_Triggered: {
         if (radio_info.iface_name != iface_name) {
@@ -1730,6 +1740,26 @@ int mon_wlan_hal_dwpal::nl_callback(struct nl_msg *msg)
 }
 static int drv_evt_callback(struct nl_msg *msg)
 {
+    #if 1
+    auto fd =  ctx->get_nl_evt_write_pfd();
+    //auto size = nlmsg_size(nlmsg_datalen((struct nlmsghdr *)nlmsg_data((struct nlmsghdr *)nlmsg_hdr(msg))));
+    //auto size = (nlmsg_hdr(msg))->nlmsg_len;
+    struct nlmsghdr *hdr = nlmsg_hdr(msg);
+    auto size = nlmsg_total_size(nlmsg_datalen(hdr));
+    LOG(ERROR) << "Anant: write fd is " << fd << " with size " <<  size;
+    int i=0;
+    char *ptr=(char *)msg;
+    for(i=0;i<size;i++)
+    {
+        LOG(ERROR) << (unsigned char)*ptr;
+        ptr++;
+    }
+    write(fd, msg, size);
+    //if ( write(fd, msg, size) )
+        //return -1;
+    //else
+        //return 0;
+        #endif
     return ctx->nl_callback(msg);
 }
 static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t len)
@@ -1850,7 +1880,9 @@ bool mon_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std
 
 bool mon_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)
 {
-    
+    LOG(ERROR) << "come here";
+        this->nl_callback(msg);   
+        
     return true;
 }
 
