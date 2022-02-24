@@ -417,7 +417,7 @@ class Generic(PrplwrtDevice):
             # Turn off the wifi to make sure it doesn't prevent the upgrade:
             shell.sendline("wifi down")
             # Do the upgrade
-            shell.sendline("sysupgrade -v /tmp/{}".format(self.image))
+            shell.sendline("sysupgrade -v -n /tmp/{}".format(self.image))
             # first give it 30 seconds, and fail early if the upgrade didn't start:
             shell.expect(r"Performing system upgrade\.\.\.", timeout=30)
             # now give it more time to apply the upgrade and reboot:
@@ -427,6 +427,11 @@ class Generic(PrplwrtDevice):
             shell.sendline("")
             self.set_prompt(shell)
             shell.expect(self.serial_prompt)
+
+            # Stop firewall and disable it
+            shell.sendline("/etc/init.d/tr181-firewall stop")
+            shell.sendline("rm /etc/rc.d/S22tr181-firewall")
+
             shell.sendline("exit")
         if not self.reach(attempts=10):
             raise ValueError("The device was not reachable after the upgrade!")
