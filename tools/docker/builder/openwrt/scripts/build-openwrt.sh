@@ -27,9 +27,6 @@ fi
 # feed-prpl is in the prpl profile:
 args+=("prpl")
 
-# Add the SAH feed and its packages:
-args+=("sah")
-
 if [ -n "$MMX_ENABLE" ] ; then
     args+=("mmx")
 else
