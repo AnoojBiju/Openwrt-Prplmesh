@@ -132,6 +132,12 @@ boardfarm-on-nec-wx3000hp:
  needs:
    - build-for-intel-mips
 
+boardfarm-on-nec-wx3000hp-stability:
+  extends: boardfarm-on-nec-wx3000hp
+  parallel: 10
+  rules:
+    - if: '$STABILITY_TESTS == "yes"'
+
 boardfarm-on-turris-omnia-rdkb:
  extends: .test-on-rdkb
  variables:
@@ -154,6 +160,12 @@ boardfarm-on-turris-omnia-rdkb:
     - ./dctest.py --dut $TARGET_DEVICE --test-suite test_flows_on_rdkb
  needs:
    - build-for-rdkb-turris-omnia
+
+boardfarm-on-turris-omnia-rdkb-stability:
+  extends: boardfarm-on-turris-omnia-rdkb
+  parallel: 10
+  rules:
+    - if: '$STABILITY_TESTS == "yes"'
 
 run-tests-on-altran-glinet-testbed:
   extends: .test-on-target
