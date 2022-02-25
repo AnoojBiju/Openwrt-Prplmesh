@@ -303,7 +303,7 @@ public:
     /**
      * @brief Calculate the vht MCS set (mask of 16bits)
      * using the maximum supported MCS and number of Spatial streams
-     * (Cf. IEEE802.11-2016 Figure 9-562—Rx VHT-MCS Map and Tx VHT-MCS Map subfields).
+     * (Cf. IEEE802.11-2016 Figure 9-562-Rx VHT-MCS Map and Tx VHT-MCS Map subfields).
      *
      * @param vht_mcs_max Maximum supported MCS value.
      * @param vht_ss_max Maximum supported number of spatial stream.
