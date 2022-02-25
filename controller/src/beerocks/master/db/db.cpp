@@ -2129,6 +2129,7 @@ bool db::can_start_client_steering(const std::string &sta_mac, const std::string
     auto sta        = get_node(sta_mac);
     auto target_bss = get_node(target_bssid);
 
+    // BH Stations type is not Client.
     if (!sta || get_node_type(sta_mac) != TYPE_CLIENT) {
         LOG(ERROR) << "Device with mac " << sta_mac << " is not a station.";
         return false;
@@ -5126,36 +5127,25 @@ void db::disable_periodic_link_metrics_requests()
 bool db::dm_set_sta_link_metrics(const sMacAddr &sta_mac, uint32_t downlink_est_mac_data_rate,
                                  uint32_t uplink_est_mac_data_rate, uint8_t signal_strength)
 {
-    auto sta_node = get_node(sta_mac);
-
-    if (!sta_node || sta_node->get_type() != TYPE_CLIENT) {
-        LOG(ERROR) << "Fail to get station node with mac: " << sta_mac;
-        return {};
+    auto station = get_station(sta_mac);
+    if (!station) {
+        LOG(ERROR) << "Failed to get station on db with mac: " << sta_mac;
+        return false;
     }
 
-    std::string path_to_sta = sta_node->dm_path;
-    bool return_val         = true;
-
-    if (path_to_sta.empty()) {
+    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.
+    if (station->dm_path.empty()) {
         return true;
     }
 
-    if (!m_ambiorix_datamodel->set(path_to_sta, "EstMACDataRateDownlink",
-                                   downlink_est_mac_data_rate)) {
-        LOG(ERROR) << "Failed to set" << path_to_sta
-                   << ".EstMACDataRateDownlink: " << downlink_est_mac_data_rate;
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_sta, "EstMACDataRateUplink", uplink_est_mac_data_rate)) {
-        LOG(ERROR) << "Failed to set " << path_to_sta
-                   << ".EstMACDataRateUplink: " << uplink_est_mac_data_rate;
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_sta, "SignalStrength", signal_strength)) {
-        LOG(ERROR) << "Failed to set " << path_to_sta << ".SignalStrength: " << signal_strength;
-        return_val = false;
-    }
-    return return_val;
+    bool ret_val = true;
+    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "EstMACDataRateDownlink",
+                                         downlink_est_mac_data_rate);
+    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "EstMACDataRateUplink",
+                                         uplink_est_mac_data_rate);
+    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "SignalStrength", signal_strength);
+
+    return ret_val;
 }
 
 //
@@ -6724,120 +6714,57 @@ bool db::dm_remove_interface_neighbor(const std::string &dm_path)
 bool db::dm_set_sta_extended_link_metrics(
     const sMacAddr &sta_mac, const wfa_map::tlvAssociatedStaExtendedLinkMetrics::sMetrics &metrics)
 {
-    auto sta_node = get_node(sta_mac);
-
-    if (!sta_node || sta_node->get_type() != TYPE_CLIENT) {
-        LOG(ERROR) << "Failed to get station node with mac: " << sta_mac;
+    auto station = get_station(sta_mac);
+    if (!station) {
+        LOG(ERROR) << "Failed to get station on db with mac: " << sta_mac;
         return false;
     }
 
-    std::string path_to_sta = sta_node->dm_path;
-
-    if (path_to_sta.empty()) {
+    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.
+    if (station->dm_path.empty()) {
         return true;
     }
 
-    // Path example to the variable in Data Model
-    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.LastDataDownlinkRate
-    if (!m_ambiorix_datamodel->set(path_to_sta, "LastDataDownlinkRate",
-                                   metrics.last_data_down_link_rate)) {
-        LOG(ERROR) << "Failed to set " << path_to_sta
-                   << ".LastDataDownlinkRate: " << metrics.last_data_down_link_rate;
-        return false;
-    }
+    bool ret_val = true;
+    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "LastDataDownlinkRate",
+                                         metrics.last_data_down_link_rate);
+    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "LastDataUplinkRate",
+                                         metrics.last_data_up_link_rate);
+    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "UtilizationReceive",
+                                         metrics.utilization_receive);
+    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "UtilizationTransmit",
+                                         metrics.utilization_transmit);
 
-    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.LastDataUplinkRate
-    if (!m_ambiorix_datamodel->set(path_to_sta, "LastDataUplinkRate",
-                                   metrics.last_data_up_link_rate)) {
-        LOG(ERROR) << "Failed to set " << path_to_sta
-                   << ".LastDataUplinkRate: " << metrics.last_data_up_link_rate;
-        return false;
-    }
-
-    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.UtilizationReceive
-    if (!m_ambiorix_datamodel->set(path_to_sta, "UtilizationReceive",
-                                   metrics.utilization_receive)) {
-        LOG(ERROR) << "Failed to set " << path_to_sta
-                   << ".UtilizationReceive: " << metrics.utilization_receive;
-        return false;
-    }
-
-    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.UtilizationTransmit
-    if (!m_ambiorix_datamodel->set(path_to_sta, "UtilizationTransmit",
-                                   metrics.utilization_transmit)) {
-        LOG(ERROR) << "Failed to set " << path_to_sta
-                   << ".UtilizationTransmit: " << metrics.utilization_transmit;
-        return false;
-    }
-    return true;
+    return ret_val;
 }
 
 bool db::dm_set_sta_traffic_stats(const sMacAddr &sta_mac, sAssociatedStaTrafficStats &stats)
 {
-    auto sta_node = get_node(sta_mac);
-
-    if (!sta_node || sta_node->get_type() != TYPE_CLIENT) {
-        LOG(ERROR) << "Failed to get station node with mac: " << sta_mac;
+    auto station = get_station(sta_mac);
+    if (!station) {
+        LOG(ERROR) << "Failed to get station on db with mac: " << sta_mac;
         return false;
     }
 
-    std::string path_to_sta = sta_node->dm_path;
-
-    if (path_to_sta.empty()) {
+    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.
+    if (station->dm_path.empty()) {
         return true;
     }
 
-    // Path example to the variable in Data Model
-    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.BytesSent
-    if (!m_ambiorix_datamodel->set(path_to_sta, "BytesSent", stats.m_byte_sent)) {
-        LOG(ERROR) << "Failed to set " << path_to_sta << ".BytesSent: " << stats.m_byte_sent;
-        return false;
-    }
+    bool ret_val = true;
+    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "BytesSent", stats.m_byte_sent);
+    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "BytesReceived", stats.m_byte_received);
+    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "PacketsSent", stats.m_packets_sent);
+    ret_val &=
+        m_ambiorix_datamodel->set(station->dm_path, "PacketsReceived", stats.m_packets_received);
+    ret_val &=
+        m_ambiorix_datamodel->set(station->dm_path, "RetransCount", stats.m_retransmission_count);
+    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "ErrorsSent", stats.m_tx_packets_error);
+    ret_val &=
+        m_ambiorix_datamodel->set(station->dm_path, "ErrorsReceived", stats.m_rx_packets_error);
+    ret_val &= m_ambiorix_datamodel->set_current_time(station->dm_path);
 
-    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.BytesReceived
-    if (!m_ambiorix_datamodel->set(path_to_sta, "BytesReceived", stats.m_byte_received)) {
-        LOG(ERROR) << "Failed to set " << path_to_sta
-                   << ".BytesReceived: " << stats.m_byte_received;
-        return false;
-    }
-
-    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.PacketsSent
-    if (!m_ambiorix_datamodel->set(path_to_sta, "PacketsSent", stats.m_packets_sent)) {
-        LOG(ERROR) << "Failed to set " << path_to_sta << ".PacketsSent: " << stats.m_packets_sent;
-        return false;
-    }
-
-    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.PacketsReceived
-    if (!m_ambiorix_datamodel->set(path_to_sta, "PacketsReceived", stats.m_packets_received)) {
-        LOG(ERROR) << "Failed to set " << path_to_sta
-                   << ".PacketsReceived: " << stats.m_packets_received;
-        return false;
-    }
-
-    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.4.RetransCount
-    if (!m_ambiorix_datamodel->set(path_to_sta, "RetransCount", stats.m_retransmission_count)) {
-        LOG(ERROR) << "Failed to set " << path_to_sta
-                   << ".RetransCount: " << stats.m_retransmission_count;
-        return false;
-    }
-
-    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.ErrorsSent
-    if (!m_ambiorix_datamodel->set(path_to_sta, "ErrorsSent", stats.m_tx_packets_error)) {
-        LOG(ERROR) << "Failed to set " << path_to_sta
-                   << ".ErrorsSent: " << stats.m_tx_packets_error;
-        return false;
-    }
-
-    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.ErrorsReceived
-    if (!m_ambiorix_datamodel->set(path_to_sta, "ErrorsReceived", stats.m_rx_packets_error)) {
-        LOG(ERROR) << "Failed to set " << path_to_sta
-                   << ".ErrorsReceived: " << stats.m_rx_packets_error;
-        return false;
-    }
-
-    m_ambiorix_datamodel->set_current_time(path_to_sta);
-
-    return true;
+    return ret_val;
 }
 
 bool db::dm_clear_sta_stats(const sMacAddr &sta_mac)
@@ -6868,8 +6795,8 @@ bool db::set_sta_dhcp_v4_lease(const sMacAddr &sta_mac, const std::string &host_
                                const std::string &ipv4_address)
 {
     auto sta_node = get_node(sta_mac);
-
-    if (!sta_node || sta_node->get_type() != TYPE_CLIENT) {
+    if (!sta_node) {
+        LOG(ERROR) << "Failed to get station node with mac: " << sta_mac;
         return false;
     }
 
@@ -6877,64 +6804,53 @@ bool db::set_sta_dhcp_v4_lease(const sMacAddr &sta_mac, const std::string &host_
     sta_node->ipv4 = ipv4_address;
     sta_node->name = host_name;
 
-    // Update datamodel attributes.
-    std::string path_to_sta = sta_node->dm_path;
+    auto station = get_station(sta_mac);
+    if (!station) {
+        LOG(ERROR) << "Failed to get station on db with mac: " << sta_mac;
+        return false;
+    }
 
-    if (path_to_sta.empty()) {
+    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.
+    if (station->dm_path.empty()) {
         return true;
     }
 
-    // Path example to the variable in Data Model
-    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.Hostname
-    if (!m_ambiorix_datamodel->set(path_to_sta, "Hostname", host_name)) {
-        LOG(ERROR) << "Failed to set " << path_to_sta << ".Hostname: " << host_name;
-        return false;
-    }
+    bool ret_val = true;
+    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "Hostname", host_name);
+    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "IPV4Address", ipv4_address);
 
-    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.IPV4Address
-    if (!m_ambiorix_datamodel->set(path_to_sta, "IPV4Address", ipv4_address)) {
-        LOG(ERROR) << "Failed to set " << path_to_sta << ".IPV4Address: " << ipv4_address;
-        return false;
-    }
-
-    return true;
+    return ret_val;
 }
 
 bool db::set_sta_dhcp_v6_lease(const sMacAddr &sta_mac, const std::string &host_name,
                                const std::string &ipv6_address)
 {
     auto sta_node = get_node(sta_mac);
-    auto station  = get_station(sta_mac);
-
-    if (!sta_node || sta_node->get_type() != TYPE_CLIENT || !station) {
+    if (!sta_node) {
+        LOG(ERROR) << "Failed to get station node with mac: " << sta_mac;
         return false;
     }
 
     // Update node attributes.
-    station->ipv6  = ipv6_address;
     sta_node->name = host_name;
 
-    // Update datamodel attributes.
-    std::string path_to_sta = sta_node->dm_path;
+    auto station = get_station(sta_mac);
+    if (!station) {
+        LOG(ERROR) << "Failed to get station on db with mac: " << sta_mac;
+        return false;
+    }
+    station->ipv6 = ipv6_address;
 
-    if (path_to_sta.empty()) {
+    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.
+    if (station->dm_path.empty()) {
         return true;
     }
 
-    // Path example to the variable in Data Model
-    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.Hostname
-    if (!m_ambiorix_datamodel->set(path_to_sta, "Hostname", host_name)) {
-        LOG(ERROR) << "Failed to set " << path_to_sta << ".Hostname: " << host_name;
-        return false;
-    }
+    bool ret_val = true;
+    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "Hostname", host_name);
+    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "IPV6Address", ipv6_address);
 
-    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.IPV6Address
-    if (!m_ambiorix_datamodel->set(path_to_sta, "IPV6Address", ipv6_address)) {
-        LOG(ERROR) << "Failed to set " << path_to_sta << ".IPV6Address: " << ipv6_address;
-        return false;
-    }
-
-    return true;
+    return ret_val;
 }
 
 bool db::update_master_configuration(const sDbNbapiConfig &nbapi_config)
