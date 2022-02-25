@@ -19,6 +19,7 @@
 
 extern "C" {
 #include <dwpal.h>
+#include <dwpald_client.h>
 }
 
 #define UNHANDLED_EVENTS_LOGS 20
@@ -581,7 +582,10 @@ bool base_wlan_hal_dwpal::attach_ctrl_interface(int vap_id)
                    << " but context is NULL!";
         return false;
     }
-
+    if (dwpald_attach((char *)ifname.c_str()) == false) {
+        LOG(ERROR) << "Failed to attach to dwpald";
+        return false;
+    }
     return true;
 }
 

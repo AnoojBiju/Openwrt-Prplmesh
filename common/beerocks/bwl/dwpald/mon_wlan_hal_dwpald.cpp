@@ -20,8 +20,10 @@
 
 extern "C" {
 #include <dwpal.h>
+#include <dwpald_client.h>
 }
 
+#define MONITOR_DWPALD_ATTACH_ID 1
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////// DWPAL////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -1711,6 +1713,59 @@ bool mon_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)
     default:
         LOG(ERROR) << "Unknown DWPAL NL event received: " << int(event);
         break;
+    }
+    return true;
+}
+
+#define HAP_EVENT(event) (char *)event, sizeof(event) - 1, hap_evt_callback
+
+static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t len) { return 0; }
+
+static int drv_evt_callback(struct nl_msg *msg) { return 0; }
+
+bool mon_wlan_hal_dwpal::dwpald_attach(char *ifname)
+{
+    auto iface_ids = beerocks::utils::get_ids_from_iface_string(ifname);
+
+    static dwpald_hostap_event hostap_radio_event_handlers[] = {
+        {HAP_EVENT("RRM-BEACON-REP-RECEIVED")},
+        {HAP_EVENT("RRM-CHANNEL-LOAD-RECEIVED")},
+        {HAP_EVENT("AP-DISABLED")},
+        {HAP_EVENT("AP-STA-CONNECTED")},
+        {HAP_EVENT("AP-STA-DISCONNECTED")}};
+
+    static dwpald_hostap_event hostap_vap_event_handlers[] = {
+        {HAP_EVENT("RRM-BEACON-REP-RECEIVED")},
+        {HAP_EVENT("RRM-CHANNEL-LOAD-RECEIVED")},
+        {HAP_EVENT("AP-ENABLED")},
+        {HAP_EVENT("AP-DISABLED")},
+        {HAP_EVENT("AP-STA-CONNECTED")},
+        {HAP_EVENT("AP-STA-DISCONNECTED")}};
+    /*
+        As dwpald allows only once dwpald_hostap_attach/nl_attach API to be called from per process,
+        In order to register additional event handlers for monitor, dwpald_hostap_attach_with_id/nl_attach_with_id
+        API is used which extends already registered event handlers in dwpald_hostap_attach
+        which is called from ap_wlan_hal.
+    */
+    if (iface_ids.vap_id == beerocks::IFACE_RADIO_ID) {
+        if (dwpald_hostap_attach_with_id(
+                ifname, sizeof(hostap_radio_event_handlers) / sizeof(dwpald_hostap_event),
+                hostap_radio_event_handlers, 0, MONITOR_DWPALD_ATTACH_ID) != DWPALD_SUCCESS) {
+            LOG(ERROR) << "Failed to attach to dwpald for interface " << ifname;
+            return false;
+        }
+        if (dwpald_nl_drv_attach_with_id(0, NULL, drv_evt_callback, MONITOR_DWPALD_ATTACH_ID) !=
+            DWPALD_SUCCESS) {
+            LOG(ERROR) << "Failed to attach to dwpald for nl";
+            return false;
+        }
+    } else {
+        if (dwpald_hostap_attach_with_id(
+                ifname, sizeof(hostap_vap_event_handlers) / sizeof(dwpald_hostap_event),
+                hostap_vap_event_handlers, 0, MONITOR_DWPALD_ATTACH_ID) != DWPALD_SUCCESS) {
+            LOG(ERROR) << "Failed to attach to dwpald for interface " << ifname;
+            return false;
+        }
     }
     return true;
 }
