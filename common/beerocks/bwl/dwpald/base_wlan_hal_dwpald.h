@@ -19,6 +19,7 @@
 
 extern "C" {
 #include <dwpal.h>
+#include <dwpald_client.h>
 }
 
 #include <chrono>
@@ -86,6 +87,7 @@ protected:
     // Process dwpal event
     virtual bool process_dwpal_event(char *buffer, int bufLen, const std::string &opcode) = 0;
     virtual bool process_dwpal_nl_event(struct nl_msg *msg, void *arg = nullptr)          = 0;
+    virtual bool dwpald_attach(char *ifname)                                              = 0;
 
     bool set(const std::string &param, const std::string &value,
              int vap_id = beerocks::IFACE_RADIO_ID);
