@@ -15,6 +15,7 @@
 
 extern "C" {
 #include <dwpal.h>
+#include <dwpald_client.h>
 }
 
 #define LOGGING_ID sta_wlan_hal_dwpal
@@ -587,6 +588,41 @@ bool sta_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std
         break;
     }
 
+    return true;
+}
+
+#define HAP_EVENT(event) (char *)event, sizeof(event) - 1, hap_evt_callback
+
+/* hostap event callback executed in dwpald context */
+static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t len) { return 0; }
+
+bool sta_wlan_hal_dwpal::dwpald_attach(char *ifname)
+{
+    static dwpald_hostap_event supplicant_event_handlers[] = {
+        {HAP_EVENT("CTRL-EVENT-CONNECTED")},      {HAP_EVENT("CTRL-EVENT-DISCONNECTED")},
+        {HAP_EVENT("CTRL-EVENT-TERMINATING")},    {HAP_EVENT("CTRL-EVENT-SCAN-RESULTS")},
+        {HAP_EVENT("CTRL-EVENT-CHANNEL-SWITCH")}, {HAP_EVENT("UNCONNECTED-STA-RSSI")}};
+
+    if (dwpald_connect("sta_wlan_hal") != DWPALD_SUCCESS) {
+        LOG(ERROR) << "Failed to connect to dwpald";
+        // Don't return, as backhaul process can try to connect for all sta interface ( per radio )
+    } else {
+        if (dwpald_start_listener() != DWPALD_SUCCESS) {
+            LOG(ERROR) << "Failed to start listener thread in dwpald";
+            return false;
+        }
+
+        if (dwpald_nl_drv_attach(0, NULL, NULL) != DWPALD_SUCCESS) {
+            LOG(ERROR) << "Failed to attach to dwpald for nl";
+            return false;
+        }
+    }
+    if (dwpald_hostap_attach(ifname,
+                             sizeof(supplicant_event_handlers) / sizeof(dwpald_hostap_event),
+                             supplicant_event_handlers, 0) != DWPALD_SUCCESS) {
+        LOG(ERROR) << "Failed to attach to dwpald for interface " << ifname;
+        return false;
+    }
     return true;
 }
 

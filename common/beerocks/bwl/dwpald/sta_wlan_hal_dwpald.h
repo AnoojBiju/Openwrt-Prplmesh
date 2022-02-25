@@ -63,6 +63,7 @@ public:
 protected:
     virtual bool process_dwpal_event(char *buffer, int bufLen, const std::string &opcode) override;
     virtual bool process_dwpal_nl_event(struct nl_msg *msg, void *arg = nullptr) override;
+    virtual bool dwpald_attach(char *ifname) override;
 
     // Overload for Monitor events
     bool event_queue_push(sta_wlan_hal::Event event, std::shared_ptr<void> data = {})
