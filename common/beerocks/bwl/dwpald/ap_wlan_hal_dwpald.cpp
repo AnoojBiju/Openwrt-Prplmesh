@@ -6,7 +6,7 @@
  * See LICENSE file for more details.
  */
 
-#include "ap_wlan_hal_dwpal.h"
+#include "ap_wlan_hal_dwpald.h"
 
 #include <bcl/beerocks_defines.h>
 #include <bcl/beerocks_os_utils.h>

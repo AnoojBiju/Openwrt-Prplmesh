@@ -6,8 +6,8 @@
  * See LICENSE file for more details.
  */
 
-#ifndef _BWL_MON_WLAN_HAL_DWPAL_TYPES_H_
-#define _BWL_MON_WLAN_HAL_DWPAL_TYPES_H_
+#ifndef _BWL_MON_WLAN_HAL_DWPALD_TYPES_H_
+#define _BWL_MON_WLAN_HAL_DWPALD_TYPES_H_
 
 namespace bwl {
 namespace dwpal {
@@ -69,4 +69,4 @@ constexpr size_t ScanCfgParams_size_invalid = 0L;
 } // namespace dwpal
 } // namespace bwl
 
-#endif // _BWL_MON_WLAN_HAL_DWPAL_TYPES_H_
+#endif // _BWL_MON_WLAN_HAL_DWPALD_TYPES_H_

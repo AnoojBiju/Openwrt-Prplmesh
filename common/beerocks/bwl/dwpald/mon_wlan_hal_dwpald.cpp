@@ -6,7 +6,7 @@
  * See LICENSE file for more details.
  */
 
-#include "mon_wlan_hal_dwpal.h"
+#include "mon_wlan_hal_dwpald.h"
 
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
