@@ -543,7 +543,12 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
         // the BSSID the station is currently connected to.
         // Otherwise, the station has probably already re-connected to another BSS in the meantime
         // and we should not remove it.
-        bool reported_by_parent = bssid_str == database.get_node_parent(client_mac_str);
+        auto bss = client->get_bss();
+        if (!bss) {
+            LOG(INFO) << "BSS of the Station is empty mac: " << client->mac;
+            return false;
+        }
+        bool reported_by_parent = bssid == bss->bssid;
 
         if (reported_by_parent && !database.dm_remove_sta(*client)) {
             LOG(ERROR) << "Failed to remove STA from data model mac:" << client_mac_str;
