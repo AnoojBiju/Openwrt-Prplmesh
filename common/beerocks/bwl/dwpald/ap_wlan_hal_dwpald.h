@@ -6,10 +6,10 @@
  * See LICENSE file for more details.
  */
 
-#ifndef _BWL_AP_WLAN_HAL_DWPAL_H_
-#define _BWL_AP_WLAN_HAL_DWPAL_H_
+#ifndef _BWL_AP_WLAN_HAL_DWPALD_H_
+#define _BWL_AP_WLAN_HAL_DWPALD_H_
 
-#include "base_wlan_hal_dwpal.h"
+#include "base_wlan_hal_dwpald.h"
 #include <bcl/network/network_utils.h>
 
 #include <bwl/ap_wlan_hal.h>
@@ -138,4 +138,4 @@ private:
 } // namespace dwpal
 } // namespace bwl
 
-#endif // _BWL_AP_WLAN_HAL_DWPAL_H_
+#endif // _BWL_AP_WLAN_HAL_DWPALD_H_
