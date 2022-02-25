@@ -96,7 +96,19 @@ sta_wlan_hal_dwpal::sta_wlan_hal_dwpal(const std::string &iface_name, hal_event_
     m_filtered_events.insert(events, events + events_size);
 }
 
-sta_wlan_hal_dwpal::~sta_wlan_hal_dwpal() {}
+sta_wlan_hal_dwpal::~sta_wlan_hal_dwpal()
+{
+    if (dwpald_hostap_detach(m_radio_info.iface_name.c_str()) != DWPALD_SUCCESS) {
+        LOG(ERROR) << " Failed to detach from dwpald for interface" << m_radio_info.iface_name;
+    }
+    for (const auto &vap : m_radio_info.available_vaps) {
+        std::string vap_name = beerocks::utils::get_iface_string_from_iface_vap_ids(
+            m_radio_info.iface_name, vap.first);
+        if (dwpald_hostap_detach(vap_name.c_str()) != DWPALD_SUCCESS) {
+            LOG(ERROR) << " Failed to detach from dwpald for interface" << vap_name;
+        }
+    }
+}
 
 bool sta_wlan_hal_dwpal::start_wps_pbc()
 {
