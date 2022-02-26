@@ -513,6 +513,8 @@ bool base_wlan_hal_dwpal::dwpal_send_cmd(const std::string &cmd, int vap_id)
         //LOG(DEBUG) << "Send dwpal cmd: " << cmd.c_str();
         result = dwpal_hostap_cmd_send(m_dwpal_ctx[ctx_index], cmd.c_str(), NULL, buffer,
                                        &buff_size_copy);
+        result = dwpald_hostap_cmd(get_iface_name().c_str(), cmd.c_str(), cmd.length(), buffer,
+                                   &buff_size_copy);
         if (result != 0) {
             LOG(DEBUG) << "Failed to send cmd to DWPAL: " << cmd << " ctx_index=" << ctx_index
                        << " --> Retry";
@@ -645,6 +647,7 @@ bool base_wlan_hal_dwpal::process_nl_events()
 bool base_wlan_hal_dwpal::dwpal_nl_cmd_set(const std::string &ifname, unsigned int nl_cmd,
                                            const void *vendor_data, size_t vendor_data_size)
 {
+    auto res = -1;
     if (!vendor_data) {
         LOG(ERROR) << "vendor_data is NULL ==> Abort!";
         return false;
@@ -656,6 +659,15 @@ bool base_wlan_hal_dwpal::dwpal_nl_cmd_set(const std::string &ifname, unsigned i
             const_cast<unsigned char *>(reinterpret_cast<const unsigned char *>(vendor_data)),
             vendor_data_size) != DWPAL_SUCCESS) {
         LOG(ERROR) << "ERROR for cmd = " << nl_cmd;
+        return false;
+    }
+    if (dwpald_drv_set((char *)ifname.c_str(), ltq_nl80211_vendor_subcmds(nl_cmd), &res,
+                       vendor_data, vendor_data_size) != DWPALD_SUCCESS) {
+        LOG(ERROR) << "ERROR for cmd = " << nl_cmd;
+        return false;
+    }
+    if (res < 0) {
+        LOG(ERROR) << "ERROR for cmd =  with res= " << nl_cmd << res;
         return false;
     }
 
@@ -731,6 +743,12 @@ ssize_t base_wlan_hal_dwpal::dwpal_nl_cmd_get(const std::string &ifname, unsigne
             return -1;
         }
     }
+    auto res = -1;
+    if (dwpald_drv_get((char *)ifname.c_str(), (enum ltq_nl80211_vendor_subcmds)nl_cmd, &res, NULL,
+                       0, out_buffer, (size_t *)&max_buffer_size) != DWPALD_SUCCESS) {
+        LOG(ERROR) << "ERROR for cmd = " << nl_cmd;
+        return -1;
+    }
 
     return data_size;
 }
@@ -754,6 +772,13 @@ bool base_wlan_hal_dwpal::dwpal_nl_cmd_send_and_recv(int command, DWPAL_nl80211C
 
     int nl80211_id = -1;
     if (dwpal_nl80211_id_get(m_dwpal_nl_ctx, &nl80211_id) == DWPAL_FAILURE) {
+        LOG(ERROR) << "getting nl id failed for: " << m_radio_info.iface_name
+                   << ", unable to send nl command, nl80211_id=" << nl80211_id;
+        nlmsg_free(msg);
+        return false;
+    }
+
+    if (dwpald_nl80211_id_get(&nl80211_id) != DWPALD_SUCCESS) {
         LOG(ERROR) << "getting nl id failed for: " << m_radio_info.iface_name
                    << ", unable to send nl command, nl80211_id=" << nl80211_id;
         nlmsg_free(msg);
@@ -784,6 +809,11 @@ bool base_wlan_hal_dwpal::dwpal_nl_cmd_send_and_recv(int command, DWPAL_nl80211C
         return false;
     }
 
+    ret = dwpald_nl80211_cmd_send(msg, nl_callback, &cmd_res, callback_args);
+    if (ret != DWPALD_SUCCESS && cmd_res != 0) {
+        LOG(ERROR) << "dwpal_nl80211_cmd_send failed, msg=" << msg << ", cmd_res=" << cmd_res;
+        return false;
+    }
     return true;
 }
 
