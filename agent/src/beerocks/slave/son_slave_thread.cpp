@@ -181,6 +181,7 @@ bool slave_thread::thread_init()
             ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_WSC_MESSAGE,
             ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_RENEW_MESSAGE,
             ieee1905_1::eMessageType::MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE,
+            ieee1905_1::eMessageType::SERVICE_PRIORITIZATION_REQUEST_MESSAGE,
         })) {
         LOG(FATAL) << "Failed subscribing to the Bus";
     }
@@ -517,6 +518,11 @@ bool slave_thread::read_platform_configuration()
                      << " using default configuration ";
     }
 
+    if (!bpl::get_max_prioritization_rules(db->device_conf.max_prioritization_rules)) {
+        LOG(WARNING) << "get_max_prioritization_rules() failed!"
+                     << " using default configuration ";
+    }
+
     // Set local_gw flag
     db->device_conf.local_gw = (db->device_conf.operating_mode == BPL_OPER_MODE_GATEWAY ||
                                 db->device_conf.operating_mode == BPL_OPER_MODE_GATEWAY_WISP);
@@ -555,6 +561,7 @@ bool slave_thread::read_platform_configuration()
     LOG(DEBUG) << "rdkb_extensions: " << db->device_conf.rdkb_extensions_enabled;
     LOG(DEBUG) << "zwdfs_enable: " << db->device_conf.zwdfs_enable;
     LOG(DEBUG) << "best_channel_rank_threshold: " << db->device_conf.best_channel_rank_threshold;
+    LOG(DEBUG) << "max_prioritization_rules: " << db->device_conf.max_prioritization_rules;
 
     return true;
 }
