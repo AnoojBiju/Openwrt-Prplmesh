@@ -13,6 +13,7 @@
 #include "gate/1905_beacon_query_to_vs.h"
 #include "gate/vs_beacon_response_to_1905.h"
 #include "tasks/ap_autoconfiguration_task.h"
+#include "tasks/service_prioritization_task.h"
 #include <bcl/beerocks_cmdu_client_factory_factory.h>
 #include <bcl/beerocks_cmdu_server_factory.h>
 #include <bcl/beerocks_timer_factory_impl.h>
@@ -271,6 +272,7 @@ bool slave_thread::thread_init()
     }
 
     m_task_pool.add_task(std::make_shared<ApAutoConfigurationTask>(*this, cmdu_tx));
+    m_task_pool.add_task(std::make_shared<ServicePrioritizationTask>(*this, cmdu_tx));
 
     m_agent_state = STATE_INIT;
     LOG(DEBUG) << "Agent Started";
