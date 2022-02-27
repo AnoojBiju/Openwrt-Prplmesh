@@ -96,8 +96,8 @@ cNeighbors:
   channel_utilization:
     _type: uint8_t
     _condition:
-      _field_name: bss_load_element_present
-      _field_value: eBssLoadElementPresent::FIELD_PRESENT
+      _using_members: bss_load_element_present
+      _phrase: bss_load_element_present == eBssLoadElementPresent::FIELD_PRESENT
     _comment: |
       If "BSS Load Element Present" bit is set to one, this field is present.
       Otherwise it is omitted.
@@ -106,8 +106,8 @@ cNeighbors:
   station_count:
     _type: uint16_t
     _condition:
-      _field_name: bss_load_element_present
-      _field_value: eBssLoadElementPresent::FIELD_PRESENT
+      _using_members: bss_load_element_present
+      _phrase: bss_load_element_present == eBssLoadElementPresent::FIELD_PRESENT
     _comment: |
       If "BSS Load Element Present" bit is set to one, this field is present.
       Otherwise it is omitted.

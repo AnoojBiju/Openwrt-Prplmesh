@@ -66,8 +66,8 @@ bool tlvBackhaulStaRadioCapabilities::alloc_sta_mac() {
 }
 
 sMacAddr* tlvBackhaulStaRadioCapabilities::sta_mac() {
-    if (!m_sta_mac_included || *m_sta_mac_included != eStaMacIncluded::FIELD_PRESENT) {
-        TLVF_LOG(ERROR) << "sta_mac requested but sta_mac_included != eStaMacIncluded::FIELD_PRESENT";
+    if (!m_sta_mac_included || !(*m_sta_mac_included == eStaMacIncluded::FIELD_PRESENT)) {
+        TLVF_LOG(ERROR) << "sta_mac requested but condition not met: *m_sta_mac_included == eStaMacIncluded::FIELD_PRESENT";
         return nullptr;
     }
     return (sMacAddr*)(m_sta_mac);
@@ -78,7 +78,6 @@ bool tlvBackhaulStaRadioCapabilities::set_sta_mac(const sMacAddr sta_mac) {
         LOG(ERROR) << "Could not allocate sta_mac!";
         return false;
     }
-    *m_sta_mac_included = eStaMacIncluded::FIELD_PRESENT;
     *m_sta_mac = sta_mac;
     return true;
 }
@@ -162,7 +161,7 @@ bool tlvBackhaulStaRadioCapabilities::init()
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(eStaMacIncluded); }
     m_sta_mac = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
-    if (*m_sta_mac_included == eStaMacIncluded::FIELD_PRESENT && !buffPtrIncrementSafe(sizeof(sMacAddr))) {
+    if ((*m_sta_mac_included == eStaMacIncluded::FIELD_PRESENT) && !buffPtrIncrementSafe(sizeof(sMacAddr))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sMacAddr) << ") Failed!";
         return false;
     }

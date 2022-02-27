@@ -15,6 +15,11 @@ tlvProfile2ErrorCode:
     _comment: |
       BSSID this error refers to.
       This field shall be included if the reason code field is set to 0x07 or 0x08.
+    _condition:
+      _using_members: reason_code
+      _phrase: |
+        reason_code == eReasonCode::DEFAULT_PCP_OR_PRIMARY_VLAN_ID_NOT_PROVIDED || 
+        reason_code == eReasonCode::NUMBER_OF_UNIQUE_VLAN_ID_EXCEEDS_MAXIMUM_SUPPORTED
 
 eReasonCode:
   _type: enum
