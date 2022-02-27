@@ -17,8 +17,8 @@ tlvBackhaulStaRadioCapabilities:
   sta_mac:
     _type: sMacAddr
     _condition:
-      _field_name: sta_mac_included
-      _field_value: eStaMacIncluded::FIELD_PRESENT
+      _using_members: sta_mac_included
+      _phrase: sta_mac_included == eStaMacIncluded::FIELD_PRESENT
     _comment: |
       Mac Address of the backhaul STA on this radio.
       This field is included if the MAC address included field is set to 1.

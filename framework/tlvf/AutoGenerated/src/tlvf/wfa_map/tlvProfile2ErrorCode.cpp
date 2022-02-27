@@ -37,15 +37,54 @@ tlvProfile2ErrorCode::eReasonCode& tlvProfile2ErrorCode::reason_code() {
     return (eReasonCode&)(*m_reason_code);
 }
 
-sMacAddr& tlvProfile2ErrorCode::bssid() {
-    return (sMacAddr&)(*m_bssid);
+bool tlvProfile2ErrorCode::alloc_bssid() {
+    if (m_bssid_allocated) {
+        LOG(ERROR) << "bssid already allocated!";
+        return false;
+    }
+    size_t len = sizeof(sMacAddr);
+    if(getBuffRemainingBytes() < len )  {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
+        return false;
+    }
+    uint8_t *src = (uint8_t *)m_bssid;
+    uint8_t *dst = src + len;
+    if (!m_parse__) {
+        size_t move_length = getBuffRemainingBytes(src) - len;
+        std::copy_n(src, move_length, dst);
+    }
+    if (!buffPtrIncrementSafe(len)) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
+        return false;
+    }
+    m_bssid_allocated = true;
+    return true;
+}
+
+sMacAddr* tlvProfile2ErrorCode::bssid() {
+    if (!m_reason_code || !(*m_reason_code == eReasonCode::DEFAULT_PCP_OR_PRIMARY_VLAN_ID_NOT_PROVIDED || *m_reason_code == eReasonCode::NUMBER_OF_UNIQUE_VLAN_ID_EXCEEDS_MAXIMUM_SUPPORTED)) {
+        TLVF_LOG(ERROR) << "bssid requested but condition not met: *m_reason_code == eReasonCode::DEFAULT_PCP_OR_PRIMARY_VLAN_ID_NOT_PROVIDED || *m_reason_code == eReasonCode::NUMBER_OF_UNIQUE_VLAN_ID_EXCEEDS_MAXIMUM_SUPPORTED";
+        return nullptr;
+    }
+    return (sMacAddr*)(m_bssid);
+}
+
+bool tlvProfile2ErrorCode::set_bssid(const sMacAddr bssid) {
+    if (!m_bssid_allocated && !alloc_bssid()) {
+        LOG(ERROR) << "Could not allocate bssid!";
+        return false;
+    }
+    *m_bssid = bssid;
+    return true;
 }
 
 void tlvProfile2ErrorCode::class_swap()
 {
     tlvf_swap(16, reinterpret_cast<uint8_t*>(m_length));
     tlvf_swap(8*sizeof(eReasonCode), reinterpret_cast<uint8_t*>(m_reason_code));
-    m_bssid->struct_swap();
+    if (*m_reason_code == eReasonCode::DEFAULT_PCP_OR_PRIMARY_VLAN_ID_NOT_PROVIDED || *m_reason_code == eReasonCode::NUMBER_OF_UNIQUE_VLAN_ID_EXCEEDS_MAXIMUM_SUPPORTED) {
+        m_bssid->struct_swap();
+    }
 }
 
 bool tlvProfile2ErrorCode::finalize()
@@ -82,7 +121,6 @@ size_t tlvProfile2ErrorCode::get_initial_size()
     class_size += sizeof(eTlvTypeMap); // type
     class_size += sizeof(uint16_t); // length
     class_size += sizeof(eReasonCode); // reason_code
-    class_size += sizeof(sMacAddr); // bssid
     return class_size;
 }
 
@@ -111,11 +149,10 @@ bool tlvProfile2ErrorCode::init()
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(eReasonCode); }
     m_bssid = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(sMacAddr))) {
+    if ((*m_reason_code == eReasonCode::DEFAULT_PCP_OR_PRIMARY_VLAN_ID_NOT_PROVIDED || *m_reason_code == eReasonCode::NUMBER_OF_UNIQUE_VLAN_ID_EXCEEDS_MAXIMUM_SUPPORTED) && !buffPtrIncrementSafe(sizeof(sMacAddr))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sMacAddr) << ") Failed!";
         return false;
     }
-    if(m_length && !m_parse__){ (*m_length) += sizeof(sMacAddr); }
     if (!m_parse__) { m_bssid->struct_init(); }
     if (m_parse__) { class_swap(); }
     if (m_parse__) {

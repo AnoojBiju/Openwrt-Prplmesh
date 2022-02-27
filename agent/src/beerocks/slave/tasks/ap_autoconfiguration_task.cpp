@@ -1452,7 +1452,7 @@ bool ApAutoConfigurationTask::send_error_response_message(
         }
 
         profile2_error_code_tlv->reason_code() = reason;
-        profile2_error_code_tlv->bssid()       = bssid;
+        profile2_error_code_tlv->set_bssid(bssid);
 
         m_btl_ctx.send_cmdu_to_controller({}, m_cmdu_tx);
     }
