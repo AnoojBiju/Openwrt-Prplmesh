@@ -53,6 +53,7 @@ bool tlvProfile2ErrorCode::alloc_bssid() {
         size_t move_length = getBuffRemainingBytes(src) - len;
         std::copy_n(src, move_length, dst);
     }
+    m_service_prioritization_rule_id = (uint32_t *)((uint8_t *)(m_service_prioritization_rule_id) + len);
     if (!buffPtrIncrementSafe(len)) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
         return false;
@@ -78,12 +79,56 @@ bool tlvProfile2ErrorCode::set_bssid(const sMacAddr bssid) {
     return true;
 }
 
+bool tlvProfile2ErrorCode::alloc_service_prioritization_rule_id() {
+    if (m_service_prioritization_rule_id_allocated) {
+        LOG(ERROR) << "service_prioritization_rule_id already allocated!";
+        return false;
+    }
+    size_t len = sizeof(uint32_t);
+    if(getBuffRemainingBytes() < len )  {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
+        return false;
+    }
+    uint8_t *src = (uint8_t *)m_service_prioritization_rule_id;
+    uint8_t *dst = src + len;
+    if (!m_parse__) {
+        size_t move_length = getBuffRemainingBytes(src) - len;
+        std::copy_n(src, move_length, dst);
+    }
+    if (!buffPtrIncrementSafe(len)) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
+        return false;
+    }
+    m_service_prioritization_rule_id_allocated = true;
+    return true;
+}
+
+uint32_t* tlvProfile2ErrorCode::service_prioritization_rule_id() {
+    if (!m_reason_code || !(*m_reason_code == eReasonCode::SERVICE_PRIORITIZATION_RULE_NOT_FOUND || *m_reason_code == eReasonCode::NUMBER_OF_SERVICE_PRIORITIZATION_RULES_EXCEEDED_THE_MAXIMUM_SUPPORTED)) {
+        TLVF_LOG(ERROR) << "service_prioritization_rule_id requested but condition not met: *m_reason_code == eReasonCode::SERVICE_PRIORITIZATION_RULE_NOT_FOUND || *m_reason_code == eReasonCode::NUMBER_OF_SERVICE_PRIORITIZATION_RULES_EXCEEDED_THE_MAXIMUM_SUPPORTED";
+        return nullptr;
+    }
+    return (uint32_t*)(m_service_prioritization_rule_id);
+}
+
+bool tlvProfile2ErrorCode::set_service_prioritization_rule_id(const uint32_t service_prioritization_rule_id) {
+    if (!m_service_prioritization_rule_id_allocated && !alloc_service_prioritization_rule_id()) {
+        LOG(ERROR) << "Could not allocate service_prioritization_rule_id!";
+        return false;
+    }
+    *m_service_prioritization_rule_id = service_prioritization_rule_id;
+    return true;
+}
+
 void tlvProfile2ErrorCode::class_swap()
 {
     tlvf_swap(16, reinterpret_cast<uint8_t*>(m_length));
     tlvf_swap(8*sizeof(eReasonCode), reinterpret_cast<uint8_t*>(m_reason_code));
     if (*m_reason_code == eReasonCode::DEFAULT_PCP_OR_PRIMARY_VLAN_ID_NOT_PROVIDED || *m_reason_code == eReasonCode::NUMBER_OF_UNIQUE_VLAN_ID_EXCEEDS_MAXIMUM_SUPPORTED) {
         m_bssid->struct_swap();
+    }
+    if (*m_reason_code == eReasonCode::SERVICE_PRIORITIZATION_RULE_NOT_FOUND || *m_reason_code == eReasonCode::NUMBER_OF_SERVICE_PRIORITIZATION_RULES_EXCEEDED_THE_MAXIMUM_SUPPORTED) {
+        tlvf_swap(32, reinterpret_cast<uint8_t*>(m_service_prioritization_rule_id));
     }
 }
 
@@ -154,6 +199,11 @@ bool tlvProfile2ErrorCode::init()
         return false;
     }
     if (!m_parse__) { m_bssid->struct_init(); }
+    m_service_prioritization_rule_id = reinterpret_cast<uint32_t*>(m_buff_ptr__);
+    if ((*m_reason_code == eReasonCode::SERVICE_PRIORITIZATION_RULE_NOT_FOUND || *m_reason_code == eReasonCode::NUMBER_OF_SERVICE_PRIORITIZATION_RULES_EXCEEDED_THE_MAXIMUM_SUPPORTED) && !buffPtrIncrementSafe(sizeof(uint32_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint32_t) << ") Failed!";
+        return false;
+    }
     if (m_parse__) { class_swap(); }
     if (m_parse__) {
         if (*m_type != eTlvTypeMap::TLV_PROFILE2_ERROR_CODE) {

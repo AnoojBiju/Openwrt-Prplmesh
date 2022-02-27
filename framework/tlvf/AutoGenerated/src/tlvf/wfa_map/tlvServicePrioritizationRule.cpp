@@ -33,32 +33,14 @@ const uint16_t& tlvServicePrioritizationRule::length() {
     return (const uint16_t&)(*m_length);
 }
 
-uint32_t& tlvServicePrioritizationRule::rule_id() {
-    return (uint32_t&)(*m_rule_id);
-}
-
-tlvServicePrioritizationRule::sRuleBitsField1& tlvServicePrioritizationRule::rule_bits_field1() {
-    return (sRuleBitsField1&)(*m_rule_bits_field1);
-}
-
-uint8_t& tlvServicePrioritizationRule::precedence() {
-    return (uint8_t&)(*m_precedence);
-}
-
-uint8_t& tlvServicePrioritizationRule::output() {
-    return (uint8_t&)(*m_output);
-}
-
-tlvServicePrioritizationRule::sRuleBitsField2& tlvServicePrioritizationRule::rule_bits_field2() {
-    return (sRuleBitsField2&)(*m_rule_bits_field2);
+tlvServicePrioritizationRule::sServicePrioritizationRule& tlvServicePrioritizationRule::rule_params() {
+    return (sServicePrioritizationRule&)(*m_rule_params);
 }
 
 void tlvServicePrioritizationRule::class_swap()
 {
     tlvf_swap(16, reinterpret_cast<uint8_t*>(m_length));
-    tlvf_swap(32, reinterpret_cast<uint8_t*>(m_rule_id));
-    m_rule_bits_field1->struct_swap();
-    m_rule_bits_field2->struct_swap();
+    m_rule_params->struct_swap();
 }
 
 bool tlvServicePrioritizationRule::finalize()
@@ -94,11 +76,7 @@ size_t tlvServicePrioritizationRule::get_initial_size()
     size_t class_size = 0;
     class_size += sizeof(eTlvTypeMap); // type
     class_size += sizeof(uint16_t); // length
-    class_size += sizeof(uint32_t); // rule_id
-    class_size += sizeof(sRuleBitsField1); // rule_bits_field1
-    class_size += sizeof(uint8_t); // precedence
-    class_size += sizeof(uint8_t); // output
-    class_size += sizeof(sRuleBitsField2); // rule_bits_field2
+    class_size += sizeof(sServicePrioritizationRule); // rule_params
     return class_size;
 }
 
@@ -120,38 +98,13 @@ bool tlvServicePrioritizationRule::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
         return false;
     }
-    m_rule_id = reinterpret_cast<uint32_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint32_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint32_t) << ") Failed!";
+    m_rule_params = reinterpret_cast<sServicePrioritizationRule*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(sServicePrioritizationRule))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sServicePrioritizationRule) << ") Failed!";
         return false;
     }
-    if(m_length && !m_parse__){ (*m_length) += sizeof(uint32_t); }
-    m_rule_bits_field1 = reinterpret_cast<sRuleBitsField1*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(sRuleBitsField1))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sRuleBitsField1) << ") Failed!";
-        return false;
-    }
-    if(m_length && !m_parse__){ (*m_length) += sizeof(sRuleBitsField1); }
-    if (!m_parse__) { m_rule_bits_field1->struct_init(); }
-    m_precedence = reinterpret_cast<uint8_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
-        return false;
-    }
-    if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_output = reinterpret_cast<uint8_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
-        return false;
-    }
-    if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_rule_bits_field2 = reinterpret_cast<sRuleBitsField2*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(sRuleBitsField2))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sRuleBitsField2) << ") Failed!";
-        return false;
-    }
-    if(m_length && !m_parse__){ (*m_length) += sizeof(sRuleBitsField2); }
-    if (!m_parse__) { m_rule_bits_field2->struct_init(); }
+    if(m_length && !m_parse__){ (*m_length) += sizeof(sServicePrioritizationRule); }
+    if (!m_parse__) { m_rule_params->struct_init(); }
     if (m_parse__) { class_swap(); }
     if (m_parse__) {
         if (*m_type != eTlvTypeMap::TLV_SERVICE_PRIORITIZATION_RULE) {
