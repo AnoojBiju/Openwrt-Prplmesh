@@ -1260,7 +1260,7 @@ int bml_internal::process_cmdu_header(std::shared_ptr<beerocks_header> beerocks_
                 return (-BML_RET_OP_FAILED);
             }
 
-            if (!wake_up(beerocks_message::ACTION_BML_SET_CLIENT_ROAMING_11K_SUPPORT_RESPONSE, 0)) {
+            if (!wake_up(beerocks_message::ACTION_BML_SET_CLIENT_ROAMING_11K_SUPPORT_REQUEST, 0)) {
                 LOG(WARNING)
                     << "Received ACTION_BML_SET_CLIENT_ROAMING_11K_SUPPORT_RESPONSE response, "
                        "but no one is waiting...";
@@ -1275,7 +1275,7 @@ int bml_internal::process_cmdu_header(std::shared_ptr<beerocks_header> beerocks_
                 LOG(ERROR) << "addClass cACTION_BML_GET_CLIENT_ROAMING_11K_SUPPORT_RESPONSE failed";
                 return (-BML_RET_OP_FAILED);
             }
-            if (!wake_up(beerocks_message::ACTION_BML_GET_CLIENT_ROAMING_11K_SUPPORT_RESPONSE,
+            if (!wake_up(beerocks_message::ACTION_BML_GET_CLIENT_ROAMING_11K_SUPPORT_REQUEST,
                          response->isEnable())) {
                 LOG(WARNING)
                     << "Received ACTION_BML_GET_CLIENT_ROAMING_11K_SUPPORT_RESPONSE response, "
