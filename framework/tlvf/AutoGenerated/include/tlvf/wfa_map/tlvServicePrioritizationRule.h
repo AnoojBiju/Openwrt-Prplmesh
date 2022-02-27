@@ -33,7 +33,7 @@ class tlvServicePrioritizationRule : public BaseClass
         explicit tlvServicePrioritizationRule(std::shared_ptr<BaseClass> base, bool parse = false);
         ~tlvServicePrioritizationRule();
 
-        typedef struct sRuleBitsField1 {
+        typedef struct sServicePrioritizationRuleBitsField1 {
             #if defined(__LITTLE_ENDIAN_BITFIELD)
             uint8_t reserved : 7;
             uint8_t add_remove : 1;
@@ -47,9 +47,9 @@ class tlvServicePrioritizationRule : public BaseClass
             }
             void struct_init(){
             }
-        } __attribute__((packed)) sRuleBitsField1;
+        } __attribute__((packed)) sServicePrioritizationRuleBitsField1;
         
-        typedef struct sRuleBitsField2 {
+        typedef struct sServicePrioritizationRuleBitsField2 {
             #if defined(__LITTLE_ENDIAN_BITFIELD)
             uint8_t reserved : 7;
             uint8_t always_match : 1;
@@ -63,18 +63,31 @@ class tlvServicePrioritizationRule : public BaseClass
             }
             void struct_init(){
             }
-        } __attribute__((packed)) sRuleBitsField2;
+        } __attribute__((packed)) sServicePrioritizationRuleBitsField2;
+        
+        typedef struct sServicePrioritizationRule {
+            uint32_t id;
+            sServicePrioritizationRuleBitsField1 bits_field1;
+            //Rule Precedence - higher number means higher priority. Possible values: 0x00 - 0xFE
+            uint8_t precedence;
+            //Rule Output. The value of, or method used to select, the 802.1Q C-TAG PCP output value.
+            //Possible values: 0x00 - 0x09
+            uint8_t output;
+            sServicePrioritizationRuleBitsField2 bits_field2;
+            void struct_swap(){
+                tlvf_swap(32, reinterpret_cast<uint8_t*>(&id));
+                bits_field1.struct_swap();
+                bits_field2.struct_swap();
+            }
+            void struct_init(){
+                bits_field1.struct_init();
+                bits_field2.struct_init();
+            }
+        } __attribute__((packed)) sServicePrioritizationRule;
         
         const eTlvTypeMap& type();
         const uint16_t& length();
-        uint32_t& rule_id();
-        sRuleBitsField1& rule_bits_field1();
-        //Rule Precedence - higher number means higher priority. Possible values: 0x00 - 0xFE
-        uint8_t& precedence();
-        //Rule Output. The value of, or method used to select, the 802.1Q C-TAG PCP output value.
-        //Possible values: 0x00 - 0x09
-        uint8_t& output();
-        sRuleBitsField2& rule_bits_field2();
+        sServicePrioritizationRule& rule_params();
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -83,11 +96,7 @@ class tlvServicePrioritizationRule : public BaseClass
         bool init();
         eTlvTypeMap* m_type = nullptr;
         uint16_t* m_length = nullptr;
-        uint32_t* m_rule_id = nullptr;
-        sRuleBitsField1* m_rule_bits_field1 = nullptr;
-        uint8_t* m_precedence = nullptr;
-        uint8_t* m_output = nullptr;
-        sRuleBitsField2* m_rule_bits_field2 = nullptr;
+        sServicePrioritizationRule* m_rule_params = nullptr;
 };
 
 }; // close namespace: wfa_map
