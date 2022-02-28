@@ -50,6 +50,8 @@ class ClientSteeringDummy(PrplMeshBaseTest):
         sniffer = self.dev.DUT.wired_sniffer
         sniffer.start(self.__class__.__name__ + "-" + self.dev.DUT.name)
 
+        self.configure_ssids(['ClientSteeringDummy'])
+
         self.checkpoint()
 
         debug("Connect dummy STA to wlan0")
