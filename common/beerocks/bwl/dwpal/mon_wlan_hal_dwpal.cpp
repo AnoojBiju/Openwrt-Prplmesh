@@ -301,7 +301,7 @@ static void get_he_operation(const uint8_t *data, uint8_t len, sChannelScanResul
     if (results.operating_frequency_band !=
             eChannelScanResultOperatingFrequencyBand::eOperating_Freq_Band_5GHz ||
         !(data[2] & BIT(6))) {
-        LOG(ERROR) << "Unable to parse the HE operation element";
+        LOG(DEBUG) << "Unable to parse the HE operation element, this segment should be filtered";
         return;
     }
 
