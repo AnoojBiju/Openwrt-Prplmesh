@@ -35,6 +35,7 @@
 #include <tlvf/wfa_map/tlvApHeCapabilities.h>
 #include <tlvf/wfa_map/tlvApHtCapabilities.h>
 #include <tlvf/wfa_map/tlvApVhtCapabilities.h>
+#include <tlvf/wfa_map/tlvBackhaulStaRadioCapabilities.h>
 #include <tlvf/wfa_map/tlvChannelScanCapabilities.h>
 #include <tlvf/wfa_map/tlvClientCapabilityReport.h>
 #include <tlvf/wfa_map/tlvClientInfo.h>
@@ -62,6 +63,10 @@ bool CapabilityReportingTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, ui
     }
     case ieee1905_1::eMessageType::AP_CAPABILITY_QUERY_MESSAGE: {
         handle_ap_capability_query(cmdu_rx, src_mac);
+        break;
+    }
+    case ieee1905_1::eMessageType::BACKHAUL_STA_CAPABILITY_QUERY_MESSAGE: {
+        handle_backhaul_sta_capability_query(cmdu_rx, src_mac);
         break;
     }
     default: {
@@ -247,6 +252,57 @@ void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
     // send the constructed report
     LOG(DEBUG) << "Sending AP_CAPABILITY_REPORT_MESSAGE , mid: " << std::hex << mid;
     m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, db->bridge.mac);
+}
+
+void CapabilityReportingTask::handle_backhaul_sta_capability_query(
+    ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac)
+{
+    const auto mid = cmdu_rx.getMessageId();
+    LOG(DEBUG) << "Received BACKHAUL_STA_CAPABILITY_QUERY_MESSAGE, mid=" << std::hex << mid;
+
+    if (!m_cmdu_tx.create(mid, ieee1905_1::eMessageType::BACKHAUL_STA_CAPABILITY_REPORT_MESSAGE)) {
+        LOG(ERROR) << "cmdu creation of type BACKHAUL_STA_CAPABILITY_REPORT_MESSAGE, has failed";
+        return;
+    }
+
+    auto db = AgentDB::get();
+    for (const auto &radio_info : m_btl_ctx.m_radios_info) {
+
+        if (radio_info->radio_mac == net::network_utils::ZERO_MAC) {
+            continue;
+        }
+
+        auto backhaul_sta_radio_cap_tlv =
+            m_cmdu_tx.addClass<wfa_map::tlvBackhaulStaRadioCapabilities>();
+        if (!backhaul_sta_radio_cap_tlv) {
+            LOG(ERROR) << "addClass wfa_map::tlvBackhaulStaRadioCapabilities has failed";
+            return;
+        }
+
+        backhaul_sta_radio_cap_tlv->ruid() = radio_info->radio_mac;
+        backhaul_sta_radio_cap_tlv->sta_mac_included() =
+            wfa_map::tlvBackhaulStaRadioCapabilities::eStaMacIncluded::FIELD_PRESENT;
+
+        sMacAddr backhaul_mac;
+        if (!radio_info->sta_wlan_hal) {
+            // TODO: This case occurs in case of wired backhaul (PPM-2016)
+            LOG(INFO) << "Radio STA Interface HAL is not initialized, iface="
+                      << radio_info->sta_iface;
+            backhaul_mac = net::network_utils::ZERO_MAC;
+        } else {
+            backhaul_mac = tlvf::mac_from_string(radio_info->sta_wlan_hal->get_radio_mac());
+        }
+
+        if (!backhaul_sta_radio_cap_tlv->set_sta_mac(backhaul_mac)) {
+            LOG(ERROR) << "Setting sta_mac for tlvBackhaulStaRadioCapabilities has failed";
+            return;
+        }
+
+        LOG(DEBUG) << "Backhaul STA Radio Capabilities, ruid=" << radio_info->radio_mac
+                   << " sta mac=" << backhaul_mac;
+    }
+
+    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, db->controller_info.bridge_mac, db->bridge.mac);
 }
 
 bool CapabilityReportingTask::add_ap_ht_capabilities(const std::string &iface_name)
