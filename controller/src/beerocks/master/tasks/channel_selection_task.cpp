@@ -786,8 +786,7 @@ void channel_selection_task::work()
         break;
     }
     case eState::ON_DFS_CHANNEL_AVAILABLE: {
-        TASK_LOG(ERROR) << "radio_mac - " << radio_mac
-                        << " channel availble - clear radar affected";
+        TASK_LOG(INFO) << "radio_mac - " << radio_mac << " channel availble - clear radar affected";
         auto vec_channels = wireless_utils::get_5g_20MHz_channels(
             beerocks::eWiFiBandwidth(dfs_channel_available->params.bandwidth),
             dfs_channel_available->params.vht_center_frequency);
