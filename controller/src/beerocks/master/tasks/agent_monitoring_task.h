@@ -143,6 +143,18 @@ private:
                                           ieee1905_1::CmduMessageTx &cmdu_tx);
 
     /**
+     * @brief Sends Backhaul STA Capability Query Message to Agent.
+     * 
+     * Backhaul STA Capability Query/Response is only supported by Profile2 or higher profile agents
+     *
+     * @param dst_mac Destination MAC address.
+     * @param cmdu_tx CMDU to be transmitted.
+     * @return True on success, false otherwise.
+    */
+    bool send_backhaul_sta_capability_query(const sMacAddr &dst_mac,
+                                            ieee1905_1::CmduMessageTx &cmdu_tx);
+
+    /**
      * @brief Add NBAPI AgentConnected event and its sub-objects: Radios, BSSes, STAs to data model.
      *
      * @param device_mac Mac address of Agent for which AgentConnected event will be created.
