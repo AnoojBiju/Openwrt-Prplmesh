@@ -65,10 +65,10 @@ def check_serial_type(serial_name: str, baudrate: int, prompt_regexp: str) -> st
         if not shell.isalive():
             raise ValueError("Unable to connect to the serial device!")
 
-            shell.sendline("")
-            shell.expect([UBOOT_PROMPT, pexpect.TIMEOUT])
-            if shell.match is not pexpect.TIMEOUT:
-                return ShellType.UBOOT
+        shell.sendline("")
+        shell.expect([UBOOT_PROMPT, pexpect.TIMEOUT])
+        if shell.match is not pexpect.TIMEOUT:
+            return ShellType.UBOOT
 
         shell.expect([prompt_regexp, pexpect.TIMEOUT])
         shell.sendline("")
@@ -121,7 +121,7 @@ def check_uboot_var(shell, variable: str, expectation: str):
     """
 
     UBOOT_PROMPT = "=>"
-    """ Standard UBoot prompt."""
+    # Standard UBoot prompt.
 
     shell.sendline(f"printenv {variable}")
     shell.expect([expectation, pexpect.TIMEOUT])
