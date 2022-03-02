@@ -779,6 +779,11 @@ beerocks::eFreqType wireless_utils::which_freq(uint32_t chn)
         return beerocks::eFreqType::FREQ_5G;
     }
 
+    if (0 == chn) {
+        LOG(DEBUG) << "ACS in progress and channel zero, so FREQ is unknown";
+        return beerocks::eFreqType::FREQ_UNKNOWN;
+    }
+
     LOG(ERROR) << "Unsupported channel:" << int(chn);
     return beerocks::eFreqType::FREQ_UNKNOWN;
 }
@@ -846,7 +851,8 @@ wireless_utils::split_channel_to_20MHz(int channel, beerocks::eWiFiBandwidth bw,
     const int channel_step_5g = 4;
     const int channel_step_2g = 5;
     bool is_2g                = (which_freq(channel) == beerocks::eFreqType::FREQ_24G);
-    bool high_band            = wireless_utils::is_high_subband(channel);
+    bool is_5g                = (which_freq(channel) == beerocks::eFreqType::FREQ_5G);
+    bool high_band            = is_5g ? wireless_utils::is_high_subband(channel) : false;
     int last_channel          = high_band ? END_OF_HIGH_BAND : END_OF_LOW_BAND;
     LOG(INFO) << "channel = " << int(channel)
               << " channel_ext_above_secondary = " << int(channel_ext_above_secondary)
