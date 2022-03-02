@@ -9,15 +9,14 @@
 import os
 import re
 import subprocess
-import sys
 from pathlib import Path
 
 # Third party
 import pexpect
 import pexpect.fdpexpect
 import pexpect.pxssh
-import serial
 from device.prplwrt import PrplwrtDevice
+from device.serial import SerialDevice
 from device.utils import (ShellType, check_serial_type, check_uboot_var,
                           serial_cmd_err)
 
@@ -89,18 +88,12 @@ class TurrisRdkb(PrplwrtDevice):
         serial_type: ShellType
             Type of the serial connection as enum ShellType(uboot, rdkb, prplwrt)
         """
-        serial_path = f"/dev/{self.name}"
-        if not os.path.exists(serial_path):
-            raise ValueError(f"The serial device {serial_path} does not exist!\n"
-                             + "Please make sure you have an appropriate udev rule for it.")
 
-        with serial.Serial(serial_path, self.BAUDRATE) as ser:
+        with SerialDevice(self.baudrate, self.name,
+                          self.PROMPT_RE, expect_prompt_on_connect=False) as ser:
             print("Reset board.")
 
-            shell = pexpect.fdpexpect.fdspawn(ser, logfile=sys.stdout.buffer, timeout=20)
-            if not shell.isalive():
-                raise ValueError("Unable to connect to the serial device!")
-
+            shell = ser.shell
             if serial_type == ShellType.UBOOT:
                 shell.sendline("reset")
             elif serial_type == ShellType.PRPLWRT or \
@@ -113,15 +106,8 @@ class TurrisRdkb(PrplwrtDevice):
             If images was not copied return False, otherwise True.
         """
 
-        serial_path = f"/dev/{self.name}"
-        if not os.path.exists(serial_path):
-            raise ValueError(f"The serial device {serial_path} does not exist!\n"
-                             + "Please make sure you have an appropriate udev rule for it.")
-
-        with serial.Serial(serial_path, self.BAUDRATE) as ser:
-            shell = pexpect.fdpexpect.fdspawn(ser, logfile=sys.stdout.buffer, timeout=30)
-            if not shell.isalive():
-                raise ValueError("Unable to connect to the serial device!")
+        with SerialDevice(self.baudrate, self.name, self.PROMPT_RE) as ser:
+            shell = ser.shell
 
             def find_file(file_name: str):
                 shell.sendline("")
@@ -161,15 +147,8 @@ class TurrisRdkb(PrplwrtDevice):
 
         self.check_images_on_board()
 
-        serial_path = f"/dev/{self.name}"
-        if not os.path.exists(serial_path):
-            raise ValueError(f"The serial device {serial_path} does not exist!\n"
-                             + "Please make sure you have an appropriate udev rule for it.")
-
-        with serial.Serial(serial_path, self.BAUDRATE) as ser:
-            shell = pexpect.fdpexpect.fdspawn(ser, logfile=sys.stdout.buffer, timeout=40)
-            if not shell.isalive():
-                raise ValueError("Unable to connect to the serial device.")
+        with SerialDevice(self.baudrate, self.name, self.PROMPT_RE) as ser:
+            shell = ser.shell
 
             def mount_mmc(partition: str):
                 serial_cmd_err(shell, self.PROMPT_RE, f"mount /dev/{partition} /mnt")
@@ -251,16 +230,9 @@ class TurrisRdkb(PrplwrtDevice):
         common_net_mask = "24"
         rdkb_bridge = "lan4.200"
 
-        serial_path = f"/dev/{self.name}"
-        if not os.path.exists(serial_path):
-            raise ValueError(f"The serial device {serial_path} does not exist!\n"
-                             + "Please make sure you have an appropriate udev rule for it.")
-
-        with serial.Serial(serial_path, self.BAUDRATE) as ser:
-            shell = pexpect.fdpexpect.fdspawn(ser, logfile=sys.stdout.buffer, timeout=30)
-            if not shell.isalive():
-                raise ValueError("Unable to connect to the serial device.")
-
+        with SerialDevice(self.baudrate, self.name,
+                          self.PROMPT_RE, expect_prompt_on_connect=False) as ser:
+            shell = ser.shell
             shell.expect("Hit any key to stop autoboot")
             shell.sendline("")
             shell.expect(self.UBOOT_PROMPT)
@@ -383,16 +355,9 @@ class TurrisRdkb(PrplwrtDevice):
         def is_prplwrt_ready() -> bool:
             """ Checks if prplwrt propmpt ready to use after reboot"""
 
-            serial_path = f"/dev/{self.name}"
-            if not os.path.exists(serial_path):
-                raise ValueError(f"The serial device {serial_path} does not exist!\n"
-                                 + "Please make sure you have an appropriate udev rule for it.")
-
-            with serial.Serial(serial_path, self.BAUDRATE) as ser:
-                shell = pexpect.fdpexpect.fdspawn(ser, logfile=sys.stdout.buffer, timeout=60)
-                if not shell.isalive():
-                    raise ValueError("Unable to connect to the serial device.")
-
+            with SerialDevice(self.baudrate, self.name, self.serial_prompt,
+                              expect_prompt_on_connect=False) as ser:
+                shell = ser.shell
                 shell.expect(["Please press Enter to activate this console.", pexpect.TIMEOUT])
                 if shell.match == pexpect.TIMEOUT:
                     return False

@@ -17,7 +17,7 @@ from typing import List
 import pexpect
 import pexpect.fdpexpect
 import pexpect.pxssh
-import serial
+from device.serial import SerialDevice
 
 
 class PrplwrtDevice:
@@ -164,15 +164,8 @@ class Generic(PrplwrtDevice):
         except subprocess.CalledProcessError as exc:
             print("Failed to copy the image to the target:\n{}".format(exc.output))
             raise exc
-        with serial.Serial(serial_path, self.baudrate) as ser:
-            print("Connecting to serial")
-            shell = pexpect.fdpexpect.fdspawn(ser, logfile=sys.stdout.buffer)
-            if not shell.isalive():
-                raise ValueError("Unable to connect to the serial device!")
-            print("Connected")
-            # The console might not be active yet:
-            shell.sendline("")
-            shell.expect(self.serial_prompt)
+        with SerialDevice(self.baudrate, self.name, self.serial_prompt) as ser:
+            shell = ser.shell
             # Turn off the wifi to make sure it doesn't prevent the upgrade:
             shell.sendline("wifi down")
             # Do the upgrade
