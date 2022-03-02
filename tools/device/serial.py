@@ -29,10 +29,11 @@ class SerialDevice:
     "sendline" because the characters are sent too fast.
     """
 
-    def __init__(self, baudrate: int, name: str, prompt):
+    def __init__(self, baudrate: int, name: str, prompt, expect_prompt_on_connect=True):
         self.baudrate = baudrate
         self.name = name
         self.prompt = prompt
+        self.expect_prompt_on_connect = expect_prompt_on_connect
 
         self.serial_path = "/dev/{}".format(self.name)
         self.serial = None
@@ -68,7 +69,8 @@ class SerialDevice:
         if not self.shell.isalive():
             raise ValueError("Unable to connect to the serial device!")
         self.shell.sendline("")
-        self.shell.prompt()
+        if self.expect_prompt_on_connect:
+            self.shell.prompt()
 
     def disconnect(self):
         """Close the serial connection."""
