@@ -1,0 +1,17 @@
+[tool.isort]
+skip_gitignore = true
+import_heading_future = "Future"
+import_heading_stdlib = "Standard library"
+import_heading_thirdparty = "Third party"
+import_heading_firstparty = "First party"
+import_heading_localfolder = "Local folder"
+
+[tool.pylint.messages_control]
+
+max-line-length = 100
+
+# Keep only warnings and errors:
+disable = [
+  "C",
+  "R",
+]
