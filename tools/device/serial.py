@@ -5,13 +5,16 @@
 # See LICENSE file for more details.
 ###############################################################
 """This module contains utilities for shells over a serial line."""
+# Standard library
 import sys
 import time
 
+# Third party
 import pexpect
 import pexpect.fdpexpect
 import pexpect.pxssh
 import serial
+
 
 class SerialDevice:
     """A base class representing a serial device using pexpect.
