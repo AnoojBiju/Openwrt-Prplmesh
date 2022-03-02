@@ -89,6 +89,41 @@ build-for-cgr:
   rules:
     - if: '$CI_PARENT_PIPELINE_SOURCE == "schedule" && $BUILD_CGR == "yes"'
 
+test-upgrade-image-on-turris-omnia:
+  extends: .test-upgrade-image
+  variables:
+    TARGET_DEVICE: turris-omnia
+    TARGET_DEVICE_NAME: turris-omnia-1
+    OPENWRT_IMAGE: openwrt-mvebu-cortexa9-cznic_turris-omnia-sysupgrade.img.gz
+  needs: ["build-for-turris-omnia"]
+
+test-upgrade-image-on-glinet-b1300:
+  extends: .test-upgrade-image
+  variables:
+    TARGET_DEVICE: glinet-b1300
+    TARGET_DEVICE_NAME: glinet-b1300-1
+    OPENWRT_IMAGE: openwrt-ipq40xx-generic-glinet_gl-b1300-squashfs-sysupgrade.bin
+  needs: ["build-for-glinet-b1300"]
+
+test-upgrade-image-on-nec-wx3000hp:
+  extends: .test-upgrade-image
+  variables:
+    TARGET_DEVICE: nec-wx3000hp
+    TARGET_DEVICE_NAME: nec-wx3000hp-1
+    OPENWRT_IMAGE: $NEC_WX3000HP_FULLIMAGE
+  needs: ["build-for-intel-mips"]
+
+test-upgrade-image-on-turris-rdkb:
+  extends: .test-upgrade-image
+  variables:
+    TARGET_DEVICE: turris-rdkb
+    TARGET_DEVICE_NAME: turris-omnia-2
+  script:
+    - export RDKB_IMAGE_PATH=$(ls build/turris-omnia-rdk/rdkb-generic-broadband-image_rdkb*.rootfs.tar.gz)
+    - export RDKB_IMAGE_NAME=${RDKB_IMAGE_PATH##*/}
+    - tools/deploy_firmware.py --device turris-omnia-rdk --target-name "$TARGET_DEVICE_NAME" --image $RDKB_IMAGE_NAME --os-type rdkb --kernel zImage --full
+  needs: ["build-for-rdkb-turris-omnia"]
+
 test-on-turris-omnia:
   extends: .test-on-target
   variables:
