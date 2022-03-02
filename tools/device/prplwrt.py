@@ -5,23 +5,20 @@
 # See LICENSE file for more details.
 ###############################################################
 
-import time
-import sys
+# Standard library
+import difflib
 import os
 import subprocess
-import difflib
-import argparse
-import shutil
+import sys
+import time
 from typing import List
 
-from enum import Enum
-from pathlib import Path
-
+# Third party
 import pexpect
 import pexpect.fdpexpect
 import pexpect.pxssh
 import serial
-import re
+
 
 class PrplwrtDevice:
     """Represents a prplWrt device.

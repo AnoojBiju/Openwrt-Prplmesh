@@ -5,23 +5,21 @@
 # See LICENSE file for more details.
 ###############################################################
 
-import time
-import sys
+# Standard library
 import os
+import re
 import subprocess
-import difflib
-import argparse
-import shutil
-from typing import List
-
-from enum import Enum
+import sys
 from pathlib import Path
 
+# Third party
 import pexpect
 import pexpect.fdpexpect
 import pexpect.pxssh
 import serial
-import re
+from device.prplwrt import PrplwrtDevice
+from device.utils import (ShellType, check_serial_type, check_uboot_var,
+                          serial_cmd_err)
 
 
 class TurrisRdkb(PrplwrtDevice):
