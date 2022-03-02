@@ -6,6 +6,7 @@
 ###############################################################
 """This module contains utilities for shells over a serial line."""
 # Standard library
+import os
 import sys
 import time
 
@@ -54,6 +55,9 @@ class SerialDevice:
         ValueError
             If the shell is not alive after its creation.
         """
+        if not os.path.exists(self.serial_path):
+            raise ValueError(f"The serial device {self.serial_path} does not exist!\n"
+                             + "Please make sure you have an appropriate udev rule for it.")
         if self.serial is not None:
             raise ValueError("Serial already connected!")
         self.serial = serial.Serial(self.serial_path, self.baudrate)
