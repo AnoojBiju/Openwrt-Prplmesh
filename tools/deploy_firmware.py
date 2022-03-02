@@ -44,6 +44,11 @@ def main():
         '-k',
         '--kernel',
         help="Kernel for RDKB type of image.")
+    parser.add_argument(
+        '-f',
+        '--full',
+        action='store_true',
+        help="Always flash the full image (even if it's not required).")
 
     args = parser.parse_args()
 
@@ -58,9 +63,8 @@ def main():
     if not dev.reach():
         raise ValueError("The device {} is not reachable over ssh! check your ssh configuration."
                          .format(dev.name))
-    print("Checking if the device needs to be upgraded")
-    if dev.needs_upgrade():
-        print("The device {} will be upgraded".format(dev.name))
+
+    def do_upgrade(dev):
         try:
             dev.sysupgrade()
         except NotImplementedError:
@@ -70,8 +74,17 @@ def main():
             print("Something went wrong with the update!")
             sys.exit(1)
         print("Done")
+
+    if args.full:
+        print("--full was provided, the device {} will be upgraded".format(dev.name))
+        do_upgrade(dev)
     else:
-        print("The device is already using the same version, no upgrade will be done.")
+        print("Checking if the device needs to be upgraded")
+        if dev.needs_upgrade():
+            print("The device {} will be upgraded".format(dev.name))
+            do_upgrade(dev)
+        else:
+            print("The device is already using the same version, no upgrade will be done.")
 
 
 if __name__ == '__main__':
