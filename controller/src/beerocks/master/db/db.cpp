@@ -4414,26 +4414,25 @@ bool db::set_vap_stats_info(const sMacAddr &bssid, uint64_t uc_tx_bytes, uint64_
                             uint64_t mc_tx_bytes, uint64_t mc_rx_bytes, uint64_t bc_tx_bytes,
                             uint64_t bc_rx_bytes)
 {
-    /*
-        Prepare path with correct BSS instance.
-        Example: Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.1
-    */
-    auto bss_path = dm_get_path_to_bss(bssid);
-    if (bss_path.empty()) {
-        LOG(ERROR) << "Failed to get BSS path with mac: " << bssid;
+    auto bss = get_bss(bssid);
+    if (!bss) {
+        LOG(ERROR) << "Failed to get BSS with BSSID: " << bssid;
         return false;
+    }
+    if (bss->dm_path.empty()) {
+        return true;
     }
 
     bool ret_val = true;
 
-    ret_val &= m_ambiorix_datamodel->set(bss_path, "UnicastBytesSent", uc_tx_bytes);
-    ret_val &= m_ambiorix_datamodel->set(bss_path, "UnicastBytesReceived", uc_rx_bytes);
-    ret_val &= m_ambiorix_datamodel->set(bss_path, "MulticastBytesSent", mc_tx_bytes);
-    ret_val &= m_ambiorix_datamodel->set(bss_path, "MulticastBytesReceived", mc_rx_bytes);
-    ret_val &= m_ambiorix_datamodel->set(bss_path, "BroadcastBytesSent", bc_tx_bytes);
-    ret_val &= m_ambiorix_datamodel->set(bss_path, "BroadcastBytesReceived", bc_rx_bytes);
+    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "UnicastBytesSent", uc_tx_bytes);
+    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "UnicastBytesReceived", uc_rx_bytes);
+    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "MulticastBytesSent", mc_tx_bytes);
+    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "MulticastBytesReceived", mc_rx_bytes);
+    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "BroadcastBytesSent", bc_tx_bytes);
+    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "BroadcastBytesReceived", bc_rx_bytes);
 
-    m_ambiorix_datamodel->set_current_time(bss_path);
+    m_ambiorix_datamodel->set_current_time(bss->dm_path);
 
     return ret_val;
 }
@@ -5795,16 +5794,13 @@ bool db::dm_set_device_multi_ap_capabilities(const std::string &device_mac)
 bool db::dm_add_sta_element(const sMacAddr &bssid, Station &station)
 {
 
-    if (bssid == network_utils::ZERO_MAC) {
-        LOG(WARNING) << "Client has empty parent bssid, not adding it to the data model, client="
-                     << station.mac;
+    auto bss = get_bss(bssid);
+    if (!bss) {
+        LOG(ERROR) << "Failed to get BSS with BSSID: " << bssid;
         return false;
     }
-
-    std::string path_to_bss = dm_get_path_to_bss(bssid);
-    if (path_to_bss.empty()) {
-        LOG(ERROR) << "Failed get path to bss with mac: " << bssid;
-        return false;
+    if (bss->dm_path.empty()) {
+        return true;
     }
 
     // TODO In refactoring Database nodes (PPM-1057),
@@ -5815,7 +5811,7 @@ bool db::dm_add_sta_element(const sMacAddr &bssid, Station &station)
     if (!station.dm_path.empty()) {
 
         // Verify if STA is added under different BSS. If so, remove old data model object.
-        if (station.dm_path.find(path_to_bss) == std::string::npos) {
+        if (station.dm_path.find(bss->dm_path) == std::string::npos) {
 
             LOG(DEBUG) << "Station is added to different BSS " << bssid
                        << " remove previous object";
@@ -5832,7 +5828,7 @@ bool db::dm_add_sta_element(const sMacAddr &bssid, Station &station)
     // If dm_path is empty, either it is steered or firstly added. New dm instance should be added.
     if (station.dm_path.empty()) {
 
-        const std::string path_to_sta = path_to_bss + "STA";
+        const std::string path_to_sta = bss->dm_path + ".STA";
 
         station.dm_path = m_ambiorix_datamodel->add_instance(path_to_sta);
         if (station.dm_path.empty()) {
@@ -6273,65 +6269,19 @@ bool db::set_radio_metrics(const sMacAddr &radio_mac, uint8_t noise, uint8_t tra
     return true;
 }
 
-// Cover the get_path_ code for skipping errors about finding the path
-// when AmbiorixDummy enabled
-#ifdef ENABLE_NBAPI
-std::string db::dm_get_path_to_bss(const sMacAddr &bssid)
-{
-    std::string bssid_string = tlvf::mac_to_string(bssid);
-    auto node                = get_node(bssid_string);
-
-    if (!node) {
-        LOG(ERROR) << "Failed to get radio node for bssid: " << bssid_string;
-        return {};
-    }
-
-    auto find_node = std::find_if(
-        std::begin(nodes), std::end(nodes),
-        [&bssid_string](const std::unordered_map<std::string, std::shared_ptr<son::node>> &map) {
-            return map.find(bssid_string) != map.end();
-        });
-
-    if (find_node == std::end(nodes)) {
-        LOG(ERROR) << "Failed to get radio node for bssid: " << bssid_string;
-        return {};
-    }
-
-    auto radio_node = find_node->at(bssid_string);
-
-    auto radio_path = radio_node->dm_path;
-    if (radio_path.empty()) {
-        LOG(ERROR) << "Failed to get radio path for radio, mac: " << radio_node->mac;
-        return {};
-    }
-
-    auto bss_path = radio_path + ".BSS.";
-    auto bss_index =
-        m_ambiorix_datamodel->get_instance_index(bss_path + "[BSSID == '%s']", bssid_string);
-    if (!bss_index) {
-        LOG(ERROR) << "Failed to get bss index for bss with mac: " << bssid_string;
-        return {};
-    }
-    return radio_path + ".BSS." + std::to_string(bss_index) + ".";
-}
-
-#else
-std::string db::dm_get_path_to_bss(const sMacAddr &bssid) { return "dummy!"; }
-#endif
-
 bool db::set_estimated_service_param(const sMacAddr &bssid, const std::string &param_name,
                                      uint32_t esp_value)
 {
-    std::string path_to_bss = dm_get_path_to_bss(bssid);
-    if (path_to_bss.empty()) {
-        LOG(ERROR) << "Failed get path to bss with mac: " << bssid;
+    auto bss = get_bss(bssid);
+    if (!bss) {
+        LOG(ERROR) << "Failed to get BSS with BSSID: " << bssid;
         return false;
     }
-    if (!m_ambiorix_datamodel->set(path_to_bss, param_name, esp_value)) {
-        LOG(ERROR) << "Failed to set " << path_to_bss << param_name << ": " << esp_value;
-        return false;
+    if (bss->dm_path.empty()) {
+        return true;
     }
-    return true;
+
+    return m_ambiorix_datamodel->set(bss->dm_path, param_name, esp_value);
 }
 
 bool db::add_interface(const sMacAddr &device_mac, const sMacAddr &interface_mac,

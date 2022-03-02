@@ -2314,16 +2314,6 @@ private:
     bool dm_add_sta_element(const sMacAddr &bssid, Station &station);
 
     /**
-     * @brief Prepares path to the BSS data element with correct index (i).
-     *
-     * Data model path example: "Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.2."
-     *
-     * @param bssid BSSID.
-     * @return Path to bss, empty string otherwise.
-     */
-    std::string dm_get_path_to_bss(const sMacAddr &bssid);
-
-    /**
      * @brief Set clients (device) multi ap capabilities
      *
      * Data model path example: "Device.WiFi.DataElements.Network.Device.1.MultiAPCapabilities.{capabilities}"
