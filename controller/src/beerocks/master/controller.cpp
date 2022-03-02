@@ -2140,6 +2140,8 @@ bool Controller::handle_cmdu_1905_backhaul_sta_capability_report_message(
 
         LOG(DEBUG) << "Backhaul STA of radio with ruid=" << bh_sta_radio_cap_tlv->ruid()
                    << " is sta_mac=" << radio->backhaul_station_mac;
+
+        database.dm_set_radio_bh_sta(*radio, radio->backhaul_station_mac);
     }
     return true;
 }

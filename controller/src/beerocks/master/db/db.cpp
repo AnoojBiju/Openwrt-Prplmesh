@@ -7067,3 +7067,12 @@ bool db::dm_remove_bss(Agent::sRadio::sBss &bss)
 
     return true;
 }
+
+bool db::dm_set_radio_bh_sta(const Agent::sRadio &radio, const sMacAddr &bh_sta_mac)
+{
+    if (radio.dm_path.empty()) {
+        return true;
+    }
+
+    return m_ambiorix_datamodel->set(radio.dm_path + ".BackhaulSta", "MACAddress", bh_sta_mac);
+}

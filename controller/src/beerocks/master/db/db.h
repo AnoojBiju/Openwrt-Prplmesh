@@ -1990,6 +1990,20 @@ public:
      */
     bool dm_remove_bss(Agent::sRadio::sBss &bss);
 
+    /**
+     * @brief Sets MACAddress of the Backhaul Station (bSTA) on given radio.
+     * 
+     * A station with this MAC also should appear on datamodel,
+     * if this devices radio connects to another EasyMesh devices wireless backhaul BSS (bBSS).
+     *
+     * DM path : "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BackhaulSta"
+     *
+     * @param[in] radio radio db object
+     * @param[in] bh_sta_mac backhaul sta mac address.
+     * @return true on success, otherwise false.
+     */
+    bool dm_set_radio_bh_sta(const Agent::sRadio &radio, const sMacAddr &bh_sta_mac);
+
     //
     // tasks
     //
