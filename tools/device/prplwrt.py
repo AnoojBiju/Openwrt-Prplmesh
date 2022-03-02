@@ -58,7 +58,7 @@ class PrplwrtDevice:
         self.image = image
         self.username = username
 
-        self.rootdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "..")
+        self.rootdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../..")
         self.artifacts_dir = os.path.join(self.rootdir, "build/{}".format(self.device))
         """The directory where artifacts are stored. It's expected to contain
         prplwrt-version, and the image file."""
