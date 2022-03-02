@@ -6,23 +6,14 @@
 # See LICENSE file for more details.
 ###############################################################
 
-import time
-import sys
-import os
-import subprocess
-import difflib
+# Standard library
 import argparse
-import shutil
-from typing import List
+import sys
 
-from enum import Enum
-from pathlib import Path
-
-import pexpect
-import pexpect.fdpexpect
-import pexpect.pxssh
-import serial
-import re
+# Third party
+from device.axepoint import Axepoint
+from device.prplwrt import Generic
+from device.turris_rdk_b import TurrisRdkb
 
 
 def main():

@@ -5,23 +5,18 @@
 # See LICENSE file for more details.
 ###############################################################
 
-import time
-import sys
+# Standard library
 import os
-import subprocess
-import difflib
-import argparse
 import shutil
-from typing import List
+import sys
+import time
 
-from enum import Enum
-from pathlib import Path
-
+# Third party
 import pexpect
 import pexpect.fdpexpect
 import pexpect.pxssh
 import serial
-import re
+from device.prplwrt import PrplwrtDevice
 
 
 class Axepoint(PrplwrtDevice):

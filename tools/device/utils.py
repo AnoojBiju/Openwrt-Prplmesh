@@ -5,23 +5,17 @@
 # See LICENSE file for more details.
 ###############################################################
 
-import time
-import sys
+# Standard library
 import os
-import subprocess
-import difflib
-import argparse
-import shutil
-from typing import List
-
+import re
+import sys
 from enum import Enum
-from pathlib import Path
 
+# Third party
 import pexpect
 import pexpect.fdpexpect
 import pexpect.pxssh
 import serial
-import re
 
 
 class ShellType(Enum):
