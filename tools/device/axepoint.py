@@ -8,15 +8,14 @@
 # Standard library
 import os
 import shutil
-import sys
 import time
 
 # Third party
 import pexpect
 import pexpect.fdpexpect
 import pexpect.pxssh
-import serial
 from device.prplwrt import PrplwrtDevice
+from device.serial import SerialDevice
 
 
 class Axepoint(PrplwrtDevice):
@@ -66,15 +65,8 @@ class Axepoint(PrplwrtDevice):
         print("Copying image '{}' to '{}'".format(self.image, self.tftp_dir))
         shutil.copy(os.path.join(self.artifacts_dir, self.image), self.tftp_dir)
         print("Image copied to {}.".format(self.tftp_dir))
-        with serial.Serial(serial_path, self.baudrate) as ser:
-            print("Connecting to serial")
-            shell = pexpect.fdpexpect.fdspawn(ser, logfile=sys.stdout.buffer)
-            if not shell.isalive():
-                raise ValueError("Unable to connect to the serial device!")
-            print("Connected")
-            # The console might not be active yet:
-            shell.sendline("")
-            shell.expect(self.serial_prompt)
+        with SerialDevice(self.baudrate, self.name, self.serial_prompt) as ser:
+            shell = ser.shell
             # kill any instance of the init script, if the current
             # firmware doesn't have working wireless interfaces it
             # will prevent it from rebooting:

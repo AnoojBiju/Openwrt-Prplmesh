@@ -6,16 +6,14 @@
 ###############################################################
 
 # Standard library
-import os
 import re
-import sys
 from enum import Enum
 
 # Third party
 import pexpect
 import pexpect.fdpexpect
 import pexpect.pxssh
-import serial
+from device.serial import SerialDevice
 
 
 class ShellType(Enum):
@@ -53,18 +51,12 @@ def check_serial_type(serial_name: str, baudrate: int, prompt_regexp: str) -> st
         If the connecting to the serial device failed.
     """
 
-    serial_path = f"/dev/{serial_name}"
-    if not os.path.exists(serial_path):
-        raise ValueError(f"The serial device {serial_path} does not exist!\n"
-                         + "Please make sure you have an appropriate udev rule for it.")
     UBOOT_PROMPT = "=>"
     OSTYPE_RE = r"NAME=[^\s]*"
 
-    with serial.Serial(serial_path, baudrate) as ser:
-        shell = pexpect.fdpexpect.fdspawn(ser, logfile=sys.stdout.buffer, timeout=20)
-        if not shell.isalive():
-            raise ValueError("Unable to connect to the serial device!")
-
+    with SerialDevice(baudrate, serial_name, prompt_regexp,
+                      expect_prompt_on_connect=False) as ser:
+        shell = ser.shell
         shell.sendline("")
         shell.expect([UBOOT_PROMPT, pexpect.TIMEOUT])
         if shell.match is not pexpect.TIMEOUT:
