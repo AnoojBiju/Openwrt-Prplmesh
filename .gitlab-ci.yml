@@ -26,11 +26,12 @@ include:
   - local: "/ci/templates.yml"
 
 .rules-for-expensive-job: &expensive-job
-  - if: '$CI_PIPELINE_SOURCE == "schedule"'
-  - if: '$CI_MERGE_REQUEST_EVENT_TYPE == "merge_train"'
-  - if: $CI_COMMIT_TAG
-  - when: manual
-    allow_failure: true
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_MERGE_REQUEST_EVENT_TYPE == "merge_train"'
+    - if: $CI_COMMIT_TAG
+    - when: manual
+      allow_failure: true
 
 image-build-builder/alpine:
   extends: .image-build
@@ -55,7 +56,8 @@ platform:
   needs:
     - build-in-docker
     - image-build-boardfarm-ci
-  rules: *expensive-job
+  rules:
+    - !reference [.rules-for-expensive-job, rules]
   variables:
     STABILITY_TESTS: $STABILITY_TESTS
     ALTRAN_TESTS: $ALTRAN_TESTS
@@ -221,14 +223,16 @@ build-in-docker:
 build-in-docker-alpine:
   extends: .build-in-docker
   image: $CI_REGISTRY_IMAGE/prplmesh-builder-alpine:$CI_PIPELINE_ID
-  rules: *expensive-job
+  rules:
+    - !reference [.rules-for-expensive-job, rules]
   needs: ["image-build-builder/alpine"]
 
 build-in-docker-static:
   extends: build-in-docker
   variables:
     EXTRA_CMAKE_FLAGS: "-DBUILD_SHARED_LIBS=OFF"
-  rules: *expensive-job
+  rules:
+    - !reference [.rules-for-expensive-job, rules]
 
 tlvf_test:
   extends: .run-test-in-docker
