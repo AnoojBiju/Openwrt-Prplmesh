@@ -190,7 +190,7 @@ int test_complex_list()
     for (int i = 0; i < complex_list_entries; i++) {
         auto cmplx_tlv4_i = std::get<1>(tlv4->complex_list(i));
         if (cmplx_tlv4_i.var1() != 0xbbbbaaaa) {
-            MAPF_ERR("wrong value for cmplx->var1 " << std::hex << cmplx_tlv4_i.var1());
+            MAPF_ERR("wrong value for cmplx_tlv4_i.var1 " << std::hex << cmplx_tlv4_i.var1());
             errors++;
         }
     }
