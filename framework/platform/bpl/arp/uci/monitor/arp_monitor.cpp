@@ -388,7 +388,6 @@ bool arp_monitor::process_mon(BPL_ARP_MON_ENTRY &sArpMonData)
         }
 
         // creating atrribute table
-        unsigned short type;
         int max            = NDA_MAX;
         struct rtattr *rta = ((struct rtattr *)(((char *)(r)) + NLMSG_ALIGN(sizeof(struct ndmsg))));
         len_at             = h->nlmsg_len - NLMSG_LENGTH(sizeof(*r));
@@ -396,7 +395,7 @@ bool arp_monitor::process_mon(BPL_ARP_MON_ENTRY &sArpMonData)
 
         memset(tb, 0, sizeof(struct rtattr *) * (max + 1));
         while (RTA_OK(rta, len_at)) {
-            type = rta->rta_type & ~flags;
+            unsigned short type = rta->rta_type & ~flags;
             if ((type <= max) && (!tb[type])) {
                 tb[type] = rta;
             }

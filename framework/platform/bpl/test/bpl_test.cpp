@@ -33,13 +33,13 @@ int main()
         printf("\n1. Query WLAN ready\n2. AP start\n3. AP stop\n4. STA start\n5. STA stop\n6. "
                "Restore at interface level\n7. Restore at full scope\n8. Set WiFI credentials\n9. "
                "Get WiFi credentials\n10. AP post init handling\n11. Exit\n");
-        fflush(stdin);
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
         getString(userInputS, 3);
         switch (atoi(userInputS)) {
         case 9:
             memset(&wlan_params, 0, sizeof(wlan_params));
             printf("Interface : ");
-            fflush(stdin);
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
             getString(inputInterface, sizeof(inputInterface));
             if (beerocks::bpl::cfg_get_wifi_params(inputInterface, &wlan_params) != 0) {
                 MAPF_ERR("Failed to retrieve WiFi params for " << inputInterface << "\n");
