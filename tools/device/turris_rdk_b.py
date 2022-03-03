@@ -86,7 +86,8 @@ class TurrisRdkb(PrplwrtDevice):
         with SerialDevice(self.baudrate, self.name, self.serial_prompt,
                           expect_prompt_on_connect=False) as ser:
             shell = ser.shell
-            shell.expect(["Please press Enter to activate this console.", pexpect.TIMEOUT])
+            shell.expect(["Please press Enter to activate this console.", pexpect.TIMEOUT],
+                         timeout=180)
             if shell.match == pexpect.TIMEOUT:
                 return False
 
