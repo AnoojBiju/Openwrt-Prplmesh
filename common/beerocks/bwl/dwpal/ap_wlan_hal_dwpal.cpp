@@ -3194,6 +3194,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
 
         if (iface_ids.vap_id == beerocks::IFACE_RADIO_ID) {
             // Ignore AP-ENABLED on radio
+            LOG(INFO) << "AP already enabled on radio";
             return true;
         }
 
