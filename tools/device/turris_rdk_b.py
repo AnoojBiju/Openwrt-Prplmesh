@@ -9,6 +9,7 @@
 import os
 import re
 import subprocess
+import time
 from pathlib import Path
 
 # Third party
@@ -227,6 +228,7 @@ class TurrisRdkb(PrplwrtDevice):
             print("Install RDKB rootfs.")
             mount_mmc(self.ROOTFS_PARTITION)
 
+            time.sleep(60)
             shell.sendline("")
 
             serial_cmd_err(shell, self.PROMPT_RE, "rm -rf /mnt/*")
