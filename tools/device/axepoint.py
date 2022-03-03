@@ -74,8 +74,6 @@ class Axepoint(PrplwrtDevice):
             print("Connected")
             # The console might not be active yet:
             shell.sendline("")
-            # make the shell prompt appear:
-            self.set_prompt(shell)
             shell.expect(self.serial_prompt)
             # kill any instance of the init script, if the current
             # firmware doesn't have working wireless interfaces it
@@ -104,7 +102,6 @@ class Axepoint(PrplwrtDevice):
             shell.expect("Please press Enter to activate this console", timeout=180)
             # activate the console:
             shell.sendline("")
-            self.set_prompt(shell)
             shell.expect(self.serial_prompt)
             shell.sendline("exit")
         if not self.reach(attempts=10):
