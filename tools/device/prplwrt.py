@@ -29,8 +29,8 @@ class PrplwrtDevice:
     is needed (see `artifacts_dir`).
     """
 
-    serial_prompt = "_pexpect_prompt_ "
-    """For serial connections we will set this prompt to make it easier to "expect" it."""
+    serial_prompt = r'root@[^\s]+:[^\s]+# '
+    """The prplOS prompt for serial connections."""
 
     baudrate = 115200
     """The baudrate of the serial connection to the device."""
@@ -62,10 +62,6 @@ class PrplwrtDevice:
         self.artifacts_dir = os.path.join(self.rootdir, "build/{}".format(self.device))
         """The directory where artifacts are stored. It's expected to contain
         prplwrt-version, and the image file."""
-
-    def set_prompt(self, pexp: pexpect):
-        """Set the prompt to `serial_prompt` on a pexpect object."""
-        pexp.sendline("export PS1='{}'".format(self.serial_prompt))
 
     def read_remote_version(self) -> List[str]:
         """Read prplwrt-version on a remote device
@@ -176,8 +172,6 @@ class Generic(PrplwrtDevice):
             print("Connected")
             # The console might not be active yet:
             shell.sendline("")
-            # make the shell prompt appear:
-            self.set_prompt(shell)
             shell.expect(self.serial_prompt)
             # Turn off the wifi to make sure it doesn't prevent the upgrade:
             shell.sendline("wifi down")
@@ -190,7 +184,6 @@ class Generic(PrplwrtDevice):
             shell.expect("Please press Enter to activate this console", timeout=180)
             # activate the console:
             shell.sendline("")
-            self.set_prompt(shell)
             shell.expect(self.serial_prompt)
             shell.sendline("exit")
         if not self.reach(attempts=10):
