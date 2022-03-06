@@ -835,6 +835,18 @@ bool get_serial_number(std::string &serial_number);
  */
 bool get_ruid_chipset_vendor(const sMacAddr &ruid, std::string &chipset_vendor);
 
+/**
+ * @brief Get the maximum service prioritization rules supported by the Multi-AP Agent.
+ * 
+ * @note It is the manufacturer responsability to override implementation of this function and
+ * and return a correct string.
+ * 
+ * @param [out] max_prioritization_rules The maximum service prioritization rules supported by the
+ * Multi-AP Agent. If not supported set to zero.
+ * @return true on success, otherwise false.
+ */
+bool get_max_prioritization_rules(uint32_t &max_prioritization_rules);
+
 } // namespace bpl
 } // namespace beerocks
 

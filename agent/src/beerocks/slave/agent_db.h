@@ -21,6 +21,7 @@
 #include <mutex>
 #include <tlvf/wfa_map/tlvProfile2ApCapability.h>
 #include <tlvf/wfa_map/tlvProfile2MultiApProfile.h>
+#include <tlvf/wfa_map/tlvServicePrioritizationRule.h>
 #include <unordered_set>
 
 #ifdef ENABLE_NBAPI
@@ -152,6 +153,7 @@ public:
         uint16_t ucc_listener_port;
         CountryCode country_code;
         wfa_map::tlvProfile2ApCapability::eByteCounterUnits byte_counter_units;
+        uint32_t max_prioritization_rules;
     } device_conf;
 
     struct sControllerInfo {
@@ -322,6 +324,13 @@ public:
         std::unordered_set<uint16_t> secondary_vlans_ids;
     } traffic_separation;
 
+    struct {
+        // Key: rule ID
+        std::unordered_map<uint32_t,
+                           wfa_map::tlvServicePrioritizationRule::sServicePrioritizationRule>
+            rules;
+        std::array<uint8_t, 64> dscp_mapping_table;
+    } service_prioritization;
     struct {
         uint32_t reporting_interval_sec;
         bool report_independent_channel_scans               = false;

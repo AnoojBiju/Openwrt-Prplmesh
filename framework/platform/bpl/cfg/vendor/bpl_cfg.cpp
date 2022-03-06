@@ -26,5 +26,14 @@ bool get_ruid_chipset_vendor(const sMacAddr &ruid, std::string &chipset_vendor)
     return true;
 }
 
+bool get_max_prioritization_rules(uint32_t &max_prioritization_rules)
+{
+    // On EasyMesh standard 9.1 it is said that a Multi-AP Agent that implements Profile-3, need to:
+    // "Set Max Total Number Service Prioritization Rules to one".
+    // This requirement will probably change on future version of the standard.
+    max_prioritization_rules = 1;
+    return true;
+}
+
 } // namespace bpl
 } // namespace beerocks
