@@ -104,7 +104,10 @@ void CmduPeer::receive_cmdus(beerocks::net::Socket::Connection &connection,
     // only one message would be received at a time and the loop would be iterated only once.
     while ((buffer.length() > 0) &&
            m_cmdu_parser->parse_cmdu(buffer, iface_index, dst_mac, src_mac, cmdu_rx)) {
-        handler(connection, iface_index, dst_mac, src_mac, cmdu_rx);
+        if (!handler(connection, iface_index, dst_mac, src_mac, cmdu_rx)) {
+            LOG(ERROR) << "Stop processing buffer";
+            break;
+        }
     }
 }
 

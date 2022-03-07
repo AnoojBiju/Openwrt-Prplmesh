@@ -40,7 +40,7 @@ public:
      * @param src_mac Source MAC address.
      * @param cmdu_rx The CMDU message received.
      */
-    using CmduReceivedHandler = std::function<void(
+    using CmduReceivedHandler = std::function<bool(
         beerocks::net::Socket::Connection &connection, uint32_t iface_index,
         const sMacAddr &dst_mac, const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)>;
 
