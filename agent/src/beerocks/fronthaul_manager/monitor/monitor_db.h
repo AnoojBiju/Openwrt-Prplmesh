@@ -291,6 +291,14 @@ public:
         bool include_associated_sta_traffic_stats_tlv_in_ap_metrics_response = false;
 
         /**
+         * Associated WIFI 6 Sta Status Report Inclusion Policy.
+         * 0: Do not include Associated WIFI 6 Sta Status Report TLV in AP Metrics Response
+         * 1: Include Associated WIFI 6 Sta Status Report TLV in AP Metrics Response
+         * (Value is obtained from Metric Reporting Policy TLV)
+         */
+        bool include_associated_wifi_6_sta_status_report_tlv_in_ap_metrics_response = false;
+
+        /**
          * Last value reported for STA Metrics Reporting RCPI.
          * Must be compared with threshold value and hysteresis to decide if current value has to
          * be reported.
