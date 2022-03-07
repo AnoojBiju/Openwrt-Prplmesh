@@ -119,6 +119,10 @@ public:
         uint8_t rx_load_percent_prev = 0;
     };
 
+    bwl::SStaQosCtrlParams hal_qos_ctrl_params = {};
+    bwl::SStaQosCtrlParams &get_qos_ctrl_params() { return m_sta_qos_ctrl_params; }
+    const bwl::SStaQosCtrlParams &get_qos_ctrl_params() const { return m_sta_qos_ctrl_params; }
+
     SStaStats &get_stats() { return m_sta_stats; }
     const SStaStats &get_stats() const { return m_sta_stats; }
 
@@ -146,6 +150,7 @@ private:
     std::chrono::steady_clock::time_point last_change_time;
     std::chrono::steady_clock::time_point arp_time = std::chrono::steady_clock::now();
     SStaStats m_sta_stats;
+    bwl::SStaQosCtrlParams m_sta_qos_ctrl_params;
     bool m_measure_sta_enable = false;
 };
 

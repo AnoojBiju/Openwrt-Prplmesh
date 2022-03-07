@@ -40,6 +40,8 @@ public:
                                        const monitor_sta_node &sta_node);
     bool add_ap_assoc_sta_link_metric(ieee1905_1::CmduMessageTx &cmdu_tx, const sMacAddr &bssid,
                                       monitor_sta_node &sta_node);
+    bool add_ap_assoc_wifi_6_sta_status_report(ieee1905_1::CmduMessageTx &cmdu_tx,
+                                               const monitor_sta_node &sta_node);
     bool add_radio_metrics(ieee1905_1::CmduMessageTx &cmdu_tx, const sMacAddr &radio_mac,
                            const monitor_radio_node &radio_node) const;
 
