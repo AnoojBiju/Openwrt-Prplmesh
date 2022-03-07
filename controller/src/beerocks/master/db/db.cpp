@@ -4761,7 +4761,7 @@ bool db::set_node_channel_bw(const sMacAddr &mac, int channel, beerocks::eWiFiBa
 {
     std::shared_ptr<node> n = get_node(mac);
     if (!n) {
-        LOG(ERROR) << "node " << mac << "does not exist ";
+        LOG(ERROR) << "node " << mac << " does not exist ";
         return false;
     }
     if (n->get_type() == beerocks::TYPE_SLAVE) {
