@@ -32,6 +32,7 @@ enum eTaskType : uint8_t {
     LINK_METRICS_COLLECTION,
     SWITCH_CHANNEL,
     TOPOLOGY,
+    SERVICE_PRIORITIZATION,
 };
 
 class Task {
