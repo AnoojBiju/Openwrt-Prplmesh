@@ -89,6 +89,7 @@ void CmduClientImpl::handle_read(int fd)
                        const sMacAddr &dst_mac, const sMacAddr &src_mac,
                        ieee1905_1::CmduMessageRx &cmdu_rx) {
         notify_cmdu_received(iface_index, dst_mac, src_mac, cmdu_rx);
+        return true;
     };
     m_peer.receive_cmdus(*m_connection, m_buffer, handler);
 }

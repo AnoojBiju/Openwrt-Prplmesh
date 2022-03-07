@@ -218,6 +218,11 @@ void CmduServerImpl::handle_read(int fd)
                        const sMacAddr &dst_mac, const sMacAddr &src_mac,
                        ieee1905_1::CmduMessageRx &cmdu_rx) {
         notify_cmdu_received(fd, iface_index, dst_mac, src_mac, cmdu_rx);
+        if (m_connections.end() == m_connections.find(fd)) {
+            LOG(ERROR) << "Failed to find connection! fd = " << fd;
+            return false;
+        }
+        return true;
     };
     m_peer.receive_cmdus(*context.connection, context.buffer, handler);
 }
