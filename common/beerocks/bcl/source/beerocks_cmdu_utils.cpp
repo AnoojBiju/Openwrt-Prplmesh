@@ -27,8 +27,6 @@ bool CmduUtils::verify_cmdu(uint8_t *data, size_t length)
     auto tlv = reinterpret_cast<ieee1905_1::sTlvHeader *>(
         data + ieee1905_1::cCmduHeader::get_initial_size());
 
-    bool ret = true;
-
     do {
 
         auto tlv_type = static_cast<ieee1905_1::eTlvType>(tlv->type);
@@ -42,7 +40,6 @@ bool CmduUtils::verify_cmdu(uint8_t *data, size_t length)
                                               sizeof(ieee1905_1::sTlvHeader) + tlv_length, true);
             if (!tlv_vendor_specific.isInitialized()) {
                 LOG(ERROR) << "tlvVendorSpecific init() failure";
-                ret = false;
                 break;
             }
 
@@ -55,7 +52,6 @@ bool CmduUtils::verify_cmdu(uint8_t *data, size_t length)
                 if (beerocks_magic != message::MESSAGE_MAGIC) {
                     LOG(WARNING) << "mismatch magic " << std::hex << int(beerocks_magic)
                                  << " != " << int(message::MESSAGE_MAGIC) << std::dec;
-                    ret = false;
                     break;
                 }
 
@@ -78,7 +74,7 @@ bool CmduUtils::verify_cmdu(uint8_t *data, size_t length)
     LOG(ERROR) << "TLV end of message not found! tlv_type=" << tlv->type
                << ", tlv_length=" << tlv->length;
 
-    return ret;
+    return false;
 }
 
 } // namespace beerocks
