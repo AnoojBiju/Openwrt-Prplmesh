@@ -50,7 +50,10 @@ namespace beerocks {
 /**
  * Time between successive timer executions of the tasks timer
  */
-constexpr auto tasks_timer_period = std::chrono::milliseconds(500);
+// Reduced the tasks_timer_period to 90 from 500 milliseconds to fix
+// the issue mentioned in PPM-1939.
+// Optimizing the task wakeup time will be handled as part of PPM-1955.
+constexpr auto tasks_timer_period = std::chrono::milliseconds(90);
 
 /**
  * Time between successive timer executions of the FSM timer
