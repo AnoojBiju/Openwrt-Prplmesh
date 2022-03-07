@@ -208,8 +208,6 @@ bool socket_thread::verify_cmdu(message::sUdsHeader *uds_header)
         ieee1905_1::cCmduHeader::get_initial_size());
     ieee1905_1::sTlvHeader *first_tlv = tlv;
 
-    bool ret = true;
-
     uint8_t type    = tlv->type;
     uint16_t length = tlv->length;
 
@@ -221,7 +219,6 @@ bool socket_thread::verify_cmdu(message::sUdsHeader *uds_header)
                 (uint8_t *)tlv, length + sizeof(ieee1905_1::sTlvHeader), true);
             if (!tlv_vendor_specific.isInitialized()) {
                 LOG(ERROR) << "tlvVendorSpecific init() failure";
-                ret = false;
                 break;
             }
 
@@ -233,7 +230,6 @@ bool socket_thread::verify_cmdu(message::sUdsHeader *uds_header)
                 if (beerocks_magic != message::MESSAGE_MAGIC) {
                     THREAD_LOG(WARNING) << "mismatch magic " << std::hex << int(beerocks_magic)
                                         << " != " << int(message::MESSAGE_MAGIC) << std::dec;
-                    ret = false;
                     break;
                 }
 
@@ -262,7 +258,7 @@ bool socket_thread::verify_cmdu(message::sUdsHeader *uds_header)
     std::ptrdiff_t available_bytes = uds_header->length + sizeof(message::sUdsHeader);
     LOG(DEBUG) << "hex_dump (" + std::to_string(available_bytes) + " bytes):" << std::endl
                << utils::dump_buffer((uint8_t *)uds_header, available_bytes);
-    return ret;
+    return false;
 }
 
 bool socket_thread::work()
