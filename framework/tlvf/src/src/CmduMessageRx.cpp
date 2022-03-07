@@ -44,6 +44,7 @@
 #include <tlvf/wfa_map/tlvAssociatedStaExtendedLinkMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaTrafficStats.h>
+#include <tlvf/wfa_map/tlvAssociatedWiFi6StaStatusReport.h>
 #include <tlvf/wfa_map/tlvBackhaulBssConfiguration.h>
 #include <tlvf/wfa_map/tlvBackhaulStaRadioCapabilities.h>
 #include <tlvf/wfa_map/tlvBackhaulSteeringRequest.h>
@@ -417,6 +418,9 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     }
     case (wfa_map::eTlvTypeMap::TLV_DEVICE_INVENTORY): {
         return msg.addClass<wfa_map::tlvDeviceInventory>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_ASSOCIATED_WIFI_6_STA_STATUS_REPORT): {
+        return msg.addClass<wfa_map::tlvAssociatedWiFi6StaStatusReport>();
     }
     }
     LOG(FATAL) << "Unknown TLV type: " << unsigned(tlv_type);
