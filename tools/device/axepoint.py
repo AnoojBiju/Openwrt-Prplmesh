@@ -27,7 +27,7 @@ class Axepoint(GenericPrplOS):
     tftp_dir = "/srv/tftp"
     """The root directory of the tftp server. The image will be copied there"""
 
-    uboot_prompt = "GRX500 #"
+    bootloader_prompt = "GRX500 #"
     """The u-boot prompt on the target."""
 
     def _update_fullimage(self, shell: pexpect.fdpexpect.fdspawn):
@@ -42,15 +42,15 @@ class Axepoint(GenericPrplOS):
                       pexpect.EOF, pexpect.TIMEOUT], timeout=120)
         # stop autoboot:
         shell.sendline("")
-        shell.expect(self.uboot_prompt)
+        shell.expect(self.bootloader_prompt)
         # set the image name and save it:
         shell.sendline("setenv fullimage {} ; saveenv".format(self.image))
-        shell.expect(self.uboot_prompt)
+        shell.expect(self.bootloader_prompt)
         # do the actual upgrade:
         shell.sendline("run update_fullimage")
         shell.expect("Creating dynamic volume .* of size", timeout=120)
         shell.expect(r"(?i)Writing to nand\.\.\. (ok|done)", timeout=60)
-        shell.expect(self.uboot_prompt, timeout=600)
+        shell.expect(self.bootloader_prompt, timeout=600)
 
     def upgrade_bootloader(self):
         """Upgrade the device through u-boot.

@@ -44,6 +44,15 @@ class GenericDevice():
     """The time (in seconds) the device needs to initialize when it boots
     for the first time after flashing a new image."""
 
+    bootloader_prompt = "=> "
+    """The prompt of the bootloader."""
+
+    boot_stop_expression = "Hit any key to stop autoboot"
+    """The expression signaling the device can be stopped in its bootloader."""
+
+    boot_stop_sequence = "\n"
+    """The sequence to use to stop the device in its bootloader."""
+
     def __init__(self, device: str, name: str, image: str, username: str = "root"):
         """
 
@@ -109,7 +118,7 @@ class GenericDevice():
             print(diff_str)
         return bool(diff_str)
 
-    def reboot(self, serial_type: ShellType):
+    def reboot(self, serial_type: ShellType, stop_in_bootloader: bool = False):
         """Reboot the device.
 
         Note that this method handles both the cases where the device
@@ -120,6 +129,8 @@ class GenericDevice():
         -----------
         serial_type: ShellType
             Type of the serial connection as enum ShellType(uboot, rdkb, prplOS)
+        stop_in_bootloader: bool
+            Whether to stop the device when it enters its bootloader or not.
         """
         with SerialDevice(self.baudrate, self.name,
                           self.serial_prompt, expect_prompt_on_connect=False) as ser:
@@ -130,6 +141,12 @@ class GenericDevice():
                 shell.sendline("reset")
             elif serial_type in [ShellType.PRPLOS, ShellType.RDKB]:
                 shell.sendline("reboot")
+            if stop_in_bootloader:
+                print("Device will be stopped in its bootloader.")
+                shell.expect(self.boot_stop_expression, timeout=180)
+                shell.sendline(self.boot_stop_sequence)
+                shell.expect(self.bootloader_prompt)
+                print("Device stopped in bootloader.")
 
     def read_artifacts_dir_version(self) -> List[str]:
         """Reads the local version file.
