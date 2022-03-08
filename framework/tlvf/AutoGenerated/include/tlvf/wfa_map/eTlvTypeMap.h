@@ -65,6 +65,7 @@ enum class eTlvTypeMap : uint8_t {
     TLV_PROFILE2_CAC_REQUEST = 0xad,
     TLV_PROFILE2_CAC_TERMINATION = 0xae,
     TLV_PROFILE2_CAC_COMPLETION_REPORT = 0xaf,
+    TLV_ASSOCIATED_WIFI_6_STA_STATUS_REPORT = 0xb0,
     TLV_PROFILE2_CAC_STATUS_REPORT = 0xb1,
     TLV_PROFILE2_CAC_CAPABILITIES = 0xb2,
     TLV_PROFILE2_MULTIAP_PROFILE = 0xb3,
@@ -139,6 +140,7 @@ static const char *eTlvTypeMap_str(eTlvTypeMap enum_value) {
     case eTlvTypeMap::TLV_PROFILE2_CAC_REQUEST:                     return "eTlvTypeMap::TLV_PROFILE2_CAC_REQUEST";
     case eTlvTypeMap::TLV_PROFILE2_CAC_TERMINATION:                 return "eTlvTypeMap::TLV_PROFILE2_CAC_TERMINATION";
     case eTlvTypeMap::TLV_PROFILE2_CAC_COMPLETION_REPORT:           return "eTlvTypeMap::TLV_PROFILE2_CAC_COMPLETION_REPORT";
+    case eTlvTypeMap::TLV_ASSOCIATED_WIFI_6_STA_STATUS_REPORT:      return "eTlvTypeMap::TLV_ASSOCIATED_WIFI_6_STA_STATUS_REPORT";
     case eTlvTypeMap::TLV_PROFILE2_CAC_STATUS_REPORT:               return "eTlvTypeMap::TLV_PROFILE2_CAC_STATUS_REPORT";
     case eTlvTypeMap::TLV_PROFILE2_CAC_CAPABILITIES:                return "eTlvTypeMap::TLV_PROFILE2_CAC_CAPABILITIES";
     case eTlvTypeMap::TLV_PROFILE2_MULTIAP_PROFILE:                 return "eTlvTypeMap::TLV_PROFILE2_MULTIAP_PROFILE";
@@ -220,6 +222,7 @@ public:
         case 0xad:
         case 0xae:
         case 0xaf:
+        case 0xb0:
         case 0xb1:
         case 0xb2:
         case 0xb3:

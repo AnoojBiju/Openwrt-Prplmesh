@@ -304,6 +304,20 @@ bool mon_wlan_hal_nl80211::update_stations_stats(const std::string &vap_iface_na
     return true;
 }
 
+bool mon_wlan_hal_nl80211::update_station_qos_control_params(const std::string &vap_iface_name,
+                                                             const std::string &sta_mac,
+                                                             SStaQosCtrlParams &sta_qos_ctrl_params)
+{
+    constexpr uint8_t TID_QUEUE_SIZE_DUMMY =
+        3; // Dummy values to initialize queue size for associated TIDs
+    // To Do: NL call to update qos control params to be handled in PPM-1941.
+
+    // Setting dummy values to SStaQosCtrlParams until PPM-1941 is closed.
+    std::fill_n(sta_qos_ctrl_params.tid_queue_size, IEEE80211_QOS_TID_MAX_UP, TID_QUEUE_SIZE_DUMMY);
+
+    return true;
+}
+
 bool mon_wlan_hal_nl80211::sta_channel_load_11k_request(const std::string &vap_iface_name,
                                                         const SStaChannelLoadRequest11k &req)
 {

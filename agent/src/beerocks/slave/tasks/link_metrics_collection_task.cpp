@@ -25,6 +25,7 @@
 #include <tlvf/wfa_map/tlvApMetricQuery.h>
 #include <tlvf/wfa_map/tlvAssociatedStaExtendedLinkMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaTrafficStats.h>
+#include <tlvf/wfa_map/tlvAssociatedWiFi6StaStatusReport.h>
 #include <tlvf/wfa_map/tlvBeaconMetricsQuery.h>
 #include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
 #include <tlvf/wfa_map/tlvProfile2Default802dotQSettings.h>
@@ -775,9 +776,29 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
                 {sta_link_metric->sta_mac(), std::get<1>(response_list)});
         }
 
+        std::vector<sStaQosCtrlParams> qos_ctrl_response;
+        for (auto &sta_qos_ctrl_params :
+             cmdu_rx.getClassList<wfa_map::tlvAssociatedWiFi6StaStatusReport>()) {
+            if (!sta_qos_ctrl_params) {
+                LOG(ERROR) << "Failed getClassList<wfa_map::tlvAssociatedWiFi6StaStatusReport>";
+                return;
+            }
+            uint8_t tid_list_length = sta_qos_ctrl_params->tid_queue_size_list_length();
+
+            sStaQosCtrlParams sta_qos_params;
+            sta_qos_params.sta_mac = sta_qos_ctrl_params->sta_mac();
+            for (uint8_t tid_index = 0; tid_index < tid_list_length; tid_index++) {
+                auto tid_tuple        = sta_qos_ctrl_params->tid_queue_size_list(tid_index);
+                auto &qos_ctrl_params = std::get<1>(tid_tuple);
+                sta_qos_params.tid_queue_size[tid_index] = qos_ctrl_params.queue_size;
+            }
+
+            qos_ctrl_response.push_back({sta_qos_params});
+        }
+
         // Fill a response vector
-        m_ap_metric_response.push_back(
-            {metric, extended_metrics, traffic_stats_response, link_metrics_response});
+        m_ap_metric_response.push_back({metric, extended_metrics, traffic_stats_response,
+                                        link_metrics_response, qos_ctrl_response});
 
         // Remove an entry from the processed query
         m_ap_metric_query.erase(
@@ -887,6 +908,32 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
             auto &sta_link_metric_response =
                 std::get<1>(sta_link_metric_response_tlv->bssid_info_list(0));
             sta_link_metric_response = link_metric.bssid_info;
+        }
+
+        // For each station one "Associated Wifi 6 Sta Status tlv" is added to
+        // "AP Metrics Response Message". And value of the tlv fields are populated
+        // with values from reponse vector.
+        for (auto &qos_control_params : response.sta_wifi_6_status) {
+            auto sta_wifi6_status_report_response_tlv =
+                m_cmdu_tx.addClass<wfa_map::tlvAssociatedWiFi6StaStatusReport>();
+
+            if (!sta_wifi6_status_report_response_tlv) {
+                LOG(ERROR) << "Failed addClass<wfa_map::tlvAssociatedWiFi6StaStatusReport>";
+                return;
+            }
+
+            sta_wifi6_status_report_response_tlv->sta_mac() = qos_control_params.sta_mac;
+            if (!sta_wifi6_status_report_response_tlv->alloc_tid_queue_size_list(
+                    IEEE80211_QOS_TID_MAX_UP)) {
+                LOG(ERROR) << "alloc_tid_queue_size_list() has failed!";
+                return;
+            }
+            for (uint8_t n = 0; n < IEEE80211_QOS_TID_MAX_UP; n++) {
+                auto &ap_assoc_wifi_6_sta_status_report =
+                    std::get<1>(sta_wifi6_status_report_response_tlv->tid_queue_size_list(n));
+                ap_assoc_wifi_6_sta_status_report.tid        = n;
+                ap_assoc_wifi_6_sta_status_report.queue_size = qos_control_params.tid_queue_size[n];
+            }
         }
     }
 
