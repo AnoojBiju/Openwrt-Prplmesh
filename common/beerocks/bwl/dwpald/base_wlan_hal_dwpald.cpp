@@ -328,6 +328,42 @@ bool base_wlan_hal_dwpal::fsm_setup()
                     LOG(ERROR) << "NL ctx is NULL! netlink is disabled for this platform";
                 }
 
+                if (pipe(m_dwpal_event_pfd)) {
+                    LOG(ERROR) << "Failed creating eventfd: " << strerror(errno);
+                    return (transition.change_destination(dwpal_fsm_state::Detach));
+                }
+                auto flags = fcntl(m_dwpal_event_pfd[0], F_GETFD);
+                flags |= O_NONBLOCK;
+                if (fcntl(m_dwpal_event_pfd[0], F_SETFD, flags)) {
+                    LOG(ERROR) << "fcntl failed" << strerror(errno);
+                    return (transition.change_destination(dwpal_fsm_state::Detach));
+                }
+                flags = fcntl(m_dwpal_event_pfd[1], F_GETFD);
+                flags |= O_NONBLOCK;
+                if (fcntl(m_dwpal_event_pfd[1], F_SETFD, flags)) {
+                    LOG(ERROR) << "fcntl failed" << strerror(errno);
+                    return (transition.change_destination(dwpal_fsm_state::Detach));
+                }
+                m_fds_ext_events[0] = m_dwpal_event_pfd[0];
+
+                if (pipe(m_nl_event_pfd)) {
+                    LOG(ERROR) << "Failed creating eventfd: " << strerror(errno);
+                    return (transition.change_destination(dwpal_fsm_state::Detach));
+                }
+                flags = fcntl(m_nl_event_pfd[0], F_GETFD);
+                flags |= O_NONBLOCK;
+                if (fcntl(m_nl_event_pfd[0], F_SETFD, flags)) {
+                    LOG(ERROR) << "fcntl failed" << strerror(errno);
+                    return (transition.change_destination(dwpal_fsm_state::Detach));
+                }
+                flags = fcntl(m_nl_event_pfd[1], F_GETFD);
+                flags |= O_NONBLOCK;
+                if (fcntl(m_nl_event_pfd[1], F_SETFD, flags)) {
+                    LOG(ERROR) << "fcntl failed" << strerror(errno);
+                    return (transition.change_destination(dwpal_fsm_state::Detach));
+                }
+                m_fd_nl_events = m_nl_event_pfd[0];
+
                 return true;
             })
 
@@ -639,6 +675,15 @@ bool base_wlan_hal_dwpal::process_nl_events()
         }
     } else {
         m_nl_get_failed_attempts = 0;
+    }
+
+    memset(m_nl_buffer, 0, NL_MAX_REPLY_BUFFSIZE);
+    auto read_bytes = read(m_fd_nl_events, m_nl_buffer, NL_MAX_REPLY_BUFFSIZE);
+    if (read_bytes <= 0) {
+        LOG(ERROR) << "Failed reading nl event callback: " << strerror(errno);
+        return false;
+    } else {
+        return process_dwpal_nl_event((struct nl_msg *)m_nl_buffer, this);
     }
 
     return true;
@@ -1160,6 +1205,39 @@ bool base_wlan_hal_dwpal::process_ext_events(int fd)
         // No pending messages
         LOG(WARNING) << "base_wlan_hal_dwpal::process_ext_events() called but there are no pending "
                         "messages...";
+        return false;
+    }
+
+    auto buffer         = m_wpa_ctrl_buffer;
+    auto buff_size_copy = m_wpa_ctrl_buffer_size;
+    memset(buffer, 0, buff_size_copy);
+    int read_bytes = read(m_fds_ext_events[0], buffer, buff_size_copy);
+    if (read_bytes <= 0) {
+        LOG(ERROR) << "Failed reading event: " << strerror(errno);
+        return false;
+    }
+
+    std::string event;
+    bool event_found = false;
+    // Parse event eg: <3>INTERFACE-DISABLED wlan0
+    for (int i = 0; i < read_bytes; i++) {
+        if (buffer[i] == '>') {
+            event_found = true;
+            continue; // event string starts
+        }
+        if (buffer[i] == ' ') {
+            break; //escape space, string ends
+        }
+        if (event_found == true) {
+            event += buffer[i]; // store event
+        }
+    }
+    if (event_found == false) {
+        LOG(ERROR) << "Failed to pares hostap event";
+        return false;
+    }
+    if (!process_dwpal_event(buffer, read_bytes, event)) {
+        LOG(ERROR) << "Failed processing DWPAL event with DWPAL parser";
         return false;
     }
 
