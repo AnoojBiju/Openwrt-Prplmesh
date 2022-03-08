@@ -85,6 +85,8 @@ static std::string dwpal_security_val(WiFiSec sec)
 /////////////////////////////// Implementation ///////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
+static sta_wlan_hal_dwpal *ctx = nullptr; // To access object methods from dwpald context callback
+
 sta_wlan_hal_dwpal::sta_wlan_hal_dwpal(const std::string &iface_name, hal_event_cb_t callback,
                                        const bwl::hal_conf_t &hal_conf)
     : base_wlan_hal(bwl::HALType::Station, iface_name, IfaceType::Intel, callback, hal_conf),
@@ -603,10 +605,17 @@ bool sta_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std
     return true;
 }
 
-#define HAP_EVENT(event) (char *)event, sizeof(event) - 1, hap_evt_callback
-
 /* hostap event callback executed in dwpald context */
-static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t len) { return 0; }
+static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t len)
+{
+    if (write(ctx->get_ext_evt_write_pfd(), buffer, len) < 0) {
+        LOG(ERROR) << "Failed writing hostap event callback data";
+        return -1;
+    }
+    return 0;
+}
+
+#define HAP_EVENT(event) (char *)event, sizeof(event) - 1, hap_evt_callback
 
 bool sta_wlan_hal_dwpal::dwpald_attach(char *ifname)
 {
