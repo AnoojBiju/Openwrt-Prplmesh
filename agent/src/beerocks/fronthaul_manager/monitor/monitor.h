@@ -92,6 +92,7 @@ private:
     bool create_ap_metrics_response(uint16_t mid, const std::vector<sMacAddr> &bssid_list);
 
     bool update_ap_stats();
+    bool update_sta_qos_ctrl_params();
     bool update_sta_stats(const std::chrono::steady_clock::time_point &timeout);
 
     void debug_channel_load_11k_request(beerocks_message::sStaChannelLoadRequest11k &request);

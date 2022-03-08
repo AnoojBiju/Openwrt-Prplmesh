@@ -28,8 +28,10 @@ sPolicy:
     _bit_range: [7,7]
   include_associated_sta_link_metrics_tlv_in_ap_metrics_response:
     _bit_range: [6,6]
+  include_associated_wifi_6_sta_status_report_tlv_in_ap_metrics_response:
+    _bit_range: [5,5]
   reserved:
-    _bit_range: [5, 0]
+    _bit_range: [4, 0]
 
 sMetricsReportingConf:
   _type: struct

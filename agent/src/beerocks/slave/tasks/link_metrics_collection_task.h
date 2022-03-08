@@ -226,6 +226,11 @@ private:
         wfa_map::tlvAssociatedStaLinkMetrics::sBssidInfo bssid_info;
     };
 
+    struct sStaQosCtrlParams {
+        sMacAddr sta_mac;
+        int8_t tid_queue_size[IEEE80211_QOS_TID_MAX_UP];
+    };
+
     struct sApMetrics {
         sMacAddr bssid;
         uint8_t channel_utilization;
@@ -249,6 +254,7 @@ private:
         sApExtendedMetrics extended_metric;
         std::vector<sStaTrafficStats> sta_traffic_stats;
         std::vector<sStaLinkMetrics> sta_link_metrics;
+        std::vector<sStaQosCtrlParams> sta_wifi_6_status;
     };
 
     std::vector<sApMetricsResponse> m_ap_metric_response;

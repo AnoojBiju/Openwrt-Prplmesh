@@ -28,6 +28,9 @@ constexpr char BEEROCKS_CONTROLLER_UDS[] = "uds_controller";
 constexpr char BEEROCKS_PLATFORM_UDS[]   = "uds_platform";
 constexpr char BEEROCKS_BACKHAUL_UDS[]   = "uds_backhaul";
 
+constexpr uint8_t IEEE80211_QOS_TID_MAX_UP =
+    8; // Maximum number of user priorities for class of service
+
 // configuration files path
 #ifdef BEEROCKS_RDKB
 #define CONF_FILES_WRITABLE_PATH std::string("/nvram/")

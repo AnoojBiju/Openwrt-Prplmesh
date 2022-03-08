@@ -36,6 +36,9 @@ public:
     virtual bool update_vap_stats(const std::string &vap_iface_name, SVapStats &vap_stats) override;
     virtual bool update_stations_stats(const std::string &vap_iface_name,
                                        const std::string &sta_mac, SStaStats &sta_stats) override;
+    virtual bool update_station_qos_control_params(const std::string &vap_iface_name,
+                                                   const std::string &sta_mac,
+                                                   SStaQosCtrlParams &sta_qos_ctrl_params) override;
 
     virtual bool sta_channel_load_11k_request(const std::string &vap_iface_name,
                                               const SStaChannelLoadRequest11k &req) override;

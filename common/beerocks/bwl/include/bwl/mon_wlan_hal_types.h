@@ -93,6 +93,11 @@ struct SStaStats {
     uint8_t dl_bandwidth = 0; //beerocks::eWiFiBandwidth
 };
 
+struct SStaQosCtrlParams {
+    uint8_t tid_queue_size
+        [IEEE80211_QOS_TID_MAX_UP]; //TID - Traffic identifier of QoS control header field in 802.11 mac header.
+};
+
 struct SStaChannelLoadRequest11k {
     uint8_t channel;
     uint8_t op_class;
