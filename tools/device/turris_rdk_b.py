@@ -15,13 +15,13 @@ from pathlib import Path
 import pexpect
 import pexpect.fdpexpect
 import pexpect.pxssh
-from device.prplwrt import PrplwrtDevice
+from device.prplos import PrplOSDevice
 from device.serial import SerialDevice
 from device.utils import (ShellType, check_serial_type, check_uboot_var,
                           serial_cmd_err)
 
 
-class TurrisRdkb(PrplwrtDevice):
+class TurrisRdkb(PrplOSDevice):
     """Represents a RDKB device.
 
     Offers methods to check if a device needs to be upgraded and to do the actual upgrade.
@@ -100,7 +100,7 @@ class TurrisRdkb(PrplwrtDevice):
         Parameters
         -----------
         serial_type: ShellType
-            Type of the serial connection as enum ShellType(uboot, rdkb, prplwrt)
+            Type of the serial connection as enum ShellType(uboot, rdkb, prplOS)
         """
 
         with SerialDevice(self.baudrate, self.name,
@@ -110,7 +110,7 @@ class TurrisRdkb(PrplwrtDevice):
             shell = ser.shell
             if serial_type == ShellType.UBOOT:
                 shell.sendline("reset")
-            elif serial_type == ShellType.PRPLWRT or \
+            elif serial_type == ShellType.PRPLOS or \
                     serial_type == ShellType.RDKB:
                 shell.sendline("reboot")
 
@@ -285,7 +285,7 @@ class TurrisRdkb(PrplwrtDevice):
 
         # Currently RDK-B can only be upgraded when the device has booted into prplOS:
         serial_type = check_serial_type(self.name, self.BAUDRATE, self.PROMPT_RE)
-        if serial_type != ShellType.PRPLWRT:
+        if serial_type != ShellType.PRPLOS:
             print("The device is not running prplOS, rebooting.")
             self.reset_board(serial_type)
             if not self.is_prplos_ready():
@@ -381,14 +381,14 @@ class TurrisRdkb(PrplwrtDevice):
             Raises
             -----------
             ValueError
-                If failed to get serial connection or prplwrt is not ready for use
+                If failed to get serial connection or prplOS is not ready for use
         """
 
         serial_type = check_serial_type(self.name, self.BAUDRATE, self.PROMPT_RE)
         if serial_type == ShellType.UBOOT:
             self.reset_board(serial_type)
             if not self.is_prplos_ready():
-                raise ValueError("Failed to get ready prplwrt serial.")
+                raise ValueError("Failed to get ready prplOS serial.")
 
         current_version = int(self.read_remote_rdkb_version())
         new_version = int(self.read_rdkb_rootfs_version())
@@ -399,6 +399,6 @@ class TurrisRdkb(PrplwrtDevice):
         if will_upgrade and serial_type == ShellType.RDKB:
             self.reset_board(check_serial_type(self.name, self.BAUDRATE, self.PROMPT_RE))
             if not self.is_prplos_ready():
-                raise ValueError("Failed to get ready prplwrt serial.")
+                raise ValueError("Failed to get ready prplOS serial.")
 
         return will_upgrade

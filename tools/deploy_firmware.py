@@ -12,13 +12,13 @@ import sys
 
 # Third party
 from device.axepoint import Axepoint
-from device.prplwrt import Generic
+from device.prplos import Generic
 from device.turris_rdk_b import TurrisRdkb
 
 
 def main():
     parser = argparse.ArgumentParser(prog=sys.argv[0],
-                                     description="""Update a prplWrt device, either through u-boot
+                                     description="""Update a prplOS device, either through u-boot
                                      or using sysupgrade, depending on the target device.""")
     parser.add_argument('-d', '--device',
                         help="""Device to upgrade. Currently supported targets are: nec-wx3000hp
@@ -37,8 +37,8 @@ def main():
     parser.add_argument(
         '-o',
         '--os-type',
-        help="Type of the operating system: rdkb or prplWrt.",
-        default="prplwrt")
+        help="Type of the operating system: rdkb or prplOS.",
+        default="prplOS")
 
     parser.add_argument(
         '-k',

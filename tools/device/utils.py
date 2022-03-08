@@ -19,10 +19,10 @@ from device.serial import SerialDevice
 class ShellType(Enum):
     """ ShellType enum contains 3 types of the possible shell on the device:
 
-        UBOOT, PRPLWRT, RDKB
+        UBOOT, PRPLOS, RDKB
     """
     UBOOT = 1
-    PRPLWRT = 2
+    PRPLOS = 2
     RDKB = 3
 
 
@@ -43,7 +43,7 @@ def check_serial_type(serial_name: str, baudrate: int, prompt_regexp: str) -> st
     Returns
     -------
     int
-        Enum for rdkb, prplwrt or uboot shell otherwise raise exception.
+        Enum for rdkb, prplOS or uboot shell otherwise raise exception.
 
     Raises
     -------
@@ -87,7 +87,7 @@ def check_serial_type(serial_name: str, baudrate: int, prompt_regexp: str) -> st
             os_name = str(i)
 
         if re.findall(r"OpenWrt", os_name):
-            return ShellType.PRPLWRT
+            return ShellType.PRPLOS
         elif re.findall(r"RDK", os_name):
             return ShellType.RDKB
         else:

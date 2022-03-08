@@ -20,8 +20,8 @@ import pexpect.pxssh
 from device.serial import SerialDevice
 
 
-class PrplwrtDevice:
-    """Represents a prplWrt device.
+class PrplOSDevice:
+    """Represents a prplOS device.
 
     Offers methods to check if a device needs to be upgraded and to do the actual upgrade.
 
@@ -144,8 +144,8 @@ class PrplwrtDevice:
         raise NotImplementedError
 
 
-class Generic(PrplwrtDevice):
-    """A generic PrplwrtDevice.
+class Generic(PrplOSDevice):
+    """A generic PrplOSDevice.
 
     Since upgrading through uboot is generally target-specific, it
     only offers the sysupgrade option.

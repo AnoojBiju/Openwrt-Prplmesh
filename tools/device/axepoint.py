@@ -14,11 +14,11 @@ import time
 import pexpect
 import pexpect.fdpexpect
 import pexpect.pxssh
-from device.prplwrt import PrplwrtDevice
+from device.prplos import PrplOSDevice
 from device.serial import SerialDevice
 
 
-class Axepoint(PrplwrtDevice):
+class Axepoint(PrplOSDevice):
     """An axepoint or any similar device (e.g. NEC WX3000HP).
 
     At the moment, the device can only be updated through uboot using a tftp server.
