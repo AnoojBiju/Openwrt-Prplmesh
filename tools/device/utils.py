@@ -62,6 +62,8 @@ def check_serial_type(serial_name: str, baudrate: int, prompt_regexp: str) -> st
         if shell.match is not pexpect.TIMEOUT:
             return ShellType.UBOOT
 
+        # Silence kernel messages:
+        shell.sendline("sysctl -w kernel.printk='0 4 1 7'")
         shell.expect([prompt_regexp, pexpect.TIMEOUT])
         shell.sendline("")
         shell.sendline("cat /etc/os-release")
