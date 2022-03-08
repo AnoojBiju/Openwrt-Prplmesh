@@ -144,7 +144,7 @@ class PrplOSDevice:
         raise NotImplementedError
 
 
-class Generic(PrplOSDevice):
+class GenericPrplOS(PrplOSDevice):
     """A generic PrplOSDevice.
 
     Since upgrading through uboot is generally target-specific, it

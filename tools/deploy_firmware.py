@@ -12,7 +12,7 @@ import sys
 
 # Third party
 from device.axepoint import Axepoint
-from device.prplos import Generic
+from device.prplos import GenericPrplOS
 from device.turris_rdk_b import TurrisRdkb
 
 
@@ -57,7 +57,7 @@ def main():
     elif args.os_type == "rdkb":
         dev = TurrisRdkb(args.device, args.target_name, args.image, args.kernel)
     else:
-        dev = Generic(args.device, args.target_name, args.image)
+        dev = GenericPrplOS(args.device, args.target_name, args.image)
 
     print("Checking if the device is reachable over ssh")
     if not dev.reach():
