@@ -6,7 +6,6 @@
 ###############################################################
 
 # Standard library
-import difflib
 import os
 import subprocess
 import sys
@@ -17,51 +16,29 @@ from typing import List
 import pexpect
 import pexpect.fdpexpect
 import pexpect.pxssh
+from device.generic import GenericDevice
 from device.serial import SerialDevice
 
 
-class PrplOSDevice:
-    """Represents a prplOS device.
+class GenericPrplOS(GenericDevice):
+    """A generic PrplOSDevice.
 
-    Offers methods to check if a device needs to be upgraded and to do the actual upgrade.
-
-    It needs to have access to the artifacts of a build job to determine when an upgrade
-    is needed (see `artifacts_dir`).
+    Since upgrading through uboot is generally target-specific, it
+    only offers the sysupgrade option.
     """
 
-    serial_prompt = r'root@[^\s]+:[^\s]+# '
-    """The prplOS prompt for serial connections."""
+    def read_artifacts_dir_version(self) -> List[str]:
+        """Reads the local prplwrt-version.
 
-    baudrate = 115200
-    """The baudrate of the serial connection to the device."""
+        The version file is read from the artifacts (see `artifacts_dir`).
 
-    initialization_time = 60
-    """The time (in seconds) the device needs to initialize when it boots
-    for the first time after flashing a new image."""
-
-    def __init__(self, device: str, name: str, image: str, username: str = "root"):
+        Returns
+        -------
+        List[str]
+            The content of the local prplwrt-version as a list of strings.
         """
-
-        Parameters
-        -----------
-        device: str
-            The name of the platform (example: nec-wx3000hp).
-        name: str
-            The name of the device (it should ne reachable through ssh without a password).
-        image: str
-            The name of the image that can be used to upgrade the device.
-        username: str, optional
-            The username to use when connecting to the device over SSH.
-        """
-        self.device = device
-        self.name = name
-        self.image = image
-        self.username = username
-
-        self.rootdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../..")
-        self.artifacts_dir = os.path.join(self.rootdir, "build/{}".format(self.device))
-        """The directory where artifacts are stored. It's expected to contain
-        prplwrt-version, and the image file."""
+        with open(os.path.join(self.artifacts_dir, "prplwrt-version")) as version_file:
+            return version_file.read().splitlines()
 
     def read_remote_version(self) -> List[str]:
         """Read prplwrt-version on a remote device
@@ -80,76 +57,6 @@ class PrplOSDevice:
             # remove the first (empty) line:
             version = shell.before.decode().splitlines()[1:]
         return version
-
-    def read_artifacts_dir_version(self) -> List[str]:
-        """Reads the local prplwrt-version.
-
-        The version file is read from the artifacts (see `artifacts_dir`).
-
-        Returns
-        -------
-        List[str]
-            The content of the local prplwrt-version as a list of strings.
-        """
-        with open(os.path.join(self.artifacts_dir, "prplwrt-version")) as version_file:
-            return version_file.read().splitlines()
-
-    def needs_upgrade(self):
-        """Check if a device needs to be updated
-
-        The check is done by comparing prplwrt-version on the target
-        with a local one (see `read_artifacts_dir_version).
-        """
-        artifacts_dir_version = self.read_artifacts_dir_version()
-        remote_version = self.read_remote_version()
-        diff = difflib.unified_diff(artifacts_dir_version, remote_version,
-                                    fromfile='artifacts', tofile='device')
-        diff_str = '\n'.join(diff)
-        if diff_str:
-            print(diff_str)
-        return bool(diff_str)
-
-    def reach(self, attempts: int = 5, wait: int = 5) -> bool:
-        """Check if the device is reachable via SSH (and optionally try multiple times).
-
-        Parameters
-        ----------
-        attempts: int, optional
-            How many times we try before concluding that the device is unreachable.
-        wait: int, optional
-            The number of seconds to wait between attempts.
-
-        Returns
-        -------
-        bool
-            True if the device is reachable via SSH, false otherwise.
-        """
-        for _ in range(attempts):
-            try:
-                with pexpect.pxssh.pxssh(options={"StrictHostKeyChecking": "no",
-                                                  "UserKnownHostsFile": "/dev/null"}) as shell:
-                    shell.login(self.name, self.username, login_timeout=5)
-                    return True
-            except (pexpect.pxssh.ExceptionPxssh, pexpect.exceptions.EOF):
-                print("Waiting for the device to be reachable")
-                time.sleep(wait)
-        return False
-
-    def sysupgrade(self):
-        """Upgrade the device using sysupgrade."""
-        raise NotImplementedError
-
-    def upgrade_uboot(self):
-        """Upgrade the device through uboot."""
-        raise NotImplementedError
-
-
-class GenericPrplOS(PrplOSDevice):
-    """A generic PrplOSDevice.
-
-    Since upgrading through uboot is generally target-specific, it
-    only offers the sysupgrade option.
-    """
 
     def sysupgrade(self):
         serial_path = "/dev/{}".format(self.name)

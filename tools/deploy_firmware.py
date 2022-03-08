@@ -68,7 +68,7 @@ def main():
         try:
             dev.sysupgrade()
         except NotImplementedError:
-            dev.upgrade_uboot()
+            dev.upgrade_bootloader()
         print("Checking if the device was properly updated")
         if dev.needs_upgrade():
             print("Something went wrong with the update!")

@@ -14,11 +14,11 @@ import time
 import pexpect
 import pexpect.fdpexpect
 import pexpect.pxssh
-from device.prplos import PrplOSDevice
+from device.prplos import GenericPrplOS
 from device.serial import SerialDevice
 
 
-class Axepoint(PrplOSDevice):
+class Axepoint(GenericPrplOS):
     """An axepoint or any similar device (e.g. NEC WX3000HP).
 
     At the moment, the device can only be updated through uboot using a tftp server.
@@ -52,7 +52,7 @@ class Axepoint(PrplOSDevice):
         shell.expect(r"(?i)Writing to nand\.\.\. (ok|done)", timeout=60)
         shell.expect(self.uboot_prompt, timeout=600)
 
-    def upgrade_uboot(self):
+    def upgrade_bootloader(self):
         """Upgrade the device through u-boot.
 
         It requires a running tftp server listenning on the IP the
@@ -100,3 +100,7 @@ class Axepoint(PrplOSDevice):
             raise ValueError("The device was not reachable after the upgrade!")
         # Wait at least for the CAC timer:
         time.sleep(self.initialization_time)
+
+    def sysupgrade(self):
+        # sysupgrade is not supported at the moment, so explicitely override it.
+        raise NotImplementedError("sysupgrade is not implemented for this device.")

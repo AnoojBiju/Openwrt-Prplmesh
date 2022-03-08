@@ -15,13 +15,13 @@ from pathlib import Path
 import pexpect
 import pexpect.fdpexpect
 import pexpect.pxssh
-from device.prplos import PrplOSDevice
+from device.prplos import GenericPrplOS
 from device.serial import SerialDevice
 from device.utils import (ShellType, check_serial_type, check_uboot_var,
                           serial_cmd_err)
 
 
-class TurrisRdkb(PrplOSDevice):
+class TurrisRdkb(GenericPrplOS):
     """Represents a RDKB device.
 
     Offers methods to check if a device needs to be upgraded and to do the actual upgrade.

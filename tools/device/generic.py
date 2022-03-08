@@ -1,0 +1,134 @@
+###############################################################
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+# SPDX-FileCopyrightText: 2022 the prplMesh contributors (see AUTHORS.md)
+# This code is subject to the terms of the BSD+Patent license.
+# See LICENSE file for more details.
+###############################################################
+
+# Standard library
+import difflib
+import os
+import time
+from typing import List
+
+# Third party
+import pexpect
+import pexpect.fdpexpect
+import pexpect.pxssh
+
+
+class GenericDevice():
+    """Base class that all the devices class should extend.
+
+    This class relies on access to the artifacts of a build job to
+    determine when an upgrade is needed (see `artifacts_dir`).
+
+    It's also expected that:
+
+    - The device is reachable over SSH without a
+      password.
+    - A serial line for the device is accessible at
+      '/dev/name'. Note that a udev rule can be used to create symlinks
+      for serial devices.
+    """
+
+    serial_prompt = r'root@[^\s]+:[^\s]+# '
+    """The OS prompt for serial connections."""
+
+    baudrate = 115200
+    """The baudrate of the serial connection to the device."""
+
+    initialization_time = 60
+    """The time (in seconds) the device needs to initialize when it boots
+    for the first time after flashing a new image."""
+
+    def __init__(self, device: str, name: str, image: str, username: str = "root"):
+        """
+
+        Parameters
+        -----------
+        device: str
+            The name of the platform (example: nec-wx3000hp).
+        name: str
+            The name of the device (it should ne reachable through ssh without a password).
+        image: str
+            The name of the image that can be used to upgrade the device.
+        username: str, optional
+            The username to use when connecting to the device over SSH.
+        """
+        self.device = device
+        self.name = name
+        self.image = image
+        self.username = username
+
+        self.rootdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../..")
+        self.artifacts_dir = os.path.join(self.rootdir, "build/{}".format(self.device))
+        """The directory where artifacts are stored. It's expected to contain
+        a version file, and the image file."""
+
+    def reach(self, attempts: int = 5, wait: int = 5) -> bool:
+        """Check if the device is reachable via SSH (and optionally try multiple times).
+
+        Parameters
+        ----------
+        attempts: int, optional
+            How many times we try before concluding that the device is unreachable.
+        wait: int, optional
+            The number of seconds to wait between attempts.
+
+        Returns
+        -------
+        bool
+            True if the device is reachable via SSH, false otherwise.
+        """
+        for _ in range(attempts):
+            try:
+                with pexpect.pxssh.pxssh(options={"StrictHostKeyChecking": "no",
+                                                  "UserKnownHostsFile": "/dev/null"}) as shell:
+                    shell.login(self.name, self.username, login_timeout=5)
+                    return True
+            except (pexpect.pxssh.ExceptionPxssh, pexpect.exceptions.EOF):
+                print("Waiting for the device to be reachable")
+                time.sleep(wait)
+        return False
+
+    def needs_upgrade(self):
+        """Check if a device needs to be updated
+
+        The check is done by comparing prplwrt-version on the target
+        with a local one (see `read_artifacts_dir_version).
+        """
+        artifacts_dir_version = self.read_artifacts_dir_version()
+        remote_version = self.read_remote_version()
+        diff = difflib.unified_diff(artifacts_dir_version, remote_version,
+                                    fromfile='artifacts', tofile='device')
+        diff_str = '\n'.join(diff)
+        if diff_str:
+            print(diff_str)
+        return bool(diff_str)
+
+    def read_artifacts_dir_version(self) -> List[str]:
+        """Reads the local version file.
+
+        The version file is read from the artifacts (see `artifacts_dir`).
+
+        Returns
+        -------
+        List[str]
+            The content of the local version file as a list of strings.
+        """
+        raise NotImplementedError("Reading the local version is not implemented for this device.")
+
+    def read_remote_version(self) -> List[str]:
+        """Read the version file on a remote device.
+
+        Returns
+        -------
+        List[str]
+            The content of the version file on the device as a list of strings.
+        """
+        raise NotImplementedError("Reading the remote version is not implemented for this device.")
+
+    def upgrade_bootloader(self):
+        """Upgrade the device through uboot."""
+        raise NotImplementedError("u-boot upgrades is not implemented for this device.")
