@@ -6,92 +6,23 @@
 ###############################################################
 
 # Standard library
-import re
 from enum import Enum
 
 # Third party
 import pexpect
 import pexpect.fdpexpect
 import pexpect.pxssh
-from device.serial import SerialDevice
 
 
 class ShellType(Enum):
     """ ShellType enum contains 3 types of the possible shell on the device:
 
-        UBOOT, PRPLWRT, RDKB
+        UBOOT, PRPLOS, RDKB
     """
     UBOOT = 1
-    PRPLWRT = 2
+    PRPLOS = 2
     RDKB = 3
-
-
-def check_serial_type(serial_name: str, baudrate: int, prompt_regexp: str) -> str:
-    """ Checks type of the serial terminal.
-
-    Parameters
-    ----------
-    serial_name: str
-        Name of the serial device.
-
-    baudrate: int, optional
-        Serial baud rate.
-
-    prompt_regexp: str
-        Regular expression with shell prompt.
-
-    Returns
-    -------
-    int
-        Enum for rdkb, prplwrt or uboot shell otherwise raise exception.
-
-    Raises
-    -------
-    ValueError
-        If the connecting to the serial device failed.
-    """
-
-    UBOOT_PROMPT = "=>"
-    OSTYPE_RE = r"NAME=[^\s]*"
-
-    with SerialDevice(baudrate, serial_name, prompt_regexp,
-                      expect_prompt_on_connect=False) as ser:
-        shell = ser.shell
-        shell.sendline("")
-        shell.expect([UBOOT_PROMPT, pexpect.TIMEOUT])
-        if shell.match is not pexpect.TIMEOUT:
-            return ShellType.UBOOT
-
-        # Silence kernel messages:
-        shell.sendline("sysctl -w kernel.printk='0 4 1 7'")
-        shell.expect([prompt_regexp, pexpect.TIMEOUT])
-        shell.sendline("")
-        shell.sendline("cat /etc/os-release")
-
-        os_name = ""
-
-        # Read 25 lines from terminal for getting OS Type
-        read_lines = 25
-
-        while read_lines != 0:
-            try:
-                read_lines = read_lines - 1
-                tmp = shell.readline()
-                os_name = re.findall(OSTYPE_RE, tmp.decode("utf-8"))
-                if os_name:
-                    break
-            except pexpect.TIMEOUT:
-                continue
-
-        for i in os_name:
-            os_name = str(i)
-
-        if re.findall(r"OpenWrt", os_name):
-            return ShellType.PRPLWRT
-        elif re.findall(r"RDK", os_name):
-            return ShellType.RDKB
-        else:
-            raise ValueError("Unknown device type!")
+    LINUX_UNKNOWN = 4
 
 
 def check_uboot_var(shell, variable: str, expectation: str):
