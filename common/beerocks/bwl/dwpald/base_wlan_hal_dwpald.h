@@ -79,6 +79,13 @@ public:
      */
     bool get_channel_utilization(uint8_t &channel_utilization) override;
 
+    /**
+     * @brief Get the ext evt write pipe fd
+     * @return int 
+     */
+    int get_ext_evt_write_pfd() { return m_dwpal_event_pfd[1]; }
+    int get_nl_evt_write_pfd() { return m_nl_event_pfd[1]; }
+
     // Protected methods
 protected:
     base_wlan_hal_dwpal(HALType type, const std::string &iface_name, hal_event_cb_t callback,
@@ -182,6 +189,16 @@ private:
      * @return True on success and false otherwise.
      */
     bool dwpal_get_phy_chan_status(sPhyChanStatus &status);
+
+    /**
+     * Store pipe fds ( read + write )
+     * dwpald callback context will write into pipe fd [1]
+     * dwpald bwl context will read from pipe fd [0]
+     * This is in order to process event buffer in bwl context
+     * and not in dwpald callback context.
+     */
+    int m_dwpal_event_pfd[2];
+    int m_nl_event_pfd[2];
 };
 
 } // namespace dwpal

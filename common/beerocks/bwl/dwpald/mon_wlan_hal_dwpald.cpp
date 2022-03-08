@@ -627,6 +627,8 @@ static std::shared_ptr<char> generate_client_assoc_event(const std::string &even
 /////////////////////////////// Implementation ///////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
+static mon_wlan_hal_dwpal *ctx = nullptr; // To access object methods from dwpald context callback
+
 mon_wlan_hal_dwpal::mon_wlan_hal_dwpal(const std::string &iface_name, hal_event_cb_t callback,
                                        const bwl::hal_conf_t &hal_conf)
     : base_wlan_hal(bwl::HALType::Monitor, iface_name, IfaceType::Intel, callback, hal_conf),
@@ -636,6 +638,7 @@ mon_wlan_hal_dwpal::mon_wlan_hal_dwpal(const std::string &iface_name, hal_event_
                             "CTRL-EVENT-BSS-ADDED", "CTRL-EVENT-BSS-REMOVED"};
     int events_size      = sizeof(events) / sizeof(std::string);
     m_filtered_events.insert(events, events + events_size);
+    ctx = this;
 }
 
 mon_wlan_hal_dwpal::~mon_wlan_hal_dwpal()
@@ -1733,9 +1736,26 @@ bool mon_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)
 
 #define HAP_EVENT(event) (char *)event, sizeof(event) - 1, hap_evt_callback
 
-static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t len) { return 0; }
+static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t len)
+{
+    if (write(ctx->get_ext_evt_write_pfd(), buffer, len) < 0) {
+        LOG(ERROR) << "Failed writing hostap event callback data";
+        return -1;
+    }
+    return 0;
+}
 
-static int drv_evt_callback(struct nl_msg *msg) { return 0; }
+static int drv_evt_callback(struct nl_msg *msg)
+{
+    auto fd              = ctx->get_nl_evt_write_pfd();
+    struct nlmsghdr *hdr = nlmsg_hdr(msg);
+    auto size            = nlmsg_total_size(nlmsg_datalen(hdr));
+    if (write(fd, msg, size) < 0) {
+        LOG(ERROR) << "Failed writing driver event callback data";
+        return -1;
+    }
+    return 0;
+}
 
 bool mon_wlan_hal_dwpal::dwpald_attach(char *ifname)
 {
