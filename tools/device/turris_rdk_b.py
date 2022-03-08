@@ -87,26 +87,6 @@ class TurrisRdkb(GenericDevice):
             shell.sendline("")
             return True
 
-    def reset_board(self, serial_type: ShellType):
-        """Reset board.
-
-        Parameters
-        -----------
-        serial_type: ShellType
-            Type of the serial connection as enum ShellType(uboot, rdkb, prplOS)
-        """
-
-        with SerialDevice(self.baudrate, self.name,
-                          self.serial_prompt, expect_prompt_on_connect=False) as ser:
-            print("Reset board.")
-
-            shell = ser.shell
-            if serial_type == ShellType.UBOOT:
-                shell.sendline("reset")
-            elif serial_type == ShellType.PRPLOS or \
-                    serial_type == ShellType.RDKB:
-                shell.sendline("reboot")
-
     def check_images_on_board(self):
         """Check images on the Turris Omnia.
 
@@ -241,7 +221,7 @@ class TurrisRdkb(GenericDevice):
                 If serial does not exist or unable to connect.
         """
 
-        self.reset_board(check_serial_type(self.name, self.baudrate, self.serial_prompt))
+        self.reboot(check_serial_type(self.name, self.baudrate, self.serial_prompt))
 
         common_bridge_ip = "192.168.200.140"
         common_net_mask = "24"
@@ -280,7 +260,7 @@ class TurrisRdkb(GenericDevice):
         serial_type = check_serial_type(self.name, self.baudrate, self.serial_prompt)
         if serial_type != ShellType.PRPLOS:
             print("The device is not running prplOS, rebooting.")
-            self.reset_board(serial_type)
+            self.reboot(serial_type)
             if not self.is_prplos_ready():
                 raise ValueError("Failed to get ready prplOS serial.")
 
@@ -379,7 +359,7 @@ class TurrisRdkb(GenericDevice):
 
         serial_type = check_serial_type(self.name, self.baudrate, self.serial_prompt)
         if serial_type == ShellType.UBOOT:
-            self.reset_board(serial_type)
+            self.reboot(serial_type)
             if not self.is_prplos_ready():
                 raise ValueError("Failed to get ready prplOS serial.")
 
@@ -390,7 +370,7 @@ class TurrisRdkb(GenericDevice):
 
         will_upgrade = new_version > current_version
         if will_upgrade and serial_type == ShellType.RDKB:
-            self.reset_board(check_serial_type(self.name, self.baudrate, self.serial_prompt))
+            self.reboot(check_serial_type(self.name, self.baudrate, self.serial_prompt))
             if not self.is_prplos_ready():
                 raise ValueError("Failed to get ready prplOS serial.")
 

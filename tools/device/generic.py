@@ -15,6 +15,8 @@ from typing import List
 import pexpect
 import pexpect.fdpexpect
 import pexpect.pxssh
+from device.serial import SerialDevice
+from device.utils import ShellType
 
 
 class GenericDevice():
@@ -106,6 +108,28 @@ class GenericDevice():
         if diff_str:
             print(diff_str)
         return bool(diff_str)
+
+    def reboot(self, serial_type: ShellType):
+        """Reboot the device.
+
+        Note that this method handles both the cases where the device
+        is currently booted into a Linux OS, or stopped in its
+        bootloader.
+
+        Parameters
+        -----------
+        serial_type: ShellType
+            Type of the serial connection as enum ShellType(uboot, rdkb, prplOS)
+        """
+        with SerialDevice(self.baudrate, self.name,
+                          self.serial_prompt, expect_prompt_on_connect=False) as ser:
+            print("Reset board.")
+
+            shell = ser.shell
+            if serial_type == ShellType.UBOOT:
+                shell.sendline("reset")
+            elif serial_type in [ShellType.PRPLOS, ShellType.RDKB]:
+                shell.sendline("reboot")
 
     def read_artifacts_dir_version(self) -> List[str]:
         """Reads the local version file.
