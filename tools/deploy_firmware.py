@@ -59,11 +59,6 @@ def main():
     else:
         dev = GenericPrplOS(args.device, args.target_name, args.image)
 
-    print("Checking if the device is reachable over ssh")
-    if not dev.reach():
-        raise ValueError("The device {} is not reachable over ssh! check your ssh configuration."
-                         .format(dev.name))
-
     def do_upgrade(dev):
         try:
             dev.sysupgrade()
