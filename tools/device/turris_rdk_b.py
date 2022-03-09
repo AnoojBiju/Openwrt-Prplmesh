@@ -17,8 +17,7 @@ import pexpect.fdpexpect
 import pexpect.pxssh
 from device.generic import GenericDevice
 from device.serial import SerialDevice
-from device.utils import (ShellType, check_serial_type, check_uboot_var,
-                          serial_cmd_err)
+from device.utils import ShellType, check_uboot_var, serial_cmd_err
 
 
 class TurrisRdkb(GenericDevice):
@@ -134,7 +133,7 @@ class TurrisRdkb(GenericDevice):
         # We need to make sure we're not running currently running
         # RDK-B! Otherwise, the rest of this method will try to "rm-rf"
         # the whole rootfs on the running system.
-        serial_type = check_serial_type(self.name, self.baudrate, self.serial_prompt)
+        serial_type = self.check_serial_type()
         if serial_type == ShellType.RDKB:
             raise ValueError("The board is currently running RDK-B! Aborting.")
         # If we're currently in u-boot, don't even try the upgrade
@@ -221,7 +220,7 @@ class TurrisRdkb(GenericDevice):
                 If serial does not exist or unable to connect.
         """
 
-        self.reboot(check_serial_type(self.name, self.baudrate, self.serial_prompt))
+        self.reboot(self.check_serial_type())
 
         common_bridge_ip = "192.168.200.140"
         common_net_mask = "24"
@@ -257,7 +256,7 @@ class TurrisRdkb(GenericDevice):
         """
 
         # Currently RDK-B can only be upgraded when the device has booted into prplOS:
-        serial_type = check_serial_type(self.name, self.baudrate, self.serial_prompt)
+        serial_type = self.check_serial_type()
         if serial_type != ShellType.PRPLOS:
             print("The device is not running prplOS, rebooting.")
             self.reboot(serial_type)
@@ -357,7 +356,7 @@ class TurrisRdkb(GenericDevice):
                 If failed to get serial connection or prplOS is not ready for use
         """
 
-        serial_type = check_serial_type(self.name, self.baudrate, self.serial_prompt)
+        serial_type = self.check_serial_type()
         if serial_type == ShellType.UBOOT:
             self.reboot(serial_type)
             if not self.is_prplos_ready():
@@ -370,7 +369,7 @@ class TurrisRdkb(GenericDevice):
 
         will_upgrade = new_version > current_version
         if will_upgrade and serial_type == ShellType.RDKB:
-            self.reboot(check_serial_type(self.name, self.baudrate, self.serial_prompt))
+            self.reboot(self.check_serial_type())
             if not self.is_prplos_ready():
                 raise ValueError("Failed to get ready prplOS serial.")
 

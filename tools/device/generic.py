@@ -8,6 +8,7 @@
 # Standard library
 import difflib
 import os
+import re
 import time
 from typing import List
 
@@ -147,6 +148,62 @@ class GenericDevice():
                 shell.sendline(self.boot_stop_sequence)
                 shell.expect(self.bootloader_prompt)
                 print("Device stopped in bootloader.")
+
+    def check_serial_type(self) -> ShellType:
+        """ Checks type of the serial terminal.
+
+        Returns
+        -------
+        ShellType
+            Enum for rdkb, prplOS or uboot shell.
+
+        Raises
+        -------
+        ValueError
+            If connecting to the serial device failed or the serial
+            type could not be determined.
+        """
+
+        OSTYPE_RE = r"NAME=[^\s]*"
+
+        with SerialDevice(self.baudrate, self.name, self.serial_prompt,
+                          expect_prompt_on_connect=False) as ser:
+            shell = ser.shell
+            shell.sendline("")
+            shell.expect([self.bootloader_prompt, pexpect.TIMEOUT])
+            if shell.match is not pexpect.TIMEOUT:
+                return ShellType.UBOOT
+
+            # Silence kernel messages:
+            shell.sendline("sysctl -w kernel.printk='0 4 1 7'")
+            shell.expect([self.bootloader_prompt, pexpect.TIMEOUT])
+            shell.sendline("")
+            shell.sendline("cat /etc/os-release")
+
+            os_name = ""
+
+            # Read 25 lines from terminal for getting OS Type
+            read_lines = 25
+
+            while read_lines != 0:
+                try:
+                    read_lines = read_lines - 1
+                    tmp = shell.readline()
+                    os_name = re.findall(OSTYPE_RE, tmp.decode("utf-8"))
+                    if os_name:
+                        break
+                except pexpect.TIMEOUT:
+                    continue
+
+            for i in os_name:
+                os_name = str(i)
+
+            if re.findall(r"OpenWrt", os_name):
+                return ShellType.PRPLOS
+            elif re.findall(r"RDK", os_name):
+                return ShellType.RDKB
+            else:
+                raise ValueError("Unknown device type!")
 
     def read_artifacts_dir_version(self) -> List[str]:
         """Reads the local version file.
