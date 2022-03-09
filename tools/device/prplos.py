@@ -7,6 +7,7 @@
 
 # Standard library
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -58,6 +59,50 @@ class GenericPrplOS(GenericDevice):
             version = shell.before.decode().splitlines()[1:]
         return version
 
+    def upgrade_bootloader(self):
+        """Upgrade the device through u-boot.
+
+        It requires a running tftp server listenning on the IP the
+        target device will expect (see `ipaddr` in the uboot environment).
+        """
+        serial_path = "/dev/{}".format(self.name)
+        if not os.path.exists(serial_path):
+            raise ValueError("The serial device {} does not exist!\n".format(serial_path)
+                             + "Please make sure you have an appropriate udev rule for it.")
+        print("Copying image '{}' to '{}'".format(self.image, self.tftp_dir))
+        shutil.copy(os.path.join(self.artifacts_dir, self.image), self.tftp_dir)
+        print("Image copied to {}.".format(self.tftp_dir))
+        with SerialDevice(self.baudrate, self.name, self.serial_prompt,
+                          expect_prompt_on_connect=False) as ser:
+            shell = ser.shell
+            self.reboot(self.check_serial_type(),
+                        stop_in_bootloader=True)
+
+            try:
+                self.upgrade_from_u_boot(shell)
+            except pexpect.exceptions.TIMEOUT:
+                print("The upgrade timed out, trying one more time after a reboot.")
+                # Interrupt any running command:
+                shell.send('\003')
+                self.reboot(self.check_serial_type(),
+                            stop_in_bootloader=True)
+                try:
+                    self.upgrade_from_u_boot(shell)
+                except pexpect.exceptions.TIMEOUT as err:
+                    print("The upgrade failed again, aborting.")
+                    raise err
+            print("The upgrade is done, rebooting.")
+            self.reboot(self.check_serial_type())
+            shell.expect("Please press Enter to activate this console", timeout=180)
+            # activate the console:
+            shell.sendline("")
+            shell.expect(self.serial_prompt)
+            shell.sendline("exit")
+        if not self.reach(attempts=10):
+            raise ValueError("The device was not reachable after the upgrade!")
+        # Wait at least for the CAC timer:
+        time.sleep(self.initialization_time)
+
     def sysupgrade(self):
         serial_path = "/dev/{}".format(self.name)
         if not os.path.exists(serial_path):
@@ -89,3 +134,17 @@ class GenericPrplOS(GenericDevice):
         if not self.reach(attempts=10):
             raise ValueError("The device was not reachable after the upgrade!")
         time.sleep(self.initialization_time)
+
+    def upgrade_from_u_boot(self, shell: pexpect.fdpexpect.fdspawn):
+        """Upgrades the OS image from the bootloader once it's ready.
+        Since the exact procedure to upgrade devices can vary from
+        devices to devices, this method should be overridden in sub
+        classes.
+        Subclasses can assume the serial shell is ready to receive u-boot commands
+
+        Parameters
+        ----------
+        shell
+            The pexpect-based shell (in u-boot).
+        """
+        raise NotImplementedError("Not implemented for this device.")

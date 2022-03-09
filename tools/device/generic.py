@@ -54,6 +54,9 @@ class GenericDevice():
     boot_stop_sequence = "\n"
     """The sequence to use to stop the device in its bootloader."""
 
+    tftp_dir = "/srv/tftp"
+    """The root directory of the tftp server. OS images will be copied there."""
+
     def __init__(self, device: str, name: str, image: str, username: str = "root"):
         """
 
