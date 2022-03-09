@@ -151,16 +151,22 @@ struct RadioInfo {
     beerocks::eFreqType frequency_band = beerocks::eFreqType::FREQ_UNKNOWN; /**< Frequency band */
     beerocks::eWiFiBandwidth max_bandwidth =
         beerocks::eWiFiBandwidth::BANDWIDTH_UNKNOWN; /**< Maximum supported bandwidth */
-    bool ht_supported      = false;                  /**< Is HT supported flag */
-    uint16_t ht_capability = 0;                      /**< HT capabilities */
+    bool ht_supported     = false;                   /**< Is HT supported flag */
+    uint8_t ht_capability = 0;                       /**< HT capabilities */
 
     /**< 16-byte attribute containing the MCS set as defined in 802.11n */
     std::array<uint8_t, beerocks::message::HT_MCS_SET_SIZE> ht_mcs_set;
     bool vht_supported      = false; /**< Is VHT supported flag */
-    uint32_t vht_capability = 0;     /**< VHT capabilities */
+    uint16_t vht_capability = 0;     /**< VHT capabilities */
 
     /**< 32-byte attribute containing the MCS set as defined in 802.11ac */
     std::array<uint8_t, beerocks::message::VHT_MCS_SET_SIZE> vht_mcs_set;
+
+    bool he_supported      = false; /**< Is HE supported flag */
+    uint16_t he_capability = 0;     /**< HE capabilities */
+    /**< 32-byte attribute containing the MCS set as defined in 802.11ax */
+    std::array<uint8_t, beerocks::message::HE_MCS_SET_SIZE> he_mcs_set;
+
     ChanSwReason last_csa_sw_reason = ChanSwReason::Unknown;
     // Key = channel
     std::map<uint8_t, sChannelInfo> channels_list;

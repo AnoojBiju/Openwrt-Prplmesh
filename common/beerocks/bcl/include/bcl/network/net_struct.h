@@ -90,6 +90,90 @@ struct sInterfaceStats {
     uint32_t rx_packets = 0;
 };
 
+typedef struct sHTCapabilities {
+#if defined(__LITTLE_ENDIAN_BITFIELD)
+    uint8_t reserved : 1;
+    uint8_t ht_support_40mhz : 1;
+    uint8_t short_gi_support_40mhz : 1;
+    uint8_t short_gi_support_20mhz : 1;
+    uint8_t max_num_of_supported_rx_spatial_streams : 2;
+    uint8_t max_num_of_supported_tx_spatial_streams : 2;
+#elif defined(__BIG_ENDIAN_BITFIELD)
+    uint8_t max_num_of_supported_tx_spatial_streams : 2;
+    uint8_t max_num_of_supported_rx_spatial_streams : 2;
+    uint8_t short_gi_support_20mhz : 1;
+    uint8_t short_gi_support_40mhz : 1;
+    uint8_t ht_support_40mhz : 1;
+    uint8_t reserved : 1;
+#else
+#error "Bitfield macros are not defined"
+#endif
+    void struct_swap() {}
+    void struct_init() {}
+} __attribute__((packed)) sHTCapabilities;
+
+typedef struct sVHTCapabilities {
+#if defined(__LITTLE_ENDIAN_BITFIELD)
+    uint16_t reserved : 4;
+    uint16_t mu_beamformer_capable : 1;
+    uint16_t su_beamformer_capable : 1;
+    uint16_t vht_support_160mhz : 1;
+    uint16_t vht_support_80_80mhz : 1;
+    uint16_t short_gi_support_160mhz_and_80_80mhz : 1;
+    uint16_t short_gi_support_80mhz : 1;
+    uint16_t max_num_of_supported_rx_spatial_streams : 3;
+    uint16_t max_num_of_supported_tx_spatial_streams : 3;
+#elif defined(__BIG_ENDIAN_BITFIELD)
+    uint16_t max_num_of_supported_tx_spatial_streams : 3;
+    uint16_t max_num_of_supported_rx_spatial_streams : 3;
+    uint16_t short_gi_support_80mhz : 1;
+    uint16_t short_gi_support_160mhz_and_80_80mhz : 1;
+    uint16_t vht_support_80_80mhz : 1;
+    uint16_t vht_support_160mhz : 1;
+    uint16_t su_beamformer_capable : 1;
+    uint16_t mu_beamformer_capable : 1;
+    uint16_t reserved : 4;
+#else
+#error "Bitfield macros are not defined"
+#endif
+    void struct_swap() {}
+    void struct_init() {}
+} __attribute__((packed)) sVHTCapabilities;
+
+typedef struct sHECapabilities {
+#if defined(__LITTLE_ENDIAN_BITFIELD)
+    uint16_t reserved : 1;
+    uint16_t dl_ofdm_capable : 1;
+    uint16_t ul_ofdm_capable : 1;
+    uint16_t dl_mu_mimo_and_ofdm_capable : 1;
+    uint16_t ul_mu_mimo_and_ofdm_capable : 1;
+    uint16_t ul_mu_mimo_capable : 1;
+    uint16_t mu_beamformer_capable : 1;
+    uint16_t su_beamformer_capable : 1;
+    uint16_t he_support_160mhz : 1;
+    uint16_t he_support_80_80mhz : 1;
+    uint16_t max_num_of_supported_rx_spatial_streams : 3;
+    uint16_t max_num_of_supported_tx_spatial_streams : 3;
+#elif defined(__BIG_ENDIAN_BITFIELD)
+    uint16_t max_num_of_supported_tx_spatial_streams : 3;
+    uint16_t max_num_of_supported_rx_spatial_streams : 3;
+    uint16_t he_support_80_80mhz : 1;
+    uint16_t he_support_160mhz : 1;
+    uint16_t su_beamformer_capable : 1;
+    uint16_t mu_beamformer_capable : 1;
+    uint16_t ul_mu_mimo_capable : 1;
+    uint16_t ul_mu_mimo_and_ofdm_capable : 1;
+    uint16_t dl_mu_mimo_and_ofdm_capable : 1;
+    uint16_t ul_ofdm_capable : 1;
+    uint16_t dl_ofdm_capable : 1;
+    uint16_t reserved : 1;
+#else
+#error "Bitfield macros are not defined"
+#endif
+    void struct_swap() {}
+    void struct_init() {}
+} __attribute__((packed)) sHECapabilities;
+
 } // namespace net
 } // namespace beerocks
 

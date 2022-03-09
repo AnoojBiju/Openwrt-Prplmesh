@@ -297,16 +297,23 @@ public:
         uint16_t vht_center_frequency;
 
         bool ht_supported; ///< Is 802.11n (High Throughput) protocol supported
-        uint16_t ht_capability;
-        /// 16-byte attribute containing the MCS set as defined in 802.11n
+        uint8_t ht_capability;
+
+        // 16-byte attribute containing the MCS set as defined in 802.11n
         std::array<uint8_t, beerocks::message::HT_MCS_SET_SIZE> ht_mcs_set;
 
         bool vht_supported; ///< Is 802.11ac (Very High Throughput) protocol supported
-        uint32_t vht_capability;
-        /// 32-byte attribute containing the MCS set as defined in 802.11ac
+        uint16_t vht_capability;
+
+        // 32-byte attribute containing the MCS set as defined in 802.11ac
         std::array<uint8_t, beerocks::message::VHT_MCS_SET_SIZE> vht_mcs_set;
 
         bool he_supported = false; ///< Is 802.11ax (High Efficiency) protocol supported
+        uint16_t he_capability;
+
+        // 32-byte attribute containing the MCS set as defined in 802.11ax
+        std::array<uint8_t, beerocks::message::HE_MCS_SET_SIZE> he_mcs_set;
+
         bool report_indepent_scans_policy = false;
 
         // Information on the last channel switch request which containing the requested channel
