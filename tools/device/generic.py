@@ -143,8 +143,8 @@ class GenericDevice():
             shell = ser.shell
             if serial_type == ShellType.UBOOT:
                 shell.sendline("reset")
-            elif serial_type in [ShellType.PRPLOS, ShellType.RDKB]:
-                shell.sendline("reboot")
+            elif serial_type in [ShellType.PRPLOS, ShellType.RDKB, ShellType.LINUX_UNKNOWN]:
+                shell.sendline("reboot ; sleep 15 ; reboot -f")
             if stop_in_bootloader:
                 print("Device will be stopped in its bootloader.")
                 shell.expect(self.boot_stop_expression, timeout=180)
@@ -173,40 +173,32 @@ class GenericDevice():
                           expect_prompt_on_connect=False) as ser:
             shell = ser.shell
             shell.sendline("")
-            shell.expect([self.bootloader_prompt, pexpect.TIMEOUT])
+            shell.expect([self.bootloader_prompt, pexpect.TIMEOUT], timeout=1)
             if shell.match is not pexpect.TIMEOUT:
                 return ShellType.UBOOT
 
             # Silence kernel messages:
             shell.sendline("sysctl -w kernel.printk='0 4 1 7'")
-            shell.expect([self.bootloader_prompt, pexpect.TIMEOUT])
+            shell.expect([self.serial_prompt, pexpect.TIMEOUT], timeout=1)
             shell.sendline("")
             shell.sendline("cat /etc/os-release")
 
             os_name = ""
 
-            # Read 25 lines from terminal for getting OS Type
-            read_lines = 25
-
-            while read_lines != 0:
-                try:
-                    read_lines = read_lines - 1
-                    tmp = shell.readline()
-                    os_name = re.findall(OSTYPE_RE, tmp.decode("utf-8"))
-                    if os_name:
-                        break
-                except pexpect.TIMEOUT:
-                    continue
-
-            for i in os_name:
-                os_name = str(i)
-
-            if re.findall(r"OpenWrt", os_name):
-                return ShellType.PRPLOS
-            elif re.findall(r"RDK", os_name):
-                return ShellType.RDKB
-            else:
-                raise ValueError("Unknown device type!")
+            shell.expect([OSTYPE_RE, pexpect.TIMEOUT], timeout=2)
+            os_name = str(re.search(OSTYPE_RE, shell.buffer.decode("utf-8")))
+            if os_name:
+                if re.findall(r"OpenWrt", os_name):
+                    return ShellType.PRPLOS
+                if re.findall(r"RDK", os_name):
+                    return ShellType.RDKB
+            shell.sendline("")
+            shell.sendline("dmesg --help")
+            try:
+                shell.expect("Usage: dmesg")
+                return ShellType.LINUX_UNKNOWN
+            except pexpect.TIMEOUT as err:
+                raise ValueError("Unknown serial type!") from err
 
     def read_artifacts_dir_version(self) -> List[str]:
         """Reads the local version file.

@@ -22,6 +22,7 @@ class ShellType(Enum):
     UBOOT = 1
     PRPLOS = 2
     RDKB = 3
+    LINUX_UNKNOWN = 4
 
 
 def check_uboot_var(shell, variable: str, expectation: str):
