@@ -17,7 +17,7 @@ import pexpect.fdpexpect
 import pexpect.pxssh
 from device.generic import GenericDevice
 from device.serial import SerialDevice
-from device.utils import ShellType, check_uboot_var, serial_cmd_err
+from device.utils import check_uboot_var, serial_cmd_err, ShellType
 
 
 class TurrisRdkb(GenericDevice):

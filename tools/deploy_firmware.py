@@ -14,8 +14,8 @@ import sys
 from device.axepoint import Axepoint
 from device.glinet_b1300 import GlinetB1300
 from device.prplos import GenericPrplOS
-from device.turris_rdk_b import TurrisRdkb
 from device.turris_prplos import TurrisPrplOS
+from device.turris_rdk_b import TurrisRdkb
 
 
 def main():
