@@ -12,6 +12,7 @@ import sys
 
 # Third party
 from device.axepoint import Axepoint
+from device.glinet_b1300 import GlinetB1300
 from device.prplos import GenericPrplOS
 from device.turris_rdk_b import TurrisRdkb
 from device.turris_prplos import TurrisPrplOS
@@ -53,6 +54,8 @@ def main():
         dev = TurrisRdkb(args.device, args.target_name, args.image, args.kernel)
     elif args.device == "turris-omnia":
         dev = TurrisPrplOS(args.device, args.target_name, args.image)
+    elif args.device == "glinet-b1300":
+        dev = GlinetB1300(args.device, args.target_name, args.image)
     else:
         # if no device matched, try the generic prplOS (sysupgrade)
         dev = GenericPrplOS(args.device, args.target_name, args.image)
