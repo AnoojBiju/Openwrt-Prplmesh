@@ -24,6 +24,12 @@
 struct nl_sock;
 struct nl_msg;
 
+struct scan_trigger_results {
+    int done;
+    int aborted;
+    std::function<bool(struct nl_msg *msg)> msg_handle;
+};
+
 namespace bwl {
 namespace nl80211 {
 
@@ -97,6 +103,11 @@ protected:
                           std::function<bool(struct nl_msg *msg)> msg_create,
                           std::function<bool(struct nl_msg *msg)> msg_handle,
                           const std::string &ifName = {});
+
+    bool nl80211_channel_scan_trigger(std::function<bool(struct nl_msg *msg)> msg_create,
+                                      std::function<bool(struct nl_msg *msg)> msg_handle);
+
+    bool nl80211_channel_scan_dump_results(std::function<bool(struct nl_msg *msg)> msg_handle);
 
     std::unique_ptr<nl80211_client> m_nl80211_client;
 

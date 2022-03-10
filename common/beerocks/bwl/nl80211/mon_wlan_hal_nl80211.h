@@ -74,6 +74,7 @@ public:
     // Protected methods:
 protected:
     virtual bool process_nl80211_event(parsed_obj_map_t &parsed_obj) override;
+    bool process_scan_nl_event(struct nl_msg *msg);
 
     // Overload for Monitor events
     bool event_queue_push(mon_wlan_hal::Event event, std::shared_ptr<void> data = {})
@@ -84,6 +85,12 @@ protected:
     // Private data-members:
 private:
     std::shared_ptr<char> m_temp_wav_value;
+    // Unique sequence number for the scan result dump sequence
+    uint32_t m_nl_seq = 0;
+    // Flag indicating if we are currently in a dump sequence
+    bool m_scan_dump_in_progress = false;
+    // Flag indicating if a scan was triggered internally
+    bool m_scan_was_triggered_internally = true;
 };
 
 } // namespace nl80211
