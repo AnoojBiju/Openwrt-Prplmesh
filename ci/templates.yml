@@ -81,6 +81,18 @@
     - docker-build
   needs: []
 
+.test-upgrade-image:
+  stage: test
+  script:
+    - tools/deploy_firmware.py --device "$TARGET_DEVICE" --target-name "$TARGET_DEVICE_NAME" --image "$OPENWRT_IMAGE" --full
+  rules:
+    - if: $CI_MERGE_REQUEST_LABELS =~ /.*test-upgrade-image.*/
+    - when: manual
+      allow_failure: true
+  tags:
+    - targets
+  timeout: 20m
+
 .test-on-target:
   stage: test
   before_script:
