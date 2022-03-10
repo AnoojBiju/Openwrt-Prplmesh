@@ -14,6 +14,7 @@ import sys
 from device.axepoint import Axepoint
 from device.prplos import GenericPrplOS
 from device.turris_rdk_b import TurrisRdkb
+from device.turris_prplos import TurrisPrplOS
 
 
 def main():
@@ -35,12 +36,6 @@ def main():
         required=True)
 
     parser.add_argument(
-        '-o',
-        '--os-type',
-        help="Type of the operating system: rdkb or prplOS.",
-        default="prplOS")
-
-    parser.add_argument(
         '-k',
         '--kernel',
         help="Kernel for RDKB type of image.")
@@ -54,9 +49,12 @@ def main():
 
     if args.device in ["axepoint", "nec-wx3000hp"]:
         dev = Axepoint(args.device, args.target_name, args.image)
-    elif args.os_type == "rdkb":
+    elif args.device == "turris-omnia-rdk":
         dev = TurrisRdkb(args.device, args.target_name, args.image, args.kernel)
+    elif args.device == "turris-omnia":
+        dev = TurrisPrplOS(args.device, args.target_name, args.image)
     else:
+        # if no device matched, try the generic prplOS (sysupgrade)
         dev = GenericPrplOS(args.device, args.target_name, args.image)
 
     def do_upgrade(dev):
