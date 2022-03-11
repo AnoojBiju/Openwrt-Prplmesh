@@ -97,9 +97,6 @@ class GenericPrplOS(GenericDevice):
             # activate the console:
             shell.sendline("")
             shell.expect(self.serial_prompt)
-            shell.sendline("exit")
-        if not self.reach(attempts=10):
-            raise ValueError("The device was not reachable after the upgrade!")
         # Wait at least for the CAC timer:
         time.sleep(self.initialization_time)
 
@@ -130,9 +127,6 @@ class GenericPrplOS(GenericDevice):
             # activate the console:
             shell.sendline("")
             shell.expect(self.serial_prompt)
-            shell.sendline("exit")
-        if not self.reach(attempts=10):
-            raise ValueError("The device was not reachable after the upgrade!")
         time.sleep(self.initialization_time)
 
     def upgrade_from_u_boot(self, shell: pexpect.fdpexpect.fdspawn):

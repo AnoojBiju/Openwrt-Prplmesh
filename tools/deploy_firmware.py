@@ -8,9 +8,12 @@
 
 # Standard library
 import argparse
+import time
 import sys
+from pathlib import Path
 
 # Third party
+from device.configuration import configure_device
 from device.get_device import device_from_name
 
 
@@ -38,6 +41,11 @@ def main():
         action='store_true',
         help="Always flash the full image (even if it's not required).")
 
+    parser.add_argument(
+        '-c',
+        '--configuration',
+        help="The path to an optional configuration file.", required=False)
+
     args = parser.parse_args()
 
     dev = device_from_name(args.device, args.target_name, args.image)
@@ -47,6 +55,17 @@ def main():
             dev.sysupgrade()
         except NotImplementedError:
             dev.upgrade_bootloader()
+
+        if args.configuration:
+            print("A configuration file was provided, it will be applied.")
+            configure_device(dev, Path(args.configuration))
+
+        print("Waiting for the device to initialize.")
+        time.sleep(dev.initialization_time)
+        print("Checking if the device is reachable.")
+        if not dev.reach(attempts=10):
+            raise ValueError("The device was not reachable after the upgrade!")
+
         print("Checking if the device was properly updated")
         if dev.needs_upgrade():
             print("Something went wrong with the update!")
