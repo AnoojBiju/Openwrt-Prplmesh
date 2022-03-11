@@ -557,11 +557,12 @@ void optimal_path_task::work()
 
             int hostap_channel  = database.get_node_channel(hostap);
             auto hostap_is_5ghz = database.is_node_5ghz(hostap);
+            auto hostap_is_6ghz = database.is_node_6ghz(hostap);
             if (!force_signal_strength_decision &&
                 !database.settings_client_optimal_path_roaming_prefer_signal_strength()) {
                 // Get sta capabilities
                 TASK_LOG(DEBUG) << "getting capabilities for sta_mac " << sta_mac << " on band "
-                                << (hostap_is_5ghz ? "5GHz" : "2.4GHz");
+                                << (hostap_is_5ghz ? "5GHz" : hostap_is_6ghz ? "6GHz" : "2.4GHz");
                 sta_capabilities = database.get_station_capabilities(sta_mac, hostap_is_5ghz);
                 if (sta_capabilities == nullptr) {
                     TASK_LOG(WARNING) << "STA capabilities are empty - use default capabilities";

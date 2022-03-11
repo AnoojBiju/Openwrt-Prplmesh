@@ -474,6 +474,10 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
 
         if (vs_tlv) {
             database.set_node_vap_id(client_mac_str, vs_tlv->vap_id());
+            LOG(INFO) << "Yoni Capabilities debug info - band_2g_capable: "
+                      << vs_tlv->capabilities().band_2g_capable
+                      << " band_5g_capable: " << vs_tlv->capabilities().band_5g_capable
+                      << " band_6g_capable: " << vs_tlv->capabilities().band_6g_capable;
             database.set_station_capabilities(client_mac_str, vs_tlv->capabilities());
         }
 

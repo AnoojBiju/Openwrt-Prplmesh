@@ -1742,6 +1742,10 @@ bool db::set_station_capabilities(const std::string &client_mac,
         n->m_sta_5ghz_capabilities.valid = true;
         n->capabilities                  = &n->m_sta_5ghz_capabilities;
 
+    } else if (is_node_6ghz(parent_radio)) {
+        n->m_sta_6ghz_capabilities       = sta_cap;
+        n->m_sta_6ghz_capabilities.valid = true;
+        n->capabilities                  = &n->m_sta_6ghz_capabilities;
     } else {
         n->m_sta_24ghz_capabilities       = sta_cap;
         n->m_sta_24ghz_capabilities.valid = true;
@@ -1797,6 +1801,8 @@ db::get_station_capabilities(const std::string &client_mac, bool is_bandtype_5gh
     } else {
         if (n->m_sta_24ghz_capabilities.valid == true) {
             return &n->m_sta_24ghz_capabilities;
+        } else if (n->m_sta_6ghz_capabilities.valid == true) {
+            return &n->m_sta_6ghz_capabilities;
         } else {
             return nullptr;
         }
@@ -2093,6 +2099,19 @@ bool db::is_node_5ghz(const std::string &mac)
         return false;
     }
     if (wireless_utils::which_freq(n->channel) == eFreqType::FREQ_5G) {
+        return true;
+    }
+    return false;
+}
+
+bool db::is_node_6ghz(const std::string &mac)
+{
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(ERROR) << "node " << mac << " does not exist! return false as default";
+        return false;
+    }
+    if (wireless_utils::which_freq(n->channel) == eFreqType::FREQ_6G) {
         return true;
     }
     return false;
