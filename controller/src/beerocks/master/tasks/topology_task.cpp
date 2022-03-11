@@ -72,17 +72,6 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
 
     const auto &al_mac = tlvDeviceInformation->mac();
 
-    // Get all Agent known fronthaul radios if exist, and compare it to what the Agent reports.
-    // If a radio exist on the database but not the tlvDeviceInformation, this radio node needs
-    // to be removed.
-    // This shall work in the opposite way as well: If it doesn't exist on the database, but
-    // reported in the TLV, then we need to add the node to the database. Of course this will remain
-    // as "TODO" for future task. Meanwhile parse properly the TLV, leaving the unused parts in
-    // comment for future implementation.
-    auto fronthaul_radios_on_db = database.get_node_children(
-        tlvf::mac_to_string(al_mac), beerocks::TYPE_SLAVE, beerocks::STATE_CONNECTED);
-
-    std::unordered_set<std::string> reported_fronthaul_radios;
     std::vector<sMacAddr> interface_macs{};
 
     // create topology response update event for bml listeners
@@ -127,17 +116,11 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
             // const auto iface_cf1    = media_info->ap_channel_center_frequency_index1;
             // const auto iface_cf2    = media_info->ap_channel_center_frequency_index2;
 
-            if (iface_role == ieee1905_1::eRole::AP) {
-                reported_fronthaul_radios.insert(iface_mac_str);
-            }
-
-            // update bml event with the new radio interface
+            // TODO: fix updating bml event it assumes Radios is reported (PPM-1977)
             new_bml_event.radio_interfaces.push_back(iface_info);
 
-            LOG(DEBUG) << "New radio interface is reported, mac=" << iface_mac
-                       << ", AP=" << (iface_role == ieee1905_1::eRole::AP);
-
-            // TODO: Add/Update the node on the database
+            LOG(DEBUG) << "New wireless interface is reported with mac=" << iface_mac
+                       << ", role=" << (uint8_t)iface_role;
         }
     }
 
@@ -147,26 +130,12 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
     tasks.push_event(database.get_bml_task_id(), bml_task::TOPOLOGY_RESPONSE_UPDATE,
                      &new_bml_event);
 
-    // If the database has radio mac that is not reported, remove its node from the db.
-    for (const auto &fronthaul_radio_on_db : fronthaul_radios_on_db) {
-        if (reported_fronthaul_radios.find(fronthaul_radio_on_db) ==
-            reported_fronthaul_radios.end()) {
-            LOG(DEBUG) << "radio " << fronthaul_radio_on_db
-                       << " is not reported on Device Information TLV, removing the radio node";
-            son_actions::handle_dead_node(fronthaul_radio_on_db, true, database, cmdu_tx, tasks);
-        }
-    }
-
     auto tlvApInformation = cmdu_rx.getClass<wfa_map::tlvApOperationalBSS>();
     if (tlvApInformation) {
         for (uint8_t i = 0; i < tlvApInformation->radio_list_length(); i++) {
             auto radio_entry = std::get<1>(tlvApInformation->radio_list(i));
             LOG(DEBUG) << "Operational BSS radio " << radio_entry.radio_uid();
-            if (fronthaul_radios_on_db.find(tlvf::mac_to_string(radio_entry.radio_uid())) ==
-                fronthaul_radios_on_db.end()) {
-                LOG(WARNING) << "OperationalBSS on unknown radio " << radio_entry.radio_uid();
-                continue;
-            }
+
             // Update BSSes in the Agent
             auto radio = database.get_radio(src_mac, radio_entry.radio_uid());
             if (!radio) {
