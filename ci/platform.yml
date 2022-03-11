@@ -121,7 +121,7 @@ test-upgrade-image-on-turris-rdkb:
   script:
     - export RDKB_IMAGE_PATH=$(ls build/turris-omnia-rdk/rdkb-generic-broadband-image_rdkb*.rootfs.tar.gz)
     - export RDKB_IMAGE_NAME=${RDKB_IMAGE_PATH##*/}
-    - tools/deploy_firmware.py --device turris-omnia-rdk --target-name "$TARGET_DEVICE_NAME" --image $RDKB_IMAGE_NAME --kernel zImage --full
+    - tools/deploy_firmware.py --device turris-omnia-rdk --target-name "$TARGET_DEVICE_NAME" --image $RDKB_IMAGE_NAME --full
   needs: ["build-for-rdkb-turris-omnia"]
 
 test-on-turris-omnia:

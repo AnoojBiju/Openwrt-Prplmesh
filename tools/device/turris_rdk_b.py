@@ -45,7 +45,10 @@ class TurrisRdkb(GenericDevice):
     UBOOT_PROMPT = "=>"
     """ Standard UBoot prompt."""
 
-    def __init__(self, device: str, name: str, rdkbfs: str, kernel: str, username: str = "root"):
+    kernel = "zImage"
+    """ The name of the kernel binary that can be used to upgrade kernel on device."""
+
+    def __init__(self, device: str, name: str, rdkbfs: str, username: str = "root"):
         """
 
         Parameters
@@ -56,8 +59,6 @@ class TurrisRdkb(GenericDevice):
             The name of the device (it should be reachable through ssh without a password).
         rdkbfs: str
             The name of the rdkbfs tarball that can be used to upgrade the device.
-        kernel: str
-            The name of the kernel binary that can be used to upgrade kernel on device.
         username: str, optional
             The username to use when connecting to the device over SSH.
         """
@@ -65,7 +66,6 @@ class TurrisRdkb(GenericDevice):
         self.name = name
         self.rdkbfs = rdkbfs
         self.username = username
-        self.kernel = kernel
 
         self.rootdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../..")
         self.artifacts_dir = os.path.join(self.rootdir, "build/{}".format(self.device))

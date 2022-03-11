@@ -136,7 +136,7 @@
     - for i in $ALL_TARGETS ; do ssh "$i" 'pgrep -f beerocks | xargs kill -9 2>/dev/null' || true ; done
     - export RDKB_IMAGE_PATH=$(ls build/turris-omnia-rdk/rdkb-generic-broadband-image_rdkb*.rootfs.tar.gz)
     - export RDKB_IMAGE_NAME=${RDKB_IMAGE_PATH##*/}
-    - tools/deploy_firmware.py --device turris-omnia-rdk --target-name "$TARGET_DEVICE_NAME" --image $RDKB_IMAGE_NAME --kernel zImage
+    - tools/deploy_firmware.py --device turris-omnia-rdk --target-name "$TARGET_DEVICE_NAME" --image $RDKB_IMAGE_NAME
     # tools/deploy_ipk.sh $TARGET_DEVICE_NAME build/turris-omnia-rdk/prplmesh_*.ipk
   artifacts:
     paths:
