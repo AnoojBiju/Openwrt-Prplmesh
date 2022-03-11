@@ -345,34 +345,31 @@ bool db::add_node_wired_backhaul(const sMacAddr &mac, const sMacAddr &parent_mac
     return true;
 }
 
-std::string db::dm_add_radio_element(const sMacAddr &radio_mac, const sMacAddr &device_mac)
+bool db::dm_add_radio_element(Agent::sRadio &radio, Agent &agent)
 {
-    std::string path_to_obj = "Device.WiFi.DataElements.Network.Device.";
-    uint32_t index = m_ambiorix_datamodel->get_instance_index(path_to_obj + "[ID == '%s'].",
-                                                              tlvf::mac_to_string(device_mac));
 
-    if (!index) {
-        LOG(ERROR) << "Failed to get Device.WiFi.DataElements.Network.Device index for mac: "
-                   << device_mac;
-        return {};
+    // Empty path for parent object refers to disabled NBAPI. Return true silently.
+    if (agent.dm_path.empty()) {
+        return true;
     }
 
-    // Prepare path to the Radio object, like Device.Network.{i}.Radio
-    path_to_obj += std::to_string(index) + ".Radio";
+    // Radio path is empty, so this is newly introduced object, add to datamodel.
+    if (radio.dm_path.empty()) {
 
-    auto radio_instance = m_ambiorix_datamodel->add_instance(path_to_obj);
-    if (radio_instance.empty()) {
-        LOG(ERROR) << "Failed to add instance " << radio_instance << ". Radio mac: " << radio_mac;
-        return {};
+        const std::string path_to_radio = agent.dm_path + ".Radio";
+
+        radio.dm_path = m_ambiorix_datamodel->add_instance(path_to_radio);
+        if (radio.dm_path.empty()) {
+            LOG(ERROR) << "Failed to add radio instance " << path_to_radio
+                       << ". ruid: " << radio.radio_uid;
+            return false;
+        }
     }
 
-    // Prepare path to the Radio object ID, like Device.Network.{i}.Radio.{i}.ID
-    if (!m_ambiorix_datamodel->set(radio_instance, "ID", radio_mac)) {
-        LOG(ERROR) << "Failed to set " << radio_instance << " ID: " << radio_mac;
-        return {};
-    }
+    // TODO: This method will be removed after old node architecture is deprecated (PPM-1057).
+    set_node_data_model_path(radio.radio_uid, radio.dm_path);
 
-    return radio_instance;
+    return m_ambiorix_datamodel->set(radio.dm_path, "ID", radio.radio_uid);
 }
 
 bool db::dm_set_multi_ap_sta_noise_param(Station &station, const uint8_t rcpi, const uint8_t rsni)
@@ -459,17 +456,7 @@ bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac)
 
     auto radio = agent->radios.add(mac);
 
-    auto data_model_path = dm_add_radio_element(mac, parent_mac);
-
-    if (data_model_path.empty()) {
-        LOG(ERROR) << "Failed to add radio element, mac: " << mac;
-        return false;
-    }
-
-    set_node_data_model_path(mac, data_model_path);
-    radio->dm_path = data_model_path;
-
-    return true;
+    return dm_add_radio_element(*radio, *agent);
 }
 
 std::shared_ptr<Station> db::add_node_station(const sMacAddr &mac, const sMacAddr &parent_mac)

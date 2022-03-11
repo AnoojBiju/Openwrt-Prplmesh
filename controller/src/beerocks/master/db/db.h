@@ -402,11 +402,11 @@ public:
     /**
      * @brief add instance of data element 'radio'
      *
-     * @param mac address of radio
-     * @param mac address of device
-     * @return data model path if radio instance was successfully added, empty string otherwise
+     * @param radio radio object
+     * @param agent agent which is parent of radio
+     * @return True on success, false otherwise.
      */
-    std::string dm_add_radio_element(const sMacAddr &radio_mac, const sMacAddr &device_mac);
+    bool dm_add_radio_element(Agent::sRadio &radio, Agent &agent);
 
     /**
     * @brief Add instance of data element 'MeasurementReport'.
