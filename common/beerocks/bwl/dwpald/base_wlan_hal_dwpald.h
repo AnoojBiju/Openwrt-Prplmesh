@@ -110,7 +110,7 @@ protected:
                         int vap_id = beerocks::IFACE_RADIO_ID);
 
     bool dwpal_send_cmd(const std::string &cmd, int vap_id = beerocks::IFACE_RADIO_ID);
-    bool attach_ctrl_interface(int vap_id);
+    bool attach_dwpald_interface(int vap_id);
 
     /**
      * @brief handle get data cmd from netlink
@@ -146,7 +146,6 @@ protected:
                                     void *callback_args);
 
     bool dwpal_nl_cmd_scan_dump();
-    void *get_dwpal_nl_ctx() const { return (m_dwpal_nl_ctx); }
 
     std::unique_ptr<nl80211_client> m_nl80211_client;
 
@@ -168,11 +167,6 @@ private:
     dwpal_fsm_state m_last_attach_state = dwpal_fsm_state::Detach;
 
     std::chrono::steady_clock::time_point m_state_timeout;
-
-    void *m_dwpal_ctx[DWPAL_CONTEXTS_MAX_SIZE] = {nullptr};
-    void *m_dwpal_nl_ctx                       = nullptr;
-
-    int m_fd_nl_cmd_get = -1;
 
     char m_wpa_ctrl_buffer[HOSTAPD_TO_DWPAL_MSG_LENGTH];
     size_t m_wpa_ctrl_buffer_size = HOSTAPD_TO_DWPAL_MSG_LENGTH;
@@ -197,8 +191,8 @@ private:
      * This is in order to process event buffer in bwl context
      * and not in dwpald callback context.
      */
-    int m_dwpal_event_pfd[2];
-    int m_nl_event_pfd[2];
+    int m_dwpal_event_pfd[2] = {0};
+    int m_nl_event_pfd[2]    = {0};
 };
 
 } // namespace dwpal
