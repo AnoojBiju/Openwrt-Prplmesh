@@ -88,20 +88,12 @@ protected:
 private:
     bool dwpal_get_scan_params_fg(sScanCfgParams &params, size_t &result_size)
     {
-        ssize_t received_result_size =
-            dwpal_nl_cmd_get(m_radio_info.iface_name, LTQ_NL80211_VENDOR_SUBCMD_GET_SCAN_PARAMS,
-                             m_nl_buffer, NL_MAX_REPLY_BUFFSIZE);
-        if (received_result_size <= 0) {
-            LOG(ERROR) << "LTQ_NL80211_VENDOR_SUBCMD_GET_SCAN_PARAMS failed!"
-                       << " received size <= 0";
-            result_size = ScanCfgParams_size_invalid;
-            return false;
-        }
-        result_size = received_result_size;
-        if (result_size != ScanCfgParams_size) {
-            LOG(ERROR) << "LTQ_NL80211_VENDOR_SUBCMD_GET_SCAN_PARAMS failed!"
-                       << " expected size = " << ScanCfgParams_size
-                       << ", received size = " << result_size;
+        int res  = 0;
+        auto ret = dwpald_drv_get((char *)m_radio_info.iface_name.c_str(),
+                                  LTQ_NL80211_VENDOR_SUBCMD_GET_SCAN_PARAMS, &res, NULL, 0,
+                                  m_nl_buffer, &result_size);
+        if (ret != DWPALD_SUCCESS || (res < 0)) {
+            LOG(ERROR) << __func__ << " LTQ_NL80211_VENDOR_SUBCMD_GET_SCAN_PARAMS failed!";
             return false;
         }
 
@@ -111,37 +103,25 @@ private:
 
     bool dwpal_get_scan_params_bg(sScanCfgParamsBG &params, size_t &result_size)
     {
-        ssize_t received_result_size =
-            dwpal_nl_cmd_get(m_radio_info.iface_name, LTQ_NL80211_VENDOR_SUBCMD_GET_SCAN_PARAMS_BG,
-                             m_nl_buffer, NL_MAX_REPLY_BUFFSIZE);
-        if (received_result_size <= 0) {
-            LOG(ERROR) << "LTQ_NL80211_VENDOR_SUBCMD_GET_SCAN_PARAMS_BG failed!"
-                       << " received size <= 0";
-            result_size = ScanCfgParams_size_invalid;
+        int res  = 0;
+        auto ret = dwpald_drv_get((char *)m_radio_info.iface_name.c_str(),
+                                  LTQ_NL80211_VENDOR_SUBCMD_GET_SCAN_PARAMS_BG, &res, NULL, 0,
+                                  m_nl_buffer, &result_size);
+        if (ret != DWPALD_SUCCESS || (res < 0)) {
+            LOG(ERROR) << __func__ << " LTQ_NL80211_VENDOR_SUBCMD_GET_SCAN_PARAMS_BG failed!";
             return false;
         }
-        result_size = received_result_size;
-        if (result_size < ScanCfgParamsBG_min_size) {
-            LOG(ERROR) << "LTQ_NL80211_VENDOR_SUBCMD_GET_SCAN_PARAMS_BG failed!"
-                       << " expected minimal size = " << ScanCfgParamsBG_min_size
-                       << ", received size = " << result_size;
-            return false;
-        }
-        if (result_size > ScanCfgParamsBG_size) {
-            LOG(ERROR) << "LTQ_NL80211_VENDOR_SUBCMD_GET_SCAN_PARAMS_BG failed!"
-                       << " expected maximal size = " << ScanCfgParamsBG_size
-                       << ", received size = " << result_size;
-            return false;
-        }
-
         std::copy_n(m_nl_buffer, result_size, reinterpret_cast<unsigned char *>(&params));
         return true;
     }
 
     bool dwpal_set_scan_params_fg(const sScanCfgParams &params, const size_t &size)
     {
-        if (!dwpal_nl_cmd_set(m_radio_info.iface_name, LTQ_NL80211_VENDOR_SUBCMD_SET_SCAN_PARAMS,
-                              &params, size)) {
+        int res  = 0;
+        auto ret = dwpald_drv_set((char *)m_radio_info.iface_name.c_str(),
+                                  LTQ_NL80211_VENDOR_SUBCMD_SET_SCAN_PARAMS, &res, &params, size);
+
+        if (ret != DWPALD_SUCCESS || (res < 0)) {
             LOG(ERROR) << __func__ << " LTQ_NL80211_VENDOR_SUBCMD_SET_SCAN_PARAMS failed!";
             return false;
         }
@@ -150,8 +130,12 @@ private:
 
     bool dwpal_set_scan_params_bg(const sScanCfgParamsBG &params, const size_t &size)
     {
-        if (!dwpal_nl_cmd_set(m_radio_info.iface_name, LTQ_NL80211_VENDOR_SUBCMD_SET_SCAN_PARAMS_BG,
-                              &params, size)) {
+        int res = 0;
+        auto ret =
+            dwpald_drv_set((char *)m_radio_info.iface_name.c_str(),
+                           LTQ_NL80211_VENDOR_SUBCMD_SET_SCAN_PARAMS_BG, &res, &params, size);
+
+        if (ret != DWPALD_SUCCESS || (res < 0)) {
             LOG(ERROR) << __func__ << " LTQ_NL80211_VENDOR_SUBCMD_SET_SCAN_PARAMS_BG failed!";
             return false;
         }

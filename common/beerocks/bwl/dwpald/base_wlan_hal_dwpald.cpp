@@ -135,26 +135,11 @@ bool base_wlan_hal_dwpal::fsm_setup()
                 // Open and attach a control interface to wpa_supplicant/hostapd.
                 // Check if not exist before
                 bool attached = false;
-                if (m_dwpal_ctx[0] == nullptr) {
-                    attached = attach_ctrl_interface(beerocks::IFACE_RADIO_ID);
+                if (m_dwpal_event_pfd[0] == 0) {
+                    attached = attach_dwpald_interface(beerocks::IFACE_RADIO_ID);
                 } else {
                     //Already attached
                     attached = true;
-                }
-
-                //Attach NL interface
-                if (!m_dwpal_nl_ctx) {
-                    //Attach nl interface
-                    if (dwpal_driver_nl_attach(&m_dwpal_nl_ctx) == DWPAL_FAILURE) {
-                        LOG(ERROR)
-                            << "dwpal_driver_nl_attach returned ERROR for: "
-                            << m_radio_info.iface_name << ", disabling netlink for this platform";
-                        m_dwpal_nl_ctx = nullptr;
-                    } else {
-                        LOG(DEBUG)
-                            << "dwpal_driver_nl_attach() success for: " << m_radio_info.iface_name
-                            << ", nl_context = " << m_dwpal_nl_ctx;
-                    }
                 }
 
                 // detach if wlan (hostapd/supplicant) was not attached
@@ -272,7 +257,7 @@ bool base_wlan_hal_dwpal::fsm_setup()
             [&](TTransition &transition, const void *args) -> bool {
                 uint attached = 0;
                 for (auto &vap : m_radio_info.available_vaps) {
-                    if (attach_ctrl_interface(vap.first)) {
+                    if (attach_dwpald_interface(vap.first)) {
                         attached++;
                     }
                 }
@@ -298,34 +283,9 @@ bool base_wlan_hal_dwpal::fsm_setup()
             {dwpal_fsm_state::Operational, dwpal_fsm_state::Delay, dwpal_fsm_state::Detach},
             [&](TTransition &transition, const void *args) -> bool {
                 // Get the wpa_supplicant/hostapd event interface file descriptor
-                if (m_dwpal_ctx[0] != nullptr) {
-                    if (dwpal_hostap_event_fd_get(m_dwpal_ctx[0], &m_fds_ext_events[0])) {
-                        LOG(ERROR) << "dwpal_hostap_event_fd_get() failed for: "
-                                   << m_radio_info.iface_name;
-                        return (transition.change_destination(dwpal_fsm_state::Detach));
-                    }
-                } else {
-                    LOG(ERROR) << "Can't get event fd since dwpal ctx is NULL!";
+                if (m_dwpal_event_pfd[0] != 0) {
+                    LOG(ERROR) << "Already external fd is created";
                     return (transition.change_destination(dwpal_fsm_state::Detach));
-                }
-
-                // Success
-                LOG(DEBUG)
-                    << "Open and attach an event interface to wpa_supplicant/hostapd - SUCCESS!";
-
-                // Get the nl event interface file descriptor
-                if (m_dwpal_nl_ctx) {
-                    if (dwpal_driver_nl_fd_get(m_dwpal_nl_ctx, &m_fd_nl_events, &m_fd_nl_cmd_get)) {
-                        LOG(ERROR) << "getting nl fd failed for: " << m_radio_info.iface_name
-                                   << ", disabling netlink for this platform";
-                        m_dwpal_nl_ctx = nullptr;
-                    } else {
-                        LOG(DEBUG) << "Attach event interface to nl - SUCCESS! for: "
-                                   << m_radio_info.iface_name << " nl_fd =  " << m_fd_nl_events
-                                   << " fdcmdget_nl = " << m_fd_nl_cmd_get;
-                    }
-                } else {
-                    LOG(ERROR) << "NL ctx is NULL! netlink is disabled for this platform";
                 }
 
                 if (pipe(m_dwpal_event_pfd)) {
@@ -387,32 +347,8 @@ bool base_wlan_hal_dwpal::fsm_setup()
 
             LOG(DEBUG) << "dwpal_fsm_state::Detach";
 
-            for (int i = 0; i < DWPAL_CONTEXTS_MAX_SIZE; i++) {
-                if (m_dwpal_ctx[i]) {
-                    LOG(INFO) << "Call DWPAL socket close";
-                    DWPAL_Ret ret = dwpal_hostap_socket_close(&m_dwpal_ctx[i]);
-
-                    if (ret == DWPAL_SUCCESS) {
-                        m_dwpal_ctx[i] = nullptr;
-                    } else {
-                        LOG(ERROR) << "DWPAL socket close failed, ret=" << ret;
-                        success = false;
-                    }
-                }
-            }
-
             m_fds_ext_events[0] = -1;
-
-            // detach nl socket from main vap
-            if (m_dwpal_nl_ctx) {
-                LOG(DEBUG) << "detaching nl interface";
-                if (dwpal_driver_nl_detach(&m_dwpal_nl_ctx) == DWPAL_FAILURE) {
-                    LOG(ERROR) << "dwpal_driver_nl_detach() failed for radio ="
-                               << m_radio_info.iface_name;
-                }
-                m_fd_nl_events  = -1;
-                m_fd_nl_cmd_get = -1;
-            }
+            m_fd_nl_events      = -1;
 
             return success;
         })
@@ -533,27 +469,13 @@ bool base_wlan_hal_dwpal::dwpal_send_cmd(const std::string &cmd, int vap_id)
 
     auto buffer         = m_wpa_ctrl_buffer;
     auto buff_size_copy = m_wpa_ctrl_buffer_size;
-    int ctx_index       = vap_id + 1;
-
-    if (ctx_index < 0 || ctx_index >= DWPAL_CONTEXTS_MAX_SIZE) {
-        LOG(ERROR) << "ctx_index " << ctx_index << " is out of bounds";
-        return false;
-    }
-
-    if (!m_dwpal_ctx[ctx_index]) {
-        LOG(ERROR) << "m_dwpal_ctx[" << ctx_index << "]=nullptr";
-        return false;
-    }
 
     do {
         //LOG(DEBUG) << "Send dwpal cmd: " << cmd.c_str();
-        result = dwpal_hostap_cmd_send(m_dwpal_ctx[ctx_index], cmd.c_str(), NULL, buffer,
-                                       &buff_size_copy);
         result = dwpald_hostap_cmd(get_iface_name().c_str(), cmd.c_str(), cmd.length(), buffer,
                                    &buff_size_copy);
         if (result != 0) {
-            LOG(DEBUG) << "Failed to send cmd to DWPAL: " << cmd << " ctx_index=" << ctx_index
-                       << " --> Retry";
+            LOG(DEBUG) << "Failed to send cmd to DWPALD: " << cmd << " --> Retry";
         }
     } while (result != 0 && ++try_cnt < 3);
 
@@ -593,33 +515,10 @@ bool base_wlan_hal_dwpal::dwpal_send_cmd(const std::string &cmd, char **reply, i
     return true;
 }
 
-bool base_wlan_hal_dwpal::attach_ctrl_interface(int vap_id)
+bool base_wlan_hal_dwpal::attach_dwpald_interface(int vap_id)
 {
-    int ctx_index = vap_id + 1;
-    if (ctx_index < 0 || ctx_index >= DWPAL_CONTEXTS_MAX_SIZE) {
-        LOG(ERROR) << "ctx_index " << ctx_index << " is out of bounds";
-        return false;
-    }
-
-    if (m_dwpal_ctx[ctx_index]) {
-        LOG(ERROR) << "m_dwpal_ctx[" << ctx_index << "] already attached";
-        return false;
-    }
-
     const std::string ifname =
         beerocks::utils::get_iface_string_from_iface_vap_ids(m_radio_info.iface_name, vap_id);
-    int result = dwpal_hostap_interface_attach(&m_dwpal_ctx[ctx_index], ifname.c_str(), nullptr);
-
-    if ((result == 0) && m_dwpal_ctx[ctx_index]) {
-        LOG(DEBUG) << "dwpal_hostap_interface_attach() success for: " << ifname;
-    } else if (result != 0) {
-        LOG(ERROR) << "dwpal_hostap_interface_attach() failed for: " << ifname;
-        return false;
-    } else {
-        LOG(ERROR) << "dwpal_hostap_interface_attach() returns 0 for: " << ifname
-                   << " but context is NULL!";
-        return false;
-    }
     if (dwpald_attach((char *)ifname.c_str()) == false) {
         LOG(ERROR) << "Failed to attach to dwpald";
         return false;
@@ -629,54 +528,6 @@ bool base_wlan_hal_dwpal::attach_ctrl_interface(int vap_id)
 
 bool base_wlan_hal_dwpal::process_nl_events()
 {
-    if (!m_dwpal_nl_ctx) {
-        LOG(ERROR) << "Invalid Netlink socket used for nl events (m_dwpal_nl_ctx == nullptr)";
-        return false;
-    }
-
-    // check if there is nothing to proccess
-    if (m_fd_nl_events <= 0) {
-        LOG(ERROR) << "nothing to proccess fd= " << m_fd_nl_events;
-        return false;
-    }
-
-    // Passing a lambda with capture is not supported for standard C function
-    // pointers. As a workaround, we create a static (but thread local) wrapper
-    // function that calls the capturing lambda function.
-    static __thread std::function<DWPAL_Ret(struct nl_msg * msg)> nl_handler_cb_wrapper;
-    nl_handler_cb_wrapper = [&](struct nl_msg *msg) -> DWPAL_Ret {
-        if (!process_dwpal_nl_event(msg)) {
-            LOG(ERROR) << "User's netlink handler function failed!";
-            return DWPAL_FAILURE;
-        }
-        return DWPAL_SUCCESS;
-    };
-    auto nl_handler_cb = [](struct nl_msg *msg) -> DWPAL_Ret { return nl_handler_cb_wrapper(msg); };
-
-    // parsing is done in callback function
-    // Added failure on attempt counter for dwpal_driver_nl_msg_get operation to prevent unnecessary
-    // monitor thread restarts in case of a one-time buffer glitch in dwpal-nl-parser.
-    // The above-mentioned scenario can happen when 2 sockets are using dwpal_driver_nl_msg_get
-    // simultaneously and receiving an event at the same time.
-    // If max-retries is reached, the process_nl_events() fails and the
-    // monitor_thread_stop is performed.
-    if (dwpal_driver_nl_msg_get(m_dwpal_nl_ctx, DWPAL_NL_UNSOLICITED_EVENT, NULL, nl_handler_cb) ==
-        DWPAL_FAILURE) {
-        m_nl_get_failed_attempts++;
-
-        LOG(ERROR) << " dwpal_driver_nl_msg_get failed,"
-                   << " ctx=" << m_dwpal_nl_ctx
-                   << ", nl-get-failed-attempts=" << m_nl_get_failed_attempts;
-
-        if (m_nl_get_failed_attempts >= MAX_FAILED_NL_MSG_GET) {
-            LOG(ERROR) << " max allowed consecutive-nl-msg-get-failures reached,"
-                       << " ctx=" << m_dwpal_nl_ctx << ", returning error!";
-            return false;
-        }
-    } else {
-        m_nl_get_failed_attempts = 0;
-    }
-
     memset(m_nl_buffer, 0, NL_MAX_REPLY_BUFFSIZE);
     auto read_bytes = read(m_fd_nl_events, m_nl_buffer, NL_MAX_REPLY_BUFFSIZE);
     if (read_bytes <= 0) {
@@ -698,14 +549,6 @@ bool base_wlan_hal_dwpal::dwpal_nl_cmd_set(const std::string &ifname, unsigned i
         return false;
     }
 
-    if (dwpal_driver_nl_cmd_send(
-            m_dwpal_nl_ctx, DWPAL_NL_UNSOLICITED_EVENT, (char *)ifname.c_str(), NL80211_CMD_VENDOR,
-            DWPAL_NETDEV_ID, ltq_nl80211_vendor_subcmds(nl_cmd),
-            const_cast<unsigned char *>(reinterpret_cast<const unsigned char *>(vendor_data)),
-            vendor_data_size) != DWPAL_SUCCESS) {
-        LOG(ERROR) << "ERROR for cmd = " << nl_cmd;
-        return false;
-    }
     if (dwpald_drv_set((char *)ifname.c_str(), ltq_nl80211_vendor_subcmds(nl_cmd), &res,
                        vendor_data, vendor_data_size) != DWPALD_SUCCESS) {
         LOG(ERROR) << "ERROR for cmd = " << nl_cmd;
@@ -730,64 +573,6 @@ ssize_t base_wlan_hal_dwpal::dwpal_nl_cmd_get(const std::string &ifname, unsigne
         return -1;
     }
 
-    /* Handle a command which invokes an event with the output data */
-    if (dwpal_driver_nl_cmd_send(
-            m_dwpal_nl_ctx, DWPAL_NL_SOLICITED_EVENT, (char *)ifname.c_str(), NL80211_CMD_VENDOR,
-            DWPAL_NETDEV_ID, (enum ltq_nl80211_vendor_subcmds)nl_cmd, NULL, 0) == DWPAL_FAILURE) {
-        LOG(ERROR) << "ERROR for cmd = " << nl_cmd;
-        return -1;
-    }
-
-    // Passing a lambda with capture is not supported for standard C function
-    // pointers. As a workaround, we create a static (but thread local) wrapper
-    // function that calls the capturing lambda function.
-    static __thread std::function<DWPAL_Ret(char *ifname, int event, int subevent, size_t len,
-                                            unsigned char *data)>
-        nl_handler_cb_wrapper;
-    nl_handler_cb_wrapper = [&](char *ifname, int event, int subevent, size_t len,
-                                unsigned char *data) -> DWPAL_Ret {
-        if (!len || !data) {
-            LOG(ERROR) << "len=0 and/or data is NULL ==> Abort!";
-            return DWPAL_FAILURE;
-        }
-        if (event == NL80211_CMD_VENDOR) {
-            if (len >= max_buffer_size) {
-                LOG(ERROR) << "NL size exceeds out_buffer size ==> Abort!";
-                return DWPAL_FAILURE;
-            }
-
-            // copy result from nl data buffer to local buffer
-            std::copy_n(data, len, out_buffer);
-
-            // update data size
-            data_size = len;
-        } else {
-            LOG(ERROR) << "not handling non vendor event = " << event;
-            return DWPAL_FAILURE;
-        }
-        return DWPAL_SUCCESS;
-    };
-    auto nl_handler_cb = [](char *ifname, int event, int subevent, size_t len,
-                            unsigned char *data) -> DWPAL_Ret {
-        return nl_handler_cb_wrapper(ifname, event, subevent, len, data);
-    };
-
-    // Since we're expecting a Solicited (asynchronous) event from the driver,
-    // and it's impossible to know the type of the received message without
-    // processing it (using a callback function), we continue processing events
-    // until data_size != 0.
-    // 1 sec TO is added so we dont get stuck here forever.
-    // In practice, the response usually arrives much faster.
-    auto timeout = std::chrono::steady_clock::now() + std::chrono::seconds(1);
-    while ((data_size == 0) && std::chrono::steady_clock::now() < timeout) {
-        //parsing will be done in callback func
-        if (dwpal_driver_nl_msg_get(m_dwpal_nl_ctx, DWPAL_NL_SOLICITED_EVENT, nl_handler_cb,
-                                    NULL) == DWPAL_FAILURE) {
-            LOG(ERROR) << " dwpal_driver_nl_msg_get failed,"
-                       << " ctx=" << m_dwpal_nl_ctx;
-            return -1;
-        }
-    }
     auto res = -1;
     if (dwpald_drv_get((char *)ifname.c_str(), (enum ltq_nl80211_vendor_subcmds)nl_cmd, &res, NULL,
                        0, out_buffer, (size_t *)&max_buffer_size) != DWPALD_SUCCESS) {
@@ -816,13 +601,6 @@ bool base_wlan_hal_dwpal::dwpal_nl_cmd_send_and_recv(int command, DWPAL_nl80211C
     }
 
     int nl80211_id = -1;
-    if (dwpal_nl80211_id_get(m_dwpal_nl_ctx, &nl80211_id) == DWPAL_FAILURE) {
-        LOG(ERROR) << "getting nl id failed for: " << m_radio_info.iface_name
-                   << ", unable to send nl command, nl80211_id=" << nl80211_id;
-        nlmsg_free(msg);
-        return false;
-    }
-
     if (dwpald_nl80211_id_get(&nl80211_id) != DWPALD_SUCCESS) {
         LOG(ERROR) << "getting nl id failed for: " << m_radio_info.iface_name
                    << ", unable to send nl command, nl80211_id=" << nl80211_id;
@@ -848,13 +626,7 @@ bool base_wlan_hal_dwpal::dwpal_nl_cmd_send_and_recv(int command, DWPAL_nl80211C
     }
 
     int cmd_res = 0;
-    ret         = dwpal_nl80211_cmd_send(m_dwpal_nl_ctx, msg, &cmd_res, nl_callback, callback_args);
-    if (ret != DWPAL_SUCCESS && cmd_res != 0) {
-        LOG(ERROR) << "dwpal_nl80211_cmd_send failed, msg=" << msg << ", cmd_res=" << cmd_res;
-        return false;
-    }
-
-    ret = dwpald_nl80211_cmd_send(msg, nl_callback, &cmd_res, callback_args);
+    ret         = dwpald_nl80211_cmd_send(msg, nl_callback, &cmd_res, callback_args);
     if (ret != DWPALD_SUCCESS && cmd_res != 0) {
         LOG(ERROR) << "dwpal_nl80211_cmd_send failed, msg=" << msg << ", cmd_res=" << cmd_res;
         return false;
@@ -880,9 +652,9 @@ bool base_wlan_hal_dwpal::dwpal_nl_cmd_scan_dump()
     };
 
     int cmd_res = 0;
-    auto ret    = dwpal_driver_nl_scan_dump_sync(
-        m_dwpal_nl_ctx, (char *)m_radio_info.iface_name.c_str(), &cmd_res, nl_handler_cb, nullptr);
-    if (ret != DWPAL_SUCCESS && cmd_res != 0) {
+    auto ret    = dwpald_ieee80211_scan_dump((char *)m_radio_info.iface_name.c_str(), nl_handler_cb,
+                                          &cmd_res, nullptr);
+    if (ret != DWPALD_SUCCESS && cmd_res != 0) {
         LOG(ERROR) << "dwpal_driver_nl_scan_dump Failed to request the nl scan dump";
         return false;
     }
@@ -1161,53 +933,6 @@ bool base_wlan_hal_dwpal::refresh_vaps_info(int id)
 
 bool base_wlan_hal_dwpal::process_ext_events(int fd)
 {
-    constexpr uint8_t MAX_EVENTS_PER_ITERATION = 5;
-
-    char opCode[DWPAL_OPCODE_STRING_LENGTH] = {0};
-
-    if (!m_dwpal_ctx[0]) {
-        LOG(ERROR) << "Invalid WPA Control socket (m_dwpal_ctx == nullptr)";
-        return false;
-    }
-
-    uint8_t events_received = 0;
-    int status              = DWPAL_SUCCESS;
-
-    do {
-        auto buffer         = m_wpa_ctrl_buffer;
-        auto buff_size_copy = m_wpa_ctrl_buffer_size;
-
-        // Check if there are pending event and get it
-        status = dwpal_hostap_event_get(m_dwpal_ctx[0], buffer, &buff_size_copy, opCode);
-
-        if (status == DWPAL_FAILURE) {
-            LOG(ERROR) << "Failed reading event from DWPAL socket --> detaching!";
-            detach();
-            return false;
-        } else if (status != DWPAL_NO_PENDING_MESSAGES) {
-            ++events_received;
-
-            /* Silencing unhandled filtered events */
-            if (is_filtered_event(opCode)) {
-                //LOG(DEBUG) << "DWPAL unhandled event opcode received: " << opCode;
-                return true;
-            }
-
-            // Process the event with the DWPAL parser
-            if (!process_dwpal_event(buffer, buff_size_copy, std::string(opCode))) {
-                LOG(ERROR) << "Failed processing DWPAL event with DWPAL parser";
-                return false;
-            }
-        }
-    } while ((status != DWPAL_NO_PENDING_MESSAGES) && (events_received < MAX_EVENTS_PER_ITERATION));
-
-    if (events_received == 0) {
-        // No pending messages
-        LOG(WARNING) << "base_wlan_hal_dwpal::process_ext_events() called but there are no pending "
-                        "messages...";
-        return false;
-    }
-
     auto buffer         = m_wpa_ctrl_buffer;
     auto buff_size_copy = m_wpa_ctrl_buffer_size;
     memset(buffer, 0, buff_size_copy);
