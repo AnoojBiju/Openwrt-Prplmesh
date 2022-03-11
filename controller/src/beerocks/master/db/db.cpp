@@ -7148,3 +7148,20 @@ bool db::dm_set_device_board_info(const Agent &agent, const beerocks::bpl::sDevi
         m_ambiorix_datamodel->set(device_path, "ManufacturerModel", device_info.manufacturer_model);
     return ret_val;
 }
+
+bool db::dm_remove_radio(Agent::sRadio &radio)
+{
+    if (radio.dm_path.empty()) {
+        return true;
+    }
+
+    auto instance = get_dm_index_from_path(radio.dm_path);
+    if (instance.first.empty()) {
+        return false;
+    }
+    if (!m_ambiorix_datamodel->remove_instance(instance.first, instance.second)) {
+        return false;
+    }
+    radio.dm_path.clear();
+    return true;
+}

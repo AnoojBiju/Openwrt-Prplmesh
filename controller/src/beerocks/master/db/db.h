@@ -1949,6 +1949,17 @@ public:
     std::string dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_mac,
                                          const std::string &assoc_ts = {});
 
+    /**
+     * @brief Remove Radio data model object
+     *
+     * DM path to object:
+     * "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}."
+     *
+     * @param radio db radio object
+     * @return True on success, false otherwise.
+     */
+    bool dm_remove_radio(Agent::sRadio &radio);
+
     //
     // tasks
     //
