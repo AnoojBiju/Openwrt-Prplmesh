@@ -110,7 +110,7 @@ static mon_wlan_hal::Event dwpal_nl_to_bwl_event(uint8_t cmd)
  */
 static bool dwpal_get_channel_scan_freq(const std::vector<unsigned int> &channel_pool,
                                         unsigned int curr_channel, const std::string &iface,
-                                        ScanParams &scan_params)
+                                        scan_params &scan_params)
 {
     int freq_index = 0;
     //configure center frequency for each scanned channel
@@ -1035,9 +1035,9 @@ bool mon_wlan_hal_dwpal::channel_scan_trigger(int dwell_time_msec,
     LOG(DEBUG) << "Channel scan trigger received on interface=" << m_radio_info.iface_name;
 
     //build background scan parameters
-    ScanParams channel_scan_params = {0};
+    scan_params channel_scan_params = {0};
     sScanCfgParamsBG params_bg; //background scan param
-    size_t bg_size = ScanCfgParams_size_invalid;
+    size_t bg_size = ScanCfgParamsBG_size;
 
     // get original background scan params
     if (!dwpal_get_scan_params_bg(params_bg, bg_size)) {
@@ -1074,10 +1074,9 @@ bool mon_wlan_hal_dwpal::channel_scan_trigger(int dwell_time_msec,
     channel_scan_params.ap_force = 1;
 
     int cmd_res = 0;
-    auto ret    = dwpal_driver_nl_scan_trigger_sync(get_dwpal_nl_ctx(),
-                                                 (char *)m_radio_info.iface_name.c_str(), &cmd_res,
-                                                 &channel_scan_params);
-    if (ret != DWPAL_SUCCESS && cmd_res != 0) {
+    auto ret    = dwpald_ieee80211_scan_trigger((char *)m_radio_info.iface_name.c_str(),
+                                             &channel_scan_params, &cmd_res);
+    if (ret != DWPALD_SUCCESS && cmd_res != 0) {
         LOG(ERROR) << " scan trigger failed! Abort scan";
         return false;
     }
