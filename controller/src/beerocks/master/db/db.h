@@ -492,14 +492,14 @@ public:
     bool remove_node(const sMacAddr &mac);
 
     /**
-     * @brief Removes optional subobjects: HTCapabilities, VHTCapabilities,
-     * HECapabilities for Capabilities data model.
+     * @brief Removes optional subobjects: HTCapabilities, VHTCapabilities,HECapabilities in Radio DM
+     *
      * Example of path to object: "Device.WiFi.DataElements.Network.Device.1.Radio.1.Capabilities".
      *
-     * @param radio_mac Radio mac for finding path to appropriate 'Capabilities' data element.
-     * @return True if subobject was successfuly removed, false otherwise.
+     * @param radio_id radio ruid
+     * @return True if subobject was successfully removed, false otherwise.
      */
-    bool clear_ap_capabilities(const sMacAddr &radio_mac);
+    bool clear_ap_capabilities(const sMacAddr &radio_id);
 
     bool set_node_type(const std::string &mac, beerocks::eType type);
     beerocks::eType get_node_type(const std::string &mac);

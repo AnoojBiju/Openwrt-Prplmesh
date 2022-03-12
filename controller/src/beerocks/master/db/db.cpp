@@ -5704,32 +5704,26 @@ uint64_t db::get_client_remaining_sec(const std::pair<std::string, ValuesMap> &c
                 : 0);
 }
 
-bool db::clear_ap_capabilities(const sMacAddr &radio_mac)
+bool db::clear_ap_capabilities(const sMacAddr &radio_uid)
 {
-    auto radio = get_radio_by_uid(radio_mac);
+    auto radio = get_radio_by_uid(radio_uid);
     if (!radio) {
-        LOG(WARNING) << " - node " << radio_mac << " does not exist!";
+        LOG(ERROR) << "Failed to get radio with RUID: " << radio_uid;
         return false;
     }
 
-    std::string path_to_obj = radio->dm_path;
-    if (path_to_obj.empty()) {
+    if (radio->dm_path.empty()) {
         return true;
     }
-    path_to_obj += ".Capabilities";
-    if (!m_ambiorix_datamodel->remove_optional_subobject(path_to_obj, "HTCapabilities")) {
-        LOG(ERROR) << "Failed to remove optional subobject: " << path_to_obj << ".HTCapabilities";
-        return false;
-    }
-    if (!m_ambiorix_datamodel->remove_optional_subobject(path_to_obj, "VHTCapabilities")) {
-        LOG(ERROR) << "Failed to remove optional subobject: " << path_to_obj << ".VHTCapabilities";
-        return false;
-    }
-    if (!m_ambiorix_datamodel->remove_optional_subobject(path_to_obj, "HECapabilities")) {
-        LOG(ERROR) << "Failed to remove optional subobject: " << path_to_obj << ".HECapabilities";
-        return false;
-    }
-    return true;
+
+    bool ret_val           = true;
+    const auto path_to_obj = radio->dm_path + ".Capabilities";
+
+    ret_val &= m_ambiorix_datamodel->remove_optional_subobject(path_to_obj, "HTCapabilities");
+    ret_val &= m_ambiorix_datamodel->remove_optional_subobject(path_to_obj, "VHTCapabilities");
+    ret_val &= m_ambiorix_datamodel->remove_optional_subobject(path_to_obj, "HECapabilities");
+
+    return ret_val;
 }
 
 bool db::set_ap_ht_capabilities(const sMacAddr &radio_mac,

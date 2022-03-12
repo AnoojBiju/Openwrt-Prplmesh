@@ -1862,6 +1862,9 @@ bool Controller::handle_cmdu_1905_ap_capability_report(const sMacAddr &src_mac,
 
         //TODO: We can decide to parse Radio CAPs here instead of WSC (autoconfig_wsc_parse_radio_caps)
         // to lower CPU usage on onboarding (PPM-1727)
+
+        // Remove all previously set Capabilities of radio from data model
+        database.clear_ap_capabilities(radio_tlv->radio_uid());
     }
 
     auto removed = agent->radios.keep_new_remove_old();
@@ -1898,18 +1901,15 @@ bool Controller::handle_cmdu_1905_ap_capability_report(const sMacAddr &src_mac,
 
     bool all_radio_capabilities_saved_successfully = true;
     for (int rc_idx = 0; rc_idx < radio_list_length; rc_idx++) {
-        LOG(DEBUG) << "radio-index=" << rc_idx;
+
         auto radio_capabilities_tuple = channel_scan_capabilities_tlv->radio_list(rc_idx);
         if (!std::get<0>(radio_capabilities_tuple)) {
-            LOG(ERROR) << "getting radio capabilities entry has failed!";
+            LOG(ERROR) << "Radio channel scan capabilities entry has failed!";
             return false;
         }
+
         auto &radio_capabilities_entry = std::get<1>(radio_capabilities_tuple);
         auto &ruid                     = radio_capabilities_entry.radio_uid();
-        LOG(DEBUG) << "ruid=" << ruid;
-
-        // Remove all previously set Capabilities of radio from data model
-        database.clear_ap_capabilities(ruid);
 
         if (!database.fill_radio_channel_scan_capabilites(ruid, radio_capabilities_entry)) {
 
@@ -3266,7 +3266,7 @@ bool Controller::handle_cmdu_control_message(
             new_event.snr        = notification->params().rx_snr;
             new_event.client_mac = notification->params().result.mac;
             new_event.bssid      = database.get_hostap_vap_mac(tlvf::mac_from_string(ap_mac),
-                                                               notification->params().vap_id);
+                                                          notification->params().vap_id);
             tasks.push_event(database.get_rdkb_wlan_task_id(),
                              rdkb_wlan_task::events::STEERING_EVENT_SNR_AVAILABLE, &new_event);
         }
