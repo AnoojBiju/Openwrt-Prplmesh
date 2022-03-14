@@ -77,7 +77,13 @@ def main():
         do_upgrade(dev)
     else:
         print("Checking if the device needs to be upgraded")
-        if dev.needs_upgrade():
+        needs_upgrade = False
+        try:
+            needs_upgrade = dev.needs_upgrade()
+        except Exception:  # pylint: disable=broad-except
+            print("Couldn't determine if the device needs to be ugpgraded. Upgrading anyway.")
+            needs_upgrade = True
+        if needs_upgrade:
             print("The device {} will be upgraded".format(dev.name))
             do_upgrade(dev)
         else:
