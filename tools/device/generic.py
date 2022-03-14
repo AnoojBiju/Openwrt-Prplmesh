@@ -172,7 +172,7 @@ class GenericDevice():
         with SerialDevice(self.baudrate, self.name, self.serial_prompt,
                           expect_prompt_on_connect=False) as ser:
             shell = ser.shell
-            shell.sendline("")
+            shell.send('\003')
             shell.expect([self.bootloader_prompt, pexpect.TIMEOUT], timeout=1)
             if shell.match is not pexpect.TIMEOUT:
                 return ShellType.UBOOT
