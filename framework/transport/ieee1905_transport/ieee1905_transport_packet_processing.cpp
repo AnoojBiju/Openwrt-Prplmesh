@@ -25,6 +25,10 @@ namespace transport {
 using namespace beerocks::transport::messages;
 
 static const uint8_t ieee1905_max_message_version = 0x00;
+constexpr sMacAddr Ieee1905Transport::ieee1905_multicast_addr;
+const std::set<uint16_t> Ieee1905Transport::Packet::reliable_multicast_msg_types = {
+    static_cast<uint16_t>(ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE),
+    static_cast<uint16_t>(ieee1905_1::eMessageType::ASSOCIATION_STATUS_NOTIFICATION_MESSAGE)};
 
 void Ieee1905Transport::update_neighbours(const Packet &packet)
 {
@@ -218,6 +222,23 @@ bool Ieee1905Transport::de_duplicate_packet(Packet &packet)
 
     auto it           = de_duplication_map_.find(key);
     bool is_duplicate = (it != de_duplication_map_.end());
+
+    // On reliable multicast messages, we receive the same message twice, one with multicast
+    // destination address, and a second one with a unicast destination address.
+    // If we receive one of them first, treat the other one as a duplicate.
+    if (!is_duplicate && packet.src_if_type == CmduRxMessage::IF_TYPE_NET &&
+        packet.is_reliable_multicast()) {
+        // If the destination address is al_mac, replace with multicast address
+        if (ETHER_IS_SAME(al_mac_addr_, key.dst.oct)) {
+            key.dst = Ieee1905Transport::ieee1905_multicast_addr;
+        }
+        // If the destination address is multicast, replace with al_mac address
+        else if (ETHER_IS_SAME(Ieee1905Transport::ieee1905_multicast_addr.oct, key.dst.oct)) {
+            memcpy(key.dst.oct, al_mac_addr_, ETH_ALEN);
+        }
+        it           = de_duplication_map_.find(key);
+        is_duplicate = (it != de_duplication_map_.end());
+    }
 
     if (is_duplicate) {
         // this is a duplicate packet - update timestamp
@@ -696,16 +717,9 @@ bool Ieee1905Transport::forward_packet(Packet &packet)
     if (!ch->GetRelayIndicator()) {
         return true;
     }
-    // 3. Message type is topology notification or association status notification, which are
-    //    currently the only message which should be sent using reliable multicast. See Multi-AP
-    //    specification Table 5
-    auto host_order_messageType = ntohs(ch->messageType);
-    LOG(DEBUG) << "host_order_messageType=" << std::hex << host_order_messageType;
-    if (host_order_messageType !=
-            static_cast<uint16_t>(ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE) &&
-        host_order_messageType !=
-            static_cast<uint16_t>(
-                ieee1905_1::eMessageType::ASSOCIATION_STATUS_NOTIFICATION_MESSAGE)) {
+    // 3. If Message type is a reliable multicast according to the EasyMesh specification (See EasyMesh
+    //    specification Table 5) need to send it also as unicast. Otherwise stop handling.
+    if (!packet.is_reliable_multicast()) {
         return true;
     }
 
