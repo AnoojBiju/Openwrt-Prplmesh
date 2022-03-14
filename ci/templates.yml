@@ -84,7 +84,7 @@
 .test-upgrade-image:
   stage: test
   script:
-    - tools/deploy_firmware.py --device "$TARGET_DEVICE" --target-name "$TARGET_DEVICE_NAME" --image "$OPENWRT_IMAGE" --full
+    - tools/deploy_firmware.py --device "$TARGET_DEVICE" --target-name "$TARGET_DEVICE_NAME" --image "$OPENWRT_IMAGE" --full --configuration ci/configuration/boardfarm/"$TARGET_DEVICE_NAME".sh
   rules:
     - if: $CI_MERGE_REQUEST_LABELS =~ /.*test-upgrade-image.*/
     - when: manual
@@ -102,7 +102,7 @@
     - ALL_TARGETS="turris-omnia-1 turris-omnia-2 glinet-b1300-1 netgear-rax40-1 nec-wx3000hp-1"
     # kill prplmesh on each target to make sure they don't interfere with the test
     - for i in $ALL_TARGETS ; do ssh "$i" 'pgrep -f beerocks | xargs kill -9 2>/dev/null' || true ; done
-    - tools/deploy_firmware.py --device "$TARGET_DEVICE" --target-name "$TARGET_DEVICE_NAME" --image "$OPENWRT_IMAGE"
+    - tools/deploy_firmware.py --device "$TARGET_DEVICE" --target-name "$TARGET_DEVICE_NAME" --image "$OPENWRT_IMAGE" --configuration ci/configuration/boardfarm/"$TARGET_DEVICE_NAME".sh
     - tools/setup_uci.sh --target-type "$TARGET_DEVICE" --target-name "$TARGET_DEVICE_NAME"
     - tools/deploy_ipk.sh $TARGET_DEVICE_NAME "build/$TARGET_DEVICE/"prplmesh.ipk
   script:
@@ -173,7 +173,7 @@
       esac
       if [ -n "$IMAGE_NAME" ] ; then
           echo "Checking if the firmware on $DEVICE_UNDER_TEST needs to be updated"
-          tools/deploy_firmware.py --device $DEVICE_UNDER_TEST --target-name "$DEVICE_UNDER_TEST" --image $IMAGE_NAME
+          tools/deploy_firmware.py --device $DEVICE_UNDER_TEST --target-name "$DEVICE_UNDER_TEST" --image $IMAGE_NAME --configuration ci/configuration/certification/R1/"$DEVICE_UNDER_TEST".sh
           tools/setup_uci.sh --target-type "$DEVICE_UNDER_TEST" --target-name "$DEVICE_UNDER_TEST"
           echo "Deploying prplMesh to $DEVICE_UNDER_TEST"
           tools/deploy_ipk.sh --certification-mode $DEVICE_UNDER_TEST build/$DEVICE_UNDER_TEST/prplmesh.ipk
@@ -238,6 +238,6 @@
               IMAGE_NAME=''
           ;;
       esac
-      tools/deploy_firmware.py --device "$RUN_ON_DEVICE"  --target-name "$RUN_ON_DEVICE" --image "$IMAGE_NAME"
+      tools/deploy_firmware.py --device "$RUN_ON_DEVICE"  --target-name "$RUN_ON_DEVICE" --image "$IMAGE_NAME" --configuration ci/configuration/certification/R2/"$RUN_ON_DEVICE".sh
     - tools/setup_uci.sh --target-type "$RUN_ON_DEVICE" --target-name "$RUN_ON_DEVICE"
     - tools/deploy_ipk.sh --certification-mode $RUN_ON_DEVICE build/$RUN_ON_DEVICE/prplmesh.ipk
