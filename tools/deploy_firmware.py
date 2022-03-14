@@ -52,9 +52,9 @@ def main():
 
     def do_upgrade(dev):
         try:
-            dev.sysupgrade()
-        except NotImplementedError:
             dev.upgrade_bootloader()
+        except NotImplementedError:
+            dev.sysupgrade()
 
         if args.configuration:
             print("A configuration file was provided, it will be applied.")
