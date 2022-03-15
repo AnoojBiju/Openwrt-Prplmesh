@@ -16,5 +16,9 @@ EOF
 # Wired backhaul interface:
 uci set prplmesh.config.backhaul_wire_iface='eth1'
 
+# Stop and disable the firewall:
+/etc/init.d/tr181-firewall stop
+rm -f /etc/rc.d/S22tr181-firewall
+
 uci commit
 /etc/init.d/network restart
