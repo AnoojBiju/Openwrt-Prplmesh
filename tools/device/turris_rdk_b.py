@@ -9,6 +9,7 @@
 import os
 import re
 import subprocess
+import time
 from pathlib import Path
 
 # Third party
@@ -84,6 +85,8 @@ class TurrisRdkb(GenericDevice):
                 return False
 
             shell.sendline("")
+            # Give the shell a few seconds to be ready:
+            time.sleep(5)
             return True
 
     def check_images_on_board(self):
