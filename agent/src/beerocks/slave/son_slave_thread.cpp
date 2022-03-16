@@ -2892,9 +2892,16 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
             return false;
         }
         notification_out->params() = notification_in->params();
-        send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
 
-        send_operating_channel_report(fronthaul_iface);
+        /**
+         * The Controller is not familiar with ZWDFS radio interface, so
+         * avoid sending CMDU to the controller when the radio
+         * interface is a ZWDFS radio interface.
+         */
+        if (!radio->front.zwdfs) {
+            send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
+            send_operating_channel_report(fronthaul_iface);
+        }
 
         auto notification_out_bhm = message_com::create_vs_message<
             beerocks_message::cACTION_BACKHAUL_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION>(cmdu_tx);
