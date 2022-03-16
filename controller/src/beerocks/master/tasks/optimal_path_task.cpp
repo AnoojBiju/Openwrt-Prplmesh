@@ -821,12 +821,21 @@ void optimal_path_task::work()
         //searching for sub band hostap /backhaul(client) measurement match for each ire
         for (auto &agent : agents_outside_subtree) {
             bool found_band_match = false;
-            std::string hostap_backhaul_manager =
-                tlvf::mac_to_string(agent->backhaul.wireless_backhaul_radio->radio_uid);
-            std::string hostap_backhaul;
+
             if (tlvf::mac_from_string(sta_bridge) == agent->al_mac) {
                 continue;
             }
+
+            //Wireless bh radio is set to null incase of wired connection
+            if (!agent->backhaul.wireless_backhaul_radio) {
+                TASK_LOG(DEBUG) << "wireless backhaul radio is not set";
+                continue;
+            }
+
+            std::string hostap_backhaul;
+            std::string hostap_backhaul_manager =
+                tlvf::mac_to_string(agent->backhaul.wireless_backhaul_radio->radio_uid);
+
             //searching for hostap 5Ghz Low/High direct match ,2.4Ghz auto picked when sta is 2.4
             for (const auto &radio_map_element : agent->radios) {
                 auto radio         = radio_map_element.second;
@@ -999,8 +1008,9 @@ void optimal_path_task::work()
                 continue;
             }
 
-            bool is_backhaul_manager = (agent->backhaul.wireless_backhaul_radio->radio_uid ==
-                                        tlvf::mac_from_string(hostap));
+            bool is_backhaul_manager = (agent->backhaul.wireless_backhaul_radio &&
+                                        (agent->backhaul.wireless_backhaul_radio->radio_uid ==
+                                         tlvf::mac_from_string(hostap)));
 
             //when hostap is backhaul manager , the mathing candidate is his same band sibling
             if (is_backhaul_manager &&
@@ -1754,7 +1764,8 @@ bool optimal_path_task::is_measurement_valid(const std::set<std::string> &temp_c
         }
 
         bool is_backhaul_manager =
-            (agent->backhaul.wireless_backhaul_radio->radio_uid == tlvf::mac_from_string(hostap));
+            (agent->backhaul.wireless_backhaul_radio &&
+             (agent->backhaul.wireless_backhaul_radio->radio_uid == tlvf::mac_from_string(hostap)));
 
         std::string hostap_tmp = hostap;
         if (is_backhaul_manager && database.is_node_5ghz(sta_mac)) {
@@ -1796,7 +1807,8 @@ bool optimal_path_task::all_measurement_succeed(const std::set<std::string> &tem
         }
 
         bool is_backhaul_manager =
-            (agent->backhaul.wireless_backhaul_radio->radio_uid == tlvf::mac_from_string(hostap));
+            (agent->backhaul.wireless_backhaul_radio &&
+             (agent->backhaul.wireless_backhaul_radio->radio_uid == tlvf::mac_from_string(hostap)));
 
         std::string hostap_tmp = hostap;
         if (is_backhaul_manager && database.is_node_5ghz(sta_mac)) {
