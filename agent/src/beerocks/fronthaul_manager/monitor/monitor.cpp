@@ -676,8 +676,7 @@ bool Monitor::monitor_fsm()
          */
         auto radio_node = mon_db.get_radio_node();
         auto &info      = radio_node->ap_metrics_reporting_info();
-        if (radio_node->get_stats().vap_stats_available &&
-            (0 != info.ap_channel_utilization_reporting_threshold)) {
+        if (radio_node->get_stats().vap_stats_available) {
             int elapsed_time_s =
                 std::chrono::duration_cast<std::chrono::seconds>(
                     now - info.ap_metrics_channel_utilization_last_reporting_time_point)
@@ -714,16 +713,19 @@ void Monitor::on_channel_utilization_measurement_period_elapsed()
     auto radio_node        = mon_db.get_radio_node();
     auto &info             = radio_node->ap_metrics_reporting_info();
     bool threshold_crossed = false;
-    if (channel_utilization > info.ap_channel_utilization_reporting_threshold) {
-        if (info.ap_metrics_channel_utilization_reporting_value <=
-            info.ap_channel_utilization_reporting_threshold) {
+
+    // Check if a threshold has been set
+    if (0 != info.ap_channel_utilization_reporting_threshold) {
+        if (channel_utilization > info.ap_channel_utilization_reporting_threshold) {
+            if (info.ap_metrics_channel_utilization_reporting_value <=
+                info.ap_channel_utilization_reporting_threshold) {
+                threshold_crossed = true;
+            }
+        } else if (info.ap_metrics_channel_utilization_reporting_value >
+                   info.ap_channel_utilization_reporting_threshold) {
             threshold_crossed = true;
         }
-    } else if (info.ap_metrics_channel_utilization_reporting_value >
-               info.ap_channel_utilization_reporting_threshold) {
-        threshold_crossed = true;
     }
-
     LOG(DEBUG) << "Channel utilization: previous_value="
                << std::to_string(info.ap_metrics_channel_utilization_reporting_value)
                << ", current_value=" << std::to_string(channel_utilization) << ", threshold_value="
@@ -886,18 +888,18 @@ bool Monitor::update_sta_stats(const std::chrono::steady_clock::time_point &time
             return true;
         }
 
+        // Reset STA poll data
+        if (poll_cnt == 0) {
+            sta_node->reset_poll_data();
+        }
+        sta_stats.poll_cnt++;
+
         // Update the stats
         if (!mon_wlan_hal->update_stations_stats(vap_node->get_iface(), sta_mac,
                                                  sta_stats.hal_stats)) {
             LOG(ERROR) << "Failed updating STA (" << sta_mac << ") statistics!";
             continue;
         }
-
-        // Reset STA poll data
-        if (poll_cnt == 0) {
-            sta_node->reset_poll_data();
-        }
-        sta_stats.poll_cnt++;
 
         // Update TX Phy Rate min
         auto val = sta_stats.hal_stats.tx_phy_rate_100kb;

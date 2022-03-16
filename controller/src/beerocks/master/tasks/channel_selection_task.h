@@ -132,6 +132,7 @@ private:
     void queue_clear_mac(const std::string &mac);
 
     bool is_2G_channel(int channel);
+    bool is_5G_channel(int channel);
     void get_hostap_params();
     void ccl_fill_supported_channels();
     void ccl_fill_affected_supported_channels();
