@@ -2190,43 +2190,22 @@ std::unordered_map<int8_t, sVapElement> &db::get_hostap_vap_list(const sMacAddr 
     return n->hostap->vaps_info;
 }
 
-bool db::remove_vap(Agent::sRadio &radio, int vap_id)
+bool db::remove_vap(Agent::sRadio &radio, Agent::sRadio::sBss &bss)
 {
     auto vap_list = get_hostap_vap_list(radio.radio_uid);
-    auto vap      = vap_list.find(vap_id);
+    auto vap      = vap_list.find(bss.vap_id);
 
-    if (vap == vap_list.end()) {
-        LOG(ERROR) << "Failed to get correct vap from the list.";
-        return false;
-    }
-
-    auto radio_path = radio.dm_path;
-    if (!radio_path.empty()) {
-        /*
-            Prepare path to the BSS instance.
-            Example: Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.
-        */
-        auto bss_path = radio_path + ".BSS.";
-
-        auto bss_index = m_ambiorix_datamodel->get_instance_index(bss_path + "[BSSID == '%s'].",
-                                                                  vap->second.mac);
-        if (!bss_index) {
-            LOG(ERROR) << "Failed to get BSS instance index.";
+    if (vap != vap_list.end()) {
+        if (!vap_list.erase(bss.vap_id)) {
+            LOG(ERROR) << "Failed to remove VAP, id: " << bss.vap_id
+                       << "bssid: " << vap->second.mac;
             return false;
         }
-
-        if (!m_ambiorix_datamodel->remove_instance(bss_path, bss_index)) {
-            LOG(ERROR) << "Failed to remove " << bss_path << bss_index << " instance.";
-            return false;
-        }
+    } else {
+        LOG(INFO) << "Failed to get correct vap from the list, bssid=" << bss.bssid;
     }
 
-    if (!vap_list.erase(vap_id)) {
-        LOG(ERROR) << "Failed to remove VAP, id: " << vap_id << "bssid: " << vap->second.mac;
-        return false;
-    }
-
-    return true;
+    return dm_remove_bss(bss);
 }
 
 bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bssid,
@@ -7128,5 +7107,21 @@ bool db::dm_remove_radio(Agent::sRadio &radio)
         return false;
     }
     radio.dm_path.clear();
+    return true;
+}
+
+bool db::dm_remove_bss(Agent::sRadio::sBss &bss)
+{
+    if (bss.dm_path.empty()) {
+        return true;
+    }
+
+    auto bss_path = get_dm_index_from_path(bss.dm_path);
+    if (!m_ambiorix_datamodel->remove_instance(bss_path.first, bss_path.second)) {
+        LOG(ERROR) << "Failed to remove " << bss_path.first << bss_path.second << " instance.";
+        return false;
+    }
+    bss.dm_path.clear();
+
     return true;
 }

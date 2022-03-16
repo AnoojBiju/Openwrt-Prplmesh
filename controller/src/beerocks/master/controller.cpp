@@ -2892,7 +2892,13 @@ bool Controller::handle_cmdu_control_message(
             break;
         }
 
-        database.remove_vap(*radio, vap_id);
+        auto bss = database.get_bss(disabled_bssid);
+        if (!bss) {
+            LOG(ERROR) << "Failed to get BSS with BSSID: " << disabled_bssid;
+            break;
+        }
+
+        database.remove_vap(*radio, *bss);
 
         if (radio->bsses.erase(disabled_bssid) != 1) {
             LOG(ERROR) << "No BSS " << disabled_bssid << " could be erased on " << radio_mac;
