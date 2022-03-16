@@ -370,7 +370,7 @@ class TurrisRdkb(GenericDevice):
 
         print(f"Current RDKB version is: {current_version} \nNew RDKB version is: {new_version}")
 
-        will_upgrade = new_version > current_version
+        will_upgrade = new_version != current_version
         if will_upgrade and serial_type == ShellType.RDKB:
             self.reboot(self.check_serial_type())
             if not self.is_prplos_ready():
