@@ -6193,49 +6193,32 @@ bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, cons
         return false;
     }
 
-    auto radio_path = radio->dm_path;
-    if (radio_path.empty()) {
+    if (radio->dm_path.empty()) {
         return true;
     }
 
-    /*
-        Prepare path to the BSS instance.
-        Example: Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.
-    */
-    auto bss_path  = radio_path + ".BSS";
-    auto bss_index = m_ambiorix_datamodel->get_instance_index(bss_path + ".[BSSID == '%s'].",
-                                                              tlvf::mac_to_string(bssid));
-    std::string bss_instance;
+    auto bss = get_bss(bssid);
+    if (!bss) {
+        LOG(ERROR) << "Failed to get BSS with BSSID: " << bssid;
+        return false;
+    }
 
-    if (!bss_index) {
-        bss_instance = m_ambiorix_datamodel->add_instance(bss_path);
+    if (bss->dm_path.empty()) {
+
+        auto bss_path     = radio->dm_path + ".BSS";
+        auto bss_instance = m_ambiorix_datamodel->add_instance(bss_path);
         if (bss_instance.empty()) {
             LOG(ERROR) << "Failed to add " << bss_path << " instance.";
             return false;
         }
-    } else {
-        LOG(DEBUG) << "BSS instance exists for BSSID: " << bssid << ". Updating Data Model.";
-        bss_instance = bss_path + "." + std::to_string(bss_index) + ".";
+        bss->dm_path = bss_instance;
     }
 
     auto ret_val = true;
-    /*
-        Set value for BSSID variable
-        Example: Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.1.BSSID
-    */
-    ret_val &= m_ambiorix_datamodel->set(bss_instance, "BSSID", bssid);
 
-    /*
-        Set value for SSID variable
-        Example: Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.1.SSID
-    */
-    ret_val &= m_ambiorix_datamodel->set(bss_instance, "SSID", ssid);
-
-    /*
-        Set value for Enabled variable
-        Example: Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.1.Enabled
-    */
-    ret_val &= m_ambiorix_datamodel->set(bss_instance, "Enabled", !ssid.empty());
+    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "BSSID", bssid);
+    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "SSID", ssid);
+    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "Enabled", !ssid.empty());
 
     /*
         Set value for LastChange variable - it is creation time, when someone will
@@ -6246,8 +6229,9 @@ bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, cons
     uint64_t creation_time = std::chrono::duration_cast<std::chrono::seconds>(
                                  std::chrono::steady_clock::now().time_since_epoch())
                                  .count();
-    ret_val &= m_ambiorix_datamodel->set(bss_instance, "LastChange", creation_time);
-    ret_val &= m_ambiorix_datamodel->set_current_time(bss_instance);
+    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "LastChange", creation_time);
+    ret_val &= m_ambiorix_datamodel->set_current_time(bss->dm_path);
+
     return ret_val;
 }
 

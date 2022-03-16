@@ -2917,9 +2917,6 @@ bool Controller::handle_cmdu_control_message(
         auto bssid = notification->vap_info().mac;
         auto ssid  = std::string((char *)notification->vap_info().ssid);
 
-        database.add_vap(radio_mac_str, vap_id, tlvf::mac_to_string(bssid), ssid,
-                         notification->vap_info().backhaul_vap);
-
         // Update BSSes in the Agent
         auto radio = database.get_radio(src_mac, radio_mac);
         if (!radio) {
@@ -2932,6 +2929,9 @@ bool Controller::handle_cmdu_control_message(
             << "BSS " << bssid << " changed vap_id " << bss->vap_id << " -> " << vap_id;
         bss->ssid     = ssid;
         bss->backhaul = notification->vap_info().backhaul_vap;
+
+        database.add_vap(radio_mac_str, vap_id, tlvf::mac_to_string(bssid), ssid,
+                         notification->vap_info().backhaul_vap);
 
         // update bml listeners
         bml_task::connection_change_event new_event;
