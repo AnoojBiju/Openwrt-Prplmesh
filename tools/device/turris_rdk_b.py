@@ -9,19 +9,19 @@
 import os
 import re
 import subprocess
+import time
 from pathlib import Path
 
 # Third party
 import pexpect
 import pexpect.fdpexpect
 import pexpect.pxssh
-from device.prplwrt import PrplwrtDevice
+from device.generic import GenericDevice
 from device.serial import SerialDevice
-from device.utils import (ShellType, check_serial_type, check_uboot_var,
-                          serial_cmd_err)
+from device.utils import check_uboot_var, serial_cmd_err, ShellType
 
 
-class TurrisRdkb(PrplwrtDevice):
+class TurrisRdkb(GenericDevice):
     """Represents a RDKB device.
 
     Offers methods to check if a device needs to be upgraded and to do the actual upgrade.
@@ -29,13 +29,6 @@ class TurrisRdkb(PrplwrtDevice):
     It needs to have access to the artifacts of a build job to determine when an upgrade
     is needed (see `artifacts_dir`).
     """
-
-    BAUDRATE = 115200
-    """The baudrate of the serial connection to the device."""
-
-    initialization_time = 60
-    """The time (in seconds) the device needs to initialize when it boots
-    for the first time after flashing a new image."""
 
     TURRIS_DTB = "armada-385-turris-omnia.dtb"
     """ Device Tree Blob (Flat Device Tree) for Turris Omnia.
@@ -47,13 +40,16 @@ class TurrisRdkb(PrplwrtDevice):
     ROOTFS_PARTITION = "mmcblk0p5"
     """ eMMC partition used for RDKB rootfs."""
 
-    PROMPT_RE = r'root@[^\s]+:[^\s]+# '
+    serial_prompt = r'root@[^\s]+:[^\s]+# '
     """ Regular expression for root prompt."""
 
     UBOOT_PROMPT = "=>"
     """ Standard UBoot prompt."""
 
-    def __init__(self, device: str, name: str, rdkbfs: str, kernel: str, username: str = "root"):
+    kernel = "zImage"
+    """ The name of the kernel binary that can be used to upgrade kernel on device."""
+
+    def __init__(self, device: str, name: str, rdkbfs: str, username: str = "root"):
         """
 
         Parameters
@@ -64,8 +60,6 @@ class TurrisRdkb(PrplwrtDevice):
             The name of the device (it should be reachable through ssh without a password).
         rdkbfs: str
             The name of the rdkbfs tarball that can be used to upgrade the device.
-        kernel: str
-            The name of the kernel binary that can be used to upgrade kernel on device.
         username: str, optional
             The username to use when connecting to the device over SSH.
         """
@@ -73,7 +67,6 @@ class TurrisRdkb(PrplwrtDevice):
         self.name = name
         self.rdkbfs = rdkbfs
         self.username = username
-        self.kernel = kernel
 
         self.rootdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../..")
         self.artifacts_dir = os.path.join(self.rootdir, "build/{}".format(self.device))
@@ -92,27 +85,9 @@ class TurrisRdkb(PrplwrtDevice):
                 return False
 
             shell.sendline("")
+            # Give the shell a few seconds to be ready:
+            time.sleep(5)
             return True
-
-    def reset_board(self, serial_type: ShellType):
-        """Reset board.
-
-        Parameters
-        -----------
-        serial_type: ShellType
-            Type of the serial connection as enum ShellType(uboot, rdkb, prplwrt)
-        """
-
-        with SerialDevice(self.baudrate, self.name,
-                          self.PROMPT_RE, expect_prompt_on_connect=False) as ser:
-            print("Reset board.")
-
-            shell = ser.shell
-            if serial_type == ShellType.UBOOT:
-                shell.sendline("reset")
-            elif serial_type == ShellType.PRPLWRT or \
-                    serial_type == ShellType.RDKB:
-                shell.sendline("reboot")
 
     def check_images_on_board(self):
         """Check images on the Turris Omnia.
@@ -120,12 +95,12 @@ class TurrisRdkb(PrplwrtDevice):
             If images was not copied return False, otherwise True.
         """
 
-        with SerialDevice(self.baudrate, self.name, self.PROMPT_RE) as ser:
+        with SerialDevice(self.baudrate, self.name, self.serial_prompt) as ser:
             shell = ser.shell
 
             def find_file(file_name: str):
                 shell.sendline("")
-                shell.expect(self.PROMPT_RE)
+                shell.expect(self.serial_prompt)
                 shell.sendline(f"find /tmp -maxdepth 1 -name {file_name}")
                 shell.expect([f"/tmp/{file_name}", pexpect.TIMEOUT])
                 if shell.match == pexpect.TIMEOUT:
@@ -161,7 +136,7 @@ class TurrisRdkb(PrplwrtDevice):
         # We need to make sure we're not running currently running
         # RDK-B! Otherwise, the rest of this method will try to "rm-rf"
         # the whole rootfs on the running system.
-        serial_type = check_serial_type(self.name, self.BAUDRATE, self.PROMPT_RE)
+        serial_type = self.check_serial_type()
         if serial_type == ShellType.RDKB:
             raise ValueError("The board is currently running RDK-B! Aborting.")
         # If we're currently in u-boot, don't even try the upgrade
@@ -171,29 +146,29 @@ class TurrisRdkb(PrplwrtDevice):
 
         self.check_images_on_board()
 
-        with SerialDevice(self.baudrate, self.name, self.PROMPT_RE) as ser:
+        with SerialDevice(self.baudrate, self.name, self.serial_prompt) as ser:
             shell = ser.shell
 
             def mount_mmc(partition: str):
-                serial_cmd_err(shell, self.PROMPT_RE, f"mount /dev/{partition} /mnt")
+                serial_cmd_err(shell, self.serial_prompt, f"mount /dev/{partition} /mnt")
                 shell.sendline("mount")
                 shell.expect(f"/dev/{partition} on /mnt")
 
             def umount_mmc():
-                serial_cmd_err(shell, self.PROMPT_RE, "umount /mnt")
+                serial_cmd_err(shell, self.serial_prompt, "umount /mnt")
                 shell.sendline("du -sh /mnt")
                 shell.expect("0")
 
             def copy_to_mmc(src: str, dst: str):
                 try:
-                    serial_cmd_err(shell, self.PROMPT_RE, f"cp -v {src} {dst}")
+                    serial_cmd_err(shell, self.serial_prompt, f"cp -v {src} {dst}")
                 except ValueError:
                     umount_mmc()
                     raise
 
             def check_partition(partition: str):
                 shell.sendline("")
-                shell.expect(self.PROMPT_RE)
+                shell.expect(self.serial_prompt)
                 shell.sendline(f"find /dev/ -maxdepth 1 -name {partition}")
                 shell.expect([f"/dev/{partition}", pexpect.TIMEOUT])
                 if shell.match == pexpect.TIMEOUT:
@@ -229,11 +204,11 @@ class TurrisRdkb(PrplwrtDevice):
 
             shell.sendline("")
 
-            serial_cmd_err(shell, self.PROMPT_RE, "rm -rf /mnt/*")
+            serial_cmd_err(shell, self.serial_prompt, "rm -rf /mnt/*")
             shell.sendline("du -sh /mnt")
             shell.expect("0")
 
-            serial_cmd_err(shell, self.PROMPT_RE, f"tar -xzf /tmp/{self.rdkbfs} -C /mnt/")
+            serial_cmd_err(shell, self.serial_prompt, f"tar -xzf /tmp/{self.rdkbfs} -C /mnt/")
 
             shell.sendline("")
 
@@ -248,14 +223,14 @@ class TurrisRdkb(PrplwrtDevice):
                 If serial does not exist or unable to connect.
         """
 
-        self.reset_board(check_serial_type(self.name, self.BAUDRATE, self.PROMPT_RE))
+        self.reboot(self.check_serial_type())
 
         common_bridge_ip = "192.168.200.140"
         common_net_mask = "24"
         rdkb_bridge = "lan4.200"
 
         with SerialDevice(self.baudrate, self.name,
-                          self.PROMPT_RE, expect_prompt_on_connect=False) as ser:
+                          self.serial_prompt, expect_prompt_on_connect=False) as ser:
             shell = ser.shell
             shell.expect("Hit any key to stop autoboot")
             shell.sendline("")
@@ -270,9 +245,9 @@ class TurrisRdkb(PrplwrtDevice):
 
             # Add vlan. Will be used for SSH connection
             shell.sendline(f"ip link add link lan4 name {rdkb_bridge} type vlan id 200")
-            shell.sendline(f"RES=$?")
-            shell.sendline(f"echo PRPL=$RES")
-            shell.expect(f"PRPL=0")
+            shell.sendline("RES=$?")
+            shell.sendline("echo PRPL=$RES")
+            shell.expect("PRPL=0")
             shell.sendline(f"ip a a {common_bridge_ip}/{common_net_mask} dev {rdkb_bridge}")
             shell.expect([f"ip a a {common_bridge_ip}/{common_net_mask} dev {rdkb_bridge}"])
             # Remove firewall rule which blocks SSH connection
@@ -284,10 +259,10 @@ class TurrisRdkb(PrplwrtDevice):
         """
 
         # Currently RDK-B can only be upgraded when the device has booted into prplOS:
-        serial_type = check_serial_type(self.name, self.BAUDRATE, self.PROMPT_RE)
-        if serial_type != ShellType.PRPLWRT:
+        serial_type = self.check_serial_type()
+        if serial_type != ShellType.PRPLOS:
             print("The device is not running prplOS, rebooting.")
-            self.reset_board(serial_type)
+            self.reboot(serial_type)
             if not self.is_prplos_ready():
                 raise ValueError("Failed to get ready prplOS serial.")
 
@@ -381,24 +356,24 @@ class TurrisRdkb(PrplwrtDevice):
             Raises
             -----------
             ValueError
-                If failed to get serial connection or prplwrt is not ready for use
+                If failed to get serial connection or prplOS is not ready for use
         """
 
-        serial_type = check_serial_type(self.name, self.BAUDRATE, self.PROMPT_RE)
+        serial_type = self.check_serial_type()
         if serial_type == ShellType.UBOOT:
-            self.reset_board(serial_type)
+            self.reboot(serial_type)
             if not self.is_prplos_ready():
-                raise ValueError("Failed to get ready prplwrt serial.")
+                raise ValueError("Failed to get ready prplOS serial.")
 
         current_version = int(self.read_remote_rdkb_version())
         new_version = int(self.read_rdkb_rootfs_version())
 
         print(f"Current RDKB version is: {current_version} \nNew RDKB version is: {new_version}")
 
-        will_upgrade = new_version > current_version
+        will_upgrade = new_version != current_version
         if will_upgrade and serial_type == ShellType.RDKB:
-            self.reset_board(check_serial_type(self.name, self.BAUDRATE, self.PROMPT_RE))
+            self.reboot(self.check_serial_type())
             if not self.is_prplos_ready():
-                raise ValueError("Failed to get ready prplwrt serial.")
+                raise ValueError("Failed to get ready prplOS serial.")
 
         return will_upgrade

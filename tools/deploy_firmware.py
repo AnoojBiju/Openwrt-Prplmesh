@@ -8,17 +8,18 @@
 
 # Standard library
 import argparse
+import time
 import sys
+from pathlib import Path
 
 # Third party
-from device.axepoint import Axepoint
-from device.prplwrt import Generic
-from device.turris_rdk_b import TurrisRdkb
+from device.configuration import configure_device
+from device.get_device import device_from_name
 
 
 def main():
     parser = argparse.ArgumentParser(prog=sys.argv[0],
-                                     description="""Update a prplWrt device, either through u-boot
+                                     description="""Update a prplOS device, either through u-boot
                                      or using sysupgrade, depending on the target device.""")
     parser.add_argument('-d', '--device',
                         help="""Device to upgrade. Currently supported targets are: nec-wx3000hp
@@ -35,40 +36,36 @@ def main():
         required=True)
 
     parser.add_argument(
-        '-o',
-        '--os-type',
-        help="Type of the operating system: rdkb or prplWrt.",
-        default="prplwrt")
-
-    parser.add_argument(
-        '-k',
-        '--kernel',
-        help="Kernel for RDKB type of image.")
-    parser.add_argument(
         '-f',
         '--full',
         action='store_true',
         help="Always flash the full image (even if it's not required).")
 
+    parser.add_argument(
+        '-c',
+        '--configuration',
+        help="The path to an optional configuration file.", required=False)
+
     args = parser.parse_args()
 
-    if args.device in ["axepoint", "nec-wx3000hp"]:
-        dev = Axepoint(args.device, args.target_name, args.image)
-    elif args.os_type == "rdkb":
-        dev = TurrisRdkb(args.device, args.target_name, args.image, args.kernel)
-    else:
-        dev = Generic(args.device, args.target_name, args.image)
-
-    print("Checking if the device is reachable over ssh")
-    if not dev.reach():
-        raise ValueError("The device {} is not reachable over ssh! check your ssh configuration."
-                         .format(dev.name))
+    dev = device_from_name(args.device, args.target_name, args.image)
 
     def do_upgrade(dev):
         try:
-            dev.sysupgrade()
+            dev.upgrade_bootloader()
         except NotImplementedError:
-            dev.upgrade_uboot()
+            dev.sysupgrade()
+
+        if args.configuration:
+            print("A configuration file was provided, it will be applied.")
+            configure_device(dev, Path(args.configuration))
+
+        print("Waiting for the device to initialize.")
+        time.sleep(dev.initialization_time)
+        print("Checking if the device is reachable.")
+        if not dev.reach(attempts=10):
+            raise ValueError("The device was not reachable after the upgrade!")
+
         print("Checking if the device was properly updated")
         if dev.needs_upgrade():
             print("Something went wrong with the update!")
@@ -80,7 +77,13 @@ def main():
         do_upgrade(dev)
     else:
         print("Checking if the device needs to be upgraded")
-        if dev.needs_upgrade():
+        needs_upgrade = False
+        try:
+            needs_upgrade = dev.needs_upgrade()
+        except Exception:  # pylint: disable=broad-except
+            print("Couldn't determine if the device needs to be ugpgraded. Upgrading anyway.")
+            needs_upgrade = True
+        if needs_upgrade:
             print("The device {} will be upgraded".format(dev.name))
             do_upgrade(dev)
         else:
