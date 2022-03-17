@@ -49,6 +49,8 @@ RUN apt-get update \
     wget \
     xz-utils \
     openssh-client \
+    openjdk-8-jdk \
+    openjdk-8-jre \
     && rm -rf /var/lib/apt/lists/* \
     # Ubuntu has a repo package, but it's too old
     && wget -O /usr/bin/repo https://storage.googleapis.com/git-repo-downloads/repo \
@@ -86,7 +88,7 @@ WORKDIR /home/rdk/rdk-b
 
 RUN printf '\033[1;35m%s Cloning RDK-B\n\033[0m' "$(date --iso-8601=seconds --universal)" \
     && yes | repo init -u https://code.rdkcentral.com/r/manifests \
-    -m rdkb-turris-extsrc.xml -b rdkb-2021q2-dunfell \
+    -m rdkb-turris-extsrc.xml -b rdkb-2021q4-dunfell \
     && repo sync
 
 # Fix a bug in "current" turris setup with meta-rdk-ext
