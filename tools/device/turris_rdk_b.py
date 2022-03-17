@@ -242,6 +242,7 @@ class TurrisRdkb(GenericDevice):
 
             shell.sendline("run mmcboot")
             shell.expect(["TurrisOmnia-GW login", pexpect.TIMEOUT])
+            time.sleep(30)
 
             # Add vlan. Will be used for SSH connection
             shell.sendline(f"ip link add link lan4 name {rdkb_bridge} type vlan id 200")
@@ -250,9 +251,6 @@ class TurrisRdkb(GenericDevice):
             shell.expect("PRPL=0")
             shell.sendline(f"ip a a {common_bridge_ip}/{common_net_mask} dev {rdkb_bridge}")
             shell.expect([f"ip a a {common_bridge_ip}/{common_net_mask} dev {rdkb_bridge}"])
-            # Remove firewall rule which blocks SSH connection
-            shell.sendline("iptables -D INPUT -i lan0 -p tcp -m tcp --dport 22 -j DROP")
-            shell.expect("iptables -D INPUT -i lan0 -p tcp -m tcp --dport 22 -j DROP")
 
     def sysupgrade(self):
         """Upgrade RDKB image on Turris Omnia and launch it.
