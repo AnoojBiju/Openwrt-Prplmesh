@@ -1453,7 +1453,7 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const sMacAddr &src_mac,
          * report messages, thus to confirm if we should override the existing records we compare
          * the recorded timestamp against the received timestamp as fragmented reports share the
          * same timestamp.
-         * 
+         *
          * Reports with the same timestamp are recorded in the report-record-index
          */
         bool should_override_existing_records = true;
@@ -1847,6 +1847,45 @@ bool Controller::handle_cmdu_1905_ap_capability_report(const sMacAddr &src_mac,
     auto mid = cmdu_rx.getMessageId();
     LOG(INFO) << "Received AP_CAPABILITY_REPORT_MESSAGE, mid=" << std::dec << int(mid);
 
+    auto agent = database.m_agents.get(src_mac);
+    if (!agent) {
+        LOG(ERROR) << "Agent with mac is not found in database mac=" << src_mac;
+        return false;
+    }
+
+    agent->radios.keep_new_prepare();
+
+    for (auto radio_tlv : cmdu_rx.getClassList<wfa_map::tlvApRadioBasicCapabilities>()) {
+
+        LOG(DEBUG) << "Radio is reported in AP Capabilites with ruid=" << radio_tlv->radio_uid();
+        database.add_node_radio(radio_tlv->radio_uid(), agent->al_mac);
+
+        //TODO: We can decide to parse Radio CAPs here instead of WSC (autoconfig_wsc_parse_radio_caps)
+        // to lower CPU usage on onboarding (PPM-1727)
+
+        // Remove all previously set Capabilities of radio from data model
+        database.clear_ap_capabilities(radio_tlv->radio_uid());
+    }
+
+    auto removed = agent->radios.keep_new_remove_old();
+    for (const auto &removed_radio : removed) {
+
+        LOG(INFO) << "Radio is not reported on AP_CAPABILITY_REPORT, remove radio object ruid="
+                  << removed_radio->radio_uid;
+
+        database.dm_remove_radio(*removed_radio);
+
+        if (database.get_node_type(tlvf::mac_to_string(removed_radio->radio_uid)) !=
+            beerocks::TYPE_SLAVE) {
+
+            LOG(ERROR) << "Missing or wrong radio node, contrary to database with ruid="
+                       << removed_radio->radio_uid;
+            continue;
+        }
+        son_actions::handle_dead_node(tlvf::mac_to_string(removed_radio->radio_uid), true, database,
+                                      cmdu_tx, tasks);
+    }
+
     auto channel_scan_capabilities_tlv = cmdu_rx.getClass<wfa_map::tlvChannelScanCapabilities>();
     if (!channel_scan_capabilities_tlv) {
         LOG(ERROR) << "addClass wfa_map::channel_scan_capabilities_tlv failed";
@@ -1862,18 +1901,15 @@ bool Controller::handle_cmdu_1905_ap_capability_report(const sMacAddr &src_mac,
 
     bool all_radio_capabilities_saved_successfully = true;
     for (int rc_idx = 0; rc_idx < radio_list_length; rc_idx++) {
-        LOG(DEBUG) << "radio-index=" << rc_idx;
+
         auto radio_capabilities_tuple = channel_scan_capabilities_tlv->radio_list(rc_idx);
         if (!std::get<0>(radio_capabilities_tuple)) {
-            LOG(ERROR) << "getting radio capabilities entry has failed!";
+            LOG(ERROR) << "Radio channel scan capabilities entry has failed!";
             return false;
         }
+
         auto &radio_capabilities_entry = std::get<1>(radio_capabilities_tuple);
         auto &ruid                     = radio_capabilities_entry.radio_uid();
-        LOG(DEBUG) << "ruid=" << ruid;
-
-        // Remove all previously set Capabilities of radio from data model
-        database.clear_ap_capabilities(ruid);
 
         if (!database.fill_radio_channel_scan_capabilites(ruid, radio_capabilities_entry)) {
 
@@ -1893,12 +1929,6 @@ bool Controller::handle_cmdu_1905_ap_capability_report(const sMacAddr &src_mac,
     }
     if (!handle_tlv_ap_vht_capabilities(cmdu_rx)) {
         LOG(ERROR) << "Couldn't handle TLV AP VHTCapabilities";
-        return false;
-    }
-
-    auto agent = database.m_agents.get(src_mac);
-    if (!agent) {
-        LOG(ERROR) << "Agent with mac is not found in database mac=" << src_mac;
         return false;
     }
 
