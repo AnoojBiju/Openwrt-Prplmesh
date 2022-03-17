@@ -31,8 +31,12 @@ std::string int_to_hex_string(const unsigned int integer, const uint8_t number_o
 /**
  * @brief Converts a mac address to a human-readable formatted string
  *
- * @param mac_address mac address to convert (uint8_t array)
- * @return std::string of the format xx:xx:xx:xx:xx:xx
+ * @pre The argument may not be NULL (nullptr)
+ * @pre The argument must be in big endian byte order (network byte order)
+ * @pre The argument should be 6 bytes long (i.e. it should be a valid MAC address)
+ * @param[in] mac_address mac address to convert (uint8_t array)
+ * @return The mac address in a column-separated hex format, e.g. 45:67:89:AB:CD:EF
+ *
  */
 std::string mac_to_string(const uint8_t *mac_address);
 

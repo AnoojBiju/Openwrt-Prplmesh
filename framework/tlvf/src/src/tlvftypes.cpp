@@ -14,6 +14,7 @@
 namespace tlvf {
 
 static constexpr const char mac_bytes_separator = ':';
+static constexpr const char zero_mac_string[]   = "00:00:00:00:00:00";
 
 std::string int_to_hex_string(const unsigned int integer, const uint8_t number_of_digits)
 {
@@ -27,6 +28,11 @@ std::string int_to_hex_string(const unsigned int integer, const uint8_t number_o
 
 std::string mac_to_string(const uint8_t *mac_address)
 {
+    if (!mac_address) {
+        LOG(FATAL) << "nullptr mac address!";
+        return std::string{zero_mac_string};
+    }
+
     std::string mac_addr_string;
 
     mac_addr_string = int_to_hex_string((uint32_t)mac_address[0], 2) + mac_bytes_separator +

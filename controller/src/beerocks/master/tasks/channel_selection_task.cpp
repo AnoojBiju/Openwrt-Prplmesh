@@ -1132,6 +1132,11 @@ bool channel_selection_task::is_2G_channel(int channel)
     return (wireless_utils::which_freq(channel) == eFreqType::FREQ_24G);
 }
 
+bool channel_selection_task::is_5G_channel(int channel)
+{
+    return (wireless_utils::which_freq(channel) == eFreqType::FREQ_5G);
+}
+
 void channel_selection_task::get_hostap_params()
 {
     hostap_params.channel = database.get_node_channel(tlvf::mac_to_string(radio_mac));
@@ -1153,9 +1158,14 @@ void channel_selection_task::get_hostap_params()
         hostap_params.backhaul_channel     = database.get_node_channel(hostap_params.backhaul_mac);
         //TODO add low_pass_filter_on to the DB, only needed for DFS
     }
-    hostap_params.backhaul_subband =
-        son::wireless_utils::which_subband(hostap_params.backhaul_channel);
     hostap_params.backhaul_is_2G = is_2G_channel(hostap_params.backhaul_channel);
+    // which_subband works only for 5G
+    if (is_5G_channel(hostap_params.channel)) {
+        hostap_params.backhaul_subband =
+            son::wireless_utils::which_subband(hostap_params.backhaul_channel);
+    } else {
+        hostap_params.backhaul_subband = beerocks::eSubbandType::SUBBAND_UNKNOWN;
+    }
 
     TASK_LOG(DEBUG) << "radio_mac = " << radio_mac
                     << " hostap_params.channel = " << int(hostap_params.channel)
