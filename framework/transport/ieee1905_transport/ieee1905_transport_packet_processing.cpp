@@ -631,6 +631,7 @@ bool Ieee1905Transport::forward_packet_single(Packet &packet)
                 if (((forward_to_bridge && network_interface.is_bridge) ||
                      (forward_to_network_interfaces && !network_interface.is_bridge)) &&
                     (network_interface.fd) &&
+                    (packet.dst_if_index == 0 || packet.dst_if_index == if_index) &&
                     !(packet.src_if_type == CmduRxMessage::IF_TYPE_NET &&
                       packet.src_if_index == if_index)) { /* avoid loop-back */
                     LOG(DEBUG) << "Forwarding the packet on " << ifname;
