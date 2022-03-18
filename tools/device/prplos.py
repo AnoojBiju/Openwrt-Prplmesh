@@ -84,6 +84,7 @@ class GenericPrplOS(GenericDevice):
                 print("The upgrade timed out, trying one more time after a reboot.")
                 # Interrupt any running command:
                 shell.send('\003')
+                time.sleep(1)
                 self.reboot(self.check_serial_type(),
                             stop_in_bootloader=True)
                 try:
