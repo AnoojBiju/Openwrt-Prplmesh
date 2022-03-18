@@ -5106,6 +5106,7 @@ bool slave_thread::channel_selection_current_channel_restricted(const std::strin
 bool slave_thread::get_controller_channel_preference(const std::string &fronthaul_iface,
                                                      ieee1905_1::CmduMessageRx &cmdu_rx)
 {
+    m_controller_channel_preferences.clear();
     auto db    = AgentDB::get();
     auto radio = db->radio(fronthaul_iface);
     if (!radio) {
@@ -5212,7 +5213,6 @@ bool slave_thread::handle_channel_selection_request(int fd, ieee1905_1::CmduMess
     const auto mid = cmdu_rx.getMessageId();
     LOG(DEBUG) << "Received CHANNEL_SELECTION_REQUEST_MESSAGE, mid=" << std::dec << int(mid);
 
-    m_controller_channel_preferences.clear();
     std::string fronthaul_iface;
     for (auto &radio_manager_map_element : m_radio_managers.get()) {
         fronthaul_iface     = radio_manager_map_element.first;
