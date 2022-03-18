@@ -77,8 +77,7 @@ class TurrisRdkb(GenericDevice):
         """ Checks if prplOS propmpt ready to use after reboot"""
 
         with SerialDevice(self.baudrate, self.name, self.serial_prompt,
-                          expect_prompt_on_connect=False) as ser:
-            shell = ser.shell
+                          expect_prompt_on_connect=False) as shell:
             shell.expect(["Please press Enter to activate this console.", pexpect.TIMEOUT],
                          timeout=180)
             if shell.match == pexpect.TIMEOUT:
@@ -95,8 +94,7 @@ class TurrisRdkb(GenericDevice):
             If images was not copied return False, otherwise True.
         """
 
-        with SerialDevice(self.baudrate, self.name, self.serial_prompt) as ser:
-            shell = ser.shell
+        with SerialDevice(self.baudrate, self.name, self.serial_prompt) as shell:
 
             def find_file(file_name: str):
                 shell.sendline("")
@@ -146,8 +144,7 @@ class TurrisRdkb(GenericDevice):
 
         self.check_images_on_board()
 
-        with SerialDevice(self.baudrate, self.name, self.serial_prompt) as ser:
-            shell = ser.shell
+        with SerialDevice(self.baudrate, self.name, self.serial_prompt) as shell:
 
             def mount_mmc(partition: str):
                 serial_cmd_err(shell, self.serial_prompt, f"mount /dev/{partition} /mnt")
@@ -230,8 +227,7 @@ class TurrisRdkb(GenericDevice):
         rdkb_bridge = "lan4.200"
 
         with SerialDevice(self.baudrate, self.name,
-                          self.serial_prompt, expect_prompt_on_connect=False) as ser:
-            shell = ser.shell
+                          self.serial_prompt, expect_prompt_on_connect=False) as shell:
             shell.expect("Hit any key to stop autoboot")
             shell.sendline("")
             shell.expect(self.UBOOT_PROMPT)

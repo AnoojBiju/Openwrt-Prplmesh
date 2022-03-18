@@ -56,25 +56,10 @@ def main():
         except NotImplementedError:
             dev.sysupgrade()
 
-        if args.configuration:
-            print("A configuration file was provided, it will be applied.")
-            configure_device(dev, Path(args.configuration))
-
-        print("Waiting for the device to initialize.")
-        time.sleep(dev.initialization_time)
-        print("Checking if the device is reachable.")
-        if not dev.reach(attempts=10):
-            raise ValueError("The device was not reachable after the upgrade!")
-
-        print("Checking if the device was properly updated")
-        if dev.needs_upgrade():
-            print("Something went wrong with the update!")
-            sys.exit(1)
-        print("Done")
-
+    needs_upgrade = False
     if args.full:
         print("--full was provided, the device {} will be upgraded".format(dev.name))
-        do_upgrade(dev)
+        needs_upgrade = True
     else:
         print("Checking if the device needs to be upgraded")
         needs_upgrade = False
@@ -83,11 +68,33 @@ def main():
         except Exception:  # pylint: disable=broad-except
             print("Couldn't determine if the device needs to be ugpgraded. Upgrading anyway.")
             needs_upgrade = True
-        if needs_upgrade:
-            print("The device {} will be upgraded".format(dev.name))
-            do_upgrade(dev)
-        else:
-            print("The device is already using the same version, no upgrade will be done.")
+    if needs_upgrade:
+        print("The device {} will be upgraded".format(dev.name))
+        do_upgrade(dev)
+    else:
+        print("The device is already using the same version, no upgrade will be done.")
+
+    # Apply the configuration if there is one:
+    if args.configuration:
+        print("A configuration file was provided, it will be applied.")
+        configure_device(dev, Path(args.configuration))
+
+    if args.configuration or needs_upgrade:
+        # If the device was configured or upgraded (or both), give it some time to initialize:
+        print("Waiting for the device to initialize.")
+        time.sleep(dev.initialization_time)
+
+    print("Checking if the device is reachable.")
+    if not dev.reach(attempts=10):
+        raise ValueError("The device was not reachable after the upgrade!")
+
+    # If the device had to be upgraded, check if the upgrade was successful:
+    if needs_upgrade:
+        print("Checking if the device was properly updated")
+        if dev.needs_upgrade():
+            print("Something went wrong with the update!")
+            sys.exit(1)
+    print("Done")
 
 
 if __name__ == '__main__':
