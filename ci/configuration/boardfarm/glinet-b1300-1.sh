@@ -102,6 +102,11 @@ set wireless.radio0.disabled=0
 set wireless.radio1.disabled=0
 EOF
 
+# Delete the guest network interfaces, they're not supported by
+# prplMesh yet (PPM-2019):
+uci del wireless.guest_radio0
+uci del wireless.guest_radio1
+
 # Make sure specific channels are configured. If channel is set to 0,
 # ACS will be configured. If ACS is configured hostapd will refuse to
 # switch channels when we ask it to. Channels 1 and 48 were chosen
