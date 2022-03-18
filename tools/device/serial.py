@@ -60,7 +60,7 @@ class SerialDevice:
                              + "Please make sure you have an appropriate udev rule for it.")
         if self.serial is not None:
             raise ValueError("Serial already connected!")
-        self.serial = serial.Serial(self.serial_path, self.baudrate)
+        self.serial = serial.Serial(self.serial_path, self.baudrate, xonxoff=True)
         self.serial.flushInput()
         self.shell = pexpect.fdpexpect.fdspawn(self.serial, logfile=sys.stdout.buffer)
 
