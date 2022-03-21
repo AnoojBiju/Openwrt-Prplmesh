@@ -128,11 +128,7 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
             // const auto iface_cf1    = media_info->ap_channel_center_frequency_index1;
             // const auto iface_cf2    = media_info->ap_channel_center_frequency_index2;
 
-            if (iface_role == ieee1905_1::eRole::AP) {
-                reported_fronthaul_radios.insert(iface_mac_str);
-            }
-
-            // update bml event with the new radio interface
+            // TODO: fix updating bml event it assumes Radios is reported (PPM-1977)
             new_bml_event.radio_interfaces.push_back(iface_info);
 
             LOG(DEBUG) << "New radio interface is reported, mac=" << iface_mac
