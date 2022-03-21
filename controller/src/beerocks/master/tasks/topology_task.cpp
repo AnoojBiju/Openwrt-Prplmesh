@@ -73,6 +73,35 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
 
     const auto &al_mac = tlvDeviceInformation->mac();
 
+    auto agent = database.m_agents.get(al_mac);
+    if (!agent) {
+        LOG(WARNING) << "Agent with mac is not found in database mac=" << al_mac;
+        return false;
+    }
+
+    // Update Profile Information in Agent.
+    auto tlvProfile2MultiApProfile = cmdu_rx.getClass<wfa_map::tlvProfile2MultiApProfile>();
+    if (tlvProfile2MultiApProfile) {
+        agent->profile = tlvProfile2MultiApProfile->profile();
+    }
+
+    // Set agent backhaul link as etherent and parent as empty for external Agents
+    // According to wireless interface connections, parameters are updated.
+    // Default backhaul interface mac is bridge MAC (al_mac) for wired devices.
+    //TODO: Wired parent link will be detected at the end of Topology Response (PPM-2043)
+    if (!agent->is_gateway) {
+        agent->backhaul.backhaul_iface_type = beerocks::IFACE_TYPE_ETHERNET;
+
+        //TODO: if needed, parse Device Bridge Capability (PPM-133)
+        agent->backhaul.backhaul_interface = al_mac;
+
+        agent->backhaul.parent_agent.reset();
+        agent->backhaul.parent_interface = beerocks::net::network_utils::ZERO_MAC;
+
+        // TODO: Fill backhaul radio of agent from Backhaul STA Capabilities (PPM-1297)
+        // agent->backhaul.wireless_backhaul_radio = nullptr;
+    }
+
     std::vector<sMacAddr> interface_macs{};
 
     // create topology response update event for bml listeners
@@ -112,10 +141,61 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
             const auto iface_role = media_info->role;
 
             // For future implementation
-            // const auto &iface_bssid = media_info->network_membership;
             // const auto iface_bw     = media_info->ap_channel_bandwidth;
             // const auto iface_cf1    = media_info->ap_channel_center_frequency_index1;
             // const auto iface_cf2    = media_info->ap_channel_center_frequency_index2;
+
+            // This is the case where agent reports that it has wireless backhaul connection
+            if (iface_role == ieee1905_1::eRole::NON_AP_NON_PCP_STA &&
+                media_info->network_membership != beerocks::net::network_utils::ZERO_MAC) {
+
+                // Search parent/connected agent
+                auto parent_agent = database.get_agent_by_bssid(media_info->network_membership);
+                if (!parent_agent) {
+                    LOG(ERROR) << "Parent agent is not found on database";
+                    continue;
+                }
+
+                auto backhaul_sta = database.get_station(iface_mac);
+                if (!backhaul_sta) {
+                    LOG(ERROR) << "Backhaul station is not found on database";
+                    continue;
+                }
+
+                auto parent_bss = backhaul_sta->get_bss();
+                if (!parent_bss) {
+                    LOG(ERROR) << "Connected BSS of the station is not found, sta mac="
+                               << backhaul_sta->mac;
+                    continue;
+                }
+
+                // Network Membership verification from database
+                // This case could occur, if we can topology response before topology notification
+                // with JOIN notification for that station.
+                if (media_info->network_membership != parent_bss->bssid) {
+                    LOG(INFO) << "Network membership does not allign with database, parent_bssid="
+                              << parent_bss->bssid
+                              << ", network_membership=" << media_info->network_membership;
+                    continue;
+                }
+
+                LOG(DEBUG) << "Wireless BH Link is reported for agent=" << agent->al_mac
+                           << " parent agent=" << parent_agent->al_mac
+                           << " parent's bss=" << parent_bss->bssid << " with bSTA=" << iface_mac;
+
+                agent->backhaul.parent_agent = parent_agent;
+
+                // Set backhaul link type as wireless
+                agent->backhaul.backhaul_iface_type = beerocks::IFACE_TYPE_WIFI_UNSPECIFIED;
+
+                // Set backhaul interface
+                agent->backhaul.backhaul_interface = iface_mac;
+                agent->backhaul.parent_interface   = media_info->network_membership;
+
+                // TODO: Fill backhaul radio of agent from Backhaul STA Capabilities (PPM-1297)
+                // We do not know this backhaul station's parent radio.
+                // agent->backhaul.wireless_backhaul_radio = get_from_bh_radio_capabilites()
+            }
 
             // TODO: fix updating bml event it assumes Radios is reported (PPM-1977)
             new_bml_event.radio_interfaces.push_back(iface_info);
@@ -123,6 +203,11 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
             LOG(DEBUG) << "New wireless interface is reported with mac=" << iface_mac
                        << ", role=" << (uint8_t)iface_role;
         }
+    }
+
+    // Update external agents multi ap backhaul datamodel
+    if (!agent->is_gateway) {
+        database.dm_set_device_multi_ap_backhaul(*agent);
     }
 
     // Update active mac list of the device node
@@ -309,17 +394,7 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
         }
     }
 
-    auto agent = database.m_agents.get(al_mac);
-    if (!agent) {
-        LOG(WARNING) << "Agent with mac is not found in database mac=" << al_mac;
-        return false;
-    }
-
-    // Update Profile Information in Agent.
-    auto tlvProfile2MultiApProfile = cmdu_rx.getClass<wfa_map::tlvProfile2MultiApProfile>();
-    if (tlvProfile2MultiApProfile) {
-        agent->profile = tlvProfile2MultiApProfile->profile();
-    }
+    //TODO: After handling Device and Neighbor Information, identify Parent Agent (PPM-2043)
 
     return true;
 }
