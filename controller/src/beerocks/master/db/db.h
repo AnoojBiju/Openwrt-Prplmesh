@@ -1933,14 +1933,9 @@ public:
      * DM path : "Device.WiFi.DataElements.Network.Device.{i}.MultiAPDevice.Backhaul"
      *
      * @param agent agent whose multi ap backhaul object is set
-     * @param parent_bssid parent BSSID of the backhaul STA interface
-     * @param backhaul_mac backhaul interface mac
-     * @param interface_type backhaul link/interface type
      * @return True on success, false otherwise.
      */
-    bool dm_set_device_multi_ap_backhaul(const Agent &agent, const sMacAddr &parent_bssid,
-                                         const sMacAddr &backhaul_mac,
-                                         const beerocks::eIfaceType &interface_type);
+    bool dm_set_device_multi_ap_backhaul(const Agent &agent);
 
     /**
      * @brief Sets Device datamodel board info parameters.
