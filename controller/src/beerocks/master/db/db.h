@@ -329,6 +329,16 @@ public:
     std::shared_ptr<Agent> get_agent_by_radio_uid(const sMacAddr &radio_uid);
 
     /**
+     * @brief Get agent containing a specific bssid
+     *
+     * If no BSS with the given BSSID exists, an error is logged (and nullptr returned).
+     *
+     * @param bssid BSSID which is searched over all agents.
+     * @return The Agent object, or nullptr if it doesn't exist.
+     */
+    std::shared_ptr<Agent> get_agent_by_bssid(const sMacAddr &bssid);
+
+    /**
      * @brief Get radio on a specific agent
      *
      * If no agent with the given al_mac exists, an error is logged (and nullptr returned). If no

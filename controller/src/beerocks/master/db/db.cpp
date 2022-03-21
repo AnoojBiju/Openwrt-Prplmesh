@@ -121,6 +121,21 @@ std::shared_ptr<Agent> db::get_agent_by_radio_uid(const sMacAddr &radio_uid)
     return {};
 }
 
+std::shared_ptr<Agent> db::get_agent_by_bssid(const sMacAddr &bssid)
+{
+    for (const auto &agent : m_agents) {
+        for (const auto &radio : agent.second->radios) {
+            auto bss = radio.second->bsses.get(bssid);
+            if (bss) {
+                return agent.second;
+            }
+        }
+    }
+
+    LOG(ERROR) << "No agent found containing bssid=" << bssid;
+    return {};
+}
+
 std::shared_ptr<Agent::sRadio> db::get_radio(const sMacAddr &al_mac, const sMacAddr &radio_uid)
 {
     auto agent = m_agents.get(al_mac);
