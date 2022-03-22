@@ -2,7 +2,7 @@
   stage: certification-turris-omnia
   extends: .certification-generic-R1
   variables:
-    RUN_ON_DEVICE: "turris-omnia"
+    RUN_ON_DEVICE: "turris-omnia-1"
   before_script:
     - tools/deploy_firmware.py --device turris-omnia --target-name "$RUN_ON_DEVICE" --image "$TURRIS_OMNIA_FULLIMAGE" --configuration ci/configuration/certification/R1/turris-omnia.sh
     - tools/setup_uci.sh --target-type "$RUN_ON_DEVICE" --target-name "$RUN_ON_DEVICE"
