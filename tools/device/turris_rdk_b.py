@@ -208,6 +208,8 @@ class TurrisRdkb(GenericDevice):
             shell.sendline("du -sh /mnt")
             shell.expect("0")
 
+            shell.sendline(f"du -h /tmp/{self.rdkbfs}")
+            shell.sendline("df -h")
             serial_cmd_err(shell, self.serial_prompt, f"tar -xzf /tmp/{self.rdkbfs} -C /mnt/")
 
             shell.sendline("")
