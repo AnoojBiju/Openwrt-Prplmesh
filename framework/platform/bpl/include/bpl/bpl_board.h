@@ -20,9 +20,8 @@ namespace bpl {
 /******************************* Definitions ********************************/
 /****************************************************************************/
 
-struct sDeviceInfo {
+struct sBoardInfo {
     std::string manufacturer;
-    std::string serial_number;
     std::string manufacturer_model;
 };
 
@@ -33,10 +32,10 @@ struct sDeviceInfo {
 /**
  * @brief Get board info parameters.
  *
- * @param [out] device_info_params structure only with manufacturer/vendor and S/N parameters.
+ * @param [out] board_info structure only with manufacturer and model name parameters.
  * @return Returns true in case of success.
  */
-bool get_board_info(sDeviceInfo &device_info_params);
+bool get_board_info(sBoardInfo &board_info);
 
 } // namespace bpl
 } // namespace beerocks

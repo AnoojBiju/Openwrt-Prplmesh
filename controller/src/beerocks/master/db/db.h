@@ -183,6 +183,12 @@ public:
         bool client_optimal_path_roaming_prefer_signal_strength = false;
     } sDbMasterSettings;
 
+    typedef struct {
+        std::string manufacturer;
+        std::string serial_number;
+        std::string manufacturer_model;
+    } sDeviceInfo;
+
     /**
      * @brief Avaliable configuration parameters in NBAPI.
      *
@@ -1931,8 +1937,7 @@ public:
      * @param device_info struct with values of board info parameters
      * @return True on success, false otherwise.
      */
-    bool dm_set_device_board_info(const Agent &agent,
-                                  const beerocks::bpl::sDeviceInfo &device_info);
+    bool dm_set_device_board_info(const Agent &agent, const sDeviceInfo &device_info);
 
     /**
      * @brief Adds to data model an instance of object AssociationEventData.

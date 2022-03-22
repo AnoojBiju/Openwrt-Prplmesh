@@ -171,7 +171,7 @@ bool get_all_board_info(sBoardParameters &board_params)
     return (ret_val == 0);
 }
 
-bool get_board_info(sDeviceInfo &device_info_params)
+bool get_board_info(sBoardInfo &board_info)
 {
     sBoardParameters board_params;
     if (!get_all_board_info(board_params)) {
@@ -179,10 +179,8 @@ bool get_board_info(sDeviceInfo &device_info_params)
         return false;
     }
 
-    device_info_params.manufacturer =
-        board_params.board_name.substr(0, board_params.board_name.find(","));
-    device_info_params.serial_number      = "prpl12345";
-    device_info_params.manufacturer_model = board_params.model;
+    board_info.manufacturer = board_params.board_name.substr(0, board_params.board_name.find(","));
+    board_info.manufacturer_model = board_params.model;
     return true;
 }
 

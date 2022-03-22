@@ -637,13 +637,13 @@ bool ApAutoConfigurationTask::add_wsc_m1_tlv(const std::string &radio_iface)
                       WSC::eWscAuth::WSC_AUTH_SAE);
     cfg.encr_type_flags = uint16_t(WSC::eWscEncr::WSC_ENCR_AES);
 
-    bpl::sDeviceInfo device_info;
-    bpl::get_board_info(device_info);
+    bpl::sBoardInfo board_info;
+    bpl::get_board_info(board_info);
 
-    cfg.manufacturer        = device_info.manufacturer;
-    cfg.model_name          = device_info.manufacturer_model;
+    cfg.manufacturer        = board_info.manufacturer;
+    cfg.model_name          = board_info.manufacturer_model;
+    cfg.serial_number       = db->device_conf.device_serial_number;
     cfg.model_number        = "18.04";
-    cfg.serial_number       = device_info.serial_number;
     cfg.primary_dev_type_id = WSC::WSC_DEV_NETWORK_INFRA_AP;
     cfg.device_name         = "prplmesh-agent";
     cfg.bands               = son::wireless_utils::is_frequency_band_5ghz(radio->freq_type)
