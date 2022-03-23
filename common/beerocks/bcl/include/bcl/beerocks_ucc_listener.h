@@ -244,7 +244,7 @@ private:
      * @param[out] err_string an error string, if the parameter is not valid.
      * @return true if the parameter is valid, false otherwise.
      **/
-    bool validate_program_parameter(const std::string &parameter, std::string &err_string);
+    bool validate_program_parameter(std::string &parameter, std::string &err_string);
 
     friend class tlvPrefilledData;
 
