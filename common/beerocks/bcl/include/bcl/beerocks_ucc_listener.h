@@ -184,6 +184,9 @@ protected:
     virtual bool handle_dev_set_rfeature(const std::unordered_map<std::string, std::string> &params,
                                          std::string &err_string)                      = 0;
 
+    virtual bool handle_dev_exec_action(const std::unordered_map<std::string, std::string> &params,
+                                        std::string &err_string) = 0;
+
     virtual bool handle_custom_command(const std::unordered_map<std::string, std::string> &params,
                                        std::string &err_string) = 0;
 
@@ -217,6 +220,7 @@ private:
         DEV_SET_CONFIG,
         START_WPS_REGISTRATION,
         DEV_SET_RFEATURE,
+        DEV_EXEC_ACTION,
         CUSTOM_CMD,
         WFA_CA_COMMAND_MAX,
     };

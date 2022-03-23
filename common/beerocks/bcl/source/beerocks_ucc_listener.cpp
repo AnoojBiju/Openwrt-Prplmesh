@@ -188,6 +188,8 @@ beerocks_ucc_listener::wfa_ca_command_from_string(std::string command)
         return eWfaCaCommand::START_WPS_REGISTRATION;
     } else if (command == "DEV_SET_RFEATURE") {
         return eWfaCaCommand::DEV_SET_RFEATURE;
+    } else if (command == "DEV_EXEC_ACTION") {
+        return eWfaCaCommand::DEV_EXEC_ACTION;
     } else if (command == "CUSTOM_CMD") {
         return eWfaCaCommand::CUSTOM_CMD;
     }
@@ -766,6 +768,26 @@ void beerocks_ucc_listener::handle_wfa_ca_command(int fd, const std::string &com
         }
 
         if (!handle_dev_set_rfeature(params, err_string)) {
+            LOG(ERROR) << err_string;
+            reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
+            break;
+        }
+
+        // Send back second reply
+        reply_ucc(fd, eWfaCaStatus::COMPLETE);
+        break;
+    }
+    case eWfaCaCommand::DEV_EXEC_ACTION: {
+        std::unordered_map<std::string, std::string> params{{"program", std::string()},
+                                                            {"dppactiontype", std::string()}};
+
+        if (!parse_params(cmd_tokens_vec, params, err_string)) {
+            LOG(ERROR) << err_string;
+            reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
+            break;
+        }
+
+        if (!handle_dev_exec_action(params, err_string)) {
             LOG(ERROR) << err_string;
             reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
             break;
