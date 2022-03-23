@@ -1563,6 +1563,8 @@ class TlvF:
                 self.getIndentation(2)))
             lines_cpp.append("%sreturn false;" % (self.getIndentation(2)))
             lines_cpp.append("%s}" % (self.getIndentation(1)))
+            if obj_meta.is_tlv_class:
+                lines_cpp.append("%sif(m_length){ (*m_length) += len; }" % (self.getIndentation(1)))
             # mark it as allocated:
             lines_cpp.append("%sm_%s_allocated = true;" % (self.getIndentation(1), param_name))
             lines_cpp.append("%sreturn true;" % (self.getIndentation(1)))
