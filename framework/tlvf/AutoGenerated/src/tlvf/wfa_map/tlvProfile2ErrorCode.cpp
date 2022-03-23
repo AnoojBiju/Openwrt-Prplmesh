@@ -58,6 +58,7 @@ bool tlvProfile2ErrorCode::alloc_bssid() {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
         return false;
     }
+    if(m_length){ (*m_length) += len; }
     m_bssid_allocated = true;
     return true;
 }
@@ -99,6 +100,7 @@ bool tlvProfile2ErrorCode::alloc_service_prioritization_rule_id() {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
         return false;
     }
+    if(m_length){ (*m_length) += len; }
     m_service_prioritization_rule_id_allocated = true;
     return true;
 }
