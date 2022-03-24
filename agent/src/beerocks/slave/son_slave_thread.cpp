@@ -2642,15 +2642,15 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
         auto &bssid      = notification_in->params().bssid;
         LOG(INFO) << "client disconnected sta_mac=" << client_mac << " from bssid=" << bssid;
 
+        // If exists, remove client association information for disconnected client.
+        auto db = AgentDB::get();
+        db->erase_client(client_mac, bssid);
+
         // notify master
         if (!link_to_controller()) {
             LOG(DEBUG) << "Controller is not connected";
             return true;
         }
-
-        // If exists, remove client association information for disconnected client.
-        auto db = AgentDB::get();
-        db->erase_client(client_mac, bssid);
 
         // build 1905.1 message CMDU to send to the controller
         if (!cmdu_tx.create(0, ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE)) {
@@ -2957,11 +2957,6 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
             // configure the bBSS to support it on L2.
         }
 
-        if (!link_to_controller()) {
-            LOG(DEBUG) << "Controller is not connected";
-            return true;
-        }
-
         // Save information AgentDB
         auto db = AgentDB::get();
         db->erase_client(client_mac);
@@ -2976,6 +2971,11 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
         radio->associated_clients.emplace(
             client_mac, AgentDB::sRadio::sClient{bssid, notification_in->association_frame_length(),
                                                  notification_in->association_frame()});
+
+        if (!link_to_controller()) {
+            LOG(DEBUG) << "Controller is not connected";
+            return true;
+        }
 
         // build 1905.1 message CMDU to send to the controller
         if (!cmdu_tx.create(0, ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE)) {

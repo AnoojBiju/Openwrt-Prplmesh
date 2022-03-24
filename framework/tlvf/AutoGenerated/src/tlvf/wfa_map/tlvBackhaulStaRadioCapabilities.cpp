@@ -61,6 +61,7 @@ bool tlvBackhaulStaRadioCapabilities::alloc_sta_mac() {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
         return false;
     }
+    if(m_length){ (*m_length) += len; }
     m_sta_mac_allocated = true;
     return true;
 }
