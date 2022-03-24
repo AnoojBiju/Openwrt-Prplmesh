@@ -35,10 +35,13 @@ typedef struct {
 typedef struct sRadioCapabilities {
     uint8_t ht_mcs                = 0; //beerocks::eWiFiMCS RX
     uint8_t vht_mcs               = 0; //beerocks::eWiFiMCS RX
+    uint8_t he_mcs                = 0; //beerocks::eWiFiMCS RX
     uint8_t ht_ss                 = 0; //beerocks::eWiFiSS RX
     uint8_t vht_ss                = 0; //beerocks::eWiFiSS RX
+    uint8_t he_ss                 = 0; //beerocks::eWiFiSS RX
     uint8_t ht_bw                 = 0; //beerocks::eWiFiBandwidth
     uint8_t vht_bw                = 0; //beerocks::eWiFiBandwidth
+    uint8_t he_bw                 = 0; //beerocks::eWiFiBandwidth
     uint8_t ht_low_bw_short_gi    = 0; //20 Mhz
     uint8_t ht_high_bw_short_gi   = 0; //40 Mhz
     uint8_t vht_low_bw_short_gi   = 0; //80 Mhz
@@ -69,16 +72,26 @@ typedef struct sRadioCapabilities {
     uint8_t max_streams           = 0;
     uint8_t vht_su_beamformer     = 0;
     uint8_t vht_mu_beamformer     = 0;
+    uint8_t he_su_beamformer      = 0;
+    uint8_t he_mu_beamformer      = 0;
+    uint8_t ul_mu_mimo            = 0;
+    uint8_t ul_mu_mimo_ofdma      = 0;
+    uint8_t dl_mu_mimo_ofdma      = 0;
+    uint8_t ul_ofdma              = 0;
+    uint8_t dl_ofdma              = 0;
     sRadioCapabilities() {}
     void struct_swap() {}
     void struct_init()
     {
         ht_mcs               = 0;
         vht_mcs              = 0;
+        he_mcs               = 0;
         ht_ss                = 0;
         vht_ss               = 0;
+        he_ss                = 0;
         ht_bw                = 0;
         vht_bw               = 0;
+        he_bw                = 0;
         ht_low_bw_short_gi   = 0;
         ht_high_bw_short_gi  = 0;
         vht_low_bw_short_gi  = 0;
