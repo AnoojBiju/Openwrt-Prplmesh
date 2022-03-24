@@ -21,24 +21,53 @@ cStaHeCapability:
   subtype:
     _type: eExtElementID
     _value: EXTID_HE_CAPABILITIES
-  mac_cap_info:
-    _type: uint8_t
-    _length: [6]
-  phy_cap_info:
-    _type: uint8_t
-    _length: [11]
+  mac_cap_info1:
+    _type: assoc_frame::sStaHeMacCapInfo1
+  mac_cap_info2:
+    _type: assoc_frame::sStaHeMacCapInfo2
+  supported_channel_width_set:
+    _type: sStaHePhyCapInfoB1
+    _comment: First byte of the PHY Capabilities containing Supported Channel Width Set field
+  phy_cap_info1:
+    _type: assoc_frame::sStaHePhyCapInfo1
+  phy_cap_info2:
+    _type: assoc_frame::sStaHePhyCapInfo2
   rx_mcs_le_80:
     _type: uint16_t
-    _comment: RX HE MCS for channel width lower or equal to 80MHz
+    _comment: RX HE MCS for channel width lower or equal to 80 MHz
   tx_mcs_le_80:
     _type: uint16_t
-    _comment: TX HE MCS for channel width lower or equal to 80MHz
-  data:
+    _comment: TX HE MCS for channel width lower or equal to 80 MHz
+  rx_mcs_160:
+    _type: uint16_t
+    _condition:
+      _using_members: supported_channel_width_set.bw_160_in_5
+      _phrase: supported_channel_width_set.bw_160_in_5
+    _comment: RX HE MCS for channel width 160 MHz
+  tx_mcs_160:
+    _type: uint16_t
+    _condition:
+      _using_members: supported_channel_width_set.bw_160_in_5
+      _phrase: supported_channel_width_set.bw_160_in_5
+    _comment: TX HE MCS for channel width 160 MHz
+  rx_mcs_80_80:
+    _type: uint16_t
+    _condition:
+      _using_members: supported_channel_width_set.bw_160_80p80_in_5
+      _phrase: supported_channel_width_set.bw_160_80p80_in_5
+    _comment: RX HE MCS for channel width 80+80 MHz
+  tx_mcs_80_80:
+    _type: uint16_t
+    _condition:
+      _using_members: supported_channel_width_set.bw_160_80p80_in_5
+      _phrase: supported_channel_width_set.bw_160_80p80_in_5
+    _comment: TX HE MCS for channel width 80+80 MHz
+  ppe_thresholds:
     _type: uint8_t
     _length: []
-    _comment: remaining variable length data to be parsed
+    _comment: PPE Thresholds determines the nominal packet padding value
 
-sHePhyCapInfoB1:
+sStaHePhyCapInfoB1:
   _type: struct
   _bit_field: uint8_t
   reserved2:

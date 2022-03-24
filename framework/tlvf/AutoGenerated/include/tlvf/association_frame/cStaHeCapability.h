@@ -36,7 +36,7 @@ class cStaHeCapability : public BaseClass
         explicit cStaHeCapability(std::shared_ptr<BaseClass> base, bool parse = false);
         ~cStaHeCapability();
 
-        typedef struct sHePhyCapInfoB1 {
+        typedef struct sStaHePhyCapInfoB1 {
             #if defined(__LITTLE_ENDIAN_BITFIELD)
             uint8_t reserved1 : 1;
             uint8_t bw_40_in_2_4 : 1;
@@ -62,24 +62,38 @@ class cStaHeCapability : public BaseClass
             }
             void struct_init(){
             }
-        } __attribute__((packed)) sHePhyCapInfoB1;
+        } __attribute__((packed)) sStaHePhyCapInfoB1;
         
         eElementID& type();
         const uint8_t& length();
         eExtElementID& subtype();
-        uint8_t* mac_cap_info(size_t idx = 0);
-        bool set_mac_cap_info(const void* buffer, size_t size);
-        uint8_t* phy_cap_info(size_t idx = 0);
-        bool set_phy_cap_info(const void* buffer, size_t size);
-        //RX HE MCS for channel width lower or equal to 80MHz
+        assoc_frame::sStaHeMacCapInfo1& mac_cap_info1();
+        assoc_frame::sStaHeMacCapInfo2& mac_cap_info2();
+        //First byte of the PHY Capabilities containing Supported Channel Width Set field
+        sStaHePhyCapInfoB1& supported_channel_width_set();
+        assoc_frame::sStaHePhyCapInfo1& phy_cap_info1();
+        assoc_frame::sStaHePhyCapInfo2& phy_cap_info2();
+        //RX HE MCS for channel width lower or equal to 80 MHz
         uint16_t& rx_mcs_le_80();
-        //TX HE MCS for channel width lower or equal to 80MHz
+        //TX HE MCS for channel width lower or equal to 80 MHz
         uint16_t& tx_mcs_le_80();
-        //remaining variable length data to be parsed
-        size_t data_length() { return m_data_idx__ * sizeof(uint8_t); }
-        uint8_t* data(size_t idx = 0);
-        bool set_data(const void* buffer, size_t size);
-        bool alloc_data(size_t count = 1);
+        bool alloc_rx_mcs_160();
+        uint16_t* rx_mcs_160();
+        bool set_rx_mcs_160(const uint16_t rx_mcs_160);
+        bool alloc_tx_mcs_160();
+        uint16_t* tx_mcs_160();
+        bool set_tx_mcs_160(const uint16_t tx_mcs_160);
+        bool alloc_rx_mcs_80_80();
+        uint16_t* rx_mcs_80_80();
+        bool set_rx_mcs_80_80(const uint16_t rx_mcs_80_80);
+        bool alloc_tx_mcs_80_80();
+        uint16_t* tx_mcs_80_80();
+        bool set_tx_mcs_80_80(const uint16_t tx_mcs_80_80);
+        //PPE Thresholds determines the nominal packet padding value
+        size_t ppe_thresholds_length() { return m_ppe_thresholds_idx__ * sizeof(uint8_t); }
+        uint8_t* ppe_thresholds(size_t idx = 0);
+        bool set_ppe_thresholds(const void* buffer, size_t size);
+        bool alloc_ppe_thresholds(size_t count = 1);
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -89,15 +103,24 @@ class cStaHeCapability : public BaseClass
         eElementID* m_type = nullptr;
         uint8_t* m_length = nullptr;
         eExtElementID* m_subtype = nullptr;
-        uint8_t* m_mac_cap_info = nullptr;
-        size_t m_mac_cap_info_idx__ = 0;
-        int m_lock_order_counter__ = 0;
-        uint8_t* m_phy_cap_info = nullptr;
-        size_t m_phy_cap_info_idx__ = 0;
+        assoc_frame::sStaHeMacCapInfo1* m_mac_cap_info1 = nullptr;
+        assoc_frame::sStaHeMacCapInfo2* m_mac_cap_info2 = nullptr;
+        sStaHePhyCapInfoB1* m_supported_channel_width_set = nullptr;
+        assoc_frame::sStaHePhyCapInfo1* m_phy_cap_info1 = nullptr;
+        assoc_frame::sStaHePhyCapInfo2* m_phy_cap_info2 = nullptr;
         uint16_t* m_rx_mcs_le_80 = nullptr;
         uint16_t* m_tx_mcs_le_80 = nullptr;
-        uint8_t* m_data = nullptr;
-        size_t m_data_idx__ = 0;
+        uint16_t* m_rx_mcs_160 = nullptr;
+        bool m_rx_mcs_160_allocated = false;
+        uint16_t* m_tx_mcs_160 = nullptr;
+        bool m_tx_mcs_160_allocated = false;
+        uint16_t* m_rx_mcs_80_80 = nullptr;
+        bool m_rx_mcs_80_80_allocated = false;
+        uint16_t* m_tx_mcs_80_80 = nullptr;
+        bool m_tx_mcs_80_80_allocated = false;
+        uint8_t* m_ppe_thresholds = nullptr;
+        size_t m_ppe_thresholds_idx__ = 0;
+        int m_lock_order_counter__ = 0;
 };
 
 }; // close namespace: assoc_frame
