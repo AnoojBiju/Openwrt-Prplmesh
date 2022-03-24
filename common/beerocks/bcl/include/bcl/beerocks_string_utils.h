@@ -105,6 +105,14 @@ public:
     static std::string int_to_hex_string(const unsigned int integer,
                                          const uint8_t number_of_digits);
 
+    /**
+     * @brief Convert bytes string to a string, e.g. "7072706c4d657368" -> "prplMesh".
+     * 
+     * @param byte_string Bytes string.
+     * @return std::string Converted string.
+     */
+    static std::string bytes_string_to_string(const std::string &bytes_string);
+
     static void copy_string(char *dst, const char *src, size_t dst_len);
 };
 } // namespace beerocks
