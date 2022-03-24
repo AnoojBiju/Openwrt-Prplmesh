@@ -25,6 +25,7 @@
 #include "tlvf/ieee_1905_1/tlvWsc.h"
 #include "tlvf/wfa_map/tlvApCapability.h"
 #include "tlvf/wfa_map/tlvProfile2ChannelScanResult.h"
+#include "tlvf/wfa_map/tlvProfile2ErrorCode.h"
 #include <tlvf/AssociationRequestFrame/AssocReqFrame.h>
 #include <tlvf/test/tlvVarList.h>
 #include <tlvf/tlvftypes.h>
@@ -929,6 +930,21 @@ int _test_conditional_parameters_rx_tx(uint8_t *rx_buffer, size_t rx_size)
                    << utils::dump_buffer(tlv_tx.getStartBuffPtr(), tlv_tx.getLen());
     }
 
+    if (tlv_rx.length() != tlv_tx.length()) {
+        MAPF_ERR("RX and TX buffers don't report the same length!");
+        LOG(DEBUG) << "RX: " << tlv_rx.length() << std::endl;
+        LOG(DEBUG) << "TX: " << tlv_tx.length() << std::endl;
+        errors++;
+    }
+
+    if (tlv_rx.length() != rx_size - sizeof(ieee1905_1::sTlvHeader)) {
+        MAPF_ERR("RX doesn't report a correct length!");
+        LOG(DEBUG) << "RX length: " << tlv_rx.length()
+                   << "Buffer length (excluding type and length size): "
+                   << rx_size - sizeof(ieee1905_1::sTlvHeader) << std::endl;
+        errors++;
+    }
+
     MAPF_INFO(__FUNCTION__ << " Finished, errors = " << errors << std::endl);
     return errors;
 }
@@ -1044,6 +1060,14 @@ int test_channel_scan_results()
         tlv_rx.scan_type(), wfa_map::tlvProfile2ChannelScanResult::eScanType::SCAN_WAS_PASSIVE_SCAN,
         "scan type");
 
+    if (tlv_rx.length() != sizeof(rx_buffer) - sizeof(ieee1905_1::sTlvHeader)) {
+        MAPF_ERR("RX doesn't report a correct length!");
+        LOG(DEBUG) << "RX length: " << tlv_rx.length()
+                   << "Buffer length (excluding type and length size): "
+                   << sizeof(rx_buffer) - sizeof(ieee1905_1::sTlvHeader) << std::endl;
+        errors++;
+    }
+
     MAPF_INFO(__FUNCTION__ << " Finished, errors = " << errors << std::endl);
     return errors;
 }
@@ -1104,6 +1128,47 @@ int test_conditional_parameters_rx_tx()
         0x4d, 0x48, 0x7a, 0x80, 0x1e, 0x00, 0x00, 0x00, 0x00, 0x00, 0x64, 0x00};
     errors += _test_conditional_parameters_rx_tx(rx_buffer_4, sizeof(rx_buffer_4));
 
+    return errors;
+}
+
+int test_create_error_response_message()
+{
+    int errors = 0;
+
+    constexpr uint16_t buf_size = 4096;
+    uint8_t buff[buf_size];
+    ieee1905_1::CmduMessageTx cmdu_tx(buff, buf_size);
+
+    if (!cmdu_tx.create(1 /*mid*/, ieee1905_1::eMessageType::ERROR_RESPONSE_MESSAGE)) {
+        LOG(ERROR) << "cmdu creation of type ERROR_RESPONSE_MESSAGE, has failed";
+        errors++;
+    }
+    auto profile2_error_code_tlv = cmdu_tx.addClass<wfa_map::tlvProfile2ErrorCode>();
+    if (!profile2_error_code_tlv) {
+        LOG(ERROR) << "addClass has failed";
+        errors++;
+    }
+
+    // Check the size before adding the conditional element:
+    if (profile2_error_code_tlv->length() != 1) {
+        LOG(ERROR) << "tlvProfile2ErrorCode has a wrong length! length: "
+                   << profile2_error_code_tlv->length();
+        errors++;
+    }
+
+    profile2_error_code_tlv->reason_code() = wfa_map::tlvProfile2ErrorCode::eReasonCode::
+        NUMBER_OF_UNIQUE_VLAN_ID_EXCEEDS_MAXIMUM_SUPPORTED;
+    profile2_error_code_tlv->set_bssid(tlvf::mac_from_string("01:02:03:04:05:06"));
+
+    // Check the size after adding the conditional element (it should have increased by the size of the MAC address):
+    int expected_len = 7;
+    if (profile2_error_code_tlv->length() != expected_len) {
+        LOG(ERROR) << "tlvProfile2ErrorCode has a wrong length! length: "
+                   << profile2_error_code_tlv->length() << ". Expected: " << expected_len;
+        errors++;
+    }
+
+    MAPF_INFO(__FUNCTION__ << " Finished, errors = " << errors << std::endl);
     return errors;
 }
 
@@ -1745,6 +1810,7 @@ int main(int argc, char *argv[])
     errors += test_parse_assoc_frame();
     errors += test_build_assoc_frame();
     errors += test_parse_reassoc_frame();
+    errors += test_create_error_response_message();
     MAPF_INFO(__FUNCTION__ << " Finished, errors = " << errors << std::endl);
     return errors;
 }
