@@ -258,7 +258,8 @@ bool ap_wlan_hal_dummy::sta_softblock_remove(const std::string &vap_name,
     return true;
 }
 
-bool ap_wlan_hal_dummy::switch_channel(int chan, int bw, int vht_center_frequency)
+bool ap_wlan_hal_dummy::switch_channel(int chan, int bw, int vht_center_frequency,
+                                       int csa_beacon_count)
 {
     LOG(TRACE) << __func__ << " channel: " << chan << ", bw: " << bw
                << ", vht_center_frequency: " << vht_center_frequency;
