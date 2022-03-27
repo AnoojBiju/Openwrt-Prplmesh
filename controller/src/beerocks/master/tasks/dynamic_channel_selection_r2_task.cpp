@@ -630,18 +630,18 @@ bool dynamic_channel_selection_r2_task::handle_continuous_scan_request_event(
         const auto &scan_it = m_agents_status_map[agent_mac].continuous_radio_scans.find(
             scan_request_event.radio_mac);
         // Check if the scan exists
-        if (scan_it == m_agents_status_map[agent_mac].continuous_radio_scans.end()) {
-            // If we want to enable the scan but the scan does not exist
-            // we need to return false as there is no scan to enable.
-
-            // If we want to disable the scan and the scan does not exist
-            // we need to return true as there is no scan to disable.
-
-            return !scan_request_event.enable;
+        bool radio_scan_exist = false;
+        if (scan_it != m_agents_status_map[agent_mac].continuous_radio_scans.end()) {
+            radio_scan_exist = true;
         }
 
         if (!scan_request_event.enable) {
             // The instruction is to disable the request
+            if (!radio_scan_exist) {
+                // If we want to disable the scan and the scan does not exist
+                // we need to return true as there is no scan to disable.
+                return true;
+            }
 
             // If the scan is busy, return false because the scan cannot be disabled.
             if (scan_it->second.status != eRadioScanStatus::PENDING) {
@@ -657,14 +657,21 @@ bool dynamic_channel_selection_r2_task::handle_continuous_scan_request_event(
             LOG(DEBUG) << "Continuous Radio Scan"
                        << " mac: " << scan_it->first
                        << " was successfully deleted from the container";
+            if (m_agents_status_map[agent_mac].single_radio_scans.empty() &&
+                m_agents_status_map[agent_mac].continuous_radio_scans.empty()) {
+                LOG(TRACE) << "Agent " << agent_mac
+                           << " has no remaining scans, removing agent status handler";
+                m_agents_status_map.erase(agent);
+            }
             return true;
         }
-
-        LOG(WARNING) << "A continuous scan on agent: " << agent_mac << " radio: " << radio_mac
-                     << " already exists.";
-        // If the scan is pending to be triggered, return True.
-        // Otherwise the scan is busy (in progress or pending ACK), return False.
-        return (scan_it->second.status == eRadioScanStatus::PENDING);
+        if (radio_scan_exist) {
+            LOG(WARNING) << "A continuous scan on agent: " << agent_mac << " radio: " << radio_mac
+                         << " already exists.";
+            // If the scan is pending to be triggered, return True.
+            // Otherwise the scan is busy (in progress or pending ACK), return False.
+            return (scan_it->second.status == eRadioScanStatus::PENDING);
+        }
     } else {
         create_new_agent = true;
     }
