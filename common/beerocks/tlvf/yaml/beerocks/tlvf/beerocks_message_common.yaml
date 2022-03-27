@@ -96,6 +96,9 @@ sApChannelSwitch:
   is_dfs_channel: uint8_t
   vht_center_frequency: uint16_t
   tx_power: int8_t
+  csa_count: 
+    _type: uint8_t
+    _value: 5
 
 sDfsCacCompleted:
   _type: struct
