@@ -86,7 +86,7 @@ class TurrisRdkb(GenericDevice):
 
             shell.sendline("")
             # Give the shell a few seconds to be ready:
-            time.sleep(5)
+            time.sleep(30)
             return True
 
     def check_images_on_board(self):
