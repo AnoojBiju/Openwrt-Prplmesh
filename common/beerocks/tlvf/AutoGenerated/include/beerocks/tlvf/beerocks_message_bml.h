@@ -1684,8 +1684,10 @@ class cACTION_BML_TRIGGER_CHANNEL_SELECTION_REQUEST : public BaseClass
         static eActionOp_BML get_action_op(){
             return (eActionOp_BML)(ACTION_BML_TRIGGER_CHANNEL_SELECTION_REQUEST);
         }
-        sMacAddr& al_mac();
-        sMacAddr& ruid();
+        sMacAddr& radio_mac();
+        uint8_t& channel();
+        beerocks::eWiFiBandwidth& bandwidth();
+        uint8_t& csa_count();
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -1693,8 +1695,32 @@ class cACTION_BML_TRIGGER_CHANNEL_SELECTION_REQUEST : public BaseClass
     private:
         bool init();
         eActionOp_BML* m_action_op = nullptr;
-        sMacAddr* m_al_mac = nullptr;
-        sMacAddr* m_ruid = nullptr;
+        sMacAddr* m_radio_mac = nullptr;
+        uint8_t* m_channel = nullptr;
+        beerocks::eWiFiBandwidth* m_bandwidth = nullptr;
+        uint8_t* m_csa_count = nullptr;
+};
+
+class cACTION_BML_TRIGGER_CHANNEL_SELECTION_RESPONSE : public BaseClass
+{
+    public:
+        cACTION_BML_TRIGGER_CHANNEL_SELECTION_RESPONSE(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_BML_TRIGGER_CHANNEL_SELECTION_RESPONSE(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_BML_TRIGGER_CHANNEL_SELECTION_RESPONSE();
+
+        static eActionOp_BML get_action_op(){
+            return (eActionOp_BML)(ACTION_BML_TRIGGER_CHANNEL_SELECTION_RESPONSE);
+        }
+        //0 - Success, Otherwise error according to beerocks_defines:eChannelSwitchStatus
+        uint8_t& code();
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_BML* m_action_op = nullptr;
+        uint8_t* m_code = nullptr;
 };
 
 class cACTION_BML_CHANNEL_SCAN_SET_CONTINUOUS_PARAMS_REQUEST : public BaseClass

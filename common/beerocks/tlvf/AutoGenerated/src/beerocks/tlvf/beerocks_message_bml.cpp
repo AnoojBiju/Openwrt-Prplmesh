@@ -5786,19 +5786,27 @@ BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
 }
 cACTION_BML_TRIGGER_CHANNEL_SELECTION_REQUEST::~cACTION_BML_TRIGGER_CHANNEL_SELECTION_REQUEST() {
 }
-sMacAddr& cACTION_BML_TRIGGER_CHANNEL_SELECTION_REQUEST::al_mac() {
-    return (sMacAddr&)(*m_al_mac);
+sMacAddr& cACTION_BML_TRIGGER_CHANNEL_SELECTION_REQUEST::radio_mac() {
+    return (sMacAddr&)(*m_radio_mac);
 }
 
-sMacAddr& cACTION_BML_TRIGGER_CHANNEL_SELECTION_REQUEST::ruid() {
-    return (sMacAddr&)(*m_ruid);
+uint8_t& cACTION_BML_TRIGGER_CHANNEL_SELECTION_REQUEST::channel() {
+    return (uint8_t&)(*m_channel);
+}
+
+beerocks::eWiFiBandwidth& cACTION_BML_TRIGGER_CHANNEL_SELECTION_REQUEST::bandwidth() {
+    return (beerocks::eWiFiBandwidth&)(*m_bandwidth);
+}
+
+uint8_t& cACTION_BML_TRIGGER_CHANNEL_SELECTION_REQUEST::csa_count() {
+    return (uint8_t&)(*m_csa_count);
 }
 
 void cACTION_BML_TRIGGER_CHANNEL_SELECTION_REQUEST::class_swap()
 {
     tlvf_swap(8*sizeof(eActionOp_BML), reinterpret_cast<uint8_t*>(m_action_op));
-    m_al_mac->struct_swap();
-    m_ruid->struct_swap();
+    m_radio_mac->struct_swap();
+    tlvf_swap(8*sizeof(beerocks::eWiFiBandwidth), reinterpret_cast<uint8_t*>(m_bandwidth));
 }
 
 bool cACTION_BML_TRIGGER_CHANNEL_SELECTION_REQUEST::finalize()
@@ -5831,8 +5839,10 @@ bool cACTION_BML_TRIGGER_CHANNEL_SELECTION_REQUEST::finalize()
 size_t cACTION_BML_TRIGGER_CHANNEL_SELECTION_REQUEST::get_initial_size()
 {
     size_t class_size = 0;
-    class_size += sizeof(sMacAddr); // al_mac
-    class_size += sizeof(sMacAddr); // ruid
+    class_size += sizeof(sMacAddr); // radio_mac
+    class_size += sizeof(uint8_t); // channel
+    class_size += sizeof(beerocks::eWiFiBandwidth); // bandwidth
+    class_size += sizeof(uint8_t); // csa_count
     return class_size;
 }
 
@@ -5842,18 +5852,95 @@ bool cACTION_BML_TRIGGER_CHANNEL_SELECTION_REQUEST::init()
         TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
         return false;
     }
-    m_al_mac = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
+    m_radio_mac = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(sMacAddr))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sMacAddr) << ") Failed!";
         return false;
     }
-    if (!m_parse__) { m_al_mac->struct_init(); }
-    m_ruid = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(sMacAddr))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sMacAddr) << ") Failed!";
+    if (!m_parse__) { m_radio_mac->struct_init(); }
+    m_channel = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    if (!m_parse__) { m_ruid->struct_init(); }
+    m_bandwidth = reinterpret_cast<beerocks::eWiFiBandwidth*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(beerocks::eWiFiBandwidth))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(beerocks::eWiFiBandwidth) << ") Failed!";
+        return false;
+    }
+    m_csa_count = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
+        return false;
+    }
+    if (m_parse__) { class_swap(); }
+    return true;
+}
+
+cACTION_BML_TRIGGER_CHANNEL_SELECTION_RESPONSE::cACTION_BML_TRIGGER_CHANNEL_SELECTION_RESPONSE(uint8_t* buff, size_t buff_len, bool parse) :
+    BaseClass(buff, buff_len, parse) {
+    m_init_succeeded = init();
+}
+cACTION_BML_TRIGGER_CHANNEL_SELECTION_RESPONSE::cACTION_BML_TRIGGER_CHANNEL_SELECTION_RESPONSE(std::shared_ptr<BaseClass> base, bool parse) :
+BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
+    m_init_succeeded = init();
+}
+cACTION_BML_TRIGGER_CHANNEL_SELECTION_RESPONSE::~cACTION_BML_TRIGGER_CHANNEL_SELECTION_RESPONSE() {
+}
+uint8_t& cACTION_BML_TRIGGER_CHANNEL_SELECTION_RESPONSE::code() {
+    return (uint8_t&)(*m_code);
+}
+
+void cACTION_BML_TRIGGER_CHANNEL_SELECTION_RESPONSE::class_swap()
+{
+    tlvf_swap(8*sizeof(eActionOp_BML), reinterpret_cast<uint8_t*>(m_action_op));
+}
+
+bool cACTION_BML_TRIGGER_CHANNEL_SELECTION_RESPONSE::finalize()
+{
+    if (m_parse__) {
+        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
+        return true;
+    }
+    if (m_finalized__) {
+        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
+        return true;
+    }
+    if (!isPostInitSucceeded()) {
+        TLVF_LOG(ERROR) << "post init check failed";
+        return false;
+    }
+    if (m_inner__) {
+        if (!m_inner__->finalize()) {
+            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
+            return false;
+        }
+        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
+        m_buff_ptr__ -= tailroom;
+    }
+    class_swap();
+    m_finalized__ = true;
+    return true;
+}
+
+size_t cACTION_BML_TRIGGER_CHANNEL_SELECTION_RESPONSE::get_initial_size()
+{
+    size_t class_size = 0;
+    class_size += sizeof(uint8_t); // code
+    return class_size;
+}
+
+bool cACTION_BML_TRIGGER_CHANNEL_SELECTION_RESPONSE::init()
+{
+    if (getBuffRemainingBytes() < get_initial_size()) {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
+        return false;
+    }
+    m_code = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
+        return false;
+    }
     if (m_parse__) { class_swap(); }
     return true;
 }

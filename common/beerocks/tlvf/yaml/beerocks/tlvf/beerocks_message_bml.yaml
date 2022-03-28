@@ -377,8 +377,16 @@ cACTION_BML_UNREGISTER_TOPOLOGY_QUERY:
 
 cACTION_BML_TRIGGER_CHANNEL_SELECTION_REQUEST:
   _type: class
-  al_mac: sMacAddr
-  ruid: sMacAddr
+  radio_mac: sMacAddr
+  channel: uint8_t
+  bandwidth: beerocks::eWiFiBandwidth
+  csa_count: uint8_t
+
+cACTION_BML_TRIGGER_CHANNEL_SELECTION_RESPONSE:
+  _type: class
+  code:
+    _type: uint8_t
+    _comment: 0 - Success, Otherwise error according to beerocks_defines:eChannelSwitchStatus
 
 cACTION_BML_CHANNEL_SCAN_SET_CONTINUOUS_PARAMS_REQUEST:
   _type: class
