@@ -43,7 +43,7 @@ enable_repeater_mode=0
 [log]
 log_global_levels=error,info,warning,fatal,trace,debug
 log_global_syslog_levels=error,info,warning,fatal,trace,debug
-log_global_size=1000000
+log_global_size=@BEEROCKS_AGENT_LOG_SIZE@
 log_files_enabled=@BEEROCKS_LOG_FILES_ENABLED@
 log_files_path=@BEEROCKS_LOG_FILES_PATH@
 log_files_auto_roll=@BEEROCKS_LOG_FILES_AUTO_ROLL@
