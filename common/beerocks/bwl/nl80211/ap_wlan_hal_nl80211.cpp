@@ -877,16 +877,19 @@ bool ap_wlan_hal_nl80211::sta_softblock_remove(const std::string &vap_name,
     return false;
 }
 
-bool ap_wlan_hal_nl80211::switch_channel(int chan, int bw, int vht_center_frequency)
+bool ap_wlan_hal_nl80211::switch_channel(int chan, int bw, int vht_center_frequency,
+                                         int csa_beacon_count)
 {
     LOG(TRACE) << __func__ << " channel: " << chan << ", bw: " << bw
                << ", vht_center_frequency: " << vht_center_frequency;
 
     // CHAN_SWITCH cs_count freq [center_freq1] [center_freq2] [bandwidth] [sec_channel_offset]
     //             [ht] [vht] [blocktx]
-    // cs_count - CSA_BCN_COUNT, beacon count before switch. 5 is default value in
-    //            hostapd_dfs_start_channel_switch()
-    std::string cmd = "CHAN_SWITCH 5 ";
+    // cs_count - CSA_BCN_COUNT, beacon count before switch.
+    std::string cmd = "CHAN_SWITCH ";
+
+    // Add custom beacon count
+    cmd += std::to_string(csa_beacon_count) + " ";
 
     if (chan == 0) {
         LOG(ERROR) << "ACS is not supported";

@@ -60,7 +60,8 @@ public:
                                    uint8_t authetication_snr_threshold_lo) override;
     virtual bool sta_softblock_remove(const std::string &vap_name,
                                       const std::string &client_mac) override;
-    virtual bool switch_channel(int chan, int bw, int vht_center_frequency) override;
+    virtual bool switch_channel(int chan, int bw, int vht_center_frequency,
+                                int csa_beacon_count) override;
     virtual bool cancel_cac(int chan, beerocks::eWiFiBandwidth bw, int vht_center_frequency,
                             int secondary_chan) override;
     virtual bool failsafe_channel_set(int chan, int bw, int vht_center_frequency) override;

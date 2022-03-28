@@ -1553,9 +1553,14 @@ bool ap_wlan_hal_dwpal::sta_softblock_remove(const std::string &vap_name,
     return true;
 }
 
-bool ap_wlan_hal_dwpal::switch_channel(int chan, int bw, int vht_center_frequency)
+bool ap_wlan_hal_dwpal::switch_channel(int chan, int bw, int vht_center_frequency,
+                                       int csa_beacon_count)
 {
-    std::string cmd = "CHAN_SWITCH 5 ";
+    std::string cmd = "CHAN_SWITCH ";
+
+    // Add custom beacon count
+    cmd += std::to_string(csa_beacon_count) + " ";
+
     // ACS
     if (chan == 0) {
         m_drop_csa = true;
