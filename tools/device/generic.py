@@ -137,10 +137,9 @@ class GenericDevice():
             Whether to stop the device when it enters its bootloader or not.
         """
         with SerialDevice(self.baudrate, self.name,
-                          self.serial_prompt, expect_prompt_on_connect=False) as ser:
+                          self.serial_prompt, expect_prompt_on_connect=False) as shell:
             print("Reset board.")
 
-            shell = ser.shell
             if serial_type == ShellType.UBOOT:
                 shell.sendline("reset")
             elif serial_type in [ShellType.PRPLOS, ShellType.RDKB, ShellType.LINUX_UNKNOWN]:
@@ -170,8 +169,7 @@ class GenericDevice():
         OSTYPE_RE = r"NAME=[^\s]*"
 
         with SerialDevice(self.baudrate, self.name, self.serial_prompt,
-                          expect_prompt_on_connect=False) as ser:
-            shell = ser.shell
+                          expect_prompt_on_connect=False) as shell:
             shell.send('\003')
             shell.expect([self.bootloader_prompt, pexpect.TIMEOUT], timeout=1)
             if shell.match is not pexpect.TIMEOUT:
