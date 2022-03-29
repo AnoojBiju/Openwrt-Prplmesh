@@ -22,6 +22,7 @@
 #include <tlvf/ieee_1905_1/tlvNon1905neighborDeviceList.h>
 #include <tlvf/wfa_map/tlvApOperationalBSS.h>
 #include <tlvf/wfa_map/tlvClientAssociationEvent.h>
+#include <tlvf/wfa_map/tlvProfile2ReasonCode.h>
 
 #ifdef BEEROCKS_RDKB
 #include "rdkb/rdkb_wlan_task.h"
@@ -500,11 +501,16 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
         }
 
         /*
-          TODO: Notify disconenction should be called if Disassociation Event TLV present
-                in Topology Notification Message.
-                Should be fixed after PPM-864.
+            TODO: Reason code should come from Client Disassociation Stats message in
+                    reason Code TLV but since we do not have this data Reason Code
+                    set to 1 (UNSPECIFIED_REASON - IEEE802.11-16, Table 9.45).
+                    Should be fixed after PPM-864.
+            TODO: ReasonCode should be tested after PPM-1905 for nl80211 platforms.
         */
-        if (!database.notify_disconnection(client_mac_str, vs_tlv->disconnect_reason())) {
+        uint16_t reason_code = (vs_tlv)
+                                   ? vs_tlv->disconnect_reason()
+                                   : (uint16_t)wfa_map::tlvProfile2ReasonCode::UNSPECIFIED_REASON;
+        if (!database.notify_disconnection(client_mac_str, reason_code)) {
             LOG(WARNING) << "Failed to notify disconnection event.";
         }
 
