@@ -4383,14 +4383,6 @@ bool db::notify_disconnection(const std::string &client_mac, const uint16_t reas
 
     ret_val &= m_ambiorix_datamodel->set(path_to_eventdata, "BSSID", n->parent_mac);
     ret_val &= m_ambiorix_datamodel->set(path_to_eventdata, "MACAddress", client_mac);
-
-    /*
-      TODO: Reason code should come from Client Disassociation Stats message in
-            reason Code TLV but since we do not have this data Reason Code
-            set to 1 (UNSPECIFIED_REASON - IEEE802.11-16, Table 9.45).
-            Should be fixed after PPM-864.
-      TODO: ReasonCode should be tested after PPM-1905 for nl80211 platforms.
-    */
     ret_val &= m_ambiorix_datamodel->set(path_to_eventdata, "ReasonCode", reason_code);
     ret_val &= m_ambiorix_datamodel->set(path_to_eventdata, "BytesSent", n->stats_info->tx_bytes);
     ret_val &=
