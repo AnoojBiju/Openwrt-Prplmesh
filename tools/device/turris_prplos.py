@@ -37,6 +37,7 @@ class TurrisPrplOS(GenericPrplOS):
         uncompressed_image = self.image.split(".gz")[0]
         shell.send('\003')
         shell.expect(self.bootloader_prompt)
+        time.sleep(1)
         shell.sendline("setenv bootargs earlyprintk console=ttyS0,115200")
         shell.expect(self.bootloader_prompt)
         shell.sendline("setenv set_blkcnt 'setexpr blkcnt ${filesize} + 0x7ffff && setexpr blkcnt ${blkcnt} / 0x80000 && setexpr blkcnt ${blkcnt} * 0x400'") # noqa E50
