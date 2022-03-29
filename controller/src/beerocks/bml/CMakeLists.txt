@@ -10,8 +10,9 @@ file(GLOB bml_common_sources
     ${MODULE_PATH}/internal/*.c*
 )
 
-#RDKB
-if (TARGET_PLATFORM STREQUAL "rdkb")
+
+list(FIND FEATURES "FEATURE_PRE_ASSOCIATION_STEERING" _feature_pre_association_steering_index)
+if(${_feature_pre_association_steering_index} GREATER -1)
     file(GLOB RDKB_SOURCES 
         ${MODULE_PATH}/rdkb/*.c* 
         ${MODULE_PATH}/rdkb/internal/*.c*
@@ -38,7 +39,7 @@ install(
 )
 
 file(GLOB bml_install_files ${MODULE_PATH}/*.h)
-if (TARGET_PLATFORM STREQUAL "rdkb")
+if (${_feature_pre_association_steering_index} GREATER -1)
     file(GLOB RDKB_INCLUDES ${MODULE_PATH}/rdkb/*.h)
     list(APPEND bml_install_files ${RDKB_INCLUDES})
 endif()
