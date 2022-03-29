@@ -35,16 +35,7 @@ rdkb_wlan_task::rdkb_wlan_task(db &database_, ieee1905_1::CmduMessageTx &cmdu_tx
     database_.assign_rdkb_wlan_task_id(this->id);
 }
 
-void rdkb_wlan_task::work()
-{
-    if (!database.settings_rdkb_extensions()) {
-        LOG(DEBUG) << "RDKB extensions are disabled, killing task";
-        finish();
-        return;
-    }
-
-    pending_event_check_timeout();
-}
+void rdkb_wlan_task::work() { pending_event_check_timeout(); }
 
 void rdkb_wlan_task::handle_event(int event_type, void *obj)
 {
@@ -414,8 +405,8 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
         if (obj) {
             TASK_LOG(DEBUG) << "STEERING_RSSI_MEASUREMENT_RESPONSE received";
             //TODO consider add response from monitor.
-            break;
         }
+        break;
     }
     case STEERING_REMOVE_SOCKET: {
         if (obj) {

@@ -52,7 +52,7 @@ Monitor::Monitor(const std::string &monitor_iface_,
     : EventLoopThread(), monitor_iface(monitor_iface_), beerocks_slave_conf(beerocks_slave_conf_),
       bridge_iface(beerocks_slave_conf.bridge_iface), cmdu_tx(m_tx_buffer, sizeof(m_tx_buffer)),
       logger(logger_), mon_rssi(cmdu_tx),
-#ifdef BEEROCKS_RDKB
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
       mon_rdkb_hal(cmdu_tx),
 #endif
       mon_stats(cmdu_tx)
@@ -247,7 +247,7 @@ void Monitor::on_thread_stop()
 
         mon_rssi.stop();
         mon_stats.stop();
-#ifdef BEEROCKS_RDKB
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
         mon_rdkb_hal.stop();
 #endif
 
@@ -495,7 +495,7 @@ bool Monitor::monitor_fsm()
                 }
             }
 
-#ifdef BEEROCKS_RDKB
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
             LOG(TRACE) << "mon_rdkb_hal.start()";
             if (!mon_rdkb_hal.start(&mon_db, m_slave_client)) {
                 LOG(ERROR) << "mon_rdkb_hal.start() failed";
@@ -650,7 +650,7 @@ bool Monitor::monitor_fsm()
 
         mon_rssi.process();
         mon_stats.process();
-#ifdef BEEROCKS_RDKB
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
         mon_rdkb_hal.process(max_iteration_timeout);
 #endif
 
@@ -1189,7 +1189,7 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
         sta_node->set_ipv4(sta_ipv4);
         break;
     }
-#ifdef BEEROCKS_RDKB
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
     case beerocks_message::ACTION_MONITOR_STEERING_CLIENT_SET_GROUP_REQUEST: {
 
         auto request =
@@ -1341,7 +1341,7 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
                                     OPERATION_SUCCESS);
         break;
     }
-#endif //BEEROCKS_RDKB
+#endif //FEATURE_PRE_ASSOCIATION_STEERING
     case beerocks_message::ACTION_MONITOR_CLIENT_RX_RSSI_MEASUREMENT_REQUEST: {
         LOG(TRACE) << "received ACTION_MONITOR_CLIENT_RX_RSSI_MEASUREMENT_REQUEST";
 
@@ -2080,7 +2080,7 @@ bool Monitor::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
         sta_node->set_measure_sta_enable((mon_db.get_clients_measuremet_mode() ==
                                           monitor_db::eClientsMeasurementMode::ENABLE_ALL));
 
-#ifdef BEEROCKS_RDKB
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
         //clean rdkb monitor data if already in database.
         auto client = mon_rdkb_hal.conf_get_client(sta_mac);
         if (client) {
@@ -2262,7 +2262,7 @@ void Monitor::update_vaps_in_db()
         }
     }
 }
-#ifdef BEEROCKS_RDKB
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
 void Monitor::send_steering_return_status(beerocks_message::eActionOp_MONITOR ActionOp,
                                           int32_t status)
 {
@@ -2296,4 +2296,4 @@ void Monitor::send_steering_return_status(beerocks_message::eActionOp_MONITOR Ac
     }
     return;
 }
-#endif //BEEROCKS_RDKB
+#endif //FEATURE_PRE_ASSOCIATION_STEERING

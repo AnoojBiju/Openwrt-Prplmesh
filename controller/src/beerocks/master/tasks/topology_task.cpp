@@ -24,7 +24,7 @@
 #include <tlvf/wfa_map/tlvClientAssociationEvent.h>
 #include <tlvf/wfa_map/tlvProfile2ReasonCode.h>
 
-#ifdef BEEROCKS_RDKB
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
 #include "rdkb/rdkb_wlan_task.h"
 #endif
 
@@ -527,9 +527,9 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
         int dhcp_task = database.get_dhcp_task_id();
         tasks.push_event(dhcp_task, DhcpTask::STA_CONNECTED);
 
-#ifdef BEEROCKS_RDKB
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
         //push event to rdkb_wlan_hal task
-        if (vs_tlv && database.settings_rdkb_extensions()) {
+        if (vs_tlv) {
             bwl::sClientAssociationParams new_event = {};
 
             new_event.mac          = client_mac;
@@ -548,10 +548,10 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
     } else {
         // client disconnected
 
-#ifdef BEEROCKS_RDKB
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
 
         // Push event to rdkb_wlan_hal task
-        if (vs_tlv && database.settings_rdkb_extensions()) {
+        if (vs_tlv) {
             beerocks_message::sSteeringEvDisconnect new_event = {};
             new_event.client_mac                              = client_mac;
             new_event.bssid                                   = bssid;
