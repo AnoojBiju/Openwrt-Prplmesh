@@ -9,7 +9,7 @@
 #include "son_management.h"
 #include "son_actions.h"
 #include "tasks/bml_task.h"
-#ifdef BEEROCKS_RDKB
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
 #include "tasks/rdkb/rdkb_wlan_task.h"
 #endif
 #include "db/network_map.h"
@@ -1483,7 +1483,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         }
         break;
     }
-#ifdef BEEROCKS_RDKB
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
     case beerocks_message::ACTION_BML_STEERING_SET_GROUP_REQUEST: {
         LOG(TRACE) << "ACTION_BML_STEERING_SET_GROUP_REQUEST";
         auto request =
@@ -1599,7 +1599,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
                          rdkb_wlan_task::events::STEERING_RSSI_MEASUREMENT_REQUEST, &new_event);
         break;
     }
-#endif //BEEROCKS_RDKB
+#endif //FEATURE_PRE_ASSOCIATION_STEERING
 
     case beerocks_message::ACTION_BML_TRIGGER_TOPOLOGY_QUERY: {
 

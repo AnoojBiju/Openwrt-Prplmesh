@@ -382,7 +382,7 @@ int bml_utils_event_to_string(const struct BML_EVENT *event, char *buffer, int b
            << ", cac_completed: " << std::to_string(event_data->cac_completed) << std::endl;
         break;
     }
-#ifdef BEEROCKS_RDKB
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
     case BML_EVENT_TYPE_STEERING: {
         auto event_data = static_cast<BML_EVENT_STEERING *>(event->data);
         switch (event_data->type) {
@@ -420,7 +420,7 @@ int bml_utils_event_to_string(const struct BML_EVENT *event, char *buffer, int b
         }
         break;
     }
-#endif //BEEROCKS_RDKB
+#endif //FEATURE_PRE_ASSOCIATION_STEERING
     default: {
         break;
     }

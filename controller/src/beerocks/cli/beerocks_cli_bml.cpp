@@ -217,7 +217,7 @@ static void bml_utils_dump_conn_map(
     }
 }
 
-#ifdef BEEROCKS_RDKB
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
 static void steering_set_group_string_to_struct(const std::string &str_cfg_2,
                                                 const std::string &str_cfg_5,
                                                 BML_STEERING_AP_CONFIG &cfg2,
@@ -283,7 +283,7 @@ static void steering_client_set_string_to_struct(const std::string &str_config,
               << "config.authRejectReason = " << config.authRejectReason << std::endl;
     return;
 }
-#endif //BEEROCKS_RDKB
+#endif //FEATURE_PRE_ASSOCIATION_STEERING
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////////// Implementation ///////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -490,7 +490,7 @@ void cli_bml::setFunctionsMapAndArray()
                        static_cast<pFunction>(&cli_bml::bml_channel_selection_caller), 3, 4,
                        STRING_ARG, INT_ARG, INT_ARG, INT_ARG);
 
-#ifdef BEEROCKS_RDKB
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
     insertCommandToMap("bml_rdkb_steering_set_group", "<steeringGroupIndex> <cfg_2> <cfg_5>",
                        "cfg2/5 = <bssid>, <utilCheckIntervalSec>, <utilAvgCount>, "
                        "<inactCheckIntervalSec>, <inactCheckThresholdSec> (without spaces between "
@@ -1191,7 +1191,7 @@ int cli_bml::bml_channel_selection_caller(int numOfArgs)
     }
     return -1;
 }
-#ifdef BEEROCKS_RDKB
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
 int cli_bml::bml_rdkb_steering_set_group_caller(int numOfArgs)
 {
     if (numOfArgs == 3) {
@@ -1225,7 +1225,7 @@ int cli_bml::bml_rdkb_steering_client_measure_caller(int numOfArgs)
     }
     return -1;
 }
-#endif //BEEROCKS_RDKB
+#endif //FEATURE_PRE_ASSOCIATION_STEERING
 
 /**
  * caller function for set_dcs_continuous_scan_enable
@@ -1922,7 +1922,7 @@ int cli_bml::channel_selection(const std::string &radio_mac, uint8_t channel, ui
     return 0;
 }
 
-#ifdef BEEROCKS_RDKB
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
 int cli_bml::steering_set_group(uint32_t steeringGroupIndex, const std::string &str_cfg_2,
                                 const std::string &str_cfg_5)
 {
@@ -1983,7 +1983,7 @@ int cli_bml::steering_client_measure(uint32_t steeringGroupIndex, const std::str
     printBmlReturnVals("bml_rdkb_steering_client_measure", ret);
     return 0;
 }
-#endif //BEEROCKS_RDKB
+#endif //FEATURE_PRE_ASSOCIATION_STEERING
 
 /**
  * Enables or disables beerocks DCS continuous scans.
