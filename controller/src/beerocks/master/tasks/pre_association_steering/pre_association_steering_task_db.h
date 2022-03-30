@@ -12,7 +12,7 @@
 #include <unordered_map>
 
 namespace son {
-class rdkb_wlan_task_db {
+class pre_association_steering_task_db {
     struct client_config {
         std::string mac;
         unsigned int snr_probe_req_hwm;

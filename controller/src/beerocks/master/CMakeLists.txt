@@ -16,7 +16,7 @@ endif()
 #FEATURE_PRE_ASSOCIATION_STEERING
 list(FIND FEATURES "FEATURE_PRE_ASSOCIATION_STEERING" _feature_pre_association_steering_index)
 if(${_feature_pre_association_steering_index} GREATER -1)
-    file(GLOB RDKB_SOURCES ${MODULE_PATH}/tasks/rdkb/*.cpp)
+    file(GLOB RDKB_SOURCES ${MODULE_PATH}/tasks/pre_association_steering/*.cpp)
     list(APPEND controller_tasks_sources  ${RDKB_SOURCES})
 endif()
 

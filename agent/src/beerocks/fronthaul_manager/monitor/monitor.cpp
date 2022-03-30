@@ -53,7 +53,7 @@ Monitor::Monitor(const std::string &monitor_iface_,
       bridge_iface(beerocks_slave_conf.bridge_iface), cmdu_tx(m_tx_buffer, sizeof(m_tx_buffer)),
       logger(logger_), mon_rssi(cmdu_tx),
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
-      mon_rdkb_hal(cmdu_tx),
+      mon_pre_association_steering_hal(cmdu_tx),
 #endif
       mon_stats(cmdu_tx)
 {
@@ -248,7 +248,7 @@ void Monitor::on_thread_stop()
         mon_rssi.stop();
         mon_stats.stop();
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
-        mon_rdkb_hal.stop();
+        mon_pre_association_steering_hal.stop();
 #endif
 
         mon_wlan_hal->detach();
@@ -496,9 +496,9 @@ bool Monitor::monitor_fsm()
             }
 
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
-            LOG(TRACE) << "mon_rdkb_hal.start()";
-            if (!mon_rdkb_hal.start(&mon_db, m_slave_client)) {
-                LOG(ERROR) << "mon_rdkb_hal.start() failed";
+            LOG(TRACE) << "mon_pre_association_steering_hal.start()";
+            if (!mon_pre_association_steering_hal.start(&mon_db, m_slave_client)) {
+                LOG(ERROR) << "mon_pre_association_steering_hal.start() failed";
                 return false;
             }
 #endif
@@ -651,7 +651,7 @@ bool Monitor::monitor_fsm()
         mon_rssi.process();
         mon_stats.process();
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
-        mon_rdkb_hal.process(max_iteration_timeout);
+        mon_pre_association_steering_hal.process(max_iteration_timeout);
 #endif
 
         /**
@@ -1224,7 +1224,7 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
         }
 
         if (request->params().remove) {
-            if (mon_rdkb_hal.conf_erase_ap(vap_id) == false) {
+            if (mon_pre_association_steering_hal.conf_erase_ap(vap_id) == false) {
                 LOG(ERROR) << "failed removing vap_id:" << int(vap_id) << " configuration";
                 send_steering_return_status(
                     beerocks_message::ACTION_MONITOR_STEERING_CLIENT_SET_GROUP_RESPONSE,
@@ -1237,9 +1237,9 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
                 OPERATION_SUCCESS);
             break;
         }
-        auto ap = mon_rdkb_hal.conf_add_ap(vap_id);
+        auto ap = mon_pre_association_steering_hal.conf_add_ap(vap_id);
         if (ap == nullptr) {
-            LOG(ERROR) << "add rdkb_hall ap configuration fail";
+            LOG(ERROR) << "add pre_association_steering_hal ap configuration fail";
             send_steering_return_status(
                 beerocks_message::ACTION_MONITOR_STEERING_CLIENT_SET_GROUP_RESPONSE,
                 OPERATION_FAIL);
@@ -1272,7 +1272,7 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
 
         std::string sta_mac = tlvf::mac_to_string(request->params().client_mac);
         if (request->params().remove) {
-            if (mon_rdkb_hal.conf_erase_client(sta_mac) == false) {
+            if (mon_pre_association_steering_hal.conf_erase_client(sta_mac) == false) {
                 LOG(ERROR) << "failed removing client:" << sta_mac << " configuration";
                 send_steering_return_status(
                     beerocks_message::ACTION_MONITOR_STEERING_CLIENT_SET_RESPONSE, OPERATION_FAIL);
@@ -1312,9 +1312,9 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
             return;
         }
 
-        auto client = mon_rdkb_hal.conf_add_client(sta_mac);
+        auto client = mon_pre_association_steering_hal.conf_add_client(sta_mac);
         if (client == nullptr) {
-            LOG(ERROR) << "add rdkb_hall client configuration fail";
+            LOG(ERROR) << "add pre_association_steering_hal client configuration fail";
             send_steering_return_status(
                 beerocks_message::ACTION_MONITOR_STEERING_CLIENT_SET_RESPONSE, OPERATION_FAIL);
             return;
@@ -2081,8 +2081,8 @@ bool Monitor::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
                                           monitor_db::eClientsMeasurementMode::ENABLE_ALL));
 
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
-        //clean rdkb monitor data if already in database.
-        auto client = mon_rdkb_hal.conf_get_client(sta_mac);
+        //clean pre_association_steering monitor data if already in database.
+        auto client = mon_pre_association_steering_hal.conf_get_client(sta_mac);
         if (client) {
             // override sta_node measurements configuration
             sta_node->set_measure_sta_enable((mon_db.get_clients_measuremet_mode() !=

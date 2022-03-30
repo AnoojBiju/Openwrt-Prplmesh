@@ -367,7 +367,7 @@ private:
     beerocks::promise<bool> *m_prmMasterSlaveVersions   = nullptr;
     beerocks::promise<bool> *m_prmLocalMasterGet        = nullptr;
     beerocks::promise<bool> *m_prmRestrictedChannelsGet = nullptr;
-    beerocks::promise<int> *m_prmRdkbWlan               = nullptr;
+    beerocks::promise<int> *m_prmPreAssociationSteering               = nullptr;
     //Promise used to indicate the GetParams response was received
     beerocks::promise<bool> *m_prmChannelScanParamsGet = nullptr;
     //Promise used to indicate the GetResults response was received

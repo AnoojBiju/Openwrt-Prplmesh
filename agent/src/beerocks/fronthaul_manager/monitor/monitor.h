@@ -11,7 +11,7 @@
 
 #include "monitor_rssi.h"
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
-#include "rdkb/monitor_rdkb_hal.h"
+#include "pre_association_steering/monitor_pre_association_steering_hal.h"
 #endif
 #include "monitor_db.h"
 #include "monitor_stats.h"
@@ -162,7 +162,7 @@ private:
     monitor_db mon_db;
     monitor_rssi mon_rssi;
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
-    monitor_rdkb_hal mon_rdkb_hal;
+    monitor_pre_association_steering_hal mon_pre_association_steering_hal;
 #endif
     monitor_stats mon_stats;
 

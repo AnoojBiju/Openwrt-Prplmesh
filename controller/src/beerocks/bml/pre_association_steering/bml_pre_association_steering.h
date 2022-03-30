@@ -6,14 +6,14 @@
  * See LICENSE file for more details.
  */
 
-#ifndef _BML_RDKB_H_
-#define _BML_RDKB_H_
+#ifndef _BML_PRE_ASSOCIATION_STEERING_H_
+#define _BML_PRE_ASSOCIATION_STEERING_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include "bml_rdkb_defs.h"
+#include "bml_pre_association_steering_defs.h"
 
 /**
  * Initialize the BML library and connect to Beerocks.
@@ -25,7 +25,8 @@ extern "C" {
  *
  * @return BML_RET_OK on success.
  */
-int bml_rdkb_connect(BML_CTX *ctx, const char *beerocks_conf_path, void *user_data);
+int bml_pre_association_steering_connect(BML_CTX *ctx, const char *beerocks_conf_path,
+                                         void *user_data);
 
 /**
  * Disconnect from Beerocks and purge the BML library context.
@@ -36,7 +37,7 @@ int bml_rdkb_connect(BML_CTX *ctx, const char *beerocks_conf_path, void *user_da
  *
  * @return BML_RET_OK on success.
  */
-int bml_rdkb_disconnect(BML_CTX ctx);
+int bml_pre_association_steering_disconnect(BML_CTX ctx);
 
 /*
 * A steering group defines a group members of which can have steering done
@@ -50,9 +51,9 @@ int bml_rdkb_disconnect(BML_CTX ctx);
 * @return BML_RET_OK on success.
 *
 */
-int bml_rdkb_steering_set_group(BML_CTX ctx, uint32_t steeringGroupIndex,
-                                struct BML_STEERING_AP_CONFIG *cfg_2,
-                                struct BML_STEERING_AP_CONFIG *cfg_5);
+int bml_pre_association_steering_set_group(BML_CTX ctx, uint32_t steeringGroupIndex,
+                                           struct BML_STEERING_AP_CONFIG *cfg_2,
+                                           struct BML_STEERING_AP_CONFIG *cfg_5);
 
 /*
 * Call this function to add/modify/remove per-client configuration config of client_mac.
@@ -66,9 +67,9 @@ int bml_rdkb_steering_set_group(BML_CTX ctx, uint32_t steeringGroupIndex,
 * @return BML_RET_OK on success.
 *
 */
-int bml_rdkb_steering_client_set(BML_CTX ctx, uint32_t steeringGroupIndex, const BML_MAC_ADDR bssid,
-                                 const BML_MAC_ADDR client_mac,
-                                 struct BML_STEERING_CLIENT_CONFIG *config);
+int bml_pre_association_steering_client_set(BML_CTX ctx, uint32_t steeringGroupIndex,
+                                            const BML_MAC_ADDR bssid, const BML_MAC_ADDR client_mac,
+                                            struct BML_STEERING_CLIENT_CONFIG *config);
 
 /*
 * Callback registration function.
@@ -77,7 +78,7 @@ int bml_rdkb_steering_client_set(BML_CTX ctx, uint32_t steeringGroupIndex, const
 * @param[in] pCB pointer to callback function or NULL to unregister.
 * @return BML_RET_OK on success.
 */
-int bml_rdkb_steering_event_register(BML_CTX ctx, BML_EVENT_CB pCB);
+int bml_pre_association_steering_event_register(BML_CTX ctx, BML_EVENT_CB pCB);
 
 /** 
 * On demand measure.
@@ -90,8 +91,9 @@ int bml_rdkb_steering_event_register(BML_CTX ctx, BML_EVENT_CB pCB);
 * @return BML_RET_OK on success.
 *
 */
-int bml_rdkb_steering_client_measure(BML_CTX ctx, unsigned int steeringGroupIndex,
-                                     const BML_MAC_ADDR bssid, const BML_MAC_ADDR client_mac);
+int bml_pre_association_steering_client_measure(BML_CTX ctx, unsigned int steeringGroupIndex,
+                                                const BML_MAC_ADDR bssid,
+                                                const BML_MAC_ADDR client_mac);
 
 /**Initiate a Client Disconnect.
  *
@@ -105,15 +107,16 @@ int bml_rdkb_steering_client_measure(BML_CTX ctx, unsigned int steeringGroupInde
  *
  * @return BML_RET_OK on success.
  */
-int bml_rdkb_steering_client_disconnect(BML_CTX ctx, unsigned int steeringGroupIndex,
-                                        const BML_MAC_ADDR bssid, const BML_MAC_ADDR client_mac,
-                                        BML_DISCONNECT_TYPE type, unsigned int reason);
+int bml_pre_association_steering_client_disconnect(BML_CTX ctx, unsigned int steeringGroupIndex,
+                                                   const BML_MAC_ADDR bssid,
+                                                   const BML_MAC_ADDR client_mac,
+                                                   BML_DISCONNECT_TYPE type, unsigned int reason);
 /**
  * Check whether the connection with the beerocks platform is alive and well.
  *
  * @return BML_RET_OK on success.
  */
-int bml_rdkb_ping(BML_CTX ctx);
+int bml_pre_association_steering_ping(BML_CTX ctx);
 
 /**
  * Enables or disables beerocks client band steering.
@@ -123,10 +126,10 @@ int bml_rdkb_ping(BML_CTX ctx);
  *
  * @return BML_RET_OK on success.
  */
-int bml_rdkb_set_client_band_steering(BML_CTX ctx, int enable);
+int bml_pre_association_steering_set_client_band_steering(BML_CTX ctx, int enable);
 
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
 
-#endif /* _BML_RDKB_H_ */
+#endif /* _BML_PRE_ASSOCIATION_STEERING_H_ */
