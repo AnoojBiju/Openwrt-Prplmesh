@@ -137,14 +137,13 @@ class GenericDevice():
             Whether to stop the device when it enters its bootloader or not.
         """
         with SerialDevice(self.baudrate, self.name,
-                          self.serial_prompt, expect_prompt_on_connect=False) as ser:
+                          self.serial_prompt, expect_prompt_on_connect=False) as shell:
             print("Reset board.")
 
-            shell = ser.shell
             if serial_type == ShellType.UBOOT:
                 shell.sendline("reset")
             elif serial_type in [ShellType.PRPLOS, ShellType.RDKB, ShellType.LINUX_UNKNOWN]:
-                shell.sendline("reboot ; sleep 15 ; reboot -f")
+                shell.sendline("reboot ; sleep 15 && echo force rebooting && reboot -f")
             if stop_in_bootloader:
                 print("Device will be stopped in its bootloader.")
                 shell.expect(self.boot_stop_expression, timeout=180)
@@ -170,8 +169,7 @@ class GenericDevice():
         OSTYPE_RE = r"NAME=[^\s]*"
 
         with SerialDevice(self.baudrate, self.name, self.serial_prompt,
-                          expect_prompt_on_connect=False) as ser:
-            shell = ser.shell
+                          expect_prompt_on_connect=False) as shell:
             shell.send('\003')
             shell.expect([self.bootloader_prompt, pexpect.TIMEOUT], timeout=1)
             if shell.match is not pexpect.TIMEOUT:
