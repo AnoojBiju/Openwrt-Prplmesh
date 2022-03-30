@@ -10,7 +10,7 @@
 #include "son_actions.h"
 #include "tasks/bml_task.h"
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
-#include "tasks/rdkb/rdkb_wlan_task.h"
+#include "tasks/pre_association_steering/pre_association_steering_task.h"
 #endif
 #include "db/network_map.h"
 #include "tasks/channel_selection_task.h"
@@ -1493,15 +1493,16 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
 
-        rdkb_wlan_task::steering_set_group_request_event new_event;
+        pre_association_steering_task::steering_set_group_request_event new_event;
         new_event.sd                 = sd;
         new_event.remove             = request->remove();
         new_event.steeringGroupIndex = request->steeringGroupIndex();
         new_event.cfg_2              = request->cfg_2();
         new_event.cfg_5              = request->cfg_5();
 
-        tasks.push_event(database.get_rdkb_wlan_task_id(),
-                         rdkb_wlan_task::events::STEERING_SET_GROUP_REQUEST, &new_event);
+        tasks.push_event(database.get_pre_association_steering_task_id(),
+                         pre_association_steering_task::events::STEERING_SET_GROUP_REQUEST,
+                         &new_event);
         break;
     }
     case beerocks_message::ACTION_BML_STEERING_CLIENT_SET_REQUEST: {
@@ -1513,7 +1514,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
 
-        rdkb_wlan_task::steering_client_set_request_event new_event;
+        pre_association_steering_task::steering_client_set_request_event new_event;
         //checking for remove option
         new_event.sd                 = sd;
         new_event.remove             = request->remove();
@@ -1522,8 +1523,9 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         new_event.client_mac         = request->client_mac();
         new_event.config             = request->config();
 
-        tasks.push_event(database.get_rdkb_wlan_task_id(),
-                         rdkb_wlan_task::events::STEERING_CLIENT_SET_REQUEST, &new_event);
+        tasks.push_event(database.get_pre_association_steering_task_id(),
+                         pre_association_steering_task::events::STEERING_CLIENT_SET_REQUEST,
+                         &new_event);
         break;
     }
     case beerocks_message::ACTION_BML_STEERING_EVENT_REGISTER_UNREGISTER_REQUEST: {
@@ -1535,15 +1537,17 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
 
-        //TODO: set database to update sd as listener in rdkb_wlan_task.
-        rdkb_wlan_task::listener_general_register_unregister_event new_event;
+        //TODO: set database to update sd as listener in pre_association_steering_task.
+        pre_association_steering_task::listener_general_register_unregister_event new_event;
         new_event.sd = sd;
         if (request->unregister()) {
-            tasks.push_event(database.get_rdkb_wlan_task_id(),
-                             rdkb_wlan_task::events::STEERING_EVENT_UNREGISTER, &new_event);
+            tasks.push_event(database.get_pre_association_steering_task_id(),
+                             pre_association_steering_task::events::STEERING_EVENT_UNREGISTER,
+                             &new_event);
         } else {
-            tasks.push_event(database.get_rdkb_wlan_task_id(),
-                             rdkb_wlan_task::events::STEERING_EVENT_REGISTER, &new_event);
+            tasks.push_event(database.get_pre_association_steering_task_id(),
+                             pre_association_steering_task::events::STEERING_EVENT_REGISTER,
+                             &new_event);
         }
 
         break;
@@ -1558,7 +1562,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
 
-        rdkb_wlan_task::steering_client_disconnect_request_event new_event;
+        pre_association_steering_task::steering_client_disconnect_request_event new_event;
         new_event.sd                 = sd;
         new_event.client_mac         = request->client_mac();
         new_event.steeringGroupIndex = request->steeringGroupIndex();
@@ -1566,8 +1570,9 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         new_event.type               = request->type();
         new_event.reason             = request->reason();
 
-        tasks.push_event(database.get_rdkb_wlan_task_id(),
-                         rdkb_wlan_task::events::STEERING_CLIENT_DISCONNECT_REQUEST, &new_event);
+        tasks.push_event(database.get_pre_association_steering_task_id(),
+                         pre_association_steering_task::events::STEERING_CLIENT_DISCONNECT_REQUEST,
+                         &new_event);
         break;
     }
     case beerocks_message::ACTION_BML_STEERING_CLIENT_MEASURE_REQUEST: {
@@ -1580,7 +1585,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
 
-        rdkb_wlan_task::steering_rssi_measurement_request_event new_event;
+        pre_association_steering_task::steering_rssi_measurement_request_event new_event;
         new_event.sd           = sd;
         std::string client_mac = tlvf::mac_to_string(request->client_mac());
         std::string sta_parent = database.get_node_parent(client_mac);
@@ -1595,8 +1600,9 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         new_event.params.cross                  = 0;
         new_event.params.mon_ping_burst_pkt_num = 0;
 
-        tasks.push_event(database.get_rdkb_wlan_task_id(),
-                         rdkb_wlan_task::events::STEERING_RSSI_MEASUREMENT_REQUEST, &new_event);
+        tasks.push_event(database.get_pre_association_steering_task_id(),
+                         pre_association_steering_task::events::STEERING_RSSI_MEASUREMENT_REQUEST,
+                         &new_event);
         break;
     }
 #endif //FEATURE_PRE_ASSOCIATION_STEERING

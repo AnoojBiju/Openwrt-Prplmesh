@@ -6,7 +6,7 @@
  * See LICENSE file for more details.
  */
 
-#include "bml_rdkb_internal.h"
+#include "bml_pre_association_steering_internal.h"
 
 #include <bcl/beerocks_message_structs.h>
 #include <easylogging++.h>
@@ -20,20 +20,20 @@
 using namespace beerocks;
 using namespace net;
 
-int bml_rdkb_internal::steering_set_group(uint32_t steeringGroupIndex,
-                                          BML_STEERING_AP_CONFIG *cfg_2,
-                                          BML_STEERING_AP_CONFIG *cfg_5)
+int bml_pre_association_steering_internal::steering_set_group(uint32_t steeringGroupIndex,
+                                                              BML_STEERING_AP_CONFIG *cfg_2,
+                                                              BML_STEERING_AP_CONFIG *cfg_5)
 {
-    LOG(DEBUG) << "bml_rdkb_internal::steering_set_group - entry";
+    LOG(DEBUG) << "bml_pre_association_steering_internal::steering_set_group - entry";
     // If the socket is not valid, attempt to re-establish the connection
     if (m_sockMaster == nullptr && !connect_to_master()) {
         return (-BML_RET_CONNECT_FAIL);
     }
 
     // Initialize the promise for receiving the response
-    beerocks::promise<int> prmRdkbWlan;
-    m_prmRdkbWlan  = &prmRdkbWlan;
-    int iOpTimeout = RESPONSE_TIMEOUT; // Default timeout
+    beerocks::promise<int> prmPreAssociationSteering;
+    m_prmPreAssociationSteering = &prmPreAssociationSteering;
+    int iOpTimeout              = RESPONSE_TIMEOUT; // Default timeout
 
     auto request =
         message_com::create_vs_message<beerocks_message::cACTION_BML_STEERING_SET_GROUP_REQUEST>(
@@ -75,30 +75,31 @@ int bml_rdkb_internal::steering_set_group(uint32_t steeringGroupIndex,
 
     int iRet = BML_RET_OK;
 
-    if (!prmRdkbWlan.wait_for(iOpTimeout)) {
+    if (!prmPreAssociationSteering.wait_for(iOpTimeout)) {
         LOG(ERROR) << "Timeout while waiting for configuration get response...";
-        m_prmRdkbWlan = nullptr;
+        m_prmPreAssociationSteering = nullptr;
         return (-BML_RET_TIMEOUT);
     }
 
     // Get response
-    iRet = prmRdkbWlan.get_value();
+    iRet = prmPreAssociationSteering.get_value();
 
-    m_prmRdkbWlan = nullptr;
+    m_prmPreAssociationSteering = nullptr;
 
     if (iRet != BML_RET_OK) {
         LOG(ERROR) << "Configuration get failed!";
     }
 
-    LOG(DEBUG) << "bml_rdkb_internal::steering_set_group - exit, ret=" << iRet;
+    LOG(DEBUG) << "bml_pre_association_steering_internal::steering_set_group - exit, ret=" << iRet;
     return (iRet);
 }
 
-int bml_rdkb_internal::steering_client_set(uint32_t steeringGroupIndex, const BML_MAC_ADDR bssid,
-                                           const BML_MAC_ADDR client_mac,
-                                           BML_STEERING_CLIENT_CONFIG *config)
+int bml_pre_association_steering_internal::steering_client_set(uint32_t steeringGroupIndex,
+                                                               const BML_MAC_ADDR bssid,
+                                                               const BML_MAC_ADDR client_mac,
+                                                               BML_STEERING_CLIENT_CONFIG *config)
 {
-    LOG(DEBUG) << "bml_rdkb_internal::steering_client_set - entry";
+    LOG(DEBUG) << "bml_pre_association_steering_internal::steering_client_set - entry";
 
     // If the socket is not valid, attempt to re-establish the connection
     if (m_sockMaster == nullptr && !connect_to_master()) {
@@ -106,9 +107,9 @@ int bml_rdkb_internal::steering_client_set(uint32_t steeringGroupIndex, const BM
     }
 
     // Initialize the promise for receiving the response
-    beerocks::promise<int> prmRdkbWlan;
-    m_prmRdkbWlan  = &prmRdkbWlan;
-    int iOpTimeout = RESPONSE_TIMEOUT; // Default timeout
+    beerocks::promise<int> prmPreAssociationSteering;
+    m_prmPreAssociationSteering = &prmPreAssociationSteering;
+    int iOpTimeout              = RESPONSE_TIMEOUT; // Default timeout
 
     auto request =
         message_com::create_vs_message<beerocks_message::cACTION_BML_STEERING_CLIENT_SET_REQUEST>(
@@ -142,28 +143,28 @@ int bml_rdkb_internal::steering_client_set(uint32_t steeringGroupIndex, const BM
 
     int iRet = BML_RET_OK;
 
-    if (!prmRdkbWlan.wait_for(iOpTimeout)) {
+    if (!prmPreAssociationSteering.wait_for(iOpTimeout)) {
         LOG(ERROR) << "Timeout while waiting for configuration get response... exit!";
-        m_prmRdkbWlan = nullptr;
+        m_prmPreAssociationSteering = nullptr;
         return (-BML_RET_TIMEOUT);
     }
 
     // Get response
-    iRet = prmRdkbWlan.get_value();
+    iRet = prmPreAssociationSteering.get_value();
 
-    m_prmRdkbWlan = nullptr;
+    m_prmPreAssociationSteering = nullptr;
 
     if (iRet != BML_RET_OK) {
         LOG(ERROR) << "Configuration get failed!";
     }
 
-    LOG(DEBUG) << "bml_rdkb_internal::steering_client_set - exit, ret=" << iRet;
+    LOG(DEBUG) << "bml_pre_association_steering_internal::steering_client_set - exit, ret=" << iRet;
     return (iRet);
 }
 
-int bml_rdkb_internal::steering_event_register(BML_EVENT_CB pCB)
+int bml_pre_association_steering_internal::steering_event_register(BML_EVENT_CB pCB)
 {
-    LOG(DEBUG) << "bml_rdkb_internal::steering_event_register - entry";
+    LOG(DEBUG) << "bml_pre_association_steering_internal::steering_event_register - entry";
 
     // Command supported only on local master
     if (!is_local_master()) {
@@ -184,9 +185,9 @@ int bml_rdkb_internal::steering_event_register(BML_EVENT_CB pCB)
     m_cbSteeringEvent = pCB;
 
     // Initialize the promise for receiving the response
-    beerocks::promise<int> prmRdkbWlan;
-    m_prmRdkbWlan  = &prmRdkbWlan;
-    int iOpTimeout = RESPONSE_TIMEOUT; // Default timeout
+    beerocks::promise<int> prmPreAssociationSteering;
+    m_prmPreAssociationSteering = &prmPreAssociationSteering;
+    int iOpTimeout              = RESPONSE_TIMEOUT; // Default timeout
 
     auto request = message_com::create_vs_message<
         beerocks_message::cACTION_BML_STEERING_EVENT_REGISTER_UNREGISTER_REQUEST>(cmdu_tx);
@@ -210,16 +211,16 @@ int bml_rdkb_internal::steering_event_register(BML_EVENT_CB pCB)
 
     int iRet = BML_RET_OK;
 
-    if (!prmRdkbWlan.wait_for(iOpTimeout)) {
+    if (!prmPreAssociationSteering.wait_for(iOpTimeout)) {
         LOG(WARNING) << "Timeout while waiting for configuration get response...";
-        m_prmRdkbWlan = nullptr;
+        m_prmPreAssociationSteering = nullptr;
         return (-BML_RET_TIMEOUT);
     }
 
     // Get response
-    iRet = prmRdkbWlan.get_value();
+    iRet = prmPreAssociationSteering.get_value();
 
-    m_prmRdkbWlan = nullptr;
+    m_prmPreAssociationSteering = nullptr;
 
     if (iRet != BML_RET_OK) {
         LOG(ERROR) << "Configuration get failed!";
@@ -228,19 +229,19 @@ int bml_rdkb_internal::steering_event_register(BML_EVENT_CB pCB)
     return (iRet);
 }
 
-int bml_rdkb_internal::steering_client_measure(uint32_t steeringGroupIndex,
-                                               const BML_MAC_ADDR bssid,
-                                               const BML_MAC_ADDR client_mac)
+int bml_pre_association_steering_internal::steering_client_measure(uint32_t steeringGroupIndex,
+                                                                   const BML_MAC_ADDR bssid,
+                                                                   const BML_MAC_ADDR client_mac)
 {
-    LOG(DEBUG) << "bml_rdkb_internal::steering_client_measure - entry";
+    LOG(DEBUG) << "bml_pre_association_steering_internal::steering_client_measure - entry";
     // If the socket is not valid, attempt to re-establish the connection
     if (m_sockMaster == nullptr && !connect_to_master()) {
         return (-BML_RET_CONNECT_FAIL);
     }
     // Initialize the promise for receiving the response
-    beerocks::promise<int> prmRdkbWlan;
-    m_prmRdkbWlan  = &prmRdkbWlan;
-    int iOpTimeout = RESPONSE_TIMEOUT; // Default timeout
+    beerocks::promise<int> prmPreAssociationSteering;
+    m_prmPreAssociationSteering = &prmPreAssociationSteering;
+    int iOpTimeout              = RESPONSE_TIMEOUT; // Default timeout
 
     auto request = message_com::create_vs_message<
         beerocks_message::cACTION_BML_STEERING_CLIENT_MEASURE_REQUEST>(cmdu_tx);
@@ -260,16 +261,16 @@ int bml_rdkb_internal::steering_client_measure(uint32_t steeringGroupIndex,
 
     int iRet = BML_RET_OK;
 
-    if (!prmRdkbWlan.wait_for(iOpTimeout)) {
+    if (!prmPreAssociationSteering.wait_for(iOpTimeout)) {
         LOG(WARNING) << "Timeout while waiting for configuration get response...";
-        m_prmRdkbWlan = nullptr;
+        m_prmPreAssociationSteering = nullptr;
         return (-BML_RET_TIMEOUT);
     }
 
     // Get response
-    iRet = prmRdkbWlan.get_value();
+    iRet = prmPreAssociationSteering.get_value();
 
-    m_prmRdkbWlan = nullptr;
+    m_prmPreAssociationSteering = nullptr;
 
     if (iRet != BML_RET_OK) {
         LOG(ERROR) << "Configuration get failed!";
@@ -278,20 +279,21 @@ int bml_rdkb_internal::steering_client_measure(uint32_t steeringGroupIndex,
     return (iRet);
 }
 
-int bml_rdkb_internal::steering_client_disconnect(uint32_t steeringGroupIndex,
-                                                  const BML_MAC_ADDR bssid,
-                                                  const BML_MAC_ADDR client_mac,
-                                                  BML_DISCONNECT_TYPE type, uint32_t reason)
+int bml_pre_association_steering_internal::steering_client_disconnect(uint32_t steeringGroupIndex,
+                                                                      const BML_MAC_ADDR bssid,
+                                                                      const BML_MAC_ADDR client_mac,
+                                                                      BML_DISCONNECT_TYPE type,
+                                                                      uint32_t reason)
 {
-    LOG(DEBUG) << "bml_rdkb_internal::steering_client_disconnect - entry";
+    LOG(DEBUG) << "bml_pre_association_steering_internal::steering_client_disconnect - entry";
     // If the socket is not valid, attempt to re-establish the connection
     if (m_sockMaster == nullptr && !connect_to_master()) {
         return (-BML_RET_CONNECT_FAIL);
     }
     // Initialize the promise for receiving the response
-    beerocks::promise<int> prmRdkbWlan;
-    m_prmRdkbWlan  = &prmRdkbWlan;
-    int iOpTimeout = RESPONSE_TIMEOUT; // Default timeout
+    beerocks::promise<int> prmPreAssociationSteering;
+    m_prmPreAssociationSteering = &prmPreAssociationSteering;
+    int iOpTimeout              = RESPONSE_TIMEOUT; // Default timeout
 
     auto request = message_com::create_vs_message<
         beerocks_message::cACTION_BML_STEERING_CLIENT_DISCONNECT_REQUEST>(cmdu_tx);
@@ -313,16 +315,16 @@ int bml_rdkb_internal::steering_client_disconnect(uint32_t steeringGroupIndex,
 
     int iRet = BML_RET_OK;
 
-    if (!prmRdkbWlan.wait_for(iOpTimeout)) {
+    if (!prmPreAssociationSteering.wait_for(iOpTimeout)) {
         LOG(WARNING) << "Timeout while waiting for configuration get response...";
-        m_prmRdkbWlan = nullptr;
+        m_prmPreAssociationSteering = nullptr;
         return (-BML_RET_TIMEOUT);
     }
 
     // Get response
-    iRet = prmRdkbWlan.get_value();
+    iRet = prmPreAssociationSteering.get_value();
 
-    m_prmRdkbWlan = nullptr;
+    m_prmPreAssociationSteering = nullptr;
 
     if (iRet != BML_RET_OK) {
         LOG(ERROR) << "Configuration get failed!";
@@ -331,7 +333,7 @@ int bml_rdkb_internal::steering_client_disconnect(uint32_t steeringGroupIndex,
     return (iRet);
 }
 
-bool bml_rdkb_internal::handle_steering_event_update(uint8_t *data_buffer)
+bool bml_pre_association_steering_internal::handle_steering_event_update(uint8_t *data_buffer)
 {
 
     BML_EVENT *event = (BML_EVENT *)data_buffer;
@@ -359,7 +361,8 @@ bool bml_rdkb_internal::handle_steering_event_update(uint8_t *data_buffer)
     return (true);
 }
 
-bool bml_rdkb_internal::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
+bool bml_pre_association_steering_internal::handle_cmdu(Socket *sd,
+                                                        ieee1905_1::CmduMessageRx &cmdu_rx)
 {
 
     auto beerocks_header = message_com::parse_intel_vs_message(cmdu_rx);
@@ -370,15 +373,16 @@ bool bml_rdkb_internal::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
 
     int ret = process_cmdu_header(beerocks_header);
     if (ret == BML_RET_OP_FAILED) {
-        LOG(ERROR) << "bml_rdkb_internal::process_cmdu_header failed !";
+        LOG(ERROR) << "bml_pre_association_steering_internal::process_cmdu_header failed !";
     } else if (ret == BML_RET_OP_NOT_SUPPORTED) {
-        LOG(ERROR) << "bml_rdkb_internal::process_cmdu_header return code is "
+        LOG(ERROR) << "bml_pre_association_steering_internal::process_cmdu_header return code is "
                       "BML_RET_OP_NOT_SUPPORTED, aborting!";
     }
     return (ret == BML_RET_OK);
 }
 
-int bml_rdkb_internal::process_cmdu_header(std::shared_ptr<beerocks_header> beerocks_header)
+int bml_pre_association_steering_internal::process_cmdu_header(
+    std::shared_ptr<beerocks_header> beerocks_header)
 {
     auto action    = beerocks_header->action();
     auto action_op = beerocks_header->action_op();
@@ -415,9 +419,9 @@ int bml_rdkb_internal::process_cmdu_header(std::shared_ptr<beerocks_header> beer
             }
 
             // Signal any waiting threads
-            if (m_prmRdkbWlan) {
-                m_prmRdkbWlan->set_value(response->error_code());
-                m_prmRdkbWlan = nullptr;
+            if (m_prmPreAssociationSteering) {
+                m_prmPreAssociationSteering->set_value(response->error_code());
+                m_prmPreAssociationSteering = nullptr;
             } else {
                 LOG(WARNING) << "Received ACTION_BML_STEERING_SET_GROUP_RESPONSE response, but no "
                                 "one is waiting...";
@@ -434,9 +438,9 @@ int bml_rdkb_internal::process_cmdu_header(std::shared_ptr<beerocks_header> beer
             }
 
             // Signal any waiting threads
-            if (m_prmRdkbWlan) {
-                m_prmRdkbWlan->set_value(response->error_code());
-                m_prmRdkbWlan = nullptr;
+            if (m_prmPreAssociationSteering) {
+                m_prmPreAssociationSteering->set_value(response->error_code());
+                m_prmPreAssociationSteering = nullptr;
             } else {
                 LOG(WARNING) << "Received ACTION_BML_STEERING_CLIENT_SET_RESPONSE response, but no "
                                 "one is waiting...";
@@ -452,9 +456,9 @@ int bml_rdkb_internal::process_cmdu_header(std::shared_ptr<beerocks_header> beer
             }
 
             // Signal any waiting threads
-            if (m_prmRdkbWlan) {
-                m_prmRdkbWlan->set_value(response->error_code());
-                m_prmRdkbWlan = nullptr;
+            if (m_prmPreAssociationSteering) {
+                m_prmPreAssociationSteering->set_value(response->error_code());
+                m_prmPreAssociationSteering = nullptr;
             } else {
                 LOG(WARNING) << "Received ACTION_BML_STEERING_CLIENT_SET_RESPONSE response, but no "
                                 "one is waiting...";
@@ -470,9 +474,9 @@ int bml_rdkb_internal::process_cmdu_header(std::shared_ptr<beerocks_header> beer
             }
 
             // Signal any waiting threads
-            if (m_prmRdkbWlan) {
-                m_prmRdkbWlan->set_value(response->error_code());
-                m_prmRdkbWlan = nullptr;
+            if (m_prmPreAssociationSteering) {
+                m_prmPreAssociationSteering->set_value(response->error_code());
+                m_prmPreAssociationSteering = nullptr;
             } else {
                 LOG(WARNING) << "Received ACTION_BML_STEERING_CLIENT_DISCONNECT_RESPONSE response, "
                                 "but no one is waiting...";
@@ -488,9 +492,9 @@ int bml_rdkb_internal::process_cmdu_header(std::shared_ptr<beerocks_header> beer
             }
 
             // Signal any waiting threads
-            if (m_prmRdkbWlan) {
-                m_prmRdkbWlan->set_value(response->error_code());
-                m_prmRdkbWlan = nullptr;
+            if (m_prmPreAssociationSteering) {
+                m_prmPreAssociationSteering->set_value(response->error_code());
+                m_prmPreAssociationSteering = nullptr;
             } else {
                 LOG(WARNING) << "Received ACTION_BML_STEERING_CLIENT_MEASURE_RESPONSE response, "
                                 "but no one is waiting...";

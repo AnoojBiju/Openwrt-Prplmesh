@@ -4948,13 +4948,13 @@ bool db::assign_bml_task_id(int new_task_id)
 
 int db::get_bml_task_id() { return bml_task_id; }
 
-bool db::assign_rdkb_wlan_task_id(int new_task_id)
+bool db::assign_pre_association_steering_task_id(int new_task_id)
 {
-    rdkb_wlan_task_id = new_task_id;
+    pre_association_steering_task_id = new_task_id;
     return true;
 }
 
-int db::get_rdkb_wlan_task_id() { return rdkb_wlan_task_id; }
+int db::get_pre_association_steering_task_id() { return pre_association_steering_task_id; }
 
 bool db::assign_agent_monitoring_task_id(int new_task_id)
 {

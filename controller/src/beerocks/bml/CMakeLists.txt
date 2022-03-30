@@ -14,8 +14,8 @@ file(GLOB bml_common_sources
 list(FIND FEATURES "FEATURE_PRE_ASSOCIATION_STEERING" _feature_pre_association_steering_index)
 if(${_feature_pre_association_steering_index} GREATER -1)
     file(GLOB RDKB_SOURCES 
-        ${MODULE_PATH}/rdkb/*.c* 
-        ${MODULE_PATH}/rdkb/internal/*.c*
+        ${MODULE_PATH}/pre_association_steering/*.c* 
+        ${MODULE_PATH}/pre_association_steering/internal/*.c*
     )
     list(APPEND bml_common_sources  ${RDKB_SOURCES})
 endif()
@@ -40,7 +40,7 @@ install(
 
 file(GLOB bml_install_files ${MODULE_PATH}/*.h)
 if (${_feature_pre_association_steering_index} GREATER -1)
-    file(GLOB RDKB_INCLUDES ${MODULE_PATH}/rdkb/*.h)
+    file(GLOB RDKB_INCLUDES ${MODULE_PATH}/pre_association_steering/*.h)
     list(APPEND bml_install_files ${RDKB_INCLUDES})
 endif()
 install(FILES ${bml_install_files} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/beerocks/${PROJECT_NAME})

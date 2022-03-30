@@ -491,30 +491,33 @@ void cli_bml::setFunctionsMapAndArray()
                        STRING_ARG, INT_ARG, INT_ARG, INT_ARG);
 
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
-    insertCommandToMap("bml_rdkb_steering_set_group", "<steeringGroupIndex> <cfg_2> <cfg_5>",
-                       "cfg2/5 = <bssid>, <utilCheckIntervalSec>, <utilAvgCount>, "
-                       "<inactCheckIntervalSec>, <inactCheckThresholdSec> (without spaces between "
-                       "commas) ",
-                       static_cast<pFunction>(&cli_bml::bml_rdkb_steering_set_group_caller), 3, 3,
-                       INT_ARG, STRING_ARG, STRING_ARG);
+    insertCommandToMap(
+        "bml_pre_association_steering_set_group", "<steeringGroupIndex> <cfg_2> <cfg_5>",
+        "cfg2/5 = <bssid>, <utilCheckIntervalSec>, <utilAvgCount>, "
+        "<inactCheckIntervalSec>, <inactCheckThresholdSec> (without spaces between "
+        "commas) ",
+        static_cast<pFunction>(&cli_bml::bml_pre_association_steering_set_group_caller), 3, 3,
+        INT_ARG, STRING_ARG, STRING_ARG);
 
     insertCommandToMap(
-        "bml_rdkb_steering_client_set", "<steeringGroupIndex> <bssid> <client_mac> [<config>]",
+        "bml_pre_association_steering_client_set",
+        "<steeringGroupIndex> <bssid> <client_mac> [<config>]",
         "config = <snrProbeHWM>, <snrProbeLWM>, <snrAuthHWM>, <snrAuthLWM>, <snrInactXing>, "
         "<snrHighXing>, <snrLowXing>, <authRejectReason> (without spaces between commas) "
         "if 'config' is not given, client will be removed ",
-        static_cast<pFunction>(&cli_bml::bml_rdkb_steering_client_set_caller), 3, 4, INT_ARG,
-        STRING_ARG, STRING_ARG, STRING_ARG);
-    insertCommandToMap("bml_rdkb_steering_event_register", "[<x>]",
-                       "Registers a callback function to events update from the beerocks platform, "
-                       "call with 'x' to unregister the callback ",
-                       static_cast<pFunction>(&cli_bml::bml_rdkb_steering_event_register_caller), 0,
-                       1, STRING_ARG);
+        static_cast<pFunction>(&cli_bml::bml_pre_association_steering_client_set_caller), 3, 4,
+        INT_ARG, STRING_ARG, STRING_ARG, STRING_ARG);
+    insertCommandToMap(
+        "bml_pre_association_steering_event_register", "[<x>]",
+        "Registers a callback function to events update from the beerocks platform, "
+        "call with 'x' to unregister the callback ",
+        static_cast<pFunction>(&cli_bml::bml_pre_association_steering_event_register_caller), 0, 1,
+        STRING_ARG);
 
-    insertCommandToMap("bml_rdkb_steering_client_measure",
-                       "<steeringGroupIndex> <bssid> <client_mac>", "",
-                       static_cast<pFunction>(&cli_bml::bml_rdkb_steering_client_measure_caller), 3,
-                       3, INT_ARG, STRING_ARG, STRING_ARG);
+    insertCommandToMap(
+        "bml_pre_association_steering_client_measure", "<steeringGroupIndex> <bssid> <client_mac>",
+        "", static_cast<pFunction>(&cli_bml::bml_pre_association_steering_client_measure_caller), 3,
+        3, INT_ARG, STRING_ARG, STRING_ARG);
 #endif
     insertCommandToMap(
         "bml_set_dcs_continuous_scan_enable", "<mac> <1 or 0>",
@@ -1192,14 +1195,14 @@ int cli_bml::bml_channel_selection_caller(int numOfArgs)
     return -1;
 }
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
-int cli_bml::bml_rdkb_steering_set_group_caller(int numOfArgs)
+int cli_bml::bml_pre_association_steering_set_group_caller(int numOfArgs)
 {
     if (numOfArgs == 3) {
         return steering_set_group(args.intArgs[0], args.stringArgs[1], args.stringArgs[2]);
     }
     return -1;
 }
-int cli_bml::bml_rdkb_steering_client_set_caller(int numOfArgs)
+int cli_bml::bml_pre_association_steering_client_set_caller(int numOfArgs)
 {
     if (numOfArgs == 4) {
         return steering_client_set(args.intArgs[0], args.stringArgs[1], args.stringArgs[2],
@@ -1209,7 +1212,7 @@ int cli_bml::bml_rdkb_steering_client_set_caller(int numOfArgs)
     }
     return -1;
 }
-int cli_bml::bml_rdkb_steering_event_register_caller(int numOfArgs)
+int cli_bml::bml_pre_association_steering_event_register_caller(int numOfArgs)
 {
     if (numOfArgs < 0)
         return -1;
@@ -1218,7 +1221,7 @@ int cli_bml::bml_rdkb_steering_event_register_caller(int numOfArgs)
     return steering_event_register(args.stringArgs[0]);
 }
 
-int cli_bml::bml_rdkb_steering_client_measure_caller(int numOfArgs)
+int cli_bml::bml_pre_association_steering_client_measure_caller(int numOfArgs)
 {
     if (numOfArgs == 3) {
         return steering_client_measure(args.intArgs[0], args.stringArgs[1], args.stringArgs[2]);
@@ -1933,8 +1936,8 @@ int cli_bml::steering_set_group(uint32_t steeringGroupIndex, const std::string &
     ;
     steering_set_group_string_to_struct(str_cfg_2, str_cfg_5, cfg2, cfg5);
 
-    int ret = bml_rdkb_steering_set_group(ctx, steeringGroupIndex, &cfg2, &cfg5);
-    printBmlReturnVals("bml_rdkb_steering_set_group", ret);
+    int ret = bml_pre_association_steering_set_group(ctx, steeringGroupIndex, &cfg2, &cfg5);
+    printBmlReturnVals("bml_pre_association_steering_set_group", ret);
     return 0;
 }
 
@@ -1948,14 +1951,16 @@ int cli_bml::steering_client_set(uint32_t steeringGroupIndex, const std::string 
     int ret;
     if (str_config.empty()) {
         //client remove
-        ret = bml_rdkb_steering_client_set(ctx, steeringGroupIndex, bssid, client_mac, nullptr);
+        ret = bml_pre_association_steering_client_set(ctx, steeringGroupIndex, bssid, client_mac,
+                                                      nullptr);
     } else {
         // client add
         BML_STEERING_CLIENT_CONFIG config = {};
         steering_client_set_string_to_struct(str_config, config);
-        ret = bml_rdkb_steering_client_set(ctx, steeringGroupIndex, bssid, client_mac, &config);
+        ret = bml_pre_association_steering_client_set(ctx, steeringGroupIndex, bssid, client_mac,
+                                                      &config);
     }
-    printBmlReturnVals("bml_rdkb_steering_client_set ", ret);
+    printBmlReturnVals("bml_pre_association_steering_client_set ", ret);
     return 0;
 }
 
@@ -1963,12 +1968,12 @@ int cli_bml::steering_event_register(const std::string &optional)
 {
     int ret;
     if (optional == "x") {
-        ret = bml_rdkb_steering_event_register(ctx, NULL);
+        ret = bml_pre_association_steering_event_register(ctx, NULL);
     } else {
-        ret = bml_rdkb_steering_event_register(ctx, events_update_to_console_cb);
+        ret = bml_pre_association_steering_event_register(ctx, events_update_to_console_cb);
     }
 
-    printBmlReturnVals("bml_rdkb_steering_event_register", ret);
+    printBmlReturnVals("bml_pre_association_steering_event_register", ret);
     return 0;
 }
 
@@ -1979,8 +1984,9 @@ int cli_bml::steering_client_measure(uint32_t steeringGroupIndex, const std::str
     tlvf::mac_from_string(client_mac, str_client_mac);
     BML_MAC_ADDR bssid;
     tlvf::mac_from_string(bssid, str_bssid);
-    int ret = bml_rdkb_steering_client_measure(ctx, steeringGroupIndex, bssid, client_mac);
-    printBmlReturnVals("bml_rdkb_steering_client_measure", ret);
+    int ret =
+        bml_pre_association_steering_client_measure(ctx, steeringGroupIndex, bssid, client_mac);
+    printBmlReturnVals("bml_pre_association_steering_client_measure", ret);
     return 0;
 }
 #endif //FEATURE_PRE_ASSOCIATION_STEERING

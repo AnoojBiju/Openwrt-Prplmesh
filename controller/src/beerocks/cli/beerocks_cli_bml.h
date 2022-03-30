@@ -13,7 +13,7 @@
 #include "beerocks_cli.h"
 #include "bml.h"
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
-#include "rdkb/bml_rdkb.h"
+#include "pre_association_steering/bml_pre_association_steering.h"
 #endif
 
 #include <bcl/beerocks_defines.h>
@@ -138,10 +138,10 @@ private:
     int bml_trigger_topology_discovery_caller(int numOfArgs);
     int bml_channel_selection_caller(int numOfArgs);
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
-    int bml_rdkb_steering_set_group_caller(int numOfArgs);
-    int bml_rdkb_steering_client_set_caller(int numOfArgs);
-    int bml_rdkb_steering_event_register_caller(int numOfArgs);
-    int bml_rdkb_steering_client_measure_caller(int numOfArgs);
+    int bml_pre_association_steering_set_group_caller(int numOfArgs);
+    int bml_pre_association_steering_client_set_caller(int numOfArgs);
+    int bml_pre_association_steering_event_register_caller(int numOfArgs);
+    int bml_pre_association_steering_client_measure_caller(int numOfArgs);
 #endif
     int set_dcs_continuous_scan_enable_caller(int numOfArgs);
     int get_dcs_continuous_scan_enable_caller(int numOfArgs);

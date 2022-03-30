@@ -25,7 +25,7 @@
 #include <tlvf/wfa_map/tlvProfile2ReasonCode.h>
 
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
-#include "rdkb/rdkb_wlan_task.h"
+#include "pre_association_steering/pre_association_steering_task.h"
 #endif
 
 using namespace beerocks;
@@ -537,9 +537,10 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
             new_event.vap_id       = vs_tlv->vap_id();
             new_event.capabilities = vs_tlv->capabilities();
 
-            tasks.push_event(database.get_rdkb_wlan_task_id(),
-                             rdkb_wlan_task::events::STEERING_EVENT_CLIENT_CONNECT_AVAILABLE,
-                             &new_event);
+            tasks.push_event(
+                database.get_pre_association_steering_task_id(),
+                pre_association_steering_task::events::STEERING_EVENT_CLIENT_CONNECT_AVAILABLE,
+                &new_event);
         }
 #endif
 
@@ -559,9 +560,10 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
             new_event.source = beerocks_message::eDisconnectSource(vs_tlv->disconnect_source());
             new_event.type   = beerocks_message::eDisconnectType(vs_tlv->disconnect_type());
 
-            tasks.push_event(database.get_rdkb_wlan_task_id(),
-                             rdkb_wlan_task::events::STEERING_EVENT_CLIENT_DISCONNECT_AVAILABLE,
-                             &new_event);
+            tasks.push_event(
+                database.get_pre_association_steering_task_id(),
+                pre_association_steering_task::events::STEERING_EVENT_CLIENT_DISCONNECT_AVAILABLE,
+                &new_event);
         }
 #endif
 

@@ -6,8 +6,8 @@
  * See LICENSE file for more details.
  */
 
-#ifndef _BML_RDKB_INTERNAL_H_
-#define _BML_RDKB_INTERNAL_H_
+#ifndef _BML_PRE_ASSOCIATION_STEERING_INTERNAL_H_
+#define _BML_PRE_ASSOCIATION_STEERING_INTERNAL_H_
 
 #include <bcl/beerocks_config_file.h>
 #include <bcl/beerocks_promise.h>
@@ -16,11 +16,11 @@
 #include <beerocks/tlvf/beerocks_message_common.h>
 
 #include "../../internal/bml_internal.h"
-#include "../bml_rdkb_defs.h"
+#include "../bml_pre_association_steering_defs.h"
 
 #include <mutex>
 
-class bml_rdkb_internal : public bml_internal {
+class bml_pre_association_steering_internal : public bml_internal {
 
 public:
     /*
@@ -93,8 +93,8 @@ protected:
 
 private:
     bool handle_steering_event_update(uint8_t *data_buffer);
-    beerocks::promise<int> *m_prmRdkbWlan = nullptr;
+    beerocks::promise<int> *m_prmPreAssociationSteering = nullptr;
     BML_EVENT_CB m_cbSteeringEvent        = nullptr;
 };
 
-#endif /* _BML_RDKB_INTERNAL_H_ */
+#endif /* _BML_PRE_ASSOCIATION_STEERING_INTERNAL_H_ */

@@ -6,10 +6,10 @@
  * See LICENSE file for more details.
  */
 
-#include "rdkb_wlan_task.h"
+#include "pre_association_steering_task.h"
 #include "../../db/db.h"
 #include "../../son_actions.h"
-#include "rdkb/bml_rdkb_defs.h"
+#include "pre_association_steering/bml_pre_association_steering_defs.h"
 
 #include <bcl/network/sockets.h>
 #include <easylogging++.h>
@@ -24,28 +24,29 @@
 using namespace beerocks;
 using namespace son;
 
-rdkb_wlan_task::rdkb_wlan_task(db &database_, ieee1905_1::CmduMessageTx &cmdu_tx_,
-                               task_pool &tasks_)
+pre_association_steering_task::pre_association_steering_task(db &database_,
+                                                             ieee1905_1::CmduMessageTx &cmdu_tx_,
+                                                             task_pool &tasks_)
     : task("rdkb wlan task"), database(database_), cmdu_tx(cmdu_tx_), tasks(tasks_)
 {
-    int prev_task_id = database.get_rdkb_wlan_task_id();
+    int prev_task_id = database.get_pre_association_steering_task_id();
     if (prev_task_id != -1) {
         tasks.kill_task(prev_task_id);
     }
-    database_.assign_rdkb_wlan_task_id(this->id);
+    database_.assign_pre_association_steering_task_id(this->id);
 }
 
-void rdkb_wlan_task::work() { pending_event_check_timeout(); }
+void pre_association_steering_task::work() { pending_event_check_timeout(); }
 
-void rdkb_wlan_task::handle_event(int event_type, void *obj)
+void pre_association_steering_task::handle_event(int event_type, void *obj)
 {
     std::vector<int> events_updates_listeners;
     uint32_t idx = 0;
     int sd;
 
-    while ((sd = get_bml_rdkb_wlan_socket_at(idx)) !=
+    while ((sd = get_bml_pre_association_steering_socket_at(idx)) !=
            beerocks::net::FileDescriptor::invalid_descriptor) {
-        if (get_bml_rdkb_wlan_events_update_enable(sd)) {
+        if (get_bml_pre_association_steering_events_update_enable(sd)) {
             events_updates_listeners.push_back(sd);
         }
         idx++;
@@ -57,8 +58,8 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
         if (obj) {
             auto event_obj = static_cast<listener_general_register_unregister_event *>(obj);
             TASK_LOG(DEBUG) << "STEERING_EVENT_REGISTER event was received";
-            add_bml_rdkb_wlan_socket(event_obj->sd);
-            if (!set_bml_rdkb_wlan_events_update_enable(event_obj->sd, true)) {
+            add_bml_pre_association_steering_socket(event_obj->sd);
+            if (!set_bml_pre_association_steering_events_update_enable(event_obj->sd, true)) {
                 TASK_LOG(ERROR) << "fail in changing events_update registration";
                 send_bml_response(event_type, event_obj->sd, -BML_RET_REGISTERTION_FAIL);
                 break;
@@ -72,7 +73,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
             auto event_obj = static_cast<listener_general_register_unregister_event *>(obj);
             TASK_LOG(DEBUG) << "UNREGISTER_TO_MONITOR_EVENT_UPDATES event was received";
 
-            if (!set_bml_rdkb_wlan_events_update_enable(event_obj->sd, false)) {
+            if (!set_bml_pre_association_steering_events_update_enable(event_obj->sd, false)) {
                 TASK_LOG(DEBUG) << "fail in changing stats_update unregistration";
                 send_bml_response(event_type, event_obj->sd, -BML_RET_REGISTERTION_FAIL);
                 break;
@@ -83,7 +84,8 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
     }
     case STEERING_SET_GROUP_REQUEST: {
         if (obj) {
-            auto event_obj = static_cast<rdkb_wlan_task::steering_set_group_request_event *>(obj);
+            auto event_obj =
+                static_cast<pre_association_steering_task::steering_set_group_request_event *>(obj);
             TASK_LOG(INFO) << "STEERING_SET_GROUP_REQUEST event was received - remove - "
                            << int(event_obj->remove) << ", group_index "
                            << int(event_obj->steeringGroupIndex);
@@ -110,7 +112,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
                 break;
             }
 
-            //rdkb_db.print_db();
+            //pre_association_steering_db.print_db();
 
             //send new VS message to each slave with his specific data.
             auto radios = database.get_active_hostaps();
@@ -147,7 +149,9 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
     }
     case STEERING_SET_GROUP_RESPONSE: {
         if (obj) {
-            auto event_obj = static_cast<rdkb_wlan_task::steering_set_group_response_event *>(obj);
+            auto event_obj =
+                static_cast<pre_association_steering_task::steering_set_group_response_event *>(
+                    obj);
             TASK_LOG(DEBUG) << "STEERING_SET_GROUP_RESPONSE event was received";
             auto res = check_for_pending_events(event_type);
             if (!res.first && !res.second) {
@@ -171,7 +175,9 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
     }
     case STEERING_CLIENT_SET_REQUEST: {
         if (obj) {
-            auto event_obj  = static_cast<rdkb_wlan_task::steering_client_set_request_event *>(obj);
+            auto event_obj =
+                static_cast<pre_association_steering_task::steering_client_set_request_event *>(
+                    obj);
             auto client_mac = tlvf::mac_to_string(event_obj->client_mac);
             TASK_LOG(INFO) << "STEERING_CLIENT_SET_REQUEST event was received for client_mac "
                            << client_mac << " bssid " << event_obj->bssid;
@@ -209,8 +215,8 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
             // or if the client configuration is the same as already configured,
             // no need to do anything - return success immediately
             std::shared_ptr<beerocks_message::sSteeringClientConfig> existing_config = nullptr;
-            auto res = rdkb_db.get_client_config(client_mac, event_obj->bssid,
-                                                 event_obj->steeringGroupIndex, existing_config);
+            auto res = pre_association_steering_db.get_client_config(
+                client_mac, event_obj->bssid, event_obj->steeringGroupIndex, existing_config);
             bool update_db_and_agent_is_needed = true;
             if (!res && event_obj->remove) {
                 // client config doesn't exists in DB and and asked to be removed
@@ -235,11 +241,12 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
 
             // set or remove the client config
             res = event_obj->remove
-                      ? rdkb_db.clear_client_config(client_mac, event_obj->bssid,
-                                                    event_obj->steeringGroupIndex)
-                      : rdkb_db.set_client_config(client_mac, event_obj->bssid,
-                                                  event_obj->steeringGroupIndex, event_obj->config);
-            //rdkb_db.print_db();
+                      ? pre_association_steering_db.clear_client_config(
+                            client_mac, event_obj->bssid, event_obj->steeringGroupIndex)
+                      : pre_association_steering_db.set_client_config(client_mac, event_obj->bssid,
+                                                                      event_obj->steeringGroupIndex,
+                                                                      event_obj->config);
+            //pre_association_steering_db.print_db();
             if (!res) {
                 TASK_LOG(ERROR) << "STEERING_CLIENT_SET_REQUEST db configuration failed";
                 send_bml_response(int(STEERING_CLIENT_SET_RESPONSE), event_obj->sd,
@@ -267,7 +274,9 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
     }
     case STEERING_CLIENT_SET_RESPONSE: {
         if (obj) {
-            auto event_obj = static_cast<rdkb_wlan_task::steering_client_set_response_event *>(obj);
+            auto event_obj =
+                static_cast<pre_association_steering_task::steering_client_set_response_event *>(
+                    obj);
             TASK_LOG(DEBUG) << "STEERING_CLIENT_SET_RESPONSE event was received";
             auto res = check_for_pending_events(event_type);
             TASK_LOG(DEBUG) << "res.first=" << res.first << ", res.second=" << res.second;
@@ -305,8 +314,8 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
     }
     case STEERING_CLIENT_DISCONNECT_RESPONSE: {
         if (obj) {
-            auto event_obj =
-                static_cast<rdkb_wlan_task::steering_client_disconnect_response_event *>(obj);
+            auto event_obj = static_cast<
+                pre_association_steering_task::steering_client_disconnect_response_event *>(obj);
             TASK_LOG(INFO) << "STEERING_CLIENT_DISCONNECT_RESPONSE event was received";
             auto res = check_for_pending_events(event_type);
             if (!res.first && !res.second) {
@@ -368,7 +377,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
             // check that client exists in DB and connected to provided bssid
             std::string client_mac = tlvf::mac_to_string(event_obj->params.mac);
             auto bssid             = std::string(event_obj->bssid);
-            auto group_index       = rdkb_db.get_group_index(client_mac, bssid);
+            auto group_index       = pre_association_steering_db.get_group_index(client_mac, bssid);
             if (group_index == -1) {
                 TASK_LOG(ERROR) << "event for un-configured client mac - " << client_mac
                                 << " ignored";
@@ -411,14 +420,15 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
     case STEERING_REMOVE_SOCKET: {
         if (obj) {
             auto event_obj = static_cast<listener_general_register_unregister_event *>(obj);
-            if (is_bml_rdkb_wlan_listener_socket(event_obj->sd)) {
+            if (is_bml_pre_association_steering_listener_socket(event_obj->sd)) {
                 TASK_LOG(DEBUG) << "STEERING_REMOVE_SOCKET event was received";
 
-                if (!set_bml_rdkb_wlan_events_update_enable(event_obj->sd, false)) {
-                    TASK_LOG(ERROR) << "fail in set_bml_rdkb_wlan_events_update_enable";
+                if (!set_bml_pre_association_steering_events_update_enable(event_obj->sd, false)) {
+                    TASK_LOG(ERROR)
+                        << "fail in set_bml_pre_association_steering_events_update_enable";
                 }
 
-                remove_bml_rdkb_wlan_socket(event_obj->sd);
+                remove_bml_pre_association_steering_socket(event_obj->sd);
             }
         }
         break;
@@ -429,7 +439,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
             auto event_obj   = static_cast<beerocks_message::sSteeringEvActivity *>(obj);
             auto client_mac  = tlvf::mac_to_string(event_obj->client_mac);
             auto bssid       = tlvf::mac_to_string(event_obj->bssid);
-            auto group_index = rdkb_db.get_group_index(client_mac, bssid);
+            auto group_index = pre_association_steering_db.get_group_index(client_mac, bssid);
             TASK_LOG(INFO) << "STEERING_EVENT_CLIENT_ACTIVITY_AVAILABLE client_mac = " << client_mac
                            << " active=" << event_obj->active << " bssid = " << bssid
                            << " group index " << int(group_index);
@@ -484,7 +494,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
             auto event_obj   = static_cast<beerocks_message::sSteeringEvSnrXing *>(obj);
             auto client_mac  = tlvf::mac_to_string(event_obj->client_mac);
             auto bssid       = tlvf::mac_to_string(event_obj->bssid);
-            auto group_index = rdkb_db.get_group_index(client_mac, bssid);
+            auto group_index = pre_association_steering_db.get_group_index(client_mac, bssid);
             TASK_LOG(INFO) << "STEERING_EVENT_SNR_XING_AVAILABLE client_mac = " << client_mac
                            << " bssid = " << bssid << " group index " << int(group_index);
 
@@ -543,7 +553,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
             auto event_obj   = static_cast<beerocks_message::sSteeringEvSnr *>(obj);
             auto client_mac  = tlvf::mac_to_string(event_obj->client_mac);
             auto bssid       = tlvf::mac_to_string(event_obj->bssid);
-            auto group_index = rdkb_db.get_group_index(client_mac, bssid);
+            auto group_index = pre_association_steering_db.get_group_index(client_mac, bssid);
             TASK_LOG(INFO) << "STEERING_EVENT_SNR_AVAILABLE client_mac = " << client_mac
                            << " bssid = " << bssid << " group index " << int(group_index);
 
@@ -595,7 +605,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
             auto event_obj   = static_cast<beerocks_message::sSteeringEvProbeReq *>(obj);
             auto client_mac  = tlvf::mac_to_string(event_obj->client_mac);
             auto bssid       = tlvf::mac_to_string(event_obj->bssid);
-            auto group_index = rdkb_db.get_group_index(client_mac, bssid);
+            auto group_index = pre_association_steering_db.get_group_index(client_mac, bssid);
             TASK_LOG(INFO) << "STEERING_EVENT_PROBE_REQ_AVAILABLE client_mac = " << client_mac
                            << " bssid = " << bssid << " group index " << int(group_index);
 
@@ -650,7 +660,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
             auto event_obj   = static_cast<beerocks_message::sSteeringEvAuthFail *>(obj);
             auto client_mac  = tlvf::mac_to_string(event_obj->client_mac);
             auto bssid       = tlvf::mac_to_string(event_obj->bssid);
-            auto group_index = rdkb_db.get_group_index(client_mac, bssid);
+            auto group_index = pre_association_steering_db.get_group_index(client_mac, bssid);
             TASK_LOG(INFO) << "STEERING_EVENT_AUTH_FAIL_AVAILABLE client_mac = " << client_mac
                            << " bssid = " << bssid << " group index " << int(group_index);
 
@@ -707,7 +717,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
             auto event_obj   = static_cast<bwl::sClientAssociationParams *>(obj);
             auto client_mac  = tlvf::mac_to_string(event_obj->mac);
             auto bssid       = tlvf::mac_to_string(event_obj->bssid);
-            auto group_index = rdkb_db.get_group_index(client_mac, bssid);
+            auto group_index = pre_association_steering_db.get_group_index(client_mac, bssid);
             TASK_LOG(INFO) << "STEERING_EVENT_CLIENT_CONNECT_AVAILABLE client_mac = " << client_mac
                            << " bssid = " << bssid << " group index " << int(group_index);
 
@@ -782,7 +792,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
             auto event_obj   = static_cast<beerocks_message::sSteeringEvDisconnect *>(obj);
             auto client_mac  = tlvf::mac_to_string(event_obj->client_mac);
             auto bssid       = tlvf::mac_to_string(event_obj->bssid);
-            auto group_index = rdkb_db.get_group_index(client_mac, bssid);
+            auto group_index = pre_association_steering_db.get_group_index(client_mac, bssid);
             TASK_LOG(INFO) << "STEERING_EVENT_CLIENT_DISCONNECT_AVAILABLE client_mac = "
                            << client_mac << " bssid = " << bssid << " group index "
                            << int(group_index) << " reason " << int(event_obj->reason) << " source "
@@ -846,7 +856,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
 
         TASK_LOG(INFO) << "STEERING_SLAVE_JOIN event was received";
         auto event_obj = static_cast<steering_slave_join_event *>(obj);
-        if (rdkb_db.get_steering_group_list().empty()) {
+        if (pre_association_steering_db.get_steering_group_list().empty()) {
             TASK_LOG(INFO) << "no configuration to re-send to agent, radio_mac -"
                            << event_obj->radio_mac;
             break;
@@ -862,11 +872,11 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
     }
 }
 
-bool rdkb_wlan_task::is_bml_rdkb_wlan_listener_socket(int sd)
+bool pre_association_steering_task::is_bml_pre_association_steering_listener_socket(int sd)
 {
     if (sd != beerocks::net::FileDescriptor::invalid_descriptor) {
-        for (auto it = bml_rdkb_wlan_listeners_sockets.begin();
-             it < bml_rdkb_wlan_listeners_sockets.end(); it++) {
+        for (auto it = bml_pre_association_steering_listeners_sockets.begin();
+             it < bml_pre_association_steering_listeners_sockets.end(); it++) {
             if (sd == (*it).sd) {
                 return true;
             }
@@ -875,19 +885,19 @@ bool rdkb_wlan_task::is_bml_rdkb_wlan_listener_socket(int sd)
     return false;
 }
 
-int rdkb_wlan_task::get_bml_rdkb_wlan_socket_at(uint32_t idx)
+int pre_association_steering_task::get_bml_pre_association_steering_socket_at(uint32_t idx)
 {
-    if (idx < (bml_rdkb_wlan_listeners_sockets.size())) {
-        return bml_rdkb_wlan_listeners_sockets.at(idx).sd;
+    if (idx < (bml_pre_association_steering_listeners_sockets.size())) {
+        return bml_pre_association_steering_listeners_sockets.at(idx).sd;
     }
     return beerocks::net::FileDescriptor::invalid_descriptor;
 }
 
-bool rdkb_wlan_task::get_bml_rdkb_wlan_events_update_enable(int sd)
+bool pre_association_steering_task::get_bml_pre_association_steering_events_update_enable(int sd)
 {
     if (sd != beerocks::net::FileDescriptor::invalid_descriptor) {
-        for (auto it = bml_rdkb_wlan_listeners_sockets.begin();
-             it < bml_rdkb_wlan_listeners_sockets.end(); it++) {
+        for (auto it = bml_pre_association_steering_listeners_sockets.begin();
+             it < bml_pre_association_steering_listeners_sockets.end(); it++) {
             if (sd == (*it).sd) {
                 return (*it).events_updates;
             }
@@ -896,11 +906,12 @@ bool rdkb_wlan_task::get_bml_rdkb_wlan_events_update_enable(int sd)
     return false;
 }
 
-bool rdkb_wlan_task::set_bml_rdkb_wlan_events_update_enable(int sd, bool update_enable)
+bool pre_association_steering_task::set_bml_pre_association_steering_events_update_enable(
+    int sd, bool update_enable)
 {
     if (sd != beerocks::net::FileDescriptor::invalid_descriptor) {
-        for (auto it = bml_rdkb_wlan_listeners_sockets.begin();
-             it < bml_rdkb_wlan_listeners_sockets.end(); it++) {
+        for (auto it = bml_pre_association_steering_listeners_sockets.begin();
+             it < bml_pre_association_steering_listeners_sockets.end(); it++) {
             if (sd == (*it).sd) {
                 (*it).events_updates = update_enable;
                 return true;
@@ -910,36 +921,37 @@ bool rdkb_wlan_task::set_bml_rdkb_wlan_events_update_enable(int sd, bool update_
     return false;
 }
 
-void rdkb_wlan_task::add_bml_rdkb_wlan_socket(int sd)
+void pre_association_steering_task::add_bml_pre_association_steering_socket(int sd)
 {
     if (sd != beerocks::net::FileDescriptor::invalid_descriptor) {
-        for (auto it = bml_rdkb_wlan_listeners_sockets.begin();
-             it < bml_rdkb_wlan_listeners_sockets.end(); it++) {
+        for (auto it = bml_pre_association_steering_listeners_sockets.begin();
+             it < bml_pre_association_steering_listeners_sockets.end(); it++) {
             if (sd == (*it).sd) {
                 return;
             }
         }
-        sBmlRdkbWlanListener bml_rdkb_wlan_listener = {0};
-        bml_rdkb_wlan_listener.sd                   = sd;
-        bml_rdkb_wlan_listeners_sockets.push_back(bml_rdkb_wlan_listener);
+        sBmlPreAssociationSteeringListener bml_pre_association_steering_listener = {0};
+        bml_pre_association_steering_listener.sd                                 = sd;
+        bml_pre_association_steering_listeners_sockets.push_back(
+            bml_pre_association_steering_listener);
     }
 }
 
-void rdkb_wlan_task::remove_bml_rdkb_wlan_socket(int sd)
+void pre_association_steering_task::remove_bml_pre_association_steering_socket(int sd)
 {
     if (sd != beerocks::net::FileDescriptor::invalid_descriptor) {
-        for (auto it = bml_rdkb_wlan_listeners_sockets.begin();
-             it < bml_rdkb_wlan_listeners_sockets.end(); it++) {
+        for (auto it = bml_pre_association_steering_listeners_sockets.begin();
+             it < bml_pre_association_steering_listeners_sockets.end(); it++) {
             if (sd == (*it).sd) {
-                it = bml_rdkb_wlan_listeners_sockets.erase(it);
+                it = bml_pre_association_steering_listeners_sockets.erase(it);
                 return;
             }
         }
     }
 }
 
-void rdkb_wlan_task::send_bml_event_to_listeners(ieee1905_1::CmduMessageTx &cmdu_tx,
-                                                 const std::vector<int> &bml_listeners)
+void pre_association_steering_task::send_bml_event_to_listeners(
+    ieee1905_1::CmduMessageTx &cmdu_tx, const std::vector<int> &bml_listeners)
 {
     auto controller_ctx = database.get_controller_ctx();
     if (!controller_ctx) {
@@ -952,12 +964,12 @@ void rdkb_wlan_task::send_bml_event_to_listeners(ieee1905_1::CmduMessageTx &cmdu
     }
 }
 
-bool rdkb_wlan_task::send_steering_conf_to_agent(const std::string &radio_mac)
+bool pre_association_steering_task::send_steering_conf_to_agent(const std::string &radio_mac)
 {
     auto agent_mac     = database.get_node_parent_ire(radio_mac);
     auto is_radio_5ghz = database.is_node_5ghz(radio_mac);
 
-    for (const auto &steering_group : rdkb_db.get_steering_group_list()) {
+    for (const auto &steering_group : pre_association_steering_db.get_steering_group_list()) {
         auto update = message_com::create_vs_message<
             beerocks_message::cACTION_CONTROL_STEERING_CLIENT_SET_GROUP_REQUEST>(cmdu_tx);
         if (update == nullptr) {
@@ -998,10 +1010,9 @@ bool rdkb_wlan_task::send_steering_conf_to_agent(const std::string &radio_mac)
     return true;
 }
 
-int32_t
-rdkb_wlan_task::steering_group_fill_ap_configuration(steering_set_group_request_event *event_obj,
-                                                     beerocks_message::sSteeringApConfig &cfg_2,
-                                                     beerocks_message::sSteeringApConfig &cfg_5)
+int32_t pre_association_steering_task::steering_group_fill_ap_configuration(
+    steering_set_group_request_event *event_obj, beerocks_message::sSteeringApConfig &cfg_2,
+    beerocks_message::sSteeringApConfig &cfg_5)
 {
     if (!event_obj->remove) {
         if (event_obj->cfg_2.inactCheckIntervalSec > event_obj->cfg_2.inactCheckThresholdSec ||
@@ -1010,10 +1021,10 @@ rdkb_wlan_task::steering_group_fill_ap_configuration(steering_set_group_request_
                                "inactCheckThresholdSec , invalid configuration";
             return -BML_RET_INVALID_CONFIGURATION;
         }
-        rdkb_db.set_steering_group_config(event_obj->steeringGroupIndex, event_obj->cfg_2,
-                                          event_obj->cfg_5);
+        pre_association_steering_db.set_steering_group_config(event_obj->steeringGroupIndex,
+                                                              event_obj->cfg_2, event_obj->cfg_5);
     } else {
-        auto group_list = rdkb_db.get_steering_group_list();
+        auto group_list = pre_association_steering_db.get_steering_group_list();
         if (group_list.find(event_obj->steeringGroupIndex) == group_list.end()) {
             TASK_LOG(ERROR) << "STEERING_SET_GROUP_REQUEST nothing to remove for groupindex = "
                             << int(event_obj->steeringGroupIndex);
@@ -1021,13 +1032,15 @@ rdkb_wlan_task::steering_group_fill_ap_configuration(steering_set_group_request_
         }
     }
 
-    auto steering_group_config =
-        rdkb_db.get_steering_group_list().find(event_obj->steeringGroupIndex)->second;
+    auto steering_group_config = pre_association_steering_db.get_steering_group_list()
+                                     .find(event_obj->steeringGroupIndex)
+                                     ->second;
     cfg_2 = steering_group_config->get_config_2ghz().get_ap_config();
     cfg_5 = steering_group_config->get_config_5ghz().get_ap_config();
 
     if (event_obj->remove) {
-        if (!rdkb_db.clear_steering_group_config(event_obj->steeringGroupIndex)) {
+        if (!pre_association_steering_db.clear_steering_group_config(
+                event_obj->steeringGroupIndex)) {
             LOG(ERROR) << "STEERING_SET_GROUP_REQUEST db configuration failed";
             return -BML_RET_INVALID_CONFIGURATION;
         }
@@ -1036,7 +1049,7 @@ rdkb_wlan_task::steering_group_fill_ap_configuration(steering_set_group_request_
     return BML_RET_OK;
 }
 
-void rdkb_wlan_task::send_bml_response(int event, int sd, int32_t ret)
+void pre_association_steering_task::send_bml_response(int event, int sd, int32_t ret)
 {
     auto controller_ctx = database.get_controller_ctx();
     if (!controller_ctx) {
@@ -1130,7 +1143,7 @@ void rdkb_wlan_task::send_bml_response(int event, int sd, int32_t ret)
     }
     return;
 }
-void rdkb_wlan_task::add_pending_events(int event, int bml_sd, uint32_t amount)
+void pre_association_steering_task::add_pending_events(int event, int bml_sd, uint32_t amount)
 {
     // TODO - fix to use tasks infrastructure WLANRTSYS-TBD
     for (uint32_t i = 0; i < amount; i++) {
@@ -1141,7 +1154,7 @@ void rdkb_wlan_task::add_pending_events(int event, int bml_sd, uint32_t amount)
     }
 }
 
-std::pair<bool, int> rdkb_wlan_task::check_for_pending_events(int event)
+std::pair<bool, int> pre_association_steering_task::check_for_pending_events(int event)
 {
     // TODO - fix to use tasks infrastructure WLANRTSYS-TBD
     std::pair<bool, int> res;
@@ -1166,7 +1179,7 @@ std::pair<bool, int> rdkb_wlan_task::check_for_pending_events(int event)
     return res;
 }
 
-void rdkb_wlan_task::pending_event_check_timeout()
+void pre_association_steering_task::pending_event_check_timeout()
 {
     // TODO - fix to use tasks infrastructure WLANRTSYS-TBD
     if (pending_events.empty()) {

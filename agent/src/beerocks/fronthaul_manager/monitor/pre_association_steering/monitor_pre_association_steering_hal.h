@@ -6,8 +6,8 @@
  * See LICENSE file for more details.
  */
 
-#ifndef MONITOR_RDKB_HAL_H
-#define MONITOR_RDKB_HAL_H
+#ifndef MONITOR_PRE_ASSOCIATION_STEERING_HAL_H
+#define MONITOR_PRE_ASSOCIATION_STEERING_HAL_H
 
 #include "../monitor_db.h"
 
@@ -17,9 +17,9 @@
 #include <tlvf/CmduMessageTx.h>
 
 namespace son {
-class rdkb_hal_ap_config {
+class pre_association_steering_hal_ap_config {
 public:
-    explicit rdkb_hal_ap_config(const int8_t apIndex_) : apIndex(apIndex_) {}
+    explicit pre_association_steering_hal_ap_config(const int8_t apIndex_) : apIndex(apIndex_) {}
 
     void setInactCheckIntervalSec(unsigned interval) { inactCheckIntervalSec = interval; }
     void setInactCheckThresholdSec(unsigned interval) { inactCheckThresholdSec = interval; }
@@ -40,7 +40,7 @@ private:
     unsigned inactCheckThresholdPackets = 0;
 };
 
-class rdkb_hal_sta_config {
+class pre_association_steering_hal_sta_config {
 public:
     typedef enum state_change {
         HAL_CLIENT_START_STATE,
@@ -54,7 +54,7 @@ public:
         uint32_t sample_packets; // number of packets in the last poll cycle.
     };
 
-    explicit rdkb_hal_sta_config(const std::string &mac_) : mac(mac_) {}
+    explicit pre_association_steering_hal_sta_config(const std::string &mac_) : mac(mac_) {}
 
     void setSnrInactXing(int8_t threshold) { snrInactXing = threshold; }
     void setSnrHighXing(int8_t threshold) { snrHighXing = threshold; }
@@ -77,14 +77,15 @@ public:
     void clearData();
 
     void setState(client_state_t new_state);
-    client_state_t getState() { return rdkb_hal_client_state; }
+    client_state_t getState() { return pre_association_steering_hal_client_state; }
 
     std::chrono::steady_clock::time_point getStartTime() { return startTime; }
     std::chrono::steady_clock::time_point getLastSampleTime() { return lastSampleTime; }
     uint32_t getAccumulatedPackets() { return stats.total_packets; }
     uint32_t getSamplePackets() { return stats.sample_packets; }
 
-    friend std::ostream &operator<<(std::ostream &ost, rdkb_hal_sta_config &sta);
+    friend std::ostream &operator<<(std::ostream &ost,
+                                    pre_association_steering_hal_sta_config &sta);
     std::string printStats();
     std::string getStateAbbreviation();
 
@@ -96,18 +97,18 @@ private:
     int8_t snrHighXing  = 0; /* High SNR crossing threshold     */
     int8_t snrLowXing   = 0; /* Low SNR crossing threshold      */
 
-    std::chrono::steady_clock::time_point startTime      = std::chrono::steady_clock::now();
-    std::chrono::steady_clock::time_point lastSampleTime = std::chrono::steady_clock::now();
-    client_state_t rdkb_hal_client_state                 = HAL_CLIENT_START_STATE;
+    std::chrono::steady_clock::time_point startTime          = std::chrono::steady_clock::now();
+    std::chrono::steady_clock::time_point lastSampleTime     = std::chrono::steady_clock::now();
+    client_state_t pre_association_steering_hal_client_state = HAL_CLIENT_START_STATE;
     client_stats_t stats;
     int8_t rx_snr = beerocks::SNR_INVALID;
     int sample    = -1;
 };
 
-class monitor_rdkb_hal {
+class monitor_pre_association_steering_hal {
 
 public:
-    typedef struct mon_rdkb_debug_info {
+    typedef struct mon_pre_association_steering_debug_info {
         std::string sta_mac;
         int8_t prev_snr;
         int8_t cur_snr;
@@ -119,7 +120,7 @@ public:
         int32_t rx_packets;
         int accumulatedPackets;
         int sample;
-    } mon_rdkb_debug_info_t;
+    } mon_pre_association_steering_debug_info_t;
 
     typedef enum snr_change {
         WIFI_STEERING_SNR_UNCHANGED = 0, /* SNR hasn't crossed */
@@ -133,16 +134,18 @@ public:
         snr_change_t inactive;
     } crossing_status_t;
 
-    explicit monitor_rdkb_hal(ieee1905_1::CmduMessageTx &cmdu_tx_);
-    ~monitor_rdkb_hal() {}
+    explicit monitor_pre_association_steering_hal(ieee1905_1::CmduMessageTx &cmdu_tx_);
+    ~monitor_pre_association_steering_hal() {}
     bool start(monitor_db *mon_db_, std::shared_ptr<beerocks::CmduClient> slave_client);
     void stop();
 
     void process(std::chrono::steady_clock::time_point awake_timeout);
 
-    std::shared_ptr<rdkb_hal_sta_config> conf_add_client(const std::string &sta_mac);
-    std::shared_ptr<rdkb_hal_sta_config> conf_get_client(const std::string &sta_mac);
-    std::shared_ptr<rdkb_hal_ap_config> conf_add_ap(const int8_t vap_id);
+    std::shared_ptr<pre_association_steering_hal_sta_config>
+    conf_add_client(const std::string &sta_mac);
+    std::shared_ptr<pre_association_steering_hal_sta_config>
+    conf_get_client(const std::string &sta_mac);
+    std::shared_ptr<pre_association_steering_hal_ap_config> conf_add_ap(const int8_t vap_id);
 
     bool conf_erase_ap(const int8_t vap_id);
     bool conf_erase_client(const std::string &sta_mac);
@@ -153,9 +156,10 @@ private:
     void send_snr_crossing_event(const std::string &sta_mac, monitor_sta_node::SStaStats &sta_stats,
                                  crossing_status_t threshs, int8_t vap_id);
     template <typename T, typename K> bool conf_erase(T &conf, K k);
-    std::shared_ptr<rdkb_hal_sta_config> conf_find_client(const std::string &sta_mac);
-    std::shared_ptr<rdkb_hal_ap_config> conf_find_ap(const int8_t vap_id);
-    void print_debug_info(mon_rdkb_debug_info_t &mdi, bool pkts_count_en);
+    std::shared_ptr<pre_association_steering_hal_sta_config>
+    conf_find_client(const std::string &sta_mac);
+    std::shared_ptr<pre_association_steering_hal_ap_config> conf_find_ap(const int8_t vap_id);
+    void print_debug_info(mon_pre_association_steering_debug_info_t &mdi, bool pkts_count_en);
 
     monitor_db *mon_db = nullptr;
 
@@ -168,8 +172,10 @@ private:
     std::string m_sta_mac_process_next;
 
     void sta_erase_all();
-    std::unordered_map<std::string, std::shared_ptr<son::rdkb_hal_sta_config>> conf_stas;
-    std::unordered_map<int8_t, std::shared_ptr<son::rdkb_hal_ap_config>> conf_aps;
+    std::unordered_map<std::string, std::shared_ptr<son::pre_association_steering_hal_sta_config>>
+        conf_stas;
+    std::unordered_map<int8_t, std::shared_ptr<son::pre_association_steering_hal_ap_config>>
+        conf_aps;
 };
 } //namespace son
-#endif // MONITOR_RDKB_HALL_H
+#endif // MONITOR_PRE_ASSOCIATION_STEERING_HAL_H

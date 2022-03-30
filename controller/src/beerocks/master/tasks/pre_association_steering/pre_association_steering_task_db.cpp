@@ -6,14 +6,14 @@
  * See LICENSE file for more details.
  */
 
-#include "rdkb_wlan_task_db.h"
+#include "pre_association_steering_task_db.h"
 #include <algorithm>
 #include <easylogging++.h>
 
 using namespace beerocks;
 using namespace son;
 
-bool rdkb_wlan_task_db::steering_group_config::get_client_config(
+bool pre_association_steering_task_db::steering_group_config::get_client_config(
     const std::string &mac, const std::string &bssid,
     std::shared_ptr<beerocks_message::sSteeringClientConfig> &config)
 {
@@ -36,7 +36,7 @@ bool rdkb_wlan_task_db::steering_group_config::get_client_config(
     return true;
 }
 
-bool rdkb_wlan_task_db::get_client_config(
+bool pre_association_steering_task_db::get_client_config(
     const std::string &mac, const std::string &bssid, const int steering_group_index,
     std::shared_ptr<beerocks_message::sSteeringClientConfig> &config)
 {
@@ -50,7 +50,7 @@ bool rdkb_wlan_task_db::get_client_config(
     return steering_group->get_client_config(mac, bssid, config);
 }
 
-bool rdkb_wlan_task_db::steering_group_config::set_client_config(
+bool pre_association_steering_task_db::steering_group_config::set_client_config(
     const std::string &mac, const std::string &bssid,
     const beerocks_message::sSteeringClientConfig &config)
 {
@@ -66,8 +66,8 @@ bool rdkb_wlan_task_db::steering_group_config::set_client_config(
     return true;
 }
 
-bool rdkb_wlan_task_db::steering_group_config::clear_client_config(const std::string &mac,
-                                                                   const std::string &bssid)
+bool pre_association_steering_task_db::steering_group_config::clear_client_config(
+    const std::string &mac, const std::string &bssid)
 {
     if (config_2ghz.bssid == bssid) {
         config_2ghz.client_config_list.erase(mac);
@@ -80,7 +80,7 @@ bool rdkb_wlan_task_db::steering_group_config::clear_client_config(const std::st
     return true;
 }
 
-bool rdkb_wlan_task_db::steering_group_config::update_group_config(
+bool pre_association_steering_task_db::steering_group_config::update_group_config(
     const beerocks_message::sSteeringApConfig &config_2ghz,
     const beerocks_message::sSteeringApConfig &config_5ghz)
 {
@@ -96,9 +96,9 @@ bool rdkb_wlan_task_db::steering_group_config::update_group_config(
     return true;
 }
 
-bool rdkb_wlan_task_db::set_client_config(const std::string &mac, const std::string &bssid,
-                                          int steering_group_index,
-                                          const beerocks_message::sSteeringClientConfig &config)
+bool pre_association_steering_task_db::set_client_config(
+    const std::string &mac, const std::string &bssid, int steering_group_index,
+    const beerocks_message::sSteeringClientConfig &config)
 {
     auto it = steering_group_list.find(steering_group_index);
     if (it == steering_group_list.end()) {
@@ -110,8 +110,9 @@ bool rdkb_wlan_task_db::set_client_config(const std::string &mac, const std::str
     return steering_group->set_client_config(mac, bssid, config);
 }
 
-bool rdkb_wlan_task_db::clear_client_config(const std::string &mac, const std::string &bssid,
-                                            int steering_group_index)
+bool pre_association_steering_task_db::clear_client_config(const std::string &mac,
+                                                           const std::string &bssid,
+                                                           int steering_group_index)
 {
     auto it = steering_group_list.find(steering_group_index);
     if (it == steering_group_list.end()) {
@@ -123,7 +124,7 @@ bool rdkb_wlan_task_db::clear_client_config(const std::string &mac, const std::s
     return steering_group->clear_client_config(mac, bssid);
 }
 
-bool rdkb_wlan_task_db::set_steering_group_config(
+bool pre_association_steering_task_db::set_steering_group_config(
     int index, const beerocks_message::sSteeringApConfig &config_2ghz,
     const beerocks_message::sSteeringApConfig &config_5ghz)
 {
@@ -139,7 +140,7 @@ bool rdkb_wlan_task_db::set_steering_group_config(
     return true;
 }
 
-bool rdkb_wlan_task_db::clear_steering_group_config(int index)
+bool pre_association_steering_task_db::clear_steering_group_config(int index)
 {
     auto it = steering_group_list.find(index);
     if (it == steering_group_list.end()) {
@@ -152,7 +153,7 @@ bool rdkb_wlan_task_db::clear_steering_group_config(int index)
 }
 
 std::pair<bool, beerocks_message::sSteeringApConfig>
-rdkb_wlan_task_db::get_ap_config(const std::string &bssid)
+pre_association_steering_task_db::get_ap_config(const std::string &bssid)
 {
     for (auto group_entry : steering_group_list) {
         auto steering_group = group_entry.second;
@@ -167,7 +168,7 @@ rdkb_wlan_task_db::get_ap_config(const std::string &bssid)
 }
 
 std::unordered_map<std::string, std::shared_ptr<beerocks_message::sSteeringClientConfig>>
-rdkb_wlan_task_db::get_client_config_list(const std::string &bssid)
+pre_association_steering_task_db::get_client_config_list(const std::string &bssid)
 {
     std::unordered_map<std::string, std::shared_ptr<beerocks_message::sSteeringClientConfig>>
         result;
@@ -190,7 +191,8 @@ rdkb_wlan_task_db::get_client_config_list(const std::string &bssid)
     return result;
 }
 
-int32_t rdkb_wlan_task_db::get_group_index(const std::string &client_mac, const std::string &bssid)
+int32_t pre_association_steering_task_db::get_group_index(const std::string &client_mac,
+                                                          const std::string &bssid)
 {
     //notification common data: group index
     for (auto group_entry : steering_group_list) {
@@ -210,7 +212,7 @@ int32_t rdkb_wlan_task_db::get_group_index(const std::string &client_mac, const 
     return -1;
 }
 
-void rdkb_wlan_task_db::print_db()
+void pre_association_steering_task_db::print_db()
 {
     //notification common data: group index
     std::for_each(

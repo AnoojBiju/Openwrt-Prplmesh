@@ -6,8 +6,8 @@
  * See LICENSE file for more details.
  */
 
-#ifndef _BML_RDKB_DEFS_H_
-#define _BML_RDKB_DEFS_H_
+#ifndef _BML_PRE_ASSOCIATION_STEERING_DEFS_H_
+#define _BML_PRE_ASSOCIATION_STEERING_DEFS_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -189,4 +189,4 @@ struct BML_EVENT_STEERING {
 } /* extern "C" */
 #endif
 
-#endif /* _BML__RDKB_DEFS_H_ */
+#endif /* _BML__PRE_ASSOCIATION_STEERING_DEFS_H_ */

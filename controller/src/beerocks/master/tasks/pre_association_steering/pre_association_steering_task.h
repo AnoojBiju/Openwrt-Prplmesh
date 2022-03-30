@@ -6,18 +6,18 @@
  * See LICENSE file for more details.
  */
 
-#ifndef _RDKB_WLAN_TASK_H_
-#define _RDKB_WLAN_TASK_H_
+#ifndef _PRE_ASSOCIATION_STEERING_H_
+#define _PRE_ASSOCIATION_STEERING_H_
 
 #include "../../db/db.h"
 #include "../task.h"
 #include "../task_pool.h"
-#include "rdkb_wlan_task_db.h"
+#include "pre_association_steering_task_db.h"
 
 #include <beerocks/tlvf/beerocks_message_common.h>
 
 namespace son {
-class rdkb_wlan_task : public task {
+class pre_association_steering_task : public task {
 public:
     struct listener_general_register_unregister_event {
         int sd;
@@ -98,8 +98,9 @@ public:
     };
 
 public:
-    rdkb_wlan_task(db &database_, ieee1905_1::CmduMessageTx &cmdu_tx_, task_pool &tasks_);
-    virtual ~rdkb_wlan_task() {}
+    pre_association_steering_task(db &database_, ieee1905_1::CmduMessageTx &cmdu_tx_,
+                                  task_pool &tasks_);
+    virtual ~pre_association_steering_task() {}
 
 protected:
     virtual void work() override;
@@ -109,21 +110,21 @@ private:
     typedef struct {
         int sd;
         bool events_updates;
-    } sBmlRdkbWlanListener;
+    } sBmlPreAssociationSteeringListener;
 
     typedef struct {
         int bml_sd;
         std::chrono::steady_clock::time_point timeout;
     } sPendingEvent;
 
-    std::vector<sBmlRdkbWlanListener> bml_rdkb_wlan_listeners_sockets;
+    std::vector<sBmlPreAssociationSteeringListener> bml_pre_association_steering_listeners_sockets;
 
-    bool is_bml_rdkb_wlan_listener_socket(int sd);
-    int get_bml_rdkb_wlan_socket_at(uint32_t idx);
-    bool get_bml_rdkb_wlan_events_update_enable(int sd);
-    bool set_bml_rdkb_wlan_events_update_enable(int sd, bool update_enable);
-    void add_bml_rdkb_wlan_socket(int sd);
-    void remove_bml_rdkb_wlan_socket(int sd);
+    bool is_bml_pre_association_steering_listener_socket(int sd);
+    int get_bml_pre_association_steering_socket_at(uint32_t idx);
+    bool get_bml_pre_association_steering_events_update_enable(int sd);
+    bool set_bml_pre_association_steering_events_update_enable(int sd, bool update_enable);
+    void add_bml_pre_association_steering_socket(int sd);
+    void remove_bml_pre_association_steering_socket(int sd);
     void send_bml_event_to_listeners(ieee1905_1::CmduMessageTx &cmdu_tx,
                                      const std::vector<int> &bml_listeners);
     bool send_steering_conf_to_agent(const std::string &radio_mac);
@@ -139,7 +140,7 @@ private:
     ieee1905_1::CmduMessageTx &cmdu_tx;
     task_pool &tasks;
 
-    rdkb_wlan_task_db rdkb_db;
+    pre_association_steering_task_db pre_association_steering_db;
 
     std::unordered_multimap<int, sPendingEvent> pending_events;
 };

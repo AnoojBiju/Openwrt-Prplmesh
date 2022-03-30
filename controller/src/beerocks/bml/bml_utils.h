@@ -14,7 +14,7 @@ extern "C" {
 #endif
 
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
-#include "rdkb/bml_rdkb_defs.h"
+#include "pre_association_steering/bml_pre_association_steering_defs.h"
 #else
 #include "bml_defs.h"
 #endif

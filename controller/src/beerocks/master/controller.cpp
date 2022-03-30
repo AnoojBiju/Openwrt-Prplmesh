@@ -22,7 +22,7 @@
 #include "tasks/statistics_polling_task.h"
 #include "tasks/topology_task.h"
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
-#include "tasks/rdkb/rdkb_wlan_task.h"
+#include "tasks/pre_association_steering/pre_association_steering_task.h"
 #endif
 #include "db/db_algo.h"
 #include "db/network_map.h"
@@ -404,10 +404,10 @@ void Controller::handle_disconnected(int fd)
 
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
     //TODO - use rdkb_wlan_hal_db instead of task event
-    rdkb_wlan_task::listener_general_register_unregister_event new_event;
+    pre_association_steering_task::listener_general_register_unregister_event new_event;
     new_event.sd = fd;
-    tasks.push_event(database.get_rdkb_wlan_task_id(),
-                     rdkb_wlan_task::events::STEERING_REMOVE_SOCKET, &new_event);
+    tasks.push_event(database.get_pre_association_steering_task_id(),
+                     pre_association_steering_task::events::STEERING_REMOVE_SOCKET, &new_event);
 #endif
 }
 
@@ -2268,11 +2268,12 @@ bool Controller::handle_intel_slave_join(
             notification->platform_settings().rdkb_extensions_enabled);
 #endif
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
-        int prev_task_id = database.get_rdkb_wlan_task_id();
+        int prev_task_id = database.get_pre_association_steering_task_id();
         if (!tasks.is_task_running(prev_task_id)) {
             LOG(DEBUG) << "starting RDKB task";
-            auto new_rdkb_wlan_task = std::make_shared<rdkb_wlan_task>(database, cmdu_tx, tasks);
-            tasks.add_task(new_rdkb_wlan_task);
+            auto new_pre_association_steering_task =
+                std::make_shared<pre_association_steering_task>(database, cmdu_tx, tasks);
+            tasks.add_task(new_pre_association_steering_task);
         }
 
 #endif
@@ -2406,12 +2407,12 @@ bool Controller::handle_intel_slave_join(
     tasks.push_event(database.get_channel_selection_task_id(),
                      (int)channel_selection_task::eEvent::SLAVE_JOINED_EVENT, (void *)cs_new_event);
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
-    // sending event to rdkb_wlan_task
-    LOG(DEBUG) << "rdkb_wlan_task,sending STEERING_SLAVE_JOIN for mac " << radio_mac;
-    rdkb_wlan_task::steering_slave_join_event new_event{};
+    // sending event to pre_association_steering_task
+    LOG(DEBUG) << "pre_association_steering_task,sending STEERING_SLAVE_JOIN for mac " << radio_mac;
+    pre_association_steering_task::steering_slave_join_event new_event{};
     new_event.radio_mac = tlvf::mac_to_string(radio_mac);
-    tasks.push_event(database.get_rdkb_wlan_task_id(), rdkb_wlan_task::events::STEERING_SLAVE_JOIN,
-                     &new_event);
+    tasks.push_event(database.get_pre_association_steering_task_id(),
+                     pre_association_steering_task::events::STEERING_SLAVE_JOIN, &new_event);
 #endif
     // In the case where wireless-BH is lost and agents reconnect to the controller
     // it is required to re-activate the AP in the nodes-map since it is set as not-active
@@ -3098,14 +3099,15 @@ bool Controller::handle_cmdu_control_message(
             client->cross_rx_phy_rate_100kb = notification->params().rx_phy_rate_100kb;
         }
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
-        if ((beerocks_header->id() == database.get_rdkb_wlan_task_id())) {
+        if ((beerocks_header->id() == database.get_pre_association_steering_task_id())) {
             beerocks_message::sSteeringEvSnr new_event;
             new_event.snr        = notification->params().rx_snr;
             new_event.client_mac = notification->params().result.mac;
             new_event.bssid      = database.get_hostap_vap_mac(tlvf::mac_from_string(ap_mac),
                                                           notification->params().vap_id);
-            tasks.push_event(database.get_rdkb_wlan_task_id(),
-                             rdkb_wlan_task::events::STEERING_EVENT_SNR_AVAILABLE, &new_event);
+            tasks.push_event(database.get_pre_association_steering_task_id(),
+                             pre_association_steering_task::events::STEERING_EVENT_SNR_AVAILABLE,
+                             &new_event);
         }
 #endif
         break;
@@ -3565,9 +3567,10 @@ bool Controller::handle_cmdu_control_message(
         if (database.settings_rdkb_extensions()) {
             beerocks_message::sSteeringEvActivity new_event;
             new_event = notification->params();
-            tasks.push_event(database.get_rdkb_wlan_task_id(),
-                             rdkb_wlan_task::events::STEERING_EVENT_CLIENT_ACTIVITY_AVAILABLE,
-                             &new_event);
+            tasks.push_event(
+                database.get_pre_association_steering_task_id(),
+                pre_association_steering_task::events::STEERING_EVENT_CLIENT_ACTIVITY_AVAILABLE,
+                &new_event);
         }
         break;
     }
@@ -3582,8 +3585,10 @@ bool Controller::handle_cmdu_control_message(
         if (database.settings_rdkb_extensions()) {
             beerocks_message::sSteeringEvSnrXing new_event;
             new_event = notification->params();
-            tasks.push_event(database.get_rdkb_wlan_task_id(),
-                             rdkb_wlan_task::events::STEERING_EVENT_SNR_XING_AVAILABLE, &new_event);
+            tasks.push_event(
+                database.get_pre_association_steering_task_id(),
+                pre_association_steering_task::events::STEERING_EVENT_SNR_XING_AVAILABLE,
+                &new_event);
         }
         break;
     }
@@ -3598,9 +3603,10 @@ bool Controller::handle_cmdu_control_message(
         if (database.settings_rdkb_extensions()) {
             beerocks_message::sSteeringEvProbeReq new_event;
             new_event = notification->params();
-            tasks.push_event(database.get_rdkb_wlan_task_id(),
-                             rdkb_wlan_task::events::STEERING_EVENT_PROBE_REQ_AVAILABLE,
-                             &new_event);
+            tasks.push_event(
+                database.get_pre_association_steering_task_id(),
+                pre_association_steering_task::events::STEERING_EVENT_PROBE_REQ_AVAILABLE,
+                &new_event);
         }
         break;
     }
@@ -3615,9 +3621,10 @@ bool Controller::handle_cmdu_control_message(
         if (database.settings_rdkb_extensions()) {
             beerocks_message::sSteeringEvAuthFail new_event;
             new_event = notification->params();
-            tasks.push_event(database.get_rdkb_wlan_task_id(),
-                             rdkb_wlan_task::events::STEERING_EVENT_AUTH_FAIL_AVAILABLE,
-                             &new_event);
+            tasks.push_event(
+                database.get_pre_association_steering_task_id(),
+                pre_association_steering_task::events::STEERING_EVENT_AUTH_FAIL_AVAILABLE,
+                &new_event);
         }
         break;
     }
@@ -3631,10 +3638,11 @@ bool Controller::handle_cmdu_control_message(
         }
         //push event to rdkb_wlan_hal task
         if (database.settings_rdkb_extensions()) {
-            rdkb_wlan_task::steering_set_group_response_event new_event;
+            pre_association_steering_task::steering_set_group_response_event new_event;
             new_event.ret_code = notification->params().error_code;
-            tasks.push_event(database.get_rdkb_wlan_task_id(),
-                             rdkb_wlan_task::events::STEERING_SET_GROUP_RESPONSE, &new_event);
+            tasks.push_event(database.get_pre_association_steering_task_id(),
+                             pre_association_steering_task::events::STEERING_SET_GROUP_RESPONSE,
+                             &new_event);
         }
         break;
     }
@@ -3649,10 +3657,11 @@ bool Controller::handle_cmdu_control_message(
 
         //push event to rdkb_wlan_hal task
         if (database.settings_rdkb_extensions()) {
-            rdkb_wlan_task::steering_client_set_response_event new_event;
+            pre_association_steering_task::steering_client_set_response_event new_event;
             new_event.ret_code = notification->params().error_code;
-            tasks.push_event(database.get_rdkb_wlan_task_id(),
-                             rdkb_wlan_task::events::STEERING_CLIENT_SET_RESPONSE, &new_event);
+            tasks.push_event(database.get_pre_association_steering_task_id(),
+                             pre_association_steering_task::events::STEERING_CLIENT_SET_RESPONSE,
+                             &new_event);
         }
         break;
     }
@@ -3667,10 +3676,11 @@ bool Controller::handle_cmdu_control_message(
         }
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
         //push event to rdkb_wlan_hal task
-        rdkb_wlan_task::steering_client_disconnect_response_event new_event;
+        pre_association_steering_task::steering_client_disconnect_response_event new_event;
         new_event.ret_code = notification->params().error_code;
-        tasks.push_event(database.get_rdkb_wlan_task_id(),
-                         rdkb_wlan_task::events::STEERING_CLIENT_DISCONNECT_RESPONSE, &new_event);
+        tasks.push_event(database.get_pre_association_steering_task_id(),
+                         pre_association_steering_task::events::STEERING_CLIENT_DISCONNECT_RESPONSE,
+                         &new_event);
 #endif
         break;
     }
