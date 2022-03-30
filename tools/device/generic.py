@@ -143,7 +143,7 @@ class GenericDevice():
             if serial_type == ShellType.UBOOT:
                 shell.sendline("reset")
             elif serial_type in [ShellType.PRPLOS, ShellType.RDKB, ShellType.LINUX_UNKNOWN]:
-                shell.sendline("reboot ; sleep 15 ; reboot -f")
+                shell.sendline("reboot ; sleep 15 && echo force rebooting && reboot -f")
             if stop_in_bootloader:
                 print("Device will be stopped in its bootloader.")
                 shell.expect(self.boot_stop_expression, timeout=180)
