@@ -2892,7 +2892,13 @@ bool Controller::handle_cmdu_control_message(
             break;
         }
 
-        database.remove_vap(*radio, vap_id);
+        auto bss = database.get_bss(disabled_bssid);
+        if (!bss) {
+            LOG(ERROR) << "Failed to get BSS with BSSID: " << disabled_bssid;
+            break;
+        }
+
+        database.remove_vap(*radio, *bss);
 
         if (radio->bsses.erase(disabled_bssid) != 1) {
             LOG(ERROR) << "No BSS " << disabled_bssid << " could be erased on " << radio_mac;
@@ -2917,9 +2923,6 @@ bool Controller::handle_cmdu_control_message(
         auto bssid = notification->vap_info().mac;
         auto ssid  = std::string((char *)notification->vap_info().ssid);
 
-        database.add_vap(radio_mac_str, vap_id, tlvf::mac_to_string(bssid), ssid,
-                         notification->vap_info().backhaul_vap);
-
         // Update BSSes in the Agent
         auto radio = database.get_radio(src_mac, radio_mac);
         if (!radio) {
@@ -2932,6 +2935,9 @@ bool Controller::handle_cmdu_control_message(
             << "BSS " << bssid << " changed vap_id " << bss->vap_id << " -> " << vap_id;
         bss->ssid     = ssid;
         bss->backhaul = notification->vap_info().backhaul_vap;
+
+        database.add_vap(radio_mac_str, vap_id, tlvf::mac_to_string(bssid), ssid,
+                         notification->vap_info().backhaul_vap);
 
         // update bml listeners
         bml_task::connection_change_event new_event;
@@ -3001,7 +3007,8 @@ bool Controller::handle_cmdu_control_message(
             LOG(ERROR) << "No radio found for radio_uid " << radio_mac << " on " << src_mac;
             break;
         }
-        radio->bsses.clear();
+
+        radio->bsses.keep_new_prepare();
 
         std::unordered_map<int8_t, sVapElement> vaps_info;
         std::string vaps_list;
@@ -3036,6 +3043,20 @@ bool Controller::handle_cmdu_control_message(
         }
 
         database.set_hostap_vap_list(radio_mac, vaps_info);
+
+        auto removed = radio->bsses.keep_new_remove_old();
+        for (const auto &bss : removed) {
+
+            // Remove all clients from that vap
+            auto client_list =
+                database.get_node_children(tlvf::mac_to_string(bss->bssid), beerocks::TYPE_CLIENT);
+            for (auto &client : client_list) {
+                son_actions::handle_dead_node(client, true, database, cmdu_tx, tasks);
+            }
+
+            // Remove the vap from DB
+            database.remove_vap(*radio, *bss);
+        }
 
         // update bml listeners
         bml_task::connection_change_event new_event;

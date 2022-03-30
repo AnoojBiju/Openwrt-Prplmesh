@@ -1034,7 +1034,21 @@ public:
                              const std::unordered_map<int8_t, sVapElement> &vap_list);
     std::unordered_map<int8_t, sVapElement> &get_hostap_vap_list(const sMacAddr &mac);
     std::set<std::string> get_hostap_vaps_bssids(const std::string &mac);
-    bool remove_vap(Agent::sRadio &radio, int vap_id);
+
+    /** Remove VAP
+     *
+     * This method removes VAP from Hostap VAP List (node hierarchy)
+     * To search to VAP which is going to be removed, bss.vap_id is used.
+     *
+     * After removing VAP from list, datamodel of VAP is also cleared.
+     * Note that, database object it self is not deleted in this method.
+     *
+     * @param[in] radio radio db object
+     * @param[in] bss bss db object
+     * @return True on success, false otherwise.
+     */
+    bool remove_vap(Agent::sRadio &radio, Agent::sRadio::sBss &bss);
+
     bool add_vap(const std::string &radio_mac, int vap_id, const std::string &bssid,
                  const std::string &ssid, bool backhaul);
 
@@ -1960,6 +1974,17 @@ public:
      */
     bool dm_remove_radio(Agent::sRadio &radio);
 
+    /**
+     * @brief Removes BSS datamodel object on NBAPI
+     *
+     * Example of full path to object:
+     * "Device.WiFi.DataElements.Netwok.Device.{i}.Radio.{i}.BSS.{i}
+     *
+     * @param bss BSS object.
+     * @return True on success, false otherwise.
+     */
+    bool dm_remove_bss(Agent::sRadio::sBss &bss);
+
     //
     // tasks
     //
@@ -2287,16 +2312,6 @@ private:
      * @return True on success, false otherwise.
      */
     bool dm_add_sta_element(const sMacAddr &bssid, Station &station);
-
-    /**
-     * @brief Prepares path to the BSS data element with correct index (i).
-     *
-     * Data model path example: "Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.2."
-     *
-     * @param bssid BSSID.
-     * @return Path to bss, empty string otherwise.
-     */
-    std::string dm_get_path_to_bss(const sMacAddr &bssid);
 
     /**
      * @brief Set clients (device) multi ap capabilities
