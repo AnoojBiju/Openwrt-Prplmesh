@@ -40,6 +40,7 @@ class Axepoint(GenericPrplOS):
         shell.expect("Creating dynamic volume .* of size", timeout=120)
         shell.expect(r"(?i)Writing to nand\.\.\. (ok|done)", timeout=60)
         shell.expect(self.bootloader_prompt, timeout=600)
+        shell.sendline("true")
 
     def sysupgrade(self):
         # sysupgrade is not supported at the moment, so explicitely override it.

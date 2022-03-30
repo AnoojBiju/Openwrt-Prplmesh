@@ -46,15 +46,14 @@ def configure_device(device: GenericDevice, configuration_file: Path):
     print(f"Applying configuration {str(configuration_file)} on device {device.name}.")
     conf_file_location = "/tmp/config_file.sh"
     md5 = hashlib.md5()
-    with SerialDevice(device.baudrate, device.name, device.serial_prompt) as ser:
-        shell = ser.shell
+    with SerialDevice(device.baudrate, device.name, device.serial_prompt) as shell:
         shell.sendline("")
         shell.expect(device.serial_prompt)
         shell.sendline("sysctl -w kernel.printk='0 4 1 7'")
         shell.expect(device.serial_prompt)
         shell.sendline(f"rm -rf {conf_file_location} && touch {conf_file_location}")
         shell.expect(device.serial_prompt)
-        shell.sendline(f"cat << END_OF_TRANSMISSION > {conf_file_location}")
+        shell.sendline(f"cat << 'END_OF_TRANSMISSION' > {conf_file_location}")
         shell.expect("> ")
         with open(str(configuration_file)) as config_file:
             # Write the configuration file line by line on the device:
