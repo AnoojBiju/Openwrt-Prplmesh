@@ -1210,7 +1210,7 @@ class RadioHostapd(Radio):
         """Return mac of specified iface"""
         regex = "link/ether (?P<mac>([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})"
 
-        output = self.agent.command("ip", "link", "show", f"{iface}")
+        output = self.agent.command("/sbin/ip", "link", "show", f"{iface}")
         match = re.search(regex, output)
         return match.group('mac')
 
