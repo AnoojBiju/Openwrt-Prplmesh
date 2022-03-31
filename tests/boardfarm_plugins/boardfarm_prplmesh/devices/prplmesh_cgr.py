@@ -18,15 +18,15 @@ from .prplmesh_base import PrplMeshBase
 from boardfarm.exceptions import CodeError
 from boardfarm.devices import connection_decider
 from boardfarm.devices.openwrt_router import OpenWrtRouter
-from environment import ALEntityRDKB, _get_bridge_interface
+from environment import ALEntityCGR, _get_bridge_interface
 from ipaddress import IPv4Network, IPv4Address
 from sniffer import Sniffer
 
 
-class PrplMeshRDKB(OpenWrtRouter, PrplMeshBase):
-    """RDKB burned device with prplMesh installed."""
+class PrplMeshCGR(OpenWrtRouter, PrplMeshBase):
+    """CGR burned device with prplMesh installed."""
 
-    model = "RDKB"
+    model = "CGR"
     prompt = [r'root@[^\s]+:[^\s]+# ']
     wan_iface = "eth1"
     uboot_eth = "eth0_1"
@@ -54,9 +54,9 @@ class PrplMeshRDKB(OpenWrtRouter, PrplMeshBase):
         self.host_iface_to_device = config.get("iface_to_device")
         if not self.host_iface_to_device:
             raise CodeError("Interface to the device not specified. \
-            Please provide the interface on the host that connects to the prplWrt device.")
+            Please provide the interface on the host that connects to the CGR device.")
 
-        self.name = "-".join((config.get("name", "turris-rdkb"), self.unique_id))
+        self.name = "-".join((config.get("name", "cgr"), self.unique_id))
         try:
             self.delay = int(config.get("delay", 30))
         except ValueError as err:
@@ -113,9 +113,9 @@ class PrplMeshRDKB(OpenWrtRouter, PrplMeshBase):
         self.prplmesh_start_mode(self.role)
 
         if self.role == "controller":
-            self.controller_entity = ALEntityRDKB(self, is_controller=True)
+            self.controller_entity = ALEntityCGR(self, is_controller=True)
         else:
-            self.agent_entity = ALEntityRDKB(self, is_controller=False)
+            self.agent_entity = ALEntityCGR(self, is_controller=False)
 
     def _prplMesh_exec(self, mode: str):
         """Send line to prplmesh initd script."""
@@ -143,8 +143,8 @@ class PrplMeshRDKB(OpenWrtRouter, PrplMeshBase):
         self.sendline("/opt/prplmesh/scripts/prplmesh_utils.sh status")
         self.expect(
             ["(?P<main_agent>OK) Main agent.+"
-             "(?P<wifi0>OK) wifi0.+"
-             "(?P<wifi1>OK) wifi1", pexpect.TIMEOUT],
+             "(?P<wlan0>OK) wlan0.+"
+             "(?P<wlan2>OK) wlan2", pexpect.TIMEOUT],
             timeout=5)
         if self.match is not pexpect.TIMEOUT:
             return True
