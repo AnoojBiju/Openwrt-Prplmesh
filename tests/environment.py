@@ -1077,7 +1077,7 @@ class ALEntityRDKB(ALEntity):
         return self.device.prprlmesh_status_check()
 
 
-class ALEntityRDKB(ALEntity):
+class ALEntityCGR(ALEntity):
     """Abstraction of ALEntity in real device."""
 
     def __init__(self, device: None, is_controller: bool = False):
@@ -1096,7 +1096,7 @@ class ALEntityRDKB(ALEntity):
             "grep", "log_files_path", self.config_file_name)
         self.log_folder = re.search(r'log_files_path=(?P<log_path>[a-zA-Z0-9_\/]+)',
                                     log_folder_raw).group('log_path')
-        ucc_socket = UCCSocket(str(self.device.control_ip), int(ucc_port))
+        ucc_socket = UCCSocket(str(self.device.control_ip), int(ucc_port), timeout=60)
         mac = ucc_socket.dev_get_parameter('ALid')
 
         super().__init__(mac, ucc_socket, installdir, is_controller)
@@ -1104,9 +1104,9 @@ class ALEntityRDKB(ALEntity):
         program = "controller" if is_controller else "agent"
         self.logfilenames = ["{}/beerocks_{}.log".format(self.log_folder, program)]
 
-        # We always have two radios, wifi0 and wifi1
-        RadioHostapd(self, "wifi0")
-        RadioHostapd(self, "wifi1")
+        # We always have two radios, wlan0 and wlan2
+        RadioHostapd(self, "wlan0")
+        RadioHostapd(self, "wlan2")
 
     def command(self, *command: str) -> str:
         """Execute `command` in device and return its output."""
