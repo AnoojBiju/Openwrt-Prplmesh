@@ -587,8 +587,10 @@ bool Monitor::monitor_fsm()
             }
 
             // NOTE: Radio & VAP statistics are updated only on last poll cycle
-            if (mon_db.get_radio_stats_enable() && mon_db.is_last_poll())
-                update_ap_stats();
+            if (mon_db.get_radio_stats_enable() && mon_db.is_last_poll()) {
+                if (!update_ap_stats())
+                    return false;
+            }
 
             send_heartbeat();
 
