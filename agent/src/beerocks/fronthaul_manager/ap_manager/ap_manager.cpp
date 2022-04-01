@@ -2004,7 +2004,12 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
         m_state = eApManagerState::TERMINATED;
 
     } break;
+    case Event::Hostapd_Disconnected: {
 
+        LOG(ERROR) << "Hostap Disconnected!";
+        m_state = eApManagerState::TERMINATED;
+
+    } break;
     case Event::ACS_Failed: {
         LOG(INFO) << "ACS_Failed event!";
 
