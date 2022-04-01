@@ -84,6 +84,8 @@ static ap_wlan_hal::Event dwpal_to_bwl_event(const std::string &opcode)
         return ap_wlan_hal::Event::MGMT_Frame;
     } else if (opcode == "AP-STA-POSSIBLE-PSK-MISMATCH") {
         return ap_wlan_hal::Event::AP_Sta_Possible_Psk_Mismatch;
+    } else if (opcode == "HOSTAPD-DISCONNECTED") {
+        return ap_wlan_hal::Event::Hostapd_Disconnected;
     }
 
     return ap_wlan_hal::Event::Invalid;
@@ -3210,6 +3212,10 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
 
     case Event::Interface_Disabled:
     case Event::ACS_Failed: {
+        LOG(DEBUG) << buffer;
+        event_queue_push(event); // Forward to the AP manager
+    } break;
+    case Event::Hostapd_Disconnected: {
         LOG(DEBUG) << buffer;
         event_queue_push(event); // Forward to the AP manager
     } break;

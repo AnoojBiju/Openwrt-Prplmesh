@@ -29,6 +29,7 @@ public:
         AP_Enabled,
         AP_Disabled,
         AP_Sta_Possible_Psk_Mismatch,
+        Hostapd_Disconnected,
 
         STA_Connected,
         STA_Disconnected,
