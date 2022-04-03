@@ -14,6 +14,9 @@ extern "C" {
 #endif
 
 #include "bml_defs.h"
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
+#include "pre_association_steering/bml_pre_association_steering_defs.h"
+#endif
 
 /**
  * @brief Configure Logging Preference for BML for external application.
@@ -705,6 +708,83 @@ int bml_client_get_client(BML_CTX ctx, const char *sta_mac, struct BML_CLIENT *c
  * @return BML_RET_OK on success, BML_RET_OP_FAILED on failure.
  */
 int bml_client_clear_client(BML_CTX ctx, const char *sta_mac);
+
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
+
+/*
+* A steering group defines a group members of which can have steering done
+* between them.
+* To remove a group configuration call with NULL as cfg_2 and cfg_5.
+* @param[in] ctx BML Context.
+* @param[in] steeringGroupIndex  Wifi Steering Group index
+* @param[in] cfg_2               2.4G apConfig
+* @param[in] cfg_5               5G apConfig
+*
+* @return BML_RET_OK on success.
+*
+*/
+int bml_pre_association_steering_set_group(BML_CTX ctx, uint32_t steeringGroupIndex,
+                                           struct BML_STEERING_AP_CONFIG *cfg_2,
+                                           struct BML_STEERING_AP_CONFIG *cfg_5);
+
+/*
+* Call this function to add/modify/remove per-client configuration config of client_mac.
+* In order to remove a client configuration call with NULL as "config" parameter 
+* or set config.snrProbeHWM to 0.
+* @param[in] steeringGroupIndex   Wifi Steering Group index
+* @param[in] bssid                AP bssid.
+* @param[in] client_mac           The Client's MAC address.
+* @param[in] config               The client configuration
+* @param[in] ctx BML Context.
+* @return BML_RET_OK on success.
+*
+*/
+int bml_pre_association_steering_client_set(BML_CTX ctx, uint32_t steeringGroupIndex,
+                                            const BML_MAC_ADDR bssid, const BML_MAC_ADDR client_mac,
+                                            struct BML_STEERING_CLIENT_CONFIG *config);
+
+/*
+* Callback registration function.
+* Call this function to register/unregister the callback function.
+* @param[in] ctx BML Context.
+* @param[in] pCB pointer to callback function or NULL to unregister.
+* @return BML_RET_OK on success.
+*/
+int bml_pre_association_steering_event_register(BML_CTX ctx, BML_EVENT_CB pCB);
+
+/** 
+* On demand measure.
+*
+* @param[in] ctx BML Context.
+* @param[in] steeringGroupIndex  Wifi Steering Group index
+* @param[in] bssid               AP bssid.
+* @param[in] client_mac          The Client's MAC address.
+*
+* @return BML_RET_OK on success.
+*
+*/
+int bml_pre_association_steering_client_measure(BML_CTX ctx, unsigned int steeringGroupIndex,
+                                                const BML_MAC_ADDR bssid,
+                                                const BML_MAC_ADDR client_mac);
+
+/**Initiate a Client Disconnect.
+ *
+ * This is used to kick off a client, for steering purposes.
+ * @param[in]  ctx BML Context.
+ * @param[in]  steeringgroupIndex  Wifi Steering Group index
+ * @param[in]  bssid               AP bssid. 
+ * @param[in]  client_mac          The Client's MAC address
+ * @param[in]  type                Disconnect Type
+ * @param[in]  reason              Reason code to provide in deauth/disassoc frame.
+ *
+ * @return BML_RET_OK on success.
+ */
+int bml_pre_association_steering_client_disconnect(BML_CTX ctx, unsigned int steeringGroupIndex,
+                                                   const BML_MAC_ADDR bssid,
+                                                   const BML_MAC_ADDR client_mac,
+                                                   BML_DISCONNECT_TYPE type, unsigned int reason);
+
+#endif /* FEATURE_PRE_ASSOCIATION_STEERING */
 
 #ifdef __cplusplus
 } /* extern "C" */
