@@ -34,6 +34,7 @@
 #include <tlvf/wfa_map/tlv1905EncapEapol.h>
 #include <tlvf/wfa_map/tlv1905LayerSecurityCapability.h>
 #include <tlvf/wfa_map/tlvAgentList.h>
+#include <tlvf/wfa_map/tlvAkmSuiteCapabilities.h>
 #include <tlvf/wfa_map/tlvApCapability.h>
 #include <tlvf/wfa_map/tlvApExtendedMetrics.h>
 #include <tlvf/wfa_map/tlvApHeCapabilities.h>
@@ -432,6 +433,9 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     }
     case (wfa_map::eTlvTypeMap::TLV_MIC): {
         return msg.addClass<wfa_map::tlvMic>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_AKM_SUITE_CAPABILITIES): {
+        return msg.addClass<wfa_map::tlvAkmSuiteCapabilities>();
     }
     case (wfa_map::eTlvTypeMap::TLV_1905_ENCAP_DPP): {
         return msg.addClass<wfa_map::tlv1905EncapDpp>();
