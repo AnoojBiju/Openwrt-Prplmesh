@@ -1,0 +1,18 @@
+#
+---
+_namespace: wfa_map
+
+tlvDppCeeIndication:
+  _type: class
+  _is_tlv_class : True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_DPP_CCE_INDICATION
+  length: uint16_t
+  advertise_cee: eAdvertiseCee
+
+eAdvertiseCee:
+  _type: enum
+  _enum_storage: uint8_t
+  DISABLE: 0x00
+  ENABLE: 0x01
