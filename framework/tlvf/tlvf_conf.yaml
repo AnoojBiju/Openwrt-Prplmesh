@@ -99,6 +99,7 @@ include_yaml_path: {
     "tlvf/wfa_map/tlvBssConfigurationReport.yaml",
     "tlvf/wfa_map/tlvBssConfigurationRequest.yaml",
     "tlvf/wfa_map/tlvBssConfigurationResponse.yaml",
+    "tlvf/wfa_map/tlvDppBootstrappingUriNotification.yaml",
     "tlvf/wfa_map/tlvMic.yaml"
 }
 
