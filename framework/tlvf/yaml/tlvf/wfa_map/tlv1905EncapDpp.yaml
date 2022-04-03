@@ -1,0 +1,43 @@
+#
+---
+_namespace: wfa_map
+
+tlv1905EncapDpp:
+  _type: class
+  _is_tlv_class : True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_1905_ENCAP_DPP
+  length: uint16_t
+  frame_flags: sFlags
+  dest_sta_mac: 
+    _type: sMacAddr
+    _condition:
+      _using_members: frame_flags.enrollee_mac_address_present
+      _phrase: frame_flags.enrollee_mac_address_present
+  frame_type: eFrameType
+  encapsulated_frame_length:
+    _type: uint16_t
+    _length_var: True
+  encapsulated_frame:
+    _type: uint8_t
+    _length: [ encapsulated_frame_length ]
+
+sFlags:
+  _type: struct
+  _bit_field: uint8_t
+  enrollee_mac_address_present:
+    _bit_range: [7, 7]
+  reserved1: 
+    _bit_range: [6, 6]
+  dpp_frame_indicator:
+    _bit_range: [5, 5]
+    _type: eFrameType
+  reserved2:
+    _bit_range: [4, 0]
+
+eFrameType:
+  _type: enum
+  _enum_storage: uint8_t
+  DPP_PUBLIC_ACTION_FRAME: 0
+  GAS_FRAME: 1

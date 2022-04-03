@@ -30,6 +30,7 @@
 #include <tlvf/ieee_1905_1/tlvVendorSpecific.h>
 #include <tlvf/ieee_1905_1/tlvWsc.h>
 #include <tlvf/wfa_map/eTlvTypeMap.h>
+#include <tlvf/wfa_map/tlv1905EncapDpp.h>
 #include <tlvf/wfa_map/tlvApCapability.h>
 #include <tlvf/wfa_map/tlvApExtendedMetrics.h>
 #include <tlvf/wfa_map/tlvApHeCapabilities.h>
@@ -425,6 +426,9 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     }
     case (wfa_map::eTlvTypeMap::TLV_MIC): {
         return msg.addClass<wfa_map::tlvMic>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_1905_ENCAP_DPP): {
+        return msg.addClass<wfa_map::tlv1905EncapDpp>();
     }
     }
     LOG(FATAL) << "Unknown TLV type: " << unsigned(tlv_type);
