@@ -1,0 +1,48 @@
+#
+---
+_namespace: wfa_map
+_include: 
+  { 
+    tlvf/ieee_1905_1/sVendorOUI.h, 
+    tlvf/wfa_map/eTlvTypeMap.h,
+    tlvf/common/sMacAddr.h
+  }
+
+tlvAkmSuiteCapabilities:
+  _type: class
+  _is_tlv_class : True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_AKM_SUITE_CAPABILITIES
+  length: uint16_t
+  number_of_bh_bss_akm_suite_selectors:
+    _type: uint8_t
+    _length_var: True
+  backhaul_bss_akm_suite_selectors:
+    _type: sBssAkmSuiteSelector
+    _length: [ number_of_bh_bss_akm_suite_selectors ]
+  number_of_fh_bss_akm_suite_selectors:
+    _type: uint8_t
+    _length_var: True
+  fronthaul_bss_akm_suite_selectors:
+    _type: sBssAkmSuiteSelector
+    _length: [ number_of_fh_bss_akm_suite_selectors ]
+
+sBssAkmSuiteSelector:
+  _type: struct
+  oui:
+    _type: sVendorOUI
+    _comment: | 
+      Any OUI value specified in Table 9-133 of "IEEE Std. 802.11-2016" or Table 55 of "Wi-Fi Easy
+      Connect Specification".
+  akm_suite_type: 
+    _type: uint8_t
+    _comment: |
+      Any suite type value specified in Table 9-133 of "IEEE Std. 802.11-2016" or Table 55 of
+      "Wi-Fi Easy Connect Specification".
+
+eAkmSuiteOUI:
+  _type: enum
+  _enum_storage: uint32_t
+  IEEE80211: 0x000FAC
+  WEC: 0x506F9A

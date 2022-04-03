@@ -91,6 +91,7 @@ enum class eTlvTypeMap : uint8_t {
     TLV_PROFILE2_STATUS_CODE = 0xc9,
     TLV_PROFILE2_REASON_CODE = 0xca,
     TLV_BACKHAUL_STA_RADIO_CAPABILITIES = 0xcb,
+    TLV_AKM_SUITE_CAPABILITIES = 0xcc,
     TLV_1905_ENCAP_DPP = 0xcd,
     TLV_1905_ENCAP_EAPOL = 0xce,
     TLV_BACKHAUL_BSS_CONFIGURATION = 0xd0,
@@ -171,6 +172,7 @@ static const char *eTlvTypeMap_str(eTlvTypeMap enum_value) {
     case eTlvTypeMap::TLV_PROFILE2_STATUS_CODE:                     return "eTlvTypeMap::TLV_PROFILE2_STATUS_CODE";
     case eTlvTypeMap::TLV_PROFILE2_REASON_CODE:                     return "eTlvTypeMap::TLV_PROFILE2_REASON_CODE";
     case eTlvTypeMap::TLV_BACKHAUL_STA_RADIO_CAPABILITIES:          return "eTlvTypeMap::TLV_BACKHAUL_STA_RADIO_CAPABILITIES";
+    case eTlvTypeMap::TLV_AKM_SUITE_CAPABILITIES:                   return "eTlvTypeMap::TLV_AKM_SUITE_CAPABILITIES";
     case eTlvTypeMap::TLV_1905_ENCAP_DPP:                           return "eTlvTypeMap::TLV_1905_ENCAP_DPP";
     case eTlvTypeMap::TLV_1905_ENCAP_EAPOL:                         return "eTlvTypeMap::TLV_1905_ENCAP_EAPOL";
     case eTlvTypeMap::TLV_BACKHAUL_BSS_CONFIGURATION:               return "eTlvTypeMap::TLV_BACKHAUL_BSS_CONFIGURATION";
@@ -258,6 +260,7 @@ public:
         case 0xc9:
         case 0xca:
         case 0xcb:
+        case 0xcc:
         case 0xcd:
         case 0xce:
         case 0xd0:
