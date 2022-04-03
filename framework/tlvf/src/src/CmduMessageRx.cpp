@@ -68,6 +68,7 @@
 #include <tlvf/wfa_map/tlvClientCapabilityReport.h>
 #include <tlvf/wfa_map/tlvClientInfo.h>
 #include <tlvf/wfa_map/tlvDeviceInventory.h>
+#include <tlvf/wfa_map/tlvDppBootstrappingUriNotification.h>
 #include <tlvf/wfa_map/tlvDscpMappingTable.h>
 #include <tlvf/wfa_map/tlvErrorCode.h>
 #include <tlvf/wfa_map/tlvHigherLayerData.h>
@@ -445,6 +446,9 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     }
     case (wfa_map::eTlvTypeMap::TLV_1905_ENCAP_EAPOL): {
         return msg.addClass<wfa_map::tlv1905EncapEapol>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_DPP_BOOTSTRAPPING_URI_NOTIFICATION): {
+        return msg.addClass<wfa_map::tlvDppBootstrappingUriNotification>();
     }
     case (wfa_map::eTlvTypeMap::TLV_BSS_CONFIGURATION_REPORT): {
         return msg.addClass<wfa_map::tlvBssConfigurationReport>();
