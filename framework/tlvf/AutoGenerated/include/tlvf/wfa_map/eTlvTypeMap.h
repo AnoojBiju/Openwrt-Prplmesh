@@ -99,6 +99,7 @@ enum class eTlvTypeMap : uint8_t {
     TLV_1905_ENCAP_EAPOL = 0xce,
     TLV_DPP_BOOTSTRAPPING_URI_NOTIFICATION = 0xcf,
     TLV_BACKHAUL_BSS_CONFIGURATION = 0xd0,
+    TLV_DPP_CCE_INDICATION = 0xd2,
     TLV_DEVICE_INVENTORY = 0xd4,
     TLV_AGENT_LIST = 0xd5,
 };
@@ -184,6 +185,7 @@ static const char *eTlvTypeMap_str(eTlvTypeMap enum_value) {
     case eTlvTypeMap::TLV_1905_ENCAP_EAPOL:                         return "eTlvTypeMap::TLV_1905_ENCAP_EAPOL";
     case eTlvTypeMap::TLV_DPP_BOOTSTRAPPING_URI_NOTIFICATION:       return "eTlvTypeMap::TLV_DPP_BOOTSTRAPPING_URI_NOTIFICATION";
     case eTlvTypeMap::TLV_BACKHAUL_BSS_CONFIGURATION:               return "eTlvTypeMap::TLV_BACKHAUL_BSS_CONFIGURATION";
+    case eTlvTypeMap::TLV_DPP_CCE_INDICATION:                       return "eTlvTypeMap::TLV_DPP_CCE_INDICATION";
     case eTlvTypeMap::TLV_DEVICE_INVENTORY:                         return "eTlvTypeMap::TLV_DEVICE_INVENTORY";
     case eTlvTypeMap::TLV_AGENT_LIST:                               return "eTlvTypeMap::TLV_AGENT_LIST";
     }
@@ -276,6 +278,7 @@ public:
         case 0xce:
         case 0xcf:
         case 0xd0:
+        case 0xd2:
         case 0xd4:
         case 0xd5:
                 ret = true;
