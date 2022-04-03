@@ -69,6 +69,9 @@ enum class eMessageType : uint16_t {
     BACKHAUL_STEERING_RESPONSE_MESSAGE = 0x801a,
     CHANNEL_SCAN_REQUEST_MESSAGE = 0x801b,
     CHANNEL_SCAN_REPORT_MESSAGE = 0x801c,
+    DPP_CCE_INDICATION_MESSAGE = 0x801d,
+    IEEE1905_REKEY_REQUEST_MESSAGE = 0x801e,
+    IEEE1905_DECRYPTION_FAILURE_MESSAGE = 0x801f,
     CAC_REQUEST_MESSAGE = 0x8020,
     CAC_TERMINATION_MESSAGE = 0x8021,
     CLIENT_DISASSOCIATION_STATS_MESSAGE = 0x8022,
@@ -78,7 +81,17 @@ enum class eMessageType : uint16_t {
     TUNNELLED_MESSAGE = 0x8026,
     BACKHAUL_STA_CAPABILITY_QUERY_MESSAGE = 0x8027,
     BACKHAUL_STA_CAPABILITY_REPORT_MESSAGE = 0x8028,
+    PROXIED_ENCAP_DPP_MESSAGE = 0x8029,
+    DIRECT_ENCAP_DPP_MESSAGE = 0x802a,
+    RECONFIGURATION_TRIGGER_MESSAGE = 0x802b,
+    BSS_CONFIGURATION_REQUEST_MESSAGE = 0x802c,
+    BSS_CONFIGURATION_RESPONSE_MESSAGE = 0x802d,
+    BSS_CONFIGURATION_RESULT_MESSAGE = 0x802e,
+    CHIRP_NOTIFICATION_MESSAGE = 0x802f,
+    IEEE1905_ENCAP_EAPOL_MESSAGE = 0x8030,
+    DPP_BOOTSTRAPPING_URI_NOTIFICATION_MESSAGE = 0x8031,
     FAILED_CONNECTION_MESSAGE = 0x8033,
+    AGENT_LIST_MESSAGE = 0x8035,
 };
 // Enum AutoPrint generated code snippet begining- DON'T EDIT!
 // clang-format off
@@ -132,6 +145,9 @@ static const char *eMessageType_str(eMessageType enum_value) {
     case eMessageType::BACKHAUL_STEERING_RESPONSE_MESSAGE:             return "eMessageType::BACKHAUL_STEERING_RESPONSE_MESSAGE";
     case eMessageType::CHANNEL_SCAN_REQUEST_MESSAGE:                   return "eMessageType::CHANNEL_SCAN_REQUEST_MESSAGE";
     case eMessageType::CHANNEL_SCAN_REPORT_MESSAGE:                    return "eMessageType::CHANNEL_SCAN_REPORT_MESSAGE";
+    case eMessageType::DPP_CCE_INDICATION_MESSAGE:                     return "eMessageType::DPP_CCE_INDICATION_MESSAGE";
+    case eMessageType::IEEE1905_REKEY_REQUEST_MESSAGE:                 return "eMessageType::IEEE1905_REKEY_REQUEST_MESSAGE";
+    case eMessageType::IEEE1905_DECRYPTION_FAILURE_MESSAGE:            return "eMessageType::IEEE1905_DECRYPTION_FAILURE_MESSAGE";
     case eMessageType::CAC_REQUEST_MESSAGE:                            return "eMessageType::CAC_REQUEST_MESSAGE";
     case eMessageType::CAC_TERMINATION_MESSAGE:                        return "eMessageType::CAC_TERMINATION_MESSAGE";
     case eMessageType::CLIENT_DISASSOCIATION_STATS_MESSAGE:            return "eMessageType::CLIENT_DISASSOCIATION_STATS_MESSAGE";
@@ -141,7 +157,17 @@ static const char *eMessageType_str(eMessageType enum_value) {
     case eMessageType::TUNNELLED_MESSAGE:                              return "eMessageType::TUNNELLED_MESSAGE";
     case eMessageType::BACKHAUL_STA_CAPABILITY_QUERY_MESSAGE:          return "eMessageType::BACKHAUL_STA_CAPABILITY_QUERY_MESSAGE";
     case eMessageType::BACKHAUL_STA_CAPABILITY_REPORT_MESSAGE:         return "eMessageType::BACKHAUL_STA_CAPABILITY_REPORT_MESSAGE";
+    case eMessageType::PROXIED_ENCAP_DPP_MESSAGE:                      return "eMessageType::PROXIED_ENCAP_DPP_MESSAGE";
+    case eMessageType::DIRECT_ENCAP_DPP_MESSAGE:                       return "eMessageType::DIRECT_ENCAP_DPP_MESSAGE";
+    case eMessageType::RECONFIGURATION_TRIGGER_MESSAGE:                return "eMessageType::RECONFIGURATION_TRIGGER_MESSAGE";
+    case eMessageType::BSS_CONFIGURATION_REQUEST_MESSAGE:              return "eMessageType::BSS_CONFIGURATION_REQUEST_MESSAGE";
+    case eMessageType::BSS_CONFIGURATION_RESPONSE_MESSAGE:             return "eMessageType::BSS_CONFIGURATION_RESPONSE_MESSAGE";
+    case eMessageType::BSS_CONFIGURATION_RESULT_MESSAGE:               return "eMessageType::BSS_CONFIGURATION_RESULT_MESSAGE";
+    case eMessageType::CHIRP_NOTIFICATION_MESSAGE:                     return "eMessageType::CHIRP_NOTIFICATION_MESSAGE";
+    case eMessageType::IEEE1905_ENCAP_EAPOL_MESSAGE:                   return "eMessageType::IEEE1905_ENCAP_EAPOL_MESSAGE";
+    case eMessageType::DPP_BOOTSTRAPPING_URI_NOTIFICATION_MESSAGE:     return "eMessageType::DPP_BOOTSTRAPPING_URI_NOTIFICATION_MESSAGE";
     case eMessageType::FAILED_CONNECTION_MESSAGE:                      return "eMessageType::FAILED_CONNECTION_MESSAGE";
+    case eMessageType::AGENT_LIST_MESSAGE:                             return "eMessageType::AGENT_LIST_MESSAGE";
     }
     static std::string out_str = std::to_string(int(enum_value));
     return out_str.c_str();
@@ -202,6 +228,9 @@ public:
         case 0x801a:
         case 0x801b:
         case 0x801c:
+        case 0x801d:
+        case 0x801e:
+        case 0x801f:
         case 0x8020:
         case 0x8021:
         case 0x8022:
@@ -211,7 +240,17 @@ public:
         case 0x8026:
         case 0x8027:
         case 0x8028:
+        case 0x8029:
+        case 0x802a:
+        case 0x802b:
+        case 0x802c:
+        case 0x802d:
+        case 0x802e:
+        case 0x802f:
+        case 0x8030:
+        case 0x8031:
         case 0x8033:
+        case 0x8035:
                 ret = true;
                 break;
             default:
