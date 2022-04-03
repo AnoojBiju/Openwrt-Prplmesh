@@ -73,6 +73,7 @@
 #include <tlvf/wfa_map/tlvDppChirpValue.h>
 #include <tlvf/wfa_map/tlvDppMessage.h>
 #include <tlvf/wfa_map/tlvDscpMappingTable.h>
+#include <tlvf/wfa_map/tlvEncryptedPayload.h>
 #include <tlvf/wfa_map/tlvErrorCode.h>
 #include <tlvf/wfa_map/tlvHigherLayerData.h>
 #include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
@@ -443,6 +444,9 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     }
     case (wfa_map::eTlvTypeMap::TLV_AKM_SUITE_CAPABILITIES): {
         return msg.addClass<wfa_map::tlvAkmSuiteCapabilities>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_ENCRYPTED_PAYLOAD): {
+        return msg.addClass<wfa_map::tlvEncryptedPayload>();
     }
     case (wfa_map::eTlvTypeMap::TLV_1905_ENCAP_DPP): {
         return msg.addClass<wfa_map::tlv1905EncapDpp>();
