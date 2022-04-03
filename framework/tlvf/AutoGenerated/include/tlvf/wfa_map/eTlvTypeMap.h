@@ -64,6 +64,7 @@ enum class eTlvTypeMap : uint8_t {
     TLV_TIMESTAMP = 0xa8,
     TLV_1905_LAYER_SECURITY_CAPABILITY = 0xa9,
     TLV_MIC = 0xab,
+    TLV_ENCRYPTED_PAYLOAD = 0xac,
     TLV_PROFILE2_CAC_REQUEST = 0xad,
     TLV_PROFILE2_CAC_TERMINATION = 0xae,
     TLV_PROFILE2_CAC_COMPLETION_REPORT = 0xaf,
@@ -152,6 +153,7 @@ static const char *eTlvTypeMap_str(eTlvTypeMap enum_value) {
     case eTlvTypeMap::TLV_TIMESTAMP:                                return "eTlvTypeMap::TLV_TIMESTAMP";
     case eTlvTypeMap::TLV_1905_LAYER_SECURITY_CAPABILITY:           return "eTlvTypeMap::TLV_1905_LAYER_SECURITY_CAPABILITY";
     case eTlvTypeMap::TLV_MIC:                                      return "eTlvTypeMap::TLV_MIC";
+    case eTlvTypeMap::TLV_ENCRYPTED_PAYLOAD:                        return "eTlvTypeMap::TLV_ENCRYPTED_PAYLOAD";
     case eTlvTypeMap::TLV_PROFILE2_CAC_REQUEST:                     return "eTlvTypeMap::TLV_PROFILE2_CAC_REQUEST";
     case eTlvTypeMap::TLV_PROFILE2_CAC_TERMINATION:                 return "eTlvTypeMap::TLV_PROFILE2_CAC_TERMINATION";
     case eTlvTypeMap::TLV_PROFILE2_CAC_COMPLETION_REPORT:           return "eTlvTypeMap::TLV_PROFILE2_CAC_COMPLETION_REPORT";
@@ -247,6 +249,7 @@ public:
         case 0xa8:
         case 0xa9:
         case 0xab:
+        case 0xac:
         case 0xad:
         case 0xae:
         case 0xaf:
