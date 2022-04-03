@@ -64,6 +64,7 @@
 #include <tlvf/wfa_map/tlvErrorCode.h>
 #include <tlvf/wfa_map/tlvHigherLayerData.h>
 #include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
+#include <tlvf/wfa_map/tlvMic.h>
 #include <tlvf/wfa_map/tlvOperatingChannelReport.h>
 #include <tlvf/wfa_map/tlvProfile2ApCapability.h>
 #include <tlvf/wfa_map/tlvProfile2ApRadioAdvancedCapabilities.h>
@@ -421,6 +422,9 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     }
     case (wfa_map::eTlvTypeMap::TLV_ASSOCIATED_WIFI_6_STA_STATUS_REPORT): {
         return msg.addClass<wfa_map::tlvAssociatedWiFi6StaStatusReport>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_MIC): {
+        return msg.addClass<wfa_map::tlvMic>();
     }
     }
     LOG(FATAL) << "Unknown TLV type: " << unsigned(tlv_type);
