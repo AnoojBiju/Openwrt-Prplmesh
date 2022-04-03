@@ -12,9 +12,6 @@
 #define PRINT_BUFFER_LENGTH 4096
 #include "beerocks_cli.h"
 #include "bml.h"
-#ifdef FEATURE_PRE_ASSOCIATION_STEERING
-#include "pre_association_steering/bml_pre_association_steering.h"
-#endif
 
 #include <bcl/beerocks_defines.h>
 #include <bcl/network/network_utils.h>
