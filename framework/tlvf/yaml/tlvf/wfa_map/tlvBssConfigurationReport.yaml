@@ -1,0 +1,55 @@
+#
+---
+_namespace: wfa_map
+
+tlvBssConfigurationReport:
+  _type: class
+  _is_tlv_class : True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_BSS_CONFIGURATION_REPORT
+  length: uint16_t
+  number_of_reported_radios:
+    _type: uint8_t
+    _length_var: True
+  radios: cRadio
+
+cBssConf:
+  _type: class
+  bssid: sMacAddr
+  bss_ie: sBssInformationElement
+  reserved: uint8_t
+  ssid_length:
+    _type: uint8_t
+    _length_var: True
+  ssid:
+    _type: char
+    _length: [ ssid_length ]
+
+sBssInformationElement:
+  _type: struct
+  _bit_field: uint8_t
+  backhaul_bss:
+    _bit_range: [7, 7]
+  fronthaul_bss:
+    _bit_range: [6, 6]
+  r1_disallowed:
+    _bit_range: [5, 5]
+  r2_disallowed:
+    _bit_range: [4, 4]
+  multiple_bssid:
+    _bit_range: [3, 3]
+  transmitted_bssid:
+    _bit_range: [2, 2]
+  reserved:
+    _bit_range: [1, 0]
+
+cRadio:
+  _type: class
+  ruid: sMacAddr
+  number_of_bss:
+    _type: uint8_t
+    _length_var: True
+  bss_info:
+    _type: cBssConf
+    _length: [ number_of_bss ]
