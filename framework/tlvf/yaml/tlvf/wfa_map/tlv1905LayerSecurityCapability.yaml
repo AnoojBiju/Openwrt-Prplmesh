@@ -1,0 +1,32 @@
+#
+---
+_namespace: wfa_map
+
+tlv1905LayerSecurityCapability:
+  _type: class
+  _is_tlv_class : True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_1905_LAYER_SECURITY_CAPABILITY
+  length: uint16_t
+  onboarding_protocol: eOnboardingProtocol
+  mic_algorithm: eMicAlgorithm
+  encryption_algorithm: eEncryptionAlgorithm 
+
+eOnboardingProtocol:
+  _type: enum
+  _enum_storage: uint8_t
+  IEEE1905_PROVISIONING_PROTOCOL: 0x00
+  RESERVED1: 0x01
+
+eMicAlgorithm:
+  _type: enum
+  _enum_storage: uint8_t
+  HMAC_SHA256: 0x00
+  RESERVED2: 0x01
+
+eEncryptionAlgorithm:
+  _type: enum
+  _enum_storage: uint8_t
+  AES_SIV: 0x00
+  RESERVED3: 0x01

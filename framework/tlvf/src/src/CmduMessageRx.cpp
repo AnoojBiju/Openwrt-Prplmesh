@@ -31,6 +31,7 @@
 #include <tlvf/ieee_1905_1/tlvWsc.h>
 #include <tlvf/wfa_map/eTlvTypeMap.h>
 #include <tlvf/wfa_map/tlv1905EncapDpp.h>
+#include <tlvf/wfa_map/tlv1905LayerSecurityCapability.h>
 #include <tlvf/wfa_map/tlvApCapability.h>
 #include <tlvf/wfa_map/tlvApExtendedMetrics.h>
 #include <tlvf/wfa_map/tlvApHeCapabilities.h>
@@ -423,6 +424,9 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     }
     case (wfa_map::eTlvTypeMap::TLV_ASSOCIATED_WIFI_6_STA_STATUS_REPORT): {
         return msg.addClass<wfa_map::tlvAssociatedWiFi6StaStatusReport>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_1905_LAYER_SECURITY_CAPABILITY): {
+        return msg.addClass<wfa_map::tlv1905LayerSecurityCapability>();
     }
     case (wfa_map::eTlvTypeMap::TLV_MIC): {
         return msg.addClass<wfa_map::tlvMic>();
