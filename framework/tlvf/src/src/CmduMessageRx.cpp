@@ -57,6 +57,7 @@
 #include <tlvf/wfa_map/tlvBeaconMetricsQuery.h>
 #include <tlvf/wfa_map/tlvBeaconMetricsResponse.h>
 #include <tlvf/wfa_map/tlvBssConfigurationReport.h>
+#include <tlvf/wfa_map/tlvBssConfigurationRequest.h>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
 #include <tlvf/wfa_map/tlvChannelScanCapabilities.h>
 #include <tlvf/wfa_map/tlvChannelScanReportingPolicy.h>
@@ -446,6 +447,9 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     }
     case (wfa_map::eTlvTypeMap::TLV_BSS_CONFIGURATION_REPORT): {
         return msg.addClass<wfa_map::tlvBssConfigurationReport>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_BSS_CONFIGURATION_REQUEST): {
+        return msg.addClass<wfa_map::tlvBssConfigurationRequest>();
     }
     case (wfa_map::eTlvTypeMap::TLV_AGENT_LIST): {
         return msg.addClass<wfa_map::tlvAgentList>();

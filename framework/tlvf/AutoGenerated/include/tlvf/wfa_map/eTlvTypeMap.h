@@ -77,6 +77,7 @@ enum class eTlvTypeMap : uint8_t {
     TLV_BSS_CONFIGURATION_REPORT = 0xb7,
     TLV_SERVICE_PRIORITIZATION_RULE = 0xb9,
     TLV_DSCP_MAPPING_TABLE = 0xba,
+    TLV_BSS_CONFIGURATION_REQUEST = 0xbb,
     TLV_PROFILE2_ERROR_CODE = 0xbc,
     TLV_PROFILE2_AP_RADIO_ADVANCED_CAPABILITIES = 0xbe,
     TLV_PROFILE2_ASSOCIATION_STATUS_NOTIFICATION = 0xbf,
@@ -159,6 +160,7 @@ static const char *eTlvTypeMap_str(eTlvTypeMap enum_value) {
     case eTlvTypeMap::TLV_BSS_CONFIGURATION_REPORT:                 return "eTlvTypeMap::TLV_BSS_CONFIGURATION_REPORT";
     case eTlvTypeMap::TLV_SERVICE_PRIORITIZATION_RULE:              return "eTlvTypeMap::TLV_SERVICE_PRIORITIZATION_RULE";
     case eTlvTypeMap::TLV_DSCP_MAPPING_TABLE:                       return "eTlvTypeMap::TLV_DSCP_MAPPING_TABLE";
+    case eTlvTypeMap::TLV_BSS_CONFIGURATION_REQUEST:                return "eTlvTypeMap::TLV_BSS_CONFIGURATION_REQUEST";
     case eTlvTypeMap::TLV_PROFILE2_ERROR_CODE:                      return "eTlvTypeMap::TLV_PROFILE2_ERROR_CODE";
     case eTlvTypeMap::TLV_PROFILE2_AP_RADIO_ADVANCED_CAPABILITIES:  return "eTlvTypeMap::TLV_PROFILE2_AP_RADIO_ADVANCED_CAPABILITIES";
     case eTlvTypeMap::TLV_PROFILE2_ASSOCIATION_STATUS_NOTIFICATION: return "eTlvTypeMap::TLV_PROFILE2_ASSOCIATION_STATUS_NOTIFICATION";
@@ -248,6 +250,7 @@ public:
         case 0xb7:
         case 0xb9:
         case 0xba:
+        case 0xbb:
         case 0xbc:
         case 0xbe:
         case 0xbf:
