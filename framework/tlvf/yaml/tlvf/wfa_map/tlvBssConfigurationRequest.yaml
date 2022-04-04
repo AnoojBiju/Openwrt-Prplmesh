@@ -1,0 +1,17 @@
+#
+---
+_namespace: wfa_map
+
+tlvBssConfigurationRequest:
+  _type: class
+  _is_tlv_class : True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_BSS_CONFIGURATION_REQUEST
+  length: uint16_t
+  dpp_configuration_request_object:
+    _type: uint8_t
+    _length: []
+    _comment: |
+      One or more JSON encoded DPP Configuration Request Object attributes (See section 8.1 of Wi-Fi
+      Easy Connect Specification).
