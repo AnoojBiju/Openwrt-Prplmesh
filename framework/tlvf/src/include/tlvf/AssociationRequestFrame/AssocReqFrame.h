@@ -49,7 +49,7 @@ convert(const TS source)
     return mapper.res;
 }
 
-class AssocReqFrame : public WSC::AttrList<uint8_t, uint8_t> {
+class AssocReqFrame : public AttrList<uint8_t, uint8_t> {
 public:
     typedef struct sFieldsPresent {
         uint32_t supported_rates : 1;
