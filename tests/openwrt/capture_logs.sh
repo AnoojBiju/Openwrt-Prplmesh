@@ -43,10 +43,12 @@ uci export prplmesh
 uci export network
 uci export wireless
 echo
-echo "ifconfig output:"
-ifconfig
+echo "ip addr output:"
+ip addr
 echo "'iw list' output:"
 iw list
+echo "'iw dev' output:"
+iw dev
 EOF
 
 ssh "$TARGET" "logread" > "$LOG_DIR/logread.txt"
