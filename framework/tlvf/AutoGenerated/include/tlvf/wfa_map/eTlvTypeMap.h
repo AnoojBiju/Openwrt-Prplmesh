@@ -79,6 +79,7 @@ enum class eTlvTypeMap : uint8_t {
     TLV_DSCP_MAPPING_TABLE = 0xba,
     TLV_BSS_CONFIGURATION_REQUEST = 0xbb,
     TLV_PROFILE2_ERROR_CODE = 0xbc,
+    TLV_BSS_CONFIGURATION_RESPONSE = 0xbd,
     TLV_PROFILE2_AP_RADIO_ADVANCED_CAPABILITIES = 0xbe,
     TLV_PROFILE2_ASSOCIATION_STATUS_NOTIFICATION = 0xbf,
     TLV_TUNNELLED_SOURCE_INFO = 0xc0,
@@ -162,6 +163,7 @@ static const char *eTlvTypeMap_str(eTlvTypeMap enum_value) {
     case eTlvTypeMap::TLV_DSCP_MAPPING_TABLE:                       return "eTlvTypeMap::TLV_DSCP_MAPPING_TABLE";
     case eTlvTypeMap::TLV_BSS_CONFIGURATION_REQUEST:                return "eTlvTypeMap::TLV_BSS_CONFIGURATION_REQUEST";
     case eTlvTypeMap::TLV_PROFILE2_ERROR_CODE:                      return "eTlvTypeMap::TLV_PROFILE2_ERROR_CODE";
+    case eTlvTypeMap::TLV_BSS_CONFIGURATION_RESPONSE:               return "eTlvTypeMap::TLV_BSS_CONFIGURATION_RESPONSE";
     case eTlvTypeMap::TLV_PROFILE2_AP_RADIO_ADVANCED_CAPABILITIES:  return "eTlvTypeMap::TLV_PROFILE2_AP_RADIO_ADVANCED_CAPABILITIES";
     case eTlvTypeMap::TLV_PROFILE2_ASSOCIATION_STATUS_NOTIFICATION: return "eTlvTypeMap::TLV_PROFILE2_ASSOCIATION_STATUS_NOTIFICATION";
     case eTlvTypeMap::TLV_TUNNELLED_SOURCE_INFO:                    return "eTlvTypeMap::TLV_TUNNELLED_SOURCE_INFO";
@@ -252,6 +254,7 @@ public:
         case 0xba:
         case 0xbb:
         case 0xbc:
+        case 0xbd:
         case 0xbe:
         case 0xbf:
         case 0xc0:
