@@ -26,7 +26,7 @@
 #include <mutex>
 
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
-#include "pre_association_steering/bml_pre_association_steering_defs.h"
+#include "bml_pre_association_steering_defs.h"
 #endif
 
 class bml_internal : public beerocks::socket_thread {
