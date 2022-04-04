@@ -9,7 +9,7 @@
 #include "pre_association_steering_task.h"
 #include "../../db/db.h"
 #include "../../son_actions.h"
-#include "pre_association_steering/bml_pre_association_steering_defs.h"
+#include "bml_pre_association_steering_defs.h"
 
 #include <bcl/network/sockets.h>
 #include <easylogging++.h>
