@@ -81,5 +81,6 @@ eTlvTypeMap:
   TLV_1905_ENCAP_EAPOL: 0xCE
   TLV_BACKHAUL_BSS_CONFIGURATION: 0xD0
   TLV_DEVICE_INVENTORY: 0xD4
+  TLV_AGENT_LIST: 0xD5
 
   # When adding values, make sure to also update CmduMessageRx::parseNextTlv !
