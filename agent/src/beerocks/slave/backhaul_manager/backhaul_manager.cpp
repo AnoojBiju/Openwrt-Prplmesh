@@ -1907,6 +1907,11 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
         LOG(DEBUG) << "successfully connected to bssid=" << bssid
                    << " on channel=" << (iface_hal->get_channel()) << " on iface=" << iface;
 
+        // Most likely the network_membership of one bSTA changed, send topology notification:
+        LOG(INFO) << "Sending topology notification to notify controller of the change";
+        m_task_pool.send_event(eTaskType::TOPOLOGY,
+                               TopologyTask::eEvent::AGENT_RADIO_STATE_CHANGED);
+
         auto db = AgentDB::get();
 
         if (iface == db->backhaul.selected_iface_name && !hidden_ssid) {
