@@ -1,0 +1,36 @@
+#
+---
+_namespace: wfa_map
+
+tlvAgentList:
+  _type: class
+  _is_tlv_class : True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_AGENT_LIST
+  length: uint16_t
+  number_of_agents:
+    _type: uint8_t
+    _length_var: True
+  agents:
+    _type: sAgent
+    _length: [ number_of_agents ]
+
+eMultiApProfile:
+  _type: enum
+  _enum_storage: uint8_t
+  MULTIAP_PROFILE_1: 0x1
+  MULTIAP_PROFILE_2: 0x2
+  MULTIAP_PROFILE_3: 0x3
+
+eSecurity:
+  _type: enum
+  _enum_storage: uint8_t
+  IEEE1905_NOT_ENABLED: 0x0
+  IEEE1905_ENABLED: 0x1
+
+sAgent:
+  _type: struct
+  al_mac: sMacAddr
+  multi_ap_profile: eMultiApProfile
+  security: eSecurity
