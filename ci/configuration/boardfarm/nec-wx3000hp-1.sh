@@ -2,6 +2,9 @@
 
 set -e
 
+# Start with a new log file:
+rm -f /var/log/messages && syslog-ng-ctl reload
+
 # IP for device upgrades, operational tests, Boardfarm data network, ...
 uci set network.lan.ipaddr='192.168.1.130'
 
@@ -44,18 +47,6 @@ set wireless.radio0.disabled=0
 set wireless.radio2.disabled=0
 EOF
 
-# System log is currently saved at the end of each test using logread
-# which has circular buffer. As a result data could get lost.
-# Save system (hostap/driver) logs to file and increace buffer size
-
-uci batch << 'EOF'
-set system.@system[0].log_file='/var/log/syslog.txt'
-set system.@system[0].log_buffer_size='4096'
-set system.@system[0].log_size='4096'
-set system.@system[0].log_remote='0'
-EOF
-
 uci commit
-/etc/init.d/log restart
 /etc/init.d/system restart
 /etc/init.d/network restart
