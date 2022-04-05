@@ -1077,6 +1077,59 @@ class ALEntityRDKB(ALEntity):
         return self.device.prprlmesh_status_check()
 
 
+class ALEntityCGR(ALEntity):
+    """Abstraction of ALEntity in real device."""
+
+    def __init__(self, device: None, is_controller: bool = False):
+        self.device = device
+        self.name = device.name
+
+        if is_controller:
+            self.config_file_name = '/opt/prplmesh/config/beerocks_controller.conf'
+        else:
+            self.config_file_name = '/opt/prplmesh/config/beerocks_agent.conf'
+
+        ucc_port_raw = self.command("grep", "ucc_listener_port", self.config_file_name)
+        ucc_port = int(re.search(r'ucc_listener_port=(?P<port>[0-9]+)',
+                                 ucc_port_raw).group('port'))
+        log_folder_raw = self.command(
+            "grep", "log_files_path", self.config_file_name)
+        self.log_folder = re.search(r'log_files_path=(?P<log_path>[a-zA-Z0-9_\/]+)',
+                                    log_folder_raw).group('log_path')
+        ucc_socket = UCCSocket(str(self.device.control_ip), int(ucc_port), timeout=60)
+        mac = ucc_socket.dev_get_parameter('ALid')
+
+        super().__init__(mac, ucc_socket, installdir, is_controller)
+
+        program = "controller" if is_controller else "agent"
+        self.logfilenames = ["{}/beerocks_{}.log".format(self.log_folder, program)]
+
+        # We always have two radios, wlan0 and wlan2
+        RadioHostapd(self, "wlan0")
+        RadioHostapd(self, "wlan2")
+
+    def command(self, *command: str) -> str:
+        """Execute `command` in device and return its output."""
+
+        command_str = shlex.join(command)
+        return subprocess.check_output(["ssh", self.device.control_ip, command_str]).decode()
+
+    def wait_for_log(self, regex: str, start_line: int, timeout: float,
+                     fail_on_mismatch: bool = True) -> bool:
+        """Poll the entity's logfile until it contains "regex" or times out."""
+        checkpoints = ALEntity.get_checkpoints(self.checkpoints, start_line)
+        return _device_wait_for_log(self.device, checkpoints, regex, timeout, fail_on_mismatch)
+
+    def nbapi_command(self, path: str, command: str, args: Dict = None) -> Dict:
+        return nbapi_ubus_command(self, path, command, args)
+
+    def nbapi_command_not_fail(self, path: str, command: str, args: Dict = None) -> Dict:
+        return nbapi_ubus_command_not_fail(self, path, command, args)
+
+    def prprlmesh_status_check(self):
+        return self.device.prprlmesh_status_check()
+
+
 class RadioHostapd(Radio):
     """Abstraction of real Radio in prplWRT device."""
 
@@ -1157,7 +1210,7 @@ class RadioHostapd(Radio):
         """Return mac of specified iface"""
         regex = "link/ether (?P<mac>([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})"
 
-        output = self.agent.command("ip", "link", "show", f"{iface}")
+        output = self.agent.command("/sbin/ip", "link", "show", f"{iface}")
         match = re.search(regex, output)
         return match.group('mac')
 
