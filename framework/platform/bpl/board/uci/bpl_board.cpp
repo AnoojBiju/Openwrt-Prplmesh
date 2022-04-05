@@ -11,11 +11,10 @@
 namespace beerocks {
 namespace bpl {
 
-bool get_board_info(sDeviceInfo &device_info_params)
+bool get_board_info(sBoardInfo &board_info)
 {
-    device_info_params.manufacturer       = "prplFoundation";
-    device_info_params.serial_number      = "prpl12345";
-    device_info_params.manufacturer_model = "Ubuntu";
+    board_info.manufacturer       = "prplFoundation";
+    board_info.manufacturer_model = "Ubuntu";
     return true;
 }
 

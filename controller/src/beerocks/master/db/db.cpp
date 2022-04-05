@@ -7018,7 +7018,7 @@ bool db::dm_set_device_multi_ap_backhaul(const Agent &agent, const sMacAddr &par
     return ret_val;
 }
 
-bool db::dm_set_device_board_info(const Agent &agent, const beerocks::bpl::sDeviceInfo &device_info)
+bool db::dm_set_device_board_info(const Agent &agent, const sDeviceInfo &device_info)
 {
     bool ret_val = true;
 
