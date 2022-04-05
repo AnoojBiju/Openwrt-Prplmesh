@@ -176,20 +176,26 @@ void TopologyTask::handle_topology_discovery(ieee1905_1::CmduMessageRx &cmdu_rx,
         return;
     }
 
-    LOG(DEBUG) << "sender iface_mac=" << tlvMac->mac()
-               << ", local_receiving_iface=" << local_receiving_iface_name
-               << ", local_receiving_iface_mac=" << local_receiving_iface_mac_str;
+    sMacAddr local_receiving_iface_mac = tlvf::mac_from_string(local_receiving_iface_mac_str);
 
     // Check if it is a new device so if it does, we will send a Topology Notification.
     bool new_device = false;
     for (auto &neighbors_on_local_iface_entry : db->neighbor_devices) {
         auto &neighbors_on_local_iface = neighbors_on_local_iface_entry.second;
+        auto &local_iface_mac          = neighbors_on_local_iface_entry.first;
+        // Remove old device from other interfaces
+        if (local_iface_mac != local_receiving_iface_mac) {
+            neighbors_on_local_iface.erase(tlvAlMac->mac());
+            continue;
+        }
         new_device =
             neighbors_on_local_iface.find(tlvAlMac->mac()) == neighbors_on_local_iface.end();
-        if (new_device) {
-            break;
-        }
     }
+
+    LOG(DEBUG) << "sender iface_mac=" << tlvMac->mac()
+               << ", local_receiving_iface=" << local_receiving_iface_name
+               << ", local_receiving_iface_mac=" << local_receiving_iface_mac_str
+               << ", new device=" << new_device;
 
     // Add/Update the device on our list.
     AgentDB::sNeighborDevice neighbor_device;
@@ -197,8 +203,7 @@ void TopologyTask::handle_topology_discovery(ieee1905_1::CmduMessageRx &cmdu_rx,
     neighbor_device.timestamp              = std::chrono::steady_clock::now();
     neighbor_device.receiving_iface_name   = local_receiving_iface_name;
 
-    auto &neighbor_devices_by_al_mac =
-        db->neighbor_devices[tlvf::mac_from_string(local_receiving_iface_mac_str)];
+    auto &neighbor_devices_by_al_mac            = db->neighbor_devices[local_receiving_iface_mac];
     neighbor_devices_by_al_mac[tlvAlMac->mac()] = neighbor_device;
 
     // If it is a new device, then our 1905.1 neighbors list has changed and we are required to send

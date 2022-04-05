@@ -73,8 +73,7 @@ class GenericPrplOS(GenericDevice):
         shutil.copy(os.path.join(self.artifacts_dir, self.image), self.tftp_dir)
         print("Image copied to {}.".format(self.tftp_dir))
         with SerialDevice(self.baudrate, self.name, self.serial_prompt,
-                          expect_prompt_on_connect=False) as ser:
-            shell = ser.shell
+                          expect_prompt_on_connect=False) as shell:
             self.reboot(self.check_serial_type(),
                         stop_in_bootloader=True)
 
@@ -84,6 +83,7 @@ class GenericPrplOS(GenericDevice):
                 print("The upgrade timed out, trying one more time after a reboot.")
                 # Interrupt any running command:
                 shell.send('\003')
+                time.sleep(1)
                 self.reboot(self.check_serial_type(),
                             stop_in_bootloader=True)
                 try:
@@ -113,8 +113,7 @@ class GenericPrplOS(GenericDevice):
         except subprocess.CalledProcessError as exc:
             print("Failed to copy the image to the target:\n{}".format(exc.output))
             raise exc
-        with SerialDevice(self.baudrate, self.name, self.serial_prompt) as ser:
-            shell = ser.shell
+        with SerialDevice(self.baudrate, self.name, self.serial_prompt) as shell:
             # Turn off the wifi to make sure it doesn't prevent the upgrade:
             shell.sendline("wifi down")
             # Do the upgrade
