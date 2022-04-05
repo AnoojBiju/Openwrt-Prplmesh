@@ -5211,7 +5211,7 @@ bool slave_thread::channel_selection_get_transmit_power_limit(const std::string 
 bool slave_thread::handle_channel_selection_request(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     const auto mid = cmdu_rx.getMessageId();
-    LOG(DEBUG) << "Received CHANNEL_SELECTION_REQUEST_MESSAGE, mid=" << std::dec << int(mid);
+    LOG(DEBUG) << "Received CHANNEL_SELECTION_REQUEST_MESSAGE, mid= " << std::dec << int(mid);
 
     std::string fronthaul_iface;
     for (auto &radio_manager_map_element : m_radio_managers.get()) {
