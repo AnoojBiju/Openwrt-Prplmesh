@@ -868,7 +868,8 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
         if (ap_wlan_hal->get_radio_info().channel != request->cs_params().channel &&
             !ap_wlan_hal->switch_channel(request->cs_params().channel,
                                          request->cs_params().bandwidth,
-                                         request->cs_params().vht_center_frequency)) { //error
+                                         request->cs_params().vht_center_frequency,
+                                         request->cs_params().csa_count)) { //error
             std::string error("Failed to set AP channel!");
             LOG(ERROR) << error;
 
@@ -1501,7 +1502,8 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
                        << ", center_freq=" << notification->center_frequency();
 
             if (!ap_wlan_hal->switch_channel(notification->channel(), notification->bandwidth(),
-                                             notification->center_frequency())) {
+                                             notification->center_frequency(),
+                                             notification->csa_count())) {
                 LOG(ERROR) << "switch_channel failed!";
                 response->success() = false;
             }

@@ -2026,6 +2026,10 @@ uint32_t& cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST::center_frequ
     return (uint32_t&)(*m_center_frequency);
 }
 
+uint8_t& cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST::csa_count() {
+    return (uint8_t&)(*m_csa_count);
+}
+
 void cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST::class_swap()
 {
     tlvf_swap(8*sizeof(eActionOp_BACKHAUL), reinterpret_cast<uint8_t*>(m_action_op));
@@ -2067,6 +2071,7 @@ size_t cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST::get_initial_siz
     class_size += sizeof(uint8_t); // channel
     class_size += sizeof(beerocks::eWiFiBandwidth); // bandwidth
     class_size += sizeof(uint32_t); // center_frequency
+    class_size += sizeof(uint8_t); // csa_count
     return class_size;
 }
 
@@ -2094,6 +2099,12 @@ bool cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST::init()
     m_center_frequency = reinterpret_cast<uint32_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint32_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint32_t) << ") Failed!";
+        return false;
+    }
+    m_csa_count = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!m_parse__) *m_csa_count = 0x5;
+    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
     if (m_parse__) { class_swap(); }

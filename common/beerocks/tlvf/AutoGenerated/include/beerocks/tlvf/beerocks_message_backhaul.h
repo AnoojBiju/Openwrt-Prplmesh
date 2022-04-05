@@ -616,6 +616,7 @@ class cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST : public BaseClas
         uint8_t& channel();
         beerocks::eWiFiBandwidth& bandwidth();
         uint32_t& center_frequency();
+        uint8_t& csa_count();
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -627,6 +628,7 @@ class cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST : public BaseClas
         uint8_t* m_channel = nullptr;
         beerocks::eWiFiBandwidth* m_bandwidth = nullptr;
         uint32_t* m_center_frequency = nullptr;
+        uint8_t* m_csa_count = nullptr;
 };
 
 class cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE : public BaseClass
