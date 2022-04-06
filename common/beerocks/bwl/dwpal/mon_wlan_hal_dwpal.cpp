@@ -1020,30 +1020,32 @@ bool mon_wlan_hal_dwpal::channel_scan_trigger(int dwell_time_msec,
     sScanCfgParamsBG params_bg; //background scan param
     size_t bg_size = ScanCfgParams_size_invalid;
 
-    // get original background scan params
-    if (!dwpal_get_scan_params_bg(params_bg, bg_size)) {
-        LOG(ERROR) << "Failed getting original scan parameters";
-        return false;
-    }
-
-    if (dwell_time_msec <= (int)params_bg.window_slice) {
-        LOG(DEBUG) << "dwell_time_msec=" << dwell_time_msec
-                   << " <= window_slice=" << params_bg.window_slice;
-        dwell_time_msec = params_bg.window_slice + 1;
-    }
-
-    if (params_bg.active_dwell_time != dwell_time_msec ||
-        params_bg.passive_dwell_time != dwell_time_msec) {
-        params_bg.active_dwell_time  = dwell_time_msec;
-        params_bg.passive_dwell_time = dwell_time_msec;
-        LOG(DEBUG) << "Setting NEW scan params, updating default dwell_time from "
-                   << params_bg.active_dwell_time << " to " << dwell_time_msec;
-        if (!dwpal_set_scan_params_bg(params_bg, bg_size)) {
-            LOG(ERROR) << "Failed setting new scan parameters";
+    if (dwell_time_msec > 0) // If dwell_time_msec is invalid, Use default driver dwell value
+    {
+        // get original background scan params
+        if (!dwpal_get_scan_params_bg(params_bg, bg_size)) {
+            LOG(ERROR) << "Failed getting original scan parameters";
             return false;
         }
-    }
 
+        if (dwell_time_msec <= (int)params_bg.window_slice) {
+            LOG(DEBUG) << "dwell_time_msec=" << dwell_time_msec
+                       << " <= window_slice=" << params_bg.window_slice;
+            dwell_time_msec = params_bg.window_slice + 1;
+        }
+
+        if (params_bg.active_dwell_time != dwell_time_msec ||
+            params_bg.passive_dwell_time != dwell_time_msec) {
+            params_bg.active_dwell_time  = dwell_time_msec;
+            params_bg.passive_dwell_time = dwell_time_msec;
+            LOG(DEBUG) << "Setting NEW scan params, updating default dwell_time from "
+                       << params_bg.active_dwell_time << " to " << dwell_time_msec;
+            if (!dwpal_set_scan_params_bg(params_bg, bg_size)) {
+                LOG(ERROR) << "Failed setting new scan parameters";
+                return false;
+            }
+        }
+    }
     // get frequencies from channel pool and set in scan_params
     if (!dwpal_get_channel_scan_freq(channel_pool, m_radio_info.channel, m_radio_info.iface_name,
                                      channel_scan_params)) {
