@@ -172,7 +172,7 @@
       esac
       if [ -n "$IMAGE_NAME" ] ; then
           echo "Checking if the firmware on $DEVICE_UNDER_TEST needs to be updated"
-          tools/deploy_firmware.py --device $DEVICE_UNDER_TEST --target-name "$DEVICE_UNDER_TEST" --image $IMAGE_NAME --configuration ci/configuration/certification/R1/"$DEVICE_UNDER_TEST".sh
+          tools/deploy_firmware.py --device $DEVICE_UNDER_TEST --target-name "$DEVICE_UNDER_TEST" --image $IMAGE_NAME --configuration ci/configuration/certification/"$EASYMESH_REVISION"/"$DEVICE_UNDER_TEST".sh
           echo "Deploying prplMesh to $DEVICE_UNDER_TEST"
           tools/deploy_ipk.sh --certification-mode $DEVICE_UNDER_TEST build/$DEVICE_UNDER_TEST/prplmesh.ipk
       fi
