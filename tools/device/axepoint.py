@@ -32,6 +32,13 @@ class Axepoint(GenericPrplOS):
             The serial console to send commands to.
             It's assumed that the console is already stopped in u-boot.
         """
+        # First, remove the overlay:
+        shell.sendline("ubi part system_sw")
+        shell.expect(self.bootloader_prompt)
+        shell.sendline("ubi remove rootfs_data")
+        shell.expect(self.bootloader_prompt)
+        shell.sendline("ubi create rootfs_data 0x2000000 dynamic")
+        shell.expect(self.bootloader_prompt)
         # set the image name and save it:
         shell.sendline("setenv fullimage {} ; saveenv".format(self.image))
         shell.expect(self.bootloader_prompt)
