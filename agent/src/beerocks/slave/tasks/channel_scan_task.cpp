@@ -38,6 +38,7 @@ using namespace beerocks;
 constexpr int PREFERRED_DWELLTIME_MS                       = 103; // 103 Millisec
 constexpr std::chrono::seconds SCAN_TRIGGERED_WAIT_TIME    = std::chrono::seconds(20);  // 20 Sec
 constexpr std::chrono::seconds SCAN_RESULTS_DUMP_WAIT_TIME = std::chrono::seconds(210); // 3.5 Min
+constexpr int INVALID_DWELLTIME_MS = -1; // Let default driver dwell time be used
 /**
  * To allow for CMDU & TLV fragmentation a proximation of the size we need to keep free in the
  * Channel Scan Report Message building process is needed.
@@ -936,7 +937,7 @@ bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmd
             delete ptr;
         });
         new_radio_scan->radio_mac     = radio_mac;
-        new_radio_scan->dwell_time    = PREFERRED_DWELLTIME_MS;
+        new_radio_scan->dwell_time    = INVALID_DWELLTIME_MS;
         new_radio_scan->current_state = eState::PENDING_TRIGGER;
 
         if (!perform_fresh_scan) {
