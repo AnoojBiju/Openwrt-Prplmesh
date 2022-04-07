@@ -4559,24 +4559,50 @@ uint32_t& cACTION_BML_STEERING_SET_GROUP_REQUEST::steeringGroupIndex() {
     return (uint32_t&)(*m_steeringGroupIndex);
 }
 
-sSteeringApConfig& cACTION_BML_STEERING_SET_GROUP_REQUEST::cfg_2() {
-    return (sSteeringApConfig&)(*m_cfg_2);
+std::tuple<bool, sSteeringApConfig&> cACTION_BML_STEERING_SET_GROUP_REQUEST::ap_cfgs(size_t idx) {
+    bool ret_success = ( (m_ap_cfgs_idx__ > 0) && (m_ap_cfgs_idx__ > idx) );
+    size_t ret_idx = ret_success ? idx : 0;
+    if (!ret_success) {
+        TLVF_LOG(ERROR) << "Requested index is greater than the number of available entries";
+    }
+    return std::forward_as_tuple(ret_success, m_ap_cfgs[ret_idx]);
 }
 
-sSteeringApConfig& cACTION_BML_STEERING_SET_GROUP_REQUEST::cfg_5() {
-    return (sSteeringApConfig&)(*m_cfg_5);
-}
-
-uint8_t& cACTION_BML_STEERING_SET_GROUP_REQUEST::remove() {
-    return (uint8_t&)(*m_remove);
+bool cACTION_BML_STEERING_SET_GROUP_REQUEST::alloc_ap_cfgs(size_t count) {
+    if (m_lock_order_counter__ > 0) {;
+        TLVF_LOG(ERROR) << "Out of order allocation for variable length list ap_cfgs, abort!";
+        return false;
+    }
+    size_t len = sizeof(sSteeringApConfig) * count;
+    if(getBuffRemainingBytes() < len )  {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
+        return false;
+    }
+    m_lock_order_counter__ = 0;
+    uint8_t *src = (uint8_t *)&m_ap_cfgs[m_ap_cfgs_idx__];
+    uint8_t *dst = src + len;
+    if (!m_parse__) {
+        size_t move_length = getBuffRemainingBytes(src) - len;
+        std::copy_n(src, move_length, dst);
+    }
+    m_ap_cfgs_idx__ += count;
+    if (!buffPtrIncrementSafe(len)) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
+        return false;
+    }
+    if (!m_parse__) { 
+        for (size_t i = m_ap_cfgs_idx__ - count; i < m_ap_cfgs_idx__; i++) { m_ap_cfgs[i].struct_init(); }
+    }
+    return true;
 }
 
 void cACTION_BML_STEERING_SET_GROUP_REQUEST::class_swap()
 {
     tlvf_swap(8*sizeof(eActionOp_BML), reinterpret_cast<uint8_t*>(m_action_op));
     tlvf_swap(32, reinterpret_cast<uint8_t*>(m_steeringGroupIndex));
-    m_cfg_2->struct_swap();
-    m_cfg_5->struct_swap();
+    for (size_t i = 0; i < m_ap_cfgs_idx__; i++){
+        m_ap_cfgs[i].struct_swap();
+    }
 }
 
 bool cACTION_BML_STEERING_SET_GROUP_REQUEST::finalize()
@@ -4610,9 +4636,6 @@ size_t cACTION_BML_STEERING_SET_GROUP_REQUEST::get_initial_size()
 {
     size_t class_size = 0;
     class_size += sizeof(uint32_t); // steeringGroupIndex
-    class_size += sizeof(sSteeringApConfig); // cfg_2
-    class_size += sizeof(sSteeringApConfig); // cfg_5
-    class_size += sizeof(uint8_t); // remove
     return class_size;
 }
 
@@ -4627,22 +4650,14 @@ bool cACTION_BML_STEERING_SET_GROUP_REQUEST::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint32_t) << ") Failed!";
         return false;
     }
-    m_cfg_2 = reinterpret_cast<sSteeringApConfig*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(sSteeringApConfig))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sSteeringApConfig) << ") Failed!";
-        return false;
-    }
-    if (!m_parse__) { m_cfg_2->struct_init(); }
-    m_cfg_5 = reinterpret_cast<sSteeringApConfig*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(sSteeringApConfig))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sSteeringApConfig) << ") Failed!";
-        return false;
-    }
-    if (!m_parse__) { m_cfg_5->struct_init(); }
-    m_remove = reinterpret_cast<uint8_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
-        return false;
+    m_ap_cfgs = reinterpret_cast<sSteeringApConfig*>(m_buff_ptr__);
+    if (m_parse__) {
+        size_t len = getBuffRemainingBytes();
+        m_ap_cfgs_idx__ = len/sizeof(sSteeringApConfig);
+        if (!buffPtrIncrementSafe(len)) {
+            LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
+            return false;
+        }
     }
     if (m_parse__) { class_swap(); }
     return true;

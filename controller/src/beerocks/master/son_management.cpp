@@ -1495,10 +1495,9 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
 
         pre_association_steering_task::sSteeringSetGroupRequestEvent new_event;
         new_event.sd                 = sd;
-        new_event.remove             = request->remove();
         new_event.steeringGroupIndex = request->steeringGroupIndex();
-        new_event.cfg_2              = request->cfg_2();
-        new_event.cfg_5              = request->cfg_5();
+        new_event.cfg_2              = std::get<1>(request->ap_cfgs(0));
+        new_event.cfg_5              = std::get<1>(request->ap_cfgs(1));
 
         tasks.push_event(database.get_pre_association_steering_task_id(),
                          pre_association_steering_task::eEvents::STEERING_SET_GROUP_REQUEST,

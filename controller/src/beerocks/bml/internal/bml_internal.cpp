@@ -3757,8 +3757,8 @@ bool bml_internal::wake_up(uint8_t action_opcode, int value)
 
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
 
-int bml_internal::steering_set_group(uint32_t steeringGroupIndex, BML_STEERING_AP_CONFIG *cfg_2,
-                                     BML_STEERING_AP_CONFIG *cfg_5)
+int bml_internal::steering_set_group(uint32_t steeringGroupIndex, BML_STEERING_AP_CONFIG *ap_cfgs,
+                                     size_t length)
 {
     LOG(DEBUG) << "bml_internal::steering_set_group - entry";
     // If the socket is not valid, attempt to re-establish the connection
@@ -3780,29 +3780,26 @@ int bml_internal::steering_set_group(uint32_t steeringGroupIndex, BML_STEERING_A
         return (-BML_RET_OP_FAILED);
     }
 
-    if (cfg_2 && cfg_5) {
-        request->remove() = 0;
-
-        std::copy_n(cfg_2->bssid, sizeof(sMacAddr::oct), request->cfg_2().bssid.oct);
-        request->cfg_2().utilCheckIntervalSec   = cfg_2->utilCheckIntervalSec;
-        request->cfg_2().utilAvgCount           = cfg_2->utilAvgCount;
-        request->cfg_2().inactCheckIntervalSec  = cfg_2->inactCheckIntervalSec;
-        request->cfg_2().inactCheckThresholdSec = cfg_2->inactCheckThresholdSec;
-
-        std::copy_n(cfg_5->bssid, sizeof(sMacAddr::oct), request->cfg_5().bssid.oct);
-        request->cfg_5().utilCheckIntervalSec   = cfg_5->utilCheckIntervalSec;
-        request->cfg_5().utilAvgCount           = cfg_5->utilAvgCount;
-        request->cfg_5().inactCheckIntervalSec  = cfg_5->inactCheckIntervalSec;
-        request->cfg_5().inactCheckThresholdSec = cfg_5->inactCheckThresholdSec;
-
-    } else if (!cfg_2 && !cfg_5) {
-        request->remove() = 1;
-    } else {
-        LOG(ERROR) << "invalid argument only one cfg_ is null ptr!";
-        return (-BML_RET_INVALID_ARGS);
+    request->steeringGroupIndex() = steeringGroupIndex;
+    if (length > 0) {
+        if (!request->alloc_ap_cfgs(length)) {
+            LOG(ERROR) << "Failed on allocate " << length << " AP Configurations";
+            return (-BML_RET_OP_FAILED);
+        }
     }
 
-    request->steeringGroupIndex() = steeringGroupIndex;
+    for (size_t i = 0; i < length; i++) {
+        if (!std::get<0>(request->ap_cfgs(i))) {
+            LOG(ERROR) << "Failed on getting AP Configuration of index " << i;
+            return (-BML_RET_OP_FAILED);
+        }
+        beerocks_message::sSteeringApConfig &request_ap_cfg = std::get<1>(request->ap_cfgs(i));
+        std::copy_n(ap_cfgs[i].bssid, sizeof(sMacAddr::oct), request_ap_cfg.bssid.oct);
+        request_ap_cfg.utilCheckIntervalSec   = ap_cfgs[i].utilCheckIntervalSec;
+        request_ap_cfg.utilAvgCount           = ap_cfgs[i].utilAvgCount;
+        request_ap_cfg.inactCheckIntervalSec  = ap_cfgs[i].inactCheckIntervalSec;
+        request_ap_cfg.inactCheckThresholdSec = ap_cfgs[i].inactCheckThresholdSec;
+    }
 
     if (!message_com::send_cmdu(m_sockMaster, cmdu_tx)) {
         LOG(ERROR) << "Failed sending cACTION_BML_AP_SET_CONFIG message!";

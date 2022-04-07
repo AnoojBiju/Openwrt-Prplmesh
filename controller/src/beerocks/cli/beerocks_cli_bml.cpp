@@ -1922,19 +1922,21 @@ int cli_bml::steering_set_group(uint32_t steeringGroupIndex,
 {
     int ret;
     BML_STEERING_AP_CONFIG *cfgs = nullptr;
-    std::cout << "set_ap_config entries" << std::endl;
+    unsigned int length          = 0;
 
+    std::cout << "set_ap_config entries" << std::endl;
     if (!str_ap_cfgs.empty()) {
-        cfgs = new BML_STEERING_AP_CONFIG[str_ap_cfgs.size()];
+        length = str_ap_cfgs.size();
+        cfgs   = new BML_STEERING_AP_CONFIG[length];
         if (!cfgs) {
-            std::cout << "Can't allocate array of " << str_ap_cfgs.size()
-                      << " BML_STEERING_AP_CONFIG" << std::endl;
+            std::cout << "Can't allocate array of " << length << " BML_STEERING_AP_CONFIG"
+                      << std::endl;
             return -1;
         }
         steering_set_group_string_to_struct(str_ap_cfgs, cfgs);
     }
 
-    ret = bml_pre_association_steering_set_group(ctx, steeringGroupIndex, cfgs, cfgs + 1);
+    ret = bml_pre_association_steering_set_group(ctx, steeringGroupIndex, cfgs, length);
 
     if (cfgs) {
         delete[] cfgs;

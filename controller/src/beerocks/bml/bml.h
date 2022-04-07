@@ -714,18 +714,18 @@ int bml_client_clear_client(BML_CTX ctx, const char *sta_mac);
 /*
 * A steering group defines a group members of which can have steering done
 * between them.
-* To remove a group configuration call with NULL as cfg_2 and cfg_5.
+* To remove a group configuration call this function with ap_cfgs as NULL, and length as 0.
 * @param[in] ctx BML Context.
 * @param[in] steeringGroupIndex  Wifi Steering Group index
-* @param[in] cfg_2               2.4G apConfig
-* @param[in] cfg_5               5G apConfig
+* @param[in] ap_cfgs             Array of AP Configurations
+* @param[in] length              The number of AP Configuration in the array. Cannot be above 3.
 *
 * @return BML_RET_OK on success.
 *
 */
 int bml_pre_association_steering_set_group(BML_CTX ctx, uint32_t steeringGroupIndex,
-                                           struct BML_STEERING_AP_CONFIG *cfg_2,
-                                           struct BML_STEERING_AP_CONFIG *cfg_5);
+                                           struct BML_STEERING_AP_CONFIG *ap_cfgs,
+                                           unsigned int length);
 
 /*
 * Call this function to add/modify/remove per-client configuration config of client_mac.
