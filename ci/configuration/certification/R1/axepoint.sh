@@ -3,7 +3,7 @@
 set -e
 
 # Start with a new log file:
-rm -f /var/log/messages && syslog-ng-ctl reload
+rm -f /var/log/messages ; syslog-ng-ctl reload || true
 
 # One of the LAN ports is used for control, and the WAN port for data:
 uci batch << 'EOF'
