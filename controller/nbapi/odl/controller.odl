@@ -12,16 +12,16 @@
         /* Coming from 17.2.8 of the Multi-AP Specification */
         object HTCapabilities {
             /* Maximum number of supported Tx spatial streams */
-            %read-only uint32 tx_spatial_streams {
+            %read-only uint32 MaxNumberOfTxSpatialStreams {
                 on action validate call check_maximum 4;
             }
             /* Maximum number of supported Rx spatial streams */
-            %read-only uint32 rx_spatial_streams  {
+            %read-only uint32 MaxNumberOfRxSpatialStreams {
                 on action validate call check_maximum 4;
             }
-            %read-only bool GI_20_MHz;   /* Short GI Support for 20 MHz. */
-            %read-only bool GI_40_MHz;   /* Short GI Support for 40 MHz. */
-            %read-only bool HT_40_Mhz;   /* HT support for 40 MHz */
+            %read-only bool HT20MHzGISupported;     /* Short GI Support for 20 MHz. */
+            %read-only bool HT40MHzGISupported;     /* Short GI Support for 40 MHz. */
+            %read-only bool HT40MHzBWSupported;     /* HT support for 40 MHz bandwidth.*/
         }
     }
 }
@@ -31,27 +31,27 @@
         /* Coming from 17.2.9 of the Multi-AP Specification */
         object VHTCapabilities {
             /* Supported set of VHT MCSs that can be transmitted. */
-            %read-only uint32 VHT_Tx_MCS {
+            %read-only uint32 VHTTxMCSSet {
                 on action validate call check_range [0, 65536];
             }
             /* Supported set of VHT MCSs that can be received. */
-            %read-only uint32 VHT_Rx_MCS {
+            %read-only uint32 VHTRxMCSSet {
                 on action validate call check_range [0, 65536];
             }
             /* Maximum number of supported Tx spatial streams */
-            %read-only uint32 tx_spatial_streams {
+            %read-only uint32 MaxNumberOfTxSpatialStreams {
                 on action validate call check_maximum 8;
             }
             /* Maximum number of supported Rx spatial streams */
-            %read-only uint32 rx_spatial_streams  {
+            %read-only uint32 MaxNumberOfRxSpatialStreams {
                 on action validate call check_maximum 8;
             }
-            %read-only bool GI_80_MHz;       /* Short GI support for 80 MHz */
-            %read-only bool GI_160_MHz;      /* Short GI support for 160 MHz and 80+80 MHz */
-            %read-only bool VHT_80_80_MHz;   /* VHT support for 80+80 MHz. */
-            %read-only bool VHT_160_MHz;     /* VHT support for 160 MHz. */
-            %read-only bool SU_beamformer;   /* Single user beamformer capable. */
-            %read-only bool MU_beamformer;   /* Multi user beamformer capable. */
+            %read-only bool VHT80MHzGISupported;        /* Short GI support for 80 MHz */
+            %read-only bool VHT160MHzGISupported;       /* Short GI support for 160 MHz and 80+80 MHz */
+            %read-only bool VHT8080MHzBWSupported;      /* VHT support for 80+80 MHz bandwidth. */
+            %read-only bool VHT160MHzBWSupported;       /* VHT support for 160 MHz bandwidth. */
+            %read-only bool SUBeamformerSupported;      /* Single user beamformer capable. */
+            %read-only bool MUBeamformerSupported;      /* Multi user beamformer capable. */
         }
     }
 }
@@ -61,26 +61,26 @@
         /* Coming from 17.2.10 of the Multi-AP Specification */
         object HECapabilities {
             /* Supported HE MCS indicating set of supported HE Tx and Rx MCS. */
-            object supported_MCS[] {
-                counted with supported_MCS_size;
-                %read-only uint32 MCS;   /* Individual MCS */
+            object HETxRxMCS[] {
+                counted with HETxRxMCSNumberOfEntries;
+                %read-only uint32 MCSSet;   /* Individual MCS */
             }
             /* Maximum number of supported Tx spatial streams */
-            %read-only uint32 tx_spatial_streams {
+            %read-only uint32 MaxNumberOfTxSpatialStreams {
                 on action validate call check_maximum 8;
             }
             /* Maximum number of supported Rx spatial streams */
-            %read-only uint32 rx_spatial_streams  {
+            %read-only uint32 MaxNumberOfRxSpatialStreams {
                 on action validate call check_maximum 8;
             }
-            %read-only bool HE_8080_MHz;      /* HE support for 80+80 MHz. */
-            %read-only bool HE_160_MHz;       /* HE support for 160 MHz. */
-            %read-only bool SU_Beamformer;    /* Single user beamformer capable. */
-            %read-only bool MU_Beamformer;    /* Multi user beamformer capable. */
-            %read-only bool UL_MU_MIMO;       /* UL MU-MIMO capable. */
-            %read-only bool UL_MU_MIMO_OFDMA; /* UL MU-MIMO + OFDMA capable. */
-            %read-only bool DL_MU_MIMO_OFDMA; /* DL MU-MIMO + OFDMA capable. */
-            %read-only bool UL_OFDMA;         /* UL OFDMA capable. */
+            %read-only bool HE8080MHzBWSupported;           /* HE support for 80+80 MHz bandwidth. */
+            %read-only bool HE160MHzBWSupported;            /* HE support for 160 MHz bandwidth. */
+            %read-only bool SUBeamformerSupported;          /* Single user beamformer capable. */
+            %read-only bool MUBeamformerSupported;          /* Multi user beamformer capable. */
+            %read-only bool UpLinkMUMIMOSupported;          /* UL MU-MIMO capable. */
+            %read-only bool UpLinkMUMIMOInOFDMASupported;   /* UL MU-MIMO + OFDMA capable. */
+            %read-only bool DownLinkMUMIMOInOFDMASupported; /* DL MU-MIMO + OFDMA capable. */
+            %read-only bool UpLinkInOFDMASupported;         /* UL OFDMA capable. */
         }
     }
 }

@@ -94,36 +94,36 @@ class NbapiCapabilities(PrplMeshBaseTest):
                 if tlv.tlv_type == self.ieee1905['eTlvTypeMap']['TLV_AP_HT_CAPABILITIES']:
                     radio = repeater.radios[tlv.ap_ht_radio_id]
                     ht_caps = self.get_nbapi_ht_capabilities(radio.path + ".Capabilities")
-                    self.assertEqualInt("rx_spatial_streams", ht_caps['rx_ss'] - 1,
+                    self.assertEqualInt("MaxNumberOfRxSpatialStreams", ht_caps['rx_ss'] - 1,
                                         tlv.ap_ht_caps_tree['ieee1905.ap_ht.max_rx_streams'])
-                    self.assertEqualInt("tx_spatial_streams", ht_caps['tx_ss'] - 1,
+                    self.assertEqualInt("MaxNumberOfTxSpatialStreams", ht_caps['tx_ss'] - 1,
                                         tlv.ap_ht_caps_tree['ieee1905.ap_ht.max_tx_streams'])
-                    self.assertEqualInt("GI_20_MHz", ht_caps['gi_20_mhz'],
+                    self.assertEqualInt("HT20MHzGISupported", ht_caps['gi_20_mhz'],
                                         tlv.ap_ht_caps_tree['ieee1905.ap_ht.short_gi_20mhz'])
-                    self.assertEqualInt("GI_40_MHz", ht_caps['gi_40_mhz'],
+                    self.assertEqualInt("HT40MHzGISupported", ht_caps['gi_40_mhz'],
                                         tlv.ap_ht_caps_tree['ieee1905.ap_ht.short_gi_40mhz'])
-                    self.assertEqualInt("HT_40_Mhz", ht_caps['ht_40_mhz'],
+                    self.assertEqualInt("HT40MHzBWSupported", ht_caps['ht_40_mhz'],
                                         tlv.ap_ht_caps_tree['ieee1905.ap_ht.ht_support_40mhz'])
                 if tlv.tlv_type == self.ieee1905['eTlvTypeMap']['TLV_AP_VHT_CAPABILITIES']:
                     radio = repeater.radios[tlv.ap_vht_radio_id]
                     vht_caps = self.get_nbapi_vht_capabilities(radio.path + ".Capabilities")
-                    self.assertEqualInt("rx_spatial_streams", vht_caps['rx_ss'] - 1,
+                    self.assertEqualInt("MaxNumberOfRxSpatialStreams", vht_caps['rx_ss'] - 1,
                                         tlv.ap_vht_caps_tree['ieee1905.ap_vht.max_rx_streams'])
-                    self.assertEqualInt("tx_spatial_streams", vht_caps['tx_ss'] - 1,
+                    self.assertEqualInt("MaxNumberOfTxSpatialStreams", vht_caps['tx_ss'] - 1,
                                         tlv.ap_vht_caps_tree['ieee1905.ap_vht.max_tx_streams'])
-                    self.assertEqualInt("GI_80_MHz", vht_caps['gi_80_mhz'],
+                    self.assertEqualInt("VHT80MHzGISupported", vht_caps['gi_80_mhz'],
                                         tlv.ap_vht_caps_tree['ieee1905.ap_vht.short_gi_80mhz'])
-                    self.assertEqualInt("GI_160_MHz", vht_caps['gi_160_mhz'],
+                    self.assertEqualInt("VHT160MHzGISupported", vht_caps['gi_160_mhz'],
                                         tlv.ap_vht_caps_tree['ieee1905.ap_vht.short_gi_160mhz'])
-                    self.assertEqualInt("VHT_80_80_MHz", vht_caps['vht_80_80_mhz'],
+                    self.assertEqualInt("VHT8080MHzBWSupported", vht_caps['vht_80_80_mhz'],
                                         tlv.ap_vht_caps_tree['ieee1905.ap_vht.vht_80plus_mhz'])
-                    self.assertEqualInt("VHT_160_MHz", vht_caps['vht_160_mhz'],
+                    self.assertEqualInt("VHT160MHzBWSupported", vht_caps['vht_160_mhz'],
                                         tlv.ap_vht_caps_tree['ieee1905.ap_vht.vht_160mhz'])
-                    self.assertEqualInt("SU_beamformer", vht_caps['su_beamformer'],
+                    self.assertEqualInt("SUBeamformerSupported", vht_caps['su_beamformer'],
                                         tlv.ap_vht_caps_tree['ieee1905.ap_vht.su_beamformer'])
-                    self.assertEqualInt("MU_beamformer", vht_caps['mu_beamformer'],
+                    self.assertEqualInt("MUBeamformerSupported", vht_caps['mu_beamformer'],
                                         tlv.ap_vht_caps_tree['ieee1905.ap_vht.mu_beamformer'])
                     self.assertEqualInt(
-                        "VHT_Tx_MCS", vht_caps['vht_tx_mcs'], tlv.vht_supported_tx_mcs)
+                        "VHTTxMCSSet", vht_caps['vht_tx_mcs'], tlv.vht_supported_tx_mcs)
                     self.assertEqualInt(
-                        "VHT_Rx_MCS", vht_caps['vht_rx_mcs'], tlv.vht_supported_rx_mcs)
+                        "VHTRxMCSSet", vht_caps['vht_rx_mcs'], tlv.vht_supported_rx_mcs)

@@ -1235,11 +1235,7 @@ std::list<sMacAddr> db::get_1905_1_neighbors(const sMacAddr &al_mac)
 
 bool db::set_ap_vht_capabilities(wfa_map::tlvApVhtCapabilities &vht_caps_tlv)
 {
-    auto radio      = get_radio_by_uid(vht_caps_tlv.radio_uid());
-    auto flags1     = vht_caps_tlv.flags1();
-    auto flags2     = vht_caps_tlv.flags2();
-    bool return_val = true;
-
+    auto radio = get_radio_by_uid(vht_caps_tlv.radio_uid());
     if (!radio) {
         LOG(ERROR) << "Failed to get radio with mac: " << vht_caps_tlv.radio_uid();
         return false;
@@ -1255,69 +1251,37 @@ bool db::set_ap_vht_capabilities(wfa_map::tlvApVhtCapabilities &vht_caps_tlv)
         LOG(ERROR) << "Failed to add sub-object" << path_to_obj << "VHTCapabilities";
         return false;
     }
+
+    bool ret_val = true;
     path_to_obj += "VHTCapabilities.";
-    if (!m_ambiorix_datamodel->set(path_to_obj, "VHT_Tx_MCS",
-                                   vht_caps_tlv.supported_vht_tx_mcs())) {
-        LOG(ERROR) << "Failed to set " << path_to_obj
-                   << "VHT_Tx_MCS: " << vht_caps_tlv.supported_vht_tx_mcs();
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "VHT_Rx_MCS",
-                                   vht_caps_tlv.supported_vht_rx_mcs())) {
-        LOG(ERROR) << "Failed to set " << path_to_obj
-                   << "VHT_Rx_MCS: " << vht_caps_tlv.supported_vht_rx_mcs();
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "tx_spatial_streams",
-                                   flags1.max_num_of_supported_tx_spatial_streams + 1)) {
-        LOG(ERROR) << "Failed to set " << path_to_obj
-                   << "tx_spatial_streams: " << flags1.max_num_of_supported_tx_spatial_streams + 1;
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "rx_spatial_streams",
-                                   flags1.max_num_of_supported_rx_spatial_streams + 1)) {
-        LOG(ERROR) << "Failed to set " << path_to_obj
-                   << "rx_spatial_streams: " << flags1.max_num_of_supported_rx_spatial_streams + 1;
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "GI_80_MHz",
-                                   static_cast<bool>(flags1.short_gi_support_80mhz))) {
-        LOG(ERROR) << "Failed to set " << path_to_obj
-                   << "GI_80_MHz: " << static_cast<bool>(flags1.short_gi_support_80mhz);
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(
-            path_to_obj, "GI_160_MHz",
-            static_cast<bool>(flags1.short_gi_support_160mhz_and_80_80mhz))) {
-        LOG(ERROR) << "Failed to set " << path_to_obj << "GI_160_MHz: "
-                   << static_cast<bool>(flags1.short_gi_support_160mhz_and_80_80mhz);
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "VHT_80_80_MHz",
-                                   static_cast<bool>(flags2.vht_support_80_80mhz))) {
-        LOG(ERROR) << "Failed to set " << path_to_obj
-                   << "VHT_80_80_MHz: " << static_cast<bool>(flags2.vht_support_80_80mhz);
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "VHT_160_MHz",
-                                   static_cast<bool>(flags2.vht_support_160mhz))) {
-        LOG(ERROR) << "Failed to set " << path_to_obj
-                   << "VHT_160_MHz: " << static_cast<bool>(flags2.vht_support_160mhz);
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "SU_beamformer",
-                                   static_cast<bool>(flags2.su_beamformer_capable))) {
-        LOG(ERROR) << "Failed to set " << path_to_obj
-                   << "SU_beamformer: " << static_cast<bool>(flags2.su_beamformer_capable);
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "MU_beamformer",
-                                   static_cast<bool>(flags2.mu_beamformer_capable))) {
-        LOG(ERROR) << "Failed to set " << path_to_obj
-                   << "MU_beamformer: " << static_cast<bool>(flags2.mu_beamformer_capable);
-        return_val = false;
-    }
-    return return_val;
+
+    auto flags1 = vht_caps_tlv.flags1();
+    auto flags2 = vht_caps_tlv.flags2();
+
+    ret_val &=
+        m_ambiorix_datamodel->set(path_to_obj, "VHTTxMCSSet", vht_caps_tlv.supported_vht_tx_mcs());
+    ret_val &=
+        m_ambiorix_datamodel->set(path_to_obj, "VHTRxMCSSet", vht_caps_tlv.supported_vht_rx_mcs());
+
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfTxSpatialStreams",
+                                         flags1.max_num_of_supported_tx_spatial_streams + 1);
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfRxSpatialStreams",
+                                         flags1.max_num_of_supported_rx_spatial_streams + 1);
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "VHT80MHzGISupported",
+                                         static_cast<bool>(flags1.short_gi_support_80mhz));
+    ret_val &=
+        m_ambiorix_datamodel->set(path_to_obj, "VHT160MHzGISupported",
+                                  static_cast<bool>(flags1.short_gi_support_160mhz_and_80_80mhz));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "VHT8080MHzBWSupported",
+                                         static_cast<bool>(flags2.vht_support_80_80mhz));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "VHT160MHzBWSupported",
+                                         static_cast<bool>(flags2.vht_support_160mhz));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SUBeamformerSupported",
+                                         static_cast<bool>(flags2.su_beamformer_capable));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MUBeamformerSupported",
+                                         static_cast<bool>(flags2.mu_beamformer_capable));
+
+    return ret_val;
 }
 
 bool db::dm_add_ap_operating_classes(const std::string &radio_mac, uint8_t max_tx_power,
@@ -1383,10 +1347,6 @@ bool db::set_ap_he_capabilities(wfa_map::tlvApHeCapabilities &he_caps_tlv)
     }
 
     auto path_to_obj = radio->dm_path;
-    auto flags1      = he_caps_tlv.flags1();
-    auto flags2      = he_caps_tlv.flags2();
-    bool return_val  = true;
-
     if (path_to_obj.empty()) {
         return true;
     }
@@ -1397,85 +1357,47 @@ bool db::set_ap_he_capabilities(wfa_map::tlvApHeCapabilities &he_caps_tlv)
         return false;
     }
 
+    bool ret_val = true;
     path_to_obj += "HECapabilities.";
-    if (!m_ambiorix_datamodel->set(path_to_obj, "HE_8080_MHz",
-                                   static_cast<bool>(flags1.he_support_80_80mhz))) {
-        LOG(ERROR) << "Failed to set " << path_to_obj
-                   << "HE_8080_MHz: " << static_cast<bool>(flags1.he_support_80_80mhz);
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "HE_160_MHz",
-                                   static_cast<bool>(flags1.he_support_160mhz))) {
-        LOG(ERROR) << "Failed to set " << path_to_obj
-                   << "HE_160_MHz: " << static_cast<bool>(flags1.he_support_160mhz);
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "SU_Beamformer",
-                                   static_cast<bool>(flags2.su_beamformer_capable))) {
-        LOG(ERROR) << "Failed to set " << path_to_obj
-                   << "SU_beamformer: " << static_cast<bool>(flags2.su_beamformer_capable);
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "MU_Beamformer",
-                                   static_cast<bool>(flags2.mu_beamformer_capable))) {
-        LOG(ERROR) << "Failed to set " << path_to_obj
-                   << "MU_Beamformer: " << static_cast<bool>(flags2.mu_beamformer_capable);
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "UL_MU_MIMO",
-                                   static_cast<bool>(flags2.ul_mu_mimo_capable))) {
-        LOG(ERROR) << "Failed to set " << path_to_obj
-                   << "UL_MU_MIMO: " << static_cast<bool>(flags2.ul_mu_mimo_capable);
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "UL_MU_MIMO_OFDMA",
-                                   static_cast<bool>(flags2.ul_mu_mimo_and_ofdm_capable))) {
-        LOG(ERROR) << "Failed to set " << path_to_obj
-                   << "UL_MU_MIMO_OFDMA: " << static_cast<bool>(flags2.ul_mu_mimo_and_ofdm_capable);
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "DL_MU_MIMO_OFDMA",
-                                   static_cast<bool>(flags2.dl_mu_mimo_and_ofdm_capable))) {
-        LOG(ERROR) << "Failed to set " << path_to_obj
-                   << "DL_MU_MIMO_OFDMA: " << static_cast<bool>(flags2.dl_mu_mimo_and_ofdm_capable);
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "UL_OFDMA",
-                                   static_cast<bool>(flags2.ul_ofdm_capable))) {
-        LOG(ERROR) << "Failed to set " << path_to_obj
-                   << "UL_OFDMA: " << static_cast<bool>(flags2.ul_ofdm_capable);
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "tx_spatial_streams",
-                                   flags1.max_num_of_supported_tx_spatial_streams + 1)) {
-        LOG(ERROR) << "Failed to set " << path_to_obj
-                   << "tx_spatial_streams: " << flags1.max_num_of_supported_tx_spatial_streams + 1;
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "rx_spatial_streams",
-                                   flags1.max_num_of_supported_rx_spatial_streams + 1)) {
-        LOG(ERROR) << "Failed to set " << path_to_obj
-                   << "rx_spatial_streams: " << flags1.max_num_of_supported_rx_spatial_streams + 1;
-        return_val = false;
-    }
+
+    auto flags1 = he_caps_tlv.flags1();
+    auto flags2 = he_caps_tlv.flags2();
+
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfTxSpatialStreams",
+                                         flags1.max_num_of_supported_tx_spatial_streams + 1);
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfRxSpatialStreams",
+                                         flags1.max_num_of_supported_rx_spatial_streams + 1);
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HE8080MHzBWSupported",
+                                         static_cast<bool>(flags1.he_support_80_80mhz));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HE160MHzBWSupported",
+                                         static_cast<bool>(flags1.he_support_160mhz));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SUBeamformerSupported",
+                                         static_cast<bool>(flags2.su_beamformer_capable));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MUBeamformerSupported",
+                                         static_cast<bool>(flags2.mu_beamformer_capable));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "UpLinkMUMIMOSupported",
+                                         static_cast<bool>(flags2.ul_mu_mimo_capable));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "UpLinkMUMIMOInOFDMASupported",
+                                         static_cast<bool>(flags2.ul_mu_mimo_and_ofdm_capable));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "DownLinkMUMIMOInOFDMASupported",
+                                         static_cast<bool>(flags2.dl_mu_mimo_and_ofdm_capable));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "UpLinkInOFDMASupported",
+                                         static_cast<bool>(flags2.ul_ofdm_capable));
 
     uint8_t supported_he_mcs_length = he_caps_tlv.supported_he_mcs_length();
-    path_to_obj += "supported_MCS";
+    path_to_obj += "HETxRxMCS";
     for (int i = 0; i < supported_he_mcs_length; i++) {
         auto path_to_obj_instance = m_ambiorix_datamodel->add_instance(path_to_obj);
         if (path_to_obj_instance.empty()) {
             LOG(ERROR) << "Failed to add " << path_to_obj;
-            return_val = false;
+            ret_val = false;
             continue;
         }
-        if (!m_ambiorix_datamodel->set(path_to_obj_instance + '.', "MCS",
-                                       *he_caps_tlv.supported_he_mcs(i))) {
-            LOG(WARNING) << "Failed to set " << path_to_obj_instance
-                         << "MCS: " << he_caps_tlv.supported_he_mcs(i);
-            return_val = false;
-        }
+        ret_val &= m_ambiorix_datamodel->set(path_to_obj_instance + '.', "MCSSet",
+                                             *he_caps_tlv.supported_he_mcs(i));
     }
-    return return_val;
+
+    return ret_val;
 }
 
 const beerocks::message::sRadioCapabilities *
@@ -1491,170 +1413,94 @@ db::get_station_current_capabilities(const std::string &mac)
 bool db::dm_set_sta_he_capabilities(const std::string &path_to_sta,
                                     const beerocks::message::sRadioCapabilities &sta_cap)
 {
-    bool return_val = true;
-
     if (!m_ambiorix_datamodel->add_optional_subobject(path_to_sta, "HECapabilities")) {
         LOG(ERROR) << "Failed to add sub-object " << path_to_sta << "HECapabilities";
         return false;
     }
+
+    bool ret_val            = true;
     std::string path_to_obj = path_to_sta + "HECapabilities.";
-    if (!m_ambiorix_datamodel->set(path_to_obj, "rx_spatial_streams", sta_cap.ht_ss)) {
-        LOG(ERROR) << "Failed to set " << path_to_obj << "rx_spatial_streams: " << sta_cap.ht_ss;
-        return_val = false;
-    }
+
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfRxSpatialStreams", sta_cap.ht_ss);
     // To do: find value for tx_spatial_streams PPM-792.
     // Parse the (Re)Association Request frame.
-    if (!m_ambiorix_datamodel->set(path_to_obj, "tx_spatial_streams", sta_cap.ht_ss)) {
-        LOG(ERROR) << "Failed to set " << path_to_obj << "tx_spatial_streams: " << sta_cap.ht_ss;
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "VHT_80_80_MHz",
-                                   BANDWIDTH_80_80 <= sta_cap.vht_bw)) {
-        LOG(ERROR) << "Failed to set " << path_to_obj
-                   << "VHT_80_80_MHz: " << (BANDWIDTH_80_80 <= sta_cap.vht_bw);
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "GI_160_MHz",
-                                   static_cast<bool>(sta_cap.vht_high_bw_short_gi))) {
-        LOG(ERROR) << "Failed to set " << path_to_obj
-                   << "GI_160_MHz: " << static_cast<bool>(sta_cap.vht_high_bw_short_gi);
-        return_val = false;
-    }
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfTxSpatialStreams", sta_cap.ht_ss);
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "VHT8080MHzBWSupported",
+                                         BANDWIDTH_80_80 <= sta_cap.vht_bw);
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "VHT160MHzGISupported",
+                                         static_cast<bool>(sta_cap.vht_high_bw_short_gi));
     // To do: For rest of the values need to parse
     // (Re)Association Request frame PPM-792
-    if (!m_ambiorix_datamodel->set(path_to_obj, "SU_Beamformer", false)) {
-        LOG(ERROR) << "Failed to set " << path_to_obj << "SU_Beamformer: " << false;
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "MU_Beamformer", false)) {
-        LOG(ERROR) << "Failed to set " << path_to_obj << "MU_Beamformer: " << false;
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "UL_MU_MIMO", false)) {
-        LOG(ERROR) << "Failed to set " << path_to_obj << "UL_MU_MIMO: " << false;
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "UL_MU_MIMO_OFDMA", false)) {
-        LOG(ERROR) << "Failed to set " << path_to_obj << "UL_MU_MIMO_OFDMA: " << false;
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "DL_MU_MIMO_OFDMA", false)) {
-        LOG(ERROR) << "Failed to set " << path_to_obj << "DL_MU_MIMO_OFDMA: " << false;
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "UL_OFDMA", false)) {
-        LOG(ERROR) << "Failed to set  " << path_to_obj << "UL_OFDMA: " << false;
-        return_val = false;
-    }
-    return return_val;
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SUBeamformerSupported", false);
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MUBeamformerSupported", false);
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "UpLinkMUMIMOSupported", false);
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "UpLinkMUMIMOInOFDMASupported", false);
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "DownLinkMUMIMOInOFDMASupported", false);
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "UpLinkInOFDMASupported", false);
+
+    return ret_val;
 }
 
 bool db::dm_set_sta_ht_capabilities(const std::string &path_to_sta,
                                     const beerocks::message::sRadioCapabilities &sta_cap)
 {
-    bool return_val = true;
-
     if (!m_ambiorix_datamodel->add_optional_subobject(path_to_sta, "HTCapabilities")) {
         LOG(ERROR) << "Failed to add sub-object " << path_to_sta << "HTCapabilities";
         return false;
     }
+
+    bool ret_val            = true;
     std::string path_to_obj = path_to_sta + "HTCapabilities.";
-    if (!m_ambiorix_datamodel->set(path_to_obj, "GI_20_MHz",
-                                   static_cast<bool>(sta_cap.ht_low_bw_short_gi))) {
-        LOG(ERROR) << "Failed to set " << path_to_obj
-                   << "GI_20_MHz: " << static_cast<bool>(sta_cap.ht_low_bw_short_gi);
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "GI_40_MHz",
-                                   static_cast<bool>(sta_cap.ht_high_bw_short_gi))) {
-        LOG(ERROR) << "Failed to set " << path_to_obj
-                   << "GI_40_MHz: " << static_cast<bool>(sta_cap.ht_high_bw_short_gi);
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "HT_40_Mhz",
-                                   (sta_cap.ht_bw == beerocks::BANDWIDTH_40))) {
-        LOG(ERROR) << "Failed to set " << path_to_obj
-                   << "HT_40_Mhz: " << (sta_cap.ht_bw == beerocks::BANDWIDTH_40);
-        return_val = false;
-    }
+
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HT20MHzGISupported",
+                                         static_cast<bool>(sta_cap.ht_low_bw_short_gi));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HT40MHzGISupported",
+                                         static_cast<bool>(sta_cap.ht_high_bw_short_gi));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HT40MHzBWSupported",
+                                         (sta_cap.ht_bw == beerocks::BANDWIDTH_40));
     // TODO: find value for tx_spatial_streams PPM-792.
     // Parse the (Re)Association Request frame.
-    if (!m_ambiorix_datamodel->set(path_to_obj, "tx_spatial_streams", sta_cap.ht_ss)) {
-        LOG(ERROR) << "Failed to set " << path_to_obj << "tx_spatial_streams: " << sta_cap.ht_ss;
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "rx_spatial_streams", sta_cap.ht_ss)) {
-        LOG(ERROR) << "Failed to set " << path_to_obj << "rx_spatial_streams: " << sta_cap.ht_ss;
-        return_val = false;
-    }
-    return return_val;
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfTxSpatialStreams", sta_cap.ht_ss);
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfRxSpatialStreams", sta_cap.ht_ss);
+
+    return ret_val;
 }
 
 bool db::dm_set_sta_vht_capabilities(const std::string &path_to_sta,
                                      const beerocks::message::sRadioCapabilities &sta_cap)
 {
-    bool return_val = true;
-
     if (!m_ambiorix_datamodel->add_optional_subobject(path_to_sta, "VHTCapabilities")) {
         LOG(ERROR) << "Failed to add sub-object " << path_to_sta << "VHTCapabilities";
         return false;
     }
+
+    bool ret_val            = true;
     std::string path_to_obj = path_to_sta + "VHTCapabilities.";
-    auto vht_mcs_set        = son::wireless_utils::get_vht_mcs_set(sta_cap.vht_mcs, sta_cap.vht_ss);
-    if (!m_ambiorix_datamodel->set(path_to_obj, "VHT_Tx_MCS", vht_mcs_set)) {
-        LOG(ERROR) << "Failed to set " << path_to_obj << "VHT_Tx_MCS: " << vht_mcs_set;
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "VHT_Rx_MCS", vht_mcs_set)) {
-        LOG(ERROR) << "Failed to set " << path_to_obj << "VHT_Rx_MCS: " << vht_mcs_set;
-        return_val = false;
-    }
+
+    auto vht_mcs_set = son::wireless_utils::get_vht_mcs_set(sta_cap.vht_mcs, sta_cap.vht_ss);
+
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "VHTTxMCSSet", vht_mcs_set);
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "VHTRxMCSSet", vht_mcs_set);
     // TODO: find value for tx_spatial_streams PPM-792.
     // Parse the (Re)Association Request frame.
-    if (!m_ambiorix_datamodel->set(path_to_obj, "tx_spatial_streams", sta_cap.vht_ss)) {
-        LOG(ERROR) << "Failed to set " << path_to_obj << "tx_spatial_streams: " << sta_cap.vht_ss;
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "rx_spatial_streams", sta_cap.vht_ss)) {
-        LOG(ERROR) << "Failed to set " << path_to_obj << "rx_spatial_streams: " << sta_cap.vht_ss;
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "GI_80_MHz",
-                                   static_cast<bool>(sta_cap.vht_low_bw_short_gi))) {
-        LOG(ERROR) << "Failed to set " << path_to_obj
-                   << "GI_80_MHz: " << static_cast<bool>(sta_cap.vht_low_bw_short_gi);
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "GI_160_MHz",
-                                   static_cast<bool>(sta_cap.vht_high_bw_short_gi))) {
-        LOG(ERROR) << "Failed to set " << path_to_obj
-                   << "GI_160_MHz: " << static_cast<bool>(sta_cap.vht_high_bw_short_gi);
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "VHT_80_80_MHz",
-                                   (BANDWIDTH_80_80 <= sta_cap.vht_bw))) {
-        LOG(ERROR) << "Failed to set " << path_to_obj
-                   << "VHT_80_80_MHz: " << (BANDWIDTH_80_80 <= sta_cap.vht_bw);
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "VHT_160_MHz", (BANDWIDTH_160 <= sta_cap.vht_bw))) {
-        LOG(ERROR) << "Failed to set " << path_to_obj
-                   << "VHT_160_MHz: " << (BANDWIDTH_160 <= sta_cap.vht_bw);
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "SU_beamformer",
-                                   static_cast<bool>(sta_cap.vht_su_beamformer))) {
-        LOG(ERROR) << "Failed to set " << path_to_obj
-                   << "SU_beamformer: " << static_cast<bool>(sta_cap.vht_su_beamformer);
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "MU_beamformer",
-                                   static_cast<bool>(sta_cap.vht_mu_beamformer))) {
-        LOG(ERROR) << "Failed to set " << path_to_obj
-                   << "MU_beamformer: " << static_cast<bool>(sta_cap.vht_mu_beamformer);
-        return_val = false;
-    }
-    return return_val;
+    ret_val &=
+        m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfTxSpatialStreams", sta_cap.vht_ss);
+    ret_val &=
+        m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfRxSpatialStreams", sta_cap.vht_ss);
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "VHT80MHzGISupported",
+                                         static_cast<bool>(sta_cap.vht_low_bw_short_gi));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "VHT160MHzGISupported",
+                                         static_cast<bool>(sta_cap.vht_high_bw_short_gi));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "VHT8080MHzBWSupported",
+                                         (BANDWIDTH_80_80 <= sta_cap.vht_bw));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "VHT160MHzBWSupported",
+                                         (BANDWIDTH_160 <= sta_cap.vht_bw));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SUBeamformerSupported",
+                                         static_cast<bool>(sta_cap.vht_su_beamformer));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MUBeamformerSupported",
+                                         static_cast<bool>(sta_cap.vht_mu_beamformer));
+
+    return ret_val;
 }
 
 bool db::dm_add_assoc_event_sta_caps(const std::string &assoc_event_path,
@@ -1685,24 +1531,24 @@ bool db::dm_add_assoc_event_sta_caps(const std::string &assoc_event_path,
 bool db::dm_set_assoc_event_sta_ht_cap(const std::string &path_to_event,
                                        const beerocks::message::sRadioCapabilities &sta_cap)
 {
-    bool ret_val = true;
-
     if (!m_ambiorix_datamodel->add_optional_subobject(path_to_event, "HTCapabilities")) {
         LOG(ERROR) << "Failed to add sub-object " << path_to_event << "HTCapabilities";
         return false;
     }
 
+    bool ret_val               = true;
     std::string path_to_ht_cap = path_to_event + "HTCapabilities.";
 
-    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "tx_spatial_streams", sta_cap.ht_ss);
-    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "rx_spatial_streams", sta_cap.ht_ss);
-    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "GI_20_MHz",
+    ret_val &=
+        m_ambiorix_datamodel->set(path_to_ht_cap, "MaxNumberOfTxSpatialStreams", sta_cap.ht_ss);
+    ret_val &=
+        m_ambiorix_datamodel->set(path_to_ht_cap, "MaxNumberOfRxSpatialStreams", sta_cap.ht_ss);
+    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "HT20MHzGISupported",
                                          static_cast<bool>(sta_cap.ht_low_bw_short_gi));
-    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "GI_40_MHz",
+    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "HT40MHzGISupported",
                                          static_cast<bool>(sta_cap.ht_high_bw_short_gi));
-
     // Set to 1 if both 20 MHz and 40 MHz operation is supported
-    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "HT_40_Mhz",
+    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "HT40MHzBWSupported",
                                          (sta_cap.ht_bw == beerocks::BANDWIDTH_40));
 
     return ret_val;
@@ -1711,32 +1557,33 @@ bool db::dm_set_assoc_event_sta_ht_cap(const std::string &path_to_event,
 bool db::dm_set_assoc_event_sta_vht_cap(const std::string &path_to_event,
                                         const beerocks::message::sRadioCapabilities &sta_cap)
 {
-    bool ret_val = true;
-
     if (!m_ambiorix_datamodel->add_optional_subobject(path_to_event, "VHTCapabilities")) {
         LOG(ERROR) << "Failed to add sub-object " << path_to_event << "VHTCapabilities";
         return false;
     }
 
+    bool ret_val               = true;
     std::string path_to_ht_cap = path_to_event + "VHTCapabilities.";
 
     auto vht_mcs_set = son::wireless_utils::get_vht_mcs_set(sta_cap.vht_mcs, sta_cap.vht_ss);
 
-    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "VHT_Tx_MCS", vht_mcs_set);
-    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "VHT_Rx_MCS", vht_mcs_set);
-    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "tx_spatial_streams", sta_cap.vht_ss);
-    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "rx_spatial_streams", sta_cap.vht_ss);
-    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "GI_80_MHz",
-                                         static_cast<bool>(sta_cap.vht_low_bw_short_gi));
-    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "GI_160_MHz",
-                                         static_cast<bool>(sta_cap.vht_high_bw_short_gi));
-    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "VHT_80_80_MHz",
-                                         (BANDWIDTH_80_80 <= sta_cap.vht_bw));
+    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "VHTTxMCSSet", vht_mcs_set);
+    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "VHTRxMCSSet", vht_mcs_set);
     ret_val &=
-        m_ambiorix_datamodel->set(path_to_ht_cap, "VHT_160_MHz", (BANDWIDTH_160 <= sta_cap.vht_bw));
-    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "SU_beamformer",
+        m_ambiorix_datamodel->set(path_to_ht_cap, "MaxNumberOfTxSpatialStreams", sta_cap.vht_ss);
+    ret_val &=
+        m_ambiorix_datamodel->set(path_to_ht_cap, "MaxNumberOfRxSpatialStreams", sta_cap.vht_ss);
+    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "VHT80MHzGISupported",
+                                         static_cast<bool>(sta_cap.vht_low_bw_short_gi));
+    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "VHT160MHzGISupported",
+                                         static_cast<bool>(sta_cap.vht_high_bw_short_gi));
+    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "VHT8080MHzBWSupported",
+                                         (BANDWIDTH_80_80 <= sta_cap.vht_bw));
+    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "VHT160MHzBWSupported",
+                                         (BANDWIDTH_160 <= sta_cap.vht_bw));
+    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "SUBeamformerSupported",
                                          static_cast<bool>(sta_cap.vht_su_beamformer));
-    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "MU_beamformer",
+    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "MUBeamformerSupported",
                                          static_cast<bool>(sta_cap.vht_mu_beamformer));
 
     return ret_val;
@@ -5852,9 +5699,7 @@ bool db::clear_ap_capabilities(const sMacAddr &radio_uid)
 bool db::set_ap_ht_capabilities(const sMacAddr &radio_mac,
                                 const wfa_map::tlvApHtCapabilities::sFlags &flags)
 {
-    auto radio      = get_radio_by_uid(radio_mac);
-    bool return_val = true;
-
+    auto radio = get_radio_by_uid(radio_mac);
     if (!radio) {
         LOG(ERROR) << "Failed to get radio with mac: " << radio_mac;
         return false;
@@ -5870,38 +5715,22 @@ bool db::set_ap_ht_capabilities(const sMacAddr &radio_mac,
         LOG(ERROR) << "Failed to add sub-object " << path_to_obj << ".HTCapabilities";
         return false;
     }
+
+    bool ret_val = true;
     path_to_obj += "HTCapabilities.";
-    if (!m_ambiorix_datamodel->set(path_to_obj, "GI_20_MHz",
-                                   static_cast<bool>(flags.short_gi_support_20mhz))) {
-        LOG(ERROR) << "Failed to set " << path_to_obj
-                   << "GI_20_MHz: " << static_cast<bool>(flags.short_gi_support_20mhz);
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "GI_40_MHz",
-                                   static_cast<bool>(flags.short_gi_support_40mhz))) {
-        LOG(ERROR) << "Failed to  set " << path_to_obj
-                   << "GI_40_MHz: " << static_cast<bool>(flags.short_gi_support_40mhz);
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "HT_40_Mhz",
-                                   static_cast<bool>(flags.ht_support_40mhz))) {
-        LOG(ERROR) << "Failed to set " << path_to_obj
-                   << "HT_40_Mhz: " << static_cast<bool>(flags.ht_support_40mhz);
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "tx_spatial_streams",
-                                   flags.max_num_of_supported_tx_spatial_streams + 1)) {
-        LOG(ERROR) << "Failed to set " << path_to_obj
-                   << "tx_spatial_streams: " << flags.max_num_of_supported_tx_spatial_streams + 1;
-        return_val = false;
-    }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "rx_spatial_streams",
-                                   flags.max_num_of_supported_rx_spatial_streams + 1)) {
-        LOG(ERROR) << "Failed to set " << path_to_obj
-                   << "rx_spatial_streams: " << flags.max_num_of_supported_rx_spatial_streams + 1;
-        return_val = false;
-    }
-    return return_val;
+
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HT20MHzGISupported",
+                                         static_cast<bool>(flags.short_gi_support_20mhz));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HT40MHzGISupported",
+                                         static_cast<bool>(flags.short_gi_support_40mhz));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HT40MHzBWSupported",
+                                         static_cast<bool>(flags.ht_support_40mhz));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfTxSpatialStreams",
+                                         flags.max_num_of_supported_tx_spatial_streams + 1);
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfRxSpatialStreams",
+                                         flags.max_num_of_supported_rx_spatial_streams + 1);
+
+    return ret_val;
 }
 
 bool db::dm_set_device_multi_ap_capabilities(const std::string &device_mac)

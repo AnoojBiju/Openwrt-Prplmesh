@@ -419,11 +419,13 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         ht_cap_path += ".HTCapabilities"
         ht_caps = {}
 
-        ht_caps['rx_ss'] = controller.nbapi_get_parameter(ht_cap_path, "rx_spatial_streams")
-        ht_caps['tx_ss'] = controller.nbapi_get_parameter(ht_cap_path, "tx_spatial_streams")
-        ht_caps['gi_20_mhz'] = controller.nbapi_get_parameter(ht_cap_path, "GI_20_MHz")
-        ht_caps['gi_40_mhz'] = controller.nbapi_get_parameter(ht_cap_path, "GI_40_MHz")
-        ht_caps['ht_40_mhz'] = controller.nbapi_get_parameter(ht_cap_path, "HT_40_Mhz")
+        ht_caps['rx_ss'] = controller.nbapi_get_parameter(
+            ht_cap_path, "MaxNumberOfRxSpatialStreams")
+        ht_caps['tx_ss'] = controller.nbapi_get_parameter(
+            ht_cap_path, "MaxNumberOfTxSpatialStreams")
+        ht_caps['gi_20_mhz'] = controller.nbapi_get_parameter(ht_cap_path, "HT20MHzGISupported")
+        ht_caps['gi_40_mhz'] = controller.nbapi_get_parameter(ht_cap_path, "HT40MHzGISupported")
+        ht_caps['ht_40_mhz'] = controller.nbapi_get_parameter(ht_cap_path, "HT40MHzBWSupported")
         return ht_caps
 
     def get_nbapi_vht_capabilities(self, vht_cap_path: str) -> Dict[str, int]:
@@ -445,16 +447,23 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         vht_cap_path += ".VHTCapabilities"
         vht_caps = {}
 
-        vht_caps['rx_ss'] = controller.nbapi_get_parameter(vht_cap_path, "rx_spatial_streams")
-        vht_caps['tx_ss'] = controller.nbapi_get_parameter(vht_cap_path, "tx_spatial_streams")
-        vht_caps['gi_80_mhz'] = controller.nbapi_get_parameter(vht_cap_path, "GI_80_MHz")
-        vht_caps['gi_160_mhz'] = controller.nbapi_get_parameter(vht_cap_path, "GI_160_MHz")
-        vht_caps['vht_80_80_mhz'] = controller.nbapi_get_parameter(vht_cap_path, "VHT_80_80_MHz")
-        vht_caps['vht_160_mhz'] = controller.nbapi_get_parameter(vht_cap_path, "VHT_160_MHz")
-        vht_caps['su_beamformer'] = controller.nbapi_get_parameter(vht_cap_path, "SU_beamformer")
-        vht_caps['mu_beamformer'] = controller.nbapi_get_parameter(vht_cap_path, "MU_beamformer")
-        vht_caps['vht_tx_mcs'] = controller.nbapi_get_parameter(vht_cap_path, "VHT_Tx_MCS")
-        vht_caps['vht_rx_mcs'] = controller.nbapi_get_parameter(vht_cap_path, "VHT_Rx_MCS")
+        vht_caps['rx_ss'] = controller.nbapi_get_parameter(
+            vht_cap_path, "MaxNumberOfRxSpatialStreams")
+        vht_caps['tx_ss'] = controller.nbapi_get_parameter(
+            vht_cap_path, "MaxNumberOfTxSpatialStreams")
+        vht_caps['gi_80_mhz'] = controller.nbapi_get_parameter(vht_cap_path, "VHT80MHzGISupported")
+        vht_caps['gi_160_mhz'] = controller.nbapi_get_parameter(
+            vht_cap_path, "VHT160MHzGISupported")
+        vht_caps['vht_80_80_mhz'] = controller.nbapi_get_parameter(
+            vht_cap_path, "VHT8080MHzBWSupported")
+        vht_caps['vht_160_mhz'] = controller.nbapi_get_parameter(
+            vht_cap_path, "VHT160MHzBWSupported")
+        vht_caps['su_beamformer'] = controller.nbapi_get_parameter(
+            vht_cap_path, "SUBeamformerSupported")
+        vht_caps['mu_beamformer'] = controller.nbapi_get_parameter(
+            vht_cap_path, "MUBeamformerSupported")
+        vht_caps['vht_tx_mcs'] = controller.nbapi_get_parameter(vht_cap_path, "VHTTxMCSSet")
+        vht_caps['vht_rx_mcs'] = controller.nbapi_get_parameter(vht_cap_path, "VHTRxMCSSet")
         return vht_caps
 
     def get_topology(self) -> Dict[str, connmap.MapDevice]:
