@@ -310,10 +310,10 @@ public:
     /*
     * A steering group defines a group of apIndex's which can have steering done
     * between them.
-    * To remove a group configuration call with NULL as cfg_2 and cfg_5.
+    * To remove a group configuration call with NULL as ap_cfgs, and length as 0.
     * @param[in] steeringGroupIndex  Wifi Steering Group index
-    * @param[in] cfg_2               2.4G apConfig
-    * @param[in] cfg_5               5G apConfig
+    * @param[in] ap_cfgs               Array of AP Configurations.
+    * @param[in] length                The number of AP Configurations in the array. Cannot be above 3.
     *
     * @return BML_RET_OK on success.
     *
@@ -321,8 +321,8 @@ public:
     * encryption, and passphrase configured for steering to function properly.
     *
     */
-    int steering_set_group(uint32_t steeringGroupIndex, BML_STEERING_AP_CONFIG *cfg_2,
-                           BML_STEERING_AP_CONFIG *cfg_5);
+    int steering_set_group(uint32_t steeringGroupIndex, BML_STEERING_AP_CONFIG *ap_cfgs,
+                           size_t length);
     /**
      * Call this function to add/modify per-client configuration config of client_mac.
      * To remove a client configuration call with NULL as config.

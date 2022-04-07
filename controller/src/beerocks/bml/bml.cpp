@@ -788,24 +788,37 @@ int bml_client_clear_client(BML_CTX ctx, const char *sta_mac)
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
 
 int bml_pre_association_steering_set_group(BML_CTX ctx, uint32_t steeringGroupIndex,
-                                           BML_STEERING_AP_CONFIG *cfg_2,
-                                           BML_STEERING_AP_CONFIG *cfg_5)
+                                           struct BML_STEERING_AP_CONFIG *ap_cfgs,
+                                           unsigned int length)
 {
-    LOG(DEBUG) << "bml_pre_association_steering_set_ap_set_config entry"; //TOOD: remove this line
+    LOG(DEBUG) << "bml_pre_association_steering_set_ap_set_config is called";
     // Validate input parameters
     if (!ctx)
         return (-BML_RET_INVALID_ARGS);
 
     auto *pBML = static_cast<bml_internal *>(ctx);
 
-    return (pBML->steering_set_group(steeringGroupIndex, cfg_2, cfg_5));
+    if (length >= 4) {
+        LOG(ERROR) << "The length of AP Configurations cannot be above 3";
+        return (-BML_RET_INVALID_ARGS);
+    }
+    if (!ap_cfgs && length != 0) {
+        LOG(ERROR) << "AP Configurations is NULL, but the length is not 0. The length must be 0.";
+        return (-BML_RET_INVALID_ARGS);
+    }
+    if (ap_cfgs && length == 0) {
+        LOG(ERROR)
+            << "AP Configurations is no NULL, but length is zero. The length must be above 0.";
+        return (-BML_RET_INVALID_ARGS);
+    }
+    return (pBML->steering_set_group(steeringGroupIndex, ap_cfgs, length));
 }
 
 int bml_pre_association_steering_client_set(BML_CTX ctx, uint32_t steeringGroupIndex,
                                             const BML_MAC_ADDR bssid, const BML_MAC_ADDR client_mac,
                                             BML_STEERING_CLIENT_CONFIG *config)
 {
-    LOG(DEBUG) << "bml_pre_association_steering_client_set entry";
+    LOG(DEBUG) << "bml_pre_association_steering_client_set is called";
     // Validate input parameters
     if (!ctx || !client_mac)
         return (-BML_RET_INVALID_ARGS);

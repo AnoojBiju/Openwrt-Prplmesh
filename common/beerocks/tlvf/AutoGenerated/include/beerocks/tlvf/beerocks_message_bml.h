@@ -1340,9 +1340,9 @@ class cACTION_BML_STEERING_SET_GROUP_REQUEST : public BaseClass
             return (eActionOp_BML)(ACTION_BML_STEERING_SET_GROUP_REQUEST);
         }
         uint32_t& steeringGroupIndex();
-        sSteeringApConfig& cfg_2();
-        sSteeringApConfig& cfg_5();
-        uint8_t& remove();
+        size_t ap_cfgs_length() { return m_ap_cfgs_idx__ * sizeof(sSteeringApConfig); }
+        std::tuple<bool, sSteeringApConfig&> ap_cfgs(size_t idx);
+        bool alloc_ap_cfgs(size_t count = 1);
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -1351,9 +1351,9 @@ class cACTION_BML_STEERING_SET_GROUP_REQUEST : public BaseClass
         bool init();
         eActionOp_BML* m_action_op = nullptr;
         uint32_t* m_steeringGroupIndex = nullptr;
-        sSteeringApConfig* m_cfg_2 = nullptr;
-        sSteeringApConfig* m_cfg_5 = nullptr;
-        uint8_t* m_remove = nullptr;
+        sSteeringApConfig* m_ap_cfgs = nullptr;
+        size_t m_ap_cfgs_idx__ = 0;
+        int m_lock_order_counter__ = 0;
 };
 
 class cACTION_BML_STEERING_SET_GROUP_RESPONSE : public BaseClass
