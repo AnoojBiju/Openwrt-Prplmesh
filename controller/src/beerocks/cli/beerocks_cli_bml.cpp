@@ -218,46 +218,31 @@ static void bml_utils_dump_conn_map(
 }
 
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
-static void steering_set_group_string_to_struct(const std::string &str_cfg_2,
-                                                const std::string &str_cfg_5,
-                                                BML_STEERING_AP_CONFIG &cfg2,
-                                                BML_STEERING_AP_CONFIG &cfg5)
+static void steering_set_group_string_to_struct(const std::vector<std::string> &str_ap_cfgs,
+                                                BML_STEERING_AP_CONFIG *&cfgs)
 {
-    auto v_str_cfg_2 = string_utils::str_split(str_cfg_2, ',');
-    auto v_str_cfg_5 = string_utils::str_split(str_cfg_5, ',');
-    for (const auto &elem : v_str_cfg_2) {
-        std::cout << "v_str_cfg_2 : " << elem << std::endl;
+    for (size_t i = 0; i < str_ap_cfgs.size(); i++) {
+        auto v_str_ap_cfg = string_utils::str_split(str_ap_cfgs[i], ',');
+        for (const auto &elem : v_str_ap_cfg) {
+            std::cout << "v_str_ap_cfg No." << i + 1 << ": " << elem << std::endl;
+        }
+        std::cout << std::endl;
+        tlvf::mac_to_array(tlvf::mac_from_string(v_str_ap_cfg[0]), cfgs[i].bssid);
+        cfgs[i].utilCheckIntervalSec   = string_utils::stoi(v_str_ap_cfg[1]);
+        cfgs[i].utilAvgCount           = string_utils::stoi(v_str_ap_cfg[2]);
+        cfgs[i].inactCheckIntervalSec  = string_utils::stoi(v_str_ap_cfg[3]);
+        cfgs[i].inactCheckThresholdSec = string_utils::stoi(v_str_ap_cfg[4]);
+        sMacAddr bssid                 = tlvf::mac_from_array(cfgs[i].bssid);
+        std::cout << "cfg_" << i + 1 << ".bssid = " << bssid << std::endl
+                  << "cfg_" << i + 1 << ".utilCheckIntervalSec = " << cfgs[i].utilCheckIntervalSec
+                  << std::endl
+                  << "cfg_" << i + 1 << ".utilAvgCount = " << cfgs[i].utilAvgCount << std::endl
+                  << "cfg_" << i + 1 << ".inactCheckIntervalSec = " << cfgs[i].inactCheckIntervalSec
+                  << std::endl
+                  << "cfg_" << i + 1
+                  << ".inactCheckThresholdSec = " << cfgs[i].inactCheckThresholdSec << std::endl;
+        std::cout << std::endl;
     }
-
-    for (const auto &elem : v_str_cfg_5) {
-        std::cout << "v_str_cfg_5 : " << elem << std::endl;
-    }
-    tlvf::mac_to_array(tlvf::mac_from_string(v_str_cfg_2[0]), cfg2.bssid);
-    tlvf::mac_to_array(tlvf::mac_from_string(v_str_cfg_5[0]), cfg5.bssid);
-    cfg2.utilCheckIntervalSec   = string_utils::stoi(v_str_cfg_2[1]);
-    cfg5.utilCheckIntervalSec   = string_utils::stoi(v_str_cfg_5[1]);
-    cfg2.utilAvgCount           = string_utils::stoi(v_str_cfg_2[2]);
-    cfg5.utilAvgCount           = string_utils::stoi(v_str_cfg_5[2]);
-    cfg2.inactCheckIntervalSec  = string_utils::stoi(v_str_cfg_2[3]);
-    cfg5.inactCheckIntervalSec  = string_utils::stoi(v_str_cfg_5[3]);
-    cfg2.inactCheckThresholdSec = string_utils::stoi(v_str_cfg_2[4]);
-    cfg5.inactCheckThresholdSec = string_utils::stoi(v_str_cfg_5[4]);
-
-    sMacAddr bssid2 = tlvf::mac_from_array(cfg2.bssid);
-    sMacAddr bssid5 = tlvf::mac_from_array(cfg5.bssid);
-
-    std::cout << "cfg2.bssid = " << bssid2 << std::endl
-              << "cfg2.utilCheckIntervalSec = " << cfg2.utilCheckIntervalSec << std::endl
-              << "cfg2.utilAvgCount = " << cfg2.utilAvgCount << std::endl
-              << "cfg2.inactCheckIntervalSec = " << cfg2.inactCheckIntervalSec << std::endl
-              << "cfg2.inactCheckThresholdSec = " << cfg2.inactCheckThresholdSec << std::endl
-              << "___________________________________________________" << std::endl
-              << "cfg5.bssid = " << bssid5 << std::endl
-              << "cfg5.utilCheckIntervalSec = " << cfg5.utilCheckIntervalSec << std::endl
-              << "cfg5.utilAvgCount = " << cfg5.utilAvgCount << std::endl
-              << "cfg5.inactCheckIntervalSec = " << cfg5.inactCheckIntervalSec << std::endl
-              << "cfg5.inactCheckThresholdSec = " << cfg5.inactCheckThresholdSec << std::endl;
-    return;
 }
 static void steering_client_set_string_to_struct(const std::string &str_config,
                                                  BML_STEERING_CLIENT_CONFIG &config)
@@ -492,12 +477,13 @@ void cli_bml::setFunctionsMapAndArray()
 
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
     insertCommandToMap(
-        "bml_pre_association_steering_set_group", "<steeringGroupIndex> <cfg_2> <cfg_5>",
-        "cfg2/5 = <bssid>, <utilCheckIntervalSec>, <utilAvgCount>, "
+        "bml_pre_association_steering_set_group",
+        "<steeringGroupIndex> [<ap_cfg_1>] [<ap_cfg_2>] [<ap_cfg_3>]",
+        "ap_cfg_1/2/3 = <bssid>, <utilCheckIntervalSec>, <utilAvgCount>, "
         "<inactCheckIntervalSec>, <inactCheckThresholdSec> (without spaces between "
-        "commas) ",
-        static_cast<pFunction>(&cli_bml::bml_pre_association_steering_set_group_caller), 3, 3,
-        INT_ARG, STRING_ARG, STRING_ARG);
+        "commas). To remove a group, provide only the Group Index",
+        static_cast<pFunction>(&cli_bml::bml_pre_association_steering_set_group_caller), 1, 4,
+        INT_ARG, STRING_ARG, STRING_ARG, STRING_ARG);
 
     insertCommandToMap(
         "bml_pre_association_steering_client_set",
@@ -1197,8 +1183,12 @@ int cli_bml::bml_channel_selection_caller(int numOfArgs)
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
 int cli_bml::bml_pre_association_steering_set_group_caller(int numOfArgs)
 {
-    if (numOfArgs == 3) {
-        return steering_set_group(args.intArgs[0], args.stringArgs[1], args.stringArgs[2]);
+    std::vector<std::string> strApCfgs;
+    if (numOfArgs >= 1 && numOfArgs <= 4) {
+        for (int i = 1; i < numOfArgs; i++) {
+            strApCfgs.push_back(args.stringArgs[i]);
+        }
+        return steering_set_group(args.intArgs[0], strApCfgs);
     }
     return -1;
 }
@@ -1926,17 +1916,30 @@ int cli_bml::channel_selection(const std::string &radio_mac, uint8_t channel, ui
 }
 
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
-int cli_bml::steering_set_group(uint32_t steeringGroupIndex, const std::string &str_cfg_2,
-                                const std::string &str_cfg_5)
+int cli_bml::steering_set_group(uint32_t steeringGroupIndex,
+                                const std::vector<std::string> &str_ap_cfgs)
+
 {
+    int ret;
+    BML_STEERING_AP_CONFIG *cfgs = nullptr;
+    std::cout << "set_ap_config entries" << std::endl;
 
-    BML_STEERING_AP_CONFIG cfg2 = {};
-    BML_STEERING_AP_CONFIG cfg5 = {};
-    std::cout << "set_ap_config entry" << std::endl;
-    ;
-    steering_set_group_string_to_struct(str_cfg_2, str_cfg_5, cfg2, cfg5);
+    if (!str_ap_cfgs.empty()) {
+        cfgs = new BML_STEERING_AP_CONFIG[str_ap_cfgs.size()];
+        if (!cfgs) {
+            std::cout << "Can't allocate array of " << str_ap_cfgs.size()
+                      << " BML_STEERING_AP_CONFIG" << std::endl;
+            return -1;
+        }
+        steering_set_group_string_to_struct(str_ap_cfgs, cfgs);
+    }
 
-    int ret = bml_pre_association_steering_set_group(ctx, steeringGroupIndex, &cfg2, &cfg5);
+    ret = bml_pre_association_steering_set_group(ctx, steeringGroupIndex, cfgs, cfgs + 1);
+
+    if (cfgs) {
+        delete[] cfgs;
+        cfgs = nullptr;
+    }
     printBmlReturnVals("bml_pre_association_steering_set_group", ret);
     return 0;
 }

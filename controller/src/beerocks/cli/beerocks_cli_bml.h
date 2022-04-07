@@ -197,8 +197,8 @@ private:
     int channel_selection(const std::string &radio_mac, uint8_t channel, uint8_t bw,
                           uint8_t csa_count = 5);
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
-    int steering_set_group(uint32_t steeringGroupIndex, const std::string &str_cfg_2,
-                           const std::string &str_cfg_5);
+    int steering_set_group(uint32_t steeringGroupIndex,
+                           const std::vector<std::string> &str_ap_cfgs);
     int steering_client_set(uint32_t steeringGroupIndex, const std::string &str_bssid,
                             const std::string &str_client_mac,
                             const std::string &str_config = std::string());
