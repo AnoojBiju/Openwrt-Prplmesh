@@ -1428,23 +1428,26 @@ bool db::dm_set_sta_he_capabilities(const std::string &path_to_sta,
     bool ret_val            = true;
     std::string path_to_obj = path_to_sta + "HECapabilities.";
 
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfRxSpatialStreams", sta_cap.ht_ss);
-    // To do: find value for tx_spatial_streams PPM-792.
-    // Parse the (Re)Association Request frame.
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfTxSpatialStreams", sta_cap.ht_ss);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "VHT8080MHzBWSupported",
-                                         BANDWIDTH_80_80 <= sta_cap.vht_bw);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "VHT160MHzGISupported",
-                                         static_cast<bool>(sta_cap.vht_high_bw_short_gi));
-    // To do: For rest of the values need to parse
-    // (Re)Association Request frame PPM-792
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SUBeamformerSupported", false);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MUBeamformerSupported", false);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "UpLinkMUMIMOSupported", false);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "UpLinkMUMIMOInOFDMASupported", false);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "DownLinkMUMIMOInOFDMASupported", false);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "UpLinkInOFDMASupported", false);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "DownLinkInOFDMASupported", false);
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfTxSpatialStreams", sta_cap.he_ss);
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfRxSpatialStreams", sta_cap.he_ss);
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HE8080MHzBWSupported",
+                                         (sta_cap.he_bw == BANDWIDTH_80_80));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HE160MHzBWSupported",
+                                         (sta_cap.he_bw == BANDWIDTH_160));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SUBeamformerSupported",
+                                         static_cast<bool>(sta_cap.he_su_beamformer));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MUBeamformerSupported",
+                                         static_cast<bool>(sta_cap.he_mu_beamformer));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "UpLinkMUMIMOSupported",
+                                         static_cast<bool>(sta_cap.ul_mu_mimo));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "UpLinkMUMIMOInOFDMASupported",
+                                         static_cast<bool>(sta_cap.ul_mu_mimo_ofdma));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "DownLinkMUMIMOInOFDMASupported",
+                                         static_cast<bool>(sta_cap.dl_mu_mimo_ofdma));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "UpLinkInOFDMASupported",
+                                         static_cast<bool>(sta_cap.ul_ofdma));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "DownLinkInOFDMASupported",
+                                         static_cast<bool>(sta_cap.dl_ofdma));
 
     return ret_val;
 }
@@ -1637,8 +1640,7 @@ bool db::set_station_capabilities(const std::string &client_mac,
     // Remove previous capabilities objects, if they exist
     m_ambiorix_datamodel->remove_optional_subobject(path_to_sta, "HTCapabilities");
     m_ambiorix_datamodel->remove_optional_subobject(path_to_sta, "VHTCapabilities");
-
-    // TODO: Remove HECapabilities before setting new one.
+    m_ambiorix_datamodel->remove_optional_subobject(path_to_sta, "HECapabilities");
 
     if (sta_cap.ht_bw != beerocks::BANDWIDTH_UNKNOWN &&
         !dm_set_sta_ht_capabilities(path_to_sta, sta_cap)) {
@@ -1650,7 +1652,11 @@ bool db::set_station_capabilities(const std::string &client_mac,
         LOG(ERROR) << "Failed to set station VHT Capabilities";
         return false;
     }
-    // TODO: Fill up HE Capabilities for STA, PPM-567
+    if (sta_cap.he_bw != beerocks::BANDWIDTH_UNKNOWN &&
+        !dm_set_sta_he_capabilities(path_to_sta, sta_cap)) {
+        LOG(ERROR) << "Failed to set station HE Capabilities";
+        return false;
+    }
 
     return true;
 }
