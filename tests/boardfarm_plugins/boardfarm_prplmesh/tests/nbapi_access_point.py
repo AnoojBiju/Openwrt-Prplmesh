@@ -79,8 +79,10 @@ class NbapiAccessPoint(PrplMeshBaseTest):
 
         controller.nbapi_set_parameters(all_bands_security_obj_path,
                                         {"ModeEnabled": "WPA2-Personal"})
+        time.sleep(1)
         controller.nbapi_set_parameters(all_bands_security_obj_path,
                                         {"KeyPassphrase": "key_passphrease_value"})
+        time.sleep(1)
 
         controller.nbapi_command("Device.WiFi.DataElements.Network", "AccessPointCommit")
         time.sleep(10)
