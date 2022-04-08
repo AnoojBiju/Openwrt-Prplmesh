@@ -59,6 +59,7 @@
 #include <tlvf/wfa_map/tlvApVhtCapabilities.h>
 #include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaTrafficStats.h>
+#include <tlvf/wfa_map/tlvBackhaulStaRadioCapabilities.h>
 #include <tlvf/wfa_map/tlvBackhaulSteeringResponse.h>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
 #include <tlvf/wfa_map/tlvChannelScanCapabilities.h>
@@ -329,6 +330,7 @@ bool Controller::start()
             ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE,
             ieee1905_1::eMessageType::BACKHAUL_STEERING_RESPONSE_MESSAGE,
             ieee1905_1::eMessageType::TUNNELLED_MESSAGE,
+            ieee1905_1::eMessageType::BACKHAUL_STA_CAPABILITY_REPORT_MESSAGE,
             ieee1905_1::eMessageType::FAILED_CONNECTION_MESSAGE,
         })) {
         LOG(ERROR) << "Failed subscribing to the Bus";
@@ -515,6 +517,8 @@ bool Controller::handle_cmdu_1905_1_message(const sMacAddr &src_mac,
         return handle_cmdu_1905_backhaul_sta_steering_response(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::TUNNELLED_MESSAGE:
         return handle_cmdu_1905_tunnelled_message(src_mac, cmdu_rx);
+    case ieee1905_1::eMessageType::BACKHAUL_STA_CAPABILITY_REPORT_MESSAGE:
+        return handle_cmdu_1905_backhaul_sta_capability_report_message(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::FAILED_CONNECTION_MESSAGE:
         return handle_cmdu_1905_failed_connection_message(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::ASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE:
@@ -2105,6 +2109,39 @@ bool Controller::handle_cmdu_1905_tunnelled_message(const sMacAddr &src_mac,
         if (!reassoc_frame) {
             LOG(ERROR) << "Failed to parse Reassociation Request frame";
         }
+    }
+    return true;
+}
+
+bool Controller::handle_cmdu_1905_backhaul_sta_capability_report_message(
+    const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto mid = cmdu_rx.getMessageId();
+    LOG(DEBUG) << "Received BACKHAUL_STA_CAPABILITY_REPORT_MESSAGE, mid=" << std::hex << mid;
+
+    for (auto bh_sta_radio_cap_tlv :
+         cmdu_rx.getClassList<wfa_map::tlvBackhaulStaRadioCapabilities>()) {
+        if (!bh_sta_radio_cap_tlv) {
+            LOG(ERROR) << "Failed to get tlvBackhaulStaRadioCapabilities!";
+            return false;
+        }
+
+        auto radio = database.get_radio_by_uid(bh_sta_radio_cap_tlv->ruid());
+        if (!radio) {
+            return false;
+        }
+
+        if (bh_sta_radio_cap_tlv->sta_mac_included()) {
+            radio->backhaul_station_mac = *bh_sta_radio_cap_tlv->sta_mac();
+        } else {
+            LOG(INFO) << "STA MAC is not included in Backhaul STA Capability Report.";
+            radio->backhaul_station_mac = beerocks::net::network_utils::ZERO_MAC;
+        }
+
+        LOG(DEBUG) << "Backhaul STA of radio with ruid=" << bh_sta_radio_cap_tlv->ruid()
+                   << " is sta_mac=" << radio->backhaul_station_mac;
+
+        database.dm_set_radio_bh_sta(*radio, radio->backhaul_station_mac);
     }
     return true;
 }

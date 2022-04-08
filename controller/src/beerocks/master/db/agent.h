@@ -89,6 +89,9 @@ public:
 
         std::string dm_path; /**< data model path */
 
+        /** MAC of the Backhaul STA */
+        sMacAddr backhaul_station_mac;
+
         bool is_acs_enabled = false;
 
         class s_ap_stats_params {

@@ -235,6 +235,16 @@ bool agent_monitoring_task::start_task(const sMacAddr &src_mac, std::shared_ptr<
         }
         son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
     }
+
+    auto agent = database.m_agents.get(src_mac);
+    if (agent &&
+        agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1) {
+
+        if (!send_backhaul_sta_capability_query(src_mac, cmdu_tx)) {
+            LOG(ERROR) << "Failed to send Backhaul STA Capability Query to agent=" << src_mac;
+        }
+    }
+
     return true;
 }
 
@@ -332,6 +342,18 @@ bool agent_monitoring_task::send_tlv_metric_reporting_policy(const sMacAddr &dst
     reporting_conf.sta_metrics_reporting_rcpi_threshold                  = 0;
     reporting_conf.sta_metrics_reporting_rcpi_hysteresis_margin_override = 0;
     reporting_conf.ap_channel_utilization_reporting_threshold            = 0;
+
+    return son_actions::send_cmdu_to_agent(dst_mac, cmdu_tx, database);
+}
+
+bool agent_monitoring_task::send_backhaul_sta_capability_query(const sMacAddr &dst_mac,
+                                                               ieee1905_1::CmduMessageTx &cmdu_tx)
+{
+    LOG(DEBUG) << "Preparing BACKHAUL_STA_CAPABILITY_QUERY_MESSAGE, dst_mac=" << dst_mac;
+    if (!cmdu_tx.create(0, ieee1905_1::eMessageType::BACKHAUL_STA_CAPABILITY_QUERY_MESSAGE)) {
+        LOG(ERROR) << "Failed building BACKHAUL_STA_CAPABILITY_QUERY_MESSAGE ! ";
+        return false;
+    }
 
     return son_actions::send_cmdu_to_agent(dst_mac, cmdu_tx, database);
 }
