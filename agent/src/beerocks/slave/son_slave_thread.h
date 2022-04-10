@@ -9,6 +9,7 @@
 #ifndef _SON_SLAVE_THREAD_H
 #define _SON_SLAVE_THREAD_H
 
+#include "agent_db.h"
 #include "tasks/task_pool.h"
 
 #include <bcl/beerocks_backport.h>
@@ -440,7 +441,6 @@ private:
     bool handle_ap_metrics_query(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_monitor_ap_metrics_response(const std::string &fronthaul_iface, int fd,
                                             ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_channel_preference_query(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_channel_selection_request(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool get_controller_channel_preference(const std::string &fronthaul_iface,
                                            ieee1905_1::CmduMessageRx &cmdu_rx);
@@ -480,56 +480,6 @@ private:
      */
     void save_cac_capabilities_params_to_db(const std::string &fronthaul_iface);
 
-    struct sChannelPreference {
-        sChannelPreference(uint8_t oper_class,
-                           wfa_map::cPreferenceOperatingClasses::ePreference preference,
-                           wfa_map::cPreferenceOperatingClasses::eReasonCode reason_code)
-            : operating_class(oper_class)
-        {
-            flags.reason_code = reason_code;
-            flags.preference  = preference;
-        }
-        sChannelPreference(uint8_t _operating_class,
-                           wfa_map::cPreferenceOperatingClasses::sFlags _flags)
-            : operating_class(_operating_class), flags(_flags)
-        {
-        }
-
-        uint8_t operating_class;
-        wfa_map::cPreferenceOperatingClasses::sFlags flags;
-
-        bool operator==(const sChannelPreference &rhs) const
-        {
-            return operating_class == rhs.operating_class &&
-                   flags.preference == rhs.flags.preference &&
-                   flags.reason_code == rhs.flags.reason_code;
-        }
-
-        bool operator<(const sChannelPreference &rhs) const
-        {
-            if (operating_class != rhs.operating_class) {
-                return operating_class < rhs.operating_class;
-            }
-            if (flags.preference != rhs.flags.preference) {
-                return flags.preference < rhs.flags.preference;
-            }
-            if (flags.reason_code != rhs.flags.reason_code) {
-                return flags.reason_code < rhs.flags.reason_code;
-            }
-            return false;
-        }
-    };
-    std::map<sChannelPreference, std::set<uint8_t>> m_controller_channel_preferences;
-
-    /**
-     * @brief Get a std::map of channels preferences organized in a way it will be easy to fill
-     * WFA Channel Preference Report.
-     *
-     * @return std::map of channels preferences.
-     */
-    std::map<sChannelPreference, std::set<uint8_t>>
-    get_channel_preferences_from_channels_list(const std::string &fronthaul_iface);
-
     /**
      * @brief Get the channel preference.
      *
@@ -540,7 +490,8 @@ private:
      * @return NON_OPERABLE if channel is restricted, channel preference otherwise.
      */
     wfa_map::cPreferenceOperatingClasses::ePreference
-    get_channel_preference(message::sWifiChannel channel, const sChannelPreference &preference,
+    get_channel_preference(message::sWifiChannel channel,
+                           const AgentDB::sChannelPreference &preference,
                            const std::set<uint8_t> &preference_channels_list);
 
     /**
