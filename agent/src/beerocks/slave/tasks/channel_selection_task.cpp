@@ -9,8 +9,13 @@
 #include "channel_selection_task.h"
 #include "../agent_db.h"
 #include "../backhaul_manager/backhaul_manager.h"
+#include "../cac_status_database.h"
 
 #include <beerocks/tlvf/beerocks_message_backhaul.h>
+#include <tlvf/wfa_map/tlvChannelPreference.h>
+#include <tlvf/wfa_map/tlvProfile2CacCompletionReport.h>
+#include <tlvf/wfa_map/tlvProfile2CacStatusReport.h>
+#include <tlvf/wfa_map/tlvRadioOperationRestriction.h>
 
 #include "task_messages.h"
 #include <bcl/beerocks_utils.h>
@@ -86,6 +91,10 @@ bool ChannelSelectionTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint3
                                        std::shared_ptr<beerocks_header> beerocks_header)
 {
     switch (cmdu_rx.getMessageType()) {
+    case ieee1905_1::eMessageType::CHANNEL_PREFERENCE_QUERY_MESSAGE: {
+        handle_channel_preference_query(cmdu_rx, src_mac);
+        break;
+    }
     case ieee1905_1::eMessageType::CHANNEL_SELECTION_REQUEST_MESSAGE: {
         handle_channel_selection_request(cmdu_rx, src_mac);
         // According to the WFA documentation, each radio should send channel selection
@@ -109,6 +118,49 @@ bool ChannelSelectionTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint3
     }
     }
     return true;
+}
+
+void ChannelSelectionTask::handle_channel_preference_query(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                                           const sMacAddr &src_mac)
+{
+    const auto mid = cmdu_rx.getMessageId();
+
+    LOG(DEBUG) << "Received CHANNEL_PREFERENCE_QUERY_MESSAGE from " << src_mac
+               << " with mid=" << std::hex << mid;
+
+    // Clear previous request, if any
+    m_pending_preference.preference_map.clear();
+    m_pending_preference.src_mac = src_mac;
+    m_pending_preference.mid     = mid;
+
+    LOG(DEBUG) << "Received CHANNEL_PREFERENCE_QUERY_MESSAGE, mid=" << std::dec << int(mid);
+
+    auto db = AgentDB::get();
+
+    for (const auto radio : db->get_radios_list()) {
+        LOG(DEBUG) << "Sending ACTION_BACKHAUL_CHANNELS_LIST_REQUEST to radio "
+                   << radio->front.iface_mac;
+
+        m_pending_preference.preference_map[radio->front.iface_mac];
+
+        auto request = message_com::create_vs_message<
+            beerocks_message::cACTION_BACKHAUL_CHANNELS_LIST_REQUEST>(m_cmdu_tx);
+        if (!request) {
+            LOG(ERROR) << "Failed to build message";
+            break;
+        }
+
+        auto agent_fd = m_btl_ctx.get_agent_fd();
+        if (agent_fd == beerocks::net::FileDescriptor::invalid_descriptor) {
+            LOG(ERROR) << "socket to Agent not found";
+            break;
+        }
+
+        auto action_header         = message_com::get_beerocks_header(m_cmdu_tx)->actionhdr();
+        action_header->radio_mac() = radio->front.iface_mac;
+
+        m_btl_ctx.send_cmdu(agent_fd, m_cmdu_tx);
+    }
 }
 
 void ChannelSelectionTask::handle_channel_selection_request(ieee1905_1::CmduMessageRx &cmdu_rx,
@@ -518,9 +570,9 @@ void ChannelSelectionTask::handle_vs_dfs_cac_completed_notification(
 void ChannelSelectionTask::handle_vs_channels_list_response(
     ieee1905_1::CmduMessageRx &cmdu_rx, int fd, std::shared_ptr<beerocks_header> beerocks_header)
 {
-    auto db = AgentDB::get();
-    auto radio =
-        db->get_radio_by_mac(beerocks_header->actionhdr()->radio_mac(), AgentDB::eMacType::RADIO);
+    const auto &radio_mac = beerocks_header->actionhdr()->radio_mac();
+    auto db               = AgentDB::get();
+    auto radio            = db->get_radio_by_mac(radio_mac, AgentDB::eMacType::RADIO);
     if (!radio) {
         return;
     }
@@ -529,6 +581,22 @@ void ChannelSelectionTask::handle_vs_channels_list_response(
 
     if (m_zwdfs_state == eZwdfsState::WAIT_FOR_CHANNELS_LIST) {
         ZWDFS_FSM_MOVE_STATE(eZwdfsState::CHOOSE_NEXT_BEST_CHANNEL);
+    } else if (m_pending_preference.mid > 0) {
+
+        // If there is a pending preference query, need to build a preference report
+        build_channel_preference_report(radio_mac);
+
+        // Once the preference report is done (All radios have responded)
+        if (channel_preference_report_ready()) {
+
+            // Need to send the preference report back to the controller
+            if (!send_channel_preference_report(cmdu_rx, beerocks_header)) {
+                LOG(ERROR) << "Failed to send the CHANNEL_PREFERENCE_REPORT_MESSAGE!";
+            }
+
+            // Clear the pending preference MID.
+            m_pending_preference.mid = 0;
+        }
     }
 }
 
@@ -639,6 +707,334 @@ void ChannelSelectionTask::handle_ap_enable_event(const std::string &iface)
         LOG_IF((m_zwdfs_state == ZWDFS_SWITCH_ANT_OFF_REQUEST), DEBUG)
             << "Resume ZW-DFS antenna release";
     }
+}
+
+bool ChannelSelectionTask::build_channel_preference_report(const sMacAddr &radio_mac)
+{
+    auto &radio_preference = m_pending_preference.preference_map[radio_mac];
+
+    auto db    = AgentDB::get();
+    auto radio = db->get_radio_by_mac(radio_mac, AgentDB::eMacType::RADIO);
+    if (!radio) {
+        return false;
+    }
+
+    auto get_channel_preference =
+        [&radio](
+            const uint8_t channel, const uint8_t operating_class,
+            beerocks::eWiFiBandwidth operating_bandwidth) -> const AgentDB::sChannelPreference {
+        // Channel is not supported.
+        auto it_ch = radio->channels_list.find(channel);
+        if (it_ch == radio->channels_list.end()) {
+            return AgentDB::sChannelPreference(
+                operating_class, wfa_map::cPreferenceOperatingClasses::ePreference::NON_OPERABLE,
+                wfa_map::cPreferenceOperatingClasses::eReasonCode::UNSPECIFIED);
+        }
+
+        // Bandwidth of a channel is not supported.
+        auto &supported_channel_info = it_ch->second;
+        auto &supported_bw_list      = supported_channel_info.supported_bw_list;
+        auto it_bw = std::find_if(supported_bw_list.begin(), supported_bw_list.end(),
+                                  [&](const beerocks_message::sSupportedBandwidth &bw_info) {
+                                      return bw_info.bandwidth == operating_bandwidth;
+                                  });
+        if (it_bw == supported_bw_list.end()) {
+            return AgentDB::sChannelPreference(
+                operating_class, wfa_map::cPreferenceOperatingClasses::ePreference::NON_OPERABLE,
+                wfa_map::cPreferenceOperatingClasses::eReasonCode::UNSPECIFIED);
+        }
+
+        // The rest of the checks are relevant only for 5 GHz band.
+        if (son::wireless_utils::channels_table_5g.find(channel) !=
+            son::wireless_utils::channels_table_5g.end()) {
+
+            // Channel DFS state is "Unavailable".
+            auto overlapping_beacon_channels =
+                son::wireless_utils::get_overlapping_beacon_channels(channel, operating_bandwidth);
+
+            for (const auto overlap_ch : overlapping_beacon_channels) {
+                it_ch = radio->channels_list.find(overlap_ch);
+                if (it_ch == radio->channels_list.end()) {
+                    LOG(ERROR) << "Overlap channel " << overlap_ch << " is not supported";
+                    return AgentDB::sChannelPreference(
+                        operating_class,
+                        wfa_map::cPreferenceOperatingClasses::ePreference::NON_OPERABLE,
+                        wfa_map::cPreferenceOperatingClasses::eReasonCode::UNSPECIFIED);
+                }
+
+                auto &overlap_channel_info = it_ch->second;
+
+                if (overlap_channel_info.dfs_state == beerocks_message::eDfsState::UNAVAILABLE) {
+                    return AgentDB::sChannelPreference(
+                        operating_class,
+                        wfa_map::cPreferenceOperatingClasses::ePreference::NON_OPERABLE,
+                        wfa_map::cPreferenceOperatingClasses::eReasonCode::
+                            OPERATION_DISALLOWED_DUE_TO_RADAR_DETECTION_ON_A_DFS_CHANNEL);
+                }
+            }
+        }
+
+        // Channel is supported and have valid preference.
+        return AgentDB::sChannelPreference(
+            operating_class,
+            static_cast<wfa_map::cPreferenceOperatingClasses::ePreference>(
+                it_bw->multiap_preference),
+            wfa_map::cPreferenceOperatingClasses::eReasonCode::UNSPECIFIED);
+    };
+
+    for (const auto &oper_class : son::wireless_utils::operating_classes_list) {
+        auto oper_class_num             = oper_class.first;
+        const auto &oper_class_channels = oper_class.second.channels;
+        auto oper_class_bw              = oper_class.second.band;
+
+        if (radio->freq_type != son::wireless_utils::which_freq_op_cls(oper_class_num)) {
+            // Operating Class not part of the current radio, skip.
+            continue;
+        }
+
+        for (auto channel_of_oper_class : oper_class_channels) {
+
+            // Operating classes 128,129,130 use center channel **unlike the other classes**,
+            // so convert channel and bandwidth to center channel.
+            // For more info, refer to Table E-4 in the 802.11 specification.
+            std::vector<uint8_t> beacon_channels;
+            if (oper_class_num == 128 || oper_class_num == 129 || oper_class_num == 130) {
+                beacon_channels = son::wireless_utils::center_channel_5g_to_beacon_channels(
+                    channel_of_oper_class, oper_class_bw);
+            } else {
+                beacon_channels.push_back(channel_of_oper_class);
+            }
+
+            for (const auto beacon_channel : beacon_channels) {
+                auto preference_key =
+                    get_channel_preference(beacon_channel, oper_class_num, oper_class_bw);
+
+                radio_preference.channel_preferences[preference_key].insert(channel_of_oper_class);
+            }
+        }
+    }
+
+    radio_preference.isDone = true;
+    return true;
+}
+
+bool ChannelSelectionTask::channel_preference_report_ready()
+{
+    if (m_pending_preference.preference_map.empty()) {
+        return false;
+    }
+    for (const auto &radio_preference : m_pending_preference.preference_map) {
+        if (!radio_preference.second.isDone) {
+            // Channel preference report is not ready yet.
+            return false;
+        }
+    }
+    // Channel preference report is ready on all radios.
+    return true;
+}
+
+bool ChannelSelectionTask::send_channel_preference_report(
+    ieee1905_1::CmduMessageRx &cmdu_rx, std::shared_ptr<beerocks_header> beerocks_header)
+{
+
+    LOG(INFO) << "Building CHANNEL_PREFERENCE_REPORT_MESSAGE";
+    // build channel preference report with the same MID as the query
+    auto cmdu_tx_header = m_cmdu_tx.create(
+        m_pending_preference.mid, ieee1905_1::eMessageType::CHANNEL_PREFERENCE_REPORT_MESSAGE);
+    if (!cmdu_tx_header) {
+        LOG(ERROR) << "cmdu creation of type CHANNEL_PREFERENCE_REPORT_MESSAGE, has failed";
+        return false;
+    }
+
+    auto db = AgentDB::get();
+
+    for (const auto &pending_preference_iter : m_pending_preference.preference_map) {
+        if (!create_channel_preference_tlv(pending_preference_iter.first,
+                                           pending_preference_iter.second)) {
+            LOG(ERROR) << "Failed to create Channel Preference TLV";
+            return false;
+        }
+    }
+
+    //create_radio_operation_restriction_tlv();
+
+    // Need to send CAC TLVs only if Profile2 is supported //
+    if (db->controller_info.profile_support >
+        wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1) {
+
+        create_cac_completion_report_tlv();
+        create_cac_status_report_tlv();
+    }
+
+    LOG(DEBUG) << "sending channel preference report to broker";
+    return m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, m_pending_preference.src_mac, db->bridge.mac);
+}
+
+bool ChannelSelectionTask::create_channel_preference_tlv(
+    const sMacAddr &radio_mac, const sPendingRadioPreference &radio_preference)
+{
+
+    std::stringstream ss;
+
+    auto channel_preference_tlv = m_cmdu_tx.addClass<wfa_map::tlvChannelPreference>();
+    if (!channel_preference_tlv) {
+        LOG(ERROR) << "addClass ieee1905_1::tlvChannelPreference has failed";
+        return false;
+    }
+
+    channel_preference_tlv->radio_uid() = radio_mac;
+
+    ss << "Preference for radio: " << channel_preference_tlv->radio_uid() << std::endl;
+
+    for (const auto &preference : radio_preference.channel_preferences) {
+        auto &operating_class_info          = preference.first;
+        auto &operating_class_channels_list = preference.second;
+
+        auto op_class_channels = channel_preference_tlv->create_operating_classes_list();
+        if (!op_class_channels) {
+            LOG(ERROR) << "create_operating_classes_list() has failed!";
+            return false;
+        }
+
+        op_class_channels->operating_class() = operating_class_info.operating_class;
+        ss << "operating class #" << int(op_class_channels->operating_class());
+        ss << " preference: " << int(operating_class_info.flags.preference);
+        ss << " reason code: " << int(operating_class_info.flags.reason_code) << std::endl;
+
+        if (!op_class_channels->alloc_channel_list(operating_class_channels_list.size())) {
+            LOG(ERROR) << "alloc_channel_list() has failed!";
+            return false;
+        }
+
+        ss << " channels: [";
+        uint8_t idx = 0;
+        for (auto channel : operating_class_channels_list) {
+            ss << int(channel) << " ";
+            *op_class_channels->channel_list(idx) = channel;
+            idx++;
+        }
+        ss << "]." << std::endl;
+
+        // Update channel list flags
+        op_class_channels->flags() = operating_class_info.flags;
+
+        // Push operating class object to the list of operating class objects
+        if (!channel_preference_tlv->add_operating_classes_list(op_class_channels)) {
+            LOG(ERROR) << "add_operating_classes_list() has failed!";
+            return false;
+        }
+    }
+    ss << std::endl;
+    LOG(INFO) << ss.str();
+    return true;
+}
+
+bool ChannelSelectionTask::create_radio_operation_restriction_tlv(const sMacAddr &radio_mac)
+{
+    // This is a stub for PPM-2042
+    // Need to fill the Radio Operation Restrictions TLV
+    auto db    = AgentDB::get();
+    auto radio = db->get_radio_by_mac(radio_mac);
+    if (!radio) {
+        LOG(DEBUG) << "Radio " << radio_mac << " does not exist on the db";
+        return false;
+    }
+
+    return true;
+}
+
+bool ChannelSelectionTask::create_cac_completion_report_tlv()
+{
+    // create completion report
+    auto cac_completion_report_tlv = m_cmdu_tx.addClass<wfa_map::tlvProfile2CacCompletionReport>();
+    if (!cac_completion_report_tlv) {
+        LOG(ERROR) << "Failed to create cac-completion-report-tlv";
+        return false;
+    }
+
+    CacStatusDatabase cac_status_database;
+    auto db = AgentDB::get();
+
+    for (const auto &pending_preference_iter : m_pending_preference.preference_map) {
+        auto radio = db->get_radio_by_mac(pending_preference_iter.first);
+        if (!radio) {
+            LOG(DEBUG) << "Radio " << pending_preference_iter.first << " does not exist on the db";
+            return false;
+        }
+
+        auto cac_radio = cac_completion_report_tlv->create_cac_radios();
+        if (!cac_radio) {
+            LOG(ERROR) << "Failed to create cac radio for " << radio->front.iface_mac;
+            return false;
+        }
+
+        cac_radio->radio_uid() = radio->front.iface_mac;
+        const auto &cac_completion =
+            cac_status_database.get_completion_status(radio->front.iface_mac);
+        cac_radio->operating_class()       = cac_completion.first.operating_class;
+        cac_radio->channel()               = cac_completion.first.channel;
+        cac_radio->cac_completion_status() = cac_completion.first.completion_status;
+
+        if (!cac_completion.second.empty()) {
+            cac_radio->alloc_detected_pairs(cac_completion.second.size());
+            for (unsigned int i = 0; i < cac_completion.second.size(); ++i) {
+                if (std::get<0>(cac_radio->detected_pairs(i))) {
+                    auto &cac_detected_pair = std::get<1>(cac_radio->detected_pairs(i));
+                    cac_detected_pair.operating_class_detected = cac_completion.second[i].first;
+                    cac_detected_pair.channel_detected         = cac_completion.second[i].second;
+                }
+            }
+        }
+        cac_completion_report_tlv->add_cac_radios(cac_radio);
+    }
+
+    return true;
+}
+
+bool ChannelSelectionTask::create_cac_status_report_tlv()
+{
+
+    CacStatusDatabase cac_status_database;
+    auto db = AgentDB::get();
+    CacAvailableChannels agent_avaliable_channels;
+
+    for (const auto &pending_preference_iter : m_pending_preference.preference_map) {
+        auto radio = db->get_radio_by_mac(pending_preference_iter.first);
+        if (!radio) {
+            LOG(DEBUG) << "Radio " << pending_preference_iter.first << " does not exist on the db";
+            return false;
+        }
+        // fill status report
+        auto radio_available_channels =
+            cac_status_database.get_available_channels(radio->front.iface_mac);
+        agent_avaliable_channels.insert(agent_avaliable_channels.end(),
+                                        radio_available_channels.begin(),
+                                        radio_available_channels.end());
+    }
+
+    // create status report
+    auto cac_status_report_tlv = m_cmdu_tx.addClass<wfa_map::tlvProfile2CacStatusReport>();
+    if (!cac_status_report_tlv) {
+        LOG(ERROR) << "Failed to create cac-status-report-tlv";
+        return false;
+    }
+
+    if (!cac_status_report_tlv->alloc_available_channels(agent_avaliable_channels.size())) {
+        LOG(ERROR) << "Failed to allocate " << agent_avaliable_channels.size()
+                   << " structures for available channels";
+        return false;
+    }
+
+    for (unsigned int i = 0; i < agent_avaliable_channels.size(); ++i) {
+        auto &available_ref           = std::get<1>(cac_status_report_tlv->available_channels(i));
+        available_ref.operating_class = agent_avaliable_channels[i].operating_class;
+        available_ref.channel         = agent_avaliable_channels[i].channel;
+        available_ref.minutes_since_cac_completion =
+            std::chrono::duration_cast<std::chrono::minutes>(agent_avaliable_channels[i].duration)
+                .count();
+    }
+
+    return true;
 }
 
 bool ChannelSelectionTask::radio_scan_in_progress(eFreqType band)
