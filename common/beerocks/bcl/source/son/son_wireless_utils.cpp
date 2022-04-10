@@ -769,6 +769,20 @@ uint16_t wireless_utils::channel_to_vht_center_freq(int channel, beerocks::eWiFi
     return vht_center_freq;
 }
 
+beerocks::eFreqType wireless_utils::which_freq_op_cls(const uint8_t op_cls)
+{
+
+    constexpr uint8_t operating_classes_24G_min = 81, operating_classes_24G_max = 84,
+                      operating_classes_5G_min = 115, operating_classes_5G_max = 130;
+    if ((op_cls >= operating_classes_24G_min) && (op_cls <= operating_classes_24G_max)) {
+        return beerocks::eFreqType::FREQ_24G;
+    }
+    if ((op_cls >= operating_classes_5G_min) && (op_cls <= operating_classes_5G_max)) {
+        return beerocks::eFreqType::FREQ_5G;
+    }
+    return beerocks::eFreqType::FREQ_UNKNOWN;
+}
+
 beerocks::eFreqType wireless_utils::which_freq(uint32_t chn)
 {
     if ((1 <= chn) && (chn <= BAND_5G_CHANNEL_CHECK)) {
