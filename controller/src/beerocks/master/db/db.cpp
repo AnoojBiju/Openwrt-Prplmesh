@@ -6673,6 +6673,10 @@ bool db::dm_clear_sta_stats(const sMacAddr &sta_mac)
 
 bool db::dm_remove_sta(Station &station)
 {
+    if (station.dm_path.empty()) {
+        LOG(INFO) << "Station dm_path is already empty";
+        return true;
+    }
     auto instance = get_dm_index_from_path(station.dm_path);
     station.dm_path.clear();
 
