@@ -100,14 +100,18 @@ class NbapiBSS(PrplMeshBaseTest):
             if re.match(expected_time_format, time_stamp) is None:
                 self.fail(f'Fail. Network time stamp has incorrect format: {time_stamp}')
 
-            # The tshark version 2.6.20 used in boardfarm
-            # doesn't properly parse AP Extended Metrics TLV.
-            uc_tx_bytes_tlv = int(ap_extended_metrics.tlv_data[18:29].replace(":", ""), 16)
-            uc_rx_bytes_tlv = int(ap_extended_metrics.tlv_data[30:41].replace(":", ""), 16)
-            mc_tx_bytes_tlv = int(ap_extended_metrics.tlv_data[42:53].replace(":", ""), 16)
-            mc_rx_bytes_tlv = int(ap_extended_metrics.tlv_data[54:65].replace(":", ""), 16)
-            bdc_tx_bytes_tlv = int(ap_extended_metrics.tlv_data[66:77].replace(":", ""), 16)
-            bdc_rx_bytes_tlv = int(ap_extended_metrics.tlv_data[78:89].replace(":", ""), 16)
+            uc_tx_bytes_tlv = int(ap_extended_metrics.ap_extended_metrics_unicast_bytes_sent
+                                  .replace(":", ""), 16)
+            uc_rx_bytes_tlv = int(ap_extended_metrics.ap_extended_metrics_unicast_bytes_received
+                                  .replace(":", ""), 16)
+            mc_tx_bytes_tlv = int(ap_extended_metrics.ap_extended_metrics_multicast_bytes_sent
+                                  .replace(":", ""), 16)
+            mc_rx_bytes_tlv = int(ap_extended_metrics.ap_extended_metrics_multicast_bytes_received
+                                  .replace(":", ""), 16)
+            bdc_tx_bytes_tlv = int(ap_extended_metrics.ap_extended_metrics_broadcast_bytes_sent
+                                   .replace(":", ""), 16)
+            bdc_rx_bytes_tlv = int(ap_extended_metrics.ap_extended_metrics_broadcast_bytes_received
+                                   .replace(":", ""), 16)
 
             self.assertEqual("UnicastBytesSent", uinicast_bytes_sent, uc_tx_bytes_tlv)
             self.assertEqual("UnicastBytesReceived", unicast_bytes_received, uc_rx_bytes_tlv)
