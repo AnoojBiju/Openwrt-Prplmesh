@@ -241,12 +241,12 @@ private:
 
     struct sApExtendedMetrics {
         sMacAddr bssid;
-        uint32_t unicast_bytes_sent;
-        uint32_t unicast_bytes_received;
-        uint32_t broadcast_bytes_sent;
-        uint32_t broadcast_bytes_received;
-        uint32_t multicast_bytes_sent;
-        uint32_t multicast_bytes_received;
+        uint32_t unicast_bytes_sent       = 0;
+        uint32_t unicast_bytes_received   = 0;
+        uint32_t broadcast_bytes_sent     = 0;
+        uint32_t broadcast_bytes_received = 0;
+        uint32_t multicast_bytes_sent     = 0;
+        uint32_t multicast_bytes_received = 0;
     };
 
     struct sApMetricsResponse {

@@ -13,6 +13,7 @@
 
 #include <beerocks/tlvf/beerocks_message.h>
 #include <beerocks/tlvf/beerocks_message_monitor.h>
+#include <tlvf/wfa_map/tlvApExtendedMetrics.h>
 #include <tlvf/wfa_map/tlvApMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaTrafficStats.h>
@@ -474,6 +475,27 @@ bool monitor_stats::add_ap_metrics(ieee1905_1::CmduMessageTx &cmdu_tx,
     std::fill_n(ap_metrics_response_tlv->estimated_service_info_field(), 12, 0);
     mon_wlan_hal->set_estimated_service_parameters(
         ap_metrics_response_tlv->estimated_service_info_field());
+    return true;
+}
+
+bool monitor_stats::add_ap_extended_metrics(ieee1905_1::CmduMessageTx &cmdu_tx,
+                                            monitor_vap_node &vap_node) const
+{
+    auto ap_extended_metrics_tlv = cmdu_tx.addClass<wfa_map::tlvApExtendedMetrics>();
+    if (!ap_extended_metrics_tlv) {
+        LOG(ERROR) << "Couldn't addClass tlvApExtendedMetrics";
+        return false;
+    }
+
+    ap_extended_metrics_tlv->bssid()                    = tlvf::mac_from_string(vap_node.get_mac());
+    const auto &stats                                   = vap_node.get_stats().hal_stats;
+    ap_extended_metrics_tlv->unicast_bytes_sent()       = stats.tx_ucast_bytes;
+    ap_extended_metrics_tlv->unicast_bytes_received()   = stats.rx_ucast_bytes;
+    ap_extended_metrics_tlv->multicast_bytes_sent()     = stats.tx_mcast_bytes;
+    ap_extended_metrics_tlv->multicast_bytes_received() = stats.rx_mcast_bytes;
+    ap_extended_metrics_tlv->broadcast_bytes_sent()     = stats.tx_bcast_bytes;
+    ap_extended_metrics_tlv->broadcast_bytes_received() = stats.rx_bcast_bytes;
+
     return true;
 }
 
