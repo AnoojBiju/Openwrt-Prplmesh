@@ -767,6 +767,9 @@ bool Monitor::create_ap_metrics_response(uint16_t mid, const std::vector<sMacAdd
         if (!mon_stats.add_ap_metrics(cmdu_tx, *vap_node, *radio_node, mon_wlan_hal)) {
             return false;
         }
+        if (!mon_stats.add_ap_extended_metrics(cmdu_tx, *vap_node)) {
+            return false;
+        }
 
         auto reporting_info = radio_node->ap_metrics_reporting_info();
 
