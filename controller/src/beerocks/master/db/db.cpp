@@ -6782,31 +6782,31 @@ uint64_t db::recalculate_attr_to_byte_units(
     return bytes;
 }
 
-bool db::dm_clear_cac_status_report(std::shared_ptr<Agent::sRadio> radio)
+bool db::dm_clear_cac_status_report(std::shared_ptr<Agent> agent)
 {
-    if (radio->dm_path.empty()) {
+    if (agent->dm_path.empty()) {
         return true;
     }
 
-    auto available_channel_list = radio->dm_path + ".CACStatus.CACAvailableChannel";
+    auto available_channel_list = agent->dm_path + ".CACStatus.CACAvailableChannel";
     if (!m_ambiorix_datamodel->remove_all_instances(available_channel_list)) {
         LOG(ERROR) << "Failed to remove all instances for: " << available_channel_list;
         return false;
     }
 
-    m_ambiorix_datamodel->set_current_time(radio->dm_path + ".CACStatus");
+    m_ambiorix_datamodel->set_current_time(agent->dm_path + ".CACStatus");
     return true;
 }
 
-bool db::dm_add_cac_status_available_channel(std::shared_ptr<Agent::sRadio> radio,
-                                             uint8_t operating_class, uint8_t channel)
+bool db::dm_add_cac_status_available_channel(std::shared_ptr<Agent> agent, uint8_t operating_class,
+                                             uint8_t channel)
 {
-    if (radio->dm_path.empty()) {
+    if (agent->dm_path.empty()) {
         return true;
     }
 
     bool ret_val                = true;
-    auto available_channel_list = radio->dm_path + ".CACStatus.CACAvailableChannel";
+    auto available_channel_list = agent->dm_path + ".CACStatus.CACAvailableChannel";
 
     auto available_channel = m_ambiorix_datamodel->add_instance(available_channel_list);
     if (available_channel.empty()) {
@@ -6816,7 +6816,7 @@ bool db::dm_add_cac_status_available_channel(std::shared_ptr<Agent::sRadio> radi
 
     ret_val &= m_ambiorix_datamodel->set(available_channel, "OpClass", operating_class);
     ret_val &= m_ambiorix_datamodel->set(available_channel, "Channel", channel);
-    ret_val &= m_ambiorix_datamodel->set_current_time(radio->dm_path + ".CACStatus");
+    ret_val &= m_ambiorix_datamodel->set_current_time(agent->dm_path + ".CACStatus");
     return ret_val;
 }
 

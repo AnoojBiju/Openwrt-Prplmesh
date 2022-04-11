@@ -1839,25 +1839,25 @@ public:
      *
      * Remove all indexes in CACAvailableChannel and updates timestamp.
      *
-     * Data model path : "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.CACStatus" defined in radio.odl
+     * Data model path : "Device.WiFi.DataElements.Network.Device.{i}.CACStatus"
      *
-     * @param[in] radio radio db object
+     * @param[in] agent db object
      * @return true on success, otherwise false.
      */
-    bool dm_clear_cac_status_report(std::shared_ptr<Agent::sRadio> radio);
+    bool dm_clear_cac_status_report(std::shared_ptr<Agent> agent);
 
     /**
      * @brief Adds instance for CACStatus.CACAvailableChannel and fullfills it.
      *
-     * Data model path : "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.CACStatus.CACAvailableChannel.{i}"
+     * Data model path : "Device.WiFi.DataElements.Network.Device.{i}.CACStatus.CACAvailableChannel.{i}"
      *
-     * @param[in] radio radio db object
+     * @param[in] agent db object
      * @param[in] operating_class operating class
      * @param[in] channel channel number
      * @return true on success, otherwise false.
      */
-    bool dm_add_cac_status_available_channel(std::shared_ptr<Agent::sRadio> radio,
-                                             uint8_t operating_class, uint8_t channel);
+    bool dm_add_cac_status_available_channel(std::shared_ptr<Agent> agent, uint8_t operating_class,
+                                             uint8_t channel);
 
     /**
      * @brief Removes excessive NBAPI objects from system bus, if amount of them succeed the limit.
@@ -1992,7 +1992,7 @@ public:
 
     /**
      * @brief Sets MACAddress of the Backhaul Station (bSTA) on given radio.
-     * 
+     *
      * A station with this MAC also should appear on datamodel,
      * if this devices radio connects to another EasyMesh devices wireless backhaul BSS (bBSS).
      *
