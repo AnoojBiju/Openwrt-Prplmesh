@@ -220,6 +220,7 @@ class Radio:
         agent.radios.append(self)
         self.mac = mac
         self.vaps = []
+        self.backhaul_sta_list = []
         self.logfilenames = []  # List[str]
         self.checkpoints = {}  # Dict[str, int]
 
@@ -260,6 +261,10 @@ class Radio:
     def update_vap_list(self):
         ''' Initialize / update VAP list '''
         pass
+
+    def update_backhaul_sta_list(self):
+        ''' Initialize / update Backhaul STAs list '''
+        raise NotImplementedError("Not implemented in abstract class.")
 
     def get_vap(self, ssid: str):
         for vap in self.vaps:
@@ -364,6 +369,23 @@ class VirtualAP:
     def disassociate(self, sta: Station) -> bool:
         '''Disassociate "sta" from this VAP.'''
         raise NotImplementedError("disassociate is not implemented in abstract class VirtualAP")
+
+
+class BackhaulSTA:
+    '''Abstract representation of a Backhaul STA on a MultiAP Radio.'''
+
+    def __init__(self, radio: Radio, mac: str):
+        self.radio = radio
+        radio.backhaul_sta_list.append(self)
+        self.mac = mac
+
+    def associate(self, sta: Station) -> bool:
+        '''Associate "sta" with this Backhaul STA.'''
+        raise NotImplementedError("associate is not implemented in abstract class BackhaulSTA")
+
+    def disassociate(self, sta: Station) -> bool:
+        '''Disassociate "sta" from this Backhaul STA.'''
+        raise NotImplementedError("disassociate is not implemented in abstract class BackhaulSTA")
 
 
 # The following variables are initialized as None, and have to be set when a concrete test
@@ -709,6 +731,11 @@ class RadioDocker(Radio):
             self.agent.logfilename(f"ap_manager_{iface_name}"),
         ]
 
+        self.update_backhaul_sta_list(agent)
+
+    def update_backhaul_sta_list(self, agent):
+        self.backhaul_sta_list = []
+
     def wait_for_log(self, regex: str, start_line: int, timeout: float,
                      fail_on_mismatch: bool = True) -> bool:
         '''Poll the radio's logfile until it contains "regex" or times out.'''
@@ -796,6 +823,23 @@ class VirtualAPDocker(VirtualAP):
             (True, False): BssType.Fronthaul,
             (True, True): BssType.Hybrid
         }.get((fronthaul, backhaul), BssType.Disabled)
+
+
+class BackhaulSTADocker(BackhaulSTA):
+    """Docker implementation of a Backhaul STA."""
+
+    def __init__(self, radio: RadioDocker, mac: str):
+        super().__init__(radio, mac)
+
+    def associate(self, sta: Station) -> bool:
+        ''' Associate "sta" with this Backhaul STA.'''
+        # TODO: complete this stub
+        return True
+
+    def disassociate(self, sta: Station) -> bool:
+        ''' Disassociate "sta" from this Backhaul STA.'''
+        # TODO: complete this stub
+        return True
 
 
 def _docker_inspect_network_json(unique_id: str):
