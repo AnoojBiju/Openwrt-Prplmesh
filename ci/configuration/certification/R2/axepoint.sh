@@ -3,7 +3,7 @@
 set -e
 
 # Start with a new log file:
-rm -f /var/log/messages && syslog-ng-ctl reload
+rm -f /var/log/messages ; syslog-ng-ctl reload || true
 
 # One of the LAN ports is used for control, and the WAN port for data:
 uci batch << 'EOF'
@@ -34,17 +34,42 @@ set wireless.radio2.htmode='HT20'
 # Enable action/managment frames hostapd notifiecations
 set wireless.radio0.notify_action_frame='1'
 set wireless.radio2.notify_action_frame='1'
-
-# set protected managment frames capability (pmf) to optional for wireless interfaces (supplicants)
-set wireless.default_radio26.pmf='1'
-set wireless.default_radio58.pmf='1'
-
 ##############################################################
+
+# Add backhaul STAs:
+set wireless.default_radio26=wifi-iface
+set wireless.default_radio26.device=radio0
+set wireless.default_radio26.ifname=wlan1
+set wireless.default_radio26.mode=sta
+set wireless.default_radio26.config_methods=push_button
+set wireless.default_radio26.wds=1
+set wireless.default_radio26.multi_ap_profile=2
+set wireless.default_radio26.pmf1
+
+set wireless.default_radio58=wifi-iface
+set wireless.default_radio58.device=radio2
+set wireless.default_radio58.ifname=wlan3
+set wireless.default_radio58.mode=sta
+set wireless.default_radio58.config_methods=push_button
+set wireless.default_radio58.wds=1
+set wireless.default_radio58.multi_ap_profile=2
+set wireless.default_radio58.pmf1
 
 # radios are disabled by default in prplwrt
 set wireless.radio0.disabled=0
+set wireless.default_radio100.start_disabled=0
 set wireless.radio2.disabled=0
+set wireless.default_radio102.start_disabled=0
+
+# Make guest interfaces part of lan again until prplMesh supports it (PPM-2019):
+set wireless.default_radio11.network='lan'
+set wireless.default_radio11.ssid='prplOS'
+set wireless.default_radio43.network='lan'
+set wireless.default_radio43.ssid='prplOS'
 EOF
+
+# Generate a MAC address for the new bSTA interfaces:
+sh /rom/etc/uci-defaults/15_wireless-generate-macaddr || true
 
 uci commit
 /etc/init.d/system restart
