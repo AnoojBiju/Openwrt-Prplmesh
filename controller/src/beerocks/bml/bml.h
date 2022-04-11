@@ -549,12 +549,14 @@ int bml_trigger_topology_discovery(BML_CTX ctx, const char *al_mac);
  * Trigger Channel Selection Task on a specific Agent.
  *
  * @param [in] ctx BML Context.
- * @param [in] al_mac al_mac of the platform. 
- * @param [in] ruid Agent radio identifier. 
+ * @param [in] radio_mac Radio MAC of selected radio. 
+ * @param [in] bandwidth Channel Bandwidth
+ * @param [in] csa_count Channel-Switch-Announcement beacon count. 
  * 
  * @return BML_RET_OK on success.
  */
-int bml_channel_selection(BML_CTX ctx, const char *al_mac, const char *ruid);
+int bml_channel_selection(BML_CTX ctx, const char *radio_mac, uint8_t channel, uint8_t bandwidth,
+                          uint8_t csa_count);
 
 /**
  * Set a VAP information list.

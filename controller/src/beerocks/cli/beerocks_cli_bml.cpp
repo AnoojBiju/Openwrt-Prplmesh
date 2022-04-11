@@ -484,14 +484,11 @@ void cli_bml::setFunctionsMapAndArray()
                        "trigger topology query towards 'al_mac'",
                        static_cast<pFunction>(&cli_bml::bml_trigger_topology_discovery_caller), 1,
                        1, STRING_ARG);
-    insertCommandToMap(
-        "bml_trigger_channel_selection",            // command name
-        "<al_mac (mac format)> <ruid(mac format)>", // command args list
-        "trigger channel selection procedure"       // command description
-        "on agent 'agent_ruid'",
-        static_cast<pFunction>(&cli_bml::bml_channel_selection_caller), // caller function
-        2, 2,                                                           // min,max args number
-        STRING_ARG, STRING_ARG);                                        // args types
+    insertCommandToMap("bml_trigger_channel_selection",
+                       "<mac> <channel> <bandwidth> [<csa count> by default 5]",
+                       "trigger channel selection procedure",
+                       static_cast<pFunction>(&cli_bml::bml_channel_selection_caller), 3, 4,
+                       STRING_ARG, INT_ARG, INT_ARG, INT_ARG);
 
 #ifdef BEEROCKS_RDKB
     insertCommandToMap("bml_rdkb_steering_set_group", "<steeringGroupIndex> <cfg_2> <cfg_5>",
@@ -1186,8 +1183,11 @@ int cli_bml::bml_trigger_topology_discovery_caller(int numOfArgs)
 
 int cli_bml::bml_channel_selection_caller(int numOfArgs)
 {
-    if (numOfArgs == 2) {
-        return channel_selection(args.stringArgs[0], args.stringArgs[1]);
+    if (numOfArgs == 3) {
+        return channel_selection(args.stringArgs[0], args.intArgs[1], args.intArgs[2]);
+    } else if (numOfArgs == 4) {
+        return channel_selection(args.stringArgs[0], args.intArgs[1], args.intArgs[2],
+                                 args.intArgs[3]);
     }
     return -1;
 }
@@ -1914,9 +1914,10 @@ int cli_bml::topology_discovery(const std::string &al_mac)
     return 0;
 }
 
-int cli_bml::channel_selection(const std::string &al_mac, const std::string &ruid)
+int cli_bml::channel_selection(const std::string &radio_mac, uint8_t channel, uint8_t bandwidth,
+                               uint8_t csa_count)
 {
-    int ret = bml_channel_selection(ctx, al_mac.c_str(), ruid.c_str());
+    int ret = bml_channel_selection(ctx, radio_mac.c_str(), channel, bandwidth, csa_count);
     printBmlReturnVals("channel_selection", ret);
     return 0;
 }

@@ -1633,30 +1633,37 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
 
     case beerocks_message::ACTION_BML_TRIGGER_CHANNEL_SELECTION_REQUEST: {
 
-        auto bml_request =
+        auto request =
             beerocks_header
                 ->addClass<beerocks_message::cACTION_BML_TRIGGER_CHANNEL_SELECTION_REQUEST>();
-
-        if (bml_request == nullptr) {
+        if (!request) {
             LOG(ERROR) << "addClass cACTION_BML_TRIGGER_CHANNEL_SELECTION_REQUEST failed";
-            return;
+            break;
         }
 
-        auto al_mac   = bml_request->al_mac();
-        auto ruid_mac = bml_request->ruid();
+        auto response = message_com::create_vs_message<
+            beerocks_message::cACTION_BML_TRIGGER_CHANNEL_SELECTION_RESPONSE>(
+            cmdu_tx, beerocks_header->id());
+        if (!response) {
+            LOG(ERROR) << "Failed building cACTION_BML_TRIGGER_CHANNEL_SELECTION_RESPONSE";
+        }
+
+        auto radio_mac = request->radio_mac();
+        auto channel   = request->channel();
+        auto bandwidth = request->bandwidth();
+        auto csa_count = request->csa_count();
 
         LOG(INFO) << "ACTION_BML_TRIGGER_CHANNEL_SELECTION_REQUEST "
-                  << ", al_mac=" << al_mac << ", ruid=" << ruid_mac;
+                  << ", radio_mac=" << radio_mac << ", channel=" << channel
+                  << ", bandwidth=" << bandwidth << ", csa_count=" << csa_count;
 
-        auto cmdu_header =
-            cmdu_tx.create(0, ieee1905_1::eMessageType::CHANNEL_PREFERENCE_QUERY_MESSAGE);
+        /** This code is undergoing changes as part of PPM-1973
+         * TODO: Alert the appropriate task that a new channel-selection request was triggered
+        */
 
-        if (cmdu_header == nullptr) {
-            LOG(ERROR) << "Failed building message!";
-            return;
-        }
-
-        son_actions::send_cmdu_to_agent(al_mac, cmdu_tx, database);
+        response->code() = uint8_t(0); //Success
+        //send response to bml
+        controller_ctx->send_cmdu(sd, cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_BML_CHANNEL_SCAN_SET_CONTINUOUS_PARAMS_REQUEST: {
