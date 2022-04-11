@@ -1409,6 +1409,29 @@ public:
     const std::list<sChannelScanResults> &get_channel_scan_results(const sMacAddr &mac,
                                                                    bool single_scan);
 
+    /**
+     * @brief Sets preference score for a given operating class & channel pair.
+     * 
+     * Set's the radio's reported preference for a given channel on a given operating class.
+     * 0 - Non-operable channel.
+     * 1-14 Operable with preference score, where 1 is least preferred.
+     * 
+     * @param[in] radio_mac MAC address of radio.
+     * @param[in] operating_class Operating Class number for the given channel.
+     * @param[in] channel_number Number of the given channel.
+     * @param[in] preference Preference value for the given channel.
+     * @return true if preference is valid, false otherwise.
+     */
+    bool set_channel_preference(const sMacAddr &radio_mac, const uint8_t operating_class,
+                                const uint8_t channel_number, const uint8_t preference);
+
+    /**
+     * @brief Clear the channel preference for a given Radio.
+     * 
+     * @param[in] radio_mac MAC address of radio.
+     */
+    bool clear_channel_preference(const sMacAddr &radio_mac);
+
     //
     // Client Persistent Data
     //

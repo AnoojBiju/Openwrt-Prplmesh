@@ -2885,6 +2885,39 @@ beerocks::eChannelScanStatusCode db::get_channel_scan_results_status(const sMacA
         .last_scan_error_code;
 }
 
+bool db::clear_channel_preference(const sMacAddr &radio_mac)
+{
+    auto radio = get_hostap(radio_mac);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << radio_mac;
+        return false;
+    }
+
+    radio->channel_preference_report.clear();
+    return true;
+}
+
+bool db::set_channel_preference(const sMacAddr &radio_mac, const uint8_t operating_class,
+                                const uint8_t channel_number, const uint8_t preference)
+{
+    auto radio = get_hostap(radio_mac);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << radio_mac;
+        return false;
+    }
+
+    if (!wireless_utils::is_channel_in_operating_class(operating_class, channel_number)) {
+        LOG(ERROR) << "Operating class #" << operating_class << " does not contain channel #"
+                   << channel_number;
+        return false;
+    }
+
+    const auto key = std::make_pair(operating_class, channel_number);
+
+    radio->channel_preference_report[key] = preference;
+    return true;
+}
+
 bool db::set_channel_scan_dwell_time_msec(const sMacAddr &mac, int dwell_time_msec,
                                           bool single_scan)
 {
