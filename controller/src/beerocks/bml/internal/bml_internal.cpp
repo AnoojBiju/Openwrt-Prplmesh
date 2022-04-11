@@ -13,6 +13,7 @@
 
 #include <bcl/beerocks_message_structs.h>
 #include <bcl/beerocks_string_utils.h>
+#include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
 #include <easylogging++.h>
 
@@ -1280,6 +1281,22 @@ int bml_internal::process_cmdu_header(std::shared_ptr<beerocks_header> beerocks_
                 LOG(WARNING)
                     << "Received ACTION_BML_GET_CLIENT_ROAMING_11K_SUPPORT_RESPONSE response, "
                        "but no one is waiting...";
+            }
+        } break;
+        case beerocks_message::ACTION_BML_TRIGGER_CHANNEL_SELECTION_RESPONSE: {
+            auto response =
+                beerocks_header
+                    ->addClass<beerocks_message::cACTION_BML_TRIGGER_CHANNEL_SELECTION_RESPONSE>();
+            if (!response) {
+                LOG(ERROR) << "addClass cACTION_BML_TRIGGER_CHANNEL_SELECTION_RESPONSE failed";
+                return BML_RET_OP_FAILED;
+            }
+
+            //Signal any waiting threads
+            if (!wake_up(beerocks_message::ACTION_BML_TRIGGER_CHANNEL_SELECTION_REQUEST,
+                         response->code())) {
+                LOG(WARNING) << "Received cACTION_BML_TRIGGER_CHANNEL_SELECTION_RESPONSE"
+                             << " response, but no one is waiting...";
             }
         } break;
         default: {
@@ -3590,7 +3607,8 @@ int bml_internal::trigger_topology_discovery_query(const char *al_mac)
     return BML_RET_OK;
 }
 
-int bml_internal::channel_selection(const char *al_mac, const char *ruid)
+int bml_internal::channel_selection(const sMacAddr &radio_mac, uint8_t channel, uint8_t bandwidth,
+                                    uint8_t csa_count)
 {
     auto request = message_com::create_vs_message<
         beerocks_message::cACTION_BML_TRIGGER_CHANNEL_SELECTION_REQUEST>(cmdu_tx);
@@ -3600,8 +3618,10 @@ int bml_internal::channel_selection(const char *al_mac, const char *ruid)
         return (-BML_RET_OP_FAILED);
     }
 
-    request->al_mac() = tlvf::mac_from_string(al_mac);
-    request->ruid()   = tlvf::mac_from_string(ruid);
+    request->radio_mac() = radio_mac;
+    request->channel()   = channel;
+    request->bandwidth() = utils::convert_bandwidth_to_enum(bandwidth);
+    request->csa_count() = csa_count;
 
     if (!message_com::send_cmdu(m_sockMaster, cmdu_tx)) {
         LOG(ERROR) << "Failed sending message!";

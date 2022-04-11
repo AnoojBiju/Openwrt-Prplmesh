@@ -197,7 +197,8 @@ private:
                                       const std::string &hostap_mac);
     int get_slave_restricted_channels(const std::string &hostap_mac);
     int topology_discovery(const std::string &al_mac);
-    int channel_selection(const std::string &al_mac, const std::string &ruid);
+    int channel_selection(const std::string &radio_mac, uint8_t channel, uint8_t bw,
+                          uint8_t csa_count = 5);
 #ifdef BEEROCKS_RDKB
     int steering_set_group(uint32_t steeringGroupIndex, const std::string &str_cfg_2,
                            const std::string &str_cfg_5);
