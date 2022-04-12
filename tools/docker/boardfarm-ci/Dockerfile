@@ -1,4 +1,4 @@
-FROM python:3.8-slim-buster
+FROM python:3.9.12-slim-bullseye
 
 # Debian dependencies to install docker and docker compose from docker.com
 RUN apt-get update \
