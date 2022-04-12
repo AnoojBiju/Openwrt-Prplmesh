@@ -380,6 +380,18 @@ public:
     std::shared_ptr<Agent::sRadio> get_radio_by_bssid(const sMacAddr &bssid);
 
     /**
+     * @brief Get radio containing a BH STA with a specific MAC
+     * Searches all Agent objects for sRadio object containing a BH STA with the given MAC.
+     * If no such radio found, nullptr is returned and an error is logged.
+     *
+     * This field is obtained by Profile 2 Backhaul Station Capability Report for db.
+     *
+     * @param bh_sta mac address of backhaul station
+     * @return The sRadio object, or nullptr if it doesn't exist.
+     */
+    std::shared_ptr<Agent::sRadio> get_radio_by_backhaul_cap(const sMacAddr &bh_sta);
+
+    /**
      * @brief Get station with a specific MAC address.
      *
      * Searches all Station object to find one with the given MAC address.
