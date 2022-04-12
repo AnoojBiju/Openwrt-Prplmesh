@@ -68,13 +68,12 @@ class NbapiRadio(PrplMeshBaseTest):
                                                      self.ieee1905['eTlvTypeMap']
                                                      ['TLV_PROFILE2_RADIO_METRICS'])
 
-        # The tshark version 2.6.20 used in boardfarm doesn't properly parse this TLV.
-        assert len(radio_metrics_tlv[0].tlv_data), "tlv_data of Radio Metrics TLV is empty!"
-        ruid = radio_metrics_tlv[0].tlv_data[0:17]
-        noise = radio_metrics_tlv[0].tlv_data[18:20]
-        transmit = radio_metrics_tlv[0].tlv_data[21:23]
-        resive_self = radio_metrics_tlv[0].tlv_data[24:26]
-        recive_other = radio_metrics_tlv[0].tlv_data[27:29]
+        assert radio_metrics_tlv[0].tlv_length, "tlv_length of Radio Metrics TLV is empty!"
+        ruid = radio_metrics_tlv[0].radio_metrics_radio_id
+        noise = radio_metrics_tlv[0].radio_metrics_noise
+        transmit = radio_metrics_tlv[0].radio_metrics_transmit
+        resive_self = radio_metrics_tlv[0].radio_metrics_receive_self
+        recive_other = radio_metrics_tlv[0].radio_metrics_receive_other
 
         nbapi_ruid = controller.nbapi_get_parameter(radio.path, "ID")
         assert nbapi_ruid == agent.radios[0].mac, f"Wrong ruid: {nbapi_ruid}, expected {ruid}"

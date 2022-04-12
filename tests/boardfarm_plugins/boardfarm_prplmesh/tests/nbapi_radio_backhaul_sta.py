@@ -59,16 +59,18 @@ class NbapiRadioBackhaulSta(PrplMeshBaseTest):
         debug("Checking TLV contents")
         for tlv, index in zip(backhaul_sta_radio_caps_tlvs, range(len(radios))):
 
-            assert len(tlv.tlv_data), "tlv_data of Backhaul STA Radio Capabilities TLV is empty!"
-            tlv_ruid = tlv.tlv_data[0:17]
-            tlv_sta_mac_included = int(tlv.tlv_data[18:20], 16)
+            assert tlv.tlv_length, "tlv_length of Backhaul STA Radio Capabilities TLV is empty!"
+            tlv_ruid = tlv.backhaul_sta_radio_capabilities_radio_id
+            tlv_sta_mac_included = int(
+                tlv.backhaul_sta_radio_capabilities_flags_tree
+                ['ieee1905.backhaul_sta_radio_capabilities.mac_address_included'])
 
             assert tlv_ruid == agent.radios[index].mac, \
                 f"Wrong ruid: {tlv_ruid}, expected {agent.radios[index].mac}"
             debug(f'TLV Radio UID: {tlv_ruid}')
 
             if tlv_sta_mac_included:
-                tlv_backhaul_sta_mac = tlv.tlv_data[21:38]
+                tlv_backhaul_sta_mac = tlv.backhaul_sta_radio_capabilities_backhaul_sta_mac_address
 
                 assert tlv_backhaul_sta_mac == '00:00:00:00:00:00', \
                     "Received TLV Backhaul STA MAC should be zeroed out"

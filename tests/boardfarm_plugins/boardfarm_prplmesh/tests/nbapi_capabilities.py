@@ -114,15 +114,15 @@ class NbapiCapabilities(PrplMeshBaseTest):
                     self.assertEqualInt("GI_80_MHz", vht_caps['gi_80_mhz'],
                                         tlv.ap_vht_caps_tree['ieee1905.ap_vht.short_gi_80mhz'])
                     self.assertEqualInt("GI_160_MHz", vht_caps['gi_160_mhz'],
-                                        tlv.ap_vht_caps_tree['ieee1905.ap_ht.short_gi_160mhz'])
+                                        tlv.ap_vht_caps_tree['ieee1905.ap_vht.short_gi_160mhz'])
                     self.assertEqualInt("VHT_80_80_MHz", vht_caps['vht_80_80_mhz'],
-                                        tlv.ap_vht_caps_tree['ieee1905.ap_ht.vht_80plus_mhz'])
+                                        tlv.ap_vht_caps_tree['ieee1905.ap_vht.vht_80plus_mhz'])
                     self.assertEqualInt("VHT_160_MHz", vht_caps['vht_160_mhz'],
-                                        tlv.ap_vht_caps_tree['ieee1905.ap_ht.vht_160mhz'])
+                                        tlv.ap_vht_caps_tree['ieee1905.ap_vht.vht_160mhz'])
                     self.assertEqualInt("SU_beamformer", vht_caps['su_beamformer'],
-                                        tlv.ap_vht_caps_tree['ieee1905.ap_ht.su_beamformer'])
+                                        tlv.ap_vht_caps_tree['ieee1905.ap_vht.su_beamformer'])
                     self.assertEqualInt("MU_beamformer", vht_caps['mu_beamformer'],
-                                        tlv.ap_vht_caps_tree['ieee1905.ap_ht.mu_beamformer'])
+                                        tlv.ap_vht_caps_tree['ieee1905.ap_vht.mu_beamformer'])
                     self.assertEqualInt(
                         "VHT_Tx_MCS", vht_caps['vht_tx_mcs'], tlv.vht_supported_tx_mcs)
                     self.assertEqualInt(
