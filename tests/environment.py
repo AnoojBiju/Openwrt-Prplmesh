@@ -1262,7 +1262,7 @@ class RadioHostapd(Radio):
         regex = r"channel (?P<channel>[0-9]+) [^\r\n]*width[^\r\n]* (?P<width>[0-9]+) " + \
             r"MHz[^\r\n]*center1[^\r\n]* (?P<center>[0-9]+) MHz"
 
-        output = self.agent.command("iw", "dev", f"{self.iface_name}", "info")
+        output = self.agent.command("/usr/sbin/iw", "dev", f"{self.iface_name}", "info")
         match = re.search(regex, output)
         return ChannelInfo(int(match.group('channel')), int(match.group('width')),
                            int(match.group('center')))
@@ -1270,7 +1270,7 @@ class RadioHostapd(Radio):
     def get_power_limit(self) -> int:
         regex = r"txpower (?P<power_limit>[0-9]*)(\.0+)? dBm"
 
-        output = self.agent.command("iw", "dev", f"{self.iface_name}", "info")
+        output = self.agent.command("/usr/sbin/iw", "dev", f"{self.iface_name}", "info")
         match = re.search(regex, output)
         return int(match.group('power_limit'))
 
