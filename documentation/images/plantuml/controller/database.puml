@@ -2,25 +2,24 @@
 
 class Station {
   sMacAddr mac
-  ipv4
-  ipv6
-  capabilities
-  statistics
+  string dm_path
+  string ipv6
+  string assoc_event_path
+  steering_summary_stats
 }
 
 class sBss {
   sMacAddr bssid
-  string path_to_dm
+  string dm_path
+  int vap_id
   string ssid
 }
 
 class sRadio {
   sMacAddr radio_uid
-  string path_to_dm
-  capabilities
-  statistics
-  current operating channel
-}
+  string dm_path
+  stats_info
+ }
 
 class sInterface {
   sMacAddr mac
@@ -30,26 +29,34 @@ class sInterface {
   neighbors
 }
 
+class sBackhaul {
+  sMacAddr backhaul_interface
+  sMacAddr parent_interface
+  parent_agent
+}
+
 class Agent {
   sMacAddr al_mac
-  string path_to_dm
-  bool is_controller
-  bool is_prplmesh
-  bool is_profile2
+  string dm_path
+  bool is_gateway
   string manufacturer
-  capabilities
 }
 
 class db {
-  find_bss(bssid)
+  get_dm_index_from_path(dm_path)
+  get_agent_by_radio_uid(radio_uid)
+  get_radio(al_mac,radio_uid)
+  get_bss(bssid)
+  get_station(mac)
 }
 
 db *-- Agent
 db *-- Station
 Agent *-- sRadio
 Agent *-- sInterface
+Agent *-- sBackhaul
 sRadio *-- sBss
-Station "0..1" --o sRadio :  backhaul STA
+Station "0..1" --o sRadio
 Station "*" -- "0..1" sBss
 
 @enduml
