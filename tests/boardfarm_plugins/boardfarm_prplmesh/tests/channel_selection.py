@@ -62,6 +62,10 @@ class ChannelSelection(PrplMeshBaseTest):
 
         self.dev.DUT.wired_sniffer.start(self.__class__.__name__ + "-" + self.dev.DUT.name)
 
+        self.configure_ssids(['ChannelSelection'])
+
+        self.checkpoint()
+
         orig_chan_0 = agent.radios[0].get_current_channel()
         orig_chan_1 = agent.radios[1].get_current_channel()
         debug("Starting channel wlan0: {}, wlan2: {}".format(orig_chan_0, orig_chan_1))
