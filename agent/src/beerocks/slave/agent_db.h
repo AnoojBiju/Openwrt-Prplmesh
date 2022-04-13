@@ -19,6 +19,7 @@
 #include <bwl/sta_wlan_hal.h>
 #include <memory>
 #include <mutex>
+#include <tlvf/wfa_map/tlvChannelPreference.h>
 #include <tlvf/wfa_map/tlvProfile2ApCapability.h>
 #include <tlvf/wfa_map/tlvProfile2MultiApProfile.h>
 #include <tlvf/wfa_map/tlvServicePrioritizationRule.h>
@@ -348,6 +349,46 @@ public:
         uint32_t number_of_reports_in_last_minute = 0;
     } link_metrics_policy;
 
+    struct sChannelPreference {
+        sChannelPreference(uint8_t oper_class,
+                           wfa_map::cPreferenceOperatingClasses::ePreference preference,
+                           wfa_map::cPreferenceOperatingClasses::eReasonCode reason_code)
+            : operating_class(oper_class)
+        {
+            flags.reason_code = reason_code;
+            flags.preference  = preference;
+        }
+        sChannelPreference(uint8_t _operating_class,
+                           wfa_map::cPreferenceOperatingClasses::sFlags _flags)
+            : operating_class(_operating_class), flags(_flags)
+        {
+        }
+
+        uint8_t operating_class;
+        wfa_map::cPreferenceOperatingClasses::sFlags flags;
+
+        bool operator==(const sChannelPreference &rhs) const
+        {
+            return operating_class == rhs.operating_class &&
+                   flags.preference == rhs.flags.preference &&
+                   flags.reason_code == rhs.flags.reason_code;
+        }
+
+        bool operator<(const sChannelPreference &rhs) const
+        {
+            if (operating_class != rhs.operating_class) {
+                return operating_class < rhs.operating_class;
+            }
+            if (flags.preference != rhs.flags.preference) {
+                return flags.preference < rhs.flags.preference;
+            }
+            if (flags.reason_code != rhs.flags.reason_code) {
+                return flags.reason_code < rhs.flags.reason_code;
+            }
+            return false;
+        }
+    };
+
     /**
      * @brief Get pointer to the radio data struct of a specific interface. The function can
      * accepts either front or back interface name.
@@ -467,6 +508,18 @@ public:
      * we update the time stamp in which the message is received.
      */
     std::unordered_map<sMacAddr, std::unordered_map<sMacAddr, sNeighborDevice>> neighbor_devices;
+
+    /**
+     * @brief Map of the controller's Channel Preference.
+     * 
+     * Kay: sChannelPreference, which consists of an Operating Class number, a preference value,
+     * and reason code aligned with the 1905.1 Preference Flag structure.
+     * Value: A set of channels.
+     * 
+     * When the controller sends its preferences, need to store it for Channel Selection
+     * requirements.
+     */
+    std::map<sChannelPreference, std::set<uint8_t>> controller_channel_preferences;
 
 private:
     std::list<sRadio> m_radios;

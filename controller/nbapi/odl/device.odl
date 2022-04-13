@@ -124,6 +124,20 @@
             }
         }
 
+        %read-only object CACStatus {
+            %read-only datetime TimeStamp = "2020-08-31T11:22:39Z";
+
+            %read-only object CACAvailableChannel [] {
+                counted with CACAvailableChannelNumberOfEntries;
+                %read-only uint32 OpClass = 0 {
+                    on action validate call check_range [0, 255];
+                }
+                %read-only uint32 Channel = 0 {
+                    on action validate call check_range [0, 255];
+                }
+            }
+        }
+
         /*
         ** The interval between the collection of consecutive measurements of the most
         ** frequently updated Data Element from this device (milliseconds).

@@ -9,10 +9,12 @@
 #ifndef _CHANNEL_SELECTION_TASK_H_
 #define _CHANNEL_SELECTION_TASK_H_
 
+#include "../agent_db.h"
 #include "task.h"
-
+#include <map>
 #include <tlvf/CmduMessageTx.h>
 #include <tlvf/wfa_map/tlvChannelSelectionResponse.h>
+#include <unordered_map>
 
 #include <beerocks/tlvf/enums/eDfsState.h>
 
@@ -56,6 +58,20 @@ private:
         int rank;
     } m_selected_channel;
 
+    struct sPendingRadioPreference {
+        sPendingRadioPreference() : isDone(false), channel_preferences({}) {}
+        bool isDone;
+        std::map<AgentDB::sChannelPreference, std::set<uint8_t>> channel_preferences;
+    };
+    struct sPendingChannelPreferenceReport {
+        uint16_t mid;
+        sMacAddr src_mac;
+        std::unordered_map<sMacAddr, sPendingRadioPreference> preference_map;
+    };
+
+    void handle_channel_preference_query(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                         const sMacAddr &src_mac);
+
     void handle_channel_selection_request(ieee1905_1::CmduMessageRx &cmdu_rx,
                                           const sMacAddr &src_mac);
     void handle_slave_channel_selection_response(ieee1905_1::CmduMessageRx &cmdu_rx,
@@ -97,6 +113,24 @@ private:
     void handle_ap_disabled_event(const std::string &iface);
 
     void handle_ap_enable_event(const std::string &iface);
+
+    bool build_channel_preference_report(const sMacAddr &radio_mac);
+
+    bool channel_preference_report_ready();
+
+    bool send_channel_preference_report(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                        std::shared_ptr<beerocks_header> beerocks_header);
+
+    bool create_channel_preference_tlv(const sMacAddr &radio_mac,
+                                       const sPendingRadioPreference &radio_preference);
+
+    bool create_cac_completion_report_tlv();
+
+    bool create_cac_status_report_tlv();
+
+    bool create_radio_operation_restriction_tlv(const sMacAddr &radio_mac);
+
+    bool create_cac_status_tlv();
 
     /* ZWDFS */
     static constexpr int8_t ZWDFS_FLOW_MAX_RETRIES                 = 5;
@@ -191,6 +225,8 @@ private:
     };
 
     sExpectedChannelSelection m_expected_channel_selection;
+
+    sPendingChannelPreferenceReport m_pending_preference;
 
     BackhaulManager &m_btl_ctx;
     ieee1905_1::CmduMessageTx &m_cmdu_tx;

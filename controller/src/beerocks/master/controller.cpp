@@ -499,8 +499,6 @@ bool Controller::handle_cmdu_1905_1_message(const sMacAddr &src_mac,
         return handle_cmdu_1905_ap_metric_response(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::BEACON_METRICS_RESPONSE_MESSAGE:
         return handle_cmdu_1905_beacon_response(src_mac, cmdu_rx);
-    case ieee1905_1::eMessageType::CHANNEL_PREFERENCE_REPORT_MESSAGE:
-        return handle_cmdu_1905_channel_preference_report(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::CHANNEL_SELECTION_RESPONSE_MESSAGE:
         return handle_cmdu_1905_channel_selection_response(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::CHANNEL_SCAN_REPORT_MESSAGE:
@@ -529,6 +527,7 @@ bool Controller::handle_cmdu_1905_1_message(const sMacAddr &src_mac,
     case ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE:
     case ieee1905_1::eMessageType::LINK_METRIC_RESPONSE_MESSAGE:
     case ieee1905_1::eMessageType::CLIENT_CAPABILITY_REPORT_MESSAGE:
+    case ieee1905_1::eMessageType::CHANNEL_PREFERENCE_REPORT_MESSAGE:
 
         return true;
     default:
@@ -1114,181 +1113,6 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
                                       {m1->manufacturer(), m1->serial_number(), m1->model_name()});
 
     return true;
-}
-
-bool Controller::handle_cmdu_1905_channel_preference_report(const sMacAddr &src_mac,
-                                                            ieee1905_1::CmduMessageRx &cmdu_rx)
-{
-    auto mid = cmdu_rx.getMessageId();
-    LOG(INFO) << "Received CHANNEL_PREFERENCE_REPORT_MESSAGE, mid=" << std::dec << int(mid);
-
-    // Define ruid list in order to create only one reply of tlvChannelPreference per ruid
-    std::list<sMacAddr> ruid_list;
-    // parse all tlvs in cmdu
-    // parse channel preference report message
-    auto channel_preference_tlv_rx = cmdu_rx.getClass<wfa_map::tlvChannelPreference>();
-    if (!channel_preference_tlv_rx) {
-        LOG(ERROR) << "addClass wfa_map::tlvChannelPreference has failed";
-        return false;
-    }
-
-    const auto &radio_uid = channel_preference_tlv_rx->radio_uid();
-    auto radio            = database.get_radio_by_uid(radio_uid);
-    if (!radio) {
-        LOG(ERROR) << "Failed to get Radio Object with uid: " << radio_uid;
-        return false;
-    }
-
-    auto agent = database.m_agents.get(src_mac);
-    if (!agent) {
-        LOG(ERROR) << "Agent with mac is not found in database mac=" << src_mac;
-        return false;
-    }
-
-    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
-        !handle_tlv_profile2_cac_status_report(radio, cmdu_rx)) {
-        LOG(ERROR) << "Profile2 CAC Status Report is not supplied for Agent " << src_mac
-                   << " with profile enum " << agent->profile;
-    }
-
-    // parse radio operation restriction tlv
-    auto radio_operation_restriction_tlv_rx =
-        cmdu_rx.getClass<wfa_map::tlvRadioOperationRestriction>();
-    if (radio_operation_restriction_tlv_rx) {
-        LOG(DEBUG) << "Found tlvRadioOperationRestriction";
-        // TODO: continute to parse this tlv
-        // This TLV contains radio restriction in channel selection that must be considered
-        // in channel selection request message. Since this is a dummy message, this TLV is
-        // ignored. Full implemtation will be as part of channel selection task.
-    }
-
-    // Build ACK message CMDU
-    auto cmdu_tx_header = cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE);
-    if (!cmdu_tx_header) {
-        LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
-        return false;
-    }
-    LOG(DEBUG) << "sending ACK message back to agent";
-    son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
-
-    // TODO In production mode (not certification), we need to store the channel preference (PPM-201)
-    // report in the DB which will in turn be used by the channel selection task.
-    // The plan is to create a real (and new) channel selection task that will properly handle all
-    // the channel selection flows of the standard.
-    // For now, "cert_cmdu_tx" is filled with dummy data based on the received preference report,
-    // and not send it. When the UCC tells us to sends it, we have a ready cmdu and we send it.
-    if (!database.setting_certification_mode())
-        return true;
-
-    // TODO: in actual channel selection task, it is important to validate that rx mid is identical
-    // to the mid sent in channel preference request message
-
-    // build channel request message
-    if (!cert_cmdu_tx.create(0, ieee1905_1::eMessageType::CHANNEL_SELECTION_REQUEST_MESSAGE)) {
-        LOG(ERROR) << "cmdu creation of type CHANNEL_SELECTION_REQUEST_MESSAGE, has failed";
-        return false;
-    }
-
-    // read all operating class list
-    auto operating_classes_list_length = channel_preference_tlv_rx->operating_classes_list_length();
-
-    for (int oc_idx = 0; oc_idx < operating_classes_list_length; oc_idx++) {
-        std::stringstream ss;
-        auto operating_class_tuple = channel_preference_tlv_rx->operating_classes_list(oc_idx);
-        if (!std::get<0>(operating_class_tuple)) {
-            LOG(ERROR) << "getting operating class entry has failed!";
-            return false;
-        }
-        auto &op_class_channels_rx = std::get<1>(operating_class_tuple);
-        auto operating_class       = op_class_channels_rx.operating_class();
-        ss << "operating class=" << int(operating_class);
-
-        const auto &flags = op_class_channels_rx.flags();
-        auto preference   = flags.preference;
-        auto reason_code  = flags.reason_code;
-        ss << ", preference=" << int(preference) << ", reason=" << int(reason_code);
-        ss << ", channel_list={";
-
-        auto channel_list_length = op_class_channels_rx.channel_list_length();
-        for (int ch_idx = 0; ch_idx < channel_list_length; ch_idx++) {
-            auto channel_rx = op_class_channels_rx.channel_list(ch_idx);
-            if (!channel_rx) {
-                LOG(ERROR) << "getting channel entry has failed!";
-                return false;
-            }
-
-            ss << int(*channel_rx);
-
-            // add comma if not last channel in the list, else close list by add curl brackets
-            ss << (((ch_idx + 1) != channel_list_length) ? "," : "}");
-
-            // If reply tlvChannelPreference was not created for this ruid, then:
-            // mark first supported non-dfs channel as selected channel
-            // TODO: need to check that selected channel does not violate radio restriction
-            const auto &ruid = channel_preference_tlv_rx->radio_uid();
-
-            if (std::find(ruid_list.begin(), ruid_list.end(), ruid) != ruid_list.end() ||
-                preference == 0 || wireless_utils::is_dfs_channel(*channel_rx)) {
-                continue;
-            }
-
-            LOG(INFO) << "ruid=" << ruid;
-            LOG(INFO) << "selected_operating_class=" << std::dec << int(operating_class);
-            LOG(INFO) << "selected_channel=" << int(*channel_rx);
-
-            ruid_list.push_back(ruid);
-
-            // send one channel preference report for each ruid
-            auto channel_preference_tlv_tx = cert_cmdu_tx.addClass<wfa_map::tlvChannelPreference>();
-            if (!channel_preference_tlv_tx) {
-                LOG(ERROR) << "addClass ieee1905_1::tlvChannelPreference has failed";
-                return false;
-            }
-
-            channel_preference_tlv_tx->radio_uid() = ruid;
-
-            // Create operating class object
-            auto op_class_channels_tx = channel_preference_tlv_tx->create_operating_classes_list();
-            if (!op_class_channels_tx) {
-                LOG(ERROR) << "create_operating_classes_list() has failed!";
-                return false;
-            }
-
-            // TODO: check that the data is parsed properly after fixing the following bug:
-            // Since sFlags is defined after dynamic list cPreferenceOperatingClasses it cause data override
-            // on the first channel on the list and sFlags itself.
-            // See: https://github.com/prplfoundation/prplMesh/issues/8
-
-            // Fill operating class object
-            op_class_channels_tx->operating_class() = operating_class;
-
-            // allocate 1 channel
-            if (!op_class_channels_tx->alloc_channel_list()) {
-                LOG(ERROR) << "alloc_channel_list() has failed!";
-                return false;
-            }
-            auto channel_idx = op_class_channels_tx->channel_list_length();
-            auto channel_tx  = op_class_channels_tx->channel_list(channel_idx - 1);
-            if (!channel_tx) {
-                LOG(ERROR) << "getting channel entry has failed!";
-                return false;
-            }
-            *channel_tx = *channel_rx;
-
-            op_class_channels_tx->flags() = op_class_channels_rx.flags();
-
-            // Push operating class object to the list of operating class objects
-            if (!channel_preference_tlv_tx->add_operating_classes_list(op_class_channels_tx)) {
-                LOG(ERROR) << "add_operating_classes_list() has failed!";
-                return false;
-            }
-        }
-        LOG(DEBUG) << ss.str();
-    }
-
-    cert_cmdu_tx.finalize();
-
-    return true; // cert_cmdu_tx will be sent when triggered to by the UCC application
 }
 
 bool Controller::handle_cmdu_1905_ack_message(const sMacAddr &src_mac,
@@ -3992,36 +3816,6 @@ bool Controller::handle_tlv_profile2_ap_capability(std::shared_ptr<Agent> agent,
     LOG(DEBUG) << "Profile-2 AP Capability is received, agent bytecounters enum="
                << agent->byte_counter_units;
 
-    return true;
-}
-
-bool Controller::handle_tlv_profile2_cac_status_report(std::shared_ptr<Agent::sRadio> radio,
-                                                       ieee1905_1::CmduMessageRx &cmdu_rx)
-{
-
-    // TODO: Full implementation of CAC Status Report NBAPI (PPM-1496)
-    // CAC Report is stored only in datamodels, not in database.
-    auto cac_status_report_tlv = cmdu_rx.getClass<wfa_map::tlvProfile2CacStatusReport>();
-    if (!cac_status_report_tlv) {
-        LOG(DEBUG) << "getClass wfa_map::tlvProfile2CacStatusReport has failed";
-        return false;
-    }
-
-    LOG(DEBUG) << "Profile-2 CAC Status Report is received";
-
-    database.dm_clear_cac_status_report(radio);
-
-    for (size_t i = 0; i < cac_status_report_tlv->number_of_available_channels(); i++) {
-
-        if (!std::get<0>(cac_status_report_tlv->available_channels(i))) {
-            LOG(ERROR) << "Invalid available channel in tlvProfile2CacStatusReport";
-            continue;
-        }
-
-        const auto &available_channel = std::get<1>(cac_status_report_tlv->available_channels(i));
-        database.dm_add_cac_status_available_channel(radio, available_channel.operating_class,
-                                                     available_channel.channel);
-    }
     return true;
 }
 

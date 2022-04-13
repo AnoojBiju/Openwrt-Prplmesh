@@ -2885,6 +2885,39 @@ beerocks::eChannelScanStatusCode db::get_channel_scan_results_status(const sMacA
         .last_scan_error_code;
 }
 
+bool db::clear_channel_preference(const sMacAddr &radio_mac)
+{
+    auto radio = get_hostap(radio_mac);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << radio_mac;
+        return false;
+    }
+
+    radio->channel_preference_report.clear();
+    return true;
+}
+
+bool db::set_channel_preference(const sMacAddr &radio_mac, const uint8_t operating_class,
+                                const uint8_t channel_number, const uint8_t preference)
+{
+    auto radio = get_hostap(radio_mac);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << radio_mac;
+        return false;
+    }
+
+    if (!wireless_utils::is_channel_in_operating_class(operating_class, channel_number)) {
+        LOG(ERROR) << "Operating class #" << operating_class << " does not contain channel #"
+                   << channel_number;
+        return false;
+    }
+
+    const auto key = std::make_pair(operating_class, channel_number);
+
+    radio->channel_preference_report[key] = preference;
+    return true;
+}
+
 bool db::set_channel_scan_dwell_time_msec(const sMacAddr &mac, int dwell_time_msec,
                                           bool single_scan)
 {
@@ -6782,31 +6815,31 @@ uint64_t db::recalculate_attr_to_byte_units(
     return bytes;
 }
 
-bool db::dm_clear_cac_status_report(std::shared_ptr<Agent::sRadio> radio)
+bool db::dm_clear_cac_status_report(std::shared_ptr<Agent> agent)
 {
-    if (radio->dm_path.empty()) {
+    if (agent->dm_path.empty()) {
         return true;
     }
 
-    auto available_channel_list = radio->dm_path + ".CACStatus.CACAvailableChannel";
+    auto available_channel_list = agent->dm_path + ".CACStatus.CACAvailableChannel";
     if (!m_ambiorix_datamodel->remove_all_instances(available_channel_list)) {
         LOG(ERROR) << "Failed to remove all instances for: " << available_channel_list;
         return false;
     }
 
-    m_ambiorix_datamodel->set_current_time(radio->dm_path + ".CACStatus");
+    m_ambiorix_datamodel->set_current_time(agent->dm_path + ".CACStatus");
     return true;
 }
 
-bool db::dm_add_cac_status_available_channel(std::shared_ptr<Agent::sRadio> radio,
-                                             uint8_t operating_class, uint8_t channel)
+bool db::dm_add_cac_status_available_channel(std::shared_ptr<Agent> agent, uint8_t operating_class,
+                                             uint8_t channel)
 {
-    if (radio->dm_path.empty()) {
+    if (agent->dm_path.empty()) {
         return true;
     }
 
     bool ret_val                = true;
-    auto available_channel_list = radio->dm_path + ".CACStatus.CACAvailableChannel";
+    auto available_channel_list = agent->dm_path + ".CACStatus.CACAvailableChannel";
 
     auto available_channel = m_ambiorix_datamodel->add_instance(available_channel_list);
     if (available_channel.empty()) {
@@ -6816,7 +6849,7 @@ bool db::dm_add_cac_status_available_channel(std::shared_ptr<Agent::sRadio> radi
 
     ret_val &= m_ambiorix_datamodel->set(available_channel, "OpClass", operating_class);
     ret_val &= m_ambiorix_datamodel->set(available_channel, "Channel", channel);
-    ret_val &= m_ambiorix_datamodel->set_current_time(radio->dm_path + ".CACStatus");
+    ret_val &= m_ambiorix_datamodel->set_current_time(agent->dm_path + ".CACStatus");
     return ret_val;
 }
 

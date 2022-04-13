@@ -138,6 +138,7 @@ public:
     static uint16_t channel_to_vht_center_freq(int channel, beerocks::eWiFiBandwidth bandwidth,
                                                bool channel_ext_above_secondary);
     static beerocks::eFreqType which_freq(uint32_t chn);
+    static beerocks::eFreqType which_freq_op_cls(const uint8_t op_cls);
     static bool is_same_freq_band(int chn1, int chn2);
     static beerocks::eSubbandType which_subband(uint32_t chn);
     static bool is_low_subband(const uint32_t chn);

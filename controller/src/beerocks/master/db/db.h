@@ -1409,6 +1409,29 @@ public:
     const std::list<sChannelScanResults> &get_channel_scan_results(const sMacAddr &mac,
                                                                    bool single_scan);
 
+    /**
+     * @brief Sets preference score for a given operating class & channel pair.
+     * 
+     * Set's the radio's reported preference for a given channel on a given operating class.
+     * 0 - Non-operable channel.
+     * 1-14 Operable with preference score, where 1 is least preferred.
+     * 
+     * @param[in] radio_mac MAC address of radio.
+     * @param[in] operating_class Operating Class number for the given channel.
+     * @param[in] channel_number Number of the given channel.
+     * @param[in] preference Preference value for the given channel.
+     * @return true if preference is valid, false otherwise.
+     */
+    bool set_channel_preference(const sMacAddr &radio_mac, const uint8_t operating_class,
+                                const uint8_t channel_number, const uint8_t preference);
+
+    /**
+     * @brief Clear the channel preference for a given Radio.
+     * 
+     * @param[in] radio_mac MAC address of radio.
+     */
+    bool clear_channel_preference(const sMacAddr &radio_mac);
+
     //
     // Client Persistent Data
     //
@@ -1839,25 +1862,25 @@ public:
      *
      * Remove all indexes in CACAvailableChannel and updates timestamp.
      *
-     * Data model path : "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.CACStatus" defined in radio.odl
+     * Data model path : "Device.WiFi.DataElements.Network.Device.{i}.CACStatus"
      *
-     * @param[in] radio radio db object
+     * @param[in] agent db object
      * @return true on success, otherwise false.
      */
-    bool dm_clear_cac_status_report(std::shared_ptr<Agent::sRadio> radio);
+    bool dm_clear_cac_status_report(std::shared_ptr<Agent> agent);
 
     /**
      * @brief Adds instance for CACStatus.CACAvailableChannel and fullfills it.
      *
-     * Data model path : "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.CACStatus.CACAvailableChannel.{i}"
+     * Data model path : "Device.WiFi.DataElements.Network.Device.{i}.CACStatus.CACAvailableChannel.{i}"
      *
-     * @param[in] radio radio db object
+     * @param[in] agent db object
      * @param[in] operating_class operating class
      * @param[in] channel channel number
      * @return true on success, otherwise false.
      */
-    bool dm_add_cac_status_available_channel(std::shared_ptr<Agent::sRadio> radio,
-                                             uint8_t operating_class, uint8_t channel);
+    bool dm_add_cac_status_available_channel(std::shared_ptr<Agent> agent, uint8_t operating_class,
+                                             uint8_t channel);
 
     /**
      * @brief Removes excessive NBAPI objects from system bus, if amount of them succeed the limit.
@@ -1992,7 +2015,7 @@ public:
 
     /**
      * @brief Sets MACAddress of the Backhaul Station (bSTA) on given radio.
-     * 
+     *
      * A station with this MAC also should appear on datamodel,
      * if this devices radio connects to another EasyMesh devices wireless backhaul BSS (bBSS).
      *
