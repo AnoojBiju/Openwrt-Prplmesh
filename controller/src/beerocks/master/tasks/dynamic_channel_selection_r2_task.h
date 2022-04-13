@@ -18,7 +18,11 @@
 #include "task_pool.h"
 
 #include <beerocks/tlvf/beerocks_message.h>
+#include <tlvf/wfa_map/tlvChannelPreference.h>
+#include <tlvf/wfa_map/tlvProfile2CacCompletionReport.h>
+#include <tlvf/wfa_map/tlvProfile2CacStatusReport.h>
 #include <tlvf/wfa_map/tlvProfile2ChannelScanRequest.h>
+#include <tlvf/wfa_map/tlvRadioOperationRestriction.h>
 
 #include <chrono>
 
@@ -233,6 +237,47 @@ private:
      * @return true if timeout found, false otherwise.
      */
     bool handle_timeout_in_busy_agents();
+
+    bool handle_cmdu_1905_channel_preference_report(const sMacAddr &src_mac,
+                                                    ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief Handles Radio Operation Restriction TLV of Channel Preference Report
+     * 
+     * @param radio_operation_restriction_tlv Channel Preference TLV
+     * @return True on success, false otherwise.
+    */
+    bool handle_tlv_radio_operation_restriction(
+        const std::shared_ptr<wfa_map::tlvRadioOperationRestriction>
+            &radio_operation_restriction_tlv);
+    /**
+     * @brief Handles Channel Preference TLV of Channel Preference Report
+     * 
+     * @param channel_preference_tlv Channel Preference TLV
+     * @return True on success, false otherwise.
+    */
+    bool handle_tlv_channel_preference(
+        const std::shared_ptr<wfa_map::tlvChannelPreference> &channel_preference_tlv);
+
+    /**
+     * @brief Handles Tlv of Profile-2 CAC Completion Report.
+     *
+     * @param cac_completion_report_tlv CAC completion report TLV
+     * @return True on success, false otherwise.
+    */
+    bool handle_tlv_profile2_cac_completion_report(
+        const std::shared_ptr<wfa_map::tlvProfile2CacCompletionReport> &cac_completion_report_tlv);
+
+    /**
+     * @brief Handles Tlv of Profile-2 CAC Status Report.
+     *
+     * @param agent agent db object
+     * @param cac_status_report_tlv CAC status report TLV
+     * @return True on success, false otherwise.
+    */
+    bool handle_tlv_profile2_cac_status_report(
+        const std::shared_ptr<Agent> agent,
+        const std::shared_ptr<wfa_map::tlvProfile2CacStatusReport> &cac_status_report_tlv);
 };
 
 } //namespace son

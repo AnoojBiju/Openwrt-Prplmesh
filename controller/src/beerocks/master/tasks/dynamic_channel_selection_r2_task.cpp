@@ -950,5 +950,189 @@ bool dynamic_channel_selection_r2_task::handle_timeout_in_busy_agents()
 bool dynamic_channel_selection_r2_task::handle_ieee1905_1_msg(const sMacAddr &src_mac,
                                                               ieee1905_1::CmduMessageRx &cmdu_rx)
 {
-    return false;
+    switch (cmdu_rx.getMessageType()) {
+    case ieee1905_1::eMessageType::CHANNEL_PREFERENCE_REPORT_MESSAGE: {
+        return handle_cmdu_1905_channel_preference_report(src_mac, cmdu_rx);
+    }
+    default:
+        return false;
+    }
+    return true;
+}
+
+bool dynamic_channel_selection_r2_task::handle_cmdu_1905_channel_preference_report(
+    const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto mid = cmdu_rx.getMessageId();
+    LOG(INFO) << "Received CHANNEL_PREFERENCE_REPORT_MESSAGE, mid=" << std::dec << int(mid);
+
+    auto agent = database.m_agents.get(src_mac);
+    if (!agent) {
+        LOG(ERROR) << "Agent with mac is not found in database mac=" << src_mac;
+        return false;
+    }
+
+    // CHANNEL_PREFERENCE_REPORT_MESSAGE contains zero or more Channel Preference TLVs
+    for (const auto &channel_preference_tlv :
+         cmdu_rx.getClassList<wfa_map::tlvChannelPreference>()) {
+
+        if (!handle_tlv_channel_preference(channel_preference_tlv)) {
+            LOG(ERROR) << "Failed to parse the Channel Preference TLV";
+            return false;
+        }
+    }
+
+    // CHANNEL_PREFERENCE_REPORT_MESSAGE contains zero or more Radio Operation Restriction TLVs
+    for (const auto radio_operation_restriction_tlv :
+         cmdu_rx.getClassList<wfa_map::tlvRadioOperationRestriction>()) {
+
+        if (!handle_tlv_radio_operation_restriction(radio_operation_restriction_tlv)) {
+            LOG(ERROR) << "Failed to parse the Radio Operation Restriction TLV";
+            return false;
+        }
+    }
+
+    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1) {
+
+        // CHANNEL_PREFERENCE_REPORT_MESSAGE contains zero or one CAC Completion Report TLV
+        auto cac_completion_report_tlv =
+            cmdu_rx.getClass<wfa_map::tlvProfile2CacCompletionReport>();
+        if (!cac_completion_report_tlv) {
+            // There is no tlvProfile2CacCompletionReport present, send a warning, but continue normally.
+            LOG(INFO) << "Profile2 CAC Completion Report is not supplied for Agent " << src_mac
+                      << " with profile enum " << agent->profile;
+        } else if (!handle_tlv_profile2_cac_completion_report(cac_completion_report_tlv)) {
+            LOG(ERROR) << "Failed to parse Profile2 CAC Completion Report";
+            return false;
+        }
+
+        // CHANNEL_PREFERENCE_REPORT_MESSAGE contains one CAC Status Report TLV
+        auto cac_status_report_tlv = cmdu_rx.getClass<wfa_map::tlvProfile2CacStatusReport>();
+        if (!cac_status_report_tlv) {
+            LOG(ERROR) << "Profile2 CAC Status Report is not supplied for Agent " << src_mac
+                       << " with profile enum " << agent->profile;
+            return false;
+        } else if (!handle_tlv_profile2_cac_status_report(agent, cac_status_report_tlv)) {
+            LOG(ERROR) << "Failed to parse Profile2 CAC Status Report";
+            return false;
+        }
+    }
+
+    // Build ACK message CMDU
+    auto cmdu_tx_header = cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE);
+    if (!cmdu_tx_header) {
+        LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
+        return false;
+    }
+    LOG(DEBUG) << "sending ACK message back to agent";
+    son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
+
+    return true;
+}
+
+bool dynamic_channel_selection_r2_task::handle_tlv_channel_preference(
+    const std::shared_ptr<wfa_map::tlvChannelPreference> &channel_preference_tlv)
+{
+    std::stringstream ss;
+
+    const auto &radio_uid = channel_preference_tlv->radio_uid();
+    auto radio            = database.get_radio_by_uid(radio_uid);
+    if (!radio) {
+        LOG(ERROR) << "Failed to get Radio Object with uid: " << radio_uid;
+        return false;
+    }
+
+    database.clear_channel_preference(radio_uid);
+    ss << "Preference for radio " << radio_uid << ":" << std::endl;
+    for (size_t i = 0; i < channel_preference_tlv->operating_classes_list_length(); i++) {
+        if (!std::get<0>(channel_preference_tlv->operating_classes_list(i))) {
+            LOG(ERROR) << "Invalid operating class in tlvChannelPreference";
+            continue;
+        }
+        auto &operating_class    = std::get<1>(channel_preference_tlv->operating_classes_list(i));
+        const auto &op_cls_num   = operating_class.operating_class();
+        const auto &op_cls_flags = operating_class.flags();
+
+        ss << "Operating Class: #" << int(op_cls_num) << ", ";
+        ss << "Flag, preference: " << int(op_cls_flags.preference) << ", ";
+        ss << "Flag, reason code: " << int(op_cls_flags.reason_code) << std::endl;
+
+        std::set<uint8_t> channel_set;
+        if (operating_class.channel_list_length() == 0) {
+            // An empty Channel List field indicates that the indicated
+            // Preference applies to all channels in the Operating Class.
+            const auto all_channels_in_operating_class =
+                wireless_utils::operating_class_to_channel_set(op_cls_num);
+            channel_set.insert(all_channels_in_operating_class.begin(),
+                               all_channels_in_operating_class.end());
+        } else {
+            for (size_t j = 0; j < operating_class.channel_list_length(); j++) {
+                const auto channel = operating_class.channel_list(j);
+                if (!channel) {
+                    LOG(ERROR) << "getting channel entry has failed!";
+                    continue;
+                }
+                channel_set.insert(*channel);
+            }
+
+            ss << "Channel list: [";
+            for (const auto channel_num : channel_set) {
+                ss << int(channel_num) << " ";
+                if (!database.set_channel_preference(radio_uid, op_cls_num, channel_num,
+                                                     op_cls_flags.preference)) {
+                    LOG(ERROR) << "Failed to update Channel Preference";
+                    return false;
+                }
+            }
+            ss << "]." << std::endl;
+        }
+    }
+
+    LOG(INFO) << ss.str();
+    return true;
+}
+
+bool dynamic_channel_selection_r2_task::handle_tlv_radio_operation_restriction(
+    const std::shared_ptr<wfa_map::tlvRadioOperationRestriction> &radio_operation_restriction_tlv)
+{
+    // Currently there is no handling for the radio operation restrictions.
+    // TODO - PPM-2042: Parse the Radio Operation Restriction TLVs.
+
+    return true;
+}
+
+bool dynamic_channel_selection_r2_task::handle_tlv_profile2_cac_completion_report(
+    const std::shared_ptr<wfa_map::tlvProfile2CacCompletionReport> &cac_completion_report_tlv)
+{
+    LOG(DEBUG) << "Profile-2 CAC Completion Report is received";
+    // Currently there is no handling for the cac completion report.
+    // TODO - PPM-1524: Parse the CAC Completion Report TLV.
+
+    return true;
+}
+
+bool dynamic_channel_selection_r2_task::handle_tlv_profile2_cac_status_report(
+    const std::shared_ptr<Agent> agent,
+    const std::shared_ptr<wfa_map::tlvProfile2CacStatusReport> &cac_status_report_tlv)
+{
+    LOG(DEBUG) << "Profile-2 CAC Status Report is received";
+
+    database.dm_clear_cac_status_report(agent);
+    std::stringstream ss;
+
+    for (size_t i = 0; i < cac_status_report_tlv->number_of_available_channels(); i++) {
+
+        if (!std::get<0>(cac_status_report_tlv->available_channels(i))) {
+            LOG(ERROR) << "Invalid available-channel in tlvProfile2CacStatusReport";
+            continue;
+        }
+
+        const auto &available_channel = std::get<1>(cac_status_report_tlv->available_channels(i));
+        database.dm_add_cac_status_available_channel(agent, available_channel.operating_class,
+                                                     available_channel.channel);
+        ss << "[Ch:" << available_channel.channel << ",OC:" << available_channel.operating_class
+           << "] ";
+    }
+    LOG(DEBUG) << ss.str();
+    return true;
 }

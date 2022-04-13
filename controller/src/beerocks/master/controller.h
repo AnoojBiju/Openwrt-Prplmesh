@@ -178,8 +178,6 @@ private:
                                              ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_cmdu_1905_ap_capability_report(const sMacAddr &src_mac,
                                                ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_cmdu_1905_channel_preference_report(const sMacAddr &src_mac,
-                                                    ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_cmdu_1905_channel_selection_response(const sMacAddr &src_mac,
                                                      ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_cmdu_1905_channel_scan_report(const sMacAddr &src_mac,
@@ -297,15 +295,6 @@ private:
     bool handle_tlv_profile2_ap_capability(std::shared_ptr<Agent> agent,
                                            ieee1905_1::CmduMessageRx &cmdu_rx);
 
-    /**
-     * @brief Handles Tlv of Profile-2 CAC Status Report (tlvProfile2CacStatusReport).
-     *
-     * @param radio radio db shared object.
-     * @param cmdu_rx Received CMDU as CAC Status Report message.
-     * @return True on success, false otherwise.
-    */
-    bool handle_tlv_profile2_cac_status_report(std::shared_ptr<Agent::sRadio> radio,
-                                               ieee1905_1::CmduMessageRx &cmdu_rx);
     /**
      * @brief Extracts ESP value from est_service_info_field and set it to specified
      * with @param_name NBAPI EstServiceParameter.
