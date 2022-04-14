@@ -9,7 +9,7 @@
 #ifndef _TLVF_WSC_CONFIGDATA_H_
 #define _TLVF_WSC_CONFIGDATA_H_
 
-#include <tlvf/WscAttrList.h>
+#include <tlvf/WSC/WscAttrList.h>
 #include <tlvf/tlvflogging.h>
 
 namespace WSC {

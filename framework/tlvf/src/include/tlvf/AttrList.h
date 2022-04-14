@@ -6,16 +6,13 @@
  * See LICENSE file for more details.
  */
 
-#ifndef _TLVF_WSC_ATTR_LIST_H_
-#define _TLVF_WSC_ATTR_LIST_H_
+#ifndef _TLVF_ATTR_LIST_H_
+#define _TLVF_ATTR_LIST_H_
 
 #include <memory>
 #include <tlvf/ClassList.h>
-#include <tlvf/WSC/WSC_Attributes.h>
-#include <tlvf/ieee_1905_1/tlvWsc.h>
+#include <tlvf/swap.h>
 #include <tlvf/tlvflogging.h>
-
-namespace WSC {
 
 template <typename T, typename D> struct sAttrHeader {
     T type;
@@ -62,6 +59,4 @@ protected:
     };
 };
 
-} // namespace WSC
-
-#endif // _TLVF_WSC_ATTR_LIST_H_
+#endif // _TLVF_ATTR_LIST_H_
