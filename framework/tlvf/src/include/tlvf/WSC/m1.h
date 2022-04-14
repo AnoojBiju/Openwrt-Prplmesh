@@ -9,7 +9,7 @@
 #ifndef _TLVF_WSC_M1_H_
 #define _TLVF_WSC_M1_H_
 
-#include <tlvf/WscAttrList.h>
+#include <tlvf/WSC/WscAttrList.h>
 
 namespace WSC {
 
