@@ -212,7 +212,7 @@ protected:
                                      "BTMQueryResponses", Matcher<const uint64_t &>(_)))
             .WillRepeatedly(Return(true));
         EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1 + ".MultiAPSTA.SteeringSummaryStats"),
-                                     "LastSteerTimeStamp", Matcher<const std::string &>(_)))
+                                     "LastSteerTime", Matcher<const uint32_t &>(_)))
             .WillRepeatedly(Return(true));
         EXPECT_CALL(*m_ambiorix,
                     set(std::string(g_sta_path_1), "LastConnectTime", Matcher<const uint64_t &>(_)))

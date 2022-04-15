@@ -5951,8 +5951,7 @@ bool db::dm_restore_steering_summary_stats(Station &station)
     ret_val &= m_ambiorix_datamodel->set(obj_path, "BTMFailures", steer_summary.btm_failures);
     ret_val &=
         m_ambiorix_datamodel->set(obj_path, "BTMQueryResponses", steer_summary.btm_query_responses);
-    ret_val &=
-        m_ambiorix_datamodel->set(obj_path, "LastSteerTimeStamp", steer_summary.last_steer_ts);
+    ret_val &= m_ambiorix_datamodel->set(obj_path, "LastSteerTime", steer_summary.last_steer_time);
 
     return ret_val;
 }

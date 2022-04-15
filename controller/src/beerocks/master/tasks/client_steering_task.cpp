@@ -608,9 +608,18 @@ void client_steering_task::update_sta_steer_attempt_stats(Station &station)
         LOG(ERROR) << "Failed to get Controller Data Model object.";
         return;
     }
-    station.steering_summary_stats.last_steer_ts = ambiorix_dm->get_datamodel_time_format();
-    ambiorix_dm->set(station.dm_path + ".MultiAPSTA.SteeringSummaryStats", "LastSteerTimeStamp",
-                     station.steering_summary_stats.last_steer_ts);
+    /*
+        Set value for LastSteerTime parameter - it is time of last steering attempt.
+        When someone will try to get data from this parameter action method will 
+        calculate time in seconds from last steering attempt.
+    */
+    station.steering_summary_stats.last_steer_time =
+        static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::seconds>(
+                                  std::chrono::steady_clock::now().time_since_epoch())
+                                  .count());
+    ambiorix_dm->set(station.dm_path + ".MultiAPSTA.SteeringSummaryStats", "LastSteerTime",
+                     station.steering_summary_stats.last_steer_time);
+
     if (m_database.get_node_11v_capability(station)) {
         station.steering_summary_stats.btm_attempts++;
         m_database.dm_increment_steer_summary_stats("BTMAttempts");
