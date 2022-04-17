@@ -19,6 +19,7 @@
 namespace son {
 class pre_association_steering_task : public task {
 public:
+    static const int event_timeout = 5;
     struct listener_general_register_unregister_event {
         int sd;
     };
@@ -114,10 +115,10 @@ private:
 
     typedef struct {
         int bml_sd;
-        std::chrono::steady_clock::time_point timeout;
+        std::chrono::steady_clock::time_point current_time;
+        uint32_t num_of_expected_responses;
+        uint32_t num_of_received_responses;
     } sPendingEvent;
-
-    std::vector<sBmlPreAssociationSteeringListener> bml_pre_association_steering_listeners_sockets;
 
     bool is_bml_pre_association_steering_listener_socket(int sd);
     int get_bml_pre_association_steering_socket_at(uint32_t idx);
@@ -131,9 +132,17 @@ private:
     int32_t steering_group_fill_ap_configuration(steering_set_group_request_event *event_obj,
                                                  beerocks_message::sSteeringApConfig &cfg_2,
                                                  beerocks_message::sSteeringApConfig &cfg_5);
+
     void send_bml_response(int event, int sd, int32_t ret = 0);
-    void add_pending_events(int event, int bml_sd, uint32_t amount = 1);
-    std::pair<bool, int> check_for_pending_events(int event);
+    void add_pending_events(int event, int bml_sd, uint32_t num_of_expected_responses = 1);
+    void remove_pending_event(int event);
+    bool is_pending_event_exist(int event);
+    bool is_pending_event_responses_match(int event);
+    int pending_event_get_bml_sd(int event);
+    void pending_events_increase_received_responses(int event);
+
+    void handle_response_event(int request_event_type, int response_event_type);
+
     void pending_event_check_timeout();
 
     db &database;
@@ -141,8 +150,10 @@ private:
     task_pool &tasks;
 
     pre_association_steering_task_db pre_association_steering_db;
-
-    std::unordered_multimap<int, sPendingEvent> pending_events;
+    size_t m_num_of_group_responses = 0;
+    int m_sd;
+    std::vector<sBmlPreAssociationSteeringListener> bml_pre_association_steering_listeners_sockets;
+    std::unordered_map<int, sPendingEvent> pending_events;
 };
 
 } // namespace son
