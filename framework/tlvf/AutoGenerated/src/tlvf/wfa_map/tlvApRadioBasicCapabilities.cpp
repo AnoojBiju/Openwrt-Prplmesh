@@ -207,7 +207,7 @@ bool tlvApRadioBasicCapabilities::init()
     m_operating_classes_info_list_idx__ = 0;
     for (size_t i = 0; i < operating_classes_info_list_length; i++) {
         auto operating_classes_info_list = create_operating_classes_info_list();
-        if (!operating_classes_info_list) {
+        if (!operating_classes_info_list || !operating_classes_info_list->isInitialized()) {
             TLVF_LOG(ERROR) << "create_operating_classes_info_list() failed";
             return false;
         }

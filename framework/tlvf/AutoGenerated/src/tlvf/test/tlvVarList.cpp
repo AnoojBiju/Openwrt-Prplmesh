@@ -582,7 +582,7 @@ bool tlvTestVarList::init()
     m_complex_list_idx__ = 0;
     for (size_t i = 0; i < complex_list_length; i++) {
         auto complex_list = create_complex_list();
-        if (!complex_list) {
+        if (!complex_list || !complex_list->isInitialized()) {
             TLVF_LOG(ERROR) << "create_complex_list() failed";
             return false;
         }
@@ -596,7 +596,7 @@ bool tlvTestVarList::init()
     m_var1 = reinterpret_cast<cInner*>(m_buff_ptr__);
     if (m_parse__) {
         auto var1 = create_var1();
-        if (!var1) {
+        if (!var1 || !var1->isInitialized()) {
             TLVF_LOG(ERROR) << "create_var1() failed";
             return false;
         }
@@ -610,7 +610,7 @@ bool tlvTestVarList::init()
     m_var3 = reinterpret_cast<cInner*>(m_buff_ptr__);
     if (m_parse__) {
         auto var3 = create_var3();
-        if (!var3) {
+        if (!var3 || !var3->isInitialized()) {
             TLVF_LOG(ERROR) << "create_var3() failed";
             return false;
         }
@@ -639,7 +639,7 @@ bool tlvTestVarList::init()
                 return false;
             }
             auto unknown_length_list = create_unknown_length_list();
-            if (!unknown_length_list) {
+            if (!unknown_length_list || !unknown_length_list->isInitialized()) {
                 TLVF_LOG(ERROR) << "create_unknown_length_list() failed";
                 return false;
             }

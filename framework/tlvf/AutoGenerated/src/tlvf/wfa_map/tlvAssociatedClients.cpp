@@ -183,7 +183,7 @@ bool tlvAssociatedClients::init()
     m_bss_list_idx__ = 0;
     for (size_t i = 0; i < bss_list_length; i++) {
         auto bss_list = create_bss_list();
-        if (!bss_list) {
+        if (!bss_list || !bss_list->isInitialized()) {
             TLVF_LOG(ERROR) << "create_bss_list() failed";
             return false;
         }
@@ -360,7 +360,7 @@ bool cBssInfo::init()
     m_clients_associated_list_idx__ = 0;
     for (size_t i = 0; i < clients_associated_list_length; i++) {
         auto clients_associated_list = create_clients_associated_list();
-        if (!clients_associated_list) {
+        if (!clients_associated_list || !clients_associated_list->isInitialized()) {
             TLVF_LOG(ERROR) << "create_clients_associated_list() failed";
             return false;
         }

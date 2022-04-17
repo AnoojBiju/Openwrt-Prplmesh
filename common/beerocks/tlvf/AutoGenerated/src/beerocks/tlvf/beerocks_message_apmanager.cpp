@@ -370,7 +370,7 @@ bool cACTION_APMANAGER_JOINED_NOTIFICATION::init()
     m_channel_list = reinterpret_cast<cChannelList*>(m_buff_ptr__);
     if (m_parse__) {
         auto channel_list = create_channel_list();
-        if (!channel_list) {
+        if (!channel_list || !channel_list->isInitialized()) {
             TLVF_LOG(ERROR) << "create_channel_list() failed";
             return false;
         }
@@ -3495,7 +3495,7 @@ bool cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST::init()
     m_wifi_credentials_idx__ = 0;
     for (size_t i = 0; i < wifi_credentials_size; i++) {
         auto wifi_credentials = create_wifi_credentials();
-        if (!wifi_credentials) {
+        if (!wifi_credentials || !wifi_credentials->isInitialized()) {
             TLVF_LOG(ERROR) << "create_wifi_credentials() failed";
             return false;
         }
@@ -3942,7 +3942,7 @@ bool cACTION_APMANAGER_CHANNELS_LIST_RESPONSE::init()
     m_channel_list = reinterpret_cast<cChannelList*>(m_buff_ptr__);
     if (m_parse__) {
         auto channel_list = create_channel_list();
-        if (!channel_list) {
+        if (!channel_list || !channel_list->isInitialized()) {
             TLVF_LOG(ERROR) << "create_channel_list() failed";
             return false;
         }
