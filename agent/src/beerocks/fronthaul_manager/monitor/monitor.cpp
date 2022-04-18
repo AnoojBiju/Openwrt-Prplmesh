@@ -193,16 +193,19 @@ bool Monitor::thread_init()
 
     transaction.commit();
 
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
+    mon_db.set_clients_measuremet_mode(
+        (monitor_db::eClientsMeasurementMode)bpl::eClientsMeasurementMode::ENABLE_ALL);
+#else
     bpl::eClientsMeasurementMode clients_measuremet_mode;
     if (!beerocks::bpl::cfg_get_clients_measurement_mode(clients_measuremet_mode)) {
         LOG(WARNING) << "Failed to read clients measurement mode - using defaule value: enable "
                         "measurements for all clients";
         clients_measuremet_mode = bpl::eClientsMeasurementMode::ENABLE_ALL;
     }
-
     mon_db.set_clients_measuremet_mode(
         (monitor_db::eClientsMeasurementMode)clients_measuremet_mode);
-
+#endif /* FEATURE_PRE_ASSOCIATION_STEERING */
     bool radio_stats_enable;
     if (!beerocks::bpl::cfg_get_radio_stats_enable(radio_stats_enable)) {
         LOG(DEBUG) << "Failed to read radio_stats_enable - using default value: true ";
@@ -1280,18 +1283,6 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
             }
             LOG(DEBUG) << "client: " << sta_mac << " configuration was removed";
 
-            // For ONLY_CLIENTS_SELECTED_FOR_STEERING mode, need to updated the client's measure-sta-enable flag
-            // if it  already connected. For not connected clients the flag will be determined as
-            // part of the STA_Connected event handling.
-            if (mon_db.get_clients_measuremet_mode() ==
-                monitor_db::eClientsMeasurementMode::ONLY_CLIENTS_SELECTED_FOR_STEERING) {
-                auto sta_node = mon_db.sta_find(sta_mac);
-                if (sta_node) {
-                    sta_node->set_measure_sta_enable(false);
-                    LOG(DEBUG) << "Set sta measurements mode to false for sta_mac=" << sta_mac;
-                }
-            }
-
             send_steering_return_status(
                 beerocks_message::ACTION_MONITOR_STEERING_CLIENT_SET_RESPONSE, OPERATION_SUCCESS);
             break;
@@ -1324,18 +1315,6 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
         client->setSnrLowXing(request->params().config.snrLowXing);
         client->setSnrInactXing(request->params().config.snrInactXing);
         client->setVapIndex(vap_id);
-
-        // For ONLY_CLIENTS_SELECTED_FOR_STEERING mode, need to updated the client's measure-sta-enable flag
-        // if it  already connected. For not connected clients the flag will be determined as
-        // part of the STA_Connected event handling.
-        if (mon_db.get_clients_measuremet_mode() ==
-            monitor_db::eClientsMeasurementMode::ONLY_CLIENTS_SELECTED_FOR_STEERING) {
-            auto sta_node = mon_db.sta_find(sta_mac);
-            if (sta_node) {
-                sta_node->set_measure_sta_enable(true);
-                LOG(DEBUG) << "Set sta measurements mode to true for sta_mac=" << sta_mac;
-            }
-        }
 
         send_steering_return_status(beerocks_message::ACTION_MONITOR_STEERING_CLIENT_SET_RESPONSE,
                                     OPERATION_SUCCESS);
@@ -2077,22 +2056,20 @@ bool Monitor::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
         sta_node->set_ipv4(sta_ipv4);
         sta_node->set_bridge_4addr_mac(set_bridge_4addr_mac);
 
-        sta_node->set_measure_sta_enable((mon_db.get_clients_measuremet_mode() ==
-                                          monitor_db::eClientsMeasurementMode::ENABLE_ALL));
-
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
+        sta_node->set_measure_sta_enable(true);
         //clean pre_association_steering monitor data if already in database.
         auto client = mon_pre_association_steering_hal.conf_get_client(sta_mac);
         if (client) {
-            // override sta_node measurements configuration
-            sta_node->set_measure_sta_enable((mon_db.get_clients_measuremet_mode() !=
-                                              monitor_db::eClientsMeasurementMode::DISABLE_ALL));
             client->setStartTime(std::chrono::steady_clock::now());
             client->setLastSampleTime(std::chrono::steady_clock::now());
             client->setAccumulatedPackets(0);
             client->clearData();
         }
-#endif
+#else
+        sta_node->set_measure_sta_enable((mon_db.get_clients_measuremet_mode() ==
+                                          monitor_db::eClientsMeasurementMode::ENABLE_ALL));
+#endif /* FEATURE_PRE_ASSOCIATION_STEERING */
         break;
     }
     case Event::STA_Disconnected: {
