@@ -385,39 +385,82 @@ int bml_utils_event_to_string(const struct BML_EVENT *event, char *buffer, int b
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
     case BML_EVENT_TYPE_STEERING: {
         auto event_data = static_cast<BML_EVENT_STEERING *>(event->data);
+        std::string additional_event_data;
         switch (event_data->type) {
         case BML_STEERING_EVENT_PROBE_REQ: {
             ss << "BML_STEERING_EVENT_PROBE_REQ";
+            additional_event_data += "SNR: " + std::to_string(event_data->data.probeReq.snr);
+            additional_event_data +=
+                ", broadcast: " + std::to_string(event_data->data.probeReq.broadcast);
+            additional_event_data +=
+                ", blocked: " + std::to_string(event_data->data.probeReq.blocked);
             break;
         }
         case BML_STEERING_EVENT_CLIENT_CONNECT: {
             ss << "BML_STEERING_EVENT_CLIENT_CONNECT";
+            additional_event_data +=
+                "BandCap2G: " + std::to_string(event_data->data.connect.bandCap2G);
+            additional_event_data +=
+                ", BandCap5G: " + std::to_string(event_data->data.connect.bandCap5G);
+            additional_event_data +=
+                ", Client MAC: " + tlvf::mac_to_string(event_data->data.connect.client_mac);
             break;
         }
         case BML_STEERING_EVENT_CLIENT_DISCONNECT: {
             ss << "BML_STEERING_EVENT_CLIENT_DISCONNECT";
+            additional_event_data +=
+                "reason: " + std::to_string(event_data->data.disconnect.reason);
+            additional_event_data +=
+                ", source: " + std::to_string(event_data->data.disconnect.source);
             break;
         }
         case BML_STEERING_EVENT_CLIENT_ACTIVITY: {
             ss << "BML_STEERING_EVENT_CLIENT_ACTIVITY";
+            additional_event_data += "active: " + std::to_string(event_data->data.activity.active);
+            additional_event_data +=
+                ", client MAC: " + tlvf::mac_to_string(event_data->data.activity.client_mac);
             break;
         }
         case BML_STEERING_EVENT_SNR_XING: {
             ss << "BML_STEERING_EVENT_SNR_XING";
+            additional_event_data +=
+                "client MAC: " + tlvf::mac_to_string(event_data->data.snrXing.client_mac);
+            additional_event_data += ", SNR: " + std::to_string(event_data->data.snrXing.snr);
+            additional_event_data +=
+                ", HighXing: " + std::to_string(event_data->data.snrXing.highXing);
+            additional_event_data +=
+                ", LowXing: " + std::to_string(event_data->data.snrXing.lowXing);
+            additional_event_data +=
+                ", InactiveXing: " + std::to_string(event_data->data.snrXing.inactveXing);
             break;
         }
         case BML_STEERING_EVENT_SNR: {
             ss << "BML_STEERING_EVENT_SNR";
+            additional_event_data +=
+                "client MAC: " + tlvf::mac_to_string(event_data->data.snr.client_mac);
+            additional_event_data += ", SNR: " + std::to_string(event_data->data.snr.snr);
             break;
         }
         case BML_STEERING_EVENT_AUTH_FAIL: {
             ss << "BML_STEERING_EVENT_AUTH_FAIL";
+            additional_event_data +=
+                "client MAC: " + tlvf::mac_to_string(event_data->data.authFail.client_mac);
+            additional_event_data += ", SNR: " + std::to_string(event_data->data.authFail.snr);
+            additional_event_data +=
+                ", reason: " + std::to_string(event_data->data.authFail.reason);
+            additional_event_data +=
+                ", bsBlocked: " + std::to_string(event_data->data.authFail.bsBlocked);
+            additional_event_data +=
+                ", bsRejected: " + std::to_string(event_data->data.authFail.bsRejected);
             break;
         }
         default: {
             break;
         }
         }
+        ss << " steeringGroupIndex: " << event_data->steeringGroupIndex
+           << ", bssid: " << tlvf::mac_to_string(event_data->bssid)
+           << ", timestamp_ms: " << event_data->timestamp_ms << ", " << additional_event_data;
         break;
     }
 #endif //FEATURE_PRE_ASSOCIATION_STEERING
