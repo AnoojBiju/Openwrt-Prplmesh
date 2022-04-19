@@ -154,7 +154,7 @@ protected:
                     set(bss_path + ".1", "SSID", Matcher<const std::string &>(g_ssid_1)))
             .WillOnce(Return(true));
         EXPECT_CALL(*m_ambiorix, set(_, _, Matcher<const bool &>(_))).WillRepeatedly(Return(true));
-        EXPECT_CALL(*m_ambiorix, set(_, _, Matcher<const uint64_t &>(_)))
+        EXPECT_CALL(*m_ambiorix, set(_, _, Matcher<const uint32_t &>(_)))
             .WillRepeatedly(Return(true));
         EXPECT_CALL(*m_ambiorix, set_current_time(_, _)).WillOnce(Return(true));
 
@@ -313,7 +313,7 @@ TEST_F(DbTest, test_add_vap)
                 set(std::string(bss_path) + ".1", "Enabled", Matcher<const bool &>(true)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix,
-                set(std::string(bss_path) + ".1", "LastChange", Matcher<const uint64_t &>(_)))
+                set(std::string(bss_path) + ".1", "LastChange", Matcher<const uint32_t &>(_)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set_current_time(std::string(bss_path) + ".1", _))
         .WillOnce(Return(true));
@@ -710,7 +710,7 @@ TEST_F(DbTest, test_set_vap_stats_info)
     EXPECT_CALL(*m_ambiorix, set(bss_path + ".1", "SSID", Matcher<const std::string &>(g_ssid_1)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(_, _, Matcher<const bool &>(_))).WillRepeatedly(Return(true));
-    EXPECT_CALL(*m_ambiorix, set(_, _, Matcher<const uint64_t &>(_))).WillRepeatedly(Return(true));
+    EXPECT_CALL(*m_ambiorix, set(_, _, Matcher<const uint32_t &>(_))).WillRepeatedly(Return(true));
     EXPECT_CALL(*m_ambiorix, set_current_time(_, _)).WillOnce(Return(true));
 
     //add virtual AP to radio

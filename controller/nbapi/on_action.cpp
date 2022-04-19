@@ -146,15 +146,16 @@ static amxd_status_t action_read_last_change(amxd_object_t *object, amxd_param_t
     if (status != amxd_status_ok) {
         return status;
     }
-    auto creation_time = amxc_var_dyncast(uint64_t, retval);
+    auto creation_time = amxc_var_dyncast(uint32_t, retval);
 
-    auto current_time = std::chrono::duration_cast<std::chrono::seconds>(
-                            std::chrono::steady_clock::now().time_since_epoch())
-                            .count();
+    auto current_time =
+        static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::seconds>(
+                                  std::chrono::steady_clock::now().time_since_epoch())
+                                  .count());
 
-    uint64_t last_change = current_time - creation_time;
+    uint32_t last_change = current_time - creation_time;
 
-    amxc_var_set(uint64_t, retval, last_change);
+    amxc_var_set(uint32_t, retval, last_change);
 
     return amxd_status_ok;
 }

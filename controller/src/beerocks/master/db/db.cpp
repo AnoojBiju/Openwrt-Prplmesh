@@ -6227,9 +6227,10 @@ bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, cons
         from creation moment.
         Example: Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.1.LastChange
     */
-    uint64_t creation_time = std::chrono::duration_cast<std::chrono::seconds>(
-                                 std::chrono::steady_clock::now().time_since_epoch())
-                                 .count();
+    uint32_t creation_time =
+        static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::seconds>(
+                                  std::chrono::steady_clock::now().time_since_epoch())
+                                  .count());
     ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "LastChange", creation_time);
     ret_val &= m_ambiorix_datamodel->set_current_time(bss->dm_path);
 
