@@ -157,7 +157,7 @@ bool cChannelList::init()
     m_channels_list_idx__ = 0;
     for (size_t i = 0; i < channels_list_length; i++) {
         auto channels_list = create_channels_list();
-        if (!channels_list) {
+        if (!channels_list || !channels_list->isInitialized()) {
             TLVF_LOG(ERROR) << "create_channels_list() failed";
             return false;
         }

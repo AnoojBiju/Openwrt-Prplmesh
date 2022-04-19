@@ -846,7 +846,7 @@ class TlvF:
                 lines_cpp.append("if (m_%s__) {" % (self.MEMBER_PARSE))
                 lines_cpp.append("%sauto %s = create_%s();" %
                                  (self.getIndentation(1), param_name, param_name))
-                lines_cpp.append("%sif (!%s) {" % (self.getIndentation(1), param_name))
+                lines_cpp.append("%sif (!%s || !%s->isInitialized()) {" % (self.getIndentation(1), param_name, param_name))
                 lines_cpp.append("%sTLVF_LOG(ERROR) << \"create_%s() failed\";" %
                                  (self.getIndentation(2), param_name))
                 lines_cpp.append("%sreturn false;" % (self.getIndentation(2)))
@@ -1109,7 +1109,7 @@ class TlvF:
                     lines_cpp.append("%s}" % (self.getIndentation(2)))
                     lines_cpp.append("%sauto %s = create_%s();" %
                                      (self.getIndentation(2), param_name, param_name))
-                    lines_cpp.append("%sif (!%s) {" % (self.getIndentation(2), param_name))
+                    lines_cpp.append("%sif (!%s || !%s->isInitialized()) {" % (self.getIndentation(2), param_name, param_name))
                     lines_cpp.append("%sTLVF_LOG(ERROR) << \"create_%s() failed\";" %
                                      (self.getIndentation(3), param_name))
                     lines_cpp.append("%sreturn false;" % (self.getIndentation(3)))
@@ -1154,7 +1154,7 @@ class TlvF:
                     # Add param handling to init function
                     lines_cpp.append("%sauto %s = create_%s();" %
                                      (self.getIndentation(1), param_name, param_name))
-                    lines_cpp.append("%sif (!%s) {" % (self.getIndentation(1), param_name))
+                    lines_cpp.append("%sif (!%s || !%s->isInitialized()) {" % (self.getIndentation(1), param_name, param_name))
                     lines_cpp.append("%sTLVF_LOG(ERROR) << \"create_%s() failed\";" %
                                      (self.getIndentation(2), param_name))
                     lines_cpp.append("%sreturn false;" % (self.getIndentation(2)))
