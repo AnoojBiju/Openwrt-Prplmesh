@@ -382,7 +382,7 @@ bool tlvBeaconMetricsQuery::init()
     m_ap_channel_reports_list_idx__ = 0;
     for (size_t i = 0; i < ap_channel_reports_list_length; i++) {
         auto ap_channel_reports_list = create_ap_channel_reports_list();
-        if (!ap_channel_reports_list) {
+        if (!ap_channel_reports_list || !ap_channel_reports_list->isInitialized()) {
             TLVF_LOG(ERROR) << "create_ap_channel_reports_list() failed";
             return false;
         }

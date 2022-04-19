@@ -183,7 +183,7 @@ bool tlvProfile2CacCompletionReport::init()
     m_cac_radios_idx__ = 0;
     for (size_t i = 0; i < number_of_cac_radios; i++) {
         auto cac_radios = create_cac_radios();
-        if (!cac_radios) {
+        if (!cac_radios || !cac_radios->isInitialized()) {
             TLVF_LOG(ERROR) << "create_cac_radios() failed";
             return false;
         }
