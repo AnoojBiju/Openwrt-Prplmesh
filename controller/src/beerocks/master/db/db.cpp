@@ -162,6 +162,26 @@ std::shared_ptr<Agent::sRadio> db::get_radio_by_bssid(const sMacAddr &bssid)
     return {};
 }
 
+std::shared_ptr<Agent::sRadio> db::get_radio_by_backhaul_cap(const sMacAddr &bh_sta)
+{
+    if (bh_sta == beerocks::net::network_utils::ZERO_MAC) {
+        LOG(INFO) << "Zero Backhaul Station Capability is requested";
+        return {};
+    }
+
+    for (const auto &agent : m_agents) {
+        for (const auto &radio : agent.second->radios) {
+
+            if (radio.second->backhaul_station_mac == bh_sta) {
+                return radio.second;
+            }
+        }
+    }
+
+    LOG(ERROR) << "Radio with Backhaul Station Capability " << bh_sta << " not found";
+    return {};
+}
+
 void db::set_log_level_state(const beerocks::eLogLevel &log_level, const bool &new_state)
 {
     logger.set_log_level_state(log_level, new_state);

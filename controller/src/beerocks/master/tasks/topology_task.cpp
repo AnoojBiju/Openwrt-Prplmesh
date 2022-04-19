@@ -94,12 +94,9 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
 
         //TODO: if needed, parse Device Bridge Capability (PPM-133)
         agent->backhaul.backhaul_interface = al_mac;
-
         agent->backhaul.parent_agent.reset();
-        agent->backhaul.parent_interface = beerocks::net::network_utils::ZERO_MAC;
-
-        // TODO: Fill backhaul radio of agent from Backhaul STA Capabilities (PPM-1297)
-        // agent->backhaul.wireless_backhaul_radio = nullptr;
+        agent->backhaul.parent_interface        = beerocks::net::network_utils::ZERO_MAC;
+        agent->backhaul.wireless_backhaul_radio = nullptr;
     }
 
     std::vector<sMacAddr> interface_macs{};
@@ -146,6 +143,8 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
             // const auto iface_cf2    = media_info->ap_channel_center_frequency_index2;
 
             // This is the case where agent reports that it has wireless backhaul connection
+            // TODO: If agent has wired & wireless (stale) backhaul connection at the same time,
+            // wireless connection is considered active. (PPM-2043)
             if (iface_role == ieee1905_1::eRole::NON_AP_NON_PCP_STA &&
                 media_info->network_membership != beerocks::net::network_utils::ZERO_MAC) {
 
@@ -191,10 +190,8 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
                 // Set backhaul interface
                 agent->backhaul.backhaul_interface = iface_mac;
                 agent->backhaul.parent_interface   = media_info->network_membership;
-
-                // TODO: Fill backhaul radio of agent from Backhaul STA Capabilities (PPM-1297)
-                // We do not know this backhaul station's parent radio.
-                // agent->backhaul.wireless_backhaul_radio = get_from_bh_radio_capabilites()
+                agent->backhaul.wireless_backhaul_radio =
+                    database.get_radio_by_backhaul_cap(media_info->network_membership);
             }
 
             // TODO: fix updating bml event it assumes Radios is reported (PPM-1977)
