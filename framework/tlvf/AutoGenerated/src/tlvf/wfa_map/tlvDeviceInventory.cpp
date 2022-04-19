@@ -432,7 +432,7 @@ bool tlvDeviceInventory::init()
     m_radios_vendor_info_idx__ = 0;
     for (size_t i = 0; i < number_of_radios; i++) {
         auto radios_vendor_info = create_radios_vendor_info();
-        if (!radios_vendor_info) {
+        if (!radios_vendor_info || !radios_vendor_info->isInitialized()) {
             TLVF_LOG(ERROR) << "create_radios_vendor_info() failed";
             return false;
         }

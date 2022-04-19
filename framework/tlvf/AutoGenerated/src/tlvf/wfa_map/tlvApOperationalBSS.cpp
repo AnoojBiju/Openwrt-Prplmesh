@@ -183,7 +183,7 @@ bool tlvApOperationalBSS::init()
     m_radio_list_idx__ = 0;
     for (size_t i = 0; i < radio_list_length; i++) {
         auto radio_list = create_radio_list();
-        if (!radio_list) {
+        if (!radio_list || !radio_list->isInitialized()) {
             TLVF_LOG(ERROR) << "create_radio_list() failed";
             return false;
         }
@@ -358,7 +358,7 @@ bool cRadioInfo::init()
     m_radio_bss_list_idx__ = 0;
     for (size_t i = 0; i < radio_bss_list_length; i++) {
         auto radio_bss_list = create_radio_bss_list();
-        if (!radio_bss_list) {
+        if (!radio_bss_list || !radio_bss_list->isInitialized()) {
             TLVF_LOG(ERROR) << "create_radio_bss_list() failed";
             return false;
         }
