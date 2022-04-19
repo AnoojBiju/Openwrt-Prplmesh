@@ -196,7 +196,7 @@ bool tlvDeviceInformation::init()
     m_local_interface_list_idx__ = 0;
     for (size_t i = 0; i < local_interface_list_length; i++) {
         auto local_interface_list = create_local_interface_list();
-        if (!local_interface_list) {
+        if (!local_interface_list || !local_interface_list->isInitialized()) {
             TLVF_LOG(ERROR) << "create_local_interface_list() failed";
             return false;
         }

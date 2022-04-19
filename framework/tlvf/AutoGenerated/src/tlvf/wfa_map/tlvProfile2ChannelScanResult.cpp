@@ -355,7 +355,7 @@ bool tlvProfile2ChannelScanResult::init()
     m_neighbors_list_idx__ = 0;
     for (size_t i = 0; i < neighbors_list_length; i++) {
         auto neighbors_list = create_neighbors_list();
-        if (!neighbors_list) {
+        if (!neighbors_list || !neighbors_list->isInitialized()) {
             TLVF_LOG(ERROR) << "create_neighbors_list() failed";
             return false;
         }
