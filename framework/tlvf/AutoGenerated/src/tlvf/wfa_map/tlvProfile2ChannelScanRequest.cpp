@@ -195,7 +195,7 @@ bool tlvProfile2ChannelScanRequest::init()
     m_radio_list_idx__ = 0;
     for (size_t i = 0; i < radio_list_length; i++) {
         auto radio_list = create_radio_list();
-        if (!radio_list) {
+        if (!radio_list || !radio_list->isInitialized()) {
             TLVF_LOG(ERROR) << "create_radio_list() failed";
             return false;
         }
@@ -370,7 +370,7 @@ bool cRadiosToScan::init()
     m_operating_classes_list_idx__ = 0;
     for (size_t i = 0; i < operating_classes_list_length; i++) {
         auto operating_classes_list = create_operating_classes_list();
-        if (!operating_classes_list) {
+        if (!operating_classes_list || !operating_classes_list->isInitialized()) {
             TLVF_LOG(ERROR) << "create_operating_classes_list() failed";
             return false;
         }

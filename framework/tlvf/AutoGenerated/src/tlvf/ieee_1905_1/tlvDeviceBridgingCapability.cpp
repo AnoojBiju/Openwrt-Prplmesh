@@ -183,7 +183,7 @@ bool tlvDeviceBridgingCapability::init()
     m_bridging_tuples_list_idx__ = 0;
     for (size_t i = 0; i < bridging_tuples_list_length; i++) {
         auto bridging_tuples_list = create_bridging_tuples_list();
-        if (!bridging_tuples_list) {
+        if (!bridging_tuples_list || !bridging_tuples_list->isInitialized()) {
             TLVF_LOG(ERROR) << "create_bridging_tuples_list() failed";
             return false;
         }
