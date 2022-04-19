@@ -8,6 +8,7 @@
 
 # Standard library
 import hashlib
+import time
 from pathlib import Path
 
 # Third party
@@ -50,6 +51,8 @@ def configure_device(device: GenericDevice, configuration_file: Path):
                       expect_prompt_on_connect=False) as shell:
         # Workaround for PCF-600: kill leftover network restarts, and
         # remove NetDev neighbors.
+        shell.sendline("")
+        time.sleep(1)
         shell.send("\003")
         shell.expect(device.serial_prompt)
         shell.sendline("pgrep -f 'ubus -t 30 wait_for network.interface' | xargs kill -s KILL")
