@@ -2310,10 +2310,11 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
 
             auto &radio_managers = m_radio_managers.get();
             auto radio_ctx_iter  = radio_managers.find(fronthaul_iface);
-
-            // If getting here, the code below must be the last in this function, so the deleted
-            // radio context will not be accessed.
-            m_radio_managers.set_zwdfs(radio_ctx_iter);
+            if (radio_managers.end() != radio_ctx_iter) {
+                // If getting here, the code below must be the last in this function, so the deleted
+                // radio context will not be accessed.
+                m_radio_managers.set_zwdfs(radio_ctx_iter);
+            }
             return true;
         }
         break;
