@@ -1457,11 +1457,35 @@ public:
                                 const uint8_t channel_number, const uint8_t preference);
 
     /**
+     * @brief Get the preference score for a given operating class & channel pair
+     * 
+     * @param[in] radio_mac MAC address of radio.
+     * @param[in] operating_class Operating Class number for the given channel.
+     * @param[in] channel_number Number of the given channel.
+     * 
+     * @return -1 if Invalid, 0 if in-operable, 1-15 according to the radio's preference.
+     */
+    int8_t get_channel_preference(const sMacAddr &radio_mac, const uint8_t operating_class,
+                                  const uint8_t channel_number);
+
+    node::radio::PreferenceReportMap get_radio_channel_preference(const sMacAddr &radio_mac);
+
+    /**
      * @brief Clear the channel preference for a given Radio.
      * 
      * @param[in] radio_mac MAC address of radio.
+     * @return true if channel preference was cleared, false otherwise.
      */
     bool clear_channel_preference(const sMacAddr &radio_mac);
+
+    /**
+     * @brief Get a timestamp of the last recorded preference report change.
+     * 
+     * @param radio_mac: MAC address of radio.
+     * @return a timestamp of the last recorded preference report change.
+     */
+    const std::chrono::steady_clock::time_point
+    get_last_preference_report_change(const sMacAddr &radio_mac);
 
     //
     // Client Persistent Data
