@@ -463,6 +463,13 @@ enum class eChannelScanOperationCode : uint8_t {
     INVALID_PARAMS_CHANNELPOOL
 };
 
+enum class eChannelPreferenceRankingConsts : int8_t {
+    INVALID      = -1,
+    NON_OPERABLE = 0,
+    LOWEST       = 1,
+    BEST         = 15
+};
+
 #define CHANNEL_SCAN_INVALID_PARAM -1
 #define SCAN_ALL_CHANNELS 0
 
