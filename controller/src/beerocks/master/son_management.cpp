@@ -27,6 +27,7 @@
 
 #include <tlvf/wfa_map/tlvClientAssociationControlRequest.h>
 
+#include <bcl/beerocks_utils.h>
 #include <easylogging++.h>
 
 using namespace beerocks;
@@ -1648,20 +1649,32 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             LOG(ERROR) << "Failed building cACTION_BML_TRIGGER_CHANNEL_SELECTION_RESPONSE";
         }
 
-        auto radio_mac = request->radio_mac();
-        auto channel   = request->channel();
-        auto bandwidth = request->bandwidth();
-        auto csa_count = request->csa_count();
-
         LOG(INFO) << "ACTION_BML_TRIGGER_CHANNEL_SELECTION_REQUEST "
-                  << ", radio_mac=" << radio_mac << ", channel=" << channel
-                  << ", bandwidth=" << bandwidth << ", csa_count=" << csa_count;
+                  << ", radio_mac=" << request->radio_mac() << ", channel=" << request->channel()
+                  << ", bandwidth=" << request->bandwidth()
+                  << ", csa_count=" << request->csa_count();
 
-        /** This code is undergoing changes as part of PPM-1973
-         * TODO: Alert the appropriate task that a new channel-selection request was triggered
-        */
+        auto operating_class = wireless_utils::get_operating_class_by_channel(
+            beerocks::message::sWifiChannel(request->channel(), request->bandwidth()));
+        if (operating_class == 0) {
+            LOG(ERROR) << "channel #" << request->channel() << " and bandwidth "
+                       << beerocks::utils::convert_bandwidth_to_int(request->bandwidth())
+                       << ", do not have a valid Operating Class";
+            response->code() = uint8_t(1); //Failure
+        } else {
+            LOG(DEBUG) << "Triggering Channel-Selection in task";
+            dynamic_channel_selection_r2_task::sOnDemandChannelSelectionEvent new_event;
+            new_event.radio_mac       = request->radio_mac();
+            new_event.channel         = request->channel();
+            new_event.operating_class = operating_class;
+            new_event.csa_count       = request->csa_count();
+            tasks.push_event(
+                database.get_dynamic_channel_selection_r2_task_id(),
+                dynamic_channel_selection_r2_task::eEvent::TRIGGER_ON_DEMAND_CHANNEL_SELECTION,
+                &new_event);
+            response->code() = uint8_t(0); //Success
+        }
 
-        response->code() = uint8_t(0); //Success
         //send response to bml
         controller_ctx->send_cmdu(sd, cmdu_tx);
         break;
