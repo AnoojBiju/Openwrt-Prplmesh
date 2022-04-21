@@ -18,13 +18,12 @@
 #include "task_pool.h"
 
 #include <beerocks/tlvf/beerocks_message.h>
+#include <chrono>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
 #include <tlvf/wfa_map/tlvProfile2CacCompletionReport.h>
 #include <tlvf/wfa_map/tlvProfile2CacStatusReport.h>
 #include <tlvf/wfa_map/tlvProfile2ChannelScanRequest.h>
 #include <tlvf/wfa_map/tlvRadioOperationRestriction.h>
-
-#include <chrono>
 
 constexpr uint8_t INTERVAL_TIME_BETWEEN_RETRIES_ON_FAILURE_SEC = 120;
 
@@ -111,29 +110,21 @@ public:
         }
     };
 
-    /**
-     * @brief Map of agent's status.
-     * 
-     * Key:     agent mac.
-     * Value:   agent status as sAgentScanStatus struct.
-     */
-    std::unordered_map<sMacAddr, sAgentScanStatus> m_agents_status_map;
-
 protected:
     virtual void work() override;
     virtual void handle_event(int event_enum_value, void *event_obj) override;
 
 private:
-    enum eState : uint8_t { IDLE, TRIGGER_SCAN };
+    enum class eScanState : uint8_t { IDLE, TRIGGER_SCAN };
 
     // clang-format off
-    const std::unordered_map<eState, std::string, std::hash<int>> m_states_string = {
-      { eState::IDLE,                "IDLE"              },
-      { eState::TRIGGER_SCAN,        "TRIGGER_SCAN"      },
+    const std::unordered_map<eScanState, std::string> m_scan_states_string = {
+      { eScanState::IDLE,           "IDLE"          },
+      { eScanState::TRIGGER_SCAN,   "TRIGGER_SCAN"  },
     };
     // clang-format on
 
-    eState m_state = eState::IDLE;
+    eScanState m_scan_state           = eScanState::IDLE;
 
     // Class constants
     static constexpr uint16_t INVALID_MID_ID = UINT16_MAX;
@@ -141,6 +132,14 @@ private:
     db &database;
     ieee1905_1::CmduMessageTx &cmdu_tx;
     task_pool &tasks;
+
+    /**
+     * @brief Map of agent's status.
+     * 
+     * Key:     agent mac.
+     * Value:   agent scan status as sAgentScanStatus struct.
+     */
+    std::unordered_map<sMacAddr, sAgentScanStatus> m_agents_scan_status_map;
 
     /**
      * @brief Handle single scan request events.
@@ -238,6 +237,15 @@ private:
      */
     bool handle_timeout_in_busy_agents();
 
+    /**
+     * @brief Handle 1905.1 Channel Preference Report message
+     * This message contains an agent's Channel-Preference which is needed to accurately utilize
+     * the Channel-Selection feature.
+     * 
+     * @param src_mac MAC address of the incoming message.
+     * @param cmdu_rx Received CMDU message to handle.
+     * @return true if handled correctly, false otherwise.
+     */
     bool handle_cmdu_1905_channel_preference_report(const sMacAddr &src_mac,
                                                     ieee1905_1::CmduMessageRx &cmdu_rx);
 

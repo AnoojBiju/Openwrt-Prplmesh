@@ -15,12 +15,12 @@
 
 #define CHANNEL_SCAN_REPORT_WAIT_TIME_SEC 300 //5 Min
 
-#define FSM_MOVE_STATE(new_state)                                                                  \
+#define FSM_MOVE_SCAN_STATE(new_state)                                                             \
     ({                                                                                             \
         LOG(TRACE) << "DYNAMIC_CHANNEL_SELECTION_R2 "                                              \
-                   << " FSM: " << m_states_string.at(m_state) << " --> "                           \
-                   << m_states_string.at(new_state);                                               \
-        m_state = new_state;                                                                       \
+                   << "Scan FSM: " << m_scan_states_string.at(m_scan_state) << " --> "             \
+                   << m_scan_states_string.at(new_state);                                          \
+        m_scan_state = new_state;                                                                  \
     })
 
 dynamic_channel_selection_r2_task::dynamic_channel_selection_r2_task(
@@ -29,28 +29,28 @@ dynamic_channel_selection_r2_task::dynamic_channel_selection_r2_task(
 {
     LOG(TRACE) << "Start dynamic_channel_selection_r2_task(id=" << id << ")";
     database.assign_dynamic_channel_selection_r2_task_id(id);
-    m_state = eState::IDLE;
+    m_scan_state      = eScanState::IDLE;
 }
 
 void dynamic_channel_selection_r2_task::work()
 {
-    switch (m_state) {
-    case eState::IDLE: {
+    switch (m_scan_state) {
+    case eScanState::IDLE: {
 
         handle_timeout_in_busy_agents();
 
         if (is_scan_pending_for_any_idle_agent()) {
-            FSM_MOVE_STATE(eState::TRIGGER_SCAN);
+            FSM_MOVE_SCAN_STATE(eScanState::TRIGGER_SCAN);
         }
         break;
     }
-    case eState::TRIGGER_SCAN: {
+    case eScanState::TRIGGER_SCAN: {
 
         if (!trigger_pending_scan_requests()) {
             LOG(ERROR) << "failed to trigger pending scans";
         }
 
-        FSM_MOVE_STATE(eState::IDLE);
+        FSM_MOVE_SCAN_STATE(eScanState::IDLE);
         break;
     }
 
@@ -133,8 +133,8 @@ bool dynamic_channel_selection_r2_task::is_agent_idle_with_pending_radio_scans(
 
 bool dynamic_channel_selection_r2_task::is_scan_pending_for_any_idle_agent()
 {
-    // Scan m_agents_status_map for idle agents
-    for (const auto &agent : m_agents_status_map) {
+    // Scan m_agents_scan_status_map for idle agents
+    for (const auto &agent : m_agents_scan_status_map) {
 
         // Triggering a scan request for a busy agent will result in the abort
         // of the running scan on that agent. Therefore, triggering of a new scan
@@ -149,7 +149,7 @@ bool dynamic_channel_selection_r2_task::is_scan_pending_for_any_idle_agent()
 
 bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
 {
-    for (auto &agent : m_agents_status_map) {
+    for (auto &agent : m_agents_scan_status_map) {
         auto &agent_mac   = agent.first;
         auto agent_status = agent.second;
 
@@ -523,8 +523,8 @@ bool dynamic_channel_selection_r2_task::is_scan_triggered_for_radio(const sMacAd
     }
 
     // If agent not exist - return false
-    const auto &agent = m_agents_status_map.find(ire);
-    if (agent == m_agents_status_map.cend()) {
+    const auto &agent = m_agents_scan_status_map.find(ire);
+    if (agent == m_agents_scan_status_map.cend()) {
         return false;
     }
 
@@ -563,10 +563,10 @@ bool dynamic_channel_selection_r2_task::handle_single_scan_request_event(
     // Assume we already have an agent handler
     bool create_new_agent = false;
 
-    if (m_agents_status_map.find(ire_mac) != m_agents_status_map.end()) {
+    if (m_agents_scan_status_map.find(ire_mac) != m_agents_scan_status_map.end()) {
         // If agent already exists, make sure there aren't any pending scans.
-        const auto &scan_it = m_agents_status_map[ire_mac].single_radio_scans.find(radio_mac);
-        if (scan_it != m_agents_status_map[ire_mac].single_radio_scans.end()) {
+        const auto &scan_it = m_agents_scan_status_map[ire_mac].single_radio_scans.find(radio_mac);
+        if (scan_it != m_agents_scan_status_map[ire_mac].single_radio_scans.end()) {
             LOG(DEBUG) << "A single scan on agent: " << ire_mac << " radio: " << radio_mac
                        << " already exists.";
             // If the scan is pending to be triggered, return True.
@@ -593,12 +593,12 @@ bool dynamic_channel_selection_r2_task::handle_single_scan_request_event(
     // Check if we need to create a new agent handler
     if (create_new_agent) {
         // Add agent to the queue
-        m_agents_status_map.insert({ire_mac, {}});
+        m_agents_scan_status_map.insert({ire_mac, {}});
     }
 
-    m_agents_status_map[ire_mac].single_radio_scans[radio_mac] =
+    m_agents_scan_status_map[ire_mac].single_radio_scans[radio_mac] =
         sAgentScanStatus::sRadioScanRequest();
-    m_agents_status_map[ire_mac].single_radio_scans[radio_mac].is_single_scan = true;
+    m_agents_scan_status_map[ire_mac].single_radio_scans[radio_mac].is_single_scan = true;
 
     return true;
 }
@@ -624,14 +624,14 @@ bool dynamic_channel_selection_r2_task::handle_continuous_scan_request_event(
     // the removal the agent has no radio scan requests (is empty) then it will also be removed.
     // If continuous radio scan request is in progress then we will not remove it and it will be removed when the scan
     // is complete. Otherwise, do nothing.
-    const auto &agent = m_agents_status_map.find(agent_mac);
-    if (agent != m_agents_status_map.end()) {
+    const auto &agent = m_agents_scan_status_map.find(agent_mac);
+    if (agent != m_agents_scan_status_map.end()) {
         // Find the scan element within the agent.
-        const auto &scan_it = m_agents_status_map[agent_mac].continuous_radio_scans.find(
+        const auto &scan_it = m_agents_scan_status_map[agent_mac].continuous_radio_scans.find(
             scan_request_event.radio_mac);
         // Check if the scan exists
         bool radio_scan_exist = false;
-        if (scan_it != m_agents_status_map[agent_mac].continuous_radio_scans.end()) {
+        if (scan_it != m_agents_scan_status_map[agent_mac].continuous_radio_scans.end()) {
             radio_scan_exist = true;
         }
 
@@ -651,17 +651,17 @@ bool dynamic_channel_selection_r2_task::handle_continuous_scan_request_event(
             }
 
             // Scan is safe to remove, return true in the end.
-            m_agents_status_map[agent_mac].continuous_radio_scans.erase(
+            m_agents_scan_status_map[agent_mac].continuous_radio_scans.erase(
                 scan_request_event.radio_mac);
 
             LOG(DEBUG) << "Continuous Radio Scan"
                        << " mac: " << scan_it->first
                        << " was successfully deleted from the container";
-            if (m_agents_status_map[agent_mac].single_radio_scans.empty() &&
-                m_agents_status_map[agent_mac].continuous_radio_scans.empty()) {
+            if (m_agents_scan_status_map[agent_mac].single_radio_scans.empty() &&
+                m_agents_scan_status_map[agent_mac].continuous_radio_scans.empty()) {
                 LOG(TRACE) << "Agent " << agent_mac
                            << " has no remaining scans, removing agent status handler";
-                m_agents_status_map.erase(agent);
+                m_agents_scan_status_map.erase(agent);
             }
             return true;
         }
@@ -696,13 +696,13 @@ bool dynamic_channel_selection_r2_task::handle_continuous_scan_request_event(
     // Check if we need to create a new agent handler
     if (create_new_agent) {
         // Add agent to the queue
-        m_agents_status_map.insert({agent_mac, {}});
+        m_agents_scan_status_map.insert({agent_mac, {}});
     }
 
-    m_agents_status_map[agent_mac].continuous_radio_scans[radio_mac] =
+    m_agents_scan_status_map[agent_mac].continuous_radio_scans[radio_mac] =
         sAgentScanStatus::sRadioScanRequest();
-    m_agents_status_map[agent_mac].continuous_radio_scans[radio_mac].is_single_scan = false;
-    m_agents_status_map[agent_mac].continuous_radio_scans[radio_mac].next_time_scan =
+    m_agents_scan_status_map[agent_mac].continuous_radio_scans[radio_mac].is_single_scan = false;
+    m_agents_scan_status_map[agent_mac].continuous_radio_scans[radio_mac].next_time_scan =
         std::chrono::system_clock::now();
 
     return true;
@@ -714,12 +714,12 @@ bool dynamic_channel_selection_r2_task::handle_scan_report_event(
     const auto &agent_mac          = scan_report_event.agent_mac;
     const auto &ISO_8601_timestamp = scan_report_event.ISO_8601_timestamp;
 
-    auto agent_status_it = m_agents_status_map.find(agent_mac);
-    if (agent_status_it == m_agents_status_map.end()) {
+    auto agent_status_it = m_agents_scan_status_map.find(agent_mac);
+    if (agent_status_it == m_agents_scan_status_map.end()) {
         LOG(ERROR) << "Agent " << agent_mac << " is not found in active scans";
         return false;
     }
-    auto &agent_status = m_agents_status_map[agent_mac];
+    auto &agent_status = m_agents_scan_status_map[agent_mac];
 
     auto has_matching_report_index =
         [this, &ISO_8601_timestamp](
@@ -823,7 +823,7 @@ bool dynamic_channel_selection_r2_task::handle_scan_report_event(
     if (agent_status.single_radio_scans.empty() && agent_status.continuous_radio_scans.empty()) {
         LOG(TRACE) << "Agent " << agent_mac
                    << " has no remaining scans, removing agent status handler";
-        m_agents_status_map.erase(agent_status_it);
+        m_agents_scan_status_map.erase(agent_status_it);
     } else {
         LOG(TRACE) << "Agent " << agent_mac
                    << " has remaining scans, clearing status but not removing";
@@ -880,7 +880,7 @@ bool dynamic_channel_selection_r2_task::handle_timeout_in_busy_agents()
 {
     // Check all busy agents for timeout
     auto timeout_found = false;
-    for (auto &agent : m_agents_status_map) {
+    for (auto &agent : m_agents_scan_status_map) {
         auto &agent_mac    = agent.first;
         auto &agent_status = agent.second;
 
