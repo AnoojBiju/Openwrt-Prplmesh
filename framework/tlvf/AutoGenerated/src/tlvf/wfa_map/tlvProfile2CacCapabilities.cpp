@@ -213,7 +213,7 @@ bool tlvProfile2CacCapabilities::init()
     m_cac_radios_idx__ = 0;
     for (size_t i = 0; i < number_of_cac_radios; i++) {
         auto cac_radios = create_cac_radios();
-        if (!cac_radios) {
+        if (!cac_radios || !cac_radios->isInitialized()) {
             TLVF_LOG(ERROR) << "create_cac_radios() failed";
             return false;
         }
@@ -387,7 +387,7 @@ bool cCacCapabilitiesRadio::init()
     m_cac_types_idx__ = 0;
     for (size_t i = 0; i < number_of_cac_type_supported; i++) {
         auto cac_types = create_cac_types();
-        if (!cac_types) {
+        if (!cac_types || !cac_types->isInitialized()) {
             TLVF_LOG(ERROR) << "create_cac_types() failed";
             return false;
         }
@@ -580,7 +580,7 @@ bool cCacTypes::init()
     m_operating_classes_idx__ = 0;
     for (size_t i = 0; i < number_of_operating_classes; i++) {
         auto operating_classes = create_operating_classes();
-        if (!operating_classes) {
+        if (!operating_classes || !operating_classes->isInitialized()) {
             TLVF_LOG(ERROR) << "create_operating_classes() failed";
             return false;
         }

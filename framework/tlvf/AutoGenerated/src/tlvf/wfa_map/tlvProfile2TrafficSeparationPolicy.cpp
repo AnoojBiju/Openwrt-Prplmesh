@@ -183,7 +183,7 @@ bool tlvProfile2TrafficSeparationPolicy::init()
     m_ssids_vlan_id_list_idx__ = 0;
     for (size_t i = 0; i < ssids_vlan_id_list_length; i++) {
         auto ssids_vlan_id_list = create_ssids_vlan_id_list();
-        if (!ssids_vlan_id_list) {
+        if (!ssids_vlan_id_list || !ssids_vlan_id_list->isInitialized()) {
             TLVF_LOG(ERROR) << "create_ssids_vlan_id_list() failed";
             return false;
         }
