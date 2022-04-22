@@ -8,6 +8,7 @@
 
 # Standard library
 import hashlib
+import time
 from pathlib import Path
 
 # Third party
@@ -46,7 +47,17 @@ def configure_device(device: GenericDevice, configuration_file: Path):
     print(f"Applying configuration {str(configuration_file)} on device {device.name}.")
     conf_file_location = "/tmp/config_file.sh"
     md5 = hashlib.md5()
-    with SerialDevice(device.baudrate, device.name, device.serial_prompt) as shell:
+    with SerialDevice(device.baudrate, device.name, device.serial_prompt,
+                      expect_prompt_on_connect=False) as shell:
+        # Workaround for PCF-600: kill leftover network restarts, and
+        # remove NetDev neighbors.
+        shell.sendline("")
+        time.sleep(1)
+        shell.send("\003")
+        shell.expect(device.serial_prompt)
+        shell.sendline("pgrep -f 'ubus -t 30 wait_for network.interface' | xargs kill -s KILL")
+        shell.sendline("/etc/init.d/netdev-plugin  restart")
+        shell.expect(device.serial_prompt)
         shell.sendline("")
         shell.expect(device.serial_prompt)
         shell.sendline("sysctl -w kernel.printk='0 4 1 7'")
