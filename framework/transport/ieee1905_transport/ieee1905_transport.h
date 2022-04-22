@@ -215,6 +215,14 @@ private:
         struct iovec payload      = {.iov_base = NULL, .iov_len = 0};
 
         virtual std::ostream &print(std::ostream &os) const;
+
+        static const std::set<uint16_t> reliable_multicast_msg_types;
+        bool is_reliable_multicast()
+        {
+            return reliable_multicast_msg_types.find(
+                       ntohs(static_cast<Ieee1905CmduHeader *>(payload.iov_base)->messageType)) !=
+                   reliable_multicast_msg_types.end();
+        }
     };
     friend std::ostream &operator<<(std::ostream &os, const Packet &m);
 
@@ -238,6 +246,8 @@ private:
 
     // de-duplication internal data structures
 
+    static constexpr sMacAddr ieee1905_multicast_addr = {
+        .oct = {0x01, 0x80, 0xc2, 0x00, 0x00, 0x13}};
     // two IEE1905 packets received from the same src address and with the same messageId
     // will be considered as duplicate iff they are received within a kMaximumDeDuplicationAge duration.
     // This duration should be long enough to allow for any buffered/in-transit duplicate packets to be flushed; and
