@@ -145,11 +145,20 @@ public:
     };
 
     struct sBackhaul {
+
+        // In case of a wireless connection, backhaul station mac (bSTA) that connects to an AP interface (BSS).
+        // In case of a wired connection, ethernet port that connects to a LAN interface.
+        sMacAddr backhaul_interface;
+
+        //TODO: Implement diffrent iface types (PPM-1656)
+        beerocks::eIfaceType backhaul_iface_type;
+
         // Local radio the backhaul station use. If `nullptr` the backhaul is wired.
         std::shared_ptr<Agent::sRadio> wireless_backhaul_radio;
 
-        // The BSSID which the backhaul station connected to. Could be an AP or LAN interface.
-        sMacAddr bssid;
+        // In case of a wireless connection, the BSSID to which the backhaul station is connected.
+        // In case of a wired connection, the LAN port that the interface is connected to.
+        sMacAddr parent_interface;
 
         // The Agent node that the backhaul station is connected to.
         std::weak_ptr<Agent> parent_agent;

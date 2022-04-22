@@ -356,7 +356,7 @@ bool AmbiorixImpl::set(const std::string &relative_path, const std::string &para
     auto object = prepare_transaction(relative_path, transaction);
 
     if (!object) {
-        LOG(ERROR) << "Failed to prepare transaction: " << relative_path << parameter << "="
+        LOG(ERROR) << "Failed to prepare transaction: " << relative_path << "." << parameter << "="
                    << value;
         return false;
     }
