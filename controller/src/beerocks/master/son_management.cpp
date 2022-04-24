@@ -1493,7 +1493,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
 
-        pre_association_steering_task::steering_set_group_request_event new_event;
+        pre_association_steering_task::sSteeringSetGroupRequestEvent new_event;
         new_event.sd                 = sd;
         new_event.remove             = request->remove();
         new_event.steeringGroupIndex = request->steeringGroupIndex();
@@ -1501,7 +1501,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         new_event.cfg_5              = request->cfg_5();
 
         tasks.push_event(database.get_pre_association_steering_task_id(),
-                         pre_association_steering_task::events::STEERING_SET_GROUP_REQUEST,
+                         pre_association_steering_task::eEvents::STEERING_SET_GROUP_REQUEST,
                          &new_event);
         break;
     }
@@ -1514,7 +1514,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
 
-        pre_association_steering_task::steering_client_set_request_event new_event;
+        pre_association_steering_task::sSteeringClientSetRequestEvent new_event;
         //checking for remove option
         new_event.sd                 = sd;
         new_event.remove             = request->remove();
@@ -1524,7 +1524,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         new_event.config             = request->config();
 
         tasks.push_event(database.get_pre_association_steering_task_id(),
-                         pre_association_steering_task::events::STEERING_CLIENT_SET_REQUEST,
+                         pre_association_steering_task::eEvents::STEERING_CLIENT_SET_REQUEST,
                          &new_event);
         break;
     }
@@ -1538,15 +1538,15 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         }
 
         //TODO: set database to update sd as listener in pre_association_steering_task.
-        pre_association_steering_task::listener_general_register_unregister_event new_event;
+        pre_association_steering_task::sListenerGeneralRegisterUnregisterEvent new_event;
         new_event.sd = sd;
         if (request->unregister()) {
             tasks.push_event(database.get_pre_association_steering_task_id(),
-                             pre_association_steering_task::events::STEERING_EVENT_UNREGISTER,
+                             pre_association_steering_task::eEvents::STEERING_EVENT_UNREGISTER,
                              &new_event);
         } else {
             tasks.push_event(database.get_pre_association_steering_task_id(),
-                             pre_association_steering_task::events::STEERING_EVENT_REGISTER,
+                             pre_association_steering_task::eEvents::STEERING_EVENT_REGISTER,
                              &new_event);
         }
 
@@ -1562,7 +1562,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
 
-        pre_association_steering_task::steering_client_disconnect_request_event new_event;
+        pre_association_steering_task::sSteeringClientDisconnectRequestEvent new_event;
         new_event.sd                 = sd;
         new_event.client_mac         = request->client_mac();
         new_event.steeringGroupIndex = request->steeringGroupIndex();
@@ -1571,7 +1571,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         new_event.reason             = request->reason();
 
         tasks.push_event(database.get_pre_association_steering_task_id(),
-                         pre_association_steering_task::events::STEERING_CLIENT_DISCONNECT_REQUEST,
+                         pre_association_steering_task::eEvents::STEERING_CLIENT_DISCONNECT_REQUEST,
                          &new_event);
         break;
     }
@@ -1585,7 +1585,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
 
-        pre_association_steering_task::steering_rssi_measurement_request_event new_event;
+        pre_association_steering_task::sSteeringRssiMeasurementRequestEvent new_event;
         new_event.sd           = sd;
         std::string client_mac = tlvf::mac_to_string(request->client_mac());
         std::string sta_parent = database.get_node_parent(client_mac);
@@ -1601,7 +1601,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         new_event.params.mon_ping_burst_pkt_num = 0;
 
         tasks.push_event(database.get_pre_association_steering_task_id(),
-                         pre_association_steering_task::events::STEERING_RSSI_MEASUREMENT_REQUEST,
+                         pre_association_steering_task::eEvents::STEERING_RSSI_MEASUREMENT_REQUEST,
                          &new_event);
         break;
     }

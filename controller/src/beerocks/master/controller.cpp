@@ -403,10 +403,10 @@ void Controller::handle_disconnected(int fd)
     database.remove_bml_socket(fd);
 
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
-    pre_association_steering_task::listener_general_register_unregister_event new_event;
+    pre_association_steering_task::sListenerGeneralRegisterUnregisterEvent new_event;
     new_event.sd = fd;
     tasks.push_event(database.get_pre_association_steering_task_id(),
-                     pre_association_steering_task::events::STEERING_REMOVE_SOCKET, &new_event);
+                     pre_association_steering_task::eEvents::STEERING_REMOVE_SOCKET, &new_event);
 #endif
 }
 
@@ -2407,10 +2407,10 @@ bool Controller::handle_intel_slave_join(
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
     // sending event to pre_association_steering_task
     LOG(DEBUG) << "pre_association_steering_task,sending STEERING_SLAVE_JOIN for mac " << radio_mac;
-    pre_association_steering_task::steering_slave_join_event new_event{};
+    pre_association_steering_task::sSteeringSlaveJoinEvent new_event{};
     new_event.radio_mac = tlvf::mac_to_string(radio_mac);
     tasks.push_event(database.get_pre_association_steering_task_id(),
-                     pre_association_steering_task::events::STEERING_SLAVE_JOIN, &new_event);
+                     pre_association_steering_task::eEvents::STEERING_SLAVE_JOIN, &new_event);
 #endif
     // In the case where wireless-BH is lost and agents reconnect to the controller
     // it is required to re-activate the AP in the nodes-map since it is set as not-active
@@ -3103,9 +3103,10 @@ bool Controller::handle_cmdu_control_message(
             new_event.client_mac = notification->params().result.mac;
             new_event.bssid      = database.get_hostap_vap_mac(tlvf::mac_from_string(ap_mac),
                                                           notification->params().vap_id);
-            tasks.push_event(database.get_pre_association_steering_task_id(),
-                             pre_association_steering_task::events::STEERING_EVENT_SNR_AVAILABLE,
-                             &new_event);
+            tasks.push_event(
+                database.get_pre_association_steering_task_id(),
+                pre_association_steering_task::eEvents::STEERING_EVENT_SNR_NOTIFICATION,
+                &new_event);
         }
 #endif
         break;
@@ -3566,7 +3567,7 @@ bool Controller::handle_cmdu_control_message(
         new_event = notification->params();
         tasks.push_event(
             database.get_pre_association_steering_task_id(),
-            pre_association_steering_task::events::STEERING_EVENT_CLIENT_ACTIVITY_AVAILABLE,
+            pre_association_steering_task::eEvents::STEERING_EVENT_CLIENT_ACTIVITY_NOTIFICATION,
             &new_event);
 
         break;
@@ -3580,9 +3581,10 @@ bool Controller::handle_cmdu_control_message(
         }
         beerocks_message::sSteeringEvSnrXing new_event;
         new_event = notification->params();
-        tasks.push_event(database.get_pre_association_steering_task_id(),
-                         pre_association_steering_task::events::STEERING_EVENT_SNR_XING_AVAILABLE,
-                         &new_event);
+        tasks.push_event(
+            database.get_pre_association_steering_task_id(),
+            pre_association_steering_task::eEvents::STEERING_EVENT_SNR_XING_NOTIFICATION,
+            &new_event);
 
         break;
     }
@@ -3596,9 +3598,10 @@ bool Controller::handle_cmdu_control_message(
 
         beerocks_message::sSteeringEvProbeReq new_event;
         new_event = notification->params();
-        tasks.push_event(database.get_pre_association_steering_task_id(),
-                         pre_association_steering_task::events::STEERING_EVENT_PROBE_REQ_AVAILABLE,
-                         &new_event);
+        tasks.push_event(
+            database.get_pre_association_steering_task_id(),
+            pre_association_steering_task::eEvents::STEERING_EVENT_PROBE_REQ_NOTIFICATION,
+            &new_event);
 
         break;
     }
@@ -3611,9 +3614,10 @@ bool Controller::handle_cmdu_control_message(
         }
         beerocks_message::sSteeringEvAuthFail new_event;
         new_event = notification->params();
-        tasks.push_event(database.get_pre_association_steering_task_id(),
-                         pre_association_steering_task::events::STEERING_EVENT_AUTH_FAIL_AVAILABLE,
-                         &new_event);
+        tasks.push_event(
+            database.get_pre_association_steering_task_id(),
+            pre_association_steering_task::eEvents::STEERING_EVENT_AUTH_FAIL_NOTIFICATION,
+            &new_event);
         break;
     }
     case beerocks_message::ACTION_CONTROL_STEERING_CLIENT_SET_GROUP_RESPONSE: {
@@ -3624,10 +3628,10 @@ bool Controller::handle_cmdu_control_message(
             LOG(ERROR) << "addClass cACTION_CONTROL_STEERING_CLIENT_SET_GROUP_REQUEST failed";
             return false;
         }
-        pre_association_steering_task::steering_set_group_response_event new_event;
+        pre_association_steering_task::sSteeringSetGroupResponseEvent new_event;
         new_event.ret_code = notification->params().error_code;
         tasks.push_event(database.get_pre_association_steering_task_id(),
-                         pre_association_steering_task::events::STEERING_SET_GROUP_RESPONSE,
+                         pre_association_steering_task::eEvents::STEERING_SET_GROUP_RESPONSE,
                          &new_event);
 
         break;
@@ -3640,10 +3644,10 @@ bool Controller::handle_cmdu_control_message(
             LOG(ERROR) << "addClass cACTION_CONTROL_STEERING_CLIENT_SET_RESPONSE failed";
             return false;
         }
-        pre_association_steering_task::steering_client_set_response_event new_event;
+        pre_association_steering_task::sSteeringClientSetResponseEvent new_event;
         new_event.ret_code = notification->params().error_code;
         tasks.push_event(database.get_pre_association_steering_task_id(),
-                         pre_association_steering_task::events::STEERING_CLIENT_SET_RESPONSE,
+                         pre_association_steering_task::eEvents::STEERING_CLIENT_SET_RESPONSE,
                          &new_event);
 
         break;
@@ -3659,11 +3663,12 @@ bool Controller::handle_cmdu_control_message(
         }
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
         //push event to pre association steering task
-        pre_association_steering_task::steering_client_disconnect_response_event new_event;
+        pre_association_steering_task::sSteeringClientDisconnectResponseEvent new_event;
         new_event.ret_code = notification->params().error_code;
-        tasks.push_event(database.get_pre_association_steering_task_id(),
-                         pre_association_steering_task::events::STEERING_CLIENT_DISCONNECT_RESPONSE,
-                         &new_event);
+        tasks.push_event(
+            database.get_pre_association_steering_task_id(),
+            pre_association_steering_task::eEvents::STEERING_CLIENT_DISCONNECT_RESPONSE,
+            &new_event);
 #endif
         break;
     }
