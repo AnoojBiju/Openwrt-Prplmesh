@@ -20,6 +20,7 @@
 #include <beerocks/tlvf/beerocks_message.h>
 #include <chrono>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
+#include <tlvf/wfa_map/tlvChannelSelectionResponse.h>
 #include <tlvf/wfa_map/tlvProfile2CacCompletionReport.h>
 #include <tlvf/wfa_map/tlvProfile2CacStatusReport.h>
 #include <tlvf/wfa_map/tlvProfile2ChannelScanRequest.h>
@@ -306,6 +307,16 @@ private:
      * @return true if timeout found, false otherwise.
      */
     bool handle_timeout_in_busy_agents();
+
+    /**
+     * @brief Handle 1905.1 Channel Selection Response message
+     * 
+     * @param src_mac MAC address of the incoming message.
+     * @param cmdu_rx Received CMDU message to handle.
+     * @return true if handled correctly, false otherwise.
+     */
+    bool handle_cmdu_1905_channel_selection_response(const sMacAddr &src_mac,
+                                                     ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
      * @brief Handle 1905.1 Channel Preference Report message

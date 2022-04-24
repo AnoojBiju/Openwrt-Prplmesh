@@ -1313,9 +1313,57 @@ bool dynamic_channel_selection_r2_task::handle_ieee1905_1_msg(const sMacAddr &sr
     case ieee1905_1::eMessageType::CHANNEL_PREFERENCE_REPORT_MESSAGE: {
         return handle_cmdu_1905_channel_preference_report(src_mac, cmdu_rx);
     }
+    case ieee1905_1::eMessageType::CHANNEL_SELECTION_RESPONSE_MESSAGE: {
+        return handle_cmdu_1905_channel_selection_response(src_mac, cmdu_rx);
+    }
     default:
         return false;
     }
+    return true;
+}
+
+bool dynamic_channel_selection_r2_task::handle_cmdu_1905_channel_selection_response(
+    const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto mid = cmdu_rx.getMessageId();
+    LOG(INFO) << "Received CHANNEL_SELECTION_RESPONSE_MESSAGE, mid=" << std::dec << int(mid);
+
+    for (auto channel_selection_response_tlv :
+         cmdu_rx.getClassList<wfa_map::tlvChannelSelectionResponse>()) {
+        auto &ruid         = channel_selection_response_tlv->radio_uid();
+        auto response_code = channel_selection_response_tlv->response_code();
+
+        LOG(DEBUG)
+            << "channel selection response from ruid=" << ruid << ", response_code="
+            << ([](const wfa_map::tlvChannelSelectionResponse::eResponseCode &response_code) {
+                   std::string ret_str;
+                   switch (response_code) {
+                   case wfa_map::tlvChannelSelectionResponse::eResponseCode::ACCEPT:
+                       ret_str.assign("ACCEPT");
+                       break;
+                   case wfa_map::tlvChannelSelectionResponse::eResponseCode::
+                       DECLINE_VIOLATES_CURRENT_PREFERENCES:
+                       ret_str.assign("DECLINE_VIOLATES_CURRENT_PREFERENCES");
+                       break;
+                   case wfa_map::tlvChannelSelectionResponse::eResponseCode::
+                       DECLINE_VIOLATES_MOST_RECENTLY_REPORTED_PREFERENCES:
+                       ret_str.assign("DECLINE_VIOLATES_MOST_RECENTLY_REPORTED_PREFERENCES");
+                       break;
+                   case wfa_map::tlvChannelSelectionResponse::eResponseCode::
+                       DECLINE_PREVENT_OPERATION_OF_BACKHAUL_LINK:
+                       ret_str.assign("DECLINE_PREVENT_OPERATION_OF_BACKHAUL_LINK");
+                       break;
+                   default:
+                       ret_str.assign("ERROR:UNFAMILIAR_RESPONSE_CODE");
+                       break;
+                   }
+                   return ret_str;
+               })(response_code);
+    }
+    if (m_selection_state == eSelectionState::WAIT_FOR_SELECTION_RESPONSE) {
+        FSM_MOVE_SELECTION_STATE(eSelectionState::IDLE);
+    }
+
     return true;
 }
 
