@@ -27,16 +27,17 @@ using namespace son;
 pre_association_steering_task::pre_association_steering_task(db &database_,
                                                              ieee1905_1::CmduMessageTx &cmdu_tx_,
                                                              task_pool &tasks_)
-    : task("pre association steering task"), database(database_), cmdu_tx(cmdu_tx_), tasks(tasks_)
+    : task("pre association steering task"), m_database(database_), m_cmdu_tx(cmdu_tx_),
+      m_tasks(tasks_)
 {
-    int prev_task_id = database.get_pre_association_steering_task_id();
+    int prev_task_id = m_database.get_pre_association_steering_task_id();
     if (prev_task_id != -1) {
-        tasks.kill_task(prev_task_id);
+        m_tasks.kill_task(prev_task_id);
     }
     database_.assign_pre_association_steering_task_id(this->id);
 }
 
-void pre_association_steering_task::work() { pending_event_check_timeout(); }
+void pre_association_steering_task::work() { pending_request_events_check_timeout(); }
 
 void pre_association_steering_task::handle_event(int event_type, void *obj)
 {
@@ -52,53 +53,56 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
         idx++;
     }
 
-    switch (event_type) {
+    eEvents _event_type = static_cast<eEvents>(event_type);
+
+    switch (_event_type) {
 
     case STEERING_EVENT_REGISTER: {
         if (obj) {
-            auto event_obj = static_cast<listener_general_register_unregister_event *>(obj);
+            auto event_obj = static_cast<sListenerGeneralRegisterUnregisterEvent *>(obj);
             TASK_LOG(DEBUG) << "STEERING_EVENT_REGISTER event was received";
             add_bml_pre_association_steering_socket(event_obj->sd);
             if (!set_bml_pre_association_steering_events_update_enable(event_obj->sd, true)) {
                 TASK_LOG(ERROR) << "fail in changing events_update registration";
-                send_bml_response(event_type, event_obj->sd, -BML_RET_REGISTERTION_FAIL);
+                send_bml_response(_event_type, event_obj->sd, -BML_RET_REGISTERTION_FAIL);
                 break;
             }
-            send_bml_response(event_type, event_obj->sd);
+            send_bml_response(_event_type, event_obj->sd);
         }
         break;
     }
     case STEERING_EVENT_UNREGISTER: {
         if (obj) {
-            auto event_obj = static_cast<listener_general_register_unregister_event *>(obj);
+            auto event_obj = static_cast<sListenerGeneralRegisterUnregisterEvent *>(obj);
             TASK_LOG(DEBUG) << "UNREGISTER_TO_MONITOR_EVENT_UPDATES event was received";
 
             if (!set_bml_pre_association_steering_events_update_enable(event_obj->sd, false)) {
                 TASK_LOG(DEBUG) << "fail in changing stats_update unregistration";
-                send_bml_response(event_type, event_obj->sd, -BML_RET_REGISTERTION_FAIL);
+                send_bml_response(_event_type, event_obj->sd, -BML_RET_REGISTERTION_FAIL);
                 break;
             }
-            send_bml_response(event_type, event_obj->sd);
+            send_bml_response(_event_type, event_obj->sd);
         }
         break;
     }
     case STEERING_SET_GROUP_REQUEST: {
         if (obj) {
             auto event_obj =
-                static_cast<pre_association_steering_task::steering_set_group_request_event *>(obj);
+                static_cast<pre_association_steering_task::sSteeringSetGroupRequestEvent *>(obj);
             TASK_LOG(INFO) << "STEERING_SET_GROUP_REQUEST event was received - remove - "
                            << int(event_obj->remove) << ", group_index "
                            << int(event_obj->steeringGroupIndex);
 
             if (!event_obj->remove) {
                 auto bssid        = tlvf::mac_to_string(event_obj->cfg_2.bssid);
-                auto radio_mac_2g = database.get_node_parent_radio(bssid);
+                auto radio_mac_2g = m_database.get_node_parent_radio(bssid);
                 bssid             = tlvf::mac_to_string(event_obj->cfg_5.bssid);
-                auto radio_mac_5g = database.get_node_parent_radio(bssid);
+                auto radio_mac_5g = m_database.get_node_parent_radio(bssid);
                 if (radio_mac_2g.empty() || radio_mac_5g.empty() ||
-                    !database.is_node_24ghz(radio_mac_2g) || !database.is_node_5ghz(radio_mac_5g)) {
+                    !m_database.is_node_24ghz(radio_mac_2g) ||
+                    !m_database.is_node_5ghz(radio_mac_5g)) {
                     TASK_LOG(ERROR) << "Couldn't find 2.4G or 5G parent node or band mismatch. ";
-                    send_bml_response(int(STEERING_SET_GROUP_RESPONSE), event_obj->sd,
+                    send_bml_response(STEERING_SET_GROUP_RESPONSE, event_obj->sd,
                                       -BML_RET_INVALID_ARGS);
                     break;
                 }
@@ -108,49 +112,48 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
             int32_t ret;
             if ((ret = steering_group_fill_ap_configuration(event_obj, cfg_2, cfg_5)) < 0) {
                 LOG(ERROR) << "STEERING_SET_GROUP_REQUEST Failed to fill ap configuration";
-                send_bml_response(int(STEERING_SET_GROUP_RESPONSE), event_obj->sd, ret);
+                send_bml_response(STEERING_SET_GROUP_RESPONSE, event_obj->sd, ret);
                 break;
             }
 
             //pre_association_steering_db.print_db();
 
-            auto radios = database.get_active_hostaps();
-            if (is_pending_event_exist(int(STEERING_SET_GROUP_REQUEST))) {
+            auto radios = m_database.get_active_hostaps();
+            if (is_pending_request_event_exist(STEERING_SET_GROUP_REQUEST)) {
                 TASK_LOG(ERROR) << "STEERING_SET_GROUP_REQUEST event is already initiated, but the "
                                    "response(s) are not received yet";
-                send_bml_response(int(STEERING_SET_GROUP_RESPONSE), event_obj->sd,
-                                  -BML_RET_CMDU_FAIL);
+                send_bml_response(STEERING_SET_GROUP_RESPONSE, event_obj->sd, -BML_RET_CMDU_FAIL);
             } else {
-                add_pending_events(int(STEERING_SET_GROUP_REQUEST), event_obj->sd, radios.size());
+                add_pending_request_event(STEERING_SET_GROUP_REQUEST, event_obj->sd, radios.size());
             }
             //send new VS message to each slave with his specific data.
             for (const auto &radio_mac : radios) {
                 auto update = message_com::create_vs_message<
-                    beerocks_message::cACTION_CONTROL_STEERING_CLIENT_SET_GROUP_REQUEST>(cmdu_tx);
+                    beerocks_message::cACTION_CONTROL_STEERING_CLIENT_SET_GROUP_REQUEST>(m_cmdu_tx);
                 if (update == nullptr) {
                     TASK_LOG(ERROR) << "Failed building message!, removing "
                                        "STEERING_SET_GROUP_REQUEST from pending_events";
-                    send_bml_response(int(STEERING_SET_GROUP_RESPONSE), event_obj->sd,
+                    send_bml_response(STEERING_SET_GROUP_RESPONSE, event_obj->sd,
                                       -BML_RET_CMDU_FAIL);
-                    remove_pending_event(int(STEERING_SET_GROUP_REQUEST));
+                    remove_pending_request_event(STEERING_SET_GROUP_REQUEST);
                     break;
                 }
                 update->params().remove             = event_obj->remove;
                 update->params().steeringGroupIndex = event_obj->steeringGroupIndex;
-                if (database.is_node_5ghz(radio_mac)) {
+                if (m_database.is_node_5ghz(radio_mac)) {
                     update->params().cfg = cfg_5;
                 } else { //(database.is_node_2.4ghz(hostap))
                     update->params().cfg = cfg_2;
                 }
-                auto agent_mac = database.get_node_parent_ire(radio_mac);
+                auto agent_mac = m_database.get_node_parent_ire(radio_mac);
                 m_sd           = event_obj->sd;
-                if (!son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, radio_mac)) {
+                if (!son_actions::send_cmdu_to_agent(agent_mac, m_cmdu_tx, m_database, radio_mac)) {
                     TASK_LOG(ERROR)
                         << "Failed send ACTION_CONTROL_STEERING_CLIENT_SET_GROUP_REQUEST CMDU to "
                            "agent!, removing STEERING_SET_GROUP_REQUEST from pending_events";
-                    send_bml_response(int(STEERING_SET_GROUP_RESPONSE), event_obj->sd,
+                    send_bml_response(STEERING_SET_GROUP_RESPONSE, event_obj->sd,
                                       -BML_RET_CMDU_FAIL);
-                    remove_pending_event(int(STEERING_SET_GROUP_REQUEST));
+                    remove_pending_request_event(STEERING_SET_GROUP_REQUEST);
                     break;
                 }
                 TASK_LOG(DEBUG)
@@ -163,26 +166,25 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
     case STEERING_SET_GROUP_RESPONSE: {
         if (obj) {
             TASK_LOG(DEBUG) << "STEERING_SET_GROUP_RESPONSE event was received";
-            if (!is_pending_event_exist(STEERING_SET_GROUP_REQUEST)) {
+            if (!is_pending_request_event_exist(STEERING_SET_GROUP_REQUEST)) {
                 TASK_LOG(ERROR) << "STEERING_SET_GROUP_RESPONSE event is invoked, but "
                                    "STEERING_SET_GROUP_REQUEST pending event does not exist";
                 break;
             }
-            int bml_sd = pending_event_get_bml_sd(STEERING_SET_GROUP_REQUEST);
+            int bml_sd = pending_request_event_get_bml_sd(STEERING_SET_GROUP_REQUEST);
             auto event_obj =
-                static_cast<pre_association_steering_task::steering_set_group_response_event *>(
-                    obj);
+                static_cast<pre_association_steering_task::sSteeringSetGroupResponseEvent *>(obj);
             if (event_obj->ret_code < 0) {
                 TASK_LOG(ERROR)
                     << "STEERING_SET_GROUP_RESPONSE event error received from the monitor";
-                send_bml_response(event_type, bml_sd, -BML_RET_OP_FAILED);
+                send_bml_response(_event_type, bml_sd, -BML_RET_OP_FAILED);
                 break;
             }
 
-            pending_events_increase_received_responses(int(STEERING_SET_GROUP_REQUEST));
-            if (is_pending_event_responses_match(STEERING_SET_GROUP_REQUEST)) {
-                send_bml_response(event_type, bml_sd);
-                remove_pending_event(STEERING_SET_GROUP_REQUEST);
+            pending_request_event_increase_received_response(STEERING_SET_GROUP_REQUEST);
+            if (is_pending_request_event_responses_match(STEERING_SET_GROUP_REQUEST)) {
+                send_bml_response(_event_type, bml_sd);
+                remove_pending_request_event(STEERING_SET_GROUP_REQUEST);
             }
         }
         break;
@@ -190,25 +192,22 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
     case STEERING_CLIENT_SET_REQUEST: {
         if (obj) {
             auto event_obj =
-                static_cast<pre_association_steering_task::steering_client_set_request_event *>(
-                    obj);
+                static_cast<pre_association_steering_task::sSteeringClientSetRequestEvent *>(obj);
             auto client_mac = tlvf::mac_to_string(event_obj->client_mac);
             TASK_LOG(INFO) << "STEERING_CLIENT_SET_REQUEST event was received for client_mac "
                            << client_mac << " bssid " << event_obj->bssid;
 
-            auto radio_mac = database.get_node_parent_radio(event_obj->bssid);
+            auto radio_mac = m_database.get_node_parent_radio(event_obj->bssid);
             if (radio_mac.empty()) {
                 TASK_LOG(ERROR) << "Couldn't find radio with bssid " << event_obj->bssid;
-                send_bml_response(int(STEERING_CLIENT_SET_RESPONSE), event_obj->sd,
-                                  -BML_RET_OP_FAILED);
+                send_bml_response(STEERING_CLIENT_SET_RESPONSE, event_obj->sd, -BML_RET_OP_FAILED);
                 break;
             }
             auto update = message_com::create_vs_message<
-                beerocks_message::cACTION_CONTROL_STEERING_CLIENT_SET_REQUEST>(cmdu_tx);
+                beerocks_message::cACTION_CONTROL_STEERING_CLIENT_SET_REQUEST>(m_cmdu_tx);
             if (update == nullptr) {
                 TASK_LOG(ERROR) << "Failed building message!";
-                send_bml_response(int(STEERING_CLIENT_SET_RESPONSE), event_obj->sd,
-                                  -BML_RET_CMDU_FAIL);
+                send_bml_response(STEERING_CLIENT_SET_RESPONSE, event_obj->sd, -BML_RET_CMDU_FAIL);
                 break;
             }
             // Check if configurations has changed and only then continue, else return OK
@@ -229,7 +228,7 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
             // or if the client configuration is the same as already configured,
             // no need to do anything - return success immediately
             std::shared_ptr<beerocks_message::sSteeringClientConfig> existing_config = nullptr;
-            auto res = pre_association_steering_db.get_client_config(
+            auto res = m_pre_association_steering_db.get_client_config(
                 client_mac, event_obj->bssid, event_obj->steeringGroupIndex, existing_config);
             bool update_db_and_agent_is_needed = true;
             if (!res && event_obj->remove) {
@@ -255,16 +254,15 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
 
             // set or remove the client config
             res = event_obj->remove
-                      ? pre_association_steering_db.clear_client_config(
+                      ? m_pre_association_steering_db.clear_client_config(
                             client_mac, event_obj->bssid, event_obj->steeringGroupIndex)
-                      : pre_association_steering_db.set_client_config(client_mac, event_obj->bssid,
-                                                                      event_obj->steeringGroupIndex,
-                                                                      event_obj->config);
+                      : m_pre_association_steering_db.set_client_config(
+                            client_mac, event_obj->bssid, event_obj->steeringGroupIndex,
+                            event_obj->config);
             //pre_association_steering_db.print_db();
             if (!res) {
                 TASK_LOG(ERROR) << "STEERING_CLIENT_SET_REQUEST db configuration failed";
-                send_bml_response(int(STEERING_CLIENT_SET_RESPONSE), event_obj->sd,
-                                  -BML_RET_CMDU_FAIL);
+                send_bml_response(STEERING_CLIENT_SET_RESPONSE, event_obj->sd, -BML_RET_CMDU_FAIL);
                 break;
             }
 
@@ -278,15 +276,14 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
             add STEERING_CLIENT_SET_REQUEST twice because we expect
             responses from both Monitor and AP Manager.
             */
-            add_pending_events(int(STEERING_CLIENT_SET_REQUEST), event_obj->sd, 2);
+            add_pending_request_event(STEERING_CLIENT_SET_REQUEST, event_obj->sd, 2);
 
             LOG(DEBUG) << "Sending ACTION_CONTROL_STEERING_CLIENT_SET_REQUEST to radio "
                        << radio_mac;
-            auto agent_mac = database.get_node_parent_ire(radio_mac);
-            if (!son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, radio_mac)) {
-                send_bml_response(int(STEERING_CLIENT_SET_RESPONSE), event_obj->sd,
-                                  -BML_RET_CMDU_FAIL);
-                remove_pending_event(int(STEERING_CLIENT_SET_REQUEST));
+            auto agent_mac = m_database.get_node_parent_ire(radio_mac);
+            if (!son_actions::send_cmdu_to_agent(agent_mac, m_cmdu_tx, m_database, radio_mac)) {
+                send_bml_response(STEERING_CLIENT_SET_RESPONSE, event_obj->sd, -BML_RET_CMDU_FAIL);
+                remove_pending_request_event(STEERING_CLIENT_SET_REQUEST);
                 break;
             }
         }
@@ -295,40 +292,39 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
     case STEERING_CLIENT_SET_RESPONSE: {
         if (obj) {
             TASK_LOG(DEBUG) << "STEERING_CLIENT_SET_RESPONSE event was received";
-            if (!is_pending_event_exist(STEERING_CLIENT_SET_REQUEST)) {
+            if (!is_pending_request_event_exist(STEERING_CLIENT_SET_REQUEST)) {
                 TASK_LOG(ERROR) << "STEERING_CLIENT_SET_RESPONSE event is invoked, but "
                                    "STEERING_CLIENT_SET_REQUEST pending event does not exist";
                 break;
             }
-            int bml_sd = pending_event_get_bml_sd(STEERING_CLIENT_SET_REQUEST);
+            int bml_sd = pending_request_event_get_bml_sd(STEERING_CLIENT_SET_REQUEST);
             auto event_obj =
-                static_cast<pre_association_steering_task::steering_client_set_response_event *>(
-                    obj);
+                static_cast<pre_association_steering_task::sSteeringClientSetResponseEvent *>(obj);
 
             if (event_obj->ret_code < 0) {
                 TASK_LOG(ERROR) << "STEERING_CLIENT_SET_RESPONSE event error received from the "
                                    "monitor/ap manager";
-                if (!is_pending_event_exist(STEERING_SET_GROUP_REQUEST)) {
-                    send_bml_response(event_type, bml_sd, -BML_RET_OP_FAILED);
+                if (!is_pending_request_event_exist(STEERING_SET_GROUP_REQUEST)) {
+                    send_bml_response(_event_type, bml_sd, -BML_RET_OP_FAILED);
                 }
                 break;
             }
 
-            pending_events_increase_received_responses(int(STEERING_CLIENT_SET_REQUEST));
-            if (is_pending_event_responses_match(STEERING_CLIENT_SET_REQUEST)) {
-                send_bml_response(event_type, bml_sd);
-                remove_pending_event(STEERING_CLIENT_SET_REQUEST);
+            pending_request_event_increase_received_response(STEERING_CLIENT_SET_REQUEST);
+            if (is_pending_request_event_responses_match(STEERING_CLIENT_SET_REQUEST)) {
+                send_bml_response(_event_type, bml_sd);
+                remove_pending_request_event(STEERING_CLIENT_SET_REQUEST);
             }
         }
         break;
     }
     case STEERING_CLIENT_DISCONNECT_REQUEST: {
         if (obj) {
-            auto event_obj         = static_cast<steering_client_disconnect_request_event *>(obj);
+            auto event_obj         = static_cast<sSteeringClientDisconnectRequestEvent *>(obj);
             std::string client_mac = tlvf::mac_to_string(event_obj->client_mac);
             TASK_LOG(INFO) << "STEERING_CLIENT_DISCONNECT_REQUEST received for " << client_mac;
-            add_pending_events(int(STEERING_CLIENT_DISCONNECT_REQUEST), event_obj->sd);
-            son_actions::disconnect_client(database, cmdu_tx, client_mac, event_obj->bssid,
+            add_pending_request_event(STEERING_CLIENT_DISCONNECT_REQUEST, event_obj->sd);
+            son_actions::disconnect_client(m_database, m_cmdu_tx, client_mac, event_obj->bssid,
                                            event_obj->type, event_obj->reason);
         }
         break;
@@ -336,44 +332,45 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
     case STEERING_CLIENT_DISCONNECT_RESPONSE: {
         if (obj) {
             TASK_LOG(DEBUG) << "STEERING_CLIENT_DISCONNECT_RESPONSE event was received";
-            if (!is_pending_event_exist(STEERING_CLIENT_DISCONNECT_REQUEST)) {
+            if (!is_pending_request_event_exist(STEERING_CLIENT_DISCONNECT_REQUEST)) {
                 TASK_LOG(ERROR)
                     << "STEERING_CLIENT_DISCONNECT_RESPONSE event is invoked, but "
                        "STEERING_CLIENT_DISCONNECT_REQUEST pending event does not exist";
                 break;
             }
-            int bml_sd     = pending_event_get_bml_sd(STEERING_CLIENT_DISCONNECT_REQUEST);
+            int bml_sd     = pending_request_event_get_bml_sd(STEERING_CLIENT_DISCONNECT_REQUEST);
             auto event_obj = static_cast<
-                pre_association_steering_task::steering_client_disconnect_response_event *>(obj);
+                pre_association_steering_task::sSteeringClientDisconnectResponseEvent *>(obj);
 
             if (event_obj->ret_code < 0) {
                 TASK_LOG(ERROR) << "STEERING_CLIENT_DISCONNECT_RESPONSE event error received";
-                if (!is_pending_event_exist(STEERING_CLIENT_DISCONNECT_REQUEST)) {
-                    send_bml_response(event_type, bml_sd, -BML_RET_OP_FAILED);
+                if (!is_pending_request_event_exist(STEERING_CLIENT_DISCONNECT_REQUEST)) {
+                    send_bml_response(_event_type, bml_sd, -BML_RET_OP_FAILED);
                 }
                 break;
             }
 
-            pending_events_increase_received_responses(int(STEERING_CLIENT_DISCONNECT_REQUEST));
-            if (is_pending_event_responses_match(STEERING_CLIENT_DISCONNECT_REQUEST)) {
-                send_bml_response(event_type, bml_sd);
-                remove_pending_event(STEERING_CLIENT_DISCONNECT_REQUEST);
+            pending_request_event_increase_received_response(STEERING_CLIENT_DISCONNECT_REQUEST);
+            if (is_pending_request_event_responses_match(STEERING_CLIENT_DISCONNECT_REQUEST)) {
+                send_bml_response(_event_type, bml_sd);
+                remove_pending_request_event(STEERING_CLIENT_DISCONNECT_REQUEST);
             }
         }
         break;
     }
     case STEERING_RSSI_MEASUREMENT_REQUEST: {
         if (obj) {
-            auto event_obj = static_cast<steering_rssi_measurement_request_event *>(obj);
+            auto event_obj = static_cast<sSteeringRssiMeasurementRequestEvent *>(obj);
             TASK_LOG(INFO) << "STEERING_RSSI_MEASUREMENT_REQUEST event was received for client_mac "
                            << event_obj->params.mac;
 
             auto update = message_com::create_vs_message<
-                beerocks_message::cACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_REQUEST>(cmdu_tx, id);
+                beerocks_message::cACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_REQUEST>(m_cmdu_tx,
+                                                                                      id);
             if (update == nullptr) {
                 TASK_LOG(ERROR) << "Failed building "
                                    "cACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_REQUEST message!";
-                send_bml_response(int(STEERING_RSSI_MEASUREMENT_RESPONSE), event_obj->sd,
+                send_bml_response(STEERING_RSSI_MEASUREMENT_RESPONSE, event_obj->sd,
                                   -BML_RET_CMDU_FAIL);
                 break;
             }
@@ -389,10 +386,10 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
             std::copy_n(event_obj->params.ipv4.oct, sizeof(update->params().mac.oct),
                         update->params().ipv4.oct);
 
-            auto radio_mac = database.get_node_parent_radio(event_obj->bssid);
+            auto radio_mac = m_database.get_node_parent_radio(event_obj->bssid);
             if (radio_mac.empty()) {
                 TASK_LOG(ERROR) << "Couldn't find radio with bssid " << event_obj->bssid;
-                send_bml_response(int(STEERING_RSSI_MEASUREMENT_RESPONSE), event_obj->sd,
+                send_bml_response(STEERING_RSSI_MEASUREMENT_RESPONSE, event_obj->sd,
                                   -BML_RET_CLIENT_NOT_FOUND);
                 break;
             }
@@ -400,33 +397,32 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
             // check that client exists in DB and connected to provided bssid
             std::string client_mac = tlvf::mac_to_string(event_obj->params.mac);
             auto bssid             = std::string(event_obj->bssid);
-            auto group_index       = pre_association_steering_db.get_group_index(client_mac, bssid);
+            auto group_index = m_pre_association_steering_db.get_group_index(client_mac, bssid);
             if (group_index == -1) {
                 TASK_LOG(ERROR) << "event for un-configured client mac - " << client_mac
                                 << " ignored";
-                send_bml_response(int(STEERING_RSSI_MEASUREMENT_RESPONSE), event_obj->sd,
+                send_bml_response(STEERING_RSSI_MEASUREMENT_RESPONSE, event_obj->sd,
                                   -BML_RET_CLIENT_NOT_CONFIGURED);
                 break;
             }
 
-            if (database.get_node_parent(client_mac) !=
+            if (m_database.get_node_parent(client_mac) !=
                     event_obj->bssid || // client is not connected to provided bssid
-                database.get_node_state(client_mac) == beerocks::STATE_DISCONNECTED) {
+                m_database.get_node_state(client_mac) == beerocks::STATE_DISCONNECTED) {
                 TASK_LOG(ERROR) << "Client " << client_mac << " is not connected to "
                                 << event_obj->bssid;
-                send_bml_response(int(STEERING_RSSI_MEASUREMENT_RESPONSE), event_obj->sd,
+                send_bml_response(STEERING_RSSI_MEASUREMENT_RESPONSE, event_obj->sd,
                                   -BML_RET_CLIENT_NOT_CONNECTED);
                 break;
             }
 
-            auto agent_mac = database.get_node_parent_ire(radio_mac);
-            if (!son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, radio_mac)) {
-                send_bml_response(int(STEERING_SET_GROUP_RESPONSE), event_obj->sd,
-                                  -BML_RET_CMDU_FAIL);
+            auto agent_mac = m_database.get_node_parent_ire(radio_mac);
+            if (!son_actions::send_cmdu_to_agent(agent_mac, m_cmdu_tx, m_database, radio_mac)) {
+                send_bml_response(STEERING_SET_GROUP_RESPONSE, event_obj->sd, -BML_RET_CMDU_FAIL);
                 break;
             }
 
-            send_bml_response(int(STEERING_RSSI_MEASUREMENT_RESPONSE), event_obj->sd);
+            send_bml_response(STEERING_RSSI_MEASUREMENT_RESPONSE, event_obj->sd);
         }
         break;
     }
@@ -438,7 +434,7 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
     }
     case STEERING_REMOVE_SOCKET: {
         if (obj) {
-            auto event_obj = static_cast<listener_general_register_unregister_event *>(obj);
+            auto event_obj = static_cast<sListenerGeneralRegisterUnregisterEvent *>(obj);
             if (is_bml_pre_association_steering_listener_socket(event_obj->sd)) {
                 TASK_LOG(DEBUG) << "STEERING_REMOVE_SOCKET event was received";
 
@@ -453,18 +449,19 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
         break;
     }
     //events
-    case STEERING_EVENT_CLIENT_ACTIVITY_AVAILABLE: {
+    case STEERING_EVENT_CLIENT_ACTIVITY_NOTIFICATION: {
         if (obj) {
             auto event_obj   = static_cast<beerocks_message::sSteeringEvActivity *>(obj);
             auto client_mac  = tlvf::mac_to_string(event_obj->client_mac);
             auto bssid       = tlvf::mac_to_string(event_obj->bssid);
-            auto group_index = pre_association_steering_db.get_group_index(client_mac, bssid);
-            TASK_LOG(INFO) << "STEERING_EVENT_CLIENT_ACTIVITY_AVAILABLE client_mac = " << client_mac
-                           << " active=" << event_obj->active << " bssid = " << bssid
+            auto group_index = m_pre_association_steering_db.get_group_index(client_mac, bssid);
+            TASK_LOG(INFO) << "STEERING_EVENT_CLIENT_ACTIVITY_NOTIFICATION client_mac = "
+                           << client_mac << " active=" << event_obj->active << " bssid = " << bssid
                            << " group index " << int(group_index);
 
             if (events_updates_listeners.empty()) {
-                TASK_LOG(DEBUG) << "STEERING_EVENT_CLIENT_ACTIVITY_AVAILABLE no listener ignoring";
+                TASK_LOG(DEBUG)
+                    << "STEERING_EVENT_CLIENT_ACTIVITY_NOTIFICATION no listener ignoring";
                 break;
             }
 
@@ -475,7 +472,7 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
             }
 
             auto response = message_com::create_vs_message<
-                beerocks_message::cACTION_BML_STEERING_EVENTS_UPDATE>(cmdu_tx);
+                beerocks_message::cACTION_BML_STEERING_EVENTS_UPDATE>(m_cmdu_tx);
             if (response == nullptr) {
                 TASK_LOG(ERROR) << "Failed building cACTION_BML_STEERING_EVENTS_UPDATE message!";
                 return;
@@ -504,21 +501,21 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
                         steering_event_client_activity_availble->data.activity.client_mac);
             steering_event_client_activity_availble->data.activity.active = event_obj->active;
 
-            send_bml_event_to_listeners(cmdu_tx, events_updates_listeners);
+            send_bml_event_to_listeners(m_cmdu_tx, events_updates_listeners);
         }
         break;
     }
-    case STEERING_EVENT_SNR_XING_AVAILABLE: {
+    case STEERING_EVENT_SNR_XING_NOTIFICATION: {
         if (obj) {
             auto event_obj   = static_cast<beerocks_message::sSteeringEvSnrXing *>(obj);
             auto client_mac  = tlvf::mac_to_string(event_obj->client_mac);
             auto bssid       = tlvf::mac_to_string(event_obj->bssid);
-            auto group_index = pre_association_steering_db.get_group_index(client_mac, bssid);
-            TASK_LOG(INFO) << "STEERING_EVENT_SNR_XING_AVAILABLE client_mac = " << client_mac
+            auto group_index = m_pre_association_steering_db.get_group_index(client_mac, bssid);
+            TASK_LOG(INFO) << "STEERING_EVENT_SNR_XING_NOTIFICATION client_mac = " << client_mac
                            << " bssid = " << bssid << " group index " << int(group_index);
 
             if (events_updates_listeners.empty()) {
-                TASK_LOG(DEBUG) << "STEERING_EVENT_SNR_XING_AVAILABLE no listener ignoring";
+                TASK_LOG(DEBUG) << "STEERING_EVENT_SNR_XING_NOTIFICATION no listener ignoring";
                 break;
             }
 
@@ -529,7 +526,7 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
             }
 
             auto response = message_com::create_vs_message<
-                beerocks_message::cACTION_BML_STEERING_EVENTS_UPDATE>(cmdu_tx);
+                beerocks_message::cACTION_BML_STEERING_EVENTS_UPDATE>(m_cmdu_tx);
             if (response == nullptr) {
                 TASK_LOG(ERROR) << "Failed building cACTION_BML_STEERING_EVENTS_UPDATE message!";
                 return;
@@ -563,21 +560,21 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
                 BML_STEERING_SNR_CHANGE(event_obj->highXing);
             steering_event_snr_xing_availble->data.snrXing.lowXing =
                 BML_STEERING_SNR_CHANGE(event_obj->lowXing);
-            send_bml_event_to_listeners(cmdu_tx, events_updates_listeners);
+            send_bml_event_to_listeners(m_cmdu_tx, events_updates_listeners);
         }
         break;
     }
-    case STEERING_EVENT_SNR_AVAILABLE: {
+    case STEERING_EVENT_SNR_NOTIFICATION: {
         if (obj) {
             auto event_obj   = static_cast<beerocks_message::sSteeringEvSnr *>(obj);
             auto client_mac  = tlvf::mac_to_string(event_obj->client_mac);
             auto bssid       = tlvf::mac_to_string(event_obj->bssid);
-            auto group_index = pre_association_steering_db.get_group_index(client_mac, bssid);
-            TASK_LOG(INFO) << "STEERING_EVENT_SNR_AVAILABLE client_mac = " << client_mac
+            auto group_index = m_pre_association_steering_db.get_group_index(client_mac, bssid);
+            TASK_LOG(INFO) << "STEERING_EVENT_SNR_NOTIFICATION client_mac = " << client_mac
                            << " bssid = " << bssid << " group index " << int(group_index);
 
             if (events_updates_listeners.empty()) {
-                TASK_LOG(DEBUG) << "STEERING_EVENT_SNR_AVAILABLE no listener ignoring";
+                TASK_LOG(DEBUG) << "STEERING_EVENT_SNR_NOTIFICATION no listener ignoring";
                 break;
             }
 
@@ -588,7 +585,7 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
             }
 
             auto response = message_com::create_vs_message<
-                beerocks_message::cACTION_BML_STEERING_EVENTS_UPDATE>(cmdu_tx);
+                beerocks_message::cACTION_BML_STEERING_EVENTS_UPDATE>(m_cmdu_tx);
             if (response == nullptr) {
                 TASK_LOG(ERROR) << "Failed building cACTION_BML_STEERING_EVENTS_UPDATE message!";
                 return;
@@ -615,21 +612,21 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
             std::copy_n(event_obj->client_mac.oct, BML_MAC_ADDR_LEN,
                         steering_event_snr_availble->data.snr.client_mac);
             steering_event_snr_availble->data.snr.snr = event_obj->snr;
-            send_bml_event_to_listeners(cmdu_tx, events_updates_listeners);
+            send_bml_event_to_listeners(m_cmdu_tx, events_updates_listeners);
         }
         break;
     }
-    case STEERING_EVENT_PROBE_REQ_AVAILABLE: {
+    case STEERING_EVENT_PROBE_REQ_NOTIFICATION: {
         if (obj) {
             auto event_obj   = static_cast<beerocks_message::sSteeringEvProbeReq *>(obj);
             auto client_mac  = tlvf::mac_to_string(event_obj->client_mac);
             auto bssid       = tlvf::mac_to_string(event_obj->bssid);
-            auto group_index = pre_association_steering_db.get_group_index(client_mac, bssid);
-            TASK_LOG(INFO) << "STEERING_EVENT_PROBE_REQ_AVAILABLE client_mac = " << client_mac
+            auto group_index = m_pre_association_steering_db.get_group_index(client_mac, bssid);
+            TASK_LOG(INFO) << "STEERING_EVENT_PROBE_REQ_NOTIFICATION client_mac = " << client_mac
                            << " bssid = " << bssid << " group index " << int(group_index);
 
             if (events_updates_listeners.empty()) {
-                TASK_LOG(DEBUG) << "STEERING_EVENT_PROBE_REQ_AVAILABLE no listener ignoring";
+                TASK_LOG(DEBUG) << "STEERING_EVENT_PROBE_REQ_NOTIFICATION no listener ignoring";
                 break;
             }
 
@@ -640,7 +637,7 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
             }
 
             auto response = message_com::create_vs_message<
-                beerocks_message::cACTION_BML_STEERING_EVENTS_UPDATE>(cmdu_tx);
+                beerocks_message::cACTION_BML_STEERING_EVENTS_UPDATE>(m_cmdu_tx);
             if (response == nullptr) {
                 TASK_LOG(ERROR) << "Failed building cACTION_BML_STEERING_EVENTS_UPDATE message!";
                 return;
@@ -670,21 +667,21 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
             steering_event_probe_req_availble->data.probeReq.snr       = event_obj->rx_snr;
             steering_event_probe_req_availble->data.probeReq.broadcast = event_obj->broadcast;
             steering_event_probe_req_availble->data.probeReq.blocked   = event_obj->blocked;
-            send_bml_event_to_listeners(cmdu_tx, events_updates_listeners);
+            send_bml_event_to_listeners(m_cmdu_tx, events_updates_listeners);
         }
         break;
     }
-    case STEERING_EVENT_AUTH_FAIL_AVAILABLE: {
+    case STEERING_EVENT_AUTH_FAIL_NOTIFICATION: {
         if (obj) {
             auto event_obj   = static_cast<beerocks_message::sSteeringEvAuthFail *>(obj);
             auto client_mac  = tlvf::mac_to_string(event_obj->client_mac);
             auto bssid       = tlvf::mac_to_string(event_obj->bssid);
-            auto group_index = pre_association_steering_db.get_group_index(client_mac, bssid);
-            TASK_LOG(INFO) << "STEERING_EVENT_AUTH_FAIL_AVAILABLE client_mac = " << client_mac
+            auto group_index = m_pre_association_steering_db.get_group_index(client_mac, bssid);
+            TASK_LOG(INFO) << "STEERING_EVENT_AUTH_FAIL_NOTIFICATION client_mac = " << client_mac
                            << " bssid = " << bssid << " group index " << int(group_index);
 
             if (events_updates_listeners.empty()) {
-                TASK_LOG(DEBUG) << "STEERING_EVENT_AUTH_FAIL_AVAILABLE no listener ignoring";
+                TASK_LOG(DEBUG) << "STEERING_EVENT_AUTH_FAIL_NOTIFICATION no listener ignoring";
                 break;
             }
 
@@ -695,7 +692,7 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
             }
 
             auto response = message_com::create_vs_message<
-                beerocks_message::cACTION_BML_STEERING_EVENTS_UPDATE>(cmdu_tx);
+                beerocks_message::cACTION_BML_STEERING_EVENTS_UPDATE>(m_cmdu_tx);
             if (response == nullptr) {
                 TASK_LOG(ERROR) << "Failed building cACTION_BML_STEERING_EVENTS_UPDATE message!";
                 return;
@@ -726,22 +723,24 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
             steering_event_auth_fail_availble->data.authFail.reason     = event_obj->reason;
             steering_event_auth_fail_availble->data.authFail.bsBlocked  = event_obj->blocked;
             steering_event_auth_fail_availble->data.authFail.bsRejected = event_obj->reject;
-            send_bml_event_to_listeners(cmdu_tx, events_updates_listeners);
+            send_bml_event_to_listeners(m_cmdu_tx, events_updates_listeners);
         }
         break;
     }
-    case STEERING_EVENT_CLIENT_CONNECT_AVAILABLE: {
+    case STEERING_EVENT_CLIENT_CONNECT_NOTIFICATION: {
 
         if (obj) {
             auto event_obj   = static_cast<bwl::sClientAssociationParams *>(obj);
             auto client_mac  = tlvf::mac_to_string(event_obj->mac);
             auto bssid       = tlvf::mac_to_string(event_obj->bssid);
-            auto group_index = pre_association_steering_db.get_group_index(client_mac, bssid);
-            TASK_LOG(INFO) << "STEERING_EVENT_CLIENT_CONNECT_AVAILABLE client_mac = " << client_mac
-                           << " bssid = " << bssid << " group index " << int(group_index);
+            auto group_index = m_pre_association_steering_db.get_group_index(client_mac, bssid);
+            TASK_LOG(INFO) << "STEERING_EVENT_CLIENT_CONNECT_NOTIFICATION client_mac = "
+                           << client_mac << " bssid = " << bssid << " group index "
+                           << int(group_index);
 
             if (events_updates_listeners.empty()) {
-                TASK_LOG(DEBUG) << "STEERING_EVENT_CLIENT_CONNECT_AVAILABLE no listener ignoring";
+                TASK_LOG(DEBUG)
+                    << "STEERING_EVENT_CLIENT_CONNECT_NOTIFICATION no listener ignoring";
                 break;
             }
 
@@ -751,11 +750,11 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
                 break;
             }
 
-            auto band_5g     = database.is_node_5ghz(database.get_node_parent_radio(client_mac));
-            auto client_caps = database.get_station_capabilities(client_mac, band_5g);
+            auto band_5g = m_database.is_node_5ghz(m_database.get_node_parent_radio(client_mac));
+            auto client_caps = m_database.get_station_capabilities(client_mac, band_5g);
 
             auto response = message_com::create_vs_message<
-                beerocks_message::cACTION_BML_STEERING_EVENTS_UPDATE>(cmdu_tx);
+                beerocks_message::cACTION_BML_STEERING_EVENTS_UPDATE>(m_cmdu_tx);
             if (response == nullptr) {
                 TASK_LOG(ERROR) << "Failed building cACTION_BML_STEERING_EVENTS_UPDATE message!";
                 return;
@@ -802,24 +801,24 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
             connect_event->data.connect.rmCaps.bcnRptTable   = client_caps->beacon_report_table;
             connect_event->data.connect.rmCaps.lciMeas       = client_caps->lci_meas;
             connect_event->data.connect.rmCaps.ftmRangeRpt   = client_caps->fmt_range_report;
-            send_bml_event_to_listeners(cmdu_tx, events_updates_listeners);
+            send_bml_event_to_listeners(m_cmdu_tx, events_updates_listeners);
         }
         break;
     }
-    case STEERING_EVENT_CLIENT_DISCONNECT_AVAILABLE: {
+    case STEERING_EVENT_CLIENT_DISCONNECT_NOTIFICATION: {
         if (obj) {
             auto event_obj   = static_cast<beerocks_message::sSteeringEvDisconnect *>(obj);
             auto client_mac  = tlvf::mac_to_string(event_obj->client_mac);
             auto bssid       = tlvf::mac_to_string(event_obj->bssid);
-            auto group_index = pre_association_steering_db.get_group_index(client_mac, bssid);
-            TASK_LOG(INFO) << "STEERING_EVENT_CLIENT_DISCONNECT_AVAILABLE client_mac = "
+            auto group_index = m_pre_association_steering_db.get_group_index(client_mac, bssid);
+            TASK_LOG(INFO) << "STEERING_EVENT_CLIENT_DISCONNECT_NOTIFICATION client_mac = "
                            << client_mac << " bssid = " << bssid << " group index "
                            << int(group_index) << " reason " << int(event_obj->reason) << " source "
                            << int(event_obj->source) << " type " << int(event_obj->type);
 
             if (events_updates_listeners.empty()) {
                 TASK_LOG(DEBUG)
-                    << "STEERING_EVENT_CLIENT_DISCONNECT_AVAILABLE no listener ignoring";
+                    << "STEERING_EVENT_CLIENT_DISCONNECT_NOTIFICATION no listener ignoring";
                 break;
             }
 
@@ -830,7 +829,7 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
             }
 
             auto response = message_com::create_vs_message<
-                beerocks_message::cACTION_BML_STEERING_EVENTS_UPDATE>(cmdu_tx);
+                beerocks_message::cACTION_BML_STEERING_EVENTS_UPDATE>(m_cmdu_tx);
             if (response == nullptr) {
                 TASK_LOG(ERROR) << "Failed building cACTION_BML_STEERING_EVENTS_UPDATE message!";
                 return;
@@ -862,7 +861,7 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
                 BML_DISCONNECT_SOURCE(event_obj->source);
             steering_event_client_disconnect_availble->data.disconnect.type =
                 BML_DISCONNECT_TYPE(event_obj->type);
-            send_bml_event_to_listeners(cmdu_tx, events_updates_listeners);
+            send_bml_event_to_listeners(m_cmdu_tx, events_updates_listeners);
         }
         break;
     }
@@ -874,8 +873,8 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
         }
 
         TASK_LOG(INFO) << "STEERING_SLAVE_JOIN event was received";
-        auto event_obj = static_cast<steering_slave_join_event *>(obj);
-        if (pre_association_steering_db.get_steering_group_list().empty()) {
+        auto event_obj = static_cast<sSteeringSlaveJoinEvent *>(obj);
+        if (m_pre_association_steering_db.get_steering_group_list().empty()) {
             TASK_LOG(INFO) << "no configuration to re-send to agent, radio_mac -"
                            << event_obj->radio_mac;
             break;
@@ -894,8 +893,8 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
 bool pre_association_steering_task::is_bml_pre_association_steering_listener_socket(int sd)
 {
     if (sd != beerocks::net::FileDescriptor::invalid_descriptor) {
-        for (auto it = bml_pre_association_steering_listeners_sockets.begin();
-             it < bml_pre_association_steering_listeners_sockets.end(); it++) {
+        for (auto it = m_bml_pre_association_steering_listeners_sockets.begin();
+             it < m_bml_pre_association_steering_listeners_sockets.end(); it++) {
             if (sd == (*it).sd) {
                 return true;
             }
@@ -906,8 +905,8 @@ bool pre_association_steering_task::is_bml_pre_association_steering_listener_soc
 
 int pre_association_steering_task::get_bml_pre_association_steering_socket_at(uint32_t idx)
 {
-    if (idx < (bml_pre_association_steering_listeners_sockets.size())) {
-        return bml_pre_association_steering_listeners_sockets.at(idx).sd;
+    if (idx < (m_bml_pre_association_steering_listeners_sockets.size())) {
+        return m_bml_pre_association_steering_listeners_sockets.at(idx).sd;
     }
     return beerocks::net::FileDescriptor::invalid_descriptor;
 }
@@ -915,8 +914,8 @@ int pre_association_steering_task::get_bml_pre_association_steering_socket_at(ui
 bool pre_association_steering_task::get_bml_pre_association_steering_events_update_enable(int sd)
 {
     if (sd != beerocks::net::FileDescriptor::invalid_descriptor) {
-        for (auto it = bml_pre_association_steering_listeners_sockets.begin();
-             it < bml_pre_association_steering_listeners_sockets.end(); it++) {
+        for (auto it = m_bml_pre_association_steering_listeners_sockets.begin();
+             it < m_bml_pre_association_steering_listeners_sockets.end(); it++) {
             if (sd == (*it).sd) {
                 return (*it).events_updates;
             }
@@ -929,8 +928,8 @@ bool pre_association_steering_task::set_bml_pre_association_steering_events_upda
     int sd, bool update_enable)
 {
     if (sd != beerocks::net::FileDescriptor::invalid_descriptor) {
-        for (auto it = bml_pre_association_steering_listeners_sockets.begin();
-             it < bml_pre_association_steering_listeners_sockets.end(); it++) {
+        for (auto it = m_bml_pre_association_steering_listeners_sockets.begin();
+             it < m_bml_pre_association_steering_listeners_sockets.end(); it++) {
             if (sd == (*it).sd) {
                 (*it).events_updates = update_enable;
                 return true;
@@ -943,15 +942,15 @@ bool pre_association_steering_task::set_bml_pre_association_steering_events_upda
 void pre_association_steering_task::add_bml_pre_association_steering_socket(int sd)
 {
     if (sd != beerocks::net::FileDescriptor::invalid_descriptor) {
-        for (auto it = bml_pre_association_steering_listeners_sockets.begin();
-             it < bml_pre_association_steering_listeners_sockets.end(); it++) {
+        for (auto it = m_bml_pre_association_steering_listeners_sockets.begin();
+             it < m_bml_pre_association_steering_listeners_sockets.end(); it++) {
             if (sd == (*it).sd) {
                 return;
             }
         }
         sBmlPreAssociationSteeringListener bml_pre_association_steering_listener = {0};
         bml_pre_association_steering_listener.sd                                 = sd;
-        bml_pre_association_steering_listeners_sockets.push_back(
+        m_bml_pre_association_steering_listeners_sockets.push_back(
             bml_pre_association_steering_listener);
     }
 }
@@ -959,10 +958,10 @@ void pre_association_steering_task::add_bml_pre_association_steering_socket(int 
 void pre_association_steering_task::remove_bml_pre_association_steering_socket(int sd)
 {
     if (sd != beerocks::net::FileDescriptor::invalid_descriptor) {
-        for (auto it = bml_pre_association_steering_listeners_sockets.begin();
-             it < bml_pre_association_steering_listeners_sockets.end(); it++) {
+        for (auto it = m_bml_pre_association_steering_listeners_sockets.begin();
+             it < m_bml_pre_association_steering_listeners_sockets.end(); it++) {
             if (sd == (*it).sd) {
-                it = bml_pre_association_steering_listeners_sockets.erase(it);
+                it = m_bml_pre_association_steering_listeners_sockets.erase(it);
                 return;
             }
         }
@@ -972,7 +971,7 @@ void pre_association_steering_task::remove_bml_pre_association_steering_socket(i
 void pre_association_steering_task::send_bml_event_to_listeners(
     ieee1905_1::CmduMessageTx &cmdu_tx, const std::vector<int> &bml_listeners)
 {
-    auto controller_ctx = database.get_controller_ctx();
+    auto controller_ctx = m_database.get_controller_ctx();
     if (!controller_ctx) {
         LOG(ERROR) << "controller_ctx == nullptr";
         return;
@@ -985,12 +984,12 @@ void pre_association_steering_task::send_bml_event_to_listeners(
 
 bool pre_association_steering_task::send_steering_conf_to_agent(const std::string &radio_mac)
 {
-    auto agent_mac     = database.get_node_parent_ire(radio_mac);
-    auto is_radio_5ghz = database.is_node_5ghz(radio_mac);
+    auto agent_mac     = m_database.get_node_parent_ire(radio_mac);
+    auto is_radio_5ghz = m_database.is_node_5ghz(radio_mac);
 
-    for (const auto &steering_group : pre_association_steering_db.get_steering_group_list()) {
+    for (const auto &steering_group : m_pre_association_steering_db.get_steering_group_list()) {
         auto update = message_com::create_vs_message<
-            beerocks_message::cACTION_CONTROL_STEERING_CLIENT_SET_GROUP_REQUEST>(cmdu_tx);
+            beerocks_message::cACTION_CONTROL_STEERING_CLIENT_SET_GROUP_REQUEST>(m_cmdu_tx);
         if (update == nullptr) {
             TASK_LOG(ERROR) << "Failed building message!";
             return false;
@@ -1003,15 +1002,15 @@ bool pre_association_steering_task::send_steering_conf_to_agent(const std::strin
         update->params().cfg = is_radio_5ghz
                                    ? steering_group.second->get_config_5ghz().get_ap_config()
                                    : steering_group.second->get_config_2ghz().get_ap_config();
-        auto bssid = is_radio_5ghz ? steering_group.second->get_config_5ghz().bssid
-                                   : steering_group.second->get_config_2ghz().bssid;
+        auto bssid = is_radio_5ghz ? steering_group.second->get_config_5ghz().get_bssid()
+                                   : steering_group.second->get_config_2ghz().get_bssid();
         TASK_LOG(DEBUG) << "send cACTION_CONTROL_STEERING_CLIENT_SET_GROUP_REQUEST to agent "
                         << agent_mac << " radio_mac " << radio_mac;
-        son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, radio_mac);
+        son_actions::send_cmdu_to_agent(agent_mac, m_cmdu_tx, m_database, radio_mac);
         //sending client configuration for specifc group
         for (auto client_entry : client_list) {
             auto steer_client_update = message_com::create_vs_message<
-                beerocks_message::cACTION_CONTROL_STEERING_CLIENT_SET_REQUEST>(cmdu_tx);
+                beerocks_message::cACTION_CONTROL_STEERING_CLIENT_SET_REQUEST>(m_cmdu_tx);
             if (steer_client_update == nullptr) {
                 TASK_LOG(ERROR) << "Failed building message!";
                 return false;
@@ -1023,14 +1022,14 @@ bool pre_association_steering_task::send_steering_conf_to_agent(const std::strin
             steer_client_update->params().config     = *(client_entry.second->get_client_config());
             TASK_LOG(DEBUG) << "send cACTION_CONTROL_STEERING_CLIENT_SET to agent " << agent_mac
                             << " radio_mac " << radio_mac;
-            son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, radio_mac);
+            son_actions::send_cmdu_to_agent(agent_mac, m_cmdu_tx, m_database, radio_mac);
         }
     }
     return true;
 }
 
 int32_t pre_association_steering_task::steering_group_fill_ap_configuration(
-    steering_set_group_request_event *event_obj, beerocks_message::sSteeringApConfig &cfg_2,
+    sSteeringSetGroupRequestEvent *event_obj, beerocks_message::sSteeringApConfig &cfg_2,
     beerocks_message::sSteeringApConfig &cfg_5)
 {
     if (!event_obj->remove) {
@@ -1040,10 +1039,10 @@ int32_t pre_association_steering_task::steering_group_fill_ap_configuration(
                                "inactCheckThresholdSec , invalid configuration";
             return -BML_RET_INVALID_CONFIGURATION;
         }
-        pre_association_steering_db.set_steering_group_config(event_obj->steeringGroupIndex,
-                                                              event_obj->cfg_2, event_obj->cfg_5);
+        m_pre_association_steering_db.set_steering_group_config(event_obj->steeringGroupIndex,
+                                                                event_obj->cfg_2, event_obj->cfg_5);
     } else {
-        auto group_list = pre_association_steering_db.get_steering_group_list();
+        auto group_list = m_pre_association_steering_db.get_steering_group_list();
         if (group_list.find(event_obj->steeringGroupIndex) == group_list.end()) {
             TASK_LOG(ERROR) << "STEERING_SET_GROUP_REQUEST nothing to remove for groupindex = "
                             << int(event_obj->steeringGroupIndex);
@@ -1051,14 +1050,14 @@ int32_t pre_association_steering_task::steering_group_fill_ap_configuration(
         }
     }
 
-    auto steering_group_config = pre_association_steering_db.get_steering_group_list()
+    auto steering_group_config = m_pre_association_steering_db.get_steering_group_list()
                                      .find(event_obj->steeringGroupIndex)
                                      ->second;
     cfg_2 = steering_group_config->get_config_2ghz().get_ap_config();
     cfg_5 = steering_group_config->get_config_5ghz().get_ap_config();
 
     if (event_obj->remove) {
-        if (!pre_association_steering_db.clear_steering_group_config(
+        if (!m_pre_association_steering_db.clear_steering_group_config(
                 event_obj->steeringGroupIndex)) {
             LOG(ERROR) << "STEERING_SET_GROUP_REQUEST db configuration failed";
             return -BML_RET_INVALID_CONFIGURATION;
@@ -1068,9 +1067,9 @@ int32_t pre_association_steering_task::steering_group_fill_ap_configuration(
     return BML_RET_OK;
 }
 
-void pre_association_steering_task::send_bml_response(int event, int sd, int32_t ret)
+void pre_association_steering_task::send_bml_response(eEvents event, int sd, int32_t ret)
 {
-    auto controller_ctx = database.get_controller_ctx();
+    auto controller_ctx = m_database.get_controller_ctx();
     if (!controller_ctx) {
         LOG(ERROR) << "controller_ctx == nullptr";
         return;
@@ -1080,7 +1079,7 @@ void pre_association_steering_task::send_bml_response(int event, int sd, int32_t
     case STEERING_EVENT_UNREGISTER:
     case STEERING_EVENT_REGISTER: {
         auto response = message_com::create_vs_message<
-            beerocks_message::cACTION_BML_STEERING_EVENT_REGISTER_UNREGISTER_RESPONSE>(cmdu_tx);
+            beerocks_message::cACTION_BML_STEERING_EVENT_REGISTER_UNREGISTER_RESPONSE>(m_cmdu_tx);
 
         if (response == nullptr) {
             LOG(ERROR) << "Failed building ACTION_BML_STEERING_EVENT_REGISTER_UNREGISTER_RESPONSE "
@@ -1091,12 +1090,12 @@ void pre_association_steering_task::send_bml_response(int event, int sd, int32_t
         response->error_code() = ret;
 
         //send response to bml
-        controller_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, m_cmdu_tx);
         break;
     }
     case STEERING_SET_GROUP_RESPONSE: {
         auto response = message_com::create_vs_message<
-            beerocks_message::cACTION_BML_STEERING_SET_GROUP_RESPONSE>(cmdu_tx);
+            beerocks_message::cACTION_BML_STEERING_SET_GROUP_RESPONSE>(m_cmdu_tx);
 
         if (response == nullptr) {
             LOG(ERROR) << "Failed building ACTION_BML_STEERING_SET_GROUP_RESPONSE message!";
@@ -1106,12 +1105,12 @@ void pre_association_steering_task::send_bml_response(int event, int sd, int32_t
         response->error_code() = ret;
 
         //send response to bml
-        controller_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, m_cmdu_tx);
         break;
     }
     case STEERING_CLIENT_SET_RESPONSE: {
         auto response = message_com::create_vs_message<
-            beerocks_message::cACTION_BML_STEERING_CLIENT_SET_RESPONSE>(cmdu_tx);
+            beerocks_message::cACTION_BML_STEERING_CLIENT_SET_RESPONSE>(m_cmdu_tx);
 
         if (response == nullptr) {
             LOG(ERROR) << "Failed building ACTION_BML_STEERING_CLIENT_SET_RESPONSE message!";
@@ -1121,12 +1120,12 @@ void pre_association_steering_task::send_bml_response(int event, int sd, int32_t
         response->error_code() = ret;
 
         //send response to bml
-        controller_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, m_cmdu_tx);
         break;
     }
     case STEERING_CLIENT_DISCONNECT_RESPONSE: {
         auto response = message_com::create_vs_message<
-            beerocks_message::cACTION_BML_STEERING_CLIENT_DISCONNECT_RESPONSE>(cmdu_tx);
+            beerocks_message::cACTION_BML_STEERING_CLIENT_DISCONNECT_RESPONSE>(m_cmdu_tx);
 
         if (response == nullptr) {
             LOG(ERROR)
@@ -1137,12 +1136,12 @@ void pre_association_steering_task::send_bml_response(int event, int sd, int32_t
         response->error_code() = ret;
 
         //send response to bml
-        controller_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, m_cmdu_tx);
         break;
     }
     case STEERING_RSSI_MEASUREMENT_RESPONSE: {
         auto response = message_com::create_vs_message<
-            beerocks_message::cACTION_BML_STEERING_CLIENT_MEASURE_RESPONSE>(cmdu_tx);
+            beerocks_message::cACTION_BML_STEERING_CLIENT_MEASURE_RESPONSE>(m_cmdu_tx);
 
         if (response == nullptr) {
             LOG(ERROR) << "Failed building ACTION_BML_STEERING_CLIENT_MEASURE_RESPONSE message!";
@@ -1152,7 +1151,7 @@ void pre_association_steering_task::send_bml_response(int event, int sd, int32_t
         response->error_code() = ret;
 
         //send response to bml
-        controller_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, m_cmdu_tx);
         break;
     }
     default: {
@@ -1162,8 +1161,8 @@ void pre_association_steering_task::send_bml_response(int event, int sd, int32_t
     }
     return;
 }
-void pre_association_steering_task::add_pending_events(int event, int bml_sd,
-                                                       uint32_t num_of_expected_responses)
+void pre_association_steering_task::add_pending_request_event(eEvents event, int bml_sd,
+                                                              uint32_t num_of_expected_responses)
 {
     sPendingEvent pending_event{};
     pending_event.bml_sd                    = bml_sd;
@@ -1171,37 +1170,39 @@ void pre_association_steering_task::add_pending_events(int event, int bml_sd,
     pending_event.num_of_expected_responses = num_of_expected_responses;
     pending_event.num_of_received_responses = 0;
 
-    pending_events.insert(std::make_pair(event, pending_event));
+    m_pending_request_events.insert(std::make_pair(event, pending_event));
 }
 
-void pre_association_steering_task::pending_events_increase_received_responses(int event)
+void pre_association_steering_task::pending_request_event_increase_received_response(eEvents event)
 {
-    pending_events[event].num_of_received_responses++;
+    m_pending_request_events[event].num_of_received_responses++;
 }
 
-void pre_association_steering_task::remove_pending_event(int event) { pending_events.erase(event); }
-bool pre_association_steering_task::is_pending_event_exist(int event)
+void pre_association_steering_task::remove_pending_request_event(eEvents event)
 {
-    return pending_events.find(event) != pending_events.end();
+    m_pending_request_events.erase(event);
 }
-bool pre_association_steering_task::is_pending_event_responses_match(int event)
+bool pre_association_steering_task::is_pending_request_event_exist(eEvents event)
 {
-    return pending_events[event].num_of_expected_responses ==
-           pending_events[event].num_of_received_responses;
+    return m_pending_request_events.find(event) != m_pending_request_events.end();
 }
-
-int pre_association_steering_task::pending_event_get_bml_sd(int event)
+bool pre_association_steering_task::is_pending_request_event_responses_match(eEvents event)
 {
-    return pending_events[event].bml_sd;
+    return m_pending_request_events[event].num_of_expected_responses ==
+           m_pending_request_events[event].num_of_received_responses;
 }
 
-void pre_association_steering_task::pending_event_check_timeout()
+int pre_association_steering_task::pending_request_event_get_bml_sd(eEvents event)
 {
-    for (auto it = pending_events.begin(); it != pending_events.end();) {
+    return m_pending_request_events[event].bml_sd;
+}
+
+void pre_association_steering_task::pending_request_events_check_timeout()
+{
+    for (auto it = m_pending_request_events.begin(); it != m_pending_request_events.end();) {
         if (std::chrono::steady_clock::now() >
             it->second.current_time + std::chrono::seconds(event_timeout)) {
-            pending_events.erase(it);
-            TASK_LOG(ERROR) << "YONI: event erased";
+            m_pending_request_events.erase(it);
         } else {
             ++it;
         }
