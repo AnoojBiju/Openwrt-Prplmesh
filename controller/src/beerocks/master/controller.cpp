@@ -2680,9 +2680,19 @@ bool Controller::handle_cmdu_control_message(
 
     // Sanity tests
     if (radio_mac == beerocks::net::network_utils::ZERO_MAC) {
-        LOG(ERROR) << "CMDU received with id=" << int(beerocks_header->id())
-                   << " op=" << int(beerocks_header->action_op()) << " with empty mac!";
-        return false;
+        if (beerocks_header->action_op() !=
+            beerocks_message::ACTION_CONTROL_CLIENT_DHCP_COMPLETE_NOTIFICATION) {
+            /*
+                dhcp_complete_notification is sent to the controller
+                without a radio mac. This is the expected behavior.
+                Currently, the message is ignored which leads to the
+                IP of the station not showing in the bml-connection-map.
+                Don't ignore this message even though radio_mac is zero.
+            */
+            LOG(ERROR) << "CMDU received with id=" << int(beerocks_header->id())
+                       << " op=" << int(beerocks_header->action_op()) << " with empty mac!";
+            return false;
+        }
     }
 
     if (beerocks_header->actionhdr()->direction() == beerocks::BEEROCKS_DIRECTION_AGENT) {
