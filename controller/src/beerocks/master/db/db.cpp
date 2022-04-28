@@ -239,6 +239,11 @@ bool db::add_node(const sMacAddr &mac, const sMacAddr &parent_mac, beerocks::eTy
     auto n = get_node(mac);
     if (n) { // n is not nullptr
         LOG(DEBUG) << "node with mac " << mac << " already exists, updating";
+        if (n->get_type() != type) {
+            LOG(ERROR) << "Mac duplication detected as type doesn't match prev: " << n->get_type()
+                       << " curr: " << type;
+            return false;
+        }
         n->set_type(type);
         if (n->parent_mac != tlvf::mac_to_string(parent_mac)) {
             n->previous_parent_mac = n->parent_mac;
@@ -489,7 +494,15 @@ bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac)
         return false;
     }
 
-    auto radio = agent->radios.add(mac);
+    if (agent->radios.find(mac) == agent->radios.end())
+    {
+        auto radio = agent->radios.add(mac);
+    }
+    else
+    {
+        LOG(ERROR) << "Mac duplication detected radio mac already present";
+        return false;
+    }
 
     return dm_add_radio_element(*radio, *agent);
 }
