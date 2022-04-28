@@ -2347,7 +2347,14 @@ bool Controller::handle_intel_slave_join(
             LOG(ERROR) << "Existing mac node is not TYPE_SLAVE";
         }
     } else {
-        database.add_node_radio(radio_mac, bridge_mac);
+        if (!database.add_node_radio(radio_mac, bridge_mac)) {
+            if (database.get_hostap_iface_name().compare(notification->hostap().iface_name)) {
+                LOG(ERROR) << "Mac duplication detected between "
+                           << database.get_hostap_iface_name() << " and "
+                           << notification->hostap().iface_name;
+                return false;
+            }
+        }
     }
 
     //reset/init radio stats when adding slave's radio node
