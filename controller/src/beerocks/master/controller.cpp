@@ -2348,6 +2348,13 @@ bool Controller::handle_intel_slave_join(
         }
         LOG(ERROR) << "node already present " << database.get_hostap_iface_name(radio_mac)
                    << " and new " << notification->hostap().iface_name << "for mac " << radio_mac;
+        if (database.get_hostap_iface_name(radio_mac).compare(
+                    notification->hostap().iface_name)) {
+                LOG(ERROR) << "Mac duplication detected between "
+                           << database.get_hostap_iface_name(radio_mac) << " and "
+                           << notification->hostap().iface_name;
+                return false;
+            }
     } else {
         if (!database.add_node_radio(radio_mac, bridge_mac)) {
             LOG(ERROR) << "curr: " << database.get_hostap_iface_name(radio_mac) << " new "
