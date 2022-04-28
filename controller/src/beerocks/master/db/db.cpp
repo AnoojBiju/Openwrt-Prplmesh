@@ -239,7 +239,7 @@ bool db::add_node(const sMacAddr &mac, const sMacAddr &parent_mac, beerocks::eTy
     auto n = get_node(mac);
     if (n) { // n is not nullptr
         LOG(DEBUG) << "node with mac " << mac << " already exists, updating";
-        if (n->get_type() != type) {
+        if ((n->get_type() != type) && !((n->get_type() == 0) && (type == 1))) { // transition from 0 to 1 ie GW to IRE is expected if controller/agent sits on same box
             LOG(ERROR) << "Mac duplication detected as type doesn't match prev: " << n->get_type()
                        << " curr: " << type;
             return false;
