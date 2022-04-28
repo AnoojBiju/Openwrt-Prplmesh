@@ -2346,6 +2346,8 @@ bool Controller::handle_intel_slave_join(
             database.set_node_type(tlvf::mac_to_string(radio_mac), beerocks::TYPE_SLAVE);
             LOG(ERROR) << "Existing mac node is not TYPE_SLAVE";
         }
+        LOG(ERROR) << "node already present " << database.get_hostap_iface_name(radio_mac)
+                   << " and new " << notification->hostap().iface_name << "for mac " << radio_mac;
     } else {
         if (!database.add_node_radio(radio_mac, bridge_mac)) {
             LOG(ERROR) << "curr: " << database.get_hostap_iface_name(radio_mac) << " new "
@@ -2358,6 +2360,8 @@ bool Controller::handle_intel_slave_join(
                 return false;
             }
         }
+        LOG(ERROR) << "add_node returned fine " << database.get_hostap_iface_name(radio_mac)
+                   << " and new " << notification->hostap().iface_name << "for mac " << radio_mac;
     }
 
     //reset/init radio stats when adding slave's radio node
