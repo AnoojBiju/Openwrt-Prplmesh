@@ -497,14 +497,13 @@ bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac)
     if (agent->radios.find(mac) == agent->radios.end())
     {
         auto radio = agent->radios.add(mac);
+        return dm_add_radio_element(*radio, *agent);
     }
     else
     {
         LOG(ERROR) << "Mac duplication detected radio mac already present";
         return false;
     }
-
-    return dm_add_radio_element(*radio, *agent);
 }
 
 std::shared_ptr<Station> db::add_node_station(const sMacAddr &mac, const sMacAddr &parent_mac)
