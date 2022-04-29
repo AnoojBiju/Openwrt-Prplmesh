@@ -2298,6 +2298,12 @@ bool Controller::handle_intel_slave_join(
             database.set_node_type(tlvf::mac_to_string(radio_mac), beerocks::TYPE_SLAVE);
             LOG(ERROR) << "Existing mac node is not TYPE_SLAVE";
         }
+        if (database.get_hostap_iface_name(radio_mac).compare(notification->hostap().iface_name)) {
+            LOG(ERROR) << "Mac duplication detected between "
+                       << database.get_hostap_iface_name(radio_mac) << " and "
+                       << notification->hostap().iface_name;
+            return false;
+        }
     } else {
         database.add_node_radio(radio_mac, bridge_mac);
     }
