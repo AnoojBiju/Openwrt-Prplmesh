@@ -239,7 +239,12 @@ bool db::add_node(const sMacAddr &mac, const sMacAddr &parent_mac, beerocks::eTy
     auto n = get_node(mac);
     if (n) { // n is not nullptr
         LOG(DEBUG) << "node with mac " << mac << " already exists, updating";
-        n->set_type(type);
+        //check if node type is same, else set_type would return false
+        if (!n->set_type(type)) {
+            LOG(ERROR) << "Mac duplication detected as existing type is " << n->get_type()
+                       << " and received type is " << type;
+            return false;
+        }
         if (n->parent_mac != tlvf::mac_to_string(parent_mac)) {
             n->previous_parent_mac = n->parent_mac;
             n->parent_mac          = tlvf::mac_to_string(parent_mac);
