@@ -1496,12 +1496,22 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         pre_association_steering_task::sSteeringSetGroupRequestEvent new_event;
         new_event.sd                 = sd;
         new_event.steeringGroupIndex = request->steeringGroupIndex();
-        new_event.cfg_2              = std::get<1>(request->ap_cfgs(0));
-        new_event.cfg_5              = std::get<1>(request->ap_cfgs(1));
-
-        tasks.push_event(database.get_pre_association_steering_task_id(),
-                         pre_association_steering_task::eEvents::STEERING_SET_GROUP_REQUEST,
-                         &new_event);
+        new_event.remove             = (request->ap_cfgs_length() > 0) ? 0 : 1;
+        bool is_error                = false;
+        for (size_t i = 0; i < request->ap_cfgs_length() / sizeof(sSteeringApConfig); i++) {
+            if (!std::get<0>(request->ap_cfgs(i))) {
+                LOG(ERROR) << "ACTION_BML_STEERING_SET_GROUP_REQUEST can't get AP Configuration No."
+                           << i + 1;
+                is_error = true;
+                break;
+            }
+            new_event.ap_cfgs.push_back(std::get<1>(request->ap_cfgs(i)));
+        }
+        if (!is_error) {
+            tasks.push_event(database.get_pre_association_steering_task_id(),
+                             pre_association_steering_task::eEvents::STEERING_SET_GROUP_REQUEST,
+                             &new_event);
+        }
         break;
     }
     case beerocks_message::ACTION_BML_STEERING_CLIENT_SET_REQUEST: {

@@ -18,7 +18,7 @@ public:
     public:
         ClientConfig(const std::string &mac_,
                      const beerocks_message::sSteeringClientConfig &config_)
-            : m_mac(mac_)
+            : m_client_mac(mac_)
         {
             m_snr_probe_req_hwm       = config_.snrProbeHWM;
             m_snr_probe_req_lwm       = config_.snrProbeLWM;
@@ -45,7 +45,7 @@ public:
         }
 
     private:
-        std::string m_mac;
+        std::string m_client_mac;
         unsigned int m_snr_probe_req_hwm;
         unsigned int m_snr_probe_req_lwm;
         unsigned int m_snr_auth_frame_hwm;
@@ -96,6 +96,11 @@ public:
         const std::string &get_bssid() const { return m_bssid; }
 
     private:
+        /**
+         * @brief Map clients to Clients Configuration
+         * Key: Client MAC.
+         * Value: Client Configuration
+         */
         std::unordered_map<std::string, std::shared_ptr<ClientConfig>> m_client_config_list;
         std::string m_bssid;
         unsigned int m_util_check_interval_sec;
@@ -106,14 +111,15 @@ public:
 
     class SteeringGroupConfig {
     public:
-        SteeringGroupConfig(int index_, const beerocks_message::sSteeringApConfig &config_2ghz_,
-                            const beerocks_message::sSteeringApConfig &config_5ghz_)
-            : m_index(index_), m_config_2ghz(config_2ghz_), m_config_5ghz(config_5ghz_)
+        SteeringGroupConfig(int index_,
+                            const std::vector<beerocks_message::sSteeringApConfig> &ap_cfgs_)
+            : m_index(index_)
         {
+            for (auto &ap_cfg_ : ap_cfgs_) {
+                m_ap_cfgs.push_back(ApConfig(ap_cfg_));
+            }
         }
 
-        std::shared_ptr<beerocks_message::sSteeringApConfig>
-        get_ap_config(const std::string &bssid);
         bool get_client_config(const std::string &mac, const std::string &bssid,
                                std::shared_ptr<beerocks_message::sSteeringClientConfig> &config);
         bool set_client_config(const std::string &mac, const std::string &bssid,
@@ -121,16 +127,13 @@ public:
         bool clear_client_config(const std::string &mac, const std::string &bssid);
         bool update_group_config(const beerocks_message::sSteeringApConfig &config_2ghz,
                                  const beerocks_message::sSteeringApConfig &config_5ghz);
-        ApConfig &get_config_2ghz() { return m_config_2ghz; }
-        ApConfig &get_config_5ghz() { return m_config_5ghz; }
+        bool update_group_config(const std::vector<beerocks_message::sSteeringApConfig> &ap_cfgs);
+        std::vector<ApConfig> &get_ap_configs() { return m_ap_cfgs; }
 
     private:
         const int m_index;
-        ApConfig m_config_2ghz;
-        ApConfig m_config_5ghz;
+        std::vector<ApConfig> m_ap_cfgs;
     };
-
-    std::unordered_map<int, std::shared_ptr<SteeringGroupConfig>> m_steering_group_list;
 
     bool get_client_config(const std::string &mac, const std::string &bssid,
                            const int steering_group_index,
@@ -144,8 +147,7 @@ public:
                              int steering_group_index);
 
     bool set_steering_group_config(int index,
-                                   const beerocks_message::sSteeringApConfig &config_2ghz,
-                                   const beerocks_message::sSteeringApConfig &config_5ghz);
+                                   const std::vector<beerocks_message::sSteeringApConfig> &ap_cfgs);
 
     bool clear_steering_group_config(int index);
 
@@ -162,5 +164,8 @@ public:
     int32_t get_group_index(const std::string &client_mac, const std::string &bssid);
 
     void print_db();
+
+private:
+    std::unordered_map<int, std::shared_ptr<SteeringGroupConfig>> m_steering_group_list;
 };
 } // namespace son

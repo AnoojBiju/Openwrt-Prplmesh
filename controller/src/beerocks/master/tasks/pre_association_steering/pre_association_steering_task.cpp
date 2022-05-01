@@ -94,40 +94,37 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
                            << int(event_obj->steeringGroupIndex);
 
             if (!event_obj->remove) {
-                auto bssid        = tlvf::mac_to_string(event_obj->cfg_2.bssid);
-                auto radio_mac_2g = m_database.get_node_parent_radio(bssid);
-                bssid             = tlvf::mac_to_string(event_obj->cfg_5.bssid);
-                auto radio_mac_5g = m_database.get_node_parent_radio(bssid);
-                if (radio_mac_2g.empty() || radio_mac_5g.empty() ||
-                    !m_database.is_node_24ghz(radio_mac_2g) ||
-                    !m_database.is_node_5ghz(radio_mac_5g)) {
-                    TASK_LOG(ERROR) << "Couldn't find 2.4G or 5G parent node or band mismatch. ";
+                if (!check_ap_cfgs_are_valid(event_obj->ap_cfgs)) {
                     send_bml_response(STEERING_SET_GROUP_RESPONSE, event_obj->sd,
                                       -BML_RET_INVALID_ARGS);
                     break;
                 }
+            } else if (!event_obj->ap_cfgs.empty()) {
+                TASK_LOG(ERROR) << "STEERING_SET_GROUP_REQUEST event: You shall not provide AP "
+                                   "Configurations upon removing";
+                send_bml_response(STEERING_SET_GROUP_RESPONSE, event_obj->sd,
+                                  -BML_RET_INVALID_ARGS);
+                break;
             }
 
-            beerocks_message::sSteeringApConfig cfg_2, cfg_5;
+            std::vector<beerocks_message::sSteeringApConfig> cfgs;
             int32_t ret;
-            if ((ret = steering_group_fill_ap_configuration(event_obj, cfg_2, cfg_5)) < 0) {
+            if ((ret = steering_group_fill_ap_configuration(event_obj, cfgs)) < 0) {
                 LOG(ERROR) << "STEERING_SET_GROUP_REQUEST Failed to fill ap configuration";
                 send_bml_response(STEERING_SET_GROUP_RESPONSE, event_obj->sd, ret);
                 break;
             }
-
             //pre_association_steering_db.print_db();
 
-            auto radios = m_database.get_active_hostaps();
             if (is_pending_request_event_exist(STEERING_SET_GROUP_REQUEST)) {
                 TASK_LOG(ERROR) << "STEERING_SET_GROUP_REQUEST event is already initiated, but the "
                                    "response(s) are not received yet";
                 send_bml_response(STEERING_SET_GROUP_RESPONSE, event_obj->sd, -BML_RET_CMDU_FAIL);
             } else {
-                add_pending_request_event(STEERING_SET_GROUP_REQUEST, event_obj->sd, radios.size());
+                add_pending_request_event(STEERING_SET_GROUP_REQUEST, event_obj->sd, cfgs.size());
             }
             //send new VS message to each slave with his specific data.
-            for (const auto &radio_mac : radios) {
+            for (const auto &cfg : cfgs) {
                 auto update = message_com::create_vs_message<
                     beerocks_message::cACTION_CONTROL_STEERING_CLIENT_SET_GROUP_REQUEST>(m_cmdu_tx);
                 if (update == nullptr) {
@@ -140,13 +137,27 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
                 }
                 update->params().remove             = event_obj->remove;
                 update->params().steeringGroupIndex = event_obj->steeringGroupIndex;
-                if (m_database.is_node_5ghz(radio_mac)) {
-                    update->params().cfg = cfg_5;
-                } else { //(database.is_node_2.4ghz(hostap))
-                    update->params().cfg = cfg_2;
+                update->params().cfg                = cfg;
+                auto vap_mac                        = tlvf::mac_to_string(cfg.bssid);
+                auto radio_mac                      = m_database.get_node_parent_radio(vap_mac);
+                if (radio_mac.empty()) {
+                    TASK_LOG(ERROR) << "Database error: parent radio node of VAP MAC " << vap_mac
+                                    << " is not found";
+                    send_bml_response(STEERING_SET_GROUP_RESPONSE, event_obj->sd,
+                                      -BML_RET_CMDU_FAIL);
+                    remove_pending_request_event(STEERING_SET_GROUP_REQUEST);
+                    break;
                 }
                 auto agent_mac = m_database.get_node_parent_ire(radio_mac);
-                m_sd           = event_obj->sd;
+                if (tlvf::mac_to_string(agent_mac).empty()) {
+                    TASK_LOG(ERROR) << "Database error: parent radio IRE node of radio MAC "
+                                    << radio_mac << " is not found";
+                    send_bml_response(STEERING_SET_GROUP_RESPONSE, event_obj->sd,
+                                      -BML_RET_CMDU_FAIL);
+                    remove_pending_request_event(STEERING_SET_GROUP_REQUEST);
+                    break;
+                }
+                m_sd = event_obj->sd;
                 if (!son_actions::send_cmdu_to_agent(agent_mac, m_cmdu_tx, m_database, radio_mac)) {
                     TASK_LOG(ERROR)
                         << "Failed send ACTION_CONTROL_STEERING_CLIENT_SET_GROUP_REQUEST CMDU to "
@@ -157,8 +168,8 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
                     break;
                 }
                 TASK_LOG(DEBUG)
-                    << "Send  cACTION_CONTROL_STEERING_CLIENT_SET_GROUP_REQUEST to radio_mac = "
-                    << radio_mac;
+                    << "Send  cACTION_CONTROL_STEERING_CLIENT_SET_GROUP_REQUEST to VAP = "
+                    << vap_mac << " that belongs to radio " << radio_mac;
             }
         }
         break;
@@ -228,7 +239,7 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
             // or if the client configuration is the same as already configured,
             // no need to do anything - return success immediately
             std::shared_ptr<beerocks_message::sSteeringClientConfig> existing_config = nullptr;
-            auto res = m_pre_association_steering_db.get_client_config(
+            bool res = m_pre_association_steering_db.get_client_config(
                 client_mac, event_obj->bssid, event_obj->steeringGroupIndex, existing_config);
             bool update_db_and_agent_is_needed = true;
             if (!res && event_obj->remove) {
@@ -984,8 +995,8 @@ void pre_association_steering_task::send_bml_event_to_listeners(
 
 bool pre_association_steering_task::send_steering_conf_to_agent(const std::string &radio_mac)
 {
-    auto agent_mac     = m_database.get_node_parent_ire(radio_mac);
-    auto is_radio_5ghz = m_database.is_node_5ghz(radio_mac);
+    auto agent_mac = m_database.get_node_parent_ire(radio_mac);
+    size_t idx     = 0;
 
     for (const auto &steering_group : m_pre_association_steering_db.get_steering_group_list()) {
         auto update = message_com::create_vs_message<
@@ -996,14 +1007,10 @@ bool pre_association_steering_task::send_steering_conf_to_agent(const std::strin
         }
 
         update->params().steeringGroupIndex = steering_group.first;
-        auto &client_list                   = is_radio_5ghz
-                                ? steering_group.second->get_config_5ghz().get_client_config_list()
-                                : steering_group.second->get_config_2ghz().get_client_config_list();
-        update->params().cfg = is_radio_5ghz
-                                   ? steering_group.second->get_config_5ghz().get_ap_config()
-                                   : steering_group.second->get_config_2ghz().get_ap_config();
-        auto bssid = is_radio_5ghz ? steering_group.second->get_config_5ghz().get_bssid()
-                                   : steering_group.second->get_config_2ghz().get_bssid();
+        auto &client_list = steering_group.second->get_ap_configs()[idx].get_client_config_list();
+        update->params().cfg = steering_group.second->get_ap_configs()[idx].get_ap_config();
+        auto bssid           = steering_group.second->get_ap_configs()[idx].get_bssid();
+        idx++;
         TASK_LOG(DEBUG) << "send cACTION_CONTROL_STEERING_CLIENT_SET_GROUP_REQUEST to agent "
                         << agent_mac << " radio_mac " << radio_mac;
         son_actions::send_cmdu_to_agent(agent_mac, m_cmdu_tx, m_database, radio_mac);
@@ -1029,21 +1036,23 @@ bool pre_association_steering_task::send_steering_conf_to_agent(const std::strin
 }
 
 int32_t pre_association_steering_task::steering_group_fill_ap_configuration(
-    sSteeringSetGroupRequestEvent *event_obj, beerocks_message::sSteeringApConfig &cfg_2,
-    beerocks_message::sSteeringApConfig &cfg_5)
+    sSteeringSetGroupRequestEvent *event_obj,
+    std::vector<beerocks_message::sSteeringApConfig> &ap_cfgs_)
 {
     if (!event_obj->remove) {
-        if (event_obj->cfg_2.inactCheckIntervalSec > event_obj->cfg_2.inactCheckThresholdSec ||
-            event_obj->cfg_5.inactCheckIntervalSec > event_obj->cfg_5.inactCheckThresholdSec) {
-            TASK_LOG(ERROR) << "STEERING_SET_GROUP_REQUEST inactCheckIntervalSec >= "
-                               "inactCheckThresholdSec , invalid configuration";
-            return -BML_RET_INVALID_CONFIGURATION;
+        for (auto &ap_cfg : event_obj->ap_cfgs) {
+            if (ap_cfg.inactCheckIntervalSec > ap_cfg.inactCheckThresholdSec ||
+                ap_cfg.inactCheckIntervalSec > ap_cfg.inactCheckThresholdSec) {
+                TASK_LOG(ERROR) << "STEERING_SET_GROUP_REQUEST inactCheckIntervalSec >= "
+                                   "inactCheckThresholdSec , invalid configuration";
+                return -BML_RET_INVALID_CONFIGURATION;
+            }
         }
         m_pre_association_steering_db.set_steering_group_config(event_obj->steeringGroupIndex,
-                                                                event_obj->cfg_2, event_obj->cfg_5);
+                                                                event_obj->ap_cfgs);
     } else {
-        auto group_list = m_pre_association_steering_db.get_steering_group_list();
-        if (group_list.find(event_obj->steeringGroupIndex) == group_list.end()) {
+        auto steering_group_list = m_pre_association_steering_db.get_steering_group_list();
+        if (steering_group_list.find(event_obj->steeringGroupIndex) == steering_group_list.end()) {
             TASK_LOG(ERROR) << "STEERING_SET_GROUP_REQUEST nothing to remove for groupindex = "
                             << int(event_obj->steeringGroupIndex);
             return -BML_RET_INVALID_CONFIGURATION;
@@ -1053,8 +1062,10 @@ int32_t pre_association_steering_task::steering_group_fill_ap_configuration(
     auto steering_group_config = m_pre_association_steering_db.get_steering_group_list()
                                      .find(event_obj->steeringGroupIndex)
                                      ->second;
-    cfg_2 = steering_group_config->get_config_2ghz().get_ap_config();
-    cfg_5 = steering_group_config->get_config_5ghz().get_ap_config();
+
+    for (auto ap_cfg : steering_group_config->get_ap_configs()) {
+        ap_cfgs_.push_back(ap_cfg.get_ap_config());
+    }
 
     if (event_obj->remove) {
         if (!m_pre_association_steering_db.clear_steering_group_config(
@@ -1063,7 +1074,6 @@ int32_t pre_association_steering_task::steering_group_fill_ap_configuration(
             return -BML_RET_INVALID_CONFIGURATION;
         }
     }
-
     return BML_RET_OK;
 }
 
@@ -1207,4 +1217,43 @@ void pre_association_steering_task::pending_request_events_check_timeout()
             ++it;
         }
     }
+}
+
+bool pre_association_steering_task::check_ap_cfgs_are_valid(
+    std::vector<beerocks_message::sSteeringApConfig> &ap_cfgs)
+{
+    std::string vap_bssid, radio_mac;
+    std::unordered_map<std::string, size_t> vap_bssids_map;
+    std::unordered_map<std::string, size_t>::iterator bssid_it;
+    if (ap_cfgs.empty()) {
+        TASK_LOG(ERROR) << "STEERING_SET_GROUP_REQUEST event: There are no AP Configurations";
+        return false;
+    }
+    for (size_t i = 0; i < ap_cfgs.size(); ++i) {
+        vap_bssid = tlvf::mac_to_string(ap_cfgs[i].bssid);
+        radio_mac = m_database.get_node_parent_radio(vap_bssid);
+        if (radio_mac.empty()) {
+            TASK_LOG(ERROR)
+                << "STEERING_SET_GROUP_REQUEST event: radio_mac that was retrieved from VAP "
+                << vap_bssid << " is empty";
+            return false;
+        }
+        if (!(m_database.is_node_24ghz(radio_mac) || m_database.is_node_5ghz(radio_mac))) {
+            TASK_LOG(ERROR) << "STEERING_SET_GROUP_REQUEST event: radio mac " << radio_mac
+                            << " is neither 2.4ghz nor 5ghz";
+            return false;
+        }
+
+        bssid_it = vap_bssids_map.find(vap_bssid);
+        if (bssid_it == vap_bssids_map.end()) {
+            vap_bssids_map.emplace(vap_bssid, i + 1);
+        } else {
+            TASK_LOG(ERROR) << "STEERING_SET_GROUP_REQUEST event: The BSSID " << bssid_it->first
+                            << " of AP Configurations " << bssid_it->second << " and " << i + 1
+                            << " are the same";
+            return false;
+        }
+    }
+
+    return true;
 }

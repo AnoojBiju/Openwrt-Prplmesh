@@ -27,8 +27,7 @@ public:
     struct sSteeringSetGroupRequestEvent {
         int sd;
         uint32_t steeringGroupIndex;
-        beerocks_message::sSteeringApConfig cfg_2;
-        beerocks_message::sSteeringApConfig cfg_5;
+        std::vector<beerocks_message::sSteeringApConfig> ap_cfgs;
         uint8_t remove;
     };
 
@@ -129,9 +128,9 @@ private:
     void send_bml_event_to_listeners(ieee1905_1::CmduMessageTx &cmdu_tx,
                                      const std::vector<int> &bml_listeners);
     bool send_steering_conf_to_agent(const std::string &radio_mac);
-    int32_t steering_group_fill_ap_configuration(sSteeringSetGroupRequestEvent *event_obj,
-                                                 beerocks_message::sSteeringApConfig &cfg_2,
-                                                 beerocks_message::sSteeringApConfig &cfg_5);
+    int32_t
+    steering_group_fill_ap_configuration(sSteeringSetGroupRequestEvent *event_obj,
+                                         std::vector<beerocks_message::sSteeringApConfig> &ap_cfgs);
 
     void send_bml_response(eEvents event, int sd, int32_t ret = 0);
     void add_pending_request_event(eEvents event, int bml_sd,
@@ -143,6 +142,8 @@ private:
     void pending_request_event_increase_received_response(eEvents event);
 
     void pending_request_events_check_timeout();
+
+    bool check_ap_cfgs_are_valid(std::vector<beerocks_message::sSteeringApConfig> &ap_cfgs);
 
     db &m_database;
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
