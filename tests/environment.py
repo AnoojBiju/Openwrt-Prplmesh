@@ -1092,7 +1092,7 @@ class ALEntityRDKB(ALEntity):
 
         super().__init__(mac, ucc_socket, installdir, is_controller)
 
-        program = "controller" if is_controller else "agent"
+        program = "controller" if is_controller else "backhaul"
         self.logfilenames = ["{}/beerocks_{}.log".format(self.log_folder, program)]
 
         # We always have two radios, wifi0 and wifi1
@@ -1145,7 +1145,7 @@ class ALEntityCGR(ALEntity):
 
         super().__init__(mac, ucc_socket, installdir, is_controller)
 
-        program = "controller" if is_controller else "agent"
+        program = "controller" if is_controller else "backhaul"
         self.logfilenames = ["{}/beerocks_{}.log".format(self.log_folder, program)]
 
         # We always have two radios, wlan0 and wlan2
