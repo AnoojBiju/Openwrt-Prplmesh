@@ -56,7 +56,6 @@ As of the time of writing, it includes the following packages:
 * libnl-3-dev 
 * libnl-genl-3-dev 
 * libnl-route-3-dev 
-* libreadline-dev 
 * libssl-dev 
 * ninja-build 
 * pkg-config 

@@ -7,14 +7,14 @@ FROM mcr.microsoft.com/vscode/devcontainers/base:ubuntu-18.04
 # Avoid warnings by switching to noninteractive
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install build essintials
+# Install build essentials
 RUN apt-get update && apt-get -y upgrade \
     #
     # Install C++ tools
     && apt-get -y install build-essential cmake cppcheck valgrind \
     # Libraries
     libjson-c-dev python-yaml python3-pip python3-yaml libssl-dev \
-    libncurses-dev libreadline-dev libnl-3-dev libnl-route-3-dev libnl-genl-3-dev \
+    libnl-3-dev libnl-route-3-dev libnl-genl-3-dev \
     # Install Helper tools
     bash-completion locales ninja-build pkg-config shellcheck \
     flake8 clang-format vim bridge-utils \
