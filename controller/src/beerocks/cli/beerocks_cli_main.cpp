@@ -265,7 +265,6 @@ static void cli_interactive(std::string path, std::string tmp_path, std::string 
                         }
                     } while (g_running && g_loop_cmd_exec && executions);
                     g_loop_cmd_exec = false;
-
                 }
             }
         }
@@ -281,7 +280,6 @@ static void cli_interactive(std::string path, std::string tmp_path, std::string 
     cli_bml.stop();
     cli_soc.disconnect();
     cli_bml.disconnect();
-
 }
 
 static void cli_tcp_proxy(const std::string &temp_path)
