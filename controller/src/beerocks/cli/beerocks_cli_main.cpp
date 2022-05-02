@@ -22,21 +22,12 @@
 
 #include <chrono>
 
-#ifdef HAVE_READLINE
-#include <readline/history.h>
-#include <readline/readline.h>
-#endif
-
 // Do not use this macro anywhere else in ire process
 // It should only be there in one place in each executable module
 BEEROCKS_INIT_BEEROCKS_VERSION
 
 static bool g_running       = true;
 static bool g_loop_cmd_exec = false;
-
-#ifdef HAVE_READLINE
-static std::vector<std::string> g_cli_cmds;
-#endif
 
 #define BML_PREFIX "bml_"
 
@@ -88,67 +79,6 @@ static void init_signals()
     sigint_action.sa_flags = 0;
     sigaction(SIGINT, &sigint_action, NULL);
 }
-
-#ifdef HAVE_READLINE
-static void *xmalloc(int alloc_size)
-{
-    void *m = malloc(alloc_size);
-    if (m == nullptr) {
-        LOG(FATAL) << "Error: Out of memory. Exiting";
-        sigterm_handler(0);
-        return nullptr;
-    }
-    return m;
-}
-
-static char *dupstr(const std::string &s)
-{
-    auto r_len = s.size() + 1;
-    char *r    = (char *)xmalloc(r_len);
-    if (r == nullptr) {
-        LOG(FATAL) << "Error: Out of memory. Exiting";
-        sigterm_handler(0);
-        return nullptr;
-    }
-    beerocks::string_utils::copy_string(r, s.c_str(), r_len);
-    return r;
-}
-
-static char *command_generator(const char *text, int state)
-{
-    static int list_index;
-
-    std::string text_str(text);
-
-    if (!state) {
-        list_index = 0;
-    }
-
-    while (true) {
-        list_index++;
-        if (list_index >= int(g_cli_cmds.size()))
-            break;
-        if (g_cli_cmds[list_index].find(text_str.c_str(), 0, text_str.size()) !=
-            std::string::npos) {
-            return dupstr(g_cli_cmds[list_index]);
-        }
-    }
-    return NULL;
-}
-
-static char **command_tab_completion(const char *text, int start, int end)
-{
-    char **matches;
-
-    if (start == 0) {
-        matches = rl_completion_matches((char *)text, &command_generator);
-    } else {
-        rl_bind_key('\t', rl_abort);
-        matches = (char **)NULL;
-    }
-    return (matches);
-}
-#endif
 
 static int repeated_cmd_parser(std::string &cmd)
 {
@@ -238,16 +168,6 @@ static bool getline_interactive(std::string &strBuf)
 {
     const char *prompt = ">>";
 
-#ifdef HAVE_READLINE
-    const char *buf = nullptr;
-    buf             = readline(prompt);
-    if (buf) {
-        strBuf = buf;
-        return true;
-    } else {
-        return false;
-    }
-#else
     if (!std::cin.good()) {
         return false;
     }
@@ -258,7 +178,6 @@ static bool getline_interactive(std::string &strBuf)
     } else {
         return true;
     }
-#endif
 }
 
 static void cli_interactive(std::string path, std::string tmp_path, std::string ip)
@@ -289,22 +208,6 @@ static void cli_interactive(std::string path, std::string tmp_path, std::string 
             std::cout << "Connected to BeeRocks Master CLI." << std::endl;
         }
     }
-
-#ifdef HAVE_READLINE
-    //read from history file
-    std::string historyFileName = "/tmp/widan_cli_history.txt";
-    read_history(historyFileName.c_str());
-
-    g_cli_cmds = cli_soc.get_available_commands();
-    {
-        auto cli_bml_cmds = cli_bml.get_available_commands();
-        g_cli_cmds.insert(g_cli_cmds.end(), cli_bml_cmds.begin(), cli_bml_cmds.end());
-    }
-
-    //enable auto-complete
-    rl_attempted_completion_function = command_tab_completion;
-    rl_bind_key('\t', rl_complete);
-#endif
 
     //read user input and execute functions
     bool quit_request = false;
@@ -363,18 +266,6 @@ static void cli_interactive(std::string path, std::string tmp_path, std::string 
                     } while (g_running && g_loop_cmd_exec && executions);
                     g_loop_cmd_exec = false;
 
-#ifdef HAVE_READLINE
-                    //add to history
-                    int idx = history_search_pos(strBuf.c_str(), 0, 0);
-                    if (idx != -1) {
-                        HIST_ENTRY *entry = remove_history(idx);
-                        if (entry) {
-                            free(entry->line);
-                            free(entry);
-                        }
-                    }
-                    add_history(strBuf.c_str());
-#endif
                 }
             }
         }
@@ -391,12 +282,6 @@ static void cli_interactive(std::string path, std::string tmp_path, std::string 
     cli_soc.disconnect();
     cli_bml.disconnect();
 
-#ifdef HAVE_READLINE
-    //write to history file
-    if (write_history(historyFileName.c_str())) {
-        LOG(ERROR) << "failed to write to history file";
-    }
-#endif
 }
 
 static void cli_tcp_proxy(const std::string &temp_path)
