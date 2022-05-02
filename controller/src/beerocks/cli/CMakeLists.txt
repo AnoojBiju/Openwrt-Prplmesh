@@ -1,9 +1,6 @@
 project(beerocks_cli VERSION ${prplmesh_VERSION})
 message("${BoldWhite}Preparing ${BoldGreen}${PROJECT_NAME}${BoldWhite} for the ${BoldGreen}${TARGET_PLATFORM}${BoldWhite} platform${ColourReset}")
 
-# Dependecies
-find_package(readline)
-
 # Set the base path for the current module
 set(MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
 
@@ -25,11 +22,6 @@ target_include_directories(${PROJECT_NAME}
         $<TARGET_PROPERTY:bcl,INTERFACE_INCLUDE_DIRECTORIES>
         $<TARGET_PROPERTY:btlvf,INTERFACE_INCLUDE_DIRECTORIES>
 )
-
-if (readline_FOUND)
-    target_link_libraries(${PROJECT_NAME} readline)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE HAVE_READLINE)
-endif()
 
 # Install
 install(TARGETS ${PROJECT_NAME} DESTINATION ${CMAKE_INSTALL_BINDIR})
