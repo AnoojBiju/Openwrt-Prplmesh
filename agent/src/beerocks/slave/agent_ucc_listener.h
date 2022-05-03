@@ -35,7 +35,8 @@ private:
                               std::string &value) override;
     bool handle_dev_set_rfeature(const std::unordered_map<std::string, std::string> &params,
                                  std::string &err_string) override;
-
+    bool handle_dev_exec_action(const std::unordered_map<std::string, std::string> &params,
+                                std::string &err_string) override;
     bool handle_custom_command(const std::unordered_map<std::string, std::string> &params,
                                std::string &err_string) override;
 
