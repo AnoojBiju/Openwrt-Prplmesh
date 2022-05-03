@@ -188,6 +188,8 @@ beerocks_ucc_listener::wfa_ca_command_from_string(std::string command)
         return eWfaCaCommand::START_WPS_REGISTRATION;
     } else if (command == "DEV_SET_RFEATURE") {
         return eWfaCaCommand::DEV_SET_RFEATURE;
+    } else if (command == "DEV_EXEC_ACTION") {
+        return eWfaCaCommand::DEV_EXEC_ACTION;
     } else if (command == "CUSTOM_CMD") {
         return eWfaCaCommand::CUSTOM_CMD;
     }
@@ -775,6 +777,37 @@ void beerocks_ucc_listener::handle_wfa_ca_command(int fd, const std::string &com
         reply_ucc(fd, eWfaCaStatus::COMPLETE);
         break;
     }
+    case eWfaCaCommand::DEV_EXEC_ACTION: {
+        std::unordered_map<std::string, std::string> params{{"program", std::string()},
+                                                            {"dppactiontype", std::string()}};
+
+        if (!parse_params(cmd_tokens_vec, params, err_string)) {
+            LOG(ERROR) << err_string;
+            reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
+            break;
+        }
+
+        if (params.find("program") == params.end()) {
+            err_string = "'program' is not provided";
+            LOG(ERROR) << err_string;
+            reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
+        }
+        if (!validate_program_parameter(params["program"], err_string)) {
+            // errors are logged by validate_program_parameter
+            reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
+            break;
+        }
+
+        if (!handle_dev_exec_action(params, err_string)) {
+            LOG(ERROR) << err_string;
+            reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
+            break;
+        }
+
+        // Send back second reply
+        reply_ucc(fd, eWfaCaStatus::COMPLETE);
+        break;
+    }
     case eWfaCaCommand::CUSTOM_CMD: {
         std::unordered_map<std::string, std::string> params{{"cmd", std::string()}};
 
@@ -803,9 +836,12 @@ void beerocks_ucc_listener::handle_wfa_ca_command(int fd, const std::string &com
     }
 }
 
-bool beerocks_ucc_listener::validate_program_parameter(const std::string &parameter,
+bool beerocks_ucc_listener::validate_program_parameter(std::string &parameter,
                                                        std::string &err_string)
 {
+    // Transform the parameter to lower case, since the values on supported_programs are lower case.
+    std::transform(parameter.begin(), parameter.end(), parameter.begin(), ::tolower);
+
     if (std::find(supported_programs.begin(), supported_programs.end(), parameter) ==
         supported_programs.end()) {
         err_string = "invalid param value '" + parameter +

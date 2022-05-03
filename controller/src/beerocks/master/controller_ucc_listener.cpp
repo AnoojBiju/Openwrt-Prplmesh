@@ -149,6 +149,147 @@ bool controller_ucc_listener::handle_dev_set_rfeature(
     return false;
 }
 
+bool controller_ucc_listener::handle_dev_exec_action(
+    const std::unordered_map<std::string, std::string> &params, std::string &err_string)
+{
+    auto action_type_it = params.find("dppactiontype");
+    if (action_type_it != params.end()) {
+        auto &action_type = action_type_it->second;
+        if (action_type != "SetPeerBootstrap") {
+            err_string = "DPPActionType is not 'SetPeerBootstrap', value is '" + action_type + "'";
+            return false;
+        }
+
+        auto dpp_bootstrapping_data_bytes_it = params.find("dppbootstrappingdata");
+        if (dpp_bootstrapping_data_bytes_it == params.end()) {
+            err_string = "DPPBootstrappingData is missing";
+            return false;
+        }
+        auto &dpp_bootstrapping_data_bytes = dpp_bootstrapping_data_bytes_it->second;
+
+        auto dpp_bootstrapping_data_str =
+            beerocks::string_utils::bytes_string_to_string(dpp_bootstrapping_data_bytes);
+
+        LOG(DEBUG) << "bootstrapping data: " << dpp_bootstrapping_data_str;
+
+        // dpp_bootstrapping_data is now look like that:
+        // e.g. DPP:V:2;K:MDkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDIgADezecPyVDIgJVgdGBHGBdxRxGpNU7x9cHFBE=;;
+        // Need to parse it according to this rules:
+        //  DPP:
+        //  [C:<channel/opClass>,...;]                                                # Channel list
+        //  [M:<mac(e.g. aabbccddeeff);]                                              # MAC
+        //  [I:<any sequence of printable character except ';', no length limit>;]    # Information
+        //  [V:<at least 1 (ALPHA / DIGIT) character (e.g "1", "2", etc>;]            # Version
+        //  [H:<1-255 characters of (DIGIT / ALPHA / "." / "-" / ":")>;]              # Host
+        //  [<Any sequence of characters which is not one of
+        //    ("C", "M", "I", "V", "H", "K")>:
+        //    <any sequence of printable character except ';', no length limit>;]     # Reserve
+        //  K:<any sequence of (ALPHA / DIGIT / '+' / '/' / '=') , no length limit>;; # Public key
+
+        constexpr char dpp_str[]    = "DPP:";
+        constexpr auto dpp_str_size = sizeof(dpp_str) - 1;
+
+        auto found = dpp_bootstrapping_data_str.find(dpp_str, 0, dpp_str_size);
+        if (found == std::string::npos) {
+            err_string = "missing 'DPP:' prefix on bootstrapping data";
+            return false;
+        }
+        dpp_bootstrapping_data_str.erase(0, dpp_str_size);
+
+        constexpr char data_suffix_str[]    = ";;";
+        constexpr auto data_suffix_str_size = sizeof(data_suffix_str) - 1;
+        found = dpp_bootstrapping_data_str.rfind(data_suffix_str, std::string::npos,
+                                                 data_suffix_str_size);
+        if (found == std::string::npos) {
+            err_string = "missing ';;' suffix on bootstrapping data";
+            return false;
+        }
+        dpp_bootstrapping_data_str.erase(dpp_bootstrapping_data_str.size() - data_suffix_str_size,
+                                         data_suffix_str_size);
+
+        auto bootstrapping_data_elements = string_utils::str_split(dpp_bootstrapping_data_str, ';');
+
+        enum eDppInfoType { CHANNEL, MAC, INFORMATION, VERSION, HOST, PUBLIC_KEY, RESERVE };
+        static std::unordered_map<std::string, eDppInfoType> const dpp_info_conversion = {
+            {"C", eDppInfoType::CHANNEL},     {"M", eDppInfoType::MAC},
+            {"I", eDppInfoType::INFORMATION}, {"V", eDppInfoType::VERSION},
+            {"H", eDppInfoType::HOST},        {"K", eDppInfoType::PUBLIC_KEY}};
+        constexpr char general_parsing_error[] = "Failed to parse bootstrapping info";
+        for (const auto &element : bootstrapping_data_elements) {
+            // element = <X>:<"X info">
+            auto bootstrapping_data_info = string_utils::str_split(element, ':');
+            if (bootstrapping_data_info.size() != 2) {
+                err_string.assign(general_parsing_error);
+                return false;
+            }
+
+            // Get the Enum from the conversion table.
+            auto info_letter_it = dpp_info_conversion.find(bootstrapping_data_info[0]);
+            if (info_letter_it == dpp_info_conversion.end()) {
+                LOG(WARNING) << "Failed to detect bootstrapping info key: "
+                             << bootstrapping_data_info[0];
+                continue;
+            }
+            auto &data                        = bootstrapping_data_info[1];
+            auto &enrollee_bootstrapping_info = m_database.dpp_bootstrapping_info;
+            switch (info_letter_it->second) {
+            case eDppInfoType::CHANNEL: {
+                auto operating_class_channel_pairs = string_utils::str_split(data, ',');
+                for (const auto &pair : operating_class_channel_pairs) {
+                    auto operating_class_channel_pair_vec = string_utils::str_split(pair, '/');
+                    if (operating_class_channel_pair_vec.size() != 2) {
+                        err_string.assign(general_parsing_error);
+                        return false;
+                    }
+                    enrollee_bootstrapping_info.operating_class_channel.emplace(
+                        string_utils::stoi(operating_class_channel_pair_vec[0]),
+                        string_utils::stoi(operating_class_channel_pair_vec[1]));
+                }
+                break;
+            }
+            case eDppInfoType::MAC: {
+                enrollee_bootstrapping_info.mac = tlvf::mac_from_string(data);
+                break;
+            }
+            case eDppInfoType::INFORMATION: {
+                enrollee_bootstrapping_info.info = data;
+                break;
+            }
+            case eDppInfoType::VERSION: {
+                enrollee_bootstrapping_info.version = string_utils::stoi(data);
+                break;
+            }
+            case eDppInfoType::HOST: {
+                enrollee_bootstrapping_info.host = data;
+                break;
+            }
+            case eDppInfoType::PUBLIC_KEY: {
+                enrollee_bootstrapping_info.public_key = data;
+                break;
+            }
+            default: {
+                // Unhandled bootstrapping info
+                break;
+            }
+            }
+        }
+        std::string channels_str;
+        for (auto &ch : m_database.dpp_bootstrapping_info.operating_class_channel) {
+            channels_str += std::to_string(ch.first) + "\\" + std::to_string(ch.second) + ",";
+        }
+        LOG(DEBUG) << "channel:" << channels_str;
+        LOG(DEBUG) << "mac:" << m_database.dpp_bootstrapping_info.mac;
+        LOG(DEBUG) << "info:" << m_database.dpp_bootstrapping_info.info;
+        LOG(DEBUG) << "version:" << m_database.dpp_bootstrapping_info.version;
+        LOG(DEBUG) << "host:" << m_database.dpp_bootstrapping_info.host;
+        LOG(DEBUG) << "public_key:" << m_database.dpp_bootstrapping_info.public_key;
+
+        return true;
+    }
+    err_string = "command is not supported on the Controller";
+    return false;
+}
+
 bool controller_ucc_listener::handle_custom_command(
     const std::unordered_map<std::string, std::string> &params, std::string &err_string)
 {

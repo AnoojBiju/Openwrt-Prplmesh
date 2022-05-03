@@ -229,9 +229,17 @@ bool agent_ucc_listener::handle_dev_set_rfeature(
     return true;
 }
 
+bool agent_ucc_listener::handle_dev_exec_action(
+    const std::unordered_map<std::string, std::string> &params, std::string &err_string)
+{
+    // Will be implemented as part of PPM-1692 and PPM-1693
+    err_string = "handle_dev_exec_action is not yet implemented in agent mode";
+    return false;
+}
+
 bool agent_ucc_listener::handle_custom_command(
     const std::unordered_map<std::string, std::string> &params, std::string &err_string)
 {
-    err_string = "dev set handle_custom_command not supported in agent mode";
+    err_string = "handle_custom_command is not supported in agent mode";
     return false;
 }

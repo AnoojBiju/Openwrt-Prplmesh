@@ -222,6 +222,15 @@ public:
         std::string timestamp;
     } sStaSteeringEvent;
 
+    struct sDppBootstrappingInfo {
+        std::multimap<uint8_t, uint8_t> operating_class_channel;
+        sMacAddr mac;
+        std::string info;
+        uint8_t version;
+        std::string host;
+        std::string public_key;
+    } dpp_bootstrapping_info;
+
     std::unordered_map<sMacAddr, std::vector<sStaSteeringEvent>> m_stations_steering_events;
 
     beerocks::mac_map<Agent> m_agents;

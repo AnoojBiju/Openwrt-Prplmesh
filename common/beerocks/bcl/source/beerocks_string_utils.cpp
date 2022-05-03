@@ -135,6 +135,18 @@ std::string string_utils::int_to_hex_string(const unsigned int integer,
     return ss_hex_string.str();
 };
 
+std::string string_utils::bytes_string_to_string(const std::string &bytes_string)
+{
+    std::string output;
+    // Each two characters represent a single byte. Reserve the sufficient amount of memory.
+    output.reserve(bytes_string.size() / 2);
+    for (size_t char_idx = 0; char_idx < bytes_string.size(); char_idx += 2) {
+        output.push_back(
+            static_cast<char>(std::strtoul(bytes_string.substr(char_idx, 2).c_str(), nullptr, 16)));
+    }
+    return output;
+}
+
 void string_utils::copy_string(char *dst, const char *src, size_t dst_len)
 {
     const char *src_end = std::find(src, src + dst_len, '\0');
