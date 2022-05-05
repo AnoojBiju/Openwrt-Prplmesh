@@ -111,10 +111,10 @@ class ChannelSelection(PrplMeshBaseTest):
 
         self.checkpoint()
 
-        tp20dBm = 0x14
-        tp21dBm = 0x15
+        tp16dBm = 0x10
+        tp17dBm = 0x11
 
-        for payload_transmit_power in (tp20dBm, tp21dBm):
+        for payload_transmit_power in (tp16dBm, tp17dBm):
             debug("Send empty channel selection request with changing tx_power_limit")
             cs_req_mid = controller.dev_send_1905(
                 agent.mac,
@@ -205,11 +205,11 @@ class ChannelSelection(PrplMeshBaseTest):
                 tlv(self.ieee1905['eTlvTypeMap']['TLV_CHANNEL_PREFERENCE'],
                     '{} {}'.format(agent.radios[0].mac, payload_wlan0)),
                 tlv(self.ieee1905['eTlvTypeMap']['TLV_TRANSMIT_POWER_LIMIT'],
-                    '{} 0x{:2x}'.format(agent.radios[0].mac, tp20dBm)),
+                    '{} 0x{:2x}'.format(agent.radios[0].mac, tp16dBm)),
                 tlv(self.ieee1905['eTlvTypeMap']['TLV_CHANNEL_PREFERENCE'],
                     '{} {}'.format(agent.radios[1].mac, payload_wlan2)),
                 tlv(self.ieee1905['eTlvTypeMap']['TLV_TRANSMIT_POWER_LIMIT'],
-                    '{} 0x{:2x}'.format(agent.radios[1].mac, tp20dBm))
+                    '{} 0x{:2x}'.format(agent.radios[1].mac, tp16dBm))
             )
             time.sleep(1)
 
@@ -218,9 +218,9 @@ class ChannelSelection(PrplMeshBaseTest):
 
             cur_power_0 = agent.radios[0].get_power_limit()
             cur_power_1 = agent.radios[1].get_power_limit()
-            if cur_power_0 != tp20dBm:
+            if cur_power_0 != tp16dBm:
                 self.fail("Radio 0 tx_power switched to {}".format(cur_power_0))
-            if cur_power_1 != tp20dBm:
+            if cur_power_1 != tp16dBm:
                 self.fail("Radio 1 tx_power switched to {}".format(cur_power_1))
 
             check_single_channel_response(self, 0x00)
@@ -242,7 +242,7 @@ class ChannelSelection(PrplMeshBaseTest):
                     if ocr.tlv_type != self.ieee1905['eTlvTypeMap']['TLV_OPERATING_CHANNEL_REPORT']:
                         self.fail("Unexpected TLV in operating channel report: {}".format(ocr))
                         continue
-                    if int(ocr.operating_channel_eirp) != tp20dBm:
+                    if int(ocr.operating_channel_eirp) != tp16dBm:
                         self.fail("Unexpected transmit power {} instead of {} for {}".format(
                             ocr.operating_channel_eirp, payload_transmit_power,
                             ocr.operating_channel_radio_id))
