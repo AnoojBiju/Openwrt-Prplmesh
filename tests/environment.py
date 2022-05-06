@@ -1092,7 +1092,7 @@ class ALEntityRDKB(ALEntity):
 
         super().__init__(mac, ucc_socket, installdir, is_controller)
 
-        program = "controller" if is_controller else "agent"
+        program = "controller" if is_controller else "backhaul"
         self.logfilenames = ["{}/beerocks_{}.log".format(self.log_folder, program)]
 
         # We always have two radios, wifi0 and wifi1
@@ -1145,7 +1145,7 @@ class ALEntityCGR(ALEntity):
 
         super().__init__(mac, ucc_socket, installdir, is_controller)
 
-        program = "controller" if is_controller else "agent"
+        program = "controller" if is_controller else "backhaul"
         self.logfilenames = ["{}/beerocks_{}.log".format(self.log_folder, program)]
 
         # We always have two radios, wlan0 and wlan2
@@ -1262,7 +1262,7 @@ class RadioHostapd(Radio):
         regex = r"channel (?P<channel>[0-9]+) [^\r\n]*width[^\r\n]* (?P<width>[0-9]+) " + \
             r"MHz[^\r\n]*center1[^\r\n]* (?P<center>[0-9]+) MHz"
 
-        output = self.agent.command("iw", "dev", f"{self.iface_name}", "info")
+        output = self.agent.command("/usr/sbin/iw", "dev", f"{self.iface_name}", "info")
         match = re.search(regex, output)
         return ChannelInfo(int(match.group('channel')), int(match.group('width')),
                            int(match.group('center')))
@@ -1270,7 +1270,7 @@ class RadioHostapd(Radio):
     def get_power_limit(self) -> int:
         regex = r"txpower (?P<power_limit>[0-9]*)(\.0+)? dBm"
 
-        output = self.agent.command("iw", "dev", f"{self.iface_name}", "info")
+        output = self.agent.command("/usr/sbin/iw", "dev", f"{self.iface_name}", "info")
         match = re.search(regex, output)
         return int(match.group('power_limit'))
 
