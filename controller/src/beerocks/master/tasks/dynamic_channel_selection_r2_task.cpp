@@ -864,6 +864,26 @@ bool dynamic_channel_selection_r2_task::handle_scan_report_event(
     return true;
 }
 
+bool dynamic_channel_selection_r2_task::send_channel_preference_query(const sMacAddr &agent_mac)
+{
+    LOG(TRACE) << "Creating CHANNEL_PREFERENCE_QUERY CMDU for agent: " << agent_mac;
+
+    // Build 1905.1 message CMDU to send to the agent.
+    if (!cmdu_tx.create(0, ieee1905_1::eMessageType::CHANNEL_PREFERENCE_QUERY_MESSAGE)) {
+        LOG(ERROR) << "CMDU creation of type CHANNEL_PREFERENCE_QUERY_MESSAGE, has failed";
+        return false;
+    }
+
+    // Send CMDU to agent.
+    LOG(INFO) << "Send CHANNEL_PREFERENCE_QUERY_MESSAGE to agent: " << agent_mac;
+    if (!son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database)) {
+        LOG(ERROR) << "Failed sending message!";
+        return false;
+    }
+
+    return true;
+}
+
 bool dynamic_channel_selection_r2_task::send_scan_request_to_agent(const sMacAddr &agent_mac)
 {
     // Send CMDU to agent
@@ -1058,6 +1078,9 @@ bool dynamic_channel_selection_r2_task::handle_cmdu_1905_channel_preference_repo
     LOG(DEBUG) << "sending ACK message back to agent";
     son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
 
+    if (m_selection_state == eSelectionState::WAIT_FOR_PREFERENCE) {
+        FSM_MOVE_SELECTION_STATE(eSelectionState::IDLE);
+    }
     return true;
 }
 

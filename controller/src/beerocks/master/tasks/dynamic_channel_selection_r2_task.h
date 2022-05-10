@@ -171,6 +171,17 @@ private:
         const sContinuousScanRequestStateChangeEvent &scan_request_event);
 
     /**
+     * @brief Send a Channel Preference Query message to a given agent.
+     * aligned with the 1905.1 requirements, we need to send a Channel-Preference query to receive
+     * a Channel Preference Report, which contains useful information for the Channel-Selection
+     * feature.
+     * 
+     * @param agent_mac MAC address of the agent.
+     * @return true if successful, false otherwise.
+     */
+    bool send_channel_preference_query(const sMacAddr &agent_mac);
+
+    /**
      * @brief Check the scans queue for any pending requests in idle agents
      * 
      * @return true if pending scan in idle agent found, false otherwise.
