@@ -575,17 +575,19 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
         }
         break;
     }
-    case STEERING_EVENT_SNR_NOTIFICATION: {
+    case STEERING_EVENT_RSSI_MEASUREMENT_SNR_NOTIFICATION: {
         if (obj) {
             auto event_obj   = static_cast<beerocks_message::sSteeringEvSnr *>(obj);
             auto client_mac  = tlvf::mac_to_string(event_obj->client_mac);
             auto bssid       = tlvf::mac_to_string(event_obj->bssid);
             auto group_index = m_pre_association_steering_db.get_group_index(client_mac, bssid);
-            TASK_LOG(INFO) << "STEERING_EVENT_SNR_NOTIFICATION client_mac = " << client_mac
-                           << " bssid = " << bssid << " group index " << int(group_index);
+            TASK_LOG(INFO) << "STEERING_EVENT_RSSI_MEASUREMENT_SNR_NOTIFICATION client_mac = "
+                           << client_mac << " bssid = " << bssid << " group index "
+                           << int(group_index);
 
             if (events_updates_listeners.empty()) {
-                TASK_LOG(DEBUG) << "STEERING_EVENT_SNR_NOTIFICATION no listener ignoring";
+                TASK_LOG(DEBUG)
+                    << "STEERING_EVENT_RSSI_MEASUREMENT_SNR_NOTIFICATION no listener ignoring";
                 break;
             }
 
@@ -612,7 +614,7 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
             event->data = response->buffer(sizeof(BML_EVENT));
 
             auto steering_event_snr_availble  = (BML_EVENT_STEERING *)event->data;
-            steering_event_snr_availble->type = BML_STEERING_EVENT_SNR;
+            steering_event_snr_availble->type = BML_STEERING_EVENT_RSSI_MEASUREMENT;
 
             steering_event_snr_availble->steeringGroupIndex = group_index;
             std::copy_n(event_obj->bssid.oct, BML_MAC_ADDR_LEN, steering_event_snr_availble->bssid);
@@ -621,8 +623,8 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
                     std::chrono::steady_clock::now().time_since_epoch())
                     .count();
             std::copy_n(event_obj->client_mac.oct, BML_MAC_ADDR_LEN,
-                        steering_event_snr_availble->data.snr.client_mac);
-            steering_event_snr_availble->data.snr.snr = event_obj->snr;
+                        steering_event_snr_availble->data.clientMeasurement.client_mac);
+            steering_event_snr_availble->data.clientMeasurement.snr = event_obj->snr;
             send_bml_event_to_listeners(m_cmdu_tx, events_updates_listeners);
         }
         break;

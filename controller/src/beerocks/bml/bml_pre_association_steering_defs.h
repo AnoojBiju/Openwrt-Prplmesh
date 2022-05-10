@@ -67,7 +67,7 @@ typedef enum {
     BML_STEERING_EVENT_CLIENT_ACTIVITY,   /**< Client Active Change Event */
     BML_STEERING_EVENT_CHAN_UTILIZATION,  /**< Channel Utilization Event  */
     BML_STEERING_EVENT_SNR_XING,          /**< Client SNR Crossing Event  */
-    BML_STEERING_EVENT_SNR,               /**< Instant Measurement Event  */
+    BML_STEERING_EVENT_RSSI_MEASUREMENT,  /**< Instant Measurement Event  */
     BML_STEERING_EVENT_AUTH_FAIL          /**< Client Auth Failure Event  */
 } BML_STEERING_EVENT_TYPE;
 
@@ -153,7 +153,7 @@ struct BML_STEERING_EV_SNR_XING {
 /**
  * Client SNR Measurement Event Data
  */
-struct BML_STEERING_EV_SNR {
+struct BML_STEERING_EV_CLIENT_MEASUREMENT {
     BML_MAC_ADDR client_mac; /**< Client MAC Address         */
     uint8_t snr;             /**< Clients current SNR        */
 };
@@ -180,8 +180,9 @@ struct BML_EVENT_STEERING {
         struct BML_STEERING_EV_DISCONNECT disconnect; /**< Client Disconnect Data     */
         struct BML_STEERING_EV_ACTIVITY activity;     /**< Client Active Change Data  */
         struct BML_STEERING_EV_SNR_XING snrXing;      /**< Client SNR Crossing Data   */
-        struct BML_STEERING_EV_SNR snr;               /**< Client Measured SNR Data   */
-        struct BML_STEERING_EV_AUTH_FAIL authFail;    /**< Auth Failure Data          */
+        struct BML_STEERING_EV_CLIENT_MEASUREMENT
+            clientMeasurement;                     /**< Client Measured SNR Data   */
+        struct BML_STEERING_EV_AUTH_FAIL authFail; /**< Auth Failure Data          */
     } data;
 };
 
