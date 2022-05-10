@@ -18,15 +18,18 @@
 #include "task_pool.h"
 
 #include <beerocks/tlvf/beerocks_message.h>
+#include <chrono>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
+#include <tlvf/wfa_map/tlvChannelSelectionResponse.h>
 #include <tlvf/wfa_map/tlvProfile2CacCompletionReport.h>
 #include <tlvf/wfa_map/tlvProfile2CacStatusReport.h>
 #include <tlvf/wfa_map/tlvProfile2ChannelScanRequest.h>
 #include <tlvf/wfa_map/tlvRadioOperationRestriction.h>
 
-#include <chrono>
-
 constexpr uint8_t INTERVAL_TIME_BETWEEN_RETRIES_ON_FAILURE_SEC = 120;
+// According to the Multi-AP specification the timeout is 1 second
+constexpr std::chrono::seconds CHANNEL_PREFERENCE_TIMEOUT(1);
+constexpr std::chrono::seconds CHANNEL_SELECTION_TIMEOUT(1);
 
 namespace son {
 
@@ -36,6 +39,13 @@ public:
                                       task_pool &tasks_);
     bool handle_ieee1905_1_msg(const sMacAddr &src_mac,
                                ieee1905_1::CmduMessageRx &cmdu_rx) override;
+
+    struct sOnDemandChannelSelectionEvent {
+        sMacAddr radio_mac;
+        uint8_t channel;
+        uint8_t operating_class;
+        uint8_t csa_count;
+    };
 
     struct sSingleScanRequestEvent {
         sMacAddr radio_mac;
@@ -52,6 +62,7 @@ public:
     };
 
     enum eEvent : uint8_t {
+        TRIGGER_ON_DEMAND_CHANNEL_SELECTION,
         TRIGGER_SINGLE_SCAN,
         RECEIVED_CHANNEL_SCAN_REPORT,
         CONTINUOUS_STATE_CHANGED_PER_RADIO
@@ -111,29 +122,44 @@ public:
         }
     };
 
-    /**
-     * @brief Map of agent's status.
-     * 
-     * Key:     agent mac.
-     * Value:   agent status as sAgentScanStatus struct.
-     */
-    std::unordered_map<sMacAddr, sAgentScanStatus> m_agents_status_map;
-
 protected:
     virtual void work() override;
     virtual void handle_event(int event_enum_value, void *event_obj) override;
 
 private:
-    enum eState : uint8_t { IDLE, TRIGGER_SCAN };
+    enum class eScanState : uint8_t { IDLE, TRIGGER_SCAN };
+    enum class eSelectionState : uint8_t { IDLE, WAIT_FOR_PREFERENCE, WAIT_FOR_SELECTION_RESPONSE };
 
     // clang-format off
-    const std::unordered_map<eState, std::string, std::hash<int>> m_states_string = {
-      { eState::IDLE,                "IDLE"              },
-      { eState::TRIGGER_SCAN,        "TRIGGER_SCAN"      },
+    const std::unordered_map<eScanState, std::string> m_scan_states_string = {
+      { eScanState::IDLE,           "IDLE"          },
+      { eScanState::TRIGGER_SCAN,   "TRIGGER_SCAN"  },
+    };
+    const std::unordered_map<eSelectionState, std::string> m_selection_states_string = {
+      { eSelectionState::IDLE,                          "IDLE"                          },
+      { eSelectionState::WAIT_FOR_PREFERENCE,           "WAIT_FOR_PREFERENCE"           },
+      { eSelectionState::WAIT_FOR_SELECTION_RESPONSE,   "WAIT_FOR_SELECTION_RESPONSE"   },
     };
     // clang-format on
 
-    eState m_state = eState::IDLE;
+    struct sChannelSelectionRequest {
+        virtual ~sChannelSelectionRequest() = default;
+    };
+    struct sOnDemandChannelSelectionRequest : public sChannelSelectionRequest {
+        sOnDemandChannelSelectionRequest(uint8_t channel_number_, uint8_t operating_class_,
+                                         uint8_t csa_count_)
+            : channel_number(channel_number_), operating_class(operating_class_),
+              csa_count(csa_count_)
+        {
+        }
+
+        uint8_t channel_number;
+        uint8_t operating_class;
+        uint8_t csa_count;
+    };
+
+    eScanState m_scan_state           = eScanState::IDLE;
+    eSelectionState m_selection_state = eSelectionState::IDLE;
 
     // Class constants
     static constexpr uint16_t INVALID_MID_ID = UINT16_MAX;
@@ -141,6 +167,20 @@ private:
     db &database;
     ieee1905_1::CmduMessageTx &cmdu_tx;
     task_pool &tasks;
+
+    /**
+     * @brief Map of agent's status.
+     * 
+     * Key:     agent mac.
+     * Value:   agent scan status as sAgentScanStatus struct.
+     */
+    std::unordered_map<sMacAddr, sAgentScanStatus> m_agents_scan_status_map;
+
+    typedef std::unordered_map<sMacAddr, std::shared_ptr<sChannelSelectionRequest>>
+        AgentChannelSelectionRequest;
+    std::unordered_map<sMacAddr, AgentChannelSelectionRequest> m_pending_selection_requests;
+    std::chrono::steady_clock::time_point m_preference_timeout;
+    std::chrono::steady_clock::time_point m_selection_timeout;
 
     /**
      * @brief Handle single scan request events.
@@ -160,6 +200,36 @@ private:
      */
     bool handle_continuous_scan_request_event(
         const sContinuousScanRequestStateChangeEvent &scan_request_event);
+
+    /**
+     * @brief Handle On-Demand Channel-Selection request events.
+     * Send a Channel-Selection-Request 1905.1 message to the Agent.
+     * 
+     * @param channel_selection_event Reference to an sOnDemandChannelSelectionEvent object.
+     * @return true if successful, false otherwise.
+     */
+    bool handle_on_demand_channel_selection_request_event(
+        const sOnDemandChannelSelectionEvent &channel_selection_event);
+
+    /**
+     * @brief Send pending channel Selection requests
+     * 
+     * @return true if successful, false otherwise.
+     */
+    bool send_selection_requests();
+
+    bool remove_invalid_channel_selection_requests();
+
+    /**
+     * @brief Send a Channel Preference Query message to a given agent.
+     * aligned with the 1905.1 requirements, we need to send a Channel-Preference query to receive
+     * a Channel Preference Report, which contains useful information for the Channel-Selection
+     * feature.
+     * 
+     * @param agent_mac MAC address of the agent.
+     * @return true if successful, false otherwise.
+     */
+    bool send_channel_preference_query(const sMacAddr &agent_mac);
 
     /**
      * @brief Check the scans queue for any pending requests in idle agents
@@ -238,6 +308,25 @@ private:
      */
     bool handle_timeout_in_busy_agents();
 
+    /**
+     * @brief Handle 1905.1 Channel Selection Response message
+     * 
+     * @param src_mac MAC address of the incoming message.
+     * @param cmdu_rx Received CMDU message to handle.
+     * @return true if handled correctly, false otherwise.
+     */
+    bool handle_cmdu_1905_channel_selection_response(const sMacAddr &src_mac,
+                                                     ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief Handle 1905.1 Channel Preference Report message
+     * This message contains an agent's Channel-Preference which is needed to accurately utilize
+     * the Channel-Selection feature.
+     * 
+     * @param src_mac MAC address of the incoming message.
+     * @param cmdu_rx Received CMDU message to handle.
+     * @return true if handled correctly, false otherwise.
+     */
     bool handle_cmdu_1905_channel_preference_report(const sMacAddr &src_mac,
                                                     ieee1905_1::CmduMessageRx &cmdu_rx);
 
