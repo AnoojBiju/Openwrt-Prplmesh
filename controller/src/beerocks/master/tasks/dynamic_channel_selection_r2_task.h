@@ -39,6 +39,13 @@ public:
     bool handle_ieee1905_1_msg(const sMacAddr &src_mac,
                                ieee1905_1::CmduMessageRx &cmdu_rx) override;
 
+    struct sOnDemandChannelSelectionEvent {
+        sMacAddr radio_mac;
+        uint8_t channel;
+        uint8_t operating_class;
+        uint8_t csa_count;
+    };
+
     struct sSingleScanRequestEvent {
         sMacAddr radio_mac;
     };
@@ -54,6 +61,7 @@ public:
     };
 
     enum eEvent : uint8_t {
+        TRIGGER_ON_DEMAND_CHANNEL_SELECTION,
         TRIGGER_SINGLE_SCAN,
         RECEIVED_CHANNEL_SCAN_REPORT,
         CONTINUOUS_STATE_CHANGED_PER_RADIO
@@ -136,6 +144,19 @@ private:
     struct sChannelSelectionRequest {
         virtual ~sChannelSelectionRequest() = default;
     };
+    struct sOnDemandChannelSelectionRequest : public sChannelSelectionRequest {
+        sOnDemandChannelSelectionRequest(uint8_t channel_number_, uint8_t operating_class_,
+                                         uint8_t csa_count_)
+            : channel_number(channel_number_), operating_class(operating_class_),
+              csa_count(csa_count_)
+        {
+        }
+
+        uint8_t channel_number;
+        uint8_t operating_class;
+        uint8_t csa_count;
+    };
+
     eScanState m_scan_state           = eScanState::IDLE;
     eSelectionState m_selection_state = eSelectionState::IDLE;
 
@@ -178,6 +199,16 @@ private:
      */
     bool handle_continuous_scan_request_event(
         const sContinuousScanRequestStateChangeEvent &scan_request_event);
+
+    /**
+     * @brief Handle On-Demand Channel-Selection request events.
+     * Send a Channel-Selection-Request 1905.1 message to the Agent.
+     * 
+     * @param channel_selection_event Reference to an sOnDemandChannelSelectionEvent object.
+     * @return true if successful, false otherwise.
+     */
+    bool handle_on_demand_channel_selection_request_event(
+        const sOnDemandChannelSelectionEvent &channel_selection_event);
 
     /**
      * @brief Send pending channel Selection requests

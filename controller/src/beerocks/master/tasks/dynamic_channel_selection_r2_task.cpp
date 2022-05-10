@@ -133,6 +133,13 @@ void dynamic_channel_selection_r2_task::handle_event(int event_enum_value, void 
         handle_continuous_scan_request_event(*scan_request_event);
         break;
     }
+    case TRIGGER_ON_DEMAND_CHANNEL_SELECTION: {
+        auto scan_request_event =
+            reinterpret_cast<const sOnDemandChannelSelectionEvent *>(event_obj);
+        LOG(TRACE) << "Received TRIGGER_ON_DEMAND_CHANNEL_SELECTION event";
+        handle_on_demand_channel_selection_request_event(*scan_request_event);
+        break;
+    }
     default: {
         LOG(DEBUG) << "Message handler doesn't exists for event type " << event_enum_value;
         break;
@@ -648,6 +655,42 @@ bool dynamic_channel_selection_r2_task::handle_single_scan_request_event(
     return true;
 }
 
+bool dynamic_channel_selection_r2_task::handle_on_demand_channel_selection_request_event(
+    const sOnDemandChannelSelectionEvent &channel_selection_event)
+{
+    const auto &radio_mac      = channel_selection_event.radio_mac;
+    const auto channel         = channel_selection_event.channel;
+    const auto operating_class = channel_selection_event.operating_class;
+    const auto csa_count       = channel_selection_event.csa_count;
+
+    // Get parent agent mac from radio mac
+    auto radio_mac_str = tlvf::mac_to_string(radio_mac);
+    auto agent_mac     = database.get_node_parent_ire(radio_mac_str);
+    if (agent_mac == beerocks::net::network_utils::ZERO_MAC) {
+        LOG(ERROR) << "Failed to get node_parent_ire!";
+        return false;
+    }
+
+    if (m_selection_state != eSelectionState::WAIT_FOR_PREFERENCE) {
+        const auto last_preference = database.get_last_preference_report_change(radio_mac);
+        const auto curr_timestamp  = std::chrono::steady_clock::now();
+        if ((last_preference + CHANNEL_PREFERENCE_EXPIRATION) < curr_timestamp) {
+            LOG(DEBUG) << "Preference Report is outdated, requesting a new preference from agent "
+                       << agent_mac;
+            send_channel_preference_query(agent_mac);
+            m_preference_timeout = std::chrono::steady_clock::now() + CHANNEL_PREFERENCE_TIMEOUT;
+            FSM_MOVE_SELECTION_STATE(eSelectionState::WAIT_FOR_PREFERENCE);
+        }
+    }
+
+    // Set the selection request for the agent & radio.
+    // If doesn't exist unordered_map on set will create a new one.
+    // If it does exist, will be overridden as only the latest request should be handled.
+    m_pending_selection_requests[agent_mac][radio_mac] =
+        std::make_shared<sOnDemandChannelSelectionRequest>(channel, operating_class, csa_count);
+    return true;
+}
+
 bool dynamic_channel_selection_r2_task::handle_continuous_scan_request_event(
     const sContinuousScanRequestStateChangeEvent &scan_request_event)
 {
@@ -932,6 +975,65 @@ bool dynamic_channel_selection_r2_task::send_selection_requests()
         return map;
     };
 
+    auto create_on_demand_channel_preference_tlv =
+        [&, this](const sMacAddr &radio_mac,
+                  const std::shared_ptr<sOnDemandChannelSelectionRequest> request_details,
+                  const radio_preference_tlv_format &formated_preference) -> bool {
+        auto channel_preference_tlv = cmdu_tx.addClass<wfa_map::tlvChannelPreference>();
+        if (!channel_preference_tlv) {
+            LOG(ERROR) << "addClass ieee1905_1::tlvChannelPreference has failed";
+            return false;
+        }
+
+        channel_preference_tlv->radio_uid() = radio_mac;
+
+        for (const auto &iter : formated_preference) {
+            const auto operating_class     = iter.first.first;
+            const auto reported_preference = iter.first.second;
+            const auto &channel_set        = iter.second;
+
+            // If reported preference is In-Operable send it as is, but if it is higher return it as lowest
+            // This is so the radio will pick our On-Demand channel all the time
+            const auto preference =
+                (reported_preference ==
+                 (uint8_t)beerocks::eChannelPreferenceRankingConsts::NON_OPERABLE)
+                    ? (uint8_t)beerocks::eChannelPreferenceRankingConsts::NON_OPERABLE
+                    : (uint8_t)beerocks::eChannelPreferenceRankingConsts::LOWEST;
+
+            // Create a new channel list without the requested channel
+            std::vector<uint8_t> ch_list;
+            for (const auto channel_number : channel_set) {
+                if (operating_class != request_details->operating_class) {
+                    ch_list.push_back(channel_number);
+                } else if (channel_number != request_details->channel_number) {
+                    ch_list.push_back(channel_number);
+                }
+                // This is the requested channel, do not add it since it will be added later.
+            }
+            if (ch_list.empty()) {
+                // If the channel list is empty, no need to create an operating class for it.
+                // This will only happen if the original channel list contained only the requested channel.
+                continue;
+            }
+
+            auto operating_classes_list = channel_preference_tlv->create_operating_classes_list();
+            operating_classes_list->operating_class()  = operating_class;
+            operating_classes_list->flags().preference = preference;
+            if (!operating_classes_list->set_channel_list(ch_list.data(), ch_list.size())) {
+                LOG(ERROR) << "set_channel_list() failed";
+                return false;
+            }
+
+            // Push operating class object to the list of operating class objects
+            if (!channel_preference_tlv->add_operating_classes_list(operating_classes_list)) {
+                LOG(ERROR) << "add_operating_classes_list() has failed!";
+                return false;
+            }
+        }
+
+        return true;
+    };
+
     auto create_channel_preference_tlv =
         [&, this](const sMacAddr &radio_mac,
                   const std::shared_ptr<sChannelSelectionRequest> request_details,
@@ -987,10 +1089,36 @@ bool dynamic_channel_selection_r2_task::send_selection_requests()
             const auto &preference_report =
                 convert_preference_report_map_to_tlv_format(radio_preference);
 
-            // Create Channel-Preference TLV.
-            if (!create_channel_preference_tlv(radio_mac, request_details, preference_report)) {
-                LOG(ERROR) << "Failed to create Channel Preference TLV!";
-                return false;
+            // If our current request is an On-Demand request
+            if (const auto on_demand_details =
+                    std::dynamic_pointer_cast<sOnDemandChannelSelectionRequest>(request_details)) {
+                // Create Channel-Preference TLV aligned with On-Demand requirements.
+                if (!create_on_demand_channel_preference_tlv(radio_mac, on_demand_details,
+                                                             preference_report)) {
+                    LOG(ERROR) << "Failed to create Channel Preference TLV!";
+                    return false;
+                }
+
+                // Create channel scan request extended message (vendor specific tlv)
+                if (database.is_prplmesh(agent_mac)) {
+                    LOG(INFO) << "Add On-Demand TLV";
+                    auto on_demand_vs_tlv = beerocks::message_com::add_vs_tlv<
+                        beerocks_message::tlvVsOnDemandChannelSelection>(cmdu_tx);
+
+                    on_demand_vs_tlv->radio_mac()       = radio_mac;
+                    on_demand_vs_tlv->channel()         = on_demand_details->channel_number;
+                    on_demand_vs_tlv->operating_class() = on_demand_details->operating_class;
+                    on_demand_vs_tlv->CSA_count()       = on_demand_details->csa_count;
+                } else {
+                    LOG(INFO) << "non-prplmesh agent " << agent_mac
+                              << ", skip tlvVsChannelScanRequestExtension creation";
+                }
+            } else {
+                // Create Channel-Preference TLV.
+                if (!create_channel_preference_tlv(radio_mac, request_details, preference_report)) {
+                    LOG(ERROR) << "Failed to create Channel Preference TLV!";
+                    return false;
+                }
             }
         }
 
