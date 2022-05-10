@@ -215,3 +215,8 @@
     EASYMESH_REVISION: "R1"
   after_script:
     - ci/certification/R1_marvell_station.sh
+
+.certification-generic-R4:
+  extends: .certification-generic
+  variables:
+    EASYMESH_REVISION: "R4"
