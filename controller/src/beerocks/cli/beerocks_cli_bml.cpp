@@ -504,6 +504,14 @@ void cli_bml::setFunctionsMapAndArray()
         "bml_pre_association_steering_client_measure", "<steeringGroupIndex> <bssid> <client_mac>",
         "", static_cast<pFunction>(&cli_bml::bml_pre_association_steering_client_measure_caller), 3,
         3, INT_ARG, STRING_ARG, STRING_ARG);
+
+    insertCommandToMap(
+        "bml_pre_association_steering_client_disconnect",
+        "<steeringGroup> <apIndex> <client_mac> <type> <reason>",
+        "Type: 0 - Unknown, 1 - Disassociation, 2 - Deauthentication. reason - reason code to "
+        "provide in deauth/disassoc frame",
+        static_cast<pFunction>(&cli_bml::bml_pre_association_steering_client_disconnect_caller), 5,
+        5, INT_ARG, STRING_ARG, STRING_ARG, INT_ARG, INT_ARG);
 #endif
     insertCommandToMap(
         "bml_set_dcs_continuous_scan_enable", "<mac> <1 or 0>",
@@ -1215,6 +1223,15 @@ int cli_bml::bml_pre_association_steering_client_measure_caller(int numOfArgs)
 {
     if (numOfArgs == 3) {
         return steering_client_measure(args.intArgs[0], args.stringArgs[1], args.stringArgs[2]);
+    }
+    return -1;
+}
+
+int cli_bml::bml_pre_association_steering_client_disconnect_caller(int numOfArgs)
+{
+    if (numOfArgs == 5) {
+        return steering_client_disconnect(args.intArgs[0], args.stringArgs[1], args.stringArgs[2],
+                                          args.intArgs[3], args.intArgs[4]);
     }
     return -1;
 }
@@ -1994,6 +2011,25 @@ int cli_bml::steering_client_measure(uint32_t steeringGroupIndex, const std::str
     printBmlReturnVals("bml_pre_association_steering_client_measure", ret);
     return 0;
 }
+
+int cli_bml::steering_client_disconnect(uint32_t steeringGroupIndex, const std::string &str_bssid,
+                                        const std::string &str_client_mac, uint32_t type,
+                                        uint32_t reason)
+{
+    BML_MAC_ADDR client_mac;
+    tlvf::mac_from_string(client_mac, str_client_mac);
+    BML_MAC_ADDR bssid;
+    tlvf::mac_from_string(bssid, str_bssid);
+    if (type >= 3) {
+        //assign type BML_DISCONNECT_TYPE_UNKNOWN value in case of invalid value
+        type = 0;
+    }
+    int ret = bml_pre_association_steering_client_disconnect(
+        ctx, steeringGroupIndex, bssid, client_mac, static_cast<BML_DISCONNECT_TYPE>(type), reason);
+    printBmlReturnVals("bml_pre_association_steering_client_disconnect", ret);
+    return 0;
+}
+
 #endif //FEATURE_PRE_ASSOCIATION_STEERING
 
 /**

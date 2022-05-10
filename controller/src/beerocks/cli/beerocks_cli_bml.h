@@ -139,6 +139,7 @@ private:
     int bml_pre_association_steering_client_set_caller(int numOfArgs);
     int bml_pre_association_steering_event_register_caller(int numOfArgs);
     int bml_pre_association_steering_client_measure_caller(int numOfArgs);
+    int bml_pre_association_steering_client_disconnect_caller(int numOfArgs);
 #endif
     int set_dcs_continuous_scan_enable_caller(int numOfArgs);
     int get_dcs_continuous_scan_enable_caller(int numOfArgs);
@@ -205,6 +206,9 @@ private:
     int steering_event_register(const std::string &optional = std::string());
     int steering_client_measure(uint32_t steeringGroupIndex, const std::string &str_bssid,
                                 const std::string &str_client_mac);
+    int steering_client_disconnect(uint32_t steeringGroupIndex, const std::string &str_bssid,
+                                   const std::string &str_client_mac, uint32_t type,
+                                   uint32_t reason);
 #endif /* FEATURE_PRE_ASSOCIATION_STEERING */
     int set_dcs_continuous_scan_enable(const std::string &radio_mac, int8_t enable);
     int get_dcs_continuous_scan_enable(const std::string &radio_mac);
