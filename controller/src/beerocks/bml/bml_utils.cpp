@@ -434,11 +434,12 @@ int bml_utils_event_to_string(const struct BML_EVENT *event, char *buffer, int b
                 ", InactiveXing: " + std::to_string(event_data->data.snrXing.inactveXing);
             break;
         }
-        case BML_STEERING_EVENT_SNR: {
-            ss << "BML_STEERING_EVENT_SNR";
+        case BML_STEERING_EVENT_RSSI_MEASUREMENT: {
+            ss << "BML_STEERING_EVENT_RSSI_MEASUREMENT";
             additional_event_data +=
-                "client MAC: " + tlvf::mac_to_string(event_data->data.snr.client_mac);
-            additional_event_data += ", SNR: " + std::to_string(event_data->data.snr.snr);
+                "client MAC: " + tlvf::mac_to_string(event_data->data.clientMeasurement.client_mac);
+            additional_event_data +=
+                ", SNR: " + std::to_string(event_data->data.clientMeasurement.snr);
             break;
         }
         case BML_STEERING_EVENT_AUTH_FAIL: {

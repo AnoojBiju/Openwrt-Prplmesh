@@ -3103,10 +3103,10 @@ bool Controller::handle_cmdu_control_message(
             new_event.client_mac = notification->params().result.mac;
             new_event.bssid      = database.get_hostap_vap_mac(tlvf::mac_from_string(ap_mac),
                                                           notification->params().vap_id);
-            tasks.push_event(
-                database.get_pre_association_steering_task_id(),
-                pre_association_steering_task::eEvents::STEERING_EVENT_SNR_NOTIFICATION,
-                &new_event);
+            tasks.push_event(database.get_pre_association_steering_task_id(),
+                             pre_association_steering_task::eEvents::
+                                 STEERING_EVENT_RSSI_MEASUREMENT_SNR_NOTIFICATION,
+                             &new_event);
         }
 #endif
         break;
