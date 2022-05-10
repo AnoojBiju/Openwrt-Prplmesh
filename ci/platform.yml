@@ -21,6 +21,8 @@ stages:
   - test
   - certification-R1-turris-omnia
   - certification-R1-axepoint
+  - certification-R4-turris-omnia
+  - certification-R4-axepoint
   - upload
   - release
 
