@@ -1,0 +1,31 @@
+.certification:R1:axepoint:
+  stage: certification-R1-axepoint
+  extends: .certification-generic-R1
+  variables:
+    RUN_ON_DEVICE: "axepoint"
+  before_script:
+    - tools/deploy_firmware.py --device axepoint --target-name "$RUN_ON_DEVICE" --image "$AXEPOINT_FULLIMAGE" --configuration ci/configuration/certification/R1/axepoint.sh
+    - tools/deploy_ipk.sh --certification-mode $RUN_ON_DEVICE build/$RUN_ON_DEVICE/prplmesh.ipk
+  needs:
+    - job: build-for-intel-mips
+  tags:
+    - certs-tests
+    - axepoint
+
+.certification:R1:turris-omnia:
+  stage: certification-R1-turris-omnia
+  extends: .certification-generic-R1
+  variables:
+    RUN_ON_DEVICE: "turris-omnia"
+  before_script:
+    - tools/deploy_firmware.py --device turris-omnia --target-name "$RUN_ON_DEVICE" --image "$TURRIS_OMNIA_FULLIMAGE" --configuration ci/configuration/certification/R1/turris-omnia.sh
+    - tools/deploy_ipk.sh --certification-mode $RUN_ON_DEVICE build/$RUN_ON_DEVICE/prplmesh.ipk
+  needs:
+    - job: build-for-turris-omnia
+  tags:
+    - certs-tests
+    - turris-omnia
+
+include:
+  - local: "ci/certification/R1/axepoint.yml"
+  - local: "ci/certification/R1/turris-omnia.yml"

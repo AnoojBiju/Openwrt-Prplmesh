@@ -201,7 +201,7 @@
   # RUN_ON_DEVICE variable need to be set when extending the job
   script:
     - ci/git-clean-reset.sh ~/easymesh_cert "$(<"ci/easymesh_cert_version")"
-    - ~/easymesh_cert/run_test_file.py --verbose --log-folder logs --easymesh-revision "$EASYMESH_REVISION" --device-under-test $RUN_ON_DEVICE "${CI_JOB_NAME%%:*}"
+    - ~/easymesh_cert/run_test_file.py --verbose --log-folder logs --easymesh-revision "$EASYMESH_REVISION" --device-under-test $RUN_ON_DEVICE "${CI_JOB_NAME##*:}"
   artifacts:
     paths:
       - logs

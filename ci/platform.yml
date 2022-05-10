@@ -19,23 +19,16 @@ workflow:
 stages:
   - build
   - test
-  - certification-turris-omnia
-  - certification-turris-omnia-bhwifi
-  - certification-axepoint
-  - certification-axepoint-bhwifi
-  - certification-axepoint-controller
   - certification-R2-nec-wx3000hp
+  - certification-R1-turris-omnia
+  - certification-R1-axepoint
   - certification-R2-axepoint
   - upload
   - release
 
 include:
   - local: "/ci/templates.yml"
-  - local: "/ci/certification/turris-omnia.yml"
-  - local: "/ci/certification/turris-omnia-bhwifi.yml"
-  - local: "/ci/certification/axepoint.yml"
-  - local: "/ci/certification/axepoint-bhwifi.yml"
-  - local: "/ci/certification/axepoint-controller.yml"
+  - local: "/ci/certification/templates.yml"
   - local: "/ci/certification/R2/nec-wx3000hp.yml"
   - local: "/ci/certification/R2/axepoint.yml"
 
