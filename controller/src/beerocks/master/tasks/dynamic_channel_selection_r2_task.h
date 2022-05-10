@@ -133,6 +133,9 @@ private:
     };
     // clang-format on
 
+    struct sChannelSelectionRequest {
+        virtual ~sChannelSelectionRequest() = default;
+    };
     eScanState m_scan_state           = eScanState::IDLE;
     eSelectionState m_selection_state = eSelectionState::IDLE;
 
@@ -150,6 +153,12 @@ private:
      * Value:   agent scan status as sAgentScanStatus struct.
      */
     std::unordered_map<sMacAddr, sAgentScanStatus> m_agents_scan_status_map;
+
+    typedef std::unordered_map<sMacAddr, std::shared_ptr<sChannelSelectionRequest>>
+        AgentChannelSelectionRequest;
+    std::unordered_map<sMacAddr, AgentChannelSelectionRequest> m_pending_selection_requests;
+    std::chrono::steady_clock::time_point m_preference_timeout;
+    std::chrono::steady_clock::time_point m_selection_timeout;
 
     /**
      * @brief Handle single scan request events.
@@ -169,6 +178,15 @@ private:
      */
     bool handle_continuous_scan_request_event(
         const sContinuousScanRequestStateChangeEvent &scan_request_event);
+
+    /**
+     * @brief Send pending channel Selection requests
+     * 
+     * @return true if successful, false otherwise.
+     */
+    bool send_selection_requests();
+
+    bool remove_invalid_channel_selection_requests();
 
     /**
      * @brief Send a Channel Preference Query message to a given agent.

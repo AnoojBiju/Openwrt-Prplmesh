@@ -71,6 +71,20 @@ void dynamic_channel_selection_r2_task::work()
 
     switch (m_selection_state) {
     case eSelectionState::IDLE: {
+        if (!m_pending_selection_requests.empty()) {
+            if (!remove_invalid_channel_selection_requests()) {
+                LOG(ERROR) << "Failed to remove invalid pending scans";
+                break;
+            }
+        }
+        if (!m_pending_selection_requests.empty()) {
+            if (!send_selection_requests()) {
+                LOG(ERROR) << "failed to trigger pending scans";
+                break;
+            }
+            m_selection_timeout = std::chrono::steady_clock::now() + CHANNEL_SELECTION_TIMEOUT;
+            FSM_MOVE_SELECTION_STATE(eSelectionState::WAIT_FOR_SELECTION_RESPONSE);
+        }
     } break;
     case eSelectionState::WAIT_FOR_PREFERENCE: {
         if (m_preference_timeout < std::chrono::steady_clock::now()) {
@@ -882,6 +896,172 @@ bool dynamic_channel_selection_r2_task::send_channel_preference_query(const sMac
     }
 
     return true;
+}
+
+bool dynamic_channel_selection_r2_task::send_selection_requests()
+{
+    /**
+     * The radio-preference-TLV-format container is aligned with the TLV requirements
+     * When we want to send the preference TLV we need to sent it in the following container
+     * Key:     Pair of Operating-Class & Preference-Score
+     * Value:   Set of Channel-Numbers
+     */
+    using radio_preference_tlv_format = std::map<std::pair<uint8_t, uint8_t>, std::set<uint8_t>>;
+    auto convert_preference_report_map_to_tlv_format =
+        [](const node::radio::PreferenceReportMap &radio_preference)
+        -> radio_preference_tlv_format {
+        radio_preference_tlv_format map;
+        for (const auto &iter : radio_preference) {
+            /*
+                Currently the radio's channel preference are build in the following format:
+                    Iter: Pair
+                        First: Pair
+                            First:  Operating Class
+                            Second: Channel Number
+                        Second: Preference
+                But according to the TLV requirements we need to return a map that is
+                aligned to the following format:
+                    Item:
+                        Key: Pair
+                            First:  Operating-Class
+                            Second: Preference-Score
+                        Value:  Set of Channel-Numbers
+            */
+            map[std::make_pair(iter.first.first, iter.second)].insert(iter.first.second);
+        }
+        return map;
+    };
+
+    auto create_channel_preference_tlv =
+        [&, this](const sMacAddr &radio_mac,
+                  const std::shared_ptr<sChannelSelectionRequest> request_details,
+                  const radio_preference_tlv_format &formated_preference) -> bool {
+        auto channel_preference_tlv = cmdu_tx.addClass<wfa_map::tlvChannelPreference>();
+        if (!channel_preference_tlv) {
+            LOG(ERROR) << "addClass ieee1905_1::tlvChannelPreference has failed";
+            return false;
+        }
+
+        channel_preference_tlv->radio_uid() = radio_mac;
+
+        for (const auto &iter : formated_preference) {
+            const auto operating_class     = iter.first.first;
+            const auto reported_preference = iter.first.second;
+            const auto &channel_set        = iter.second;
+
+            // Create a new channel list vector to extract a memory array.
+            std::vector<uint8_t> ch_list(channel_set.begin(), channel_set.end());
+
+            auto operating_classes_list = channel_preference_tlv->create_operating_classes_list();
+            operating_classes_list->operating_class()  = operating_class;
+            operating_classes_list->flags().preference = reported_preference;
+            if (!operating_classes_list->set_channel_list(ch_list.data(), ch_list.size())) {
+                LOG(ERROR) << "set_channel_list() failed";
+                return false;
+            }
+
+            // Push operating class object to the list of operating class objects
+            if (!channel_preference_tlv->add_operating_classes_list(operating_classes_list)) {
+                LOG(ERROR) << "add_operating_classes_list() has failed!";
+                return false;
+            }
+        }
+        return true;
+    };
+
+    std::vector<sMacAddr> sent_requests;
+    for (const auto &agent_iter : m_pending_selection_requests) {
+        const auto &agent_mac = agent_iter.first;
+        const auto &agent_map = agent_iter.second;
+        // Build 1905.1 message CMDU to send to the agent.
+        if (!cmdu_tx.create(0, ieee1905_1::eMessageType::CHANNEL_SELECTION_REQUEST_MESSAGE)) {
+            LOG(ERROR) << "CMDU creation of type CHANNEL_SELECTION_REQUEST_MESSAGE, has failed";
+            return false;
+        }
+
+        for (const auto &radio_iter : agent_map) {
+            const auto &radio_mac        = radio_iter.first;
+            const auto request_details   = radio_iter.second;
+            const auto &radio_preference = database.get_radio_channel_preference(radio_mac);
+
+            const auto &preference_report =
+                convert_preference_report_map_to_tlv_format(radio_preference);
+
+            // Create Channel-Preference TLV.
+            if (!create_channel_preference_tlv(radio_mac, request_details, preference_report)) {
+                LOG(ERROR) << "Failed to create Channel Preference TLV!";
+                return false;
+            }
+        }
+
+        // Send CMDU to agent.
+        LOG(INFO) << "Send CHANNEL_SELECTION_REQUEST_MESSAGE to agent: " << agent_mac;
+        if (!son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database)) {
+            LOG(ERROR) << "Failed sending message!";
+            return false;
+        }
+        sent_requests.push_back(agent_mac);
+    }
+    for (const auto &agent_mac : sent_requests) {
+        m_pending_selection_requests.erase(agent_mac);
+    }
+    return true;
+}
+
+bool dynamic_channel_selection_r2_task::remove_invalid_channel_selection_requests()
+{
+    std::vector<std::pair<sMacAddr, sMacAddr>> invalid_channel_selection_requests;
+    int removed_count = 0;
+
+    for (const auto &agent_iter : m_pending_selection_requests) {
+        const auto &agent_mac = agent_iter.first;
+        for (const auto &radio_iter : agent_iter.second) {
+            const auto &radio_mac = radio_iter.first;
+
+            // Need to check for invalid channel-selection-requests only on On-Demand requests
+            if (const auto on_demand_details =
+                    std::dynamic_pointer_cast<sOnDemandChannelSelectionRequest>(
+                        radio_iter.second)) {
+                const auto operating_class = on_demand_details->operating_class;
+                const auto channel_number  = on_demand_details->channel_number;
+                const auto channel_preference =
+                    database.get_channel_preference(radio_mac, operating_class, channel_number);
+                if (channel_preference <= 0) {
+                    LOG(ERROR) << "Channel Selection request for channel: " << channel_number
+                               << " & operating class: " << operating_class << " is invalid";
+                    invalid_channel_selection_requests.push_back(
+                        std::make_pair(agent_mac, radio_mac));
+                    removed_count++;
+                }
+            }
+        }
+    }
+
+    for (const auto &invalid_requests : invalid_channel_selection_requests) {
+        const auto &agent_mac = invalid_requests.first;
+        const auto &radio_mac = invalid_requests.second;
+
+        const auto &agent_iter = m_pending_selection_requests.find(agent_mac);
+        if (agent_iter == m_pending_selection_requests.end()) {
+            // Agent does not exist
+            continue;
+        }
+        const auto &radio_iter = agent_iter->second.find(radio_mac);
+        if (radio_iter == agent_iter->second.end()) {
+            // Radio does not exist
+            continue;
+        }
+        // Erase invalid radio request from pending requests
+        agent_iter->second.erase(radio_iter);
+        removed_count--;
+        if (agent_iter->second.empty()) {
+            // Erase empty agent map from pending request
+            m_pending_selection_requests.erase(agent_iter);
+        }
+    }
+
+    // Check if all the elements markeed for removal were removed
+    return (removed_count == 0);
 }
 
 bool dynamic_channel_selection_r2_task::send_scan_request_to_agent(const sMacAddr &agent_mac)
