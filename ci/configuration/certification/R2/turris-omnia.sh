@@ -9,17 +9,18 @@ set -e
 # Start with a new log file:
 rm -f /var/log/messages && syslog-ng-ctl reload
 
-# We use WAN for the control interface:
-uci batch << 'EOF'
-set network.control=interface
-set network.control.type='bridge'
-set network.control.proto='static'
-set network.control.netmask='255.255.255.0'
-set network.control.ipaddr='192.168.250.170'
-set network.control.ifname='eth2'
-del network.wan
-set network.lan.ipaddr=192.165.100.170
-EOF
+# We use WAN for the control interface.
+ubus wait_for IP.Interface
+# Add the IP address if there is none yet:
+ubus call IP.Interface _get '{ "rel_path": ".[Alias == \"wan\"].IPv4Address.[Alias == \"wan\"]." }' || {
+    echo "Adding IP address $IP"
+    ubus call "IP.Interface" _add '{ "rel_path": ".[Alias == \"wan\"].IPv4Address.", "parameters": { "IPAddress": "192.168.250.170", "SubnetMask": "255.255.255.0", "AddressingType": "Static", "Alias": "wan", "Enable" : true } }'
+}
+# Enable it:
+ubus call "IP.Interface" _set '{ "rel_path": ".[Alias == \"wan\"].", "parameters": { "IPv4Enable": true } }'
+
+# Set the LAN bridge IP:
+ubus call "IP.Interface" _set '{ "rel_path": ".[Name == \"br-lan\"].IPv4Address.[Alias == \"lan\"].", "parameters": { "IPAddress": "192.165.100.170" } }'
 
 # Wired backhaul interface:
 uci set prplmesh.config.backhaul_wire_iface='lan0'
