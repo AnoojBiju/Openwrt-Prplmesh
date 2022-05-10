@@ -12,12 +12,17 @@ rm -f /var/log/messages && syslog-ng-ctl reload
 # IP for device upgrades, operational tests, Boardfarm data network, ...
 # Note that this device uses the WAN interface (as on some Omnias the
 # others don't work in the bootloader):
-uci batch << 'EOF'
-set network.wan.proto='static'
-set network.wan.netmask='255.255.255.0'
-set network.wan.ipaddr='192.168.1.100'
-set network.lan.ipaddr='192.168.0.100'
-EOF
+ubus wait_for IP.Interface
+# Add the IP address if there is none yet:
+ubus call IP.Interface _get '{ "rel_path": ".[Alias == \"wan\"].IPv4Address.[Alias == \"wan\"]." }' || {
+    echo "Adding IP address $IP"
+    ubus call "IP.Interface" _add '{ "rel_path": ".[Alias == \"wan\"].IPv4Address.", "parameters": { "IPAddress": "192.168.1.100", "SubnetMask": "255.255.255.0", "AddressingType": "Static", "Alias": "wan", "Enable" : true } }'
+}
+# Enable it:
+ubus call "IP.Interface" _set '{ "rel_path": ".[Alias == \"wan\"].", "parameters": { "IPv4Enable": true } }'
+
+# Set a LAN IP:
+ubus call "IP.Interface" _set '{ "rel_path": ".[Alias == \"lan\"].IPv4Address.[Alias == \"lan\"].", "parameters": { "IPAddress": "192.165.0.100" } }'
 
 # Wired backhaul interface:
 uci set prplmesh.config.backhaul_wire_iface='eth2'
