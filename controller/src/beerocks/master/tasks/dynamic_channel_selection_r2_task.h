@@ -26,6 +26,9 @@
 #include <tlvf/wfa_map/tlvRadioOperationRestriction.h>
 
 constexpr uint8_t INTERVAL_TIME_BETWEEN_RETRIES_ON_FAILURE_SEC = 120;
+// According to the Multi-AP specification the timeout is 1 second
+constexpr std::chrono::seconds CHANNEL_PREFERENCE_TIMEOUT(1);
+constexpr std::chrono::seconds CHANNEL_SELECTION_TIMEOUT(1);
 
 namespace son {
 
@@ -116,15 +119,22 @@ protected:
 
 private:
     enum class eScanState : uint8_t { IDLE, TRIGGER_SCAN };
+    enum class eSelectionState : uint8_t { IDLE, WAIT_FOR_PREFERENCE, WAIT_FOR_SELECTION_RESPONSE };
 
     // clang-format off
     const std::unordered_map<eScanState, std::string> m_scan_states_string = {
       { eScanState::IDLE,           "IDLE"          },
       { eScanState::TRIGGER_SCAN,   "TRIGGER_SCAN"  },
     };
+    const std::unordered_map<eSelectionState, std::string> m_selection_states_string = {
+      { eSelectionState::IDLE,                          "IDLE"                          },
+      { eSelectionState::WAIT_FOR_PREFERENCE,           "WAIT_FOR_PREFERENCE"           },
+      { eSelectionState::WAIT_FOR_SELECTION_RESPONSE,   "WAIT_FOR_SELECTION_RESPONSE"   },
+    };
     // clang-format on
 
     eScanState m_scan_state           = eScanState::IDLE;
+    eSelectionState m_selection_state = eSelectionState::IDLE;
 
     // Class constants
     static constexpr uint16_t INVALID_MID_ID = UINT16_MAX;

@@ -8,12 +8,15 @@
 
 #include "dynamic_channel_selection_r2_task.h"
 #include "../son_actions.h"
+#include <bcl/beerocks_defines.h>
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
 #include <beerocks/tlvf/beerocks_message_1905_vs.h>
 #include <easylogging++.h>
+#include <memory>
 
 #define CHANNEL_SCAN_REPORT_WAIT_TIME_SEC 300 //5 Min
+constexpr std::chrono::minutes CHANNEL_PREFERENCE_EXPIRATION(5);
 
 #define FSM_MOVE_SCAN_STATE(new_state)                                                             \
     ({                                                                                             \
@@ -21,6 +24,13 @@
                    << "Scan FSM: " << m_scan_states_string.at(m_scan_state) << " --> "             \
                    << m_scan_states_string.at(new_state);                                          \
         m_scan_state = new_state;                                                                  \
+    })
+#define FSM_MOVE_SELECTION_STATE(new_state)                                                        \
+    ({                                                                                             \
+        LOG(TRACE) << "DYNAMIC_CHANNEL_SELECTION_R2 "                                              \
+                   << "Selection FSM: " << m_selection_states_string.at(m_selection_state)         \
+                   << " --> " << m_selection_states_string.at(new_state);                          \
+        m_selection_state = new_state;                                                             \
     })
 
 dynamic_channel_selection_r2_task::dynamic_channel_selection_r2_task(
@@ -30,6 +40,7 @@ dynamic_channel_selection_r2_task::dynamic_channel_selection_r2_task(
     LOG(TRACE) << "Start dynamic_channel_selection_r2_task(id=" << id << ")";
     database.assign_dynamic_channel_selection_r2_task_id(id);
     m_scan_state      = eScanState::IDLE;
+    m_selection_state = eSelectionState::IDLE;
 }
 
 void dynamic_channel_selection_r2_task::work()
@@ -54,6 +65,26 @@ void dynamic_channel_selection_r2_task::work()
         break;
     }
 
+    default:
+        break;
+    }
+
+    switch (m_selection_state) {
+    case eSelectionState::IDLE: {
+    } break;
+    case eSelectionState::WAIT_FOR_PREFERENCE: {
+        if (m_preference_timeout < std::chrono::steady_clock::now()) {
+            LOG(ERROR) << "Timed out  while waiting for Channel Preference Report!";
+            // Without a newer preference, the controller will use the agent's latest received preference
+            FSM_MOVE_SELECTION_STATE(eSelectionState::IDLE);
+        }
+    } break;
+    case eSelectionState::WAIT_FOR_SELECTION_RESPONSE: {
+        if (m_selection_timeout < std::chrono::steady_clock::now()) {
+            LOG(ERROR) << "Timed out while waiting for Channel Selection Response!";
+            FSM_MOVE_SELECTION_STATE(eSelectionState::IDLE);
+        }
+    } break;
     default:
         break;
     }
