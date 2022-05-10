@@ -196,7 +196,12 @@ public:
         // Value:   std::set<std::pair> Report index
         std::unordered_map<std::string, channel_scan_report_index> channel_scan_report_records;
 
-        typedef std::pair<uint8_t, uint8_t> channel_preference_report_key;
+        /**
+         *  Will be used as a key for the channel-preference report.
+         * First: Operating Class
+         * Second: Channel Number
+         */
+        using channel_preference_report_key = std::pair<uint8_t, uint8_t>;
         struct channel_preference_report_hash {
             std::size_t operator()(const channel_preference_report_key &key) const
             {
@@ -211,8 +216,18 @@ public:
          * Key: Operating Class & Channel Number pair
          * Value: Preference score (1 is least preferred)
         */
-        std::unordered_map<channel_preference_report_key, uint8_t, channel_preference_report_hash>
-            channel_preference_report;
+        using PreferenceReportMap = std::unordered_map<channel_preference_report_key, uint8_t,
+                                                       channel_preference_report_hash>;
+        /**
+         * @brief Latest report of the Radio's Channel Preference
+         * 
+         * A pair that does not appear in the map is considered non-operable
+         * 
+         * Key: Operating Class & Channel Number pair
+         * Value: Preference score (1 is least preferred)
+        */
+        PreferenceReportMap channel_preference_report;
+        std::chrono::steady_clock::time_point last_preference_report_change = {};
 
         struct channel_scan_config {
             bool is_enabled = false;

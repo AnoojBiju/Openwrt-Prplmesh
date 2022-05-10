@@ -1298,11 +1298,10 @@ wireless_utils::center_channel_5g_to_beacon_channels(uint8_t center_channel,
         return {};
     }
     }
-
-    for (size_t i = beacon_channel; i < beacon_channels.capacity(); i += 4) {
-        beacon_channels.push_back(i);
+    for (size_t i = 0; i < beacon_channels.capacity(); i++) {
+        beacon_channels.push_back(beacon_channel);
+        beacon_channel += 4;
     }
-
     return beacon_channels;
 }
 

@@ -8,19 +8,29 @@
 
 #include "dynamic_channel_selection_r2_task.h"
 #include "../son_actions.h"
+#include <bcl/beerocks_defines.h>
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
 #include <beerocks/tlvf/beerocks_message_1905_vs.h>
 #include <easylogging++.h>
+#include <memory>
 
 #define CHANNEL_SCAN_REPORT_WAIT_TIME_SEC 300 //5 Min
+constexpr std::chrono::minutes CHANNEL_PREFERENCE_EXPIRATION(5);
 
-#define FSM_MOVE_STATE(new_state)                                                                  \
+#define FSM_MOVE_SCAN_STATE(new_state)                                                             \
     ({                                                                                             \
         LOG(TRACE) << "DYNAMIC_CHANNEL_SELECTION_R2 "                                              \
-                   << " FSM: " << m_states_string.at(m_state) << " --> "                           \
-                   << m_states_string.at(new_state);                                               \
-        m_state = new_state;                                                                       \
+                   << "Scan FSM: " << m_scan_states_string.at(m_scan_state) << " --> "             \
+                   << m_scan_states_string.at(new_state);                                          \
+        m_scan_state = new_state;                                                                  \
+    })
+#define FSM_MOVE_SELECTION_STATE(new_state)                                                        \
+    ({                                                                                             \
+        LOG(TRACE) << "DYNAMIC_CHANNEL_SELECTION_R2 "                                              \
+                   << "Selection FSM: " << m_selection_states_string.at(m_selection_state)         \
+                   << " --> " << m_selection_states_string.at(new_state);                          \
+        m_selection_state = new_state;                                                             \
     })
 
 dynamic_channel_selection_r2_task::dynamic_channel_selection_r2_task(
@@ -29,31 +39,66 @@ dynamic_channel_selection_r2_task::dynamic_channel_selection_r2_task(
 {
     LOG(TRACE) << "Start dynamic_channel_selection_r2_task(id=" << id << ")";
     database.assign_dynamic_channel_selection_r2_task_id(id);
-    m_state = eState::IDLE;
+    m_scan_state      = eScanState::IDLE;
+    m_selection_state = eSelectionState::IDLE;
 }
 
 void dynamic_channel_selection_r2_task::work()
 {
-    switch (m_state) {
-    case eState::IDLE: {
+    switch (m_scan_state) {
+    case eScanState::IDLE: {
 
         handle_timeout_in_busy_agents();
 
         if (is_scan_pending_for_any_idle_agent()) {
-            FSM_MOVE_STATE(eState::TRIGGER_SCAN);
+            FSM_MOVE_SCAN_STATE(eScanState::TRIGGER_SCAN);
         }
         break;
     }
-    case eState::TRIGGER_SCAN: {
+    case eScanState::TRIGGER_SCAN: {
 
         if (!trigger_pending_scan_requests()) {
             LOG(ERROR) << "failed to trigger pending scans";
         }
 
-        FSM_MOVE_STATE(eState::IDLE);
+        FSM_MOVE_SCAN_STATE(eScanState::IDLE);
         break;
     }
 
+    default:
+        break;
+    }
+
+    switch (m_selection_state) {
+    case eSelectionState::IDLE: {
+        if (!m_pending_selection_requests.empty()) {
+            if (!remove_invalid_channel_selection_requests()) {
+                LOG(ERROR) << "Failed to remove invalid pending scans";
+                break;
+            }
+        }
+        if (!m_pending_selection_requests.empty()) {
+            if (!send_selection_requests()) {
+                LOG(ERROR) << "failed to trigger pending scans";
+                break;
+            }
+            m_selection_timeout = std::chrono::steady_clock::now() + CHANNEL_SELECTION_TIMEOUT;
+            FSM_MOVE_SELECTION_STATE(eSelectionState::WAIT_FOR_SELECTION_RESPONSE);
+        }
+    } break;
+    case eSelectionState::WAIT_FOR_PREFERENCE: {
+        if (m_preference_timeout < std::chrono::steady_clock::now()) {
+            LOG(ERROR) << "Timed out  while waiting for Channel Preference Report!";
+            // Without a newer preference, the controller will use the agent's latest received preference
+            FSM_MOVE_SELECTION_STATE(eSelectionState::IDLE);
+        }
+    } break;
+    case eSelectionState::WAIT_FOR_SELECTION_RESPONSE: {
+        if (m_selection_timeout < std::chrono::steady_clock::now()) {
+            LOG(ERROR) << "Timed out while waiting for Channel Selection Response!";
+            FSM_MOVE_SELECTION_STATE(eSelectionState::IDLE);
+        }
+    } break;
     default:
         break;
     }
@@ -86,6 +131,13 @@ void dynamic_channel_selection_r2_task::handle_event(int event_enum_value, void 
                    << scan_request_event->radio_mac << " enable: " << scan_request_event->enable;
 
         handle_continuous_scan_request_event(*scan_request_event);
+        break;
+    }
+    case TRIGGER_ON_DEMAND_CHANNEL_SELECTION: {
+        auto scan_request_event =
+            reinterpret_cast<const sOnDemandChannelSelectionEvent *>(event_obj);
+        LOG(TRACE) << "Received TRIGGER_ON_DEMAND_CHANNEL_SELECTION event";
+        handle_on_demand_channel_selection_request_event(*scan_request_event);
         break;
     }
     default: {
@@ -133,8 +185,8 @@ bool dynamic_channel_selection_r2_task::is_agent_idle_with_pending_radio_scans(
 
 bool dynamic_channel_selection_r2_task::is_scan_pending_for_any_idle_agent()
 {
-    // Scan m_agents_status_map for idle agents
-    for (const auto &agent : m_agents_status_map) {
+    // Scan m_agents_scan_status_map for idle agents
+    for (const auto &agent : m_agents_scan_status_map) {
 
         // Triggering a scan request for a busy agent will result in the abort
         // of the running scan on that agent. Therefore, triggering of a new scan
@@ -149,7 +201,7 @@ bool dynamic_channel_selection_r2_task::is_scan_pending_for_any_idle_agent()
 
 bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
 {
-    for (auto &agent : m_agents_status_map) {
+    for (auto &agent : m_agents_scan_status_map) {
         auto &agent_mac   = agent.first;
         auto agent_status = agent.second;
 
@@ -523,8 +575,8 @@ bool dynamic_channel_selection_r2_task::is_scan_triggered_for_radio(const sMacAd
     }
 
     // If agent not exist - return false
-    const auto &agent = m_agents_status_map.find(ire);
-    if (agent == m_agents_status_map.cend()) {
+    const auto &agent = m_agents_scan_status_map.find(ire);
+    if (agent == m_agents_scan_status_map.cend()) {
         return false;
     }
 
@@ -563,10 +615,10 @@ bool dynamic_channel_selection_r2_task::handle_single_scan_request_event(
     // Assume we already have an agent handler
     bool create_new_agent = false;
 
-    if (m_agents_status_map.find(ire_mac) != m_agents_status_map.end()) {
+    if (m_agents_scan_status_map.find(ire_mac) != m_agents_scan_status_map.end()) {
         // If agent already exists, make sure there aren't any pending scans.
-        const auto &scan_it = m_agents_status_map[ire_mac].single_radio_scans.find(radio_mac);
-        if (scan_it != m_agents_status_map[ire_mac].single_radio_scans.end()) {
+        const auto &scan_it = m_agents_scan_status_map[ire_mac].single_radio_scans.find(radio_mac);
+        if (scan_it != m_agents_scan_status_map[ire_mac].single_radio_scans.end()) {
             LOG(DEBUG) << "A single scan on agent: " << ire_mac << " radio: " << radio_mac
                        << " already exists.";
             // If the scan is pending to be triggered, return True.
@@ -593,13 +645,49 @@ bool dynamic_channel_selection_r2_task::handle_single_scan_request_event(
     // Check if we need to create a new agent handler
     if (create_new_agent) {
         // Add agent to the queue
-        m_agents_status_map.insert({ire_mac, {}});
+        m_agents_scan_status_map.insert({ire_mac, {}});
     }
 
-    m_agents_status_map[ire_mac].single_radio_scans[radio_mac] =
+    m_agents_scan_status_map[ire_mac].single_radio_scans[radio_mac] =
         sAgentScanStatus::sRadioScanRequest();
-    m_agents_status_map[ire_mac].single_radio_scans[radio_mac].is_single_scan = true;
+    m_agents_scan_status_map[ire_mac].single_radio_scans[radio_mac].is_single_scan = true;
 
+    return true;
+}
+
+bool dynamic_channel_selection_r2_task::handle_on_demand_channel_selection_request_event(
+    const sOnDemandChannelSelectionEvent &channel_selection_event)
+{
+    const auto &radio_mac      = channel_selection_event.radio_mac;
+    const auto channel         = channel_selection_event.channel;
+    const auto operating_class = channel_selection_event.operating_class;
+    const auto csa_count       = channel_selection_event.csa_count;
+
+    // Get parent agent mac from radio mac
+    auto radio_mac_str = tlvf::mac_to_string(radio_mac);
+    auto agent_mac     = database.get_node_parent_ire(radio_mac_str);
+    if (agent_mac == beerocks::net::network_utils::ZERO_MAC) {
+        LOG(ERROR) << "Failed to get node_parent_ire!";
+        return false;
+    }
+
+    if (m_selection_state != eSelectionState::WAIT_FOR_PREFERENCE) {
+        const auto last_preference = database.get_last_preference_report_change(radio_mac);
+        const auto curr_timestamp  = std::chrono::steady_clock::now();
+        if ((last_preference + CHANNEL_PREFERENCE_EXPIRATION) < curr_timestamp) {
+            LOG(DEBUG) << "Preference Report is outdated, requesting a new preference from agent "
+                       << agent_mac;
+            send_channel_preference_query(agent_mac);
+            m_preference_timeout = std::chrono::steady_clock::now() + CHANNEL_PREFERENCE_TIMEOUT;
+            FSM_MOVE_SELECTION_STATE(eSelectionState::WAIT_FOR_PREFERENCE);
+        }
+    }
+
+    // Set the selection request for the agent & radio.
+    // If doesn't exist unordered_map on set will create a new one.
+    // If it does exist, will be overridden as only the latest request should be handled.
+    m_pending_selection_requests[agent_mac][radio_mac] =
+        std::make_shared<sOnDemandChannelSelectionRequest>(channel, operating_class, csa_count);
     return true;
 }
 
@@ -624,14 +712,14 @@ bool dynamic_channel_selection_r2_task::handle_continuous_scan_request_event(
     // the removal the agent has no radio scan requests (is empty) then it will also be removed.
     // If continuous radio scan request is in progress then we will not remove it and it will be removed when the scan
     // is complete. Otherwise, do nothing.
-    const auto &agent = m_agents_status_map.find(agent_mac);
-    if (agent != m_agents_status_map.end()) {
+    const auto &agent = m_agents_scan_status_map.find(agent_mac);
+    if (agent != m_agents_scan_status_map.end()) {
         // Find the scan element within the agent.
-        const auto &scan_it = m_agents_status_map[agent_mac].continuous_radio_scans.find(
+        const auto &scan_it = m_agents_scan_status_map[agent_mac].continuous_radio_scans.find(
             scan_request_event.radio_mac);
         // Check if the scan exists
         bool radio_scan_exist = false;
-        if (scan_it != m_agents_status_map[agent_mac].continuous_radio_scans.end()) {
+        if (scan_it != m_agents_scan_status_map[agent_mac].continuous_radio_scans.end()) {
             radio_scan_exist = true;
         }
 
@@ -651,17 +739,17 @@ bool dynamic_channel_selection_r2_task::handle_continuous_scan_request_event(
             }
 
             // Scan is safe to remove, return true in the end.
-            m_agents_status_map[agent_mac].continuous_radio_scans.erase(
+            m_agents_scan_status_map[agent_mac].continuous_radio_scans.erase(
                 scan_request_event.radio_mac);
 
             LOG(DEBUG) << "Continuous Radio Scan"
                        << " mac: " << scan_it->first
                        << " was successfully deleted from the container";
-            if (m_agents_status_map[agent_mac].single_radio_scans.empty() &&
-                m_agents_status_map[agent_mac].continuous_radio_scans.empty()) {
+            if (m_agents_scan_status_map[agent_mac].single_radio_scans.empty() &&
+                m_agents_scan_status_map[agent_mac].continuous_radio_scans.empty()) {
                 LOG(TRACE) << "Agent " << agent_mac
                            << " has no remaining scans, removing agent status handler";
-                m_agents_status_map.erase(agent);
+                m_agents_scan_status_map.erase(agent);
             }
             return true;
         }
@@ -696,13 +784,13 @@ bool dynamic_channel_selection_r2_task::handle_continuous_scan_request_event(
     // Check if we need to create a new agent handler
     if (create_new_agent) {
         // Add agent to the queue
-        m_agents_status_map.insert({agent_mac, {}});
+        m_agents_scan_status_map.insert({agent_mac, {}});
     }
 
-    m_agents_status_map[agent_mac].continuous_radio_scans[radio_mac] =
+    m_agents_scan_status_map[agent_mac].continuous_radio_scans[radio_mac] =
         sAgentScanStatus::sRadioScanRequest();
-    m_agents_status_map[agent_mac].continuous_radio_scans[radio_mac].is_single_scan = false;
-    m_agents_status_map[agent_mac].continuous_radio_scans[radio_mac].next_time_scan =
+    m_agents_scan_status_map[agent_mac].continuous_radio_scans[radio_mac].is_single_scan = false;
+    m_agents_scan_status_map[agent_mac].continuous_radio_scans[radio_mac].next_time_scan =
         std::chrono::system_clock::now();
 
     return true;
@@ -714,12 +802,12 @@ bool dynamic_channel_selection_r2_task::handle_scan_report_event(
     const auto &agent_mac          = scan_report_event.agent_mac;
     const auto &ISO_8601_timestamp = scan_report_event.ISO_8601_timestamp;
 
-    auto agent_status_it = m_agents_status_map.find(agent_mac);
-    if (agent_status_it == m_agents_status_map.end()) {
+    auto agent_status_it = m_agents_scan_status_map.find(agent_mac);
+    if (agent_status_it == m_agents_scan_status_map.end()) {
         LOG(ERROR) << "Agent " << agent_mac << " is not found in active scans";
         return false;
     }
-    auto &agent_status = m_agents_status_map[agent_mac];
+    auto &agent_status = m_agents_scan_status_map[agent_mac];
 
     auto has_matching_report_index =
         [this, &ISO_8601_timestamp](
@@ -823,7 +911,7 @@ bool dynamic_channel_selection_r2_task::handle_scan_report_event(
     if (agent_status.single_radio_scans.empty() && agent_status.continuous_radio_scans.empty()) {
         LOG(TRACE) << "Agent " << agent_mac
                    << " has no remaining scans, removing agent status handler";
-        m_agents_status_map.erase(agent_status_it);
+        m_agents_scan_status_map.erase(agent_status_it);
     } else {
         LOG(TRACE) << "Agent " << agent_mac
                    << " has remaining scans, clearing status but not removing";
@@ -831,6 +919,277 @@ bool dynamic_channel_selection_r2_task::handle_scan_report_event(
     }
 
     return true;
+}
+
+bool dynamic_channel_selection_r2_task::send_channel_preference_query(const sMacAddr &agent_mac)
+{
+    LOG(TRACE) << "Creating CHANNEL_PREFERENCE_QUERY CMDU for agent: " << agent_mac;
+
+    // Build 1905.1 message CMDU to send to the agent.
+    if (!cmdu_tx.create(0, ieee1905_1::eMessageType::CHANNEL_PREFERENCE_QUERY_MESSAGE)) {
+        LOG(ERROR) << "CMDU creation of type CHANNEL_PREFERENCE_QUERY_MESSAGE, has failed";
+        return false;
+    }
+
+    // Send CMDU to agent.
+    LOG(INFO) << "Send CHANNEL_PREFERENCE_QUERY_MESSAGE to agent: " << agent_mac;
+    if (!son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database)) {
+        LOG(ERROR) << "Failed sending message!";
+        return false;
+    }
+
+    return true;
+}
+
+bool dynamic_channel_selection_r2_task::send_selection_requests()
+{
+    /**
+     * The radio-preference-TLV-format container is aligned with the TLV requirements
+     * When we want to send the preference TLV we need to sent it in the following container
+     * Key:     Pair of Operating-Class & Preference-Score
+     * Value:   Set of Channel-Numbers
+     */
+    using radio_preference_tlv_format = std::map<std::pair<uint8_t, uint8_t>, std::set<uint8_t>>;
+    auto convert_preference_report_map_to_tlv_format =
+        [](const node::radio::PreferenceReportMap &radio_preference)
+        -> radio_preference_tlv_format {
+        radio_preference_tlv_format map;
+        for (const auto &iter : radio_preference) {
+            /*
+                Currently the radio's channel preference are build in the following format:
+                    Iter: Pair
+                        First: Pair
+                            First:  Operating Class
+                            Second: Channel Number
+                        Second: Preference
+                But according to the TLV requirements we need to return a map that is
+                aligned to the following format:
+                    Item:
+                        Key: Pair
+                            First:  Operating-Class
+                            Second: Preference-Score
+                        Value:  Set of Channel-Numbers
+            */
+            map[std::make_pair(iter.first.first, iter.second)].insert(iter.first.second);
+        }
+        return map;
+    };
+
+    auto create_on_demand_channel_preference_tlv =
+        [&, this](const sMacAddr &radio_mac,
+                  const std::shared_ptr<sOnDemandChannelSelectionRequest> request_details,
+                  const radio_preference_tlv_format &formated_preference) -> bool {
+        auto channel_preference_tlv = cmdu_tx.addClass<wfa_map::tlvChannelPreference>();
+        if (!channel_preference_tlv) {
+            LOG(ERROR) << "addClass ieee1905_1::tlvChannelPreference has failed";
+            return false;
+        }
+
+        channel_preference_tlv->radio_uid() = radio_mac;
+
+        for (const auto &iter : formated_preference) {
+            const auto operating_class     = iter.first.first;
+            const auto reported_preference = iter.first.second;
+            const auto &channel_set        = iter.second;
+
+            // If reported preference is In-Operable send it as is, but if it is higher return it as lowest
+            // This is so the radio will pick our On-Demand channel all the time
+            const auto preference =
+                (reported_preference ==
+                 (uint8_t)beerocks::eChannelPreferenceRankingConsts::NON_OPERABLE)
+                    ? (uint8_t)beerocks::eChannelPreferenceRankingConsts::NON_OPERABLE
+                    : (uint8_t)beerocks::eChannelPreferenceRankingConsts::LOWEST;
+
+            // Create a new channel list without the requested channel
+            std::vector<uint8_t> ch_list;
+            for (const auto channel_number : channel_set) {
+                if (operating_class != request_details->operating_class) {
+                    ch_list.push_back(channel_number);
+                } else if (channel_number != request_details->channel_number) {
+                    ch_list.push_back(channel_number);
+                }
+                // This is the requested channel, do not add it since it will be added later.
+            }
+            if (ch_list.empty()) {
+                // If the channel list is empty, no need to create an operating class for it.
+                // This will only happen if the original channel list contained only the requested channel.
+                continue;
+            }
+
+            auto operating_classes_list = channel_preference_tlv->create_operating_classes_list();
+            operating_classes_list->operating_class()  = operating_class;
+            operating_classes_list->flags().preference = preference;
+            if (!operating_classes_list->set_channel_list(ch_list.data(), ch_list.size())) {
+                LOG(ERROR) << "set_channel_list() failed";
+                return false;
+            }
+
+            // Push operating class object to the list of operating class objects
+            if (!channel_preference_tlv->add_operating_classes_list(operating_classes_list)) {
+                LOG(ERROR) << "add_operating_classes_list() has failed!";
+                return false;
+            }
+        }
+
+        return true;
+    };
+
+    auto create_channel_preference_tlv =
+        [&, this](const sMacAddr &radio_mac,
+                  const std::shared_ptr<sChannelSelectionRequest> request_details,
+                  const radio_preference_tlv_format &formated_preference) -> bool {
+        auto channel_preference_tlv = cmdu_tx.addClass<wfa_map::tlvChannelPreference>();
+        if (!channel_preference_tlv) {
+            LOG(ERROR) << "addClass ieee1905_1::tlvChannelPreference has failed";
+            return false;
+        }
+
+        channel_preference_tlv->radio_uid() = radio_mac;
+
+        for (const auto &iter : formated_preference) {
+            const auto operating_class     = iter.first.first;
+            const auto reported_preference = iter.first.second;
+            const auto &channel_set        = iter.second;
+
+            // Create a new channel list vector to extract a memory array.
+            std::vector<uint8_t> ch_list(channel_set.begin(), channel_set.end());
+
+            auto operating_classes_list = channel_preference_tlv->create_operating_classes_list();
+            operating_classes_list->operating_class()  = operating_class;
+            operating_classes_list->flags().preference = reported_preference;
+            if (!operating_classes_list->set_channel_list(ch_list.data(), ch_list.size())) {
+                LOG(ERROR) << "set_channel_list() failed";
+                return false;
+            }
+
+            // Push operating class object to the list of operating class objects
+            if (!channel_preference_tlv->add_operating_classes_list(operating_classes_list)) {
+                LOG(ERROR) << "add_operating_classes_list() has failed!";
+                return false;
+            }
+        }
+        return true;
+    };
+
+    std::vector<sMacAddr> sent_requests;
+    for (const auto &agent_iter : m_pending_selection_requests) {
+        const auto &agent_mac = agent_iter.first;
+        const auto &agent_map = agent_iter.second;
+        // Build 1905.1 message CMDU to send to the agent.
+        if (!cmdu_tx.create(0, ieee1905_1::eMessageType::CHANNEL_SELECTION_REQUEST_MESSAGE)) {
+            LOG(ERROR) << "CMDU creation of type CHANNEL_SELECTION_REQUEST_MESSAGE, has failed";
+            return false;
+        }
+
+        for (const auto &radio_iter : agent_map) {
+            const auto &radio_mac        = radio_iter.first;
+            const auto request_details   = radio_iter.second;
+            const auto &radio_preference = database.get_radio_channel_preference(radio_mac);
+
+            const auto &preference_report =
+                convert_preference_report_map_to_tlv_format(radio_preference);
+
+            // If our current request is an On-Demand request
+            if (const auto on_demand_details =
+                    std::dynamic_pointer_cast<sOnDemandChannelSelectionRequest>(request_details)) {
+                // Create Channel-Preference TLV aligned with On-Demand requirements.
+                if (!create_on_demand_channel_preference_tlv(radio_mac, on_demand_details,
+                                                             preference_report)) {
+                    LOG(ERROR) << "Failed to create Channel Preference TLV!";
+                    return false;
+                }
+
+                // Create channel scan request extended message (vendor specific tlv)
+                if (database.is_prplmesh(agent_mac)) {
+                    LOG(INFO) << "Add On-Demand TLV";
+                    auto on_demand_vs_tlv = beerocks::message_com::add_vs_tlv<
+                        beerocks_message::tlvVsOnDemandChannelSelection>(cmdu_tx);
+
+                    on_demand_vs_tlv->radio_mac()       = radio_mac;
+                    on_demand_vs_tlv->channel()         = on_demand_details->channel_number;
+                    on_demand_vs_tlv->operating_class() = on_demand_details->operating_class;
+                    on_demand_vs_tlv->CSA_count()       = on_demand_details->csa_count;
+                } else {
+                    LOG(INFO) << "non-prplmesh agent " << agent_mac
+                              << ", skip tlvVsChannelScanRequestExtension creation";
+                }
+            } else {
+                // Create Channel-Preference TLV.
+                if (!create_channel_preference_tlv(radio_mac, request_details, preference_report)) {
+                    LOG(ERROR) << "Failed to create Channel Preference TLV!";
+                    return false;
+                }
+            }
+        }
+
+        // Send CMDU to agent.
+        LOG(INFO) << "Send CHANNEL_SELECTION_REQUEST_MESSAGE to agent: " << agent_mac;
+        if (!son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database)) {
+            LOG(ERROR) << "Failed sending message!";
+            return false;
+        }
+        sent_requests.push_back(agent_mac);
+    }
+    for (const auto &agent_mac : sent_requests) {
+        m_pending_selection_requests.erase(agent_mac);
+    }
+    return true;
+}
+
+bool dynamic_channel_selection_r2_task::remove_invalid_channel_selection_requests()
+{
+    std::vector<std::pair<sMacAddr, sMacAddr>> invalid_channel_selection_requests;
+    int removed_count = 0;
+
+    for (const auto &agent_iter : m_pending_selection_requests) {
+        const auto &agent_mac = agent_iter.first;
+        for (const auto &radio_iter : agent_iter.second) {
+            const auto &radio_mac = radio_iter.first;
+
+            // Need to check for invalid channel-selection-requests only on On-Demand requests
+            if (const auto on_demand_details =
+                    std::dynamic_pointer_cast<sOnDemandChannelSelectionRequest>(
+                        radio_iter.second)) {
+                const auto operating_class = on_demand_details->operating_class;
+                const auto channel_number  = on_demand_details->channel_number;
+                const auto channel_preference =
+                    database.get_channel_preference(radio_mac, operating_class, channel_number);
+                if (channel_preference <= 0) {
+                    LOG(ERROR) << "Channel Selection request for channel: " << channel_number
+                               << " & operating class: " << operating_class << " is invalid";
+                    invalid_channel_selection_requests.push_back(
+                        std::make_pair(agent_mac, radio_mac));
+                    removed_count++;
+                }
+            }
+        }
+    }
+
+    for (const auto &invalid_requests : invalid_channel_selection_requests) {
+        const auto &agent_mac = invalid_requests.first;
+        const auto &radio_mac = invalid_requests.second;
+
+        const auto &agent_iter = m_pending_selection_requests.find(agent_mac);
+        if (agent_iter == m_pending_selection_requests.end()) {
+            // Agent does not exist
+            continue;
+        }
+        const auto &radio_iter = agent_iter->second.find(radio_mac);
+        if (radio_iter == agent_iter->second.end()) {
+            // Radio does not exist
+            continue;
+        }
+        // Erase invalid radio request from pending requests
+        agent_iter->second.erase(radio_iter);
+        removed_count--;
+        if (agent_iter->second.empty()) {
+            // Erase empty agent map from pending request
+            m_pending_selection_requests.erase(agent_iter);
+        }
+    }
+
+    // Check if all the elements markeed for removal were removed
+    return (removed_count == 0);
 }
 
 bool dynamic_channel_selection_r2_task::send_scan_request_to_agent(const sMacAddr &agent_mac)
@@ -880,7 +1239,7 @@ bool dynamic_channel_selection_r2_task::handle_timeout_in_busy_agents()
 {
     // Check all busy agents for timeout
     auto timeout_found = false;
-    for (auto &agent : m_agents_status_map) {
+    for (auto &agent : m_agents_scan_status_map) {
         auto &agent_mac    = agent.first;
         auto &agent_status = agent.second;
 
@@ -954,9 +1313,57 @@ bool dynamic_channel_selection_r2_task::handle_ieee1905_1_msg(const sMacAddr &sr
     case ieee1905_1::eMessageType::CHANNEL_PREFERENCE_REPORT_MESSAGE: {
         return handle_cmdu_1905_channel_preference_report(src_mac, cmdu_rx);
     }
+    case ieee1905_1::eMessageType::CHANNEL_SELECTION_RESPONSE_MESSAGE: {
+        return handle_cmdu_1905_channel_selection_response(src_mac, cmdu_rx);
+    }
     default:
         return false;
     }
+    return true;
+}
+
+bool dynamic_channel_selection_r2_task::handle_cmdu_1905_channel_selection_response(
+    const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto mid = cmdu_rx.getMessageId();
+    LOG(INFO) << "Received CHANNEL_SELECTION_RESPONSE_MESSAGE, mid=" << std::dec << int(mid);
+
+    for (auto channel_selection_response_tlv :
+         cmdu_rx.getClassList<wfa_map::tlvChannelSelectionResponse>()) {
+        auto &ruid         = channel_selection_response_tlv->radio_uid();
+        auto response_code = channel_selection_response_tlv->response_code();
+
+        LOG(DEBUG)
+            << "channel selection response from ruid=" << ruid << ", response_code="
+            << ([](const wfa_map::tlvChannelSelectionResponse::eResponseCode &response_code) {
+                   std::string ret_str;
+                   switch (response_code) {
+                   case wfa_map::tlvChannelSelectionResponse::eResponseCode::ACCEPT:
+                       ret_str.assign("ACCEPT");
+                       break;
+                   case wfa_map::tlvChannelSelectionResponse::eResponseCode::
+                       DECLINE_VIOLATES_CURRENT_PREFERENCES:
+                       ret_str.assign("DECLINE_VIOLATES_CURRENT_PREFERENCES");
+                       break;
+                   case wfa_map::tlvChannelSelectionResponse::eResponseCode::
+                       DECLINE_VIOLATES_MOST_RECENTLY_REPORTED_PREFERENCES:
+                       ret_str.assign("DECLINE_VIOLATES_MOST_RECENTLY_REPORTED_PREFERENCES");
+                       break;
+                   case wfa_map::tlvChannelSelectionResponse::eResponseCode::
+                       DECLINE_PREVENT_OPERATION_OF_BACKHAUL_LINK:
+                       ret_str.assign("DECLINE_PREVENT_OPERATION_OF_BACKHAUL_LINK");
+                       break;
+                   default:
+                       ret_str.assign("ERROR:UNFAMILIAR_RESPONSE_CODE");
+                       break;
+                   }
+                   return ret_str;
+               })(response_code);
+    }
+    if (m_selection_state == eSelectionState::WAIT_FOR_SELECTION_RESPONSE) {
+        FSM_MOVE_SELECTION_STATE(eSelectionState::IDLE);
+    }
+
     return true;
 }
 
@@ -1027,6 +1434,9 @@ bool dynamic_channel_selection_r2_task::handle_cmdu_1905_channel_preference_repo
     LOG(DEBUG) << "sending ACK message back to agent";
     son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
 
+    if (m_selection_state == eSelectionState::WAIT_FOR_PREFERENCE) {
+        FSM_MOVE_SELECTION_STATE(eSelectionState::IDLE);
+    }
     return true;
 }
 

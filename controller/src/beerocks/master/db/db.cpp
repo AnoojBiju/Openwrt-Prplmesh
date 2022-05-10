@@ -2950,7 +2950,90 @@ bool db::set_channel_preference(const sMacAddr &radio_mac, const uint8_t operati
     const auto key = std::make_pair(operating_class, channel_number);
 
     radio->channel_preference_report[key] = preference;
+    radio->last_preference_report_change  = std::chrono::steady_clock::now();
     return true;
+}
+
+int8_t db::get_channel_preference(const sMacAddr &radio_mac, const uint8_t operating_class,
+                                  const uint8_t channel_number)
+{
+    auto radio = get_hostap(radio_mac);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << radio_mac;
+        return (int8_t)eChannelPreferenceRankingConsts::INVALID;
+    }
+
+    if (!wireless_utils::is_channel_in_operating_class(operating_class, channel_number)) {
+        LOG(ERROR) << "Operating class #" << operating_class << " does not contain channel #"
+                   << channel_number;
+        return (int8_t)eChannelPreferenceRankingConsts::INVALID;
+    }
+
+    const auto &bw                 = wireless_utils::operating_class_to_bandwidth(operating_class);
+    const auto &supported_channels = radio->supported_channels;
+
+    // Find if the channel is supported by the radio
+    if (std::find_if(supported_channels.begin(), supported_channels.end(),
+                     [channel_number, bw](const message::sWifiChannel chan) {
+                         // Find if matching channel number & bandwidth.
+                         return ((chan.channel == channel_number) &&
+                                 (chan.channel_bandwidth == bw));
+                     }) == supported_channels.end()) {
+        LOG(ERROR) << "Channel #" << channel_number << " in Operating Class #" << operating_class
+                   << " is not supported by the radio.";
+        return (int8_t)eChannelPreferenceRankingConsts::NON_OPERABLE;
+    }
+
+    const auto key  = std::make_pair(operating_class, channel_number);
+    const auto iter = radio->channel_preference_report.find(key);
+    if (iter == radio->channel_preference_report.end()) {
+        // Key is not found on radio's preference, returning BEST
+        return (int8_t)eChannelPreferenceRankingConsts::BEST;
+    }
+
+    // Converting to signed to fit return type
+    return (int8_t)iter->second;
+}
+
+node::radio::PreferenceReportMap db::get_radio_channel_preference(const sMacAddr &radio_mac)
+{
+    auto radio = get_hostap(radio_mac);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << radio_mac;
+        return {};
+    }
+
+    // Get preference from previous report.
+    node::radio::PreferenceReportMap preference_map = radio->channel_preference_report;
+
+    // Fill missing supported channels
+    for (const auto &supported_channel : radio->supported_channels) {
+        const auto operating_class =
+            wireless_utils::get_operating_class_by_channel(supported_channel);
+        if (!operating_class) {
+            // Failed to get Operating Class number
+            continue;
+        }
+        const auto key = std::make_pair(operating_class, supported_channel.channel);
+        if (preference_map.find(key) != preference_map.end()) {
+            // Preference already exists in map, skip.
+            continue;
+        }
+        preference_map[key] = (int8_t)eChannelPreferenceRankingConsts::BEST;
+    }
+
+    return preference_map;
+}
+
+const std::chrono::steady_clock::time_point
+db::get_last_preference_report_change(const sMacAddr &radio_mac)
+{
+    auto radio = get_hostap(radio_mac);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << radio_mac;
+        return std::chrono::steady_clock::time_point::min();
+    }
+    return radio->last_preference_report_change;
 }
 
 bool db::set_channel_scan_dwell_time_msec(const sMacAddr &mac, int dwell_time_msec,

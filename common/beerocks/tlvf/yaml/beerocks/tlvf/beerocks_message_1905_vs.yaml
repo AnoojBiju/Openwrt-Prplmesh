@@ -54,3 +54,10 @@ tlvVsChannelScanRequestExtension:
 tlvVsChannelScanReportDone:
   _type: class
   report_done: uint8_t #bool
+
+tlvVsOnDemandChannelSelection:
+  _type: class
+  radio_mac: sMacAddr
+  channel: uint8_t
+  operating_class: uint8_t
+  CSA_count: uint8_t
