@@ -99,7 +99,7 @@ public:
         uint64_t btm_successes       = 0;
         uint64_t btm_failures        = 0;
         uint64_t btm_query_responses = 0;
-        std::string last_steer_ts    = {};
+        uint32_t last_steer_time     = 0;
     } steering_summary_stats;
 
     std::string assoc_timestamp;
