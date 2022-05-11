@@ -33,11 +33,16 @@ static amxd_status_t action_last_steer_time(amxd_object_t *object, amxd_param_t 
                                             amxd_action_t reason, const amxc_var_t *const args,
                                             amxc_var_t *const retval, void *priv)
 {
+    /*
+        This action retrieves timestamp of last steering attempt of Associated Device
+        from LastSteerTime parameter.
+        Then, we get сurrent time and subtract retrieved timestamp for getting time passed
+        from last steering attempt in seconds.
+    */
     if (reason != action_param_read) {
         return amxd_status_function_not_implemented;
     }
     if (!param) {
-        LOG(WARNING) << "Missing value of amxd_param_t in action_last_steer_time.";
         return amxd_status_parameter_not_found;
     }
 
@@ -46,24 +51,21 @@ static amxd_status_t action_last_steer_time(amxd_object_t *object, amxd_param_t 
         return status;
     }
 
-    // Get param value directly without going though the object action handlers
-    auto last_steer_ts = amxd_object_get_param_def(object, "LastSteerTimeStamp");
-    if (!last_steer_ts) {
-        LOG(WARNING) << "Missing value of LastSteerTimeStamp in action_last_steer_time.";
-        return amxd_status_parameter_not_found;
-    }
-
-    std::string last_steer_ts_str = amxc_var_constcast(cstring_t, &last_steer_ts->value);
-    if (last_steer_ts_str.empty()) {
-        amxc_var_set(uint64_t, retval, 0);
+    auto last_steer_timestamp = amxc_var_dyncast(uint32_t, retval);
+    // If LastSteerTime has not been set yet
+    if (!last_steer_timestamp) {
         return amxd_status_ok;
     }
 
-    amxc_ts_t ts_steer, ts_now;
-    amxc_ts_parse(&ts_steer, last_steer_ts_str.c_str(), last_steer_ts_str.length());
-    amxc_ts_now(&ts_now);
+    auto current_time =
+        static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::seconds>(
+                                  std::chrono::steady_clock::now().time_since_epoch())
+                                  .count());
 
-    amxc_var_set(uint64_t, retval, (ts_now.sec - ts_steer.sec));
+    uint32_t last_steer_time = current_time - last_steer_timestamp;
+
+    amxc_var_set(uint32_t, retval, last_steer_time);
+
     return amxd_status_ok;
 }
 
@@ -144,15 +146,16 @@ static amxd_status_t action_read_last_change(amxd_object_t *object, amxd_param_t
     if (status != amxd_status_ok) {
         return status;
     }
-    auto creation_time = amxc_var_dyncast(uint64_t, retval);
+    auto creation_time = amxc_var_dyncast(uint32_t, retval);
 
-    auto current_time = std::chrono::duration_cast<std::chrono::seconds>(
-                            std::chrono::steady_clock::now().time_since_epoch())
-                            .count();
+    auto current_time =
+        static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::seconds>(
+                                  std::chrono::steady_clock::now().time_since_epoch())
+                                  .count());
 
-    uint64_t last_change = current_time - creation_time;
+    uint32_t last_change = current_time - creation_time;
 
-    amxc_var_set(uint64_t, retval, last_change);
+    amxc_var_set(uint32_t, retval, last_change);
 
     return amxd_status_ok;
 }

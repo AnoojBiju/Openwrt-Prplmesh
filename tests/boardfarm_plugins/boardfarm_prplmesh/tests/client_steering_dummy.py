@@ -13,7 +13,8 @@ import time
 class ClientSteeringDummy(PrplMeshBaseTest):
     """
         This test reproduces and tests client steering
-        Also, it checks MultiAPSteeringSummaryStats NBAPI object
+        Also, it checks SteeringSummaryStats (for STA1)
+        and MultiAPSteeringSummaryStats NBAPI objects
 
         Devices used in test setup:
         STA1 - WIFI repeater
@@ -65,9 +66,21 @@ class ClientSteeringDummy(PrplMeshBaseTest):
                                          sta, env.StationEvent.CONNECT,
                                          agent1.radios[0].vaps[0].bssid)
 
-        # Save MultiAPSteeringSummaryStats values before client steering
-        steer_summ_stats = controller.nbapi_get(
-            "Device.WiFi.DataElements.Network.MultiAPSteeringSummaryStats")
+        # Save values of MultiAPSteeringSummaryStats parameters before client steering
+        steer_summ_stats_path = "Device.WiFi.DataElements.Network.MultiAPSteeringSummaryStats"
+        steer_summ_stats = controller.nbapi_get(steer_summ_stats_path)
+
+        # Save values of SteeringSummaryStats parameters for STA1 (radio0) before client steering
+        map_agent1_radio0 = self.get_topology()[agent1.mac].radios[agent1.radios[0].mac]
+        sta_steer_summ_stats_radio0_path = map_agent1_radio0.vaps[agent1.radios[0]
+                                                                  .vaps[0].bssid].path \
+            + ".STA.1.MultiAPSTA.SteeringSummaryStats"
+        sta_steer_summ_stats = controller.nbapi_get(sta_steer_summ_stats_radio0_path)
+
+        # Check value of LastSteerTime parameter for STA1 before client steering
+        last_steer_time = sta_steer_summ_stats["LastSteerTime"]
+        assert last_steer_time == 0, f"LastSteerTime value must be zeroed," \
+            f" not '{last_steer_time}'"
 
         self.checkpoint()
 
@@ -77,6 +90,13 @@ class ClientSteeringDummy(PrplMeshBaseTest):
                                   "target_bssid": agent1.radios[1].mac})
 
         time.sleep(1)
+
+        # Check value of LastSteerTime parameter for STA1 (radio1) after client steering
+        last_steer_time = controller.nbapi_get_parameter(
+            sta_steer_summ_stats_radio0_path, "LastSteerTime")
+        assert 0 < last_steer_time < 3, f"LastSteerTime value must be greater than 0" \
+            f"and less than 3, not '{last_steer_time}'"
+
         debug("Disconnect dummy STA from wlan0")
         sta.wifi_disconnect(agent1.radios[0].vaps[0])
 
@@ -121,9 +141,27 @@ class ClientSteeringDummy(PrplMeshBaseTest):
         self.check_log(controller,
                        r"sta {} disconnected due to steering request".format(sta.mac))
 
+        map_agent1_radio1 = self.get_topology()[agent1.mac].radios[agent1.radios[1].mac]
+        sta_steer_summ_stats_radio1_path = map_agent1_radio1.vaps[agent1.radios[1]
+                                                                  .vaps[0].bssid].path \
+            + ".STA.1.MultiAPSTA.SteeringSummaryStats"
+
+        # Save value of LastSteerTime parameter for STA1 before a fixed waiting period
+        before_wait_last_steer_time = controller.nbapi_get_parameter(
+            sta_steer_summ_stats_radio1_path, "LastSteerTime")
+
         # Make sure that all blocked agents send UNBLOCK messages at the end of
         # disallow period (default 25 sec)
-        time.sleep(25)
+        DEF_DISALLOW_PERIOD = 25
+        time.sleep(DEF_DISALLOW_PERIOD)
+
+        # Check value of LastSteerTime parameter for STA1 after a fixed waiting period
+        curr_last_steer_time = controller.nbapi_get_parameter(
+            sta_steer_summ_stats_radio1_path, "LastSteerTime")
+        diff_last_steer_time = curr_last_steer_time - before_wait_last_steer_time
+        assert DEF_DISALLOW_PERIOD <= diff_last_steer_time <= DEF_DISALLOW_PERIOD + 1, \
+            f"Difference of LastSteerTime values must be in the range of 25 to 26," \
+            f" not '{diff_last_steer_time}'"
 
         debug("Confirming Client Association Control Request message was received (UNBLOCK)")
         self.check_log(agent1.radios[0], r"Got client allow request")
@@ -134,19 +172,32 @@ class ClientSteeringDummy(PrplMeshBaseTest):
         debug("Confirming Client Association Control Request message was received (UNBLOCK)")
         self.check_log(agent2.radios[1], r"Got client allow request")
 
+        # Check values of SteeringSummaryStats parameters for STA1 (radio1) after client steering
+        final_sta_steer_summ_stats = controller.nbapi_get(sta_steer_summ_stats_radio1_path)
+        for parameter in final_sta_steer_summ_stats:
+
+            debug(f"Checking parameter '{parameter}'")
+
+            if parameter == 'BTMSuccesses':
+                assert sta_steer_summ_stats[parameter] + 1 \
+                    == final_sta_steer_summ_stats[parameter], \
+                    f"Value of '{parameter}' should be '{sta_steer_summ_stats[parameter] + 1}'" \
+                    f" not '{final_sta_steer_summ_stats[parameter]}'"
+                continue
+        # TODO: Check other values of SteeringSummaryStats parameters
+
         sta.wifi_disconnect(agent1.radios[1].vaps[0])
 
-        # Check MultiAPSteeringSummaryStats values after client steering
-        final_steer_summ_stats = controller.nbapi_get(
-            "Device.WiFi.DataElements.Network.MultiAPSteeringSummaryStats")
-        for param in final_steer_summ_stats:
+        # Check values of MultiAPSteeringSummaryStats parameters after client steering
+        final_steer_summ_stats = controller.nbapi_get(steer_summ_stats_path)
+        for parameter in final_steer_summ_stats:
 
-            debug(f"Checking parameter '{param}', original value is '{steer_summ_stats[param]}'")
+            debug(f"Checking parameter '{parameter}'")
 
-            if param == 'BTMSuccesses':
-                assert steer_summ_stats[param] + 1 == final_steer_summ_stats[param], \
-                    f"Value of '{param}' should be '{steer_summ_stats[param] + 1}'" \
-                    f" not '{final_steer_summ_stats[param]}'"
+            if parameter == 'BTMSuccesses':
+                assert steer_summ_stats[parameter] + 1 == final_steer_summ_stats[parameter], \
+                    f"Value of '{parameter}' should be '{steer_summ_stats[parameter] + 1}'" \
+                    f" not '{final_steer_summ_stats[parameter]}'"
                 continue
 
             """
