@@ -1113,7 +1113,18 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
 
         for (const auto &neighbors_on_local_iface : db->neighbor_devices) {
             auto &neighbors = neighbors_on_local_iface.second;
+
+            auto &macaddr = neighbors_on_local_iface.first;
+            LOG(TRACE) << "Getting neighbors on ETH of interface mac: "
+                       << macaddr;
+
             for (const auto &neighbor_entry : neighbors) {
+                LOG(TRACE) << "- neighbor mac: "
+                           << neighbor_entry.first;
+                LOG(TRACE) << "- neighbor iface: "
+                           << neighbor_entry.second.receiving_iface_name;
+                LOG(TRACE) << " ";
+
                 if (neighbor_entry.second.receiving_iface_name == iface_name) {
                     sLinkNeighbor neighbor;
                     neighbor.al_mac    = neighbor_entry.first;
@@ -1150,8 +1161,16 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
             continue;
         }
 
+        LOG(TRACE) << "In radio loop, radio mac: "
+                   << radio->front.iface_mac
+                   << "Iface name: "
+                   << radio->front.iface_name;
+
         for (const auto &associated_client : radio->associated_clients) {
             auto &bssid = associated_client.second.bssid;
+
+            LOG(TRACE) << "Associated client:"
+                       << associated_client.first;
 
             sLinkInterface interface;
 
