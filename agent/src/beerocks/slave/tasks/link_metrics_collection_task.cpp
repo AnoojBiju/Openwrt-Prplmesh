@@ -240,6 +240,20 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
     }
 
     /**
+     * Debug: print out neighbour links map
+     */
+    LOG(TRACE) << "Printing all neigbours in the links map:";
+    for (const auto &neighbour_entry : neighbor_links_map) {
+        LOG(TRACE) << "Interface: " << neighbour_entry.first.iface_name
+                   << " mac: " << neighbour_entry.first.iface_mac << " :";
+
+        for (const auto &neighbour : neighbour_entry.second) {
+            LOG(TRACE) << "  -neighbour almac " << neighbour.al_mac << "\n"
+                       << "  -neighbour's own mac" << neighbour.iface_mac;
+        }
+    }
+
+    /**
      * If the specified neighbor 1905.1 AL ID does not identify a neighbor of the receiving 1905.1
      * AL, then a link metric ResultCode TLV (see Table 6-21) with a value set to “invalid
      * neighbor” shall be included in this message.
