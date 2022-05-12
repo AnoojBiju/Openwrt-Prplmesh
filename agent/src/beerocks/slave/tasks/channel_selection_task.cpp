@@ -321,6 +321,103 @@ void ChannelSelectionTask::handle_channel_selection_request(ieee1905_1::CmduMess
             LOG(WARNING) << "Failed to parse tlvVsOnDemandChannelSelection!";
         }
     }
+
+    // build and send channel response message
+    if (!m_cmdu_tx.create(mid, ieee1905_1::eMessageType::CHANNEL_SELECTION_RESPONSE_MESSAGE)) {
+        LOG(ERROR) << "cmdu creation of type CHANNEL_SELECTION_RESPONSE_MESSAGE, has failed";
+        return;
+    }
+
+    // Build Channel Selection Response TLVs
+    // Need to create a ChannelSelectionResponse TLV for each radio
+    for (const auto radio : db->get_radios_list()) {
+        const auto &radio_mac    = radio->front.iface_mac;
+        const auto &request_iter = m_pending_selection.requests.find(radio_mac);
+        // Set the response code to DECLINE if, the request for the specific radio does not exist.
+        // Otherwise set the response code to what we set in the given request.
+        const auto response_code =
+            ((request_iter == m_pending_selection.requests.end())
+                 ? wfa_map::tlvChannelSelectionResponse::eResponseCode::ACCEPT
+                 : request_iter->second.response_code);
+
+        auto channel_selection_response_tlv =
+            m_cmdu_tx.addClass<wfa_map::tlvChannelSelectionResponse>();
+        if (!channel_selection_response_tlv) {
+            LOG(ERROR) << "addClass ieee1905_1::tlvChannelSelectionResponse has failed";
+            return;
+        }
+        channel_selection_response_tlv->radio_uid()     = radio_mac;
+        channel_selection_response_tlv->response_code() = response_code;
+
+        LOG(DEBUG) << "Radio " << radio_mac << " is returning " << response_code
+                   << " as a response!";
+    }
+    // Send response back to the sender.
+    LOG(DEBUG) << "Sending Channel-Selection-Response to broker";
+    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, db->controller_info.bridge_mac, db->bridge.mac);
+
+    // Handle pending Outgoing requests.
+    for (auto &request_iter : m_pending_selection.requests) {
+        auto &request         = request_iter.second;
+        const auto &radio_mac = request_iter.first;
+        auto radio            = AgentDB::get()->get_radio_by_mac(radio_mac);
+
+        if (!radio) {
+            LOG(ERROR) << "Radio " << radio_mac << " does not exist on the db";
+            continue;
+        }
+
+        // Check if Channel-Switch is needed
+        if (!request.channel_switch_needed && !request.power_switch_received) {
+            LOG(DEBUG) << "No Channel Switch needed for radio " << radio_mac;
+            request.manually_send_operating_report = true;
+            continue;
+        }
+
+        // Check if ZWDFS is needed, if it is needed set the selected channel
+        // and move the ZWDFS-FSM to ZWDFS_SWITCH_ANT_SET_CHANNEL_REQUEST.
+        // Otherwise Build and send a Channel-Switch request.
+        if (m_zwdfs_ap_enabled) {
+            if (request.selected_channel.dfs_state != beerocks_message::eDfsState::NOT_DFS &&
+                request.selected_channel.dfs_state != beerocks_message::eDfsState::AVAILABLE) {
+                m_selected_channel          = request.selected_channel;
+                m_zwdfs_primary_radio_iface = radio->front.iface_name;
+                ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_SET_CHANNEL_REQUEST);
+                continue;
+            }
+        }
+        if (!send_channel_switch_request(radio_mac, request)) {
+            LOG(ERROR) << "Failed to send Channel-Switch request.";
+        }
+    }
+
+    // build and send operating channel report message
+    if (!m_cmdu_tx.create(0, ieee1905_1::eMessageType::OPERATING_CHANNEL_REPORT_MESSAGE)) {
+        LOG(ERROR) << "cmdu creation of type OPERATING_CHANNEL_REPORT_MESSAGE, has failed";
+        return;
+    }
+    for (const auto radio : db->get_radios_list()) {
+        const auto &radio_mac    = radio->front.iface_mac;
+        const auto &request_iter = m_pending_selection.requests.find(radio_mac);
+        // Normally, when a channel switch is required, a CSA notification
+        // will be received with the new channel setting which is when
+        // the agent will send the operating channel report.
+        // In case of only a tx power limit change, there will still be
+        // a CSA notification which will hold the new power limit and also
+        // trigger sending the operating channel report.
+        // If neither channel switch nor power limit change is required,
+        // we need to explicitly send the event.
+        if (request_iter == m_pending_selection.requests.end() ||
+            request_iter->second.manually_send_operating_report) {
+            if (!create_operating_channel_report(radio_mac)) {
+                LOG(ERROR) << "Failed creating Operating Channel Report";
+                continue;
+            }
+        }
+    }
+    // Send response back to the sender.
+    LOG(DEBUG) << "Sending Operating-Channel-Report to broker";
+    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, db->controller_info.bridge_mac, db->bridge.mac);
 }
 
 bool ChannelSelectionTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
@@ -1423,6 +1520,107 @@ bool ChannelSelectionTask::handle_on_demand_selection_request_extension_tlv(
     if (pending_request.channel_switch_needed) {
         pending_request.outgoing_request.CSA_count = csa_count;
     }
+    return true;
+}
+
+bool ChannelSelectionTask::send_channel_switch_request(
+    const sMacAddr &radio_mac, const sIncomingChannelSelectionRequest &request)
+{
+    auto request_msg = message_com::create_vs_message<
+        beerocks_message::cACTION_BACKHAUL_HOSTAP_CHANNEL_SWITCH_ACS_START>(m_cmdu_tx);
+
+    if (!request_msg) {
+        LOG(ERROR) << "Failed to build message";
+        return false;
+    }
+
+    request_msg->cs_params().channel   = request.outgoing_request.channel;
+    request_msg->cs_params().bandwidth = request.outgoing_request.bandwidth;
+    request_msg->cs_params().csa_count = request.outgoing_request.CSA_count;
+
+    if (son::wireless_utils::which_freq(request.outgoing_request.channel) == eFreqType::FREQ_5G) {
+        if (request.outgoing_request.bandwidth >= beerocks::eWiFiBandwidth::BANDWIDTH_40) {
+            const auto beacon_channel  = request.outgoing_request.channel;
+            const auto bandwidth       = request.outgoing_request.bandwidth;
+            const auto central_channel = son::wireless_utils::channels_table_5g.at(beacon_channel)
+                                             .at(bandwidth)
+                                             .center_channel;
+            request_msg->cs_params().vht_center_frequency =
+                son::wireless_utils::channel_to_freq(central_channel);
+        } else {
+            request_msg->cs_params().vht_center_frequency =
+                son::wireless_utils::channel_to_freq(request.outgoing_request.channel);
+        }
+    }
+
+    request_msg->tx_limit()       = request.outgoing_request.tx_limit;
+    request_msg->tx_limit_valid() = request.outgoing_request.tx_limit_valid;
+
+    auto agent_fd = m_btl_ctx.get_agent_fd();
+    if (agent_fd == beerocks::net::FileDescriptor::invalid_descriptor) {
+        LOG(ERROR) << "socket to Agent not found";
+        return false;
+    }
+
+    auto action_header         = message_com::get_beerocks_header(m_cmdu_tx)->actionhdr();
+    action_header->radio_mac() = radio_mac;
+
+    LOG(DEBUG) << "Sending a CHANNEL_SWITCH request to radio " << radio_mac
+               << " with the following paramenters:" << std::endl
+               << "- Channel: " << request_msg->cs_params().channel << std::endl
+               << "- bandwidth: " << request_msg->cs_params().bandwidth << std::endl
+               << "- CSA count: " << request_msg->cs_params().csa_count << std::endl
+               << "- TX limit: " << (int)request_msg->tx_limit() << std::endl
+               << "- TX limit valid: " << (request_msg->tx_limit_valid() ? "True" : "False");
+
+    m_btl_ctx.send_cmdu(agent_fd, m_cmdu_tx);
+    return true;
+}
+
+bool ChannelSelectionTask::create_operating_channel_report(const sMacAddr &radio_mac)
+{
+    auto radio = AgentDB::get()->get_radio_by_mac(radio_mac);
+    if (!radio) {
+        LOG(ERROR) << "Radio " << radio_mac << " does not exist on the db";
+        return false;
+    }
+
+    auto operating_channel_report_tlv = m_cmdu_tx.addClass<wfa_map::tlvOperatingChannelReport>();
+    if (!operating_channel_report_tlv) {
+        LOG(ERROR) << "addClass ieee1905_1::operating_channel_report_tlv has failed";
+        return false;
+    }
+    operating_channel_report_tlv->radio_uid() = radio_mac;
+
+    auto op_classes_list = operating_channel_report_tlv->alloc_operating_classes_list();
+    if (!op_classes_list) {
+        LOG(ERROR) << "alloc_operating_classes_list() has failed!";
+        return false;
+    }
+
+    auto operating_class_entry_tuple = operating_channel_report_tlv->operating_classes_list(0);
+    if (!std::get<0>(operating_class_entry_tuple)) {
+        LOG(ERROR) << "getting operating class entry has failed!";
+        return false;
+    }
+
+    auto &operating_class_entry = std::get<1>(operating_class_entry_tuple);
+    beerocks::message::sWifiChannel channel;
+    channel.channel_bandwidth = radio->bandwidth;
+    channel.channel           = radio->channel;
+    auto center_channel       = son::wireless_utils::freq_to_channel(radio->vht_center_frequency);
+    auto operating_class      = son::wireless_utils::get_operating_class_by_channel(channel);
+
+    operating_class_entry.operating_class = operating_class;
+    // operating classes 128,129,130 use center channel **unlike the other classes** (See Table
+    // E-4 in 802.11 spec)
+    operating_class_entry.channel_number =
+        son::wireless_utils::is_operating_class_using_central_channel(operating_class)
+            ? center_channel
+            : channel.channel;
+    operating_channel_report_tlv->current_transmit_power() = radio->tx_power_dB;
+
+    LOG(DEBUG) << "Created Operating Channel Report TLV";
     return true;
 }
 
