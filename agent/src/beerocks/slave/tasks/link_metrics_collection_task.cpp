@@ -299,16 +299,16 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
                        << ") and neighbor " << neighbor.iface_mac;
 
             sLinkMetrics link_metrics;
-            if (!collector->get_link_metrics(interface.iface_name, neighbor.iface_mac,
-                                             link_metrics)) {
+            if (collector->get_link_metrics(interface.iface_name, neighbor.iface_mac,
+                                            link_metrics)) {
+                if (!add_link_metrics_tlv(reporter_al_mac, interface, neighbor, link_metrics,
+                                          link_metrics_type)) {
+                    LOG(ERROR) << "Unable to add link metrics tlv";
+                    return;
+                }
+            } else {
                 LOG(ERROR) << "Unable to get link metrics for interface " << interface.iface_name
                            << " and neighbor " << neighbor.iface_mac;
-                return;
-            }
-
-            if (!add_link_metrics_tlv(reporter_al_mac, interface, neighbor, link_metrics,
-                                      link_metrics_type)) {
-                return;
             }
         }
     }
