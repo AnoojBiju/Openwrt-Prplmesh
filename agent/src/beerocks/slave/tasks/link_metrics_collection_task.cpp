@@ -1133,7 +1133,25 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
 
         sLinkInterface local_interface;
         local_interface.iface_mac = macaddr;
+
         net::network_utils::linux_iface_get_name(macaddr, local_interface.iface_name);
+
+        ieee1905_1::eMediaTypeGroup media_type_group;
+        ieee1905_1::eMediaType media_type = ieee1905_1::eMediaType::UNKNOWN_MEDIA;
+
+        // If the local interface is wireless
+        if (db->radio(local_interface.iface_name)) {
+            media_type_group = ieee1905_1::eMediaTypeGroup::IEEE_802_11;
+        } else {
+            media_type_group = ieee1905_1::eMediaTypeGroup::IEEE_802_3;
+        }
+
+        if (!MediaType::get_media_type(local_interface.iface_name, media_type_group, media_type)) {
+            LOG(ERROR) << "Unable to compute media type for interface "
+                       << local_interface.iface_name;
+            return false;
+        }
+        local_interface.media_type = media_type;
 
         LOG(TRACE) << "Getting neighbors of interface " << local_interface.iface_name
                    << " with mac: " << macaddr;
