@@ -129,9 +129,8 @@ void ChannelSelectionTask::handle_channel_preference_query(ieee1905_1::CmduMessa
                << " with mid=" << std::hex << mid;
 
     // Clear previous request, if any
-    m_pending_preference.preference_map.clear();
-    m_pending_preference.src_mac = src_mac;
-    m_pending_preference.mid     = mid;
+    m_pending_preference.preference_ready.clear();
+    m_pending_preference.mid = mid;
 
     LOG(DEBUG) << "Received CHANNEL_PREFERENCE_QUERY_MESSAGE, mid=" << std::dec << int(mid);
 
@@ -141,7 +140,7 @@ void ChannelSelectionTask::handle_channel_preference_query(ieee1905_1::CmduMessa
         LOG(DEBUG) << "Sending ACTION_BACKHAUL_CHANNELS_LIST_REQUEST to radio "
                    << radio->front.iface_mac;
 
-        m_pending_preference.preference_map[radio->front.iface_mac];
+        m_pending_preference.preference_ready[radio->front.iface_mac] = false;
 
         auto request = message_com::create_vs_message<
             beerocks_message::cACTION_BACKHAUL_CHANNELS_LIST_REQUEST>(m_cmdu_tx);
@@ -711,15 +710,13 @@ void ChannelSelectionTask::handle_ap_enable_event(const std::string &iface)
 
 bool ChannelSelectionTask::build_channel_preference_report(const sMacAddr &radio_mac)
 {
-    auto &radio_preference = m_pending_preference.preference_map[radio_mac];
-
     auto db    = AgentDB::get();
     auto radio = db->get_radio_by_mac(radio_mac, AgentDB::eMacType::RADIO);
     if (!radio) {
         return false;
     }
 
-    auto get_channel_preference =
+    auto get_preference_key =
         [&radio](
             const uint8_t channel, const uint8_t operating_class,
             beerocks::eWiFiBandwidth operating_bandwidth) -> const AgentDB::sChannelPreference {
@@ -744,37 +741,14 @@ bool ChannelSelectionTask::build_channel_preference_report(const sMacAddr &radio
                 wfa_map::cPreferenceOperatingClasses::eReasonCode::UNSPECIFIED);
         }
 
-        // The rest of the checks are relevant only for 5 GHz band.
-        if (son::wireless_utils::channels_table_5g.find(channel) !=
-            son::wireless_utils::channels_table_5g.end()) {
-
-            // Channel DFS state is "Unavailable".
-            auto overlapping_beacon_channels =
-                son::wireless_utils::get_overlapping_beacon_channels(channel, operating_bandwidth);
-
-            for (const auto overlap_ch : overlapping_beacon_channels) {
-                it_ch = radio->channels_list.find(overlap_ch);
-                if (it_ch == radio->channels_list.end()) {
-                    LOG(ERROR) << "Overlap channel " << overlap_ch << " is not supported";
-                    return AgentDB::sChannelPreference(
-                        operating_class,
-                        wfa_map::cPreferenceOperatingClasses::ePreference::NON_OPERABLE,
-                        wfa_map::cPreferenceOperatingClasses::eReasonCode::UNSPECIFIED);
-                }
-
-                auto &overlap_channel_info = it_ch->second;
-
-                if (overlap_channel_info.dfs_state == beerocks_message::eDfsState::UNAVAILABLE) {
-                    return AgentDB::sChannelPreference(
-                        operating_class,
-                        wfa_map::cPreferenceOperatingClasses::ePreference::NON_OPERABLE,
-                        wfa_map::cPreferenceOperatingClasses::eReasonCode::
-                            OPERATION_DISALLOWED_DUE_TO_RADAR_DETECTION_ON_A_DFS_CHANNEL);
-                }
-            }
+        if (supported_channel_info.dfs_state == beerocks_message::eDfsState::UNAVAILABLE) {
+            return AgentDB::sChannelPreference(
+                operating_class, wfa_map::cPreferenceOperatingClasses::ePreference::NON_OPERABLE,
+                wfa_map::cPreferenceOperatingClasses::eReasonCode::
+                    OPERATION_DISALLOWED_DUE_TO_RADAR_DETECTION_ON_A_DFS_CHANNEL);
         }
 
-        // Channel is supported and have valid preference.
+        // Channel is supported and has a valid preference.
         return AgentDB::sChannelPreference(
             operating_class,
             static_cast<wfa_map::cPreferenceOperatingClasses::ePreference>(
@@ -782,10 +756,13 @@ bool ChannelSelectionTask::build_channel_preference_report(const sMacAddr &radio
             wfa_map::cPreferenceOperatingClasses::eReasonCode::UNSPECIFIED);
     };
 
+    // Received new preferences, clear old preferences
+    radio->channel_preferences.clear();
+
     for (const auto &oper_class : son::wireless_utils::operating_classes_list) {
-        auto oper_class_num             = oper_class.first;
+        const auto oper_class_num       = oper_class.first;
         const auto &oper_class_channels = oper_class.second.channels;
-        auto oper_class_bw              = oper_class.second.band;
+        const auto oper_class_bw        = oper_class.second.band;
 
         if (radio->freq_type != son::wireless_utils::which_freq_op_cls(oper_class_num)) {
             // Operating Class not part of the current radio, skip.
@@ -793,38 +770,48 @@ bool ChannelSelectionTask::build_channel_preference_report(const sMacAddr &radio
         }
 
         for (auto channel_of_oper_class : oper_class_channels) {
-
             // Operating classes 128,129,130 use center channel **unlike the other classes**,
-            // so convert channel and bandwidth to center channel.
+            // so convert center channel and bandwidth to main channel.
             // For more info, refer to Table E-4 in the 802.11 specification.
-            std::vector<uint8_t> beacon_channels;
-            if (oper_class_num == 128 || oper_class_num == 129 || oper_class_num == 130) {
-                beacon_channels = son::wireless_utils::center_channel_5g_to_beacon_channels(
-                    channel_of_oper_class, oper_class_bw);
-            } else {
-                beacon_channels.push_back(channel_of_oper_class);
-            }
+            const auto beacon_channels =
+                son::wireless_utils::is_operating_class_using_central_channel(oper_class_num)
+                    ? son::wireless_utils::center_channel_5g_to_beacon_channels(
+                          channel_of_oper_class, oper_class_bw)
+                    : std::vector<uint8_t>{channel_of_oper_class};
 
+            // Assume non-operable
+            AgentDB::sChannelPreference preference_key(
+                oper_class_num, wfa_map::cPreferenceOperatingClasses::ePreference::NON_OPERABLE,
+                wfa_map::cPreferenceOperatingClasses::eReasonCode::UNSPECIFIED);
             for (const auto beacon_channel : beacon_channels) {
-                auto preference_key =
-                    get_channel_preference(beacon_channel, oper_class_num, oper_class_bw);
-
-                radio_preference.channel_preferences[preference_key].insert(channel_of_oper_class);
+                auto tmp_preference_key =
+                    get_preference_key(beacon_channel, oper_class_num, oper_class_bw);
+                if (tmp_preference_key.flags.preference == 0) {
+                    LOG(INFO) << "Channel #" << beacon_channel << " in Class #" << oper_class_num
+                              << " is non-operable";
+                    if (preference_key.flags.reason_code < tmp_preference_key.flags.reason_code) {
+                        preference_key.flags.reason_code = tmp_preference_key.flags.reason_code;
+                    }
+                } else if (preference_key.flags.preference < tmp_preference_key.flags.preference) {
+                    // Set as the highest preference in the beacon channels
+                    preference_key = tmp_preference_key;
+                }
             }
+            radio->channel_preferences[preference_key].insert(channel_of_oper_class);
         }
     }
 
-    radio_preference.isDone = true;
+    m_pending_preference.preference_ready[radio_mac] = true;
     return true;
 }
 
 bool ChannelSelectionTask::channel_preference_report_ready()
 {
-    if (m_pending_preference.preference_map.empty()) {
+    if (m_pending_preference.preference_ready.empty()) {
         return false;
     }
-    for (const auto &radio_preference : m_pending_preference.preference_map) {
-        if (!radio_preference.second.isDone) {
+    for (const auto &preference_ready : m_pending_preference.preference_ready) {
+        if (!preference_ready.second) {
             // Channel preference report is not ready yet.
             return false;
         }
@@ -848,9 +835,8 @@ bool ChannelSelectionTask::send_channel_preference_report(
 
     auto db = AgentDB::get();
 
-    for (const auto &pending_preference_iter : m_pending_preference.preference_map) {
-        if (!create_channel_preference_tlv(pending_preference_iter.first,
-                                           pending_preference_iter.second)) {
+    for (const auto &pending_preference_iter : m_pending_preference.preference_ready) {
+        if (!create_channel_preference_tlv(pending_preference_iter.first)) {
             LOG(ERROR) << "Failed to create Channel Preference TLV";
             return false;
         }
@@ -870,9 +856,13 @@ bool ChannelSelectionTask::send_channel_preference_report(
     return m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, m_pending_preference.src_mac, db->bridge.mac);
 }
 
-bool ChannelSelectionTask::create_channel_preference_tlv(
-    const sMacAddr &radio_mac, const sPendingRadioPreference &radio_preference)
+bool ChannelSelectionTask::create_channel_preference_tlv(const sMacAddr &radio_mac)
 {
+    auto db    = AgentDB::get();
+    auto radio = db->get_radio_by_mac(radio_mac, AgentDB::eMacType::RADIO);
+    if (!radio) {
+        return false;
+    }
 
     std::stringstream ss;
 
@@ -886,7 +876,7 @@ bool ChannelSelectionTask::create_channel_preference_tlv(
 
     ss << "Preference for radio: " << channel_preference_tlv->radio_uid() << std::endl;
 
-    for (const auto &preference : radio_preference.channel_preferences) {
+    for (const auto &preference : radio->channel_preferences) {
         auto &operating_class_info          = preference.first;
         auto &operating_class_channels_list = preference.second;
 
@@ -925,7 +915,7 @@ bool ChannelSelectionTask::create_channel_preference_tlv(
         }
     }
     ss << std::endl;
-    LOG(INFO) << ss.str();
+    LOG(DEBUG) << ss.str();
     return true;
 }
 
@@ -955,10 +945,11 @@ bool ChannelSelectionTask::create_cac_completion_report_tlv()
     CacStatusDatabase cac_status_database;
     auto db = AgentDB::get();
 
-    for (const auto &pending_preference_iter : m_pending_preference.preference_map) {
-        auto radio = db->get_radio_by_mac(pending_preference_iter.first);
+    for (const auto &pending_preference_iter : m_pending_preference.preference_ready) {
+        const auto &radio_mac = pending_preference_iter.first;
+        auto radio            = db->get_radio_by_mac(radio_mac);
         if (!radio) {
-            LOG(DEBUG) << "Radio " << pending_preference_iter.first << " does not exist on the db";
+            LOG(DEBUG) << "Radio " << radio_mac << " does not exist on the db";
             return false;
         }
 
@@ -998,10 +989,11 @@ bool ChannelSelectionTask::create_cac_status_report_tlv()
     auto db = AgentDB::get();
     CacAvailableChannels agent_avaliable_channels;
 
-    for (const auto &pending_preference_iter : m_pending_preference.preference_map) {
-        auto radio = db->get_radio_by_mac(pending_preference_iter.first);
+    for (const auto &pending_preference_iter : m_pending_preference.preference_ready) {
+        const auto &radio_mac = pending_preference_iter.first;
+        auto radio            = db->get_radio_by_mac(radio_mac);
         if (!radio) {
-            LOG(DEBUG) << "Radio " << pending_preference_iter.first << " does not exist on the db";
+            LOG(DEBUG) << "Radio " << radio_mac << " does not exist on the db";
             return false;
         }
         // fill status report

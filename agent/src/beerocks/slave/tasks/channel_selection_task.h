@@ -65,8 +65,7 @@ private:
     };
     struct sPendingChannelPreferenceReport {
         uint16_t mid;
-        sMacAddr src_mac;
-        std::unordered_map<sMacAddr, sPendingRadioPreference> preference_map;
+        std::unordered_map<sMacAddr, bool> preference_ready;
     };
 
     void handle_channel_preference_query(ieee1905_1::CmduMessageRx &cmdu_rx,
@@ -121,8 +120,7 @@ private:
     bool send_channel_preference_report(ieee1905_1::CmduMessageRx &cmdu_rx,
                                         std::shared_ptr<beerocks_header> beerocks_header);
 
-    bool create_channel_preference_tlv(const sMacAddr &radio_mac,
-                                       const sPendingRadioPreference &radio_preference);
+    bool create_channel_preference_tlv(const sMacAddr &radio_mac);
 
     bool create_cac_completion_report_tlv();
 
