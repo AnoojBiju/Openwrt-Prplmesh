@@ -164,6 +164,12 @@ private:
     ChannelSelectionTask::sSelectedChannel select_next_channel(const sMacAddr &radio_mac);
 
     bool handle_on_demand_selection_request_extension_tlv(ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    bool send_channel_switch_request(const sMacAddr &radio_mac,
+                                     const sIncomingChannelSelectionRequest &request);
+
+    bool create_operating_channel_report(const sMacAddr &radio_mac);
+
     /* ZWDFS */
     static constexpr int8_t ZWDFS_FLOW_MAX_RETRIES                 = 5;
     static constexpr int16_t ZWDFS_FLOW_DELAY_BETWEEN_RETRIES_MSEC = 1000;
