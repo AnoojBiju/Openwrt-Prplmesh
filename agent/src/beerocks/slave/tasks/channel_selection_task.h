@@ -81,15 +81,14 @@ private:
         bool manually_send_operating_report = false;
     };
 
-    struct sPendingChannelSelection {
-        uint16_t mid;
-        sMacAddr src_mac;
-        std::unordered_map<sMacAddr, sIncomingChannelSelectionRequest> requests;
-    };
-
     struct sPendingChannelPreferenceReport {
         uint16_t mid;
         std::unordered_map<sMacAddr, bool> preference_ready;
+    };
+
+    struct sPendingChannelSelection {
+        uint16_t mid;
+        std::unordered_map<sMacAddr, sIncomingChannelSelectionRequest> requests;
     };
 
     void handle_channel_preference_query(ieee1905_1::CmduMessageRx &cmdu_rx,
@@ -97,8 +96,6 @@ private:
 
     void handle_channel_selection_request(ieee1905_1::CmduMessageRx &cmdu_rx,
                                           const sMacAddr &src_mac);
-    void handle_slave_channel_selection_response(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                                 const sMacAddr &src_mac);
 
     /**
      * @brief Handles Vendor Specific messages.
@@ -154,6 +151,19 @@ private:
 
     bool create_cac_status_tlv();
 
+    bool handle_transmit_power_limit(
+        const std::shared_ptr<wfa_map::tlvTransmitPowerLimit> tx_power_limit_tlv);
+
+    bool store_controller_preference(
+        const std::shared_ptr<wfa_map::tlvChannelPreference> channel_preference_tlv);
+
+    bool check_received_preferences_contain_violation(const sMacAddr &radio_mac);
+
+    bool check_is_there_better_channel_than_current(const sMacAddr &radio_mac);
+
+    ChannelSelectionTask::sSelectedChannel select_next_channel(const sMacAddr &radio_mac);
+
+    bool handle_on_demand_selection_request_extension_tlv(ieee1905_1::CmduMessageRx &cmdu_rx);
     /* ZWDFS */
     static constexpr int8_t ZWDFS_FLOW_MAX_RETRIES                 = 5;
     static constexpr int16_t ZWDFS_FLOW_DELAY_BETWEEN_RETRIES_MSEC = 1000;
