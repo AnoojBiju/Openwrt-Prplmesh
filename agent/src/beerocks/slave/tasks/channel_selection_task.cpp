@@ -11,11 +11,14 @@
 #include "../backhaul_manager/backhaul_manager.h"
 #include "../cac_status_database.h"
 
+#include <beerocks/tlvf/beerocks_message_1905_vs.h>
 #include <beerocks/tlvf/beerocks_message_backhaul.h>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
+#include <tlvf/wfa_map/tlvOperatingChannelReport.h>
 #include <tlvf/wfa_map/tlvProfile2CacCompletionReport.h>
 #include <tlvf/wfa_map/tlvProfile2CacStatusReport.h>
 #include <tlvf/wfa_map/tlvRadioOperationRestriction.h>
+#include <tlvf/wfa_map/tlvTransmitPowerLimit.h>
 
 #include "task_messages.h"
 #include <bcl/beerocks_utils.h>
@@ -34,6 +37,120 @@ namespace beerocks {
 // Declaration for static class constants
 constexpr int8_t ChannelSelectionTask::ZWDFS_FLOW_MAX_RETRIES;
 constexpr int16_t ChannelSelectionTask::ZWDFS_FLOW_DELAY_BETWEEN_RETRIES_MSEC;
+
+/**
+ * @brief Returns the preference score of a given channel.
+ * 
+ * @param[in] channel_preferences Reference to the preference map.
+ * @param[in] operating_class Channel's operating class.
+ * @param[in] channel_number Channel's number.
+ * 
+ * @return Cumulative preference score of the given channel.
+ */
+uint8_t
+get_preference_for_channel(const AgentDB::sRadio::channel_preferences_map &channel_preferences,
+                           uint8_t operating_class, uint8_t channel_number)
+{
+
+    // Check if Operating Class is present in preference
+    if (std::find_if(
+            channel_preferences.begin(), channel_preferences.end(),
+            [operating_class](
+                const AgentDB::sRadio::channel_preferences_map::const_reference &iter) {
+                return (iter.first.operating_class == operating_class);
+            }) == channel_preferences.end()) {
+        // Preference does not support the Operating Class, returning Non-Operable
+        return (uint8_t)beerocks::eChannelPreferenceRankingConsts::NON_OPERABLE;
+    }
+
+    // Check if channel present in operating class
+    if (!son::wireless_utils::is_channel_in_operating_class(operating_class, channel_number)) {
+        // Channel is not present in Operating Class, returning Non-Operable
+        return (uint8_t)beerocks::eChannelPreferenceRankingConsts::NON_OPERABLE;
+    }
+
+    bool operating_class_is_present = false;
+
+    for (const auto &preference_iter : channel_preferences) {
+        // Check if correct operating class
+        if (preference_iter.first.operating_class == operating_class) {
+            operating_class_is_present = true;
+            // Check if the preference's channel-list is empty.
+            if (preference_iter.second.empty()) {
+                // All channels in the operating class have the same preference.
+                return preference_iter.first.flags.preference;
+            }
+            // Check if channel present in radio preference's channel-list.
+            const auto channel_iter = preference_iter.second.find(channel_number);
+            if (channel_iter == preference_iter.second.end()) {
+                continue;
+            }
+            return preference_iter.first.flags.preference;
+        }
+    }
+
+    if (!operating_class_is_present) {
+        LOG(ERROR) << "Preference does not support Operating Class " << operating_class;
+        return (uint8_t)beerocks::eChannelPreferenceRankingConsts::NON_OPERABLE;
+    }
+
+    /**
+     * If this is reached it means that even though the preference
+     * contains the operating class, it does not contain the specific
+     * channel in it's channel list.
+     * This means that we need to assume that the channel has the
+     * highest preference.
+     */
+    LOG(DEBUG) << "Could not find Channel " << channel_number << " in the preference!";
+    return (uint8_t)beerocks::eChannelPreferenceRankingConsts::BEST;
+}
+
+/**
+ * @brief Returns the cumulative preference of a given channel.
+ * 
+ * @param[in] radio Pointer to the AgentDB's radio element.
+ * @param[in] controller_preferences Reference to the controller's preference map.
+ * @param[in] operating_class Channel's operating class.
+ * @param[in] channel_number Channel's number.
+ * 
+ * @return Cumulative preference score of the given channel.
+ */
+uint8_t
+get_cumulative_preference(const AgentDB::sRadio *radio,
+                          const AgentDB::sRadio::channel_preferences_map &controller_preferences,
+                          uint8_t operating_class, uint8_t channel_number)
+{
+    constexpr uint8_t NON_OPERABLE =
+        (uint8_t)beerocks::eChannelPreferenceRankingConsts::NON_OPERABLE;
+    if (operating_class == NON_OPERABLE) {
+        // Skip invalid operating class
+        return NON_OPERABLE;
+    }
+
+    // Get Controller's reported preference
+    const auto controller_preference =
+        get_preference_for_channel(controller_preferences, operating_class, channel_number);
+
+    // Get Radio's reported preference
+    const auto radio_preference =
+        get_preference_for_channel(radio->channel_preferences, operating_class, channel_number);
+
+    if (radio_preference == NON_OPERABLE || controller_preference == NON_OPERABLE) {
+        return NON_OPERABLE;
+    }
+
+    const auto cumulative_preference = (radio_preference + controller_preference);
+
+    LOG(INFO) << "Channel: " << channel_number << " "
+              << "Operating Class: " << operating_class << " "
+              << "Bandwidth: "
+              << utils::convert_bandwidth_to_int(
+                     son::wireless_utils::operating_class_to_bandwidth(operating_class))
+              << "MHz "
+              << "has a cumulative preference of " << cumulative_preference << "("
+              << radio_preference << "+" << controller_preference << ")";
+    return cumulative_preference;
+}
 
 ChannelSelectionTask::ChannelSelectionTask(BackhaulManager &btl_ctx,
                                            ieee1905_1::CmduMessageTx &cmdu_tx)
@@ -97,14 +214,6 @@ bool ChannelSelectionTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint3
     }
     case ieee1905_1::eMessageType::CHANNEL_SELECTION_REQUEST_MESSAGE: {
         handle_channel_selection_request(cmdu_rx, src_mac);
-        // According to the WFA documentation, each radio should send channel selection
-        // response even if that radio was not marked in the request. After filling radio
-        // mac vector need to do forwarding for the channel selection request to all slaves.
-        // In this scope return false forwards the message to the son_slave.
-        return false;
-    }
-    case ieee1905_1::eMessageType::CHANNEL_SELECTION_RESPONSE_MESSAGE: {
-        handle_slave_channel_selection_response(cmdu_rx, src_mac);
         break;
     }
     case ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE: {
