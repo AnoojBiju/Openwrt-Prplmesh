@@ -227,6 +227,8 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
         return;
     }
 
+    LOG(TRACE) << "Processing link metric query, requested neighbour mac: " << neighbor_al_mac;
+
     /**
      * Get the list of neighbor links from the topology database.
      * Neighbors are grouped by the interface that connects to them.
@@ -727,8 +729,8 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
 
         auto bssid_tlv = ap_metrics_tlv->bssid();
         auto mac       = std::find_if(
-            m_ap_metric_query.begin(), m_ap_metric_query.end(),
-            [&bssid_tlv](sApMetricsQuery const &query) { return query.bssid == bssid_tlv; });
+                  m_ap_metric_query.begin(), m_ap_metric_query.end(),
+                  [&bssid_tlv](sApMetricsQuery const &query) { return query.bssid == bssid_tlv; });
 
         if (mac == m_ap_metric_query.end()) {
             LOG(ERROR) << "Failed search in ap_metric_query for bssid: " << bssid_tlv
@@ -1098,7 +1100,7 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
     // received through.
     auto db = AgentDB::get();
 
-    auto add_eth_neighbor = [&](const std::string &iface_name, const sMacAddr &iface_mac) {
+    /*auto add_eth_neighbor = [&](const std::string &iface_name, const sMacAddr &iface_mac) {
         sLinkInterface wired_interface;
         wired_interface.iface_name = iface_name;
         wired_interface.iface_mac  = iface_mac;
@@ -1109,68 +1111,68 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
             LOG(ERROR) << "Unable to compute media type for interface "
                        << wired_interface.iface_name;
             return false;
-        }
+        }*/
 
-        for (const auto &neighbors_on_local_iface : db->neighbor_devices) {
-            auto &neighbors = neighbors_on_local_iface.second;
+    for (const auto &neighbors_on_local_iface : db->neighbor_devices) {
+        auto &neighbors = neighbors_on_local_iface.second;
+        auto &macaddr   = neighbors_on_local_iface.first;
 
-            auto &macaddr = neighbors_on_local_iface.first;
-            LOG(TRACE) << "Getting neighbors on ETH of interface mac: "
-                       << macaddr;
+        sLinkInterface local_interface;
+        local_interface.iface_mac = macaddr;
+        net::network_utils::linux_iface_get_name(macaddr, local_interface.iface_name);
 
-            for (const auto &neighbor_entry : neighbors) {
-                LOG(TRACE) << "- neighbor mac: "
-                           << neighbor_entry.first;
-                LOG(TRACE) << "- neighbor iface: "
-                           << neighbor_entry.second.receiving_iface_name;
-                LOG(TRACE) << " ";
+        LOG(TRACE) << "Getting neighbors of interface " << local_interface.iface_name
+                   << " with mac: " << macaddr;
 
-                if (neighbor_entry.second.receiving_iface_name == iface_name) {
-                    sLinkNeighbor neighbor;
-                    neighbor.al_mac    = neighbor_entry.first;
-                    neighbor.iface_mac = neighbor_entry.second.transmitting_iface_mac;
-                    if ((neighbor_mac_filter == net::network_utils::ZERO_MAC) ||
-                        (neighbor_mac_filter == neighbor.al_mac)) {
-                        neighbor_links_map[wired_interface].push_back(neighbor);
-                    }
-                }
+        for (const auto &neighbor_entry : neighbors) {
+            LOG(TRACE) << "- neighbor mac: " << neighbor_entry.first;
+            LOG(TRACE) << "- neighbor iface: " << neighbor_entry.second.receiving_iface_name;
+            LOG(TRACE) << " ";
+
+            // Debug: add all interfaces
+            //if (neighbor_entry.second.receiving_iface_name == iface_name) {
+            sLinkNeighbor neighbor;
+            neighbor.al_mac    = neighbor_entry.first;
+            neighbor.iface_mac = neighbor_entry.second.transmitting_iface_mac;
+            if ((neighbor_mac_filter == net::network_utils::ZERO_MAC) ||
+                (neighbor_mac_filter == neighbor.al_mac)) {
+                neighbor_links_map[local_interface].push_back(neighbor);
             }
+            //}
         }
-        return true;
-    };
+    }
+    //return true;
+    //};
 
     // Add WAN interface
-    if (!db->device_conf.local_gw && !db->ethernet.wan.iface_name.empty()) {
+    /*if (!db->device_conf.local_gw && !db->ethernet.wan.iface_name.empty()) {
         if (!add_eth_neighbor(db->ethernet.wan.iface_name, db->ethernet.wan.mac)) {
             // Error message inside the lambda function.
             return false;
         }
-    }
+    }*/
 
     // Add LAN interfaces
-    for (const auto &lan_iface_info : db->ethernet.lan) {
+    /*for (const auto &lan_iface_info : db->ethernet.lan) {
         if (!add_eth_neighbor(lan_iface_info.iface_name, lan_iface_info.mac)) {
             // Error message inside the lambda function.
             return false;
         }
-    }
+    }*/
 
     // Also include a link for each associated client
-    for (const auto radio : db->get_radios_list()) {
+    /*for (const auto radio : db->get_radios_list()) {
         if (!radio) {
             continue;
         }
 
-        LOG(TRACE) << "In radio loop, radio mac: "
-                   << radio->front.iface_mac
-                   << "Iface name: "
-                   << radio->front.iface_name;
+        LOG(TRACE) << "In radio loop, radio mac: " << radio->front.iface_mac
+                   << " Iface name: " << radio->front.iface_name;
 
         for (const auto &associated_client : radio->associated_clients) {
             auto &bssid = associated_client.second.bssid;
 
-            LOG(TRACE) << "Associated client:"
-                       << associated_client.first;
+            LOG(TRACE) << "Associated client:" << associated_client.first;
 
             sLinkInterface interface;
 
@@ -1198,7 +1200,7 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
                 neighbor_links_map[interface].push_back(neighbor);
             }
         }
-    }
+    }*/
 
     return true;
 }
