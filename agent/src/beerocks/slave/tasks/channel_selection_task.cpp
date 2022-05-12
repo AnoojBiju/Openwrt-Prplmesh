@@ -270,84 +270,57 @@ void ChannelSelectionTask::handle_channel_selection_request(ieee1905_1::CmduMess
 {
     const auto mid = cmdu_rx.getMessageId();
 
-    LOG(DEBUG) << "Forwarding CHANNEL_SELECTION_REQUEST to son_slave, mid=" << std::hex << mid;
+    LOG(DEBUG) << "Received CHANNEL_SELECTION_REQUEST, mid=" << std::hex << mid;
 
     // Clear previous request, if any
-    m_expected_channel_selection.requests.clear();
-    m_expected_channel_selection.responses.clear();
+    m_pending_selection.mid = mid;
+    m_pending_selection.requests.clear();
 
-    m_expected_channel_selection.mid = mid;
-
-    auto db = AgentDB::get();
-
-    // Save radio mac for each connected radio
-    for (const auto radio : db->get_radios_list()) {
-        m_expected_channel_selection.requests.emplace_back(radio->front.iface_mac);
-    }
-}
-
-void ChannelSelectionTask::handle_slave_channel_selection_response(
-    ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac)
-{
-    const auto mid = cmdu_rx.getMessageId();
-    LOG(DEBUG) << "Received CHANNEL_SELECTION_RESPONSE message, mid=" << std::hex << mid;
-
-    if (mid != m_expected_channel_selection.mid) {
-        return;
+    // Handle TX Power Limit TLV
+    for (const auto tx_power_limit_tlv : cmdu_rx.getClassList<wfa_map::tlvTransmitPowerLimit>()) {
+        if (!handle_transmit_power_limit(tx_power_limit_tlv)) {
+            LOG(ERROR) << "Failed to handle transmit power limit";
+        }
     }
 
-    auto channel_selection_response = cmdu_rx.getClass<wfa_map::tlvChannelSelectionResponse>();
-    if (!channel_selection_response) {
-        LOG(ERROR) << "Failed cmdu_rx.getClass<wfa_map::tlvChannelSelectionResponse>(), mid="
-                   << std::hex << mid;
-        return;
-    }
+    // Handle Controller's Channel Preference TLV
+    for (const auto channel_preference_tlv :
+         cmdu_rx.getClassList<wfa_map::tlvChannelPreference>()) {
 
-    auto db = AgentDB::get();
+        const auto &radio_mac = channel_preference_tlv->radio_uid();
+        auto &radio_request   = m_pending_selection.requests[radio_mac];
 
-    m_expected_channel_selection.responses.push_back(
-        {channel_selection_response->radio_uid(), channel_selection_response->response_code()});
-
-    // Remove an entry from the processed query
-    m_expected_channel_selection.requests.erase(
-        std::remove_if(m_expected_channel_selection.requests.begin(),
-                       m_expected_channel_selection.requests.end(),
-                       [&](sMacAddr const &query) {
-                           return channel_selection_response->radio_uid() == query;
-                       }),
-        m_expected_channel_selection.requests.end());
-
-    if (!m_expected_channel_selection.requests.empty()) {
-        return;
-    }
-
-    // We received all responses - prepare and send response message to the controller
-    auto cmdu_header =
-        m_cmdu_tx.create(mid, ieee1905_1::eMessageType::CHANNEL_SELECTION_RESPONSE_MESSAGE);
-
-    if (!cmdu_header) {
-        LOG(ERROR) << "Failed building IEEE1905 CHANNEL_SELECTION_RESPONSE_MESSAGE";
-        return;
-    }
-
-    for (const auto &response : m_expected_channel_selection.responses) {
-        auto channel_selection_response_tlv =
-            m_cmdu_tx.addClass<wfa_map::tlvChannelSelectionResponse>();
-
-        if (!channel_selection_response_tlv) {
-            LOG(ERROR) << "Failed addClass<wfa_map::tlvChannelSelectionResponse>";
+        if (!store_controller_preference(channel_preference_tlv)) {
+            LOG(ERROR) << "Failed to store controller preference!";
+            radio_request.response_code = wfa_map::tlvChannelSelectionResponse::eResponseCode::
+                DECLINE_VIOLATES_CURRENT_PREFERENCES;
             continue;
         }
-
-        channel_selection_response_tlv->radio_uid()     = response.radio_mac;
-        channel_selection_response_tlv->response_code() = response.response_code;
+        if (!check_received_preferences_contain_violation(radio_mac)) {
+            LOG(ERROR) << "Failed checking if received preferences contain violation!";
+            radio_request.response_code = wfa_map::tlvChannelSelectionResponse::eResponseCode::
+                DECLINE_VIOLATES_MOST_RECENTLY_REPORTED_PREFERENCES;
+            continue;
+        }
+        if (!check_is_there_better_channel_than_current(radio_mac)) {
+            LOG(ERROR) << "Failed checking if there is a better channel!";
+            radio_request.response_code = wfa_map::tlvChannelSelectionResponse::eResponseCode::
+                DECLINE_VIOLATES_MOST_RECENTLY_REPORTED_PREFERENCES;
+            continue;
+        }
     }
 
-    // Clear the m_expected_channel_selection.responses vector after preparing response to the controller
-    m_expected_channel_selection.responses.clear();
+    auto db = AgentDB::get();
 
-    LOG(DEBUG) << "Sending CHANNEL_SELECTION_RESPONSE_MESSAGE, mid=" << std::hex << mid;
-    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, db->controller_info.bridge_mac, db->bridge.mac);
+    // Check if controller is prplMesh.
+    if (db->controller_info.prplmesh_controller) {
+        // Controller is prplMesh, parse selection extension TLV.
+        if (!handle_on_demand_selection_request_extension_tlv(cmdu_rx)) {
+            // Failed to parse the VS TLV, no need to stop the
+            // Channel-Selection flow since it is not mandatory.
+            LOG(WARNING) << "Failed to parse tlvVsOnDemandChannelSelection!";
+        }
+    }
 }
 
 bool ChannelSelectionTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
@@ -1138,6 +1111,326 @@ bool ChannelSelectionTask::create_cac_status_report_tlv()
     return true;
 }
 
+bool ChannelSelectionTask::handle_transmit_power_limit(
+    const std::shared_ptr<wfa_map::tlvTransmitPowerLimit> tx_power_limit_tlv)
+{
+    const auto &radio_mac             = tx_power_limit_tlv->radio_uid();
+    const auto new_tx_power_limit_dbm = tx_power_limit_tlv->transmit_power_limit_dbm();
+
+    auto &radio_request = m_pending_selection.requests[radio_mac];
+
+    auto radio = AgentDB::get()->get_radio_by_mac(radio_mac);
+    if (!radio) {
+        LOG(DEBUG) << "Radio " << radio_mac << " does not exist on the db";
+        return false;
+    }
+
+    LOG(DEBUG) << std::dec << "received tlvTransmitPowerLimit " << (int)new_tx_power_limit_dbm;
+    /**
+     * Currently it is assumed that if a new TX Power Limit was requested we need to send it to
+     * the Agent without any additional validation.
+     * 
+     * In the outgoing request, set the channel & bandwidth to that of the current radio.
+     */
+    radio_request.outgoing_request.channel        = radio->channel;
+    radio_request.outgoing_request.bandwidth      = radio->bandwidth;
+    radio_request.outgoing_request.tx_limit       = new_tx_power_limit_dbm;
+    radio_request.outgoing_request.tx_limit_valid = true;
+    radio_request.power_switch_received           = true;
+
+    return true;
+}
+
+bool ChannelSelectionTask::store_controller_preference(
+    const std::shared_ptr<wfa_map::tlvChannelPreference> channel_preference_tlv)
+{
+    const auto &radio_mac = channel_preference_tlv->radio_uid();
+    auto radio            = AgentDB::get()->get_radio_by_mac(radio_mac);
+    if (!radio) {
+        LOG(DEBUG) << "Radio " << radio_mac << " does not exist on the db";
+        return false;
+    }
+
+    // Get & Clear the previous channel preferences.
+    auto &controller_preferences = m_pending_selection.requests[radio_mac].controller_preferences;
+    controller_preferences.clear();
+
+    std::stringstream ss;
+    ss << "Parsing Controller's Channel Preference TLV:" << std::endl;
+
+    for (int oc_idx = 0; oc_idx < channel_preference_tlv->operating_classes_list_length();
+         oc_idx++) {
+        auto operating_class_tuple = channel_preference_tlv->operating_classes_list(oc_idx);
+        if (!std::get<0>(operating_class_tuple)) {
+            LOG(ERROR) << "getting operating class entry has failed!";
+            return false;
+        }
+        auto &op_class_channels    = std::get<1>(operating_class_tuple);
+        const auto operating_class = op_class_channels.operating_class();
+        const auto preference      = op_class_channels.flags().preference;
+        const auto reason_code     = op_class_channels.flags().reason_code;
+
+        auto channel_preference =
+            AgentDB::sChannelPreference(operating_class, op_class_channels.flags());
+        auto &channels_set = controller_preferences[channel_preference];
+
+        ss << "Operating class=" << +operating_class << ", preference=" << +preference
+           << ", reason=" << +reason_code << ", channel_list={";
+
+        for (int ch_idx = 0; ch_idx < op_class_channels.channel_list_length(); ch_idx++) {
+            // Get channel
+            auto channel_ptr = op_class_channels.channel_list(ch_idx);
+            if (!channel_ptr) {
+                LOG(ERROR) << "getting channel entry has failed!";
+                return false;
+            }
+            auto channel = *channel_ptr;
+
+            if (!son::wireless_utils::is_channel_in_operating_class(operating_class, channel)) {
+                LOG(ERROR) << "Channel " << (int)channel << " invalid for operating class "
+                           << (int)operating_class;
+                return false;
+            }
+
+            ss << (int)channel << " ";
+            channels_set.insert(channel);
+        }
+        ss.seekp(-1, std::ios_base::end); // Remove last space in string-stream
+        ss << "}" << std::endl;
+    }
+
+    LOG(DEBUG) << ss.str();
+    return true;
+}
+
+bool ChannelSelectionTask::check_received_preferences_contain_violation(const sMacAddr &radio_mac)
+{
+    auto radio = AgentDB::get()->get_radio_by_mac(radio_mac);
+    if (!radio) {
+        LOG(DEBUG) << "Radio " << radio_mac << " does not exist on the db";
+        return false;
+    }
+
+    auto &radio_request              = m_pending_selection.requests[radio_mac];
+    const auto &received_preferences = radio_request.controller_preferences;
+
+    for (const auto &preference_iter : received_preferences) {
+        const auto operating_class       = preference_iter.first.operating_class;
+        const auto controller_preference = preference_iter.first.flags.preference;
+
+        if (controller_preference == 0) {
+            // Skip Operating-Class set that the controller report as Non-Operable.
+            continue;
+        }
+
+        for (const auto channel : preference_iter.second) {
+            const auto radio_preference =
+                get_preference_for_channel(radio->channel_preferences, operating_class, channel);
+            if (radio_preference == 0) {
+                LOG(ERROR) << "[" << channel << "," << operating_class
+                           << "] is non-operational on radio " << radio_mac;
+                radio_request.response_code = wfa_map::tlvChannelSelectionResponse::eResponseCode::
+                    DECLINE_VIOLATES_CURRENT_PREFERENCES;
+                return true; // Returning true because we found a violation.
+            }
+        }
+    }
+    // No violations were found.
+    return true;
+}
+
+bool ChannelSelectionTask::check_is_there_better_channel_than_current(const sMacAddr &radio_mac)
+{
+    auto radio = AgentDB::get()->get_radio_by_mac(radio_mac);
+    if (!radio) {
+        LOG(DEBUG) << "Radio " << radio_mac << " does not exist on the db";
+        return false;
+    }
+
+    beerocks::message::sWifiChannel channel(radio->channel, radio->bandwidth);
+    const auto operating_class    = son::wireless_utils::get_operating_class_by_channel(channel);
+    auto &radio_request           = m_pending_selection.requests[radio_mac];
+    const auto current_preference = get_cumulative_preference(
+        radio, radio_request.controller_preferences, operating_class, radio->channel);
+
+    LOG(DEBUG) << "Current Channel is [" << (int)channel.channel << "-" << (int)operating_class
+               << "("
+               << utils::convert_bandwidth_to_int(
+                      beerocks::eWiFiBandwidth(channel.channel_bandwidth))
+               << "MHz)] and has a cumulative preference score of " << (int)current_preference;
+
+    /**
+     * Find the next best channel.
+     * If that channel is not restricted by the agent's preferences.
+     * And is better then our currect channel.
+     * Switch to that channel.
+     */
+    sSelectedChannel selected_channel = select_next_channel(radio_mac);
+    if (selected_channel.channel == 0) {
+        LOG(ERROR) << "Could not find a better channel!";
+        radio_request.response_code = wfa_map::tlvChannelSelectionResponse::eResponseCode::
+            DECLINE_VIOLATES_CURRENT_PREFERENCES;
+        return false;
+    }
+
+    LOG(DEBUG) << "Next best channel " << (int)selected_channel.operating_class << "-"
+               << (int)selected_channel.channel << " bandwidth: "
+               << beerocks::utils::convert_bandwidth_to_int(
+                      beerocks::eWiFiBandwidth(selected_channel.bw))
+               << " has a cumulative preference score of "
+               << (int)selected_channel.preference_score;
+
+    if (current_preference >= selected_channel.preference_score) {
+        LOG(DEBUG)
+            << "Currect channel is better or as good as the next best channel, no need to switch";
+        return true;
+    }
+
+    radio_request.selected_channel           = selected_channel;
+    radio_request.outgoing_request.channel   = selected_channel.channel;
+    radio_request.outgoing_request.bandwidth = selected_channel.bw;
+    radio_request.channel_switch_needed      = true;
+
+    return true;
+}
+
+ChannelSelectionTask::sSelectedChannel
+ChannelSelectionTask::select_next_channel(const sMacAddr &radio_mac)
+{
+    auto radio = AgentDB::get()->get_radio_by_mac(radio_mac);
+    if (!radio) {
+        LOG(DEBUG) << "Radio " << radio_mac << " does not exist on the db";
+        return sSelectedChannel();
+    }
+
+    const auto &radio_request        = m_pending_selection.requests[radio_mac];
+    const auto &received_preferences = radio_request.controller_preferences;
+
+    sSelectedChannel selected_channel = {};
+
+    for (const auto &channel_iter : radio->channels_list) {
+        const auto channel_number = channel_iter.first;
+        const auto &channel_info  = channel_iter.second;
+
+        if (channel_info.dfs_state == beerocks_message::eDfsState::UNAVAILABLE) {
+            // Skipping UNAVAILABLE channels.
+            continue;
+        }
+
+        for (auto &bw_info : channel_info.supported_bw_list) {
+            const auto bandwidth       = bw_info.bandwidth;
+            const auto operating_class = son::wireless_utils::get_operating_class_by_channel(
+                message::sWifiChannel(channel_number, bandwidth));
+
+            if (operating_class == 0) {
+                LOG(WARNING) << "Skipping invalid operating class for Channel " << channel_number
+                             << "& Bandwidth: " << utils::convert_bandwidth_to_int(bandwidth)
+                             << "MHz.";
+                // Skip invalid operating class
+                continue;
+            }
+
+            auto central_channel = channel_number;
+            if (son::wireless_utils::is_operating_class_using_central_channel(operating_class)) {
+                auto source_channel_it =
+                    son::wireless_utils::channels_table_5g.find(channel_number);
+                if (source_channel_it == son::wireless_utils::channels_table_5g.end()) {
+                    LOG(WARNING) << "Couldn't find source channel " << channel_number
+                                 << " for overlapping channels";
+                    continue;
+                }
+                central_channel = source_channel_it->second.at(bandwidth).center_channel;
+            }
+
+            const auto cumulative_preference = get_cumulative_preference(
+                radio, received_preferences, operating_class, central_channel);
+            if (cumulative_preference == 0) {
+                // Either radio or controller preference is Non-Operable, skipping
+                continue;
+            }
+
+            if (selected_channel.preference_score > cumulative_preference) {
+                // cumulative preference is lower then best, skip.
+                continue;
+            }
+
+            if (selected_channel.preference_score == cumulative_preference) {
+                // On a same preference, prefer a higher bandwidth.
+                if (selected_channel.bw <= bandwidth) {
+                    // found bandwidth is lower or equals to the best, skip.
+                    continue;
+                }
+            }
+
+            LOG(INFO) << "[" << channel_number << "-" << operating_class << "("
+                      << utils::convert_bandwidth_to_int(bandwidth)
+                      << "MHz)] is the new Best-Channel.";
+            // Override selected channel
+            selected_channel.channel          = channel_number;
+            selected_channel.operating_class  = operating_class;
+            selected_channel.bw               = bandwidth;
+            selected_channel.dfs_state        = channel_info.dfs_state;
+            selected_channel.preference_score = cumulative_preference;
+        }
+    }
+
+    if (selected_channel.preference_score == 0) {
+        LOG(ERROR) << "Could not find a suitable channel";
+        return sSelectedChannel();
+    }
+
+    LOG(INFO) << "Next Best channel is [" << selected_channel.channel << "-"
+              << selected_channel.operating_class << "("
+              << utils::convert_bandwidth_to_int(selected_channel.bw)
+              << "MHz)] with a preference score of " << selected_channel.preference_score
+              << " and has a DFS state of " << selected_channel.dfs_state;
+    // Override selected channel
+    return selected_channel;
+}
+
+bool ChannelSelectionTask::handle_on_demand_selection_request_extension_tlv(
+    ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto beerocks_header = beerocks::message_com::parse_intel_vs_message(cmdu_rx);
+    if (!beerocks_header) {
+        LOG(ERROR) << "expecting beerocks_message::tlvVsOnDemandChannelSelection";
+        return false;
+    }
+
+    auto on_demand_requests =
+        beerocks_header->addClass<beerocks_message::tlvVsOnDemandChannelSelection>();
+    if (!on_demand_requests) {
+        LOG(ERROR) << "addClass beerocks_message::tlvVsOnDemandChannelSelection failed";
+        return false;
+    }
+
+    const auto &radio_mac      = on_demand_requests->radio_mac();
+    const auto channel         = on_demand_requests->channel();
+    const auto operating_class = on_demand_requests->operating_class();
+    const auto csa_count       = on_demand_requests->CSA_count();
+    const auto bandwidth       = son::wireless_utils::operating_class_to_bandwidth(operating_class);
+
+    const auto pending_request_iter = m_pending_selection.requests.find(radio_mac);
+    if (pending_request_iter == m_pending_selection.requests.end()) {
+        LOG(ERROR) << "There is no pending Channel-Selection request that matches " << radio_mac;
+        return false;
+    }
+
+    // Found the request
+    auto &pending_request = pending_request_iter->second;
+
+    LOG(INFO) << "Received an On-Demand Channel-Selection request from " << radio_mac;
+    LOG(INFO) << "The requested channel is " << channel << " on bandwidth "
+              << utils::convert_bandwidth_to_int(bandwidth) << "MHz with a CSA count of "
+              << csa_count;
+
+    // Force a channel switch
+    if (pending_request.channel_switch_needed) {
+        pending_request.outgoing_request.CSA_count = csa_count;
+    }
+    return true;
+}
+
 bool ChannelSelectionTask::radio_scan_in_progress(eFreqType band)
 {
     auto db = AgentDB::get();
@@ -1352,7 +1645,12 @@ void ChannelSelectionTask::zwdfs_fsm()
             break;
         }
 
-        if (radio_scan_in_progress()) {
+        auto radio = AgentDB::get()->radio(m_zwdfs_primary_radio_iface);
+        if (!radio) {
+            break;
+        }
+
+        if (radio_scan_in_progress(radio->freq_type)) {
             LOG(INFO) << "Pause ZWDFS flow until background scan is finished";
             break;
         }
