@@ -142,6 +142,13 @@ bool BrokerClientImpl::send_cmdu(ieee1905_1::CmduMessageTx &cmdu_tx, const sMacA
 bool BrokerClientImpl::forward_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &dst_mac,
                                     const sMacAddr &src_mac, uint32_t iface_index)
 {
+    if (cmdu_rx.getMessageType() == ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_SEARCH_MESSAGE) {
+        LOG(ERROR) << "Hemanth multicast address - " << tlvf::mac_to_string(dst_mac);
+        LOG(ERROR) << "Hemanth controller info bridge mac address - "
+                   << tlvf::mac_to_string(src_mac);
+        LOG(ERROR) << "Hemanth bridge mac - " << iface_index;
+    }
+
     // Swap bytes before forwarding, from host to network byte order.
     cmdu_rx.swap();
 
@@ -152,6 +159,7 @@ bool BrokerClientImpl::forward_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, const sM
         cmdu_rx.swap();
     });
 
+    LOG(ERROR) << "Hemanth - Sending cmdu message";
     return send_cmdu_message(cmdu_rx, dst_mac, src_mac, iface_index);
 }
 
@@ -266,6 +274,7 @@ void BrokerClientImpl::close_connection(bool remove_handlers)
 bool BrokerClientImpl::send_cmdu_message(ieee1905_1::CmduMessage &cmdu, const sMacAddr &dst_mac,
                                          const sMacAddr &src_mac, uint32_t iface_index)
 {
+    LOG(ERROR) << "Hemanth , send_cmdu_message";
     if (beerocks::net::network_utils::ZERO_MAC == dst_mac) {
         LOG(ERROR) << "Destination MAC address is empty!";
         return false;
@@ -288,7 +297,8 @@ bool BrokerClientImpl::send_cmdu_message(ieee1905_1::CmduMessage &cmdu, const sM
     message.metadata()->if_index          = iface_index;
 
     std::copy_n(cmdu.getMessageBuff(), message.metadata()->length, message.data());
-
+    LOG(ERROR) << "Hemanth - iface index " << iface_index;
+    LOG(ERROR) << "Hemanth - sending message";
     return send_message(message);
 }
 
@@ -299,14 +309,14 @@ bool BrokerClientImpl::send_message(const beerocks::transport::messages::Message
         LOG(ERROR) << "Connection with server has been closed!";
         return false;
     }
-
+    LOG(ERROR) << "Hemanth - send_message";
     // Serialize message into a byte array
     beerocks::net::BufferImpl<broker_buffer_size> buffer;
     if (!m_message_serializer->serialize_message(message, buffer)) {
         LOG(ERROR) << "Failed to serialize message!";
         return false;
     }
-
+    LOG(ERROR) << "Hemanth - send_message";
     // Send data
     return m_connection->send(buffer);
 }

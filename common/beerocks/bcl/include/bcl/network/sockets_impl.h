@@ -362,6 +362,7 @@ public:
      */
     int send(const Buffer &buffer) override
     {
+        LOG(ERROR) << "Hemanth at ::send()";
         return ::send(m_socket->fd(), buffer.data(), buffer.length(), MSG_NOSIGNAL);
     }
 
