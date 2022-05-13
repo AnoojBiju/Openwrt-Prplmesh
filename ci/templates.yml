@@ -196,6 +196,11 @@
   variables:
     EASYMESH_REVISION: "R2"
 
+.run-certification-tests-R4:
+  extends: .run-certification-tests
+  variables:
+    EASYMESH_REVISION: "R4"
+
 .certification-generic:
   interruptible: false
   # RUN_ON_DEVICE variable need to be set when extending the job
