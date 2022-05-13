@@ -247,6 +247,22 @@ run-certification-tests-R2-platform-essensium:
     - job: build-for-intel-mips
     - job: build-for-turris-omnia
 
+run-certification-tests-R4-platform-essensium:
+  extends: .run-certification-tests-R4
+  before_script:
+    - !reference [.run-certification-tests-R4, before_script]
+    - echo "$TESTS_TO_RUN_R4_ESSENSIUM" > .tests-to-run
+    - echo "$DEVICE_UNDER_TEST_R4_ESSENSIUM" > .device-under-test
+  rules:
+    - if: '$TESTS_TO_RUN_R4_ESSENSIUM !~ /^\$/ && $DEVICE_UNDER_TEST_R4_ESSENSIUM != "prplmesh"'
+    - when: manual
+      allow_failure: true
+  tags:
+    - certs-tests-R4-essensium
+  needs:
+    - job: build-for-intel-mips
+    - job: build-for-turris-omnia
+
 run-certification-tests-R1-platform-isr:
   extends: .run-certification-tests-R1
   before_script:
