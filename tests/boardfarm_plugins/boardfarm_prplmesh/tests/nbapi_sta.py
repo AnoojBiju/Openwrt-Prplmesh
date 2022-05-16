@@ -120,8 +120,15 @@ class NbapiSta(PrplMeshBaseTest):
                         f"Wrong BSSID [{bss.bssid}] specified for sta {sta.mac}"
                     assert time_stamp != 0, "Value for TimeStamp is not specified."
 
-                    self.get_nbapi_ht_capabilities(sta.path)
-                    self.get_nbapi_vht_capabilities(sta.path)
+                    print("\nHT Capabilities")
+                    ht_caps = controller.nbapi_get(sta.path + ".HTCapabilities")
+                    for key, value in sorted(ht_caps.items()):
+                        print("{} : {}".format(key, value))
+
+                    print("\nVHT Capabilities")
+                    vht_caps = controller.nbapi_get(sta.path + ".VHTCapabilities")
+                    for key, value in sorted(vht_caps.items()):
+                        print("{} : {}".format(key, value))
 
                     time_sta = dateutil.parser.isoparse(time_stamp)
 
