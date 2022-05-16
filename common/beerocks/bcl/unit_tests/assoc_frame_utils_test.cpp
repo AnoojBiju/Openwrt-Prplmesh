@@ -53,7 +53,8 @@ TEST(parse_station_capabilities, sta_caps_from_rcvd_raw_data)
      * 0xff, 0x1c, 0x23, 0x03, 0x08, 0x00, 0x00, 0x00, 0x80, 0x64, 0x30, 0x00, 0x00,
      * 0x0d, 0x00, 0x9f, 0x00, 0x0c, 0x00, 0x00, 0xfa, 0xff, 0xfa, 0xff, 0x39, 0x1c,
      * 0xc7, 0x71, 0x1c, 0x07
-     * HE Caps:
+     * HE Caps: EID: 0xff, HE EID Ext: 0x23, HE MAC CapInfo: 0x800000000803, HE PHY CapInfo: 0x00000c009f000d00003064,
+     * supported HE-MCS and NSS set: 0xfffafffa, PPE Thresholds: 0x071c71c71c39
      *
      * VendorSpecific: Samsung
      * VendorSpecific: Epigram Inc.
@@ -107,6 +108,9 @@ TEST(parse_station_capabilities, sta_caps_from_rcvd_raw_data)
         caps.vht_bw                = beerocks::BANDWIDTH_80;
         caps.vht_low_bw_short_gi   = 1;
         caps.vht_high_bw_short_gi  = 0;
+        caps.he_ss                 = 2;
+        caps.he_mcs                = beerocks::MCS_11;
+        caps.he_bw                 = beerocks::BANDWIDTH_80;
         caps.rrm_supported         = 1;
         caps.nr_enabled            = 0;
         caps.link_meas             = 1;
@@ -119,7 +123,7 @@ TEST(parse_station_capabilities, sta_caps_from_rcvd_raw_data)
         caps.band_2g_capable       = 0;
         caps.band_5g_capable       = 1;
         caps.max_ch_width          = beerocks::BANDWIDTH_80;
-        caps.max_mcs               = beerocks::MCS_9;
+        caps.max_mcs               = beerocks::MCS_11;
         caps.max_tx_power          = 17;
         caps.max_streams           = 2;
         return caps;
@@ -138,6 +142,9 @@ TEST(parse_station_capabilities, sta_caps_from_rcvd_raw_data)
     EXPECT_EQ(resCaps.vht_bw, staCaps.vht_bw);
     EXPECT_EQ(resCaps.vht_low_bw_short_gi, staCaps.vht_low_bw_short_gi);
     EXPECT_EQ(resCaps.vht_high_bw_short_gi, staCaps.vht_high_bw_short_gi);
+    EXPECT_EQ(resCaps.he_ss, staCaps.he_ss);
+    EXPECT_EQ(resCaps.he_mcs, staCaps.he_mcs);
+    EXPECT_EQ(resCaps.he_bw, staCaps.he_bw);
     EXPECT_EQ(resCaps.rrm_supported, staCaps.rrm_supported);
     EXPECT_EQ(resCaps.link_meas, staCaps.link_meas);
     EXPECT_EQ(resCaps.beacon_report_passive, staCaps.beacon_report_passive);
@@ -224,6 +231,42 @@ TEST(parse_station_capabilities, sta_caps_from_formatted_assoc_frame)
     // filling tx_mcs_map
     vhtCapField->supported_vht_mcs().tx_mcs_map = 0xFFFD;
 
+    /*
+     * 5) add HE Capability field
+     * frame in network byte order:
+     * FF 1C 23 030800000080 643000000D009F000C0000 FAFFFAFF 391CC7711C07
+     * EID: 0xFF, HE EID Ext: 0x23, HE MAC CapInfo: 0x800000000803, HE PHY CapInfo: 0x00000C009F000D00003064,
+     * supported HE-MCS and NSS set: 0xFFFAFFFA, PPE Thresholds: 0x071C71C71C39
+     */
+    auto heCapField = fields->addAttr<assoc_frame::cStaHeCapability>();
+    EXPECT_FALSE(!heCapField);
+
+    // filling value for the first 4 octets of HE MAC cap info, instead of setting it bit per bit
+    heCapField->mac_cap_info1() =
+        assoc_frame::convert<uint32_t, assoc_frame::sStaHeMacCapInfo1>(0x00000803);
+
+    // filling value for the last 2 octets of HE MAC cap info
+    heCapField->mac_cap_info2() =
+        assoc_frame::convert<uint16_t, assoc_frame::sStaHeMacCapInfo2>(0x08000);
+
+    // filling value for the first octet of HE PHY cap info containing Supported Channel Width Set field
+    heCapField->supported_channel_width_set() =
+        assoc_frame::convert<uint8_t, assoc_frame::cStaHeCapability::sStaHePhyCapInfoB1>(0x64);
+
+    // filling value for the next 8 octets of HE PHY cap info
+    heCapField->phy_cap_info1() =
+        assoc_frame::convert<uint64_t, assoc_frame::sStaHePhyCapInfo1>(0x0C009F000D000030);
+
+    // filling value for the last 2 octets of HE PHY cap info
+    heCapField->phy_cap_info2() =
+        assoc_frame::convert<uint16_t, assoc_frame::sStaHePhyCapInfo2>(0x0000);
+
+    // filling RX HE MCS value for channel width lower or equal to 80 MHz
+    heCapField->rx_mcs_le_80() = 0xFAFF;
+
+    // filling TX HE MCS value for channel width lower or equal to 80 MHz
+    heCapField->tx_mcs_le_80() = 0xFAFF;
+
     // finalize the assoc req frame: => ready to be sent (buffer in network byte order)
     fields->finalize();
 
@@ -242,11 +285,12 @@ TEST(parse_station_capabilities, sta_caps_from_formatted_assoc_frame)
      */
     const auto staCaps = []() {
         beerocks::message::sRadioCapabilities caps;
-        caps.ant_num       = 1;
-        caps.wifi_standard = beerocks::STANDARD_A | beerocks::STANDARD_N | beerocks::STANDARD_AC;
-        caps.ht_ss         = 1;
-        caps.ht_mcs        = beerocks::MCS_7;
-        caps.ht_bw         = beerocks::BANDWIDTH_20;
+        caps.ant_num       = 2;
+        caps.wifi_standard = beerocks::STANDARD_A | beerocks::STANDARD_N | beerocks::STANDARD_AC |
+                             beerocks::STANDARD_AX;
+        caps.ht_ss                = 1;
+        caps.ht_mcs               = beerocks::MCS_7;
+        caps.ht_bw                = beerocks::BANDWIDTH_20;
         caps.ht_low_bw_short_gi   = 1;
         caps.ht_high_bw_short_gi  = 0;
         caps.ht_sm_power_save     = beerocks::HT_SM_POWER_SAVE_MODE_DISABLED;
@@ -255,10 +299,13 @@ TEST(parse_station_capabilities, sta_caps_from_formatted_assoc_frame)
         caps.vht_bw               = beerocks::BANDWIDTH_80;
         caps.vht_low_bw_short_gi  = 1;
         caps.vht_high_bw_short_gi = 0;
+        caps.he_ss                = 2;
+        caps.he_mcs               = beerocks::MCS_11;
+        caps.he_bw                = beerocks::BANDWIDTH_80;
         caps.band_5g_capable      = 1;
         caps.max_ch_width         = beerocks::BANDWIDTH_80;
-        caps.max_mcs              = beerocks::MCS_8;
-        caps.max_streams          = 1;
+        caps.max_mcs              = beerocks::MCS_11;
+        caps.max_streams          = 2;
         return caps;
     }();
 
@@ -275,6 +322,9 @@ TEST(parse_station_capabilities, sta_caps_from_formatted_assoc_frame)
     EXPECT_EQ(resCaps.vht_bw, staCaps.vht_bw);
     EXPECT_EQ(resCaps.vht_low_bw_short_gi, staCaps.vht_low_bw_short_gi);
     EXPECT_EQ(resCaps.vht_high_bw_short_gi, staCaps.vht_high_bw_short_gi);
+    EXPECT_EQ(resCaps.he_ss, staCaps.he_ss);
+    EXPECT_EQ(resCaps.he_mcs, staCaps.he_mcs);
+    EXPECT_EQ(resCaps.he_bw, staCaps.he_bw);
     EXPECT_EQ(resCaps.band_5g_capable, staCaps.band_5g_capable);
     EXPECT_EQ(resCaps.max_ch_width, staCaps.max_ch_width);
     EXPECT_EQ(resCaps.max_mcs, staCaps.max_mcs);
