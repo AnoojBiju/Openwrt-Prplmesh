@@ -79,10 +79,10 @@ class NbapiSta(PrplMeshBaseTest):
                                                           self.ieee1905['eTlvTypeMap']
                                                           ['TLV_ASSOCIATED_STA_LINK_METRICS'])
 
-        print("\nNetwork topology after settings:")
+        debug("\nNetwork topology after settings:")
         topology = self.get_topology()
         for device in topology.values():
-            print(device)
+            debug(device)
 
         for radio in topology[agent.mac].radios.values():
             for bss in radio.vaps.values():
@@ -120,15 +120,20 @@ class NbapiSta(PrplMeshBaseTest):
                         f"Wrong BSSID [{bss.bssid}] specified for sta {sta.mac}"
                     assert time_stamp != 0, "Value for TimeStamp is not specified."
 
-                    print("\nHT Capabilities")
+                    debug("\nChecking HT Capabilities")
                     ht_caps = controller.nbapi_get(sta.path + ".HTCapabilities")
                     for key, value in sorted(ht_caps.items()):
-                        print("{} : {}".format(key, value))
+                        debug("{} : {}".format(key, value))
 
-                    print("\nVHT Capabilities")
+                    debug("\nChecking VHT Capabilities")
                     vht_caps = controller.nbapi_get(sta.path + ".VHTCapabilities")
                     for key, value in sorted(vht_caps.items()):
-                        print("{} : {}".format(key, value))
+                        debug("{} : {}".format(key, value))
+
+                    debug("\nChecking HE Capabilities")
+                    he_caps = controller.nbapi_get(sta.path + ".HECapabilities")
+                    for key, value in sorted(he_caps.items()):
+                        debug("{} : {}".format(key, value))
 
                     time_sta = dateutil.parser.isoparse(time_stamp)
 
@@ -142,7 +147,7 @@ class NbapiSta(PrplMeshBaseTest):
                     if time_before_query + timedelta(seconds=2) <= time_sta:
                         self.fail('Fail. Sta time group was collected '
                                   'more than 10s after AP Metrics Query was send.')
-                    print(
+                    debug(
                         f'Sta group was collected at: [{time_sta}], '
                         f'time before query: [{time_before_query}],'
                         f'time before connection: {time_before_sta_connect}')
