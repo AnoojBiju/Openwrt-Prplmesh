@@ -34,6 +34,8 @@ struct SRadioCapabilitiesStrings {
     std::string ht_mcs;
     std::string vht_cap;
     std::string vht_mcs;
+    std::string he_cap;
+    std::string he_mcs;
     std::string rrm_caps;
 };
 
@@ -391,8 +393,8 @@ bool ap_wlan_hal_dummy::process_dummy_event(parsed_obj_map_t &parsed_obj)
             "31010802040B0C121618242102001430140100000FAC040100000FAC040100000FAC02000032043048606C"
             "3B10515153547374757677787C7D7E7F80823B160C01020304050C161718191A1B1C1D1E1F202180818246"
             "057000000000460571505000047F0A04000A82214000408000DD070050F2020001002D1A2D1103FFFF0000"
-            "000000000000000000000000000018E6E10900BF0CB079D133FAFF0C03FAFF0C03C70110DD07506F9A1603"
-            "0103";
+            "000000000000000000000000000018E6E10900BF0CB079D133FAFF0C03FAFF0C03FF1C2303080000008064"
+            "3000000D009F000C0000FAFFFAFF391CC7711C07C70110DD07506F9A16030103";
 
         //convert the hex string to binary
         auto binary_str                      = get_binary_association_frame(assoc_req);
@@ -436,6 +438,20 @@ bool ap_wlan_hal_dummy::process_dummy_event(parsed_obj_map_t &parsed_obj)
             caps_strings.vht_mcs.assign(tmp_str);
         }
 
+        if (!dummy_obj_read_str("HE_CAP", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading HE_CAP parameter!";
+            caps_valid = false;
+        } else {
+            caps_strings.he_cap.assign(tmp_str);
+        }
+
+        if (!dummy_obj_read_str("HE_MCS", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading HE_CAP parameter!";
+            caps_valid = false;
+        } else {
+            caps_strings.he_mcs.assign(tmp_str);
+        }
+
         if (caps_valid) {
             //get_sta_caps(caps_strings, msg->params.capabilities, get_radio_info().is_5ghz);
         } else {
@@ -457,6 +473,11 @@ bool ap_wlan_hal_dummy::process_dummy_event(parsed_obj_map_t &parsed_obj)
                 msg->params.capabilities.vht_mcs              = beerocks::MCS_9;
                 msg->params.capabilities.vht_low_bw_short_gi  = 1;
                 msg->params.capabilities.vht_high_bw_short_gi = 0;
+
+                msg->params.capabilities.wifi_standard |= STANDARD_AX;
+                msg->params.capabilities.he_ss  = 1;
+                msg->params.capabilities.he_bw  = beerocks::BANDWIDTH_80;
+                msg->params.capabilities.he_mcs = beerocks::MCS_11;
             }
         }
 
