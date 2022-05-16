@@ -307,6 +307,77 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
         }
     }
 
+    // Also traverse all associated clients
+    for (const auto radio : db->get_radios_list()) {
+        if (!radio) {
+            continue;
+        }
+
+        LOG(DEBUG) << "Getting neighbors of radio with mac: " << radio->front.iface_mac
+                   << " and iface name: " << radio->front.iface_name;
+
+        for (const auto &associated_client : radio->associated_clients) {
+            auto &bssid = associated_client.second.bssid;
+
+            LOG(DEBUG) << "Associated client mac: " << associated_client.first;
+
+            sLinkInterface local_interface;
+            local_interface.iface_name = radio->front.iface_name;
+            local_interface.iface_mac  = radio->front.iface_mac;
+            local_interface.media_type =
+                MediaType::get_802_11_media_type(radio->freq_type, radio->max_supported_bw);
+
+            if (ieee1905_1::eMediaType::UNKNOWN_MEDIA == local_interface.media_type) {
+                LOG(ERROR) << "Unknown media type for interface " << local_interface.iface_name;
+                continue;
+            }
+
+            if (!net::network_utils::linux_iface_is_up_and_running(local_interface.iface_name)) {
+                LOG(DEBUG) << "Interface is down iface_name: " << local_interface.iface_name;
+                continue; // Can't get link metrics from an interface that is down
+            }
+
+            std::unique_ptr<link_metrics_collector> collector =
+                create_link_metrics_collector(local_interface);
+            if (!collector) {
+                continue;
+            }
+
+            LOG(DEBUG) << "Getting neighbors connected to interface " << local_interface.iface_name
+                       << " with BSSID " << bssid;
+
+            sLinkNeighbor neighbor_device;
+            neighbor_device.iface_mac = associated_client.first;
+            neighbor_device.al_mac    = neighbor_device.iface_mac;
+
+            // Filter the requested MAC-address, if specified
+            if (specific_neighbor && neighbor_al_mac != neighbor_device.iface_mac) {
+                LOG(DEBUG) << "Neighbor with mac " << neighbor_device.iface_mac
+                           << " wasn't requested, don't add to tlv";
+                continue;
+            }
+
+            links_added_count++;
+            LOG(DEBUG) << "Getting link metrics for interface " << local_interface.iface_name
+                       << " (MediaType = " << std::hex << (int)local_interface.media_type
+                       << ") and neighbor " << neighbor_device.iface_mac;
+
+            sLinkMetrics link_metrics;
+            if (collector->get_link_metrics(local_interface.iface_name, neighbor_device.iface_mac,
+                                            link_metrics)) {
+                if (!add_link_metrics_tlv(reporter_al_mac, local_interface, neighbor_device,
+                                          link_metrics, link_metrics_type)) {
+                    LOG(ERROR) << "Unable to add link metrics tlv";
+                    return;
+                }
+            } else {
+                LOG(ERROR) << "Unable to get link metrics for interface "
+                           << local_interface.iface_name << " and neighbor "
+                           << neighbor_device.iface_mac;
+            }
+        }
+    }
+
     /**
      * If the specified neighbor 1905.1 AL ID does not identify a neighbor of the receiving 1905.1
      * AL, then a link metric ResultCode TLV (see Table 6-21) with a value set to “invalid
