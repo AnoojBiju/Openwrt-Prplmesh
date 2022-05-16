@@ -597,6 +597,12 @@ void slave_thread::on_thread_stop() { stop_slave_thread(); }
 
 void slave_thread::handle_client_disconnected(int fd)
 {
+    // if thread is about to terminate, this handler called from bcl might not have valid data.
+    // so, no need to handle notification as thread is about to terminate, ignore it.
+    if (should_stop) {
+        LOG(INFO) << "About to terminate, no need to handle client_disconnected";
+        return;
+    }
 
     auto handle_disconnect = [&](const std::string &fronthaul_iface) {
         auto &radio_manager = m_radio_managers[fronthaul_iface];
