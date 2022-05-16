@@ -1388,6 +1388,8 @@ bool db::set_ap_he_capabilities(wfa_map::tlvApHeCapabilities &he_caps_tlv)
                                          static_cast<bool>(flags2.dl_mu_mimo_and_ofdm_capable));
     ret_val &= m_ambiorix_datamodel->set(path_to_obj, "UpLinkInOFDMASupported",
                                          static_cast<bool>(flags2.ul_ofdm_capable));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "DownLinkInOFDMASupported",
+                                         static_cast<bool>(flags2.dl_ofdm_capable));
 
     uint8_t supported_he_mcs_length = he_caps_tlv.supported_he_mcs_length();
     path_to_obj += "HETxRxMCS";
@@ -1442,6 +1444,7 @@ bool db::dm_set_sta_he_capabilities(const std::string &path_to_sta,
     ret_val &= m_ambiorix_datamodel->set(path_to_obj, "UpLinkMUMIMOInOFDMASupported", false);
     ret_val &= m_ambiorix_datamodel->set(path_to_obj, "DownLinkMUMIMOInOFDMASupported", false);
     ret_val &= m_ambiorix_datamodel->set(path_to_obj, "UpLinkInOFDMASupported", false);
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "DownLinkInOFDMASupported", false);
 
     return ret_val;
 }

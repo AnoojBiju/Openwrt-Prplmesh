@@ -81,6 +81,7 @@
             %read-only bool UpLinkMUMIMOInOFDMASupported;   /* UL MU-MIMO + OFDMA capable. */
             %read-only bool DownLinkMUMIMOInOFDMASupported; /* DL MU-MIMO + OFDMA capable. */
             %read-only bool UpLinkInOFDMASupported;         /* UL OFDMA capable. */
+            %read-only bool DownLinkInOFDMASupported;       /* DL OFDMA capable. */
         }
     }
 }
