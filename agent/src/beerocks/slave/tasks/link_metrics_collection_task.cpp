@@ -273,8 +273,13 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
         }
 
         for (const auto &neighbor : neighbors) {
+
+            LOG(DEBUG) << "Checking neighbor with mac: " << neighbor.first;
+
             // Filter the requested MAC-address, if specified
             if (specific_neighbor && neighbor_al_mac != neighbor.first) {
+                LOG(DEBUG) << "Neighbor with mac " << neighbor.first
+                           << " wasn't requested, don't add to tlv";
                 continue;
             }
 
