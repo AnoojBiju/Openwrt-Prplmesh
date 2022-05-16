@@ -550,6 +550,9 @@ TEST_F(DbTest, test_set_ap_he_capabilities)
     EXPECT_CALL(*m_ambiorix,
                 set(he_capabilities_path, "UpLinkInOFDMASupported", Matcher<const bool &>(true)))
         .WillOnce(Return(true));
+    EXPECT_CALL(*m_ambiorix,
+                set(he_capabilities_path, "DownLinkInOFDMASupported", Matcher<const bool &>(true)))
+        .WillOnce(Return(true));
 
     uint8_t buff[100];
     wfa_map::tlvApHeCapabilities he_caps_tlv(buff, sizeof(buff));
