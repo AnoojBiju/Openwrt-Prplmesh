@@ -229,6 +229,8 @@ enum eWiFiMCS : uint8_t {
     MCS_7,
     MCS_8,
     MCS_9,
+    MCS_10,
+    MCS_11,
     MCS_MAX,
 };
 
