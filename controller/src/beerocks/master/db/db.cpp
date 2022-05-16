@@ -1526,16 +1526,17 @@ bool db::dm_add_assoc_event_sta_caps(const std::string &assoc_event_path,
     // Remove previous entry
     m_ambiorix_datamodel->remove_optional_subobject(path_to_event, "HTCapabilities");
     m_ambiorix_datamodel->remove_optional_subobject(path_to_event, "VHTCapabilities");
+    m_ambiorix_datamodel->remove_optional_subobject(path_to_event, "HECapabilities");
 
     if (sta_cap.ht_bw != beerocks::BANDWIDTH_UNKNOWN) {
         dm_set_assoc_event_sta_ht_cap(path_to_event, sta_cap);
     }
-
     if (sta_cap.vht_bw != beerocks::BANDWIDTH_UNKNOWN) {
         dm_set_assoc_event_sta_vht_cap(path_to_event, sta_cap);
     }
-
-    // TODO: Fill up HE Capabilities for AssociationEvent, PPM-567
+    if (sta_cap.he_bw != beerocks::BANDWIDTH_UNKNOWN) {
+        dm_set_assoc_event_sta_he_cap(path_to_event, sta_cap);
+    }
     return true;
 }
 
@@ -1596,6 +1597,43 @@ bool db::dm_set_assoc_event_sta_vht_cap(const std::string &path_to_event,
                                          static_cast<bool>(sta_cap.vht_su_beamformer));
     ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "MUBeamformerSupported",
                                          static_cast<bool>(sta_cap.vht_mu_beamformer));
+
+    return ret_val;
+}
+
+bool db::dm_set_assoc_event_sta_he_cap(const std::string &path_to_event,
+                                       const beerocks::message::sRadioCapabilities &sta_cap)
+{
+    if (!m_ambiorix_datamodel->add_optional_subobject(path_to_event, "HECapabilities")) {
+        LOG(ERROR) << "Failed to add sub-object " << path_to_event << "HECapabilities";
+        return false;
+    }
+
+    bool ret_val               = true;
+    std::string path_to_he_cap = path_to_event + "HECapabilities.";
+
+    ret_val &=
+        m_ambiorix_datamodel->set(path_to_he_cap, "MaxNumberOfTxSpatialStreams", sta_cap.he_ss);
+    ret_val &=
+        m_ambiorix_datamodel->set(path_to_he_cap, "MaxNumberOfRxSpatialStreams", sta_cap.he_ss);
+    ret_val &= m_ambiorix_datamodel->set(path_to_he_cap, "HE8080MHzBWSupported",
+                                         static_cast<bool>(sta_cap.he_bw == BANDWIDTH_80_80));
+    ret_val &= m_ambiorix_datamodel->set(path_to_he_cap, "HE160MHzBWSupported",
+                                         static_cast<bool>(sta_cap.he_bw == BANDWIDTH_160));
+    ret_val &= m_ambiorix_datamodel->set(path_to_he_cap, "SUBeamformerSupported",
+                                         static_cast<bool>(sta_cap.he_su_beamformer));
+    ret_val &= m_ambiorix_datamodel->set(path_to_he_cap, "MUBeamformerSupported",
+                                         static_cast<bool>(sta_cap.he_mu_beamformer));
+    ret_val &= m_ambiorix_datamodel->set(path_to_he_cap, "UpLinkMUMIMOSupported",
+                                         static_cast<bool>(sta_cap.ul_mu_mimo));
+    ret_val &= m_ambiorix_datamodel->set(path_to_he_cap, "UpLinkMUMIMOInOFDMASupported",
+                                         static_cast<bool>(sta_cap.ul_mu_mimo_ofdma));
+    ret_val &= m_ambiorix_datamodel->set(path_to_he_cap, "DownLinkMUMIMOInOFDMASupported",
+                                         static_cast<bool>(sta_cap.dl_mu_mimo_ofdma));
+    ret_val &= m_ambiorix_datamodel->set(path_to_he_cap, "UpLinkInOFDMASupported",
+                                         static_cast<bool>(sta_cap.ul_ofdma));
+    ret_val &= m_ambiorix_datamodel->set(path_to_he_cap, "DownLinkInOFDMASupported",
+                                         static_cast<bool>(sta_cap.dl_ofdma));
 
     return ret_val;
 }

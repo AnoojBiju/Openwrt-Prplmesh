@@ -2395,6 +2395,16 @@ private:
                                         const beerocks::message::sRadioCapabilities &sta_cap);
 
     /**
+     * @brief Sets value for parameters of optional sub-object STA HECapabilities.
+     *
+     * @param path_to_event Path to event which contains STA HECapabilities sub-object.
+     * @param sta_cap Structure with station HE Capabilities.
+     * @return True on success, false otherwise.
+     */
+    bool dm_set_assoc_event_sta_he_cap(const std::string &path_to_event,
+                                       const beerocks::message::sRadioCapabilities &sta_cap);
+
+    /**
      * @brief Adds STA instance to the datamodel.
      *
      * Data model path example: "Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.2.STA.3"
