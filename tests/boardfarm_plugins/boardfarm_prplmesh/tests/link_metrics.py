@@ -71,7 +71,7 @@ class LinkMetrics(PrplMeshBaseTest):
         map_sta2 = map_vap2.clients[sta2.mac]
         debug("Found sta2 in topology: {}".format(map_sta2.path))
 
-        debug("Send 1905 Link metric query to agent 1 (neighbor STA)")
+        debug("Send 1905 Link metric query to agent 1 (neighbor AP)")
         mid = controller.dev_send_1905(agent1.mac,
                                        self.ieee1905['eMessageType']['LINK_METRIC_QUERY_MESSAGE'],
                                        tlv(self.ieee1905['eTlvType']['TLV_LINK_METRIC_QUERY'],
