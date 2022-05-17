@@ -138,7 +138,7 @@ class CombinedInfraMetrics(PrplMeshBaseTest):
         mid = controller.dev_send_1905(agent1.mac,
                                        self.ieee1905['eMessageType']['LINK_METRIC_QUERY_MESSAGE'],
                                        tlv(self.ieee1905['eTlvType']['TLV_LINK_METRIC_QUERY'],
-                                           "0x01 {%s} 0x02" % sta1.mac))
+                                           "0x01 {%s} 0x02" % agent1.mac))
         time.sleep(1)
         response = self.check_cmdu_type_single("Link metrics response",
                                                self.ieee1905['eMessageType']
