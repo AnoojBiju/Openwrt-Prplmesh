@@ -239,6 +239,11 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
 
         net::network_utils::linux_iface_get_name(local_macaddr, local_interface.iface_name);
 
+        if (!net::network_utils::linux_iface_is_up_and_running(local_interface.iface_name)) {
+            LOG(INFO) << "Interface is down iface_name: " << local_interface.iface_name;
+            continue; // Can't get link metrics from an interface that is down
+        }
+
         ieee1905_1::eMediaTypeGroup media_type_group;
         ieee1905_1::eMediaType media_type = ieee1905_1::eMediaType::UNKNOWN_MEDIA;
 
@@ -260,11 +265,6 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
         LOG(DEBUG) << "Getting neighbors of " << media_type_group
                    << " interface: " << local_interface.iface_name
                    << " with mac: " << local_macaddr;
-
-        if (!net::network_utils::linux_iface_is_up_and_running(local_interface.iface_name)) {
-            LOG(INFO) << "Interface is down iface_name: " << local_interface.iface_name;
-            continue; // Can't get link metrics from an interface that is down
-        }
 
         std::unique_ptr<link_metrics_collector> collector =
             create_link_metrics_collector(local_interface);
