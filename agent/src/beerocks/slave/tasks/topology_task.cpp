@@ -434,7 +434,6 @@ bool TopologyTask::add_device_information_tlv()
         if (!MediaType::get_media_type(local_eth_iface_name,
                                        ieee1905_1::eMediaTypeGroup::IEEE_802_3, media_type)) {
             LOG(ERROR) << "Unable to compute media type for interface " << local_eth_iface_name;
-            return false;
         }
 
         std::shared_ptr<ieee1905_1::cLocalInterfaceInfo> localInterfaceInfo =
@@ -555,7 +554,6 @@ bool TopologyTask::add_device_information_tlv()
         ieee1905_1::eMediaType media_type            = ieee1905_1::eMediaType::UNKNOWN_MEDIA;
         if (!MediaType::get_media_type(local_radio_iface_name, media_type_group, media_type)) {
             LOG(ERROR) << "Unable to compute media type for interface " << local_radio_iface_name;
-            return false;
         }
 
         if (!fill_radio_iface_info(media_type, true)) {

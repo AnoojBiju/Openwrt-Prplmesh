@@ -193,11 +193,11 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
     ieee1905_1::eLinkMetricsType link_metrics_type;
 
     if (tlvLinkMetricQuery) {
-        /**
-    	   * If tlvLinkMetricQuery has been included in message, we will be permissive enough to
-    	   * allow it specify ALL_NEIGHBORS and if so, then we will just ignore the field
-    	   * containing the MAC address of neighbor.
-    	   */
+        /*
+        * If tlvLinkMetricQuery has been included in message, we will be permissive enough to
+    	* allow it specify ALL_NEIGHBORS and if so, then we will just ignore the field
+    	* containing the MAC address of neighbor.
+    	*/
         neighbor_type     = tlvLinkMetricQuery->neighbor_type();
         neighbor_al_mac   = tlvLinkMetricQuery->mac_al_1905_device();
         link_metrics_type = tlvLinkMetricQuery->link_metrics_type();
@@ -227,14 +227,89 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
         return;
     }
 
-    /**
-     * Get the list of neighbor links from the topology database.
-     * Neighbors are grouped by the interface that connects to them.
-     */
-    std::map<sLinkInterface, std::vector<sLinkNeighbor>> neighbor_links_map;
-    if (!get_neighbor_links(neighbor_al_mac, neighbor_links_map)) {
-        LOG(ERROR) << "Failed to get the list of neighbor links";
-        return;
+    LOG(DEBUG) << "Processing link metric query, requested neighbor mac: " << neighbor_al_mac;
+
+    int links_added_count = 0;
+    for (const auto &neighbors_on_local_iface : db->neighbor_devices) {
+        auto &local_macaddr = neighbors_on_local_iface.first;
+        auto &neighbors     = neighbors_on_local_iface.second;
+
+        sLinkInterface local_interface;
+        local_interface.iface_mac = local_macaddr;
+
+        net::network_utils::linux_iface_get_name(local_macaddr, local_interface.iface_name);
+
+        if (!net::network_utils::linux_iface_is_up_and_running(local_interface.iface_name)) {
+            LOG(INFO) << "Interface is down iface_name: " << local_interface.iface_name;
+            continue; // Can't get link metrics from an interface that is down
+        }
+
+        ieee1905_1::eMediaTypeGroup media_type_group;
+        ieee1905_1::eMediaType media_type = ieee1905_1::eMediaType::UNKNOWN_MEDIA;
+
+        // Check the db to find out the media type of the local interface
+        // TODO: add support for MoCA and 1901 media types
+        if (db->radio(local_interface.iface_name)) {
+            media_type_group = ieee1905_1::eMediaTypeGroup::IEEE_802_11;
+        } else {
+            media_type_group = ieee1905_1::eMediaTypeGroup::IEEE_802_3;
+        }
+
+        LOG(DEBUG) << "Media type group of iface: " << local_interface.iface_name << " : "
+                   << media_type_group;
+
+        if (!MediaType::get_media_type(local_interface.iface_name, media_type_group, media_type)) {
+            media_type = ieee1905_1::eMediaType::UNKNOWN_MEDIA;
+            LOG(ERROR) << "Unable to compute media type for interface "
+                       << local_interface.iface_name;
+        }
+        local_interface.media_type = media_type;
+
+        LOG(DEBUG) << "Getting neighbors of " << media_type_group
+                   << " interface: " << local_interface.iface_name
+                   << " with mac: " << local_macaddr;
+
+        std::unique_ptr<link_metrics_collector> collector =
+            create_link_metrics_collector(local_interface, false);
+        if (!collector && (ieee1905_1::eMediaTypeGroup::IEEE_802_3 == media_type_group)) {
+            collector = create_link_metrics_collector(local_interface, true);
+        } else if (!collector) {
+            continue;
+        }
+
+        for (const auto &neighbor : neighbors) {
+
+            LOG(DEBUG) << "Checking neighbor with mac: " << neighbor.first;
+
+            // Filter the requested MAC-address, if specified
+            if (specific_neighbor && neighbor_al_mac != neighbor.first) {
+                LOG(DEBUG) << "Neighbor with mac " << neighbor.first
+                           << " wasn't requested, don't add to tlv";
+                continue;
+            }
+
+            links_added_count++;
+            LOG(DEBUG) << "Getting link metrics for interface " << local_interface.iface_name
+                       << " (MediaType = " << std::hex << (int)local_interface.media_type
+                       << ") and neighbor " << neighbor.first;
+
+            sLinkNeighbor neighbor_device;
+            neighbor_device.al_mac    = neighbor.first;
+            neighbor_device.iface_mac = neighbor.second.transmitting_iface_mac;
+
+            sLinkMetrics link_metrics;
+            if (collector->get_link_metrics(local_interface.iface_name, neighbor.first,
+                                            link_metrics)) {
+                if (!add_link_metrics_tlv(reporter_al_mac, local_interface, neighbor_device,
+                                          link_metrics, link_metrics_type)) {
+                    LOG(ERROR) << "Unable to add link metrics tlv";
+                    return;
+                }
+            } else {
+                LOG(ERROR) << "Unable to get link metrics for interface "
+                           << local_interface.iface_name << " and neighbor " << neighbor.first;
+            }
+        }
     }
 
     /**
@@ -242,8 +317,7 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
      * AL, then a link metric ResultCode TLV (see Table 6-21) with a value set to “invalid
      * neighbor” shall be included in this message.
      */
-    bool invalid_neighbor = specific_neighbor && neighbor_links_map.empty();
-    if (invalid_neighbor) {
+    if (specific_neighbor && links_added_count == 0) {
         auto tlvLinkMetricResultCode = m_cmdu_tx.addClass<ieee1905_1::tlvLinkMetricResultCode>();
         if (!tlvLinkMetricResultCode) {
             LOG(ERROR) << "addClass ieee1905_1::tlvLinkMetricResultCode failed, mid=" << std::hex
@@ -260,41 +334,6 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
                    << mid;
         m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, db->bridge.mac);
         return;
-    }
-
-    /**
-     * Report link metrics for the link with specific neighbor or for all neighbors, as
-     * obtained from topology database
-     */
-    for (const auto &entry : neighbor_links_map) {
-        auto interface        = entry.first;
-        const auto &neighbors = entry.second;
-
-        std::unique_ptr<link_metrics_collector> collector =
-            create_link_metrics_collector(interface);
-        if (!collector) {
-            continue;
-        }
-
-        for (const auto &neighbor : neighbors) {
-
-            LOG(TRACE) << "Getting link metrics for interface " << interface.iface_name
-                       << " (MediaType = " << std::hex << (int)interface.media_type
-                       << ") and neighbor " << neighbor.iface_mac;
-
-            sLinkMetrics link_metrics;
-            if (!collector->get_link_metrics(interface.iface_name, neighbor.iface_mac,
-                                             link_metrics)) {
-                LOG(ERROR) << "Unable to get link metrics for interface " << interface.iface_name
-                           << " and neighbor " << neighbor.iface_mac;
-                return;
-            }
-
-            if (!add_link_metrics_tlv(reporter_al_mac, interface, neighbor, link_metrics,
-                                      link_metrics_type)) {
-                return;
-            }
-        }
     }
 
     LOG(DEBUG) << "Sending LINK_METRIC_RESPONSE_MESSAGE, mid: " << std::hex << mid;
@@ -725,10 +764,12 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
             continue;
         }
 
+        // clang-format off
         auto bssid_tlv = ap_metrics_tlv->bssid();
         auto mac       = std::find_if(
             m_ap_metric_query.begin(), m_ap_metric_query.end(),
             [&bssid_tlv](sApMetricsQuery const &query) { return query.bssid == bssid_tlv; });
+        // clang-format on
 
         if (mac == m_ap_metric_query.end()) {
             LOG(ERROR) << "Failed search in ap_metric_query for bssid: " << bssid_tlv
@@ -1065,7 +1106,8 @@ bool LinkMetricsCollectionTask::add_link_metrics_tlv(const sMacAddr &reporter_al
 }
 
 std::unique_ptr<link_metrics_collector>
-LinkMetricsCollectionTask::create_link_metrics_collector(const sLinkInterface &link_interface) const
+LinkMetricsCollectionTask::create_link_metrics_collector(const sLinkInterface &link_interface,
+                                                         bool force = false) const
 {
     ieee1905_1::eMediaType media_type = link_interface.media_type;
     ieee1905_1::eMediaTypeGroup media_type_group =
@@ -1079,109 +1121,15 @@ LinkMetricsCollectionTask::create_link_metrics_collector(const sLinkInterface &l
         return std::make_unique<ieee802_11_link_metrics_collector>();
     }
 
+    if (force) {
+        return std::make_unique<ieee802_3_link_metrics_collector>();
+    }
+
     LOG(ERROR) << "Unable to create link metrics collector for interface '"
                << link_interface.iface_name << "' (unsupported media type " << std::hex
                << (int)media_type << ")";
 
     return nullptr;
-}
-
-bool LinkMetricsCollectionTask::get_neighbor_links(
-    const sMacAddr &neighbor_mac_filter,
-    std::map<sLinkInterface, std::vector<sLinkNeighbor>> &neighbor_links_map)
-{
-    // TODO: Topology Database is required to implement this method.
-
-    // TODO: this is not accurate as we have made the assumption that there is a single interface.
-    // Note that when processing Topology Discovery message we must store the IEEE 1905.1 AL MAC
-    // address of the transmitting device together with the interface that such message is
-    // received through.
-    auto db = AgentDB::get();
-
-    auto add_eth_neighbor = [&](const std::string &iface_name, const sMacAddr &iface_mac) {
-        sLinkInterface wired_interface;
-        wired_interface.iface_name = iface_name;
-        wired_interface.iface_mac  = iface_mac;
-
-        if (!MediaType::get_media_type(wired_interface.iface_name,
-                                       ieee1905_1::eMediaTypeGroup::IEEE_802_3,
-                                       wired_interface.media_type)) {
-            LOG(ERROR) << "Unable to compute media type for interface "
-                       << wired_interface.iface_name;
-            return false;
-        }
-
-        for (const auto &neighbors_on_local_iface : db->neighbor_devices) {
-            auto &neighbors = neighbors_on_local_iface.second;
-            for (const auto &neighbor_entry : neighbors) {
-                if (neighbor_entry.second.receiving_iface_name == iface_name) {
-                    sLinkNeighbor neighbor;
-                    neighbor.al_mac    = neighbor_entry.first;
-                    neighbor.iface_mac = neighbor_entry.second.transmitting_iface_mac;
-                    if ((neighbor_mac_filter == net::network_utils::ZERO_MAC) ||
-                        (neighbor_mac_filter == neighbor.al_mac)) {
-                        neighbor_links_map[wired_interface].push_back(neighbor);
-                    }
-                }
-            }
-        }
-        return true;
-    };
-
-    // Add WAN interface
-    if (!db->device_conf.local_gw && !db->ethernet.wan.iface_name.empty()) {
-        if (!add_eth_neighbor(db->ethernet.wan.iface_name, db->ethernet.wan.mac)) {
-            // Error message inside the lambda function.
-            return false;
-        }
-    }
-
-    // Add LAN interfaces
-    for (const auto &lan_iface_info : db->ethernet.lan) {
-        if (!add_eth_neighbor(lan_iface_info.iface_name, lan_iface_info.mac)) {
-            // Error message inside the lambda function.
-            return false;
-        }
-    }
-
-    // Also include a link for each associated client
-    for (const auto radio : db->get_radios_list()) {
-        if (!radio) {
-            continue;
-        }
-
-        for (const auto &associated_client : radio->associated_clients) {
-            auto &bssid = associated_client.second.bssid;
-
-            sLinkInterface interface;
-
-            interface.iface_name = radio->front.iface_name;
-            interface.iface_mac  = bssid;
-            interface.media_type =
-                MediaType::get_802_11_media_type(radio->freq_type, radio->max_supported_bw);
-
-            if (ieee1905_1::eMediaType::UNKNOWN_MEDIA == interface.media_type) {
-                LOG(ERROR) << "Unknown media type for interface " << interface.iface_name;
-                return false;
-            }
-
-            LOG(TRACE) << "Getting neighbors connected to interface " << interface.iface_name
-                       << " with BSSID " << bssid;
-
-            // TODO: This is not correct... We actually have to get this from the topology
-            // discovery message, which will give us the neighbor interface and AL MAC addresses.
-            sLinkNeighbor neighbor;
-            neighbor.iface_mac = associated_client.first;
-            neighbor.al_mac    = neighbor.iface_mac;
-
-            if ((neighbor_mac_filter == net::network_utils::ZERO_MAC) ||
-                (neighbor_mac_filter == neighbor.al_mac)) {
-                neighbor_links_map[interface].push_back(neighbor);
-            }
-        }
-    }
-
-    return true;
 }
 
 void LinkMetricsCollectionTask::handle_event(uint8_t event_enum_value, const void *event_obj)

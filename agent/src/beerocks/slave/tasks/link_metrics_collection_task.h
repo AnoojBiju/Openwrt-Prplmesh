@@ -130,14 +130,17 @@ private:
      * Creates a new link metrics collector suitable for the underlying network technology of the
      * connecting interface.
      * Collector choice depends on bits 15 to 8 of media type, that is, the media type group.
+     * 
+     * Not all devices return proper link metrics. For these devices a collector is forced
+     * and the link metric query TLV is filled with default values and UNKNOWN_MEDIA_TYPE
      *
-     * @param[in] iface_mac MAC address of the connecting interface.
-     * @param[in] media_type The underlying network technology of the connecting interface.
+     * @param[in] link_interface sLinkInterface to create a metrics collector for
+     * @param[in] force Forces the creation of a 802.3 link metric collector
      *
      * @return Link metrics collector on success and nullptr otherwise.
      */
     std::unique_ptr<link_metrics_collector>
-    create_link_metrics_collector(const sLinkInterface &link_interface) const;
+    create_link_metrics_collector(const sLinkInterface &link_interface, bool force) const;
 
     /**
      * @brief Gets the list of neighbors connected to this device (from topology database).
