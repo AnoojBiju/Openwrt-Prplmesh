@@ -261,7 +261,6 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
         if (!MediaType::get_media_type(local_interface.iface_name, media_type_group, media_type)) {
             LOG(ERROR) << "Unable to compute media type for interface "
                        << local_interface.iface_name;
-            continue;
         }
         local_interface.media_type = media_type;
 
