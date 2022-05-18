@@ -259,6 +259,7 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
                    << media_type_group;
 
         if (!MediaType::get_media_type(local_interface.iface_name, media_type_group, media_type)) {
+            media_type = ieee1905_1::eMediaType::UNKNOWN_MEDIA;
             LOG(ERROR) << "Unable to compute media type for interface "
                        << local_interface.iface_name;
         }
@@ -271,8 +272,7 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
         std::unique_ptr<link_metrics_collector> collector =
             create_link_metrics_collector(local_interface, false);
         if (!collector && (ieee1905_1::eMediaTypeGroup::IEEE_802_3 == media_type_group)) {
-            std::unique_ptr<link_metrics_collector> collector =
-                create_link_metrics_collector(local_interface, true);
+            collector = create_link_metrics_collector(local_interface, true);
         } else if (!collector) {
             continue;
         }
