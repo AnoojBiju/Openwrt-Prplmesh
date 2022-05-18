@@ -1462,11 +1462,13 @@ public:
      * @param[in] radio_mac MAC address of radio.
      * @param[in] operating_class Operating Class number for the given channel.
      * @param[in] channel_number Number of the given channel.
+     * @param[in] is_central_channel Is the incoming value already a central channel.
      * 
      * @return -1 if Invalid, 0 if in-operable, 1-15 according to the radio's preference.
      */
     int8_t get_channel_preference(const sMacAddr &radio_mac, const uint8_t operating_class,
-                                  const uint8_t channel_number);
+                                  const uint8_t channel_number,
+                                  const bool is_central_channel = false);
 
     node::radio::PreferenceReportMap get_radio_channel_preference(const sMacAddr &radio_mac);
 
