@@ -270,7 +270,10 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
 
         std::unique_ptr<link_metrics_collector> collector =
             create_link_metrics_collector(local_interface);
-        if (!collector) {
+        if (!collector && (ieee1905_1::eMediaTypeGroup::IEEE_802_3 == media_type_group)) {
+            std::unique_ptr<link_metrics_collector> collector =
+                create_link_metrics_collector(local_interface, true);
+        } else if (!collector) {
             continue;
         }
 
@@ -1103,7 +1106,8 @@ bool LinkMetricsCollectionTask::add_link_metrics_tlv(const sMacAddr &reporter_al
 }
 
 std::unique_ptr<link_metrics_collector>
-LinkMetricsCollectionTask::create_link_metrics_collector(const sLinkInterface &link_interface) const
+LinkMetricsCollectionTask::create_link_metrics_collector(const sLinkInterface &link_interface,
+                                                         bool force = false) const
 {
     ieee1905_1::eMediaType media_type = link_interface.media_type;
     ieee1905_1::eMediaTypeGroup media_type_group =
@@ -1115,6 +1119,10 @@ LinkMetricsCollectionTask::create_link_metrics_collector(const sLinkInterface &l
 
     if (ieee1905_1::eMediaTypeGroup::IEEE_802_11 == media_type_group) {
         return std::make_unique<ieee802_11_link_metrics_collector>();
+    }
+
+    if (force) {
+        return std::make_unique<ieee802_3_link_metrics_collector>();
     }
 
     LOG(ERROR) << "Unable to create link metrics collector for interface '"
