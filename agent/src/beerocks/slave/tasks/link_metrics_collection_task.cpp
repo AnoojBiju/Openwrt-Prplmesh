@@ -269,7 +269,7 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
                    << " with mac: " << local_macaddr;
 
         std::unique_ptr<link_metrics_collector> collector =
-            create_link_metrics_collector(local_interface);
+            create_link_metrics_collector(local_interface, false);
         if (!collector && (ieee1905_1::eMediaTypeGroup::IEEE_802_3 == media_type_group)) {
             std::unique_ptr<link_metrics_collector> collector =
                 create_link_metrics_collector(local_interface, true);
