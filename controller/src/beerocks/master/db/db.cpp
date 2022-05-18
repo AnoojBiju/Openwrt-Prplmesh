@@ -2955,7 +2955,7 @@ bool db::set_channel_preference(const sMacAddr &radio_mac, const uint8_t operati
 }
 
 int8_t db::get_channel_preference(const sMacAddr &radio_mac, const uint8_t operating_class,
-                                  const uint8_t channel_number)
+                                  const uint8_t channel_number, const bool is_central_channel)
 {
     auto radio = get_hostap(radio_mac);
     if (!radio) {
@@ -2963,9 +2963,22 @@ int8_t db::get_channel_preference(const sMacAddr &radio_mac, const uint8_t opera
         return (int8_t)eChannelPreferenceRankingConsts::INVALID;
     }
 
-    if (!wireless_utils::is_channel_in_operating_class(operating_class, channel_number)) {
+    uint8_t channel = channel_number;
+    if (!is_central_channel &&
+        wireless_utils::is_operating_class_using_central_channel(operating_class)) {
+        auto bandwidth         = wireless_utils::operating_class_to_bandwidth(operating_class);
+        auto source_channel_it = wireless_utils::channels_table_5g.find(channel_number);
+        if (source_channel_it == wireless_utils::channels_table_5g.end()) {
+            LOG(ERROR) << "Couldn't find source channel " << channel_number
+                       << " for overlapping channels";
+            return (int8_t)eChannelPreferenceRankingConsts::INVALID;
+        }
+        channel = source_channel_it->second.at(bandwidth).center_channel;
+    }
+
+    if (!wireless_utils::is_channel_in_operating_class(operating_class, channel)) {
         LOG(ERROR) << "Operating class #" << operating_class << " does not contain channel #"
-                   << channel_number;
+                   << channel;
         return (int8_t)eChannelPreferenceRankingConsts::INVALID;
     }
 
@@ -2974,17 +2987,16 @@ int8_t db::get_channel_preference(const sMacAddr &radio_mac, const uint8_t opera
 
     // Find if the channel is supported by the radio
     if (std::find_if(supported_channels.begin(), supported_channels.end(),
-                     [channel_number, bw](const message::sWifiChannel chan) {
+                     [channel, bw](const message::sWifiChannel chan) {
                          // Find if matching channel number & bandwidth.
-                         return ((chan.channel == channel_number) &&
-                                 (chan.channel_bandwidth == bw));
+                         return ((chan.channel == channel) && (chan.channel_bandwidth == bw));
                      }) == supported_channels.end()) {
-        LOG(ERROR) << "Channel #" << channel_number << " in Operating Class #" << operating_class
+        LOG(ERROR) << "Channel #" << channel << " in Operating Class #" << operating_class
                    << " is not supported by the radio.";
         return (int8_t)eChannelPreferenceRankingConsts::NON_OPERABLE;
     }
 
-    const auto key  = std::make_pair(operating_class, channel_number);
+    const auto key  = std::make_pair(operating_class, channel);
     const auto iter = radio->channel_preference_report.find(key);
     if (iter == radio->channel_preference_report.end()) {
         // Key is not found on radio's preference, returning BEST
