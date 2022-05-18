@@ -76,6 +76,7 @@ bool MediaType::get_media_type(const std::string &interface_name,
             } else if (SPEED_1000 <= max_speed) {
                 media_type = ieee1905_1::eMediaType::IEEE_802_3AB_GIGABIT_ETHERNET;
             } else if (UINT32_MAX == max_speed) {
+                media_type = ieee1905_1::eMediaType::IEEE_802_3AB_GIGABIT_ETHERNET;
                 return false;
             }
         }
