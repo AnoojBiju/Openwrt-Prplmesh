@@ -703,8 +703,12 @@ bool Controller::handle_cmdu_1905_autoconfiguration_search(const sMacAddr &src_m
     LOG(DEBUG) << "sending autoconfig response message";
 
     if (tlvProfile2MultiApProfileAgent) {
-
-        auto agent = database.add_node_ire(al_mac);
+        std::shared_ptr<Agent> agent;
+        if (database.get_local_bridge_mac() == al_mac) {
+            agent = database.add_node_gateway(al_mac);
+        } else {
+            agent = database.add_node_ire(al_mac);
+        }
         if (!agent) {
             LOG(ERROR) << "Failed adding agent: " << al_mac;
             return false;
