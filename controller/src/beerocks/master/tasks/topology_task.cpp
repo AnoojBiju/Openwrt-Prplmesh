@@ -24,8 +24,8 @@
 #include <tlvf/wfa_map/tlvClientAssociationEvent.h>
 #include <tlvf/wfa_map/tlvProfile2ReasonCode.h>
 
-#ifdef BEEROCKS_RDKB
-#include "rdkb/rdkb_wlan_task.h"
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
+#include "pre_association_steering/pre_association_steering_task.h"
 #endif
 
 using namespace beerocks;
@@ -527,9 +527,9 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
         int dhcp_task = database.get_dhcp_task_id();
         tasks.push_event(dhcp_task, DhcpTask::STA_CONNECTED);
 
-#ifdef BEEROCKS_RDKB
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
         //push event to rdkb_wlan_hal task
-        if (vs_tlv && database.settings_rdkb_extensions()) {
+        if (vs_tlv) {
             bwl::sClientAssociationParams new_event = {};
 
             new_event.mac          = client_mac;
@@ -537,9 +537,10 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
             new_event.vap_id       = vs_tlv->vap_id();
             new_event.capabilities = vs_tlv->capabilities();
 
-            tasks.push_event(database.get_rdkb_wlan_task_id(),
-                             rdkb_wlan_task::events::STEERING_EVENT_CLIENT_CONNECT_AVAILABLE,
-                             &new_event);
+            tasks.push_event(
+                database.get_pre_association_steering_task_id(),
+                pre_association_steering_task::eEvents::STEERING_EVENT_CLIENT_CONNECT_NOTIFICATION,
+                &new_event);
         }
 #endif
 
@@ -548,10 +549,10 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
     } else {
         // client disconnected
 
-#ifdef BEEROCKS_RDKB
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
 
         // Push event to rdkb_wlan_hal task
-        if (vs_tlv && database.settings_rdkb_extensions()) {
+        if (vs_tlv) {
             beerocks_message::sSteeringEvDisconnect new_event = {};
             new_event.client_mac                              = client_mac;
             new_event.bssid                                   = bssid;
@@ -559,8 +560,9 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
             new_event.source = beerocks_message::eDisconnectSource(vs_tlv->disconnect_source());
             new_event.type   = beerocks_message::eDisconnectType(vs_tlv->disconnect_type());
 
-            tasks.push_event(database.get_rdkb_wlan_task_id(),
-                             rdkb_wlan_task::events::STEERING_EVENT_CLIENT_DISCONNECT_AVAILABLE,
+            tasks.push_event(database.get_pre_association_steering_task_id(),
+                             pre_association_steering_task::eEvents::
+                                 STEERING_EVENT_CLIENT_DISCONNECT_NOTIFICATION,
                              &new_event);
         }
 #endif

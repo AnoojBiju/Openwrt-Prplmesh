@@ -6,7 +6,7 @@
  * See LICENSE file for more details.
  */
 
-#include "monitor_rdkb_hal.h"
+#include "monitor_pre_association_steering_hal.h"
 
 #include <easylogging++.h>
 
@@ -17,19 +17,21 @@ using namespace beerocks;
 using namespace net;
 using namespace son;
 
-monitor_rdkb_hal::monitor_rdkb_hal(ieee1905_1::CmduMessageTx &cmdu_tx_) : cmdu_tx(cmdu_tx_)
+monitor_pre_association_steering_hal::monitor_pre_association_steering_hal(
+    ieee1905_1::CmduMessageTx &cmdu_tx_)
+    : cmdu_tx(cmdu_tx_)
 {
     mon_db = nullptr;
 }
 
-void monitor_rdkb_hal::stop()
+void monitor_pre_association_steering_hal::stop()
 {
     mon_db         = nullptr;
     m_slave_client = nullptr;
 }
 
-bool monitor_rdkb_hal::start(monitor_db *mon_db_,
-                             std::shared_ptr<beerocks::CmduClient> slave_client)
+bool monitor_pre_association_steering_hal::start(monitor_db *mon_db_,
+                                                 std::shared_ptr<beerocks::CmduClient> slave_client)
 {
     if (!mon_db_ || !slave_client) {
         LOG(ERROR) << "invalid parameters";
@@ -44,8 +46,8 @@ bool monitor_rdkb_hal::start(monitor_db *mon_db_,
     return true;
 }
 
-monitor_rdkb_hal::snr_change_t monitor_rdkb_hal::get_snr_change_type(int8_t prev, int8_t cur,
-                                                                     int8_t th)
+monitor_pre_association_steering_hal::snr_change_t
+monitor_pre_association_steering_hal::get_snr_change_type(int8_t prev, int8_t cur, int8_t th)
 {
     if (prev == SNR_INVALID || cur == SNR_INVALID) {
         return WIFI_STEERING_SNR_UNCHANGED;
@@ -60,7 +62,8 @@ monitor_rdkb_hal::snr_change_t monitor_rdkb_hal::get_snr_change_type(int8_t prev
     }
 }
 
-void monitor_rdkb_hal::print_debug_info(mon_rdkb_debug_info_t &mdi, bool pkts_count_en)
+void monitor_pre_association_steering_hal::print_debug_info(
+    mon_pre_association_steering_debug_info_t &mdi, bool pkts_count_en)
 {
     std::stringstream ss;
     ss << mdi.sample << ": " << mdi.sta_mac << " prev_snr:" << int(mdi.prev_snr)
@@ -78,7 +81,8 @@ void monitor_rdkb_hal::print_debug_info(mon_rdkb_debug_info_t &mdi, bool pkts_co
     LOG(DEBUG) << ss.str();
 }
 
-void monitor_rdkb_hal::process(std::chrono::steady_clock::time_point awake_timeout)
+void monitor_pre_association_steering_hal::process(
+    std::chrono::steady_clock::time_point awake_timeout)
 {
 
     if (mon_db == nullptr) {
@@ -90,7 +94,7 @@ void monitor_rdkb_hal::process(std::chrono::steady_clock::time_point awake_timeo
         return;
     }
 
-    LOG(DEBUG) << "monitor_rdkb_hal::process: sta_num=" << conf_stas.size();
+    LOG(DEBUG) << "monitor_pre_association_steering_hal::process: sta_num=" << conf_stas.size();
     for (auto it : conf_stas) {
 
         auto sta_mac     = it.first;
@@ -111,7 +115,7 @@ void monitor_rdkb_hal::process(std::chrono::steady_clock::time_point awake_timeo
             continue;
         }
 
-        LOG(DEBUG) << "monitor_rdkb_hal::process: client mac:" << sta_mac;
+        LOG(DEBUG) << "monitor_pre_association_steering_hal::process: client mac:" << sta_mac;
 
         auto sta_node = mon_db->sta_find(sta_mac);
         //client not connected.
@@ -129,7 +133,7 @@ void monitor_rdkb_hal::process(std::chrono::steady_clock::time_point awake_timeo
 
         conf_client->setRxPrevSnr(sta_stats.rx_snr_curr);
 
-        monitor_rdkb_hal::crossing_status_t ths;
+        monitor_pre_association_steering_hal::crossing_status_t ths;
 
         ths.high     = get_snr_change_type(prev_snr, cur_snr, snrHighXing);
         ths.low      = get_snr_change_type(prev_snr, cur_snr, snrLowXing);
@@ -151,7 +155,7 @@ void monitor_rdkb_hal::process(std::chrono::steady_clock::time_point awake_timeo
             continue;
         }
 
-        mon_rdkb_debug_info_t debug_info;
+        mon_pre_association_steering_debug_info_t debug_info;
         debug_info.sample       = conf_client->getSample();
         debug_info.sta_mac      = sta_mac;
         debug_info.prev_snr     = prev_snr;
@@ -192,30 +196,34 @@ void monitor_rdkb_hal::process(std::chrono::steady_clock::time_point awake_timeo
         }
 
         switch (conf_client->getState()) {
-        case rdkb_hal_sta_config::HAL_CLIENT_START_STATE: {
+        case pre_association_steering_hal_sta_config::HAL_CLIENT_START_STATE: {
             if (conf_client->getAccumulatedPackets() > conf_ap->getInactCheckThresholdPackets()) {
-                conf_client->setState(rdkb_hal_sta_config::HAL_CLIENT_ACTIVE_STATE);
+                conf_client->setState(
+                    pre_association_steering_hal_sta_config::HAL_CLIENT_ACTIVE_STATE);
                 send_activity_event(sta_mac, true, conf_client->getVapIndex());
             } else {
-                conf_client->setState(rdkb_hal_sta_config::HAL_CLIENT_INACTIVE_STATE);
+                conf_client->setState(
+                    pre_association_steering_hal_sta_config::HAL_CLIENT_INACTIVE_STATE);
                 send_activity_event(sta_mac, false, conf_client->getVapIndex());
                 LOG(DEBUG) << "goto  HAL_CLIENT_INACTIVE_STATE from START mac: " << sta_mac
                            << " s:" << debug_info.sample;
             }
             break;
         }
-        case rdkb_hal_sta_config::HAL_CLIENT_INACTIVE_STATE: {
+        case pre_association_steering_hal_sta_config::HAL_CLIENT_INACTIVE_STATE: {
             if (conf_client->getAccumulatedPackets() > conf_ap->getInactCheckThresholdPackets()) {
-                conf_client->setState(rdkb_hal_sta_config::HAL_CLIENT_ACTIVE_STATE);
+                conf_client->setState(
+                    pre_association_steering_hal_sta_config::HAL_CLIENT_ACTIVE_STATE);
                 send_activity_event(sta_mac, true, conf_client->getVapIndex());
                 LOG(DEBUG) << "goto  HAL_CLIENT_ACTIVE_STATE mac: " << sta_mac
                            << " s:" << debug_info.sample;
             }
             break;
         }
-        case rdkb_hal_sta_config::HAL_CLIENT_ACTIVE_STATE: {
+        case pre_association_steering_hal_sta_config::HAL_CLIENT_ACTIVE_STATE: {
             if (conf_client->getAccumulatedPackets() <= conf_ap->getInactCheckThresholdPackets()) {
-                conf_client->setState(rdkb_hal_sta_config::HAL_CLIENT_INACTIVE_STATE);
+                conf_client->setState(
+                    pre_association_steering_hal_sta_config::HAL_CLIENT_INACTIVE_STATE);
                 send_activity_event(sta_mac, false, conf_client->getVapIndex());
                 LOG(DEBUG) << "goto  HAL_CLIENT_INACTIVE_STATE mac: " << sta_mac
                            << " s:" << debug_info.sample;
@@ -235,7 +243,8 @@ void monitor_rdkb_hal::process(std::chrono::steady_clock::time_point awake_timeo
     m_sta_mac_process_next.clear();
 }
 
-void monitor_rdkb_hal::send_activity_event(const std::string &sta_mac, bool active, int8_t vap_id)
+void monitor_pre_association_steering_hal::send_activity_event(const std::string &sta_mac,
+                                                               bool active, int8_t vap_id)
 {
     LOG(DEBUG) << "activity event active: " << active << " mac " << sta_mac;
 
@@ -264,9 +273,9 @@ void monitor_rdkb_hal::send_activity_event(const std::string &sta_mac, bool acti
     m_slave_client->send_cmdu(cmdu_tx);
 }
 
-void monitor_rdkb_hal::send_snr_crossing_event(const std::string &sta_mac,
-                                               monitor_sta_node::SStaStats &sta_stats,
-                                               crossing_status_t thrs, int8_t vap_id)
+void monitor_pre_association_steering_hal::send_snr_crossing_event(
+    const std::string &sta_mac, monitor_sta_node::SStaStats &sta_stats, crossing_status_t thrs,
+    int8_t vap_id)
 {
     LOG(DEBUG) << "crossing event"
                << " mac " << sta_mac;
@@ -299,12 +308,13 @@ void monitor_rdkb_hal::send_snr_crossing_event(const std::string &sta_mac,
     m_slave_client->send_cmdu(cmdu_tx);
 }
 
-std::shared_ptr<rdkb_hal_sta_config> monitor_rdkb_hal::conf_add_client(const std::string &sta_mac)
+std::shared_ptr<pre_association_steering_hal_sta_config>
+monitor_pre_association_steering_hal::conf_add_client(const std::string &sta_mac)
 {
 
     auto cp = conf_find_client(sta_mac);
     if (cp == nullptr) {
-        auto node = std::make_shared<son::rdkb_hal_sta_config>(sta_mac);
+        auto node = std::make_shared<son::pre_association_steering_hal_sta_config>(sta_mac);
         auto ret  = conf_stas.insert(std::make_pair(sta_mac, node));
         if (ret.second == true) {
             node->setLastSampleTime(std::chrono::steady_clock::now());
@@ -317,12 +327,14 @@ std::shared_ptr<rdkb_hal_sta_config> monitor_rdkb_hal::conf_add_client(const std
     }
 }
 
-std::shared_ptr<rdkb_hal_sta_config> monitor_rdkb_hal::conf_get_client(const std::string &sta_mac)
+std::shared_ptr<pre_association_steering_hal_sta_config>
+monitor_pre_association_steering_hal::conf_get_client(const std::string &sta_mac)
 {
     return conf_find_client(sta_mac);
 }
 
-std::shared_ptr<rdkb_hal_sta_config> monitor_rdkb_hal::conf_find_client(const std::string &sta_mac)
+std::shared_ptr<pre_association_steering_hal_sta_config>
+monitor_pre_association_steering_hal::conf_find_client(const std::string &sta_mac)
 {
 
     auto it = conf_stas.find(sta_mac);
@@ -332,12 +344,13 @@ std::shared_ptr<rdkb_hal_sta_config> monitor_rdkb_hal::conf_find_client(const st
     return nullptr;
 }
 
-std::shared_ptr<rdkb_hal_ap_config> monitor_rdkb_hal::conf_add_ap(const int8_t vap_id)
+std::shared_ptr<pre_association_steering_hal_ap_config>
+monitor_pre_association_steering_hal::conf_add_ap(const int8_t vap_id)
 {
 
     auto cp = conf_find_ap(vap_id);
     if (cp == nullptr) {
-        auto ap  = std::make_shared<son::rdkb_hal_ap_config>(vap_id);
+        auto ap  = std::make_shared<son::pre_association_steering_hal_ap_config>(vap_id);
         auto ret = conf_aps.insert(std::make_pair(vap_id, ap));
         if (ret.second == false) {
             LOG(WARNING) << "existing client configuration not found";
@@ -348,7 +361,8 @@ std::shared_ptr<rdkb_hal_ap_config> monitor_rdkb_hal::conf_add_ap(const int8_t v
     }
 }
 
-std::shared_ptr<rdkb_hal_ap_config> monitor_rdkb_hal::conf_find_ap(const int8_t vap_id)
+std::shared_ptr<pre_association_steering_hal_ap_config>
+monitor_pre_association_steering_hal::conf_find_ap(const int8_t vap_id)
 {
 
     auto it = conf_aps.find(vap_id);
@@ -358,7 +372,8 @@ std::shared_ptr<rdkb_hal_ap_config> monitor_rdkb_hal::conf_find_ap(const int8_t 
     return nullptr;
 }
 
-template <typename T, typename K> bool monitor_rdkb_hal::conf_erase(T &conf, K k)
+template <typename T, typename K>
+bool monitor_pre_association_steering_hal::conf_erase(T &conf, K k)
 {
 
     auto n = conf.erase(k);
@@ -370,12 +385,12 @@ template <typename T, typename K> bool monitor_rdkb_hal::conf_erase(T &conf, K k
     return true;
 }
 
-bool monitor_rdkb_hal::conf_erase_client(const std::string &sta_mac)
+bool monitor_pre_association_steering_hal::conf_erase_client(const std::string &sta_mac)
 {
     return conf_erase(conf_stas, sta_mac);
 }
 
-bool monitor_rdkb_hal::conf_erase_ap(int8_t ap_index)
+bool monitor_pre_association_steering_hal::conf_erase_ap(int8_t ap_index)
 {
     if (!conf_erase(conf_aps, ap_index)) {
         LOG(ERROR) << "Failed to erase AP from configuration";
@@ -394,7 +409,7 @@ bool monitor_rdkb_hal::conf_erase_ap(int8_t ap_index)
     return true;
 }
 
-std::string rdkb_hal_sta_config::getStateAbbreviation()
+std::string pre_association_steering_hal_sta_config::getStateAbbreviation()
 {
     switch (getState()) {
     case HAL_CLIENT_START_STATE: {
@@ -412,7 +427,7 @@ std::string rdkb_hal_sta_config::getStateAbbreviation()
     };
 }
 
-std::string rdkb_hal_sta_config::getStateString(client_state_t state)
+std::string pre_association_steering_hal_sta_config::getStateString(client_state_t state)
 {
     switch (state) {
     case HAL_CLIENT_START_STATE: {
@@ -430,20 +445,20 @@ std::string rdkb_hal_sta_config::getStateString(client_state_t state)
     };
 }
 
-void rdkb_hal_sta_config::setState(client_state_t new_state)
+void pre_association_steering_hal_sta_config::setState(client_state_t new_state)
 {
     LOG(DEBUG) << printStats() << " go to state: " << getStateString(new_state)
-               << " from state: " << getStateString(rdkb_hal_client_state);
-    rdkb_hal_client_state = new_state;
+               << " from state: " << getStateString(pre_association_steering_hal_client_state);
+    pre_association_steering_hal_client_state = new_state;
 }
 
-std::string rdkb_hal_sta_config::printStats()
+std::string pre_association_steering_hal_sta_config::printStats()
 {
     return " total packets: " + std::to_string(getAccumulatedPackets()) +
            " sample_packets: " + std::to_string(getSamplePackets()) + " mac: " + getMac();
 }
 
-std::ostream &operator<<(std::ostream &ost, rdkb_hal_sta_config &sta)
+std::ostream &operator<<(std::ostream &ost, pre_association_steering_hal_sta_config &sta)
 {
 
     ost << std::endl << sta.printStats() << std::endl;
@@ -451,9 +466,9 @@ std::ostream &operator<<(std::ostream &ost, rdkb_hal_sta_config &sta)
     return ost;
 }
 
-void rdkb_hal_sta_config::clearData()
+void pre_association_steering_hal_sta_config::clearData()
 {
-    setState(rdkb_hal_sta_config::HAL_CLIENT_START_STATE);
+    setState(pre_association_steering_hal_sta_config::HAL_CLIENT_START_STATE);
     setRxPrevSnr(SNR_INVALID);
     setSample(0);
 }
