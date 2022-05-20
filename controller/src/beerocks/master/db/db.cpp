@@ -2126,21 +2126,23 @@ bool db::update_node_failed_24ghz_steer_attempt(const std::string &mac)
 
 bool db::can_start_client_steering(const std::string &sta_mac, const std::string &target_bssid)
 {
-    auto sta        = get_node(sta_mac);
-    auto target_bss = get_node(target_bssid);
 
-    // BH Stations type is not Client.
-    if (!sta || get_node_type(sta_mac) != TYPE_CLIENT) {
-        LOG(ERROR) << "Device with mac " << sta_mac << " is not a station.";
-        return false;
-    }
-    if (!target_bss || !is_hostap_active(tlvf::mac_from_string(target_bssid))) {
-        LOG(ERROR) << "Invalid or inactive BSS " << target_bssid;
+    auto station = get_station(tlvf::mac_from_string(sta_mac));
+    if (!station) {
+        LOG(ERROR) << "Failed to get station with mac: " << sta_mac;
         return false;
     }
 
+    auto bss = get_bss(tlvf::mac_from_string(target_bssid));
+    if (!bss) {
+        LOG(ERROR) << "Failed to get Target BSS with BSSID: " << target_bssid;
+        return false;
+    }
+
+    //TODO: Refactor BSS object to cover radio band support (PPM-1057)
     bool hostap_is_5ghz = is_node_5ghz(target_bssid);
 
+    //TODO: Refactor Station object to cover band support (PPM-1057)
     if ((hostap_is_5ghz && !get_node_5ghz_support(sta_mac))) {
         LOG(DEBUG) << "Sta " << sta_mac << " can't steer to hostap " << target_bssid << std::endl
                    << "  hostap_is_5ghz = " << hostap_is_5ghz << std::endl
@@ -6777,6 +6779,10 @@ bool db::dm_clear_sta_stats(const sMacAddr &sta_mac)
 
 bool db::dm_remove_sta(Station &station)
 {
+    if (station.dm_path.empty()) {
+        LOG(INFO) << "Station dm_path is already empty";
+        return true;
+    }
     auto instance = get_dm_index_from_path(station.dm_path);
     station.dm_path.clear();
 

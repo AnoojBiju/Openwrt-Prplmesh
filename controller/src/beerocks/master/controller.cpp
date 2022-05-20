@@ -1440,6 +1440,14 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const sMacAddr &src_mac,
 
     int result_count = 0;
     for (auto const result_tlv : cmdu_rx.getClassList<wfa_map::tlvProfile2ChannelScanResult>()) {
+
+        //If scans status is not successful, it will not include other fields.
+        if (result_tlv->success() != wfa_map::tlvProfile2ChannelScanResult::eScanStatus::SUCCESS) {
+            LOG(WARNING) << "Channel Scan Status: " << result_tlv->success();
+            continue;
+        }
+        LOG(INFO) << "Channel Scan Status: " << result_tlv->success();
+
         auto neighbors_list_length = result_tlv->neighbors_list_length();
         LOG(DEBUG) << "Received Result TLV for:" << std::endl
                    << "RUID: " << result_tlv->radio_uid() << ", "
@@ -1489,8 +1497,7 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const sMacAddr &src_mac,
             LOG(ERROR) << "Failed to add channel report entry #" << result_count << "!";
             return false;
         }
-        if (result_tlv->success() == 0 &&
-            !database.dm_add_scan_result(
+        if (!database.dm_add_scan_result(
                 result_tlv->radio_uid(), result_tlv->operating_class(), result_tlv->channel(),
                 result_tlv->noise(), result_tlv->utilization(), neighbor_vec, ISO_8601_timestamp)) {
             LOG(ERROR) << "Failed to add ScanResult entry #" << result_count << " !";
@@ -2794,9 +2801,19 @@ bool Controller::handle_cmdu_control_message(
 
     // Sanity tests
     if (radio_mac == beerocks::net::network_utils::ZERO_MAC) {
-        LOG(ERROR) << "CMDU received with id=" << int(beerocks_header->id())
-                   << " op=" << int(beerocks_header->action_op()) << " with empty mac!";
-        return false;
+        if (beerocks_header->action_op() !=
+            beerocks_message::ACTION_CONTROL_CLIENT_DHCP_COMPLETE_NOTIFICATION) {
+            /*
+                dhcp_complete_notification is sent to the controller
+                without a radio mac. This is the expected behavior.
+                Currently, the message is ignored which leads to the
+                IP of the station not showing in the bml-connection-map.
+                Don't ignore this message even though radio_mac is zero.
+            */
+            LOG(ERROR) << "CMDU received with id=" << int(beerocks_header->id())
+                       << " op=" << int(beerocks_header->action_op()) << " with empty mac!";
+            return false;
+        }
     }
 
     if (beerocks_header->actionhdr()->direction() == beerocks::BEEROCKS_DIRECTION_AGENT) {
