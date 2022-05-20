@@ -2582,11 +2582,6 @@ bool Controller::handle_intel_slave_join(
         database.update_node_last_seen(tlvf::mac_to_string(radio_mac));
     }
 
-    if (!database.dm_set_device_multi_ap_backhaul(
-            *agent, parent_bssid_mac, tlvf::mac_from_string(backhaul_mac), backhaul_iface_type)) {
-        LOG(ERROR) << "Device set MultiAPDevice.Backhaul object is failed.";
-    }
-
     return true;
 }
 
@@ -2775,13 +2770,6 @@ bool Controller::handle_non_intel_slave_join(
     database.set_hostap_band_capability(bridge_mac, radio_mac,
                                         beerocks::SUBBAND_CAPABILITY_UNKNOWN);
     //        }
-
-    // TODO: Improve MultiAPDevice.Backhaul from EasyMesh messages not only VS (PPM-1659)
-    if (!database.dm_set_device_multi_ap_backhaul(*agent, beerocks::net::network_utils::ZERO_MAC,
-                                                  tlvf::mac_from_string(backhaul_mac),
-                                                  beerocks::eIfaceType::IFACE_TYPE_ETHERNET)) {
-        LOG(ERROR) << "Device set MultiAPDevice.Backhaul object is failed.";
-    }
 
     // update bml listeners
     bml_task::connection_change_event bml_new_event;
