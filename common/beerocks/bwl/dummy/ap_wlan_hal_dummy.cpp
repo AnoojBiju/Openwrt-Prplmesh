@@ -263,7 +263,8 @@ bool ap_wlan_hal_dummy::sta_softblock_remove(const std::string &vap_name,
 bool ap_wlan_hal_dummy::switch_channel(int chan, int bw, int vht_center_frequency,
                                        int csa_beacon_count)
 {
-    LOG(TRACE) << __func__ << " channel: " << chan << ", bw: " << bw
+    auto bw_int = beerocks::utils::convert_bandwidth_to_int((beerocks::eWiFiBandwidth)bw);
+    LOG(TRACE) << __func__ << " channel: " << chan << ", bw: " << bw_int
                << ", vht_center_frequency: " << vht_center_frequency;
 
     m_radio_info.last_csa_sw_reason = ChanSwReason::Unknown;
@@ -272,7 +273,7 @@ bool ap_wlan_hal_dummy::switch_channel(int chan, int bw, int vht_center_frequenc
     event_queue_push(Event::ACS_Completed);
     event_queue_push(Event::CSA_Finished);
 
-    return set_channel(chan, beerocks::utils::convert_bandwidth_to_enum(bw), vht_center_frequency);
+    return set_channel(chan, (beerocks::eWiFiBandwidth)bw, vht_center_frequency);
 }
 
 bool ap_wlan_hal_dummy::cancel_cac(int chan, beerocks::eWiFiBandwidth bw, int vht_center_frequency,
