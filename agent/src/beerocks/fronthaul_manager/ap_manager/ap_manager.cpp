@@ -887,7 +887,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
 
         // Set AP channel
         if (!ap_wlan_hal->switch_channel(request->cs_params().channel,
-                                         request->cs_params().bandwidth,
+                                         (beerocks::eWiFiBandwidth)request->cs_params().bandwidth,
                                          request->cs_params().vht_center_frequency,
                                          request->cs_params().csa_count)) { //error
             std::string error("Failed to set AP channel!");

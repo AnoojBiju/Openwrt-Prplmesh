@@ -232,7 +232,7 @@ public:
      *
      * @return true on success or false on error.
      */
-    virtual bool switch_channel(int chan, int bw, int vht_center_frequency,
+    virtual bool switch_channel(int chan, beerocks::eWiFiBandwidth bw, int vht_center_frequency,
                                 int csa_beacon_count = 5) = 0;
 
     /**
