@@ -3638,6 +3638,13 @@ int bml_internal::channel_selection(const sMacAddr &radio_mac, uint8_t channel, 
     return BML_RET_OK;
 }
 
+int bml_internal::set_dynamic_channel_pool(const sMacAddr &radio_mac,
+                                           const unsigned int *channel_pool,
+                                           const int channel_pool_size)
+{
+    return BML_RET_OK;
+}
+
 bool bml_internal::wake_up(uint8_t action_opcode, int value)
 {
     std::unique_lock<std::mutex> lock(m_mtxLock);

@@ -187,6 +187,10 @@ public:
     int channel_selection(const sMacAddr &radio_mac, uint8_t channel, uint8_t bandwidth,
                           uint8_t csa_count = 5);
 
+    // Set the channel pool for the Auto Channel Selection
+    int set_dynamic_channel_pool(const sMacAddr &radio_mac, const unsigned int *channel_pool,
+                                 const int channel_pool_size);
+
     //set and get vaps list
     int bml_set_vap_list_credentials(const BML_VAP_INFO *vaps, const uint8_t vaps_num);
     int bml_get_vap_list_credentials(BML_VAP_INFO *vaps, uint8_t &vaps_num);

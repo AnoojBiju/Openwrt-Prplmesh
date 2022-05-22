@@ -137,6 +137,7 @@ private:
     int get_slave_restricted_channels_caller(int numOfArgs);
     int bml_trigger_topology_discovery_caller(int numOfArgs);
     int bml_channel_selection_caller(int numOfArgs);
+    int bml_set_dynamic_channel_pool_caller(int numOfArgs);
 #ifdef BEEROCKS_RDKB
     int bml_rdkb_steering_set_group_caller(int numOfArgs);
     int bml_rdkb_steering_client_set_caller(int numOfArgs);
@@ -199,6 +200,7 @@ private:
     int topology_discovery(const std::string &al_mac);
     int channel_selection(const std::string &radio_mac, uint8_t channel, uint8_t bw,
                           uint8_t csa_count = 5);
+    int set_dynamic_pool(const std::string &radio_mac, const std::string &channel_pool);
 #ifdef BEEROCKS_RDKB
     int steering_set_group(uint32_t steeringGroupIndex, const std::string &str_cfg_2,
                            const std::string &str_cfg_5);

@@ -3178,6 +3178,29 @@ bool db::get_pool_of_all_supported_channels(std::unordered_set<uint8_t> &channel
     return true;
 }
 
+bool db::get_dynamic_channel_pool(const sMacAddr &RUID,
+                                  std::unordered_set<uint8_t> &channel_pool_set)
+{
+    auto radio = get_hostap(RUID);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << RUID;
+        return false;
+    }
+    if (radio->single_scan_config.dynamic_channel_pool.empty()) {
+        LOG(INFO) << "Getting static channel pool for " << radio->iface_name;
+        const auto &pool_str = config.default_channel_pools[radio->iface_name];
+        LOG(INFO) << "Static channel pool for " << radio->iface_name << " is: " << pool_str;
+        const auto &channels_str = string_utils::str_split(pool_str, ',');
+        for (const auto &channel_str : channels_str) {
+            LOG(INFO) << "Adding channel " << channel_str << " to the dynamic pool";
+            radio->single_scan_config.dynamic_channel_pool.insert(
+                beerocks::string_utils::stoi(channel_str));
+        }
+    }
+    channel_pool_set = radio->single_scan_config.dynamic_channel_pool;
+    return true;
+}
+
 bool db::add_channel_report(const sMacAddr &RUID, const uint8_t &operating_class,
                             const uint8_t &channel,
                             const std::vector<wfa_map::cNeighbors> &neighbors, uint8_t avg_noise,
