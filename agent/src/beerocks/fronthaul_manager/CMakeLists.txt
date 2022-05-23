@@ -24,9 +24,10 @@ if (TARGET_PLATFORM STREQUAL "ugw")
 
 endif()
 
-#RDKB
-if (TARGET_PLATFORM STREQUAL "rdkb")
-    file(GLOB RDKB_SOURCES ${MODULE_PATH}/monitor/rdkb/*.c*)
+#FEATURE_PRE_ASSOCIATION_STEERING
+list(FIND FEATURES "FEATURE_PRE_ASSOCIATION_STEERING" _feature_pre_association_steering_index)
+if(${_feature_pre_association_steering_index} GREATER -1)
+    file(GLOB RDKB_SOURCES ${MODULE_PATH}/monitor/pre_association_steering/*.c*)
     list(APPEND fronthaul_manager_sources  ${RDKB_SOURCES})
 endif()
 

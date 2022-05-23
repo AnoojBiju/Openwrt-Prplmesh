@@ -52,8 +52,8 @@ Monitor::Monitor(const std::string &monitor_iface_,
     : EventLoopThread(), monitor_iface(monitor_iface_), beerocks_slave_conf(beerocks_slave_conf_),
       bridge_iface(beerocks_slave_conf.bridge_iface), cmdu_tx(m_tx_buffer, sizeof(m_tx_buffer)),
       logger(logger_), mon_rssi(cmdu_tx),
-#ifdef BEEROCKS_RDKB
-      mon_rdkb_hal(cmdu_tx),
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
+      mon_pre_association_steering_hal(cmdu_tx),
 #endif
       mon_stats(cmdu_tx)
 {
@@ -193,16 +193,19 @@ bool Monitor::thread_init()
 
     transaction.commit();
 
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
+    mon_db.set_clients_measuremet_mode(
+        (monitor_db::eClientsMeasurementMode)bpl::eClientsMeasurementMode::ENABLE_ALL);
+#else
     bpl::eClientsMeasurementMode clients_measuremet_mode;
     if (!beerocks::bpl::cfg_get_clients_measurement_mode(clients_measuremet_mode)) {
         LOG(WARNING) << "Failed to read clients measurement mode - using defaule value: enable "
                         "measurements for all clients";
         clients_measuremet_mode = bpl::eClientsMeasurementMode::ENABLE_ALL;
     }
-
     mon_db.set_clients_measuremet_mode(
         (monitor_db::eClientsMeasurementMode)clients_measuremet_mode);
-
+#endif /* FEATURE_PRE_ASSOCIATION_STEERING */
     bool radio_stats_enable;
     if (!beerocks::bpl::cfg_get_radio_stats_enable(radio_stats_enable)) {
         LOG(DEBUG) << "Failed to read radio_stats_enable - using default value: true ";
@@ -247,8 +250,8 @@ void Monitor::on_thread_stop()
 
         mon_rssi.stop();
         mon_stats.stop();
-#ifdef BEEROCKS_RDKB
-        mon_rdkb_hal.stop();
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
+        mon_pre_association_steering_hal.stop();
 #endif
 
         mon_wlan_hal->detach();
@@ -495,10 +498,10 @@ bool Monitor::monitor_fsm()
                 }
             }
 
-#ifdef BEEROCKS_RDKB
-            LOG(TRACE) << "mon_rdkb_hal.start()";
-            if (!mon_rdkb_hal.start(&mon_db, m_slave_client)) {
-                LOG(ERROR) << "mon_rdkb_hal.start() failed";
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
+            LOG(TRACE) << "mon_pre_association_steering_hal.start()";
+            if (!mon_pre_association_steering_hal.start(&mon_db, m_slave_client)) {
+                LOG(ERROR) << "mon_pre_association_steering_hal.start() failed";
                 return false;
             }
 #endif
@@ -650,8 +653,8 @@ bool Monitor::monitor_fsm()
 
         mon_rssi.process();
         mon_stats.process();
-#ifdef BEEROCKS_RDKB
-        mon_rdkb_hal.process(max_iteration_timeout);
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
+        mon_pre_association_steering_hal.process(max_iteration_timeout);
 #endif
 
         /**
@@ -1189,7 +1192,7 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
         sta_node->set_ipv4(sta_ipv4);
         break;
     }
-#ifdef BEEROCKS_RDKB
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
     case beerocks_message::ACTION_MONITOR_STEERING_CLIENT_SET_GROUP_REQUEST: {
 
         auto request =
@@ -1224,7 +1227,7 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
         }
 
         if (request->params().remove) {
-            if (mon_rdkb_hal.conf_erase_ap(vap_id) == false) {
+            if (mon_pre_association_steering_hal.conf_erase_ap(vap_id) == false) {
                 LOG(ERROR) << "failed removing vap_id:" << int(vap_id) << " configuration";
                 send_steering_return_status(
                     beerocks_message::ACTION_MONITOR_STEERING_CLIENT_SET_GROUP_RESPONSE,
@@ -1237,9 +1240,9 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
                 OPERATION_SUCCESS);
             break;
         }
-        auto ap = mon_rdkb_hal.conf_add_ap(vap_id);
+        auto ap = mon_pre_association_steering_hal.conf_add_ap(vap_id);
         if (ap == nullptr) {
-            LOG(ERROR) << "add rdkb_hall ap configuration fail";
+            LOG(ERROR) << "add pre_association_steering_hal ap configuration fail";
             send_steering_return_status(
                 beerocks_message::ACTION_MONITOR_STEERING_CLIENT_SET_GROUP_RESPONSE,
                 OPERATION_FAIL);
@@ -1272,25 +1275,13 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
 
         std::string sta_mac = tlvf::mac_to_string(request->params().client_mac);
         if (request->params().remove) {
-            if (mon_rdkb_hal.conf_erase_client(sta_mac) == false) {
+            if (mon_pre_association_steering_hal.conf_erase_client(sta_mac) == false) {
                 LOG(ERROR) << "failed removing client:" << sta_mac << " configuration";
                 send_steering_return_status(
                     beerocks_message::ACTION_MONITOR_STEERING_CLIENT_SET_RESPONSE, OPERATION_FAIL);
                 return;
             }
             LOG(DEBUG) << "client: " << sta_mac << " configuration was removed";
-
-            // For ONLY_CLIENTS_SELECTED_FOR_STEERING mode, need to updated the client's measure-sta-enable flag
-            // if it  already connected. For not connected clients the flag will be determined as
-            // part of the STA_Connected event handling.
-            if (mon_db.get_clients_measuremet_mode() ==
-                monitor_db::eClientsMeasurementMode::ONLY_CLIENTS_SELECTED_FOR_STEERING) {
-                auto sta_node = mon_db.sta_find(sta_mac);
-                if (sta_node) {
-                    sta_node->set_measure_sta_enable(false);
-                    LOG(DEBUG) << "Set sta measurements mode to false for sta_mac=" << sta_mac;
-                }
-            }
 
             send_steering_return_status(
                 beerocks_message::ACTION_MONITOR_STEERING_CLIENT_SET_RESPONSE, OPERATION_SUCCESS);
@@ -1312,9 +1303,9 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
             return;
         }
 
-        auto client = mon_rdkb_hal.conf_add_client(sta_mac);
+        auto client = mon_pre_association_steering_hal.conf_add_client(sta_mac);
         if (client == nullptr) {
-            LOG(ERROR) << "add rdkb_hall client configuration fail";
+            LOG(ERROR) << "add pre_association_steering_hal client configuration fail";
             send_steering_return_status(
                 beerocks_message::ACTION_MONITOR_STEERING_CLIENT_SET_RESPONSE, OPERATION_FAIL);
             return;
@@ -1325,23 +1316,11 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
         client->setSnrInactXing(request->params().config.snrInactXing);
         client->setVapIndex(vap_id);
 
-        // For ONLY_CLIENTS_SELECTED_FOR_STEERING mode, need to updated the client's measure-sta-enable flag
-        // if it  already connected. For not connected clients the flag will be determined as
-        // part of the STA_Connected event handling.
-        if (mon_db.get_clients_measuremet_mode() ==
-            monitor_db::eClientsMeasurementMode::ONLY_CLIENTS_SELECTED_FOR_STEERING) {
-            auto sta_node = mon_db.sta_find(sta_mac);
-            if (sta_node) {
-                sta_node->set_measure_sta_enable(true);
-                LOG(DEBUG) << "Set sta measurements mode to true for sta_mac=" << sta_mac;
-            }
-        }
-
         send_steering_return_status(beerocks_message::ACTION_MONITOR_STEERING_CLIENT_SET_RESPONSE,
                                     OPERATION_SUCCESS);
         break;
     }
-#endif //BEEROCKS_RDKB
+#endif //FEATURE_PRE_ASSOCIATION_STEERING
     case beerocks_message::ACTION_MONITOR_CLIENT_RX_RSSI_MEASUREMENT_REQUEST: {
         LOG(TRACE) << "received ACTION_MONITOR_CLIENT_RX_RSSI_MEASUREMENT_REQUEST";
 
@@ -2077,22 +2056,20 @@ bool Monitor::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
         sta_node->set_ipv4(sta_ipv4);
         sta_node->set_bridge_4addr_mac(set_bridge_4addr_mac);
 
-        sta_node->set_measure_sta_enable((mon_db.get_clients_measuremet_mode() ==
-                                          monitor_db::eClientsMeasurementMode::ENABLE_ALL));
-
-#ifdef BEEROCKS_RDKB
-        //clean rdkb monitor data if already in database.
-        auto client = mon_rdkb_hal.conf_get_client(sta_mac);
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
+        sta_node->set_measure_sta_enable(true);
+        //clean pre_association_steering monitor data if already in database.
+        auto client = mon_pre_association_steering_hal.conf_get_client(sta_mac);
         if (client) {
-            // override sta_node measurements configuration
-            sta_node->set_measure_sta_enable((mon_db.get_clients_measuremet_mode() !=
-                                              monitor_db::eClientsMeasurementMode::DISABLE_ALL));
             client->setStartTime(std::chrono::steady_clock::now());
             client->setLastSampleTime(std::chrono::steady_clock::now());
             client->setAccumulatedPackets(0);
             client->clearData();
         }
-#endif
+#else
+        sta_node->set_measure_sta_enable((mon_db.get_clients_measuremet_mode() ==
+                                          monitor_db::eClientsMeasurementMode::ENABLE_ALL));
+#endif /* FEATURE_PRE_ASSOCIATION_STEERING */
         break;
     }
     case Event::STA_Disconnected: {
@@ -2262,7 +2239,7 @@ void Monitor::update_vaps_in_db()
         }
     }
 }
-#ifdef BEEROCKS_RDKB
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
 void Monitor::send_steering_return_status(beerocks_message::eActionOp_MONITOR ActionOp,
                                           int32_t status)
 {
@@ -2296,4 +2273,4 @@ void Monitor::send_steering_return_status(beerocks_message::eActionOp_MONITOR Ac
     }
     return;
 }
-#endif //BEEROCKS_RDKB
+#endif //FEATURE_PRE_ASSOCIATION_STEERING

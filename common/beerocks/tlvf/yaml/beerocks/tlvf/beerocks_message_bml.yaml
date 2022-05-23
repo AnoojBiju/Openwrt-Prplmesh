@@ -296,9 +296,9 @@ cACTION_BML_GET_VAP_LIST_CREDENTIALS_REQUEST:
 cACTION_BML_STEERING_SET_GROUP_REQUEST:
   _type: class
   steeringGroupIndex: uint32_t
-  cfg_2: sSteeringApConfig
-  cfg_5: sSteeringApConfig
-  remove: uint8_t
+  ap_cfgs:
+    _type: sSteeringApConfig
+    _length: []
 
 cACTION_BML_STEERING_SET_GROUP_RESPONSE:
   _type: class

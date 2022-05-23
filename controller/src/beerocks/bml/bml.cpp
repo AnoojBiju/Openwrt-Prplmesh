@@ -784,3 +784,88 @@ int bml_client_clear_client(BML_CTX ctx, const char *sta_mac)
     auto pBML = static_cast<bml_internal *>(ctx);
     return pBML->client_clear_client(tlvf::mac_from_string(std::string(sta_mac)));
 }
+
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
+
+int bml_pre_association_steering_set_group(BML_CTX ctx, uint32_t steeringGroupIndex,
+                                           struct BML_STEERING_AP_CONFIG *ap_cfgs,
+                                           unsigned int length)
+{
+    LOG(DEBUG) << "bml_pre_association_steering_set_ap_set_config is called";
+    // Validate input parameters
+    if (!ctx)
+        return (-BML_RET_INVALID_ARGS);
+
+    auto *pBML = static_cast<bml_internal *>(ctx);
+
+    if (length >= 4) {
+        LOG(ERROR) << "The length of AP Configurations cannot be above 3";
+        return (-BML_RET_INVALID_ARGS);
+    }
+    if (!ap_cfgs && length != 0) {
+        LOG(ERROR) << "AP Configurations is NULL, but the length is not 0. The length must be 0.";
+        return (-BML_RET_INVALID_ARGS);
+    }
+    if (ap_cfgs && length == 0) {
+        LOG(ERROR)
+            << "AP Configurations is no NULL, but length is zero. The length must be above 0.";
+        return (-BML_RET_INVALID_ARGS);
+    }
+    return (pBML->steering_set_group(steeringGroupIndex, ap_cfgs, length));
+}
+
+int bml_pre_association_steering_client_set(BML_CTX ctx, uint32_t steeringGroupIndex,
+                                            const BML_MAC_ADDR bssid, const BML_MAC_ADDR client_mac,
+                                            BML_STEERING_CLIENT_CONFIG *config)
+{
+    LOG(DEBUG) << "bml_pre_association_steering_client_set is called";
+    // Validate input parameters
+    if (!ctx || !client_mac)
+        return (-BML_RET_INVALID_ARGS);
+
+    auto *pBML = static_cast<bml_internal *>(ctx);
+
+    return (pBML->steering_client_set(steeringGroupIndex, bssid, client_mac, config));
+}
+
+int bml_pre_association_steering_event_register(BML_CTX ctx, BML_EVENT_CB pCB)
+{
+    LOG(DEBUG) << "bml_pre_association_steering_event_register entry";
+    // Validate input parameters
+    if (!ctx)
+        return (-BML_RET_INVALID_ARGS);
+
+    auto *pBML = static_cast<bml_internal *>(ctx);
+
+    return (pBML->steering_event_register(pCB));
+}
+
+int bml_pre_association_steering_client_measure(BML_CTX ctx, unsigned int steeringGroupIndex,
+                                                const BML_MAC_ADDR bssid,
+                                                const BML_MAC_ADDR client_mac)
+{
+    LOG(DEBUG) << "bml_pre_association_steering_client_measure entry";
+    // Validate input parameters
+    if (!ctx)
+        return (-BML_RET_INVALID_ARGS);
+
+    auto *pBML = static_cast<bml_internal *>(ctx);
+
+    return (pBML->steering_client_measure(steeringGroupIndex, bssid, client_mac));
+}
+
+int bml_pre_association_steering_client_disconnect(BML_CTX ctx, unsigned int steeringGroupIndex,
+                                                   const BML_MAC_ADDR bssid,
+                                                   const BML_MAC_ADDR client_mac,
+                                                   BML_DISCONNECT_TYPE type, unsigned int reason)
+{
+    LOG(DEBUG) << "bml_pre_association_steering_client_disconnect entry";
+    // Validate input parameters
+    if (!ctx)
+        return (-BML_RET_INVALID_ARGS);
+    auto *pBML = static_cast<bml_internal *>(ctx);
+
+    return (pBML->steering_client_disconnect(steeringGroupIndex, bssid, client_mac, type, reason));
+}
+
+#endif /* FEATURE_PRE_ASSOCIATION_STEERING */
