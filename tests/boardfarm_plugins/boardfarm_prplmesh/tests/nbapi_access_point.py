@@ -1,4 +1,3 @@
-
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 # SPDX-FileCopyrightText: 2021 the prplMesh contributors (see AUTHORS.md)
 # This code is subject to the terms of the BSD+Patent license.
@@ -6,6 +5,7 @@
 
 from .prplmesh_base_test import PrplMeshBaseTest
 from boardfarm.exceptions import SkipTest
+from opts import debug
 
 import time
 
@@ -23,13 +23,28 @@ class NbapiAccessPoint(PrplMeshBaseTest):
                 self.fail(f"BSS with SSID: {ssid}, expect does not appear on radio "
                           "uid: {radio.uid}, path: {radio.path}.")
 
-    def check_bss_in_radio(self, ssid: str, radio, ssids, controller):
+    def check_bss_in_radio(self, ssid: str, radio, ssids, config, controller):
         found = False
+        fronthaul_use_exp = config.get('fronthaul', 'true').title()
+        backhaul_use_exp = config.get('backhaul', 'false').title()
+        debug(f"SSID: {ssid}")
         for bss in radio.vaps.values():
             enabled = controller.nbapi_get_parameter(bss.path, "Enabled")
             if bss.ssid == ssid:
                 found = True
                 assert enabled, f"BSS {bss.ssid} is not enabled."
+
+                # Check the currently used BSS type
+                debug(f"BSS: {bss.bssid}")
+                debug(f"Expected: fronthaul = {fronthaul_use_exp}, backhaul = {backhaul_use_exp}")
+                fronthaul_use = controller.nbapi_get_parameter(bss.path, "FronthaulUse")
+                assert str(fronthaul_use) == fronthaul_use_exp, \
+                    f"FronthaulUse value for {bss.bssid} with SSID {bss.ssid}" \
+                    f" should be '{fronthaul_use_exp}' not '{fronthaul_use}'."
+                backhaul_use = controller.nbapi_get_parameter(bss.path, "BackhaulUse")
+                assert str(backhaul_use) == backhaul_use_exp, \
+                    f"BackhaulUse value for {bss.bssid} with SSID {bss.ssid}" \
+                    f" should be '{backhaul_use_exp}' not '{backhaul_use}'."
             else:
                 assert next((ssid_name for ssid_name, ssid_val in ssids.items()
                              if ssid_val == bss.ssid), False),\
@@ -90,8 +105,10 @@ class NbapiAccessPoint(PrplMeshBaseTest):
             print(device)
 
         config_all_bands = {
-            "fronthaul": "true", "backhaul": "false",
-            "auth_type": "WPA2-PSK", "encr_type": "AES",
+            "fronthaul": "true",
+            "backhaul": "false",
+            "auth_type": "WPA2-PSK",
+            "encr_type": "AES",
             "network_key": "key_passphrease_value"
         }
 
@@ -135,19 +152,19 @@ class NbapiAccessPoint(PrplMeshBaseTest):
 
         repeater1 = topology[agent.mac]
         repeater2 = topology[agent2.mac]
-        self.check_bss_in_radio(
-            ssid["5GL"], repeater1.radios[agent.radios[1].mac], ssid, controller)
-        self.check_bss_in_radio(
-            ssid["5GL"], repeater2.radios[agent2.radios[1].mac], ssid, controller)
-        self.check_bss_is_disabled(
-            ssid["5GL"], repeater1.radios[agent.radios[0].mac], controller)
-        self.check_bss_is_disabled(
-            ssid["5GL"], repeater2.radios[agent2.radios[0].mac], controller)
+        self.check_bss_in_radio(ssid["5GL"], repeater1.radios[agent.radios[1].mac], ssid,
+                                {"fronthaul": "true"}, controller)
+        self.check_bss_in_radio(ssid["5GL"], repeater2.radios[agent2.radios[1].mac], ssid,
+                                {"fronthaul": "true"}, controller)
+        self.check_bss_is_disabled(ssid["5GL"], repeater1.radios[agent.radios[0].mac], controller)
+        self.check_bss_is_disabled(ssid["5GL"], repeater2.radios[agent2.radios[0].mac], controller)
 
         # Verify Access Point with all bands enabled: 2/4G, 5GH, 5GL, 6G
         for device in topology.values():
             for radio in device.radios.values():
-                self.check_bss_in_radio(ssid["all_bands"], radio, ssid, controller)
-                self.check_bss_in_radio(ssid["5GH_24G"], radio, ssid, controller)
-                self.check_bss_in_radio(ssid["F+B"], radio, ssid, controller)
+                self.check_bss_in_radio(ssid["all_bands"], radio, ssid, config_all_bands,
+                                        controller)
+                self.check_bss_in_radio(ssid["5GH_24G"], radio, ssid, {"fronthaul": "true"},
+                                        controller)
+                self.check_bss_in_radio(ssid["F+B"], radio, ssid, {"backhaul": "true"}, controller)
                 self.check_bss_is_disabled(ssid["6G"], radio, controller)
