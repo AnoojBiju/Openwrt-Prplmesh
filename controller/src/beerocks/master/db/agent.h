@@ -137,7 +137,10 @@ public:
             /** SSID of the BSS - empty if unconfigured. */
             std::string ssid;
 
-            /** True if this is a backhaul bss. */
+            /** True if the BSS supports Fronthaul connections */
+            bool fronthaul = false;
+
+            /** True if the BSS supports Backhaul connections */
             bool backhaul = false;
 
             /** Stations (backhaul or fronthaul) connected to this BSS. */
