@@ -143,6 +143,9 @@ public:
             /** True if the BSS supports Backhaul connections */
             bool backhaul = false;
 
+            /** True if the BSS is operational. */
+            bool enabled = false;
+
             /** Stations (backhaul or fronthaul) connected to this BSS. */
             beerocks::mac_map<Station> connected_stations;
         };

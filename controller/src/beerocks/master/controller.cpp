@@ -1075,6 +1075,16 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
     const auto &bss_info_confs = database.get_bss_info_configuration(m1->mac_addr());
     uint8_t num_bsss           = 0;
 
+    // Update BSSes in the Agent
+    if (!database.has_node(ruid)) {
+        database.add_node_radio(ruid, al_mac);
+    }
+    auto radio = agent->radios.get(ruid);
+    if (!radio) {
+        LOG(ERROR) << "No radio found for ruid=" << ruid << " on " << al_mac;
+        return false;
+    }
+
     for (const auto &bss_info_conf : bss_info_confs) {
         // Check if the radio supports it
         if (!son_actions::has_matching_operating_class(*radio_basic_caps, bss_info_conf)) {
@@ -1099,6 +1109,16 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
         if (!autoconfig_wsc_add_m2(*m1, &bss_info_conf)) {
             LOG(ERROR) << "Failed setting M2 attributes";
             return false;
+        }
+
+        auto bss       = radio->bsses.add(radio->radio_uid, *radio);
+        bss->enabled   = false;
+        bss->ssid      = bss_info_conf.ssid;
+        bss->fronthaul = bss_info_conf.fronthaul;
+        bss->backhaul  = bss_info_conf.backhaul;
+        if (!database.update_vap(ruid, bss->bssid, bss->ssid, bss->backhaul)) {
+            LOG(ERROR) << "Failed to update VAP for radio " << ruid << " BSS " << bss->bssid
+                       << " SSID " << bss->ssid;
         }
         num_bsss++;
     }
@@ -2797,8 +2817,10 @@ bool Controller::handle_cmdu_control_message(
         auto bss = radio->bsses.add(bssid, *radio, vap_id);
         LOG_IF(bss->vap_id != vap_id, ERROR)
             << "BSS " << bssid << " changed vap_id " << bss->vap_id << " -> " << vap_id;
-        bss->ssid     = ssid;
-        bss->backhaul = notification->vap_info().backhaul_vap;
+        bss->enabled   = true;
+        bss->ssid      = ssid;
+        bss->fronthaul = notification->vap_info().fronthaul_vap;
+        bss->backhaul  = notification->vap_info().backhaul_vap;
 
         database.add_vap(radio_mac_str, vap_id, tlvf::mac_to_string(bssid), ssid,
                          notification->vap_info().backhaul_vap);
@@ -2882,8 +2904,9 @@ bool Controller::handle_cmdu_control_message(
             if (vap_mac != beerocks::net::network_utils::ZERO_MAC_STRING) {
                 auto bss =
                     radio->bsses.add(notification->params().vaps[vap_id].mac, *radio, vap_id);
-                bss->ssid     = std::string((char *)notification->params().vaps[vap_id].ssid);
-                bss->backhaul = notification->params().vaps[vap_id].backhaul_vap;
+                bss->ssid      = std::string((char *)notification->params().vaps[vap_id].ssid);
+                bss->fronthaul = notification->params().vaps[vap_id].fronthaul_vap;
+                bss->backhaul  = notification->params().vaps[vap_id].backhaul_vap;
 
                 vaps_info[vap_id].mac = vap_mac;
                 vaps_info[vap_id].ssid =

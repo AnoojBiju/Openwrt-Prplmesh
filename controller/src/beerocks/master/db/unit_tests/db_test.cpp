@@ -153,11 +153,11 @@ protected:
         EXPECT_CALL(*m_ambiorix,
                     set(bss_path + ".1", "SSID", Matcher<const std::string &>(g_ssid_1)))
             .WillOnce(Return(true));
-        EXPECT_CALL(*m_ambiorix, set(_, "Enabled", Matcher<const bool &>(_)))
+        EXPECT_CALL(*m_ambiorix, set(_, "Enabled", Matcher<const bool &>(false)))
             .WillRepeatedly(Return(true));
-        EXPECT_CALL(*m_ambiorix, set(bss_path + ".1", "FronthaulUse", Matcher<const bool &>(_)))
+        EXPECT_CALL(*m_ambiorix, set(bss_path + ".1", "FronthaulUse", Matcher<const bool &>(false)))
             .WillOnce(Return(true));
-        EXPECT_CALL(*m_ambiorix, set(bss_path + ".1", "BackhaulUse", Matcher<const bool &>(_)))
+        EXPECT_CALL(*m_ambiorix, set(bss_path + ".1", "BackhaulUse", Matcher<const bool &>(false)))
             .WillOnce(Return(true));
         EXPECT_CALL(*m_ambiorix, set(_, _, Matcher<const uint32_t &>(_)))
             .WillRepeatedly(Return(true));
@@ -313,11 +313,11 @@ TEST_F(DbTest, test_add_vap)
                 set(std::string(bss_path) + ".1", "SSID", Matcher<const std::string &>(g_ssid_1)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix,
-                set(std::string(bss_path) + ".1", "Enabled", Matcher<const bool &>(true)))
+                set(std::string(bss_path) + ".1", "Enabled", Matcher<const bool &>(false)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix, set(bss_path + ".1", "FronthaulUse", Matcher<const bool &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(bss_path + ".1", "FronthaulUse", Matcher<const bool &>(false)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix, set(bss_path + ".1", "BackhaulUse", Matcher<const bool &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(bss_path + ".1", "BackhaulUse", Matcher<const bool &>(false)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix,
                 set(std::string(bss_path) + ".1", "LastChange", Matcher<const uint32_t &>(_)))

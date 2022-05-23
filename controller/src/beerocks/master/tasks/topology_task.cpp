@@ -234,8 +234,9 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
                 auto bss_entry = std::get<1>(radio_entry.radio_bss_list(j));
                 LOG(DEBUG) << "Operational BSS " << bss_entry.radio_bssid();
 
-                auto bss  = radio->bsses.add(bss_entry.radio_bssid(), *radio);
-                bss->ssid = bss_entry.ssid_str();
+                auto bss     = radio->bsses.add(bss_entry.radio_bssid(), *radio);
+                bss->enabled = true;
+                bss->ssid    = bss_entry.ssid_str();
                 // Backhaul is not reported in this message. Leave it unchanged.
                 // TODO "backhaul" is not set in this TLV, so just assume false
                 if (!database.update_vap(radio_entry.radio_uid(), bss_entry.radio_bssid(),

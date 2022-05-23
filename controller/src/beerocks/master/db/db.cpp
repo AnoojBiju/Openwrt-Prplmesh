@@ -6328,7 +6328,7 @@ bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, cons
 
     ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "BSSID", bssid);
     ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "SSID", ssid);
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "Enabled", !ssid.empty());
+    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "Enabled", bss->enabled);
     ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "FronthaulUse", bss->fronthaul);
     ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "BackhaulUse", bss->backhaul);
 
