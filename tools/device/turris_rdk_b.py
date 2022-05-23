@@ -83,9 +83,11 @@ class TurrisRdkb(GenericDevice):
             if shell.match == pexpect.TIMEOUT:
                 return False
 
-            shell.sendline("")
             # Give the shell a few seconds to be ready:
             time.sleep(30)
+            shell.sendline("")
+            time.sleep(2)
+
             return True
 
     def check_images_on_board(self):
