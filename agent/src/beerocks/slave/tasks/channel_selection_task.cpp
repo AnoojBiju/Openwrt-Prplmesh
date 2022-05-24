@@ -130,8 +130,7 @@ void ChannelSelectionTask::handle_channel_preference_query(ieee1905_1::CmduMessa
 
     // Clear previous request, if any
     m_pending_preference.preference_map.clear();
-    m_pending_preference.src_mac = src_mac;
-    m_pending_preference.mid     = mid;
+    m_pending_preference.mid = mid;
 
     LOG(DEBUG) << "Received CHANNEL_PREFERENCE_QUERY_MESSAGE, mid=" << std::dec << int(mid);
 
@@ -712,6 +711,7 @@ void ChannelSelectionTask::handle_ap_enable_event(const std::string &iface)
 bool ChannelSelectionTask::build_channel_preference_report(const sMacAddr &radio_mac)
 {
     auto &radio_preference = m_pending_preference.preference_map[radio_mac];
+    radio_preference.channel_preferences.clear();
 
     auto db    = AgentDB::get();
     auto radio = db->get_radio_by_mac(radio_mac, AgentDB::eMacType::RADIO);
@@ -841,6 +841,7 @@ bool ChannelSelectionTask::send_channel_preference_report(
     // build channel preference report with the same MID as the query
     auto cmdu_tx_header = m_cmdu_tx.create(
         m_pending_preference.mid, ieee1905_1::eMessageType::CHANNEL_PREFERENCE_REPORT_MESSAGE);
+
     if (!cmdu_tx_header) {
         LOG(ERROR) << "cmdu creation of type CHANNEL_PREFERENCE_REPORT_MESSAGE, has failed";
         return false;
@@ -866,8 +867,13 @@ bool ChannelSelectionTask::send_channel_preference_report(
         create_cac_status_report_tlv();
     }
 
+    if (db->controller_info.bridge_mac == beerocks::net::network_utils::ZERO_MAC) {
+        LOG(ERROR) << "Controller MAC unknown.";
+        return false;
+    }
+
     LOG(DEBUG) << "sending channel preference report to broker";
-    return m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, m_pending_preference.src_mac, db->bridge.mac);
+    return m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, db->controller_info.bridge_mac, db->bridge.mac);
 }
 
 bool ChannelSelectionTask::create_channel_preference_tlv(
