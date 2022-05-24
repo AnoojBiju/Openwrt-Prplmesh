@@ -866,8 +866,13 @@ bool ChannelSelectionTask::send_channel_preference_report(
         create_cac_status_report_tlv();
     }
 
+    if (db->controller_info.bridge_mac == beerocks::net::network_utils::ZERO_MAC) {
+        LOG(DEBUG) << "Controller MAC unknown.";
+        return false;
+    }
+
     LOG(DEBUG) << "sending channel preference report to broker";
-    return m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, m_pending_preference.src_mac, db->bridge.mac);
+    return m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, db->controller_info.bridge_mac, db->bridge.mac);
 }
 
 bool ChannelSelectionTask::create_channel_preference_tlv(
