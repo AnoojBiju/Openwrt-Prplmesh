@@ -65,7 +65,6 @@ private:
     };
     struct sPendingChannelPreferenceReport {
         uint16_t mid;
-        sMacAddr src_mac;
         std::unordered_map<sMacAddr, sPendingRadioPreference> preference_map;
     };
 
