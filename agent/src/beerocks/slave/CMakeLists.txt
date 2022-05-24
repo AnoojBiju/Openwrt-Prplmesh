@@ -21,6 +21,11 @@ if (ENABLE_NBAPI)
     add_subdirectory("nbapi")
 endif()
 
+if (USE_PRPLMESH_WHM)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_PRPLMESH_WHM")
+    list(APPEND LIBS wbapi)
+endif()
+
 # UGW
 if (TARGET_PLATFORM STREQUAL "ugw")
 
@@ -37,7 +42,7 @@ endif()
 
 add_executable(${PROJECT_NAME} ${beerocks_agent_sources})
 set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-Wl,-z,defs")
-target_link_libraries(${PROJECT_NAME} rt dl bcl btl tlvf elpp btlvf bwl bpl nbapi wbapi ${LIBS})
+target_link_libraries(${PROJECT_NAME} rt dl bcl btl tlvf elpp btlvf bwl bpl nbapi ${LIBS})
 
 if (ENABLE_NBAPI)
     # Include AMBIORIX in the build

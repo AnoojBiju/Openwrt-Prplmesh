@@ -24,6 +24,11 @@ if (TARGET_PLATFORM STREQUAL "ugw")
 
 endif()
 
+if (USE_PRPLMESH_WHM)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_PRPLMESH_WHM")
+    list(APPEND LIBS wbapi)
+endif()
+
 #FEATURE_PRE_ASSOCIATION_STEERING
 list(FIND FEATURES "FEATURE_PRE_ASSOCIATION_STEERING" _feature_pre_association_steering_index)
 if(${_feature_pre_association_steering_index} GREATER -1)
@@ -33,7 +38,7 @@ endif()
 
 add_executable(${PROJECT_NAME} ${fronthaul_manager_sources})
 set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-Wl,-z,defs")
-target_link_libraries(${PROJECT_NAME} bcl btlvf rt dl tlvf elpp bwl mapfcommon bpl wbapi ${LIBS})
+target_link_libraries(${PROJECT_NAME} bcl btlvf rt dl tlvf elpp bwl mapfcommon bpl ${LIBS})
 
 # Install
 install(TARGETS ${PROJECT_NAME} DESTINATION ${CMAKE_INSTALL_BINDIR})
