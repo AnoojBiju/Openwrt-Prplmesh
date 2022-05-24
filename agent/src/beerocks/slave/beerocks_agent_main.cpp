@@ -518,6 +518,12 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    // Initialize the BPL (Beerocks Platform Library)
+    if (beerocks::bpl::bpl_init() < 0) {
+        LOG(ERROR) << "Failed to initialize BPL!";
+        return false;
+    }
+
     // read slave config file
     std::string slave_config_file_path =
         CONF_FILES_WRITABLE_PATH + std::string(BEEROCKS_AGENT) +

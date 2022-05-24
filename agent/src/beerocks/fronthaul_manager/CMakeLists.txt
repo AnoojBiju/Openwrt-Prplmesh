@@ -33,7 +33,7 @@ endif()
 
 add_executable(${PROJECT_NAME} ${fronthaul_manager_sources})
 set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-Wl,-z,defs")
-target_link_libraries(${PROJECT_NAME} bcl btlvf rt dl tlvf elpp bwl mapfcommon bpl ${LIBS})
+target_link_libraries(${PROJECT_NAME} bcl btlvf rt dl tlvf elpp bwl mapfcommon bpl wbapi ${LIBS})
 
 # Install
 install(TARGETS ${PROJECT_NAME} DESTINATION ${CMAKE_INSTALL_BINDIR})

@@ -15,6 +15,8 @@ option (BUILD_CONTROLLER "Build EasyMesh controller" ON)
 option(BUILD_SHARED_LIBS "Build shared libraries (.so) instead of static ones (.a)" ON)
 option (ENABLE_NBAPI "Build the northbound (high-level) API" OFF)
 
+option(USE_PRPLMESH_WHM "Use prplMesh Wireless Hardware Manager" OFF)
+
 ## Generic checks and defaults
 
 include(FindPkgConfig)
