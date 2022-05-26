@@ -82,8 +82,22 @@ class NbapiAssociationEvent(PrplMeshBaseTest):
                 time_format = r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d+(Z|[-+]\d{2}:\d{2})'
                 if re.match(time_format, time_stamp) is None:
                     self.fail(f'Fail. NBAPI time stamp has unncorrect format: {time_stamp}')
-                self.get_nbapi_ht_capabilities(assoc_data)
-                self.get_nbapi_vht_capabilities(assoc_data)
+
+                debug("\nChecking HT Capabilities")
+                ht_caps = controller.nbapi_get(assoc_data + ".HTCapabilities")
+                for key, value in sorted(ht_caps.items()):
+                    debug("{} : {}".format(key, value))
+
+                debug("\nChecking VHT Capabilities")
+                vht_caps = controller.nbapi_get(assoc_data + ".VHTCapabilities")
+                for key, value in sorted(vht_caps.items()):
+                    debug("{} : {}".format(key, value))
+
+                debug("\nChecking HE Capabilities")
+                he_caps = controller.nbapi_get(assoc_data + ".HECapabilities")
+                for key, value in sorted(he_caps.items()):
+                    debug("{} : {}".format(key, value))
+
         assert 0 < event_present and event_present <= 2,\
             f"Wrong amount of AssociationEvents [{event_present}] registered for client: {sta.mac}"
 

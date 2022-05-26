@@ -238,20 +238,66 @@ bool assoc_frame_utils::get_station_capabilities_from_assoc_field<>(
     if (!hecap) {
         return false;
     }
-    sta_caps.wifi_standard |= beerocks::STANDARD_AX;
-    auto phyCapInfoB1 =
-        reinterpret_cast<assoc_frame::cStaHeCapability::sHePhyCapInfoB1 *>(hecap->phy_cap_info(0));
-    if (phyCapInfoB1) {
-        //detect support multi-band
-        if (phyCapInfoB1->bw_40_in_2_4) {
-            sta_caps.band_2g_capable = 1;
-        }
-        if (phyCapInfoB1->bw_40_80_in_5 || phyCapInfoB1->bw_160_in_5) {
-            sta_caps.band_5g_capable = 1;
+
+    auto mac_cap_info1 = hecap->mac_cap_info1();
+    auto phy_cap_info1 = hecap->phy_cap_info1();
+
+    auto supported_channel_width_set = hecap->supported_channel_width_set();
+    // Detecting channel width and multi-band support
+    if (supported_channel_width_set.bw_40_in_2_4) {
+        sta_caps.band_2g_capable = 1;
+        sta_caps.he_bw           = beerocks::BANDWIDTH_40;
+    }
+    if (supported_channel_width_set.bw_40_80_in_5) {
+        sta_caps.band_5g_capable = 1;
+        sta_caps.he_bw           = beerocks::BANDWIDTH_80;
+    }
+    if (supported_channel_width_set.bw_160_in_5) {
+        sta_caps.band_5g_capable = 1;
+        sta_caps.he_bw           = beerocks::BANDWIDTH_160;
+    }
+    if (supported_channel_width_set.bw_160_80p80_in_5) {
+        sta_caps.he_bw = beerocks::BANDWIDTH_80_80;
+    }
+
+    uint16_t he_mcs_rx = hecap->rx_mcs_le_80();
+
+    for (uint8_t i = 8; i > 0; i--) { // up to 8ss
+        auto he_mcs_temp = (he_mcs_rx >> (2 * (i - 1))) & 0x03;
+        // 0 indicates support for HE-MCS 0-7 for n spatial streams
+        // 1 indicates support for HE-MCS 0-9 for n spatial streams
+        // 2 indicates support for HE-MCS 0-11 for n spatial streams
+        // 3 indicates that n spatial streams is not supported
+        if (he_mcs_temp != 0x3) { //0x3 == not supported
+            sta_caps.ant_num = std::max(i, sta_caps.ant_num);
+            sta_caps.he_ss   = i;
+            switch (he_mcs_temp) {
+            case 0:
+                sta_caps.he_mcs = he_mcs_temp + 7;
+                break;
+            case 1:
+                sta_caps.he_mcs = he_mcs_temp + 8;
+                break;
+            case 2:
+                sta_caps.he_mcs = he_mcs_temp + 9;
+                break;
+            default:
+                break;
+            }
+            break;
         }
     }
-    // mumimo_supported, based on HE Phy Cap Inf:
-    // Partial DL MU-MIMO, Partial/Full UL MU-MO
+    sta_caps.max_ch_width = sta_caps.he_bw;
+    sta_caps.max_streams  = sta_caps.he_ss;
+    sta_caps.max_mcs      = sta_caps.he_mcs;
+
+    sta_caps.ul_ofdma         = mac_cap_info1.ofdma_ra_support;
+    sta_caps.ul_mu_mimo       = phy_cap_info1.full_band_ul_mu_mimo;
+    sta_caps.ul_mu_mimo_ofdma = phy_cap_info1.part_band_ul_mu_mimo;
+    sta_caps.dl_mu_mimo_ofdma = phy_cap_info1.part_band_dl_mu_mimo;
+    sta_caps.he_su_beamformer = phy_cap_info1.su_beamformer;
+    sta_caps.he_mu_beamformer = phy_cap_info1.mu_beamformer;
+
     return true;
 }
 } // namespace son
@@ -266,6 +312,7 @@ bool assoc_frame_utils::get_station_capabilities_from_assoc_frame(
     sta_caps.ant_num      = 1;
     sta_caps.ht_bw        = beerocks::BANDWIDTH_UNKNOWN;
     sta_caps.vht_bw       = beerocks::BANDWIDTH_UNKNOWN;
+    sta_caps.he_bw        = beerocks::BANDWIDTH_UNKNOWN;
     sta_caps.max_ch_width = beerocks::BANDWIDTH_20;
     sta_caps.max_streams  = 1;
 
@@ -300,6 +347,9 @@ bool assoc_frame_utils::get_station_capabilities_from_assoc_frame(
         //VHT only supported in freq band 5GHz
         sta_caps.band_5g_capable = 1;
         sta_caps.wifi_standard |= beerocks::STANDARD_A;
+    }
+    if (sta_caps.he_ss) {
+        sta_caps.wifi_standard |= beerocks::STANDARD_AX;
     }
 
     auto rmCaps = assoc_frame->getAttr<assoc_frame::cRmEnabledCaps>();

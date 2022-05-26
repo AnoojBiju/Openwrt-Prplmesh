@@ -43,8 +43,9 @@ class ClientCapabilityQuerySuccessful(PrplMeshBaseTest):
                                      "80:00:dd:07:00:50:f2:02:00:01:00:2d:1a:2d:11:03:"\
                                      "ff:ff:00:00:00:00:00:00:00:00:00:00:00:00:00:00:"\
                                      "00:00:18:e6:e1:09:00:bf:0c:b0:79:d1:33:fa:ff:0c:"\
-                                     "03:fa:ff:0c:03:c7:01:10:dd:07:50:6f:9a:16:03:01:"\
-                                     "03"
+                                     "03:fa:ff:0c:03:ff:1c:23:03:08:00:00:00:80:64:30:"\
+                                     "00:00:0d:00:9f:00:0c:00:00:fa:ff:fa:ff:39:1c:c7:"\
+                                     "71:1c:07:c7:01:10:dd:07:50:6f:9a:16:03:01:03"
         # connect a station
         debug("Connect dummy STA to wlan0")
         sta.wifi_connect_check(agent.radios[0].vaps[0])
