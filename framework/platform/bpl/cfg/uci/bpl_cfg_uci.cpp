@@ -157,9 +157,14 @@ int cfg_uci_get_wireless_from_ifname(enum paramType type, const char *interface_
                     continue;
 
                 // Different platform has different option path. We take only soc/* part.
+                // If soc/* is not part of the string we will use the whole string.
                 size_t pos = std::string(o->v.string).find("soc/");
-                path_interface_name =
-                    "/sys/devices/platform/" + std::string(o->v.string).substr(pos) + "/net";
+                if (pos != std::string::npos) {
+                    path_interface_name =
+                        "/sys/devices/platform/" + std::string(o->v.string).substr(pos) + "/net";
+                } else {
+                    path_interface_name = "/sys/devices/" + std::string(o->v.string) + "/net";
+                }
 
                 if ((dir = opendir(path_interface_name.c_str())) != NULL) {
                     while ((ent = readdir(dir)) != NULL) {
