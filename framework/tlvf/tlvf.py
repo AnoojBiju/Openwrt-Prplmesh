@@ -324,10 +324,8 @@ class MetaData:
                         cond_parts = ["*m_" + e if e in raw_members else e for e in s.split(" ")]
 
                         # handle members inside another struct (bitfield)
-                        tmp = []
-                        for e in cond_parts:
-                            tmp.append(e.replace('*', '').replace('.', '->', 1) if '.' in e else e)
-                        cond_parts = tmp
+                        cond_parts = [e.replace('*', '').replace('.', '->', 1)
+                                      if '.' in e else e for e in cond_parts]
 
                         self.condition[MetaData.CONDITION_PHRASE] = ' '.join(cond_parts)
                 else:
