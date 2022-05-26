@@ -5227,9 +5227,8 @@ bool slave_thread::send_operating_channel_report(const std::string &fronthaul_if
     // operating classes 128,129,130 use center channel **unlike the other classes** (See Table
     // E-4 in 802.11 spec)
     operating_class_entry.channel_number =
-        (operating_class == 128 || operating_class == 129 || operating_class == 130)
-            ? center_channel
-            : channel.channel;
+        wireless_utils::is_operating_class_using_central_channel(operating_class) ? center_channel
+                                                                                  : channel.channel;
     operating_channel_report_tlv->current_transmit_power() = radio->tx_power_dB;
 
     return send_cmdu_to_controller(fronthaul_iface, cmdu_tx);

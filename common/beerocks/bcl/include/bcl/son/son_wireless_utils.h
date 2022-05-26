@@ -312,6 +312,11 @@ public:
      */
     static uint16_t get_vht_mcs_set(uint8_t vht_mcs, uint8_t vht_ss);
 
+    static bool is_operating_class_using_central_channel(int operating_class)
+    {
+        return (operating_class == 128 || operating_class == 129 || operating_class == 130);
+    }
+
 private:
     enum eAntennaFactor {
         ANT_FACTOR_1X1 = 0,
