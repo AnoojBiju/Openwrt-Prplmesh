@@ -62,6 +62,9 @@ enum class eTlvTypeMap : uint8_t {
     TLV_CHANNEL_SCAN_REQUEST = 0xa6,
     TLV_CHANNEL_SCAN_RESULT = 0xa7,
     TLV_TIMESTAMP = 0xa8,
+    TLV_1905_LAYER_SECURITY_CAPABILITY = 0xa9,
+    TLV_MIC = 0xab,
+    TLV_ENCRYPTED_PAYLOAD = 0xac,
     TLV_PROFILE2_CAC_REQUEST = 0xad,
     TLV_PROFILE2_CAC_TERMINATION = 0xae,
     TLV_PROFILE2_CAC_COMPLETION_REPORT = 0xaf,
@@ -72,9 +75,12 @@ enum class eTlvTypeMap : uint8_t {
     TLV_PROFILE2_AP_CAPABILITY = 0xb4,
     TLV_PROFILE2_DEFAULT_802_1Q_SETTINGS = 0xb5,
     TLV_PROFILE2_TRAFFIC_SEPARATION_POLICY = 0xb6,
+    TLV_BSS_CONFIGURATION_REPORT = 0xb7,
     TLV_SERVICE_PRIORITIZATION_RULE = 0xb9,
     TLV_DSCP_MAPPING_TABLE = 0xba,
+    TLV_BSS_CONFIGURATION_REQUEST = 0xbb,
     TLV_PROFILE2_ERROR_CODE = 0xbc,
+    TLV_BSS_CONFIGURATION_RESPONSE = 0xbd,
     TLV_PROFILE2_AP_RADIO_ADVANCED_CAPABILITIES = 0xbe,
     TLV_PROFILE2_ASSOCIATION_STATUS_NOTIFICATION = 0xbf,
     TLV_TUNNELLED_SOURCE_INFO = 0xc0,
@@ -89,8 +95,16 @@ enum class eTlvTypeMap : uint8_t {
     TLV_PROFILE2_STATUS_CODE = 0xc9,
     TLV_PROFILE2_REASON_CODE = 0xca,
     TLV_BACKHAUL_STA_RADIO_CAPABILITIES = 0xcb,
+    TLV_AKM_SUITE_CAPABILITIES = 0xcc,
+    TLV_1905_ENCAP_DPP = 0xcd,
+    TLV_1905_ENCAP_EAPOL = 0xce,
+    TLV_DPP_BOOTSTRAPPING_URI_NOTIFICATION = 0xcf,
     TLV_BACKHAUL_BSS_CONFIGURATION = 0xd0,
+    TLV_DPP_MESSAGE = 0xd1,
+    TLV_DPP_CCE_INDICATION = 0xd2,
+    TLV_DPP_CHIRP_VALUE = 0xd3,
     TLV_DEVICE_INVENTORY = 0xd4,
+    TLV_AGENT_LIST = 0xd5,
 };
 // Enum AutoPrint generated code snippet begining- DON'T EDIT!
 // clang-format off
@@ -137,6 +151,9 @@ static const char *eTlvTypeMap_str(eTlvTypeMap enum_value) {
     case eTlvTypeMap::TLV_CHANNEL_SCAN_REQUEST:                     return "eTlvTypeMap::TLV_CHANNEL_SCAN_REQUEST";
     case eTlvTypeMap::TLV_CHANNEL_SCAN_RESULT:                      return "eTlvTypeMap::TLV_CHANNEL_SCAN_RESULT";
     case eTlvTypeMap::TLV_TIMESTAMP:                                return "eTlvTypeMap::TLV_TIMESTAMP";
+    case eTlvTypeMap::TLV_1905_LAYER_SECURITY_CAPABILITY:           return "eTlvTypeMap::TLV_1905_LAYER_SECURITY_CAPABILITY";
+    case eTlvTypeMap::TLV_MIC:                                      return "eTlvTypeMap::TLV_MIC";
+    case eTlvTypeMap::TLV_ENCRYPTED_PAYLOAD:                        return "eTlvTypeMap::TLV_ENCRYPTED_PAYLOAD";
     case eTlvTypeMap::TLV_PROFILE2_CAC_REQUEST:                     return "eTlvTypeMap::TLV_PROFILE2_CAC_REQUEST";
     case eTlvTypeMap::TLV_PROFILE2_CAC_TERMINATION:                 return "eTlvTypeMap::TLV_PROFILE2_CAC_TERMINATION";
     case eTlvTypeMap::TLV_PROFILE2_CAC_COMPLETION_REPORT:           return "eTlvTypeMap::TLV_PROFILE2_CAC_COMPLETION_REPORT";
@@ -147,9 +164,12 @@ static const char *eTlvTypeMap_str(eTlvTypeMap enum_value) {
     case eTlvTypeMap::TLV_PROFILE2_AP_CAPABILITY:                   return "eTlvTypeMap::TLV_PROFILE2_AP_CAPABILITY";
     case eTlvTypeMap::TLV_PROFILE2_DEFAULT_802_1Q_SETTINGS:         return "eTlvTypeMap::TLV_PROFILE2_DEFAULT_802_1Q_SETTINGS";
     case eTlvTypeMap::TLV_PROFILE2_TRAFFIC_SEPARATION_POLICY:       return "eTlvTypeMap::TLV_PROFILE2_TRAFFIC_SEPARATION_POLICY";
+    case eTlvTypeMap::TLV_BSS_CONFIGURATION_REPORT:                 return "eTlvTypeMap::TLV_BSS_CONFIGURATION_REPORT";
     case eTlvTypeMap::TLV_SERVICE_PRIORITIZATION_RULE:              return "eTlvTypeMap::TLV_SERVICE_PRIORITIZATION_RULE";
     case eTlvTypeMap::TLV_DSCP_MAPPING_TABLE:                       return "eTlvTypeMap::TLV_DSCP_MAPPING_TABLE";
+    case eTlvTypeMap::TLV_BSS_CONFIGURATION_REQUEST:                return "eTlvTypeMap::TLV_BSS_CONFIGURATION_REQUEST";
     case eTlvTypeMap::TLV_PROFILE2_ERROR_CODE:                      return "eTlvTypeMap::TLV_PROFILE2_ERROR_CODE";
+    case eTlvTypeMap::TLV_BSS_CONFIGURATION_RESPONSE:               return "eTlvTypeMap::TLV_BSS_CONFIGURATION_RESPONSE";
     case eTlvTypeMap::TLV_PROFILE2_AP_RADIO_ADVANCED_CAPABILITIES:  return "eTlvTypeMap::TLV_PROFILE2_AP_RADIO_ADVANCED_CAPABILITIES";
     case eTlvTypeMap::TLV_PROFILE2_ASSOCIATION_STATUS_NOTIFICATION: return "eTlvTypeMap::TLV_PROFILE2_ASSOCIATION_STATUS_NOTIFICATION";
     case eTlvTypeMap::TLV_TUNNELLED_SOURCE_INFO:                    return "eTlvTypeMap::TLV_TUNNELLED_SOURCE_INFO";
@@ -164,8 +184,16 @@ static const char *eTlvTypeMap_str(eTlvTypeMap enum_value) {
     case eTlvTypeMap::TLV_PROFILE2_STATUS_CODE:                     return "eTlvTypeMap::TLV_PROFILE2_STATUS_CODE";
     case eTlvTypeMap::TLV_PROFILE2_REASON_CODE:                     return "eTlvTypeMap::TLV_PROFILE2_REASON_CODE";
     case eTlvTypeMap::TLV_BACKHAUL_STA_RADIO_CAPABILITIES:          return "eTlvTypeMap::TLV_BACKHAUL_STA_RADIO_CAPABILITIES";
+    case eTlvTypeMap::TLV_AKM_SUITE_CAPABILITIES:                   return "eTlvTypeMap::TLV_AKM_SUITE_CAPABILITIES";
+    case eTlvTypeMap::TLV_1905_ENCAP_DPP:                           return "eTlvTypeMap::TLV_1905_ENCAP_DPP";
+    case eTlvTypeMap::TLV_1905_ENCAP_EAPOL:                         return "eTlvTypeMap::TLV_1905_ENCAP_EAPOL";
+    case eTlvTypeMap::TLV_DPP_BOOTSTRAPPING_URI_NOTIFICATION:       return "eTlvTypeMap::TLV_DPP_BOOTSTRAPPING_URI_NOTIFICATION";
     case eTlvTypeMap::TLV_BACKHAUL_BSS_CONFIGURATION:               return "eTlvTypeMap::TLV_BACKHAUL_BSS_CONFIGURATION";
+    case eTlvTypeMap::TLV_DPP_MESSAGE:                              return "eTlvTypeMap::TLV_DPP_MESSAGE";
+    case eTlvTypeMap::TLV_DPP_CCE_INDICATION:                       return "eTlvTypeMap::TLV_DPP_CCE_INDICATION";
+    case eTlvTypeMap::TLV_DPP_CHIRP_VALUE:                          return "eTlvTypeMap::TLV_DPP_CHIRP_VALUE";
     case eTlvTypeMap::TLV_DEVICE_INVENTORY:                         return "eTlvTypeMap::TLV_DEVICE_INVENTORY";
+    case eTlvTypeMap::TLV_AGENT_LIST:                               return "eTlvTypeMap::TLV_AGENT_LIST";
     }
     static std::string out_str = std::to_string(int(enum_value));
     return out_str.c_str();
@@ -219,6 +247,9 @@ public:
         case 0xa6:
         case 0xa7:
         case 0xa8:
+        case 0xa9:
+        case 0xab:
+        case 0xac:
         case 0xad:
         case 0xae:
         case 0xaf:
@@ -229,9 +260,12 @@ public:
         case 0xb4:
         case 0xb5:
         case 0xb6:
+        case 0xb7:
         case 0xb9:
         case 0xba:
+        case 0xbb:
         case 0xbc:
+        case 0xbd:
         case 0xbe:
         case 0xbf:
         case 0xc0:
@@ -246,8 +280,16 @@ public:
         case 0xc9:
         case 0xca:
         case 0xcb:
+        case 0xcc:
+        case 0xcd:
+        case 0xce:
+        case 0xcf:
         case 0xd0:
+        case 0xd1:
+        case 0xd2:
+        case 0xd3:
         case 0xd4:
+        case 0xd5:
                 ret = true;
                 break;
             default:

@@ -1,0 +1,15 @@
+#
+---
+_namespace: wfa_map
+
+tlv1905EncapEapol:
+  _type: class
+  _is_tlv_class : True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_1905_ENCAP_EAPOL
+  length: uint16_t
+  # EAPOL frame payload attributes are stored in an inner TlvList
+  payload:
+    _type: uint8_t
+    _length: []

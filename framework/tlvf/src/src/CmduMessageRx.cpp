@@ -30,6 +30,11 @@
 #include <tlvf/ieee_1905_1/tlvVendorSpecific.h>
 #include <tlvf/ieee_1905_1/tlvWsc.h>
 #include <tlvf/wfa_map/eTlvTypeMap.h>
+#include <tlvf/wfa_map/tlv1905EncapDpp.h>
+#include <tlvf/wfa_map/tlv1905EncapEapol.h>
+#include <tlvf/wfa_map/tlv1905LayerSecurityCapability.h>
+#include <tlvf/wfa_map/tlvAgentList.h>
+#include <tlvf/wfa_map/tlvAkmSuiteCapabilities.h>
 #include <tlvf/wfa_map/tlvApCapability.h>
 #include <tlvf/wfa_map/tlvApExtendedMetrics.h>
 #include <tlvf/wfa_map/tlvApHeCapabilities.h>
@@ -51,6 +56,9 @@
 #include <tlvf/wfa_map/tlvBackhaulSteeringResponse.h>
 #include <tlvf/wfa_map/tlvBeaconMetricsQuery.h>
 #include <tlvf/wfa_map/tlvBeaconMetricsResponse.h>
+#include <tlvf/wfa_map/tlvBssConfigurationReport.h>
+#include <tlvf/wfa_map/tlvBssConfigurationRequest.h>
+#include <tlvf/wfa_map/tlvBssConfigurationResponse.h>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
 #include <tlvf/wfa_map/tlvChannelScanCapabilities.h>
 #include <tlvf/wfa_map/tlvChannelScanReportingPolicy.h>
@@ -60,10 +68,16 @@
 #include <tlvf/wfa_map/tlvClientCapabilityReport.h>
 #include <tlvf/wfa_map/tlvClientInfo.h>
 #include <tlvf/wfa_map/tlvDeviceInventory.h>
+#include <tlvf/wfa_map/tlvDppBootstrappingUriNotification.h>
+#include <tlvf/wfa_map/tlvDppCeeIndication.h>
+#include <tlvf/wfa_map/tlvDppChirpValue.h>
+#include <tlvf/wfa_map/tlvDppMessage.h>
 #include <tlvf/wfa_map/tlvDscpMappingTable.h>
+#include <tlvf/wfa_map/tlvEncryptedPayload.h>
 #include <tlvf/wfa_map/tlvErrorCode.h>
 #include <tlvf/wfa_map/tlvHigherLayerData.h>
 #include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
+#include <tlvf/wfa_map/tlvMic.h>
 #include <tlvf/wfa_map/tlvOperatingChannelReport.h>
 #include <tlvf/wfa_map/tlvProfile2ApCapability.h>
 #include <tlvf/wfa_map/tlvProfile2ApRadioAdvancedCapabilities.h>
@@ -421,6 +435,48 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     }
     case (wfa_map::eTlvTypeMap::TLV_ASSOCIATED_WIFI_6_STA_STATUS_REPORT): {
         return msg.addClass<wfa_map::tlvAssociatedWiFi6StaStatusReport>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_1905_LAYER_SECURITY_CAPABILITY): {
+        return msg.addClass<wfa_map::tlv1905LayerSecurityCapability>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_MIC): {
+        return msg.addClass<wfa_map::tlvMic>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_AKM_SUITE_CAPABILITIES): {
+        return msg.addClass<wfa_map::tlvAkmSuiteCapabilities>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_ENCRYPTED_PAYLOAD): {
+        return msg.addClass<wfa_map::tlvEncryptedPayload>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_1905_ENCAP_DPP): {
+        return msg.addClass<wfa_map::tlv1905EncapDpp>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_1905_ENCAP_EAPOL): {
+        return msg.addClass<wfa_map::tlv1905EncapEapol>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_DPP_BOOTSTRAPPING_URI_NOTIFICATION): {
+        return msg.addClass<wfa_map::tlvDppBootstrappingUriNotification>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_BSS_CONFIGURATION_REPORT): {
+        return msg.addClass<wfa_map::tlvBssConfigurationReport>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_BSS_CONFIGURATION_REQUEST): {
+        return msg.addClass<wfa_map::tlvBssConfigurationRequest>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_BSS_CONFIGURATION_RESPONSE): {
+        return msg.addClass<wfa_map::tlvBssConfigurationResponse>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_DPP_MESSAGE): {
+        return msg.addClass<wfa_map::tlvDppMessage>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_DPP_CCE_INDICATION): {
+        return msg.addClass<wfa_map::tlvDppCeeIndication>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_DPP_CHIRP_VALUE): {
+        return msg.addClass<wfa_map::tlvDppChirpValue>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_AGENT_LIST): {
+        return msg.addClass<wfa_map::tlvAgentList>();
     }
     }
     LOG(FATAL) << "Unknown TLV type: " << unsigned(tlv_type);
