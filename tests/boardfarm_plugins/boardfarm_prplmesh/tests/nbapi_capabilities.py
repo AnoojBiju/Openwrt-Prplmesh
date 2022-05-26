@@ -93,37 +93,80 @@ class NbapiCapabilities(PrplMeshBaseTest):
                         "Not all operating classes was reported in data model."
                 if tlv.tlv_type == self.ieee1905['eTlvTypeMap']['TLV_AP_HT_CAPABILITIES']:
                     radio = repeater.radios[tlv.ap_ht_radio_id]
-                    ht_caps = self.get_nbapi_ht_capabilities(radio.path + ".Capabilities")
-                    self.assertEqualInt("rx_spatial_streams", ht_caps['rx_ss'] - 1,
-                                        tlv.ap_ht_caps_tree['ieee1905.ap_ht.max_rx_streams'])
-                    self.assertEqualInt("tx_spatial_streams", ht_caps['tx_ss'] - 1,
-                                        tlv.ap_ht_caps_tree['ieee1905.ap_ht.max_tx_streams'])
-                    self.assertEqualInt("GI_20_MHz", ht_caps['gi_20_mhz'],
+                    ht_caps = controller.nbapi_get(radio.path + ".Capabilities.HTCapabilities")
+                    self.assertEqualInt(
+                        "MaxNumberOfRxSpatialStreams",
+                        ht_caps['MaxNumberOfRxSpatialStreams'] - 1,
+                        tlv.ap_ht_caps_tree['ieee1905.ap_ht.max_rx_streams'])
+                    self.assertEqualInt(
+                        "MaxNumberOfTxSpatialStreams",
+                        ht_caps['MaxNumberOfTxSpatialStreams'] - 1,
+                        tlv.ap_ht_caps_tree['ieee1905.ap_ht.max_tx_streams'])
+                    self.assertEqualInt("HT20MHzGISupported", ht_caps['HT20MHzGISupported'],
                                         tlv.ap_ht_caps_tree['ieee1905.ap_ht.short_gi_20mhz'])
-                    self.assertEqualInt("GI_40_MHz", ht_caps['gi_40_mhz'],
+                    self.assertEqualInt("HT40MHzGISupported", ht_caps['HT40MHzGISupported'],
                                         tlv.ap_ht_caps_tree['ieee1905.ap_ht.short_gi_40mhz'])
-                    self.assertEqualInt("HT_40_Mhz", ht_caps['ht_40_mhz'],
+                    self.assertEqualInt("HT40MHzBWSupported", ht_caps['HT40MHzBWSupported'],
                                         tlv.ap_ht_caps_tree['ieee1905.ap_ht.ht_support_40mhz'])
                 if tlv.tlv_type == self.ieee1905['eTlvTypeMap']['TLV_AP_VHT_CAPABILITIES']:
                     radio = repeater.radios[tlv.ap_vht_radio_id]
-                    vht_caps = self.get_nbapi_vht_capabilities(radio.path + ".Capabilities")
-                    self.assertEqualInt("rx_spatial_streams", vht_caps['rx_ss'] - 1,
-                                        tlv.ap_vht_caps_tree['ieee1905.ap_vht.max_rx_streams'])
-                    self.assertEqualInt("tx_spatial_streams", vht_caps['tx_ss'] - 1,
-                                        tlv.ap_vht_caps_tree['ieee1905.ap_vht.max_tx_streams'])
-                    self.assertEqualInt("GI_80_MHz", vht_caps['gi_80_mhz'],
+                    vht_caps = controller.nbapi_get(radio.path + ".Capabilities.VHTCapabilities")
+                    self.assertEqualInt(
+                        "MaxNumberOfRxSpatialStreams",
+                        vht_caps['MaxNumberOfRxSpatialStreams'] - 1,
+                        tlv.ap_vht_caps_tree['ieee1905.ap_vht.max_rx_streams'])
+                    self.assertEqualInt(
+                        "MaxNumberOfTxSpatialStreams",
+                        vht_caps['MaxNumberOfTxSpatialStreams'] - 1,
+                        tlv.ap_vht_caps_tree['ieee1905.ap_vht.max_tx_streams'])
+                    self.assertEqualInt("VHT80MHzGISupported", vht_caps['VHT80MHzGISupported'],
                                         tlv.ap_vht_caps_tree['ieee1905.ap_vht.short_gi_80mhz'])
-                    self.assertEqualInt("GI_160_MHz", vht_caps['gi_160_mhz'],
+                    self.assertEqualInt("VHT160MHzGISupported", vht_caps['VHT160MHzGISupported'],
                                         tlv.ap_vht_caps_tree['ieee1905.ap_vht.short_gi_160mhz'])
-                    self.assertEqualInt("VHT_80_80_MHz", vht_caps['vht_80_80_mhz'],
+                    self.assertEqualInt("VHT8080MHzBWSupported", vht_caps['VHT8080MHzBWSupported'],
                                         tlv.ap_vht_caps_tree['ieee1905.ap_vht.vht_80plus_mhz'])
-                    self.assertEqualInt("VHT_160_MHz", vht_caps['vht_160_mhz'],
+                    self.assertEqualInt("VHT160MHzBWSupported", vht_caps['VHT160MHzBWSupported'],
                                         tlv.ap_vht_caps_tree['ieee1905.ap_vht.vht_160mhz'])
-                    self.assertEqualInt("SU_beamformer", vht_caps['su_beamformer'],
+                    self.assertEqualInt("SUBeamformerSupported", vht_caps['SUBeamformerSupported'],
                                         tlv.ap_vht_caps_tree['ieee1905.ap_vht.su_beamformer'])
-                    self.assertEqualInt("MU_beamformer", vht_caps['mu_beamformer'],
+                    self.assertEqualInt("MUBeamformerSupported", vht_caps['MUBeamformerSupported'],
                                         tlv.ap_vht_caps_tree['ieee1905.ap_vht.mu_beamformer'])
                     self.assertEqualInt(
-                        "VHT_Tx_MCS", vht_caps['vht_tx_mcs'], tlv.vht_supported_tx_mcs)
+                        "VHTTxMCSSet", vht_caps['VHTTxMCSSet'], tlv.vht_supported_tx_mcs)
                     self.assertEqualInt(
-                        "VHT_Rx_MCS", vht_caps['vht_rx_mcs'], tlv.vht_supported_rx_mcs)
+                        "VHTRxMCSSet", vht_caps['VHTRxMCSSet'], tlv.vht_supported_rx_mcs)
+                if tlv.tlv_type == self.ieee1905['eTlvTypeMap']['TLV_AP_HE_CAPABILITIES']:
+                    radio = repeater.radios[tlv.ap_he_capability_radio_id]
+                    he_caps = controller.nbapi_get(radio.path + ".Capabilities.HECapabilities")
+                    self.assertEqualInt(
+                        "MaxNumberOfRxSpatialStreams",
+                        he_caps['MaxNumberOfRxSpatialStreams'] - 1,
+                        tlv.ap_he_caps_tree['ieee1905.he_cap.max_rx_streams'])
+                    self.assertEqualInt(
+                        "MaxNumberOfTxSpatialStreams",
+                        he_caps['MaxNumberOfTxSpatialStreams'] - 1,
+                        tlv.ap_he_caps_tree['ieee1905.he_cap.max_tx_streams'])
+                    self.assertEqualInt("HE8080MHzBWSupported", he_caps['HE8080MHzBWSupported'],
+                                        tlv.ap_he_caps_tree['ieee1905.ap_he.he_80plus_mhz'])
+                    self.assertEqualInt("HE160MHzBWSupported", he_caps['HE160MHzBWSupported'],
+                                        tlv.ap_he_caps_tree['ieee1905.ap_he.he_160_mhz'])
+                    self.assertEqualInt("SUBeamformerSupported", he_caps['SUBeamformerSupported'],
+                                        tlv.ap_he_caps_tree['ieee1905.ap_he.su_beamformer'])
+                    self.assertEqualInt("MUBeamformerSupported", he_caps['MUBeamformerSupported'],
+                                        tlv.ap_he_caps_tree['ieee1905.ap_he.mu_beamformer'])
+                    self.assertEqualInt("UpLinkMUMIMOSupported", he_caps['UpLinkMUMIMOSupported'],
+                                        tlv.ap_he_caps_tree['ieee1905.ap_he.ul_mu_mimo'])
+                    self.assertEqualInt(
+                        "UpLinkMUMIMOInOFDMASupported",
+                        he_caps['UpLinkMUMIMOInOFDMASupported'],
+                        tlv.ap_he_caps_tree['ieee1905.ap_he.he_ul_mu_mimo_ofdma'])
+                    self.assertEqualInt(
+                        "DownLinkMUMIMOInOFDMASupported",
+                        he_caps['DownLinkMUMIMOInOFDMASupported'],
+                        tlv.ap_he_caps_tree['ieee1905.ap_he.he_dl_mu_mimo_ofdma'])
+                    self.assertEqualInt("UpLinkInOFDMASupported", he_caps['UpLinkInOFDMASupported'],
+                                        tlv.ap_he_caps_tree['ieee1905.ap_he.he_ul_ofdma'])
+                    self.assertEqualInt(
+                        "DownLinkInOFDMASupported",
+                        he_caps['DownLinkInOFDMASupported'],
+                        tlv.ap_he_caps_tree['ieee1905.ap_he.he_dl_ofdma'])

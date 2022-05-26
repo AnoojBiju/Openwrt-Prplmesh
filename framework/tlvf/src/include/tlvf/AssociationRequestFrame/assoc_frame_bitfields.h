@@ -118,6 +118,224 @@ typedef struct sSupportedVhtMcsSet {
     void struct_init() {}
 } __attribute__((packed)) sSupportedVhtMcsSet;
 
+typedef struct sStaHeMacCapInfo1 {
+#if defined(__LITTLE_ENDIAN_BITFIELD)
+    uint32_t htc_he_support : 1;
+    uint32_t twt_req_support : 1;
+    uint32_t twt_resp_support : 1;
+    uint32_t dynamic_frag_support : 2;
+    uint32_t max_num_frag_msdus : 3;
+    uint32_t min_frag_size : 2;
+    uint32_t trigger_frame_mac_pad_dur : 2;
+    uint32_t multi_tid_aggr_rx_support : 3;
+    uint32_t he_link_adapt_support : 2;
+    uint32_t all_ack_support : 1;
+    uint32_t trs_support : 1;
+    uint32_t bsr_support : 1;
+    uint32_t broadcast_twt_support : 1;
+    uint32_t ba_bitmap_32bit_support : 1;
+    uint32_t mu_cascading_support : 1;
+    uint32_t ack_enabled_aggr_support : 1;
+    uint32_t reserved : 1;
+    uint32_t om_control_support : 1;
+    uint32_t ofdma_ra_support : 1;
+    uint32_t max_ampdu_length_exp_ext : 2;
+    uint32_t amsdu_frag_support : 1;
+    uint32_t flex_twt_sched_support : 1;
+    uint32_t rx_control_frame_multi_bss : 1;
+#elif defined(__BIG_ENDIAN_BITFIELD)
+    uint32_t rx_control_frame_multi_bss : 1;
+    uint32_t flex_twt_sched_support : 1;
+    uint32_t amsdu_frag_support : 1;
+    uint32_t max_ampdu_length_exp_ext : 2;
+    uint32_t ofdma_ra_support : 1;
+    uint32_t om_control_support : 1;
+    uint32_t reserved : 1;
+    uint32_t ack_enabled_aggr_support : 1;
+    uint32_t mu_cascading_support : 1;
+    uint32_t ba_bitmap_32bit_support : 1;
+    uint32_t broadcast_twt_support : 1;
+    uint32_t bsr_support : 1;
+    uint32_t trs_support : 1;
+    uint32_t all_ack_support : 1;
+    uint32_t he_link_adapt_support : 2;
+    uint32_t multi_tid_aggr_rx_support : 3;
+    uint32_t trigger_frame_mac_pad_dur : 2;
+    uint32_t min_frag_size : 2;
+    uint32_t max_num_frag_msdus : 3;
+    uint32_t dynamic_frag_support : 2;
+    uint32_t twt_resp_support : 1;
+    uint32_t twt_req_support : 1;
+    uint32_t htc_he_support : 1;
+#endif
+    void struct_swap() {}
+    void struct_init() {}
+} __attribute__((packed)) sStaHeMacCapInfo1;
+
+typedef struct sStaHeMacCapInfo2 {
+#if defined(__LITTLE_ENDIAN_BITFIELD)
+    uint16_t bsrp_bqrp_ampdu_aggr : 1;
+    uint16_t qtp_support : 1;
+    uint16_t bqr_support : 1;
+    uint16_t psr_responder : 1;
+    uint16_t ndp_feedback_rep_support : 1;
+    uint16_t ops_support : 1;
+    uint16_t amsdu_not_ba_ack_en_ampdu_support : 1;
+    uint16_t multi_tid_aggr_tx_support : 3;
+    uint16_t he_sub_sel_trans_support : 1;
+    uint16_t ul_double_966tone_ru_support : 1;
+    uint16_t om_control_ul_mu_data_dis_support : 1;
+    uint16_t he_dyn_sm_power_support : 1;
+    uint16_t punctured_sounding_support : 1;
+    uint16_t ht_vht_trig_frame_rx_support : 1;
+#elif defined(__BIG_ENDIAN_BITFIELD)
+    uint16_t ht_vht_trig_frame_rx_support : 1;
+    uint16_t punctured_sounding_support : 1;
+    uint16_t he_dyn_sm_power_support : 1;
+    uint16_t om_control_ul_mu_data_dis_support : 1;
+    uint16_t ul_double_966tone_ru_support : 1;
+    uint16_t he_sub_sel_trans_support : 1;
+    uint16_t multi_tid_aggr_tx_support : 3;
+    uint16_t amsdu_not_ba_ack_en_ampdu_support : 1;
+    uint16_t ops_support : 1;
+    uint16_t ndp_feedback_rep_support : 1;
+    uint16_t psr_responder : 1;
+    uint16_t bqr_support : 1;
+    uint16_t qtp_support : 1;
+    uint16_t bsrp_bqrp_ampdu_aggr : 1;
+#endif
+    void struct_swap() {}
+    void struct_init() {}
+} __attribute__((packed)) sStaHeMacCapInfo2;
+
+typedef struct sStaHePhyCapInfo1 {
+#if defined(__LITTLE_ENDIAN_BITFIELD)
+    uint64_t punctured_preamble_rx : 4;
+    uint64_t device_class : 1;
+    uint64_t ldpc_coding_payload : 1;
+    uint64_t su_ppdu_1x_ltf_0d8us_gi : 1;
+    uint64_t mid_tx_rx_max_nsts : 2;
+    uint64_t ndp_4x_ltf_3d2us_gi : 1;
+    uint64_t stbc_tx_less_80mhz : 1;
+    uint64_t stbc_rx_less_80mhz : 1;
+    uint64_t doppler_tx : 1;
+    uint64_t doppler_rx : 1;
+    uint64_t full_band_ul_mu_mimo : 1;
+    uint64_t part_band_ul_mu_mimo : 1;
+    uint64_t dcm_max_const_tx : 2;
+    uint64_t dcm_max_nss_tx : 1;
+    uint64_t dcm_max_const_rx : 2;
+    uint64_t dcm_max_nss_rx : 1;
+    uint64_t rx_part_bw_su_20mhz_mu_ppdu : 1;
+    uint64_t su_beamformer : 1;
+    uint64_t su_beamformee : 1;
+    uint64_t mu_beamformer : 1;
+    uint64_t beamform_sts_less_80mhz : 3;
+    uint64_t beamform_sts_great_80mhz : 3;
+    uint64_t num_sound_dim_less_80mhz : 3;
+    uint64_t num_sound_dim_great_80mhz : 3;
+    uint64_t ng_16_su_fb : 1;
+    uint64_t ng_16_mu_fb : 1;
+    uint64_t codebook_f_ps_4_2_su_fb : 1;
+    uint64_t codebook_f_ps_7_5_su_fb : 1;
+    uint64_t trig_su_beamform_fb : 1;
+    uint64_t trig_mu_beamform_part_bw_fb : 1;
+    uint64_t trig_cqi_fb : 1;
+    uint64_t part_band_ext_range : 1;
+    uint64_t part_band_dl_mu_mimo : 1;
+    uint64_t ppe_thresholds_pres : 1;
+    uint64_t psr_based_sr_support : 1;
+    uint64_t power_boost_fac_support : 1;
+    uint64_t su_mu_ppdu_4x_ltf_0d8us_gi : 1;
+    uint64_t max_nc : 3;
+    uint64_t stbc_tx_great_80mhz : 1;
+    uint64_t stbc_rx_great_80mhz : 1;
+    uint64_t er_su_ppdu_4x_ltf_0d8us_gi : 1;
+    uint64_t width_20_in_40mhz_ppdu_2d4_band : 1;
+    uint64_t width_20_in_160_80mhz_paired_ppdu : 1;
+    uint64_t width_80_in_160_80mhz_paired_ppdu : 1;
+    uint64_t er_su_ppdu_1x_ltf_0d8us_gi : 1;
+    uint64_t mid_tx_rx_2x_ltf_1x : 1;
+    uint64_t dcm_max_ru : 2;
+#elif defined(__BIG_ENDIAN_BITFIELD)
+    uint64_t dcm_max_ru : 2;
+    uint64_t mid_tx_rx_2x_ltf_1x : 1;
+    uint64_t er_su_ppdu_1x_ltf_0d8us_gi : 1;
+    uint64_t width_80_in_160_80mhz_paired_ppdu : 1;
+    uint64_t width_20_in_160_80mhz_paired_ppdu : 1;
+    uint64_t width_20_in_40mhz_ppdu_2d4_band : 1;
+    uint64_t er_su_ppdu_4x_ltf_0d8us_gi : 1;
+    uint64_t stbc_rx_great_80mhz : 1;
+    uint64_t stbc_tx_great_80mhz : 1;
+    uint64_t max_nc : 3;
+    uint64_t su_mu_ppdu_4x_ltf_0d8us_gi : 1;
+    uint64_t power_boost_fac_support : 1;
+    uint64_t psr_based_sr_support : 1;
+    uint64_t ppe_thresholds_pres : 1;
+    uint64_t part_band_dl_mu_mimo : 1;
+    uint64_t part_band_ext_range : 1;
+    uint64_t trig_cqi_fb : 1;
+    uint64_t trig_mu_beamform_part_bw_fb : 1;
+    uint64_t trig_su_beamform_fb : 1;
+    uint64_t codebook_f_ps_7_5_su_fb : 1;
+    uint64_t codebook_f_ps_4_2_su_fb : 1;
+    uint64_t ng_16_mu_fb : 1;
+    uint64_t ng_16_su_fb : 1;
+    uint64_t num_sound_dim_great_80mhz : 3;
+    uint64_t num_sound_dim_less_80mhz : 3;
+    uint64_t beamform_sts_great_80mhz : 3;
+    uint64_t beamform_sts_less_80mhz : 3;
+    uint64_t mu_beamformer : 1;
+    uint64_t su_beamformee : 1;
+    uint64_t su_beamformer : 1;
+    uint64_t rx_part_bw_su_20mhz_mu_ppdu : 1;
+    uint64_t dcm_max_nss_rx : 1;
+    uint64_t dcm_max_const_rx : 2;
+    uint64_t dcm_max_nss_tx : 1;
+    uint64_t dcm_max_const_tx : 2;
+    uint64_t part_band_ul_mu_mimo : 1;
+    uint64_t full_band_ul_mu_mimo : 1;
+    uint64_t doppler_rx : 1;
+    uint64_t doppler_tx : 1;
+    uint64_t stbc_rx_less_80mhz : 1;
+    uint64_t stbc_tx_less_80mhz : 1;
+    uint64_t ndp_4x_ltf_3d2us_gi : 1;
+    uint64_t mid_tx_rx_max_nsts : 2;
+    uint64_t su_ppdu_1x_ltf_0d8us_gi : 1;
+    uint64_t ldpc_coding_payload : 1;
+    uint64_t device_class : 1;
+    uint64_t punctured_preamble_rx : 4;
+#endif
+    void struct_swap() {}
+    void struct_init() {}
+} __attribute__((packed)) sStaHePhyCapInfo1;
+
+typedef struct sStaHePhyCapInfo2 {
+#if defined(__LITTLE_ENDIAN_BITFIELD)
+    uint16_t longer_16_sigb_ofdm_symb_support : 1;
+    uint16_t non_trig_cqi_fb : 1;
+    uint16_t tx_1024qam_less_242tone_ru_support : 1;
+    uint16_t rx_1024qam_less_242tone_ru_support : 1;
+    uint16_t rx_full_bw_su_mu_ppdu_comp_sigb : 1;
+    uint16_t rx_full_bw_su_mu_ppdu_noncomp_sigb : 1;
+    uint16_t normal_packet_padding : 2;
+    uint16_t mu_ppdu_great_1_ru_rx_max_n_lft : 1;
+    uint16_t reserved : 7;
+#elif defined(__BIG_ENDIAN_BITFIELD)
+    uint16_t reserved : 7;
+    uint16_t mu_ppdu_great_1_ru_rx_max_n_lft : 1;
+    uint16_t normal_packet_padding : 2;
+    uint16_t rx_full_bw_su_mu_ppdu_noncomp_sigb : 1;
+    uint16_t rx_full_bw_su_mu_ppdu_comp_sigb : 1;
+    uint16_t rx_1024qam_less_242tone_ru_support : 1;
+    uint16_t tx_1024qam_less_242tone_ru_support : 1;
+    uint16_t non_trig_cqi_fb : 1;
+    uint16_t longer_16_sigb_ofdm_symb_support : 1;
+#endif
+    void struct_swap() {}
+    void struct_init() {}
+} __attribute__((packed)) sStaHePhyCapInfo2;
+
 ////////////////////////////////////////////////
 // Capability Information field for non DMG STA
 ///////////////////////////////////////////////

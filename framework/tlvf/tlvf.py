@@ -322,6 +322,13 @@ class MetaData:
                         s = self.condition[MetaData.CONDITION_PHRASE].replace(
                             '\n', '').strip().strip('"')
                         cond_parts = ["*m_" + e if e in raw_members else e for e in s.split(" ")]
+
+                        # handle members inside another struct (bitfield)
+                        tmp = []
+                        for e in cond_parts:
+                            tmp.append(e.replace('*', '').replace('.', '->', 1) if '.' in e else e)
+                        cond_parts = tmp
+
                         self.condition[MetaData.CONDITION_PHRASE] = ' '.join(cond_parts)
                 else:
                     self.error = self.errPrefix() + "unknown key: %s, dict: %s" % (key, dict)
@@ -902,7 +909,8 @@ class TlvF:
                 lines_cpp.append("%s* %s::%s() {" % (param_type_full, obj_meta.name, param_name))
                 if_statement = "%sif (" % self.getIndentation(1)
                 for member in param_meta.condition[MetaData.CONDITION_USING_MEMBERS]:
-                    if_statement += ("!%s || " % member)
+                    if_statement += ("!%s || " %
+                                     (member[0: member.index('.')] if '.' in member else member))
                 if_statement += "!(%s)) {" % param_meta.condition[MetaData.CONDITION_PHRASE]
                 lines_cpp.append(if_statement)
                 lines_cpp.append('%sTLVF_LOG(ERROR) << "%s requested but condition not met: %s";' %

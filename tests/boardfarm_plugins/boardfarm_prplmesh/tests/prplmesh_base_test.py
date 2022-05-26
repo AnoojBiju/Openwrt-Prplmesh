@@ -400,63 +400,6 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
 
         return True
 
-    def get_nbapi_ht_capabilities(self, ht_cap_path: str) -> Dict[str, int]:
-        '''Get HT Capabilities of the object.
-
-        Parameters
-        ----------
-        ht_cap_path: str
-            Path to HT Capabilties object.
-            Example:
-            "Device.WiFi.DataElements.AssociationEvent.AssociationEventData.8"
-
-        Returns
-        -------
-        Dict[str, int]
-            A dictionary with HT Capabilities of NBAPI object.
-        '''
-        controller = self.dev.lan.controller_entity
-        ht_cap_path += ".HTCapabilities"
-        ht_caps = {}
-
-        ht_caps['rx_ss'] = controller.nbapi_get_parameter(ht_cap_path, "rx_spatial_streams")
-        ht_caps['tx_ss'] = controller.nbapi_get_parameter(ht_cap_path, "tx_spatial_streams")
-        ht_caps['gi_20_mhz'] = controller.nbapi_get_parameter(ht_cap_path, "GI_20_MHz")
-        ht_caps['gi_40_mhz'] = controller.nbapi_get_parameter(ht_cap_path, "GI_40_MHz")
-        ht_caps['ht_40_mhz'] = controller.nbapi_get_parameter(ht_cap_path, "HT_40_Mhz")
-        return ht_caps
-
-    def get_nbapi_vht_capabilities(self, vht_cap_path: str) -> Dict[str, int]:
-        '''Get VHT Capabilities of the object.
-
-        Parameters
-        ----------
-        vht_cap_path: str
-            Path to VHT Capabilties object.
-            Example:
-            "Device.WiFi.DataElements.AssociationEvent.AssociationEventData.9"
-
-        Returns
-        -------
-        Dict[str, int]
-            A dictionary with VHT Capabilities of NBAPI object.
-        '''
-        controller = self.dev.lan.controller_entity
-        vht_cap_path += ".VHTCapabilities"
-        vht_caps = {}
-
-        vht_caps['rx_ss'] = controller.nbapi_get_parameter(vht_cap_path, "rx_spatial_streams")
-        vht_caps['tx_ss'] = controller.nbapi_get_parameter(vht_cap_path, "tx_spatial_streams")
-        vht_caps['gi_80_mhz'] = controller.nbapi_get_parameter(vht_cap_path, "GI_80_MHz")
-        vht_caps['gi_160_mhz'] = controller.nbapi_get_parameter(vht_cap_path, "GI_160_MHz")
-        vht_caps['vht_80_80_mhz'] = controller.nbapi_get_parameter(vht_cap_path, "VHT_80_80_MHz")
-        vht_caps['vht_160_mhz'] = controller.nbapi_get_parameter(vht_cap_path, "VHT_160_MHz")
-        vht_caps['su_beamformer'] = controller.nbapi_get_parameter(vht_cap_path, "SU_beamformer")
-        vht_caps['mu_beamformer'] = controller.nbapi_get_parameter(vht_cap_path, "MU_beamformer")
-        vht_caps['vht_tx_mcs'] = controller.nbapi_get_parameter(vht_cap_path, "VHT_Tx_MCS")
-        vht_caps['vht_rx_mcs'] = controller.nbapi_get_parameter(vht_cap_path, "VHT_Rx_MCS")
-        return vht_caps
-
     def get_topology(self) -> Dict[str, connmap.MapDevice]:
         '''Get the topology.
 
