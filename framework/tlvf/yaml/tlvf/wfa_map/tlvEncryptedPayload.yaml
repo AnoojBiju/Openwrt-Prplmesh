@@ -1,0 +1,28 @@
+#
+---
+_namespace: wfa_map
+
+tlvEncryptedPayload:
+  _type: class
+  _is_tlv_class : True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_ENCRYPTED_PAYLOAD
+  length: uint16_t
+  encryption_transmission_counter:
+    _type: uint8_t
+    _length: [ 6 ]
+    _comment: |
+      This variable is a 6-octet integer. Unfortunately this is not a native type, which the tlvf
+      does not support.
+      For now, define it as a list of 6 octets though it is wrong since it means it will not get
+      swapped. Will Be address as part of PPM-2013.
+  source_1905_al_mac_address: sMacAddr
+  destination_1905_al_mac_address: sMacAddr
+  aes_siv_length:
+    _type: uint16_t
+    _length_var: True
+  aes_siv:
+    _type: uint8_t
+    _length: [ aes_siv_length ]
+    _comment: AES-SIV Encryption Output (i.e., SIV concatenated with all the encrypted TLVs)

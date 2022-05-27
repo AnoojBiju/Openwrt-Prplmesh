@@ -1,0 +1,27 @@
+#
+---
+_namespace: wfa_map
+
+tlvDppBootstrappingUriNotification:
+  _type: class
+  _is_tlv_class : True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_DPP_BOOTSTRAPPING_URI_NOTIFICATION
+  length: uint16_t
+  ruid: sMacAddr
+  bssid:
+    _type: sMacAddr
+    _comment: |
+      MAC Address of Local Interface (equal to BSSID) operating on the radio, on which the URI was
+      received during PBC onboarding.
+  backhaul_sta_address:
+    _type: sMacAddr
+    _comment: |
+      MAC Address of backhaul STA from which the URI was received during PBC onboarding.
+  dpp_uri:
+    _type: char
+    _length: [ ]
+    _comment: |
+      DPP URI received during PBC onboarding (note: format of URI is specified in section 5.2.1 of 
+      Wi-Fi Easy Connect Specification.

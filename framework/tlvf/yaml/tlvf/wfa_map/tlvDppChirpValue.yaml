@@ -1,0 +1,33 @@
+#
+---
+_namespace: wfa_map
+
+tlvDppChirpValue:
+  _type: class
+  _is_tlv_class : True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_DPP_CHIRP_VALUE
+  length: uint16_t
+  flags: sFlags
+  dest_sta_mac: 
+    _type: sMacAddr
+    _condition:
+      _using_members: flags.enrollee_mac_address_present
+      _phrase: flags.enrollee_mac_address_present
+  hash_length:
+    _type: uint8_t
+    _length_var: True
+  hash:
+    _type: uint8_t
+    _length: [ hash_length ]
+
+sFlags:
+  _type: struct
+  _bit_field: uint8_t
+  enrollee_mac_address_present:
+    _bit_range: [7, 7]
+  hash_validity: 
+    _bit_range: [6, 6]
+  reserved:
+    _bit_range: [5, 0]

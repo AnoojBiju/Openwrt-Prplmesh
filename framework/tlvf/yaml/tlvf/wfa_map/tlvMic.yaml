@@ -1,0 +1,45 @@
+#
+---
+_namespace: wfa_map
+
+tlvMic:
+  _type: class
+  _is_tlv_class : True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_MIC
+  length: uint16_t
+  flags: sFlags
+  integrity_transmission_counter:
+    _type: uint8_t
+    _length: [ 6 ]
+    _comment: |
+      This variable is a 6-octet integer. Unfortunately this is not a native type, which the tlvf
+      does not support.
+      For now, define it as a list of 6 octets though it is wrong since it means it will not get
+      swapped. Will Be address as part of PPM-2013.
+  source_1905_al_mac_address: sMacAddr
+  mic_length:
+    _type: uint16_t
+    _length_var: True
+  mic:
+    _type: uint8_t
+    _length: [ mic_length ]
+    _comment: Message Integrity Code
+
+sFlags:
+  _type: struct
+  _bit_field: uint8_t
+  ieee1905_gtk_key_id:
+    _bit_range: [7, 6]
+  mic_version:
+    _bit_range: [5, 4]
+    _type: eMicVersion
+  reserved:
+    _bit_range: [3, 0]
+
+eMicVersion:
+  _type: enum
+  _enum_storage: uint8_t
+  VERSION_1: 0x00
+  RESERVED: 0x01
