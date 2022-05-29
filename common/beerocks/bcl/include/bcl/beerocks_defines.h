@@ -481,6 +481,14 @@ static const char *const ifname_prefix_list[] = {"wlan", "wl"};
 // string of separator characters delimiting the ifname prefix
 static const char *const ifname_separators = ".-";
 
+enum class eZWDFS_flags : uint8_t {
+    DISABLE      = 0b00000000,
+    ON_RADAR     = 0b00000001,
+    ON_SELECTION = 0b00000010,
+    PRE_CAC      = 0b00000100,
+    ALL          = 0b11111111
+};
+
 } // namespace beerocks
 
 #endif //_BEEROCKS_DEFINES_H_

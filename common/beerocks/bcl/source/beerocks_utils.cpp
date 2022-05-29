@@ -320,6 +320,7 @@ void utils::hex_dump(const std::string &description, uint8_t *addr, int len,
     LOG(DEBUG) << caller_file_name << "[" << (int)calling_line << "] " << description << std::endl
                << print_stream.str();
 }
+
 std::string utils::get_ISO_8601_timestamp_string(std::chrono::system_clock::time_point timestamp)
 {
     auto seconds_since_epoch =
@@ -344,4 +345,38 @@ std::string utils::get_ISO_8601_timestamp_string(std::chrono::system_clock::time
     // the time delta (+03:00 for Israel, as an example).
     return std::string(buff) +
            std::to_string((timestamp.time_since_epoch() - seconds_since_epoch).count()) + "Z";
+}
+
+bool utils::get_zwdfs_flag(const int bitwise_flag, eZWDFS_flags flag)
+{
+    return ((bitwise_flag & (uint8_t)flag) != 0);
+}
+
+void utils::get_zwdfs_flags(const int bitwise_flag, bool &on_radar, bool &on_selection,
+                            bool &pre_cac)
+{
+    on_radar     = get_zwdfs_flag(bitwise_flag, eZWDFS_flags::ON_RADAR);
+    on_selection = get_zwdfs_flag(bitwise_flag, eZWDFS_flags::ON_SELECTION);
+    pre_cac      = get_zwdfs_flag(bitwise_flag, eZWDFS_flags::PRE_CAC);
+}
+
+const std::string utils::get_zwdfs_string(const int bitwise_flag)
+{
+    bool on_radar, on_selection, pre_cac;
+    get_zwdfs_flags(bitwise_flag, on_radar, on_selection, pre_cac);
+    std::stringstream zwdfs_str;
+    zwdfs_str << "ZWDFS supports: ";
+    if (on_radar) {
+        zwdfs_str << "On-Radar ";
+    }
+    if (on_selection) {
+        zwdfs_str << "On-Selection ";
+    }
+    if (pre_cac) {
+        zwdfs_str << "Pre-CAC ";
+    }
+    if (!on_radar && !on_selection && !pre_cac) {
+        zwdfs_str << "None";
+    }
+    return zwdfs_str.str();
 }
