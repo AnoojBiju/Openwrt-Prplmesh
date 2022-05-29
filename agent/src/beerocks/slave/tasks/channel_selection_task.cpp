@@ -360,7 +360,7 @@ void ChannelSelectionTask::handle_channel_selection_request(ieee1905_1::CmduMess
     for (auto &request_iter : m_pending_selection.requests) {
         auto &request         = request_iter.second;
         const auto &radio_mac = request_iter.first;
-        auto radio            = AgentDB::get()->get_radio_by_mac(radio_mac);
+        auto radio            = db->get_radio_by_mac(radio_mac);
 
         if (!radio) {
             LOG(ERROR) << "Radio " << radio_mac << " does not exist on the db";
@@ -374,18 +374,26 @@ void ChannelSelectionTask::handle_channel_selection_request(ieee1905_1::CmduMess
             continue;
         }
 
-        // Check if ZWDFS is needed, if it is needed set the selected channel
-        // and move the ZWDFS-FSM to ZWDFS_SWITCH_ANT_SET_CHANNEL_REQUEST.
-        // Otherwise Build and send a Channel-Switch request.
-        if (m_zwdfs_ap_enabled) {
-            if (request.selected_channel.dfs_state != beerocks_message::eDfsState::NOT_DFS &&
-                request.selected_channel.dfs_state != beerocks_message::eDfsState::AVAILABLE) {
-                m_selected_channel          = request.selected_channel;
-                m_zwdfs_primary_radio_iface = radio->front.iface_name;
-                ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_SET_CHANNEL_REQUEST);
-                continue;
-            }
+        // Check if ZWDFS On-Selection is enabled and if ZWDFS is needed.
+        // if it is needed & enabled set the selected channel and move
+        // the ZWDFS-FSM to ZWDFS_SWITCH_ANT_SET_CHANNEL_REQUEST.
+        bool ZWDFS_enabled = m_zwdfs_ap_enabled &&
+                             beerocks::utils::get_zwdfs_flag(db->device_conf.zwdfs_flag,
+                                                             beerocks::eZWDFS_flags::ON_SELECTION);
+        bool ZWDFS_needed =
+            request.selected_channel.dfs_state != beerocks_message::eDfsState::NOT_DFS &&
+            request.selected_channel.dfs_state != beerocks_message::eDfsState::AVAILABLE;
+        if (ZWDFS_enabled && ZWDFS_needed) {
+            m_selected_channel          = request.selected_channel;
+            m_zwdfs_primary_radio_iface = radio->front.iface_name;
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_SET_CHANNEL_REQUEST);
+            // Channel switch is handled by the ZWDFS flow.
+            continue;
+        } else if (ZWDFS_needed) {
+            LOG(INFO)
+                << "ZWDFS is needed but disabled. performing a regular Channel-Switch request";
         }
+        // Perform a channel switch.
         if (!send_channel_switch_request(radio_mac, request)) {
             LOG(ERROR) << "Failed to send Channel-Switch request.";
         }
@@ -512,9 +520,16 @@ void ChannelSelectionTask::handle_vs_csa_notification(
 
     auto sub_band_dfs_enable = db->device_conf.front_radio.config[sender_iface_name].sub_band_dfs;
 
-    if (db->device_conf.zwdfs_enable) {
+    bool zwdfs_on_radar, zwdfs_on_selection, pre_cac;
+    utils::get_zwdfs_flags(db->device_conf.zwdfs_flag, zwdfs_on_radar, zwdfs_on_selection, pre_cac);
+
+    if (zwdfs_on_radar || zwdfs_on_selection) {
         // Initiate Agent Managed ZWDFS flow.
         if (notification->cs_params().switch_reason == beerocks::CH_SWITCH_REASON_RADAR) {
+            if (!zwdfs_on_radar) {
+                LOG(INFO) << "ZWDFS On-Radar is not enabled";
+                return;
+            }
             if (!sub_band_dfs_enable && !sender_radio->front.zwdfs &&
                 m_zwdfs_state != eZwdfsState::WAIT_FOR_ZWDFS_CAC_STARTED &&
                 m_zwdfs_state != eZwdfsState::WAIT_FOR_ZWDFS_CAC_COMPLETED) {
@@ -548,6 +563,8 @@ void ChannelSelectionTask::handle_vs_csa_notification(
                 }
             }
         }
+    } else {
+        LOG(INFO) << "ZWDFS is disabled";
     }
 }
 
@@ -2028,7 +2045,7 @@ void ChannelSelectionTask::zwdfs_fsm()
         // the feature.
         // Skip this case if the feature is disabled and move directly to not-running.
         auto db = AgentDB::get();
-        if (!db->device_conf.zwdfs_enable) {
+        if (!utils::get_zwdfs_flag(db->device_conf.zwdfs_flag, beerocks::eZWDFS_flags::ALL)) {
             ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
             break;
         }

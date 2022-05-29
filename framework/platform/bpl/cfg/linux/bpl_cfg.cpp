@@ -449,16 +449,12 @@ int cfg_get_all_prplmesh_wifi_interfaces(BPL_WLAN_IFACE *interfaces, int *num_of
     return RETURN_OK;
 }
 
-bool cfg_get_zwdfs_enable(bool &enable)
+bool cfg_get_zwdfs_flag(int &flag)
 {
-    int zwdfs_enable;
-
-    if (cfg_get_param_int("zwdfs_enable", zwdfs_enable) < 0) {
-        MAPF_DBG("Failed to read zwdfs_enable parameter - setting default value");
-        zwdfs_enable = DEFAULT_ZWDFS_ENABLE;
+    if (cfg_get_param_int("zwdfs_flag", flag) < 0) {
+        MAPF_DBG("Failed to read zwdfs_flag parameter - setting default value");
+        flag = DEFAULT_ZWDFS_DISABLE;
     }
-
-    enable = (zwdfs_enable == 1);
 
     return true;
 }
