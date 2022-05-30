@@ -6,7 +6,8 @@ set -e
 rm -f /var/log/messages && syslog-ng-ctl reload
 
 # IP for device upgrades, operational tests, Boardfarm data network, ...
-uci set network.lan.ipaddr='192.168.1.130'
+ubus wait_for IP.Interface
+ubus call "IP.Interface" _set '{ "rel_path": ".[Name == \"br-lan\"].IPv4Address.[Alias == \"lan\"].", "parameters": { "IPAddress": "192.168.1.130" } }'
 
 # VLAN interface to control the device separatly:
 uci batch << 'EOF'
