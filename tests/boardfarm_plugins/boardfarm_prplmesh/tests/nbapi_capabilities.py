@@ -137,36 +137,24 @@ class NbapiCapabilities(PrplMeshBaseTest):
                         "VHTRxMCSSet", vht_caps['VHTRxMCSSet'], tlv.vht_supported_rx_mcs)
                 if tlv.tlv_type == self.ieee1905['eTlvTypeMap']['TLV_AP_HE_CAPABILITIES']:
                     radio = repeater.radios[tlv.ap_he_capability_radio_id]
-                    he_caps = controller.nbapi_get(radio.path + ".Capabilities.HECapabilities")
-                    self.assertEqualInt(
-                        "MaxNumberOfRxSpatialStreams",
-                        he_caps['MaxNumberOfRxSpatialStreams'] - 1,
-                        tlv.ap_he_caps_tree['ieee1905.he_cap.max_rx_streams'])
-                    self.assertEqualInt(
-                        "MaxNumberOfTxSpatialStreams",
-                        he_caps['MaxNumberOfTxSpatialStreams'] - 1,
-                        tlv.ap_he_caps_tree['ieee1905.he_cap.max_tx_streams'])
-                    self.assertEqualInt("HE8080MHzBWSupported", he_caps['HE8080MHzBWSupported'],
-                                        tlv.ap_he_caps_tree['ieee1905.ap_he.he_80plus_mhz'])
-                    self.assertEqualInt("HE160MHzBWSupported", he_caps['HE160MHzBWSupported'],
+                    he_caps = controller.nbapi_get(radio.path + ".Capabilities.WiFi6Capabilities")
+                    self.assertEqualInt("MaxNumberOfRxSpatialStreams",
+                                        he_caps['MaxNumberOfRxSpatialStreams'] - 1,
+                                        tlv.ap_he_caps_tree['ieee1905.he_cap.max_rx_streams'])
+                    self.assertEqualInt("MaxNumberOfTxSpatialStreams",
+                                        he_caps['MaxNumberOfTxSpatialStreams'] - 1,
+                                        tlv.ap_he_caps_tree['ieee1905.he_cap.max_tx_streams'])
+                    self.assertEqualInt("HE160", he_caps['HE160'],
                                         tlv.ap_he_caps_tree['ieee1905.ap_he.he_160_mhz'])
-                    self.assertEqualInt("SUBeamformerSupported", he_caps['SUBeamformerSupported'],
+                    self.assertEqualInt("HE8080", he_caps['HE8080'],
+                                        tlv.ap_he_caps_tree['ieee1905.ap_he.he_80plus_mhz'])
+                    self.assertEqualInt("SUBeamformer", he_caps['SUBeamformer'],
                                         tlv.ap_he_caps_tree['ieee1905.ap_he.su_beamformer'])
-                    self.assertEqualInt("MUBeamformerSupported", he_caps['MUBeamformerSupported'],
+                    self.assertEqualInt("MUBeamformer", he_caps['MUBeamformer'],
                                         tlv.ap_he_caps_tree['ieee1905.ap_he.mu_beamformer'])
-                    self.assertEqualInt("UpLinkMUMIMOSupported", he_caps['UpLinkMUMIMOSupported'],
+                    self.assertEqualInt("ULMUMIMO", he_caps['ULMUMIMO'],
                                         tlv.ap_he_caps_tree['ieee1905.ap_he.ul_mu_mimo'])
-                    self.assertEqualInt(
-                        "UpLinkMUMIMOInOFDMASupported",
-                        he_caps['UpLinkMUMIMOInOFDMASupported'],
-                        tlv.ap_he_caps_tree['ieee1905.ap_he.he_ul_mu_mimo_ofdma'])
-                    self.assertEqualInt(
-                        "DownLinkMUMIMOInOFDMASupported",
-                        he_caps['DownLinkMUMIMOInOFDMASupported'],
-                        tlv.ap_he_caps_tree['ieee1905.ap_he.he_dl_mu_mimo_ofdma'])
-                    self.assertEqualInt("UpLinkInOFDMASupported", he_caps['UpLinkInOFDMASupported'],
+                    self.assertEqualInt("ULOFDMA", he_caps['ULOFDMA'],
                                         tlv.ap_he_caps_tree['ieee1905.ap_he.he_ul_ofdma'])
-                    self.assertEqualInt(
-                        "DownLinkInOFDMASupported",
-                        he_caps['DownLinkInOFDMASupported'],
-                        tlv.ap_he_caps_tree['ieee1905.ap_he.he_dl_ofdma'])
+                    self.assertEqualInt("DLOFDMA", he_caps['DLOFDMA'],
+                                        tlv.ap_he_caps_tree['ieee1905.ap_he.he_dl_ofdma'])

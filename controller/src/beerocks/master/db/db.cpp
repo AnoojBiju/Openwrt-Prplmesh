@@ -1352,13 +1352,13 @@ bool db::set_ap_he_capabilities(wfa_map::tlvApHeCapabilities &he_caps_tlv)
     }
 
     path_to_obj += ".Capabilities.";
-    if (!m_ambiorix_datamodel->add_optional_subobject(path_to_obj, "HECapabilities")) {
-        LOG(ERROR) << "Failed to add sub-object " << path_to_obj << "HECapabilities";
+    if (!m_ambiorix_datamodel->add_optional_subobject(path_to_obj, "WiFi6Capabilities")) {
+        LOG(ERROR) << "Failed to add sub-object " << path_to_obj << "WiFi6Capabilities";
         return false;
     }
 
     bool ret_val = true;
-    path_to_obj += "HECapabilities.";
+    path_to_obj += "WiFi6Capabilities.";
 
     auto flags1 = he_caps_tlv.flags1();
     auto flags2 = he_caps_tlv.flags2();
@@ -1367,27 +1367,23 @@ bool db::set_ap_he_capabilities(wfa_map::tlvApHeCapabilities &he_caps_tlv)
                                          flags1.max_num_of_supported_tx_spatial_streams + 1);
     ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfRxSpatialStreams",
                                          flags1.max_num_of_supported_rx_spatial_streams + 1);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HE8080MHzBWSupported",
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HE8080",
                                          static_cast<bool>(flags1.he_support_80_80mhz));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HE160MHzBWSupported",
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HE160",
                                          static_cast<bool>(flags1.he_support_160mhz));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SUBeamformerSupported",
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SUBeamformer",
                                          static_cast<bool>(flags2.su_beamformer_capable));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MUBeamformerSupported",
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MUBeamformer",
                                          static_cast<bool>(flags2.mu_beamformer_capable));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "UpLinkMUMIMOSupported",
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "ULMUMIMO",
                                          static_cast<bool>(flags2.ul_mu_mimo_capable));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "UpLinkMUMIMOInOFDMASupported",
-                                         static_cast<bool>(flags2.ul_mu_mimo_and_ofdm_capable));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "DownLinkMUMIMOInOFDMASupported",
-                                         static_cast<bool>(flags2.dl_mu_mimo_and_ofdm_capable));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "UpLinkInOFDMASupported",
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "ULOFDMA",
                                          static_cast<bool>(flags2.ul_ofdm_capable));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "DownLinkInOFDMASupported",
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "DLOFDMA",
                                          static_cast<bool>(flags2.dl_ofdm_capable));
 
     uint8_t supported_he_mcs_length = he_caps_tlv.supported_he_mcs_length();
-    path_to_obj += "HETxRxMCS";
+    path_to_obj += "MCSNSS";
     for (int i = 0; i < supported_he_mcs_length; i++) {
         auto path_to_obj_instance = m_ambiorix_datamodel->add_instance(path_to_obj);
         if (path_to_obj_instance.empty()) {
@@ -1395,7 +1391,7 @@ bool db::set_ap_he_capabilities(wfa_map::tlvApHeCapabilities &he_caps_tlv)
             ret_val = false;
             continue;
         }
-        ret_val &= m_ambiorix_datamodel->set(path_to_obj_instance + '.', "MCSSet",
+        ret_val &= m_ambiorix_datamodel->set(path_to_obj_instance + '.', "MCSNSSSet",
                                              *he_caps_tlv.supported_he_mcs(i));
     }
 
@@ -1415,34 +1411,56 @@ db::get_station_current_capabilities(const std::string &mac)
 bool db::dm_set_sta_he_capabilities(const std::string &path_to_sta,
                                     const beerocks::message::sRadioCapabilities &sta_cap)
 {
-    if (!m_ambiorix_datamodel->add_optional_subobject(path_to_sta, "HECapabilities")) {
-        LOG(ERROR) << "Failed to add sub-object " << path_to_sta << "HECapabilities";
+    if (!m_ambiorix_datamodel->add_optional_subobject(path_to_sta, "WiFi6Capabilities")) {
+        LOG(ERROR) << "Failed to add sub-object " << path_to_sta << "WiFi6Capabilities";
         return false;
     }
 
     bool ret_val            = true;
-    std::string path_to_obj = path_to_sta + "HECapabilities.";
+    std::string path_to_obj = path_to_sta + "WiFi6Capabilities.";
 
     ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfTxSpatialStreams", sta_cap.he_ss);
     ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfRxSpatialStreams", sta_cap.he_ss);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HE8080MHzBWSupported",
-                                         (sta_cap.he_bw == BANDWIDTH_80_80));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HE160MHzBWSupported",
-                                         (sta_cap.he_bw == BANDWIDTH_160));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SUBeamformerSupported",
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HE8080",
+                                         static_cast<bool>(sta_cap.he_bw == BANDWIDTH_80_80));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HE160",
+                                         static_cast<bool>(sta_cap.he_bw == BANDWIDTH_160));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SUBeamformer",
                                          static_cast<bool>(sta_cap.he_su_beamformer));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MUBeamformerSupported",
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SUBeamformee",
+                                         static_cast<bool>(sta_cap.he_su_beamformee));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MUBeamformer",
                                          static_cast<bool>(sta_cap.he_mu_beamformer));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "UpLinkMUMIMOSupported",
-                                         static_cast<bool>(sta_cap.ul_mu_mimo));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "UpLinkMUMIMOInOFDMASupported",
-                                         static_cast<bool>(sta_cap.ul_mu_mimo_ofdma));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "DownLinkMUMIMOInOFDMASupported",
-                                         static_cast<bool>(sta_cap.dl_mu_mimo_ofdma));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "UpLinkInOFDMASupported",
-                                         static_cast<bool>(sta_cap.ul_ofdma));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "DownLinkInOFDMASupported",
-                                         static_cast<bool>(sta_cap.dl_ofdma));
+    ret_val &= m_ambiorix_datamodel->set(
+        path_to_obj, "Beamformee80orLess",
+        static_cast<bool>(sta_cap.he_su_beamformee ? sta_cap.he_beamformee_sts_less_80mhz : false));
+    ret_val &= m_ambiorix_datamodel->set(
+        path_to_obj, "BeamformeeAbove80",
+        static_cast<bool>(sta_cap.he_su_beamformee && (sta_cap.he_bw > BANDWIDTH_80)
+                              ? sta_cap.he_beamformee_sts_great_80mhz
+                              : false));
+    ret_val &=
+        m_ambiorix_datamodel->set(path_to_obj, "ULMUMIMO", static_cast<bool>(sta_cap.ul_mu_mimo));
+    ret_val &=
+        m_ambiorix_datamodel->set(path_to_obj, "ULOFDMA", static_cast<bool>(sta_cap.ul_ofdma));
+    ret_val &=
+        m_ambiorix_datamodel->set(path_to_obj, "DLOFDMA", static_cast<bool>(sta_cap.dl_ofdma));
+    // TODO: find the values for the unfilled parameters, PPM-2112
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxDLMUMIMO", sta_cap.dl_mu_mimo_max_users);
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxULMUMIMO", sta_cap.ul_mu_mimo_max_users);
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxDLOFDMA", sta_cap.dl_ofdma_max_users);
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxULOFDMA", sta_cap.ul_ofdma_max_users);
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "RTS", static_cast<bool>(false));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MURTS", static_cast<bool>(sta_cap.ul_ofdma));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MultiBSSID", static_cast<bool>(false));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MUEDCA", static_cast<bool>(false));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "TWTRequestor",
+                                         static_cast<bool>(sta_cap.twt_requester));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "TWTResponder",
+                                         static_cast<bool>(sta_cap.twt_responder));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SpatialReuse", static_cast<bool>(false));
+    ret_val &=
+        m_ambiorix_datamodel->set(path_to_obj, "AnticipatedChannelUsage", static_cast<bool>(false));
 
     return ret_val;
 }
@@ -1521,7 +1539,7 @@ bool db::dm_add_assoc_event_sta_caps(const std::string &assoc_event_path,
     // Remove previous entry
     m_ambiorix_datamodel->remove_optional_subobject(path_to_event, "HTCapabilities");
     m_ambiorix_datamodel->remove_optional_subobject(path_to_event, "VHTCapabilities");
-    m_ambiorix_datamodel->remove_optional_subobject(path_to_event, "HECapabilities");
+    m_ambiorix_datamodel->remove_optional_subobject(path_to_event, "WiFi6Capabilities");
 
     if (sta_cap.ht_bw != beerocks::BANDWIDTH_UNKNOWN) {
         dm_set_assoc_event_sta_ht_cap(path_to_event, sta_cap);
@@ -1599,36 +1617,56 @@ bool db::dm_set_assoc_event_sta_vht_cap(const std::string &path_to_event,
 bool db::dm_set_assoc_event_sta_he_cap(const std::string &path_to_event,
                                        const beerocks::message::sRadioCapabilities &sta_cap)
 {
-    if (!m_ambiorix_datamodel->add_optional_subobject(path_to_event, "HECapabilities")) {
-        LOG(ERROR) << "Failed to add sub-object " << path_to_event << "HECapabilities";
+    if (!m_ambiorix_datamodel->add_optional_subobject(path_to_event, "WiFi6Capabilities")) {
+        LOG(ERROR) << "Failed to add sub-object " << path_to_event << "WiFi6Capabilities";
         return false;
     }
 
-    bool ret_val               = true;
-    std::string path_to_he_cap = path_to_event + "HECapabilities.";
+    bool ret_val            = true;
+    std::string path_to_obj = path_to_event + "WiFi6Capabilities.";
 
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_he_cap, "MaxNumberOfTxSpatialStreams", sta_cap.he_ss);
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_he_cap, "MaxNumberOfRxSpatialStreams", sta_cap.he_ss);
-    ret_val &= m_ambiorix_datamodel->set(path_to_he_cap, "HE8080MHzBWSupported",
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfTxSpatialStreams", sta_cap.he_ss);
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfRxSpatialStreams", sta_cap.he_ss);
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HE8080",
                                          static_cast<bool>(sta_cap.he_bw == BANDWIDTH_80_80));
-    ret_val &= m_ambiorix_datamodel->set(path_to_he_cap, "HE160MHzBWSupported",
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HE160",
                                          static_cast<bool>(sta_cap.he_bw == BANDWIDTH_160));
-    ret_val &= m_ambiorix_datamodel->set(path_to_he_cap, "SUBeamformerSupported",
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SUBeamformer",
                                          static_cast<bool>(sta_cap.he_su_beamformer));
-    ret_val &= m_ambiorix_datamodel->set(path_to_he_cap, "MUBeamformerSupported",
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SUBeamformee",
+                                         static_cast<bool>(sta_cap.he_su_beamformee));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MUBeamformer",
                                          static_cast<bool>(sta_cap.he_mu_beamformer));
-    ret_val &= m_ambiorix_datamodel->set(path_to_he_cap, "UpLinkMUMIMOSupported",
-                                         static_cast<bool>(sta_cap.ul_mu_mimo));
-    ret_val &= m_ambiorix_datamodel->set(path_to_he_cap, "UpLinkMUMIMOInOFDMASupported",
-                                         static_cast<bool>(sta_cap.ul_mu_mimo_ofdma));
-    ret_val &= m_ambiorix_datamodel->set(path_to_he_cap, "DownLinkMUMIMOInOFDMASupported",
-                                         static_cast<bool>(sta_cap.dl_mu_mimo_ofdma));
-    ret_val &= m_ambiorix_datamodel->set(path_to_he_cap, "UpLinkInOFDMASupported",
-                                         static_cast<bool>(sta_cap.ul_ofdma));
-    ret_val &= m_ambiorix_datamodel->set(path_to_he_cap, "DownLinkInOFDMASupported",
-                                         static_cast<bool>(sta_cap.dl_ofdma));
+    ret_val &= m_ambiorix_datamodel->set(
+        path_to_obj, "Beamformee80orLess",
+        static_cast<bool>(sta_cap.he_su_beamformee ? sta_cap.he_beamformee_sts_less_80mhz : false));
+    ret_val &= m_ambiorix_datamodel->set(
+        path_to_obj, "BeamformeeAbove80",
+        static_cast<bool>(sta_cap.he_su_beamformee && (sta_cap.he_bw > BANDWIDTH_80)
+                              ? sta_cap.he_beamformee_sts_great_80mhz
+                              : false));
+    ret_val &=
+        m_ambiorix_datamodel->set(path_to_obj, "ULMUMIMO", static_cast<bool>(sta_cap.ul_mu_mimo));
+    ret_val &=
+        m_ambiorix_datamodel->set(path_to_obj, "ULOFDMA", static_cast<bool>(sta_cap.ul_ofdma));
+    ret_val &=
+        m_ambiorix_datamodel->set(path_to_obj, "DLOFDMA", static_cast<bool>(sta_cap.dl_ofdma));
+    // TODO: find the values for the unfilled parameters, PPM-2112
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxDLMUMIMO", sta_cap.dl_mu_mimo_max_users);
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxULMUMIMO", sta_cap.ul_mu_mimo_max_users);
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxDLOFDMA", sta_cap.dl_ofdma_max_users);
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxULOFDMA", sta_cap.ul_ofdma_max_users);
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "RTS", static_cast<bool>(false));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MURTS", static_cast<bool>(sta_cap.ul_ofdma));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MultiBSSID", static_cast<bool>(false));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MUEDCA", static_cast<bool>(false));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "TWTRequestor",
+                                         static_cast<bool>(sta_cap.twt_requester));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "TWTResponder",
+                                         static_cast<bool>(sta_cap.twt_responder));
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SpatialReuse", static_cast<bool>(false));
+    ret_val &=
+        m_ambiorix_datamodel->set(path_to_obj, "AnticipatedChannelUsage", static_cast<bool>(false));
 
     return ret_val;
 }
@@ -1673,7 +1711,7 @@ bool db::set_station_capabilities(const std::string &client_mac,
     // Remove previous capabilities objects, if they exist
     m_ambiorix_datamodel->remove_optional_subobject(path_to_sta, "HTCapabilities");
     m_ambiorix_datamodel->remove_optional_subobject(path_to_sta, "VHTCapabilities");
-    m_ambiorix_datamodel->remove_optional_subobject(path_to_sta, "HECapabilities");
+    m_ambiorix_datamodel->remove_optional_subobject(path_to_sta, "WiFi6Capabilities");
 
     if (sta_cap.ht_bw != beerocks::BANDWIDTH_UNKNOWN &&
         !dm_set_sta_ht_capabilities(path_to_sta, sta_cap)) {
@@ -5738,7 +5776,7 @@ bool db::clear_ap_capabilities(const sMacAddr &radio_uid)
 
     ret_val &= m_ambiorix_datamodel->remove_optional_subobject(path_to_obj, "HTCapabilities");
     ret_val &= m_ambiorix_datamodel->remove_optional_subobject(path_to_obj, "VHTCapabilities");
-    ret_val &= m_ambiorix_datamodel->remove_optional_subobject(path_to_obj, "HECapabilities");
+    ret_val &= m_ambiorix_datamodel->remove_optional_subobject(path_to_obj, "WiFi6Capabilities");
 
     return ret_val;
 }

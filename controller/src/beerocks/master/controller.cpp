@@ -1463,7 +1463,7 @@ bool Controller::handle_tlv_ap_he_capabilities(ieee1905_1::CmduMessageRx &cmdu_r
 
     for (const auto &ap_he_caps_tlv : cmdu_rx.getClassList<wfa_map::tlvApHeCapabilities>()) {
         if (!database.set_ap_he_capabilities(*ap_he_caps_tlv)) {
-            LOG(ERROR) << "Couldn't set values for ap HEcapabilities data model";
+            LOG(ERROR) << "Couldn't set values for AP WiFi6Capabilities data model";
             ret_val = false;
         }
     }
