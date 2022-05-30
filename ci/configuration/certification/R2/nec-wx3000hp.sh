@@ -5,16 +5,51 @@ set -e
 # Start with a new log file:
 rm -f /var/log/messages && syslog-ng-ctl reload
 
-# One of the LAN ports is used for control, and the WAN port for data:
-uci batch << 'EOF'
-set network.cert=interface
-set network.cert.proto='static'
-set network.cert.ifname='eth0_4'
-set network.cert.ipaddr='192.168.250.171'
-set network.cert.netmask='255.255.255.0'
-set network.lan.ipaddr='192.165.100.171'
-set network.lan.ifname='eth0_1 eth0_2 eth0_3 eth1'
-EOF
+# Set the LAN bridge IP:
+ubus wait_for IP.Interface
+ubus call "IP.Interface" _set '{ "rel_path": ".[Name == \"br-lan\"].IPv4Address.[Alias == \"lan\"].", "parameters": { "IPAddress": "192.165.100.171" } }'
+
+# Move the WAN port into the LAN bridge if it's not there yet (to use it for data):
+ubus wait_for Bridging.Bridge
+ubus call "Bridging.Bridge" _get '{ "rel_path": ".[Alias == \"lan\"].Port.[Name == \"eth1\"]." }' || {
+    echo "Adding interface to bridge"
+    ubus call "Bridging.Bridge" _add '{ "rel_path": ".[Alias == \"lan\"].Port.",  "parameters": { "Name": "eth1", "Alias": "ETH1", "Enable": true } }'
+}
+
+# One of the LAN ports is used for control. Create a section for it:
+uci set network.cert=interface
+# Setting ifname is not supported in the current version of the TR-181
+# IP manager (v1.11.1), set it in UCI instead:
+uci set network.cert.ifname='eth0_4'
+
+# Remove the control interface from the LAN bridge if it's not already the case:
+ubus wait_for Bridging.Bridge
+ubus call "Bridging.Bridge" _get '{ "rel_path": ".[Alias == \"lan\"].Port.[Name == \"eth0_4\"]." }' && {
+    echo "Removing interface from bridge"
+    ubus call "Bridging.Bridge" _del '{ "rel_path": ".[Alias == \"lan\"].Port.[Name == \"eth0_4\"]." }'
+}
+
+# To set the IP on the control interface, we first need to find the
+# corresponding Ethernet.Interface:
+ETH_IF="$(ubus call Ethernet.Interface _list | jsonfilter -e '@.instances[@.name="ETH0_4"].index')"
+# Then if there is no corresponding Ethernet.Link yet, we need to add
+# one:
+ubus call Ethernet.Link _get '{ "rel_path": ".[Name == \"eth0_4\"]." }' || {
+    echo "Adding Ethernet Link"
+    ETH_LINK="$(ubus call Ethernet.Link _add "{ \"parameters\": { \"Name\": \"eth0_4\", \"Alias\": \"eth0_4\",\"LowerLayers\": \"Device.Ethernet.Interface.$ETH_IF.\", \"Enable\": true } }" | jsonfilter -e '@.index')"
+}
+# We can now create an IP.Interface if there is none yet:
+ubus call IP.Interface _get '{ "rel_path": ".[Name == \"eth0_4\"]." }' || {
+    echo "Adding IP.Interface"
+    ubus call IP.Interface _add "{ \"parameters\": { \"Name\": \"eth0_4\", \"UCISectionNameIPv4\": \"cert\", \"Alias\": \"eth0_4\", \"LowerLayers\": \"Device.Ethernet.Link.$ETH_LINK.\", \"Enable\": true } }"
+}
+# We can now add the IP address if there is none yet:
+ubus call IP.Interface _get '{ "rel_path": ".[Name == \"eth0_4\"].IPv4Address.[Alias == \"eth0_4\"]." }' || {
+    echo "Adding IP address $IP"
+    ubus call "IP.Interface" _add '{ "rel_path": ".[Name == \"eth0_4\"].IPv4Address.", "parameters": { "IPAddress": "192.168.250.171", "SubnetMask": "255.255.255.0", "AddressingType": "Static", "Alias": "eth0_4", "Enable" : true } }'
+}
+# Finally, we can enable it:
+ubus call "IP.Interface" _set '{ "rel_path": ".[Name == \"eth0_4\"].", "parameters": { "IPv4Enable": true } }'
 
 # Wired backhaul interface:
 uci set prplmesh.config.backhaul_wire_iface='eth1'
