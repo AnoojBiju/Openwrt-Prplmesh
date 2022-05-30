@@ -3614,7 +3614,7 @@ int bml_internal::channel_selection(const sMacAddr &radio_mac, uint8_t channel, 
         beerocks_message::cACTION_BML_TRIGGER_CHANNEL_SELECTION_REQUEST>(cmdu_tx);
 
     if (request == nullptr) {
-        LOG(ERROR) << "Failed building cACTION_BML_TRIGGER_CHANNEL_SELECTION_REQUEST message!";
+        LOG(ERROR) << "Failed building ACTION_BML_TRIGGER_CHANNEL_SELECTION_REQUEST message!";
         return (-BML_RET_OP_FAILED);
     }
 
@@ -3623,11 +3623,25 @@ int bml_internal::channel_selection(const sMacAddr &radio_mac, uint8_t channel, 
     request->bandwidth() = utils::convert_bandwidth_to_enum(bandwidth);
     request->csa_count() = csa_count;
 
-    if (!message_com::send_cmdu(m_sockMaster, cmdu_tx)) {
-        LOG(ERROR) << "Failed sending message!";
+    int result = 0;
+    if (send_bml_cmdu(result, request->get_action_op()) != BML_RET_OK) {
+        LOG(ERROR) << "send_bml_cmdu failed";
         return (-BML_RET_OP_FAILED);
     }
 
+    if (result != 0) {
+        LOG(ERROR) << "cACTION_BML_TRIGGER_CHANNEL_SELECTION_REQUEST returned error code:"
+                   << result;
+        return result;
+    }
+
+    return BML_RET_OK;
+}
+
+int bml_internal::set_dynamic_channel_pool(const sMacAddr &radio_mac,
+                                           const unsigned int *channel_pool,
+                                           const int channel_pool_size)
+{
     return BML_RET_OK;
 }
 

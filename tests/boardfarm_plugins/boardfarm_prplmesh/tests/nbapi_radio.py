@@ -105,8 +105,8 @@ class NbapiRadio(PrplMeshBaseTest):
                         found = True
             assert found, f"No operating channel report TLV found for {agent.radios[0].mac}"
 
-        missing_op_class = [op_ch_tlv for op_ch_tlv in [self.check_cmdu_has_tlv_single(
+        missing_op_class = [op_ch_tlv for op_ch_tlv in [self.check_cmdu_has_tlvs(
             report, self.ieee1905['eTlvTypeMap']['TLV_OPERATING_CHANNEL_REPORT'])
             for report in op_ch_reports]
-            if op_ch_tlv.operating_channel_radio_id == agent.radios[0].mac]
+            if op_ch_tlv[0].operating_channel_radio_id == agent.radios[0].mac]
         assert not missing_op_class, f"CurrentOperatingClasses missing value for {missing_op_class}"

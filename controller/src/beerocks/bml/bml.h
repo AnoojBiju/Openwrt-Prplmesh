@@ -546,7 +546,7 @@ int bml_get_slave_restricted_channels(BML_CTX ctx, uint8_t *restricted_channels,
 int bml_trigger_topology_discovery(BML_CTX ctx, const char *al_mac);
 
 /**
- * Trigger Channel Selection Task on a specific Agent.
+ * Trigger the On-Demand Channel-Selection.
  *
  * @param [in] ctx BML Context.
  * @param [in] radio_mac Radio MAC of selected radio. 
@@ -555,8 +555,21 @@ int bml_trigger_topology_discovery(BML_CTX ctx, const char *al_mac);
  * 
  * @return BML_RET_OK on success.
  */
-int bml_channel_selection(BML_CTX ctx, const char *radio_mac, uint8_t channel, uint8_t bandwidth,
-                          uint8_t csa_count);
+int bml_on_demand_channel_selection(BML_CTX ctx, const char *radio_mac, uint8_t channel,
+                                    uint8_t bandwidth, uint8_t csa_count);
+
+/**
+ * Set the dynamic channel pool, used by the Auto Channel Selection flow.
+ *
+ * @param [in] ctx BML Context.
+ * @param [in] radio_mac Radio MAC of selected radio. 
+ * @param [in] channel_pool channel pool for the Channel Selection .
+ * @param [in] channel_pool_size size of the channel pool.
+ * 
+ * @return BML_RET_OK on success.
+ */
+int bml_set_dynamic_pool(BML_CTX ctx, const char *radio_mac, unsigned int *channel_pool,
+                         int channel_pool_size);
 
 /**
  * Set a VAP information list.

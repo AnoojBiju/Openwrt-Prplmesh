@@ -639,8 +639,8 @@ int bml_trigger_topology_discovery(BML_CTX ctx, const char *al_mac)
     return (pBML->trigger_topology_discovery_query(al_mac));
 }
 
-int bml_channel_selection(BML_CTX ctx, const char *radio_mac, uint8_t channel, uint8_t bandwidth,
-                          uint8_t csa_count)
+int bml_on_demand_channel_selection(BML_CTX ctx, const char *radio_mac, uint8_t channel,
+                                    uint8_t bandwidth, uint8_t csa_count)
 {
     // Validate input parameters
     if (!ctx) {
@@ -651,6 +651,20 @@ int bml_channel_selection(BML_CTX ctx, const char *radio_mac, uint8_t channel, u
 
     return pBML->channel_selection(tlvf::mac_from_string(std::string(radio_mac)), channel,
                                    bandwidth, csa_count);
+}
+
+int bml_set_dynamic_pool(BML_CTX ctx, const char *radio_mac, unsigned int *channel_pool,
+                         int channel_pool_size)
+{
+    // Validate input parameters
+    if (!ctx) {
+        return (-BML_RET_INVALID_ARGS);
+    }
+
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
+
+    return pBML->set_dynamic_channel_pool(tlvf::mac_from_string(std::string(radio_mac)),
+                                          channel_pool, channel_pool_size);
 }
 
 int bml_set_dcs_continuous_scan_enable(BML_CTX ctx, const char *radio_mac, int enable)

@@ -298,6 +298,22 @@ int cfg_get_load_steer_on_vaps(int num_of_interfaces,
     return RETURN_OK;
 }
 
+int cfg_get_dcs_channel_pool(int radio_num, char channel_pool[BPL_DCS_CHANNEL_POOL_LEN])
+{
+    if (!channel_pool) {
+        MAPF_ERR("invalid input: channel_pool is NULL");
+        return RETURN_ERR;
+    }
+
+    if (radio_num < 0) {
+        MAPF_ERR("invalid input: radio_num < 0");
+        return RETURN_ERR;
+    }
+
+    mapf::utils::copy_string(channel_pool, DEFAULT_DCS_CHANNEL_POOL, BPL_DCS_CHANNEL_POOL_LEN);
+    return RETURN_OK;
+}
+
 int cfg_get_stop_on_failure_attempts()
 {
     int retVal = -1;
@@ -449,16 +465,12 @@ int cfg_get_all_prplmesh_wifi_interfaces(BPL_WLAN_IFACE *interfaces, int *num_of
     return RETURN_OK;
 }
 
-bool cfg_get_zwdfs_enable(bool &enable)
+bool cfg_get_zwdfs_flag(int &flag)
 {
-    int zwdfs_enable;
-
-    if (cfg_get_param_int("zwdfs_enable", zwdfs_enable) < 0) {
-        MAPF_DBG("Failed to read zwdfs_enable parameter - setting default value");
-        zwdfs_enable = DEFAULT_ZWDFS_ENABLE;
+    if (cfg_get_param_int("zwdfs_flag", flag) < 0) {
+        MAPF_DBG("Failed to read zwdfs_flag parameter - setting default value");
+        flag = DEFAULT_ZWDFS_DISABLE;
     }
-
-    enable = (zwdfs_enable == 1);
 
     return true;
 }
