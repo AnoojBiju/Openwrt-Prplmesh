@@ -36,7 +36,7 @@ def main():
 
     args = parser.parse_args()
 
-    dev = device_from_name(args.device, args.target_name, image="")
+    dev = device_from_name(args.device, args.target_name)
     configure_device(dev, Path(args.configuration))
 
 
