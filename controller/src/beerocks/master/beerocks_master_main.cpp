@@ -480,6 +480,8 @@ int main(int argc, char *argv[])
                                                  base_master_name + "_std.log");
     }
 
+    LOG(DEBUG) << "Controller initiated" << std::endl;
+
     //write pid file
     beerocks::os_utils::write_pid_file(beerocks_master_conf.temp_path, base_master_name);
     std::string pid_file_path =
