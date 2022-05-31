@@ -469,6 +469,7 @@ int main(int argc, char *argv[])
               << "Running " << base_master_name << " Version " << BEEROCKS_VERSION << " Build date "
               << BEEROCKS_BUILD_DATE << std::endl
               << std::endl;
+    LOG(DEBUG) << "Badhri Controller process starts here";
     beerocks::version::log_version(argc, argv);
     versionfile.open(beerocks_master_conf.temp_path + "beerocks_master_version");
     versionfile << BEEROCKS_VERSION << std::endl << BEEROCKS_REVISION;
