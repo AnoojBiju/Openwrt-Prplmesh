@@ -2332,6 +2332,80 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         }
         break;
     }
+    case beerocks_message::ACTION_BML_SET_SELECTION_CHANNEL_POOL_REQUEST: {
+        LOG(TRACE) << "ACTION_BML_SET_SELECTION_CHANNEL_POOL_REQUEST";
+        auto request =
+            beerocks_header
+                ->addClass<beerocks_message::cACTION_BML_SET_SELECTION_CHANNEL_POOL_REQUEST>();
+        if (!request) {
+            LOG(ERROR) << "addClass cACTION_BML_SET_SELECTION_CHANNEL_POOL_REQUEST failed";
+            break;
+        }
+
+        auto response = message_com::create_vs_message<
+            beerocks_message::cACTION_BML_SET_SELECTION_CHANNEL_POOL_RESPONSE>(cmdu_tx);
+        if (!response) {
+            LOG(ERROR) << "Failed building message "
+                          "cACTION_BML_SET_SELECTION_CHANNEL_POOL_RESPONSE !";
+            break;
+        }
+
+        auto radio_mac         = request->radio_mac();
+        auto channel_pool      = request->channel_pool();
+        auto channel_pool_size = request->channel_pool_size();
+        auto channel_pool_set =
+            std::unordered_set<uint8_t>(channel_pool, channel_pool + channel_pool_size);
+        std::stringstream ss;
+        for (auto channel : channel_pool_set) {
+            ss << (int)channel << " ";
+        }
+        LOG(INFO) << "Setting channel pool to: " << ss.str();
+        response->success() =
+            (database.set_selection_channel_pool(radio_mac, channel_pool_set) ? 0 : -1);
+
+        LOG(INFO) << "Sending SET_SELECTION_CHANNEL_POOL_RESPONSE with response "
+                  << (int)response->success();
+        if (!controller_ctx->send_cmdu(sd, cmdu_tx)) {
+            LOG(ERROR) << "Error sending response message";
+        }
+        break;
+    }
+    case beerocks_message::ACTION_BML_GET_SELECTION_CHANNEL_POOL_REQUEST: {
+        LOG(TRACE) << "ACTION_BML_GET_SELECTION_CHANNEL_POOL_REQUEST";
+        auto request =
+            beerocks_header
+                ->addClass<beerocks_message::cACTION_BML_GET_SELECTION_CHANNEL_POOL_REQUEST>();
+        if (!request) {
+            LOG(ERROR) << "addClass cACTION_BML_GET_SELECTION_CHANNEL_POOL_REQUEST failed";
+            break;
+        }
+
+        auto response = message_com::create_vs_message<
+            beerocks_message::cACTION_BML_GET_SELECTION_CHANNEL_POOL_RESPONSE>(cmdu_tx);
+        if (!response) {
+            LOG(ERROR) << "Failed building message "
+                          "cACTION_BML_GET_SELECTION_CHANNEL_POOL_RESPONSE !";
+            break;
+        }
+
+        auto radio_mac = request->radio_mac();
+        std::unordered_set<uint8_t> channel_pool_set;
+        if (!database.get_selection_channel_pool(radio_mac, channel_pool_set)) {
+            LOG(INFO) << "Failed to get Selection Channel-Pool.";
+            response->success() = 1; //Failure.
+        } else {
+            LOG(INFO) << "Got Selection Channel-Pool successfully.";
+            response->success() = 0; //Success.
+            std::vector<uint8_t> tmp_vec(channel_pool_set.begin(), channel_pool_set.end());
+            response->set_channel_pool(tmp_vec.data(), tmp_vec.size());
+            response->channel_pool_size() = tmp_vec.size();
+        }
+        LOG(INFO) << "Sending GET_SELECTION_CHANNEL_POOL_RESPONSE";
+        if (!controller_ctx->send_cmdu(sd, cmdu_tx)) {
+            LOG(ERROR) << "Error sending response message";
+        }
+        break;
+    }
     default: {
         LOG(ERROR) << "Unsupported BML action_op:" << int(beerocks_header->action_op());
         break;
