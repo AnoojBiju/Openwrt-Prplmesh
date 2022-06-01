@@ -154,6 +154,7 @@ public:
         int management_mode;
         bool unsuccessful_assoc_report_policy;
         int unsuccessful_assoc_max_reporting_rate;
+        int flag_check;
     } sDbMasterConfig;
 
     typedef struct {
@@ -2225,6 +2226,12 @@ public:
     // vars
     //
     sDbMasterConfig &config;
+
+    int8_t flag_state = 0;
+
+    int8_t get_flag_state();
+
+    void set_new_flag_state(int8_t new_flag_state);
 
 private:
     /**

@@ -69,6 +69,22 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
     }
 
     switch (beerocks_header->action_op()) {
+    case beerocks_message::ACTION_CLI_SET_FLAG_STATE: {
+        auto request_in = beerocks_header->addClass<beerocks_message::cACTION_CLI_SET_FLAG_STATE>();
+        if (request_in == nullptr) {
+            LOG(ERROR) << "addClass cACTION_CLI_SET_FLAG_STATE failed";
+            isOK = false;
+            break;
+        }
+
+        int8_t new_flag_state = request_in->flag_state();
+        database.set_new_flag_state(new_flag_state);
+        int8_t updated_flag_state = database.get_flag_state();
+
+        currentValue = updated_flag_state;
+
+        break;
+    }
     case beerocks_message::ACTION_CLI_HOSTAP_STATS_MEASUREMENT: {
         auto request_in =
             beerocks_header->addClass<beerocks_message::cACTION_CLI_HOSTAP_STATS_MEASUREMENT>();

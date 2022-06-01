@@ -111,6 +111,8 @@ void cli_socket::setFunctionsMapAndArray()
     insertCommandToMap("dump_node_info", "<mac_address>", "print given node info",
                        static_cast<pFunction>(&cli_socket::dump_node_info_caller), 1, 1,
                        STRING_ARG);
+    insertCommandToMap("set_flag_state", "[<1 or 0>]", "sets/prints the flag state",
+                       static_cast<pFunction>(&cli_socket::set_flag_state_caller), 1, 1, INT_ARG);
     insertCommandToMap(
         "cross_rx_rssi_measurement", "<client_mac> <hostap_mac> <center_frequency>",
         "initiate a cross rx_rssi measurement of given 'client mac' and  'hostap_mac' ",
@@ -291,6 +293,13 @@ int cli_socket::dump_node_info_caller(int numOfArgs)
     if (numOfArgs < 1)
         return -1;
     return dump_node_info(args.stringArgs[0]);
+}
+
+int cli_socket::set_flag_state_caller(int numOfArgs)
+{
+    if (numOfArgs < 1)
+        return -1;
+    return set_flag_state(args.intArgs[0]);
 }
 
 int cli_socket::cross_rx_rssi_measurement_caller(int numOfArgs)
@@ -496,6 +505,18 @@ int cli_socket::dump_node_info(std::string mac)
 
     request->mac() = tlvf::mac_from_string(mac);
     wait_response  = true;
+    message_com::send_cmdu(master_socket, cmdu_tx);
+    waitResponseReady();
+    return 0;
+}
+
+int cli_socket::set_flag_state(int8_t flag_state)
+{
+    auto request =
+        message_com::create_vs_message<beerocks_message::cACTION_CLI_SET_FLAG_STATE>(cmdu_tx);
+
+    request->flag_state() = flag_state;
+    wait_response         = true;
     message_com::send_cmdu(master_socket, cmdu_tx);
     waitResponseReady();
     return 0;
