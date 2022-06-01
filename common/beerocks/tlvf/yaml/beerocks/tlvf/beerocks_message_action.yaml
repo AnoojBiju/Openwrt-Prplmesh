@@ -336,8 +336,9 @@ eActionOp_CLI:
   ACTION_CLI_HOSTAP_SET_NEIGHBOR_11K_REQUEST: 123
   ACTION_CLI_HOSTAP_REMOVE_NEIGHBOR_11K_REQUEST: 124
   ACTION_CLI_HOSTAP_STATS_MEASUREMENT: 125
+  ACTION_CLI_SET_FLAG_STATE: 126
 
-  ACTION_CLI_ENUM_END: 126
+  ACTION_CLI_ENUM_END: 127
 
 ####################################################
 ####################################################

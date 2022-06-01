@@ -51,6 +51,8 @@ private:
 
     int dump_node_info_caller(int numOfArgs);
 
+    int set_flag_state_caller(int numOfArgs);
+
     int cross_rx_rssi_measurement_caller(int numOfArgs);
 
     int steer_client_caller(int numOfArgs);
@@ -88,6 +90,8 @@ private:
     int enable_diagnostics_measurements(int8_t isEnable = -1);
 
     int dump_node_info(std::string mac);
+
+    int set_flag_state(int8_t flag_state);
 
     int cross_rx_rssi_measurement(std::string client_mac, std::string hostap_mac,
                                   uint16_t center_frequency = 0);

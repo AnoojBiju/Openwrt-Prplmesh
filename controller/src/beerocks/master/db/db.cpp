@@ -5019,6 +5019,10 @@ bool db::assign_dhcp_task_id(int new_task_id)
     return true;
 }
 
+int8_t db::get_flag_state() { return flag_state; }
+
+void db::set_new_flag_state(int8_t new_flag_state) { flag_state = new_flag_state; }
+
 int db::get_dhcp_task_id() { return dhcp_task_id; }
 
 bool db::assign_statistics_polling_task_id(int new_task_id)
