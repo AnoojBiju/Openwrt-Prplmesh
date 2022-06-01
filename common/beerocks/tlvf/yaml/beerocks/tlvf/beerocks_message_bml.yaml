@@ -537,3 +537,31 @@ cACTION_BML_GET_CLIENT_ROAMING_11K_SUPPORT_REQUEST:
 cACTION_BML_GET_CLIENT_ROAMING_11K_SUPPORT_RESPONSE:
   _type: class
   isEnable: uint8_t
+
+cACTION_BML_SET_SELECTION_CHANNEL_POOL_REQUEST:
+  _type: class
+  radio_mac: sMacAddr
+  channel_pool_size:
+    _type: int8_t
+    _value: 0
+  channel_pool:
+    _type: uint8_t
+    _length: ["beerocks::message::SUPPORTED_CHANNELS_LENGTH"]
+
+cACTION_BML_SET_SELECTION_CHANNEL_POOL_RESPONSE:
+  _type: class
+  success: uint8_t
+
+cACTION_BML_GET_SELECTION_CHANNEL_POOL_REQUEST:
+  _type: class
+  radio_mac: sMacAddr
+
+cACTION_BML_GET_SELECTION_CHANNEL_POOL_RESPONSE:
+  _type: class
+  success: uint8_t
+  channel_pool_size:
+    _type: int8_t
+    _value: 0
+  channel_pool:
+    _type: uint8_t
+    _length: ["beerocks::message::SUPPORTED_CHANNELS_LENGTH"]
