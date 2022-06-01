@@ -1669,26 +1669,33 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
                   << ", bandwidth=" << request->bandwidth()
                   << ", csa_count=" << request->csa_count();
 
-        auto operating_class = wireless_utils::get_operating_class_by_channel(
-            beerocks::message::sWifiChannel(request->channel(), request->bandwidth()));
-        if (operating_class == 0) {
-            LOG(ERROR) << "channel #" << request->channel() << " and bandwidth "
-                       << beerocks::utils::convert_bandwidth_to_int(request->bandwidth())
-                       << ", do not have a valid Operating Class";
-            response->code() = uint8_t(1); //Failure
-            controller_ctx->send_cmdu(sd, cmdu_tx);
-            return;
-        }
+        uint8_t operating_class = 0;
+        if (request->channel() == 0) {
+            LOG(INFO) << "On-Demand-Auto Channel-Selection request detected";
+        } else {
+            operating_class = wireless_utils::get_operating_class_by_channel(
+                beerocks::message::sWifiChannel(request->channel(), request->bandwidth()));
+            if (operating_class == 0) {
+                LOG(ERROR) << "channel #" << request->channel() << " and bandwidth "
+                           << beerocks::utils::convert_bandwidth_to_int(request->bandwidth())
+                           << ", do not have a valid Operating Class";
 
-        int8_t channel_preference = database.get_channel_preference(
-            request->radio_mac(), operating_class, request->channel());
-        if (channel_preference <= 0) {
-            LOG(ERROR) << "channel #" << request->channel() << " and bandwidth "
-                       << beerocks::utils::convert_bandwidth_to_int(request->bandwidth())
-                       << ", are " << ((channel_preference == 0) ? "Non-Operable" : "Invalid");
-            response->code() = uint8_t(1); //Failure
-            controller_ctx->send_cmdu(sd, cmdu_tx);
-            break;
+                response->code() = uint8_t(1); //Failure
+                controller_ctx->send_cmdu(sd, cmdu_tx);
+                return;
+            }
+
+            int8_t channel_preference = database.get_channel_preference(
+                request->radio_mac(), operating_class, request->channel());
+            if (channel_preference <= 0) {
+                LOG(ERROR) << "channel #" << request->channel() << " and bandwidth "
+                           << beerocks::utils::convert_bandwidth_to_int(request->bandwidth())
+                           << ", are " << ((channel_preference == 0) ? "Non-Operable" : "Invalid");
+
+                response->code() = uint8_t(1); //Failure
+                controller_ctx->send_cmdu(sd, cmdu_tx);
+                break;
+            }
         }
 
         LOG(DEBUG) << "Triggering Channel-Selection in task";
