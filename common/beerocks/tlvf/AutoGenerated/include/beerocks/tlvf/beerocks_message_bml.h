@@ -2340,6 +2340,104 @@ class cACTION_BML_GET_CLIENT_ROAMING_11K_SUPPORT_RESPONSE : public BaseClass
         uint8_t* m_isEnable = nullptr;
 };
 
+class cACTION_BML_SET_SELECTION_CHANNEL_POOL_REQUEST : public BaseClass
+{
+    public:
+        cACTION_BML_SET_SELECTION_CHANNEL_POOL_REQUEST(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_BML_SET_SELECTION_CHANNEL_POOL_REQUEST(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_BML_SET_SELECTION_CHANNEL_POOL_REQUEST();
+
+        static eActionOp_BML get_action_op(){
+            return (eActionOp_BML)(ACTION_BML_SET_SELECTION_CHANNEL_POOL_REQUEST);
+        }
+        sMacAddr& radio_mac();
+        int8_t& channel_pool_size();
+        uint8_t* channel_pool(size_t idx = 0);
+        bool set_channel_pool(const void* buffer, size_t size);
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_BML* m_action_op = nullptr;
+        sMacAddr* m_radio_mac = nullptr;
+        int8_t* m_channel_pool_size = nullptr;
+        uint8_t* m_channel_pool = nullptr;
+        size_t m_channel_pool_idx__ = 0;
+        int m_lock_order_counter__ = 0;
+};
+
+class cACTION_BML_SET_SELECTION_CHANNEL_POOL_RESPONSE : public BaseClass
+{
+    public:
+        cACTION_BML_SET_SELECTION_CHANNEL_POOL_RESPONSE(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_BML_SET_SELECTION_CHANNEL_POOL_RESPONSE(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_BML_SET_SELECTION_CHANNEL_POOL_RESPONSE();
+
+        static eActionOp_BML get_action_op(){
+            return (eActionOp_BML)(ACTION_BML_SET_SELECTION_CHANNEL_POOL_RESPONSE);
+        }
+        uint8_t& success();
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_BML* m_action_op = nullptr;
+        uint8_t* m_success = nullptr;
+};
+
+class cACTION_BML_GET_SELECTION_CHANNEL_POOL_REQUEST : public BaseClass
+{
+    public:
+        cACTION_BML_GET_SELECTION_CHANNEL_POOL_REQUEST(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_BML_GET_SELECTION_CHANNEL_POOL_REQUEST(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_BML_GET_SELECTION_CHANNEL_POOL_REQUEST();
+
+        static eActionOp_BML get_action_op(){
+            return (eActionOp_BML)(ACTION_BML_GET_SELECTION_CHANNEL_POOL_REQUEST);
+        }
+        sMacAddr& radio_mac();
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_BML* m_action_op = nullptr;
+        sMacAddr* m_radio_mac = nullptr;
+};
+
+class cACTION_BML_GET_SELECTION_CHANNEL_POOL_RESPONSE : public BaseClass
+{
+    public:
+        cACTION_BML_GET_SELECTION_CHANNEL_POOL_RESPONSE(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_BML_GET_SELECTION_CHANNEL_POOL_RESPONSE(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_BML_GET_SELECTION_CHANNEL_POOL_RESPONSE();
+
+        static eActionOp_BML get_action_op(){
+            return (eActionOp_BML)(ACTION_BML_GET_SELECTION_CHANNEL_POOL_RESPONSE);
+        }
+        uint8_t& success();
+        int8_t& channel_pool_size();
+        uint8_t* channel_pool(size_t idx = 0);
+        bool set_channel_pool(const void* buffer, size_t size);
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_BML* m_action_op = nullptr;
+        uint8_t* m_success = nullptr;
+        int8_t* m_channel_pool_size = nullptr;
+        uint8_t* m_channel_pool = nullptr;
+        size_t m_channel_pool_idx__ = 0;
+        int m_lock_order_counter__ = 0;
+};
+
 }; // close namespace: beerocks_message
 
 #endif //_BEEROCKS/TLVF_BEEROCKS_MESSAGE_BML_H_
