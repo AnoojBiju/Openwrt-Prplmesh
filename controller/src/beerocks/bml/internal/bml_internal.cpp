@@ -1303,6 +1303,73 @@ int bml_internal::process_cmdu_header(std::shared_ptr<beerocks_header> beerocks_
                              << " response, but no one is waiting...";
             }
         } break;
+        case beerocks_message::ACTION_BML_SET_SELECTION_CHANNEL_POOL_RESPONSE: {
+            LOG(DEBUG) << "ACTION_BML_SET_SELECTION_CHANNEL_POOL_RESPONSE received";
+
+            auto response =
+                beerocks_header
+                    ->addClass<beerocks_message::cACTION_BML_SET_SELECTION_CHANNEL_POOL_RESPONSE>();
+            if (!response) {
+                LOG(ERROR) << "addClass cACTION_BML_SET_SELECTION_CHANNEL_POOL_RESPONSE failed";
+                return (-BML_RET_OP_FAILED);
+            }
+
+            if (response->success() != 0) {
+                LOG(ERROR) << "cACTION_BML_SET_SELECTION_CHANNEL_POOL_RESPONSE failed with error: "
+                           << response->success();
+            }
+
+            if (!wake_up(beerocks_message::ACTION_BML_SET_SELECTION_CHANNEL_POOL_REQUEST,
+                         response->success())) {
+                LOG(WARNING) << "Received ACTION_BML_SET_SELECTION_CHANNEL_POOL_REQUEST response, "
+                                "but no one is waiting...";
+            }
+        } break;
+        case beerocks_message::ACTION_BML_GET_SELECTION_CHANNEL_POOL_RESPONSE: {
+            LOG(DEBUG) << "ACTION_BML_GET_SELECTION_CHANNEL_POOL_RESPONSE received";
+
+            auto response =
+                beerocks_header
+                    ->addClass<beerocks_message::cACTION_BML_GET_SELECTION_CHANNEL_POOL_RESPONSE>();
+            if (!response) {
+                LOG(ERROR) << "addClass cACTION_BML_GET_SELECTION_CHANNEL_POOL_RESPONSE failed";
+                return (-BML_RET_OP_FAILED);
+            }
+
+            if (!m_prmSelectionPoolGet) {
+                LOG(WARNING)
+                    << "Received cACTION_BML_GET_SELECTION_CHANNEL_POOL_RESPONSE response, "
+                    << "but no one is waiting...";
+                break;
+            }
+
+            if (!m_selection_pool || !m_selection_pool_size) {
+                LOG(ERROR) << "The pointer to the channel pool data buffer is null!";
+                m_prmSelectionPoolGet->set_value(false);
+                return (-BML_RET_INVALID_ARGS);
+            }
+
+            if (response->success() != 0) {
+                LOG(ERROR) << "GET_SELECTION_CHANNEL_POOL failed with error: "
+                           << response->success();
+                m_prmSelectionPoolGet->set_value(false);
+                break;
+            }
+
+            auto channel_pool_size = response->channel_pool_size();
+            LOG(INFO) << "Received " << (int)channel_pool_size << " channels from the controller";
+            // Store the received data.
+            if (channel_pool_size == 0) {
+                LOG(DEBUG) << "Received an empty channel pool!";
+                m_prmSelectionPoolGet->set_value(true);
+                break;
+            }
+
+            channel_pool_size = std::min((int)channel_pool_size, (int)*m_selection_pool_size);
+            m_selection_pool->insert(m_selection_pool->begin(), response->channel_pool(),
+                                     response->channel_pool() + channel_pool_size);
+            m_prmSelectionPoolGet->set_value(true);
+        } break;
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
         case beerocks_message::ACTION_BML_STEERING_EVENTS_UPDATE: {
             auto response =
@@ -3749,6 +3816,121 @@ int bml_internal::channel_selection(const sMacAddr &radio_mac, uint8_t channel, 
         return result;
     }
 
+    return BML_RET_OK;
+}
+
+int bml_internal::set_selection_channel_pool(const sMacAddr &radio_mac,
+                                             const unsigned int *channel_pool,
+                                             const int channel_pool_size)
+{
+    auto request = message_com::create_vs_message<
+        beerocks_message::cACTION_BML_SET_SELECTION_CHANNEL_POOL_REQUEST>(cmdu_tx);
+
+    if (request == nullptr) {
+        LOG(ERROR) << "Failed building ACTION_BML_SET_SELECTION_CHANNEL_POOL_REQUEST message!";
+        return (-BML_RET_OP_FAILED);
+    }
+
+    request->radio_mac()         = radio_mac;
+    request->channel_pool_size() = channel_pool_size;
+    if (channel_pool_size > 0 && channel_pool_size <= BML_CHANNEL_SCAN_MAX_CHANNEL_POOL_SIZE &&
+        channel_pool) {
+        std::copy_n(channel_pool, channel_pool_size, request->channel_pool());
+    }
+
+    int result = 0;
+    if (send_bml_cmdu(result, request->get_action_op()) != BML_RET_OK) {
+        LOG(ERROR) << "send_bml_cmdu failed";
+        return (-BML_RET_OP_FAILED);
+    }
+
+    if (result != 0) {
+        LOG(ERROR) << "cACTION_BML_SET_SELECTION_CHANNEL_POOL_REQUEST returned error code:"
+                   << result;
+        return result;
+    }
+
+    return BML_RET_OK;
+}
+
+int bml_internal::get_selection_channel_pool(const sMacAddr &radio_mac, unsigned int *channel_pool,
+                                             int *channel_pool_size)
+{
+    // Invalid input
+    if (!channel_pool || !channel_pool_size) {
+        LOG(ERROR) << "Invalid input: null pointers";
+        return (-BML_RET_INVALID_DATA);
+    }
+
+    // Not enough space for even one result
+    if (*channel_pool_size < (int)(sizeof(int))) {
+        LOG(ERROR) << "Invalid input: insufficient minimal space for results";
+        return (-BML_RET_INVALID_DATA);
+    }
+
+    // If the socket is not valid, attempt to re-establish the connection
+    if (!m_sockMaster) {
+        int iRet = connect_to_master();
+        if (iRet != BML_RET_OK) {
+            LOG(ERROR) << " Unable to create context, connect_to_master failed!";
+            return iRet;
+        }
+    }
+
+    // Initialize the promise for receiving the response
+    beerocks::promise<bool> prmSelectionPoolGet;
+    m_prmSelectionPoolGet = &prmSelectionPoolGet;
+    int iOpTimeout        = RESPONSE_TIMEOUT; // Default timeout
+    auto channel_pool_vec = std::vector<uint8_t>();
+    m_selection_pool      = &channel_pool_vec;
+    m_selection_pool_size = (uint32_t *)channel_pool_size;
+
+    auto request = message_com::create_vs_message<
+        beerocks_message::cACTION_BML_GET_SELECTION_CHANNEL_POOL_REQUEST>(cmdu_tx);
+
+    if (!request) {
+        LOG(ERROR) << "Failed building cACTION_BML_GET_SELECTION_CHANNEL_POOL_REQUEST message!";
+        return (-BML_RET_OP_FAILED);
+    }
+
+    request->radio_mac() = radio_mac;
+    // Build and send the message
+    if (!message_com::send_cmdu(m_sockMaster, cmdu_tx)) {
+        LOG(ERROR) << "Failed sending param get message!";
+        m_prmSelectionPoolGet = nullptr;
+        m_selection_pool      = nullptr;
+        m_client_list_size    = nullptr;
+        return (-BML_RET_OP_FAILED);
+    }
+    LOG(DEBUG) << "cACTION_BML_CLIENT_GET_CLIENT_LIST_REQUEST sent";
+
+    int iRet = BML_RET_OK;
+
+    if (!m_prmSelectionPoolGet->wait_for(iOpTimeout)) {
+        LOG(WARNING) << "Timeout while waiting for client list get response...";
+        iRet = -BML_RET_TIMEOUT;
+    }
+
+    // Clear the get channel pool members
+    m_selection_pool   = nullptr;
+    m_client_list_size = nullptr;
+
+    // Clear the promise holder
+    m_prmSelectionPoolGet = nullptr;
+
+    if (iRet != BML_RET_OK) {
+        LOG(ERROR) << "Get channel pool request returned with error code:" << iRet;
+        return (iRet);
+    }
+
+    bool result = prmSelectionPoolGet.get_value();
+    LOG(DEBUG) << "Promise resolved, received " << channel_pool_vec.size() << " channels";
+    if (!result) {
+        LOG(ERROR) << "Get channel pool request failed";
+        return (-BML_RET_OP_FAILED);
+    }
+
+    std::copy(channel_pool_vec.begin(), channel_pool_vec.end(), channel_pool);
     return BML_RET_OK;
 }
 
