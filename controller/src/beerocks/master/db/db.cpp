@@ -3052,7 +3052,7 @@ bool db::set_channel_scan_pool(const sMacAddr &mac, const std::unordered_set<uin
         return false;
     }
 
-    (single_scan ? radio->single_scan_config : radio->continuous_scan_config).channel_pool =
+    (single_scan ? radio->single_scan_config : radio->continuous_scan_config).active_channel_pool =
         channel_pool;
 
     LOG(DEBUG) << (single_scan ? "single" : "continuous")
@@ -3071,7 +3071,8 @@ const std::unordered_set<uint8_t> &db::get_channel_scan_pool(const sMacAddr &mac
         return empty;
     }
 
-    return (single_scan ? radio->single_scan_config : radio->continuous_scan_config).channel_pool;
+    return (single_scan ? radio->single_scan_config : radio->continuous_scan_config)
+        .active_channel_pool;
 }
 
 bool db::is_channel_in_pool(const sMacAddr &mac, uint8_t channel, bool single_scan)
@@ -3082,8 +3083,8 @@ bool db::is_channel_in_pool(const sMacAddr &mac, uint8_t channel, bool single_sc
         return false;
     }
 
-    auto &pool =
-        (single_scan ? radio->single_scan_config : radio->continuous_scan_config).channel_pool;
+    auto &pool = (single_scan ? radio->single_scan_config : radio->continuous_scan_config)
+                     .active_channel_pool;
     return pool.find(channel) != pool.end();
 }
 
@@ -3217,6 +3218,46 @@ bool db::get_pool_of_all_supported_channels(std::unordered_set<uint8_t> &channel
     std::transform(subset_20MHz_channels.begin(), subset_20MHz_channels.end(),
                    std::inserter(channel_pool_set, channel_pool_set.end()),
                    [](const beerocks::message::sWifiChannel &c) -> uint8_t { return c.channel; });
+    return true;
+}
+
+bool db::get_selection_channel_pool(const sMacAddr &ruid,
+                                    std::unordered_set<uint8_t> &channel_pool_set)
+{
+    auto radio = get_hostap(ruid);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << ruid;
+        return false;
+    }
+    if (radio->single_scan_config.default_channel_pool.empty()) {
+        LOG(INFO) << "Getting static channel pool for " << radio->iface_name;
+        const auto &pool_str = config.default_channel_pools[radio->iface_name];
+        LOG(INFO) << "Static channel pool for " << radio->iface_name << " is: " << pool_str;
+        const auto &channels_str = string_utils::str_split(pool_str, ',');
+        for (const auto &channel_str : channels_str) {
+            LOG(INFO) << "Adding channel " << channel_str << " to the dynamic pool";
+            radio->single_scan_config.default_channel_pool.insert(
+                beerocks::string_utils::stoi(channel_str));
+        }
+    }
+    channel_pool_set = radio->single_scan_config.default_channel_pool;
+    return true;
+}
+
+bool db::set_selection_channel_pool(const sMacAddr &ruid,
+                                    const std::unordered_set<uint8_t> &channel_pool)
+{
+    auto radio = get_hostap(ruid);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << ruid;
+        return false;
+    }
+    if (!is_channel_scan_pool_supported(ruid, channel_pool)) {
+        LOG(ERROR) << "Channel pool is not supported!";
+        return false;
+    }
+    radio->single_scan_config.default_channel_pool.clear();
+    radio->single_scan_config.default_channel_pool.insert(channel_pool.begin(), channel_pool.end());
     return true;
 }
 

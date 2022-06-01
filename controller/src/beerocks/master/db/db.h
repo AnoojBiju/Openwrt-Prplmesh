@@ -92,6 +92,7 @@ public:
         std::string model;
         std::string load_steer_on_vaps;
         std::vector<uint8_t> global_restricted_channels;
+        std::unordered_map<std::string, std::string> default_channel_pools;
         int ucc_listener_port;
         int diagnostics_measurements_polling_rate_sec;
         int ire_rssi_report_rate_sec;
@@ -1382,7 +1383,14 @@ public:
      */
     bool get_pool_of_all_supported_channels(std::unordered_set<uint8_t> &channel_pool_set,
                                             const sMacAddr &radio_mac);
+    /**
+     * 
+     */
+    bool get_selection_channel_pool(const sMacAddr &ruid,
+                                    std::unordered_set<uint8_t> &channel_pool_set);
 
+    bool set_selection_channel_pool(const sMacAddr &ruid,
+                                    const std::unordered_set<uint8_t> &channel_pool);
     /**
      * @brief
      *
