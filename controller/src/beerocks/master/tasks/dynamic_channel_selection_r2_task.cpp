@@ -15,7 +15,7 @@
 #include <easylogging++.h>
 #include <memory>
 
-#define CHANNEL_SCAN_REPORT_WAIT_TIME_SEC 300 //5 Min
+constexpr std::chrono::seconds CHANNEL_SCAN_REPORT_WAIT_TIME(300);
 constexpr std::chrono::minutes CHANNEL_PREFERENCE_EXPIRATION(5);
 
 #define FSM_MOVE_SCAN_STATE(new_state)                                                             \
@@ -86,9 +86,17 @@ void dynamic_channel_selection_r2_task::work()
             FSM_MOVE_SELECTION_STATE(eSelectionState::WAIT_FOR_SELECTION_RESPONSE);
         }
     } break;
+    case eSelectionState::WAIT_FOR_SCAN: {
+        if (m_selection_timeout < std::chrono::steady_clock::now()) {
+            LOG(ERROR) << "Timed out while waiting for the Channel Scan to complete!";
+            handle_timeout_in_selection_flow();
+            FSM_MOVE_SELECTION_STATE(eSelectionState::IDLE);
+        }
+    } break;
     case eSelectionState::WAIT_FOR_PREFERENCE: {
-        if (m_preference_timeout < std::chrono::steady_clock::now()) {
-            LOG(ERROR) << "Timed out  while waiting for Channel Preference Report!";
+        if (m_selection_timeout < std::chrono::steady_clock::now()) {
+            LOG(ERROR) << "Timed out while waiting for Channel Preference Report!";
+            handle_timeout_in_selection_flow();
             // Without a newer preference, the controller will use the agent's latest received preference
             FSM_MOVE_SELECTION_STATE(eSelectionState::IDLE);
         }
@@ -96,6 +104,7 @@ void dynamic_channel_selection_r2_task::work()
     case eSelectionState::WAIT_FOR_SELECTION_RESPONSE: {
         if (m_selection_timeout < std::chrono::steady_clock::now()) {
             LOG(ERROR) << "Timed out while waiting for Channel Selection Response!";
+            handle_timeout_in_selection_flow();
             FSM_MOVE_SELECTION_STATE(eSelectionState::IDLE);
         }
     } break;
@@ -556,8 +565,7 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
         }
 
         agent.second.status  = eAgentStatus::BUSY;
-        agent.second.timeout = std::chrono::system_clock::now() +
-                               std::chrono::seconds(CHANNEL_SCAN_REPORT_WAIT_TIME_SEC);
+        agent.second.timeout = std::chrono::system_clock::now() + CHANNEL_SCAN_REPORT_WAIT_TIME;
         LOG(DEBUG) << "Triggered a scan for agent " << agent_mac;
     }
     return true;
@@ -671,34 +679,62 @@ bool dynamic_channel_selection_r2_task::handle_on_demand_channel_selection_reque
         return false;
     }
 
-    if (m_selection_state != eSelectionState::WAIT_FOR_PREFERENCE) {
-        const auto last_preference = database.get_last_preference_report_change(radio_mac);
-        const auto curr_timestamp  = std::chrono::steady_clock::now();
-        if ((last_preference + CHANNEL_PREFERENCE_EXPIRATION) < curr_timestamp) {
-            LOG(DEBUG) << "Preference Report is outdated, requesting a new preference from agent "
-                       << agent_mac;
-            send_channel_preference_query(agent_mac);
-            m_preference_timeout = std::chrono::steady_clock::now() + CHANNEL_PREFERENCE_TIMEOUT;
-            FSM_MOVE_SELECTION_STATE(eSelectionState::WAIT_FOR_PREFERENCE);
-        }
-    }
-    auto requested_channel = channel;
-    if (wireless_utils::is_operating_class_using_central_channel(operating_class)) {
-        auto bandwidth         = wireless_utils::operating_class_to_bandwidth(operating_class);
-        auto source_channel_it = wireless_utils::channels_table_5g.find(channel);
-        if (source_channel_it == wireless_utils::channels_table_5g.end()) {
-            LOG(ERROR) << "Couldn't find source channel " << channel << " for overlapping channels";
+    if (channel == 0) {
+        std::unordered_set<uint8_t> channel_pool_set;
+        if (!database.get_selection_channel_pool(radio_mac, channel_pool_set)) {
+            LOG(ERROR) << "set_channel_scan_pool failed";
             return false;
         }
-        requested_channel = source_channel_it->second.at(bandwidth).center_channel;
-    }
+        if (!database.set_channel_scan_pool(radio_mac, channel_pool_set, true)) {
+            LOG(ERROR) << "set_channel_scan_pool failed";
+            return false;
+        }
+        if (!database.set_channel_scan_dwell_time_msec(radio_mac, 40, true)) {
+            LOG(ERROR) << "set_channel_scan_dwell_time_msec failed";
+            return false;
+        }
 
-    // Set the selection request for the agent & radio.
-    // If doesn't exist unordered_map on set will create a new one.
-    // If it does exist, will be overridden as only the latest request should be handled.
-    m_pending_selection_requests[agent_mac][radio_mac] =
-        std::make_shared<sOnDemandChannelSelectionRequest>(requested_channel, operating_class,
-                                                           csa_count);
+        dynamic_channel_selection_r2_task::sSingleScanRequestEvent new_event;
+        new_event.radio_mac = radio_mac;
+        handle_single_scan_request_event(new_event);
+
+        m_selection_timeout = std::chrono::steady_clock::now() + CHANNEL_SCAN_REPORT_WAIT_TIME;
+        FSM_MOVE_SELECTION_STATE(eSelectionState::WAIT_FOR_SCAN);
+
+        m_pending_selection_requests[agent_mac][radio_mac] =
+            std::make_shared<sOnDemandAutoChannelSelectionRequest>(channel_pool_set, csa_count);
+    } else {
+        if (m_selection_state != eSelectionState::WAIT_FOR_PREFERENCE) {
+            const auto last_preference = database.get_last_preference_report_change(radio_mac);
+            const auto curr_timestamp  = std::chrono::steady_clock::now();
+            if ((last_preference + CHANNEL_PREFERENCE_EXPIRATION) < curr_timestamp) {
+                LOG(DEBUG)
+                    << "Preference Report is outdated, requesting a new preference from agent "
+                    << agent_mac;
+                send_channel_preference_query(agent_mac);
+                m_selection_timeout = std::chrono::steady_clock::now() + CHANNEL_PREFERENCE_TIMEOUT;
+                FSM_MOVE_SELECTION_STATE(eSelectionState::WAIT_FOR_PREFERENCE);
+            }
+        }
+        auto requested_channel = channel;
+        if (wireless_utils::is_operating_class_using_central_channel(operating_class)) {
+            auto bandwidth         = wireless_utils::operating_class_to_bandwidth(operating_class);
+            auto source_channel_it = wireless_utils::channels_table_5g.find(channel);
+            if (source_channel_it == wireless_utils::channels_table_5g.end()) {
+                LOG(ERROR) << "Couldn't find source channel " << channel
+                           << " for overlapping channels";
+                return false;
+            }
+            requested_channel = source_channel_it->second.at(bandwidth).center_channel;
+        }
+
+        // Set the selection request for the agent & radio.
+        // If doesn't exist unordered_map on set will create a new one.
+        // If it does exist, will be overridden as only the latest request should be handled.
+        m_pending_selection_requests[agent_mac][radio_mac] =
+            std::make_shared<sOnDemandChannelSelectionRequest>(requested_channel, operating_class,
+                                                               csa_count);
+    }
     return true;
 }
 
@@ -929,6 +965,13 @@ bool dynamic_channel_selection_r2_task::handle_scan_report_event(
         agent_status.status = eAgentStatus::IDLE;
     }
 
+    // Check if On-Demand-Auto is pending
+    if (m_selection_state == eSelectionState::WAIT_FOR_SCAN) {
+        send_channel_preference_query(agent_mac);
+        m_selection_timeout = std::chrono::steady_clock::now() + CHANNEL_PREFERENCE_TIMEOUT;
+        FSM_MOVE_SELECTION_STATE(eSelectionState::WAIT_FOR_PREFERENCE);
+    }
+
     return true;
 }
 
@@ -989,7 +1032,7 @@ bool dynamic_channel_selection_r2_task::send_selection_requests()
     auto create_on_demand_channel_preference_tlv =
         [&, this](const sMacAddr &radio_mac,
                   const std::shared_ptr<sOnDemandChannelSelectionRequest> request_details,
-                  const radio_preference_tlv_format &formated_preference) -> bool {
+                  const radio_preference_tlv_format &formatted_preference) -> bool {
         auto channel_preference_tlv = cmdu_tx.addClass<wfa_map::tlvChannelPreference>();
         if (!channel_preference_tlv) {
             LOG(ERROR) << "addClass ieee1905_1::tlvChannelPreference has failed";
@@ -998,7 +1041,7 @@ bool dynamic_channel_selection_r2_task::send_selection_requests()
 
         channel_preference_tlv->radio_uid() = radio_mac;
 
-        for (const auto &iter : formated_preference) {
+        for (const auto &iter : formatted_preference) {
             const auto operating_class     = iter.first.first;
             const auto reported_preference = iter.first.second;
             const auto &channel_set        = iter.second;
@@ -1045,10 +1088,67 @@ bool dynamic_channel_selection_r2_task::send_selection_requests()
         return true;
     };
 
+    auto create_on_demand_auto_channel_preference_tlv =
+        [&, this](const sMacAddr &radio_mac,
+                  const std::shared_ptr<sOnDemandAutoChannelSelectionRequest> request_details,
+                  const radio_preference_tlv_format &formatted_preference) -> bool {
+        auto channel_preference_tlv = cmdu_tx.addClass<wfa_map::tlvChannelPreference>();
+        if (!channel_preference_tlv) {
+            LOG(ERROR) << "addClass ieee1905_1::tlvChannelPreference has failed";
+            return false;
+        }
+
+        channel_preference_tlv->radio_uid() = radio_mac;
+        for (const auto &iter : formatted_preference) {
+            const auto operating_class     = iter.first.first;
+            const auto reported_preference = iter.first.second;
+            const auto &channel_set        = iter.second;
+
+            // If reported preference is In-Operable send it as is, but if it is higher return it as lowest
+            // This is so the radio will pick our On-Demand channel all the time
+            const auto preference =
+                (reported_preference ==
+                 (uint8_t)beerocks::eChannelPreferenceRankingConsts::NON_OPERABLE)
+                    ? (uint8_t)beerocks::eChannelPreferenceRankingConsts::NON_OPERABLE
+                    : (uint8_t)beerocks::eChannelPreferenceRankingConsts::LOWEST;
+
+            // Create a new channel list without the requested channel
+            std::vector<uint8_t> ch_list;
+            for (const auto channel_number : channel_set) {
+                if (request_details->channel_pool.find(channel_number) ==
+                    request_details->channel_pool.end()) {
+                    ch_list.push_back(channel_number);
+                }
+                // This is one of the requested channels, do not add it, this will set it's preference as best.
+            }
+            if (ch_list.empty()) {
+                // If the channel list is empty, all of its channels are to be considered as BEST.
+                // Skip the channel as this will indicate that the operating class is as considered BEST.
+                continue;
+            }
+
+            auto operating_classes_list = channel_preference_tlv->create_operating_classes_list();
+            operating_classes_list->operating_class()  = operating_class;
+            operating_classes_list->flags().preference = preference;
+            if (!operating_classes_list->set_channel_list(ch_list.data(), ch_list.size())) {
+                LOG(ERROR) << "set_channel_list() failed";
+                return false;
+            }
+
+            // Push operating class object to the list of operating class objects
+            if (!channel_preference_tlv->add_operating_classes_list(operating_classes_list)) {
+                LOG(ERROR) << "add_operating_classes_list() has failed!";
+                return false;
+            }
+        }
+
+        return true;
+    };
+
     auto create_channel_preference_tlv =
         [&, this](const sMacAddr &radio_mac,
                   const std::shared_ptr<sChannelSelectionRequest> request_details,
-                  const radio_preference_tlv_format &formated_preference) -> bool {
+                  const radio_preference_tlv_format &formatted_preference) -> bool {
         auto channel_preference_tlv = cmdu_tx.addClass<wfa_map::tlvChannelPreference>();
         if (!channel_preference_tlv) {
             LOG(ERROR) << "addClass ieee1905_1::tlvChannelPreference has failed";
@@ -1057,7 +1157,7 @@ bool dynamic_channel_selection_r2_task::send_selection_requests()
 
         channel_preference_tlv->radio_uid() = radio_mac;
 
-        for (const auto &iter : formated_preference) {
+        for (const auto &iter : formatted_preference) {
             const auto operating_class     = iter.first.first;
             const auto reported_preference = iter.first.second;
             const auto &channel_set        = iter.second;
@@ -1079,6 +1179,22 @@ bool dynamic_channel_selection_r2_task::send_selection_requests()
                 return false;
             }
         }
+        return true;
+    };
+    auto create_vs_on_demand_cmdu =
+        [&, this](const sMacAddr &radio_mac,
+                  const std::shared_ptr<sChannelSelectionRequest> request_details) -> bool {
+        // Create channel scan request extended message (vendor specific tlv)
+        LOG(INFO) << "Add On-Demand VS-TLV";
+        auto on_demand_vs_tlv =
+            beerocks::message_com::add_vs_tlv<beerocks_message::tlvVsOnDemandChannelSelection>(
+                cmdu_tx);
+        if (!on_demand_vs_tlv) {
+            LOG(ERROR) << "add_vs_tlv tlvVsOnDemandChannelSelection failed";
+            return false;
+        }
+        on_demand_vs_tlv->radio_mac() = radio_mac;
+        on_demand_vs_tlv->CSA_count() = request_details->csa_count;
         return true;
     };
 
@@ -1109,17 +1225,33 @@ bool dynamic_channel_selection_r2_task::send_selection_requests()
                     LOG(ERROR) << "Failed to create Channel Preference TLV!";
                     return false;
                 }
-
                 // Create channel scan request extended message (vendor specific tlv)
                 if (database.is_prplmesh(agent_mac)) {
-                    LOG(INFO) << "Add On-Demand TLV";
-                    auto on_demand_vs_tlv = beerocks::message_com::add_vs_tlv<
-                        beerocks_message::tlvVsOnDemandChannelSelection>(cmdu_tx);
-
-                    on_demand_vs_tlv->radio_mac()       = radio_mac;
-                    on_demand_vs_tlv->channel()         = on_demand_details->channel_number;
-                    on_demand_vs_tlv->operating_class() = on_demand_details->operating_class;
-                    on_demand_vs_tlv->CSA_count()       = on_demand_details->csa_count;
+                    LOG(INFO) << "Agent " << agent_mac << " is prplMesh";
+                    if (!create_vs_on_demand_cmdu(radio_mac, request_details)) {
+                        LOG(ERROR) << "Failed to create On-Demand VS tlv!";
+                        return false;
+                    }
+                } else {
+                    LOG(INFO) << "non-prplmesh agent " << agent_mac
+                              << ", skip tlvVsChannelScanRequestExtension creation";
+                }
+            } else if (const auto on_demand_details =
+                           std::dynamic_pointer_cast<sOnDemandAutoChannelSelectionRequest>(
+                               request_details)) {
+                // Create Channel-Preference TLV aligned with On-Demand-Auto requirements.
+                if (!create_on_demand_auto_channel_preference_tlv(radio_mac, on_demand_details,
+                                                                  preference_report)) {
+                    LOG(ERROR) << "Failed to create Channel Preference TLV!";
+                    return false;
+                }
+                // Create channel scan request extended message (vendor specific tlv)
+                if (database.is_prplmesh(agent_mac)) {
+                    LOG(INFO) << "Agent " << agent_mac << " is prplMesh";
+                    if (!create_vs_on_demand_cmdu(radio_mac, request_details)) {
+                        LOG(ERROR) << "Failed to create On-Demand VS tlv!";
+                        return false;
+                    }
                 } else {
                     LOG(INFO) << "non-prplmesh agent " << agent_mac
                               << ", skip tlvVsChannelScanRequestExtension creation";
@@ -1161,8 +1293,12 @@ bool dynamic_channel_selection_r2_task::remove_invalid_channel_selection_request
             if (const auto on_demand_details =
                     std::dynamic_pointer_cast<sOnDemandChannelSelectionRequest>(
                         radio_iter.second)) {
-                const auto operating_class    = on_demand_details->operating_class;
-                const auto channel_number     = on_demand_details->channel_number;
+                const auto operating_class = on_demand_details->operating_class;
+                const auto channel_number  = on_demand_details->channel_number;
+                if (channel_number == 0) {
+                    // On-Demand-Auto is always valid, no need to check
+                    continue;
+                }
                 const auto channel_preference = database.get_channel_preference(
                     radio_mac, operating_class, channel_number, true);
                 if (channel_preference <= 0) {
@@ -1250,6 +1386,7 @@ bool dynamic_channel_selection_r2_task::handle_timeout_in_busy_agents()
 {
     // Check all busy agents for timeout
     auto timeout_found = false;
+    std::vector<sMacAddr> agents_to_be_deleted;
     for (auto &agent : m_agents_scan_status_map) {
         auto &agent_mac    = agent.first;
         auto &agent_status = agent.second;
@@ -1312,6 +1449,11 @@ bool dynamic_channel_selection_r2_task::handle_timeout_in_busy_agents()
 
         // Clear agent status
         agent_status.status = eAgentStatus::IDLE;
+        agents_to_be_deleted.push_back(agent_mac);
+    }
+
+    for (const auto &agent_mac : agents_to_be_deleted) {
+        m_agents_scan_status_map.erase(agent_mac);
     }
 
     return timeout_found;
@@ -1555,5 +1697,16 @@ bool dynamic_channel_selection_r2_task::handle_tlv_profile2_cac_status_report(
            << "] ";
     }
     LOG(DEBUG) << ss.str();
+    return true;
+}
+
+bool dynamic_channel_selection_r2_task::handle_timeout_in_selection_flow()
+{
+    if (m_selection_state != eSelectionState::SELECTION_ABORTED) {
+        return true;
+    }
+
+    m_pending_selection_requests.clear();
+    FSM_MOVE_SELECTION_STATE(eSelectionState::IDLE);
     return true;
 }
