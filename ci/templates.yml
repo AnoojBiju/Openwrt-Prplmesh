@@ -196,12 +196,17 @@
   variables:
     EASYMESH_REVISION: "R2"
 
+.run-certification-tests-R4:
+  extends: .run-certification-tests
+  variables:
+    EASYMESH_REVISION: "R4"
+
 .certification-generic:
   interruptible: false
   # RUN_ON_DEVICE variable need to be set when extending the job
   script:
     - ci/git-clean-reset.sh ~/easymesh_cert "$(<"ci/easymesh_cert_version")"
-    - ~/easymesh_cert/run_test_file.py --verbose --log-folder logs --easymesh-revision "$EASYMESH_REVISION" --device-under-test $RUN_ON_DEVICE "${CI_JOB_NAME%%:*}"
+    - ~/easymesh_cert/run_test_file.py --verbose --log-folder logs --easymesh-revision "$EASYMESH_REVISION" --device-under-test $RUN_ON_DEVICE "${CI_JOB_NAME##*:}"
   artifacts:
     paths:
       - logs
@@ -216,25 +221,7 @@
   after_script:
     - ci/certification/R1_marvell_station.sh
 
-.certification-generic-R2:
+.certification-generic-R4:
   extends: .certification-generic
   variables:
-    EASYMESH_REVISION: "R2"
-  before_script:
-    - |
-      case "$RUN_ON_DEVICE" in
-          axepoint)
-              IMAGE_NAME="$AXEPOINT_FULLIMAGE"
-          ;;
-          nec-wx3000hp)
-              IMAGE_NAME="$NEC_WX3000HP_FULLIMAGE"
-          ;;
-          turris-omnia)
-              IMAGE_NAME="$TURRIS_OMNIA_FULLIMAGE"
-          ;;
-          *)
-              IMAGE_NAME=''
-          ;;
-      esac
-      tools/deploy_firmware.py --device "$RUN_ON_DEVICE"  --target-name "$RUN_ON_DEVICE" --image "$IMAGE_NAME" --configuration ci/configuration/certification/R2/"$RUN_ON_DEVICE".sh
-    - tools/deploy_ipk.sh --certification-mode $RUN_ON_DEVICE build/$RUN_ON_DEVICE/prplmesh.ipk
+    EASYMESH_REVISION: "R4"
