@@ -248,6 +248,14 @@ static void build_channels_list(ieee1905_1::CmduMessageTx &cmdu_tx,
                 continue;
             }
 
+            // If the ACS_REPORT's ranking map is empty, set the preference score
+            // to the lowest value, as the channel is valid, but not preferable.
+            if (ranks.size() == 0) {
+                supported_bw_info_tlv.multiap_preference = 1;
+                print_channel_info();
+                continue;
+            }
+
             // The ranks are sorted since they are on an ordered container. Therefore, use the
             // the index of each element to calculate the Multi-AP preference by subtracting
             // the rank element index from 15 (Best rank).
