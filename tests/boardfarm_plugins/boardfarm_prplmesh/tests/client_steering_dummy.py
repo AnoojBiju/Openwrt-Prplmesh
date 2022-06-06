@@ -61,10 +61,8 @@ class ClientSteeringDummy(PrplMeshBaseTest):
         time.sleep(1)
 
         debug("Check dummy STA connected to repeater1 radio")
-        self.check_topology_notification(agent1.mac,
-                                         [controller.mac, agent2.mac],
-                                         sta, env.StationEvent.CONNECT,
-                                         agent1.radios[0].vaps[0].bssid)
+        self.check_topology_notification(agent1.mac, [controller.mac, agent2.mac], sta,
+                                         env.StationEvent.CONNECT, agent1.radios[0].vaps[0].bssid)
 
         # Save values of MultiAPSteeringSummaryStats parameters before client steering
         steer_summ_stats_path = "Device.WiFi.DataElements.Network.MultiAPSteeringSummaryStats"
@@ -91,29 +89,20 @@ class ClientSteeringDummy(PrplMeshBaseTest):
 
         time.sleep(1)
 
-        # Check value of LastSteerTime parameter for STA1 (radio1) after client steering
-        last_steer_time = controller.nbapi_get_parameter(
-            sta_steer_summ_stats_radio0_path, "LastSteerTime")
-        assert 0 < last_steer_time < 3, f"LastSteerTime value must be greater than 0" \
-            f"and less than 3, not '{last_steer_time}'"
-
         debug("Disconnect dummy STA from wlan0")
         sta.wifi_disconnect(agent1.radios[0].vaps[0])
 
         time.sleep(1)
-        self.check_topology_notification(agent1.mac,
-                                         [controller.mac, agent2.mac],
-                                         sta, env.StationEvent.DISCONNECT,
+        self.check_topology_notification(agent1.mac, [controller.mac, agent2.mac], sta,
+                                         env.StationEvent.DISCONNECT,
                                          agent1.radios[0].vaps[0].bssid)
 
         debug("Connect dummy STA to wlan2")
         sta.wifi_connect(agent1.radios[1].vaps[0])
 
         time.sleep(1)
-        self.check_topology_notification(agent1.mac,
-                                         [controller.mac, agent2.mac],
-                                         sta, env.StationEvent.CONNECT,
-                                         agent1.radios[1].vaps[0].bssid)
+        self.check_topology_notification(agent1.mac, [controller.mac, agent2.mac], sta,
+                                         env.StationEvent.CONNECT, agent1.radios[1].vaps[0].bssid)
 
         debug("Confirming Client Association Control Request message was received (UNBLOCK)")
         self.check_log(agent1.radios[1], r"Got client allow request")
@@ -138,8 +127,7 @@ class ClientSteeringDummy(PrplMeshBaseTest):
 
         debug("Confirm steering success by client connected")
         self.check_log(controller, r"steering successful for sta {}".format(sta.mac))
-        self.check_log(controller,
-                       r"sta {} disconnected due to steering request".format(sta.mac))
+        self.check_log(controller, r"sta {} disconnected due to steering request".format(sta.mac))
 
         map_agent1_radio1 = self.get_topology()[agent1.mac].radios[agent1.radios[1].mac]
         sta_steer_summ_stats_radio1_path = map_agent1_radio1.vaps[agent1.radios[1]
@@ -150,14 +138,18 @@ class ClientSteeringDummy(PrplMeshBaseTest):
         before_wait_last_steer_time = controller.nbapi_get_parameter(
             sta_steer_summ_stats_radio1_path, "LastSteerTime")
 
+        # Check value of LastSteerTime parameter for STA1 (radio1) after client steering
+        assert 3 < before_wait_last_steer_time <= 6, f"LastSteerTime value must be greater than 3" \
+            f" and less than 6, not '{before_wait_last_steer_time}'"
+
         # Make sure that all blocked agents send UNBLOCK messages at the end of
         # disallow period (default 25 sec)
         DEF_DISALLOW_PERIOD = 25
         time.sleep(DEF_DISALLOW_PERIOD)
 
         # Check value of LastSteerTime parameter for STA1 after a fixed waiting period
-        curr_last_steer_time = controller.nbapi_get_parameter(
-            sta_steer_summ_stats_radio1_path, "LastSteerTime")
+        curr_last_steer_time = controller.nbapi_get_parameter(sta_steer_summ_stats_radio1_path,
+                                                              "LastSteerTime")
         diff_last_steer_time = curr_last_steer_time - before_wait_last_steer_time
         assert DEF_DISALLOW_PERIOD <= diff_last_steer_time <= DEF_DISALLOW_PERIOD + 1, \
             f"Difference of LastSteerTime values must be in the range of 25 to 26," \
@@ -199,7 +191,6 @@ class ClientSteeringDummy(PrplMeshBaseTest):
                     f"Value of '{parameter}' should be '{steer_summ_stats[parameter] + 1}'" \
                     f" not '{final_steer_summ_stats[parameter]}'"
                 continue
-
             """
             TODO: Check other values of MultiAPSteeringSummaryStats parameters
             Other params values are currently set incorrectly, so there is no way to check them yet.
