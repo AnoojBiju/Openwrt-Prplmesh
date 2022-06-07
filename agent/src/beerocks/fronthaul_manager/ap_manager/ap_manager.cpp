@@ -1067,7 +1067,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             m_disallowed_clients.push_back(disallowed_client);
 
             LOG(DEBUG) << "client " << disallowed_client.mac
-                       << " will be allowed to accosiate with bssid " << disallowed_client.bssid
+                       << " will be allowed to associate with bssid " << disallowed_client.bssid
                        << " in "
                        << std::chrono::duration_cast<std::chrono::seconds>(
                               disallowed_client.timeout - std::chrono::steady_clock::now())
