@@ -6,38 +6,42 @@
 # See LICENSE file for more details.
 ###############################################################
 
-"""This script can be used to configure a device (prplOS, RDK-B, etc)
-over a serial conntection."""
+"""This script can be used to get logs from a device over a serial
+connection.
 
+It is assumed that the serial device is accessible at
+/dev/<target-name> (use a udev rule if needed).
+
+"""
+
+# Standard library
 import argparse
 import sys
 
-from pathlib import Path
-
-from device.configuration import configure_device
+# Third party
 from device.get_device import device_from_name
+from device.logs import capture_logs
 
 
 def main():
     parser = argparse.ArgumentParser(prog=sys.argv[0],
-                                     description="""Configure a device over serial.""")
+                                     description="""Get logs from a device over serial.""")
     parser.add_argument('-d', '--device',
                         help="""Device to configure. For a list of the supported devices, see the
- get_device module.""", required=True)
+                        get_device module.""", required=True)
     parser.add_argument(
         '-t',
         '--target-name',
-        help="Name of the target to upgrade.", required=True)
-
+        help="Name of the target.", required=True)
     parser.add_argument(
-        '-c',
-        '--configuration',
-        help="The path to the configuration file.", required=True)
+        '-o',
+        '--output',
+        help="The output directory for the logs (defaults to the current directory).", default=".")
 
     args = parser.parse_args()
 
     dev = device_from_name(args.device, args.target_name)
-    configure_device(dev, Path(args.configuration))
+    capture_logs(dev, args.output)
 
 
 if __name__ == '__main__':

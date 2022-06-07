@@ -30,11 +30,13 @@ class SerialDevice(pexpect.fdpexpect.fdspawn):
     "sendline" because the characters are sent too fast.
     """
 
-    def __init__(self, baudrate: int, name: str, prompt, expect_prompt_on_connect=True):
+    def __init__(self, baudrate: int, name: str, prompt, expect_prompt_on_connect=True,
+                 logfile=sys.stdout.buffer):
         self.baudrate = baudrate
         self.name = name
         self.prompt_expr = prompt
         self.expect_prompt_on_connect = expect_prompt_on_connect
+        self.logfile = logfile
 
         self.serial_path = "/dev/{}".format(self.name)
         self.serial = None
@@ -62,7 +64,7 @@ class SerialDevice(pexpect.fdpexpect.fdspawn):
             raise ValueError("Serial already connected!")
         self.serial = serial.Serial(self.serial_path, self.baudrate, xonxoff=True)
         self.serial.flushInput()
-        super().__init__(self.serial, logfile=sys.stdout.buffer)
+        super().__init__(self.serial, logfile=self.logfile)
 
         # Unlike pxssh, fdspawn doesn't have a spawn method. For ease
         # of use, create one:

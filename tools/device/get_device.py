@@ -6,6 +6,9 @@
 ###############################################################
 """Utility module to get the correct device."""
 
+# Standard library
+from typing import Union
+
 # Third party
 import device.axepoint
 import device.generic
@@ -15,7 +18,7 @@ import device.turris_prplos
 import device.turris_rdk_b
 
 
-def device_from_name(name: str, target_name: str, image: str
+def device_from_name(name: str, target_name: str, image: Union[str, None] = None
                      ) -> device.generic.GenericDevice:
     """Construct a device based on its name and type.
 
@@ -25,8 +28,8 @@ def device_from_name(name: str, target_name: str, image: str
         The name of the device
     target_name: str
         The name of the target.
-    image: str
-        The name of the image.
+    image: image: Union[str, None]
+        The name of the image (optional, defaults to None).
     """
     if name in ["axepoint", "nec-wx3000hp"]:
         dev = device.axepoint.Axepoint(name, target_name, image)
