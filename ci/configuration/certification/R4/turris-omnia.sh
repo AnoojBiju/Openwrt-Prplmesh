@@ -15,11 +15,23 @@ rm -f /etc/rc.d/S27tr181-dhcpv4client
 /etc/init.d/tr181-dhcpv6client stop
 rm -f /etc/rc.d/S25tr181-dhcpv6client
 
-# IP for device upgrades, operational tests, Boardfarm data network, ...
-ubus call "IP.Interface" _set '{ "rel_path": ".[Alias == \"lan\"].IPv4Address.[Alias == \"lan\"].", "parameters": { "IPAddress": "192.168.1.110" } }'
+# We use WAN for the control interface.
+ubus wait_for IP.Interface
+# Add the IP address if there is none yet:
+ubus call IP.Interface _get '{ "rel_path": ".[Alias == \"wan\"].IPv4Address.[Alias == \"wan\"]." }' || {
+    echo "Adding IP address $IP"
+    ubus call "IP.Interface" _add '{ "rel_path": ".[Alias == \"wan\"].IPv4Address.", "parameters": { "Alias": "wan" }'
+}
+# Configure it:
+ubus call "IP.Interface" _set '{ "rel_path": ".[Alias == \"wan\"].IPv4Address.1", "parameters": { "IPAddress": "192.168.250.170", "SubnetMask": "255.255.255.0", "AddressingType": "Static", "Enable" : true } }'
+# Enable it:
+ubus call "IP.Interface" _set '{ "rel_path": ".[Alias == \"wan\"].", "parameters": { "IPv4Enable": true } }'
 
-uci set wireless.radio0.disabled=0
-uci set wireless.radio1.disabled=0
+# Set the LAN bridge IP:
+ubus call "IP.Interface" _set '{ "rel_path": ".[Name == \"br-lan\"].IPv4Address.[Alias == \"lan\"].", "parameters": { "IPAddress": "192.165.100.170" } }'
+
+# Wired backhaul interface:
+uci set prplmesh.config.backhaul_wire_iface='lan0'
 
 # Stop and disable the firewall:
 /etc/init.d/tr181-firewall stop

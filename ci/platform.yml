@@ -19,25 +19,16 @@ workflow:
 stages:
   - build
   - test
-  - certification-turris-omnia
-  - certification-turris-omnia-bhwifi
-  - certification-axepoint
-  - certification-axepoint-bhwifi
-  - certification-axepoint-controller
-  - certification-R2-nec-wx3000hp
-  - certification-R2-axepoint
+  - certification-R1-turris-omnia
+  - certification-R1-axepoint
+  - certification-R4-turris-omnia
+  - certification-R4-axepoint
   - upload
   - release
 
 include:
   - local: "/ci/templates.yml"
-  - local: "/ci/certification/turris-omnia.yml"
-  - local: "/ci/certification/turris-omnia-bhwifi.yml"
-  - local: "/ci/certification/axepoint.yml"
-  - local: "/ci/certification/axepoint-bhwifi.yml"
-  - local: "/ci/certification/axepoint-controller.yml"
-  - local: "/ci/certification/R2/nec-wx3000hp.yml"
-  - local: "/ci/certification/R2/axepoint.yml"
+  - local: "/ci/certification/templates.yml"
 
 .rules-for-releases: &onrelease
   - if: '$CI_COMMIT_TAG =~ /\A\d+\.\d+\.\d+\z/'
@@ -252,6 +243,22 @@ run-certification-tests-R2-platform-essensium:
       allow_failure: true
   tags:
     - certs-tests-R2-essensium
+  needs:
+    - job: build-for-intel-mips
+    - job: build-for-turris-omnia
+
+run-certification-tests-R4-platform-essensium:
+  extends: .run-certification-tests-R4
+  before_script:
+    - !reference [.run-certification-tests-R4, before_script]
+    - echo "$TESTS_TO_RUN_R4_ESSENSIUM" > .tests-to-run
+    - echo "$DEVICE_UNDER_TEST_R4_ESSENSIUM" > .device-under-test
+  rules:
+    - if: '$TESTS_TO_RUN_R4_ESSENSIUM !~ /^\$/ && $DEVICE_UNDER_TEST_R4_ESSENSIUM != "prplmesh"'
+    - when: manual
+      allow_failure: true
+  tags:
+    - certs-tests-R4-essensium
   needs:
     - job: build-for-intel-mips
     - job: build-for-turris-omnia

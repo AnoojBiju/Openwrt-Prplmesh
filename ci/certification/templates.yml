@@ -1,0 +1,80 @@
+.certification:R1:axepoint:
+  stage: certification-R1-axepoint
+  extends: .certification-generic-R1
+  variables:
+    RUN_ON_DEVICE: "axepoint"
+  before_script:
+    - tools/deploy_firmware.py --device axepoint --target-name "$RUN_ON_DEVICE" --image "$AXEPOINT_FULLIMAGE" --configuration ci/configuration/certification/R1/axepoint.sh
+    - tools/deploy_ipk.sh --certification-mode $RUN_ON_DEVICE build/$RUN_ON_DEVICE/prplmesh.ipk
+  needs:
+    - job: build-for-intel-mips
+  tags:
+    - certs-tests
+    - axepoint
+
+.certification:R1:turris-omnia:
+  stage: certification-R1-turris-omnia
+  extends: .certification-generic-R1
+  variables:
+    RUN_ON_DEVICE: "turris-omnia"
+  before_script:
+    - tools/deploy_firmware.py --device turris-omnia --target-name "$RUN_ON_DEVICE" --image "$TURRIS_OMNIA_FULLIMAGE" --configuration ci/configuration/certification/R1/turris-omnia.sh
+    - tools/deploy_ipk.sh --certification-mode $RUN_ON_DEVICE build/$RUN_ON_DEVICE/prplmesh.ipk
+  needs:
+    - job: build-for-turris-omnia
+  tags:
+    - certs-tests
+    - turris-omnia
+
+.certification:R4:axepoint:
+  stage: certification-R4-axepoint
+  extends: .certification-generic-R4
+  variables:
+    RUN_ON_DEVICE: "axepoint"
+  before_script:
+    - tools/deploy_firmware.py --device axepoint --target-name "$RUN_ON_DEVICE" --image "$AXEPOINT_FULLIMAGE" --configuration ci/configuration/certification/R4/axepoint.sh
+    - tools/deploy_ipk.sh --certification-mode $RUN_ON_DEVICE build/$RUN_ON_DEVICE/prplmesh.ipk
+  needs:
+    - job: build-for-intel-mips
+  tags:
+    - certs-tests-R4
+    - axepoint
+
+.certification:R4:turris-omnia:
+  stage: certification-R4-turris-omnia
+  extends: .certification-generic-R4
+  variables:
+    RUN_ON_DEVICE: "turris-omnia"
+  before_script:
+    - tools/deploy_firmware.py --device turris-omnia --target-name "$RUN_ON_DEVICE" --image "$TURRIS_OMNIA_FULLIMAGE" --configuration ci/configuration/certification/R4/turris-omnia.sh
+    - tools/deploy_ipk.sh --certification-mode $RUN_ON_DEVICE build/$RUN_ON_DEVICE/prplmesh.ipk
+  needs:
+    - job: build-for-turris-omnia
+  tags:
+    - certs-tests-R4
+    - turris-omnia
+
+include:
+  - local: "ci/certification/R1/axepoint.yml"
+  - local: "ci/certification/R1/turris-omnia.yml"
+# The R4 testbed is shared with R2, so we can't enable it yet:
+#  - local: "ci/certification/R4/axepoint.yml"
+#  - local: "ci/certification/R4/turris-omnia.yml"
+
+
+# Merge train tests
+##################
+
+R1:turris-omnia:MAP-4.2.1:
+  extends: .certification:R1:turris-omnia
+  rules:
+    - if: '$CI_MERGE_REQUEST_EVENT_TYPE == "merge_train"'
+      when: on_success
+  retry: 2
+
+R1:axepoint:MAP-4.4.2_BHWIFI_FH5GH:
+  extends: .certification:R1:axepoint
+  rules:
+    - if: '$CI_MERGE_REQUEST_EVENT_TYPE == "merge_train"'
+      when: on_success
+  retry: 2
