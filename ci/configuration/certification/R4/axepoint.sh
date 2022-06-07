@@ -13,7 +13,7 @@ rm -f /etc/rc.d/S25tr181-dhcpv6client
 
 # Set the LAN bridge IP:
 ubus wait_for IP.Interface
-ubus call "IP.Interface" _set '{ "rel_path": ".[Name == \"br-lan\"].IPv4Address.[Alias == \"lan\"].", "parameters": { "IPAddress": "192.165.100.180" } }'
+ubus call "IP.Interface" _set '{ "rel_path": ".[Name == \"br-lan\"].IPv4Address.[Alias == \"lan\"].", "parameters": { "IPAddress": "192.165.100.173" } }'
 
 # Move the WAN port into the LAN bridge if it's not there yet (to use it for data):
 ubus wait_for Bridging.Bridge
@@ -52,7 +52,7 @@ ubus call IP.Interface _get '{ "rel_path": ".[Name == \"eth0_4\"]." }' || {
 # We can now add the IP address if there is none yet:
 ubus call IP.Interface _get '{ "rel_path": ".[Name == \"eth0_4\"].IPv4Address.[Alias == \"eth0_4\"]." }' || {
     echo "Adding IP address $IP"
-    ubus call "IP.Interface" _add '{ "rel_path": ".[Name == \"eth0_4\"].IPv4Address.", "parameters": { "IPAddress": "192.168.250.180", "SubnetMask": "255.255.255.0", "AddressingType": "Static", "Alias": "eth0_4", "Enable" : true } }'
+    ubus call "IP.Interface" _add '{ "rel_path": ".[Name == \"eth0_4\"].IPv4Address.", "parameters": { "IPAddress": "192.168.250.173", "SubnetMask": "255.255.255.0", "AddressingType": "Static", "Alias": "eth0_4", "Enable" : true } }'
 }
 # Finally, we can enable it:
 ubus call "IP.Interface" _set '{ "rel_path": ".[Name == \"eth0_4\"].", "parameters": { "IPv4Enable": true } }'
