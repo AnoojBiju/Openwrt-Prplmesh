@@ -31,11 +31,12 @@ public:
     prplmesh_cli();
     bool get_ip_from_iface(const std::string &iface, std::string &ip);
     bool prpl_conn_map(void);
+    int recursion(std::string agent_mac, std::string skip_mac);
 
     std::shared_ptr<beerocks::prplmesh_amx::AmxClient> m_amx_client;
 
-private:
     typedef struct conn_map_t {
+        uint32_t device_number;
         std::string controller_id;
         std::string bridge_ip_v4;
         uint32_t radio_number;
@@ -46,6 +47,8 @@ private:
         std::string ssid;
         uint32_t channel;
     } conn_map_t;
+
+private:
 };
 
 } // namespace prplmesh_api

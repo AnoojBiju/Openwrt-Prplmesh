@@ -23,6 +23,8 @@
 namespace beerocks {
 namespace prplmesh_api {
 
+static prplmesh_cli::conn_map_t conn_map;
+
 prplmesh_cli::prplmesh_cli()
 {
     m_amx_client = std::make_shared<beerocks::prplmesh_amx::AmxClient>();
@@ -59,9 +61,38 @@ bool prplmesh_cli::get_ip_from_iface(const std::string &iface, std::string &ip)
     return true;
 }
 
+int prplmesh_cli::recursion(std::string agent_mac, std::string skip_mac)
+{
+    std::string backhaul_device_id;
+    std::string space = "\t";
+
+    std::cout << "Found " << conn_map.device_number << "devices" << std::endl;
+    for (uint32_t i = 1; i <= conn_map.device_number; i++) {
+        std::string backhaul_path = "Device.WiFi.DataElements.Network.Device." + std::to_string(i) +
+                                    ".MultiAPDevice.Backhaul.";
+        amxc_var_t *backhaul_obj = m_amx_client->get_object(backhaul_path);
+        backhaul_device_id       = GET_CHAR(backhaul_obj, "BackhaulDeviceID");
+
+        std::cout << "Debug  backhaul_device_id = " << backhaul_device_id
+                  << " agent_mac = " << agent_mac << std::endl;
+        if (backhaul_device_id == agent_mac && skip_mac != backhaul_device_id) {
+            agent_mac = GET_CHAR(backhaul_obj, "MACAddress");
+            space += "\t";
+            std::cout << space << "Device[" << i << "]: name: Agent, mac: " << agent_mac
+                      << std::endl;
+            recursion(agent_mac, "");
+        }
+    }
+
+    if (backhaul_device_id != "") {
+        recursion(backhaul_device_id, agent_mac);
+    }
+
+    return 0;
+}
+
 bool prplmesh_cli::prpl_conn_map(void)
 {
-    conn_map_t conn_map;
 
     std::cout << "Start conn map" << std::endl;
 
@@ -69,9 +100,12 @@ bool prplmesh_cli::prpl_conn_map(void)
     std::string network_path = "Device.WiFi.DataElements.Network.";
     amxc_var_t *network_obj  = m_amx_client->get_object(network_path);
     const char *op_band      = GET_CHAR(network_obj, "ControllerID");
+    conn_map.device_number   = GET_UINT32(network_obj, "DeviceNumberOfEntries");
 
     conn_map.controller_id = std::string(op_band);
 
+    recursion(conn_map.controller_id, "");
+    std::cout << "End agent topology" << std::endl;
     // Need to change br-lan to variable which depends on platform(rdkb/prplos)
     if (!prplmesh_cli::get_ip_from_iface("br-lan", conn_map.bridge_ip_v4)) {
         LOG(ERROR) << "Can't get bridge ip.";
