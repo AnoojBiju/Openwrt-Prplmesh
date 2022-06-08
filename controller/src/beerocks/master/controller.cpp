@@ -339,7 +339,7 @@ bool Controller::start()
 
     transaction.commit();
 
-    LOG(DEBUG) << "started";
+    LOG(DEBUG) << "Started";
 
     return true;
 }
