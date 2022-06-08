@@ -1593,10 +1593,13 @@ bool mon_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)
         if (m_radio_info.iface_name != iface_name) {
             // ifname doesn't match current interface
             // meaning the event was received for a diffrent channel
+            LOG(DEBUG) << "DWPAL NL event channel scan triggered skipped, as iface_name "
+                       << iface_name << " and not " << m_radio_info.iface_name;
             return true;
         }
         if (!m_scan_was_triggered_internally) {
             // Scan was not triggered internally, no need to handle the event
+            LOG(DEBUG) << "DWPAL NL event channel scan triggered skipped, not started internally";
             return true;
         }
         LOG(DEBUG) << "DWPAL NL event channel scan triggered";
@@ -1742,6 +1745,7 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
 
 static int drv_evt_callback(struct nl_msg *msg)
 {
+#if 0
     auto fd              = ctx->get_nl_evt_write_pfd();
     struct nlmsghdr *hdr = nlmsg_hdr(msg);
     auto size            = nlmsg_total_size(nlmsg_datalen(hdr));
@@ -1749,6 +1753,9 @@ static int drv_evt_callback(struct nl_msg *msg)
         LOG(ERROR) << "Failed writing driver event callback data";
         return -1;
     }
+#endif
+    LOG(DEBUG) << "DWPAL nl event recv";
+    ctx->process_dwpal_nl_event(msg, ctx);
     return 0;
 }
 
