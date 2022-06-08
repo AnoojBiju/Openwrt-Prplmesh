@@ -71,11 +71,11 @@ public:
 
     virtual bool channel_scan_abort() override;
     virtual bool set_estimated_service_parameters(uint8_t *esp_info_field) override;
-
+    virtual bool process_dwpal_nl_event(struct nl_msg *msg, void *arg = nullptr) override;
     // Protected methods:
 protected:
     virtual bool process_dwpal_event(char *buffer, int bufLen, const std::string &opcode) override;
-    virtual bool process_dwpal_nl_event(struct nl_msg *msg, void *arg = nullptr) override;
+
     virtual bool dwpald_attach(char *ifname) override;
 
     // Overload for Monitor events
