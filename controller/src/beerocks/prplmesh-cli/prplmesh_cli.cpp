@@ -24,6 +24,7 @@ namespace beerocks {
 namespace prplmesh_api {
 
 static prplmesh_cli::conn_map_t conn_map;
+static std::string space = "";
 
 prplmesh_cli::prplmesh_cli()
 {
@@ -61,62 +62,9 @@ bool prplmesh_cli::get_ip_from_iface(const std::string &iface, std::string &ip)
     return true;
 }
 
-int prplmesh_cli::recursion(std::string agent_mac, std::string skip_mac)
+bool prplmesh_cli::print_radio(std::string device_path)
 {
-    std::string backhaul_device_id;
-    std::string space = "\t";
-
-    std::cout << "Found " << conn_map.device_number << "devices" << std::endl;
-    for (uint32_t i = 1; i <= conn_map.device_number; i++) {
-        std::string backhaul_path = "Device.WiFi.DataElements.Network.Device." + std::to_string(i) +
-                                    ".MultiAPDevice.Backhaul.";
-        amxc_var_t *backhaul_obj = m_amx_client->get_object(backhaul_path);
-        backhaul_device_id       = GET_CHAR(backhaul_obj, "BackhaulDeviceID");
-
-        std::cout << "Debug  backhaul_device_id = " << backhaul_device_id
-                  << " agent_mac = " << agent_mac << std::endl;
-        if (backhaul_device_id == agent_mac && skip_mac != backhaul_device_id) {
-            agent_mac = GET_CHAR(backhaul_obj, "MACAddress");
-            space += "\t";
-            std::cout << space << "Device[" << i << "]: name: Agent, mac: " << agent_mac
-                      << std::endl;
-            recursion(agent_mac, "");
-        }
-    }
-
-    if (backhaul_device_id != "") {
-        recursion(backhaul_device_id, agent_mac);
-    }
-
-    return 0;
-}
-
-bool prplmesh_cli::prpl_conn_map(void)
-{
-
-    std::cout << "Start conn map" << std::endl;
-
-    // GW_BRIDGE: name: GW_MASTER, mac: d8:58:d7:01:47:16, ipv4: 192.168.1.1
-    std::string network_path = "Device.WiFi.DataElements.Network.";
-    amxc_var_t *network_obj  = m_amx_client->get_object(network_path);
-    const char *op_band      = GET_CHAR(network_obj, "ControllerID");
-    conn_map.device_number   = GET_UINT32(network_obj, "DeviceNumberOfEntries");
-
-    conn_map.controller_id = std::string(op_band);
-
-    recursion(conn_map.controller_id, "");
-    std::cout << "End agent topology" << std::endl;
-    // Need to change br-lan to variable which depends on platform(rdkb/prplos)
-    if (!prplmesh_cli::get_ip_from_iface("br-lan", conn_map.bridge_ip_v4)) {
-        LOG(ERROR) << "Can't get bridge ip.";
-    }
-
-    std::cout << "GW_BRIDGE: name: GW_MASTER, mac: " << conn_map.controller_id
-              << ", ipv4: " << conn_map.bridge_ip_v4 << std::endl;
-
-    // we use only device 1. Need it to get radio numbers
-    std::string device_path = network_path + "Device.1.";
-    std::string radio_path  = device_path + "Radio.";
+    std::string radio_path = device_path + "Radio.";
     std::string radio_path_i;
     amxc_var_t *device_obj = m_amx_client->get_object(device_path);
 
@@ -132,7 +80,7 @@ bool prplmesh_cli::prpl_conn_map(void)
         conn_map.channel          = GET_UINT32(op_class_obj, "Channel");
 
         //RADIO: wlan1-1 mac: 06:f0:21:90:d7:4b, ch: 1, bw: 20, freq: 2412MHz
-        std::cout << "\t RADIO[" << i << "]: mac: " << conn_map.radio_id
+        std::cout << space << "\tRADIO[" << i << "]: mac: " << conn_map.radio_id
                   << ", ch: " << conn_map.channel << ", bw: 20, freq: 2412MHz" << std::endl;
 
         for (uint32_t j = 1; j <= conn_map.bss_number; j++) {
@@ -144,18 +92,100 @@ bool prplmesh_cli::prpl_conn_map(void)
             conn_map.sta_number  = GET_UINT32(bss_obj, "STANumberOfEntries");
 
             //      fVAP[0]: wlan1-1.0 bssid: 02:f0:21:90:d7:4b, ssid: prplmesh
-            std::cout << "\t\t fVAP[" << j - 1 << "]: bssid: " << conn_map.bss_id
+            std::cout << space << "\t\tfVAP[" << j - 1 << "]: bssid: " << conn_map.bss_id
                       << ", ssid: " << conn_map.ssid << std::endl;
 
             for (uint32_t k = 0; k < conn_map.sta_number; k++) {
-                std::string sta_path_i = sta_path + std::to_string(k + 1) + ".";
-                amxc_var_t *sta_obj    = m_amx_client->get_object(sta_path_i);
-                std::string sta_mac    = GET_CHAR(sta_obj, "MACAddress");
+                std::string sta_path_i   = sta_path + std::to_string(k + 1) + ".";
+                amxc_var_t *sta_obj      = m_amx_client->get_object(sta_path_i);
+                std::string sta_mac      = GET_CHAR(sta_obj, "MACAddress");
+                std::string sta_hostname = GET_CHAR(sta_obj, "Hostname");
+                std::string sta_ipv4     = GET_CHAR(sta_obj, "IPV4Address");
 
-                std::cout << "\t\t\t CLIENT[" << k << "]: mac: " << sta_mac << std::endl;
+                std::cout << space << "\t\t\tCLIENT[" << k << "]: mac: " << sta_mac
+                          << " ipv4: " << sta_ipv4 << " name: " << sta_hostname << std::endl;
             }
         }
     }
+
+    return true;
+}
+
+bool prplmesh_cli::print_device_info(std::string agent_mac, std::string skip_mac)
+{
+    std::string backhaul_device_id;
+
+    for (uint32_t i = 1; i <= conn_map.device_number; i++) {
+        std::string backhaul_path = "Device.WiFi.DataElements.Network.Device." + std::to_string(i) +
+                                    ".MultiAPDevice.Backhaul.";
+        amxc_var_t *backhaul_obj = m_amx_client->get_object(backhaul_path);
+        backhaul_device_id       = GET_CHAR(backhaul_obj, "BackhaulDeviceID");
+        std::string linktype     = GET_CHAR(backhaul_obj, "LinkType");
+
+        if (linktype == "Ethernet" && backhaul_device_id == "" && agent_mac != skip_mac) {
+            backhaul_device_id = conn_map.controller_id;
+        }
+
+        std::string curr_mac = GET_CHAR(backhaul_obj, "MACAddress");
+        if (backhaul_device_id == agent_mac && skip_mac != curr_mac) {
+            agent_mac = GET_CHAR(backhaul_obj, "MACAddress");
+            std::string device_path =
+                "Device.WiFi.DataElements.Network.Device." + std::to_string(i) + ".";
+            space += "\t";
+            std::cout << space << "Device[" << i << "]: name: Agent, mac: " << agent_mac
+                      << " LinkType: " << linktype << std::endl;
+            print_radio(device_path);
+            print_device_info(agent_mac, "");
+        }
+    }
+
+    if (backhaul_device_id != "") {
+        // Need to decrease space value
+        print_device_info(backhaul_device_id, agent_mac);
+    }
+
+    return true;
+}
+
+bool prplmesh_cli::prpl_conn_map(void)
+{
+
+    std::cout << "Start conn map" << std::endl;
+
+    std::string network_path = "Device.WiFi.DataElements.Network.";
+    amxc_var_t *network_obj  = m_amx_client->get_object(network_path);
+    const char *op_band      = GET_CHAR(network_obj, "ControllerID");
+    conn_map.device_number   = GET_UINT32(network_obj, "DeviceNumberOfEntries");
+
+    conn_map.controller_id = std::string(op_band);
+
+    std::cout << "Found " << conn_map.device_number << " devices" << std::endl;
+
+    // Need to change br-lan to variable which depends on platform(rdkb/prplos)
+    if (!prplmesh_cli::get_ip_from_iface("br-lan", conn_map.bridge_ip_v4)) {
+        LOG(ERROR) << "Can't get bridge ip.";
+    }
+
+    // Print controller
+    std::cout << "Device[1]: name: GW_MASTER, mac: " << conn_map.controller_id
+              << ", ipv4: " << conn_map.bridge_ip_v4 << std::endl;
+
+    // Print controller radios
+    for (uint32_t i = 1; i <= conn_map.device_number; i++) {
+        std::string device_path =
+            "Device.WiFi.DataElements.Network.Device." + std::to_string(i) + ".";
+        amxc_var_t *device_obj = m_amx_client->get_object(device_path);
+        std::string device_id  = GET_CHAR(device_obj, "ID");
+
+        // Find controller in all devices
+        if (device_id == conn_map.controller_id) {
+            print_radio(device_path);
+            break;
+        }
+    }
+
+    // Print all agents
+    print_device_info(conn_map.controller_id, "");
 
     return true;
 }

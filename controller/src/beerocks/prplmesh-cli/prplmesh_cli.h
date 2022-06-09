@@ -31,7 +31,8 @@ public:
     prplmesh_cli();
     bool get_ip_from_iface(const std::string &iface, std::string &ip);
     bool prpl_conn_map(void);
-    int recursion(std::string agent_mac, std::string skip_mac);
+    bool print_device_info(std::string agent_mac, std::string skip_mac);
+    bool print_radio(std::string device_path);
 
     std::shared_ptr<beerocks::prplmesh_amx::AmxClient> m_amx_client;
 
