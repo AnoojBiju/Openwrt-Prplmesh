@@ -83,9 +83,11 @@ class TurrisRdkb(GenericDevice):
             if shell.match == pexpect.TIMEOUT:
                 return False
 
-            shell.sendline("")
             # Give the shell a few seconds to be ready:
             time.sleep(30)
+            shell.sendline("")
+            time.sleep(2)
+
             return True
 
     def check_images_on_board(self):
@@ -222,10 +224,6 @@ class TurrisRdkb(GenericDevice):
 
         self.reboot(self.check_serial_type())
 
-        common_bridge_ip = "192.168.200.140"
-        common_net_mask = "24"
-        rdkb_bridge = "lan4.200"
-
         with SerialDevice(self.baudrate, self.name,
                           self.serial_prompt, expect_prompt_on_connect=False) as shell:
             shell.expect("Hit any key to stop autoboot")
@@ -239,14 +237,6 @@ class TurrisRdkb(GenericDevice):
             shell.sendline("run mmcboot")
             shell.expect(["TurrisOmnia-GW login", pexpect.TIMEOUT])
             time.sleep(30)
-
-            # Add vlan. Will be used for SSH connection
-            shell.sendline(f"ip link add link lan4 name {rdkb_bridge} type vlan id 200")
-            shell.sendline("RES=$?")
-            shell.sendline("echo PRPL=$RES")
-            shell.expect("PRPL=0")
-            shell.sendline(f"ip a a {common_bridge_ip}/{common_net_mask} dev {rdkb_bridge}")
-            shell.expect([f"ip a a {common_bridge_ip}/{common_net_mask} dev {rdkb_bridge}"])
 
     def sysupgrade(self):
         """Upgrade RDKB image on Turris Omnia and launch it.
