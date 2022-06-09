@@ -10,7 +10,7 @@ import difflib
 import os
 import re
 import time
-from typing import List
+from typing import List, Union
 
 # Third party
 import pexpect
@@ -57,7 +57,8 @@ class GenericDevice():
     tftp_dir = "/srv/tftp"
     """The root directory of the tftp server. OS images will be copied there."""
 
-    def __init__(self, device: str, name: str, image: str, username: str = "root"):
+    def __init__(self, device: str, name: str, image: Union[str, None] = None,
+                 username: str = "root"):
         """
 
         Parameters
@@ -66,7 +67,7 @@ class GenericDevice():
             The name of the platform (example: nec-wx3000hp).
         name: str
             The name of the device (it should ne reachable through ssh without a password).
-        image: str
+        image: Union[str, None]
             The name of the image that can be used to upgrade the device.
         username: str, optional
             The username to use when connecting to the device over SSH.

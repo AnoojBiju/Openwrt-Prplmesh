@@ -116,6 +116,7 @@
       EOF
     - tests/openwrt/test_status.sh $TARGET_DEVICE_NAME
   after_script:
+    - tools/capture_logs.py --device $TARGET_DEVICE --target-name $TARGET_DEVICE_NAME --output logs/$TARGET_DEVICE_NAME
     - tests/openwrt/capture_logs.sh $TARGET_DEVICE_NAME
   artifacts:
     paths:

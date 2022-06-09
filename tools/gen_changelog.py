@@ -83,7 +83,7 @@ def main():
     if args.latest_version:
         versions = versions[-2:]
     if args.start_version and args.start_version not in versions:
-        raise argparse.ArgumentError('-s', f"{parser.start_version} is not a valid version!"
+        raise argparse.ArgumentError('-s', f"{args.start_version} is not a valid version!"
                                            f"Must be one of: {str(versions)}")
     if args.start_version:
         versions = versions[versions.index(args.start_version):]
