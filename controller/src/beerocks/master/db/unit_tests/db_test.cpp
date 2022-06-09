@@ -393,14 +393,11 @@ TEST_F(DbTest, test_set_ap_ht_capabilities)
     EXPECT_CALL(*m_ambiorix, add_optional_subobject(capabilities2, "HTCapabilities"))
         .WillOnce(Return(true));
 
-    EXPECT_CALL(*m_ambiorix,
-                set(ht_capabilities1, "HT20MHzGISupported", Matcher<const bool &>(true)))
+    EXPECT_CALL(*m_ambiorix, set(ht_capabilities1, "HTShortGI20", Matcher<const bool &>(true)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix,
-                set(ht_capabilities1, "HT40MHzGISupported", Matcher<const bool &>(false)))
+    EXPECT_CALL(*m_ambiorix, set(ht_capabilities1, "HTShortGI40", Matcher<const bool &>(false)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix,
-                set(ht_capabilities1, "HT40MHzBWSupported", Matcher<const bool &>(true)))
+    EXPECT_CALL(*m_ambiorix, set(ht_capabilities1, "HT40", Matcher<const bool &>(true)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix,
                 set(ht_capabilities1, "MaxNumberOfTxSpatialStreams",
@@ -411,14 +408,11 @@ TEST_F(DbTest, test_set_ap_ht_capabilities)
                     Matcher<const int32_t &>(flags1.max_num_of_supported_rx_spatial_streams + 1)))
         .WillOnce(Return(true));
 
-    EXPECT_CALL(*m_ambiorix,
-                set(ht_capabilities2, "HT20MHzGISupported", Matcher<const bool &>(false)))
+    EXPECT_CALL(*m_ambiorix, set(ht_capabilities2, "HTShortGI20", Matcher<const bool &>(false)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix,
-                set(ht_capabilities2, "HT40MHzGISupported", Matcher<const bool &>(true)))
+    EXPECT_CALL(*m_ambiorix, set(ht_capabilities2, "HTShortGI40", Matcher<const bool &>(true)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix,
-                set(ht_capabilities2, "HT40MHzBWSupported", Matcher<const bool &>(false)))
+    EXPECT_CALL(*m_ambiorix, set(ht_capabilities2, "HT40", Matcher<const bool &>(false)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix,
                 set(ht_capabilities2, "MaxNumberOfTxSpatialStreams",
@@ -780,11 +774,11 @@ TEST_F(DbTestRadio1Sta1, test_set_station_capabilities)
     EXPECT_CALL(*m_ambiorix, add_optional_subobject(g_sta_path_1 + '.', "WiFi6Capabilities"))
         .WillOnce(Return(true));
 
-    EXPECT_CALL(*m_ambiorix, set(ht_capabilities1, "HT20MHzGISupported", Matcher<const bool &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(ht_capabilities1, "HTShortGI20", Matcher<const bool &>(_)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix, set(ht_capabilities1, "HT40MHzGISupported", Matcher<const bool &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(ht_capabilities1, "HTShortGI40", Matcher<const bool &>(_)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix, set(ht_capabilities1, "HT40MHzBWSupported", Matcher<const bool &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(ht_capabilities1, "HT40", Matcher<const bool &>(_)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix,
                 set(ht_capabilities1, "MaxNumberOfTxSpatialStreams", Matcher<const int32_t &>(_)))
@@ -793,9 +787,9 @@ TEST_F(DbTestRadio1Sta1, test_set_station_capabilities)
                 set(ht_capabilities1, "MaxNumberOfRxSpatialStreams", Matcher<const int32_t &>(_)))
         .WillOnce(Return(true));
 
-    EXPECT_CALL(*m_ambiorix, set(vht_capabilities1, "VHTTxMCSSet", Matcher<const int32_t &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(vht_capabilities1, "MCSNSSTxSet", Matcher<const int32_t &>(_)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix, set(vht_capabilities1, "VHTRxMCSSet", Matcher<const int32_t &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(vht_capabilities1, "MCSNSSRxSet", Matcher<const int32_t &>(_)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix,
                 set(vht_capabilities1, "MaxNumberOfTxSpatialStreams", Matcher<const int32_t &>(_)))
@@ -803,23 +797,17 @@ TEST_F(DbTestRadio1Sta1, test_set_station_capabilities)
     EXPECT_CALL(*m_ambiorix,
                 set(vht_capabilities1, "MaxNumberOfRxSpatialStreams", Matcher<const int32_t &>(_)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix,
-                set(vht_capabilities1, "VHT80MHzGISupported", Matcher<const bool &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(vht_capabilities1, "VHTShortGI80", Matcher<const bool &>(_)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix,
-                set(vht_capabilities1, "VHT160MHzGISupported", Matcher<const bool &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(vht_capabilities1, "VHTShortGI160", Matcher<const bool &>(_)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix,
-                set(vht_capabilities1, "VHT8080MHzBWSupported", Matcher<const bool &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(vht_capabilities1, "VHT8080", Matcher<const bool &>(_)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix,
-                set(vht_capabilities1, "VHT160MHzBWSupported", Matcher<const bool &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(vht_capabilities1, "VHT160", Matcher<const bool &>(_)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix,
-                set(vht_capabilities1, "SUBeamformerSupported", Matcher<const bool &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(vht_capabilities1, "SUBeamformer", Matcher<const bool &>(_)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix,
-                set(vht_capabilities1, "MUBeamformerSupported", Matcher<const bool &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(vht_capabilities1, "MUBeamformer", Matcher<const bool &>(_)))
         .WillOnce(Return(true));
 
     EXPECT_CALL(*m_ambiorix,
@@ -892,11 +880,11 @@ TEST_F(DbTestRadio1Sta1, test_set_station_capabilities)
                 add_optional_subobject(g_assoc_event_path_1 + '.', "WiFi6Capabilities"))
         .WillRepeatedly(Return(true));
 
-    EXPECT_CALL(*m_ambiorix, set(ht_capabilities2, "HT20MHzGISupported", Matcher<const bool &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(ht_capabilities2, "HTShortGI20", Matcher<const bool &>(_)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix, set(ht_capabilities2, "HT40MHzGISupported", Matcher<const bool &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(ht_capabilities2, "HTShortGI40", Matcher<const bool &>(_)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix, set(ht_capabilities2, "HT40MHzBWSupported", Matcher<const bool &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(ht_capabilities2, "HT40", Matcher<const bool &>(_)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix,
                 set(ht_capabilities2, "MaxNumberOfTxSpatialStreams", Matcher<const int32_t &>(_)))
@@ -905,9 +893,9 @@ TEST_F(DbTestRadio1Sta1, test_set_station_capabilities)
                 set(ht_capabilities2, "MaxNumberOfRxSpatialStreams", Matcher<const int32_t &>(_)))
         .WillOnce(Return(true));
 
-    EXPECT_CALL(*m_ambiorix, set(vht_capabilities2, "VHTTxMCSSet", Matcher<const int32_t &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(vht_capabilities2, "MCSNSSTxSet", Matcher<const int32_t &>(_)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix, set(vht_capabilities2, "VHTRxMCSSet", Matcher<const int32_t &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(vht_capabilities2, "MCSNSSRxSet", Matcher<const int32_t &>(_)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix,
                 set(vht_capabilities2, "MaxNumberOfTxSpatialStreams", Matcher<const int32_t &>(_)))
@@ -915,23 +903,17 @@ TEST_F(DbTestRadio1Sta1, test_set_station_capabilities)
     EXPECT_CALL(*m_ambiorix,
                 set(vht_capabilities2, "MaxNumberOfRxSpatialStreams", Matcher<const int32_t &>(_)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix,
-                set(vht_capabilities2, "VHT80MHzGISupported", Matcher<const bool &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(vht_capabilities2, "VHTShortGI80", Matcher<const bool &>(_)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix,
-                set(vht_capabilities2, "VHT160MHzGISupported", Matcher<const bool &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(vht_capabilities2, "VHTShortGI160", Matcher<const bool &>(_)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix,
-                set(vht_capabilities2, "VHT8080MHzBWSupported", Matcher<const bool &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(vht_capabilities2, "VHT8080", Matcher<const bool &>(_)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix,
-                set(vht_capabilities2, "VHT160MHzBWSupported", Matcher<const bool &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(vht_capabilities2, "VHT160", Matcher<const bool &>(_)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix,
-                set(vht_capabilities2, "SUBeamformerSupported", Matcher<const bool &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(vht_capabilities2, "SUBeamformer", Matcher<const bool &>(_)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix,
-                set(vht_capabilities2, "MUBeamformerSupported", Matcher<const bool &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(vht_capabilities2, "MUBeamformer", Matcher<const bool &>(_)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set_current_time(g_assoc_event_path_1, _)).WillOnce(Return(true));
 

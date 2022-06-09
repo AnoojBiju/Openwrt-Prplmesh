@@ -19,9 +19,9 @@
             %read-only uint32 MaxNumberOfRxSpatialStreams {
                 on action validate call check_maximum 4;
             }
-            %read-only bool HT20MHzGISupported;     /* Short GI Support for 20 MHz. */
-            %read-only bool HT40MHzGISupported;     /* Short GI Support for 40 MHz. */
-            %read-only bool HT40MHzBWSupported;     /* HT support for 40 MHz bandwidth.*/
+            %read-only bool HTShortGI20;        /* HT short GI for 20 MHz support. */
+            %read-only bool HTShortGI40;        /* HT short GI for 40 MHz support. */
+            %read-only bool HT40;               /* HT 40 MHz bandwidth support.*/
         }
     }
 }
@@ -30,12 +30,12 @@
     mib VHTCapabilities {
         /* Coming from 17.2.9 of the Multi-AP Specification */
         object VHTCapabilities {
-            /* Supported set of VHT MCSs that can be transmitted. */
-            %read-only uint32 VHTTxMCSSet {
+            /* Supported set of VHT MCSs and NSSs that can be transmitted. */
+            %read-only uint32 MCSNSSTxSet {
                 on action validate call check_range [0, 65536];
             }
-            /* Supported set of VHT MCSs that can be received. */
-            %read-only uint32 VHTRxMCSSet {
+            /* Supported set of VHT MCSs and NSSs that can be received. */
+            %read-only uint32 MCSNSSRxSet {
                 on action validate call check_range [0, 65536];
             }
             /* Maximum number of supported Tx spatial streams */
@@ -46,12 +46,12 @@
             %read-only uint32 MaxNumberOfRxSpatialStreams {
                 on action validate call check_maximum 8;
             }
-            %read-only bool VHT80MHzGISupported;        /* Short GI support for 80 MHz */
-            %read-only bool VHT160MHzGISupported;       /* Short GI support for 160 MHz and 80+80 MHz */
-            %read-only bool VHT8080MHzBWSupported;      /* VHT support for 80+80 MHz bandwidth. */
-            %read-only bool VHT160MHzBWSupported;       /* VHT support for 160 MHz bandwidth. */
-            %read-only bool SUBeamformerSupported;      /* Single user beamformer capable. */
-            %read-only bool MUBeamformerSupported;      /* Multi user beamformer capable. */
+            %read-only bool VHTShortGI80;               /* VHT short GI for 80 MHz support. */
+            %read-only bool VHTShortGI160;              /* VHT short GI for 160 MHz and 80+80 MHz support. */
+            %read-only bool VHT8080;                    /* VHT 80+80 MHz bandwidth support. */
+            %read-only bool VHT160;                     /* VHT 160 MHz bandwidth support. */
+            %read-only bool SUBeamformer;               /* Single-user beamformer support. */
+            %read-only bool MUBeamformer;               /* Multi-user beamformer support. */
         }
     }
 }
