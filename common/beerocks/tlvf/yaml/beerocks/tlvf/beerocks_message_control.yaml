@@ -219,7 +219,7 @@ cACTION_CONTROL_CLIENT_BEACON_11K_RESPONSE:
   params: sBeaconResponse11k
 
 #################################################
-# MONITOR RDKB CONFIGURATIONS
+# MONITOR PRE ASSOCIATION STEERING CONFIGURATIONS
 #################################################
 cACTION_CONTROL_STEERING_CLIENT_SET_GROUP_REQUEST:
   _type: class
@@ -237,7 +237,7 @@ cACTION_CONTROL_STEERING_CLIENT_SET_RESPONSE:
   _type: class
   params: sSteeringClientSetResponse
 ################################################
-# MONITOR RDKB NOTIFICATIONS
+# MONITOR PRE ASSOCIATION STEERING NOTIFICATIONS
 #################################################
 cACTION_CONTROL_STEERING_EVENT_CLIENT_ACTIVITY_NOTIFICATION:
   _type: class
@@ -248,7 +248,7 @@ cACTION_CONTROL_STEERING_EVENT_SNR_XING_NOTIFICATION:
   params: sSteeringEvSnrXing
 
 ################################################
-# AP_MANAGER RDKB NOTIFICATIONS(softblock)
+# AP_MANAGER PRE ASSOCIATION STEERING NOTIFICATIONS(softblock)
 #################################################
 cACTION_CONTROL_STEERING_EVENT_PROBE_REQ_NOTIFICATION:
   _type: class

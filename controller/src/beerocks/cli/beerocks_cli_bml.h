@@ -12,9 +12,6 @@
 #define PRINT_BUFFER_LENGTH 4096
 #include "beerocks_cli.h"
 #include "bml.h"
-#ifdef BEEROCKS_RDKB
-#include "rdkb/bml_rdkb.h"
-#endif
 
 #include <bcl/beerocks_defines.h>
 #include <bcl/network/network_utils.h>
@@ -137,11 +134,12 @@ private:
     int get_slave_restricted_channels_caller(int numOfArgs);
     int bml_trigger_topology_discovery_caller(int numOfArgs);
     int bml_channel_selection_caller(int numOfArgs);
-#ifdef BEEROCKS_RDKB
-    int bml_rdkb_steering_set_group_caller(int numOfArgs);
-    int bml_rdkb_steering_client_set_caller(int numOfArgs);
-    int bml_rdkb_steering_event_register_caller(int numOfArgs);
-    int bml_rdkb_steering_client_measure_caller(int numOfArgs);
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
+    int bml_pre_association_steering_set_group_caller(int numOfArgs);
+    int bml_pre_association_steering_client_set_caller(int numOfArgs);
+    int bml_pre_association_steering_event_register_caller(int numOfArgs);
+    int bml_pre_association_steering_client_measure_caller(int numOfArgs);
+    int bml_pre_association_steering_client_disconnect_caller(int numOfArgs);
 #endif
     int set_dcs_continuous_scan_enable_caller(int numOfArgs);
     int get_dcs_continuous_scan_enable_caller(int numOfArgs);
@@ -199,16 +197,19 @@ private:
     int topology_discovery(const std::string &al_mac);
     int channel_selection(const std::string &radio_mac, uint8_t channel, uint8_t bw,
                           uint8_t csa_count = 5);
-#ifdef BEEROCKS_RDKB
-    int steering_set_group(uint32_t steeringGroupIndex, const std::string &str_cfg_2,
-                           const std::string &str_cfg_5);
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
+    int steering_set_group(uint32_t steeringGroupIndex,
+                           const std::vector<std::string> &str_ap_cfgs);
     int steering_client_set(uint32_t steeringGroupIndex, const std::string &str_bssid,
                             const std::string &str_client_mac,
                             const std::string &str_config = std::string());
     int steering_event_register(const std::string &optional = std::string());
     int steering_client_measure(uint32_t steeringGroupIndex, const std::string &str_bssid,
                                 const std::string &str_client_mac);
-#endif
+    int steering_client_disconnect(uint32_t steeringGroupIndex, const std::string &str_bssid,
+                                   const std::string &str_client_mac, uint32_t type,
+                                   uint32_t reason);
+#endif /* FEATURE_PRE_ASSOCIATION_STEERING */
     int set_dcs_continuous_scan_enable(const std::string &radio_mac, int8_t enable);
     int get_dcs_continuous_scan_enable(const std::string &radio_mac);
     int set_dcs_continuous_scan_params(const std::string &radio_mac, int32_t dwell_time,

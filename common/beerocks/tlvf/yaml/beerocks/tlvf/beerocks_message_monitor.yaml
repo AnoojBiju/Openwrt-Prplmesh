@@ -145,7 +145,7 @@ cACTION_MONITOR_CLIENT_NEW_IP_ADDRESS_NOTIFICATION:
   ipv4: beerocks::net::sIpv4Addr
 
 #################################################
-# CLIENT MONITOR RDKB HAL
+# CLIENT MONITOR PRE ASSOCIATION STEERING HAL
 #################################################
 cACTION_MONITOR_STEERING_CLIENT_SET_GROUP_REQUEST:
   _type: class

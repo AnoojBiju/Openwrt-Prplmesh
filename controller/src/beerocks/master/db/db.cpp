@@ -239,7 +239,12 @@ bool db::add_node(const sMacAddr &mac, const sMacAddr &parent_mac, beerocks::eTy
     auto n = get_node(mac);
     if (n) { // n is not nullptr
         LOG(DEBUG) << "node with mac " << mac << " already exists, updating";
-        n->set_type(type);
+        //check if node type is same, else set_type would return false
+        if (!n->set_type(type)) {
+            LOG(ERROR) << "Mac duplication detected as existing type is " << n->get_type()
+                       << " and received type is " << type;
+            return false;
+        }
         if (n->parent_mac != tlvf::mac_to_string(parent_mac)) {
             n->previous_parent_mac = n->parent_mac;
             n->parent_mac          = tlvf::mac_to_string(parent_mac);
@@ -4948,13 +4953,13 @@ bool db::assign_bml_task_id(int new_task_id)
 
 int db::get_bml_task_id() { return bml_task_id; }
 
-bool db::assign_rdkb_wlan_task_id(int new_task_id)
+bool db::assign_pre_association_steering_task_id(int new_task_id)
 {
-    rdkb_wlan_task_id = new_task_id;
+    pre_association_steering_task_id = new_task_id;
     return true;
 }
 
-int db::get_rdkb_wlan_task_id() { return rdkb_wlan_task_id; }
+int db::get_pre_association_steering_task_id() { return pre_association_steering_task_id; }
 
 bool db::assign_agent_monitoring_task_id(int new_task_id)
 {

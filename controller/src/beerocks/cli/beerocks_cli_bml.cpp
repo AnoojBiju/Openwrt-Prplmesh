@@ -217,47 +217,32 @@ static void bml_utils_dump_conn_map(
     }
 }
 
-#ifdef BEEROCKS_RDKB
-static void steering_set_group_string_to_struct(const std::string &str_cfg_2,
-                                                const std::string &str_cfg_5,
-                                                BML_STEERING_AP_CONFIG &cfg2,
-                                                BML_STEERING_AP_CONFIG &cfg5)
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
+static void steering_set_group_string_to_struct(const std::vector<std::string> &str_ap_cfgs,
+                                                BML_STEERING_AP_CONFIG *&cfgs)
 {
-    auto v_str_cfg_2 = string_utils::str_split(str_cfg_2, ',');
-    auto v_str_cfg_5 = string_utils::str_split(str_cfg_5, ',');
-    for (const auto &elem : v_str_cfg_2) {
-        std::cout << "v_str_cfg_2 : " << elem << std::endl;
+    for (size_t i = 0; i < str_ap_cfgs.size(); i++) {
+        auto v_str_ap_cfg = string_utils::str_split(str_ap_cfgs[i], ',');
+        for (const auto &elem : v_str_ap_cfg) {
+            std::cout << "v_str_ap_cfg No." << i + 1 << ": " << elem << std::endl;
+        }
+        std::cout << std::endl;
+        tlvf::mac_to_array(tlvf::mac_from_string(v_str_ap_cfg[0]), cfgs[i].bssid);
+        cfgs[i].utilCheckIntervalSec   = string_utils::stoi(v_str_ap_cfg[1]);
+        cfgs[i].utilAvgCount           = string_utils::stoi(v_str_ap_cfg[2]);
+        cfgs[i].inactCheckIntervalSec  = string_utils::stoi(v_str_ap_cfg[3]);
+        cfgs[i].inactCheckThresholdSec = string_utils::stoi(v_str_ap_cfg[4]);
+        sMacAddr bssid                 = tlvf::mac_from_array(cfgs[i].bssid);
+        std::cout << "cfg_" << i + 1 << ".bssid = " << bssid << std::endl
+                  << "cfg_" << i + 1 << ".utilCheckIntervalSec = " << cfgs[i].utilCheckIntervalSec
+                  << std::endl
+                  << "cfg_" << i + 1 << ".utilAvgCount = " << cfgs[i].utilAvgCount << std::endl
+                  << "cfg_" << i + 1 << ".inactCheckIntervalSec = " << cfgs[i].inactCheckIntervalSec
+                  << std::endl
+                  << "cfg_" << i + 1
+                  << ".inactCheckThresholdSec = " << cfgs[i].inactCheckThresholdSec << std::endl;
+        std::cout << std::endl;
     }
-
-    for (const auto &elem : v_str_cfg_5) {
-        std::cout << "v_str_cfg_5 : " << elem << std::endl;
-    }
-    tlvf::mac_to_array(tlvf::mac_from_string(v_str_cfg_2[0]), cfg2.bssid);
-    tlvf::mac_to_array(tlvf::mac_from_string(v_str_cfg_5[0]), cfg5.bssid);
-    cfg2.utilCheckIntervalSec   = string_utils::stoi(v_str_cfg_2[1]);
-    cfg5.utilCheckIntervalSec   = string_utils::stoi(v_str_cfg_5[1]);
-    cfg2.utilAvgCount           = string_utils::stoi(v_str_cfg_2[2]);
-    cfg5.utilAvgCount           = string_utils::stoi(v_str_cfg_5[2]);
-    cfg2.inactCheckIntervalSec  = string_utils::stoi(v_str_cfg_2[3]);
-    cfg5.inactCheckIntervalSec  = string_utils::stoi(v_str_cfg_5[3]);
-    cfg2.inactCheckThresholdSec = string_utils::stoi(v_str_cfg_2[4]);
-    cfg5.inactCheckThresholdSec = string_utils::stoi(v_str_cfg_5[4]);
-
-    sMacAddr bssid2 = tlvf::mac_from_array(cfg2.bssid);
-    sMacAddr bssid5 = tlvf::mac_from_array(cfg5.bssid);
-
-    std::cout << "cfg2.bssid = " << bssid2 << std::endl
-              << "cfg2.utilCheckIntervalSec = " << cfg2.utilCheckIntervalSec << std::endl
-              << "cfg2.utilAvgCount = " << cfg2.utilAvgCount << std::endl
-              << "cfg2.inactCheckIntervalSec = " << cfg2.inactCheckIntervalSec << std::endl
-              << "cfg2.inactCheckThresholdSec = " << cfg2.inactCheckThresholdSec << std::endl
-              << "___________________________________________________" << std::endl
-              << "cfg5.bssid = " << bssid5 << std::endl
-              << "cfg5.utilCheckIntervalSec = " << cfg5.utilCheckIntervalSec << std::endl
-              << "cfg5.utilAvgCount = " << cfg5.utilAvgCount << std::endl
-              << "cfg5.inactCheckIntervalSec = " << cfg5.inactCheckIntervalSec << std::endl
-              << "cfg5.inactCheckThresholdSec = " << cfg5.inactCheckThresholdSec << std::endl;
-    return;
 }
 static void steering_client_set_string_to_struct(const std::string &str_config,
                                                  BML_STEERING_CLIENT_CONFIG &config)
@@ -283,7 +268,7 @@ static void steering_client_set_string_to_struct(const std::string &str_config,
               << "config.authRejectReason = " << config.authRejectReason << std::endl;
     return;
 }
-#endif //BEEROCKS_RDKB
+#endif //FEATURE_PRE_ASSOCIATION_STEERING
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////////// Implementation ///////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -490,31 +475,43 @@ void cli_bml::setFunctionsMapAndArray()
                        static_cast<pFunction>(&cli_bml::bml_channel_selection_caller), 3, 4,
                        STRING_ARG, INT_ARG, INT_ARG, INT_ARG);
 
-#ifdef BEEROCKS_RDKB
-    insertCommandToMap("bml_rdkb_steering_set_group", "<steeringGroupIndex> <cfg_2> <cfg_5>",
-                       "cfg2/5 = <bssid>, <utilCheckIntervalSec>, <utilAvgCount>, "
-                       "<inactCheckIntervalSec>, <inactCheckThresholdSec> (without spaces between "
-                       "commas) ",
-                       static_cast<pFunction>(&cli_bml::bml_rdkb_steering_set_group_caller), 3, 3,
-                       INT_ARG, STRING_ARG, STRING_ARG);
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
+    insertCommandToMap(
+        "bml_pre_association_steering_set_group",
+        "<steeringGroupIndex> [<ap_cfg_1>] [<ap_cfg_2>] [<ap_cfg_3>]",
+        "ap_cfg_1/2/3 = <bssid>, <utilCheckIntervalSec>, <utilAvgCount>, "
+        "<inactCheckIntervalSec>, <inactCheckThresholdSec> (without spaces between "
+        "commas). To remove a group, provide only the Group Index",
+        static_cast<pFunction>(&cli_bml::bml_pre_association_steering_set_group_caller), 1, 4,
+        INT_ARG, STRING_ARG, STRING_ARG, STRING_ARG);
 
     insertCommandToMap(
-        "bml_rdkb_steering_client_set", "<steeringGroupIndex> <bssid> <client_mac> [<config>]",
+        "bml_pre_association_steering_client_set",
+        "<steeringGroupIndex> <bssid> <client_mac> [<config>]",
         "config = <snrProbeHWM>, <snrProbeLWM>, <snrAuthHWM>, <snrAuthLWM>, <snrInactXing>, "
         "<snrHighXing>, <snrLowXing>, <authRejectReason> (without spaces between commas) "
         "if 'config' is not given, client will be removed ",
-        static_cast<pFunction>(&cli_bml::bml_rdkb_steering_client_set_caller), 3, 4, INT_ARG,
-        STRING_ARG, STRING_ARG, STRING_ARG);
-    insertCommandToMap("bml_rdkb_steering_event_register", "[<x>]",
-                       "Registers a callback function to events update from the beerocks platform, "
-                       "call with 'x' to unregister the callback ",
-                       static_cast<pFunction>(&cli_bml::bml_rdkb_steering_event_register_caller), 0,
-                       1, STRING_ARG);
+        static_cast<pFunction>(&cli_bml::bml_pre_association_steering_client_set_caller), 3, 4,
+        INT_ARG, STRING_ARG, STRING_ARG, STRING_ARG);
+    insertCommandToMap(
+        "bml_pre_association_steering_event_register", "[<x>]",
+        "Registers a callback function to events update from the beerocks platform, "
+        "call with 'x' to unregister the callback ",
+        static_cast<pFunction>(&cli_bml::bml_pre_association_steering_event_register_caller), 0, 1,
+        STRING_ARG);
 
-    insertCommandToMap("bml_rdkb_steering_client_measure",
-                       "<steeringGroupIndex> <bssid> <client_mac>", "",
-                       static_cast<pFunction>(&cli_bml::bml_rdkb_steering_client_measure_caller), 3,
-                       3, INT_ARG, STRING_ARG, STRING_ARG);
+    insertCommandToMap(
+        "bml_pre_association_steering_client_measure", "<steeringGroupIndex> <bssid> <client_mac>",
+        "", static_cast<pFunction>(&cli_bml::bml_pre_association_steering_client_measure_caller), 3,
+        3, INT_ARG, STRING_ARG, STRING_ARG);
+
+    insertCommandToMap(
+        "bml_pre_association_steering_client_disconnect",
+        "<steeringGroup> <apIndex> <client_mac> <type> <reason>",
+        "Type: 0 - Unknown, 1 - Disassociation, 2 - Deauthentication. reason - reason code to "
+        "provide in deauth/disassoc frame",
+        static_cast<pFunction>(&cli_bml::bml_pre_association_steering_client_disconnect_caller), 5,
+        5, INT_ARG, STRING_ARG, STRING_ARG, INT_ARG, INT_ARG);
 #endif
     insertCommandToMap(
         "bml_set_dcs_continuous_scan_enable", "<mac> <1 or 0>",
@@ -1191,15 +1188,19 @@ int cli_bml::bml_channel_selection_caller(int numOfArgs)
     }
     return -1;
 }
-#ifdef BEEROCKS_RDKB
-int cli_bml::bml_rdkb_steering_set_group_caller(int numOfArgs)
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
+int cli_bml::bml_pre_association_steering_set_group_caller(int numOfArgs)
 {
-    if (numOfArgs == 3) {
-        return steering_set_group(args.intArgs[0], args.stringArgs[1], args.stringArgs[2]);
+    std::vector<std::string> strApCfgs;
+    if (numOfArgs >= 1 && numOfArgs <= 4) {
+        for (int i = 1; i < numOfArgs; i++) {
+            strApCfgs.push_back(args.stringArgs[i]);
+        }
+        return steering_set_group(args.intArgs[0], strApCfgs);
     }
     return -1;
 }
-int cli_bml::bml_rdkb_steering_client_set_caller(int numOfArgs)
+int cli_bml::bml_pre_association_steering_client_set_caller(int numOfArgs)
 {
     if (numOfArgs == 4) {
         return steering_client_set(args.intArgs[0], args.stringArgs[1], args.stringArgs[2],
@@ -1209,7 +1210,7 @@ int cli_bml::bml_rdkb_steering_client_set_caller(int numOfArgs)
     }
     return -1;
 }
-int cli_bml::bml_rdkb_steering_event_register_caller(int numOfArgs)
+int cli_bml::bml_pre_association_steering_event_register_caller(int numOfArgs)
 {
     if (numOfArgs < 0)
         return -1;
@@ -1218,14 +1219,23 @@ int cli_bml::bml_rdkb_steering_event_register_caller(int numOfArgs)
     return steering_event_register(args.stringArgs[0]);
 }
 
-int cli_bml::bml_rdkb_steering_client_measure_caller(int numOfArgs)
+int cli_bml::bml_pre_association_steering_client_measure_caller(int numOfArgs)
 {
     if (numOfArgs == 3) {
         return steering_client_measure(args.intArgs[0], args.stringArgs[1], args.stringArgs[2]);
     }
     return -1;
 }
-#endif //BEEROCKS_RDKB
+
+int cli_bml::bml_pre_association_steering_client_disconnect_caller(int numOfArgs)
+{
+    if (numOfArgs == 5) {
+        return steering_client_disconnect(args.intArgs[0], args.stringArgs[1], args.stringArgs[2],
+                                          args.intArgs[3], args.intArgs[4]);
+    }
+    return -1;
+}
+#endif //FEATURE_PRE_ASSOCIATION_STEERING
 
 /**
  * caller function for set_dcs_continuous_scan_enable
@@ -1922,19 +1932,34 @@ int cli_bml::channel_selection(const std::string &radio_mac, uint8_t channel, ui
     return 0;
 }
 
-#ifdef BEEROCKS_RDKB
-int cli_bml::steering_set_group(uint32_t steeringGroupIndex, const std::string &str_cfg_2,
-                                const std::string &str_cfg_5)
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
+int cli_bml::steering_set_group(uint32_t steeringGroupIndex,
+                                const std::vector<std::string> &str_ap_cfgs)
+
 {
+    int ret;
+    BML_STEERING_AP_CONFIG *cfgs = nullptr;
+    unsigned int length          = 0;
 
-    BML_STEERING_AP_CONFIG cfg2 = {};
-    BML_STEERING_AP_CONFIG cfg5 = {};
-    std::cout << "set_ap_config entry" << std::endl;
-    ;
-    steering_set_group_string_to_struct(str_cfg_2, str_cfg_5, cfg2, cfg5);
+    std::cout << "set_ap_config entries" << std::endl;
+    if (!str_ap_cfgs.empty()) {
+        length = str_ap_cfgs.size();
+        cfgs   = new BML_STEERING_AP_CONFIG[length];
+        if (!cfgs) {
+            std::cout << "Can't allocate array of " << length << " BML_STEERING_AP_CONFIG"
+                      << std::endl;
+            return -1;
+        }
+        steering_set_group_string_to_struct(str_ap_cfgs, cfgs);
+    }
 
-    int ret = bml_rdkb_steering_set_group(ctx, steeringGroupIndex, &cfg2, &cfg5);
-    printBmlReturnVals("bml_rdkb_steering_set_group", ret);
+    ret = bml_pre_association_steering_set_group(ctx, steeringGroupIndex, cfgs, length);
+
+    if (cfgs) {
+        delete[] cfgs;
+        cfgs = nullptr;
+    }
+    printBmlReturnVals("bml_pre_association_steering_set_group", ret);
     return 0;
 }
 
@@ -1948,14 +1973,16 @@ int cli_bml::steering_client_set(uint32_t steeringGroupIndex, const std::string 
     int ret;
     if (str_config.empty()) {
         //client remove
-        ret = bml_rdkb_steering_client_set(ctx, steeringGroupIndex, bssid, client_mac, nullptr);
+        ret = bml_pre_association_steering_client_set(ctx, steeringGroupIndex, bssid, client_mac,
+                                                      nullptr);
     } else {
         // client add
         BML_STEERING_CLIENT_CONFIG config = {};
         steering_client_set_string_to_struct(str_config, config);
-        ret = bml_rdkb_steering_client_set(ctx, steeringGroupIndex, bssid, client_mac, &config);
+        ret = bml_pre_association_steering_client_set(ctx, steeringGroupIndex, bssid, client_mac,
+                                                      &config);
     }
-    printBmlReturnVals("bml_rdkb_steering_client_set ", ret);
+    printBmlReturnVals("bml_pre_association_steering_client_set ", ret);
     return 0;
 }
 
@@ -1963,12 +1990,12 @@ int cli_bml::steering_event_register(const std::string &optional)
 {
     int ret;
     if (optional == "x") {
-        ret = bml_rdkb_steering_event_register(ctx, NULL);
+        ret = bml_pre_association_steering_event_register(ctx, NULL);
     } else {
-        ret = bml_rdkb_steering_event_register(ctx, events_update_to_console_cb);
+        ret = bml_pre_association_steering_event_register(ctx, events_update_to_console_cb);
     }
 
-    printBmlReturnVals("bml_rdkb_steering_event_register", ret);
+    printBmlReturnVals("bml_pre_association_steering_event_register", ret);
     return 0;
 }
 
@@ -1979,11 +2006,31 @@ int cli_bml::steering_client_measure(uint32_t steeringGroupIndex, const std::str
     tlvf::mac_from_string(client_mac, str_client_mac);
     BML_MAC_ADDR bssid;
     tlvf::mac_from_string(bssid, str_bssid);
-    int ret = bml_rdkb_steering_client_measure(ctx, steeringGroupIndex, bssid, client_mac);
-    printBmlReturnVals("bml_rdkb_steering_client_measure", ret);
+    int ret =
+        bml_pre_association_steering_client_measure(ctx, steeringGroupIndex, bssid, client_mac);
+    printBmlReturnVals("bml_pre_association_steering_client_measure", ret);
     return 0;
 }
-#endif //BEEROCKS_RDKB
+
+int cli_bml::steering_client_disconnect(uint32_t steeringGroupIndex, const std::string &str_bssid,
+                                        const std::string &str_client_mac, uint32_t type,
+                                        uint32_t reason)
+{
+    BML_MAC_ADDR client_mac;
+    tlvf::mac_from_string(client_mac, str_client_mac);
+    BML_MAC_ADDR bssid;
+    tlvf::mac_from_string(bssid, str_bssid);
+    if (type >= 3) {
+        //assign type BML_DISCONNECT_TYPE_UNKNOWN value in case of invalid value
+        type = 0;
+    }
+    int ret = bml_pre_association_steering_client_disconnect(
+        ctx, steeringGroupIndex, bssid, client_mac, static_cast<BML_DISCONNECT_TYPE>(type), reason);
+    printBmlReturnVals("bml_pre_association_steering_client_disconnect", ret);
+    return 0;
+}
+
+#endif //FEATURE_PRE_ASSOCIATION_STEERING
 
 /**
  * Enables or disables beerocks DCS continuous scans.
