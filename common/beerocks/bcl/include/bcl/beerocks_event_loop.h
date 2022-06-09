@@ -10,6 +10,7 @@
 #define _BEEROCKS_EVENT_LOOP_H_
 
 #include <functional>
+#include <string>
 
 namespace beerocks {
 
