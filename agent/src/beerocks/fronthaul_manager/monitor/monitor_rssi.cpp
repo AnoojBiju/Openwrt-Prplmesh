@@ -91,7 +91,7 @@ void monitor_rssi::arp_recv()
         return;
     }
 
-    uint16_t proto_type = (uint16_t)(((rx_buffer[12]) << 8) + rx_buffer[13]);
+     uint16_t proto_type = (uint16_t)(((rx_buffer[12]) << 8) + rx_buffer[13]);
     arphdr              = (network_utils::arp_hdr *)(rx_buffer + 6 + 6 + 2);
     if ((proto_type != ETH_P_ARP) || (ntohs(arphdr->opcode) != ARPOP_REPLY)) {
         // LOG(DEBUG) << "proto_type or arphdr->opcode are wrong type! proto_type=" << proto_type << " ETH_P_ARP= " << ETH_P_ARP << " arphdr->opcode=" << ntohs(arphdr->opcode);
@@ -106,7 +106,8 @@ void monitor_rssi::arp_recv()
     }
 
     if (sta_node == nullptr) {
-        //LOG(DEBUG) << "can't find node by mac=" << sta_mac << " or by ipv4=" << sta_ip << " in db! dropping arp reply";
+          //LOG(DEBUG) 
+	  //<< "can't find node by mac=" << sta_mac << " or by ipv4=" << sta_ip << " in db! dropping arp reply";
         return;
     }
 
@@ -132,8 +133,8 @@ void monitor_rssi::arp_recv()
             m_slave_client->send_cmdu(cmdu_tx);
 
             LOG(DEBUG)
-                << "send ACTION_MONITOR_CLIENT_RX_RSSI_MEASUREMENT_START_NOTIFICATION, sta_mac = "
-                << sta_node->get_mac() << " id=" << request_id;
+                   << "send ACTION_MONITOR_CLIENT_RX_RSSI_MEASUREMENT_START_NOTIFICATION, sta_mac = "
+                   << sta_node->get_mac() << " id=" << request_id;
         }
 
         // send arp burst
