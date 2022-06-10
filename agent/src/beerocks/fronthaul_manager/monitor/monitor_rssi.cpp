@@ -106,7 +106,8 @@ void monitor_rssi::arp_recv()
     }
 
     if (sta_node == nullptr) {
-        //LOG(DEBUG) << "can't find node by mac=" << sta_mac << " or by ipv4=" << sta_ip << " in db! dropping arp reply";
+        //LOG(DEBUG)
+        //<< "can't find node by mac=" << sta_mac << " or by ipv4=" << sta_ip << " in db! dropping arp reply";
         return;
     }
 
