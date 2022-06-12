@@ -248,6 +248,14 @@ static void build_channels_list(ieee1905_1::CmduMessageTx &cmdu_tx,
                 continue;
             }
 
+            // If the ACS_REPORT's ranking map is empty, set the preference score
+            // to the lowest value, as the channel is valid, but not preferable.
+            if (ranks.size() == 0) {
+                supported_bw_info_tlv.multiap_preference = 1;
+                print_channel_info();
+                continue;
+            }
+
             // The ranks are sorted since they are on an ordered container. Therefore, use the
             // the index of each element to calculate the Multi-AP preference by subtracting
             // the rank element index from 15 (Best rank).
@@ -864,10 +872,18 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             }
         }
 
+        if (ap_wlan_hal->get_radio_info().channel == request->cs_params().channel &&
+            ap_wlan_hal->get_radio_info().bandwidth == request->cs_params().bandwidth &&
+            !request->tx_limit_valid()) {
+            // No need to switch channels
+            LOG(INFO) << "No need to switch channels as current channel and requested channels are "
+                         "the same.";
+            return;
+        }
+
         // Set AP channel
-        if (ap_wlan_hal->get_radio_info().channel != request->cs_params().channel &&
-            !ap_wlan_hal->switch_channel(request->cs_params().channel,
-                                         request->cs_params().bandwidth,
+        if (!ap_wlan_hal->switch_channel(request->cs_params().channel,
+                                         (beerocks::eWiFiBandwidth)request->cs_params().bandwidth,
                                          request->cs_params().vht_center_frequency,
                                          request->cs_params().csa_count)) { //error
             std::string error("Failed to set AP channel!");

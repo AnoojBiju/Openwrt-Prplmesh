@@ -2955,7 +2955,7 @@ bool db::set_channel_preference(const sMacAddr &radio_mac, const uint8_t operati
 }
 
 int8_t db::get_channel_preference(const sMacAddr &radio_mac, const uint8_t operating_class,
-                                  const uint8_t channel_number)
+                                  const uint8_t channel_number, const bool is_central_channel)
 {
     auto radio = get_hostap(radio_mac);
     if (!radio) {
@@ -2963,9 +2963,22 @@ int8_t db::get_channel_preference(const sMacAddr &radio_mac, const uint8_t opera
         return (int8_t)eChannelPreferenceRankingConsts::INVALID;
     }
 
-    if (!wireless_utils::is_channel_in_operating_class(operating_class, channel_number)) {
+    uint8_t channel = channel_number;
+    if (!is_central_channel &&
+        wireless_utils::is_operating_class_using_central_channel(operating_class)) {
+        auto bandwidth         = wireless_utils::operating_class_to_bandwidth(operating_class);
+        auto source_channel_it = wireless_utils::channels_table_5g.find(channel_number);
+        if (source_channel_it == wireless_utils::channels_table_5g.end()) {
+            LOG(ERROR) << "Couldn't find source channel " << channel_number
+                       << " for overlapping channels";
+            return (int8_t)eChannelPreferenceRankingConsts::INVALID;
+        }
+        channel = source_channel_it->second.at(bandwidth).center_channel;
+    }
+
+    if (!wireless_utils::is_channel_in_operating_class(operating_class, channel)) {
         LOG(ERROR) << "Operating class #" << operating_class << " does not contain channel #"
-                   << channel_number;
+                   << channel;
         return (int8_t)eChannelPreferenceRankingConsts::INVALID;
     }
 
@@ -2974,17 +2987,16 @@ int8_t db::get_channel_preference(const sMacAddr &radio_mac, const uint8_t opera
 
     // Find if the channel is supported by the radio
     if (std::find_if(supported_channels.begin(), supported_channels.end(),
-                     [channel_number, bw](const message::sWifiChannel chan) {
+                     [channel, bw](const message::sWifiChannel chan) {
                          // Find if matching channel number & bandwidth.
-                         return ((chan.channel == channel_number) &&
-                                 (chan.channel_bandwidth == bw));
+                         return ((chan.channel == channel) && (chan.channel_bandwidth == bw));
                      }) == supported_channels.end()) {
-        LOG(ERROR) << "Channel #" << channel_number << " in Operating Class #" << operating_class
+        LOG(ERROR) << "Channel #" << channel << " in Operating Class #" << operating_class
                    << " is not supported by the radio.";
         return (int8_t)eChannelPreferenceRankingConsts::NON_OPERABLE;
     }
 
-    const auto key  = std::make_pair(operating_class, channel_number);
+    const auto key  = std::make_pair(operating_class, channel);
     const auto iter = radio->channel_preference_report.find(key);
     if (iter == radio->channel_preference_report.end()) {
         // Key is not found on radio's preference, returning BEST
@@ -3104,7 +3116,7 @@ bool db::set_channel_scan_pool(const sMacAddr &mac, const std::unordered_set<uin
         return false;
     }
 
-    (single_scan ? radio->single_scan_config : radio->continuous_scan_config).channel_pool =
+    (single_scan ? radio->single_scan_config : radio->continuous_scan_config).active_channel_pool =
         channel_pool;
 
     LOG(DEBUG) << (single_scan ? "single" : "continuous")
@@ -3123,7 +3135,8 @@ const std::unordered_set<uint8_t> &db::get_channel_scan_pool(const sMacAddr &mac
         return empty;
     }
 
-    return (single_scan ? radio->single_scan_config : radio->continuous_scan_config).channel_pool;
+    return (single_scan ? radio->single_scan_config : radio->continuous_scan_config)
+        .active_channel_pool;
 }
 
 bool db::is_channel_in_pool(const sMacAddr &mac, uint8_t channel, bool single_scan)
@@ -3134,8 +3147,8 @@ bool db::is_channel_in_pool(const sMacAddr &mac, uint8_t channel, bool single_sc
         return false;
     }
 
-    auto &pool =
-        (single_scan ? radio->single_scan_config : radio->continuous_scan_config).channel_pool;
+    auto &pool = (single_scan ? radio->single_scan_config : radio->continuous_scan_config)
+                     .active_channel_pool;
     return pool.find(channel) != pool.end();
 }
 
@@ -3269,6 +3282,46 @@ bool db::get_pool_of_all_supported_channels(std::unordered_set<uint8_t> &channel
     std::transform(subset_20MHz_channels.begin(), subset_20MHz_channels.end(),
                    std::inserter(channel_pool_set, channel_pool_set.end()),
                    [](const beerocks::message::sWifiChannel &c) -> uint8_t { return c.channel; });
+    return true;
+}
+
+bool db::get_selection_channel_pool(const sMacAddr &RUID,
+                                    std::unordered_set<uint8_t> &channel_pool_set)
+{
+    auto radio = get_hostap(RUID);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << RUID;
+        return false;
+    }
+    if (radio->single_scan_config.default_channel_pool.empty()) {
+        LOG(INFO) << "Getting static channel pool for " << radio->iface_name;
+        const auto &pool_str = config.default_channel_pools[radio->iface_name];
+        LOG(INFO) << "Static channel pool for " << radio->iface_name << " is: " << pool_str;
+        const auto &channels_str = string_utils::str_split(pool_str, ',');
+        for (const auto &channel_str : channels_str) {
+            LOG(INFO) << "Adding channel " << channel_str << " to the dynamic pool";
+            radio->single_scan_config.default_channel_pool.insert(
+                beerocks::string_utils::stoi(channel_str));
+        }
+    }
+    channel_pool_set = radio->single_scan_config.default_channel_pool;
+    return true;
+}
+
+bool db::set_selection_channel_pool(const sMacAddr &RUID,
+                                    const std::unordered_set<uint8_t> &channel_pool)
+{
+    auto radio = get_hostap(RUID);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << RUID;
+        return false;
+    }
+    if (!is_channel_scan_pool_supported(RUID, channel_pool)) {
+        LOG(ERROR) << "Channel pool is not supported!";
+        return false;
+    }
+    radio->single_scan_config.default_channel_pool.clear();
+    radio->single_scan_config.default_channel_pool.insert(channel_pool.begin(), channel_pool.end());
     return true;
 }
 

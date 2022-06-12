@@ -191,6 +191,13 @@ public:
     int channel_selection(const sMacAddr &radio_mac, uint8_t channel, uint8_t bandwidth,
                           uint8_t csa_count = 5);
 
+    // Set the channel pool for the Auto Channel Selection
+    int set_selection_channel_pool(const sMacAddr &radio_mac, const unsigned int *channel_pool,
+                                   const int channel_pool_size);
+    // Get the channel pool for the Auto Channel Selection
+    int get_selection_channel_pool(const sMacAddr &radio_mac, unsigned int *channel_pool,
+                                   int *channel_pool_size);
+
     //set and get vaps list
     int bml_set_vap_list_credentials(const BML_VAP_INFO *vaps, const uint8_t vaps_num);
     int bml_get_vap_list_credentials(BML_VAP_INFO *vaps, uint8_t &vaps_num);
@@ -443,6 +450,7 @@ private:
     beerocks::promise<int> *m_prmChannelScanResultsGet = nullptr;
     beerocks::promise<bool> *m_prmClientListGet        = nullptr;
     beerocks::promise<bool> *m_prmClientGet            = nullptr;
+    beerocks::promise<bool> *m_prmSelectionPoolGet     = nullptr;
 
     std::map<uint8_t, beerocks::promise<int> *> m_prmCliResponses;
 
@@ -464,13 +472,15 @@ private:
     //m_scan_results_status is used to store the results' latest status
     uint8_t *m_scan_results_status = nullptr;
     //m_scan_results_maxsize is used to indicate the maximum capacity of the requested results
-    uint32_t *m_scan_results_maxsize   = nullptr;
-    std::list<sMacAddr> *m_client_list = nullptr;
-    uint32_t *m_client_list_size       = nullptr;
-    BML_CLIENT *m_client               = nullptr;
-    BML_VAP_INFO *m_vaps               = nullptr;
-    uint8_t *m_pvaps_list_size         = nullptr;
-    uint16_t id                        = 0;
+    uint32_t *m_scan_results_maxsize       = nullptr;
+    std::list<sMacAddr> *m_client_list     = nullptr;
+    uint32_t *m_client_list_size           = nullptr;
+    BML_CLIENT *m_client                   = nullptr;
+    BML_VAP_INFO *m_vaps                   = nullptr;
+    uint8_t *m_pvaps_list_size             = nullptr;
+    std::vector<uint8_t> *m_selection_pool = nullptr;
+    uint32_t *m_selection_pool_size        = nullptr;
+    uint16_t id                            = 0;
     static bool s_fExtLogContext;
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
     bool handle_steering_event_update(uint8_t *data_buffer);

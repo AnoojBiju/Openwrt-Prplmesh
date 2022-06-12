@@ -150,7 +150,7 @@ constexpr int DEFAULT_UNFRIENDLY_DEVICE_MAX_TIMELIFE_DELAY_MINUTES = 1 * 24 * 60
 // by default, the interval in which the aging mechanism needs to be checked is once per hour.
 constexpr int DEFAULT_PERSISTENT_DB_AGING_INTERVAL_SEC = 3600;
 // by default zwdfs functionality is disabled
-constexpr int DEFAULT_ZWDFS_ENABLE = 0;
+constexpr int DEFAULT_ZWDFS_DISABLE = 0;
 // Channel ranking used to determine best channel candidate.
 // Using threshold to avoid high frequency channel switch.
 // By default best channel ranking threshold is 0.
@@ -170,6 +170,10 @@ constexpr int DEFAULT_UNSUCCESSFUL_ASSOC_REPORT_POLICY = 1;
 
 // Default value in attempts per minute for maximum rate for reporting unsuccessful association attempts
 constexpr int DEFAULT_UNSUCCESSFUL_ASSOC_MAX_REPORTING_RATE = 30;
+
+// Default DCS Channel Pool
+constexpr int BPL_DCS_CHANNEL_POOL_LEN    = 64;
+constexpr char DEFAULT_DCS_CHANNEL_POOL[] = "0";
 
 /****************************************************************************/
 /******************************* Structures *********************************/
@@ -359,6 +363,10 @@ int cfg_get_certification_mode();
 int cfg_get_load_steer_on_vaps(int num_of_interfaces,
                                char load_steer_on_vaps[BPL_LOAD_STEER_ON_VAPS_LEN]);
 
+/**
+ * 
+ */
+int cfg_get_dcs_channel_pool(int radio_num, char channel_pool[BPL_DCS_CHANNEL_POOL_LEN]);
 /**
  * Returns the maximum number of failures allowed on agent before stopping its execution.
  *
@@ -559,10 +567,10 @@ int cfg_get_all_prplmesh_wifi_interfaces(BPL_WLAN_IFACE *interfaces, int *num_of
 /**
  * @brief Returns whether the zwdfs feature is enabled.
  *
- * @param [out] enable true if the zwdfs is enabled, otherwise false.
+ * @param [out] flag bitwise value of the ZWDFS modes of operation.
  * @return true on success, otherwise false.
  */
-bool cfg_get_zwdfs_enable(bool &enable);
+bool cfg_get_zwdfs_flag(int &flag);
 
 /**
  * @brief Returns best channel ranking threshold.

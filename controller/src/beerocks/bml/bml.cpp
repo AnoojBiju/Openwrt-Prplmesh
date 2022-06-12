@@ -653,6 +653,33 @@ int bml_channel_selection(BML_CTX ctx, const char *radio_mac, uint8_t channel, u
                                    bandwidth, csa_count);
 }
 
+int bml_set_selection_channel_pool(BML_CTX ctx, const char *radio_mac, unsigned int *channel_pool,
+                                   int channel_pool_size)
+{
+    // Validate input parameters
+    if (!ctx) {
+        return (-BML_RET_INVALID_ARGS);
+    }
+
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
+
+    return pBML->set_selection_channel_pool(tlvf::mac_from_string(std::string(radio_mac)),
+                                            channel_pool, channel_pool_size);
+}
+
+int bml_get_selection_channel_pool(BML_CTX ctx, const char *radio_mac, unsigned int *channel_pool,
+                                   int channel_pool_size)
+{
+    if (!ctx) {
+        return (-BML_RET_INVALID_ARGS);
+    }
+
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
+
+    return pBML->get_selection_channel_pool(tlvf::mac_from_string(std::string(radio_mac)),
+                                            channel_pool, &channel_pool_size);
+}
+
 int bml_set_dcs_continuous_scan_enable(BML_CTX ctx, const char *radio_mac, int enable)
 {
     // Validate input parameters

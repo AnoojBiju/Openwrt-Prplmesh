@@ -877,8 +877,8 @@ bool ap_wlan_hal_nl80211::sta_softblock_remove(const std::string &vap_name,
     return false;
 }
 
-bool ap_wlan_hal_nl80211::switch_channel(int chan, int bw, int vht_center_frequency,
-                                         int csa_beacon_count)
+bool ap_wlan_hal_nl80211::switch_channel(int chan, beerocks::eWiFiBandwidth bw,
+                                         int vht_center_frequency, int csa_beacon_count)
 {
     LOG(TRACE) << __func__ << " channel: " << chan << ", bw: " << bw
                << ", vht_center_frequency: " << vht_center_frequency;

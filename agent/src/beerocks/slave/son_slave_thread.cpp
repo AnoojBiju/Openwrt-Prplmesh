@@ -509,10 +509,9 @@ bool slave_thread::read_platform_configuration()
         return false;
     }
 
-    if (!bpl::cfg_get_zwdfs_enable(db->device_conf.zwdfs_enable)) {
-        LOG(WARNING) << "cfg_get_zwdfs_enable() failed!, using default configuration, zwdfs is "
-                     << (db->device_conf.zwdfs_enable ? std::string("enabled.")
-                                                      : std::string("disabled."));
+    if (!bpl::cfg_get_zwdfs_flag(db->device_conf.zwdfs_flag)) {
+        LOG(WARNING) << "cfg_get_zwdfs_flag() failed!, using default configuration: "
+                     << beerocks::utils::get_zwdfs_string(db->device_conf.zwdfs_flag);
     }
 
     if (!bpl::cfg_get_best_channel_rank_threshold(db->device_conf.best_channel_rank_threshold)) {
@@ -561,7 +560,7 @@ bool slave_thread::read_platform_configuration()
     LOG(DEBUG) << "backhaul_preferred_radio_band: "
                << db->device_conf.back_radio.backhaul_preferred_radio_band;
     LOG(DEBUG) << "rdkb_extensions: " << db->device_conf.rdkb_extensions_enabled;
-    LOG(DEBUG) << "zwdfs_enable: " << db->device_conf.zwdfs_enable;
+    LOG(DEBUG) << beerocks::utils::get_zwdfs_string(db->device_conf.zwdfs_flag);
     LOG(DEBUG) << "best_channel_rank_threshold: " << db->device_conf.best_channel_rank_threshold;
     LOG(DEBUG) << "max_prioritization_rules: " << db->device_conf.max_prioritization_rules;
 
@@ -789,8 +788,6 @@ bool slave_thread::handle_cmdu_control_ieee1905_1_message(int fd,
         return handle_ap_metrics_query(fd, cmdu_rx);
     case ieee1905_1::eMessageType::BEACON_METRICS_QUERY_MESSAGE:
         return handle_beacon_metrics_query(fd, cmdu_rx);
-    case ieee1905_1::eMessageType::CHANNEL_SELECTION_REQUEST_MESSAGE:
-        return handle_channel_selection_request(fd, cmdu_rx);
     case ieee1905_1::eMessageType::CLIENT_ASSOCIATION_CONTROL_REQUEST_MESSAGE:
         return handle_client_association_request(fd, cmdu_rx);
     case ieee1905_1::eMessageType::CLIENT_STEERING_REQUEST_MESSAGE:
@@ -1757,7 +1754,9 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
         }
 
         LOG(DEBUG) << "send cACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START";
-        request_out->cs_params() = request_in->cs_params();
+        request_out->cs_params()      = request_in->cs_params();
+        request_out->tx_limit()       = request_in->tx_limit();
+        request_out->tx_limit_valid() = request_in->tx_limit_valid();
         send_cmdu(radio_manager.ap_manager_fd, cmdu_tx);
         break;
     }
@@ -4816,370 +4815,6 @@ bool slave_thread::handle_monitor_ap_metrics_response(const std::string &frontha
     return true;
 }
 
-wfa_map::cPreferenceOperatingClasses::ePreference
-slave_thread::get_channel_preference(beerocks::message::sWifiChannel channel,
-                                     const AgentDB::sChannelPreference &preference,
-                                     const std::set<uint8_t> &preference_channels_list)
-{
-    // According to Table 23 in the MultiAP Specification, an empty channel list field
-    // indicates that the indicated preference applies to all channels in the operating class.
-    if (preference_channels_list.empty()) {
-        return wfa_map::cPreferenceOperatingClasses::ePreference(preference.flags.preference);
-    }
-
-    uint8_t center_channel = 0;
-    auto bw                = static_cast<beerocks::eWiFiBandwidth>(channel.channel_bandwidth);
-    auto operating_class   = wireless_utils::get_operating_class_by_channel(channel);
-
-    LOG_IF(operating_class != preference.operating_class, FATAL)
-        << "Invalid channel operating class " << int(operating_class)
-        << ", preference operating class is " << int(preference.operating_class);
-
-    // operating classes 128,129,130 use center channel **unlike the other classes**,
-    // so convert channel and bandwidth to center channel.
-    // For more info, refer to Table E-4 in the 802.11 specification.
-    if (operating_class == 128 || operating_class == 129 || operating_class == 130) {
-        center_channel = wireless_utils::get_5g_center_channel(channel.channel, bw);
-    }
-
-    // explicitely restrict non-operable channels
-    auto channel_to_check =
-        (operating_class == 128 || operating_class == 129 || operating_class == 130)
-            ? center_channel
-            : channel.channel;
-    for (const auto ch : preference_channels_list) {
-        if (channel_to_check == ch) {
-            return wfa_map::cPreferenceOperatingClasses::ePreference(preference.flags.preference);
-        }
-    }
-    // Default to the highest preference
-    return wfa_map::cPreferenceOperatingClasses::ePreference::PREFERRED14;
-}
-
-beerocks::message::sWifiChannel
-slave_thread::channel_selection_select_channel(const std::string &fronthaul_iface)
-{
-    auto db    = AgentDB::get();
-    auto radio = db->radio(fronthaul_iface);
-    if (!radio) {
-        LOG(DEBUG) << "Radio of interface " << fronthaul_iface << " does not exist on the db";
-        return {};
-    }
-
-    for (const auto &preference : db->controller_channel_preferences) {
-        auto &preference_info         = preference.first;
-        auto &preference_channel_list = preference.second;
-
-        if (preference_channel_list.empty()) {
-            continue;
-        }
-        for (const auto &channel_info_pair : radio->channels_list) {
-            auto channel       = channel_info_pair.first;
-            auto &channel_info = channel_info_pair.second;
-            for (auto &bw_info : channel_info.supported_bw_list) {
-
-                beerocks::message::sWifiChannel wifi_channel(channel, bw_info.bandwidth);
-                auto operating_class = wireless_utils::get_operating_class_by_channel(wifi_channel);
-
-                // Skip DFS channels
-                if (channel_info.dfs_state != beerocks_message::eDfsState::NOT_DFS) {
-                    LOG(DEBUG) << "Skip DFS channel " << channel << ", operating class "
-                               << operating_class;
-                    continue;
-                }
-                // Skip channels from other operating classes.
-                if (operating_class != preference_info.operating_class) {
-                    continue;
-                }
-                // Skip restricted channels
-                if (get_channel_preference(wifi_channel, preference_info,
-                                           preference_channel_list) ==
-                    wfa_map::cPreferenceOperatingClasses::ePreference::NON_OPERABLE) {
-                    LOG(DEBUG) << "Skip restricted channel " << channel << ", operating class "
-                               << operating_class;
-                    continue;
-                }
-                // If we got this far, we found a candidate channel, so switch to it
-                LOG(DEBUG) << "Selected channel " << channel << ", operating class "
-                           << operating_class;
-                return wifi_channel;
-            }
-        }
-    }
-
-    LOG(ERROR) << "Could not find a suitable channel";
-    return beerocks::message::sWifiChannel();
-}
-
-bool slave_thread::channel_selection_current_channel_restricted(const std::string &fronthaul_iface)
-{
-    auto db    = AgentDB::get();
-    auto radio = db->radio(fronthaul_iface);
-    if (!radio) {
-        LOG(DEBUG) << "Radio of interface " << fronthaul_iface << " does not exist on the db";
-        return false;
-    }
-
-    beerocks::message::sWifiChannel channel(radio->channel, radio->bandwidth);
-    auto operating_class = wireless_utils::get_operating_class_by_channel(channel);
-
-    if (operating_class == 0) {
-        LOG(ERROR) << "Unknown operating class for bandwidth= " << channel.channel_bandwidth
-                   << " channel=" << channel.channel
-                   << ". Considering the channel to be restricted";
-        return true;
-    }
-
-    LOG(DEBUG) << "Current channel " << int(channel.channel) << " bw "
-               << beerocks::utils::convert_bandwidth_to_int(
-                      beerocks::eWiFiBandwidth(channel.channel_bandwidth))
-               << " oper_class " << int(operating_class);
-    for (const auto &preference : db->controller_channel_preferences) {
-        // for now we handle only non-operable preference
-        // TODO - handle as part of https://github.com/prplfoundation/prplMesh/issues/725
-        auto &preference_info         = preference.first;
-        auto &preference_channel_list = preference.second;
-        if (preference_info.flags.preference !=
-            wfa_map::cPreferenceOperatingClasses::ePreference::NON_OPERABLE) {
-            LOG(WARNING) << "Ignoring operable channels preference";
-            continue;
-        }
-        // Skip channels from other operating classes.
-        if (operating_class != preference_info.operating_class) {
-            continue;
-        }
-        if (get_channel_preference(channel, preference_info, preference_channel_list) ==
-            wfa_map::cPreferenceOperatingClasses::ePreference::NON_OPERABLE) {
-            LOG(INFO) << "Current channel " << int(channel.channel)
-                      << " restricted, channel switch required";
-            return true;
-        }
-    }
-    LOG(INFO) << "Current channel " << int(channel.channel)
-              << " not restricted, channel switch not required";
-    return false;
-}
-
-bool slave_thread::get_controller_channel_preference(const std::string &fronthaul_iface,
-                                                     ieee1905_1::CmduMessageRx &cmdu_rx)
-{
-    auto db    = AgentDB::get();
-    auto radio = db->radio(fronthaul_iface);
-    if (!radio) {
-        LOG(DEBUG) << "Radio of interface " << fronthaul_iface << " does not exist on the db";
-        return false;
-    }
-
-    db->controller_channel_preferences.clear();
-
-    for (auto channel_preference_tlv : cmdu_rx.getClassList<wfa_map::tlvChannelPreference>()) {
-
-        const auto &ruid = channel_preference_tlv->radio_uid();
-        if (ruid != radio->front.iface_mac) {
-            LOG(DEBUG) << "ruid_rx=" << ruid << ", son_slave_ruid=" << radio->front.iface_mac;
-            continue;
-        }
-
-        // read all operating class list
-        auto operating_classes_list_length =
-            channel_preference_tlv->operating_classes_list_length();
-
-        for (int oc_idx = 0; oc_idx < operating_classes_list_length; oc_idx++) {
-            std::stringstream ss;
-            auto operating_class_tuple = channel_preference_tlv->operating_classes_list(oc_idx);
-            if (!std::get<0>(operating_class_tuple)) {
-                LOG(ERROR) << "getting operating class entry has failed!";
-                return false;
-            }
-            auto &op_class_channels = std::get<1>(operating_class_tuple);
-            auto operating_class    = op_class_channels.operating_class();
-
-            auto channel_preference = AgentDB::sChannelPreference(
-                op_class_channels.operating_class(), op_class_channels.flags());
-
-            const auto &op_class_chan_set =
-                wireless_utils::operating_class_to_channel_set(operating_class);
-            ss << "operating class=" << +operating_class;
-
-            auto channel_list_length = op_class_channels.channel_list_length();
-
-            ss << ", preference=" << +channel_preference.flags.preference
-               << ", reason=" << +channel_preference.flags.reason_code;
-            ss << ", channel_list={";
-            if (channel_list_length == 0) {
-                ss << "}";
-            }
-
-            auto &channels_set = db->controller_channel_preferences[channel_preference];
-
-            for (int ch_idx = 0; ch_idx < channel_list_length; ch_idx++) {
-                auto channel = op_class_channels.channel_list(ch_idx);
-                if (!channel) {
-                    LOG(ERROR) << "getting channel entry has failed!";
-                    return false;
-                }
-
-                // Check if channel is valid for operating class
-                if (op_class_chan_set.find(*channel) == op_class_chan_set.end()) {
-                    LOG(ERROR) << "Channel " << *channel << " invalid for operating class "
-                               << operating_class;
-                    return false;
-                }
-
-                ss << +(*channel);
-
-                // add comma if not last channel in the list, else close list by add curl brackets
-                ss << (((ch_idx + 1) != channel_list_length) ? "," : "}");
-
-                channels_set.insert(*channel);
-            }
-            LOG(DEBUG) << ss.str();
-        }
-    }
-
-    return true;
-}
-
-bool slave_thread::channel_selection_get_transmit_power_limit(const std::string &fronthaul_iface,
-                                                              ieee1905_1::CmduMessageRx &cmdu_rx,
-                                                              int &power_limit)
-{
-    auto db    = AgentDB::get();
-    auto radio = db->radio(fronthaul_iface);
-    if (!radio) {
-        LOG(DEBUG) << "Radio of interface " << fronthaul_iface << " does not exist on the db";
-        return false;
-    }
-    for (const auto &tx_power_limit_tlv : cmdu_rx.getClassList<wfa_map::tlvTransmitPowerLimit>()) {
-
-        const auto &ruid = tx_power_limit_tlv->radio_uid();
-        if (ruid != radio->front.iface_mac) {
-            LOG(DEBUG) << "ruid_rx=" << ruid << ", son_slave_ruid=" << radio->front.iface_mac;
-            continue;
-        }
-
-        power_limit = tx_power_limit_tlv->transmit_power_limit_dbm();
-        LOG(DEBUG) << std::dec << "received tlvTransmitPowerLimit " << (int)power_limit;
-        // Only one limit per ruid
-        return true;
-    }
-    return false;
-}
-
-bool slave_thread::handle_channel_selection_request(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
-{
-    const auto mid = cmdu_rx.getMessageId();
-    LOG(DEBUG) << "Received CHANNEL_SELECTION_REQUEST_MESSAGE, mid=" << std::dec << int(mid);
-
-    std::string fronthaul_iface;
-    for (auto &radio_manager_map_element : m_radio_managers.get()) {
-        fronthaul_iface     = radio_manager_map_element.first;
-        auto &radio_manager = radio_manager_map_element.second;
-
-        auto db    = AgentDB::get();
-        auto radio = db->radio(fronthaul_iface);
-        if (!radio) {
-            return false;
-        }
-
-        int power_limit = 0;
-        bool power_limit_received =
-            channel_selection_get_transmit_power_limit(fronthaul_iface, cmdu_rx, power_limit);
-
-        auto response_code = wfa_map::tlvChannelSelectionResponse::eResponseCode::ACCEPT;
-        beerocks::message::sWifiChannel channel_to_switch;
-        bool switch_required = false;
-        if (get_controller_channel_preference(fronthaul_iface, cmdu_rx)) {
-            // Only restricted channels are be included in channel selection request.
-            if (channel_selection_current_channel_restricted(fronthaul_iface)) {
-                channel_to_switch = channel_selection_select_channel(fronthaul_iface);
-                if (channel_to_switch.channel != 0) {
-                    switch_required = true;
-                    LOG(INFO) << "Switch to channel " << channel_to_switch.channel << ", bw "
-                              << beerocks::utils::convert_bandwidth_to_int(
-                                     beerocks::eWiFiBandwidth(channel_to_switch.channel_bandwidth));
-                } else {
-                    LOG(INFO) << "Decline channel selection request " << radio->front.iface_mac;
-                    response_code = wfa_map::tlvChannelSelectionResponse::eResponseCode::
-                        DECLINE_VIOLATES_MOST_RECENTLY_REPORTED_PREFERENCES;
-                }
-            }
-        } else {
-            LOG(ERROR) << "Failed to update channel preference";
-            response_code = wfa_map::tlvChannelSelectionResponse::eResponseCode::
-                DECLINE_VIOLATES_MOST_RECENTLY_REPORTED_PREFERENCES;
-        }
-
-        // build and send channel response message
-        if (!cmdu_tx.create(mid, ieee1905_1::eMessageType::CHANNEL_SELECTION_RESPONSE_MESSAGE)) {
-            LOG(ERROR) << "cmdu creation of type CHANNEL_SELECTION_RESPONSE_MESSAGE, has failed";
-            return false;
-        }
-
-        auto channel_selection_response_tlv =
-            cmdu_tx.addClass<wfa_map::tlvChannelSelectionResponse>();
-        if (!channel_selection_response_tlv) {
-            LOG(ERROR) << "addClass ieee1905_1::tlvChannelSelectionResponse has failed";
-            return false;
-        }
-
-        channel_selection_response_tlv->radio_uid()     = radio->front.iface_mac;
-        channel_selection_response_tlv->response_code() = response_code;
-        // Send ack back to the sender.
-        if (!send_cmdu_to_controller(fronthaul_iface, cmdu_tx)) {
-            LOG(ERROR) << "failed to send CHANNEL_SELECTION_RESPONSE_MESSAGE";
-            return false;
-        }
-
-        // Normally, when a channel switch is required, a CSA notification
-        // will be received with the new channel setting which is when
-        // the agent will send the operating channel report.
-        // In case of only a tx power limit change, there will still be
-        // a CSA notification which will hold the new power limit and also
-        // trigger sending the operating channel report.
-        // If neither channel switch nor power limit change is required,
-        // we need to explicitly send the event.
-        if (!switch_required && !power_limit_received) {
-            LOG(DEBUG) << "Channel switch not required, sending operating channel report";
-            send_operating_channel_report(fronthaul_iface);
-            continue;
-        }
-
-        auto request_out = message_com::create_vs_message<
-            beerocks_message::cACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START>(cmdu_tx, mid);
-        if (!request_out) {
-            LOG(ERROR) << "Failed building message!";
-            return false;
-        }
-
-        LOG(DEBUG) << "send ACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START";
-
-        // If only tx power limit change is required, set channel to current
-        request_out->cs_params().channel =
-            switch_required ? channel_to_switch.channel : radio->channel;
-        request_out->cs_params().bandwidth =
-            switch_required ? channel_to_switch.channel_bandwidth : uint8_t(radio->bandwidth);
-        request_out->tx_limit()       = power_limit;
-        request_out->tx_limit_valid() = power_limit_received;
-
-        ///////////////////////////////////////////////////////////////////
-        // TODO https://github.com/prplfoundation/prplMesh/issues/797
-        //
-        // Short term solution
-        // In non-EasyMesh mode, never modify hostapd configuration
-        // and in this case don't switch channel
-        //
-        ////////////////////////////////////////////////////////////////////
-        if (db->device_conf.management_mode != BPL_MGMT_MODE_NOT_MULTIAP) {
-            send_cmdu(radio_manager.ap_manager_fd, cmdu_tx);
-        } else {
-            LOG(WARNING) << "non-EasyMesh mode - skip channel switch";
-        }
-    }
-
-    return true;
-}
-
 bool slave_thread::send_operating_channel_report(const std::string &fronthaul_iface)
 {
     // build and send operating channel report message
@@ -5225,9 +4860,8 @@ bool slave_thread::send_operating_channel_report(const std::string &fronthaul_if
     // operating classes 128,129,130 use center channel **unlike the other classes** (See Table
     // E-4 in 802.11 spec)
     operating_class_entry.channel_number =
-        (operating_class == 128 || operating_class == 129 || operating_class == 130)
-            ? center_channel
-            : channel.channel;
+        wireless_utils::is_operating_class_using_central_channel(operating_class) ? center_channel
+                                                                                  : channel.channel;
     operating_channel_report_tlv->current_transmit_power() = radio->tx_power_dB;
 
     return send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
