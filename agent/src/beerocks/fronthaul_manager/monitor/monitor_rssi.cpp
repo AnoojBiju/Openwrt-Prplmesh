@@ -91,12 +91,12 @@ void monitor_rssi::arp_recv()
         return;
     }
 
-    uint16_t proto_type = (uint16_t)(((rx_buffer[12]) << 8) + rx_buffer[13]);
+      uint16_t proto_type = (uint16_t)(((rx_buffer[12]) << 8) + rx_buffer[13]);
     arphdr              = (network_utils::arp_hdr *)(rx_buffer + 6 + 6 + 2);
-    if ((proto_type != ETH_P_ARP) || (ntohs(arphdr->opcode) != ARPOP_REPLY)) {
+       if ((proto_type != ETH_P_ARP) || (ntohs(arphdr->opcode) != ARPOP_REPLY)) {
         // LOG(DEBUG) << "proto_type or arphdr->opcode are wrong type! proto_type=" << proto_type << " ETH_P_ARP= " << ETH_P_ARP << " arphdr->opcode=" << ntohs(arphdr->opcode);
         return;
-    }
+      }
 
     std::string sta_mac = tlvf::mac_to_string(arphdr->sender_mac);
     std::string sta_ip  = network_utils::ipv4_to_string(arphdr->sender_ip);
@@ -120,8 +120,8 @@ void monitor_rssi::arp_recv()
             auto notification = message_com::create_vs_message<
                 beerocks_message::cACTION_MONITOR_CLIENT_RX_RSSI_MEASUREMENT_START_NOTIFICATION>(
                 cmdu_tx, request_id);
-            if (notification == nullptr) {
-                LOG(ERROR) << "Failed building "
+               if (notification == nullptr) {
+                 LOG(ERROR) << "Failed building "
                               "cACTION_MONITOR_CLIENT_RX_RSSI_MEASUREMENT_START_NOTIFICATION "
                               "message!";
                 break;
@@ -129,7 +129,7 @@ void monitor_rssi::arp_recv()
 
             notification->mac() = tlvf::mac_from_string(sta_node->get_mac());
 
-            m_slave_client->send_cmdu(cmdu_tx);
+               m_slave_client->send_cmdu(cmdu_tx);
 
             LOG(DEBUG)
                 << "send ACTION_MONITOR_CLIENT_RX_RSSI_MEASUREMENT_START_NOTIFICATION, sta_mac = "
@@ -158,7 +158,7 @@ void monitor_rssi::arp_recv()
         if (arp_burst_delay < 10) {
             UTILS_SLEEP_MSEC(arp_burst_delay);
         } else {
-            for (int i = arp_burst_delay; i > 0; i -= 5) {
+                for (int i = arp_burst_delay; i > 0; i -= 5) {
                 UTILS_SLEEP_MSEC(5);
                 network_utils::arp_send(arp_iface, sta_node->get_ipv4(), arp_iface_ipv4,
                                         tlvf::mac_from_string(arp_dst_mac),
@@ -175,7 +175,7 @@ void monitor_rssi::arp_recv()
         sta_node->set_arp_state(monitor_sta_node::WAIT_REPLY);
         //LOG(DEBUG) << "state WAIT_FIRST_REPLY --> WAIT_REPLY , sta_mac = " << sta_mac;
     } else if (arp_state == monitor_sta_node::WAIT_REPLY) {
-        sta_node->set_last_change_time();
+           sta_node->set_last_change_time();
         sta_node->arp_recv_count_inc();
         //LOG(DEBUG) << " on_arp_recv, sta_mac = " <<  sta_mac << " sta_node->arp_recv_count = " << (int)sta_node->arp_recv_count;
         if (sta_node->arp_recv_count_get() >= mon_db->MONITOR_ARP_COUNT_OK) {
@@ -187,7 +187,7 @@ void monitor_rssi::arp_recv()
 }
 
 // enter every m_measurement_window_msec
-void monitor_rssi::process()
+    void monitor_rssi::process()
 {
     bool poll_last = mon_db->is_last_poll();
 
