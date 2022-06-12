@@ -10,15 +10,6 @@ file(GLOB bml_common_sources
     ${MODULE_PATH}/internal/*.c*
 )
 
-#RDKB
-if (TARGET_PLATFORM STREQUAL "rdkb")
-    file(GLOB RDKB_SOURCES 
-        ${MODULE_PATH}/rdkb/*.c* 
-        ${MODULE_PATH}/rdkb/internal/*.c*
-    )
-    list(APPEND bml_common_sources  ${RDKB_SOURCES})
-endif()
-
 # Build the library
 add_library(${PROJECT_NAME} ${bml_common_sources})
 target_link_libraries(${PROJECT_NAME} PRIVATE bcl tlvf elpp btlvf)
@@ -38,9 +29,5 @@ install(
 )
 
 file(GLOB bml_install_files ${MODULE_PATH}/*.h)
-if (TARGET_PLATFORM STREQUAL "rdkb")
-    file(GLOB RDKB_INCLUDES ${MODULE_PATH}/rdkb/*.h)
-    list(APPEND bml_install_files ${RDKB_INCLUDES})
-endif()
 install(FILES ${bml_install_files} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/beerocks/${PROJECT_NAME})
 install(EXPORT bmlConfig NAMESPACE beerocks:: DESTINATION lib/cmake/beerocks/${PROJECT_NAME})

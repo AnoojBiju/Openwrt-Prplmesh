@@ -13,8 +13,8 @@
 extern "C" {
 #endif
 
-#ifdef BEEROCKS_RDKB
-#include "rdkb/bml_rdkb_defs.h"
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
+#include "bml_pre_association_steering_defs.h"
 #else
 #include "bml_defs.h"
 #endif

@@ -10,8 +10,8 @@
 #define MONITOR_THREAD_H
 
 #include "monitor_rssi.h"
-#ifdef BEEROCKS_RDKB
-#include "rdkb/monitor_rdkb_hal.h"
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
+#include "pre_association_steering/monitor_pre_association_steering_hal.h"
 #endif
 #include "monitor_db.h"
 #include "monitor_stats.h"
@@ -102,7 +102,7 @@ private:
 
     void send_heartbeat();
     void update_vaps_in_db();
-#ifdef BEEROCKS_RDKB
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
     void send_steering_return_status(beerocks_message::eActionOp_MONITOR ActionOp, int32_t status);
 #endif
     beerocks_message::sSonConfig son_config;
@@ -161,8 +161,8 @@ private:
 
     monitor_db mon_db;
     monitor_rssi mon_rssi;
-#ifdef BEEROCKS_RDKB
-    monitor_rdkb_hal mon_rdkb_hal;
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
+    monitor_pre_association_steering_hal mon_pre_association_steering_hal;
 #endif
     monitor_stats mon_stats;
 

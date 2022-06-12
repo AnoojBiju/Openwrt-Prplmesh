@@ -2089,8 +2089,8 @@ public:
     bool assign_bml_task_id(int new_task_id);
     int get_bml_task_id();
 
-    bool assign_rdkb_wlan_task_id(int new_task_id);
-    int get_rdkb_wlan_task_id();
+    bool assign_pre_association_steering_task_id(int new_task_id);
+    int get_pre_association_steering_task_id();
 
     bool assign_channel_selection_task_id(int new_task_id);
     int get_channel_selection_task_id();
@@ -2465,7 +2465,7 @@ private:
     int channel_selection_task_id              = -1;
     int dynamic_channel_selection_r2_task_id   = -1;
     int bml_task_id                            = -1;
-    int rdkb_wlan_task_id                      = -1;
+    int pre_association_steering_task_id       = -1;
     int config_update_task_id                  = -1;
     int persistent_db_aging_operation_id       = -1;
     int persistent_db_data_commit_operation_id = -1;
