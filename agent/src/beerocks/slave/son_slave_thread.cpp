@@ -5279,6 +5279,7 @@ void slave_thread::save_channel_params_to_db(const std::string &fronthaul_iface,
         LOG(DEBUG) << "Radio of interface " << fronthaul_iface << " does not exist on the db";
         return;
     }
+    LOG(DEBUG) << "Storing radio params";
 
     radio->channel                   = params.channel;
     radio->bandwidth                 = static_cast<beerocks::eWiFiBandwidth>(params.bandwidth);
