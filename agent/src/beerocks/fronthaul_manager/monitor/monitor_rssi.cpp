@@ -189,6 +189,7 @@ void monitor_rssi::arp_recv()
 // enter every m_measurement_window_msec
 void monitor_rssi::process()
 {
+    LOG(DEBUG) << "Inside monitor_rssi::process function";
     bool poll_last = mon_db->is_last_poll();
 
     if (!poll_last) {
