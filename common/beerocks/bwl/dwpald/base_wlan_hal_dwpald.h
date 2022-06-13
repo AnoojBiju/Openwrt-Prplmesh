@@ -113,16 +113,6 @@ protected:
     bool attach_dwpald_interface(int vap_id);
 
     /**
-     * @brief handle get data cmd from netlink
-     * @param ifname radio interface name
-     * @param nl_cmd netlink get command number
-     * @param out_buffer pointer to data buffer for the result
-     * @param max_buffer_size buffer size
-     * @return size of returned data (success if > 0)
-     */
-    ssize_t dwpal_nl_cmd_get(const std::string &ifname, unsigned int nl_cmd,
-                             unsigned char *out_buffer, const size_t max_buffer_size);
-    /**
      * @brief handle set vendor data cmd to netlink
      * @param ifname radio interface name
      * @param nl_cmd netlink set command number

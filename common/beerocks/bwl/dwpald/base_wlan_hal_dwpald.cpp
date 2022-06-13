@@ -562,27 +562,6 @@ bool base_wlan_hal_dwpal::dwpal_nl_cmd_set(const std::string &ifname, unsigned i
     return true;
 }
 
-ssize_t base_wlan_hal_dwpal::dwpal_nl_cmd_get(const std::string &ifname, unsigned int nl_cmd,
-                                              unsigned char *out_buffer,
-                                              const size_t max_buffer_size)
-{
-    size_t data_size = 0;
-
-    if (!out_buffer) {
-        LOG(ERROR) << "out_buffer is invalid ==> Abort!";
-        return -1;
-    }
-
-    auto res = -1;
-    if (dwpald_drv_get((char *)ifname.c_str(), (enum ltq_nl80211_vendor_subcmds)nl_cmd, &res, NULL,
-                       0, out_buffer, (size_t *)&max_buffer_size) != DWPALD_SUCCESS) {
-        LOG(ERROR) << "ERROR for cmd = " << nl_cmd;
-        return -1;
-    }
-
-    return data_size;
-}
-
 bool base_wlan_hal_dwpal::dwpal_nl_cmd_send_and_recv(int command, DWPAL_nl80211Callback nl_callback,
                                                      void *callback_args)
 {
@@ -993,17 +972,15 @@ bool base_wlan_hal_dwpal::get_channel_utilization(uint8_t &channel_utilization)
 
 bool base_wlan_hal_dwpal::dwpal_get_phy_chan_status(sPhyChanStatus &status)
 {
-    const ssize_t expected_result_size = sizeof(status);
-    ssize_t received_result_size =
-        dwpal_nl_cmd_get(get_iface_name(), LTQ_NL80211_VENDOR_SUBCMD_GET_PHY_CHAN_STATUS,
-                         m_nl_buffer, NL_MAX_REPLY_BUFFSIZE);
-
-    if (expected_result_size != received_result_size) {
-        LOG(ERROR) << "LTQ_NL80211_VENDOR_SUBCMD_GET_PHY_CHAN_STATUS failed! expected size = "
-                   << expected_result_size << ", received size = " << received_result_size;
+    size_t expected_result_size = sizeof(status);
+    int res                     = 0;
+    auto ret                    = dwpald_drv_get((char *)get_iface_name().c_str(),
+                              LTQ_NL80211_VENDOR_SUBCMD_GET_PHY_CHAN_STATUS, &res, NULL, 0, &status,
+                              &expected_result_size);
+    if ((ret != DWPALD_SUCCESS) || (res < 0)) {
+        LOG(ERROR) << __func__ << " LTQ_NL80211_VENDOR_SUBCMD_GET_PHY_CHAN_STATUS failed!";
         return false;
     }
-    std::copy_n(m_nl_buffer, sizeof(status), reinterpret_cast<unsigned char *>(&status));
     return true;
 }
 
