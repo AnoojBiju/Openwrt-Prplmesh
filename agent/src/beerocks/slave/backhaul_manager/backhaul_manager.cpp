@@ -2905,6 +2905,13 @@ bool BackhaulManager::set_mbo_assoc_disallow(const sMacAddr &radio_mac, const sM
     return true;
 }
 
+bool BackhaulManager::get_sta_info(const sMacAddr &mac)
+{
+    // TODO: Send the message to the AP Manager to get the station information from BWL
+    // Once response is received, return the station information to the UCC
+    return true;
+}
+
 std::shared_ptr<bwl::sta_wlan_hal> BackhaulManager::get_selected_backhaul_sta_wlan_hal()
 {
     auto selected_backhaul_it =
