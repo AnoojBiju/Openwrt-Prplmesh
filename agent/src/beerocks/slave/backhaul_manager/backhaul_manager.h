@@ -149,6 +149,14 @@ public:
      */
     bool set_mbo_assoc_disallow(const sMacAddr &radio_mac, const sMacAddr &bssid, bool enable);
 
+    /**
+     * @brief Get Station Information.
+     *
+     * @param sta_mac MAC address of the station.
+     * @return true on success, false on failure.
+     */
+    bool get_sta_info(const sMacAddr &sta_mac);
+
     // Forward declaration
     struct sRadioInfo;
 
