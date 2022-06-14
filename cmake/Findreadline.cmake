@@ -14,6 +14,7 @@ message("NCURSES_LIBRARY: " ${NCURSES_LIBRARY})
 message("READLINE_INCLUDE_DIRS: " ${READLINE_INCLUDE_DIRS})
 
 if (readline_FOUND)
+    message(WARNING "Adding readline dependency (GPLv3)")
     add_library(readline UNKNOWN IMPORTED)
 
     #############################################################################################################################

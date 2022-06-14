@@ -52,11 +52,9 @@ As of the time of writing, it includes the following packages:
 * gcc 
 * git 
 * libjson-c-dev 
-* libncurses-dev 
 * libnl-3-dev 
 * libnl-genl-3-dev 
 * libnl-route-3-dev 
-* libreadline-dev 
 * libssl-dev 
 * ninja-build 
 * pkg-config 
@@ -80,6 +78,11 @@ As of the time of writing, it includes the following packages:
 * net-tools 
 * psmisc 
 * uuid-runtime
+
+if the `ENABLE_READLINE` option is specified, the following 2 libraries are also needed:
+* libncurses-dev
+* libreadline-dev
+Note that readline is a GPLv3 library, so this is not generally recommended
 
 ### Run Build
 

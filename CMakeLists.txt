@@ -182,6 +182,12 @@ else()
     message(STATUS "Coverage support is not enabled")
 endif()
 
+# Readline support
+option(ENABLE_READLINE "Enable the use of readline for beerocks_cli. WARNING: GPLv3!" OFF)
+if (ENABLE_READLINE)
+    message(WARNING "Readline support is enabled. Linking with a GPLv3 library")
+endif()
+
 ## Components
 
 add_subdirectory(framework)

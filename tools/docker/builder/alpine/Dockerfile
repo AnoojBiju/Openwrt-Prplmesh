@@ -16,12 +16,10 @@ RUN apk add --update --no-cache \
     zeromq-dev \
     linux-headers \
     make \
-    ncurses-dev \
     ninja \
     openssl-dev \
     pkgconf \
     py3-yaml \
     python3 \
-    readline-dev \
     sed \
     clang-extra-tools
