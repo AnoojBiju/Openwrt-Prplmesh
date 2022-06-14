@@ -77,6 +77,8 @@ static ap_wlan_hal::Event dummy_to_bwl_event(const std::string &opcode)
         return ap_wlan_hal::Event::MGMT_Frame;
     } else if (opcode == "AP-STA-POSSIBLE-PSK-MISMATCH") {
         return ap_wlan_hal::Event::AP_Sta_Possible_Psk_Mismatch;
+    } else if (opcode == "STA_INFO_REPLY") {
+        return ap_wlan_hal::Event::STA_Info_Reply;
     }
 
     return ap_wlan_hal::Event::Invalid;
@@ -350,6 +352,42 @@ bool ap_wlan_hal_dummy::set_primary_vlan_id(uint16_t primary_vlan_id)
     return true;
 }
 
+bool ap_wlan_hal_dummy::get_sta_info(const std::string &sta_mac)
+{
+    /**
+     * This function can be used to simulate dummy station data when the command
+     * (device_get_sta_info) is issued to query station information. 
+     */
+    LOG(DEBUG) << "Constructing STA_INFO_REPLY for " << sta_mac;
+
+    char device_name[] = "Galaxy";
+    char os_name[]     = "Android";
+    char vendor[]      = "Samsung";
+
+    auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_STATION_INFO_RESPONSE));
+    auto msg      = reinterpret_cast<sACTION_APMANAGER_STATION_INFO_RESPONSE *>(msg_buff.get());
+    LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+    memset(msg_buff.get(), 0, sizeof(sACTION_APMANAGER_STATION_INFO_RESPONSE));
+
+    msg->sta_mac = tlvf::mac_from_string(sta_mac);
+    msg->bss     = tlvf::mac_from_string("aa:bb:cc:dd:ee:ff");
+    beerocks::string_utils::copy_string(msg->device_name, device_name,
+                                        beerocks::message::DEV_INFO_STR_MAX_LEN);
+    beerocks::string_utils::copy_string(msg->os_name, os_name,
+                                        beerocks::message::DEV_INFO_STR_MAX_LEN);
+    beerocks::string_utils::copy_string(msg->vendor, vendor,
+                                        beerocks::message::DEV_INFO_STR_MAX_LEN);
+    msg->days_since_last_reset = 100;
+    msg->ipv4                  = beerocks::net::network_utils::ipv4_from_string("192.168.1.10");
+    msg->subnet_mask           = beerocks::net::network_utils::ipv4_from_string("255.255.255.0");
+    msg->default_gw            = beerocks::net::network_utils::ipv4_from_string("192.168.1.0");
+
+    event_queue_push(Event::STA_Info_Reply, msg_buff);
+
+    return true;
+}
+
 bool ap_wlan_hal_dummy::process_dummy_data(parsed_obj_map_t &parsed_obj) { return true; }
 
 bool ap_wlan_hal_dummy::process_dummy_event(parsed_obj_map_t &parsed_obj)
@@ -580,6 +618,71 @@ bool ap_wlan_hal_dummy::process_dummy_event(parsed_obj_map_t &parsed_obj)
         msg->vap_id    = iface_ids.vap_id;
 
         event_queue_push(Event::AP_Enabled, msg_buff);
+    } break;
+
+    case Event::STA_Info_Reply: {
+        int64_t tmp_int;
+        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_STATION_INFO_RESPONSE));
+        auto msg      = reinterpret_cast<sACTION_APMANAGER_STATION_INFO_RESPONSE *>(msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        memset(msg_buff.get(), 0, sizeof(sACTION_APMANAGER_STATION_INFO_RESPONSE));
+
+        if (!dummy_obj_read_str("sta_mac", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading sta_mac parameter!";
+            return false;
+        }
+        msg->sta_mac = tlvf::mac_from_string(tmp_str);
+
+        if (!dummy_obj_read_str("bss", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading bss parameter!";
+            return false;
+        }
+        msg->bss = tlvf::mac_from_string(tmp_str);
+
+        if (!dummy_obj_read_str("device_name", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading device_name parameter!";
+            return false;
+        }
+        beerocks::string_utils::copy_string(msg->device_name, tmp_str,
+                                            beerocks::message::DEV_INFO_STR_MAX_LEN);
+
+        if (!dummy_obj_read_str("os_name", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading device_name parameter!";
+            return false;
+        }
+        beerocks::string_utils::copy_string(msg->os_name, tmp_str,
+                                            beerocks::message::DEV_INFO_STR_MAX_LEN);
+
+        if (!dummy_obj_read_str("vendor", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading vendor parameter!";
+            return false;
+        }
+        beerocks::string_utils::copy_string(msg->vendor, tmp_str,
+                                            beerocks::message::DEV_INFO_STR_MAX_LEN);
+
+        if (!dummy_obj_read_int("days_since_last_reset", parsed_obj, tmp_int)) {
+            LOG(ERROR) << "Failed reading vendor parameter!";
+            return false;
+        }
+        msg->days_since_last_reset = tmp_int;
+
+        if (!dummy_obj_read_str("ipv4", parsed_obj, &tmp_str)) {
+            LOG(DEBUG) << "ipv4 parameter not found!";
+        }
+        msg->ipv4 = beerocks::net::network_utils::ipv4_from_string(tmp_str);
+
+        if (!dummy_obj_read_str("subnet_mask", parsed_obj, &tmp_str)) {
+            LOG(DEBUG) << "subnet_mask parameter not found!";
+        }
+        msg->subnet_mask = beerocks::net::network_utils::ipv4_from_string(tmp_str);
+
+        if (!dummy_obj_read_str("default_gw", parsed_obj, &tmp_str)) {
+            LOG(DEBUG) << "default_gw parameter not found!";
+        }
+        msg->default_gw = beerocks::net::network_utils::ipv4_from_string(tmp_str);
+
+        event_queue_push(Event::STA_Info_Reply, msg_buff);
     } break;
 
     // Gracefully ignore unhandled events
