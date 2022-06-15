@@ -138,6 +138,19 @@ uint16_t CmduMessageRx::getNextTlvLength() const
     return tlv_length;
 }
 
+uint16_t CmduMessageRx::getNextTlvSubtype() const
+{
+    if (!getCmduHeader()) {
+        return UINT16_MAX;
+    }
+    sSubtypedTlvHeader *tlv = reinterpret_cast<sSubtypedTlvHeader *>(msg.prevClass()->getBuffPtr());
+
+    uint16_t tlv_subtype = tlv->subtype;
+    swap_16(tlv_subtype);
+
+    return tlv_subtype;
+}
+
 std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(ieee1905_1::eTlvType tlv_type)
 {
     switch (tlv_type) {

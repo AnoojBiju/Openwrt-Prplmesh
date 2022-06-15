@@ -34,6 +34,12 @@ public:
 private:
     int getNextTlvType() const;
     uint16_t getNextTlvLength() const;
+    /*
+     * @brief Get the subtype of the next TLV. The caller is expected
+     * to make sure that the TLV does have a subtype.
+     * @return the next TLV subtype, or UINT16_MAX if there was no CMDU header.
+     */
+    uint16_t getNextTlvSubtype() const;
     std::shared_ptr<BaseClass> parseNextTlv();
     std::shared_ptr<BaseClass> parseNextTlv(ieee1905_1::eTlvType tlv_type);
     std::shared_ptr<BaseClass> parseNextTlv(wfa_map::eTlvTypeMap tlv_type);

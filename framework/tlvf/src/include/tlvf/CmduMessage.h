@@ -17,10 +17,16 @@
 
 namespace ieee1905_1 {
 
-typedef struct sTlvHeader {
+struct sTlvHeader {
     uint8_t type;
     uint16_t length;
-} __attribute__((packed)) sTlvHeader;
+} __attribute__((packed));
+
+struct sSubtypedTlvHeader {
+    uint8_t type;
+    uint16_t length;
+    uint16_t subtype;
+} __attribute__((packed));
 
 class CmduMessage {
 
