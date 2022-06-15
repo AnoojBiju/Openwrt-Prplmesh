@@ -1178,7 +1178,8 @@ bool Controller::handle_cmdu_1905_client_steering_btm_report_message(
     son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
 
     std::string client_mac = tlvf::mac_to_string(steering_btm_report->sta_mac());
-    uint8_t status_code    = steering_btm_report->btm_status_code();
+    wfa_map::tlvSteeringBTMReport::eBTMStatusCode status_code =
+        steering_btm_report->btm_status_code();
 
     LOG(DEBUG) << "BTM_REPORT from source bssid " << steering_btm_report->bssid()
                << " for client_mac=" << client_mac << " status_code=" << (int)status_code;
@@ -1197,7 +1198,7 @@ bool Controller::handle_cmdu_1905_client_steering_btm_report_message(
     }
     database.update_node_11v_responsiveness(*client, true);
 
-    if (status_code != 0) {
+    if (status_code != wfa_map::tlvSteeringBTMReport::ACCEPT) {
         LOG(DEBUG) << "sta " << client_mac << " rejected BSS steer request";
         LOG(DEBUG) << "killing roaming task";
 

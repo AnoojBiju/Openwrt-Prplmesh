@@ -41,8 +41,8 @@ sMacAddr& tlvSteeringBTMReport::sta_mac() {
     return (sMacAddr&)(*m_sta_mac);
 }
 
-uint8_t& tlvSteeringBTMReport::btm_status_code() {
-    return (uint8_t&)(*m_btm_status_code);
+tlvSteeringBTMReport::eBTMStatusCode& tlvSteeringBTMReport::btm_status_code() {
+    return (eBTMStatusCode&)(*m_btm_status_code);
 }
 
 sMacAddr& tlvSteeringBTMReport::target_bssid() {
@@ -54,6 +54,7 @@ void tlvSteeringBTMReport::class_swap()
     tlvf_swap(16, reinterpret_cast<uint8_t*>(m_length));
     m_bssid->struct_swap();
     m_sta_mac->struct_swap();
+    tlvf_swap(8*sizeof(eBTMStatusCode), reinterpret_cast<uint8_t*>(m_btm_status_code));
     m_target_bssid->struct_swap();
 }
 
@@ -92,7 +93,7 @@ size_t tlvSteeringBTMReport::get_initial_size()
     class_size += sizeof(uint16_t); // length
     class_size += sizeof(sMacAddr); // bssid
     class_size += sizeof(sMacAddr); // sta_mac
-    class_size += sizeof(uint8_t); // btm_status_code
+    class_size += sizeof(eBTMStatusCode); // btm_status_code
     class_size += sizeof(sMacAddr); // target_bssid
     return class_size;
 }
@@ -129,12 +130,12 @@ bool tlvSteeringBTMReport::init()
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(sMacAddr); }
     if (!m_parse__) { m_sta_mac->struct_init(); }
-    m_btm_status_code = reinterpret_cast<uint8_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
+    m_btm_status_code = reinterpret_cast<eBTMStatusCode*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(eBTMStatusCode))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(eBTMStatusCode) << ") Failed!";
         return false;
     }
-    if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
+    if(m_length && !m_parse__){ (*m_length) += sizeof(eBTMStatusCode); }
     m_target_bssid = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(sMacAddr))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sMacAddr) << ") Failed!";

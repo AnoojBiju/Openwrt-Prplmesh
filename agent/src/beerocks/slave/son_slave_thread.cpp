@@ -2781,8 +2781,10 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
             return false;
         }
         //TODO Add target BSSID
-        steering_btm_report_tlv->sta_mac()         = response_in->params().mac;
-        steering_btm_report_tlv->btm_status_code() = response_in->params().status_code;
+        steering_btm_report_tlv->sta_mac() = response_in->params().mac;
+        steering_btm_report_tlv->btm_status_code() =
+            static_cast<wfa_map::tlvSteeringBTMReport::eBTMStatusCode>(
+                response_in->params().status_code);
 
         /*
             If ACTION_APMANAGER_CLIENT_BSS_STEER_RESPONSE contains
