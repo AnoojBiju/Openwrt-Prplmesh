@@ -38,7 +38,7 @@ class AmxClient {
 
 public:
     AmxClient(){};
-    AmxClient(const AmxClient &) = delete;
+    AmxClient(const AmxClient &)            = delete;
     AmxClient &operator=(const AmxClient &) = delete;
     ~AmxClient();
 
@@ -47,6 +47,7 @@ public:
 
     // Get a object from bus using object_path.
     amxc_var_t *get_object(const std::string &object_path);
+    const amxc_htable_t *get_htable_object(const std::string &object_path);
 
 private:
     amxb_bus_ctx_t *bus_ctx = nullptr;

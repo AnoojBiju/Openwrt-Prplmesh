@@ -33,20 +33,20 @@ public:
     bool prpl_conn_map(void);
     bool print_device_info(std::string agent_mac, std::string skip_mac);
     bool print_radio(std::string device_path);
+    float get_freq_from_class(uint32_t oper_class);
 
     std::shared_ptr<beerocks::prplmesh_amx::AmxClient> m_amx_client;
 
     typedef struct conn_map_t {
+        std::string device_ht_path = "Device.WiFi.DataElements.Network.Device.*.";
         uint32_t device_number;
         std::string controller_id;
         std::string bridge_ip_v4;
-        uint32_t radio_number;
         std::string radio_id;
-        uint32_t bss_number;
-        uint32_t sta_number;
         std::string bss_id;
         std::string ssid;
         uint32_t channel;
+        uint32_t oper_class;
     } conn_map_t;
 
 private:
