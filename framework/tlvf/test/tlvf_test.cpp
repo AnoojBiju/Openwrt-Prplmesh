@@ -24,6 +24,7 @@
 #include "tlvf/ieee_1905_1/tlvVendorSpecific.h"
 #include "tlvf/ieee_1905_1/tlvWsc.h"
 #include "tlvf/wfa_map/tlvApCapability.h"
+#include "tlvf/wfa_map/tlvApRadioVbssCapabilities.h"
 #include "tlvf/wfa_map/tlvProfile2ChannelScanResult.h"
 #include "tlvf/wfa_map/tlvProfile2ErrorCode.h"
 #include <tlvf/AssociationRequestFrame/AssocReqFrame.h>
@@ -1795,6 +1796,54 @@ int test_build_assoc_frame()
     return errors;
 }
 
+int test_parse_ap_radio_vbss_capabilities()
+{
+    int errors = 0;
+    MAPF_INFO(__FUNCTION__ << " start");
+
+    /*
+     * frame raw buffer in network byte order
+     */
+    std::vector<uint8_t> ap_radio_vbss_capa_buffer = {// type
+                                                      0xde,
+                                                      // length
+                                                      0x00, 0x16,
+                                                      // subtype
+                                                      0x00, 0x01,
+                                                      // radio_uid
+                                                      0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+                                                      // max VBSS
+                                                      0x08,
+                                                      // VBSSs settings
+                                                      0b10000000,
+                                                      // fixed bits mask
+                                                      0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c,
+                                                      // fixed bits value
+                                                      0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12};
+
+    auto ap_radio_vbss_capa = ApRadioVbssCapabilities(ap_radio_vbss_capa_buffer.data(),
+                                                      ap_radio_vbss_capa_buffer.size(), true);
+    errors +=
+        check_field<eTlvTypeMap>(ap_radio_vbss_capa.type(), eTlvTypeMap::TLV_VIRTUAL_BSS, "type");
+    errors += check_field<uint16_t>(ap_radio_vbss_capa.length(), 22, "length");
+    errors += check_field<wfa_map::eVirtualBssSubtype>(
+        ap_radio_vbss_capa.subtype(), wfa_map::eVirtualBssSubtype::AP_RADIO_VBSS_CAPABILITIES,
+        "subtype");
+    errors += check_field<sMacAddr>(ap_radio_vbss_capa.radio_uid(),
+                                    tlvf::mac_from_string("01:02:03:04:05:06"), "radio_uid");
+    errors += check_field<uint8_t>(ap_radio_vbss_capa.max_vbss(), 8, "max_vbss");
+    ApRadioVbssCapabilities::sVbssSettings vbss_settings = ap_radio_vbss_capa.vbss_settings();
+    errors += check_field<uint8_t>(vbss_settings.vbsss_subtract, 1, "vbsss_subtract");
+    errors += check_field<uint8_t>(vbss_settings.vbssid_restrictions, 0, "vbssid_restrictions");
+    errors += check_field<uint8_t>(vbss_settings.vbssid_match_and_mask_restrictions, 0,
+                                   "vbssid_match_and_mask_restrictions");
+    errors +=
+        check_field<uint8_t>(vbss_settings.fixed_bit_restrictions, 0, "fixed_bit_restrictions");
+    errors += check_field<uint32_t>(vbss_settings.reserved, 0, "fixed_bit_reserved");
+    MAPF_INFO(__FUNCTION__ << " Finished, errors = " << errors << std::endl);
+    return errors;
+}
+
 int main(int argc, char *argv[])
 {
     int errors = 0;
@@ -1811,6 +1860,7 @@ int main(int argc, char *argv[])
     errors += test_build_assoc_frame();
     errors += test_parse_reassoc_frame();
     errors += test_create_error_response_message();
+    errors += test_parse_ap_radio_vbss_capabilities();
     MAPF_INFO(__FUNCTION__ << " Finished, errors = " << errors << std::endl);
     return errors;
 }
