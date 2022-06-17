@@ -591,3 +591,9 @@ controller_ucc_listener::parse_bss_info(const std::string &bss_info_str,
 
     return al_mac;
 }
+bool controller_ucc_listener::handle_sta_info_query(
+    std::unordered_map<std::string, std::string> &params, std::string &err_string)
+{
+    err_string = "Not supported for Controller mode";
+    return false;
+}
