@@ -36,6 +36,7 @@ public:
         STA_Softblock_Drop,
         STA_Steering_Probe_Req,
         STA_Steering_Auth_Fail,
+        STA_Info_Response,
 
         Interface_Enabled,
         Interface_Disabled,
@@ -399,6 +400,14 @@ public:
      * @return true on success, false otherwise.
      */
     virtual bool set_primary_vlan_id(uint16_t primary_vlan_id) = 0;
+
+    /**
+     * @brief Get Station Information.
+     *
+     * @param sta_mac MAC Address of Station.
+     * @return true on success, false otherwise.
+     */
+    virtual bool get_sta_info(const std::string &sta_mac) = 0;
 
 private:
     static const int frame_body_idx = (sizeof(s80211MgmtFrame::sHeader) * 2);

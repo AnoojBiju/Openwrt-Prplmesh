@@ -83,6 +83,9 @@ enum eStructsConsts {
     VHT_MCS_SET_SIZE                     = 32,
     HE_MCS_SET_SIZE                      = 32,
     DEV_MAX_RADIOS                       = 3,
+    DEVICE_NAME_MAX_LENGTH               = 7,
+    OS_NAME_MAX_LENGTH                   = 8,
+    VENDOR_NAME_MAX_LENGTH               = 8,
 };
 
 enum eMessageConsts {

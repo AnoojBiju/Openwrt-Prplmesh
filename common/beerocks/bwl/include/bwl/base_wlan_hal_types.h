@@ -356,6 +356,18 @@ typedef struct {
     int8_t vap_id;
 } sHOSTAP_ENABLED_NOTIFICATION;
 
+struct sACTION_APMANAGER_STA_INFO_RESPONSE {
+    sMacAddr sta_mac;
+    sMacAddr bss;
+    char device_name[beerocks::message::eStructsConsts::DEVICE_NAME_MAX_LENGTH];
+    char os_name[beerocks::message::eStructsConsts::OS_NAME_MAX_LENGTH];
+    char vendor[beerocks::message::eStructsConsts::VENDOR_NAME_MAX_LENGTH];
+    uint32_t days_since_last_reset;
+    beerocks::net::sIpv4Addr ipv4;
+    beerocks::net::sIpv4Addr subnet_mask;
+    beerocks::net::sIpv4Addr default_gw;
+};
+
 #define SSID_MAX_SIZE beerocks::message::WIFI_SSID_MAX_LENGTH
 // ASSOCIATION_MAX_LENGTH is defined to be the maximum of the binary frame
 // but since it is represented as hex here. we need two hex characters per byte + a terminating \0.
