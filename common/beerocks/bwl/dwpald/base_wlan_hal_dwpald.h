@@ -86,15 +86,16 @@ public:
     int get_ext_evt_write_pfd() { return m_dwpal_event_pfd[1]; }
     int get_nl_evt_write_pfd() { return m_nl_event_pfd[1]; }
 
+    // Process dwpal event
+    virtual bool process_dwpal_event(char *buffer, int bufLen, const std::string &opcode) = 0;
+    virtual bool process_dwpal_nl_event(struct nl_msg *msg, void *arg = nullptr)          = 0;
+
     // Protected methods
 protected:
     base_wlan_hal_dwpal(HALType type, const std::string &iface_name, hal_event_cb_t callback,
                         const hal_conf_t &hal_conf = {});
 
-    // Process dwpal event
-    virtual bool process_dwpal_event(char *buffer, int bufLen, const std::string &opcode) = 0;
-    virtual bool process_dwpal_nl_event(struct nl_msg *msg, void *arg = nullptr)          = 0;
-    virtual bool dwpald_attach(char *ifname)                                              = 0;
+    virtual bool dwpald_attach(char *ifname) = 0;
 
     bool set(const std::string &param, const std::string &value,
              int vap_id = beerocks::IFACE_RADIO_ID);
