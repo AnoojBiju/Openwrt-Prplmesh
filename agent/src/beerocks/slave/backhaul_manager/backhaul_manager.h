@@ -140,6 +140,14 @@ public:
     bool start_wps_pbc(const sMacAddr &radio_mac);
 
     /**
+     * @brief Get Station Information.
+     *
+     * @param sta_mac MAC address of the station.
+     * @return true on success, false on failure.
+     */
+    bool sta_info_query(const sMacAddr &mac_addr);
+
+    /**
      * @brief set MBO AssocDisallow property
      * 
      * @param radio_mac radio mac of the radio on which to set the MBO

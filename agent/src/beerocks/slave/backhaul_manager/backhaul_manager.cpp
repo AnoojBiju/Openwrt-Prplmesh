@@ -2775,6 +2775,13 @@ std::string BackhaulManager::freq_to_radio_mac(eFreqType freq) const
     return {};
 }
 
+bool BackhaulManager::sta_info_query(const sMacAddr &mac)
+{
+    // When complete flow is implemented, backhaul manager
+    // takes care of sending the station information to the UCC Server.
+    return true;
+}
+
 bool BackhaulManager::start_wps_pbc(const sMacAddr &radio_mac)
 {
     if ((m_eFSMState == EState::OPERATIONAL)) {
