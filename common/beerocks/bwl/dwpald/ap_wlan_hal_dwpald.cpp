@@ -3299,10 +3299,14 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
 /* hostap event callback executed in dwpald context */
 static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t len)
 {
+    std::string opcode(op_code);
+#if 0
     if (write(ctx->get_ext_evt_write_pfd(), buffer, len) < 0) {
         LOG(ERROR) << "Failed writing hostap event callback data";
         return -1;
     }
+#endif
+    ctx->process_dwpal_event(buffer, len, opcode);
     return 0;
 }
 
