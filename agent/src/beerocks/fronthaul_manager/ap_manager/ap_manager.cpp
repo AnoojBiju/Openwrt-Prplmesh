@@ -2139,6 +2139,24 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
         // Send the mismatched message
         send_cmdu(cmdu_tx);
     } break;
+    case Event::STA_Info_Response: {
+        if (!data) {
+            LOG(ERROR) << "STA_Info_Response without data!";
+            return false;
+        }
+        auto msg = static_cast<bwl::sACTION_APMANAGER_STA_INFO_RESPONSE *>(data);
+        LOG(DEBUG) << "STA_Info_Response received for sta=" << msg->sta_mac;
+        LOG(DEBUG) << "bss = " << msg->bss;
+        LOG(DEBUG) << "Device name = " << msg->device_name;
+        LOG(DEBUG) << "OS name = " << msg->os_name;
+        LOG(DEBUG) << "Vendor = " << msg->vendor;
+        LOG(DEBUG) << "days_since_last_reset = " << msg->days_since_last_reset;
+        LOG(DEBUG) << "ipv4 = " << beerocks::net::network_utils::ipv4_to_string(msg->ipv4);
+        LOG(DEBUG) << "subnet mask = "
+                   << beerocks::net::network_utils::ipv4_to_string(msg->subnet_mask);
+        LOG(DEBUG) << "default gw = "
+                   << beerocks::net::network_utils::ipv4_to_string(msg->default_gw);
+    } break;
     // Unhandled events
     default:
         LOG(ERROR) << "Unhandled event: " << int(event);
