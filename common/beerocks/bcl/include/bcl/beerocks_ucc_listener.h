@@ -189,7 +189,8 @@ protected:
 
     virtual bool handle_custom_command(const std::unordered_map<std::string, std::string> &params,
                                        std::string &err_string) = 0;
-
+    virtual bool handle_sta_info_query(std::unordered_map<std::string, std::string> &params,
+                                       std::string &err_string) = 0;
     enum class eUccListenerRunOn : uint8_t {
         CONTROLLER,
         AGENT,
@@ -222,6 +223,7 @@ private:
         DEV_SET_RFEATURE,
         DEV_EXEC_ACTION,
         CUSTOM_CMD,
+        DEV_GET_STA_INFO,
         WFA_CA_COMMAND_MAX,
     };
     static eWfaCaCommand wfa_ca_command_from_string(std::string command);
