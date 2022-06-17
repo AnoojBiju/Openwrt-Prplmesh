@@ -39,6 +39,8 @@ private:
                                 std::string &err_string) override;
     bool handle_custom_command(const std::unordered_map<std::string, std::string> &params,
                                std::string &err_string) override;
+    bool handle_sta_info_query(std::unordered_map<std::string, std::string> &params,
+                               std::string &err_string) override;
 
     BackhaulManager &m_btl_ctx;
 };

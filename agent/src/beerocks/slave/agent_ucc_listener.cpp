@@ -243,3 +243,15 @@ bool agent_ucc_listener::handle_custom_command(
     err_string = "handle_custom_command is not supported in agent mode";
     return false;
 }
+
+bool agent_ucc_listener::handle_sta_info_query(std::unordered_map<std::string, std::string> &params,
+                                               std::string &err_string)
+{
+    if (params.find("sta_mac") == params.end()) {
+        err_string = "MAC Address is empty";
+        return false;
+    }
+
+    LOG(DEBUG) << "Calling sta_info_query in backhaul manager context";
+    return m_btl_ctx.sta_info_query(tlvf::mac_from_string(params["sta_mac"]));
+}
