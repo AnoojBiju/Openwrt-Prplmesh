@@ -35,6 +35,7 @@
 #include <tlvf/wfa_map/tlv1905LayerSecurityCapability.h>
 #include <tlvf/wfa_map/tlvAgentList.h>
 #include <tlvf/wfa_map/tlvAkmSuiteCapabilities.h>
+#include <tlvf/wfa_map/tlvAnticipatedChannelPreference.h>
 #include <tlvf/wfa_map/tlvApCapability.h>
 #include <tlvf/wfa_map/tlvApExtendedMetrics.h>
 #include <tlvf/wfa_map/tlvApHeCapabilities.h>
@@ -229,6 +230,9 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     }
     case (wfa_map::eTlvTypeMap::TLV_SEARCHED_SERVICE): {
         return msg.addClass<wfa_map::tlvSearchedService>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_ANTICIPATED_CHANNEL_PREFERENCE): {
+        return msg.addClass<wfa_map::tlvAnticipatedChannelPreference>();
     }
     case (wfa_map::eTlvTypeMap::TLV_AP_RADIO_IDENTIFIER): {
         return msg.addClass<wfa_map::tlvApRadioIdentifier>();
