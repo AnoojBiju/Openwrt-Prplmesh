@@ -13,6 +13,7 @@
 #include <iostream>
 #include <sstream>
 
+#include "tlv_team_members.h"
 #include "tlvf/WSC/configData.h"
 #include "tlvf/WSC/m1.h"
 #include "tlvf/WSC/m2.h"
@@ -26,6 +27,7 @@
 #include "tlvf/wfa_map/tlvApCapability.h"
 #include "tlvf/wfa_map/tlvProfile2ChannelScanResult.h"
 #include "tlvf/wfa_map/tlvProfile2ErrorCode.h"
+
 #include <tlvf/AssociationRequestFrame/AssocReqFrame.h>
 #include <tlvf/test/tlvVarList.h>
 #include <tlvf/tlvftypes.h>
@@ -44,7 +46,6 @@ using namespace ieee1905_1;
 using namespace wfa_map;
 
 using namespace mapf;
-
 int test_int_len_list()
 {
     int errors = 0;
@@ -1795,6 +1796,15 @@ int test_build_assoc_frame()
     return errors;
 }
 
+static void test_team_members()
+{
+    uint8_t buffer[4096];
+    uint8_t len;
+    memset(buffer, 0, 4096);
+    len = build_cmdu(buffer, 4096);
+    parse_and_print_cmdu(buffer, len);
+}
+
 int main(int argc, char *argv[])
 {
     int errors = 0;
@@ -1811,6 +1821,8 @@ int main(int argc, char *argv[])
     errors += test_build_assoc_frame();
     errors += test_parse_reassoc_frame();
     errors += test_create_error_response_message();
+    MAPF_INFO(__FUNCTION__ << " Calling test_team_members build and parse function" << std::endl);
+    test_team_members();
     MAPF_INFO(__FUNCTION__ << " Finished, errors = " << errors << std::endl);
     return errors;
 }
