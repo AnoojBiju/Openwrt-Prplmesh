@@ -1685,20 +1685,30 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
                 return;
             }
 
-            int8_t channel_preference = database.get_channel_preference(
-                request->radio_mac(), operating_class, request->channel());
-            if (channel_preference <= 0) {
-                LOG(ERROR) << "channel #" << request->channel() << " and bandwidth "
-                           << beerocks::utils::convert_bandwidth_to_int(request->bandwidth())
-                           << ", are " << ((channel_preference == 0) ? "Non-Operable" : "Invalid");
+            if (database.is_preference_reported_expired(request->radio_mac())) {
+                LOG(DEBUG) << "Preference Report has expired, request new preference!";
+                dynamic_channel_selection_r2_task::sPreferenceRequestEvent new_event;
+                new_event.radio_mac = request->radio_mac();
+                tasks.push_event(database.get_dynamic_channel_selection_r2_task_id(),
+                                 dynamic_channel_selection_r2_task::eEvent::REQUEST_NEW_PREFERENCE,
+                                 &new_event);
+            } else {
+                int8_t channel_preference = database.get_channel_preference(
+                    request->radio_mac(), operating_class, request->channel());
+                if (channel_preference <= 0) {
+                    LOG(ERROR) << "channel #" << request->channel() << " and bandwidth "
+                               << beerocks::utils::convert_bandwidth_to_int(request->bandwidth())
+                               << ", are "
+                               << ((channel_preference == 0) ? "Non-Operable" : "Invalid");
 
-                response->code() = uint8_t(1); //Failure
-                controller_ctx->send_cmdu(sd, cmdu_tx);
-                break;
+                    response->code() = uint8_t(1); //Failure
+                    controller_ctx->send_cmdu(sd, cmdu_tx);
+                    break;
+                }
             }
         }
 
-        LOG(DEBUG) << "Triggering Channel-Selection in task";
+        LOG(DEBUG) << "Sending Channel-Selection request to task";
         dynamic_channel_selection_r2_task::sOnDemandChannelSelectionEvent new_event;
         new_event.radio_mac       = request->radio_mac();
         new_event.channel         = request->channel();
