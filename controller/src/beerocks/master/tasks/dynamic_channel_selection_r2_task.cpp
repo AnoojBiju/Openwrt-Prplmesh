@@ -16,7 +16,6 @@
 #include <memory>
 
 constexpr std::chrono::seconds CHANNEL_SCAN_REPORT_WAIT_TIME(300);
-constexpr std::chrono::minutes CHANNEL_PREFERENCE_EXPIRATION(5);
 
 #define FSM_MOVE_SCAN_STATE(new_state)                                                             \
     ({                                                                                             \
@@ -75,6 +74,10 @@ void dynamic_channel_selection_r2_task::work()
             if (!remove_invalid_channel_selection_requests()) {
                 LOG(ERROR) << "Failed to remove invalid pending scans";
                 break;
+            }
+            if (m_pending_selection_requests.empty()) {
+                LOG(INFO)
+                    << "All pending selection requests where removed because there were invalid.";
             }
         }
         if (!m_pending_selection_requests.empty()) {
@@ -143,10 +146,17 @@ void dynamic_channel_selection_r2_task::handle_event(int event_enum_value, void 
         break;
     }
     case TRIGGER_ON_DEMAND_CHANNEL_SELECTION: {
-        auto scan_request_event =
+        auto on_demand_request_event =
             reinterpret_cast<const sOnDemandChannelSelectionEvent *>(event_obj);
         LOG(TRACE) << "Received TRIGGER_ON_DEMAND_CHANNEL_SELECTION event";
-        handle_on_demand_channel_selection_request_event(*scan_request_event);
+        handle_on_demand_channel_selection_request_event(*on_demand_request_event);
+        break;
+    }
+    case REQUEST_NEW_PREFERENCE: {
+        auto new_preference_request_event =
+            reinterpret_cast<const sPreferenceRequestEvent *>(event_obj);
+        LOG(TRACE) << "Received REQUEST_NEW_PREFERENCE event";
+        handle_preference_request_event(*new_preference_request_event);
         break;
     }
     default: {
@@ -704,18 +714,6 @@ bool dynamic_channel_selection_r2_task::handle_on_demand_channel_selection_reque
         m_pending_selection_requests[agent_mac][radio_mac] =
             std::make_shared<sOnDemandAutoChannelSelectionRequest>(channel_pool_set, csa_count);
     } else {
-        if (m_selection_state != eSelectionState::WAIT_FOR_PREFERENCE) {
-            const auto last_preference = database.get_last_preference_report_change(radio_mac);
-            const auto curr_timestamp  = std::chrono::steady_clock::now();
-            if ((last_preference + CHANNEL_PREFERENCE_EXPIRATION) < curr_timestamp) {
-                LOG(DEBUG)
-                    << "Preference Report is outdated, requesting a new preference from agent "
-                    << agent_mac;
-                send_channel_preference_query(agent_mac);
-                m_selection_timeout = std::chrono::steady_clock::now() + CHANNEL_PREFERENCE_TIMEOUT;
-                FSM_MOVE_SELECTION_STATE(eSelectionState::WAIT_FOR_PREFERENCE);
-            }
-        }
         auto requested_channel = channel;
         if (wireless_utils::is_operating_class_using_central_channel(operating_class)) {
             auto bandwidth         = wireless_utils::operating_class_to_bandwidth(operating_class);
@@ -735,6 +733,31 @@ bool dynamic_channel_selection_r2_task::handle_on_demand_channel_selection_reque
             std::make_shared<sOnDemandChannelSelectionRequest>(requested_channel, operating_class,
                                                                csa_count);
     }
+    return true;
+}
+
+bool dynamic_channel_selection_r2_task::handle_preference_request_event(
+    const sPreferenceRequestEvent &preference_request_event)
+{
+    const auto &radio_mac = preference_request_event.radio_mac;
+
+    // Get parent agent mac from radio mac
+    auto radio_mac_str = tlvf::mac_to_string(radio_mac);
+    auto agent_mac     = database.get_node_parent_ire(radio_mac_str);
+
+    if (agent_mac == beerocks::net::network_utils::ZERO_MAC) {
+        LOG(ERROR) << "Failed to get node_parent_ire!";
+        return false;
+    }
+
+    if (m_selection_state != eSelectionState::IDLE) {
+        LOG(INFO) << "Cannot send channel preference query because task is not idle";
+        return false;
+    }
+
+    send_channel_preference_query(agent_mac);
+    m_selection_timeout = std::chrono::steady_clock::now() + CHANNEL_PREFERENCE_TIMEOUT;
+    FSM_MOVE_SELECTION_STATE(eSelectionState::WAIT_FOR_PREFERENCE);
     return true;
 }
 
