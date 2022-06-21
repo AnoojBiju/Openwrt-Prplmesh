@@ -11,6 +11,7 @@ mkdir -p files/etc
 #   We need to keep the hashes in the firmware, to later know if an upgrade is needed:
 printf '%s=%s\n' "OPENWRT_REPOSITORY" "$OPENWRT_REPOSITORY" >> files/etc/prplwrt-version
 printf '%s=%s\n' "OPENWRT_VERSION" "$OPENWRT_VERSION" >> files/etc/prplwrt-version
+printf '%s=%s\n' "OPENWRT_TOOLCHAIN_VERSION" "$OPENWRT_TOOLCHAIN_VERSION" >> files/etc/prplwrt-version
 
 # Arguments to gen_config.py:
 args=("$TARGET_SYSTEM")
