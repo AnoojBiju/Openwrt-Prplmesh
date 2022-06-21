@@ -49,6 +49,7 @@ public:
     int association_handling_task_id = -1;
     int steering_task_id             = -1;
     int roaming_task_id              = -1;
+    int btm_request_task_id          = -1;
 
     bool confined = false;
 
