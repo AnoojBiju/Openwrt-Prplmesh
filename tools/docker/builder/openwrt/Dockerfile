@@ -65,7 +65,7 @@ RUN printf '\033[1;35m%s Cloning prplWrt\n\033[0m' "$(date --iso-8601=seconds --
     && printf '\033[1;35m%s Building base prplWrt tree\n\033[0m' "$(date --iso-8601=seconds --universal)" \
     && cd openwrt \
     && git checkout "$OPENWRT_TOOLCHAIN_VERSION" \
-    && ./scripts/gen_config.py "$TARGET_SYSTEM" \
+    && ./scripts/gen_config.py "$TARGET_SYSTEM" prpl \
     && make -j"$(nproc)" \
     && rm -rf bin \
     && rm -rf build_dir/target*/libnl-3* \
