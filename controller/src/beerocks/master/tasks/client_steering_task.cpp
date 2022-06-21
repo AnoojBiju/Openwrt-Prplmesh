@@ -243,8 +243,7 @@ void client_steering_task::steer_sta()
         bh_steer_req_tlv->finalize();
 
         son_actions::send_cmdu_to_agent(agent_mac, m_cmdu_tx, m_database, radio_mac);
-        // TODO: send backhaul steering to the owner of the bSTA
-        // https://jira.prplfoundation.org/browse/PPM-2118
+        // TODO: send backhaul steering to the owner of the bSTA (PPM-2118)
 
         // update bml listeners
         bml_task::bh_roam_req_available_event bh_roam_event;

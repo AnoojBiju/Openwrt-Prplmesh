@@ -379,6 +379,95 @@ amxd_status_t trigger_scan(amxd_object_t *object, amxd_function_t *func, amxc_va
     return amxd_status_ok;
 }
 
+/**
+ * @brief Send BTMRequest from NBAPI for the current STA and given parameters
+ *
+ * Example of usage:
+ * ubus call Device.WiFi.DataElements.Network.Device.Radio.BSS.STA.MultiAPSTA.BTMRequest
+ * '{"DisassociationImminent": "true", "DisassociationTimer": "60", "TargetBSS": "aa:bb:cc:dd:ee:ff"}'
+ *
+ * STA MAC address is implicit (using the MACAddress of the object on which this function
+ * is called)
+ * Optional parameters defined by TR-181, BSSTerminationDuration, ValidityInterval and SteeringTimer
+ * are currently ignored
+ */
+amxd_status_t btm_request(amxd_object_t *mapsta_object, amxd_function_t *func, amxc_var_t *args,
+                          amxc_var_t *ret)
+{
+    auto controller_ctx = g_database->get_controller_ctx();
+
+    if (!controller_ctx) {
+        LOG(ERROR) << "Failed to get controller context.";
+        return amxd_status_unknown_error;
+    }
+
+    amxd_object_t *station_object = NULL;
+    station_object                = amxd_object_get_parent(mapsta_object);
+
+    if (station_object == NULL) {
+        LOG(ERROR) << "Failed retrieving the parent of the MultiAPSTA object";
+        return amxd_status_object_not_found;
+    }
+
+    amxc_var_t value;
+    amxc_var_init(&value);
+    amxd_object_get_param(station_object, "MACAddress", &value);
+    std::string station_mac = amxc_var_constcast(cstring_t, &value);
+
+    bool disassociation_imminent = GET_BOOL(args, "DisassociationImminent");
+
+    uint32_t disassociation_timer = 0, bss_termination_duration = 0, validity_interval = 0,
+             steering_timer  = 0;
+    disassociation_timer     = GET_UINT32(args, "DisassociationTimer");
+    bss_termination_duration = GET_UINT32(args, "BSSTerminationDuration");
+    //optional
+    validity_interval = GET_UINT32(args, "ValidityInterval");
+    steering_timer    = GET_UINT32(args, "SteeringTimer");
+
+    std::string target_bssid = GET_CHAR(args, "TargetBSS");
+
+    if (disassociation_timer != 0) {
+        disassociation_imminent = true;
+        //force true if a disassoc timer is provided
+    } else if (disassociation_imminent == true) {
+        disassociation_timer = 60;
+        // force a non-zero value for disassoc timer if disassoc imminent flag is set
+    }
+
+    if (station_mac.empty()) {
+        LOG(ERROR) << "Failed reading Station MAC from DM";
+        return amxd_status_invalid_attr;
+    }
+
+    if (target_bssid.empty()) {
+        LOG(ERROR) << "Failed to get proper arguments.";
+        return amxd_status_parameter_not_found;
+    }
+
+    if (bss_termination_duration == 0) {
+        LOG(INFO) << "bss termination duration not provided";
+    }
+
+    if (validity_interval == 0) {
+        LOG(INFO) << "validity interval not provided";
+    }
+
+    if (steering_timer == 0) {
+        LOG(INFO) << "steering timer not provided";
+    }
+
+    if (!g_database->can_start_client_steering(station_mac, target_bssid)) {
+        LOG(WARNING) << "Cannot initiate steering of the client: " << station_mac
+                     << " to the AP with BSSID: " << target_bssid;
+        return amxd_status_invalid_arg;
+    } else {
+        controller_ctx->send_btm_request(disassociation_imminent, disassociation_timer,
+                                         bss_termination_duration, validity_interval,
+                                         steering_timer, station_mac, target_bssid);
+    }
+    return amxd_status_ok;
+}
+
 // Events
 
 amxd_dm_t *g_data_model = nullptr;
@@ -510,8 +599,10 @@ std::vector<beerocks::nbapi::sFunctions> get_func_list(void)
         {"access_point_commit", "Device.WiFi.DataElements.Network.AccessPointCommit",
          access_point_commit},
         {"client_steering", "Device.WiFi.DataElements.Network.ClientSteering", client_steering},
-        {"trigger_scan", "Device.WiFi.DataElements.Network.Device.Radio.ScanTrigger",
-         trigger_scan}};
+        {"trigger_scan", "Device.WiFi.DataElements.Network.Device.Radio.ScanTrigger", trigger_scan},
+        {"BTMRequest",
+         "Device.WiFi.DataElements.Network.Device.Radio.BSS.STA.MultiAPSTA.BTMRequest",
+         btm_request}};
     return functions_list;
 }
 

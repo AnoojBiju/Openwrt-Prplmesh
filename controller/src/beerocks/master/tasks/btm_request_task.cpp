@@ -50,8 +50,15 @@ void btm_request_task::work()
         m_tasks.kill_task(prev_task_id);
         station->btm_request_task_id = id;
 
-        m_original_bssid = tlvf::mac_to_string(station->get_bss()->bssid);
-        m_ssid_name      = station->get_bss()->ssid;
+        auto original_bss = station->get_bss();
+        if (!original_bss) {
+            LOG(ERROR) << "Unable to get parent BSS for station " << m_sta_mac;
+            finish();
+            break;
+        }
+
+        m_original_bssid = tlvf::mac_to_string(original_bss->bssid);
+        m_ssid_name      = original_bss->ssid;
 
         update_sta_steer_attempt_stats(*station);
 
@@ -168,7 +175,7 @@ void btm_request_task::steer_sta()
 
     auto target_agent = m_database.get_agent_by_bssid(tlvf::mac_from_string(m_target_bssid));
     if (!target_agent || tlvf::mac_to_string(target_agent->al_mac).empty()) {
-        LOG(ERROR) << "Parent ire for bssid= " << m_target_bssid
+        LOG(ERROR) << "Parent agent for bssid= " << m_target_bssid
                    << " not found, exiting steering task";
         return;
     }
@@ -305,15 +312,15 @@ void btm_request_task::handle_event(int event_type, void *obj)
 {
     if (event_type == STA_CONNECTED) {
 
-        auto station         = m_database.get_station(tlvf::mac_from_string(m_sta_mac));
-        auto connected_bssid = station->get_bss();
+        auto station       = m_database.get_station(tlvf::mac_from_string(m_sta_mac));
+        auto connected_bss = station->get_bss();
 
-        if (tlvf::mac_to_string(connected_bssid->bssid) == m_target_bssid) {
+        if (tlvf::mac_to_string(connected_bss->bssid) == m_target_bssid) {
             TASK_LOG(DEBUG) << "steering successful for sta " << m_sta_mac << " to bssid "
-                            << connected_bssid->bssid;
+                            << connected_bss->bssid;
             m_steering_success = true;
         } else {
-            TASK_LOG(ERROR) << "sta " << m_sta_mac << " steered to bssid " << connected_bssid->bssid
+            TASK_LOG(ERROR) << "sta " << m_sta_mac << " steered to bssid " << connected_bss->bssid
                             << " ,target bssid was " << m_target_bssid;
         }
 
@@ -355,8 +362,7 @@ void btm_request_task::handle_event(int event_type, void *obj)
         m_database.dm_uint64_param_one_up(bss_path + ".MultiAPSteering", "BTMQueryResponses");
         m_database.dm_increment_steer_summary_stats("BTMQueryResponses");
 
-        // TODO: increment statistics for this particular operation (using status code for the BTMRequest)
-        // https://jira.prplfoundation.org/browse/PPM-2124
+        // TODO: increment statistics for this particular operation (using status code for the BTMRequest) (PPM-2124)
     }
 }
 

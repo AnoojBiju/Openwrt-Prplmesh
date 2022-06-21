@@ -96,6 +96,23 @@ public:
     bool start_client_steering(const std::string &sta_mac, const std::string &target_bssid);
 
     /**
+     * @brief Send BTM Request on NBAPI RPC.
+     *
+     * @param disassociation_imminent Flag for 802.11 BTM Request.
+     * @param disassociation_timer Number of beacon transmission times until Disassoc Frame.
+     * @param bss_termination_duration Minute count for which the BSS is not available.
+     * @param validity_interval Beacon interval count for which the CandidateList is valid.
+     * @param steering_timer Beacon interval count for which the STA is blacklisted.
+     * @param sta_mac Mac address of the client
+     * @param target_bssid Target BSSID.
+     * @return True if client steering started successfully, false otherwise.
+     */
+    bool send_btm_request(const bool &disassociation_imminent, const uint32_t &disassociation_timer,
+                          const uint32_t &bss_termination_duration,
+                          const uint32_t &validity_interval, const uint32_t &steering_timer,
+                          const std::string &sta_mac, const std::string &target_bssid);
+
+    /**
      * @brief Trigger channel scan initiated by NBAPI.
      *
      * @param ruid ruid of radio for wich scan requested.

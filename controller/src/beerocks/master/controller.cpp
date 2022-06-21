@@ -13,6 +13,7 @@
 #include "son_management.h"
 #include "tasks/agent_monitoring_task.h"
 #include "tasks/bml_task.h"
+#include "tasks/btm_request_task.h"
 #include "tasks/channel_selection_task.h"
 #include "tasks/client_association_task.h"
 #include "tasks/client_steering_task.h"
@@ -1205,6 +1206,15 @@ bool Controller::handle_cmdu_1905_client_steering_btm_report_message(
         tasks.kill_task(client->roaming_task_id);
 
         tasks.push_event(steering_task_id, client_steering_task::BSS_TM_REQUEST_REJECTED);
+    }
+
+    int btm_request_task_id = client->btm_request_task_id;
+    // Check if task is running before pushing the event
+    if (tasks.is_task_running(btm_request_task_id)) {
+        tasks.push_event(btm_request_task_id, btm_request_task::BTM_REPORT_RECEIVED,
+                         (void *)&status_code);
+        // no BSS_TM_REQUEST_REJECTED event for the btm_request_task since there is no particualr handling for
+        // this value of the BTM_RESPONSE status;
     }
 
     return true;
@@ -3727,6 +3737,29 @@ bool Controller::start_client_steering(const std::string &sta_mac, const std::st
     son_actions::steer_sta(database, cmdu_tx, tasks, sta_mac, target_bssid, triggered_by,
                            std::string(), disassoc_imminent,
                            database.config.steering_disassoc_timer_msec.count());
+    return true;
+}
+
+#define BEACON_INTERVAL_MS_IN_BI 100
+bool Controller::send_btm_request(const bool &disassoc_imminent,
+                                  const uint32_t &disassoc_timer,    // beacon interval count
+                                  const uint32_t &bss_term_duration, // minutes count
+                                  const uint32_t &validity_interval, // beacon interval count
+                                  const uint32_t &steering_timer,    // beacon interval count
+                                  const std::string &sta_mac, const std::string &target_bssid)
+{
+    std::string triggered_by{"NBAPI BTMRequest"};
+    std::string steering_type{"BTM"}; // so the steering task increments the BTM statistics counters
+
+    int disassoc_timer_ms    = BEACON_INTERVAL_MS_IN_BI * disassoc_timer;
+    int steering_timer_ms    = BEACON_INTERVAL_MS_IN_BI * steering_timer;
+    int validity_interval_ms = BEACON_INTERVAL_MS_IN_BI * validity_interval;
+
+    LOG(DEBUG) << "NBAPI BTMRequest to steer sta " << sta_mac << " to BSSID " << target_bssid;
+    son_actions::start_btm_request_task(database, cmdu_tx, tasks, disassoc_imminent,
+                                        disassoc_timer_ms, bss_term_duration, validity_interval_ms,
+                                        steering_timer_ms, sta_mac, target_bssid, triggered_by);
+
     return true;
 }
 
