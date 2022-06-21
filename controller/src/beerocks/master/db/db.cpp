@@ -32,6 +32,8 @@ const std::string db::INITIAL_RADIO_STR        = "initial_radio";
 const std::string db::SELECTED_BANDS_STR       = "selected_bands";
 const std::string db::IS_UNFRIENDLY_STR        = "is_unfriendly";
 
+constexpr std::chrono::minutes CHANNEL_PREFERENCE_EXPIRATION(5);
+
 // static
 std::string db::type_to_string(beerocks::eType type)
 {
@@ -2945,6 +2947,17 @@ db::get_last_preference_report_change(const sMacAddr &radio_mac)
         return std::chrono::steady_clock::time_point::min();
     }
     return radio->last_preference_report_change;
+}
+
+bool db::is_preference_reported_expired(const sMacAddr &radio_mac)
+{
+    auto radio = get_hostap(radio_mac);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << radio_mac;
+        return false;
+    }
+    return ((radio->last_preference_report_change + CHANNEL_PREFERENCE_EXPIRATION) <
+            std::chrono::steady_clock::now());
 }
 
 bool db::set_channel_scan_dwell_time_msec(const sMacAddr &mac, int dwell_time_msec,

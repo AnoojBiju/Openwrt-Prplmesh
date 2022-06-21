@@ -1497,6 +1497,14 @@ public:
     const std::chrono::steady_clock::time_point
     get_last_preference_report_change(const sMacAddr &radio_mac);
 
+    /**
+     * @brief Check if the preference report has expired.
+     * 
+     * @param radio_mac: MAC address of radio.
+     * @return True if the preference report has expired, false otherwise.
+     */
+    bool is_preference_reported_expired(const sMacAddr &radio_mac);
+
     //
     // Client Persistent Data
     //

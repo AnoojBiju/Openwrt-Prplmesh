@@ -47,6 +47,10 @@ public:
         uint8_t csa_count;
     };
 
+    struct sPreferenceRequestEvent {
+        sMacAddr radio_mac;
+    };
+
     struct sSingleScanRequestEvent {
         sMacAddr radio_mac;
     };
@@ -63,6 +67,7 @@ public:
 
     enum eEvent : uint8_t {
         TRIGGER_ON_DEMAND_CHANNEL_SELECTION,
+        REQUEST_NEW_PREFERENCE,
         TRIGGER_SINGLE_SCAN,
         RECEIVED_CHANNEL_SCAN_REPORT,
         CONTINUOUS_STATE_CHANGED_PER_RADIO
@@ -227,6 +232,14 @@ private:
      */
     bool handle_on_demand_channel_selection_request_event(
         const sOnDemandChannelSelectionEvent &channel_selection_event);
+
+    /**
+     * @brief Handle Preference Query request event.
+     * 
+     * @param preference_request_event Reference to sPreferenceRequestEvent object.
+     * @return true if successful, false otherwise.
+     */
+    bool handle_preference_request_event(const sPreferenceRequestEvent &preference_request_event);
 
     /**
      * @brief Send pending channel Selection requests
