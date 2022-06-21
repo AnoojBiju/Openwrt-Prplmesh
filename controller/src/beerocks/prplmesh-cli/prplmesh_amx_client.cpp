@@ -44,7 +44,7 @@ amxc_var_t *AmxClient::get_object(const std::string &object_path)
         }
     }
     amxc_var_clean(&retval_t);
-    return NULL;
+    return nullptr;
 }
 
 const amxc_htable_t *AmxClient::get_htable_object(const std::string &object_path)
@@ -53,11 +53,12 @@ const amxc_htable_t *AmxClient::get_htable_object(const std::string &object_path
     amxc_var_init(&retval_t);
 
     if (amxb_get(bus_ctx, object_path.c_str(), 0, &retval_t, 3) == AMXB_STATUS_OK) {
-        const amxc_htable_t *htable_retval = amxc_var_constcast(amxc_htable_t, GETI_ARG(&retval_t, 0));
+        const amxc_htable_t *htable_retval =
+            amxc_var_constcast(amxc_htable_t, GETI_ARG(&retval_t, 0));
         return htable_retval;
     }
     amxc_var_clean(&retval_t);
-    return NULL;
+    return nullptr;
 }
 
 AmxClient::~AmxClient()

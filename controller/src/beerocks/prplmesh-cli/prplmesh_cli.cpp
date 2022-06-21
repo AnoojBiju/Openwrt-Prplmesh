@@ -63,7 +63,7 @@ bool prplmesh_cli::get_ip_from_iface(const std::string &iface, std::string &ip)
 }
 
 // IEEE Std 802.11™‐2020 - Global operating classes
-float prplmesh_cli::get_freq_from_class(uint32_t oper_class)
+float prplmesh_cli::get_freq_from_class(const uint32_t oper_class)
 {
     float freq;
 
@@ -120,7 +120,7 @@ float prplmesh_cli::get_freq_from_class(uint32_t oper_class)
     return freq;
 }
 
-bool prplmesh_cli::print_radio(std::string device_path)
+bool prplmesh_cli::print_radio(const std::string device_path)
 {
     std::string radio_ht_path     = device_path + "Radio.*.";
     const amxc_htable_t *ht_radio = m_amx_client->get_htable_object(radio_ht_path);
@@ -184,57 +184,59 @@ bool prplmesh_cli::print_device_info(std::string agent_mac, std::string skip_mac
     std::string backhaul_device_id;
     std::string device_ht_path     = "Device.WiFi.DataElements.Network.Device.*.";
     const amxc_htable_t *ht_device = m_amx_client->get_htable_object(device_ht_path);
-    int device_index               = 1;
 
     amxc_htable_iterate(device_it, ht_device)
     {
-        const char *device_key    = amxc_htable_it_get_key(device_it);
-        std::string device_path_i = std::string(device_key);
+        std::string device_path_i = amxc_htable_it_get_key(device_it);
         std::string backhaul_path = device_path_i + ".MultiAPDevice.Backhaul.";
         amxc_var_t *backhaul_obj  = m_amx_client->get_object(backhaul_path);
         backhaul_device_id        = GET_CHAR(backhaul_obj, "BackhaulDeviceID");
         std::string linktype      = GET_CHAR(backhaul_obj, "LinkType");
 
-        if (linktype == "Ethernet" && backhaul_device_id == "" && agent_mac != skip_mac) {
+        if (linktype == "Ethernet" && backhaul_device_id.empty() && agent_mac != skip_mac) {
             backhaul_device_id = conn_map.controller_id;
         }
 
         std::string curr_mac = GET_CHAR(backhaul_obj, "MACAddress");
+
         if (backhaul_device_id == agent_mac && skip_mac != curr_mac) {
             agent_mac = GET_CHAR(backhaul_obj, "MACAddress");
             space += "\t";
-            device_index++;
-            std::cout << space << "Device[" << device_index << "]: name: Agent, mac: " << agent_mac
-                      << " LinkType: " << linktype << std::endl;
+            conn_map.device_index++;
+            std::cout << space << "Device[" << conn_map.device_index
+                      << "]: name: Agent, mac: " << agent_mac << " LinkType: " << linktype
+                      << std::endl;
             print_radio(device_path_i);
             print_device_info(agent_mac, "");
         }
     }
 
-    if (backhaul_device_id != "") {
+    if (conn_map.device_index < conn_map.device_number) {
         // Decrease space value
         if (space.size() > 0) {
             space.pop_back();
         }
 
         //Go to the previous primary device but skip the current one
-        print_device_info(backhaul_device_id, agent_mac);
+        if (backhaul_device_id.empty()) {
+            print_device_info(conn_map.controller_id, agent_mac);
+        } else {
+            print_device_info(backhaul_device_id, agent_mac);
+        }
     }
 
     return true;
 }
 
-bool prplmesh_cli::prpl_conn_map(void)
+bool prplmesh_cli::prpl_conn_map()
 {
 
     std::cout << "Start conn map" << std::endl;
 
     std::string network_path = "Device.WiFi.DataElements.Network.";
     amxc_var_t *network_obj  = m_amx_client->get_object(network_path);
-    const char *op_band      = GET_CHAR(network_obj, "ControllerID");
+    conn_map.controller_id   = GET_CHAR(network_obj, "ControllerID");
     conn_map.device_number   = GET_UINT32(network_obj, "DeviceNumberOfEntries");
-
-    conn_map.controller_id = std::string(op_band);
 
     std::cout << "Found " << conn_map.device_number << " devices" << std::endl;
 
@@ -267,6 +269,15 @@ bool prplmesh_cli::prpl_conn_map(void)
     // Print all agents
     print_device_info(conn_map.controller_id, "");
 
+    return true;
+}
+
+bool prplmesh_cli::print_help()
+{
+    std::cout << "Usage: prplmesh_cli -c <command>" << std::endl
+              << "Next commands are available : " << std::endl
+              << "help      \t\t: get supported commands" << std::endl
+              << "conn_map  \t\t: dump the latest network map" << std::endl;
     return true;
 }
 

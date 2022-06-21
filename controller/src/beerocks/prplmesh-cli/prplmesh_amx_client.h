@@ -38,7 +38,7 @@ class AmxClient {
 
 public:
     AmxClient(){};
-    AmxClient(const AmxClient &)            = delete;
+    AmxClient(const AmxClient &) = delete;
     AmxClient &operator=(const AmxClient &) = delete;
     ~AmxClient();
 

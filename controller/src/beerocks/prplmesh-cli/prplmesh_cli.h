@@ -30,10 +30,11 @@ class prplmesh_cli {
 public:
     prplmesh_cli();
     bool get_ip_from_iface(const std::string &iface, std::string &ip);
-    bool prpl_conn_map(void);
+    bool prpl_conn_map();
+    bool print_help();
     bool print_device_info(std::string agent_mac, std::string skip_mac);
-    bool print_radio(std::string device_path);
-    float get_freq_from_class(uint32_t oper_class);
+    bool print_radio(const std::string device_path);
+    float get_freq_from_class(const uint32_t oper_class);
 
     std::shared_ptr<beerocks::prplmesh_amx::AmxClient> m_amx_client;
 
@@ -47,6 +48,7 @@ public:
         std::string ssid;
         uint32_t channel;
         uint32_t oper_class;
+        uint32_t device_index = 1;
     } conn_map_t;
 
 private:
