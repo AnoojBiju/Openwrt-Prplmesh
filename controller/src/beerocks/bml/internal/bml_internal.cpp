@@ -512,11 +512,15 @@ bool bml_internal::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
         return false;
     }
 
-    if (process_cmdu_header(beerocks_header) != BML_RET_OK) {
-        return false;
-    }
+    int ret = process_cmdu_header(beerocks_header);
 
-    return true;
+    if (ret == BML_RET_OP_FAILED) {
+        LOG(ERROR) << "bml_internal::process_cmdu_header failed!";
+    } else if (ret == BML_RET_OP_NOT_SUPPORTED) {
+        LOG(ERROR) << "bml_internal::process_cmdu_header return code is "
+                      "BML_RET_OP_NOT_SUPPORTED, aborting!";
+    }
+    return (ret == BML_RET_OK);
 }
 
 int bml_internal::process_cmdu_header(std::shared_ptr<beerocks_header> beerocks_header)
@@ -1299,6 +1303,116 @@ int bml_internal::process_cmdu_header(std::shared_ptr<beerocks_header> beerocks_
                              << " response, but no one is waiting...";
             }
         } break;
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
+        case beerocks_message::ACTION_BML_STEERING_EVENTS_UPDATE: {
+            auto response =
+                beerocks_header->addClass<beerocks_message::cACTION_BML_STEERING_EVENTS_UPDATE>();
+            if (!response) {
+                LOG(ERROR) << "addClass cACTION_BML_STEERING_EVENTS_UPDATE failed";
+                return BML_RET_OP_FAILED;
+            }
+
+            auto buffer = response->buffer(0);
+            if (!buffer) {
+                LOG(ERROR) << "get buffer has failed";
+                return BML_RET_OP_FAILED;
+            }
+
+            handle_steering_event_update((uint8_t *)buffer);
+        } break;
+        case beerocks_message::ACTION_BML_STEERING_SET_GROUP_RESPONSE: {
+            LOG(DEBUG) << "Received ACTION_BML_STEERING_SET_GROUP_RESPONSE response";
+            auto response =
+                beerocks_header
+                    ->addClass<beerocks_message::cACTION_BML_STEERING_SET_GROUP_RESPONSE>();
+            if (!response) {
+                LOG(ERROR) << "addClass cACTION_BML_STEERING_SET_GROUP_RESPONSE failed";
+                return BML_RET_OP_FAILED;
+            }
+
+            // Signal any waiting threads
+            if (m_prmPreAssociationSteering) {
+                m_prmPreAssociationSteering->set_value(response->error_code());
+                m_prmPreAssociationSteering = nullptr;
+            } else {
+                LOG(WARNING) << "Received ACTION_BML_STEERING_SET_GROUP_RESPONSE response, but no "
+                                "one is waiting...";
+            }
+        } break;
+        case beerocks_message::ACTION_BML_STEERING_CLIENT_SET_RESPONSE: {
+            LOG(DEBUG) << "Received ACTION_BML_STEERING_CLIENT_SET_RESPONSE response";
+            auto response =
+                beerocks_header
+                    ->addClass<beerocks_message::cACTION_BML_STEERING_CLIENT_SET_RESPONSE>();
+            if (!response) {
+                LOG(ERROR) << "addClass cACTION_BML_STEERING_CLIENT_SET_RESPONSE failed";
+                return BML_RET_OP_FAILED;
+            }
+
+            // Signal any waiting threads
+            if (m_prmPreAssociationSteering) {
+                m_prmPreAssociationSteering->set_value(response->error_code());
+                m_prmPreAssociationSteering = nullptr;
+            } else {
+                LOG(WARNING) << "Received ACTION_BML_STEERING_CLIENT_SET_RESPONSE response, but no "
+                                "one is waiting...";
+            }
+        } break;
+        case beerocks_message::ACTION_BML_STEERING_EVENT_REGISTER_UNREGISTER_RESPONSE: {
+            auto response = beerocks_header->addClass<
+                beerocks_message::cACTION_BML_STEERING_EVENT_REGISTER_UNREGISTER_RESPONSE>();
+            if (!response) {
+                LOG(ERROR)
+                    << "addClass cACTION_BML_STEERING_EVENT_REGISTER_UNREGISTER_RESPONSE failed";
+                return BML_RET_OP_FAILED;
+            }
+
+            // Signal any waiting threads
+            if (m_prmPreAssociationSteering) {
+                m_prmPreAssociationSteering->set_value(response->error_code());
+                m_prmPreAssociationSteering = nullptr;
+            } else {
+                LOG(WARNING) << "Received ACTION_BML_STEERING_CLIENT_SET_RESPONSE response, but no "
+                                "one is waiting...";
+            }
+        } break;
+        case beerocks_message::ACTION_BML_STEERING_CLIENT_DISCONNECT_RESPONSE: {
+            auto response =
+                beerocks_header
+                    ->addClass<beerocks_message::cACTION_BML_STEERING_CLIENT_DISCONNECT_RESPONSE>();
+            if (!response) {
+                LOG(ERROR) << "addClass cACTION_BML_STEERING_CLIENT_DISCONNECT_RESPONSE failed";
+                return BML_RET_OP_FAILED;
+            }
+
+            // Signal any waiting threads
+            if (m_prmPreAssociationSteering) {
+                m_prmPreAssociationSteering->set_value(response->error_code());
+                m_prmPreAssociationSteering = nullptr;
+            } else {
+                LOG(WARNING) << "Received ACTION_BML_STEERING_CLIENT_DISCONNECT_RESPONSE response, "
+                                "but no one is waiting...";
+            }
+        } break;
+        case beerocks_message::ACTION_BML_STEERING_CLIENT_MEASURE_RESPONSE: {
+            auto response =
+                beerocks_header
+                    ->addClass<beerocks_message::cACTION_BML_STEERING_CLIENT_MEASURE_RESPONSE>();
+            if (!response) {
+                LOG(ERROR) << "addClass cACTION_BML_STEERING_CLIENT_MEASURE_RESPONSE failed";
+                return BML_RET_OP_FAILED;
+            }
+
+            // Signal any waiting threads
+            if (m_prmPreAssociationSteering) {
+                m_prmPreAssociationSteering->set_value(response->error_code());
+                m_prmPreAssociationSteering = nullptr;
+            } else {
+                LOG(WARNING) << "Received ACTION_BML_STEERING_CLIENT_MEASURE_RESPONSE response, "
+                                "but no one is waiting...";
+            }
+        } break;
+#endif /* FEATURE_PRE_ASSOCIATION_STEERING */
         default: {
             LOG(WARNING) << "unhandled header BML action type 0x" << std::hex
                          << int(beerocks_header->action_op());
@@ -3640,3 +3754,340 @@ bool bml_internal::wake_up(uint8_t action_opcode, int value)
     m_prmCliResponses[action_opcode]->set_value(value);
     return true;
 }
+
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
+
+int bml_internal::steering_set_group(uint32_t steeringGroupIndex, BML_STEERING_AP_CONFIG *ap_cfgs,
+                                     size_t length)
+{
+    LOG(DEBUG) << "bml_internal::steering_set_group - entry";
+    // If the socket is not valid, attempt to re-establish the connection
+    if (m_sockMaster == nullptr && !connect_to_master()) {
+        return (-BML_RET_CONNECT_FAIL);
+    }
+
+    // Initialize the promise for receiving the response
+    beerocks::promise<int> prmPreAssociationSteering;
+    m_prmPreAssociationSteering = &prmPreAssociationSteering;
+    int iOpTimeout              = RESPONSE_TIMEOUT; // Default timeout
+
+    auto request =
+        message_com::create_vs_message<beerocks_message::cACTION_BML_STEERING_SET_GROUP_REQUEST>(
+            cmdu_tx);
+
+    if (request == nullptr) {
+        LOG(ERROR) << "Failed building cACTION_BML_AP_SET_CONFIG message!";
+        return (-BML_RET_OP_FAILED);
+    }
+
+    request->steeringGroupIndex() = steeringGroupIndex;
+    if (length > 0) {
+        if (!request->alloc_ap_cfgs(length)) {
+            LOG(ERROR) << "Failed on allocate " << length << " AP Configurations";
+            return (-BML_RET_OP_FAILED);
+        }
+    }
+
+    for (size_t i = 0; i < length; i++) {
+        if (!std::get<0>(request->ap_cfgs(i))) {
+            LOG(ERROR) << "Failed on getting AP Configuration of index " << i;
+            return (-BML_RET_OP_FAILED);
+        }
+        beerocks_message::sSteeringApConfig &request_ap_cfg = std::get<1>(request->ap_cfgs(i));
+        std::copy_n(ap_cfgs[i].bssid, sizeof(sMacAddr::oct), request_ap_cfg.bssid.oct);
+        request_ap_cfg.utilCheckIntervalSec   = ap_cfgs[i].utilCheckIntervalSec;
+        request_ap_cfg.utilAvgCount           = ap_cfgs[i].utilAvgCount;
+        request_ap_cfg.inactCheckIntervalSec  = ap_cfgs[i].inactCheckIntervalSec;
+        request_ap_cfg.inactCheckThresholdSec = ap_cfgs[i].inactCheckThresholdSec;
+    }
+
+    if (!message_com::send_cmdu(m_sockMaster, cmdu_tx)) {
+        LOG(ERROR) << "Failed sending cACTION_BML_AP_SET_CONFIG message!";
+        return (-BML_RET_OP_FAILED);
+    }
+
+    int iRet = BML_RET_OK;
+
+    if (!prmPreAssociationSteering.wait_for(iOpTimeout)) {
+        LOG(ERROR) << "Timeout while waiting for configuration get response...";
+        m_prmPreAssociationSteering = nullptr;
+        return (-BML_RET_TIMEOUT);
+    }
+
+    // Get response
+    iRet = prmPreAssociationSteering.get_value();
+
+    m_prmPreAssociationSteering = nullptr;
+
+    if (iRet != BML_RET_OK) {
+        LOG(ERROR) << "Configuration get failed!";
+    }
+
+    LOG(DEBUG) << "bml_internal::steering_set_group - exit, ret=" << iRet;
+    return (iRet);
+}
+
+int bml_internal::steering_client_set(uint32_t steeringGroupIndex, const BML_MAC_ADDR bssid,
+                                      const BML_MAC_ADDR client_mac,
+                                      BML_STEERING_CLIENT_CONFIG *config)
+{
+    LOG(DEBUG) << "bml_internal::steering_client_set - entry";
+
+    // If the socket is not valid, attempt to re-establish the connection
+    if (m_sockMaster == nullptr && !connect_to_master()) {
+        return (-BML_RET_CONNECT_FAIL);
+    }
+
+    // Initialize the promise for receiving the response
+    beerocks::promise<int> prmPreAssociationSteering;
+    m_prmPreAssociationSteering = &prmPreAssociationSteering;
+    int iOpTimeout              = RESPONSE_TIMEOUT; // Default timeout
+
+    auto request =
+        message_com::create_vs_message<beerocks_message::cACTION_BML_STEERING_CLIENT_SET_REQUEST>(
+            cmdu_tx);
+
+    if (request == nullptr) {
+        LOG(ERROR) << "Failed building cACTION_BML_STEERING_CLIENT_SET_REQUEST message!";
+        return (-BML_RET_OP_FAILED);
+    }
+
+    request->steeringGroupIndex() = steeringGroupIndex;
+    std::copy_n(bssid, sizeof(sMacAddr::oct), request->bssid().oct);
+    std::copy_n(client_mac, sizeof(sMacAddr::oct), request->client_mac().oct);
+    request->remove() = 1;
+    if (config) {
+        request->config().snrProbeHWM      = config->snrProbeHWM;
+        request->config().snrProbeLWM      = config->snrProbeLWM;
+        request->config().snrAuthHWM       = config->snrAuthHWM;
+        request->config().snrAuthLWM       = config->snrAuthLWM;
+        request->config().snrInactXing     = config->snrInactXing;
+        request->config().snrHighXing      = config->snrHighXing;
+        request->config().snrLowXing       = config->snrLowXing;
+        request->config().authRejectReason = config->authRejectReason;
+        request->remove()                  = 0;
+    }
+
+    if (!message_com::send_cmdu(m_sockMaster, cmdu_tx)) {
+        LOG(ERROR) << "Failed sending cACTION_BML_STEERING_CLIENT_SET_REQUEST message!";
+        return (-BML_RET_OP_FAILED);
+    }
+
+    int iRet = BML_RET_OK;
+
+    if (!prmPreAssociationSteering.wait_for(iOpTimeout)) {
+        LOG(ERROR) << "Timeout while waiting for configuration get response... exit!";
+        m_prmPreAssociationSteering = nullptr;
+        return (-BML_RET_TIMEOUT);
+    }
+
+    // Get response
+    iRet = prmPreAssociationSteering.get_value();
+
+    m_prmPreAssociationSteering = nullptr;
+
+    if (iRet != BML_RET_OK) {
+        LOG(ERROR) << "Configuration get failed!";
+    }
+
+    LOG(DEBUG) << "bml_internal::steering_client_set - exit, ret=" << iRet;
+    return (iRet);
+}
+
+int bml_internal::steering_event_register(BML_EVENT_CB pCB)
+{
+    LOG(DEBUG) << "bml_internal::steering_event_register - entry";
+
+    // Command supported only on local master
+    if (!is_local_master()) {
+        LOG(ERROR) << "Command supported only on local master!";
+        return (-BML_RET_OP_NOT_SUPPORTED);
+    }
+
+    // If the socket is not valid, attempt to re-establish the connection
+    if (m_sockMaster == nullptr && !connect_to_master()) {
+        return (-BML_RET_CONNECT_FAIL);
+    }
+
+    if ((m_cbSteeringEvent == nullptr) && (pCB == nullptr)) {
+        LOG(WARNING) << "Event callback function was NOT registered...";
+        return (-BML_RET_OP_FAILED);
+    }
+
+    m_cbSteeringEvent = pCB;
+
+    // Initialize the promise for receiving the response
+    beerocks::promise<int> prmPreAssociationSteering;
+    m_prmPreAssociationSteering = &prmPreAssociationSteering;
+    int iOpTimeout              = RESPONSE_TIMEOUT; // Default timeout
+
+    auto request = message_com::create_vs_message<
+        beerocks_message::cACTION_BML_STEERING_EVENT_REGISTER_UNREGISTER_REQUEST>(cmdu_tx);
+    if (request == nullptr) {
+        LOG(ERROR) << "Failed building cACTION_BML_STEERING_EVENT_REGISTER message!";
+        return (-BML_RET_OP_FAILED);
+    }
+
+    if (pCB == nullptr) {
+        request->unregister() = 1;
+        LOG(DEBUG) << "Steering events unregister";
+    } else {
+        request->unregister() = 0;
+        LOG(DEBUG) << "Steering events register";
+    }
+
+    if (!message_com::send_cmdu(m_sockMaster, cmdu_tx)) {
+        LOG(ERROR) << "Failed sending cACTION_BML_STEERING_EVENT_REGISTER message!";
+        return (-BML_RET_OP_FAILED);
+    }
+
+    int iRet = BML_RET_OK;
+
+    if (!prmPreAssociationSteering.wait_for(iOpTimeout)) {
+        LOG(WARNING) << "Timeout while waiting for configuration get response...";
+        m_prmPreAssociationSteering = nullptr;
+        return (-BML_RET_TIMEOUT);
+    }
+
+    // Get response
+    iRet = prmPreAssociationSteering.get_value();
+
+    m_prmPreAssociationSteering = nullptr;
+
+    if (iRet != BML_RET_OK) {
+        LOG(ERROR) << "Configuration get failed!";
+    }
+
+    return (iRet);
+}
+
+int bml_internal::steering_client_measure(uint32_t steeringGroupIndex, const BML_MAC_ADDR bssid,
+                                          const BML_MAC_ADDR client_mac)
+{
+    LOG(DEBUG) << "bml_internal::steering_client_measure - entry";
+    // If the socket is not valid, attempt to re-establish the connection
+    if (m_sockMaster == nullptr && !connect_to_master()) {
+        return (-BML_RET_CONNECT_FAIL);
+    }
+    // Initialize the promise for receiving the response
+    beerocks::promise<int> prmPreAssociationSteering;
+    m_prmPreAssociationSteering = &prmPreAssociationSteering;
+    int iOpTimeout              = RESPONSE_TIMEOUT; // Default timeout
+
+    auto request = message_com::create_vs_message<
+        beerocks_message::cACTION_BML_STEERING_CLIENT_MEASURE_REQUEST>(cmdu_tx);
+    if (request == nullptr) {
+        LOG(ERROR) << "Failed building cACTION_BML_STEERING_CLIENT_MEASURE_REQUEST message!";
+        return (-BML_RET_OP_FAILED);
+    }
+
+    std::copy_n(client_mac, BML_MAC_ADDR_LEN, request->client_mac().oct);
+    request->steeringGroupIndex() = steeringGroupIndex;
+    std::copy_n(bssid, sizeof(sMacAddr::oct), request->bssid().oct);
+
+    if (!message_com::send_cmdu(m_sockMaster, cmdu_tx)) {
+        LOG(ERROR) << "Failed sending cACTION_BML_STEERING_CLIENT_MEASURE_REQUEST message!";
+        return (-BML_RET_OP_FAILED);
+    }
+
+    int iRet = BML_RET_OK;
+
+    if (!prmPreAssociationSteering.wait_for(iOpTimeout)) {
+        LOG(WARNING) << "Timeout while waiting for configuration get response...";
+        m_prmPreAssociationSteering = nullptr;
+        return (-BML_RET_TIMEOUT);
+    }
+
+    // Get response
+    iRet = prmPreAssociationSteering.get_value();
+
+    m_prmPreAssociationSteering = nullptr;
+
+    if (iRet != BML_RET_OK) {
+        LOG(ERROR) << "Configuration get failed!";
+    }
+
+    return (iRet);
+}
+
+int bml_internal::steering_client_disconnect(uint32_t steeringGroupIndex, const BML_MAC_ADDR bssid,
+                                             const BML_MAC_ADDR client_mac,
+                                             BML_DISCONNECT_TYPE type, uint32_t reason)
+{
+    LOG(DEBUG) << "bml_internal::steering_client_disconnect - entry";
+    // If the socket is not valid, attempt to re-establish the connection
+    if (m_sockMaster == nullptr && !connect_to_master()) {
+        return (-BML_RET_CONNECT_FAIL);
+    }
+    // Initialize the promise for receiving the response
+    beerocks::promise<int> prmPreAssociationSteering;
+    m_prmPreAssociationSteering = &prmPreAssociationSteering;
+    int iOpTimeout              = RESPONSE_TIMEOUT; // Default timeout
+
+    auto request = message_com::create_vs_message<
+        beerocks_message::cACTION_BML_STEERING_CLIENT_DISCONNECT_REQUEST>(cmdu_tx);
+    if (request == nullptr) {
+        LOG(ERROR) << "Failed building ACTION_BML_STEERING_CLIENT_DISCONNECT_REQUEST message!";
+        return (-BML_RET_OP_FAILED);
+    }
+
+    std::copy_n(client_mac, BML_MAC_ADDR_LEN, request->client_mac().oct);
+    request->steeringGroupIndex() = steeringGroupIndex;
+    std::copy_n(bssid, sizeof(sMacAddr::oct), request->bssid().oct);
+    request->type()   = beerocks_message::eDisconnectType(type);
+    request->reason() = reason;
+
+    if (!message_com::send_cmdu(m_sockMaster, cmdu_tx)) {
+        LOG(ERROR) << "Failed sending ACTION_BML_STEERING_CLIENT_DISCONNECT_REQUEST message!";
+        return (-BML_RET_OP_FAILED);
+    }
+
+    int iRet = BML_RET_OK;
+
+    if (!prmPreAssociationSteering.wait_for(iOpTimeout)) {
+        LOG(WARNING) << "Timeout while waiting for configuration get response...";
+        m_prmPreAssociationSteering = nullptr;
+        return (-BML_RET_TIMEOUT);
+    }
+
+    // Get response
+    iRet = prmPreAssociationSteering.get_value();
+
+    m_prmPreAssociationSteering = nullptr;
+
+    if (iRet != BML_RET_OK) {
+        LOG(ERROR) << "Configuration get failed!";
+    }
+
+    return (iRet);
+}
+
+bool bml_internal::handle_steering_event_update(uint8_t *data_buffer)
+{
+
+    BML_EVENT *event = (BML_EVENT *)data_buffer;
+    event->ctx       = this;
+
+    //should not happen
+    if (!m_cbSteeringEvent) {
+        LOG(ERROR) << "steering event arrived although callback not registered ,event - "
+                   << event->type;
+        return (false);
+    }
+
+    switch (event->type) {
+    case BML_EVENT_TYPE_STEERING: {
+        event->data = data_buffer + sizeof(BML_EVENT);
+        break;
+    }
+    default: {
+        LOG(ERROR) << "undefined event type: " << event->type;
+        return (false);
+    }
+    }
+
+    m_cbSteeringEvent(event);
+    return (true);
+}
+
+#endif /* FEATURE_PRE_ASSOCIATION_STEERING */

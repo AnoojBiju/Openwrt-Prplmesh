@@ -44,7 +44,9 @@ for profile in "${args[@]}" ; do
 done
 
 printf '\033[1;35m%s Building prplWrt\n\033[0m' "$(date --iso-8601=seconds --universal)"
-make -j"$(nproc)" V=sc
+# Prevent multi-threaded build until PPM-2122 is resolved
+#make -j"$(nproc)" V=sc
+make -j1 V=sc
 
 printf '\033[1;35m%s Cleaning prplMesh\n\033[0m' "$(date --iso-8601=seconds --universal)"
 make package/prplmesh/clean

@@ -41,7 +41,7 @@ class GenericDevice():
     baudrate = 115200
     """The baudrate of the serial connection to the device."""
 
-    initialization_time = 60
+    initialization_time = 100
     """The time (in seconds) the device needs to initialize when it boots
     for the first time after flashing a new image."""
 

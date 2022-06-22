@@ -25,6 +25,10 @@
 #include <map>
 #include <mutex>
 
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
+#include "bml_pre_association_steering_defs.h"
+#endif
+
 class bml_internal : public beerocks::socket_thread {
 
 public:
@@ -302,6 +306,72 @@ public:
      */
     int client_clear_client(const sMacAddr &sta_mac);
 
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
+    /*
+    * A steering group defines a group of apIndex's which can have steering done
+    * between them.
+    * To remove a group configuration call with NULL as ap_cfgs, and length as 0.
+    * @param[in] steeringGroupIndex  Wifi Steering Group index
+    * @param[in] ap_cfgs               Array of AP Configurations.
+    * @param[in] length                The number of AP Configurations in the array. Cannot be above 3.
+    *
+    * @return BML_RET_OK on success.
+    *
+    * @warning All apIndex's provided within a group must have the same SSID,
+    * encryption, and passphrase configured for steering to function properly.
+    *
+    */
+    int steering_set_group(uint32_t steeringGroupIndex, BML_STEERING_AP_CONFIG *ap_cfgs,
+                           size_t length);
+    /**
+     * Call this function to add/modify per-client configuration config of client_mac.
+     * To remove a client configuration call with NULL as config.
+     * @param[in] steeringGroupIndex   Wifi Steering Group index
+     * @param[in] bssid                AP bssid.
+     * @param[in] client_mac           The Client's MAC address.
+     * @param[in] config               The client configuration
+     * 
+     * @return RETURN_OK on success.
+     */
+    int steering_client_set(uint32_t steeringGroupIndex, const BML_MAC_ADDR bssid,
+                            const BML_MAC_ADDR client_mac, BML_STEERING_CLIENT_CONFIG *config);
+    /**
+     * Call this function to register/unregister the callback function.
+     *
+     * @param[in] pCB  a callback function pointer or NULL to unregister.
+     * 
+     * @return RETURN_OK on success.
+     */
+    int steering_event_register(BML_EVENT_CB pCB);
+    /** 
+    *
+    * @param[in] steeringGroupIndex  Wifi Steering Group index
+    * @param[in] bssid               AP bssid.   
+    * @param[in] client_mac           The Client's MAC address.
+    *
+    * @return BML_RET_OK on success.
+    *
+    */
+    int steering_client_measure(uint32_t steeringGroupIndex, const BML_MAC_ADDR bssid,
+                                const BML_MAC_ADDR client_mac);
+    /**Initiate a Client Disconnect.
+     *
+     * This is used to kick off a client, for steering purposes.
+     *
+     * @param[in]  steeringgroupIndex  Wifi Steering Group index
+     * @param[in]  bssid               AP bssid.
+     * @param[in]  client_mac          The Client's MAC address
+     * @param[in]  type                Disconnect Type
+     * @param[in]  reason              Reason code to provide in deauth/disassoc frame.
+     *
+     * @return BML_RET_OK on success.
+     */
+    int steering_client_disconnect(uint32_t steeringGroupIndex, const BML_MAC_ADDR bssid,
+                                   const BML_MAC_ADDR client_mac, BML_DISCONNECT_TYPE type,
+                                   uint32_t reason);
+
+#endif /* FEATURE_PRE_ASSOCIATION_STEERING */
+
     /*
  * Public static methods:
  */
@@ -367,7 +437,6 @@ private:
     beerocks::promise<bool> *m_prmMasterSlaveVersions   = nullptr;
     beerocks::promise<bool> *m_prmLocalMasterGet        = nullptr;
     beerocks::promise<bool> *m_prmRestrictedChannelsGet = nullptr;
-    beerocks::promise<int> *m_prmRdkbWlan               = nullptr;
     //Promise used to indicate the GetParams response was received
     beerocks::promise<bool> *m_prmChannelScanParamsGet = nullptr;
     //Promise used to indicate the GetResults response was received
@@ -403,6 +472,11 @@ private:
     uint8_t *m_pvaps_list_size         = nullptr;
     uint16_t id                        = 0;
     static bool s_fExtLogContext;
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
+    bool handle_steering_event_update(uint8_t *data_buffer);
+    beerocks::promise<int> *m_prmPreAssociationSteering = nullptr;
+    BML_EVENT_CB m_cbSteeringEvent                      = nullptr;
+#endif /* FEATURE_PRE_ASSOCIATION_STEERING */
 };
 
 #endif /* _BML_INTERNAL_H_ */
