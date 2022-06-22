@@ -58,6 +58,4 @@ tlvVsChannelScanReportDone:
 tlvVsOnDemandChannelSelection:
   _type: class
   radio_mac: sMacAddr
-  channel: uint8_t
-  operating_class: uint8_t
   CSA_count: uint8_t
