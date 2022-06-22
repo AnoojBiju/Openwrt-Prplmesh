@@ -103,6 +103,7 @@
 #include <tlvf/wfa_map/tlvProfile2SteeringRequest.h>
 #include <tlvf/wfa_map/tlvProfile2TrafficSeparationPolicy.h>
 #include <tlvf/wfa_map/tlvProfile2UnsuccessfulAssociationPolicy.h>
+#include <tlvf/wfa_map/tlvQoSManagementPolicy.h>
 #include <tlvf/wfa_map/tlvRadioOperationRestriction.h>
 #include <tlvf/wfa_map/tlvSearchedService.h>
 #include <tlvf/wfa_map/tlvServicePrioritizationRule.h>
@@ -517,6 +518,9 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
         }
         LOG(FATAL) << "Unknown TLV subtype: " << unsigned(tlv_subtype);
         return msg.addClass<tlvUnknown>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_QOS_MANAGEMENT_POLICY): {
+        return msg.addClass<wfa_map::tlvQoSManagementPolicy>();
     }
     }
     LOG(FATAL) << "Unknown TLV type: " << unsigned(tlv_type);
