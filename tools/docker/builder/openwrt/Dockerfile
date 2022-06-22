@@ -60,7 +60,7 @@ RUN printf '\033[1;35m%s Cloning prplWrt\n\033[0m' "$(date --iso-8601=seconds --
     && git clone "$OPENWRT_REPOSITORY" openwrt \
     && printf '\033[1;35m%s Building base prplWrt tree\n\033[0m' "$(date --iso-8601=seconds --universal)" \
     && cd openwrt \
-    && git checkout c741916862ebf2763aa4b8f0f5814ed4adef1510 \
+    && git checkout 5657cc6ef9574461ae289cc630745891982825a3 \
     && ./scripts/gen_config.py "$TARGET_SYSTEM" \
     && make -j"$(nproc)" \
     && rm -rf bin \
