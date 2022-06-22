@@ -57,6 +57,14 @@ public:
     static bool send_topology_query_msg(const sMacAddr &dest_mac,
                                         ieee1905_1::CmduMessageTx &cmdu_tx, db &database);
 
+    static int start_btm_request_task(db &database, ieee1905_1::CmduMessageTx &cmdu_tx,
+                                      task_pool &tasks, const bool &disassoc_imminent,
+                                      const int &disassoc_timer_ms,
+                                      const int &bss_term_duration_min,
+                                      const int &validity_interval_ms, const int &steering_timer_ms,
+                                      const std::string &sta_mac, const std::string &target_bssid,
+                                      const std::string &event_source);
+
 private:
     static bool
     check_hostap_activability(db &database,

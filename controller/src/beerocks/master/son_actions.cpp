@@ -12,6 +12,7 @@
 #include "tasks/agent_monitoring_task.h"
 #include "tasks/association_handling_task.h"
 #include "tasks/bml_task.h"
+#include "tasks/btm_request_task.h"
 #include "tasks/client_steering_task.h"
 
 #include <bcl/network/network_utils.h>
@@ -169,6 +170,20 @@ int son_actions::steer_sta(db &database, ieee1905_1::CmduMessageTx &cmdu_tx, tas
     return new_task->id;
 }
 
+int son_actions::start_btm_request_task(
+    db &database, ieee1905_1::CmduMessageTx &cmdu_tx, task_pool &tasks,
+    const bool &disassoc_imminent, const int &disassoc_timer_ms, const int &bss_term_duration_min,
+    const int &validity_interval_ms, const int &steering_timer_ms, const std::string &sta_mac,
+    const std::string &target_bssid, const std::string &event_source)
+{
+
+    auto new_task = std::make_shared<btm_request_task>(
+        database, cmdu_tx, tasks, sta_mac, target_bssid, event_source, disassoc_imminent,
+        validity_interval_ms, steering_timer_ms, disassoc_timer_ms);
+
+    tasks.add_task(new_task);
+    return new_task->id;
+}
 bool son_actions::set_hostap_active(db &database, task_pool &tasks, std::string hostap_mac,
                                     bool active)
 {
@@ -297,6 +312,11 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
             int steering_task = station->steering_task_id;
             if (tasks.is_task_running(steering_task))
                 tasks.push_event(steering_task, client_steering_task::STA_DISCONNECTED);
+
+            // Notify btm_request task, if any, of disconnect.
+            int btm_request_task = station->btm_request_task_id;
+            if (tasks.is_task_running(btm_request_task))
+                tasks.push_event(btm_request_task, btm_request_task::STA_DISCONNECTED);
 
             if (database.get_node_handoff_flag(*station)) {
                 LOG(DEBUG) << "handoff_flag == true, mac " << mac;

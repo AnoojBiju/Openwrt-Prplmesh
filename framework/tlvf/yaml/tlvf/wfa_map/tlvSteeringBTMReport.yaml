@@ -11,6 +11,20 @@ tlvSteeringBTMReport:
   length: uint16_t
   bssid: sMacAddr
   sta_mac: sMacAddr
-  btm_status_code: uint8_t
+  btm_status_code: eBTMStatusCode
   target_bssid: sMacAddr
-  
+
+
+eBTMStatusCode:
+  _type: enum
+  _enum_storage: uint8_t
+  ACCEPT:                                 0x00
+  REJECT_UNSPECIFIED:                     0x01
+  REJECT_INSUFFICIENT_BEACON_RESPONSES:   0x02
+  REJECT_INSUFFICIENT_CAPACITY:           0x03
+  REJECT_BSS_TERMINATION_NOT_DESIRED:     0x04
+  REJECT_BSS_TERMINATION_REQUEST_DELAY:   0x05
+  REJECT_STA_BSS_CANDIDATE_LIST_PROVIDED: 0x06
+  REJECT_NO_SUITABLE_CANDIDATES:          0x07
+  REJECT_LEAVING_ESS:                     0x08
+  REJECT_RESERVED:                        0x09
