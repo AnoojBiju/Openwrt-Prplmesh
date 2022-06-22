@@ -651,6 +651,7 @@ mon_wlan_hal_dwpal::~mon_wlan_hal_dwpal()
             LOG(ERROR) << " Failed to detach from dwpald for interface" << vap_name;
         }
     }
+    ctx = nullptr;
 }
 
 bool mon_wlan_hal_dwpal::update_radio_stats(SRadioStats &radio_stats)
@@ -1761,7 +1762,9 @@ static int drv_evt_callback(struct nl_msg *msg)
     }
 #endif
     LOG(DEBUG) << "DWPAL nl event recv";
-    ctx->process_dwpal_nl_event(msg, ctx);
+    if (ctx) {
+        ctx->process_dwpal_nl_event(msg, ctx);
+    }
     return 0;
 }
 
