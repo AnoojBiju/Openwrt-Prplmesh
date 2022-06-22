@@ -11,6 +11,7 @@
 #include "../db/db_algo.h"
 #include "../son_actions.h"
 #include "bml_task.h"
+#include "btm_request_task.h"
 #include "client_steering_task.h"
 #include "dhcp_task.h"
 
@@ -524,6 +525,11 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
             tasks.push_event(client->steering_task_id, client_steering_task::STA_CONNECTED);
         }
 
+        // Notify existing btm request task of completed connection
+        // Check if task is running before pushing the event
+        if (tasks.is_task_running(client->btm_request_task_id)) {
+            tasks.push_event(client->btm_request_task_id, client_steering_task::STA_CONNECTED);
+        }
         int dhcp_task = database.get_dhcp_task_id();
         tasks.push_event(dhcp_task, DhcpTask::STA_CONNECTED);
 
