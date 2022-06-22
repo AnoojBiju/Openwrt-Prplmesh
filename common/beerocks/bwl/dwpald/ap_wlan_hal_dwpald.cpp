@@ -758,6 +758,7 @@ ap_wlan_hal_dwpal::~ap_wlan_hal_dwpal()
             LOG(ERROR) << " Failed to detach from dwpald for interface" << vap_name;
         }
     }
+    ctx = nullptr;
 }
 
 HALState ap_wlan_hal_dwpal::attach(bool block)
@@ -3306,7 +3307,9 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
         return -1;
     }
 #endif
-    ctx->process_dwpal_event(buffer, len, opcode);
+    if (ctx) {
+        ctx->process_dwpal_event(buffer, len, opcode);
+    }
     return 0;
 }
 
