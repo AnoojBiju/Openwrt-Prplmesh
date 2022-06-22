@@ -9,8 +9,11 @@
 printf '\033[1;35m%s Configuring prplWrt\n\033[0m' "$(date --iso-8601=seconds --universal)"
 mkdir -p files/etc
 #   We need to keep the hashes in the firmware, to later know if an upgrade is needed:
-printf '%s=%s\n' "OPENWRT_REPOSITORY" "$OPENWRT_REPOSITORY" >> files/etc/prplwrt-version
-printf '%s=%s\n' "OPENWRT_VERSION" "$OPENWRT_VERSION" >> files/etc/prplwrt-version
+{
+    printf '%s=%s\n' "OPENWRT_REPOSITORY" "$OPENWRT_REPOSITORY"
+    printf '%s=%s\n' "OPENWRT_VERSION" "$OPENWRT_VERSION"
+    printf '%s=%s\n' "OPENWRT_TOOLCHAIN_VERSION" "$OPENWRT_TOOLCHAIN_VERSION"
+} >> files/etc/prplwrt-version
 
 # Arguments to gen_config.py:
 args=("$TARGET_SYSTEM")
