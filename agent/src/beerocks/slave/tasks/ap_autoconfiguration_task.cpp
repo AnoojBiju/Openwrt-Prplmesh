@@ -73,8 +73,8 @@ const std::string ApAutoConfigurationTask::fsm_state_to_string(eState status)
         return "SEND_AP_AUTOCONFIGURATION_WSC_M1";
     case eState::WAIT_AP_AUTOCONFIGURATION_WSC_M2:
         return "WAIT_AP_AUTOCONFIGURATION_WSC_M2";
-    case eState::CONFIGIRED:
-        return "CONFIGIRED";
+    case eState::CONFIGURED:
+        return "CONFIGURED";
     default:
         LOG(ERROR) << "state argument doesn't have an enum";
         break;
@@ -163,7 +163,7 @@ void ApAutoConfigurationTask::work()
             }
             break;
         }
-        case eState::CONFIGIRED: {
+        case eState::CONFIGURED: {
             configured_aps_count++;
             break;
         }
@@ -861,7 +861,7 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_wsc(ieee1905_1::CmduMe
         return;
     }
 
-    FSM_MOVE_STATE(radio->front.iface_name, eState::CONFIGIRED);
+    FSM_MOVE_STATE(radio->front.iface_name, eState::CONFIGURED);
     return;
 }
 
@@ -1063,7 +1063,7 @@ void ApAutoConfigurationTask::handle_multi_ap_policy_config_request(
         const auto &radio_iface = radios_conf_param_kv.first;
         const auto &conf_params = radios_conf_param_kv.second;
 
-        if (conf_params.state == eState::CONFIGIRED) {
+        if (conf_params.state == eState::CONFIGURED) {
             TrafficSeparation::apply_traffic_separation(radio_iface);
         } else {
             LOG(WARNING) << "autoconfiguration procedure is not completed yet, traffic separation "
