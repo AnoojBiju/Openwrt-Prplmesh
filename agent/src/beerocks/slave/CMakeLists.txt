@@ -21,6 +21,11 @@ if (ENABLE_NBAPI)
     add_subdirectory("nbapi")
 endif()
 
+if (USE_PRPLMESH_WHM)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_PRPLMESH_WHM")
+    list(APPEND LIBS wbapi)
+endif()
+
 # UGW
 if (TARGET_PLATFORM STREQUAL "ugw")
 

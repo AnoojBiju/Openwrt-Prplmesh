@@ -182,6 +182,7 @@ int main(int argc, char *argv[])
 
     init_signals();
 
+#ifndef USE_PRPLMESH_WHM
     // Close all inhereted files descriptors.
     int openFds = sysconf(_SC_OPEN_MAX);
     for (int fd = 0; fd < openFds; fd++) {
@@ -190,6 +191,7 @@ int main(int argc, char *argv[])
             close(fd);
         }
     }
+#endif
 
     // Check for version query first, handle and exit if requested.
     std::string module_description;

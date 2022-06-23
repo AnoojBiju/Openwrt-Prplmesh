@@ -7,7 +7,7 @@ add_library(ieee1905_transport_lib
 
 set_target_properties(ieee1905_transport_lib PROPERTIES VERSION ${prplmesh_VERSION} SOVERSION ${prplmesh_VERSION_MAJOR})
 target_link_libraries(ieee1905_transport_lib 
-    PUBLIC bpl bcl tlvf btlvf ieee1905_transport_messages mapfcommon 
+    PUBLIC bpl bcl tlvf btlvf ieee1905_transport_messages mapfcommon
     PRIVATE elpp)
 target_include_directories(ieee1905_transport_lib PUBLIC include/)
 

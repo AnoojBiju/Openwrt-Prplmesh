@@ -11,7 +11,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11")
 
 # Default defaults
 set(BWL_TYPE "DUMMY" CACHE STRING "BWL type")
-set_property(CACHE BWL_TYPE PROPERTY STRINGS "DUMMY" "NL80211" "DWPAL" "DWPALD")
+set_property(CACHE BWL_TYPE PROPERTY STRINGS "DUMMY" "NL80211" "DWPAL" "DWPALD" "WHM")
 add_definitions(-DBEEROCKS_TMP_PATH="${TMP_PATH}")
 
 if (TARGET_PLATFORM STREQUAL "rdkb")
@@ -28,6 +28,10 @@ elseif(TARGET_PLATFORM STREQUAL "openwrt")
         set(BWL_TYPE "NL80211")
     endif()
 
+endif()
+
+if (USE_PRPLMESH_WHM)
+    set(BWL_TYPE "WHM")
 endif()
 
 set(BWL_TYPE ${BWL_TYPE} CACHE STRING "Which BWL backend to use")
@@ -157,6 +161,25 @@ elseif(BWL_TYPE STREQUAL "DUMMY")
         ${MODULE_PATH}/dummy/ap_wlan_hal_dummy.cpp
         ${MODULE_PATH}/dummy/base_wlan_hal_dummy.cpp
         ${MODULE_PATH}/dummy/sta_wlan_hal_dummy.cpp
+    )
+
+elseif(BWL_TYPE STREQUAL "WHM")
+
+    find_package(nl-genl-3 REQUIRED)
+    list(APPEND BWL_LIBS nl-genl-3)
+
+    find_package(amxb REQUIRED)
+    find_package(amxc REQUIRED)
+    find_package(amxd REQUIRED)
+    find_package(amxp REQUIRED)
+    list(APPEND BWL_LIBS amxb amxc amxd amxp)
+    list(APPEND BWL_LIBS wbapi)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WPABI_SOCK}")
+
+    file(GLOB bwl_platform_sources
+        ${bwl_platform_sources}
+        ${MODULE_PATH}/shared/*.c*
+        ${MODULE_PATH}/whm/*.c*
     )
     
 else()

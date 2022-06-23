@@ -47,6 +47,10 @@
 
 //#endif
 
+#ifdef USE_PRPLMESH_WHM
+#include "wifi_manager.h"
+#endif //USE_PRPLMESH_WHM
+
 // Do not use this macro anywhere else in ire process
 // It should only be there in one place in each executable module
 BEEROCKS_INIT_BEEROCKS_VERSION
@@ -417,6 +421,12 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    // Initialize the BPL (Beerocks Platform Library)
+    if (beerocks::bpl::bpl_init() < 0) {
+        LOG(ERROR) << "Failed to initialize BPL!";
+        return false;
+    }
+
     // read master config file
     std::string master_config_file_path =
         CONF_FILES_WRITABLE_PATH + std::string(BEEROCKS_CONTROLLER) +
@@ -566,6 +576,14 @@ int main(int argc, char *argv[])
     } else {
         LOG(DEBUG) << "failed to read wireless settings";
     }
+
+#ifdef USE_PRPLMESH_WHM
+    auto wifi_manager =
+        std::make_shared<prplmesh::controller::whm::WifiManager>(event_loop, &master_db);
+    LOG_IF(!wifi_manager, FATAL) << "Unable to create controller WifiManager!";
+
+    wifi_manager->subscribe_to_bss_info_config_change();
+#endif
 
     // diagnostics_thread diagnostics(master_db);
 
