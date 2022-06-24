@@ -47,7 +47,7 @@ bool prplmesh_cli::get_ip_from_iface(const std::string &iface, std::string &ip)
 
     //IPv4 IP address
     ifr.ifr_addr.sa_family = AF_INET;
-    strncpy(ifr.ifr_name, iface.c_str(), IFNAMSIZ - 1);
+    snprintf(ifr.ifr_name, IFNAMSIZ, "%s", iface.c_str());
 
     // Get the address of the device using ifr_addr
     if (ioctl(fd, SIOCGIFADDR, &ifr) == -1) {
