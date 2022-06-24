@@ -179,6 +179,9 @@ add_library(${PROJECT_NAME} ${bpl_common_sources} ${bpl_platform_sources})
 set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${prplmesh_VERSION} SOVERSION ${prplmesh_VERSION_MAJOR})
 set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-Wl,-z,defs")
 target_link_libraries(${PROJECT_NAME} PRIVATE elpp mapfcommon ${BPL_LIBS})
+if (USE_PRPLMESH_WHM)
+    target_link_libraries(${PROJECT_NAME} PUBLIC wbapi)
+endif()
 
 # Install
 target_include_directories(${PROJECT_NAME}
