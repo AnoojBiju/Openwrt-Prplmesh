@@ -62,7 +62,7 @@ void ap_wlan_hal_whm::subscribe_to_radio_events(const std::string &iface_name)
 {
     // subscribe to the WiFi.Radio.iface_name.Status
     std::string wifi_radio_path;
-    if (!whm_get_radio_ref(iface_name, wifi_radio_path)) {
+    if (!whm_get_radio_path(iface_name, wifi_radio_path)) {
         return;
     }
     sAmxClEventCallback *event_callback = new sAmxClEventCallback();
@@ -104,14 +104,9 @@ void ap_wlan_hal_whm::subscribe_to_radio_events(const std::string &iface_name)
 
 void ap_wlan_hal_whm::subscribe_to_ap_events(const std::string &iface_name)
 {
-    amxc_var_t *ap_obj = whm_get_ap_obj(iface_name);
-    if (!ap_obj) {
-        LOG(ERROR) << "failed to get ap object";
-        return;
-    }
-    const char *ap_path      = amxc_var_key(ap_obj);
-    std::string wifi_ap_path = std::string(ap_path) + AMX_CL_OBJ_DELIMITER;
-
+    std::string wifi_ap_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
+                               std::string(AMX_CL_AP_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
+                               "[Alias == '" + iface_name + "']" + AMX_CL_OBJ_DELIMITER;
     sAmxClEventCallback *event_callback = new sAmxClEventCallback();
     event_callback->event_type          = AMX_CL_OBJECT_CHANGED_EVT;
     event_callback->callback_fn         = [](amxc_var_t *event_data, void *context) -> void {
@@ -151,14 +146,10 @@ void ap_wlan_hal_whm::subscribe_to_ap_events(const std::string &iface_name)
 
 void ap_wlan_hal_whm::subscribe_to_sta_events(const std::string &iface_name)
 {
-    amxc_var_t *ap_obj = whm_get_ap_obj(iface_name);
-    if (!ap_obj) {
-        LOG(ERROR) << "failed to get ap object";
-        return;
-    }
-    const char *ap_path = amxc_var_key(ap_obj);
-    std::string wifi_ap_sta_path =
-        std::string(ap_path) + AMX_CL_OBJ_DELIMITER + "AssociatedDevice.";
+    std::string wifi_ap_sta_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
+                                   std::string(AMX_CL_AP_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
+                                   "[Alias == '" + iface_name + "']" + AMX_CL_OBJ_DELIMITER +
+                                   "AssociatedDevice.";
     sAmxClEventCallback *event_callback = new sAmxClEventCallback();
     event_callback->event_type          = AMX_CL_OBJECT_CHANGED_EVT;
     event_callback->callback_fn         = [](amxc_var_t *event_data, void *context) -> void {
@@ -196,7 +187,7 @@ void ap_wlan_hal_whm::subscribe_to_sta_events(const std::string &iface_name)
 bool ap_wlan_hal_whm::refresh_radio_info()
 {
     std::string wifi_radio_path;
-    if (!whm_get_radio_ref(get_iface_name(), wifi_radio_path)) {
+    if (!whm_get_radio_path(get_iface_name(), wifi_radio_path)) {
         return false;
     }
 
@@ -217,6 +208,8 @@ bool ap_wlan_hal_whm::refresh_radio_info()
         m_radio_info.max_bandwidth =
             beerocks::wbapi::wbapi_utils::bandwith_from_string(std::string(max_ch_band));
     }
+
+    amxc_var_delete(&radio_obj);
 
     // TODO: read radio capabilities and supported channel list (PPM-2120)
 
@@ -244,7 +237,7 @@ bool ap_wlan_hal_whm::set_start_disabled(bool enable, int vap_id)
 bool ap_wlan_hal_whm::set_channel(int chan, beerocks::eWiFiBandwidth bw, int center_channel)
 {
     std::string wifi_radio_path;
-    if (!whm_get_radio_ref(get_iface_name(), wifi_radio_path)) {
+    if (!whm_get_radio_path(get_iface_name(), wifi_radio_path)) {
         return false;
     }
 
@@ -255,6 +248,7 @@ bool ap_wlan_hal_whm::set_channel(int chan, beerocks::eWiFiBandwidth bw, int cen
     }
 
     bool auto_channel_enable = GET_BOOL(radio_obj, "AutoChannelEnable");
+    amxc_var_delete(&radio_obj);
     if (auto_channel_enable) {
         LOG(ERROR) << "unable to set channel!, AutoChannelEnable option is enabled";
         return false;
@@ -277,30 +271,34 @@ bool ap_wlan_hal_whm::set_channel(int chan, beerocks::eWiFiBandwidth bw, int cen
 
 bool ap_wlan_hal_whm::sta_allow(const std::string &mac, const std::string &bssid)
 {
-    amxc_var_t *ap_obj = whm_get_ap_obj(get_iface_name());
-    if (!ap_obj) {
-        LOG(ERROR) << "failed to get ap object";
+    auto vap_id = get_vap_id_with_mac(bssid);
+    if (vap_id < 0) {
+        LOG(ERROR) << "no vap has bssid " << bssid;
         return false;
     }
-    const char *ap_path = amxc_var_key(ap_obj);
 
-    std::string mac_filter_path = std::string(ap_path) + AMX_CL_OBJ_DELIMITER + "MACFiltering.";
-    amxc_var_t *mac_filter_obj  = m_ambiorix_cl->get_object(mac_filter_path, 0);
+    std::string ifname          = m_radio_info.available_vaps[vap_id].bss;
+    std::string mac_filter_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
+                                  std::string(AMX_CL_AP_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
+                                  "[Alias = " + ifname + "]" + AMX_CL_OBJ_DELIMITER +
+                                  "MACFiltering.";
+    amxc_var_t *mac_filter_obj = m_ambiorix_cl->get_object(mac_filter_path, 0);
     if (!mac_filter_obj) {
         LOG(ERROR) << "failed to get MACFiltering object";
         return false;
     }
 
-    const char *mode = GET_CHAR(mac_filter_obj, "Mode");
-    if (mode && (std::string(mode) == "BlackList")) {
-        LOG(TRACE) << "MACFiltering mode is off or to WhiteList, sta allowed";
+    std::string mode = GET_CHAR(mac_filter_obj, "Mode");
+    amxc_var_delete(&mac_filter_obj);
+    if (mode == "Off") {
+        LOG(TRACE) << "MACFiltering mode is off, sta allowed";
         return true;
     }
 
-    // check if the sta is the blacklist entries
+    // check if the sta is included in accesslist entries
     bool sta_found           = false;
     std::string entries_path = mac_filter_path + "Entry.";
-    amxc_var_t *entries      = m_ambiorix_cl->get_object(entries_path, 1);
+    amxc_var_t *entries      = m_ambiorix_cl->get_object(entries_path, 2);
     if (entries) {
         amxc_var_for_each(entry, entries)
         {
@@ -309,10 +307,15 @@ bool ap_wlan_hal_whm::sta_allow(const std::string &mac, const std::string &bssid
                 sta_found = true;
             }
         }
+        amxc_var_delete(&entries);
     }
 
-    if (!sta_found) {
-        LOG(TRACE) << "sta is not in the BlackList, sta allowed";
+    if (sta_found && mode == "WhiteList") {
+        LOG(TRACE) << "sta allowed in WhiteList mode";
+        return true;
+    }
+    if (!sta_found && mode == "BlackList") {
+        LOG(TRACE) << "sta allowed in BlackList mode";
         return true;
     }
 
@@ -323,27 +326,36 @@ bool ap_wlan_hal_whm::sta_allow(const std::string &mac, const std::string &bssid
     amxc_var_init(&result);
     amxc_var_set_type(&args, AMXC_VAR_ID_HTABLE);
     amxc_var_add_new_key_cstring_t(&args, "mac", mac.c_str());
-    bool ret = m_ambiorix_cl->call(mac_filter_path, "delEntry", &args, &result);
+    bool ret = true;
+    if (mode == "WhiteList") {
+        ret = m_ambiorix_cl->call(mac_filter_path, "addEntry", &args, &result);
+    } else if (mode == "BlackList") {
+        ret = m_ambiorix_cl->call(mac_filter_path, "delEntry", &args, &result);
+    }
     amxc_var_clean(&args);
     amxc_var_clean(&result);
 
     if (!ret) {
-        LOG(ERROR) << "MACFiltering delete entry failed!";
+        LOG(ERROR) << "MACFiltering update entry failed!";
         return false;
     }
-    LOG(TRACE) << "sta deleted from the BlackList, sta allowed";
+    LOG(TRACE) << "sta updated in accessList, sta allowed";
     return true;
 }
 
 bool ap_wlan_hal_whm::sta_deny(const std::string &mac, const std::string &bssid)
 {
-    amxc_var_t *ap_obj = whm_get_ap_obj(get_iface_name());
-    if (!ap_obj) {
-        LOG(ERROR) << "failed to get ap object";
+    auto vap_id = get_vap_id_with_mac(bssid);
+    if (vap_id < 0) {
+        LOG(ERROR) << "no vap has bssid " << bssid;
         return false;
     }
-    const char *ap_path         = amxc_var_key(ap_obj);
-    std::string mac_filter_path = std::string(ap_path) + AMX_CL_OBJ_DELIMITER + "MACFiltering.";
+
+    std::string ifname          = m_radio_info.available_vaps[vap_id].bss;
+    std::string mac_filter_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
+                                  std::string(AMX_CL_AP_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
+                                  "[Alias = " + ifname + "]" + AMX_CL_OBJ_DELIMITER +
+                                  "MACFiltering.";
 
     amxc_var_t *mac_filter_obj = m_ambiorix_cl->get_object(mac_filter_path, 0);
     if (!mac_filter_obj) {
@@ -351,34 +363,66 @@ bool ap_wlan_hal_whm::sta_deny(const std::string &mac, const std::string &bssid)
         return false;
     }
 
-    const char *mode = GET_CHAR(mac_filter_obj, "Mode");
-    if (mode && (std::string(mode) == "BlackList")) {
-        LOG(WARNING) << "change MACFiltering mode to BlackList";
-        amxc_var_t new_obj;
-        amxc_var_init(&new_obj);
-        amxc_var_set_type(&new_obj, AMXC_VAR_ID_HTABLE);
-        amxc_var_add_new_key_cstring_t(&new_obj, "Mode", "BlackList");
-        bool ret = m_ambiorix_cl->update_object(mac_filter_path, &new_obj);
-        amxc_var_clean(&new_obj);
+    std::string mode = GET_CHAR(mac_filter_obj, "Mode");
+    amxc_var_delete(&mac_filter_obj);
 
-        if (!ret) {
-            LOG(ERROR) << "unable to change MACFiltering mode to BlackList!";
-            return false;
+    // check if the sta is included in accesslist entries
+    bool sta_found           = false;
+    std::string entries_path = mac_filter_path + "Entry.";
+    amxc_var_t *entries      = m_ambiorix_cl->get_object(entries_path, 2);
+    if (entries) {
+        amxc_var_for_each(entry, entries)
+        {
+            const char *entry_mac = GET_CHAR(entry, "MACAddress");
+            if (entry_mac && (std::string(entry_mac) == mac)) {
+                sta_found = true;
+            }
         }
+        amxc_var_delete(&entries);
     }
 
+    if (sta_found && mode == "BlackList") {
+        LOG(TRACE) << "sta denied in BlackList mode";
+        return true;
+    }
+    if (!sta_found && mode == "WhiteList") {
+        LOG(TRACE) << "sta denied in WhiteList mode";
+        return true;
+    }
+
+    bool ret = true;
     amxc_var_t args;
     amxc_var_t result;
     amxc_var_init(&args);
     amxc_var_init(&result);
     amxc_var_set_type(&args, AMXC_VAR_ID_HTABLE);
     amxc_var_add_new_key_cstring_t(&args, "mac", mac.c_str());
-    bool ret = m_ambiorix_cl->call(mac_filter_path, "addEntry", &args, &result);
+    if (mode == "Off") {
+        LOG(WARNING) << "change MACFiltering mode to BlackList";
+        amxc_var_t new_obj;
+        amxc_var_init(&new_obj);
+        amxc_var_set_type(&new_obj, AMXC_VAR_ID_HTABLE);
+        amxc_var_add_new_key_cstring_t(&new_obj, "Mode", "BlackList");
+        ret = m_ambiorix_cl->update_object(mac_filter_path, &new_obj);
+        amxc_var_clean(&new_obj);
+
+        if (!ret) {
+            LOG(ERROR) << "unable to change MACFiltering mode to BlackList!";
+        } else {
+            mode = "BlackList";
+        }
+    }
+    if (!sta_found && mode == "BlackList") {
+        ret = m_ambiorix_cl->call(mac_filter_path, "addEntry", &args, &result);
+    } else if (sta_found && mode == "WhiteList") {
+        ret = m_ambiorix_cl->call(mac_filter_path, "delEntry", &args, &result);
+    }
+
     amxc_var_clean(&args);
     amxc_var_clean(&result);
 
     if (!ret) {
-        LOG(ERROR) << "MACFiltering add entry failed!";
+        LOG(ERROR) << "MACFiltering update entry failed!";
         return false;
     }
     return true;
@@ -392,6 +436,11 @@ bool ap_wlan_hal_whm::sta_disassoc(int8_t vap_id, const std::string &mac, uint32
 
 bool ap_wlan_hal_whm::sta_deauth(int8_t vap_id, const std::string &mac, uint32_t reason)
 {
+    if (!check_vap_id(vap_id)) {
+        LOG(ERROR) << "invalid vap_id " << vap_id;
+        return false;
+    }
+    std::string ifname = m_radio_info.available_vaps[vap_id].bss;
     amxc_var_t args;
     amxc_var_t result;
     amxc_var_init(&args);
@@ -401,7 +450,7 @@ bool ap_wlan_hal_whm::sta_deauth(int8_t vap_id, const std::string &mac, uint32_t
     amxc_var_add_new_key_uint32_t(&args, "reason", reason);
     std::string wifi_ap_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
                                std::string(AMX_CL_AP_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
-                               std::to_string(vap_id) + AMX_CL_OBJ_DELIMITER;
+                               "[Alias = " + ifname + "]" + AMX_CL_OBJ_DELIMITER;
     bool ret = m_ambiorix_cl->call(wifi_ap_path, "kickStationReason", &args, &result);
     amxc_var_clean(&args);
     amxc_var_clean(&result);
@@ -417,6 +466,12 @@ bool ap_wlan_hal_whm::sta_bss_steer(int8_t vap_id, const std::string &mac, const
                                     int oper_class, int chan, int disassoc_timer_btt,
                                     int valid_int_btt, int reason)
 {
+    if (!check_vap_id(vap_id)) {
+        LOG(ERROR) << "invalid vap_id " << vap_id;
+        return false;
+    }
+    std::string ifname = m_radio_info.available_vaps[vap_id].bss;
+
     amxc_var_t args;
     amxc_var_t result;
     amxc_var_init(&args);
@@ -431,7 +486,7 @@ bool ap_wlan_hal_whm::sta_bss_steer(int8_t vap_id, const std::string &mac, const
     amxc_var_add_new_key_uint8_t(&args, "transitionReason", reason);
     std::string wifi_ap_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
                                std::string(AMX_CL_AP_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
-                               std::to_string(vap_id) + AMX_CL_OBJ_DELIMITER;
+                               "[Alias = " + ifname + "]" + AMX_CL_OBJ_DELIMITER;
     bool ret = m_ambiorix_cl->call(wifi_ap_path, "sendBssTransferRequest", &args, &result);
     amxc_var_clean(&args);
     amxc_var_clean(&result);
@@ -453,6 +508,7 @@ bool ap_wlan_hal_whm::update_vap_credentials(
     m_radio_info.available_vaps.clear();
 
     for (auto bss_info_conf : bss_info_conf_list) {
+        std::string ifname = get_iface_name();
         auto auth_type =
             son::wireless_utils::wsc_to_bwl_authentication(bss_info_conf.authentication_type);
         if (auth_type == "INVALID") {
@@ -473,12 +529,13 @@ bool ap_wlan_hal_whm::update_vap_credentials(
                    << " fronthaul: " << bss_info_conf.fronthaul
                    << " backhaul: " << bss_info_conf.backhaul;
 
-        amxc_var_t *ap_obj = whm_get_ap_obj(get_iface_name(), vap_id);
+        amxc_var_t *ap_obj = whm_get_wifi_ap_object(ifname);
         if (!ap_obj) {
             continue;
         }
-        const char *ssid_ref_val   = GET_CHAR(ap_obj, "SSIDReference");
-        std::string wifi_ssid_path = std::string(ssid_ref_val) + AMX_CL_OBJ_DELIMITER;
+        std::string ssid_ref_val   = GET_CHAR(ap_obj, "SSIDReference");
+        std::string wifi_ssid_path = ssid_ref_val + AMX_CL_OBJ_DELIMITER;
+        amxc_var_delete(&ap_obj);
 
         amxc_var_t new_obj;
         amxc_var_init(&new_obj);
@@ -513,7 +570,8 @@ bool ap_wlan_hal_whm::update_vap_credentials(
 
         std::string wifi_ap_sec_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
                                        std::string(AMX_CL_AP_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
-                                       std::to_string(vap_id) + AMX_CL_OBJ_DELIMITER + "Security.";
+                                       "[Alias == '" + ifname + "']" + AMX_CL_OBJ_DELIMITER +
+                                       "Security.";
         amxc_var_init(&new_obj);
         amxc_var_set_type(&new_obj, AMXC_VAR_ID_HTABLE);
         amxc_var_add_new_key_cstring_t(&new_obj, "ModeEnabled", security_mode.c_str());
@@ -531,7 +589,6 @@ bool ap_wlan_hal_whm::update_vap_credentials(
         m_radio_info.available_vaps[vap_id].fronthaul = bss_info_conf.fronthaul;
         m_radio_info.available_vaps[vap_id].backhaul  = bss_info_conf.backhaul;
         m_radio_info.available_vaps[vap_id++].ssid    = bss_info_conf.ssid;
-        vap_id++;
     }
 
     return true;
@@ -632,7 +689,7 @@ bool ap_wlan_hal_whm::read_acs_report()
 bool ap_wlan_hal_whm::set_tx_power_limit(int tx_pow_limit)
 {
     std::string wifi_radio_path;
-    if (!whm_get_radio_ref(get_iface_name(), wifi_radio_path)) {
+    if (!whm_get_radio_path(get_iface_name(), wifi_radio_path)) {
         return false;
     }
 
@@ -666,29 +723,25 @@ bool ap_wlan_hal_whm::get_vap_enable(const std::string &iface_name, bool &enable
 bool ap_wlan_hal_whm::generate_connected_clients_events(
     bool &is_finished_all_clients, std::chrono::steady_clock::time_point max_iteration_timeout)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    //LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
     return true;
 }
 
 bool ap_wlan_hal_whm::pre_generate_connected_clients_events()
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    //LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
     return true;
 }
 
 bool ap_wlan_hal_whm::start_wps_pbc()
 {
-    amxc_var_t *ap_obj = whm_get_ap_obj(get_iface_name());
-    if (!ap_obj) {
-        LOG(ERROR) << "failed to get ap object";
-        return false;
-    }
-    const char *ap_path  = amxc_var_key(ap_obj);
-    std::string wps_path = std::string(ap_path) + AMX_CL_OBJ_DELIMITER + "WPS.";
     amxc_var_t args;
     amxc_var_t result;
     amxc_var_init(&args);
     amxc_var_init(&result);
+    std::string wps_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
+                           std::string(AMX_CL_AP_OBJ_NAME) + AMX_CL_OBJ_DELIMITER + "[Alias == '" +
+                           get_iface_name() + "']" + AMX_CL_OBJ_DELIMITER + "WPS.";
     bool ret = m_ambiorix_cl->call(wps_path, "pushButton", &args, &result);
     amxc_var_clean(&args);
     amxc_var_clean(&result);
@@ -737,9 +790,10 @@ bool ap_wlan_hal_whm::process_whm_event(ap_wlan_hal::Event event, const amxc_var
             return true;
         }
 
-        const char *interface = GET_CHAR(ap_obj, "Alias");
-        auto vap_id           = get_vap_id_with_bss(interface);
-        auto iface_ids        = beerocks::utils::get_ids_from_iface_string(interface);
+        std::string interface = GET_CHAR(ap_obj, "Alias");
+        amxc_var_delete(&ap_obj);
+        auto vap_id    = get_vap_id_with_bss(interface);
+        auto iface_ids = beerocks::utils::get_ids_from_iface_string(interface);
         if (vap_id < 0) {
             LOG(ERROR) << "Invalid vap_id " << vap_id;
             return false;
@@ -770,9 +824,10 @@ bool ap_wlan_hal_whm::process_whm_event(ap_wlan_hal::Event event, const amxc_var
             return true;
         }
 
-        const char *interface = GET_CHAR(ap_obj, "Alias");
-        auto vap_id           = get_vap_id_with_bss(interface);
-        auto iface_ids        = beerocks::utils::get_ids_from_iface_string(interface);
+        std::string interface = GET_CHAR(ap_obj, "Alias");
+        amxc_var_delete(&ap_obj);
+        auto vap_id    = get_vap_id_with_bss(interface);
+        auto iface_ids = beerocks::utils::get_ids_from_iface_string(interface);
         if (vap_id < 0) {
             LOG(ERROR) << "Invalid vap_id " << vap_id;
             return true;
@@ -809,12 +864,13 @@ bool ap_wlan_hal_whm::process_whm_event(ap_wlan_hal::Event event, const amxc_var
         }
         amxc_var_t *sta_obj = m_ambiorix_cl->get_object(std::string(sta_obj_path), 0);
         if (!sta_obj) {
-            LOG(ERROR) << "failed to get AssociatedDevice object";
+            LOG(ERROR) << "failed to get AssociatedDevice object " << sta_obj_path;
             return true;
         }
 
-        const char *sta_mac = GET_CHAR(sta_obj, "MACAddress");
-        if (!sta_mac) {
+        std::string sta_mac = GET_CHAR(sta_obj, "MACAddress");
+        amxc_var_delete(&sta_obj);
+        if (sta_mac.empty()) {
             LOG(ERROR) << "failed to get MACAddress";
             return true;
         }
@@ -853,8 +909,9 @@ bool ap_wlan_hal_whm::process_whm_event(ap_wlan_hal::Event event, const amxc_var
             return true;
         }
 
-        const char *sta_mac = GET_CHAR(sta_obj, "MACAddress");
-        if (!sta_mac) {
+        std::string sta_mac = GET_CHAR(sta_obj, "MACAddress");
+        amxc_var_delete(&sta_obj);
+        if (sta_mac.empty()) {
             LOG(ERROR) << "failed to get MACAddress";
             return true;
         }

@@ -40,6 +40,7 @@ static amxc_var_t *bpl_cfg_get_wifi_ap_object(const std::string &iface)
                 return ap;
             }
         }
+        amxc_var_delete(&aps);
     }
 
     return nullptr;
@@ -82,17 +83,9 @@ static amxc_var_t *bpl_cfg_get_wifi_radio_object(const std::string &iface)
 
 static amxc_var_t *bpl_cfg_get_wifi_security_object(const std::string &iface)
 {
-    amxc_var_t *ap_obj = bpl_cfg_get_wifi_ap_object(iface);
-    if (!ap_obj) {
-        return nullptr;
-    }
-
-    const char *ap_path = amxc_var_key(ap_obj);
-    int vap_id          = beerocks::wbapi::wbapi_utils::get_object_id(std::string(ap_path));
-
     std::string wifi_ap_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
                                std::string(AMX_CL_AP_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
-                               std::to_string(vap_id) + AMX_CL_OBJ_DELIMITER;
+                               "[Alias == '" + iface + "']" + AMX_CL_OBJ_DELIMITER;
     const std::string sec_path         = "Security.";
     const std::string wifi_ap_sec_path = wifi_ap_path + sec_path;
 
@@ -136,6 +129,7 @@ int cfg_get_all_prplmesh_wifi_interfaces(BPL_WLAN_IFACE *interfaces, int *num_of
             interfaces[interfaces_count].radio_num = interfaces_count;
             interfaces_count++;
         }
+        amxc_var_delete(&aps);
     }
 
     *num_of_interfaces = interfaces_count;
