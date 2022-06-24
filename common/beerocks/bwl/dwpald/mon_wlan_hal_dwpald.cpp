@@ -303,7 +303,7 @@ static void get_he_operation(const uint8_t *data, uint8_t len, sChannelScanResul
     if (results.operating_frequency_band !=
             eChannelScanResultOperatingFrequencyBand::eOperating_Freq_Band_5GHz ||
         !(data[2] & BIT(6))) {
-        LOG(ERROR) << "Unable to parse the HE operation element";
+        LOG(ERROR) << "Unable to parse the HE operation element, this segment should be filtered";
         return;
     }
 
@@ -1307,7 +1307,8 @@ bool mon_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std
             }
 
             // Check if the event's BSSID is present in the monitored BSSIDs list.
-            if (m_hal_conf.monitored_BSSs.find(BSS_str) == m_hal_conf.monitored_BSSs.end()) {
+            if (iface_ids.vap_id != beerocks::IFACE_RADIO_ID &&
+                m_hal_conf.monitored_BSSs.find(BSS_str) == m_hal_conf.monitored_BSSs.end()) {
                 // Log print commented as to not flood the logs
                 //LOG(DEBUG) << "Event received on BSS " << BSS_str << " that is not on monitored BSSs list, ignoring";
                 return true;
