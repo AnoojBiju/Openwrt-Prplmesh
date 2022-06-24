@@ -93,7 +93,6 @@ class GenericPrplOS(GenericDevice):
                     raise err
             print("The upgrade is done, rebooting.")
             self.reboot(self.check_serial_type())
-            time.sleep(80)
             shell.expect("Please press Enter to activate this console", timeout=180)
             # activate the console:
             shell.sendline("")
