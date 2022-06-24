@@ -149,6 +149,29 @@ else()
 
 endif()
 
+if (USE_PRPLMESH_WHM)
+    foreach (item ${bpl_platform_sources})
+        if (item MATCHES "bpl.cpp$")
+            list(REMOVE_ITEM bpl_platform_sources ${item})
+        endif()
+        if (item MATCHES "bpl_cfg_wifi.cpp$")
+            list(REMOVE_ITEM bpl_platform_sources ${item})
+        endif()
+    endforeach()
+
+    list(APPEND bpl_platform_sources ${MODULE_PATH}/cfg/prplMesh_WHM/bpl.cpp)
+    list(APPEND bpl_platform_sources ${MODULE_PATH}/cfg/prplMesh_WHM/bpl_cfg_wifi.cpp)
+
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WPABI_SOCK}")
+
+    find_package(amxb REQUIRED)
+    find_package(amxc REQUIRED)
+    find_package(amxd REQUIRED)
+    find_package(amxp REQUIRED)
+    list(APPEND BPL_LIBS amxb amxc amxd amxp)
+    list(APPEND BPL_LIBS wbapi)
+endif()
+
 list(APPEND BPL_LIBS bcl)
 
 # Build the library

@@ -503,6 +503,10 @@ bool ApManager::ap_manager_fsm(bool &continue_processing)
                 .on_error =
                     [&](int fd, EventLoop &loop) {
                         LOG(ERROR) << "ap_hal_ext_events error! on fd " << fd;
+#ifdef USE_PRPLMESH_WHM
+                        // amx signal event loop on_error should return true
+                        return true;
+#endif //USE_PRPLMESH_WHM
                         auto it =
                             std::find(m_ap_hal_ext_events.begin(), m_ap_hal_ext_events.end(), fd);
                         if (it != m_ap_hal_ext_events.end()) {

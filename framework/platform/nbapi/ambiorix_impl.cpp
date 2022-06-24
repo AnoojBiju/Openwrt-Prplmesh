@@ -685,7 +685,6 @@ AmbiorixImpl::~AmbiorixImpl()
     amxb_free(&m_bus_ctx);
     amxd_dm_clean(&m_datamodel);
     amxo_parser_clean(&m_parser);
-    amxb_be_remove_all();
 }
 
 } // namespace nbapi
