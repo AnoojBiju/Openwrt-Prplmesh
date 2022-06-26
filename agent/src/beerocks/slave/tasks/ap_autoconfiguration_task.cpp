@@ -165,6 +165,10 @@ void ApAutoConfigurationTask::work()
             }
             break;
         }
+        case eState::WAIT_AP_CONFIGURATION_COMPLETE: {
+            configuration_complete_wait_action(radio_iface);
+            break;
+        }
         case eState::CONFIGURED: {
             configured_aps_count++;
             break;
@@ -288,6 +292,84 @@ bool ApAutoConfigurationTask::handle_vendor_specific(
     }
     return true;
 }
+
+void ApAutoConfigurationTask::configuration_complete_wait_action(const std::string &radio_iface)
+{
+    auto &radio_conf_params = m_radios_conf_params[radio_iface];
+
+    // num_of_bss_available updates on ACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_RESPONSE handler
+    if (!radio_conf_params.num_of_bss_available) {
+        return;
+    }
+
+    if (radio_conf_params.enabled_bssids.size() != radio_conf_params.num_of_bss_available) {
+
+        // Wait until WAIT_AP_ENABLED_TIMEOUT_SECONDS timeout is expired.
+        // If expired and we did not receive AP_ENABLE on the radios BSSs, assume it was already
+        // configured, and the AP_ENABLE will never come.
+        // The timer is set on "handle_vs_wifi_credentials_update_response()""
+        if (std::chrono::steady_clock::now() < radio_conf_params.timeout) {
+            return;
+        }
+    }
+
+    // Arbitrary value
+    constexpr uint8_t WAIT_IFACES_INSIDE_THE_BRIDGE_TIMEOUT_SECONDS = 30;
+
+    if (!radio_conf_params.sent_vaps_list_update) {
+        if (!send_ap_bss_info_update_request(radio_iface)) {
+            LOG(ERROR) << "send_ap_bss_info_update_request has failed";
+            return;
+        }
+        radio_conf_params.sent_vaps_list_update = true;
+
+        radio_conf_params.timeout =
+            std::chrono::steady_clock::now() +
+            std::chrono::seconds(WAIT_IFACES_INSIDE_THE_BRIDGE_TIMEOUT_SECONDS);
+    }
+
+    if (!radio_conf_params.received_vaps_list_update) {
+        return;
+    }
+
+    // Check if all reported interfaces are in the bridge
+    auto db               = AgentDB::get();
+    auto ifaces_in_bridge = network_utils::linux_get_iface_list_from_bridge(db->bridge.iface_name);
+
+    auto radio = db->radio(radio_iface);
+    if (!radio) {
+        return;
+    }
+    for (const auto &bssid : radio->front.bssids) {
+        if (bssid.iface_name.empty()) {
+            continue;
+        }
+        auto found = std::find(ifaces_in_bridge.begin(), ifaces_in_bridge.end(), bssid.iface_name);
+
+        // Return if not all bssids are in the bridge, and print error.
+        if (found == ifaces_in_bridge.end()) {
+            if (std::chrono::steady_clock::now() > radio_conf_params.timeout) {
+                auto timeout_sec =
+                    std::chrono::duration_cast<std::chrono::seconds>(
+                        std::chrono::steady_clock::now() - radio_conf_params.timeout +
+                        std::chrono::seconds(WAIT_IFACES_INSIDE_THE_BRIDGE_TIMEOUT_SECONDS))
+                        .count();
+                LOG_EVERY_N(10, ERROR)
+                    << "Some of or all " << radio_iface << " BSSIDs are not in the bridge after "
+                    << timeout_sec << " seconds after AP configuration!";
+            }
+            return;
+        }
+    }
+
+    FSM_MOVE_STATE(radio_iface, eState::CONFIGURED);
+
+    LOG(TRACE) << "Finished configuration on " << radio_iface;
+    TrafficSeparation::apply_traffic_separation(radio_iface);
+
+    return;
+}
+
 bool ApAutoConfigurationTask::send_ap_autoconfiguration_search_message(
     const std::string &radio_iface)
 {
@@ -660,8 +742,9 @@ bool ApAutoConfigurationTask::add_wsc_m1_tlv(const std::string &radio_iface)
 
     auto &radio_conf_params = m_radios_conf_params[radio_iface];
 
-    cfg.msg_type         = WSC::eWscMessageType::WSC_MSG_TYPE_M1;
-    cfg.mac              = db->bridge.mac;
+    cfg.msg_type = WSC::eWscMessageType::WSC_MSG_TYPE_M1;
+    cfg.mac      = db->bridge.mac;
+
     radio_conf_params.dh = std::make_unique<mapf::encryption::diffie_hellman>();
 
     std::copy(radio_conf_params.dh->nonce(),
@@ -892,12 +975,15 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_wsc(ieee1905_1::CmduMe
         return;
     }
 
-    if (!send_ap_bss_info_update_request(radio->front.iface_name)) {
-        LOG(ERROR) << "send_ap_bss_info_update_request has failed";
-        return;
-    }
+    // Initialize for next state
+    auto &radio_conf_params = m_radios_conf_params[radio->front.iface_name];
 
-    FSM_MOVE_STATE(radio->front.iface_name, eState::CONFIGURED);
+    radio_conf_params.num_of_bss_available = 0;
+    radio_conf_params.enabled_bssids.clear();
+    radio_conf_params.sent_vaps_list_update     = false;
+    radio_conf_params.received_vaps_list_update = false;
+
+    FSM_MOVE_STATE(radio->front.iface_name, eState::WAIT_AP_CONFIGURATION_COMPLETE);
     return;
 }
 

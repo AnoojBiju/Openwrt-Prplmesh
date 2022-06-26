@@ -195,6 +195,15 @@ private:
                                                  std::shared_ptr<beerocks_header> beerocks_header);
 
     /* Helper functions */
+    /**
+     * @brief Wait until given radio @a radio_iface has completed the AP configuration.
+     * Perform the necessary actions to actively get the the completed status.
+     * 
+     * @param radio_iface Radio interface name.
+     * @return true if configuration has completed, otherwise false.
+     */
+    void configuration_complete_wait_action(const std::string &radio_iface);
+
     bool send_ap_autoconfiguration_search_message(const std::string &radio_iface);
 
     bool send_ap_autoconfiguration_wsc_m1_message(const std::string &radio_iface);
