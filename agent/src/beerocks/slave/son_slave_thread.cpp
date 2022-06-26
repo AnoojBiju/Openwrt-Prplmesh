@@ -709,7 +709,7 @@ bool slave_thread::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
             return handle_cmdu_platform_manager_message(fd, beerocks_header);
         } break;
         case beerocks_message::ACTION_APMANAGER: {
-            return handle_cmdu_ap_manager_message(fronthaul_iface, fd, beerocks_header);
+            return handle_cmdu_ap_manager_message(fronthaul_iface, fd, cmdu_rx, beerocks_header);
         } break;
         case beerocks_message::ACTION_MONITOR: {
             return handle_cmdu_monitor_message(fronthaul_iface, fd, beerocks_header);
@@ -2198,6 +2198,7 @@ bool slave_thread::handle_cmdu_platform_manager_message(
 }
 
 bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_iface, int fd,
+                                                  ieee1905_1::CmduMessageRx &cmdu_rx,
                                                   std::shared_ptr<beerocks_header> beerocks_header)
 {
     if (beerocks_header->action_op() == beerocks_message::ACTION_APMANAGER_UP_NOTIFICATION) {
@@ -3206,9 +3207,11 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
         break;
     }
     default: {
-        LOG(ERROR) << "Unknown AP_MANAGER message, action_op: "
-                   << int(beerocks_header->action_op());
-        return false;
+        if (!m_task_pool.handle_cmdu(cmdu_rx, 0, {}, {}, fd, beerocks_header)) {
+            LOG(ERROR) << "Unknown AP_MANAGER message, action_op: "
+                       << int(beerocks_header->action_op());
+            return false;
+        }
     }
     }
 
