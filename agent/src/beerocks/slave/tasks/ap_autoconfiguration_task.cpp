@@ -73,6 +73,8 @@ const std::string ApAutoConfigurationTask::fsm_state_to_string(eState status)
         return "SEND_AP_AUTOCONFIGURATION_WSC_M1";
     case eState::WAIT_AP_AUTOCONFIGURATION_WSC_M2:
         return "WAIT_AP_AUTOCONFIGURATION_WSC_M2";
+    case eState::WAIT_AP_CONFIGURATION_COMPLETE:
+        return "WAIT_AP_CONFIGURATION_COMPLETE";
     case eState::CONFIGURED:
         return "CONFIGURED";
     default:

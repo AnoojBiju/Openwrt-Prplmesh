@@ -57,7 +57,7 @@ private:
         WAIT_FOR_CONTROLLER_DISCOVERY_COMPLETE,
         SEND_AP_AUTOCONFIGURATION_WSC_M1,
         WAIT_AP_AUTOCONFIGURATION_WSC_M2,
-        SEND_MONITOR_SON_CONFIG,
+        WAIT_AP_CONFIGURATION_COMPLETE,
         CONFIGURED
     };
 
@@ -66,8 +66,12 @@ private:
         std::chrono::steady_clock::time_point timeout;
         std::unique_ptr<mapf::encryption::diffie_hellman> dh = nullptr;
         //copy of M1 message used for authentication
-        uint8_t *m1_auth_buf   = nullptr;
-        size_t m1_auth_buf_len = 0;
+        uint8_t *m1_auth_buf         = nullptr;
+        size_t m1_auth_buf_len       = 0;
+        uint8_t num_of_bss_available = 0;
+        std::unordered_set<sMacAddr> enabled_bssids;
+        bool sent_vaps_list_update;
+        bool received_vaps_list_update;
     };
 
     /**
