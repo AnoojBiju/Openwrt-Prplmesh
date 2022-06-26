@@ -170,6 +170,26 @@ private:
     bool handle_ap_autoconfiguration_wsc_vs_extension_tlv(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                           const std::string &radio_iface);
 
+    /**
+     * @brief Handles Vendor Specific messages.
+     *
+     * @param[in] cmdu_rx Received CMDU.
+     * @param[in] src_mac MAC address of the message sender.
+     * @param[in] fd File descriptor of the socket connection with the slave that sent the message.
+     * @param[in] beerocks_header Shared pointer to beerocks header.
+     * @return true, if the message has been handled, otherwise false.
+     */
+    bool handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac, int fd,
+                                std::shared_ptr<beerocks_header> beerocks_header);
+
+    /* Vendor specific message handlers: */
+
+    void handle_vs_ap_enabled_notification(ieee1905_1::CmduMessageRx &cmdu_rx, int fd,
+                                           std::shared_ptr<beerocks_header> beerocks_header);
+
+    void handle_vs_vaps_list_update_notification(ieee1905_1::CmduMessageRx &cmdu_rx, int fd,
+                                                 std::shared_ptr<beerocks_header> beerocks_header);
+
     /* Helper functions */
     bool send_ap_autoconfiguration_search_message(const std::string &radio_iface);
 
