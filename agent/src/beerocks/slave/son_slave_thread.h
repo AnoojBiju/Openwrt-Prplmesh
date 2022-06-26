@@ -123,6 +123,14 @@ public:
      */
     bool send_ack_to_controller(ieee1905_1::CmduMessageTx &cmdu_tx, uint32_t mid);
 
+    /**
+     * @brief Update the vaps in the Agent DB.
+     * @param iface The interface to use to find the radio in the DB.
+     * @param vaps the array of VAPs to use for the update.
+     * @return true on success, false on failure.
+     */
+    bool update_vaps_info(const std::string &iface, const beerocks_message::sVapInfo vaps[]);
+
 private:
     /**
      * @brief Handles received CMDU message.
@@ -497,12 +505,18 @@ private:
     void save_cac_capabilities_params_to_db(const std::string &fronthaul_iface);
 
     /**
-     * @brief Update the vaps in the Agent DB.
-     * @param iface The interface to use to find the radio in the DB.
-     * @param vaps the array of VAPs to use for the update.
-     * @return true on success, false on failure.
+     * @brief Get the channel preference.
+     *
+     * @pre The channel operating class and the preference operating class have to match.
+     * @param channel A channel to check.
+     * @param preference The preference of the channel.
+     * @param preference_channels_list The preference channels list given by the Controller.
+     * @return NON_OPERABLE if channel is restricted, channel preference otherwise.
      */
-    bool update_vaps_info(const std::string &iface, const beerocks_message::sVapInfo vaps[]);
+    wfa_map::cPreferenceOperatingClasses::ePreference
+    get_channel_preference(message::sWifiChannel channel,
+                           const AgentDB::sChannelPreference &preference,
+                           const std::set<uint8_t> &preference_channels_list);
 };
 
 } // namespace beerocks
