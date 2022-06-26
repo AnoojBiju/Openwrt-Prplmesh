@@ -334,6 +334,7 @@ private:
 
     bool m_stopped = false;
 
+public:
     struct sManagedRadio {
         int stop_on_failure_attempts;
         bool configuration_in_progress = false;
@@ -374,6 +375,28 @@ private:
             return get_radio_context(fronthaul_iface);
         }
 
+        std::string get_radio_iface_from_fd(int fd)
+        {
+            if (fd == net::FileDescriptor::invalid_descriptor) {
+                return {};
+            }
+            for (auto &radio : get()) {
+                auto &radio_manager = radio.second;
+                if (fd == radio_manager.ap_manager_fd || fd == radio_manager.monitor_fd) {
+                    return radio.first; // interface name
+                }
+            }
+            const auto &zwdfs_radio = get_zwdfs();
+            if (!zwdfs_radio) {
+                return {};
+            }
+            const auto &radio_manager = zwdfs_radio->second;
+            if (fd == radio_manager.ap_manager_fd || fd == radio_manager.monitor_fd) {
+                return zwdfs_radio->first; // interface name
+            }
+            return {};
+        }
+
         std::map<std::string, sManagedRadio> &get() { return m_radio_managers; }
         std::unique_ptr<std::pair<std::string, sManagedRadio>> &get_zwdfs()
         {
@@ -411,6 +434,7 @@ private:
         };
     } m_radio_managers;
 
+private:
     /**
      * @brief check if there was an error in the constructor
      *
