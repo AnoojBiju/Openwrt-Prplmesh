@@ -91,5 +91,6 @@ eTlvTypeMap:
   TLV_DPP_CHIRP_VALUE: 0xD3
   TLV_DEVICE_INVENTORY: 0xD4
   TLV_AGENT_LIST: 0xD5
+  TLV_TEAM_MEMBERS: 0xD6
 
   # When adding values, make sure to also update CmduMessageRx::parseNextTlv !

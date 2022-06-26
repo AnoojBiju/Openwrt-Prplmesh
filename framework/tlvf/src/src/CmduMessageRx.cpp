@@ -107,6 +107,7 @@
 #include <tlvf/wfa_map/tlvSteeringPolicy.h>
 #include <tlvf/wfa_map/tlvSteeringRequest.h>
 #include <tlvf/wfa_map/tlvSupportedService.h>
+#include <tlvf/wfa_map/tlvTeamMembers.h>
 #include <tlvf/wfa_map/tlvTimestamp.h>
 #include <tlvf/wfa_map/tlvTransmitPowerLimit.h>
 #include <tlvf/wfa_map/tlvTunnelledData.h>
@@ -348,6 +349,9 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     }
     case (wfa_map::eTlvTypeMap::TLV_BACKHAUL_BSS_CONFIGURATION): {
         return msg.addClass<wfa_map::tlvBackhaulBssConfiguration>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_TEAM_MEMBERS): {
+        return msg.addClass<wfa_map::tlvTeamMembers>();
     }
     case (wfa_map::eTlvTypeMap::TLV_TIMESTAMP): {
         return msg.addClass<wfa_map::tlvTimestamp>();

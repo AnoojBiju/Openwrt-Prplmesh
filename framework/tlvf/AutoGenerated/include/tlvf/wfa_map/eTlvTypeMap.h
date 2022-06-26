@@ -105,102 +105,8 @@ enum class eTlvTypeMap : uint8_t {
     TLV_DPP_CHIRP_VALUE = 0xd3,
     TLV_DEVICE_INVENTORY = 0xd4,
     TLV_AGENT_LIST = 0xd5,
+    TLV_TEAM_MEMBERS = 0xd6,
 };
-// Enum AutoPrint generated code snippet begining- DON'T EDIT!
-// clang-format off
-static const char *eTlvTypeMap_str(eTlvTypeMap enum_value) {
-    switch (enum_value) {
-    case eTlvTypeMap::TLV_SUPPORTED_SERVICE:                        return "eTlvTypeMap::TLV_SUPPORTED_SERVICE";
-    case eTlvTypeMap::TLV_SEARCHED_SERVICE:                         return "eTlvTypeMap::TLV_SEARCHED_SERVICE";
-    case eTlvTypeMap::TLV_AP_RADIO_IDENTIFIER:                      return "eTlvTypeMap::TLV_AP_RADIO_IDENTIFIER";
-    case eTlvTypeMap::TLV_AP_OPERATIONAL_BSS:                       return "eTlvTypeMap::TLV_AP_OPERATIONAL_BSS";
-    case eTlvTypeMap::TLV_ASSOCIATED_CLIENTS:                       return "eTlvTypeMap::TLV_ASSOCIATED_CLIENTS";
-    case eTlvTypeMap::TLV_AP_RADIO_BASIC_CAPABILITIES:              return "eTlvTypeMap::TLV_AP_RADIO_BASIC_CAPABILITIES";
-    case eTlvTypeMap::TLV_AP_HT_CAPABILITIES:                       return "eTlvTypeMap::TLV_AP_HT_CAPABILITIES";
-    case eTlvTypeMap::TLV_AP_VHT_CAPABILITIES:                      return "eTlvTypeMap::TLV_AP_VHT_CAPABILITIES";
-    case eTlvTypeMap::TLV_AP_HE_CAPABILITIES:                       return "eTlvTypeMap::TLV_AP_HE_CAPABILITIES";
-    case eTlvTypeMap::TLV_STEERING_POLICY:                          return "eTlvTypeMap::TLV_STEERING_POLICY";
-    case eTlvTypeMap::TLV_METRIC_REPORTING_POLICY:                  return "eTlvTypeMap::TLV_METRIC_REPORTING_POLICY";
-    case eTlvTypeMap::TLV_CHANNEL_PREFERENCE:                       return "eTlvTypeMap::TLV_CHANNEL_PREFERENCE";
-    case eTlvTypeMap::TLV_RADIO_OPERATION_RESTRICTION:              return "eTlvTypeMap::TLV_RADIO_OPERATION_RESTRICTION";
-    case eTlvTypeMap::TLV_TRANSMIT_POWER_LIMIT:                     return "eTlvTypeMap::TLV_TRANSMIT_POWER_LIMIT";
-    case eTlvTypeMap::TLV_CHANNEL_SELECTION_RESPONSE:               return "eTlvTypeMap::TLV_CHANNEL_SELECTION_RESPONSE";
-    case eTlvTypeMap::TLV_OPERATING_CHANNEL_REPORT:                 return "eTlvTypeMap::TLV_OPERATING_CHANNEL_REPORT";
-    case eTlvTypeMap::TLV_CLIENT_INFO:                              return "eTlvTypeMap::TLV_CLIENT_INFO";
-    case eTlvTypeMap::TLV_CLIENT_CAPABILITY_REPORT:                 return "eTlvTypeMap::TLV_CLIENT_CAPABILITY_REPORT";
-    case eTlvTypeMap::TLV_CLIENT_ASSOCIATION_EVENT:                 return "eTlvTypeMap::TLV_CLIENT_ASSOCIATION_EVENT";
-    case eTlvTypeMap::TLV_AP_METRIC_QUERY:                          return "eTlvTypeMap::TLV_AP_METRIC_QUERY";
-    case eTlvTypeMap::TLV_AP_METRIC:                                return "eTlvTypeMap::TLV_AP_METRIC";
-    case eTlvTypeMap::TLV_STAMAC_ADDRESS_TYPE:                      return "eTlvTypeMap::TLV_STAMAC_ADDRESS_TYPE";
-    case eTlvTypeMap::TLV_ASSOCIATED_STA_LINK_METRICS:              return "eTlvTypeMap::TLV_ASSOCIATED_STA_LINK_METRICS";
-    case eTlvTypeMap::TLV_UNASSOCIATED_STA_LINK_METRICS_QUERY:      return "eTlvTypeMap::TLV_UNASSOCIATED_STA_LINK_METRICS_QUERY";
-    case eTlvTypeMap::TLV_UNASSOCIATED_STA_LINK_METRICS_RESPONSE:   return "eTlvTypeMap::TLV_UNASSOCIATED_STA_LINK_METRICS_RESPONSE";
-    case eTlvTypeMap::TLV_BEACON_METRICS_QUERY:                     return "eTlvTypeMap::TLV_BEACON_METRICS_QUERY";
-    case eTlvTypeMap::TLV_BEACON_METRICS_RESPONSE:                  return "eTlvTypeMap::TLV_BEACON_METRICS_RESPONSE";
-    case eTlvTypeMap::TLV_STEERING_REQUEST:                         return "eTlvTypeMap::TLV_STEERING_REQUEST";
-    case eTlvTypeMap::TLV_STEERING_BTM_REPORT:                      return "eTlvTypeMap::TLV_STEERING_BTM_REPORT";
-    case eTlvTypeMap::TLV_CLIENT_ASSOCIATION_CONTROL_REQUEST:       return "eTlvTypeMap::TLV_CLIENT_ASSOCIATION_CONTROL_REQUEST";
-    case eTlvTypeMap::TLV_BACKHAUL_STEERING_REQUEST:                return "eTlvTypeMap::TLV_BACKHAUL_STEERING_REQUEST";
-    case eTlvTypeMap::TLV_BACKHAUL_STEERING_RESPONSE:               return "eTlvTypeMap::TLV_BACKHAUL_STEERING_RESPONSE";
-    case eTlvTypeMap::TLV_HIGHER_LAYER_DATA:                        return "eTlvTypeMap::TLV_HIGHER_LAYER_DATA";
-    case eTlvTypeMap::TLV_AP_CAPABILITY:                            return "eTlvTypeMap::TLV_AP_CAPABILITY";
-    case eTlvTypeMap::TLV_ASSOCIATED_STA_TRAFFIC_STATS:             return "eTlvTypeMap::TLV_ASSOCIATED_STA_TRAFFIC_STATS";
-    case eTlvTypeMap::TLV_ERROR_CODE:                               return "eTlvTypeMap::TLV_ERROR_CODE";
-    case eTlvTypeMap::TLV_CHANNEL_SCAN_REPORTING_POLICY:            return "eTlvTypeMap::TLV_CHANNEL_SCAN_REPORTING_POLICY";
-    case eTlvTypeMap::TLV_CHANNEL_SCAN_CAPABILITIES:                return "eTlvTypeMap::TLV_CHANNEL_SCAN_CAPABILITIES";
-    case eTlvTypeMap::TLV_CHANNEL_SCAN_REQUEST:                     return "eTlvTypeMap::TLV_CHANNEL_SCAN_REQUEST";
-    case eTlvTypeMap::TLV_CHANNEL_SCAN_RESULT:                      return "eTlvTypeMap::TLV_CHANNEL_SCAN_RESULT";
-    case eTlvTypeMap::TLV_TIMESTAMP:                                return "eTlvTypeMap::TLV_TIMESTAMP";
-    case eTlvTypeMap::TLV_1905_LAYER_SECURITY_CAPABILITY:           return "eTlvTypeMap::TLV_1905_LAYER_SECURITY_CAPABILITY";
-    case eTlvTypeMap::TLV_MIC:                                      return "eTlvTypeMap::TLV_MIC";
-    case eTlvTypeMap::TLV_ENCRYPTED_PAYLOAD:                        return "eTlvTypeMap::TLV_ENCRYPTED_PAYLOAD";
-    case eTlvTypeMap::TLV_PROFILE2_CAC_REQUEST:                     return "eTlvTypeMap::TLV_PROFILE2_CAC_REQUEST";
-    case eTlvTypeMap::TLV_PROFILE2_CAC_TERMINATION:                 return "eTlvTypeMap::TLV_PROFILE2_CAC_TERMINATION";
-    case eTlvTypeMap::TLV_PROFILE2_CAC_COMPLETION_REPORT:           return "eTlvTypeMap::TLV_PROFILE2_CAC_COMPLETION_REPORT";
-    case eTlvTypeMap::TLV_ASSOCIATED_WIFI_6_STA_STATUS_REPORT:      return "eTlvTypeMap::TLV_ASSOCIATED_WIFI_6_STA_STATUS_REPORT";
-    case eTlvTypeMap::TLV_PROFILE2_CAC_STATUS_REPORT:               return "eTlvTypeMap::TLV_PROFILE2_CAC_STATUS_REPORT";
-    case eTlvTypeMap::TLV_PROFILE2_CAC_CAPABILITIES:                return "eTlvTypeMap::TLV_PROFILE2_CAC_CAPABILITIES";
-    case eTlvTypeMap::TLV_PROFILE2_MULTIAP_PROFILE:                 return "eTlvTypeMap::TLV_PROFILE2_MULTIAP_PROFILE";
-    case eTlvTypeMap::TLV_PROFILE2_AP_CAPABILITY:                   return "eTlvTypeMap::TLV_PROFILE2_AP_CAPABILITY";
-    case eTlvTypeMap::TLV_PROFILE2_DEFAULT_802_1Q_SETTINGS:         return "eTlvTypeMap::TLV_PROFILE2_DEFAULT_802_1Q_SETTINGS";
-    case eTlvTypeMap::TLV_PROFILE2_TRAFFIC_SEPARATION_POLICY:       return "eTlvTypeMap::TLV_PROFILE2_TRAFFIC_SEPARATION_POLICY";
-    case eTlvTypeMap::TLV_BSS_CONFIGURATION_REPORT:                 return "eTlvTypeMap::TLV_BSS_CONFIGURATION_REPORT";
-    case eTlvTypeMap::TLV_SERVICE_PRIORITIZATION_RULE:              return "eTlvTypeMap::TLV_SERVICE_PRIORITIZATION_RULE";
-    case eTlvTypeMap::TLV_DSCP_MAPPING_TABLE:                       return "eTlvTypeMap::TLV_DSCP_MAPPING_TABLE";
-    case eTlvTypeMap::TLV_BSS_CONFIGURATION_REQUEST:                return "eTlvTypeMap::TLV_BSS_CONFIGURATION_REQUEST";
-    case eTlvTypeMap::TLV_PROFILE2_ERROR_CODE:                      return "eTlvTypeMap::TLV_PROFILE2_ERROR_CODE";
-    case eTlvTypeMap::TLV_BSS_CONFIGURATION_RESPONSE:               return "eTlvTypeMap::TLV_BSS_CONFIGURATION_RESPONSE";
-    case eTlvTypeMap::TLV_PROFILE2_AP_RADIO_ADVANCED_CAPABILITIES:  return "eTlvTypeMap::TLV_PROFILE2_AP_RADIO_ADVANCED_CAPABILITIES";
-    case eTlvTypeMap::TLV_PROFILE2_ASSOCIATION_STATUS_NOTIFICATION: return "eTlvTypeMap::TLV_PROFILE2_ASSOCIATION_STATUS_NOTIFICATION";
-    case eTlvTypeMap::TLV_TUNNELLED_SOURCE_INFO:                    return "eTlvTypeMap::TLV_TUNNELLED_SOURCE_INFO";
-    case eTlvTypeMap::TLV_TUNNELLED_PROTOCOL_TYPE:                  return "eTlvTypeMap::TLV_TUNNELLED_PROTOCOL_TYPE";
-    case eTlvTypeMap::TLV_TUNNELLED_DATA:                           return "eTlvTypeMap::TLV_TUNNELLED_DATA";
-    case eTlvTypeMap::TLV_PROFILE2_STEERING_REQUEST:                return "eTlvTypeMap::TLV_PROFILE2_STEERING_REQUEST";
-    case eTlvTypeMap::TLV_PROFILE2_UNSUCCESSFUL_ASSOCIATION_POLICY: return "eTlvTypeMap::TLV_PROFILE2_UNSUCCESSFUL_ASSOCIATION_POLICY";
-    case eTlvTypeMap::TLV_PROFILE2_METRIC_COLLECTION_INTERVAL:      return "eTlvTypeMap::TLV_PROFILE2_METRIC_COLLECTION_INTERVAL";
-    case eTlvTypeMap::TLV_PROFILE2_RADIO_METRICS:                   return "eTlvTypeMap::TLV_PROFILE2_RADIO_METRICS";
-    case eTlvTypeMap::TLV_AP_EXTENDED_METRICS:                      return "eTlvTypeMap::TLV_AP_EXTENDED_METRICS";
-    case eTlvTypeMap::TLV_ASSOCIATED_STA_EXTENDED_LINK_METRICS:     return "eTlvTypeMap::TLV_ASSOCIATED_STA_EXTENDED_LINK_METRICS";
-    case eTlvTypeMap::TLV_PROFILE2_STATUS_CODE:                     return "eTlvTypeMap::TLV_PROFILE2_STATUS_CODE";
-    case eTlvTypeMap::TLV_PROFILE2_REASON_CODE:                     return "eTlvTypeMap::TLV_PROFILE2_REASON_CODE";
-    case eTlvTypeMap::TLV_BACKHAUL_STA_RADIO_CAPABILITIES:          return "eTlvTypeMap::TLV_BACKHAUL_STA_RADIO_CAPABILITIES";
-    case eTlvTypeMap::TLV_AKM_SUITE_CAPABILITIES:                   return "eTlvTypeMap::TLV_AKM_SUITE_CAPABILITIES";
-    case eTlvTypeMap::TLV_1905_ENCAP_DPP:                           return "eTlvTypeMap::TLV_1905_ENCAP_DPP";
-    case eTlvTypeMap::TLV_1905_ENCAP_EAPOL:                         return "eTlvTypeMap::TLV_1905_ENCAP_EAPOL";
-    case eTlvTypeMap::TLV_DPP_BOOTSTRAPPING_URI_NOTIFICATION:       return "eTlvTypeMap::TLV_DPP_BOOTSTRAPPING_URI_NOTIFICATION";
-    case eTlvTypeMap::TLV_BACKHAUL_BSS_CONFIGURATION:               return "eTlvTypeMap::TLV_BACKHAUL_BSS_CONFIGURATION";
-    case eTlvTypeMap::TLV_DPP_MESSAGE:                              return "eTlvTypeMap::TLV_DPP_MESSAGE";
-    case eTlvTypeMap::TLV_DPP_CCE_INDICATION:                       return "eTlvTypeMap::TLV_DPP_CCE_INDICATION";
-    case eTlvTypeMap::TLV_DPP_CHIRP_VALUE:                          return "eTlvTypeMap::TLV_DPP_CHIRP_VALUE";
-    case eTlvTypeMap::TLV_DEVICE_INVENTORY:                         return "eTlvTypeMap::TLV_DEVICE_INVENTORY";
-    case eTlvTypeMap::TLV_AGENT_LIST:                               return "eTlvTypeMap::TLV_AGENT_LIST";
-    }
-    static std::string out_str = std::to_string(int(enum_value));
-    return out_str.c_str();
-}
-inline std::ostream &operator<<(std::ostream &out, eTlvTypeMap value) { return out << eTlvTypeMap_str(value); }
-// clang-format on
-// Enum AutoPrint generated code snippet end
 class eTlvTypeMapValidate {
 public:
     static bool check(uint8_t value) {
@@ -290,6 +196,7 @@ public:
         case 0xd3:
         case 0xd4:
         case 0xd5:
+        case 0xd6:
                 ret = true;
                 break;
             default:
