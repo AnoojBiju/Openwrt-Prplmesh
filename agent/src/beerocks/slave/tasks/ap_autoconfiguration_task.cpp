@@ -269,6 +269,10 @@ bool ApAutoConfigurationTask::handle_vendor_specific(
     }
 
     switch (beerocks_header->action_op()) {
+    case beerocks_message::ACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_RESPONSE: {
+        handle_vs_wifi_credentials_update_response(cmdu_rx, sd, beerocks_header);
+        break;
+    }
     case beerocks_message::ACTION_APMANAGER_HOSTAP_AP_ENABLED_NOTIFICATION: {
         handle_vs_ap_enabled_notification(cmdu_rx, sd, beerocks_header);
         break;
@@ -1326,6 +1330,37 @@ bool ApAutoConfigurationTask::handle_wsc_m2_tlv(
     }
 
     return true;
+}
+
+void ApAutoConfigurationTask::handle_vs_wifi_credentials_update_response(
+    ieee1905_1::CmduMessageRx &cmdu_rx, int fd, std::shared_ptr<beerocks_header> beerocks_header)
+{
+    auto response =
+        beerocks_header
+            ->addClass<beerocks_message::cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_RESPONSE>();
+    if (!response) {
+        LOG(ERROR) << "addClass cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_RESPONSE failed";
+        return;
+    }
+
+    auto radio_iface        = m_btl_ctx.m_radio_managers.get_radio_iface_from_fd(fd);
+    auto &radio_conf_params = m_radios_conf_params[radio_iface];
+
+    radio_conf_params.num_of_bss_available = response->number_of_bss_available();
+
+    auto db    = AgentDB::get();
+    auto radio = db->radio(radio_iface);
+    if (!radio) {
+        return;
+    }
+
+    LOG(TRACE) << "received ACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_RESPONSE from "
+               << radio->front.iface_name;
+
+    // This value have an arbitrary value based on observation on real platform behavior.
+    constexpr uint8_t WAIT_AP_ENABLED_TIMEOUT_SECONDS = 20;
+    radio_conf_params.timeout =
+        std::chrono::steady_clock::now() + std::chrono::seconds(WAIT_AP_ENABLED_TIMEOUT_SECONDS);
 }
 
 void ApAutoConfigurationTask::handle_vs_ap_enabled_notification(

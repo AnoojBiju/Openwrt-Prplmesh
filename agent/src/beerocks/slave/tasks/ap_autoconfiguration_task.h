@@ -184,6 +184,10 @@ private:
 
     /* Vendor specific message handlers: */
 
+    void
+    handle_vs_wifi_credentials_update_response(ieee1905_1::CmduMessageRx &cmdu_rx, int fd,
+                                               std::shared_ptr<beerocks_header> beerocks_header);
+
     void handle_vs_ap_enabled_notification(ieee1905_1::CmduMessageRx &cmdu_rx, int fd,
                                            std::shared_ptr<beerocks_header> beerocks_header);
 
