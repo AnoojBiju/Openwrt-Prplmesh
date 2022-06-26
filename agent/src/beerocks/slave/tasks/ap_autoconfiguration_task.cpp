@@ -1334,18 +1334,21 @@ void ApAutoConfigurationTask::handle_vs_ap_enabled_notification(
     auto notification_in =
         beerocks_header
             ->addClass<beerocks_message::cACTION_APMANAGER_HOSTAP_AP_ENABLED_NOTIFICATION>();
-    if (notification_in == nullptr) {
+    if (!notification_in) {
         LOG(ERROR) << "addClass cACTION_APMANAGER_HOSTAP_AP_ENABLED_NOTIFICATION failed";
-        return false;
+        return;
     }
-    LOG(INFO) << "received ACTION_APMANAGER_HOSTAP_AP_ENABLED_NOTIFICATION vap_id="
-              << int(notification_in->vap_id());
+
+    auto radio_iface = m_btl_ctx.m_radio_managers.get_radio_iface_from_fd(fd);
 
     auto db    = AgentDB::get();
-    auto radio = db->radio(fronthaul_iface);
+    auto radio = db->radio(radio_iface);
     if (!radio) {
-        return false;
+        return;
     }
+
+    LOG(INFO) << "received ACTION_APMANAGER_HOSTAP_AP_ENABLED_NOTIFICATION "
+              << notification_in->vap_info().iface_name;
 
     const auto &vap_info = notification_in->vap_info();
     auto bssid           = std::find_if(radio->front.bssids.begin(), radio->front.bssids.end(),
@@ -1354,7 +1357,7 @@ void ApAutoConfigurationTask::handle_vs_ap_enabled_notification(
                               });
     if (bssid == radio->front.bssids.end()) {
         LOG(ERROR) << "Radio does not contain BSSID: " << vap_info.mac;
-        return false;
+        return;
     }
 
     // Update VAP info (BSSID) in the AgentDB
@@ -1369,16 +1372,19 @@ void ApAutoConfigurationTask::handle_vs_ap_enabled_notification(
     }
 
     auto notification_out = message_com::create_vs_message<
-        beerocks_message::cACTION_CONTROL_HOSTAP_AP_ENABLED_NOTIFICATION>(cmdu_tx);
+        beerocks_message::cACTION_CONTROL_HOSTAP_AP_ENABLED_NOTIFICATION>(m_cmdu_tx);
     if (!notification_out) {
         LOG(ERROR) << "Failed building message!";
-        return false;
+        return;
     }
 
     notification_out->vap_id()   = notification_in->vap_id();
     notification_out->vap_info() = notification_in->vap_info();
-    send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
-    break;
+    m_btl_ctx.send_cmdu_to_controller(radio->front.iface_name, m_cmdu_tx);
+
+    // Marked BSSID as "enabled".
+    auto &radio_conf_params = m_radios_conf_params[radio_iface];
+    radio_conf_params.enabled_bssids.insert(bssid->mac);
 }
 
 void ApAutoConfigurationTask::handle_vs_vaps_list_update_notification(
@@ -1387,44 +1393,54 @@ void ApAutoConfigurationTask::handle_vs_vaps_list_update_notification(
     auto notification_in =
         beerocks_header
             ->addClass<beerocks_message::cACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION>();
-    if (notification_in == nullptr) {
+    if (!notification_in) {
         LOG(ERROR) << "addClass cACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION failed";
-        return false;
+        return;
     }
+
+    auto radio_iface = m_btl_ctx.m_radio_managers.get_radio_iface_from_fd(fd);
+    auto db          = AgentDB::get();
+    auto radio       = db->radio(radio_iface);
+    if (!radio) {
+        return;
+    }
+
+    const auto &fronthaul_iface = radio->front.iface_name;
 
     LOG(INFO) << "received ACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION "
               << fronthaul_iface;
 
-    update_vaps_info(fronthaul_iface, notification_in->params().vaps);
-
-    TrafficSeparation::apply_traffic_separation(fronthaul_iface);
+    m_btl_ctx.update_vaps_info(fronthaul_iface, notification_in->params().vaps);
 
     auto notification_out = message_com::create_vs_message<
-        beerocks_message::cACTION_CONTROL_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION>(cmdu_tx);
+        beerocks_message::cACTION_CONTROL_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION>(m_cmdu_tx);
     if (!notification_out) {
         LOG(ERROR) << "Failed building message!";
-        return false;
+        return;
     }
 
     notification_out->params() = notification_in->params();
     LOG(TRACE) << "send ACTION_CONTROL_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION " << fronthaul_iface;
-    send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
+    m_btl_ctx.send_cmdu_to_controller(fronthaul_iface, m_cmdu_tx);
 
     // This probably changed the "AP Operational BSS" list in topology, so send a notification
-    if (!cmdu_tx.create(0, ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE)) {
+    if (!m_cmdu_tx.create(0, ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE)) {
         LOG(ERROR) << "cmdu creation of type TOPOLOGY_NOTIFICATION_MESSAGE, has failed";
-        return false;
+        return;
     }
 
-    auto tlvAlMacAddress = cmdu_tx.addClass<ieee1905_1::tlvAlMacAddress>();
+    auto tlvAlMacAddress = m_cmdu_tx.addClass<ieee1905_1::tlvAlMacAddress>();
     if (!tlvAlMacAddress) {
         LOG(ERROR) << "addClass ieee1905_1::tlvAlMacAddress failed";
-        return false;
+        return;
     }
-    auto db                = AgentDB::get();
+
     tlvAlMacAddress->mac() = db->bridge.mac;
-    send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
-    break;
+    m_btl_ctx.send_cmdu_to_controller(fronthaul_iface, m_cmdu_tx);
+
+    auto &radio_conf_params = m_radios_conf_params[radio_iface];
+
+    radio_conf_params.received_vaps_list_update = true;
 }
 
 bool ApAutoConfigurationTask::ap_autoconfiguration_wsc_calculate_keys(
