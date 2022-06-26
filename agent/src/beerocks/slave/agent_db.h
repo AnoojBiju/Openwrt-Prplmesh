@@ -221,6 +221,7 @@ public:
             bool hybrid_mode_supported;
 
             struct sBssid {
+                std::string iface_name;
                 sMacAddr mac;
                 std::string ssid;
                 bool fronthaul_bss;
