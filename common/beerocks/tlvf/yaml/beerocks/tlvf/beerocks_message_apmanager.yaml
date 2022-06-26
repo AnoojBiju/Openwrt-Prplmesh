@@ -233,6 +233,10 @@ cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST:
     _type: WSC::cConfigData
     _length: [wifi_credentials_size]
 
+cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_RESPONSE:
+  _type: class
+  number_of_bss_available: uint8_t
+
 cACTION_APMANAGER_START_WPS_PBC_REQUEST:
   _type: class
 
