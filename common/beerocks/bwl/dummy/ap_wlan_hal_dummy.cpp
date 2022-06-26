@@ -226,10 +226,17 @@ bool ap_wlan_hal_dummy::update_vap_credentials(
     std::stringstream value;
     for (int id = beerocks::IFACE_VAP_ID_MIN; id < predefined_vaps_num; id++) {
         value << "- vap_" << id << ":" << std::endl;
+        value << "  iface: " << m_radio_info.available_vaps[id].bss << std::endl;
         value << "  bssid: " << m_radio_info.available_vaps[id].mac << std::endl;
         value << "  ssid: '" << m_radio_info.available_vaps[id].ssid << "'" << std::endl;
         value << "  fronthaul: " << m_radio_info.available_vaps[id].fronthaul << std::endl;
         value << "  backhaul: " << m_radio_info.available_vaps[id].backhaul << std::endl;
+
+        // Generate AP_ENABLED event on that BSS iface
+        parsed_obj_map_t parsed_obj;
+        parsed_obj[DUMMY_EVENT_KEYLESS_PARAM_OPCODE] = "AP-ENABLED";
+        parsed_obj[DUMMY_EVENT_KEYLESS_PARAM_IFACE]  = m_radio_info.available_vaps[id].bss;
+        process_dummy_event(parsed_obj);
     }
 
     write_status_file("vap", value.str());
