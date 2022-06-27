@@ -62,7 +62,6 @@ bool prplmesh_cli::get_ip_from_iface(const std::string &iface, std::string &ip)
     return true;
 }
 
-// IEEE Std 802.11™‐2020 - Global operating classes
 float prplmesh_cli::get_freq_from_class(const uint32_t oper_class)
 {
     float freq;
@@ -120,7 +119,7 @@ float prplmesh_cli::get_freq_from_class(const uint32_t oper_class)
     return freq;
 }
 
-bool prplmesh_cli::print_radio(const std::string device_path)
+bool prplmesh_cli::print_radio(std::string device_path)
 {
     std::string radio_ht_path     = device_path + "Radio.*.";
     const amxc_htable_t *ht_radio = m_amx_client->get_htable_object(radio_ht_path);
