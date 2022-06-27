@@ -122,6 +122,15 @@ private:
     std::shared_ptr<char> m_wpa_ctrl_buffer;
     size_t m_wpa_ctrl_buffer_size = 0;
 
+    // Current network configuration
+    struct NetworkConfiguration {
+        std::string bssid;
+        std::string ssid;
+        std::string wps_state;
+        int multi_ap;
+        std::string multi_ap_backhaul_ssid;
+    };
+
     /**
      * @brief Register interface for WPA Control handling.
      * WPA Ctrl socket file path is:
@@ -136,6 +145,21 @@ private:
      * - Wpa_ctrl client failed to add interface.
      */
     bool register_wpa_ctrl_interface(const std::string &interface);
+
+    /**
+     * @brief Get current network configuration information
+     * 
+     * Executes wpa_supplicant command GET_CONFIG to read current network
+     * configuration information for given (or for current) interface
+     * and fills in given structure.
+     *
+     * @param[out] network_configuration Current network configuration info.
+     * @param[in] ifname Interface name.
+     *
+     * @return True on success and false otherwise.
+     */
+    bool get_config(NetworkConfiguration &network_configuration);
+    bool get_config(NetworkConfiguration &network_configuration, const std::string &ifname);
 };
 
 } // namespace nl80211

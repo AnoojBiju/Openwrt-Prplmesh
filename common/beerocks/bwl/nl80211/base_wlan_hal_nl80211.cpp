@@ -754,9 +754,6 @@ bool base_wlan_hal_nl80211::refresh_vaps_info(int id)
         vap_element.bss  = reply["bss[" + std::to_string(vap_id) + "]"];
         vap_element.mac  = reply["bssid[" + std::to_string(vap_id) + "]"];
         vap_element.ssid = reply["ssid[" + std::to_string(vap_id) + "]"];
-        // TODO https://github.com/prplfoundation/prplMesh/issues/1175
-        vap_element.fronthaul = true;
-        vap_element.backhaul  = false;
 
         // VAP does not exists
         if (vap_element.mac.empty()) {
@@ -805,10 +802,38 @@ bool base_wlan_hal_nl80211::refresh_vaps_info(int id)
             }
         }
 
+        // Read network configuration
+        NetworkConfiguration network_configuration;
+        if (!get_config(network_configuration, vap_element.bss)) {
+            LOG(ERROR) << "Failed to get network configuration for iface: " << vap_element.bss;
+            return false;
+        }
+
+        switch (network_configuration.multi_ap) {
+        case beerocks::eBssType::BSS_TYPE_BACKHAUL:
+            vap_element.fronthaul = false;
+            vap_element.backhaul  = true;
+            break;
+        case beerocks::eBssType::BSS_TYPE_FRONTHAUL:
+            vap_element.fronthaul = true;
+            vap_element.backhaul  = false;
+            break;
+        case beerocks::eBssType::BSS_TYPE_BACK_FRONTHAUL:
+            vap_element.fronthaul = true;
+            vap_element.backhaul  = true;
+            break;
+        default:
+            LOG(ERROR) << "Multi AP configuration value is unrecognized "
+                       << network_configuration.multi_ap << ", assign as only fronthaul support";
+            vap_element.fronthaul = true;
+            vap_element.backhaul  = false;
+            break;
+        }
+
         auto &mapped_vap_element = m_radio_info.available_vaps[vap_id];
         if (mapped_vap_element.bss.empty()) {
             LOG(WARNING) << "BSS " << vap_element.bss << " is not preconfigured!"
-                         << "Overriding VAP element.";
+                         << " Overriding VAP element.";
 
             mapped_vap_element = vap_element;
             return true;
@@ -1088,6 +1113,46 @@ bool base_wlan_hal_nl80211::register_wpa_ctrl_interface(const std::string &inter
     if (!m_wpa_ctrl_client.add_interface(interface, wpa_ctrl_path, m_fds_ext_events)) {
         return false;
     }
+    return true;
+}
+
+bool base_wlan_hal_nl80211::get_config(NetworkConfiguration &network_configuration)
+{
+    return get_config(network_configuration, get_iface_name());
+}
+
+bool base_wlan_hal_nl80211::get_config(NetworkConfiguration &network_configuration,
+                                       const std::string &ifname)
+{
+    std::string iface_name = ifname;
+    if (ifname.empty()) {
+        iface_name = get_iface_name();
+    }
+
+    LOG(TRACE) << __func__ << " entered for " << iface_name;
+
+    const char *cmd = "GET_CONFIG";
+    parsed_obj_map_t reply;
+    if (!wpa_ctrl_send_msg(cmd, reply, iface_name)) {
+        LOG(ERROR) << "GET_CONFIG for " << iface_name << " failed";
+        return false;
+    }
+
+    network_configuration.bssid                  = reply["bssid"];
+    network_configuration.ssid                   = reply["ssid"];
+    network_configuration.wps_state              = reply["wps_state"];
+    network_configuration.multi_ap               = beerocks::string_utils::stoi(reply["multi_ap"]);
+    network_configuration.multi_ap_backhaul_ssid = reply["multi_ap_backhaul_ssid"];
+
+    std::string reply_str;
+    for (const auto &entry : reply) {
+        if (!reply_str.empty()) {
+            reply_str += "\n";
+        }
+        reply_str += entry.first + "=" + entry.second;
+    }
+    LOG(TRACE) << "GET_CONFIG reply for " << iface_name << " = \n" << reply_str;
+
     return true;
 }
 
