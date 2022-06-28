@@ -105,6 +105,7 @@ enum class eTlvTypeMap : uint8_t {
     TLV_DPP_CHIRP_VALUE = 0xd3,
     TLV_DEVICE_INVENTORY = 0xd4,
     TLV_AGENT_LIST = 0xd5,
+    TLV_ANTICIPATED_CHANNEL_PREFERENCE = 0xd6,
 };
 // Enum AutoPrint generated code snippet begining- DON'T EDIT!
 // clang-format off
@@ -194,6 +195,7 @@ static const char *eTlvTypeMap_str(eTlvTypeMap enum_value) {
     case eTlvTypeMap::TLV_DPP_CHIRP_VALUE:                          return "eTlvTypeMap::TLV_DPP_CHIRP_VALUE";
     case eTlvTypeMap::TLV_DEVICE_INVENTORY:                         return "eTlvTypeMap::TLV_DEVICE_INVENTORY";
     case eTlvTypeMap::TLV_AGENT_LIST:                               return "eTlvTypeMap::TLV_AGENT_LIST";
+    case eTlvTypeMap::TLV_ANTICIPATED_CHANNEL_PREFERENCE:           return "eTlvTypeMap::TLV_ANTICIPATED_CHANNEL_PREFERENCE";
     }
     static std::string out_str = std::to_string(int(enum_value));
     return out_str.c_str();
@@ -290,6 +292,7 @@ public:
         case 0xd3:
         case 0xd4:
         case 0xd5:
+        case 0xd6:
                 ret = true;
                 break;
             default:
