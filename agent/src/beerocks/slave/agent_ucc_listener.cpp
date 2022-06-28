@@ -243,3 +243,14 @@ bool agent_ucc_listener::handle_custom_command(
     err_string = "handle_custom_command is not supported in agent mode";
     return false;
 }
+
+bool agent_ucc_listener::handle_dev_get_station_info(
+    std::unordered_map<std::string, std::string> &params, std::string &result)
+{
+    if (params.find("sta_mac") == params.end()) {
+        result = "MAC Address is empty";
+        return false;
+    }
+
+    return m_btl_ctx.get_sta_info(tlvf::mac_from_string(params["sta_mac"]));
+}
