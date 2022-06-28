@@ -23,6 +23,7 @@ include_yaml_path: {
     #
     # "wfa_map/",
     "tlvf/wfa_map/eTlvTypeMap.yaml",
+    "tlvf/wfa_map/tlvAnticipatedChannelPreference.yaml",
     "tlvf/wfa_map/tlvApCapability.yaml",
     "tlvf/wfa_map/tlvApHeCapabilities.yaml",
     "tlvf/wfa_map/tlvApHtCapabilities.yaml",

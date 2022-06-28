@@ -1,0 +1,29 @@
+#
+---
+_namespace: wfa_map
+
+tlvAnticipatedChannelPreference:
+  _type: class
+  _is_tlv_class : True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_ANTICIPATED_CHANNEL_PREFERENCE
+  length: uint16_t
+  operating_classes_list_length:
+    _type: uint8_t
+    _length_var: True
+  operating_classes_list:
+    _type: cAnticipatedOperatingClasses
+    _length: [ operating_classes_list_length ]
+
+cAnticipatedOperatingClasses:
+  _type: class
+  operating_class: uint8_t
+  channel_list_length:
+    _type: uint8_t
+    _length_var: True
+  channel_list:
+    _type: uint8_t
+    _length: [ channel_list_length ]
+  reserved: uint32_t
+
