@@ -230,8 +230,9 @@ void monitor_rssi::process()
                         beerocks_message::cACTION_MONITOR_CLIENT_RX_RSSI_MEASUREMENT_NOTIFICATION>(
                         cmdu_tx);
                     if (notification == nullptr) {
-                        LOG(ERROR) << "Failed building "
-                                      "ACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_REQUES message!";
+                        LOG(ERROR)
+                            << "Failed building "
+                               "ACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_NOTIFICATION message!";
                         break;
                     }
 
@@ -380,7 +381,7 @@ void monitor_rssi::send_rssi_measurement_response(const std::string &sta_mac,
                                                                                    request_id);
         if (response == nullptr) {
             LOG(ERROR)
-                << "Failed building ACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_REQUES message!";
+                << "Failed building ACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_RESPONSE message!";
             break;
         }
 
