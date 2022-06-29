@@ -162,7 +162,7 @@ if (USE_PRPLMESH_WHM)
     list(APPEND bpl_platform_sources ${MODULE_PATH}/cfg/prplMesh_WHM/bpl.cpp)
     list(APPEND bpl_platform_sources ${MODULE_PATH}/cfg/prplMesh_WHM/bpl_cfg_wifi.cpp)
 
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WPABI_SOCK}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WBAPI_SOCK}")
 
     find_package(amxb REQUIRED)
     find_package(amxc REQUIRED)

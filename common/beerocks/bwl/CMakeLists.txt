@@ -174,7 +174,7 @@ elseif(BWL_TYPE STREQUAL "WHM")
     find_package(amxp REQUIRED)
     list(APPEND BWL_LIBS amxb amxc amxd amxp)
     list(APPEND BWL_LIBS wbapi)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WPABI_SOCK}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WBAPI_SOCK}")
 
     file(GLOB bwl_platform_sources
         ${bwl_platform_sources}
