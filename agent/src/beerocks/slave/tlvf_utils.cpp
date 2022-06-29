@@ -106,7 +106,8 @@ std::vector<uint8_t> get_operating_class_non_oper_channels(
             auto &channel_info = channel_info_element.second;
             for (const auto &bw_info : channel_info.supported_bw_list) {
                 auto channel = channel_info_element.first;
-                if (operating_class == 128 || operating_class == 129 || operating_class == 130) {
+                if (son::wireless_utils::is_operating_class_using_central_channel(
+                        operating_class)) {
                     channel =
                         son::wireless_utils::get_5g_center_channel(channel, bw_info.bandwidth);
                 }

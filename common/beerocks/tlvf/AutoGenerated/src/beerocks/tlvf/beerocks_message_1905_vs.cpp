@@ -348,14 +348,6 @@ sMacAddr& tlvVsOnDemandChannelSelection::radio_mac() {
     return (sMacAddr&)(*m_radio_mac);
 }
 
-uint8_t& tlvVsOnDemandChannelSelection::channel() {
-    return (uint8_t&)(*m_channel);
-}
-
-uint8_t& tlvVsOnDemandChannelSelection::operating_class() {
-    return (uint8_t&)(*m_operating_class);
-}
-
 uint8_t& tlvVsOnDemandChannelSelection::CSA_count() {
     return (uint8_t&)(*m_CSA_count);
 }
@@ -397,8 +389,6 @@ size_t tlvVsOnDemandChannelSelection::get_initial_size()
 {
     size_t class_size = 0;
     class_size += sizeof(sMacAddr); // radio_mac
-    class_size += sizeof(uint8_t); // channel
-    class_size += sizeof(uint8_t); // operating_class
     class_size += sizeof(uint8_t); // CSA_count
     return class_size;
 }
@@ -415,16 +405,6 @@ bool tlvVsOnDemandChannelSelection::init()
         return false;
     }
     if (!m_parse__) { m_radio_mac->struct_init(); }
-    m_channel = reinterpret_cast<uint8_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
-        return false;
-    }
-    m_operating_class = reinterpret_cast<uint8_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
-        return false;
-    }
     m_CSA_count = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";

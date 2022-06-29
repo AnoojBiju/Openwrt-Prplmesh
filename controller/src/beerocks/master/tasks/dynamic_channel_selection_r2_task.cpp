@@ -682,12 +682,23 @@ bool dynamic_channel_selection_r2_task::handle_on_demand_channel_selection_reque
             FSM_MOVE_SELECTION_STATE(eSelectionState::WAIT_FOR_PREFERENCE);
         }
     }
+    auto requested_channel = channel;
+    if (wireless_utils::is_operating_class_using_central_channel(operating_class)) {
+        auto bandwidth         = wireless_utils::operating_class_to_bandwidth(operating_class);
+        auto source_channel_it = wireless_utils::channels_table_5g.find(channel);
+        if (source_channel_it == wireless_utils::channels_table_5g.end()) {
+            LOG(ERROR) << "Couldn't find source channel " << channel << " for overlapping channels";
+            return false;
+        }
+        requested_channel = source_channel_it->second.at(bandwidth).center_channel;
+    }
 
     // Set the selection request for the agent & radio.
     // If doesn't exist unordered_map on set will create a new one.
     // If it does exist, will be overridden as only the latest request should be handled.
     m_pending_selection_requests[agent_mac][radio_mac] =
-        std::make_shared<sOnDemandChannelSelectionRequest>(channel, operating_class, csa_count);
+        std::make_shared<sOnDemandChannelSelectionRequest>(requested_channel, operating_class,
+                                                           csa_count);
     return true;
 }
 
@@ -1150,10 +1161,10 @@ bool dynamic_channel_selection_r2_task::remove_invalid_channel_selection_request
             if (const auto on_demand_details =
                     std::dynamic_pointer_cast<sOnDemandChannelSelectionRequest>(
                         radio_iter.second)) {
-                const auto operating_class = on_demand_details->operating_class;
-                const auto channel_number  = on_demand_details->channel_number;
-                const auto channel_preference =
-                    database.get_channel_preference(radio_mac, operating_class, channel_number);
+                const auto operating_class    = on_demand_details->operating_class;
+                const auto channel_number     = on_demand_details->channel_number;
+                const auto channel_preference = database.get_channel_preference(
+                    radio_mac, operating_class, channel_number, true);
                 if (channel_preference <= 0) {
                     LOG(ERROR) << "Channel Selection request for channel: " << channel_number
                                << " & operating class: " << operating_class << " is invalid";
