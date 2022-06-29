@@ -291,12 +291,18 @@ bool assoc_frame_utils::get_station_capabilities_from_assoc_field<>(
     sta_caps.max_streams  = sta_caps.he_ss;
     sta_caps.max_mcs      = sta_caps.he_mcs;
 
-    sta_caps.ul_ofdma         = mac_cap_info1.ofdma_ra_support;
-    sta_caps.ul_mu_mimo       = phy_cap_info1.full_band_ul_mu_mimo;
-    sta_caps.ul_mu_mimo_ofdma = phy_cap_info1.part_band_ul_mu_mimo;
-    sta_caps.dl_mu_mimo_ofdma = phy_cap_info1.part_band_dl_mu_mimo;
-    sta_caps.he_su_beamformer = phy_cap_info1.su_beamformer;
-    sta_caps.he_mu_beamformer = phy_cap_info1.mu_beamformer;
+    sta_caps.ul_ofdma      = mac_cap_info1.ofdma_ra_support;
+    sta_caps.twt_requester = mac_cap_info1.twt_req_support;
+    sta_caps.twt_responder = mac_cap_info1.twt_resp_support;
+
+    sta_caps.ul_mu_mimo                    = phy_cap_info1.full_band_ul_mu_mimo;
+    sta_caps.ul_mu_mimo_ofdma              = phy_cap_info1.part_band_ul_mu_mimo;
+    sta_caps.dl_mu_mimo_ofdma              = phy_cap_info1.part_band_dl_mu_mimo;
+    sta_caps.he_su_beamformer              = phy_cap_info1.su_beamformer;
+    sta_caps.he_su_beamformee              = phy_cap_info1.su_beamformee;
+    sta_caps.he_mu_beamformer              = phy_cap_info1.mu_beamformer;
+    sta_caps.he_beamformee_sts_less_80mhz  = phy_cap_info1.beamformee_sts_less_80mhz;
+    sta_caps.he_beamformee_sts_great_80mhz = phy_cap_info1.beamformee_sts_great_80mhz;
 
     return true;
 }

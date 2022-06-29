@@ -230,8 +230,8 @@ typedef struct sStaHePhyCapInfo1 {
     uint64_t su_beamformer : 1;
     uint64_t su_beamformee : 1;
     uint64_t mu_beamformer : 1;
-    uint64_t beamform_sts_less_80mhz : 3;
-    uint64_t beamform_sts_great_80mhz : 3;
+    uint64_t beamformee_sts_less_80mhz : 3;
+    uint64_t beamformee_sts_great_80mhz : 3;
     uint64_t num_sound_dim_less_80mhz : 3;
     uint64_t num_sound_dim_great_80mhz : 3;
     uint64_t ng_16_su_fb : 1;
@@ -283,8 +283,8 @@ typedef struct sStaHePhyCapInfo1 {
     uint64_t ng_16_su_fb : 1;
     uint64_t num_sound_dim_great_80mhz : 3;
     uint64_t num_sound_dim_less_80mhz : 3;
-    uint64_t beamform_sts_great_80mhz : 3;
-    uint64_t beamform_sts_less_80mhz : 3;
+    uint64_t beamformee_sts_great_80mhz : 3;
+    uint64_t beamformee_sts_less_80mhz : 3;
     uint64_t mu_beamformer : 1;
     uint64_t su_beamformee : 1;
     uint64_t su_beamformer : 1;
