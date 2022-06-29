@@ -48,6 +48,18 @@
     - docker-build
   needs: []
 
+.build-for-openwrt-whm:
+  extends: .build-for-openwrt
+  script:
+    - mkdir -p "build/$TARGET_DEVICE"
+    - tools/docker/builder/openwrt/build.sh --verbose -d "$TARGET_DEVICE" -t "prplmesh-builder-whm-$TARGET_DEVICE:$CI_COMMIT_SHORT_SHA-$CI_PIPELINE_ID" --whm 2>&1
+  artifacts:
+    paths:
+      - "buildWHM/*"
+  rules:
+  - when: always
+    allow_failure: false
+
 .build-for-openwrt-mmx:
   extends: .build-for-openwrt
   script:
@@ -126,6 +138,18 @@
   tags:
     - targets
   timeout: 20m
+
+.test-on-target-whm:
+  extends: .test-on-target
+  before_script:
+  # Remove any leftover from docker-compose
+  - ./dctest.py --clean
+  # we need a list of all the targets to be able to kill them
+  - ALL_TARGETS="turris-omnia-1 turris-omnia-2 glinet-b1300-1 netgear-rax40-1 nec-wx3000hp-1"
+  # kill prplmesh on each target to make sure they don't interfere with the test
+  - for i in $ALL_TARGETS ; do ssh "$i" 'pgrep -f beerocks | xargs kill -9 2>/dev/null' || true ; done
+  - tools/deploy_firmware.py --device "$TARGET_DEVICE" --target-name "$TARGET_DEVICE_NAME" --image "$OPENWRT_IMAGE" --whm --full --configuration ci/configuration/boardfarm/"$TARGET_DEVICE_NAME".sh
+  - tools/deploy_ipk.sh $TARGET_DEVICE_NAME "buildWHM/$TARGET_DEVICE/"prplmesh.ipk
 
 .test-on-rdkb:
   stage: test

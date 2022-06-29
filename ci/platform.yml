@@ -56,6 +56,16 @@ build-for-intel-mips:
   variables:
     TARGET_DEVICE: "intel_mips"
 
+build-for-turris-omnia-whm:
+  extends: .build-for-openwrt-whm
+  variables:
+    TARGET_DEVICE: "turris-omnia"
+
+build-for-glinet-b1300-whm:
+  extends: .build-for-openwrt-whm
+  variables:
+    TARGET_DEVICE: "glinet-b1300"
+
 build-for-turris-omnia-mmx:
   extends: .build-for-openwrt-mmx
   variables:
@@ -132,6 +142,15 @@ test-on-glinet-b1300:
     TARGET_DEVICE_NAME: glinet-b1300-1
     OPENWRT_IMAGE: openwrt-ipq40xx-generic-glinet_gl-b1300-squashfs-sysupgrade.bin
   needs: ["build-for-glinet-b1300"]
+
+test-on-glinet-b1300-whm:
+  extends: .test-on-target-whm
+  variables:
+    TARGET_DEVICE: glinet-b1300
+    TARGET_DEVICE_NAME: glinet-b1300-1
+    OPENWRT_IMAGE: openwrt-ipq40xx-generic-glinet_gl-b1300-squashfs-sysupgrade.bin
+  needs: ["build-for-glinet-b1300-whm"]
+  allow_failure: true
 
 boardfarm-on-nec-wx3000hp:
  extends: .test-on-target
