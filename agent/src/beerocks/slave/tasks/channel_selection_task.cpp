@@ -272,7 +272,7 @@ void ChannelSelectionTask::handle_channel_selection_request(ieee1905_1::CmduMess
 
     LOG(DEBUG) << "Received CHANNEL_SELECTION_REQUEST, mid=" << std::hex << mid;
 
-    // Clear previous request, if any
+    // Clear previous request, if any.
     m_pending_selection.mid = mid;
     m_pending_selection.requests.clear();
 
@@ -356,6 +356,7 @@ void ChannelSelectionTask::handle_channel_selection_request(ieee1905_1::CmduMess
     LOG(DEBUG) << "Sending Channel-Selection-Response to broker";
     m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, db->controller_info.bridge_mac, db->bridge.mac);
 
+    bool manually_send_operating_report = false;
     // Handle pending Outgoing requests.
     for (auto &request_iter : m_pending_selection.requests) {
         auto &request         = request_iter.second;
@@ -371,6 +372,7 @@ void ChannelSelectionTask::handle_channel_selection_request(ieee1905_1::CmduMess
         if (!request.channel_switch_needed && !request.power_switch_received) {
             LOG(DEBUG) << "No Channel Switch needed for radio " << radio_mac;
             request.manually_send_operating_report = true;
+            manually_send_operating_report         = true;
             continue;
         }
 
@@ -399,6 +401,13 @@ void ChannelSelectionTask::handle_channel_selection_request(ieee1905_1::CmduMess
         }
     }
 
+    if (manually_send_operating_report) {
+        // No need to manually send operating channel report message.
+        // If a Channel-Switch was requested, a CSA notification
+        // will be received, and an operating channel report will
+        // be send from it's handler.
+        return;
+    }
     // build and send operating channel report message
     if (!m_cmdu_tx.create(0, ieee1905_1::eMessageType::OPERATING_CHANNEL_REPORT_MESSAGE)) {
         LOG(ERROR) << "cmdu creation of type OPERATING_CHANNEL_REPORT_MESSAGE, has failed";
