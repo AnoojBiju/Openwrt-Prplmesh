@@ -509,10 +509,9 @@ bool slave_thread::read_platform_configuration()
         return false;
     }
 
-    if (!bpl::cfg_get_zwdfs_enable(db->device_conf.zwdfs_enable)) {
-        LOG(WARNING) << "cfg_get_zwdfs_enable() failed!, using default configuration, zwdfs is "
-                     << (db->device_conf.zwdfs_enable ? std::string("enabled.")
-                                                      : std::string("disabled."));
+    if (!bpl::cfg_get_zwdfs_flag(db->device_conf.zwdfs_flag)) {
+        LOG(WARNING) << "cfg_get_zwdfs_flag() failed!, using default configuration: "
+                     << beerocks::utils::get_zwdfs_string(db->device_conf.zwdfs_flag);
     }
 
     if (!bpl::cfg_get_best_channel_rank_threshold(db->device_conf.best_channel_rank_threshold)) {
@@ -561,7 +560,7 @@ bool slave_thread::read_platform_configuration()
     LOG(DEBUG) << "backhaul_preferred_radio_band: "
                << db->device_conf.back_radio.backhaul_preferred_radio_band;
     LOG(DEBUG) << "rdkb_extensions: " << db->device_conf.rdkb_extensions_enabled;
-    LOG(DEBUG) << "zwdfs_enable: " << db->device_conf.zwdfs_enable;
+    LOG(DEBUG) << beerocks::utils::get_zwdfs_string(db->device_conf.zwdfs_flag);
     LOG(DEBUG) << "best_channel_rank_threshold: " << db->device_conf.best_channel_rank_threshold;
     LOG(DEBUG) << "max_prioritization_rules: " << db->device_conf.max_prioritization_rules;
 

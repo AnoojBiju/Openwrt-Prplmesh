@@ -360,7 +360,7 @@ void ChannelSelectionTask::handle_channel_selection_request(ieee1905_1::CmduMess
     for (auto &request_iter : m_pending_selection.requests) {
         auto &request         = request_iter.second;
         const auto &radio_mac = request_iter.first;
-        auto radio            = AgentDB::get()->get_radio_by_mac(radio_mac);
+        auto radio            = db->get_radio_by_mac(radio_mac);
 
         if (!radio) {
             LOG(ERROR) << "Radio " << radio_mac << " does not exist on the db";
@@ -374,18 +374,26 @@ void ChannelSelectionTask::handle_channel_selection_request(ieee1905_1::CmduMess
             continue;
         }
 
-        // Check if ZWDFS is needed, if it is needed set the selected channel
-        // and move the ZWDFS-FSM to ZWDFS_SWITCH_ANT_SET_CHANNEL_REQUEST.
-        // Otherwise Build and send a Channel-Switch request.
-        if (m_zwdfs_ap_enabled) {
-            if (request.selected_channel.dfs_state != beerocks_message::eDfsState::NOT_DFS &&
-                request.selected_channel.dfs_state != beerocks_message::eDfsState::AVAILABLE) {
+        // Check if ZWDFS if ZWDFS is needed and On-Selection is enabled.
+        // if it is needed & enabled set the selected channel and move
+        // the ZWDFS-FSM to ZWDFS_SWITCH_ANT_SET_CHANNEL_REQUEST.
+        // If ZWDFS is not needed or is not enabled, perform a regular channel switch.
+        if (request.selected_channel.dfs_state == beerocks_message::eDfsState::USABLE) {
+            // ZWDFS is needed
+            bool zwdfs_enabled = m_zwdfs_ap_enabled && beerocks::utils::compare_zwdfs_flag(
+                                                           db->device_conf.zwdfs_flag,
+                                                           beerocks::eZWDFS_flags::ON_SELECTION);
+            if (zwdfs_enabled) {
                 m_selected_channel          = request.selected_channel;
                 m_zwdfs_primary_radio_iface = radio->front.iface_name;
                 ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_SET_CHANNEL_REQUEST);
+                // Channel switch is handled by the ZWDFS flow.
                 continue;
             }
+            LOG(INFO) << "ZWDFS is needed but disabled. performing a "
+                         "regular Channel-Switch request";
         }
+        // Perform a channel switch.
         if (!send_channel_switch_request(radio_mac, request)) {
             LOG(ERROR) << "Failed to send Channel-Switch request.";
         }
@@ -512,9 +520,16 @@ void ChannelSelectionTask::handle_vs_csa_notification(
 
     auto sub_band_dfs_enable = db->device_conf.front_radio.config[sender_iface_name].sub_band_dfs;
 
-    if (db->device_conf.zwdfs_enable) {
+    bool zwdfs_on_radar, zwdfs_on_selection, pre_cac;
+    utils::get_zwdfs_flags(db->device_conf.zwdfs_flag, zwdfs_on_radar, zwdfs_on_selection, pre_cac);
+
+    if (zwdfs_on_radar || zwdfs_on_selection) {
         // Initiate Agent Managed ZWDFS flow.
         if (notification->cs_params().switch_reason == beerocks::CH_SWITCH_REASON_RADAR) {
+            if (!zwdfs_on_radar) {
+                LOG(INFO) << "ZWDFS On-Radar is not enabled";
+                return;
+            }
             if (!sub_band_dfs_enable && !sender_radio->front.zwdfs &&
                 m_zwdfs_state != eZwdfsState::WAIT_FOR_ZWDFS_CAC_STARTED &&
                 m_zwdfs_state != eZwdfsState::WAIT_FOR_ZWDFS_CAC_COMPLETED) {
@@ -548,6 +563,8 @@ void ChannelSelectionTask::handle_vs_csa_notification(
                 }
             }
         }
+    } else {
+        LOG(INFO) << "ZWDFS is disabled";
     }
 }
 
@@ -1378,8 +1395,8 @@ bool ChannelSelectionTask::check_is_there_better_channel_than_current(const sMac
                << (int)selected_channel.preference_score;
 
     if (current_preference >= selected_channel.preference_score) {
-        LOG(DEBUG)
-            << "Currect channel is better or as good as the next best channel, no need to switch";
+        LOG(DEBUG) << "Currect channel is better or as good as the next best channel, no need "
+                      "to switch";
         return true;
     }
 
@@ -1774,11 +1791,13 @@ void ChannelSelectionTask::zwdfs_fsm()
                     db->device_conf.best_channel_rank_threshold)) {
             // If current channel has valid rank and selected channel doesn't meet the threshold requirement,
             // no need to switch-channel
-            LOG(INFO)
-                << "Channel " << m_selected_channel.channel << " with bw=" << m_selected_channel.bw
-                << " and dfs_state=" << m_selected_channel.dfs_state
-                << " has better rank than current channel, but did not pass the ranking threshold="
-                << db->device_conf.best_channel_rank_threshold << ", Current channel is selected.";
+            LOG(INFO) << "Channel " << m_selected_channel.channel
+                      << " with bw=" << m_selected_channel.bw
+                      << " and dfs_state=" << m_selected_channel.dfs_state
+                      << " has better rank than current channel, but did not pass the ranking "
+                         "threshold="
+                      << db->device_conf.best_channel_rank_threshold
+                      << ", Current channel is selected.";
             ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
             break;
         }
@@ -2026,7 +2045,7 @@ void ChannelSelectionTask::zwdfs_fsm()
         // the feature.
         // Skip this case if the feature is disabled and move directly to not-running.
         auto db = AgentDB::get();
-        if (!db->device_conf.zwdfs_enable) {
+        if (!utils::compare_zwdfs_flag(db->device_conf.zwdfs_flag, beerocks::eZWDFS_flags::ALL)) {
             ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
             break;
         }

@@ -8,6 +8,7 @@
 
 #include "cac_capabilities_database.h"
 #include "agent_db.h"
+#include <bcl/beerocks_utils.h>
 #include <bcl/son/son_wireless_utils.h>
 #include <tlvf/tlvftypes.h>
 
@@ -66,7 +67,7 @@ bool CacCapabilitiesDatabase::is_cac_method_supported(const sMacAddr &radio_mac,
 
     // zwdf existance means that de facto we support mimo dimension reduced
     if (method == wfa_map::eCacMethod::CONTINUOUS_CAC_WITH_DEDICATED_RADIO) {
-        return db->device_conf.zwdfs_enable;
+        return db->device_conf.zwdfs_flag > 0;
     }
 
     // we don't support anything else
