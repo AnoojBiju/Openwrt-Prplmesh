@@ -171,6 +171,10 @@ constexpr int DEFAULT_UNSUCCESSFUL_ASSOC_REPORT_POLICY = 1;
 // Default value in attempts per minute for maximum rate for reporting unsuccessful association attempts
 constexpr int DEFAULT_UNSUCCESSFUL_ASSOC_MAX_REPORTING_RATE = 30;
 
+// Default DCS Channel Pool
+constexpr int BPL_DCS_CHANNEL_POOL_LEN    = 64;
+constexpr char DEFAULT_DCS_CHANNEL_POOL[] = "0";
+
 /****************************************************************************/
 /******************************* Structures *********************************/
 /****************************************************************************/
@@ -359,6 +363,10 @@ int cfg_get_certification_mode();
 int cfg_get_load_steer_on_vaps(int num_of_interfaces,
                                char load_steer_on_vaps[BPL_LOAD_STEER_ON_VAPS_LEN]);
 
+/**
+ * 
+ */
+int cfg_get_dcs_channel_pool(int radio_num, char channel_pool[BPL_DCS_CHANNEL_POOL_LEN]);
 /**
  * Returns the maximum number of failures allowed on agent before stopping its execution.
  *
