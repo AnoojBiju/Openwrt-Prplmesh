@@ -120,18 +120,18 @@ class NbapiSta(PrplMeshBaseTest):
                         f"Wrong BSSID [{bss.bssid}] specified for sta {sta.mac}"
                     assert time_stamp != 0, "Value for TimeStamp is not specified."
 
-                    debug("\nChecking HT Capabilities")
+                    debug("\nChecking HT capabilities")
                     ht_caps = controller.nbapi_get(sta.path + ".HTCapabilities")
                     for key, value in sorted(ht_caps.items()):
                         debug("{} : {}".format(key, value))
 
-                    debug("\nChecking VHT Capabilities")
+                    debug("\nChecking VHT capabilities")
                     vht_caps = controller.nbapi_get(sta.path + ".VHTCapabilities")
                     for key, value in sorted(vht_caps.items()):
                         debug("{} : {}".format(key, value))
 
-                    debug("\nChecking HE Capabilities")
-                    he_caps = controller.nbapi_get(sta.path + ".HECapabilities")
+                    debug("\nChecking HE capabilities")
+                    he_caps = controller.nbapi_get(sta.path + ".WiFi6Capabilities")
                     for key, value in sorted(he_caps.items()):
                         debug("{} : {}".format(key, value))
 

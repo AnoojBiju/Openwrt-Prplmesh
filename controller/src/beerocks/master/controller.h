@@ -236,7 +236,7 @@ private:
 
     /**
      * @brief Get info from 'AP HE Capabilities' TLV,
-     * set data to AP HECapabilities data element.
+     * set data to AP WiFi6Capabilities data element.
      *
      * @param cmdu_rx AP Capability Report message.
      * @return True on success, false otherwise.

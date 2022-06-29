@@ -83,18 +83,18 @@ class NbapiAssociationEvent(PrplMeshBaseTest):
                 if re.match(time_format, time_stamp) is None:
                     self.fail(f'Fail. NBAPI time stamp has unncorrect format: {time_stamp}')
 
-                debug("\nChecking HT Capabilities")
+                debug("\nChecking HT capabilities")
                 ht_caps = controller.nbapi_get(assoc_data + ".HTCapabilities")
                 for key, value in sorted(ht_caps.items()):
                     debug("{} : {}".format(key, value))
 
-                debug("\nChecking VHT Capabilities")
+                debug("\nChecking VHT capabilities")
                 vht_caps = controller.nbapi_get(assoc_data + ".VHTCapabilities")
                 for key, value in sorted(vht_caps.items()):
                     debug("{} : {}".format(key, value))
 
-                debug("\nChecking HE Capabilities")
-                he_caps = controller.nbapi_get(assoc_data + ".HECapabilities")
+                debug("\nChecking HE capabilities")
+                he_caps = controller.nbapi_get(assoc_data + ".WiFi6Capabilities")
                 for key, value in sorted(he_caps.items()):
                     debug("{} : {}".format(key, value))
 
