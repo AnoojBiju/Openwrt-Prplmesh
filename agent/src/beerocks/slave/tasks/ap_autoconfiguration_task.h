@@ -58,7 +58,7 @@ private:
         SEND_AP_AUTOCONFIGURATION_WSC_M1,
         WAIT_AP_AUTOCONFIGURATION_WSC_M2,
         SEND_MONITOR_SON_CONFIG,
-        CONFIGIRED
+        CONFIGURED
     };
 
     struct sConfigurationParams {
