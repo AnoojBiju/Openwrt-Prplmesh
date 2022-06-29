@@ -314,16 +314,13 @@ int cfg_notify_error(int code, const char data[BPL_ERROR_STRING_LEN]) { return 0
 
 int cfg_get_administrator_credentials(char pass[BPL_PASS_LEN]) { return 0; }
 
-bool cfg_get_zwdfs_enable(bool &enable)
+bool cfg_get_zwdfs_flag(int &flag)
 {
-    int retVal = -1;
-    if (cfg_get_prplmesh_param_int_default("zwdfs_enable", &retVal, DEFAULT_ZWDFS_ENABLE) ==
+    if (cfg_get_prplmesh_param_int_default("zwdfs_flag", &flag, DEFAULT_ZWDFS_DISABLE) ==
         RETURN_ERR) {
-        MAPF_ERR("Failed to read zwdfs_enable parameter");
+        MAPF_ERR("Failed to read zwdfs_flag parameter");
         return false;
     }
-
-    enable = (retVal == 1);
 
     return true;
 }

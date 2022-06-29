@@ -349,16 +349,75 @@ int cfg_notify_error(int code, const char data[BPL_ERROR_STRING_LEN]) { return R
 
 int cfg_get_administrator_credentials(char pass[BPL_PASS_LEN]) { return RETURN_ERR; }
 
-bool cfg_get_zwdfs_enable(bool &enable)
+int cfg_get_sta_iface(const char iface[BPL_IFNAME_LEN], char sta_iface[BPL_IFNAME_LEN])
 {
-    int zwdfs_enable;
-
-    if (cfg_get_param_int("zwdfs_enable", zwdfs_enable) < 0) {
-        MAPF_DBG("Failed to read zwdfs_enable parameter - setting default value");
-        zwdfs_enable = DEFAULT_ZWDFS_ENABLE;
+    if (!iface || !sta_iface) {
+        MAPF_ERR("cfg_get_sta_iface: invalid input: iface or sta_iface are NULL");
+        return RETURN_ERR;
     }
 
-    enable = (zwdfs_enable == 1);
+    mapf::utils::copy_string(sta_iface, iface, BPL_IFNAME_LEN);
+    return RETURN_OK;
+}
+
+int cfg_get_hostap_iface(int32_t radio_num, char hostap_iface[BPL_IFNAME_LEN])
+{
+    if (!hostap_iface) {
+        MAPF_ERR("cfg_get_hostap_iface: invalid input: hostap_iface is NULL");
+        return RETURN_ERR;
+    }
+
+    if (radio_num < 0) {
+        MAPF_ERR("cfg_get_hostap_iface: invalid input: radio_num < 0");
+        return RETURN_ERR;
+    }
+
+    std::string iface_str;
+    if (!radio_num_to_wlan_iface_name(radio_num, iface_str)) {
+        MAPF_ERR("cfg_get_hostap_iface: unknown iface index: " + std::to_string(radio_num));
+        return RETURN_ERR;
+    }
+
+    mapf::utils::copy_string(hostap_iface, iface_str.c_str(), BPL_IFNAME_LEN);
+    return RETURN_OK;
+}
+
+int cfg_get_all_prplmesh_wifi_interfaces(BPL_WLAN_IFACE *interfaces, int *num_of_interfaces)
+{
+    if (!interfaces) {
+        MAPF_ERR("cfg_get_all_prplmesh_wifi_interfaces: invalid input: interfaces is NULL");
+        return RETURN_ERR;
+    }
+    if (!num_of_interfaces) {
+        MAPF_ERR("cfg_get_all_prplmesh_wifi_interfaces: invalid input: num_of_interfaces is NULL");
+        return RETURN_ERR;
+    }
+    if (*num_of_interfaces < 1) {
+        MAPF_ERR(
+            "cfg_get_all_prplmesh_wifi_interfaces: invalid input: max num_of_interfaces value < 1");
+        return RETURN_ERR;
+    }
+
+    int interfaces_count = 0;
+    for (int index = 0; index < *num_of_interfaces; index++) {
+        if (cfg_get_hostap_iface(index, interfaces[interfaces_count].ifname) == RETURN_ERR) {
+            MAPF_ERR("cfg_get_all_prplmesh_wifi_interfaces: failed to get wifi interface for agent"
+                     << index);
+        }
+        interfaces[interfaces_count++].radio_num = index;
+    }
+
+    *num_of_interfaces = interfaces_count;
+
+    return RETURN_OK;
+}
+
+bool cfg_get_zwdfs_flag(int &flag)
+{
+    if (cfg_get_param_int("zwdfs_flag", flag) < 0) {
+        MAPF_DBG("Failed to read zwdfs_flag parameter - setting default value");
+        flag = DEFAULT_ZWDFS_DISABLE;
+    }
 
     return true;
 }
