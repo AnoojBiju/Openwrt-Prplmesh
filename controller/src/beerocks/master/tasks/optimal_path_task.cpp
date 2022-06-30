@@ -592,9 +592,22 @@ void optimal_path_task::work()
                     }
                     dl_rssi = wireless_utils::convert_rssi_from_rcpi(dl_rcpi);
 
-                    TASK_LOG(DEBUG) << "bssid " << hostap << " dl_rssi: " << int(dl_rssi)
-                                    << ", dl_snr:" << int(dl_snr);
-                } else {
+                    if (dl_rssi == beerocks::RSSI_INVALID) {
+                        if (hostap == current_hostap) {
+                            estimate_dl_rssi = true;
+                            LOG(DEBUG) << "wrong beacon measurement data on current AP " << hostap
+                                       << ", estimating dl_rssi";
+                        } else {
+                            LOG(DEBUG)
+                                << "wrong beacon measurement data on AP " << hostap << ", skipping";
+                            continue;
+                        }
+                    } else {
+                        TASK_LOG(DEBUG) << "bssid " << hostap << " dl_rssi: " << int(dl_rssi)
+                                        << ", dl_snr:" << int(dl_snr);
+                    }
+                }
+                if (estimate_dl_rssi) {
                     int8_t rx_rssi, rx_packets;
                     if (!station->get_cross_rx_rssi(hostap, rx_rssi, rx_packets)) {
                         TASK_LOG(ERROR) << "can't get cross_rx_rssi for hostap " << hostap;
@@ -679,9 +692,22 @@ void optimal_path_task::work()
                     }
                     dl_rssi = wireless_utils::convert_rssi_from_rcpi(dl_rcpi);
 
-                    TASK_LOG(DEBUG) << "bssid " << hostap << " dl_rssi: " << int(dl_rssi)
-                                    << ", dl_snr:" << int(dl_snr);
-                } else {
+                    if (dl_rssi == beerocks::RSSI_INVALID) {
+                        if (hostap == current_hostap) {
+                            estimate_dl_rssi = true;
+                            LOG(DEBUG) << "wrong beacon measurement data on current AP " << hostap
+                                       << ", estimating dl_rssi";
+                        } else {
+                            LOG(DEBUG)
+                                << "wrong beacon measurement data on AP " << hostap << ", skipping";
+                            continue;
+                        }
+                    } else {
+                        TASK_LOG(DEBUG) << "bssid " << hostap << " dl_rssi: " << int(dl_rssi)
+                                        << ", dl_snr:" << int(dl_snr);
+                    }
+                }
+                if (estimate_dl_rssi) {
                     int8_t rx_rssi, rx_packets;
                     if (!station->get_cross_rx_rssi(hostap, rx_rssi, rx_packets)) {
                         TASK_LOG(ERROR) << "can't get cross_rx_rssi for hostap " << hostap;
