@@ -530,7 +530,14 @@ bool ap_wlan_hal_nl80211::sta_bss_steer(int8_t vap_id, const std::string &mac,
 
     // Target BSSID
     cmd += std::string() + " neighbor=" + bssid + ",0," + std::to_string(oper_class) + "," +
-           std::to_string(chan) + ",0";
+           std::to_string(chan);
+    if (chan < 36) {
+        cmd += ",7"; /* ht */
+    } else {
+        cmd += ",9"; /* vht */
+    }
+    //add highest preference for the bss candidate
+    cmd += ",0301ff";
 
     // Send command
     if (!wpa_ctrl_send_msg(cmd, m_radio_info.available_vaps[vap_id].bss)) {
