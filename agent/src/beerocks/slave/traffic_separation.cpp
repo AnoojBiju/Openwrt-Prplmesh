@@ -68,6 +68,13 @@ void TrafficSeparation::traffic_seperation_configuration_clear()
                 continue;
             }
 
+            // consider vap_id shift when main vap_id is greater than 0
+            // (case of glinet where main vap is wlan0-1)
+            auto iface_ids = utils::get_ids_from_iface_string(radio->front.iface_name);
+            if (iface_ids.vap_id >= IFACE_VAP_ID_MIN) {
+                bss_id += iface_ids.vap_id;
+            }
+
             // TODO: Save the bss iface name on the database instead of using bss ID.
             auto bss_iface_name =
                 utils::get_iface_string_from_iface_vap_ids(radio->front.iface_name, bss_id);
