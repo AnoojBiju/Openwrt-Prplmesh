@@ -243,9 +243,9 @@ stop_function() {
 
     # shellcheck disable=SC2050
     [ "@BWL_TYPE@" = "DUMMY" ] && [ "$PLATFORM_INIT" = "true" ] && platform_deinit
-    prplmesh_framework_deinit
-    prplmesh_controller_stop
     prplmesh_agent_stop
+    prplmesh_controller_stop
+    prplmesh_framework_deinit
     [ "$DELETE_LOGS" = "true" ] && prplmesh_delete_logs
 }
 
