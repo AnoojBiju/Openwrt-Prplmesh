@@ -195,8 +195,6 @@ void monitor_rssi::process()
         return;
     }
 
-    LOG(DEBUG) << "monitor_rssi::process get_sta_count=" << mon_db->get_sta_count();
-
     for (auto it = mon_db->sta_begin(); it != mon_db->sta_end(); ++it) {
         auto sta_mac  = it->first;
         auto sta_node = it->second;
