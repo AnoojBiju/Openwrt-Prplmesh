@@ -281,7 +281,7 @@ void association_handling_task::handle_response(std::string mac,
         }
 
         if (database.settings_client_11k_roaming() &&
-            (database.get_node_beacon_measurement_support_level(sta_mac) ==
+            (database.get_node_beacon_measurement_support_level(sta_mac) !=
              beerocks::BEACON_MEAS_UNSUPPORTED) &&
             (database.get_node_type(sta_mac) == beerocks::TYPE_CLIENT)) {
 

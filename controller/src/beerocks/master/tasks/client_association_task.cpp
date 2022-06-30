@@ -203,6 +203,10 @@ bool client_association_task::handle_cmdu_1905_client_capability_report_message(
             m_database.update_node_bw(sta_mac, client_bw_max);
         }
     }
+    if (capabilities.rrm_supported) {
+        m_database.set_node_beacon_measurement_support_level(sta_mac_str,
+                                                             beerocks::BEACON_MEAS_BSSID_SUPPORTED);
+    }
 
     return true;
 }

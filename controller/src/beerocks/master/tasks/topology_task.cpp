@@ -517,6 +517,10 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
         if (vs_tlv) {
             database.set_node_vap_id(client_mac_str, vs_tlv->vap_id());
             database.set_station_capabilities(client_mac_str, vs_tlv->capabilities());
+            if (vs_tlv->capabilities().rrm_supported) {
+                database.set_node_beacon_measurement_support_level(
+                    client_mac_str, beerocks::BEACON_MEAS_BSSID_SUPPORTED);
+            }
         }
 
         // Notify existing steering task of completed connection
