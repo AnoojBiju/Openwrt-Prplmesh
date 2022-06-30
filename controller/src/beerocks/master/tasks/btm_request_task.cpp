@@ -183,34 +183,12 @@ void btm_request_task::steer_sta()
     if (client) {
         dm_update_multi_ap_steering_params(m_database.get_node_11v_capability(*client));
     }
-
     // Send 17.1.27	Client Association Control Request
-    if (!m_cmdu_tx.create(0,
-                          ieee1905_1::eMessageType::CLIENT_ASSOCIATION_CONTROL_REQUEST_MESSAGE)) {
-        LOG(ERROR)
-            << "cmdu creation of type CLIENT_ASSOCIATION_CONTROL_REQUEST_MESSAGE, has failed";
-        return;
-    }
+    std::unordered_set<sMacAddr> unblock_list{tlvf::mac_from_string(m_sta_mac)};
 
-    auto association_control_request_tlv =
-        m_cmdu_tx.addClass<wfa_map::tlvClientAssociationControlRequest>();
-    if (!association_control_request_tlv) {
-        LOG(ERROR) << "addClass wfa_map::tlvClientAssociationControlRequest failed";
-        return;
-    }
-
-    association_control_request_tlv->bssid_to_block_client() =
-        tlvf::mac_from_string(m_target_bssid);
-    association_control_request_tlv->association_control() =
-        wfa_map::tlvClientAssociationControlRequest::UNBLOCK;
-    association_control_request_tlv->validity_period_sec() = 0;
-    association_control_request_tlv->alloc_sta_list();
-    auto sta_list_unblock         = association_control_request_tlv->sta_list(0);
-    std::get<1>(sta_list_unblock) = tlvf::mac_from_string(m_sta_mac);
-
-    TASK_LOG(DEBUG) << "Sending allow request for " << m_sta_mac << " to bssid " << m_target_bssid
-                    << " id=" << int(id);
-    son_actions::send_cmdu_to_agent(target_agent->al_mac, m_cmdu_tx, m_database);
+    son_actions::send_client_association_control(
+        m_database, m_cmdu_tx, target_agent->al_mac, tlvf::mac_from_string(m_target_bssid),
+        unblock_list, 0, wfa_map::tlvClientAssociationControlRequest::UNBLOCK);
 
     // update bml listeners
     bml_task::client_allow_req_available_event client_allow_event;

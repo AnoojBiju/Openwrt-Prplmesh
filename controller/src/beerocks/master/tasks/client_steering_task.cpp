@@ -168,48 +168,30 @@ void client_steering_task::steer_sta()
         }
     }
 
-    std::string radio_mac = m_database.get_node_parent_radio(m_target_bssid);
-    if (radio_mac.empty()) {
+    std::string target_radio_mac = m_database.get_node_parent_radio(m_target_bssid);
+    if (target_radio_mac.empty()) {
         LOG(ERROR) << "parent radio for target-bssid=" << m_target_bssid
                    << " not found, exiting steering task";
         return;
     }
-    if (client) {
-        dm_update_multi_ap_steering_params(m_database.get_node_11v_capability(*client));
-    }
-    // Send 17.1.27	Client Association Control Request
-    if (!m_cmdu_tx.create(0,
-                          ieee1905_1::eMessageType::CLIENT_ASSOCIATION_CONTROL_REQUEST_MESSAGE)) {
-        LOG(ERROR)
-            << "cmdu creation of type CLIENT_ASSOCIATION_CONTROL_REQUEST_MESSAGE, has failed";
-        return;
-    }
 
-    auto association_control_request_tlv =
-        m_cmdu_tx.addClass<wfa_map::tlvClientAssociationControlRequest>();
-    if (!association_control_request_tlv) {
-        LOG(ERROR) << "addClass wfa_map::tlvClientAssociationControlRequest failed";
-        return;
-    }
-
-    association_control_request_tlv->bssid_to_block_client() =
-        tlvf::mac_from_string(m_target_bssid);
-    association_control_request_tlv->association_control() =
-        wfa_map::tlvClientAssociationControlRequest::UNBLOCK;
-    association_control_request_tlv->validity_period_sec() = 0;
-    association_control_request_tlv->alloc_sta_list();
-    auto sta_list_unblock         = association_control_request_tlv->sta_list(0);
-    std::get<1>(sta_list_unblock) = tlvf::mac_from_string(m_sta_mac);
-
-    auto agent_mac = m_database.get_node_parent_ire(radio_mac);
-    if (agent_mac == network_utils::ZERO_MAC) {
-        LOG(ERROR) << "parent ire for radio_mac=" << radio_mac
+    auto target_agent = m_database.get_agent_by_bssid(tlvf::mac_from_string(m_target_bssid));
+    if (!target_agent || tlvf::mac_to_string(target_agent->al_mac).empty()) {
+        LOG(ERROR) << "Parent agent for bssid= " << m_target_bssid
                    << " not found, exiting steering task";
         return;
     }
-    TASK_LOG(DEBUG) << "sending allow request for " << m_sta_mac << " to bssid " << m_target_bssid
-                    << " id=" << int(id);
-    son_actions::send_cmdu_to_agent(agent_mac, m_cmdu_tx, m_database, radio_mac);
+
+    if (client) {
+        dm_update_multi_ap_steering_params(m_database.get_node_11v_capability(*client));
+    }
+
+    // Send 17.1.27	Client Association Control Request : Unblock
+    std::unordered_set<sMacAddr> unblock_list{tlvf::mac_from_string(m_sta_mac)};
+
+    son_actions::send_client_association_control(
+        m_database, m_cmdu_tx, target_agent->al_mac, tlvf::mac_from_string(m_target_bssid),
+        unblock_list, 0, wfa_map::tlvClientAssociationControlRequest::UNBLOCK);
 
     // update bml listeners
     bml_task::client_allow_req_available_event client_allow_event;
@@ -242,7 +224,8 @@ void client_steering_task::steer_sta()
             m_database.get_hostap_operating_class(tlvf::mac_from_string(m_target_bssid));
         bh_steer_req_tlv->finalize();
 
-        son_actions::send_cmdu_to_agent(agent_mac, m_cmdu_tx, m_database, radio_mac);
+        son_actions::send_cmdu_to_agent(target_agent->al_mac, m_cmdu_tx, m_database,
+                                        target_radio_mac);
         // TODO: send backhaul steering to the owner of the bSTA (PPM-2118)
 
         // update bml listeners
@@ -257,7 +240,8 @@ void client_steering_task::steer_sta()
 
     auto hostaps                   = m_database.get_active_hostaps();
     std::string original_radio_mac = m_database.get_node_parent_radio(m_original_bssid);
-    hostaps.erase(radio_mac); // remove chosen hostap from the general list
+
+    hostaps.erase(target_radio_mac); // remove chosen hostap from the general list
     for (auto &hostap : hostaps) {
         /*
         * send disallow to all others
@@ -269,34 +253,14 @@ void client_steering_task::steer_sta()
                 continue;
             }
 
-            agent_mac = m_database.get_node_parent_ire(hostap);
-            if (!m_cmdu_tx.create(
-                    0, ieee1905_1::eMessageType::CLIENT_ASSOCIATION_CONTROL_REQUEST_MESSAGE)) {
-                LOG(ERROR) << "cmdu creation of type "
-                              "CLIENT_ASSOCIATION_CONTROL_REQUEST_MESSAGE, has failed";
-                return;
-            }
+            // Send 17.1.27	Client Association Control Request : Block
+            sMacAddr agent_mac = m_database.get_node_parent_ire(hostap);
+            std::unordered_set<sMacAddr> block_list{tlvf::mac_from_string(m_sta_mac)};
 
-            auto association_control_block_request_tlv =
-                m_cmdu_tx.addClass<wfa_map::tlvClientAssociationControlRequest>();
-            if (!association_control_block_request_tlv) {
-                LOG(ERROR) << "addClass wfa_map::tlvClientAssociationControlRequest failed";
-                return;
-            }
-            association_control_block_request_tlv->bssid_to_block_client() =
-                tlvf::mac_from_string(hostap_vap.second.mac);
-            association_control_block_request_tlv->association_control() =
-                wfa_map::tlvClientAssociationControlRequest::BLOCK;
-            association_control_block_request_tlv->validity_period_sec() =
-                STEERING_WAIT_TIME_MS / 1000;
-            association_control_block_request_tlv->alloc_sta_list();
-            auto sta_list_block         = association_control_block_request_tlv->sta_list(0);
-            std::get<1>(sta_list_block) = tlvf::mac_from_string(m_sta_mac);
-            son_actions::send_cmdu_to_agent(agent_mac, m_cmdu_tx, m_database, hostap);
-            TASK_LOG(DEBUG) << "sending disallow request for " << m_sta_mac << " to bssid "
-                            << hostap_vap.second.mac << " with validity period = "
-                            << association_control_block_request_tlv->validity_period_sec()
-                            << "sec,  id=" << int(id);
+            son_actions::send_client_association_control(
+                m_database, m_cmdu_tx, agent_mac, tlvf::mac_from_string(hostap_vap.second.mac),
+                block_list, STEERING_WAIT_TIME_MS / 1000,
+                wfa_map::tlvClientAssociationControlRequest::BLOCK);
 
             // update bml listeners
             bml_task::client_disallow_req_available_event client_disallow_event;
@@ -339,8 +303,10 @@ void client_steering_task::steer_sta()
         m_database.get_hostap_operating_class(tlvf::mac_from_string(m_target_bssid));
     std::get<1>(bssid_list).target_bss_channel_number = m_database.get_node_channel(m_target_bssid);
 
-    agent_mac = m_database.get_node_parent_ire(m_original_bssid);
-    son_actions::send_cmdu_to_agent(agent_mac, m_cmdu_tx, m_database, original_radio_mac);
+    auto source_agent = m_database.get_agent_by_bssid(tlvf::mac_from_string(m_original_bssid));
+
+    son_actions::send_cmdu_to_agent(source_agent->al_mac, m_cmdu_tx, m_database,
+                                    original_radio_mac);
     TASK_LOG(DEBUG) << "sending steering request, sta " << m_sta_mac << " steer from bssid "
                     << m_original_bssid << " to bssid " << m_target_bssid << " channel "
                     << std::to_string(std::get<1>(bssid_list).target_bss_channel_number)
