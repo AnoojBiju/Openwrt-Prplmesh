@@ -4412,7 +4412,8 @@ bool db::dm_check_objects_limit(std::queue<std::string> &paths, uint8_t limit)
     return true;
 }
 
-bool db::notify_disconnection(const std::string &client_mac, const uint16_t reason_code)
+bool db::notify_disconnection(const std::string &client_mac, const uint16_t reason_code,
+                              const std::string &bssid)
 {
     auto n = get_node(client_mac);
     if (!n) {
@@ -4436,7 +4437,7 @@ bool db::notify_disconnection(const std::string &client_mac, const uint16_t reas
 
     bool ret_val = true;
 
-    ret_val &= m_ambiorix_datamodel->set(path_to_eventdata, "BSSID", n->parent_mac);
+    ret_val &= m_ambiorix_datamodel->set(path_to_eventdata, "BSSID", bssid);
     ret_val &= m_ambiorix_datamodel->set(path_to_eventdata, "MACAddress", client_mac);
     ret_val &= m_ambiorix_datamodel->set(path_to_eventdata, "ReasonCode", reason_code);
     ret_val &= m_ambiorix_datamodel->set(path_to_eventdata, "BytesSent", n->stats_info->tx_bytes);

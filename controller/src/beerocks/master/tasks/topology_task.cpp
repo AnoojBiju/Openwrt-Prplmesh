@@ -589,7 +589,7 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
         uint16_t reason_code = (vs_tlv)
                                    ? vs_tlv->disconnect_reason()
                                    : (uint16_t)wfa_map::tlvProfile2ReasonCode::UNSPECIFIED_REASON;
-        if (!database.notify_disconnection(client_mac_str, reason_code)) {
+        if (!database.notify_disconnection(client_mac_str, reason_code, bssid_str)) {
             LOG(WARNING) << "Failed to notify disconnection event.";
         }
 
