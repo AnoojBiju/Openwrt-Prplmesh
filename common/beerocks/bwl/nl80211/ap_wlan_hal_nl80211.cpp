@@ -1338,10 +1338,12 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
             return false;
         }
 
+#if 0
         // Case of boards where main VAP and radio have same name
         if (vap_id == 0 && iface_ids.vap_id == beerocks::IFACE_RADIO_ID) {
             vap_id = beerocks::IFACE_RADIO_ID;
         }
+#endif
         if (vap_id == beerocks::IFACE_ID_INVALID) {
             LOG(ERROR) << "Invalid vap_id " << vap_id;
             return false;
@@ -1358,10 +1360,12 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
 
         memset(msg_buff.get(), 0, sizeof(sHOSTAP_ENABLED_NOTIFICATION));
 
+#if 0
         // Case of boards where main VAP and radio have same name
         if (vap_id == 0 && iface_ids.vap_id == beerocks::IFACE_RADIO_ID) {
             vap_id = beerocks::IFACE_RADIO_ID;
         }
+#endif
         if (vap_id == beerocks::IFACE_ID_INVALID) {
             LOG(ERROR) << "Invalid vap_id " << vap_id;
             return false;

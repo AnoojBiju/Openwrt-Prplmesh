@@ -61,19 +61,25 @@ CmduServerImpl::CmduServerImpl(std::unique_ptr<beerocks::net::ServerSocket> serv
 CmduServerImpl::~CmduServerImpl()
 {
     LOG(DEBUG) << "CmduServerImpl CTOR";
+
+    // Remove all registered FDs to avoid events while in cleanup
+    for (auto &it : m_connections) {
+        m_event_loop->remove_handlers(it.first);
+    }
+
+    // Remove installed event handlers for the server socket
+    m_event_loop->remove_handlers(m_server_socket->socket()->fd());
+
     // Remove all connections and their installed event handlers
     while (m_connections.size() > 0) {
         const auto &it = m_connections.begin();
 
         int fd = it->first;
 
-        if (!remove_connection(fd, true)) {
+        if (!remove_connection(fd)) {
             m_connections.erase(it);
         }
     }
-
-    // Remove installed event handlers for the server socket
-    m_event_loop->remove_handlers(m_server_socket->socket()->fd());
 }
 
 bool CmduServerImpl::disconnect(int fd)
@@ -121,7 +127,7 @@ bool CmduServerImpl::add_connection(int fd,
                                     std::unique_ptr<beerocks::net::Socket::Connection> connection,
                                     const beerocks::EventLoop::EventHandlers &handlers)
 {
-    // LOG(DEBUG) << "Adding new connection, fd = " << fd;
+    LOG(DEBUG) << "Adding new connection, fd = " << fd;
 
     // Register event handlers for the connected socket
     if (!m_event_loop->register_handlers(fd, handlers)) {
@@ -165,15 +171,17 @@ bool CmduServerImpl::remove_connection(int fd, bool remove_handlers)
     // Remove connection from the map of current connections.
     m_connections.erase(it);
 
-    // Notify that a client has disconnected from this server
-    notify_client_disconnected(fd);
+    if (remove_handlers) {
+        // Notify that a client has disconnected from this server
+        notify_client_disconnected(fd);
+    }
 
     return true;
 }
 
 void CmduServerImpl::handle_connect(int fd)
 {
-    // LOG(DEBUG) << "Accepting connection, fd = " << fd;
+    LOG(DEBUG) << "Accepting connection, fd = " << fd;
 
     beerocks::net::UdsAddress address;
     auto connection = m_server_socket->accept(address);

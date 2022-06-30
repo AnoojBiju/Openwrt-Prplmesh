@@ -51,6 +51,10 @@ static mon_wlan_hal::Event wav_to_bwl_event(const std::string &opcode)
         return mon_wlan_hal::Event::RRM_Beacon_Request_Status;
     } else if (opcode == "BEACON-RESP-RX") {
         return mon_wlan_hal::Event::RRM_Beacon_Response;
+    } else if (opcode == "AP-ENABLED") {
+        return mon_wlan_hal::Event::AP_Enabled;
+    } else if (opcode == "AP-DISABLED") {
+        return mon_wlan_hal::Event::AP_Disabled;
     }
     // } else if (opcode == "RRM-LINK-MEASUREMENT-RECEIVED") {
 
@@ -670,6 +674,30 @@ bool mon_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
         // Add the message to the queue
         event_queue_push(event, resp_buff);
 
+    } break;
+    case Event::AP_Disabled: {
+        if (vap_id == beerocks::IFACE_ID_INVALID) {
+            LOG(ERROR) << "Invalid vap_id " << vap_id;
+            return false;
+        }
+        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sHOSTAP_DISABLED_NOTIFICATION));
+        auto msg      = reinterpret_cast<sHOSTAP_DISABLED_NOTIFICATION *>(msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+        memset(msg_buff.get(), 0, sizeof(sHOSTAP_DISABLED_NOTIFICATION));
+        msg->vap_id = vap_id;
+        event_queue_push(Event::AP_Disabled, msg_buff); // send message to Monitor
+    } break;
+    case Event::AP_Enabled: {
+        if (vap_id == beerocks::IFACE_ID_INVALID) {
+            LOG(ERROR) << "Invalid vap_id " << vap_id;
+            return false;
+        }
+        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sHOSTAP_ENABLED_NOTIFICATION));
+        auto msg      = reinterpret_cast<sHOSTAP_ENABLED_NOTIFICATION *>(msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+        memset(msg_buff.get(), 0, sizeof(sHOSTAP_ENABLED_NOTIFICATION));
+        msg->vap_id = vap_id;
+        event_queue_push(Event::AP_Enabled, msg_buff);
     } break;
 
     // Gracefully ignore unhandled events

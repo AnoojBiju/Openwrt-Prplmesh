@@ -747,6 +747,12 @@ bool base_wlan_hal_nl80211::refresh_vaps_info(int id)
         return false;
     }
 
+    std::vector<std::string> vap_ifaces;
+    if (!m_nl80211_client->get_interfaces(vap_ifaces)) {
+        LOG(ERROR) << "failed to get interfaces";
+        return false;
+    }
+
     auto fill_bss_info = [&](uint16_t vap_id) {
         VAPElement vap_element;
 
@@ -759,7 +765,9 @@ bool base_wlan_hal_nl80211::refresh_vaps_info(int id)
         vap_element.backhaul  = false;
 
         // VAP does not exists
-        if (vap_element.mac.empty()) {
+        // or it has no more a valid nl80211 interface
+        if (vap_element.mac.empty() || (std::find(vap_ifaces.begin(), vap_ifaces.end(),
+                                                  vap_element.bss) == vap_ifaces.end())) {
             if (m_radio_info.available_vaps.find(vap_id) != m_radio_info.available_vaps.end()) {
 
                 // clean wpa_ctrl_sockets which relative BSS is more valid (null mac)
