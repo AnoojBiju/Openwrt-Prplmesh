@@ -553,6 +553,9 @@ bool ap_wlan_hal_nl80211::update_vap_credentials(
     }
 
     // Clear all VAPs from the available container, since we preset it with configuration.
+    auto &available_vaps = m_radio_info.available_vaps;
+    //keep copy of available vaps, to restore vap_id and vap_mac
+    auto prev_vaps = m_radio_info.available_vaps;
     m_radio_info.available_vaps.clear();
 
     // If a Multi-AP Agent receives an AP-Autoconfiguration WSC message containing one or
@@ -564,9 +567,10 @@ bool ap_wlan_hal_nl80211::update_vap_credentials(
     // decalre a function for iterating over bss-conf and ap-vaps
     bool abort = false;
     auto configure_func =
-        [&abort, &conf, &bss_info_conf_list, &backhaul_wps_ssid, &backhaul_wps_passphrase](
-            const std::string &vap,
-            std::remove_reference<decltype(bss_info_conf_list)>::type::iterator bss_it) {
+        [&abort, &conf, &bss_info_conf_list, &backhaul_wps_ssid, &backhaul_wps_passphrase,
+         &available_vaps,
+         &prev_vaps](const std::string &vap,
+                     std::remove_reference<decltype(bss_info_conf_list)>::type::iterator bss_it) {
             if (abort) {
                 return;
             }
@@ -818,6 +822,34 @@ bool ap_wlan_hal_nl80211::update_vap_credentials(
 
                 // finally enable the vap (remove any previously set start_disabled)
                 conf.set_create_vap_value(vap, "start_disabled", "");
+
+                VAPElement vap_info;
+                vap_info.bss       = vap;
+                vap_info.fronthaul = bss_it->fronthaul;
+                vap_info.backhaul  = bss_it->backhaul;
+                if (vap_info.backhaul) {
+                    vap_info.ssid = backhaul_wps_ssid;
+                    vap_info.profile1_backhaul_sta_association_disallowed =
+                        bss_it->profile1_backhaul_sta_association_disallowed;
+                    vap_info.profile2_backhaul_sta_association_disallowed =
+                        bss_it->profile2_backhaul_sta_association_disallowed;
+                } else {
+                    vap_info.ssid                                         = bss_it->ssid;
+                    vap_info.profile1_backhaul_sta_association_disallowed = 0;
+                    vap_info.profile2_backhaul_sta_association_disallowed = 0;
+                }
+
+                // if vap_id is unknown, then match the vap_id with saved vap bss
+                int8_t vap_id = 0;
+                for (auto &it : prev_vaps) {
+                    if (it.second.bss == vap) {
+                        vap_id = it.first;
+                        break;
+                    }
+                }
+                vap_info.mac           = prev_vaps[vap_id].mac;
+                available_vaps[vap_id] = vap_info;
+
             } else {
                 // no more data in the input bss-conf list
                 // disable the rest of the vaps
