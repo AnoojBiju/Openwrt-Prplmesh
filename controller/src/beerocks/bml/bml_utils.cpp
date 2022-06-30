@@ -179,18 +179,19 @@ int bml_utils_stats_to_string(const struct BML_STATS *stats, char *buffer, int b
 
     ss << std::endl
        << "  TX - "
-       << "bytes_sent: " << std::to_string(stats->bytes_sent)
-       << ", packets_sent: " << std::to_string(stats->packets_sent)
+       << "bytes_sent: " << std::to_string((uint32_t)stats->bytes_sent)
+       << ", packets_sent: " << std::to_string((uint32_t)stats->packets_sent)
        << ", errors_sent: " << std::to_string(stats->errors_sent)
        << ", retrans_count: " << std::to_string(stats->retrans_count);
 
     if (stats->type == BML_STAT_TYPE_VAP) {
         ss << std::endl
            << "       unicast_packets_sent: "
-           << std::to_string(stats->uType.vap.unicast_packets_sent) << ", multicast_packets_sent: "
-           << std::to_string(stats->uType.vap.multicast_packets_sent)
+           << std::to_string((uint32_t)stats->uType.vap.unicast_packets_sent)
+           << ", multicast_packets_sent: "
+           << std::to_string((uint32_t)stats->uType.vap.multicast_packets_sent)
            << ", broadcast_packets_sent: "
-           << std::to_string(stats->uType.vap.broadcast_packets_sent);
+           << std::to_string((uint32_t)stats->uType.vap.broadcast_packets_sent);
     } else if (stats->type == BML_STAT_TYPE_CLIENT) {
         ss << std::endl
            << "       last_data_uplink_rate: " << std::fixed << std::setprecision(1)
@@ -202,18 +203,18 @@ int bml_utils_stats_to_string(const struct BML_STATS *stats, char *buffer, int b
 
     ss << std::endl
        << "  RX - "
-       << "bytes_received: " << std::to_string(stats->bytes_received)
-       << ", packets_received: " << std::to_string(stats->packets_received)
+       << "bytes_received: " << std::to_string((uint32_t)stats->bytes_received)
+       << ", packets_received: " << std::to_string((uint32_t)stats->packets_received)
        << ", errors_received: " << std::to_string(stats->errors_received);
 
     if (stats->type == BML_STAT_TYPE_VAP) {
         ss << std::endl
            << "       unicast_packets_received: "
-           << std::to_string(stats->uType.vap.unicast_packets_received)
+           << std::to_string((uint32_t)stats->uType.vap.unicast_packets_received)
            << ", multicast_packets_received: "
-           << std::to_string(stats->uType.vap.multicast_packets_received)
+           << std::to_string((uint32_t)stats->uType.vap.multicast_packets_received)
            << ", broadcast_packets_received: "
-           << std::to_string(stats->uType.vap.broadcast_packets_received);
+           << std::to_string((uint32_t)stats->uType.vap.broadcast_packets_received);
     } else if (stats->type == BML_STAT_TYPE_CLIENT) {
         ss << std::endl
            << "       last_data_downlink_rate: " << std::fixed << std::setprecision(1)
