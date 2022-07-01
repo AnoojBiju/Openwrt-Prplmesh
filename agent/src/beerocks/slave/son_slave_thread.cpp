@@ -4521,6 +4521,14 @@ bool slave_thread::forward_cmdu_to_uds(int fd, ieee1905_1::CmduMessageRx &cmdu_r
 bool slave_thread::forward_cmdu_to_controller(ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto db = AgentDB::get();
+    if (cmdu_tx.getMessageType() == ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_SEARCH_MESSAGE) {
+        //LOG(ERROR) << "Hemanth MSG TYPE - " << cmdu_tx.getMessageType();
+        LOG(ERROR) << "Hemanth multicast address - "
+                   << tlvf::mac_to_string(network_utils::MULTICAST_1905_MAC_ADDR);
+        LOG(ERROR) << "Hemanth controller info bridge mac address - "
+                   << tlvf::mac_to_string(db->controller_info.bridge_mac);
+        LOG(ERROR) << "Hemanth bridge mac - " << tlvf::mac_to_string(db->bridge.mac);
+    }
     sMacAddr dst_addr;
     switch (cmdu_tx.getMessageType()) {
     case ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE:
@@ -4533,6 +4541,7 @@ bool slave_thread::forward_cmdu_to_controller(ieee1905_1::CmduMessageRx &cmdu_rx
         break;
     }
 
+    LOG(ERROR) << "Hemanth - forwarding cmdu";
     return m_broker_client->forward_cmdu(cmdu_rx, dst_addr, db->bridge.mac);
 }
 
@@ -5073,6 +5082,7 @@ bool slave_thread::handle_channel_selection_request(int fd, ieee1905_1::CmduMess
     const auto mid = cmdu_rx.getMessageId();
     LOG(DEBUG) << "Received CHANNEL_SELECTION_REQUEST_MESSAGE, mid=" << std::dec << int(mid);
 
+    //m_controller_channel_preferences.clear();
     std::string fronthaul_iface;
     for (auto &radio_manager_map_element : m_radio_managers.get()) {
         fronthaul_iface     = radio_manager_map_element.first;

@@ -7,7 +7,7 @@
 			"file" : {
 				"enable" : true,
 				"path" : "@BEEROCKS_LOG_FILES_PATH@/",
-				"size" : "1000000"
+				"size" : "10000000"
 			},
 			"flushthreshold" : 1
 		},
