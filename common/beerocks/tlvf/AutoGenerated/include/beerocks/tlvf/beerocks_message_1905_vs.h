@@ -134,8 +134,6 @@ class tlvVsOnDemandChannelSelection : public BaseClass
             return (eActionOp_1905_VS)(ACTION_TLV_VENDOR_SPECIFIC);
         }
         sMacAddr& radio_mac();
-        uint8_t& channel();
-        uint8_t& operating_class();
         uint8_t& CSA_count();
         void class_swap() override;
         bool finalize() override;
@@ -145,8 +143,6 @@ class tlvVsOnDemandChannelSelection : public BaseClass
         bool init();
         eActionOp_1905_VS* m_action_op = nullptr;
         sMacAddr* m_radio_mac = nullptr;
-        uint8_t* m_channel = nullptr;
-        uint8_t* m_operating_class = nullptr;
         uint8_t* m_CSA_count = nullptr;
 };
 

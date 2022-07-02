@@ -239,6 +239,26 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
         master_conf.load_steer_on_vaps = std::string(load_steer_on_vaps);
     }
 
+    beerocks::bpl::BPL_WLAN_IFACE interfaces[beerocks::IRE_MAX_SLAVES] = {0};
+    int num_of_interfaces                                              = beerocks::IRE_MAX_SLAVES;
+    if (beerocks::bpl::cfg_get_all_prplmesh_wifi_interfaces(interfaces, &num_of_interfaces)) {
+        std::cout << "ERROR: Failed to read interfaces map" << std::endl;
+    } else
+        for (int index = 0; index < num_of_interfaces; index++) {
+            auto it = std::find_if(
+                std::begin(interfaces), std::end(interfaces),
+                [index](beerocks::bpl::BPL_WLAN_IFACE iface) { return iface.radio_num == index; });
+            if (!it) {
+                continue;
+            }
+            char radio_channel_pool[BPL_LOAD_STEER_ON_VAPS_LEN] = {0};
+            if (beerocks::bpl::cfg_get_dcs_channel_pool(index, radio_channel_pool) < 0) {
+                master_conf.default_channel_pools[it->ifname] = std::string();
+            } else {
+                master_conf.default_channel_pools[it->ifname] = std::string(radio_channel_pool);
+            }
+        }
+
     if (!beerocks::bpl::cfg_get_persistent_db_enable(master_conf.persistent_db)) {
         LOG(DEBUG) << "Failed to read persistent db enable, setting to default value: "
                    << bool(beerocks::bpl::DEFAULT_PERSISTENT_DB);

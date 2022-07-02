@@ -107,6 +107,7 @@ sta_wlan_hal_dwpal::~sta_wlan_hal_dwpal()
             LOG(ERROR) << " Failed to detach from dwpald for interface" << vap_name;
         }
     }
+    ctx = nullptr;
 }
 
 bool sta_wlan_hal_dwpal::start_wps_pbc()
@@ -605,9 +606,15 @@ bool sta_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std
 /* hostap event callback executed in dwpald context */
 static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t len)
 {
+    std::string opcode(op_code);
+#if 0
     if (write(ctx->get_ext_evt_write_pfd(), buffer, len) < 0) {
         LOG(ERROR) << "Failed writing hostap event callback data";
         return -1;
+    }
+#endif
+    if (ctx) {
+        ctx->process_dwpal_event(buffer, len, opcode);
     }
     return 0;
 }

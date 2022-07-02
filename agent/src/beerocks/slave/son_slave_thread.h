@@ -441,14 +441,6 @@ private:
     bool handle_ap_metrics_query(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_monitor_ap_metrics_response(const std::string &fronthaul_iface, int fd,
                                             ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_channel_selection_request(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool get_controller_channel_preference(const std::string &fronthaul_iface,
-                                           ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool channel_selection_get_transmit_power_limit(const std::string &fronthaul_iface,
-                                                    ieee1905_1::CmduMessageRx &cmdu_rx,
-                                                    int &power_limit);
-    bool channel_selection_current_channel_restricted(const std::string &fronthaul_iface);
-    message::sWifiChannel channel_selection_select_channel(const std::string &fronthaul_iface);
     bool handle_client_association_request(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_1905_higher_layer_data_message(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_client_steering_request(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
@@ -479,20 +471,6 @@ private:
      * @brief save cac capabilities in the agent DB
      */
     void save_cac_capabilities_params_to_db(const std::string &fronthaul_iface);
-
-    /**
-     * @brief Get the channel preference.
-     *
-     * @pre The channel operating class and the preference operating class have to match.
-     * @param channel A channel to check.
-     * @param preference The preference of the channel.
-     * @param preference_channels_list The preference channels list given by the Controller.
-     * @return NON_OPERABLE if channel is restricted, channel preference otherwise.
-     */
-    wfa_map::cPreferenceOperatingClasses::ePreference
-    get_channel_preference(message::sWifiChannel channel,
-                           const AgentDB::sChannelPreference &preference,
-                           const std::set<uint8_t> &preference_channels_list);
 
     /**
      * @brief Update the vaps in the Agent DB.

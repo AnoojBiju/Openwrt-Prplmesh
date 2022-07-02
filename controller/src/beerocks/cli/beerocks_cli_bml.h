@@ -134,6 +134,8 @@ private:
     int get_slave_restricted_channels_caller(int numOfArgs);
     int bml_trigger_topology_discovery_caller(int numOfArgs);
     int bml_channel_selection_caller(int numOfArgs);
+    int bml_set_selection_channel_pool_caller(int numOfArgs);
+    int bml_get_selection_channel_pool_caller(int numOfArgs);
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
     int bml_pre_association_steering_set_group_caller(int numOfArgs);
     int bml_pre_association_steering_client_set_caller(int numOfArgs);
@@ -197,6 +199,8 @@ private:
     int topology_discovery(const std::string &al_mac);
     int channel_selection(const std::string &radio_mac, uint8_t channel, uint8_t bw,
                           uint8_t csa_count = 5);
+    int set_selection_pool(const std::string &radio_mac, const std::string &channel_pool);
+    int get_selection_pool(const std::string &radio_mac);
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
     int steering_set_group(uint32_t steeringGroupIndex,
                            const std::vector<std::string> &str_ap_cfgs);

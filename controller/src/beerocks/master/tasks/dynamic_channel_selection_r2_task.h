@@ -47,6 +47,10 @@ public:
         uint8_t csa_count;
     };
 
+    struct sPreferenceRequestEvent {
+        sMacAddr radio_mac;
+    };
+
     struct sSingleScanRequestEvent {
         sMacAddr radio_mac;
     };
@@ -63,6 +67,7 @@ public:
 
     enum eEvent : uint8_t {
         TRIGGER_ON_DEMAND_CHANNEL_SELECTION,
+        REQUEST_NEW_PREFERENCE,
         TRIGGER_SINGLE_SCAN,
         RECEIVED_CHANNEL_SCAN_REPORT,
         CONTINUOUS_STATE_CHANGED_PER_RADIO
@@ -128,7 +133,13 @@ protected:
 
 private:
     enum class eScanState : uint8_t { IDLE, TRIGGER_SCAN };
-    enum class eSelectionState : uint8_t { IDLE, WAIT_FOR_PREFERENCE, WAIT_FOR_SELECTION_RESPONSE };
+    enum class eSelectionState : uint8_t {
+        IDLE,
+        WAIT_FOR_SCAN,
+        WAIT_FOR_PREFERENCE,
+        WAIT_FOR_SELECTION_RESPONSE,
+        SELECTION_ABORTED
+    };
 
     // clang-format off
     const std::unordered_map<eScanState, std::string> m_scan_states_string = {
@@ -137,27 +148,39 @@ private:
     };
     const std::unordered_map<eSelectionState, std::string> m_selection_states_string = {
       { eSelectionState::IDLE,                          "IDLE"                          },
+      { eSelectionState::WAIT_FOR_SCAN,                 "WAIT_FOR_SCAN"                 },
       { eSelectionState::WAIT_FOR_PREFERENCE,           "WAIT_FOR_PREFERENCE"           },
       { eSelectionState::WAIT_FOR_SELECTION_RESPONSE,   "WAIT_FOR_SELECTION_RESPONSE"   },
+      { eSelectionState::SELECTION_ABORTED,             "SELECTION_ABORTED"             },
     };
     // clang-format on
 
     struct sChannelSelectionRequest {
+        explicit sChannelSelectionRequest(uint8_t csa_count_) : csa_count(csa_count_) {}
         virtual ~sChannelSelectionRequest() = default;
+
+        uint8_t csa_count;
     };
     struct sOnDemandChannelSelectionRequest : public sChannelSelectionRequest {
         sOnDemandChannelSelectionRequest(uint8_t channel_number_, uint8_t operating_class_,
                                          uint8_t csa_count_)
-            : channel_number(channel_number_), operating_class(operating_class_),
-              csa_count(csa_count_)
+            : sChannelSelectionRequest(csa_count_), channel_number(channel_number_),
+              operating_class(operating_class_)
         {
         }
 
         uint8_t channel_number;
         uint8_t operating_class;
-        uint8_t csa_count;
     };
+    struct sOnDemandAutoChannelSelectionRequest : public sChannelSelectionRequest {
+        sOnDemandAutoChannelSelectionRequest(const std::unordered_set<uint8_t> &channel_pool_,
+                                             uint8_t csa_count_)
+            : sChannelSelectionRequest(csa_count_), channel_pool(channel_pool_)
+        {
+        }
 
+        std::unordered_set<uint8_t> channel_pool;
+    };
     eScanState m_scan_state           = eScanState::IDLE;
     eSelectionState m_selection_state = eSelectionState::IDLE;
 
@@ -179,7 +202,6 @@ private:
     typedef std::unordered_map<sMacAddr, std::shared_ptr<sChannelSelectionRequest>>
         AgentChannelSelectionRequest;
     std::unordered_map<sMacAddr, AgentChannelSelectionRequest> m_pending_selection_requests;
-    std::chrono::steady_clock::time_point m_preference_timeout;
     std::chrono::steady_clock::time_point m_selection_timeout;
 
     /**
@@ -210,6 +232,14 @@ private:
      */
     bool handle_on_demand_channel_selection_request_event(
         const sOnDemandChannelSelectionEvent &channel_selection_event);
+
+    /**
+     * @brief Handle Preference Query request event.
+     * 
+     * @param preference_request_event Reference to sPreferenceRequestEvent object.
+     * @return true if successful, false otherwise.
+     */
+    bool handle_preference_request_event(const sPreferenceRequestEvent &preference_request_event);
 
     /**
      * @brief Send pending channel Selection requests
@@ -367,6 +397,8 @@ private:
     bool handle_tlv_profile2_cac_status_report(
         const std::shared_ptr<Agent> agent,
         const std::shared_ptr<wfa_map::tlvProfile2CacStatusReport> &cac_status_report_tlv);
+
+    bool handle_timeout_in_selection_flow();
 };
 
 } //namespace son

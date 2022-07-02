@@ -231,9 +231,10 @@ public:
 
         struct channel_scan_config {
             bool is_enabled = false;
-            std::unordered_set<uint8_t> channel_pool; // default value: empty list
-            int interval_sec    = -1;                 //-1 (invalid)
-            int dwell_time_msec = -1;                 //-1 (invalid)
+            std::unordered_set<uint8_t> default_channel_pool; // default value: empty list
+            std::unordered_set<uint8_t> active_channel_pool;  // default value: empty list
+            int interval_sec    = -1;                         //-1 (invalid)
+            int dwell_time_msec = -1;                         //-1 (invalid)
         };
 
         struct channel_scan_status {

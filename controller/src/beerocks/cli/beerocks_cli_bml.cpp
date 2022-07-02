@@ -474,6 +474,16 @@ void cli_bml::setFunctionsMapAndArray()
                        "trigger channel selection procedure",
                        static_cast<pFunction>(&cli_bml::bml_channel_selection_caller), 3, 4,
                        STRING_ARG, INT_ARG, INT_ARG, INT_ARG);
+    insertCommandToMap(
+        "bml_set_selection_channel_pool", "<mac> <channel pool>",
+        "Set the Channel-Selection's channel pool for the Auto Channel Selection. channels are "
+        "separated by commas.",
+        static_cast<pFunction>(&cli_bml::bml_set_selection_channel_pool_caller), 2, 2, STRING_ARG,
+        STRING_ARG);
+    insertCommandToMap("bml_get_selection_channel_pool", "<mac>",
+                       "Get the Channel-Selection's channel pool for the Auto Channel Selection.",
+                       static_cast<pFunction>(&cli_bml::bml_get_selection_channel_pool_caller), 1,
+                       1, STRING_ARG);
 
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
     insertCommandToMap(
@@ -1188,6 +1198,23 @@ int cli_bml::bml_channel_selection_caller(int numOfArgs)
     }
     return -1;
 }
+
+int cli_bml::bml_set_selection_channel_pool_caller(int numOfArgs)
+{
+    if (numOfArgs == 2) {
+        return set_selection_pool(args.stringArgs[0], args.stringArgs[1]);
+    }
+    return -1;
+}
+
+int cli_bml::bml_get_selection_channel_pool_caller(int numOfArgs)
+{
+    if (numOfArgs == 1) {
+        return get_selection_pool(args.stringArgs[0]);
+    }
+    return -1;
+}
+
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
 int cli_bml::bml_pre_association_steering_set_group_caller(int numOfArgs)
 {
@@ -1929,6 +1956,45 @@ int cli_bml::channel_selection(const std::string &radio_mac, uint8_t channel, ui
 {
     int ret = bml_channel_selection(ctx, radio_mac.c_str(), channel, bandwidth, csa_count);
     printBmlReturnVals("channel_selection", ret);
+    return 0;
+}
+
+int cli_bml::set_selection_pool(const std::string &radio_mac, const std::string &channel_pool)
+{
+    auto channels      = string_utils::str_split(channel_pool, ',');
+    auto channels_size = channels.size();
+
+    if (channels_size > BML_CHANNEL_SCAN_MAX_CHANNEL_POOL_SIZE) {
+        std::cout << "size of channel_pool is too big. size=" << channels_size << std::endl;
+        return -1;
+    }
+
+    unsigned int channel_pool_arr[BML_CHANNEL_SCAN_MAX_CHANNEL_POOL_SIZE] = {0};
+    for (size_t i = 0; i < channels_size; i++) {
+        channel_pool_arr[i] = beerocks::string_utils::stoi(channels[i]);
+    }
+
+    int ret =
+        bml_set_selection_channel_pool(ctx, radio_mac.c_str(), channel_pool_arr, channels_size);
+    printBmlReturnVals("set_selection_pool", ret);
+    return 0;
+}
+
+int cli_bml::get_selection_pool(const std::string &radio_mac)
+{
+    int channel_pool_size = BML_CHANNEL_SCAN_MAX_CHANNEL_POOL_SIZE;
+    unsigned int channel_pool[BML_CHANNEL_SCAN_MAX_CHANNEL_POOL_SIZE] = {0};
+    int ret =
+        bml_get_selection_channel_pool(ctx, radio_mac.c_str(), channel_pool, &channel_pool_size);
+
+    std::cout << "channel_pool=";
+    for (int i = 0; (i < channel_pool_size) && (i < BML_CHANNEL_SCAN_MAX_CHANNEL_POOL_SIZE); i++) {
+        if (channel_pool[i] > 0) {
+            std::cout << channel_pool[i] << " ";
+        }
+    }
+    std::cout << std::endl;
+    printBmlReturnVals("get_selection_pool", ret);
     return 0;
 }
 
