@@ -23,6 +23,7 @@ usage() {
     echo "      --docker-target-stage docker target build stage (implies -i)"
     echo "      -i|--image - build the docker image only"
     echo "      -o|--openwrt-version - the openwrt version to use"
+    echo "      -u|--openwrt-toolchain-version - the openwrt version to use for toolchain"
     echo "      -r|--openwrt-repository - the openwrt repository to use"
     echo "      -s|--shell-only - don't build prplMesh, drop into a shell instead"
     echo "      -t|--tag - the tag to use for the builder image"
@@ -37,6 +38,7 @@ build_image() {
     docker build --tag "$image_tag" \
            --build-arg OPENWRT_REPOSITORY="$OPENWRT_REPOSITORY" \
            --build-arg OPENWRT_VERSION="$OPENWRT_VERSION" \
+           --build-arg OPENWRT_TOOLCHAIN_VERSION="$OPENWRT_TOOLCHAIN_VERSION" \
            --build-arg TARGET_SYSTEM="$TARGET_SYSTEM" \
            --build-arg MMX_ENABLE="$MMX_ENABLE" \
            --build-arg PRPLMESH_VARIANT="$PRPLMESH_VARIANT" \
@@ -70,6 +72,7 @@ build_prplmesh() {
            --name "$container_name" \
            -e TARGET_SYSTEM \
            -e OPENWRT_VERSION \
+           -e OPENWRT_TOOLCHAIN_VERSION \
            -e PRPLMESH_VERSION \
            -v "$scriptdir/scripts:/home/openwrt/openwrt/build_scripts/:ro" \
            -v "${rootdir}:/home/openwrt/prplMesh_source:ro" \
@@ -107,16 +110,17 @@ main() {
 
     while true; do
         case "$1" in
-            -h | --help)               usage; exit 0; shift ;;
-            -v | --verbose)            VERBOSE=true; shift ;;
-            -d | --target-device)      TARGET_DEVICE="$2"; shift ; shift ;;
-            --docker-target-stage)     DOCKER_TARGET_STAGE="$2"; IMAGE_ONLY=true; shift 2 ;;
-            -i | --image)              IMAGE_ONLY=true; shift ;;
-            -o | --openwrt-version)    OPENWRT_VERSION="$2"; shift; shift ;;
-            -r | --openwrt-repository) OPENWRT_REPOSITORY="$2"; shift; shift ;;
-            -s | --shell)              SHELL_ONLY=true; shift ;;
-            -t | --tag)                TAG="$2"; shift ; shift ;;
-            --mmx)                     MMX_ENABLE=true; shift ;;
+            -h | --help)                      usage; exit 0; shift ;;
+            -v | --verbose)                   VERBOSE=true; shift ;;
+            -d | --target-device)             TARGET_DEVICE="$2"; shift ; shift ;;
+            --docker-target-stage)            DOCKER_TARGET_STAGE="$2"; IMAGE_ONLY=true; shift 2 ;;
+            -i | --image)                     IMAGE_ONLY=true; shift ;;
+            -o | --openwrt-version)           OPENWRT_VERSION="$2"; shift; shift ;;
+            -u | --openwrt-toolchain-version) OPENWRT_TOOLCHAIN_VERSION="$2"; shift; shift ;;
+            -r | --openwrt-repository)        OPENWRT_REPOSITORY="$2"; shift; shift ;;
+            -s | --shell)                     SHELL_ONLY=true; shift ;;
+            -t | --tag)                       TAG="$2"; shift ; shift ;;
+            --mmx)                            MMX_ENABLE=true; shift ;;
             -- ) shift; break ;;
             * ) err "unsupported argument $1"; usage; exit 1 ;;
         esac
@@ -149,6 +153,7 @@ main() {
     esac
 
     dbg "OPENWRT_REPOSITORY=$OPENWRT_REPOSITORY"
+    dbg "OPENWRT_TOOLCHAIN_VERSION=$OPENWRT_TOOLCHAIN_VERSION"
     dbg "OPENWRT_VERSION=$OPENWRT_VERSION"
     dbg "MMX_ENABLE=$MMX_ENABLE"
     dbg "IMAGE_ONLY=$IMAGE_ONLY"
@@ -185,7 +190,8 @@ main() {
 VERBOSE=false
 IMAGE_ONLY=false
 OPENWRT_REPOSITORY='https://gitlab.com/prpl-foundation/prplos/prplos.git'
-OPENWRT_VERSION='5657cc6ef9574461ae289cc630745891982825a3'
+OPENWRT_TOOLCHAIN_VERSION='b0e4daa75387f638cc09b80d4f4f089c8a792c48'
+OPENWRT_VERSION='b0e4daa75387f638cc09b80d4f4f089c8a792c48'
 PRPLMESH_VARIANT="-nl80211"
 DOCKER_TARGET_STAGE="prplmesh-builder"
 SHELL_ONLY=false
