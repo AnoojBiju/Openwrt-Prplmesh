@@ -92,6 +92,7 @@ public:
         std::string model;
         std::string load_steer_on_vaps;
         std::vector<uint8_t> global_restricted_channels;
+        std::unordered_map<std::string, std::string> default_channel_pools;
         int ucc_listener_port;
         int diagnostics_measurements_polling_rate_sec;
         int ire_rssi_report_rate_sec;
@@ -1382,7 +1383,14 @@ public:
      */
     bool get_pool_of_all_supported_channels(std::unordered_set<uint8_t> &channel_pool_set,
                                             const sMacAddr &radio_mac);
+    /**
+     * 
+     */
+    bool get_selection_channel_pool(const sMacAddr &ruid,
+                                    std::unordered_set<uint8_t> &channel_pool_set);
 
+    bool set_selection_channel_pool(const sMacAddr &ruid,
+                                    const std::unordered_set<uint8_t> &channel_pool);
     /**
      * @brief
      *
@@ -1462,11 +1470,13 @@ public:
      * @param[in] radio_mac MAC address of radio.
      * @param[in] operating_class Operating Class number for the given channel.
      * @param[in] channel_number Number of the given channel.
+     * @param[in] is_central_channel Is the incoming value already a central channel.
      * 
      * @return -1 if Invalid, 0 if in-operable, 1-15 according to the radio's preference.
      */
     int8_t get_channel_preference(const sMacAddr &radio_mac, const uint8_t operating_class,
-                                  const uint8_t channel_number);
+                                  const uint8_t channel_number,
+                                  const bool is_central_channel = false);
 
     node::radio::PreferenceReportMap get_radio_channel_preference(const sMacAddr &radio_mac);
 
@@ -1486,6 +1496,14 @@ public:
      */
     const std::chrono::steady_clock::time_point
     get_last_preference_report_change(const sMacAddr &radio_mac);
+
+    /**
+     * @brief Check if the preference report has expired.
+     * 
+     * @param radio_mac: MAC address of radio.
+     * @return True if the preference report has expired, false otherwise.
+     */
+    bool is_preference_reported_expired(const sMacAddr &radio_mac);
 
     //
     // Client Persistent Data

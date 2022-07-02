@@ -1669,28 +1669,57 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
                   << ", bandwidth=" << request->bandwidth()
                   << ", csa_count=" << request->csa_count();
 
-        auto operating_class = wireless_utils::get_operating_class_by_channel(
-            beerocks::message::sWifiChannel(request->channel(), request->bandwidth()));
-        if (operating_class == 0) {
-            LOG(ERROR) << "channel #" << request->channel() << " and bandwidth "
-                       << beerocks::utils::convert_bandwidth_to_int(request->bandwidth())
-                       << ", do not have a valid Operating Class";
-            response->code() = uint8_t(1); //Failure
+        uint8_t operating_class = 0;
+        if (request->channel() == 0) {
+            LOG(INFO) << "On-Demand-Auto Channel-Selection request detected";
         } else {
-            LOG(DEBUG) << "Triggering Channel-Selection in task";
-            dynamic_channel_selection_r2_task::sOnDemandChannelSelectionEvent new_event;
-            new_event.radio_mac       = request->radio_mac();
-            new_event.channel         = request->channel();
-            new_event.operating_class = operating_class;
-            new_event.csa_count       = request->csa_count();
-            tasks.push_event(
-                database.get_dynamic_channel_selection_r2_task_id(),
-                dynamic_channel_selection_r2_task::eEvent::TRIGGER_ON_DEMAND_CHANNEL_SELECTION,
-                &new_event);
-            response->code() = uint8_t(0); //Success
+            operating_class = wireless_utils::get_operating_class_by_channel(
+                beerocks::message::sWifiChannel(request->channel(), request->bandwidth()));
+            if (operating_class == 0) {
+                LOG(ERROR) << "channel #" << request->channel() << " and bandwidth "
+                           << beerocks::utils::convert_bandwidth_to_int(request->bandwidth())
+                           << ", do not have a valid Operating Class";
+
+                response->code() = uint8_t(1); //Failure
+                controller_ctx->send_cmdu(sd, cmdu_tx);
+                return;
+            }
+
+            if (database.is_preference_reported_expired(request->radio_mac())) {
+                LOG(DEBUG) << "Preference Report has expired, request new preference!";
+                dynamic_channel_selection_r2_task::sPreferenceRequestEvent new_event;
+                new_event.radio_mac = request->radio_mac();
+                tasks.push_event(database.get_dynamic_channel_selection_r2_task_id(),
+                                 dynamic_channel_selection_r2_task::eEvent::REQUEST_NEW_PREFERENCE,
+                                 &new_event);
+            } else {
+                int8_t channel_preference = database.get_channel_preference(
+                    request->radio_mac(), operating_class, request->channel());
+                if (channel_preference <= 0) {
+                    LOG(ERROR) << "channel #" << request->channel() << " and bandwidth "
+                               << beerocks::utils::convert_bandwidth_to_int(request->bandwidth())
+                               << ", are "
+                               << ((channel_preference == 0) ? "Non-Operable" : "Invalid");
+
+                    response->code() = uint8_t(1); //Failure
+                    controller_ctx->send_cmdu(sd, cmdu_tx);
+                    break;
+                }
+            }
         }
 
-        //send response to bml
+        LOG(DEBUG) << "Sending Channel-Selection request to task";
+        dynamic_channel_selection_r2_task::sOnDemandChannelSelectionEvent new_event;
+        new_event.radio_mac       = request->radio_mac();
+        new_event.channel         = request->channel();
+        new_event.operating_class = operating_class;
+        new_event.csa_count       = request->csa_count();
+        tasks.push_event(
+            database.get_dynamic_channel_selection_r2_task_id(),
+            dynamic_channel_selection_r2_task::eEvent::TRIGGER_ON_DEMAND_CHANNEL_SELECTION,
+            &new_event);
+
+        response->code() = uint8_t(0); //Success
         controller_ctx->send_cmdu(sd, cmdu_tx);
         break;
     }
@@ -2317,6 +2346,80 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         response->result() = database.clear_client_persistent_db(mac) ? 0 : 1;
         if (!controller_ctx->send_cmdu(sd, cmdu_tx)) {
             LOG(ERROR) << "Error sending clear client response message for mac= " << mac;
+        }
+        break;
+    }
+    case beerocks_message::ACTION_BML_SET_SELECTION_CHANNEL_POOL_REQUEST: {
+        LOG(TRACE) << "ACTION_BML_SET_SELECTION_CHANNEL_POOL_REQUEST";
+        auto request =
+            beerocks_header
+                ->addClass<beerocks_message::cACTION_BML_SET_SELECTION_CHANNEL_POOL_REQUEST>();
+        if (!request) {
+            LOG(ERROR) << "addClass cACTION_BML_SET_SELECTION_CHANNEL_POOL_REQUEST failed";
+            break;
+        }
+
+        auto response = message_com::create_vs_message<
+            beerocks_message::cACTION_BML_SET_SELECTION_CHANNEL_POOL_RESPONSE>(cmdu_tx);
+        if (!response) {
+            LOG(ERROR) << "Failed building message "
+                          "cACTION_BML_SET_SELECTION_CHANNEL_POOL_RESPONSE !";
+            break;
+        }
+
+        auto radio_mac         = request->radio_mac();
+        auto channel_pool      = request->channel_pool();
+        auto channel_pool_size = request->channel_pool_size();
+        auto channel_pool_set =
+            std::unordered_set<uint8_t>(channel_pool, channel_pool + channel_pool_size);
+        std::stringstream ss;
+        for (auto channel : channel_pool_set) {
+            ss << (int)channel << " ";
+        }
+        LOG(INFO) << "Setting channel pool to: " << ss.str();
+        response->success() =
+            (database.set_selection_channel_pool(radio_mac, channel_pool_set) ? 0 : -1);
+
+        LOG(INFO) << "Sending SET_SELECTION_CHANNEL_POOL_RESPONSE with response "
+                  << (int)response->success();
+        if (!controller_ctx->send_cmdu(sd, cmdu_tx)) {
+            LOG(ERROR) << "Error sending response message";
+        }
+        break;
+    }
+    case beerocks_message::ACTION_BML_GET_SELECTION_CHANNEL_POOL_REQUEST: {
+        LOG(TRACE) << "ACTION_BML_GET_SELECTION_CHANNEL_POOL_REQUEST";
+        auto request =
+            beerocks_header
+                ->addClass<beerocks_message::cACTION_BML_GET_SELECTION_CHANNEL_POOL_REQUEST>();
+        if (!request) {
+            LOG(ERROR) << "addClass cACTION_BML_GET_SELECTION_CHANNEL_POOL_REQUEST failed";
+            break;
+        }
+
+        auto response = message_com::create_vs_message<
+            beerocks_message::cACTION_BML_GET_SELECTION_CHANNEL_POOL_RESPONSE>(cmdu_tx);
+        if (!response) {
+            LOG(ERROR) << "Failed building message "
+                          "cACTION_BML_GET_SELECTION_CHANNEL_POOL_RESPONSE !";
+            break;
+        }
+
+        auto radio_mac = request->radio_mac();
+        std::unordered_set<uint8_t> channel_pool_set;
+        if (!database.get_selection_channel_pool(radio_mac, channel_pool_set)) {
+            LOG(INFO) << "Failed to get Selection Channel-Pool.";
+            response->success() = 1; //Failure.
+        } else {
+            LOG(INFO) << "Got Selection Channel-Pool successfully.";
+            response->success() = 0; //Success.
+            std::vector<uint8_t> tmp_vec(channel_pool_set.begin(), channel_pool_set.end());
+            response->set_channel_pool(tmp_vec.data(), tmp_vec.size());
+            response->channel_pool_size() = tmp_vec.size();
+        }
+        LOG(INFO) << "Sending GET_SELECTION_CHANNEL_POOL_RESPONSE";
+        if (!controller_ctx->send_cmdu(sd, cmdu_tx)) {
+            LOG(ERROR) << "Error sending response message";
         }
         break;
     }

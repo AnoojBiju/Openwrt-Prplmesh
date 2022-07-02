@@ -758,6 +758,7 @@ ap_wlan_hal_dwpal::~ap_wlan_hal_dwpal()
             LOG(ERROR) << " Failed to detach from dwpald for interface" << vap_name;
         }
     }
+    ctx = nullptr;
 }
 
 HALState ap_wlan_hal_dwpal::attach(bool block)
@@ -1566,8 +1567,8 @@ bool ap_wlan_hal_dwpal::sta_softblock_remove(const std::string &vap_name,
     return true;
 }
 
-bool ap_wlan_hal_dwpal::switch_channel(int chan, int bw, int vht_center_frequency,
-                                       int csa_beacon_count)
+bool ap_wlan_hal_dwpal::switch_channel(int chan, beerocks::eWiFiBandwidth bw,
+                                       int vht_center_frequency, int csa_beacon_count)
 {
     std::string cmd = "CHAN_SWITCH ";
 
@@ -2264,7 +2265,8 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
             }
 
             // Check if the event's BSSID is present in the monitored BSSIDs list.
-            if (m_hal_conf.monitored_BSSs.find(BSS_str) == m_hal_conf.monitored_BSSs.end()) {
+            if (iface_ids.vap_id != beerocks::IFACE_RADIO_ID &&
+                m_hal_conf.monitored_BSSs.find(BSS_str) == m_hal_conf.monitored_BSSs.end()) {
                 // Log print commented as to not flood the logs
                 //LOG(DEBUG) << "Event received on BSS " << BSS_str << " that is not on monitored BSSs list, ignoring";
                 return true;
@@ -3299,9 +3301,15 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
 /* hostap event callback executed in dwpald context */
 static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t len)
 {
+    std::string opcode(op_code);
+#if 0
     if (write(ctx->get_ext_evt_write_pfd(), buffer, len) < 0) {
         LOG(ERROR) << "Failed writing hostap event callback data";
         return -1;
+    }
+#endif
+    if (ctx) {
+        ctx->process_dwpal_event(buffer, len, opcode);
     }
     return 0;
 }

@@ -118,6 +118,35 @@ public:
     */
     static std::string get_ISO_8601_timestamp_string(
         std::chrono::system_clock::time_point timestamp = std::chrono::system_clock::now());
+
+    /**
+     * @brief Returns the value for a given enum in the flag.
+     * 
+     * @param[in] bitwise_flag a bitwise flag of the ZWDFS subfeatures.
+     * @param[in] flag enum of the ZWDFS flag.
+     * 
+     * @return The specific value within the bitwise flag.
+     */
+    static bool compare_zwdfs_flag(const int bitwise_flag, eZWDFS_flags flag);
+
+    /**
+     * @brief Returns the boolean values of the bitwise ZWDFS flag.
+     * 
+     * @param[in] bitwise_flag a bitwise flag of the ZWDFS subfeatures.
+     * @param[out] on_radar True if ZWDFS On-Radar is enabled, false otherwise.
+     * @param[out] on_selection True if ZWDFS On-Selection is enabled, false otherwise.
+     * @param[out] pre_cac True if ZWDFS Pre-CAC is enabled, false otherwise.
+     */
+    static void get_zwdfs_flags(const int bitwise_flag, bool &on_radar, bool &on_selection,
+                                bool &pre_cac);
+
+    /**
+     * @brief Returns a string describing what ZWDFS subfeatures are supported.
+     * 
+     * @param[in] bitwise_flag a bitwise flag of the ZWDFS subfeatures.
+     * @return String with the supported ZWDFS subfeatures.
+     */
+    static const std::string get_zwdfs_string(const int bitwise_flag);
 };
 
 } //namespace beerocks

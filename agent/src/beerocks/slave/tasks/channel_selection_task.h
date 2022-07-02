@@ -13,7 +13,9 @@
 #include "task.h"
 #include <map>
 #include <tlvf/CmduMessageTx.h>
+#include <tlvf/wfa_map/tlvChannelPreference.h>
 #include <tlvf/wfa_map/tlvChannelSelectionResponse.h>
+#include <tlvf/wfa_map/tlvTransmitPowerLimit.h>
 #include <unordered_map>
 
 #include <beerocks/tlvf/enums/eDfsState.h>
@@ -51,21 +53,42 @@ private:
      * @param dfs_state DFS state for knowing if the channel is DFS channel or not.
      */
     struct sSelectedChannel {
-        uint8_t channel;
-        uint8_t secondary_channel;
-        eWiFiBandwidth bw;
-        beerocks_message::eDfsState dfs_state;
-        int rank;
+        uint8_t channel                       = 0;
+        uint8_t operating_class               = 0;
+        beerocks::eWiFiBandwidth bw           = beerocks::eWiFiBandwidth::BANDWIDTH_UNKNOWN;
+        beerocks_message::eDfsState dfs_state = beerocks_message::eDfsState::UNAVAILABLE;
+        int rank                              = -1;
+        uint8_t preference_score              = 0;
     } m_selected_channel;
 
-    struct sPendingRadioPreference {
-        sPendingRadioPreference() : isDone(false), channel_preferences({}) {}
-        bool isDone;
-        std::map<AgentDB::sChannelPreference, std::set<uint8_t>> channel_preferences;
+    struct sIncomingChannelSelectionRequest {
+        // Assume response will be successful
+        wfa_map::tlvChannelSelectionResponse::eResponseCode response_code =
+            wfa_map::tlvChannelSelectionResponse::eResponseCode::ACCEPT;
+
+        AgentDB::sRadio::channel_preferences_map controller_preferences;
+        struct sChannelSelectionParams {
+            uint8_t channel                    = 0;
+            beerocks::eWiFiBandwidth bandwidth = beerocks::eWiFiBandwidth::BANDWIDTH_UNKNOWN;
+            int8_t tx_limit                    = 0;
+            bool tx_limit_valid                = false;
+            uint8_t CSA_count                  = 5;
+        } outgoing_request;
+        sSelectedChannel selected_channel;
+        bool power_switch_received          = false;
+        bool channel_switch_needed          = false;
+        bool is_zwdfs_needed                = false;
+        bool manually_send_operating_report = false;
     };
+
     struct sPendingChannelPreferenceReport {
         uint16_t mid;
-        std::unordered_map<sMacAddr, sPendingRadioPreference> preference_map;
+        std::unordered_map<sMacAddr, bool> preference_ready;
+    };
+
+    struct sPendingChannelSelection {
+        uint16_t mid;
+        std::unordered_map<sMacAddr, sIncomingChannelSelectionRequest> requests;
     };
 
     void handle_channel_preference_query(ieee1905_1::CmduMessageRx &cmdu_rx,
@@ -73,8 +96,6 @@ private:
 
     void handle_channel_selection_request(ieee1905_1::CmduMessageRx &cmdu_rx,
                                           const sMacAddr &src_mac);
-    void handle_slave_channel_selection_response(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                                 const sMacAddr &src_mac);
 
     /**
      * @brief Handles Vendor Specific messages.
@@ -120,8 +141,7 @@ private:
     bool send_channel_preference_report(ieee1905_1::CmduMessageRx &cmdu_rx,
                                         std::shared_ptr<beerocks_header> beerocks_header);
 
-    bool create_channel_preference_tlv(const sMacAddr &radio_mac,
-                                       const sPendingRadioPreference &radio_preference);
+    bool create_channel_preference_tlv(const sMacAddr &radio_mac);
 
     bool create_cac_completion_report_tlv();
 
@@ -130,6 +150,25 @@ private:
     bool create_radio_operation_restriction_tlv(const sMacAddr &radio_mac);
 
     bool create_cac_status_tlv();
+
+    bool handle_transmit_power_limit(
+        const std::shared_ptr<wfa_map::tlvTransmitPowerLimit> tx_power_limit_tlv);
+
+    bool store_controller_preference(
+        const std::shared_ptr<wfa_map::tlvChannelPreference> channel_preference_tlv);
+
+    bool check_received_preferences_contain_violation(const sMacAddr &radio_mac);
+
+    bool check_is_there_better_channel_than_current(const sMacAddr &radio_mac);
+
+    ChannelSelectionTask::sSelectedChannel select_next_channel(const sMacAddr &radio_mac);
+
+    bool handle_on_demand_selection_request_extension_tlv(ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    bool send_channel_switch_request(const sMacAddr &radio_mac,
+                                     const sIncomingChannelSelectionRequest &request);
+
+    bool create_operating_channel_report(const sMacAddr &radio_mac);
 
     /* ZWDFS */
     static constexpr int8_t ZWDFS_FLOW_MAX_RETRIES                 = 5;
@@ -212,18 +251,7 @@ private:
 
     /* Class members */
 
-    struct sChannelSelectionResponse {
-        sMacAddr radio_mac;
-        wfa_map::tlvChannelSelectionResponse::eResponseCode response_code;
-    };
-
-    struct sExpectedChannelSelection {
-        uint16_t mid;
-        std::vector<sMacAddr> requests;
-        std::vector<sChannelSelectionResponse> responses;
-    };
-
-    sExpectedChannelSelection m_expected_channel_selection;
+    sPendingChannelSelection m_pending_selection;
 
     sPendingChannelPreferenceReport m_pending_preference;
 

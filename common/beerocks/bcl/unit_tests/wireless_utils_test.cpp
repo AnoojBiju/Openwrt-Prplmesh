@@ -159,7 +159,7 @@ std::vector<tGetOperatingClassByChannelParam> get_operating_class_by_channel_inv
                     }
                     auto op_class            = operating_class.operating_class;
                     uint8_t channel_to_check = channel;
-                    if (op_class == 128 || op_class == 129 || op_class == 130) {
+                    if (son::wireless_utils::is_operating_class_using_central_channel(op_class)) {
                         channel_to_check =
                             son::wireless_utils::get_5g_center_channel(channel, bandwidth);
                     }

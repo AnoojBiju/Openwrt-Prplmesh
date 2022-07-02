@@ -143,7 +143,7 @@ public:
         bool load_balancing_enabled;
         bool service_fairness_enabled;
         bool rdkb_extensions_enabled;
-        bool zwdfs_enable;
+        int zwdfs_flag;
         uint32_t best_channel_rank_threshold;
 
         std::string vendor;
@@ -198,6 +198,8 @@ public:
         } wan;
         std::vector<sEthernetPort> lan;
     } ethernet;
+
+    struct sChannelPreference;
 
     struct sRadio {
         sRadio(const std::string &front_iface_name, const std::string &back_iface_name)
@@ -274,6 +276,17 @@ public:
 
         // Key: Channel
         std::unordered_map<uint8_t, sChannelInfo> channels_list;
+        using channel_preferences_map = std::map<sChannelPreference, std::set<uint8_t>>;
+
+        /**
+         * @brief Map of the Radio's Channel Preference.
+         * When the Radio reports its preferences, need to store it for Channel Selection
+         * Key: sChannelPreference, which consists of an Operating Class number, a preference value,
+         * and reason code aligned with the 1905.1 Preference Flag structure.
+         * Value: A set of channels.
+         * requirements.
+         */
+        channel_preferences_map channel_preferences;
 
         // Key: Channel number
         // Value: Pair containing:
@@ -508,18 +521,6 @@ public:
      * we update the time stamp in which the message is received.
      */
     std::unordered_map<sMacAddr, std::unordered_map<sMacAddr, sNeighborDevice>> neighbor_devices;
-
-    /**
-     * @brief Map of the controller's Channel Preference.
-     * 
-     * Kay: sChannelPreference, which consists of an Operating Class number, a preference value,
-     * and reason code aligned with the 1905.1 Preference Flag structure.
-     * Value: A set of channels.
-     * 
-     * When the controller sends its preferences, need to store it for Channel Selection
-     * requirements.
-     */
-    std::map<sChannelPreference, std::set<uint8_t>> controller_channel_preferences;
 
 private:
     std::list<sRadio> m_radios;

@@ -65,7 +65,7 @@ public:
 
     virtual bool sta_softblock_remove(const std::string &vap_name,
                                       const std::string &client_mac) override;
-    virtual bool switch_channel(int chan, int bw, int vht_center_frequency,
+    virtual bool switch_channel(int chan, beerocks::eWiFiBandwidth bw, int vht_center_frequency,
                                 int csa_beacon_count) override;
     virtual bool cancel_cac(int chan, beerocks::eWiFiBandwidth bw, int vht_center_frequency,
                             int secondary_chan_offset) override;
@@ -104,10 +104,10 @@ public:
     virtual bool set_radio_mbo_assoc_disallow(bool enable) override;
     virtual bool set_primary_vlan_id(uint16_t primary_vlan_id) override;
 
-    // Protected methods:
-protected:
     virtual bool process_dwpal_event(char *buffer, int bufLen, const std::string &opcode) override;
     virtual bool process_dwpal_nl_event(struct nl_msg *msg, void *arg = nullptr) override;
+    // Protected methods:
+protected:
     virtual bool dwpald_attach(char *ifname) override;
 
     // Overload for AP events

@@ -168,6 +168,22 @@ int cfg_get_load_steer_on_vaps(int num_of_interfaces,
     return RETURN_OK;
 }
 
+int cfg_get_dcs_channel_pool(int radio_num, char channel_pool[BPL_DCS_CHANNEL_POOL_LEN])
+{
+    if (!channel_pool) {
+        MAPF_ERR("invalid input: channel_pool is NULL");
+        return RETURN_ERR;
+    }
+
+    if (radio_num < 0) {
+        MAPF_ERR("invalid input: radio_num < 0");
+        return RETURN_ERR;
+    }
+
+    return cfg_get_prplmesh_radio_param(radio_num, "dcs_channel_pool", channel_pool,
+                                        BPL_DCS_CHANNEL_POOL_LEN);
+}
+
 int cfg_get_stop_on_failure_attempts()
 {
     int retVal = -1;
@@ -314,16 +330,13 @@ int cfg_notify_error(int code, const char data[BPL_ERROR_STRING_LEN]) { return 0
 
 int cfg_get_administrator_credentials(char pass[BPL_PASS_LEN]) { return 0; }
 
-bool cfg_get_zwdfs_enable(bool &enable)
+bool cfg_get_zwdfs_flag(int &flag)
 {
-    int retVal = -1;
-    if (cfg_get_prplmesh_param_int_default("zwdfs_enable", &retVal, DEFAULT_ZWDFS_ENABLE) ==
+    if (cfg_get_prplmesh_param_int_default("zwdfs_flag", &flag, DEFAULT_ZWDFS_DISABLE) ==
         RETURN_ERR) {
-        MAPF_ERR("Failed to read zwdfs_enable parameter");
+        MAPF_ERR("Failed to read zwdfs_flag parameter");
         return false;
     }
-
-    enable = (retVal == 1);
 
     return true;
 }
