@@ -13,6 +13,7 @@ mkdir -p artifacts
 cat << EOT >> artifacts/prplmesh.buildinfo
 TARGET_SYSTEM=${TARGET_SYSTEM}
 OPENWRT_VERSION=${OPENWRT_VERSION}
+OPENWRT_TOOLCHAIN_VERSION=${OPENWRT_TOOLCHAIN_VERSION}
 PRPLMESH_VERSION=${PRPLMESH_VERSION}
 EOT
 find bin -name 'prplmesh*.ipk' -exec cp -v {} "artifacts/prplmesh.ipk" \;
