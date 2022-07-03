@@ -162,6 +162,7 @@ public:
     static std::string wsc_to_bwl_encryption(WSC::eWscEncr enctype);
     static beerocks::eBssType wsc_to_bwl_bss_type(WSC::eWscVendorExtSubelementBssType bss_type);
     static std::list<uint8_t> string_to_wsc_oper_class(const std::string &operating_class);
+    static uint16_t get_vht_central_frequency(uint8_t channel, beerocks::eWiFiBandwidth bandwidth);
     static uint8_t get_5g_center_channel(uint8_t channel, beerocks::eWiFiBandwidth bandwidth);
     static uint8_t get_operating_class_by_channel(const beerocks::message::sWifiChannel &channel);
 

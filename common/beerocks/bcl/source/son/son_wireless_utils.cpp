@@ -1108,6 +1108,46 @@ uint8_t wireless_utils::get_5g_center_channel(uint8_t channel, beerocks::eWiFiBa
     return bw_info_it->second.center_channel;
 }
 
+uint16_t wireless_utils::get_vht_central_frequency(uint8_t channel,
+                                                   beerocks::eWiFiBandwidth bandwidth)
+{
+    const auto freq = which_freq(channel);
+    if (freq == beerocks::eFreqType::FREQ_5G) {
+        auto channel_it = channels_table_5g.find(channel);
+        if (channel_it == channels_table_5g.end()) {
+            return 0;
+        }
+        auto &bw_info_map = channel_it->second;
+
+        if (bandwidth == beerocks::eWiFiBandwidth::BANDWIDTH_80_80) {
+            bandwidth = beerocks::eWiFiBandwidth::BANDWIDTH_80;
+        }
+
+        auto bw_info_it = bw_info_map.find(bandwidth);
+        if (bw_info_it == bw_info_map.end()) {
+            return 0;
+        }
+
+        return channel_to_freq(bw_info_it->second.center_channel);
+    } else if (freq == beerocks::eFreqType::FREQ_24G) {
+        auto channel_it = channels_table_24g.find(channel);
+        if (channel_it == channels_table_24g.end()) {
+            return 0;
+        }
+        auto &chan_info_map = channel_it->second;
+
+        const auto operating_class =
+            get_operating_class_by_channel(beerocks::message::sWifiChannel(channel, bandwidth));
+
+        auto center_freq_it = chan_info_map.find(operating_class);
+        if (center_freq_it == chan_info_map.end()) {
+            return 0;
+        }
+        return channel_to_freq(center_freq_it->second);
+    }
+    return 0;
+}
+
 /**
  * @brief get operating class number by channel and channel bandwidth
  *
