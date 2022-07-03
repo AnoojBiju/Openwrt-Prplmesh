@@ -1564,19 +1564,16 @@ bool ChannelSelectionTask::send_channel_switch_request(
     request_msg->cs_params().bandwidth = request.outgoing_request.bandwidth;
     request_msg->cs_params().csa_count = request.outgoing_request.CSA_count;
 
-    if (son::wireless_utils::which_freq(request.outgoing_request.channel) == eFreqType::FREQ_5G) {
-        if (request.outgoing_request.bandwidth >= beerocks::eWiFiBandwidth::BANDWIDTH_40) {
-            const auto beacon_channel  = request.outgoing_request.channel;
-            const auto bandwidth       = request.outgoing_request.bandwidth;
-            const auto central_channel = son::wireless_utils::channels_table_5g.at(beacon_channel)
-                                             .at(bandwidth)
-                                             .center_channel;
-            request_msg->cs_params().vht_center_frequency =
-                son::wireless_utils::channel_to_freq(central_channel);
-        } else {
-            request_msg->cs_params().vht_center_frequency =
-                son::wireless_utils::channel_to_freq(request.outgoing_request.channel);
-        }
+    if (request.outgoing_request.bandwidth >= beerocks::eWiFiBandwidth::BANDWIDTH_40) {
+        // Because we want to switch to a bandwidth that is greater then 20Mhz,
+        // We need to find the central frequancy and set it to the VHT param.
+        const auto beacon_channel = request.outgoing_request.channel;
+        const auto bandwidth      = request.outgoing_request.bandwidth;
+        request_msg->cs_params().vht_center_frequency =
+            son::wireless_utils::get_vht_central_frequency(beacon_channel, bandwidth);
+    } else {
+        request_msg->cs_params().vht_center_frequency =
+            son::wireless_utils::channel_to_freq(request.outgoing_request.channel);
     }
 
     request_msg->tx_limit()       = request.outgoing_request.tx_limit;
