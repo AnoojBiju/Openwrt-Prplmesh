@@ -22,6 +22,5 @@ RUN apk add --update --no-cache \
     pkgconf \
     py3-yaml \
     python3 \
-    readline-dev \
     sed \
     clang-extra-tools
