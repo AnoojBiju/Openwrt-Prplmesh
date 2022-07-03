@@ -226,6 +226,7 @@ public:
         std::pair<uint8_t, uint8_t> overlap_beacon_channels_range;
     };
     static const std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, sChannel>> channels_table_5g;
+    static const std::map<uint8_t, std::map<uint8_t, uint8_t>> channels_table_24g;
 
     struct sOperatingClass {
         std::set<uint8_t> channels;

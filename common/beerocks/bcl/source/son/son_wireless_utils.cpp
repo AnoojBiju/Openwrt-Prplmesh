@@ -45,6 +45,93 @@ const std::map<uint8_t, wireless_utils::sOperatingClass> wireless_utils::operati
     {130,       {{42, 58, 106, 122, 138, 155},                                 beerocks::BANDWIDTH_80_80}}
 };
 
+const std::map<uint8_t, std::map<uint8_t, uint8_t>> wireless_utils::channels_table_24g = 
+{
+    /*
+    Example:
+    { Channel,  {
+                   { Operating Class, { Center channel } },
+                }
+    }
+    */
+    {
+        1,  {
+               { 81,  { 1  } },   // BANDWIDTH_20
+               { 83,  { 3  } }   //  BANDWIDTH_40
+            }
+    },
+    {   2,  {
+                { 81,  { 2  } },   // BANDWIDTH_20
+                { 83,  { 4  } }    // BANDWIDTH_40
+            }
+    },
+    {   3,  {
+                { 81,  { 3  } },   // BANDWIDTH_20
+                { 83,  { 5  } }    // BANDWIDTH_40
+            }
+    },
+    {   4,  {
+                { 81,  { 4  } },   // BANDWIDTH_20
+                { 83,  { 6  } }    // BANDWIDTH_40
+            }
+    },
+    {   5,  {
+                { 81,  { 5  } },   // BANDWIDTH_20
+                { 83,  { 7  } },   // BANDWIDTH_40
+                { 84,  { 3  } }    // BANDWIDTH_40
+            }
+    },
+    {   6,  {
+                { 81,  { 6  } },   // BANDWIDTH_20
+                { 83,  { 8  } },   // BANDWIDTH_40
+                { 84,  { 4  } }    // BANDWIDTH_40
+            }
+    },
+    {   7,  {
+                { 81,  { 7  } },   // BANDWIDTH_20
+                { 83,  { 9  } },   // BANDWIDTH_40
+                { 84,  { 5  } }    // BANDWIDTH_40
+            }
+    },
+    {   8,  {
+                { 81,  { 8  } },   // BANDWIDTH_20
+                { 83,  { 10 } },   // BANDWIDTH_40
+                { 84,  { 6  } }    // BANDWIDTH_40
+            }
+    },
+    {   9,  {
+                { 81,  { 9  } },   // BANDWIDTH_20
+                { 83,  { 11 } },   // BANDWIDTH_40
+                { 84,  { 7  } }    // BANDWIDTH_40
+            }
+    },
+    {   10, {
+                { 81,  { 10 } },   // BANDWIDTH_20
+                { 84,  { 8  } }    // BANDWIDTH_40
+            }
+    },
+    {   11, {
+                { 81,  { 11 } },   // BANDWIDTH_20
+                { 84,  { 9  } }    // BANDWIDTH_40
+            }
+    },
+    {   12, {
+                { 81,  { 12 } },   // BANDWIDTH_20
+                { 84,  { 10 } }    // BANDWIDTH_40
+            }
+    },
+    {   13, {
+                { 81,  { 13 } },   // BANDWIDTH_20
+                { 84,  { 11 } }    // BANDWIDTH_40
+            }
+    },
+    {
+        14, {
+                { 82,  { 14 } }    // BANDWIDTH_20
+            }
+    }
+};
+
 const std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, wireless_utils::sChannel>> wireless_utils::channels_table_5g =
 {
     /*
@@ -223,10 +310,6 @@ const std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, wireless_utils::sChan
                    { beerocks::BANDWIDTH_20,  { 169,            { 169, 169                      } } },
                 }
     }
-
-
-
-
 };
 
 const wireless_utils::sPhyRateTableEntry wireless_utils::phy_rate_table[PHY_RATE_TABLE_ANT_MODE_MAX][PHY_RATE_TABLE_MCS_MAX] = {
