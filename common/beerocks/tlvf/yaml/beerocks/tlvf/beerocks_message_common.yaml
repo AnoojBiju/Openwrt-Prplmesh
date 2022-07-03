@@ -24,6 +24,9 @@ eDHCPOp:
 
 sVapInfo:
   _type: struct
+  iface_name:
+    _type: char
+    _length: ["beerocks::message::IFACE_NAME_LENGTH"]
   mac: sMacAddr
   ssid:
     _type: char

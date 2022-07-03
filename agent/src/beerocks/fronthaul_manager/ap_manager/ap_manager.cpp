@@ -75,9 +75,9 @@ static void copy_vaps_info(std::shared_ptr<bwl::ap_wlan_hal> &ap_wlan_hal,
         }
         const auto &curr_vap = radio_vaps.at(vap_id);
 
-        LOG(DEBUG) << "vap_id=" << int(vap_id) << ", mac=" << curr_vap.mac
-                   << ", ssid=" << curr_vap.ssid << ", fronthaul=" << curr_vap.fronthaul
-                   << ", backhaul=" << curr_vap.backhaul;
+        LOG(DEBUG) << "vap_id=" << int(vap_id) << ", iface_name=" << curr_vap.bss
+                   << ", mac=" << curr_vap.mac << ", ssid=" << curr_vap.ssid
+                   << ", fronthaul=" << curr_vap.fronthaul << ", backhaul=" << curr_vap.backhaul;
 
         if (curr_vap.backhaul) {
             LOG(DEBUG) << "disallow_profile1="
@@ -87,6 +87,8 @@ static void copy_vaps_info(std::shared_ptr<bwl::ap_wlan_hal> &ap_wlan_hal,
         }
 
         // Copy the VAP MAC and SSID
+        beerocks::string_utils::copy_string(vaps[i].iface_name, curr_vap.bss.c_str(),
+                                            beerocks::message::IFACE_NAME_LENGTH);
         vaps[i].mac = tlvf::mac_from_string(curr_vap.mac);
         beerocks::string_utils::copy_string(vaps[i].ssid, curr_vap.ssid.c_str(),
                                             beerocks::message::WIFI_SSID_MAX_LENGTH);
@@ -2310,6 +2312,8 @@ bool ApManager::handle_ap_enabled(int vap_id)
     notification->vap_id() = vap_id;
 
     // Copy the VAP MAC and SSID
+    string_utils::copy_string(notification->vap_info().iface_name, vap_info.bss.c_str(),
+                              beerocks::message::IFACE_NAME_LENGTH);
     notification->vap_info().mac = tlvf::mac_from_string(vap_info.mac);
     string_utils::copy_string(notification->vap_info().ssid, vap_info.ssid.c_str(),
                               beerocks::message::WIFI_SSID_MAX_LENGTH);

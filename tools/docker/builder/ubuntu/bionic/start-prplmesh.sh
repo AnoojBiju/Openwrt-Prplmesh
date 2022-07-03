@@ -24,7 +24,15 @@ run ip link add          eth0_2   type dummy
 run ip link add          eth0_3   type dummy
 run ip link add          eth0_4   type dummy
 run ip link add          wlan0    type dummy
+run ip link add          wlan0.0  type dummy
+run ip link add          wlan0.1  type dummy
+run ip link add          wlan0.2  type dummy
+run ip link add          wlan0.3  type dummy
 run ip link add          wlan2    type dummy
+run ip link add          wlan2.0  type dummy
+run ip link add          wlan2.1  type dummy
+run ip link add          wlan2.2  type dummy
+run ip link add          wlan2.3  type dummy
 
 # When an interface is added to the bridge, the bridge inherits its MAC address.
 # It shouldn't be the same as any other interface because that messes up the topology in the
@@ -37,14 +45,30 @@ run ip link set      dev eth0_2   master br-lan
 run ip link set      dev eth0_3   master br-lan
 run ip link set      dev eth0_4   master br-lan
 run ip link set      dev wlan0    master br-lan
+run ip link set      dev wlan0.0  master br-lan
+run ip link set      dev wlan0.1  master br-lan
+run ip link set      dev wlan0.2  master br-lan
+run ip link set      dev wlan0.3  master br-lan
 run ip link set      dev wlan2    master br-lan
+run ip link set      dev wlan2.0  master br-lan
+run ip link set      dev wlan2.1  master br-lan
+run ip link set      dev wlan2.2  master br-lan
+run ip link set      dev wlan2.3  master br-lan
 run ip address flush dev eth1
 run ip link set      dev eth0_1   up
 run ip link set      dev eth0_2   up
 run ip link set      dev eth0_3   up
 run ip link set      dev eth0_4   up
 run ip link set      dev wlan0    up
+run ip link set      dev wlan0.0  up
+run ip link set      dev wlan0.1  up
+run ip link set      dev wlan0.2  up
+run ip link set      dev wlan0.3  up
 run ip link set      dev wlan2    up
+run ip link set      dev wlan2.0  up
+run ip link set      dev wlan2.1  up
+run ip link set      dev wlan2.2  up
+run ip link set      dev wlan2.3  up
 
 run ip link set      dev br-lan   addr "$bridge_mac"
 run ip address add   dev br-lan "$bridge_ip"
