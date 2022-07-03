@@ -422,6 +422,8 @@ bool base_wlan_hal_dummy::refresh_radio_info()
         auto mac = tlvf::mac_from_string(radio_mac);
         mac.oct[5] += vap_id;
         m_radio_info.available_vaps[vap_id].mac = tlvf::mac_to_string(mac);
+        m_radio_info.available_vaps[vap_id].bss =
+            m_radio_info.iface_name + "." + std::to_string(vap_id);
     }
     return true;
 }

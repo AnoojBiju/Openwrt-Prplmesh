@@ -4982,6 +4982,7 @@ bool slave_thread::update_vaps_info(const std::string &iface,
     }
     for (uint8_t vap_idx = 0; vap_idx < eBeeRocksIfaceIds::IFACE_TOTAL_VAPS; vap_idx++) {
         auto &bss         = radio->front.bssids[vap_idx];
+        bss.iface_name    = vaps[vap_idx].iface_name;
         bss.mac           = vaps[vap_idx].mac;
         bss.ssid          = vaps[vap_idx].ssid;
         bss.fronthaul_bss = vaps[vap_idx].fronthaul_vap;
@@ -4992,8 +4993,9 @@ bool slave_thread::update_vaps_info(const std::string &iface,
             vaps[vap_idx].profile2_backhaul_sta_association_disallowed;
 
         if (vaps[vap_idx].mac != network_utils::ZERO_MAC) {
-            LOG(DEBUG) << "BSS " << bss.mac << ", ssid:" << bss.ssid
-                       << ", fBSS: " << bss.fronthaul_bss << ", bBSS: " << bss.backhaul_bss
+            LOG(DEBUG) << "BSS " << bss.iface_name << ", bssid: " << bss.mac
+                       << ", ssid:" << bss.ssid << ", fBSS: " << bss.fronthaul_bss
+                       << ", bBSS: " << bss.backhaul_bss
                        << ", p1_dis: " << bss.backhaul_bss_disallow_profile1_agent_association
                        << ", p2_dis: " << bss.backhaul_bss_disallow_profile2_agent_association;
         }
