@@ -108,7 +108,7 @@ HALState ap_wlan_hal_dummy::attach(bool block)
     if (m_radio_info.is_5ghz) {
         set_channel(149, beerocks::eWiFiBandwidth::BANDWIDTH_80, 5775);
     } else {
-        set_channel(1, beerocks::eWiFiBandwidth::BANDWIDTH_40, 0);
+        set_channel(1, beerocks::eWiFiBandwidth::BANDWIDTH_40, 2422);
     }
 
     // On Operational send the AP_Attached event to the AP Manager
