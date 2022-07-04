@@ -546,7 +546,7 @@ bool client_steering_task::add_sta_steer_event_to_db()
 
     steer_sta_event.original_bssid = tlvf::mac_from_string(m_original_bssid);
     steer_sta_event.target_bssid   = tlvf::mac_from_string(m_target_bssid);
-    steer_sta_event.duration       = std::chrono::duration_cast<std::chrono::seconds>(m_duration);
+    steer_sta_event.duration       = m_duration;
 
     steer_sta_event.trigger_event = "Unknown";
 

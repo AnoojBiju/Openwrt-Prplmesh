@@ -60,7 +60,6 @@ void btm_request_task::work()
         m_original_bssid = tlvf::mac_to_string(original_bss->bssid);
         m_ssid_name      = original_bss->ssid;
 
-        update_sta_steer_attempt_stats(*station);
 
         if (m_original_bssid == m_target_bssid) {
             TASK_LOG(DEBUG) << "Target and original BSSIDs are the same:" << m_target_bssid
@@ -79,11 +78,14 @@ void btm_request_task::work()
 
         steer_sta();
 
+        m_steering_start = std::chrono::steady_clock::now();
+        update_sta_steer_attempt_stats(*station);
+
         m_state = FINALIZE;
 
-        wait_for_event(STA_DISCONNECTED);
-        wait_for_event(STA_CONNECTED); //STA Connected 'implies' a BTMResponse(Success),
-                                       //or at least, a successful blacklisting;
+        wait_for_event(STA_CONNECTED);
+        wait_for_event(BTM_REPORT_RECEIVED);
+
         set_events_timeout(STEERING_WAIT_TIME_MS);
         break;
     }
@@ -246,12 +248,6 @@ void btm_request_task::steer_sta()
 
     m_steer_try_performed = true;
 
-    // disassoc cannot happen before this point in time;
-    // in case the STA_CONNECTED event is received before the STA_DISCONNECTED
-    // this value shall allow us to compute the upper bound of m_duration
-    // (and guarantee a non-zero value thereof)
-    m_disassoc_ts = std::chrono::steady_clock::now();
-
     // update bml listeners
     bml_task::bss_tm_req_available_event bss_tm_event;
     bss_tm_event.target_bssid      = m_target_bssid;
@@ -297,50 +293,29 @@ void btm_request_task::handle_event(int event_type, void *obj)
             TASK_LOG(DEBUG) << "steering successful for sta " << m_sta_mac << " to bssid "
                             << connected_bss->bssid;
             m_steering_success = true;
+
+            m_status_code = wfa_map::tlvSteeringBTMReport::ACCEPT;
+            // station connected to the target bssid implies status::ACCEPT
+
+            if (m_steering_start.time_since_epoch().count() &&
+                m_steering_start < std::chrono::steady_clock::now()) {
+                m_duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now() - m_steering_start);
+                m_steering_start = {};
+            }
+
         } else {
             TASK_LOG(ERROR) << "sta " << m_sta_mac << " steered to bssid " << connected_bss->bssid
                             << " ,target bssid was " << m_target_bssid;
         }
 
-        // If time for STA disassociation was set then calculate
-        // duration between STA disconnected and connected
-        if (m_disassoc_ts.time_since_epoch().count() &&
-            m_disassoc_ts < std::chrono::steady_clock::now()) {
-            m_duration = std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::steady_clock::now() - m_disassoc_ts);
-            m_disassoc_ts = {};
-        }
     } else if (event_type == STA_DISCONNECTED) {
         TASK_LOG(DEBUG) << "sta " << m_sta_mac << " disconnected due to steering request";
-        m_disassoc_ts = std::chrono::steady_clock::now();
-    } else if (event_type == BTM_REQUEST_REJECTED) {
-        TASK_LOG(DEBUG) << "sta " << m_sta_mac << " rejected BSS_TM request";
-        // TODO : the AirTies controller, when disassoc_imminent is set, will disassoc
-        // the station from its current AP
-        if (m_disassoc_imminent) {
-            TASK_LOG(DEBUG) << "m_disassoc_imminent flag is true, proceeding as usual";
-        } else {
-            TASK_LOG(DEBUG) << "aborting task";
-            print_steering_info();
-            // need to remove client from blacklist ASAP and not wait until the disallow period ends.
-            son_actions::unblock_sta(m_database, m_cmdu_tx, m_sta_mac);
-            finish();
-        }
     } else if (event_type == BTM_REPORT_RECEIVED) {
         m_btm_report_received = true;
         m_status_code         = *(wfa_map::tlvSteeringBTMReport::eBTMStatusCode *)obj;
 
-        auto bss_path = m_database.get_node_data_model_path(m_target_bssid);
-
-        if (bss_path.empty()) {
-            LOG(WARNING) << "Path for BSS " << m_target_bssid << " not set";
-            return;
-        }
-
-        m_database.dm_uint64_param_one_up(bss_path + ".MultiAPSteering", "BTMQueryResponses");
-        m_database.dm_increment_steer_summary_stats("BTMQueryResponses");
-
-        // TODO: increment statistics for this particular operation (using status code for the BTMRequest) (PPM-2124)
+        LOG(DEBUG) << "status code " << int(m_status_code);
     }
 }
 
@@ -481,7 +456,12 @@ bool btm_request_task::add_sta_steer_event_to_db()
 
     steer_sta_event.original_bssid = tlvf::mac_from_string(m_original_bssid);
     steer_sta_event.target_bssid   = tlvf::mac_from_string(m_target_bssid);
-    steer_sta_event.duration       = std::chrono::duration_cast<std::chrono::seconds>(m_duration);
+    if (m_steering_success) {
+        steer_sta_event.duration =
+            std::chrono::duration_cast<std::chrono::milliseconds>(m_duration);
+    } else {
+        steer_sta_event.duration = {}; // a value of 0 is reserved for failed transitions
+    }
 
     steer_sta_event.trigger_event = "Unknown";
 
@@ -518,10 +498,10 @@ void btm_request_task::update_sta_steer_attempt_stats(Station &station)
         When someone will try to get data from this parameter action method will 
         calculate time in seconds from last steering attempt.
     */
-    station.steering_summary_stats.last_steer_time =
-        static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::seconds>(
-                                  std::chrono::steady_clock::now().time_since_epoch())
-                                  .count());
+
+    station.steering_summary_stats.last_steer_time = static_cast<uint32_t>(
+        std::chrono::duration_cast<std::chrono::seconds>(m_steering_start.time_since_epoch())
+            .count());
     ambiorix_dm->set(station.dm_path + ".MultiAPSTA.SteeringSummaryStats", "LastSteerTime",
                      station.steering_summary_stats.last_steer_time);
 

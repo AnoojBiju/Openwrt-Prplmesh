@@ -221,7 +221,7 @@ public:
         sMacAddr target_bssid;
         std::string trigger_event;
         std::string steering_approach;
-        std::chrono::seconds duration = {};
+        std::chrono::milliseconds duration = {};
         std::string timestamp;
     } sStaSteeringEvent;
 

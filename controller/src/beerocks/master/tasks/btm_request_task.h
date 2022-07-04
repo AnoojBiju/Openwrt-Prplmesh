@@ -107,9 +107,9 @@ private:
     std::string m_dm_timestamp;
 
     /**
-     * @brief The timestamp when the STA disconnected.
+     * @brief The timestamp when the steering started.
      */
-    std::chrono::steady_clock::time_point m_disassoc_ts;
+    std::chrono::steady_clock::time_point m_steering_start = {};
 
     /**
      * @brief The duration between STA disassociation and association event.
