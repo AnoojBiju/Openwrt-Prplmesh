@@ -91,9 +91,9 @@ void btm_request_task::work()
     }
 
     case FINALIZE: {
-        auto client = m_database.get_station(tlvf::mac_from_string(m_sta_mac));
-        if (!client) {
-            TASK_LOG(ERROR) << "Client " << m_sta_mac << " not found";
+        auto station = m_database.get_station(tlvf::mac_from_string(m_sta_mac));
+        if (!station) {
+            TASK_LOG(ERROR) << "Station " << m_sta_mac << " not found";
             finish();
             break;
         }
@@ -101,11 +101,11 @@ void btm_request_task::work()
         if (!m_steering_success && m_disassoc_imminent) {
             TASK_LOG(DEBUG) << "Steering failed for " << m_sta_mac << " from " << m_original_bssid
                             << " to " << m_target_bssid;
-            if (m_database.get_node_11v_capability(*client)) {
-                client->steering_summary_stats.btm_failures++;
+            if (m_database.get_node_11v_capability(*station)) {
+                station->steering_summary_stats.btm_failures++;
                 m_database.dm_increment_steer_summary_stats("BTMFailures");
             } else {
-                client->steering_summary_stats.blacklist_failures++;
+                station->steering_summary_stats.blacklist_failures++;
                 m_database.dm_increment_steer_summary_stats("BlacklistFailures");
             }
             /*
@@ -124,11 +124,11 @@ void btm_request_task::work()
                 m_database.update_node_failed_24ghz_steer_attempt(m_sta_mac);
             }
         } else {
-            if (m_database.get_node_11v_capability(*client)) {
-                client->steering_summary_stats.btm_successes++;
+            if (m_database.get_node_11v_capability(*station)) {
+                station->steering_summary_stats.btm_successes++;
                 m_database.dm_increment_steer_summary_stats("BTMSuccesses");
             } else {
-                client->steering_summary_stats.blacklist_successes++;
+                station->steering_summary_stats.blacklist_successes++;
                 m_database.dm_increment_steer_summary_stats("BlacklistSuccesses");
             }
         }
@@ -140,16 +140,16 @@ void btm_request_task::work()
         if (!add_sta_steer_event_to_db()) {
             LOG(ERROR) << "Failed to add MultiAPSTA.SteeringHistory for STA in database";
         }
-        m_database.dm_restore_steering_summary_stats(*client);
+        m_database.dm_restore_steering_summary_stats(*station);
 
         print_steering_info();
 
         if (m_database.config.persistent_db) {
 
             // Set is-unfriendly flag only if client exists in the persistent DB.
-            auto client_mac = tlvf::mac_from_string(m_sta_mac);
-            if (m_database.is_client_in_persistent_db(client_mac)) {
-                m_database.set_client_is_unfriendly(*client, !m_steering_success);
+            auto station_mac = tlvf::mac_from_string(m_sta_mac);
+            if (m_database.is_client_in_persistent_db(station_mac)) {
+                m_database.set_client_is_unfriendly(*station, !m_steering_success);
             }
         }
 
@@ -164,13 +164,13 @@ void btm_request_task::work()
 
 void btm_request_task::steer_sta()
 {
-    auto client = m_database.get_station(tlvf::mac_from_string(m_sta_mac));
-    if (!client) {
-        LOG(ERROR) << "Client " << m_sta_mac << " not found";
+    auto station = m_database.get_station(tlvf::mac_from_string(m_sta_mac));
+    if (!station) {
+        LOG(ERROR) << "Station " << m_sta_mac << " not found";
     }
 
     if (m_database.get_node_type(m_sta_mac) != beerocks::TYPE_IRE_BACKHAUL) {
-        if (client && !m_database.set_node_handoff_flag(*client, true)) {
+        if (station && !m_database.set_node_handoff_flag(*station, true)) {
             LOG(ERROR) << "Can't set handoff flag for " << m_sta_mac;
         }
     }
@@ -182,8 +182,8 @@ void btm_request_task::steer_sta()
         return;
     }
 
-    if (client) {
-        dm_update_multi_ap_steering_params(m_database.get_node_11v_capability(*client));
+    if (station) {
+        dm_update_multi_ap_steering_params(m_database.get_node_11v_capability(*station));
     }
     // Send 17.1.27	Client Association Control Request
     std::unordered_set<sMacAddr> unblock_list{tlvf::mac_from_string(m_sta_mac)};
@@ -239,6 +239,7 @@ void btm_request_task::steer_sta()
     std::get<1>(bssid_list).target_bss_channel_number = m_database.get_node_channel(m_target_bssid);
 
     auto source_agent = m_database.get_agent_by_bssid(tlvf::mac_from_string(m_original_bssid));
+
     son_actions::send_cmdu_to_agent(source_agent->al_mac, m_cmdu_tx, m_database);
     TASK_LOG(DEBUG) << "Sending steering request, sta " << m_sta_mac << " steer from bssid "
                     << m_original_bssid << " to bssid " << m_target_bssid << " channel "
@@ -262,15 +263,15 @@ void btm_request_task::print_steering_info()
     time_t now            = time(NULL);
     std::string timestamp = ctime(&now);
 
-    auto client = m_database.get_station(tlvf::mac_from_string(m_sta_mac));
-    if (!client) {
-        LOG(ERROR) << "Client " << m_sta_mac << " is not found";
+    auto station = m_database.get_station(tlvf::mac_from_string(m_sta_mac));
+    if (!station) {
+        LOG(ERROR) << "Station " << m_sta_mac << " is not found";
         return;
     }
 
     if (m_steering_type.empty()) {
         m_steering_type = std::string(" 11v (BTM) ");
-        if (!m_database.get_node_11v_capability(*client)) {
+        if (!m_database.get_node_11v_capability(*station)) {
             m_steering_type = std::string(" Legacy ");
         }
     }
@@ -321,17 +322,17 @@ void btm_request_task::handle_event(int event_type, void *obj)
 
 void btm_request_task::handle_task_end()
 {
-    auto client = m_database.get_station(tlvf::mac_from_string(m_sta_mac));
-    if (!client) {
-        LOG(ERROR) << "Client " << m_sta_mac << " is not found";
+    auto station = m_database.get_station(tlvf::mac_from_string(m_sta_mac));
+    if (!station) {
+        LOG(ERROR) << "Station " << m_sta_mac << " is not found";
         return;
     }
 
     if (m_steer_try_performed && !m_btm_report_received) {
-        TASK_LOG(DEBUG) << "client didn't respond to 11v request, updating responsiveness";
-        m_database.update_node_11v_responsiveness(*client, false);
+        TASK_LOG(DEBUG) << "Station didn't respond to 11v request, updating responsiveness";
+        m_database.update_node_11v_responsiveness(*station, false);
     }
-    m_database.set_node_handoff_flag(*client, false);
+    m_database.set_node_handoff_flag(*station, false);
 }
 
 bool btm_request_task::dm_set_steer_event_params(const std::string &event_path)
