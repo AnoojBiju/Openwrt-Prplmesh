@@ -497,6 +497,9 @@ bool btm_request_task::add_sta_steer_event_to_db()
 
     } else if (m_triggered_by.find("optimal_path_task") != std::string::npos) {
         steer_sta_event.trigger_event = "Wi-Fi Link Quality";
+
+    } else if (m_triggered_by.find("NBAPI") != std::string::npos) {
+        steer_sta_event.trigger_event = "Northbound API";
     }
 
     return m_database.add_sta_steering_event(tlvf::mac_from_string(m_sta_mac), steer_sta_event);
