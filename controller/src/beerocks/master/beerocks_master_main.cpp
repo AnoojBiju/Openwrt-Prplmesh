@@ -382,6 +382,22 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
         master_conf.unsuccessful_assoc_max_reporting_rate =
             beerocks::bpl::DEFAULT_UNSUCCESSFUL_ASSOC_MAX_REPORTING_RATE;
     }
+
+    if (!beerocks::bpl::cfg_get_rssi_measurements_timeout(
+            master_conf.optimal_path_rssi_timeout_msec)) {
+        LOG(DEBUG) << "Failed to read rssi_measurements_timeout, setting to default value: "
+                   << beerocks::bpl::DEFAULT_RSSI_MEASUREMENT_TIMEOUT_MSEC;
+        master_conf.optimal_path_rssi_timeout_msec =
+            beerocks::bpl::DEFAULT_RSSI_MEASUREMENT_TIMEOUT_MSEC;
+    }
+
+    if (!beerocks::bpl::cfg_get_beacon_measurements_timeout(
+            master_conf.optimal_path_beacon_timeout_msec)) {
+        LOG(DEBUG) << "Failed to read beacon_measurements_timeout, setting to default value: "
+                   << beerocks::bpl::DEFAULT_BEACON_MEASUREMENT_TIMEOUT_MSEC;
+        master_conf.optimal_path_beacon_timeout_msec =
+            beerocks::bpl::DEFAULT_BEACON_MEASUREMENT_TIMEOUT_MSEC;
+    }
 }
 
 /**
