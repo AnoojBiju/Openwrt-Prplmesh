@@ -1849,7 +1849,7 @@ bool Monitor::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
                 tlvf::mac_from_array(hal_data->bssid.oct, response->params().bssid);
 
                 it = pending_11k_events.erase(it);
-                LOG(INFO) << "Sending beacon measurement reponse on BSSID: "
+                LOG(INFO) << "Sending beacon measurement response on BSSID: "
                           << response->params().bssid << " to task_id: " << id;
 
                 send_cmdu(cmdu_tx);
