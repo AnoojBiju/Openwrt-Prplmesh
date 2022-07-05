@@ -635,5 +635,33 @@ bool cfg_get_radio_stats_enable(bool &radio_stats_enable)
     return true;
 }
 
+bool cfg_get_rssi_measurements_timeout(int &rssi_measurements_timeout_msec)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int_default("rssi_measurements_timeout", &retVal,
+                                           DEFAULT_RSSI_MEASUREMENT_TIMEOUT_MSEC) == RETURN_ERR) {
+        MAPF_ERR("Failed to read rssi_measurements_timeout parameter");
+        return false;
+    }
+
+    rssi_measurements_timeout_msec = retVal;
+
+    return true;
+}
+
+bool cfg_get_beacon_measurements_timeout(int &beacon_measurements_timeout_msec)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int_default("beacon_measurements_timeout", &retVal,
+                                           DEFAULT_BEACON_MEASUREMENT_TIMEOUT_MSEC) == RETURN_ERR) {
+        MAPF_ERR("Failed to read beacon_measurements_timeout parameter");
+        return false;
+    }
+
+    beacon_measurements_timeout_msec = retVal;
+
+    return true;
+}
+
 } // namespace bpl
 } // namespace beerocks
