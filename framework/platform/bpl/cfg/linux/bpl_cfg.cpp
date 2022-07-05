@@ -613,5 +613,35 @@ bool cfg_get_radio_stats_enable(bool &radio_stats_enable)
     return true;
 }
 
+bool cfg_get_rssi_measurements_timeout(int &rssi_measurements_timeout_msec)
+{
+    int retVal = DEFAULT_RSSI_MEASUREMENT_TIMEOUT_MSEC;
+
+    // persistent db value is optional
+    if (cfg_get_param_int("rssi_measurements_timeout", retVal) < 0) {
+        MAPF_DBG("Failed to read rssi_measurements_timeout parameter - setting default value");
+        retVal = DEFAULT_RSSI_MEASUREMENT_TIMEOUT_MSEC;
+    }
+
+    rssi_measurements_timeout_msec = retVal;
+
+    return true;
+}
+
+bool cfg_get_beacon_measurements_timeout(int &beacon_measurements_timeout_msec)
+{
+    int retVal = DEFAULT_BEACON_MEASUREMENT_TIMEOUT_MSEC;
+
+    // persistent db value is optional
+    if (cfg_get_param_int("beacon_measurements_timeout", retVal) < 0) {
+        MAPF_DBG("Failed to read beacon_measurements_timeout parameter - setting default value");
+        retVal = DEFAULT_BEACON_MEASUREMENT_TIMEOUT_MSEC;
+    }
+
+    beacon_measurements_timeout_msec = retVal;
+
+    return true;
+}
+
 } // namespace bpl
 } // namespace beerocks

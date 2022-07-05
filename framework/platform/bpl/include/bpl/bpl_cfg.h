@@ -175,6 +175,9 @@ constexpr int DEFAULT_UNSUCCESSFUL_ASSOC_MAX_REPORTING_RATE = 30;
 constexpr int BPL_DCS_CHANNEL_POOL_LEN    = 64;
 constexpr char DEFAULT_DCS_CHANNEL_POOL[] = "0";
 
+constexpr int DEFAULT_RSSI_MEASUREMENT_TIMEOUT_MSEC   = 10000;
+constexpr int DEFAULT_BEACON_MEASUREMENT_TIMEOUT_MSEC = 6000;
+
 /****************************************************************************/
 /******************************* Structures *********************************/
 /****************************************************************************/
@@ -854,6 +857,24 @@ bool get_ruid_chipset_vendor(const sMacAddr &ruid, std::string &chipset_vendor);
  * @return true on success, otherwise false.
  */
 bool get_max_prioritization_rules(uint32_t &max_prioritization_rules);
+
+/**
+ * @brief Get the RSSI measurements timeout which will be used by the Optimal-Path task.
+ * 
+ * @param [out] rssi_measurements_timeout_msec RSSI measurements timeout in milliseconds.
+ * 
+ * @return true on success, otherwise false.
+ */
+bool cfg_get_rssi_measurements_timeout(int &rssi_measurements_timeout_msec);
+
+/**
+ * @brief Get the 11K beacon measurements timeout which will be used by the Optimal-Path task.
+ * 
+ * @param [out] beacon_measurements_timeout_msec 11K beacon measurements timeout in milliseconds.
+ * 
+ * @return true on success, otherwise false.
+ */
+bool cfg_get_beacon_measurements_timeout(int &beacon_measurements_timeout_msec);
 
 } // namespace bpl
 } // namespace beerocks
