@@ -983,7 +983,13 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_wsc(ieee1905_1::CmduMe
     radio_conf_params.sent_vaps_list_update     = false;
     radio_conf_params.received_vaps_list_update = false;
 
-    FSM_MOVE_STATE(radio->front.iface_name, eState::WAIT_AP_CONFIGURATION_COMPLETE);
+    if (db->device_conf.management_mode != BPL_MGMT_MODE_NOT_MULTIAP) {
+        FSM_MOVE_STATE(radio->front.iface_name, eState::WAIT_AP_CONFIGURATION_COMPLETE);
+        return;
+    }
+
+    // MODE is NOT_MULTIAP
+    FSM_MOVE_STATE(radio->front.iface_name, eState::CONFIGURED);
     return;
 }
 
