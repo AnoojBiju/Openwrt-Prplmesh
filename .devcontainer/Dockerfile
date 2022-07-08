@@ -49,6 +49,9 @@ RUN apt-get -y install apt-transport-https ca-certificates \
 RUN curl -L "https://github.com/docker/compose/releases/download/1.28.4/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose \
     && chmod +x /usr/local/bin/docker-compose
 
+# Need to purge old python3-apt; this build image has a broken python3-apt
+RUN apt -y purge python3-apt && apt -y autoremove && apt update -y && apt install -y python3-apt
+
 # We need liburiparser-dev > v. 9.0 which isn't avalaible in default
 # 18.04 Ubuntu repos. So add Ubuntu 19.10 repo which has v. 0.9.3-2
 RUN echo "deb http://old-releases.ubuntu.com/ubuntu eoan main universe" | tee -a /etc/apt/sources.list.d/eoan.list && \
