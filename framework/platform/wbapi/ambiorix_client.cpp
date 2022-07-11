@@ -35,17 +35,23 @@ bool AmbiorixClient::connect(const std::string &amxb_backend, const std::string 
 
 amxc_var_t *AmbiorixClient::get_object(const std::string &object_path, const int32_t depth)
 {
-    amxc_var_t ret_val;
-    amxc_var_init(&ret_val);
-    int ret = amxb_get(m_bus_ctx, object_path.c_str(), depth, &ret_val, AMX_CL_DEF_TIMEOUT);
+    amxc_var_t data;
+    amxc_var_init(&data);
+    amxc_var_t *result = nullptr;
+
+    int ret = amxb_get(m_bus_ctx, object_path.c_str(), depth, &data, AMX_CL_DEF_TIMEOUT);
     if (ret == AMXB_STATUS_OK) {
-        amxc_var_t *result = GETI_ARG(&ret_val, 0);
+        result = GETI_ARG(&data, 0);
         if (depth == 0) {
-            return amxc_var_get_first(result);
+            result = amxc_var_get_first(result);
         }
-        return result;
+        amxc_var_take_it(result);
+    } else {
+        LOG(DEBUG) << "Request path [" << object_path << "] failed ret: " << std::to_string(ret);
     }
-    return nullptr;
+    amxc_var_clean(&data);
+
+    return result;
 }
 
 bool AmbiorixClient::update_object(const std::string &object_path, amxc_var_t *object)
