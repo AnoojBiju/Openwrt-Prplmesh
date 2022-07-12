@@ -2893,7 +2893,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
             // Add the message to the queue
             event_queue_push(Event::STA_Steering_Auth_Fail, msg_buff);
         } else {
-            LOG(ERROR) << "Unknown message type!";
+            LOG(ERROR) << "Unknown message type!!";
             break;
         }
 
