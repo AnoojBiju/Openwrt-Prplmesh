@@ -29,7 +29,9 @@
 #include <tlvf/ieee_1905_1/tlvUnknown.h>
 #include <tlvf/ieee_1905_1/tlvVendorSpecific.h>
 #include <tlvf/ieee_1905_1/tlvWsc.h>
+#include <tlvf/swap.h>
 #include <tlvf/wfa_map/eTlvTypeMap.h>
+#include <tlvf/wfa_map/eVirtualBssSubtype.h>
 #include <tlvf/wfa_map/tlv1905EncapDpp.h>
 #include <tlvf/wfa_map/tlv1905EncapEapol.h>
 #include <tlvf/wfa_map/tlv1905LayerSecurityCapability.h>
@@ -45,6 +47,7 @@
 #include <tlvf/wfa_map/tlvApOperationalBSS.h>
 #include <tlvf/wfa_map/tlvApRadioBasicCapabilities.h>
 #include <tlvf/wfa_map/tlvApRadioIdentifier.h>
+#include <tlvf/wfa_map/tlvApRadioVbssCapabilities.h>
 #include <tlvf/wfa_map/tlvApVhtCapabilities.h>
 #include <tlvf/wfa_map/tlvAssociatedClients.h>
 #include <tlvf/wfa_map/tlvAssociatedStaExtendedLinkMetrics.h>
@@ -136,6 +139,19 @@ uint16_t CmduMessageRx::getNextTlvLength() const
     swap_16(tlv_length);
 
     return tlv_length;
+}
+
+uint16_t CmduMessageRx::getNextTlvSubtype() const
+{
+    if (!getCmduHeader()) {
+        return UINT16_MAX;
+    }
+    sSubtypedTlvHeader *tlv = reinterpret_cast<sSubtypedTlvHeader *>(msg.prevClass()->getBuffPtr());
+
+    uint16_t tlv_subtype = tlv->subtype;
+    swap_16(tlv_subtype);
+
+    return tlv_subtype;
 }
 
 std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(ieee1905_1::eTlvType tlv_type)
@@ -485,6 +501,22 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     }
     case (wfa_map::eTlvTypeMap::TLV_SPATIAL_REUSE_CONFIG_RESPONSE): {
         return msg.addClass<wfa_map::tlvSpatialReuseConfigResponse>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_VIRTUAL_BSS): {
+        auto tlv_subtype_int = getNextTlvSubtype();
+
+        if (!wfa_map::eVirtualBssSubtypeValidate::check(tlv_subtype_int)) {
+            LOG(FATAL) << "Invalid TLV subtype " << tlv_subtype_int << " for type " << tlv_type;
+            return msg.addClass<tlvUnknown>();
+        }
+        auto tlv_subtype = static_cast<wfa_map::eVirtualBssSubtype>(tlv_subtype_int);
+        switch (tlv_subtype) {
+        case (wfa_map::eVirtualBssSubtype::AP_RADIO_VBSS_CAPABILITIES): {
+            return msg.addClass<wfa_map::ApRadioVbssCapabilities>();
+        }
+        }
+        LOG(FATAL) << "Unknown TLV subtype: " << unsigned(tlv_subtype);
+        return msg.addClass<tlvUnknown>();
     }
     }
     LOG(FATAL) << "Unknown TLV type: " << unsigned(tlv_type);

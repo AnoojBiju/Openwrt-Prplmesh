@@ -418,7 +418,6 @@ class TlvF:
         self.logger = None
         self.yaml_file_list = []
         self.generated_file_list = []
-        self.copied_file_list = []
         self.db = LastUpdatedOrderedDict()
         self.db_enum_storage_type = {}
         self.db_yaml_paths = {}
@@ -439,7 +438,7 @@ class TlvF:
         self.generateCode()
 
         if self.print_outputs:
-            outputs = ";".join(self.generated_file_list + self.copied_file_list)
+            outputs = ";".join(self.generated_file_list)
             sys.stdout.write(outputs)
 
         logConsole("All Done.\n")
