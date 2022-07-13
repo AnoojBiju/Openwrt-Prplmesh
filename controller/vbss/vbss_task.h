@@ -26,4 +26,7 @@ private:
     son::db &database;
 
     bool handle_ap_radio_vbss_caps_msg(const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    bool handle_move_response_msg(const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx,
+                                  bool did_cancel);
 };

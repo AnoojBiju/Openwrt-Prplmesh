@@ -1,6 +1,7 @@
 #include "vbss_task.h"
 #include "../src/beerocks/master/son_actions.h"
 #include "dummy_tlvs/tlvAPRadioVBSSCapabilities.h"
+#include <tlvf/wfa_map/tlvClientInfo.h>
 
 vbss_task::vbss_task(son::db &database_) : database(database_) {}
 
@@ -24,11 +25,11 @@ bool vbss_task::handle_ieee1905_1_msg(const sMacAddr &src_mac, ieee1905_1::CmduM
     case ieee1905_1::eMessageType::BSS_CONFIGURATION_RESPONSE_MESSAGE:
         // This type is definitely not right
         // Virtual BSS Move Preperation Response
-        break;
+        return handle_move_response_msg(src_mac, cmdu_rx, false);
     case ieee1905_1::eMessageType::FAILED_CONNECTION_MESSAGE:
         // This type is definitely not right
         // Virtual BSS Move Cancel Response
-        break;
+        return handle_move_response_msg(src_mac, cmdu_rx, true);
     case ieee1905_1::eMessageType::TOPOLOGY_RESPONSE_MESSAGE:
         //VBSS Configuration Report TLV
         break;
@@ -109,6 +110,26 @@ bool vbss_task::handle_ap_radio_vbss_caps_msg(const sMacAddr &src_mac,
     }
 
     //TODO: Send to VBSSManager
+
+    return true;
+}
+
+bool vbss_task::handle_move_response_msg(const sMacAddr &src_mac,
+                                         ieee1905_1::CmduMessageRx &cmdu_rx, bool did_cancel)
+{
+
+    auto client_info_tlv = cmdu_rx.getClass<wfa_map::tlvClientInfo>();
+    std::string msg_desc = "Move Cancel" ? did_cancel : "Move Preparation";
+
+    if (!client_info_tlv) {
+        LOG(ERROR) << msg_desc " Response did not contain a Client Info TLV!";
+        return false;
+    }
+
+    sMacAddr client_mac = client_info_tlv->client_mac();
+    sMacAddr bssid      = client_info_tlv->bssid();
+
+    // TODO: Send to VBSS Manager
 
     return true;
 }
