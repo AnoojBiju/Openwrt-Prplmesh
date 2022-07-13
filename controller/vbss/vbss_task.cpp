@@ -1,6 +1,7 @@
 #include "vbss_task.h"
 #include "../src/beerocks/master/son_actions.h"
 #include "dummy_tlvs/tlvAPRadioVBSSCapabilities.h"
+#include "dummy_tlvs/tlvTriggerChannelSwitchAnnounce.h"
 #include <tlvf/wfa_map/tlvClientInfo.h>
 
 vbss_task::vbss_task(son::db &database_) : database(database_) {}
@@ -56,10 +57,10 @@ bool vbss_task::handle_ieee1905_1_msg(const sMacAddr &src_mac, ieee1905_1::CmduM
     - Client Info TLV
     - Trigger Channel Switch Announcement TLV
 
- Virtual VBSS Move Preperation Response
+ Virtual VBSS Move Preperation Response !!
     - Client Info TLV
 
- Virtual BSS Move Cancel Response
+ Virtual BSS Move Cancel Response !!
     - Client Info TLV
 
 -----------------------------------------------
@@ -128,6 +129,35 @@ bool vbss_task::handle_move_response_msg(const sMacAddr &src_mac,
 
     sMacAddr client_mac = client_info_tlv->client_mac();
     sMacAddr bssid      = client_info_tlv->bssid();
+
+    // TODO: Send to VBSS Manager
+
+    return true;
+}
+
+bool handle_trigger_chan_switch_announce_resp(const sMacAddr &src_mac,
+                                              ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto client_info_tlv = cmdu_rx.getClass<wfa_map::tlvClientInfo>();
+
+    if (!client_info_tlv) {
+        LOG(ERROR) << msg_desc
+            "Trigger Channel Switch Announcement Response did not contain the Client Info TLV!";
+        return false;
+    }
+
+    sMacAddr client_mac = client_info_tlv->client_mac();
+    sMacAddr bssid      = client_info_tlv->bssid();
+
+    auto channel_switch_tlv = cmdu_rx.getClass<tlvTriggerChannelSwitchAnnounce>();
+    if (!client_info_tlv) {
+        LOG(ERROR) << msg_desc "Trigger Channel Switch Announcement Response did not contain the "
+                               "Trigger Channel Switch Announcement TLV!";
+        return false;
+    }
+
+    uint8_t csa_channel = *channel_switch_tlv->m_csa_channel;
+    uint8_t op_class    = *channel_switch_tlv->m_op_class;
 
     // TODO: Send to VBSS Manager
 

@@ -29,4 +29,7 @@ private:
 
     bool handle_move_response_msg(const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx,
                                   bool did_cancel);
+
+    bool handle_trigger_chan_switch_announce_resp(const sMacAddr &src_mac,
+                                                  ieee1905_1::CmduMessageRx &cmdu_rx);
 };
