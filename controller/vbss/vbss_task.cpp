@@ -79,7 +79,7 @@ bool vbss_task::handle_ieee1905_1_msg(const sMacAddr &src_mac, ieee1905_1::CmduM
     - AP Radio VBSS Capabilities TLV
     - ...
 */
-
+// clang-format off
 bool vbss_task::handle_ap_radio_vbss_caps_msg(const sMacAddr &src_mac,
                                               ieee1905_1::CmduMessageRx &cmdu_rx)
 {
@@ -97,17 +97,14 @@ bool vbss_task::handle_ap_radio_vbss_caps_msg(const sMacAddr &src_mac,
         vbss::sAPRadioVBSSCapabilities ap_radio_caps;
 
         ap_radio_caps.max_vbss        = ap_vbss_caps_tlv->max_vbss();
-        ap_radio_caps.vbsses_subtract = ap_vbss_caps_tlv->vbss_settings().vbsss_subtract();
-        ap_radio_caps.apply_fixed_bits_restrict =
-            ap_vbss_caps_tlv->vbss_settings().vbssid_restrictions();
-        ap_radio_caps.apply_vbssid_match_mask_restrict =
-            ap_vbss_caps_tlv->vbss_settings().vbssid_match_and_mask_restrictions();
-        ap_radio_caps.apply_fixed_bits_restrict =
-            ap_vbss_caps_tlv->vbss_settings().fixed_bit_restrictions();
+        ap_radio_caps.vbsses_subtract = ap_vbss_caps_tlv->vbss_settings().vbsss_subtract;
+        ap_radio_caps.apply_fixed_bits_restrict = ap_vbss_caps_tlv->vbss_settings().vbssid_restrictions;
+        ap_radio_caps.apply_vbssid_match_mask_restrict = ap_vbss_caps_tlv->vbss_settings().vbssid_match_and_mask_restrictions;
+        ap_radio_caps.apply_fixed_bits_restrict = ap_vbss_caps_tlv->vbss_settings().fixed_bit_restrictions;
         ap_radio_caps.fixed_bits_mask  = ap_vbss_caps_tlv->fixed_bits_mask();
         ap_radio_caps.fixed_bits_value = ap_vbss_caps_tlv->fixed_bits_value();
 
-        ruid_caps_map.insert({ap_vbss_caps_tlv->radio_uid(), ap_radio_caps});
+        ruid_caps_map.add(ap_vbss_caps_tlv->radio_uid(), ap_radio_caps);
 
         ap_vbss_caps_tlv = cmdu_rx.getClass<wfa_map::ApRadioVbssCapabilities>();
     }
@@ -116,16 +113,16 @@ bool vbss_task::handle_ap_radio_vbss_caps_msg(const sMacAddr &src_mac,
 
     return true;
 }
-
+// clang-format on
 bool vbss_task::handle_move_response_msg(const sMacAddr &src_mac,
                                          ieee1905_1::CmduMessageRx &cmdu_rx, bool did_cancel)
 {
 
     auto client_info_tlv = cmdu_rx.getClass<wfa_map::tlvClientInfo>();
-    std::string msg_desc = "Move Cancel" ? did_cancel : "Move Preparation";
+    std::string msg_desc = did_cancel ? "Move Cancel" : "Move Preparation";
 
     if (!client_info_tlv) {
-        LOG(ERROR) << msg_desc " Response did not contain a Client Info TLV!";
+        LOG(ERROR) << msg_desc << " Response did not contain a Client Info TLV!";
         return false;
     }
 
@@ -143,8 +140,8 @@ bool vbss_task::handle_trigger_chan_switch_announce_resp(const sMacAddr &src_mac
     auto client_info_tlv = cmdu_rx.getClass<wfa_map::tlvClientInfo>();
 
     if (!client_info_tlv) {
-        LOG(ERROR) << msg_desc
-            "Trigger Channel Switch Announcement Response did not contain the Client Info TLV!";
+        LOG(ERROR)
+            << "Trigger Channel Switch Announcement Response did not contain the Client Info TLV!";
         return false;
     }
 
@@ -153,8 +150,8 @@ bool vbss_task::handle_trigger_chan_switch_announce_resp(const sMacAddr &src_mac
 
     auto channel_switch_tlv = cmdu_rx.getClass<tlvTriggerChannelSwitchAnnounce>();
     if (!client_info_tlv) {
-        LOG(ERROR) << msg_desc "Trigger Channel Switch Announcement Response did not contain the "
-                               "Trigger Channel Switch Announcement TLV!";
+        LOG(ERROR) << "Trigger Channel Switch Announcement Response did not contain the Trigger "
+                      "Channel Switch Announcement TLV!";
         return false;
     }
 
@@ -190,7 +187,7 @@ bool handle_top_response_msg(const sMacAddr &src_mac, ieee1905_1::CmduMessageRx 
 
     auto config_report_tlv = cmdu_rx.getClass<tlvVBSSConfigurationReport>();
     if (!config_report_tlv) {
-        LOG(INFO) << "Agent with MAC " tlvf::mac_to_string(src_mac)
+        LOG(INFO) << "Agent with MAC " << tlvf::mac_to_string(src_mac)
                   << " does not support did not send a VBSS Configuration Report TLV with the "
                      "TOPOLOGY_RESPONSE_MESSAGE. It does not support VBSS.";
         return false;
