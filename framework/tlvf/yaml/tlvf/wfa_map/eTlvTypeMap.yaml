@@ -92,5 +92,7 @@ eTlvTypeMap:
   TLV_DEVICE_INVENTORY: 0xD4
   TLV_AGENT_LIST: 0xD5
   TLV_ANTICIPATED_CHANNEL_PREFERENCE: 0xD6
+  TLV_SPATIAL_REUSE_CONFIG_RESPONSE: 0xDA
+  TLV_VIRTUAL_BSS: 0xDE
 
   # When adding values, make sure to also update CmduMessageRx::parseNextTlv !

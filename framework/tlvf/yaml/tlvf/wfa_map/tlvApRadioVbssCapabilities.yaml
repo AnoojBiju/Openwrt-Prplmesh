@@ -1,0 +1,62 @@
+#
+---
+
+_include: {
+  tlvf/wfa_map/eTlvTypeMap.h,
+  tlvf/wfa_map/eVirtualBssSubtype.h,
+  tlvf/common/sMacAddr.h
+}
+
+_namespace: wfa_map
+
+ApRadioVbssCapabilities:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_VIRTUAL_BSS
+  length: uint16_t
+  subtype:
+    _type: eVirtualBssSubtype
+    _value_const: AP_RADIO_VBSS_CAPABILITIES
+  radio_uid: sMacAddr
+  max_vbss: uint8_t
+  vbss_settings:
+    _type: ApRadioVbssCapabilities::sVbssSettings
+  fixed_bits_mask: sMacAddr
+  fixed_bits_value: sMacAddr
+
+sVbssSettings:
+  _type: struct
+  _bit_field: uint8_t
+  vbsss_subtract:
+    _bit_range: [7,7]
+    _comment: |
+      0 = Each active VBSS subtracts from the maximum number of VBSSs
+      supported by the radio and is independent of the maximum
+      1 = Each active VBSS subtracts from both the maximum number of
+      VBSSs and the maximum number of BSSs supported by the radio
+      as specified in the AP Radio Basic Capabilities TLV.
+  vbssid_restrictions:
+    _bit_range: [6,6]
+    _comment: |
+      1 = Some BSSID restrictions apply - see bits 5-0
+      0 = no restrictions - all BSSIDs values can be supported as a
+      VBSSID by the radio
+      Note: If bit 6 is 0, bits 5-0 and First N Bits Value field below are not used and should be treated as reserved.
+      VBSSID Match and Mask
+  vbssid_match_and_mask_restrictions:
+    _bit_range: [5,5]
+    _comment: |
+      0 = No Match and Mask VBSSID restrictions apply
+      1 = Match and Mask VBSSID restrictions apply to all non-fixed
+      value bits (i.e., VBSSIDs must be orthogonal to other
+      BSSIDs/VBSSIDs under bit-wise operations)
+  fixed_bit_restrictions:
+    _bit_range: [4,4]
+    _comment: |
+      0 = No fixed bits restrictions apply for the VBSSID
+      1 = Fixed bits restrictions apply for the VBSSID. Refer to Fixed Bits
+      Mask and Fixed Bits Value fields.
+  reserved:
+    _bit_range: [3,0]
