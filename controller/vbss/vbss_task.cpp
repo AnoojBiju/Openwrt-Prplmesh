@@ -2,6 +2,7 @@
 #include "../src/beerocks/master/son_actions.h"
 #include "dummy_tlvs/tlvAPRadioVBSSCapabilities.h"
 #include "dummy_tlvs/tlvTriggerChannelSwitchAnnounce.h"
+#include "dummy_tlvs/tlvVBSSConfigurationReport.h"
 #include "dummy_tlvs/tlvVBSSEventTLV.h"
 #include <tlvf/wfa_map/tlvClientInfo.h>
 
@@ -34,7 +35,7 @@ bool vbss_task::handle_ieee1905_1_msg(const sMacAddr &src_mac, ieee1905_1::CmduM
         return handle_move_response_msg(src_mac, cmdu_rx, true);
     case ieee1905_1::eMessageType::TOPOLOGY_RESPONSE_MESSAGE:
         //VBSS Configuration Report TLV
-        break;
+        return handle_top_response_msg(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_WSC_MESSAGE:
         //AP Radio VBSS Capabilities TLV
         return handle_ap_radio_vbss_caps_msg(src_mac, cmdu_rx);
@@ -177,6 +178,29 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
     sMacAddr ruid    = vbss_event_tlv->ruid();
     sMacAddr vbssid  = vbss_event_tlv->bssid();
     bool did_succeed = vbss_event_tlv->success();
+
+    // TODO: Send to VBSS Manager (include src_mac = agent_mac)
+
+    return true;
+}
+
+// If the Agent supports VBSS this message will include a VBSS Configuration Report TLV
+bool handle_top_response_msg(const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+
+    auto config_report_tlv = cmdu_rx.getClass<tlvVBSSConfigurationReport>();
+    if (!config_report_tlv) {
+        LOG(INFO) << "Agent with MAC " tlvf::mac_to_string(src_mac)
+                  << " does not support did not send a VBSS Configuration Report TLV with the "
+                     "TOPOLOGY_RESPONSE_MESSAGE. It does not support VBSS.";
+        return false;
+    }
+
+    uint8_t num_radios = config_report_tlv->num_radios();
+    sMacAddr ruid      = config_report_tlv->ruid();
+    uint8_t num_bss    = config_report_tlv->num_bss();
+    sMacAddr bssid     = config_report_tlv->bssid();
+    std::string ssid   = config_report_tlv->ssid_str();
 
     // TODO: Send to VBSS Manager (include src_mac = agent_mac)
 

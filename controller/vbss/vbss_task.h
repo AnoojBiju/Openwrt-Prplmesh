@@ -34,4 +34,6 @@ private:
                                                   ieee1905_1::CmduMessageRx &cmdu_rx);
 
     bool handle_vbss_event_response(const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    bool handle_top_response_msg(const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
 };
