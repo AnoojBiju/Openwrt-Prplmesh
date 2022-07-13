@@ -44,10 +44,10 @@ bool vbss_task::handle_ieee1905_1_msg(const sMacAddr &src_mac, ieee1905_1::CmduM
     }
 }
 /*
- Virtual BSS Capabilities Response
-    - AP Radio VBSS Capabilities TLV !!
+ Virtual BSS Capabilities Response !!
+    - AP Radio VBSS Capabilities TLV
 
- Virtual BSS Response
+ Virtual BSS Response !!
     - Virtual BSS Event TLV
 
  Client Security Context Response
@@ -70,12 +70,12 @@ bool vbss_task::handle_ieee1905_1_msg(const sMacAddr &src_mac, ieee1905_1::CmduM
     - VBSS Configuration Report TLV
     - ...
 
- 1905 AP-Autoconfiguration WSC message
-    - AP Radio VBSS Capabilities TLV !!
+ 1905 AP-Autoconfiguration WSC message !!
+    - AP Radio VBSS Capabilities TLV
     - ...
 
- BSS Configuration Request
-    - AP Radio VBSS Capabilities TLV !!
+ BSS Configuration Request !!
+    - AP Radio VBSS Capabilities TLV
     - ...
 */
 
