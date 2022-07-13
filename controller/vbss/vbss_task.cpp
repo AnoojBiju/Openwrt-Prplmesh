@@ -1,6 +1,7 @@
 #include "vbss_task.h"
 #include "../src/beerocks/master/son_actions.h"
 #include "dummy_tlvs/tlvAPRadioVBSSCapabilities.h"
+#include "dummy_tlvs/tlvClientSecurityContext.h"
 #include "dummy_tlvs/tlvTriggerChannelSwitchAnnounce.h"
 #include "dummy_tlvs/tlvVBSSConfigurationReport.h"
 #include "dummy_tlvs/tlvVBSSEventTLV.h"
@@ -21,7 +22,7 @@ bool vbss_task::handle_ieee1905_1_msg(const sMacAddr &src_mac, ieee1905_1::CmduM
     case ieee1905_1::eMessageType::CLIENT_CAPABILITY_REPORT_MESSAGE:
         // This type is definitely not right
         // Client Security Context Response
-        break;
+        return handle_client_security_ctx_resp(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::CHANNEL_SELECTION_RESPONSE_MESSAGE:
         // Trigger Channel Switch Announcement Response
         return handle_trigger_chan_switch_announce_resp(src_mac, cmdu_rx);
@@ -112,7 +113,7 @@ bool vbss_task::handle_ap_radio_vbss_caps_msg(const sMacAddr &src_mac,
         ap_vbss_caps_tlv = cmdu_rx.getClass<tlvAPRadioVBSSCapabilities>();
     }
 
-    //TODO: Send to VBSSManager (along with src_mac = agent_mac)
+    //TODO: Send to VBSSManager (include src_mac = agent_mac)
 
     return true;
 }
@@ -132,7 +133,7 @@ bool vbss_task::handle_move_response_msg(const sMacAddr &src_mac,
     sMacAddr client_mac = client_info_tlv->client_mac();
     sMacAddr bssid      = client_info_tlv->bssid();
 
-    // TODO: Send to VBSS Manager
+    // TODO: Send to VBSS Manager (include src_mac = agent_mac)
 
     return true;
 }
@@ -161,7 +162,7 @@ bool vbss_task::handle_trigger_chan_switch_announce_resp(const sMacAddr &src_mac
     uint8_t csa_channel = *channel_switch_tlv->m_csa_channel;
     uint8_t op_class    = *channel_switch_tlv->m_op_class;
 
-    // TODO: Send to VBSS Manager
+    // TODO: Send to VBSS Manager (include src_mac = agent_mac)
 
     return true;
 }
@@ -201,6 +202,38 @@ bool handle_top_response_msg(const sMacAddr &src_mac, ieee1905_1::CmduMessageRx 
     uint8_t num_bss    = config_report_tlv->num_bss();
     sMacAddr bssid     = config_report_tlv->bssid();
     std::string ssid   = config_report_tlv->ssid_str();
+
+    // TODO: Send to VBSS Manager (include src_mac = agent_mac)
+
+    return true;
+}
+
+bool handle_client_security_ctx_resp(const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+
+    auto client_info_tlv = cmdu_rx.getClass<wfa_map::tlvClientInfo>();
+
+    if (!client_info_tlv) {
+        LOG(ERROR) << "Client Security Context Response did not contain the Client Info TLV!";
+        return false;
+    }
+
+    sMacAddr client_mac = client_info_tlv->client_mac();
+    sMacAddr bssid      = client_info_tlv->bssid();
+
+    auto client_sec_ctx_tlv = cmdu_rx.getClass<tlvClientSecurityContext>();
+
+    if (!client_sec_ctx_tlv) {
+        LOG(ERROR)
+            << "Client Security Context Response did not contain the Client Security Context TLV!";
+        return false;
+    }
+
+    bool client_is_connected     = client_sec_ctx_tlv->vbss_settings().client_connected;
+    std::string ptk              = client_sec_ctx_tlv->ptk_str();
+    uint64_t tx_packet_num       = client_sec_ctx_tlv->tx_packet_num();
+    std::string gtk              = client_sec_ctx_tlv->gtk_str();
+    uint64_t group_tx_packet_num = client_sec_ctx_tlv->group_tx_packet_num();
 
     // TODO: Send to VBSS Manager (include src_mac = agent_mac)
 
