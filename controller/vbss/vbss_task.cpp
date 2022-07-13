@@ -1,5 +1,6 @@
 #include "vbss_task.h"
 #include "../src/beerocks/master/son_actions.h"
+#include "dummy_tlvs/tlvAPRadioVBSSCapabilities.h"
 
 vbss_task::vbss_task(son::db &database_) : database(database_) {}
 
@@ -9,7 +10,7 @@ bool vbss_task::handle_ieee1905_1_msg(const sMacAddr &src_mac, ieee1905_1::CmduM
     switch (cmdu_rx.getMessageType()) {
     case ieee1905_1::eMessageType::AP_CAPABILITY_REPORT_MESSAGE:
         // Virtual BSS Capabilities Response
-        break;
+        return handle_ap_radio_vbss_caps_msg(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::BSS_CONFIGURATION_RESULT_MESSAGE:
         // Virtual BSS Response
         break;
@@ -33,15 +34,15 @@ bool vbss_task::handle_ieee1905_1_msg(const sMacAddr &src_mac, ieee1905_1::CmduM
         break;
     case ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_WSC_MESSAGE:
         //AP Radio VBSS Capabilities TLV
-        break;
+        return handle_ap_radio_vbss_caps_msg(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::BSS_CONFIGURATION_REQUEST_MESSAGE:
         //AP Radio VBSS Capabilities TLV
-        break;
+        return handle_ap_radio_vbss_caps_msg(src_mac, cmdu_rx);
     }
 }
 /*
  Virtual BSS Capabilities Response
-    - AP Radio VBSS Capabilities TLV
+    - AP Radio VBSS Capabilities TLV !!
 
  Virtual BSS Response
     - Virtual BSS Event TLV
@@ -67,10 +68,47 @@ bool vbss_task::handle_ieee1905_1_msg(const sMacAddr &src_mac, ieee1905_1::CmduM
     - ...
 
  1905 AP-Autoconfiguration WSC message
-    - AP Radio VBSS Capabilities TLV
+    - AP Radio VBSS Capabilities TLV !!
     - ...
 
  BSS Configuration Request
-    - AP Radio VBSS Capabilities TLV
+    - AP Radio VBSS Capabilities TLV !!
     - ...
 */
+
+bool vbss_task::handle_ap_radio_vbss_caps_msg(const sMacAddr &src_mac,
+                                              ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+
+    auto ap_vbss_caps_tlv = cmdu_rx.getClass<tlvAPRadioVBSSCapabilities>();
+    if (!ap_vbss_caps_tlv) {
+        // Message did not contain an AP Radio VBSS Capabilities TLV
+        return false;
+    }
+
+    // A TLV is returned for each radio that supports VBSS, handle all of them
+    beerocks::mac_map<vbss::sAPRadioVBSSCapabilities> ruid_caps_map;
+
+    while (ap_vbss_caps_tlv) {
+        vbss::sAPRadioVBSSCapabilities ap_radio_caps;
+
+        ap_radio_caps.max_vbss        = ap_vbss_caps_tlv->max_vbss();
+        ap_radio_caps.vbsses_subtract = ap_vbss_caps_tlv->vbss_settings().vbsss_subtract();
+        ap_radio_caps.apply_fixed_bits_restrict =
+            ap_vbss_caps_tlv->vbss_settings().vbssid_restrictions();
+        ap_radio_caps.apply_vbssid_match_mask_restrict =
+            ap_vbss_caps_tlv->vbss_settings().vbssid_match_and_mask_restrictions();
+        ap_radio_caps.apply_fixed_bits_restrict =
+            ap_vbss_caps_tlv->vbss_settings().fixed_bit_restrictions();
+        ap_radio_caps.fixed_bits_mask  = ap_vbss_caps_tlv->fixed_bits_mask();
+        ap_radio_caps.fixed_bits_value = ap_vbss_caps_tlv->fixed_bits_value();
+
+        ruid_caps_map.insert({ap_vbss_caps_tlv->radio_uid(), ap_radio_caps});
+
+        ap_vbss_caps_tlv = cmdu_rx.getClass<tlvAPRadioVBSSCapabilities>();
+    }
+
+    //TODO: Send to VBSSManager
+
+    return true;
+}
