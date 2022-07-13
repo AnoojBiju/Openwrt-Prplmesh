@@ -53,7 +53,7 @@ bool vbss_task::handle_ieee1905_1_msg(const sMacAddr &src_mac, ieee1905_1::CmduM
     - Client Info TLV
     - Client Security Context TLV
 
- Trigger Channel Switch Announcement Response
+ Trigger Channel Switch Announcement Response !!
     - Client Info TLV
     - Trigger Channel Switch Announcement TLV
 
