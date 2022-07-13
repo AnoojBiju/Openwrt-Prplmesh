@@ -2,6 +2,7 @@
 #include "../src/beerocks/master/son_actions.h"
 #include "dummy_tlvs/tlvAPRadioVBSSCapabilities.h"
 #include "dummy_tlvs/tlvTriggerChannelSwitchAnnounce.h"
+#include "dummy_tlvs/tlvVBSSEventTLV.h"
 #include <tlvf/wfa_map/tlvClientInfo.h>
 
 vbss_task::vbss_task(son::db &database_) : database(database_) {}
@@ -15,14 +16,14 @@ bool vbss_task::handle_ieee1905_1_msg(const sMacAddr &src_mac, ieee1905_1::CmduM
         return handle_ap_radio_vbss_caps_msg(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::BSS_CONFIGURATION_RESULT_MESSAGE:
         // Virtual BSS Response
-        break;
+        return handle_vbss_event_response(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::CLIENT_CAPABILITY_REPORT_MESSAGE:
         // This type is definitely not right
         // Client Security Context Response
         break;
     case ieee1905_1::eMessageType::CHANNEL_SELECTION_RESPONSE_MESSAGE:
         // Trigger Channel Switch Announcement Response
-        break;
+        return handle_trigger_chan_switch_announce_resp(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::BSS_CONFIGURATION_RESPONSE_MESSAGE:
         // This type is definitely not right
         // Virtual BSS Move Preperation Response
@@ -110,7 +111,7 @@ bool vbss_task::handle_ap_radio_vbss_caps_msg(const sMacAddr &src_mac,
         ap_vbss_caps_tlv = cmdu_rx.getClass<tlvAPRadioVBSSCapabilities>();
     }
 
-    //TODO: Send to VBSSManager
+    //TODO: Send to VBSSManager (along with src_mac = agent_mac)
 
     return true;
 }
@@ -135,8 +136,8 @@ bool vbss_task::handle_move_response_msg(const sMacAddr &src_mac,
     return true;
 }
 
-bool handle_trigger_chan_switch_announce_resp(const sMacAddr &src_mac,
-                                              ieee1905_1::CmduMessageRx &cmdu_rx)
+bool vbss_task::handle_trigger_chan_switch_announce_resp(const sMacAddr &src_mac,
+                                                         ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto client_info_tlv = cmdu_rx.getClass<wfa_map::tlvClientInfo>();
 
@@ -160,6 +161,24 @@ bool handle_trigger_chan_switch_announce_resp(const sMacAddr &src_mac,
     uint8_t op_class    = *channel_switch_tlv->m_op_class;
 
     // TODO: Send to VBSS Manager
+
+    return true;
+}
+
+bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
+                                           ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto vbss_event_tlv = cmdu_rx.getClass<tlvBSSEventTLV>();
+
+    if (!vbss_event_tlv) {
+        LOG(ERROR) << "VBSS Response does not contain a VBSS Event TLV!";
+        return false;
+    }
+    sMacAddr ruid    = vbss_event_tlv->ruid();
+    sMacAddr vbssid  = vbss_event_tlv->bssid();
+    bool did_succeed = vbss_event_tlv->success();
+
+    // TODO: Send to VBSS Manager (include src_mac = agent_mac)
 
     return true;
 }

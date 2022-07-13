@@ -32,4 +32,6 @@ private:
 
     bool handle_trigger_chan_switch_announce_resp(const sMacAddr &src_mac,
                                                   ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    bool handle_vbss_event_response(const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
 };
