@@ -1,10 +1,10 @@
 #include "vbss_task.h"
 #include "../src/beerocks/master/son_actions.h"
-#include "dummy_tlvs/tlvAPRadioVBSSCapabilities.h"
 #include "dummy_tlvs/tlvClientSecurityContext.h"
 #include "dummy_tlvs/tlvTriggerChannelSwitchAnnounce.h"
 #include "dummy_tlvs/tlvVBSSConfigurationReport.h"
 #include "dummy_tlvs/tlvVBSSEventTLV.h"
+#include <tlvf/wfa_map/tlvApRadioVbssCapabilities.h>
 #include <tlvf/wfa_map/tlvClientInfo.h>
 
 vbss_task::vbss_task(son::db &database_) : database(database_) {}
@@ -13,8 +13,7 @@ bool vbss_task::handle_ieee1905_1_msg(const sMacAddr &src_mac, ieee1905_1::CmduM
 {
     // Note: These are just temporararily used IEEE1905 message types. They will be changed in the future.
     switch (cmdu_rx.getMessageType()) {
-    case ieee1905_1::eMessageType::AP_CAPABILITY_REPORT_MESSAGE:
-        // Virtual BSS Capabilities Response
+    case ieee1905_1::eMessageType::VIRTUAL_BSS_CAPABILITIES_REPONSE_MESSAGE:
         return handle_ap_radio_vbss_caps_msg(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::BSS_CONFIGURATION_RESULT_MESSAGE:
         // Virtual BSS Response
@@ -85,7 +84,7 @@ bool vbss_task::handle_ap_radio_vbss_caps_msg(const sMacAddr &src_mac,
                                               ieee1905_1::CmduMessageRx &cmdu_rx)
 {
 
-    auto ap_vbss_caps_tlv = cmdu_rx.getClass<tlvAPRadioVBSSCapabilities>();
+    auto ap_vbss_caps_tlv = cmdu_rx.getClass<wfa_map::ApRadioVbssCapabilities>();
     if (!ap_vbss_caps_tlv) {
         // Message did not contain an AP Radio VBSS Capabilities TLV
         return false;
@@ -110,7 +109,7 @@ bool vbss_task::handle_ap_radio_vbss_caps_msg(const sMacAddr &src_mac,
 
         ruid_caps_map.insert({ap_vbss_caps_tlv->radio_uid(), ap_radio_caps});
 
-        ap_vbss_caps_tlv = cmdu_rx.getClass<tlvAPRadioVBSSCapabilities>();
+        ap_vbss_caps_tlv = cmdu_rx.getClass<wfa_map::ApRadioVbssCapabilities>();
     }
 
     //TODO: Send to VBSSManager (include src_mac = agent_mac)
