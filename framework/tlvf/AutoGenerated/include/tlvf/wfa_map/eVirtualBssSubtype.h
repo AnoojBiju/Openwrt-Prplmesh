@@ -22,12 +22,14 @@ namespace wfa_map {
 
 enum class eVirtualBssSubtype : uint16_t {
     AP_RADIO_VBSS_CAPABILITIES = 0x1,
+    VIRTUAL_BSS_CREATION = 0x2,
 };
 // Enum AutoPrint generated code snippet begining- DON'T EDIT!
 // clang-format off
 static const char *eVirtualBssSubtype_str(eVirtualBssSubtype enum_value) {
     switch (enum_value) {
     case eVirtualBssSubtype::AP_RADIO_VBSS_CAPABILITIES: return "eVirtualBssSubtype::AP_RADIO_VBSS_CAPABILITIES";
+    case eVirtualBssSubtype::VIRTUAL_BSS_CREATION:       return "eVirtualBssSubtype::VIRTUAL_BSS_CREATION";
     }
     static std::string out_str = std::to_string(int(enum_value));
     return out_str.c_str();
@@ -41,6 +43,7 @@ public:
         bool ret = false;
         switch (value) {
         case 0x1:
+        case 0x2:
                 ret = true;
                 break;
             default:
