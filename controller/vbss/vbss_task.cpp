@@ -52,7 +52,7 @@ bool vbss_task::handle_ieee1905_1_msg(const sMacAddr &src_mac, ieee1905_1::CmduM
  Virtual BSS Response !!
     - Virtual BSS Event TLV
 
- Client Security Context Response
+ Client Security Context Response !!
     - Client Info TLV
     - Client Security Context TLV
 
@@ -68,7 +68,7 @@ bool vbss_task::handle_ieee1905_1_msg(const sMacAddr &src_mac, ieee1905_1::CmduM
 
 -----------------------------------------------
 
- 1905 Topology Response Message
+ 1905 Topology Response Message !!
     - VBSS Configuration Report TLV
     - ...
 
