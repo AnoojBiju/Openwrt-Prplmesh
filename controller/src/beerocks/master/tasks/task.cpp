@@ -39,6 +39,8 @@ void task::response_received(std::string mac,
     }
 
     // Handle the response even if we are not expecting it
+    TASK_LOG(DEBUG) << "The Response " << std::hex << beerocks_header->action_op()
+                    << " is not in pending_macs";
     handle_response(mac, beerocks_header);
 }
 
