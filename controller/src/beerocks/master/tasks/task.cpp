@@ -130,6 +130,11 @@ void task::execute()
             events_timeout_set = false;
             pending_events.clear();
         }
+        if (waiting_for_responses && pending_macs.empty()) {
+            // TASK_LOG(DEBUG) << "done waiting for responses";
+            responses_timeout_set = false;
+            waiting_for_responses = false;
+        }
         if (responses_timeout_set && now >= responses_timeout) {
             // TASK_LOG(DEBUG) << "responses timed out";
             handle_responses_timeout(pending_macs);
@@ -140,11 +145,6 @@ void task::execute()
             TASK_LOG(DEBUG) << "done waiting for events";
             events_timeout_set = false;
             waiting_for_events = false;
-        }
-        if (waiting_for_responses && pending_macs.empty()) {
-            // TASK_LOG(DEBUG) << "done waiting for responses";
-            responses_timeout_set = false;
-            waiting_for_responses = false;
         }
         if (!responses_timeout_set && !waiting_for_events && !waiting_for_responses &&
             !waiting_for_pending_task) {
