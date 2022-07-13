@@ -103,6 +103,7 @@
 #include <tlvf/wfa_map/tlvRadioOperationRestriction.h>
 #include <tlvf/wfa_map/tlvSearchedService.h>
 #include <tlvf/wfa_map/tlvServicePrioritizationRule.h>
+#include <tlvf/wfa_map/tlvSpatialReuseConfigResponse.h>
 #include <tlvf/wfa_map/tlvStaMacAddressType.h>
 #include <tlvf/wfa_map/tlvSteeringBTMReport.h>
 #include <tlvf/wfa_map/tlvSteeringPolicy.h>
@@ -481,6 +482,9 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     }
     case (wfa_map::eTlvTypeMap::TLV_AGENT_LIST): {
         return msg.addClass<wfa_map::tlvAgentList>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_SPATIAL_REUSE_CONFIG_RESPONSE): {
+        return msg.addClass<wfa_map::tlvSpatialReuseConfigResponse>();
     }
     }
     LOG(FATAL) << "Unknown TLV type: " << unsigned(tlv_type);

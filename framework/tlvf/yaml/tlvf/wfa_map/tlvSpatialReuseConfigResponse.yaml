@@ -1,0 +1,20 @@
+#
+---
+_namespace: wfa_map
+
+tlvSpatialReuseConfigResponse:
+  _type: class
+  _is_tlv_class : True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_SPATIAL_REUSE_CONFIG_RESPONSE
+  length: uint16_t
+  response_code:
+    _type: eResponseCode
+    _comment: Channel selection response code, with respect to the Spatial Reuse Request
+
+eResponseCode:
+  _type: enum
+  _enum_storage: uint8_t
+  ACCEPT: 0x00
+  DECLINE: 0x01
