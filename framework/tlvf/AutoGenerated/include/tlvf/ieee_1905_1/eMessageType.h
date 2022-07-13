@@ -92,6 +92,8 @@ enum class eMessageType : uint16_t {
     DPP_BOOTSTRAPPING_URI_NOTIFICATION_MESSAGE = 0x8031,
     FAILED_CONNECTION_MESSAGE = 0x8033,
     AGENT_LIST_MESSAGE = 0x8035,
+    VIRTUAL_BSS_CAPABILITIES_REQUEST_MESSAGE = 0x8038,
+    VIRTUAL_BSS_CAPABILITIES_REPONSE_MESSAGE = 0x8039,
 };
 // Enum AutoPrint generated code snippet begining- DON'T EDIT!
 // clang-format off
@@ -168,6 +170,8 @@ static const char *eMessageType_str(eMessageType enum_value) {
     case eMessageType::DPP_BOOTSTRAPPING_URI_NOTIFICATION_MESSAGE:     return "eMessageType::DPP_BOOTSTRAPPING_URI_NOTIFICATION_MESSAGE";
     case eMessageType::FAILED_CONNECTION_MESSAGE:                      return "eMessageType::FAILED_CONNECTION_MESSAGE";
     case eMessageType::AGENT_LIST_MESSAGE:                             return "eMessageType::AGENT_LIST_MESSAGE";
+    case eMessageType::VIRTUAL_BSS_CAPABILITIES_REQUEST_MESSAGE:       return "eMessageType::VIRTUAL_BSS_CAPABILITIES_REQUEST_MESSAGE";
+    case eMessageType::VIRTUAL_BSS_CAPABILITIES_REPONSE_MESSAGE:       return "eMessageType::VIRTUAL_BSS_CAPABILITIES_REPONSE_MESSAGE";
     }
     static std::string out_str = std::to_string(int(enum_value));
     return out_str.c_str();
@@ -251,6 +255,8 @@ public:
         case 0x8031:
         case 0x8033:
         case 0x8035:
+        case 0x8038:
+        case 0x8039:
                 ret = true;
                 break;
             default:

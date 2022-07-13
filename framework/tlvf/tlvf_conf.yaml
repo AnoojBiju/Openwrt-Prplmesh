@@ -106,7 +106,9 @@ include_yaml_path: {
     "tlvf/wfa_map/tlvDppMessage.yaml",
     "tlvf/wfa_map/tlvEncryptedPayload.yaml",
     "tlvf/wfa_map/tlvMic.yaml",
-    "tlvf/wfa_map/tlvSpatialReuseConfigResponse.yaml"
+    "tlvf/wfa_map/tlvSpatialReuseConfigResponse.yaml",
+    "tlvf/wfa_map/eVirtualBssSubtype.yaml",
+    "tlvf/wfa_map/tlvApRadioVbssCapabilities.yaml"
 }
 
 # Relative to tlvf.py src_path variable
