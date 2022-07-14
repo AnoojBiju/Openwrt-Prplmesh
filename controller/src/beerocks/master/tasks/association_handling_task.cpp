@@ -126,7 +126,7 @@ void association_handling_task::work()
         auto agent_mac = database.get_node_parent_ire(radio_mac);
         son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, radio_mac);
 
-        add_pending_mac(database.get_node_parent_radio(new_hostap_mac),
+        add_pending_mac(database.get_node_parent_radio(radio_mac),
                         beerocks_message::ACTION_CONTROL_CLIENT_START_MONITORING_RESPONSE);
         set_responses_timeout(START_MONITORING_RESPONSE_TIMEOUT_MSEC);
         break;
