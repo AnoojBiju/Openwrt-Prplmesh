@@ -27,6 +27,7 @@
 #include "tlvf/wfa_map/tlvApRadioVbssCapabilities.h"
 #include "tlvf/wfa_map/tlvProfile2ChannelScanResult.h"
 #include "tlvf/wfa_map/tlvProfile2ErrorCode.h"
+#include "tlvf/wfa_map/tlvVirtualBssCreation.h"
 #include <tlvf/AssociationRequestFrame/AssocReqFrame.h>
 #include <tlvf/test/tlvVarList.h>
 #include <tlvf/tlvftypes.h>
@@ -1910,6 +1911,100 @@ int test_create_ap_radio_vbss_response_cmdu()
     return errors;
 }
 
+int test_virtual_bss_creation()
+{
+    int errors = 0;
+    MAPF_INFO(__FUNCTION__ << " start");
+
+    /*
+     * frame raw buffer in network byte order
+     */
+    // clang-format off
+    std::vector<uint8_t> vbss_buffer = {
+        // type
+        0xde,
+        // length
+        0x00, 0x46,
+        // subtype
+        0x00, 0x02,
+        // radio_uid
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+        // BSSID
+        0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c,
+        // SSID length
+        0x00, 0x08,
+        // SSID ("prplmesh")
+        0x70, 0x72, 0x70, 0x6c, 0x6d, 0x65, 0x73, 0x68,
+        // Pass length
+        0x00, 0x04,
+        // Pass ("pass")
+        0x70, 0x61, 0x73, 0x73,
+        // DPP Connector length
+        0x00, 0x00,
+        // Client MAC
+        0xde, 0xad, 0xbe, 0xef, 0xf0, 0x0d,
+        // Client assoc
+        0x01,
+        // Key length
+        0x00, 0x8,
+        // PTK,
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+        // TX Packet num (257)
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01,
+        // Group key length
+        0x00, 0x5,
+        // GTK
+        0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+        // Group TX Packet num (4097)
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x01,
+    };
+    // clang-format on
+
+    auto virtual_bss_creation = VirtualBssCreation(vbss_buffer.data(), vbss_buffer.size(), true);
+    errors +=
+        check_field<eTlvTypeMap>(virtual_bss_creation.type(), eTlvTypeMap::TLV_VIRTUAL_BSS, "type");
+    errors += check_field<uint16_t>(virtual_bss_creation.length(), 0x46, "length");
+    errors += check_field<wfa_map::eVirtualBssSubtype>(
+        virtual_bss_creation.subtype(), wfa_map::eVirtualBssSubtype::VIRTUAL_BSS_CREATION,
+        "subtype");
+    errors += check_field<sMacAddr>(virtual_bss_creation.radio_uid(),
+                                    tlvf::mac_from_string("01:02:03:04:05:06"), "radio_uid");
+    errors += check_field<sMacAddr>(virtual_bss_creation.bssid(),
+                                    tlvf::mac_from_string("07:08:09:0a:0b:0c"), "bssid");
+    errors += check_field<uint16_t>(virtual_bss_creation.ssid_length(), 8, "ssid_length");
+    errors += check_field<std::string>(virtual_bss_creation.ssid_str(), "prplmesh", "ssid");
+    errors += check_field<uint16_t>(virtual_bss_creation.pass_length(), 4, "pass_length");
+    errors += check_field<std::string>(virtual_bss_creation.pass(), "pass", "pass");
+    errors += check_field<uint16_t>(virtual_bss_creation.dpp_connector_length(), 0,
+                                    "dpp_connector_length");
+    errors += check_field<std::size_t>(virtual_bss_creation.dpp_connector_str().size(), 0,
+                                       "dpp_connector_str().size()");
+    errors += check_field<sMacAddr>(virtual_bss_creation.client_mac(),
+                                    tlvf::mac_from_string("de:ad:be:ef:f0:0d"), "client_mac");
+    errors += check_field<uint8_t>(virtual_bss_creation.client_assoc(), 1, "client_assoc");
+    errors += check_field<uint16_t>(virtual_bss_creation.key_length(), 8, "key_length");
+    std::vector<uint8_t> expected_ptk = {
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+    };
+    std::vector<uint8_t> parsed_ptk(virtual_bss_creation.ptk(),
+                                    virtual_bss_creation.ptk() + virtual_bss_creation.key_length());
+    errors += check_field<std::vector<uint8_t>>(parsed_ptk, expected_ptk, "PTK");
+    errors += check_field<uint64_t>(virtual_bss_creation.tx_packet_num(), 257, "tx_packet_num");
+    errors += check_field<uint16_t>(virtual_bss_creation.group_key_length(), 5, "group_key_length");
+    std::vector<uint8_t> expected_gtk = {
+        0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+    };
+    std::vector<uint8_t> parsed_gtk(virtual_bss_creation.gtk(),
+                                    virtual_bss_creation.gtk() +
+                                        virtual_bss_creation.group_key_length());
+    errors += check_field<std::vector<uint8_t>>(parsed_gtk, expected_gtk, "GTK");
+    errors += check_field<uint64_t>(virtual_bss_creation.group_tx_packet_num(), 0x1001,
+                                    "group_tx_packet_num");
+
+    MAPF_INFO(__FUNCTION__ << " Finished, errors = " << errors << std::endl);
+    return errors;
+}
+
 int main(int argc, char *argv[])
 {
     int errors = 0;
@@ -1928,6 +2023,7 @@ int main(int argc, char *argv[])
     errors += test_create_error_response_message();
     errors += test_parse_ap_radio_vbss_capabilities();
     errors += test_create_ap_radio_vbss_response_cmdu();
+    errors += test_virtual_bss_creation();
     MAPF_INFO(__FUNCTION__ << " Finished, errors = " << errors << std::endl);
     return errors;
 }
