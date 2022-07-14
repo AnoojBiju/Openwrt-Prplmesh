@@ -1085,7 +1085,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             m_disallowed_clients.push_back(disallowed_client);
 
             LOG(DEBUG) << "client " << disallowed_client.mac
-                       << " will be allowed to accosiate with bssid " << disallowed_client.bssid
+                       << " will be allowed to associate with bssid " << disallowed_client.bssid
                        << " in "
                        << std::chrono::duration_cast<std::chrono::seconds>(
                               disallowed_client.timeout - std::chrono::steady_clock::now())
@@ -1913,7 +1913,7 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
 
         auto msg =
             static_cast<bwl::sACTION_APMANAGER_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION *>(data);
-        LOG(INFO) << "DFS_EVENT_CAC_COMPLETED succsess = " << int(msg->params.success);
+        LOG(INFO) << "DFS_EVENT_CAC_COMPLETED success = " << int(msg->params.success);
 
         auto response = message_com::create_vs_message<
             beerocks_message::cACTION_APMANAGER_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION>(cmdu_tx);

@@ -68,9 +68,12 @@ protected:
 
     virtual bool set(const std::string &param, const std::string &value,
                      int vap_id = beerocks::IFACE_RADIO_ID) override;
-    amxc_var_t *whm_get_ap_obj(const std::string &iface);
-    amxc_var_t *whm_get_ap_obj(const std::string &iface, const int vap_id);
+    amxc_var_t *whm_get_wifi_ap_object(const std::string &iface);
+    int whm_get_vap_id(const std::string &iface);
     bool whm_get_radio_ref(const std::string &iface, std::string &ref);
+    bool whm_get_radio_path(const std::string &iface, std::string &path);
+    bool refresh_vap_info(int id, amxc_var_t *ap_obj);
+    amxc_var_t *get_radio_vaps();
 
     std::shared_ptr<beerocks::wbapi::AmbiorixClient> m_ambiorix_cl;
 

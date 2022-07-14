@@ -14,9 +14,9 @@ namespace whm {
 
 eRadioState utils_wlan_hal_whm::radio_state_from_string(const std::string &state)
 {
-    if (state == "Disabled") {
+    if (state == "Down") {
         return eRadioState::DISABLED;
-    } else if (state == "Enabled") {
+    } else if (state == "Up") {
         return eRadioState::ENABLED;
     } else {
         return eRadioState::UNKNOWN;
