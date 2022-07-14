@@ -11,4 +11,5 @@ eVirtualBssSubtype:
     (Cf. Draft_EasyMeshVBSSSpecSubmission_prpl_2022-05-10 Unencumbered by WFA Confidentiality)
   AP_RADIO_VBSS_CAPABILITIES: 1
   VIRTUAL_BSS_CREATION: 2
+  VIRTUAL_BSS_DESTRUCTION: 3
 

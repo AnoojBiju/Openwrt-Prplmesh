@@ -110,6 +110,7 @@ include_yaml_path: {
     "tlvf/wfa_map/eVirtualBssSubtype.yaml",
     "tlvf/wfa_map/tlvApRadioVbssCapabilities.yaml",
     "tlvf/wfa_map/tlvVirtualBssCreation.yaml",
+    "tlvf/wfa_map/tlvVirtualBssDestruction.yaml",
 }
 
 # Relative to tlvf.py src_path variable
