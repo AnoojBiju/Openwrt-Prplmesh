@@ -71,6 +71,7 @@
 #include <tlvf/wfa_map/tlvClientAssociationEvent.h>
 #include <tlvf/wfa_map/tlvClientCapabilityReport.h>
 #include <tlvf/wfa_map/tlvClientInfo.h>
+#include <tlvf/wfa_map/tlvClientSecurityContext.h>
 #include <tlvf/wfa_map/tlvDeviceInventory.h>
 #include <tlvf/wfa_map/tlvDppBootstrappingUriNotification.h>
 #include <tlvf/wfa_map/tlvDppCeeIndication.h>
@@ -525,6 +526,9 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
         }
         case (wfa_map::eVirtualBssSubtype::VIRTUAL_BSS_EVENT): {
             return msg.addClass<wfa_map::VirtualBssEvent>();
+        }
+        case (wfa_map::eVirtualBssSubtype::CLIENT_SECURITY_CONTEXT): {
+            return msg.addClass<wfa_map::ClientSecurityContext>();
         }
         }
         LOG(FATAL) << "Unknown TLV subtype: " << unsigned(tlv_subtype);
