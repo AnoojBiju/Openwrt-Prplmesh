@@ -103,7 +103,14 @@ wan_monitor::ELinkState wan_monitor::process()
 
     struct sockaddr_nl addr = {0};
     struct iovec iov        = {m_arrNLBuff, sizeof m_arrNLBuff};
-    struct msghdr msg       = {(void *)&addr, sizeof addr, &iov, 1, NULL, 0, 0};
+
+    struct msghdr msg = {.msg_name       = (void *)&addr,
+                         .msg_namelen    = sizeof(addr),
+                         .msg_iov        = &iov,
+                         .msg_iovlen     = 1,
+                         .msg_control    = nullptr,
+                         .msg_controllen = 0,
+                         .msg_flags      = 0};
 
     // Read a message from the netlink socket
     ssize_t len = recvmsg(m_iNetlinkFD, &msg, 0);
