@@ -115,6 +115,7 @@
 #include <tlvf/wfa_map/tlvSupportedService.h>
 #include <tlvf/wfa_map/tlvTimestamp.h>
 #include <tlvf/wfa_map/tlvTransmitPowerLimit.h>
+#include <tlvf/wfa_map/tlvTriggerChannelSwitchAnnouncement.h>
 #include <tlvf/wfa_map/tlvTunnelledData.h>
 #include <tlvf/wfa_map/tlvTunnelledProtocolType.h>
 #include <tlvf/wfa_map/tlvTunnelledSourceInfo.h>
@@ -529,6 +530,9 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
         }
         case (wfa_map::eVirtualBssSubtype::CLIENT_SECURITY_CONTEXT): {
             return msg.addClass<wfa_map::ClientSecurityContext>();
+        }
+        case (wfa_map::eVirtualBssSubtype::TRIGGER_CHANNEL_SWITCH_ANNOUNCEMENT): {
+            return msg.addClass<wfa_map::TriggerChannelSwitchAnnouncement>();
         }
         }
         LOG(FATAL) << "Unknown TLV subtype: " << unsigned(tlv_subtype);
