@@ -119,6 +119,7 @@
 #include <tlvf/wfa_map/tlvTunnelledSourceInfo.h>
 #include <tlvf/wfa_map/tlvVirtualBssCreation.h>
 #include <tlvf/wfa_map/tlvVirtualBssDestruction.h>
+#include <tlvf/wfa_map/tlvVirtualBssEvent.h>
 
 using namespace ieee1905_1;
 
@@ -521,6 +522,9 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
         }
         case (wfa_map::eVirtualBssSubtype::VIRTUAL_BSS_DESTRUCTION): {
             return msg.addClass<wfa_map::VirtualBssDestruction>();
+        }
+        case (wfa_map::eVirtualBssSubtype::VIRTUAL_BSS_EVENT): {
+            return msg.addClass<wfa_map::VirtualBssEvent>();
         }
         }
         LOG(FATAL) << "Unknown TLV subtype: " << unsigned(tlv_subtype);

@@ -24,6 +24,7 @@ enum class eVirtualBssSubtype : uint16_t {
     AP_RADIO_VBSS_CAPABILITIES = 0x1,
     VIRTUAL_BSS_CREATION = 0x2,
     VIRTUAL_BSS_DESTRUCTION = 0x3,
+    VIRTUAL_BSS_EVENT = 0x4,
 };
 // Enum AutoPrint generated code snippet begining- DON'T EDIT!
 // clang-format off
@@ -32,6 +33,7 @@ static const char *eVirtualBssSubtype_str(eVirtualBssSubtype enum_value) {
     case eVirtualBssSubtype::AP_RADIO_VBSS_CAPABILITIES: return "eVirtualBssSubtype::AP_RADIO_VBSS_CAPABILITIES";
     case eVirtualBssSubtype::VIRTUAL_BSS_CREATION:       return "eVirtualBssSubtype::VIRTUAL_BSS_CREATION";
     case eVirtualBssSubtype::VIRTUAL_BSS_DESTRUCTION:    return "eVirtualBssSubtype::VIRTUAL_BSS_DESTRUCTION";
+    case eVirtualBssSubtype::VIRTUAL_BSS_EVENT:          return "eVirtualBssSubtype::VIRTUAL_BSS_EVENT";
     }
     static std::string out_str = std::to_string(int(enum_value));
     return out_str.c_str();
@@ -47,6 +49,7 @@ public:
         case 0x1:
         case 0x2:
         case 0x3:
+        case 0x4:
                 ret = true;
                 break;
             default:
