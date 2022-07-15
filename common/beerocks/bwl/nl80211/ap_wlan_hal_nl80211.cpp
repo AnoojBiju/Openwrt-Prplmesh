@@ -87,6 +87,8 @@ static ap_wlan_hal::Event nl80211_to_bwl_event(const std::string &opcode)
         return ap_wlan_hal::Event::AP_MGMT_FRAME_RECEIVED;
     } else if (opcode == "AP-STA-POSSIBLE-PSK-MISMATCH") {
         return ap_wlan_hal::Event::AP_Sta_Possible_Psk_Mismatch;
+    } else if (opcode == "STA_INFO_REPLY") {
+        return ap_wlan_hal::Event::STA_Info_Reply;
     }
 
     return ap_wlan_hal::Event::Invalid;
@@ -1094,6 +1096,19 @@ bool ap_wlan_hal_nl80211::start_wps_pbc()
     return true;
 }
 
+bool ap_wlan_hal_nl80211::get_sta_info(const std::string &sta_mac)
+{
+    std::string cmd = "STA_INFO_QUERY " + sta_mac + " add_network_info=1";
+
+    LOG(DEBUG) << "Send nl80211 cmd " << cmd;
+    if (!wpa_ctrl_send_msg(cmd)) {
+        LOG(ERROR) << "get_sta_info() failed!";
+        return false;
+    }
+
+    return true;
+}
+
 bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
 {
     // Filter out empty events
@@ -1389,6 +1404,74 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
         LOG(DEBUG) << "STA possible PSK mismatch: offending MAC: " << msg->sta_mac;
 
         event_queue_push(Event::AP_Sta_Possible_Psk_Mismatch, msg_buff);
+        break;
+    }
+
+    case Event::STA_Info_Reply: {
+
+        const *tmp_str;
+        int64_t tmp_int;
+        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_STATION_INFO_RESPONSE));
+        auto msg      = reinterpret_cast<sACTION_APMANAGER_STATION_INFO_RESPONSE *>(msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        memset(msg_buff.get(), 0, sizeof(sACTION_APMANAGER_STATION_INFO_RESPONSE));
+
+        if (!read_param("sta_mac", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading sta_mac parameter!";
+            return false;
+        }
+        msg->sta_mac = tlvf::mac_from_string(tmp_str);
+
+        if (!read_param("bss", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading bss parameter!";
+            return false;
+        }
+        msg->bss = tlvf::mac_from_string(tmp_str);
+
+        if (!read_param("device_name", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading device_name parameter!";
+            return false;
+        }
+        beerocks::string_utils::copy_string(msg->device_name, tmp_str,
+                                            beerocks::message::DEV_INFO_STR_MAX_LEN);
+
+        if (!read_param("os_name", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading os_name parameter!";
+            return false;
+        }
+        beerocks::string_utils::copy_string(msg->os_name, tmp_str,
+                                            beerocks::message::DEV_INFO_STR_MAX_LEN);
+
+        if (!read_param("vendor", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading vendor parameter!";
+            return false;
+        }
+        beerocks::string_utils::copy_string(msg->vendor, tmp_str,
+                                            beerocks::message::DEV_INFO_STR_MAX_LEN);
+
+        if (!read_param("days_since_last_reset", parsed_obj, tmp_int)) {
+            LOG(ERROR) << "Failed reading days_since_last_reset parameter!";
+            return false;
+        }
+        msg->days_since_last_reset = tmp_int;
+
+        if (!read_param("ipv4", parsed_obj, &tmp_str)) {
+            LOG(DEBUG) << "ipv4 parameter not found!";
+        }
+        msg->ipv4 = beerocks::net::network_utils::ipv4_from_string(tmp_str);
+
+        if (!read_param("subnet_mask", parsed_obj, &tmp_str)) {
+            LOG(DEBUG) << "subnet_mask parameter not found!";
+        }
+        msg->subnet_mask = beerocks::net::network_utils::ipv4_from_string(tmp_str);
+
+        if (!read_param("default_gw", parsed_obj, &tmp_str)) {
+            LOG(DEBUG) << "default_gw parameter not found!";
+        }
+        msg->default_gw = beerocks::net::network_utils::ipv4_from_string(tmp_str);
+
+        event_queue_push(Event::STA_Info_Reply, msg_buff);
         break;
     }
 
