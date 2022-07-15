@@ -27,6 +27,7 @@ enum class eVirtualBssSubtype : uint16_t {
     VIRTUAL_BSS_EVENT = 0x4,
     CLIENT_SECURITY_CONTEXT = 0x5,
     TRIGGER_CHANNEL_SWITCH_ANNOUNCEMENT = 0x6,
+    VBSS_CONFIGURATION_REPORT = 0x7,
 };
 // Enum AutoPrint generated code snippet begining- DON'T EDIT!
 // clang-format off
@@ -38,6 +39,7 @@ static const char *eVirtualBssSubtype_str(eVirtualBssSubtype enum_value) {
     case eVirtualBssSubtype::VIRTUAL_BSS_EVENT:                   return "eVirtualBssSubtype::VIRTUAL_BSS_EVENT";
     case eVirtualBssSubtype::CLIENT_SECURITY_CONTEXT:             return "eVirtualBssSubtype::CLIENT_SECURITY_CONTEXT";
     case eVirtualBssSubtype::TRIGGER_CHANNEL_SWITCH_ANNOUNCEMENT: return "eVirtualBssSubtype::TRIGGER_CHANNEL_SWITCH_ANNOUNCEMENT";
+    case eVirtualBssSubtype::VBSS_CONFIGURATION_REPORT:           return "eVirtualBssSubtype::VBSS_CONFIGURATION_REPORT";
     }
     static std::string out_str = std::to_string(int(enum_value));
     return out_str.c_str();
@@ -56,6 +58,7 @@ public:
         case 0x4:
         case 0x5:
         case 0x6:
+        case 0x7:
                 ret = true;
                 break;
             default:
