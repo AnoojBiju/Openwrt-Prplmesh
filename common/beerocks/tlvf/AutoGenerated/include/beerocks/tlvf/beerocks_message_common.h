@@ -1013,10 +1013,18 @@ typedef struct sSteeringEvAuthFail {
     }
 } __attribute__((packed)) sSteeringEvAuthFail;
 
+enum eClientDisconnectSource: uint8_t {
+    eClient_Disconnect_Source_Ignore = 0x0,
+    eClient_Disconnect_Source_Beerocks_cli = 0x1,
+    eClient_Disconnect_Source_Pre_Association_Steering_Task = 0x2,
+};
+
 typedef struct sClientDisconnectResponse {
     int32_t error_code;
+    eClientDisconnectSource src;
     void struct_swap(){
         tlvf_swap(32, reinterpret_cast<uint8_t*>(&error_code));
+        tlvf_swap(8*sizeof(eClientDisconnectSource), reinterpret_cast<uint8_t*>(&src));
     }
     void struct_init(){
     }

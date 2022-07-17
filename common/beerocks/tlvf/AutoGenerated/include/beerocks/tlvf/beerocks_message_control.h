@@ -814,6 +814,7 @@ class cACTION_CONTROL_CLIENT_DISCONNECT_REQUEST : public BaseClass
         int8_t& vap_id();
         eDisconnectType& type();
         uint32_t& reason();
+        eClientDisconnectSource& src();
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -825,6 +826,7 @@ class cACTION_CONTROL_CLIENT_DISCONNECT_REQUEST : public BaseClass
         int8_t* m_vap_id = nullptr;
         eDisconnectType* m_type = nullptr;
         uint32_t* m_reason = nullptr;
+        eClientDisconnectSource* m_src = nullptr;
 };
 
 class cACTION_CONTROL_CLIENT_DISCONNECT_RESPONSE : public BaseClass

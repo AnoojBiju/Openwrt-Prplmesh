@@ -711,9 +711,17 @@ sSteeringEvAuthFail:
   reject: uint8_t
   reason: uint8_t
 
+eClientDisconnectSource:
+  _type: enum
+  _enum_storage: uint8_t
+  eClient_Disconnect_Source_Ignore: 0
+  eClient_Disconnect_Source_Beerocks_cli: 1
+  eClient_Disconnect_Source_Pre_Association_Steering_Task: 2
+
 sClientDisconnectResponse:
   _type: struct
   error_code: int32_t
+  src: eClientDisconnectSource
 
 sSteeringDatarateInfo:
   _type: struct
