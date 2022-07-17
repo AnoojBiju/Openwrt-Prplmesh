@@ -336,7 +336,8 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
             TASK_LOG(INFO) << "STEERING_CLIENT_DISCONNECT_REQUEST received for " << client_mac;
             add_pending_request_event(STEERING_CLIENT_DISCONNECT_REQUEST, event_obj->sd);
             son_actions::disconnect_client(m_database, m_cmdu_tx, client_mac, event_obj->bssid,
-                                           event_obj->type, event_obj->reason);
+                                           event_obj->type, event_obj->reason,
+                                           eClient_Disconnect_Source_Pre_Association_Steering_Task);
         }
         break;
     }

@@ -1009,6 +1009,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
         break;
     }
     case beerocks_message::ACTION_APMANAGER_CLIENT_DISCONNECT_REQUEST: {
+        int res = OPERATION_FAIL;
         auto request =
             beerocks_header
                 ->addClass<beerocks_message::cACTION_APMANAGER_CLIENT_DISCONNECT_REQUEST>();
@@ -1016,25 +1017,34 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             LOG(ERROR) << "addClass cACTION_APMANAGER_CLIENT_DISCONNECT_REQUEST failed";
             send_steering_return_status(
                 beerocks_message::ACTION_APMANAGER_CLIENT_DISCONNECT_RESPONSE, OPERATION_FAIL);
-            return;
-        }
-        std::string sta_mac = tlvf::mac_to_string(request->mac());
-        auto vap_id         = request->vap_id();
-        auto type           = request->type();
-        auto reason         = request->reason();
-
-        LOG(DEBUG) << "CLIENT_DISCONNECT, type "
-                   << ((type == beerocks_message::eDisconnect_Type_Deauth) ? "DEAUTH" : "DISASSOC")
-                   << " vap_id = " << int(vap_id) << " mac = " << sta_mac
-                   << " reason = " << std::to_string(reason);
-        bool res;
-        if (type == beerocks_message::eDisconnect_Type_Deauth) {
-            res = ap_wlan_hal->sta_deauth(vap_id, sta_mac, reason);
         } else {
-            res = ap_wlan_hal->sta_disassoc(vap_id, sta_mac, reason);
+            std::string sta_mac = tlvf::mac_to_string(request->mac());
+            auto vap_id         = request->vap_id();
+            auto type           = request->type();
+            auto reason         = request->reason();
+
+            LOG(DEBUG) << "CLIENT_DISCONNECT, type "
+                       << ((type == beerocks_message::eDisconnect_Type_Deauth) ? "DEAUTH"
+                                                                               : "DISASSOC")
+                       << " vap_id = " << int(vap_id) << " mac = " << sta_mac
+                       << " reason = " << std::to_string(reason);
+
+            if (type == beerocks_message::eDisconnect_Type_Deauth) {
+                res = ap_wlan_hal->sta_deauth(vap_id, sta_mac, reason);
+            } else {
+                res = ap_wlan_hal->sta_disassoc(vap_id, sta_mac, reason);
+            }
         }
-        send_steering_return_status(beerocks_message::ACTION_APMANAGER_CLIENT_DISCONNECT_RESPONSE,
-                                    res ? OPERATION_SUCCESS : OPERATION_FAIL);
+
+        auto response = message_com::create_vs_message<
+            beerocks_message::cACTION_APMANAGER_CLIENT_DISCONNECT_RESPONSE>(cmdu_tx);
+        if (response == nullptr) {
+            LOG(ERROR) << "Failed building message!";
+            break;
+        }
+        response->params().error_code = res;
+        response->params().src        = request->src();
+        send_cmdu(cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_APMANAGER_CLIENT_DISALLOW_REQUEST: {

@@ -203,7 +203,8 @@ bool son_actions::set_hostap_active(db &database, task_pool &tasks, std::string 
 
 void son_actions::disconnect_client(db &database, ieee1905_1::CmduMessageTx &cmdu_tx,
                                     const std::string &client_mac, const std::string &bssid,
-                                    eDisconnectType type, uint32_t reason)
+                                    eDisconnectType type, uint32_t reason,
+                                    eClientDisconnectSource src)
 {
 
     auto agent_mac = database.get_node_parent_ire(bssid);
@@ -220,6 +221,7 @@ void son_actions::disconnect_client(db &database, ieee1905_1::CmduMessageTx &cmd
     request->vap_id() = database.get_hostap_vap_id(tlvf::mac_from_string(bssid));
     request->type()   = type;
     request->reason() = reason;
+    request->src()    = src;
 
     const auto parent_radio = database.get_node_parent_radio(bssid);
     son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, parent_radio);

@@ -193,6 +193,7 @@ cACTION_CONTROL_CLIENT_DISCONNECT_REQUEST:
   vap_id: int8_t
   type: eDisconnectType
   reason: uint32_t
+  src: eClientDisconnectSource
 
 cACTION_CONTROL_CLIENT_DISCONNECT_RESPONSE:
   _type: class

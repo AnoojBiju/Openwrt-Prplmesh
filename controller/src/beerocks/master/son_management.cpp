@@ -338,7 +338,8 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
                    << hostap_mac;
 
         son_actions::disconnect_client(database, cmdu_tx, client_mac, hostap_mac,
-                                       cli_request->type(), cli_request->reason());
+                                       cli_request->type(), cli_request->reason(),
+                                       beerocks_message::eClient_Disconnect_Source_Beerocks_cli);
         break;
     }
     case beerocks_message::ACTION_CLI_CLIENT_BEACON_11K_REQUEST: {
