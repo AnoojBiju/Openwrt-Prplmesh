@@ -1053,6 +1053,7 @@ bool slave_thread::handle_cmdu_control_message(int fd,
         request_out->vap_id() = request_in->vap_id();
         request_out->type()   = request_in->type();
         request_out->reason() = request_in->reason();
+        request_out->src()    = request_in->src();
 
         send_cmdu(radio_manager.ap_manager_fd, cmdu_tx);
         break;
