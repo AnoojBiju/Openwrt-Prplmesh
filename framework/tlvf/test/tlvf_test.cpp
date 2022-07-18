@@ -27,6 +27,7 @@
 #include "tlvf/wfa_map/tlvApRadioVbssCapabilities.h"
 #include "tlvf/wfa_map/tlvProfile2ChannelScanResult.h"
 #include "tlvf/wfa_map/tlvProfile2ErrorCode.h"
+#include "tlvf/wfa_map/tlvVbssConfigurationReport.h"
 #include "tlvf/wfa_map/tlvVirtualBssCreation.h"
 #include <tlvf/AssociationRequestFrame/AssocReqFrame.h>
 #include <tlvf/test/tlvVarList.h>
@@ -2005,6 +2006,99 @@ int test_virtual_bss_creation()
     return errors;
 }
 
+int test_topology_response_including_vbss_configuration_report()
+{
+    int errors = 0;
+    MAPF_INFO(__FUNCTION__ << " start");
+
+    constexpr uint16_t tx_buffer_size = 4096;
+    uint8_t tx_buffer[tx_buffer_size];
+    ieee1905_1::CmduMessageTx cmdu_tx(tx_buffer, tx_buffer_size);
+
+    if (!cmdu_tx.create(1 /*mid*/, ieee1905_1::eMessageType::TOPOLOGY_RESPONSE_MESSAGE)) {
+        LOG(ERROR) << "cmdu creation of type TOPOLOGY_RESPONSE, has failed";
+        errors++;
+    }
+    auto tx_vbss_configuration_report = cmdu_tx.addClass<wfa_map::VbssConfigurationReport>();
+    if (!tx_vbss_configuration_report) {
+        LOG(ERROR) << "addClass has failed";
+        errors++;
+    }
+
+    auto radio = tx_vbss_configuration_report->create_radio_list();
+    if (!radio) {
+        LOG(ERROR) << "create_radio_list() has failed!";
+        return false;
+    }
+
+    radio->radio_uid() = tlvf::mac_from_string("01:02:03:04:05:06");
+
+    auto bss = radio->create_bss_list();
+    if (!bss) {
+        LOG(ERROR) << "create_bss_list() has failed!";
+        return false;
+    }
+    bss->bssid() = tlvf::mac_from_string("07:08:09:0a:0b:0c");
+    bss->set_ssid("prplMesh");
+    if (!radio->add_bss_list(bss)) {
+        LOG(ERROR) << "Failed to add a bss!";
+        return false;
+    }
+
+    if (!tx_vbss_configuration_report->add_radio_list(radio)) {
+        LOG(ERROR) << "Failed to add a radio!";
+        return false;
+    }
+
+    cmdu_tx.finalize();
+
+    LOG(DEBUG) << "TX: " << std::endl << utils::dump_buffer(tx_buffer, cmdu_tx.getMessageLength());
+
+    uint8_t recv_buffer[sizeof(tx_buffer)];
+    memcpy(recv_buffer, tx_buffer, sizeof(recv_buffer));
+
+    CmduMessageRx received_message(recv_buffer, sizeof(recv_buffer));
+    received_message.parse();
+    auto rx_vbss_configuration_report =
+        received_message.getClass<wfa_map::VbssConfigurationReport>();
+    if (!rx_vbss_configuration_report) {
+        LOG(ERROR) << "getClass() failed";
+        errors++;
+    }
+
+    errors += check_field<eTlvTypeMap>(rx_vbss_configuration_report->type(),
+                                       eTlvTypeMap::TLV_VIRTUAL_BSS, "type");
+    errors += check_field<uint16_t>(rx_vbss_configuration_report->length(), 25, "length");
+    errors += check_field<wfa_map::eVirtualBssSubtype>(
+        rx_vbss_configuration_report->subtype(),
+        wfa_map::eVirtualBssSubtype::VBSS_CONFIGURATION_REPORT, "subtype");
+    errors += check_field<uint8_t>(rx_vbss_configuration_report->number_of_radios(), 1,
+                                   "number_of_radios");
+
+    auto radio1_tup = rx_vbss_configuration_report->radio_list(0);
+    if (!std::get<0>(radio1_tup)) {
+        LOG(ERROR) << "Failed to retrieve radio1!";
+        errors++;
+    }
+    auto radio1 = std::get<1>(radio1_tup);
+    errors += check_field<sMacAddr>(radio1.radio_uid(), tlvf::mac_from_string("01:02:03:04:05:06"),
+                                    "radio_uid");
+    errors += check_field<uint8_t>(radio1.number_bss(), 1, "number_bss");
+
+    auto bss1_tup = radio1.bss_list(0);
+    if (!std::get<0>(bss1_tup)) {
+        LOG(ERROR) << "Failed to retrieve bss1!";
+        errors++;
+    }
+    auto bss1 = std::get<1>(bss1_tup);
+    errors +=
+        check_field<sMacAddr>(bss1.bssid(), tlvf::mac_from_string("07:08:09:0a:0b:0c"), "bssid");
+    errors += check_field<std::string>(bss1.ssid_str(), "prplMesh", "ssid");
+
+    MAPF_INFO(__FUNCTION__ << " Finished, errors = " << errors << std::endl);
+    return errors;
+}
+
 int main(int argc, char *argv[])
 {
     int errors = 0;
@@ -2024,6 +2118,7 @@ int main(int argc, char *argv[])
     errors += test_parse_ap_radio_vbss_capabilities();
     errors += test_create_ap_radio_vbss_response_cmdu();
     errors += test_virtual_bss_creation();
+    errors += test_topology_response_including_vbss_configuration_report();
     MAPF_INFO(__FUNCTION__ << " Finished, errors = " << errors << std::endl);
     return errors;
 }
