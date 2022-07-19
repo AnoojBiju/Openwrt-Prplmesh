@@ -742,8 +742,12 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
         break;
     }
     case STEERING_EVENT_CLIENT_CONNECT_NOTIFICATION: {
-
         if (obj) {
+            if (events_updates_listeners.empty()) {
+                TASK_LOG(DEBUG) << "receive STEERING_EVENT_CLIENT_CONNECT_NOTIFICATION, no "
+                                   "listeners. ignoring";
+                break;
+            }
             auto event_obj   = static_cast<bwl::sClientAssociationParams *>(obj);
             auto client_mac  = tlvf::mac_to_string(event_obj->mac);
             auto bssid       = tlvf::mac_to_string(event_obj->bssid);
@@ -751,12 +755,6 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
             TASK_LOG(INFO) << "STEERING_EVENT_CLIENT_CONNECT_NOTIFICATION client_mac = "
                            << client_mac << " bssid = " << bssid << " group index "
                            << int(group_index);
-
-            if (events_updates_listeners.empty()) {
-                TASK_LOG(DEBUG)
-                    << "STEERING_EVENT_CLIENT_CONNECT_NOTIFICATION no listener ignoring";
-                break;
-            }
 
             if (group_index == -1) {
                 TASK_LOG(ERROR) << "event for un-configured client mac - " << client_mac
@@ -821,6 +819,11 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
     }
     case STEERING_EVENT_CLIENT_DISCONNECT_NOTIFICATION: {
         if (obj) {
+            if (events_updates_listeners.empty()) {
+                TASK_LOG(DEBUG) << "receive STEERING_EVENT_CLIENT_DISCONNECT_NOTIFICATION, no "
+                                   "listeners. ignoring";
+                break;
+            }
             auto event_obj   = static_cast<beerocks_message::sSteeringEvDisconnect *>(obj);
             auto client_mac  = tlvf::mac_to_string(event_obj->client_mac);
             auto bssid       = tlvf::mac_to_string(event_obj->bssid);
@@ -829,12 +832,6 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
                            << client_mac << " bssid = " << bssid << " group index "
                            << int(group_index) << " reason " << int(event_obj->reason) << " source "
                            << int(event_obj->source) << " type " << int(event_obj->type);
-
-            if (events_updates_listeners.empty()) {
-                TASK_LOG(DEBUG)
-                    << "STEERING_EVENT_CLIENT_DISCONNECT_NOTIFICATION no listener ignoring";
-                break;
-            }
 
             if (group_index == -1) {
                 TASK_LOG(ERROR) << "event for un-configured client mac - " << client_mac
