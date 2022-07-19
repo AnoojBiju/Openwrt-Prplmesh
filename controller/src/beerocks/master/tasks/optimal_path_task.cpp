@@ -1609,6 +1609,12 @@ void optimal_path_task::handle_responses_timeout(
     }
 }
 
+void optimal_path_task::handle_pending_task_ended(int task_id)
+{
+    TASK_LOG(INFO) << "Task " << task_id << " has been ended. finish this task";
+    finish();
+}
+
 void optimal_path_task::handle_response(std::string mac,
                                         std::shared_ptr<beerocks_header> beerocks_header)
 {
