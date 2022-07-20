@@ -39,6 +39,8 @@ void task::response_received(std::string mac,
     }
 
     // Handle the response even if we are not expecting it
+    TASK_LOG(DEBUG) << "The Response " << std::hex << beerocks_header->action_op()
+                    << " is not in pending_macs";
     handle_response(mac, beerocks_header);
 }
 
@@ -131,6 +133,11 @@ void task::execute()
             events_timeout_set = false;
             pending_events.clear();
         }
+        if (waiting_for_responses && pending_macs.empty()) {
+            // TASK_LOG(DEBUG) << "done waiting for responses";
+            responses_timeout_set = false;
+            waiting_for_responses = false;
+        }
         if (responses_timeout_set && now >= responses_timeout) {
             // TASK_LOG(DEBUG) << "responses timed out";
             handle_responses_timeout(pending_macs);
@@ -141,11 +148,6 @@ void task::execute()
             TASK_LOG(DEBUG) << "done waiting for events";
             events_timeout_set = false;
             waiting_for_events = false;
-        }
-        if (waiting_for_responses && pending_macs.empty()) {
-            // TASK_LOG(DEBUG) << "done waiting for responses";
-            responses_timeout_set = false;
-            waiting_for_responses = false;
         }
         if (!responses_timeout_set && !waiting_for_events && !waiting_for_responses &&
             !waiting_for_pending_task) {
