@@ -15,6 +15,7 @@
 #include <easylogging++.h>
 #include <net/if.h>
 
+#include <algorithm>
 #include <cmath>
 #include <functional>
 
@@ -541,6 +542,176 @@ static bool get_scan_results_from_nl_msg(sChannelScanResults &results, struct nl
         LOG(ERROR) << "failed to translate nl data to BWL results";
         return false;
     }
+
+    auto print_result = [](const sChannelScanResults &results) {
+        LOG(INFO) << "BSSID: " << results.bssid;
+        LOG(INFO) << "SSID: " << results.ssid;
+        LOG(INFO) << "Mode: " << ([](const eChannelScanResultMode &e) -> std::string {
+            switch (e) {
+            case eChannelScanResultMode::eMode_NA:
+                return "NA";
+            case eChannelScanResultMode::eMode_AdHoc:
+                return "AdHoc";
+            case eChannelScanResultMode::eMode_Infrastructure:
+                return "Infrastructure";
+            default:
+                return "";
+            }
+        })(results.mode);
+        LOG(INFO) << "Channel: " << results.channel;
+        LOG(INFO) << "Signal Strength (dBm): " << results.signal_strength_dBm;
+        LOG(INFO) << "Security Modes: "
+                  << ([](std::vector<eChannelScanResultSecurityMode> vec) -> std::string {
+                         std::stringstream ss;
+                         for (size_t i = 0; i < vec.size(); i++) {
+                             if (i != 0)
+                                 ss << ", ";
+                             ss << ([](const eChannelScanResultSecurityMode &e) -> std::string {
+                                 switch (e) {
+                                 case eChannelScanResultSecurityMode::eSecurity_Mode_None:
+                                     return "None";
+                                 case eChannelScanResultSecurityMode::eSecurity_Mode_WEP:
+                                     return "WEP";
+                                 case eChannelScanResultSecurityMode::eSecurity_Mode_WPA:
+                                     return "WPA";
+                                 case eChannelScanResultSecurityMode::eSecurity_Mode_WPA2:
+                                     return "WPA2";
+                                 default:
+                                     return "";
+                                 }
+                             })(vec[i]);
+                         }
+                         return ss.str();
+                     })(results.security_mode_enabled);
+        LOG(INFO) << "Encryption Modes: "
+                  << ([](std::vector<eChannelScanResultEncryptionMode> vec) -> std::string {
+                         std::stringstream ss;
+                         for (size_t i = 0; i < vec.size(); i++) {
+                             if (i != 0)
+                                 ss << ", ";
+                             ss << ([](const eChannelScanResultEncryptionMode &e) -> std::string {
+                                 switch (e) {
+                                 case eChannelScanResultEncryptionMode::eEncryption_Mode_NA:
+                                     return "NA";
+                                 case eChannelScanResultEncryptionMode::eEncryption_Mode_AES:
+                                     return "AES";
+                                 case eChannelScanResultEncryptionMode::eEncryption_Mode_TKIP:
+                                     return "TKIP";
+                                 default:
+                                     return "";
+                                 }
+                             })(vec[i]);
+                         }
+                         return ss.str();
+                     })(results.encryption_mode);
+        LOG(INFO) << "Band: "
+                  << ([](const eChannelScanResultOperatingFrequencyBand &e) -> std::string {
+                         switch (e) {
+                         case eChannelScanResultOperatingFrequencyBand::eOperating_Freq_Band_NA:
+                             return "NA";
+                         case eChannelScanResultOperatingFrequencyBand::eOperating_Freq_Band_2_4GHz:
+                             return "2.4Ghz";
+                         case eChannelScanResultOperatingFrequencyBand::eOperating_Freq_Band_5GHz:
+                             return "5Ghz";
+                         default:
+                             return "";
+                         }
+                     })(results.operating_frequency_band);
+        LOG(INFO) << "Supported Standards: "
+                  << ([](std::vector<eChannelScanResultStandards> vec) -> std::string {
+                         std::stringstream ss;
+                         for (size_t i = 0; i < vec.size(); i++) {
+                             if (i != 0)
+                                 ss << ", ";
+                             ss << ([](const eChannelScanResultStandards &e) -> std::string {
+                                 switch (e) {
+                                 case eChannelScanResultStandards::eStandard_NA:
+                                     return "NA";
+                                 case eChannelScanResultStandards::eStandard_802_11a:
+                                     return "802.11a";
+                                 case eChannelScanResultStandards::eStandard_802_11b:
+                                     return "802.11b";
+                                 case eChannelScanResultStandards::eStandard_802_11g:
+                                     return "802.11g";
+                                 case eChannelScanResultStandards::eStandard_802_11n:
+                                     return "802.11n";
+                                 case eChannelScanResultStandards::eStandard_802_11ac:
+                                     return "802.11ac";
+                                 case eChannelScanResultStandards::eStandard_802_11ax:
+                                     return "802.11ax";
+                                 default:
+                                     return "";
+                                 }
+                             })(vec[i]);
+                         }
+                         return ss.str();
+                     })(results.supported_standards);
+        LOG(INFO) << "Operating Standards: "
+                  << ([](const eChannelScanResultStandards &e) -> std::string {
+                         switch (e) {
+                         case eChannelScanResultStandards::eStandard_NA:
+                             return "NA";
+                         case eChannelScanResultStandards::eStandard_802_11a:
+                             return "802.11a";
+                         case eChannelScanResultStandards::eStandard_802_11b:
+                             return "802.11b";
+                         case eChannelScanResultStandards::eStandard_802_11g:
+                             return "802.11g";
+                         case eChannelScanResultStandards::eStandard_802_11n:
+                             return "802.11n";
+                         case eChannelScanResultStandards::eStandard_802_11ac:
+                             return "802.11ac";
+                         case eChannelScanResultStandards::eStandard_802_11ax:
+                             return "802.11ax";
+                         default:
+                             return "";
+                         }
+                     })(results.operating_standards);
+        LOG(INFO) << "Bandwidth: "
+                  << ([](const eChannelScanResultChannelBandwidth &e) -> std::string {
+                         switch (e) {
+                         case eChannelScanResultChannelBandwidth::eChannel_Bandwidth_NA:
+                             return "NA";
+                         case eChannelScanResultChannelBandwidth::eChannel_Bandwidth_20MHz:
+                             return "20MHz";
+                         case eChannelScanResultChannelBandwidth::eChannel_Bandwidth_40MHz:
+                             return "40MHz";
+                         case eChannelScanResultChannelBandwidth::eChannel_Bandwidth_80MHz:
+                             return "80MHz";
+                         case eChannelScanResultChannelBandwidth::eChannel_Bandwidth_160MHz:
+                             return "160MHz";
+                         case eChannelScanResultChannelBandwidth::eChannel_Bandwidth_80_80:
+                             return "80+80";
+                         default:
+                             return "";
+                         }
+                     })(results.operating_channel_bandwidth);
+        LOG(INFO) << "Beacon Period (ms): " << results.beacon_period_ms;
+        LOG(INFO) << "noise_dBm: " << results.noise_dBm;
+        LOG(INFO) << "Basic TX (kbps): " << ([](std::vector<uint32_t> vec) -> std::string {
+            std::stringstream ss;
+            for (size_t i = 0; i < vec.size(); i++) {
+                if (i != 0)
+                    ss << ", ";
+                ss << vec[i];
+            }
+            return ss.str();
+        })(results.basic_data_transfer_rates_kbps);
+        LOG(INFO) << "Supported TX (kbps): " << ([](std::vector<uint32_t> vec) -> std::string {
+            std::stringstream ss;
+            for (size_t i = 0; i < vec.size(); i++) {
+                if (i != 0)
+                    ss << ", ";
+                ss << vec[i];
+            }
+            return ss.str();
+        })(results.supported_data_transfer_rates_kbps);
+
+        LOG(INFO) << "dTIM period: " << results.dtim_period;
+        LOG(INFO) << "Channel Utilization: " << results.channel_utilization;
+    };
+
+    print_result(results);
 
     return true;
 }
@@ -1168,9 +1339,9 @@ bool mon_wlan_hal_dwpal::generate_connected_clients_events(
         do {
             // if thread awake time is too long - return false (means there is more handling to be done on next wake-up)
             if (std::chrono::steady_clock::now() > max_iteration_timeout) {
-                LOG(DEBUG)
-                    << "Thread is awake too long - will continue on next wakeup, last handled sta:"
-                    << m_prev_client_mac;
+                LOG(DEBUG) << "Thread is awake too long - will continue on next wakeup, last "
+                              "handled sta:"
+                           << m_prev_client_mac;
                 is_finished_all_clients = false;
                 return true;
             }
