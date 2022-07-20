@@ -236,6 +236,20 @@ static void build_channels_list(ieee1905_1::CmduMessageTx &cmdu_tx,
                            << ", dfs_state=" << dfs_state_to_string(channel_info_tlv->dfs_state());
             };
 
+            /*
+                This is a workaround for PPM-2187,
+                when PPM-2187 is resolved, we can return this condition *after* the 
+                (channel_info_tlv->dfs_state() == beerocks_message::eDfsState::UNAVAILABLE)
+                condition
+            */
+            // If the ACS_REPORT's ranking map is empty, set the preference score
+            // to the lowest value, as the channel is valid, but not preferable.
+            if (ranks.size() == 0) {
+                supported_bw_info_tlv.multiap_preference = 1;
+                print_channel_info();
+                continue;
+            }
+
             // If channel & bw has undefined rank (-1), set the channel preference to
             // "Not Usable" (0).
             if (supported_bw_info_tlv.rank == -1) {
@@ -247,14 +261,6 @@ static void build_channels_list(ieee1905_1::CmduMessageTx &cmdu_tx,
             if (channel_info_tlv->dfs_state() == beerocks_message::eDfsState::UNAVAILABLE) {
                 supported_bw_info_tlv.multiap_preference = 0;
                 supported_bw_info_tlv.rank               = -1;
-                continue;
-            }
-
-            // If the ACS_REPORT's ranking map is empty, set the preference score
-            // to the lowest value, as the channel is valid, but not preferable.
-            if (ranks.size() == 0) {
-                supported_bw_info_tlv.multiap_preference = 1;
-                print_channel_info();
                 continue;
             }
 
@@ -1085,7 +1091,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             m_disallowed_clients.push_back(disallowed_client);
 
             LOG(DEBUG) << "client " << disallowed_client.mac
-                       << " will be allowed to accosiate with bssid " << disallowed_client.bssid
+                       << " will be allowed to associate with bssid " << disallowed_client.bssid
                        << " in "
                        << std::chrono::duration_cast<std::chrono::seconds>(
                               disallowed_client.timeout - std::chrono::steady_clock::now())
@@ -1913,7 +1919,7 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
 
         auto msg =
             static_cast<bwl::sACTION_APMANAGER_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION *>(data);
-        LOG(INFO) << "DFS_EVENT_CAC_COMPLETED succsess = " << int(msg->params.success);
+        LOG(INFO) << "DFS_EVENT_CAC_COMPLETED success = " << int(msg->params.success);
 
         auto response = message_com::create_vs_message<
             beerocks_message::cACTION_APMANAGER_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION>(cmdu_tx);

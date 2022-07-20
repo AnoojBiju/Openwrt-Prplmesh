@@ -1,0 +1,26 @@
+#
+---
+_namespace: wfa_map
+
+tlvQoSManagementPolicy:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_QOS_MANAGEMENT_POLICY
+  length: uint16_t
+  mscs_disallowed_sta_length:
+    _type: uint8_t
+    _length_var: True
+  mscs_disallowed_sta_list:
+    _type: sMacAddr
+    _length: [mscs_disallowed_sta_length]
+  scs_disallowed_sta_length:
+    _type: uint8_t
+    _length_var: True
+  scs_disallowed_sta_list:
+    _type: sMacAddr
+    _length: [scs_disallowed_sta_length]
+  reserved:
+    _type: uint8_t
+    _length: [20]

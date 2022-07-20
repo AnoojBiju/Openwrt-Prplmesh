@@ -165,20 +165,16 @@ elseif(BWL_TYPE STREQUAL "DUMMY")
 
 elseif(BWL_TYPE STREQUAL "WHM")
 
-    find_package(nl-genl-3 REQUIRED)
-    list(APPEND BWL_LIBS nl-genl-3)
-
     find_package(amxb REQUIRED)
     find_package(amxc REQUIRED)
     find_package(amxd REQUIRED)
     find_package(amxp REQUIRED)
     list(APPEND BWL_LIBS amxb amxc amxd amxp)
     list(APPEND BWL_LIBS wbapi)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WPABI_SOCK}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WBAPI_SOCK}")
 
     file(GLOB bwl_platform_sources
         ${bwl_platform_sources}
-        ${MODULE_PATH}/shared/*.c*
         ${MODULE_PATH}/whm/*.c*
     )
     
@@ -227,9 +223,13 @@ if (BUILD_TESTS)
         ${bwl_platform_sources} 
         ${MODULE_PATH}/unit_tests/action_frame_parsing_test.cpp
         ${MODULE_PATH}/unit_tests/assoc_frame_body_extract_test.cpp
-        ${MODULE_PATH}/unit_tests/nl80211_client_impl_test.cpp
-        ${MODULE_PATH}/unit_tests/nl80211_client_test.cpp
     )
+    if(NOT BWL_TYPE STREQUAL "WHM")
+        list(APPEND unit_tests_sources
+             ${MODULE_PATH}/unit_tests/nl80211_client_impl_test.cpp
+	     ${MODULE_PATH}/unit_tests/nl80211_client_test.cpp
+	)
+    endif()
     add_executable(${TEST_PROJECT_NAME} 
         ${unit_tests_sources}
     )

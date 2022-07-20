@@ -509,7 +509,7 @@ bool bml_internal::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
     auto beerocks_header = message_com::parse_intel_vs_message(cmdu_rx);
     if (!beerocks_header) {
         LOG(ERROR) << "Not a vendor specific message";
-        LOG(DEBUG) << "Message #" << beerocks_header->action_op() << " is not handled";
+        LOG(DEBUG) << "Message type " << cmdu_rx.getMessageType() << " is not handled";
         return false;
     }
 
