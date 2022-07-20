@@ -11,6 +11,7 @@ variables:
   GLINET_B1300_FULLIMAGE: "openwrt-ipq40xx-generic-glinet_gl-b1300-squashfs-sysupgrade.bin"
   AXEPOINT_FULLIMAGE: "AX3000_1600_ETH_11AXUCI-squashfs-fullimage.img"
   NEC_WX3000HP_FULLIMAGE: "AX3000_1600_ETH_11AXUCI_ASURADA-squashfs-fullimage.img"
+  TURRIS_OMNIA_RDKB_FULLIMAGE: "rdkb-generic-broadband-image_turris-omnia.rootfs.tar.gz"
 
 workflow:
   rules:
@@ -316,11 +317,15 @@ upload-release-artifacts:
    - upload_command "glinet-b1300" "$GLINET_B1300_FULLIMAGE"
    - upload_command "axepoint" "$AXEPOINT_FULLIMAGE"
    - upload_command "nec-wx3000hp" "$NEC_WX3000HP_FULLIMAGE"
+   # need to get correct rdkb fullimage name
+   - mv build/turris-omnia-rdk/rdkb-generic-broadband-image_rdkb*.rootfs.tar.gz build/turris-omnia-rdk/$TURRIS_OMNIA_RDKB_FULLIMAGE
+   - mv build/turris-omnia-rdk/prplmesh_*.ipk build/turris-omnia-rdk/prplmesh.ipk
+   - upload_command "turris-omnia-rdk" "$TURRIS_OMNIA_RDKB_FULLIMAGE"
   needs:
     - job: build-for-turris-omnia
     - job: build-for-glinet-b1300
     - job: build-for-intel-mips
-
+    - job: build-for-rdkb-turris-omnia
 
 release:
   stage: release
@@ -336,7 +341,10 @@ release:
         --assets-link "{\"name\":\"turris-omnia prplmesh ipk\",\"type\":\"package\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/turris-omnia/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_turris-omnia.ipk\"}" \
         --assets-link "{\"name\":\"turris-omnia fullimage\",\"type\":\"image\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/turris-omnia/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$TURRIS_OMNIA_FULLIMAGE\"}" \
         --assets-link "{\"name\":\"nec-wx3000hp prplmesh ipk\",\"type\":\"package\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/nec-wx3000hp/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_nec-wx3000hp.ipk\"}" \
-        --assets-link "{\"name\":\"nec-wx3000hp fullimage\",\"type\":\"image\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/nec-wx3000hp/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$NEC_WX3000HP_FULLIMAGE\"}"
+        --assets-link "{\"name\":\"nec-wx3000hp fullimage\",\"type\":\"image\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/nec-wx3000hp/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$NEC_WX3000HP_FULLIMAGE\"}" \
+        --assets-link "{\"name\":\"turris-omnia-rdk prplmesh ipk\",\"type\":\"package\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/turris-omnia-rdk/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_turris-omnia-rdk.ipk\"}" \
+        --assets-link "{\"name\":\"turris-omnia-rdk fullimage\",\"type\":\"image\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/turris-omnia-rdk/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$TURRIS_OMNIA_RDKB_FULLIMAGE\"}"
+
   needs:
     - job: upload-release-artifacts
     - job: changelog
