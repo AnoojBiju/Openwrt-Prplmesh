@@ -1,0 +1,24 @@
+#
+---
+_namespace: wfa_map
+
+tlvControllerCapability:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_CONTROLLER_CAPABILITY
+  length: uint16_t
+  flags: sFlags
+  reserved:
+    _type: uint8_t
+    _length: []
+    _comment: Reserved for future expansion (length inferred from tlvLength field)
+
+sFlags:
+  _type: struct
+  _bit_field: uint8_t
+  kibmib_counter_supported:
+    _bit_range: [7,7]
+  reserved:
+    _bit_range: [6,0]

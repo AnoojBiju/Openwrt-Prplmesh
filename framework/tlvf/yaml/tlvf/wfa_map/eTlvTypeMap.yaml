@@ -95,5 +95,6 @@ eTlvTypeMap:
   TLV_SPATIAL_REUSE_CONFIG_RESPONSE: 0xDA
   TLV_VIRTUAL_BSS: 0xDE
   TLV_QOS_MANAGEMENT_POLICY: 0xDB
+  TLV_CONTROLLER_CAPABILITY: 0xDD
 
   # When adding values, make sure to also update CmduMessageRx::parseNextTlv !
