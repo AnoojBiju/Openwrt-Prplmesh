@@ -74,6 +74,7 @@ protected:
     virtual void work() = 0;
     virtual void handle_events_timeout(std::multiset<int> pending_events) {}
     virtual void handle_pending_task_timeout(int task_id) {}
+    virtual void handle_pending_task_ended(int task_id) {}
     virtual void handle_task_end() {}
     virtual void handle_event(int event_type, void *obj) {}
     virtual void handle_response(std::string slave_mac,

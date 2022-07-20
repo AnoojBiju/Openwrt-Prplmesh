@@ -40,6 +40,7 @@ protected:
     virtual void handle_responses_timeout(
         std::unordered_multimap<std::string, beerocks_message::eActionOp_CONTROL> timed_out_macs)
         override;
+    virtual void handle_pending_task_ended(int task_id) override;
 
 private:
     bool check_if_sta_can_steer_to_ap(const std::string &ap);

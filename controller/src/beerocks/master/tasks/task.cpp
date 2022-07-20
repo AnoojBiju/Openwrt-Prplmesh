@@ -57,6 +57,7 @@ void task::pending_task_ended(int task_id)
     if (task_id == pending_task_id) {
         TASK_LOG(DEBUG) << "pending_task_id " << pending_task_id << " - ended";
         waiting_for_pending_task = false;
+        handle_pending_task_ended(task_id);
     }
 }
 
