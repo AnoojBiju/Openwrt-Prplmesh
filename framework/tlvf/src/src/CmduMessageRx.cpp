@@ -71,6 +71,7 @@
 #include <tlvf/wfa_map/tlvClientAssociationEvent.h>
 #include <tlvf/wfa_map/tlvClientCapabilityReport.h>
 #include <tlvf/wfa_map/tlvClientInfo.h>
+#include <tlvf/wfa_map/tlvControllerCapability.h>
 #include <tlvf/wfa_map/tlvDeviceInventory.h>
 #include <tlvf/wfa_map/tlvDppBootstrappingUriNotification.h>
 #include <tlvf/wfa_map/tlvDppCeeIndication.h>
@@ -521,6 +522,9 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     }
     case (wfa_map::eTlvTypeMap::TLV_QOS_MANAGEMENT_POLICY): {
         return msg.addClass<wfa_map::tlvQoSManagementPolicy>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_CONTROLLER_CAPABILITY): {
+        return msg.addClass<wfa_map::tlvControllerCapability>();
     }
     }
     LOG(FATAL) << "Unknown TLV type: " << unsigned(tlv_type);
