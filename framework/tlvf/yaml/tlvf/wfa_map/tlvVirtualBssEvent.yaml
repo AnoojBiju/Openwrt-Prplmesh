@@ -1,0 +1,25 @@
+#
+---
+
+_include: {
+  tlvf/wfa_map/eTlvTypeMap.h,
+  tlvf/wfa_map/eVirtualBssSubtype.h,
+  tlvf/common/sMacAddr.h
+}
+
+_namespace: wfa_map
+
+VirtualBssEvent:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_VIRTUAL_BSS
+  length: uint16_t
+  subtype:
+    _type: eVirtualBssSubtype
+    _value_const: VIRTUAL_BSS_EVENT
+  radio_uid: sMacAddr
+  success: uint8_t
+  bssid: sMacAddr
+

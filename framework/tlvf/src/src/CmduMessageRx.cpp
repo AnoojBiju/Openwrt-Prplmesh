@@ -71,6 +71,7 @@
 #include <tlvf/wfa_map/tlvClientAssociationEvent.h>
 #include <tlvf/wfa_map/tlvClientCapabilityReport.h>
 #include <tlvf/wfa_map/tlvClientInfo.h>
+#include <tlvf/wfa_map/tlvClientSecurityContext.h>
 #include <tlvf/wfa_map/tlvControllerCapability.h>
 #include <tlvf/wfa_map/tlvDeviceInventory.h>
 #include <tlvf/wfa_map/tlvDppBootstrappingUriNotification.h>
@@ -116,9 +117,14 @@
 #include <tlvf/wfa_map/tlvSupportedService.h>
 #include <tlvf/wfa_map/tlvTimestamp.h>
 #include <tlvf/wfa_map/tlvTransmitPowerLimit.h>
+#include <tlvf/wfa_map/tlvTriggerChannelSwitchAnnouncement.h>
 #include <tlvf/wfa_map/tlvTunnelledData.h>
 #include <tlvf/wfa_map/tlvTunnelledProtocolType.h>
 #include <tlvf/wfa_map/tlvTunnelledSourceInfo.h>
+#include <tlvf/wfa_map/tlvVbssConfigurationReport.h>
+#include <tlvf/wfa_map/tlvVirtualBssCreation.h>
+#include <tlvf/wfa_map/tlvVirtualBssDestruction.h>
+#include <tlvf/wfa_map/tlvVirtualBssEvent.h>
 
 using namespace ieee1905_1;
 
@@ -515,6 +521,24 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
         switch (tlv_subtype) {
         case (wfa_map::eVirtualBssSubtype::AP_RADIO_VBSS_CAPABILITIES): {
             return msg.addClass<wfa_map::ApRadioVbssCapabilities>();
+        }
+        case (wfa_map::eVirtualBssSubtype::VIRTUAL_BSS_CREATION): {
+            return msg.addClass<wfa_map::VirtualBssCreation>();
+        }
+        case (wfa_map::eVirtualBssSubtype::VIRTUAL_BSS_DESTRUCTION): {
+            return msg.addClass<wfa_map::VirtualBssDestruction>();
+        }
+        case (wfa_map::eVirtualBssSubtype::VIRTUAL_BSS_EVENT): {
+            return msg.addClass<wfa_map::VirtualBssEvent>();
+        }
+        case (wfa_map::eVirtualBssSubtype::CLIENT_SECURITY_CONTEXT): {
+            return msg.addClass<wfa_map::ClientSecurityContext>();
+        }
+        case (wfa_map::eVirtualBssSubtype::TRIGGER_CHANNEL_SWITCH_ANNOUNCEMENT): {
+            return msg.addClass<wfa_map::TriggerChannelSwitchAnnouncement>();
+        }
+        case (wfa_map::eVirtualBssSubtype::VBSS_CONFIGURATION_REPORT): {
+            return msg.addClass<wfa_map::VbssConfigurationReport>();
         }
         }
         LOG(FATAL) << "Unknown TLV subtype: " << unsigned(tlv_subtype);
