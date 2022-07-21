@@ -1,0 +1,47 @@
+#
+---
+
+_include: {
+  tlvf/wfa_map/eTlvTypeMap.h,
+  tlvf/wfa_map/eVirtualBssSubtype.h,
+  tlvf/common/sMacAddr.h
+}
+
+_namespace: wfa_map
+
+VbssConfigurationReport:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_VIRTUAL_BSS
+  length: uint16_t
+  subtype:
+    _type: eVirtualBssSubtype
+    _value_const: VBSS_CONFIGURATION_REPORT
+  number_of_radios:
+    _type: uint8_t
+    _length_var: True
+  radio_list:
+    _type: cVbssRadioInfo
+    _length: [number_of_radios]
+
+cVbssRadioInfo:
+  _type: class
+  radio_uid: sMacAddr
+  number_bss:
+    _type: uint8_t
+    _length_var: True
+  bss_list:
+    _type: cVbssBssInfo
+    _length: [number_bss]
+
+cVbssBssInfo:
+  _type: class
+  bssid: sMacAddr
+  ssid_length:
+    _type: uint8_t
+    _length_var: True
+  ssid:
+    _type: char
+    _length: [ssid_length]

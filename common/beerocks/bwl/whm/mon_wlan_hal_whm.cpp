@@ -45,14 +45,14 @@ mon_wlan_hal_whm::~mon_wlan_hal_whm() {}
 
 bool mon_wlan_hal_whm::update_radio_stats(SRadioStats &radio_stats)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    //LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
     radio_stats = {};
     return true;
 }
 
 bool mon_wlan_hal_whm::update_vap_stats(const std::string &vap_iface_name, SVapStats &vap_stats)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    //LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
     vap_stats = {};
     return true;
 }
@@ -60,14 +60,10 @@ bool mon_wlan_hal_whm::update_vap_stats(const std::string &vap_iface_name, SVapS
 bool mon_wlan_hal_whm::update_stations_stats(const std::string &vap_iface_name,
                                              const std::string &sta_mac, SStaStats &sta_stats)
 {
-    amxc_var_t *ap_obj = whm_get_ap_obj(vap_iface_name);
-    if (!ap_obj) {
-        LOG(ERROR) << "failed to get ap object";
-        return false;
-    }
-    const char *ap_path = amxc_var_key(ap_obj);
-    std::string assoc_device_path =
-        std::string(ap_path) + AMX_CL_OBJ_DELIMITER + "AssociatedDevice." + sta_mac;
+    std::string assoc_device_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
+                                    std::string(AMX_CL_AP_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
+                                    "[Alias == '" + vap_iface_name + "']" + AMX_CL_OBJ_DELIMITER +
+                                    "AssociatedDevice." + sta_mac;
 
     amxc_var_t *assoc_device_obj = m_ambiorix_cl->get_object(assoc_device_path, 0);
     if (!assoc_device_obj) {
@@ -85,6 +81,7 @@ bool mon_wlan_hal_whm::update_stations_stats(const std::string &vap_iface_name,
     sta_stats.tx_packets_cnt    = GET_UINT32(assoc_device_obj, "TxPacketCount");
     sta_stats.rx_packets_cnt    = GET_UINT32(assoc_device_obj, "RxPacketCount");
     sta_stats.retrans_count     = GET_UINT32(assoc_device_obj, "Retransmissions");
+    amxc_var_delete(&assoc_device_obj);
 
     return true;
 }
@@ -107,13 +104,6 @@ bool mon_wlan_hal_whm::sta_channel_load_11k_request(const std::string &vap_iface
 bool mon_wlan_hal_whm::sta_beacon_11k_request(const std::string &vap_iface_name,
                                               const SBeaconRequest11k &req, int &dialog_token)
 {
-    amxc_var_t *ap_obj = whm_get_ap_obj(vap_iface_name);
-    if (!ap_obj) {
-        LOG(ERROR) << "failed to get ap object";
-        return false;
-    }
-    const char *ap_path      = amxc_var_key(ap_obj);
-    std::string wifi_ap_path = std::string(ap_path) + AMX_CL_OBJ_DELIMITER;
     amxc_var_t args;
     amxc_var_t result;
     amxc_var_init(&args);
@@ -124,6 +114,9 @@ bool mon_wlan_hal_whm::sta_beacon_11k_request(const std::string &vap_iface_name,
     amxc_var_add_new_key_uint8_t(&args, "class", req.op_class);
     amxc_var_add_new_key_uint8_t(&args, "channel", req.channel);
     amxc_var_add_new_key_cstring_t(&args, "ssid", (const char *)req.ssid);
+    std::string wifi_ap_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
+                               std::string(AMX_CL_AP_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
+                               "[Alias == '" + vap_iface_name + "']" + AMX_CL_OBJ_DELIMITER;
     bool ret = m_ambiorix_cl->call(wifi_ap_path, "sendRemoteMeasumentRequest", &args, &result);
     amxc_var_clean(&args);
     amxc_var_clean(&result);
@@ -164,14 +157,14 @@ bool mon_wlan_hal_whm::channel_scan_dump_results()
 bool mon_wlan_hal_whm::generate_connected_clients_events(
     bool &is_finished_all_clients, std::chrono::steady_clock::time_point max_iteration_timeout)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    //LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
     is_finished_all_clients = true;
     return true;
 }
 
 bool mon_wlan_hal_whm::pre_generate_connected_clients_events()
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    //LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
     return true;
 }
 

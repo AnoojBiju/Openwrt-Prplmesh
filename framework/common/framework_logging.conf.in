@@ -2,10 +2,10 @@
 	"logging": {
 		"default": {
 			"level" : "INFO",
-			"syslog" : false,
-			"console" : false,
+			"syslog" : @BEEROCKS_LOG_SYSLOG_ENABLED@,
+			"console" : @BEEROCKS_LOG_STDOUT_ENABLED@,
 			"file" : {
-				"enable" : true,
+				"enable" : @BEEROCKS_LOG_FILES_ENABLED@,
 				"path" : "@BEEROCKS_LOG_FILES_PATH@/",
 				"size" : "1000000"
 			},
