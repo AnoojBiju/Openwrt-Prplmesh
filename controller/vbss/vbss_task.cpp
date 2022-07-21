@@ -1,11 +1,11 @@
 #include "vbss_task.h"
 #include "../src/beerocks/master/son_actions.h"
-#include "dummy_tlvs/tlvClientSecurityContext.h"
-#include "dummy_tlvs/tlvTriggerChannelSwitchAnnounce.h"
-#include "dummy_tlvs/tlvVBSSConfigurationReport.h"
-#include "dummy_tlvs/tlvVBSSEventTLV.h"
 #include <tlvf/wfa_map/tlvApRadioVbssCapabilities.h>
 #include <tlvf/wfa_map/tlvClientInfo.h>
+#include <tlvf/wfa_map/tlvClientSecurityContext.h>
+#include <tlvf/wfa_map/tlvTriggerChannelSwitchAnnouncement.h>
+#include <tlvf/wfa_map/tlvVbssConfigurationReport.h>
+#include <tlvf/wfa_map/tlvVirtualBssEvent.h>
 
 vbss_task::vbss_task(son::db &database_) : database(database_) {}
 
@@ -148,15 +148,15 @@ bool vbss_task::handle_trigger_chan_switch_announce_resp(const sMacAddr &src_mac
     sMacAddr client_mac = client_info_tlv->client_mac();
     sMacAddr bssid      = client_info_tlv->bssid();
 
-    auto channel_switch_tlv = cmdu_rx.getClass<tlvTriggerChannelSwitchAnnounce>();
+    auto channel_switch_tlv = cmdu_rx.getClass<wfa_map::TriggerChannelSwitchAnnouncement>();
     if (!client_info_tlv) {
         LOG(ERROR) << "Trigger Channel Switch Announcement Response did not contain the Trigger "
                       "Channel Switch Announcement TLV!";
         return false;
     }
 
-    uint8_t csa_channel = *channel_switch_tlv->m_csa_channel;
-    uint8_t op_class    = *channel_switch_tlv->m_op_class;
+    uint8_t csa_channel = channel_switch_tlv->csa_channel();
+    uint8_t op_class    = channel_switch_tlv->opclass();
 
     // TODO: Send to VBSS Manager (include src_mac = agent_mac)
 
@@ -166,13 +166,13 @@ bool vbss_task::handle_trigger_chan_switch_announce_resp(const sMacAddr &src_mac
 bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
                                            ieee1905_1::CmduMessageRx &cmdu_rx)
 {
-    auto vbss_event_tlv = cmdu_rx.getClass<tlvBSSEventTLV>();
+    auto vbss_event_tlv = cmdu_rx.getClass<wfa_map::VirtualBssEvent>();
 
     if (!vbss_event_tlv) {
         LOG(ERROR) << "VBSS Response does not contain a VBSS Event TLV!";
         return false;
     }
-    sMacAddr ruid    = vbss_event_tlv->ruid();
+    sMacAddr ruid    = vbss_event_tlv->radio_uid();
     sMacAddr vbssid  = vbss_event_tlv->bssid();
     bool did_succeed = vbss_event_tlv->success();
 
@@ -185,7 +185,7 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
 bool handle_top_response_msg(const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
 {
 
-    auto config_report_tlv = cmdu_rx.getClass<tlvVBSSConfigurationReport>();
+    auto config_report_tlv = cmdu_rx.getClass<wfa_map::VbssConfigurationReport>();
     if (!config_report_tlv) {
         LOG(INFO) << "Agent with MAC " << tlvf::mac_to_string(src_mac)
                   << " does not support did not send a VBSS Configuration Report TLV with the "
@@ -193,11 +193,7 @@ bool handle_top_response_msg(const sMacAddr &src_mac, ieee1905_1::CmduMessageRx 
         return false;
     }
 
-    uint8_t num_radios = config_report_tlv->num_radios();
-    sMacAddr ruid      = config_report_tlv->ruid();
-    uint8_t num_bss    = config_report_tlv->num_bss();
-    sMacAddr bssid     = config_report_tlv->bssid();
-    std::string ssid   = config_report_tlv->ssid_str();
+    uint8_t num_radios = config_report_tlv->number_of_radios();
 
     // TODO: Send to VBSS Manager (include src_mac = agent_mac)
 
@@ -217,7 +213,7 @@ bool handle_client_security_ctx_resp(const sMacAddr &src_mac, ieee1905_1::CmduMe
     sMacAddr client_mac = client_info_tlv->client_mac();
     sMacAddr bssid      = client_info_tlv->bssid();
 
-    auto client_sec_ctx_tlv = cmdu_rx.getClass<tlvClientSecurityContext>();
+    auto client_sec_ctx_tlv = cmdu_rx.getClass<wfa_map::ClientSecurityContext>();
 
     if (!client_sec_ctx_tlv) {
         LOG(ERROR)
@@ -225,10 +221,10 @@ bool handle_client_security_ctx_resp(const sMacAddr &src_mac, ieee1905_1::CmduMe
         return false;
     }
 
-    bool client_is_connected     = client_sec_ctx_tlv->vbss_settings().client_connected;
-    std::string ptk              = client_sec_ctx_tlv->ptk_str();
+    bool client_is_connected     = client_sec_ctx_tlv->client_connected_flags().client_connected;
+    uint8_t *ptk                 = client_sec_ctx_tlv->ptk();
     uint64_t tx_packet_num       = client_sec_ctx_tlv->tx_packet_num();
-    std::string gtk              = client_sec_ctx_tlv->gtk_str();
+    uint8_t *gtk                 = client_sec_ctx_tlv->gtk();
     uint64_t group_tx_packet_num = client_sec_ctx_tlv->group_tx_packet_num();
 
     // TODO: Send to VBSS Manager (include src_mac = agent_mac)
