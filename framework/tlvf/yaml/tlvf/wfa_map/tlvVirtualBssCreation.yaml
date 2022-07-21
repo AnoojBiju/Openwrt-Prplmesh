@@ -1,0 +1,67 @@
+#
+---
+
+_include: {
+  tlvf/wfa_map/eTlvTypeMap.h,
+  tlvf/wfa_map/eVirtualBssSubtype.h,
+  tlvf/common/sMacAddr.h
+}
+
+_namespace: wfa_map
+
+VirtualBssCreation:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_VIRTUAL_BSS
+  length: uint16_t
+  subtype:
+    _type: eVirtualBssSubtype
+    _value_const: VIRTUAL_BSS_CREATION
+  radio_uid: sMacAddr
+  bssid: sMacAddr
+  ssid_length:
+    _type: uint16_t
+    _length_var: True
+  ssid:
+    _type: char
+    _length: [ssid_length]
+  pass_length:
+    _type: uint16_t
+    _length_var: True
+    _comment: 0 indicates that the WPA2 or SAE Pass is not present
+  pass:
+    _type: char
+    _length: [pass_length]
+  dpp_connector_length:
+    _type: uint16_t
+    _length_var: True
+    _comment: 0 indicates that DPP Connector is not present
+  dpp_connector:
+    _type: char
+    _length: [dpp_connector_length]
+  client_mac: sMacAddr
+  client_assoc:
+    _type: uint8_t
+    _comment: |
+      If 1, client is already associated, 0 if client is not yet
+      associated. If this flag is 1 then the security context fields
+      below are populated. If 0, then the security fields below are
+      filled in with 0s.
+  key_length:
+    _type: uint16_t
+    _length_var: True
+  ptk:
+    _type: uint8_t
+    _length: [key_length]
+  tx_packet_num:
+    _type: uint64_t
+  group_key_length:
+    _type: uint16_t
+    _length_var: True
+  gtk:
+    _type: uint8_t
+    _length: [group_key_length]
+  group_tx_packet_num:
+    _type: uint64_t

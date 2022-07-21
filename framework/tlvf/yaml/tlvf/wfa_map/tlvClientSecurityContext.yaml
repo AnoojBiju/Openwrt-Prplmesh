@@ -1,0 +1,48 @@
+#
+---
+
+_include: {
+  tlvf/wfa_map/eTlvTypeMap.h,
+  tlvf/wfa_map/eVirtualBssSubtype.h,
+  tlvf/common/sMacAddr.h
+}
+
+_namespace: wfa_map
+
+ClientSecurityContext:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_VIRTUAL_BSS
+  length: uint16_t
+  subtype:
+    _type: eVirtualBssSubtype
+    _value_const: CLIENT_SECURITY_CONTEXT
+  client_connected_flags:
+    _type: ClientSecurityContext::sClientConnectedFlags
+  key_length:
+    _type: uint16_t
+    _length_var: True
+    _comment: if the network is open, then this field is 0.
+  ptk:
+    _type: uint8_t
+    _length: [key_length]
+  tx_packet_num:
+    _type: uint64_t
+  group_key_length:
+    _type: uint16_t
+    _length_var: True
+  gtk:
+    _type: uint8_t
+    _length: [group_key_length]
+  group_tx_packet_num:
+    _type: uint64_t
+
+sClientConnectedFlags:
+  _type: struct
+  _bit_field: uint8_t
+  client_connected:
+    _bit_range: [7,7]
+  reserved:
+    _bit_range: [6,0]

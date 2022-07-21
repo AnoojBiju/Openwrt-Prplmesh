@@ -1067,8 +1067,8 @@ class TlvF:
         elif (is_int_len or is_const_len or is_var_len or is_dynamic_len):
 
             if param_meta and param_meta.condition is not None:
-                self.abort("%s.yaml --> conditional parameters are only supported " +
-                           "for arithmetic types" % self.yaml_fname)
+                self.abort("%s.yaml --> conditional parameters are only supported "
+                           % self.yaml_fname + "for arithmetic types")
 
             # add private pointer
             self.include_list.append("<tuple>")
