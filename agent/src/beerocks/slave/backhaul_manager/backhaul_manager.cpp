@@ -37,6 +37,7 @@
 #include <tlvf/wfa_map/tlvBackhaulSteeringRequest.h>
 #include <tlvf/wfa_map/tlvBackhaulSteeringResponse.h>
 #include <tlvf/wfa_map/tlvErrorCode.h>
+#include <tlvf/wfa_map/tlvHigherLayerData.h>
 #include <tlvf/wfa_map/tlvProfile2AssociationStatusNotification.h>
 
 // BPL Error Codes
@@ -413,6 +414,28 @@ bool BackhaulManager::send_ack_to_controller(ieee1905_1::CmduMessageTx &cmdu_tx,
     return ret;
 }
 
+bool BackhaulManager::send_hle_to_controller()
+{
+    // build ACK message CMDU
+    auto cmdu_tx_header = cmdu_tx.create(0, ieee1905_1::eMessageType::HIGHER_LAYER_DATA_MESSAGE);
+    if (!cmdu_tx_header) {
+        LOG(ERROR) << "Failed to create ieee1905_1::eMessageType::HIGHER_LAYER_DATA_MESSAGE";
+        return false;
+    }
+
+    auto tlvHigherLayerData = cmdu_tx.addClass<wfa_map::tlvHigherLayerData>();
+    if (!tlvHigherLayerData) {
+        LOG(ERROR) << "addClass wfa_map::tlvHigherLayerData failed";
+        return false;
+    }
+
+    auto db = AgentDB::get();
+
+    LOG(DEBUG) << "Sending HIGHER_LAYER_DATA_MESSAGE message to the controller";
+    bool ret = send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac, db->bridge.mac);
+    return ret;
+}
+
 bool BackhaulManager::forward_cmdu_to_broker(ieee1905_1::CmduMessageRx &cmdu_rx,
                                              const sMacAddr &dst_mac, const sMacAddr &src_mac,
                                              const std::string &iface_name)
@@ -497,6 +520,10 @@ bool BackhaulManager::handle_cmdu_from_broker(uint32_t iface_index, const sMacAd
                                               ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto db = AgentDB::get();
+
+    if (db->controller_info.bridge_mac == src_mac) {
+        update_controller_last_contact_time();
+    }
 
     // Filter messages which are not destined to this agent
     if (dst_mac != beerocks::net::network_utils::MULTICAST_1905_MAC_ADDR &&
@@ -845,49 +872,48 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
         //     m_eth_link_up       = beerocks::net::network_utils::linux_iface_is_up_and_running(
         //         db->ethernet.wan.iface_name);
         // }
+
+        update_controller_last_contact_time();
+
         FSM_MOVE_STATE(OPERATIONAL);
         break;
     }
     // Backhaul manager is OPERATIONAL!
     case EState::OPERATIONAL: {
-        /*
-        * TODO
-        * This code segment is commented out since wireless-backhaul is not yet supported and
-        * the current implementation causes high CPU load on steady-state.
-        * The high CPU load is due to a call to linux_iface_is_up_and_running() performed every
-        * second to check if the wired interface changed its state. The implementation of the above
-        * polls the interface flags using ioctl() which is very costly (~120 milliseconds).
-        *
-        * An event-driven solution will be implemented as part of the task:
-        * [TASK] Dynamic switching between wired and wireless
-        * https://github.com/prplfoundation/prplMesh/issues/866
-        */
-        // /**
-        //  * Get current time. It is later used to compute elapsed time since some start time and
-        //  * check if a timeout has expired to perform periodic actions.
-        //  */
-        // auto db = AgentDB::get();
-        //
-        // auto now = std::chrono::steady_clock::now();
-        //
-        // if (!db->device_conf.local_gw()) {
-        //     if (db->ethernet.wan.iface_name.empty()) {
-        //         LOG(WARNING) << "WAN interface is empty on Repeater platform configuration!";
-        //     }
-        // int time_elapsed_ms =
-        //     std::chrono::duration_cast<std::chrono::milliseconds>(now - eth_link_poll_timer)
-        //         .count();
-        // //pooling eth link status every second to notice if there been a change.
-        // if (time_elapsed_ms > POLL_TIMER_TIMEOUT_MS) {
 
-        //     eth_link_poll_timer = now;
-        //     bool eth_link_up = beerocks::net::network_utils::linux_iface_is_up_and_running(db->ethernet.wan.iface_name);
-        //     if (eth_link_up != m_eth_link_up) {
-        //         m_eth_link_up = beerocks::net::network_utils::linux_iface_is_up_and_running(db->ethernet.wan.iface_name);
-        //         FSM_MOVE_STATE(RESTART);
-        //     }
-        // }
-        // }
+        /**
+         * Connection validity section.
+         * This periodic check is added to observe the connectivity of this agent to the controller.
+         */
+
+        // Agent on local controller is not meant to be disconnected.
+        auto db = AgentDB::get();
+        if (db->device_conf.local_controller) {
+            break;
+        }
+
+        auto time_elapsed_sec = std::chrono::duration_cast<std::chrono::seconds>(
+            std::chrono::steady_clock::now().time_since_epoch() -
+            last_controller_contact_time.time_since_epoch());
+
+        // If agent does not receive message from controller for message timeout, send one heartbeat.
+        // Higher Layer Data should be replied in one second according to standard, so it is used as heartbeat.
+        if (time_elapsed_sec > CONTROLLER_MSG_TIMEOUT_SEC) {
+
+            // Send only one heart beat TLV to the Controller
+            if (!heartbeat_message_send) {
+                LOG(DEBUG)
+                    << "Controller did not send message for MSG timeout, send heartbeat (HLE)";
+                heartbeat_message_send = true;
+                send_hle_to_controller();
+            }
+        }
+
+        // If agent does not receive message from controller for connection timeout, accept it as disconnection.
+        if (time_elapsed_sec > CONTROLLER_CON_TIMEOUT_SEC) {
+            LOG(INFO) << "Controller connection has timeout";
+            FSM_MOVE_STATE(RESTART);
+        }
         break;
     }
     case EState::RESTART: {
@@ -3067,6 +3093,12 @@ bool BackhaulManager::handle_dev_set_config(
     m_is_in_reset_state = false;
 
     return true;
+}
+
+void BackhaulManager::update_controller_last_contact_time()
+{
+    last_controller_contact_time = std::chrono::steady_clock::now();
+    heartbeat_message_send       = false;
 }
 
 } // namespace beerocks
