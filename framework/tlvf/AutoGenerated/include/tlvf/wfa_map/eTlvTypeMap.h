@@ -106,6 +106,10 @@ enum class eTlvTypeMap : uint8_t {
     TLV_DEVICE_INVENTORY = 0xd4,
     TLV_AGENT_LIST = 0xd5,
     TLV_ANTICIPATED_CHANNEL_PREFERENCE = 0xd6,
+    TLV_SPATIAL_REUSE_CONFIG_RESPONSE = 0xda,
+    TLV_VIRTUAL_BSS = 0xde,
+    TLV_QOS_MANAGEMENT_POLICY = 0xdb,
+    TLV_CONTROLLER_CAPABILITY = 0xdd,
 };
 // Enum AutoPrint generated code snippet begining- DON'T EDIT!
 // clang-format off
@@ -196,6 +200,10 @@ static const char *eTlvTypeMap_str(eTlvTypeMap enum_value) {
     case eTlvTypeMap::TLV_DEVICE_INVENTORY:                         return "eTlvTypeMap::TLV_DEVICE_INVENTORY";
     case eTlvTypeMap::TLV_AGENT_LIST:                               return "eTlvTypeMap::TLV_AGENT_LIST";
     case eTlvTypeMap::TLV_ANTICIPATED_CHANNEL_PREFERENCE:           return "eTlvTypeMap::TLV_ANTICIPATED_CHANNEL_PREFERENCE";
+    case eTlvTypeMap::TLV_SPATIAL_REUSE_CONFIG_RESPONSE:            return "eTlvTypeMap::TLV_SPATIAL_REUSE_CONFIG_RESPONSE";
+    case eTlvTypeMap::TLV_VIRTUAL_BSS:                              return "eTlvTypeMap::TLV_VIRTUAL_BSS";
+    case eTlvTypeMap::TLV_QOS_MANAGEMENT_POLICY:                    return "eTlvTypeMap::TLV_QOS_MANAGEMENT_POLICY";
+    case eTlvTypeMap::TLV_CONTROLLER_CAPABILITY:                    return "eTlvTypeMap::TLV_CONTROLLER_CAPABILITY";
     }
     static std::string out_str = std::to_string(int(enum_value));
     return out_str.c_str();
@@ -293,6 +301,10 @@ public:
         case 0xd4:
         case 0xd5:
         case 0xd6:
+        case 0xda:
+        case 0xde:
+        case 0xdb:
+        case 0xdd:
                 ret = true;
                 break;
             default:

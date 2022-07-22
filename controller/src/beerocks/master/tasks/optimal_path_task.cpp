@@ -21,8 +21,6 @@ using namespace net;
 using namespace son;
 
 #define MAX_REQUEST_CYCLES 2
-#define RX_RSSI_MEASUREMENT_REQUEST_TIMEOUT_MSEC 10000
-#define BEACON_MEASUREMENT_REQUEST_TIMEOUT_MSEC 6000
 #define DELAY_COUNT_LIMIT 2
 #define DELTA_BURST_LIMIT 20
 #define DEC_WINDOW_LIMIT 20
@@ -452,7 +450,7 @@ void optimal_path_task::work()
                     son_actions::send_cmdu_to_agent(current_agent_mac, cmdu_tx, database,
                                                     current_hostap);
 
-                    set_responses_timeout(BEACON_MEASUREMENT_REQUEST_TIMEOUT_MSEC);
+                    set_responses_timeout(database.config.optimal_path_beacon_timeout_msec);
 
                     ++iterator_element_counter;
                     ++potential_ap_iter;
@@ -941,7 +939,7 @@ void optimal_path_task::work()
         TASK_LOG(DEBUG) << "requesting rssi measurements for " << sta_mac << " from "
                         << current_hostap;
 
-        set_responses_timeout(RX_RSSI_MEASUREMENT_REQUEST_TIMEOUT_MSEC);
+        set_responses_timeout(database.config.optimal_path_rssi_timeout_msec);
 
         state = FIND_AND_PICK_HOSTAP_CROSS;
         break;
@@ -1609,6 +1607,12 @@ void optimal_path_task::handle_responses_timeout(
             hostaps.erase(mac); //hostaps that didn't respond on time won't be considered as active
         }
     }
+}
+
+void optimal_path_task::handle_pending_task_ended(int task_id)
+{
+    TASK_LOG(INFO) << "Task " << task_id << " has been ended. finish this task";
+    finish();
 }
 
 void optimal_path_task::handle_response(std::string mac,

@@ -24,8 +24,11 @@
 #include "tlvf/ieee_1905_1/tlvVendorSpecific.h"
 #include "tlvf/ieee_1905_1/tlvWsc.h"
 #include "tlvf/wfa_map/tlvApCapability.h"
+#include "tlvf/wfa_map/tlvApRadioVbssCapabilities.h"
 #include "tlvf/wfa_map/tlvProfile2ChannelScanResult.h"
 #include "tlvf/wfa_map/tlvProfile2ErrorCode.h"
+#include "tlvf/wfa_map/tlvVbssConfigurationReport.h"
+#include "tlvf/wfa_map/tlvVirtualBssCreation.h"
 #include <tlvf/AssociationRequestFrame/AssocReqFrame.h>
 #include <tlvf/test/tlvVarList.h>
 #include <tlvf/tlvftypes.h>
@@ -1795,6 +1798,307 @@ int test_build_assoc_frame()
     return errors;
 }
 
+int test_parse_ap_radio_vbss_capabilities()
+{
+    int errors = 0;
+    MAPF_INFO(__FUNCTION__ << " start");
+
+    /*
+     * frame raw buffer in network byte order
+     */
+    std::vector<uint8_t> ap_radio_vbss_capa_buffer = {// type
+                                                      0xde,
+                                                      // length
+                                                      0x00, 0x16,
+                                                      // subtype
+                                                      0x00, 0x01,
+                                                      // radio_uid
+                                                      0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+                                                      // max VBSS
+                                                      0x08,
+                                                      // VBSSs settings
+                                                      0b10000000,
+                                                      // fixed bits mask
+                                                      0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c,
+                                                      // fixed bits value
+                                                      0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12};
+
+    auto ap_radio_vbss_capa = ApRadioVbssCapabilities(ap_radio_vbss_capa_buffer.data(),
+                                                      ap_radio_vbss_capa_buffer.size(), true);
+    errors +=
+        check_field<eTlvTypeMap>(ap_radio_vbss_capa.type(), eTlvTypeMap::TLV_VIRTUAL_BSS, "type");
+    errors += check_field<uint16_t>(ap_radio_vbss_capa.length(), 22, "length");
+    errors += check_field<wfa_map::eVirtualBssSubtype>(
+        ap_radio_vbss_capa.subtype(), wfa_map::eVirtualBssSubtype::AP_RADIO_VBSS_CAPABILITIES,
+        "subtype");
+    errors += check_field<sMacAddr>(ap_radio_vbss_capa.radio_uid(),
+                                    tlvf::mac_from_string("01:02:03:04:05:06"), "radio_uid");
+    errors += check_field<uint8_t>(ap_radio_vbss_capa.max_vbss(), 8, "max_vbss");
+    ApRadioVbssCapabilities::sVbssSettings vbss_settings = ap_radio_vbss_capa.vbss_settings();
+    errors += check_field<uint8_t>(vbss_settings.vbsss_subtract, 1, "vbsss_subtract");
+    errors += check_field<uint8_t>(vbss_settings.vbssid_restrictions, 0, "vbssid_restrictions");
+    errors += check_field<uint8_t>(vbss_settings.vbssid_match_and_mask_restrictions, 0,
+                                   "vbssid_match_and_mask_restrictions");
+    errors +=
+        check_field<uint8_t>(vbss_settings.fixed_bit_restrictions, 0, "fixed_bit_restrictions");
+    errors += check_field<uint32_t>(vbss_settings.reserved, 0, "fixed_bit_reserved");
+    MAPF_INFO(__FUNCTION__ << " Finished, errors = " << errors << std::endl);
+    return errors;
+}
+
+int test_create_ap_radio_vbss_response_cmdu()
+{
+    int errors = 0;
+
+    constexpr uint16_t tx_buffer_size = 4096;
+    uint8_t tx_buffer[tx_buffer_size];
+    ieee1905_1::CmduMessageTx cmdu_tx(tx_buffer, tx_buffer_size);
+
+    if (!cmdu_tx.create(1 /*mid*/,
+                        ieee1905_1::eMessageType::VIRTUAL_BSS_CAPABILITIES_REPONSE_MESSAGE)) {
+        LOG(ERROR) << "cmdu creation of type VIRTUAL_BSS_CAPABILITIES_REPONSE_MESSAGE, has failed";
+        errors++;
+    }
+    auto ap_radio_vbss_capabilities = cmdu_tx.addClass<wfa_map::ApRadioVbssCapabilities>();
+    if (!ap_radio_vbss_capabilities) {
+        LOG(ERROR) << "addClass has failed";
+        errors++;
+    }
+
+    ap_radio_vbss_capabilities->radio_uid() = tlvf::mac_from_string("01:02:03:04:05:06");
+    ap_radio_vbss_capabilities->max_vbss()  = 8;
+    ap_radio_vbss_capabilities->vbss_settings().vbsss_subtract                     = 1;
+    ap_radio_vbss_capabilities->vbss_settings().vbssid_restrictions                = 0;
+    ap_radio_vbss_capabilities->vbss_settings().vbssid_match_and_mask_restrictions = 0;
+    ap_radio_vbss_capabilities->vbss_settings().fixed_bit_restrictions             = 0;
+    ap_radio_vbss_capabilities->vbss_settings().reserved                           = 0;
+
+    cmdu_tx.finalize();
+
+    LOG(DEBUG) << "TX: " << std::endl << utils::dump_buffer(tx_buffer, cmdu_tx.getMessageLength());
+
+    uint8_t recv_buffer[sizeof(tx_buffer)];
+    memcpy(recv_buffer, tx_buffer, sizeof(recv_buffer));
+
+    CmduMessageRx received_message(recv_buffer, sizeof(recv_buffer));
+    received_message.parse();
+    // By parsing and getting the class, we make sure the subtype was
+    // parsed correctly:
+    auto ap_radio_vbss_capa = received_message.getClass<wfa_map::ApRadioVbssCapabilities>();
+    if (!ap_radio_vbss_capa) {
+        LOG(ERROR) << "getClass<tlvApRadioVbssCapabilities> failed";
+        errors++;
+    }
+
+    errors +=
+        check_field<eTlvTypeMap>(ap_radio_vbss_capa->type(), eTlvTypeMap::TLV_VIRTUAL_BSS, "type");
+    errors += check_field<uint16_t>(ap_radio_vbss_capa->length(), 22, "length");
+    errors += check_field<wfa_map::eVirtualBssSubtype>(
+        ap_radio_vbss_capa->subtype(), wfa_map::eVirtualBssSubtype::AP_RADIO_VBSS_CAPABILITIES,
+        "subtype");
+    errors += check_field<sMacAddr>(ap_radio_vbss_capa->radio_uid(),
+                                    tlvf::mac_from_string("01:02:03:04:05:06"), "radio_uid");
+    errors += check_field<uint8_t>(ap_radio_vbss_capa->max_vbss(), 8, "max_vbss");
+    ApRadioVbssCapabilities::sVbssSettings vbss_settings = ap_radio_vbss_capa->vbss_settings();
+    errors += check_field<uint8_t>(vbss_settings.vbsss_subtract, 1, "vbsss_subtract");
+    errors += check_field<uint8_t>(vbss_settings.vbssid_restrictions, 0, "vbssid_restrictions");
+    errors += check_field<uint8_t>(vbss_settings.vbssid_match_and_mask_restrictions, 0,
+                                   "vbssid_match_and_mask_restrictions");
+    errors +=
+        check_field<uint8_t>(vbss_settings.fixed_bit_restrictions, 0, "fixed_bit_restrictions");
+    errors += check_field<uint32_t>(vbss_settings.reserved, 0, "fixed_bit_reserved");
+
+    MAPF_INFO(__FUNCTION__ << " Finished, errors = " << errors << std::endl);
+    return errors;
+}
+
+int test_virtual_bss_creation()
+{
+    int errors = 0;
+    MAPF_INFO(__FUNCTION__ << " start");
+
+    /*
+     * frame raw buffer in network byte order
+     */
+    // clang-format off
+    std::vector<uint8_t> vbss_buffer = {
+        // type
+        0xde,
+        // length
+        0x00, 0x46,
+        // subtype
+        0x00, 0x02,
+        // radio_uid
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+        // BSSID
+        0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c,
+        // SSID length
+        0x00, 0x08,
+        // SSID ("prplmesh")
+        0x70, 0x72, 0x70, 0x6c, 0x6d, 0x65, 0x73, 0x68,
+        // Pass length
+        0x00, 0x04,
+        // Pass ("pass")
+        0x70, 0x61, 0x73, 0x73,
+        // DPP Connector length
+        0x00, 0x00,
+        // Client MAC
+        0xde, 0xad, 0xbe, 0xef, 0xf0, 0x0d,
+        // Client assoc
+        0x01,
+        // Key length
+        0x00, 0x8,
+        // PTK,
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+        // TX Packet num (257)
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01,
+        // Group key length
+        0x00, 0x5,
+        // GTK
+        0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+        // Group TX Packet num (4097)
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x01,
+    };
+    // clang-format on
+
+    auto virtual_bss_creation = VirtualBssCreation(vbss_buffer.data(), vbss_buffer.size(), true);
+    errors +=
+        check_field<eTlvTypeMap>(virtual_bss_creation.type(), eTlvTypeMap::TLV_VIRTUAL_BSS, "type");
+    errors += check_field<uint16_t>(virtual_bss_creation.length(), 0x46, "length");
+    errors += check_field<wfa_map::eVirtualBssSubtype>(
+        virtual_bss_creation.subtype(), wfa_map::eVirtualBssSubtype::VIRTUAL_BSS_CREATION,
+        "subtype");
+    errors += check_field<sMacAddr>(virtual_bss_creation.radio_uid(),
+                                    tlvf::mac_from_string("01:02:03:04:05:06"), "radio_uid");
+    errors += check_field<sMacAddr>(virtual_bss_creation.bssid(),
+                                    tlvf::mac_from_string("07:08:09:0a:0b:0c"), "bssid");
+    errors += check_field<uint16_t>(virtual_bss_creation.ssid_length(), 8, "ssid_length");
+    errors += check_field<std::string>(virtual_bss_creation.ssid_str(), "prplmesh", "ssid");
+    errors += check_field<uint16_t>(virtual_bss_creation.pass_length(), 4, "pass_length");
+    errors += check_field<std::string>(virtual_bss_creation.pass(), "pass", "pass");
+    errors += check_field<uint16_t>(virtual_bss_creation.dpp_connector_length(), 0,
+                                    "dpp_connector_length");
+    errors += check_field<std::size_t>(virtual_bss_creation.dpp_connector_str().size(), 0,
+                                       "dpp_connector_str().size()");
+    errors += check_field<sMacAddr>(virtual_bss_creation.client_mac(),
+                                    tlvf::mac_from_string("de:ad:be:ef:f0:0d"), "client_mac");
+    errors += check_field<uint8_t>(virtual_bss_creation.client_assoc(), 1, "client_assoc");
+    errors += check_field<uint16_t>(virtual_bss_creation.key_length(), 8, "key_length");
+    std::vector<uint8_t> expected_ptk = {
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+    };
+    std::vector<uint8_t> parsed_ptk(virtual_bss_creation.ptk(),
+                                    virtual_bss_creation.ptk() + virtual_bss_creation.key_length());
+    errors += check_field<std::vector<uint8_t>>(parsed_ptk, expected_ptk, "PTK");
+    errors += check_field<uint64_t>(virtual_bss_creation.tx_packet_num(), 257, "tx_packet_num");
+    errors += check_field<uint16_t>(virtual_bss_creation.group_key_length(), 5, "group_key_length");
+    std::vector<uint8_t> expected_gtk = {
+        0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+    };
+    std::vector<uint8_t> parsed_gtk(virtual_bss_creation.gtk(),
+                                    virtual_bss_creation.gtk() +
+                                        virtual_bss_creation.group_key_length());
+    errors += check_field<std::vector<uint8_t>>(parsed_gtk, expected_gtk, "GTK");
+    errors += check_field<uint64_t>(virtual_bss_creation.group_tx_packet_num(), 0x1001,
+                                    "group_tx_packet_num");
+
+    MAPF_INFO(__FUNCTION__ << " Finished, errors = " << errors << std::endl);
+    return errors;
+}
+
+int test_topology_response_including_vbss_configuration_report()
+{
+    int errors = 0;
+    MAPF_INFO(__FUNCTION__ << " start");
+
+    constexpr uint16_t tx_buffer_size = 4096;
+    uint8_t tx_buffer[tx_buffer_size];
+    ieee1905_1::CmduMessageTx cmdu_tx(tx_buffer, tx_buffer_size);
+
+    if (!cmdu_tx.create(1 /*mid*/, ieee1905_1::eMessageType::TOPOLOGY_RESPONSE_MESSAGE)) {
+        LOG(ERROR) << "cmdu creation of type TOPOLOGY_RESPONSE, has failed";
+        errors++;
+    }
+    auto tx_vbss_configuration_report = cmdu_tx.addClass<wfa_map::VbssConfigurationReport>();
+    if (!tx_vbss_configuration_report) {
+        LOG(ERROR) << "addClass has failed";
+        errors++;
+    }
+
+    auto radio = tx_vbss_configuration_report->create_radio_list();
+    if (!radio) {
+        LOG(ERROR) << "create_radio_list() has failed!";
+        return false;
+    }
+
+    radio->radio_uid() = tlvf::mac_from_string("01:02:03:04:05:06");
+
+    auto bss = radio->create_bss_list();
+    if (!bss) {
+        LOG(ERROR) << "create_bss_list() has failed!";
+        return false;
+    }
+    bss->bssid() = tlvf::mac_from_string("07:08:09:0a:0b:0c");
+    bss->set_ssid("prplMesh");
+    if (!radio->add_bss_list(bss)) {
+        LOG(ERROR) << "Failed to add a bss!";
+        return false;
+    }
+
+    if (!tx_vbss_configuration_report->add_radio_list(radio)) {
+        LOG(ERROR) << "Failed to add a radio!";
+        return false;
+    }
+
+    cmdu_tx.finalize();
+
+    LOG(DEBUG) << "TX: " << std::endl << utils::dump_buffer(tx_buffer, cmdu_tx.getMessageLength());
+
+    uint8_t recv_buffer[sizeof(tx_buffer)];
+    memcpy(recv_buffer, tx_buffer, sizeof(recv_buffer));
+
+    CmduMessageRx received_message(recv_buffer, sizeof(recv_buffer));
+    received_message.parse();
+    auto rx_vbss_configuration_report =
+        received_message.getClass<wfa_map::VbssConfigurationReport>();
+    if (!rx_vbss_configuration_report) {
+        LOG(ERROR) << "getClass() failed";
+        errors++;
+    }
+
+    errors += check_field<eTlvTypeMap>(rx_vbss_configuration_report->type(),
+                                       eTlvTypeMap::TLV_VIRTUAL_BSS, "type");
+    errors += check_field<uint16_t>(rx_vbss_configuration_report->length(), 25, "length");
+    errors += check_field<wfa_map::eVirtualBssSubtype>(
+        rx_vbss_configuration_report->subtype(),
+        wfa_map::eVirtualBssSubtype::VBSS_CONFIGURATION_REPORT, "subtype");
+    errors += check_field<uint8_t>(rx_vbss_configuration_report->number_of_radios(), 1,
+                                   "number_of_radios");
+
+    auto radio1_tup = rx_vbss_configuration_report->radio_list(0);
+    if (!std::get<0>(radio1_tup)) {
+        LOG(ERROR) << "Failed to retrieve radio1!";
+        errors++;
+    }
+    auto radio1 = std::get<1>(radio1_tup);
+    errors += check_field<sMacAddr>(radio1.radio_uid(), tlvf::mac_from_string("01:02:03:04:05:06"),
+                                    "radio_uid");
+    errors += check_field<uint8_t>(radio1.number_bss(), 1, "number_bss");
+
+    auto bss1_tup = radio1.bss_list(0);
+    if (!std::get<0>(bss1_tup)) {
+        LOG(ERROR) << "Failed to retrieve bss1!";
+        errors++;
+    }
+    auto bss1 = std::get<1>(bss1_tup);
+    errors +=
+        check_field<sMacAddr>(bss1.bssid(), tlvf::mac_from_string("07:08:09:0a:0b:0c"), "bssid");
+    errors += check_field<std::string>(bss1.ssid_str(), "prplMesh", "ssid");
+
+    MAPF_INFO(__FUNCTION__ << " Finished, errors = " << errors << std::endl);
+    return errors;
+}
+
 int main(int argc, char *argv[])
 {
     int errors = 0;
@@ -1811,6 +2115,10 @@ int main(int argc, char *argv[])
     errors += test_build_assoc_frame();
     errors += test_parse_reassoc_frame();
     errors += test_create_error_response_message();
+    errors += test_parse_ap_radio_vbss_capabilities();
+    errors += test_create_ap_radio_vbss_response_cmdu();
+    errors += test_virtual_bss_creation();
+    errors += test_topology_response_including_vbss_configuration_report();
     MAPF_INFO(__FUNCTION__ << " Finished, errors = " << errors << std::endl);
     return errors;
 }

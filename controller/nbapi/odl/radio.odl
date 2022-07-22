@@ -64,6 +64,10 @@
             %read-only string MACAddress = "";
         }
 
+        object UnassociatedSTA []{
+            counted with UnassociatedSTANumberOfEntries;
+        }
+
         %read-only object ScanResult [] {
             counted with ScanResultNumberOfEntries;
         }

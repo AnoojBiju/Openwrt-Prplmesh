@@ -29,7 +29,9 @@
 #include <tlvf/ieee_1905_1/tlvUnknown.h>
 #include <tlvf/ieee_1905_1/tlvVendorSpecific.h>
 #include <tlvf/ieee_1905_1/tlvWsc.h>
+#include <tlvf/swap.h>
 #include <tlvf/wfa_map/eTlvTypeMap.h>
+#include <tlvf/wfa_map/eVirtualBssSubtype.h>
 #include <tlvf/wfa_map/tlv1905EncapDpp.h>
 #include <tlvf/wfa_map/tlv1905EncapEapol.h>
 #include <tlvf/wfa_map/tlv1905LayerSecurityCapability.h>
@@ -45,6 +47,7 @@
 #include <tlvf/wfa_map/tlvApOperationalBSS.h>
 #include <tlvf/wfa_map/tlvApRadioBasicCapabilities.h>
 #include <tlvf/wfa_map/tlvApRadioIdentifier.h>
+#include <tlvf/wfa_map/tlvApRadioVbssCapabilities.h>
 #include <tlvf/wfa_map/tlvApVhtCapabilities.h>
 #include <tlvf/wfa_map/tlvAssociatedClients.h>
 #include <tlvf/wfa_map/tlvAssociatedStaExtendedLinkMetrics.h>
@@ -68,6 +71,8 @@
 #include <tlvf/wfa_map/tlvClientAssociationEvent.h>
 #include <tlvf/wfa_map/tlvClientCapabilityReport.h>
 #include <tlvf/wfa_map/tlvClientInfo.h>
+#include <tlvf/wfa_map/tlvClientSecurityContext.h>
+#include <tlvf/wfa_map/tlvControllerCapability.h>
 #include <tlvf/wfa_map/tlvDeviceInventory.h>
 #include <tlvf/wfa_map/tlvDppBootstrappingUriNotification.h>
 #include <tlvf/wfa_map/tlvDppCeeIndication.h>
@@ -100,9 +105,11 @@
 #include <tlvf/wfa_map/tlvProfile2SteeringRequest.h>
 #include <tlvf/wfa_map/tlvProfile2TrafficSeparationPolicy.h>
 #include <tlvf/wfa_map/tlvProfile2UnsuccessfulAssociationPolicy.h>
+#include <tlvf/wfa_map/tlvQoSManagementPolicy.h>
 #include <tlvf/wfa_map/tlvRadioOperationRestriction.h>
 #include <tlvf/wfa_map/tlvSearchedService.h>
 #include <tlvf/wfa_map/tlvServicePrioritizationRule.h>
+#include <tlvf/wfa_map/tlvSpatialReuseConfigResponse.h>
 #include <tlvf/wfa_map/tlvStaMacAddressType.h>
 #include <tlvf/wfa_map/tlvSteeringBTMReport.h>
 #include <tlvf/wfa_map/tlvSteeringPolicy.h>
@@ -110,9 +117,14 @@
 #include <tlvf/wfa_map/tlvSupportedService.h>
 #include <tlvf/wfa_map/tlvTimestamp.h>
 #include <tlvf/wfa_map/tlvTransmitPowerLimit.h>
+#include <tlvf/wfa_map/tlvTriggerChannelSwitchAnnouncement.h>
 #include <tlvf/wfa_map/tlvTunnelledData.h>
 #include <tlvf/wfa_map/tlvTunnelledProtocolType.h>
 #include <tlvf/wfa_map/tlvTunnelledSourceInfo.h>
+#include <tlvf/wfa_map/tlvVbssConfigurationReport.h>
+#include <tlvf/wfa_map/tlvVirtualBssCreation.h>
+#include <tlvf/wfa_map/tlvVirtualBssDestruction.h>
+#include <tlvf/wfa_map/tlvVirtualBssEvent.h>
 
 using namespace ieee1905_1;
 
@@ -135,6 +147,19 @@ uint16_t CmduMessageRx::getNextTlvLength() const
     swap_16(tlv_length);
 
     return tlv_length;
+}
+
+uint16_t CmduMessageRx::getNextTlvSubtype() const
+{
+    if (!getCmduHeader()) {
+        return UINT16_MAX;
+    }
+    sSubtypedTlvHeader *tlv = reinterpret_cast<sSubtypedTlvHeader *>(msg.prevClass()->getBuffPtr());
+
+    uint16_t tlv_subtype = tlv->subtype;
+    swap_16(tlv_subtype);
+
+    return tlv_subtype;
 }
 
 std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(ieee1905_1::eTlvType tlv_type)
@@ -481,6 +506,49 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     }
     case (wfa_map::eTlvTypeMap::TLV_AGENT_LIST): {
         return msg.addClass<wfa_map::tlvAgentList>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_SPATIAL_REUSE_CONFIG_RESPONSE): {
+        return msg.addClass<wfa_map::tlvSpatialReuseConfigResponse>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_VIRTUAL_BSS): {
+        auto tlv_subtype_int = getNextTlvSubtype();
+
+        if (!wfa_map::eVirtualBssSubtypeValidate::check(tlv_subtype_int)) {
+            LOG(FATAL) << "Invalid TLV subtype " << tlv_subtype_int << " for type " << tlv_type;
+            return msg.addClass<tlvUnknown>();
+        }
+        auto tlv_subtype = static_cast<wfa_map::eVirtualBssSubtype>(tlv_subtype_int);
+        switch (tlv_subtype) {
+        case (wfa_map::eVirtualBssSubtype::AP_RADIO_VBSS_CAPABILITIES): {
+            return msg.addClass<wfa_map::ApRadioVbssCapabilities>();
+        }
+        case (wfa_map::eVirtualBssSubtype::VIRTUAL_BSS_CREATION): {
+            return msg.addClass<wfa_map::VirtualBssCreation>();
+        }
+        case (wfa_map::eVirtualBssSubtype::VIRTUAL_BSS_DESTRUCTION): {
+            return msg.addClass<wfa_map::VirtualBssDestruction>();
+        }
+        case (wfa_map::eVirtualBssSubtype::VIRTUAL_BSS_EVENT): {
+            return msg.addClass<wfa_map::VirtualBssEvent>();
+        }
+        case (wfa_map::eVirtualBssSubtype::CLIENT_SECURITY_CONTEXT): {
+            return msg.addClass<wfa_map::ClientSecurityContext>();
+        }
+        case (wfa_map::eVirtualBssSubtype::TRIGGER_CHANNEL_SWITCH_ANNOUNCEMENT): {
+            return msg.addClass<wfa_map::TriggerChannelSwitchAnnouncement>();
+        }
+        case (wfa_map::eVirtualBssSubtype::VBSS_CONFIGURATION_REPORT): {
+            return msg.addClass<wfa_map::VbssConfigurationReport>();
+        }
+        }
+        LOG(FATAL) << "Unknown TLV subtype: " << unsigned(tlv_subtype);
+        return msg.addClass<tlvUnknown>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_QOS_MANAGEMENT_POLICY): {
+        return msg.addClass<wfa_map::tlvQoSManagementPolicy>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_CONTROLLER_CAPABILITY): {
+        return msg.addClass<wfa_map::tlvControllerCapability>();
     }
     }
     LOG(FATAL) << "Unknown TLV type: " << unsigned(tlv_type);

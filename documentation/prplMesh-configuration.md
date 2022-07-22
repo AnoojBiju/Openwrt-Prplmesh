@@ -48,7 +48,8 @@ In the following table, "default" means default value used within prplMesh if it
 | mandatory_interfaces                         | string  | no       | *empty*         | Comma-separated list of wireless interfaces that prplMesh should use. If empty, try to use all of them.                                               |
 | unsuccessful_assoc_report_policy                         | bool  | no       | 1         | If set to 1, enable reporting for unsuccessful associations.                                               |
 | unsuccessful_assoc_max_reporting_rate                         | int  | no       | 30         | Maximum rate for reporting unsuccessful association in attempts per minute.                                               |
-
+| rssi_measurements_timeout                     | int   | no    | 10000 | rssi measurements timeout in msec, used by the optimal path task
+| beacon_measurements_timeout                   | int   | no    | 6000  | 11k beacon measurements timeout in msec, used by the optimal path task
 ### Radio-specific configuration options (UCI only).
 
 In addition to the global configuration options, prplMesh needs to have one configuration section per radio.

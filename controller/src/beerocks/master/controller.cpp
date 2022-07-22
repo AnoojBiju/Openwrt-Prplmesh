@@ -579,6 +579,7 @@ bool Controller::handle_cmdu_1905_autoconfiguration_search(const sMacAddr &src_m
     auto &auto_config_freq_band = tlvAutoconfigFreqBand->value();
     LOG(DEBUG) << "band=" << int(auto_config_freq_band);
 
+    bool supported_agent_service = false;
     for (int i = 0; i < tlvSupportedServiceIn->supported_service_list_length(); i++) {
         auto supportedServiceTuple = tlvSupportedServiceIn->supported_service_list(i);
         if (!std::get<0>(supportedServiceTuple)) {
@@ -586,26 +587,36 @@ bool Controller::handle_cmdu_1905_autoconfiguration_search(const sMacAddr &src_m
             return false;
         }
         auto supportedService = std::get<1>(supportedServiceTuple);
-        if (supportedService != wfa_map::tlvSupportedService::eSupportedService::MULTI_AP_AGENT) {
-            LOG(WARNING) << "Invalid tlvSupportedService - supported service is not "
-                            "MULTI_AP_AGENT. Received value: "
-                         << std::hex << int(supportedService);
-            return false;
+        if (supportedService == wfa_map::tlvSupportedService::eSupportedService::MULTI_AP_AGENT) {
+            supported_agent_service = true;
+        } else {
+            LOG(INFO) << "Not supported service, received value:" << std::hex
+                      << int(supportedService);
         }
     }
+    if (!supported_agent_service) {
+        LOG(WARNING) << "MULTI_AP_AGENT is not supported as service";
+        return false;
+    }
 
+    bool searched_controller_service = false;
     for (int i = 0; i < tlvSearchedService->searched_service_list_length(); i++) {
         auto searchedServiceTuple = tlvSearchedService->searched_service_list(i);
         if (!std::get<0>(searchedServiceTuple)) {
             LOG(ERROR) << "Invalid tlvSearchedService";
             return false;
         }
-        if (std::get<1>(searchedServiceTuple) !=
+        if (std::get<1>(searchedServiceTuple) ==
             wfa_map::tlvSearchedService::eSearchedService::MULTI_AP_CONTROLLER) {
-            LOG(WARNING)
-                << "Invalid tlvSearchedService - searched service is not MULTI_AP_CONTROLLER";
-            return false;
+            searched_controller_service = true;
+        } else {
+            LOG(INFO) << "Not supported searched service, received value:" << std::hex
+                      << int(std::get<1>(searchedServiceTuple));
         }
+    }
+    if (!searched_controller_service) {
+        LOG(WARNING) << "MULTI_AP_CONTROLLER is not searched as service";
+        return false;
     }
 
     auto cmdu_header = cmdu_tx.create(

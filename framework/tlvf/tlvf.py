@@ -418,7 +418,6 @@ class TlvF:
         self.logger = None
         self.yaml_file_list = []
         self.generated_file_list = []
-        self.copied_file_list = []
         self.db = LastUpdatedOrderedDict()
         self.db_enum_storage_type = {}
         self.db_yaml_paths = {}
@@ -439,7 +438,7 @@ class TlvF:
         self.generateCode()
 
         if self.print_outputs:
-            outputs = ";".join(self.generated_file_list + self.copied_file_list)
+            outputs = ";".join(self.generated_file_list)
             sys.stdout.write(outputs)
 
         logConsole("All Done.\n")
@@ -1068,8 +1067,8 @@ class TlvF:
         elif (is_int_len or is_const_len or is_var_len or is_dynamic_len):
 
             if param_meta and param_meta.condition is not None:
-                self.abort("%s.yaml --> conditional parameters are only supported " +
-                           "for arithmetic types" % self.yaml_fname)
+                self.abort("%s.yaml --> conditional parameters are only supported "
+                           % self.yaml_fname + "for arithmetic types")
 
             # add private pointer
             self.include_list.append("<tuple>")

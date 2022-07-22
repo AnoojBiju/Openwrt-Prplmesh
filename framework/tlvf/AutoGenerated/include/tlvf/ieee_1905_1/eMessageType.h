@@ -92,82 +92,106 @@ enum class eMessageType : uint16_t {
     DPP_BOOTSTRAPPING_URI_NOTIFICATION_MESSAGE = 0x8031,
     FAILED_CONNECTION_MESSAGE = 0x8033,
     AGENT_LIST_MESSAGE = 0x8035,
+    VIRTUAL_BSS_CAPABILITIES_REQUEST_MESSAGE = 0x8038,
+    VIRTUAL_BSS_CAPABILITIES_REPONSE_MESSAGE = 0x8039,
+    VIRTUAL_BSS_REQUEST_MESSAGE = 0x8040,
+    VIRTUAL_BSS_RESPONSE_MESSAGE = 0x8041,
+    CLIENT_SECURITY_CONTEXT_REQUEST_MESSAGE = 0x8042,
+    CLIENT_SECURITY_CONTEXT_RESPONSE_MESSAGE = 0x8043,
+    TRIGGER_CHANNEL_SWITCH_ANNOUNCEMENT_REQUEST_MESSAGE = 0x8044,
+    TRIGGER_CHANNEL_SWITCH_ANNOUNCEMENT_RESPONSE_MESSAGE = 0x8045,
+    VIRTUAL_BSS_MOVE_PREPARATION_REQUEST_MESSAGE = 0x8046,
+    VIRTUAL_BSS_MOVE_PREPARATION_RESPONSE_MESSAGE = 0x8047,
+    VIRTUAL_BSS_MOVE_CANCEL_REQUEST_MESSAGE = 0x8048,
+    VIRTUAL_BSS_MOVE_CANCEL_RESPONSE_MESSAGE = 0x8049,
 };
 // Enum AutoPrint generated code snippet begining- DON'T EDIT!
 // clang-format off
 static const char *eMessageType_str(eMessageType enum_value) {
     switch (enum_value) {
-    case eMessageType::TOPOLOGY_DISCOVERY_MESSAGE:                     return "eMessageType::TOPOLOGY_DISCOVERY_MESSAGE";
-    case eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE:                  return "eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE";
-    case eMessageType::TOPOLOGY_QUERY_MESSAGE:                         return "eMessageType::TOPOLOGY_QUERY_MESSAGE";
-    case eMessageType::TOPOLOGY_RESPONSE_MESSAGE:                      return "eMessageType::TOPOLOGY_RESPONSE_MESSAGE";
-    case eMessageType::VENDOR_SPECIFIC_MESSAGE:                        return "eMessageType::VENDOR_SPECIFIC_MESSAGE";
-    case eMessageType::LINK_METRIC_QUERY_MESSAGE:                      return "eMessageType::LINK_METRIC_QUERY_MESSAGE";
-    case eMessageType::LINK_METRIC_RESPONSE_MESSAGE:                   return "eMessageType::LINK_METRIC_RESPONSE_MESSAGE";
-    case eMessageType::AP_AUTOCONFIGURATION_SEARCH_MESSAGE:            return "eMessageType::AP_AUTOCONFIGURATION_SEARCH_MESSAGE";
-    case eMessageType::AP_AUTOCONFIGURATION_RESPONSE_MESSAGE:          return "eMessageType::AP_AUTOCONFIGURATION_RESPONSE_MESSAGE";
-    case eMessageType::AP_AUTOCONFIGURATION_WSC_MESSAGE:               return "eMessageType::AP_AUTOCONFIGURATION_WSC_MESSAGE";
-    case eMessageType::AP_AUTOCONFIGURATION_RENEW_MESSAGE:             return "eMessageType::AP_AUTOCONFIGURATION_RENEW_MESSAGE";
-    case eMessageType::PUSH_BUTTON_EVENT_NOTIFICATION_MESSAGE:         return "eMessageType::PUSH_BUTTON_EVENT_NOTIFICATION_MESSAGE";
-    case eMessageType::PUSH_BUTTON_JOIN_NOTIFICATION_MESSAGE:          return "eMessageType::PUSH_BUTTON_JOIN_NOTIFICATION_MESSAGE";
-    case eMessageType::HIGHER_LAYER_QUERY_MESSAGE:                     return "eMessageType::HIGHER_LAYER_QUERY_MESSAGE";
-    case eMessageType::HIGHER_LAYER_RESPONSE_MESSAGE:                  return "eMessageType::HIGHER_LAYER_RESPONSE_MESSAGE";
-    case eMessageType::INTERFACE_POWER_CHANGE_REQUEST_MESSAGE:         return "eMessageType::INTERFACE_POWER_CHANGE_REQUEST_MESSAGE";
-    case eMessageType::INTERFACE_POWER_CHANGE_RESPONSE_MESSAGE:        return "eMessageType::INTERFACE_POWER_CHANGE_RESPONSE_MESSAGE";
-    case eMessageType::GENERIC_PHY_QUERY_MESSAGE:                      return "eMessageType::GENERIC_PHY_QUERY_MESSAGE";
-    case eMessageType::GENERIC_PHY_RESPONSE_MESSAGE:                   return "eMessageType::GENERIC_PHY_RESPONSE_MESSAGE";
-    case eMessageType::ACK_MESSAGE:                                    return "eMessageType::ACK_MESSAGE";
-    case eMessageType::AP_CAPABILITY_QUERY_MESSAGE:                    return "eMessageType::AP_CAPABILITY_QUERY_MESSAGE";
-    case eMessageType::AP_CAPABILITY_REPORT_MESSAGE:                   return "eMessageType::AP_CAPABILITY_REPORT_MESSAGE";
-    case eMessageType::MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE:         return "eMessageType::MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE";
-    case eMessageType::CHANNEL_PREFERENCE_QUERY_MESSAGE:               return "eMessageType::CHANNEL_PREFERENCE_QUERY_MESSAGE";
-    case eMessageType::CHANNEL_PREFERENCE_REPORT_MESSAGE:              return "eMessageType::CHANNEL_PREFERENCE_REPORT_MESSAGE";
-    case eMessageType::CHANNEL_SELECTION_REQUEST_MESSAGE:              return "eMessageType::CHANNEL_SELECTION_REQUEST_MESSAGE";
-    case eMessageType::CHANNEL_SELECTION_RESPONSE_MESSAGE:             return "eMessageType::CHANNEL_SELECTION_RESPONSE_MESSAGE";
-    case eMessageType::OPERATING_CHANNEL_REPORT_MESSAGE:               return "eMessageType::OPERATING_CHANNEL_REPORT_MESSAGE";
-    case eMessageType::CLIENT_CAPABILITY_QUERY_MESSAGE:                return "eMessageType::CLIENT_CAPABILITY_QUERY_MESSAGE";
-    case eMessageType::CLIENT_CAPABILITY_REPORT_MESSAGE:               return "eMessageType::CLIENT_CAPABILITY_REPORT_MESSAGE";
-    case eMessageType::AP_METRICS_QUERY_MESSAGE:                       return "eMessageType::AP_METRICS_QUERY_MESSAGE";
-    case eMessageType::AP_METRICS_RESPONSE_MESSAGE:                    return "eMessageType::AP_METRICS_RESPONSE_MESSAGE";
-    case eMessageType::ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE:      return "eMessageType::ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE";
-    case eMessageType::ASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE:   return "eMessageType::ASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE";
-    case eMessageType::UNASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE:    return "eMessageType::UNASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE";
-    case eMessageType::UNASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE: return "eMessageType::UNASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE";
-    case eMessageType::BEACON_METRICS_QUERY_MESSAGE:                   return "eMessageType::BEACON_METRICS_QUERY_MESSAGE";
-    case eMessageType::BEACON_METRICS_RESPONSE_MESSAGE:                return "eMessageType::BEACON_METRICS_RESPONSE_MESSAGE";
-    case eMessageType::COMBINED_INFRASTRUCTURE_METRICS_MESSAGE:        return "eMessageType::COMBINED_INFRASTRUCTURE_METRICS_MESSAGE";
-    case eMessageType::CLIENT_STEERING_REQUEST_MESSAGE:                return "eMessageType::CLIENT_STEERING_REQUEST_MESSAGE";
-    case eMessageType::CLIENT_STEERING_BTM_REPORT_MESSAGE:             return "eMessageType::CLIENT_STEERING_BTM_REPORT_MESSAGE";
-    case eMessageType::CLIENT_ASSOCIATION_CONTROL_REQUEST_MESSAGE:     return "eMessageType::CLIENT_ASSOCIATION_CONTROL_REQUEST_MESSAGE";
-    case eMessageType::STEERING_COMPLETED_MESSAGE:                     return "eMessageType::STEERING_COMPLETED_MESSAGE";
-    case eMessageType::HIGHER_LAYER_DATA_MESSAGE:                      return "eMessageType::HIGHER_LAYER_DATA_MESSAGE";
-    case eMessageType::BACKHAUL_STEERING_REQUEST_MESSAGE:              return "eMessageType::BACKHAUL_STEERING_REQUEST_MESSAGE";
-    case eMessageType::BACKHAUL_STEERING_RESPONSE_MESSAGE:             return "eMessageType::BACKHAUL_STEERING_RESPONSE_MESSAGE";
-    case eMessageType::CHANNEL_SCAN_REQUEST_MESSAGE:                   return "eMessageType::CHANNEL_SCAN_REQUEST_MESSAGE";
-    case eMessageType::CHANNEL_SCAN_REPORT_MESSAGE:                    return "eMessageType::CHANNEL_SCAN_REPORT_MESSAGE";
-    case eMessageType::DPP_CCE_INDICATION_MESSAGE:                     return "eMessageType::DPP_CCE_INDICATION_MESSAGE";
-    case eMessageType::IEEE1905_REKEY_REQUEST_MESSAGE:                 return "eMessageType::IEEE1905_REKEY_REQUEST_MESSAGE";
-    case eMessageType::IEEE1905_DECRYPTION_FAILURE_MESSAGE:            return "eMessageType::IEEE1905_DECRYPTION_FAILURE_MESSAGE";
-    case eMessageType::CAC_REQUEST_MESSAGE:                            return "eMessageType::CAC_REQUEST_MESSAGE";
-    case eMessageType::CAC_TERMINATION_MESSAGE:                        return "eMessageType::CAC_TERMINATION_MESSAGE";
-    case eMessageType::CLIENT_DISASSOCIATION_STATS_MESSAGE:            return "eMessageType::CLIENT_DISASSOCIATION_STATS_MESSAGE";
-    case eMessageType::SERVICE_PRIORITIZATION_REQUEST_MESSAGE:         return "eMessageType::SERVICE_PRIORITIZATION_REQUEST_MESSAGE";
-    case eMessageType::ERROR_RESPONSE_MESSAGE:                         return "eMessageType::ERROR_RESPONSE_MESSAGE";
-    case eMessageType::ASSOCIATION_STATUS_NOTIFICATION_MESSAGE:        return "eMessageType::ASSOCIATION_STATUS_NOTIFICATION_MESSAGE";
-    case eMessageType::TUNNELLED_MESSAGE:                              return "eMessageType::TUNNELLED_MESSAGE";
-    case eMessageType::BACKHAUL_STA_CAPABILITY_QUERY_MESSAGE:          return "eMessageType::BACKHAUL_STA_CAPABILITY_QUERY_MESSAGE";
-    case eMessageType::BACKHAUL_STA_CAPABILITY_REPORT_MESSAGE:         return "eMessageType::BACKHAUL_STA_CAPABILITY_REPORT_MESSAGE";
-    case eMessageType::PROXIED_ENCAP_DPP_MESSAGE:                      return "eMessageType::PROXIED_ENCAP_DPP_MESSAGE";
-    case eMessageType::DIRECT_ENCAP_DPP_MESSAGE:                       return "eMessageType::DIRECT_ENCAP_DPP_MESSAGE";
-    case eMessageType::RECONFIGURATION_TRIGGER_MESSAGE:                return "eMessageType::RECONFIGURATION_TRIGGER_MESSAGE";
-    case eMessageType::BSS_CONFIGURATION_REQUEST_MESSAGE:              return "eMessageType::BSS_CONFIGURATION_REQUEST_MESSAGE";
-    case eMessageType::BSS_CONFIGURATION_RESPONSE_MESSAGE:             return "eMessageType::BSS_CONFIGURATION_RESPONSE_MESSAGE";
-    case eMessageType::BSS_CONFIGURATION_RESULT_MESSAGE:               return "eMessageType::BSS_CONFIGURATION_RESULT_MESSAGE";
-    case eMessageType::CHIRP_NOTIFICATION_MESSAGE:                     return "eMessageType::CHIRP_NOTIFICATION_MESSAGE";
-    case eMessageType::IEEE1905_ENCAP_EAPOL_MESSAGE:                   return "eMessageType::IEEE1905_ENCAP_EAPOL_MESSAGE";
-    case eMessageType::DPP_BOOTSTRAPPING_URI_NOTIFICATION_MESSAGE:     return "eMessageType::DPP_BOOTSTRAPPING_URI_NOTIFICATION_MESSAGE";
-    case eMessageType::FAILED_CONNECTION_MESSAGE:                      return "eMessageType::FAILED_CONNECTION_MESSAGE";
-    case eMessageType::AGENT_LIST_MESSAGE:                             return "eMessageType::AGENT_LIST_MESSAGE";
+    case eMessageType::TOPOLOGY_DISCOVERY_MESSAGE:                           return "eMessageType::TOPOLOGY_DISCOVERY_MESSAGE";
+    case eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE:                        return "eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE";
+    case eMessageType::TOPOLOGY_QUERY_MESSAGE:                               return "eMessageType::TOPOLOGY_QUERY_MESSAGE";
+    case eMessageType::TOPOLOGY_RESPONSE_MESSAGE:                            return "eMessageType::TOPOLOGY_RESPONSE_MESSAGE";
+    case eMessageType::VENDOR_SPECIFIC_MESSAGE:                              return "eMessageType::VENDOR_SPECIFIC_MESSAGE";
+    case eMessageType::LINK_METRIC_QUERY_MESSAGE:                            return "eMessageType::LINK_METRIC_QUERY_MESSAGE";
+    case eMessageType::LINK_METRIC_RESPONSE_MESSAGE:                         return "eMessageType::LINK_METRIC_RESPONSE_MESSAGE";
+    case eMessageType::AP_AUTOCONFIGURATION_SEARCH_MESSAGE:                  return "eMessageType::AP_AUTOCONFIGURATION_SEARCH_MESSAGE";
+    case eMessageType::AP_AUTOCONFIGURATION_RESPONSE_MESSAGE:                return "eMessageType::AP_AUTOCONFIGURATION_RESPONSE_MESSAGE";
+    case eMessageType::AP_AUTOCONFIGURATION_WSC_MESSAGE:                     return "eMessageType::AP_AUTOCONFIGURATION_WSC_MESSAGE";
+    case eMessageType::AP_AUTOCONFIGURATION_RENEW_MESSAGE:                   return "eMessageType::AP_AUTOCONFIGURATION_RENEW_MESSAGE";
+    case eMessageType::PUSH_BUTTON_EVENT_NOTIFICATION_MESSAGE:               return "eMessageType::PUSH_BUTTON_EVENT_NOTIFICATION_MESSAGE";
+    case eMessageType::PUSH_BUTTON_JOIN_NOTIFICATION_MESSAGE:                return "eMessageType::PUSH_BUTTON_JOIN_NOTIFICATION_MESSAGE";
+    case eMessageType::HIGHER_LAYER_QUERY_MESSAGE:                           return "eMessageType::HIGHER_LAYER_QUERY_MESSAGE";
+    case eMessageType::HIGHER_LAYER_RESPONSE_MESSAGE:                        return "eMessageType::HIGHER_LAYER_RESPONSE_MESSAGE";
+    case eMessageType::INTERFACE_POWER_CHANGE_REQUEST_MESSAGE:               return "eMessageType::INTERFACE_POWER_CHANGE_REQUEST_MESSAGE";
+    case eMessageType::INTERFACE_POWER_CHANGE_RESPONSE_MESSAGE:              return "eMessageType::INTERFACE_POWER_CHANGE_RESPONSE_MESSAGE";
+    case eMessageType::GENERIC_PHY_QUERY_MESSAGE:                            return "eMessageType::GENERIC_PHY_QUERY_MESSAGE";
+    case eMessageType::GENERIC_PHY_RESPONSE_MESSAGE:                         return "eMessageType::GENERIC_PHY_RESPONSE_MESSAGE";
+    case eMessageType::ACK_MESSAGE:                                          return "eMessageType::ACK_MESSAGE";
+    case eMessageType::AP_CAPABILITY_QUERY_MESSAGE:                          return "eMessageType::AP_CAPABILITY_QUERY_MESSAGE";
+    case eMessageType::AP_CAPABILITY_REPORT_MESSAGE:                         return "eMessageType::AP_CAPABILITY_REPORT_MESSAGE";
+    case eMessageType::MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE:               return "eMessageType::MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE";
+    case eMessageType::CHANNEL_PREFERENCE_QUERY_MESSAGE:                     return "eMessageType::CHANNEL_PREFERENCE_QUERY_MESSAGE";
+    case eMessageType::CHANNEL_PREFERENCE_REPORT_MESSAGE:                    return "eMessageType::CHANNEL_PREFERENCE_REPORT_MESSAGE";
+    case eMessageType::CHANNEL_SELECTION_REQUEST_MESSAGE:                    return "eMessageType::CHANNEL_SELECTION_REQUEST_MESSAGE";
+    case eMessageType::CHANNEL_SELECTION_RESPONSE_MESSAGE:                   return "eMessageType::CHANNEL_SELECTION_RESPONSE_MESSAGE";
+    case eMessageType::OPERATING_CHANNEL_REPORT_MESSAGE:                     return "eMessageType::OPERATING_CHANNEL_REPORT_MESSAGE";
+    case eMessageType::CLIENT_CAPABILITY_QUERY_MESSAGE:                      return "eMessageType::CLIENT_CAPABILITY_QUERY_MESSAGE";
+    case eMessageType::CLIENT_CAPABILITY_REPORT_MESSAGE:                     return "eMessageType::CLIENT_CAPABILITY_REPORT_MESSAGE";
+    case eMessageType::AP_METRICS_QUERY_MESSAGE:                             return "eMessageType::AP_METRICS_QUERY_MESSAGE";
+    case eMessageType::AP_METRICS_RESPONSE_MESSAGE:                          return "eMessageType::AP_METRICS_RESPONSE_MESSAGE";
+    case eMessageType::ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE:            return "eMessageType::ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE";
+    case eMessageType::ASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE:         return "eMessageType::ASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE";
+    case eMessageType::UNASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE:          return "eMessageType::UNASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE";
+    case eMessageType::UNASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE:       return "eMessageType::UNASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE";
+    case eMessageType::BEACON_METRICS_QUERY_MESSAGE:                         return "eMessageType::BEACON_METRICS_QUERY_MESSAGE";
+    case eMessageType::BEACON_METRICS_RESPONSE_MESSAGE:                      return "eMessageType::BEACON_METRICS_RESPONSE_MESSAGE";
+    case eMessageType::COMBINED_INFRASTRUCTURE_METRICS_MESSAGE:              return "eMessageType::COMBINED_INFRASTRUCTURE_METRICS_MESSAGE";
+    case eMessageType::CLIENT_STEERING_REQUEST_MESSAGE:                      return "eMessageType::CLIENT_STEERING_REQUEST_MESSAGE";
+    case eMessageType::CLIENT_STEERING_BTM_REPORT_MESSAGE:                   return "eMessageType::CLIENT_STEERING_BTM_REPORT_MESSAGE";
+    case eMessageType::CLIENT_ASSOCIATION_CONTROL_REQUEST_MESSAGE:           return "eMessageType::CLIENT_ASSOCIATION_CONTROL_REQUEST_MESSAGE";
+    case eMessageType::STEERING_COMPLETED_MESSAGE:                           return "eMessageType::STEERING_COMPLETED_MESSAGE";
+    case eMessageType::HIGHER_LAYER_DATA_MESSAGE:                            return "eMessageType::HIGHER_LAYER_DATA_MESSAGE";
+    case eMessageType::BACKHAUL_STEERING_REQUEST_MESSAGE:                    return "eMessageType::BACKHAUL_STEERING_REQUEST_MESSAGE";
+    case eMessageType::BACKHAUL_STEERING_RESPONSE_MESSAGE:                   return "eMessageType::BACKHAUL_STEERING_RESPONSE_MESSAGE";
+    case eMessageType::CHANNEL_SCAN_REQUEST_MESSAGE:                         return "eMessageType::CHANNEL_SCAN_REQUEST_MESSAGE";
+    case eMessageType::CHANNEL_SCAN_REPORT_MESSAGE:                          return "eMessageType::CHANNEL_SCAN_REPORT_MESSAGE";
+    case eMessageType::DPP_CCE_INDICATION_MESSAGE:                           return "eMessageType::DPP_CCE_INDICATION_MESSAGE";
+    case eMessageType::IEEE1905_REKEY_REQUEST_MESSAGE:                       return "eMessageType::IEEE1905_REKEY_REQUEST_MESSAGE";
+    case eMessageType::IEEE1905_DECRYPTION_FAILURE_MESSAGE:                  return "eMessageType::IEEE1905_DECRYPTION_FAILURE_MESSAGE";
+    case eMessageType::CAC_REQUEST_MESSAGE:                                  return "eMessageType::CAC_REQUEST_MESSAGE";
+    case eMessageType::CAC_TERMINATION_MESSAGE:                              return "eMessageType::CAC_TERMINATION_MESSAGE";
+    case eMessageType::CLIENT_DISASSOCIATION_STATS_MESSAGE:                  return "eMessageType::CLIENT_DISASSOCIATION_STATS_MESSAGE";
+    case eMessageType::SERVICE_PRIORITIZATION_REQUEST_MESSAGE:               return "eMessageType::SERVICE_PRIORITIZATION_REQUEST_MESSAGE";
+    case eMessageType::ERROR_RESPONSE_MESSAGE:                               return "eMessageType::ERROR_RESPONSE_MESSAGE";
+    case eMessageType::ASSOCIATION_STATUS_NOTIFICATION_MESSAGE:              return "eMessageType::ASSOCIATION_STATUS_NOTIFICATION_MESSAGE";
+    case eMessageType::TUNNELLED_MESSAGE:                                    return "eMessageType::TUNNELLED_MESSAGE";
+    case eMessageType::BACKHAUL_STA_CAPABILITY_QUERY_MESSAGE:                return "eMessageType::BACKHAUL_STA_CAPABILITY_QUERY_MESSAGE";
+    case eMessageType::BACKHAUL_STA_CAPABILITY_REPORT_MESSAGE:               return "eMessageType::BACKHAUL_STA_CAPABILITY_REPORT_MESSAGE";
+    case eMessageType::PROXIED_ENCAP_DPP_MESSAGE:                            return "eMessageType::PROXIED_ENCAP_DPP_MESSAGE";
+    case eMessageType::DIRECT_ENCAP_DPP_MESSAGE:                             return "eMessageType::DIRECT_ENCAP_DPP_MESSAGE";
+    case eMessageType::RECONFIGURATION_TRIGGER_MESSAGE:                      return "eMessageType::RECONFIGURATION_TRIGGER_MESSAGE";
+    case eMessageType::BSS_CONFIGURATION_REQUEST_MESSAGE:                    return "eMessageType::BSS_CONFIGURATION_REQUEST_MESSAGE";
+    case eMessageType::BSS_CONFIGURATION_RESPONSE_MESSAGE:                   return "eMessageType::BSS_CONFIGURATION_RESPONSE_MESSAGE";
+    case eMessageType::BSS_CONFIGURATION_RESULT_MESSAGE:                     return "eMessageType::BSS_CONFIGURATION_RESULT_MESSAGE";
+    case eMessageType::CHIRP_NOTIFICATION_MESSAGE:                           return "eMessageType::CHIRP_NOTIFICATION_MESSAGE";
+    case eMessageType::IEEE1905_ENCAP_EAPOL_MESSAGE:                         return "eMessageType::IEEE1905_ENCAP_EAPOL_MESSAGE";
+    case eMessageType::DPP_BOOTSTRAPPING_URI_NOTIFICATION_MESSAGE:           return "eMessageType::DPP_BOOTSTRAPPING_URI_NOTIFICATION_MESSAGE";
+    case eMessageType::FAILED_CONNECTION_MESSAGE:                            return "eMessageType::FAILED_CONNECTION_MESSAGE";
+    case eMessageType::AGENT_LIST_MESSAGE:                                   return "eMessageType::AGENT_LIST_MESSAGE";
+    case eMessageType::VIRTUAL_BSS_CAPABILITIES_REQUEST_MESSAGE:             return "eMessageType::VIRTUAL_BSS_CAPABILITIES_REQUEST_MESSAGE";
+    case eMessageType::VIRTUAL_BSS_CAPABILITIES_REPONSE_MESSAGE:             return "eMessageType::VIRTUAL_BSS_CAPABILITIES_REPONSE_MESSAGE";
+    case eMessageType::VIRTUAL_BSS_REQUEST_MESSAGE:                          return "eMessageType::VIRTUAL_BSS_REQUEST_MESSAGE";
+    case eMessageType::VIRTUAL_BSS_RESPONSE_MESSAGE:                         return "eMessageType::VIRTUAL_BSS_RESPONSE_MESSAGE";
+    case eMessageType::CLIENT_SECURITY_CONTEXT_REQUEST_MESSAGE:              return "eMessageType::CLIENT_SECURITY_CONTEXT_REQUEST_MESSAGE";
+    case eMessageType::CLIENT_SECURITY_CONTEXT_RESPONSE_MESSAGE:             return "eMessageType::CLIENT_SECURITY_CONTEXT_RESPONSE_MESSAGE";
+    case eMessageType::TRIGGER_CHANNEL_SWITCH_ANNOUNCEMENT_REQUEST_MESSAGE:  return "eMessageType::TRIGGER_CHANNEL_SWITCH_ANNOUNCEMENT_REQUEST_MESSAGE";
+    case eMessageType::TRIGGER_CHANNEL_SWITCH_ANNOUNCEMENT_RESPONSE_MESSAGE: return "eMessageType::TRIGGER_CHANNEL_SWITCH_ANNOUNCEMENT_RESPONSE_MESSAGE";
+    case eMessageType::VIRTUAL_BSS_MOVE_PREPARATION_REQUEST_MESSAGE:         return "eMessageType::VIRTUAL_BSS_MOVE_PREPARATION_REQUEST_MESSAGE";
+    case eMessageType::VIRTUAL_BSS_MOVE_PREPARATION_RESPONSE_MESSAGE:        return "eMessageType::VIRTUAL_BSS_MOVE_PREPARATION_RESPONSE_MESSAGE";
+    case eMessageType::VIRTUAL_BSS_MOVE_CANCEL_REQUEST_MESSAGE:              return "eMessageType::VIRTUAL_BSS_MOVE_CANCEL_REQUEST_MESSAGE";
+    case eMessageType::VIRTUAL_BSS_MOVE_CANCEL_RESPONSE_MESSAGE:             return "eMessageType::VIRTUAL_BSS_MOVE_CANCEL_RESPONSE_MESSAGE";
     }
     static std::string out_str = std::to_string(int(enum_value));
     return out_str.c_str();
@@ -251,6 +275,18 @@ public:
         case 0x8031:
         case 0x8033:
         case 0x8035:
+        case 0x8038:
+        case 0x8039:
+        case 0x8040:
+        case 0x8041:
+        case 0x8042:
+        case 0x8043:
+        case 0x8044:
+        case 0x8045:
+        case 0x8046:
+        case 0x8047:
+        case 0x8048:
+        case 0x8049:
                 ret = true;
                 break;
             default:

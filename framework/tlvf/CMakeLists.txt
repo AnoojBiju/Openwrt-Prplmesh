@@ -35,6 +35,11 @@ if(NOT RET EQUAL 0)
 endif()
 #message("TLVF_OUTPUTS\n${TLVF_OUTPUTS}")
 
+execute_process(COMMAND ${ENUM_AUTO_PRINT_COMMAND})
+if(NOT RET EQUAL 0)
+    message(FATAL_ERROR "-- Running enum_auto_print.py failed!")
+endif()
+
 add_custom_command(
     COMMAND ${TLVF_COMMAND}
     COMMAND ${ENUM_AUTO_PRINT_COMMAND}
