@@ -317,7 +317,7 @@ amxd_status_t client_steering(amxd_object_t *object, amxd_function_t *func, amxc
  * @brief Initiate channel scan from NBAPI for given radio and channels.
  *
  * Example of usage:
- * ubus call Device.WiFi.DataElements.Network ScanTrigger
+ * ubus call Device.WiFi.DataElements.Network.Device.1.Radio.1 ScanTrigger
  * '{"channels_list": "36, 44", channels_num: "2"}'
  *
  * When channel list does not contain any channels

@@ -95,7 +95,7 @@ main() {
 
     [ -n "$ENTRYPOINT" ] && DOCKEROPTS+=(--entrypoint "$ENTRYPOINT")
     if [ "$DETACH" = "false" ]; then
-        DOCKER_RUN_OPTS+=(--rm -a)
+        DOCKER_RUN_OPTS+=(-a)
     fi
     if docker ps -a --format '{{ .Names }}' --filter name="${NAME}" | grep -q -x "${NAME}"; then
         info "Container ${NAME} is already running"
