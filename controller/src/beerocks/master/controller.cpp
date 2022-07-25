@@ -1702,36 +1702,39 @@ bool Controller::handle_cmdu_1905_ap_capability_report(const sMacAddr &src_mac,
                                       cmdu_tx, tasks);
     }
 
-    auto channel_scan_capabilities_tlv = cmdu_rx.getClass<wfa_map::tlvChannelScanCapabilities>();
-    if (!channel_scan_capabilities_tlv) {
-        LOG(ERROR) << "addClass wfa_map::channel_scan_capabilities_tlv failed";
-        return false;
-    }
-
-    // read all operating class list
-    auto radio_list_length = channel_scan_capabilities_tlv->radio_list_length();
-    if (!radio_list_length) {
-        LOG(WARNING) << "Received AP Capability Report without any radios";
-        return true;
-    }
-
     bool all_radio_capabilities_saved_successfully = true;
-    for (int rc_idx = 0; rc_idx < radio_list_length; rc_idx++) {
-
-        auto radio_capabilities_tuple = channel_scan_capabilities_tlv->radio_list(rc_idx);
-        if (!std::get<0>(radio_capabilities_tuple)) {
-            LOG(ERROR) << "Radio channel scan capabilities entry has failed!";
+    if (agent->profile >= wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_2) {
+        auto channel_scan_capabilities_tlv =
+            cmdu_rx.getClass<wfa_map::tlvChannelScanCapabilities>();
+        if (!channel_scan_capabilities_tlv) {
+            LOG(ERROR) << "addClass wfa_map::channel_scan_capabilities_tlv failed";
             return false;
         }
 
-        auto &radio_capabilities_entry = std::get<1>(radio_capabilities_tuple);
-        auto &ruid                     = radio_capabilities_entry.radio_uid();
+        // read all operating class list
+        auto radio_list_length = channel_scan_capabilities_tlv->radio_list_length();
+        if (!radio_list_length) {
+            LOG(WARNING) << "Received AP Capability Report without any radios";
+            return true;
+        }
 
-        if (!database.fill_radio_channel_scan_capabilites(ruid, radio_capabilities_entry)) {
+        for (int rc_idx = 0; rc_idx < radio_list_length; rc_idx++) {
 
-            // We want to save the channel-scan-capabilities for the radios we can
-            LOG(ERROR) << "Failed to save radio channel-scan-capabilities for radio=" << ruid;
-            all_radio_capabilities_saved_successfully = false;
+            auto radio_capabilities_tuple = channel_scan_capabilities_tlv->radio_list(rc_idx);
+            if (!std::get<0>(radio_capabilities_tuple)) {
+                LOG(ERROR) << "Radio channel scan capabilities entry has failed!";
+                return false;
+            }
+
+            auto &radio_capabilities_entry = std::get<1>(radio_capabilities_tuple);
+            auto &ruid                     = radio_capabilities_entry.radio_uid();
+
+            if (!database.fill_radio_channel_scan_capabilites(ruid, radio_capabilities_entry)) {
+
+                // We want to save the channel-scan-capabilities for the radios we can
+                LOG(ERROR) << "Failed to save radio channel-scan-capabilities for radio=" << ruid;
+                all_radio_capabilities_saved_successfully = false;
+            }
         }
     }
 
