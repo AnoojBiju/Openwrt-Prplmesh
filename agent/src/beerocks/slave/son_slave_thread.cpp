@@ -3325,6 +3325,15 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
             break;
         }
 
+        auto db    = AgentDB::get();
+        auto radio = db->radio(fronthaul_iface);
+        if (!radio) {
+            LOG(ERROR) << "Failed to retrieve radio from the Agent DB";
+            return false;
+        }
+        auto action_header         = message_com::get_beerocks_header(cmdu_tx)->actionhdr();
+        action_header->radio_mac() = radio->front.iface_mac;
+
         response_out->params()            = response_in->params();
         response_out->params().src_module = beerocks::BEEROCKS_ENTITY_MONITOR;
         send_cmdu_to_controller(fronthaul_iface, cmdu_tx);

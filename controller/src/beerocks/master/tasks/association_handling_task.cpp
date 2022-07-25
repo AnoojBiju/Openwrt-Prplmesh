@@ -230,7 +230,7 @@ void association_handling_task::work()
         TASK_LOG(DEBUG) << "requested rx rssi measurement from " << hostap_mac << " for sta "
                         << sta_mac;
 
-        add_pending_mac(hostap_mac,
+        add_pending_mac(parent_radio,
                         beerocks_message::ACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_RESPONSE);
         set_responses_timeout(3000);
         break;
