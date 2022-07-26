@@ -23,6 +23,7 @@
 #include <tuple>
 #include "bcl/beerocks_message_structs.h"
 #include "beerocks/tlvf/beerocks_message_action.h"
+#include "beerocks/tlvf/beerocks_message_common.h"
 
 namespace beerocks_message {
 
@@ -144,6 +145,38 @@ class tlvVsOnDemandChannelSelection : public BaseClass
         eActionOp_1905_VS* m_action_op = nullptr;
         sMacAddr* m_radio_mac = nullptr;
         uint8_t* m_CSA_count = nullptr;
+};
+
+class tlvVsChannelScanResult : public BaseClass
+{
+    public:
+        tlvVsChannelScanResult(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit tlvVsChannelScanResult(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~tlvVsChannelScanResult();
+
+        static eActionOp_1905_VS get_action_op(){
+            return (eActionOp_1905_VS)(ACTION_TLV_VENDOR_SPECIFIC);
+        }
+        sMacAddr& radio_uid();
+        uint8_t& operating_class();
+        uint8_t& channel();
+        uint8_t& scan_results_list_length();
+        std::tuple<bool, sChannelScanResults&> scan_results_list(size_t idx);
+        bool alloc_scan_results_list(size_t count = 1);
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_1905_VS* m_action_op = nullptr;
+        sMacAddr* m_radio_uid = nullptr;
+        uint8_t* m_operating_class = nullptr;
+        uint8_t* m_channel = nullptr;
+        uint8_t* m_scan_results_list_length = nullptr;
+        sChannelScanResults* m_scan_results_list = nullptr;
+        size_t m_scan_results_list_idx__ = 0;
+        int m_lock_order_counter__ = 0;
 };
 
 }; // close namespace: beerocks_message
