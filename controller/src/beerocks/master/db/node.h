@@ -186,7 +186,7 @@ public:
                     return std::hash<uint8_t>()(pair.first) ^ std::hash<uint8_t>()(pair.second);
                 }
             };
-            std::vector<beerocks_message::sChannelScanResults> neighbors;
+            std::map<sMacAddr, beerocks_message::sChannelScanResults> neighbors;
         };
         typedef std::set<channel_scan_report::channel_scan_report_key> channel_scan_report_index;
         std::unordered_map<channel_scan_report::channel_scan_report_key, channel_scan_report,

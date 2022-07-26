@@ -3329,7 +3329,7 @@ bool db::add_channel_report(const sMacAddr &RUID, const uint8_t &operating_class
 
         neighbor_result.channel_utilization = avg_utilization;
 
-        radio->scan_report[key].neighbors.push_back(neighbor_result);
+        radio->scan_report[key].neighbors.emplace(neighbor_result.bssid, neighbor_result);
     }
 
     // Find any existing report key to channel scan report record
@@ -3369,7 +3369,11 @@ db::get_channel_scan_report(const sMacAddr &RUID,
         auto report_neighbors = radio->scan_report[key].neighbors;
         LOG(DEBUG) << "Adding " << report_neighbors.size() << " neighbors from key: [" << key.first
                    << ',' << key.second << "].";
-        final_report.insert(final_report.end(), report_neighbors.begin(), report_neighbors.end());
+        std::for_each(report_neighbors.begin(), report_neighbors.end(),
+                      [&final_report](
+                          const std::pair<sMacAddr, beerocks_message::sChannelScanResults> &elem) {
+                          final_report.push_back(elem.second);
+                      });
     }
     return final_report;
 }
