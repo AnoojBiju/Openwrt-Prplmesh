@@ -38,61 +38,6 @@ using namespace beerocks;
 constexpr int PREFERRED_DWELLTIME_MS                       = 103; // 103 Millisec
 constexpr std::chrono::seconds SCAN_TRIGGERED_WAIT_TIME    = std::chrono::seconds(20);  // 20 Sec
 constexpr std::chrono::seconds SCAN_RESULTS_DUMP_WAIT_TIME = std::chrono::seconds(210); // 3.5 Min
-/**
- * To allow for CMDU & TLV fragmentation a proximation of the size we need to keep free in the
- * Channel Scan Report Message building process is needed.
- * 
- * 
- * 
- * The cNeighbor structure consists of the following parameters:
- *  Field name           | Size (Byte)   | Description
- *  ---------------------+---------------+----------------------
- *  BSSID                |             6 | BSSID of the found AP
- *  SSID Length          |             1 | Length of the SSID field
- *  SSID                 | [MAX]      32 | SSID of the found AP, Assuming max size of 32 Bytes
- *  signal_strength      |             1 | Signal Strength of found AP
- *  Channel BW Length    |             1 | Length of the Bandwidth
- *  Channel BW           | [MAX]       5 | Stirng value of Bandwidth, Can be one of "20", "40" "80"
- *                       |               | "80+80" or "160" MHz. Seeing as "80+80" is the longest
- *                       |               | value possible, We can assume the max size is 5 Bytes.
- *  eBssLoadElement      |             1 | Enumerate value
- *  channel_utilization  |             1 | Utilization of the found AP
- *  station_count        |             2 | Station count of the found AP
- *  ---------------------+---------------+----------------------
- * Maximum size          |            50 |
- * 
- * The Channel Scan Result TLV structure consists of the following parameters:
- *  Field name           | Size (Byte)   | Description
- *  ---------------------+---------------+----------------------
- *  TLV Header           |             3 | Header of the TLV message
- *  Radio MAC            |             6 | Result's Radio's MAC address
- *  Operating Class      |             1 | Result's Operating Class
- *  Channel              |             1 | Result's Channel
- *  Status               |             1 | Result's Status
- *  Timestamp Length     |             1 | Result's Timestamp's Length
- *  Timestamp            | [MAX]      27 | Result's Timestamp [ISO 8601]
- *  Utilization          |             1 | Result's average channel utilization
- *  Noise                |             1 | Result's average channel noise
- *  Number of Neighbors  |             2 | Number of found Neighbors
- *  Aggregate Duration   |             4 | Aggregation duration
- *  Scan Type            |             1 | Type of scan (Active/Passive)
- *  ---------------------+---------------+----------------------
- *  Maximum size         |            49 |
- * 
- * The tlvVsChannelScanResult structure consists of the following parameters:
- *  Field name           | Size (Byte)   | Description
- *  ---------------------+---------------+----------------------
- *  TLV Header           |             3 | Header of the TLV message
- *  ---------------------+---------------+----------------------
- * 
- */
-constexpr size_t MAX_NEIGHBOR_SIZE     = 50; //Bytes
-constexpr size_t BASE_RESULTS_TLV_SIZE = 49; //Bytes
-constexpr size_t MIN_RESULTS_TLV_SIZE  = BASE_RESULTS_TLV_SIZE + MAX_NEIGHBOR_SIZE;
-constexpr size_t TLV_HEADER            = 3; // Bytes;
-// When an IEEE1905 packet (CMDU) is larger than a standard defined threshold (1500 bytes) it
-// should be fragmented into smaller than 1500 bytes fragments.
-constexpr size_t MAX_TLV_FRAGMENT_SIZE = 1500;
 
 ChannelScanTask::ChannelScanTask(BackhaulManager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu_tx)
     : Task(eTaskType::CHANNEL_SCAN), m_btl_ctx(btl_ctx), m_cmdu_tx(cmdu_tx)
@@ -1342,8 +1287,12 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
             calculate_remaining_buffer_size(db->controller_info.prplmesh_controller);
         LOG(TRACE) << "Remaining buffer size: " << remaining_buffer_size << " byte.";
 
+        size_t min_result_tlv_size = wfa_map::tlvProfile2ChannelScanResult::get_initial_size() -
+                                     wfa_map::cNeighbors::get_initial_size() -
+                                     beerocks_message::tlvVsChannelScanResult::get_initial_size() -
+                                     sizeof(beerocks_message::sChannelScanResults);
         // If cannot fit even one tlv with neighbor, then send and clear buffer
-        if (remaining_buffer_size < MIN_RESULTS_TLV_SIZE) {
+        if (remaining_buffer_size < min_result_tlv_size) {
             // Send "active" Report-Message
             if (!send_channel_scan_report_cmdu(request_info->src_mac)) {
                 LOG(ERROR) << "Failed to Send Channel Scan Report Message";
@@ -1367,10 +1316,36 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
             LOG(TRACE) << "Remaining buffer size: " << remaining_buffer_size << " byte.";
         }
 
-        // Get number of results that can fit in the currently avaliable buffer
-        const size_t max_allowed_tlv_size = std::min(remaining_buffer_size, MAX_TLV_FRAGMENT_SIZE);
+        // Get number of results that can fit in the currently available buffer
+        const size_t max_allowed_tlv_size = std::min(remaining_buffer_size, MTU_SIZE);
+
+        /**
+         * To calculate the maximum number of neighbors that could be
+         * added in the available space we use the following formula:
+         * 
+         * MAX <= Max Number of Neighbors That Can Be Added
+         * ALLOWED <= Max Available Size (Remaining Buffer Size OR Max TLV Fragment Size)
+         * R2_TLV <= R2 Channel Scan Result TLV Size
+         * R2_NBR <= R2 Neighbor Result Size
+         * VS_TLV <= VS Channel Scan Result TLV Size
+         * VS_NBR <= VS Neighbor Result Size
+         * 
+         *  IF CONTROLLER IS PRPLMESH
+         *      MAX = (ALLOWED - (R2_TLV + VS_TLV)) / (R2_NBR + VS_NBR)
+         *  ELSE
+         *      MAX = (ALLOWED - R2_TLV) / R2_NBR
+         */
         const size_t max_number_of_neighbors_that_can_be_added =
-            (max_allowed_tlv_size - BASE_RESULTS_TLV_SIZE) / MAX_NEIGHBOR_SIZE;
+            (db->controller_info.prplmesh_controller
+                 ? ((max_allowed_tlv_size -
+                     (wfa_map::tlvProfile2ChannelScanResult::get_initial_size() +
+                      beerocks_message::tlvVsChannelScanResult::get_initial_size())) /
+                    (wfa_map::cNeighbors::get_initial_size() +
+                     sizeof(beerocks_message::sChannelScanResults)))
+                 : ((max_allowed_tlv_size -
+                     wfa_map::tlvProfile2ChannelScanResult::get_initial_size()) /
+                    wfa_map::cNeighbors::get_initial_size()));
+
         const size_t remaining_neighbors_to_be_sent =
             std::distance(neighbor_iterator, results_neighbors.end());
         const size_t number_of_neighbors_that_will_be_added =
