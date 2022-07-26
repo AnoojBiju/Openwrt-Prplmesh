@@ -3346,6 +3346,53 @@ bool db::add_channel_report(const sMacAddr &RUID, const uint8_t &operating_class
     return true;
 }
 
+bool db::update_channel_report(
+    const sMacAddr &ruid, const uint8_t &operating_class, const uint8_t &channel,
+    const std::vector<beerocks_message::sChannelScanResults> &scan_results)
+{
+    auto radio = get_hostap(ruid);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << ruid;
+        return false;
+    }
+    const auto &key  = std::make_pair(operating_class, channel);
+    auto report_iter = radio->scan_report.find(key);
+    if (report_iter == radio->scan_report.end()) {
+        LOG(INFO) << "Could not find a stored result for [" << key.first << "," << key.second
+                  << "]";
+        return true;
+    }
+
+    for (auto &scan_result : scan_results) {
+        auto neighbor_iter = report_iter->second.neighbors.find(scan_result.bssid);
+        if (neighbor_iter == report_iter->second.neighbors.end()) {
+            LOG(INFO) << "Couldn't find neighbor " << scan_result.bssid << " Skipping!";
+            continue;
+        }
+
+        auto &stored_neighbor = neighbor_iter->second;
+        stored_neighbor.mode  = scan_result.mode;
+        std::copy_n(scan_result.security_mode_enabled, beerocks::message::CHANNEL_SCAN_LIST_LENGTH,
+                    stored_neighbor.security_mode_enabled);
+        std::copy_n(scan_result.encryption_mode, beerocks::message::CHANNEL_SCAN_LIST_LENGTH,
+                    stored_neighbor.encryption_mode);
+        stored_neighbor.operating_frequency_band = scan_result.operating_frequency_band;
+        std::copy_n(scan_result.supported_standards, beerocks::message::CHANNEL_SCAN_LIST_LENGTH,
+                    stored_neighbor.supported_standards);
+        stored_neighbor.operating_standards = scan_result.operating_standards;
+        stored_neighbor.beacon_period_ms    = scan_result.beacon_period_ms;
+        std::copy_n(scan_result.basic_data_transfer_rates_kbps,
+                    beerocks::message::CHANNEL_SCAN_LIST_LENGTH,
+                    stored_neighbor.basic_data_transfer_rates_kbps);
+        std::copy_n(scan_result.supported_data_transfer_rates_kbps,
+                    beerocks::message::CHANNEL_SCAN_LIST_LENGTH,
+                    stored_neighbor.supported_data_transfer_rates_kbps);
+        stored_neighbor.dtim_period = scan_result.dtim_period;
+        LOG(INFO) << "Updated neighbor " << stored_neighbor.bssid;
+    }
+    return true;
+}
+
 const std::vector<sChannelScanResults>
 db::get_channel_scan_report(const sMacAddr &RUID,
                             const node::radio::channel_scan_report_index &index)

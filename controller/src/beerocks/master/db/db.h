@@ -1410,6 +1410,20 @@ public:
                             bool override_existing_data = true);
 
     /**
+     * @brief Update any existing results with a more encompassing result 
+     *
+     * @param ruid Radio UID
+     * @param operating_class Operating class of report
+     * @param channel channel of report
+     * @param scan_results Vector containing the scan results.
+     * @return true on success
+     * @return false on failure
+     */
+    bool update_channel_report(const sMacAddr &ruid, const uint8_t &operating_class,
+                               const uint8_t &channel,
+                               const std::vector<sChannelScanResults> &scan_results);
+
+    /**
      * @brief Get the report records for a given radio using the scan's index.
      *
      * @param RUID MAC address of radio.
