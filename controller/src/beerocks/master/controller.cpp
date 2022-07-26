@@ -1315,6 +1315,31 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const sMacAddr &src_mac,
     }
     LOG(DEBUG) << "Done with Channel Scan Results TLVs";
 
+    for (auto const vs_result_tlv :
+         cmdu_rx.getClassList<beerocks_message::tlvVsChannelScanResult>()) {
+        auto scan_results_list_length = vs_result_tlv->scan_results_list_length();
+        LOG(DEBUG) << "Received Result TLV for:" << std::endl
+                   << "RUID: " << vs_result_tlv->radio_uid() << ", "
+                   << "Operating Class: " << vs_result_tlv->operating_class() << ", "
+                   << "Channel: " << vs_result_tlv->channel() << ", "
+                   << " containing " << scan_results_list_length << " neighbors";
+        std::vector<wfa_map::cNeighbors> neighbor_vec;
+
+        std::vector<beerocks_message::sChannelScanResults> scan_result_vec;
+        for (int res_idx = 0; res_idx < scan_results_list_length; res_idx++) {
+            auto result_tuple = vs_result_tlv->scan_results_list(res_idx);
+            if (!std::get<0>(result_tuple)) {
+                LOG(ERROR) << "getting scan result entry #" << res_idx << " has failed!";
+                return false;
+            }
+
+            auto scan_result = std::get<1>(result_tuple);
+            scan_result_vec.push_back(scan_result);
+        }
+        database.update_channel_report(vs_result_tlv->radio_uid(), vs_result_tlv->operating_class(),
+                                       vs_result_tlv->channel(), scan_result_vec);
+    }
+
     // Build and send ACK message CMDU to the originator.
     auto cmdu_tx_header =
         cmdu_tx.create(current_message_mid, ieee1905_1::eMessageType::ACK_MESSAGE);
