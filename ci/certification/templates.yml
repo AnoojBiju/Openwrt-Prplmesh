@@ -65,14 +65,14 @@ include:
 # Merge train tests
 ##################
 
-R1:turris-omnia:MAP-4.2.1:
+merge-train:R1:turris-omnia:MAP-4.2.1:
   extends: .certification:R1:turris-omnia
   rules:
     - if: '$CI_MERGE_REQUEST_EVENT_TYPE == "merge_train"'
       when: on_success
   retry: 2
 
-R1:axepoint:MAP-4.4.2_BHWIFI_FH5GH:
+merge-train:R1:axepoint:MAP-4.4.2_BHWIFI_FH5GH:
   extends: .certification:R1:axepoint
   rules:
     - if: '$CI_MERGE_REQUEST_EVENT_TYPE == "merge_train"'
