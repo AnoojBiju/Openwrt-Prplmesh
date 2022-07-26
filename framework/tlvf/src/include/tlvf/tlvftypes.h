@@ -115,6 +115,16 @@ inline bool operator==(sMacAddr const &lhs, sMacAddr const &rhs)
     return (0 == std::memcmp(lhs.oct, rhs.oct, sizeof(sMacAddr)));
 }
 
+inline bool operator>(sMacAddr const &lhs, sMacAddr const &rhs)
+{
+    return (0 > std::memcmp(lhs.oct, rhs.oct, sizeof(sMacAddr)));
+}
+
+inline bool operator<(sMacAddr const &lhs, sMacAddr const &rhs)
+{
+    return (0 < std::memcmp(lhs.oct, rhs.oct, sizeof(sMacAddr)));
+}
+
 inline bool operator!=(sMacAddr const &lhs, sMacAddr const &rhs) { return !(rhs == lhs); }
 
 namespace std {

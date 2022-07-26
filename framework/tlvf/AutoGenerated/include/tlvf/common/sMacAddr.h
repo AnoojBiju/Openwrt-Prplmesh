@@ -25,6 +25,22 @@ typedef struct sMacAddr {
                 oct[i] = 0x0;
             }
     }
+    // uint64_t val() const {
+    //     uint64_t val = 0;
+    //     for (size_t i = 0; i < 6; i++) {
+    //         val = (val * 0x100) + oct[i];
+    //     }
+    //     return val;
+    // }
+    // bool operator==(const sMacAddr &o) const {
+    //     return val() == o.val();
+    // }
+    // bool operator<(const sMacAddr &o) const {
+    //     return val() < o.val();
+    // }
+    // bool operator>(const sMacAddr &o) const {
+    //     return val() > o.val();
+    // }
 } __attribute__((packed)) sMacAddr;
 
 
