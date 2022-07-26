@@ -468,6 +468,45 @@ amxd_status_t btm_request(amxd_object_t *mapsta_object, amxd_function_t *func, a
     return amxd_status_ok;
 }
 
+// VBSS Functions
+
+/**
+ * @brief Initiates a Virtual BSS Capabilities Request
+ *
+ * Example of usage:
+ * ubus call Device.WiFi.DataElements.Network.Device.1 UpdateVBSSCapabilities
+ *
+ */
+amxd_status_t update_vbss_capabilities(amxd_object_t *object, amxd_function_t *func,
+                                       amxc_var_t *args, amxc_var_t *ret)
+{
+    auto controller_ctx = g_database->get_controller_ctx();
+
+    if (!controller_ctx) {
+        LOG(ERROR) << "Failed to get controller context.";
+        return amxd_status_unknown_error;
+    }
+
+    amxc_var_t value;
+
+    amxc_var_init(&value);
+    amxd_object_get_param(object, "ID", &value);
+    std::string agent_mac_str = amxc_var_constcast(cstring_t, &value);
+
+    if (agent_mac_str.empty()) {
+        LOG(ERROR) << "agent_mac_str is empty";
+        return amxd_status_parameter_not_found;
+    }
+
+    if (!controller_ctx->update_agent_vbss_capabilities(tlvf::mac_from_string(agent_mac_str))) {
+        LOG(ERROR) << "Failed to send VBSS capabilites request from NBAPI for agent "
+                   << agent_mac_str;
+        return amxd_status_unknown_error;
+    }
+
+    return amxd_status_ok;
+}
+
 // Events
 
 amxd_dm_t *g_data_model = nullptr;
@@ -602,7 +641,10 @@ std::vector<beerocks::nbapi::sFunctions> get_func_list(void)
         {"trigger_scan", "Device.WiFi.DataElements.Network.Device.Radio.ScanTrigger", trigger_scan},
         {"BTMRequest",
          "Device.WiFi.DataElements.Network.Device.Radio.BSS.STA.MultiAPSTA.BTMRequest",
-         btm_request}};
+         btm_request},
+        {"update_vbss_capabilities",
+         "Device.WiFi.DataElements.Network.Device.UpdateVBSSCapabilities",
+         update_vbss_capabilities}};
     return functions_list;
 }
 
