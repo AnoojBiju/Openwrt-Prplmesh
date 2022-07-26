@@ -2178,6 +2178,27 @@ public:
         const sMacAddr &radio_uid, const wfa_map::eCacMethod &method, const uint8_t &duration,
         const std::unordered_map<uint8_t, std::vector<uint8_t>> &oc_channels);
 
+    /**
+     * @brief Set the VBSS Capabilities for the specified radio. 
+     *  VBSS Capabilities information defined more in the EasyMesh specification.
+     * 
+     * @param radio_uid The UID of the radio to update the VBSS Capabilities for.
+     * @param max_vbss Maximum number of VBSSs supported by this radio.
+     * @param vbsses_subtract Which total BSS count each VBSSs should decrease (More in spec).
+     * @param apply_vbssid_restrict If true, the following BSSID restritions apply.
+     * @param apply_vbssid_match_mask_restrict If true, Match + Mask restrictions apply to all non-fixed bits.
+     * @param apply_fixed_bits_restrict If true, restrictions apply to the fixed bits in these VBSSIDs.
+     * @param fixed_bits_mask Mask of bits that must be fixed in the VBSSID that the radio can support.
+     * @param fixed_bits_value Value of the VBSSID that must be fixed, when masked with the fixed bits mask.
+     * @return True if VBSSCapabilities object was set sucesssfully for radio, false otherwise. 
+     */
+    bool dm_set_radio_vbss_capabilities(const sMacAddr &radio_uid, uint8_t max_vbss,
+                                        bool vbsses_subtract, bool apply_vbssid_restrictions,
+                                        bool apply_vbssid_match_mask_restrictions,
+                                        bool apply_fixed_bits_restrictions,
+                                        const sMacAddr &fixed_bits_mask,
+                                        const sMacAddr &fixed_bits_value);
+
     //
     // tasks
     //
@@ -2552,9 +2573,10 @@ private:
      * @param radio_mac mac address of radio on which BSSID exists.
      * @param bssid BSSID of the BSS.
      * @param ssid SSID of the BSS. If empty, BSS is considered disabled.
+     * @param is_vbss Whether this is a Virtual BSS or not
      */
-    bool dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid,
-                          const std::string &ssid);
+    bool dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, const std::string &ssid,
+                          bool is_vbss = false);
 
     /**
      * @brief Set data model path member of a node
