@@ -507,6 +507,68 @@ amxd_status_t update_vbss_capabilities(amxd_object_t *object, amxd_function_t *f
     return amxd_status_ok;
 }
 
+/**
+ * @brief Initiates a VBSS Request with the Creation TLV at the current Radio and the given parameters
+ *
+ * Example of usage:
+ * ubus call Device.WiFi.DataElements.Network.Device.1.Radio.1 TriggerVBSSCreation
+ * '{"vbssid": "aa:bb:cc:dd:ee:ff", "client_mac": "aa:bb:cc:dd:ee:ff", "ssid": "prplMeshNetwork", "pass": "prpl"}'
+ *
+ */
+amxd_status_t trigger_vbss_creation(amxd_object_t *object, amxd_function_t *func, amxc_var_t *args,
+                                    amxc_var_t *ret)
+{
+    auto controller_ctx = g_database->get_controller_ctx();
+
+    if (!controller_ctx) {
+        LOG(ERROR) << "Failed to get controller context.";
+        return amxd_status_unknown_error;
+    }
+
+    amxc_var_t value;
+
+    amxc_var_init(&value);
+    amxd_object_get_param(object, "ID", &value);
+    std::string radio_mac_str = amxc_var_constcast(cstring_t, &value);
+
+    if (radio_mac_str.empty()) {
+        LOG(ERROR) << "agent_mac_str is empty";
+        return amxd_status_parameter_not_found;
+    }
+
+    std::string vbssid_str     = GET_CHAR(args, "vbssid");
+    std::string client_mac_str = GET_CHAR(args, "client_mac");
+    std::string ssid           = GET_CHAR(args, "ssid");
+    std::string password       = GET_CHAR(args, "pass");
+
+    if (password.size() < 8) {
+        LOG(ERROR)
+            << "Failed to create VBSS via NB API! Password provided is less than 8 characters!";
+        return amxd_status_invalid_value;
+    }
+
+    sMacAddr vbssid, client_mac = {};
+    sMacAddr radio_uid = tlvf::mac_from_string(radio_mac_str);
+    if (!tlvf::mac_from_string(vbssid.oct, vbssid_str)) {
+        LOG(ERROR) << "Failed to create VBSS via NB API! Given VBSSID (" << vbssid_str
+                   << ") is not a valid MAC address";
+        return amxd_status_invalid_value;
+    }
+    if (!tlvf::mac_from_string(client_mac.oct, client_mac_str)) {
+        LOG(ERROR) << "Failed to create VBSS via NB API! Given Client MAC (" << client_mac_str
+                   << ") is not a valid MAC address";
+        return amxd_status_invalid_value;
+    }
+
+    if (!controller_ctx->trigger_vbss_creation(radio_uid, vbssid, client_mac, ssid, password)) {
+        LOG(ERROR) << "Failed to send VBSS Creation Request for client: " << client_mac_str
+                   << " and VBSSID " << vbssid_str << " on radio " << radio_mac_str;
+        return amxd_status_unknown_error;
+    }
+
+    return amxd_status_ok;
+}
+
 // Events
 
 amxd_dm_t *g_data_model = nullptr;
@@ -644,7 +706,10 @@ std::vector<beerocks::nbapi::sFunctions> get_func_list(void)
          btm_request},
         {"update_vbss_capabilities",
          "Device.WiFi.DataElements.Network.Device.UpdateVBSSCapabilities",
-         update_vbss_capabilities}};
+         update_vbss_capabilities},
+        {"trigger_vbss_creation",
+         "Device.WiFi.DataElements.Network.Device.Radio.TriggerVBSSCreation",
+         trigger_vbss_creation}};
     return functions_list;
 }
 
