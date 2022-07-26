@@ -41,39 +41,50 @@ constexpr std::chrono::seconds SCAN_RESULTS_DUMP_WAIT_TIME = std::chrono::second
 /**
  * To allow for CMDU & TLV fragmentation a proximation of the size we need to keep free in the
  * Channel Scan Report Message building process is needed.
+ * 
+ * 
+ * 
  * The cNeighbor structure consists of the following parameters:
- * Field name           | Size (Byte)   | Description
- * ---------------------+---------------+----------------------
- * BSSID                |             6 | BSSID of the found AP
- * SSID Length          |             1 | Length of the SSID field
- * SSID                 | [MAX]      32 | SSID of the found AP, Assuming max size of 32 Bytes
- * signal_strength      |             1 | Signal Strength of found AP
- * Channel BW Length    |             1 | Length of the Bandwidth
- * Channel BW           | [MAX]       5 | Stirng value of Bandwidth, Can be one of "20", "40" "80"
- *                      |               | "80+80" or "160" MHz. Seeing as "80+80" is the longest
- *                      |               | value possible, We can assume the max size is 5 Bytes.
- * eBssLoadElement      |             1 | Enumerate value
- * channel_utilization  |             1 | Utilization of the found AP
- * station_count        |             2 | Station count of the found AP
+ *  Field name           | Size (Byte)   | Description
+ *  ---------------------+---------------+----------------------
+ *  BSSID                |             6 | BSSID of the found AP
+ *  SSID Length          |             1 | Length of the SSID field
+ *  SSID                 | [MAX]      32 | SSID of the found AP, Assuming max size of 32 Bytes
+ *  signal_strength      |             1 | Signal Strength of found AP
+ *  Channel BW Length    |             1 | Length of the Bandwidth
+ *  Channel BW           | [MAX]       5 | Stirng value of Bandwidth, Can be one of "20", "40" "80"
+ *                       |               | "80+80" or "160" MHz. Seeing as "80+80" is the longest
+ *                       |               | value possible, We can assume the max size is 5 Bytes.
+ *  eBssLoadElement      |             1 | Enumerate value
+ *  channel_utilization  |             1 | Utilization of the found AP
+ *  station_count        |             2 | Station count of the found AP
+ *  ---------------------+---------------+----------------------
+ * Maximum size          |            50 |
  * 
- * The Maximum assumable size of the cNeighbor is 50 Bytes
+ * The Channel Scan Result TLV structure consists of the following parameters:
+ *  Field name           | Size (Byte)   | Description
+ *  ---------------------+---------------+----------------------
+ *  TLV Header           |             3 | Header of the TLV message
+ *  Radio MAC            |             6 | Result's Radio's MAC address
+ *  Operating Class      |             1 | Result's Operating Class
+ *  Channel              |             1 | Result's Channel
+ *  Status               |             1 | Result's Status
+ *  Timestamp Length     |             1 | Result's Timestamp's Length
+ *  Timestamp            | [MAX]      27 | Result's Timestamp [ISO 8601]
+ *  Utilization          |             1 | Result's average channel utilization
+ *  Noise                |             1 | Result's average channel noise
+ *  Number of Neighbors  |             2 | Number of found Neighbors
+ *  Aggregate Duration   |             4 | Aggregation duration
+ *  Scan Type            |             1 | Type of scan (Active/Passive)
+ *  ---------------------+---------------+----------------------
+ *  Maximum size         |            49 |
  * 
- * Field name           | Size (Byte)   | Description
- * ---------------------+---------------+----------------------
- * TLV Header           |             3 | Header of the TLV message
- * Radio MAC            |             6 | Result's Radio's MAC address
- * Operating Class      |             1 | Result's Operating Class
- * Channel              |             1 | Result's Channel
- * Status               |             1 | Result's Status
- * Timestamp Length     |             1 | Result's Timestamp's Length
- * Timestamp            | [MAX]      27 | Result's Timestamp [ISO 8601]
- * Utilization          |             1 | Result's average channel utilization
- * Noise                |             1 | Result's average channel noise
- * Number of Neighbors  |             2 | Number of found Neighbors
- * Aggregate Duration   |             4 | Aggregation duration
- * Scan Type            |             1 | Type of scan (Active/Passive)
+ * The tlvVsChannelScanResult structure consists of the following parameters:
+ *  Field name           | Size (Byte)   | Description
+ *  ---------------------+---------------+----------------------
+ *  TLV Header           |             3 | Header of the TLV message
+ *  ---------------------+---------------+----------------------
  * 
- * The assumable size of the sChannelScanResults is 49 Bytes
  */
 constexpr size_t MAX_NEIGHBOR_SIZE     = 50; //Bytes
 constexpr size_t BASE_RESULTS_TLV_SIZE = 49; //Bytes
@@ -1137,7 +1148,7 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
     auto add_scan_results_tlv_to_report =
         [this, &set_neighbor_in_scan_results_tlv](
             sMacAddr ruid, uint8_t operating_class, uint8_t channel, eScanStatus status,
-            std::chrono::system_clock::time_point timestamp,
+            std::chrono::system_clock::time_point timestamp, bool add_vs_tlv,
             std::vector<beerocks_message::sChannelScanResults> results) -> bool {
         LOG(DEBUG) << "Adding new Scan Results TLV";
         auto results_tlv = m_cmdu_tx.addClass<wfa_map::tlvProfile2ChannelScanResult>();
@@ -1206,6 +1217,37 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
             results_tlv->utilization() = 10;
         }
 
+        if (!add_vs_tlv) {
+            // No need to add the vendor specific TLV, return true.
+            return true;
+        }
+
+        // Add vendor specific TLV to fill missing results
+        auto vs_results_tlv = m_cmdu_tx.addClass<beerocks_message::tlvVsChannelScanResult>();
+        if (!vs_results_tlv) {
+            LOG(ERROR) << "addClass tlvProfile2ChannelScanResult failed";
+            return false;
+        }
+
+        // Fill Scan VS Results TLV
+        vs_results_tlv->radio_uid()       = ruid;
+        vs_results_tlv->operating_class() = operating_class;
+        vs_results_tlv->channel()         = channel;
+
+        // Allocate Scan results list.
+        if (!vs_results_tlv->alloc_scan_results_list(results.size())) {
+            LOG(ERROR) << "Failed to allocate a result list of size " << results.size();
+            return false;
+        }
+        for (int i = 0; i < vs_results_tlv->scan_results_list_length(); i++) {
+            auto result_tuple = vs_results_tlv->scan_results_list(i);
+            if (!std::get<0>(result_tuple)) {
+                LOG(ERROR) << "Failed to get Result in index " << i << " from VS Result TLV";
+                return false;
+            }
+            auto &outgoing_result = std::get<1>(result_tuple);
+            outgoing_result       = results[i];
+        }
         return true;
     };
 
@@ -1344,11 +1386,12 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
         // this API receives a fragment of the results (that have enough space in buffer to add)
         const auto results_fragment = std::vector<beerocks_message::sChannelScanResults>(
             neighbor_iterator, neighbor_iterator + number_of_neighbors_that_will_be_added);
-        const auto results_tlv = add_scan_results_tlv_to_report(
+        const auto results_tlv_added = add_scan_results_tlv_to_report(
             stored_scan_results_iter->ruid, stored_scan_results_iter->operating_class,
             stored_scan_results_iter->channel, stored_scan_results_iter->status,
-            stored_scan_results_iter->timestamp, results_fragment);
-        if (!results_tlv) {
+            stored_scan_results_iter->timestamp, db->controller_info.prplmesh_controller,
+            results_fragment);
+        if (!results_tlv_added) {
             LOG(ERROR) << "Failed to add Scan Result TLV to Channel Scan Report Message";
             return false;
         }
