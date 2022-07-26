@@ -569,6 +569,81 @@ amxd_status_t trigger_vbss_creation(amxd_object_t *object, amxd_function_t *func
     return amxd_status_ok;
 }
 
+/**
+ * @brief Initiates a Virtual BSS Destruction Request for the current Radio and BSS,
+ *          along with the option to disassociate the client from the network
+ *
+ * Example of usage:
+ * ubus call Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.1.VBSSClient.1 TriggerVBSSDestruction
+ * '{"client_mac" : "aa:bb:cc:dd:ee:ff", "should_disassociate" : false}'
+ *
+ */
+amxd_status_t trigger_vbss_destruction(amxd_object_t *object, amxd_function_t *func,
+                                       amxc_var_t *args, amxc_var_t *ret)
+{
+    auto controller_ctx = g_database->get_controller_ctx();
+
+    if (!controller_ctx) {
+        LOG(ERROR) << "Failed to get controller context.";
+        return amxd_status_unknown_error;
+    }
+
+    bool should_disassociate   = GET_BOOL(args, "should_disassociate");
+    std::string client_mac_str = GET_CHAR(args, "client_mac");
+
+    sMacAddr client_mac = {};
+    if (!tlvf::mac_from_string(client_mac.oct, client_mac_str)) {
+        LOG(ERROR) << "Failed to move VBSS via NB API! Given Client MAC address (" << client_mac_str
+                   << ") is not a valid MAC address";
+        return amxd_status_invalid_value;
+    }
+
+    amxc_var_t value;
+    amxc_var_init(&value);
+
+    // Read BSS object
+
+    amxd_object_get_param(object, "BSSID", &value);
+    std::string vbssid_str = amxc_var_constcast(cstring_t, &value);
+
+    if (vbssid_str.empty()) {
+        LOG(ERROR) << "vbssid_str is empty";
+        return amxd_status_parameter_not_found;
+    }
+
+    // Read Radio object
+
+    amxd_object_t *radio_object = NULL;
+    radio_object                = amxd_object_get_parent(object);
+
+    if (radio_object == NULL) {
+        LOG(ERROR) << "Failed retrieving the Radio grandparent of the VBSSClient object";
+        return amxd_status_object_not_found;
+    }
+
+    amxd_object_get_param(radio_object, "ID", &value);
+    std::string connected_ruid_str = amxc_var_constcast(cstring_t, &value);
+
+    if (connected_ruid_str.empty()) {
+        LOG(ERROR) << "connected_ruid_str is empty";
+        return amxd_status_parameter_not_found;
+    }
+
+    // Send Request
+    sMacAddr connected_ruid = tlvf::mac_from_string(connected_ruid_str);
+    sMacAddr vbssid         = tlvf::mac_from_string(vbssid_str);
+
+    if (!controller_ctx->trigger_vbss_destruction(connected_ruid, vbssid, client_mac,
+                                                  should_disassociate)) {
+        LOG(ERROR) << "Failed to send VBSS Destruction request from NBAPI for VBSSID: "
+                   << vbssid_str << ", on Radio: " << connected_ruid_str
+                   << ", for client: " << client_mac_str;
+        return amxd_status_unknown_error;
+    }
+
+    return amxd_status_ok;
+}
+
 // Events
 
 amxd_dm_t *g_data_model = nullptr;
@@ -709,7 +784,10 @@ std::vector<beerocks::nbapi::sFunctions> get_func_list(void)
          update_vbss_capabilities},
         {"trigger_vbss_creation",
          "Device.WiFi.DataElements.Network.Device.Radio.TriggerVBSSCreation",
-         trigger_vbss_creation}};
+         trigger_vbss_creation},
+        {"trigger_vbss_destruction",
+         "Device.WiFi.DataElements.Network.Device.Radio.BSS.TriggerVBSSDestruction",
+         trigger_vbss_destruction}};
     return functions_list;
 }
 
