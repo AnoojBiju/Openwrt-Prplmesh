@@ -20,6 +20,7 @@
         %read-only string BSSID = "0";
         %read-only string SSID = "0";
         bool Enabled = false;
+        %read-only bool IsVBSS = false;
         %read-only uint32 LastChange = 0 {
             on action read call action_read_last_change;
         }
@@ -50,6 +51,18 @@
 
         bool FronthaulUse = false;
         bool BackhaulUse = false;
+
+        %instance bool TriggerVBSSDestruction(
+            %in %mandatory string client_mac,
+            %in bool should_disassociate = true
+        );
+
+        %instance bool TriggerVBSSMove(
+            %in %mandatory string client_mac,
+            %in %mandatory string dest_ruid,
+            %in %mandatory string ssid,
+            %in %mandatory string pass
+        );
 
         object STA [] {
             counted with STANumberOfEntries;
