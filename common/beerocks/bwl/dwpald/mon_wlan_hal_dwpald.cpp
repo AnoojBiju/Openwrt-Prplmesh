@@ -1776,6 +1776,7 @@ bool mon_wlan_hal_dwpal::dwpald_attach(char *ifname)
     static dwpald_hostap_event hostap_radio_event_handlers[] = {
         {HAP_EVENT("RRM-BEACON-REP-RECEIVED")},
         {HAP_EVENT("RRM-CHANNEL-LOAD-RECEIVED")},
+        {HAP_EVENT("AP-ENABLED")},
         {HAP_EVENT("AP-DISABLED")},
         {HAP_EVENT("AP-STA-CONNECTED")},
         {HAP_EVENT("AP-STA-DISCONNECTED")}};
