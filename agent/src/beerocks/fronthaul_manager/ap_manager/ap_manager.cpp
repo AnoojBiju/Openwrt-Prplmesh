@@ -1382,6 +1382,13 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             ap_wlan_hal->refresh_radio_info();
             fill_cs_params(csa_notification->cs_params());
             send_cmdu(cmdu_tx);
+
+            // The 'available_vaps' container is cleared and filled inside update_vap_credentials()
+            auto response = message_com::create_vs_message<
+                beerocks_message::cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_RESPONSE>(cmdu_tx);
+            const auto &radio_vaps              = ap_wlan_hal->get_radio_info().available_vaps;
+            response->number_of_bss_available() = radio_vaps.size();
+            send_cmdu(cmdu_tx);
         }
         break;
     }
