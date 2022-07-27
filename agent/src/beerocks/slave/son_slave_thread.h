@@ -123,6 +123,14 @@ public:
      */
     bool send_ack_to_controller(ieee1905_1::CmduMessageTx &cmdu_tx, uint32_t mid);
 
+    /**
+     * @brief Update the vaps in the Agent DB.
+     * @param iface The interface to use to find the radio in the DB.
+     * @param vaps the array of VAPs to use for the update.
+     * @return true on success, false on failure.
+     */
+    bool update_vaps_info(const std::string &iface, const beerocks_message::sVapInfo vaps[]);
+
 private:
     /**
      * @brief Handles received CMDU message.
@@ -186,6 +194,7 @@ private:
     bool handle_cmdu_platform_manager_message(int fd,
                                               std::shared_ptr<beerocks_header> beerocks_header);
     bool handle_cmdu_ap_manager_message(const std::string &fronthaul_iface, int fd,
+                                        ieee1905_1::CmduMessageRx &cmdu_rx,
                                         std::shared_ptr<beerocks_header> beerocks_header);
     bool handle_cmdu_monitor_message(const std::string &fronthaul_iface, int fd,
                                      std::shared_ptr<beerocks_header> beerocks_header);
@@ -334,6 +343,7 @@ private:
 
     bool m_stopped = false;
 
+public:
     struct sManagedRadio {
         int stop_on_failure_attempts;
         bool configuration_in_progress = false;
@@ -374,6 +384,28 @@ private:
             return get_radio_context(fronthaul_iface);
         }
 
+        std::string get_radio_iface_from_fd(int fd)
+        {
+            if (fd == net::FileDescriptor::invalid_descriptor) {
+                return {};
+            }
+            for (auto &radio : get()) {
+                auto &radio_manager = radio.second;
+                if (fd == radio_manager.ap_manager_fd || fd == radio_manager.monitor_fd) {
+                    return radio.first; // interface name
+                }
+            }
+            const auto &zwdfs_radio = get_zwdfs();
+            if (!zwdfs_radio) {
+                return {};
+            }
+            const auto &radio_manager = zwdfs_radio->second;
+            if (fd == radio_manager.ap_manager_fd || fd == radio_manager.monitor_fd) {
+                return zwdfs_radio->first; // interface name
+            }
+            return {};
+        }
+
         std::map<std::string, sManagedRadio> &get() { return m_radio_managers; }
         std::unique_ptr<std::pair<std::string, sManagedRadio>> &get_zwdfs()
         {
@@ -411,6 +443,7 @@ private:
         };
     } m_radio_managers;
 
+private:
     /**
      * @brief check if there was an error in the constructor
      *
@@ -473,12 +506,18 @@ private:
     void save_cac_capabilities_params_to_db(const std::string &fronthaul_iface);
 
     /**
-     * @brief Update the vaps in the Agent DB.
-     * @param iface The interface to use to find the radio in the DB.
-     * @param vaps the array of VAPs to use for the update.
-     * @return true on success, false on failure.
+     * @brief Get the channel preference.
+     *
+     * @pre The channel operating class and the preference operating class have to match.
+     * @param channel A channel to check.
+     * @param preference The preference of the channel.
+     * @param preference_channels_list The preference channels list given by the Controller.
+     * @return NON_OPERABLE if channel is restricted, channel preference otherwise.
      */
-    bool update_vaps_info(const std::string &iface, const beerocks_message::sVapInfo vaps[]);
+    wfa_map::cPreferenceOperatingClasses::ePreference
+    get_channel_preference(message::sWifiChannel channel,
+                           const AgentDB::sChannelPreference &preference,
+                           const std::set<uint8_t> &preference_channels_list);
 };
 
 } // namespace beerocks

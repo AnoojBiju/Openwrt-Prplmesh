@@ -57,7 +57,7 @@ private:
         WAIT_FOR_CONTROLLER_DISCOVERY_COMPLETE,
         SEND_AP_AUTOCONFIGURATION_WSC_M1,
         WAIT_AP_AUTOCONFIGURATION_WSC_M2,
-        SEND_MONITOR_SON_CONFIG,
+        WAIT_AP_CONFIGURATION_COMPLETE,
         CONFIGURED
     };
 
@@ -66,8 +66,12 @@ private:
         std::chrono::steady_clock::time_point timeout;
         std::unique_ptr<mapf::encryption::diffie_hellman> dh = nullptr;
         //copy of M1 message used for authentication
-        uint8_t *m1_auth_buf   = nullptr;
-        size_t m1_auth_buf_len = 0;
+        uint8_t *m1_auth_buf         = nullptr;
+        size_t m1_auth_buf_len       = 0;
+        uint8_t num_of_bss_available = 0;
+        std::unordered_set<sMacAddr> enabled_bssids;
+        bool sent_vaps_list_update;
+        bool received_vaps_list_update;
     };
 
     /**
@@ -166,7 +170,40 @@ private:
     bool handle_ap_autoconfiguration_wsc_vs_extension_tlv(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                           const std::string &radio_iface);
 
+    /**
+     * @brief Handles Vendor Specific messages.
+     *
+     * @param[in] cmdu_rx Received CMDU.
+     * @param[in] src_mac MAC address of the message sender.
+     * @param[in] fd File descriptor of the socket connection with the slave that sent the message.
+     * @param[in] beerocks_header Shared pointer to beerocks header.
+     * @return true, if the message has been handled, otherwise false.
+     */
+    bool handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac, int fd,
+                                std::shared_ptr<beerocks_header> beerocks_header);
+
+    /* Vendor specific message handlers: */
+
+    void
+    handle_vs_wifi_credentials_update_response(ieee1905_1::CmduMessageRx &cmdu_rx, int fd,
+                                               std::shared_ptr<beerocks_header> beerocks_header);
+
+    void handle_vs_ap_enabled_notification(ieee1905_1::CmduMessageRx &cmdu_rx, int fd,
+                                           std::shared_ptr<beerocks_header> beerocks_header);
+
+    void handle_vs_vaps_list_update_notification(ieee1905_1::CmduMessageRx &cmdu_rx, int fd,
+                                                 std::shared_ptr<beerocks_header> beerocks_header);
+
     /* Helper functions */
+    /**
+     * @brief Wait until given radio @a radio_iface has completed the AP configuration.
+     * Perform the necessary actions to actively get the the completed status.
+     * 
+     * @param radio_iface Radio interface name.
+     * @return true if configuration has completed, otherwise false.
+     */
+    void configuration_complete_wait_action(const std::string &radio_iface);
+
     bool send_ap_autoconfiguration_search_message(const std::string &radio_iface);
 
     bool send_ap_autoconfiguration_wsc_m1_message(const std::string &radio_iface);

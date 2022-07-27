@@ -73,6 +73,8 @@ const std::string ApAutoConfigurationTask::fsm_state_to_string(eState status)
         return "SEND_AP_AUTOCONFIGURATION_WSC_M1";
     case eState::WAIT_AP_AUTOCONFIGURATION_WSC_M2:
         return "WAIT_AP_AUTOCONFIGURATION_WSC_M2";
+    case eState::WAIT_AP_CONFIGURATION_COMPLETE:
+        return "WAIT_AP_CONFIGURATION_COMPLETE";
     case eState::CONFIGURED:
         return "CONFIGURED";
     default:
@@ -163,6 +165,10 @@ void ApAutoConfigurationTask::work()
             }
             break;
         }
+        case eState::WAIT_AP_CONFIGURATION_COMPLETE: {
+            configuration_complete_wait_action(radio_iface);
+            break;
+        }
         case eState::CONFIGURED: {
             configured_aps_count++;
             break;
@@ -245,11 +251,123 @@ bool ApAutoConfigurationTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, ui
         handle_multi_ap_policy_config_request(cmdu_rx);
         return true;
     }
+    case ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE: {
+        // Internally, the 'handle_vendor_specific' might not really handle
+        // the CMDU, thus we need to return the real return value and not 'true'.
+        return handle_vendor_specific(cmdu_rx, src_mac, fd, beerocks_header);
+    }
     default: {
         // Message was not handled, therefore return false.
         return false;
     }
     }
+}
+
+bool ApAutoConfigurationTask::handle_vendor_specific(
+    ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac, int sd,
+    std::shared_ptr<beerocks_header> beerocks_header)
+{
+    if (!beerocks_header) {
+        LOG(ERROR) << "beerocks_header is nullptr";
+        return false;
+    }
+
+    switch (beerocks_header->action_op()) {
+    case beerocks_message::ACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_RESPONSE: {
+        handle_vs_wifi_credentials_update_response(cmdu_rx, sd, beerocks_header);
+        break;
+    }
+    case beerocks_message::ACTION_APMANAGER_HOSTAP_AP_ENABLED_NOTIFICATION: {
+        handle_vs_ap_enabled_notification(cmdu_rx, sd, beerocks_header);
+        break;
+    }
+    case beerocks_message::ACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION: {
+        handle_vs_vaps_list_update_notification(cmdu_rx, sd, beerocks_header);
+        break;
+    }
+    default: {
+        // Message was not handled, therefore return false.
+        return false;
+    }
+    }
+    return true;
+}
+
+void ApAutoConfigurationTask::configuration_complete_wait_action(const std::string &radio_iface)
+{
+    auto &radio_conf_params = m_radios_conf_params[radio_iface];
+
+    // num_of_bss_available updates on ACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_RESPONSE handler
+    if (!radio_conf_params.num_of_bss_available) {
+        return;
+    }
+
+    if (radio_conf_params.enabled_bssids.size() != radio_conf_params.num_of_bss_available) {
+
+        // Wait until WAIT_AP_ENABLED_TIMEOUT_SECONDS timeout is expired.
+        // If expired and we did not receive AP_ENABLE on the radios BSSs, assume it was already
+        // configured, and the AP_ENABLE will never come.
+        // The timer is set on "handle_vs_wifi_credentials_update_response()""
+        if (std::chrono::steady_clock::now() < radio_conf_params.timeout) {
+            return;
+        }
+    }
+
+    // Arbitrary value
+    constexpr uint8_t WAIT_IFACES_INSIDE_THE_BRIDGE_TIMEOUT_SECONDS = 30;
+
+    if (!radio_conf_params.sent_vaps_list_update) {
+        if (!send_ap_bss_info_update_request(radio_iface)) {
+            LOG(ERROR) << "send_ap_bss_info_update_request has failed";
+            return;
+        }
+        radio_conf_params.sent_vaps_list_update = true;
+
+        radio_conf_params.timeout =
+            std::chrono::steady_clock::now() +
+            std::chrono::seconds(WAIT_IFACES_INSIDE_THE_BRIDGE_TIMEOUT_SECONDS);
+    }
+
+    if (!radio_conf_params.received_vaps_list_update) {
+        return;
+    }
+
+    // Check if all reported interfaces are in the bridge
+    auto db               = AgentDB::get();
+    auto ifaces_in_bridge = network_utils::linux_get_iface_list_from_bridge(db->bridge.iface_name);
+
+    auto radio = db->radio(radio_iface);
+    if (!radio) {
+        return;
+    }
+    for (const auto &bssid : radio->front.bssids) {
+        if (bssid.iface_name.empty()) {
+            continue;
+        }
+        auto found = std::find(ifaces_in_bridge.begin(), ifaces_in_bridge.end(), bssid.iface_name);
+
+        // Return if not all bssids are in the bridge, and print error.
+        if (found == ifaces_in_bridge.end()) {
+            if (std::chrono::steady_clock::now() > radio_conf_params.timeout) {
+                auto timeout_sec =
+                    std::chrono::duration_cast<std::chrono::seconds>(
+                        std::chrono::steady_clock::now() - radio_conf_params.timeout +
+                        std::chrono::seconds(WAIT_IFACES_INSIDE_THE_BRIDGE_TIMEOUT_SECONDS))
+                        .count();
+                LOG_EVERY_N(10, ERROR)
+                    << "Some of or all " << radio_iface << " BSSIDs are not in the bridge after "
+                    << timeout_sec << " seconds after AP configuration!";
+            }
+            return;
+        }
+    }
+
+    FSM_MOVE_STATE(radio_iface, eState::CONFIGURED);
+
+    LOG(TRACE) << "Finished configuration on " << radio_iface;
+    TrafficSeparation::apply_traffic_separation(radio_iface);
+
+    return;
 }
 
 bool ApAutoConfigurationTask::send_ap_autoconfiguration_search_message(
@@ -624,8 +742,9 @@ bool ApAutoConfigurationTask::add_wsc_m1_tlv(const std::string &radio_iface)
 
     auto &radio_conf_params = m_radios_conf_params[radio_iface];
 
-    cfg.msg_type         = WSC::eWscMessageType::WSC_MSG_TYPE_M1;
-    cfg.mac              = db->bridge.mac;
+    cfg.msg_type = WSC::eWscMessageType::WSC_MSG_TYPE_M1;
+    cfg.mac      = db->bridge.mac;
+
     radio_conf_params.dh = std::make_unique<mapf::encryption::diffie_hellman>();
 
     std::copy(radio_conf_params.dh->nonce(),
@@ -856,11 +975,20 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_wsc(ieee1905_1::CmduMe
         return;
     }
 
-    if (!send_ap_bss_info_update_request(radio->front.iface_name)) {
-        LOG(ERROR) << "send_ap_bss_info_update_request has failed";
+    // Initialize for next state
+    auto &radio_conf_params = m_radios_conf_params[radio->front.iface_name];
+
+    radio_conf_params.num_of_bss_available = 0;
+    radio_conf_params.enabled_bssids.clear();
+    radio_conf_params.sent_vaps_list_update     = false;
+    radio_conf_params.received_vaps_list_update = false;
+
+    if (db->device_conf.management_mode != BPL_MGMT_MODE_NOT_MULTIAP) {
+        FSM_MOVE_STATE(radio->front.iface_name, eState::WAIT_AP_CONFIGURATION_COMPLETE);
         return;
     }
 
+    // MODE is NOT_MULTIAP
     FSM_MOVE_STATE(radio->front.iface_name, eState::CONFIGURED);
     return;
 }
@@ -1294,6 +1422,152 @@ bool ApAutoConfigurationTask::handle_wsc_m2_tlv(
     }
 
     return true;
+}
+
+void ApAutoConfigurationTask::handle_vs_wifi_credentials_update_response(
+    ieee1905_1::CmduMessageRx &cmdu_rx, int fd, std::shared_ptr<beerocks_header> beerocks_header)
+{
+    auto response =
+        beerocks_header
+            ->addClass<beerocks_message::cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_RESPONSE>();
+    if (!response) {
+        LOG(ERROR) << "addClass cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_RESPONSE failed";
+        return;
+    }
+
+    auto radio_iface        = m_btl_ctx.m_radio_managers.get_radio_iface_from_fd(fd);
+    auto &radio_conf_params = m_radios_conf_params[radio_iface];
+
+    radio_conf_params.num_of_bss_available = response->number_of_bss_available();
+
+    auto db    = AgentDB::get();
+    auto radio = db->radio(radio_iface);
+    if (!radio) {
+        return;
+    }
+
+    LOG(TRACE) << "received ACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_RESPONSE from "
+               << radio->front.iface_name;
+
+    // This value have an arbitrary value based on observation on real platform behavior.
+    constexpr uint8_t WAIT_AP_ENABLED_TIMEOUT_SECONDS = 20;
+    radio_conf_params.timeout =
+        std::chrono::steady_clock::now() + std::chrono::seconds(WAIT_AP_ENABLED_TIMEOUT_SECONDS);
+}
+
+void ApAutoConfigurationTask::handle_vs_ap_enabled_notification(
+    ieee1905_1::CmduMessageRx &cmdu_rx, int fd, std::shared_ptr<beerocks_header> beerocks_header)
+{
+    auto notification_in =
+        beerocks_header
+            ->addClass<beerocks_message::cACTION_APMANAGER_HOSTAP_AP_ENABLED_NOTIFICATION>();
+    if (!notification_in) {
+        LOG(ERROR) << "addClass cACTION_APMANAGER_HOSTAP_AP_ENABLED_NOTIFICATION failed";
+        return;
+    }
+
+    auto radio_iface = m_btl_ctx.m_radio_managers.get_radio_iface_from_fd(fd);
+
+    auto db    = AgentDB::get();
+    auto radio = db->radio(radio_iface);
+    if (!radio) {
+        return;
+    }
+
+    LOG(INFO) << "received ACTION_APMANAGER_HOSTAP_AP_ENABLED_NOTIFICATION "
+              << notification_in->vap_info().iface_name;
+
+    const auto &vap_info = notification_in->vap_info();
+    auto bssid           = std::find_if(radio->front.bssids.begin(), radio->front.bssids.end(),
+                              [&vap_info](const beerocks::AgentDB::sRadio::sFront::sBssid &bssid) {
+                                  return bssid.mac == vap_info.mac;
+                              });
+    if (bssid == radio->front.bssids.end()) {
+        LOG(ERROR) << "Radio does not contain BSSID: " << vap_info.mac;
+        return;
+    }
+
+    // Update VAP info (BSSID) in the AgentDB
+    bssid->ssid          = vap_info.ssid;
+    bssid->fronthaul_bss = vap_info.fronthaul_vap;
+    bssid->backhaul_bss  = vap_info.backhaul_vap;
+    if (vap_info.backhaul_vap) {
+        bssid->backhaul_bss_disallow_profile1_agent_association =
+            vap_info.profile1_backhaul_sta_association_disallowed;
+        bssid->backhaul_bss_disallow_profile2_agent_association =
+            vap_info.profile2_backhaul_sta_association_disallowed;
+    }
+
+    auto notification_out = message_com::create_vs_message<
+        beerocks_message::cACTION_CONTROL_HOSTAP_AP_ENABLED_NOTIFICATION>(m_cmdu_tx);
+    if (!notification_out) {
+        LOG(ERROR) << "Failed building message!";
+        return;
+    }
+
+    notification_out->vap_id()   = notification_in->vap_id();
+    notification_out->vap_info() = notification_in->vap_info();
+    m_btl_ctx.send_cmdu_to_controller(radio->front.iface_name, m_cmdu_tx);
+
+    // Marked BSSID as "enabled".
+    auto &radio_conf_params = m_radios_conf_params[radio_iface];
+    radio_conf_params.enabled_bssids.insert(bssid->mac);
+}
+
+void ApAutoConfigurationTask::handle_vs_vaps_list_update_notification(
+    ieee1905_1::CmduMessageRx &cmdu_rx, int fd, std::shared_ptr<beerocks_header> beerocks_header)
+{
+    auto notification_in =
+        beerocks_header
+            ->addClass<beerocks_message::cACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION>();
+    if (!notification_in) {
+        LOG(ERROR) << "addClass cACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION failed";
+        return;
+    }
+
+    auto radio_iface = m_btl_ctx.m_radio_managers.get_radio_iface_from_fd(fd);
+    auto db          = AgentDB::get();
+    auto radio       = db->radio(radio_iface);
+    if (!radio) {
+        return;
+    }
+
+    const auto &fronthaul_iface = radio->front.iface_name;
+
+    LOG(INFO) << "received ACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION "
+              << fronthaul_iface;
+
+    m_btl_ctx.update_vaps_info(fronthaul_iface, notification_in->params().vaps);
+
+    auto notification_out = message_com::create_vs_message<
+        beerocks_message::cACTION_CONTROL_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION>(m_cmdu_tx);
+    if (!notification_out) {
+        LOG(ERROR) << "Failed building message!";
+        return;
+    }
+
+    notification_out->params() = notification_in->params();
+    LOG(TRACE) << "send ACTION_CONTROL_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION " << fronthaul_iface;
+    m_btl_ctx.send_cmdu_to_controller(fronthaul_iface, m_cmdu_tx);
+
+    // This probably changed the "AP Operational BSS" list in topology, so send a notification
+    if (!m_cmdu_tx.create(0, ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE)) {
+        LOG(ERROR) << "cmdu creation of type TOPOLOGY_NOTIFICATION_MESSAGE, has failed";
+        return;
+    }
+
+    auto tlvAlMacAddress = m_cmdu_tx.addClass<ieee1905_1::tlvAlMacAddress>();
+    if (!tlvAlMacAddress) {
+        LOG(ERROR) << "addClass ieee1905_1::tlvAlMacAddress failed";
+        return;
+    }
+
+    tlvAlMacAddress->mac() = db->bridge.mac;
+    m_btl_ctx.send_cmdu_to_controller(fronthaul_iface, m_cmdu_tx);
+
+    auto &radio_conf_params = m_radios_conf_params[radio_iface];
+
+    radio_conf_params.received_vaps_list_update = true;
 }
 
 bool ApAutoConfigurationTask::ap_autoconfiguration_wsc_calculate_keys(

@@ -270,7 +270,7 @@ main_agent_operational() {
 }
 
 radio_agent_operational() {
-    grep -q "$2 FSM: WAIT_AP_AUTOCONFIGURATION_WSC_M2 --> CONFIGURED" "$1/beerocks_agent@BEEROCKS_LOG_FILES_SUFFIX@"
+    grep -q "$2 FSM: .* --> CONFIGURED" "$1/beerocks_agent@BEEROCKS_LOG_FILES_SUFFIX@"
 }
 
 report() {

@@ -709,7 +709,7 @@ bool slave_thread::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
             return handle_cmdu_platform_manager_message(fd, beerocks_header);
         } break;
         case beerocks_message::ACTION_APMANAGER: {
-            return handle_cmdu_ap_manager_message(fronthaul_iface, fd, beerocks_header);
+            return handle_cmdu_ap_manager_message(fronthaul_iface, fd, cmdu_rx, beerocks_header);
         } break;
         case beerocks_message::ACTION_MONITOR: {
             return handle_cmdu_monitor_message(fronthaul_iface, fd, beerocks_header);
@@ -2198,6 +2198,7 @@ bool slave_thread::handle_cmdu_platform_manager_message(
 }
 
 bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_iface, int fd,
+                                                  ieee1905_1::CmduMessageRx &cmdu_rx,
                                                   std::shared_ptr<beerocks_header> beerocks_header)
 {
     if (beerocks_header->action_op() == beerocks_message::ACTION_APMANAGER_UP_NOTIFICATION) {
@@ -2401,100 +2402,6 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
             fronthaul_reset(radio_manager);
         }
 
-        break;
-    }
-    case beerocks_message::ACTION_APMANAGER_HOSTAP_AP_ENABLED_NOTIFICATION: {
-        auto notification_in =
-            beerocks_header
-                ->addClass<beerocks_message::cACTION_APMANAGER_HOSTAP_AP_ENABLED_NOTIFICATION>();
-        if (notification_in == nullptr) {
-            LOG(ERROR) << "addClass cACTION_APMANAGER_HOSTAP_AP_ENABLED_NOTIFICATION failed";
-            return false;
-        }
-        LOG(INFO) << "received ACTION_APMANAGER_HOSTAP_AP_ENABLED_NOTIFICATION vap_id="
-                  << int(notification_in->vap_id());
-
-        auto db    = AgentDB::get();
-        auto radio = db->radio(fronthaul_iface);
-        if (!radio) {
-            return false;
-        }
-
-        const auto &vap_info = notification_in->vap_info();
-        auto bssid =
-            std::find_if(radio->front.bssids.begin(), radio->front.bssids.end(),
-                         [&vap_info](const beerocks::AgentDB::sRadio::sFront::sBssid &bssid) {
-                             return bssid.mac == vap_info.mac;
-                         });
-        if (bssid == radio->front.bssids.end()) {
-            LOG(ERROR) << "Radio does not contain BSSID: " << vap_info.mac;
-            return false;
-        }
-
-        // Update VAP info (BSSID) in the AgentDB
-        bssid->ssid          = vap_info.ssid;
-        bssid->fronthaul_bss = vap_info.fronthaul_vap;
-        bssid->backhaul_bss  = vap_info.backhaul_vap;
-        if (vap_info.backhaul_vap) {
-            bssid->backhaul_bss_disallow_profile1_agent_association =
-                vap_info.profile1_backhaul_sta_association_disallowed;
-            bssid->backhaul_bss_disallow_profile2_agent_association =
-                vap_info.profile2_backhaul_sta_association_disallowed;
-        }
-
-        auto notification_out = message_com::create_vs_message<
-            beerocks_message::cACTION_CONTROL_HOSTAP_AP_ENABLED_NOTIFICATION>(cmdu_tx);
-        if (!notification_out) {
-            LOG(ERROR) << "Failed building message!";
-            return false;
-        }
-
-        notification_out->vap_id()   = notification_in->vap_id();
-        notification_out->vap_info() = notification_in->vap_info();
-        send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
-        break;
-    }
-    case beerocks_message::ACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION: {
-        auto notification_in = beerocks_header->addClass<
-            beerocks_message::cACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION>();
-        if (notification_in == nullptr) {
-            LOG(ERROR) << "addClass cACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION failed";
-            return false;
-        }
-
-        LOG(INFO) << "received ACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION "
-                  << fronthaul_iface;
-
-        update_vaps_info(fronthaul_iface, notification_in->params().vaps);
-
-        TrafficSeparation::apply_traffic_separation(fronthaul_iface);
-
-        auto notification_out = message_com::create_vs_message<
-            beerocks_message::cACTION_CONTROL_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION>(cmdu_tx);
-        if (!notification_out) {
-            LOG(ERROR) << "Failed building message!";
-            return false;
-        }
-
-        notification_out->params() = notification_in->params();
-        LOG(TRACE) << "send ACTION_CONTROL_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION "
-                   << fronthaul_iface;
-        send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
-
-        // This probably changed the "AP Operational BSS" list in topology, so send a notification
-        if (!cmdu_tx.create(0, ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE)) {
-            LOG(ERROR) << "cmdu creation of type TOPOLOGY_NOTIFICATION_MESSAGE, has failed";
-            return false;
-        }
-
-        auto tlvAlMacAddress = cmdu_tx.addClass<ieee1905_1::tlvAlMacAddress>();
-        if (!tlvAlMacAddress) {
-            LOG(ERROR) << "addClass ieee1905_1::tlvAlMacAddress failed";
-            return false;
-        }
-        auto db                = AgentDB::get();
-        tlvAlMacAddress->mac() = db->bridge.mac;
-        send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_APMANAGER_HOSTAP_ACS_NOTIFICATION: {
@@ -3206,9 +3113,11 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
         break;
     }
     default: {
-        LOG(ERROR) << "Unknown AP_MANAGER message, action_op: "
-                   << int(beerocks_header->action_op());
-        return false;
+        if (!m_task_pool.handle_cmdu(cmdu_rx, 0, {}, {}, fd, beerocks_header)) {
+            LOG(ERROR) << "Unknown AP_MANAGER message, action_op: "
+                       << int(beerocks_header->action_op());
+            return false;
+        }
     }
     }
 
