@@ -1077,7 +1077,7 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
 
         // Channel Utilization
         // Resolve as part of PPM-1045
-        // Since BSS Load Element Present is set to "Not Present" no need to set  Channel Utilization.
+        // Since BSS Load Element Present is set to "Not Present" no need to set Channel Utilization.
         // neighbor_res->channel_utilization() = neighbor.channel_utilization;
 
         // Station Count
@@ -1106,7 +1106,7 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
         results_tlv->radio_uid()       = ruid;
         results_tlv->operating_class() = operating_class;
         results_tlv->channel()         = channel;
-        LOG(DEBUG) << "New Result for " << ruid << "[" << operating_class << "," << channel << "]";
+        LOG(DEBUG) << "Add Result for " << ruid << "[" << operating_class << "," << channel << "]";
 
         // Set Results TLV status
         results_tlv->success() = status;
@@ -1147,6 +1147,7 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
                 LOG(ERROR) << "Failed to add neighbor to TLV";
                 return false;
             }
+            LOG(INFO) << "Added Neighbor " << tlv_neighbor_ptr->bssid();
 
             total_noise       = total_noise + stored_neighbor.noise_dBm;
             total_utilization = total_utilization + stored_neighbor.channel_utilization;
@@ -1166,10 +1167,12 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
 
         if (!add_vs_tlv) {
             // No need to add the vendor specific TLV, return true.
+            LOG(INFO) << "No need to add the vendor specific TLV";
             return true;
         }
 
         // Add vendor specific TLV to fill missing results
+        LOG(DEBUG) << "Adding new VS Scan Results TLV";
         auto vs_results_tlv =
             message_com::add_vs_tlv<beerocks_message::tlvVsChannelScanResult>(m_cmdu_tx);
         if (!vs_results_tlv) {
@@ -1187,6 +1190,7 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
             LOG(ERROR) << "Failed to allocate a result list of size " << results.size();
             return false;
         }
+        LOG(DEBUG) << "Allocated " << results.size() << " results.";
         for (int i = 0; i < vs_results_tlv->scan_results_list_length(); i++) {
             auto result_tuple = vs_results_tlv->scan_results_list(i);
             if (!std::get<0>(result_tuple)) {
@@ -1195,6 +1199,7 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
             }
             auto &outgoing_result = std::get<1>(result_tuple);
             outgoing_result       = results[i];
+            LOG(INFO) << "Added Neighbor " << outgoing_result.bssid;
         }
         return true;
     };
@@ -1205,7 +1210,6 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
                                                 bool report_done = false) -> bool {
         auto db = AgentDB::get();
         if (db->controller_info.prplmesh_controller) {
-            LOG(TRACE) << m_cmdu_tx.getMessageBuffLength() - m_cmdu_tx.getMessageLength();
             auto scan_report_done_tlv =
                 message_com::add_vs_tlv<beerocks_message::tlvVsChannelScanReportDone>(m_cmdu_tx);
             if (!scan_report_done_tlv) {
@@ -1213,7 +1217,6 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
                 return false;
             }
             scan_report_done_tlv->report_done() = report_done;
-            LOG(TRACE) << m_cmdu_tx.getMessageBuffLength() - m_cmdu_tx.getMessageLength();
         }
         LOG(DEBUG) << "Sending Channel Scan Report Message to broker";
         return m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, dst_mac, db->bridge.mac);
