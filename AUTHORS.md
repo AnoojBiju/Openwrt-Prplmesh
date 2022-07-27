@@ -1,10 +1,10 @@
 <!--
 SPDX-License-Identifier: BSD-2-Clause-Patent
-Copyright (c) 2020 the prplMesh contributors
+Copyright (c) 2022 the prplMesh contributors
 This code is subject to the terms of the BSD+Patent license.
 See LICENSE file for more details.
 -->
-The prplMesh project is copyright 2016-2020 its contributors.
+The prplMesh project is copyright 2016-2022 its contributors.
 This file lists all contributors.
 
 Companies and organizations:
@@ -12,6 +12,7 @@ This lists companies/organizations that sponsored development on prplMesh,
 rather than getting paid for implementing it
 - Altran
 - ASSIA
+- CableLabs
 - Deutsche Telekom
 - GlobalLogic
 - Inango
@@ -28,6 +29,7 @@ Individuals:
 - Allan Dickow (Greenwave Systems)
 - Anton Bilohai (prpl Foundation via Inango)
 - Arnout Vandecappelle (Deutsche Telekom and prpl Foundation via Essensium/Mind)
+- Benjamin Carlson (CableLabs)
 - Cihangir Odabas (ASSIA)
 - Coral Malachi (Intel Corporation)
 - Daniel Edri (MaxLinear via Devalore)
@@ -60,12 +62,14 @@ Individuals:
 - Semyon Barenboym (Intel Corporation)
 - Sinan Akpolat (Lifemote)
 - Tomer Eliyahu (Intel Corporation)
+- Tucker Polomik (CableLabs)
 - Vitalii Komisarenko (prpl Foundation via Essensium/Mind)
 - Vitaly Bukhovsky (MaxLinear via Devalore)
 - Vladyslav Tupikin (prpl Foundation via Inango)
 - Yevheniy-Vilhelm Vall (GlobalLogic)
 - Yaniv Yitzhak (MaxLinear)
 - Yuriy Masechko (GlobalLogic)
+- Zackary Foreman (CableLabs)
 
 In addition, some parts were copied from other projects.
 
