@@ -1329,13 +1329,11 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const sMacAddr &src_mac,
         for (auto const vs_result_tlv :
              beerocks_header->getClassList<beerocks_message::tlvVsChannelScanResult>()) {
             auto scan_results_list_length = vs_result_tlv->scan_results_list_length();
-            LOG(DEBUG) << "Received Result TLV for:" << std::endl
+            LOG(DEBUG) << "Received Result VS-TLV for:" << std::endl
                        << "RUID: " << vs_result_tlv->radio_uid() << ", "
                        << "Operating Class: " << vs_result_tlv->operating_class() << ", "
                        << "Channel: " << vs_result_tlv->channel() << ", "
-                       << " containing " << scan_results_list_length << " neighbors";
-            std::vector<wfa_map::cNeighbors> neighbor_vec;
-
+                       << " containing " << scan_results_list_length << " scan-results";
             std::vector<beerocks_message::sChannelScanResults> scan_result_vec;
             for (int res_idx = 0; res_idx < scan_results_list_length; res_idx++) {
                 auto result_tuple = vs_result_tlv->scan_results_list(res_idx);
