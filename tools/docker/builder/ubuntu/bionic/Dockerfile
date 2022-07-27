@@ -104,7 +104,7 @@ RUN \
 # them in specific order.
 RUN \
     repo init -u https://gitlab.com/prpl-foundation/components/ambiorix/ambiorix.git \
-        -b refs/tags/v1.15.2 < /dev/null && \
+        -b refs/tags/v2.11.0 < /dev/null && \
     repo sync && \
     make install -C libraries/libamxc && \
     make install -C libraries/libamxp && \
