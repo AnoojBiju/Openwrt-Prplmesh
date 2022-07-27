@@ -41,7 +41,7 @@ public:
     bool handle_ieee1905_1_msg(const sMacAddr &src_mac,
                                ieee1905_1::CmduMessageRx &cmdu_rx) override;
 
-    enum eEventType { MOVE };
+    enum eEventType { MOVE, CREATE, DESTROY };
 
     // TODO: Might be able to be moved to private. Revisit later
     // Keeping public for now in case people want to check later
@@ -63,13 +63,42 @@ public:
         eMoveProcessState state = INIT;
         std::shared_ptr<vbss::sClientSecCtxInfo> sec_ctx_info;
 
-        sMoveEvent(sMacAddr vbssid, const vbss::sClientVBSS &client_vbss_, sMacAddr dest_ruid_,
-                   const std::string &ssid_, const std::string &password_)
+        sMoveEvent(const sMacAddr &vbssid, const vbss::sClientVBSS &client_vbss_,
+                   sMacAddr dest_ruid_, const std::string &ssid_, const std::string &password_)
             : client_vbss(client_vbss_), dest_ruid(dest_ruid_), ssid(ssid_), password(password_)
         {
         }
 
         sMoveEvent(){};
+    };
+
+    struct sCreationEvent {
+        vbss::sClientVBSS client_vbss;
+        sMacAddr dest_ruid;
+        std::string ssid;
+        std::string password;
+        std::shared_ptr<vbss::sClientSecCtxInfo> sec_ctx_info;
+
+        sCreationEvent(const sMacAddr &vbssid, const vbss::sClientVBSS &client_vbss_,
+                       sMacAddr dest_ruid_, const std::string &ssid_, const std::string &password_)
+            : client_vbss(client_vbss_), dest_ruid(dest_ruid_), ssid(ssid_), password(password_)
+        {
+        }
+
+        sCreationEvent() {}
+    };
+
+    struct sDestructionEvent {
+        vbss::sClientVBSS client_vbss;
+        bool should_disassociate;
+
+        sDestructionEvent(const sMacAddr &vbssid, const vbss::sClientVBSS &client_vbss_,
+                          bool should_disassociate_)
+            : client_vbss(client_vbss_), should_disassociate(should_disassociate_)
+        {
+        }
+
+        sDestructionEvent() {}
     };
 
 protected:
@@ -84,6 +113,18 @@ private:
      * @brief A map between VBSSIDs and active (in the process of executing) move events
      */
     beerocks::mac_map<sMoveEvent> active_moves;
+
+    /**
+     * @brief A map between VBSSIDs and active (in the process of executing) VBSS creation events 
+     * 
+     */
+    beerocks::mac_map<sCreationEvent> active_creation_events;
+
+    /**
+     * @brief A map between VBSSIDs and active (in the process of executing) VBSS destruction events 
+     * 
+     */
+    beerocks::mac_map<sDestructionEvent> active_destruction_events;
 
     /**
      * @brief Get the active move event which corresponds to the given VBSSID and is in the given state
