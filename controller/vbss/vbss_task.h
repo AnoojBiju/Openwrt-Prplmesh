@@ -150,10 +150,26 @@ private:
     /**
      * @brief Begin process of moving client from one agent to another after recieving a move event
      * 
-     * @param move_event The event struct recieved in handle_event containing the necsessary info
+     * @param move_event The event struct received in handle_event containing the necessary info
      * @return True if the first request executed successfully, false otherwise.
      */
     bool handle_move_client_event(const sMoveEvent &move_event);
+
+    /**
+     * @brief Begin process of creating a VBSS after recieving a create event, starting with fetching the Client Security Context
+     * 
+     * @param create_event The event struct received in handle_event containing the necessary info
+     * @return True if the first request executed successfully, false otherwise.
+     */
+    bool handle_vbss_creation_event(const sCreationEvent &create_event);
+
+    /**
+     * @brief Send a VBSS Request with the VBSS Destruction TLV to the given agent
+     * 
+     * @param destroy_event The event struct received in handle_event containing the necessary info
+     * @return True if the destroy VBSS request executed successfully, false otherwise.
+     */
+    bool handle_vbss_destruction_event(const sDestructionEvent &destroy_event);
 
     /**
      * @brief Generic method to handle the three responses that send AP Radio VBSS Capabilities TLVs in the response
