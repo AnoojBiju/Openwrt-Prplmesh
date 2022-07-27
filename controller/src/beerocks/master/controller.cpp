@@ -3698,13 +3698,15 @@ bool Controller::handle_cmdu_control_message(
             return false;
         }
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
-        //push event to pre association steering task
-        pre_association_steering_task::sSteeringClientDisconnectResponseEvent new_event;
-        new_event.ret_code = notification->params().error_code;
-        tasks.push_event(
-            database.get_pre_association_steering_task_id(),
-            pre_association_steering_task::eEvents::STEERING_CLIENT_DISCONNECT_RESPONSE,
-            &new_event);
+        if (notification->params().src == eClient_Disconnect_Source_Pre_Association_Steering_Task) {
+            //push event to pre association steering task
+            pre_association_steering_task::sSteeringClientDisconnectResponseEvent new_event;
+            new_event.ret_code = notification->params().error_code;
+            tasks.push_event(
+                database.get_pre_association_steering_task_id(),
+                pre_association_steering_task::eEvents::STEERING_CLIENT_DISCONNECT_RESPONSE,
+                &new_event);
+        }
 #endif
         break;
     }

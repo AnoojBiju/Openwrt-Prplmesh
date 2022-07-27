@@ -1015,6 +1015,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
         break;
     }
     case beerocks_message::ACTION_APMANAGER_CLIENT_DISCONNECT_REQUEST: {
+        int res = OPERATION_FAIL;
         auto request =
             beerocks_header
                 ->addClass<beerocks_message::cACTION_APMANAGER_CLIENT_DISCONNECT_REQUEST>();
@@ -1033,14 +1034,23 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
                    << ((type == beerocks_message::eDisconnect_Type_Deauth) ? "DEAUTH" : "DISASSOC")
                    << " vap_id = " << int(vap_id) << " mac = " << sta_mac
                    << " reason = " << std::to_string(reason);
-        bool res;
+
         if (type == beerocks_message::eDisconnect_Type_Deauth) {
             res = ap_wlan_hal->sta_deauth(vap_id, sta_mac, reason);
         } else {
             res = ap_wlan_hal->sta_disassoc(vap_id, sta_mac, reason);
         }
-        send_steering_return_status(beerocks_message::ACTION_APMANAGER_CLIENT_DISCONNECT_RESPONSE,
-                                    res ? OPERATION_SUCCESS : OPERATION_FAIL);
+
+        auto response = message_com::create_vs_message<
+            beerocks_message::cACTION_APMANAGER_CLIENT_DISCONNECT_RESPONSE>(cmdu_tx);
+        if (response == nullptr) {
+            LOG(ERROR) << "Failed building message!";
+            return;
+        }
+        response->params().error_code = res;
+        response->params().src        = request->src();
+        send_cmdu(cmdu_tx);
+
         break;
     }
     case beerocks_message::ACTION_APMANAGER_CLIENT_DISALLOW_REQUEST: {

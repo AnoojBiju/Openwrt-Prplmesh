@@ -534,8 +534,8 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
         tasks.push_event(dhcp_task, DhcpTask::STA_CONNECTED);
 
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
-        //push event to rdkb_wlan_hal task
-        if (vs_tlv) {
+        //push event to pre_association_steering_task task
+        if (database.get_pre_association_steering_task_id() != -1 && vs_tlv) {
             bwl::sClientAssociationParams new_event = {};
 
             new_event.mac          = client_mac;
@@ -548,17 +548,15 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
                 pre_association_steering_task::eEvents::STEERING_EVENT_CLIENT_CONNECT_NOTIFICATION,
                 &new_event);
         }
-#endif
+#endif /* FEATURE_PRE_ASSOCIATION_STEERING */
 
         son_actions::handle_completed_connection(database, cmdu_tx, tasks, client_mac_str);
 
     } else {
         // client disconnected
-
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
-
-        // Push event to rdkb_wlan_hal task
-        if (vs_tlv) {
+        // Push event to pre_association_steering_task task
+        if (database.get_pre_association_steering_task_id() != -1 && vs_tlv) {
             beerocks_message::sSteeringEvDisconnect new_event = {};
             new_event.client_mac                              = client_mac;
             new_event.bssid                                   = bssid;
@@ -571,7 +569,7 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
                                  STEERING_EVENT_CLIENT_DISCONNECT_NOTIFICATION,
                              &new_event);
         }
-#endif
+#endif /* FEATURE_PRE_ASSOCIATION_STEERING */
 
         auto client = database.get_station(tlvf::mac_from_string(client_mac_str));
         if (!client) {
