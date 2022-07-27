@@ -869,6 +869,7 @@ bool dynamic_channel_selection_r2_task::handle_continuous_scan_request_event(
 bool dynamic_channel_selection_r2_task::handle_scan_report_event(
     const sScanReportEvent &scan_report_event)
 {
+    LOG(INFO) << "Handle Scan Report event!";
     const auto &agent_mac          = scan_report_event.agent_mac;
     const auto &ISO_8601_timestamp = scan_report_event.ISO_8601_timestamp;
 
@@ -952,6 +953,7 @@ bool dynamic_channel_selection_r2_task::handle_scan_report_event(
         return false;
     }
 
+    LOG(INFO) << "Need to stop ongoing scan";
     /**
      * After a scan's report has been stored validated, need to clear the stored scan request
      * handler. If the scan is a single scan, we can simply remove it from the radio's scan map.

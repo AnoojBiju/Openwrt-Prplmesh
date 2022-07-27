@@ -1106,10 +1106,12 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
         results_tlv->radio_uid()       = ruid;
         results_tlv->operating_class() = operating_class;
         results_tlv->channel()         = channel;
+        LOG(DEBUG) << "New Result for " << ruid << "[" << operating_class << "," << channel << "]";
 
         // Set Results TLV status
         results_tlv->success() = status;
         if (results_tlv->success() != eScanStatus::SUCCESS) {
+            LOG(DEBUG) << "Result is not successful.";
             // If results status is not successful, need to finish TLV.
             return true;
         }
@@ -1168,7 +1170,8 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
         }
 
         // Add vendor specific TLV to fill missing results
-        auto vs_results_tlv = m_cmdu_tx.addClass<beerocks_message::tlvVsChannelScanResult>();
+        auto vs_results_tlv =
+            message_com::add_vs_tlv<beerocks_message::tlvVsChannelScanResult>(m_cmdu_tx);
         if (!vs_results_tlv) {
             LOG(ERROR) << "addClass tlvProfile2ChannelScanResult failed";
             return false;
