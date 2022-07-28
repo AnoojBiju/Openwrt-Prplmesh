@@ -2231,6 +2231,12 @@ static bool is_acs_completed_scan(char *buffer, int bufLen)
     return !strncmp(scan, "SCAN", 4);
 }
 
+bool ap_wlan_hal_dwpal::set_cce_indication(uint16_t advertise_cce)
+{
+    LOG(DEBUG) << "ap_wlan_hal_dwpal: set_cce_indication, advertise_cce=" << advertise_cce;
+    return true;
+}
+
 bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std::string &opcode)
 {
     LOG(TRACE) << __func__ << " - opcode: |" << opcode << "|";

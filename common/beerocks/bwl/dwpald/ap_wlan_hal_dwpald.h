@@ -106,6 +106,7 @@ public:
 
     virtual bool process_dwpal_event(char *buffer, int bufLen, const std::string &opcode) override;
     virtual bool process_dwpal_nl_event(struct nl_msg *msg, void *arg = nullptr) override;
+    virtual bool set_cce_indication(uint16_t advertise_cce) override;
     // Protected methods:
 protected:
     virtual bool dwpald_attach(char *ifname) override;

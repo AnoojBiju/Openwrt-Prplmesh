@@ -100,6 +100,7 @@ public:
     virtual bool set_mbo_assoc_disallow(const std::string &bssid, bool enable) override;
     virtual bool set_radio_mbo_assoc_disallow(bool enable) override;
     virtual bool set_primary_vlan_id(uint16_t primary_vlan_id) override;
+    virtual bool set_cce_indication(uint16_t advertise_cce) override;
 
     // Protected methods:
 protected:
