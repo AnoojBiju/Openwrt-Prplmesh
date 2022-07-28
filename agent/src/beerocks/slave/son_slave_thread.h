@@ -115,6 +115,15 @@ public:
     bool forward_cmdu_to_uds(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
+     * @brief Forwards given received CMDU message to the broker server for dispatching which
+     * eventually will be sent to the Controller.
+     *
+     * @param cmdu_rx Received CMDU message to forward.
+     * @return true on success and false otherwise.
+     */
+    bool forward_cmdu_to_controller(ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
      * @brief Sends ACK CMDU to controller
      *
      * @param cmdu CMDU message to send.
@@ -145,15 +154,6 @@ private:
      */
     bool send_cmdu_to_broker(ieee1905_1::CmduMessageTx &cmdu, const sMacAddr &dst_mac,
                              const sMacAddr &src_mac, const std::string &iface_name = "");
-
-    /**
-     * @brief Forwards given received CMDU message to the broker server for dispatching which
-     * eventually will be sent to the Controller.
-     *
-     * @param cmdu_rx Received CMDU message to forward.
-     * @return true on success and false otherwise.
-     */
-    bool forward_cmdu_to_controller(ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
      * @brief Handles CMDU message received from broker.
