@@ -270,6 +270,19 @@ bool vbss_task::handle_ap_radio_vbss_caps_msg(const sMacAddr &src_mac,
         return false;
     }
 
+    auto src_agent = m_database.m_agents.get(src_mac);
+
+    if (!src_agent) {
+        LOG(ERROR) << "Message contained AP Radio VBSS Capabilities TLV but no Agent found for "
+                      "message source MAC address ("
+                   << src_mac << ")!";
+        return false;
+    }
+
+    // If a VBSS Capabilities TLV is recieved, this agent supports VBSS
+    src_agent->does_support_vbss = true;
+    m_database.get_ambiorix_obj()->set(src_agent->dm_path, "SupportsVBSS", true);
+
     // A TLV is returned for each radio that supports VBSS, handle all of them
     beerocks::mac_map<vbss::sAPRadioVBSSCapabilities> ruid_caps_map;
 
@@ -288,8 +301,6 @@ bool vbss_task::handle_ap_radio_vbss_caps_msg(const sMacAddr &src_mac,
 
         ruid_caps_map.add(ap_vbss_caps_tlv->radio_uid(), ap_radio_caps);
     }
-
-    //TODO: Send to VBSSManager (include src_mac = agent_mac)
 
     return true;
 }
