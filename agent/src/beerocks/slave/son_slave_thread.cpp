@@ -550,6 +550,9 @@ bool slave_thread::read_platform_configuration()
             }
         }
     }
+    if (db->device_conf.local_controller) {
+        LOG(DEBUG) << "Local Controller is running!";
+    }
     LOG(DEBUG) << "client_band_steering_enabled: " << db->device_conf.client_band_steering_enabled;
     LOG(DEBUG) << "client_optimal_path_roaming_enabled: "
                << db->device_conf.client_optimal_path_roaming_enabled;
