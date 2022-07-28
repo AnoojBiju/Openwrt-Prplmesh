@@ -311,6 +311,14 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
         }
     }
 
+    /* If this TLV is recieved in the 1905.1 Topology Response Message...
+         then the src agent is hosting VBSSes (which were sent in the AP Operational BSS TLV) which now need to be marked as virtual
+    */
+    auto vbss_config_report_tlv = cmdu_rx.getClass<wfa_map::VbssConfigurationReport>();
+    if (vbss_config_report_tlv) {
+        handle_vbss_configuration_tlv(src_mac, vbss_config_report_tlv);
+    }
+
     for (const auto &iface_mac : interface_macs) {
 
         auto iface_node = database.get_interface_node(al_mac, iface_mac);
@@ -446,6 +454,44 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
     //TODO: After handling Device and Neighbor Information, identify Parent Agent (PPM-2043)
 
     return true;
+}
+
+void topology_task::handle_vbss_configuration_tlv(
+    const sMacAddr &src_mac, std::shared_ptr<wfa_map::VbssConfigurationReport> config_report_tlv)
+{
+
+    uint8_t num_radios = config_report_tlv->number_of_radios();
+    for (uint8_t radio_idx = 0; radio_idx < num_radios; radio_idx++) {
+        auto radio_tup = config_report_tlv->radio_list(radio_idx);
+        if (!std::get<0>(radio_tup)) {
+            LOG(ERROR) << "Failed to get radio (from VbssConfigurationReport) for index "
+                       << radio_idx;
+            continue;
+        }
+        auto radio_info = std::get<1>(radio_tup);
+
+        for (uint8_t bss_idx = 0; bss_idx < radio_info.number_bss(); bss_idx++) {
+            auto bss_tup = radio_info.bss_list(bss_idx);
+            if (!std::get<0>(bss_tup)) {
+                LOG(ERROR) << "Failed to get BSS (from VbssConfigurationReport) for radio at index "
+                           << radio_idx << " at index " << bss_idx;
+                continue;
+            }
+            auto bss_info = std::get<1>(bss_tup);
+
+            // BSS already exists since it was passed in the AP Operational BSS TLV,
+            // Just declare that this BSS is a virtual BSS
+            auto existing_bss = database.get_bss(bss_info.bssid());
+            if (!existing_bss) {
+                LOG(ERROR) << "Failed to set BSS (" << bss_info.bssid()
+                           << ") as a virtual BSS! BSS does not exist for BSSID!";
+                continue;
+            }
+
+            existing_bss->is_vbss = true;
+            database.get_ambiorix_obj()->set(existing_bss->dm_path, "IsVBSS", true);
+        }
+    }
 }
 
 void topology_task::handle_dead_neighbors(const sMacAddr &src_mac, const sMacAddr &al_mac,

@@ -74,8 +74,6 @@ bool vbss_task::handle_ieee1905_1_msg(const sMacAddr &src_mac, ieee1905_1::CmduM
         return handle_move_response_msg(src_mac, cmdu_rx, false);
     case ieee1905_1::eMessageType::VIRTUAL_BSS_MOVE_CANCEL_RESPONSE_MESSAGE:
         return handle_move_response_msg(src_mac, cmdu_rx, true);
-    case ieee1905_1::eMessageType::TOPOLOGY_RESPONSE_MESSAGE:
-        return handle_top_response_msg(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_WSC_MESSAGE:
         return handle_ap_radio_vbss_caps_msg(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::BSS_CONFIGURATION_REQUEST_MESSAGE:
@@ -477,55 +475,6 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
         }
         active_moves.erase(vbssid);
         return true;
-    }
-
-    // TODO: Send to VBSS Manager (include src_mac = agent_mac)
-
-    return true;
-}
-
-// If the Agent supports VBSS this message will include a VBSS Configuration Report TLV
-bool vbss_task::handle_top_response_msg(const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
-{
-
-    auto config_report_tlv = cmdu_rx.getClass<wfa_map::VbssConfigurationReport>();
-    if (!config_report_tlv) {
-        LOG(INFO) << "Agent with MAC " << src_mac
-                  << " did not send a VBSS Configuration Report TLV with the "
-                     "TOPOLOGY_RESPONSE_MESSAGE. It does not support VBSS.";
-        return false;
-    }
-
-    LOG(INFO) << "VBSS Configuration Report received with data...";
-
-    uint8_t num_radios = config_report_tlv->number_of_radios();
-    for (uint8_t radio_idx = 0; radio_idx < num_radios; radio_idx++) {
-        auto radio_tup = config_report_tlv->radio_list(radio_idx);
-        if (!std::get<0>(radio_tup)) {
-            LOG(ERROR) << "Failed to get radio (from VbssConfigurationReport) for index "
-                       << radio_idx;
-            continue;
-        }
-        auto radio_info = std::get<1>(radio_tup);
-
-        sMacAddr ruid   = radio_info.radio_uid();
-        uint8_t num_bss = radio_info.number_bss();
-        LOG(INFO) << "RUID: " << ruid;
-
-        for (uint8_t bss_idx = 0; bss_idx < num_bss; bss_idx++) {
-            auto bss_tup = radio_info.bss_list(bss_idx);
-            if (!std::get<0>(bss_tup)) {
-                LOG(ERROR) << "Failed to get BSS (from VbssConfigurationReport) for radio at index "
-                           << radio_idx << " at index " << bss_idx;
-                continue;
-            }
-            auto bss_info = std::get<1>(bss_tup);
-
-            sMacAddr bssid   = bss_info.bssid();
-            std::string ssid = bss_info.ssid_str();
-
-            LOG(DEBUG) << "    BSSID: " << bssid << ", SSID: \"" << ssid << "\"";
-        }
     }
 
     // TODO: Send to VBSS Manager (include src_mac = agent_mac)
