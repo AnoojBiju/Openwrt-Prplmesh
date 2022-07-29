@@ -153,6 +153,21 @@ public:
                                   const sMacAddr &client_mac,
                                   const bool should_disassociate = true);
 
+    /**
+     * @brief Triggers the move operation of a client between two agents on the vbss system
+     * 
+     * @param connected_ruid The UID of the currently connected radio
+     * @param dest_ruid The UID of the radio to move to
+     * @param vbssid The VBSSID to move between agents
+     * @param client_mac The MAC Address of the client to move between agents
+     * @param new_bss_ssid The SSID to set for the BSS on the new agent
+     * @param new_bss_pass The password to set for the BSS on the new agent
+     * @return True if move operation was triggered, false otherwise.
+     */
+    bool trigger_vbss_move(const sMacAddr &connected_ruid, const sMacAddr &dest_ruid,
+                           const sMacAddr &vbssid, const sMacAddr &client_mac,
+                           const std::string &new_bss_ssid, const std::string &new_bss_pass);
+
 private:
     /**
      * @brief Handles the client-connected event in the CMDU server.

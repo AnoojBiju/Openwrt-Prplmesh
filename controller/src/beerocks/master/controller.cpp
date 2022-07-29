@@ -3859,6 +3859,37 @@ bool Controller::trigger_vbss_destruction(const sMacAddr &connected_ruid, const 
     return false;
 }
 
+bool Controller::trigger_vbss_move(const sMacAddr &connected_ruid, const sMacAddr &dest_ruid,
+                                   const sMacAddr &vbssid, const sMacAddr &client_mac,
+                                   const std::string &new_bss_ssid, const std::string &new_bss_pass)
+{
+#ifdef ENABLE_VBSS
+    int task_id = database.get_vbss_task_id();
+    if (task_id == db::TASK_ID_NOT_FOUND) {
+        LOG(ERROR) << "Could not trigger VBSS move! VBSS Task not found!";
+        return false;
+    }
+
+    vbss::sClientVBSS client_vbss      = {};
+    client_vbss.client_is_associated   = true; // Can assume client is associated in move req
+    client_vbss.client_mac             = client_mac;
+    client_vbss.current_connected_ruid = connected_ruid;
+    client_vbss.vbssid                 = vbssid;
+
+    vbss_task::sMoveEvent move_event = {};
+    move_event.client_vbss           = client_vbss;
+    move_event.dest_ruid             = dest_ruid;
+    move_event.ssid                  = new_bss_ssid;
+    move_event.password              = new_bss_pass;
+
+    tasks.push_event(task_id, vbss_task::eEventType::MOVE, &move_event);
+
+    return true;
+#endif
+    LOG(ERROR) << "Failed to trigger VBSS move! VBSS is not enabled!";
+    return false;
+}
+
 bool Controller::handle_tlv_profile2_ap_capability(std::shared_ptr<Agent> agent,
                                                    ieee1905_1::CmduMessageRx &cmdu_rx)
 {
