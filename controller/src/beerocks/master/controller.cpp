@@ -3815,7 +3815,6 @@ bool Controller::send_btm_request(const bool &disassoc_imminent,
                                   const std::string &sta_mac, const std::string &target_bssid)
 {
     std::string triggered_by{"NBAPI BTMRequest"};
-    std::string steering_type{"BTM"}; // so the steering task increments the BTM statistics counters
 
     int disassoc_timer_ms    = BEACON_INTERVAL_MS_IN_BI * disassoc_timer;
     int steering_timer_ms    = BEACON_INTERVAL_MS_IN_BI * steering_timer;
