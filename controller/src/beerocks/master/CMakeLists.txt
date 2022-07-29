@@ -22,6 +22,11 @@ if (USE_PRPLMESH_WHM)
     file(GLOB controller_whm ${WHM_PATH}/*.cpp)
 endif()
 
+if (ENABLE_VBSS)
+    file(GLOB controller_vbss ${VBSS_PATH}/*.cpp)
+endif()
+
+
 #FEATURE_PRE_ASSOCIATION_STEERING
 list(FIND FEATURES "FEATURE_PRE_ASSOCIATION_STEERING" _feature_pre_association_steering_index)
 if(${_feature_pre_association_steering_index} GREATER -1)
@@ -65,7 +70,9 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     if (USE_PRPLMESH_WHM)
         ${WHM_PATH}
     endif()
-    ${VBSS_PATH}
+    if (ENABLE_VBSS)
+        ${VBSS_PATH}
+    endif()
 )
 
 # Install
