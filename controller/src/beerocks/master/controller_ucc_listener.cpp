@@ -591,3 +591,9 @@ controller_ucc_listener::parse_bss_info(const std::string &bss_info_str,
 
     return al_mac;
 }
+
+bool controller_ucc_listener::handle_dev_get_station_info(
+    std::unordered_map<std::string, std::string> &params, std::string &err_string) {
+    err_string = "Not supported for controller: Only for Fronthaul STAs connected to Agent";
+    return false;
+}

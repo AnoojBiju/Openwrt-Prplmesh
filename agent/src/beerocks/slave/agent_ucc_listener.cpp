@@ -243,3 +243,16 @@ bool agent_ucc_listener::handle_custom_command(
     err_string = "handle_custom_command is not supported in agent mode";
     return false;
 }
+
+bool agent_ucc_listener::handle_dev_get_station_info(
+    std::unordered_map<std::string, std::string> &params, std::string &err_string)
+{
+    if (params.find("sta_mac") == params.end()) {
+        err_string = "Invalid MAC";
+        return false;
+    }
+
+    //return m_btl_ctx.get_sta_info(tlvf::mac_from_string(params["sta_mac"]));
+    err_string = "This command is under development";
+    return false;
+}
