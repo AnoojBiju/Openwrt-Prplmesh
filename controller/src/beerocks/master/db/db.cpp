@@ -5137,7 +5137,7 @@ bool db::assign_statistics_polling_task_id(int new_task_id)
 
 int db::get_statistics_polling_task_id() { return statistics_polling_task_id; }
 
-bool db::assign_vbss_task_id(int new_task_id)
+bool db::assign_vbss_task_id(const int new_task_id)
 {
     vbss_task_id = new_task_id;
     return true;

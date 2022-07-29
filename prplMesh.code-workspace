@@ -62,7 +62,14 @@
 			"streambuf": "cpp",
 			"thread": "cpp",
 			"cinttypes": "cpp",
-			"typeinfo": "cpp"
+			"typeinfo": "cpp",
+			"bit": "cpp",
+			"numeric": "cpp",
+			"random": "cpp",
+			"regex": "cpp",
+			"future": "cpp",
+			"shared_mutex": "cpp",
+			"forward_list": "cpp"
 		},
 		"files.exclude": {
 			"**/.dccache": true

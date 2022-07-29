@@ -39,7 +39,7 @@ vbss_task::vbss_task(son::db &database, task_pool &tasks, const std::string &tas
     - Client Info TLV
     - Trigger Channel Switch Announcement TLV
 
- Virtual VBSS Move Preperation Response
+ Virtual VBSS Move Preparation Response
     - Client Info TLV
 
  Virtual BSS Move Cancel Response
@@ -59,7 +59,6 @@ vbss_task::vbss_task(son::db &database, task_pool &tasks, const std::string &tas
     - AP Radio VBSS Capabilities TLV
     - ...
 */
-
 bool vbss_task::handle_ieee1905_1_msg(const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     switch (cmdu_rx.getMessageType()) {
@@ -82,6 +81,8 @@ bool vbss_task::handle_ieee1905_1_msg(const sMacAddr &src_mac, ieee1905_1::CmduM
     case ieee1905_1::eMessageType::BSS_CONFIGURATION_REQUEST_MESSAGE:
         return handle_ap_radio_vbss_caps_msg(src_mac, cmdu_rx);
     default:
+        TASK_LOG(ERROR) << "Unknown CMDU message type: " << std::hex
+                        << int(cmdu_rx.getMessageType());
         return false;
     }
 }
@@ -90,9 +91,9 @@ void vbss_task::work() {}
 
 void vbss_task::handle_event(int event_enum_value, void *event_obj)
 {
-    if (event_obj == nullptr) {
-        LOG(ERROR) << "VBSS Task recieved NULL event!!! Could not process event type ("
-                   << event_enum_value << ")";
+    if (!event_obj) {
+        TASK_LOG(ERROR) << "Could not process event type (" << event_enum_value
+                        << ")! event_obj == nullptr";
         return;
     }
 
@@ -116,7 +117,7 @@ bool vbss_task::handle_move_client_event(const sMoveEvent &move_event)
     sMacAddr client_mac           = client_vbss.client_mac;
 
     auto existing_move = active_moves.get(client_vbss.vbssid);
-    if (existing_move != nullptr) {
+    if (existing_move) {
         LOG(ERROR) << "Could not start a new move for client with MAC address " << client_mac
                    << "! Move already in progress for VBSSID " << client_vbss.vbssid
                    << " (From radio " << existing_move->client_vbss.current_connected_ruid
@@ -132,7 +133,7 @@ bool vbss_task::handle_move_client_event(const sMoveEvent &move_event)
     }
 
     // Add a new sMoveEvent to the mac_map with the new state CLIENT_SEC_CTX (Client Security Context Request)
-    //       which is the first step of the move process
+    // which is the first step of the move process
     active_moves.add(client_vbss.vbssid, client_vbss, move_event.dest_ruid, move_event.ssid,
                      move_event.password);
 
@@ -144,7 +145,8 @@ bool vbss_task::handle_move_client_event(const sMoveEvent &move_event)
         return false;
     }
 
-    // At this point, the move request process has started, and the following requests will be sent by the corresponding response handlers.
+    // At this point, the move request process has started,
+    // and the following requests will be sent by the corresponding response handlers.
     return true;
 }
 
@@ -152,16 +154,18 @@ bool vbss_task::handle_ap_radio_vbss_caps_msg(const sMacAddr &src_mac,
                                               ieee1905_1::CmduMessageRx &cmdu_rx)
 {
 
-    auto ap_vbss_caps_tlv = cmdu_rx.getClass<wfa_map::ApRadioVbssCapabilities>();
-    if (!ap_vbss_caps_tlv) {
-        // Message did not contain an AP Radio VBSS Capabilities TLV
+    auto ap_vbss_caps_tlv_list = cmdu_rx.getClassList<wfa_map::ApRadioVbssCapabilities>();
+    if (ap_vbss_caps_tlv_list.empty()) {
+        TASK_LOG(ERROR) << "BSS Configuration Request CMDU mid=" << std::hex
+                        << cmdu_rx.getMessageId()
+                        << " does not have AP Radio VBSS Capabilities TLV";
         return false;
     }
 
     // A TLV is returned for each radio that supports VBSS, handle all of them
     beerocks::mac_map<vbss::sAPRadioVBSSCapabilities> ruid_caps_map;
 
-    while (ap_vbss_caps_tlv) {
+    for (const auto &ap_vbss_caps_tlv : ap_vbss_caps_tlv_list) {
         vbss::sAPRadioVBSSCapabilities ap_radio_caps = {};
 
         ap_radio_caps.max_vbss              = ap_vbss_caps_tlv->max_vbss();
@@ -175,8 +179,6 @@ bool vbss_task::handle_ap_radio_vbss_caps_msg(const sMacAddr &src_mac,
         ap_radio_caps.fixed_bits_value = ap_vbss_caps_tlv->fixed_bits_value();
 
         ruid_caps_map.add(ap_vbss_caps_tlv->radio_uid(), ap_radio_caps);
-
-        ap_vbss_caps_tlv = cmdu_rx.getClass<wfa_map::ApRadioVbssCapabilities>();
     }
 
     //TODO: Send to VBSSManager (include src_mac = agent_mac)
@@ -184,11 +186,11 @@ bool vbss_task::handle_ap_radio_vbss_caps_msg(const sMacAddr &src_mac,
     return true;
 }
 bool vbss_task::handle_move_response_msg(const sMacAddr &src_mac,
-                                         ieee1905_1::CmduMessageRx &cmdu_rx, bool did_cancel)
+                                         ieee1905_1::CmduMessageRx &cmdu_rx, bool is_cancelled)
 {
 
     auto client_info_tlv = cmdu_rx.getClass<wfa_map::tlvClientInfo>();
-    std::string msg_desc = did_cancel ? "Move Cancel" : "Move Preparation";
+    std::string msg_desc = is_cancelled ? "Move Cancel" : "Move Preparation";
 
     if (!client_info_tlv) {
         LOG(ERROR) << msg_desc << " Response did not contain a Client Info TLV!";
@@ -202,7 +204,7 @@ bool vbss_task::handle_move_response_msg(const sMacAddr &src_mac,
               << " and BSSID " << bssid;
 
     auto existing_move = get_matching_active_move(bssid, eMoveProcessState::VBSS_MOVE_PREP);
-    if (existing_move != nullptr && !did_cancel) {
+    if (existing_move != nullptr && !is_cancelled) {
         // Move exists for VBSSID and is in response to a MOVE_PREP request
         existing_move->state = eMoveProcessState::VBSS_CREATION;
         if (!vbss::vbss_actions::create_vbss(existing_move->client_vbss, existing_move->dest_ruid,
@@ -232,7 +234,7 @@ bool vbss_task::handle_trigger_chan_switch_announce_resp(const sMacAddr &src_mac
     sMacAddr bssid      = client_info_tlv->bssid();
 
     auto channel_switch_tlv = cmdu_rx.getClass<wfa_map::TriggerChannelSwitchAnnouncement>();
-    if (!client_info_tlv) {
+    if (!channel_switch_tlv) {
         LOG(ERROR) << "Trigger Channel Switch Announcement Response did not contain the Trigger "
                       "Channel Switch Announcement TLV!";
         return false;
@@ -269,9 +271,9 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
         LOG(ERROR) << "VBSS Response does not contain a VBSS Event TLV!";
         return false;
     }
-    sMacAddr ruid    = vbss_event_tlv->radio_uid();
-    sMacAddr vbssid  = vbss_event_tlv->bssid();
-    bool did_succeed = vbss_event_tlv->success();
+    sMacAddr ruid     = vbss_event_tlv->radio_uid();
+    sMacAddr vbssid   = vbss_event_tlv->bssid();
+    bool is_succeeded = vbss_event_tlv->success();
 
     auto existing_move = get_matching_active_move(vbssid, eMoveProcessState::VBSS_CREATION);
     if (existing_move != nullptr) {
@@ -287,7 +289,7 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
         }
         sMacAddr agent_mac = src_agent->al_mac;
 
-        if (!did_succeed) {
+        if (!is_succeeded) {
             // Creation failed, send move cancel request
             LOG(INFO) << "Virtual BSS Creation failed on destination radio " << ruid
                       << "! Sending Move Cancel request to currently connected radio";
@@ -329,9 +331,8 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
     existing_move = get_matching_active_move(vbssid, eMoveProcessState::VBSS_DESTRUCTION);
     if (existing_move != nullptr) {
         // Recieved destruction request response during a move
-        // Move is completed!!!
 
-        if (did_succeed) {
+        if (!is_succeeded) {
             LOG(ERROR) << "VBSS Destruction on radio "
                        << existing_move->client_vbss.current_connected_ruid << " failed!";
         }
@@ -451,8 +452,8 @@ bool vbss_task::handle_client_security_ctx_resp(const sMacAddr &src_mac,
 
         // Next step is move preperation request. Execute and return since this data should not be sent to VBSS Manager
         if (!vbss::vbss_actions::send_move_prep_request(agent_mac, client_vbss, m_database)) {
-            LOG(ERROR) << "Failed to send move request for client with MAC address " << client_mac
-                       << ". Failed to send move prep request to agent " << agent_mac;
+            LOG(ERROR) << "Failed to send move preparation request for client with MAC address "
+                       << client_mac << " to agent " << agent_mac;
             return false;
         }
         return true;
@@ -463,8 +464,8 @@ bool vbss_task::handle_client_security_ctx_resp(const sMacAddr &src_mac,
     return true;
 }
 
-std::shared_ptr<vbss_task::sMoveEvent> vbss_task::get_matching_active_move(sMacAddr vbssid,
-                                                                           eMoveProcessState state)
+std::shared_ptr<vbss_task::sMoveEvent>
+vbss_task::get_matching_active_move(const sMacAddr vbssid, const eMoveProcessState state)
 {
     auto existing_move = active_moves.get(vbssid);
     if (existing_move == nullptr) {
@@ -477,8 +478,8 @@ std::shared_ptr<vbss_task::sMoveEvent> vbss_task::get_matching_active_move(sMacA
     return existing_move;
 }
 
-bool vbss_task::should_trigger_channel_switch(sMacAddr src_ruid, sMacAddr dest_ruid,
-                                              uint8_t &out_chan, uint8_t &out_opclass)
+bool vbss_task::should_trigger_channel_switch(const sMacAddr src_ruid, const sMacAddr dest_ruid,
+                                              uint8_t &out_channel, uint8_t &out_opclass)
 {
 
     uint8_t src_channel  = m_database.get_node_channel(tlvf::mac_to_string(src_ruid));
@@ -492,7 +493,7 @@ bool vbss_task::should_trigger_channel_switch(sMacAddr src_ruid, sMacAddr dest_r
         return false;
     }
 
-    out_chan    = dest_channel;
+    out_channel = dest_channel;
     out_opclass = dest_op_class;
     return true;
 }

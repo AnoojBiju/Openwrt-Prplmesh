@@ -109,7 +109,6 @@ private:
 
     /**
      * @brief A map between VBSSIDs and active (in the process of executing) move events
-     * 
      */
     beerocks::mac_map<sMoveEvent> active_moves;
 
@@ -123,7 +122,7 @@ private:
     std::shared_ptr<sMoveEvent> get_matching_active_move(sMacAddr vbssid, eMoveProcessState state);
 
     /**
-     * @brief Determines Whether a channel switch should occur during the move between two radios
+     * @brief Determines whether a channel switch should occur during the move between two radios
      * 
      * @param src_ruid The currently connected radio
      * @param dest_ruid The destination radio for the move
