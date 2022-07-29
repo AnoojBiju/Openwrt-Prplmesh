@@ -2137,7 +2137,7 @@ public:
     int get_statistics_polling_task_id();
 
     bool assign_vbss_task_id(int new_task_id);
-    const int get_vbss_task_id();
+    int get_vbss_task_id();
 
     void lock();
     void unlock();

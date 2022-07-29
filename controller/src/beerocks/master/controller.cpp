@@ -89,6 +89,10 @@
 
 #include <net/if.h> // if_nametoindex
 
+#ifdef ENABLE_VBSS
+#include "../../../vbss/vbss_actions.h"
+#include "../../../vbss/vbss_task.h"
+#endif
 namespace son {
 
 /**
@@ -160,6 +164,14 @@ Controller::Controller(db &database_,
     } else {
         LOG(DEBUG) << "Health check is DISABLED!";
     }
+
+#ifdef ENABLE_VBSS
+    LOG_IF(!tasks.add_task(std::make_shared<vbss_task>(database, tasks)), FATAL)
+        << "Failed adding vbss task!";
+#else
+    LOG(INFO) << "VBSS is not enabled";
+#endif
+
     if (database.config.management_mode != BPL_MGMT_MODE_NOT_MULTIAP) {
         m_link_metrics_task =
             std::make_shared<LinkMetricsTask>(database, cmdu_tx, cert_cmdu_tx, tasks);
@@ -3808,6 +3820,25 @@ bool Controller::trigger_scan(
     tasks.push_event(database.get_dynamic_channel_selection_r2_task_id(),
                      dynamic_channel_selection_r2_task::eEvent::TRIGGER_SINGLE_SCAN, &new_event);
     return true;
+}
+
+bool Controller::trigger_vbss_creation(const sMacAddr &dest_ruid, const sMacAddr &vbssid,
+                                       const sMacAddr &client_mac, const std::string &new_bss_ssid,
+                                       const std::string &new_bss_pass)
+{
+#ifdef ENABLE_VBSS
+    vbss::sClientVBSS client_vbss = {};
+    // Can assume client is not associated since this is not called during a move
+    client_vbss.client_is_associated   = false;
+    client_vbss.client_mac             = client_mac;
+    client_vbss.current_connected_ruid = beerocks::net::network_utils::ZERO_MAC;
+    client_vbss.vbssid                 = vbssid;
+
+    return vbss::vbss_actions::create_vbss(client_vbss, dest_ruid, new_bss_ssid, new_bss_pass,
+                                           database);
+#endif
+    LOG(ERROR) << "Failed to trigger VBSS creation! VBSS is not enabled!";
+    return false;
 }
 
 bool Controller::handle_tlv_profile2_ap_capability(std::shared_ptr<Agent> agent,
