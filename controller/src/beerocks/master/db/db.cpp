@@ -2208,7 +2208,7 @@ bool db::update_vap(const sMacAddr &radio_mac, const sMacAddr &bssid, const std:
 
     auto &vaps_info = get_hostap_vap_list(radio_mac);
     auto it         = std::find_if(vaps_info.begin(), vaps_info.end(),
-                           [&](const std::pair<int8_t, sVapElement> &vap) {
+                                   [&](const std::pair<int8_t, sVapElement> &vap) {
                                return vap.second.mac == tlvf::mac_to_string(bssid);
                            });
     if (it == vaps_info.end()) {
@@ -5136,6 +5136,13 @@ bool db::assign_statistics_polling_task_id(int new_task_id)
 }
 
 int db::get_statistics_polling_task_id() { return statistics_polling_task_id; }
+
+bool db::assign_vbss_task_id(int new_task_id)
+{
+    vbss_task_id = new_task_id;
+    return true;
+}
+const int db::get_vbss_task_id() { return vbss_task_id; }
 
 void db::lock() { db_mutex.lock(); }
 
