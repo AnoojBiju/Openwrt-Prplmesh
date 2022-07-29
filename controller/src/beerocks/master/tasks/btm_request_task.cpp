@@ -91,13 +91,10 @@ void btm_request_task::work()
         if (!m_steering_success && m_disassoc_imminent) {
             TASK_LOG(DEBUG) << "Steering failed for " << m_sta_mac << " from " << m_original_bssid
                             << " to " << m_target_bssid;
-            if (m_database.get_node_11v_capability(*station)) {
-                station->steering_summary_stats.btm_failures++;
-                m_database.dm_increment_steer_summary_stats("BTMFailures");
-            } else {
-                station->steering_summary_stats.blacklist_failures++;
-                m_database.dm_increment_steer_summary_stats("BlacklistFailures");
-            }
+
+            station->steering_summary_stats.btm_failures++;
+            m_database.dm_increment_steer_summary_stats("BTMFailures");
+
             /*
             * might need to split this logic to high and low bands of 5GHz
             * since some clients can support one but not the other
@@ -114,13 +111,9 @@ void btm_request_task::work()
                 m_database.update_node_failed_24ghz_steer_attempt(m_sta_mac);
             }
         } else {
-            if (m_database.get_node_11v_capability(*station)) {
-                station->steering_summary_stats.btm_successes++;
-                m_database.dm_increment_steer_summary_stats("BTMSuccesses");
-            } else {
-                station->steering_summary_stats.blacklist_successes++;
-                m_database.dm_increment_steer_summary_stats("BlacklistSuccesses");
-            }
+
+            station->steering_summary_stats.btm_successes++;
+            m_database.dm_increment_steer_summary_stats("BTMSuccesses");
         }
 
         if (!dm_set_steer_event_params(m_database.dm_add_steer_event())) {
@@ -408,24 +401,6 @@ void btm_request_task::add_steer_history_to_persistent_db(const std::string &ste
     }
 }
 
-void btm_request_task::dm_update_multi_ap_steering_params(bool sta_11v_capable)
-{
-    auto bss_path = m_database.get_node_data_model_path(m_target_bssid);
-
-    if (bss_path.empty()) {
-        LOG(WARNING) << "Path for BSS " << m_target_bssid << " not set";
-        return;
-    }
-
-    if (m_steering_type.find("BTM") != std::string::npos ||
-        (m_steering_type.empty() && sta_11v_capable)) {
-        m_database.dm_uint64_param_one_up(bss_path + ".MultiAPSteering", "BTMAttempts");
-        m_database.dm_increment_steer_summary_stats("BTMAttempts");
-        m_database.dm_uint64_param_one_up(bss_path + ".MultiAPSteering", "BlacklistAttempts");
-        m_database.dm_increment_steer_summary_stats("BlacklistAttempts");
-    }
-}
-
 bool btm_request_task::add_sta_steer_event_to_db()
 {
     db::sStaSteeringEvent steer_sta_event;
@@ -471,6 +446,19 @@ void btm_request_task::update_sta_steer_attempt_stats(Station &station)
         LOG(ERROR) << "Failed to get Controller Data Model object.";
         return;
     }
+
+    auto bss = m_database.get_bss(tlvf::mac_from_string(m_original_bssid));
+
+    auto bss_path = bss->dm_path;
+
+    if (bss_path.empty()) {
+        LOG(WARNING) << "Path for BSS " << m_target_bssid << " not set";
+        return;
+    }
+
+    std::string network_multiap_steer_summary =
+        "Device.WiFi.DataElements.Network.MultiAPSteeringSummaryStats";
+
     /*
         Set value for LastSteerTime parameter - it is time of last steering attempt.
         When someone will try to get data from this parameter action method will 
@@ -480,16 +468,13 @@ void btm_request_task::update_sta_steer_attempt_stats(Station &station)
     station.steering_summary_stats.last_steer_time = static_cast<uint32_t>(
         std::chrono::duration_cast<std::chrono::seconds>(m_steering_start.time_since_epoch())
             .count());
+
     ambiorix_dm->set(station.dm_path + ".MultiAPSTA.SteeringSummaryStats", "LastSteerTime",
                      station.steering_summary_stats.last_steer_time);
 
-    if (m_database.get_node_11v_capability(station)) {
-        station.steering_summary_stats.btm_attempts++;
-        m_database.dm_increment_steer_summary_stats("BTMAttempts");
-    } else {
-        station.steering_summary_stats.blacklist_attempts++;
-        m_database.dm_increment_steer_summary_stats("BlacklistAttempts");
-    }
+    station.steering_summary_stats.btm_attempts++;
+    m_database.dm_uint64_param_one_up(network_multiap_steer_summary, "BTMAttempts");
+    m_database.dm_uint64_param_one_up(bss_path + ".MultiAPSteering", "BTMAttempts");
 }
 
 bool btm_request_task::handle_ieee1905_1_msg(const sMacAddr &src_mac,

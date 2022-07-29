@@ -53,15 +53,6 @@ private:
     bool dm_set_steer_event_params(const std::string &event_path);
 
     /**
-     * @brief Set values for BTMAttempts and BlacklistAttempts parameters of MultiAPSteering object.
-     * This parameter defined in TR-181 as:
-     * "number of times BTM steer was attempted for particular Access Point."
-     *
-     * @param sta_11v_capable True if client support 11v, false otherwise.
-     */
-    void dm_update_multi_ap_steering_params(bool sta_11v_capable);
-
-    /**
      * @brief Save data about client steer event to persistent db.
      *
      * @param steer_origin Steer origin.
