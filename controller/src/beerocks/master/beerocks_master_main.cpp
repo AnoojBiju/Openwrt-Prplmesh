@@ -520,6 +520,8 @@ int main(int argc, char *argv[])
     versionfile << BEEROCKS_VERSION << std::endl << BEEROCKS_REVISION;
     versionfile.close();
 
+    LOG(DEBUG) << "Logger is initialized for " << base_master_name << std::endl;
+
     // Redirect stdout / stderr
     if (logger.get_log_files_enabled()) {
         beerocks::os_utils::redirect_console_std(beerocks_master_conf.sLog.files_path +
@@ -530,6 +532,9 @@ int main(int argc, char *argv[])
     beerocks::os_utils::write_pid_file(beerocks_master_conf.temp_path, base_master_name);
     std::string pid_file_path =
         beerocks_master_conf.temp_path + "pid/" + base_master_name; // for file touching
+
+    LOG(DEBUG) << "PID of " << base_master_name << "is written in "
+               << beerocks_master_conf.temp_path << std::endl;
 
     // fill master configuration
     son::db::sDbMasterConfig master_conf;
@@ -650,6 +655,8 @@ int main(int argc, char *argv[])
     };
 
     LOG_IF(!controller.start(), FATAL) << "Unable to start controller!";
+
+    LOG(DEBUG) << "Controller started!" << std::endl;
 
     auto touch_time_stamp_timeout = std::chrono::steady_clock::now();
     while (g_running) {
