@@ -367,6 +367,7 @@ bool btm_request_task::dm_set_steer_event_params(const std::string &event_path)
     }
     if (m_triggered_by.find("NBAPI") != std::string::npos) {
         steer_origin = "NBAPI";
+        steer_type   = "BTM";
     }
     if (m_triggered_by.find("optimal_path_task") != std::string::npos ||
         m_triggered_by.find("DFS Rentry") != std::string::npos) {
@@ -378,6 +379,7 @@ bool btm_request_task::dm_set_steer_event_params(const std::string &event_path)
         steer_type = "BTM";
     }
     ambiorix_dm->set(event_path, "SteeringOrigin", steer_origin);
+    ambiorix_dm->set(event_path, "SteeringType", steer_type);
     if (m_database.config.persistent_db) {
         add_steer_history_to_persistent_db(steer_origin, steer_type);
     }
