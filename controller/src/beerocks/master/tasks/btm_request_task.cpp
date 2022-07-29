@@ -45,6 +45,12 @@ void btm_request_task::work()
             finish();
             break;
         }
+        if (m_database.get_node_type(m_sta_mac) == beerocks::TYPE_IRE_BACKHAUL) {
+            LOG(ERROR) << "Device with mac " << m_sta_mac
+                       << " is of type Backhaul Station, do not use BTM Request";
+            finish();
+            break;
+        }
 
         int prev_task_id = station->btm_request_task_id;
         m_tasks.kill_task(prev_task_id);
@@ -183,12 +189,6 @@ void btm_request_task::steer_sta()
     client_allow_event.ip         = m_database.get_node_ipv4(m_sta_mac);
     m_tasks.push_event(m_database.get_bml_task_id(), bml_task::CLIENT_ALLOW_REQ_EVENT_AVAILABLE,
                        &client_allow_event);
-
-    if (m_database.get_node_type(m_sta_mac) == beerocks::TYPE_IRE_BACKHAUL) {
-        LOG(ERROR) << "Device with mac " << m_sta_mac
-                   << " is of type Backhaul Station, do not use BTM Request";
-        return;
-    }
 
     // Send STEERING request
     if (!m_cmdu_tx.create(0, ieee1905_1::eMessageType::CLIENT_STEERING_REQUEST_MESSAGE)) {
