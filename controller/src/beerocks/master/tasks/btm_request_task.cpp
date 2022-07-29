@@ -60,22 +60,6 @@ void btm_request_task::work()
         m_original_bssid = tlvf::mac_to_string(original_bss->bssid);
         m_ssid_name      = original_bss->ssid;
 
-
-        if (m_original_bssid == m_target_bssid) {
-            TASK_LOG(DEBUG) << "Target and original BSSIDs are the same:" << m_target_bssid
-                            << ". Aborting steering task.";
-            m_steer_try_performed = false;
-            if (m_database.get_node_11v_capability(*station)) {
-                station->steering_summary_stats.btm_failures++;
-                m_database.dm_increment_steer_summary_stats("BTMFailures");
-            } else {
-                station->steering_summary_stats.blacklist_failures++;
-                m_database.dm_increment_steer_summary_stats("BlacklistFailures");
-            }
-            finish();
-            break;
-        }
-
         steer_sta();
 
         m_steering_start = std::chrono::steady_clock::now();
