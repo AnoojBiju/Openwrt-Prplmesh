@@ -172,9 +172,6 @@ void btm_request_task::steer_sta()
         return;
     }
 
-    if (station) {
-        dm_update_multi_ap_steering_params(m_database.get_node_11v_capability(*station));
-    }
     // Send 17.1.27	Client Association Control Request
     std::unordered_set<sMacAddr> unblock_list{tlvf::mac_from_string(m_sta_mac)};
 
@@ -230,8 +227,6 @@ void btm_request_task::steer_sta()
                     << std::to_string(std::get<1>(bssid_list).target_bss_channel_number)
                     << " disassoc_timer=" << m_disassoc_timer_ms
                     << " disassoc_imminent=" << m_disassoc_imminent << " id=" << int(id);
-
-    m_steer_try_performed = true;
 
     // update bml listeners
     bml_task::bss_tm_req_available_event bss_tm_event;
@@ -312,10 +307,6 @@ void btm_request_task::handle_task_end()
         return;
     }
 
-    if (m_steer_try_performed && !m_btm_report_received) {
-        TASK_LOG(DEBUG) << "Station didn't respond to 11v request, updating responsiveness";
-        m_database.update_node_11v_responsiveness(*station, false);
-    }
     m_database.set_node_handoff_flag(*station, false);
 }
 
