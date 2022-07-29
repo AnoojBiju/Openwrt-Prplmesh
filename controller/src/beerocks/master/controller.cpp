@@ -3859,6 +3859,15 @@ bool Controller::trigger_vbss_destruction(const sMacAddr &connected_ruid, const 
     return false;
 }
 
+bool Controller::update_agent_vbss_capabilities(const sMacAddr &agent_mac)
+{
+#ifdef ENABLE_VBSS
+    return vbss::vbss_actions::request_ap_radio_vbss_caps(agent_mac, database);
+#endif
+    LOG(ERROR) << "Failed to update VBSS capabilities! VBSS is not enabled!";
+    return false;
+}
+
 bool Controller::trigger_vbss_move(const sMacAddr &connected_ruid, const sMacAddr &dest_ruid,
                                    const sMacAddr &vbssid, const sMacAddr &client_mac,
                                    const std::string &new_bss_ssid, const std::string &new_bss_pass)

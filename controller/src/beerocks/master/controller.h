@@ -154,6 +154,15 @@ public:
                                   const bool should_disassociate = true);
 
     /**
+     * @brief Requests the VBSS capabilities from the specified agent. 
+     * Result which will be reflected in the NB API
+     * 
+     * @param agent_mac The MAC address of the agent to send the request to
+     * @return True if the request was sent successfully, false otherwise
+     */
+    bool update_agent_vbss_capabilities(const sMacAddr &agent_mac);
+
+    /**
      * @brief Triggers the move operation of a client between two agents on the vbss system
      * 
      * @param connected_ruid The UID of the currently connected radio
