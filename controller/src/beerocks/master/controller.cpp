@@ -3150,7 +3150,7 @@ bool Controller::handle_cmdu_control_message(
             new_event.snr        = notification->params().rx_snr;
             new_event.client_mac = notification->params().result.mac;
             new_event.bssid      = database.get_hostap_vap_mac(tlvf::mac_from_string(ap_mac),
-                                                          notification->params().vap_id);
+                                                               notification->params().vap_id);
             tasks.push_event(database.get_pre_association_steering_task_id(),
                              pre_association_steering_task::eEvents::
                                  STEERING_EVENT_RSSI_MEASUREMENT_SNR_NOTIFICATION,
@@ -3838,6 +3838,24 @@ bool Controller::trigger_vbss_creation(const sMacAddr &dest_ruid, const sMacAddr
                                            database);
 #endif
     LOG(ERROR) << "Failed to trigger VBSS creation! VBSS is not enabled!";
+    return false;
+}
+
+bool Controller::trigger_vbss_destruction(const sMacAddr &connected_ruid, const sMacAddr &vbssid,
+                                          const sMacAddr &client_mac,
+                                          const bool should_disassociate)
+{
+#ifdef ENABLE_VBSS
+    vbss::sClientVBSS client_vbss = {};
+    // Can assume client is associated since we are destroying a VBSS
+    client_vbss.client_is_associated   = true;
+    client_vbss.client_mac             = client_mac;
+    client_vbss.current_connected_ruid = connected_ruid;
+    client_vbss.vbssid                 = vbssid;
+
+    return vbss::vbss_actions::destroy_vbss(client_vbss, should_disassociate, database);
+#endif
+    LOG(ERROR) << "Failed to trigger VBSS destruction! VBSS is not enabled!";
     return false;
 }
 

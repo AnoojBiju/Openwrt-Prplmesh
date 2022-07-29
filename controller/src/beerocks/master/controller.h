@@ -140,6 +140,19 @@ public:
                                const sMacAddr &client_mac, const std::string &new_bss_ssid,
                                const std::string &new_bss_pass);
 
+    /**
+     * @brief Triggers VBSS destruction for the given VBSSID on the given radio/agent
+     * 
+     * @param connected_ruid The UID of the radio that the client is currently connected to
+     * @param vbssid The BSSID of the VBSS to destroy
+     * @param client_mac The MAC address of the VBSS client
+     * @param should_disassociate Wether the client should disassociate from the network after destruction
+     * @return True if the destruction operation was triggered, false otherwise 
+     */
+    bool trigger_vbss_destruction(const sMacAddr &connected_ruid, const sMacAddr &vbssid,
+                                  const sMacAddr &client_mac,
+                                  const bool should_disassociate = true);
+
 private:
     /**
      * @brief Handles the client-connected event in the CMDU server.
