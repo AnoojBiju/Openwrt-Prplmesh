@@ -467,6 +467,28 @@ bool AmbiorixImpl::set(const std::string &relative_path, const std::string &para
 }
 
 bool AmbiorixImpl::set(const std::string &relative_path, const std::string &parameter,
+                       const uint16_t &value)
+{
+    amxd_trans_t transaction;
+    auto object = prepare_transaction(relative_path, transaction);
+
+    if (!object) {
+        LOG(ERROR) << "Failed to prepare transaction: " << relative_path << parameter << "="
+                   << value;
+        return false;
+    }
+
+    amxd_trans_set_value(uint16_t, &transaction, parameter.c_str(), value);
+
+    if (!apply_transaction(transaction)) {
+        LOG(ERROR) << "Couldn't apply transaction: " << relative_path << parameter << "=" << value;
+        return false;
+    }
+
+    return true;
+}
+
+bool AmbiorixImpl::set(const std::string &relative_path, const std::string &parameter,
                        const uint32_t &value)
 {
     amxd_trans_t transaction;
