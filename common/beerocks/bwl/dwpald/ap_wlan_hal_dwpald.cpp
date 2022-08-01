@@ -3336,23 +3336,6 @@ bool ap_wlan_hal_dwpal::dwpald_attach(char *ifname)
         {HAP_EVENT("LTQ-SOFTBLOCK-DROP")},
         {HAP_EVENT("AP-ACTION-FRAME-RECEIVED")},
         {HAP_EVENT("AP-STA-POSSIBLE-PSK-MISMATCH")}};
-    static dwpald_hostap_event hostap_vap_event_handlers[] = {
-        {HAP_EVENT("AP-ENABLED")},
-        {HAP_EVENT("AP-DISABLED")},
-        {HAP_EVENT("AP-STA-CONNECTED")},
-        {HAP_EVENT("AP-STA-DISCONNECTED")},
-        {HAP_EVENT("UNCONNECTED-STA-RSSI")},
-        {HAP_EVENT("INTERFACE-DISABLED")},
-        {HAP_EVENT("ACS-STARTED")},
-        {HAP_EVENT("ACS-FAILED")},
-        {HAP_EVENT("BSS-TM-QUERY")},
-        {HAP_EVENT("BSS-TM-RESP")},
-        {HAP_EVENT("DFS-CAC-START")},
-        {HAP_EVENT("DFS-CAC-COMPLETED")},
-        {HAP_EVENT("DFS-NOP-FINISHED")},
-        {HAP_EVENT("LTQ-SOFTBLOCK-DROP")},
-        {HAP_EVENT("AP-ACTION-FRAME-RECEIVED")},
-        {HAP_EVENT("AP-STA-POSSIBLE-PSK-MISMATCH")}};
 
     if (iface_ids.vap_id == beerocks::IFACE_RADIO_ID) {
         if (dwpald_connect("ap_wlan_hal") != DWPALD_SUCCESS) {
@@ -3375,9 +3358,11 @@ bool ap_wlan_hal_dwpal::dwpald_attach(char *ifname)
             return false;
         }
     } else {
-        if (dwpald_hostap_attach(ifname,
-                                 sizeof(hostap_vap_event_handlers) / sizeof(dwpald_hostap_event),
-                                 hostap_vap_event_handlers, 0) != DWPALD_SUCCESS) {
+        /*
+        hostapd's VAP related events come from a radio interface,
+        and contain VAP information
+        */
+        if (dwpald_hostap_attach(ifname, 0, {}, 0) != DWPALD_SUCCESS) {
             LOG(ERROR) << "Failed to attach to dwpald for interface " << ifname;
             return false;
         }
