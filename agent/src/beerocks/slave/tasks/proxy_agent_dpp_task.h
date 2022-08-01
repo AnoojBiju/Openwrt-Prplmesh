@@ -18,6 +18,13 @@ public:
                      const sMacAddr &dst_mac, const sMacAddr &src_mac, int fd,
                      std::shared_ptr<beerocks_header> beerocks_header) override;
 
+    typedef struct {
+        unsigned char *auth_frame_buffer[50];
+        unsigned char *chirp_value_hash[50];
+    } dpp_auth_db;
+    uint8_t current_auth_frame_idx = 0;
+    dpp_auth_db auth_db;
+
 private:
     slave_thread &m_btl_ctx;
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
