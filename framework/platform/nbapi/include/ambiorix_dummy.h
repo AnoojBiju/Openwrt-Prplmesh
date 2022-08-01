@@ -23,6 +23,8 @@ public:
     bool set(const std::string &relative_path, const std::string &parameter,
              const std::string &value) override;
     bool set(const std::string &relative_path, const std::string &parameter,
+             const int8_t &value) override;
+    bool set(const std::string &relative_path, const std::string &parameter,
              const int16_t &value) override;
     bool set(const std::string &relative_path, const std::string &parameter,
              const int32_t &value) override;
