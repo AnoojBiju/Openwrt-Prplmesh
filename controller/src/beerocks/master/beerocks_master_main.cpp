@@ -533,6 +533,7 @@ int main(int argc, char *argv[])
 
     // fill master configuration
     son::db::sDbMasterConfig master_conf;
+    LOG(DEBUG) << "Storing the master configuration in database";
     fill_master_config(master_conf, beerocks_master_conf);
 
     // Create application event loop to wait for blocking I/O operations.
