@@ -31,11 +31,11 @@
         /* Coming from 17.2.9 of the Multi-AP Specification */
         object VHTCapabilities {
             /* Supported set of VHT MCSs and NSSs that can be transmitted. */
-            %read-only uint32 MCSNSSTxSet {
+            %read-only uint16 MCSNSSTxSet {
                 on action validate call check_range [0, 65536];
             }
             /* Supported set of VHT MCSs and NSSs that can be received. */
-            %read-only uint32 MCSNSSRxSet {
+            %read-only uint16 MCSNSSRxSet {
                 on action validate call check_range [0, 65536];
             }
             /* Maximum number of supported Tx spatial streams */
