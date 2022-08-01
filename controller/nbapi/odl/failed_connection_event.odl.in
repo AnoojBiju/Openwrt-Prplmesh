@@ -20,8 +20,8 @@
                 counted with FailedConnectionEventDataNumberOfEntries;
                 %read-only string MACAddress = "00:00:00:00:00:00";
                 %read-only string TimeStamp = "2020-08-31T11:22:39Z";
-                %read-only uint32 StatusCode = "0x1"; /* Default: 'Unspecified reason' */
-                %read-only uint32 ReasonCode = "0x1"; /* Default: 'Unspecified failure' */
+                %read-only uint16 StatusCode = "0x1"; /* Default: 'Unspecified reason' */
+                %read-only uint16 ReasonCode = "0x1"; /* Default: 'Unspecified failure' */
             }
         }
     }

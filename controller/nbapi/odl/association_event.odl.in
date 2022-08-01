@@ -26,7 +26,7 @@
                 %read-only string BSSID;  /* The MAC address of the logical BSS (BSSID) which is
                                             reporting the association event. */
                 %read-only string MACAddress;  /* MAC address of the associating station */
-                %read-only uint32 StatusCode;  /* The status code sent to the STA in the
+                %read-only uint16 StatusCode;  /* The status code sent to the STA in the
                                                 latest Association Response frame */
                 // The time this event was collected
                 %read-only string TimeStamp = "2020-08-31T11:22:39Z";

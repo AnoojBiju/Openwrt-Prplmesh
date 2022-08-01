@@ -21,7 +21,7 @@
         %read-only string ChipsetVendor;
 
         %read-only uint32 Noise = 0 {
-            on action validate call check_range [0, 220];
+            on action validate call check_range [0, 255];
         }
         %read-only uint32 Utilization = 0 {
             on action validate call check_range [0, 255];
@@ -69,7 +69,7 @@
                 on action validate call check_range [0, 255];
             }
             %read-only int32 TxPower = 0 {
-                on action validate call check_range [-128, 127];
+                on action validate call check_range [-127, 127];
             }
         }
 
