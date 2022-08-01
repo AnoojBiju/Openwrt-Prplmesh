@@ -19,6 +19,7 @@
 #include <beerocks/tlvf/beerocks_message.h>
 #include <beerocks/tlvf/beerocks_message_apmanager.h>
 
+#include <tlvf/wfa_map/tlv1905EncapDpp.h>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
 #include <tlvf/wfa_map/tlvDppCceIndication.h>
 #include <tlvf/wfa_map/tlvDppChirpValue.h>
@@ -676,9 +677,14 @@ void ApManager::handle_cmdu_ieee1905_1_message(ieee1905_1::CmduMessageRx &cmdu_r
     auto cmdu_message_type = cmdu_rx.getMessageType();
 
     switch (cmdu_message_type) {
-    case ieee1905_1::eMessageType::DPP_CCE_INDICATION_MESSAGE:
+    case ieee1905_1::eMessageType::DPP_CCE_INDICATION_MESSAGE: {
         handle_dpp_cce_indication_message(cmdu_rx);
         break;
+    }
+    case ieee1905_1::eMessageType::DIRECT_ENCAP_DPP_MESSAGE: {
+        handle_direct_encap_dpp_message(cmdu_rx);
+        break;
+    }
     default:
         LOG(ERROR) << "Unknown CMDU message type: " << std::hex << int(cmdu_message_type);
     }
@@ -695,6 +701,20 @@ void ApManager::handle_dpp_cce_indication_message(ieee1905_1::CmduMessageRx &cmd
         return;
     }
     ap_wlan_hal->set_cce_indication(dpp_cce_indication_tlv->advertise_cee());
+}
+
+void ApManager::handle_direct_encap_dpp_message(ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    const auto mid      = cmdu_rx.getMessageId();
+    auto encap_1905_tlv = cmdu_rx.getClass<wfa_map::tlv1905EncapDpp>();
+
+    if (!encap_1905_tlv) {
+        LOG(ERROR) << "Direct encap dpp cmdu mid =" << mid
+                   << "message doesn't contain 1905 encap Dpp tlv";
+        return;
+    }
+
+    // To implement forwarding of authentication request message to dwpal layer in future commit.
 }
 
 void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
