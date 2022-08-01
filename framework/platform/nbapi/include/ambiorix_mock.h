@@ -43,6 +43,10 @@ public:
                 (override));
     MOCK_METHOD(bool, set,
                 (const std::string &relative_path, const std::string &parameter,
+                 const uint16_t &value),
+                (override));
+    MOCK_METHOD(bool, set,
+                (const std::string &relative_path, const std::string &parameter,
                  const uint32_t &value),
                 (override));
     MOCK_METHOD(bool, set,

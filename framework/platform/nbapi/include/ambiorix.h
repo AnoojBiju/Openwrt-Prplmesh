@@ -45,6 +45,8 @@ public:
     virtual bool set(const std::string &relative_path, const std::string &parameter,
                      const int64_t &value)     = 0;
     virtual bool set(const std::string &relative_path, const std::string &parameter,
+                     const uint16_t &value)    = 0;
+    virtual bool set(const std::string &relative_path, const std::string &parameter,
                      const uint32_t &value)    = 0;
     virtual bool set(const std::string &relative_path, const std::string &parameter,
                      const uint64_t &value)    = 0;
