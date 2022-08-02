@@ -6359,7 +6359,7 @@ std::string db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &
             Should be fixed after PPM-864.
     */
     if (!m_ambiorix_datamodel->set(path_association_event, "StatusCode",
-                                   static_cast<uint32_t>(0))) {
+                                   static_cast<uint16_t>(0))) {
         LOG(ERROR) << "Failed to set " << path_association_event << ".StatusCode: " << 0;
         return {};
     }
