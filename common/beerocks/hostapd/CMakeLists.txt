@@ -8,7 +8,7 @@ set(MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
 set(hostapd_sources source/configuration.cpp)
 add_library(${PROJECT_NAME} ${hostapd_sources})
 set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${prplmesh_VERSION} SOVERSION ${prplmesh_VERSION_MAJOR})
-target_link_libraries(${PROJECT_NAME} elpp ${PRPLMESH_HOSTAPD_LIBS})
+target_link_libraries(${PROJECT_NAME} bcl elpp mapfcommon ${PRPLMESH_HOSTAPD_LIBS})
 target_include_directories(${PROJECT_NAME}
     PRIVATE
         ${PLATFORM_INCLUDE_DIR}
