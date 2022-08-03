@@ -38,6 +38,10 @@ fi
 
 ./scripts/gen_config.py "${args[@]}"
 
+# The initial 'make defconfig' invocation generates a wrong config, so
+# run it again. Remove this workaround once PPM-2279 is fixed.
+make defconfig
+
 for profile in "${args[@]}" ; do
     printf "\nProfile %s:\n" "${profile}" >> files/etc/prplwrt-version
     cat "profiles/${profile}.yml" >> files/etc/prplwrt-version
