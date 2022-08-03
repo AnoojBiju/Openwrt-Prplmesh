@@ -60,12 +60,14 @@ WORKDIR /home/openwrt
 # Remove bin/ to make sure any artifact we save is regenerated with the version from the next steps.
 # Remove some of the build directories because they are used with wildcard in the feed_intel
 # Makefiles, and it might match two or the wrong directories
+# TODO: remove the second make deconfig invocation once PPM-2279 is solved.
 RUN printf '\033[1;35m%s Cloning prplWrt\n\033[0m' "$(date --iso-8601=seconds --universal)" \
     && git clone "$OPENWRT_REPOSITORY" openwrt \
     && printf '\033[1;35m%s Building base prplWrt tree\n\033[0m' "$(date --iso-8601=seconds --universal)" \
     && cd openwrt \
     && git checkout "$OPENWRT_TOOLCHAIN_VERSION" \
     && ./scripts/gen_config.py "$TARGET_SYSTEM" prpl \
+    && make defconfig \
     && make -j"$(nproc)" \
     && rm -rf bin \
     && rm -rf build_dir/target*/libnl-3* \
