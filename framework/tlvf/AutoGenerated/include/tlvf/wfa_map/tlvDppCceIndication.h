@@ -10,8 +10,8 @@
  * See LICENSE file for more details.
  */
 
-#ifndef _TLVF_WFA_MAP_TLVDPPCEEINDICATION_H_
-#define _TLVF_WFA_MAP_TLVDPPCEEINDICATION_H_
+#ifndef _TLVF_WFA_MAP_TLVDPPCCEINDICATION_H_
+#define _TLVF_WFA_MAP_TLVDPPCCEINDICATION_H_
 
 #include <cstddef>
 #include <stdint.h>
@@ -26,12 +26,12 @@
 namespace wfa_map {
 
 
-class tlvDppCeeIndication : public BaseClass
+class tlvDppCceIndication : public BaseClass
 {
     public:
-        tlvDppCeeIndication(uint8_t* buff, size_t buff_len, bool parse = false);
-        explicit tlvDppCeeIndication(std::shared_ptr<BaseClass> base, bool parse = false);
-        ~tlvDppCeeIndication();
+        tlvDppCceIndication(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit tlvDppCceIndication(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~tlvDppCceIndication();
 
         enum eAdvertiseCee: uint8_t {
             DISABLE = 0x0,
@@ -67,4 +67,4 @@ class tlvDppCeeIndication : public BaseClass
 
 }; // close namespace: wfa_map
 
-#endif //_TLVF/WFA_MAP_TLVDPPCEEINDICATION_H_
+#endif //_TLVF/WFA_MAP_TLVDPPCCEINDICATION_H_

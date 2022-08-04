@@ -33,6 +33,7 @@ enum eTaskType : uint8_t {
     SWITCH_CHANNEL,
     TOPOLOGY,
     SERVICE_PRIORITIZATION,
+    PROXY_AGENT_DPP,
 };
 
 class Task {

@@ -1120,6 +1120,12 @@ bool ap_wlan_hal_dwpal::sta_deauth(int8_t vap_id, const std::string &mac, uint32
     return true;
 }
 
+bool ap_wlan_hal_dwpal::set_cce_indication(uint16_t advertise_cce)
+{
+    LOG(DEBUG) << "ap_wlan_hal_dwpal: set_cce_indication, advertise_cce=" << advertise_cce;
+    return true;
+}
+
 bool ap_wlan_hal_dwpal::sta_bss_steer(int8_t vap_id, const std::string &mac,
                                       const std::string &bssid, int oper_class, int chan,
                                       int disassoc_timer_btt, int valid_int_btt, int reason)
