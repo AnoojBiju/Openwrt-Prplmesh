@@ -402,7 +402,8 @@ bool nl80211_client_impl::get_radio_info(const std::string &interface_name, radi
                     uint32_t freq = nla_get_u32(tb_freq[NL80211_FREQUENCY_ATTR_FREQ]);
 
                     channel_info channel{};
-                    channel.number = son::wireless_utils::freq_to_channel(freq);
+                    channel.center_freq = freq;
+                    channel.number      = son::wireless_utils::freq_to_channel(freq);
 
                     if (tb_freq[NL80211_FREQUENCY_ATTR_MAX_TX_POWER]) {
                         channel.tx_power =
