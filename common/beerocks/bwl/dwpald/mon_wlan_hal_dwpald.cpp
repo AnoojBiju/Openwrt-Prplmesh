@@ -1781,13 +1781,6 @@ bool mon_wlan_hal_dwpal::dwpald_attach(char *ifname)
         {HAP_EVENT("AP-STA-CONNECTED")},
         {HAP_EVENT("AP-STA-DISCONNECTED")}};
 
-    static dwpald_hostap_event hostap_vap_event_handlers[] = {
-        {HAP_EVENT("RRM-BEACON-REP-RECEIVED")},
-        {HAP_EVENT("RRM-CHANNEL-LOAD-RECEIVED")},
-        {HAP_EVENT("AP-ENABLED")},
-        {HAP_EVENT("AP-DISABLED")},
-        {HAP_EVENT("AP-STA-CONNECTED")},
-        {HAP_EVENT("AP-STA-DISCONNECTED")}};
     /*
         As dwpald allows only once dwpald_hostap_attach/nl_attach API to be called from per process,
         In order to register additional event handlers for monitor, dwpald_hostap_attach_with_id/nl_attach_with_id
@@ -1807,9 +1800,12 @@ bool mon_wlan_hal_dwpal::dwpald_attach(char *ifname)
             return false;
         }
     } else {
-        if (dwpald_hostap_attach_with_id(
-                ifname, sizeof(hostap_vap_event_handlers) / sizeof(dwpald_hostap_event),
-                hostap_vap_event_handlers, 0, MONITOR_DWPALD_ATTACH_ID) != DWPALD_SUCCESS) {
+        /*
+        hostapd's VAP related events come from a radio interface,
+        and contain VAP information
+        */
+        if (dwpald_hostap_attach_with_id(ifname, 0, {}, 0, MONITOR_DWPALD_ATTACH_ID) !=
+            DWPALD_SUCCESS) {
             LOG(ERROR) << "Failed to attach to dwpald for interface " << ifname;
             return false;
         }
