@@ -599,6 +599,12 @@ bool ap_wlan_hal_dummy::process_dummy_event(parsed_obj_map_t &parsed_obj)
     return true;
 }
 
+bool ap_wlan_hal_dummy::set_cce_indication(uint16_t advertise_cce)
+{
+    LOG(DEBUG) << "ap_wlan_hal_dummy: set_cce_indication, advertise_cce=" << advertise_cce;
+    return true;
+}
+
 bool ap_wlan_hal_dummy::set(const std::string &param, const std::string &value, int vap_id)
 {
     LOG(TRACE) << __func__;

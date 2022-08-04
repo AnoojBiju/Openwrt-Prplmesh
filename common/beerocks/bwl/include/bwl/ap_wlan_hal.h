@@ -56,7 +56,8 @@ public:
         DFS_RADAR_Detected,
         AP_MGMT_FRAME_RECEIVED,
 
-        MGMT_Frame /**< 802.11 management frame payload */
+        MGMT_Frame, /**< 802.11 management frame payload */
+        DPP_PRESENCE_ANNOUNCEMENT
     };
 
     // Public methods
@@ -399,6 +400,17 @@ public:
      * @return true on success, false otherwise.
      */
     virtual bool set_primary_vlan_id(uint16_t primary_vlan_id) = 0;
+
+    /**
+     * @brief Set CCE Indication value on the Radio.
+     * CCE Information Element will be added to the beacon and probe response frame
+     * Set 1 for setting CCE Indication value on the Radio.
+     * Set 0 for nothing.
+     * 
+     * @param advertise_cce Advertise CCE.
+     * @return true on success, false otherwise.
+     */
+    virtual bool set_cce_indication(uint16_t advertise_cce) = 0;
 
 private:
     static const int frame_body_idx = (sizeof(s80211MgmtFrame::sHeader) * 2);

@@ -178,6 +178,12 @@ HALState ap_wlan_hal_nl80211::attach(bool block)
     return state;
 }
 
+bool ap_wlan_hal_nl80211::set_cce_indication(uint16_t advertise_cce)
+{
+    LOG(DEBUG) << "ap_wlan_hal_nl80211: set_cce_indication, advertise_cce=" << advertise_cce;
+    return true;
+}
+
 bool ap_wlan_hal_nl80211::refresh_radio_info()
 {
     // Obtain radio information (frequency band, maximum supported bandwidth, capabilities and

@@ -75,7 +75,7 @@
 #include <tlvf/wfa_map/tlvControllerCapability.h>
 #include <tlvf/wfa_map/tlvDeviceInventory.h>
 #include <tlvf/wfa_map/tlvDppBootstrappingUriNotification.h>
-#include <tlvf/wfa_map/tlvDppCeeIndication.h>
+#include <tlvf/wfa_map/tlvDppCceIndication.h>
 #include <tlvf/wfa_map/tlvDppChirpValue.h>
 #include <tlvf/wfa_map/tlvDppMessage.h>
 #include <tlvf/wfa_map/tlvDscpMappingTable.h>
@@ -499,7 +499,7 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
         return msg.addClass<wfa_map::tlvDppMessage>();
     }
     case (wfa_map::eTlvTypeMap::TLV_DPP_CCE_INDICATION): {
-        return msg.addClass<wfa_map::tlvDppCeeIndication>();
+        return msg.addClass<wfa_map::tlvDppCceIndication>();
     }
     case (wfa_map::eTlvTypeMap::TLV_DPP_CHIRP_VALUE): {
         return msg.addClass<wfa_map::tlvDppChirpValue>();

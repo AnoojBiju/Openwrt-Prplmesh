@@ -91,6 +91,20 @@ private:
     void handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
+     * @brief Handles CMDU message received from dpp_onboarding_task.
+     *
+     * @param cmdu_rx Received CMDU to be handled.
+     */
+    void handle_cmdu_ieee1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief Handles DPP CCE Indication message.
+     *
+     * @param cmdu_rx Received CMDU to be handled.
+     */
+    void handle_dpp_cce_indication_message(ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
      * @brief Runs the Finite State Machine of the AP manager.
      * 
      * @param[out] continue_processing Flag that means that state machine transitioned to a 

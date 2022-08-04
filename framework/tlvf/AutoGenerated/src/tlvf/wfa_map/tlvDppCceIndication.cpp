@@ -10,40 +10,40 @@
  * See LICENSE file for more details.
  */
 
-#include <tlvf/wfa_map/tlvDppCeeIndication.h>
+#include <tlvf/wfa_map/tlvDppCceIndication.h>
 #include <tlvf/tlvflogging.h>
 
 using namespace wfa_map;
 
-tlvDppCeeIndication::tlvDppCeeIndication(uint8_t* buff, size_t buff_len, bool parse) :
+tlvDppCceIndication::tlvDppCceIndication(uint8_t* buff, size_t buff_len, bool parse) :
     BaseClass(buff, buff_len, parse) {
     m_init_succeeded = init();
 }
-tlvDppCeeIndication::tlvDppCeeIndication(std::shared_ptr<BaseClass> base, bool parse) :
+tlvDppCceIndication::tlvDppCceIndication(std::shared_ptr<BaseClass> base, bool parse) :
 BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
     m_init_succeeded = init();
 }
-tlvDppCeeIndication::~tlvDppCeeIndication() {
+tlvDppCceIndication::~tlvDppCceIndication() {
 }
-const eTlvTypeMap& tlvDppCeeIndication::type() {
+const eTlvTypeMap& tlvDppCceIndication::type() {
     return (const eTlvTypeMap&)(*m_type);
 }
 
-const uint16_t& tlvDppCeeIndication::length() {
+const uint16_t& tlvDppCceIndication::length() {
     return (const uint16_t&)(*m_length);
 }
 
-tlvDppCeeIndication::eAdvertiseCee& tlvDppCeeIndication::advertise_cee() {
+tlvDppCceIndication::eAdvertiseCee& tlvDppCceIndication::advertise_cee() {
     return (eAdvertiseCee&)(*m_advertise_cee);
 }
 
-void tlvDppCeeIndication::class_swap()
+void tlvDppCceIndication::class_swap()
 {
     tlvf_swap(16, reinterpret_cast<uint8_t*>(m_length));
     tlvf_swap(8*sizeof(eAdvertiseCee), reinterpret_cast<uint8_t*>(m_advertise_cee));
 }
 
-bool tlvDppCeeIndication::finalize()
+bool tlvDppCceIndication::finalize()
 {
     if (m_parse__) {
         TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
@@ -71,7 +71,7 @@ bool tlvDppCeeIndication::finalize()
     return true;
 }
 
-size_t tlvDppCeeIndication::get_initial_size()
+size_t tlvDppCceIndication::get_initial_size()
 {
     size_t class_size = 0;
     class_size += sizeof(eTlvTypeMap); // type
@@ -80,7 +80,7 @@ size_t tlvDppCeeIndication::get_initial_size()
     return class_size;
 }
 
-bool tlvDppCeeIndication::init()
+bool tlvDppCceIndication::init()
 {
     if (getBuffRemainingBytes() < get_initial_size()) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";

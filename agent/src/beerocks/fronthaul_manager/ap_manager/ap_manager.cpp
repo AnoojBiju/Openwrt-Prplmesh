@@ -20,6 +20,8 @@
 #include <beerocks/tlvf/beerocks_message_apmanager.h>
 
 #include <tlvf/wfa_map/tlvChannelPreference.h>
+#include <tlvf/wfa_map/tlvDppCceIndication.h>
+#include <tlvf/wfa_map/tlvDppChirpValue.h>
 #include <tlvf/wfa_map/tlvProfile2ReasonCode.h>
 #include <tlvf/wfa_map/tlvProfile2StatusCode.h>
 #include <tlvf/wfa_map/tlvStaMacAddressType.h>
@@ -669,12 +671,37 @@ bool ApManager::ap_manager_fsm(bool &continue_processing)
     return true;
 }
 
+void ApManager::handle_cmdu_ieee1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto cmdu_message_type = cmdu_rx.getMessageType();
+
+    switch (cmdu_message_type) {
+    case ieee1905_1::eMessageType::DPP_CCE_INDICATION_MESSAGE:
+        handle_dpp_cce_indication_message(cmdu_rx);
+        break;
+    default:
+        LOG(ERROR) << "Unknown CMDU message type: " << std::hex << int(cmdu_message_type);
+    }
+}
+
+void ApManager::handle_dpp_cce_indication_message(ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    const auto mid              = cmdu_rx.getMessageId();
+    auto dpp_cce_indication_tlv = cmdu_rx.getClass<wfa_map::tlvDppCceIndication>();
+
+    if (!dpp_cce_indication_tlv) {
+        LOG(ERROR) << "DPP CCE Indication cmdu mid=" << mid
+                   << " does not contain CCE Indication TLV";
+        return;
+    }
+    ap_wlan_hal->set_cce_indication(dpp_cce_indication_tlv->advertise_cee());
+}
+
 void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto beerocks_header = message_com::parse_intel_vs_message(cmdu_rx);
     if (beerocks_header == nullptr) {
-        LOG(ERROR) << "Not a vendor specific message";
-        return;
+        handle_cmdu_ieee1905_1_message(cmdu_rx);
     }
 
     if (beerocks_header->action() != beerocks_message::ACTION_APMANAGER) {
@@ -2182,6 +2209,31 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
             return false;
         }
         // Send the mismatched message
+        send_cmdu(cmdu_tx);
+    } break;
+    case Event::DPP_PRESENCE_ANNOUNCEMENT: {
+        LOG(DEBUG) << "DPP Presence Announcement";
+        auto dpp_presence = static_cast<bwl::sACTION_APMANAGER_DPP_PRESENCE_ANNOUNCEMENT *>(data);
+
+        auto cmdu_tx_header =
+            cmdu_tx.create(0, ieee1905_1::eMessageType::CHIRP_NOTIFICATION_MESSAGE);
+        if (!cmdu_tx_header) {
+            LOG(ERROR) << "cmdu creation of type CHIRP_NOTIFICATION_MESSAGE failed!";
+            return false;
+        }
+
+        auto chirp_value_tlv = cmdu_tx.addClass<wfa_map::tlvDppChirpValue>();
+        if (!chirp_value_tlv) {
+            LOG(ERROR) << "addClass wfa_map::tlvDppChirpValue!";
+            return false;
+        }
+
+        chirp_value_tlv->set_hash(dpp_presence->hash, sizeof(dpp_presence->hash));
+        chirp_value_tlv->hash_length() = sizeof(dpp_presence->hash);
+        // establish
+        chirp_value_tlv->flags().hash_validity                = true;
+        chirp_value_tlv->flags().enrollee_mac_address_present = true;
+        chirp_value_tlv->set_dest_sta_mac(dpp_presence->enrollee_mac);
         send_cmdu(cmdu_tx);
     } break;
     // Unhandled events
