@@ -144,6 +144,11 @@ public:
          */
         uint8_t number = 0;
 
+        /*
+        Channel's center frequency
+        */
+        uint32_t center_freq = 0;
+
         /**
          * Supported channel bandwidths.
          */
@@ -251,7 +256,9 @@ public:
         // TODO: add HE capability, MCS set and whatever else is required to report HE capabilities
 
         /**
-         * Channels supported in this band (obtained from NL80211_BAND_ATTR_FREQS).
+         * The Channels that are supported in this band.
+         * The calculation of the channels is based on the frequenices
+         * numbers that are obtained from NL80211_BAND_ATTR_FREQS in nl80211.h.
          * Map key is the channel number and map value is the channel information.
          */
         std::unordered_map<uint8_t, channel_info> supported_channels;
