@@ -27,14 +27,14 @@ if [ "$TARGET_SYSTEM" = "intel_mips" ]; then
     sed -i '/iw-full$/d' "profiles/debug.yml"
 fi
 
-# feed-prpl is in the prpl profile:
-args+=("prpl")
-
 if [ -n "$MMX_ENABLE" ] ; then
     args+=("mmx")
 else
     args+=("webui")
 fi
+
+# feed-prpl is in the prpl profile:
+args+=("prpl")
 
 ./scripts/gen_config.py "${args[@]}"
 
