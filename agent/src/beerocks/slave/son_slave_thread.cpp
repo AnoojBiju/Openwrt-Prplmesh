@@ -69,6 +69,7 @@ constexpr int MONITOR_HEARTBEAT_TIMEOUT_SEC                           = 10;
 constexpr int MONITOR_HEARTBEAT_RETRIES                               = 10;
 constexpr int AP_MANAGER_HEARTBEAT_TIMEOUT_SEC                        = 10;
 constexpr int AP_MANAGER_HEARTBEAT_RETRIES                            = 10;
+constexpr std::chrono::seconds WAIT_FOR_FRONTHAUL_JOINED_TIMEOUT_SEC  = std::chrono::seconds(60);
 
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////// Local Module Functions ///////////////////////////
@@ -97,6 +98,7 @@ slave_thread::slave_thread(sAgentConfig conf, beerocks::logging &logger_)
 
         const auto &fronthaul_iface = radio_map_element.first;
         const auto &radio_conf      = radio_map_element.second;
+        LOG(DEBUG) << "Adding configured radio: " << fronthaul_iface;
 
         auto &radio_manager                    = m_radio_managers[fronthaul_iface];
         radio_manager.stop_on_failure_attempts = db->device_conf.stop_on_failure_attempts;
@@ -307,6 +309,7 @@ void slave_thread::agent_reset()
 
         // If stopped, or backhaul disconnected close the fronthaul.
         if (m_stopped || m_is_backhaul_disconnected) {
+            LOG(DEBUG) << "Stopping fronthaul";
             fronthaul_stop(fronthaul_iface);
         }
         return true;
@@ -2355,8 +2358,8 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
             LOG(ERROR) << "addClass cACTION_APMANAGER_HOSTAP_AP_DISABLED_NOTIFICATION failed";
             return false;
         }
-        LOG(INFO) << "received ACTION_APMANAGER_HOSTAP_AP_DISABLED_NOTIFICATION on vap_id="
-                  << int(notification_in->vap_id());
+        LOG(INFO) << "received ACTION_APMANAGER_HOSTAP_AP_DISABLED_NOTIFICATION on iface="
+                  << fronthaul_iface << " vap_id=" << int(notification_in->vap_id());
         if (notification_in->vap_id() == beerocks::IFACE_RADIO_ID) {
 
             auto notification_out = message_com::create_vs_message<
@@ -3232,12 +3235,20 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
 
         radio_manager.monitor_fd = fd;
         static const std::string client_name("monitor ");
-        m_cmdu_server->set_client_name(fd, client_name + notification->iface_name());
+        auto final_client_name = client_name + notification->iface_name();
+        
+        if (m_cmdu_server->set_client_name(fd, final_client_name)) {
+            LOG(DEBUG) << "Successfully set monitor client \"" << final_client_name << "\"";
+        } else {
+            LOG(DEBUG) << "Failed to set monitor client \"" << final_client_name << "\"";
+        }
 
         if (m_agent_state != STATE_WAIT_FOR_FRONTHAUL_THREADS_JOINED) {
             LOG(WARNING) << "ACTION_MONITOR_JOINED_NOTIFICATION, but slave_state != "
                             "STATE_WAIT_FOR_FRONTHAUL_THREADS_JOINED";
         }
+        LOG(DEBUG) << "Handled ACTION_MONITOR_JOINED_NOTIFICATION from "
+                   << notification->iface_name();
         return true;
     }
 
@@ -4157,6 +4168,7 @@ bool slave_thread::agent_fsm()
     }
     case STATE_JOIN_INIT: {
 
+        LOG(DEBUG) << "In STATE_JOIN_INIT";
         bool all_radios_disabled = true;
         auto db                  = AgentDB::get();
 
@@ -4170,6 +4182,7 @@ bool slave_thread::agent_fsm()
         for (const auto &radio_conf_element : db->device_conf.front_radio.config) {
             auto &radio_iface = radio_conf_element.first;
             auto &radio_conf  = radio_conf_element.second;
+            LOG(DEBUG) << "Checking radio " << radio_iface;
             LOG_IF(!radio_conf.band_enabled, DEBUG) << "radio " << radio_iface << " is disabled";
             all_radios_disabled &= !radio_conf.band_enabled;
         }
@@ -4182,6 +4195,7 @@ bool slave_thread::agent_fsm()
 
         m_radio_managers.do_on_each_radio_manager(
             [&](const sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
+                LOG(INFO) << "Checking radio " << fronthaul_iface;
                 auto db = AgentDB::get();
                 if (!db->device_conf.front_radio.config.at(fronthaul_iface).band_enabled) {
                     return true;
@@ -4193,19 +4207,24 @@ bool slave_thread::agent_fsm()
                 }
                 if (!radio_manager.fronthaul_started) {
                     // Start the fronthaul process. Before starting, kill the existing one.
+                    LOG(INFO) << "Start the fronthaul process. Before starting, kill the existing one.";
                     fronthaul_stop(fronthaul_iface);
                     fronthaul_start(fronthaul_iface);
+                } else {
+                    LOG(INFO) << "Start the fronthaul already started.";
                 }
                 return true;
             });
 
         LOG(TRACE) << "goto STATE_WAIT_FOR_FRONTHAUL_THREADS_JOINED";
+        m_wait_for_fronthaul_joined_timeout = std::chrono::steady_clock::now() + WAIT_FOR_FRONTHAUL_JOINED_TIMEOUT_SEC;
         m_agent_state = STATE_WAIT_FOR_FRONTHAUL_THREADS_JOINED;
         break;
     }
     case STATE_WAIT_FOR_FRONTHAUL_THREADS_JOINED: {
 
         bool all_fronthauls_joined = true;
+        std::vector<std::string> pending_fronthauls;
         m_radio_managers.do_on_each_radio_manager([&](const sManagedRadio &radio_manager,
                                                       const std::string &fronthaul_iface) {
             auto db = AgentDB::get();
@@ -4219,15 +4238,31 @@ bool slave_thread::agent_fsm()
                 return true;
             }
 
-            all_fronthauls_joined &=
+            bool fronthaul_joined =
                 (radio_manager.ap_manager_fd != beerocks::net::FileDescriptor::invalid_descriptor &&
                  radio_manager.monitor_fd != beerocks::net::FileDescriptor::invalid_descriptor);
+            if (!fronthaul_joined) {
+                pending_fronthauls.push_back(fronthaul_iface);
+            }
+
+            all_fronthauls_joined &= fronthaul_joined;
             return true;
         });
 
         if (all_fronthauls_joined) {
             LOG(TRACE) << "goto STATE_BACKHAUL_ENABLE";
             m_agent_state = STATE_BACKHAUL_ENABLE;
+        } else if (std::chrono::steady_clock::now() > m_wait_for_fronthaul_joined_timeout) {
+            std::stringstream ss;
+            for (auto it = pending_fronthauls.begin(); it != pending_fronthauls.end(); it++) {
+                if (it != pending_fronthauls.begin()) {
+                    ss << ",";
+                }
+                ss << *it;
+            }
+            LOG(ERROR) << "Timed out while waiting for fronthaul(s) " << ss.str() << " to connect.";
+            LOG(TRACE) << "goto STATE_JOIN_INIT";
+            m_agent_state = STATE_JOIN_INIT;
         }
         break;
     }

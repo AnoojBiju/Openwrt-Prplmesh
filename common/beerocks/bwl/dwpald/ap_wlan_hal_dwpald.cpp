@@ -2268,7 +2268,8 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
             if (iface_ids.vap_id != beerocks::IFACE_RADIO_ID &&
                 m_hal_conf.monitored_BSSs.find(BSS_str) == m_hal_conf.monitored_BSSs.end()) {
                 // Log print commented as to not flood the logs
-                //LOG(DEBUG) << "Event received on BSS " << BSS_str << " that is not on monitored BSSs list, ignoring";
+                LOG(DEBUG) << "Event received on BSS " << BSS_str
+                           << " which is not on monitored BSSs list, ignoring";
                 return true;
             }
         }
@@ -3180,6 +3181,8 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
             LOG(ERROR) << "DWPAL parse error ==> Abort";
             return false;
         }
+
+        LOG(DEBUG) << "Received AP-DISABLED on iface: " << interface;
 
         auto iface_ids = beerocks::utils::get_ids_from_iface_string(interface);
         msg->vap_id    = iface_ids.vap_id;

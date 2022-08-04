@@ -26,6 +26,8 @@
 #include <beerocks/tlvf/beerocks_header.h>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
 
+constexpr std::chrono::seconds WAIT_FOR_FRONTHAUL_JOINED_TIMEOUT = std::chrono::seconds(60);
+
 // Forward decleration
 namespace beerocks_message {
 class cChannelList;
@@ -330,6 +332,8 @@ private:
     // Global FSM members:
     eSlaveState m_agent_state;
     std::chrono::steady_clock::time_point m_agent_state_timer_sec =
+        std::chrono::steady_clock::time_point::min();
+    std::chrono::steady_clock::time_point m_wait_for_fronthaul_joined_timeout =
         std::chrono::steady_clock::time_point::min();
 
     bool m_stopped = false;
