@@ -204,7 +204,7 @@ run-tests-on-altran-glinet-testbed:
     TARGET_DEVICE_NAME: glinet-b1300-1
     OPENWRT_IMAGE: openwrt-ipq40xx-generic-glinet_gl-b1300-squashfs-sysupgrade.bin
   script:
-    - ./tools/docker/build.sh -v -j 4 -f ENABLE_NBAPI=ON
+    - ./tools/docker/build.sh -v -j 4 -f ENABLE_NBAPI=ON ENABLE_VBSS=ON
     - ./tools/docker/image-build.sh -t $PARENT_PIPELINE_ID -i boardfarm-ci
     - ./tools/docker/image-build.sh -t $PARENT_PIPELINE_ID -i builder/ubuntu/bionic
     - ./dctest.py --dut glinet-b1300-1-remote --test-suite test_flows_on_altran
