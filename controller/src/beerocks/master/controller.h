@@ -126,6 +126,57 @@ public:
                  std::array<uint8_t, beerocks::message::SUPPORTED_CHANNELS_LENGTH> channel_pool,
                  uint8_t pool_size, int dwell_time);
 
+    /**
+     * @brief Triggers VBSS creation for the given VBSSID on the given radio/agent
+     * 
+     * @param dest_ruid The UID of the radio to create the VBSS on
+     * @param vbssid The VBSSID to create for the client
+     * @param client_mac The MAC Address of the client to create the VBSS for
+     * @param new_bss_ssid The SSID to set for the BSS on the new agent
+     * @param new_bss_pass The password to set for the BSS on the new agent
+     * @return True if the creation operation was triggered, false otherwise
+     */
+    bool trigger_vbss_creation(const sMacAddr &dest_ruid, const sMacAddr &vbssid,
+                               const sMacAddr &client_mac, const std::string &new_bss_ssid,
+                               const std::string &new_bss_pass);
+
+    /**
+     * @brief Triggers VBSS destruction for the given VBSSID on the given radio/agent
+     * 
+     * @param connected_ruid The UID of the radio that the client is currently connected to
+     * @param vbssid The BSSID of the VBSS to destroy
+     * @param client_mac The MAC address of the VBSS client
+     * @param should_disassociate Wether the client should disassociate from the network after destruction
+     * @return True if the destruction operation was triggered, false otherwise 
+     */
+    bool trigger_vbss_destruction(const sMacAddr &connected_ruid, const sMacAddr &vbssid,
+                                  const sMacAddr &client_mac,
+                                  const bool should_disassociate = true);
+
+    /**
+     * @brief Requests the VBSS capabilities from the specified agent. 
+     * Result which will be reflected in the NB API
+     * 
+     * @param agent_mac The MAC address of the agent to send the request to
+     * @return True if the request was sent successfully, false otherwise
+     */
+    bool update_agent_vbss_capabilities(const sMacAddr &agent_mac);
+
+    /**
+     * @brief Triggers the move operation of a client between two agents on the vbss system
+     * 
+     * @param connected_ruid The UID of the currently connected radio
+     * @param dest_ruid The UID of the radio to move to
+     * @param vbssid The VBSSID to move between agents
+     * @param client_mac The MAC Address of the client to move between agents
+     * @param new_bss_ssid The SSID to set for the BSS on the new agent
+     * @param new_bss_pass The password to set for the BSS on the new agent
+     * @return True if move operation was triggered, false otherwise.
+     */
+    bool trigger_vbss_move(const sMacAddr &connected_ruid, const sMacAddr &dest_ruid,
+                           const sMacAddr &vbssid, const sMacAddr &client_mac,
+                           const std::string &new_bss_ssid, const std::string &new_bss_pass);
+
 private:
     /**
      * @brief Handles the client-connected event in the CMDU server.

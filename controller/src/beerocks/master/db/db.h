@@ -2136,6 +2136,9 @@ public:
     bool assign_statistics_polling_task_id(int new_task_id);
     int get_statistics_polling_task_id();
 
+    bool assign_vbss_task_id(int new_task_id);
+    int get_vbss_task_id();
+
     void lock();
     void unlock();
 
@@ -2492,6 +2495,7 @@ private:
     int dhcp_task_id                           = -1;
     int agent_monitoring_task_id               = -1;
     int statistics_polling_task_id             = -1;
+    int vbss_task_id                           = -1;
 
     std::shared_ptr<node> last_accessed_node;
     std::string last_accessed_node_mac;

@@ -221,7 +221,7 @@ pytest:
 build-in-docker:
   extends: .build-in-docker
   variables:
-    EXTRA_CMAKE_FLAGS: "-DENABLE_NBAPI=ON"
+    EXTRA_CMAKE_FLAGS: "-DENABLE_NBAPI=ON -DENABLE_VBSS=ON"
 
 build-in-docker-alpine:
   extends: .build-in-docker
