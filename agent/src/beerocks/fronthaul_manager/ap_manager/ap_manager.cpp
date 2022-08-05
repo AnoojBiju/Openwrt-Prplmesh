@@ -19,6 +19,7 @@
 #include <beerocks/tlvf/beerocks_message.h>
 #include <beerocks/tlvf/beerocks_message_apmanager.h>
 
+#include <tlvf/wfa_map/tlvBssid.h>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
 #include <tlvf/wfa_map/tlvDppCceIndication.h>
 #include <tlvf/wfa_map/tlvDppChirpValue.h>
@@ -2170,9 +2171,17 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
         send_cmdu(cmdu_tx);
 
     } break;
+    case Event::WPA_Event_EAP_Failure:
+    case Event::WPA_Event_EAP_Failure2:
+    case Event::WPA_Event_EAP_Timeout_Failure:
+    case Event::WPA_Event_EAP_Timeout_Failure2:
+    case Event::WPS_Event_Timeout:
+    case Event::WPS_Event_Fail:
+    case Event::WPA_Event_SAE_Unknown_Password_Identifier:
+    case Event::WPS_Event_Cancel:
     case Event::AP_Sta_Possible_Psk_Mismatch: {
-        LOG(DEBUG) << "ap manager: Ap STA Possible PSK Mismatch";
-        auto mismatch_psk = static_cast<bwl::sSTA_MISMATCH_PSK *>(data);
+        LOG(DEBUG) << "STA Connection failure";
+        auto sta_conn_fail = static_cast<bwl::sStaConnectionFail *>(data);
         // Create a Failed Connection Message
         auto cmdu_tx_header =
             cmdu_tx.create(0, ieee1905_1::eMessageType::FAILED_CONNECTION_MESSAGE);
@@ -2180,13 +2189,20 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
             LOG(ERROR) << "cmdu creation of type FAILED_CONNECTION_MESSAGE failed!";
             return false;
         }
+        // add BSSID
+        auto bssid_tlv = cmdu_tx.addClass<wfa_map::tlvBssid>();
+        if (!bssid_tlv) {
+            LOG(ERROR) << "addClass wfa_map::tlvBssid!";
+            return false;
+        }
+        bssid_tlv->bssid() = sta_conn_fail->bssid;
         // add STA
         auto sta_mac_tlv = cmdu_tx.addClass<wfa_map::tlvStaMacAddressType>();
         if (!sta_mac_tlv) {
             LOG(ERROR) << "addClass wfa_map::tlvStaMacAddressType!";
             return false;
         }
-        sta_mac_tlv->sta_mac() = mismatch_psk->sta_mac;
+        sta_mac_tlv->sta_mac() = sta_conn_fail->sta_mac;
         // add status code
         auto profile2_status_code_tlv = cmdu_tx.addClass<wfa_map::tlvProfile2StatusCode>();
         if (!profile2_status_code_tlv) {
