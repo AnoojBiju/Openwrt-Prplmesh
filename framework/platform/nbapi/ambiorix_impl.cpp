@@ -611,7 +611,22 @@ bool AmbiorixImpl::set(const std::string &relative_path, const std::string &para
 {
     return set(relative_path, parameter, tlvf::mac_to_string(value));
 }
+bool AmbiorixImpl::read_param(const std::string &obj_path, const std::string &param_name,
+                              uint8_t *param_val)
+{
+    amxc_var_t ret_val;
+    amxd_object_t *obj   = find_object(obj_path);
+    amxd_status_t status = amxd_object_get_param(obj, param_name.c_str(), &ret_val);
 
+    if (status != amxd_status_ok) {
+        LOG(ERROR) << "Failed to get param [" << param_name << "] of object: " << obj_path;
+        *param_val = 0;
+        return false;
+    }
+    *param_val = amxc_var_constcast(uint8_t, &ret_val);
+    amxc_var_clean(&ret_val);
+    return true;
+}
 bool AmbiorixImpl::read_param(const std::string &obj_path, const std::string &param_name,
                               uint16_t *param_val)
 {
