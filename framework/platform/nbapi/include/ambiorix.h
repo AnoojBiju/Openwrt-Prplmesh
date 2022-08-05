@@ -22,7 +22,7 @@ namespace nbapi {
 class Ambiorix {
 public:
     Ambiorix(){};
-    Ambiorix(const Ambiorix &)            = delete;
+    Ambiorix(const Ambiorix &) = delete;
     Ambiorix &operator=(const Ambiorix &) = delete;
     virtual ~Ambiorix()                   = 0;
 
@@ -89,6 +89,8 @@ public:
                             bool *param_val)        = 0;
     virtual bool read_param(const std::string &obj_path, const std::string &param_name,
                             std::string *param_val) = 0;
+    virtual bool read_param(const std::string &obj_path, const std::string &param_name,
+                            sMacAddr *param_val)    = 0;
 
     /* @brief Add instance to the data model object with type list
      *

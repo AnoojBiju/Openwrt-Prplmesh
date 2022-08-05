@@ -66,6 +66,8 @@ public:
                     bool *param_val) override;
     bool read_param(const std::string &obj_path, const std::string &param_name,
                     std::string *param_val) override;
+    bool read_param(const std::string &obj_path, const std::string &param_name,
+                    sMacAddr *param_val) override;
     std::string add_instance(const std::string &relative_path) override;
     bool remove_instance(const std::string &relative_path, uint32_t index) override;
     uint32_t get_instance_index(const std::string &specific_path, const std::string &key) override;

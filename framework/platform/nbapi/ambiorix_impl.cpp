@@ -7,6 +7,7 @@
  */
 #include "ambiorix_impl.h"
 #include "tlvf/tlvftypes.h"
+#include <bcl/network/network_utils.h>
 
 namespace beerocks {
 namespace nbapi {
@@ -795,6 +796,25 @@ bool AmbiorixImpl::read_param(const std::string &obj_path, const std::string &pa
     }
     *param_val = std::string(amxc_var_constcast(cstring_t, &ret_val));
     amxc_var_clean(&ret_val);
+    return true;
+}
+
+bool AmbiorixImpl::read_param(const std::string &obj_path, const std::string &param_name,
+                              sMacAddr *param_val)
+{
+    std::string mac_string;
+    bool str_ret_val = read_param(obj_path, param_name, &mac_string);
+    if (!str_ret_val) {
+        *param_val = beerocks::net::network_utils::ZERO_MAC;
+        return false;
+    }
+    bool mac_is_valid = tlvf::mac_from_string(param_val->oct, mac_string);
+    if (!mac_is_valid) {
+        LOG(ERROR) << "Failed to get param [" << param_name << "] of object: " << obj_path
+                   << ". Object is not a MAC Address";
+        *param_val = beerocks::net::network_utils::ZERO_MAC;
+        return false;
+    }
     return true;
 }
 
