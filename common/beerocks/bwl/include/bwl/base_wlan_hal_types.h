@@ -394,12 +394,13 @@ struct sMGMT_FRAME_NOTIFICATION {
 };
 
 /**
- * @brief 802.11 management frame notification event.
+ * @brief station connection failure related parameters.
  * 
- * This structure contains the payload of a 802.11 management frame received
- * from a station. This frame can analyzed in the agent or tunnelled to the controller.
+ * This structure contains the parameters of the station connection failure
+ * message like the mac address of the station and the bssid of the interface.
  */
-struct sSTA_MISMATCH_PSK {
+struct sSTA_CONN_FAIL {
+    sMacAddr bssid;   /**< The BSSID of the AP's interface */
     sMacAddr sta_mac; /**< The MAC address of the station */
 };
 } // namespace bwl

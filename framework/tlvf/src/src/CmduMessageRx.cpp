@@ -63,6 +63,7 @@
 #include <tlvf/wfa_map/tlvBssConfigurationReport.h>
 #include <tlvf/wfa_map/tlvBssConfigurationRequest.h>
 #include <tlvf/wfa_map/tlvBssConfigurationResponse.h>
+#include <tlvf/wfa_map/tlvBssid.h>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
 #include <tlvf/wfa_map/tlvChannelScanCapabilities.h>
 #include <tlvf/wfa_map/tlvChannelScanReportingPolicy.h>
@@ -494,6 +495,9 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     }
     case (wfa_map::eTlvTypeMap::TLV_BSS_CONFIGURATION_RESPONSE): {
         return msg.addClass<wfa_map::tlvBssConfigurationResponse>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_BSSID): {
+        return msg.addClass<wfa_map::tlvBssid>();
     }
     case (wfa_map::eTlvTypeMap::TLV_DPP_MESSAGE): {
         return msg.addClass<wfa_map::tlvDppMessage>();

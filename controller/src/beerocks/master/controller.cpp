@@ -62,6 +62,7 @@
 #include <tlvf/wfa_map/tlvAssociatedStaTrafficStats.h>
 #include <tlvf/wfa_map/tlvBackhaulStaRadioCapabilities.h>
 #include <tlvf/wfa_map/tlvBackhaulSteeringResponse.h>
+#include <tlvf/wfa_map/tlvBssid.h>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
 #include <tlvf/wfa_map/tlvChannelScanCapabilities.h>
 #include <tlvf/wfa_map/tlvChannelSelectionResponse.h>
@@ -1964,9 +1965,19 @@ bool Controller::handle_cmdu_1905_backhaul_sta_capability_report_message(
 bool Controller::handle_cmdu_1905_failed_connection_message(const sMacAddr &src_mac,
                                                             ieee1905_1::CmduMessageRx &cmdu_rx)
 {
-    LOG(DEBUG) << "Received Failed Connection Message for STA";
+    LOG(DEBUG) << "Received Failed Connection Message for Sta";
+
+    auto bssid_tlv = cmdu_rx.getClass<wfa_map::tlvBssid>();
+
+    if (!bssid_tlv) {
+        LOG(ERROR) << "Failed to get tlvBssid!";
+        return false;
+    }
+    LOG(DEBUG) << "Sta Connection Failure: BSSID = " << bssid_tlv->bssid();
 
     auto sta_mac_tlv = cmdu_rx.getClass<wfa_map::tlvStaMacAddressType>();
+
+    LOG(DEBUG) << "Sta Connection Failure: offending Sta MAC = " << sta_mac_tlv->sta_mac();
 
     if (!sta_mac_tlv) {
         LOG(ERROR) << "Failed to get tlvStaMacAddressType!";
@@ -2002,8 +2013,8 @@ bool Controller::handle_cmdu_1905_failed_connection_message(const sMacAddr &src_
         reason_code = profile2_reason_code_tlv->reason_code();
     }
     if (status_code != 0) {
-        if (!database.dm_add_failed_connection_event(sta_mac_tlv->sta_mac(), status_code,
-                                                     reason_code)) {
+        if (!database.dm_add_failed_connection_event(bssid_tlv->bssid(), sta_mac_tlv->sta_mac(),
+                                                     status_code, reason_code)) {
             LOG(ERROR) << "Failed to add FailedConnectionEvent.";
             return false;
         }
