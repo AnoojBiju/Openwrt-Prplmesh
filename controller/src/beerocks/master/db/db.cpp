@@ -2208,7 +2208,7 @@ bool db::update_vap(const sMacAddr &radio_mac, const sMacAddr &bssid, const std:
 
     auto &vaps_info = get_hostap_vap_list(radio_mac);
     auto it         = std::find_if(vaps_info.begin(), vaps_info.end(),
-                                   [&](const std::pair<int8_t, sVapElement> &vap) {
+                           [&](const std::pair<int8_t, sVapElement> &vap) {
                                return vap.second.mac == tlvf::mac_to_string(bssid);
                            });
     if (it == vaps_info.end()) {
@@ -6956,14 +6956,14 @@ std::string db::calculate_dpp_bootstrapping_str()
     //  K:<any sequence of (ALPHA / DIGIT / '+' / '/' / '=') , no length limit>;; # Public key
 
     std::string dpp_conn_string = "";
-
-    for (auto &ch : dpp_bootstrapping_info.operating_class_channel) {
-        dpp_conn_string += std::to_string(ch.first) + "/" + std::to_string(ch.second);
-        if (ch == *dpp_bootstrapping_info.operating_class_channel.end()) {
-            dpp_conn_string += ";";
-            break;
-        }
-        dpp_conn_string += ",";
+    std::string opclass_channel_str;
+    for (const auto &ch : dpp_bootstrapping_info.operating_class_channel) {
+        opclass_channel_str += std::to_string(ch.first) + "/" + std::to_string(ch.second) + ",";
+    }
+    if (!opclass_channel_str.empty()) {
+        // Channel/OpClass has been added
+        opclass_channel_str.pop_back();
+        dpp_conn_string += "C:" + opclass_channel_str + ";";
     }
 
     if (dpp_bootstrapping_info.mac != net::network_utils::ZERO_MAC) {
