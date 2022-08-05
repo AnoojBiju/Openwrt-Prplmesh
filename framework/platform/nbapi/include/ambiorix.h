@@ -85,6 +85,8 @@ public:
                             uint64_t *param_val) = 0;
     virtual bool read_param(const std::string &obj_path, const std::string &param_name,
                             double *param_val)   = 0;
+    virtual bool read_param(const std::string &obj_path, const std::string &param_name,
+                            bool *param_val)     = 0;
 
     /* @brief Add instance to the data model object with type list
      *

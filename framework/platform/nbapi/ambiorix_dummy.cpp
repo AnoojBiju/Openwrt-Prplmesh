@@ -116,6 +116,11 @@ bool AmbiorixDummy::read_param(const std::string &obj_path, const std::string &p
 {
     return true;
 }
+bool AmbiorixDummy::read_param(const std::string &obj_path, const std::string &param_name,
+                               bool *param_val)
+{
+    return true;
+}
 std::string AmbiorixDummy::add_instance(const std::string &relative_path) { return {}; }
 bool AmbiorixDummy::remove_instance(const std::string &relative_path, uint32_t index)
 {

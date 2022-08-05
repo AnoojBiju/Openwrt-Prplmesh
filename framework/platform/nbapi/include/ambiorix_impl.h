@@ -136,6 +136,8 @@ public:
                     uint64_t *param_val) override;
     bool read_param(const std::string &obj_path, const std::string &param_name,
                     double *param_val) override;
+    bool read_param(const std::string &obj_path, const std::string &param_name,
+                    bool *param_val) override;
 
     std::string add_instance(const std::string &relative_path) override;
 

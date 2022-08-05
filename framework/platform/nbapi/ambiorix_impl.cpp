@@ -764,6 +764,23 @@ bool AmbiorixImpl::read_param(const std::string &obj_path, const std::string &pa
     return true;
 }
 
+bool AmbiorixImpl::read_param(const std::string &obj_path, const std::string &param_name,
+                              bool *param_val)
+{
+    amxc_var_t ret_val;
+    amxd_object_t *obj   = find_object(obj_path);
+    amxd_status_t status = amxd_object_get_param(obj, param_name.c_str(), &ret_val);
+
+    if (status != amxd_status_ok) {
+        LOG(ERROR) << "Failed to get param [" << param_name << "] of object: " << obj_path;
+        *param_val = 0;
+        return false;
+    }
+    *param_val = amxc_var_constcast(bool, &ret_val);
+    amxc_var_clean(&ret_val);
+    return true;
+}
+
 std::string AmbiorixImpl::add_instance(const std::string &relative_path)
 {
     amxd_trans_t transaction;

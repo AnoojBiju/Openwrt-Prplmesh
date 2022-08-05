@@ -95,6 +95,9 @@ public:
     MOCK_METHOD(bool, read_param,
                 (const std::string &path_to_object, const std::string &object, double *param_val),
                 (override));
+    MOCK_METHOD(bool, read_param,
+                (const std::string &path_to_object, const std::string &object, bool *param_val),
+                (override));
     MOCK_METHOD(std::string, add_instance, (const std::string &relative_path), (override));
     MOCK_METHOD(bool, remove_instance, (const std::string &relative_path, uint32_t index),
                 (override));
