@@ -75,6 +75,22 @@ static ap_wlan_hal::Event dummy_to_bwl_event(const std::string &opcode)
         return ap_wlan_hal::Event::DFS_NOP_Finished;
     } else if (opcode == "MGMT-FRAME") {
         return ap_wlan_hal::Event::MGMT_Frame;
+    } else if (opcode == "WPA_EVENT_EAP_FAILURE") {
+        return ap_wlan_hal::Event::WPA_Event_EAP_Failure;
+    } else if (opcode == "WPA_EVENT_EAP_FAILURE2") {
+        return ap_wlan_hal::Event::WPA_Event_EAP_Failure2;
+    } else if (opcode == "WPA_EVENT_EAP_TIMEOUT_FAILURE") {
+        return ap_wlan_hal::Event::WPA_Event_EAP_Timeout_Failure;
+    } else if (opcode == "WPA_EVENT_EAP_TIMEOUT_FAILURE2") {
+        return ap_wlan_hal::Event::WPA_Event_EAP_Timeout_Failure2;
+    } else if (opcode == "WPS_EVENT_TIMEOUT") {
+        return ap_wlan_hal::Event::WPS_Event_Timeout;
+    } else if (opcode == "WPS_EVENT_FAIL") {
+        return ap_wlan_hal::Event::WPS_Event_Fail;
+    } else if (opcode == "WPA_EVENT_SAE_UNKNOWN_PASSWORD_IDENTIFIER") {
+        return ap_wlan_hal::Event::WPA_Event_SAE_Unknown_Password_Identifier;
+    } else if (opcode == "WPS_EVENT_CANCEL") {
+        return ap_wlan_hal::Event::WPS_Event_Cancel;
     } else if (opcode == "AP-STA-POSSIBLE-PSK-MISMATCH") {
         return ap_wlan_hal::Event::AP_Sta_Possible_Psk_Mismatch;
     }
@@ -536,15 +552,39 @@ bool ap_wlan_hal_dummy::process_dummy_event(parsed_obj_map_t &parsed_obj)
         event_queue_push(Event::MGMT_Frame, mgmt_frame);
     } break;
 
+    case Event::WPA_Event_EAP_Failure:
+    case Event::WPA_Event_EAP_Failure2:
+    case Event::WPA_Event_EAP_Timeout_Failure:
+    case Event::WPA_Event_EAP_Timeout_Failure2:
+    case Event::WPS_Event_Timeout:
+    case Event::WPS_Event_Fail:
+    case Event::WPA_Event_SAE_Unknown_Password_Identifier:
+    case Event::WPS_Event_Cancel:
     case Event::AP_Sta_Possible_Psk_Mismatch: {
-        LOG(DEBUG) << "Ap STA Possible PSK Mismatch";
-        if (!dummy_obj_read_str(DUMMY_EVENT_KEYLESS_PARAM_MAC, parsed_obj, &tmp_str)) {
-            LOG(ERROR) << "Failed reading mac parameter of mismatched psk station!";
+        LOG(DEBUG) << "Station connection failure event";
+        std::string sta_mac = parsed_obj[DUMMY_EVENT_KEYLESS_PARAM_MAC];
+        if (sta_mac.empty()) {
+            LOG(ERROR) << "Station mac parameter not found!";
             return false;
         }
-        auto mismatch_psk     = std::make_shared<sSTA_MISMATCH_PSK>();
-        mismatch_psk->sta_mac = tlvf::mac_from_string(tmp_str);
-        event_queue_push(Event::AP_Sta_Possible_Psk_Mismatch, mismatch_psk);
+
+        auto sta_conn_fail   = std::make_shared<sStaConnectionFail>();
+        std::string vap_name = parsed_obj[DUMMY_EVENT_KEYLESS_PARAM_IFACE];
+        LOG(ERROR) << "vap_name = " << vap_name;
+        std::string bssid;
+
+        for (const auto &iter : m_radio_info.available_vaps) {
+            if (vap_name == iter.second.bss) {
+                bssid = iter.second.mac;
+                break;
+            }
+        }
+        LOG(ERROR) << "bssid = " << bssid;
+
+        sta_conn_fail->bssid   = tlvf::mac_from_string(bssid);
+        sta_conn_fail->sta_mac = tlvf::mac_from_string(sta_mac);
+
+        event_queue_push(event, sta_conn_fail);
     } break;
 
     case Event::AP_Disabled: {
