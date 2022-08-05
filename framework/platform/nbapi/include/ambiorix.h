@@ -68,25 +68,27 @@ public:
      * @return True on success, false otherwise.
     */
     virtual bool read_param(const std::string &obj_path, const std::string &param_name,
-                            int8_t *param_val)   = 0;
+                            int8_t *param_val)      = 0;
     virtual bool read_param(const std::string &obj_path, const std::string &param_name,
-                            int16_t *param_val)  = 0;
+                            int16_t *param_val)     = 0;
     virtual bool read_param(const std::string &obj_path, const std::string &param_name,
-                            int32_t *param_val)  = 0;
+                            int32_t *param_val)     = 0;
     virtual bool read_param(const std::string &obj_path, const std::string &param_name,
-                            int64_t *param_val)  = 0;
+                            int64_t *param_val)     = 0;
     virtual bool read_param(const std::string &obj_path, const std::string &param_name,
-                            uint8_t *param_val)  = 0;
+                            uint8_t *param_val)     = 0;
     virtual bool read_param(const std::string &obj_path, const std::string &param_name,
-                            uint16_t *param_val) = 0;
+                            uint16_t *param_val)    = 0;
     virtual bool read_param(const std::string &obj_path, const std::string &param_name,
-                            uint32_t *param_val) = 0;
+                            uint32_t *param_val)    = 0;
     virtual bool read_param(const std::string &obj_path, const std::string &param_name,
-                            uint64_t *param_val) = 0;
+                            uint64_t *param_val)    = 0;
     virtual bool read_param(const std::string &obj_path, const std::string &param_name,
-                            double *param_val)   = 0;
+                            double *param_val)      = 0;
     virtual bool read_param(const std::string &obj_path, const std::string &param_name,
-                            bool *param_val)     = 0;
+                            bool *param_val)        = 0;
+    virtual bool read_param(const std::string &obj_path, const std::string &param_name,
+                            std::string *param_val) = 0;
 
     /* @brief Add instance to the data model object with type list
      *
