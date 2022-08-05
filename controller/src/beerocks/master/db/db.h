@@ -883,13 +883,14 @@ public:
      * Data model path example:
      * "Device.WiFi.DataElements.FailedConnectionEvent.FailedConnectionEventData"
      *
+     * @param bssid BSSID of the interface where connection failure happened.
      * @param sta_mac Client mac address.
      * @param reason_code Reason code of clients failed association.
      * @param status_code Status code of clients failed association.
      * @return True on success, false otherwise.
      */
-    bool dm_add_failed_connection_event(const sMacAddr &sta_mac, const uint16_t reason_code,
-                                        const uint16_t status_code);
+    bool dm_add_failed_connection_event(const sMacAddr &bssid, const sMacAddr &sta_mac,
+                                        const uint16_t reason_code, const uint16_t status_code);
 
     /**
      * @brief Adds station capabilities sub-objects into data model

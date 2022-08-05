@@ -6064,8 +6064,8 @@ void db::dm_increment_steer_summary_stats(const std::string &param_name)
                            param_name);
 }
 
-bool db::dm_add_failed_connection_event(const sMacAddr &sta_mac, const uint16_t reason_code,
-                                        const uint16_t status_code)
+bool db::dm_add_failed_connection_event(const sMacAddr &bssid, const sMacAddr &sta_mac,
+                                        const uint16_t reason_code, const uint16_t status_code)
 {
     std::string event_path =
         "Device.WiFi.DataElements.FailedConnectionEvent.FailedConnectionEventData";
@@ -6079,6 +6079,7 @@ bool db::dm_add_failed_connection_event(const sMacAddr &sta_mac, const uint16_t 
     bool ret_val = true;
 
     ret_val &= m_ambiorix_datamodel->set_current_time(event_path);
+    ret_val &= m_ambiorix_datamodel->set(event_path, "BSSID", bssid);
     ret_val &= m_ambiorix_datamodel->set(event_path, "MACAddress", sta_mac);
     ret_val &= m_ambiorix_datamodel->set(event_path, "StatusCode", status_code);
     ret_val &= m_ambiorix_datamodel->set(event_path, "ReasonCode", reason_code);
