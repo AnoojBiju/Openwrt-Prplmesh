@@ -68,6 +68,8 @@ public:
      * @return True on success, false otherwise.
     */
     virtual bool read_param(const std::string &obj_path, const std::string &param_name,
+                            int32_t *param_val)  = 0;
+    virtual bool read_param(const std::string &obj_path, const std::string &param_name,
                             int64_t *param_val)  = 0;
     virtual bool read_param(const std::string &obj_path, const std::string &param_name,
                             uint8_t *param_val)  = 0;

@@ -119,6 +119,8 @@ public:
              const sMacAddr &value) override;
 
     bool read_param(const std::string &obj_path, const std::string &param_name,
+                    int32_t *param_val) override;
+    bool read_param(const std::string &obj_path, const std::string &param_name,
                     int64_t *param_val) override;
     bool read_param(const std::string &obj_path, const std::string &param_name,
                     uint8_t *param_val) override;
