@@ -60,6 +60,8 @@ public:
                     uint32_t *param_val) override;
     bool read_param(const std::string &obj_path, const std::string &param_name,
                     uint64_t *param_val) override;
+    bool read_param(const std::string &obj_path, const std::string &param_name,
+                    double *param_val) override;
     std::string add_instance(const std::string &relative_path) override;
     bool remove_instance(const std::string &relative_path, uint32_t index) override;
     uint32_t get_instance_index(const std::string &specific_path, const std::string &key) override;
