@@ -418,9 +418,10 @@ bool vbss_task::handle_client_security_ctx_resp(const sMacAddr &src_mac,
 
     // Created as shared pointer to a keep allocated ptk and gtk from being deallocated before they can be used
     bool is_connected = client_sec_ctx_tlv->client_connected_flags().client_connected;
-    std::shared_ptr<sClientSecCtxInfo> sec_ctx_info = std::make_shared<sClientSecCtxInfo>(
-        is_connected, client_sec_ctx_tlv->key_length(), client_sec_ctx_tlv->tx_packet_num(),
-        client_sec_ctx_tlv->group_key_length(), client_sec_ctx_tlv->group_tx_packet_num());
+    std::shared_ptr<vbss::sClientSecCtxInfo> sec_ctx_info =
+        std::make_shared<vbss::sClientSecCtxInfo>(
+            is_connected, client_sec_ctx_tlv->key_length(), client_sec_ctx_tlv->tx_packet_num(),
+            client_sec_ctx_tlv->group_key_length(), client_sec_ctx_tlv->group_tx_packet_num());
 
     // Keep PTK and GTK in memory even when Client Security Context Info TLV is out of scope
     sec_ctx_info->ptk = new uint8_t[sec_ctx_info->key_length];
