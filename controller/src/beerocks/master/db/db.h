@@ -229,7 +229,7 @@ public:
         std::multimap<uint8_t, uint8_t> operating_class_channel;
         sMacAddr mac;
         std::string info;
-        uint8_t version;
+        uint8_t version = 0;
         std::string host;
         std::string public_key;
     } dpp_bootstrapping_info;
@@ -1934,6 +1934,13 @@ public:
      */
     uint64_t recalculate_attr_to_byte_units(
         wfa_map::tlvProfile2ApCapability::eByteCounterUnits byte_counter_units, uint64_t bytes);
+
+    /**
+     * @brief Calculates the DPP bootstrapping string from struct dpp_bootstrapping_info
+     * 
+     * @return Calculated string if dpp_bootstrapping_info is filled, empty string otherwise
+     */
+    std::string calculate_dpp_bootstrapping_str();
 
     /**
      * @brief Clears CAC Status Report data model.
