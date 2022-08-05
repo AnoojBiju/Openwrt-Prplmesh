@@ -69,6 +69,9 @@ public:
                  const sMacAddr &value),
                 (override));
     MOCK_METHOD(bool, read_param,
+                (const std::string &path_to_object, const std::string &object, int8_t *param_val),
+                (override));
+    MOCK_METHOD(bool, read_param,
                 (const std::string &path_to_object, const std::string &object, int16_t *param_val),
                 (override));
     MOCK_METHOD(bool, read_param,

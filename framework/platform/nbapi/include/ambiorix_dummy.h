@@ -45,6 +45,8 @@ public:
     bool set(const std::string &relative_path, const std::string &parameter,
              const sMacAddr &value) override;
     bool read_param(const std::string &obj_path, const std::string &param_name,
+                    int8_t *param_val) override;
+    bool read_param(const std::string &obj_path, const std::string &param_name,
                     int16_t *param_val) override;
     bool read_param(const std::string &obj_path, const std::string &param_name,
                     int32_t *param_val) override;
