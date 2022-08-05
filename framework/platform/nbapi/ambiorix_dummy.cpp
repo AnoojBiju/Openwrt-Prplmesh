@@ -71,6 +71,16 @@ bool AmbiorixDummy::set(const std::string &relative_path, const std::string &par
 {
     return true;
 }
+bool AmbiorixDummy::read_param(const std::string &obj_path, const std::string &param_name,
+                               uint32_t *param_val)
+{
+    return true;
+}
+bool AmbiorixDummy::read_param(const std::string &obj_path, const std::string &param_name,
+                               uint64_t *param_val)
+{
+    return true;
+}
 std::string AmbiorixDummy::add_instance(const std::string &relative_path) { return {}; }
 bool AmbiorixDummy::remove_instance(const std::string &relative_path, uint32_t index)
 {

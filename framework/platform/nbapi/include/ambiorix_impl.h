@@ -118,6 +118,12 @@ public:
     bool set(const std::string &relative_path, const std::string &parameter,
              const sMacAddr &value) override;
 
+    bool read_param(const std::string &obj_path, const std::string &param_name,
+                    uint32_t *param_val) override;
+
+    bool read_param(const std::string &obj_path, const std::string &param_name,
+                    uint64_t *param_val) override;
+
     std::string add_instance(const std::string &relative_path) override;
 
     bool remove_instance(const std::string &relative_path, uint32_t index) override;
@@ -157,7 +163,7 @@ public:
      * @brief Reads and return from Data Model value of uint64 parameter for given object.
      * 
      * @param[in] obj_path Path to object.
-     * @param[in] param_name Name of the parametr.
+     * @param[in] param_name Name of the parameter.
      * @param[out] param_val Value of parameter.
      * @return True on success, false otherwise.
     */

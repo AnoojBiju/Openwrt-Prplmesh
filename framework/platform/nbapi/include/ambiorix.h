@@ -22,7 +22,7 @@ namespace nbapi {
 class Ambiorix {
 public:
     Ambiorix(){};
-    Ambiorix(const Ambiorix &) = delete;
+    Ambiorix(const Ambiorix &)            = delete;
     Ambiorix &operator=(const Ambiorix &) = delete;
     virtual ~Ambiorix()                   = 0;
 
@@ -58,6 +58,20 @@ public:
                      const double &value)      = 0;
     virtual bool set(const std::string &relative_path, const std::string &parameter,
                      const sMacAddr &value)    = 0;
+
+    /**
+     * @brief Reads and returns the value of the paramater from the given object.
+     * 
+     * @param[in] obj_path Path to object.
+     * @param[in] param_name Name of the parameter.
+     * @param[out] param_val Value of parameter.
+     * @return True on success, false otherwise.
+    */
+    virtual bool read_param(const std::string &obj_path, const std::string &param_name,
+                            uint32_t *param_val) = 0;
+
+    virtual bool read_param(const std::string &obj_path, const std::string &param_name,
+                            uint64_t *param_val) = 0;
 
     /* @brief Add instance to the data model object with type list
      *
