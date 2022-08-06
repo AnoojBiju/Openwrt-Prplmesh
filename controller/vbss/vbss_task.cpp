@@ -209,7 +209,7 @@ bool vbss_task::handle_move_response_msg(const sMacAddr &src_mac,
         existing_move->state = eMoveProcessState::VBSS_CREATION;
         if (!vbss::vbss_actions::create_vbss(existing_move->client_vbss, existing_move->dest_ruid,
                                              existing_move->ssid, existing_move->password,
-                                             m_database)) {
+                                             existing_move->sec_ctx_info.get(), m_database)) {
             LOG(ERROR) << "Failed to send Create VBSS request during move operation!";
             return false;
         }
