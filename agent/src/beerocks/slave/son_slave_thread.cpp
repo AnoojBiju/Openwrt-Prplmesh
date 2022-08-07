@@ -4172,8 +4172,14 @@ bool slave_thread::agent_fsm()
                 ss << *it;
             }
             LOG(ERROR) << "Timed out while waiting for fronthaul(s) " << ss.str() << " to connect.";
-            m_agent_state_timer_sec =
-                std::chrono::steady_clock::now() + WAIT_FOR_FRONTHAUL_JOINED_TIMEOUT_SEC;
+            // Set all radios to "not started" in order to manually restart them in the STATE_JOIN_INIT.
+            m_radio_managers.do_on_each_radio_manager(
+                [&](sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
+                    radio_manager.fronthaul_started = false;
+                    return true;
+                });
+            LOG(DEBUG) << "goto STATE_JOIN_INIT";
+            m_agent_state = STATE_JOIN_INIT;
         }
         break;
     }
