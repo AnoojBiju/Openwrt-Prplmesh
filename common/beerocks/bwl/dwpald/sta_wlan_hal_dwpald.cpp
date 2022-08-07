@@ -642,9 +642,16 @@ bool sta_wlan_hal_dwpal::dwpald_attach(char *ifname)
             return false;
         }
     }
-    if (dwpald_hostap_attach(ifname,
-                             sizeof(supplicant_event_handlers) / sizeof(dwpald_hostap_event),
-                             supplicant_event_handlers, 0) != DWPALD_SUCCESS) {
+    static const std::unordered_map<std::string, uint8_t> dwpald_iface_ids = {{"wlan1", 0},
+                                                                              {"wlan3", 1}};
+    auto it = dwpald_iface_ids.find(ifname);
+    if (it == dwpald_iface_ids.end()) {
+        LOG(ERROR) << "iface " << ifname << " not found on dwpald_iface_ids list";
+        return false;
+    }
+    if (dwpald_hostap_attach_with_id(
+            ifname, sizeof(supplicant_event_handlers) / sizeof(dwpald_hostap_event),
+            supplicant_event_handlers, 0, it->second) != DWPALD_SUCCESS) {
         LOG(ERROR) << "Failed to attach to dwpald for interface " << ifname;
         return false;
     }
