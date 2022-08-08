@@ -2419,19 +2419,8 @@ bool Controller::handle_intel_slave_join(
             m_task_pool.add_task(new_pre_association_steering_task);
         }
 #endif
-        database.settings_client_band_steering(
-            notification->platform_settings().client_band_steering_enabled);
-        database.settings_client_optimal_path_roaming(
-            notification->platform_settings().client_optimal_path_roaming_enabled);
-        database.settings_client_optimal_path_roaming_prefer_signal_strength(
-            notification->platform_settings()
-                .client_optimal_path_roaming_prefer_signal_strength_enabled);
-        database.settings_client_11k_roaming(
-            notification->platform_settings().client_11k_roaming_enabled);
-        database.settings_load_balancing(notification->platform_settings().load_balancing_enabled);
         database.settings_service_fairness(
             notification->platform_settings().service_fairness_enabled);
-        database.settings_dfs_reentry(false);
     }
 
     /*
