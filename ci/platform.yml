@@ -334,16 +334,16 @@ release:
   script:
     - |
       release-cli create --name "Release $CI_COMMIT_TAG" --description CHANGELOG.md --tag-name $CI_COMMIT_TAG \
-        --assets-link "{\"name\":\"axepoint prplmesh ipk\",\"type\":\"package\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/axepoint/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_axepoint.ipk\"}" \
-        --assets-link "{\"name\":\"axepoint fullimage\",\"type\":\"image\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/axepoint/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$AXEPOINT_FULLIMAGE\"}" \
-        --assets-link "{\"name\":\"glinet-b1300 prplmesh ipk\",\"type\":\"package\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/glinet-b1300/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_glinet-b1300.ipk\"}" \
-        --assets-link "{\"name\":\"glinet-b1300 fullimage\",\"type\":\"image\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/glinet-b1300/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$GLINET_B1300_FULLIMAGE\"}" \
-        --assets-link "{\"name\":\"turris-omnia prplmesh ipk\",\"type\":\"package\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/turris-omnia/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_turris-omnia.ipk\"}" \
-        --assets-link "{\"name\":\"turris-omnia fullimage\",\"type\":\"image\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/turris-omnia/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$TURRIS_OMNIA_FULLIMAGE\"}" \
-        --assets-link "{\"name\":\"nec-wx3000hp prplmesh ipk\",\"type\":\"package\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/nec-wx3000hp/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_nec-wx3000hp.ipk\"}" \
-        --assets-link "{\"name\":\"nec-wx3000hp fullimage\",\"type\":\"image\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/nec-wx3000hp/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$NEC_WX3000HP_FULLIMAGE\"}" \
-        --assets-link "{\"name\":\"turris-omnia-rdk prplmesh ipk\",\"type\":\"package\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/turris-omnia-rdk/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_turris-omnia-rdk.ipk\"}" \
-        --assets-link "{\"name\":\"turris-omnia-rdk fullimage\",\"type\":\"image\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/turris-omnia-rdk/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$TURRIS_OMNIA_RDKB_FULLIMAGE\"}"
+        --assets-link "{\"name\":\"axepoint prplmesh ipk\",\"type\":\"package\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/axepoint/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_axepoint.ipk\",\"link_type\":\"package\"}" \
+        --assets-link "{\"name\":\"axepoint fullimage\",\"type\":\"image\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/axepoint/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$AXEPOINT_FULLIMAGE\",\"link_type\":\"image\"}" \
+        --assets-link "{\"name\":\"glinet-b1300 prplmesh ipk\",\"type\":\"package\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/glinet-b1300/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_glinet-b1300.ipk\",\"link_type\":\"package\"}" \
+        --assets-link "{\"name\":\"glinet-b1300 fullimage\",\"type\":\"image\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/glinet-b1300/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$GLINET_B1300_FULLIMAGE\",\"link_type\":\"image\"}" \
+        --assets-link "{\"name\":\"turris-omnia prplmesh ipk\",\"type\":\"package\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/turris-omnia/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_turris-omnia.ipk\",\"link_type\":\"package\"}" \
+        --assets-link "{\"name\":\"turris-omnia fullimage\",\"type\":\"image\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/turris-omnia/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$TURRIS_OMNIA_FULLIMAGE\",\"link_type\":\"image\"}" \
+        --assets-link "{\"name\":\"nec-wx3000hp prplmesh ipk\",\"type\":\"package\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/nec-wx3000hp/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_nec-wx3000hp.ipk\",\"link_type\":\"package\"}" \
+        --assets-link "{\"name\":\"nec-wx3000hp fullimage\",\"type\":\"image\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/nec-wx3000hp/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$NEC_WX3000HP_FULLIMAGE\",\"link_type\":\"image\"}" \
+        --assets-link "{\"name\":\"turris-omnia-rdk prplmesh ipk\",\"type\":\"package\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/turris-omnia-rdk/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_turris-omnia-rdk.ipk\",\"link_type\":\"package\"}" \
+        --assets-link "{\"name\":\"turris-omnia-rdk fullimage\",\"type\":\"image\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/turris-omnia-rdk/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$TURRIS_OMNIA_RDKB_FULLIMAGE\",\"link_type\":\"image\"}"
 
   needs:
     - job: upload-release-artifacts
