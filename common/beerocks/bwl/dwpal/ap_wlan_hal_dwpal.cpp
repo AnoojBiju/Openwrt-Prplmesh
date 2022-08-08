@@ -780,10 +780,35 @@ bool ap_wlan_hal_dwpal::refresh_radio_info()
     if (m_radio_info.frequency_band == beerocks::eFreqType::FREQ_UNKNOWN) {
 
         if (radio_info.bands.size() == 1) {
+            // if there is only one band for this radio, then select it
+            auto &supported_channels = radio_info.bands[0].supported_channels;
+            if (supported_channels.empty()) {
+                LOG(ERROR)
+                    << "There must be at least 1 supported channel that is read from nl80211";
+                return false;
+            }
 
-            // If there is just one band, then select it.
-            m_radio_info.frequency_band = radio_info.bands[0].get_frequency_band();
+            // validate all the frequencies are of the same type
+            auto freq_type = son::wireless_utils::which_freq_type(
+                supported_channels.begin()->second.center_freq);
+            if (freq_type == beerocks::eFreqType::FREQ_UNKNOWN) {
+                LOG(ERROR) << "frequency " << supported_channels.begin()->second.center_freq
+                           << " type is unknown";
+                return false;
+            }
+            bool are_all_freq_same_type =
+                std::all_of(supported_channels.begin(), supported_channels.end(),
+                            [&](const std::pair<uint8_t, bwl::nl80211_client::channel_info>
+                                    &supported_channel) {
+                                return freq_type == son::wireless_utils::which_freq_type(
+                                                        supported_channel.second.center_freq);
+                            });
+            if (!are_all_freq_same_type) {
+                LOG(ERROR) << "All frequencies of the same band must be of the same band type";
+                return false;
+            }
 
+            m_radio_info.frequency_band = freq_type;
         } else {
 
             // If there are multiple bands, then select the band which frequency matches the
@@ -874,22 +899,30 @@ bool ap_wlan_hal_dwpal::refresh_radio_info()
         }
     }
 
-    for (const auto &band_info : radio_info.bands) {
-        if (m_radio_info.frequency_band != band_info.get_frequency_band()) {
-            continue;
-        }
+    if (radio_info.bands.begin()->supported_channels.empty()) {
+        LOG(ERROR) << "Supported channels map is empty";
+        return false;
+    }
+    auto band_info_it =
+        std::find_if(radio_info.bands.begin(), radio_info.bands.end(),
+                     [&](const bwl::nl80211_client::band_info &b) {
+                         return m_radio_info.frequency_band ==
+                                son::wireless_utils::which_freq_type(
+                                    b.supported_channels.begin()->second.center_freq);
+                     });
 
-        m_radio_info.max_bandwidth = band_info.get_max_bandwidth();
-        m_radio_info.ht_supported  = band_info.ht_supported;
-        m_radio_info.ht_capability = band_info.ht_capability;
-        std::copy_n(band_info.ht_mcs_set, m_radio_info.ht_mcs_set.size(),
+    if (band_info_it != radio_info.bands.end()) {
+        m_radio_info.max_bandwidth = band_info_it->get_max_bandwidth();
+        m_radio_info.ht_supported  = band_info_it->ht_supported;
+        m_radio_info.ht_capability = band_info_it->ht_capability;
+        std::copy_n(band_info_it->ht_mcs_set, m_radio_info.ht_mcs_set.size(),
                     m_radio_info.ht_mcs_set.begin());
-        m_radio_info.vht_supported  = band_info.vht_supported;
-        m_radio_info.vht_capability = band_info.vht_capability;
-        std::copy_n(band_info.vht_mcs_set, m_radio_info.vht_mcs_set.size(),
+        m_radio_info.vht_supported  = band_info_it->vht_supported;
+        m_radio_info.vht_capability = band_info_it->vht_capability;
+        std::copy_n(band_info_it->vht_mcs_set, m_radio_info.vht_mcs_set.size(),
                     m_radio_info.vht_mcs_set.begin());
 
-        for (auto const &pair : band_info.supported_channels) {
+        for (auto const &pair : band_info_it->supported_channels) {
             auto &supported_channel_info = pair.second;
             auto &channel_info        = m_radio_info.channels_list[supported_channel_info.number];
             channel_info.tx_power_dbm = supported_channel_info.tx_power;
@@ -907,12 +940,15 @@ bool ap_wlan_hal_dwpal::refresh_radio_info()
                 }
             }
         }
-
-        break;
+    } else {
+        LOG(ERROR) << "Can't find a band that match frequency band of the radio info";
+        return false;
     }
-
-    return base_wlan_hal_dwpal::refresh_radio_info();
+    break;
 }
+
+return base_wlan_hal_dwpal::refresh_radio_info();
+} // namespace dwpal
 
 bool ap_wlan_hal_dwpal::enable()
 {
@@ -3293,7 +3329,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)
     return false;
 }
 
-} // namespace dwpal
+} // namespace bwl
 
 std::shared_ptr<ap_wlan_hal> ap_wlan_hal_create(std::string iface_name, hal_conf_t hal_conf,
                                                 base_wlan_hal::hal_event_cb_t callback)

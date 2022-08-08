@@ -875,8 +875,6 @@ bool base_wlan_hal_dwpal::refresh_radio_info()
             return false;
         }
     }
-    m_radio_info.is_5ghz =
-        (son::wireless_utils::which_freq(m_radio_info.channel) == beerocks::eFreqType::FREQ_5G);
     // If the VAPs map is empty, refresh it as well
     // TODO: update on every refresh?
 
@@ -910,6 +908,15 @@ bool base_wlan_hal_dwpal::refresh_radio_info()
     auto print_status = m_radio_info.radio_state != eRadioState::ENABLED &&
                         m_radio_info.radio_state != eRadioState::DISABLED;
     LOG_IF(print_status, DEBUG) << "Radio state=" << m_radio_info.radio_state;
+
+    if (m_radio_info.frequency_band == beerocks::eFreqType::FREQ_UNKNOWN) {
+        if (!read_param("freq", reply_obj, tmp_int)) {
+            LOG(ERROR) << "Failed reading 'freq' parameter!";
+            return false;
+        } else {
+            m_radio_info.frequency_band = son::wireless_utils::which_freq_type(tmp_int);
+        }
+    }
 
     if (m_radio_info.radio_state == eRadioState::DISABLED) {
         return true;
