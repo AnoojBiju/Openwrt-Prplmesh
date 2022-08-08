@@ -416,24 +416,21 @@ fill_nbapi_config_from_master_conf(std::shared_ptr<beerocks::nbapi::Ambiorix> am
 
     // ambiorix->set methods trigger data change event. It is not harmfull, but needed to be remembered.
 
-    ret_val &=
-        ambiorix_datamodel->set("Device.WiFi.DataElements.Configuration", "BandSteeringEnabled",
-                                master_conf.load_client_band_steering);
+    const std::string base_path = "Device.WiFi.DataElements.Configuration";
 
-    ret_val &=
-        ambiorix_datamodel->set("Device.WiFi.DataElements.Configuration", "ClientSteeringEnabled",
-                                master_conf.load_client_optimal_path_roaming);
+    ret_val &= ambiorix_datamodel->set(base_path, "BandSteeringEnabled",
+                                       master_conf.load_client_band_steering);
 
-    ret_val &=
-        ambiorix_datamodel->set("Device.WiFi.DataElements.Configuration", "SteeringCurrentBonus",
-                                master_conf.roaming_hysteresis_percent_bonus);
+    ret_val &= ambiorix_datamodel->set(base_path, "OptimalPathEnabled",
+                                       master_conf.load_client_optimal_path_roaming);
 
-    ret_val &= ambiorix_datamodel->set("Device.WiFi.DataElements.Configuration",
-                                       "SteeringDisassociationTimer",
+    ret_val &= ambiorix_datamodel->set(base_path, "SteeringCurrentBonus",
+                                       master_conf.roaming_hysteresis_percent_bonus);
+
+    ret_val &= ambiorix_datamodel->set(base_path, "SteeringDisassociationTimer",
                                        master_conf.steering_disassoc_timer_msec.count());
 
-    ret_val &= ambiorix_datamodel->set("Device.WiFi.DataElements.Configuration",
-                                       "LinkMetricsRequestInterval",
+    ret_val &= ambiorix_datamodel->set(base_path, "LinkMetricsRequestInterval",
                                        master_conf.link_metrics_request_interval_seconds.count());
 
     return ret_val;
