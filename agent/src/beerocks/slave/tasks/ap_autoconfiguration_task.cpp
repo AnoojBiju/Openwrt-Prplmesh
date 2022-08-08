@@ -683,9 +683,7 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_wsc_m1_message(
     // Hostap Params
     string_utils::copy_string(notification->hostap().iface_name, radio->front.iface_name.c_str(),
                               beerocks::message::IFACE_NAME_LENGTH);
-    notification->hostap().iface_mac = radio->front.iface_mac;
-    notification->hostap().iface_is_5ghz =
-        son::wireless_utils::is_frequency_band_5ghz(radio->freq_type);
+    notification->hostap().iface_mac      = radio->front.iface_mac;
     notification->hostap().ant_num        = radio->number_of_antennas;
     notification->hostap().tx_power       = radio->tx_power_dB;
     notification->hostap().frequency_band = radio->freq_type;
