@@ -510,7 +510,7 @@ bool Monitor::monitor_fsm()
             }
 #endif
 
-            mon_rssi.is_5ghz = mon_wlan_hal->get_radio_info().is_5ghz;
+            mon_rssi.freq_type = mon_wlan_hal->get_radio_info().frequency_band;
 
             LOG(DEBUG) << "Monitor attach process finished successfully!";
             mon_hal_attached = true;

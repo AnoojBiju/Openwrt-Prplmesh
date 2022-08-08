@@ -222,7 +222,7 @@ void monitor_rssi::process()
                 //LOG(DEBUG) << ">> monitor_sta_node::IDLE, MAC=" << sta_mac << " sta_stats.rx_rssi_curr=" << int(sta_stats.rx_rssi_curr) << " sta_stats.rx_rssi_prev="<<int(sta_stats.rx_rssi_prev) << " delta_val=" << int(delta_val);
                 // If radio is 2.4 Ghz, send notification even though threshold is not crossed
                 if (delta_val >= conf_rx_rssi_notification_delta_db &&
-                    (!is_5ghz ||
+                    (freq_type == beerocks::eFreqType::FREQ_24G ||
                      sta_stats.rx_rssi_curr <= conf_rx_rssi_notification_threshold_dbm)) {
                     sta_stats.rx_rssi_prev = sta_stats.rx_rssi_curr;
 
