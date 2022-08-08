@@ -485,6 +485,22 @@ bool cfg_set_channel_select_task(bool channel_select_task);
  *@param [out] enable true if the DFS Task is enabled and false otherwise.
  * @return true on success, otherwise false.
  */
+bool cfg_get_dfs_reentry(bool &dfs_reentry_enabled);
+
+/**
+ * @brief Sets DFS Re-Entry option in configuration.
+ *
+ * @param[in] dfs_reentry_enabled  true for enabled dfs_reentry_enabled.
+ * @return true on success, otherwise false
+ */
+
+bool cfg_set_dfs_reentry(bool dfs_reentry_enabled);
+/**
+ * @brief Returns whether DFS Re-Entry is enabled or not.
+ *
+ *@param [out] enable true if the DFS Re-Entry is enabled and false otherwise.
+ * @return true on success, otherwise false.
+ */
 bool cfg_get_dfs_task(bool &dfs_task_enabled);
 
 /**

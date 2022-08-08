@@ -367,6 +367,19 @@ bool cfg_get_channel_select_task(bool &channel_select_task_enabled)
 
 bool cfg_set_channel_select_task(bool channel_select_task_enabled) { return true; }
 
+bool cfg_get_dfs_reentry(bool &dfs_reentry_enabled)
+{
+    int retVal = -1;
+    if (cfg_get_param_int("dfs_reentry", retVal) == RETURN_ERR) {
+        return false;
+    }
+
+    dfs_reentry_enabled = (retVal == 1);
+    return true;
+}
+
+bool cfg_set_dfs_reentry(bool dfs_reentry_enabled) { return true; }
+
 bool cfg_get_dfs_task(bool &dfs_task_enabled)
 {
     int retVal = -1;

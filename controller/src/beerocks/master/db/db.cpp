@@ -6935,6 +6935,7 @@ bool db::update_master_configuration(const sDbNbapiConfig &nbapi_config)
     ret_val &= beerocks::bpl::cfg_set_optimal_path_roaming(config.load_client_optimal_path_roaming);
     ret_val &= beerocks::bpl::cfg_set_roaming_hysteresis_percent_bonus(
         config.roaming_hysteresis_percent_bonus);
+
     ret_val &=
         beerocks::bpl::cfg_set_steering_disassoc_timer_msec(config.steering_disassoc_timer_msec);
     ret_val &= beerocks::bpl::cfg_set_link_metrics_request_interval(
@@ -6942,6 +6943,7 @@ bool db::update_master_configuration(const sDbNbapiConfig &nbapi_config)
 
     ret_val &= beerocks::bpl::cfg_set_load_balancing(config.load_load_balancing);
     ret_val &= beerocks::bpl::cfg_set_channel_select_task(config.load_channel_select_task);
+    ret_val &= beerocks::bpl::cfg_set_dfs_reentry(config.load_dfs_reentry);
     ret_val &= beerocks::bpl::cfg_set_dfs_task(config.load_dynamic_channel_select_task);
     ret_val &= beerocks::bpl::cfg_set_health_check(config.load_health_check);
     ret_val &= beerocks::bpl::cfg_set_optimal_path_prefer_signal_strenght(
@@ -6963,6 +6965,7 @@ void db::update_master_settings_from_config()
     settings_client_optimal_path_roaming(true);
     settings_client_optimal_path_roaming_prefer_signal_strength(true);
     settings_client_11k_roaming(true);
+    settings_dfs_reentry(true);
     settings_ire_roaming(true);
     settings_health_check(true);
     settings_load_balancing(true);
