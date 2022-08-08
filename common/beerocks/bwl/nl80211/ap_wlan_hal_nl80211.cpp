@@ -1342,7 +1342,7 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
             son::wireless_utils::freq_to_channel(beerocks::string_utils::stoi(parsed_obj["freq"]));
         m_radio_info.bandwidth          = wpa_bw_to_beerocks_bw(bandwidth);
         m_radio_info.channel_ext_above  = beerocks::string_utils::stoi(parsed_obj["ch_offset"]);
-        m_radio_info.vht_center_freq    = beerocks::string_utils::stoi(parsed_obj["cf1"]);
+        m_radio_info.center_freq        = beerocks::string_utils::stoi(parsed_obj["cf1"]);
         m_radio_info.is_dfs_channel     = beerocks::string_utils::stoi(parsed_obj["dfs"]);
         m_radio_info.last_csa_sw_reason = ChanSwReason::Unknown;
         if (son::wireless_utils::which_freq(m_radio_info.channel) == beerocks::eFreqType::FREQ_5G) {

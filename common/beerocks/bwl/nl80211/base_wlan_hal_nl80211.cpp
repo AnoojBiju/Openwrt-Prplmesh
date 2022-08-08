@@ -675,7 +675,7 @@ bool base_wlan_hal_nl80211::refresh_radio_info()
                 default:
                     break;
                 }
-                m_radio_info.vht_center_freq = if_info.frequency_center1;
+                m_radio_info.center_freq = if_info.frequency_center1;
             }
         }
 
@@ -703,7 +703,7 @@ bool base_wlan_hal_nl80211::refresh_radio_info()
         //center freq
         auto freq = reply.find("freq");
         if (freq != reply.end() && !freq->second.empty()) {
-            m_radio_info.vht_center_freq = beerocks::string_utils::stoi(iter->second);
+            m_radio_info.center_freq = beerocks::string_utils::stoi(iter->second);
         } else {
             /* vht (802.11ac) is 5ghz only.
                However, when HE (802.11ax) exists, the field he_oper_centr_freq_seg0_idx
@@ -715,7 +715,7 @@ bool base_wlan_hal_nl80211::refresh_radio_info()
             if (iter != reply.end()) {
                 auto freq_idx = beerocks::string_utils::stoi(iter->second);
                 if (freq_idx > 0) {
-                    m_radio_info.vht_center_freq = 5000 + (freq_idx * 5);
+                    m_radio_info.center_freq = 5000 + (freq_idx * 5);
                 }
             }
         }

@@ -144,7 +144,7 @@ struct RadioInfo {
     int channel                        = 0;
     int bandwidth                      = 0;
     int channel_ext_above              = 0;
-    int vht_center_freq                = 0;
+    int center_freq                    = 0;
     bool is_dfs_channel                = false;
     int ant_num                        = 0;
     int tx_power                       = 0;

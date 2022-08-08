@@ -2365,7 +2365,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         LOG(DEBUG) << "numOfValidArgs[4]= " << numOfValidArgs[4]
                    << " ExtensionChannel= " << (int)m_radio_info.channel_ext_above;
         LOG(DEBUG) << "numOfValidArgs[5]= " << numOfValidArgs[5]
-                   << " cf1= " << (int)m_radio_info.vht_center_freq;
+                   << " cf1= " << (int)m_radio_info.center_freq;
         LOG(DEBUG) << "numOfValidArgs[6]= " << numOfValidArgs[6]
                    << " dfs_chan= " << (int)m_radio_info.is_dfs_channel;
         LOG(DEBUG) << "numOfValidArgs[7]= " << numOfValidArgs[7] << " reason= " << reason;
