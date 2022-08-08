@@ -457,6 +457,9 @@ typedef struct sChannelScanResults {
 
     //Indicates the fraction of the time AP senses that the channel is in use by the neighboring AP for transmissions.
     uint32_t channel_utilization = 0;
+
+    //This indicates the number of station associated with the BSS. This field is taken from BSS Load IE
+    uint16_t station_count = 0;
 } sChannelScanResults;
 
 typedef struct {

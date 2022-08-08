@@ -385,7 +385,8 @@ static void parse_info_elements(unsigned char *ie, int ielen, sChannelScanResult
                 LOG(ERROR) << "TYPE_BSS_LOAD doesn't match min and max length criteria";
                 break;
             }
-            results.channel_utilization = (uint32_t)(data[2] / 255);
+            results.channel_utilization = (uint32_t)(((float)data[2] / 255)*100);
+	    results.station_count = (uint16_t)data[0];
         } break;
 
         case ie_type::TYPE_RSN: {
