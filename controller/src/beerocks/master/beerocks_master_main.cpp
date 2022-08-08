@@ -433,6 +433,35 @@ fill_nbapi_config_from_master_conf(std::shared_ptr<beerocks::nbapi::Ambiorix> am
     ret_val &= ambiorix_datamodel->set(base_path, "LinkMetricsRequestInterval",
                                        master_conf.link_metrics_request_interval_seconds.count());
 
+    ret_val &= ambiorix_datamodel->set(base_path, "ChannelSelectionTaskEnabled",
+                                       master_conf.load_channel_select_task);
+
+    ret_val &= ambiorix_datamodel->set(base_path, "BackhaulOptimizationEnabled",
+                                       master_conf.load_ire_roaming);
+
+    ret_val &= ambiorix_datamodel->set(base_path, "DynamicChannelSelectionTaskEnabled",
+                                       master_conf.load_dynamic_channel_select_task);
+
+    ret_val &=
+        ambiorix_datamodel->set(base_path, "LoadBalancingEnabled", master_conf.load_load_balancing);
+
+    ret_val &=
+        ambiorix_datamodel->set(base_path, "OptimalPathPreferSignalStrength",
+                                master_conf.load_optimal_path_roaming_prefer_signal_strength);
+
+    ret_val &= ambiorix_datamodel->set(base_path, "HealthCheckTask", master_conf.load_health_check);
+
+    ret_val &= ambiorix_datamodel->set(base_path, "StatisticsPollingTask",
+                                       master_conf.load_diagnostics_measurements);
+
+    ret_val &= ambiorix_datamodel->set(base_path, "StatisticsPollingRateSec",
+                                       master_conf.diagnostics_measurements_polling_rate_sec);
+
+    ret_val &= ambiorix_datamodel->set(base_path, "DFSReentry", master_conf.load_dfs_reentry);
+
+    ret_val &= ambiorix_datamodel->set(base_path, "Client_11kRoaming",
+                                       master_conf.load_client_11k_roaming);
+
     return ret_val;
 }
 
