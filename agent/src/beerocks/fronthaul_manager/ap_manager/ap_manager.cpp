@@ -2225,12 +2225,11 @@ void ApManager::handle_hostapd_attached()
     string_utils::copy_string(notification->params().iface_name,
                               ap_wlan_hal->get_iface_name().c_str(), message::IFACE_NAME_LENGTH);
 
-    notification->params().iface_type    = uint8_t(ap_wlan_hal->get_iface_type());
-    notification->params().iface_mac     = tlvf::mac_from_string(ap_wlan_hal->get_radio_mac());
-    notification->params().iface_is_5ghz = ap_wlan_hal->get_radio_info().is_5ghz;
-    notification->params().ant_num       = ap_wlan_hal->get_radio_info().ant_num;
-    notification->params().tx_power      = ap_wlan_hal->get_radio_info().tx_power;
-    notification->cs_params().channel    = ap_wlan_hal->get_radio_info().channel;
+    notification->params().iface_type = uint8_t(ap_wlan_hal->get_iface_type());
+    notification->params().iface_mac  = tlvf::mac_from_string(ap_wlan_hal->get_radio_mac());
+    notification->params().ant_num    = ap_wlan_hal->get_radio_info().ant_num;
+    notification->params().tx_power   = ap_wlan_hal->get_radio_info().tx_power;
+    notification->cs_params().channel = ap_wlan_hal->get_radio_info().channel;
     notification->cs_params().channel_ext_above_primary =
         ap_wlan_hal->get_radio_info().channel_ext_above;
     notification->cs_params().vht_center_frequency = ap_wlan_hal->get_radio_info().vht_center_freq;
