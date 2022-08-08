@@ -102,6 +102,10 @@ bool Configuration::store()
         // add empty line for readability
         out_file << "\n";
         for (auto &line : vap.second) {
+            // skip any existing config_id line (e.g. set by netfid)
+            if (line.rfind("config_id=", 0) == 0) {
+                continue;
+            }
             out_file << line << "\n";
             bss_conf << line << "\n";
         }
