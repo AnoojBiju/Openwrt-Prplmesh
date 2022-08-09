@@ -85,14 +85,16 @@ static std::string dwpal_security_val(WiFiSec sec)
 /////////////////////////////// Implementation ///////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-static sta_wlan_hal_dwpal *ctx = nullptr; // To access object methods from dwpald context callback
+// To access object methods from dwpald context callback
+// key: ifname, value: sta_wlan_hal_dwpal object context
+static std::unordered_map<std::string, sta_wlan_hal_dwpal *> ctx_map = {};
 
 sta_wlan_hal_dwpal::sta_wlan_hal_dwpal(const std::string &iface_name, hal_event_cb_t callback,
                                        const bwl::hal_conf_t &hal_conf)
     : base_wlan_hal(bwl::HALType::Station, iface_name, IfaceType::Intel, callback, hal_conf),
       base_wlan_hal_dwpal(bwl::HALType::Station, iface_name, callback, hal_conf)
 {
-    ctx = this;
+    ctx_map[iface_name] = this;
 }
 
 sta_wlan_hal_dwpal::~sta_wlan_hal_dwpal()
@@ -100,14 +102,7 @@ sta_wlan_hal_dwpal::~sta_wlan_hal_dwpal()
     if (dwpald_hostap_detach(m_radio_info.iface_name.c_str()) != DWPALD_SUCCESS) {
         LOG(ERROR) << " Failed to detach from dwpald for interface" << m_radio_info.iface_name;
     }
-    for (const auto &vap : m_radio_info.available_vaps) {
-        std::string vap_name = beerocks::utils::get_iface_string_from_iface_vap_ids(
-            m_radio_info.iface_name, vap.first);
-        if (dwpald_hostap_detach(vap_name.c_str()) != DWPALD_SUCCESS) {
-            LOG(ERROR) << " Failed to detach from dwpald for interface" << vap_name;
-        }
-    }
-    ctx = nullptr;
+    ctx_map.erase(m_radio_info.iface_name);
 }
 
 bool sta_wlan_hal_dwpal::start_wps_pbc()
@@ -607,15 +602,12 @@ bool sta_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std
 static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t len)
 {
     std::string opcode(op_code);
-#if 0
-    if (write(ctx->get_ext_evt_write_pfd(), buffer, len) < 0) {
-        LOG(ERROR) << "Failed writing hostap event callback data";
+    auto it = ctx_map.find(ifname);
+    if (it == ctx_map.end()) {
+        LOG(ERROR) << "Could not find context for ifname=" << ifname;
         return -1;
     }
-#endif
-    if (ctx) {
-        ctx->process_dwpal_event(buffer, len, opcode);
-    }
+    it->second->process_dwpal_event(buffer, len, opcode);
     return 0;
 }
 
@@ -642,18 +634,9 @@ bool sta_wlan_hal_dwpal::dwpald_attach(char *ifname)
             return false;
         }
     }
-    static const std::unordered_map<std::string, uint8_t> dwpald_iface_ids = {{"wlan1", 0},
-                                                                              {"wlan3", 1}};
-    auto it = dwpald_iface_ids.find(ifname);
-    if (it == dwpald_iface_ids.end()) {
-        LOG(ERROR) << "iface " << ifname << " not found on dwpald_iface_ids list";
-        return false;
-    }
-    LOG(DEBUG) << "Calling dwpald_hostap_attach_with_id(), iface=" << it->first
-               << ", id=" << it->second;
-    if (dwpald_hostap_attach_with_id(
-            ifname, sizeof(supplicant_event_handlers) / sizeof(dwpald_hostap_event),
-            supplicant_event_handlers, 0, it->second) != DWPALD_SUCCESS) {
+    if (dwpald_hostap_attach(ifname,
+                             sizeof(supplicant_event_handlers) / sizeof(dwpald_hostap_event),
+                             supplicant_event_handlers, 0) != DWPALD_SUCCESS) {
         LOG(ERROR) << "Failed to attach to dwpald for interface " << ifname;
         return false;
     }
