@@ -97,15 +97,16 @@ sta_wlan_hal_dwpal::sta_wlan_hal_dwpal(const std::string &iface_name, hal_event_
 
 sta_wlan_hal_dwpal::~sta_wlan_hal_dwpal()
 {
-    if (dwpald_hostap_detach(m_radio_info.iface_name.c_str()) != DWPALD_SUCCESS) {
-        LOG(ERROR) << " Failed to detach from dwpald for interface" << m_radio_info.iface_name;
+    static const std::unordered_map<std::string, uint8_t> dwpald_iface_ids = {{"wlan1", 0},
+                                                                              {"wlan3", 1}};
+    auto it = dwpald_iface_ids.find(m_radio_info.iface_name);
+    if (it == dwpald_iface_ids.end()) {
+        LOG(ERROR) << "iface " << m_radio_info.iface_name << " not found on dwpald_iface_ids list";
+        return;
     }
-    for (const auto &vap : m_radio_info.available_vaps) {
-        std::string vap_name = beerocks::utils::get_iface_string_from_iface_vap_ids(
-            m_radio_info.iface_name, vap.first);
-        if (dwpald_hostap_detach(vap_name.c_str()) != DWPALD_SUCCESS) {
-            LOG(ERROR) << " Failed to detach from dwpald for interface" << vap_name;
-        }
+    if (dwpald_hostap_detach_with_id(m_radio_info.iface_name.c_str(), it->second) !=
+        DWPALD_SUCCESS) {
+        LOG(ERROR) << " Failed to detach from dwpald for interface" << m_radio_info.iface_name;
     }
     ctx = nullptr;
 }
@@ -651,9 +652,9 @@ bool sta_wlan_hal_dwpal::dwpald_attach(char *ifname)
     }
     LOG(DEBUG) << "Calling dwpald_hostap_attach_with_id(), iface=" << it->first
                << ", id=" << it->second;
-    if (dwpald_hostap_attach_with_id(
+    if (dwpald_hostap_attach_ex_with_id(
             ifname, sizeof(supplicant_event_handlers) / sizeof(dwpald_hostap_event),
-            supplicant_event_handlers, 0, it->second) != DWPALD_SUCCESS) {
+            supplicant_event_handlers, NULL, 0, it->second) != DWPALD_SUCCESS) {
         LOG(ERROR) << "Failed to attach to dwpald for interface " << ifname;
         return false;
     }
