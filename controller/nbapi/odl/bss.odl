@@ -48,6 +48,9 @@
             on action validate call check_range [0, 16777215];
         }
 
+        bool FronthaulUse = false;
+        bool BackhaulUse = false;
+
         object STA [] {
             counted with STANumberOfEntries;
         }
