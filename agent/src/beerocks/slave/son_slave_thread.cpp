@@ -578,7 +578,7 @@ bool slave_thread::read_platform_configuration()
     if (!bpl::get_controller_message_timeout_seconds(
             db->device_conf.controller_message_timeout_seconds)) {
         LOG(WARNING) << "get_controller_message_timeout_seconds() failed!"
-                     << " using default configuration ";
+                     << " using default configuration!!! ";
     }
     if (!bpl::get_controller_heartbeat_state_timeout_seconds(
             db->device_conf.controller_heartbeat_state_timeout_seconds)) {
