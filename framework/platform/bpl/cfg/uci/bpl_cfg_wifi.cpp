@@ -278,20 +278,25 @@ bool bpl_cfg_get_wireless_settings(std::list<son::wireless_utils::sBssInfoConf> 
                 configuration.fronthaul = true;
                 configuration.backhaul  = false;
             } else {
-                if (multi_ap == "1") {
+                switch (beerocks::string_utils::stoi(multi_ap)) {
+                case beerocks::eBssType::BSS_TYPE_BACKHAUL:
                     configuration.fronthaul = false;
                     configuration.backhaul  = true;
-                } else if (multi_ap == "2") {
+                    break;
+                case beerocks::eBssType::BSS_TYPE_FRONTHAUL:
                     configuration.fronthaul = true;
                     configuration.backhaul  = false;
-                } else if (multi_ap == "3") {
+                    break;
+                case beerocks::eBssType::BSS_TYPE_BACK_FRONTHAUL:
                     configuration.fronthaul = true;
                     configuration.backhaul  = true;
-                } else {
-                    LOG(ERROR) << "multi_ap configuration value is unrecognized " << multi_ap
+                    break;
+                default:
+                    LOG(ERROR) << "Multi AP configuration value is unrecognized " << multi_ap
                                << ", assign as only fronthaul support";
                     configuration.fronthaul = true;
                     configuration.backhaul  = false;
+                    break;
                 }
             }
         }

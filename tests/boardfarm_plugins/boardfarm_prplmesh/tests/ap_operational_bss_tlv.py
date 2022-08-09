@@ -13,7 +13,9 @@ import time
 
 
 class ApOperationalBss(PrplMeshBaseTest):
-    ''' Check fields in ApOperationalBSS TLV '''
+    ''' Check fields in ApOperationalBSS TLV
+        Additionally, check the currently used BSS type
+    '''
 
     def runTest(self):
         try:
@@ -34,6 +36,15 @@ class ApOperationalBss(PrplMeshBaseTest):
                                                 "fronthaul"))
         controller.beerocks_cli_command('bml_update_wifi_credentials {}'.format(agent.mac))
         time.sleep(3)
+
+        debug("Check the currently used BSS type")
+        for radio in self.get_topology()[agent.mac].radios.values():
+            for bss in radio.vaps.values():
+                assert controller.nbapi_get_parameter(bss.path, "FronthaulUse"), \
+                    f"FronthaulUse value for {bss.bssid} should be 'true'."
+                assert not controller.nbapi_get_parameter(bss.path, "BackhaulUse"), \
+                    f"BackhaulUse value for {bss.bssid} should be 'false'."
+
         debug("Send 1905 a Topology Query message")
         mid = controller.dev_send_1905(
             agent.mac, self.ieee1905['eMessageType']['TOPOLOGY_QUERY_MESSAGE'])
@@ -74,3 +85,22 @@ class ApOperationalBss(PrplMeshBaseTest):
                                               .format(bss_interface.ap_bss_local_intf_ssid,
                                                       ssid))
         debug("No errors found in the AP Operational TLV.")
+
+        # Change Multi AP mode to backhaul
+        controller.beerocks_cli_command('bml_clear_wifi_credentials {}'.format(agent.mac))
+        controller.beerocks_cli_command('bml_set_wifi_credentials {} {} {} {} {}'
+                                        .format(agent.mac,
+                                                ssid,
+                                                "maprocks1",
+                                                "24g-5g",
+                                                "backhaul"))
+        controller.beerocks_cli_command('bml_update_wifi_credentials {}'.format(agent.mac))
+        time.sleep(3)
+
+        debug("Check the currently used BSS type")
+        for radio in self.get_topology()[agent.mac].radios.values():
+            for bss in radio.vaps.values():
+                assert not controller.nbapi_get_parameter(bss.path, "FronthaulUse"), \
+                    f"FronthaulUse value for {bss.bssid} should be 'false'."
+                assert controller.nbapi_get_parameter(bss.path, "BackhaulUse"), \
+                    f"BackhaulUse value for {bss.bssid} should be 'true'."
