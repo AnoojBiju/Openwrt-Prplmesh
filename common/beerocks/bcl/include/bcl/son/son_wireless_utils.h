@@ -62,6 +62,14 @@
 
 #define RESTRICTED_2G_OVERLAPP_SIZE 5
 
+//Based on https://en.wikipedia.org/wiki/List_of_WLAN_channels
+#define BAND_24G_MIN_FREQ 2401
+#define BAND_24G_MAX_FREQ 2473
+#define BAND_5G_MIN_FREQ 5150
+#define BAND_5G_MAX_FREQ 5895
+#define BAND_6G_MIX_FREQ 5945
+#define BAND_6G_MAX_FREQ 7125
+
 namespace son {
 class wireless_utils {
 public:
@@ -131,14 +139,15 @@ public:
     /**
      * @brief Obtains the channel number that corresponds to given frequency value.
      *
-     * @param freq frequency value in MHz.
+     * @param center_freq center frequency value in MHz.
      * @return channel number.
      */
-    static int freq_to_channel(int freq);
+    static int freq_to_channel(int center_freq);
     static uint16_t channel_to_vht_center_freq(int channel, beerocks::eWiFiBandwidth bandwidth,
                                                bool channel_ext_above_secondary);
     static beerocks::eFreqType which_freq(uint32_t chn);
     static beerocks::eFreqType which_freq_op_cls(const uint8_t op_cls);
+    static beerocks::eFreqType which_freq_type(uint32_t frequency);
     static bool is_same_freq_band(int chn1, int chn2);
     static beerocks::eSubbandType which_subband(uint32_t chn);
     static bool is_low_subband(const uint32_t chn);

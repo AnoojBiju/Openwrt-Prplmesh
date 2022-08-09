@@ -632,10 +632,7 @@ bool base_wlan_hal_nl80211::refresh_radio_info()
         if (m_radio_info.channel <= 0) {
             //LOG(ERROR) << "X_LANTIQ_COM_Vendor_Channel not valid: " << radio_info.channel;
             return false;
-        } else if (m_radio_info.channel > 14) {
-            m_radio_info.is_5ghz = true;
         }
-
     } else {
 
         // Unavailable
@@ -651,31 +648,38 @@ bool base_wlan_hal_nl80211::refresh_radio_info()
         // 1 = 80 MHz channel width
         // 2 = 160 MHz channel width
         // 3 = 80+80 MHz channel width
-        int vht_oper_chwidth  = 0;
+
+        int oper_chwidth      = 0;
         int secondary_channel = 0;
         nl80211_client::interface_info if_info;
-        auto iter = reply.find("vht_oper_chwidth");
+        auto iter = reply.find("vht_oper_chwidth"); // vht (802.11ac) is 5ghz only
         if (iter != reply.end()) {
-            vht_oper_chwidth  = beerocks::string_utils::stoi(iter->second);
+            oper_chwidth      = beerocks::string_utils::stoi(iter->second);
             secondary_channel = beerocks::string_utils::stoi(iter->second);
-        } else if (m_nl80211_client->get_interface_info(get_iface_name(), if_info)) {
-            switch (if_info.bandwidth) {
-            case 40:
-                secondary_channel = 1;
-                break;
-            case 80:
-                vht_oper_chwidth = 1;
-                break;
-            case 160:
-                vht_oper_chwidth = 2;
-                break;
-            default:
-                break;
+        } else {
+            iter = reply.find("he_oper_chwidth"); // HE (802.11ax) can be 2.4ghz, 5ghz, or 6ghz
+            if (iter != reply.end()) {
+                oper_chwidth      = beerocks::string_utils::stoi(iter->second);
+                secondary_channel = beerocks::string_utils::stoi(iter->second);
+            } else if (m_nl80211_client->get_interface_info(get_iface_name(), if_info)) {
+                switch (if_info.bandwidth) {
+                case 40:
+                    secondary_channel = 1;
+                    break;
+                case 80:
+                    oper_chwidth = 1;
+                    break;
+                case 160:
+                    oper_chwidth = 2;
+                    break;
+                default:
+                    break;
+                }
+                m_radio_info.center_freq = if_info.frequency_center1;
             }
-            m_radio_info.vht_center_freq = if_info.frequency_center1;
         }
 
-        switch (vht_oper_chwidth) {
+        switch (oper_chwidth) {
             // if vht_oper_chwidth is not set it defaults to 0
         case 0:
             if (secondary_channel == 0) {
@@ -691,17 +695,28 @@ bool base_wlan_hal_nl80211::refresh_radio_info()
             m_radio_info.bandwidth = 160;
             break;
         default:
-            LOG(ERROR) << "Unknown vht_oper_chwidth " << vht_oper_chwidth
+            LOG(ERROR) << "Unknown oper_chwidth " << oper_chwidth
                        << ". Defaulting bandwidth to 160Mhz.";
             m_radio_info.bandwidth = 160;
         }
 
-        //center freq = 5 GHz + (5 * index)
-        iter = reply.find("vht_oper_centr_freq_seg0_idx");
-        if (iter != reply.end()) {
-            auto freq_idx = beerocks::string_utils::stoi(iter->second);
-            if (freq_idx > 0) {
-                m_radio_info.vht_center_freq = 5000 + (freq_idx * 5);
+        //center freq
+        auto freq = reply.find("freq");
+        if (freq != reply.end() && !freq->second.empty()) {
+            m_radio_info.center_freq = beerocks::string_utils::stoi(iter->second);
+        } else {
+            /* vht (802.11ac) is 5ghz only.
+               However, when HE (802.11ax) exists, the field he_oper_centr_freq_seg0_idx
+               can represent 2.4ghz, 5ghz, or 6ghz, so without 'freq' field,
+               we need to find a way to distinguish between the band types
+               in order to do the proper calculation.
+            */
+            iter = reply.find("vht_oper_centr_freq_seg0_idx");
+            if (iter != reply.end()) {
+                auto freq_idx = beerocks::string_utils::stoi(iter->second);
+                if (freq_idx > 0) {
+                    m_radio_info.center_freq = 5000 + (freq_idx * 5);
+                }
             }
         }
 
@@ -719,9 +734,6 @@ bool base_wlan_hal_nl80211::refresh_radio_info()
 
         // Channel
         m_radio_info.channel = beerocks::string_utils::stoi(reply["channel"]);
-
-        m_radio_info.is_5ghz =
-            (son::wireless_utils::which_freq(m_radio_info.channel) == beerocks::eFreqType::FREQ_5G);
 
         // If the VAPs map is empty, refresh it as well
         // TODO: update on every refresh?

@@ -337,7 +337,6 @@ typedef struct sNodeHostap {
     char iface_name[beerocks::message::IFACE_NAME_LENGTH];
     uint8_t iface_type;
     sMacAddr iface_mac;
-    uint8_t iface_is_5ghz;
     uint8_t ant_num;
     uint8_t ant_gain;
     uint8_t tx_power;

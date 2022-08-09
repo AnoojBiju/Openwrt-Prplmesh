@@ -1618,7 +1618,7 @@ void ApManager::fill_cs_params(beerocks_message::sApChannelSwitch &params)
     params.bandwidth = uint8_t(
         beerocks::utils::convert_bandwidth_to_enum(ap_wlan_hal->get_radio_info().bandwidth));
     params.channel_ext_above_primary = ap_wlan_hal->get_radio_info().channel_ext_above;
-    params.vht_center_frequency      = ap_wlan_hal->get_radio_info().vht_center_freq;
+    params.vht_center_frequency      = ap_wlan_hal->get_radio_info().center_freq;
     params.switch_reason             = uint8_t(ap_wlan_hal->get_radio_info().last_csa_sw_reason);
     params.is_dfs_channel            = ap_wlan_hal->get_radio_info().is_dfs_channel;
 }
@@ -1669,8 +1669,7 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
                   << " bandwidth = " << ap_wlan_hal->get_radio_info().bandwidth
                   << " channel_ext_above_primary = "
                   << int(ap_wlan_hal->get_radio_info().channel_ext_above)
-                  << " vht_center_frequency = "
-                  << int(ap_wlan_hal->get_radio_info().vht_center_freq)
+                  << " vht_center_frequency = " << int(ap_wlan_hal->get_radio_info().center_freq)
                   << " last_csa_switch_reason enum = "
                   << int(ap_wlan_hal->get_radio_info().last_csa_sw_reason);
 
@@ -2277,15 +2276,14 @@ void ApManager::handle_hostapd_attached()
     string_utils::copy_string(notification->params().iface_name,
                               ap_wlan_hal->get_iface_name().c_str(), message::IFACE_NAME_LENGTH);
 
-    notification->params().iface_type    = uint8_t(ap_wlan_hal->get_iface_type());
-    notification->params().iface_mac     = tlvf::mac_from_string(ap_wlan_hal->get_radio_mac());
-    notification->params().iface_is_5ghz = ap_wlan_hal->get_radio_info().is_5ghz;
-    notification->params().ant_num       = ap_wlan_hal->get_radio_info().ant_num;
-    notification->params().tx_power      = ap_wlan_hal->get_radio_info().tx_power;
-    notification->cs_params().channel    = ap_wlan_hal->get_radio_info().channel;
+    notification->params().iface_type = uint8_t(ap_wlan_hal->get_iface_type());
+    notification->params().iface_mac  = tlvf::mac_from_string(ap_wlan_hal->get_radio_mac());
+    notification->params().ant_num    = ap_wlan_hal->get_radio_info().ant_num;
+    notification->params().tx_power   = ap_wlan_hal->get_radio_info().tx_power;
+    notification->cs_params().channel = ap_wlan_hal->get_radio_info().channel;
     notification->cs_params().channel_ext_above_primary =
         ap_wlan_hal->get_radio_info().channel_ext_above;
-    notification->cs_params().vht_center_frequency = ap_wlan_hal->get_radio_info().vht_center_freq;
+    notification->cs_params().vht_center_frequency = ap_wlan_hal->get_radio_info().center_freq;
     notification->cs_params().bandwidth            = uint8_t(
         beerocks::utils::convert_bandwidth_to_enum(ap_wlan_hal->get_radio_info().bandwidth));
 
@@ -2318,7 +2316,7 @@ void ApManager::handle_hostapd_attached()
     LOG(INFO) << " ant_num = " << ap_wlan_hal->get_radio_info().ant_num;
     LOG(INFO) << " tx_power = " << ap_wlan_hal->get_radio_info().tx_power;
     LOG(INFO) << " current channel = " << ap_wlan_hal->get_radio_info().channel;
-    LOG(INFO) << " vht_center_frequency = " << ap_wlan_hal->get_radio_info().vht_center_freq;
+    LOG(INFO) << " vht_center_frequency = " << ap_wlan_hal->get_radio_info().center_freq;
     LOG(INFO) << " current bw = " << ap_wlan_hal->get_radio_info().bandwidth;
     LOG(INFO) << " frequency_band = " << ap_wlan_hal->get_radio_info().frequency_band;
     LOG(INFO) << " max_bandwidth = " << ap_wlan_hal->get_radio_info().max_bandwidth;

@@ -780,10 +780,35 @@ bool ap_wlan_hal_dwpal::refresh_radio_info()
     if (m_radio_info.frequency_band == beerocks::eFreqType::FREQ_UNKNOWN) {
 
         if (radio_info.bands.size() == 1) {
+            // if there is only one band for this radio, then select it
+            auto &supported_channels = radio_info.bands[0].supported_channels;
+            if (supported_channels.empty()) {
+                LOG(ERROR)
+                    << "There must be at least 1 supported channel that is read from nl80211";
+                return false;
+            }
 
-            // If there is just one band, then select it.
-            m_radio_info.frequency_band = radio_info.bands[0].get_frequency_band();
+            // validate all the frequencies are of the same type
+            auto freq_type = son::wireless_utils::which_freq_type(
+                supported_channels.begin()->second.center_freq);
+            if (freq_type == beerocks::eFreqType::FREQ_UNKNOWN) {
+                LOG(ERROR) << "frequency " << supported_channels.begin()->second.center_freq
+                           << " type is unknown";
+                return false;
+            }
+            bool are_all_freq_same_type =
+                std::all_of(supported_channels.begin(), supported_channels.end(),
+                            [&](const std::pair<uint8_t, bwl::nl80211_client::channel_info>
+                                    &supported_channel) {
+                                return freq_type == son::wireless_utils::which_freq_type(
+                                                        supported_channel.second.center_freq);
+                            });
+            if (!are_all_freq_same_type) {
+                LOG(ERROR) << "All frequencies of the same band must be of the same band type";
+                return false;
+            }
 
+            m_radio_info.frequency_band = freq_type;
         } else {
 
             // If there are multiple bands, then select the band which frequency matches the
@@ -874,22 +899,30 @@ bool ap_wlan_hal_dwpal::refresh_radio_info()
         }
     }
 
-    for (const auto &band_info : radio_info.bands) {
-        if (m_radio_info.frequency_band != band_info.get_frequency_band()) {
-            continue;
-        }
+    if (radio_info.bands.begin()->supported_channels.empty()) {
+        LOG(ERROR) << "Supported channels map is empty";
+        return false;
+    }
+    auto band_info_it =
+        std::find_if(radio_info.bands.begin(), radio_info.bands.end(),
+                     [&](const bwl::nl80211_client::band_info &b) {
+                         return m_radio_info.frequency_band ==
+                                son::wireless_utils::which_freq_type(
+                                    b.supported_channels.begin()->second.center_freq);
+                     });
 
-        m_radio_info.max_bandwidth = band_info.get_max_bandwidth();
-        m_radio_info.ht_supported  = band_info.ht_supported;
-        m_radio_info.ht_capability = band_info.ht_capability;
-        std::copy_n(band_info.ht_mcs_set, m_radio_info.ht_mcs_set.size(),
+    if (band_info_it != radio_info.bands.end()) {
+        m_radio_info.max_bandwidth = band_info_it->get_max_bandwidth();
+        m_radio_info.ht_supported  = band_info_it->ht_supported;
+        m_radio_info.ht_capability = band_info_it->ht_capability;
+        std::copy_n(band_info_it->ht_mcs_set, m_radio_info.ht_mcs_set.size(),
                     m_radio_info.ht_mcs_set.begin());
-        m_radio_info.vht_supported  = band_info.vht_supported;
-        m_radio_info.vht_capability = band_info.vht_capability;
-        std::copy_n(band_info.vht_mcs_set, m_radio_info.vht_mcs_set.size(),
+        m_radio_info.vht_supported  = band_info_it->vht_supported;
+        m_radio_info.vht_capability = band_info_it->vht_capability;
+        std::copy_n(band_info_it->vht_mcs_set, m_radio_info.vht_mcs_set.size(),
                     m_radio_info.vht_mcs_set.begin());
 
-        for (auto const &pair : band_info.supported_channels) {
+        for (auto const &pair : band_info_it->supported_channels) {
             auto &supported_channel_info = pair.second;
             auto &channel_info        = m_radio_info.channels_list[supported_channel_info.number];
             channel_info.tx_power_dbm = supported_channel_info.tx_power;
@@ -907,12 +940,15 @@ bool ap_wlan_hal_dwpal::refresh_radio_info()
                 }
             }
         }
-
-        break;
+    } else {
+        LOG(ERROR) << "Can't find a band that match frequency band of the radio info";
+        return false;
     }
-
-    return base_wlan_hal_dwpal::refresh_radio_info();
+    break;
 }
+
+return base_wlan_hal_dwpal::refresh_radio_info();
+} // namespace dwpal
 
 bool ap_wlan_hal_dwpal::enable()
 {
@@ -2390,7 +2426,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         int16_t VHT_MCS[16]                    = {0};
         char ht_cap[8]                         = {0};
         char vht_cap[16]                       = {0};
-        size_t numOfValidArgs[22]              = {0};
+        size_t numOfValidArgs[23]              = {0};
         char assoc_req[ASSOCIATION_FRAME_SIZE] = {0};
 
         //force to unknown if not available
@@ -2420,20 +2456,22 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
              DWPAL_CHAR_PARAM, "band_2g_capable=", 0},
             {(void *)&msg->params.capabilities.band_5g_capable, &numOfValidArgs[13],
              DWPAL_CHAR_PARAM, "band_5g_capable=", 0},
-            {(void *)&msg->params.capabilities.rrm_supported, &numOfValidArgs[14], DWPAL_CHAR_PARAM,
+            {(void *)&msg->params.capabilities.band_6g_capable, &numOfValidArgs[14],
+             DWPAL_CHAR_PARAM, "band_6g_capable=", 0},
+            {(void *)&msg->params.capabilities.rrm_supported, &numOfValidArgs[15], DWPAL_CHAR_PARAM,
              "rrm_supported=", 0},
-            {(void *)&max_ch_width, &numOfValidArgs[15], DWPAL_CHAR_PARAM, "max_ch_width=", 0},
-            {(void *)&msg->params.capabilities.max_streams, &numOfValidArgs[16], DWPAL_CHAR_PARAM,
+            {(void *)&max_ch_width, &numOfValidArgs[16], DWPAL_CHAR_PARAM, "max_ch_width=", 0},
+            {(void *)&msg->params.capabilities.max_streams, &numOfValidArgs[17], DWPAL_CHAR_PARAM,
              "max_streams=", 0},
-            {(void *)&msg->params.capabilities.phy_mode, &numOfValidArgs[17], DWPAL_CHAR_PARAM,
+            {(void *)&msg->params.capabilities.phy_mode, &numOfValidArgs[18], DWPAL_CHAR_PARAM,
              "phy_mode=", 0},
-            {(void *)&msg->params.capabilities.max_mcs, &numOfValidArgs[18], DWPAL_CHAR_PARAM,
+            {(void *)&msg->params.capabilities.max_mcs, &numOfValidArgs[19], DWPAL_CHAR_PARAM,
              "max_mcs=", 0},
-            {(void *)&msg->params.capabilities.max_tx_power, &numOfValidArgs[19], DWPAL_CHAR_PARAM,
+            {(void *)&msg->params.capabilities.max_tx_power, &numOfValidArgs[20], DWPAL_CHAR_PARAM,
              "max_tx_power=", 0},
-            {(void *)&msg->params.capabilities.mumimo_supported, &numOfValidArgs[20],
+            {(void *)&msg->params.capabilities.mumimo_supported, &numOfValidArgs[21],
              DWPAL_CHAR_PARAM, "mu_mimo=", 0},
-            {(void *)&msg->params.multi_ap_profile, &numOfValidArgs[21], DWPAL_INT_PARAM,
+            {(void *)&msg->params.multi_ap_profile, &numOfValidArgs[22], DWPAL_INT_PARAM,
              "multi_ap_profile=", 0},
             /* Must be at the end */
             {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
@@ -2458,6 +2496,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         LOG(DEBUG) << "cell_capa        : " << (int)msg->params.capabilities.cell_capa;
         LOG(DEBUG) << "band_2g_capable  : " << (int)msg->params.capabilities.band_2g_capable;
         LOG(DEBUG) << "band_5g_capable  : " << (int)msg->params.capabilities.band_5g_capable;
+        LOG(DEBUG) << "band_6g_capable  : " << (int)msg->params.capabilities.band_6g_capable;
         LOG(DEBUG) << "rrm_supported    : " << (int)msg->params.capabilities.rrm_supported;
         LOG(DEBUG) << "max_ch_width     : " << (int)msg->params.capabilities.max_ch_width;
         LOG(DEBUG) << "max_streams      : " << (int)msg->params.capabilities.max_streams;
@@ -2471,7 +2510,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         for (uint8_t i = 0; i < (sizeof(numOfValidArgs) / sizeof(size_t)); i++) {
             if (numOfValidArgs[i] == 0) {
                 // Skip validation on multi-ap profile since it is not mandatory.
-                if (i == 21) {
+                if (i == 22) {
                     // If the validation check fails, set the profile parameter to zero (not a Mult-AP
                     // Station), to make sure DWPAL did not put garbage there.
                     msg->params.multi_ap_profile = 0;
@@ -3296,7 +3335,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)
     return false;
 }
 
-} // namespace dwpal
+} // namespace bwl
 
 std::shared_ptr<ap_wlan_hal> ap_wlan_hal_create(std::string iface_name, hal_conf_t hal_conf,
                                                 base_wlan_hal::hal_event_cb_t callback)

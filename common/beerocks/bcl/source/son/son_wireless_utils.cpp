@@ -808,19 +808,23 @@ int wireless_utils::channel_to_freq(int channel)
     return (channel + 1000) * 5;
 }
 
-int wireless_utils::freq_to_channel(int freq)
+int wireless_utils::freq_to_channel(int center_freq)
 {
     /* see 802.11-2007 17.3.8.3.2 and Annex J */
-    if (freq == 2484) {
+    if (center_freq == 2484) {
         return 14;
-    } else if (freq < 2484) {
-        return (freq - 2407) / 5;
-    } else if (freq >= 4910 && freq <= 4980) {
-        return (freq - 4000) / 5;
-    } else if (freq <= 45000) { /* DMG band lower limit */
-        return (freq - 5000) / 5;
-    } else if (freq >= 58320 && freq <= 64800) {
-        return (freq - 56160) / 2160;
+    } else if (center_freq < 2484) {
+        return (center_freq - 2407) / 5;
+    } else if (center_freq >= 4910 && center_freq <= 4980) {
+        return (center_freq - 4000) / 5;
+    } else if (center_freq >= BAND_5G_MIN_FREQ && center_freq <= BAND_5G_MAX_FREQ) {
+        return (center_freq - 5000) / 5;
+    } else if (center_freq >= BAND_6G_MIX_FREQ && center_freq <= BAND_6G_MAX_FREQ) {
+        return (center_freq - (BAND_6G_MIX_FREQ + 10)) / 5 + 1;
+    } else if (center_freq <= 45000) { /* DMG band lower limit */
+        return (center_freq - 5000) / 5;
+    } else if (center_freq >= 58320 && center_freq <= 64800) {
+        return (center_freq - 56160) / 2160;
     } else {
         return 0;
     }
@@ -882,6 +886,18 @@ beerocks::eFreqType wireless_utils::which_freq(uint32_t chn)
     }
 
     LOG(ERROR) << "Unsupported channel:" << int(chn);
+    return beerocks::eFreqType::FREQ_UNKNOWN;
+}
+
+beerocks::eFreqType wireless_utils::which_freq_type(uint32_t freq)
+{
+    if (freq >= BAND_24G_MIN_FREQ && freq <= BAND_24G_MAX_FREQ) {
+        return beerocks::eFreqType::FREQ_24G;
+    } else if (freq >= BAND_5G_MIN_FREQ && freq <= BAND_5G_MAX_FREQ) {
+        return beerocks::eFreqType::FREQ_5G;
+    } else if (freq >= BAND_6G_MIX_FREQ && freq <= BAND_6G_MAX_FREQ) {
+        return beerocks::eFreqType::FREQ_6G;
+    }
     return beerocks::eFreqType::FREQ_UNKNOWN;
 }
 
