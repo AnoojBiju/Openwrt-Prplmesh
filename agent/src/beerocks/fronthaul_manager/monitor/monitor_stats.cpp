@@ -227,8 +227,6 @@ void monitor_stats::process()
         return;
     }
 
-    LOG(DEBUG) << "monitor_stats::process()";
-
     // Radio
     auto radio_node = mon_db->get_radio_node();
 
