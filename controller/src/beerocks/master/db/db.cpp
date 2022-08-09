@@ -2285,6 +2285,13 @@ bool db::is_vap_on_steer_list(const sMacAddr &bssid)
         return false;
     }
 
+    // consider vap_id shift when main vap_id is greater than 0
+    // (case of glinet where main vap is wlan0-1)
+    auto iface_ids = utils::get_ids_from_iface_string(vap_name);
+    if (iface_ids.vap_id >= IFACE_VAP_ID_MIN) {
+        vap_id += iface_ids.vap_id;
+    }
+
     vap_name               = utils::get_iface_string_from_iface_vap_ids(vap_name, vap_id);
     const auto &steer_vaps = config.load_steer_on_vaps;
     if (steer_vaps.find(vap_name) == std::string::npos) {
