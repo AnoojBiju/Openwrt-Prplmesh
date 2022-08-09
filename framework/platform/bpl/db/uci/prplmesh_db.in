@@ -30,6 +30,7 @@ config prplmesh 'config'
     option radio_stats_enable '1'
     option unsuccessful_assoc_report_policy '1'
     option unsuccessful_assoc_max_reporting_rate '30'
+    option ire_roaming '1'
 
 config wifi-device 'radio0'
     option hostap_iface 'wlan0'

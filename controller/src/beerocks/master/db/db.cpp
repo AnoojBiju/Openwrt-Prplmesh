@@ -6966,12 +6966,11 @@ void db::update_master_settings_from_config()
     settings_client_optimal_path_roaming_prefer_signal_strength(true);
     settings_client_11k_roaming(true);
     settings_dfs_reentry(true);
+    settings_dynamic_channel_select_task(true);
     settings_ire_roaming(true);
     settings_health_check(true);
     settings_load_balancing(true);
     settings_channel_select_task(true);
-    settings_dynamic_channel_select_task(true);
-    settings_dfs_reentry(true);
     settings_diagnostics_measurements(true);
 }
 
