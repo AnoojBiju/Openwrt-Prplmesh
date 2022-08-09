@@ -649,6 +649,8 @@ bool sta_wlan_hal_dwpal::dwpald_attach(char *ifname)
         LOG(ERROR) << "iface " << ifname << " not found on dwpald_iface_ids list";
         return false;
     }
+    LOG(DEBUG) << "Calling dwpald_hostap_attach_with_id(), iface=" << it->first
+               << ", id=" << it->second;
     if (dwpald_hostap_attach_with_id(
             ifname, sizeof(supplicant_event_handlers) / sizeof(dwpald_hostap_event),
             supplicant_event_handlers, 0, it->second) != DWPALD_SUCCESS) {
