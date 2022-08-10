@@ -255,6 +255,12 @@ bool base_wlan_hal_dwpal::fsm_setup()
 
         .on(dwpal_fsm_event::Attach, {dwpal_fsm_state::Attach, dwpal_fsm_state::Detach},
             [&](TTransition &transition, const void *args) -> bool {
+                // Station does not use vap interfaces.
+                if (get_type() == HALType::Station) {
+                    // move to next state
+                    return true;
+                }
+
                 uint attached = 0;
                 for (auto &vap : m_radio_info.available_vaps) {
                     if (attach_dwpald_interface(vap.first)) {
