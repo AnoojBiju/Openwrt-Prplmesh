@@ -390,6 +390,8 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_search_message(
         freq_band = ieee1905_1::tlvAutoconfigFreqBand::IEEE_802_11_2_4_GHZ;
     } else if (radio->freq_type == beerocks::eFreqType::FREQ_5G) {
         freq_band = ieee1905_1::tlvAutoconfigFreqBand::IEEE_802_11_5_GHZ;
+    } else if (radio->freq_type == beerocks::eFreqType::FREQ_6G) {
+        freq_band = ieee1905_1::tlvAutoconfigFreqBand::IEEE_802_11_6_GHZ;
     } else {
         LOG(ERROR) << "unsupported freq_type=" << int(radio->freq_type)
                    << ", iface=" << radio_iface;
@@ -763,9 +765,17 @@ bool ApAutoConfigurationTask::add_wsc_m1_tlv(const std::string &radio_iface)
     cfg.model_number        = "18.04";
     cfg.primary_dev_type_id = WSC::WSC_DEV_NETWORK_INFRA_AP;
     cfg.device_name         = "prplmesh-agent";
-    cfg.bands               = son::wireless_utils::is_frequency_band_5ghz(radio->freq_type)
-                    ? WSC::WSC_RF_BAND_5GHZ
-                    : WSC::WSC_RF_BAND_2GHZ;
+    switch (radio->freq_type) {
+    case beerocks::FREQ_5G:
+        cfg.bands = WSC::WSC_RF_BAND_5GHZ;
+        break;
+    case beerocks::FREQ_6G:
+        cfg.bands = WSC::WSC_RF_BAND_6GHZ;
+        break;
+    default:
+        cfg.bands = WSC::WSC_RF_BAND_2GHZ;
+        break;
+    }
     auto attributes = WSC::m1::create(*tlv, cfg);
     if (!attributes)
         return false;
@@ -820,6 +830,10 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_response(
     case ieee1905_1::tlvSupportedFreqBand::BAND_5G:
         band_name = "5GHz";
         freq_type = beerocks::eFreqType::FREQ_5G;
+        break;
+    case ieee1905_1::tlvSupportedFreqBand::BAND_6G:
+        band_name = "6GHz";
+        freq_type = beerocks::eFreqType::FREQ_6G;
         break;
     case ieee1905_1::tlvSupportedFreqBand::BAND_60G:
         LOG(DEBUG) << "received autoconfiguration response for 60GHz band, unsupported";
