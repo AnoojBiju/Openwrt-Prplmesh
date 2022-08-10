@@ -23,6 +23,7 @@ namespace WSC {
 enum eWscRfBands: uint8_t {
     WSC_RF_BAND_2GHZ = 0x1,
     WSC_RF_BAND_5GHZ = 0x2,
+    WSC_RF_BAND_6GHZ = 0x3,
     WSC_RF_BAND_60GHZ = 0x4,
 };
 // Enum AutoPrint generated code snippet begining- DON'T EDIT!
@@ -31,6 +32,7 @@ static const char *eWscRfBands_str(eWscRfBands enum_value) {
     switch (enum_value) {
     case WSC_RF_BAND_2GHZ:  return "WSC_RF_BAND_2GHZ";
     case WSC_RF_BAND_5GHZ:  return "WSC_RF_BAND_5GHZ";
+    case WSC_RF_BAND_6GHZ:  return "WSC_RF_BAND_6GHZ";
     case WSC_RF_BAND_60GHZ: return "WSC_RF_BAND_60GHZ";
     }
     static std::string out_str = std::to_string(int(enum_value));
