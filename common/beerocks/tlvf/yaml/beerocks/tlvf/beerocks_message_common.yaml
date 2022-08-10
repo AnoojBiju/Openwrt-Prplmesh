@@ -957,6 +957,13 @@ sChannelScanResults:
   channel_utilization:
     _comment: Indicates the fraction of the time AP senses that the channel is in use by the neighboring AP for transmissions.
     _type: uint32_t
+  station_count:
+    _comment: This indicates the number of station associated with the BSS. This field is taken from BSS Load IE of scanned bss.
+    _type: uint16_t
+  load_bss_ie_present:
+    _comment: This indicates that scanned BSS has BSS LOAD IE present or not.
+    _type: uint32_t
+
 
 sBssidInfo:
   _type: struct
