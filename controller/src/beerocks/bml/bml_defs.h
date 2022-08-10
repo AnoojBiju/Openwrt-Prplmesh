@@ -578,6 +578,10 @@ struct BML_NEIGHBOR_AP {
     uint32_t ap_DTIMPeriod;
     //Indicates the fraction of the time AP senses that the channel is in use by the neighboring AP for transmissions.
     uint32_t ap_ChannelUtilization;
+    //This indicates the number of station associated with the BSS. This field is taken from BSS Load IE
+    uint16_t ap_StationCount;
+    //LOAD BSS IE is present or absence in scanned BSS. If scanned BSS does not have LOAD BSS IE present then this field will be 0.
+    uint32_t ap_loadBssIEPresent = 0;
 };
 
 struct BML_CLIENT_CONFIG {
