@@ -131,6 +131,7 @@ static void map_event_obj_parser(std::string event_str,
         idx_start++;
     } else {
         LOG(WARNING) << "empty event! event_string: " << event_str;
+        return;
     }
 
     // Parse all the args
