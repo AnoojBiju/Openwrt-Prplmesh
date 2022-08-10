@@ -85,14 +85,16 @@ static std::string dwpal_security_val(WiFiSec sec)
 /////////////////////////////// Implementation ///////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-static sta_wlan_hal_dwpal *ctx = nullptr; // To access object methods from dwpald context callback
+// To access object methods from dwpald context callback
+// key: ifname, value: sta_wlan_hal_dwpal object context
+static std::unordered_map<std::string, sta_wlan_hal_dwpal *> ctx_map;
 
 sta_wlan_hal_dwpal::sta_wlan_hal_dwpal(const std::string &iface_name, hal_event_cb_t callback,
                                        const bwl::hal_conf_t &hal_conf)
     : base_wlan_hal(bwl::HALType::Station, iface_name, IfaceType::Intel, callback, hal_conf),
       base_wlan_hal_dwpal(bwl::HALType::Station, iface_name, callback, hal_conf)
 {
-    ctx = this;
+    ctx_map[iface_name] = this;
 }
 
 sta_wlan_hal_dwpal::~sta_wlan_hal_dwpal()
@@ -100,6 +102,7 @@ sta_wlan_hal_dwpal::~sta_wlan_hal_dwpal()
     if (dwpald_hostap_detach(m_radio_info.iface_name.c_str()) != DWPALD_SUCCESS) {
         LOG(ERROR) << " Failed to detach from dwpald for interface" << m_radio_info.iface_name;
     }
+    ctx_map.erase(m_radio_info.iface_name);
 }
 
 bool sta_wlan_hal_dwpal::start_wps_pbc()
@@ -599,9 +602,12 @@ bool sta_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std
 static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t len)
 {
     std::string opcode(op_code);
-    if (ctx) {
-        ctx->process_dwpal_event(buffer, len, opcode);
+    auto it = ctx_map.find(ifname);
+    if (it == ctx_map.end()) {
+        LOG(ERROR) << "Could not find context for ifname=" << ifname;
+        return -1;
     }
+    it->second->process_dwpal_event(buffer, len, opcode);
     return 0;
 }
 
