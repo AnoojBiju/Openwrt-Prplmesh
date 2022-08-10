@@ -1365,7 +1365,7 @@ bool slave_thread::handle_cmdu_control_message(int fd,
             return false;
         }
 
-        bool radio_5g = wireless_utils::is_frequency_band_5ghz(radio->freq_type);
+        bool radio_5g = (radio->freq_type == beerocks::FREQ_5G);
 
         // If received scan request and ZWDFS CAC is about to finish refuse to start the
         // background scan only on the 5G radio.
@@ -4883,7 +4883,7 @@ void slave_thread::save_cac_capabilities_params_to_db(const std::string &frontha
         LOG(DEBUG) << "Radio of interface " << fronthaul_iface << " does not exist on the db";
         return;
     }
-    if (son::wireless_utils::is_frequency_band_5ghz(radio->freq_type)) {
+    if (radio->freq_type == beerocks::FREQ_5G) {
         AgentDB::sRadio::sCacCapabilities::sCacMethodCapabilities cac_capabilities_local;
 
         // we'll update the value when we receive cac-started event.

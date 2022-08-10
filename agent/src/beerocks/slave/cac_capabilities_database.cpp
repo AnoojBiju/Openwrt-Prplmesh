@@ -30,7 +30,7 @@ std::vector<sMacAddr> CacCapabilitiesDatabase::get_cac_radios() const
         if (!radio) {
             return {};
         }
-        if (son::wireless_utils::is_frequency_band_5ghz(radio->freq_type)) {
+        if (radio->freq_type == beerocks::FREQ_5G) {
             radios_5g.push_back(radio);
         }
     }
