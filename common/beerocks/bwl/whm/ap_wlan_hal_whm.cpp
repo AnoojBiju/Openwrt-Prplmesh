@@ -619,8 +619,8 @@ bool ap_wlan_hal_whm::sta_softblock_remove(const std::string &vap_name,
     return true;
 }
 
-bool ap_wlan_hal_whm::switch_channel(int chan, int bw, int vht_center_frequency,
-                                     int csa_beacon_count)
+bool ap_wlan_hal_whm::switch_channel(int chan, beerocks::eWiFiBandwidth bw,
+                                     int vht_center_frequency, int csa_beacon_count)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
     return true;
