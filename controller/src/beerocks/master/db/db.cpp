@@ -3334,7 +3334,15 @@ bool db::add_channel_report(const sMacAddr &RUID, const uint8_t &operating_class
 
         neighbor_result.noise_dBm = avg_noise;
 
-        neighbor_result.channel_utilization = avg_utilization;
+        if (src_neighbor.bss_load_element_present() ==
+            wfa_map::cNeighbors::eBssLoadElementPresent::FIELD_PRESENT) {
+            auto channel_utilization            = src_neighbor.channel_utilization();
+            auto station_count                  = src_neighbor.station_count();
+            neighbor_result.channel_utilization = (uint32_t)*channel_utilization;
+            neighbor_result.station_count       = (uint16_t)*station_count;
+        } else {
+            neighbor_result.channel_utilization = avg_utilization;
+        }
 
         radio->scan_report[key].neighbors.push_back(neighbor_result);
     }
