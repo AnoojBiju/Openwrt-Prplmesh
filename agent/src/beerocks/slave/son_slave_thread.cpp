@@ -195,7 +195,7 @@ bool slave_thread::thread_init()
     std::string agent_server_uds_path = config.temp_path + std::string(BEEROCKS_AGENT_UDS);
     m_cmdu_server_uds_address = beerocks::net::UdsAddress::create_instance(agent_server_uds_path);
     LOG_IF(!m_cmdu_server_uds_address, FATAL)
-        << "Unable to create UDS server address for backhaul manager!";
+        << "Unable to create UDS server address for the backhaul manager!";
 
     // Create server to exchange CMDU messages with clients connected through a UDS socket
     m_cmdu_server =
