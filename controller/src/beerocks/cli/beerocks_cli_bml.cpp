@@ -2344,8 +2344,8 @@ int cli_bml::get_dcs_scan_results(const std::string &radio_mac, uint32_t max_res
                                                    BML_CHANNEL_SCAN_ENUM_LIST_SIZE)
                           << std::endl
                           << "  dtim_period=" << int(res.ap_DTIMPeriod) << std::endl
-                          << "  channel_utilization=" << int(res.ap_ChannelUtilization)
-                          << std::endl;
+                          << "  channel_utilization=" << int(res.ap_ChannelUtilization) << std::endl
+                          << "  station_count=" << int(res.ap_StationCount) << std::endl;
             }
         }
     }

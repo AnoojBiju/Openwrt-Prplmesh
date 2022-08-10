@@ -92,6 +92,8 @@ static void translate_channel_scan_results(const beerocks_message::sChannelScanR
     res_out.ap_Noise                     = res_in.noise_dBm;
     res_out.ap_DTIMPeriod                = res_in.dtim_period;
     res_out.ap_ChannelUtilization        = res_in.channel_utilization;
+    res_out.ap_StationCount              = res_in.station_count;
+    res_out.ap_loadBssIEPresent          = res_in.load_bss_ie_present;
 }
 
 //////////////////////////////////////////////////////////////////////////////
