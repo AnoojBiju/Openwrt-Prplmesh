@@ -147,7 +147,6 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
         beerocks::string_utils::stoi(main_master_conf.ucc_listener_port);
     master_conf.load_ire_roaming           = (main_master_conf.load_ire_roaming == "1");
     master_conf.load_service_fairness      = (main_master_conf.load_service_fairness == "1");
-    master_conf.load_dfs_reentry           = (main_master_conf.load_dfs_reentry == "1");
     master_conf.load_rdkb_extensions       = (main_master_conf.load_rdkb_extensions == "1");
     master_conf.load_client_11k_roaming    = (main_master_conf.load_client_11k_roaming == "1");
     master_conf.load_legacy_client_roaming = (main_master_conf.load_legacy_client_roaming == "1");
@@ -329,6 +328,12 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
                    << beerocks::bpl::DEFAULT_BAND_STEERING;
 
         master_conf.load_client_band_steering = beerocks::bpl::DEFAULT_BAND_STEERING;
+    }
+
+    if (!beerocks::bpl::cfg_get_dfs_reentry(master_conf.load_dfs_reentry)) {
+        LOG(DEBUG) << "Failed to read cfg_get_dfs_reentry, setting to default value: "
+                   << beerocks::bpl::DEFAULT_DFS_REENTRY;
+        master_conf.load_dfs_reentry = beerocks::bpl::DEFAULT_DFS_REENTRY;
     }
 
     if (!beerocks::bpl::cfg_get_optimal_path_roaming(
