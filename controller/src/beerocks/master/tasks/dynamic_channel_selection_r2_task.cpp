@@ -1555,6 +1555,15 @@ bool dynamic_channel_selection_r2_task::handle_cmdu_1905_channel_preference_repo
         return false;
     }
 
+    // Build ACK message CMDU
+    auto cmdu_tx_header = cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE);
+    if (!cmdu_tx_header) {
+        LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
+        return false;
+    }
+    LOG(DEBUG) << "sending ACK message back to agent";
+    son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
+
     // CHANNEL_PREFERENCE_REPORT_MESSAGE contains zero or more Channel Preference TLVs
     for (const auto &channel_preference_tlv :
          cmdu_rx.getClassList<wfa_map::tlvChannelPreference>()) {
@@ -1600,15 +1609,6 @@ bool dynamic_channel_selection_r2_task::handle_cmdu_1905_channel_preference_repo
             return false;
         }
     }
-
-    // Build ACK message CMDU
-    auto cmdu_tx_header = cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE);
-    if (!cmdu_tx_header) {
-        LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
-        return false;
-    }
-    LOG(DEBUG) << "sending ACK message back to agent";
-    son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
 
     if (m_selection_state == eSelectionState::WAIT_FOR_PREFERENCE) {
         FSM_MOVE_SELECTION_STATE(eSelectionState::IDLE);
