@@ -4115,9 +4115,13 @@ bool slave_thread::agent_fsm()
                     radio->front.zwdfs = false;
                 }
                 if (!radio_manager.fronthaul_started) {
+                    LOG(INFO) << "Starting the " << fronthaul_iface
+                              << " fronthaul process. Before starting, kill the existing one.";
                     // Start the fronthaul process. Before starting, kill the existing one.
                     fronthaul_stop(fronthaul_iface);
                     fronthaul_start(fronthaul_iface);
+                } else {
+                    LOG(INFO) << "Fronthaul " << fronthaul_iface << " is already started";
                 }
                 return true;
             });
@@ -4172,12 +4176,18 @@ bool slave_thread::agent_fsm()
                 ss << *it;
             }
             LOG(ERROR) << "Timed out while waiting for fronthaul(s) " << ss.str() << " to connect.";
-            // Set all radios to "not started" in order to manually restart them in the STATE_JOIN_INIT.
+            // Set all pending radios to "not started" in order to manually restart them in
+            // the JOIN_INIT state.
             m_radio_managers.do_on_each_radio_manager(
                 [&](sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
-                    radio_manager.fronthaul_started = false;
+                    if (std::find(pending_fronthauls.begin(), pending_fronthauls.end(),
+                                  fronthaul_iface) != pending_fronthauls.end()) {
+                        radio_manager.fronthaul_started = false;
+                    }
                     return true;
                 });
+            // To to the JOIN_INIT state, to recover from the timeout, otherwise we will be stuck
+            // in the WAIT_FOR_FRONTHAUL_THREADS_JOINED state indefinitely.
             LOG(DEBUG) << "goto STATE_JOIN_INIT";
             m_agent_state = STATE_JOIN_INIT;
         }
