@@ -12,9 +12,9 @@
 #include "buffer.h"
 #include "file_descriptor.h"
 
-#include <sys/socket.h>
-
 #include <memory>
+#include <string>
+#include <sys/socket.h>
 
 namespace beerocks {
 namespace net {
