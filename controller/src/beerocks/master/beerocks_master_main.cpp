@@ -149,7 +149,6 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
     master_conf.load_service_fairness      = (main_master_conf.load_service_fairness == "1");
     master_conf.load_rdkb_extensions       = (main_master_conf.load_rdkb_extensions == "1");
     master_conf.load_legacy_client_roaming = (main_master_conf.load_legacy_client_roaming == "1");
-    master_conf.load_load_balancing        = (main_master_conf.load_load_balancing == "1");
     master_conf.load_diagnostics_measurements =
         (main_master_conf.load_diagnostics_measurements == "1");
     master_conf.load_backhaul_measurements = (main_master_conf.load_backhaul_measurements == "1");
@@ -333,6 +332,12 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
         LOG(DEBUG) << "Failed to read cfg_get_client_11k_roaming, setting to default value: "
                    << beerocks::bpl::DEFAULT_11K_ROAMING;
         master_conf.load_client_11k_roaming = beerocks::bpl::DEFAULT_11K_ROAMING;
+    }
+
+    if (!beerocks::bpl::cfg_get_load_balancing(master_conf.load_load_balancing)) {
+        LOG(DEBUG) << "Failed to read cfg_get_load_balancing, setting to default value: "
+                   << beerocks::bpl::DEFAULT_LOAD_BALANCING;
+        master_conf.load_load_balancing = beerocks::bpl::DEFAULT_LOAD_BALANCING;
     }
 
     if (!beerocks::bpl::cfg_get_dfs_reentry(master_conf.load_dfs_reentry)) {

@@ -41,7 +41,6 @@ public:
         std::string ucc_listener_port;
         std::string load_legacy_client_roaming;
         std::string load_ire_roaming;
-        std::string load_load_balancing;
         std::string load_service_fairness;
         std::string load_diagnostics_measurements;
         std::string load_backhaul_measurements;

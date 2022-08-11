@@ -54,7 +54,6 @@ bool config_file::read_master_config_file(const std::string &config_file_path, s
         std::make_tuple("load_legacy_client_roaming=", &conf.load_legacy_client_roaming,
                         mandatory_master),
         std::make_tuple("load_ire_roaming=", &conf.load_ire_roaming, mandatory_master),
-        std::make_tuple("load_load_balancing=", &conf.load_load_balancing, mandatory_master),
         std::make_tuple("load_service_fairness=", &conf.load_service_fairness, mandatory_master),
         std::make_tuple("load_diagnostics_measurements=", &conf.load_diagnostics_measurements, 0),
         std::make_tuple("load_backhaul_measurements=", &conf.load_backhaul_measurements, 0),

@@ -18,9 +18,6 @@ load_legacy_client_roaming=1
 #   IRE roaming feature:
 load_ire_roaming=1
 
-#   Balancing feature:
-load_load_balancing=0
-
 #   Measurement feature:
 load_diagnostics_measurements=1
 load_backhaul_measurements=0
