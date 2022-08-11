@@ -1566,7 +1566,7 @@ bool dynamic_channel_selection_r2_task::handle_cmdu_1905_channel_preference_repo
     }
 
     // CHANNEL_PREFERENCE_REPORT_MESSAGE contains zero or more Radio Operation Restriction TLVs
-    for (const auto radio_operation_restriction_tlv :
+    for (const auto &radio_operation_restriction_tlv :
          cmdu_rx.getClassList<wfa_map::tlvRadioOperationRestriction>()) {
 
         if (!handle_tlv_radio_operation_restriction(radio_operation_restriction_tlv)) {

@@ -1280,7 +1280,7 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const sMacAddr &src_mac,
     LOG(INFO) << "Report Timestamp: " << ISO_8601_timestamp;
 
     int result_count = 0;
-    for (auto const result_tlv : cmdu_rx.getClassList<wfa_map::tlvProfile2ChannelScanResult>()) {
+    for (auto const &result_tlv : cmdu_rx.getClassList<wfa_map::tlvProfile2ChannelScanResult>()) {
 
         //If scans status is not successful, it will not include other fields.
         if (result_tlv->success() != wfa_map::tlvProfile2ChannelScanResult::eScanStatus::SUCCESS) {
