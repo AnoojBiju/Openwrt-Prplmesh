@@ -11,6 +11,7 @@
 
 #include "beerocks_thread_base.h"
 #include <bcl/beerocks_event_loop.h>
+#include <memory>
 
 namespace beerocks {
 
