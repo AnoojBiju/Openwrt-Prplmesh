@@ -499,6 +499,8 @@ bool slave_thread::read_platform_configuration()
             return beerocks::eFreqType::FREQ_24G;
         } else if (bpl_band == BPL_RADIO_BAND_5G) {
             return beerocks::eFreqType::FREQ_5G;
+        } else if (bpl_band == BPL_RADIO_BAND_6G) {
+            return beerocks::eFreqType::FREQ_6G;
         } else if (bpl_band == BPL_RADIO_BAND_AUTO) {
             return beerocks::eFreqType::FREQ_AUTO;
         } else {
