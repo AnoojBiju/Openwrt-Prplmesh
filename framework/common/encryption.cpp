@@ -190,24 +190,6 @@ bool create_iv(uint8_t *iv, unsigned iv_length)
     return generate_random_bytestream(iv, iv_length);
 }
 
-class sha256 {
-public:
-    sha256();
-    ~sha256();
-
-    bool update(const uint8_t *message, size_t message_length);
-
-    /**
-     * @brief Calculate and return the sha256 digest
-     * @param[out] digest Output buffer, must be 32 bytes
-     * @return
-     */
-    bool digest(uint8_t *digest);
-
-private:
-    EVP_MD_CTX *m_ctx;
-};
-
 sha256::sha256() : m_ctx(EVP_MD_CTX_new())
 {
     if (!EVP_DigestInit_ex(m_ctx, EVP_sha256(), NULL)) {
