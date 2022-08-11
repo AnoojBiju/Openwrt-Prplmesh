@@ -7,9 +7,11 @@
  */
 
 #include <algorithm>
+#include <bcl/beerocks_string_utils.h>
 #include <easylogging++.h>
 #include <fstream>
 #include <hostapd/configuration.h>
+#include <mapf/common/encryption.h>
 
 namespace prplmesh {
 namespace hostapd {
@@ -95,11 +97,32 @@ bool Configuration::store()
 
     // store the next ones ('bss=')
     for (auto &vap : m_hostapd_config_vaps) {
+        std::stringstream bss_conf;
+
         // add empty line for readability
         out_file << "\n";
         for (auto &line : vap.second) {
+            // skip any existing config_id line (e.g. set by netfid)
+            if (line.rfind("config_id=", 0) == 0) {
+                continue;
+            }
             out_file << line << "\n";
+            bss_conf << line << "\n";
         }
+        // add the config_id at the end:
+        uint8_t config_id[32];
+        mapf::encryption::sha256 sha;
+        sha.update(reinterpret_cast<const uint8_t *>(bss_conf.str().c_str()),
+                   bss_conf.str().size());
+        if (!sha.digest(config_id)) {
+            LOG(ERROR) << "Unable to compute sha256 of the configuration!";
+            return false;
+        };
+        out_file << "config_id=";
+        for (const auto &c : config_id) {
+            out_file << beerocks::string_utils::int_to_hex_string(c, 2);
+        }
+        out_file << "\n";
     }
 
     m_ok           = true;

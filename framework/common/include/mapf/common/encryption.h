@@ -10,10 +10,12 @@
 #define ENCRYPTION_H_
 
 #include <cstdint>
+#include <stddef.h>
 
 extern "C" {
 /** Internal defintion from OpenSSL, avoids requiring include of openssl headers. */
 struct dh_st;
+typedef struct evp_md_ctx_st EVP_MD_CTX;
 }
 
 namespace mapf {
@@ -22,6 +24,24 @@ namespace mapf {
  * @brief Wrapper functions for performing encryption
  */
 namespace encryption {
+
+class sha256 {
+public:
+    sha256();
+    ~sha256();
+
+    bool update(const uint8_t *message, size_t message_length);
+
+    /**
+     * @brief Calculate and return the sha256 digest
+     * @param[out] digest Output buffer, must be 32 bytes
+     * @return
+     */
+    bool digest(uint8_t *digest);
+
+private:
+    EVP_MD_CTX *m_ctx;
+};
 
 ///
 /// @brief Diffie-Hellman key exchange
