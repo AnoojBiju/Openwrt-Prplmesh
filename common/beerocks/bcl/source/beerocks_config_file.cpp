@@ -58,7 +58,6 @@ bool config_file::read_master_config_file(const std::string &config_file_path, s
         std::make_tuple("load_diagnostics_measurements=", &conf.load_diagnostics_measurements, 0),
         std::make_tuple("load_backhaul_measurements=", &conf.load_backhaul_measurements, 0),
         std::make_tuple("load_front_measurements=", &conf.load_front_measurements, 0),
-        std::make_tuple("load_health_check=", &conf.load_health_check, 0),
         std::make_tuple("load_monitor_on_vaps=", &conf.load_monitor_on_vaps, 0),
         std::make_tuple("load_rdkb_extensions=", &conf.load_rdkb_extensions, 0),
         std::make_tuple("global_restricted_channels=", &conf.global_restricted_channels, 0),

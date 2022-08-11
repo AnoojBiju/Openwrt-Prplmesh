@@ -45,7 +45,6 @@ public:
         std::string load_diagnostics_measurements;
         std::string load_backhaul_measurements;
         std::string load_front_measurements;
-        std::string load_health_check;
         std::string load_monitor_on_vaps;
         std::string load_rdkb_extensions;
         std::string global_restricted_channels;

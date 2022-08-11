@@ -24,9 +24,6 @@ load_backhaul_measurements=0
 load_front_measurements=1
 load_monitor_on_vaps=1
 
-#   health check feature:
-load_health_check=0
-
 #   service fairness feature:
 load_service_fairness=0
 

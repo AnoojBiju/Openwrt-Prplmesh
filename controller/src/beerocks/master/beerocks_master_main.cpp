@@ -153,7 +153,6 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
         (main_master_conf.load_diagnostics_measurements == "1");
     master_conf.load_backhaul_measurements = (main_master_conf.load_backhaul_measurements == "1");
     master_conf.load_front_measurements    = (main_master_conf.load_front_measurements == "1");
-    master_conf.load_health_check          = (main_master_conf.load_health_check == "1");
     master_conf.load_monitor_on_vaps       = (main_master_conf.load_monitor_on_vaps == "1");
     master_conf.diagnostics_measurements_polling_rate_sec =
         beerocks::string_utils::stoi(main_master_conf.diagnostics_measurements_polling_rate_sec);
@@ -332,6 +331,12 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
         LOG(DEBUG) << "Failed to read cfg_get_client_11k_roaming, setting to default value: "
                    << beerocks::bpl::DEFAULT_11K_ROAMING;
         master_conf.load_client_11k_roaming = beerocks::bpl::DEFAULT_11K_ROAMING;
+    }
+
+    if (!beerocks::bpl::cfg_get_health_check(master_conf.load_health_check)) {
+        LOG(DEBUG) << "Failed to read cfg_get_health_check, setting to default value: "
+                   << beerocks::bpl::DEFAULT_HEALTH_CHECK;
+        master_conf.load_health_check = beerocks::bpl::DEFAULT_HEALTH_CHECK;
     }
 
     if (!beerocks::bpl::cfg_get_load_balancing(master_conf.load_load_balancing)) {

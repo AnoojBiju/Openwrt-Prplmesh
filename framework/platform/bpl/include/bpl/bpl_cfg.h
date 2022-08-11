@@ -124,6 +124,7 @@ constexpr int DEFAULT_DFS_REENTRY                      = 1;
 constexpr int DEFAULT_BAND_STEERING                    = 0;
 constexpr int DEFAULT_OPTIMAL_PATH_ROAMING             = 0;
 constexpr int DEFAULT_11K_ROAMING                      = 1;
+constexpr int DEFAULT_HEALTH_CHECK                     = 0;
 constexpr int DEFAULT_LOAD_BALANCING                   = 0;
 constexpr int DEFAULT_ROAMING_HYSTERESIS_PERCENT_BONUS = 10;
 constexpr std::chrono::milliseconds DEFAULT_STEERING_DISASSOC_TIMER_MSEC{200};
