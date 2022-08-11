@@ -359,6 +359,15 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
         master_conf.load_client_optimal_path_roaming = beerocks::bpl::DEFAULT_OPTIMAL_PATH_ROAMING;
     }
 
+    if (!beerocks::bpl::cfg_get_optimal_path_prefer_signal_strenght(
+            master_conf.load_optimal_path_roaming_prefer_signal_strength)) {
+        LOG(DEBUG) << "Failed to read cfg_get_optimal_path_prefer_signal_strenght, setting to "
+                      "default value: "
+                   << beerocks::bpl::DEFAULT_OPTIMAL_PATH_PREFER_SIG_STRENGTH;
+        master_conf.load_optimal_path_roaming_prefer_signal_strength =
+            beerocks::bpl::DEFAULT_OPTIMAL_PATH_PREFER_SIG_STRENGTH;
+    }
+
     if (!beerocks::bpl::cfg_get_roaming_hysteresis_percent_bonus(
             master_conf.roaming_hysteresis_percent_bonus)) {
         LOG(DEBUG) << "Failed to read roaming_hysteresis_percent_bonus, setting to default value: "
