@@ -64,9 +64,7 @@ mon_wlan_hal_dummy::mon_wlan_hal_dummy(const std::string &iface_name, hal_event_
     : base_wlan_hal(bwl::HALType::Monitor, iface_name, IfaceType::Intel, callback, hal_conf),
       base_wlan_hal_dummy(bwl::HALType::Monitor, iface_name, callback, hal_conf)
 {
-    std::string events[] = {};
-    int events_size      = sizeof(events) / sizeof(std::string);
-    m_filtered_events.insert(events, events + events_size);
+    m_filtered_events.insert({});
 }
 
 mon_wlan_hal_dummy::~mon_wlan_hal_dummy() {}

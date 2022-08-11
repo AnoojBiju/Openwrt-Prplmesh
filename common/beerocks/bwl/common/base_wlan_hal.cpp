@@ -242,6 +242,9 @@ eRadioState base_wlan_hal::radio_state_from_string(const std::string &state)
 
 bool base_wlan_hal::is_filtered_event(const std::string &opcode)
 {
+    if (m_filtered_events.empty()) {
+        return true;
+    }
     return m_filtered_events.find(opcode) != m_filtered_events.end();
 }
 
