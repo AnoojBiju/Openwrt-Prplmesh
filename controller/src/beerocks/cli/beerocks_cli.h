@@ -9,7 +9,9 @@
 #ifndef _BEEROCKS_CLI_H
 #define _BEEROCKS_CLI_H
 
+#include <cstdint>
 #include <map>
+#include <string>
 #include <vector>
 
 #define ARGSNUM 10
