@@ -685,6 +685,7 @@ int main(int argc, char *argv[])
 #endif
 
     fill_nbapi_config_from_master_conf(amb_dm_obj, master_conf);
+    master_db.update_master_settings_from_config();
 
     // The prplMesh controller needs to be configured with the SSIDs and credentials that have to
     // be configured on the agents. Even though NBAPI exists to configure this, there is a lot of
