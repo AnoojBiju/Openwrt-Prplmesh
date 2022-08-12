@@ -29,4 +29,4 @@ class MultiApPolicyConfigWUnsucessfulAssociation(CommonFlows):
 
         self.configure_multi_ap_policy_config_with_unsuccessful_association(
             agent, controller, 0x80, 0x01)
-        self.mismatch_psk(agent.radios[0], controller, sta)
+        self.fail_sta_connection(agent.radios[0], controller, sta)
