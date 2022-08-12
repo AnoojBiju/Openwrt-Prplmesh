@@ -27,7 +27,8 @@ LOG_COMMANDS = \
         LogCommand('ubus call Bridging _get \'{ "depth": "10" }\'', "dm-Bridge.txt"),
         LogCommand('ubus call Ethernet _get \'{ "depth": "10" }\'', "dm-Ethernet.txt"),
         LogCommand('ubus call DHCPv4 _get \'{ "depth": "10" }\'', "dm-DHCPv4.txt"),
-        LogCommand('ubus call DHCPv6 _get \'{ "depth": "10" }\'', "dm-DHCPv6.txt")
+        LogCommand('ubus call DHCPv6 _get \'{ "depth": "10" }\'', "dm-DHCPv6.txt"),
+        LogCommand('ubus call WiFi _get \'{ "depth": "10" }\'', "dm-WiFi.txt")
     ]
 
 
