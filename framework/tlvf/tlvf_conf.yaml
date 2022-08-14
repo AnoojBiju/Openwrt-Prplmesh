@@ -3,6 +3,7 @@
 # Relative to tlvf.py yaml_path argument
 include_yaml_path: {
     "tlvf/WSC/",
+    "tlvf/WEC/",
     "tlvf/common/",
     "tlvf/ieee_1905_1/",
     "tlvf/test/",

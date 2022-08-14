@@ -1,0 +1,14 @@
+#
+---
+_namespace: WSC
+
+eWecConnectorKey:
+  _type: enum
+  _enum_storage: uint8_t
+  # The enrollee shall retain and reuse the same public/private key associated with the Connector it
+  # sent in the Reconfiguration Authentication Response frame.
+  CONFIG_REUSEKEY: 0
+  
+  # The enrollee shall discard the original public/private key and instead the Connector shall use
+  # the newly negotiated protocol key pair.
+  CONFIG_REPLACEKEY: 1
