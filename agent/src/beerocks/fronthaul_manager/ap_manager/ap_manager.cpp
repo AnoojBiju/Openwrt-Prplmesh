@@ -58,6 +58,7 @@ constexpr auto fsm_timer_period = std::chrono::milliseconds(1000);
 static void copy_vaps_info(std::shared_ptr<bwl::ap_wlan_hal> &ap_wlan_hal,
                            beerocks_message::sVapInfo vaps[])
 {
+    LOG(ERROR) << "Badhri Inside " << __func__;
     if (!ap_wlan_hal->refresh_vaps_info()) {
         LOG(ERROR) << "Failed to refresh vaps info!";
         return;
@@ -66,21 +67,23 @@ static void copy_vaps_info(std::shared_ptr<bwl::ap_wlan_hal> &ap_wlan_hal,
     const auto &radio_vaps = ap_wlan_hal->get_radio_info().available_vaps;
 
     // Copy the VAPs
-    for (int vap_id = beerocks::IFACE_VAP_ID_MIN, i = 0; vap_id <= beerocks::IFACE_VAP_ID_MAX;
-         vap_id++, i++) {
+    for (int vap_id = beerocks::IFACE_VAP_ID_MIN; vap_id <= beerocks::IFACE_VAP_ID_MAX; vap_id++) {
 
         // Clear the memory
-        vaps[i] = {};
+        vaps[vap_id] = {}; //wlan0.1, wlan2.2, wlan4.3
 
         // If the VAP ID exists
         if (radio_vaps.find(vap_id) == radio_vaps.end()) {
             continue;
         }
+        LOG(ERROR) << "Badhri vap_id inside radio_vaps.at = "
+                   << vap_id; //Badhri vap_id inside radio_vaps.at = 1 or 2
         const auto &curr_vap = radio_vaps.at(vap_id);
 
         LOG(DEBUG) << "vap_id=" << int(vap_id) << ", iface_name=" << curr_vap.bss
                    << ", mac=" << curr_vap.mac << ", ssid=" << curr_vap.ssid
                    << ", fronthaul=" << curr_vap.fronthaul << ", backhaul=" << curr_vap.backhaul;
+        //vap_id=1, iface_name=wlan0.1, mac=00:e0:92:00:01:42, ssid=test_ssid
 
         if (curr_vap.backhaul) {
             LOG(DEBUG) << "disallow_profile1="
@@ -90,17 +93,19 @@ static void copy_vaps_info(std::shared_ptr<bwl::ap_wlan_hal> &ap_wlan_hal,
         }
 
         // Copy the VAP MAC and SSID
-        beerocks::string_utils::copy_string(vaps[i].iface_name, curr_vap.bss.c_str(),
+        beerocks::string_utils::copy_string(vaps[vap_id].iface_name, curr_vap.bss.c_str(),
                                             beerocks::message::IFACE_NAME_LENGTH);
-        vaps[i].mac = tlvf::mac_from_string(curr_vap.mac);
-        beerocks::string_utils::copy_string(vaps[i].ssid, curr_vap.ssid.c_str(),
+        vaps[vap_id].mac = tlvf::mac_from_string(curr_vap.mac);
+        beerocks::string_utils::copy_string(vaps[vap_id].ssid, curr_vap.ssid.c_str(),
                                             beerocks::message::WIFI_SSID_MAX_LENGTH);
+        LOG(ERROR) << "Badhri vaps[" << vap_id
+                   << "].mac = " << vaps[vap_id].mac; // Badhri vaps[1].mac = 00:e0:92:00:01:42
 
-        vaps[i].fronthaul_vap = curr_vap.fronthaul;
-        vaps[i].backhaul_vap  = curr_vap.backhaul;
-        vaps[i].profile1_backhaul_sta_association_disallowed =
+        vaps[vap_id].fronthaul_vap = curr_vap.fronthaul;
+        vaps[vap_id].backhaul_vap  = curr_vap.backhaul;
+        vaps[vap_id].profile1_backhaul_sta_association_disallowed =
             curr_vap.profile1_backhaul_sta_association_disallowed;
-        vaps[i].profile2_backhaul_sta_association_disallowed =
+        vaps[vap_id].profile2_backhaul_sta_association_disallowed =
             curr_vap.profile2_backhaul_sta_association_disallowed;
     }
 }
@@ -1516,9 +1521,10 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             LOG(ERROR) << "Failed building message!";
             return;
         }
-
+        LOG(ERROR) << "Badhri Calling copy_vaps_info from "
+                      "ACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_REQUEST";
         copy_vaps_info(ap_wlan_hal, notification->params().vaps);
-        LOG(DEBUG) << "Sending Vap List update to controller";
+        LOG(ERROR) << "Badhri Sending Vap List update to slave";
         if (!send_cmdu(cmdu_tx)) {
             LOG(ERROR) << "Failed sending cmdu!";
             return;
@@ -2297,7 +2303,7 @@ void ApManager::handle_hostapd_attached()
         ap_wlan_hal->get_radio_info().channel_ext_above;
     notification->cs_params().vht_center_frequency = ap_wlan_hal->get_radio_info().vht_center_freq;
     notification->cs_params().bandwidth            = uint8_t(
-        beerocks::utils::convert_bandwidth_to_enum(ap_wlan_hal->get_radio_info().bandwidth));
+                   beerocks::utils::convert_bandwidth_to_enum(ap_wlan_hal->get_radio_info().bandwidth));
 
     notification->params().frequency_band = ap_wlan_hal->get_radio_info().frequency_band;
     notification->params().max_bandwidth  = ap_wlan_hal->get_radio_info().max_bandwidth;
@@ -2340,7 +2346,13 @@ void ApManager::handle_hostapd_attached()
     LOG(INFO) << " he_capability = " << std::hex << ap_wlan_hal->get_radio_info().he_capability;
     LOG(INFO) << " zwdfs = " << m_ap_support_zwdfs;
 
+    LOG(ERROR) << "Badhri Calling copy_vaps_info from ACTION_APMANAGER_JOINED_NOTIFICATION";
     copy_vaps_info(ap_wlan_hal, notification->vap_list().vaps);
+    LOG(ERROR) << "vap[0].mac" << notification->vap_list().vaps[0].mac << "vap[1].mac"
+               << notification->vap_list().vaps[1].mac << "vap[2].mac"
+               << notification->vap_list().vaps[2].mac << "vap[3].mac"
+               << notification->vap_list().vaps[3].mac << "vap[4].mac"
+               << notification->vap_list().vaps[4].mac;
 
     // Send CMDU
     send_cmdu(cmdu_tx);

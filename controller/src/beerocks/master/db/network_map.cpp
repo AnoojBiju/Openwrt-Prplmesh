@@ -157,6 +157,7 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::string node_ma
                                                const std::ptrdiff_t &buffer_size,
                                                bool force_client_disconnect)
 {
+    LOG(ERROR) << "Badhri node_mac = " << node_mac;
     auto n = database.get_node(node_mac);
     if (n == nullptr) {
         LOG(ERROR) << "get_node(), node_mac=" << node_mac << " , n == nullptr !!!";
@@ -274,9 +275,9 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
                 break;
             }
             tlvf::mac_to_array(radio.first, node->data.gw_ire.radio[i].radio_mac);
-
             unsigned vap_id = 0;
             for (const auto &bss : radio.second->bsses) {
+                LOG(ERROR) << "Badhri outside if bss.second->vap_id = " << bss.second->vap_id;
                 if (bss.second->vap_id >= 0) {
                     // If vap_id is set, use it. Normally if one BSS has vap_id set, all of them
                     // should have it set. Still, we increment vap_id at the end of the loop so we
@@ -288,11 +289,22 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
                     break;
                 }
                 tlvf::mac_to_array(bss.first, node->data.gw_ire.radio[i].vap[vap_id].bssid);
+                LOG(ERROR) << "Badhri bss.first = " << bss.first;
+                LOG(ERROR) << "Badhri node->data.gw_ire.radio[" << i << "].vap[" << vap_id
+                           << "].bssid = " << node->data.gw_ire.radio[i].vap[vap_id].bssid;
                 string_utils::copy_string(node->data.gw_ire.radio[i].vap[vap_id].ssid,
                                           bss.second->ssid.c_str(),
                                           sizeof(node->data.gw_ire.radio[i].vap[0].ssid));
+                LOG(ERROR) << "Badhri bss.second->ssid = " << bss.second->ssid;
+                LOG(ERROR) << "Badhri node->data.gw_ire.radio[" << i << "].vap[" << vap_id
+                           << "].ssid = " << node->data.gw_ire.radio[i].vap[vap_id].ssid;
                 node->data.gw_ire.radio[i].vap[vap_id].backhaul_vap = bss.second->backhaul;
-                vap_id++;
+                LOG(ERROR) << "Badhri bss.second->backhaul = " << bss.second->backhaul;
+                LOG(ERROR) << "Badhri node->data.gw_ire.radio[" << i << "].vap[" << vap_id
+                           << "].backhaul_vap = "
+                           << node->data.gw_ire.radio[i].vap[vap_id].backhaul_vap;
+                LOG(ERROR) << "Badhri Updating vap_id from " << vap_id << "to" << ++vap_id;
+                ++vap_id;
             }
 
             auto c = database.get_node(radio.first);
@@ -314,6 +326,8 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
                     node->data.gw_ire.radio[i].iface_name,
                     database.get_hostap_iface_name(tlvf::mac_from_string(c->mac)).c_str(),
                     BML_NODE_IFACE_NAME_LEN);
+                LOG(ERROR) << "Badhri node->data.gw_ire.radio[" << i << "].iface_name"
+                           << node->data.gw_ire.radio[i].iface_name;
 
                 // Radio Vendor
                 switch (database.get_hostap_iface_type(tlvf::mac_from_string(c->mac))) {

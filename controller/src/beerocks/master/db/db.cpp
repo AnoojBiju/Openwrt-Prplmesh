@@ -2138,6 +2138,7 @@ bool db::get_node_11v_capability(const Station &station) { return station.m_supp
 bool db::set_hostap_vap_list(const sMacAddr &mac,
                              const std::unordered_map<int8_t, sVapElement> &vap_list)
 {
+    LOG(ERROR) << "Badhri Inside " << __func__;
     auto n = get_node(mac);
     if (!n) {
         LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
@@ -2152,6 +2153,7 @@ bool db::set_hostap_vap_list(const sMacAddr &mac,
 
 std::unordered_map<int8_t, sVapElement> &db::get_hostap_vap_list(const sMacAddr &mac)
 {
+    LOG(ERROR) << "Badhri Inside " << __func__;
     static std::unordered_map<int8_t, sVapElement> invalid_vap_list;
     auto n = get_node(mac);
     if (!n) {
@@ -2167,6 +2169,7 @@ std::unordered_map<int8_t, sVapElement> &db::get_hostap_vap_list(const sMacAddr 
 
 bool db::remove_vap(Agent::sRadio &radio, Agent::sRadio::sBss &bss)
 {
+    LOG(ERROR) << "Badhri Calling get_hostap_vap_list in " << __func__;
     auto vap_list = get_hostap_vap_list(radio.radio_uid);
     auto vap      = vap_list.find(bss.vap_id);
 
@@ -2190,11 +2193,15 @@ bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bs
         !add_virtual_node(tlvf::mac_from_string(bssid), tlvf::mac_from_string(radio_mac))) {
         return false;
     }
-
+    LOG(ERROR) << "Badhri Calling get_hostap_vap_list in " << __func__;
     auto &vaps_info                = get_hostap_vap_list(tlvf::mac_from_string(radio_mac));
     vaps_info[vap_id].mac          = bssid;
     vaps_info[vap_id].ssid         = ssid;
     vaps_info[vap_id].backhaul_vap = backhaul;
+    LOG(ERROR) << "Badhri vaps_info[" << vap_id << "].mac" << vaps_info[vap_id].mac;
+    LOG(ERROR) << "Badhri vaps_info[" << vap_id << "].ssid" << vaps_info[vap_id].ssid;
+    LOG(ERROR) << "Badhri vaps_info[" << vap_id << "].backhaul_vap"
+               << vaps_info[vap_id].backhaul_vap;
 
     return dm_set_radio_bss(tlvf::mac_from_string(radio_mac), tlvf::mac_from_string(bssid), ssid);
 }
@@ -2208,7 +2215,7 @@ bool db::update_vap(const sMacAddr &radio_mac, const sMacAddr &bssid, const std:
 
     auto &vaps_info = get_hostap_vap_list(radio_mac);
     auto it         = std::find_if(vaps_info.begin(), vaps_info.end(),
-                           [&](const std::pair<int8_t, sVapElement> &vap) {
+                                   [&](const std::pair<int8_t, sVapElement> &vap) {
                                return vap.second.mac == tlvf::mac_to_string(bssid);
                            });
     if (it == vaps_info.end()) {
@@ -2221,6 +2228,7 @@ bool db::update_vap(const sMacAddr &radio_mac, const sMacAddr &bssid, const std:
                 return a.first < b.first;
             });
         int8_t new_vap_id = (max_vap_it == vaps_info.end()) ? 0 : max_vap_it->first + 1;
+        LOG(ERROR) << "Badhri calling add_vap from " << __func__;
         return add_vap(tlvf::mac_to_string(radio_mac), new_vap_id, tlvf::mac_to_string(bssid), ssid,
                        backhaul);
     }

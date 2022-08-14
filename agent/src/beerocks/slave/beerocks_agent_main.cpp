@@ -502,7 +502,7 @@ static uint8_t read_management_mode()
 
 int main(int argc, char *argv[])
 {
-    std::cout << "Beerocks Agent Process Start" << std::endl;
+    std::cout << "Beerocks Agent Process Start Test Badhri" << std::endl;
 
     init_signals();
 

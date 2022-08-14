@@ -227,18 +227,27 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
                              << " on " << src_mac;
                 continue;
             }
-
             radio->bsses.keep_new_prepare();
-
             for (uint8_t j = 0; j < radio_entry.radio_bss_list_length(); j++) {
                 auto bss_entry = std::get<1>(radio_entry.radio_bss_list(j));
                 LOG(DEBUG) << "Operational BSS " << bss_entry.radio_bssid();
 
+                int8_t badhri_vap_id = database.get_hostap_vap_id(bss_entry.radio_bssid());
+                LOG(ERROR) << "Badhri vap_id from db = " << badhri_vap_id;
+                std::string badhri_iface_name =
+                    database.get_hostap_iface_name(bss_entry.radio_bssid());
+                LOG(ERROR) << "Badhri iface_name from db = " << badhri_iface_name;
+                std::unordered_map<int8_t, son::sVapElement> badhri_vap_element =
+                    database.get_hostap_vap_list(bss_entry.radio_bssid());
+                LOG(ERROR) << "Badhri vap_element mac = " << badhri_vap_element[j].mac;
+
                 auto bss     = radio->bsses.add(bss_entry.radio_bssid(), *radio);
                 bss->enabled = true;
                 bss->ssid    = bss_entry.ssid_str();
+                LOG(ERROR) << "Badhri bss->ssid = " << bss->ssid;
                 // Backhaul is not reported in this message. Leave it unchanged.
-                // TODO "backhaul" is not set in this TLV, so just assume false
+                // TODO "backhaul" is not set in this TLV, so just assume
+                LOG(ERROR) << "Badhri Calling update_vap from topology_task.cpp ";
                 if (!database.update_vap(radio_entry.radio_uid(), bss_entry.radio_bssid(),
                                          bss_entry.ssid_str(), false)) {
                     LOG(ERROR) << "Failed to update VAP for radio " << radio_entry.radio_uid()

@@ -295,6 +295,7 @@ bool ApAutoConfigurationTask::handle_vendor_specific(
 
 void ApAutoConfigurationTask::configuration_complete_wait_action(const std::string &radio_iface)
 {
+    LOG(ERROR) << "Badhri Inside " << __func__;
     auto &radio_conf_params = m_radios_conf_params[radio_iface];
 
     // num_of_bss_available updates on ACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_RESPONSE handler
@@ -317,6 +318,7 @@ void ApAutoConfigurationTask::configuration_complete_wait_action(const std::stri
     constexpr uint8_t WAIT_IFACES_INSIDE_THE_BRIDGE_TIMEOUT_SECONDS = 30;
 
     if (!radio_conf_params.sent_vaps_list_update) {
+        LOG(ERROR) << "Badhri Calling send_ap_bss_info_update_request function";
         if (!send_ap_bss_info_update_request(radio_iface)) {
             LOG(ERROR) << "send_ap_bss_info_update_request has failed";
             return;
@@ -684,6 +686,7 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_wsc_m1_message(
     string_utils::copy_string(notification->hostap().iface_name, radio->front.iface_name.c_str(),
                               beerocks::message::IFACE_NAME_LENGTH);
     notification->hostap().iface_mac = radio->front.iface_mac;
+    LOG(ERROR) << "Badhri radio->front.iface_name = " << radio->front.iface_name;
     notification->hostap().iface_is_5ghz =
         son::wireless_utils::is_frequency_band_5ghz(radio->freq_type);
     notification->hostap().ant_num        = radio->number_of_antennas;
@@ -766,9 +769,9 @@ bool ApAutoConfigurationTask::add_wsc_m1_tlv(const std::string &radio_iface)
     cfg.primary_dev_type_id = WSC::WSC_DEV_NETWORK_INFRA_AP;
     cfg.device_name         = "prplmesh-agent";
     cfg.bands               = son::wireless_utils::is_frequency_band_5ghz(radio->freq_type)
-                    ? WSC::WSC_RF_BAND_5GHZ
-                    : WSC::WSC_RF_BAND_2GHZ;
-    auto attributes = WSC::m1::create(*tlv, cfg);
+                                  ? WSC::WSC_RF_BAND_5GHZ
+                                  : WSC::WSC_RF_BAND_2GHZ;
+    auto attributes         = WSC::m1::create(*tlv, cfg);
     if (!attributes)
         return false;
 
@@ -902,6 +905,7 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_response(
 
 void ApAutoConfigurationTask::handle_ap_autoconfiguration_wsc(ieee1905_1::CmduMessageRx &cmdu_rx)
 {
+    LOG(ERROR) << "Badhri Inside " << __func__;
     auto ruid = cmdu_rx.getClass<wfa_map::tlvApRadioIdentifier>();
     if (!ruid) {
         LOG(INFO) << "tlvApRadioIdentifier is part of M2 CMDU sent by the controller, Ignore M1 "
@@ -984,6 +988,7 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_wsc(ieee1905_1::CmduMe
     radio_conf_params.received_vaps_list_update = false;
 
     if (db->device_conf.management_mode != BPL_MGMT_MODE_NOT_MULTIAP) {
+        LOG(ERROR) << "Badhri Changing FSM state to WAIT_AP_CONFIGURATION_COMPLETE";
         FSM_MOVE_STATE(radio->front.iface_name, eState::WAIT_AP_CONFIGURATION_COMPLETE);
         return;
     }
@@ -1479,7 +1484,7 @@ void ApAutoConfigurationTask::handle_vs_ap_enabled_notification(
 
     const auto &vap_info = notification_in->vap_info();
     auto bssid           = std::find_if(radio->front.bssids.begin(), radio->front.bssids.end(),
-                              [&vap_info](const beerocks::AgentDB::sRadio::sFront::sBssid &bssid) {
+                                        [&vap_info](const beerocks::AgentDB::sRadio::sFront::sBssid &bssid) {
                                   return bssid.mac == vap_info.mac;
                               });
     if (bssid == radio->front.bssids.end()) {
@@ -1534,9 +1539,8 @@ void ApAutoConfigurationTask::handle_vs_vaps_list_update_notification(
 
     const auto &fronthaul_iface = radio->front.iface_name;
 
-    LOG(INFO) << "received ACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION "
-              << fronthaul_iface;
-
+    LOG(ERROR) << "received ACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION "
+               << fronthaul_iface;
     m_btl_ctx.update_vaps_info(fronthaul_iface, notification_in->params().vaps);
 
     auto notification_out = message_com::create_vs_message<
@@ -1547,7 +1551,9 @@ void ApAutoConfigurationTask::handle_vs_vaps_list_update_notification(
     }
 
     notification_out->params() = notification_in->params();
-    LOG(TRACE) << "send ACTION_CONTROL_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION " << fronthaul_iface;
+    LOG(TRACE)
+        << "Badhri Send ACTION_CONTROL_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION to the controller "
+        << fronthaul_iface;
     m_btl_ctx.send_cmdu_to_controller(fronthaul_iface, m_cmdu_tx);
 
     // This probably changed the "AP Operational BSS" list in topology, so send a notification
@@ -1768,12 +1774,14 @@ bool ApAutoConfigurationTask::send_ap_bss_configuration_message(
 bool ApAutoConfigurationTask::send_ap_bss_info_update_request(const std::string &radio_iface)
 {
     // request the current vap list from ap_manager
+    LOG(ERROR) << "Badhri Inside " << __func__;
     auto request = message_com::create_vs_message<
         beerocks_message::cACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_REQUEST>(m_cmdu_tx);
     if (!request) {
         LOG(ERROR) << "Failed building cACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_REQUEST message!";
         return false;
     }
+    LOG(ERROR) << "Badhri Sending ACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_REQUEST to ap_manager";
     auto ap_manager_fd = m_btl_ctx.get_ap_manager_fd(radio_iface);
     m_btl_ctx.send_cmdu(ap_manager_fd, m_cmdu_tx);
     return true;

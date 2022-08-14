@@ -56,8 +56,9 @@ static void fill_conn_map_node(
                     tlvf::mac_to_string(node->data.gw_ire.radio[i].radio_identifier);
                 r->radio_mac = tlvf::mac_to_string(node->data.gw_ire.radio[i].radio_mac);
                 r->ifname.assign(node->data.gw_ire.radio[i].iface_name);
-
-                // VAP
+                LOG(ERROR) << "Badhri iface_name = " << r->ifname;
+                
+		// VAP
                 int vap_length = sizeof(node->data.gw_ire.radio[i].vap) /
                                  sizeof(node->data.gw_ire.radio[i].vap[0]);
 
@@ -1686,7 +1687,7 @@ int cli_bml::enable_client_roaming(int8_t isEnable)
 {
     int result = -1;
     int ret    = (isEnable < 0) ? bml_get_client_roaming(ctx, &result)
-                             : bml_set_client_roaming(ctx, isEnable);
+                                : bml_set_client_roaming(ctx, isEnable);
     printBmlReturnVals("bml_enable_client_roaming", ret);
     if (isEnable < 0 && ret == BML_RET_OK)
         std::cout << "client_roaming mode = " << result << std::endl;
@@ -1697,7 +1698,7 @@ int cli_bml::enable_client_roaming_11k_support(int8_t isEnable)
 {
     int result = -1;
     int ret    = (isEnable < 0) ? bml_get_client_roaming_11k_support(ctx, &result)
-                             : bml_set_client_roaming_11k_support(ctx, isEnable);
+                                : bml_set_client_roaming_11k_support(ctx, isEnable);
     printBmlReturnVals("bml_enable_client_roaming_11k_support", ret);
     if (isEnable < 0 && ret == BML_RET_OK)
         std::cout << "client_roaming_11k_support mode = " << result << std::endl;
@@ -1708,7 +1709,7 @@ int cli_bml::enable_legacy_client_roaming(int8_t isEnable)
 {
     int result = -1;
     int ret    = (isEnable < 0) ? bml_get_legacy_client_roaming(ctx, &result)
-                             : bml_set_legacy_client_roaming(ctx, isEnable);
+                                : bml_set_legacy_client_roaming(ctx, isEnable);
     printBmlReturnVals("bml_enable_legacy_client_roaming", ret);
     if (isEnable < 0 && ret == BML_RET_OK)
         std::cout << "legacy_client_roaming mode = " << result << std::endl;
@@ -1719,7 +1720,7 @@ int cli_bml::enable_client_roaming_prefer_signal_strength(int8_t isEnable)
 {
     int result = -1;
     int ret    = (isEnable < 0) ? bml_get_client_roaming_prefer_signal_strength(ctx, &result)
-                             : bml_set_client_roaming_prefer_signal_strength(ctx, isEnable);
+                                : bml_set_client_roaming_prefer_signal_strength(ctx, isEnable);
     printBmlReturnVals("bml_enable_client_roaming_prefer_signal_strength", ret);
     if (isEnable < 0 && ret == BML_RET_OK)
         std::cout << "client roaming prefer signal strength mode = " << result << std::endl;
@@ -1730,7 +1731,7 @@ int cli_bml::enable_client_band_steering(int8_t isEnable)
 {
     int result = -1;
     int ret    = (isEnable < 0) ? bml_get_client_band_steering(ctx, &result)
-                             : bml_set_client_band_steering(ctx, isEnable);
+                                : bml_set_client_band_steering(ctx, isEnable);
     printBmlReturnVals("bml_enable_client_band_steering", ret);
     if (isEnable < 0 && ret == BML_RET_OK)
         std::cout << "client_band_steering mode = " << result << std::endl;
@@ -1763,7 +1764,7 @@ int cli_bml::enable_service_fairness(int8_t isEnable)
 {
     int result = -1;
     int ret    = (isEnable < 0) ? bml_get_service_fairness(ctx, &result)
-                             : bml_set_service_fairness(ctx, isEnable);
+                                : bml_set_service_fairness(ctx, isEnable);
     printBmlReturnVals("bml_enable_service_fairness", ret);
     if (isEnable < 0 && ret == BML_RET_OK)
         std::cout << "service_fairness mode = " << result << std::endl;
@@ -1785,7 +1786,7 @@ int cli_bml::enable_certification_mode(int8_t isEnable)
 {
     int result = -1;
     int ret    = (isEnable < 0) ? bml_get_certification_mode(ctx, &result)
-                             : bml_set_certification_mode(ctx, isEnable);
+                                : bml_set_certification_mode(ctx, isEnable);
     printBmlReturnVals("bml_enable_certification_mode", ret);
     if (isEnable < 0 && ret == BML_RET_OK)
         std::cout << "enable_certification_mode = " << result << std::endl;

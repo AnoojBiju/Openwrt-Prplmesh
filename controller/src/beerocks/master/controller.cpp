@@ -1117,6 +1117,7 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
         bss->ssid      = bss_info_conf.ssid;
         bss->fronthaul = bss_info_conf.fronthaul;
         bss->backhaul  = bss_info_conf.backhaul;
+        LOG(ERROR) << "Badhri Calling update_vap from controller.cpp ";
         if (!database.update_vap(ruid, bss->bssid, bss->ssid, bss->backhaul)) {
             LOG(ERROR) << "Failed to update VAP for radio " << ruid << " BSS " << bss->bssid
                        << " SSID " << bss->ssid;
@@ -2811,8 +2812,8 @@ bool Controller::handle_cmdu_control_message(
         }
 
         int vap_id = notification->vap_id();
-        LOG(INFO) << "received ACTION_CONTROL_HOSTAP_AP_ENABLED_NOTIFICATION from " << radio_mac
-                  << " vap_id=" << vap_id;
+        LOG(ERROR) << "received ACTION_CONTROL_HOSTAP_AP_ENABLED_NOTIFICATION from " << radio_mac
+                   << " vap_id=" << vap_id;
 
         auto bssid = notification->vap_info().mac;
         auto ssid  = std::string((char *)notification->vap_info().ssid);
@@ -2831,6 +2832,8 @@ bool Controller::handle_cmdu_control_message(
         bss->ssid      = ssid;
         bss->fronthaul = notification->vap_info().fronthaul_vap;
         bss->backhaul  = notification->vap_info().backhaul_vap;
+        LOG(ERROR) << "Badhri bss->ssid = " << bss->ssid;
+        LOG(ERROR) << "Badhri Calling add_vap with vap_id = " << vap_id;
 
         database.add_vap(radio_mac_str, vap_id, tlvf::mac_to_string(bssid), ssid,
                          notification->vap_info().backhaul_vap);
@@ -2890,10 +2893,12 @@ bool Controller::handle_cmdu_control_message(
         break;
     }
     case beerocks_message::ACTION_CONTROL_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION: {
+        LOG(ERROR) << "Badhri sACTION_CONTROL_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION from "
+                   << radio_mac;
         auto notification = beerocks_header->addClass<
             beerocks_message::cACTION_CONTROL_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION>();
         if (notification == nullptr) {
-            LOG(ERROR) << "addClass cACTION_CONTROL_HOSTAP_ACS_NOTIFICATION failed";
+            LOG(ERROR) << "addClass ACTION_CONTROL_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION failed";
             return false;
         }
 
@@ -2910,6 +2915,8 @@ bool Controller::handle_cmdu_control_message(
         std::string vaps_list;
         for (int8_t vap_id = beerocks::IFACE_VAP_ID_MIN; vap_id <= beerocks::IFACE_VAP_ID_MAX;
              vap_id++) {
+            LOG(ERROR) << "Badhri vap_id = " << vap_id;
+            LOG(ERROR) << "Badhri iface_name = " << notification->params().vaps[vap_id].iface_name;
             auto vap_mac = tlvf::mac_to_string(notification->params().vaps[vap_id].mac);
             if (vap_mac != beerocks::net::network_utils::ZERO_MAC_STRING) {
                 auto bss =
@@ -2923,6 +2930,7 @@ bool Controller::handle_cmdu_control_message(
                     std::string((char *)notification->params().vaps[vap_id].ssid);
                 vaps_info[vap_id].backhaul_vap = notification->params().vaps[vap_id].backhaul_vap;
                 vaps_list += ("    vap_id=" + std::to_string(vap_id) +
+                              ", iface_name=" + notification->params().vaps[vap_id].iface_name +
                               ", vap_mac=" + (vaps_info[vap_id]).mac +
                               " , ssid=" + (vaps_info[vap_id]).ssid + std::string("\n"));
             }
@@ -2938,7 +2946,7 @@ bool Controller::handle_cmdu_control_message(
                 database.add_virtual_node(tlvf::mac_from_string(vap.second.mac), radio_mac);
             }
         }
-
+        LOG(ERROR) << "Badhri Calling set_hostap_vap_list";
         database.set_hostap_vap_list(radio_mac, vaps_info);
 
         auto removed = radio->bsses.keep_new_remove_old();
@@ -3183,7 +3191,7 @@ bool Controller::handle_cmdu_control_message(
             new_event.snr        = notification->params().rx_snr;
             new_event.client_mac = notification->params().result.mac;
             new_event.bssid      = database.get_hostap_vap_mac(tlvf::mac_from_string(ap_mac),
-                                                          notification->params().vap_id);
+                                                               notification->params().vap_id);
             tasks.push_event(database.get_pre_association_steering_task_id(),
                              pre_association_steering_task::eEvents::
                                  STEERING_EVENT_RSSI_MEASUREMENT_SNR_NOTIFICATION,
