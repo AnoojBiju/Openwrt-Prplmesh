@@ -70,6 +70,7 @@ constexpr int MONITOR_HEARTBEAT_TIMEOUT_SEC                           = 10;
 constexpr int MONITOR_HEARTBEAT_RETRIES                               = 10;
 constexpr int AP_MANAGER_HEARTBEAT_TIMEOUT_SEC                        = 10;
 constexpr int AP_MANAGER_HEARTBEAT_RETRIES                            = 10;
+constexpr std::chrono::seconds WAIT_FOR_FRONTHAUL_JOINED_TIMEOUT_SEC  = std::chrono::seconds(60);
 
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////// Local Module Functions ///////////////////////////
@@ -4122,12 +4123,15 @@ bool slave_thread::agent_fsm()
             });
 
         LOG(TRACE) << "goto STATE_WAIT_FOR_FRONTHAUL_THREADS_JOINED";
+        m_agent_state_timer_sec =
+            std::chrono::steady_clock::now() + WAIT_FOR_FRONTHAUL_JOINED_TIMEOUT_SEC;
         m_agent_state = STATE_WAIT_FOR_FRONTHAUL_THREADS_JOINED;
         break;
     }
     case STATE_WAIT_FOR_FRONTHAUL_THREADS_JOINED: {
 
         bool all_fronthauls_joined = true;
+        std::vector<std::string> pending_fronthauls;
         m_radio_managers.do_on_each_radio_manager([&](const sManagedRadio &radio_manager,
                                                       const std::string &fronthaul_iface) {
             auto db = AgentDB::get();
@@ -4141,15 +4145,41 @@ bool slave_thread::agent_fsm()
                 return true;
             }
 
-            all_fronthauls_joined &=
+            bool fronthaul_joined =
                 (radio_manager.ap_manager_fd != beerocks::net::FileDescriptor::invalid_descriptor &&
                  radio_manager.monitor_fd != beerocks::net::FileDescriptor::invalid_descriptor);
+            if (!fronthaul_joined) {
+                pending_fronthauls.push_back(fronthaul_iface);
+            }
+
+            all_fronthauls_joined &= fronthaul_joined;
             return true;
         });
 
         if (all_fronthauls_joined) {
             LOG(TRACE) << "goto STATE_BACKHAUL_ENABLE";
             m_agent_state = STATE_BACKHAUL_ENABLE;
+        } else if (std::chrono::steady_clock::now() > m_agent_state_timer_sec) {
+            if (pending_fronthauls.empty()) {
+                LOG(ERROR) << "Timed out while waiting for fronthauls";
+                break;
+            }
+            std::stringstream ss;
+            for (auto it = pending_fronthauls.begin(); it != pending_fronthauls.end(); it++) {
+                if (it != pending_fronthauls.begin()) {
+                    ss << ",";
+                }
+                ss << *it;
+            }
+            LOG(ERROR) << "Timed out while waiting for fronthaul(s) " << ss.str() << " to connect.";
+            // Set all radios to "not started" in order to manually restart them in the STATE_JOIN_INIT.
+            m_radio_managers.do_on_each_radio_manager(
+                [&](sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
+                    radio_manager.fronthaul_started = false;
+                    return true;
+                });
+            LOG(DEBUG) << "goto STATE_JOIN_INIT";
+            m_agent_state = STATE_JOIN_INIT;
         }
         break;
     }
