@@ -99,7 +99,7 @@ bool vbss_actions::send_trigger_channel_switch_announcement(const sMacAddr &agen
 
 bool vbss_actions::create_vbss(const sClientVBSS &client_vbss, const sMacAddr &dest_ruid,
                                const std::string &ssid, const std::string &password,
-                               son::db &database)
+                               const sClientSecCtxInfo *client_sec_ctx, son::db &database)
 {
     uint8_t tx_buffer[beerocks::message::MESSAGE_BUFFER_LENGTH];
     ieee1905_1::CmduMessageTx cmdu_tx(tx_buffer, sizeof(tx_buffer));
@@ -136,8 +136,18 @@ bool vbss_actions::create_vbss(const sClientVBSS &client_vbss, const sMacAddr &d
 
     // Need more info on DPP, just disabling
     vbss_creation_req->set_dpp_connector("");
-    vbss_creation_req->set_ptk("", 0);
-    vbss_creation_req->set_gtk("", 0);
+
+    if (client_vbss.client_is_associated) {
+        if (!client_sec_ctx) {
+            LOG(ERROR) << "Failed to send VBSS creation request! Client is associated but no "
+                          "client security context is given!";
+            return false;
+        }
+        vbss_creation_req->set_ptk(client_sec_ctx->ptk, client_sec_ctx->key_length);
+        vbss_creation_req->tx_packet_num() = client_sec_ctx->tx_packet_num;
+        vbss_creation_req->set_gtk(client_sec_ctx->gtk, client_sec_ctx->group_key_length);
+        vbss_creation_req->group_tx_packet_num() = client_sec_ctx->group_tx_packet_num;
+    }
 
     if (!son_actions::send_cmdu_to_agent(agent->al_mac, cmdu_tx, database,
                                          tlvf::mac_to_string(radio->radio_uid))) {
