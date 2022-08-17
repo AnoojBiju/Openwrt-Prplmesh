@@ -3813,8 +3813,21 @@ int bml_internal::channel_selection(const sMacAddr &radio_mac, uint8_t channel, 
     }
 
     if (result != 0) {
-        LOG(ERROR) << "cACTION_BML_TRIGGER_CHANNEL_SELECTION_REQUEST returned error code:"
-                   << result;
+        LOG(ERROR) << "cACTION_BML_TRIGGER_CHANNEL_SELECTION_REQUEST returned error: "
+                   << ([](int res) -> std::string {
+                          switch (eChannelSwitchStatus(res)) {
+                          case eChannelSwitchStatus::SUCCESS:
+                              return "Success";
+                          case eChannelSwitchStatus::ERROR:
+                              return "Error";
+                          case eChannelSwitchStatus::INVALID_BANDWIDTH_AND_CHANNEL:
+                              return "Invalid Bandwidth & Channel";
+                          case eChannelSwitchStatus::INOPERABLE_CHANNEL:
+                              return "Inoperable Channel";
+                          default:
+                              return "NA";
+                          }
+                      })(result);
         return result;
     }
 
