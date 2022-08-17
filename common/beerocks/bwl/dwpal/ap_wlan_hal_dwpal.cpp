@@ -82,6 +82,22 @@ static ap_wlan_hal::Event dwpal_to_bwl_event(const std::string &opcode)
         return ap_wlan_hal::Event::STA_Softblock_Drop;
     } else if (opcode == "AP-ACTION-FRAME-RECEIVED") {
         return ap_wlan_hal::Event::MGMT_Frame;
+    } else if (opcode == "WPA_EVENT_EAP_FAILURE") {
+        return ap_wlan_hal::Event::WPA_Event_EAP_Failure;
+    } else if (opcode == "WPA_EVENT_EAP_FAILURE2") {
+        return ap_wlan_hal::Event::WPA_Event_EAP_Failure2;
+    } else if (opcode == "WPA_EVENT_EAP_TIMEOUT_FAILURE") {
+        return ap_wlan_hal::Event::WPA_Event_EAP_Timeout_Failure;
+    } else if (opcode == "WPA_EVENT_EAP_TIMEOUT_FAILURE2") {
+        return ap_wlan_hal::Event::WPA_Event_EAP_Timeout_Failure2;
+    } else if (opcode == "WPS_EVENT_TIMEOUT") {
+        return ap_wlan_hal::Event::WPS_Event_Timeout;
+    } else if (opcode == "WPS_EVENT_FAIL") {
+        return ap_wlan_hal::Event::WPS_Event_Fail;
+    } else if (opcode == "WPA_EVENT_SAE_UNKNOWN_PASSWORD_IDENTIFIER") {
+        return ap_wlan_hal::Event::WPA_Event_SAE_Unknown_Password_Identifier;
+    } else if (opcode == "WPS_EVENT_CANCEL") {
+        return ap_wlan_hal::Event::WPS_Event_Cancel;
     } else if (opcode == "AP-STA-POSSIBLE-PSK-MISMATCH") {
         return ap_wlan_hal::Event::AP_Sta_Possible_Psk_Mismatch;
     }
@@ -3254,28 +3270,51 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         event_queue_push(Event::MGMT_Frame, mgmt_frame);
     } break;
 
+    case Event::WPA_Event_EAP_Failure:
+    case Event::WPA_Event_EAP_Failure2:
+    case Event::WPA_Event_EAP_Timeout_Failure:
+    case Event::WPA_Event_EAP_Timeout_Failure2:
+    case Event::WPS_Event_Timeout:
+    case Event::WPS_Event_Fail:
+    case Event::WPA_Event_SAE_Unknown_Password_Identifier:
+    case Event::WPS_Event_Cancel:
     case Event::AP_Sta_Possible_Psk_Mismatch: {
 
+        LOG(DEBUG) << "Sta Connection failure";
         parsed_line_t parsed_obj;
         parse_event(buffer, parsed_obj);
 
-        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sSTA_MISMATCH_PSK));
-        auto msg      = reinterpret_cast<sSTA_MISMATCH_PSK *>(msg_buff.get());
+        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sStaConnectionFail));
+        auto msg      = reinterpret_cast<sStaConnectionFail *>(msg_buff.get());
         LOG_IF(!msg, FATAL) << "Memory allocation failed!";
 
         // Initialize the message
-        memset(msg_buff.get(), 0, sizeof(sSTA_MISMATCH_PSK));
+        memset(msg_buff.get(), 0, sizeof(sStaConnectionFail));
 
-        const char *client_mac_str;
-
+        const char *client_mac_str = nullptr;
         if (!read_param("_mac", parsed_obj, &client_mac_str)) {
             return false;
         }
         msg->sta_mac = tlvf::mac_from_string(client_mac_str);
-        LOG(DEBUG) << "sta possible psk mismatch: offending STA mac: " << msg->sta_mac;
+        LOG(DEBUG) << "sta connection failure: offending STA mac: " << msg->sta_mac;
 
-        event_queue_push(Event::AP_Sta_Possible_Psk_Mismatch,
-                         msg_buff); // send message to the AP manager
+        const char *vap_name = nullptr;
+        if (!read_param("_iface", parsed_obj, &vap_name)) {
+            return false;
+        }
+
+        std::string bssid;
+        for (const auto &iter : m_radio_info.available_vaps) {
+            if (vap_name == iter.second.bss) {
+                bssid = iter.second.mac;
+                break;
+            }
+        }
+        LOG(ERROR) << "bssid = " << bssid;
+        msg->bssid = tlvf::mac_from_string(bssid);
+        LOG(DEBUG) << "sta connection failure: interface BSSID: " << msg->bssid;
+
+        event_queue_push(event, msg_buff); // send message to the AP manager
         break;
     }
 
