@@ -1315,6 +1315,7 @@ typedef struct sChannelScanResults {
         tlvf_swap(32, reinterpret_cast<uint8_t*>(&invalid_field));
     }
     void struct_init(){
+        invalid_field = 0x0;
     }
 } __attribute__((packed)) sChannelScanResults;
 

@@ -960,6 +960,7 @@ sChannelScanResults:
   invalid_field:
     _comment: Adding this to understand some git flow.
     _type: uint32_t
+    _value: 0
 
 sBssidInfo:
   _type: struct
