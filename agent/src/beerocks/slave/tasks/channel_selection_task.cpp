@@ -277,14 +277,14 @@ void ChannelSelectionTask::handle_channel_selection_request(ieee1905_1::CmduMess
     m_pending_selection.requests.clear();
 
     // Handle TX Power Limit TLV
-    for (const auto tx_power_limit_tlv : cmdu_rx.getClassList<wfa_map::tlvTransmitPowerLimit>()) {
+    for (const auto &tx_power_limit_tlv : cmdu_rx.getClassList<wfa_map::tlvTransmitPowerLimit>()) {
         if (!handle_transmit_power_limit(tx_power_limit_tlv)) {
             LOG(ERROR) << "Failed to handle transmit power limit";
         }
     }
 
     // Handle Controller's Channel Preference TLV
-    for (const auto channel_preference_tlv :
+    for (const auto &channel_preference_tlv :
          cmdu_rx.getClassList<wfa_map::tlvChannelPreference>()) {
 
         const auto &radio_mac = channel_preference_tlv->radio_uid();

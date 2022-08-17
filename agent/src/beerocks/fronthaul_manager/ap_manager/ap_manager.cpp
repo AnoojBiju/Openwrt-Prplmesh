@@ -159,7 +159,7 @@ static void build_channels_list(ieee1905_1::CmduMessageTx &cmdu_tx,
 
         // Unify the original ranks which are under the same group, and add the unified group to
         // the ranks list. The two separated groups that that made the new group are removed.
-        for (const auto min_delta_ranks_group : min_delta_ranks_groups) {
+        for (const auto &min_delta_ranks_group : min_delta_ranks_groups) {
             std::set<int32_t> unified_rank_elements;
             auto &min_delta_ranks_on_group = min_delta_ranks_group.second;
             for (const auto &min_delta_rank : min_delta_ranks_on_group) {

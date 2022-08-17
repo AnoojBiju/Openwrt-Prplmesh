@@ -826,7 +826,7 @@ bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmd
     auto create_stored_operating_classes =
         [this, &print_channel_vector]() -> std::vector<sOperatingClass> {
         std::vector<sOperatingClass> operating_vector;
-        for (const auto previous_scan : m_previous_scans) {
+        for (const auto &previous_scan : m_previous_scans) {
             const auto operating_class = previous_scan.first;
             const auto bandwidth =
                 son::wireless_utils::operating_class_to_bandwidth(operating_class);
