@@ -161,13 +161,13 @@ class V2Certification_4_7_10(CommonFlows):
         self.configure_multi_ap_policy_config_with_unsuccessful_association(agent, controller,
                                                                             0x00, 0x00)
         # report should not be sent as we disabled the feature
-        self.mismatch_psk(agent.radios[0], controller, sta1, 'no')
+        self.fail_sta_connection(agent.radios[0], controller, sta1, 'no')
 
         # Enable unsuccsfull association - 1 per minute
         self.configure_multi_ap_policy_config_with_unsuccessful_association(agent, controller,
                                                                             0x80, 0x01)
         # First report should be sent
-        self.mismatch_psk(agent.radios[0], controller, sta1, 'yes')
+        self.fail_sta_connection(agent.radios[0], controller, sta1, 'yes')
 
         # tear down the test: disassociated
         sta1.wifi_disconnect(vap1)

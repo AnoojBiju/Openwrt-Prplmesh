@@ -54,7 +54,7 @@ class CommonFlows(prplmesh_base_test.PrplMeshBaseTest):
         debug("Confirming multi-ap policy config ack message has been received on the controller")
         self.check_cmdu_type_single("ACK", 0x8000, agent.mac, controller.mac, mid)
 
-    def mismatch_psk(self, agent_radio, controller, sta, expect='yes'):
+    def fail_sta_connection(self, agent_radio, controller, sta, expect='yes'):
         '''
         expect: yes / no / exceed
         '''
@@ -63,39 +63,47 @@ class CommonFlows(prplmesh_base_test.PrplMeshBaseTest):
 
         # Get the agent from the radio
         agent = agent_radio.agent
-
+        # Array of Station Connection Failure Events
+        event_array = ["EVENT WPA_EVENT_EAP_FAILURE",
+                       "EVENT WPA_EVENT_EAP_FAILURE2",
+                       "EVENT WPA_EVENT_EAP_TIMEOUT_FAILURE",
+                       "EVENT WPA_EVENT_EAP_TIMEOUT_FAILURE2",
+                       "EVENT WPS_EVENT_TIMEOUT",
+                       "EVENT WPS_EVENT_FAIL",
+                       "EVENT WPA_EVENT_SAE_UNKNOWN_PASSWORD_IDENTIFIER",
+                       "EVENT WPS_EVENT_CANCEL",
+                       "EVENT AP-STA-POSSIBLE-PSK-MISMATCH"]
         # Simulate Failed Association Message
-        agent_radio.send_bwl_event(
-            "EVENT AP-STA-POSSIBLE-PSK-MISMATCH {}".format(sta.mac))
+        for event in event_array:
+            agent_radio.send_bwl_event(
+                "{} {}".format(event, sta.mac))
+            # Wait for something to happen
+            time.sleep(1)
+            # Check correct flow
+            if expect == 'yes':
+                # Validate "Failed Connection Message" CMDU was sent
+                responses = self.check_cmdu_type(
+                    event, 0x8033, agent.mac, controller.mac)
+                debug("Check {} has valid STA TLV".format(event))
+                for response in responses:
+                    tlv_sta_macs = self.check_cmdu_has_tlvs(response, 0x95)
+                for sta_mac in tlv_sta_macs:
+                    if hasattr(sta_mac, 'sta_mac_addr_type_mac_addr'):
+                        received_sta_mac = sta_mac.sta_mac_addr_type_mac_addr
+                    else:
+                        received_sta_mac = '00:00:00:00:00:00'
 
-        # Wait for something to happen
-        time.sleep(1)
-
-        # Check correct flow
-
-        if expect == 'yes':
-            # Validate "Failed Connection Message" CMDU was sent
-            response = self.check_cmdu_type_single(
-                "Failed Connection Message", 0x8033, agent.mac, controller.mac)
-
-            debug("Check Failed Connection Message has valid STA TLV")
-            tlv_sta_mac = self.check_cmdu_has_tlv_single(response, 0x95)
-            if hasattr(tlv_sta_mac, 'sta_mac_addr_type_mac_addr'):
-                received_sta_mac = tlv_sta_mac.sta_mac_addr_type_mac_addr
+                # Validate Source Info STA MAC
+                if received_sta_mac != sta.mac:
+                    self.fail("Source Info TLV has wrong STA MAC {} instead of {}".format(
+                        received_sta_mac, sta.mac))
+            elif expect == 'no':
+                debug("expecting no cmdu, policy set to no report")
+                self.check_no_cmdu_type(event, 0x8033,
+                                        agent.mac, controller.mac)
+            elif expect == 'exceed':
+                debug("expecting no cmdu, exceeded number of reports in a minute")
+                self.check_no_cmdu_type(event, 0x8033,
+                                        agent.mac, controller.mac)
             else:
-                received_sta_mac = '00:00:00:00:00:00'
-
-            # Validate Srouce Info STA MAC
-            if received_sta_mac != sta.mac:
-                self.fail("Source Info TLV has wrong STA MAC {} instead of {}".format(
-                    received_sta_mac, sta.mac))
-        elif expect == 'no':
-            debug("expecting no cmdu, policy set to no report")
-            self.check_no_cmdu_type("Failed Connection Message", 0x8033,
-                                    agent.mac, controller.mac)
-        elif expect == 'exceed':
-            debug("expecting no cmdu, exceeded number of reports in a minute")
-            self.check_no_cmdu_type("Failed Connection Message", 0x8033,
-                                    agent.mac, controller.mac)
-        else:
-            debug("unknown 'expect' = {}".format(expect))
+                debug("unknown 'expect' = {}".format(expect))

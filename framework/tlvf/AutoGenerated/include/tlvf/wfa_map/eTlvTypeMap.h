@@ -76,6 +76,7 @@ enum class eTlvTypeMap : uint8_t {
     TLV_PROFILE2_DEFAULT_802_1Q_SETTINGS = 0xb5,
     TLV_PROFILE2_TRAFFIC_SEPARATION_POLICY = 0xb6,
     TLV_BSS_CONFIGURATION_REPORT = 0xb7,
+    TLV_BSSID = 0xb8,
     TLV_SERVICE_PRIORITIZATION_RULE = 0xb9,
     TLV_DSCP_MAPPING_TABLE = 0xba,
     TLV_BSS_CONFIGURATION_REQUEST = 0xbb,
@@ -170,6 +171,7 @@ static const char *eTlvTypeMap_str(eTlvTypeMap enum_value) {
     case eTlvTypeMap::TLV_PROFILE2_DEFAULT_802_1Q_SETTINGS:         return "eTlvTypeMap::TLV_PROFILE2_DEFAULT_802_1Q_SETTINGS";
     case eTlvTypeMap::TLV_PROFILE2_TRAFFIC_SEPARATION_POLICY:       return "eTlvTypeMap::TLV_PROFILE2_TRAFFIC_SEPARATION_POLICY";
     case eTlvTypeMap::TLV_BSS_CONFIGURATION_REPORT:                 return "eTlvTypeMap::TLV_BSS_CONFIGURATION_REPORT";
+    case eTlvTypeMap::TLV_BSSID:                                    return "eTlvTypeMap::TLV_BSSID";
     case eTlvTypeMap::TLV_SERVICE_PRIORITIZATION_RULE:              return "eTlvTypeMap::TLV_SERVICE_PRIORITIZATION_RULE";
     case eTlvTypeMap::TLV_DSCP_MAPPING_TABLE:                       return "eTlvTypeMap::TLV_DSCP_MAPPING_TABLE";
     case eTlvTypeMap::TLV_BSS_CONFIGURATION_REQUEST:                return "eTlvTypeMap::TLV_BSS_CONFIGURATION_REQUEST";
@@ -271,6 +273,7 @@ public:
         case 0xb5:
         case 0xb6:
         case 0xb7:
+        case 0xb8:
         case 0xb9:
         case 0xba:
         case 0xbb:

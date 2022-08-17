@@ -1,0 +1,12 @@
+#
+---
+_namespace: wfa_map
+
+tlvBssid:
+  _type: class
+  _is_tlv_class : True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_BSSID
+  length: uint16_t
+  bssid: sMacAddr
