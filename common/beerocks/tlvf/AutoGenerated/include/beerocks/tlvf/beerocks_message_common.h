@@ -1296,6 +1296,8 @@ typedef struct sChannelScanResults {
     uint32_t dtim_period;
     //Indicates the fraction of the time AP senses that the channel is in use by the neighboring AP for transmissions.
     uint32_t channel_utilization;
+    //Adding this to understand some git flow.
+    uint32_t invalid_field;
     void struct_swap(){
         bssid.struct_swap();
         tlvf_swap(32, reinterpret_cast<uint8_t*>(&channel));
@@ -1310,6 +1312,7 @@ typedef struct sChannelScanResults {
         }
         tlvf_swap(32, reinterpret_cast<uint8_t*>(&dtim_period));
         tlvf_swap(32, reinterpret_cast<uint8_t*>(&channel_utilization));
+        tlvf_swap(32, reinterpret_cast<uint8_t*>(&invalid_field));
     }
     void struct_init(){
     }
