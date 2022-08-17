@@ -159,9 +159,7 @@ ap_wlan_hal_nl80211::ap_wlan_hal_nl80211(const std::string &iface_name, hal_even
     : base_wlan_hal(bwl::HALType::AccessPoint, iface_name, IfaceType::Intel, callback, hal_conf),
       base_wlan_hal_nl80211(bwl::HALType::AccessPoint, iface_name, callback, BUFFER_SIZE, hal_conf)
 {
-    std::string events[] = {};
-    int events_size      = sizeof(events) / sizeof(std::string);
-    m_filtered_events.insert(events, events + events_size);
+    m_filtered_events.insert({});
 }
 
 ap_wlan_hal_nl80211::~ap_wlan_hal_nl80211() {}
