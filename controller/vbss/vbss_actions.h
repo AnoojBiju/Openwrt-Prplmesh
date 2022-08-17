@@ -16,6 +16,33 @@ struct sClientVBSS {
     sMacAddr current_connected_ruid;
 };
 
+struct sClientSecCtxInfo {
+    const bool client_is_connected;
+    const uint16_t key_length;
+    uint8_t *ptk = nullptr;
+    const uint64_t tx_packet_num;
+    const uint16_t group_key_length;
+    uint8_t *gtk = nullptr;
+    const uint64_t group_tx_packet_num;
+
+    sClientSecCtxInfo(bool is_connected, uint16_t ptk_len, uint64_t tx_pkt_num, uint16_t gtk_len,
+                      uint64_t group_tx_pkt_num)
+        : client_is_connected(is_connected), key_length(ptk_len), tx_packet_num(tx_pkt_num),
+          group_key_length(gtk_len), group_tx_packet_num(group_tx_pkt_num)
+    {
+    }
+
+    ~sClientSecCtxInfo()
+    {
+        if (ptk != nullptr) {
+            delete[] ptk;
+        }
+        if (gtk != nullptr) {
+            delete[] gtk;
+        }
+    }
+};
+
 class vbss_actions {
 
 public:
@@ -26,12 +53,13 @@ public:
      * @param dest_ruid The UID of the radio that this VBSS will be created on
      * @param ssid The SSID to set for the new VBSS
      * @param password The password to set for the new password
+     * @param client_sec_ctx The client security context. If client is not associated, should equal nullptr
      * @param database Database to fetch controller, agent, and radio contexts
      * @return Wether the message was sent successfully or not
      */
     static bool create_vbss(const sClientVBSS &client_vbss, const sMacAddr &dest_ruid,
                             const std::string &ssid, const std::string &password,
-                            son::db &database);
+                            const sClientSecCtxInfo *client_sec_ctx, son::db &database);
 
     /**
      * @brief Sends a request to destroy the current virtual BSS

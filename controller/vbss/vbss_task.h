@@ -55,40 +55,13 @@ public:
         VBSS_DESTRUCTION
     };
 
-    struct sClientSecCtxInfo {
-        const bool client_is_connected;
-        const uint16_t key_length;
-        uint8_t *ptk = nullptr;
-        const uint64_t tx_packet_num;
-        const uint16_t group_key_length;
-        uint8_t *gtk = nullptr;
-        const uint64_t group_tx_packet_num;
-
-        sClientSecCtxInfo(bool is_connected, uint16_t ptk_len, uint64_t tx_pkt_num,
-                          uint16_t gtk_len, uint64_t group_tx_pkt_num)
-            : client_is_connected(is_connected), key_length(ptk_len), tx_packet_num(tx_pkt_num),
-              group_key_length(gtk_len), group_tx_packet_num(group_tx_pkt_num)
-        {
-        }
-
-        ~sClientSecCtxInfo()
-        {
-            if (ptk != nullptr) {
-                delete[] ptk;
-            }
-            if (gtk != nullptr) {
-                delete[] gtk;
-            }
-        }
-    };
-
     struct sMoveEvent {
         vbss::sClientVBSS client_vbss;
         sMacAddr dest_ruid;
         std::string ssid;
         std::string password;
         eMoveProcessState state = INIT;
-        std::shared_ptr<sClientSecCtxInfo> sec_ctx_info;
+        std::shared_ptr<vbss::sClientSecCtxInfo> sec_ctx_info;
 
         sMoveEvent(sMacAddr vbssid, const vbss::sClientVBSS &client_vbss_, sMacAddr dest_ruid_,
                    const std::string &ssid_, const std::string &password_)
