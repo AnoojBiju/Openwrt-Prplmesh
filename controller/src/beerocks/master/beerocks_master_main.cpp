@@ -510,11 +510,11 @@ fill_nbapi_config_from_master_conf(std::shared_ptr<beerocks::nbapi::Ambiorix> am
 
     ret_val &= ambiorix_datamodel->set(base_path, "HealthCheckTask", master_conf.load_health_check);
 
-    ret_val &= ambiorix_datamodel->set(base_path, "StatisticsPollingTask",
-                                       master_conf.load_diagnostics_measurements);
-
     ret_val &= ambiorix_datamodel->set(base_path, "StatisticsPollingRateSec",
                                        master_conf.diagnostics_measurements_polling_rate_sec);
+
+    ret_val &= ambiorix_datamodel->set(base_path, "StatisticsPollingTask",
+                                       master_conf.load_diagnostics_measurements);
 
     ret_val &= ambiorix_datamodel->set(base_path, "DFSReentry", master_conf.load_dfs_reentry);
 

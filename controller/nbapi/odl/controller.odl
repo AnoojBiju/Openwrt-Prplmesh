@@ -144,7 +144,9 @@
                     bool OptimalPathPreferSignalStrenght = false;
                     bool HealthCheckTask = false;
                     bool StatisticsPollingTask = false;
-                    uint32 StatisticsPollingRateSec = 0;
+                    uint32 StatisticsPollingRateSec = 1 {
+                        on action validate call check_range [1, 10000];
+                    }
                     bool DFSReentry = false;
                 }
 
