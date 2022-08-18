@@ -19,6 +19,7 @@
 #include <beerocks/tlvf/beerocks_message.h>
 #include <beerocks/tlvf/beerocks_message_apmanager.h>
 
+#include <tlvf/wfa_map/tlv1905EncapDpp.h>
 #include <tlvf/wfa_map/tlvBssid.h>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
 #include <tlvf/wfa_map/tlvDppCceIndication.h>
@@ -2244,6 +2245,31 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
         chirp_value_tlv->flags().hash_validity                = true;
         chirp_value_tlv->flags().enrollee_mac_address_present = true;
         chirp_value_tlv->set_dest_sta_mac(dpp_presence->enrollee_mac);
+        send_cmdu(cmdu_tx);
+    } break;
+    case Event::DPP_AUTHENTICATION_RESPONSE: {
+        LOG(DEBUG) << "DPP Authentication Response";
+        auto dpp_authentication_response =
+            static_cast<bwl::sACTION_APMANAGER_DPP_AUTHENTICATION_RESPONSE *>(data);
+
+        auto cmdu_tx_header =
+            cmdu_tx.create(0, ieee1905_1::eMessageType::PROXIED_ENCAP_DPP_MESSAGE);
+        if (!cmdu_tx_header) {
+            LOG(ERROR) << "cmdu creation of type PROXIED_ENCAP_DPP_MESSAGE failed!";
+            return false;
+        }
+
+        auto encap_1905_dpp_tlv = cmdu_tx.addClass<wfa_map::tlv1905EncapDpp>();
+        if (!encap_1905_dpp_tlv) {
+            LOG(ERROR) << "addClass wfa_map::tlv1905EncapDpp!";
+            return false;
+        }
+
+        encap_1905_dpp_tlv->frame_type() =
+            wfa_map::tlv1905EncapDpp::eFrameType::DPP_PUBLIC_ACTION_FRAME;
+        encap_1905_dpp_tlv->frame_flags().dpp_frame_indicator          = false;
+        encap_1905_dpp_tlv->frame_flags().enrollee_mac_address_present = true;
+        encap_1905_dpp_tlv->set_dest_sta_mac(dpp_authentication_response->enrollee_mac);
         send_cmdu(cmdu_tx);
     } break;
     // Unhandled events
