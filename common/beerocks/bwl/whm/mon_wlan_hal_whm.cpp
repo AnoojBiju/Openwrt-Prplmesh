@@ -45,15 +45,61 @@ mon_wlan_hal_whm::~mon_wlan_hal_whm() {}
 
 bool mon_wlan_hal_whm::update_radio_stats(SRadioStats &radio_stats)
 {
-    //LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
-    radio_stats = {};
+    std::string wifi_radio_path;
+    if (!whm_get_radio_ref(get_iface_name(), wifi_radio_path)) {
+        return false;
+    }
+
+    std::string stats_path = wifi_radio_path + "Stats.";
+
+    amxc_var_t *stats_obj = m_ambiorix_cl->get_object(stats_path, 0);
+    if (!stats_obj) {
+        LOG(ERROR) << "failed to get radio Stats object";
+        return false;
+    }
+
+    radio_stats.tx_bytes_cnt    = GET_UINT32(stats_obj, "BytesSent");
+    radio_stats.rx_bytes_cnt    = GET_UINT32(stats_obj, "BytesReceived");
+    radio_stats.tx_packets_cnt  = GET_UINT32(stats_obj, "PacketsSent");
+    radio_stats.rx_packets_cnt  = GET_UINT32(stats_obj, "PacketsReceived");
+    radio_stats.errors_sent     = GET_UINT32(stats_obj, "ErrorsSent");
+    radio_stats.errors_received = GET_UINT32(stats_obj, "ErrorsReceived");
+
+    amxc_var_t *radio_obj = m_ambiorix_cl->get_object(wifi_radio_path, 0);
+    if (!radio_obj) {
+        LOG(ERROR) << "failed to get radio object";
+        return false;
+    }
+
+    radio_stats.noise = GET_UINT32(radio_obj, "Noise");
+
+    amxc_var_delete(&stats_obj);
+    amxc_var_delete(&radio_obj);
+
     return true;
 }
 
 bool mon_wlan_hal_whm::update_vap_stats(const std::string &vap_iface_name, SVapStats &vap_stats)
 {
-    //LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
-    vap_stats = {};
+    std::string ssid_stats_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
+                                  std::string(AMX_CL_SSID_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
+                                  vap_iface_name + AMX_CL_OBJ_DELIMITER + "Stats.";
+
+    amxc_var_t *ssid_stats_obj = m_ambiorix_cl->get_object(ssid_stats_path, 0);
+    if (!ssid_stats_obj) {
+        LOG(ERROR) << "failed to get SSID Stats object, path:" << ssid_stats_path;
+        return false;
+    }
+
+    vap_stats.tx_bytes_cnt    = GET_UINT32(ssid_stats_obj, "BytesSent");
+    vap_stats.rx_bytes_cnt    = GET_UINT32(ssid_stats_obj, "BytesReceived");
+    vap_stats.tx_packets_cnt  = GET_UINT32(ssid_stats_obj, "PacketsSent");
+    vap_stats.rx_packets_cnt  = GET_UINT32(ssid_stats_obj, "PacketsReceived");
+    vap_stats.errors_sent     = GET_UINT32(ssid_stats_obj, "ErrorsSent");
+    vap_stats.errors_received = GET_UINT32(ssid_stats_obj, "ErrorsReceived");
+    vap_stats.retrans_count   = GET_UINT32(ssid_stats_obj, "RetransCount");
+    amxc_var_delete(&ssid_stats_obj);
+
     return true;
 }
 
