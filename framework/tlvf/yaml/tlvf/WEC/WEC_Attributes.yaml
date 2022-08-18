@@ -1,0 +1,386 @@
+_include: {
+  tlvf/WEC/eWecDppAttributes.h,
+  tlvf/WEC/eWecLengths.h,
+  tlvf/WEC/eWecDppStatus.h,
+  tlvf/WEC/eWecConnectorKey.h,
+}
+
+_namespace: WEC
+
+sDppAttrDppStatus:
+  _type: struct
+  type:
+    _type: eWecDppAttributes
+    _value: ATTR_DPP_STATUS
+  length:
+    _type: uint16_t
+    _value: sizeof(eWecDppStatus)
+  dpp_status:
+    _type: eWecDppStatus
+    _value: eWecDppStatus::STATUS_OK
+
+sDppAttrInitiatorBootstrappingKeyHash:
+  _type: struct
+  type:
+    _type: eWecDppAttributes
+    _value: ATTR_INITIATOR_BOOTSTRAPPING_KEY_HASH
+  length:
+    _type: uint16_t
+    _value: WEC_SHA256_LENGTH
+  initiator_public_bootstrapping_key_hashed:
+    _type: uint8_t
+    _length: [ WEC_SHA256_LENGTH ]
+
+sDppAttrResponderBootstrappingKeyHash:
+  _type: struct
+  type:
+    _type: eWecDppAttributes
+    _value: ATTR_RESPONDER_BOOTSTRAPPING_KEY_HASH
+  length:
+    _type: uint16_t
+    _value: WEC_SHA256_LENGTH
+  responder_public_bootstrapping_key_hashed:
+    _type: uint8_t
+    _length: [ WEC_SHA256_LENGTH ]
+    
+sDppAttrInitiatorProtocolKey:
+  _type: struct
+  type:
+    _type: eWecDppAttributes
+    _value: ATTR_INITIATOR_PROTOCOL_KEY
+  length:
+    _type: uint16_t
+    _value: WEC_PUBLIC_PROTOCOL_KEY_LENGTH
+  initiator_public_protocol_key:
+    _type: uint8_t
+    _length: [ WEC_PUBLIC_PROTOCOL_KEY_LENGTH ]
+
+sDppAttrResponderProtocolKey:
+  _type: struct
+  type:
+    _type: eWecDppAttributes
+    _value: ATTR_RESPONDER_PROTOCOL_KEY
+  length:
+    _type: uint16_t
+    _value: WEC_PUBLIC_PROTOCOL_KEY_LENGTH
+  responder_public_protocol_key:
+    _type: uint8_t
+    _length: [ WEC_PUBLIC_PROTOCOL_KEY_LENGTH ]
+
+sDppAttrInitiatorNonce:
+  _type: struct
+  type:
+    _type: eWecDppAttributes
+    _value: ATTR_INITIATOR_NONCE
+  length:
+    _type: uint16_t
+    _value: WEC_NONCE_LENGTH
+  initiator_nonce:
+    _type: uint8_t
+    _length: [ WEC_NONCE_LENGTH ]
+
+sDppAttrResponderNonce:
+  _type: struct
+  type:
+    _type: eWecDppAttributes
+    _value: ATTR_RESPONDER_NONCE
+  length:
+    _type: uint16_t
+    _value: WEC_NONCE_LENGTH
+  responder_nonce:
+    _type: uint8_t
+    _length: [ WEC_NONCE_LENGTH ]
+
+sDppAttrEnrolleeNonce:
+  _type: struct
+  type:
+    _type: eWecDppAttributes
+    _value: ATTR_ENROLLEE_NONCE
+  length:
+    _type: uint16_t
+    _value: WEC_NONCE_LENGTH
+  enrollee_nonce:
+    _type: uint8_t
+    _length: [ WEC_NONCE_LENGTH ]
+
+sDppAttrConfiguratorNonce:
+  _type: struct
+  type:
+    _type: eWecDppAttributes
+    _value: ATTR_CONFIGURATOR_NONCE
+  length:
+    _type: uint16_t
+    _value: WEC_NONCE_LENGTH
+  configurator_nonce:
+    _type: uint8_t
+    _length: [ WEC_NONCE_LENGTH ]
+
+sDppAttrFiniteCyclicGroup:
+  _type: struct
+  type:
+    _type: eWecDppAttributes
+    _value: ATTR_FINITE_CYCLIC_GROUP
+  length:
+    _type: uint16_t
+    _value: 2
+  integer:
+    _type: uint16_t
+    _comment: need to little endian byte order
+
+sDppAttrEncryptedKey:
+  _type: struct
+  type:
+    _type: eWecDppAttributes
+    _value: ATTR_ENCRYPTED_KEY
+  length:
+    _type: uint16_t
+    _value: WEC_ENCRYPTED_KEY_LENGTH
+  encrypted_key:
+    _type: uint8_t
+    _length: [ WEC_ENCRYPTED_KEY_LENGTH ]
+
+sDppAttrTransactionId:
+  _type: struct
+  type:
+    _type: eWecDppAttributes
+    _value: ATTR_TRANSACTION_ID
+  length:
+    _type: uint16_t
+    _value: 1
+  transaction_id: uint8_t
+
+sDppAttrChannel:
+  _type: struct
+  type:
+    _type: eWecDppAttributes
+    _value: ATTR_CHANNEL
+  length:
+    _type: uint16_t
+    _value: 2
+  operating_class: uint8_t
+  channel: uint8_t
+
+sDppAttrProtocolVersion:
+  _type: struct
+  type:
+    _type: eWecDppAttributes
+    _value: ATTR_PROTOCOL_VERSION
+  length:
+    _type: uint16_t
+    _value: 1
+  dpp_protocol_version:
+    _type: uint8_t
+    _value: 2
+
+sDppAttrSendConnStatus:
+  _type: struct
+  type:
+    _type: eWecDppAttributes
+    _value: ATTR_SEND_CONN_STATUS
+  length:
+    _type: uint16_t
+    _value: 0
+
+sDppAttrANonce:
+  _type: struct
+  type:
+    _type: eWecDppAttributes
+    _value: ATTR_ENROLLEE_NONCE
+  length:
+    _type: uint16_t
+    _value: WEC_NONCE_LENGTH
+  enrollee_nonce:
+    _type: uint8_t
+    _length: [ WEC_NONCE_LENGTH ]
+
+cDppAttrInitiatorCapabilities:
+  _type: class
+  type:
+    _type: eWecDppAttributes
+    _value: ATTR_INITIATOR_CAPABILITIES
+  length:
+    _type: uint8_t 
+    _value_const: 1 #sizeof(sWecICapabilitiesBitfield) 
+  initiator_capabilities: cDppAttrInitiatorCapabilities::sWecICapabilitiesBitfield
+
+sWecICapabilitiesBitfield:
+  _type: struct
+  _bit_field: uint8_t
+  reserved:
+    _bit_range: [7,2]
+  configurator_capable:
+    _bit_range: [1,1]
+  enrollee_capable:
+    _bit_range: [0,0]
+
+cDppAttrResponderCapabilities:
+  _type: class
+  type:
+    _type: eWecDppAttributes
+    _value: ATTR_RESPONDER_CAPABILITIES
+  length:
+    _type: uint8_t
+    value_const: 1 # sizeof(sWecRCapabilitiesBitfield) 
+  responder_capabilities: cDppAttrResponderCapabilities::sWecRCapabilitiesBitfield
+
+sWecRCapabilitiesBitfield:
+  _type: struct
+  _bit_field: uint8_t
+  reserved:
+    _bit_range: [7,2]
+  configurator_capable:
+    _bit_range: [1,1]
+  enrollee_capable:
+    _bit_range: [0,0]
+
+cDppAttrWrappedDataAttribute:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eWecDppAttributes
+    _value: ATTR_WRAPPED_DATA
+  length:
+    _type: uint16_t
+  wrapped_data:
+    _type: uint8_t
+    _length: []
+
+cDppAttrInitiatorAuthenticatingTag:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eWecDppAttributes
+    _value: ATTR_INITIATOR_AUTHENTICATING_TAG
+  length: uint16_t
+  initiator_authenticating_tag:
+    _type: uint8_t
+    _length: []
+
+cDppAttrResponderAuthenticatingTag:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eWecDppAttributes
+    _value: ATTR_RESPONDER_AUTHENTICATING_TAG
+  length: uint16_t
+  responder_authenticating_tag:
+    _type: uint8_t
+    _length: []
+
+cDppAttrDppConfigurationObject:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eWecDppAttributes
+    _value: ATTR_DPP_CONFIGURATION_OBJECT
+  length: uint16_t
+  configuration_object:
+    _type: char
+    _length: []
+
+cDppAttrDppConnector:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eWecDppAttributes
+    _value: ATTR_DPP_CONNECTOR
+  length: uint16_t
+  connector:
+    _type: char
+    _length: []
+
+cDppAttrDppConfigurationRequestObject:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eWecDppAttributes
+    _value: ATTR_DPP_CONFIGURATION_REQUEST_OBJECT
+  length: uint16_t
+  configuration_request_object:
+    _type: char
+    _length: []
+
+cDppAttrBootstrappingKey:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eWecDppAttributes
+    _value: ATTR_BOOTSTRAPPING_KEY
+  length: uint16_t
+  configuration_request_object:
+    _type: char
+    _length: []
+
+cDppAttrCodeIdentifier:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eWecDppAttributes
+    _value: ATTR_CODE_IDENTIFIER
+  length: uint16_t
+  code_identifier:
+    _type: char
+    _length: []
+    _length_max: WEC_CODE_IDENTIFIER_MAX_LENGTH
+
+cDppAttrBootstrappingInfo:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eWecDppAttributes
+    _value: ATTR_BOOTSTRAPPING_INFO
+  length: uint16_t
+  bootstrapping_info:
+    _type: char
+    _length: []
+
+cDppAttrDppEnvelopedData:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eWecDppAttributes
+    _value: ATTR_DPP_ENVELOPED_DATA
+  length: uint16_t
+  enveloped_data:
+    _type: uint8_t
+    _length: []
+
+cDppAttrDppConnectionStatusObject:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eWecDppAttributes
+    _value: ATTR_CONN_STATUS_OBJECT
+  length: uint16_t
+  dpp_connection_status_json_object:
+    _type: char
+    _length: []
+
+cDppAttrReconfigurationFlags:
+  _type: class
+  type:
+    _type: eWecDppAttributes
+    _value: ATTR_RECONFIGURATION_FLAGS
+  length: 
+    _type: uint8_t
+    _value: 1
+  reconfiguration_flags: cDppAttrReconfigurationFlags::sWecReconfigurationFlags
+
+sWecReconfigurationFlags:
+  _type: struct
+  _bit_field: uint8_t
+  reserved:
+    _bit_range: [7,1]
+  connector_key:
+    _bit_range: [0,0]
+
+cDppAttrEtagId:
+  _type: class
+  type:
+    _type: eWecDppAttributes
+    _value: ATTR_E_TAG_ID
+  length:
+    _type: uint16_t
+  etag_id:
+    _type: uint8_t
+    _length: []

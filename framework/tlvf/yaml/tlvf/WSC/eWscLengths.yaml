@@ -4,7 +4,7 @@ _namespace: WSC
 
 eWscLengths:
   _type: enum
-  _enum_storage: uint16_t                                                                             
+  _enum_storage: uint16_t
   WSC_MAC_LENGTH: 6
   WSC_NONCE_LENGTH: 16
   WSC_UUID_LENGTH: 16

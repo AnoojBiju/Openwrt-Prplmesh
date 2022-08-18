@@ -1,0 +1,17 @@
+#
+---
+_namespace: WEC
+
+# Assuming 'prime length' < 256 and 'NIST P-256' elliptic curve.
+
+eWecLengths:
+  _type: enum
+  _enum_storage: uint16_t
+  WEC_MAC_LENGTH: 6
+  WEC_NONCE_LENGTH: 16
+  WEC_SHA256_LENGTH: 32
+  WEC_PUBLIC_PROTOCOL_KEY_LENGTH: 64
+  WEC_PUBLIC_PROTOCOL_KEY_COORDINATE_LENGTH: 32
+  WEC_PRIVATE_PROTOCOL_KEY_LENGTH: 32
+  WEC_ENCRYPTED_KEY_LENGTH: 64
+  WEC_CODE_IDENTIFIER_MAX_LENGTH: 80
