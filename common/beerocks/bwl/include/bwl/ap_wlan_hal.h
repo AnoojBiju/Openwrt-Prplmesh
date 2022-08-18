@@ -65,7 +65,8 @@ public:
         AP_MGMT_FRAME_RECEIVED,
 
         MGMT_Frame, /**< 802.11 management frame payload */
-        DPP_PRESENCE_ANNOUNCEMENT
+        DPP_PRESENCE_ANNOUNCEMENT,
+        DPP_AUTHENTICATION_RESPONSE
     };
 
     // Public methods
