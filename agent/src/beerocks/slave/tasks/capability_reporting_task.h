@@ -77,6 +77,18 @@ private:
     bool add_ap_he_capabilities(const std::string &iface_name);
 
     /**
+     * @brief Adds an AP WIFI6 Capabilities TLV to AP Capability Report message.
+     *
+     * TLV is added to message only if radio on given interface supports HE capabilities.
+     * See section 17.2.72 of Multi-AP Specification for details.
+     *
+     * @param iface_name Interface on which radio operates.
+     *
+     * @return True on success and false otherwise.
+     */
+    bool add_ap_wifi6_capabilities(const std::string &iface_name);
+
+    /**
      * @brief Adds Channel Scan Capabilities TLV to AP Capability Report message.
      *
      * The TLV is already created by the caller. This function adds
