@@ -366,86 +366,106 @@ void Controller::configure_tasks()
 #ifndef BEEROCKS_LINUX
     if (database.settings_diagnostics_measurements()) {
         if (!m_statistics_polling_task) {
+            LOG(DEBUG) << "Start Statistics polling task";
             m_statistics_polling_task =
                 std::make_shared<statistics_polling_task>(database, cmdu_tx, m_task_pool);
             LOG_IF(!m_task_pool.add_task(m_statistics_polling_task), FATAL)
-                << "Failed adding statistics polling task!";
+                << "Failed adding Statistics polling task!";
         } else {
             LOG(DEBUG) << "Statistics polling task already running";
         }
     } else {
         if (m_statistics_polling_task) {
+            LOG(DEBUG) << "Stop Statistics polling task";
             m_task_pool.kill_task(m_statistics_polling_task->id);
             m_statistics_polling_task = {};
             database.assign_statistics_polling_task_id(-1);
+        } else {
+            LOG(DEBUG) << "Statistics polling task disabled";
         }
     }
 #endif
 
     if (database.config.management_mode != BPL_MGMT_MODE_NOT_MULTIAP) {
         if (!m_link_metrics_task) {
+            LOG(DEBUG) << "Start Link metrics task";
             m_link_metrics_task =
                 std::make_shared<LinkMetricsTask>(database, cmdu_tx, cert_cmdu_tx, m_task_pool);
             LOG_IF(!m_task_pool.add_task(m_link_metrics_task), FATAL)
-                << "Failed adding link metrics task!";
+                << "Failed adding Link metrics task!";
         } else {
             LOG(DEBUG) << "Link metrics task already running";
         }
     } else {
         if (m_link_metrics_task) {
+            LOG(DEBUG) << "Stop Link metrics task";
             m_task_pool.kill_task(m_link_metrics_task->id);
             m_link_metrics_task = {};
+        } else {
+            LOG(DEBUG) << "Link metric task disabled";
         }
     }
 
     if (database.settings_channel_select_task()) {
         if (!m_channel_selection_task) {
+            LOG(DEBUG) << "Start Channel selection task";
             m_channel_selection_task =
                 std::make_shared<channel_selection_task>(database, cmdu_tx, m_task_pool);
             LOG_IF(!m_task_pool.add_task(m_channel_selection_task), FATAL)
-                << "Failed adding channel selection task!";
+                << "Failed adding Channel selection task!";
         } else {
             LOG(DEBUG) << "Channel selection task already running";
         }
     } else {
         if (m_channel_selection_task) {
+            LOG(DEBUG) << "Stop Channel selection task";
             m_task_pool.kill_task(m_channel_selection_task->id);
             m_channel_selection_task = {};
             database.assign_channel_selection_task_id(-1);
+        } else {
+            LOG(DEBUG) << "Channel selection task disabled";
         }
     }
 
     if (database.settings_dynamic_channel_select_task()) {
         if (!m_dynamic_channel_selection_task) {
+            LOG(DEBUG) << "Start Dynamic channel selection r2 task";
             m_dynamic_channel_selection_task =
                 std::make_shared<dynamic_channel_selection_r2_task>(database, cmdu_tx, m_task_pool);
             LOG_IF(!m_task_pool.add_task(m_dynamic_channel_selection_task), FATAL)
-                << "Failed adding dynamic channel selection r2 task!";
+                << "Failed adding Dynamic channel selection r2 task!";
         } else {
-            LOG(DEBUG) << "Dynamic channel selection task already running";
+            LOG(DEBUG) << "Dynamic channel selection task r2 already running";
         }
     } else {
         if (m_dynamic_channel_selection_task) {
+            LOG(DEBUG) << "Stop  Dynamic channel selection r2 task";
             m_task_pool.kill_task(m_dynamic_channel_selection_task->id);
             m_dynamic_channel_selection_task = {};
             database.assign_dynamic_channel_selection_r2_task_id(-1);
+        } else {
+            LOG(DEBUG) << "Dynamic channel selection task r2 disabled";
         }
     }
 
     if (database.settings_health_check()) {
         if (!m_network_health_check_task) {
+            LOG(DEBUG) << "Start Network health check task";
             m_network_health_check_task =
                 std::make_shared<network_health_check_task>(database, cmdu_tx, m_task_pool, 0);
             LOG_IF(!m_task_pool.add_task(m_network_health_check_task), FATAL)
-                << "Failed adding network health check task!";
+                << "Failed adding Network health check task!";
         } else {
             LOG(DEBUG) << "Network health check task already running";
         }
     } else {
         if (m_network_health_check_task) {
+            LOG(DEBUG) << "Stop Network health check task";
             m_task_pool.kill_task(m_network_health_check_task->id);
             m_network_health_check_task = {};
             database.assign_dynamic_channel_selection_r2_task_id(-1);
+        } else {
+            LOG(DEBUG) << "Network health check task disabled";
         }
     }
 }
