@@ -295,6 +295,15 @@ private:
     bool handle_tlv_ap_he_capabilities(ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
+     * @brief Get info from 'AP WIFI6 Capabilities' TLV,
+     * set data to AP WiFi6Capabilities data element.
+     *
+     * @param cmdu_rx AP Capability Report message.
+     * @return True on success, false otherwise.
+    */
+    bool handle_tlv_ap_wifi6_capabilities(ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
      * @brief Get info from 'AP VHT Capabilities' TLV,
      * set data to AP VHTCapabilities data element.
      *
