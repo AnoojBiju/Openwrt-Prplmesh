@@ -158,10 +158,6 @@ boardfarm-on-nec-wx3000hp:
    - nec-wx3000hp
  needs:
    - build-for-intel-mips
- rules:
- - when: manual
-   allow_failure: true
-
 
 boardfarm-on-nec-wx3000hp-stability:
   extends: boardfarm-on-nec-wx3000hp
