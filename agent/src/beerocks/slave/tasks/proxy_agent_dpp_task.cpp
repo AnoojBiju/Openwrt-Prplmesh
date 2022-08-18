@@ -1,5 +1,6 @@
 #include "proxy_agent_dpp_task.h"
 #include "../son_slave_thread.h"
+#include <tlvf/wfa_map/tlv1905EncapDpp.h>
 #include <tlvf/wfa_map/tlvDppCceIndication.h>
 #include <tlvf/wfa_map/tlvDppChirpValue.h>
 
@@ -21,6 +22,10 @@ bool ProxyAgentDppTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t
     }
     case ieee1905_1::eMessageType::CHIRP_NOTIFICATION_MESSAGE: {
         handle_chirp_notification(cmdu_rx);
+        return true;
+    }
+    case ieee1905_1::eMessageType::PROXIED_ENCAP_DPP_MESSAGE: {
+        handle_proxied_encap_dpp(cmdu_rx);
         return true;
     }
     default: {
@@ -48,11 +53,23 @@ void ProxyAgentDppTask::handle_chirp_notification(ieee1905_1::CmduMessageRx &cmd
     auto chirp_notification_tlv = cmdu_rx.getClass<wfa_map::tlvDppChirpValue>();
     if (!chirp_notification_tlv) {
         LOG(ERROR) << "Chirp notification message doesn't contain DPP chirp value tlv";
+        return;
     }
 
     // code for comparison of the hash will be added as part of PPM-2160.
     // chirp notification message will be sent to the controller only if the hash comparison fails.
     // Otherwise authentication request message will be forwarded to ap_manager and then to the enrollee.
+    m_btl_ctx.forward_cmdu_to_controller(cmdu_rx);
+}
+
+void ProxyAgentDppTask::handle_proxied_encap_dpp(ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    // cmdu message received from ap_manager
+    auto encap_1905_dpp_tlv = cmdu_rx.getClass<wfa_map::tlv1905EncapDpp>();
+    if (!encap_1905_dpp_tlv) {
+        LOG(ERROR) << "Proxied encap dpp message doesn't contain 1905 encap dpp tlv";
+        return;
+    }
     m_btl_ctx.forward_cmdu_to_controller(cmdu_rx);
 }
 

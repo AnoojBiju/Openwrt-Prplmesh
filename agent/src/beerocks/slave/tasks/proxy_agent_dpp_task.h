@@ -37,6 +37,14 @@ private:
      * @return true on success, otherwise false.
      */
     void handle_chirp_notification(ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief Parse Proxied Encap DPP Message.
+     *
+     * @param cmdu_rx Received CMDU.
+     * @return true on success, otherwise false.
+     */
+    void handle_proxied_encap_dpp(ieee1905_1::CmduMessageRx &cmdu_rx);
 };
 } // namespace beerocks
 
