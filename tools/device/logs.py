@@ -28,6 +28,7 @@ LOG_COMMANDS = \
         LogCommand('ubus call Ethernet _get \'{ "depth": "10" }\'', "dm-Ethernet.txt"),
         LogCommand('ubus call DHCPv4 _get \'{ "depth": "10" }\'', "dm-DHCPv4.txt"),
         LogCommand('ubus call DHCPv6 _get \'{ "depth": "10" }\'', "dm-DHCPv6.txt"),
+        LogCommand('ubus call Firewall _get \'{ "depth": "10" }\'', "dm-Firewall.txt"),
         LogCommand('ubus call WiFi _get \'{ "depth": "10" }\'', "dm-WiFi.txt"),
         LogCommand('logread', "syslog.txt"),
         LogCommand('iptables -L', "iptables-filter.txt"),
