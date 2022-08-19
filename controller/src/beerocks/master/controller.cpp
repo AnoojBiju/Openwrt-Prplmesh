@@ -124,7 +124,7 @@ Controller::Controller(db &database_,
 
     database.set_controller_ctx(this);
 
-    start_permanent_tasks();
+    start_tasks();
 
     beerocks::CmduServer::EventHandlers handlers{
         .on_client_connected    = [&](int fd) { handle_connected(fd); },
@@ -328,7 +328,7 @@ bool Controller::stop()
     return ok;
 }
 
-void Controller::start_permanent_tasks()
+void Controller::start_tasks()
 {
     LOG(DEBUG) << "Start controller periodic tasks";
     configure_tasks();
@@ -403,10 +403,11 @@ void Controller::configure_tasks()
         if (m_channel_selection_task) {
             m_task_pool.kill_task(m_channel_selection_task->id);
             m_channel_selection_task = {};
+            database.assign_channel_selection_task_id(-1);
         }
     }
 
-    if (database.get_dynamic_channel_selection_r2_task_id()) {
+    if (database.settings_dynamic_channel_select_task()) {
         if (!m_dynamic_channel_selection_task) {
             auto m_dynamic_channel_selection_task =
                 std::make_shared<dynamic_channel_selection_r2_task>(database, cmdu_tx, m_task_pool);
@@ -417,6 +418,7 @@ void Controller::configure_tasks()
         if (m_dynamic_channel_selection_task) {
             m_task_pool.kill_task(m_dynamic_channel_selection_task->id);
             m_dynamic_channel_selection_task = {};
+            database.assign_dynamic_channel_selection_r2_task_id(-1);
         }
     }
 }
@@ -1435,9 +1437,15 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const sMacAddr &src_mac,
         dynamic_channel_selection_r2_task::sScanReportEvent new_event = {};
         new_event.ISO_8601_timestamp                                  = ISO_8601_timestamp;
         new_event.agent_mac                                           = src_mac;
-        m_task_pool.push_event(
-            database.get_dynamic_channel_selection_r2_task_id(),
-            dynamic_channel_selection_r2_task::eEvent::RECEIVED_CHANNEL_SCAN_REPORT, &new_event);
+
+        if (database.get_dynamic_channel_selection_r2_task_id() > 0) {
+            m_task_pool.push_event(
+                database.get_dynamic_channel_selection_r2_task_id(),
+                dynamic_channel_selection_r2_task::eEvent::RECEIVED_CHANNEL_SCAN_REPORT,
+                &new_event);
+        } else {
+            LOG(WARNING) << "dynamic_channel_selection_task not running";
+        }
     }
     LOG(DEBUG) << "Report handling is done";
     return true;
@@ -2519,9 +2527,13 @@ bool Controller::handle_intel_slave_join(
     cs_new_event->hostap_mac = radio_mac;
     cs_new_event->cs_params  = notification->cs_params();
 
-    m_task_pool.push_event(database.get_channel_selection_task_id(),
-                           (int)channel_selection_task::eEvent::SLAVE_JOINED_EVENT,
-                           (void *)cs_new_event);
+    if (database.get_channel_selection_task_id() > 0) {
+        m_task_pool.push_event(database.get_channel_selection_task_id(),
+                               (int)channel_selection_task::eEvent::SLAVE_JOINED_EVENT,
+                               (void *)cs_new_event);
+    } else {
+        LOG(WARNING) << "channel_selection_task not running";
+    }
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
     // sending event to pre_association_steering_task
     LOG(DEBUG) << "pre_association_steering_task,sending STEERING_SLAVE_JOIN for mac " << radio_mac;
@@ -2788,10 +2800,14 @@ bool Controller::handle_cmdu_control_message(
         auto new_event        = new channel_selection_task::sRestrictedChannelResponse_event;
         new_event->hostap_mac = beerocks_header->actionhdr()->radio_mac();
         new_event->success    = response->success();
-        m_task_pool.push_event(
-            database.get_channel_selection_task_id(),
-            (int)channel_selection_task::eEvent::RESTRICTED_CHANNEL_RESPONSE_EVENT,
-            (void *)new_event);
+        if (database.get_channel_selection_task_id() > 0) {
+            m_task_pool.push_event(
+                database.get_channel_selection_task_id(),
+                (int)channel_selection_task::eEvent::RESTRICTED_CHANNEL_RESPONSE_EVENT,
+                (void *)new_event);
+        } else {
+            LOG(WARNING) << "channel_selection_task not running";
+        }
         break;
     }
     case beerocks_message::ACTION_CONTROL_HOSTAP_AP_DISABLED_NOTIFICATION: {
@@ -2925,9 +2941,13 @@ bool Controller::handle_cmdu_control_message(
         auto new_event        = new channel_selection_task::sAcsResponse_event;
         new_event->hostap_mac = radio_mac;
         new_event->cs_params  = notification->cs_params();
-        m_task_pool.push_event(database.get_channel_selection_task_id(),
-                               (int)channel_selection_task::eEvent::ACS_RESPONSE_EVENT,
-                               (void *)new_event);
+        if (database.get_channel_selection_task_id() > 0) {
+            m_task_pool.push_event(database.get_channel_selection_task_id(),
+                                   (int)channel_selection_task::eEvent::ACS_RESPONSE_EVENT,
+                                   (void *)new_event);
+        } else {
+            LOG(WARNING) << "channel_selection_task not running";
+        }
         break;
     }
     case beerocks_message::ACTION_CONTROL_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION: {
@@ -3394,9 +3414,13 @@ bool Controller::handle_cmdu_control_message(
         auto new_event        = new channel_selection_task::sCacCompleted_event;
         new_event->hostap_mac = radio_mac;
         new_event->params     = notification->params();
-        m_task_pool.push_event(database.get_channel_selection_task_id(),
-                               (int)channel_selection_task::eEvent::CAC_COMPLETED_EVENT,
-                               (void *)new_event);
+        if (database.get_channel_selection_task_id() > 0) {
+            m_task_pool.push_event(database.get_channel_selection_task_id(),
+                                   (int)channel_selection_task::eEvent::CAC_COMPLETED_EVENT,
+                                   (void *)new_event);
+        } else {
+            LOG(WARNING) << "channel_selection_task not running";
+        }
 
         auto channel_ext_above =
             (notification->params().frequency < notification->params().center_frequency1) ? true
@@ -3425,9 +3449,13 @@ bool Controller::handle_cmdu_control_message(
         auto new_event        = new channel_selection_task::sDfsChannelAvailable_event;
         new_event->hostap_mac = radio_mac;
         new_event->params     = notification->params();
-        m_task_pool.push_event(database.get_channel_selection_task_id(),
-                               (int)channel_selection_task::eEvent::DFS_CHANNEL_AVAILABLE_EVENT,
-                               (void *)new_event);
+        if (database.get_channel_selection_task_id() > 0) {
+            m_task_pool.push_event(database.get_channel_selection_task_id(),
+                                   (int)channel_selection_task::eEvent::DFS_CHANNEL_AVAILABLE_EVENT,
+                                   (void *)new_event);
+        } else {
+            LOG(WARNING) << "channel_selection_task not running";
+        }
         break;
     }
     case beerocks_message::ACTION_CONTROL_HOSTAP_STATS_MEASUREMENT_RESPONSE: {
@@ -3661,9 +3689,14 @@ bool Controller::handle_cmdu_control_message(
             LOG(DEBUG) << "CS_task,sending AP_ACTIVITY_IDLE_EVENT for mac " << radio_mac;
             auto new_event        = new channel_selection_task::sApActivityIdle_event;
             new_event->hostap_mac = radio_mac;
-            m_task_pool.push_event(database.get_channel_selection_task_id(),
-                                   (int)channel_selection_task::eEvent::AP_ACTIVITY_IDLE_EVENT,
-                                   (void *)new_event);
+
+            if (database.get_channel_selection_task_id() > 0) {
+                m_task_pool.push_event(database.get_channel_selection_task_id(),
+                                       (int)channel_selection_task::eEvent::AP_ACTIVITY_IDLE_EVENT,
+                                       (void *)new_event);
+            } else {
+                LOG(WARNING) << "channel_selection_task not running";
+            }
         }
 
         break;
@@ -3895,9 +3928,14 @@ bool Controller::trigger_scan(
 
     dynamic_channel_selection_r2_task::sSingleScanRequestEvent new_event = {};
     new_event.radio_mac                                                  = radio_mac;
-    m_task_pool.push_event(database.get_dynamic_channel_selection_r2_task_id(),
-                           dynamic_channel_selection_r2_task::eEvent::TRIGGER_SINGLE_SCAN,
-                           &new_event);
+
+    if (database.get_dynamic_channel_selection_r2_task_id() > 0) {
+        m_task_pool.push_event(database.get_dynamic_channel_selection_r2_task_id(),
+                               dynamic_channel_selection_r2_task::eEvent::TRIGGER_SINGLE_SCAN,
+                               &new_event);
+    } else {
+        LOG(WARNING) << "dynamic_channel_selection_task not running";
+    }
     return true;
 }
 

@@ -187,11 +187,11 @@ public:
     void configure_tasks();
 
     /**
-     * @brief Function that starts/stops all periodic tasks
+     * @brief Function that starts all periodic tasks on controller start-up
      *
      * @return void.
      */
-    void start_permanent_tasks();
+    void start_tasks();
 
 private:
     /**
