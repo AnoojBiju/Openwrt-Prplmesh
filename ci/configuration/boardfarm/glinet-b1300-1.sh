@@ -21,9 +21,11 @@ ubus call "IP.Interface" _set '{ "rel_path": ".[Alias == \"lan\"].IPv4Address.[A
 uci set wireless.radio0.disabled=0
 uci set wireless.radio1.disabled=0
 
-# Stop and disable the firewall:
-/etc/init.d/tr181-firewall stop
-rm -f /etc/rc.d/S22tr181-firewall
+# For now there is no way to disable the firewall (see PCF-590).
+# Instead, wait for it in the datamodel, then set the whole INPUT
+# chain to ACCEPT:
+ubus wait_for Firewall
+iptables -P INPUT ACCEPT
 
 # Required for config_load:
 . /lib/functions/system.sh
