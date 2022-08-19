@@ -573,6 +573,9 @@ static void event_configuration_changed(const char *const sig_name, const amxc_v
     nbapi_config.dynamic_channel_select_task =
         amxd_object_get_bool(configuration, "DynamicChannelSelectionTaskEnabled", nullptr);
 
+    nbapi_config.load_balancing =
+        amdx_object_get_bool(configuration, "LoadBalancingEnabled", nullptr);
+
     if (!g_database->update_master_configuration(nbapi_config)) {
         LOG(ERROR) << "Failed update master configuration from NBAPI.";
     }

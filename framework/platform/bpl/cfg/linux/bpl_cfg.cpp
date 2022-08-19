@@ -328,6 +328,19 @@ bool cfg_get_client_roaming(bool &client_roaming)
 
 bool cfg_set_client_roaming(bool client_roaming) { return true; }
 
+bool cfg_get_load_balancing(bool &load_balancing)
+{
+    int retVal = -1;
+    if (cfg_get_param_int("load_balancing", retVal) == RETURN_ERR) {
+        return false;
+    }
+
+    load_balancing = (retVal == 1);
+    return true;
+}
+
+bool cfg_set_load_balancing(bool load_balancing) { return true; }
+
 bool cfg_get_channel_select_task(bool &channel_select_task_enabled)
 {
     int retVal = -1;

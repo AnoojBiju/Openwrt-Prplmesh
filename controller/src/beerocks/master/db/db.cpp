@@ -6915,6 +6915,7 @@ bool db::update_master_configuration(const sDbNbapiConfig &nbapi_config)
     config.link_metrics_request_interval_seconds =
         nbapi_config.link_metrics_request_interval_seconds;
 
+    config.load_load_balancing              = nbapi_config.load_balancing;
     config.load_channel_select_task         = nbapi_config.channel_select_task;
     config.load_dynamic_channel_select_task = nbapi_config.dynamic_channel_select_task;
 
@@ -6928,6 +6929,7 @@ bool db::update_master_configuration(const sDbNbapiConfig &nbapi_config)
     ret_val &= beerocks::bpl::cfg_set_link_metrics_request_interval(
         config.link_metrics_request_interval_seconds);
 
+    ret_val &= beerocks::bpl::cfg_set_load_balancing(config.load_load_balancing);
     ret_val &= beerocks::bpl::cfg_set_channel_select_task(config.load_channel_select_task);
     ret_val &= beerocks::bpl::cfg_set_dfs_task(config.load_dynamic_channel_select_task);
 

@@ -429,6 +429,22 @@ bool cfg_get_client_roaming(bool &client_roaming);
 bool cfg_set_client_roaming(bool client_roaming);
 
 /**
+ * @brief Returns whether Load Balancing feature is enabled or not.
+ *
+ * @param [out] enable true if the Load Balancing is enabled and false otherwise.
+ * @return true on success, otherwise false.
+ */
+bool cfg_get_load_balancing(bool &load_balancing);
+
+/**
+ * @brief Sets Load Balancing in configuration.
+ *
+ * @param[in] load_balancing true for enabled Load Balancing.
+ * @return true on success, otherwise false
+ */
+bool cfg_set_load_balancing(bool load_balancing);
+
+/**
  * @brief Returns whether Channel Select Task is enabled or not.
  *
  *@param [out] enable true if the Channel Select Task is enabled and false otherwise.

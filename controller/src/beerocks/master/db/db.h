@@ -207,6 +207,7 @@ public:
         bool client_band_steering;
         bool client_optimal_path_roaming;
 
+        bool load_balancing;
         bool channel_select_task;
         bool dynamic_channel_select_task;
         bool ire_roaming;
@@ -1931,6 +1932,7 @@ public:
      * @return true on success, otherwise false.
      */
     bool update_master_configuration(const sDbNbapiConfig &nbapi_config);
+
 
     /**
      * @brief Recalculate single value of attribute to Byte units according to its unit.
