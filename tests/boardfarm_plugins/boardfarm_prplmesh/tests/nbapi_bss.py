@@ -36,6 +36,7 @@ class NbapiBSS(PrplMeshBaseTest):
         time_before_bss_appear = datetime.now()
         time_before_bss_appear = pytz.utc.localize(time_before_bss_appear)
         self.configure_ssids(["NbapiBSS"])
+        time.sleep(2)
 
         topology = self.get_topology()
         for device in topology.values():
