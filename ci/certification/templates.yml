@@ -57,9 +57,8 @@
 include:
   - local: "ci/certification/R1/axepoint.yml"
   - local: "ci/certification/R1/turris-omnia.yml"
-# The R4 testbed is shared with R2, so we can't enable it yet:
-#  - local: "ci/certification/R4/axepoint.yml"
-#  - local: "ci/certification/R4/turris-omnia.yml"
+  - local: "ci/certification/R4/axepoint.yml"
+  - local: "ci/certification/R4/turris-omnia.yml"
 
 
 # Merge train tests
