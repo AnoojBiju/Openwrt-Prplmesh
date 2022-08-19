@@ -396,7 +396,7 @@ private:
     ieee1905_1::CmduMessageTx cert_cmdu_tx;
 
     db &database;
-    task_pool tasks;
+    task_pool m_task_pool;
     periodic_operation_pool operations;
     beerocks::controller_ucc_listener m_controller_ucc_listener;
 
