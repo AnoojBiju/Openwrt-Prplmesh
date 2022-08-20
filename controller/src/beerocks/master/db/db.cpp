@@ -2183,19 +2183,21 @@ bool db::remove_vap(Agent::sRadio &radio, Agent::sRadio::sBss &bss)
     return dm_remove_bss(bss);
 }
 
-bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bssid,
+bool db::add_vap(const std::string &radio_mac, int vap_index, const std::string &bssid,
                  const std::string &ssid, bool backhaul)
 {
     if (!has_node(tlvf::mac_from_string(bssid)) &&
         !add_virtual_node(tlvf::mac_from_string(bssid), tlvf::mac_from_string(radio_mac))) {
         return false;
     }
-
-    auto &vaps_info                = get_hostap_vap_list(tlvf::mac_from_string(radio_mac));
-    vaps_info[vap_id].mac          = bssid;
-    vaps_info[vap_id].ssid         = ssid;
-    vaps_info[vap_id].backhaul_vap = backhaul;
-
+    std::string vaps_list;
+    auto &vaps_info                   = get_hostap_vap_list(tlvf::mac_from_string(radio_mac));
+    vaps_info[vap_index].mac          = bssid;
+    vaps_info[vap_index].ssid         = ssid;
+    vaps_info[vap_index].backhaul_vap = backhaul;
+    vaps_list += (" vap_mac=" + (vaps_info[vap_index]).mac +
+                  " , ssid=" + (vaps_info[vap_index]).ssid + std::string("\n"));
+    LOG(INFO) << "Adding a vap with " << vaps_list;
     return dm_set_radio_bss(tlvf::mac_from_string(radio_mac), tlvf::mac_from_string(bssid), ssid);
 }
 
@@ -2213,15 +2215,14 @@ bool db::update_vap(const sMacAddr &radio_mac, const sMacAddr &bssid, const std:
                            });
     if (it == vaps_info.end()) {
         LOG(DEBUG) << "update_vap: creating new VAP for " << bssid;
-
-        // Need to create a new VAP, which means creating a new vap_id
+        // Need to create a new VAP
         auto max_vap_it = std::max_element(
             vaps_info.begin(), vaps_info.end(),
             [](const std::pair<int8_t, sVapElement> &a, const std::pair<int8_t, sVapElement> &b) {
                 return a.first < b.first;
             });
-        int8_t new_vap_id = (max_vap_it == vaps_info.end()) ? 0 : max_vap_it->first + 1;
-        return add_vap(tlvf::mac_to_string(radio_mac), new_vap_id, tlvf::mac_to_string(bssid), ssid,
+        int8_t vap_index = (max_vap_it == vaps_info.end()) ? 0 : max_vap_it->first + 1;
+        return add_vap(tlvf::mac_to_string(radio_mac), vap_index, tlvf::mac_to_string(bssid), ssid,
                        backhaul);
     }
     it->second.ssid         = ssid;

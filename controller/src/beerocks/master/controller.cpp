@@ -2810,9 +2810,8 @@ bool Controller::handle_cmdu_control_message(
             return false;
         }
 
-        int vap_id = notification->vap_id();
         LOG(INFO) << "received ACTION_CONTROL_HOSTAP_AP_ENABLED_NOTIFICATION from " << radio_mac
-                  << " vap_id=" << vap_id;
+                  << " vap_id=" << notification->vap_id();
 
         auto bssid = notification->vap_info().mac;
         auto ssid  = std::string((char *)notification->vap_info().ssid);
@@ -2824,16 +2823,13 @@ bool Controller::handle_cmdu_control_message(
             break;
         }
 
-        auto bss = radio->bsses.add(bssid, *radio, vap_id);
-        LOG_IF(bss->vap_id != vap_id, ERROR)
-            << "BSS " << bssid << " changed vap_id " << bss->vap_id << " -> " << vap_id;
+        auto bss       = radio->bsses.add(bssid, *radio);
         bss->enabled   = true;
         bss->ssid      = ssid;
         bss->fronthaul = notification->vap_info().fronthaul_vap;
         bss->backhaul  = notification->vap_info().backhaul_vap;
 
-        database.add_vap(radio_mac_str, vap_id, tlvf::mac_to_string(bssid), ssid,
-                         notification->vap_info().backhaul_vap);
+        database.update_vap(radio_mac, bssid, ssid, notification->vap_info().backhaul_vap);
 
         // update bml listeners
         bml_task::connection_change_event new_event;
@@ -2908,23 +2904,20 @@ bool Controller::handle_cmdu_control_message(
 
         std::unordered_map<int8_t, sVapElement> vaps_info;
         std::string vaps_list;
-        for (int8_t vap_id = beerocks::IFACE_VAP_ID_MIN; vap_id <= beerocks::IFACE_VAP_ID_MAX;
-             vap_id++) {
-            auto vap_mac = tlvf::mac_to_string(notification->params().vaps[vap_id].mac);
+        for (uint8_t i = beerocks::IFACE_VAP_ID_MIN; i <= beerocks::IFACE_VAP_ID_MAX; i++) {
+            auto vap_mac = tlvf::mac_to_string(notification->params().vaps[i].mac);
             if (vap_mac != beerocks::net::network_utils::ZERO_MAC_STRING) {
-                auto bss =
-                    radio->bsses.add(notification->params().vaps[vap_id].mac, *radio, vap_id);
-                bss->ssid      = std::string((char *)notification->params().vaps[vap_id].ssid);
-                bss->fronthaul = notification->params().vaps[vap_id].fronthaul_vap;
-                bss->backhaul  = notification->params().vaps[vap_id].backhaul_vap;
+                auto bss       = radio->bsses.add(notification->params().vaps[i].mac, *radio);
+                bss->ssid      = std::string((char *)notification->params().vaps[i].ssid);
+                bss->fronthaul = notification->params().vaps[i].fronthaul_vap;
+                bss->backhaul  = notification->params().vaps[i].backhaul_vap;
 
-                vaps_info[vap_id].mac = vap_mac;
-                vaps_info[vap_id].ssid =
-                    std::string((char *)notification->params().vaps[vap_id].ssid);
-                vaps_info[vap_id].backhaul_vap = notification->params().vaps[vap_id].backhaul_vap;
-                vaps_list += ("    vap_id=" + std::to_string(vap_id) +
-                              ", vap_mac=" + (vaps_info[vap_id]).mac +
-                              " , ssid=" + (vaps_info[vap_id]).ssid + std::string("\n"));
+                vaps_info[i].mac  = vap_mac;
+                vaps_info[i].ssid = std::string((char *)notification->params().vaps[i].ssid);
+                vaps_info[i].backhaul_vap = notification->params().vaps[i].backhaul_vap;
+                vaps_list +=
+                    ("    vap_id=" + std::to_string(i) + ", vap_mac=" + (vaps_info[i]).mac +
+                     " , ssid=" + (vaps_info[i]).ssid + std::string("\n"));
             }
         }
 

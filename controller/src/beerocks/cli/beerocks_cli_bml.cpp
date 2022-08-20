@@ -72,7 +72,6 @@ static void fill_conn_map_node(
                                            ? node->data.gw_ire.radio[i].vap[j].ssid
                                            : std::string("N/A"));
                         v->backhaul_vap = node->data.gw_ire.radio[i].vap[j].backhaul_vap;
-                        v->vap_id       = j;
                         r->vap.push_back(v);
                     }
                 }
@@ -200,9 +199,7 @@ static void bml_utils_dump_conn_map(
                 uint8_t j = 0;
                 for (auto vap = radio->vap.begin(); vap != radio->vap.end(); vap++) {
                     if ((*vap)->bssid != network_utils::ZERO_MAC_STRING) {
-                        ss << ind_str << std::string((*vap)->backhaul_vap ? "b" : "f") << "VAP["
-                           << std::to_string((*vap)->vap_id) << "]:"
-                           << " " << radio->ifname << "." << std::to_string((*vap)->vap_id)
+                        ss << ind_str << std::string((*vap)->backhaul_vap ? "b" : "f") << "VAP:"
                            << " bssid: " << (*vap)->bssid << ", ssid: " << (*vap)->ssid
                            << std::endl;
                         // add clients which are connected to the vap
