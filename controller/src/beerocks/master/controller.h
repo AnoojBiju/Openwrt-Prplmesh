@@ -16,6 +16,7 @@
 #include "tasks/dynamic_channel_selection_r2_task.h"
 #include "tasks/link_metrics_task.h"
 #include "tasks/network_health_check_task.h"
+#include "tasks/statistics_polling_task.h"
 #include "tasks/task_pool.h"
 
 #include "../../../common/beerocks/bwl/include/bwl/base_wlan_hal.h"
@@ -436,6 +437,11 @@ private:
      * Pointer used to start/stop the task without restarting the controller
      */
     std::shared_ptr<network_health_check_task> m_network_health_check_task = {};
+
+    /**
+     * Pointer used to stop/start the task without restarting the controller
+     */
+    std::shared_ptr<statistics_polling_task> m_statistics_polling_task = {};
 
     /**
      * Factory to create broker client instances connected to broker server.

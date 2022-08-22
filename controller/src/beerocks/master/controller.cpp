@@ -19,7 +19,6 @@
 #include "tasks/dhcp_task.h"
 #include "tasks/load_balancer_task.h"
 #include "tasks/optimal_path_task.h"
-#include "tasks/statistics_polling_task.h"
 #include "tasks/topology_task.h"
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
 #include "tasks/pre_association_steering/pre_association_steering_task.h"
@@ -332,15 +331,6 @@ void Controller::start_tasks()
     LOG(DEBUG) << "Start controller periodic tasks";
     configure_tasks();
 
-#ifndef BEEROCKS_LINUX
-    if (database.settings_diagnostics_measurements()) {
-        LOG_IF(!m_task_pool.add_task(
-                   std::make_shared<statistics_polling_task>(database, cmdu_tx, m_task_pool)),
-               FATAL)
-            << "Failed adding statistics polling task!";
-    }
-#endif
-
     LOG_IF(!m_task_pool.add_task(std::make_shared<bml_task>(database, cmdu_tx, m_task_pool)), FATAL)
         << "Failed adding BML task!";
 
@@ -365,13 +355,6 @@ void Controller::start_tasks()
     LOG(INFO) << "VBSS is not enabled";
 #endif
 
-    if (database.config.management_mode != BPL_MGMT_MODE_NOT_MULTIAP) {
-        m_link_metrics_task =
-            std::make_shared<LinkMetricsTask>(database, cmdu_tx, cert_cmdu_tx, m_task_pool);
-        LOG_IF(!m_task_pool.add_task(m_link_metrics_task), FATAL)
-            << "Failed adding link metrics task!";
-    }
-
     LOG_IF(!m_task_pool.add_task(std::make_shared<DhcpTask>(database, m_timer_manager)), FATAL)
         << "Failed adding dhcp task!";
 }
@@ -380,8 +363,41 @@ void Controller::configure_tasks()
 {
     LOG(DEBUG) << "Start/Stop configurable periodic tasks";
 
-    auto m_channel_selection_task =
-        std::make_shared<channel_selection_task>(database, cmdu_tx, m_task_pool);
+#ifndef BEEROCKS_LINUX
+    if (database.settings_diagnostics_measurements()) {
+        if (!m_statistics_polling_task) {
+            m_statistics_polling_task =
+                std::make_shared<statistics_polling_task>(database, cmdu_tx, m_task_pool);
+            LOG_IF(!m_task_pool.add_task(m_statistics_polling_task), FATAL)
+                << "Failed adding statistics polling task!";
+        } else {
+            LOG(DEBUG) << "Statistics polling task already running";
+        }
+    } else {
+        if (m_statistics_polling_task) {
+            m_task_pool.kill_task(m_statistics_polling_task->id);
+            m_statistics_polling_task = {};
+            database.assign_statistics_polling_task_id(-1);
+        }
+    }
+#endif
+
+    if (database.config.management_mode != BPL_MGMT_MODE_NOT_MULTIAP) {
+        if (!m_link_metrics_task) {
+            m_link_metrics_task =
+                std::make_shared<LinkMetricsTask>(database, cmdu_tx, cert_cmdu_tx, m_task_pool);
+            LOG_IF(!m_task_pool.add_task(m_link_metrics_task), FATAL)
+                << "Failed adding link metrics task!";
+        } else {
+            LOG(DEBUG) << "Link metrics task already running";
+        }
+    } else {
+        if (m_link_metrics_task) {
+            m_task_pool.kill_task(m_link_metrics_task->id);
+            m_link_metrics_task = {};
+        }
+    }
+
     if (database.settings_channel_select_task()) {
         if (!m_channel_selection_task) {
             m_channel_selection_task =
@@ -389,7 +405,7 @@ void Controller::configure_tasks()
             LOG_IF(!m_task_pool.add_task(m_channel_selection_task), FATAL)
                 << "Failed adding channel selection task!";
         } else {
-            LOG(DEBUG) << "Channel Selection Task already running";
+            LOG(DEBUG) << "Channel selection task already running";
         }
     } else {
         if (m_channel_selection_task) {
@@ -406,7 +422,7 @@ void Controller::configure_tasks()
             LOG_IF(!m_task_pool.add_task(m_dynamic_channel_selection_task), FATAL)
                 << "Failed adding dynamic channel selection r2 task!";
         } else {
-            LOG(DEBUG) << "Dynamic Channel Selection Task already running";
+            LOG(DEBUG) << "Dynamic channel selection task already running";
         }
     } else {
         if (m_dynamic_channel_selection_task) {
@@ -423,7 +439,7 @@ void Controller::configure_tasks()
             LOG_IF(!m_task_pool.add_task(m_network_health_check_task), FATAL)
                 << "Failed adding network health check task!";
         } else {
-            LOG(DEBUG) << "Network Health Check Task already running";
+            LOG(DEBUG) << "Network health check task already running";
         }
     } else {
         if (m_network_health_check_task) {
