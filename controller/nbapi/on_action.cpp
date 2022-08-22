@@ -561,6 +561,14 @@ static void event_configuration_changed(const char *const sig_name, const amxc_v
     nbapi_config.link_metrics_request_interval_seconds = std::chrono::seconds{
         amxd_object_get_int32_t(configuration, "LinkMetricsRequestInterval", nullptr)};
 
+    // channel optimization task
+    nbapi_config.channel_select_task =
+        amxd_object_get_bool(configuration, "ChannelSelectionTaskEnabled", nullptr);
+
+    // dfs task : stats collection should not be disabled ?
+    nbapi_config.dynamic_channel_select_task =
+        amxd_object_get_bool(configuration, "DynamicChannelSelectionTaskEnabled", nullptr);
+
     if (!g_database->update_master_configuration(nbapi_config)) {
         LOG(ERROR) << "Failed update master configuration from NBAPI.";
     }

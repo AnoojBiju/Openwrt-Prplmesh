@@ -110,6 +110,9 @@ public:
         bool load_front_measurements;
         bool load_health_check;
         bool load_monitor_on_vaps;
+        bool load_channel_select_task;
+        bool load_dynamic_channel_select_task;
+
         bool certification_mode;
         bool persistent_db;
         int persistent_db_aging_interval;
@@ -182,6 +185,9 @@ public:
 
         bool rdkb_extensions = false;
 
+        bool channel_select_task         = false;
+        bool dynamic_channel_select_task = false;
+
         // Params
         bool client_optimal_path_roaming_prefer_signal_strength = false;
     } sDbMasterSettings;
@@ -200,6 +206,9 @@ public:
     typedef struct {
         bool client_band_steering;
         bool client_optimal_path_roaming;
+
+        bool channel_select_task;
+        bool dynamic_channel_select_task;
         int roaming_hysteresis_percent_bonus;
         std::chrono::milliseconds steering_disassoc_timer_msec;
         std::chrono::seconds link_metrics_request_interval_seconds;
@@ -2235,6 +2244,18 @@ public:
     {
         return settings.client_optimal_path_roaming_prefer_signal_strength;
     }
+
+    void settings_channel_select_task(bool en)
+    {
+        settings.channel_select_task = en && config.load_channel_select_task;
+    }
+    bool settings_channel_select_task() { return settings.channel_select_task; }
+
+    void settings_dynamic_channel_select_task(bool en)
+    {
+        settings.dynamic_channel_select_task = en && config.load_dynamic_channel_select_task;
+    }
+    bool settings_dynamic_channel_select_task() { return settings.dynamic_channel_select_task; }
 
     bool is_prplmesh(const sMacAddr &mac);
     void set_prplmesh(const sMacAddr &mac);

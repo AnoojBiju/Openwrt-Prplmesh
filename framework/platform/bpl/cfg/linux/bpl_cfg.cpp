@@ -328,6 +328,32 @@ bool cfg_get_client_roaming(bool &client_roaming)
 
 bool cfg_set_client_roaming(bool client_roaming) { return true; }
 
+bool cfg_get_channel_select_task(bool &channel_select_task_enabled)
+{
+    int retVal = -1;
+    if (cfg_get_param_int("channel_select_task", retVal) == RETURN_ERR) {
+        return false;
+    }
+
+    channel_select_task_enabled = (retVal == 1);
+    return true;
+}
+
+bool cfg_set_channel_select_task(bool channel_select_task_enabled) { return true; }
+
+bool cfg_get_dfs_task(bool &dfs_task_enabled)
+{
+    int retVal = -1;
+    if (cfg_get_param_int("dfs_task_enabled", retVal) == RETURN_ERR) {
+        return false;
+    }
+
+    dfs_task_enabled = (retVal == 1);
+    return true;
+}
+
+bool cfg_set_dfs_task(bool dfs_task_enabled) { return true; }
+
 int cfg_get_backhaul_params(int *max_vaps, int *network_enabled, int *preferred_radio_band)
 {
     *max_vaps             = 0;

@@ -6915,6 +6915,9 @@ bool db::update_master_configuration(const sDbNbapiConfig &nbapi_config)
     config.link_metrics_request_interval_seconds =
         nbapi_config.link_metrics_request_interval_seconds;
 
+    config.load_channel_select_task         = nbapi_config.channel_select_task;
+    config.load_dynamic_channel_select_task = nbapi_config.dynamic_channel_select_task;
+
     // Update persistent configuration.
     ret_val &= beerocks::bpl::cfg_set_band_steering(config.load_client_band_steering);
     ret_val &= beerocks::bpl::cfg_set_client_roaming(config.load_client_optimal_path_roaming);

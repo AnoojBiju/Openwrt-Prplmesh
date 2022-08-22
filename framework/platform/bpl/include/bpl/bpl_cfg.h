@@ -429,6 +429,38 @@ bool cfg_get_client_roaming(bool &client_roaming);
 bool cfg_set_client_roaming(bool client_roaming);
 
 /**
+ * @brief Returns whether Channel Select Task is enabled or not.
+ *
+ *@param [out] enable true if the Channel Select Task is enabled and false otherwise.
+ * @return true on success, otherwise false.
+ */
+bool cfg_get_channel_select_task(bool &channel_select_task);
+
+/**
+ * @brief Sets Channel Select Task in configuration.
+ *
+ * @param[in] channel_select_task  true for enabled channel_select_task.
+ * @return true on success, otherwise false
+ */
+bool cfg_set_channel_select_task(bool channel_select_task);
+
+/**
+ * @brief Returns whether DFS Task is enabled or not.
+ *
+ *@param [out] enable true if the DFS Task is enabled and false otherwise.
+ * @return true on success, otherwise false.
+ */
+bool cfg_get_dfs_task(bool &dfs_task_enabled);
+
+/**
+ * @brief Sets DFS Task in configuration.
+ *
+ * @param[in] dfs_task_enabled  true for enabled dfs_task_enabled.
+ * @return true on success, otherwise false
+ */
+bool cfg_set_dfs_task(bool dfs_task_enabled);
+
+/**
  * Returns miscellaneous Wi-Fi parameters.
  *
  * @param [in] iface Interface name for the requested parameters.
