@@ -329,6 +329,19 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
         master_conf.load_client_11k_roaming = beerocks::bpl::DEFAULT_11K_ROAMING;
     }
 
+    if (!beerocks::bpl::cfg_get_channel_select_task(master_conf.load_channel_select_task)) {
+        LOG(DEBUG) << "Failed to read cfg_get_channel_select_task, setting to default value: "
+                   << beerocks::bpl::DEFAULT_CHANNEL_SELECT_TASK;
+        master_conf.load_channel_select_task = beerocks::bpl::DEFAULT_CHANNEL_SELECT_TASK;
+    }
+
+    if (!beerocks::bpl::cfg_get_dfs_task(master_conf.load_dynamic_channel_select_task)) {
+        LOG(DEBUG) << "Failed to read cfg_get_dfs_task, setting to default value: "
+                   << beerocks::bpl::DEFAULT_DYNAMIC_CHANNEL_SELECT_TASK;
+        master_conf.load_dynamic_channel_select_task =
+            beerocks::bpl::DEFAULT_DYNAMIC_CHANNEL_SELECT_TASK;
+    }
+
     if (!beerocks::bpl::cfg_get_health_check(master_conf.load_health_check)) {
         LOG(DEBUG) << "Failed to read cfg_get_health_check, setting to default value: "
                    << beerocks::bpl::DEFAULT_HEALTH_CHECK;
