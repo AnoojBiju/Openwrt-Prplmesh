@@ -127,6 +127,7 @@ constexpr int DEFAULT_CHANNEL_SELECT_TASK              = 1;
 constexpr int DEFAULT_DYNAMIC_CHANNEL_SELECT_TASK      = 1;
 constexpr int DEFAULT_DIAGNOSTICS_MEASUREMENTS         = 1;
 constexpr int DEFAULT_DIAGNOSTICS_POLLING_RATE         = 10;
+constexpr int DEFAULT_IRE_ROAMING                      = 1;
 constexpr int DEFAULT_11K_ROAMING                      = 1;
 constexpr int DEFAULT_HEALTH_CHECK                     = 0;
 constexpr int DEFAULT_LOAD_BALANCING                   = 0;
@@ -534,6 +535,22 @@ bool cfg_get_health_check(bool &health_check_enabled);
  * @return true on success, otherwise false
  */
 bool cfg_set_health_check(bool health_check_enabled);
+
+/**
+ * @brief Returns whether IRE Roaming Flag is enabled or not.
+ *
+ *@param [out] enable true if the IRE Roaming Flag is enabled and false otherwise.
+ * @return true on success, otherwise false.
+ */
+bool cfg_get_ire_roaming(bool &ire_roaming);
+
+/**
+ * @brief Sets IRE Roaming Flag in configuration.
+ *
+ * @param[in] ire_roaming IRE Roaming Flag.
+ * @return true on success, otherwise false
+ */
+bool cfg_set_ire_roaming(bool ire_roaming);
 
 /**
  * @brief Returns whether Optimal Path Task Prefer Signal Strenght is enabled or not.

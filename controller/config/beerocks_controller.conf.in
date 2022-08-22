@@ -15,9 +15,6 @@ ucc_listener_port=8002 # 0 - disabled
 #   Client steering feature:
 load_legacy_client_roaming=1
 
-#   IRE roaming feature:
-load_ire_roaming=1
-
 #   Measurement feature:
 load_backhaul_measurements=0
 load_front_measurements=1

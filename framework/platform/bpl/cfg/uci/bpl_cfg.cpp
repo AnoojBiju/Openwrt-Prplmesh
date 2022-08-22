@@ -370,6 +370,25 @@ bool cfg_set_health_check(bool health_check_enabled)
     return cfg_set_prplmesh_config(option, value);
 }
 
+bool cfg_get_ire_roaming(bool &ire_roaming)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int("ire_roaming", &retVal) == RETURN_ERR) {
+        return false;
+    }
+
+    ire_roaming = (retVal == 1);
+    return true;
+}
+
+bool cfg_set_ire_roaming(bool ire_roaming)
+{
+    std::string option = "ire_roaming";
+    std::string value  = std::to_string(((int)ire_roaming));
+
+    return cfg_set_prplmesh_config(option, value);
+}
+
 bool cfg_get_optimal_path_prefer_signal_strenght(bool &optimal_path_prefer_signal_strenght)
 {
     int retVal = -1;

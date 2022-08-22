@@ -6924,6 +6924,7 @@ bool db::update_master_configuration(const sDbNbapiConfig &nbapi_config)
     config.load_health_check                = nbapi_config.health_check;
     config.load_optimal_path_roaming_prefer_signal_strength =
         nbapi_config.optimal_path_prefer_signal_strength;
+    config.load_ire_roaming = nbapi_config.ire_roaming;
 
     config.load_diagnostics_measurements = nbapi_config.diagnostics_measurements;
     config.diagnostics_measurements_polling_rate_sec =
@@ -6946,6 +6947,7 @@ bool db::update_master_configuration(const sDbNbapiConfig &nbapi_config)
     ret_val &= beerocks::bpl::cfg_set_dfs_reentry(config.load_dfs_reentry);
     ret_val &= beerocks::bpl::cfg_set_dfs_task(config.load_dynamic_channel_select_task);
     ret_val &= beerocks::bpl::cfg_set_health_check(config.load_health_check);
+    ret_val &= beerocks::bpl::cfg_set_ire_roaming(config.load_ire_roaming);
     ret_val &= beerocks::bpl::cfg_set_optimal_path_prefer_signal_strenght(
         config.load_optimal_path_roaming_prefer_signal_strength);
     ret_val &=

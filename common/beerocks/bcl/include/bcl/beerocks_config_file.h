@@ -40,7 +40,6 @@ public:
         std::string model;
         std::string ucc_listener_port;
         std::string load_legacy_client_roaming;
-        std::string load_ire_roaming;
         std::string load_service_fairness;
         std::string load_backhaul_measurements;
         std::string load_front_measurements;

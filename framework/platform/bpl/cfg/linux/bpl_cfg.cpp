@@ -406,6 +406,19 @@ bool cfg_get_health_check(bool &health_check_enabled)
 
 bool cfg_set_health_check(bool health_check_enabled) { return true; }
 
+bool cfg_get_ire_roaming(bool &ire_roaming)
+{
+    int retVal = -1;
+    if (cfg_get_param_int("ire_roaming", retVal) == RETURN_ERR) {
+        return false;
+    }
+
+    ire_roaming = (retVal == 1);
+    return true;
+}
+
+bool cfg_set_ire_roaming(bool ire_roaming) { return true; }
+
 bool cfg_get_optimal_path_prefer_signal_strenght(bool &optimal_path_prefer_signal_strenght)
 {
     int retVal = -1;

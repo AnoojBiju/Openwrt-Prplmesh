@@ -145,7 +145,6 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
     master_conf.model  = main_master_conf.model;
     master_conf.ucc_listener_port =
         beerocks::string_utils::stoi(main_master_conf.ucc_listener_port);
-    master_conf.load_ire_roaming           = (main_master_conf.load_ire_roaming == "1");
     master_conf.load_service_fairness      = (main_master_conf.load_service_fairness == "1");
     master_conf.load_rdkb_extensions       = (main_master_conf.load_rdkb_extensions == "1");
     master_conf.load_legacy_client_roaming = (main_master_conf.load_legacy_client_roaming == "1");
@@ -346,6 +345,12 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
         LOG(DEBUG) << "Failed to read cfg_get_health_check, setting to default value: "
                    << beerocks::bpl::DEFAULT_HEALTH_CHECK;
         master_conf.load_health_check = beerocks::bpl::DEFAULT_HEALTH_CHECK;
+    }
+
+    if (!beerocks::bpl::cfg_get_ire_roaming(master_conf.load_ire_roaming)) {
+        LOG(DEBUG) << "Failed to read cfg_get_ire_roaming, setting to default value: "
+                   << beerocks::bpl::DEFAULT_IRE_ROAMING;
+        master_conf.load_ire_roaming = beerocks::bpl::DEFAULT_IRE_ROAMING;
     }
 
     if (!beerocks::bpl::cfg_get_load_balancing(master_conf.load_load_balancing)) {
