@@ -149,13 +149,9 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
     master_conf.load_service_fairness      = (main_master_conf.load_service_fairness == "1");
     master_conf.load_rdkb_extensions       = (main_master_conf.load_rdkb_extensions == "1");
     master_conf.load_legacy_client_roaming = (main_master_conf.load_legacy_client_roaming == "1");
-    master_conf.load_diagnostics_measurements =
-        (main_master_conf.load_diagnostics_measurements == "1");
     master_conf.load_backhaul_measurements = (main_master_conf.load_backhaul_measurements == "1");
     master_conf.load_front_measurements    = (main_master_conf.load_front_measurements == "1");
     master_conf.load_monitor_on_vaps       = (main_master_conf.load_monitor_on_vaps == "1");
-    master_conf.diagnostics_measurements_polling_rate_sec =
-        beerocks::string_utils::stoi(main_master_conf.diagnostics_measurements_polling_rate_sec);
     master_conf.ire_rssi_report_rate_sec =
         beerocks::string_utils::stoi(main_master_conf.ire_rssi_report_rate_sec);
 
@@ -349,6 +345,22 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
         LOG(DEBUG) << "Failed to read cfg_get_dfs_reentry, setting to default value: "
                    << beerocks::bpl::DEFAULT_DFS_REENTRY;
         master_conf.load_dfs_reentry = beerocks::bpl::DEFAULT_DFS_REENTRY;
+    }
+
+    if (!beerocks::bpl::cfg_get_diagnostics_measurements(
+            master_conf.load_diagnostics_measurements)) {
+        LOG(DEBUG) << "Failed to read cfg_get_diagnostics_measurements, setting to default value: "
+                   << beerocks::bpl::DEFAULT_DIAGNOSTICS_MEASUREMENTS;
+        master_conf.load_diagnostics_measurements = beerocks::bpl::DEFAULT_DIAGNOSTICS_MEASUREMENTS;
+    }
+
+    if (!beerocks::bpl::cfg_get_diagnostics_measurements_polling_rate_sec(
+            master_conf.diagnostics_measurements_polling_rate_sec)) {
+        LOG(DEBUG) << "Failed to read cfg_get_diagnostics_measurements_polling_rate_sec, setting "
+                      "to default value: "
+                   << beerocks::bpl::DEFAULT_DIAGNOSTICS_POLLING_RATE;
+        master_conf.diagnostics_measurements_polling_rate_sec =
+            beerocks::bpl::DEFAULT_DIAGNOSTICS_POLLING_RATE;
     }
 
     if (!beerocks::bpl::cfg_get_optimal_path_roaming(

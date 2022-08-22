@@ -42,13 +42,11 @@ public:
         std::string load_legacy_client_roaming;
         std::string load_ire_roaming;
         std::string load_service_fairness;
-        std::string load_diagnostics_measurements;
         std::string load_backhaul_measurements;
         std::string load_front_measurements;
         std::string load_monitor_on_vaps;
         std::string load_rdkb_extensions;
         std::string global_restricted_channels;
-        std::string diagnostics_measurements_polling_rate_sec;
         std::string ire_rssi_report_rate_sec;
         std::string roaming_unconnected_client_rssi_compensation_db;
         std::string roaming_hop_percent_penalty;
