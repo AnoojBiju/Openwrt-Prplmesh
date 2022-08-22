@@ -313,6 +313,44 @@ bool cfg_set_dfs_task(bool dfs_task_enabled)
     return cfg_set_prplmesh_config(option, value);
 }
 
+bool cfg_get_health_check(bool &health_check_enabled)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int("health_check_enabled", &retVal) == RETURN_ERR) {
+        return false;
+    }
+
+    health_check_enabled = (retVal == 1);
+    return true;
+}
+
+bool cfg_set_health_check(bool health_check_enabled)
+{
+    std::string option = "health_check_enabled";
+    std::string value  = std::to_string(((int)health_check_enabled));
+
+    return cfg_set_prplmesh_config(option, value);
+}
+
+bool cfg_get_optimal_path_prefer_signal_strenght(bool &optimal_path_prefer_signal_strenght)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int("optimal_path_prefer_signal_strenght", &retVal) == RETURN_ERR) {
+        return false;
+    }
+
+    optimal_path_prefer_signal_strenght = (retVal == 1);
+    return true;
+}
+
+bool cfg_set_optimal_path_prefer_signal_strenght(bool optimal_path_prefer_signal_strenght)
+{
+    std::string option = "optimal_path_prefer_signal_strenght";
+    std::string value  = std::to_string(((int)optimal_path_prefer_signal_strenght));
+
+    return cfg_set_prplmesh_config(option, value);
+}
+
 int cfg_get_backhaul_params(int *max_vaps, int *network_enabled, int *preferred_radio_band)
 {
     if (max_vaps) {

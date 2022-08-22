@@ -6918,6 +6918,9 @@ bool db::update_master_configuration(const sDbNbapiConfig &nbapi_config)
     config.load_load_balancing              = nbapi_config.load_balancing;
     config.load_channel_select_task         = nbapi_config.channel_select_task;
     config.load_dynamic_channel_select_task = nbapi_config.dynamic_channel_select_task;
+    config.load_health_check                = nbapi_config.health_check;
+    config.load_optimal_path_roaming_prefer_signal_strength =
+        nbapi_config.optimal_path_prefer_signal_strength;
 
     // Update persistent configuration.
     ret_val &= beerocks::bpl::cfg_set_band_steering(config.load_client_band_steering);
@@ -6932,6 +6935,9 @@ bool db::update_master_configuration(const sDbNbapiConfig &nbapi_config)
     ret_val &= beerocks::bpl::cfg_set_load_balancing(config.load_load_balancing);
     ret_val &= beerocks::bpl::cfg_set_channel_select_task(config.load_channel_select_task);
     ret_val &= beerocks::bpl::cfg_set_dfs_task(config.load_dynamic_channel_select_task);
+    ret_val &= beerocks::bpl::cfg_set_health_check(config.load_health_check);
+    ret_val &= beerocks::bpl::cfg_set_optimal_path_prefer_signal_strenght(
+        config.load_optimal_path_roaming_prefer_signal_strength);
 
     update_master_settings_from_config();
 
@@ -6943,8 +6949,10 @@ void db::update_master_settings_from_config()
     // calling these functions with "true" is equivalent to copying the value from config container
     settings_client_band_steering(true);
     settings_client_optimal_path_roaming(true);
+    settings_client_optimal_path_roaming_prefer_signal_strength(true);
     settings_client_11k_roaming(true);
     settings_ire_roaming(true);
+    settings_health_check(true);
     settings_load_balancing(true);
     settings_channel_select_task(true);
     settings_dynamic_channel_select_task(true);

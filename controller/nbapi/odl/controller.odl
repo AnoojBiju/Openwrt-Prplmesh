@@ -140,6 +140,8 @@
                     bool BackhaulOptimizationEnabled = false;
 
                     bool LoadBalancingEnabled = false;
+                    bool OptimalPathPreferSignalStrenght = false;
+                    bool HealthCheckTask = false;
                 }
 
                 // Define controller.Network element

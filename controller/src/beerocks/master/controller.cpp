@@ -28,7 +28,6 @@
 #include "db/network_map.h"
 #include "tasks/client_locating_task.h"
 #include "tasks/dynamic_channel_selection_task.h"
-#include "tasks/network_health_check_task.h"
 
 #include <bcl/beerocks_backport.h>
 #include <bcl/beerocks_utils.h>
@@ -359,15 +358,6 @@ void Controller::start_tasks()
            FATAL)
         << "Failed adding agent monitoring task!";
 
-    if (database.settings_health_check()) {
-        LOG_IF(!m_task_pool.add_task(
-                   std::make_shared<network_health_check_task>(database, cmdu_tx, m_task_pool, 0)),
-               FATAL)
-            << "Failed adding network health check task!";
-    } else {
-        LOG(DEBUG) << "Health check is DISABLED!";
-    }
-
 #ifdef ENABLE_VBSS
     LOG_IF(!tasks.add_task(std::make_shared<vbss_task>(database, tasks)), FATAL)
         << "Failed adding vbss task!";
@@ -418,6 +408,23 @@ void Controller::configure_tasks()
         if (m_dynamic_channel_selection_task) {
             m_task_pool.kill_task(m_dynamic_channel_selection_task->id);
             m_dynamic_channel_selection_task = {};
+            database.assign_dynamic_channel_selection_r2_task_id(-1);
+        }
+    }
+
+    if (database.settings_health_check()) {
+        if (!m_network_health_check_task) {
+            m_network_health_check_task =
+                std::make_shared<network_health_check_task>(database, cmdu_tx, m_task_pool, 0);
+            LOG_IF(!m_task_pool.add_task(m_network_health_check_task), FATAL)
+                << "Failed adding network health check task!";
+        } else {
+            LOG(DEBUG) << "Network Health Check Task already running";
+        }
+    } else {
+        if (m_network_health_check_task) {
+            m_task_pool.kill_task(m_network_health_check_task->id);
+            m_network_health_check_task = {};
             database.assign_dynamic_channel_selection_r2_task_id(-1);
         }
     }

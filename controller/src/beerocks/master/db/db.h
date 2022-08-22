@@ -100,6 +100,7 @@ public:
         bool load_rdkb_extensions;
         bool load_client_band_steering;
         bool load_client_optimal_path_roaming;
+        bool load_optimal_path_roaming_prefer_signal_strength;
         bool load_client_11k_roaming;
         bool load_legacy_client_roaming;
         bool load_ire_roaming;
@@ -189,7 +190,7 @@ public:
         bool dynamic_channel_select_task = false;
 
         // Params
-        bool client_optimal_path_roaming_prefer_signal_strength = false;
+        bool optimal_path_roaming_prefer_signal_strength = false;
     } sDbMasterSettings;
 
     typedef struct {
@@ -206,11 +207,12 @@ public:
     typedef struct {
         bool client_band_steering;
         bool client_optimal_path_roaming;
-
+        bool optimal_path_prefer_signal_strength;
         bool load_balancing;
         bool channel_select_task;
         bool dynamic_channel_select_task;
         bool ire_roaming;
+        bool health_check;
         int roaming_hysteresis_percent_bonus;
         std::chrono::milliseconds steering_disassoc_timer_msec;
         std::chrono::seconds link_metrics_request_interval_seconds;
@@ -259,6 +261,8 @@ public:
         settings.enable_dfs_reentry &= config_.load_dfs_reentry;
         settings.client_band_steering &= config_.load_client_band_steering;
         settings.client_optimal_path_roaming &= config_.load_client_optimal_path_roaming;
+        settings.optimal_path_roaming_prefer_signal_strength &=
+            config_.load_optimal_path_roaming_prefer_signal_strength;
         settings.client_11k_roaming &= config_.load_client_11k_roaming;
         settings.legacy_client_roaming &= config_.load_legacy_client_roaming;
         settings.ire_roaming &= config_.load_ire_roaming;
@@ -2247,11 +2251,11 @@ public:
 
     void settings_client_optimal_path_roaming_prefer_signal_strength(bool en)
     {
-        settings.client_optimal_path_roaming_prefer_signal_strength = en;
+        settings.optimal_path_roaming_prefer_signal_strength = en;
     }
     bool settings_client_optimal_path_roaming_prefer_signal_strength()
     {
-        return settings.client_optimal_path_roaming_prefer_signal_strength;
+        return settings.optimal_path_roaming_prefer_signal_strength;
     }
 
     void settings_channel_select_task(bool en)

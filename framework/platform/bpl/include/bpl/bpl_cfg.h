@@ -477,6 +477,38 @@ bool cfg_get_dfs_task(bool &dfs_task_enabled);
 bool cfg_set_dfs_task(bool dfs_task_enabled);
 
 /**
+ * @brief Returns whether Health Check Task is enabled or not.
+ *
+ *@param [out] enable true if the Health Check Task is enabled and false otherwise.
+ * @return true on success, otherwise false.
+ */
+bool cfg_get_health_check(bool &health_check_enabled);
+
+/**
+ * @brief Sets Health Check Task in configuration.
+ *
+ * @param[in] health_check_enabled  true for enabled dfs_task_enabled.
+ * @return true on success, otherwise false
+ */
+bool cfg_set_health_check(bool health_check_enabled);
+
+/**
+ * @brief Returns whether Optimal Path Task Prefer Signal Strenght is enabled or not.
+ *
+ *@param [out] enable true if the Prefer Signal Strenght is enabled and false otherwise.
+ * @return true on success, otherwise false.
+ */
+bool cfg_get_optimal_path_prefer_signal_strenght(bool &optimal_path_prefer_signal_strenght);
+
+/**
+ * @brief Sets Optimal Path Prefer Signal Strenght in configuration.
+ *
+ * @param[in] health_check_enabled  true for enabled preference.
+ * @return true on success, otherwise false
+ */
+bool cfg_set_optimal_path_prefer_signal_strenght(bool optimal_path_prefer_signal_strenght);
+
+/**
  * Returns miscellaneous Wi-Fi parameters.
  *
  * @param [in] iface Interface name for the requested parameters.
