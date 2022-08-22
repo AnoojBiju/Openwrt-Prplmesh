@@ -6933,11 +6933,21 @@ bool db::update_master_configuration(const sDbNbapiConfig &nbapi_config)
     ret_val &= beerocks::bpl::cfg_set_channel_select_task(config.load_channel_select_task);
     ret_val &= beerocks::bpl::cfg_set_dfs_task(config.load_dynamic_channel_select_task);
 
-    settings_channel_select_task(true);
-    settings_dynamic_channel_select_task(true);
-    // calling these functions with "true" is equivalent to copying the value from config container
+    update_master_settings_from_config();
 
     return ret_val;
+}
+
+void db::update_master_settings_from_config()
+{
+    // calling these functions with "true" is equivalent to copying the value from config container
+    settings_client_band_steering(true);
+    settings_client_optimal_path_roaming(true);
+    settings_client_11k_roaming(true);
+    settings_ire_roaming(true);
+    settings_load_balancing(true);
+    settings_channel_select_task(true);
+    settings_dynamic_channel_select_task(true);
 }
 
 uint64_t db::recalculate_attr_to_byte_units(

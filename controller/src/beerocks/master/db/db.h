@@ -1933,6 +1933,12 @@ public:
      */
     bool update_master_configuration(const sDbNbapiConfig &nbapi_config);
 
+    /**
+     * @brief Synchronizes settings struct from config struct. Called after config struct
+     * is updated from NBAPI.
+     *
+     */
+    void update_master_settings_from_config();
 
     /**
      * @brief Recalculate single value of attribute to Byte units according to its unit.
