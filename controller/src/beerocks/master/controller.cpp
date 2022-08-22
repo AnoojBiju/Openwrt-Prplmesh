@@ -378,16 +378,18 @@ void Controller::start_tasks()
 
 void Controller::configure_tasks()
 {
-    LOG(DEBUG) << "Start configurable periodic tasks";
+    LOG(DEBUG) << "Start/Stop configurable periodic tasks";
 
     auto m_channel_selection_task =
         std::make_shared<channel_selection_task>(database, cmdu_tx, m_task_pool);
     if (database.settings_channel_select_task()) {
         if (!m_channel_selection_task) {
-            auto m_channel_selection_task =
+            m_channel_selection_task =
                 std::make_shared<channel_selection_task>(database, cmdu_tx, m_task_pool);
             LOG_IF(!m_task_pool.add_task(m_channel_selection_task), FATAL)
                 << "Failed adding channel selection task!";
+        } else {
+            LOG(DEBUG) << "Channel Selection Task already running";
         }
     } else {
         if (m_channel_selection_task) {
@@ -399,10 +401,12 @@ void Controller::configure_tasks()
 
     if (database.settings_dynamic_channel_select_task()) {
         if (!m_dynamic_channel_selection_task) {
-            auto m_dynamic_channel_selection_task =
+            m_dynamic_channel_selection_task =
                 std::make_shared<dynamic_channel_selection_r2_task>(database, cmdu_tx, m_task_pool);
             LOG_IF(!m_task_pool.add_task(m_dynamic_channel_selection_task), FATAL)
                 << "Failed adding dynamic channel selection r2 task!";
+        } else {
+            LOG(DEBUG) << "Dynamic Channel Selection Task already running";
         }
     } else {
         if (m_dynamic_channel_selection_task) {

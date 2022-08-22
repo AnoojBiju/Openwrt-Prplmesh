@@ -574,7 +574,7 @@ static void event_configuration_changed(const char *const sig_name, const amxc_v
         amxd_object_get_bool(configuration, "DynamicChannelSelectionTaskEnabled", nullptr);
 
     nbapi_config.load_balancing =
-        amdx_object_get_bool(configuration, "LoadBalancingEnabled", nullptr);
+        amxd_object_get_bool(configuration, "LoadBalancingEnabled", nullptr);
 
     nbapi_config.optimal_path_prefer_signal_strength =
         amxd_object_get_bool(configuration, "OptimalPathPreferSignalStrenght", nullptr);
@@ -588,6 +588,15 @@ static void event_configuration_changed(const char *const sig_name, const amxc_v
     if (!g_database->dm_update_collection_intervals(
             nbapi_config.link_metrics_request_interval_seconds)) {
         LOG(ERROR) << "Failed update collection intervals of all agents.";
+    }
+
+    auto controller_ctx = g_database->get_controller_ctx();
+
+    if (!controller_ctx) {
+        LOG(WARNING) << "Failed to get controller context.";
+    } else {
+        LOG(DEBUG) << "Start/Stop reconfigured tasks";
+        controller_ctx->configure_tasks();
     }
 
     // TODO Save persistent settings with amxo_parser_save() (PPM-1419)
