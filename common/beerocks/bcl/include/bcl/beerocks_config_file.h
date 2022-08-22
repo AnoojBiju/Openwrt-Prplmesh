@@ -39,7 +39,6 @@ public:
         std::string vendor;
         std::string model;
         std::string ucc_listener_port;
-        std::string load_client_11k_roaming;
         std::string load_legacy_client_roaming;
         std::string load_ire_roaming;
         std::string load_load_balancing;
