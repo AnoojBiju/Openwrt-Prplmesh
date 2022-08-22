@@ -552,6 +552,8 @@ static void event_configuration_changed(const char *const sig_name, const amxc_v
     son::db::sDbNbapiConfig nbapi_config;
     nbapi_config.client_band_steering =
         amxd_object_get_bool(configuration, "BandSteeringEnabled", nullptr);
+    nbapi_config.client_11k_roaming =
+        amxd_object_get_bool(configuration, "Client_11kRoaming", nullptr);
     nbapi_config.client_optimal_path_roaming =
         amxd_object_get_bool(configuration, "OptimalPathEnabled", nullptr);
     nbapi_config.roaming_hysteresis_percent_bonus =

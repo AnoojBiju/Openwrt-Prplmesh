@@ -6909,6 +6909,7 @@ bool db::update_master_configuration(const sDbNbapiConfig &nbapi_config)
     auto ret_val = true;
 
     config.load_client_band_steering        = nbapi_config.client_band_steering;
+    config.load_client_11k_roaming          = nbapi_config.client_11k_roaming;
     config.load_client_optimal_path_roaming = nbapi_config.client_optimal_path_roaming;
     config.roaming_hysteresis_percent_bonus = nbapi_config.roaming_hysteresis_percent_bonus;
     config.steering_disassoc_timer_msec     = nbapi_config.steering_disassoc_timer_msec;
@@ -6930,6 +6931,7 @@ bool db::update_master_configuration(const sDbNbapiConfig &nbapi_config)
 
     // Update persistent configuration.
     ret_val &= beerocks::bpl::cfg_set_band_steering(config.load_client_band_steering);
+    ret_val &= beerocks::bpl::cfg_set_client_11k_roaming(config.load_client_11k_roaming);
     ret_val &= beerocks::bpl::cfg_set_optimal_path_roaming(config.load_client_optimal_path_roaming);
     ret_val &= beerocks::bpl::cfg_set_roaming_hysteresis_percent_bonus(
         config.roaming_hysteresis_percent_bonus);

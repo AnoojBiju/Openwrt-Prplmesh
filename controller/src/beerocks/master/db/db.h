@@ -206,6 +206,7 @@ public:
      */
     typedef struct {
         bool client_band_steering;
+        bool client_11k_roaming;
         bool client_optimal_path_roaming;
         bool optimal_path_prefer_signal_strength;
         bool load_balancing;

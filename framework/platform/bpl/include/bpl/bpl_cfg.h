@@ -416,6 +416,22 @@ bool cfg_get_band_steering(bool &band_steering);
 bool cfg_set_band_steering(bool band_steering);
 
 /**
+ * @brief Returns whether 11k Roaming feature is enabled or not.
+ *
+ * @param [out] enable true if the 11k Roaming is enabled and false otherwise.
+ * @return true on success, otherwise false.
+ */
+bool cfg_get_client_11k_roaming(bool &eleven_k_roaming);
+
+/**
+ * @brief Sets 11k Roaming in configuration.
+ *
+ * @param[in] band_steering  true for enabled 11k Roaming.
+ * @return true on success, otherwise false
+ */
+bool cfg_set_client_11k_roaming(bool eleven_k_roaming);
+
+/**
  * @brief Returns whether Optimal Path Roaming feature is enabled or not.
  *
  * @param [out] enable true if the Optimal Path Roaming is enabled and false otherwise.

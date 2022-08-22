@@ -237,6 +237,25 @@ bool cfg_set_band_steering(bool band_steering)
     return cfg_set_prplmesh_config(option, value);
 }
 
+bool cfg_get_client_11k_roaming(bool &eleven_k_roaming)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int("client_11k_roaming", &retVal) == RETURN_ERR) {
+        return false;
+    }
+
+    eleven_k_roaming = (retVal == 1);
+    return true;
+}
+
+bool cfg_set_client_11k_roaming(bool eleven_k_roaming)
+{
+    std::string option = "client_11k_roaming";
+    std::string value  = std::to_string(((int)eleven_k_roaming));
+
+    return cfg_set_prplmesh_config(option, value);
+}
+
 bool cfg_get_optimal_path_roaming(bool &optimal_path_roaming)
 {
     int retVal = -1;
