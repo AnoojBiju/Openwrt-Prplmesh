@@ -392,15 +392,33 @@ void Controller::configure_tasks()
 
     auto m_channel_selection_task =
         std::make_shared<channel_selection_task>(database, cmdu_tx, m_task_pool);
+    if (database.settings_channel_select_task()) {
+        if (!m_channel_selection_task) {
+            auto m_channel_selection_task =
+                std::make_shared<channel_selection_task>(database, cmdu_tx, m_task_pool);
+            LOG_IF(!m_task_pool.add_task(m_channel_selection_task), FATAL)
+                << "Failed adding channel selection task!";
+        }
+    } else {
+        if (m_channel_selection_task) {
+            m_task_pool.kill_task(m_channel_selection_task->id);
+            m_channel_selection_task = {};
+        }
+    }
 
-    LOG_IF(!m_task_pool.add_task(m_channel_selection_task), FATAL)
-        << "Failed adding channel selection task!";
-
-    auto m_dynamic_channel_selection_task =
-        std::make_shared<dynamic_channel_selection_r2_task>(database, cmdu_tx, m_task_pool);
-    LOG_IF(!m_task_pool.add_task(m_dynamic_channel_selection_task), FATAL)
-        << "Failed adding dynamic channel selection r2 task!";
-    //
+    if (database.get_dynamic_channel_selection_r2_task_id()) {
+        if (!m_dynamic_channel_selection_task) {
+            auto m_dynamic_channel_selection_task =
+                std::make_shared<dynamic_channel_selection_r2_task>(database, cmdu_tx, m_task_pool);
+            LOG_IF(!m_task_pool.add_task(m_dynamic_channel_selection_task), FATAL)
+                << "Failed adding dynamic channel selection r2 task!";
+        }
+    } else {
+        if (m_dynamic_channel_selection_task) {
+            m_task_pool.kill_task(m_dynamic_channel_selection_task->id);
+            m_dynamic_channel_selection_task = {};
+        }
+    }
 }
 
 bool Controller::send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)

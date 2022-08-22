@@ -412,6 +412,7 @@ private:
     ieee1905_1::CmduMessageTx cert_cmdu_tx;
 
     db &database;
+    //task_pool tasks;
     task_pool m_task_pool;
     periodic_operation_pool operations;
     beerocks::controller_ucc_listener m_controller_ucc_listener;
@@ -423,12 +424,12 @@ private:
     /**
      * Pointer used to stop/start the task without restarting the controller
      */
-    std::shared_ptr<channel_selection_task> m_channel_selection_task;
+    std::shared_ptr<channel_selection_task> m_channel_selection_task = {};
 
     /**
      * Pointer used to stop/start the task without restarting the controller
      */
-    std::shared_ptr<dynamic_channel_selection_r2_task> m_dynamic_channel_selection_task;
+    std::shared_ptr<dynamic_channel_selection_r2_task> m_dynamic_channel_selection_task = {};
 
     /**
      * Factory to create broker client instances connected to broker server.

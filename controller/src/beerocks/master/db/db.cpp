@@ -6928,6 +6928,13 @@ bool db::update_master_configuration(const sDbNbapiConfig &nbapi_config)
     ret_val &= beerocks::bpl::cfg_set_link_metrics_request_interval(
         config.link_metrics_request_interval_seconds);
 
+    ret_val &= beerocks::bpl::cfg_set_channel_select_task(config.load_channel_select_task);
+    ret_val &= beerocks::bpl::cfg_set_dfs_task(config.load_dynamic_channel_select_task);
+
+    settings_channel_select_task(true);
+    settings_dynamic_channel_select_task(true);
+    // calling these functions with "true" is equivalent to copying the value from config container
+
     return ret_val;
 }
 
