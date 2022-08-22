@@ -122,7 +122,7 @@ constexpr int DEFAULT_STOP_ON_FAILURE_ATTEMPTS         = 1;
 constexpr int DEFAULT_RDKB_EXTENSIONS                  = 0;
 constexpr int DEFAULT_DFS_REENTRY                      = 1;
 constexpr int DEFAULT_BAND_STEERING                    = 0;
-constexpr int DEFAULT_CLIENT_ROAMING                   = 0;
+constexpr int DEFAULT_OPTIMAL_PATH_ROAMING             = 0;
 constexpr int DEFAULT_ROAMING_HYSTERESIS_PERCENT_BONUS = 10;
 constexpr std::chrono::milliseconds DEFAULT_STEERING_DISASSOC_TIMER_MSEC{200};
 
@@ -413,20 +413,20 @@ bool cfg_get_band_steering(bool &band_steering);
 bool cfg_set_band_steering(bool band_steering);
 
 /**
- * @brief Returns whether Client Roaming feature is enabled or not.
+ * @brief Returns whether Optimal Path Roaming feature is enabled or not.
  *
- * @param [out] enable true if the Client Roaming is enabled and false otherwise.
+ * @param [out] enable true if the Optimal Path Roaming is enabled and false otherwise.
  * @return true on success, otherwise false.
  */
-bool cfg_get_client_roaming(bool &client_roaming);
+bool cfg_get_optimal_path_roaming(bool &optimal_path_roaming);
 
 /**
- * @brief Sets Client Roaming in configuration.
+ * @brief Sets Optimal Path Roaming in configuration.
  *
- * @param[in] client_roaming  true for enabled client_roaming.
+ * @param[in] optimal_path_roaming  true for enabled optimal_path_roaming.
  * @return true on success, otherwise false
  */
-bool cfg_set_client_roaming(bool client_roaming);
+bool cfg_set_optimal_path_roaming(bool optimal_path_roaming);
 
 /**
  * @brief Returns whether Load Balancing feature is enabled or not.

@@ -315,18 +315,18 @@ bool cfg_get_band_steering(bool &band_steering)
 
 bool cfg_set_band_steering(bool band_steering) { return true; }
 
-bool cfg_get_client_roaming(bool &client_roaming)
+bool cfg_get_optimal_path_roaming(bool &optimal_path_roaming)
 {
     int retVal = -1;
-    if (cfg_get_param_int("client_roaming", retVal) == RETURN_ERR) {
+    if (cfg_get_param_int("optimal_path_roaming", retVal) == RETURN_ERR) {
         return false;
     }
 
-    client_roaming = (retVal == 1);
+    optimal_path_roaming = (retVal == 1);
     return true;
 }
 
-bool cfg_set_client_roaming(bool client_roaming) { return true; }
+bool cfg_set_optimal_path_roaming(bool optimal_path_roaming) { return true; }
 
 bool cfg_get_load_balancing(bool &load_balancing)
 {

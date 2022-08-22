@@ -19,4 +19,4 @@ wireless.@BEEROCKS_WLAN3_IFACE@.security_mode=wpa2-psk
 wireless.@BEEROCKS_WLAN3_IFACE@.psk=prplmesh_pass
 backhaul_wire_iface=@BEEROCKS_BH_WIRE_IFACE@
 band_steering=1
-client_roaming=1
+optimal_path_roaming=1

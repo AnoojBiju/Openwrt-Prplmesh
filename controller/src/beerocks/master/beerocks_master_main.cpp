@@ -331,11 +331,12 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
         master_conf.load_client_band_steering = beerocks::bpl::DEFAULT_BAND_STEERING;
     }
 
-    if (!beerocks::bpl::cfg_get_client_roaming(master_conf.load_client_optimal_path_roaming)) {
-        LOG(DEBUG) << "Failed to read cfg_get_client_roaming, setting to default value: "
-                   << beerocks::bpl::DEFAULT_CLIENT_ROAMING;
+    if (!beerocks::bpl::cfg_get_optimal_path_roaming(
+            master_conf.load_client_optimal_path_roaming)) {
+        LOG(DEBUG) << "Failed to read cfg_get_optimal_path_roaming, setting to default value: "
+                   << beerocks::bpl::DEFAULT_OPTIMAL_PATH_ROAMING;
 
-        master_conf.load_client_optimal_path_roaming = beerocks::bpl::DEFAULT_CLIENT_ROAMING;
+        master_conf.load_client_optimal_path_roaming = beerocks::bpl::DEFAULT_OPTIMAL_PATH_ROAMING;
     }
 
     if (!beerocks::bpl::cfg_get_roaming_hysteresis_percent_bonus(

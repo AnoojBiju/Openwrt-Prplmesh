@@ -6921,7 +6921,7 @@ bool db::update_master_configuration(const sDbNbapiConfig &nbapi_config)
 
     // Update persistent configuration.
     ret_val &= beerocks::bpl::cfg_set_band_steering(config.load_client_band_steering);
-    ret_val &= beerocks::bpl::cfg_set_client_roaming(config.load_client_optimal_path_roaming);
+    ret_val &= beerocks::bpl::cfg_set_optimal_path_roaming(config.load_client_optimal_path_roaming);
     ret_val &= beerocks::bpl::cfg_set_roaming_hysteresis_percent_bonus(
         config.roaming_hysteresis_percent_bonus);
     ret_val &=

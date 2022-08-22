@@ -123,8 +123,8 @@
             object DataElements {
 
                 object Configuration {
-                    bool BandSteeringEnabled = false;
-                    bool ClientSteeringEnabled = false;
+                    bool BandSteeringEnabled = false; //client_band_steering
+                    bool OptimalPathEnabled = false;  //client_optimal_path_roaming
                     uint32 SteeringCurrentBonus = 0 {
                         on action validate call check_range [0, 10000];
                     }

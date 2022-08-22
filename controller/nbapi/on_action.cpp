@@ -553,7 +553,7 @@ static void event_configuration_changed(const char *const sig_name, const amxc_v
     nbapi_config.client_band_steering =
         amxd_object_get_bool(configuration, "BandSteeringEnabled", nullptr);
     nbapi_config.client_optimal_path_roaming =
-        amxd_object_get_bool(configuration, "ClientSteeringEnabled", nullptr);
+        amxd_object_get_bool(configuration, "OptimalPathEnabled", nullptr);
     nbapi_config.roaming_hysteresis_percent_bonus =
         amxd_object_get_int32_t(configuration, "SteeringCurrentBonus", nullptr);
     nbapi_config.steering_disassoc_timer_msec = std::chrono::milliseconds{

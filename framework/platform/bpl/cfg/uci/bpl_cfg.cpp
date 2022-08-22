@@ -237,21 +237,21 @@ bool cfg_set_band_steering(bool band_steering)
     return cfg_set_prplmesh_config(option, value);
 }
 
-bool cfg_get_client_roaming(bool &client_roaming)
+bool cfg_get_optimal_path_roaming(bool &optimal_path_roaming)
 {
     int retVal = -1;
-    if (cfg_get_prplmesh_param_int("client_roaming", &retVal) == RETURN_ERR) {
+    if (cfg_get_prplmesh_param_int("optimal_path_roaming", &retVal) == RETURN_ERR) {
         return false;
     }
 
-    client_roaming = (retVal == 1);
+    optimal_path_roaming = (retVal == 1);
     return true;
 }
 
-bool cfg_set_client_roaming(bool client_roaming)
+bool cfg_set_optimal_path_roaming(bool optimal_path_roaming)
 {
-    std::string option = "client_roaming";
-    std::string value  = std::to_string(((int)client_roaming));
+    std::string option = "optimal_path_roaming";
+    std::string value  = std::to_string(((int)optimal_path_roaming));
 
     return cfg_set_prplmesh_config(option, value);
 }

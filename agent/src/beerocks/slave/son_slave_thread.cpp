@@ -451,12 +451,13 @@ bool slave_thread::read_platform_configuration()
         db->device_conf.client_band_steering_enabled = beerocks::bpl::DEFAULT_BAND_STEERING;
     }
 
-    if (!beerocks::bpl::cfg_get_client_roaming(
+    if (!beerocks::bpl::cfg_get_optimal_path_roaming(
             db->device_conf.client_optimal_path_roaming_enabled)) {
-        LOG(DEBUG) << "Failed to read cfg_get_client_roaming, setting to default value: "
-                   << beerocks::bpl::DEFAULT_CLIENT_ROAMING;
+        LOG(DEBUG) << "Failed to read cfg_get_optimal_path_roaming, setting to default value: "
+                   << beerocks::bpl::DEFAULT_OPTIMAL_PATH_ROAMING;
 
-        db->device_conf.client_optimal_path_roaming_enabled = beerocks::bpl::DEFAULT_CLIENT_ROAMING;
+        db->device_conf.client_optimal_path_roaming_enabled =
+            beerocks::bpl::DEFAULT_OPTIMAL_PATH_ROAMING;
     }
 
     if ((temp_int = bpl::cfg_is_master()) < 0) {
