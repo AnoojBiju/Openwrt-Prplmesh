@@ -213,7 +213,7 @@ public:
         bool dynamic_channel_select_task;
         bool ire_roaming;
         bool health_check;
-
+        bool enable_dfs_reentry;
         bool diagnostics_measurements;
         int diagnostics_measurements_polling_rate_sec;
 

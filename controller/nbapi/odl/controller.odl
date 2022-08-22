@@ -144,6 +144,7 @@
                     bool HealthCheckTask = false;
                     bool StatisticsPollingTask = false;
                     uint32 StatisticsPollingRateSec = 0;
+                    bool DFSReentry = false;
                 }
 
                 // Define controller.Network element

@@ -6915,6 +6915,8 @@ bool db::update_master_configuration(const sDbNbapiConfig &nbapi_config)
     config.link_metrics_request_interval_seconds =
         nbapi_config.link_metrics_request_interval_seconds;
 
+    config.load_dfs_reentry = nbapi_config.enable_dfs_reentry;
+
     config.load_load_balancing              = nbapi_config.load_balancing;
     config.load_channel_select_task         = nbapi_config.channel_select_task;
     config.load_dynamic_channel_select_task = nbapi_config.dynamic_channel_select_task;
@@ -6964,6 +6966,7 @@ void db::update_master_settings_from_config()
     settings_load_balancing(true);
     settings_channel_select_task(true);
     settings_dynamic_channel_select_task(true);
+    settings_dfs_reentry(true);
     settings_diagnostics_measurements(true);
 }
 
