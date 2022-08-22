@@ -396,6 +396,41 @@ bool cfg_set_optimal_path_prefer_signal_strenght(bool optimal_path_prefer_signal
     return true;
 }
 
+bool cfg_get_diagnostics_measurements(bool &diagnostics_measurements)
+{
+    int retVal = -1;
+    if (cfg_get_param_int("diagnostics_measurements", retVal) == RETURN_ERR) {
+        return false;
+    }
+
+    diagnostics_measurements = (retVal == 1);
+    return true;
+}
+
+bool cfg_set_diagnostics_measurements(bool diagnostics_measurements) { return true; }
+
+bool cfg_get_diagnostics_measurements_polling_rate_sec(
+    int &diagnostics_measurements_polling_rate_sec)
+{
+    int retVal = -1;
+    if (cfg_get_param_int("diagnostics_measurements_polling_rate_sec", retVal) == RETURN_ERR) {
+        MAPF_INFO("Failed to read diagnostics_measurements_polling_rate_sec parameter ");
+        diagnostics_measurements_polling_rate_sec =
+            DEFAULT_DIAGNOSTICS_MEASUREMENT_POLLING_RATE_SEC;
+        return false;
+    }
+
+    diagnostics_measurements_polling_rate_sec = retVal;
+
+    return true;
+}
+
+bool cfg_set_diagnostics_measurements_polling_rate_sec(
+    const int &diagnostics_measurements_polling_rate_sec)
+{
+    return true;
+}
+
 int cfg_get_backhaul_params(int *max_vaps, int *network_enabled, int *preferred_radio_band)
 {
     *max_vaps             = 0;

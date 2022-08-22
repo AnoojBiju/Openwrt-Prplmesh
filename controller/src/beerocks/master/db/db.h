@@ -213,6 +213,10 @@ public:
         bool dynamic_channel_select_task;
         bool ire_roaming;
         bool health_check;
+
+        bool diagnostics_measurements;
+        int diagnostics_measurements_polling_rate_sec;
+
         int roaming_hysteresis_percent_bonus;
         std::chrono::milliseconds steering_disassoc_timer_msec;
         std::chrono::seconds link_metrics_request_interval_seconds;

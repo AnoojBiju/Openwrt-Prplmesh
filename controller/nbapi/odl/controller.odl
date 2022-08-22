@@ -142,6 +142,8 @@
                     bool LoadBalancingEnabled = false;
                     bool OptimalPathPreferSignalStrenght = false;
                     bool HealthCheckTask = false;
+                    bool StatisticsPollingTask = false;
+                    uint32 StatisticsPollingRateSec = 0;
                 }
 
                 // Define controller.Network element

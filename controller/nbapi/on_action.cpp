@@ -581,6 +581,12 @@ static void event_configuration_changed(const char *const sig_name, const amxc_v
 
     nbapi_config.health_check = amxd_object_get_bool(configuration, "HealthCheckTask", nullptr);
 
+    nbapi_config.diagnostics_measurements =
+        amxd_object_get_bool(configuration, "StatisticsPollingTask", nullptr);
+
+    nbapi_config.diagnostics_measurements_polling_rate_sec =
+        amxd_object_get_int32_t(configuration, "StatisticsPollingRateSec", nullptr);
+
     if (!g_database->update_master_configuration(nbapi_config)) {
         LOG(ERROR) << "Failed update master configuration from NBAPI.";
     }

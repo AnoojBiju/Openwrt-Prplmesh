@@ -351,6 +351,51 @@ bool cfg_set_optimal_path_prefer_signal_strenght(bool optimal_path_prefer_signal
     return cfg_set_prplmesh_config(option, value);
 }
 
+bool cfg_get_diagnostics_measurements(bool &diagnostics_measurements)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int("diagnostics_measurements", &retVal) == RETURN_ERR) {
+        return false;
+    }
+
+    diagnostics_measurements = (retVal == 1);
+    return true;
+}
+
+bool cfg_set_diagnostics_measurements(bool diagnostics_measurements)
+{
+    std::string option = "diagnostics_measurements";
+    std::string value  = std::to_string(((int)diagnostics_measurements));
+
+    return cfg_set_prplmesh_config(option, value);
+}
+
+bool cfg_get_diagnostics_measurements_polling_rate_sec(
+    int &diagnostics_measurements_polling_rate_sec)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int_default("diagnostics_measurements_polling_rate_sec", &retVal,
+                                           DEFAULT_DIAGNOSTICS_MEASUREMENT_POLLING_RATE_SEC) ==
+        RETURN_ERR) {
+        MAPF_INFO("Failed to read diagnostics_measurements_polling_rate_sec parameter - setting "
+                  "default value");
+        return false;
+    }
+
+    diagnostics_measurements_polling_rate_sec = retVal;
+
+    return true;
+}
+
+bool cfg_set_diagnostics_measurements_polling_rate_sec(
+    const int &diagnostics_measurements_polling_rate_sec)
+{
+    std::string option = "diagnostics_measurements_polling_rate_sec";
+    std::string value  = std::to_string(diagnostics_measurements_polling_rate_sec);
+
+    return cfg_set_prplmesh_config(option, value);
+}
+
 int cfg_get_backhaul_params(int *max_vaps, int *network_enabled, int *preferred_radio_band)
 {
     if (max_vaps) {
