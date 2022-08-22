@@ -565,6 +565,10 @@ static void event_configuration_changed(const char *const sig_name, const amxc_v
     nbapi_config.channel_select_task =
         amxd_object_get_bool(configuration, "ChannelSelectionTaskEnabled", nullptr);
 
+    // ire_roaming
+    nbapi_config.ire_roaming =
+        amxd_object_get_bool(configuration, "BackhaulOptimizationEnabled", nullptr);
+
     // dfs task : stats collection should not be disabled ?
     nbapi_config.dynamic_channel_select_task =
         amxd_object_get_bool(configuration, "DynamicChannelSelectionTaskEnabled", nullptr);

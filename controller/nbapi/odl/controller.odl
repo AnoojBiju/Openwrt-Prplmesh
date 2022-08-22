@@ -136,6 +136,8 @@
                     bool ChannelSelectionTaskEnabled = false;
 
                     bool DynamicChannelSelectionTaskEnabled = false;
+
+                    bool BackhaulOptimizationEnabled = false;
                 }
 
                 // Define controller.Network element
