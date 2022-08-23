@@ -105,6 +105,13 @@ private:
     void handle_dpp_cce_indication_message(ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
+     * @brief Handles Direct Encap DPP message.
+     *
+     * @param cmdu_rx Received CMDU to be handled.
+     */
+    void handle_direct_encap_dpp_message(ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
      * @brief Runs the Finite State Machine of the AP manager.
      * 
      * @param[out] continue_processing Flag that means that state machine transitioned to a 
