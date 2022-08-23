@@ -148,7 +148,7 @@
   - ALL_TARGETS="turris-omnia-1 turris-omnia-2 glinet-b1300-1 netgear-rax40-1 nec-wx3000hp-1"
   # kill prplmesh on each target to make sure they don't interfere with the test
   - for i in $ALL_TARGETS ; do ssh "$i" 'pgrep -f beerocks | xargs kill -9 2>/dev/null' || true ; done
-  - tools/deploy_firmware.py --device "$TARGET_DEVICE" --target-name "$TARGET_DEVICE_NAME" --image "$OPENWRT_IMAGE" --whm --full --configuration ci/configuration/boardfarm/"$TARGET_DEVICE_NAME".sh
+  - tools/deploy_firmware.py --device "$TARGET_DEVICE" --target-name "$TARGET_DEVICE_NAME" --image "$OPENWRT_IMAGE" --whm --full --configuration ci/configuration/boardfarm/whm/"$TARGET_DEVICE_NAME".sh
   - tools/deploy_ipk.sh $TARGET_DEVICE_NAME "buildWHM/$TARGET_DEVICE/"prplmesh.ipk
 
 .test-on-rdkb:
