@@ -128,6 +128,13 @@ private:
      */
     bool add_associated_clients_tlv();
 
+    /**
+     * @brief Add and fill bssid_iface_mapping tlv.
+     * 
+     * @return true on success, otherwise false.
+     */
+    bool add_vs_tlv_bssid_iface_mapping();
+
     std::chrono::steady_clock::time_point m_periodic_discovery_timestamp;
 
     bool m_pending_to_send_topology_notification = false;
