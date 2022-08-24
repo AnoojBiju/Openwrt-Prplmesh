@@ -3324,7 +3324,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
                 break;
             }
         }
-        LOG(ERROR) << "bssid = " << bssid;
+        LOG(DEBUG) << "bssid = " << bssid;
         msg->bssid = tlvf::mac_from_string(bssid);
         LOG(DEBUG) << "sta connection failure: interface bssid: " << msg->bssid;
 
