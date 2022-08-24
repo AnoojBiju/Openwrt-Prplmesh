@@ -23,6 +23,7 @@ LogCommand = namedtuple("LogCommand", "cmd, filename")
 LOG_COMMANDS = \
     [
         LogCommand("ip address show", "ip-addr.txt"),
+        LogCommand("cat /etc/config/network", "config-network.txt"),
         LogCommand('ubus call IP _get \'{ "depth": "10" }\'', "dm-IP.txt"),
         LogCommand('ubus call Bridging _get \'{ "depth": "10" }\'', "dm-Bridge.txt"),
         LogCommand('ubus call Ethernet _get \'{ "depth": "10" }\'', "dm-Ethernet.txt"),
@@ -32,6 +33,10 @@ LOG_COMMANDS = \
         LogCommand('ubus call WiFi _get \'{ "depth": "10" }\'', "dm-WiFi.txt"),
         LogCommand('logread', "syslog.txt"),
         LogCommand('iptables -L', "iptables-filter.txt"),
+        LogCommand('find /etc/config/tr181-bridging/ -type f -print -exec cat {} \';\'',
+                   "config-tr181-bridging.txt"),
+        LogCommand('find /etc/amx/tr181-bridging/ -type f -print -exec cat {} \';\'',
+                   "amx-tr181-bridging.txt"),
     ]
 
 
