@@ -37,7 +37,7 @@ public:
     int conf_rx_rssi_notification_delta_db      = 8;
     int conf_rx_rssi_notification_threshold_dbm = -60;
     bool conf_disable_initiative_arp            = false;
-    bool is_5ghz                                = false;
+    beerocks::eFreqType freq_type               = beerocks::eFreqType::FREQ_UNKNOWN;
 
 private:
     void send_rssi_measurement_response(const std::string &sta_mac, monitor_sta_node *sta_node);
