@@ -3851,7 +3851,7 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
         auto response_out_backhaul = message_com::create_vs_message<
             beerocks_message::cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_RESPONSE>(cmdu_tx);
         if (!response_out_backhaul) {
-            LOG(ERROR) << "Failed building cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_RESPONSE";
+            LOG(ERROR) << "Failed building cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_RESPONSE!!";
             return false;
         }
 
