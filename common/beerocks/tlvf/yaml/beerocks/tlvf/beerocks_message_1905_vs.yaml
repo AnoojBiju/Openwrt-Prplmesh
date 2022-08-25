@@ -1,7 +1,11 @@
 #
 ---
 _include:
-  { bcl/beerocks_message_structs.h, beerocks/tlvf/beerocks_message_action.h }
+  {
+    bcl/beerocks_message_structs.h,
+    beerocks/tlvf/beerocks_message_action.h,
+    beerocks/tlvf/beerocks_message_common.h,
+  }
 
 _namespace: beerocks_message
 
@@ -49,7 +53,7 @@ tlvVsChannelScanRequestExtension:
     _length_var: True
   scan_requests_list:
     _type: sScanRequestExtension
-    _length: [ scan_requests_list_length ]
+    _length: [scan_requests_list_length]
 
 tlvVsChannelScanReportDone:
   _type: class
@@ -59,3 +63,12 @@ tlvVsOnDemandChannelSelection:
   _type: class
   radio_mac: sMacAddr
   CSA_count: uint8_t
+
+tlvVsBssidIfaceMapping:
+  _type: class
+  bssid_vap_id_map_length:
+    _type: uint8_t
+    _length_var: True
+  bssid_vap_id_map:
+    _type: sBssidVapId
+    _length: [bssid_vap_id_map_length]
