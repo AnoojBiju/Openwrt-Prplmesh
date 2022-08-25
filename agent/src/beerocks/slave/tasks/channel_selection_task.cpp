@@ -1472,8 +1472,8 @@ ChannelSelectionTask::select_next_channel(const sMacAddr &radio_mac)
                 continue;
             }
 
-            LOG(INFO) << "IGNORE: sel ch = " << selected_channel.channel
-                      << " score = " << selected_channel.preference_score;
+            //LOG(INFO) << "IGNORE: sel ch = " << selected_channel.channel
+            //          << " score = " << selected_channel.preference_score;
             if (selected_channel.preference_score > cumulative_preference) {
                 // cumulative preference is lower then best, skip.
                 continue;
