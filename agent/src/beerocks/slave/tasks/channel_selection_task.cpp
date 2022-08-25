@@ -135,7 +135,7 @@ get_cumulative_preference(const AgentDB::sRadio *radio,
 
     const auto cumulative_preference = (radio_preference + controller_preference);
 
-    LOG(INFO) << "Channel: " << channel_number << " "
+    LOG(INFO) << "CW: Channel: " << channel_number << " "
               << "Operating Class: " << operating_class << " "
               << "Bandwidth: "
               << utils::convert_bandwidth_to_int(
@@ -1472,6 +1472,8 @@ ChannelSelectionTask::select_next_channel(const sMacAddr &radio_mac)
                 continue;
             }
 
+            LOG(INFO) << "IGNORE: sel ch = " << selected_channel.channel
+                      << " score = " << selected_channel.preference_score;
             if (selected_channel.preference_score > cumulative_preference) {
                 // cumulative preference is lower then best, skip.
                 continue;
@@ -1485,6 +1487,8 @@ ChannelSelectionTask::select_next_channel(const sMacAddr &radio_mac)
                 }
             }
 
+            LOG(INFO) << "CW: updated new best channel would be ch = " << channel_number
+                      << " BW = " << bandwidth << " score = " << cumulative_preference;
             LOG(INFO) << "[" << channel_number << "-" << operating_class << "("
                       << utils::convert_bandwidth_to_int(bandwidth)
                       << "MHz)] is the new Best-Channel.";
@@ -1502,7 +1506,7 @@ ChannelSelectionTask::select_next_channel(const sMacAddr &radio_mac)
         return sSelectedChannel();
     }
 
-    LOG(INFO) << "Next Best channel is [" << selected_channel.channel << "-"
+    LOG(INFO) << "CW: Next Best channel is [" << selected_channel.channel << "-"
               << selected_channel.operating_class << "("
               << utils::convert_bandwidth_to_int(selected_channel.bw)
               << "MHz)] with a preference score of " << selected_channel.preference_score
