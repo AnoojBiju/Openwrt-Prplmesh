@@ -1408,6 +1408,17 @@ typedef struct sClient {
     }
 } __attribute__((packed)) sClient;
 
+typedef struct sBssidVapId {
+    sMacAddr bssid;
+    int8_t vap_id;
+    void struct_swap(){
+        bssid.struct_swap();
+    }
+    void struct_init(){
+        bssid.struct_init();
+    }
+} __attribute__((packed)) sBssidVapId;
+
 
 }; // close namespace: beerocks_message
 
