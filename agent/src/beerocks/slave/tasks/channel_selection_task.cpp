@@ -293,7 +293,7 @@ void ChannelSelectionTask::handle_channel_selection_request(ieee1905_1::CmduMess
         if (!store_controller_preference(channel_preference_tlv)) {
             LOG(ERROR) << "Failed to store controller preference!";
             radio_request.response_code = wfa_map::tlvChannelSelectionResponse::eResponseCode::
-                DECLINE_VIOLATES_CURRENT_PREFERENCES;
+                DECLINE_VIOLATES_MOST_RECENTLY_REPORTED_PREFERENCES;
             continue;
         }
         if (!check_received_preferences_contain_violation(radio_mac)) {
