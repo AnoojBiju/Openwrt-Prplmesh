@@ -2,6 +2,7 @@
 #define _PROXY_AGENT_DPP_TASK_H_
 
 #include "task.h"
+#include <bcl/network/sockets_impl.h>
 #include <tlvf/CmduMessageTx.h>
 
 namespace beerocks {
@@ -21,6 +22,7 @@ public:
 private:
     slave_thread &m_btl_ctx;
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
+    int active_onboarding_ap_manager_fd = beerocks::net::FileDescriptor::invalid_descriptor;
 
     /**
      * @brief Parse DPP CCE Indication message.
@@ -44,7 +46,8 @@ private:
      * @param cmdu_rx Received CMDU.
      * @return true on success, otherwise false.
      */
-    void handle_proxied_encap_dpp(ieee1905_1::CmduMessageRx &cmdu_rx);
+    void handle_proxied_encap_dpp(int fd, const sMacAddr &src_mac,
+                                  ieee1905_1::CmduMessageRx &cmdu_rx);
 };
 } // namespace beerocks
 
