@@ -52,7 +52,12 @@ int cfg_get_prplmesh_radio_param(int radio_id, const std::string &radio_param, c
         return RETURN_ERR;
     }
 
-    return cfg_uci_get(path, buf, buf_len);
+    auto ret = cfg_uci_get(path, buf, buf_len);
+
+    LOG(INFO) << "CW: DBG " << path << " = " << buf;
+
+    return ret;
+    //return cfg_uci_get(path, buf, buf_len);
 }
 
 static int cfg_get_prplmesh_param_int_raw(const std::string &param, int *buf)

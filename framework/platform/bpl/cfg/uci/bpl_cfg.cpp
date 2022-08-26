@@ -180,6 +180,8 @@ int cfg_get_dcs_channel_pool(int radio_num, char channel_pool[BPL_DCS_CHANNEL_PO
         return RETURN_ERR;
     }
 
+    LOG(INFO) << "CW: Channel pool size = " << BPL_DCS_CHANNEL_POOL_LEN;
+
     return cfg_get_prplmesh_radio_param(radio_num, "dcs_channel_pool", channel_pool,
                                         BPL_DCS_CHANNEL_POOL_LEN);
 }

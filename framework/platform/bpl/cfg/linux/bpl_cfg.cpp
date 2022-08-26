@@ -288,6 +288,7 @@ int cfg_get_dcs_channel_pool(int radio_num, char channel_pool[BPL_DCS_CHANNEL_PO
     LOG(INFO) << "CW: Channel pool length = " << BPL_DCS_CHANNEL_POOL_LEN;
 
     mapf::utils::copy_string(channel_pool, DEFAULT_DCS_CHANNEL_POOL, BPL_DCS_CHANNEL_POOL_LEN);
+    LOG(INFO) << "CW: channel_pool: = " << channel_pool;
     return RETURN_OK;
 }
 
