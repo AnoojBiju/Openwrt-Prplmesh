@@ -1176,10 +1176,14 @@ bool ChannelSelectionTask::create_cac_completion_report_tlv()
 
 bool ChannelSelectionTask::create_cac_status_report_tlv()
 {
+    auto cac_status_report_tlv = m_cmdu_tx.addClass<wfa_map::tlvProfile2CacStatusReport>();
+    if (!cac_status_report_tlv) {
+        LOG(ERROR) << "Failed to create CAC Status Report TLV";
+        return false;
+    }
 
     CacStatusDatabase cac_status_database;
     auto db = AgentDB::get();
-    CacAvailableChannels agent_avaliable_channels;
 
     for (const auto &pending_preference_iter : m_pending_preference.preference_ready) {
         const auto &radio_mac = pending_preference_iter.first;
@@ -1188,34 +1192,11 @@ bool ChannelSelectionTask::create_cac_status_report_tlv()
             LOG(DEBUG) << "Radio " << radio_mac << " does not exist on the db";
             return false;
         }
-        // fill status report
-        auto radio_available_channels =
-            cac_status_database.get_available_channels(radio->front.iface_mac);
-        agent_avaliable_channels.insert(agent_avaliable_channels.end(),
-                                        radio_available_channels.begin(),
-                                        radio_available_channels.end());
-    }
 
-    // create status report
-    auto cac_status_report_tlv = m_cmdu_tx.addClass<wfa_map::tlvProfile2CacStatusReport>();
-    if (!cac_status_report_tlv) {
-        LOG(ERROR) << "Failed to create cac-status-report-tlv";
-        return false;
-    }
-
-    if (!cac_status_report_tlv->alloc_available_channels(agent_avaliable_channels.size())) {
-        LOG(ERROR) << "Failed to allocate " << agent_avaliable_channels.size()
-                   << " structures for available channels";
-        return false;
-    }
-
-    for (unsigned int i = 0; i < agent_avaliable_channels.size(); ++i) {
-        auto &available_ref           = std::get<1>(cac_status_report_tlv->available_channels(i));
-        available_ref.operating_class = agent_avaliable_channels[i].operating_class;
-        available_ref.channel         = agent_avaliable_channels[i].channel;
-        available_ref.minutes_since_cac_completion =
-            std::chrono::duration_cast<std::chrono::minutes>(agent_avaliable_channels[i].duration)
-                .count();
+        if (!cac_status_database.add_cac_status_report_tlv(radio, cac_status_report_tlv)) {
+            LOG(DEBUG) << "Failed to add CAC Status Report TLV for " << radio_mac;
+            return false;
+        }
     }
 
     return true;

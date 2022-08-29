@@ -47,6 +47,38 @@ CacAvailableChannels CacStatusDatabase::get_available_channels(const sMacAddr &r
     return ret;
 }
 
+bool CacStatusDatabase::add_cac_status_report_tlv(
+    const AgentDB::sRadio *radio,
+    const std::shared_ptr<wfa_map::tlvProfile2CacStatusReport> cac_status_report_tlv)
+{
+    if (!radio) {
+        return false;
+    }
+
+    auto available_channels = get_available_channels(radio->front.iface_mac);
+    if (!available_channels.empty() &&
+        !cac_status_report_tlv->alloc_available_channels(available_channels.size())) {
+        LOG(ERROR) << "Failed to allocate " << available_channels.size()
+                   << " structures for available channels";
+    }
+
+    for (unsigned int i = 0; i < available_channels.size(); ++i) {
+        auto &available_ref           = std::get<1>(cac_status_report_tlv->available_channels(i));
+        available_ref.operating_class = available_channels[i].operating_class;
+        available_ref.channel         = available_channels[i].channel;
+        if (son::wireless_utils::is_dfs_channel(available_channels[i].channel)) {
+            available_ref.minutes_since_cac_completion = static_cast<uint16_t>(
+                std::chrono::duration_cast<std::chrono::minutes>(available_channels[i].duration)
+                    .count());
+        } else {
+            // Set to zero for non-DFS channels
+            available_ref.minutes_since_cac_completion = 0;
+        }
+    }
+
+    return true;
+}
+
 sCacCompletionStatus CacStatusDatabase::get_completion_status(const AgentDB::sRadio *radio) const
 {
     sCacCompletionStatus ret;
