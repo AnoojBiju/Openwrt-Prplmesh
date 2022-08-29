@@ -204,7 +204,7 @@ private:
     bool handle_cmdu_monitor_ieee1905_1_message(const std::string &fronthaul_iface, int fd,
                                                 ieee1905_1::CmduMessageRx &cmdu_rx);
 
-    bool fsm_all();
+    bool fsm_all(int);
     bool agent_fsm();
     void agent_reset();
     void stop_slave_thread();

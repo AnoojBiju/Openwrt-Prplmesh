@@ -76,6 +76,8 @@ constexpr std::chrono::seconds WAIT_FOR_FRONTHAUL_JOINED_TIMEOUT_SEC  = std::chr
 /////////////////////////// Local Module Functions ///////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
+beerocks::EventLoop::EventHandler TaskTimerLapse;
+
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////////// Implementation ///////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -250,7 +252,7 @@ bool slave_thread::thread_init()
     constexpr auto fsm_timer_period = std::chrono::milliseconds(200);
     m_fsm_timer = m_timer_manager->add_timer("Agent FSM", fsm_timer_period, fsm_timer_period,
                                              [&](int fd, beerocks::EventLoop &loop) {
-                                                 fsm_all();
+                                                 fsm_all(fsm_timer_period.count());
                                                  return true;
                                              });
     LOG_IF(m_fsm_timer == beerocks::net::FileDescriptor::invalid_descriptor, FATAL)
@@ -261,13 +263,14 @@ bool slave_thread::thread_init()
     // Create a timer to run internal tasks periodically
     constexpr auto tasks_timer_period = std::chrono::milliseconds(500);
 
+    TaskTimerLapse = [&](int fd, beerocks::EventLoop &loop) {
+        // Allow tasks to execute up to 80% of the timer period
+        m_task_pool.run_tasks(int(double(tasks_timer_period.count()) * 0.8));
+        return true;
+    };
     m_tasks_timer = m_timer_manager->add_timer(
         "Agent Tasks", tasks_timer_period, tasks_timer_period,
-        [&](int fd, beerocks::EventLoop &loop) {
-            // Allow tasks to execute up to 80% of the timer period
-            m_task_pool.run_tasks(int(double(tasks_timer_period.count()) * 0.8));
-            return true;
-        });
+        TaskTimerLapse);
 
     if (m_tasks_timer == beerocks::net::FileDescriptor::invalid_descriptor) {
         LOG(FATAL) << "Failed to create the tasks timer";
@@ -600,6 +603,8 @@ void slave_thread::on_thread_stop() { stop_slave_thread(); }
 
 void slave_thread::handle_client_disconnected(int fd)
 {
+    LOG(INFO) << "handle_client_disconnected";
+    TaskTimerLapse(0, *m_event_loop);
     // if thread is about to terminate, this handler called from bcl might not have valid data.
     // so, no need to handle notification as thread is about to terminate, ignore it.
     if (should_stop) {
@@ -651,8 +656,9 @@ void slave_thread::handle_client_disconnected(int fd)
     LOG(INFO) << "Uknown client socket disconnected!";
 }
 
-bool slave_thread::fsm_all()
+bool slave_thread::fsm_all(int timer_check)
 {
+    LOG(INFO) << "timer_check: " << timer_check;
     auto radio_fsm = [&](const sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
         if (!monitor_heartbeat_check(fronthaul_iface) ||
             !ap_manager_heartbeat_check(fronthaul_iface)) {
