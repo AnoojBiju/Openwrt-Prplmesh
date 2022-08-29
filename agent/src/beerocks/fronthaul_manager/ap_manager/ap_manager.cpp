@@ -2291,6 +2291,30 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
         encap_1905_dpp_tlv->set_dest_sta_mac(dpp_authentication_response->enrollee_mac);
         send_cmdu(cmdu_tx);
     } break;
+    case Event::DPP_CONFIGURATION_REQUEST: {
+        LOG(DEBUG) << "DPP Configuration Request";
+        auto dpp_configuration_request =
+            static_cast<bwl::sACTION_APMANAGER_DPP_CONFIGURATION_REQUEST *>(data);
+
+        auto cmdu_tx_header =
+            cmdu_tx.create(0, ieee1905_1::eMessageType::PROXIED_ENCAP_DPP_MESSAGE);
+        if (!cmdu_tx_header) {
+            LOG(ERROR) << "cmdu creation of type PROXIED_ENCAP_DPP_MESSAGE failed!";
+            return false;
+        }
+
+        auto encap_1905_dpp_tlv = cmdu_tx.addClass<wfa_map::tlv1905EncapDpp>();
+        if (!encap_1905_dpp_tlv) {
+            LOG(ERROR) << "addClass wfa_map::tlv1905EncapDpp!";
+            return false;
+        }
+
+        encap_1905_dpp_tlv->frame_type() = wfa_map::tlv1905EncapDpp::eFrameType::GAS_FRAME;
+        encap_1905_dpp_tlv->frame_flags().dpp_frame_indicator          = true;
+        encap_1905_dpp_tlv->frame_flags().enrollee_mac_address_present = true;
+        encap_1905_dpp_tlv->set_dest_sta_mac(dpp_configuration_request->enrollee_mac);
+        send_cmdu(cmdu_tx);
+    } break;
     // Unhandled events
     default:
         LOG(ERROR) << "Unhandled event: " << int(event);
