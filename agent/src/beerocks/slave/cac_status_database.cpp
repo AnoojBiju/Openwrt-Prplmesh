@@ -30,6 +30,15 @@ CacStatusDatabase::get_non_occupancy_channels(const sMacAddr &radio_mac) const
     return it->second;
 }
 
+CacActiveChannels CacStatusDatabase::get_active_channels(const sMacAddr &radio_mac) const
+{
+    auto it = m_active_channels.find(radio_mac);
+    if (it == m_active_channels.end()) {
+        return CacAvailableChannels();
+    }
+    return it->second;
+}
+
 bool CacStatusDatabase::update_cac_status_db(const AgentDB::sRadio *radio)
 {
     if (!radio) {
@@ -38,6 +47,7 @@ bool CacStatusDatabase::update_cac_status_db(const AgentDB::sRadio *radio)
 
     CacAvailableChannels available_channels;
     CacNonOccupancyChannels non_occupancy_channels;
+    CacActiveChannels active_channels;
 
     for (const auto &channel_channel_info : radio->channels_list) {
         uint8_t channel    = channel_channel_info.first;
@@ -70,7 +80,15 @@ bool CacStatusDatabase::update_cac_status_db(const AgentDB::sRadio *radio)
             }
             break;
         case beerocks_message::eDfsState::USABLE:
-            // TODO: calculate duration value (PPM-1088)
+            for (auto &bw_info : channel_info.supported_bw_list) {
+                beerocks::message::sWifiChannel wifi_ch(channel, bw_info.bandwidth);
+                cac_status.operating_class =
+                    son::wireless_utils::get_operating_class_by_channel(wifi_ch);
+                cac_status.channel = channel;
+                // TODO: calculate duration value (PPM-1088)
+                cac_status.duration = std::chrono::seconds(0);
+                active_channels.push_back(cac_status);
+            }
             break;
         case beerocks_message::eDfsState::NOT_DFS:
             continue;
@@ -87,6 +105,10 @@ bool CacStatusDatabase::update_cac_status_db(const AgentDB::sRadio *radio)
 
     if (!non_occupancy_channels.empty()) {
         m_non_occupancy_channels.emplace(radio->front.iface_mac, non_occupancy_channels);
+    }
+
+    if (!active_channels.empty()) {
+        m_active_channels.emplace(radio->front.iface_mac, active_channels);
     }
 
     return true;
@@ -137,6 +159,21 @@ bool CacStatusDatabase::add_cac_status_report_tlv(
         detected_ref.operating_class_detected = non_occupancy_channels[i].operating_class;
         detected_ref.channel_detected         = non_occupancy_channels[i].channel;
         detected_ref.duration = static_cast<uint16_t>(non_occupancy_channels[i].duration.count());
+    }
+
+    auto active_channels = get_active_channels(radio->front.iface_mac);
+    if (!active_channels.empty() &&
+        !cac_status_report_tlv->alloc_active_cac_pairs(active_channels.size())) {
+        LOG(ERROR) << "Failed to allocate " << active_channels.size()
+                   << " structures for active channels";
+    }
+
+    for (unsigned int i = 0; i < active_channels.size(); ++i) {
+        auto &active_ref = std::get<1>(cac_status_report_tlv->active_cac_pairs(i));
+        active_ref.operating_class_active_cac = active_channels[i].operating_class;
+        active_ref.channel_active_cac         = active_channels[i].channel;
+        uint32_t duration = static_cast<uint32_t>(active_channels[i].duration.count());
+        memcpy(active_ref.countdown, &duration, 3);
     }
 
     return true;

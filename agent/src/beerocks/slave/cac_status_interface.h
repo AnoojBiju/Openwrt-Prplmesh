@@ -71,6 +71,14 @@ public:
     virtual CacNonOccupancyChannels get_non_occupancy_channels(const sMacAddr &radio_mac) const = 0;
 
     /**
+     * @brief Get a list of all channels that have an active CAC ongoing of a given radio mac.
+     * 
+     * @param radio_mac MAC address of radio for which channel list is requested.
+     * @return CacActiveChannels List of channels.
+     */
+    virtual CacActiveChannels get_active_channels(const sMacAddr &radio_mac) const = 0;
+
+    /**
      * @brief Get the completion status object of a given radio.
      * 
      * @param radio Pointer to the AgentDB's radio element.

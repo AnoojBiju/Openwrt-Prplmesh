@@ -17,6 +17,7 @@ class CacStatusDatabase : public CacStatusInterface {
 public:
     CacAvailableChannels get_available_channels(const sMacAddr &radio_mac) const override;
     CacNonOccupancyChannels get_non_occupancy_channels(const sMacAddr &radio_mac) const override;
+    CacActiveChannels get_active_channels(const sMacAddr &radio_mac) const override;
 
     bool update_cac_status_db(const AgentDB::sRadio *radio) override;
 
@@ -47,6 +48,7 @@ public:
 private:
     std::unordered_map<sMacAddr, CacAvailableChannels> m_available_channels;
     std::unordered_map<sMacAddr, CacNonOccupancyChannels> m_non_occupancy_channels;
+    std::unordered_map<sMacAddr, CacActiveChannels> m_active_channels;
 };
 
 // utilities based on CacCapabilities interface
