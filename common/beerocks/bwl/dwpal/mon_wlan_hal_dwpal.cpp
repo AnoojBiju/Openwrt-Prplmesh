@@ -763,7 +763,8 @@ bool mon_wlan_hal_dwpal::update_vap_stats(const std::string &vap_iface_name, SVa
 }
 
 bool mon_wlan_hal_dwpal::update_stations_stats(const std::string &vap_iface_name,
-                                               const std::string &sta_mac, SStaStats &sta_stats)
+                                               const std::string &sta_mac, SStaStats &sta_stats,
+                                               bool is_read_unicast)
 {
     const char *tmp_str;
     int64_t tmp_int;
