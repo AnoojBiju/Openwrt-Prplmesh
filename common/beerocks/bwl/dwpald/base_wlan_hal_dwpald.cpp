@@ -695,15 +695,7 @@ bool base_wlan_hal_dwpal::refresh_radio_info()
         LOG(ERROR) << "DWPAL parse error ==> Abort";
         return false;
     }
-    /* TEMP: Traces... */
-    // LOG(DEBUG) << "GET_RADIO_INFO reply=\n" << reply;
-    // LOG(DEBUG) << "numOfValidArgs[0]= " << numOfValidArgs[0] << " ant_num= " << m_radio_info.ant_num;
-    // LOG(DEBUG) << "numOfValidArgs[1]= " << numOfValidArgs[1] << " tx_power= " << m_radio_info.tx_power;
-    // LOG(DEBUG) << "numOfValidArgs[2]= " << numOfValidArgs[2] << " bandwidth= " << m_radio_info.bandwidth;
-    // LOG(DEBUG) << "numOfValidArgs[3]= " << numOfValidArgs[3] << " vht_center_freq= " << m_radio_info.vht_center_freq;
-    // LOG(DEBUG) << "numOfValidArgs[4]= " << numOfValidArgs[4] << " wifi_ctrl_enabled= " << m_radio_info.wifi_ctrl_enabled;
-    // LOG(DEBUG) << "numOfValidArgs[5]= " << numOfValidArgs[5] << " tx_enabled= " << m_radio_info.tx_enabled;
-    // LOG(DEBUG) << "numOfValidArgs[6]= " << numOfValidArgs[6] << " channel= " << m_radio_info.channel;
+
     /* End of TEMP: Traces... */
     for (uint8_t i = 0; i < (sizeof(numOfValidArgs) / sizeof(size_t)); i++) {
         if (numOfValidArgs[i] == 0) {
@@ -746,14 +738,33 @@ bool base_wlan_hal_dwpal::refresh_radio_info()
                         m_radio_info.radio_state != eRadioState::DISABLED;
     LOG_IF(print_status, DEBUG) << "Radio state=" << m_radio_info.radio_state;
 
-    if (m_radio_info.frequency_band == beerocks::eFreqType::FREQ_UNKNOWN) {
-        if (!read_param("freq", reply_obj, tmp_int)) {
-            LOG(ERROR) << "Failed reading 'freq' parameter!";
-            return false;
-        } else {
-            m_radio_info.frequency_band = son::wireless_utils::which_freq_type(tmp_int);
-        }
+    //if (m_radio_info.frequency_band == beerocks::eFreqType::FREQ_UNKNOWN) {
+    if (!read_param("freq", reply_obj, tmp_int)) {
+        LOG(ERROR) << "Failed reading 'freq' parameter!";
+        return false;
+    } else {
+        m_radio_info.frequency_band = son::wireless_utils::which_freq_type(tmp_int);
     }
+    //}
+
+    /* TEMP: Traces... */
+    LOG(DEBUG) << "GET_RADIO_INFO reply=\n" << reply;
+    LOG(DEBUG) << "numOfValidArgs[0]= " << numOfValidArgs[0]
+               << " ant_num= " << m_radio_info.ant_num;
+    LOG(DEBUG) << "numOfValidArgs[1]= " << numOfValidArgs[1]
+               << " tx_power= " << m_radio_info.tx_power;
+    LOG(DEBUG) << "numOfValidArgs[2]= " << numOfValidArgs[2]
+               << " bandwidth= " << m_radio_info.bandwidth;
+    LOG(DEBUG) << "numOfValidArgs[3]= " << numOfValidArgs[3]
+               << " vht_center_freq= " << m_radio_info.vht_center_freq;
+    LOG(DEBUG) << "numOfValidArgs[4]= " << numOfValidArgs[4]
+               << " wifi_ctrl_enabled= " << m_radio_info.wifi_ctrl_enabled;
+    LOG(DEBUG) << "numOfValidArgs[5]= " << numOfValidArgs[5]
+               << " tx_enabled= " << m_radio_info.tx_enabled;
+    LOG(DEBUG) << "numOfValidArgs[6]= " << numOfValidArgs[6]
+               << " channel= " << m_radio_info.channel;
+    LOG(DEBUG) << "channel freq= " << tmp_int;
+    LOG(DEBUG) << "channel_ext_above= " << m_radio_info.channel_ext_above;
 
     if (m_radio_info.radio_state == eRadioState::DISABLED) {
         return true;
