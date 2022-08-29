@@ -63,6 +63,14 @@ public:
     virtual CacAvailableChannels get_available_channels(const sMacAddr &radio_mac) const = 0;
 
     /**
+     * @brief Get a list of all channels that cannot be occupied (radar was detected) of a given radio mac.
+     * 
+     * @param radio_mac MAC address of radio for which channel list is requested.
+     * @return CacNonOccupancyChannels List of channels.
+     */
+    virtual CacNonOccupancyChannels get_non_occupancy_channels(const sMacAddr &radio_mac) const = 0;
+
+    /**
      * @brief Get the completion status object of a given radio.
      * 
      * @param radio Pointer to the AgentDB's radio element.
