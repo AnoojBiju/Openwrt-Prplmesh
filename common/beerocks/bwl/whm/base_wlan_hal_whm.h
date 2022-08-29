@@ -60,6 +60,7 @@ public:
      */
     bool get_channel_utilization(uint8_t &channel_utilization) override;
     bool refresh_vap_info(int id);
+    std::string whm_get_vap_instance_name(const std::string &iface);
 
     // Protected methods
 protected:
@@ -69,6 +70,7 @@ protected:
     virtual bool set(const std::string &param, const std::string &value,
                      int vap_id = beerocks::IFACE_RADIO_ID) override;
     amxc_var_t *whm_get_wifi_ap_object(const std::string &iface);
+    amxc_var_t *whm_get_wifi_ssid_object(const std::string &iface);
     int whm_get_vap_id(const std::string &iface);
     bool whm_get_radio_ref(const std::string &iface, std::string &ref);
     bool whm_get_radio_path(const std::string &iface, std::string &path);

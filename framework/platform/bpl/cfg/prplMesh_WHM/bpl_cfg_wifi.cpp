@@ -113,15 +113,17 @@ int cfg_get_all_prplmesh_wifi_interfaces(BPL_WLAN_IFACE *interfaces, int *num_of
         return RETURN_ERR;
     }
 
-    std::string ap_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
-                          std::string(AMX_CL_AP_OBJ_NAME) + AMX_CL_OBJ_DELIMITER;
-    amxc_var_t *aps = m_ambiorix_cl->get_object(ap_path, 1);
+    // pwhm dm path: WiFi.Radio.*.Name?
+    std::string radio_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
+                             std::string(AMX_CL_RADIO_OBJ_NAME) + AMX_CL_OBJ_DELIMITER + "*" +
+                             AMX_CL_OBJ_DELIMITER + "Name";
+    amxc_var_t *radios = m_ambiorix_cl->get_object(radio_path, 1);
 
     int interfaces_count = 0;
-    if (aps) {
-        amxc_var_for_each(ap, aps)
+    if (radios) {
+        amxc_var_for_each(radio, radios)
         {
-            const char *ifname = GET_CHAR(ap, "Alias");
+            const char *ifname = GET_CHAR(radio, "Name");
             if (!ifname) {
                 continue;
             }
@@ -129,7 +131,7 @@ int cfg_get_all_prplmesh_wifi_interfaces(BPL_WLAN_IFACE *interfaces, int *num_of
             interfaces[interfaces_count].radio_num = interfaces_count;
             interfaces_count++;
         }
-        amxc_var_delete(&aps);
+        amxc_var_delete(&radios);
     }
 
     *num_of_interfaces = interfaces_count;
