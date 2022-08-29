@@ -251,7 +251,7 @@ bool slave_thread::thread_init()
     // Create a timer to run the FSM periodically
     constexpr auto fsm_timer_period = std::chrono::milliseconds(200);
     m_fsm_timer = m_timer_manager->add_timer("Agent FSM", fsm_timer_period, fsm_timer_period,
-                                             [&](int fd, beerocks::EventLoop &loop) {
+                                             [this, fsm_timer_period](int fd, beerocks::EventLoop &loop) {
                                                  fsm_all(fsm_timer_period.count());
                                                  return true;
                                              });
@@ -263,7 +263,7 @@ bool slave_thread::thread_init()
     // Create a timer to run internal tasks periodically
     constexpr auto tasks_timer_period = std::chrono::milliseconds(500);
 
-    TaskTimerLapse = [&](int fd, beerocks::EventLoop &loop) {
+    TaskTimerLapse = [this, tasks_timer_period](int fd, beerocks::EventLoop &loop) {
         // Allow tasks to execute up to 80% of the timer period
         m_task_pool.run_tasks(int(double(tasks_timer_period.count()) * 0.8));
         return true;
