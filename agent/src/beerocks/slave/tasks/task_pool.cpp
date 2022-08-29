@@ -48,6 +48,8 @@ void TaskPool::run_tasks(int max_exec_duration_ms)
         m_exec_iteration_slots      = 0;
     }
 
+    LOG(INFO) << "max_exec_duration_ms: " << max_exec_duration_ms;
+
     // Calculate the execution deadline time point
     auto exec_deadline_time =
         (max_exec_duration_ms)
@@ -89,6 +91,7 @@ void TaskPool::run_tasks(int max_exec_duration_ms)
         // If the maximal execution time in a single execution slot is reached
         if (std::chrono::steady_clock::now() >= exec_deadline_time) {
             m_exec_iteration_slots++;
+            LOG(ERROR) << "maximal execution time reached!";
             return;
         }
 

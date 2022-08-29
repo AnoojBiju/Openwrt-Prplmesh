@@ -156,10 +156,13 @@ bool CmduServerImpl::remove_connection(int fd, bool remove_handlers)
         return false;
     }
 
+    LOG(INFO) << "remove_handlers: " << (remove_handlers ? "True" : "False");
     // If requested, remove event handlers for the connected socket
-    if (remove_handlers && (!m_event_loop->remove_handlers(fd))) {
-        LOG(ERROR) << "Failed to remove event handlers for the connected socket! fd = " << fd;
-        return false;
+    if (remove_handlers) {
+        if (!m_event_loop->remove_handlers(fd)) {
+            LOG(ERROR) << "Failed to remove event handlers for the connected socket! fd = " << fd;
+            return false;
+        }
     }
 
     // Remove connection from the map of current connections.
