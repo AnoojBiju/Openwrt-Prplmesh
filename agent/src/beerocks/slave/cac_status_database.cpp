@@ -97,8 +97,13 @@ bool CacStatusDatabase::update_cac_status_db(const AgentDB::sRadio *radio)
                     continue;
                 }
                 cac_status.channel = channel;
-                // TODO: calculate duration value (PPM-1088)
-                cac_status.duration = std::chrono::seconds(0);
+                if (std::chrono::steady_clock::now() > radio->cac_completion_time) {
+                    LOG(WARNING) << "Exceeded estimated CAC completion time for radio "
+                                 << radio->front.iface_mac;
+                    continue;
+                }
+                cac_status.duration = std::chrono::duration_cast<std::chrono::seconds>(
+                    radio->cac_completion_time - std::chrono::steady_clock::now());
                 active_channels.push_back(cac_status);
             }
             break;

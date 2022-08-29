@@ -282,6 +282,9 @@ public:
             beerocks_message::eDfsState dfs_state;
         };
 
+        // Estimated time of completion of the CAC procedure.
+        std::chrono::time_point<std::chrono::steady_clock> cac_completion_time;
+
         // Key: Channel
         std::unordered_map<uint8_t, sChannelInfo> channels_list;
         using channel_preferences_map = std::map<sChannelPreference, std::set<uint8_t>>;
