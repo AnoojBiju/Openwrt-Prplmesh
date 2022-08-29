@@ -752,7 +752,9 @@ bool ApAutoConfigurationTask::add_wsc_m1_tlv(const std::string &radio_iface)
     cfg.auth_type_flags =
         WSC::eWscAuth(WSC::eWscAuth::WSC_AUTH_OPEN | WSC::eWscAuth::WSC_AUTH_WPA2PSK |
                       WSC::eWscAuth::WSC_AUTH_SAE);
-    cfg.encr_type_flags = uint16_t(WSC::eWscEncr::WSC_ENCR_AES);
+    cfg.encr_type_flags = uint16_t(WSC::eWscEncr::WSC_ENCR_AES) |
+                          uint16_t(WSC::eWscEncr::WSC_ENCR_TKIP) |
+                          uint16_t(WSC::eWscEncr::WSC_ENCR_NONE);
 
     bpl::sBoardInfo board_info;
     bpl::get_board_info(board_info);
