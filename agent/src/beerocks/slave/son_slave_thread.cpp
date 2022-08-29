@@ -4175,7 +4175,10 @@ bool slave_thread::agent_fsm()
             // Set all radios to "not started" in order to manually restart them in the STATE_JOIN_INIT.
             m_radio_managers.do_on_each_radio_manager(
                 [&](sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
-                    radio_manager.fronthaul_started = false;
+                    if (std::find(pending_fronthauls.begin(), pending_fronthauls.end(),
+                                  fronthaul_iface) != pending_fronthauls.end()) {
+                        radio_manager.fronthaul_started = false;
+                    }
                     return true;
                 });
             LOG(DEBUG) << "goto STATE_JOIN_INIT";
