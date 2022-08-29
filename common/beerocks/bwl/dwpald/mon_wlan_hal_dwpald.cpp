@@ -781,7 +781,8 @@ bool mon_wlan_hal_dwpal::update_vap_stats(const std::string &vap_iface_name, SVa
 }
 
 bool mon_wlan_hal_dwpal::update_stations_stats(const std::string &vap_iface_name,
-                                               const std::string &sta_mac, SStaStats &sta_stats)
+                                               const std::string &sta_mac, SStaStats &sta_stats,
+                                               bool is_read_unicast)
 {
     const char *tmp_str;
     int64_t tmp_int;
@@ -839,34 +840,67 @@ bool mon_wlan_hal_dwpal::update_stations_stats(const std::string &vap_iface_name
     }
     sta_stats.rx_phy_rate_100kb = (tmp_int / 100);
 
-    // TX Bytes
-    if (!read_param("BytesSent", reply, tmp_int)) {
-        LOG(ERROR) << "Failed reading BytesSent parameter!";
-        return false;
-    }
-    calc_curr_traffic(tmp_int, sta_stats.tx_bytes_cnt, sta_stats.tx_bytes);
+    if (is_read_unicast) {
+        // Fetch unicast packet counters
 
-    // RX Bytes
-    if (!read_param("BytesReceived", reply, tmp_int)) {
-        LOG(ERROR) << "Failed reading BytesReceived parameter!";
-        return false;
-    }
-    calc_curr_traffic(tmp_int, sta_stats.rx_bytes_cnt, sta_stats.rx_bytes);
+        int res         = 0;
+        auto client_mac = tlvf::mac_from_string(sta_mac);
+        sStaExtendedStats sta_ext_stats;
+        size_t stats_size = sizeof(sta_ext_stats);
 
-    // TX Packets
-    if (!read_param("PacketsSent", reply, tmp_int)) {
-        LOG(ERROR) << "Failed reading PacketsSent parameter!";
-        return false;
-    }
-    calc_curr_traffic(tmp_int, sta_stats.tx_packets_cnt, sta_stats.tx_packets);
+        auto ret = dwpald_drv_get(
+            (char *)vap_iface_name.c_str(), LTQ_NL80211_VENDOR_SUBCMD_GET_TR181_PEER_STATS, &res,
+            client_mac.oct, sizeof(client_mac.oct), &sta_ext_stats, &stats_size);
+        if ((ret != DWPALD_SUCCESS) || (res < 0)) {
+            LOG(ERROR) << __func__ << " LTQ_NL80211_VENDOR_SUBCMD_GET_TR181_PEER_STATS failed!";
+            return false;
+        }
 
-    // RX Packets
-    if (!read_param("PacketsReceived", reply, tmp_int)) {
-        LOG(ERROR) << "Failed reading PacketsReceived parameter!";
-        return false;
-    }
-    calc_curr_traffic(tmp_int, sta_stats.rx_packets_cnt, sta_stats.rx_packets);
+        // TX Bytes
+        calc_curr_traffic(sta_ext_stats.unicast_tx_bytes_cnt, sta_stats.tx_bytes_cnt,
+                          sta_stats.tx_bytes);
+        // RX Bytes
+        calc_curr_traffic(sta_ext_stats.unicast_rx_bytes_cnt, sta_stats.rx_bytes_cnt,
+                          sta_stats.rx_bytes);
+        // TX Packets
+        calc_curr_traffic(sta_ext_stats.unicast_tx_packets_cnt, sta_stats.tx_packets_cnt,
+                          sta_stats.tx_packets);
+        // RX Packets
+        calc_curr_traffic(sta_ext_stats.unicast_rx_packets_cnt, sta_stats.rx_packets_cnt,
+                          sta_stats.rx_packets);
 
+        /* Tx error and Rx error counters for unicast packets will be
+         * updated once appropriate vendor specific NL cmd is identified/implemented.
+         */
+    } else {
+        // TX Bytes
+        if (!read_param("BytesSent", reply, tmp_int)) {
+            LOG(ERROR) << "Failed reading BytesSent parameter!";
+            return false;
+        }
+        calc_curr_traffic(tmp_int, sta_stats.tx_bytes_cnt, sta_stats.tx_bytes);
+
+        // RX Bytes
+        if (!read_param("BytesReceived", reply, tmp_int)) {
+            LOG(ERROR) << "Failed reading BytesReceived parameter!";
+            return false;
+        }
+        calc_curr_traffic(tmp_int, sta_stats.rx_bytes_cnt, sta_stats.rx_bytes);
+
+        // TX Packets
+        if (!read_param("PacketsSent", reply, tmp_int)) {
+            LOG(ERROR) << "Failed reading PacketsSent parameter!";
+            return false;
+        }
+        calc_curr_traffic(tmp_int, sta_stats.tx_packets_cnt, sta_stats.tx_packets);
+
+        // RX Packets
+        if (!read_param("PacketsReceived", reply, tmp_int)) {
+            LOG(ERROR) << "Failed reading PacketsReceived parameter!";
+            return false;
+        }
+        calc_curr_traffic(tmp_int, sta_stats.rx_packets_cnt, sta_stats.rx_packets);
+    }
     // Retranmission Count
     if (!read_param("RetransCount", reply, tmp_int, true)) {
         LOG(ERROR) << "Failed reading RetransCount parameter!";
@@ -874,7 +908,7 @@ bool mon_wlan_hal_dwpal::update_stations_stats(const std::string &vap_iface_name
     }
     sta_stats.retrans_count = tmp_int;
 
-    //Optional: Current link bandwidth
+    // Optional: Current link bandwidth
     sta_stats.dl_bandwidth = beerocks::BANDWIDTH_UNKNOWN;
     if (read_param("CbwMHz", reply, tmp_int, true) && (tmp_int > 0)) {
         sta_stats.dl_bandwidth = beerocks::utils::convert_bandwidth_to_enum(int(tmp_int));
