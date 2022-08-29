@@ -82,7 +82,8 @@ bool mon_wlan_hal_dummy::update_vap_stats(const std::string &vap_iface_name, SVa
 }
 
 bool mon_wlan_hal_dummy::update_stations_stats(const std::string &vap_iface_name,
-                                               const std::string &sta_mac, SStaStats &sta_stats)
+                                               const std::string &sta_mac, SStaStats &sta_stats,
+                                               bool is_read_unicast)
 {
     SStaStats dummy_sta_stats;
     auto dummy_sta = m_dummy_stas_map.find(sta_mac);
