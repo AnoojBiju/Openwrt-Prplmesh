@@ -961,6 +961,8 @@ bool get_controller_message_timeout_seconds(std::chrono::seconds &timeout_second
  */
 bool get_controller_heartbeat_state_timeout_seconds(std::chrono::seconds &timeout_seconds);
 
+bool cfg_get_clients_unicast_measurements(bool &client_unicast_measurements);
+
 } // namespace bpl
 } // namespace beerocks
 
