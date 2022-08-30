@@ -1714,9 +1714,52 @@ bool dynamic_channel_selection_r2_task::handle_tlv_profile2_cac_completion_repor
     const std::shared_ptr<wfa_map::tlvProfile2CacCompletionReport> &cac_completion_report_tlv)
 {
     LOG(DEBUG) << "Profile-2 CAC Completion Report is received";
-    // Currently there is no handling for the cac completion report.
-    // TODO - PPM-1524: Parse the CAC Completion Report TLV.
 
+    std::stringstream ss;
+
+    ss << "CAC Completion Report: " << std::endl;
+    for (size_t i = 0; i < cac_completion_report_tlv->number_of_cac_radios(); i++) {
+
+        if (!std::get<0>(cac_completion_report_tlv->cac_radios(i))) {
+            LOG(ERROR) << "Invalid CAC radio in tlvProfile2CacCompletionReport";
+            continue;
+        }
+
+        auto &cac_radio = std::get<1>(cac_completion_report_tlv->cac_radios(i));
+        // TODO: PPM-2197
+        ss << "Radio " << cac_radio.radio_uid() << " with status "
+           << cac_radio.cac_completion_status() << std::endl;
+
+        if (cac_radio.cac_completion_status() !=
+            wfa_map::cCacCompletionReportRadio::eCompletionStatus::NOT_PERFORMED) {
+            ss << "CAC was performed on: [OC: " << int(cac_radio.operating_class())
+               << ", channel: " << int(cac_radio.channel()) << "]" << std::endl;
+        }
+
+        if (cac_radio.cac_completion_status() ==
+            wfa_map::cCacCompletionReportRadio::eCompletionStatus::RADAR_DETECTED) {
+
+            for (size_t j = 0; j < cac_radio.number_of_detected_pairs(); j++) {
+
+                if (!std::get<0>(cac_radio.detected_pairs(i))) {
+                    LOG(ERROR) << "Invalid detected pair in tlvProfile2CacCompletionReport";
+                    continue;
+                }
+
+                auto &detected_pair = std::get<1>(cac_radio.detected_pairs(i));
+                ss << "Radar was detected on: [OC: " << int(detected_pair.operating_class_detected)
+                   << ", channel: " << int(detected_pair.channel_detected) << "]" << std::endl;
+            }
+
+        } else {
+            if (!cac_radio.number_of_detected_pairs() == 0) {
+                LOG(ERROR)
+                    << "Number of detected pairs value must be zeroed if radar was not detected!";
+            }
+        }
+    }
+
+    LOG(DEBUG) << ss.str();
     return true;
 }
 
