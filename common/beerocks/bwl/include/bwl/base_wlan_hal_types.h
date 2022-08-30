@@ -297,6 +297,10 @@ typedef struct {
 } sACTION_APMANAGER_DPP_AUTHENTICATION_RESPONSE;
 
 typedef struct {
+    sMacAddr enrollee_mac;
+} sACTION_APMANAGER_DPP_CONFIGURATION_REQUEST;
+
+typedef struct {
     sClientAssociationParams params;
 } sACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION;
 
