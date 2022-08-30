@@ -43,7 +43,7 @@
 #define INFO(fmt, args...) LOGF_LOG_INFO(fmt, ##args)
 #define DEBUG(fmt, args...) LOGF_LOG_DEBUG(fmt, ##args)
 
-#define MAX_UCI_BUF_LEN 64
+#define MAX_UCI_BUF_LEN 128
 
 enum paramType { TYPE_RADIO = 0, TYPE_VAP };
 // Enum AutoPrint generated code snippet begining- DON'T EDIT!
