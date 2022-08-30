@@ -1046,3 +1046,8 @@ sClient:
       Determines the period of time after which the client configuration should be cleared,
       0 - Never age.
       -1 - Not Configured.
+
+sBssidVapId:
+  _type: struct
+  bssid: sMacAddr
+  vap_id: int8_t
