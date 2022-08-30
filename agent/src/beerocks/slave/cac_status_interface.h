@@ -21,9 +21,7 @@ struct sCacStatus {
     uint8_t operating_class = 0;
     uint8_t channel         = 0;
     // duration is used based on the context
-    std::chrono::seconds duration          = std::chrono::seconds(0);
-    using eCacCompletionStatus             = wfa_map::cCacCompletionReportRadio::eCompletionStatus;
-    eCacCompletionStatus completion_status = eCacCompletionStatus::NOT_PERFORMED;
+    std::chrono::seconds duration = std::chrono::seconds(0);
 };
 
 using CacAvailableChannels    = std::vector<sCacStatus>;
