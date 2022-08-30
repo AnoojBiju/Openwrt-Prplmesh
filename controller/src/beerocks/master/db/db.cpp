@@ -7109,25 +7109,87 @@ bool db::dm_clear_cac_status_reports(std::shared_ptr<Agent> agent)
     return m_ambiorix_datamodel->remove_all_instances(agent->dm_path + ".CACStatus");
 }
 
-bool db::dm_add_cac_status_available_channel(std::shared_ptr<Agent> agent, uint8_t operating_class,
-                                             uint8_t channel)
+bool db::dm_add_cac_status_report(
+    std::shared_ptr<Agent> agent,
+    const std::vector<wfa_map::tlvProfile2CacStatusReport::sAvailableChannels> &available_channels,
+    const std::vector<wfa_map::tlvProfile2CacStatusReport::sDetectedPairs> &non_occupancy_channels,
+    const std::vector<wfa_map::tlvProfile2CacStatusReport::sActiveCacPairs> &active_channels)
 {
     if (agent->dm_path.empty()) {
         return true;
     }
 
-    bool ret_val                = true;
-    auto available_channel_list = agent->dm_path + ".CACStatus.CACAvailableChannel";
-
-    auto available_channel = m_ambiorix_datamodel->add_instance(available_channel_list);
-    if (available_channel.empty()) {
-        LOG(ERROR) << "Failed to add instance to " << available_channel_list;
+    auto cac_status_path = m_ambiorix_datamodel->add_instance(agent->dm_path + ".CACStatus");
+    if (cac_status_path.empty()) {
+        LOG(ERROR) << "Failed to add: " << agent->dm_path << ".CACStatus";
         return false;
     }
 
-    ret_val &= m_ambiorix_datamodel->set(available_channel, "OpClass", operating_class);
-    ret_val &= m_ambiorix_datamodel->set(available_channel, "Channel", channel);
-    ret_val &= m_ambiorix_datamodel->set_current_time(agent->dm_path + ".CACStatus");
+    bool ret_val = true;
+
+    if (!available_channels.empty()) {
+
+        for (const auto &available_channel : available_channels) {
+            auto available_channel_path =
+                m_ambiorix_datamodel->add_instance(cac_status_path + ".CACAvailableChannel");
+            if (available_channel_path.empty()) {
+                LOG(ERROR) << "Failed to add instance to " << cac_status_path
+                           << ".CACAvailableChannel";
+                return false;
+            }
+
+            ret_val &= m_ambiorix_datamodel->set(available_channel_path, "OpClass",
+                                                 available_channel.operating_class);
+            ret_val &= m_ambiorix_datamodel->set(available_channel_path, "Channel",
+                                                 available_channel.channel);
+            ret_val &= m_ambiorix_datamodel->set(available_channel_path, "Minutes",
+                                                 available_channel.minutes_since_cac_completion);
+        }
+    }
+
+    if (!non_occupancy_channels.empty()) {
+
+        for (const auto &non_occupancy_channel : non_occupancy_channels) {
+            auto non_occupancy_channel_path =
+                m_ambiorix_datamodel->add_instance(cac_status_path + ".CACNonOccupancyChannel");
+            if (non_occupancy_channel_path.empty()) {
+                LOG(ERROR) << "Failed to add instance to " << cac_status_path
+                           << ".CACNonOccupancyChannel";
+                return false;
+            }
+
+            ret_val &= m_ambiorix_datamodel->set(non_occupancy_channel_path, "OpClass",
+                                                 non_occupancy_channel.operating_class_detected);
+            ret_val &= m_ambiorix_datamodel->set(non_occupancy_channel_path, "Channel",
+                                                 non_occupancy_channel.channel_detected);
+            ret_val &= m_ambiorix_datamodel->set(non_occupancy_channel_path, "Seconds",
+                                                 non_occupancy_channel.duration);
+        }
+    }
+
+    if (!active_channels.empty()) {
+
+        for (const auto &active_channel : active_channels) {
+            auto active_channel_path =
+                m_ambiorix_datamodel->add_instance(cac_status_path + ".CACActiveChannel");
+            if (active_channel_path.empty()) {
+                LOG(ERROR) << "Failed to add instance to " << cac_status_path
+                           << ".CACActiveChannel";
+                return false;
+            }
+
+            ret_val &= m_ambiorix_datamodel->set(active_channel_path, "OpClass",
+                                                 active_channel.operating_class_active_cac);
+            ret_val &= m_ambiorix_datamodel->set(active_channel_path, "Channel",
+                                                 active_channel.channel_active_cac);
+            uint32_t countdown;
+            memcpy(&countdown, active_channel.countdown, sizeof(active_channel.countdown));
+            ret_val &= m_ambiorix_datamodel->set(active_channel_path, "Countdown", countdown);
+        }
+    }
+
+    ret_val &= m_ambiorix_datamodel->set_current_time(cac_status_path);
+
     return ret_val;
 }
 

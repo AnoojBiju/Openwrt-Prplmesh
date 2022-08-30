@@ -1775,6 +1775,12 @@ bool dynamic_channel_selection_r2_task::handle_tlv_profile2_cac_status_report(
         // TODO: Add debug print for duration parameter (need value conversion - PPM-2302)
     }
 
+    if (!database.dm_add_cac_status_report(agent, available_channels, non_occupancy_channels,
+                                           active_channels)) {
+        LOG(ERROR) << "Failed to add CAC Status Report to DM";
+        return false;
+    }
+
     LOG(DEBUG) << ss.str();
     return true;
 }
