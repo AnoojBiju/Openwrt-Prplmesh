@@ -1,18 +1,19 @@
 /* SPDX-License-Identifier: BSD-2-Clause-Patent
  *
- * SPDX-FileCopyrightText: 2016-2020 the prplMesh contributors (see AUTHORS.md)
+ * SPDX-FileCopyrightText: 2016-2022 the prplMesh contributors (see AUTHORS.md)
  *
  * This code is subject to the terms of the BSD+Patent license.
  * See LICENSE file for more details.
  */
 
-#ifndef _CAC_STAUS_H_
-#define _CAC_STAUS_H_
+#ifndef _CAC_STATUS_H_
+#define _CAC_STATUS_H_
 
-#include "tlvf/common/sMacAddr.h"
-#include "tlvf/wfa_map/tlvProfile2CacCompletionReport.h"
 #include <chrono>
 #include <vector>
+
+#include "agent_db.h"
+#include "tlvf/wfa_map/tlvProfile2CacCompletionReport.h"
 
 namespace beerocks {
 
@@ -35,7 +36,12 @@ using CacActiveChannels       = std::vector<sCacStatus>;
  * a vector of operating class + channel that are overlapping with the first pair of operating
  * class and channel
  */
-using CacCompletionStatus = std::pair<sCacStatus, std::vector<std::pair<uint8_t, uint8_t>>>;
+struct sCacCompletionStatus : public sCacStatus {
+    using eCacCompletionStatus             = wfa_map::cCacCompletionReportRadio::eCompletionStatus;
+    eCacCompletionStatus completion_status = eCacCompletionStatus::NOT_PERFORMED;
+    /** Operating class + channel that are overlapping with the sCacStatus operating class / channel. */
+    std::vector<std::pair<uint8_t, uint8_t>> overlapping_channels;
+};
 
 class CacStatusInterface {
 public:
@@ -52,10 +58,10 @@ public:
     /**
      * @brief Get the completion status object of a given radio.
      * 
-     * @param radio Radio MAC.
-     * @return CacCompletionStatus object of the channel.
+     * @param radio Pointer to the AgentDB's radio element.
+     * @return sCacCompletionStatus struct of the channel.
      */
-    virtual CacCompletionStatus get_completion_status(const sMacAddr &radio) const = 0;
+    virtual sCacCompletionStatus get_completion_status(const AgentDB::sRadio *radio) const = 0;
 };
 
 // utilities based on CacCapabilities interface

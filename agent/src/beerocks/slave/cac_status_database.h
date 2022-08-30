@@ -16,7 +16,7 @@ namespace beerocks {
 class CacStatusDatabase : public CacStatusInterface {
 public:
     CacAvailableChannels get_available_channels(const sMacAddr &radio) const override;
-    CacCompletionStatus get_completion_status(const sMacAddr &radio) const override;
+    sCacCompletionStatus get_completion_status(const AgentDB::sRadio *radio) const override;
 
     /**
      * @brief Fills in CAC Completion Report TLV by given radio.
