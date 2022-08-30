@@ -3,9 +3,6 @@
 This directory builds for RDK-B in a Docker container.
 The scripts optimise the build time by making use of the download and sstate caches of OpenEmbedded.
 
-* Export the RDK credentials in the environment.
-  The username must be set in RDK_GIT_USER, the password in RDK_GIT_TOKEN.
-  Alternatively, the password can be written base64-encoded to a file, and the filename is put in the RDK_GIT_TOKEN_FILE environment variable.
 * Run `tools/docker/builder/rdk-b/build.sh -d <device>` to start the build.
   The `-d` option is mandatory.
   Supported devices is currently only `turris-omnia`.
