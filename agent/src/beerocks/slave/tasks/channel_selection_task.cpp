@@ -1485,6 +1485,14 @@ ChannelSelectionTask::select_next_channel(const sMacAddr &radio_mac)
                 }
             }
 
+            auto find_best_beacon_channel = [&]() {
+                const auto beacon_channels =
+                    son::wireless_utils::is_operating_class_using_central_channel(operating_class)
+                        ? son::wireless_utils::center_channel_5g_to_beacon_channels(central_channel,
+                                                                                    operating_class)
+                        : std::vector<uint8_t>{channel_number};
+            };
+
             LOG(INFO) << "[" << channel_number << "-" << operating_class << "("
                       << utils::convert_bandwidth_to_int(bandwidth)
                       << "MHz)] is the new Best-Channel.";
