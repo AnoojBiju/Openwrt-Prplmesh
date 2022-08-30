@@ -903,8 +903,9 @@ bool Controller::autoconfig_wsc_add_m2(WSC::m1 &m1,
     m2_cfg.serial_number       = "prpl12345";
     m2_cfg.primary_dev_type_id = WSC::WSC_DEV_NETWORK_INFRA_GATEWAY;
     m2_cfg.device_name         = "prplmesh-controller";
-    m2_cfg.encr_type_flags =
-        uint16_t(WSC::eWscEncr::WSC_ENCR_NONE) | uint16_t(WSC::eWscEncr::WSC_ENCR_AES);
+    m2_cfg.encr_type_flags     = uint16_t(WSC::eWscEncr::WSC_ENCR_NONE) |
+                             uint16_t(WSC::eWscEncr::WSC_ENCR_AES) |
+                             uint16_t(WSC::eWscEncr::WSC_ENCR_TKIP);
     m2_cfg.auth_type_flags =
         WSC::eWscAuth(WSC::eWscAuth::WSC_AUTH_OPEN | WSC::eWscAuth::WSC_AUTH_WPA2PSK |
                       WSC::eWscAuth::WSC_AUTH_SAE);
