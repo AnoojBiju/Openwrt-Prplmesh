@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-2-Clause-Patent
  *
- * SPDX-FileCopyrightText: 2016-2020 the prplMesh contributors (see AUTHORS.md)
+ * SPDX-FileCopyrightText: 2016-2022 the prplMesh contributors (see AUTHORS.md)
  *
  * This code is subject to the terms of the BSD+Patent license.
  * See LICENSE file for more details.
@@ -96,6 +96,41 @@ CacCompletionStatus CacStatusDatabase::get_completion_status(const sMacAddr &rad
     }
 
     return ret;
+}
+
+bool CacStatusDatabase::add_cac_completion_report_tlv(
+    const AgentDB::sRadio *radio,
+    const std::shared_ptr<wfa_map::tlvProfile2CacCompletionReport> cac_completion_report_tlv)
+{
+    if (!radio) {
+        return false;
+    }
+
+    const auto &cac_radio = cac_completion_report_tlv->create_cac_radios();
+    if (!cac_radio) {
+        LOG(ERROR) << "Failed to create cac radio for " << radio->front.iface_mac;
+        return false;
+    }
+
+    cac_radio->radio_uid()             = radio->front.iface_mac;
+    const auto &cac_completion         = get_completion_status(radio->front.iface_mac);
+    cac_radio->operating_class()       = cac_completion.first.operating_class;
+    cac_radio->channel()               = cac_completion.first.channel;
+    cac_radio->cac_completion_status() = cac_completion.first.completion_status;
+
+    if (!cac_completion.second.empty()) {
+        cac_radio->alloc_detected_pairs(cac_completion.second.size());
+        for (unsigned int i = 0; i < cac_completion.second.size(); ++i) {
+            if (std::get<0>(cac_radio->detected_pairs(i))) {
+                auto &cac_detected_pair = std::get<1>(cac_radio->detected_pairs(i));
+                cac_detected_pair.operating_class_detected = cac_completion.second[i].first;
+                cac_detected_pair.channel_detected         = cac_completion.second[i].second;
+            }
+        }
+    }
+    cac_completion_report_tlv->add_cac_radios(cac_radio);
+
+    return true;
 }
 
 } // namespace beerocks

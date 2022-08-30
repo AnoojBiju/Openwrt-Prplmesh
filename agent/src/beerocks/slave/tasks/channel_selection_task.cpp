@@ -1148,10 +1148,9 @@ bool ChannelSelectionTask::create_radio_operation_restriction_tlv(const sMacAddr
 
 bool ChannelSelectionTask::create_cac_completion_report_tlv()
 {
-    // create completion report
     auto cac_completion_report_tlv = m_cmdu_tx.addClass<wfa_map::tlvProfile2CacCompletionReport>();
     if (!cac_completion_report_tlv) {
-        LOG(ERROR) << "Failed to create cac-completion-report-tlv";
+        LOG(ERROR) << "Failed to create CAC Completion Report TLV";
         return false;
     }
 
@@ -1166,30 +1165,10 @@ bool ChannelSelectionTask::create_cac_completion_report_tlv()
             return false;
         }
 
-        auto cac_radio = cac_completion_report_tlv->create_cac_radios();
-        if (!cac_radio) {
-            LOG(ERROR) << "Failed to create cac radio for " << radio->front.iface_mac;
+        if (!cac_status_database.add_cac_completion_report_tlv(radio, cac_completion_report_tlv)) {
+            LOG(DEBUG) << "Failed to add CAC Completion Report TLV for " << radio->front.iface_mac;
             return false;
         }
-
-        cac_radio->radio_uid() = radio->front.iface_mac;
-        const auto &cac_completion =
-            cac_status_database.get_completion_status(radio->front.iface_mac);
-        cac_radio->operating_class()       = cac_completion.first.operating_class;
-        cac_radio->channel()               = cac_completion.first.channel;
-        cac_radio->cac_completion_status() = cac_completion.first.completion_status;
-
-        if (!cac_completion.second.empty()) {
-            cac_radio->alloc_detected_pairs(cac_completion.second.size());
-            for (unsigned int i = 0; i < cac_completion.second.size(); ++i) {
-                if (std::get<0>(cac_radio->detected_pairs(i))) {
-                    auto &cac_detected_pair = std::get<1>(cac_radio->detected_pairs(i));
-                    cac_detected_pair.operating_class_detected = cac_completion.second[i].first;
-                    cac_detected_pair.channel_detected         = cac_completion.second[i].second;
-                }
-            }
-        }
-        cac_completion_report_tlv->add_cac_radios(cac_radio);
     }
 
     return true;
