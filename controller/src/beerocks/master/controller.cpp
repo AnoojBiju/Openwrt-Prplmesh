@@ -1272,6 +1272,21 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const sMacAddr &src_mac,
     LOG(INFO) << "Received CHANNEL_SCAN_REPORT_MESSAGE, agent src_mac=" << src_mac
               << ", mid=" << std::hex << current_message_mid;
 
+    // Build and send ACK message CMDU to the originator.
+    auto cmdu_tx_header =
+        cmdu_tx.create(current_message_mid, ieee1905_1::eMessageType::ACK_MESSAGE);
+    if (!cmdu_tx_header) {
+        LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
+        return false;
+    }
+
+    // Zero Error Code TLVs in this ACK message
+    LOG(DEBUG) << "Sending ACK message to the originator, mid=" << std::hex << current_message_mid;
+    if (!send_cmdu_to_broker(cmdu_tx, src_mac, database.get_local_bridge_mac())) {
+        LOG(ERROR) << "Failed to send ACK_MESSAGE back to agent";
+        return false;
+    }
+
     // get Timestamp TLV
     auto timestamp_tlv = cmdu_rx.getClass<wfa_map::tlvTimestamp>();
     if (!timestamp_tlv) {
@@ -1348,21 +1363,6 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const sMacAddr &src_mac,
         result_count++;
     }
     LOG(DEBUG) << "Done with Channel Scan Results TLVs";
-
-    // Build and send ACK message CMDU to the originator.
-    auto cmdu_tx_header =
-        cmdu_tx.create(current_message_mid, ieee1905_1::eMessageType::ACK_MESSAGE);
-    if (!cmdu_tx_header) {
-        LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
-        return false;
-    }
-
-    // Zero Error Code TLVs in this ACK message
-    LOG(DEBUG) << "Sending ACK message to the originator, mid=" << std::hex << current_message_mid;
-    if (!send_cmdu_to_broker(cmdu_tx, src_mac, database.get_local_bridge_mac())) {
-        LOG(ERROR) << "Failed to send ACK_MESSAGE back to agent";
-        return false;
-    }
 
     /**
      * To support scan reports that may exceed the maximum size supported by the transport layer
