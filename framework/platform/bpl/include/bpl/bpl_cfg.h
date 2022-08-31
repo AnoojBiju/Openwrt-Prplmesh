@@ -379,7 +379,7 @@ int cfg_get_load_steer_on_vaps(int num_of_interfaces,
                                char load_steer_on_vaps[BPL_LOAD_STEER_ON_VAPS_LEN]);
 
 /**
- * 
+ *
  */
 int cfg_get_dcs_channel_pool(int radio_num, char channel_pool[BPL_DCS_CHANNEL_POOL_LEN]);
 /**
@@ -826,7 +826,7 @@ bool cfg_get_radio_stats_enable(bool &radio_stats_enable);
 
 /**
  * @brief Get radio's monitored BSSIDs by radio's interface.
- * 
+ *
  * @param [in] iface Radio interface name.
  * @param [out] monitored_BSSs Set of BSSIDs to monitor.
  * @return true on success, otherwise false.
@@ -837,10 +837,10 @@ bool bpl_cfg_get_monitored_BSSs_by_radio_iface(const std::string &iface,
 /**
  * @brief Get a string identifying the particular device that is unique for the indicated model
  * and manufacturer.
- * 
- * @note It is the manufacturer responsability to override implementation of this function and
+ *
+ * @note It is the manufacturer responsibility to override implementation of this function and
  * and return a correct string.
- * 
+ *
  * @param [out] serial_number  Serial number of the device.
  * @return true on success, otherwise false.
  */
@@ -848,10 +848,10 @@ bool get_serial_number(std::string &serial_number);
 
 /**
  * @brief Get a string identifying the Wi-Fi chip vendor a radio.
- * 
- * @note It is the manufacturer responsability to override implementation of this function and
+ *
+ * @note It is the manufacturer responsibility to override implementation of this function and
  * and return a correct string.
- * 
+ *
  * @param [in] ruid  Radio UID of the radio to get the chipset vendor from.
  * @param [out] chipset_vendor  Chipset vendor of the radio specified by @a ruid.
  * @return true on success, otherwise false.
@@ -860,10 +860,10 @@ bool get_ruid_chipset_vendor(const sMacAddr &ruid, std::string &chipset_vendor);
 
 /**
  * @brief Get the maximum service prioritization rules supported by the Multi-AP Agent.
- * 
- * @note It is the manufacturer responsability to override implementation of this function and
+ *
+ * @note It is the manufacturer responsibility to override implementation of this function and
  * and return a correct string.
- * 
+ *
  * @param [out] max_prioritization_rules The maximum service prioritization rules supported by the
  * Multi-AP Agent. If not supported set to zero.
  * @return true on success, otherwise false.
@@ -872,18 +872,18 @@ bool get_max_prioritization_rules(uint32_t &max_prioritization_rules);
 
 /**
  * @brief Get the RSSI measurements timeout which will be used by the Optimal-Path task.
- * 
+ *
  * @param [out] rssi_measurements_timeout_msec RSSI measurements timeout in milliseconds.
- * 
+ *
  * @return true on success, otherwise false.
  */
 bool cfg_get_rssi_measurements_timeout(int &rssi_measurements_timeout_msec);
 
 /**
  * @brief Get the 11K beacon measurements timeout which will be used by the Optimal-Path task.
- * 
+ *
  * @param [out] beacon_measurements_timeout_msec 11K beacon measurements timeout in milliseconds.
- * 
+ *
  * @return true on success, otherwise false.
  */
 bool cfg_get_beacon_measurements_timeout(int &beacon_measurements_timeout_msec);
