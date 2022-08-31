@@ -21,27 +21,14 @@ usage() {
     echo "      -h|--help - show this help menu"
     echo "      -v|--verbose - increase the script's verbosity"
     echo " -d is always required."
-    echo ""
-    echo "The following environment variables will affect the build:"
-    echo " - RDK_GIT_USER: the username with which to authenticate to rdk"
-    echo " - RDK_GIT_TOKEN_FILE: file containing the password for authentication to rdk"
 }
 
 build_image() {
     info "Building image $image_tag"
-    if [ -n "$RDK_GIT_TOKEN_FILE" ]; then
-        RDK_GIT_TOKEN="$(base64 -d "$RDK_GIT_TOKEN_FILE")"
-    fi
-    if [ -z "$RDK_GIT_TOKEN" ]; then
-        err "RDK_GIT_TOKEN not set, can't clone RDK-B!"
-        exit 1
-    fi
 
     # Docker doesn't allow symlinks pointing outside of the directory, so we need to copy it
     cp "${rootdir}/tools/get-git-hash.sh" "$scriptdir"
     docker build --tag "$image_tag" \
-           --build-arg RDK_GIT_USER="$RDK_GIT_USER" \
-           --build-arg RDK_GIT_TOKEN="$RDK_GIT_TOKEN" \
            --build-arg UID="$(id -u)" \
            --build-arg GID="$(id -g)" \
            "$scriptdir/"

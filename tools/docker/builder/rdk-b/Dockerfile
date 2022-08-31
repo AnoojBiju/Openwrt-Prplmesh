@@ -62,8 +62,6 @@ RUN apt-get update \
     && update-locale LANG=en_US.UTF-8
 ENV LANG=en_US.UTF-8
 
-COPY git-askpass /usr/bin/git-askpass
-
 ARG UID
 ARG GID
 
@@ -71,23 +69,17 @@ RUN groupadd --gid $GID --non-unique rdk \
     && useradd --create-home --shell /bin/bash --non-unique --uid $UID --gid $GID rdk
 USER rdk
 
-ENV GIT_ASKPASS=/usr/bin/git-askpass
-
 ####
 ## Clone RDK-B repositories
 ####
 
-ARG RDK_GIT_USER
-ARG RDK_GIT_TOKEN
-RUN git config --global \
-    "url.https://$RDK_GIT_USER@code.rdkcentral.com/.insteadOf" https://code.rdkcentral.com/ \
-    && git config --global user.email "prplmesh@prplfoundation.org" \
+RUN git config --global user.email "prplmesh@prplfoundation.org" \
     && git config --global user.name "prplMesh RDK-B Build Bot" \
     && mkdir /home/rdk/rdk-b /home/rdk/cache
 WORKDIR /home/rdk/rdk-b
 
 RUN printf '\033[1;35m%s Cloning RDK-B\n\033[0m' "$(date --iso-8601=seconds --universal)" \
-    && yes | repo init -u https://code.rdkcentral.com/r/manifests \
+    && yes | repo init -u https://code.rdkcentral.com/r/rdkcmf/manifests \
     -m rdkb-turris-extsrc.xml -b rdkb-2021q4-dunfell \
     && repo sync
 
