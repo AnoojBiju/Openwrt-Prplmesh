@@ -19,7 +19,7 @@ using namespace beerocks;
 using namespace net;
 
 static constexpr std::chrono::seconds HEARTBEAT_SENDING_PERIOD_SEC{2};
-static constexpr uint8_t MAX_HEARTBEAT_COUNT{3};
+static constexpr uint8_t MAX_HEARTBEAT_COUNT{8};
 static constexpr uint8_t INDIRECT_TIMEOUT_MULTIPLIER{3};
 
 #define FSM_IS_IN_STATE(state) (m_task_state == eState::state)
@@ -71,30 +71,37 @@ void ControllerConnectivityTask::work()
         break;
     }
     case eState::WAIT_FOR_CONTROLLER_DISCOVERY: {
-        check_backhaul_connection_time();
+        if (check_controller_discovery_timeout()) {
+            LOG(DEBUG) << "Backhaul link does not provide Controller connectivity";
+            FSM_MOVE_STATE(CONNECTION_TIMEOUT);
+        }
         break;
     }
     case eState::CONTROLLER_MONITORING: {
 
-        // If indirect checking is disabled, don't check connectivity when there is indirect link
-        auto db = AgentDB::get();
-        if (m_direct_link_to_controller ||
-            db->device_conf.check_indirect_connectivity_to_controller) {
-            check_controller_last_contact_time();
+        if (check_controller_message_timeout()) {
+            clear_heartbeat_counters();
+            FSM_MOVE_STATE(WAIT_RESPONSE_FROM_CONTROLLER);
         }
         break;
     }
     case eState::WAIT_RESPONSE_FROM_CONTROLLER: {
-        check_controller_last_contact_time();
-        if (FSM_IS_IN_STATE(WAIT_RESPONSE_FROM_CONTROLLER)) {
-            check_last_heartbeat_time();
+
+        // Check that any response is arrived or not
+        if (!check_controller_message_timeout()) {
+            FSM_MOVE_STATE(CONTROLLER_MONITORING);
+            break;
         }
+        if (check_controller_response_timeout()) {
+            FSM_MOVE_STATE(CONNECTION_TIMEOUT);
+            break;
+        }
+        check_heartbeat_status();
         break;
     }
     case eState::CONNECTION_TIMEOUT: {
         // TODO: Change to RECONNECTION state and search other possible links (PPM-2282)
         send_disconnect_to_backhaul_manager();
-        FSM_MOVE_STATE(BACKHAUL_LINK_DISCONNECTED);
         break;
     }
     case eState::BACKHAUL_LINK_DISCONNECTED: {
@@ -169,32 +176,53 @@ bool ControllerConnectivityTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx,
     }
 }
 
-void ControllerConnectivityTask::check_controller_last_contact_time()
+bool ControllerConnectivityTask::check_controller_message_timeout()
 {
     auto db               = AgentDB::get();
     auto time_elapsed_sec = std::chrono::duration_cast<std::chrono::seconds>(
         std::chrono::steady_clock::now() - db->controller_info.last_controller_contact_time);
 
-    auto message_timeout_sec    = db->device_conf.controller_message_timeout_seconds;
-    auto connection_timeout_sec = db->device_conf.controller_message_timeout_seconds +
-                                  db->device_conf.controller_heartbeat_state_timeout_seconds;
+    auto message_timeout_sec = db->device_conf.controller_message_timeout_seconds;
+
+    // If indirect checking is disabled, don't check connectivity when there is indirect link
+    if (!m_direct_link_to_controller &&
+        !db->device_conf.check_indirect_connectivity_to_controller_enable) {
+        return false;
+    }
 
     // Incase of indirect connection, multiple timeout periods
     if (!m_direct_link_to_controller) {
         message_timeout_sec *= INDIRECT_TIMEOUT_MULTIPLIER;
-        connection_timeout_sec *= INDIRECT_TIMEOUT_MULTIPLIER;
     }
 
-    // Heartbeat parameters should be cleared only once, so state is checked as "CONTROLLER_MONITORING".
-    if (FSM_IS_IN_STATE(CONTROLLER_MONITORING) && time_elapsed_sec > message_timeout_sec) {
-        clear_heartbeat_counters();
-        FSM_MOVE_STATE(WAIT_RESPONSE_FROM_CONTROLLER);
-    } else if (time_elapsed_sec > connection_timeout_sec) {
-        FSM_MOVE_STATE(CONNECTION_TIMEOUT);
+    if (time_elapsed_sec > message_timeout_sec) {
+        return true;
     }
+
+    return false;
 }
 
-void ControllerConnectivityTask::check_last_heartbeat_time()
+bool ControllerConnectivityTask::check_controller_response_timeout()
+{
+    auto db               = AgentDB::get();
+    auto time_elapsed_sec = std::chrono::duration_cast<std::chrono::seconds>(
+        std::chrono::steady_clock::now() - m_controller_waiting_response_state_time);
+
+    auto waiting_response_timeout_sec = db->device_conf.controller_heartbeat_state_timeout_seconds;
+
+    // Incase of indirect connection, multiple timeout periods
+    if (!m_direct_link_to_controller) {
+        waiting_response_timeout_sec *= INDIRECT_TIMEOUT_MULTIPLIER;
+    }
+
+    if (time_elapsed_sec > waiting_response_timeout_sec) {
+        return true;
+    }
+
+    return false;
+}
+
+void ControllerConnectivityTask::check_heartbeat_status()
 {
     auto time_elapsed_sec = std::chrono::duration_cast<std::chrono::seconds>(
         std::chrono::steady_clock::now() - m_last_heartbeat_send_time);
@@ -212,22 +240,23 @@ void ControllerConnectivityTask::check_last_heartbeat_time()
     }
 }
 
-void ControllerConnectivityTask::check_backhaul_connection_time()
+bool ControllerConnectivityTask::check_controller_discovery_timeout()
 {
     auto db               = AgentDB::get();
     auto time_elapsed_sec = std::chrono::duration_cast<std::chrono::seconds>(
         std::chrono::steady_clock::now() - m_backhaul_connected_time);
 
-    if (time_elapsed_sec > db->device_conf.backhaul_connection_timeout_seconds) {
-        LOG(DEBUG) << "Backhaul link does not provide Controller connectivity";
-        FSM_MOVE_STATE(CONNECTION_TIMEOUT);
+    if (time_elapsed_sec > db->device_conf.controller_discovery_timeout_seconds) {
+        return true;
     }
+    return false;
 }
 
 void ControllerConnectivityTask::clear_heartbeat_counters()
 {
-    m_count_heartbeat_message  = 0;
-    m_last_heartbeat_send_time = std::chrono::steady_clock::now();
+    m_count_heartbeat_message                = 0;
+    m_last_heartbeat_send_time               = std::chrono::steady_clock::now();
+    m_controller_waiting_response_state_time = std::chrono::steady_clock::now();
 }
 
 bool ControllerConnectivityTask::send_hle_to_controller()
@@ -268,7 +297,8 @@ void ControllerConnectivityTask::init_task_configuration()
     // Local Controller's agent does not need to check backhaul connectivity
     // To prevent certification procedures, it is bypassed.
     auto db = AgentDB::get();
-    if (db->device_conf.certification_mode || !db->device_conf.check_connectivity_to_controller) {
+    if (db->device_conf.certification_mode || db->device_conf.local_controller ||
+        !db->device_conf.check_connectivity_to_controller_enable) {
         m_task_is_active = false;
         return;
     }

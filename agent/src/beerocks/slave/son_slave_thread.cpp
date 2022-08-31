@@ -188,6 +188,11 @@ bool slave_thread::thread_init()
             ieee1905_1::eMessageType::MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE,
             ieee1905_1::eMessageType::SERVICE_PRIORITIZATION_REQUEST_MESSAGE,
             ieee1905_1::eMessageType::DPP_CCE_INDICATION_MESSAGE,
+            // Controller's messages which are used to update connectivity
+            ieee1905_1::eMessageType::ACK_MESSAGE,
+            ieee1905_1::eMessageType::LINK_METRIC_QUERY_MESSAGE,
+            ieee1905_1::eMessageType::AP_METRICS_QUERY_MESSAGE,
+            ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE,
         })) {
         LOG(FATAL) << "Failed subscribing to the Bus";
     }

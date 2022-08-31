@@ -25,9 +25,9 @@ class slave_thread;
  *  - Provide mechanism to switch backhaul connection
  *
  * Configuration parameters:
- *  - check_connectivity_to_controller: disable/enable of this task functionality
- *  - check_indirect_connectivity_to_controller: disable/enable of checking connectivity of indirectly connected agents
- *  - backhaul_connection_timeout_sec: backhaul connection timeout.
+ *  - check_connectivity_to_controller_enable: enable/disable of this task functionality
+ *  - check_indirect_connectivity_to_controller_enable: enable/disable of checking connectivity of indirectly connected agents
+ *  - controller_discovery_timeout_sec: controller discovery timeout.
  *  It is expected to finish controller discovery within this timeout period.
  *
  * - controller_message_timeout_sec: controller message timeout.
@@ -122,7 +122,14 @@ private:
     uint8_t m_count_heartbeat_message = 0;
 
     /**
-     * @brief Last time point when heartbeat message is being send to controller
+     * @brief The time where waiting response from controller is set.
+     *
+     * It is used to check timeout to decide to disconnect the active backhaul link
+     */
+    std::chrono::steady_clock::time_point m_controller_waiting_response_state_time;
+
+    /**
+     * @brief Last time point when heartbeat message is being send to Controller
      */
     std::chrono::steady_clock::time_point m_last_heartbeat_send_time;
 
@@ -135,58 +142,65 @@ private:
     static const std::string fsm_state_to_string(eState status);
 
     /**
-     * @brief Checks controller last contact time after controller is discovered.
+     * @brief Checks Controller discovery timeout after backhaul link is connected.
      *
-     * Message Timeout:
-     * If contact time exceeds over message timeout, heartbeat procedure starts.
+     * If backhaul link connection time exceeds over timeout, forcing disconnection is triggered.
+     * This scenario could occur after wired or wireless connection established,
+     * and Controller could not be discovered in timeout period.
+     *
+     * Timeout period is defined with configuration of controller_discovery_timeout_sec.
+     *
+     * @return true if timeout occurs, false otherwise
+     */
+    bool check_controller_discovery_timeout();
+
+    /**
+     * @brief Checks Controller last contact/message time after Controller is discovered.
+     *
+     * If contact time exceeds over message timeout, heartbeat procedure (waiting response state) starts.
      * Timeout period is defined with configuration of controller_message_timeout_sec.
      *
-     * If agent does not receive message from controller for message timeout, enter heartbeat sending state.
+     * If agent does not receive message from Controller for message timeout, enter heartbeat sending state.
      * In this state, clearing only once of heartbeat counters is must.
-     *
-     * Connection Timeout:
-     * If contact time exceeds over connection timeout, forcing disconnection is triggered.
-     * Timeout period is defined with configurations of controller_message_timeout_sec plus
-     * controller_heartbeat_state_timeout_seconds.
      *
      * Incase of indirect connection check, timeouts are multiplied with INDIRECT_TIMEOUT_MULTIPLIER.
      * This is designed to prevent sending frequent heartbeat messages.
      *
-     * Agents which indirectly connected to controller does not get DISCOVERY messages from controller
+     * Agents which indirectly connected to Controller does not get DISCOVERY messages from Controller
      * every 60 seconds. They only update last contact time with Topology Notification/Query, Metric Collections
-     * or VS extensions. So, it is normal them to see less package from controller comparing to direct link.
+     * or VS extensions. So, it is normal them to see less package from Controller comparing to direct link.
      *
-     * @return None
+     * @return true if timeout occurs, false otherwise
      */
-    void check_controller_last_contact_time();
+    bool check_controller_message_timeout();
 
     /**
-     * @brief Checks backhaul link connection time after link is established.
+     * @brief Checks Controller response timeout after message timeout occurs
      *
-     * If backhaul link connection time exceeds over timeout, forcing disconnection is triggered.
-     * This scenario could occur after wired or wireless connection established,
-     * but controller could not be discovered in timeout period.
+     * After entering WAIT_RESPONSE_FROM_CONTROLLER state, beginning of that time is registered
+     * as m_controller_waiting_response_state_time.
      *
-     * Timeout period is defined with configuration of backhaul_connection_timeout_sec.
+     * This time is compared with configurable setting of controller_heartbeat_state_timeout_seconds
+     * to decide timeout.
      *
-     * @return None
+     * @return true if timeout occurs, false otherwise
      */
-    void check_backhaul_connection_time();
+    bool check_controller_response_timeout();
 
     /**
-     * @brief Checks last heartbeat message sending time to send the message periodically.
+     * @brief Checks heartbeat status to send or not heartbeat messages
      *
-     * This method is called in MESSAGE_TIMEOUT state periodically.
+     * This method is called in WAIT_RESPONSE_FROM_CONTROLLER state periodically.
      *
      * It send max amount of heartbeat as MAX_HEARTBEAT_COUNT and
      * within HEARTBEAT_SENDING_PERIOD_SEC period.
      *
      * To make it proper usage of this method, clear_heartbeat_counters() needs to be
-     * called after entering MESSAGE_TIMEOUT state.
+     * called after entering WAIT_RESPONSE_FROM_CONTROLLER state.
      *
      * @return None
      */
-    void check_last_heartbeat_time();
+    void check_heartbeat_status();
 
     /**
      * @brief Clears the heartbeat counters.

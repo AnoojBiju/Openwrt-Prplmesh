@@ -18,9 +18,9 @@ namespace beerocks {
 
 /**
 * @brief Enum which defines all tasks type.
-* 
+*
 * Each task must have an entry on the enum eType, so it will be possible to send the task an
-* event. 
+* event.
 */
 enum eTaskType : uint8_t {
     AP_AUTOCONFIGURATION,
@@ -44,17 +44,17 @@ public:
     virtual ~Task() {}
 
     /**
-     * @brief Retrun the task type.
-     * 
+     * @brief Return the task type.
+     *
      * Called by TaskPool send_event().
-     * 
+     *
      * @return eType Task type.
      */
     virtual eTaskType get_task_type() { return m_task_type; }
 
     /**
      * @brief The list of events this task wants to handle
-     * 
+     *
      * @return vector of events this task handles. empty by default.
      */
     virtual std::vector<eTaskEvent> get_task_event_list() const { return {}; }
@@ -66,7 +66,7 @@ public:
 
     /**
      * @brief Handle events, which are being send from containing thread.
-     * 
+     *
      * @param event_enum_value Event enum value which shall be defined on the task.
      * @param event_obj Pointer to some chunk of memory used to pass data to the event handler.
      */
@@ -75,7 +75,7 @@ public:
     /**
      * @brief Handle events, which are careless about the containing thread.
      * Implementation may take ownership of the data by keeping the shared pointer.
-     * 
+     *
      * @param event Event enum value which shall be defined on the task.
      * @param event_obj Pointer to some chunk of memory used to pass data to the event handler.
      */
@@ -83,7 +83,7 @@ public:
 
     /**
      * @brief Handle CMDU message.
-     * 
+     *
      * @param cmdu_rx CMDU object containing the received message to be handled.
      * @param iface_index Index of the network interface that the CMDU message was received on.
      * @param dst_mac Destination AL MAC address.
@@ -101,7 +101,7 @@ public:
 
     /**
      * @brief Task execution time setter method.
-     * 
+     *
      * @param time A timepoint of the task's last execution.
      */
     void set_last_exec_time(std::chrono::steady_clock::time_point time) { m_last_exec_time = time; }
