@@ -49,7 +49,7 @@ cACTION_BACKHAUL_AP_DISABLED_NOTIFICATION:
   iface:
     _type: char
     _length: ["beerocks::message::IFACE_NAME_LENGTH"]
-    
+
 cACTION_BACKHAUL_CLIENT_RX_RSSI_MEASUREMENT_REQUEST:
   _type: class
   params: sNodeRssiMeasurementRequest
@@ -92,7 +92,7 @@ cACTION_BACKHAUL_SET_ASSOC_DISALLOW_REQUEST:
 
 cACTION_BACKHAUL_APPLY_VLAN_POLICY_REQUEST:
   _type: class
-  
+
 cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED:
   _type: class
   front_iface_name:
@@ -141,7 +141,7 @@ cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST:
   channel: uint8_t
   bandwidth: beerocks::eWiFiBandwidth
   center_frequency: uint32_t
-  csa_count: 
+  csa_count:
     _type: uint8_t
     _value: 5
 
@@ -158,6 +158,9 @@ cACTION_BACKHAUL_RADIO_DISABLE_REQUEST:
 cACTION_BACKHAUL_RADIO_TEAR_DOWN_REQUEST:
   _type: class
 
+cACTION_BACKHAUL_DISCONNECT_COMMAND:
+  _type: class
+
 ################################################
 # CHANNEL SCAN REQUESTS/RESPONSES
 ################################################
@@ -171,7 +174,7 @@ cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE:
 
 cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_REQUEST:
   _type: class
-  
+
 cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_RESPONSE:
   _type: class
   success: uint8_t #bool
