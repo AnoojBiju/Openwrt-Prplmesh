@@ -179,6 +179,17 @@ constexpr char DEFAULT_DCS_CHANNEL_POOL[] = "0";
 constexpr int DEFAULT_RSSI_MEASUREMENT_TIMEOUT_MSEC   = 10000;
 constexpr int DEFAULT_BEACON_MEASUREMENT_TIMEOUT_MSEC = 6000;
 
+// Default value in enabling controller connectivity task
+constexpr bool DEFAULT_CHECK_CONNECTIVITY_TO_CONTROLLER_ENABLE = true;
+// Default value in enabling checking indirect controller connectivity
+constexpr bool DEFAULT_CHECK_INDIRECT_CONNECTIVITY_TO_CONTROLLER_ENABLE = true;
+// Default value for controller discovery timeout in controller connectivity task
+constexpr std::chrono::seconds DEFAULT_CONTROLLER_DISCOVERY_TIMEOUT_SEC{120};
+// Default value for controller message timeout in controller connectivity task
+constexpr std::chrono::seconds DEFAULT_CONTROLLER_MESSAGE_TIMEOUT_SEC{70};
+// Default value for heartbeat state timeout in controller connectivity task
+constexpr std::chrono::seconds DEFAULT_CONTROLLER_HEARTBEAT_STATE_TIMEOUT_SEC{30};
+
 /****************************************************************************/
 /******************************* Structures *********************************/
 /****************************************************************************/
@@ -876,6 +887,79 @@ bool cfg_get_rssi_measurements_timeout(int &rssi_measurements_timeout_msec);
  * @return true on success, otherwise false.
  */
 bool cfg_get_beacon_measurements_timeout(int &beacon_measurements_timeout_msec);
+
+/**
+ * @brief Reads enable flag setting for checking connectivity to the Controller from agent
+ *
+ * If this flag is set to true,
+ * checking connectivity task and its main functionality is enabled.
+ * Backhaul connection and controller connectivity checking is enabled.
+ *
+ * If this flag is set to false,
+ * controller connectivity task does not enable connectivity features.
+ *
+ * @param [out] check_connectivity_enable enable/disable check connectivity task
+ * @return true on success, otherwise false
+ */
+bool get_check_connectivity_to_controller_enable(bool &check_connectivity_enable);
+
+/**
+ * @brief Reads enable flag setting for checking indirect connectivity to the Controller from the Agent.
+ *
+ * If this flag is set to true,
+ * indirectly connected agent's to controller connectivity is checked by the amount of message timeout.
+ *
+ * Indirect connection indicates that the agent does not have a direct link to the controller.
+ * So, the agent does not appear on the neighbor list on the controller and it does not receive periodic
+ * TOPOLOGY_DISCOVERY from the controller.
+ *
+ * If this flag is set to false,
+ * indirectly connected agents could wait until their parent to fix its connectivity to the controller.
+ * Controller connectivity task does not intervene in that scenario.
+ *
+ * @param [out] check_indirect_connectivity_enable enable/disable checking of indirect connectivity
+ * @return true on success, otherwise false
+ */
+bool get_check_indirect_connectivity_to_controller_enable(bool &check_indirect_connectivity_enable);
+
+/**
+ * @brief Reads controller discovery timeout in seconds.
+ *
+ * When the backhaul link is established, the Agent enters into a 'Controller discovery' state.
+ * If the Controller is not discovered within this timeout, need to send a 'disconnect' command
+ * to the backhaul manager.
+ *
+ * @param[out] timeout_seconds controller discovery timeout in seconds.
+ * @return true on success, otherwise false
+ */
+bool get_controller_discovery_timeout_seconds(std::chrono::seconds &timeout_seconds);
+
+/**
+ * @brief Reads controller message timeout in seconds.
+ *
+ * Time differences of latest message of controller with current time is compared
+ * this configuration paramater (timeout).
+ *
+ * If it exceeds the timeout, heartbeat (message_timeout) stage is started in controller connectivity task.
+ *
+ * @param[out] timeout_seconds controller message timeout in seconds.
+ * @return true on success, otherwise false
+ */
+bool get_controller_message_timeout_seconds(std::chrono::seconds &timeout_seconds);
+
+/**
+ * @brief Reads controller heartbeat stage timeout in seconds.
+ *
+ * Time differences of latest message of controller with current time is compared
+ * total value of message timeout and heartbeat timeout to decide disconnection from controller.
+ *
+ * If it exceeds the timeout, heartbeat (message_timeout) stage is finished and disconnection stage is
+ * started in controller connectivity task.
+ *
+ * @param[out] timeout_seconds controller heartbeat state timeout in seconds.
+ * @return true on success, otherwise false
+ */
+bool get_controller_heartbeat_state_timeout_seconds(std::chrono::seconds &timeout_seconds);
 
 } // namespace bpl
 } // namespace beerocks
