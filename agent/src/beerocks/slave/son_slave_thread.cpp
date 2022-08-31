@@ -13,8 +13,10 @@
 #include "gate/1905_beacon_query_to_vs.h"
 #include "gate/vs_beacon_response_to_1905.h"
 #include "tasks/ap_autoconfiguration_task.h"
+#include "tasks/controller_connectivity_task.h"
 #include "tasks/proxy_agent_dpp_task.h"
 #include "tasks/service_prioritization_task.h"
+
 #include <bcl/beerocks_cmdu_client_factory_factory.h>
 #include <bcl/beerocks_cmdu_server_factory.h>
 #include <bcl/beerocks_timer_factory_impl.h>
@@ -277,6 +279,7 @@ bool slave_thread::thread_init()
     m_task_pool.add_task(std::make_shared<ApAutoConfigurationTask>(*this, cmdu_tx));
     m_task_pool.add_task(std::make_shared<ServicePrioritizationTask>(*this, cmdu_tx));
     m_task_pool.add_task(std::make_shared<ProxyAgentDppTask>(*this, cmdu_tx));
+    m_task_pool.add_task(std::make_shared<ControllerConnectivityTask>(*this, cmdu_tx));
 
     m_agent_state = STATE_INIT;
     LOG(DEBUG) << "Agent Started";
@@ -780,6 +783,11 @@ bool slave_thread::handle_cmdu_from_broker(uint32_t iface_index, const sMacAddr 
             LOG(DEBUG) << "handle_cmdu() - dropping msg, dst_mac=" << dst_mac
                        << ", local_bridge_mac=" << db->bridge.mac;
             return true;
+        }
+
+        // Update controller last contact time
+        if (db->controller_info.bridge_mac == src_mac) {
+            db->controller_info.last_controller_contact_time = std::chrono::steady_clock::now();
         }
     }
 
@@ -1556,6 +1564,8 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
         LOG(DEBUG) << "goto STATE_BACKHAUL_MANAGER_CONNECTED";
         m_agent_state = STATE_BACKHAUL_MANAGER_CONNECTED;
 
+        m_task_pool.send_event(eTaskType::CONTROLLER_CONNECTIVITY,
+                               ControllerConnectivityTask::eEvent::BACKHAUL_MANAGER_CONNECTED);
         break;
     }
     case beerocks_message::ACTION_BACKHAUL_DISCONNECTED_NOTIFICATION: {
@@ -1579,6 +1589,10 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
         m_stopped |= bool(notification->stopped());
 
         agent_reset();
+
+        m_task_pool.send_event(
+            eTaskType::CONTROLLER_CONNECTIVITY,
+            ControllerConnectivityTask::eEvent::BACKHAUL_DISCONNECTED_NOTIFICATION);
         break;
     }
     case beerocks_message::ACTION_BACKHAUL_APPLY_VLAN_POLICY_REQUEST: {
@@ -3991,6 +4005,10 @@ bool slave_thread::agent_fsm()
         if (!read_platform_configuration()) {
             LOG(DEBUG) << "Read platform configuration failed";
         }
+
+        m_task_pool.send_event(eTaskType::CONTROLLER_CONNECTIVITY,
+                               ControllerConnectivityTask::eEvent::INIT_TASK);
+
         m_agent_state = STATE_CONNECT_TO_PLATFORM_MANAGER;
         break;
     }
@@ -4330,6 +4348,9 @@ bool slave_thread::agent_fsm()
         if (db->statuses.ap_autoconfiguration_completed) {
             LOG(TRACE) << "goto STATE_OPERATIONAL";
             m_agent_state = STATE_OPERATIONAL;
+
+            m_task_pool.send_event(eTaskType::CONTROLLER_CONNECTIVITY,
+                                   ControllerConnectivityTask::eEvent::CONTROLLER_DISCOVERED);
 
             // Make sure OPERATIONAL state will be done right away.
             return agent_fsm();

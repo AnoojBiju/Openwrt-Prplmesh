@@ -591,7 +591,7 @@ bool BackhaulManager::finalize_slaves_connect_state(bool fConnected)
         // Update the backhaul BSSID on the AgentDB and detach from any sta_bwl not used for
         // by wireless connection:
 
-        // Initialize backhaul bssid to empty in case in the connecten type is wired. If it is not,
+        // Initialize backhaul bssid to empty in case in the connected type is wired. If it is not,
         // will be overriden in the loop below.
         db->backhaul.backhaul_bssid = {};
 
@@ -745,7 +745,7 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
         wan_monitor::ELinkState wired_link_state = wan_monitor::ELinkState::eInvalid;
         if (!db->device_conf.local_gw && !db->ethernet.wan.iface_name.empty()) {
             wired_link_state = wan_mon.initialize(db->ethernet.wan.iface_name);
-            // Failure might be due to insufficient permissions, datailed error message is being
+            // Failure might be due to insufficient permissions, detailed error message is being
             // printed inside.
             if (wired_link_state == wan_monitor::ELinkState::eInvalid) {
                 LOG(WARNING) << "wan_mon.initialize() failed, skip wired link establishment";
@@ -1742,6 +1742,16 @@ bool BackhaulManager::handle_slave_backhaul_message(int fd, ieee1905_1::CmduMess
 
         break;
     }
+    case beerocks_message::ACTION_BACKHAUL_DISCONNECT_COMMAND: {
+
+        LOG(DEBUG) << "ACTION_BACKHAUL_DISCONNECT_COMMAND is received, when active state is "
+                   << FSM_CURR_STATE_STR;
+
+        if (FSM_IS_IN_STATE(OPERATIONAL) || FSM_IS_IN_STATE(CONNECTED)) {
+            FSM_MOVE_STATE(RESTART);
+        }
+        break;
+    }
     default: {
         bool handled =
             m_task_pool.handle_cmdu(cmdu_rx, 0, sMacAddr(), sMacAddr(), fd, beerocks_header);
@@ -1924,7 +1934,7 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
         }
 
         // Try adding wireless backhaul STA interface to the bridge in case there is no
-        // entity (hostadp) that adds it automaticaly.
+        // entity (hostapd) that adds it automaticaly.
         auto bridge        = db->bridge.iface_name;
         auto bridge_ifaces = beerocks::net::network_utils::linux_get_iface_list_from_bridge(bridge);
         if (!beerocks::net::network_utils::linux_add_iface_to_bridge(bridge, iface)) {

@@ -168,6 +168,8 @@ public:
         sMacAddr bridge_mac;
         wfa_map::tlvProfile2MultiApProfile::eMultiApProfile profile_support =
             wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::PRPLMESH_PROFILE_UNKNOWN;
+        bool direct_link_to_controller = false;
+        std::chrono::steady_clock::time_point last_controller_contact_time;
     } controller_info;
 
     struct sStatus {
