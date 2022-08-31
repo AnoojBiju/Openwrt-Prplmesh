@@ -530,6 +530,33 @@ bool slave_thread::read_platform_configuration()
                      << " using default configuration ";
     }
 
+    // Check controller connectivity settings
+    if (!bpl::get_check_connectivity_to_controller_enable(
+            db->device_conf.check_connectivity_to_controller_enable)) {
+        LOG(WARNING) << "get_check_connectivity_to_controller_enable() failed!"
+                     << " using default configuration ";
+    }
+    if (!bpl::get_check_indirect_connectivity_to_controller_enable(
+            db->device_conf.check_indirect_connectivity_to_controller_enable)) {
+        LOG(WARNING) << "check_indirect_connectivity_to_controller_enable() failed!"
+                     << " using default configuration ";
+    }
+    if (!bpl::get_controller_discovery_timeout_seconds(
+            db->device_conf.controller_discovery_timeout_seconds)) {
+        LOG(WARNING) << "controller_discovery_timeout_seconds() failed!"
+                     << " using default configuration ";
+    }
+    if (!bpl::get_controller_message_timeout_seconds(
+            db->device_conf.controller_message_timeout_seconds)) {
+        LOG(WARNING) << "get_controller_message_timeout_seconds() failed!"
+                     << " using default configuration ";
+    }
+    if (!bpl::get_controller_heartbeat_state_timeout_seconds(
+            db->device_conf.controller_heartbeat_state_timeout_seconds)) {
+        LOG(WARNING) << "get_controller_heartbeat_state_timeout_seconds() failed!"
+                     << " using default configuration ";
+    }
+
     // Set local_gw flag
     db->device_conf.local_gw = (db->device_conf.operating_mode == BPL_OPER_MODE_GATEWAY ||
                                 db->device_conf.operating_mode == BPL_OPER_MODE_GATEWAY_WISP);
@@ -569,6 +596,10 @@ bool slave_thread::read_platform_configuration()
     LOG(DEBUG) << beerocks::utils::get_zwdfs_string(db->device_conf.zwdfs_flag);
     LOG(DEBUG) << "best_channel_rank_threshold: " << db->device_conf.best_channel_rank_threshold;
     LOG(DEBUG) << "max_prioritization_rules: " << db->device_conf.max_prioritization_rules;
+    LOG(DEBUG) << "check_connectivity_to_controller_enable: "
+               << db->device_conf.check_connectivity_to_controller_enable;
+    LOG(DEBUG) << "check_indirect_connectivity_to_controller: "
+               << db->device_conf.check_indirect_connectivity_to_controller_enable;
 
     return true;
 }
