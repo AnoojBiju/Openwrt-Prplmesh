@@ -16,4 +16,5 @@ eValue:
   _enum_storage: uint8_t
   BAND_2_4G: 0x00
   BAND_5G: 0x01
-  BAND_60G: 0x02
+  BAND_6G: 0x02
+  BAND_60G: 0x03

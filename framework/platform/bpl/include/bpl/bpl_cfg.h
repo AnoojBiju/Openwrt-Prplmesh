@@ -74,6 +74,7 @@ inline std::ostream &operator<<(std::ostream &out, eClientsMeasurementMode value
 /* Radio Band */
 #define BPL_RADIO_BAND_5G 5
 #define BPL_RADIO_BAND_2G 2
+#define BPL_RADIO_BAND_6G 6
 
 /* Platform Operating Mode */
 #define BPL_OPER_MODE_GATEWAY 0
