@@ -34,6 +34,7 @@
 #include "../agent_db.h"
 #include "../agent_ucc_listener.h"
 
+#include <chrono>
 #include <future>
 #include <list>
 
@@ -108,6 +109,16 @@ public:
      * @return true on success and false otherwise.
      */
     bool send_ack_to_controller(ieee1905_1::CmduMessageTx &cmdu_tx, uint32_t mid);
+
+    /**
+     * @brief Sends Higher Layer Data CMDU to controller
+     *
+     * Controller should respond this message with ACK in one second.
+     * This is used to check connectivity to the controller.
+
+     * @return true on success and false otherwise.
+     */
+    bool send_hle_to_controller();
 
     /**
      * @brief Forwards given received CMDU message to the broker server for dispatching.
@@ -243,6 +254,13 @@ private:
      */
     bool send_slaves_tear_down();
 
+    /**
+     * @brief Update last contact time of controller with steady clock now.
+     *        Also, it clears heartbeat flag.
+     * @return None
+     */
+    void update_controller_last_contact_time();
+
     std::shared_ptr<bwl::sta_wlan_hal> get_wireless_hal(std::string iface = "");
 
     /**
@@ -264,6 +282,16 @@ private:
      * CMDU to be transmitted by the UCC listener (in certification mode).
      */
     ieee1905_1::CmduMessageTx cert_cmdu_tx;
+
+    /**
+     * Last time entry when any controller's message is arrived
+     */
+    std::chrono::steady_clock::time_point last_controller_contact_time;
+
+    /**
+     * Flag to identify heartbeat is send to not spam heartbeats.
+     */
+    bool heartbeat_message_send;
 
     struct SBackhaulConfig {
         std::string ssid;
@@ -343,6 +371,8 @@ private:
     const int AP_BLACK_LIST_FAILED_ATTEMPTS_THRESHOLD = 2;
     const int INTERFACE_BRING_UP_TIMEOUT_SECONDS      = 600;
     const int DEAUTH_REASON_PASSPHRASE_MISMACH        = 2;
+    const std::chrono::seconds CONTROLLER_MSG_TIMEOUT_SEC{70};
+    const std::chrono::seconds CONTROLLER_CON_TIMEOUT_SEC{80};
 
     std::chrono::steady_clock::time_point state_time_stamp_timeout;
     int state_attempts;
