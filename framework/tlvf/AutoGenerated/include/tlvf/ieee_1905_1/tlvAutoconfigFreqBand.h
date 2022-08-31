@@ -36,7 +36,8 @@ class tlvAutoconfigFreqBand : public BaseClass
         enum eValue: uint8_t {
             IEEE_802_11_2_4_GHZ = 0x0,
             IEEE_802_11_5_GHZ = 0x1,
-            IEEE_802_11_60_GHZ = 0x2,
+            IEEE_802_11_6_GHZ = 0x2,
+            IEEE_802_11_60_GHZ = 0x3,
         };
         // Enum AutoPrint generated code snippet begining- DON'T EDIT!
         // clang-format off
@@ -44,6 +45,7 @@ class tlvAutoconfigFreqBand : public BaseClass
             switch (enum_value) {
             case IEEE_802_11_2_4_GHZ: return "IEEE_802_11_2_4_GHZ";
             case IEEE_802_11_5_GHZ:   return "IEEE_802_11_5_GHZ";
+            case IEEE_802_11_6_GHZ:   return "IEEE_802_11_6_GHZ";
             case IEEE_802_11_60_GHZ:  return "IEEE_802_11_60_GHZ";
             }
             static std::string out_str = std::to_string(int(enum_value));
