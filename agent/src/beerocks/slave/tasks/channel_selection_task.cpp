@@ -1518,13 +1518,18 @@ ChannelSelectionTask::select_next_channel(const sMacAddr &radio_mac)
                                                                                     bandwidth)
                         : std::vector<uint8_t>{channel_number};
 
+		LOG(INFO) << "Beacon Channels in Class #" << operating_class;
+                for (const auto beacon_channel : beacon_channels) {
+                    LOG(INFO) << "CW: " << beacon_channel << " :";
+		}
+		//TODO: remove all un-necceassary debug logs (kept under CW:)
                 uint8_t multiap_preference = 0;
                 uint8_t best_bcn_chan      = 0;
                 for (const auto beacon_channel : beacon_channels) {
                     auto tmp_preference =
                         get_map_preference(beacon_channel, operating_class, bandwidth);
                     if (tmp_preference == 0) {
-                        LOG(INFO) << "Channel #" << beacon_channel << " in Class #"
+                        LOG(INFO) << "CW: Channel #" << beacon_channel << " in Class #"
                                   << operating_class << " is non-operable";
                     } else if (multiap_preference < tmp_preference) {
                         // Set as the highest preference in the beacon channels
@@ -1535,7 +1540,7 @@ ChannelSelectionTask::select_next_channel(const sMacAddr &radio_mac)
                                   << " has local highest preference = " << multiap_preference;
                     }
                     LOG(INFO) << "CW: Channel #" << beacon_channel << " in Class #"
-                              << operating_class << " has preference = " << multiap_preference;
+                              << operating_class << " has preference = " << tmp_preference;
                 }
                 LOG(INFO) << "CW: Channel #" << best_bcn_chan << " in Class #" << operating_class
                           << " has preference = " << multiap_preference
