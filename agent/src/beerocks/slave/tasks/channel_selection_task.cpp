@@ -1486,7 +1486,7 @@ ChannelSelectionTask::select_next_channel(const sMacAddr &radio_mac)
             }
 
             auto get_map_preference =
-                [&radio](const uint8_t channel, const uint8_t operating_class,
+                [&radio](const uint8_t channel, uint8_t operating_class,
                          beerocks::eWiFiBandwidth operating_bandwidth) -> uint8_t {
                 // Check if channel is not valid
                 auto it_ch = radio->channels_list.find(channel);
@@ -1511,23 +1511,25 @@ ChannelSelectionTask::select_next_channel(const sMacAddr &radio_mac)
                 return it_bw->multiap_preference;
             };
 
-            auto find_best_beacon_channel = [&]() {
+            auto find_best_beacon_channel =
+		    [&](uint8_t channel, uint8_t operating_class,
+                         beerocks::eWiFiBandwidth operating_bandwidth) -> uint8_t {
                 const auto beacon_channels =
                     son::wireless_utils::is_operating_class_using_central_channel(operating_class)
-                        ? son::wireless_utils::center_channel_5g_to_beacon_channels(central_channel,
-                                                                                    bandwidth)
-                        : std::vector<uint8_t>{channel_number};
+                        ? son::wireless_utils::center_channel_5g_to_beacon_channels(channel,
+                                                                                    operating_bandwidth)
+                        : std::vector<uint8_t>{channel};
 
-		LOG(INFO) << "Beacon Channels in Class #" << operating_class << " central channel#"<< central_channel << " and BW = "<< bandwidth;
+		LOG(INFO) << "CW: Beacon Channels in Class #" << operating_class << " central channel#"<< channel << " and BW = "<< operating_bandwidth;
                 for (const auto beacon_channel : beacon_channels) {
                     LOG(INFO) << "CW: " << beacon_channel << " :";
 		}
 		//TODO: remove all un-necceassary debug logs (kept under CW:)
                 uint8_t multiap_preference = 0;
-                uint8_t best_bcn_chan      = 0;
+                uint8_t best_bcn_chan      = channel;
                 for (const auto beacon_channel : beacon_channels) {
                     auto tmp_preference =
-                        get_map_preference(beacon_channel, operating_class, bandwidth);
+                        get_map_preference(beacon_channel, operating_class, operating_bandwidth);
                     if (tmp_preference == 0) {
                         LOG(INFO) << "CW: Channel #" << beacon_channel << " in Class #"
                                   << operating_class << " is non-operable";
@@ -1545,15 +1547,16 @@ ChannelSelectionTask::select_next_channel(const sMacAddr &radio_mac)
                 LOG(INFO) << "CW: Channel #" << best_bcn_chan << " in Class #" << operating_class
                           << " has preference = " << multiap_preference
                           << " is next beacon channel";
+		return best_bcn_chan;
             };
 
-            find_best_beacon_channel();
+            auto bcn_channel = find_best_beacon_channel(central_channel, operating_class, bandwidth);
 
             LOG(INFO) << "[" << channel_number << "-" << operating_class << "("
                       << utils::convert_bandwidth_to_int(bandwidth)
                       << "MHz)] is the new Best-Channel.";
             // Override selected channel
-            selected_channel.channel          = channel_number;
+            selected_channel.channel          = bcn_channel;
             selected_channel.operating_class  = operating_class;
             selected_channel.bw               = bandwidth;
             selected_channel.dfs_state        = channel_info.dfs_state;
