@@ -204,7 +204,19 @@ int cfg_get_sta_iface(const char iface[BPL_IFNAME_LEN], char sta_iface[BPL_IFNAM
         return RETURN_ERR;
     }
 
-    mapf::utils::copy_string(sta_iface, iface, BPL_IFNAME_LEN);
+    //get sta ifname based on conf: must have a wpa_suppl ctrl sock file
+    std::string wpa_ctrl_path;
+    if (!beerocks::bpl::bpl_cfg_get_wpa_supplicant_ctrl_path(std::string(iface), wpa_ctrl_path) ||
+        wpa_ctrl_path.empty()) {
+        MAPF_INFO("cfg_get_sta_iface: no sta_iface for hostap_iface (" + std::string(iface) + ")");
+        return RETURN_ERR;
+    }
+    //get sock filename : last token
+    std::stringstream path(wpa_ctrl_path);
+    std::string token;
+    while (std::getline(path, token, '/'))
+        ;
+    mapf::utils::copy_string(sta_iface, token.c_str(), BPL_IFNAME_LEN);
     return RETURN_OK;
 }
 
