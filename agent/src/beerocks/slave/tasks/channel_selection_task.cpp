@@ -1485,13 +1485,64 @@ ChannelSelectionTask::select_next_channel(const sMacAddr &radio_mac)
                 }
             }
 
+            auto get_map_preference =
+                [&radio](const uint8_t channel, const uint8_t operating_class,
+                         beerocks::eWiFiBandwidth operating_bandwidth) -> uint8_t {
+                // Check if channel is not valid
+                auto it_ch = radio->channels_list.find(channel);
+                if (it_ch == radio->channels_list.end()) {
+                    return 0;
+                }
+                // Bandwidth of a channel is not supported.
+                auto &supported_channel_info = it_ch->second;
+                auto &supported_bw_list      = supported_channel_info.supported_bw_list;
+                auto it_bw =
+                    std::find_if(supported_bw_list.begin(), supported_bw_list.end(),
+                                 [&](const beerocks_message::sSupportedBandwidth &bw_info) {
+                                     return bw_info.bandwidth == operating_bandwidth;
+                                 });
+                if (it_bw == supported_bw_list.end()) {
+                    return 0;
+                }
+
+                if (supported_channel_info.dfs_state == beerocks_message::eDfsState::UNAVAILABLE) {
+                    return 0;
+                }
+                return it_bw->multiap_preference;
+            };
+
             auto find_best_beacon_channel = [&]() {
                 const auto beacon_channels =
                     son::wireless_utils::is_operating_class_using_central_channel(operating_class)
                         ? son::wireless_utils::center_channel_5g_to_beacon_channels(central_channel,
-                                                                                    operating_class)
+                                                                                    bandwidth)
                         : std::vector<uint8_t>{channel_number};
+
+                uint8_t multiap_preference = 0;
+                uint8_t best_bcn_chan      = 0;
+                for (const auto beacon_channel : beacon_channels) {
+                    auto tmp_preference =
+                        get_map_preference(beacon_channel, operating_class, bandwidth);
+                    if (tmp_preference == 0) {
+                        LOG(INFO) << "Channel #" << beacon_channel << " in Class #"
+                                  << operating_class << " is non-operable";
+                    } else if (multiap_preference < tmp_preference) {
+                        // Set as the highest preference in the beacon channels
+                        multiap_preference = tmp_preference;
+                        best_bcn_chan      = beacon_channel;
+                        LOG(INFO) << "CW: Channel #" << beacon_channel << " in Class #"
+                                  << operating_class
+                                  << " has local highest preference = " << multiap_preference;
+                    }
+                    LOG(INFO) << "CW: Channel #" << beacon_channel << " in Class #"
+                              << operating_class << " has preference = " << multiap_preference;
+                }
+                LOG(INFO) << "CW: Channel #" << best_bcn_chan << " in Class #" << operating_class
+                          << " has preference = " << multiap_preference
+                          << " is next beacon channel";
             };
+
+            find_best_beacon_channel();
 
             LOG(INFO) << "[" << channel_number << "-" << operating_class << "("
                       << utils::convert_bandwidth_to_int(bandwidth)
