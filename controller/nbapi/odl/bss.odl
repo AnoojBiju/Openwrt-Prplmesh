@@ -49,6 +49,8 @@
             on action validate call check_range [0, 16777215];
         }
 
+        %read-only uint32 ByteCounterUnits = 0x0;
+
         bool FronthaulUse = false;
         bool BackhaulUse = false;
 

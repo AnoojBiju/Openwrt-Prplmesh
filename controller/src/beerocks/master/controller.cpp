@@ -1156,11 +1156,12 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
             return false;
         }
 
-        auto bss       = radio->bsses.add(radio->radio_uid, *radio);
-        bss->enabled   = false;
-        bss->ssid      = bss_info_conf.ssid;
-        bss->fronthaul = bss_info_conf.fronthaul;
-        bss->backhaul  = bss_info_conf.backhaul;
+        auto bss                = radio->bsses.add(radio->radio_uid, *radio);
+        bss->enabled            = false;
+        bss->ssid               = bss_info_conf.ssid;
+        bss->fronthaul          = bss_info_conf.fronthaul;
+        bss->backhaul           = bss_info_conf.backhaul;
+        bss->byte_counter_units = agent->byte_counter_units;
         if (!database.update_vap(ruid, bss->bssid, bss->ssid, bss->backhaul)) {
             LOG(ERROR) << "Failed to update VAP for radio " << ruid << " BSS " << bss->bssid
                        << " SSID " << bss->ssid;
