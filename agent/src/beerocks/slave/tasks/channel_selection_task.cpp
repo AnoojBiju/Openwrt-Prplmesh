@@ -1518,7 +1518,7 @@ ChannelSelectionTask::select_next_channel(const sMacAddr &radio_mac)
                                                                                     bandwidth)
                         : std::vector<uint8_t>{channel_number};
 
-		LOG(INFO) << "Beacon Channels in Class #" << operating_class;
+		LOG(INFO) << "Beacon Channels in Class #" << operating_class << " central channel#"<< central_channel << " and BW = "<< bandwidth;
                 for (const auto beacon_channel : beacon_channels) {
                     LOG(INFO) << "CW: " << beacon_channel << " :";
 		}
