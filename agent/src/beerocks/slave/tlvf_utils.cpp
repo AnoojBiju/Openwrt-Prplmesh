@@ -66,6 +66,7 @@ static int8_t get_operating_class_max_tx_power(
         LOG(ERROR) << "Operating class does not exist: " << operating_class;
         return beerocks::eGlobals::RSSI_INVALID;
     }
+
     const auto &oper_class = oper_class_it->second;
 
     for (const auto &channel_info_element : channels_list) {
@@ -98,6 +99,7 @@ std::vector<uint8_t> get_operating_class_non_oper_channels(
         LOG(ERROR) << "Operating class does not exist: " << operating_class;
         return {};
     }
+
     const auto &oper_class = oper_class_it->second;
 
     for (const auto &op_class_channel : oper_class.channels) {
@@ -171,6 +173,7 @@ bool tlvf_utils::add_ap_radio_basic_capabilities(ieee1905_1::CmduMessageTx &cmdu
             get_operating_class_non_oper_channels(radio->channels_list, op_class);
         if (!non_oper_channels.empty()) {
             // Create list of statically non-oper channels
+
             operationClassesInfo->alloc_statically_non_operable_channels_list(
                 non_oper_channels.size());
             uint8_t idx = 0;
@@ -182,14 +185,17 @@ bool tlvf_utils::add_ap_radio_basic_capabilities(ieee1905_1::CmduMessageTx &cmdu
 
         LOG(DEBUG) << "OpClass=" << op_class
                    << ", max_tx_dbm=" << operationClassesInfo->maximum_transmit_power_dbm()
-                   << ", non_operable_channels=" << [&](std::vector<uint8_t>) {
+                   << ", non_operable_channels=" << [&]() {
+                          if (non_oper_channels.empty()) {
+                              return std::string{"None"};
+                          }
                           std::string out;
                           for (auto non_oper_ch : non_oper_channels) {
                               out.append(std::to_string(non_oper_ch)).append(",");
                           }
                           out.pop_back();
                           return out;
-                      }(non_oper_channels);
+                      }();
 
         if (!radio_basic_caps->add_operating_classes_info_list(operationClassesInfo)) {
             LOG(ERROR) << "add_operating_classes_info_list failed";
