@@ -237,6 +237,25 @@ bool cfg_set_band_steering(bool band_steering)
     return cfg_set_prplmesh_config(option, value);
 }
 
+bool cfg_get_client_11k_roaming(bool &eleven_k_roaming)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int("client_11k_roaming", &retVal) == RETURN_ERR) {
+        return false;
+    }
+
+    eleven_k_roaming = (retVal == 1);
+    return true;
+}
+
+bool cfg_set_client_11k_roaming(bool eleven_k_roaming)
+{
+    std::string option = "client_11k_roaming";
+    std::string value  = std::to_string(((int)eleven_k_roaming));
+
+    return cfg_set_prplmesh_config(option, value);
+}
+
 bool cfg_get_client_roaming(bool &client_roaming)
 {
     int retVal = -1;
@@ -252,6 +271,83 @@ bool cfg_set_client_roaming(bool client_roaming)
 {
     std::string option = "client_roaming";
     std::string value  = std::to_string(((int)client_roaming));
+
+    return cfg_set_prplmesh_config(option, value);
+}
+
+bool cfg_get_load_balancing(bool &load_balancing)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int("load_balancing", &retVal) == RETURN_ERR) {
+        return false;
+    }
+
+    load_balancing = (retVal == 1);
+    return true;
+}
+
+bool cfg_set_load_balancing(bool load_balancing)
+{
+    std::string option = "load_balancing";
+    std::string value  = std::to_string(((int)load_balancing));
+
+    return cfg_set_prplmesh_config(option, value);
+}
+
+
+bool cfg_get_dfs_reentry(bool &dfs_reentry_enabled)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int("dfs_reentry", &retVal) == RETURN_ERR) {
+        return false;
+    }
+
+    dfs_reentry_enabled = (retVal == 1);
+    return true;
+}
+
+bool cfg_set_dfs_reentry(bool dfs_reentry_enabled)
+{
+    std::string option = "dfs_reentry";
+    std::string value  = std::to_string(((int)dfs_reentry_enabled));
+
+    return cfg_set_prplmesh_config(option, value);
+}
+
+bool cfg_get_ire_roaming(bool &ire_roaming)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int("ire_roaming", &retVal) == RETURN_ERR) {
+        return false;
+    }
+
+    ire_roaming = (retVal == 1);
+    return true;
+}
+
+bool cfg_set_ire_roaming(bool ire_roaming)
+{
+    std::string option = "ire_roaming";
+    std::string value  = std::to_string(((int)ire_roaming));
+
+    return cfg_set_prplmesh_config(option, value);
+}
+
+bool cfg_get_optimal_path_prefer_signal_strenght(bool &optimal_path_prefer_signal_strenght)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int("optimal_path_prefer_signal_strenght", &retVal) == RETURN_ERR) {
+        return false;
+    }
+
+    optimal_path_prefer_signal_strenght = (retVal == 1);
+    return true;
+}
+
+bool cfg_set_optimal_path_prefer_signal_strenght(bool optimal_path_prefer_signal_strenght)
+{
+    std::string option = "optimal_path_prefer_signal_strenght";
+    std::string value  = std::to_string(((int)optimal_path_prefer_signal_strenght));
 
     return cfg_set_prplmesh_config(option, value);
 }

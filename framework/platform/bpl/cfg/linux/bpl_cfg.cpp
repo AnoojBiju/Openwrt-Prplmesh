@@ -315,6 +315,19 @@ bool cfg_get_band_steering(bool &band_steering)
 
 bool cfg_set_band_steering(bool band_steering) { return true; }
 
+bool cfg_get_client_11k_roaming(bool &eleven_k_roaming)
+{
+    int retVal = -1;
+    if (cfg_get_param_int("client_11k_roaming", retVal) == RETURN_ERR) {
+        return false;
+    }
+
+    eleven_k_roaming = (retVal == 1);
+    return true;
+}
+
+bool cfg_set_client_11k_roaming(bool eleven_k_roaming) { return true; }
+
 bool cfg_get_client_roaming(bool &client_roaming)
 {
     int retVal = -1;
@@ -327,6 +340,61 @@ bool cfg_get_client_roaming(bool &client_roaming)
 }
 
 bool cfg_set_client_roaming(bool client_roaming) { return true; }
+
+bool cfg_get_load_balancing(bool &load_balancing)
+{
+    int retVal = -1;
+    if (cfg_get_param_int("load_balancing", retVal) == RETURN_ERR) {
+        return false;
+    }
+
+    load_balancing = (retVal == 1);
+    return true;
+}
+
+bool cfg_set_load_balancing(bool load_balancing) { return true; }
+
+bool cfg_get_dfs_reentry(bool &dfs_reentry_enabled)
+{
+    int retVal = -1;
+    if (cfg_get_param_int("dfs_reentry", retVal) == RETURN_ERR) {
+        return false;
+    }
+
+    dfs_reentry_enabled = (retVal == 1);
+    return true;
+}
+
+bool cfg_set_dfs_reentry(bool dfs_reentry_enabled) { return true; }
+
+bool cfg_get_ire_roaming(bool &ire_roaming)
+{
+    int retVal = -1;
+    if (cfg_get_param_int("ire_roaming", retVal) == RETURN_ERR) {
+        return false;
+    }
+
+    ire_roaming = (retVal == 1);
+    return true;
+}
+
+bool cfg_set_ire_roaming(bool ire_roaming) { return true; }
+
+bool cfg_get_optimal_path_prefer_signal_strenght(bool &optimal_path_prefer_signal_strenght)
+{
+    int retVal = -1;
+    if (cfg_get_param_int("optimal_path_prefer_signal_strenght", retVal) == RETURN_ERR) {
+        return false;
+    }
+
+    optimal_path_prefer_signal_strenght = (retVal == 1);
+    return true;
+}
+
+bool cfg_set_optimal_path_prefer_signal_strenght(bool optimal_path_prefer_signal_strenght)
+{
+    return true;
+}
 
 int cfg_get_backhaul_params(int *max_vaps, int *network_enabled, int *preferred_radio_band)
 {

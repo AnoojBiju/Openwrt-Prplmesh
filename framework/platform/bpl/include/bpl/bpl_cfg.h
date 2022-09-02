@@ -425,6 +425,22 @@ bool cfg_get_band_steering(bool &band_steering);
 bool cfg_set_band_steering(bool band_steering);
 
 /**
+ * @brief Returns whether 11k Roaming feature is enabled or not.
+ *
+ * @param [out] enable true if the 11k Roaming is enabled and false otherwise.
+ * @return true on success, otherwise false.
+ */
+bool cfg_get_client_11k_roaming(bool &eleven_k_roaming);
+
+/**
+ * @brief Sets 11k Roaming in configuration.
+ *
+ * @param[in] band_steering  true for enabled 11k Roaming.
+ * @return true on success, otherwise false
+ */
+bool cfg_set_client_11k_roaming(bool eleven_k_roaming);
+
+/**
  * @brief Returns whether Client Roaming feature is enabled or not.
  *
  * @param [out] enable true if the Client Roaming is enabled and false otherwise.
@@ -439,6 +455,70 @@ bool cfg_get_client_roaming(bool &client_roaming);
  * @return true on success, otherwise false
  */
 bool cfg_set_client_roaming(bool client_roaming);
+
+/**
+ * @brief Returns whether Load Balancing feature is enabled or not.
+ *
+ * @param [out] enable true if the Load Balancing is enabled and false otherwise.
+ * @return true on success, otherwise false.
+ */
+bool cfg_get_load_balancing(bool &load_balancing);
+
+/**
+ * @brief Sets Load Balancing in configuration.
+ *
+ * @param[in] load_balancing true for enabled Load Balancing.
+ * @return true on success, otherwise false
+ */
+bool cfg_set_load_balancing(bool load_balancing);
+
+/**
+ * @brief Returns whether DFS Re-Entry is enabled or not.
+ *
+ *@param [out] enable true if the DFS Re-Entry is enabled and false otherwise.
+ * @return true on success, otherwise false.
+ */
+bool cfg_get_dfs_reentry(bool &dfs_reentry_enabled);
+
+/**
+ * @brief Sets DFS Re-Entry option in configuration.
+ *
+ * @param[in] dfs_reentry_enabled  true for enabled dfs_reentry_enabled.
+ * @return true on success, otherwise false
+ */
+bool cfg_set_dfs_reentry(bool dfs_reentry_enabled);
+
+/**
+ * @brief Returns whether IRE Roaming Flag is enabled or not.
+ *
+ *@param [out] enable true if the IRE Roaming Flag is enabled and false otherwise.
+ * @return true on success, otherwise false.
+ */
+bool cfg_get_ire_roaming(bool &ire_roaming);
+
+/**
+ * @brief Sets IRE Roaming Flag in configuration.
+ *
+ * @param[in] ire_roaming IRE Roaming Flag.
+ * @return true on success, otherwise false
+ */
+bool cfg_set_ire_roaming(bool ire_roaming);
+
+/**
+ * @brief Returns whether Optimal Path Task Prefer Signal Strenght is enabled or not.
+ *
+ *@param [out] enable true if the Prefer Signal Strenght is enabled and false otherwise.
+ * @return true on success, otherwise false.
+ */
+bool cfg_get_optimal_path_prefer_signal_strenght(bool &optimal_path_prefer_signal_strenght);
+
+/**
+ * @brief Sets Optimal Path Prefer Signal Strenght in configuration.
+ *
+ * @param[in] health_check_enabled  true for enabled preference.
+ * @return true on success, otherwise false
+ */
+bool cfg_set_optimal_path_prefer_signal_strenght(bool optimal_path_prefer_signal_strenght);
 
 /**
  * Returns miscellaneous Wi-Fi parameters.
