@@ -124,7 +124,8 @@
 
                 object Configuration {
                     bool BandSteeringEnabled = false;
-                    bool ClientSteeringEnabled = false;
+                    bool ClientRoamingEnabled = false;
+
                     uint32 SteeringCurrentBonus = 0 {
                         on action validate call check_range [0, 10000];
                     }
