@@ -824,6 +824,8 @@ static void event_configuration_changed(const char *const sig_name, const amxc_v
     son::db::sDbNbapiConfig nbapi_config;
     nbapi_config.client_band_steering =
         amxd_object_get_bool(configuration, "BandSteeringEnabled", nullptr);
+    nbapi_config.client_11k_roaming =
+        amxd_object_get_bool(configuration, "Client_11kRoaming", nullptr);
     nbapi_config.client_optimal_path_roaming =
         amxd_object_get_bool(configuration, "ClientSteeringEnabled", nullptr);
     nbapi_config.roaming_hysteresis_percent_bonus =
@@ -832,6 +834,32 @@ static void event_configuration_changed(const char *const sig_name, const amxc_v
         amxd_object_get_int32_t(configuration, "SteeringDisassociationTimer", nullptr)};
     nbapi_config.link_metrics_request_interval_seconds = std::chrono::seconds{
         amxd_object_get_int32_t(configuration, "LinkMetricsRequestInterval", nullptr)};
+
+    nbapi_config.channel_select_task =
+        amxd_object_get_bool(configuration, "ChannelSelectionTaskEnabled", nullptr);
+
+    nbapi_config.ire_roaming =
+        amxd_object_get_bool(configuration, "BackhaulOptimizationEnabled", nullptr);
+
+    nbapi_config.dynamic_channel_select_task =
+        amxd_object_get_bool(configuration, "DynamicChannelSelectionTaskEnabled", nullptr);
+
+    nbapi_config.load_balancing =
+        amxd_object_get_bool(configuration, "LoadBalancingTaskEnabled", nullptr);
+
+    nbapi_config.optimal_path_prefer_signal_strength =
+        amxd_object_get_bool(configuration, "OptimalPathPreferSignalStrength", nullptr);
+
+    nbapi_config.health_check =
+        amxd_object_get_bool(configuration, "HealthCheckTaskEnabled", nullptr);
+
+    nbapi_config.diagnostics_measurements =
+        amxd_object_get_bool(configuration, "StatisticsPollingTaskEnabled", nullptr);
+
+    nbapi_config.diagnostics_measurements_polling_rate_sec =
+        amxd_object_get_int32_t(configuration, "StatisticsPollingRateSec", nullptr);
+
+    nbapi_config.enable_dfs_reentry = amxd_object_get_bool(configuration, "DFSReentry", nullptr);
 
     if (!g_database->update_master_configuration(nbapi_config)) {
         LOG(ERROR) << "Failed update master configuration from NBAPI.";
