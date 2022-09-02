@@ -393,6 +393,19 @@ bool cfg_get_dfs_task(bool &dfs_task_enabled)
 
 bool cfg_set_dfs_task(bool dfs_task_enabled) { return true; }
 
+bool cfg_get_health_check(bool &health_check_enabled)
+{
+    int retVal = -1;
+    if (cfg_get_param_int("health_check_enabled", retVal) == RETURN_ERR) {
+        return false;
+    }
+
+    health_check_enabled = (retVal == 1);
+    return true;
+}
+
+bool cfg_set_health_check(bool health_check_enabled) { return true; }
+
 bool cfg_get_ire_roaming(bool &ire_roaming)
 {
     int retVal = -1;
@@ -418,6 +431,41 @@ bool cfg_get_optimal_path_prefer_signal_strenght(bool &optimal_path_prefer_signa
 }
 
 bool cfg_set_optimal_path_prefer_signal_strenght(bool optimal_path_prefer_signal_strenght)
+{
+    return true;
+}
+
+bool cfg_get_diagnostics_measurements(bool &diagnostics_measurements)
+{
+    int retVal = -1;
+    if (cfg_get_param_int("diagnostics_measurements", retVal) == RETURN_ERR) {
+        return false;
+    }
+
+    diagnostics_measurements = (retVal == 1);
+    return true;
+}
+
+bool cfg_set_diagnostics_measurements(bool diagnostics_measurements) { return true; }
+
+bool cfg_get_diagnostics_measurements_polling_rate_sec(
+    int &diagnostics_measurements_polling_rate_sec)
+{
+    int retVal = -1;
+    if (cfg_get_param_int("diagnostics_measurements_polling_rate_sec", retVal) == RETURN_ERR) {
+        MAPF_INFO("Failed to read diagnostics_measurements_polling_rate_sec parameter ");
+        diagnostics_measurements_polling_rate_sec =
+            DEFAULT_DIAGNOSTICS_MEASUREMENT_POLLING_RATE_SEC;
+        return false;
+    }
+
+    diagnostics_measurements_polling_rate_sec = retVal;
+
+    return true;
+}
+
+bool cfg_set_diagnostics_measurements_polling_rate_sec(
+    const int &diagnostics_measurements_polling_rate_sec)
 {
     return true;
 }

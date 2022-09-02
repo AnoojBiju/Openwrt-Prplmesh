@@ -172,6 +172,9 @@ constexpr int DEFAULT_UNSUCCESSFUL_ASSOC_REPORT_POLICY = 1;
 // Default value in attempts per minute for maximum rate for reporting unsuccessful association attempts
 constexpr int DEFAULT_UNSUCCESSFUL_ASSOC_MAX_REPORTING_RATE = 30;
 
+// Default value for the diagnostics measurements interval in seconds
+constexpr int DEFAULT_DIAGNOSTICS_MEASUREMENT_POLLING_RATE_SEC = 10;
+
 // Default DCS Channel Pool
 constexpr int BPL_DCS_CHANNEL_POOL_LEN    = 128;
 constexpr char DEFAULT_DCS_CHANNEL_POOL[] = "0";
@@ -521,6 +524,22 @@ bool cfg_get_dfs_task(bool &dfs_task_enabled);
 bool cfg_set_dfs_task(bool dfs_task_enabled);
 
 /**
+ * @brief Returns whether Health Check Task is enabled or not.
+ *
+ *@param [out] enable true if the Health Check Task is enabled and false otherwise.
+ * @return true on success, otherwise false.
+ */
+bool cfg_get_health_check(bool &health_check_enabled);
+
+/**
+ * @brief Sets Health Check Task in configuration.
+ *
+ * @param[in] health_check_enabled  true for enabled dfs_task_enabled.
+ * @return true on success, otherwise false
+ */
+bool cfg_set_health_check(bool health_check_enabled);
+
+/**
  * @brief Returns whether IRE Roaming Flag is enabled or not.
  *
  *@param [out] enable true if the IRE Roaming Flag is enabled and false otherwise.
@@ -551,6 +570,41 @@ bool cfg_get_optimal_path_prefer_signal_strenght(bool &optimal_path_prefer_signa
  * @return true on success, otherwise false
  */
 bool cfg_set_optimal_path_prefer_signal_strenght(bool optimal_path_prefer_signal_strenght);
+
+/**
+ * @brief Returns whether Statistics Polling Task is enabled or not.
+ *
+ *@param [out] enable true if the Statistics Polling Task is enabled and false otherwise.
+ * @return true on success, otherwise false.
+ */
+bool cfg_get_diagnostics_measurements(bool &diagnostics_measurements);
+
+/**
+ * @brief Sets Statistics Polling Task in configuration.
+ *
+ * @param[in] health_check_enabled  true for enabled preference.
+ * @return true on success, otherwise false
+ */
+bool cfg_set_diagnostics_measurements(bool diagnostics_measurements);
+
+/**
+ * @brief Returns the Statistics Polling Task poll rate in seconds.
+ *
+ *@param [out] diagnostics_measurements_polling_rate_sec value from uci config if present,
+ * 10seconds default value otherwise
+ * @return true on success, otherwise false.
+ */
+bool cfg_get_diagnostics_measurements_polling_rate_sec(
+    int &diagnostics_measurements_polling_rate_sec);
+
+/**
+ * @brief Sets the Statistics Polling Task poll rate in seconds in configuration.
+ *
+ * @param[in] diagnostics_measurements_polling_rate_sec poll rate in seconds
+ * @return true on success, otherwise false
+ */
+bool cfg_set_diagnostics_measurements_polling_rate_sec(
+    const int &diagnostics_measurements_polling_rate_sec);
 
 /**
  * Returns miscellaneous Wi-Fi parameters.

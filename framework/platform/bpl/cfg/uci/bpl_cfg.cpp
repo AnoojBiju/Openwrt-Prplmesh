@@ -351,6 +351,25 @@ bool cfg_set_dfs_task(bool dfs_task_enabled)
     return cfg_set_prplmesh_config(option, value);
 }
 
+bool cfg_get_health_check(bool &health_check_enabled)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int("health_check_enabled", &retVal) == RETURN_ERR) {
+        return false;
+    }
+
+    health_check_enabled = (retVal == 1);
+    return true;
+}
+
+bool cfg_set_health_check(bool health_check_enabled)
+{
+    std::string option = "health_check_enabled";
+    std::string value  = std::to_string(((int)health_check_enabled));
+
+    return cfg_set_prplmesh_config(option, value);
+}
+
 bool cfg_get_ire_roaming(bool &ire_roaming)
 {
     int retVal = -1;
@@ -385,6 +404,51 @@ bool cfg_set_optimal_path_prefer_signal_strenght(bool optimal_path_prefer_signal
 {
     std::string option = "optimal_path_prefer_signal_strenght";
     std::string value  = std::to_string(((int)optimal_path_prefer_signal_strenght));
+
+    return cfg_set_prplmesh_config(option, value);
+}
+
+bool cfg_get_diagnostics_measurements(bool &diagnostics_measurements)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int("diagnostics_measurements", &retVal) == RETURN_ERR) {
+        return false;
+    }
+
+    diagnostics_measurements = (retVal == 1);
+    return true;
+}
+
+bool cfg_set_diagnostics_measurements(bool diagnostics_measurements)
+{
+    std::string option = "diagnostics_measurements";
+    std::string value  = std::to_string(((int)diagnostics_measurements));
+
+    return cfg_set_prplmesh_config(option, value);
+}
+
+bool cfg_get_diagnostics_measurements_polling_rate_sec(
+    int &diagnostics_measurements_polling_rate_sec)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int_default("diagnostics_measurements_polling_rate_sec", &retVal,
+                                           DEFAULT_DIAGNOSTICS_MEASUREMENT_POLLING_RATE_SEC) ==
+        RETURN_ERR) {
+        MAPF_INFO("Failed to read diagnostics_measurements_polling_rate_sec parameter - setting "
+                  "default value");
+        return false;
+    }
+
+    diagnostics_measurements_polling_rate_sec = retVal;
+
+    return true;
+}
+
+bool cfg_set_diagnostics_measurements_polling_rate_sec(
+    const int &diagnostics_measurements_polling_rate_sec)
+{
+    std::string option = "diagnostics_measurements_polling_rate_sec";
+    std::string value  = std::to_string(diagnostics_measurements_polling_rate_sec);
 
     return cfg_set_prplmesh_config(option, value);
 }
