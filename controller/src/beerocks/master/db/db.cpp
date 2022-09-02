@@ -6941,6 +6941,61 @@ uint64_t db::recalculate_attr_to_byte_units(
     return bytes;
 }
 
+std::string db::calculate_dpp_bootstrapping_str()
+{
+    // e.g. DPP:V:2;K:MDkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDIgADezecPyVDIgJVgdGBHGBdxRxGpNU7x9cHFBE=;;
+    //  DPP:
+    //  [C:<channel/opClass>,...;]                                                # Channel list
+    //  [M:<mac(e.g. aabbccddeeff);]                                              # MAC
+    //  [I:<any sequence of printable character except ';', no length limit>;]    # Information
+    //  [V:<at least 1 (ALPHA / DIGIT) character (e.g "1", "2", etc>;]            # Version
+    //  [H:<1-255 characters of (DIGIT / ALPHA / "." / "-" / ":")>;]              # Host
+    //  [<Any sequence of characters which is not one of
+    //    ("C", "M", "I", "V", "H", "K")>:
+    //    <any sequence of printable character except ';', no length limit>;]     # Reserve
+    //  K:<any sequence of (ALPHA / DIGIT / '+' / '/' / '=') , no length limit>;; # Public key
+
+    std::string dpp_conn_string = "";
+    std::string opclass_channel_str;
+    for (const auto &ch : dpp_bootstrapping_info.operating_class_channel) {
+        opclass_channel_str += std::to_string(ch.first) + "/" + std::to_string(ch.second) + ",";
+    }
+    if (!opclass_channel_str.empty()) {
+        // Channel/OpClass has been added
+        opclass_channel_str.pop_back();
+        dpp_conn_string += "C:" + opclass_channel_str + ";";
+    }
+
+    if (dpp_bootstrapping_info.mac != net::network_utils::ZERO_MAC) {
+        // Since semicolons are not in DPP str, remove them
+        std::string mac_string = tlvf::mac_to_string(dpp_bootstrapping_info.mac);
+        mac_string.erase(std::remove_if(mac_string.begin(), mac_string.end(),
+                                        [&mac_string](const char &c) {
+                                            return mac_string.find(c) != std::string::npos;
+                                        }),
+                         mac_string.end());
+        dpp_conn_string += "M:" + mac_string + ";";
+    }
+    if (!dpp_bootstrapping_info.info.empty())
+        dpp_conn_string += "I:" + dpp_bootstrapping_info.info + ";";
+
+    if (dpp_bootstrapping_info.version != 0)
+        dpp_conn_string += "V:" + std::to_string(dpp_bootstrapping_info.version) + ";";
+
+    if (!dpp_bootstrapping_info.host.empty())
+        dpp_conn_string += "H:" + dpp_bootstrapping_info.host + ";";
+
+    if (!dpp_bootstrapping_info.public_key.empty())
+        dpp_conn_string += "K:" + dpp_bootstrapping_info.public_key + ";";
+
+    if (dpp_conn_string.empty()) {
+        // No data elements were added, bootstrapping data is not initialized, return ""
+        return "";
+    }
+
+    return "DPP:" + dpp_conn_string + ";";
+}
+
 bool db::dm_clear_cac_status_report(std::shared_ptr<Agent> agent)
 {
     if (agent->dm_path.empty()) {

@@ -134,8 +134,7 @@ bool vbss_actions::create_vbss(const sClientVBSS &client_vbss, const sMacAddr &d
     vbss_creation_req->set_ssid(ssid);
     vbss_creation_req->set_pass(password);
 
-    // Need more info on DPP, just disabling
-    vbss_creation_req->set_dpp_connector("");
+    vbss_creation_req->set_dpp_connector(database.calculate_dpp_bootstrapping_str());
 
     if (client_vbss.client_is_associated) {
         if (!client_sec_ctx) {
