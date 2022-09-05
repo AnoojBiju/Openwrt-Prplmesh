@@ -56,3 +56,7 @@ ubus call "WiFi.Radio.1" _set '{ "parameters": { "Channel": "1" } }'
 ubus call "WiFi.Radio.2" _set '{ "parameters": { "Channel": "48" } }'
 
 # secondary vaps and backhaul are not supported yet (WIP)
+
+# Try to work around PCF-681: if we don't have a connectivity, restart
+# tr181-bridging
+ping 192.168.1.2 -c 3 || /etc/init.d/tr181-bridging restart

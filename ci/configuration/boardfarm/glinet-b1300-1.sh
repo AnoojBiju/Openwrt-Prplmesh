@@ -147,3 +147,7 @@ config_foreach set_channel wifi-device
 uci commit
 /etc/init.d/system restart
 /etc/init.d/network restart
+
+# Try to work around PCF-681: if we don't have a connectivity, restart
+# tr181-bridging
+ping 192.168.1.2 -c 3 || /etc/init.d/tr181-bridging restart
