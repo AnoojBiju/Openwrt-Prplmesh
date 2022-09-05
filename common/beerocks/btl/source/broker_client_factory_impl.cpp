@@ -14,6 +14,8 @@
 
 #include <easylogging++.h>
 
+#include <chrono>
+
 namespace beerocks {
 namespace btl {
 
@@ -44,8 +46,25 @@ std::unique_ptr<BrokerClient> BrokerClientFactoryImpl::create_instance()
     // Connect client socket to server socket
     beerocks::net::UdsAddress address(m_uds_path);
     LOG(DEBUG) << "Connecting to Broker";
-    auto connection = client_socket->connect(address);
-    if (!connection) {
+
+    std::unique_ptr<net::Socket::Connection> connection;
+    constexpr auto broker_client_connection_timeout = std::chrono::seconds(10);
+    auto timeout = std::chrono::steady_clock::now() + broker_client_connection_timeout;
+
+    // When prplMesh processes are brought up, it is possible that broker clients will try to
+    // connect before the transport process is up.
+    // On the client side, failure to connect the transport process means FATAL.
+    // To prevent random FATAL when prplMesh is started, return error only if the client failed to
+    // connect the transport for more than 'broker_client_connection_timeout' seconds.
+    while (!connection) {
+        connection = client_socket->connect(address);
+        if (connection) {
+            break;
+        }
+        if (std::chrono::steady_clock::now() < timeout) {
+            UTILS_SLEEP_MSEC(100);
+            continue;
+        }
         LOG(ERROR) << "Unable to connect client socket to '" << address.path() + "'";
         return nullptr;
     }
