@@ -474,25 +474,53 @@ fill_nbapi_config_from_master_conf(std::shared_ptr<beerocks::nbapi::Ambiorix> am
 
     // ambiorix->set methods trigger data change event. It is not harmfull, but needed to be remembered.
 
-    ret_val &=
-        ambiorix_datamodel->set("Device.WiFi.DataElements.Configuration", "BandSteeringEnabled",
-                                master_conf.load_client_band_steering);
+    const std::string configuration_path = "Device.WiFi.DataElements.Configuration";
 
-    ret_val &=
-        ambiorix_datamodel->set("Device.WiFi.DataElements.Configuration", "ClientSteeringEnabled",
-                                master_conf.load_client_optimal_path_roaming);
+    ret_val &= ambiorix_datamodel->set(configuration_path, "BandSteeringEnabled",
+                                       master_conf.load_client_band_steering);
 
-    ret_val &=
-        ambiorix_datamodel->set("Device.WiFi.DataElements.Configuration", "SteeringCurrentBonus",
-                                master_conf.roaming_hysteresis_percent_bonus);
+    ret_val &= ambiorix_datamodel->set(configuration_path, "OptimalPathEnabled",
+                                       master_conf.load_client_optimal_path_roaming);
 
-    ret_val &= ambiorix_datamodel->set("Device.WiFi.DataElements.Configuration",
-                                       "SteeringDisassociationTimer",
+    ret_val &= ambiorix_datamodel->set(configuration_path, "SteeringCurrentBonus",
+                                       master_conf.roaming_hysteresis_percent_bonus);
+
+    ret_val &= ambiorix_datamodel->set(configuration_path, "SteeringDisassociationTimer",
                                        master_conf.steering_disassoc_timer_msec.count());
 
-    ret_val &= ambiorix_datamodel->set("Device.WiFi.DataElements.Configuration",
-                                       "LinkMetricsRequestInterval",
+    ret_val &= ambiorix_datamodel->set(configuration_path, "LinkMetricsRequestInterval",
                                        master_conf.link_metrics_request_interval_seconds.count());
+
+    ret_val &= ambiorix_datamodel->set(configuration_path, "ChannelSelectionTaskEnabled",
+                                       master_conf.load_channel_select_task);
+
+    ret_val &= ambiorix_datamodel->set(configuration_path, "BackhaulOptimizationEnabled",
+                                       master_conf.load_ire_roaming);
+
+    ret_val &= ambiorix_datamodel->set(configuration_path, "DynamicChannelSelectionTaskEnabled",
+                                       master_conf.load_dynamic_channel_select_task);
+
+    ret_val &= ambiorix_datamodel->set(configuration_path, "LoadBalancingTaskEnabled",
+                                       master_conf.load_load_balancing);
+
+    ret_val &=
+        ambiorix_datamodel->set(configuration_path, "OptimalPathPreferSignalStrength",
+                                master_conf.load_optimal_path_roaming_prefer_signal_strength);
+
+    ret_val &= ambiorix_datamodel->set(configuration_path, "HealthCheckTaskEnabled",
+                                       master_conf.load_health_check);
+
+    ret_val &= ambiorix_datamodel->set(configuration_path, "StatisticsPollingRateSec",
+                                       master_conf.diagnostics_measurements_polling_rate_sec);
+
+    ret_val &= ambiorix_datamodel->set(configuration_path, "StatisticsPollingTaskEnabled",
+                                       master_conf.load_diagnostics_measurements);
+
+    ret_val &=
+        ambiorix_datamodel->set(configuration_path, "DFSReentry", master_conf.load_dfs_reentry);
+
+    ret_val &= ambiorix_datamodel->set(configuration_path, "Client_11kRoaming",
+                                       master_conf.load_client_11k_roaming);
 
     return ret_val;
 }
