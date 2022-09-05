@@ -119,12 +119,21 @@ inline std::ostream &operator<<(std::ostream &out, eClientsMeasurementMode value
 #define BPL_GW_DB_OPER_MODE_LEN (127 + 1)   /* Maximal length of OPERATING MODE string */
 
 /* Default values */
-constexpr int DEFAULT_STOP_ON_FAILURE_ATTEMPTS         = 1;
-constexpr int DEFAULT_RDKB_EXTENSIONS                  = 0;
-constexpr int DEFAULT_DFS_REENTRY                      = 1;
-constexpr int DEFAULT_BAND_STEERING                    = 0;
-constexpr int DEFAULT_CLIENT_ROAMING                   = 0;
-constexpr int DEFAULT_ROAMING_HYSTERESIS_PERCENT_BONUS = 10;
+constexpr int DEFAULT_STOP_ON_FAILURE_ATTEMPTS            = 1;
+constexpr int DEFAULT_RDKB_EXTENSIONS                     = 0;
+constexpr int DEFAULT_DFS_REENTRY                         = 1;
+constexpr int DEFAULT_BAND_STEERING                       = 0;
+constexpr int DEFAULT_CLIENT_ROAMING                      = 0;
+constexpr int DEFAULT_CHANNEL_SELECT_TASK                 = 1;
+constexpr int DEFAULT_DYNAMIC_CHANNEL_SELECT_TASK         = 1;
+constexpr int DEFAULT_DIAGNOSTICS_MEASUREMENTS            = 1;
+constexpr int DEFAULT_DIAGNOSTICS_POLLING_RATE_SEC        = 10;
+constexpr int DEFAULT_IRE_ROAMING                         = 1;
+constexpr int DEFAULT_11K_ROAMING                         = 1;
+constexpr int DEFAULT_HEALTH_CHECK                        = 0;
+constexpr int DEFAULT_LOAD_BALANCING                      = 0;
+constexpr int DEFAULT_OPTIMAL_PATH_PREFER_SIGNAL_STRENGTH = 0;
+constexpr int DEFAULT_ROAMING_HYSTERESIS_PERCENT_BONUS    = 10;
 constexpr std::chrono::milliseconds DEFAULT_STEERING_DISASSOC_TIMER_MSEC{200};
 
 // by-default the persistent DB is disabled to allow backwards compatability
