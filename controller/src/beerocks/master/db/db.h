@@ -532,7 +532,7 @@ public:
     bool remove_node(const sMacAddr &mac);
 
     /**
-     * @brief Removes optional subobjects: HTCapabilities, VHTCapabilities,WiFi6Capabilities in Radio DM
+     * @brief Removes optional subobjects: HTCapabilities, VHTCapabilities,WiFi6 in Radio DM
      *
      * Example of path to object: "Device.WiFi.DataElements.Network.Device.1.Radio.1.Capabilities".
      *
@@ -959,7 +959,7 @@ public:
      * @brief Add optional sub-object of AP HE Capabilities data element,
      * set values for its parameters.
      * Example of full path to object:
-     * "Device.WiFi.DataElements.Netwok.Device.1.Radio.1.Capabilities.WiFi6Capabilities"
+     * "Device.WiFi.DataElements.Netwok.Device.1.Radio.1.Capabilities.WiFi6"
      *
      * @param he_caps_tlv TLV with AP HE Capabilities included in
      * 'AP Capability Report' message
@@ -2363,10 +2363,10 @@ private:
     std::string dm_add_device_element(const sMacAddr &mac);
 
     /**
-     * @brief Add station 'WiFi6Capabilities' data element, set values to its parameters.
+     * @brief Add station 'WiFi6' data element, set values to its parameters.
      *
      * Example of full path to object:
-     * "Device.WiFi.DataElements.Netwok.Device.1.Radio.1.Capabilities.BSS.1.STA.1.WiFi6Capabilities".
+     * "Device.WiFi.DataElements.Netwok.Device.1.Radio.1.Capabilities.BSS.1.STA.1.WiFi6".
      *
      * @param path_to_sta Path to station.
      * Example of full path to station:
@@ -2428,9 +2428,9 @@ private:
                                         const beerocks::message::sRadioCapabilities &sta_cap);
 
     /**
-     * @brief Sets value for parameters of optional sub-object STA WiFi6Capabilities.
+     * @brief Sets value for parameters of optional sub-object STA WiFi6.
      *
-     * @param path_to_event Path to event which contains STA WiFi6Capabilities sub-object.
+     * @param path_to_event Path to event which contains STA WiFi6 sub-object.
      * @param sta_cap Structure with station WiFi6 Capabilities.
      * @return True on success, false otherwise.
      */

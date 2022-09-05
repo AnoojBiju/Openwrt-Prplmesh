@@ -517,10 +517,10 @@ TEST_F(DbTest, test_set_ap_he_capabilities)
               m_db->get_node_data_model_path(g_radio_mac_1));
 
     //expectations for set_ap_he_capabilities
-    EXPECT_CALL(*m_ambiorix, add_optional_subobject(radio_path_1_capabilities, "WiFi6Capabilities"))
+    EXPECT_CALL(*m_ambiorix, add_optional_subobject(radio_path_1_capabilities, "WiFi6"))
         .WillOnce(Return(true));
 
-    const std::string he_capabilities_path = radio_path_1_capabilities + "WiFi6Capabilities.";
+    const std::string he_capabilities_path = radio_path_1_capabilities + "WiFi6.";
     EXPECT_CALL(*m_ambiorix, set(he_capabilities_path, "MaxNumberOfTxSpatialStreams",
                                  Matcher<const int32_t &>(8)))
         .WillOnce(Return(true));
@@ -756,10 +756,10 @@ TEST_F(DbTestRadio1Sta1, test_set_station_capabilities)
 {
     std::string ht_capabilities1  = std::string(g_sta_path_1) + ".HTCapabilities.";
     std::string vht_capabilities1 = std::string(g_sta_path_1) + ".VHTCapabilities.";
-    std::string he_capabilities1  = std::string(g_sta_path_1) + ".WiFi6Capabilities.";
+    std::string he_capabilities1  = std::string(g_sta_path_1) + ".WiFi6.";
     std::string ht_capabilities2  = std::string(g_assoc_event_path_1) + ".HTCapabilities.";
     std::string vht_capabilities2 = std::string(g_assoc_event_path_1) + ".VHTCapabilities.";
-    std::string he_capabilities2  = std::string(g_assoc_event_path_1) + ".WiFi6Capabilities.";
+    std::string he_capabilities2  = std::string(g_assoc_event_path_1) + ".WiFi6.";
 
     //expectations for set_node_stats_info
     beerocks::message::sRadioCapabilities sta_cap;
@@ -772,13 +772,13 @@ TEST_F(DbTestRadio1Sta1, test_set_station_capabilities)
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, remove_optional_subobject(g_sta_path_1 + '.', "VHTCapabilities"))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix, remove_optional_subobject(g_sta_path_1 + '.', "WiFi6Capabilities"))
+    EXPECT_CALL(*m_ambiorix, remove_optional_subobject(g_sta_path_1 + '.', "WiFi6"))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, add_optional_subobject(g_sta_path_1 + '.', "HTCapabilities"))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, add_optional_subobject(g_sta_path_1 + '.', "VHTCapabilities"))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix, add_optional_subobject(g_sta_path_1 + '.', "WiFi6Capabilities"))
+    EXPECT_CALL(*m_ambiorix, add_optional_subobject(g_sta_path_1 + '.', "WiFi6"))
         .WillOnce(Return(true));
 
     EXPECT_CALL(*m_ambiorix, set(ht_capabilities1, "HTShortGI20", Matcher<const bool &>(_)))
@@ -875,16 +875,14 @@ TEST_F(DbTestRadio1Sta1, test_set_station_capabilities)
     EXPECT_CALL(*m_ambiorix,
                 remove_optional_subobject(g_assoc_event_path_1 + '.', "VHTCapabilities"))
         .WillRepeatedly(Return(true));
-    EXPECT_CALL(*m_ambiorix,
-                remove_optional_subobject(g_assoc_event_path_1 + '.', "WiFi6Capabilities"))
+    EXPECT_CALL(*m_ambiorix, remove_optional_subobject(g_assoc_event_path_1 + '.', "WiFi6"))
         .WillRepeatedly(Return(true));
 
     EXPECT_CALL(*m_ambiorix, add_optional_subobject(g_assoc_event_path_1 + '.', "HTCapabilities"))
         .WillRepeatedly(Return(true));
     EXPECT_CALL(*m_ambiorix, add_optional_subobject(g_assoc_event_path_1 + '.', "VHTCapabilities"))
         .WillRepeatedly(Return(true));
-    EXPECT_CALL(*m_ambiorix,
-                add_optional_subobject(g_assoc_event_path_1 + '.', "WiFi6Capabilities"))
+    EXPECT_CALL(*m_ambiorix, add_optional_subobject(g_assoc_event_path_1 + '.', "WiFi6"))
         .WillRepeatedly(Return(true));
 
     EXPECT_CALL(*m_ambiorix, set(ht_capabilities2, "HTShortGI20", Matcher<const bool &>(_)))

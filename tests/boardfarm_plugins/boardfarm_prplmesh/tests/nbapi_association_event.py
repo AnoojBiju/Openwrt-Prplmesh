@@ -94,7 +94,7 @@ class NbapiAssociationEvent(PrplMeshBaseTest):
                     debug("{} : {}".format(key, value))
 
                 debug("\nChecking HE capabilities")
-                he_caps = controller.nbapi_get(assoc_data + ".WiFi6Capabilities")
+                he_caps = controller.nbapi_get(assoc_data + ".WiFi6")
                 for key, value in sorted(he_caps.items()):
                     debug("{} : {}".format(key, value))
 

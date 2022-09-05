@@ -135,7 +135,7 @@ class NbapiCapabilities(PrplMeshBaseTest):
                                         tlv.vht_supported_rx_mcs)
                 if tlv.tlv_type == self.ieee1905['eTlvTypeMap']['TLV_AP_HE_CAPABILITIES']:
                     radio = repeater.radios[tlv.ap_he_capability_radio_id]
-                    he_caps = controller.nbapi_get(radio.path + ".Capabilities.WiFi6Capabilities")
+                    he_caps = controller.nbapi_get(radio.path + ".Capabilities.WiFi6")
                     self.assertEqualInt("MaxNumberOfRxSpatialStreams",
                                         he_caps['MaxNumberOfRxSpatialStreams'] - 1,
                                         tlv.ap_he_caps_tree['ieee1905.he_cap.max_rx_streams'])
