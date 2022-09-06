@@ -1520,11 +1520,13 @@ ChannelSelectionTask::select_next_channel(const sMacAddr &radio_mac)
             }
 
             // For 80M & 160M need to choose best beacon channel according to 20M rankning
-            auto best_channel = channel_number;
+            auto best_channel = central_channel;
             if (bandwidth >= eWiFiBandwidth::BANDWIDTH_80) {
                 best_channel = find_best_beacon_channel(
                     son::wireless_utils::center_channel_5g_to_beacon_channels(best_channel,
                                                                               bandwidth));
+		if (!best_channel)
+			best_channel = channel_number;
             }
 
             LOG(INFO) << "[" << best_channel << "-" << operating_class << "("
