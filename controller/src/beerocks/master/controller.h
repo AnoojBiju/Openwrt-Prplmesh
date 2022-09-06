@@ -181,6 +181,34 @@ public:
                            const sMacAddr &vbssid, const sMacAddr &client_mac,
                            const std::string &new_bss_ssid, const std::string &new_bss_pass);
 
+    /**
+     * @brief Function that starts all mandatory periodic tasks on controller start-up
+     * Mandatory task list is
+     * bml_task
+     * topology_task
+     * client_association_task
+     * agent_monitoring_task
+     * vbss_task (ifdef ENABLE_VBSS)
+     * DhcpTask
+     *
+     * @return void.
+     */
+    void start_mandatory_tasks();
+
+    /**
+     * @brief Function that starts/stops configurable periodic tasks based on database settings
+     * Optional tasks can be enabled/disabled via NbAPI flags.
+     * The following tasks are in this category:
+     * statistics_polling_task
+     * LinkMetricTask
+     * channel_selection_task
+     * dynamic_channel_selection_task_r2
+     * health_check_task
+     *
+     * @return void.
+     */
+    void start_optional_tasks();
+
 private:
     /**
      * @brief Handles the client-connected event in the CMDU server.
