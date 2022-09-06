@@ -14,13 +14,11 @@
 #include "tasks/agent_monitoring_task.h"
 #include "tasks/bml_task.h"
 #include "tasks/btm_request_task.h"
-#include "tasks/channel_selection_task.h"
 #include "tasks/client_association_task.h"
 #include "tasks/client_steering_task.h"
 #include "tasks/dhcp_task.h"
 #include "tasks/load_balancer_task.h"
 #include "tasks/optimal_path_task.h"
-#include "tasks/statistics_polling_task.h"
 #include "tasks/topology_task.h"
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
 #include "tasks/pre_association_steering/pre_association_steering_task.h"
@@ -28,9 +26,7 @@
 #include "db/db_algo.h"
 #include "db/network_map.h"
 #include "tasks/client_locating_task.h"
-#include "tasks/dynamic_channel_selection_r2_task.h"
 #include "tasks/dynamic_channel_selection_task.h"
-#include "tasks/network_health_check_task.h"
 
 #include <bcl/beerocks_backport.h>
 #include <bcl/beerocks_utils.h>
@@ -132,25 +128,28 @@ Controller::Controller(db &database_,
 
 #ifndef BEEROCKS_LINUX
     if (database.settings_diagnostics_measurements()) {
-        LOG_IF(!m_task_pool.add_task(
-                   std::make_shared<statistics_polling_task>(database, cmdu_tx, m_task_pool)),
-               FATAL)
-            << "Failed adding statistics polling task!";
+        LOG(DEBUG) << "Start Statistics polling task";
+        m_statistics_polling_task =
+            std::make_shared<statistics_polling_task>(database, cmdu_tx, m_task_pool);
+        LOG_IF(!m_task_pool.add_task(m_statistics_polling_task), FATAL)
+            << "Failed adding Statistics polling task!";
     }
 #endif
 
     LOG_IF(!m_task_pool.add_task(std::make_shared<bml_task>(database, cmdu_tx, m_task_pool)), FATAL)
         << "Failed adding BML task!";
 
-    LOG_IF(!m_task_pool.add_task(
-               std::make_shared<channel_selection_task>(database, cmdu_tx, m_task_pool)),
-           FATAL)
-        << "Failed adding channel selection task!";
+    LOG(DEBUG) << "Start Channel selection task";
+    m_channel_selection_task =
+        std::make_shared<channel_selection_task>(database, cmdu_tx, m_task_pool);
+    LOG_IF(!m_task_pool.add_task(m_channel_selection_task), FATAL)
+        << "Failed adding Channel selection task!";
 
-    LOG_IF(!m_task_pool.add_task(
-               std::make_shared<dynamic_channel_selection_r2_task>(database, cmdu_tx, m_task_pool)),
-           FATAL)
-        << "Failed adding dynamic channel selection r2 task!";
+    LOG(DEBUG) << "Start Dynamic channel selection r2 task";
+    m_dynamic_channel_selection_task =
+        std::make_shared<dynamic_channel_selection_r2_task>(database, cmdu_tx, m_task_pool);
+    LOG_IF(!m_task_pool.add_task(m_dynamic_channel_selection_task), FATAL)
+        << "Failed adding Dynamic channel selection r2 task!";
 
     LOG_IF(!m_task_pool.add_task(std::make_shared<topology_task>(database, cmdu_tx, m_task_pool)),
            FATAL)
@@ -167,10 +166,12 @@ Controller::Controller(db &database_,
         << "Failed adding agent monitoring task!";
 
     if (database.settings_health_check()) {
-        LOG_IF(!m_task_pool.add_task(
-                   std::make_shared<network_health_check_task>(database, cmdu_tx, m_task_pool, 0)),
-               FATAL)
-            << "Failed adding network health check task!";
+        LOG(DEBUG) << "Start Network health check task";
+
+        m_network_health_check_task =
+            std::make_shared<network_health_check_task>(database, cmdu_tx, m_task_pool, 0);
+        LOG_IF(!m_task_pool.add_task(m_network_health_check_task), FATAL)
+            << "Failed adding Network health check task!";
     } else {
         LOG(DEBUG) << "Health check is DISABLED!";
     }
@@ -183,6 +184,8 @@ Controller::Controller(db &database_,
 #endif
 
     if (database.config.management_mode != BPL_MGMT_MODE_NOT_MULTIAP) {
+        LOG(DEBUG) << "Start Link metrics task";
+
         m_link_metrics_task =
             std::make_shared<LinkMetricsTask>(database, cmdu_tx, cert_cmdu_tx, m_task_pool);
         LOG_IF(!m_task_pool.add_task(m_link_metrics_task), FATAL)

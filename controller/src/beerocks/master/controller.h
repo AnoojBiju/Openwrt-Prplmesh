@@ -12,7 +12,11 @@
 #include "controller_ucc_listener.h"
 #include "db/db.h"
 #include "periodic/periodic_operation_pool.h"
+#include "tasks/channel_selection_task.h"
+#include "tasks/dynamic_channel_selection_r2_task.h"
 #include "tasks/link_metrics_task.h"
+#include "tasks/network_health_check_task.h"
+#include "tasks/statistics_polling_task.h"
 #include "tasks/task_pool.h"
 
 #include "../../../common/beerocks/bwl/include/bwl/base_wlan_hal.h"
@@ -454,6 +458,26 @@ private:
     // It is used only in handle_cmdu_1905_ap_metric_response() to call construct_combined_infra_metric().
     // TODO It can be removed after cert_cmdu_tx usage is removed (PPM-1130).
     std::shared_ptr<LinkMetricsTask> m_link_metrics_task;
+
+    /**
+     * Pointer used to stop/start the channel_selection_task without restarting the controller
+     */
+    std::shared_ptr<channel_selection_task> m_channel_selection_task = {};
+
+    /**
+     * Pointer used to stop/start the dynamic_channel_selection_r2_task without restarting the controller
+     */
+    std::shared_ptr<dynamic_channel_selection_r2_task> m_dynamic_channel_selection_task = {};
+
+    /**
+     * Pointer used to start/stop the network_health_check_task without restarting the controller
+     */
+    std::shared_ptr<network_health_check_task> m_network_health_check_task = {};
+
+    /**
+     * Pointer used to stop/start the statistics_polling_task without restarting the controller
+     */
+    std::shared_ptr<statistics_polling_task> m_statistics_polling_task = {};
 
     /**
      * Factory to create broker client instances connected to broker server.
