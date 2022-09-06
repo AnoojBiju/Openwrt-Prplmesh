@@ -1,6 +1,6 @@
 ###############################################################
 # SPDX-License-Identifier: BSD-2-Clause-Patent
-# SPDX-FileCopyrightText: 2020 the prplMesh contributors (see AUTHORS.md)
+# SPDX-FileCopyrightText: 2020-2022 the prplMesh contributors (see AUTHORS.md)
 # This code is subject to the terms of the BSD+Patent license.
 # See LICENSE file for more details.
 ###############################################################
@@ -77,10 +77,11 @@ class ChannelSelection(PrplMeshBaseTest):
         time.sleep(3)
         debug("Confirming channel preference query has been received on agent")
 
-        # TODO should be a single response (currently two are sent)
-        self.check_cmdu_type("channel preference response",
-                             self.ieee1905['eMessageType']['CHANNEL_PREFERENCE_REPORT_MESSAGE'],
-                             agent.mac, controller.mac, ch_pref_query_mid)
+        self.check_cmdu_type_single("Channel Preference Report",
+                                    self.ieee1905['eMessageType']
+                                    ['CHANNEL_PREFERENCE_REPORT_MESSAGE'],
+                                    agent.mac,
+                                    controller.mac, ch_pref_query_mid)
 
         debug("Send empty channel selection request")
         cs_req_mid = controller.dev_send_1905(agent.mac,
@@ -135,12 +136,11 @@ class ChannelSelection(PrplMeshBaseTest):
             if cur_power_1 != payload_transmit_power:
                 self.fail("Radio 1 tx_power switched to {}".format(cur_power_1))
 
-            # TODO should be a single response (currently two are sent)
-            self.check_cmdu_type("channel selection response",
-                                 self.ieee1905['eMessageType']
-                                 ['CHANNEL_SELECTION_RESPONSE_MESSAGE'],
-                                 agent.mac,
-                                 controller.mac, cs_req_mid)
+            self.check_cmdu_type_single("Channel Selection Response",
+                                        self.ieee1905['eMessageType']
+                                        ['CHANNEL_SELECTION_RESPONSE_MESSAGE'],
+                                        agent.mac,
+                                        controller.mac, cs_req_mid)
 
             cur_chan_0 = agent.radios[0].get_current_channel()
             cur_chan_1 = agent.radios[1].get_current_channel()
