@@ -375,8 +375,8 @@ bool ApManager::start()
     // Install a connection-closed event handler.
     handlers.on_connection_closed = [&]() {
         LOG(ERROR) << "Slave socket disconnected!";
-        m_slave_client.reset();
-
+        // Don't put here a "m_slave_client.reset()" since it will destruct this function before it
+        // ends, and will lead to a crash.
         m_state = eApManagerState::TERMINATED;
     };
 
@@ -658,6 +658,10 @@ bool ApManager::ap_manager_fsm(bool &continue_processing)
         break;
     }
     case eApManagerState::TERMINATED: {
+        LOG(DEBUG) << "State TERMINATED, removing Agent client";
+        if (m_slave_client) {
+            m_slave_client.reset();
+        }
         return false;
     }
     default:

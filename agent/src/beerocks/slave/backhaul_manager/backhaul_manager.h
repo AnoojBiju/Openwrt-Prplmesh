@@ -578,6 +578,8 @@ private:
      * "dev_set_config" command has not been received yet.
      */
     std::string m_selected_backhaul;
+
+    bool m_remove_platform_manager_client = false;
 };
 
 } // namespace beerocks

@@ -163,7 +163,9 @@ bool Monitor::thread_init()
     // Install a connection-closed event handler.
     handlers.on_connection_closed = [&]() {
         LOG(ERROR) << "Slave socket disconnected!";
-        m_slave_client.reset();
+        // Don't put here a "m_slave_client.reset()" since it will destruct this function before it
+        // ends, and will lead to a crash.
+        m_remove_agent_client = true;
     };
 
     m_slave_client->set_handlers(handlers);
@@ -269,6 +271,11 @@ bool Monitor::monitor_fsm()
         logger.set_thread_name(thread_name);
         logger.attach_current_thread_to_logger_id();
         m_logger_configured = true;
+    }
+
+    if (m_remove_agent_client) {
+        m_slave_client.reset();
+        m_remove_agent_client = false;
     }
 
     if (!m_slave_client) {
