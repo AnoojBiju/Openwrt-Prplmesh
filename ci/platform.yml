@@ -142,6 +142,8 @@ test-on-glinet-b1300:
     TARGET_DEVICE_NAME: glinet-b1300-1
     OPENWRT_IMAGE: openwrt-ipq40xx-generic-glinet_gl-b1300-squashfs-sysupgrade.bin
   needs: ["build-for-glinet-b1300"]
+  # remove once PCF-695 is fixed:
+  retry: 1
 
 test-on-glinet-b1300-whm:
   extends: .test-on-target-whm
