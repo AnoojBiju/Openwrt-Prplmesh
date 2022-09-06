@@ -69,6 +69,11 @@ std::unique_ptr<BrokerClient> BrokerClientFactoryImpl::create_instance()
         return nullptr;
     }
 
+    if (!connection) {
+        // Prevent false positive cppcheck error
+        return nullptr;
+    }
+
     LOG(DEBUG) << "Broker client created with fd = " << connection->socket()->fd();
     auto broker_client = std::make_unique<BrokerClientImpl>(std::move(connection), m_message_parser,
                                                             m_message_serializer, m_event_loop);
