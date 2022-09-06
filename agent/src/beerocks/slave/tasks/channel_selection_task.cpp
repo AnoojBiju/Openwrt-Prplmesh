@@ -1427,7 +1427,7 @@ ChannelSelectionTask::select_next_channel(const sMacAddr &radio_mac)
     }
 
     auto find_best_beacon_channel = [&](const std::vector<uint8_t> beacon_channels) -> uint8_t {
-        uint8_t multiap_preference = -1;
+        uint8_t multiap_preference = 0;
         uint8_t best_bcn_chan      = 0;
         LOG(INFO) << "********* CW: *********** ";
         for (const auto beacon_channel : beacon_channels) {
