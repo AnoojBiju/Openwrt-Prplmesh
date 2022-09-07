@@ -167,6 +167,9 @@
           turris-omnia)
               IMAGE_NAME="$TURRIS_OMNIA_FULLIMAGE"
           ;;
+          glinet-b1300)
+              IMAGE_NAME="$GLINET_B1300_FULLIMAGE"
+          ;;
           *)
               IMAGE_NAME=''
           ;;

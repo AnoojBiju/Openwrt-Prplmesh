@@ -26,6 +26,20 @@
     - certs-tests
     - turris-omnia
 
+.certification:R1:glinet-b1300:
+  stage: certification-R1-glinet
+  extends: .certification-generic-R1
+  variables:
+    RUN_ON_DEVICE: "glinet-b1300"
+  before_script:
+    - tools/deploy_firmware.py --device glinet-b1300 --target-name "$RUN_ON_DEVICE" --image "$GLINET_B1300_FULLIMAGE" --configuration ci/configuration/certification/R1/glinet-b1300.sh
+    - tools/deploy_ipk.sh --certification-mode $RUN_ON_DEVICE build/$RUN_ON_DEVICE/prplmesh.ipk
+  needs:
+    - job: build-for-glinet-b1300
+  tags:
+    - certs-tests
+    - glinet-b1300
+
 .certification:R4:axepoint:
   stage: certification-R4-axepoint
   extends: .certification-generic-R4
@@ -57,6 +71,7 @@
 include:
   - local: "ci/certification/R1/axepoint.yml"
   - local: "ci/certification/R1/turris-omnia.yml"
+  - local: "ci/certification/R1/glinet-b1300.yml"
   - local: "ci/certification/R4/axepoint.yml"
   - local: "ci/certification/R4/turris-omnia.yml"
 
