@@ -745,6 +745,24 @@ update_vap_credentials_configure_wpa(const std::string &vap_if,
     return true;
 }
 
+static bool hostapd_configuration_matches(const std::string &vap_if,
+                                          const std::vector<std::string> &vap_hostapd_config,
+                                          const son::wireless_utils::sBssInfoConf &bss_info_conf)
+{
+    std::string hostapd_ssid;
+    if (hostapd_config_get_value(vap_hostapd_config, "ssid", hostapd_ssid)) {
+        LOG(ERROR) << "Failed to get SSID for " << vap_if;
+        return false;
+    }
+    if (bss_info_conf.ssid != hostapd_ssid) {
+        return false;
+    }
+    //TODO
+
+    // The hostapd configuration matches the bss info.
+    return true;
+}
+
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////////// Implementation ///////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -1400,8 +1418,8 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
 
     auto backhaul_wps_ssid_copy(backhaul_wps_ssid);
 
-    // Assume all vaps need to be reconfigured.
-    bool need_reconfiguration = true;
+    // Assume no vap needs to be reconfigured.
+    bool need_reconfiguration = false;
     // Go through the bss_info_conf_list and change the hostapd config accordingly
     for (const auto &bss_info_conf : bss_info_conf_list) {
         // Get the hostapd bss that matches the current bssid
@@ -1451,7 +1469,15 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
                    << " fronthaul: " << bss_info_conf.fronthaul
                    << " backhaul: " << bss_info_conf.backhaul;
 
+        // Check if new VAP configuration matches old configuration
+        if (!hostapd_configuration_matches(vap_if, vap_hostapd_config, bss_info_conf)) {
+            LOG(WARNING) << "Autoconfiguration: VAP " << vap_if
+                         << " matches the preexisting one, no need to reconfigure";
+            continue;
+        }
+
         // -- Update VAP settings in hostapd config --
+        need_reconfiguration = true;
 
         // SSID
         hostapd_config_set_value(vap_hostapd_config, "ssid", bss_info_conf.ssid);
