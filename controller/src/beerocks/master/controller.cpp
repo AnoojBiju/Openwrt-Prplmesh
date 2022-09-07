@@ -657,6 +657,10 @@ bool Controller::handle_cmdu_1905_autoconfiguration_search(const sMacAddr &src_m
         tlvSupportedFreqBand->value() = ieee1905_1::tlvSupportedFreqBand::BAND_5G;
         break;
     }
+    case ieee1905_1::tlvAutoconfigFreqBand::IEEE_802_11_6_GHZ: {
+        tlvSupportedFreqBand->value() = ieee1905_1::tlvSupportedFreqBand::BAND_6G;
+        break;
+    }
     case ieee1905_1::tlvAutoconfigFreqBand::IEEE_802_11_60_GHZ: {
         tlvSupportedFreqBand->value() = ieee1905_1::tlvSupportedFreqBand::BAND_60G;
         break;
