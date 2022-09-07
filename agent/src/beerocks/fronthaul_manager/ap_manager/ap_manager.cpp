@@ -1386,6 +1386,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
                 bss_type &
                 WSC::eWscVendorExtSubelementBssType::PROFILE2_BACKHAUL_STA_ASSOCIATION_DISALLOWED;
 
+            bss_info_conf.bssid               = config_data.bssid_attr().data;
             bss_info_conf.ssid                = config_data.ssid_str();
             bss_info_conf.authentication_type = config_data.authentication_type_attr().data;
             bss_info_conf.encryption_type     = config_data.encryption_type_attr().data;
@@ -1412,7 +1413,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             UTILS_SLEEP_MSEC(500);
         }
 
-        if (perform_update) {
+        if (perform_update && !bss_info_conf_list.empty()) {
             ap_wlan_hal->update_vap_credentials(bss_info_conf_list, backhaul_wps_ssid,
                                                 backhaul_wps_passphrase);
 
