@@ -1396,16 +1396,41 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
     // operating a BSS with operating parameters that do not completely match any of the M2 in
     // the received AP-Autoconfiguration WSC message, it shall tear down that BSS.
 
-    // Find first VAP entry
-    auto hostapd_vap_iterator = hostapd_config_vaps.begin();
-
-    // Clear all VAPs from the available container, since we preset it with configuration.
-    m_radio_info.available_vaps.clear();
+    std::vector<std::string> present_vaps;
 
     auto backhaul_wps_ssid_copy(backhaul_wps_ssid);
 
+    // Assume all vaps need to be reconfigured.
+    bool need_reconfiguration = true;
     // Go through the bss_info_conf_list and change the hostapd config accordingly
     for (const auto &bss_info_conf : bss_info_conf_list) {
+        // Get the hostapd bss that matches the current bssid
+        const std::string &vap_if = [&hostapd_config_vaps, &bss_info_conf]() {
+            const auto &config_bssid = tlvf::mac_to_string(bss_info_conf.bssid);
+            for (const auto &hostapd_config_vap : hostapd_config_vaps) {
+                std::string hostapd_bssid;
+                if (!hostapd_config_get_value(hostapd_config_vap.second, "bssid", hostapd_bssid)) {
+                    // BSS does not have a BSSID, should be an error.
+                    continue;
+                } else if (hostapd_bssid != config_bssid) {
+                    // BSSIDs do not match
+                    continue;
+                } else {
+                    // Found the matching BSS configuration
+                    return hostapd_config_vap.first;
+                }
+            }
+            // Could not find a matching BSS configuration
+            return std::string();
+        }();
+        if (vap_if.empty()) {
+            LOG(ERROR) << "BSSID " << bss_info_conf.bssid
+                       << " was not found in hostapd configuration.";
+            continue;
+        }
+        present_vaps.push_back(vap_if);
+        std::vector<std::string> &vap_hostapd_config = hostapd_config_vaps.at(vap_if);
+
         auto auth_type =
             son::wireless_utils::wsc_to_bwl_authentication(bss_info_conf.authentication_type);
         if (auth_type == "INVALID") {
@@ -1426,24 +1451,7 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
                    << " fronthaul: " << bss_info_conf.fronthaul
                    << " backhaul: " << bss_info_conf.backhaul;
 
-        // We only can use AP entries, skip STAs if ended up on one
-        std::string entry_mode;
-        while (hostapd_vap_iterator != hostapd_config_vaps.end() &&
-               hostapd_config_get_value(hostapd_vap_iterator->second, "mode", entry_mode) &&
-               entry_mode != "ap") {
-            LOG(DEBUG) << "Autoconfiguration: skipping STA entry";
-            ++hostapd_vap_iterator;
-        }
-
-        // Make sure we still have VAPs available to configure
-        if (hostapd_vap_iterator == hostapd_config_vaps.end()) {
-            LOG(ERROR) << "Autoconfiguration: not enough VAPs";
-            return false;
-        }
-
-        // Update VAP settings in hostapd config
-        const std::string &vap_if                    = hostapd_vap_iterator->first;
-        std::vector<std::string> &vap_hostapd_config = hostapd_vap_iterator->second;
+        // -- Update VAP settings in hostapd config --
 
         // SSID
         hostapd_config_set_value(vap_hostapd_config, "ssid", bss_info_conf.ssid);
@@ -1485,17 +1493,25 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
         // Save the configured VAP into available VAPS list.
         uint8_t vap_id = beerocks::utils::get_ids_from_iface_string(vap_if).vap_id;
 
+        // Clear previous VAP since we preset it with configuration.
+        m_radio_info.available_vaps.erase(vap_id);
         m_radio_info.available_vaps[vap_id] = vap_info;
 
         // Finally enable the VAP (remove any previously set start_disabled)
         hostapd_config_set_value(vap_hostapd_config, "start_disabled", "");
-        // Successfully updated the VAP, move on to the the next
-        ++hostapd_vap_iterator;
+        // Successfully updated the VAP
     }
 
+    // Assume no vap needs to be removed
+    bool need_to_remove = false;
     // Disable the remaining VAPs
-    for (; hostapd_vap_iterator != hostapd_config_vaps.end(); ++hostapd_vap_iterator) {
-        std::vector<std::string> &vap_hostapd_config = hostapd_vap_iterator->second;
+    for (auto &hostapd_vap_iterator : hostapd_config_vaps) {
+        // Skip present VAPs
+        if (std::find(present_vaps.begin(), present_vaps.end(), hostapd_vap_iterator.first) ==
+            present_vaps.end()) {
+            continue;
+        }
+        std::vector<std::string> &vap_hostapd_config = hostapd_vap_iterator.second;
         // Skip STAs
         std::string entry_mode;
         if (hostapd_config_get_value(vap_hostapd_config, "mode", entry_mode) &&
@@ -1510,6 +1526,14 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
         hostapd_config_set_value(vap_hostapd_config, "multi_ap", "0");
         hostapd_config_set_value(vap_hostapd_config, "multi_ap_backhaul_ssid", "");
         hostapd_config_set_value(vap_hostapd_config, "multi_ap_backhaul_wpa_passphrase", "");
+
+        need_to_remove = true;
+    }
+
+    // Check if there are any changes needed from the current hostapd configuration.
+    if (!need_reconfiguration && !need_to_remove) {
+        LOG(WARNING) << "Autoconfiguration: No changes needed for the hostapd config";
+        return true;
     }
 
     // If we are still here, then autoconfiguration was successful,
