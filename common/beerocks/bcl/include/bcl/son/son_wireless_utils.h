@@ -237,6 +237,8 @@ public:
         uint8_t center_channel;
         std::pair<uint8_t, uint8_t> overlap_beacon_channels_range;
     };
+
+    static const std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, sChannel>> channels_table_6g;
     static const std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, sChannel>> channels_table_5g;
     static const std::map<uint8_t, std::map<uint8_t, uint8_t>> channels_table_24g;
 
@@ -327,7 +329,8 @@ public:
 
     static bool is_operating_class_using_central_channel(int operating_class)
     {
-        return (operating_class == 128 || operating_class == 129 || operating_class == 130);
+        return ((128 <= operating_class && operating_class <= 130) ||
+                (132 <= operating_class && operating_class <= 136));
     }
 
 private:
@@ -367,6 +370,18 @@ private:
             {2633,169}, {2700,232}, {2925,189}, {3240,237}, {3510,251}, {3600,246}, {3900,328}, {4680,251}, {5265,253}, {5850,261},
             {7020,266}, {7800,266}
     };
+
+    /**
+     * @brief Initialized 6GHz channels table variable on son_wireless-utils.cpp
+     * 
+     * Instead of initializing a huge map of 6GHz channels, like in channels_table_5g, which will inflate
+     * the size of the file in son_wireless_utils.cpp, this function does the same.
+     * It is called and assigned once to channels_table_6g member.
+     * 
+     * @return const std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, sChannel>> 
+     */
+    static const std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, sChannel>>
+    initialize_channels_table_6g();
 
     // clang-format on
 };

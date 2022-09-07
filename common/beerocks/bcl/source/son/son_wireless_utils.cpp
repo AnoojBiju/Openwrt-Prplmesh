@@ -18,6 +18,13 @@
 
 using namespace son;
 
+#define OPERATING_CLASS_24GHZ_FIRST 81
+#define OPERATING_CLASS_24GHZ_LAST 84
+#define OPERATING_CLASS_5GHZ_FIRST 115
+#define OPERATING_CLASS_5GHZ_LAST 130
+#define OPERATING_CLASS_6GHZ_FIRST 131
+#define OPERATING_CLASS_6GHZ_LAST 136
+
 //Based on hostapd global_op_class struct, file ieee802_11_common.c
 // clang-format off
 const std::map<uint8_t, wireless_utils::sOperatingClass> wireless_utils::operating_classes_list = {
@@ -42,7 +49,23 @@ const std::map<uint8_t, wireless_utils::sOperatingClass> wireless_utils::operati
 //  {OP Class   {Channel center Frequency index},                              Bandwidth              }}
     {128,       {{42, 58, 106, 122, 138, 155},                                 beerocks::BANDWIDTH_80}},
     {129,       {{50, 114},                                                    beerocks::BANDWIDTH_160}},
-    {130,       {{42, 58, 106, 122, 138, 155},                                 beerocks::BANDWIDTH_80_80}}
+    {130,       {{42, 58, 106, 122, 138, 155},                                 beerocks::BANDWIDTH_80_80}},
+//  {OP Class   {Channels List,                                                Bandwidth             }}
+    {131,       {{1, 5, 9, 13, 17, 21, 25, 29, 33, 37, 41, 45, 49, 53, 57,
+                  61, 65, 69, 73, 77, 81, 85, 89, 93, 97, 101, 105, 109, 113,
+                  117, 121, 125, 129, 133, 137, 141, 145, 149, 153, 157, 161,
+                  165, 169, 173, 177, 181, 185, 189, 193, 197, 201, 205, 209,
+                  213, 217, 221, 225, 229, 233},                               beerocks::BANDWIDTH_20}},
+//  {OP Class   {Channel center Frequency index},                              Bandwidth              }}
+    {132,       {{3, 11, 19, 27, 35, 43, 51, 59, 67, 75, 83, 91, 99, 107,
+                  115, 123, 131, 139, 147, 155, 163, 171, 179, 187, 195,
+                  203, 211, 219, 227},                                         beerocks::BANDWIDTH_40}},
+    {133,       {{7, 23, 39, 55, 71, 87, 103, 119, 135, 151,
+                  167, 183, 199, 215},                                         beerocks::BANDWIDTH_80}},
+    {134,       {{15, 47, 79, 111, 143, 175, 207},                             beerocks::BANDWIDTH_160}},
+    {135,       {{7, 23, 39, 55, 71, 87, 103, 119, 135, 151,
+                  167, 183, 199, 215},                                         beerocks::BANDWIDTH_80_80}},
+    {136,       {{2},                                                          beerocks::BANDWIDTH_20}}
 };
 
 const std::map<uint8_t, std::map<uint8_t, uint8_t>> wireless_utils::channels_table_24g = 
@@ -311,6 +334,9 @@ const std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, wireless_utils::sChan
                 }
     }
 };
+
+
+const std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, wireless_utils::sChannel>> wireless_utils::channels_table_6g = wireless_utils::initialize_channels_table_6g();
 
 const wireless_utils::sPhyRateTableEntry wireless_utils::phy_rate_table[PHY_RATE_TABLE_ANT_MODE_MAX][PHY_RATE_TABLE_MCS_MAX] = {
     // 1X1_SS1_table
@@ -858,14 +884,14 @@ uint16_t wireless_utils::channel_to_vht_center_freq(int channel, beerocks::eWiFi
 
 beerocks::eFreqType wireless_utils::which_freq_op_cls(const uint8_t op_cls)
 {
-
-    constexpr uint8_t operating_classes_24G_min = 81, operating_classes_24G_max = 84,
-                      operating_classes_5G_min = 115, operating_classes_5G_max = 130;
-    if ((op_cls >= operating_classes_24G_min) && (op_cls <= operating_classes_24G_max)) {
+    if ((OPERATING_CLASS_24GHZ_FIRST <= op_cls) && (op_cls <= OPERATING_CLASS_24GHZ_LAST)) {
         return beerocks::eFreqType::FREQ_24G;
     }
-    if ((op_cls >= operating_classes_5G_min) && (op_cls <= operating_classes_5G_max)) {
+    if ((OPERATING_CLASS_5GHZ_FIRST <= op_cls) && (op_cls <= OPERATING_CLASS_5GHZ_LAST)) {
         return beerocks::eFreqType::FREQ_5G;
+    }
+    if ((OPERATING_CLASS_6GHZ_FIRST <= op_cls) && (op_cls <= OPERATING_CLASS_6GHZ_LAST)) {
+        return beerocks::eFreqType::FREQ_6G;
     }
     return beerocks::eFreqType::FREQ_UNKNOWN;
 }
@@ -1639,4 +1665,123 @@ uint16_t wireless_utils::get_vht_mcs_set(uint8_t vht_mcs, uint8_t vht_ss)
         vht_mcs_set &= ~(((10 - vht_mcs) & 0x03) << (i * 2));
     }
     return vht_mcs_set;
+}
+
+const std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, wireless_utils::sChannel>>
+wireless_utils::initialize_channels_table_6g()
+{
+    /**
+     * same pattern as the global variable variable channels_table_5g.
+     * The is the first 160MHz chunk of 6G band.
+     * This is used as the pattern to create a full 6GHz channels table.
+     * https://en.wikipedia.org/wiki/List_of_WLAN_channels#6_GHz_(802.11ax)
+     */
+    const std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, wireless_utils::sChannel>>
+        channels_table_6g_pattern = {{1,
+                                      {
+                                          {beerocks::BANDWIDTH_20, {1, {1, 1}}},
+                                          {beerocks::BANDWIDTH_40, {3, {1, 5}}},
+                                          {beerocks::BANDWIDTH_80, {7, {1, 13}}},
+                                          {beerocks::BANDWIDTH_160, {15, {1, 29}}},
+                                      }},
+                                     {5,
+                                      {
+                                          {beerocks::BANDWIDTH_20, {5, {5, 5}}},
+                                          {beerocks::BANDWIDTH_40, {3, {1, 5}}},
+                                          {beerocks::BANDWIDTH_80, {7, {1, 13}}},
+                                          {beerocks::BANDWIDTH_160, {15, {1, 29}}},
+                                      }},
+                                     {9,
+                                      {
+                                          {beerocks::BANDWIDTH_20, {9, {9, 9}}},
+                                          {beerocks::BANDWIDTH_40, {11, {9, 13}}},
+                                          {beerocks::BANDWIDTH_80, {7, {1, 13}}},
+                                          {beerocks::BANDWIDTH_160, {15, {1, 29}}},
+                                      }},
+                                     {13,
+                                      {
+                                          {beerocks::BANDWIDTH_20, {13, {13, 13}}},
+                                          {beerocks::BANDWIDTH_40, {11, {9, 13}}},
+                                          {beerocks::BANDWIDTH_80, {7, {1, 13}}},
+                                          {beerocks::BANDWIDTH_160, {15, {1, 29}}},
+                                      }},
+                                     {17,
+                                      {
+                                          {beerocks::BANDWIDTH_20, {17, {17, 17}}},
+                                          {beerocks::BANDWIDTH_40, {19, {17, 21}}},
+                                          {beerocks::BANDWIDTH_80, {23, {17, 29}}},
+                                          {beerocks::BANDWIDTH_160, {15, {1, 29}}},
+                                      }},
+                                     {21,
+                                      {
+                                          {beerocks::BANDWIDTH_20, {21, {21, 21}}},
+                                          {beerocks::BANDWIDTH_40, {19, {17, 21}}},
+                                          {beerocks::BANDWIDTH_80, {23, {17, 29}}},
+                                          {beerocks::BANDWIDTH_160, {15, {1, 29}}},
+                                      }},
+                                     {25,
+                                      {
+                                          {beerocks::BANDWIDTH_20, {25, {25, 25}}},
+                                          {beerocks::BANDWIDTH_40, {27, {25, 29}}},
+                                          {beerocks::BANDWIDTH_80, {23, {17, 29}}},
+                                          {beerocks::BANDWIDTH_160, {15, {1, 29}}},
+                                      }},
+                                     {29,
+                                      {
+                                          {beerocks::BANDWIDTH_20, {29, {29, 29}}},
+                                          {beerocks::BANDWIDTH_40, {27, {25, 29}}},
+                                          {beerocks::BANDWIDTH_80, {23, {17, 29}}},
+                                          {beerocks::BANDWIDTH_160, {15, {1, 29}}},
+                                      }}};
+
+    std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, wireless_utils::sChannel>> channels_table =
+        {};
+
+    /**
+     * @brief 6GHz channels have 7 chunks of 160MHz.
+     * Each chunk has 8 channels of 20MHz.
+     * For example, the first chunk contains channels between 1 to 29.
+     * The second chunk contains channel between 33 to 61.
+     * and so on.
+     * https://en.wikipedia.org/wiki/List_of_WLAN_channels#6_GHz_(802.11ax)
+     */
+    constexpr int num_of_6g_160mhz_chunks = 7;
+    size_t offset                         = 0;
+
+    std::pair<uint8_t, std::map<beerocks::eWiFiBandwidth, son::wireless_utils::sChannel>> pair;
+    for (int i = 0; i < num_of_6g_160mhz_chunks; ++i) {
+        for (auto &entry : channels_table_6g_pattern) {
+            pair = entry;
+            pair.first += offset;
+            for (auto &bw_to_channels : pair.second) {
+                bw_to_channels.second.center_channel += offset;
+                bw_to_channels.second.overlap_beacon_channels_range.first += offset;
+                bw_to_channels.second.overlap_beacon_channels_range.second += offset;
+            }
+            channels_table.insert(pair);
+        }
+        /*
+         * proceed to the next chunk. the values of the next chuck are the 
+         * the same as in channels_table_6g_pattern, but with an offset addition.
+         * 32 is the offet between the chunks.
+         * For example, The corresponding of channel 1 in the first chanel is channel 33
+         * in the second chunk (1 + 32 = 33).
+         * The corresponding channel of channel 37 in the second chunk is channel 69
+         * in the third chunk (37 + 32 = 69).
+        */
+        offset += 32;
+    }
+
+    /*
+     * These channels don't have 80MHz and 160MHz bandwidth, hence they
+     * don't fit the pattern of channels_table_6g_pattern.
+     * Hence, add them manually.
+    */
+    channels_table[225] = {{beerocks::BANDWIDTH_20, {225, {225, 225}}},
+                           {beerocks::BANDWIDTH_40, {227, {225, 229}}}};
+    channels_table[229] = {{beerocks::BANDWIDTH_20, {229, {229, 229}}},
+                           {beerocks::BANDWIDTH_40, {227, {225, 229}}}};
+    channels_table[233] = {{beerocks::BANDWIDTH_20, {233, {233, 233}}}};
+
+    return channels_table;
 }
