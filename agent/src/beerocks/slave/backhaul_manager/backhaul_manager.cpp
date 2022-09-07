@@ -712,7 +712,9 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
                 handlers.on_connection_closed = [&]() {
                     LOG(ERROR) << "Client to Platform Manager disconnected, restarting "
                                   "Backhaul Manager";
-                    m_platform_manager_client.reset();
+                    // Don't put here a "m_platform_manager_client.reset()" since it will destruct
+                    // this function before it ends, and will lead to a crash.
+                    m_remove_platform_manager_client = true;
                     FSM_MOVE_STATE(RESTART);
                     return true;
                 };
@@ -894,6 +896,10 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
 
         LOG(DEBUG) << "Restarting ...";
 
+        if (m_remove_platform_manager_client) {
+            m_platform_manager_client.reset();
+            m_remove_platform_manager_client = false;
+        }
         auto db = AgentDB::get();
 
         for (auto &radio_info : m_radios_info) {
