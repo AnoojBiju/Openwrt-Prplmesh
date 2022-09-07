@@ -15,26 +15,62 @@ rm -f /etc/rc.d/S27tr181-dhcpv4client
 /etc/init.d/tr181-dhcpv6client stop
 rm -f /etc/rc.d/S25tr181-dhcpv6client
 
-# We use WAN for the control interface.
-ubus wait_for IP.Interface
-# Add the IP address if there is none yet:
-ubus call IP.Interface _get '{ "rel_path": ".[Alias == \"wan\"].IPv4Address.[Alias == \"wan\"]." }' || {
-    echo "Adding IP address $IP"
-    ubus call "IP.Interface" _add '{ "rel_path": ".[Alias == \"wan\"].IPv4Address.", "parameters": { "Alias": "wan", "AddressingType": "Static" } }'
-}
-# Configure it:
-ubus call "IP.Interface" _set '{ "rel_path": ".[Alias == \"wan\"].IPv4Address.1", "parameters": { "IPAddress": "192.168.250.170", "SubnetMask": "255.255.255.0", "AddressingType": "Static", "Enable" : true } }'
-# Enable it:
-ubus call "IP.Interface" _set '{ "rel_path": ".[Alias == \"wan\"].", "parameters": { "IPv4Enable": true } }'
+# Since for the GL-inet eth0 (LAN) is always detected as UP, eth1 (WAN) will be configured as a backhaul interface
+# This allows prplMesh to detect the state of the backhaul interface
+# WAN and LAN interfaces are effectively switched
 
+# Remove the physical LAN interface from the LAN-bridge; it will become the control interface
+# Also add the WAN interface to the LAN-bridge
 # Set the LAN bridge IP:
-ubus call "IP.Interface" _set '{ "rel_path": ".[Name == \"br-lan\"].IPv4Address.[Alias == \"lan\"].", "parameters": { "IPAddress": "192.165.100.170" } }'
+ubus wait_for IP.Interface
+ubus call "IP.Interface" _set '{ "rel_path": ".[Name == \"br-lan\"].IPv4Address.[Alias == \"lan\"].", "parameters": { "IPAddress": "192.165.100.172" } }'
+
+# Move the WAN port into the LAN bridge if it's not there yet (to use it for data):
+ubus wait_for Bridging.Bridge
+ubus call "Bridging.Bridge" _get '{ "rel_path": ".[Alias == \"lan\"].Port.[Name == \"eth1\"]." }' || {
+    echo "Adding WAN interface to LAN-bridge"
+    ubus call "Bridging.Bridge" _add '{ "rel_path": ".[Alias == \"lan\"].Port.",  "parameters": { "Name": "eth1", "Alias": "ETH1", "Enable": true } }'
+}
+
+# One of the LAN ports is used for control. Create a section for it:
+uci set network.cert=interface
+# Setting ifname is not supported in the current version of the TR-181
+# IP manager (v1.11.1), set it in UCI instead:
+uci set network.cert.ifname='eth0'
+
+# Remove the control interface from the LAN bridge if it's not already the case:
+ubus wait_for Bridging.Bridge
+ubus call "Bridging.Bridge" _get '{ "rel_path": ".[Alias == \"lan\"].Port.[Name == \"eth0\"]." }' && {
+    echo "Removing LAN interface from LAN-bridge"
+    echo "It will be used as control interface"
+    ubus call "Bridging.Bridge" _del '{ "rel_path": ".[Alias == \"lan\"].Port.[Name == \"eth0\"]." }'
+}
+
+# To set the IP on the control interface, we first need to find the
+# corresponding Ethernet.Interface:
+ETH_IF="$(ubus call Ethernet.Interface _list | jsonfilter -e '@.instances[@.name="ETH0"].index')"
+# Then if there is no corresponding Ethernet.Link yet, we need to add
+# one:
+ubus call Ethernet.Link _get '{ "rel_path": ".[Name == \"eth0\"]." }' || {
+    echo "Adding Ethernet Link for LAN interface"
+    ETH_LINK="$(ubus call Ethernet.Link _add "{ \"parameters\": { \"Name\": \"eth0\", \"Alias\": \"eth0\",\"LowerLayers\": \"Device.Ethernet.Interface.$ETH_IF.\", \"Enable\": true } }" | jsonfilter -e '@.index')"
+}
+# We can now create an IP.Interface if there is none yet:
+ubus call IP.Interface _get '{ "rel_path": ".[Name == \"eth0\"]." }' || {
+    echo "Adding IP.Interface"
+    ubus call IP.Interface _add "{ \"parameters\": { \"Name\": \"eth0\", \"UCISectionNameIPv4\": \"cert\", \"Alias\": \"eth0\", \"LowerLayers\": \"Device.Ethernet.Link.$ETH_LINK.\", \"Enable\": true } }"
+}
+# We can now add the IP address if there is none yet:
+ubus call IP.Interface _get '{ "rel_path": ".[Name == \"eth0\"].IPv4Address.[Alias == \"eth0\"]." }' || {
+    echo "Adding IP address $IP"
+    ubus call "IP.Interface" _add '{ "rel_path": ".[Name == \"eth0\"].IPv4Address.", "parameters": { "IPAddress": "192.168.250.172", "SubnetMask": "255.255.255.0", "AddressingType": "Static", "Alias": "eth0", "Enable" : true } }'
+}
+# Finally, we can enable it:
+ubus call "IP.Interface" _set '{ "rel_path": ".[Name == \"eth0\"].", "parameters": { "IPv4Enable": true } }'
 
 # Wired backhaul interface:
-uci set prplmesh.config.backhaul_wire_iface='lan0'
-
-uci set wireless.radio0.disabled=0
-uci set wireless.radio1.disabled=0
+# Set the WAN interface as backhaul interface
+uci set prplmesh.config.backhaul_wire_iface='eth1'
 
 # Stop and disable the firewall:
 /etc/init.d/tr181-firewall stop
@@ -52,7 +88,6 @@ rm -f /etc/rc.d/S22tr181-firewall
 logger -t prplmesh -p daemon.info "Applying wifi configuration."
 rm -f /etc/config/wireless
 wifi config
-
 
 uci batch << 'EOF'
 set wireless.default_radio0=wifi-iface
