@@ -13,6 +13,7 @@
 #include <bcl/beerocks_string_utils.h>
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
+#include <bcl/son/son_assoc_frame_utils.h>
 #include <bcl/son/son_wireless_utils.h>
 #include <easylogging++.h>
 #include <math.h>
@@ -771,6 +772,41 @@ bool ap_wlan_hal_whm::set_primary_vlan_id(uint16_t primary_vlan_id)
     return true;
 }
 
+bool ap_wlan_hal_whm::set_cce_indication(uint16_t advertise_cce)
+{
+    LOG(DEBUG) << "ap_wlan_hal_whm: set_cce_indication, advertise_cce=" << advertise_cce;
+    return true;
+}
+
+amxc_var_t *ap_wlan_hal_whm::get_last_assoc_frame(const std::string &sta_mac)
+{
+    amxc_var_t args;
+    amxc_var_init(&args);
+    amxc_var_t data;
+    amxc_var_init(&data);
+    amxc_var_t *frame = nullptr;
+
+    amxc_var_set_type(&args, AMXC_VAR_ID_HTABLE);
+    amxc_var_add_new_key_cstring_t(&args, "mac", sta_mac.c_str());
+    std::string ap_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
+                          std::string(AMX_CL_AP_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
+                          "[Alias = " + get_iface_name() + "]" + AMX_CL_OBJ_DELIMITER;
+
+    bool ret = m_ambiorix_cl->call(ap_path, "getLastAssocReq", &args, &data);
+
+    if (ret) {
+        frame = GETI_ARG(&data, 0);
+        amxc_var_take_it(frame);
+    } else {
+        LOG(ERROR) << "getLastAssocReq() failed!";
+    }
+
+    amxc_var_clean(&args);
+    amxc_var_clean(&data);
+
+    return frame;
+}
+
 bool ap_wlan_hal_whm::process_whm_event(ap_wlan_hal::Event event, const amxc_var_t *data)
 {
     switch (event) {
@@ -884,7 +920,44 @@ bool ap_wlan_hal_whm::process_whm_event(ap_wlan_hal::Event event, const amxc_var
             (son::wireless_utils::which_freq(m_radio_info.channel) ==
              beerocks::eFreqType::FREQ_24G);
 
-        // TODO: get associated station capabilities PPM-2106.
+        auto assoc_frame_type = assoc_frame::AssocReqFrame::UNKNOWN;
+
+        amxc_var_t *frame = get_last_assoc_frame(sta_mac);
+        if (frame) {
+            const char *frame_body = GET_CHAR(frame, "frame");
+            const char *ap_bssid   = GET_CHAR(frame, "bssid");
+            msg->params.bssid      = tlvf::mac_from_string(ap_bssid);
+            auto vap_id            = get_vap_id_with_mac(ap_bssid);
+            msg->params.vap_id     = vap_id;
+            //convert the hex string to binary
+            auto binary_str                      = get_binary_association_frame(frame_body);
+            msg->params.association_frame_length = binary_str.length();
+            // Add the latest association frame
+            std::copy_n(&binary_str[0], binary_str.length(), msg->params.association_frame);
+            assoc_frame_type      = assoc_frame::AssocReqFrame::ASSOCIATION_REQUEST;
+            uint32_t request_type = GET_UINT32(frame, "request_type");
+            if (request_type == 2) {
+                assoc_frame_type = assoc_frame::AssocReqFrame::REASSOCIATION_REQUEST;
+            }
+            amxc_var_delete(&frame);
+        } else {
+            LOG(WARNING) << "STA connected without previously receiving a (re-)association frame!";
+            msg->params.association_frame_length = 0;
+        }
+
+        auto assoc_frame = assoc_frame::AssocReqFrame::parse(
+            msg->params.association_frame, msg->params.association_frame_length, assoc_frame_type);
+
+        auto res = son::assoc_frame_utils::get_station_capabilities_from_assoc_frame(
+            assoc_frame, msg->params.capabilities);
+        if (!res) {
+            LOG(WARNING) << "Failed to get station capabilities.";
+        } else {
+            LOG(INFO) << "print_station_capabilities!";
+            son::wireless_utils::print_station_capabilities(msg->params.capabilities);
+        }
+
+        // Add the message to the queue
         event_queue_push(Event::STA_Connected, msg_buff);
 
     } break;
