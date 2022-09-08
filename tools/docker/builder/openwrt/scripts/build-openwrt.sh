@@ -27,16 +27,20 @@ if [ "$TARGET_SYSTEM" = "intel_mips" ]; then
     sed -i '/iw-full$/d' "profiles/debug.yml"
 fi
 
-# feed-prpl is in the prpl profile:
-args+=("prpl")
-
 if [ -n "$MMX_ENABLE" ] ; then
     args+=("mmx")
 else
     args+=("webui")
 fi
 
+# feed-prpl is in the prpl profile:
+args+=("prpl")
+
 ./scripts/gen_config.py "${args[@]}"
+
+# The initial 'make defconfig' invocation generates a wrong config, so
+# run it again. Remove this workaround once PPM-2279 is fixed.
+make defconfig
 
 for profile in "${args[@]}" ; do
     printf "\nProfile %s:\n" "${profile}" >> files/etc/prplwrt-version

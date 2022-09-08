@@ -223,6 +223,11 @@ build-in-docker:
   variables:
     EXTRA_CMAKE_FLAGS: "-DENABLE_NBAPI=ON -DENABLE_VBSS=ON"
 
+build-in-docker-whm:
+  extends: .build-in-docker
+  variables:
+    EXTRA_CMAKE_FLAGS: "-DENABLE_NBAPI=ON -DUSE_PRPLMESH_WHM=ON"
+
 build-in-docker-alpine:
   extends: .build-in-docker
   image: $CI_REGISTRY_IMAGE/prplmesh-builder-alpine:$CI_PIPELINE_ID

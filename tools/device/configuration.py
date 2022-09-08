@@ -82,7 +82,7 @@ def configure_device(device: GenericDevice, configuration_file: Path):
             raise ValueError("The md5 of the configuration file doesn't match! Aborting.")
 
         print(md5.hexdigest())
-        shell.sendline(f"sh {conf_file_location}")
+        shell.sendline(f"sh -x {conf_file_location}")
         shell.expect(device.serial_prompt)
         shell.sendline("echo conf_file_exit_code=$?")
         try:
