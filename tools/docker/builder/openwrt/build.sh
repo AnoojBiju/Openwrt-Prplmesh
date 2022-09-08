@@ -28,6 +28,7 @@ usage() {
     echo "      -s|--shell-only - don't build prplMesh, drop into a shell instead"
     echo "      -t|--tag - the tag to use for the builder image"
     echo "      --mmx - enable mmx as part of builds"
+    echo "      --whm - use a WHM enabled prplOS sidebranch to build"
     echo " -d is always required."
     echo ""
 }
@@ -98,7 +99,7 @@ main() {
         exit 1
     fi
 
-    if ! OPTS=$(getopt -o 'hvd:io:r:st:' --long help,verbose,target-device:,docker-target-stage:,mmx,image,openwrt-version:,openwrt-repository:,shell,tag: -n 'parse-options' -- "$@"); then
+    if ! OPTS=$(getopt -o 'hvd:io:r:st:' --long help,verbose,target-device:,docker-target-stage:,mmx,whm,image,openwrt-version:,openwrt-repository:,shell,tag: -n 'parse-options' -- "$@"); then
         err "Failed parsing options." >&2
         usage
         exit 1
@@ -121,6 +122,7 @@ main() {
             -s | --shell)                     SHELL_ONLY=true; shift ;;
             -t | --tag)                       TAG="$2"; shift ; shift ;;
             --mmx)                            MMX_ENABLE=true; shift ;;
+            --whm)                            WHM_ENABLE=true; shift ;;
             -- ) shift; break ;;
             * ) err "unsupported argument $1"; usage; exit 1 ;;
         esac
@@ -152,10 +154,16 @@ main() {
             ;;
     esac
 
+    if [ -n "$WHM_ENABLE" ] ; then
+        OPENWRT_TOOLCHAIN_VERSION='aa18ae3839eef9694bee8d7687cc8e2ce64347f2'
+        OPENWRT_VERSION='aa18ae3839eef9694bee8d7687cc8e2ce64347f2'
+    fi
+
     dbg "OPENWRT_REPOSITORY=$OPENWRT_REPOSITORY"
     dbg "OPENWRT_TOOLCHAIN_VERSION=$OPENWRT_TOOLCHAIN_VERSION"
     dbg "OPENWRT_VERSION=$OPENWRT_VERSION"
     dbg "MMX_ENABLE=$MMX_ENABLE"
+    dbg "WHM_ENABLE=$WHM_ENABLE"
     dbg "IMAGE_ONLY=$IMAGE_ONLY"
     dbg "TAG=$TAG"
     dbg "TARGET_SYSTEM=$TARGET_SYSTEM"
@@ -178,12 +186,19 @@ main() {
     PRPLMESH_VERSION="$(git describe --always --dirty | sed -e 's/.*-g//')"
     export PRPLMESH_VERSION
     export MMX_ENABLE
+    export WHM_ENABLE
     export PRPLMESH_VARIANT
 
-    build_image "$rootdir/build/$TARGET_DEVICE"
+    if [ -n "$WHM_ENABLE" ] ; then
+        build_directory="$rootdir/buildWHM"
+    else
+        build_directory="$rootdir/build"
+    fi
+
+    build_image "$build_directory/$TARGET_DEVICE"
     [ $IMAGE_ONLY = true ] && exit $?
 
-    build_prplmesh "$rootdir/build/$TARGET_DEVICE"
+    build_prplmesh "$build_directory/$TARGET_DEVICE"
 
 }
 

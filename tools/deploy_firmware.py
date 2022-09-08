@@ -17,6 +17,12 @@ from device.configuration import configure_device
 from device.get_device import device_from_name
 
 
+def replace_build_dir(build_directory):
+    reversed_dir = build_directory[::-1]
+    replaced_dir = reversed_dir.replace("/build/"[::-1], "/buildWHM/"[::-1], 1)
+    return replaced_dir[::-1]
+
+
 def main():
     parser = argparse.ArgumentParser(prog=sys.argv[0],
                                      description="""Update a prplOS device, either through u-boot
@@ -42,6 +48,12 @@ def main():
         help="Always flash the full image (even if it's not required).")
 
     parser.add_argument(
+        '-w',
+        '--whm',
+        action='store_true',
+        help="Flash using the WHM build")
+
+    parser.add_argument(
         '-c',
         '--configuration',
         help="The path to an optional configuration file.", required=False)
@@ -49,6 +61,10 @@ def main():
     args = parser.parse_args()
 
     dev = device_from_name(args.device, args.target_name, args.image)
+
+    # Replaces the last occurence of /build/ with /buildWHM/ in the devices's artifacts dir
+    if args.whm:
+        dev.artifacts_dir = replace_build_dir(dev.artifacts_dir)
 
     def do_upgrade(dev):
         try:

@@ -58,12 +58,6 @@ EOF
         eval ssh "$SSH_OPTIONS" "$TARGET" \""uci set prplmesh.config.certification_mode=1 && uci commit"\"
         echo "Certification mode enabled on the target."
     fi
-
-    if [ "$BOARD_TYPE" != "rdk" ]; then
-        echo "Restarting networking"
-        eval ssh "$SSH_OPTIONS" "$TARGET" \""/etc/init.d/network restart"\"
-        echo "Done"
-    fi
 }
 
 main() {
