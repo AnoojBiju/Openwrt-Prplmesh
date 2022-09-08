@@ -57,7 +57,40 @@ amxc_var_t *AmbiorixClient::get_object(const std::string &object_path, const int
 bool AmbiorixClient::update_object(const std::string &object_path, amxc_var_t *object)
 {
     amxc_var_t data;
+    amxc_var_init(&data);
     int ret = amxb_set(m_bus_ctx, object_path.c_str(), object, &data, AMX_CL_DEF_TIMEOUT);
+    amxc_var_clean(&data);
+    return (ret == AMXB_STATUS_OK);
+}
+
+bool AmbiorixClient::add_instance(const std::string &object_path, amxc_var_t *parameter,
+                                  int &instance_id)
+{
+    amxc_var_t data;
+    amxc_var_init(&data);
+    bool success = false;
+    if (amxb_add(m_bus_ctx, object_path.c_str(), 0, NULL, parameter, &data, AMX_CL_DEF_TIMEOUT) ==
+        AMXB_STATUS_OK) {
+        const char *path = GETP_CHAR(&data, "0.path");
+        if (path) {
+            std::string instance_path   = std::string(path).substr(0, std::string(path).size() - 1);
+            std::size_t found           = instance_path.find_last_of(AMX_CL_OBJ_DELIMITER);
+            std::string instance_id_str = instance_path.substr(found + 1);
+            instance_id                 = std::stoi(instance_id_str);
+            success                     = true;
+        }
+    }
+    amxc_var_clean(&data);
+    return success;
+}
+
+bool AmbiorixClient::remove_instance(const std::string &object_path, int instance_id)
+{
+    amxc_var_t data;
+    amxc_var_init(&data);
+    int ret =
+        amxb_del(m_bus_ctx, object_path.c_str(), instance_id, NULL, &data, AMX_CL_DEF_TIMEOUT);
+    amxc_var_clean(&data);
     return (ret == AMXB_STATUS_OK);
 }
 

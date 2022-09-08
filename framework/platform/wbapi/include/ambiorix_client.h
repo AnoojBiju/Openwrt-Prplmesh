@@ -31,11 +31,12 @@
 
 constexpr uint8_t AMX_CL_DEF_TIMEOUT = 3;
 
-constexpr char AMX_CL_WIFI_ROOT_NAME[] = "WiFi";
-constexpr char AMX_CL_RADIO_OBJ_NAME[] = "Radio";
-constexpr char AMX_CL_AP_OBJ_NAME[]    = "AccessPoint";
-constexpr char AMX_CL_SSID_OBJ_NAME[]  = "SSID";
-constexpr char AMX_CL_OBJ_DELIMITER    = '.';
+constexpr char AMX_CL_WIFI_ROOT_NAME[]    = "WiFi";
+constexpr char AMX_CL_RADIO_OBJ_NAME[]    = "Radio";
+constexpr char AMX_CL_AP_OBJ_NAME[]       = "AccessPoint";
+constexpr char AMX_CL_SSID_OBJ_NAME[]     = "SSID";
+constexpr char AMX_CL_ENDPOINT_OBJ_NAME[] = "EndPoint";
+constexpr char AMX_CL_OBJ_DELIMITER       = '.';
 
 constexpr char AMX_CL_OBJECT_CHANGED_EVT[]   = "dm:object-changed";
 constexpr char AMX_CL_OBJECT_ADDED_EVT[]     = "dm:object-added";
@@ -90,10 +91,29 @@ public:
      * @brief update a given object.
      *
      * @param[in] object_path: relative path to object.
-     * @param[in] object: amxc_var_t object tp update.
+     * @param[in] object: amxc_var_t object to update.
      * @return True on success and false otherwise.
     */
     bool update_object(const std::string &object_path, amxc_var_t *object);
+
+    /**
+     * @brief add instance.
+     *
+     * @param[in] object_path: relative path to object.
+     * @param[in] object: amxc_var_t parameter: list of parameters values of the instance.
+     * @param[out] instance_id: the new instance id.
+     * @return True on success and false otherwise.
+    */
+    bool add_instance(const std::string &object_path, amxc_var_t *parameter, int &instance_id);
+
+    /**
+     * @brief remove instance.
+     *
+     * @param[in] object_path: relative path to object.
+     * @param[in] instance_id: the instance id.
+     * @return True on success and false otherwise.
+    */
+    bool remove_instance(const std::string &object_path, int instance_id);
 
     /**
      * @brief invokes a data model function.
