@@ -1426,6 +1426,32 @@ ChannelSelectionTask::select_next_channel(const sMacAddr &radio_mac)
         return sSelectedChannel();
     }
 
+    auto find_best_beacon_channel = [&](const std::vector<uint8_t> beacon_channels) -> uint8_t {
+        uint8_t multiap_preference = 0;
+        uint8_t best_bcn_chan      = 0;
+
+        for (const auto beacon_channel : beacon_channels) {
+
+            // Get the 20Mhz operating class for the beacon channel
+            const auto operating_class_20Mhz = son::wireless_utils::get_operating_class_by_channel(
+                message::sWifiChannel(beacon_channel, eWiFiBandwidth::BANDWIDTH_20));
+
+            // Get the radio preference for the operating class & beacon channel.
+            auto tmp_radio_preference = get_preference_for_channel(
+                radio->channel_preferences, operating_class_20Mhz, beacon_channel);
+
+            if (tmp_radio_preference == 0) {
+                LOG(INFO) << "Channel #" << beacon_channel << " in Class #" << operating_class_20Mhz
+                          << " is non-operable";
+            } else if (multiap_preference < tmp_radio_preference) {
+                // Set as the highest preference in the beacon channels
+                multiap_preference = tmp_radio_preference;
+                best_bcn_chan      = beacon_channel;
+            }
+        }
+        return best_bcn_chan;
+    };
+
     const auto &radio_request        = m_pending_selection.requests[radio_mac];
     const auto &received_preferences = radio_request.controller_preferences;
 
@@ -1485,11 +1511,22 @@ ChannelSelectionTask::select_next_channel(const sMacAddr &radio_mac)
                 }
             }
 
-            LOG(INFO) << "[" << channel_number << "-" << operating_class << "("
+            // For 80M & 160M need to choose best beacon channel according to 20M rankning
+            auto best_channel = central_channel;
+            if (bandwidth >= eWiFiBandwidth::BANDWIDTH_80) {
+                best_channel = find_best_beacon_channel(
+                    son::wireless_utils::center_channel_5g_to_beacon_channels(best_channel,
+                                                                              bandwidth));
+                // For any fail case, we should switch to the selected primary channel
+                if (!best_channel)
+                    best_channel = channel_number;
+            }
+
+            LOG(INFO) << "[" << best_channel << "-" << operating_class << "("
                       << utils::convert_bandwidth_to_int(bandwidth)
                       << "MHz)] is the new Best-Channel.";
             // Override selected channel
-            selected_channel.channel          = channel_number;
+            selected_channel.channel          = best_channel;
             selected_channel.operating_class  = operating_class;
             selected_channel.bw               = bandwidth;
             selected_channel.dfs_state        = channel_info.dfs_state;
