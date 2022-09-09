@@ -107,6 +107,10 @@ test-upgrade-image-on-glinet-b1300:
     TARGET_DEVICE_NAME: glinet-b1300-1
     OPENWRT_IMAGE: openwrt-ipq40xx-generic-glinet_gl-b1300-squashfs-sysupgrade.bin
   needs: ["build-for-glinet-b1300"]
+  rules:
+    - when: always
+      allow_failure: false
+  parallel: 10
 
 test-upgrade-image-on-nec-wx3000hp:
   extends: .test-upgrade-image
