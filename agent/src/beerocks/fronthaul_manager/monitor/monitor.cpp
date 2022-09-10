@@ -728,6 +728,17 @@ void Monitor::on_channel_utilization_measurement_period_elapsed()
     auto &info             = radio_node->ap_metrics_reporting_info();
     bool threshold_crossed = false;
 
+    /**
+     * If the channel utilization threshold is set for the first time in Multi-AP Policy Config
+     * Request Message, report it by setting the threshold_crossed to true.
+     * Channel Utilization threshold is monitored by the bool variable
+     * m_send_first_ap_metrics_response_after_threshold_enable in monitor_radio_node
+     */
+    if (radio_node->get_first_threshold_enabled()) {
+        threshold_crossed = true;
+        radio_node->set_first_threshold_enabled(false);
+    }
+
     // Check if a threshold has been set
     if (0 != info.ap_channel_utilization_reporting_threshold) {
         if (channel_utilization > info.ap_channel_utilization_reporting_threshold) {
@@ -1670,6 +1681,17 @@ void Monitor::handle_multi_ap_policy_config_request(ieee1905_1::CmduMessageRx &c
              * Extract and store configuration for this radio
              */
             auto &info = mon_db.get_radio_node()->ap_metrics_reporting_info();
+
+            /**
+             * If the previous ap_channel_utilization_reporting_threshold is 0 and the Multi-AP
+             * Policy Config Request Message has ap_channel_utilization_reporting_threshold value
+             * greater than 0, set the bool variable
+             * m_send_first_ap_metrics_response_after_threshold_enable to true
+             */
+            if (info.ap_channel_utilization_reporting_threshold == 0 &&
+                metrics_reporting_conf.ap_channel_utilization_reporting_threshold > 0) {
+                mon_db.get_radio_node()->set_first_threshold_enabled(true);
+            }
 
             info.sta_metrics_reporting_rcpi_threshold =
                 metrics_reporting_conf.sta_metrics_reporting_rcpi_threshold;

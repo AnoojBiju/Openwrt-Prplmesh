@@ -249,6 +249,15 @@ public:
     friend std::ostream &operator<<(std::ostream &os, const monitor_radio_node &radio_node);
     friend std::ostream &operator<<(std::ostream &os, const monitor_radio_node *radio_node);
 
+    void set_first_threshold_enabled(bool threshold_enabled_flag_)
+    {
+        m_send_first_ap_metrics_response_after_threshold_enable = threshold_enabled_flag_;
+    }
+    bool get_first_threshold_enabled()
+    {
+        return m_send_first_ap_metrics_response_after_threshold_enable;
+    }
+
     /**
      * AP Metrics Reporting configuration and status type.
      */
@@ -423,6 +432,14 @@ private:
      * enough to be reported.
      */
     sApMetricsReportingInfo m_ap_metrics_reporting_info;
+
+    /**
+     * Send AP Metrics Response if channel utilization threshold enabled for the first time
+     * 0: ap_channel_utilization_reporting_threshold field in sApMetricsReportingInfo is 0
+     * 1: ap_channel_utilization_reporting_threshold field in sApMetricsReportingInfo changed
+     * from 0 to 1
+     */
+    bool m_send_first_ap_metrics_response_after_threshold_enable = false;
 };
 
 ////////////////////////////////////////////
