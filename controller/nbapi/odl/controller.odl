@@ -57,9 +57,9 @@
 }
 
 %define {
-    mib WiFi6Capabilities {
+    mib WiFi6 {
         /* Coming from 17.2.72 of the Multi-AP Specification R4 and TR-181 spec v2.15 */
-        object WiFi6Capabilities {
+        object WiFi6 {
             /* Supported HE MCS and NSS indicating set of supported HE Tx and Rx MCS/NSS. */
             object MCSNSS[] {
                 counted with MCSNSSNumberOfEntries;

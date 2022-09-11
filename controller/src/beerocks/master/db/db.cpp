@@ -1359,13 +1359,13 @@ bool db::set_ap_he_capabilities(wfa_map::tlvApHeCapabilities &he_caps_tlv)
     }
 
     path_to_obj += ".Capabilities.";
-    if (!m_ambiorix_datamodel->add_optional_subobject(path_to_obj, "WiFi6Capabilities")) {
-        LOG(ERROR) << "Failed to add sub-object " << path_to_obj << "WiFi6Capabilities";
+    if (!m_ambiorix_datamodel->add_optional_subobject(path_to_obj, "WiFi6")) {
+        LOG(ERROR) << "Failed to add sub-object " << path_to_obj << "WiFi6";
         return false;
     }
 
     bool ret_val = true;
-    path_to_obj += "WiFi6Capabilities.";
+    path_to_obj += "WiFi6.";
 
     auto flags1 = he_caps_tlv.flags1();
     auto flags2 = he_caps_tlv.flags2();
@@ -1418,13 +1418,13 @@ db::get_station_current_capabilities(const std::string &mac)
 bool db::dm_set_sta_he_capabilities(const std::string &path_to_sta,
                                     const beerocks::message::sRadioCapabilities &sta_cap)
 {
-    if (!m_ambiorix_datamodel->add_optional_subobject(path_to_sta, "WiFi6Capabilities")) {
-        LOG(ERROR) << "Failed to add sub-object " << path_to_sta << "WiFi6Capabilities";
+    if (!m_ambiorix_datamodel->add_optional_subobject(path_to_sta, "WiFi6")) {
+        LOG(ERROR) << "Failed to add sub-object " << path_to_sta << "WiFi6";
         return false;
     }
 
     bool ret_val            = true;
-    std::string path_to_obj = path_to_sta + "WiFi6Capabilities.";
+    std::string path_to_obj = path_to_sta + "WiFi6.";
 
     ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfTxSpatialStreams", sta_cap.he_ss);
     ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfRxSpatialStreams", sta_cap.he_ss);
@@ -1545,7 +1545,7 @@ bool db::dm_add_assoc_event_sta_caps(const std::string &assoc_event_path,
     // Remove previous entry
     m_ambiorix_datamodel->remove_optional_subobject(path_to_event, "HTCapabilities");
     m_ambiorix_datamodel->remove_optional_subobject(path_to_event, "VHTCapabilities");
-    m_ambiorix_datamodel->remove_optional_subobject(path_to_event, "WiFi6Capabilities");
+    m_ambiorix_datamodel->remove_optional_subobject(path_to_event, "WiFi6");
 
     if (sta_cap.ht_bw != beerocks::BANDWIDTH_UNKNOWN) {
         dm_set_assoc_event_sta_ht_cap(path_to_event, sta_cap);
@@ -1623,13 +1623,13 @@ bool db::dm_set_assoc_event_sta_vht_cap(const std::string &path_to_event,
 bool db::dm_set_assoc_event_sta_he_cap(const std::string &path_to_event,
                                        const beerocks::message::sRadioCapabilities &sta_cap)
 {
-    if (!m_ambiorix_datamodel->add_optional_subobject(path_to_event, "WiFi6Capabilities")) {
-        LOG(ERROR) << "Failed to add sub-object " << path_to_event << "WiFi6Capabilities";
+    if (!m_ambiorix_datamodel->add_optional_subobject(path_to_event, "WiFi6")) {
+        LOG(ERROR) << "Failed to add sub-object " << path_to_event << "WiFi6";
         return false;
     }
 
     bool ret_val            = true;
-    std::string path_to_obj = path_to_event + "WiFi6Capabilities.";
+    std::string path_to_obj = path_to_event + "WiFi6.";
 
     ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfTxSpatialStreams", sta_cap.he_ss);
     ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfRxSpatialStreams", sta_cap.he_ss);
@@ -1717,7 +1717,7 @@ bool db::set_station_capabilities(const std::string &client_mac,
     // Remove previous capabilities objects, if they exist
     m_ambiorix_datamodel->remove_optional_subobject(path_to_sta, "HTCapabilities");
     m_ambiorix_datamodel->remove_optional_subobject(path_to_sta, "VHTCapabilities");
-    m_ambiorix_datamodel->remove_optional_subobject(path_to_sta, "WiFi6Capabilities");
+    m_ambiorix_datamodel->remove_optional_subobject(path_to_sta, "WiFi6");
 
     if (sta_cap.ht_bw != beerocks::BANDWIDTH_UNKNOWN &&
         !dm_set_sta_ht_capabilities(path_to_sta, sta_cap)) {
@@ -5867,7 +5867,7 @@ bool db::clear_ap_capabilities(const sMacAddr &radio_uid)
 
     ret_val &= m_ambiorix_datamodel->remove_optional_subobject(path_to_obj, "HTCapabilities");
     ret_val &= m_ambiorix_datamodel->remove_optional_subobject(path_to_obj, "VHTCapabilities");
-    ret_val &= m_ambiorix_datamodel->remove_optional_subobject(path_to_obj, "WiFi6Capabilities");
+    ret_val &= m_ambiorix_datamodel->remove_optional_subobject(path_to_obj, "WiFi6");
 
     return ret_val;
 }
