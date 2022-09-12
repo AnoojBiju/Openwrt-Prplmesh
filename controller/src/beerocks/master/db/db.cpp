@@ -5170,15 +5170,19 @@ void db::add_bss_info_configuration(const sMacAddr &al_mac,
 
 void db::add_bss_info_configuration(const wireless_utils::sBssInfoConf &bss_info)
 {
+    LOG(DEBUG) << "Adding BSSID " << bss_info.bssid;
     bss_infos_global.push_back(bss_info);
 }
 
 std::list<wireless_utils::sBssInfoConf> &db::get_bss_info_configuration(const sMacAddr &al_mac)
 {
+    LOG(DEBUG) << "get_bss_info_configuration for " << al_mac;
     // If al_mac not exist, it will be added, and return empty list
     if (bss_infos[al_mac].empty()) {
+        LOG(INFO) << "bss_infos[" << al_mac << "] is empty!";
         return bss_infos_global;
     } else {
+        LOG(INFO) << "bss_infos[" << al_mac << "] is present";
         return bss_infos[al_mac];
     }
 }
