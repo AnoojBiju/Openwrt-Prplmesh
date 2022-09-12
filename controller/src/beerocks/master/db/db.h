@@ -1961,14 +1961,14 @@ public:
     /**
      * @brief Clears CAC Status Report data model.
      *
-     * Remove all indexes in CACAvailableChannel and updates timestamp.
+     * Remove all indexes (reports) in CACStatus object for given agent.
      *
-     * Data model path : "Device.WiFi.DataElements.Network.Device.{i}.CACStatus"
+     * Data model path : "Device.WiFi.DataElements.Network.Device.{i}.CACStatus.{i}."
      *
      * @param[in] agent db object
      * @return true on success, otherwise false.
      */
-    bool dm_clear_cac_status_report(std::shared_ptr<Agent> agent);
+    bool dm_clear_cac_status_reports(std::shared_ptr<Agent> agent);
 
     /**
      * @brief Adds instance for CACStatus.CACAvailableChannel and fullfills it.

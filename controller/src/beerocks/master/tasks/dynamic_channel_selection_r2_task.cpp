@@ -1726,7 +1726,6 @@ bool dynamic_channel_selection_r2_task::handle_tlv_profile2_cac_status_report(
 {
     LOG(DEBUG) << "Profile-2 CAC Status Report is received";
 
-    database.dm_clear_cac_status_report(agent);
     std::stringstream ss;
 
     for (size_t i = 0; i < cac_status_report_tlv->number_of_available_channels(); i++) {

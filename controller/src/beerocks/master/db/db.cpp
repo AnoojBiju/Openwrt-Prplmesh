@@ -7100,20 +7100,13 @@ std::string db::calculate_dpp_bootstrapping_str()
     return "DPP:" + dpp_conn_string + ";";
 }
 
-bool db::dm_clear_cac_status_report(std::shared_ptr<Agent> agent)
+bool db::dm_clear_cac_status_reports(std::shared_ptr<Agent> agent)
 {
     if (agent->dm_path.empty()) {
         return true;
     }
 
-    auto available_channel_list = agent->dm_path + ".CACStatus.CACAvailableChannel";
-    if (!m_ambiorix_datamodel->remove_all_instances(available_channel_list)) {
-        LOG(ERROR) << "Failed to remove all instances for: " << available_channel_list;
-        return false;
-    }
-
-    m_ambiorix_datamodel->set_current_time(agent->dm_path + ".CACStatus");
-    return true;
+    return m_ambiorix_datamodel->remove_all_instances(agent->dm_path + ".CACStatus");
 }
 
 bool db::dm_add_cac_status_available_channel(std::shared_ptr<Agent> agent, uint8_t operating_class,
