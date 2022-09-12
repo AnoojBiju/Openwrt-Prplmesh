@@ -40,8 +40,8 @@ const std::map<uint8_t, wireless_utils::sOperatingClass> wireless_utils::operati
     {119,       {{52, 60},                                                     beerocks::BANDWIDTH_40}},
     {120,       {{56, 64},                                                     beerocks::BANDWIDTH_40}},
     {121,       {{100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144}, beerocks::BANDWIDTH_20}},
-    {122,       {{100, 108, 116, 124, 132, 136, 140},                          beerocks::BANDWIDTH_40}},
-    {123,       {{104, 112, 120, 128, 134, 136, 138, 144},                     beerocks::BANDWIDTH_40}},
+    {122,       {{100, 108, 116, 124, 132, 140},                               beerocks::BANDWIDTH_40}},
+    {123,       {{104, 112, 120, 128, 136, 144},                               beerocks::BANDWIDTH_40}},
     {124,       {{149, 153, 157, 161},                                         beerocks::BANDWIDTH_20}},
     {125,       {{149, 153, 157, 161, 165, 169},                               beerocks::BANDWIDTH_20}},
     {126,       {{149, 157},                                                   beerocks::BANDWIDTH_40}},
@@ -305,32 +305,57 @@ const std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, wireless_utils::sChan
                    { beerocks::BANDWIDTH_20,  { 149,            { 149, 149                      } } },
                    { beerocks::BANDWIDTH_40,  { 151,            { 149, 153                      } } },
                    { beerocks::BANDWIDTH_80,  { 155,            { 149, 161                      } } },
+                   { beerocks::BANDWIDTH_160, { 163,            { 149, 177                      } } },
                 }
     },
     { 153,      {
                    { beerocks::BANDWIDTH_20,  { 153,            { 153, 153                      } } },
                    { beerocks::BANDWIDTH_40,  { 151,            { 149, 153                      } } },
                    { beerocks::BANDWIDTH_80,  { 155,            { 149, 161                      } } },
+                   { beerocks::BANDWIDTH_160, { 163,            { 149, 177                      } } },
                 }
     },
     { 157,      {
                    { beerocks::BANDWIDTH_20,  { 157,            { 157, 157                      } } },
                    { beerocks::BANDWIDTH_40,  { 159,            { 157, 161                      } } },
                    { beerocks::BANDWIDTH_80,  { 155,            { 149, 161                      } } },
+                   { beerocks::BANDWIDTH_160, { 163,            { 149, 177                      } } },
                 }
     },
     { 161,      {
                    { beerocks::BANDWIDTH_20,  { 161,            { 161, 161                      } } },
                    { beerocks::BANDWIDTH_40,  { 159,            { 157, 161                      } } },
                    { beerocks::BANDWIDTH_80,  { 155,            { 149, 161                      } } },
+                   { beerocks::BANDWIDTH_160, { 163,            { 149, 177                      } } },
                 }
     },
     { 165,      {
                    { beerocks::BANDWIDTH_20,  { 165,            { 165, 165                      } } },
+                   { beerocks::BANDWIDTH_40,  { 167,            { 165, 169                      } } },
+                   { beerocks::BANDWIDTH_80,  { 171,            { 165, 177                      } } },
+                   { beerocks::BANDWIDTH_160, { 163,            { 149, 177                      } } },
                 }
     },
     { 169,      {
                    { beerocks::BANDWIDTH_20,  { 169,            { 169, 169                      } } },
+                   { beerocks::BANDWIDTH_40,  { 167,            { 165, 169                      } } },
+                   { beerocks::BANDWIDTH_80,  { 171,            { 165, 177                      } } },
+                   { beerocks::BANDWIDTH_160, { 163,            { 149, 177                      } } },
+
+                }
+    },
+    { 173,      {
+                   { beerocks::BANDWIDTH_20,  { 173,            { 173, 173                      } } },
+                   { beerocks::BANDWIDTH_40,  { 175,            { 165, 169                      } } },
+                   { beerocks::BANDWIDTH_80,  { 171,            { 165, 177                      } } },
+                   { beerocks::BANDWIDTH_160, { 163,            { 149, 177                      } } },
+                }
+    },
+    { 177,      {
+                   { beerocks::BANDWIDTH_20,  { 177,            { 177, 177                      } } },
+                   { beerocks::BANDWIDTH_40,  { 175,            { 173, 177                      } } },
+                   { beerocks::BANDWIDTH_80,  { 171,            { 165, 177                      } } },
+                   { beerocks::BANDWIDTH_160, { 163,            { 149, 177                      } } },
                 }
     }
 };
