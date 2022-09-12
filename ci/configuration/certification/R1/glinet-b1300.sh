@@ -23,11 +23,15 @@ if data_overlay_not_initialized; then
 fi
 sleep 2
 
-# Stop and disable the DHCP clients:
-/etc/init.d/tr181-dhcpv4client stop
-rm -f /etc/rc.d/S27tr181-dhcpv4client
-/etc/init.d/tr181-dhcpv6client stop
-rm -f /etc/rc.d/S25tr181-dhcpv6client
+ubus wait_for DHCPv4
+ubus wait_for DHCPv6
+ubus wait_for IP.Interface
+
+# Stop and disable the DHCP clients and servers:
+ubus call DHCPv4.Client.1 _set '{"parameters": { "Enable": False }}'
+ubus call DHCPv6.Client.1 _set '{"parameters": { "Enable": False }}'
+ubus call DHCPv4.Server _set '{"parameters": { "Enable": False }}'
+ubus call DHCPv6.Server _set '{"parameters": { "Enable": False }}'
 
 # Since for the GL-inet eth0 (LAN) is always detected as UP, eth1 (WAN) will be configured as a backhaul interface
 # This allows prplMesh to detect the state of the backhaul interface
@@ -36,7 +40,6 @@ rm -f /etc/rc.d/S25tr181-dhcpv6client
 # Remove the physical LAN interface from the LAN-bridge; it will become the control interface
 # Also add the WAN interface to the LAN-bridge
 # Set the LAN bridge IP:
-ubus wait_for IP.Interface
 ubus call "IP.Interface" _set '{ "rel_path": ".[Name == \"br-lan\"].IPv4Address.[Alias == \"lan\"].", "parameters": { "IPAddress": "192.165.100.172" } }'
 
 # Move the WAN port into the LAN bridge if it's not there yet (to use it for data):

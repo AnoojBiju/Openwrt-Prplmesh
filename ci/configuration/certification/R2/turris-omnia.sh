@@ -23,8 +23,15 @@ if data_overlay_not_initialized; then
 fi
 sleep 2
 
-# We use WAN for the control interface.
 ubus wait_for IP.Interface
+
+# Stop and disable the DHCP clients:
+/etc/init.d/tr181-dhcpv4client stop
+rm -f /etc/rc.d/S27tr181-dhcpv4client
+/etc/init.d/tr181-dhcpv6client stop
+rm -f /etc/rc.d/S25tr181-dhcpv6client
+
+# We use WAN for the control interface.
 # Add the IP address if there is none yet:
 ubus call IP.Interface _get '{ "rel_path": ".[Alias == \"wan\"].IPv4Address.[Alias == \"wan\"]." }' || {
     echo "Adding IP address $IP"
