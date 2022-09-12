@@ -99,6 +99,11 @@ bool CacStatusDatabase::update_cac_status_db(const AgentDB::sRadio *radio)
         }
     }
 
+    if (available_channels.empty() && non_occupancy_channels.empty() && active_channels.empty()) {
+        LOG(DEBUG) << "No CAC data to update for radio " << radio->front.iface_mac;
+        return false;
+    }
+
     if (!available_channels.empty()) {
         m_available_channels.emplace(radio->front.iface_mac, available_channels);
     }
