@@ -117,14 +117,17 @@ bool CacStatusDatabase::update_cac_status_db(const AgentDB::sRadio *radio)
     }
 
     if (!available_channels.empty()) {
+        std::sort(available_channels.begin(), available_channels.end());
         m_available_channels.emplace(radio->front.iface_mac, available_channels);
     }
 
     if (!non_occupancy_channels.empty()) {
+        std::sort(non_occupancy_channels.begin(), non_occupancy_channels.end());
         m_non_occupancy_channels.emplace(radio->front.iface_mac, non_occupancy_channels);
     }
 
     if (!active_channels.empty()) {
+        std::sort(active_channels.begin(), active_channels.end());
         m_active_channels.emplace(radio->front.iface_mac, active_channels);
     }
 

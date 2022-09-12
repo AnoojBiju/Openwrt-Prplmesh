@@ -23,6 +23,12 @@ struct sCacStatus {
     uint8_t channel         = 0;
     // duration is used based on the context
     std::chrono::seconds duration = std::chrono::seconds(0);
+
+    bool operator<(const sCacStatus &status) const
+    {
+        return std::tie(operating_class, channel) <
+               std::tie(status.operating_class, status.channel);
+    }
 };
 
 using CacAvailableChannels    = std::vector<sCacStatus>;
