@@ -217,6 +217,7 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
                      &new_bml_event);
 
     //Parse BssidIfaceMapping vsTLV
+    std::unordered_map<sMacAddr, int8_t> bssid_vap_map;
     std::shared_ptr<beerocks_message::tlvVsBssidIfaceMapping> tlvBssidIfaceMapping;
     auto beerocks_header = beerocks::message_com::parse_intel_vs_message(cmdu_rx);
     if (beerocks_header) {
