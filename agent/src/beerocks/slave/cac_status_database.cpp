@@ -60,6 +60,10 @@ bool CacStatusDatabase::update_cac_status_db(const AgentDB::sRadio *radio)
                 beerocks::message::sWifiChannel wifi_ch(channel, bw_info.bandwidth);
                 cac_status.operating_class =
                     son::wireless_utils::get_operating_class_by_channel(wifi_ch);
+                if (!cac_status.operating_class) {
+                    LOG(WARNING) << "Skipping invalid operating class for channel: " << channel;
+                    continue;
+                }
                 cac_status.channel = channel;
 
                 // TODO: calculate duration value (PPM-2276)
@@ -72,6 +76,10 @@ bool CacStatusDatabase::update_cac_status_db(const AgentDB::sRadio *radio)
                 beerocks::message::sWifiChannel wifi_ch(channel, bw_info.bandwidth);
                 cac_status.operating_class =
                     son::wireless_utils::get_operating_class_by_channel(wifi_ch);
+                if (!cac_status.operating_class) {
+                    LOG(WARNING) << "Skipping invalid operating class for channel: " << channel;
+                    continue;
+                }
                 cac_status.channel = channel;
 
                 // TODO: calculate duration value (PPM-2275)
@@ -84,6 +92,10 @@ bool CacStatusDatabase::update_cac_status_db(const AgentDB::sRadio *radio)
                 beerocks::message::sWifiChannel wifi_ch(channel, bw_info.bandwidth);
                 cac_status.operating_class =
                     son::wireless_utils::get_operating_class_by_channel(wifi_ch);
+                if (!cac_status.operating_class) {
+                    LOG(WARNING) << "Skipping invalid operating class for channel: " << channel;
+                    continue;
+                }
                 cac_status.channel = channel;
                 // TODO: calculate duration value (PPM-1088)
                 cac_status.duration = std::chrono::seconds(0);
