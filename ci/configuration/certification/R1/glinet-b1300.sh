@@ -9,11 +9,15 @@ set -e
 # Start with a new log file:
 rm -f /var/log/messages && syslog-ng-ctl reload
 
-# Stop and disable the DHCP clients:
-/etc/init.d/tr181-dhcpv4client stop
-rm -f /etc/rc.d/S27tr181-dhcpv4client
-/etc/init.d/tr181-dhcpv6client stop
-rm -f /etc/rc.d/S25tr181-dhcpv6client
+# Stop and disable the DHCP clients and servers:
+ubus wait_for DHCPv4.Client.1
+ubus call DHCPv4.Client.1 _set '{"parameters": { "Enable": False }}'
+ubus wait_for DHCPv6.Client.1
+ubus call DHCPv6.Client.1 _set '{"parameters": { "Enable": False }}'
+ubus wait_for DHCPv4.Server
+ubus call DHCPv4.Server _set '{"parameters": { "Enable": False }}'
+ubus wait_for DHCPv6.Server
+ubus call DHCPv6.Server _set '{"parameters": { "Enable": False }}'
 
 # Since for the GL-inet eth0 (LAN) is always detected as UP, eth1 (WAN) will be configured as a backhaul interface
 # This allows prplMesh to detect the state of the backhaul interface
