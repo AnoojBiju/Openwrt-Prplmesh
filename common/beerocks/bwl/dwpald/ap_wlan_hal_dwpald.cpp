@@ -474,6 +474,8 @@ load_hostapd_config_file(const std::string &fname, std::vector<std::string> &hos
         if (beerocks::string_utils::is_empty(line)) {
             continue;
         }
+        std::transform(line.begin(), line.end(), line.begin(),
+                       [](unsigned char c) { return std::tolower(c); });
         // Check if the string belongs to a VAP config part and
         // capture which one.
         const std::string bss_eq("bss=");
