@@ -159,6 +159,8 @@ protected:
             .WillOnce(Return(true));
         EXPECT_CALL(*m_ambiorix, set(bss_path + ".1", "BackhaulUse", Matcher<const bool &>(false)))
             .WillOnce(Return(true));
+        EXPECT_CALL(*m_ambiorix, set(bss_path + ".1", "IsVBSS", Matcher<const bool &>(false)))
+            .WillOnce(Return(true));
         EXPECT_CALL(*m_ambiorix, set(_, _, Matcher<const uint32_t &>(_)))
             .WillRepeatedly(Return(true));
         EXPECT_CALL(*m_ambiorix, set_current_time(_, _)).WillOnce(Return(true));
