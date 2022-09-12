@@ -1187,6 +1187,7 @@ wireless_utils::get_operating_class_by_channel(const beerocks::message::sWifiCha
             return oper_class.first;
         }
     }
+    LOG(WARNING) << "Failed to find operating class by channel #" << ch << " and bandwidth " << bw;
     return 0;
 }
 
