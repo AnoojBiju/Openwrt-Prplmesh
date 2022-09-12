@@ -1410,6 +1410,31 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
         return false;
     }
 
+    {
+        auto split_str = [](const std::string &str,
+                            std::string tok = "=") -> std::pair<std::string, std::string> {
+            const size_t pos = str.find(tok);
+            if (pos == std::string::npos) {
+                return std::pair<std::string, std::string>();
+            }
+            return std::make_pair(str.substr(0, pos), str.substr(pos + 1));
+        };
+        LOG(INFO) << "----------";
+        LOG(INFO) << "Head:";
+        for (const auto &line : hostapd_config_head) {
+            const auto pair = split_str(line);
+            LOG(INFO) << "  " << pair.first << ": " << pair.second;
+        }
+        for (const auto &hostapd_config_vap : hostapd_config_vaps) {
+            LOG(INFO) << " VAP " << hostapd_config_vap.first;
+            for (const auto &line : hostapd_config_vap.second) {
+                const auto pair = split_str(line);
+                LOG(INFO) << "   " << pair.first << ": " << pair.second;
+            }
+        }
+        LOG(INFO) << "----------";
+    }
+
     // If a Multi-AP Agent receives an AP-Autoconfiguration WSC message containing one or
     // more M2, it shall validate each M2 (based on its 1905 AL MAC address) and configure
     // a BSS on the corresponding radio for each of the M2. If the Multi-AP Agent is currently
@@ -1430,10 +1455,13 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
             for (const auto &hostapd_config_vap : hostapd_config_vaps) {
                 std::string hostapd_bssid;
                 if (!hostapd_config_get_value(hostapd_config_vap.second, "bssid", hostapd_bssid)) {
+                    LOG(ERROR) << "BSS does not have a BSSID, should be an error.";
                     // BSS does not have a BSSID, should be an error.
                     continue;
                 } else if (hostapd_bssid != config_bssid) {
-                    // BSSIDs do not match
+                    LOG(ERROR) << "BSSIDs do not match.";
+                    LOG(ERROR) << hostapd_bssid << " != " << config_bssid;
+                    // BSSIDs do not match.
                     continue;
                 } else {
                     // Found the matching BSS configuration
