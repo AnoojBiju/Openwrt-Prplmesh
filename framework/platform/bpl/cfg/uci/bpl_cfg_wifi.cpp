@@ -34,6 +34,8 @@ static bool bpl_cfg_get_bss_configuration(const std::string &section_name,
     }
 
     // Fill in wireless credentials from option values read from UCI configuration.
+    configuration.bssid = tlvf::mac_from_string(options["macaddr"]);
+
     configuration.ssid = options["ssid"];
 
     auto starts_with = [](const std::string &prefix, const std::string &value) {

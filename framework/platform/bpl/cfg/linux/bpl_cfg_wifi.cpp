@@ -102,6 +102,8 @@ bool bpl_cfg_get_wifi_credentials(const std::string &iface,
     }
 
     // Fill in wireless credentials from parameter values read from configuration file.
+    configuration.bssid = tlvf::mac_from_string(parameters[prefix + "bssid"]);
+
     configuration.ssid = parameters[prefix + "ssid"];
 
     auto get_authentication_type = [](const std::string &security_mode) {
