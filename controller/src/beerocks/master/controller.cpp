@@ -975,7 +975,15 @@ bool Controller::autoconfig_wsc_add_m2(WSC::m1 &m1,
     // the closest to the WSC-specified behaviour.
     //
     // Note that the BBF 1905.1 implementation (meshComms) simply ignores the MAC address in M2.
-    cfg.bssid = m1.mac_addr();
+
+    LOG(DEBUG) << "BSSID: " << bss_info_conf->bssid;
+    if (bss_info_conf->bssid != beerocks::net::network_utils::ZERO_MAC) {
+        LOG(DEBUG) << "Setting BSSID to configured BSSID";
+        cfg.bssid = bss_info_conf->bssid;
+    } else {
+        LOG(DEBUG) << "Setting BSSID to M1 BSSID";
+        cfg.bssid = m1.mac_addr();
+    }
 
     auto config_data = WSC::configData::create(cfg, buf, sizeof(buf));
     if (!config_data) {
@@ -1117,7 +1125,9 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
             return false;
         }
 
-        auto bss       = radio->bsses.add(radio->radio_uid, *radio);
+        LOG(INFO) << "Adding BSS ID:" << bss_info_conf.bssid << " SSID:" << bss_info_conf.ssid;
+
+        auto bss       = radio->bsses.add(bss_info_conf.bssid, *radio);
         bss->enabled   = false;
         bss->ssid      = bss_info_conf.ssid;
         bss->fronthaul = bss_info_conf.fronthaul;
