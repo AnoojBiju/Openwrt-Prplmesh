@@ -1402,6 +1402,7 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
     std::string fname;
     std::vector<std::string> hostapd_config_head;
     std::map<std::string, std::vector<std::string>> hostapd_config_vaps;
+    std::map<std::string, std::vector<std::string>> original_hostapd_config_vaps;
 
     // Load hostapd config for the radio
     if (!load_hostapd_config(m_radio_info.iface_name, fname, hostapd_config_head,
@@ -1410,7 +1411,7 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
         return false;
     }
 
-    {
+    auto print_config = [](const std::vector<std::string> &hostapd_config, int indent = 0) -> std::string {
         auto split_str = [](const std::string &str,
                             std::string tok = "=") -> std::pair<std::string, std::string> {
             const size_t pos = str.find(tok);
@@ -1419,21 +1420,22 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
             }
             return std::make_pair(str.substr(0, pos), str.substr(pos + 1));
         };
-        LOG(INFO) << "----------";
-        LOG(INFO) << "Head:";
-        for (const auto &line : hostapd_config_head) {
+        std::stringstream ss;
+        for (const auto &line : hostapd_config) {
             const auto pair = split_str(line);
-            LOG(INFO) << "  " << pair.first << ": " << pair.second;
+            ss << std::string(indent, ' ') << pair.first << ": " << pair.second << std::endl;
         }
-        for (const auto &hostapd_config_vap : hostapd_config_vaps) {
-            LOG(INFO) << " VAP " << hostapd_config_vap.first;
-            for (const auto &line : hostapd_config_vap.second) {
-                const auto pair = split_str(line);
-                LOG(INFO) << "   " << pair.first << ": " << pair.second;
-            }
-        }
-        LOG(INFO) << "----------";
+        return ss.str();
+    };
+
+    std::stringstream ss;
+    ss << "Config Head:" << std::endl;
+    ss << print_config(hostapd_config_head, 1);
+    for (const auto &config_iter : hostapd_config_vaps) {
+        ss << " VAP:" << config_iter.first << std::endl;
+        ss << print_config(hostapd_config_head, 2);
     }
+    LOG(INFO) << "Hostap config" << std::endl << ss.str();
 
     // If a Multi-AP Agent receives an AP-Autoconfiguration WSC message containing one or
     // more M2, it shall validate each M2 (based on its 1905 AL MAC address) and configure

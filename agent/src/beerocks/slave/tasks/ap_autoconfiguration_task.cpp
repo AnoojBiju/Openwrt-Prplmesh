@@ -968,18 +968,17 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_wsc(ieee1905_1::CmduMe
     }
 
     ///////////////////////////////////////////////////////////////////
-    // TODO https://github.com/prplfoundation/prplMesh/issues/797
-    //
-    // Short term solution.
-    // In non-EasyMesh mode, never modify hostapd configuration.
-    // and in this case VAPs credentials.
-    //
     // Long term solution.
     // All EasyMesh VAPs will be stored in the platform DB.
     // All other VAPs are manual, AKA should not be modified by prplMesh.
     ////////////////////////////////////////////////////////////////////
     if (db->device_conf.management_mode != BPL_MGMT_MODE_NOT_MULTIAP) {
-        send_ap_bss_configuration_message(radio->front.iface_name, configs);
+        validate_reconfiguration(radio->front.iface_name, configs);
+        if (!configs.empty()) {
+            send_ap_bss_configuration_message(radio->front.iface_name, configs);
+        } else {
+            LOG(INFO) << "Reconfiguration is not needed";
+        }
     } else {
         LOG(WARNING) << "non-EasyMesh mode - skip updating VAP credentials";
     }
@@ -1001,7 +1000,6 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_wsc(ieee1905_1::CmduMe
         FSM_MOVE_STATE(radio->front.iface_name, eState::WAIT_AP_CONFIGURATION_COMPLETE);
         return;
     }
-
     // MODE is NOT_MULTIAP
     FSM_MOVE_STATE(radio->front.iface_name, eState::CONFIGURED);
     return;
@@ -1749,6 +1747,104 @@ bool ApAutoConfigurationTask::send_error_response_message(
         m_btl_ctx.send_cmdu_to_controller({}, m_cmdu_tx);
     }
     return true;
+}
+
+bool ApAutoConfigurationTask::validate_reconfiguration(
+    const std::string &radio_iface, std::vector<WSC::configData::config> &configs)
+{
+    auto db    = AgentDB::get();
+    auto radio = db->radio(radio_iface);
+    if (!radio) {
+        LOG(ERROR) << "Radio not found " << radio_iface;
+        return false;
+    }
+    LOG(INFO) << "-- Current BSS config data:";
+    for (const auto &bssid : radio->front.bssids) {
+        LOG(INFO) << " bssid: " << bssid.mac << ", ssid: " << bssid.ssid
+                  << ", fBSS: " << bssid.fronthaul_bss << ", bBSS: " << bssid.backhaul_bss;
+    }
+
+    LOG(INFO) << "-- Incoming BSS config data:";
+    for (const auto &config : configs) {
+        LOG(INFO) << " bssid: " << config.bssid << ", ssid: " << config.ssid
+                  << ", network_key: " << config.network_key
+                  << ", authentication_type: " << std::hex << int(config.auth_type)
+                  << ", encryption_type: " << int(config.encr_type)
+                  << ", bss_type: " << int(config.bss_type);
+    }
+    LOG(INFO) << "--";
+
+    const auto find_by_similarity = [](const AgentDB::sRadio::sFront::sBssid &bss) {
+        return [&bss](const WSC::configData::config &config) { return bss.ssid == config.ssid; };
+    };
+    const auto bss_needs_reconfiguration = [](const WSC::configData::config &config,
+                                              const AgentDB::sRadio::sFront::sBssid &bss) {
+        return bss.ssid != config.ssid;
+    };
+
+    const auto bss_pending_teardown = [](const WSC::configData::config &config) {
+        return ((config.bss_type & WSC::eWscVendorExtSubelementBssType::TEARDOWN) != 0);
+    };
+
+    const auto &bssids = radio->front.bssids;
+    std::vector<AgentDB::sRadio::sFront::sBssid> current_bssids(bssids.begin(),
+                                                                bssids.begin() + bssids.size());
+    std::vector<WSC::configData::config> config_copy = configs;
+    configs.clear();
+
+    // Iterate over existing configuration.
+    for (const auto &bssid : current_bssids) {
+        auto iter = std::find_if(config_copy.begin(), config_copy.end(), find_by_similarity(bssid));
+        if (iter != config_copy.end()) {
+            // Found a configuration that is similar to current bssid
+            if (bss_needs_reconfiguration(*iter, bssid)) {
+                // bss needs reconfiguration
+                LOG(DEBUG) << "BSS " << bssid.mac << " needs reconfiguration.";
+
+                // Set the BSSID of the BSS since the controller does not send this information.
+                iter->bssid = bssid.mac;
+
+                // Remove from incoming configuration
+                config_copy.erase(iter);
+                // Add to the final configuration.
+                configs.push_back(*iter);
+            } else {
+                LOG(DEBUG) << "BSS " << bssid.mac << " does not need reconfiguration.";
+            }
+        } else {
+            // Did not find vap in configuration, need to teardown
+            WSC::configData::config vap_to_teardown;
+            vap_to_teardown.bssid    = bssid.mac;
+            vap_to_teardown.bss_type = WSC::eWscVendorExtSubelementBssType::TEARDOWN;
+            configs.push_back(vap_to_teardown);
+        }
+    }
+    for (const auto &remaining_bss : config_copy) {
+        // Find if there are any BSSs that are pending for teardown
+        auto iter = std::find_if(configs.begin(), configs.end(), bss_pending_teardown);
+        if (iter != configs.end()) {
+            // Override BSSs parameters
+            iter->ssid        = remaining_bss.ssid;
+            iter->auth_type   = remaining_bss.auth_type;
+            iter->encr_type   = remaining_bss.encr_type;
+            iter->network_key = remaining_bss.network_key;
+            iter->bss_type    = remaining_bss.bss_type;
+        } else {
+            LOG(ERROR) << "Cannot add more VAPs then what are currently configured";
+        }
+    }
+
+    LOG(INFO) << "-- New BSS config data:";
+    for (const auto &config : configs) {
+        LOG(INFO) << " bssid: " << config.bssid << ", ssid: " << config.ssid
+                  << ", network_key: " << config.network_key
+                  << ", authentication_type: " << std::hex << int(config.auth_type)
+                  << ", encryption_type: " << int(config.encr_type)
+                  << ", bss_type: " << int(config.bss_type);
+    }
+    LOG(INFO) << "--";
+
+    return false;
 }
 
 bool ApAutoConfigurationTask::send_ap_bss_configuration_message(
