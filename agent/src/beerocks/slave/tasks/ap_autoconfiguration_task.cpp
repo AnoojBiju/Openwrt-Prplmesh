@@ -1760,6 +1760,9 @@ bool ApAutoConfigurationTask::validate_reconfiguration(
     }
     LOG(INFO) << "-- Current BSS config data:";
     for (const auto &bssid : radio->front.bssids) {
+        if (!bssid.active) {
+            continue;
+        }
         LOG(INFO) << " bssid: " << bssid.mac << ", ssid: " << bssid.ssid
                   << ", fBSS: " << bssid.fronthaul_bss << ", bBSS: " << bssid.backhaul_bss;
     }
@@ -1794,6 +1797,9 @@ bool ApAutoConfigurationTask::validate_reconfiguration(
 
     // Iterate over existing configuration.
     for (const auto &bssid : current_bssids) {
+        if (!bssid.active) {
+            continue;
+        }
         auto iter = std::find_if(config_copy.begin(), config_copy.end(), find_by_similarity(bssid));
         if (iter != config_copy.end()) {
             // Found a configuration that is similar to current bssid
@@ -1812,6 +1818,7 @@ bool ApAutoConfigurationTask::validate_reconfiguration(
                 LOG(DEBUG) << "BSS " << bssid.mac << " does not need reconfiguration.";
             }
         } else {
+            LOG(DEBUG) << "BSS " << bssid.mac << " needs teardown.";
             // Did not find vap in configuration, need to teardown
             WSC::configData::config vap_to_teardown;
             vap_to_teardown.bssid    = bssid.mac;
@@ -1824,6 +1831,8 @@ bool ApAutoConfigurationTask::validate_reconfiguration(
         auto iter = std::find_if(configs.begin(), configs.end(), bss_pending_teardown);
         if (iter != configs.end()) {
             // Override BSSs parameters
+            LOG(DEBUG) << "BSS " << iter->bssid
+                       << " will be reconfigured instead of being torn down.";
             iter->ssid        = remaining_bss.ssid;
             iter->auth_type   = remaining_bss.auth_type;
             iter->encr_type   = remaining_bss.encr_type;

@@ -1411,7 +1411,8 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
         return false;
     }
 
-    auto print_config = [](const std::vector<std::string> &hostapd_config, int indent = 0) -> std::string {
+    auto print_config = [](const std::vector<std::string> &hostapd_config,
+                           int indent = 0) -> std::string {
         auto split_str = [](const std::string &str,
                             std::string tok = "=") -> std::pair<std::string, std::string> {
             const size_t pos = str.find(tok);
