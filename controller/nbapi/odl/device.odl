@@ -73,6 +73,14 @@
             }
         }
 
+        %read-only object SSIDtoVIDMapping {
+            /* The Service Set Identifier (SSID) to VLAN ID mapping for EasyMesh traffic separation */
+            %read-only string SSID;
+            %read-only uint64 VID = 0 {
+                on action validate call check_range [0, 4095];
+            }
+        }
+
         /*
         ** The list of Radio objects.
         */
