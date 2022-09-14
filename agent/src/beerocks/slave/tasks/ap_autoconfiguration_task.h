@@ -211,6 +211,9 @@ private:
     bool send_ap_bss_configuration_message(const std::string &radio_iface,
                                            const std::vector<WSC::configData::config> &configs);
 
+    bool validate_reconfiguration(const std::string &radio_iface,
+                                  std::vector<WSC::configData::config> &configs);
+
     bool send_ap_bss_info_update_request(const std::string &radio_iface);
 
     bool send_ap_connected_sta_notifications_request(const std::string &radio_iface);
