@@ -4944,7 +4944,7 @@ bool slave_thread::update_vaps_info(const std::string &iface,
     }
     for (uint8_t vap_idx = 0; vap_idx < eBeeRocksIfaceIds::IFACE_TOTAL_VAPS; vap_idx++) {
         auto &bss  = radio->front.bssids[vap_idx];
-        bss.active = (vaps[vap_idx].mac == network_utils::ZERO_MAC);
+        bss.active = (vaps[vap_idx].mac != network_utils::ZERO_MAC);
         if (!bss.active) {
             continue;
         }
