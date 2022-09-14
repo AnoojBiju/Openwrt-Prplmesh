@@ -1444,7 +1444,7 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
 
     auto backhaul_wps_ssid_copy(backhaul_wps_ssid);
 
-    auto matching_bss = [](const son::wireless_utils::sBssInfoConf &bss) {
+    const auto matching_bss = [](const son::wireless_utils::sBssInfoConf &bss) const {
         return [&bss](const std::pair<std::string, std::vector<std::string>> &hostapd_config) -> bool {
             const auto &target_bssid = tlvf::mac_to_string(bss.bssid);
             std::string hostapd_bssid, entry_mode;
@@ -1526,9 +1526,9 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
         if (!compare_value("ssid", bss_info_conf.ssid))
         {
             // SSID do not match, override existing value.
-            hostapd_config_set_value(hostapd_config->second, "ssid", bss_info_conf.ssid)
-                // Add interface to pending reconfigure set.
-                ifaces_to_reconfigure.insert(hostapd_config->first);
+            hostapd_config_set_value(hostapd_config->second, "ssid", bss_info_conf.ssid);
+            // Add interface to pending reconfigure set.
+            ifaces_to_reconfigure.insert(hostapd_config->first);
         }
 
         // // Everything related to switching between open and WPA2
