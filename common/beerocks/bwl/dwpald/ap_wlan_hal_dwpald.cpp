@@ -1469,8 +1469,8 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
     std::set<std::string> ifaces_to_reconfigure;
     // Go through the bss_info_conf_list and change the hostapd config accordingly
     for (const auto &bss_info_conf : bss_info_conf_list) {
-        auto &hostapd_config = std::find_if(hostapd_config_vaps.begin(), hostapd_config_vaps.end(),
-                                            matching_bss(bss_info_conf));
+        auto hostapd_config = std::find_if(hostapd_config_vaps.begin(), hostapd_config_vaps.end(),
+                                           matching_bss(bss_info_conf));
         if (hostapd_config == hostapd_config_vaps.end()) {
             LOG(ERROR) << "Could not find a hostapd BSS with a BSSID of " << bss_info_conf.bssid;
             return false;
