@@ -967,19 +967,13 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_wsc(ieee1905_1::CmduMe
         return;
     }
 
-    ///////////////////////////////////////////////////////////////////
-    // TODO https://github.com/prplfoundation/prplMesh/issues/797
-    //
-    // Short term solution.
-    // In non-EasyMesh mode, never modify hostapd configuration.
-    // and in this case VAPs credentials.
-    //
-    // Long term solution.
-    // All EasyMesh VAPs will be stored in the platform DB.
-    // All other VAPs are manual, AKA should not be modified by prplMesh.
-    ////////////////////////////////////////////////////////////////////
     if (db->device_conf.management_mode != BPL_MGMT_MODE_NOT_MULTIAP) {
-        send_ap_bss_configuration_message(radio->front.iface_name, configs);
+        validate_reconfiguration(radio->front.iface_name, configs);
+        if (!configs.empty()) {
+            send_ap_bss_configuration_message(radio->front.iface_name, configs);
+        } else {
+            LOG(INFO) << "Reconfiguration is not needed";
+        }
     } else {
         LOG(WARNING) << "non-EasyMesh mode - skip updating VAP credentials";
     }
