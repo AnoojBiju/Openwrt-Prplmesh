@@ -98,31 +98,36 @@ bool Configuration::store()
     // store the next ones ('bss=')
     for (auto &vap : m_hostapd_config_vaps) {
         std::stringstream bss_conf;
+        bool config_id_supported = false;
 
         // add empty line for readability
         out_file << "\n";
         for (auto &line : vap.second) {
-            // skip any existing config_id line (e.g. set by netfid)
+            // skip any existing config_id line (e.g. set by netfid),
+            // it will be set again at the end.
             if (line.rfind("config_id=", 0) == 0) {
+                config_id_supported = true;
                 continue;
             }
             out_file << line << "\n";
             bss_conf << line << "\n";
         }
-        // add the config_id at the end:
-        uint8_t config_id[32];
-        mapf::encryption::sha256 sha;
-        sha.update(reinterpret_cast<const uint8_t *>(bss_conf.str().c_str()),
-                   bss_conf.str().size());
-        if (!sha.digest(config_id)) {
-            LOG(ERROR) << "Unable to compute sha256 of the configuration!";
-            return false;
-        };
-        out_file << "config_id=";
-        for (const auto &c : config_id) {
-            out_file << beerocks::string_utils::int_to_hex_string(c, 2);
+        if (config_id_supported) {
+            // add the config_id at the end:
+            uint8_t config_id[32];
+            mapf::encryption::sha256 sha;
+            sha.update(reinterpret_cast<const uint8_t *>(bss_conf.str().c_str()),
+                       bss_conf.str().size());
+            if (!sha.digest(config_id)) {
+                LOG(ERROR) << "Unable to compute sha256 of the configuration!";
+                return false;
+            };
+            out_file << "config_id=";
+            for (const auto &c : config_id) {
+                out_file << beerocks::string_utils::int_to_hex_string(c, 2);
+            }
+            out_file << "\n";
         }
-        out_file << "\n";
     }
 
     m_ok           = true;
