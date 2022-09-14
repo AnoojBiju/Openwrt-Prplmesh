@@ -1751,6 +1751,132 @@ bool ApAutoConfigurationTask::send_error_response_message(
     return true;
 }
 
+bool ApAutoConfigurationTask::validate_reconfiguration(
+    const std::string &radio_iface, std::vector<WSC::configData::config> &configs)
+{
+    auto db    = AgentDB::get();
+    auto radio = db->radio(radio_iface);
+    if (!radio) {
+        LOG(ERROR) << "Radio not found " << radio_iface;
+        return false;
+    }
+    std::stringstream config_prints;
+    config_prints << "-- Current BSS config data:" << std::endl;
+    for (const auto &bssid : radio->front.bssids) {
+        if (!bssid.active) {
+            continue;
+        }
+        config_prints << " bssid: " << bssid.mac << ", ssid: " << bssid.ssid
+                      << ", fBSS: " << bssid.fronthaul_bss << ", bBSS: " << bssid.backhaul_bss
+                      << (bssid.active ? ", is active." : ", isn't active.") << std::endl;
+    }
+
+    config_prints << "-- Incoming BSS config data:" << std::endl;
+    for (const auto &config : configs) {
+        config_prints << " bssid: " << config.bssid << ", ssid: " << config.ssid
+                      << ", network_key: " << config.network_key
+                      << ", authentication_type: " << std::hex << int(config.auth_type)
+                      << ", encryption_type: " << std::hex << int(config.encr_type)
+                      << ", bss_type: " << std::hex << int(config.bss_type) << std::endl;
+        ;
+    }
+    config_prints << "--" << std::endl;
+
+    // Using a nested lambda to return a predicate function.
+    // The named lambda "find_by_similarity" receives a AgentDB BSS element.
+    // The anonymous returning predicate lambda, finds a "matching" WSC config element.
+    const auto find_by_similarity = [](const AgentDB::sRadio::sFront::sBssid &bss) {
+        return [&bss](const WSC::configData::config &config) { return true; };
+    };
+    const auto bss_needs_reconfiguration = [](const WSC::configData::config &config,
+                                              const AgentDB::sRadio::sFront::sBssid &bss) {
+        return true;
+    };
+
+    const auto bss_pending_teardown = [](const WSC::configData::config &config) {
+        return ((config.bss_type & WSC::eWscVendorExtSubelementBssType::TEARDOWN) != 0);
+    };
+
+    const auto &bssids = radio->front.bssids;
+    // Create a copy of the existing configuration.
+    // Create a container for the final configuration.
+
+    // We create these two containers, so we could remove and insert into the configuration
+    std::vector<WSC::configData::config> config_copy = configs;
+    std::vector<WSC::configData::config> final_config;
+
+    // Iterate over existing configuration.
+    for (const auto &bssid : bssids) {
+        if (!bssid.active) {
+            continue;
+        }
+        auto iter = std::find_if(config_copy.begin(), config_copy.end(), find_by_similarity(bssid));
+        if (iter != config_copy.end()) {
+            // Found a configuration that is similar to current bssid
+            if (bss_needs_reconfiguration(*iter, bssid)) {
+
+                // BSS needs reconfiguration
+                LOG(DEBUG) << "BSS " << bssid.mac << " needs reconfiguration.";
+
+                // Set the BSSID of the BSS since the controller does not send this information.
+                iter->bssid = bssid.mac;
+
+                // Add to the final configuration.
+                final_config.emplace_back(std::move(*iter));
+
+                // Remove from incoming configuration so we would not match with it again by mistake.
+                config_copy.erase(iter);
+            } else {
+                LOG(DEBUG) << "BSS " << bssid.mac << " does not need reconfiguration.";
+            }
+        } else {
+            // Did not find vap in configuration, need to teardown
+            WSC::configData::config vap_to_teardown;
+            vap_to_teardown.bssid    = bssid.mac;
+            vap_to_teardown.bss_type = WSC::eWscVendorExtSubelementBssType::TEARDOWN;
+            final_config.emplace_back(std::move(vap_to_teardown));
+        }
+    }
+
+    // Now that all the existing BSSs were updated, we need to iterate over the remaining incoming configuration.
+    // Any BSS that is flagged for teardown in the final configuration will instead be updated with the incoming configuration.
+    for (const auto &remaining_bss : config_copy) {
+        // Find if there are any BSSs that are pending for teardown
+        auto iter = std::find_if(final_config.begin(), final_config.end(), bss_pending_teardown);
+        if (iter != final_config.end()) {
+            // Override BSSs parameters
+            LOG(DEBUG) << "BSS " << iter->bssid
+                       << " will be reconfigured instead of being torn down.";
+            iter->ssid        = remaining_bss.ssid;
+            iter->auth_type   = remaining_bss.auth_type;
+            iter->encr_type   = remaining_bss.encr_type;
+            iter->network_key = remaining_bss.network_key;
+            iter->bss_type    = remaining_bss.bss_type;
+        } else {
+            LOG(ERROR) << "Cannot add more VAPs then what are currently configured";
+        }
+    }
+
+    config_prints << "-- New BSS config data:" << std::endl;
+    for (const auto &config : final_config) {
+        config_prints << " bssid: " << config.bssid << ", ssid: " << config.ssid
+                      << ", network_key: " << config.network_key
+                      << ", authentication_type: " << std::hex << int(config.auth_type)
+                      << ", encryption_type: " << std::hex << int(config.encr_type)
+                      << ", bss_type: " << std::hex << int(config.bss_type) << std::endl;
+    }
+
+    // Set final configuration.
+    configs = final_config;
+
+    // This log is very large and spamming, can be used for debugging purposes if needed.
+    // LOG(INFO) << "Config Prints: " << std::endl
+    //           << std::endl
+    //           << config_prints.str() << std::endl
+    //           << std::endl;
+    return true;
+}
+
 bool ApAutoConfigurationTask::send_ap_bss_configuration_message(
     const std::string &radio_iface, const std::vector<WSC::configData::config> &configs)
 {
