@@ -109,6 +109,8 @@ public:
         WSC::eWscAuth authentication_type;
         WSC::eWscEncr encryption_type;
         std::string network_key;
+        sMacAddr bssid;
+        bool teardown                                     = false;
         bool fronthaul                                    = false;
         bool backhaul                                     = false;
         bool profile1_backhaul_sta_association_disallowed = false;
