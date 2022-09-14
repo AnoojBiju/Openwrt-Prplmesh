@@ -1447,17 +1447,9 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
     const auto matching_bss = [](const son::wireless_utils::sBssInfoConf &bss) {
         return [&bss](const std::pair<std::string, std::vector<std::string>> &hostapd_config) -> bool {
             const auto &target_bssid = tlvf::mac_to_string(bss.bssid);
-            std::string hostapd_bssid, entry_mode;
+            std::string hostapd_bssid;
             if (!hostapd_config_get_value(hostapd_config.second, "bssid", hostapd_bssid)) {
                 LOG(ERROR) << "BSS " << hostapd_config.first << " does not have a BSSID.";
-                return false;
-            }
-            if (!hostapd_config_get_value(hostapd_config.second, "mode", entry_mode)) {
-                LOG(ERROR) << "BSS " << hostapd_config.first << " does not have a MODE.";
-                return false;
-            }
-            if (entry_mode != "ap") {
-                // Need to find only APs
                 return false;
             }
             // Return if matching BSSIDs
