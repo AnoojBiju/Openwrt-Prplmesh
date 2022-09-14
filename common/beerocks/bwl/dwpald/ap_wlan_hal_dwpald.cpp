@@ -1392,6 +1392,49 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
         return false;
     }
 
+    auto print_config = [](const std::vector<std::string> &hostapd_config,
+                           int indent = 0) -> std::string {
+        auto split_str = [](const std::string &str,
+                            std::string tok = "=") -> std::pair<std::string, std::string> {
+            const size_t pos = str.find(tok);
+            if (pos == std::string::npos) {
+                return std::pair<std::string, std::string>();
+            }
+            return std::make_pair(str.substr(0, pos), str.substr(pos + 1));
+        };
+        std::stringstream ss;
+        for (const auto &line : hostapd_config) {
+            const auto pair = split_str(line);
+            ss << std::string(indent, ' ') << pair.first << ": " << pair.second << std::endl;
+        }
+        return ss.str();
+    };
+
+    std::stringstream present, incoming;
+    present << "Config Head:" << std::endl;
+    present << print_config(hostapd_config_head, 1);
+    for (const auto &config_iter : hostapd_config_vaps) {
+        present << " VAP:" << config_iter.first << std::endl;
+        present << print_config(hostapd_config_head, 2);
+    }
+    incoming << "There are " << bss_info_conf_list.size() << " incoming BSSs:" << std::endl;
+    for (const auto &bss_info : bss_info_conf_list) {
+        incoming << " VAP:" << bss_info.bssid << std::endl;
+        incoming << "  Teardown:" << bss_info.teardown << std::endl;
+        if (bss_info.teardown) {
+            continue;
+        }
+        incoming << "  SSID:" << bss_info.ssid << std::endl;
+        incoming << "  fBSS:" << bss_info.fronthaul << std::endl;
+        incoming << "  bBSS:" << bss_info.backhaul << std::endl;
+        incoming << "  Auth:" << bss_info.authentication_type << std::endl;
+        incoming << "  Encr:" << bss_info.encryption_type << std::endl;
+    }
+
+
+    LOG(INFO) << "Hostapd config" << std::endl << present.str();
+    LOG(INFO) << "Incoming config" << std::endl << incoming.str();
+
     // If a Multi-AP Agent receives an AP-Autoconfiguration WSC message containing one or
     // more M2, it shall validate each M2 (based on its 1905 AL MAC address) and configure
     // a BSS on the corresponding radio for each of the M2. If the Multi-AP Agent is currently
