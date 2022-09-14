@@ -1433,7 +1433,6 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
         incoming << "  Encr:" << bss_info.encryption_type << std::endl;
     }
 
-
     LOG(INFO) << "Hostapd config" << std::endl << present.str();
     LOG(INFO) << "Incoming config" << std::endl << incoming.str();
 
