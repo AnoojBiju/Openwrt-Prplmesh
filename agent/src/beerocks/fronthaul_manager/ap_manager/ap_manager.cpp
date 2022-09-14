@@ -1359,6 +1359,8 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             }
             auto &config_data = std::get<1>(config_data_tuple);
 
+            bss_info_conf.bssid = config_data.bssid_attr().data;
+
             // If a Multi-AP Agent receives an AP-Autoconfiguration WSC message containing an M2
             // with a Multi-AP Extension subelement with bit 4 (Tear Down bit) of the subelement
             // value set to one (see Table 4), it shall tear down all currently operating BSS(s)
@@ -1367,9 +1369,9 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             auto bss_type =
                 static_cast<WSC::eWscVendorExtSubelementBssType>(config_data.bss_type());
             if ((bss_type & WSC::eWscVendorExtSubelementBssType::TEARDOWN) != 0) {
-                LOG(DEBUG) << "received teardown";
-                bss_info_conf_list.clear();
-                break;
+                bss_info_conf.teardown = true;
+                bss_info_conf_list.push_back(bss_info_conf);
+                continue;
             }
             if ((bss_type & WSC::eWscVendorExtSubelementBssType::FRONTHAUL_BSS) != 0) {
                 bss_info_conf.fronthaul = true;
@@ -1412,7 +1414,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             UTILS_SLEEP_MSEC(500);
         }
 
-        if (perform_update) {
+        if (perform_update && !bss_info_conf_list.empty()) {
             ap_wlan_hal->update_vap_credentials(bss_info_conf_list, backhaul_wps_ssid,
                                                 backhaul_wps_passphrase);
 
