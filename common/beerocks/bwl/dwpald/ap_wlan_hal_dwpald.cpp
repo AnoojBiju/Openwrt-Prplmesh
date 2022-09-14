@@ -1384,13 +1384,15 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
     std::string fname;
     std::vector<std::string> hostapd_config_head;
     std::map<std::string, std::vector<std::string>> hostapd_config_vaps;
+    std::map<std::string, std::vector<std::string>> original_hostapd_config_vaps;
 
     // Load hostapd config for the radio
     if (!load_hostapd_config(m_radio_info.iface_name, fname, hostapd_config_head,
-                             hostapd_config_vaps)) {
+                             original_hostapd_config_vaps)) {
         LOG(ERROR) << "Autoconfiguration: no hostapd config to apply configuration!";
         return false;
     }
+    hostapd_config_vaps = original_hostapd_config_vaps;
 
     auto print_config = [](const std::vector<std::string> &hostapd_config,
                            int indent = 0) -> std::string {
