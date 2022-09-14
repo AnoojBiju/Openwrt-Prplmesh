@@ -1372,6 +1372,26 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
     const std::map<std::string, std::vector<std::string>> original_hostapd_config_vaps =
         hostapd_config_vaps;
 
+    auto print_config_vec = [](const std::vector<std::string> &hostapd_config,
+                               int indent = 0) -> std::string {
+        std::stringstream ss;
+        for (const auto &line : hostapd_config) {
+            const auto pair = beerocks::string_utils::str_split(line, '=');
+            ss << std::string(indent, ' ') << pair.at(0) << ": " << pair.at(1) << std::endl;
+        }
+        return ss.str();
+    };
+    auto print_config_map =
+        [&print_config_vec](const std::map<std::string, std::vector<std::string>> &hostapd_config,
+                            int indent = 0) -> std::string {
+        std::stringstream ss;
+        for (const auto &config_iter : hostapd_config) {
+            ss << std::string(indent, ' ') << "VAP:" << config_iter.first << std::endl;
+            ss << print_config_vec(config_iter.second, indent + 1);
+        }
+        return ss.str();
+    };
+
     // If a Multi-AP Agent receives an AP-Autoconfiguration WSC message containing one or
     // more M2, it shall validate each M2 (based on its 1905 AL MAC address) and configure
     // a BSS on the corresponding radio for each of the M2. If the Multi-AP Agent is currently
@@ -1538,6 +1558,11 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
         LOG(WARNING) << "Autoconfiguration: No changes needed for the hostapd config";
         return true;
     }
+
+    LOG(INFO) << "Hostapd config: " << std::endl
+              << print_config_map(original_hostapd_config_vaps, 1) << std::endl
+              << "Current config: " << std::endl
+              << print_config_map(hostapd_config_vaps, 1);
 
     LOG(INFO) << "Reconfiguring the following interfaces: "
               << [&ifaces_to_reconfigure]() -> std::string {
