@@ -1532,20 +1532,20 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
         }
 
         // // Everything related to switching between open and WPA2
-        // if (!update_vap_credentials_configure_wpa(vap_if, hostapd_config, bss_info_conf)) {
-        //     // The function prints the error messages itself
-        //     return false;
-        // }
+        if (!update_vap_credentials_configure_wpa(hostapd_config->first, hostapd_config->second, bss_info_conf)) {
+            // The function prints the error messages itself
+            // return false;
+        }
 
         // // Set multi_ap mode
-        // if (!set_vap_multiap_mode(vap_hostapd_config, bss_info_conf.fronthaul,
-        //                           bss_info_conf.backhaul, backhaul_wps_ssid_copy,
-        //                           backhaul_wps_passphrase,
-        //                           bss_info_conf.profile1_backhaul_sta_association_disallowed,
-        //                           bss_info_conf.profile2_backhaul_sta_association_disallowed)) {
-        //     // The function prints the error messages itself
-        //     return false;
-        // }
+        if (!set_vap_multiap_mode(hostapd_config->second, bss_info_conf.fronthaul,
+                                  bss_info_conf.backhaul, backhaul_wps_ssid_copy,
+                                  backhaul_wps_passphrase,
+                                  bss_info_conf.profile1_backhaul_sta_association_disallowed,
+                                  bss_info_conf.profile2_backhaul_sta_association_disallowed)) {
+            // The function prints the error messages itself
+            // return false;
+        }
 
         // Finally check if VAP is disabled
         if (compare_value("start_disabled", "1")) {
