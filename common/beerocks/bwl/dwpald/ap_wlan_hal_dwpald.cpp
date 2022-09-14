@@ -1444,7 +1444,7 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
 
     auto backhaul_wps_ssid_copy(backhaul_wps_ssid);
 
-    const auto matching_bss = [](const son::wireless_utils::sBssInfoConf &bss) const {
+    const auto matching_bss = [](const son::wireless_utils::sBssInfoConf &bss) {
         return [&bss](const std::pair<std::string, std::vector<std::string>> &hostapd_config) -> bool {
             const auto &target_bssid = tlvf::mac_to_string(bss.bssid);
             std::string hostapd_bssid, entry_mode;
@@ -1514,8 +1514,8 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
                    << " backhaul: " << bss_info_conf.backhaul;
 
         // Check if changes are needed
-        auto compare_value = [&hostapd_config](const std::string &key,
-                                               const std::string target) -> bool {
+        auto compare_value = [hostapd_config](const std::string &key,
+                                              const std::string target) -> bool {
             std::string value;
             if (!hostapd_config_get_value(hostapd_config->second, key, value)) {
                 return false;
