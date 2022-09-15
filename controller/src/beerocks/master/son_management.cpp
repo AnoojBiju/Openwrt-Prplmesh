@@ -454,24 +454,11 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
         if (request->isEnable() >= 0) {
-#ifndef BEEROCKS_LINUX
-            // If received request is to disable task,
-            // and currenlty it is enable, then kill it
-            if (!request->isEnable() && database.settings_diagnostics_measurements()) {
-                tasks.kill_task(database.get_statistics_polling_task_id());
-                LOG(DEBUG) << "Killed statistics polling task";
-            }
-            // If received request is to enable task,
-            // and currenlty it is disable, then add task
-            if (request->isEnable() && !database.settings_diagnostics_measurements()) {
-                if (!tasks.add_task(
-                        std::make_shared<statistics_polling_task>(database, cmdu_tx, tasks))) {
-                    LOG(FATAL) << "Failed adding statistics polling task!";
-                }
-                LOG(DEBUG) << "Statistics polling task is added";
-            }
-#endif
             database.settings_diagnostics_measurements(request->isEnable());
+#ifndef BEEROCKS_LINUX
+            controller_ctx->configure_tasks();
+            // configure_tasks will start / stop diagnostics measurements task based on new settings;
+#endif
             LOG(INFO) << "CLI load_diagnostics_measurements changed to "
                       << int(database.settings_diagnostics_measurements());
         }
@@ -1186,9 +1173,14 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         new_event->hostap_mac = request->params().hostap_mac;
         std::copy_n(request->params().restricted_channels, sizeof(new_event->restricted_channels),
                     new_event->restricted_channels);
-        tasks.push_event(database.get_channel_selection_task_id(),
-                         (int)channel_selection_task::eEvent::CONFIGURED_RESTRICTED_CHANNELS_EVENT,
-                         (void *)new_event);
+        if (database.get_channel_selection_task_id() > 0) {
+            tasks.push_event(
+                database.get_channel_selection_task_id(),
+                (int)channel_selection_task::eEvent::CONFIGURED_RESTRICTED_CHANNELS_EVENT,
+                (void *)new_event);
+        } else {
+            LOG(WARNING) << "channel_selection_task not running";
+        }
 
         //send response to bml
         auto response = message_com::create_vs_message<
@@ -1719,19 +1711,28 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         if (need_new_preference) {
             dynamic_channel_selection_r2_task::sPreferenceRequestEvent new_event;
             new_event.radio_mac = request->radio_mac();
-            tasks.push_event(database.get_dynamic_channel_selection_r2_task_id(),
-                             dynamic_channel_selection_r2_task::eEvent::REQUEST_NEW_PREFERENCE,
-                             &new_event);
+            if (database.get_dynamic_channel_selection_r2_task_id() > 0) {
+                tasks.push_event(database.get_dynamic_channel_selection_r2_task_id(),
+                                 dynamic_channel_selection_r2_task::eEvent::REQUEST_NEW_PREFERENCE,
+                                 &new_event);
+            } else {
+                LOG(WARNING) << "dynamic_channel_selection_task not running";
+            }
         }
         dynamic_channel_selection_r2_task::sOnDemandChannelSelectionEvent new_event;
         new_event.radio_mac       = request->radio_mac();
         new_event.channel         = request->channel();
         new_event.operating_class = operating_class;
         new_event.csa_count       = request->csa_count();
-        tasks.push_event(
-            database.get_dynamic_channel_selection_r2_task_id(),
-            dynamic_channel_selection_r2_task::eEvent::TRIGGER_ON_DEMAND_CHANNEL_SELECTION,
-            &new_event);
+
+        if (database.get_dynamic_channel_selection_r2_task_id() > 0) {
+            tasks.push_event(
+                database.get_dynamic_channel_selection_r2_task_id(),
+                dynamic_channel_selection_r2_task::eEvent::TRIGGER_ON_DEMAND_CHANNEL_SELECTION,
+                &new_event);
+        } else {
+            LOG(WARNING) << "dynamic_channel_selection_task not running";
+        }
         break;
     }
     case beerocks_message::ACTION_BML_CHANNEL_SCAN_SET_CONTINUOUS_PARAMS_REQUEST: {
@@ -1853,11 +1854,14 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             dynamic_channel_selection_r2_task::sContinuousScanRequestStateChangeEvent new_event;
             new_event.enable    = enable;
             new_event.radio_mac = radio_mac;
-
-            tasks.push_event(
-                database.get_dynamic_channel_selection_r2_task_id(),
-                (int)dynamic_channel_selection_r2_task::eEvent::CONTINUOUS_STATE_CHANGED_PER_RADIO,
-                (void *)&new_event);
+            if (database.get_dynamic_channel_selection_r2_task_id() > 0) {
+                tasks.push_event(database.get_dynamic_channel_selection_r2_task_id(),
+                                 (int)dynamic_channel_selection_r2_task::eEvent::
+                                     CONTINUOUS_STATE_CHANGED_PER_RADIO,
+                                 (void *)&new_event);
+            } else {
+                LOG(WARNING) << "dynamic_channel_selection_task not running";
+            }
         }
         //send response to bml
         controller_ctx->send_cmdu(sd, cmdu_tx);
@@ -2086,9 +2090,13 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         LOG(DEBUG) << "Triggering Scan in task";
         dynamic_channel_selection_r2_task::sSingleScanRequestEvent new_event;
         new_event.radio_mac = radio_mac;
-        tasks.push_event(database.get_dynamic_channel_selection_r2_task_id(),
-                         dynamic_channel_selection_r2_task::eEvent::TRIGGER_SINGLE_SCAN,
-                         &new_event);
+        if (database.get_dynamic_channel_selection_r2_task_id() > 0) {
+            tasks.push_event(database.get_dynamic_channel_selection_r2_task_id(),
+                             dynamic_channel_selection_r2_task::eEvent::TRIGGER_SINGLE_SCAN,
+                             &new_event);
+        } else {
+            LOG(WARNING) << "dynamic_channel_selection_task not running";
+        }
         response->op_error_code() = uint8_t(eChannelScanOperationCode::SUCCESS);
         controller_ctx->send_cmdu(sd, cmdu_tx);
         break;

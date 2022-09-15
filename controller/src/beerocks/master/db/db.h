@@ -100,6 +100,7 @@ public:
         bool load_rdkb_extensions;
         bool load_client_band_steering;
         bool load_client_optimal_path_roaming;
+        bool load_optimal_path_roaming_prefer_signal_strength;
         bool load_client_11k_roaming;
         bool load_legacy_client_roaming;
         bool load_ire_roaming;
@@ -110,6 +111,9 @@ public:
         bool load_front_measurements;
         bool load_health_check;
         bool load_monitor_on_vaps;
+        bool load_channel_select_task;
+        bool load_dynamic_channel_select_task;
+
         bool certification_mode;
         bool persistent_db;
         int persistent_db_aging_interval;
@@ -182,8 +186,11 @@ public:
 
         bool rdkb_extensions = false;
 
+        bool channel_select_task         = false;
+        bool dynamic_channel_select_task = false;
+
         // Params
-        bool client_optimal_path_roaming_prefer_signal_strength = false;
+        bool optimal_path_roaming_prefer_signal_strength = false;
     } sDbMasterSettings;
 
     typedef struct {
@@ -199,7 +206,18 @@ public:
      */
     typedef struct {
         bool client_band_steering;
+        bool client_11k_roaming;
         bool client_optimal_path_roaming;
+        bool optimal_path_prefer_signal_strength;
+        bool load_balancing;
+        bool channel_select_task;
+        bool dynamic_channel_select_task;
+        bool ire_roaming;
+        bool health_check;
+        bool enable_dfs_reentry;
+        bool diagnostics_measurements;
+        int diagnostics_measurements_polling_rate_sec;
+
         int roaming_hysteresis_percent_bonus;
         std::chrono::milliseconds steering_disassoc_timer_msec;
         std::chrono::seconds link_metrics_request_interval_seconds;
@@ -248,6 +266,8 @@ public:
         settings.enable_dfs_reentry &= config_.load_dfs_reentry;
         settings.client_band_steering &= config_.load_client_band_steering;
         settings.client_optimal_path_roaming &= config_.load_client_optimal_path_roaming;
+        settings.optimal_path_roaming_prefer_signal_strength &=
+            config_.load_optimal_path_roaming_prefer_signal_strength;
         settings.client_11k_roaming &= config_.load_client_11k_roaming;
         settings.legacy_client_roaming &= config_.load_legacy_client_roaming;
         settings.ire_roaming &= config_.load_ire_roaming;
@@ -1923,6 +1943,13 @@ public:
     bool update_master_configuration(const sDbNbapiConfig &nbapi_config);
 
     /**
+     * @brief Synchronizes settings struct from config struct. Called after config struct
+     * is updated from NBAPI.
+     *
+     */
+    void update_master_settings_from_config();
+
+    /**
      * @brief Recalculate single value of attribute to Byte units according to its unit.
      *
      * If attribute unit is BYTES, method changes nothing.
@@ -2236,12 +2263,24 @@ public:
 
     void settings_client_optimal_path_roaming_prefer_signal_strength(bool en)
     {
-        settings.client_optimal_path_roaming_prefer_signal_strength = en;
+        settings.optimal_path_roaming_prefer_signal_strength = en;
     }
     bool settings_client_optimal_path_roaming_prefer_signal_strength()
     {
-        return settings.client_optimal_path_roaming_prefer_signal_strength;
+        return settings.optimal_path_roaming_prefer_signal_strength;
     }
+
+    void settings_channel_select_task(bool en)
+    {
+        settings.channel_select_task = en && config.load_channel_select_task;
+    }
+    bool settings_channel_select_task() { return settings.channel_select_task; }
+
+    void settings_dynamic_channel_select_task(bool en)
+    {
+        settings.dynamic_channel_select_task = en && config.load_dynamic_channel_select_task;
+    }
+    bool settings_dynamic_channel_select_task() { return settings.dynamic_channel_select_task; }
 
     bool is_prplmesh(const sMacAddr &mac);
     void set_prplmesh(const sMacAddr &mac);

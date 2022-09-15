@@ -123,7 +123,16 @@ constexpr int DEFAULT_STOP_ON_FAILURE_ATTEMPTS         = 1;
 constexpr int DEFAULT_RDKB_EXTENSIONS                  = 0;
 constexpr int DEFAULT_DFS_REENTRY                      = 1;
 constexpr int DEFAULT_BAND_STEERING                    = 0;
-constexpr int DEFAULT_CLIENT_ROAMING                   = 0;
+constexpr int DEFAULT_OPTIMAL_PATH_ROAMING             = 0;
+constexpr int DEFAULT_CHANNEL_SELECT_TASK              = 1;
+constexpr int DEFAULT_DYNAMIC_CHANNEL_SELECT_TASK      = 1;
+constexpr int DEFAULT_DIAGNOSTICS_MEASUREMENTS         = 1;
+constexpr int DEFAULT_DIAGNOSTICS_POLLING_RATE         = 10;
+constexpr int DEFAULT_IRE_ROAMING                      = 1;
+constexpr int DEFAULT_11K_ROAMING                      = 1;
+constexpr int DEFAULT_HEALTH_CHECK                     = 0;
+constexpr int DEFAULT_LOAD_BALANCING                   = 0;
+constexpr int DEFAULT_OPTIMAL_PATH_PREFER_SIG_STRENGTH = 0;
 constexpr int DEFAULT_ROAMING_HYSTERESIS_PERCENT_BONUS = 10;
 constexpr std::chrono::milliseconds DEFAULT_STEERING_DISASSOC_TIMER_MSEC{200};
 
@@ -171,6 +180,9 @@ constexpr int DEFAULT_UNSUCCESSFUL_ASSOC_REPORT_POLICY = 1;
 
 // Default value in attempts per minute for maximum rate for reporting unsuccessful association attempts
 constexpr int DEFAULT_UNSUCCESSFUL_ASSOC_MAX_REPORTING_RATE = 30;
+
+// Default value for the diagnostics measurements interval in seconds
+constexpr int DEFAULT_DIAGNOSTICS_MEASUREMENT_POLLING_RATE_SEC = 10;
 
 // Default DCS Channel Pool
 constexpr int BPL_DCS_CHANNEL_POOL_LEN    = 128;
@@ -414,20 +426,183 @@ bool cfg_get_band_steering(bool &band_steering);
 bool cfg_set_band_steering(bool band_steering);
 
 /**
- * @brief Returns whether Client Roaming feature is enabled or not.
+ * @brief Returns whether 11k Roaming feature is enabled or not.
  *
- * @param [out] enable true if the Client Roaming is enabled and false otherwise.
+ * @param [out] enable true if the 11k Roaming is enabled and false otherwise.
  * @return true on success, otherwise false.
  */
-bool cfg_get_client_roaming(bool &client_roaming);
+bool cfg_get_client_11k_roaming(bool &eleven_k_roaming);
 
 /**
- * @brief Sets Client Roaming in configuration.
+ * @brief Sets 11k Roaming in configuration.
  *
- * @param[in] client_roaming  true for enabled client_roaming.
+ * @param[in] band_steering  true for enabled 11k Roaming.
  * @return true on success, otherwise false
  */
-bool cfg_set_client_roaming(bool client_roaming);
+bool cfg_set_client_11k_roaming(bool eleven_k_roaming);
+
+/**
+ * @brief Returns whether Optimal Path Roaming feature is enabled or not.
+ *
+ * @param [out] enable true if the Optimal Path Roaming is enabled and false otherwise.
+ * @return true on success, otherwise false.
+ */
+bool cfg_get_optimal_path_roaming(bool &optimal_path_roaming);
+
+/**
+ * @brief Sets Optimal Path Roaming in configuration.
+ *
+ * @param[in] optimal_path_roaming  true for enabled optimal_path_roaming.
+ * @return true on success, otherwise false
+ */
+bool cfg_set_optimal_path_roaming(bool optimal_path_roaming);
+
+/**
+ * @brief Returns whether Load Balancing feature is enabled or not.
+ *
+ * @param [out] enable true if the Load Balancing is enabled and false otherwise.
+ * @return true on success, otherwise false.
+ */
+bool cfg_get_load_balancing(bool &load_balancing);
+
+/**
+ * @brief Sets Load Balancing in configuration.
+ *
+ * @param[in] load_balancing true for enabled Load Balancing.
+ * @return true on success, otherwise false
+ */
+bool cfg_set_load_balancing(bool load_balancing);
+
+/**
+ * @brief Returns whether Channel Select Task is enabled or not.
+ *
+ *@param [out] enable true if the Channel Select Task is enabled and false otherwise.
+ * @return true on success, otherwise false.
+ */
+bool cfg_get_channel_select_task(bool &channel_select_task);
+
+/**
+ * @brief Sets Channel Select Task in configuration.
+ *
+ * @param[in] channel_select_task  true for enabled channel_select_task.
+ * @return true on success, otherwise false
+ */
+bool cfg_set_channel_select_task(bool channel_select_task);
+
+/**
+ * @brief Returns whether DFS Task is enabled or not.
+ *
+ *@param [out] enable true if the DFS Task is enabled and false otherwise.
+ * @return true on success, otherwise false.
+ */
+bool cfg_get_dfs_reentry(bool &dfs_reentry_enabled);
+
+/**
+ * @brief Sets DFS Re-Entry option in configuration.
+ *
+ * @param[in] dfs_reentry_enabled  true for enabled dfs_reentry_enabled.
+ * @return true on success, otherwise false
+ */
+
+bool cfg_set_dfs_reentry(bool dfs_reentry_enabled);
+/**
+ * @brief Returns whether DFS Re-Entry is enabled or not.
+ *
+ *@param [out] enable true if the DFS Re-Entry is enabled and false otherwise.
+ * @return true on success, otherwise false.
+ */
+bool cfg_get_dfs_task(bool &dfs_task_enabled);
+
+/**
+ * @brief Sets DFS Task in configuration.
+ *
+ * @param[in] dfs_task_enabled  true for enabled dfs_task_enabled.
+ * @return true on success, otherwise false
+ */
+bool cfg_set_dfs_task(bool dfs_task_enabled);
+
+/**
+ * @brief Returns whether Health Check Task is enabled or not.
+ *
+ *@param [out] enable true if the Health Check Task is enabled and false otherwise.
+ * @return true on success, otherwise false.
+ */
+bool cfg_get_health_check(bool &health_check_enabled);
+
+/**
+ * @brief Sets Health Check Task in configuration.
+ *
+ * @param[in] health_check_enabled  true for enabled dfs_task_enabled.
+ * @return true on success, otherwise false
+ */
+bool cfg_set_health_check(bool health_check_enabled);
+
+/**
+ * @brief Returns whether IRE Roaming Flag is enabled or not.
+ *
+ *@param [out] enable true if the IRE Roaming Flag is enabled and false otherwise.
+ * @return true on success, otherwise false.
+ */
+bool cfg_get_ire_roaming(bool &ire_roaming);
+
+/**
+ * @brief Sets IRE Roaming Flag in configuration.
+ *
+ * @param[in] ire_roaming IRE Roaming Flag.
+ * @return true on success, otherwise false
+ */
+bool cfg_set_ire_roaming(bool ire_roaming);
+
+/**
+ * @brief Returns whether Optimal Path Task Prefer Signal Strenght is enabled or not.
+ *
+ *@param [out] enable true if the Prefer Signal Strenght is enabled and false otherwise.
+ * @return true on success, otherwise false.
+ */
+bool cfg_get_optimal_path_prefer_signal_strenght(bool &optimal_path_prefer_signal_strenght);
+
+/**
+ * @brief Sets Optimal Path Prefer Signal Strenght in configuration.
+ *
+ * @param[in] health_check_enabled  true for enabled preference.
+ * @return true on success, otherwise false
+ */
+bool cfg_set_optimal_path_prefer_signal_strenght(bool optimal_path_prefer_signal_strenght);
+
+/**
+ * @brief Returns whether Statistics Polling Task is enabled or not.
+ *
+ *@param [out] enable true if the Statistics Polling Task is enabled and false otherwise.
+ * @return true on success, otherwise false.
+ */
+bool cfg_get_diagnostics_measurements(bool &diagnostics_measurements);
+
+/**
+ * @brief Sets Statistics Polling Task in configuration.
+ *
+ * @param[in] health_check_enabled  true for enabled preference.
+ * @return true on success, otherwise false
+ */
+bool cfg_set_diagnostics_measurements(bool diagnostics_measurements);
+
+/**
+ * @brief Returns the Statistics Polling Task poll rate in seconds.
+ *
+ *@param [out] diagnostics_measurements_polling_rate_sec value from uci config if present,
+ * 10seconds default value otherwise
+ * @return true on success, otherwise false.
+ */
+bool cfg_get_diagnostics_measurements_polling_rate_sec(
+    int &diagnostics_measurements_polling_rate_sec);
+
+/**
+ * @brief Sets the Statistics Polling Task poll rate in seconds in configuration.
+ *
+ * @param[in] diagnostics_measurements_polling_rate_sec poll rate in seconds
+ * @return true on success, otherwise false
+ */
+bool cfg_set_diagnostics_measurements_polling_rate_sec(
+    const int &diagnostics_measurements_polling_rate_sec);
 
 /**
  * Returns miscellaneous Wi-Fi parameters.

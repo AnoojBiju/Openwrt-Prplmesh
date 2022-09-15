@@ -145,21 +145,12 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
     master_conf.model  = main_master_conf.model;
     master_conf.ucc_listener_port =
         beerocks::string_utils::stoi(main_master_conf.ucc_listener_port);
-    master_conf.load_ire_roaming           = (main_master_conf.load_ire_roaming == "1");
     master_conf.load_service_fairness      = (main_master_conf.load_service_fairness == "1");
-    master_conf.load_dfs_reentry           = (main_master_conf.load_dfs_reentry == "1");
     master_conf.load_rdkb_extensions       = (main_master_conf.load_rdkb_extensions == "1");
-    master_conf.load_client_11k_roaming    = (main_master_conf.load_client_11k_roaming == "1");
     master_conf.load_legacy_client_roaming = (main_master_conf.load_legacy_client_roaming == "1");
-    master_conf.load_load_balancing        = (main_master_conf.load_load_balancing == "1");
-    master_conf.load_diagnostics_measurements =
-        (main_master_conf.load_diagnostics_measurements == "1");
     master_conf.load_backhaul_measurements = (main_master_conf.load_backhaul_measurements == "1");
     master_conf.load_front_measurements    = (main_master_conf.load_front_measurements == "1");
-    master_conf.load_health_check          = (main_master_conf.load_health_check == "1");
     master_conf.load_monitor_on_vaps       = (main_master_conf.load_monitor_on_vaps == "1");
-    master_conf.diagnostics_measurements_polling_rate_sec =
-        beerocks::string_utils::stoi(main_master_conf.diagnostics_measurements_polling_rate_sec);
     master_conf.ire_rssi_report_rate_sec =
         beerocks::string_utils::stoi(main_master_conf.ire_rssi_report_rate_sec);
 
@@ -331,11 +322,80 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
         master_conf.load_client_band_steering = beerocks::bpl::DEFAULT_BAND_STEERING;
     }
 
-    if (!beerocks::bpl::cfg_get_client_roaming(master_conf.load_client_optimal_path_roaming)) {
-        LOG(DEBUG) << "Failed to read cfg_get_client_roaming, setting to default value: "
-                   << beerocks::bpl::DEFAULT_CLIENT_ROAMING;
+    if (!beerocks::bpl::cfg_get_client_11k_roaming(master_conf.load_client_11k_roaming)) {
+        LOG(DEBUG) << "Failed to read cfg_get_client_11k_roaming, setting to default value: "
+                   << beerocks::bpl::DEFAULT_11K_ROAMING;
+        master_conf.load_client_11k_roaming = beerocks::bpl::DEFAULT_11K_ROAMING;
+    }
 
-        master_conf.load_client_optimal_path_roaming = beerocks::bpl::DEFAULT_CLIENT_ROAMING;
+    if (!beerocks::bpl::cfg_get_channel_select_task(master_conf.load_channel_select_task)) {
+        LOG(DEBUG) << "Failed to read cfg_get_channel_select_task, setting to default value: "
+                   << beerocks::bpl::DEFAULT_CHANNEL_SELECT_TASK;
+        master_conf.load_channel_select_task = beerocks::bpl::DEFAULT_CHANNEL_SELECT_TASK;
+    }
+
+    if (!beerocks::bpl::cfg_get_dfs_task(master_conf.load_dynamic_channel_select_task)) {
+        LOG(DEBUG) << "Failed to read cfg_get_dfs_task, setting to default value: "
+                   << beerocks::bpl::DEFAULT_DYNAMIC_CHANNEL_SELECT_TASK;
+        master_conf.load_dynamic_channel_select_task =
+            beerocks::bpl::DEFAULT_DYNAMIC_CHANNEL_SELECT_TASK;
+    }
+
+    if (!beerocks::bpl::cfg_get_health_check(master_conf.load_health_check)) {
+        LOG(DEBUG) << "Failed to read cfg_get_health_check, setting to default value: "
+                   << beerocks::bpl::DEFAULT_HEALTH_CHECK;
+        master_conf.load_health_check = beerocks::bpl::DEFAULT_HEALTH_CHECK;
+    }
+
+    if (!beerocks::bpl::cfg_get_ire_roaming(master_conf.load_ire_roaming)) {
+        LOG(DEBUG) << "Failed to read cfg_get_ire_roaming, setting to default value: "
+                   << beerocks::bpl::DEFAULT_IRE_ROAMING;
+        master_conf.load_ire_roaming = beerocks::bpl::DEFAULT_IRE_ROAMING;
+    }
+
+    if (!beerocks::bpl::cfg_get_load_balancing(master_conf.load_load_balancing)) {
+        LOG(DEBUG) << "Failed to read cfg_get_load_balancing, setting to default value: "
+                   << beerocks::bpl::DEFAULT_LOAD_BALANCING;
+        master_conf.load_load_balancing = beerocks::bpl::DEFAULT_LOAD_BALANCING;
+    }
+
+    if (!beerocks::bpl::cfg_get_dfs_reentry(master_conf.load_dfs_reentry)) {
+        LOG(DEBUG) << "Failed to read cfg_get_dfs_reentry, setting to default value: "
+                   << beerocks::bpl::DEFAULT_DFS_REENTRY;
+        master_conf.load_dfs_reentry = beerocks::bpl::DEFAULT_DFS_REENTRY;
+    }
+
+    if (!beerocks::bpl::cfg_get_diagnostics_measurements(
+            master_conf.load_diagnostics_measurements)) {
+        LOG(DEBUG) << "Failed to read cfg_get_diagnostics_measurements, setting to default value: "
+                   << beerocks::bpl::DEFAULT_DIAGNOSTICS_MEASUREMENTS;
+        master_conf.load_diagnostics_measurements = beerocks::bpl::DEFAULT_DIAGNOSTICS_MEASUREMENTS;
+    }
+
+    if (!beerocks::bpl::cfg_get_diagnostics_measurements_polling_rate_sec(
+            master_conf.diagnostics_measurements_polling_rate_sec)) {
+        LOG(DEBUG) << "Failed to read cfg_get_diagnostics_measurements_polling_rate_sec, setting "
+                      "to default value: "
+                   << beerocks::bpl::DEFAULT_DIAGNOSTICS_POLLING_RATE;
+        master_conf.diagnostics_measurements_polling_rate_sec =
+            beerocks::bpl::DEFAULT_DIAGNOSTICS_POLLING_RATE;
+    }
+
+    if (!beerocks::bpl::cfg_get_optimal_path_roaming(
+            master_conf.load_client_optimal_path_roaming)) {
+        LOG(DEBUG) << "Failed to read cfg_get_optimal_path_roaming, setting to default value: "
+                   << beerocks::bpl::DEFAULT_OPTIMAL_PATH_ROAMING;
+
+        master_conf.load_client_optimal_path_roaming = beerocks::bpl::DEFAULT_OPTIMAL_PATH_ROAMING;
+    }
+
+    if (!beerocks::bpl::cfg_get_optimal_path_prefer_signal_strenght(
+            master_conf.load_optimal_path_roaming_prefer_signal_strength)) {
+        LOG(DEBUG) << "Failed to read cfg_get_optimal_path_prefer_signal_strenght, setting to "
+                      "default value: "
+                   << beerocks::bpl::DEFAULT_OPTIMAL_PATH_PREFER_SIG_STRENGTH;
+        master_conf.load_optimal_path_roaming_prefer_signal_strength =
+            beerocks::bpl::DEFAULT_OPTIMAL_PATH_PREFER_SIG_STRENGTH;
     }
 
     if (!beerocks::bpl::cfg_get_roaming_hysteresis_percent_bonus(
@@ -415,25 +475,51 @@ fill_nbapi_config_from_master_conf(std::shared_ptr<beerocks::nbapi::Ambiorix> am
 
     // ambiorix->set methods trigger data change event. It is not harmfull, but needed to be remembered.
 
-    ret_val &=
-        ambiorix_datamodel->set("Device.WiFi.DataElements.Configuration", "BandSteeringEnabled",
-                                master_conf.load_client_band_steering);
+    const std::string base_path = "Device.WiFi.DataElements.Configuration";
 
-    ret_val &=
-        ambiorix_datamodel->set("Device.WiFi.DataElements.Configuration", "ClientSteeringEnabled",
-                                master_conf.load_client_optimal_path_roaming);
+    ret_val &= ambiorix_datamodel->set(base_path, "BandSteeringEnabled",
+                                       master_conf.load_client_band_steering);
 
-    ret_val &=
-        ambiorix_datamodel->set("Device.WiFi.DataElements.Configuration", "SteeringCurrentBonus",
-                                master_conf.roaming_hysteresis_percent_bonus);
+    ret_val &= ambiorix_datamodel->set(base_path, "OptimalPathEnabled",
+                                       master_conf.load_client_optimal_path_roaming);
 
-    ret_val &= ambiorix_datamodel->set("Device.WiFi.DataElements.Configuration",
-                                       "SteeringDisassociationTimer",
+    ret_val &= ambiorix_datamodel->set(base_path, "SteeringCurrentBonus",
+                                       master_conf.roaming_hysteresis_percent_bonus);
+
+    ret_val &= ambiorix_datamodel->set(base_path, "SteeringDisassociationTimer",
                                        master_conf.steering_disassoc_timer_msec.count());
 
-    ret_val &= ambiorix_datamodel->set("Device.WiFi.DataElements.Configuration",
-                                       "LinkMetricsRequestInterval",
+    ret_val &= ambiorix_datamodel->set(base_path, "LinkMetricsRequestInterval",
                                        master_conf.link_metrics_request_interval_seconds.count());
+
+    ret_val &= ambiorix_datamodel->set(base_path, "ChannelSelectionTaskEnabled",
+                                       master_conf.load_channel_select_task);
+
+    ret_val &= ambiorix_datamodel->set(base_path, "BackhaulOptimizationEnabled",
+                                       master_conf.load_ire_roaming);
+
+    ret_val &= ambiorix_datamodel->set(base_path, "DynamicChannelSelectionTaskEnabled",
+                                       master_conf.load_dynamic_channel_select_task);
+
+    ret_val &=
+        ambiorix_datamodel->set(base_path, "LoadBalancingEnabled", master_conf.load_load_balancing);
+
+    ret_val &=
+        ambiorix_datamodel->set(base_path, "OptimalPathPreferSignalStrength",
+                                master_conf.load_optimal_path_roaming_prefer_signal_strength);
+
+    ret_val &= ambiorix_datamodel->set(base_path, "HealthCheckTask", master_conf.load_health_check);
+
+    ret_val &= ambiorix_datamodel->set(base_path, "StatisticsPollingRateSec",
+                                       master_conf.diagnostics_measurements_polling_rate_sec);
+
+    ret_val &= ambiorix_datamodel->set(base_path, "StatisticsPollingTask",
+                                       master_conf.load_diagnostics_measurements);
+
+    ret_val &= ambiorix_datamodel->set(base_path, "DFSReentry", master_conf.load_dfs_reentry);
+
+    ret_val &= ambiorix_datamodel->set(base_path, "Client_11kRoaming",
+                                       master_conf.load_client_11k_roaming);
 
     return ret_val;
 }
@@ -599,6 +685,7 @@ int main(int argc, char *argv[])
 #endif
 
     fill_nbapi_config_from_master_conf(amb_dm_obj, master_conf);
+    master_db.update_master_settings_from_config();
 
     // The prplMesh controller needs to be configured with the SSIDs and credentials that have to
     // be configured on the agents. Even though NBAPI exists to configure this, there is a lot of

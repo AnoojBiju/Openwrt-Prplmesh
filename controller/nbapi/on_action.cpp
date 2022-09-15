@@ -552,14 +552,44 @@ static void event_configuration_changed(const char *const sig_name, const amxc_v
     son::db::sDbNbapiConfig nbapi_config;
     nbapi_config.client_band_steering =
         amxd_object_get_bool(configuration, "BandSteeringEnabled", nullptr);
+    nbapi_config.client_11k_roaming =
+        amxd_object_get_bool(configuration, "Client_11kRoaming", nullptr);
     nbapi_config.client_optimal_path_roaming =
-        amxd_object_get_bool(configuration, "ClientSteeringEnabled", nullptr);
+        amxd_object_get_bool(configuration, "OptimalPathEnabled", nullptr);
     nbapi_config.roaming_hysteresis_percent_bonus =
         amxd_object_get_int32_t(configuration, "SteeringCurrentBonus", nullptr);
     nbapi_config.steering_disassoc_timer_msec = std::chrono::milliseconds{
         amxd_object_get_int32_t(configuration, "SteeringDisassociationTimer", nullptr)};
     nbapi_config.link_metrics_request_interval_seconds = std::chrono::seconds{
         amxd_object_get_int32_t(configuration, "LinkMetricsRequestInterval", nullptr)};
+
+    // channel optimization task
+    nbapi_config.channel_select_task =
+        amxd_object_get_bool(configuration, "ChannelSelectionTaskEnabled", nullptr);
+
+    // ire_roaming
+    nbapi_config.ire_roaming =
+        amxd_object_get_bool(configuration, "BackhaulOptimizationEnabled", nullptr);
+
+    // dfs task : stats collection should not be disabled ?
+    nbapi_config.dynamic_channel_select_task =
+        amxd_object_get_bool(configuration, "DynamicChannelSelectionTaskEnabled", nullptr);
+
+    nbapi_config.load_balancing =
+        amxd_object_get_bool(configuration, "LoadBalancingEnabled", nullptr);
+
+    nbapi_config.optimal_path_prefer_signal_strength =
+        amxd_object_get_bool(configuration, "OptimalPathPreferSignalStrenght", nullptr);
+
+    nbapi_config.health_check = amxd_object_get_bool(configuration, "HealthCheckTask", nullptr);
+
+    nbapi_config.diagnostics_measurements =
+        amxd_object_get_bool(configuration, "StatisticsPollingTask", nullptr);
+
+    nbapi_config.diagnostics_measurements_polling_rate_sec =
+        amxd_object_get_int32_t(configuration, "StatisticsPollingRateSec", nullptr);
+
+    nbapi_config.enable_dfs_reentry = amxd_object_get_bool(configuration, "DFSReentry", nullptr);
 
     if (!g_database->update_master_configuration(nbapi_config)) {
         LOG(ERROR) << "Failed update master configuration from NBAPI.";
@@ -568,6 +598,15 @@ static void event_configuration_changed(const char *const sig_name, const amxc_v
     if (!g_database->dm_update_collection_intervals(
             nbapi_config.link_metrics_request_interval_seconds)) {
         LOG(ERROR) << "Failed update collection intervals of all agents.";
+    }
+
+    auto controller_ctx = g_database->get_controller_ctx();
+
+    if (!controller_ctx) {
+        LOG(WARNING) << "Failed to get controller context.";
+    } else {
+        LOG(DEBUG) << "Start/Stop reconfigured tasks";
+        controller_ctx->configure_tasks();
     }
 
     // TODO Save persistent settings with amxo_parser_save() (PPM-1419)

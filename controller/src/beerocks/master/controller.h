@@ -12,7 +12,11 @@
 #include "controller_ucc_listener.h"
 #include "db/db.h"
 #include "periodic/periodic_operation_pool.h"
+#include "tasks/channel_selection_task.h"
+#include "tasks/dynamic_channel_selection_r2_task.h"
 #include "tasks/link_metrics_task.h"
+#include "tasks/network_health_check_task.h"
+#include "tasks/statistics_polling_task.h"
 #include "tasks/task_pool.h"
 
 #include "../../../common/beerocks/bwl/include/bwl/base_wlan_hal.h"
@@ -176,6 +180,20 @@ public:
     bool trigger_vbss_move(const sMacAddr &connected_ruid, const sMacAddr &dest_ruid,
                            const sMacAddr &vbssid, const sMacAddr &client_mac,
                            const std::string &new_bss_ssid, const std::string &new_bss_pass);
+
+    /**
+     * @brief Function that starts/stops configurable periodic tasks based on database settings
+     *
+     * @return void.
+     */
+    void configure_tasks();
+
+    /**
+     * @brief Function that starts all periodic tasks on controller start-up
+     *
+     * @return void.
+     */
+    void start_tasks();
 
 private:
     /**
@@ -396,13 +414,34 @@ private:
     ieee1905_1::CmduMessageTx cert_cmdu_tx;
 
     db &database;
-    task_pool tasks;
+    //task_pool tasks;
+    task_pool m_task_pool;
     periodic_operation_pool operations;
     beerocks::controller_ucc_listener m_controller_ucc_listener;
 
     // It is used only in handle_cmdu_1905_ap_metric_response() to call construct_combined_infra_metric().
     // TODO It can be removed after cert_cmdu_tx usage is removed (PPM-1130).
     std::shared_ptr<LinkMetricsTask> m_link_metrics_task;
+
+    /**
+     * Pointer used to stop/start the task without restarting the controller
+     */
+    std::shared_ptr<channel_selection_task> m_channel_selection_task = {};
+
+    /**
+     * Pointer used to stop/start the task without restarting the controller
+     */
+    std::shared_ptr<dynamic_channel_selection_r2_task> m_dynamic_channel_selection_task = {};
+
+    /**
+     * Pointer used to start/stop the task without restarting the controller
+     */
+    std::shared_ptr<network_health_check_task> m_network_health_check_task = {};
+
+    /**
+     * Pointer used to stop/start the task without restarting the controller
+     */
+    std::shared_ptr<statistics_polling_task> m_statistics_polling_task = {};
 
     /**
      * Factory to create broker client instances connected to broker server.
