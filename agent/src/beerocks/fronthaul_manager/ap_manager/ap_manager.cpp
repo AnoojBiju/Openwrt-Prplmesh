@@ -1830,6 +1830,7 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
         response->params().mac          = msg->params.mac;
         response->params().status_code  = msg->params.status_code;
         response->params().source_bssid = msg->params.source_bssid;
+        response->params().target_bssid = msg->params.target_bssid;
         // TODO: add the optional target BSSID
 
         send_cmdu(cmdu_tx);

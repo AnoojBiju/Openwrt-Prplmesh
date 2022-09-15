@@ -53,15 +53,6 @@ private:
     bool dm_set_steer_event_params(const std::string &event_path);
 
     /**
-     * @brief Set values for BTMAttempts and BlacklistAttempts parameters of MultiAPSteering object.
-     * This parameter defined in TR-181 as:
-     * "number of times BTM steer was attempted for particular Access Point."
-     *
-     * @param sta_11v_capable True if client support 11v, false otherwise.
-     */
-    void dm_update_multi_ap_steering_params(bool sta_11v_capable);
-
-    /**
      * @brief Save data about client steer event to persistent db.
      *
      * @param steer_origin Steer origin.
@@ -107,9 +98,9 @@ private:
     std::string m_dm_timestamp;
 
     /**
-     * @brief The timestamp when the STA disconnected.
+     * @brief The timestamp when the steering started.
      */
-    std::chrono::steady_clock::time_point m_disassoc_ts;
+    std::chrono::steady_clock::time_point m_steering_start = {};
 
     /**
      * @brief The duration between STA disassociation and association event.
@@ -118,14 +109,6 @@ private:
      */
     std::chrono::milliseconds m_duration = {};
 
-    /**
-     * @brief A flag to determine if a steer was actually performed or not since in case
-     * that the client decided to move on its own to the target BSSID, we would not want
-     * to flag it as non-responsive or consider the flow as failed.
-     * This flag helps to differentiate between failed steer attempts and
-     * no-need-to-steer decisions.
-     */
-    bool m_steer_try_performed                 = false;
     static constexpr int STEERING_WAIT_TIME_MS = 25000;
 
     enum states {

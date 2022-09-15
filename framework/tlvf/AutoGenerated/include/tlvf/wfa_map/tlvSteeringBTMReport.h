@@ -73,7 +73,9 @@ class tlvSteeringBTMReport : public BaseClass
         sMacAddr& bssid();
         sMacAddr& sta_mac();
         eBTMStatusCode& btm_status_code();
-        sMacAddr& target_bssid();
+        bool alloc_target_bssid();
+        sMacAddr* target_bssid();
+        bool set_target_bssid(const sMacAddr target_bssid);
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -86,6 +88,7 @@ class tlvSteeringBTMReport : public BaseClass
         sMacAddr* m_sta_mac = nullptr;
         eBTMStatusCode* m_btm_status_code = nullptr;
         sMacAddr* m_target_bssid = nullptr;
+        bool m_target_bssid_allocated = false;
 };
 
 }; // close namespace: wfa_map

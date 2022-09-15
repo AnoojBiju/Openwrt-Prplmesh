@@ -1347,6 +1347,14 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
         // Agent need to fill up BSSID here with ZERO_MAC.
         msg->params.source_bssid = beerocks::net::network_utils::ZERO_MAC;
 
+        if (msg->params.status_code == 0) {
+            if (parsed_obj.find("target_bssid") != parsed_obj.end()) {
+                msg->params.target_bssid = tlvf::mac_from_string(parsed_obj.at("target_bssid"));
+            } else {
+                LOG(ERROR) << "BTM Response : status ACCEPT but no target bssid";
+            }
+        }
+
         // Add the message to the queue
         event_queue_push(Event::BSS_TM_Response, msg_buff);
 

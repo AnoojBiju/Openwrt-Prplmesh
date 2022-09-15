@@ -119,6 +119,8 @@ void son_actions::unblock_sta(db &database, ieee1905_1::CmduMessageTx &cmdu_tx, 
     const auto &current_bssid = database.get_node_parent(sta_mac);
     const auto &ssid          = database.get_hostap_ssid(tlvf::mac_from_string(current_bssid));
 
+    std::unordered_set<sMacAddr> unblock_list{tlvf::mac_from_string(sta_mac)};
+
     for (auto &hostap : hostaps) {
         /*
          * unblock client from all hostaps to prevent it from getting locked out
@@ -130,29 +132,10 @@ void son_actions::unblock_sta(db &database, ieee1905_1::CmduMessageTx &cmdu_tx, 
                 continue;
             }
             auto agent_mac = database.get_node_parent_ire(hostap);
-            if (!cmdu_tx.create(
-                    0, ieee1905_1::eMessageType::CLIENT_ASSOCIATION_CONTROL_REQUEST_MESSAGE)) {
-                LOG(ERROR) << "cmdu creation of type CLIENT_ASSOCIATION_CONTROL_REQUEST_MESSAGE, "
-                              "has failed";
-                break;
-            }
-            auto association_control_request_tlv =
-                cmdu_tx.addClass<wfa_map::tlvClientAssociationControlRequest>();
-            if (!association_control_request_tlv) {
-                LOG(ERROR) << "addClass wfa_map::tlvClientAssociationControlRequest failed";
-                break;
-            }
-            association_control_request_tlv->bssid_to_block_client() =
-                tlvf::mac_from_string(hostap_vap.second.mac);
-            association_control_request_tlv->association_control() =
-                wfa_map::tlvClientAssociationControlRequest::UNBLOCK;
-            association_control_request_tlv->alloc_sta_list();
-            auto sta_list         = association_control_request_tlv->sta_list(0);
-            std::get<1>(sta_list) = tlvf::mac_from_string(sta_mac);
 
-            son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, hostap);
-            LOG(DEBUG) << "sending allow request for " << sta_mac << " to " << hostap << "bssid"
-                       << association_control_request_tlv->bssid_to_block_client();
+            son_actions::send_client_association_control(
+                database, cmdu_tx, agent_mac, tlvf::mac_from_string(hostap_vap.second.mac),
+                unblock_list, 0, wfa_map::tlvClientAssociationControlRequest::UNBLOCK);
         }
     }
 }
@@ -551,4 +534,65 @@ bool son_actions::send_topology_query_msg(const sMacAddr &dest_mac,
         return false;
     }
     return send_cmdu_to_agent(dest_mac, cmdu_tx, database);
+}
+
+bool son_actions::send_client_association_control(
+    db &database, ieee1905_1::CmduMessageTx &cmdu_tx, const sMacAddr &agent_mac,
+    const sMacAddr &agent_bssid, const std::unordered_set<sMacAddr> &station_list,
+    const int &duration_sec,
+    wfa_map::tlvClientAssociationControlRequest::eAssociationControl association_flag)
+{
+    if (!cmdu_tx.create(0, ieee1905_1::eMessageType::CLIENT_ASSOCIATION_CONTROL_REQUEST_MESSAGE)) {
+        LOG(ERROR) << "Failed building CLIENT_ASSOCIATION_CONTROL_REQUEST_MESSAGE message";
+        return false;
+    }
+
+    auto association_control_request_tlv =
+        cmdu_tx.addClass<wfa_map::tlvClientAssociationControlRequest>();
+
+    if (!association_control_request_tlv) {
+        LOG(ERROR) << "addClass wfa_map::tlvClientAssociationControlRequest failed";
+        return false;
+    }
+
+    association_control_request_tlv->bssid_to_block_client() = agent_bssid;
+    association_control_request_tlv->association_control()   = association_flag;
+
+    if (association_flag == wfa_map::tlvClientAssociationControlRequest::BLOCK) {
+        association_control_request_tlv->validity_period_sec() = duration_sec;
+    } else {
+        association_control_request_tlv->validity_period_sec() = 0;
+    }
+
+    int index = 0;
+    std::stringstream sta_list_str;
+    for (auto station : station_list) {
+        if (!association_control_request_tlv->alloc_sta_list()) {
+            LOG(ERROR)
+                << "can't alloc new station for client association control, currently allocd "
+                << index << " stations";
+
+            if (association_control_request_tlv->sta_list_length() > index) {
+                association_control_request_tlv->sta_list_length() = index;
+                // alloc_sta_list() may fail after incrementing the sta_list_lenght;
+            }
+            break;
+        }
+        auto sta_list_unblock         = association_control_request_tlv->sta_list(index);
+        std::get<1>(sta_list_unblock) = station;
+        index++;
+        sta_list_str << tlvf::mac_to_string(station) << ", ";
+    }
+
+    std::string action_str =
+        (association_flag == wfa_map::tlvClientAssociationControlRequest::BLOCK) ? "block"
+                                                                                 : "unblock";
+
+    std::string duration_str =
+        duration_sec != 0 ? "for " + std::to_string(duration_sec) + " seconds" : "";
+
+    LOG(DEBUG) << "sending " << action_str << " request for " << sta_list_str.str() << " to agent "
+               << tlvf::mac_to_string(agent_mac) << " for bssid "
+               << association_control_request_tlv->bssid_to_block_client() << duration_str;
+    return son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database);
 }

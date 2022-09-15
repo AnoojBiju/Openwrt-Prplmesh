@@ -2698,6 +2698,9 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
         steering_btm_report_tlv->btm_status_code() =
             static_cast<wfa_map::tlvSteeringBTMReport::eBTMStatusCode>(
                 response_in->params().status_code);
+        if (steering_btm_report_tlv->btm_status_code() == wfa_map::tlvSteeringBTMReport::ACCEPT) {
+            steering_btm_report_tlv->set_target_bssid(response_in->params().target_bssid);
+        }
 
         /*
             If ACTION_APMANAGER_CLIENT_BSS_STEER_RESPONSE contains

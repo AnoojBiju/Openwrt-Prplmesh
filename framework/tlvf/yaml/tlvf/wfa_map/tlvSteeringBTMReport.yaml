@@ -12,8 +12,14 @@ tlvSteeringBTMReport:
   bssid: sMacAddr
   sta_mac: sMacAddr
   btm_status_code: eBTMStatusCode
-  target_bssid: sMacAddr
-
+  target_bssid:
+    _type: sMacAddr
+    _condition:
+      _using_members: btm_status_code
+      _phrase: btm_status_code == eBTMStatusCode::ACCEPT
+    _comment: |
+      Target BSSID in the 1905 / 802.11 BTM Steering Request
+      This field is present if the status code == 0, i.e., the station accepted the steering request.
 
 eBTMStatusCode:
   _type: enum

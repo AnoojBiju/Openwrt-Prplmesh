@@ -2093,9 +2093,21 @@ bool db::can_start_client_steering(const std::string &sta_mac, const std::string
         return false;
     }
 
-    auto bss = get_bss(tlvf::mac_from_string(target_bssid));
-    if (!bss) {
+    auto target_bss   = get_bss(tlvf::mac_from_string(target_bssid));
+    auto original_bss = station->get_bss();
+
+    if (!target_bss) {
         LOG(ERROR) << "Failed to get Target BSS with BSSID: " << target_bssid;
+        return false;
+    }
+
+    if (!original_bss) {
+        LOG(ERROR) << "Failed to get Origin BSS for station: " << sta_mac;
+        return false;
+    }
+
+    if (tlvf::mac_to_string(original_bss->bssid) == target_bssid) {
+        LOG(ERROR) << "target BSSID is identical to current BSSID";
         return false;
     }
 
