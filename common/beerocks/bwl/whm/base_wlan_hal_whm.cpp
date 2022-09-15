@@ -291,6 +291,15 @@ amxc_var_t *base_wlan_hal_whm::whm_get_wifi_ap_object(const std::string &iface)
     return m_ambiorix_cl->get_object(ap_path, 0);
 }
 
+amxc_var_t *base_wlan_hal_whm::whm_get_wifi_ssid_object(const std::string &iface)
+{
+    // pwhm dm path: WiFi.SSID.[ Alias == 'iface' ].?
+    std::string ap_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
+                          std::string(AMX_CL_SSID_OBJ_NAME) + AMX_CL_OBJ_DELIMITER + "[Alias == '" +
+                          iface + "']" + AMX_CL_OBJ_DELIMITER;
+    return m_ambiorix_cl->get_object(ap_path, 0);
+}
+
 int base_wlan_hal_whm::whm_get_vap_id(const std::string &iface)
 {
     int vap_id = 0;
@@ -363,6 +372,23 @@ std::string base_wlan_hal_whm::get_radio_mac()
     mac.assign(GET_CHAR(radio_obj, "BaseMACAddress"));
     amxc_var_delete(&radio_obj);
     return mac;
+}
+
+std::string base_wlan_hal_whm::whm_get_vap_instance_name(const std::string &iface)
+{
+    // pwhm dm path: WiFi.SSID.[ Alias == 'iface' ].Name?
+    std::string vap_name = "";
+    amxc_var_t *ssid_obj = whm_get_wifi_ssid_object(iface);
+    if (!ssid_obj) {
+        LOG(ERROR) << "failed to get ssid object";
+        return vap_name;
+    }
+    const char *name = GET_CHAR(ssid_obj, "Name");
+    if (name) {
+        vap_name = std::string(name);
+    }
+    amxc_var_delete(&ssid_obj);
+    return vap_name;
 }
 
 bool base_wlan_hal_whm::get_channel_utilization(uint8_t &channel_utilization)

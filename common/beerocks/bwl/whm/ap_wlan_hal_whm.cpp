@@ -149,7 +149,7 @@ void ap_wlan_hal_whm::subscribe_to_sta_events(const std::string &iface_name)
 {
     std::string wifi_ap_sta_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
                                    std::string(AMX_CL_AP_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
-                                   "[Alias == '" + iface_name + "']" + AMX_CL_OBJ_DELIMITER +
+                                   whm_get_vap_instance_name(iface_name) + AMX_CL_OBJ_DELIMITER +
                                    "AssociatedDevice.";
     sAmxClEventCallback *event_callback = new sAmxClEventCallback();
     event_callback->event_type          = AMX_CL_OBJECT_CHANGED_EVT;
@@ -790,7 +790,7 @@ amxc_var_t *ap_wlan_hal_whm::get_last_assoc_frame(const std::string &sta_mac)
     amxc_var_add_new_key_cstring_t(&args, "mac", sta_mac.c_str());
     std::string ap_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
                           std::string(AMX_CL_AP_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
-                          "[Alias = " + get_iface_name() + "]" + AMX_CL_OBJ_DELIMITER;
+                          whm_get_vap_instance_name(get_iface_name()) + AMX_CL_OBJ_DELIMITER;
 
     bool ret = m_ambiorix_cl->call(ap_path, "getLastAssocReq", &args, &data);
 
