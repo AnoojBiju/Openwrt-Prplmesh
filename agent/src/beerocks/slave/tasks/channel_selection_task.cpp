@@ -754,6 +754,16 @@ void ChannelSelectionTask::handle_vs_dfs_cac_completed_notification(
     m_btl_ctx.m_task_pool.send_event(eTaskEvent::CAC_COMPLETED_NOTIFICATION,
                                      cac_completed_notification);
 
+    // Set to true to trigger the Channel Preference Report to the Controller
+    m_send_preference_report_after_cac_completion_event = true;
+
+    // Clear the m_pending_preference struct and m_pending_selection struct
+    // if there are no pending selection request/preference query
+    if (!m_pending_preference.mid && !m_pending_selection.mid) {
+        m_pending_preference.mid                                      = 0;
+        m_pending_preference.preference_ready[radio->front.iface_mac] = false;
+    }
+
     if (m_zwdfs_state == eZwdfsState::WAIT_FOR_ZWDFS_CAC_COMPLETED) {
         db->statuses.zwdfs_cac_remaining_time_sec = 0;
         if (notification->params().success != 1) {
@@ -794,6 +804,17 @@ void ChannelSelectionTask::handle_vs_channels_list_response(
 
             // Clear the pending preference MID.
             m_pending_preference.mid = 0;
+        }
+    } else if (m_send_preference_report_after_cac_completion_event) {
+        build_channel_preference_report(radio_mac);
+
+        if (m_pending_preference.preference_ready[radio_mac]) {
+            if (!send_channel_preference_report(cmdu_rx, beerocks_header)) {
+                LOG(ERROR) << "Failed to send the CHANNEL_PREFERENCE_REPORT_MESSAGE!";
+            }
+
+            // Clear the send preference report flag.
+            m_send_preference_report_after_cac_completion_event = false;
         }
     }
 }
