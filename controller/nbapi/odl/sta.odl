@@ -98,7 +98,8 @@
                         "Unknown",
                         "Wi-Fi Channel Utilization",
                         "Wi-Fi Link Quality",
-                        "Backhaul Link Utilization"
+                        "Backhaul Link Utilization",
+                        "Northbound API"
                     ];
                 }
 

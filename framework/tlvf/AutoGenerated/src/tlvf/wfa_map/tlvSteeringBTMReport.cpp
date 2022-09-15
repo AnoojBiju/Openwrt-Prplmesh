@@ -45,8 +45,46 @@ tlvSteeringBTMReport::eBTMStatusCode& tlvSteeringBTMReport::btm_status_code() {
     return (eBTMStatusCode&)(*m_btm_status_code);
 }
 
-sMacAddr& tlvSteeringBTMReport::target_bssid() {
-    return (sMacAddr&)(*m_target_bssid);
+bool tlvSteeringBTMReport::alloc_target_bssid() {
+    if (m_target_bssid_allocated) {
+        LOG(ERROR) << "target_bssid already allocated!";
+        return false;
+    }
+    size_t len = sizeof(sMacAddr);
+    if(getBuffRemainingBytes() < len )  {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
+        return false;
+    }
+    uint8_t *src = (uint8_t *)m_target_bssid;
+    uint8_t *dst = src + len;
+    if (!m_parse__) {
+        size_t move_length = getBuffRemainingBytes(src) - len;
+        std::copy_n(src, move_length, dst);
+    }
+    if (!buffPtrIncrementSafe(len)) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
+        return false;
+    }
+    if(m_length){ (*m_length) += len; }
+    m_target_bssid_allocated = true;
+    return true;
+}
+
+sMacAddr* tlvSteeringBTMReport::target_bssid() {
+    if (!m_btm_status_code || !(*m_btm_status_code == eBTMStatusCode::ACCEPT)) {
+        TLVF_LOG(ERROR) << "target_bssid requested but condition not met: *m_btm_status_code == eBTMStatusCode::ACCEPT";
+        return nullptr;
+    }
+    return (sMacAddr*)(m_target_bssid);
+}
+
+bool tlvSteeringBTMReport::set_target_bssid(const sMacAddr target_bssid) {
+    if (!m_target_bssid_allocated && !alloc_target_bssid()) {
+        LOG(ERROR) << "Could not allocate target_bssid!";
+        return false;
+    }
+    *m_target_bssid = target_bssid;
+    return true;
 }
 
 void tlvSteeringBTMReport::class_swap()
@@ -55,7 +93,9 @@ void tlvSteeringBTMReport::class_swap()
     m_bssid->struct_swap();
     m_sta_mac->struct_swap();
     tlvf_swap(8*sizeof(eBTMStatusCode), reinterpret_cast<uint8_t*>(m_btm_status_code));
-    m_target_bssid->struct_swap();
+    if (*m_btm_status_code == eBTMStatusCode::ACCEPT) {
+        m_target_bssid->struct_swap();
+    }
 }
 
 bool tlvSteeringBTMReport::finalize()
@@ -94,7 +134,6 @@ size_t tlvSteeringBTMReport::get_initial_size()
     class_size += sizeof(sMacAddr); // bssid
     class_size += sizeof(sMacAddr); // sta_mac
     class_size += sizeof(eBTMStatusCode); // btm_status_code
-    class_size += sizeof(sMacAddr); // target_bssid
     return class_size;
 }
 
@@ -137,11 +176,10 @@ bool tlvSteeringBTMReport::init()
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(eBTMStatusCode); }
     m_target_bssid = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(sMacAddr))) {
+    if ((*m_btm_status_code == eBTMStatusCode::ACCEPT) && !buffPtrIncrementSafe(sizeof(sMacAddr))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sMacAddr) << ") Failed!";
         return false;
     }
-    if(m_length && !m_parse__){ (*m_length) += sizeof(sMacAddr); }
     if (!m_parse__) { m_target_bssid->struct_init(); }
     if (m_parse__) { class_swap(); }
     if (m_parse__) {

@@ -12,6 +12,7 @@
 #include "controller.h"
 
 #include <bcl/beerocks_message_structs.h>
+#include <tlvf/wfa_map/tlvClientAssociationControlRequest.h>
 
 #define CLI_LOG(a) LOG(a)
 
@@ -65,6 +66,12 @@ public:
                                       const int &validity_interval_ms, const int &steering_timer_ms,
                                       const std::string &sta_mac, const std::string &target_bssid,
                                       const std::string &event_source);
+
+    static bool send_client_association_control(
+        db &database, ieee1905_1::CmduMessageTx &cmdu_tx, const sMacAddr &agent_mac,
+        const sMacAddr &agent_bssid, const std::unordered_set<sMacAddr> &station_list,
+        const int &duration_sec,
+        wfa_map::tlvClientAssociationControlRequest::eAssociationControl association_flag);
 
 private:
     static bool

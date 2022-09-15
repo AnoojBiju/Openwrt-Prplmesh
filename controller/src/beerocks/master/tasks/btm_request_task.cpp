@@ -45,6 +45,12 @@ void btm_request_task::work()
             finish();
             break;
         }
+        if (m_database.get_node_type(m_sta_mac) == beerocks::TYPE_IRE_BACKHAUL) {
+            LOG(ERROR) << "Device with mac " << m_sta_mac
+                       << " is of type Backhaul Station, do not use BTM Request";
+            finish();
+            break;
+        }
 
         int prev_task_id = station->btm_request_task_id;
         m_tasks.kill_task(prev_task_id);
@@ -60,38 +66,24 @@ void btm_request_task::work()
         m_original_bssid = tlvf::mac_to_string(original_bss->bssid);
         m_ssid_name      = original_bss->ssid;
 
-        update_sta_steer_attempt_stats(*station);
-
-        if (m_original_bssid == m_target_bssid) {
-            TASK_LOG(DEBUG) << "Target and original BSSIDs are the same:" << m_target_bssid
-                            << ". Aborting steering task.";
-            m_steer_try_performed = false;
-            if (m_database.get_node_11v_capability(*station)) {
-                station->steering_summary_stats.btm_failures++;
-                m_database.dm_increment_steer_summary_stats("BTMFailures");
-            } else {
-                station->steering_summary_stats.blacklist_failures++;
-                m_database.dm_increment_steer_summary_stats("BlacklistFailures");
-            }
-            finish();
-            break;
-        }
-
         steer_sta();
+
+        m_steering_start = std::chrono::steady_clock::now();
+        update_sta_steer_attempt_stats(*station);
 
         m_state = FINALIZE;
 
-        wait_for_event(STA_DISCONNECTED);
-        wait_for_event(STA_CONNECTED); //STA Connected 'implies' a BTMResponse(Success),
-                                       //or at least, a successful blacklisting;
+        wait_for_event(STA_CONNECTED);
+        wait_for_event(BTM_REPORT_RECEIVED);
+
         set_events_timeout(STEERING_WAIT_TIME_MS);
         break;
     }
 
     case FINALIZE: {
-        auto client = m_database.get_station(tlvf::mac_from_string(m_sta_mac));
-        if (!client) {
-            TASK_LOG(ERROR) << "Client " << m_sta_mac << " not found";
+        auto station = m_database.get_station(tlvf::mac_from_string(m_sta_mac));
+        if (!station) {
+            TASK_LOG(ERROR) << "Station " << m_sta_mac << " not found";
             finish();
             break;
         }
@@ -99,13 +91,10 @@ void btm_request_task::work()
         if (!m_steering_success && m_disassoc_imminent) {
             TASK_LOG(DEBUG) << "Steering failed for " << m_sta_mac << " from " << m_original_bssid
                             << " to " << m_target_bssid;
-            if (m_database.get_node_11v_capability(*client)) {
-                client->steering_summary_stats.btm_failures++;
-                m_database.dm_increment_steer_summary_stats("BTMFailures");
-            } else {
-                client->steering_summary_stats.blacklist_failures++;
-                m_database.dm_increment_steer_summary_stats("BlacklistFailures");
-            }
+
+            station->steering_summary_stats.btm_failures++;
+            m_database.dm_increment_steer_summary_stats("BTMFailures");
+
             /*
             * might need to split this logic to high and low bands of 5GHz
             * since some clients can support one but not the other
@@ -122,13 +111,9 @@ void btm_request_task::work()
                 m_database.update_node_failed_24ghz_steer_attempt(m_sta_mac);
             }
         } else {
-            if (m_database.get_node_11v_capability(*client)) {
-                client->steering_summary_stats.btm_successes++;
-                m_database.dm_increment_steer_summary_stats("BTMSuccesses");
-            } else {
-                client->steering_summary_stats.blacklist_successes++;
-                m_database.dm_increment_steer_summary_stats("BlacklistSuccesses");
-            }
+
+            station->steering_summary_stats.btm_successes++;
+            m_database.dm_increment_steer_summary_stats("BTMSuccesses");
         }
 
         if (!dm_set_steer_event_params(m_database.dm_add_steer_event())) {
@@ -138,16 +123,16 @@ void btm_request_task::work()
         if (!add_sta_steer_event_to_db()) {
             LOG(ERROR) << "Failed to add MultiAPSTA.SteeringHistory for STA in database";
         }
-        m_database.dm_restore_steering_summary_stats(*client);
+        m_database.dm_restore_steering_summary_stats(*station);
 
         print_steering_info();
 
         if (m_database.config.persistent_db) {
 
             // Set is-unfriendly flag only if client exists in the persistent DB.
-            auto client_mac = tlvf::mac_from_string(m_sta_mac);
-            if (m_database.is_client_in_persistent_db(client_mac)) {
-                m_database.set_client_is_unfriendly(*client, !m_steering_success);
+            auto station_mac = tlvf::mac_from_string(m_sta_mac);
+            if (m_database.is_client_in_persistent_db(station_mac)) {
+                m_database.set_client_is_unfriendly(*station, !m_steering_success);
             }
         }
 
@@ -162,13 +147,13 @@ void btm_request_task::work()
 
 void btm_request_task::steer_sta()
 {
-    auto client = m_database.get_station(tlvf::mac_from_string(m_sta_mac));
-    if (!client) {
-        LOG(ERROR) << "Client " << m_sta_mac << " not found";
+    auto station = m_database.get_station(tlvf::mac_from_string(m_sta_mac));
+    if (!station) {
+        LOG(ERROR) << "Station " << m_sta_mac << " not found";
     }
 
     if (m_database.get_node_type(m_sta_mac) != beerocks::TYPE_IRE_BACKHAUL) {
-        if (client && !m_database.set_node_handoff_flag(*client, true)) {
+        if (station && !m_database.set_node_handoff_flag(*station, true)) {
             LOG(ERROR) << "Can't set handoff flag for " << m_sta_mac;
         }
     }
@@ -180,37 +165,12 @@ void btm_request_task::steer_sta()
         return;
     }
 
-    if (client) {
-        dm_update_multi_ap_steering_params(m_database.get_node_11v_capability(*client));
-    }
-
     // Send 17.1.27	Client Association Control Request
-    if (!m_cmdu_tx.create(0,
-                          ieee1905_1::eMessageType::CLIENT_ASSOCIATION_CONTROL_REQUEST_MESSAGE)) {
-        LOG(ERROR)
-            << "cmdu creation of type CLIENT_ASSOCIATION_CONTROL_REQUEST_MESSAGE, has failed";
-        return;
-    }
+    std::unordered_set<sMacAddr> unblock_list{tlvf::mac_from_string(m_sta_mac)};
 
-    auto association_control_request_tlv =
-        m_cmdu_tx.addClass<wfa_map::tlvClientAssociationControlRequest>();
-    if (!association_control_request_tlv) {
-        LOG(ERROR) << "addClass wfa_map::tlvClientAssociationControlRequest failed";
-        return;
-    }
-
-    association_control_request_tlv->bssid_to_block_client() =
-        tlvf::mac_from_string(m_target_bssid);
-    association_control_request_tlv->association_control() =
-        wfa_map::tlvClientAssociationControlRequest::UNBLOCK;
-    association_control_request_tlv->validity_period_sec() = 0;
-    association_control_request_tlv->alloc_sta_list();
-    auto sta_list_unblock         = association_control_request_tlv->sta_list(0);
-    std::get<1>(sta_list_unblock) = tlvf::mac_from_string(m_sta_mac);
-
-    TASK_LOG(DEBUG) << "Sending allow request for " << m_sta_mac << " to bssid " << m_target_bssid
-                    << " id=" << int(id);
-    son_actions::send_cmdu_to_agent(target_agent->al_mac, m_cmdu_tx, m_database);
+    son_actions::send_client_association_control(
+        m_database, m_cmdu_tx, target_agent->al_mac, tlvf::mac_from_string(m_target_bssid),
+        unblock_list, 0, wfa_map::tlvClientAssociationControlRequest::UNBLOCK);
 
     // update bml listeners
     bml_task::client_allow_req_available_event client_allow_event;
@@ -219,12 +179,6 @@ void btm_request_task::steer_sta()
     client_allow_event.ip         = m_database.get_node_ipv4(m_sta_mac);
     m_tasks.push_event(m_database.get_bml_task_id(), bml_task::CLIENT_ALLOW_REQ_EVENT_AVAILABLE,
                        &client_allow_event);
-
-    if (m_database.get_node_type(m_sta_mac) == beerocks::TYPE_IRE_BACKHAUL) {
-        LOG(ERROR) << "Device with mac " << m_sta_mac
-                   << " is of type Backhaul Station, do not use BTM Request";
-        return;
-    }
 
     // Send STEERING request
     if (!m_cmdu_tx.create(0, ieee1905_1::eMessageType::CLIENT_STEERING_REQUEST_MESSAGE)) {
@@ -259,20 +213,13 @@ void btm_request_task::steer_sta()
     std::get<1>(bssid_list).target_bss_channel_number = m_database.get_node_channel(m_target_bssid);
 
     auto source_agent = m_database.get_agent_by_bssid(tlvf::mac_from_string(m_original_bssid));
+
     son_actions::send_cmdu_to_agent(source_agent->al_mac, m_cmdu_tx, m_database);
     TASK_LOG(DEBUG) << "Sending steering request, sta " << m_sta_mac << " steer from bssid "
                     << m_original_bssid << " to bssid " << m_target_bssid << " channel "
                     << std::to_string(std::get<1>(bssid_list).target_bss_channel_number)
                     << " disassoc_timer=" << m_disassoc_timer_ms
                     << " disassoc_imminent=" << m_disassoc_imminent << " id=" << int(id);
-
-    m_steer_try_performed = true;
-
-    // disassoc cannot happen before this point in time;
-    // in case the STA_CONNECTED event is received before the STA_DISCONNECTED
-    // this value shall allow us to compute the upper bound of m_duration
-    // (and guarantee a non-zero value thereof)
-    m_disassoc_ts = std::chrono::steady_clock::now();
 
     // update bml listeners
     bml_task::bss_tm_req_available_event bss_tm_event;
@@ -288,15 +235,15 @@ void btm_request_task::print_steering_info()
     time_t now            = time(NULL);
     std::string timestamp = ctime(&now);
 
-    auto client = m_database.get_station(tlvf::mac_from_string(m_sta_mac));
-    if (!client) {
-        LOG(ERROR) << "Client " << m_sta_mac << " is not found";
+    auto station = m_database.get_station(tlvf::mac_from_string(m_sta_mac));
+    if (!station) {
+        LOG(ERROR) << "Station " << m_sta_mac << " is not found";
         return;
     }
 
     if (m_steering_type.empty()) {
         m_steering_type = std::string(" 11v (BTM) ");
-        if (!m_database.get_node_11v_capability(*client)) {
+        if (!m_database.get_node_11v_capability(*station)) {
             m_steering_type = std::string(" Legacy ");
         }
     }
@@ -319,66 +266,41 @@ void btm_request_task::handle_event(int event_type, void *obj)
             TASK_LOG(DEBUG) << "steering successful for sta " << m_sta_mac << " to bssid "
                             << connected_bss->bssid;
             m_steering_success = true;
+
+            m_status_code = wfa_map::tlvSteeringBTMReport::ACCEPT;
+            // station connected to the target bssid implies status::ACCEPT
+
+            if (m_steering_start.time_since_epoch().count() &&
+                m_steering_start < std::chrono::steady_clock::now()) {
+                m_duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now() - m_steering_start);
+                m_steering_start = {};
+            }
+
         } else {
             TASK_LOG(ERROR) << "sta " << m_sta_mac << " steered to bssid " << connected_bss->bssid
                             << " ,target bssid was " << m_target_bssid;
         }
 
-        // If time for STA disassociation was set then calculate
-        // duration between STA disconnected and connected
-        if (m_disassoc_ts.time_since_epoch().count() &&
-            m_disassoc_ts < std::chrono::steady_clock::now()) {
-            m_duration = std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::steady_clock::now() - m_disassoc_ts);
-            m_disassoc_ts = {};
-        }
     } else if (event_type == STA_DISCONNECTED) {
         TASK_LOG(DEBUG) << "sta " << m_sta_mac << " disconnected due to steering request";
-        m_disassoc_ts = std::chrono::steady_clock::now();
-    } else if (event_type == BTM_REQUEST_REJECTED) {
-        TASK_LOG(DEBUG) << "sta " << m_sta_mac << " rejected BSS_TM request";
-        // TODO : the AirTies controller, when disassoc_imminent is set, will disassoc
-        // the station from its current AP
-        if (m_disassoc_imminent) {
-            TASK_LOG(DEBUG) << "m_disassoc_imminent flag is true, proceeding as usual";
-        } else {
-            TASK_LOG(DEBUG) << "aborting task";
-            print_steering_info();
-            // need to remove client from blacklist ASAP and not wait until the disallow period ends.
-            son_actions::unblock_sta(m_database, m_cmdu_tx, m_sta_mac);
-            finish();
-        }
     } else if (event_type == BTM_REPORT_RECEIVED) {
         m_btm_report_received = true;
         m_status_code         = *(wfa_map::tlvSteeringBTMReport::eBTMStatusCode *)obj;
 
-        auto bss_path = m_database.get_node_data_model_path(m_target_bssid);
-
-        if (bss_path.empty()) {
-            LOG(WARNING) << "Path for BSS " << m_target_bssid << " not set";
-            return;
-        }
-
-        m_database.dm_uint64_param_one_up(bss_path + ".MultiAPSteering", "BTMQueryResponses");
-        m_database.dm_increment_steer_summary_stats("BTMQueryResponses");
-
-        // TODO: increment statistics for this particular operation (using status code for the BTMRequest) (PPM-2124)
+        LOG(DEBUG) << "status code " << int(m_status_code);
     }
 }
 
 void btm_request_task::handle_task_end()
 {
-    auto client = m_database.get_station(tlvf::mac_from_string(m_sta_mac));
-    if (!client) {
-        LOG(ERROR) << "Client " << m_sta_mac << " is not found";
+    auto station = m_database.get_station(tlvf::mac_from_string(m_sta_mac));
+    if (!station) {
+        LOG(ERROR) << "Station " << m_sta_mac << " is not found";
         return;
     }
 
-    if (m_steer_try_performed && !m_btm_report_received) {
-        TASK_LOG(DEBUG) << "client didn't respond to 11v request, updating responsiveness";
-        m_database.update_node_11v_responsiveness(*client, false);
-    }
-    m_database.set_node_handoff_flag(*client, false);
+    m_database.set_node_handoff_flag(*station, false);
 }
 
 bool btm_request_task::dm_set_steer_event_params(const std::string &event_path)
@@ -438,6 +360,7 @@ bool btm_request_task::dm_set_steer_event_params(const std::string &event_path)
     }
     if (m_triggered_by.find("NBAPI") != std::string::npos) {
         steer_origin = "NBAPI";
+        steer_type   = "BTM";
     }
     if (m_triggered_by.find("optimal_path_task") != std::string::npos ||
         m_triggered_by.find("DFS Rentry") != std::string::npos) {
@@ -449,6 +372,7 @@ bool btm_request_task::dm_set_steer_event_params(const std::string &event_path)
         steer_type = "BTM";
     }
     ambiorix_dm->set(event_path, "SteeringOrigin", steer_origin);
+    ambiorix_dm->set(event_path, "SteeringType", steer_type);
     if (m_database.config.persistent_db) {
         add_steer_history_to_persistent_db(steer_origin, steer_type);
     }
@@ -477,24 +401,6 @@ void btm_request_task::add_steer_history_to_persistent_db(const std::string &ste
     }
 }
 
-void btm_request_task::dm_update_multi_ap_steering_params(bool sta_11v_capable)
-{
-    auto bss_path = m_database.get_node_data_model_path(m_target_bssid);
-
-    if (bss_path.empty()) {
-        LOG(WARNING) << "Path for BSS " << m_target_bssid << " not set";
-        return;
-    }
-
-    if (m_steering_type.find("BTM") != std::string::npos ||
-        (m_steering_type.empty() && sta_11v_capable)) {
-        m_database.dm_uint64_param_one_up(bss_path + ".MultiAPSteering", "BTMAttempts");
-        m_database.dm_increment_steer_summary_stats("BTMAttempts");
-        m_database.dm_uint64_param_one_up(bss_path + ".MultiAPSteering", "BlacklistAttempts");
-        m_database.dm_increment_steer_summary_stats("BlacklistAttempts");
-    }
-}
-
 bool btm_request_task::add_sta_steer_event_to_db()
 {
     db::sStaSteeringEvent steer_sta_event;
@@ -503,7 +409,12 @@ bool btm_request_task::add_sta_steer_event_to_db()
 
     steer_sta_event.original_bssid = tlvf::mac_from_string(m_original_bssid);
     steer_sta_event.target_bssid   = tlvf::mac_from_string(m_target_bssid);
-    steer_sta_event.duration       = std::chrono::duration_cast<std::chrono::seconds>(m_duration);
+    if (m_steering_success) {
+        steer_sta_event.duration =
+            std::chrono::duration_cast<std::chrono::milliseconds>(m_duration);
+    } else {
+        steer_sta_event.duration = {}; // a value of 0 is reserved for failed transitions
+    }
 
     steer_sta_event.trigger_event = "Unknown";
 
@@ -519,6 +430,9 @@ bool btm_request_task::add_sta_steer_event_to_db()
 
     } else if (m_triggered_by.find("optimal_path_task") != std::string::npos) {
         steer_sta_event.trigger_event = "Wi-Fi Link Quality";
+
+    } else if (m_triggered_by.find("NBAPI") != std::string::npos) {
+        steer_sta_event.trigger_event = "Northbound API";
     }
 
     return m_database.add_sta_steering_event(tlvf::mac_from_string(m_sta_mac), steer_sta_event);
@@ -532,25 +446,35 @@ void btm_request_task::update_sta_steer_attempt_stats(Station &station)
         LOG(ERROR) << "Failed to get Controller Data Model object.";
         return;
     }
+
+    auto bss = m_database.get_bss(tlvf::mac_from_string(m_original_bssid));
+
+    auto bss_path = bss->dm_path;
+
+    if (bss_path.empty()) {
+        LOG(WARNING) << "Path for BSS " << m_target_bssid << " not set";
+        return;
+    }
+
+    std::string network_multiap_steer_summary =
+        "Device.WiFi.DataElements.Network.MultiAPSteeringSummaryStats";
+
     /*
         Set value for LastSteerTime parameter - it is time of last steering attempt.
         When someone will try to get data from this parameter action method will 
         calculate time in seconds from last steering attempt.
     */
-    station.steering_summary_stats.last_steer_time =
-        static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::seconds>(
-                                  std::chrono::steady_clock::now().time_since_epoch())
-                                  .count());
+
+    station.steering_summary_stats.last_steer_time = static_cast<uint32_t>(
+        std::chrono::duration_cast<std::chrono::seconds>(m_steering_start.time_since_epoch())
+            .count());
+
     ambiorix_dm->set(station.dm_path + ".MultiAPSTA.SteeringSummaryStats", "LastSteerTime",
                      station.steering_summary_stats.last_steer_time);
 
-    if (m_database.get_node_11v_capability(station)) {
-        station.steering_summary_stats.btm_attempts++;
-        m_database.dm_increment_steer_summary_stats("BTMAttempts");
-    } else {
-        station.steering_summary_stats.blacklist_attempts++;
-        m_database.dm_increment_steer_summary_stats("BlacklistAttempts");
-    }
+    station.steering_summary_stats.btm_attempts++;
+    m_database.dm_uint64_param_one_up(network_multiap_steer_summary, "BTMAttempts");
+    m_database.dm_uint64_param_one_up(bss_path + ".MultiAPSteering", "BTMAttempts");
 }
 
 bool btm_request_task::handle_ieee1905_1_msg(const sMacAddr &src_mac,
