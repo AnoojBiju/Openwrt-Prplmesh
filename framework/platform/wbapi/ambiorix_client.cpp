@@ -203,7 +203,8 @@ bool AmbiorixClient::remove_signal_loop(std::shared_ptr<EventLoop> event_loop)
 bool AmbiorixClient::subscribe_to_object_event(const std::string &object_path,
                                                sAmxClEventCallback *event_callback)
 {
-    auto sub_cb = [](const char *const sig_name, const amxc_var_t *const data, void *priv) -> void {
+    auto sub_cb = [](const char *const sig_name, const amxc_var_t *const data,
+                     void *const priv) -> void {
         sAmxClEventCallback *event_callback = static_cast<sAmxClEventCallback *>(priv);
         if (event_callback) {
             const char *notification = GET_CHAR(data, "notification");
