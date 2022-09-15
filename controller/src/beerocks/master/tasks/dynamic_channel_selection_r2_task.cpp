@@ -1077,15 +1077,30 @@ bool dynamic_channel_selection_r2_task::send_selection_requests()
                     ? (uint8_t)beerocks::eChannelPreferenceRankingConsts::NON_OPERABLE
                     : (uint8_t)beerocks::eChannelPreferenceRankingConsts::LOWEST;
 
+            bool is_central = wireless_utils::is_operating_class_using_central_channel(
+                request_details->operating_class);
+
             // Create a new channel list without the requested channel
+            // Channels that are not on the preference report will be considered as "most preferred".
             std::vector<uint8_t> ch_list;
             for (const auto channel_number : channel_set) {
-                if (operating_class != request_details->operating_class) {
-                    ch_list.push_back(channel_number);
-                } else if (channel_number != request_details->channel_number) {
-                    ch_list.push_back(channel_number);
+                if (operating_class == request_details->operating_class) {
+                    if (channel_number == request_details->channel_number) {
+                        // If we don't add our channel it would be considered the "best" (15)
+                        continue;
+                    }
+                } else if (is_central) {
+                    // The request uses a central channel
+                    if (wireless_utils::operating_class_to_bandwidth(operating_class) ==
+                        beerocks::eWiFiBandwidth::BANDWIDTH_20) {
+                        if (channel_number == request_details->channel_number) {
+                            // If we don't add our channel it would be considered the "best" (15)
+                            continue;
+                        }
+                    }
                 }
-                // This is the requested channel, do not add it since it will be added later.
+                // The channel is not the on-demand channel
+                ch_list.push_back(channel_number);
             }
             if (ch_list.empty()) {
                 // If the channel list is empty, no need to create an operating class for it.
@@ -1243,6 +1258,7 @@ bool dynamic_channel_selection_r2_task::send_selection_requests()
             if (const auto on_demand_details =
                     std::dynamic_pointer_cast<sOnDemandChannelSelectionRequest>(request_details)) {
                 // Create Channel-Preference TLV aligned with On-Demand requirements.
+                LOG(INFO) << "On Demand Channel Selection";
                 if (!create_on_demand_channel_preference_tlv(radio_mac, on_demand_details,
                                                              preference_report)) {
                     LOG(ERROR) << "Failed to create Channel Preference TLV!";
@@ -1263,6 +1279,7 @@ bool dynamic_channel_selection_r2_task::send_selection_requests()
                            std::dynamic_pointer_cast<sOnDemandAutoChannelSelectionRequest>(
                                request_details)) {
                 // Create Channel-Preference TLV aligned with On-Demand-Auto requirements.
+                LOG(INFO) << "On Demand Auto Channel Selection";
                 if (!create_on_demand_auto_channel_preference_tlv(radio_mac, on_demand_details,
                                                                   preference_report)) {
                     LOG(ERROR) << "Failed to create Channel Preference TLV!";

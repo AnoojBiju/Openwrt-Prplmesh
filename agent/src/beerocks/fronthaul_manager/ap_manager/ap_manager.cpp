@@ -120,7 +120,7 @@ static void build_channels_list(ieee1905_1::CmduMessageTx &cmdu_tx,
         const auto &channel_info = channel_element.second;
         for (const auto &bw_info : channel_info.bw_info_list) {
             auto rank = bw_info.second;
-            if (rank == -1) {
+            if (rank == -1 && channel_info.dfs_state == beerocks::eDfsState::UNAVAILABLE) {
                 continue;
             }
 
@@ -240,14 +240,7 @@ static void build_channels_list(ieee1905_1::CmduMessageTx &cmdu_tx,
                            << ", dfs_state=" << dfs_state_to_string(channel_info_tlv->dfs_state());
             };
 
-            // If channel & bw has undefined rank (-1), set the channel preference to
-            // "Not Usable" (0).
-            if (supported_bw_info_tlv.rank == -1) {
-                supported_bw_info_tlv.multiap_preference = 0;
-                print_channel_info();
-                continue;
-            }
-
+            // If channel's DFS State is unavailable, set the channel preference to "Not Usable" (0).
             if (channel_info_tlv->dfs_state() == beerocks_message::eDfsState::UNAVAILABLE) {
                 supported_bw_info_tlv.multiap_preference = 0;
                 supported_bw_info_tlv.rank               = -1;
