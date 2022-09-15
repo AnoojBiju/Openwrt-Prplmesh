@@ -485,7 +485,7 @@ bool slave_thread::read_platform_configuration()
 
     int mem_only_psk = bpl::cfg_get_security_policy();
     if (mem_only_psk < 0) {
-        LOG(ERROR) << "Failed reading Wi-Fi security policy!";
+        LOG(ERROR) << "Failed reading Wi-Fi security policy!!!";
         return false;
     }
 
@@ -4895,7 +4895,7 @@ bool slave_thread::handle_client_association_request(int fd, ieee1905_1::CmduMes
     auto association_control_request_tlv =
         cmdu_rx.getClass<wfa_map::tlvClientAssociationControlRequest>();
     if (!association_control_request_tlv) {
-        LOG(ERROR) << "addClass wfa_map::tlvClientAssociationControlRequest failed!!!";
+        LOG(ERROR) << "addClass wfa_map::tlvClientAssociationControlRequest failed!!";
         return false;
     }
 
