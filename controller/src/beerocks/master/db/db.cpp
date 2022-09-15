@@ -7330,6 +7330,27 @@ bool db::dm_set_device_multi_ap_backhaul(const Agent &agent)
     return ret_val;
 }
 
+bool db::dm_set_device_ssid_to_vid_map(const Agent &agent,
+                                       const wireless_utils::sTrafficSeparationSsid &config)
+{
+    bool ret_val = true;
+
+    if (agent.dm_path.empty()) {
+        return true;
+    }
+
+    auto ssidtovidmapping_path =
+        m_ambiorix_datamodel->add_instance(agent.dm_path + ".SSIDtoVIDMapping");
+    if (ssidtovidmapping_path.empty()) {
+        LOG(ERROR) << "Failed to add: " << agent.dm_path << ".SSIDtoVIDMapping";
+        return false;
+    }
+    ret_val &= m_ambiorix_datamodel->set(ssidtovidmapping_path, "SSID", config.ssid);
+    ret_val &= m_ambiorix_datamodel->set(ssidtovidmapping_path, "VID", config.vlan_id);
+
+    return ret_val;
+}
+
 bool db::dm_set_device_board_info(const Agent &agent, const sDeviceInfo &device_info)
 {
     bool ret_val = true;

@@ -390,6 +390,14 @@ bool agent_monitoring_task::add_traffic_policy_tlv(db &database, ieee1905_1::Cmd
 {
     auto traffic_separation_configs =
         database.get_traffic_separataion_configuration(m1->mac_addr());
+    auto al_mac = m1->mac_addr();
+
+    auto agent = database.m_agents.get(al_mac);
+    if (!agent) {
+        LOG(ERROR) << "Agent with mac is not found in database mac=" << al_mac;
+        return false;
+    }
+
     if (!traffic_separation_configs.empty()) {
         auto tlv_traffic_policy = cmdu_tx.addClass<wfa_map::tlvProfile2TrafficSeparationPolicy>();
         if (!tlv_traffic_policy) {
@@ -411,6 +419,8 @@ bool agent_monitoring_task::add_traffic_policy_tlv(db &database, ieee1905_1::Cmd
                 LOG(ERROR) << "Failed adding ssid_vlan_entry";
                 return false;
             }
+
+            database.dm_set_device_ssid_to_vid_map(*agent, config);
         }
     }
     return true;
