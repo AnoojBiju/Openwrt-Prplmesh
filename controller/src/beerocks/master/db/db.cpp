@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-2-Clause-Patent
  *
- * SPDX-FileCopyrightText: 2016-2020 the prplMesh contributors (see AUTHORS.md)
+ * SPDX-FileCopyrightText: 2016-2022 the prplMesh contributors (see AUTHORS.md)
  *
  * This code is subject to the terms of the BSD+Patent license.
  * See LICENSE file for more details.
@@ -7283,4 +7283,73 @@ bool db::dm_set_radio_bh_sta(const Agent::sRadio &radio, const sMacAddr &bh_sta_
     }
 
     return m_ambiorix_datamodel->set(radio.dm_path + ".BackhaulSta", "MACAddress", bh_sta_mac);
+}
+
+bool db::dm_clear_radio_cac_capabilities(const sMacAddr &radio_uid)
+{
+    auto radio = get_radio_by_uid(radio_uid);
+    if (!radio) {
+        LOG(ERROR) << "Failed to get radio with RUID: " << radio_uid;
+        return false;
+    }
+
+    if (radio->dm_path.empty()) {
+        return true;
+    }
+
+    if (!m_ambiorix_datamodel->remove_all_instances(radio->dm_path + ".CACCapability")) {
+        LOG(ERROR) << "Failed to remove all instances for: " << radio->dm_path + ".CACCapability";
+        return false;
+    }
+
+    return true;
+}
+
+bool db::dm_add_radio_cac_capabilities(
+    const sMacAddr &radio_uid, const wfa_map::eCacMethod &method, const uint8_t &duration,
+    const std::unordered_map<uint8_t, std::vector<uint8_t>> &oc_channels)
+{
+    auto radio = get_radio_by_uid(radio_uid);
+    if (!radio) {
+        LOG(ERROR) << "Failed to get radio with RUID: " << radio_uid;
+        return false;
+    }
+
+    if (radio->dm_path.empty()) {
+        return true;
+    }
+
+    auto cac_method_path =
+        m_ambiorix_datamodel->add_instance(radio->dm_path + ".CACCapability.CACMethod");
+    if (cac_method_path.empty()) {
+        LOG(ERROR) << "Failed to add: " << radio->dm_path << ".CACCapability.CACMethod";
+        return false;
+    }
+
+    bool ret_val = true;
+    ret_val &= m_ambiorix_datamodel->set(cac_method_path, "Method", method);
+    ret_val &= m_ambiorix_datamodel->set(cac_method_path, "NumberOfSeconds", duration);
+
+    for (auto &oc_ch : oc_channels) {
+        auto oc_channels_path =
+            m_ambiorix_datamodel->add_instance(cac_method_path + ".OpClassChannels");
+        if (oc_channels_path.empty()) {
+            LOG(ERROR) << "Failed to add: " << cac_method_path << ".OpClassChannels";
+            return false;
+        }
+
+        ret_val &= m_ambiorix_datamodel->set(oc_channels_path, "OpClass", oc_ch.first);
+
+        for (auto &channel : oc_ch.second) {
+            auto channels_path = m_ambiorix_datamodel->add_instance(oc_channels_path + ".Channel");
+            if (oc_channels_path.empty()) {
+                LOG(ERROR) << "Failed to add: " << oc_channels_path << ".Channel";
+                return false;
+            }
+
+            ret_val &= m_ambiorix_datamodel->set(channels_path, "Channel", channel);
+        }
+    }
+
+    return ret_val;
 }

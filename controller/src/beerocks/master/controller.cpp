@@ -3984,6 +3984,8 @@ bool Controller::handle_tlv_profile2_cac_capabilities(std::shared_ptr<Agent> age
         auto &cac_radio = std::get<1>(cac_capabilities_tlv->cac_radios(radio_idx));
         auto ruid       = cac_radio.radio_uid();
 
+        database.dm_clear_radio_cac_capabilities(ruid);
+
         for (size_t type_idx = 0; type_idx < cac_radio.number_of_cac_type_supported(); type_idx++) {
             if (type_idx > 3) {
                 LOG(ERROR) << "Invalid number of CAC types in tlvProfile2CacCapabilities";
@@ -4009,6 +4011,9 @@ bool Controller::handle_tlv_profile2_cac_capabilities(std::shared_ptr<Agent> age
                 continue;
             }
 
+            // Key: operating class, value: vector with channel numbers
+            std::unordered_map<uint8_t, std::vector<uint8_t>> oc_channels;
+
             ss << "Supported OC/channels:" << std::endl;
             for (size_t oc_idx = 0; oc_idx < cac_type.number_of_operating_classes(); oc_idx++) {
                 if (!std::get<0>(cac_type.operating_classes(oc_idx))) {
@@ -4020,10 +4025,19 @@ bool Controller::handle_tlv_profile2_cac_capabilities(std::shared_ptr<Agent> age
                 auto oc               = operating_class.operating_class();
                 ss << "OC: " << int(oc) << ", channels: ";
 
+                std::vector<uint8_t> channels;
                 for (size_t ch_idx = 0; ch_idx < operating_class.number_of_channels(); ch_idx++) {
+                    channels.push_back(*operating_class.channels(ch_idx));
                     ss << "#" << int(*operating_class.channels(ch_idx)) << " ";
                 }
+                oc_channels.emplace(oc, channels);
                 ss << std::endl;
+            }
+
+            if (!database.dm_add_radio_cac_capabilities(ruid, cac_method, *cac_duration,
+                                                        oc_channels)) {
+                LOG(ERROR) << "Failed to add CAC capabilities for ruid=" << ruid;
+                return false;
             }
         }
     }

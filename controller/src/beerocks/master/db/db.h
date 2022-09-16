@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-2-Clause-Patent
  *
- * SPDX-FileCopyrightText: 2016-2020 the prplMesh contributors (see AUTHORS.md)
+ * SPDX-FileCopyrightText: 2016-2022 the prplMesh contributors (see AUTHORS.md)
  *
  * This code is subject to the terms of the BSD+Patent license.
  * See LICENSE file for more details.
@@ -25,6 +25,7 @@
 #include <tlvf/wfa_map/tlvApRadioBasicCapabilities.h>
 #include <tlvf/wfa_map/tlvApVhtCapabilities.h>
 #include <tlvf/wfa_map/tlvAssociatedStaExtendedLinkMetrics.h>
+#include <tlvf/wfa_map/tlvProfile2CacCapabilities.h>
 
 #include <algorithm>
 #include <mutex>
@@ -2106,6 +2107,38 @@ public:
      * @return true on success, otherwise false.
      */
     bool dm_set_radio_bh_sta(const Agent::sRadio &radio, const sMacAddr &bh_sta_mac);
+
+    /**
+     * @brief Clears CACCapability data model object.
+     *
+     * Remove all indexes in CACCapability object for given Radio UID.
+     *
+     * Data model path : "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.CACCapability."
+     *
+     * @param[in] radio_uid Radio UID of the radio.
+     * @return true on success, otherwise false.
+     */
+    bool dm_clear_radio_cac_capabilities(const sMacAddr &radio_uid);
+
+    /**
+     * @brief Adds instance for CACCapability.CACMethod and fullfills it.
+     *
+     * Also creates sub-objects: OpClassChannels and Channel.
+     *
+     * Data model paths :
+     * "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.CACCapability.CACMethod.{i}."
+     * "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.CACCapability.CACMethod.{i}.OpClassChannels.{i}."
+     * "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.CACCapability.CACMethod.{i}.OpClassChannels.{i}.Channel.{i}."
+     *
+     * @param[in] radio_uid Radio UID of the radio.
+     * @param[in] method CAC method supported.
+     * @param[in] duration number of seconds required to complete given method of CAC.
+     * @param[in] oc_channels map holds vectors with channel numbers per operating class supported for given method of CAC.
+     * @return true on success, otherwise false.
+     */
+    bool dm_add_radio_cac_capabilities(
+        const sMacAddr &radio_uid, const wfa_map::eCacMethod &method, const uint8_t &duration,
+        const std::unordered_map<uint8_t, std::vector<uint8_t>> &oc_channels);
 
     //
     // tasks
