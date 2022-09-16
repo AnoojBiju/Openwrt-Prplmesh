@@ -1,7 +1,7 @@
 
 /* SPDX-License-Identifier: BSD-2-Clause-Patent
  *
- * SPDX-FileCopyrightText: 2020 the prplMesh contributors (see AUTHORS.md)
+ * SPDX-FileCopyrightText: 2020-2022 the prplMesh contributors (see AUTHORS.md)
  *
  * This code is subject to the terms of the BSD+Patent license.
  * See LICENSE file for more details.
@@ -71,5 +71,31 @@
         %read-only object ScanResult [] {
             counted with ScanResultNumberOfEntries;
         }
+
+        /* Describes the Channel Availability Check (CAC) capabilities of a radio */
+        %read-only object CACCapability {
+            %read-only object CACMethod [] {
+                counted with CACMethodNumberOfEntries;
+
+                %read-only uint32 Method;
+                %read-only uint32 NumberOfSeconds = 0;
+
+                %read-only object OpClassChannels [] {
+                    counted with OpClassChannelsNumberOfEntries;
+
+                    %read-only uint32 OpClass = 0 {
+                        on action validate call check_range [0, 255];
+                    }
+
+                    %read-only object Channel [] {
+                        counted with ChannelNumberOfEntries;
+                        %read-only uint32 Channel = 0 {
+                            on action validate call check_range [0, 255];
+                        }
+                    }
+                }
+            }
+        }
+
     }
 }
