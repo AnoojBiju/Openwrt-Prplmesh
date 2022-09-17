@@ -1192,7 +1192,7 @@ wireless_utils::get_operating_class_by_channel(const beerocks::message::sWifiCha
 }
 
 /**
- * @brief convert operating class to channel set based on Table 4-E in the ieee 802.11 specification
+ * @brief convert operating class to channel set based on Table E-4 in the ieee 802.11 specification
  *
  * @param operating_class operating class
  * @return std::set<uint8_t> set of supported channels by the operating class or empty if failure
@@ -1210,7 +1210,7 @@ const std::set<uint8_t> &wireless_utils::operating_class_to_channel_set(uint8_t 
 }
 
 /**
- * @brief convert operating class to bandwidth based on Table 4-E in the ieee 802.11 specification
+ * @brief convert operating class to bandwidth based on Table E-4 in the ieee 802.11 specification
  *
  * @param operating_class operating class
  * @return beerocks::eWiFiBandwidth enum of supported bandwidth for specific operating class.
