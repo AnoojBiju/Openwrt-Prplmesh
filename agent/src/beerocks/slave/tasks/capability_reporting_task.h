@@ -95,14 +95,14 @@ private:
      * information to the given tlv based on radio on given interface.
      * See section 17.2.38 of Multi-AP Specification v2 for details.
      *
-     * @param iface_name Interface on which radio operates.
+     * @param radio Pointer to the AgentDB's radio element.
      *
-     * @param channe_scan_capability_tlv a pointer to the already created tlv.
+     * @param channel_scan_capabilities_tlv Channel Scan Capabilities TLV.
      *
      * @return True on success and false otherwise.
      */
     bool add_channel_scan_capabilities(
-        const std::string &iface_name,
+        const AgentDB::sRadio *radio,
         wfa_map::tlvChannelScanCapabilities &channel_scan_capabilities_tlv);
 
     /**
