@@ -610,6 +610,8 @@ bool CapabilityReportingTask::add_channel_scan_capabilities(
         return false;
     }
 
+    // TODO: Fill values for operating classes and channels (PPM-2294).
+
     // Push operating class object to the list of operating class objects
     if (!channel_scan_capabilities_tlv.add_radio_list(radio_channel_scan_capabilities)) {
         LOG(ERROR) << "add_radio_list() has failed!";
