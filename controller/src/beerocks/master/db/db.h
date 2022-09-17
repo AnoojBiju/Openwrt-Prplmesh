@@ -2225,6 +2225,21 @@ public:
                                         const sMacAddr &fixed_bits_mask,
                                         const sMacAddr &fixed_bits_value);
 
+    /**
+     * @brief Adds instance for ScanCapability and fullfills it.
+     *
+     * Also creates sub-objects: OpClassChannels and Channel.
+     *
+     * Data model paths :
+     * "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.ScanCapability."
+     * "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.ScanCapability.OpClassChannels.{i}."
+     * "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.ScanCapability.OpClassChannels.{i}.Channel.{i}."
+     *
+     * @param[in] radio Radio DB object.
+     * @return True on success, otherwise false.
+     */
+    bool dm_add_radio_scan_capabilities(const Agent::sRadio &radio);
+
     //
     // tasks
     //

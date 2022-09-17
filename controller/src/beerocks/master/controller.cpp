@@ -4076,6 +4076,11 @@ bool Controller::handle_tlv_profile2_channel_scan_capabilities(std::shared_ptr<A
             LOG(ERROR) << "Failed to save channel scan capabilities for radio=" << ruid;
             return false;
         }
+
+        if (!database.dm_add_radio_scan_capabilities(*radio)) {
+            LOG(ERROR) << "Failed to add channel scan capabilities to DM for radio=" << ruid;
+            return false;
+        }
     }
 
     return true;

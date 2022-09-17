@@ -7517,6 +7517,56 @@ bool db::dm_add_radio_cac_capabilities(
     return ret_val;
 }
 
+bool db::dm_add_radio_scan_capabilities(const Agent::sRadio &radio)
+{
+    if (radio.dm_path.empty()) {
+        return true;
+    }
+
+    auto scan_capability_path = radio.dm_path + ".ScanCapability";
+
+    // Clearing ScanCapability data model object and its sub-objects.
+    if (!m_ambiorix_datamodel->remove_all_instances(scan_capability_path)) {
+        return false;
+    }
+
+    auto &scan_capabilities = radio.scan_capabilities;
+    bool ret_val            = true;
+
+    ret_val &= m_ambiorix_datamodel->set(scan_capability_path, "OnBootOnly",
+                                         scan_capabilities.on_boot_only);
+    ret_val &=
+        m_ambiorix_datamodel->set(scan_capability_path, "Impact", scan_capabilities.scan_impact);
+    ret_val &= m_ambiorix_datamodel->set(scan_capability_path, "MinimumInterval",
+                                         scan_capabilities.minimum_scan_interval);
+
+    if (scan_capabilities.operating_classes.empty()) {
+        LOG(ERROR) << "Invalid number of operating classes for radio " << radio.radio_uid;
+        return false;
+    }
+
+    for (auto &oc_ch : scan_capabilities.operating_classes) {
+        auto oc_channels_path =
+            m_ambiorix_datamodel->add_instance(scan_capability_path + ".OpClassChannels");
+        if (oc_channels_path.empty()) {
+            return false;
+        }
+
+        ret_val &= m_ambiorix_datamodel->set(oc_channels_path, "OpClass", oc_ch.first);
+
+        for (auto &wifi_channel : oc_ch.second) {
+            auto channels_path = m_ambiorix_datamodel->add_instance(oc_channels_path + ".Channel");
+            if (oc_channels_path.empty()) {
+                return false;
+            }
+
+            ret_val &= m_ambiorix_datamodel->set(channels_path, "Channel", wifi_channel.channel);
+        }
+    }
+
+    return ret_val;
+}
+
 bool db::dm_set_radio_vbss_capabilities(const sMacAddr &radio_uid, uint8_t max_vbss,
                                         bool vbsses_subtract, bool apply_vbssid_restrictions,
                                         bool apply_vbssid_match_mask_restrictions,
