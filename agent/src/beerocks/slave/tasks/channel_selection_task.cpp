@@ -1450,8 +1450,8 @@ ChannelSelectionTask::sSelectedChannel ChannelSelectionTask::select_next_channel
                 message::sWifiChannel(beacon_channel, eWiFiBandwidth::BANDWIDTH_20));
 
             // Get the cumulative channel preference for the operating class & beacon channel using controller preferences.
-            auto tmp_radio_preference = get_cumulative_preference(
-                radio, controller_preferences, operating_class_20Mhz, beacon_channel);
+            auto tmp_radio_preference = get_preference_for_channel(
+                controller_preferences, operating_class_20Mhz, beacon_channel);
 
             if (tmp_radio_preference == 0) {
                 LOG(INFO) << "Channel #" << beacon_channel << " in Class #" << operating_class_20Mhz
