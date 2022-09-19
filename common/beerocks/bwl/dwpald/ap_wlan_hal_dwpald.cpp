@@ -415,11 +415,19 @@ static std::shared_ptr<char> generate_client_assoc_event(const std::string &even
 static bool hostapd_config_get_value(const std::vector<std::string> &hostapd_config,
                                      const std::string &key, std::string &value)
 {
+    auto key_matches = [&key, &value](const std::string &line) -> bool {
+        // Split the line into two parts according to the following pattern:
+        //      "Key=Value"
+        const auto parts = beerocks::string_utils::str_split(line, '=');
+        if (parts.size() < 2) {
+            // Line does not match pattern.
+            return false;
+        }
+        // Check key using case-insensitive comparison.
+        return beerocks::string_utils::case_insensitive_compare(parts.at(0), key);
+    };
     std::string key_eq(key + "=");
-    auto it_str = std::find_if(hostapd_config.begin(), hostapd_config.end(),
-                               [&key_eq](std::string str) -> bool {
-                                   return (str.compare(0, key_eq.length(), key_eq) == 0);
-                               });
+    auto it_str = std::find_if(hostapd_config.begin(), hostapd_config.end(), key_matches);
     if (it_str == hostapd_config.end()) {
         return false;
     }
