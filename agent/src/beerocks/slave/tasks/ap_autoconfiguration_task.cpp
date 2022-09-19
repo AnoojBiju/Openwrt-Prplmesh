@@ -1785,11 +1785,75 @@ bool ApAutoConfigurationTask::validate_reconfiguration(
     // Using a nested lambda to return a predicate function.
     // The named lambda "find_by_similarity" receives a AgentDB BSS element.
     // The anonymous returning predicate lambda, finds a "matching" WSC config element.
-    const auto find_by_similarity = [](const AgentDB::sRadio::sFront::sBssid &bss) {
-        return [&bss](const WSC::configData::config &config) { return true; };
+    const auto find_by_similarity = [&db](const AgentDB::sRadio::sFront::sBssid &bss) {
+        return [&db, &bss](const WSC::configData::config &config) {
+            // Check if config's BSSID is valid
+            if (config.bssid != db->bridge.mac) {
+                // Config BSSID is valid, can check BSSID only.
+                return (config.bssid == bss.mac);
+            }
+            // Need to expand the comparison to create a stricter match
+            // TODO: PPM-2296
+            // The issue here is that the Agent DB's sBssid does not contain the following
+            //  - Authentication type
+            //  - Encryption type
+            //  - Network Key
+            // For now validate against the values we do have.
+            constexpr int minimal_similarity = 1;
+            int matching_fields              = 0;
+
+            // SSID
+            if (bss.ssid == config.ssid) {
+                matching_fields++;
+            }
+
+            // BSS Type
+            if (bss.active &&
+                !bool(config.bss_type & WSC::eWscVendorExtSubelementBssType::TEARDOWN)) {
+                matching_fields++;
+            }
+            if (bss.backhaul_bss &&
+                bool(config.bss_type & WSC::eWscVendorExtSubelementBssType::BACKHAUL_BSS)) {
+                matching_fields++;
+            }
+            if (bss.fronthaul_bss &&
+                bool(config.bss_type & WSC::eWscVendorExtSubelementBssType::FRONTHAUL_BSS)) {
+                matching_fields++;
+            }
+
+            return (matching_fields >= minimal_similarity);
+        };
     };
     const auto bss_needs_reconfiguration = [](const WSC::configData::config &config,
                                               const AgentDB::sRadio::sFront::sBssid &bss) {
+        // Need to read compare the incoming config (WSC::configData::config)
+        // and compare it to the existing bss (AgentDB::sRadio::sFront::sBssid)
+        // TODO: PPM-2296
+        // The issue here is that the Agent DB's sBssid does not contain the following
+        //  - Authentication type
+        //  - Encryption type
+        //  - Network Key
+        // For now validate against the values we do have.
+
+        // SSID
+        if (bss.ssid != config.ssid) {
+            return true;
+        }
+
+        // BSS Type
+        if (bss.active && bool(config.bss_type & WSC::eWscVendorExtSubelementBssType::TEARDOWN)) {
+            return true;
+        }
+        if (bss.backhaul_bss &&
+            !bool(config.bss_type & WSC::eWscVendorExtSubelementBssType::BACKHAUL_BSS)) {
+            return true;
+        }
+        if (bss.fronthaul_bss &&
+            !bool(config.bss_type & WSC::eWscVendorExtSubelementBssType::FRONTHAUL_BSS)) {
+            return true;
+        }
+
+        // Structures match
         return true;
     };
 
