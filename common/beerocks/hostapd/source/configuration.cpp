@@ -201,6 +201,35 @@ std::string Configuration::get_head_value(const std::string &key)
     return line_iter->substr(line_iter->find('=') + 1);
 }
 
+const std::string Configuration::get_vap_by_bssid(const std::string &bssid) const
+{
+    auto bssid_matches = [&bssid](const std::string &line) -> bool {
+        // Split the line into two parts according to the following pattern:
+        //      "Key=Value"
+        const auto parts = beerocks::string_utils::str_split(line, '=');
+        if (parts.size() < 2) {
+            // Line does not match pattern
+            return false;
+        }
+        if (parts.at(0) != "bssid") {
+            // Line is not the bssid parameter
+            return false;
+        }
+        // Check if BSSID matches using case-insensitive comparison.
+        return beerocks::string_utils::case_insensitive_compare(parts.at(1), bssid);
+    };
+    for (const auto &vap_iter : m_hostapd_config_vaps) {
+        // Search the current vap if its BSSID matches the given one.
+        if (std::find_if(vap_iter.second.begin(), vap_iter.second.end(), bssid_matches) ==
+            vap_iter.second.end()) {
+            // Found the vap we are searching for, return it's name (key in the hostapd map).
+            return vap_iter.first;
+        }
+    }
+    // Return an empty string, meaning that the vap was not found.
+    return std::string();
+}
+
 bool Configuration::set_create_vap_value(const std::string &vap, const std::string &key,
                                          const std::string &value)
 {

@@ -105,6 +105,17 @@ public:
     std::string get_head_value(const std::string &key);
 
     /**
+     * @brief Find a VAP using the given BSSID.
+     * 
+     * @details Find a VAP using the given BSSID, assuming that the VAP configuration
+     * has BSSID information stored.
+     * 
+     * @param BSSID The BSSID to find in the VAP list.
+     * @return VAP name if exists, otherwise empty.
+     */
+    const std::string get_vap_by_bssid(const std::string &bssid) const;
+
+    /**
      * @brief set key/value for the given vap
      * @details set the key/vale for the given vap, either replace or create.
      * @param 
