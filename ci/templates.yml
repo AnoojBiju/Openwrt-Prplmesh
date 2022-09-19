@@ -101,6 +101,14 @@
     - if: $CI_MERGE_REQUEST_LABELS =~ /.*test-upgrade-image.*/
     - when: manual
       allow_failure: true
+  after_script:
+    - tools/capture_logs.py --device $TARGET_DEVICE --target-name $TARGET_DEVICE_NAME --output logs/$TARGET_DEVICE_NAME
+    - tests/openwrt/capture_logs.sh $TARGET_DEVICE_NAME
+  artifacts:
+    paths:
+      - logs
+    expire_in: 4 weeks
+    when: always
   tags:
     - targets
   timeout: 20m

@@ -9,6 +9,16 @@ set -e
 # Start with a new log file:
 rm -f /var/log/messages && syslog-ng-ctl reload
 
+# Stop and disable the DHCP clients and servers:
+ubus wait_for DHCPv4.Client.1
+ubus call DHCPv4.Client.1 _set '{"parameters": { "Enable": False }}'
+ubus wait_for DHCPv6.Client.1
+ubus call DHCPv6.Client.1 _set '{"parameters": { "Enable": False }}'
+ubus wait_for DHCPv4.Server
+ubus call DHCPv4.Server _set '{"parameters": { "Enable": False }}'
+ubus wait_for DHCPv6.Server
+ubus call DHCPv6.Server _set '{"parameters": { "Enable": False }}'
+
 # We use WAN for the control interface.
 ubus wait_for IP.Interface
 # Add the IP address if there is none yet:
@@ -25,9 +35,11 @@ ubus call "IP.Interface" _set '{ "rel_path": ".[Name == \"br-lan\"].IPv4Address.
 # Wired backhaul interface:
 uci set prplmesh.config.backhaul_wire_iface='lan0'
 
-# Stop and disable the firewall:
-/etc/init.d/tr181-firewall stop
-rm -f /etc/rc.d/S22tr181-firewall
+# For now there is no way to disable the firewall (see PCF-590).
+# Instead, wait for it in the datamodel, then set the whole INPUT
+# chain to ACCEPT:
+ubus wait_for Firewall
+iptables -P INPUT ACCEPT
 
 # Required for config_load:
 . /lib/functions/system.sh

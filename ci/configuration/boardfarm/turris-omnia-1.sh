@@ -9,11 +9,15 @@ set -e
 # Start with a new log file:
 rm -f /var/log/messages && syslog-ng-ctl reload
 
-# Stop and disable the DHCP clients:
-/etc/init.d/tr181-dhcpv4client stop
-rm -f /etc/rc.d/S27tr181-dhcpv4client
-/etc/init.d/tr181-dhcpv6client stop
-rm -f /etc/rc.d/S25tr181-dhcpv6client
+# Stop and disable the DHCP clients and servers:
+ubus wait_for DHCPv4.Client.1
+ubus call DHCPv4.Client.1 _set '{"parameters": { "Enable": False }}'
+ubus wait_for DHCPv6.Client.1
+ubus call DHCPv6.Client.1 _set '{"parameters": { "Enable": False }}'
+ubus wait_for DHCPv4.Server
+ubus call DHCPv4.Server _set '{"parameters": { "Enable": False }}'
+ubus wait_for DHCPv6.Server
+ubus call DHCPv6.Server _set '{"parameters": { "Enable": False }}'
 
 # IP for device upgrades, operational tests, Boardfarm data network, ...
 # Note that this device uses the WAN interface (as on some Omnias the

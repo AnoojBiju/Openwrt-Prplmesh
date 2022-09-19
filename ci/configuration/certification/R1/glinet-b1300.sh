@@ -9,11 +9,15 @@ set -e
 # Start with a new log file:
 rm -f /var/log/messages && syslog-ng-ctl reload
 
-# Stop and disable the DHCP clients:
-/etc/init.d/tr181-dhcpv4client stop
-rm -f /etc/rc.d/S27tr181-dhcpv4client
-/etc/init.d/tr181-dhcpv6client stop
-rm -f /etc/rc.d/S25tr181-dhcpv6client
+# Stop and disable the DHCP clients and servers:
+ubus wait_for DHCPv4.Client.1
+ubus call DHCPv4.Client.1 _set '{"parameters": { "Enable": False }}'
+ubus wait_for DHCPv6.Client.1
+ubus call DHCPv6.Client.1 _set '{"parameters": { "Enable": False }}'
+ubus wait_for DHCPv4.Server
+ubus call DHCPv4.Server _set '{"parameters": { "Enable": False }}'
+ubus wait_for DHCPv6.Server
+ubus call DHCPv6.Server _set '{"parameters": { "Enable": False }}'
 
 # Since for the GL-inet eth0 (LAN) is always detected as UP, eth1 (WAN) will be configured as a backhaul interface
 # This allows prplMesh to detect the state of the backhaul interface
@@ -72,9 +76,11 @@ ubus call "IP.Interface" _set '{ "rel_path": ".[Name == \"eth0\"].", "parameters
 # Set the WAN interface as backhaul interface
 uci set prplmesh.config.backhaul_wire_iface='eth1'
 
-# Stop and disable the firewall:
-/etc/init.d/tr181-firewall stop
-rm -f /etc/rc.d/S22tr181-firewall
+# For now there is no way to disable the firewall (see PCF-590).
+# Instead, wait for it in the datamodel, then set the whole INPUT
+# chain to ACCEPT:
+ubus wait_for Firewall
+iptables -P INPUT ACCEPT
 
 # Required for config_load:
 . /lib/functions/system.sh
