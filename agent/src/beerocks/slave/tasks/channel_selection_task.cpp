@@ -311,7 +311,6 @@ void ChannelSelectionTask::handle_channel_selection_request(ieee1905_1::CmduMess
     }
 
     auto db = AgentDB::get();
-
     // Check if controller is prplMesh.
     if (db->controller_info.prplmesh_controller) {
         // Controller is prplMesh, parse selection extension TLV.
@@ -1388,7 +1387,8 @@ bool ChannelSelectionTask::check_is_there_better_channel_than_current(const sMac
      * And is better then our currect channel.
      * Switch to that channel.
      */
-    sSelectedChannel selected_channel = select_next_channel(radio_mac);
+    sSelectedChannel selected_channel =
+        select_next_channel(radio_mac, radio_request.controller_preferences);
     if (selected_channel.channel == 0) {
         LOG(ERROR) << "Could not find a better channel!";
         radio_request.response_code = wfa_map::tlvChannelSelectionResponse::eResponseCode::
@@ -1409,6 +1409,18 @@ bool ChannelSelectionTask::check_is_there_better_channel_than_current(const sMac
         return true;
     }
 
+    if (radio->channel == selected_channel.channel && radio->bandwidth == selected_channel.bw) {
+
+        LOG(DEBUG) << "Already operating on channel: " << (int)selected_channel.channel
+                   << " with bandwidth: "
+                   << beerocks::utils::convert_bandwidth_to_int(
+                          beerocks::eWiFiBandwidth(selected_channel.bw))
+                   << ".";
+
+        radio_request.channel_switch_needed = false;
+        return true;
+    }
+
     radio_request.selected_channel           = selected_channel;
     radio_request.outgoing_request.channel   = selected_channel.channel;
     radio_request.outgoing_request.bandwidth = selected_channel.bw;
@@ -1417,8 +1429,9 @@ bool ChannelSelectionTask::check_is_there_better_channel_than_current(const sMac
     return true;
 }
 
-ChannelSelectionTask::sSelectedChannel
-ChannelSelectionTask::select_next_channel(const sMacAddr &radio_mac)
+ChannelSelectionTask::sSelectedChannel ChannelSelectionTask::select_next_channel(
+    const sMacAddr &radio_mac,
+    const AgentDB::sRadio::channel_preferences_map &controller_preferences)
 {
     auto radio = AgentDB::get()->get_radio_by_mac(radio_mac);
     if (!radio) {
@@ -1436,9 +1449,9 @@ ChannelSelectionTask::select_next_channel(const sMacAddr &radio_mac)
             const auto operating_class_20Mhz = son::wireless_utils::get_operating_class_by_channel(
                 message::sWifiChannel(beacon_channel, eWiFiBandwidth::BANDWIDTH_20));
 
-            // Get the radio preference for the operating class & beacon channel.
-            auto tmp_radio_preference = get_preference_for_channel(
-                radio->channel_preferences, operating_class_20Mhz, beacon_channel);
+            // Get the cumulative channel preference for the operating class & beacon channel using controller preferences.
+            auto tmp_radio_preference = get_cumulative_preference(
+                radio, controller_preferences, operating_class_20Mhz, beacon_channel);
 
             if (tmp_radio_preference == 0) {
                 LOG(INFO) << "Channel #" << beacon_channel << " in Class #" << operating_class_20Mhz
