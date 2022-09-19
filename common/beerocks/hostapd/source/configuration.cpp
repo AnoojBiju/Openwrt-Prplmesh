@@ -20,6 +20,8 @@ Configuration::Configuration(const std::string &file_name) : m_configuration_fil
 
 Configuration::operator bool() const { return m_ok; }
 
+bool Configuration::update_required() const { return m_update_required; }
+
 bool Configuration::load(const std::set<std::string> &vap_indications)
 {
     // please take a look at README.md (common/beerocks/hostapd/README.md) for
@@ -82,6 +84,8 @@ bool Configuration::load(const std::set<std::string> &vap_indications)
     // if we've got to parsing vaps and no read errors, assume all is good
     m_ok = parsing_vaps && !ifs.bad();
 
+    // reset the update required default state
+    m_update_required = false;
     // return this as bool
     return *this;
 }
@@ -130,14 +134,16 @@ bool Configuration::store()
         }
     }
 
-    m_ok           = true;
-    m_last_message = m_configuration_file + " was stored";
+    m_ok              = true;
+    m_last_message    = m_configuration_file + " was stored";
+    m_update_required = false;
 
     // close the file
     out_file.close();
     if (out_file.fail()) {
-        m_last_message = strerror(errno);
-        m_ok           = false;
+        m_last_message    = strerror(errno);
+        m_ok              = false;
+        m_update_required = true;
     }
 
     return *this;
@@ -236,7 +242,8 @@ bool Configuration::set_create_vap_value(const std::string &vap, const std::stri
             std::string(__FUNCTION__) + " the key '" + key + "' for vap " + vap + " was deleted";
     }
 
-    m_ok = true;
+    m_ok              = true;
+    m_update_required = true;
     return *this;
 }
 
