@@ -7,7 +7,7 @@ tlvUnassociatedStaLinkMetricsQuery:
   _is_tlv_class : True
   type:
     _type: eTlvTypeMap
-    _value_const: TLV_UNASSOCIATED_STA_LINKMETRICS_QUERY
+    _value_const: TLV_UNASSOCIATED_STA_LINK_METRICS_QUERY
   length: uint16_t
   operating_class_of_channel_list: uint8_t
   channel_list_length:
