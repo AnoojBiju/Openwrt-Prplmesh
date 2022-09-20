@@ -122,6 +122,8 @@
 #include <tlvf/wfa_map/tlvTunnelledData.h>
 #include <tlvf/wfa_map/tlvTunnelledProtocolType.h>
 #include <tlvf/wfa_map/tlvTunnelledSourceInfo.h>
+#include <tlvf/wfa_map/tlvUnassociatedStaLinkMetricsQuery.h>
+#include <tlvf/wfa_map/tlvUnassociatedStaLinkMetricsResponse.h>
 #include <tlvf/wfa_map/tlvVbssConfigurationReport.h>
 #include <tlvf/wfa_map/tlvVirtualBssCreation.h>
 #include <tlvf/wfa_map/tlvVirtualBssDestruction.h>
@@ -324,12 +326,10 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
         return msg.addClass<wfa_map::tlvAssociatedStaLinkMetrics>();
     }
     case (wfa_map::eTlvTypeMap::TLV_UNASSOCIATED_STA_LINK_METRICS_QUERY): {
-        LOG(DEBUG) << "TLV_UNASSOCIATED_STA_LINK_METRICS_QUERY not supported";
-        return msg.addClass<ieee1905_1::tlvUnknown>();
+        return msg.addClass<wfa_map::tlvUnassociatedStaLinkMetricsQuery>();
     }
     case (wfa_map::eTlvTypeMap::TLV_UNASSOCIATED_STA_LINK_METRICS_RESPONSE): {
-        LOG(DEBUG) << "TLV_UNASSOCIATED_STA_LINK_METRICS_RESPONSE not supported";
-        return msg.addClass<ieee1905_1::tlvUnknown>();
+        return msg.addClass<wfa_map::tlvUnassociatedStaLinkMetricsResponse>();
     }
     case (wfa_map::eTlvTypeMap::TLV_BEACON_METRICS_QUERY): {
         return msg.addClass<wfa_map::tlvBeaconMetricsQuery>();
