@@ -730,8 +730,8 @@ bool dynamic_channel_selection_r2_task::handle_on_demand_channel_selection_reque
         // If doesn't exist unordered_map on set will create a new one.
         // If it does exist, will be overridden as only the latest request should be handled.
         m_pending_selection_requests[agent_mac][radio_mac] =
-            std::make_shared<sOnDemandChannelSelectionRequest>(requested_channel, operating_class,
-                                                               csa_count);
+            std::make_shared<sOnDemandChannelSelectionRequest>(requested_channel, channel,
+                                                               operating_class, csa_count);
     }
     return true;
 }
@@ -1064,6 +1064,11 @@ bool dynamic_channel_selection_r2_task::send_selection_requests()
 
         channel_preference_tlv->radio_uid() = radio_mac;
 
+        bool is_central = wireless_utils::is_operating_class_using_central_channel(
+            request_details->operating_class);
+        LOG(INFO) << "Operating class " << request_details->operating_class << " "
+                  << (is_central ? "uses a central channel" : "uses a primary channel");
+
         for (const auto &iter : formatted_preference) {
             const auto operating_class     = iter.first.first;
             const auto reported_preference = iter.first.second;
@@ -1077,24 +1082,25 @@ bool dynamic_channel_selection_r2_task::send_selection_requests()
                     ? (uint8_t)beerocks::eChannelPreferenceRankingConsts::NON_OPERABLE
                     : (uint8_t)beerocks::eChannelPreferenceRankingConsts::LOWEST;
 
-            bool is_central = wireless_utils::is_operating_class_using_central_channel(
-                request_details->operating_class);
-
             // Create a new channel list without the requested channel
             // Channels that are not on the preference report will be considered as "most preferred".
             std::vector<uint8_t> ch_list;
             for (const auto channel_number : channel_set) {
                 if (operating_class == request_details->operating_class) {
                     if (channel_number == request_details->channel_number) {
-                        // If we don't add our channel it would be considered the "best" (15)
+                        LOG(INFO) << "Our selected channel is " << operating_class << ":"
+                                  << channel_number;
+                        // If we don't add our central/primary channel it would be considered the "best" (15)
                         continue;
                     }
                 } else if (is_central) {
                     // The request uses a central channel
                     if (wireless_utils::operating_class_to_bandwidth(operating_class) ==
                         beerocks::eWiFiBandwidth::BANDWIDTH_20) {
-                        if (channel_number == request_details->channel_number) {
-                            // If we don't add our channel it would be considered the "best" (15)
+                        if (channel_number == request_details->primary_beacon_channel) {
+                            LOG(INFO) << "Our primary channel is " << operating_class << ":"
+                                      << channel_number;
+                            // If we don't add our primary beacon channel it would be considered the "best" (15)
                             continue;
                         }
                     }
