@@ -1472,6 +1472,87 @@ bool db::dm_set_sta_he_capabilities(const std::string &path_to_sta,
     return ret_val;
 }
 
+bool db::set_ap_wifi6_capabilities(wfa_map::tlvApWifi6Capabilities &wifi6_caps_tlv)
+{
+    auto radio = get_radio_by_uid(wifi6_caps_tlv.radio_uid());
+    if (!radio) {
+        LOG(ERROR) << "Failed to get radio with RUID: " << wifi6_caps_tlv.radio_uid();
+        return false;
+    }
+
+    if (radio->dm_path.empty()) {
+        return true;
+    }
+
+    auto path_to_obj = radio->dm_path + ".Capabilities.";
+    if (!m_ambiorix_datamodel->add_optional_subobject(path_to_obj, "WiFi6Capabilities")) {
+        LOG(ERROR) << "Failed to add sub-object " << path_to_obj << "WiFi6Capabilities";
+        return false;
+    }
+
+    bool ret_val = true;
+    path_to_obj += "WiFi6Capabilities.";
+
+    for (auto iter1 = 0; iter1 < wifi6_caps_tlv.number_of_roles(); iter1++) {
+        auto role_tuple = wifi6_caps_tlv.role(iter1);
+        if (!std::get<0>(role_tuple)) {
+            LOG(ERROR) << "role entry has failed!";
+            return false;
+        }
+
+        auto &role  = std::get<1>(role_tuple);
+        auto flags1 = role.flags1();
+        auto flags2 = role.flags2();
+        auto flags3 = role.flags3();
+        auto flags4 = role.flags4();
+
+        //TODO: Need to set the value for MCS_NSS and OFDMA (PPM-2288)
+        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "AgentRole", flags1.agent_role);
+        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HE160",
+                                             static_cast<bool>(flags1.he_support_160mhz));
+        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HE8080",
+                                             static_cast<bool>(flags1.he_support_80_80mhz));
+        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MCSNSSLength", flags1.mcs_nss_length);
+        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SUBeamformer",
+                                             static_cast<bool>(flags2.su_beamformer));
+        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SUBeamformee",
+                                             static_cast<bool>(flags2.su_beamformee));
+        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MUBeamformer",
+                                             static_cast<bool>(flags2.mu_Beamformer_status));
+        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "BeamformeeStsLess80",
+                                             static_cast<bool>(flags2.beamformee_sts_less_80mhz));
+        ret_val &=
+            m_ambiorix_datamodel->set(path_to_obj, "BeamformeeStsGreater80",
+                                      static_cast<bool>(flags2.beamformee_sts_greater_80mhz));
+        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "ULMUMIMO",
+                                             static_cast<bool>(flags2.ul_mu_mimo));
+        ret_val &=
+            m_ambiorix_datamodel->set(path_to_obj, "ULOFDMA", static_cast<bool>(flags2.ul_ofdma));
+        ret_val &=
+            m_ambiorix_datamodel->set(path_to_obj, "DLOFDMA", static_cast<bool>(flags2.dl_ofdma));
+        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfUsersSupportedTX",
+                                             flags3.max_dl_mu_mimo_tx);
+        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfUsersSupportedRX",
+                                             flags3.max_ul_mu_mimo_rx);
+        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "RTS", static_cast<bool>(flags4.rts));
+        ret_val &=
+            m_ambiorix_datamodel->set(path_to_obj, "MURTS", static_cast<bool>(flags4.mu_rts));
+        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MULTIBSSID",
+                                             static_cast<bool>(flags4.multi_bssid));
+        ret_val &=
+            m_ambiorix_datamodel->set(path_to_obj, "MUEDCA", static_cast<bool>(flags4.mu_edca));
+        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "TwtRequester",
+                                             static_cast<bool>(flags4.twt_requester));
+        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "TwtResponder",
+                                             static_cast<bool>(flags4.twt_responder));
+        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SpatialReuse",
+                                             static_cast<bool>(flags4.spatial_reuse));
+        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "AnticipatedChannelUsage",
+                                             static_cast<bool>(flags4.anticipated_channel_usage));
+    }
+    return ret_val;
+}
+
 bool db::dm_set_sta_ht_capabilities(const std::string &path_to_sta,
                                     const beerocks::message::sRadioCapabilities &sta_cap)
 {
