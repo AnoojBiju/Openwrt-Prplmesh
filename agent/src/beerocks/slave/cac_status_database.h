@@ -15,7 +15,8 @@ namespace beerocks {
 
 class CacStatusDatabase : public CacStatusInterface {
 public:
-    CacAvailableChannels get_available_channels(const sMacAddr &radio) const override;
+    CacAvailableChannels get_available_channels(const sMacAddr &radio_mac) const override;
+    bool update_cac_status_db(const AgentDB::sRadio *radio) override;
 
     /**
      * @brief Fills in CAC Status Report TLV by given radio.
@@ -40,6 +41,9 @@ public:
     bool add_cac_completion_report_tlv(
         const AgentDB::sRadio *radio,
         const std::shared_ptr<wfa_map::tlvProfile2CacCompletionReport> cac_completion_report_tlv);
+
+private:
+    std::unordered_map<sMacAddr, CacAvailableChannels> m_available_channels;
 };
 
 // utilities based on CacCapabilities interface

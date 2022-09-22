@@ -14,6 +14,7 @@
 
 #include "agent_db.h"
 #include "tlvf/wfa_map/tlvProfile2CacCompletionReport.h"
+#include "tlvf/wfa_map/tlvProfile2CacStatusReport.h"
 
 namespace beerocks {
 
@@ -46,12 +47,20 @@ public:
     virtual ~CacStatusInterface() = default;
 
     /**
+     * @brief Update all collected channel information by given radio.
+     * 
+     * @param radio Pointer to the AgentDB's radio element.
+     * @return True on success, false otherwise.
+     */
+    virtual bool update_cac_status_db(const AgentDB::sRadio *radio) = 0;
+
+    /**
      * @brief Get a list of all CAC-able channels (Available of Usable) of a given radio mac.
      * 
-     * @param radio A radio MAC. 
-     * @return CacAvailableChannels List of channels. 
+     * @param radio_mac MAC address of radio for which channel list is requested.
+     * @return CacAvailableChannels List of channels.
      */
-    virtual CacAvailableChannels get_available_channels(const sMacAddr &radio) const = 0;
+    virtual CacAvailableChannels get_available_channels(const sMacAddr &radio_mac) const = 0;
 
     /**
      * @brief Get the completion status object of a given radio.

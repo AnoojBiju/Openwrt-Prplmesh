@@ -7,44 +7,64 @@
  */
 
 #include "cac_status_database.h"
-#include "agent_db.h"
 #include "cac_capabilities_database.h"
 
 namespace beerocks {
 
 CacAvailableChannels CacStatusDatabase::get_available_channels(const sMacAddr &radio_mac) const
 {
-    CacAvailableChannels ret;
-
-    auto db = AgentDB::get();
-
-    const auto radio = db->get_radio_by_mac(radio_mac);
-    if (!radio) {
-        LOG(ERROR) << "Failed to find the Radio with mac: " << radio_mac;
-        return ret;
+    auto it = m_available_channels.find(radio_mac);
+    if (it == m_available_channels.end()) {
+        return CacAvailableChannels();
     }
+    return it->second;
+}
+
+bool CacStatusDatabase::update_cac_status_db(const AgentDB::sRadio *radio)
+{
+    if (!radio) {
+        return false;
+    }
+
+    CacAvailableChannels available_channels;
 
     for (const auto &channel_channel_info : radio->channels_list) {
         uint8_t channel    = channel_channel_info.first;
         auto &channel_info = channel_channel_info.second;
+        sCacStatus cac_status;
 
-        if (channel_info.dfs_state == beerocks_message::eDfsState::USABLE ||
-            channel_info.dfs_state == beerocks_message::eDfsState::AVAILABLE) {
-
+        switch (channel_info.dfs_state) {
+        case beerocks_message::eDfsState::AVAILABLE:
             for (auto &bw_info : channel_info.supported_bw_list) {
                 beerocks::message::sWifiChannel wifi_ch(channel, bw_info.bandwidth);
-                sCacStatus cac_status;
-                cac_status.channel = channel;
                 cac_status.operating_class =
                     son::wireless_utils::get_operating_class_by_channel(wifi_ch);
+                cac_status.channel = channel;
 
-                // Todo: https://jira.prplfoundation.org/browse/PPM-1088
+                // TODO: calculate duration value (PPM-2276)
                 cac_status.duration = std::chrono::seconds(0);
-                ret.push_back(cac_status);
+                available_channels.push_back(cac_status);
             }
+            break;
+        case beerocks_message::eDfsState::UNAVAILABLE:
+            break;
+        case beerocks_message::eDfsState::USABLE:
+            // TODO: calculate duration value (PPM-1088)
+            break;
+        case beerocks_message::eDfsState::NOT_DFS:
+            continue;
+        default:
+            LOG(ERROR) << "Undefined DFS state " << channel_info.dfs_state
+                       << ", radio: " << radio->front.iface_mac;
+            continue;
         }
     }
-    return ret;
+
+    if (!available_channels.empty()) {
+        m_available_channels.emplace(radio->front.iface_mac, available_channels);
+    }
+
+    return true;
 }
 
 bool CacStatusDatabase::add_cac_status_report_tlv(
@@ -52,6 +72,10 @@ bool CacStatusDatabase::add_cac_status_report_tlv(
     const std::shared_ptr<wfa_map::tlvProfile2CacStatusReport> cac_status_report_tlv)
 {
     if (!radio) {
+        return false;
+    }
+
+    if (!update_cac_status_db(radio)) {
         return false;
     }
 
