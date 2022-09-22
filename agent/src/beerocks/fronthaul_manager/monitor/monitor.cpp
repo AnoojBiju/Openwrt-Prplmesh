@@ -216,6 +216,13 @@ bool Monitor::thread_init()
 
     mon_db.set_radio_stats_enable(radio_stats_enable);
 
+    bool clients_unicast_measurements;
+    if (!beerocks::bpl::cfg_get_clients_unicast_measurements(clients_unicast_measurements)) {
+        LOG(DEBUG) << "Failed to read clients_unicast_measurement - using default value: false";
+        clients_unicast_measurements = false;
+    }
+    mon_db.set_clients_unicast_measurements(clients_unicast_measurements);
+
     LOG(DEBUG) << "started";
 
     return true;
