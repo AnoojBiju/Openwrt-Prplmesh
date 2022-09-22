@@ -35,6 +35,7 @@
 #include <tlvf/wfa_map/tlvApHeCapabilities.h>
 #include <tlvf/wfa_map/tlvApHtCapabilities.h>
 #include <tlvf/wfa_map/tlvApVhtCapabilities.h>
+#include <tlvf/wfa_map/tlvApWifi6Capabilities.h>
 #include <tlvf/wfa_map/tlvBackhaulStaRadioCapabilities.h>
 #include <tlvf/wfa_map/tlvChannelScanCapabilities.h>
 #include <tlvf/wfa_map/tlvClientCapabilityReport.h>
@@ -195,6 +196,14 @@ void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
 
         if (!add_ap_he_capabilities(radio->front.iface_name)) {
             return;
+        }
+
+        if (db->controller_info.profile_support >=
+            wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_3) {
+
+            if (!add_ap_wifi6_capabilities(radio->front.iface_name)) {
+                return;
+            }
         }
     }
 
@@ -456,6 +465,113 @@ bool CapabilityReportingTask::add_ap_he_capabilities(const std::string &iface_na
     tlv->flags2().mu_beamformer_capable       = HECaps->mu_beamformer_capable;
     tlv->flags2().su_beamformer_capable       = HECaps->su_beamformer_capable;
 
+    return true;
+}
+
+bool CapabilityReportingTask::add_ap_wifi6_capabilities(const std::string &iface_name)
+{
+    auto db    = AgentDB::get();
+    auto radio = db->radio(iface_name);
+    if (!radio) {
+        return false;
+    }
+
+    // Include one AP Wi-Fi 6 Capabilities TLV in the AP Capability Report message
+    // for each radio that supports 802.11
+    // High Efficiency capability (Multi-AP Specification 3.0)
+    // return true if Radio does not support Wi-Fi 6 Capabilities
+    if (!radio->he_supported) {
+        return true;
+    }
+
+    auto tlv = m_cmdu_tx.addClass<wfa_map::tlvApWifi6Capabilities>();
+    if (!tlv) {
+        LOG(ERROR) << "Error creating TLV_AP_WIFI6_CAPABILITIES";
+        return false;
+    }
+
+    tlv->radio_uid() = radio->front.iface_mac;
+    // TODO: Need to get number of role supported (PPM-2288)
+    auto number_of_role = 1; //dummy value;
+
+    for (int i = 0; i < number_of_role; i++) {
+        auto role = tlv->create_role();
+        if (!role) {
+            LOG(ERROR) << "Failed creating role";
+            return false;
+        }
+
+        auto wifi6_caps =
+            reinterpret_cast<beerocks::net::sWIFI6Capabilities *>(&radio->wifi6_capability);
+
+        /**
+	 * AP WIFI6 Capabilities TLV Format 32 bits: (Multi-AP Specification 3.0)
+	 * tlvValue (Flag1) :
+	 * Bits 31-30 : Multi-AP Agent's Role
+	 * Bits 29    : Support for HE 160 MHz
+	 * Bits 28    : Support for HE 80+80 MHz
+	 * Bits 27-24    : Length of MCS NSS
+	 * tlvValue (Flag2):
+	 * Bits 23    : Support for SU Beamformer
+	 * Bits 22    : Support for SU Beamformee
+	 * Bits 21    : Support for MU Beamformer Status
+	 * Bits 20    : Support for Beamformee STS ≤ 80 MHz
+	 * Bits 19    : Support for Beamformee STS > 80 MHz
+	 * Bits 18    : Support for UL MU-MIMO
+	 * Bits 17    : Support for UL OFDMA
+	 * Bits 16    : Support for DL OFDMA
+	 * tlvValue (Flag3)
+	 * Bits 15-12 : Max number of users supported per DL MU-MIMO TX in an AP role
+	 * Bits 11-8  : Max number of users supported per UL MU-MIMO RX in an AP role
+	 * tlvValue (Flag4)
+	 * Bits 7     : Support for RTS
+	 * Bits 6     : Support for MU RTS
+	 * Bits 5     : Support for Multi-BSSID
+	 * Bits 4     : Support for MU EDCA
+	 * Bits 3     : Support for TWT Requester
+	 * Bits 2     : Support for TWT Responder
+	 * Bits 1     : Support for Spatial Reuse
+         * Bits 0     : Support for Anticipated Channel Usage
+	*/
+
+        // TODO: Need to get Agent_role (PPM-2288)
+        role->flags1().agent_role          = wifi6_caps->agent_role;
+        role->flags1().he_support_160mhz   = wifi6_caps->he_support_160mhz;
+        role->flags1().he_support_80_80mhz = wifi6_caps->he_support_80_80mhz;
+        role->flags1().mcs_nss_length      = wifi6_caps->mcs_nss_length;
+        // TODO: Need to get the supported mcs_nss value (PPM-2288)
+        if (role->flags1().he_support_160mhz) {
+            role->set_mcs_nss_160(role->flags1().he_support_160mhz);
+        }
+        if (role->flags1().he_support_80_80mhz) {
+            role->set_mcs_nss_80_80(role->flags1().he_support_80_80mhz);
+        }
+        role->flags2().su_beamformer                = wifi6_caps->su_beamformer;
+        role->flags2().su_beamformee                = wifi6_caps->su_beamformee;
+        role->flags2().mu_Beamformer_status         = wifi6_caps->mu_Beamformer_status;
+        role->flags2().beamformee_sts_less_80mhz    = wifi6_caps->beamformee_sts_less_80mhz;
+        role->flags2().beamformee_sts_greater_80mhz = wifi6_caps->beamformee_sts_greater_80mhz;
+        role->flags2().ul_mu_mimo                   = wifi6_caps->ul_mu_mimo;
+        role->flags2().ul_ofdma                     = wifi6_caps->ul_ofdma;
+        role->flags2().dl_ofdma                     = wifi6_caps->dl_ofdma;
+        role->flags3().max_dl_mu_mimo_tx            = wifi6_caps->max_dl_mu_mimo_tx;
+        role->flags3().max_ul_mu_mimo_rx            = wifi6_caps->max_ul_mu_mimo_rx;
+        // TODO: Need to get Max number of users supported per DL OFDMA TX and
+        // UL OFDMA RX in an AP role (PPM-2288)
+        role->flags4().rts                       = wifi6_caps->rts;
+        role->flags4().mu_rts                    = wifi6_caps->mu_rts;
+        role->flags4().multi_bssid               = wifi6_caps->multi_bssid;
+        role->flags4().mu_edca                   = wifi6_caps->mu_edca;
+        role->flags4().twt_requester             = wifi6_caps->twt_requester;
+        role->flags4().twt_responder             = wifi6_caps->twt_responder;
+        role->flags4().spatial_reuse             = wifi6_caps->spatial_reuse;
+        role->flags4().anticipated_channel_usage = wifi6_caps->anticipated_channel_usage;
+
+        if (!tlv->add_role(role)) {
+            LOG(ERROR) << "add_role for index " << i << " failed";
+            return false;
+        }
+    }
     return true;
 }
 

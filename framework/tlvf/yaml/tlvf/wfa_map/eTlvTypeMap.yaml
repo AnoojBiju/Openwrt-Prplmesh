@@ -98,4 +98,7 @@ eTlvTypeMap:
   TLV_QOS_MANAGEMENT_POLICY: 0xDB
   TLV_CONTROLLER_CAPABILITY: 0xDD
 
+  # Profile 3 starts here
+  TLV_AP_WIFI_6_CAPABILITIES: 0xAA
+
   # When adding values, make sure to also update CmduMessageRx::parseNextTlv !

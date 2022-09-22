@@ -1,0 +1,110 @@
+#
+---
+_namespace: wfa_map
+
+tlvApWifi6Capabilities:
+  _type: class
+  _is_tlv_class : True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_AP_WIFI_6_CAPABILITIES
+  length: uint16_t
+  radio_uid: sMacAddr
+  number_of_roles:
+    _type: uint8_t
+    _length_var: True
+  role:
+    _type: cRole
+    _length: [ number_of_roles ]
+
+cRole:
+  _type: class
+  flags1: sFlags1
+  mcs_nss_80:
+    _type: uint32_t
+    _comment: MCS for channel width lower or equal to 80 MHz
+  mcs_nss_160:
+    _type: uint32_t
+    _condition:
+      _using_members: flags1.he_support_160mhz
+      _phrase: flags1.he_support_160mhz
+    _comment: MCS for channel width 160 MHz
+  mcs_nss_80_80:
+    _type: uint32_t
+    _condition:
+      _using_members: flags1.he_support_80_80mhz
+      _phrase: flags1.he_support_80_80mhz
+    _comment: MCS for channel width 80+80 MHz
+  flags2: sFlags2
+  flags3: sFlags3
+  max_dl_ofdma_tx:
+    _type: uint8_t
+    _length_var: True
+  max_ul_ofdma_rx:
+    _type: uint8_t
+    _length_var: True
+  flags4: sFlags4
+
+sFlags1:
+  _type: struct
+  _bit_field: uint8_t
+  agent_role:
+    _bit_range: [7,6]
+    _comment: |
+      0: AP
+      1: Non-AP STA
+      2-3: reserved
+  he_support_160mhz:
+    _bit_range: [5,5]
+  he_support_80_80mhz:
+    _bit_range: [4,4]
+  mcs_nss_length:
+    _bit_range: [3,0]
+
+sFlags2:
+  _type: struct
+  _bit_field: uint8_t
+  su_beamformer:
+    _bit_range: [7,7]
+  su_beamformee:
+    _bit_range: [6,6]
+  mu_Beamformer_status:
+    _bit_range: [5,5]
+  beamformee_sts_less_80mhz:
+    _bit_range: [4,4]
+  beamformee_sts_greater_80mhz:
+    _bit_range: [3,3]
+  ul_mu_mimo:
+    _bit_range: [2,2]
+  ul_ofdma:
+    _bit_range: [1,1]
+  dl_ofdma:
+    _bit_range: [0,0]
+
+sFlags3:
+  _type: struct
+  _bit_field: uint8_t
+  max_dl_mu_mimo_tx:
+    _bit_range: [7,4]
+  max_ul_mu_mimo_rx:
+    _bit_range: [3,0]
+
+sFlags4:
+  _type: struct
+  _bit_field: uint8_t
+  rts:
+    _bit_range: [7,7]
+  mu_rts:
+    _bit_range: [6,6]
+  multi_bssid:
+    _bit_range: [5,5]
+  mu_edca:
+    _bit_range: [4,4]
+  twt_requester:
+    _bit_range: [3,3]
+  twt_responder:
+    _bit_range: [2,2]
+  spatial_reuse:
+    _bit_range: [1,1]
+  anticipated_channel_usage:
+    _bit_range: [0,0]

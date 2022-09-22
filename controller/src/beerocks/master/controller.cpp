@@ -58,6 +58,7 @@
 #include <tlvf/wfa_map/tlvApMetrics.h>
 #include <tlvf/wfa_map/tlvApRadioIdentifier.h>
 #include <tlvf/wfa_map/tlvApVhtCapabilities.h>
+#include <tlvf/wfa_map/tlvApWifi6Capabilities.h>
 #include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaTrafficStats.h>
 #include <tlvf/wfa_map/tlvBackhaulStaRadioCapabilities.h>
@@ -1519,6 +1520,19 @@ bool Controller::handle_tlv_ap_ht_capabilities(ieee1905_1::CmduMessageRx &cmdu_r
     return ret_val;
 }
 
+bool Controller::handle_tlv_ap_wifi6_capabilities(ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    bool ret_val = true;
+
+    for (const auto &wifi6_caps_tlv : cmdu_rx.getClassList<wfa_map::tlvApWifi6Capabilities>()) {
+        if (!database.set_ap_wifi6_capabilities(*wifi6_caps_tlv)) {
+            LOG(ERROR) << "Couldn't set values for ap WIFI6capabilities data model";
+            ret_val = false;
+        }
+    }
+    return ret_val;
+}
+
 bool Controller::handle_tlv_ap_he_capabilities(ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     bool ret_val = true;
@@ -1786,6 +1800,11 @@ bool Controller::handle_cmdu_1905_ap_capability_report(const sMacAddr &src_mac,
     }
     if (!handle_tlv_ap_vht_capabilities(cmdu_rx)) {
         LOG(ERROR) << "Couldn't handle TLV AP VHTCapabilities";
+        return false;
+    }
+    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_3 &&
+        !handle_tlv_ap_wifi6_capabilities(cmdu_rx)) {
+        LOG(ERROR) << "Couldn't handle TLV AP WIFI6Capabilities";
         return false;
     }
 

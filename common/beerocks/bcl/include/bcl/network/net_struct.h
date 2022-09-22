@@ -174,6 +174,64 @@ typedef struct sHECapabilities {
     void struct_init() {}
 } __attribute__((packed)) sHECapabilities;
 
+typedef struct sWIFI6Capabilities {
+#if defined(__LITTLE_ENDIAN_BITFIELD)
+    uint64_t anticipated_channel_usage : 1;
+    uint64_t spatial_reuse : 1;
+    uint64_t twt_responder : 1;
+    uint64_t twt_requester : 1;
+    uint64_t mu_edca : 1;
+    uint64_t multi_bssid : 1;
+    uint64_t mu_rts : 1;
+    uint64_t rts : 1;
+    uint64_t max_ul_ofdma_rx : 8;
+    uint64_t max_dl_ofdma_tx : 8;
+    uint64_t max_ul_mu_mimo_rx : 4;
+    uint64_t max_dl_mu_mimo_tx : 4;
+    uint64_t dl_ofdma : 1;
+    uint64_t ul_ofdma : 1;
+    uint64_t ul_mu_mimo : 1;
+    uint64_t beamformee_sts_greater_80mhz : 1;
+    uint64_t beamformee_sts_less_80mhz : 1;
+    uint64_t mu_Beamformer_status : 1;
+    uint64_t su_beamformee : 1;
+    uint64_t su_beamformer : 1;
+    uint64_t mcs_nss_length : 4;
+    uint64_t he_support_80_80mhz : 1;
+    uint64_t he_support_160mhz : 1;
+    uint64_t agent_role : 2;
+#elif defined(__BIG_ENDIAN_BITFIELD)
+    uint64_t agent_role : 2;
+    uint64_t he_support_160mhz : 1;
+    uint64_t he_support_80_80mhz : 1;
+    uint64_t mcs_nss_length : 4;
+    uint64_t su_beamformer : 1;
+    uint64_t su_beamformee : 1;
+    uint64_t mu_Beamformer_status : 1;
+    uint64_t beamformee_sts_less_80mhz : 1;
+    uint64_t beamformee_sts_greater_80mhz : 1;
+    uint64_t ul_mu_mimo : 1;
+    uint64_t ul_ofdma : 1;
+    uint64_t dl_ofdma : 1;
+    uint64_t max_dl_mu_mimo_tx : 4;
+    uint64_t max_ul_mu_mimo_rx : 4;
+    uint64_t max_dl_ofdma_tx : 8;
+    uint64_t max_ul_ofdma_rx : 8;
+    uint64_t rts : 1;
+    uint64_t mu_rts : 1;
+    uint64_t multi_bssid : 1;
+    uint64_t mu_edca : 1;
+    uint64_t twt_requester : 1;
+    uint64_t twt_responder : 1;
+    uint64_t spatial_reuse : 1;
+    uint64_t anticipated_channel_usage : 1;
+#else
+#error "Bitfield macros are not defined"
+#endif
+    void struct_swap() {}
+    void struct_init() {}
+} __attribute__((packed)) sWIFI6Capabilities;
+
 } // namespace net
 } // namespace beerocks
 
