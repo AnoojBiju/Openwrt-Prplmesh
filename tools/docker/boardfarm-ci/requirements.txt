@@ -3,6 +3,7 @@ argparse
 beautifulsoup4
 boto3
 cdrouter
+debugpy
 debtcollector
 distro
 dlipower
