@@ -23,6 +23,7 @@
 #include <tuple>
 #include "bcl/beerocks_message_structs.h"
 #include "beerocks/tlvf/beerocks_message_action.h"
+#include "beerocks/tlvf/beerocks_message_common.h"
 
 namespace beerocks_message {
 
@@ -144,6 +145,32 @@ class tlvVsOnDemandChannelSelection : public BaseClass
         eActionOp_1905_VS* m_action_op = nullptr;
         sMacAddr* m_radio_mac = nullptr;
         uint8_t* m_CSA_count = nullptr;
+};
+
+class tlvVsBssidIfaceMapping : public BaseClass
+{
+    public:
+        tlvVsBssidIfaceMapping(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit tlvVsBssidIfaceMapping(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~tlvVsBssidIfaceMapping();
+
+        static eActionOp_1905_VS get_action_op(){
+            return (eActionOp_1905_VS)(ACTION_TLV_VENDOR_SPECIFIC);
+        }
+        uint8_t& bssid_vap_id_map_length();
+        std::tuple<bool, sBssidVapId&> bssid_vap_id_map(size_t idx);
+        bool alloc_bssid_vap_id_map(size_t count = 1);
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_1905_VS* m_action_op = nullptr;
+        uint8_t* m_bssid_vap_id_map_length = nullptr;
+        sBssidVapId* m_bssid_vap_id_map = nullptr;
+        size_t m_bssid_vap_id_map_idx__ = 0;
+        int m_lock_order_counter__ = 0;
 };
 
 }; // close namespace: beerocks_message
