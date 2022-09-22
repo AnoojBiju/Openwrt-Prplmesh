@@ -1485,13 +1485,7 @@ bool db::set_ap_wifi6_capabilities(wfa_map::tlvApWifi6Capabilities &wifi6_caps_t
     }
 
     auto path_to_obj = radio->dm_path + ".Capabilities.";
-    if (!m_ambiorix_datamodel->add_optional_subobject(path_to_obj, "WiFi6Capabilities")) {
-        LOG(ERROR) << "Failed to add sub-object " << path_to_obj << "WiFi6Capabilities";
-        return false;
-    }
-
-    bool ret_val = true;
-    path_to_obj += "WiFi6Capabilities.";
+    bool ret_val     = true;
 
     for (auto iter1 = 0; iter1 < wifi6_caps_tlv.number_of_roles(); iter1++) {
         auto role_tuple = wifi6_caps_tlv.role(iter1);
@@ -1505,6 +1499,23 @@ bool db::set_ap_wifi6_capabilities(wfa_map::tlvApWifi6Capabilities &wifi6_caps_t
         auto flags2 = role.flags2();
         auto flags3 = role.flags3();
         auto flags4 = role.flags4();
+
+        // First bit represents agent role, second bit is reserved according to R3.
+        uint8_t agent_role_first_bit = flags1.agent_role & 0x01;
+
+        if (agent_role_first_bit == 0x0) {
+            if (!m_ambiorix_datamodel->add_optional_subobject(path_to_obj, "WiFi6APRole")) {
+                LOG(ERROR) << "Failed to add sub-object " << path_to_obj << "WiFi6APRole";
+                return false;
+            }
+            path_to_obj += "WiFi6APRole.";
+        } else {
+            if (!m_ambiorix_datamodel->add_optional_subobject(path_to_obj, "WiFi6bSTARole")) {
+                LOG(ERROR) << "Failed to add sub-object " << path_to_obj << "WiFi6bSTARole";
+                return false;
+            }
+            path_to_obj += "WiFi6bSTARole.";
+        }
 
         //TODO: Need to set the value for MCS_NSS and OFDMA (PPM-2288)
         ret_val &= m_ambiorix_datamodel->set(path_to_obj, "AgentRole", flags1.agent_role);
