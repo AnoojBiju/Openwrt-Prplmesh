@@ -1239,7 +1239,7 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
         //init the freq band cap with the target radio freq band info
         msg->params.capabilities.band_5g_capable = m_radio_info.is_5ghz;
         msg->params.capabilities.band_2g_capable =
-            (son::wireless_utils::which_freq(m_radio_info.channel) ==
+            (son::wireless_utils::which_freq_type(m_radio_info.vht_center_freq) ==
              beerocks::eFreqType::FREQ_24G);
 
         auto assoc_frame_type = assoc_frame::AssocReqFrame::UNKNOWN;
@@ -1389,7 +1389,8 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
         m_radio_info.vht_center_freq    = beerocks::string_utils::stoi(parsed_obj["cf1"]);
         m_radio_info.is_dfs_channel     = beerocks::string_utils::stoi(parsed_obj["dfs"]);
         m_radio_info.last_csa_sw_reason = ChanSwReason::Unknown;
-        if (son::wireless_utils::which_freq(m_radio_info.channel) == beerocks::eFreqType::FREQ_5G) {
+        if (son::wireless_utils::which_freq_type(m_radio_info.vht_center_freq) ==
+            beerocks::eFreqType::FREQ_5G) {
             m_radio_info.is_5ghz = true;
         }
     } break;

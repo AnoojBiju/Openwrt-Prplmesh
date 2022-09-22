@@ -721,8 +721,8 @@ bool base_wlan_hal_nl80211::refresh_radio_info()
         // Channel
         m_radio_info.channel = beerocks::string_utils::stoi(reply["channel"]);
 
-        m_radio_info.is_5ghz =
-            (son::wireless_utils::which_freq(m_radio_info.channel) == beerocks::eFreqType::FREQ_5G);
+        m_radio_info.is_5ghz = (son::wireless_utils::which_freq_type(
+                                    m_radio_info.vht_center_freq) == beerocks::eFreqType::FREQ_5G);
 
         // If the VAPs map is empty, refresh it as well
         // TODO: update on every refresh?

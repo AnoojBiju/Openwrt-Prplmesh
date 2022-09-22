@@ -917,7 +917,7 @@ bool ap_wlan_hal_whm::process_whm_event(ap_wlan_hal::Event event, const amxc_var
         //init the freq band cap with the target radio freq band info
         msg->params.capabilities.band_5g_capable = m_radio_info.is_5ghz;
         msg->params.capabilities.band_2g_capable =
-            (son::wireless_utils::which_freq(m_radio_info.channel) ==
+            (son::wireless_utils::which_freq_type(m_radio_info.vht_center_freq) ==
              beerocks::eFreqType::FREQ_24G);
 
         auto assoc_frame_type = assoc_frame::AssocReqFrame::UNKNOWN;
