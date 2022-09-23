@@ -26,6 +26,13 @@ ubus call "IP.Interface" _set '{ "rel_path": ".[Alias == \"lan\"].IPv4Address.[A
 ubus wait_for Firewall
 iptables -P INPUT ACCEPT
 
+# Try to work around PCF-681: if we don't have a connectivity, restart
+# tr181-bridging
+time ping 192.168.1.2 -c 10 || {
+  logger -t prplmesh -p daemon.crit "Unable to ping 192.168.1.2, restarting tr181-bridging"
+  /etc/init.d/tr181-bridging restart
+}
+
 # Required for config_load:
 . /lib/functions/system.sh
 # Required for config_foreach:
@@ -147,6 +154,3 @@ uci commit
 /etc/init.d/system restart
 /etc/init.d/network restart
 
-# Try to work around PCF-681: if we don't have a connectivity, restart
-# tr181-bridging
-ping 192.168.1.2 -c 3 || /etc/init.d/tr181-bridging restart
