@@ -26,6 +26,8 @@ time ping 192.168.1.2 -c 10 || {
   /etc/init.d/tr181-bridging restart
 }
 
+uci changes; uci show network.lan.ipaddr
+
 # Required for config_load:
 . /lib/functions/system.sh
 # Required for config_foreach:
@@ -38,6 +40,8 @@ time ping 192.168.1.2 -c 10 || {
 logger -t prplmesh -p daemon.info "Applying wifi configuration."
 rm -f /etc/config/wireless
 wifi config
+
+uci changes; uci show network.lan.ipaddr
 
 uci batch << 'EOF'
 set wireless.default_radio0=wifi-iface
@@ -149,8 +153,11 @@ uci commit
 logger -t prplmesh -p daemon.info "Stoping network"
 /etc/init.d/network stop
 
+uci changes; uci show network.lan.ipaddr
+
 sleep 10
 logger -t prplmesh -p daemon.info "Network should be stopped."
+uci changes; uci show network.lan.ipaddr
 
 logger -t prplmesh -p daemon.info "Starting network"
 /etc/init.d/network start
@@ -163,3 +170,5 @@ time ubus -t 60 wait_for network.interface.lan || logger -t prplmesh -p daemon.c
 time ubus wait_for Firewall
 iptables -P INPUT ACCEPT
 sed -i 's/:INPUT DROP/:INPUT ACCEPT/' /etc/amx/tr181-firewall/firewall.defaults
+
+uci changes; uci show network.lan.ipaddr
