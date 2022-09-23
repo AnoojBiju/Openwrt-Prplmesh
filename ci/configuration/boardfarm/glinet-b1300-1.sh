@@ -145,7 +145,17 @@ config_foreach set_channel wifi-device
 
 uci commit
 /etc/init.d/system restart
-/etc/init.d/network restart
+
+logger -t prplmesh -p daemon.info "Stoping network"
+/etc/init.d/network stop
+
+sleep 10
+logger -t prplmesh -p daemon.info "Network should be stopped."
+
+logger -t prplmesh -p daemon.info "Starting network"
+/etc/init.d/network start
+
+time ubus -t 60 wait_for network.interface.lan || logger -t prplmesh -p daemon.crit "netifd: waiting for lan network interface failed!"
 
 # For now there is no way to disable the firewall (see PCF-590).
 # Instead, wait for it in the datamodel, then set the whole INPUT
