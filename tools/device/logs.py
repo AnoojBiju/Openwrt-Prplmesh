@@ -23,10 +23,13 @@ LogCommand = namedtuple("LogCommand", "cmd, filename")
 LOG_COMMANDS = \
     [
         LogCommand("ip address show", "ip-addr.txt"),
+        LogCommand("brctl show", "brtcl.txt"),
         LogCommand("cat /etc/config/network", "config-network.txt"),
         LogCommand('ubus call IP _get \'{ "depth": "10" }\'', "dm-IP.txt"),
         LogCommand('ubus call Bridging _get \'{ "depth": "10" }\'', "dm-Bridge.txt"),
         LogCommand('ubus call Ethernet _get \'{ "depth": "10" }\'', "dm-Ethernet.txt"),
+        LogCommand('ubus call NetModel _get \'{ "depth": "10" }\'', "dm-NetModel.txt"),
+        LogCommand('ubus call NetDev _get \'{ "depth": "10" }\'', "dm-NetDev.txt"),
         LogCommand('ubus call DHCPv4 _get \'{ "depth": "10" }\'', "dm-DHCPv4.txt"),
         LogCommand('ubus call DHCPv6 _get \'{ "depth": "10" }\'', "dm-DHCPv6.txt"),
         LogCommand('ubus call Firewall _get \'{ "depth": "10" }\'', "dm-Firewall.txt"),
