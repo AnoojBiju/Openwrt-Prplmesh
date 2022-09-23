@@ -19,13 +19,6 @@ uci commit network
 # IP for device upgrades, operational tests, Boardfarm data network, ...
 ubus call "IP.Interface" _set '{ "rel_path": ".[Alias == \"lan\"].IPv4Address.[Alias == \"lan\"].", "parameters": { "IPAddress": "192.168.1.110" } }'
 
-
-# For now there is no way to disable the firewall (see PCF-590).
-# Instead, wait for it in the datamodel, then set the whole INPUT
-# chain to ACCEPT:
-ubus wait_for Firewall
-iptables -P INPUT ACCEPT
-
 # Try to work around PCF-681: if we don't have a connectivity, restart
 # tr181-bridging
 time ping 192.168.1.2 -c 10 || {
@@ -154,3 +147,9 @@ uci commit
 /etc/init.d/system restart
 /etc/init.d/network restart
 
+# For now there is no way to disable the firewall (see PCF-590).
+# Instead, wait for it in the datamodel, then set the whole INPUT
+# chain to ACCEPT:
+time ubus wait_for Firewall
+iptables -P INPUT ACCEPT
+sed -i 's/:INPUT DROP/:INPUT ACCEPT/' /etc/amx/tr181-firewall/firewall.defaults
