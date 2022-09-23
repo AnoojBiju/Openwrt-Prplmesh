@@ -6,9 +6,6 @@
 
 set -e
 
-# Start with a new log file:
-rm -f /var/log/messages && syslog-ng-ctl reload
-
 # Stop and disable the DHCP clients and servers:
 ubus call DHCPv4.Client.1 _set '{"parameters": { "Enable": False }}'
 ubus call DHCPv6.Client.1 _set '{"parameters": { "Enable": False }}'
