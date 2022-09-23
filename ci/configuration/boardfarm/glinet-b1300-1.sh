@@ -15,6 +15,10 @@ ubus call DHCPv6.Client.1 _set '{"parameters": { "Enable": False }}'
 ubus call DHCPv4.Server _set '{"parameters": { "Enable": False }}'
 ubus call DHCPv6.Server _set '{"parameters": { "Enable": False }}'
 
+uci set network.lan.ipaddr='192.168.1.1/24'
+uci del network.lan.netmask
+uci commit network
+
 # IP for device upgrades, operational tests, Boardfarm data network, ...
 ubus call "IP.Interface" _set '{ "rel_path": ".[Alias == \"lan\"].IPv4Address.[Alias == \"lan\"].", "parameters": { "IPAddress": "192.168.1.110" } }'
 

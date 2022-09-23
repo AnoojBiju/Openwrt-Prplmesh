@@ -15,6 +15,10 @@ rm -f /etc/rc.d/S27tr181-dhcpv4client
 /etc/init.d/tr181-dhcpv6client stop
 rm -f /etc/rc.d/S25tr181-dhcpv6client
 
+uci set network.lan.ipaddr='192.168.1.1/24'
+uci del network.lan.netmask
+uci commit network
+
 # IP for device upgrades, operational tests, Boardfarm data network, ...
 # Note that this device uses the WAN interface (as on some Omnias the
 # others don't work in the bootloader):
