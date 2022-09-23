@@ -15,8 +15,6 @@ ubus call DHCPv6.Server _set '{"parameters": { "Enable": False }}'
 # IP for device upgrades, operational tests, Boardfarm data network, ...
 ubus call "IP.Interface" _set '{ "rel_path": ".[Alias == \"lan\"].IPv4Address.[Alias == \"lan\"].", "parameters": { "IPAddress": "192.168.1.110" } }'
 
-uci set wireless.radio0.disabled=0
-uci set wireless.radio1.disabled=0
 
 # For now there is no way to disable the firewall (see PCF-590).
 # Instead, wait for it in the datamodel, then set the whole INPUT
