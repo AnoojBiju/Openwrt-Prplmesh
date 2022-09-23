@@ -35,7 +35,7 @@ LOG_COMMANDS = \
         LogCommand('ubus call Firewall _get \'{ "depth": "10" }\'', "dm-Firewall.txt"),
         LogCommand('ubus call WiFi _get \'{ "depth": "10" }\'', "dm-WiFi.txt"),
         LogCommand('logread', "syslog.txt"),
-        LogCommand('iptables -L', "iptables-filter.txt"),
+        LogCommand('iptables-save', "iptables-filter.txt"),
         LogCommand('find /etc/config/tr181-bridging/ -type f -print -exec cat {} \';\'',
                    "config-tr181-bridging.txt"),
         LogCommand('find /etc/amx/tr181-bridging/ -type f -print -exec cat {} \';\'',
