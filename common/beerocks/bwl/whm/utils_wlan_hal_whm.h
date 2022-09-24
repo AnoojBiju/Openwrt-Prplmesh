@@ -22,6 +22,11 @@ public:
      * @brief Converts a string-based radio state to an eRadioState.
      */
     static eRadioState radio_state_from_string(const std::string &state);
+
+    /**
+     * @brief Converts BWL to pwhm security string
+     */
+    static std::string security_val(WiFiSec sec);
 };
 
 } // namespace whm

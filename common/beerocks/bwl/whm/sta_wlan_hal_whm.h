@@ -71,10 +71,33 @@ protected:
 
 private:
     bool process_whm_event(sta_wlan_hal::Event event, const amxc_var_t *data);
-    // Active network parameters
+
+    struct Endpoint {
+        std::string bssid;
+        std::string ssid;
+        std::string connection_status;
+        int channel;
+        int active_profile_id;
+    };
+
+    int add_profile();
+    int remove_profile(int profile_id);
+    bool set_profile_params(int profile_id, const std::string &ssid, const std::string &bssid,
+                            WiFiSec sec, bool mem_only_psk, const std::string &pass,
+                            bool hidden_ssid, int channel = 0);
+    bool enable_profile(int profile_id);
+
+    bool read_status(Endpoint &endpoint);
+    void update_status(const Endpoint &endpoint);
+    bool is_connected(const std::string &status);
+
+    // Active profile parameters
     std::string m_active_ssid;
     std::string m_active_bssid;
-    uint8_t m_active_channel = 0;
+    std::string m_active_pass;
+    WiFiSec m_active_secutiry = WiFiSec::Invalid;
+    uint8_t m_active_channel  = 0;
+    int m_active_profile_id   = -1;
 };
 
 } // namespace whm
