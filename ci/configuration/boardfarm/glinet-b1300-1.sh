@@ -16,6 +16,15 @@ uci set network.lan.ipaddr='192.168.1.1/24'
 uci del network.lan.netmask
 uci commit network
 
+uci changes; uci show network.lan.ipaddr
+ip link show br-lan
+ip addr show br-lan
+ubus call "IP.Interface" _get '{ "rel_path": ".[Alias == \"lan\"].IPv4Address.[Alias == \"lan\"]." }'
+ubus call "NetDev.Link" _get '{ "rel_path": ".br-lan.IPv4Addr." }'
+ubus call "NetModel.Intf" _get '{ "rel_path": ".ip-lan.", "depth":5 }'
+ubus call "NetModel.Intf" _get '{ "rel_path": ".lan.", "depth":5 }'
+ubus call "NetModel.Intf" _get '{ "rel_path": ".bridge-lan_bridge.", "depth":5 }'
+
 # IP for device upgrades, operational tests, Boardfarm data network, ...
 ubus call "IP.Interface" _set '{ "rel_path": ".[Alias == \"lan\"].IPv4Address.[Alias == \"lan\"].", "parameters": { "IPAddress": "192.168.1.110" } }'
 
@@ -27,6 +36,13 @@ time ping 192.168.1.2 -c 10 || {
 }
 
 uci changes; uci show network.lan.ipaddr
+ip link show br-lan
+ip addr show br-lan
+ubus call "IP.Interface" _get '{ "rel_path": ".[Alias == \"lan\"].IPv4Address.[Alias == \"lan\"]." }'
+ubus call "NetDev.Link" _get '{ "rel_path": ".br-lan.IPv4Addr." }'
+ubus call "NetModel.Intf" _get '{ "rel_path": ".ip-lan.", "depth":5 }'
+ubus call "NetModel.Intf" _get '{ "rel_path": ".lan.", "depth":5 }'
+ubus call "NetModel.Intf" _get '{ "rel_path": ".bridge-lan_bridge.", "depth":5 }'
 
 # Required for config_load:
 . /lib/functions/system.sh
