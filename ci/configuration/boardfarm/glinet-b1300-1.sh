@@ -26,14 +26,16 @@ ubus call "NetModel.Intf" _get '{ "rel_path": ".lan.", "depth":5 }'
 ubus call "NetModel.Intf" _get '{ "rel_path": ".bridge-lan_bridge.", "depth":5 }'
 
 # IP for device upgrades, operational tests, Boardfarm data network, ...
+logger -t prplmesh -p daemon.info "Setting lan IP to .110"
 ubus call "IP.Interface" _set '{ "rel_path": ".[Alias == \"lan\"].IPv4Address.[Alias == \"lan\"].", "parameters": { "IPAddress": "192.168.1.110" } }'
 
 # Try to work around PCF-681: if we don't have a connectivity, restart
 # tr181-bridging
-time ping 192.168.1.2 -c 10 || {
+time ping 192.168.1.2 -c 3 || {
   logger -t prplmesh -p daemon.crit "Unable to ping 192.168.1.2, restarting tr181-bridging"
   /etc/init.d/tr181-bridging restart
 }
+logger -t prplmesh -p daemon.info "Setting lan IP to .110 should be done"
 
 uci changes; uci show network.lan.ipaddr
 ip link show br-lan
