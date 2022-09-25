@@ -31,7 +31,7 @@ ubus call "IP.Interface" _set '{ "rel_path": ".[Alias == \"lan\"].IPv4Address.[A
 
 # Try to work around PCF-681: if we don't have a connectivity, restart
 # tr181-bridging
-time ping 192.168.1.2 -c 3 || {
+time ping 192.168.1.2 -c 10 || {
   logger -t prplmesh -p daemon.crit "Unable to ping 192.168.1.2, restarting tr181-bridging"
   /etc/init.d/tr181-bridging restart
 }
