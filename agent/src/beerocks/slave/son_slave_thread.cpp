@@ -406,7 +406,7 @@ bool slave_thread::read_platform_configuration()
     char ssid[beerocks::message::WIFI_SSID_MAX_LENGTH];
     char pass[beerocks::message::WIFI_PASS_MAX_LENGTH];
     if (bpl::cfg_get_beerocks_credentials(BPL_RADIO_BACK, ssid, pass, security_type) < 0) {
-        LOG(ERROR) << "Failed reading Wi-Fi back credentials!";
+        LOG(ERROR) << "Failed reading Wi-Fi back credentials!!";
         return false;
     }
     db->device_conf.back_radio.ssid = std::string(ssid, beerocks::message::WIFI_SSID_MAX_LENGTH);
