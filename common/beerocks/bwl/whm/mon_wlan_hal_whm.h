@@ -77,6 +77,7 @@ public:
 
     // Protected methods:
 protected:
+    virtual bool process_whm_event(std::string &opcode, const amxc_var_t *data) override;
     // Overload for Monitor events
     bool event_queue_push(mon_wlan_hal::Event event, std::shared_ptr<void> data = {})
     {
@@ -86,7 +87,6 @@ protected:
     virtual bool set(const std::string &param, const std::string &value, int vap_id) override;
 
 private:
-    bool process_whm_event(mon_wlan_hal::Event event, const amxc_var_t *data);
 };
 
 } // namespace whm

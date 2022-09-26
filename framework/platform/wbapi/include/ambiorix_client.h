@@ -201,7 +201,7 @@ public:
      * @param[in] event_callback: event callback structure.
      * @return true on success, false otherwise.
     */
-    bool subscribe_to_object_event(const std::string &object_path,
+    bool subscribe_to_object_event(const std::string &object_path, const char *filter,
                                    sAmxClEventCallback *event_callback);
 
 private:

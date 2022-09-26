@@ -30,6 +30,17 @@ namespace whm {
 /////////////////////////// Local Module Functions ///////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
+static mon_wlan_hal::Event whm_to_bwl_event(const std::string &opcode)
+{
+    if (opcode == "AP-STA-CONNECTED") {
+        return mon_wlan_hal::Event::STA_Connected;
+    } else if (opcode == "AP-STA-DISCONNECTED") {
+        return mon_wlan_hal::Event::STA_Disconnected;
+    }
+
+    return mon_wlan_hal::Event::Invalid;
+}
+
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////////// Implementation ///////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -220,12 +231,6 @@ bool mon_wlan_hal_whm::channel_scan_abort()
     return false;
 }
 
-bool mon_wlan_hal_whm::process_whm_event(mon_wlan_hal::Event event, const amxc_var_t *data)
-{
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
-    return true;
-}
-
 bool mon_wlan_hal_whm::set(const std::string &param, const std::string &value, int vap_id)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
@@ -235,6 +240,84 @@ bool mon_wlan_hal_whm::set(const std::string &param, const std::string &value, i
 bool mon_wlan_hal_whm::set_estimated_service_parameters(uint8_t *esp_info_field)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    return true;
+}
+
+bool mon_wlan_hal_whm::process_whm_event(std::string &opcode, const amxc_var_t *data)
+{
+    auto event = whm_to_bwl_event(opcode);
+    switch (event) {
+
+    case Event::STA_Connected: {
+        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_MONITOR_CLIENT_ASSOCIATED_NOTIFICATION));
+        auto msg =
+            reinterpret_cast<sACTION_MONITOR_CLIENT_ASSOCIATED_NOTIFICATION *>(msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        // Initialize the message
+        memset(msg_buff.get(), 0, sizeof(sACTION_MONITOR_CLIENT_ASSOCIATED_NOTIFICATION));
+
+        const char *sta_obj_path = GET_CHAR(data, "object");
+        if (!sta_obj_path) {
+            return false;
+        }
+        amxc_var_t *sta_obj = m_ambiorix_cl->get_object(std::string(sta_obj_path), 0);
+        if (!sta_obj) {
+            LOG(ERROR) << "failed to get AssociatedDevice object " << sta_obj_path;
+            return true;
+        }
+
+        std::string sta_mac = GET_CHAR(sta_obj, "MACAddress");
+        amxc_var_delete(&sta_obj);
+        if (sta_mac.empty()) {
+            LOG(ERROR) << "failed to get MACAddress";
+            return true;
+        }
+        //msg->vap_id = vap_id;
+        msg->mac = tlvf::mac_from_string(sta_mac);
+
+        // Add the message to the queue
+        event_queue_push(Event::STA_Connected, msg_buff);
+    } break;
+
+    case Event::STA_Disconnected: {
+        auto msg_buff =
+            ALLOC_SMART_BUFFER(sizeof(sACTION_MONITOR_CLIENT_DISCONNECTED_NOTIFICATION));
+        auto msg =
+            reinterpret_cast<sACTION_MONITOR_CLIENT_DISCONNECTED_NOTIFICATION *>(msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        // Initialize the message
+        memset(msg_buff.get(), 0, sizeof(sACTION_MONITOR_CLIENT_DISCONNECTED_NOTIFICATION));
+
+        // Store the MAC address of the disconnected STA
+        const char *sta_obj_path = GET_CHAR(data, "object");
+        if (!sta_obj_path) {
+            return false;
+        }
+        amxc_var_t *sta_obj = m_ambiorix_cl->get_object(std::string(sta_obj_path), 0);
+        if (!sta_obj) {
+            LOG(ERROR) << "failed to get AssociatedDevice object " << sta_obj_path;
+            return true;
+        }
+
+        std::string sta_mac = GET_CHAR(sta_obj, "MACAddress");
+        amxc_var_delete(&sta_obj);
+        if (sta_mac.empty()) {
+            LOG(ERROR) << "failed to get MACAddress";
+            return true;
+        }
+        msg->mac = tlvf::mac_from_string(sta_mac);
+
+        // Add the message to the queue
+        event_queue_push(Event::STA_Disconnected, msg_buff);
+    } break;
+
+    default:
+        LOG(DEBUG) << "Unhandled event received";
+        break;
+    }
+
     return true;
 }
 

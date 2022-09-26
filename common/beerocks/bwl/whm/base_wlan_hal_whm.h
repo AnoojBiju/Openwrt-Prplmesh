@@ -66,7 +66,7 @@ public:
 protected:
     base_wlan_hal_whm(HALType type, const std::string &iface_name, hal_event_cb_t callback,
                       const hal_conf_t &hal_conf = {});
-
+    virtual bool process_whm_event(std::string &opcode, const amxc_var_t *data) = 0;
     virtual bool set(const std::string &param, const std::string &value,
                      int vap_id = beerocks::IFACE_RADIO_ID) override;
     amxc_var_t *whm_get_wifi_ap_object(const std::string &iface);
@@ -81,6 +81,10 @@ protected:
 
     // Private data-members:
 private:
+    void subscribe_to_radio_events(const std::string &iface_name);
+    void subscribe_to_ap_events(const std::string &iface_name);
+    void subscribe_to_sta_events(const std::string &iface_name);
+    void subscribe_to_endpoint_events(const std::string &iface_name);
     bool fsm_setup();
 };
 

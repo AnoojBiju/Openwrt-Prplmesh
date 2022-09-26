@@ -63,6 +63,7 @@ public:
     std::string get_bssid() override;
 
 protected:
+    virtual bool process_whm_event(std::string &opcode, const amxc_var_t *data) override;
     // Overload for Monitor events
     bool event_queue_push(sta_wlan_hal::Event event, std::shared_ptr<void> data = {})
     {
@@ -70,14 +71,13 @@ protected:
     }
 
 private:
-    bool process_whm_event(sta_wlan_hal::Event event, const amxc_var_t *data);
-
     struct Endpoint {
+        int id;
         std::string bssid;
         std::string ssid;
         std::string connection_status;
         int channel;
-        int active_profile_id;
+        std::string radio_ref;
     };
 
     int add_profile();
@@ -95,6 +95,7 @@ private:
     std::string m_active_ssid;
     std::string m_active_bssid;
     std::string m_active_pass;
+    std::string m_active_radio_ref;
     WiFiSec m_active_secutiry = WiFiSec::Invalid;
     uint8_t m_active_channel  = 0;
     int m_active_profile_id   = -1;

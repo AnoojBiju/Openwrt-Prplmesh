@@ -45,6 +45,11 @@ base_wlan_hal_whm::base_wlan_hal_whm(HALType type, const std::string &iface_name
 
     m_fds_ext_events = {amx_fd, amxp_fd};
 
+    subscribe_to_radio_events(iface_name);
+    subscribe_to_ap_events(iface_name);
+    subscribe_to_sta_events(iface_name);
+    subscribe_to_endpoint_events(iface_name);
+
     // Initialize the FSM
     fsm_setup();
 }
@@ -283,8 +288,114 @@ bool base_wlan_hal_whm::process_ext_events(int fd)
     return true;
 }
 
+void base_wlan_hal_whm::subscribe_to_radio_events(const std::string &iface_name)
+{
+    // subscribe to the WiFi.Radio.iface_name.Status
+    std::string wifi_radio_path;
+    if (!whm_get_radio_path(iface_name, wifi_radio_path)) {
+        return;
+    }
+    sAmxClEventCallback *event_callback = new sAmxClEventCallback();
+    event_callback->event_type          = AMX_CL_OBJECT_CHANGED_EVT;
+    event_callback->callback_fn         = [](amxc_var_t *event_data, void *context) -> void {
+        if (!event_data) {
+            return;
+        }
+        const char *status = GETP_CHAR(event_data, "parameters.Status.to");
+        if (status) {
+            std::string opcode = "INTERFACE-DISABLED";
+            if (std::string(status) == "Up") {
+                opcode = "INTERFACE-ENABLED";
+            }
+            (static_cast<base_wlan_hal_whm *>(context))->process_whm_event(opcode, event_data);
+        }
+    };
+    event_callback->context = this;
+    m_ambiorix_cl->subscribe_to_object_event(wifi_radio_path, "contains('parameters.Status')",
+                                             event_callback);
+}
+
+void base_wlan_hal_whm::subscribe_to_ap_events(const std::string &iface_name)
+{
+    // Path example: WiFi.Accesspoint.[Alias == 'wlan0'].
+    std::string wifi_ap_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
+                               std::string(AMX_CL_AP_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
+                               "[Alias == '" + iface_name + "']" + AMX_CL_OBJ_DELIMITER;
+    sAmxClEventCallback *event_callback = new sAmxClEventCallback();
+    event_callback->event_type          = AMX_CL_OBJECT_CHANGED_EVT;
+    event_callback->callback_fn         = [](amxc_var_t *event_data, void *context) -> void {
+        if (!event_data) {
+            return;
+        }
+        const char *status = GETP_CHAR(event_data, "parameters.Status.to");
+        if (status) {
+            std::string opcode = "AP-ENABLED";
+            if (std::string(status) != "Up") {
+                opcode = "AP-DISABLED";
+            }
+            (static_cast<base_wlan_hal_whm *>(context))->process_whm_event(opcode, event_data);
+        }
+    };
+    event_callback->context = this;
+    m_ambiorix_cl->subscribe_to_object_event(wifi_ap_path, "contains('parameters.Status')",
+                                             event_callback);
+}
+
+void base_wlan_hal_whm::subscribe_to_sta_events(const std::string &iface_name)
+{
+    // Path example: WiFi.Accesspoint.[Alias == 'wlan0'].AssociatedDevice.
+    std::string wifi_ap_sta_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
+                                   std::string(AMX_CL_AP_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
+                                   whm_get_vap_instance_name(iface_name) + AMX_CL_OBJ_DELIMITER +
+                                   "AssociatedDevice.";
+    sAmxClEventCallback *event_callback = new sAmxClEventCallback();
+    event_callback->event_type          = AMX_CL_OBJECT_CHANGED_EVT;
+    event_callback->callback_fn         = [](amxc_var_t *event_data, void *context) -> void {
+        if (!event_data) {
+            return;
+        }
+        bool active        = GETP_BOOL(event_data, "parameters.Active.to");
+        std::string opcode = "AP-STA-DISCONNECTED";
+        if (active) {
+            opcode = "AP-STA-CONNECTED";
+        }
+        (static_cast<base_wlan_hal_whm *>(context))->process_whm_event(opcode, event_data);
+    };
+    event_callback->context = this;
+    m_ambiorix_cl->subscribe_to_object_event(wifi_ap_sta_path, "contains('parameters.Active')",
+                                             event_callback);
+}
+
+void base_wlan_hal_whm::subscribe_to_endpoint_events(const std::string &iface_name)
+{
+    // Path example: WiFi.EndPoint.[IntfName == 'wlan0'].
+    std::string endpoint_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
+                                std::string(AMX_CL_ENDPOINT_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
+                                "[IntfName == '" + get_iface_name() + "']" + AMX_CL_OBJ_DELIMITER;
+    sAmxClEventCallback *event_callback = new sAmxClEventCallback();
+    event_callback->event_type          = AMX_CL_OBJECT_CHANGED_EVT;
+    event_callback->callback_fn         = [](amxc_var_t *event_data, void *context) -> void {
+        if (!event_data) {
+            return;
+        }
+
+        const char *status = GETP_CHAR(event_data, "parameters.ConnectionStatus.to");
+        if (status) {
+            std::string opcode = "CTRL-EVENT-CONNECTED";
+            if (std::string(status) != "Connected") {
+                opcode = "CTRL-EVENT-DISCONNECTED";
+            }
+            (static_cast<base_wlan_hal_whm *>(context))->process_whm_event(opcode, event_data);
+        }
+    };
+    event_callback->context = this;
+    m_ambiorix_cl->subscribe_to_object_event(
+        endpoint_path, "contains('parameters.ConnectionStatus')", event_callback);
+}
+
 amxc_var_t *base_wlan_hal_whm::whm_get_wifi_ap_object(const std::string &iface)
 {
+    // Path example: WiFi.Accesspoint.[Alias == 'iface'].
     std::string ap_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
                           std::string(AMX_CL_AP_OBJ_NAME) + AMX_CL_OBJ_DELIMITER + "[Alias == '" +
                           iface + "']" + AMX_CL_OBJ_DELIMITER;
@@ -293,7 +404,7 @@ amxc_var_t *base_wlan_hal_whm::whm_get_wifi_ap_object(const std::string &iface)
 
 amxc_var_t *base_wlan_hal_whm::whm_get_wifi_ssid_object(const std::string &iface)
 {
-    // pwhm dm path: WiFi.SSID.[ Alias == 'iface' ].?
+    // Path example: WiFi.SSID.[Alias == 'iface'].
     std::string ap_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
                           std::string(AMX_CL_SSID_OBJ_NAME) + AMX_CL_OBJ_DELIMITER + "[Alias == '" +
                           iface + "']" + AMX_CL_OBJ_DELIMITER;

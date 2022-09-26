@@ -105,6 +105,7 @@ public:
 
     // Protected methods:
 protected:
+    virtual bool process_whm_event(std::string &opcode, const amxc_var_t *data) override;
     // Overload for AP events
     bool event_queue_push(ap_wlan_hal::Event event, std::shared_ptr<void> data = {})
     {
@@ -114,11 +115,7 @@ protected:
     virtual bool set(const std::string &param, const std::string &value, int vap_id) override;
 
 private:
-    void subscribe_to_radio_events(const std::string &iface_name);
-    void subscribe_to_ap_events(const std::string &iface_name);
-    void subscribe_to_sta_events(const std::string &iface_name);
     amxc_var_t *get_last_assoc_frame(const std::string &sta_mac);
-    bool process_whm_event(ap_wlan_hal::Event event, const amxc_var_t *data);
 };
 
 } // namespace whm

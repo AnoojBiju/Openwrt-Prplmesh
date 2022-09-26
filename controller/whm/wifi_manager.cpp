@@ -125,7 +125,7 @@ void WifiManager::subscribe_to_bss_info_config_change()
         }
     };
     event_callback->context = this;
-    m_ambiorix_cl->subscribe_to_object_event(wifi_path, event_callback);
+    m_ambiorix_cl->subscribe_to_object_event(wifi_path, nullptr, event_callback);
 }
 
 WifiManager::~WifiManager()

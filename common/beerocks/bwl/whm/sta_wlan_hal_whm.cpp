@@ -13,8 +13,35 @@
 
 #include <easylogging++.h>
 
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////// WHM////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+
 namespace bwl {
 namespace whm {
+
+//////////////////////////////////////////////////////////////////////////////
+////////////////////////// Local Module Definitions //////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////////////
+/////////////////////////// Local Module Functions ///////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+
+static sta_wlan_hal::Event whm_to_bwl_event(const std::string &opcode)
+{
+    if (opcode == "CTRL-EVENT-CONNECTED") {
+        return sta_wlan_hal::Event::Connected;
+    } else if (opcode == "CTRL-EVENT-DISCONNECTED") {
+        return sta_wlan_hal::Event::Disconnected;
+    }
+
+    return sta_wlan_hal::Event::Invalid;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+/////////////////////////////// Implementation ///////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
 
 sta_wlan_hal_whm::sta_wlan_hal_whm(const std::string &iface_name, hal_event_cb_t callback,
                                    const bwl::hal_conf_t &hal_conf)
@@ -27,7 +54,23 @@ sta_wlan_hal_whm::~sta_wlan_hal_whm() { sta_wlan_hal_whm::detach(); }
 
 bool sta_wlan_hal_whm::start_wps_pbc()
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    amxc_var_t args;
+    amxc_var_t result;
+    amxc_var_init(&args);
+    amxc_var_init(&result);
+    // Path example: WiFi.EndPoint.[IntfName == 'wlan0'].WPS.pushButton()
+    std::string endpoint_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
+                                std::string(AMX_CL_ENDPOINT_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
+                                "[IntfName == '" + get_iface_name() + "']" + AMX_CL_OBJ_DELIMITER;
+    std::string wps_path = endpoint_path + "WPS.";
+    bool ret             = m_ambiorix_cl->call(wps_path, "pushButton", &args, &result);
+    amxc_var_clean(&args);
+    amxc_var_clean(&result);
+
+    if (!ret) {
+        LOG(ERROR) << "start_wps_pbc() failed!";
+        return false;
+    }
     return true;
 }
 
@@ -124,9 +167,9 @@ bool sta_wlan_hal_whm::disconnect()
     }
 
     // Connection status id must be the same as the active profile id
-    if (m_active_profile_id != endpoint.active_profile_id) {
+    if (m_active_profile_id != endpoint.id) {
         LOG(ERROR) << "Profile id mismatch: m_active_profile_id(" << m_active_profile_id << ") != "
-                   << "endpoint.active_profile_id(" << endpoint.active_profile_id << ")";
+                   << "endpoint.id(" << endpoint.id << ")";
         return false;
     }
 
@@ -139,13 +182,56 @@ bool sta_wlan_hal_whm::disconnect()
     m_active_ssid       = "";
     m_active_bssid      = "";
     m_active_pass       = "";
+    m_active_radio_ref  = "";
     m_active_channel    = 0;
     m_active_profile_id = -1;
 
     return true;
 }
 
-bool sta_wlan_hal_whm::roam(const sMacAddr &bssid, uint8_t channel) { return true; }
+bool sta_wlan_hal_whm::roam(const sMacAddr &bssid, uint8_t channel)
+{
+    if (m_active_profile_id == -1) {
+        LOG(ERROR) << "Incorrect active profile " << m_active_profile_id;
+        return false;
+    }
+
+    if (!is_connected()) {
+        LOG(ERROR) << get_iface_name() << " Not connected, can't roam";
+        return false;
+    }
+
+    amxc_var_t args;
+    amxc_var_t result;
+    amxc_var_init(&args);
+    amxc_var_init(&result);
+    amxc_var_set_type(&args, AMXC_VAR_ID_HTABLE);
+    auto bssid_str = tlvf::mac_to_string(bssid);
+    amxc_var_add_new_key_cstring_t(&args, "bssid", bssid_str.c_str());
+    // Path example: WiFi.EndPoint.[IntfName == 'wlan0'].roamTo()
+    std::string endpoint_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
+                                std::string(AMX_CL_ENDPOINT_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
+                                "[IntfName == '" + get_iface_name() + "']" + AMX_CL_OBJ_DELIMITER;
+    bool ret = m_ambiorix_cl->call(endpoint_path, "roamTo", &args, &result);
+    amxc_var_clean(&args);
+    amxc_var_clean(&result);
+
+    if (!ret) {
+        LOG(ERROR) << "roamTo() failed!";
+        return false;
+    }
+
+    // Update the active channel and bssid
+    Endpoint endpoint;
+    if (!read_status(endpoint)) {
+        LOG(ERROR) << "Failed reading connection status for iface: " << get_iface_name();
+        return false;
+    }
+
+    update_status(endpoint);
+
+    return true;
+}
 
 bool sta_wlan_hal_whm::get_4addr_mode() { return true; }
 
@@ -175,12 +261,6 @@ std::string sta_wlan_hal_whm::get_ssid() { return m_active_ssid; }
 
 std::string sta_wlan_hal_whm::get_bssid() { return m_active_bssid; }
 
-bool sta_wlan_hal_whm::process_whm_event(sta_wlan_hal::Event event, const amxc_var_t *data)
-{
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
-    return true;
-}
-
 bool sta_wlan_hal_whm::update_status()
 {
     Endpoint endpoint;
@@ -198,8 +278,7 @@ int sta_wlan_hal_whm::add_profile()
     // Path example: WiFi.EndPoint.[IntfName == 'wlan0'].Profile+
     std::string profiles_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
                                 std::string(AMX_CL_ENDPOINT_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
-                                "[IntfName == '" + get_iface_name() + "']" + AMX_CL_OBJ_DELIMITER +
-                                "Profile." + AMX_CL_OBJ_DELIMITER;
+                                "[IntfName == '" + get_iface_name() + "']" + AMX_CL_OBJ_DELIMITER;
     int profile_id = -1;
     bool ret       = m_ambiorix_cl->add_instance(profiles_path, nullptr, profile_id);
     if (!ret) {
@@ -213,8 +292,7 @@ int sta_wlan_hal_whm::remove_profile(int profile_id)
     // Path example: WiFi.EndPoint.[IntfName == 'wlan0'].Profile+
     std::string profiles_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
                                 std::string(AMX_CL_ENDPOINT_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
-                                "[IntfName == '" + get_iface_name() + "']" + AMX_CL_OBJ_DELIMITER +
-                                "Profile." + AMX_CL_OBJ_DELIMITER;
+                                "[IntfName == '" + get_iface_name() + "']" + AMX_CL_OBJ_DELIMITER;
 
     bool ret = m_ambiorix_cl->remove_instance(profiles_path, profile_id);
     if (!ret) {
@@ -337,11 +415,18 @@ bool sta_wlan_hal_whm::read_status(Endpoint &endpoint)
     }
     endpoint.bssid             = GET_CHAR(endpoint_obj, "BSSID");
     endpoint.ssid              = GET_CHAR(endpoint_obj, "SSID");
-    endpoint.active_profile_id = GET_UINT32(endpoint_obj, "ProfileReference");
+    endpoint.id                = GET_UINT32(endpoint_obj, "ProfileReference");
     endpoint.connection_status = GET_CHAR(endpoint_obj, "ConnectionStatus");
-    endpoint.channel           = GET_UINT32(endpoint_obj, "Channel");
-
+    endpoint.radio_ref         = GET_CHAR(endpoint_obj, "RadioReference");
     amxc_var_delete(&endpoint_obj);
+
+    std::string radio_path = endpoint.radio_ref + AMX_CL_OBJ_DELIMITER;
+    amxc_var_t *radio_obj  = m_ambiorix_cl->get_object(radio_path, 0);
+    if (!radio_obj) {
+        LOG(ERROR) << "failed to get radio object, RadioReference:" << radio_path;
+    }
+    endpoint.channel = GET_UINT32(radio_obj, "Channel");
+    amxc_var_delete(&radio_obj);
 
     LOG(DEBUG) << "active profile " << m_active_profile_id;
 
@@ -350,10 +435,11 @@ bool sta_wlan_hal_whm::read_status(Endpoint &endpoint)
 
 void sta_wlan_hal_whm::update_status(const Endpoint &endpoint)
 {
+    m_active_profile_id = endpoint.id;
     m_active_bssid      = endpoint.bssid;
-    m_active_ssid       = endpoint.ssid;
-    m_active_profile_id = endpoint.active_profile_id;
     m_active_channel    = endpoint.channel;
+    m_active_ssid       = endpoint.ssid;
+    m_active_radio_ref  = endpoint.radio_ref;
 
     LOG(DEBUG) << "m_active_profile_id= " << m_active_profile_id
                << ", active_bssid= " << m_active_bssid << ", active_channel= " << m_active_channel
@@ -363,6 +449,69 @@ void sta_wlan_hal_whm::update_status(const Endpoint &endpoint)
 bool sta_wlan_hal_whm::is_connected(const std::string &status)
 {
     return (status.compare("Connected") == 0);
+}
+
+bool sta_wlan_hal_whm::process_whm_event(std::string &opcode, const amxc_var_t *data)
+{
+    auto event = whm_to_bwl_event(opcode);
+
+    switch (event) {
+    case Event::Connected: {
+
+        Endpoint endpoint;
+        if (!read_status(endpoint)) {
+            LOG(ERROR) << "Failed reading connection status for iface: " << get_iface_name();
+            return false;
+        }
+
+        LOG(DEBUG) << get_iface_name() << " - Connected: bssid = " << endpoint.bssid
+                   << ", channel = " << endpoint.channel;
+
+        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_BACKHAUL_CONNECTED_NOTIFICATION));
+        auto msg      = reinterpret_cast<sACTION_BACKHAUL_CONNECTED_NOTIFICATION *>(msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        // Initialize the message
+        memset(msg_buff.get(), 0, sizeof(sACTION_BACKHAUL_CONNECTED_NOTIFICATION));
+
+        update_status(endpoint);
+
+        // Forward the event
+        event_queue_push(event, msg_buff);
+
+    } break;
+
+    case Event::Disconnected: {
+
+        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_BACKHAUL_DISCONNECT_REASON_NOTIFICATION));
+        auto msg =
+            reinterpret_cast<sACTION_BACKHAUL_DISCONNECT_REASON_NOTIFICATION *>(msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        // Initialize the message
+        memset(msg_buff.get(), 0, sizeof(sACTION_BACKHAUL_DISCONNECT_REASON_NOTIFICATION));
+
+        Endpoint endpoint;
+        if (!read_status(endpoint)) {
+            LOG(ERROR) << "Failed reading connection status for iface: " << get_iface_name();
+            return false;
+        }
+
+        // Fill in the message
+        msg->bssid = tlvf::mac_from_string(endpoint.bssid);
+        // TODO: fill the disconnection reason in the message (PPM-2310)
+
+        // Forward the event
+        event_queue_push(event, msg_buff);
+
+    } break;
+
+    default:
+        LOG(DEBUG) << "Unhandled event received: " << opcode;
+        break;
+    }
+
+    return true;
 }
 
 } // namespace whm

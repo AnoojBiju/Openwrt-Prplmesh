@@ -233,7 +233,7 @@ bool AmbiorixClient::remove_signal_loop(std::shared_ptr<EventLoop> event_loop)
     return true;
 }
 
-bool AmbiorixClient::subscribe_to_object_event(const std::string &object_path,
+bool AmbiorixClient::subscribe_to_object_event(const std::string &object_path, const char *filter,
                                                sAmxClEventCallback *event_callback)
 {
     auto sub_cb = [](const char *const sig_name, const amxc_var_t *const data,
@@ -249,7 +249,7 @@ bool AmbiorixClient::subscribe_to_object_event(const std::string &object_path,
         }
     };
     int retval =
-        amxb_subscribe(m_bus_ctx, object_path.c_str(), nullptr, sub_cb, (void *)event_callback);
+        amxb_subscribe(m_bus_ctx, object_path.c_str(), filter, sub_cb, (void *)event_callback);
     if (retval != AMXB_STATUS_OK) {
         LOG(ERROR) << "Subscribing to object events failed, path:" << object_path
                    << ", errno:" << retval;

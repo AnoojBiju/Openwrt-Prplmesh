@@ -29,6 +29,25 @@ namespace whm {
 /////////////////////////// Local Module Functions ///////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
+static ap_wlan_hal::Event whm_to_bwl_event(const std::string &opcode)
+{
+    if (opcode == "AP-ENABLED") {
+        return ap_wlan_hal::Event::AP_Enabled;
+    } else if (opcode == "AP-DISABLED") {
+        return ap_wlan_hal::Event::AP_Disabled;
+    } else if (opcode == "AP-STA-CONNECTED") {
+        return ap_wlan_hal::Event::STA_Connected;
+    } else if (opcode == "AP-STA-DISCONNECTED") {
+        return ap_wlan_hal::Event::STA_Disconnected;
+    } else if (opcode == "INTERFACE-ENABLED") {
+        return ap_wlan_hal::Event::Interface_Enabled;
+    } else if (opcode == "INTERFACE-DISABLED") {
+        return ap_wlan_hal::Event::Interface_Disabled;
+    }
+
+    return ap_wlan_hal::Event::Invalid;
+}
+
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////////// Implementation ///////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -40,9 +59,6 @@ ap_wlan_hal_whm::ap_wlan_hal_whm(const std::string &iface_name, hal_event_cb_t c
     : base_wlan_hal(bwl::HALType::AccessPoint, iface_name, IfaceType::Intel, callback, hal_conf),
       base_wlan_hal_whm(bwl::HALType::AccessPoint, iface_name, callback, hal_conf)
 {
-    subscribe_to_radio_events(iface_name);
-    subscribe_to_ap_events(iface_name);
-    subscribe_to_sta_events(iface_name);
 }
 
 ap_wlan_hal_whm::~ap_wlan_hal_whm() {}
@@ -57,132 +73,6 @@ HALState ap_wlan_hal_whm::attach(bool block)
     }
 
     return state;
-}
-
-void ap_wlan_hal_whm::subscribe_to_radio_events(const std::string &iface_name)
-{
-    // subscribe to the WiFi.Radio.iface_name.Status
-    std::string wifi_radio_path;
-    if (!whm_get_radio_path(iface_name, wifi_radio_path)) {
-        return;
-    }
-    sAmxClEventCallback *event_callback = new sAmxClEventCallback();
-    event_callback->event_type          = AMX_CL_OBJECT_CHANGED_EVT;
-    event_callback->callback_fn         = [](amxc_var_t *event_data, void *context) -> void {
-        if (!event_data) {
-            return;
-        }
-        amxc_var_t *params = GET_ARG(event_data, "parameters");
-        amxc_var_for_each(param, params)
-        {
-            const char *key = amxc_var_key(param);
-            if (!key) {
-                continue;
-            }
-            if (std::string(key) != "Status") {
-                continue;
-            }
-            amxc_var_t *status = GET_ARG(params, key);
-            if (!status) {
-                continue;
-            }
-            const char *status_val = GET_CHAR(status, "to");
-            if (!status_val) {
-                continue;
-            }
-            ap_wlan_hal::Event event = ap_wlan_hal::Event::Invalid;
-            if (std::string(status_val) == "Up") {
-                event = ap_wlan_hal::Event::Interface_Enabled;
-            } else {
-                event = ap_wlan_hal::Event::Interface_Disabled;
-            }
-            (static_cast<ap_wlan_hal_whm *>(context))->process_whm_event(event, event_data);
-        }
-    };
-    event_callback->context = this;
-    m_ambiorix_cl->subscribe_to_object_event(wifi_radio_path, event_callback);
-}
-
-void ap_wlan_hal_whm::subscribe_to_ap_events(const std::string &iface_name)
-{
-    std::string wifi_ap_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
-                               std::string(AMX_CL_AP_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
-                               "[Alias == '" + iface_name + "']" + AMX_CL_OBJ_DELIMITER;
-    sAmxClEventCallback *event_callback = new sAmxClEventCallback();
-    event_callback->event_type          = AMX_CL_OBJECT_CHANGED_EVT;
-    event_callback->callback_fn         = [](amxc_var_t *event_data, void *context) -> void {
-        if (!event_data) {
-            return;
-        }
-        amxc_var_t *params = GET_ARG(event_data, "parameters");
-        amxc_var_for_each(param, params)
-        {
-            const char *key = amxc_var_key(param);
-            if (!key) {
-                continue;
-            }
-            if (std::string(key) != "Status") {
-                continue;
-            }
-            amxc_var_t *status = GET_ARG(params, key);
-            if (!status) {
-                continue;
-            }
-            const char *status_val = GET_CHAR(status, "to");
-            if (!status_val) {
-                continue;
-            }
-            ap_wlan_hal::Event event = ap_wlan_hal::Event::Invalid;
-            if (std::string(status_val) == "Enabled") {
-                event = ap_wlan_hal::Event::AP_Enabled;
-            } else {
-                event = ap_wlan_hal::Event::AP_Disabled;
-            }
-            (static_cast<ap_wlan_hal_whm *>(context))->process_whm_event(event, event_data);
-        }
-    };
-    event_callback->context = this;
-    m_ambiorix_cl->subscribe_to_object_event(wifi_ap_path, event_callback);
-}
-
-void ap_wlan_hal_whm::subscribe_to_sta_events(const std::string &iface_name)
-{
-    std::string wifi_ap_sta_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
-                                   std::string(AMX_CL_AP_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
-                                   whm_get_vap_instance_name(iface_name) + AMX_CL_OBJ_DELIMITER +
-                                   "AssociatedDevice.";
-    sAmxClEventCallback *event_callback = new sAmxClEventCallback();
-    event_callback->event_type          = AMX_CL_OBJECT_CHANGED_EVT;
-    event_callback->callback_fn         = [](amxc_var_t *event_data, void *context) -> void {
-        if (!event_data) {
-            return;
-        }
-        amxc_var_t *params = GET_ARG(event_data, "parameters");
-        amxc_var_for_each(param, params)
-        {
-            const char *key = amxc_var_key(param);
-            if (!key) {
-                continue;
-            }
-            if (std::string(key) != "Active") {
-                continue;
-            }
-            amxc_var_t *active = GET_ARG(params, key);
-            if (!active) {
-                continue;
-            }
-            const bool active_val    = GET_BOOL(active, "to");
-            ap_wlan_hal::Event event = ap_wlan_hal::Event::Invalid;
-            if (active_val) {
-                event = ap_wlan_hal::Event::STA_Connected;
-            } else {
-                event = ap_wlan_hal::Event::STA_Disconnected;
-            }
-            (static_cast<ap_wlan_hal_whm *>(context))->process_whm_event(event, event_data);
-        }
-    };
-    event_callback->context = this;
-    m_ambiorix_cl->subscribe_to_object_event(wifi_ap_sta_path, event_callback);
 }
 
 bool ap_wlan_hal_whm::refresh_radio_info()
@@ -281,7 +171,7 @@ bool ap_wlan_hal_whm::sta_allow(const std::string &mac, const std::string &bssid
     std::string ifname          = m_radio_info.available_vaps[vap_id].bss;
     std::string mac_filter_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
                                   std::string(AMX_CL_AP_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
-                                  "[Alias = " + ifname + "]" + AMX_CL_OBJ_DELIMITER +
+                                  "[Alias == " + ifname + "]" + AMX_CL_OBJ_DELIMITER +
                                   "MACFiltering.";
     amxc_var_t *mac_filter_obj = m_ambiorix_cl->get_object(mac_filter_path, 0);
     if (!mac_filter_obj) {
@@ -355,7 +245,7 @@ bool ap_wlan_hal_whm::sta_deny(const std::string &mac, const std::string &bssid)
     std::string ifname          = m_radio_info.available_vaps[vap_id].bss;
     std::string mac_filter_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
                                   std::string(AMX_CL_AP_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
-                                  "[Alias = " + ifname + "]" + AMX_CL_OBJ_DELIMITER +
+                                  "[Alias == " + ifname + "]" + AMX_CL_OBJ_DELIMITER +
                                   "MACFiltering.";
 
     amxc_var_t *mac_filter_obj = m_ambiorix_cl->get_object(mac_filter_path, 0);
@@ -451,7 +341,7 @@ bool ap_wlan_hal_whm::sta_deauth(int8_t vap_id, const std::string &mac, uint32_t
     amxc_var_add_new_key_uint32_t(&args, "reason", reason);
     std::string wifi_ap_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
                                std::string(AMX_CL_AP_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
-                               "[Alias = " + ifname + "]" + AMX_CL_OBJ_DELIMITER;
+                               "[Alias == " + ifname + "]" + AMX_CL_OBJ_DELIMITER;
     bool ret = m_ambiorix_cl->call(wifi_ap_path, "kickStationReason", &args, &result);
     amxc_var_clean(&args);
     amxc_var_clean(&result);
@@ -487,7 +377,7 @@ bool ap_wlan_hal_whm::sta_bss_steer(int8_t vap_id, const std::string &mac, const
     amxc_var_add_new_key_uint8_t(&args, "transitionReason", reason);
     std::string wifi_ap_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
                                std::string(AMX_CL_AP_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
-                               "[Alias = " + ifname + "]" + AMX_CL_OBJ_DELIMITER;
+                               "[Alias == " + ifname + "]" + AMX_CL_OBJ_DELIMITER;
     bool ret = m_ambiorix_cl->call(wifi_ap_path, "sendBssTransferRequest", &args, &result);
     amxc_var_clean(&args);
     amxc_var_clean(&result);
@@ -807,8 +697,9 @@ amxc_var_t *ap_wlan_hal_whm::get_last_assoc_frame(const std::string &sta_mac)
     return frame;
 }
 
-bool ap_wlan_hal_whm::process_whm_event(ap_wlan_hal::Event event, const amxc_var_t *data)
+bool ap_wlan_hal_whm::process_whm_event(std::string &opcode, const amxc_var_t *data)
 {
+    auto event = whm_to_bwl_event(opcode);
     switch (event) {
 
     case Event::AP_Enabled: {
