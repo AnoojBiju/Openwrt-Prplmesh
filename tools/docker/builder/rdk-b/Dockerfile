@@ -5,7 +5,7 @@
 # See LICENSE file for more details.
 ###############################################################
 
-FROM ubuntu:bionic-20210930
+FROM ubuntu:bionic-20210930 as rdk-b-builder
 
 ####
 ## Yocto pre-requisites and "rdk" user
@@ -77,6 +77,8 @@ RUN git config --global user.email "prplmesh@prplfoundation.org" \
     && git config --global user.name "prplMesh RDK-B Build Bot" \
     && mkdir /home/rdk/rdk-b /home/rdk/cache
 WORKDIR /home/rdk/rdk-b
+
+FROM rdk-b-builder as rdk-b-prplmesh-builder
 
 RUN printf '\033[1;35m%s Cloning RDK-B\n\033[0m' "$(date --iso-8601=seconds --universal)" \
     && yes | repo init -u https://code.rdkcentral.com/r/rdkcmf/manifests \
