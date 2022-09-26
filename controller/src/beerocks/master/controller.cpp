@@ -3891,7 +3891,7 @@ bool Controller::trigger_vbss_creation(const sMacAddr &dest_ruid, const sMacAddr
     client_vbss.vbssid                 = vbssid;
 
     return vbss::vbss_actions::create_vbss(client_vbss, dest_ruid, new_bss_ssid, new_bss_pass,
-                                           database);
+                                           nullptr, database);
 #endif
     LOG(ERROR) << "Failed to trigger VBSS creation! VBSS is not enabled!";
     return false;
