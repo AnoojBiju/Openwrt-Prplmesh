@@ -1896,7 +1896,11 @@ bool ApAutoConfigurationTask::send_platform_version_notification(
     string_utils::copy_string(notification->versions().slave_version, BEEROCKS_VERSION,
                               sizeof(beerocks_message::sVersions::slave_version));
 
-    auto platform_manager_cmdu_client = m_btl_ctx.get_platform_manager_cmdu_client(radio_iface);
+    auto platform_manager_cmdu_client = m_btl_ctx.get_platform_manager_cmdu_client();
+    if (!platform_manager_cmdu_client) {
+        LOG(ERROR) << "Failed to get platform manager cmdu client";
+        return false;
+    }
     platform_manager_cmdu_client->send_cmdu(m_cmdu_tx);
 
     LOG(DEBUG) << "send ACTION_PLATFORM_MASTER_SLAVE_VERSIONS_NOTIFICATION " << radio_iface;

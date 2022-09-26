@@ -136,6 +136,12 @@ public:
         bool certification_mode;
         uint8_t stop_on_failure_attempts;
 
+        bool check_connectivity_to_controller_enable;
+        bool check_indirect_connectivity_to_controller_enable;
+        std::chrono::seconds controller_discovery_timeout_seconds;
+        std::chrono::seconds controller_message_timeout_seconds;
+        std::chrono::seconds controller_heartbeat_state_timeout_seconds;
+
         bool client_band_steering_enabled;
         bool client_optimal_path_roaming_enabled;
         bool client_optimal_path_roaming_prefer_signal_strength_enabled;
@@ -162,6 +168,8 @@ public:
         sMacAddr bridge_mac;
         wfa_map::tlvProfile2MultiApProfile::eMultiApProfile profile_support =
             wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::PRPLMESH_PROFILE_UNKNOWN;
+        bool direct_link_to_controller = false;
+        std::chrono::steady_clock::time_point last_controller_contact_time;
     } controller_info;
 
     struct sStatus {

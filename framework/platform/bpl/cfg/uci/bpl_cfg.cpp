@@ -665,5 +665,78 @@ bool cfg_get_beacon_measurements_timeout(int &beacon_measurements_timeout_msec)
     return true;
 }
 
+bool get_check_connectivity_to_controller_enable(bool &check_connectivity_enable)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int_default("check_connectivity_to_controller_enable", &retVal,
+                                           DEFAULT_CHECK_CONNECTIVITY_TO_CONTROLLER_ENABLE) ==
+        RETURN_ERR) {
+        MAPF_INFO("Failed to read check_connectivity_to_controller_enable parameter");
+        return false;
+    }
+
+    check_connectivity_enable = (retVal == 1);
+    return true;
+}
+
+bool get_check_indirect_connectivity_to_controller_enable(bool &check_indirect_connectivity_enable)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int_default(
+            "check_indirect_connectivity_to_controller_enable", &retVal,
+            DEFAULT_CHECK_INDIRECT_CONNECTIVITY_TO_CONTROLLER_ENABLE) == RETURN_ERR) {
+        MAPF_INFO("Failed to read check_indirect_connectivity_to_controller_enable parameter");
+        return false;
+    }
+
+    check_indirect_connectivity_enable = (retVal == 1);
+    return true;
+}
+
+bool get_controller_discovery_timeout_seconds(std::chrono::seconds &timeout_seconds)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int_default("controller_discovery_timeout_seconds", &retVal,
+                                           DEFAULT_CONTROLLER_DISCOVERY_TIMEOUT_SEC.count()) ==
+        RETURN_ERR) {
+        MAPF_INFO("Failed to read controller_discovery_timeout_seconds parameter - setting "
+                  "default value");
+        return false;
+    }
+
+    timeout_seconds = std::chrono::seconds{retVal};
+    return true;
+}
+
+bool get_controller_message_timeout_seconds(std::chrono::seconds &timeout_seconds)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int_default("controller_message_timeout_seconds", &retVal,
+                                           DEFAULT_CONTROLLER_MESSAGE_TIMEOUT_SEC.count()) ==
+        RETURN_ERR) {
+        MAPF_INFO("Failed to read controller_message_timeout_seconds parameter - setting "
+                  "default value");
+        return false;
+    }
+
+    timeout_seconds = std::chrono::seconds{retVal};
+    return true;
+}
+
+bool get_controller_heartbeat_state_timeout_seconds(std::chrono::seconds &timeout_seconds)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int_default(
+            "controller_heartbeat_state_timeout_seconds", &retVal,
+            DEFAULT_CONTROLLER_HEARTBEAT_STATE_TIMEOUT_SEC.count()) == RETURN_ERR) {
+        MAPF_INFO("Failed to read controller_heartbeat_state_timeout_seconds parameter - setting "
+                  "default value");
+        return false;
+    }
+
+    timeout_seconds = std::chrono::seconds{retVal};
+    return true;
+}
+
 } // namespace bpl
 } // namespace beerocks

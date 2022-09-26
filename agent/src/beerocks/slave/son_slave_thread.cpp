@@ -13,8 +13,10 @@
 #include "gate/1905_beacon_query_to_vs.h"
 #include "gate/vs_beacon_response_to_1905.h"
 #include "tasks/ap_autoconfiguration_task.h"
+#include "tasks/controller_connectivity_task.h"
 #include "tasks/proxy_agent_dpp_task.h"
 #include "tasks/service_prioritization_task.h"
+
 #include <bcl/beerocks_cmdu_client_factory_factory.h>
 #include <bcl/beerocks_cmdu_server_factory.h>
 #include <bcl/beerocks_timer_factory_impl.h>
@@ -186,6 +188,11 @@ bool slave_thread::thread_init()
             ieee1905_1::eMessageType::MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE,
             ieee1905_1::eMessageType::SERVICE_PRIORITIZATION_REQUEST_MESSAGE,
             ieee1905_1::eMessageType::DPP_CCE_INDICATION_MESSAGE,
+            // Controller's messages which are used to update connectivity
+            ieee1905_1::eMessageType::ACK_MESSAGE,
+            ieee1905_1::eMessageType::LINK_METRIC_QUERY_MESSAGE,
+            ieee1905_1::eMessageType::AP_METRICS_QUERY_MESSAGE,
+            ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE,
         })) {
         LOG(FATAL) << "Failed subscribing to the Bus";
     }
@@ -277,6 +284,7 @@ bool slave_thread::thread_init()
     m_task_pool.add_task(std::make_shared<ApAutoConfigurationTask>(*this, cmdu_tx));
     m_task_pool.add_task(std::make_shared<ServicePrioritizationTask>(*this, cmdu_tx));
     m_task_pool.add_task(std::make_shared<ProxyAgentDppTask>(*this, cmdu_tx));
+    m_task_pool.add_task(std::make_shared<ControllerConnectivityTask>(*this, cmdu_tx));
 
     m_agent_state = STATE_INIT;
     LOG(DEBUG) << "Agent Started";
@@ -530,6 +538,33 @@ bool slave_thread::read_platform_configuration()
                      << " using default configuration ";
     }
 
+    // Check controller connectivity settings
+    if (!bpl::get_check_connectivity_to_controller_enable(
+            db->device_conf.check_connectivity_to_controller_enable)) {
+        LOG(WARNING) << "get_check_connectivity_to_controller_enable() failed!"
+                     << " using default configuration ";
+    }
+    if (!bpl::get_check_indirect_connectivity_to_controller_enable(
+            db->device_conf.check_indirect_connectivity_to_controller_enable)) {
+        LOG(WARNING) << "check_indirect_connectivity_to_controller_enable() failed!"
+                     << " using default configuration ";
+    }
+    if (!bpl::get_controller_discovery_timeout_seconds(
+            db->device_conf.controller_discovery_timeout_seconds)) {
+        LOG(WARNING) << "controller_discovery_timeout_seconds() failed!"
+                     << " using default configuration ";
+    }
+    if (!bpl::get_controller_message_timeout_seconds(
+            db->device_conf.controller_message_timeout_seconds)) {
+        LOG(WARNING) << "get_controller_message_timeout_seconds() failed!"
+                     << " using default configuration ";
+    }
+    if (!bpl::get_controller_heartbeat_state_timeout_seconds(
+            db->device_conf.controller_heartbeat_state_timeout_seconds)) {
+        LOG(WARNING) << "get_controller_heartbeat_state_timeout_seconds() failed!"
+                     << " using default configuration ";
+    }
+
     // Set local_gw flag
     db->device_conf.local_gw = (db->device_conf.operating_mode == BPL_OPER_MODE_GATEWAY ||
                                 db->device_conf.operating_mode == BPL_OPER_MODE_GATEWAY_WISP);
@@ -569,6 +604,10 @@ bool slave_thread::read_platform_configuration()
     LOG(DEBUG) << beerocks::utils::get_zwdfs_string(db->device_conf.zwdfs_flag);
     LOG(DEBUG) << "best_channel_rank_threshold: " << db->device_conf.best_channel_rank_threshold;
     LOG(DEBUG) << "max_prioritization_rules: " << db->device_conf.max_prioritization_rules;
+    LOG(DEBUG) << "check_connectivity_to_controller_enable: "
+               << db->device_conf.check_connectivity_to_controller_enable;
+    LOG(DEBUG) << "check_indirect_connectivity_to_controller: "
+               << db->device_conf.check_indirect_connectivity_to_controller_enable;
 
     return true;
 }
@@ -749,6 +788,11 @@ bool slave_thread::handle_cmdu_from_broker(uint32_t iface_index, const sMacAddr 
             LOG(DEBUG) << "handle_cmdu() - dropping msg, dst_mac=" << dst_mac
                        << ", local_bridge_mac=" << db->bridge.mac;
             return true;
+        }
+
+        // Update controller last contact time
+        if (db->controller_info.bridge_mac == src_mac) {
+            db->controller_info.last_controller_contact_time = std::chrono::steady_clock::now();
         }
     }
 
@@ -1525,6 +1569,8 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
         LOG(DEBUG) << "goto STATE_BACKHAUL_MANAGER_CONNECTED";
         m_agent_state = STATE_BACKHAUL_MANAGER_CONNECTED;
 
+        m_task_pool.send_event(eTaskType::CONTROLLER_CONNECTIVITY,
+                               ControllerConnectivityTask::eEvent::BACKHAUL_MANAGER_CONNECTED);
         break;
     }
     case beerocks_message::ACTION_BACKHAUL_DISCONNECTED_NOTIFICATION: {
@@ -1548,6 +1594,10 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
         m_stopped |= bool(notification->stopped());
 
         agent_reset();
+
+        m_task_pool.send_event(
+            eTaskType::CONTROLLER_CONNECTIVITY,
+            ControllerConnectivityTask::eEvent::BACKHAUL_DISCONNECTED_NOTIFICATION);
         break;
     }
     case beerocks_message::ACTION_BACKHAUL_APPLY_VLAN_POLICY_REQUEST: {
@@ -3960,6 +4010,10 @@ bool slave_thread::agent_fsm()
         if (!read_platform_configuration()) {
             LOG(DEBUG) << "Read platform configuration failed";
         }
+
+        m_task_pool.send_event(eTaskType::CONTROLLER_CONNECTIVITY,
+                               ControllerConnectivityTask::eEvent::INIT_TASK);
+
         m_agent_state = STATE_CONNECT_TO_PLATFORM_MANAGER;
         break;
     }
@@ -4299,6 +4353,9 @@ bool slave_thread::agent_fsm()
         if (db->statuses.ap_autoconfiguration_completed) {
             LOG(TRACE) << "goto STATE_OPERATIONAL";
             m_agent_state = STATE_OPERATIONAL;
+
+            m_task_pool.send_event(eTaskType::CONTROLLER_CONNECTIVITY,
+                                   ControllerConnectivityTask::eEvent::CONTROLLER_DISCOVERED);
 
             // Make sure OPERATIONAL state will be done right away.
             return agent_fsm();

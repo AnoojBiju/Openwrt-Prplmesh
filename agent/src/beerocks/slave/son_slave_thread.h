@@ -218,7 +218,7 @@ private:
 public:
     /**
      * @brief Checks if there is a link to the Multi-AP Controller.
-     * 
+     *
      * @return true if there is a link to the Controller, otherwise false.
      */
     bool link_to_controller();
@@ -235,12 +235,12 @@ public:
         return m_radio_managers[fronthaul_iface].monitor_fd;
     }
 
-    inline const CmduClient *get_backhaul_manager_cmdu_client(const std::string &fronthaul_iface)
+    inline const CmduClient *get_backhaul_manager_cmdu_client()
     {
         return m_backhaul_manager_client.get();
     }
 
-    inline const CmduClient *get_platform_manager_cmdu_client(const std::string &fronthaul_iface)
+    inline const CmduClient *get_platform_manager_cmdu_client()
     {
         return m_platform_manager_client.get();
     }
@@ -457,11 +457,11 @@ private:
 
     /**
      * @brief Reset a Fronthaul by disconnecting a socket to one of its threads.
-     * 
+     *
      * @details When disconnecting a socket to one of the Fronthaul threads, the disconnect handler
      * will disconnect the other one too, and call to agent_reset(). The choice which one to
      * disconnect is arbitrary.
-     * 
+     *
      * @param parameter A radio manager struct containing the fronthaul threads socket file
      * descriptors.
      */

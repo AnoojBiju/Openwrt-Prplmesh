@@ -643,5 +643,35 @@ bool cfg_get_beacon_measurements_timeout(int &beacon_measurements_timeout_msec)
     return true;
 }
 
+bool get_check_connectivity_to_controller_enable(bool &check_connectivity_enable)
+{
+    check_connectivity_enable = DEFAULT_CHECK_CONNECTIVITY_TO_CONTROLLER_ENABLE;
+    return true;
+}
+
+bool get_check_indirect_connectivity_to_controller_enable(bool &check_indirect_connectivity_enable)
+{
+    check_indirect_connectivity_enable = DEFAULT_CHECK_INDIRECT_CONNECTIVITY_TO_CONTROLLER_ENABLE;
+    return true;
+}
+
+bool get_controller_discovery_timeout_seconds(std::chrono::seconds &timeout_seconds)
+{
+    timeout_seconds = std::chrono::seconds{DEFAULT_CONTROLLER_DISCOVERY_TIMEOUT_SEC};
+    return true;
+}
+
+bool get_controller_message_timeout_seconds(std::chrono::seconds &timeout_seconds)
+{
+    timeout_seconds = std::chrono::seconds{DEFAULT_CONTROLLER_MESSAGE_TIMEOUT_SEC};
+    return true;
+}
+
+bool get_controller_heartbeat_state_timeout_seconds(std::chrono::seconds &timeout_seconds)
+{
+    timeout_seconds = std::chrono::seconds{DEFAULT_CONTROLLER_HEARTBEAT_STATE_TIMEOUT_SEC};
+    return true;
+}
+
 } // namespace bpl
 } // namespace beerocks
