@@ -126,7 +126,16 @@ bool base_wlan_hal_dwpal::fsm_setup()
         })
 
         // Handle "Detach" event
-        .on(dwpal_fsm_event::Detach, dwpal_fsm_state::Detach)
+        .on(dwpal_fsm_event::Detach, dwpal_fsm_state::Detach,
+            [&](TTransition &transition, const void *args) -> bool {
+                bool detach = false;
+                if (dwpald_disconnect() == DWPALD_SUCCESS) {
+                    detach = true;
+                    LOG(ERROR) << "Disconnecting dwpald";
+                    return detach;
+                }
+                return detach;
+            })
 
         // Handle "Attach" event
         .on(dwpal_fsm_event::Attach,
@@ -349,13 +358,15 @@ bool base_wlan_hal_dwpal::fsm_setup()
         .state(dwpal_fsm_state::Detach)
 
         .entry([&](const void *args) -> bool {
-            bool success = true;
-
-            LOG(DEBUG) << "dwpal_fsm_state::Detach";
-
+            bool success        = false;
             m_fds_ext_events[0] = -1;
             m_fd_nl_events      = -1;
-
+            LOG(DEBUG) << "dwpal_fsm_state::Detach";
+            if (dwpald_disconnect() == DWPALD_SUCCESS) {
+                success = true;
+                LOG(ERROR) << "Disconnecting dwpald";
+                return success;
+            }
             return success;
         })
 
@@ -638,7 +649,7 @@ bool base_wlan_hal_dwpal::dwpal_nl_cmd_scan_dump()
 
     int cmd_res = 0;
     auto ret    = dwpald_ieee80211_scan_dump((char *)m_radio_info.iface_name.c_str(), nl_handler_cb,
-                                          &cmd_res, nullptr);
+                                             &cmd_res, nullptr);
     if (ret != DWPALD_SUCCESS && cmd_res != 0) {
         LOG(ERROR) << "dwpal_driver_nl_scan_dump Failed to request the nl scan dump";
         return false;
@@ -989,8 +1000,8 @@ bool base_wlan_hal_dwpal::dwpal_get_phy_chan_status(sPhyChanStatus &status)
     size_t expected_result_size = sizeof(status);
     int res                     = 0;
     auto ret                    = dwpald_drv_get((char *)get_iface_name().c_str(),
-                              LTQ_NL80211_VENDOR_SUBCMD_GET_PHY_CHAN_STATUS, &res, NULL, 0, &status,
-                              &expected_result_size);
+                                                 LTQ_NL80211_VENDOR_SUBCMD_GET_PHY_CHAN_STATUS, &res, NULL, 0, &status,
+                                                 &expected_result_size);
     if ((ret != DWPALD_SUCCESS) || (res < 0)) {
         LOG(ERROR) << __func__ << " LTQ_NL80211_VENDOR_SUBCMD_GET_PHY_CHAN_STATUS failed!";
         return false;
