@@ -16,7 +16,8 @@ uci set network.lan.ipaddr='192.168.1.1/24'
 uci del network.lan.netmask
 uci commit network
 
-uci changes; uci show network.lan.ipaddr
+uci changes
+logger -t prplmesh -p daemon.info "tmpfs: $(uci -q -c /tmp/root/upper/etc/config get network.lan.ipaddr || echo NA) overlay: $(uci -q get network.lan.ipaddr || echo NA)"
 ip link show br-lan
 ip addr show br-lan
 ubus call "IP.Interface" _get '{ "rel_path": ".[Alias == \"lan\"].IPv4Address.[Alias == \"lan\"]." }'
@@ -37,7 +38,8 @@ time ping 192.168.1.2 -c 3 || {
 }
 logger -t prplmesh -p daemon.info "Setting lan IP to .110 should be done"
 
-uci changes; uci show network.lan.ipaddr
+logger -t prplmesh -p daemon.info "tmpfs: $(uci -q -c /tmp/root/upper/etc/config get network.lan.ipaddr || echo NA) overlay: $(uci -q get network.lan.ipaddr || echo NA)"
+uci changes
 ip link show br-lan
 ip addr show br-lan
 ubus call "IP.Interface" _get '{ "rel_path": ".[Alias == \"lan\"].IPv4Address.[Alias == \"lan\"]." }'
@@ -59,7 +61,8 @@ logger -t prplmesh -p daemon.info "Applying wifi configuration."
 rm -f /etc/config/wireless
 wifi config
 
-uci changes; uci show network.lan.ipaddr
+uci changes
+logger -t prplmesh -p daemon.info "tmpfs: $(uci -q -c /tmp/root/upper/etc/config get network.lan.ipaddr || echo NA) overlay: $(uci -q get network.lan.ipaddr || echo NA)"
 
 uci batch << 'EOF'
 set wireless.default_radio0=wifi-iface
@@ -171,11 +174,13 @@ uci commit
 logger -t prplmesh -p daemon.info "Stoping network"
 /etc/init.d/network stop
 
-uci changes; uci show network.lan.ipaddr
+uci changes
+logger -t prplmesh -p daemon.info "tmpfs: $(uci -q -c /tmp/root/upper/etc/config get network.lan.ipaddr || echo NA) overlay: $(uci -q get network.lan.ipaddr || echo NA)"
 
 sleep 10
 logger -t prplmesh -p daemon.info "Network should be stopped."
-uci changes; uci show network.lan.ipaddr
+uci changes
+logger -t prplmesh -p daemon.info "tmpfs: $(uci -q -c /tmp/root/upper/etc/config get network.lan.ipaddr || echo NA) overlay: $(uci -q get network.lan.ipaddr || echo NA)"
 
 logger -t prplmesh -p daemon.info "Starting network"
 /etc/init.d/network start
@@ -189,4 +194,5 @@ time ubus wait_for Firewall
 iptables -P INPUT ACCEPT
 sed -i 's/:INPUT DROP/:INPUT ACCEPT/' /etc/amx/tr181-firewall/firewall.defaults
 
-uci changes; uci show network.lan.ipaddr
+uci changes
+logger -t prplmesh -p daemon.info "tmpfs: $(uci -q -c /tmp/root/upper/etc/config get network.lan.ipaddr || echo NA) overlay: $(uci -q get network.lan.ipaddr || echo NA)"
