@@ -6,6 +6,19 @@
 
 set -e
 
+data_overlay_not_initialized()
+{
+  grep -q overlayfs:/tmp/root /proc/mounts || test -f /tmp/.switch_jffs2 || pgrep 'mount_root done'
+}
+
+if data_overlay_not_initialized; then
+  logger -t prplmesh -p daemon.info "Waiting for data overlay initialization..."
+  while data_overlay_not_initialized; do
+    sleep 2
+  done
+  logger -t prplmesh -p daemon.info "Data overlay is initialized."
+fi
+
 # Stop and disable the DHCP clients and servers:
 ubus call DHCPv4.Client.1 _set '{"parameters": { "Enable": False }}'
 ubus call DHCPv6.Client.1 _set '{"parameters": { "Enable": False }}'
