@@ -6,7 +6,7 @@ dmcli eRT setvalues Device.X_CISCO_COM_DeviceControl.LanManagementEntry.1.LanNet
 
 # There is a script that hard-codes the brlan0 IP at boot time.
 # Replace the default IP with our IP:
-sed -ri 's/ifconfig brlan0 10.0.0.1/ifconfig brlan0 192.168.250.170/g'
+sed -ri 's/ifconfig brlan0 10.0.0.1/ifconfig brlan0 192.168.250.170/g' /lib/rdk/hostapd-init.sh
 
 # Allow SSH on LAN:
 iptables -D INPUT -i brlan0 -p tcp -m tcp --dport 22 -j DROP
