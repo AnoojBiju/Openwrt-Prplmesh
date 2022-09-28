@@ -16,3 +16,17 @@ sed -i '/iptables -A INPUT -i $lan_ifname -p tcp --dport 22 -j DROP/d' /etc/utop
 
 # Configure the wired backhaul interface:
 sed -ri 's/backhaul_wire_iface=erouter0/backhaul_wire_iface=lan0/' /opt/prplmesh/share/prplmesh_platform_db
+
+# Configure the device as an agent:
+sed -ri 's/management_mode=.*$/management_mode=Multi-AP-Agent/g' /opt/prplmesh/share/prplmesh_platform_db
+sed -ri 's/management_mode=.*$/operating_mode=WDS-Repeater/g' /opt/prplmesh/share/prplmesh_platform_db
+
+# The init script doesn't handle the mode properly.
+# Override it to start the agent only:
+printf >/tmp/prplmesh-override.conf '
+[Service]
+ExecStart=
+ExecStart=/opt/prplmesh/scripts/prplmesh_utils.sh start -m a
+'
+env SYSTEMD_EDITOR="cp /tmp/prplmesh-override.conf" systemctl edit prplmesh
+systemctl daemon-reload

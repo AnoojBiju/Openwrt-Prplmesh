@@ -16,6 +16,9 @@ ubus call DHCPv4.Server _set '{"parameters": { "Enable": False }}'
 ubus wait_for DHCPv6.Server
 ubus call DHCPv6.Server _set '{"parameters": { "Enable": False }}'
 
+# We don't want to save the credentials obtained through WPS (because of PPM-1717 we can't make use of them anyway, we have to re-do WPS after reboot):
+sed -ri '/\|\| wps_catch_credentials \&/d' /etc/rc.button/wps
+
 # Stop and disable CWMPD or it will slowly fill the tmpfs with core
 # files (PPM-2251):
 /etc/init.d/cwmp_plugin stop || true
@@ -65,7 +68,7 @@ set wireless.default_radio0.network='lan'
 set wireless.default_radio0.mode='ap'
 set wireless.default_radio0.key='prplmesh_pass'
 set wireless.default_radio0.encryption='psk2'
-set wireless.default_radio0.ssid='prplmesh'
+set wireless.default_radio0.ssid='default'
 set wireless.default_radio0.wps_pushbutton='1'
 set wireless.default_radio0.ieee80211v='1'
 set wireless.default_radio0.bss_transition='1'
@@ -76,7 +79,7 @@ set wireless.default_radio1.network='lan'
 set wireless.default_radio1.mode='ap'
 set wireless.default_radio1.key='prplmesh_pass'
 set wireless.default_radio1.encryption='psk2'
-set wireless.default_radio1.ssid='prplmesh'
+set wireless.default_radio1.ssid='default'
 set wireless.default_radio1.wps_pushbutton='1'
 set wireless.default_radio1.ieee80211v='1'
 set wireless.default_radio1.bss_transition='1'
@@ -87,7 +90,7 @@ set wireless.default_radio10.network='lan'
 set wireless.default_radio10.mode='ap'
 set wireless.default_radio10.key='prplmesh_pass'
 set wireless.default_radio10.encryption='psk2'
-set wireless.default_radio10.ssid='prplmesh'
+set wireless.default_radio10.ssid='default'
 set wireless.default_radio10.ieee80211v='1'
 set wireless.default_radio10.bss_transition='1'
 
@@ -97,7 +100,7 @@ set wireless.default_radio20.network='lan'
 set wireless.default_radio20.mode='ap'
 set wireless.default_radio20.key='prplmesh_pass'
 set wireless.default_radio20.encryption='psk2'
-set wireless.default_radio20.ssid='prplmesh'
+set wireless.default_radio20.ssid='default'
 set wireless.default_radio20.ieee80211v='1'
 set wireless.default_radio20.bss_transition='1'
 
