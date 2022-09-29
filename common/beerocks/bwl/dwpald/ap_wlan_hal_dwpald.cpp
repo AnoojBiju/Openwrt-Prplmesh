@@ -3432,7 +3432,7 @@ bool ap_wlan_hal_dwpal::dwpald_attach(char *ifname)
         {HAP_EVENT("AP-STA-CONNECTED")},
         {HAP_EVENT("AP-STA-DISCONNECTED")},
         {HAP_EVENT("UNCONNECTED-STA-RSSI")},
-        {HAP_EVENT("INTERFACE-DISABLED")},
+        //{HAP_EVENT("INTERFACE-DISABLED")},
         {HAP_EVENT("ACS-STARTED")},
         {HAP_EVENT("ACS-COMPLETED")},
         {HAP_EVENT("ACS-FAILED")},
