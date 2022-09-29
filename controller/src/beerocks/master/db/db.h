@@ -116,6 +116,7 @@ public:
         bool load_monitor_on_vaps;
         bool load_channel_select_task;
         bool load_dynamic_channel_select_task;
+
         bool certification_mode;
         bool persistent_db;
         int persistent_db_aging_interval;
@@ -208,7 +209,18 @@ public:
      */
     typedef struct {
         bool client_band_steering;
+        bool client_11k_roaming;
         bool client_optimal_path_roaming;
+        bool optimal_path_prefer_signal_strength;
+        bool load_balancing;
+        bool channel_select_task;
+        bool dynamic_channel_select_task;
+        bool ire_roaming;
+        bool health_check;
+        bool enable_dfs_reentry;
+        bool diagnostics_measurements;
+        int diagnostics_measurements_polling_rate_sec;
+
         int roaming_hysteresis_percent_bonus;
         std::chrono::milliseconds steering_disassoc_timer_msec;
         std::chrono::seconds link_metrics_request_interval_seconds;
