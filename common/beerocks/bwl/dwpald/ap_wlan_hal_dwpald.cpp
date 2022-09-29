@@ -101,6 +101,12 @@ static ap_wlan_hal::Event dwpal_to_bwl_event(const std::string &opcode)
         return ap_wlan_hal::Event::WPS_Event_Cancel;
     } else if (opcode == "AP-STA-POSSIBLE-PSK-MISMATCH") {
         return ap_wlan_hal::Event::AP_Sta_Possible_Psk_Mismatch;
+    } else if (opcode == "INTERFACE_CONNECTED_OK") {
+        return ap_wlan_hal::Event::Interface_Connected_OK;
+    } else if (opcode == "INTERFACE_RECONNECTED_OK") {
+        return ap_wlan_hal::Event::Interface_Reconnected_OK;
+    } else if (opcode == "INTERFACE_DISCONNECTED") {
+        return ap_wlan_hal::Event::Interface_Disconnected;
     }
 
     return ap_wlan_hal::Event::Invalid;
@@ -3368,6 +3374,18 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         event_queue_push(event, msg_buff); // send message to the AP manager
         break;
     }
+    case Event::Interface_Connected_OK: {
+        LOG(INFO) << "CW: INTERFACE_CONNECTED_OK from intf ";
+        break;
+    }
+    case Event::Interface_Reconnected_OK: {
+        LOG(INFO) << "CW: INTERFACE_RECONNECTED_OK from intf ";
+        break;
+    }
+    case Event::Interface_Disconnected: {
+        LOG(INFO) << "CW: INTERFACE_DISCONNECTED_OK from intf ";
+        break;
+    }
 
     // Gracefully ignore unhandled events
     // TODO: Probably should be changed to an error once dwpal will stop
@@ -3392,9 +3410,9 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
         return -1;
     }
 #endif
-    LOG(INFO) << "CW: Opcode " << opcode << " and intf "<< ifname << " and len is " << len;
+    LOG(INFO) << "CW: Opcode " << opcode << " and intf " << ifname << " and len is " << len;
     if (len) {
-	LOG(INFO) << "CW: msg is -> " << buffer;
+        LOG(INFO) << "CW: msg is -> " << buffer;
     }
     if (ctx) {
         ctx->process_dwpal_event(buffer, len, opcode);
@@ -3431,7 +3449,7 @@ bool ap_wlan_hal_dwpal::dwpald_attach(char *ifname)
         {HAP_EVENT("WPS_EVENT_FAIL")},
         {HAP_EVENT("WPA_EVENT_SAE_UNKNOWN_PASSWORD_IDENTIFIER")},
         {HAP_EVENT("WPS_EVENT_CANCEL")},
-		//{HAP_EVENT("INTERFACE_CONNECTED_OK")},
+        {HAP_EVENT("INTERFACE_CONNECTED_OK")},
         {HAP_EVENT("INTERFACE_RECONNECTED_OK")},
         {HAP_EVENT("INTERFACE_DISCONNECTED")},
         {HAP_EVENT("AP-STA-POSSIBLE-PSK-MISMATCH")}};
@@ -3440,6 +3458,11 @@ bool ap_wlan_hal_dwpal::dwpald_attach(char *ifname)
         if (dwpald_connect("ap_wlan_hal") != DWPALD_SUCCESS) {
             LOG(ERROR) << "Failed to connect to dwpald";
             return false;
+        } else {
+            if (dwpald_start_listener() != DWPALD_SUCCESS) {
+                LOG(ERROR) << "Failed to start listener thread in dwpald";
+                return false;
+            }
         }
         if (dwpald_hostap_attach(ifname,
                                  sizeof(hostap_radio_event_handlers) / sizeof(dwpald_hostap_event),
@@ -3450,12 +3473,7 @@ bool ap_wlan_hal_dwpal::dwpald_attach(char *ifname)
         if (dwpald_nl_drv_attach(0, NULL, NULL) != DWPALD_SUCCESS) {
             LOG(ERROR) << "Failed to attach to dwpald for nl";
             return false;
-	}
-	if (dwpald_start_listener() != DWPALD_SUCCESS) {
-		LOG(ERROR) << "Failed to start listener thread in dwpald";
-		return false;
-	}
-	LOG(INFO) << "CW: attached intf and listner started";
+        }
     } else {
         /*
         hostapd's VAP related events come from a radio interface,

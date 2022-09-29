@@ -69,9 +69,9 @@ public:
         DPP_AUTHENTICATION_RESPONSE,
         DPP_CONFIGURATION_REQUEST,
 
-	Interface_Connected_OK,
-	Interface_Reconnected_OK,
-	Interface_Disconnected
+        Interface_Connected_OK,
+        Interface_Reconnected_OK,
+        Interface_Disconnected
     };
 
     // Public methods
