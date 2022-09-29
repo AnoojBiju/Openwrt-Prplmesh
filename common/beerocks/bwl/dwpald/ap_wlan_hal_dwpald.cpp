@@ -101,6 +101,12 @@ static ap_wlan_hal::Event dwpal_to_bwl_event(const std::string &opcode)
         return ap_wlan_hal::Event::WPS_Event_Cancel;
     } else if (opcode == "AP-STA-POSSIBLE-PSK-MISMATCH") {
         return ap_wlan_hal::Event::AP_Sta_Possible_Psk_Mismatch;
+    } else if (opcode == "INTERFACE_CONNECTED_OK") {
+        return ap_wlan_hal::Event::Interface_Connected_OK;
+    } else if (opcode == "INTERFACE_RECONNECTED_OK") {
+        return ap_wlan_hal::Event::Interface_Reconnected_OK;
+    } else if (opcode == "INTERFACE_DISCONNECTED") {
+        return ap_wlan_hal::Event::Interface_Disconnected;
     }
 
     return ap_wlan_hal::Event::Invalid;
@@ -2289,7 +2295,7 @@ bool ap_wlan_hal_dwpal::set_cce_indication(uint16_t advertise_cce)
 
 bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std::string &opcode)
 {
-    LOG(TRACE) << __func__ << " - opcode: |" << opcode << "|";
+    LOG(TRACE) << __func__ << " CW: - opcode: |" << opcode << "|";
 
     // For key-value parser.
     int64_t tmp_int;
@@ -3367,6 +3373,24 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
 
         event_queue_push(event, msg_buff); // send message to the AP manager
         break;
+    }
+    case Event::Interface_Connected_OK: {
+        LOG(INFO) << "CW: INTERFACE_CONNECTED_OK from intf ";
+	LOG(INFO) << "CW: BufLen " << bufLen;
+	LOG(INFO) << "CW: Buffer " << buffer;
+	break;
+    }
+    case Event::Interface_Reconnected_OK: {
+        LOG(INFO) << "CW: INTERFACE_RECONNECTED_OK from intf ";
+	LOG(INFO) << "CW: BufLen " << bufLen;
+	LOG(INFO) << "CW: Buffer " << buffer;
+	break;
+    }
+    case Event::Interface_Disconnected: {
+        LOG(INFO) << "CW: INTERFACE_DISCONNECTED_OK from intf ";
+	LOG(INFO) << "CW: BufLen " << bufLen;
+	LOG(INFO) << "CW: Buffer " << buffer;
+	break;
     }
 
     // Gracefully ignore unhandled events
