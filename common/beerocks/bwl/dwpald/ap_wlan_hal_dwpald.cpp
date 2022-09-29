@@ -3430,14 +3430,14 @@ bool ap_wlan_hal_dwpal::dwpald_attach(char *ifname)
 {
     auto iface_ids = beerocks::utils::get_ids_from_iface_string(ifname);
     static dwpald_hostap_event hostap_radio_event_handlers[] = {
-        {HAP_EVENT("INTERFACE_CONNECTED_OK")},
-        {HAP_EVENT("INTERFACE_RECONNECTED_OK")},
-        {HAP_EVENT("INTERFACE_DISCONNECTED")},
         {HAP_EVENT("AP-DISABLED")},
         {HAP_EVENT("AP-ENABLED")},
         {HAP_EVENT("AP-STA-CONNECTED")},
         {HAP_EVENT("AP-STA-DISCONNECTED")},
         {HAP_EVENT("UNCONNECTED-STA-RSSI")},
+        {HAP_EVENT("INTERFACE_CONNECTED_OK")},
+        {HAP_EVENT("INTERFACE_RECONNECTED_OK")},
+        {HAP_EVENT("INTERFACE_DISCONNECTED")},
         {HAP_EVENT("ACS-STARTED")},
         {HAP_EVENT("ACS-COMPLETED")},
         {HAP_EVENT("ACS-FAILED")},
