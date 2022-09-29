@@ -3416,6 +3416,7 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
         return -1;
     }
 #endif
+    LOG(INFO) << "CW: Opcode " << opcode << "and intf "<< ifname;
     if (ctx) {
         ctx->process_dwpal_event(buffer, len, opcode);
     }
