@@ -101,12 +101,6 @@ static ap_wlan_hal::Event dwpal_to_bwl_event(const std::string &opcode)
         return ap_wlan_hal::Event::WPS_Event_Cancel;
     } else if (opcode == "AP-STA-POSSIBLE-PSK-MISMATCH") {
         return ap_wlan_hal::Event::AP_Sta_Possible_Psk_Mismatch;
-    } else if (opcode == "INTERFACE_CONNECTED_OK") {
-        return ap_wlan_hal::Event::Interface_Connected_OK;
-    } else if (opcode == "INTERFACE_RECONNECTED_OK") {
-        return ap_wlan_hal::Event::Interface_Reconnected_OK;
-    } else if (opcode == "INTERFACE_DISCONNECTED") {
-        return ap_wlan_hal::Event::Interface_Disconnected;
     }
 
     return ap_wlan_hal::Event::Invalid;
@@ -3374,24 +3368,6 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         event_queue_push(event, msg_buff); // send message to the AP manager
         break;
     }
-    case Event::Interface_Connected_OK: {
-        LOG(INFO) << "CW: INTERFACE_CONNECTED_OK from intf ";
-	LOG(INFO) << "CW: BufLen " << bufLen;
-	LOG(INFO) << "CW: Buffer " << buffer;
-	break;
-    }
-    case Event::Interface_Reconnected_OK: {
-        LOG(INFO) << "CW: INTERFACE_RECONNECTED_OK from intf ";
-	LOG(INFO) << "CW: BufLen " << bufLen;
-	LOG(INFO) << "CW: Buffer " << buffer;
-	break;
-    }
-    case Event::Interface_Disconnected: {
-        LOG(INFO) << "CW: INTERFACE_DISCONNECTED_OK from intf ";
-	LOG(INFO) << "CW: BufLen " << bufLen;
-	LOG(INFO) << "CW: Buffer " << buffer;
-	break;
-    }
 
     // Gracefully ignore unhandled events
     // TODO: Probably should be changed to an error once dwpal will stop
@@ -3435,9 +3411,7 @@ bool ap_wlan_hal_dwpal::dwpald_attach(char *ifname)
         {HAP_EVENT("AP-STA-CONNECTED")},
         {HAP_EVENT("AP-STA-DISCONNECTED")},
         {HAP_EVENT("UNCONNECTED-STA-RSSI")},
-        {HAP_EVENT("INTERFACE_CONNECTED_OK")},
-        {HAP_EVENT("INTERFACE_RECONNECTED_OK")},
-        {HAP_EVENT("INTERFACE_DISCONNECTED")},
+        {HAP_EVENT("INTERFACE-DISABLED")},
         {HAP_EVENT("ACS-STARTED")},
         {HAP_EVENT("ACS-COMPLETED")},
         {HAP_EVENT("ACS-FAILED")},
@@ -3457,8 +3431,10 @@ bool ap_wlan_hal_dwpal::dwpald_attach(char *ifname)
         {HAP_EVENT("WPS_EVENT_FAIL")},
         {HAP_EVENT("WPA_EVENT_SAE_UNKNOWN_PASSWORD_IDENTIFIER")},
         {HAP_EVENT("WPS_EVENT_CANCEL")},
-        {HAP_EVENT("AP-STA-POSSIBLE-PSK-MISMATCH")},
-        {HAP_EVENT("INTERFACE-DISABLED")},};
+		//{HAP_EVENT("INTERFACE_CONNECTED_OK")},
+        //{HAP_EVENT("INTERFACE_RECONNECTED_OK")},
+        //{HAP_EVENT("INTERFACE_DISCONNECTED")},
+        {HAP_EVENT("AP-STA-POSSIBLE-PSK-MISMATCH")}};
 
     if (iface_ids.vap_id == beerocks::IFACE_RADIO_ID) {
         if (dwpald_connect("ap_wlan_hal") != DWPALD_SUCCESS) {
