@@ -13,6 +13,7 @@
 
 #include <beerocks/tlvf/beerocks_message.h>
 #include <tlvf/ieee_1905_1/tlvLinkMetricQuery.h>
+#include <tlvf/wfa_map/tlvUnassociatedStaLinkMetricsResponse.h>
 
 #include <easylogging++.h>
 
@@ -69,8 +70,10 @@ bool LinkMetricsTask::handle_ieee1905_1_msg(const sMacAddr &src_mac,
 {
     switch (cmdu_rx.getMessageType()) {
     case ieee1905_1::eMessageType::LINK_METRIC_RESPONSE_MESSAGE: {
-        handle_cmdu_1905_link_metric_response(src_mac, cmdu_rx);
-        break;
+        return handle_cmdu_1905_link_metric_response(src_mac, cmdu_rx);
+    }
+    case ieee1905_1::eMessageType::UNASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE: {
+        return handle_cmdu_1905_unassociated_station_link_metric_response(src_mac, cmdu_rx);
     }
     default: {
         return false;
@@ -256,6 +259,56 @@ bool LinkMetricsTask::handle_cmdu_1905_link_metric_response(const sMacAddr &src_
     if (database.setting_certification_mode())
         construct_combined_infra_metric();
 
+    return true;
+}
+
+bool LinkMetricsTask::handle_cmdu_1905_unassociated_station_link_metric_response(
+    const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    const auto message_id = cmdu_rx.getMessageId();
+    LOG(DEBUG) << "Received an Unassociated STA Link Metrics Response, mid=" << message_id
+               << ", src_mac=" << src_mac;
+
+    auto unassoc_sta_link_metrics_tlv =
+        cmdu_rx.getClass<wfa_map::tlvUnassociatedStaLinkMetricsResponse>();
+    if (!unassoc_sta_link_metrics_tlv) {
+        LOG(ERROR) << "Unassociated STA Link Metrics Response message did not contain an "
+                      "Unassociated STA Link Metrics TLV!";
+        return false;
+    }
+    const uint8_t number_of_station_entries = unassoc_sta_link_metrics_tlv->sta_list_length();
+    if (number_of_station_entries == 0) {
+        LOG(DEBUG) << "Unassociated STA Link Metrics Response from Agent " << src_mac
+                   << " reports zero stations, nothing to do!";
+        // return OK, as this is not necessarily an error.
+        // TODO: maybe parse DB for STAs previously heard from this Agent, and remove them?
+        return true;
+    }
+    for (int i = 0; i < number_of_station_entries; ++i) {
+        const auto station_tuple = unassoc_sta_link_metrics_tlv->sta_list(i);
+        const bool success       = std::get<0>(station_tuple);
+        const auto sta_metrics   = std::get<1>(station_tuple);
+
+        // TODO what is this 'success' field? It's not called out in the spec.
+        (void)success;
+        if (sta_metrics.sta_mac == beerocks::net::network_utils::ZERO_MAC) {
+            // skip dud entries
+            continue;
+        }
+        LOG(DEBUG) << "Inspecting Unassoc STA Link Metrics Response entry " << i << " from Agent "
+                   << src_mac << ", MAC: " << sta_metrics.sta_mac
+                   << ", RCPI: " << sta_metrics.uplink_rcpi_dbm_enc
+                   << ", ChannelNum: " << sta_metrics.channel_number
+                   << ", Time Delta Since Last Measurement (mS): "
+                   << sta_metrics.measurement_to_report_delta_msec;
+        // Ideally, we want a new report at sub-1 second intervals.
+        if (sta_metrics.measurement_to_report_delta_msec >
+            std::chrono::milliseconds(1000).count()) {
+            LOG(WARNING) << "Cadence of Unassociated Station Reports is too slow!";
+        }
+        // TODO slap into the database (agent_mac -> sta_metrics object mapping maybe)
+        // TODO also update on Controller DM
+    }
     return true;
 }
 
