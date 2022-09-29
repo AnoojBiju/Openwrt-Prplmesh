@@ -3432,7 +3432,6 @@ bool ap_wlan_hal_dwpal::dwpald_attach(char *ifname)
         {HAP_EVENT("AP-STA-CONNECTED")},
         {HAP_EVENT("AP-STA-DISCONNECTED")},
         {HAP_EVENT("UNCONNECTED-STA-RSSI")},
-        //{HAP_EVENT("INTERFACE-DISABLED")},
         {HAP_EVENT("ACS-STARTED")},
         {HAP_EVENT("ACS-COMPLETED")},
         {HAP_EVENT("ACS-FAILED")},
@@ -3453,9 +3452,10 @@ bool ap_wlan_hal_dwpal::dwpald_attach(char *ifname)
         {HAP_EVENT("WPA_EVENT_SAE_UNKNOWN_PASSWORD_IDENTIFIER")},
         {HAP_EVENT("WPS_EVENT_CANCEL")},
         {HAP_EVENT("AP-STA-POSSIBLE-PSK-MISMATCH")},
-        {HAP_EVENT("INTERFACE_CONNECTED_OK")},
         {HAP_EVENT("INTERFACE_RECONNECTED_OK")},
-        {HAP_EVENT("INTERFACE_DISCONNECTED")}};
+        {HAP_EVENT("INTERFACE_DISCONNECTED")},
+        {HAP_EVENT("INTERFACE_CONNECTED_OK")},
+        {HAP_EVENT("INTERFACE-DISABLED")}};
 
     if (iface_ids.vap_id == beerocks::IFACE_RADIO_ID) {
         if (dwpald_connect("ap_wlan_hal") != DWPALD_SUCCESS) {
