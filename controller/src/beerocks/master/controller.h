@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-2-Clause-Patent
  *
- * SPDX-FileCopyrightText: 2016-2020 the prplMesh contributors (see AUTHORS.md)
+ * SPDX-FileCopyrightText: 2016-2022 the prplMesh contributors (see AUTHORS.md)
  *
  * This code is subject to the terms of the BSD+Patent license.
  * See LICENSE file for more details.
@@ -371,6 +371,16 @@ private:
     */
     bool handle_tlv_profile2_ap_capability(std::shared_ptr<Agent> agent,
                                            ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief Handles TLV of CAC Capabilities (tlvProfile2CacCapabilities).
+     *
+     * @param agent agent db shared object.
+     * @param cmdu_rx Received CMDU as Profile2 CAC Capabilities Report message.
+     * @return True on success, false otherwise.
+    */
+    bool handle_tlv_profile2_cac_capabilities(std::shared_ptr<Agent> agent,
+                                              ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
      * @brief Extracts ESP value from est_service_info_field and set it to specified

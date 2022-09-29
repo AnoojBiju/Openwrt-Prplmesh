@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-2-Clause-Patent
  *
- * SPDX-FileCopyrightText: 2016-2020 the prplMesh contributors (see AUTHORS.md)
+ * SPDX-FileCopyrightText: 2016-2022 the prplMesh contributors (see AUTHORS.md)
  *
  * This code is subject to the terms of the BSD+Patent license.
  * See LICENSE file for more details.
@@ -73,6 +73,7 @@
 #include <tlvf/wfa_map/tlvHigherLayerData.h>
 #include <tlvf/wfa_map/tlvOperatingChannelReport.h>
 #include <tlvf/wfa_map/tlvProfile2ApCapability.h>
+#include <tlvf/wfa_map/tlvProfile2CacCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2CacStatusReport.h>
 #include <tlvf/wfa_map/tlvProfile2ChannelScanResult.h>
 #include <tlvf/wfa_map/tlvProfile2MultiApProfile.h>
@@ -1812,6 +1813,12 @@ bool Controller::handle_cmdu_1905_ap_capability_report(const sMacAddr &src_mac,
     if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
         !handle_tlv_profile2_ap_capability(agent, cmdu_rx)) {
         LOG(ERROR) << "Profile2 AP Capability is not supplied for Agent " << src_mac
+                   << " with profile enum " << agent->profile;
+    }
+
+    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
+        !handle_tlv_profile2_cac_capabilities(agent, cmdu_rx)) {
+        LOG(ERROR) << "Profile2 CAC Capabilities are not supplied for Agent " << src_mac
                    << " with profile enum " << agent->profile;
     }
 
@@ -3972,6 +3979,92 @@ bool Controller::handle_tlv_profile2_ap_capability(std::shared_ptr<Agent> agent,
     LOG(DEBUG) << "Profile-2 AP Capability is received, agent bytecounters enum="
                << agent->byte_counter_units;
 
+    return true;
+}
+
+bool Controller::handle_tlv_profile2_cac_capabilities(std::shared_ptr<Agent> agent,
+                                                      ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto cac_capabilities_tlv = cmdu_rx.getClass<wfa_map::tlvProfile2CacCapabilities>();
+    if (!cac_capabilities_tlv) {
+        LOG(DEBUG) << "getClass wfa_map::tlvProfile2CacCapabilities has failed";
+        return false;
+    }
+
+    LOG(DEBUG) << "Profile-2 CAC Capabilities TLV is received";
+
+    std::stringstream ss;
+    ss << "Country code: " << int(*cac_capabilities_tlv->country_code()) << std::endl;
+
+    for (size_t radio_idx = 0; radio_idx < cac_capabilities_tlv->number_of_cac_radios();
+         radio_idx++) {
+        if (!std::get<0>(cac_capabilities_tlv->cac_radios(radio_idx))) {
+            LOG(ERROR) << "Invalid CAC radio in tlvProfile2CacCapabilities";
+            continue;
+        }
+
+        auto &cac_radio = std::get<1>(cac_capabilities_tlv->cac_radios(radio_idx));
+        auto ruid       = cac_radio.radio_uid();
+
+        database.dm_clear_radio_cac_capabilities(ruid);
+
+        for (size_t type_idx = 0; type_idx < cac_radio.number_of_cac_type_supported(); type_idx++) {
+            if (type_idx > 3) {
+                LOG(ERROR) << "Invalid number of CAC types in tlvProfile2CacCapabilities";
+                return false;
+            }
+
+            if (!std::get<0>(cac_radio.cac_types(type_idx))) {
+                LOG(ERROR) << "Invalid CAC type in tlvProfile2CacCapabilities";
+                continue;
+            }
+            auto &cac_type = std::get<1>(cac_radio.cac_types(type_idx));
+
+            auto cac_method     = cac_type.cac_method();
+            auto cac_method_str = wfa_map::eCacMethod_str(cac_method);
+            auto cac_duration   = cac_type.duration();
+
+            ss << "Radio " << ruid << ", supported CAC method " << cac_method_str
+               << " with duration " << int(*cac_duration) << std::endl;
+
+            if (!cac_type.number_of_operating_classes()) {
+                LOG(ERROR) << "Invalid number of supported operating classes in "
+                              "tlvProfile2CacCapabilities";
+                continue;
+            }
+
+            // Key: operating class, value: vector with channel numbers
+            std::unordered_map<uint8_t, std::vector<uint8_t>> oc_channels;
+
+            ss << "Supported OC/channels:" << std::endl;
+            for (size_t oc_idx = 0; oc_idx < cac_type.number_of_operating_classes(); oc_idx++) {
+                if (!std::get<0>(cac_type.operating_classes(oc_idx))) {
+                    LOG(ERROR) << "Invalid operating class in tlvProfile2CacCapabilities";
+                    continue;
+                }
+
+                auto &operating_class = std::get<1>(cac_type.operating_classes(oc_idx));
+                auto oc               = operating_class.operating_class();
+                ss << "OC: " << int(oc) << ", channels: ";
+
+                std::vector<uint8_t> channels;
+                for (size_t ch_idx = 0; ch_idx < operating_class.number_of_channels(); ch_idx++) {
+                    channels.push_back(*operating_class.channels(ch_idx));
+                    ss << "#" << int(*operating_class.channels(ch_idx)) << " ";
+                }
+                oc_channels.emplace(oc, channels);
+                ss << std::endl;
+            }
+
+            if (!database.dm_add_radio_cac_capabilities(ruid, cac_method, *cac_duration,
+                                                        oc_channels)) {
+                LOG(ERROR) << "Failed to add CAC capabilities for ruid=" << ruid;
+                return false;
+            }
+        }
+    }
+
+    LOG(DEBUG) << ss.str();
     return true;
 }
 

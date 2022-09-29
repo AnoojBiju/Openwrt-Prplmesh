@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
-# SPDX-FileCopyrightText: 2021 the prplMesh contributors (see AUTHORS.md)
+# SPDX-FileCopyrightText: 2021-2022 the prplMesh contributors (see AUTHORS.md)
 # This code is subject to the terms of the BSD+Patent license.
 # See LICENSE file for more details.
 
@@ -156,3 +156,6 @@ class NbapiCapabilities(PrplMeshBaseTest):
                                         tlv.ap_he_caps_tree['ieee1905.ap_he.he_ul_ofdma'])
                     self.assertEqualInt("DLOFDMA", he_caps['DLOFDMA'],
                                         tlv.ap_he_caps_tree['ieee1905.ap_he.he_dl_ofdma'])
+                if tlv.tlv_type == self.ieee1905['eTlvTypeMap']['TLV_PROFILE2_CAC_CAPABILITIES']:
+                    debug("Checking Profile-2 CAC Capabilities TLV")
+                    # TODO: Check Profile-2 CAC Capabilities TLV and related DM objects (PPM-2289).
