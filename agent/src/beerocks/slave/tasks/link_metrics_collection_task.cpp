@@ -32,6 +32,7 @@
 #include <tlvf/wfa_map/tlvProfile2RadioMetrics.h>
 #include <tlvf/wfa_map/tlvProfile2TrafficSeparationPolicy.h>
 #include <tlvf/wfa_map/tlvStaMacAddressType.h>
+#include <tlvf/wfa_map/tlvUnassociatedStaLinkMetricsQuery.h>
 
 namespace beerocks {
 
@@ -61,6 +62,10 @@ bool LinkMetricsCollectionTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx,
     }
     case ieee1905_1::eMessageType::ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE: {
         handle_associated_sta_link_metrics_query(cmdu_rx, src_mac);
+        break;
+    }
+    case ieee1905_1::eMessageType::UNASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE: {
+        handle_unassociated_sta_link_metrics_query(cmdu_rx, src_mac);
         break;
     }
     case ieee1905_1::eMessageType::AP_METRICS_QUERY_MESSAGE: {
@@ -403,6 +408,51 @@ void LinkMetricsCollectionTask::handle_beacon_metrics_query(ieee1905_1::CmduMess
     if (!m_btl_ctx.forward_cmdu_to_uds(m_btl_ctx.get_agent_fd(), 0, db->bridge.mac, src_mac,
                                        cmdu_rx)) {
         LOG(ERROR) << "forward_cmdu_to_uds() to agent failed - fd=" << m_btl_ctx.get_agent_fd();
+    }
+}
+
+void LinkMetricsCollectionTask::handle_unassociated_sta_link_metrics_query(
+    ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac)
+{
+    const auto message_id = cmdu_rx.getMessageId();
+    LOG(DEBUG) << "Received Unassociated STA Link Metrics Query, mid=" << message_id;
+
+    if (!m_cmdu_tx.create(
+            message_id, ieee1905_1::eMessageType::UNASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE)) {
+        LOG(ERROR) << "Could not create a UNASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE";
+        return;
+    }
+
+    const auto unassociated_sta_link_metrics_query_tlv =
+        cmdu_rx.getClass<wfa_map::tlvUnassociatedStaLinkMetricsQuery>();
+    if (!unassociated_sta_link_metrics_query_tlv) {
+        LOG(ERROR) << "Unassociated STA Link Metrics Query message did not contain an Unassociated "
+                      "STA Link Metrics Query TLV!";
+        return;
+    }
+
+    const auto n_channels = unassociated_sta_link_metrics_query_tlv->channel_list_length();
+    // no work to be done.
+    if (n_channels == 0) {
+        LOG(DEBUG)
+            << "Unassociated STA Link Metrics Query is asking for information on zero channels.";
+        return;
+    }
+
+    for (int chan_idx = 0; chan_idx < n_channels; ++chan_idx) {
+        const auto chanel_params_tuple =
+            unassociated_sta_link_metrics_query_tlv->channel_list(chan_idx);
+        const bool throwaway      = std::get<0>(chanel_params_tuple);
+        const auto channel_params = std::get<1>(chanel_params_tuple);
+        (void)throwaway;
+        if (channel_params.sta_list_length == 0) {
+            LOG(DEBUG) << "ChannelParam[" << chan_idx << "] has a STA list length of 0.";
+            continue;
+        }
+        for (int sta_idx = 0; sta_idx < channel_params.sta_list_length; ++sta_idx) {
+            sMacAddr sta_mac = channel_params.sta_list[sta_idx];
+            LOG(DEBUG) << "chan_idx=" << chan_idx << " STA #" << sta_idx << " MAC " << sta_mac;
+        }
     }
 }
 
