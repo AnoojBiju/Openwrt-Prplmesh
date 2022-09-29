@@ -823,7 +823,6 @@ bool ap_wlan_hal_nl80211::update_vap_credentials(
                 conf.set_create_vap_value(vap, "ssid", bss_it->ssid);
                 conf.set_create_vap_value(vap, "wps_state", bss_it->fronthaul ? "2" : "");
                 conf.set_create_vap_value(vap, "wps_independent", "0");
-                conf.set_create_vap_value(vap, "max_num_sta", bss_it->backhaul ? "1" : "");
                 std::string multi_ap;
                 if (bss_it->fronthaul) {
                     if (bss_it->backhaul) {
