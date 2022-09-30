@@ -104,7 +104,7 @@ public:
     virtual bool set_radio_mbo_assoc_disallow(bool enable) override;
     virtual bool set_primary_vlan_id(uint16_t primary_vlan_id) override;
 
-    virtual bool process_dwpal_event(char *buffer, int bufLen, const std::string &opcode) override;
+    virtual bool process_dwpal_event(char *ifname, char *buffer, int bufLen, const std::string &opcode) override;
     virtual bool process_dwpal_nl_event(struct nl_msg *msg, void *arg = nullptr) override;
     virtual bool set_cce_indication(uint16_t advertise_cce) override;
     // Protected methods:

@@ -2293,7 +2293,7 @@ bool ap_wlan_hal_dwpal::set_cce_indication(uint16_t advertise_cce)
     return true;
 }
 
-bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std::string &opcode)
+bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufLen, const std::string &opcode)
 {
     LOG(TRACE) << __func__ << " CW: - opcode: |" << opcode << "|";
 
@@ -3375,15 +3375,15 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         break;
     }
     case Event::Interface_Connected_OK: {
-        LOG(INFO) << "CW: INTERFACE_CONNECTED_OK from intf ";
+        LOG(INFO) << "CW: INTERFACE_CONNECTED_OK from intf " << ifname;
         break;
     }
     case Event::Interface_Reconnected_OK: {
-        LOG(INFO) << "CW: INTERFACE_RECONNECTED_OK from intf ";
+        LOG(INFO) << "CW: INTERFACE_RECONNECTED_OK from intf " << ifname;
         break;
     }
     case Event::Interface_Disconnected: {
-        LOG(INFO) << "CW: INTERFACE_DISCONNECTED_OK from intf ";
+        LOG(INFO) << "CW: INTERFACE_DISCONNECTED_OK from intf " << ifname;
         break;
     }
 
@@ -3415,7 +3415,7 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
         LOG(INFO) << "CW: msg is -> " << buffer;
     }
     if (ctx) {
-        ctx->process_dwpal_event(buffer, len, opcode);
+        ctx->process_dwpal_event(ifname, buffer, len, opcode);
     }
     return 0;
 }
