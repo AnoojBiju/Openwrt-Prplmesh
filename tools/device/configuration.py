@@ -83,7 +83,7 @@ def configure_device(device: GenericDevice, configuration_file: Path):
 
         print(md5.hexdigest())
         shell.sendline(f"sh -x {conf_file_location}")
-        shell.expect(device.serial_prompt)
+        shell.expect(device.serial_prompt, timeout=120)
         shell.sendline("echo conf_file_exit_code=$?")
         try:
             shell.expect("conf_file_exit_code=0", timeout=1)
