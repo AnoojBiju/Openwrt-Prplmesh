@@ -219,9 +219,10 @@ int sta_wlan_hal_dwpal::get_scan_results(const std::string &ssid, std::vector<SS
         }
 
         SScanResult ap;
-        ap.bssid   = tlvf::mac_from_string(scan_results[i].bssid);
-        ap.channel = son::wireless_utils::freq_to_channel(scan_results[i].frequency);
-        ap.rssi    = scan_results[i].rssi;
+        ap.bssid     = tlvf::mac_from_string(scan_results[i].bssid);
+        ap.channel   = son::wireless_utils::freq_to_channel(scan_results[i].frequency);
+        ap.freq_type = son::wireless_utils::which_freq_type(scan_results[i].frequency);
+        ap.rssi      = scan_results[i].rssi;
 
         list.insert(list.begin(), ap);
         aps_found++;

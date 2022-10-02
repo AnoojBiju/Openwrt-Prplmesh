@@ -2298,7 +2298,7 @@ bool BackhaulManager::select_bssid()
                 selected_bssid                   = bssid;
                 db->backhaul.selected_iface_name = iface;
                 return true;
-            } else if (son::wireless_utils::which_freq(scan_result.channel) == eFreqType::FREQ_5G) {
+            } else if (scan_result.freq_type == eFreqType::FREQ_5G) {
                 auto radio = db->radio(radio_info->sta_iface);
                 if (!radio) {
                     return false;
@@ -2334,7 +2334,7 @@ bool BackhaulManager::select_bssid()
                     best_5_sta_iface     = iface;
                 }
 
-            } else {
+            } else if (scan_result.freq_type == eFreqType::FREQ_24G) {
                 // best 2.4G
                 if (scan_result.rssi > max_rssi_24) {
                     max_rssi_24           = scan_result.rssi;
@@ -2342,6 +2342,8 @@ bool BackhaulManager::select_bssid()
                     best_bssid_channel_24 = scan_result.channel;
                     best_24_sta_iface     = iface;
                 }
+            } else {
+                LOG(WARNING) << "scan results for 6ghz band: NOT YET IMPLEMENTED";
             }
         }
     }
