@@ -473,12 +473,22 @@ static bool translate_nl_data_to_bwl_results(sChannelScanResults &results,
     //get channel and operating frequency band
     if (bss[NL80211_BSS_FREQUENCY]) {
         int freq = nla_get_u32(bss[NL80211_BSS_FREQUENCY]);
-        if (freq >= 5180) {
-            results.operating_frequency_band =
-                eChannelScanResultOperatingFrequencyBand::eOperating_Freq_Band_5GHz;
-        } else {
+        switch (son::wireless_utils::which_freq_type(freq)) {
+        case beerocks::FREQ_24G:
             results.operating_frequency_band =
                 eChannelScanResultOperatingFrequencyBand::eOperating_Freq_Band_2_4GHz;
+            break;
+        case beerocks::FREQ_5G:
+            results.operating_frequency_band =
+                eChannelScanResultOperatingFrequencyBand::eOperating_Freq_Band_5GHz;
+            break;
+        case beerocks::FREQ_6G:
+            results.operating_frequency_band =
+                eChannelScanResultOperatingFrequencyBand::eOperating_Freq_Band_6GHz;
+            break;
+        default:
+            LOG(ERROR) << "Freq type must be 2.4ghz, 5ghz or 6ghz";
+            return false;
         }
         results.channel = son::wireless_utils::freq_to_channel(freq);
     }
