@@ -2217,13 +2217,18 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
             LOG(ERROR) << "cmdu creation of type FAILED_CONNECTION_MESSAGE failed!";
             return false;
         }
-        // add BSSID
-        auto bssid_tlv = cmdu_tx.addClass<wfa_map::tlvBssid>();
-        if (!bssid_tlv) {
-            LOG(ERROR) << "addClass wfa_map::tlvBssid!";
-            return false;
+
+        if (m_multiap_controller_profile >=
+            wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_3) {
+            // add BSSID
+            auto bssid_tlv = cmdu_tx.addClass<wfa_map::tlvBssid>();
+            if (!bssid_tlv) {
+                LOG(ERROR) << "addClass wfa_map::tlvBssid!";
+                return false;
+            }
+            bssid_tlv->bssid() = sta_conn_fail->bssid;
         }
-        bssid_tlv->bssid() = sta_conn_fail->bssid;
+
         // add STA
         auto sta_mac_tlv = cmdu_tx.addClass<wfa_map::tlvStaMacAddressType>();
         if (!sta_mac_tlv) {
