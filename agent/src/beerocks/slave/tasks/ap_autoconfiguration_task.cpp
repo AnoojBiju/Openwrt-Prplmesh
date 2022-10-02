@@ -912,6 +912,22 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_response(
     LOG(DEBUG) << "controller_discovered on " << band_name
                << " band, controller bridge_mac=" << src_mac
                << ", prplmesh_controller=" << prplmesh_controller;
+
+    // Update the AP Manager with the Multi-AP Controller Profile
+    m_btl_ctx.m_radio_managers.do_on_each_radio_manager(
+        [&](slave_thread::sManagedRadio &radio_manager,
+            const std::string &fronthaul_iface) -> bool {
+            auto msg = message_com::create_vs_message<
+                beerocks_message::cACTION_APMANAGER_SET_MAP_CONTROLLER_PROFILE>(m_cmdu_tx);
+            if (!msg) {
+                LOG(ERROR)
+                    << "Failed building cACTION_APMANAGER_SET_MAP_CONTROLLER_PROFILE message!";
+                return false;
+            }
+            msg->profile() = db->controller_info.profile_support;
+            m_btl_ctx.send_cmdu(radio_manager.ap_manager_fd, m_cmdu_tx);
+            return true;
+        });
 }
 
 void ApAutoConfigurationTask::handle_ap_autoconfiguration_wsc(ieee1905_1::CmduMessageRx &cmdu_rx)
