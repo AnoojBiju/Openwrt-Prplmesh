@@ -1616,6 +1616,16 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
         ap_wlan_hal->set_primary_vlan_id(request->primary_vlan_id());
         break;
     }
+    case beerocks_message::ACTION_APMANAGER_SET_MAP_CONTROLLER_PROFILE: {
+        auto msg = beerocks_header
+                       ->addClass<beerocks_message::cACTION_APMANAGER_SET_MAP_CONTROLLER_PROFILE>();
+        if (!msg) {
+            LOG(ERROR) << "addClass has failed";
+            return;
+        }
+        m_multiap_controller_profile = msg->profile();
+        break;
+    }
     default: {
         LOG(ERROR) << "Unsupported header action_op: " << int(beerocks_header->action_op());
         break;

@@ -151,6 +151,8 @@ private:
     beerocks::logging &m_logger;
     bool acs_enabled;
     bool m_ap_support_zwdfs;
+    wfa_map::tlvProfile2MultiApProfile::eMultiApProfile m_multiap_controller_profile =
+        wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::PRPLMESH_PROFILE_UNKNOWN;
 
     int bss_steer_valid_int          = BSS_STEER_VALID_INT_BTT;
     int bss_steer_imminent_valid_int = BSS_STEER_IMMINENT_VALID_INT_BTT;
