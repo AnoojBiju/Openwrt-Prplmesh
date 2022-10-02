@@ -2644,6 +2644,12 @@ bool BackhaulManager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx
         return true;
     }
 
+    auto freq_type = son::wireless_utils::which_freq_op_cls(oper_class);
+    if (freq_type == beerocks::FREQ_UNKNOWN) {
+        LOG(ERROR) << "Unknown frequency type. must be 2.4GHz, 5GHz or 6GHz";
+        return false;
+    }
+
     // Trigger (asynchronously) a scan of the target BSSID on the target channel.
     // The steering itself will be done when the scan results are received.
     // If this function call fails for some reason (for example because a scan was already in
@@ -2652,7 +2658,7 @@ bool BackhaulManager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx
     // Backhaul Steering Response message with "error" result code if this function fails nor return
     // false, just log a warning and let the execution continue. If we do not steer after the
     // timeout elapses, a response will anyway be sent to the controller.
-    auto scan_result = active_hal->scan_bss(bssid, channel);
+    auto scan_result = active_hal->scan_bss(bssid, channel, freq_type);
     if (!scan_result) {
         LOG(WARNING) << "Failed to scan for the target BSSID: " << bssid << " on channel "
                      << channel << ".";

@@ -36,7 +36,7 @@ public:
     virtual bool detach() override;
 
     virtual bool initiate_scan() override;
-    bool scan_bss(const sMacAddr &bssid, uint8_t channel) override;
+    bool scan_bss(const sMacAddr &bssid, uint8_t channel, beerocks::eFreqType freq_type) override;
     virtual int get_scan_results(const std::string &ssid, std::vector<SScanResult> &list,
                                  bool parse_vsie = false) override;
 

@@ -58,7 +58,8 @@ public:
      * @param[in] channel The channel to scan on.
      * If not provided, all channels are scanned.
      */
-    virtual bool scan_bss(const sMacAddr &bssid, uint8_t channel) = 0;
+    virtual bool scan_bss(const sMacAddr &bssid, uint8_t channel,
+                          beerocks::eFreqType freq_type) = 0;
 
     virtual int get_scan_results(const std::string &ssid, std::vector<SScanResult> &list,
                                  bool parse_vsie = false) = 0;

@@ -35,7 +35,11 @@ bool sta_wlan_hal_whm::detach() { return true; }
 
 bool sta_wlan_hal_whm::initiate_scan() { return true; }
 
-bool sta_wlan_hal_whm::scan_bss(const sMacAddr &bssid, uint8_t channel) { return true; }
+bool sta_wlan_hal_whm::scan_bss(const sMacAddr &bssid, uint8_t channel,
+                                beerocks::eFreqType freq_type)
+{
+    return true;
+}
 
 int sta_wlan_hal_whm::get_scan_results(const std::string &ssid, std::vector<SScanResult> &list,
                                        bool parse_vsie)

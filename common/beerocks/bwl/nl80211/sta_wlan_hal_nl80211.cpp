@@ -80,13 +80,14 @@ bool sta_wlan_hal_nl80211::start_wps_pbc()
 
 bool sta_wlan_hal_nl80211::initiate_scan() { return true; }
 
-bool sta_wlan_hal_nl80211::scan_bss(const sMacAddr &bssid, uint8_t channel)
+bool sta_wlan_hal_nl80211::scan_bss(const sMacAddr &bssid, uint8_t channel,
+                                    beerocks::eFreqType freq_type)
 {
     if (bssid == beerocks::net::network_utils::ZERO_MAC || channel == 0) {
         LOG(ERROR) << "Invalid parameters";
         return false;
     }
-    auto freq = son::wireless_utils::channel_to_freq(channel);
+    auto freq = son::wireless_utils::channel_to_freq(channel, freq_type);
 
     LOG(DEBUG) << "Scan with TYPE=ONLY on interface: " << get_iface_name() << " for bssid " << bssid
                << " channel " << channel << " (frequency " << freq << ").";

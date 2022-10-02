@@ -33,7 +33,7 @@ public:
     virtual ~sta_wlan_hal_dwpal();
 
     virtual bool initiate_scan() override;
-    bool scan_bss(const sMacAddr &bssid, uint8_t channel) override;
+    bool scan_bss(const sMacAddr &bssid, uint8_t channel, beerocks::eFreqType freq_type) override;
     virtual bool start_wps_pbc() override;
     virtual int get_scan_results(const std::string &ssid, std::vector<SScanResult> &list,
                                  bool parse_vsie) override;
