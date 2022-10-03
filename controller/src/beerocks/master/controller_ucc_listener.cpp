@@ -589,5 +589,6 @@ controller_ucc_listener::parse_bss_info(const std::string &bss_info_str,
         bss_info_conf.fronthaul = true;
     }
 
+    bss_info_conf.teardown = false;
     return al_mac;
 }
