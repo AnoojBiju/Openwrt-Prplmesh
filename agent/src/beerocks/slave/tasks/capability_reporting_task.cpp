@@ -29,7 +29,7 @@
  */
 
 #include "capability_reporting_task.h"
-#include "../backhaul_manager/backhaul_manager.h"
+#include "../son_slave_thread.h"
 #include "../tlvf_utils.h"
 #include <tlvf/wfa_map/tlvApCapability.h>
 #include <tlvf/wfa_map/tlvApHeCapabilities.h>
@@ -41,13 +41,14 @@
 #include <tlvf/wfa_map/tlvClientCapabilityReport.h>
 #include <tlvf/wfa_map/tlvClientInfo.h>
 #include <tlvf/wfa_map/tlvDeviceInventory.h>
+#include <tlvf/wfa_map/tlvErrorCode.h>
 #include <tlvf/wfa_map/tlvProfile2ApCapability.h>
 #include <tlvf/wfa_map/tlvProfile2CacCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2MetricCollectionInterval.h>
 
 namespace beerocks {
 
-CapabilityReportingTask::CapabilityReportingTask(BackhaulManager &btl_ctx,
+CapabilityReportingTask::CapabilityReportingTask(slave_thread &btl_ctx,
                                                  ieee1905_1::CmduMessageTx &cmdu_tx)
     : Task(eTaskType::CAPABILITY_REPORTING), m_btl_ctx(btl_ctx), m_cmdu_tx(cmdu_tx)
 {
@@ -135,7 +136,7 @@ void CapabilityReportingTask::handle_client_capability_query(ieee1905_1::CmduMes
         error_code_tlv->reason_code() =
             wfa_map::tlvErrorCode::STA_NOT_ASSOCIATED_WITH_ANY_BSS_OPERATED_BY_THE_AGENT;
         error_code_tlv->sta_mac() = client_info_tlv_r->client_mac();
-        m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, db->bridge.mac);
+        m_btl_ctx.send_cmdu_to_controller({}, m_cmdu_tx);
         return;
     }
 
@@ -148,7 +149,7 @@ void CapabilityReportingTask::handle_client_capability_query(ieee1905_1::CmduMes
                                                         client_info.association_frame_length);
 
     LOG(DEBUG) << "Send a CLIENT_CAPABILITY_REPORT_MESSAGE back to controller";
-    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, db->bridge.mac);
+    m_btl_ctx.send_cmdu_to_controller({}, m_cmdu_tx);
 }
 
 void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx,
@@ -172,17 +173,13 @@ void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
 
     // 1. The tlvs created in the loop are created per radio and are
     // defined in the specification as "Zero Or More" (multi-ap specification v2, 17.1.7)
-    for (const auto &radio_info : m_btl_ctx.m_radios_info) {
-        // TODO skip slaves that are not operational
-        auto &radio_mac = radio_info->radio_mac;
-
-        auto radio = db->get_radio_by_mac(radio_mac);
+    for (auto radio : db->get_radios_list()) {
         if (!radio) {
-            LOG(ERROR) << "radio with mac " << radio_mac << " does not exist in the db";
+            LOG(ERROR) << "radio does not exist in the db";
             continue;
         }
 
-        if (!tlvf_utils::add_ap_radio_basic_capabilities(m_cmdu_tx, radio_mac)) {
+        if (!tlvf_utils::add_ap_radio_basic_capabilities(m_cmdu_tx, radio->front.iface_mac)) {
             return;
         }
 
@@ -220,8 +217,14 @@ void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
     }
 
     // Add Channel Scan Capabilities
-    for (const auto &radio_info : m_btl_ctx.m_radios_info) {
-        add_channel_scan_capabilities(radio_info->hostap_iface, *channel_scan_capabilities_tlv);
+    for (auto radio : db->get_radios_list()) {
+
+        if (!radio) {
+            LOG(ERROR) << "radio does not exist in the db";
+            continue;
+        }
+
+        add_channel_scan_capabilities(radio->front.iface_name, *channel_scan_capabilities_tlv);
     }
 
     // 2.2 radio independent tlvs
@@ -260,7 +263,7 @@ void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
 
     // send the constructed report
     LOG(DEBUG) << "Sending AP_CAPABILITY_REPORT_MESSAGE , mid: " << std::hex << mid;
-    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, db->bridge.mac);
+    m_btl_ctx.send_cmdu_to_controller({}, m_cmdu_tx);
 }
 
 void CapabilityReportingTask::handle_backhaul_sta_capability_query(
@@ -275,9 +278,14 @@ void CapabilityReportingTask::handle_backhaul_sta_capability_query(
     }
 
     auto db = AgentDB::get();
-    for (const auto &radio_info : m_btl_ctx.m_radios_info) {
+    for (auto radio : db->get_radios_list()) {
 
-        if (radio_info->radio_mac == net::network_utils::ZERO_MAC) {
+        if (!radio) {
+            LOG(ERROR) << "radio does not exist in the db";
+            continue;
+        }
+
+        if (radio->front.iface_mac == net::network_utils::ZERO_MAC) {
             continue;
         }
 
@@ -288,18 +296,18 @@ void CapabilityReportingTask::handle_backhaul_sta_capability_query(
             return;
         }
 
-        backhaul_sta_radio_cap_tlv->ruid() = radio_info->radio_mac;
+        backhaul_sta_radio_cap_tlv->ruid() = radio->front.iface_mac;
         backhaul_sta_radio_cap_tlv->sta_mac_included() =
             wfa_map::tlvBackhaulStaRadioCapabilities::eStaMacIncluded::FIELD_PRESENT;
 
         sMacAddr backhaul_mac;
-        if (!radio_info->sta_wlan_hal) {
+        if (radio->back.iface_mac == net::network_utils::ZERO_MAC) {
             // TODO: This case occurs in case of wired backhaul (PPM-2016)
             LOG(INFO) << "Radio STA Interface HAL is not initialized, iface="
-                      << radio_info->sta_iface;
+                      << radio->back.iface_name;
             backhaul_mac = net::network_utils::ZERO_MAC;
         } else {
-            backhaul_mac = tlvf::mac_from_string(radio_info->sta_wlan_hal->get_radio_mac());
+            backhaul_mac = radio->back.iface_mac;
         }
 
         if (!backhaul_sta_radio_cap_tlv->set_sta_mac(backhaul_mac)) {
@@ -307,11 +315,11 @@ void CapabilityReportingTask::handle_backhaul_sta_capability_query(
             return;
         }
 
-        LOG(DEBUG) << "Backhaul STA Radio Capabilities, ruid=" << radio_info->radio_mac
+        LOG(DEBUG) << "Backhaul STA Radio Capabilities, ruid=" << radio->front.iface_mac
                    << " sta mac=" << backhaul_mac;
     }
 
-    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, db->controller_info.bridge_mac, db->bridge.mac);
+    m_btl_ctx.send_cmdu_to_controller({}, m_cmdu_tx);
 }
 
 bool CapabilityReportingTask::add_ap_ht_capabilities(const std::string &iface_name)
