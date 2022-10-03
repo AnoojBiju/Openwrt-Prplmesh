@@ -1355,15 +1355,27 @@ bool ApAutoConfigurationTask::handle_wsc_m2_tlv(
                  WSC::eWscVendorExtSubelementBssType::PROFILE2_BACKHAUL_STA_ASSOCIATION_DISALLOWED);
         bool teardown = bool(config.bss_type & WSC::eWscVendorExtSubelementBssType::TEARDOWN);
 
-        LOG(INFO) << "BSS configuration - ";
-        LOG(INFO) << "bssid: " << config.bssid;
-        LOG(INFO) << "ssid: " << config.ssid;
-        LOG(INFO) << "fBSS: " << fBSS;
-        LOG(INFO) << "bBSS: " << bBSS;
-        LOG(INFO) << "Teardown: " << teardown;
+        std::stringstream ss;
+        ss << "Parsed config data: " << std::endl;
+        ss << "bssid: " << config.bssid << std::endl;
+        ss << "ssid: " << config.ssid << std::endl;
+        ss << "fBSS: " << fBSS << std::endl;
+        ss << "bBSS: " << bBSS << std::endl;
+        ss << "encr:" << std::hex << int(config.encr_type) << std::endl;
+        ss << "auth:" << std::hex << int(config.auth_type) << std::endl;
         if (bBSS) {
-            LOG(INFO) << "profile1_backhaul_sta_association_disallowed: " << bBSS_p1_disallowed;
-            LOG(INFO) << "profile2_backhaul_sta_association_disallowed: " << bBSS_p2_disallowed;
+            ss << "profile1_backhaul_sta_association_disallowed: " << bBSS_p1_disallowed;
+            ss << "profile2_backhaul_sta_association_disallowed: " << bBSS_p2_disallowed;
+        }
+
+        // Keep this log print commented as it floods the logs,
+        // but could be helpful with future debugging.
+        // LOG(DEBUG) << m2.manufacturer() << " " << ss.str();
+
+        if (teardown) {
+            LOG(DEBUG) << "BSSID: " << config.bssid << " is flagged for teardown!";
+            configs.push_back(config);
+            continue;
         }
 
         // TODO - revisit this in the future
@@ -1371,16 +1383,13 @@ bool ApAutoConfigurationTask::handle_wsc_m2_tlv(
         // so tear down the radio if the SSID is empty.
         if (config.ssid.empty()) {
             LOG(INFO) << "Empty config data, tear down radio";
-            configs.clear();
-            break;
+            config.bss_type = WSC::eWscVendorExtSubelementBssType::TEARDOWN;
+            configs.push_back(config);
+            continue;
         }
 
         LOG(INFO) << "bss_type: " << std::hex << int(config.bss_type);
-        if (teardown) {
-            LOG(INFO) << "Teardown bit set, tear down radio";
-            configs.clear();
-            break;
-        }
+
         // BACKHAUL_STA bit is not expected to be set
         if (bSTA) {
             LOG(WARNING) << "Unexpected backhaul STA bit";
@@ -1437,6 +1446,9 @@ bool ApAutoConfigurationTask::handle_wsc_m2_tlv(
                    << ", encryption_type: " << int(config.encr_type);
         configs.push_back(config);
     }
+
+    LOG(INFO) << "Finished M2 parsing with " << configs.size() << " vaps and " << bss_errors.size()
+              << " errors.";
 
     if (bss_errors.size()) {
         if (!send_error_response_message(bss_errors)) {
