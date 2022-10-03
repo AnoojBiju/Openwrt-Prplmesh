@@ -1411,12 +1411,6 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
         }
         return (value == target);
     };
-    const auto matching_bss = [&compare_value](const son::wireless_utils::sBssInfoConf &bss) {
-        return
-            [&bss](const std::pair<std::string, std::vector<std::string>> &hostapd_config) -> bool {
-
-            };
-    };
 
     // Using a set to remove any duplicate values.
     std::set<std::string> ifaces_to_reconfigure;
