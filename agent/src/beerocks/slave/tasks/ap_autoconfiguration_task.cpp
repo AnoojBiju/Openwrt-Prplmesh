@@ -1954,20 +1954,44 @@ bool ApAutoConfigurationTask::send_ap_bss_configuration_message(
         LOG(ERROR) << "Failed building message!";
         return false;
     }
+    std::stringstream ss;
     for (const auto &config : configs) {
         auto c = request->create_wifi_credentials();
         if (!c) {
             LOG(ERROR) << "Failed building message!";
             return false;
         }
+
+        ss << "VAP: " << config.bssid << std::endl
+           << "- BSS type: " << std::hex << int(config.bss_type) << std::endl;
+
+        c->bssid_attr().data = config.bssid;
+        c->bss_type()        = config.bss_type;
+
+        if ((config.bss_type & WSC::eWscVendorExtSubelementBssType::TEARDOWN) != 0) {
+            ss << "- - BSS flagged for teardown." << std::endl;
+            // BSS needs teardown, can skip setting the rest of the values.
+            c->set_ssid("");
+            c->set_network_key("");
+            c->authentication_type_attr().data = WSC::eWscAuth::WSC_AUTH_INVALID;
+            c->encryption_type_attr().data     = WSC::eWscEncr::WSC_ENCR_INVALID;
+            request->add_wifi_credentials(c);
+            continue;
+        }
+
+        ss << "- SSID: " << config.ssid << std::endl
+           << "- Key: " << config.network_key << std::endl
+           << "- Auth: " << std::hex << int(config.auth_type) << std::endl
+           << "- Encr: " << std::hex << int(config.encr_type) << std::endl;
+
         c->set_ssid(config.ssid);
         c->set_network_key(config.network_key);
-        c->bssid_attr().data               = config.bssid;
         c->authentication_type_attr().data = config.auth_type;
         c->encryption_type_attr().data     = config.encr_type;
-        c->bss_type()                      = config.bss_type;
         request->add_wifi_credentials(c);
     }
+    LOG(INFO) << "Sending reconfiguration: " << std::endl << ss.str();
+
     auto ap_manager_fd = m_btl_ctx.get_ap_manager_fd(radio_iface);
     m_btl_ctx.send_cmdu(ap_manager_fd, m_cmdu_tx);
     return true;
