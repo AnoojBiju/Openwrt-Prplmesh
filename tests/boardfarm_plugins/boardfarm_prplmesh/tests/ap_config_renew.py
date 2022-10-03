@@ -66,9 +66,6 @@ class ApConfigRenew(PrplMeshBaseTest):
                 f"Radio 1 vap {ssid_2} bss type is {vap_bss_type.name}"
                 " when it should be Backhaul")
 
-        self.check_log(agent.radios[1],
-                       r"tear down radio",
-                       timeout=60)
         bssid1 = agent.ucc_socket.dev_get_parameter('macaddr',
                                                     ruid='0x' +
                                                     agent.radios[0].mac.replace(':', ''),
