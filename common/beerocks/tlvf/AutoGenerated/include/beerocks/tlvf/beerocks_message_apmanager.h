@@ -26,6 +26,7 @@
 #include "classes/ChannelList.h"
 #include "structs/sCacStartedNotificationParams.h"
 #include "tlvf/WSC/WSC_Attributes.h"
+#include "tlvf/wfa_map/tlvProfile2MultiApProfile.h"
 
 namespace beerocks_message {
 
@@ -1156,6 +1157,27 @@ class cACTION_APMANAGER_CHANNELS_LIST_RESPONSE : public BaseClass
         bool m_channel_list_init = false;
         bool m_lock_allocation__ = false;
         int m_lock_order_counter__ = 0;
+};
+
+class cACTION_APMANAGER_SET_MAP_CONTROLLER_PROFILE : public BaseClass
+{
+    public:
+        cACTION_APMANAGER_SET_MAP_CONTROLLER_PROFILE(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_APMANAGER_SET_MAP_CONTROLLER_PROFILE(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_APMANAGER_SET_MAP_CONTROLLER_PROFILE();
+
+        static eActionOp_APMANAGER get_action_op(){
+            return (eActionOp_APMANAGER)(ACTION_APMANAGER_SET_MAP_CONTROLLER_PROFILE);
+        }
+        wfa_map::tlvProfile2MultiApProfile::eMultiApProfile& profile();
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_APMANAGER* m_action_op = nullptr;
+        wfa_map::tlvProfile2MultiApProfile::eMultiApProfile* m_profile = nullptr;
 };
 
 }; // close namespace: beerocks_message

@@ -6,6 +6,7 @@ _include:
     classes/ChannelList.h,
     structs/sCacStartedNotificationParams.h,
     tlvf/WSC/WSC_Attributes.h,
+    tlvf/wfa_map/tlvProfile2MultiApProfile.h,
   }
 
 _namespace: beerocks_message
@@ -257,3 +258,7 @@ cACTION_APMANAGER_CHANNELS_LIST_REQUEST:
 cACTION_APMANAGER_CHANNELS_LIST_RESPONSE:
   _type: class
   channel_list: cChannelList
+
+cACTION_APMANAGER_SET_MAP_CONTROLLER_PROFILE:
+  _type: class
+  profile: wfa_map::tlvProfile2MultiApProfile::eMultiApProfile
