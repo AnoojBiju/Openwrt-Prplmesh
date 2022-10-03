@@ -71,6 +71,8 @@ public:
 
     static std::vector<std::string> str_split(const std::string &s, char delim);
 
+    static bool case_insensitive_compare(const std::string &, const std::string &);
+
 #ifndef __GNUC__
 #define __builtin_FILE() __FILE__
 #define __builtin_LINE() __LINE__

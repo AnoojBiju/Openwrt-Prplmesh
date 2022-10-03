@@ -161,3 +161,10 @@ void string_utils::copy_string(char *dst, const char *src, size_t dst_len)
                    << " dst_size=" << dst_size;
     }
 }
+
+bool string_utils::case_insensitive_compare(const std::string &lstr, const std::string &rstr)
+{
+    return lstr.size() == rstr.size() &&
+           std::equal(lstr.begin(), lstr.end(), rstr.begin(),
+                      [](char a, char b) -> bool { return (tolower(a) == tolower(b)); });
+}
