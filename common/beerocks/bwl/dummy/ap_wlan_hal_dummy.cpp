@@ -203,34 +203,65 @@ bool ap_wlan_hal_dummy::update_vap_credentials(
     std::list<son::wireless_utils::sBssInfoConf> &bss_info_conf_list,
     const std::string &backhaul_wps_ssid, const std::string &backhaul_wps_passphrase)
 {
-    int vap_id = beerocks::IFACE_VAP_ID_MIN;
+    std::vector<int> configured_vaps;
+    for (auto &bss_info_conf : bss_info_conf_list) {
+        auto vap_iter =
+            std::find_if(m_radio_info.available_vaps.begin(), m_radio_info.available_vaps.end(),
+                         [bss_info_conf](const std::pair<int, VAPElement> &iter) {
+                             const std::string &found = iter.second.mac;
+                             const std::string &bssid = tlvf::mac_to_string(bss_info_conf.bssid);
+                             return bssid.size() == found.size() &&
+                                    std::equal(bssid.begin(), bssid.end(), found.begin(),
+                                               [](char a, char b) -> bool {
+                                                   return (tolower(a) == tolower(b));
+                                               });
+                         });
+        if (vap_iter == m_radio_info.available_vaps.end()) {
+            LOG(DEBUG) << "Unable to find bssid " << bss_info_conf.bssid;
+            continue;
+        }
+        configured_vaps.push_back(vap_iter->first);
 
-    for (auto bss_info_conf : bss_info_conf_list) {
         auto auth_type =
             son::wireless_utils::wsc_to_bwl_authentication(bss_info_conf.authentication_type);
         if (auth_type == "INVALID") {
-            LOG(ERROR) << "Invalid auth_type " << int(bss_info_conf.authentication_type);
-            return false;
+            LOG(ERROR) << "Bssid " << bss_info_conf.bssid << " has an invalid auth_type "
+                       << int(bss_info_conf.authentication_type);
+            bss_info_conf.teardown = true;
         }
         auto enc_type = son::wireless_utils::wsc_to_bwl_encryption(bss_info_conf.encryption_type);
         if (enc_type == "INVALID") {
-            LOG(ERROR) << "Invalid enc_type " << int(bss_info_conf.encryption_type);
-            return false;
+            LOG(ERROR) << "Bssid " << bss_info_conf.bssid << " has an invalid enc_type "
+                       << int(bss_info_conf.encryption_type);
+            bss_info_conf.teardown = true;
         }
 
-        LOG(DEBUG) << "Autoconfiguration for ssid: " << bss_info_conf.ssid
-                   << " auth_type: " << auth_type << " encr_type: " << enc_type
-                   << " network_key: " << bss_info_conf.network_key
+        if (bss_info_conf.teardown) {
+            // Clear existing configuration since bss is flagged for teardown.
+            vap_iter->second.fronthaul = false;
+            vap_iter->second.backhaul  = false;
+            vap_iter->second.ssid.clear();
+            continue;
+        }
+
+        LOG(DEBUG) << "Autoconfiguration for bssid: " << bss_info_conf.bssid
+                   << " ssid: " << bss_info_conf.ssid << " auth_type: " << auth_type
+                   << " encr_type: " << enc_type << " network_key: " << bss_info_conf.network_key
                    << " fronthaul: " << beerocks::string_utils::bool_str(bss_info_conf.fronthaul)
                    << " backhaul: " << beerocks::string_utils::bool_str(bss_info_conf.backhaul);
 
-        m_radio_info.available_vaps[vap_id].fronthaul = bss_info_conf.fronthaul;
-        m_radio_info.available_vaps[vap_id].backhaul  = bss_info_conf.backhaul;
-        m_radio_info.available_vaps[vap_id++].ssid    = bss_info_conf.ssid;
+        vap_iter->second.fronthaul = bss_info_conf.fronthaul;
+        vap_iter->second.backhaul  = bss_info_conf.backhaul;
+        vap_iter->second.ssid      = bss_info_conf.ssid;
     }
 
     /* Tear down all other VAPs */
-    while (vap_id < predefined_vaps_num) {
+    for (int vap_id = beerocks::IFACE_VAP_ID_MIN; vap_id < predefined_vaps_num; vap_id++) {
+        if (std::find(configured_vaps.begin(), configured_vaps.end(), vap_id) !=
+            configured_vaps.end()) {
+            // Vap is configured, skip teardown.
+            continue;
+        }
         m_radio_info.available_vaps[vap_id].fronthaul = false;
         m_radio_info.available_vaps[vap_id].backhaul  = false;
         m_radio_info.available_vaps[vap_id++].ssid.clear();
@@ -253,6 +284,10 @@ bool ap_wlan_hal_dummy::update_vap_credentials(
         process_dummy_event(parsed_obj);
     }
 
+    LOG(DEBUG) << "Writing to VAP status file:" << std::endl
+               << "###########################" << std::endl
+               << value.str() << std::endl
+               << "###########################";
     write_status_file("vap", value.str());
 
     return true;
