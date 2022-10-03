@@ -2062,6 +2062,18 @@ public:
     bool dm_set_device_multi_ap_backhaul(const Agent &agent);
 
     /**
+     * @brief Sets Service Set Identifier (SSID) to VLAN ID (VID) mapping for EasyMesh traffic separation.
+     *
+     * DM path : "Device.WiFi.DataElements.Network.Device.{i}.SSIDtoVIDMapping.{i}."
+     *
+     * @param[in] agent agent whose SSIDtoVIDMapping object is set
+     * @param[in] config Traffic separation policy configuration
+     * @return True on success, false otherwise.
+     */
+    bool dm_set_device_ssid_to_vid_map(const Agent &agent,
+                                       const wireless_utils::sTrafficSeparationSsid &config);
+
+    /**
      * @brief Sets Device datamodel board info parameters.
      *
      * DM path : "Device.WiFi.DataElements.Network.Device.{i}"
