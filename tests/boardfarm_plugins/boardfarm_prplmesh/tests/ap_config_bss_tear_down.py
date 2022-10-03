@@ -50,7 +50,8 @@ class ApConfigBSSTeardown(PrplMeshBaseTest):
                        rf"Setting node '{agent.radios[1].mac}' as active", timeout=10)
 
         self.check_log(agent.radios[0],
-                       r"Autoconfiguration for ssid: Boardfarm-Tests-24G-3 .*"
+                       r"Autoconfiguration for bssid:.*"
+                       r"ssid: Boardfarm-Tests-24G-3 .*"
                        r"fronthaul: true backhaul: false")
         self.check_log(agent.radios[1], r".* tear down radio")
         conn_map = controller.get_conn_map()
