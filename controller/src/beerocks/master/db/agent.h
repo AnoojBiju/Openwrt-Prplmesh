@@ -11,10 +11,12 @@
 
 #include <bcl/beerocks_defines.h>
 #include <bcl/beerocks_mac_map.h>
+#include <bcl/beerocks_message_structs.h>
 #include <memory>
 #include <string>
 #include <tlvf/common/sMacAddr.h>
 #include <tlvf/tlvftypes.h>
+#include <tlvf/wfa_map/tlvChannelScanCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2ApCapability.h>
 #include <tlvf/wfa_map/tlvProfile2MultiApProfile.h>
 
@@ -114,6 +116,28 @@ public:
             std::chrono::steady_clock::time_point timestamp;
         };
         std::shared_ptr<s_ap_stats_params> stats_info;
+
+        class channel_scan_capabilities {
+        public:
+            // True: Agent can only perform scan on boot, False: Agent can perform Requested scans
+            bool on_boot_only = true;
+
+            // 0x00: No impact (independent radio is available for scanning that is not used for Fronthaul or backhaul)
+            // 0x01: Reduced number of spatial streams
+            // 0x02: Time slicing impairment (Radio may go off channel for a series of short intervals)
+            // 0x03: Radio unavailable for >= 2 seconds)
+            uint8_t scan_impact = wfa_map::cRadiosWithScanCapabilities::eScanImpact::
+                SCAN_IMPACT_TIME_SLICING_IMPAIRMENT;
+
+            // The minimum interval in seconds between the start of two consecutive channel scans on this radio
+            uint32_t minimum_scan_interval = 0;
+
+            // An unordered-map of operating classes the radio can scan on
+            // Key: operating-class id, Value: vector with channels
+            std::unordered_map<uint8_t, std::vector<beerocks::message::sWifiChannel>>
+                operating_classes;
+        };
+        channel_scan_capabilities scan_capabilities;
 
         struct sBss {
             sBss()             = delete;

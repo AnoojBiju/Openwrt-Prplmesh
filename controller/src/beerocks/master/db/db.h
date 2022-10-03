@@ -1173,9 +1173,17 @@ public:
     bool set_hostap_conf_restricted_channels(const sMacAddr &hostap_mac,
                                              const uint8_t *restricted_channels);
     std::vector<uint8_t> get_hostap_conf_restricted_channels(const sMacAddr &hostap_mac);
+
+    /**
+     * @brief Sets channel scan capabilities parameters of Agent DB for given radio.
+     *
+     * @param[in] radio Radio DB object.
+     * @param[in] radio_capabilities Struct with radio channel scan capabilities.
+     * @return True on success, false otherwise.
+     */
     bool
-    fill_radio_channel_scan_capabilites(const sMacAddr &radio_mac,
-                                        wfa_map::cRadiosWithScanCapabilities &radio_capabilities);
+    set_radio_channel_scan_capabilites(Agent::sRadio &radio,
+                                       wfa_map::cRadiosWithScanCapabilities &radio_capabilities);
 
     //
     // CS - DFS

@@ -4066,7 +4066,13 @@ bool Controller::handle_tlv_profile2_channel_scan_capabilities(std::shared_ptr<A
         auto &radio_capabilities = std::get<1>(radio_capabilities_tuple);
         auto &ruid               = radio_capabilities.radio_uid();
 
-        if (!database.fill_radio_channel_scan_capabilites(ruid, radio_capabilities)) {
+        auto radio = agent->radios.get(ruid);
+        if (!radio) {
+            LOG(ERROR) << "No radio found for ruid=" << ruid << " on " << agent->al_mac;
+            continue;
+        }
+
+        if (!database.set_radio_channel_scan_capabilites(*radio, radio_capabilities)) {
             LOG(ERROR) << "Failed to save channel scan capabilities for radio=" << ruid;
             return false;
         }

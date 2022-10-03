@@ -708,32 +708,17 @@ std::vector<uint8_t> db::get_hostap_conf_restricted_channels(const sMacAddr &hos
     return n->hostap->conf_restricted_channels;
 }
 
-bool db::fill_radio_channel_scan_capabilites(
-    const sMacAddr &radio_mac, wfa_map::cRadiosWithScanCapabilities &radio_capabilities)
+bool db::set_radio_channel_scan_capabilites(
+    Agent::sRadio &radio, wfa_map::cRadiosWithScanCapabilities &radio_capabilities)
 {
-    LOG(DEBUG) << "Fill radio channel scan capabilities for " << radio_mac;
-    auto node = get_node(radio_mac);
-    if (!node) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << radio_mac << " does not exist!";
-        return false;
-    }
-
-    if (node->get_type() != beerocks::TYPE_SLAVE || node->hostap == nullptr) {
-        LOG(WARNING) << __FUNCTION__ << "node " << radio_mac << " is not a valid radio!";
-        return false;
-    }
-
-    node->hostap->scan_capabilities.on_boot_only = radio_capabilities.capabilities().on_boot_only;
-    node->hostap->scan_capabilities.scan_impact  = radio_capabilities.capabilities().scan_impact;
-    node->hostap->scan_capabilities.minimum_scan_interval =
-        radio_capabilities.minimum_scan_interval();
+    radio.scan_capabilities.on_boot_only          = radio_capabilities.capabilities().on_boot_only;
+    radio.scan_capabilities.scan_impact           = radio_capabilities.capabilities().scan_impact;
+    radio.scan_capabilities.minimum_scan_interval = radio_capabilities.minimum_scan_interval();
 
     std::stringstream ss;
-    ss << "on_boot_only=" << std::hex << int(node->hostap->scan_capabilities.on_boot_only)
-       << std::endl
-       << "scan_impact=" << std::oct << int(node->hostap->scan_capabilities.scan_impact)
-       << std::endl
-       << "minimum_scan_interval=" << int(node->hostap->scan_capabilities.minimum_scan_interval)
+    ss << "on_boot_only=" << std::hex << int(radio.scan_capabilities.on_boot_only) << std::endl
+       << "scan_impact=" << std::oct << int(radio.scan_capabilities.scan_impact) << std::endl
+       << "minimum_scan_interval=" << int(radio.scan_capabilities.minimum_scan_interval)
        << std::endl;
 
     auto operating_classes_list_length = radio_capabilities.operating_classes_list_length();
@@ -758,8 +743,7 @@ bool db::fill_radio_channel_scan_capabilites(
             ss << "}";
         }
 
-        //std::vector<beerocks::message::sWifiChannel> channels_list;
-        auto &operating_classes = node->hostap->scan_capabilities.operating_classes;
+        auto &operating_classes = radio.scan_capabilities.operating_classes;
         operating_classes.clear();
         for (int ch_idx = 0; ch_idx < channel_list_length; ch_idx++) {
             auto channel = operating_class_struct.channel_list(ch_idx);
@@ -782,14 +766,11 @@ bool db::fill_radio_channel_scan_capabilites(
 
             beerocks::message::sWifiChannel wifi_channel;
             wifi_channel.channel = *channel;
-            //channels_list.push_back(wifi_channel);
             operating_classes[operating_class].push_back(wifi_channel);
         }
     }
-
-    // Print the received channel scan capabilites
+    ss << std::endl;
     LOG(DEBUG) << ss.str();
-
     return true;
 }
 
