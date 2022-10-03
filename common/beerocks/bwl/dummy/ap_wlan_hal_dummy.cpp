@@ -125,6 +125,9 @@ HALState ap_wlan_hal_dummy::attach(bool block)
         set_channel(1, beerocks::eWiFiBandwidth::BANDWIDTH_40, 2422);
     }
 
+    std::list<son::wireless_utils::sBssInfoConf> bss_info_conf_list;
+    update_vap_credentials(bss_info_conf_list, "", "");
+
     // On Operational send the AP_Attached event to the AP Manager
     if (state == HALState::Operational) {
         event_queue_push(Event::AP_Attached);
