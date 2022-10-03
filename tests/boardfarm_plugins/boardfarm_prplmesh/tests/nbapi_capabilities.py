@@ -72,7 +72,7 @@ class NbapiCapabilities(PrplMeshBaseTest):
         time.sleep(1)
 
         debug("Confirming AP capability query has been received on agent")
-        self.check_log(agent, "AP_CAPABILITY_QUERY_MESSAGE")
+        self.check_log(agent.radios[0], "AP_CAPABILITY_QUERY_MESSAGE")
         debug("Confirming AP capability report has been received on controller")
         self.check_log(controller, "AP_CAPABILITY_REPORT_MESSAGE")
         ap_cap_report = self.check_cmdu_type(

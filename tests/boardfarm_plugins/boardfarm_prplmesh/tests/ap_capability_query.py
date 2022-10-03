@@ -26,7 +26,7 @@ class ApCapabilityQuery(PrplMeshBaseTest):
         time.sleep(1)
 
         debug("Confirming ap capability query has been received on agent")
-        self.check_log(agent, "AP_CAPABILITY_QUERY_MESSAGE")
+        self.check_log(agent.radios[0], "AP_CAPABILITY_QUERY_MESSAGE")
 
         debug("Confirming ap capability report has been received on controller")
         self.check_log(controller, "AP_CAPABILITY_REPORT_MESSAGE")
