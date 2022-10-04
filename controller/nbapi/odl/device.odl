@@ -185,5 +185,9 @@
         %read-only uint32 CollectionInterval = 0 {
             on action validate call check_minimum 0;
         }
+
+        %read-only bool SupportsVBSS = false;
+
+        %instance bool UpdateVBSSCapabilities();
     }
 }

@@ -75,6 +75,8 @@ public:
 
     bool is_gateway = false;
 
+    bool does_support_vbss = false;
+
     std::string manufacturer;
 
     beerocks::eNodeState state = beerocks::STATE_CONNECTED;
@@ -145,6 +147,9 @@ public:
 
             /** True if the BSS is operational. */
             bool enabled = false;
+
+            /** True if this BSS was created virtually for use by a single station */
+            bool is_vbss = false;
 
             /** Stations (backhaul or fronthaul) connected to this BSS. */
             beerocks::mac_map<Station> connected_stations;

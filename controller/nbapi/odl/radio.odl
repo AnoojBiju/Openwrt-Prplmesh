@@ -54,6 +54,13 @@
             %in %mandatory uint32 channels_num
         );
 
+        %instance bool TriggerVBSSCreation(
+            %in %mandatory string vbssid,
+            %in %mandatory string client_mac,
+            %in %mandatory string ssid,
+            %in %mandatory string pass
+        );
+
         object Capabilities;
 
         object BSS [] {

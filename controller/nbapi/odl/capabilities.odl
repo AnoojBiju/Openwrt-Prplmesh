@@ -126,5 +126,15 @@
             %read-only bool SpatialReuse;               /* EasyMesh configuration and reporting of BSS Color/Spatial Reuse support. */
             %read-only bool AnticipatedChannelUsage;    /* Anticipated Channel Usage (ACU) reporting support. */
         }
+
+        %read-only object VBSSCapabilities {
+            %read-only uint8 MaxVBSS = 0;
+            %read-only bool VBSSsSubtract;
+            %read-only bool ApplyVBSSIDRestrictions;
+            %read-only bool ApplyVBSSIDMatchMaskRestrictions;
+            %read-only bool ApplyVBSSIDFixedBitsRestrictions;
+            %read-only string VBSSIDFixedBitsMask;
+            %read-only string VBSSIDFixedBitsValue;
+        }
     }
 }

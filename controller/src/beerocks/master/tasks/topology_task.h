@@ -13,6 +13,7 @@
 #include "../db/db.h"
 #include "task.h"
 #include "task_pool.h"
+#include <tlvf/wfa_map/tlvVbssConfigurationReport.h>
 
 #include <beerocks/tlvf/beerocks_message.h>
 
@@ -47,6 +48,16 @@ private:
     * @return True if message, was successfully processed, false otherwise.
     */
     bool handle_topology_notification(const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief Handles the recieving of a VBSS Configuration Report TLV which marks the already added BSSes as virtual BSSes.
+     * 
+     * @param src_mac MAC address of the message sender.
+     * @param vbss_config_report_tlv The TLV that was recieved, cannot be a nullptr
+     */
+    void handle_vbss_configuration_tlv(
+        const sMacAddr &src_mac,
+        std::shared_ptr<wfa_map::VbssConfigurationReport> vbss_config_report_tlv);
 
     /**
      * Remove not reported neighbors.

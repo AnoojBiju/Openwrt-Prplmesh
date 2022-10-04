@@ -6414,7 +6414,8 @@ bool db::set_radio_utilization(const sMacAddr &bssid, uint8_t utilization)
     return true;
 }
 
-bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, const std::string &ssid)
+bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, const std::string &ssid,
+                          bool is_vbss)
 {
     auto radio = get_radio_by_uid(radio_mac);
     if (!radio) {
@@ -6450,6 +6451,7 @@ bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, cons
     ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "Enabled", bss->enabled);
     ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "FronthaulUse", bss->fronthaul);
     ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "BackhaulUse", bss->backhaul);
+    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "IsVBSS", is_vbss);
 
     /*
         Set value for LastChange variable - it is creation time, when someone will
@@ -7530,6 +7532,43 @@ bool db::dm_add_radio_cac_capabilities(
             ret_val &= m_ambiorix_datamodel->set(channels_path, "Channel", channel);
         }
     }
+
+    return ret_val;
+}
+
+bool db::dm_set_radio_vbss_capabilities(const sMacAddr &radio_uid, uint8_t max_vbss,
+                                        bool vbsses_subtract, bool apply_vbssid_restrictions,
+                                        bool apply_vbssid_match_mask_restrictions,
+                                        bool apply_fixed_bits_restrictions,
+                                        const sMacAddr &fixed_bits_mask,
+                                        const sMacAddr &fixed_bits_value)
+{
+
+    auto radio = get_radio_by_uid(radio_uid);
+    if (!radio) {
+        LOG(ERROR) << "Failed to get radio with UID: " << radio_uid;
+        return false;
+    }
+
+    if (radio->dm_path.empty()) {
+        return true;
+    }
+
+    std::string vbss_caps_dm_path = radio->dm_path + ".Capabilities.VBSSCapabilities";
+
+    bool ret_val = true;
+
+    ret_val &= m_ambiorix_datamodel->set(vbss_caps_dm_path, "MaxVBSS", max_vbss);
+    ret_val &= m_ambiorix_datamodel->set(vbss_caps_dm_path, "VBSSsSubtract", vbsses_subtract);
+    ret_val &= m_ambiorix_datamodel->set(vbss_caps_dm_path, "ApplyVBSSIDRestrictions",
+                                         apply_vbssid_restrictions);
+    ret_val &= m_ambiorix_datamodel->set(vbss_caps_dm_path, "ApplyVBSSIDMatchMaskRestrictions",
+                                         apply_vbssid_match_mask_restrictions);
+    ret_val &= m_ambiorix_datamodel->set(vbss_caps_dm_path, "ApplyVBSSIDFixedBitsRestrictions",
+                                         apply_fixed_bits_restrictions);
+    ret_val &= m_ambiorix_datamodel->set(vbss_caps_dm_path, "VBSSIDFixedBitsMask", fixed_bits_mask);
+    ret_val &=
+        m_ambiorix_datamodel->set(vbss_caps_dm_path, "VBSSIDFixedBitsValue", fixed_bits_value);
 
     return ret_val;
 }

@@ -74,8 +74,6 @@ bool vbss_task::handle_ieee1905_1_msg(const sMacAddr &src_mac, ieee1905_1::CmduM
         return handle_move_response_msg(src_mac, cmdu_rx, false);
     case ieee1905_1::eMessageType::VIRTUAL_BSS_MOVE_CANCEL_RESPONSE_MESSAGE:
         return handle_move_response_msg(src_mac, cmdu_rx, true);
-    case ieee1905_1::eMessageType::TOPOLOGY_RESPONSE_MESSAGE:
-        return handle_top_response_msg(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_WSC_MESSAGE:
         return handle_ap_radio_vbss_caps_msg(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::BSS_CONFIGURATION_REQUEST_MESSAGE:
@@ -103,6 +101,22 @@ void vbss_task::handle_event(int event_enum_value, void *event_obj)
         LOG(INFO) << "VBSS Task recieved a MOVE event. Starting move process for client \""
                   << move_event->client_vbss.client_mac << "\"";
         handle_move_client_event(*move_event);
+        break;
+    }
+    case eEventType::CREATE: {
+        auto create_event = reinterpret_cast<sCreationEvent *>(event_obj);
+        LOG(INFO)
+            << "VBSS Task received a CREATE event. Starting vbss creation process for client \""
+            << create_event->client_vbss.client_mac << "\"";
+        handle_vbss_creation_event(*create_event);
+        break;
+    }
+    case eEventType::DESTROY: {
+        auto destroy_event = reinterpret_cast<sDestructionEvent *>(event_obj);
+        LOG(INFO)
+            << "VBSS Task received a DESTROY event. Starting vbss destruction process for client \""
+            << destroy_event->client_vbss.client_mac << "\"";
+        handle_vbss_destruction_event(*destroy_event);
         break;
     }
     default:
@@ -150,6 +164,100 @@ bool vbss_task::handle_move_client_event(const sMoveEvent &move_event)
     return true;
 }
 
+bool vbss_task::handle_vbss_creation_event(const sCreationEvent &create_event)
+{
+    vbss::sClientVBSS client_vbss = create_event.client_vbss;
+    sMacAddr client_mac           = client_vbss.client_mac;
+
+    // You cannot create a VBSS via this method while a move for this VBSSID is ongoing
+    auto existing_move = active_moves.get(client_vbss.vbssid);
+    if (existing_move) {
+        LOG(ERROR) << "Could not start VBSS creation for client with MAC address " << client_mac
+                   << "! Move already in progress for VBSSID " << client_vbss.vbssid
+                   << " (From radio " << existing_move->client_vbss.current_connected_ruid
+                   << " to radio " << existing_move->dest_ruid << ")";
+        return false;
+    }
+
+    auto existing_creation = active_creation_events.get(client_vbss.vbssid);
+    if (existing_creation) {
+        LOG(ERROR) << "Could not start VBSS creation for client with MAC address " << client_mac
+                   << "! Creation already in progress for VBSSID " << client_vbss.vbssid
+                   << " on the radio with UID " << existing_creation->dest_ruid;
+        return false;
+    }
+
+    auto agent = m_database.get_agent_by_radio_uid(client_vbss.current_connected_ruid);
+    if (!agent) {
+        LOG(ERROR) << "Could not start VBSS creation for client with MAC address " << client_mac
+                   << "! Could not find agent for radio uid " << client_vbss.current_connected_ruid;
+        return false;
+    }
+
+    active_creation_events.add(client_vbss.vbssid, client_vbss, create_event.dest_ruid,
+                               create_event.ssid, create_event.password);
+
+    sMacAddr agent_mac = agent->al_mac;
+
+    if (client_vbss.client_is_associated) {
+        // Client is already associated, Must have the Security Context to create a VBSS
+        if (!vbss::vbss_actions::send_client_security_ctx_request(agent_mac, client_vbss,
+                                                                  m_database)) {
+            LOG(ERROR) << "Could not start VBSS creation for client with MAC address " << client_mac
+                       << "! Client Security Context Request failed to send!";
+            return false;
+        }
+        return true;
+    }
+
+    // Client is not associated, just request VBSS creation
+    if (!vbss::vbss_actions::create_vbss(client_vbss, create_event.dest_ruid, create_event.ssid,
+                                         create_event.password, nullptr, m_database)) {
+        LOG(ERROR) << "Could not start VBSS creation for client with MAC address " << client_mac
+                   << "! Create VBSS Request failed to send!";
+        return false;
+    }
+
+    return true;
+}
+
+bool vbss_task::handle_vbss_destruction_event(const sDestructionEvent &destroy_event)
+{
+
+    vbss::sClientVBSS client_vbss = destroy_event.client_vbss;
+    sMacAddr client_mac           = client_vbss.client_mac;
+
+    // You cannot destroy a VBSS via this method while a move for this VBSSID is ongoing
+    auto existing_move = active_moves.get(client_vbss.vbssid);
+    if (existing_move) {
+        LOG(ERROR) << "Could not start VBSS destruction for client with MAC address " << client_mac
+                   << "! Move already in progress for VBSSID " << existing_move->client_vbss.vbssid
+                   << " (From radio " << existing_move->client_vbss.current_connected_ruid
+                   << " to radio " << existing_move->dest_ruid << ")";
+        return false;
+    }
+
+    auto existing_destruction = active_destruction_events.get(destroy_event.client_vbss.vbssid);
+    if (existing_destruction) {
+        LOG(ERROR) << "Could not start VBSS destruction for client with MAC address " << client_mac
+                   << "! Destruction already in progress for VBSSID "
+                   << destroy_event.client_vbss.vbssid << " on the radio with UID "
+                   << existing_destruction->client_vbss.current_connected_ruid;
+        return false;
+    }
+
+    active_destruction_events.add(client_vbss.vbssid, client_vbss,
+                                  destroy_event.should_disassociate);
+
+    if (!vbss::vbss_actions::destroy_vbss(client_vbss, destroy_event.should_disassociate,
+                                          m_database)) {
+        LOG(ERROR) << "Could not start VBSS destruction for client with MAC address " << client_mac
+                   << "! Destruction request failed!";
+        return false;
+    }
+    return true;
+}
+
 bool vbss_task::handle_ap_radio_vbss_caps_msg(const sMacAddr &src_mac,
                                               ieee1905_1::CmduMessageRx &cmdu_rx)
 {
@@ -161,6 +269,19 @@ bool vbss_task::handle_ap_radio_vbss_caps_msg(const sMacAddr &src_mac,
                         << " does not have AP Radio VBSS Capabilities TLV";
         return false;
     }
+
+    auto src_agent = m_database.m_agents.get(src_mac);
+
+    if (!src_agent) {
+        LOG(ERROR) << "Message contained AP Radio VBSS Capabilities TLV but no Agent found for "
+                      "message source MAC address ("
+                   << src_mac << ")!";
+        return false;
+    }
+
+    // If a VBSS Capabilities TLV is recieved, this agent supports VBSS
+    src_agent->does_support_vbss = true;
+    m_database.get_ambiorix_obj()->set(src_agent->dm_path, "SupportsVBSS", true);
 
     // A TLV is returned for each radio that supports VBSS, handle all of them
     beerocks::mac_map<vbss::sAPRadioVBSSCapabilities> ruid_caps_map;
@@ -180,8 +301,6 @@ bool vbss_task::handle_ap_radio_vbss_caps_msg(const sMacAddr &src_mac,
 
         ruid_caps_map.add(ap_vbss_caps_tlv->radio_uid(), ap_radio_caps);
     }
-
-    //TODO: Send to VBSSManager (include src_mac = agent_mac)
 
     return true;
 }
@@ -275,9 +394,38 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
     sMacAddr vbssid   = vbss_event_tlv->bssid();
     bool is_succeeded = vbss_event_tlv->success();
 
+    auto existing_creation = active_creation_events.get(vbssid);
+    if (existing_creation) {
+        // Recieved the response to an active creation request
+
+        active_creation_events.erase(vbssid);
+        if (!is_succeeded) {
+            LOG(ERROR) << "Virtual BSS Creation failed on destination radio " << ruid
+                       << "! Creation event failed";
+            return false;
+        }
+        //TODO: Add VBSSes to DM
+
+        return true;
+    }
+
+    auto existing_destruction = active_destruction_events.get(vbssid);
+    if (existing_destruction) {
+        // Recieved the response to an active destruction request
+        active_destruction_events.erase(vbssid);
+        if (!is_succeeded) {
+            LOG(ERROR) << "Virtual BSS Destruction failed on destination radio " << ruid
+                       << "! Destroy event failed";
+            return false;
+        }
+        //TODO: Add VBSSes to DM
+
+        return true;
+    }
+
     auto existing_move = get_matching_active_move(vbssid, eMoveProcessState::VBSS_CREATION);
-    if (existing_move != nullptr) {
-        // Recieved creation request response during a move
+    if (existing_move) {
+        // Received creation request response during a move
 
         sMacAddr src_ruid = existing_move->client_vbss.current_connected_ruid;
         auto src_agent    = m_database.get_agent_by_radio_uid(src_ruid);
@@ -329,7 +477,7 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
     }
 
     existing_move = get_matching_active_move(vbssid, eMoveProcessState::VBSS_DESTRUCTION);
-    if (existing_move != nullptr) {
+    if (existing_move) {
         // Recieved destruction request response during a move
 
         if (!is_succeeded) {
@@ -338,55 +486,6 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
         }
         active_moves.erase(vbssid);
         return true;
-    }
-
-    // TODO: Send to VBSS Manager (include src_mac = agent_mac)
-
-    return true;
-}
-
-// If the Agent supports VBSS this message will include a VBSS Configuration Report TLV
-bool vbss_task::handle_top_response_msg(const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
-{
-
-    auto config_report_tlv = cmdu_rx.getClass<wfa_map::VbssConfigurationReport>();
-    if (!config_report_tlv) {
-        LOG(INFO) << "Agent with MAC " << src_mac
-                  << " did not send a VBSS Configuration Report TLV with the "
-                     "TOPOLOGY_RESPONSE_MESSAGE. It does not support VBSS.";
-        return false;
-    }
-
-    LOG(INFO) << "VBSS Configuration Report received with data...";
-
-    uint8_t num_radios = config_report_tlv->number_of_radios();
-    for (uint8_t radio_idx = 0; radio_idx < num_radios; radio_idx++) {
-        auto radio_tup = config_report_tlv->radio_list(radio_idx);
-        if (!std::get<0>(radio_tup)) {
-            LOG(ERROR) << "Failed to get radio (from VbssConfigurationReport) for index "
-                       << radio_idx;
-            continue;
-        }
-        auto radio_info = std::get<1>(radio_tup);
-
-        sMacAddr ruid   = radio_info.radio_uid();
-        uint8_t num_bss = radio_info.number_bss();
-        LOG(INFO) << "RUID: " << ruid;
-
-        for (uint8_t bss_idx = 0; bss_idx < num_bss; bss_idx++) {
-            auto bss_tup = radio_info.bss_list(bss_idx);
-            if (!std::get<0>(bss_tup)) {
-                LOG(ERROR) << "Failed to get BSS (from VbssConfigurationReport) for radio at index "
-                           << radio_idx << " at index " << bss_idx;
-                continue;
-            }
-            auto bss_info = std::get<1>(bss_tup);
-
-            sMacAddr bssid   = bss_info.bssid();
-            std::string ssid = bss_info.ssid_str();
-
-            LOG(DEBUG) << "    BSSID: " << bssid << ", SSID: \"" << ssid << "\"";
-        }
     }
 
     // TODO: Send to VBSS Manager (include src_mac = agent_mac)
@@ -431,7 +530,7 @@ bool vbss_task::handle_client_security_ctx_resp(const sMacAddr &src_mac,
     std::copy_n(client_sec_ctx_tlv->gtk(), sec_ctx_info->group_key_length, sec_ctx_info->gtk);
 
     auto existing_move = get_matching_active_move(bssid, eMoveProcessState::CLIENT_SEC_CTX);
-    if (existing_move != nullptr) {
+    if (existing_move) {
         // A move is in process for this mac address (and vbssid) and this state is the state that should be processed
 
         // Copy over security context info for later processing
@@ -440,7 +539,7 @@ bool vbss_task::handle_client_security_ctx_resp(const sMacAddr &src_mac,
         vbss::sClientVBSS client_vbss = existing_move->client_vbss;
 
         auto agent = m_database.get_agent_by_radio_uid(client_vbss.current_connected_ruid);
-        if (agent == nullptr) {
+        if (!agent) {
             LOG(ERROR) << "Could not continue move request for client with MAC address "
                        << client_mac << "! Could not find agent for radio uid "
                        << client_vbss.current_connected_ruid;
@@ -460,7 +559,23 @@ bool vbss_task::handle_client_security_ctx_resp(const sMacAddr &src_mac,
         return true;
     }
 
-    // TODO: Send to VBSS Manager (include src_mac = agent_mac)
+    auto existing_creation = active_creation_events.get(bssid);
+
+    if (existing_creation) {
+        existing_creation->sec_ctx_info = sec_ctx_info;
+
+        vbss::sClientVBSS client_vbss = existing_creation->client_vbss;
+
+        if (!vbss::vbss_actions::create_vbss(client_vbss, existing_creation->dest_ruid,
+                                             existing_creation->ssid, existing_creation->password,
+                                             existing_creation->sec_ctx_info.get(), m_database)) {
+            LOG(ERROR) << "Could not start VBSS creation from Client Security Context Response for "
+                          "client with MAC address "
+                       << client_mac << "! Create VBSS Request failed to send!";
+            return false;
+        }
+        return true;
+    }
 
     return true;
 }
