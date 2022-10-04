@@ -12,8 +12,14 @@
 // Do not compile when OpenSSL >= 1.1.x is detected
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 
+#include <openssl/bn.h>
+#include <openssl/dh.h>
+#include <openssl/dsa.h>
+#include <openssl/ecdsa.h>
 #include <openssl/engine.h>
 #include <openssl/hmac.h>
+#include <openssl/ossl_typ.h>
+#include <openssl/rsa.h>
 
 #ifdef __cplusplus
 extern "C" {

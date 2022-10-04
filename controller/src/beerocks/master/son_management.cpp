@@ -1669,11 +1669,18 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
                   << ", radio_mac=" << request->radio_mac() << ", channel=" << request->channel()
                   << ", bandwidth=" << request->bandwidth()
                   << ", csa_count=" << request->csa_count();
+        if (!database.get_agent_by_radio_uid(request->radio_mac())) {
+            response->code() = uint8_t(eChannelSwitchStatus::ERROR);
+            controller_ctx->send_cmdu(sd, cmdu_tx);
+            return;
+        }
 
-        uint8_t operating_class = 0;
-        if (request->channel() == 0) {
-            LOG(INFO) << "On-Demand-Auto Channel-Selection request detected";
-        } else {
+        bool need_new_preference = false;
+        uint8_t operating_class  = 0;
+        if (request->channel() != 0) {
+            // Specific On-Demand Channel-Selection request
+
+            // Get operating-class & check validity
             operating_class = wireless_utils::get_operating_class_by_channel(
                 beerocks::message::sWifiChannel(request->channel(), request->bandwidth()));
             if (operating_class == 0) {
@@ -1681,19 +1688,17 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
                            << beerocks::utils::convert_bandwidth_to_int(request->bandwidth())
                            << ", do not have a valid Operating Class";
 
-                response->code() = uint8_t(1); //Failure
+                response->code() = uint8_t(eChannelSwitchStatus::INVALID_BANDWIDTH_AND_CHANNEL);
                 controller_ctx->send_cmdu(sd, cmdu_tx);
                 return;
             }
 
+            // Check if preference has expired for the radio
             if (database.is_preference_reported_expired(request->radio_mac())) {
                 LOG(DEBUG) << "Preference Report has expired, request new preference!";
-                dynamic_channel_selection_r2_task::sPreferenceRequestEvent new_event;
-                new_event.radio_mac = request->radio_mac();
-                tasks.push_event(database.get_dynamic_channel_selection_r2_task_id(),
-                                 dynamic_channel_selection_r2_task::eEvent::REQUEST_NEW_PREFERENCE,
-                                 &new_event);
+                need_new_preference = true;
             } else {
+                // Because preference is still valid, we need to check the channel's preference
                 int8_t channel_preference = database.get_channel_preference(
                     request->radio_mac(), operating_class, request->channel());
                 if (channel_preference <= 0) {
@@ -1702,14 +1707,27 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
                                << ", are "
                                << ((channel_preference == 0) ? "Non-Operable" : "Invalid");
 
-                    response->code() = uint8_t(1); //Failure
+                    response->code() = uint8_t(eChannelSwitchStatus::INOPERABLE_CHANNEL);
                     controller_ctx->send_cmdu(sd, cmdu_tx);
-                    break;
+                    return;
                 }
             }
+        } else {
+            LOG(INFO) << "On-Demand-Auto Channel-Selection request detected";
         }
 
-        LOG(DEBUG) << "Sending Channel-Selection request to task";
+        // Send back response.
+        response->code() = uint8_t(eChannelSwitchStatus::SUCCESS);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
+
+        LOG(DEBUG) << "Sending Channel-Selection events to task";
+        if (need_new_preference) {
+            dynamic_channel_selection_r2_task::sPreferenceRequestEvent new_event;
+            new_event.radio_mac = request->radio_mac();
+            tasks.push_event(database.get_dynamic_channel_selection_r2_task_id(),
+                             dynamic_channel_selection_r2_task::eEvent::REQUEST_NEW_PREFERENCE,
+                             &new_event);
+        }
         dynamic_channel_selection_r2_task::sOnDemandChannelSelectionEvent new_event;
         new_event.radio_mac       = request->radio_mac();
         new_event.channel         = request->channel();
@@ -1719,9 +1737,6 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             database.get_dynamic_channel_selection_r2_task_id(),
             dynamic_channel_selection_r2_task::eEvent::TRIGGER_ON_DEMAND_CHANNEL_SELECTION,
             &new_event);
-
-        response->code() = uint8_t(0); //Success
-        controller_ctx->send_cmdu(sd, cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_BML_CHANNEL_SCAN_SET_CONTINUOUS_PARAMS_REQUEST: {

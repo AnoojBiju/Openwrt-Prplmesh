@@ -246,6 +246,10 @@ void TopologyTask::handle_topology_query(ieee1905_1::CmduMessageRx &cmdu_rx,
         return;
     }
 
+    if (!add_vs_tlv_bssid_iface_mapping()) {
+        return;
+    }
+
     auto db = AgentDB::get();
 
     auto multiap_profile_tlv = cmdu_rx.getClass<wfa_map::tlvProfile2MultiApProfile>();
@@ -778,6 +782,46 @@ bool TopologyTask::add_associated_clients_tlv()
                 }
                 tlvAssociatedClients->add_bss_list(bss_list);
             }
+        }
+    }
+    return true;
+}
+
+bool TopologyTask::add_vs_tlv_bssid_iface_mapping()
+{
+    auto vs_tlv = message_com::add_vs_tlv<beerocks_message::tlvVsBssidIfaceMapping>(m_cmdu_tx);
+    if (!vs_tlv) {
+        LOG(ERROR) << "Failed to allocate tlvBssidIfaceMapping";
+        return false;
+    }
+
+    auto db        = AgentDB::get();
+    uint8_t filled = 0;
+    for (const auto radio : db->get_radios_list()) {
+        if (!radio) {
+            continue;
+        }
+        int num_bss = std::count_if(radio->front.bssids.begin(), radio->front.bssids.end(),
+                                    [](beerocks::AgentDB::sRadio::sFront::sBssid b) {
+                                        return b.mac != net::network_utils::ZERO_MAC;
+                                    });
+        vs_tlv->alloc_bssid_vap_id_map(num_bss);
+        uint8_t filled_on_radio = 0;
+        for (int8_t vap_id = 0; vap_id < IFACE_TOTAL_VAPS; vap_id++) {
+            auto &vap_info = radio->front.bssids[vap_id];
+            if (vap_info.iface_name.empty()) {
+                continue;
+            }
+            if (filled_on_radio == num_bss) {
+                break;
+            }
+            auto &bssid_vap_id_map  = std::get<1>(vs_tlv->bssid_vap_id_map(filled));
+            bssid_vap_id_map.bssid  = vap_info.mac;
+            bssid_vap_id_map.vap_id = vap_id;
+            LOG(DEBUG) << "vap_id=" << int(bssid_vap_id_map.vap_id)
+                       << ", bssid=" << bssid_vap_id_map.bssid;
+            filled_on_radio++;
+            filled++;
         }
     }
     return true;
