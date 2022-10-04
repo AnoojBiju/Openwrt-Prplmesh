@@ -36,6 +36,7 @@ class tlvProfile2CacStatusReport : public BaseClass
         typedef struct sAvailableChannels {
             uint8_t operating_class;
             uint8_t channel;
+            //Minutes since CAC was completed identifying available channel. Equals zero for non-DFS channels.
             uint16_t minutes_since_cac_completion;
             void struct_swap(){
                 tlvf_swap(16, reinterpret_cast<uint8_t*>(&minutes_since_cac_completion));
@@ -47,6 +48,7 @@ class tlvProfile2CacStatusReport : public BaseClass
         typedef struct sDetectedPairs {
             uint8_t operating_class_detected;
             uint8_t channel_detected;
+            //Seconds remaining in the non-occupancy duration for the channel specified by the operating class and channel pair.
             uint16_t duration;
             void struct_swap(){
                 tlvf_swap(16, reinterpret_cast<uint8_t*>(&duration));
@@ -58,6 +60,7 @@ class tlvProfile2CacStatusReport : public BaseClass
         typedef struct sActiveCacPairs {
             uint8_t operating_class_active_cac;
             uint8_t channel_active_cac;
+            //Seconds remaining to complete the CAC.
             uint8_t countdown[3];
             void struct_swap(){
             }

@@ -1,7 +1,7 @@
 
 /* SPDX-License-Identifier: BSD-2-Clause-Patent
  *
- * SPDX-FileCopyrightText: 2020 the prplMesh contributors (see AUTHORS.md)
+ * SPDX-FileCopyrightText: 2020-2022 the prplMesh contributors (see AUTHORS.md)
  *
  * This code is subject to the terms of the BSD+Patent license.
  * See LICENSE file for more details.
@@ -106,12 +106,12 @@
             %read-only uint16 MediaType = 0;
 
             object Stats {
-                %read-only uint64 BytesSent  = 0;
-                %read-only uint64 BytesReceived  = 0;
-                %read-only uint64 PacketsSent  = 0;
-                %read-only uint64 PacketsReceived  = 0;
-                %read-only uint32 ErrorsSent  = 0;
-                %read-only uint32 ErrorsReceived  = 0;
+                %read-only uint64 BytesSent = 0;
+                %read-only uint64 BytesReceived = 0;
+                %read-only uint64 PacketsSent = 0;
+                %read-only uint64 PacketsReceived = 0;
+                %read-only uint32 ErrorsSent = 0;
+                %read-only uint32 ErrorsReceived = 0;
                 %read-only uint64 UnicastPacketsSent = 0;
                 %read-only uint64 UnicastPacketsReceived = 0;
                 %read-only uint32 DiscardPacketsSent = 0;
@@ -132,9 +132,12 @@
             }
         }
 
-        %read-only object CACStatus {
-            %read-only datetime TimeStamp = "2020-08-31T11:22:39Z";
+        /* Latest Channel Availability Check (CAC) Status Report from the device */
+        %read-only object CACStatus [] {
+            counted with CACStatusNumberOfEntries;
+            %read-only datetime TimeStamp;
 
+            /* Describes available channels identified by CAC */
             %read-only object CACAvailableChannel [] {
                 counted with CACAvailableChannelNumberOfEntries;
                 %read-only uint32 OpClass = 0 {
@@ -143,6 +146,35 @@
                 %read-only uint32 Channel = 0 {
                     on action validate call check_range [0, 255];
                 }
+                %read-only uint32 Minutes = 0 {
+                    on action validate call check_range [0, 65535];
+                }
+            }
+
+            /* Describes channels identified by CAC that may not be occupied */
+            %read-only object CACNonOccupancyChannel [] {
+                counted with CACNonOccupancyChannelNumberOfEntries;
+                %read-only uint32 OpClass = 0 {
+                    on action validate call check_range [0, 255];
+                }
+                %read-only uint32 Channel = 0 {
+                    on action validate call check_range [0, 255];
+                }
+                %read-only uint32 Seconds = 0 {
+                    on action validate call check_range [0, 65535];
+                }
+            }
+
+            /* Describes channels with ongoing CAC */
+            %read-only object CACActiveChannel [] {
+                counted with CACActiveChannelNumberOfEntries;
+                %read-only uint32 OpClass = 0 {
+                    on action validate call check_range [0, 255];
+                }
+                %read-only uint32 Channel = 0 {
+                    on action validate call check_range [0, 255];
+                }
+                %read-only uint32 Countdown = 0;
             }
         }
 

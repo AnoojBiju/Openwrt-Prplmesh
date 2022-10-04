@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-2-Clause-Patent
  *
- * SPDX-FileCopyrightText: 2019-2020 the prplMesh contributors (see AUTHORS.md)
+ * SPDX-FileCopyrightText: 2019-2022 the prplMesh contributors (see AUTHORS.md)
  *
  * This code is subject to the terms of the BSD+Patent license.
  * See LICENSE file for more details.
@@ -9,7 +9,6 @@
 #define _AGENT_DB_H_
 
 #include "cac_capabilities.h"
-#include "cac_status_interface.h"
 #include "tasks/task_messages.h"
 #include <bcl/beerocks_defines.h>
 #include <bcl/network/network_utils.h>
@@ -282,6 +281,9 @@ public:
             std::vector<beerocks_message::sSupportedBandwidth> supported_bw_list;
             beerocks_message::eDfsState dfs_state;
         };
+
+        // Estimated time of completion of the CAC procedure.
+        std::chrono::time_point<std::chrono::steady_clock> cac_completion_time;
 
         // Key: Channel
         std::unordered_map<uint8_t, sChannelInfo> channels_list;

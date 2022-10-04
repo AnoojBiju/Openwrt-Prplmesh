@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-2-Clause-Patent
  *
- * SPDX-FileCopyrightText: 2019-2020 the prplMesh contributors (see AUTHORS.md)
+ * SPDX-FileCopyrightText: 2019-2022 the prplMesh contributors (see AUTHORS.md)
  *
  * This code is subject to the terms of the BSD+Patent license.
  * See LICENSE file for more details.
@@ -1714,9 +1714,52 @@ bool dynamic_channel_selection_r2_task::handle_tlv_profile2_cac_completion_repor
     const std::shared_ptr<wfa_map::tlvProfile2CacCompletionReport> &cac_completion_report_tlv)
 {
     LOG(DEBUG) << "Profile-2 CAC Completion Report is received";
-    // Currently there is no handling for the cac completion report.
-    // TODO - PPM-1524: Parse the CAC Completion Report TLV.
 
+    std::stringstream ss;
+
+    ss << "CAC Completion Report: " << std::endl;
+    for (size_t i = 0; i < cac_completion_report_tlv->number_of_cac_radios(); i++) {
+
+        if (!std::get<0>(cac_completion_report_tlv->cac_radios(i))) {
+            LOG(ERROR) << "Invalid CAC radio in tlvProfile2CacCompletionReport";
+            continue;
+        }
+
+        auto &cac_radio = std::get<1>(cac_completion_report_tlv->cac_radios(i));
+        // TODO: PPM-2197
+        ss << "Radio " << cac_radio.radio_uid() << " with status "
+           << cac_radio.cac_completion_status() << std::endl;
+
+        if (cac_radio.cac_completion_status() !=
+            wfa_map::cCacCompletionReportRadio::eCompletionStatus::NOT_PERFORMED) {
+            ss << "CAC was performed on: [OC: " << int(cac_radio.operating_class())
+               << ", channel: " << int(cac_radio.channel()) << "]" << std::endl;
+        }
+
+        if (cac_radio.cac_completion_status() ==
+            wfa_map::cCacCompletionReportRadio::eCompletionStatus::RADAR_DETECTED) {
+
+            for (size_t j = 0; j < cac_radio.number_of_detected_pairs(); j++) {
+
+                if (!std::get<0>(cac_radio.detected_pairs(i))) {
+                    LOG(ERROR) << "Invalid detected pair in tlvProfile2CacCompletionReport";
+                    continue;
+                }
+
+                auto &detected_pair = std::get<1>(cac_radio.detected_pairs(i));
+                ss << "Radar was detected on: [OC: " << int(detected_pair.operating_class_detected)
+                   << ", channel: " << int(detected_pair.channel_detected) << "]" << std::endl;
+            }
+
+        } else {
+            if (!cac_radio.number_of_detected_pairs() == 0) {
+                LOG(ERROR)
+                    << "Number of detected pairs value must be zeroed if radar was not detected!";
+            }
+        }
+    }
+
+    LOG(DEBUG) << ss.str();
     return true;
 }
 
@@ -1726,22 +1769,61 @@ bool dynamic_channel_selection_r2_task::handle_tlv_profile2_cac_status_report(
 {
     LOG(DEBUG) << "Profile-2 CAC Status Report is received";
 
-    database.dm_clear_cac_status_report(agent);
     std::stringstream ss;
+
+    std::vector<wfa_map::tlvProfile2CacStatusReport::sAvailableChannels> available_channels;
+    std::vector<wfa_map::tlvProfile2CacStatusReport::sDetectedPairs> non_occupancy_channels;
+    std::vector<wfa_map::tlvProfile2CacStatusReport::sActiveCacPairs> active_channels;
 
     for (size_t i = 0; i < cac_status_report_tlv->number_of_available_channels(); i++) {
 
         if (!std::get<0>(cac_status_report_tlv->available_channels(i))) {
-            LOG(ERROR) << "Invalid available-channel in tlvProfile2CacStatusReport";
+            LOG(ERROR) << "Invalid available channel in tlvProfile2CacStatusReport";
             continue;
         }
 
         const auto &available_channel = std::get<1>(cac_status_report_tlv->available_channels(i));
-        database.dm_add_cac_status_available_channel(agent, available_channel.operating_class,
-                                                     available_channel.channel);
-        ss << "[Ch:" << available_channel.channel << ",OC:" << available_channel.operating_class
-           << "] ";
+        available_channels.push_back(available_channel);
+        ss << "Available: [OC: " << int(available_channel.operating_class)
+           << ", channel: " << int(available_channel.channel)
+           << ", minutes: " << int(available_channel.minutes_since_cac_completion) << "]"
+           << std::endl;
     }
+
+    for (size_t i = 0; i < cac_status_report_tlv->number_of_detected_pairs(); i++) {
+
+        if (!std::get<0>(cac_status_report_tlv->detected_pairs(i))) {
+            LOG(ERROR) << "Invalid detected pair in tlvProfile2CacStatusReport";
+            continue;
+        }
+
+        const auto &non_occupancy_channel = std::get<1>(cac_status_report_tlv->detected_pairs(i));
+        non_occupancy_channels.push_back(non_occupancy_channel);
+        ss << "Non-occupancy: [OC: " << int(non_occupancy_channel.operating_class_detected)
+           << ", channel: " << int(non_occupancy_channel.channel_detected)
+           << ", seconds: " << int(non_occupancy_channel.duration) << "]" << std::endl;
+    }
+
+    for (size_t i = 0; i < cac_status_report_tlv->number_of_active_cac_pairs(); i++) {
+
+        if (!std::get<0>(cac_status_report_tlv->active_cac_pairs(i))) {
+            LOG(ERROR) << "Invalid active pair in tlvProfile2CacStatusReport";
+            continue;
+        }
+
+        const auto &active_channel = std::get<1>(cac_status_report_tlv->active_cac_pairs(i));
+        active_channels.push_back(active_channel);
+        ss << "Active: [OC: " << int(active_channel.operating_class_active_cac)
+           << ", channel: " << int(active_channel.channel_active_cac) << "]" << std::endl;
+        // TODO: Add debug print for duration parameter (need value conversion - PPM-2302)
+    }
+
+    if (!database.dm_add_cac_status_report(agent, available_channels, non_occupancy_channels,
+                                           active_channels)) {
+        LOG(ERROR) << "Failed to add CAC Status Report to DM";
+        return false;
+    }
+
     LOG(DEBUG) << ss.str();
     return true;
 }

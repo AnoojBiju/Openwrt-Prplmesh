@@ -27,6 +27,7 @@
 #include <tlvf/wfa_map/tlvApWifi6Capabilities.h>
 #include <tlvf/wfa_map/tlvAssociatedStaExtendedLinkMetrics.h>
 #include <tlvf/wfa_map/tlvProfile2CacCapabilities.h>
+#include <tlvf/wfa_map/tlvProfile2CacStatusReport.h>
 
 #include <algorithm>
 #include <mutex>
@@ -1961,27 +1962,37 @@ public:
     /**
      * @brief Clears CAC Status Report data model.
      *
-     * Remove all indexes in CACAvailableChannel and updates timestamp.
+     * Remove all indexes (reports) in CACStatus object for given agent.
      *
-     * Data model path : "Device.WiFi.DataElements.Network.Device.{i}.CACStatus"
+     * Data model path : "Device.WiFi.DataElements.Network.Device.{i}.CACStatus.{i}."
      *
      * @param[in] agent db object
      * @return true on success, otherwise false.
      */
-    bool dm_clear_cac_status_report(std::shared_ptr<Agent> agent);
+    bool dm_clear_cac_status_reports(std::shared_ptr<Agent> agent);
 
     /**
-     * @brief Adds instance for CACStatus.CACAvailableChannel and fullfills it.
+     * @brief Adds instance for CACStatus and its sub-objects and full fills it.
+     * Sub-objects: CACAvailableChannel, CACNonOccupancyChannel and CACActiveChannel.
      *
-     * Data model path : "Device.WiFi.DataElements.Network.Device.{i}.CACStatus.CACAvailableChannel.{i}"
+     * Data model paths :
+     *      "Device.WiFi.DataElements.Network.Device.{i}.CACStatus.{i}.CACAvailableChannel.{i}"
+     *      "Device.WiFi.DataElements.Network.Device.{i}.CACStatus.{i}.CACNonOccupancyChannel.{i}"
+     *      "Device.WiFi.DataElements.Network.Device.{i}.CACStatus.{i}.CACActiveChannel.{i}"
      *
      * @param[in] agent db object
-     * @param[in] operating_class operating class
-     * @param[in] channel channel number
+     * @param[in] available_channels vector with available channels identified by CAC
+     * @param[in] non_occupancy_channels vector with non occupancy channels identified by CAC
+     * @param[in] active_channels vector with active channels identified by CAC
      * @return true on success, otherwise false.
      */
-    bool dm_add_cac_status_available_channel(std::shared_ptr<Agent> agent, uint8_t operating_class,
-                                             uint8_t channel);
+    bool dm_add_cac_status_report(
+        std::shared_ptr<Agent> agent,
+        const std::vector<wfa_map::tlvProfile2CacStatusReport::sAvailableChannels>
+            &available_channels,
+        const std::vector<wfa_map::tlvProfile2CacStatusReport::sDetectedPairs>
+            &non_occupancy_channels,
+        const std::vector<wfa_map::tlvProfile2CacStatusReport::sActiveCacPairs> &active_channels);
 
     /**
      * @brief Removes excessive NBAPI objects from system bus, if amount of them succeed the limit.
