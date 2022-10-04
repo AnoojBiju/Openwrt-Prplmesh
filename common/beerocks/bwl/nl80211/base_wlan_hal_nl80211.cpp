@@ -331,7 +331,7 @@ bool base_wlan_hal_nl80211::fsm_setup()
                     return (transition.change_destination(nl80211_fsm_state::Detach));
                 }
 
-                // Stay in the current state
+                std::this_thread::sleep_for(std::chrono::seconds(1));
                 return false;
             })
 

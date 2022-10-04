@@ -18,6 +18,7 @@
 #include <chrono>
 #include <list>
 #include <memory>
+#include <thread>
 #include <unordered_map>
 
 // Forward declaration
