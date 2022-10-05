@@ -126,6 +126,13 @@ void Station::set_bss(std::shared_ptr<Agent::sRadio::sBss> bss) { m_bss = bss; }
 
 std::shared_ptr<Agent::sRadio::sBss> Station::get_bss() { return m_bss.lock(); }
 
+void Station::set_assoc_frame(std::shared_ptr<assoc_frame::AssocReqFrame> assoc_frame)
+{
+    m_assoc_frame = assoc_frame;
+}
+
+std::shared_ptr<assoc_frame::AssocReqFrame> Station::get_assoc_frame() { return m_assoc_frame; }
+
 } // namespace db
 } // namespace controller
 } // namespace prplmesh
