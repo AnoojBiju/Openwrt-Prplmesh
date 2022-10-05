@@ -123,6 +123,29 @@ std::shared_ptr<Agent> db::get_agent_by_radio_uid(const sMacAddr &radio_uid)
     return {};
 }
 
+bool db::set_sta_association_frame(const sMacAddr &sta_mac,
+                                   std::shared_ptr<assoc_frame::AssocReqFrame> assoc_frame)
+{
+    auto sta = get_station(sta_mac);
+    if (!sta) {
+        LOG(ERROR) << "Station " << sta_mac << " is not known";
+        return false;
+    }
+    sta->set_assoc_frame(assoc_frame);
+    return true;
+}
+
+std::shared_ptr<assoc_frame::AssocReqFrame>
+db::get_association_frame_by_sta_mac(const sMacAddr &sta_mac)
+{
+    auto sta = get_station(sta_mac);
+    if (!sta) {
+        LOG(ERROR) << "Station " << sta_mac << " is not known";
+        return {};
+    }
+    return sta->get_assoc_frame();
+}
+
 std::shared_ptr<Agent> db::get_agent_by_bssid(const sMacAddr &bssid)
 {
     for (const auto &agent : m_agents) {

@@ -344,6 +344,26 @@ public:
     std::shared_ptr<Agent> get_agent_by_radio_uid(const sMacAddr &radio_uid);
 
     /**
+     * @brief Set the (Re)association frame for station `sta_mac`
+     * 
+     * @param sta_mac MAC of the originating station.
+     * @param assoc_frame The (Re)association frame from `sta_mac`
+     */
+    bool set_sta_association_frame(const sMacAddr &sta_mac,
+                                   std::shared_ptr<assoc_frame::AssocReqFrame> assoc_frame);
+
+    /**
+     * @brief Get the most recent (Re)association frame by station MAC
+     * 
+     * If no association frame data exists, a warning is logged and nullptr is returned.
+     * 
+     * @param sta_mac The station MAC of interest
+     * @return The association frame object, or nullptr
+     */
+    std::shared_ptr<assoc_frame::AssocReqFrame>
+    get_association_frame_by_sta_mac(const sMacAddr &sta_mac);
+
+    /**
      * @brief Get agent containing a specific bssid
      *
      * If no BSS with the given BSSID exists, an error is logged (and nullptr returned).
