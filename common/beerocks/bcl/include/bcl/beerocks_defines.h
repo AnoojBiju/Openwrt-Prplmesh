@@ -94,7 +94,7 @@ enum eMessageConsts {
 
 enum eGlobals {
     HIERARCHY_MAX                           = 14,
-    IRE_MAX_SLAVES                          = 4,
+    MAX_RADIOS_PER_AGENT                    = 4,
     RSSI_MAX                                = 20,
     RSSI_MIN                                = -100,
     RSSI_INVALID                            = -127,

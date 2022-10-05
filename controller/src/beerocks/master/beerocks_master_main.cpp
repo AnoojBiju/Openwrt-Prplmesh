@@ -232,15 +232,15 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
     // platform settings
     master_conf.certification_mode = beerocks::bpl::cfg_get_certification_mode();
     char load_steer_on_vaps[BPL_LOAD_STEER_ON_VAPS_LEN] = {0};
-    if (beerocks::bpl::cfg_get_load_steer_on_vaps(beerocks::IRE_MAX_SLAVES, load_steer_on_vaps) <
-        0) {
+    if (beerocks::bpl::cfg_get_load_steer_on_vaps(beerocks::MAX_RADIOS_PER_AGENT,
+                                                  load_steer_on_vaps) < 0) {
         master_conf.load_steer_on_vaps = std::string();
     } else {
         master_conf.load_steer_on_vaps = std::string(load_steer_on_vaps);
     }
 
-    beerocks::bpl::BPL_WLAN_IFACE interfaces[beerocks::IRE_MAX_SLAVES] = {0};
-    int num_of_interfaces                                              = beerocks::IRE_MAX_SLAVES;
+    beerocks::bpl::BPL_WLAN_IFACE interfaces[beerocks::MAX_RADIOS_PER_AGENT] = {0};
+    int num_of_interfaces = beerocks::MAX_RADIOS_PER_AGENT;
     if (beerocks::bpl::cfg_get_all_prplmesh_wifi_interfaces(interfaces, &num_of_interfaces)) {
         std::cout << "ERROR: Failed to read interfaces map" << std::endl;
     } else

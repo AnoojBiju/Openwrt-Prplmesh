@@ -98,11 +98,11 @@ public:
         std::string monitor_polling_rate_msec;
         std::string monitor_measurement_window_poll_count;
         //[slaveX]
-        std::string enable_repeater_mode[IRE_MAX_SLAVES];
-        std::string hostap_iface_type[IRE_MAX_SLAVES];
-        std::string sta_iface[IRE_MAX_SLAVES];
-        std::string sta_iface_filter_low[IRE_MAX_SLAVES];
-        std::string hostap_ant_gain[IRE_MAX_SLAVES];
+        std::string enable_repeater_mode[MAX_RADIOS_PER_AGENT];
+        std::string hostap_iface_type[MAX_RADIOS_PER_AGENT];
+        std::string sta_iface[MAX_RADIOS_PER_AGENT];
+        std::string sta_iface_filter_low[MAX_RADIOS_PER_AGENT];
+        std::string hostap_ant_gain[MAX_RADIOS_PER_AGENT];
         //[log]
         SConfigLog sLog;
     } sConfigSlave;

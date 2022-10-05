@@ -69,7 +69,7 @@ int cfg_get_wifi_params(const char *iface, struct BPL_WLAN_PARAMS *wlan_params)
 
 bool bpl_cfg_get_wireless_settings(std::list<son::wireless_utils::sBssInfoConf> &wireless_settings)
 {
-    int num_of_interfaces = beerocks::IRE_MAX_SLAVES;
+    int num_of_interfaces = beerocks::MAX_RADIOS_PER_AGENT;
     for (int index = 0; index < num_of_interfaces; index++) {
         char iface[BPL_IFNAME_LEN];
         if (cfg_get_hostap_iface(index, iface) == RETURN_ERR) {

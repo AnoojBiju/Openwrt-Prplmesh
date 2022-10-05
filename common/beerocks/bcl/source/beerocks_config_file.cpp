@@ -171,7 +171,7 @@ bool config_file::read_slave_config_file(const std::string &config_file_path, sC
         }
     }
 
-    for (int slave_num = 0; slave_num < IRE_MAX_SLAVES; slave_num++) {
+    for (int slave_num = 0; slave_num < MAX_RADIOS_PER_AGENT; slave_num++) {
         if (slave_num > 0)
             mandatory_slave = 0;
         tConfig slave_conf_args = {
