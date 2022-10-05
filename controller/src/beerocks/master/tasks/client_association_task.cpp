@@ -175,6 +175,11 @@ bool client_association_task::handle_cmdu_1905_client_capability_report_message(
         return false;
     }
 
+    if (!m_database.set_sta_association_frame(sta_mac, assoc_frame)) {
+        LOG(ERROR) << "Failed to save association frame for STA " << sta_mac;
+        return false;
+    }
+
     beerocks::message::sRadioCapabilities capabilities = {};
     auto result = son::assoc_frame_utils::get_station_capabilities_from_assoc_frame(assoc_frame,
                                                                                     capabilities);
