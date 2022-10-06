@@ -1817,7 +1817,7 @@ bool Controller::handle_cmdu_1905_ap_capability_report(const sMacAddr &src_mac,
     }
 
     if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
-        !handle_tlv_profile2_cac_capabilities(agent, cmdu_rx)) {
+        !handle_tlv_profile2_cac_capabilities(*agent, cmdu_rx)) {
         LOG(ERROR) << "Profile2 CAC Capabilities are not supplied for Agent " << src_mac
                    << " with profile enum " << agent->profile;
     }
@@ -3982,7 +3982,7 @@ bool Controller::handle_tlv_profile2_ap_capability(std::shared_ptr<Agent> agent,
     return true;
 }
 
-bool Controller::handle_tlv_profile2_cac_capabilities(std::shared_ptr<Agent> agent,
+bool Controller::handle_tlv_profile2_cac_capabilities(Agent &agent,
                                                       ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto cac_capabilities_tlv = cmdu_rx.getClass<wfa_map::tlvProfile2CacCapabilities>();

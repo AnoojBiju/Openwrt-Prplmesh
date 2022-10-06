@@ -375,12 +375,11 @@ private:
     /**
      * @brief Handles TLV of CAC Capabilities (tlvProfile2CacCapabilities).
      *
-     * @param agent agent db shared object.
+     * @param agent Agent DB object.
      * @param cmdu_rx Received CMDU as Profile2 CAC Capabilities Report message.
      * @return True on success, false otherwise.
     */
-    bool handle_tlv_profile2_cac_capabilities(std::shared_ptr<Agent> agent,
-                                              ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool handle_tlv_profile2_cac_capabilities(Agent &agent, ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
      * @brief Extracts ESP value from est_service_info_field and set it to specified
