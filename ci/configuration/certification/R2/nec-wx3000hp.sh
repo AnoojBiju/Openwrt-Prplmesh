@@ -5,6 +5,20 @@ set -e
 # Start with a new log file:
 rm -f /var/log/messages && syslog-ng-ctl reload
 
+data_overlay_not_initialized()
+{
+  grep -q overlayfs:/tmp/root /proc/mounts || test -f /tmp/.switch_jffs2 || pgrep 'mount_root done'
+}
+
+if data_overlay_not_initialized; then
+  logger -t prplmesh -p daemon.info "Waiting for data overlay initialization..."
+  while data_overlay_not_initialized; do
+    sleep 2
+  done
+  logger -t prplmesh -p daemon.info "Data overlay is initialized."
+fi
+sleep 2
+
 # Set the LAN bridge IP:
 ubus wait_for IP.Interface
 ubus call "IP.Interface" _set '{ "rel_path": ".[Name == \"br-lan\"].IPv4Address.[Alias == \"lan\"].", "parameters": { "IPAddress": "192.165.100.171" } }'

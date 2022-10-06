@@ -9,6 +9,20 @@ set -e
 # Start with a new log file:
 rm -f /var/log/messages && syslog-ng-ctl reload
 
+data_overlay_not_initialized()
+{
+  grep -q overlayfs:/tmp/root /proc/mounts || test -f /tmp/.switch_jffs2 || pgrep 'mount_root done'
+}
+
+if data_overlay_not_initialized; then
+  logger -t prplmesh -p daemon.info "Waiting for data overlay initialization..."
+  while data_overlay_not_initialized; do
+    sleep 2
+  done
+  logger -t prplmesh -p daemon.info "Data overlay is initialized."
+fi
+sleep 2
+
 # Stop and disable the DHCP clients:
 /etc/init.d/tr181-dhcpv4client stop
 rm -f /etc/rc.d/S27tr181-dhcpv4client

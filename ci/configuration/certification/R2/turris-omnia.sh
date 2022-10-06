@@ -9,6 +9,20 @@ set -e
 # Start with a new log file:
 rm -f /var/log/messages && syslog-ng-ctl reload
 
+data_overlay_not_initialized()
+{
+  grep -q overlayfs:/tmp/root /proc/mounts || test -f /tmp/.switch_jffs2 || pgrep 'mount_root done'
+}
+
+if data_overlay_not_initialized; then
+  logger -t prplmesh -p daemon.info "Waiting for data overlay initialization..."
+  while data_overlay_not_initialized; do
+    sleep 2
+  done
+  logger -t prplmesh -p daemon.info "Data overlay is initialized."
+fi
+sleep 2
+
 # We use WAN for the control interface.
 ubus wait_for IP.Interface
 # Add the IP address if there is none yet:
