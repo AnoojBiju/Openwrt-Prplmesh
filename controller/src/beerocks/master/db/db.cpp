@@ -7606,3 +7606,28 @@ bool db::dm_set_radio_vbss_capabilities(const sMacAddr &radio_uid, uint8_t max_v
 
     return ret_val;
 }
+
+bool db::dm_add_agent_1905_layer_security_capabilities(
+    const Agent &agent,
+    const wfa_map::tlv1905LayerSecurityCapability::eOnboardingProtocol &onboard_protocol,
+    const wfa_map::tlv1905LayerSecurityCapability::eMicAlgorithm &integrity_algorithm,
+    const wfa_map::tlv1905LayerSecurityCapability::eEncryptionAlgorithm &encryption_algorithm)
+{
+    m_ambiorix_datamodel->remove_all_instances(agent.dm_path + ".IEEE1905Security");
+
+    auto ieee_1905_sec_path =
+        m_ambiorix_datamodel->add_instance(agent.dm_path + ".IEEE1905Security");
+    if (ieee_1905_sec_path.empty()) {
+        return false;
+    }
+
+    bool ret_val = true;
+    ret_val &=
+        m_ambiorix_datamodel->set(ieee_1905_sec_path, "OnboardingProtocol", onboard_protocol);
+    ret_val &=
+        m_ambiorix_datamodel->set(ieee_1905_sec_path, "IntegrityAlgorithm", integrity_algorithm);
+    ret_val &=
+        m_ambiorix_datamodel->set(ieee_1905_sec_path, "EncryptionAlgorithm", encryption_algorithm);
+
+    return ret_val;
+}

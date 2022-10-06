@@ -178,6 +178,13 @@
             }
         }
 
+        /* IEEE 1905 security capabilities. */
+        %read-only object IEEE1905Security [] {
+            %read-only uint32 OnboardingProtocol = 0;
+            %read-only uint32 IntegrityAlgorithm = 0;
+            %read-only uint32 EncryptionAlgorithm = 0;
+        }
+
         /*
         ** The interval between the collection of consecutive measurements of the most
         ** frequently updated Data Element from this device (milliseconds).

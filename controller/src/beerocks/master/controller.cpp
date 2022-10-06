@@ -54,6 +54,7 @@
 #include <tlvf/ieee_1905_1/tlvSearchedRole.h>
 #include <tlvf/ieee_1905_1/tlvSupportedFreqBand.h>
 #include <tlvf/ieee_1905_1/tlvSupportedRole.h>
+#include <tlvf/wfa_map/tlv1905LayerSecurityCapability.h>
 #include <tlvf/wfa_map/tlvApExtendedMetrics.h>
 #include <tlvf/wfa_map/tlvApMetrics.h>
 #include <tlvf/wfa_map/tlvApRadioIdentifier.h>
@@ -1792,6 +1793,12 @@ bool Controller::handle_cmdu_1905_ap_capability_report(const sMacAddr &src_mac,
         !handle_tlv_profile2_cac_capabilities(*agent, cmdu_rx)) {
         LOG(ERROR) << "Profile2 CAC Capabilities are not supplied for Agent " << src_mac
                    << " with profile enum " << agent->profile;
+    }
+
+    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_2 &&
+        !handle_tlv_profile3_1905_layer_security_capabilities(*agent, cmdu_rx)) {
+        LOG(ERROR) << "Profile3 1905 Layer Security Capability is not supplied for Agent "
+                   << src_mac << " with profile enum " << agent->profile;
     }
 
     return all_radio_capabilities_saved_successfully;
@@ -4087,6 +4094,28 @@ bool Controller::handle_tlv_profile2_channel_scan_capabilities(std::shared_ptr<A
             LOG(ERROR) << "Failed to add channel scan capabilities to DM for radio=" << ruid;
             return false;
         }
+    }
+
+    return true;
+}
+
+bool Controller::handle_tlv_profile3_1905_layer_security_capabilities(
+    const Agent &agent, ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto ieee_1905_security_tlv = cmdu_rx.getClass<wfa_map::tlv1905LayerSecurityCapability>();
+    if (!ieee_1905_security_tlv) {
+        LOG(DEBUG) << "getClass wfa_map::tlv1905LayerSecurityCapability has failed";
+        return false;
+    }
+
+    LOG(DEBUG) << "Profile-3 1905 Layer Security Capability TLV is received";
+
+    if (!database.dm_add_agent_1905_layer_security_capabilities(
+            agent, ieee_1905_security_tlv->onboarding_protocol(),
+            ieee_1905_security_tlv->mic_algorithm(),
+            ieee_1905_security_tlv->encryption_algorithm())) {
+        LOG(ERROR) << "Failed to add IEEE 1905 security capability";
+        return false;
     }
 
     return true;
