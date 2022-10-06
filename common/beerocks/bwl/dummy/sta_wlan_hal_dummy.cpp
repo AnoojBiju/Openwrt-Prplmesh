@@ -49,15 +49,15 @@ int sta_wlan_hal_dummy::get_scan_results(const std::string &ssid, std::vector<SS
 }
 
 bool sta_wlan_hal_dummy::connect(const std::string &ssid, const std::string &pass, WiFiSec sec,
-                                 bool mem_only_psk, const std::string &bssid, uint8_t channel,
-                                 bool hidden_ssid)
+                                 bool mem_only_psk, const std::string &bssid,
+                                 ChannelFreqPair channel, bool hidden_ssid)
 {
     return true;
 }
 
 bool sta_wlan_hal_dummy::disconnect() { return true; }
 
-bool sta_wlan_hal_dummy::roam(const sMacAddr &bssid, uint8_t channel) { return true; }
+bool sta_wlan_hal_dummy::roam(const sMacAddr &bssid, ChannelFreqPair channel) { return true; }
 
 bool sta_wlan_hal_dummy::get_4addr_mode() { return true; }
 

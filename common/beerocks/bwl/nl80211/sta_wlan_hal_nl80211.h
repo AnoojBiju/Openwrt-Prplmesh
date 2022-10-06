@@ -43,12 +43,12 @@ public:
                                  bool parse_vsie = false) override;
 
     virtual bool connect(const std::string &ssid, const std::string &pass, WiFiSec sec,
-                         bool mem_only_psk, const std::string &bssid, uint8_t channel,
+                         bool mem_only_psk, const std::string &bssid, ChannelFreqPair channel,
                          bool hidden_ssid) override;
 
     virtual bool disconnect() override;
 
-    virtual bool roam(const sMacAddr &bssid, uint8_t channel) override;
+    virtual bool roam(const sMacAddr &bssid, ChannelFreqPair channel) override;
 
     virtual bool get_4addr_mode() override;
     virtual bool set_4addr_mode(bool enable) override;
