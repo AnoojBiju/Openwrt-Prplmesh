@@ -109,28 +109,59 @@ static mon_wlan_hal::Event dwpal_nl_to_bwl_event(uint8_t cmd)
  * @brief get channel pool frquencies for channel scan parameters.
  *
  * @param [in] channel_pool list of channels to be scanned.
- * @param [in] curr_channel channel teh radio is currently on.
+ * @param [in] curr_channel channel the radio is currently on.
+ * @param [in] curr_freq_type frequency type of the radio in which is currently on.
  * @param [in] iface radio interface name.
  * @param [out] scan_params for saving channel frequencies for next scan.
  * @return true on success
  */
 static bool dwpal_get_channel_scan_freq(const std::vector<unsigned int> &channel_pool,
-                                        unsigned int curr_channel, const std::string &iface,
-                                        scan_params &scan_params)
+                                        unsigned int curr_channel,
+                                        beerocks::eFreqType curr_freq_type,
+                                        const std::string &iface, scan_params &scan_params)
 {
     int freq_index = 0;
+
     //configure center frequency for each scanned channel
     for (auto channel : channel_pool) {
         //channel validation
         LOG(DEBUG) << "validating pool channel=" << channel;
-        if (son::wireless_utils::which_freq(curr_channel) !=
-            son::wireless_utils::which_freq(channel)) {
+        if (curr_freq_type == beerocks::FREQ_24G) {
+            if (son::wireless_utils::channels_table_24g.find(channel) ==
+                son::wireless_utils::channels_table_24g.end()) {
+                LOG(ERROR)
+                    << "cannot scan channel (" << channel
+                    << "). Channel is not part of the defined channels for 2.4G band. Interface="
+                    << iface;
+
+                return false;
+            }
+        } else if (curr_freq_type == beerocks::FREQ_5G) {
+            if (son::wireless_utils::channels_table_5g.find(channel) ==
+                son::wireless_utils::channels_table_5g.end()) {
+                LOG(ERROR)
+                    << "cannot scan channel (" << channel
+                    << "). Channel is not part of the defined channels for 5G band. Interface="
+                    << iface;
+                return false;
+            }
+        } else if (curr_freq_type == beerocks::FREQ_6G) {
+            if (son::wireless_utils::channels_table_6g.find(channel) ==
+                son::wireless_utils::channels_table_6g.end()) {
+                LOG(ERROR)
+                    << "cannot scan channel (" << channel
+                    << "). Channel is not part of the defined channels for 6G band. Interface="
+                    << iface;
+                return false;
+            }
+        } else {
             LOG(ERROR) << "cannot scan channel = " << channel
-                       << " not on the same radio interface =  " << iface;
+                       << " of freq that is not 2.4GHz, 5GHz, or 6GHz." << iface;
             return false;
         }
 
-        scan_params.freq[freq_index] = son::wireless_utils::channel_to_freq(int(channel));
+        scan_params.freq[freq_index] =
+            son::wireless_utils::channel_to_freq(int(channel), curr_freq_type);
         LOG(DEBUG) << "channel scan pool add center frequency=" << scan_params.freq[freq_index];
         freq_index++;
     }
@@ -1113,7 +1144,8 @@ bool mon_wlan_hal_dwpal::channel_scan_trigger(int dwell_time_msec,
     }
 
     // get frequencies from channel pool and set in scan_params
-    if (!dwpal_get_channel_scan_freq(channel_pool, m_radio_info.channel, m_radio_info.iface_name,
+    if (!dwpal_get_channel_scan_freq(channel_pool, m_radio_info.channel,
+                                     m_radio_info.frequency_band, m_radio_info.iface_name,
                                      channel_scan_params)) {
         LOG(ERROR) << "Failed getting frequencies";
         return false;
