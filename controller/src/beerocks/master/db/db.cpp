@@ -7498,6 +7498,30 @@ bool db::dm_set_device_ssid_to_vid_map(const Agent &agent,
     return ret_val;
 }
 
+bool db::dm_set_default_8021q(const Agent &agent, const uint16_t primary_vlan_id,
+                              const uint8_t default_pcp)
+{
+    bool ret_val = true;
+
+    if (agent.dm_path.empty()) {
+        return true;
+    }
+
+    if (!m_ambiorix_datamodel->remove_all_instances(agent.dm_path + ".Default8021Q")) {
+        return false;
+    }
+
+    auto default_8021q_path = m_ambiorix_datamodel->add_instance(agent.dm_path + ".Default8021Q");
+    if (default_8021q_path.empty()) {
+        return false;
+    }
+    ret_val &= m_ambiorix_datamodel->set(default_8021q_path, "Enable", bool(primary_vlan_id > 0));
+    ret_val &= m_ambiorix_datamodel->set(default_8021q_path, "PrimaryVID", primary_vlan_id);
+    ret_val &= m_ambiorix_datamodel->set(default_8021q_path, "DefaultPCP", default_pcp);
+
+    return ret_val;
+}
+
 bool db::dm_set_profile1_device_info(const Agent &agent)
 {
     if (agent.dm_path.empty()) {

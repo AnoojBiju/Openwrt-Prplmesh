@@ -291,7 +291,7 @@ bool agent_monitoring_task::send_multi_ap_policy_config_request(const sMacAddr &
 
     if (num_bsss) {
         add_traffic_policy_tlv(database, cmdu_tx, m1);
-        add_profile_2default_802q_settings_tlv(database, cmdu_tx, m1);
+        add_profile_2default_802q_settings_tlv(database, cmdu_tx, m1->mac_addr());
     }
 
     auto metric_reporting_policy_tlv = cmdu_tx.addClass<wfa_map::tlvMetricReportingPolicy>();
@@ -457,19 +457,31 @@ bool agent_monitoring_task::send_tlv_empty_channel_selection_request(
 }
 
 bool agent_monitoring_task::add_profile_2default_802q_settings_tlv(
-    db &database, ieee1905_1::CmduMessageTx &cmdu_tx, std::shared_ptr<WSC::m1> m1)
+    db &database, ieee1905_1::CmduMessageTx &cmdu_tx, const sMacAddr &al_mac)
 {
-    auto default_8021q_config = database.get_default_8021q_setting(m1->mac_addr());
-    if (default_8021q_config.primary_vlan_id > 0) {
-        auto tlv_default_8021q_settings =
-            cmdu_tx.addClass<wfa_map::tlvProfile2Default802dotQSettings>();
-        if (!tlv_default_8021q_settings) {
-            LOG(ERROR) << "Failed adding tlvProfile2Default802dotQSettings";
-            return false;
-        }
-        tlv_default_8021q_settings->primary_vlan_id() = default_8021q_config.primary_vlan_id;
-        tlv_default_8021q_settings->default_pcp()     = default_8021q_config.default_pcp;
+    auto default_8021q_config = database.get_default_8021q_setting(al_mac);
+    auto agent                = database.m_agents.get(al_mac);
+
+    if (!agent) {
+        LOG(ERROR) << "Agent with mac is not found in database mac=" << al_mac;
+        return false;
     }
+
+    auto tlv_default_8021q_settings =
+        cmdu_tx.addClass<wfa_map::tlvProfile2Default802dotQSettings>();
+    if (!tlv_default_8021q_settings) {
+        LOG(ERROR) << "Failed adding tlvProfile2Default802dotQSettings";
+        return false;
+    }
+    tlv_default_8021q_settings->primary_vlan_id() = default_8021q_config.primary_vlan_id;
+    tlv_default_8021q_settings->default_pcp()     = default_8021q_config.default_pcp;
+
+    if (!database.dm_set_default_8021q(*agent, default_8021q_config.primary_vlan_id,
+                                       default_8021q_config.default_pcp)) {
+        LOG(ERROR) << "Failed to set default 802.1Q parameters for agent" << al_mac;
+        return false;
+    }
+
     return true;
 }
 

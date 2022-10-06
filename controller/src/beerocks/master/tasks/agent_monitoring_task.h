@@ -28,7 +28,7 @@ public:
 
     static bool add_profile_2default_802q_settings_tlv(db &database,
                                                        ieee1905_1::CmduMessageTx &cmdu_tx,
-                                                       std::shared_ptr<WSC::m1> m1);
+                                                       const sMacAddr &al_mac);
     static bool add_traffic_policy_tlv(db &database, ieee1905_1::CmduMessageTx &cmdu_tx,
                                        std::shared_ptr<WSC::m1> m1);
 

@@ -201,6 +201,17 @@
             %read-only uint32 EncryptionAlgorithm = 0;
         }
 
+        /* The default 802.1Q settings for EasyMesh service prioritization */
+        object Default8021Q [] {
+            bool Enable;
+            uint32 PrimaryVID = 0 {
+                on action validate call check_range [0, 4095];
+            }
+            uint32 DefaultPCP = 0 {
+                on action validate call check_range [0, 7];
+            }
+        }
+
         /*
         ** The interval between the collection of consecutive measurements of the most
         ** frequently updated Data Element from this device (milliseconds).

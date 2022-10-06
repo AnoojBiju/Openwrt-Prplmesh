@@ -2158,6 +2158,18 @@ public:
                                        const wireless_utils::sTrafficSeparationSsid &config);
 
     /**
+     * @brief Sets the default 802.1Q settings for EasyMesh service prioritization.
+     *
+     * DM path : "Device.WiFi.DataElements.Network.Device.{i}.Default8021Q.{i}."
+     *
+     * @param[in] agent agent whose Default8021Q object is set.
+     * @param[in] primary_vlan_id The primary 802.1Q C-TAG (VLAN ID).
+     * @param[in] default_pcp The default Priority Code Point (PCP).
+     * @return True on success, false otherwise.
+     */
+    bool dm_set_default_8021q(const Agent &agent, const uint16_t primary_vlan_id,
+                              const uint8_t default_pcp);
+    /**
      * @brief Sets Device datamodel board info parameters.
      *
      * DM path: "Device.WiFi.DataElements.Network.Device.{i}."
