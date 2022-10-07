@@ -110,7 +110,7 @@ PlatformManager::PlatformManager(config_file::sConfigSlave &config_,
     enable_arp_monitor = (config.enable_arp_monitor == "1");
 
     int i = 0;
-    for (int j = 0; j < IRE_MAX_SLAVES && i < BPL_NUM_OF_INTERFACES; ++j) {
+    for (int j = 0; j < MAX_RADIOS_PER_AGENT && i < BPL_NUM_OF_INTERFACES; ++j) {
         auto hostap_iface_elm = interfaces_map.find(j);
         if (hostap_iface_elm == interfaces_map.end() || hostap_iface_elm->second.empty())
             continue;
@@ -163,7 +163,8 @@ bool PlatformManager::start()
     transaction.add_rollback_action([&]() { bpl::bpl_close(); });
 
     int i = 0;
-    for (int slave_num = 0; slave_num < IRE_MAX_SLAVES && i < BPL_NUM_OF_INTERFACES; ++slave_num) {
+    for (int slave_num = 0; slave_num < MAX_RADIOS_PER_AGENT && i < BPL_NUM_OF_INTERFACES;
+         ++slave_num) {
 
         auto hostap_iface_elm = interfaces_map.find(slave_num);
         if (hostap_iface_elm == interfaces_map.end() || hostap_iface_elm->second.empty())
@@ -181,7 +182,7 @@ bool PlatformManager::start()
     is_onboarding_on_init = bpl::cfg_is_onboarding();
     if (is_onboarding_on_init) {
         LOG(DEBUG) << "Onboarding state.";
-        for (int slave_num = 0; slave_num < IRE_MAX_SLAVES; slave_num++) {
+        for (int slave_num = 0; slave_num < MAX_RADIOS_PER_AGENT; slave_num++) {
             if (!config.sta_iface[slave_num].empty()) {
                 load_iface_params(config.sta_iface[slave_num], beerocks::ARP_SRC_WIRELESS_BACK);
             }
@@ -203,7 +204,7 @@ bool PlatformManager::start()
         }
         load_iface_params(db->ethernet.wan.iface_name, beerocks::ARP_SRC_ETH_BACK);
 
-        for (int slave_num = 0; slave_num < IRE_MAX_SLAVES; slave_num++) {
+        for (int slave_num = 0; slave_num < MAX_RADIOS_PER_AGENT; slave_num++) {
             if (!config.sta_iface[slave_num].empty()) {
                 load_iface_params(config.sta_iface[slave_num], beerocks::ARP_SRC_WIRELESS_BACK);
             }

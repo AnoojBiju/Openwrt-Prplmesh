@@ -162,7 +162,7 @@ int cfg_get_wifi_params(const char iface[BPL_IFNAME_LEN], struct BPL_WLAN_PARAMS
 
 bool bpl_cfg_get_wireless_settings(std::list<son::wireless_utils::sBssInfoConf> &wireless_settings)
 {
-    int num_of_interfaces = beerocks::IRE_MAX_SLAVES;
+    int num_of_interfaces = beerocks::MAX_RADIOS_PER_AGENT;
     for (int index = 0; index < num_of_interfaces; index++) {
         char iface[BPL_IFNAME_LEN];
         if (cfg_get_hostap_iface(index, iface) == RETURN_ERR) {
@@ -317,8 +317,8 @@ int cfg_get_hostap_iface(int32_t radio_num, char hostap_iface[BPL_IFNAME_LEN])
         return RETURN_ERR;
     }
 
-    beerocks::bpl::BPL_WLAN_IFACE interfaces[beerocks::IRE_MAX_SLAVES] = {0};
-    int num_of_interfaces                                              = beerocks::IRE_MAX_SLAVES;
+    beerocks::bpl::BPL_WLAN_IFACE interfaces[beerocks::MAX_RADIOS_PER_AGENT] = {0};
+    int num_of_interfaces = beerocks::MAX_RADIOS_PER_AGENT;
     if (cfg_get_all_prplmesh_wifi_interfaces(interfaces, &num_of_interfaces)) {
         MAPF_ERR("ERROR: Failed to read interfaces map");
         return RETURN_ERR;

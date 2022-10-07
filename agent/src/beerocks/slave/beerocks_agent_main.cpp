@@ -397,7 +397,7 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
                             [&](const std::string &s) { return !s.empty(); }),
            WARNING)
         << "No slave sta ifaces!";
-    for (int slave_num = 0; slave_num < beerocks::IRE_MAX_SLAVES; slave_num++) {
+    for (int slave_num = 0; slave_num < beerocks::MAX_RADIOS_PER_AGENT; slave_num++) {
         if (!beerocks_slave_conf.sta_iface[slave_num].empty()) {
             slave_sta_ifaces.insert(beerocks_slave_conf.sta_iface[slave_num]);
         }
@@ -560,8 +560,8 @@ int main(int argc, char *argv[])
     // TODO: MaxLinear DHCP monitoring may need to fill interfaces (PPM-1777)
     if (read_management_mode() != BPL_MGMT_MODE_MULTIAP_CONTROLLER) {
 
-        beerocks::bpl::BPL_WLAN_IFACE interfaces[beerocks::IRE_MAX_SLAVES] = {0};
-        int num_of_interfaces = beerocks::IRE_MAX_SLAVES;
+        beerocks::bpl::BPL_WLAN_IFACE interfaces[beerocks::MAX_RADIOS_PER_AGENT] = {0};
+        int num_of_interfaces = beerocks::MAX_RADIOS_PER_AGENT;
         if (beerocks::bpl::cfg_get_all_prplmesh_wifi_interfaces(interfaces, &num_of_interfaces)) {
             std::cout << "ERROR: Failed to read interfaces map" << std::endl;
             return 1;
