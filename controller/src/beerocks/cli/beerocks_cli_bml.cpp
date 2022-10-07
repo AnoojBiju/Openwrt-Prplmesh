@@ -473,7 +473,7 @@ void cli_bml::setFunctionsMapAndArray()
                        static_cast<pFunction>(&cli_bml::bml_trigger_topology_discovery_caller), 1,
                        1, STRING_ARG);
     insertCommandToMap("bml_trigger_channel_selection",
-                       "<mac> <channel> <bandwidth> [<csa count> by default 5]",
+                       "<radio mac> <channel> <bandwidth> [<csa count> by default 5]",
                        "trigger channel selection procedure",
                        static_cast<pFunction>(&cli_bml::bml_channel_selection_caller), 3, 4,
                        STRING_ARG, INT_ARG, INT_ARG, INT_ARG);
