@@ -477,7 +477,9 @@ bool base_wlan_hal_dwpal::dwpal_send_cmd(const std::string &cmd, int vap_id)
     auto buff_size_copy = m_wpa_ctrl_buffer_size;
 
     do {
-        LOG(DEBUG) << "CW: Send dwpal cmd: " << cmd.c_str() << " From intf:" << get_iface_name().c_str();
+        LOG(DEBUG) << "CW: Send dwpal cmd: " << cmd.c_str()
+                   << " From intf:" << get_iface_name().c_str();
+	LOG(INFO) << "CW: map for intf conn_state["<<get_iface_name().c_str()<<"] is " << conn_state[get_iface_name().c_str()]
         result = dwpald_hostap_cmd(get_iface_name().c_str(), cmd.c_str(), cmd.length(), buffer,
                                    &buff_size_copy);
         if (result != 0) {
@@ -954,7 +956,7 @@ bool base_wlan_hal_dwpal::process_ext_events(int fd)
         LOG(ERROR) << "Failed to pares hostap event";
         return false;
     }
-    if (!process_dwpal_event(buffer, read_bytes, event)) {
+    if (!process_dwpal_event(char *ifname, buffer, read_bytes, event)) {
         LOG(ERROR) << "Failed processing DWPAL event with DWPAL parser";
         return false;
     }

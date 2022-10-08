@@ -469,7 +469,8 @@ std::string sta_wlan_hal_dwpal::get_ssid() { return m_active_ssid; }
 
 std::string sta_wlan_hal_dwpal::get_bssid() { return m_active_bssid; }
 
-bool sta_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std::string &opcode)
+bool sta_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufLen,
+                                             const std::string &opcode)
 {
     LOG(TRACE) << __func__ << " " << get_iface_name() << " - opcode: |" << opcode << "|";
 
@@ -607,7 +608,7 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
         LOG(ERROR) << "Could not find context for ifname=" << ifname;
         return -1;
     }
-    it->second->process_dwpal_event(buffer, len, opcode);
+    it->second->process_dwpal_event(ifname, buffer, len, opcode);
     return 0;
 }
 

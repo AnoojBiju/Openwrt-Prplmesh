@@ -61,7 +61,8 @@ public:
     std::string get_bssid() override;
 
 protected:
-    virtual bool process_dwpal_event(char *buffer, int bufLen, const std::string &opcode) override;
+    virtual bool process_dwpal_event(char *ifname, char *buffer, int bufLen,
+                                     const std::string &opcode) override;
     virtual bool process_dwpal_nl_event(struct nl_msg *msg, void *arg = nullptr) override;
 
     // Overload for Monitor events

@@ -40,6 +40,11 @@ namespace bwl {
 namespace dwpal {
 
 #define CSA_EVENT_FILTERING_TIMEOUT_MS 1000
+#define IF_LENGTH IF_NAMESIZE + 1
+
+typedef struct {
+    char name[IF_LENGTH];
+} vap_name_t;
 
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////// Local Module Functions ///////////////////////////
@@ -2293,7 +2298,8 @@ bool ap_wlan_hal_dwpal::set_cce_indication(uint16_t advertise_cce)
     return true;
 }
 
-bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std::string &opcode)
+bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufLen,
+                                            const std::string &opcode)
 {
     LOG(TRACE) << __func__ << " CW: - opcode: |" << opcode << "|";
 
@@ -2303,8 +2309,56 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
 
     auto event = dwpal_to_bwl_event(opcode);
 
+    auto update_conn_status = [](bool is_disconnect) -> int {
+        size_t numOfValidArgs;
+        vap_name_t to_search;
+        int ret                       = -1;
+        FieldsToParse fieldsToParse[] = {
+            {NULL, &numOfValidArgs, DWPAL_STR_PARAM, to_search.name, IF_LENGTH},
+            {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
+        reply = malloc(HOSTAPD_TO_DWPAL_MSG_LENGTH);
+        if (!reply) {
+            LOG(ERROR) << "%s; malloc failed\n" << __FUNCTION__;
+            goto end;
+        }
+
+        memset((void *)reply, 0, HOSTAPD_TO_DWPAL_MSG_LENGTH);
+        if (0 != hostap_cmd_send(ifname, "STATUS", reply, &replyLen)) {
+            LOG(ERROR) << "STATUS command send error";
+            goto end;
+        }
+
+        for (i = 0; i < MAX_VAPS_PER_RADIO; i++) {
+            char vap[IF_LENGTH] = {0};
+            int status;
+            status = sprintf_s(to_search.name, sizeof(vap_name_t), "bss[%d]=", i);
+            if (status <= 0) {
+                ERROR("sprintf_s failed %d!\n", i);
+                goto end;
+            }
+            fieldsToParse[0].field = vap;
+            if (DWPAL_SUCCESS !=
+                dwpal_string_to_struct_parse(reply, replyLen, fieldsToParse, sizeof(vap))) {
+                LOG(ERROR) << "STATUS reply parse error at " << i;
+                goto end;
+            }
+            if (!numOfValidArgs)
+                break;
+            if (is_disconnect == true) {
+                conn_state[vap] = false;
+            } else {
+                conn_state[vap] = true;
+            }
+        }
+        ret = 0;
+    end:
+        free(reply);
+        return ret;
+    }
+
     // If there is monitored BSSs list, monitor all BSSs
-    if (!m_hal_conf.monitored_BSSs.empty()) {
+    if (!m_hal_conf.monitored_BSSs.empty())
+    {
         if (event == Event::STA_Connected || event == Event::STA_Disconnected ||
             event == Event::AP_Disabled || event == Event::AP_Enabled) {
 
@@ -3374,16 +3428,18 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         event_queue_push(event, msg_buff); // send message to the AP manager
         break;
     }
-    case Event::Interface_Connected_OK: {
-        LOG(INFO) << "INTERFACE_CONNECTED_OK ";
-        break;
-    }
+    case Event::Interface_Connected_OK:
+        LOG(INFO) << "INTERFACE_CONNECTED_OK from  intf " << ifname;
     case Event::Interface_Reconnected_OK: {
-        LOG(INFO) << "INTERFACE_RECONNECTED_OK";
+        LOG(INFO) << "INTERFACE_RECONNECTED_OK from  intf " << ifname;
+        auto ret = update_conn_status(false);
+        LOG(INFO) << "Status update return value " << ret;
         break;
     }
     case Event::Interface_Disconnected: {
         LOG(INFO) << "INTERFACE_DISCONNECTED_OK";
+        auto ret = update_conn_status(true);
+        LOG(INFO) << "Status update return value " << ret;
         break;
     }
 
@@ -3415,7 +3471,7 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
         LOG(INFO) << "CW: msg is -> " << buffer;
     }
     if (ctx) {
-        ctx->process_dwpal_event(buffer, len, opcode);
+        ctx->process_dwpal_event(ifname, buffer, len, opcode);
     }
     return 0;
 }

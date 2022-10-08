@@ -2275,7 +2275,8 @@ static bool is_acs_completed_scan(char *buffer, int bufLen)
     return !strncmp(scan, "SCAN", 4);
 }
 
-bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std::string &opcode)
+bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufLen,
+                                            const std::string &opcode)
 {
     LOG(TRACE) << __func__ << " - opcode: |" << opcode << "|";
 

@@ -87,8 +87,9 @@ public:
     int get_nl_evt_write_pfd() { return m_nl_event_pfd[1]; }
 
     // Process dwpal event
-    virtual bool process_dwpal_event(char *buffer, int bufLen, const std::string &opcode) = 0;
-    virtual bool process_dwpal_nl_event(struct nl_msg *msg, void *arg = nullptr)          = 0;
+    virtual bool process_dwpal_event(char *ifname, char *buffer, int bufLen,
+                                     const std::string &opcode)                  = 0;
+    virtual bool process_dwpal_nl_event(struct nl_msg *msg, void *arg = nullptr) = 0;
 
     // Protected methods
 protected:
@@ -144,6 +145,11 @@ protected:
      * Re-usable buffer to hold the response of NL80211_CMD_VENDOR commands
      */
     unsigned char m_nl_buffer[NL_MAX_REPLY_BUFFSIZE] = {'\0'};
+
+    /**
+     * map for maintaining interface connection state
+     */
+    unordered_map<string, bool> conn_state;
 
     // Private data-members:
 private:

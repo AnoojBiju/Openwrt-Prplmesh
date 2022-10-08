@@ -1279,7 +1279,8 @@ bool mon_wlan_hal_dwpal::pre_generate_connected_clients_events()
     return true;
 }
 
-bool mon_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std::string &opcode)
+bool mon_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufLen,
+                                             const std::string &opcode)
 {
     LOG(TRACE) << __func__ << " - opcode: |" << opcode << "|";
 
@@ -1749,7 +1750,7 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
         return -1;
     }
 #endif
-    ctx->process_dwpal_event(buffer, len, opcode);
+    ctx->process_dwpal_event(ifname, buffer, len, opcode);
     return 0;
 }
 
