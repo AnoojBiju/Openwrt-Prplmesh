@@ -216,6 +216,13 @@ bool Monitor::thread_init()
 
     mon_db.set_radio_stats_enable(radio_stats_enable);
 
+    bool clients_unicast_measurements;
+    if (!beerocks::bpl::cfg_get_clients_unicast_measurements(clients_unicast_measurements)) {
+        LOG(DEBUG) << "Failed to read clients_unicast_measurement - using default value: false";
+        clients_unicast_measurements = false;
+    }
+    mon_db.set_clients_unicast_measurements(clients_unicast_measurements);
+
     LOG(DEBUG) << "started";
 
     return true;
@@ -901,8 +908,9 @@ bool Monitor::update_sta_stats(const std::chrono::steady_clock::time_point &time
             continue;
         }
 
-        auto vap_node   = mon_db.vap_get_by_id(sta_node->get_vap_id());
-        auto &sta_stats = sta_node->get_stats();
+        auto vap_node        = mon_db.vap_get_by_id(sta_node->get_vap_id());
+        auto &sta_stats      = sta_node->get_stats();
+        bool is_read_unicast = false;
 
         // Skip stations that were already updated in the current cycle
         if (sta_stats.last_update_time > m_sta_stats_polling_start_timestamp) {
@@ -922,9 +930,10 @@ bool Monitor::update_sta_stats(const std::chrono::steady_clock::time_point &time
         }
         sta_stats.poll_cnt++;
 
-        // Update the stats
+        // Update unicast/gobal stats as per the config.
+        is_read_unicast = mon_db.get_clients_unicast_measurements();
         if (!mon_wlan_hal->update_stations_stats(vap_node->get_iface(), sta_mac,
-                                                 sta_stats.hal_stats)) {
+                                                 sta_stats.hal_stats, is_read_unicast)) {
             LOG(ERROR) << "Failed updating STA (" << sta_mac << ") statistics!";
             continue;
         }

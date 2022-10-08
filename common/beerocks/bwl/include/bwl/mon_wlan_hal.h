@@ -49,7 +49,8 @@ public:
     virtual bool update_radio_stats(SRadioStats &radio_stats)                              = 0;
     virtual bool update_vap_stats(const std::string &vap_iface_name, SVapStats &vap_stats) = 0;
     virtual bool update_stations_stats(const std::string &vap_iface_name,
-                                       const std::string &sta_mac, SStaStats &sta_stats)   = 0;
+                                       const std::string &sta_mac, SStaStats &sta_stats,
+                                       bool is_read_unicast)                               = 0;
 
     /**
      * @brief Update station qos control params for already associated wifi6 clients.

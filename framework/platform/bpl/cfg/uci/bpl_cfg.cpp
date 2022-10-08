@@ -935,5 +935,17 @@ bool get_controller_heartbeat_state_timeout_seconds(std::chrono::seconds &timeou
     return true;
 }
 
+bool cfg_get_clients_unicast_measurements(bool &client_unicast_measurements)
+{
+    int val = -1;
+    if (cfg_get_prplmesh_param_int_default("clients_unicast_measurements", &val, int(false)) ==
+        RETURN_ERR) {
+        return false;
+    }
+
+    client_unicast_measurements = bool(val == 1);
+    return true;
+}
+
 } // namespace bpl
 } // namespace beerocks

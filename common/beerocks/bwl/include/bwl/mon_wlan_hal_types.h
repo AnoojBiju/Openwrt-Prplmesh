@@ -99,6 +99,32 @@ struct SStaStats {
     uint8_t dl_bandwidth = 0; //beerocks::eWiFiBandwidth
 };
 
+struct sStaExtendedStats {
+    uint32_t station_id               = 0;
+    uint32_t supported_network_modes  = 0;
+    uint32_t tx_bytes_cnt             = 0;
+    uint32_t rx_bytes_cnt             = 0;
+    uint32_t tx_packets_cnt           = 0;
+    uint32_t rx_packets_cnt           = 0;
+    uint32_t unicast_tx_packets_cnt   = 0;
+    uint32_t unicast_tx_bytes_cnt     = 0;
+    uint32_t unicast_rx_packets_cnt   = 0;
+    uint32_t unicast_rx_bytes_cnt     = 0;
+    uint32_t multicast_rx_packets_cnt = 0;
+    uint32_t multicast_rx_bytes_cnt   = 0;
+    uint32_t broadcast_rx_packets_cnt = 0;
+    uint32_t broadcast_rx_bytes_cnt   = 0;
+    uint32_t retransmission           = 0;
+    uint32_t RetransCount             = 0;
+    uint32_t RetryCount               = 0;
+    uint32_t MultipleRetryCount       = 0;
+    uint32_t FailedRetransCount       = 0;
+    uint32_t ErrorsSent               = 0;
+    uint32_t LastDataDownlinkRate     = 0;
+    uint32_t LastDataUplinkRate       = 0;
+    int32_t SignalStrength            = 0;
+};
+
 struct SStaQosCtrlParams {
     uint8_t tid_queue_size
         [IEEE80211_QOS_TID_MAX_UP]; //TID - Traffic identifier of QoS control header field in 802.11 mac header.

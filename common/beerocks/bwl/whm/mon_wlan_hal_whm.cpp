@@ -104,7 +104,8 @@ bool mon_wlan_hal_whm::update_vap_stats(const std::string &vap_iface_name, SVapS
 }
 
 bool mon_wlan_hal_whm::update_stations_stats(const std::string &vap_iface_name,
-                                             const std::string &sta_mac, SStaStats &sta_stats)
+                                             const std::string &sta_mac, SStaStats &sta_stats,
+                                             bool is_read_unicast)
 {
     std::string assoc_device_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
                                     std::string(AMX_CL_AP_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
