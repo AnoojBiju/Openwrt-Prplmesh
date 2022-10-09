@@ -20,6 +20,7 @@
 #include <bpl/bpl_board.h>
 
 #include <tlvf/wfa_map/tlv1905LayerSecurityCapability.h>
+#include <tlvf/wfa_map/tlvAkmSuiteCapabilities.h>
 #include <tlvf/wfa_map/tlvApHeCapabilities.h>
 #include <tlvf/wfa_map/tlvApHtCapabilities.h>
 #include <tlvf/wfa_map/tlvApOperationalBSS.h>
@@ -2224,6 +2225,25 @@ public:
     bool dm_add_radio_cac_capabilities(
         const Agent::sRadio &radio, const wfa_map::eCacMethod &method, const uint8_t &duration,
         const std::unordered_map<uint8_t, std::vector<uint8_t>> &oc_channels);
+
+    /**
+     * @brief Adds instances for AKMFrontHaul and AKMBackhaul objects and fullfills them.
+     *
+     * Data model paths :
+     * "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.Capabilities.AKMFrontHaul.{i}."
+     * "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.Capabilities.AKMBackhaul.{i}."
+     *
+     * @param[in] radio Radio DB object.
+     * @param[in] fronthaul_bss_selectors Vector with values of OUI and suite type parameters for the fronthaul BSS.
+     * @param[in] backhaul_bss_selectors Vector with values of OUI and suite type parameters for the backhaul BSS.
+     * @return True on success, otherwise false.
+     */
+    bool dm_add_radio_akm_suite_capabilities(
+        const Agent::sRadio &radio,
+        const std::vector<wfa_map::tlvAkmSuiteCapabilities::sBssAkmSuiteSelector>
+            &fronthaul_bss_selectors,
+        const std::vector<wfa_map::tlvAkmSuiteCapabilities::sBssAkmSuiteSelector>
+            &backhaul_bss_selectors);
 
     /**
      * @brief Set the VBSS Capabilities for the specified radio. 

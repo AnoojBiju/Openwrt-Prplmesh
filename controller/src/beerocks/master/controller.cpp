@@ -4159,6 +4159,9 @@ bool Controller::handle_tlv_profile3_akm_suite_capabilities(Agent &agent,
 
     LOG(DEBUG) << "Profile-3 AKM Suite Capabilities TLV is received";
 
+    std::vector<wfa_map::tlvAkmSuiteCapabilities::sBssAkmSuiteSelector> backhaul_bss_selectors;
+    std::vector<wfa_map::tlvAkmSuiteCapabilities::sBssAkmSuiteSelector> fronthaul_bss_selectors;
+
     std::stringstream ss;
     for (size_t i = 0; i < akm_suite_capabilities_tlv->number_of_bh_bss_akm_suite_selectors();
          i++) {
@@ -4174,6 +4177,8 @@ bool Controller::handle_tlv_profile3_akm_suite_capabilities(Agent &agent,
            << wfa_map::tlvAkmSuiteCapabilities::eAkmSuiteOUI_str(
                   wfa_map::tlvAkmSuiteCapabilities::eAkmSuiteOUI(uint32_t(selector.oui)))
            << ", suite type: " << (int)selector.akm_suite_type << std::endl;
+
+        backhaul_bss_selectors.push_back(selector);
     }
 
     for (size_t i = 0; i < akm_suite_capabilities_tlv->number_of_fh_bss_akm_suite_selectors();
@@ -4190,7 +4195,16 @@ bool Controller::handle_tlv_profile3_akm_suite_capabilities(Agent &agent,
            << wfa_map::tlvAkmSuiteCapabilities::eAkmSuiteOUI_str(
                   wfa_map::tlvAkmSuiteCapabilities::eAkmSuiteOUI(uint32_t(selector.oui)))
            << ", suite type: " << (int)selector.akm_suite_type << std::endl;
+
+        fronthaul_bss_selectors.push_back(selector);
     }
+
+    /* TODO: Establish a accordance between radio and given AKM Suite сapabilities (PPM-2332).
+    if (!database.dm_add_radio_akm_suite_capabilities(radio, fronthaul_bss_selectors, backhaul_bss_selectors) {
+        LOG(ERROR) << "Failed to add AKM Suite Capabilities for radio=" << radio->radio_uid;
+        return false;
+    }
+    */
 
     return true;
 }

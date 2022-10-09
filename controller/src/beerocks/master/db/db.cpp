@@ -7570,6 +7570,52 @@ bool db::dm_add_radio_scan_capabilities(const Agent::sRadio &radio)
     return ret_val;
 }
 
+bool db::dm_add_radio_akm_suite_capabilities(
+    const Agent::sRadio &radio,
+    const std::vector<wfa_map::tlvAkmSuiteCapabilities::sBssAkmSuiteSelector>
+        &fronthaul_bss_selectors,
+    const std::vector<wfa_map::tlvAkmSuiteCapabilities::sBssAkmSuiteSelector>
+        &backhaul_bss_selectors)
+{
+    if (radio.dm_path.empty()) {
+        return true;
+    }
+
+    if (!m_ambiorix_datamodel->remove_all_instances(radio.dm_path + ".Capabilities.AKMFrontHaul")) {
+        return false;
+    }
+
+    bool ret_val = true;
+
+    for (auto &selector : fronthaul_bss_selectors) {
+        auto akm_fronthaul_path =
+            m_ambiorix_datamodel->add_instance(radio.dm_path + ".Capabilities.AKMFrontHaul");
+        if (akm_fronthaul_path.empty()) {
+            return false;
+        }
+
+        ret_val &= m_ambiorix_datamodel->set(akm_fronthaul_path, "OUI", selector.oui);
+        ret_val &= m_ambiorix_datamodel->set(akm_fronthaul_path, "Type", selector.akm_suite_type);
+    }
+
+    if (!m_ambiorix_datamodel->remove_all_instances(radio.dm_path + ".Capabilities.AKMBackhaul")) {
+        return false;
+    }
+
+    for (auto &selector : backhaul_bss_selectors) {
+        auto akm_backhaul_path =
+            m_ambiorix_datamodel->add_instance(radio.dm_path + ".Capabilities.AKMBackhaul");
+        if (akm_backhaul_path.empty()) {
+            return false;
+        }
+
+        ret_val &= m_ambiorix_datamodel->set(akm_backhaul_path, "OUI", selector.oui);
+        ret_val &= m_ambiorix_datamodel->set(akm_backhaul_path, "Type", selector.akm_suite_type);
+    }
+
+    return ret_val;
+}
+
 bool db::dm_set_radio_vbss_capabilities(const sMacAddr &radio_uid, uint8_t max_vbss,
                                         bool vbsses_subtract, bool apply_vbssid_restrictions,
                                         bool apply_vbssid_match_mask_restrictions,
