@@ -348,6 +348,7 @@ bool Controller::start()
             ieee1905_1::eMessageType::BACKHAUL_STEERING_RESPONSE_MESSAGE,
             ieee1905_1::eMessageType::TUNNELLED_MESSAGE,
             ieee1905_1::eMessageType::BACKHAUL_STA_CAPABILITY_REPORT_MESSAGE,
+            ieee1905_1::eMessageType::BSS_CONFIGURATION_REQUEST_MESSAGE,
             ieee1905_1::eMessageType::FAILED_CONNECTION_MESSAGE,
         })) {
         LOG(ERROR) << "Failed subscribing to the Bus";
@@ -529,6 +530,8 @@ bool Controller::handle_cmdu_1905_1_message(const sMacAddr &src_mac,
         return handle_cmdu_1905_tunnelled_message(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::BACKHAUL_STA_CAPABILITY_REPORT_MESSAGE:
         return handle_cmdu_1905_backhaul_sta_capability_report_message(src_mac, cmdu_rx);
+    case ieee1905_1::eMessageType::BSS_CONFIGURATION_REQUEST_MESSAGE:
+        return handle_cmdu_1905_bss_configuration_request_message(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::FAILED_CONNECTION_MESSAGE:
         return handle_cmdu_1905_failed_connection_message(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::ASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE:
@@ -4121,4 +4124,12 @@ bool Controller::handle_tlv_profile3_1905_layer_security_capabilities(
     return true;
 }
 
+bool Controller::handle_cmdu_1905_bss_configuration_request_message(
+    const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto mid = cmdu_rx.getMessageId();
+    LOG(DEBUG) << "Received BSS_CONFIGURATION_REQUEST_MESSAGE, mid=" << std::hex << mid;
+
+    return true;
+}
 } // namespace son
