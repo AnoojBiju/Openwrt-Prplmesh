@@ -7473,12 +7473,7 @@ bool db::dm_clear_radio_cac_capabilities(const Agent::sRadio &radio)
         return true;
     }
 
-    if (!m_ambiorix_datamodel->remove_all_instances(radio.dm_path + ".CACCapability")) {
-        LOG(ERROR) << "Failed to remove all instances for: " << radio.dm_path + ".CACCapability";
-        return false;
-    }
-
-    return true;
+    return m_ambiorix_datamodel->remove_all_instances(radio.dm_path + ".CACCapability");
 }
 
 bool db::dm_add_radio_cac_capabilities(
@@ -7492,7 +7487,6 @@ bool db::dm_add_radio_cac_capabilities(
     auto cac_method_path =
         m_ambiorix_datamodel->add_instance(radio.dm_path + ".CACCapability.CACMethod");
     if (cac_method_path.empty()) {
-        LOG(ERROR) << "Failed to add: " << radio.dm_path << ".CACCapability.CACMethod";
         return false;
     }
 
@@ -7504,7 +7498,6 @@ bool db::dm_add_radio_cac_capabilities(
         auto oc_channels_path =
             m_ambiorix_datamodel->add_instance(cac_method_path + ".OpClassChannels");
         if (oc_channels_path.empty()) {
-            LOG(ERROR) << "Failed to add: " << cac_method_path << ".OpClassChannels";
             return false;
         }
 
@@ -7513,7 +7506,6 @@ bool db::dm_add_radio_cac_capabilities(
         for (auto &channel : oc_ch.second) {
             auto channels_path = m_ambiorix_datamodel->add_instance(oc_channels_path + ".Channel");
             if (oc_channels_path.empty()) {
-                LOG(ERROR) << "Failed to add: " << oc_channels_path << ".Channel";
                 return false;
             }
 
