@@ -40,6 +40,7 @@ namespace bwl {
 namespace dwpal {
 
 #define CSA_EVENT_FILTERING_TIMEOUT_MS 1000
+#define MAX_VAPS_PER_RADIO 16
 #define IF_LENGTH IF_NAMESIZE + 1
 
 typedef struct {
@@ -2309,56 +2310,48 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
 
     auto event = dwpal_to_bwl_event(opcode);
 
-    auto update_conn_status = [](bool is_disconnect) -> int {
+    auto update_conn_status = [&]() -> int {
         size_t numOfValidArgs;
         vap_name_t to_search;
-        int ret                       = -1;
+        int ret                       = -1, i;
+        char *reply                   = nullptr;
+        size_t replyLen               = HOSTAPD_TO_DWPAL_MSG_LENGTH - 1;
         FieldsToParse fieldsToParse[] = {
             {NULL, &numOfValidArgs, DWPAL_STR_PARAM, to_search.name, IF_LENGTH},
             {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
-        reply = malloc(HOSTAPD_TO_DWPAL_MSG_LENGTH);
-        if (!reply) {
-            LOG(ERROR) << "%s; malloc failed\n" << __FUNCTION__;
-            goto end;
+
+        if (!dwpal_send_cmd("STATUS", &reply)) {
+            LOG(ERROR) << "STATUS command send error";
+            return ret;
         }
 
-        memset((void *)reply, 0, HOSTAPD_TO_DWPAL_MSG_LENGTH);
-        if (0 != hostap_cmd_send(ifname, "STATUS", reply, &replyLen)) {
-            LOG(ERROR) << "STATUS command send error";
-            goto end;
-        }
+        replyLen = strnlen(reply, HOSTAPD_TO_DWPAL_MSG_LENGTH);
 
         for (i = 0; i < MAX_VAPS_PER_RADIO; i++) {
             char vap[IF_LENGTH] = {0};
             int status;
             status = sprintf_s(to_search.name, sizeof(vap_name_t), "bss[%d]=", i);
             if (status <= 0) {
-                ERROR("sprintf_s failed %d!\n", i);
-                goto end;
+                LOG(ERROR) << "sprintf_s failed at " << i;
+                return ret;
             }
             fieldsToParse[0].field = vap;
             if (DWPAL_SUCCESS !=
                 dwpal_string_to_struct_parse(reply, replyLen, fieldsToParse, sizeof(vap))) {
                 LOG(ERROR) << "STATUS reply parse error at " << i;
-                goto end;
+                return ret;
             }
             if (!numOfValidArgs)
                 break;
-            if (is_disconnect == true) {
-                conn_state[vap] = false;
-            } else {
-                conn_state[vap] = true;
-            }
+            // Update interface connection status for vap to true
+            conn_state[vap] = true;
+            LOG(INFO) << "CW: updated intf " << vap << "with true";
         }
-        ret = 0;
-    end:
-        free(reply);
-        return ret;
-    }
+        return 0;
+    };
 
     // If there is monitored BSSs list, monitor all BSSs
-    if (!m_hal_conf.monitored_BSSs.empty())
-    {
+    if (!m_hal_conf.monitored_BSSs.empty()) {
         if (event == Event::STA_Connected || event == Event::STA_Disconnected ||
             event == Event::AP_Disabled || event == Event::AP_Enabled) {
 
@@ -3429,17 +3422,20 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
         break;
     }
     case Event::Interface_Connected_OK:
-        LOG(INFO) << "INTERFACE_CONNECTED_OK from  intf " << ifname;
     case Event::Interface_Reconnected_OK: {
-        LOG(INFO) << "INTERFACE_RECONNECTED_OK from  intf " << ifname;
-        auto ret = update_conn_status(false);
+        LOG(INFO) << "INTERFACE_RECONNECTED_OK or INTERFACE_CONNECTED_OK from intf " << ifname;
+        auto ret = update_conn_status();
         LOG(INFO) << "Status update return value " << ret;
         break;
     }
     case Event::Interface_Disconnected: {
-        LOG(INFO) << "INTERFACE_DISCONNECTED_OK";
-        auto ret = update_conn_status(true);
-        LOG(INFO) << "Status update return value " << ret;
+        LOG(INFO) << "INTERFACE_DISCONNECTED_OK from intf " << ifname;
+        std::unordered_map<std::string, bool>::iterator con;
+        for (con = conn_state.begin(); con != conn_state.end(); con++) {
+            // Update interface connection status for vap to false
+            conn_state[con->first] = false;
+            LOG(INFO) << "CW: updated intf " << con->first << "with false";
+        }
         break;
     }
 

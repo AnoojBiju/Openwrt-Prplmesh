@@ -24,6 +24,7 @@ extern "C" {
 
 #include <chrono>
 #include <memory>
+#include <unordered_map>
 
 namespace bwl {
 namespace dwpal {
@@ -149,7 +150,7 @@ protected:
     /**
      * map for maintaining interface connection state
      */
-    unordered_map<string, bool> conn_state;
+    std::unordered_map<std::string, bool> conn_state;
 
     // Private data-members:
 private:
