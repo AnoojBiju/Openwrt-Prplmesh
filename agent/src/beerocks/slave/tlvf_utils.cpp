@@ -34,8 +34,8 @@ static std::vector<uint8_t> get_supported_operating_classes(
             auto &channel_info = channel_info_element.second;
             bool found         = false;
             for (const auto &bw_info : channel_info.supported_bw_list) {
-                if (son::wireless_utils::has_operating_class_channel(oper_class.second, channel,
-                                                                     bw_info.bandwidth)) {
+                if (son::wireless_utils::has_operating_class_5g_channel(oper_class.second, channel,
+                                                                        bw_info.bandwidth)) {
                     operating_classes.push_back(oper_class.first);
                     found = true;
                     break;
@@ -73,8 +73,8 @@ static int8_t get_operating_class_max_tx_power(
         auto channel       = channel_info_element.first;
         auto &channel_info = channel_info_element.second;
         for (const auto &bw_info : channel_info.supported_bw_list) {
-            if (son::wireless_utils::has_operating_class_channel(oper_class, channel,
-                                                                 bw_info.bandwidth)) {
+            if (son::wireless_utils::has_operating_class_5g_channel(oper_class, channel,
+                                                                    bw_info.bandwidth)) {
                 max_tx_power = std::max(max_tx_power, channel_info.tx_power_dbm);
             }
         }

@@ -508,8 +508,8 @@ constexpr beerocks::eWiFiSS wireless_utils::phy_rate_table_mode_to_ss[PHY_RATE_T
 constexpr wireless_utils::sPhyRateBitRateEntry
     wireless_utils::bit_rate_max_table_mbps[BIT_RATE_MAX_TABLE_SIZE];
 
-bool wireless_utils::has_operating_class_channel(const sOperatingClass &oper_class, uint8_t channel,
-                                                 beerocks::eWiFiBandwidth bw)
+bool wireless_utils::has_operating_class_5g_channel(const sOperatingClass &oper_class,
+                                                    uint8_t channel, beerocks::eWiFiBandwidth bw)
 {
     if (oper_class.band != bw) {
         return false;
@@ -1392,7 +1392,8 @@ bool wireless_utils::is_frequency_band_5ghz(beerocks::eFreqType frequency_band)
     }
 }
 
-wireless_utils::OverlappingChannels wireless_utils::get_overlapping_channels(uint8_t source_channel)
+wireless_utils::OverlappingChannels
+wireless_utils::get_overlapping_5g_channels(uint8_t source_channel)
 {
     OverlappingChannels ret;
 
@@ -1415,15 +1416,15 @@ wireless_utils::OverlappingChannels wireless_utils::get_overlapping_channels(uin
             auto min_channel = current_bandwidth_it.second.overlap_beacon_channels_range.first;
             auto max_channel = current_bandwidth_it.second.overlap_beacon_channels_range.second;
             if (source_channel >= min_channel && source_channel <= max_channel) {
-                ret.push_back(std::make_pair(current_channel, current_bandwidth));
+                ret.emplace_back(current_channel, current_bandwidth);
             }
         }
     }
     return ret;
 }
 
-std::vector<uint8_t> wireless_utils::get_overlapping_beacon_channels(uint8_t beacon_channel,
-                                                                     beerocks::eWiFiBandwidth bw)
+std::vector<uint8_t> wireless_utils::get_overlapping_5g_beacon_channels(uint8_t beacon_channel,
+                                                                        beerocks::eWiFiBandwidth bw)
 {
     std::vector<uint8_t> overlapping_beacon_channels;
 

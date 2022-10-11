@@ -203,24 +203,24 @@ public:
     using OverlappingChannels = std::vector<std::pair<uint8_t, beerocks::eWiFiBandwidth>>;
 
     /**
-     * @brief Calculates the list of overlapping channels and bandwidths
+     * @brief Calculates the list of overlapping 5GHz channels and bandwidths
      * for the given source channel.
      *
-     * @param source_channel The channel to calculate its overlapping pairs.
+     * @param source_channel The 5Ghz channel to calculate its overlapping pairs.
      * @return OverlappingChannles A vector of the overlapping channels for the
      * given source channel. Empty list if not as such.
      */
-    static OverlappingChannels get_overlapping_channels(uint8_t source_channel);
+    static OverlappingChannels get_overlapping_5g_channels(uint8_t source_channel);
 
     /**
-     * @brief Get a list of overlapping beacon channel for a given channel and bandwidth.
+     * @brief Get a list of overlapping 5GHz beacon channel for a given channel and bandwidth.
      *
      * @param beacon_channel Channel.
      * @param bw Bandwidth.
      * @return std::vector<uint8_t> List of overlapping beacon channels (20 MHz).
      */
-    static std::vector<uint8_t> get_overlapping_beacon_channels(uint8_t beacon_channel,
-                                                                beerocks::eWiFiBandwidth bw);
+    static std::vector<uint8_t> get_overlapping_5g_beacon_channels(uint8_t beacon_channel,
+                                                                   beerocks::eWiFiBandwidth bw);
 
     /**
      * @brief Get list of all possible beacon channels for a give center channel and bandwidth on
@@ -249,8 +249,8 @@ public:
     // Key: Operating Class
     static const std::map<uint8_t, sOperatingClass> operating_classes_list;
 
-    static bool has_operating_class_channel(const sOperatingClass &oper_class, uint8_t channel,
-                                            beerocks::eWiFiBandwidth bw);
+    static bool has_operating_class_5g_channel(const sOperatingClass &oper_class, uint8_t channel,
+                                               beerocks::eWiFiBandwidth bw);
 
     /**
      * @brief get max supported bandwidth in station capabilities.

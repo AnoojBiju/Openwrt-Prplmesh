@@ -290,7 +290,7 @@ TEST(overlapping_channels, channel_112)
 {
     // channel 112 test
     son::wireless_utils::OverlappingChannels result =
-        son::wireless_utils::get_overlapping_channels(112);
+        son::wireless_utils::get_overlapping_5g_channels(112);
 
     EXPECT_EQ(result.size(), 15);
     EXPECT_FALSE(std::find(result.begin(), result.end(),
