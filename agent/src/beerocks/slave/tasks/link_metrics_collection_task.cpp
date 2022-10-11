@@ -712,12 +712,6 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
 
     for (auto ap_metrics_tlv : ap_metrics_tlv_list) {
         std::shared_ptr<wfa_map::tlvApExtendedMetrics> ap_extended_metrics_tlv;
-        for (auto tmp : ap_extended_metrics_tlv_list) {
-            if (tmp->bssid() == ap_metrics_tlv->bssid()) {
-                ap_extended_metrics_tlv = tmp;
-                break;
-            }
-        }
 
         if (!ap_metrics_tlv) {
             LOG(WARNING) << "found null ap_metrics_tlv in response, skipping. mid=" << std::hex
@@ -726,7 +720,14 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
         }
 
         auto bssid_tlv = ap_metrics_tlv->bssid();
-        auto mac       = std::find_if(
+        for (auto tmp : ap_extended_metrics_tlv_list) {
+            if (tmp->bssid() == bssid_tlv) {
+                ap_extended_metrics_tlv = tmp;
+                break;
+            }
+        }
+
+        auto mac = std::find_if(
             m_ap_metric_query.begin(), m_ap_metric_query.end(),
             [&bssid_tlv](sApMetricsQuery const &query) { return query.bssid == bssid_tlv; });
 
