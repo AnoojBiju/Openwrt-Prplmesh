@@ -2320,6 +2320,9 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
             {NULL, &numOfValidArgs, DWPAL_STR_PARAM, to_search.name, IF_LENGTH},
             {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
 
+        // Make radio intf connection state as true before sending STATUS command
+        conn_state[ifname] = true;
+
         if (!dwpal_send_cmd("STATUS", &reply)) {
             LOG(ERROR) << "STATUS command send error";
             return ret;
