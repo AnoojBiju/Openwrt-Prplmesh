@@ -35,7 +35,7 @@ class NbapiRadioBackhaulSta(PrplMeshBaseTest):
 
         debug("Confirming Backhaul STA Capability Query has been received on agent")
         self.check_log(
-            agent,
+            agent.radios[0],
             r"BACKHAUL_STA_CAPABILITY_QUERY_MESSAGE, mid=0x{:02x}".format(mid),
             timeout=1)
 

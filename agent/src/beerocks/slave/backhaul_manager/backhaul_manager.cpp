@@ -36,7 +36,6 @@
 #include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
 #include <tlvf/wfa_map/tlvBackhaulSteeringRequest.h>
 #include <tlvf/wfa_map/tlvBackhaulSteeringResponse.h>
-#include <tlvf/wfa_map/tlvErrorCode.h>
 #include <tlvf/wfa_map/tlvProfile2AssociationStatusNotification.h>
 
 // BPL Error Codes
@@ -131,7 +130,6 @@ BackhaulManager::BackhaulManager(const config_file::sConfigSlave &config,
     m_task_pool.add_task(std::make_shared<TopologyTask>(*this, cmdu_tx));
     m_task_pool.add_task(std::make_shared<ChannelSelectionTask>(*this, cmdu_tx));
     m_task_pool.add_task(std::make_shared<ChannelScanTask>(*this, cmdu_tx));
-    m_task_pool.add_task(std::make_shared<CapabilityReportingTask>(*this, cmdu_tx));
     m_task_pool.add_task(std::make_shared<LinkMetricsCollectionTask>(*this, cmdu_tx));
     m_task_pool.add_task(
         std::make_shared<switch_channel::SwitchChannelTask>(m_task_pool, *this, cmdu_tx));
@@ -286,7 +284,6 @@ bool BackhaulManager::thread_init()
     // Subscribe for the reception of CMDU messages that this process is interested in
     if (!m_broker_client->subscribe(std::set<ieee1905_1::eMessageType>{
             ieee1905_1::eMessageType::ACK_MESSAGE,
-            ieee1905_1::eMessageType::AP_CAPABILITY_QUERY_MESSAGE,
             ieee1905_1::eMessageType::AP_METRICS_QUERY_MESSAGE,
             ieee1905_1::eMessageType::ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE,
             ieee1905_1::eMessageType::BACKHAUL_STEERING_REQUEST_MESSAGE,
@@ -297,7 +294,6 @@ bool BackhaulManager::thread_init()
             ieee1905_1::eMessageType::CHANNEL_SCAN_REQUEST_MESSAGE,
             ieee1905_1::eMessageType::CHANNEL_SELECTION_REQUEST_MESSAGE,
             ieee1905_1::eMessageType::CLIENT_ASSOCIATION_CONTROL_REQUEST_MESSAGE,
-            ieee1905_1::eMessageType::CLIENT_CAPABILITY_QUERY_MESSAGE,
             ieee1905_1::eMessageType::CLIENT_STEERING_REQUEST_MESSAGE,
             ieee1905_1::eMessageType::COMBINED_INFRASTRUCTURE_METRICS_MESSAGE,
             ieee1905_1::eMessageType::HIGHER_LAYER_DATA_MESSAGE,
@@ -305,7 +301,6 @@ bool BackhaulManager::thread_init()
             ieee1905_1::eMessageType::TOPOLOGY_DISCOVERY_MESSAGE,
             ieee1905_1::eMessageType::TOPOLOGY_QUERY_MESSAGE,
             ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE,
-            ieee1905_1::eMessageType::BACKHAUL_STA_CAPABILITY_QUERY_MESSAGE,
         })) {
         LOG(ERROR) << "Failed subscribing to the Bus";
         return false;
