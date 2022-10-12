@@ -107,8 +107,7 @@ public:
 
     // Protected methods:
 protected:
-    virtual bool process_dwpal_event(char *ifname, char *buffer, int bufLen,
-                                     const std::string &opcode) override;
+    virtual bool process_dwpal_event(char *buffer, int bufLen, const std::string &opcode) override;
     virtual bool process_dwpal_nl_event(struct nl_msg *msg, void *arg = nullptr) override;
 
     // Overload for AP events

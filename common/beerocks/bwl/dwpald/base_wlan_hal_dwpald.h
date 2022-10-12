@@ -148,7 +148,7 @@ protected:
     unsigned char m_nl_buffer[NL_MAX_REPLY_BUFFSIZE] = {'\0'};
 
     /**
-     * map for maintaining interface connection state
+     * map for maintaining dwpald interface connection state
      */
     std::unordered_map<std::string, bool> conn_state;
 

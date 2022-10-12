@@ -1127,7 +1127,7 @@ bool base_wlan_hal_dwpal::process_ext_events(int fd)
             }
 
             // Process the event with the DWPAL parser
-            if (!process_dwpal_event(NULL, buffer, buff_size_copy, std::string(opCode))) {
+            if (!process_dwpal_event(buffer, buff_size_copy, std::string(opCode))) {
                 LOG(ERROR) << "Failed processing DWPAL event with DWPAL parser";
                 return false;
             }

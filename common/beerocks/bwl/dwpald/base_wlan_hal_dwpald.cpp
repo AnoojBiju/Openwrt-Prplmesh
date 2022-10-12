@@ -488,8 +488,6 @@ bool base_wlan_hal_dwpal::dwpal_send_cmd(const std::string &cmd, int vap_id)
             if (result != 0) {
                 LOG(DEBUG) << "Failed to send cmd to DWPALD: " << cmd << " --> Retry";
             }
-        } else {
-            LOG(DEBUG) << "CW: Failed to send cmd to DWPALD: " << cmd << " --> Retry";
         }
     } while (result != 0 && ++try_cnt < 3);
 

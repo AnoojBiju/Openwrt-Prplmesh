@@ -1260,8 +1260,7 @@ bool mon_wlan_hal_dwpal::pre_generate_connected_clients_events()
     return true;
 }
 
-bool mon_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufLen,
-                                             const std::string &opcode)
+bool mon_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std::string &opcode)
 {
     LOG(TRACE) << __func__ << " - opcode: |" << opcode << "|";
 

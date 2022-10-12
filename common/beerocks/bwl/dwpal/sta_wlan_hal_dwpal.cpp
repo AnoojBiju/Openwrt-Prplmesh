@@ -461,8 +461,7 @@ std::string sta_wlan_hal_dwpal::get_ssid() { return m_active_ssid; }
 
 std::string sta_wlan_hal_dwpal::get_bssid() { return m_active_bssid; }
 
-bool sta_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufLen,
-                                             const std::string &opcode)
+bool sta_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std::string &opcode)
 {
     LOG(TRACE) << __func__ << " " << get_iface_name() << " - opcode: |" << opcode << "|";
 

@@ -2302,7 +2302,7 @@ bool ap_wlan_hal_dwpal::set_cce_indication(uint16_t advertise_cce)
 bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufLen,
                                             const std::string &opcode)
 {
-    LOG(TRACE) << __func__ << " CW: - opcode: |" << opcode << "|";
+    LOG(TRACE) << __func__ << " - opcode: |" << opcode << "|";
 
     // For key-value parser.
     int64_t tmp_int;
@@ -2330,6 +2330,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
 
         replyLen = strnlen(reply, HOSTAPD_TO_DWPAL_MSG_LENGTH);
 
+	// Update connection status for VAP list on that radio
         for (i = 0; i < MAX_VAPS_PER_RADIO; i++) {
             char vap[IF_LENGTH] = {0};
             int status;
@@ -2348,7 +2349,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
                 break;
             // Update interface connection status for vap to true
             conn_state[vap] = true;
-            LOG(INFO) << "CW: updated intf " << vap << "with true";
+            LOG(INFO) << "CW: updated connection status for intf " << vap << "with true";
         }
         return 0;
     };
@@ -3437,7 +3438,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
         for (con = conn_state.begin(); con != conn_state.end(); con++) {
             // Update interface connection status for vap to false
             conn_state[con->first] = false;
-            LOG(INFO) << "CW: updated intf " << con->first << "with false";
+            LOG(INFO) << "CW: updated connection status for intf " << con->first << "with false";
         }
         break;
     }
@@ -3465,10 +3466,6 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
         return -1;
     }
 #endif
-    LOG(INFO) << "CW: Opcode " << opcode << " and intf " << ifname << " and len is " << len;
-    if (len) {
-        LOG(INFO) << "CW: msg is -> " << buffer;
-    }
     if (ctx) {
         ctx->process_dwpal_event(ifname, buffer, len, opcode);
     }
