@@ -481,15 +481,15 @@ bool base_wlan_hal_dwpal::dwpal_send_cmd(const std::string &cmd, int vap_id)
                    << " From intf:" << get_iface_name().c_str();
         LOG(INFO) << "CW: map for intf conn_state[" << get_iface_name().c_str() << "] is "
                   << conn_state[get_iface_name().c_str()];
-        result = DWPALD_DISCONNECTED;
-        if (conn_state[get_iface_name().c_str()] == true) {
+        //result = DWPALD_DISCONNECTED;
+        //if (conn_state[get_iface_name().c_str()] == true) {
             result = dwpald_hostap_cmd(get_iface_name().c_str(), cmd.c_str(), cmd.length(), buffer,
                                        &buff_size_copy);
             if (result != 0) {
                 LOG(DEBUG) << "Failed to send cmd to DWPALD: " << cmd << " --> Retry";
             }
-        }
-    } while (result != 0 && ++try_cnt < 3);
+        //}
+    } while (result != 0 && ++try_cnt < 3 && (conn_state[get_iface_name().c_str()] == true));
 
     if (result < 0) {
         LOG(ERROR) << "can't send wpa_ctrl_request";
