@@ -821,7 +821,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
                 LOG(ERROR) << "Failed building message!";
                 return;
             }
-	LOG(INFO) << "CW: Log 3";
+            LOG(INFO) << "CW: Log 3";
             ap_wlan_hal->refresh_radio_info();
             fill_cs_params(csa_notification->cs_params());
             send_cmdu(cmdu_tx);
@@ -918,7 +918,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
                     LOG(ERROR) << "Failed building message!";
                     return;
                 }
-	LOG(INFO) << "CW: Log 4";
+                LOG(INFO) << "CW: Log 4";
                 ap_wlan_hal->refresh_radio_info();
                 fill_cs_params(notification->cs_params());
                 send_cmdu(cmdu_tx);
@@ -942,7 +942,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             std::string error("Failed to set AP channel!");
             LOG(ERROR) << error;
 
-	LOG(INFO) << "CW: Log 5";
+            LOG(INFO) << "CW: Log 5";
             ap_wlan_hal->refresh_radio_info();
 
             // Send the error reponse
@@ -986,7 +986,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
         auto timeout =
             std::chrono::steady_clock::now() + std::chrono::seconds(MAX_CANCEL_CAC_TIMEOUT_SEC);
         while (cancel_cac_success && std::chrono::steady_clock::now() < timeout) {
-	LOG(INFO) << "CW: Log 6";
+            LOG(INFO) << "CW: Log 6";
             if (!ap_wlan_hal->refresh_radio_info()) {
                 LOG(WARNING) << "Radio could be temporary disabled, wait grace time "
                              << std::chrono::duration_cast<std::chrono::seconds>(
@@ -1033,7 +1033,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
                 LOG(ERROR) << "Failed building message!";
                 return;
             }
-	LOG(INFO) << "CW: Log 2";
+            LOG(INFO) << "CW: Log 2";
             ap_wlan_hal->refresh_radio_info();
             fill_cs_params(notification->cs_params());
             send_cmdu(cmdu_tx);
@@ -1190,7 +1190,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
 
         // Read supported_channels (From Netlink HW Features)
         // Refreshing the radio info updates the DFS State of each channel on the channels list.
-	LOG(INFO) << "CW: Log 7";
+        LOG(INFO) << "CW: Log 7";
         if (!ap_wlan_hal->refresh_radio_info()) {
             LOG(ERROR) << "Failed to refresh_radio_info";
             return;
@@ -1399,7 +1399,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
                        std::chrono::seconds(WAIT_FOR_RADIO_ENABLE_TIMEOUT_SEC);
         auto perform_update = false;
         while (std::chrono::steady_clock::now() < timeout) {
-	LOG(INFO) << "CW: Log 8";
+            LOG(INFO) << "CW: Log 8";
             if (!ap_wlan_hal->refresh_radio_info()) {
                 break;
             }
@@ -1425,7 +1425,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
                 LOG(ERROR) << "Failed building message!";
                 return;
             }
-	LOG(INFO) << "CW: Log 10";
+            LOG(INFO) << "CW: Log 10";
             ap_wlan_hal->refresh_radio_info();
             fill_cs_params(csa_notification->cs_params());
             send_cmdu(cmdu_tx);
@@ -1681,7 +1681,7 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
     case Event::ACS_Completed:
     case Event::CSA_Finished: {
 
-	LOG(INFO) << "CW: Log 1";
+        LOG(INFO) << "CW: Log 1";
         ap_wlan_hal->read_acs_report();
         ap_wlan_hal->refresh_radio_info();
 
@@ -2056,7 +2056,7 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
             auto notify_disabled = true;
 
             while (std::chrono::steady_clock::now() < timeout) {
-	LOG(INFO) << "CW: Log 11";
+                LOG(INFO) << "CW: Log 11";
                 if (!ap_wlan_hal->refresh_radio_info()) {
                     LOG(WARNING) << "Radio could be temporary disabled, wait grace time "
                                  << std::chrono::duration_cast<std::chrono::seconds>(

@@ -40,13 +40,14 @@ namespace bwl {
 namespace dwpal {
 
 #define CSA_EVENT_FILTERING_TIMEOUT_MS 1000
+#if 0
 #define MAX_VAPS_PER_RADIO 16
 #define IF_LENGTH IF_NAMESIZE + 1
 
 typedef struct {
     char name[IF_LENGTH];
 } vap_name_t;
-
+#endif
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////// Local Module Functions ///////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -2330,7 +2331,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
 
         replyLen = strnlen(reply, HOSTAPD_TO_DWPAL_MSG_LENGTH);
 
-	// Update connection status for VAP list on that radio
+        // Update connection status for VAP list on that radio
         for (i = 0; i < MAX_VAPS_PER_RADIO; i++) {
             char vap[IF_LENGTH] = {0};
             int status;
@@ -2339,7 +2340,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
                 LOG(ERROR) << "sprintf_s failed at " << i;
                 return ret;
             }
-	    LOG(INFO) << "CW: value of to_search.name is " << to_search.name;
+            LOG(INFO) << "CW: value of to_search.name is " << to_search.name;
             fieldsToParse[0].field = vap;
             if (DWPAL_SUCCESS !=
                 dwpal_string_to_struct_parse(reply, replyLen, fieldsToParse, sizeof(vap))) {

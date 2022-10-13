@@ -477,12 +477,15 @@ bool base_wlan_hal_dwpal::dwpal_send_cmd(const std::string &cmd, int vap_id)
     auto buff_size_copy = m_wpa_ctrl_buffer_size;
 
     do {
-	    result = dwpald_hostap_cmd(get_iface_name().c_str(), cmd.c_str(), cmd.length(), buffer,
-			    &buff_size_copy);
-	    if (result != 0) {
-		    LOG(DEBUG) << "Failed to send cmd to DWPALD: " << cmd << " --> Retry";
-	    }
-    } while (result != 0 && ++try_cnt < 3 && (conn_state[get_iface_name().c_str()] == true));
+        result = DWPALD_DISCONNECTED;
+        if ((conn_state[get_iface_name().c_str()] == true)) {
+            result = dwpald_hostap_cmd(get_iface_name().c_str(), cmd.c_str(), cmd.length(), buffer,
+                                       &buff_size_copy);
+            if (result != 0) {
+                LOG(DEBUG) << "Failed to send cmd to DWPALD: " << cmd << " --> Retry";
+            }
+        }
+    } while (result != 0 && ++try_cnt < 3);
 
     if (result < 0) {
         LOG(ERROR) << "can't send wpa_ctrl_request";

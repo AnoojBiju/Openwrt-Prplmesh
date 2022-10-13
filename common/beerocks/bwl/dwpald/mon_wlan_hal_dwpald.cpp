@@ -24,6 +24,15 @@ extern "C" {
 }
 
 #define MONITOR_DWPALD_ATTACH_ID 1
+#if 0
+#define MAX_VAPS_PER_RADIO 16
+#define IF_LENGTH IF_NAMESIZE + 1
+
+typedef struct {
+    char name[IF_LENGTH];
+} vap_name_t;
+#endif
+
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////// DWPAL////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -77,6 +86,12 @@ static mon_wlan_hal::Event dwpal_to_bwl_event(const std::string &opcode)
         return mon_wlan_hal::Event::STA_Connected;
     } else if (opcode == "AP-STA-DISCONNECTED") {
         return mon_wlan_hal::Event::STA_Disconnected;
+    } else if (opcode == "INTERFACE_CONNECTED_OK") {
+        return mon_wlan_hal::Event::Interface_Connected_OK;
+    } else if (opcode == "INTERFACE_RECONNECTED_OK") {
+        return mon_wlan_hal::Event::Interface_Reconnected_OK;
+    } else if (opcode == "INTERFACE_DISCONNECTED") {
+        return mon_wlan_hal::Event::Interface_Disconnected;
     }
 
     return mon_wlan_hal::Event::Invalid;
@@ -1286,6 +1301,51 @@ bool mon_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int buf
 
     auto event = dwpal_to_bwl_event(opcode);
 
+    auto update_conn_status = [&]() -> int {
+        size_t numOfValidArgs;
+        vap_name_t to_search;
+        int ret                       = -1, i;
+        char *reply                   = nullptr;
+        size_t replyLen               = HOSTAPD_TO_DWPAL_MSG_LENGTH - 1;
+        FieldsToParse fieldsToParse[] = {
+            {NULL, &numOfValidArgs, DWPAL_STR_PARAM, to_search.name, IF_LENGTH},
+            {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
+
+        // Make radio intf connection state as true before sending STATUS command
+        conn_state[ifname] = true;
+
+        if (!dwpal_send_cmd("STATUS", &reply)) {
+            LOG(ERROR) << "STATUS command send error";
+            return ret;
+        }
+
+        replyLen = strnlen(reply, HOSTAPD_TO_DWPAL_MSG_LENGTH);
+
+        // Update connection status for VAP list on that radio
+        for (i = 0; i < MAX_VAPS_PER_RADIO; i++) {
+            char vap[IF_LENGTH] = {0};
+            int status;
+            status = sprintf_s(to_search.name, sizeof(vap_name_t), "bss[%d]=", i);
+            if (status <= 0) {
+                LOG(ERROR) << "sprintf_s failed at " << i;
+                return ret;
+            }
+            LOG(INFO) << "CW: value of to_search.name is " << to_search.name;
+            fieldsToParse[0].field = vap;
+            if (DWPAL_SUCCESS !=
+                dwpal_string_to_struct_parse(reply, replyLen, fieldsToParse, sizeof(vap))) {
+                LOG(ERROR) << "STATUS reply parse error at " << i;
+                return ret;
+            }
+            if (!numOfValidArgs)
+                break;
+            // Update interface connection status for vap to true
+            conn_state[vap] = true;
+            LOG(INFO) << "CW: updated connection status for intf " << vap << "with true";
+        }
+        return 0;
+    };
+
     // If there is monitored BSSs list, monitor all BSSs
     if (!m_hal_conf.monitored_BSSs.empty()) {
         if (event == Event::STA_Connected || event == Event::STA_Disconnected ||
@@ -1568,6 +1628,23 @@ bool mon_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int buf
     }
     case Event::RRM_Channel_Load_Response:
         break;
+    case Event::Interface_Connected_OK:
+    case Event::Interface_Reconnected_OK: {
+        LOG(INFO) << "INTERFACE_RECONNECTED_OK or INTERFACE_CONNECTED_OK from intf " << ifname;
+        auto ret = update_conn_status();
+        LOG(INFO) << "Status update return value " << ret;
+        break;
+    }
+    case Event::Interface_Disconnected: {
+        LOG(INFO) << "INTERFACE_DISCONNECTED_OK from intf " << ifname;
+        std::unordered_map<std::string, bool>::iterator con;
+        for (con = conn_state.begin(); con != conn_state.end(); con++) {
+            // Update interface connection status for vap to false
+            conn_state[con->first] = false;
+            LOG(INFO) << "CW: updated connection status for intf " << con->first << "with false";
+        }
+        break;
+    }
     // Gracefully ignore unhandled events
     // TODO: Probably should be changed to an error once dwpal will stop
     //       sending empty or irrelevant events...
@@ -1782,7 +1859,10 @@ bool mon_wlan_hal_dwpal::dwpald_attach(char *ifname)
         {HAP_EVENT("AP-ENABLED")},
         {HAP_EVENT("AP-DISABLED")},
         {HAP_EVENT("AP-STA-CONNECTED")},
-        {HAP_EVENT("AP-STA-DISCONNECTED")}};
+        {HAP_EVENT("AP-STA-DISCONNECTED")},
+        {HAP_EVENT("INTERFACE_CONNECTED_OK")},
+        {HAP_EVENT("INTERFACE_RECONNECTED_OK")},
+        {HAP_EVENT("INTERFACE_DISCONNECTED")}};
 
     /*
         As dwpald allows only once dwpald_hostap_attach/nl_attach API to be called from per process,
