@@ -208,7 +208,7 @@ private:
         sMacAddr bssid;
     };
 
-    std::vector<sApMetricsQuery> m_ap_metric_query;
+    std::unordered_map<uint16_t, std::vector<sApMetricsQuery>> m_ap_metric_query;
 
     struct sStaTrafficStats {
         sMacAddr sta_mac;

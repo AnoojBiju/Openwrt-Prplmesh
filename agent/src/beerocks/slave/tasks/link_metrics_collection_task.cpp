@@ -587,7 +587,8 @@ bool LinkMetricsCollectionTask::send_ap_metric_query_message(
 
             // responses are coming one by one - each bssid alone,
             // so we keep track of each bssid in the query
-            m_ap_metric_query.push_back({bssid_query[i]});
+            m_ap_metric_query.insert(std::make_pair(mid, std::vector<sApMetricsQuery>()));
+            m_ap_metric_query[mid].push_back({bssid_query[i]});
         }
 
         auto monitor_fd = m_btl_ctx.get_monitor_fd(radio->front.iface_name);
@@ -704,6 +705,17 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
         LOG(WARNING) << "got empty ap extended metrics response for mid=" << std::hex << mid;
     }
 
+    uint16_t mid_index =
+        (mid != 0) ? mid : UINT16_MAX; // UINT16_MAX used for internal AP_METRICS requests
+    auto ap_metric_queries_map = m_ap_metric_query.find(mid_index);
+    if (ap_metric_queries_map == m_ap_metric_query.end()) {
+        LOG(ERROR) << "No AP_Metrics_Query map found for MID : " << std::hex << mid_index
+                   << " found";
+        return;
+    }
+
+    LOG(INFO) << "Found AP_Metrics_Query map for MID : " << std::hex << mid_index;
+
     for (auto ap_metrics_tlv : ap_metrics_tlv_list) {
         std::shared_ptr<wfa_map::tlvApExtendedMetrics> ap_extended_metrics_tlv;
 
@@ -722,15 +734,16 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
         }
 
         auto mac = std::find_if(
-            m_ap_metric_query.begin(), m_ap_metric_query.end(),
-            [&bssid_tlv](sApMetricsQuery const &query) { return query.bssid == bssid_tlv; });
+            ap_metric_queries_map->second.begin(), ap_metric_queries_map->second.end(),
+            [&](sApMetricsQuery const &query) {
+                return ((query.bssid == bssid_tlv) && (mid_index == ap_metric_queries_map->first));
+            });
 
-        if (mac == m_ap_metric_query.end()) {
+        if (mac == ap_metric_queries_map->second.end()) {
             LOG(ERROR) << "Failed search in ap_metric_query for bssid: " << bssid_tlv
-                       << " from mid=" << std::hex << mid;
+                       << " from mid=" << std::hex << mid_index;
             return;
         }
-
         // Zero-initialize the struct to make sure values are meaningful
         sApExtendedMetrics extended_metrics{};
         extended_metrics.bssid =
@@ -832,14 +845,21 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
                                         link_metrics_response, qos_ctrl_response});
 
         // Remove an entry from the processed query
-        m_ap_metric_query.erase(
-            std::remove_if(m_ap_metric_query.begin(), m_ap_metric_query.end(),
-                           [&](sApMetricsQuery const &query) { return mac->bssid == query.bssid; }),
-            m_ap_metric_query.end());
+        ap_metric_queries_map->second.erase(
+            std::remove_if(ap_metric_queries_map->second.begin(),
+                           ap_metric_queries_map->second.end(),
+                           [&](sApMetricsQuery const &query) {
+                               return ((mac->bssid == query.bssid) &&
+                                       (mid_index == ap_metric_queries_map->first));
+                           }),
+            ap_metric_queries_map->second.end());
+        if (ap_metric_queries_map->second.empty()) {
+            m_ap_metric_query.erase(ap_metric_queries_map);
+        }
     }
-
-    if (!m_ap_metric_query.empty()) {
-        LOG(DEBUG) << "Still expecting " << m_ap_metric_query.size() << " ap metric responses.";
+    if (!ap_metric_queries_map->second.empty()) {
+        LOG(DEBUG) << "Still expecting " << ap_metric_queries_map->second.size()
+                   << " ap metric responses.";
         return;
     }
 
