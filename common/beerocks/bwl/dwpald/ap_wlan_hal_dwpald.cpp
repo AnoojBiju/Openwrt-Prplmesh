@@ -2339,6 +2339,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
                 LOG(ERROR) << "sprintf_s failed at " << i;
                 return ret;
             }
+	    LOG(INFO) << "CW: value of to_search.name is " << to_search.name;
             fieldsToParse[0].field = vap;
             if (DWPAL_SUCCESS !=
                 dwpal_string_to_struct_parse(reply, replyLen, fieldsToParse, sizeof(vap))) {
