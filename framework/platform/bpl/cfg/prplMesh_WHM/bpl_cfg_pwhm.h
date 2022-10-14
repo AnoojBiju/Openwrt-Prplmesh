@@ -21,7 +21,7 @@
 namespace beerocks {
 namespace bpl {
 
-extern std::shared_ptr<beerocks::wbapi::AmbiorixClient> m_ambiorix_cl;
+extern std::unique_ptr<beerocks::wbapi::AmbiorixClient> m_ambiorix_cl;
 
 } // namespace bpl
 } // namespace beerocks

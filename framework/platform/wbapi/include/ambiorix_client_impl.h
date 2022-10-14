@@ -6,45 +6,13 @@
  * See LICENSE file for more details.
  */
 
-#ifndef AMBIORIX_CLIENT_H
-#define AMBIORIX_CLIENT_H
+#ifndef AMBIORIX_CLIENT_IMPL_H
+#define AMBIORIX_CLIENT_IMPL_H
 
 // prplmesh
-#include <bcl/beerocks_event_loop.h>
-#include <easylogging++.h>
+#include "ambiorix_connection.h"
 
-// Ambiorix
-#include <amxc/amxc.h>
-
-#include <amxp/amxp.h>
-
-#include <amxd/amxd_dm.h>
-
-#include <amxb/amxb.h>
-
-constexpr uint8_t AMX_CL_DEF_TIMEOUT = 3;
-
-constexpr char AMX_CL_WIFI_ROOT_NAME[]    = "WiFi";
-constexpr char AMX_CL_RADIO_OBJ_NAME[]    = "Radio";
-constexpr char AMX_CL_AP_OBJ_NAME[]       = "AccessPoint";
-constexpr char AMX_CL_SSID_OBJ_NAME[]     = "SSID";
-constexpr char AMX_CL_ENDPOINT_OBJ_NAME[] = "EndPoint";
-constexpr char AMX_CL_OBJ_DELIMITER       = '.';
-
-constexpr char AMX_CL_OBJECT_CHANGED_EVT[]   = "dm:object-changed";
-constexpr char AMX_CL_OBJECT_ADDED_EVT[]     = "dm:object-added";
-constexpr char AMX_CL_OBJECT_REMOVED_EVT[]   = "dm:object-removed";
-constexpr char AMX_CL_INSTANCE_ADDED_EVT[]   = "dm:instance-added";
-constexpr char AMX_CL_INSTANCE_CHANGED_EVT[] = "dm:instance-removed";
-constexpr char AMX_CL_PERIODIC_INFORM_EVT[]  = "dm:periodic-inform";
-
-using AmxClEventCb = std::function<void(amxc_var_t *event_data, void *context)>;
-
-struct sAmxClEventCallback {
-    AmxClEventCb callback_fn;
-    std::string event_type;
-    void *context;
-};
+#include "ambiorix_client.h"
 
 namespace beerocks {
 namespace wbapi {
@@ -53,13 +21,11 @@ namespace wbapi {
  * @class AmbiorixClient
  * @brief This class manages the AmbiorixClient instance.
  */
-class AmbiorixClient {
+class AmbiorixClientImpl : public AmbiorixClient {
 
 public:
-    /**
-     * @brief Class destructor.
-     */
-    virtual ~AmbiorixClient() = default;
+    explicit AmbiorixClientImpl(std::unique_ptr<AmbiorixConnection> connection);
+    ~AmbiorixClientImpl();
 
     /**
      * @brief read and return a given object.
@@ -69,8 +35,8 @@ public:
      * @param[in] only_first: it indicates if only first matching object is returned
      * @return amxc_var_t object.
     */
-    virtual amxc_var_t *get_object(const std::string &object_path, const int32_t depth = 0,
-                                   bool only_first = true) = 0;
+    amxc_var_t *get_object(const std::string &object_path, const int32_t depth = 0,
+                           bool only_first = true) override;
 
     /**
      * @brief resolve a search path, and retrieve all matching results.
@@ -79,8 +45,8 @@ public:
      * @param[out] abs_path_list: all resolved path strings, cleared when failing.
      * @return true when search path is resolved, false otherwise.
     */
-    virtual bool resolve_path(const std::string &search_path,
-                              std::vector<std::string> &abs_path_list) = 0;
+    bool resolve_path(const std::string &search_path,
+                      std::vector<std::string> &abs_path_list) override;
 
     /**
      * @brief resolve a search path, and retrieve first matching result.
@@ -89,7 +55,7 @@ public:
      * @param[out] abs_path: first resolved path string, empty when failing.
      * @return true when search path is resolved, false otherwise.
     */
-    virtual bool resolve_path(const std::string &search_path, std::string &abs_path) = 0;
+    bool resolve_path(const std::string &search_path, std::string &abs_path) override;
 
     /**
      * @brief update a given object.
@@ -98,7 +64,7 @@ public:
      * @param[in] object: amxc_var_t object to update.
      * @return True on success and false otherwise.
     */
-    virtual bool update_object(const std::string &object_path, amxc_var_t *object) = 0;
+    bool update_object(const std::string &object_path, amxc_var_t *object) override;
 
     /**
      * @brief add instance.
@@ -108,8 +74,8 @@ public:
      * @param[out] instance_id: the new instance id.
      * @return True on success and false otherwise.
     */
-    virtual bool add_instance(const std::string &object_path, amxc_var_t *parameter,
-                              int &instance_id) = 0;
+    bool add_instance(const std::string &object_path, amxc_var_t *parameter,
+                      int &instance_id) override;
 
     /**
      * @brief remove instance.
@@ -118,7 +84,7 @@ public:
      * @param[in] instance_id: the instance id.
      * @return True on success and false otherwise.
     */
-    virtual bool remove_instance(const std::string &object_path, int instance_id) = 0;
+    bool remove_instance(const std::string &object_path, int instance_id) override;
 
     /**
      * @brief invokes a data model function.
@@ -129,8 +95,8 @@ public:
      * @param[out] result: will contain the return value(s) and/or the out arguments.
      * @return True on success and false otherwise.
     */
-    virtual bool call(const std::string &object_path, const char *method, amxc_var_t *args,
-                      amxc_var_t *result) = 0;
+    bool call(const std::string &object_path, const char *method, amxc_var_t *args,
+              amxc_var_t *result) override;
 
     /**
      * @brief get the amxb file descriptor.
@@ -138,14 +104,14 @@ public:
      *
      * @return the valid file descriptor or -1 when no file descriptor is available.
     */
-    virtual int get_fd() = 0;
+    int get_fd() override;
 
     /**
      * @brief get the amxp signal file descriptor.
      *
      * @return the valid file descriptor or -1 when no file descriptor is available.
     */
-    virtual int get_signal_fd() = 0;
+    int get_signal_fd() override;
 
     /**
      * @brief read data from the file descriptor of the connection context.
@@ -159,7 +125,7 @@ public:
      * and depends on the backend implementation, typically the number of bytes
      * read are returned.
     */
-    virtual int read() = 0;
+    int read() override;
 
     /**
      * @brief from the amxp signal file descriptor.
@@ -168,35 +134,35 @@ public:
      *
      * @return 0 when successful, otherwise an error code
     */
-    virtual int read_signal() = 0;
+    int read_signal() override;
 
     /**
      * @brief Initialize event handlers for Ambiorix fd in the event loop.
      *
      * @return True on success and false otherwise.
      */
-    virtual bool init_event_loop(std::shared_ptr<EventLoop> event_loop) = 0;
+    bool init_event_loop(std::shared_ptr<EventLoop> event_loop) override;
 
     /**
      * @brief Initialize event handlers for the ambiorix signals fd in the event loop.
      *
      * @return True on success and false otherwise.
      */
-    virtual bool init_signal_loop(std::shared_ptr<EventLoop> event_loop) = 0;
+    bool init_signal_loop(std::shared_ptr<EventLoop> event_loop) override;
 
     /**
      * @brief Remove event handlers for Ambiorix fd from the event loop.
      *
      * @return True on success and false otherwise.
      */
-    virtual bool remove_event_loop(std::shared_ptr<EventLoop> event_loop) = 0;
+    bool remove_event_loop(std::shared_ptr<EventLoop> event_loop) override;
 
     /**
      * @brief Remove event handlers for the ambiorix signals fd from the event loop.
      *
      * @return True on success and false otherwise.
      */
-    virtual bool remove_signal_loop(std::shared_ptr<EventLoop> event_loop) = 0;
+    bool remove_signal_loop(std::shared_ptr<EventLoop> event_loop) override;
 
     /**
      * @brief subscribe for event for a given object.
@@ -206,9 +172,14 @@ public:
      * @param[in] filter: filter expression.
      * @return true on success, false otherwise.
      */
-    virtual bool subscribe_to_object_event(const std::string &object_path,
-                                           sAmxClEventCallback *event_callback,
-                                           const std::string &filter = {}) = 0;
+    bool subscribe_to_object_event(const std::string &object_path,
+                                   sAmxClEventCallback *event_callback,
+                                   const std::string &filter = {}) override;
+
+private:
+    std::unique_ptr<AmbiorixConnection> m_connection;
+    std::vector<amxb_subscription_t *> m_subscriptions;
+    amxb_bus_ctx_t *&m_bus_ctx;
 };
 
 } // namespace wbapi

@@ -8,6 +8,8 @@
 
 #include "base_wlan_hal_whm.h"
 
+#include "ambiorix_client_factory.h"
+
 #include <bcl/beerocks_string_utils.h>
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
@@ -27,11 +29,8 @@ base_wlan_hal_whm::base_wlan_hal_whm(HALType type, const std::string &iface_name
     : base_wlan_hal(type, iface_name, IfaceType::Intel, callback, hal_conf),
       beerocks::beerocks_fsm<whm_fsm_state, whm_fsm_event>(whm_fsm_state::Delay)
 {
-    m_ambiorix_cl = std::make_shared<beerocks::wbapi::AmbiorixClient>();
+    m_ambiorix_cl = beerocks::wbapi::AmbiorixClientFactory::create_instance();
     LOG_IF(!m_ambiorix_cl, FATAL) << "Unable to create ambiorix client instance!";
-
-    LOG_IF(!m_ambiorix_cl->connect(AMBIORIX_WBAPI_BACKEND_PATH, AMBIORIX_WBAPI_BUS_URI), FATAL)
-        << "Unable to connect to the ambiorix backend!";
 
     int amx_fd = m_ambiorix_cl->get_fd();
     if (amx_fd == -1) {

@@ -32,7 +32,7 @@ public:
 
 private:
     bool bss_info_config_change();
-    std::shared_ptr<beerocks::wbapi::AmbiorixClient> m_ambiorix_cl = nullptr;
+    std::unique_ptr<beerocks::wbapi::AmbiorixClient> m_ambiorix_cl;
     son::db *m_ctx_wifi_db;
     std::shared_ptr<beerocks::EventLoop> m_event_loop;
 };

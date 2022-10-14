@@ -14,7 +14,8 @@ set(MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
 
 list(APPEND wbapi_sources ${MODULE_PATH}/ambiorix_connection.cpp)
 list(APPEND wbapi_sources ${MODULE_PATH}/ambiorix_connection_factory.cpp)
-list(APPEND wbapi_sources ${MODULE_PATH}/ambiorix_client.cpp)
+list(APPEND wbapi_sources ${MODULE_PATH}/ambiorix_client_factory.cpp)
+list(APPEND wbapi_sources ${MODULE_PATH}/ambiorix_client_impl.cpp)
 list(APPEND wbapi_sources ${MODULE_PATH}/wbapi_utils.cpp)
 
 find_package(amxb REQUIRED)

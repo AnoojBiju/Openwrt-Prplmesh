@@ -12,6 +12,8 @@
 
 #include "bpl_cfg_pwhm.h"
 
+#include "ambiorix_client_factory.h"
+
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////////// Implementation ///////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -19,15 +21,12 @@
 namespace beerocks {
 namespace bpl {
 
-std::shared_ptr<beerocks::wbapi::AmbiorixClient> m_ambiorix_cl = nullptr;
+std::unique_ptr<beerocks::wbapi::AmbiorixClient> m_ambiorix_cl = nullptr;
 
 int bpl_init()
 {
-    m_ambiorix_cl = std::make_shared<beerocks::wbapi::AmbiorixClient>();
+    m_ambiorix_cl = beerocks::wbapi::AmbiorixClientFactory::create_instance();
     LOG_IF(!m_ambiorix_cl, FATAL) << "Unable to create ambiorix client object!";
-
-    LOG_IF(!m_ambiorix_cl->connect(AMBIORIX_WBAPI_BACKEND_PATH, AMBIORIX_WBAPI_BUS_URI), FATAL)
-        << "Unable to connect to the ambiorix backend!";
 
     return RETURN_OK;
 }

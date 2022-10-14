@@ -8,11 +8,16 @@
 
 #include "wifi_manager.h"
 
+#include "ambiorix_client_factory.h"
+
 #include <beerocks/tlvf/beerocks_message_bml.h>
 #include <bpl/bpl_cfg.h>
 
 #include <regex>
 #include <string>
+
+using namespace beerocks;
+using namespace wbapi;
 
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////////// Implementation ///////////////////////////////
@@ -28,11 +33,8 @@ WifiManager::WifiManager(std::shared_ptr<beerocks::EventLoop> event_loop, son::d
     m_event_loop  = event_loop;
     m_ctx_wifi_db = ctx_wifi_db;
 
-    m_ambiorix_cl = std::make_shared<beerocks::wbapi::AmbiorixClient>();
+    m_ambiorix_cl = AmbiorixClientFactory::create_instance();
     LOG_IF(!m_ambiorix_cl, FATAL) << "Unable to create ambiorix client object!";
-
-    LOG_IF(!m_ambiorix_cl->connect(AMBIORIX_WBAPI_BACKEND_PATH, AMBIORIX_WBAPI_BUS_URI), FATAL)
-        << "Unable to connect to the ambiorix backend!";
 
     m_ambiorix_cl->init_event_loop(m_event_loop);
     m_ambiorix_cl->init_signal_loop(m_event_loop);

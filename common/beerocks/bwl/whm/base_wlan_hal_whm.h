@@ -77,7 +77,7 @@ protected:
     bool refresh_vap_info(int id, amxc_var_t *ap_obj);
     amxc_var_t *get_radio_vaps();
 
-    std::shared_ptr<beerocks::wbapi::AmbiorixClient> m_ambiorix_cl;
+    std::unique_ptr<beerocks::wbapi::AmbiorixClient> m_ambiorix_cl;
 
     // Private data-members:
 private:
