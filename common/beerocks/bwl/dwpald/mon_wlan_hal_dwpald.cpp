@@ -1325,7 +1325,7 @@ bool mon_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int buf
         for (i = 0; i < MAX_VAPS_PER_RADIO; i++) {
             char vap[IF_LENGTH] = {0};
             int status;
-            status = sprintf_s(to_search.name, sizeof(vap_name_t), "bss[%d]=", i);
+            status = snprintf(to_search.name, sizeof(vap_name_t), "bss[%d]=", i);
             if (status <= 0) {
                 LOG(ERROR) << "sprintf_s failed at " << i;
                 return ret;
