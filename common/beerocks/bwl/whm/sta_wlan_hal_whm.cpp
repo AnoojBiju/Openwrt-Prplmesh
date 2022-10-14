@@ -196,12 +196,9 @@ bool sta_wlan_hal_whm::update_status()
 int sta_wlan_hal_whm::add_profile()
 {
     // Path example: WiFi.EndPoint.[IntfName == 'wlan0'].Profile+
-    std::string profiles_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
-                                std::string(AMX_CL_ENDPOINT_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
-                                "[IntfName == '" + get_iface_name() + "']" + AMX_CL_OBJ_DELIMITER +
-                                "Profile." + AMX_CL_OBJ_DELIMITER;
-    int profile_id = -1;
-    bool ret       = m_ambiorix_cl->add_instance(profiles_path, nullptr, profile_id);
+    std::string profiles_path = search_path_ep_profiles_by_iface(get_iface_name());
+    int profile_id            = -1;
+    bool ret                  = m_ambiorix_cl->add_instance(profiles_path, nullptr, profile_id);
     if (!ret) {
         LOG(ERROR) << "Failed to add profile instance " << get_iface_name();
     }
@@ -211,10 +208,7 @@ int sta_wlan_hal_whm::add_profile()
 int sta_wlan_hal_whm::remove_profile(int profile_id)
 {
     // Path example: WiFi.EndPoint.[IntfName == 'wlan0'].Profile+
-    std::string profiles_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
-                                std::string(AMX_CL_ENDPOINT_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
-                                "[IntfName == '" + get_iface_name() + "']" + AMX_CL_OBJ_DELIMITER +
-                                "Profile." + AMX_CL_OBJ_DELIMITER;
+    std::string profiles_path = search_path_ep_profiles_by_iface(get_iface_name());
 
     bool ret = m_ambiorix_cl->remove_instance(profiles_path, profile_id);
     if (!ret) {
@@ -228,10 +222,7 @@ bool sta_wlan_hal_whm::set_profile_params(int profile_id, const std::string &ssi
                                           const std::string &pass, bool hidden_ssid, int channel)
 {
     // Path example: WiFi.EndPoint.[IntfName == 'wlan0'].Profile.1.
-    std::string profile_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
-                               std::string(AMX_CL_ENDPOINT_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
-                               "[IntfName == '" + get_iface_name() + "']" + AMX_CL_OBJ_DELIMITER +
-                               "Profile." + std::to_string(profile_id) + AMX_CL_OBJ_DELIMITER;
+    std::string profile_path = search_path_ep_profile_by_id(get_iface_name(), profile_id);
     amxc_var_t params;
 
     // Set SSID
@@ -293,10 +284,8 @@ bool sta_wlan_hal_whm::set_profile_params(int profile_id, const std::string &ssi
 bool sta_wlan_hal_whm::enable_profile(int profile_id)
 {
     // Path example: WiFi.EndPoint.[IntfName == 'wlan0'].Profile.1.
-    std::string profile_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
-                               std::string(AMX_CL_ENDPOINT_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
-                               "[IntfName == '" + get_iface_name() + "']" + AMX_CL_OBJ_DELIMITER +
-                               "Profile." + std::to_string(profile_id) + AMX_CL_OBJ_DELIMITER;
+    std::string profile_path = search_path_ep_profile_by_id(get_iface_name(), profile_id);
+
     amxc_var_t params;
     amxc_var_init(&params);
     amxc_var_set_type(&params, AMXC_VAR_ID_HTABLE);
@@ -309,9 +298,7 @@ bool sta_wlan_hal_whm::enable_profile(int profile_id)
     amxc_var_clean(&params);
 
     // Path example: WiFi.EndPoint.[IntfName == 'wlan0'].
-    std::string endpoint_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
-                                std::string(AMX_CL_ENDPOINT_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
-                                "[IntfName == '" + get_iface_name() + "']" + AMX_CL_OBJ_DELIMITER;
+    std::string endpoint_path = search_path_ep_by_iface(get_iface_name());
     amxc_var_init(&params);
     amxc_var_set_type(&params, AMXC_VAR_ID_HTABLE);
     amxc_var_add_new_key_uint8_t(&params, "ProfileReference", profile_id);
@@ -326,11 +313,9 @@ bool sta_wlan_hal_whm::enable_profile(int profile_id)
 bool sta_wlan_hal_whm::read_status(Endpoint &endpoint)
 {
     // Path example: WiFi.EndPoint.[IntfName == 'wlan0'].
-    std::string endpoint_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
-                                std::string(AMX_CL_ENDPOINT_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
-                                "[IntfName == '" + get_iface_name() + "']" + AMX_CL_OBJ_DELIMITER;
+    std::string endpoint_path = search_path_ep_by_iface(get_iface_name());
 
-    amxc_var_t *endpoint_obj = m_ambiorix_cl->get_object(endpoint_path, 0);
+    amxc_var_t *endpoint_obj = m_ambiorix_cl->get_object(endpoint_path);
     if (!endpoint_obj) {
         LOG(ERROR) << "failed to get endpoint object";
         return false;

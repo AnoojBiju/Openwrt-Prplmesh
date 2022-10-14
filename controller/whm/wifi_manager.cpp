@@ -71,63 +71,29 @@ bool WifiManager::bss_info_config_change()
 
 void WifiManager::subscribe_to_bss_info_config_change()
 {
-    std::string wifi_path               = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER;
     sAmxClEventCallback *event_callback = new sAmxClEventCallback();
     event_callback->event_type          = AMX_CL_OBJECT_CHANGED_EVT;
     event_callback->callback_fn         = [](amxc_var_t *event_data, void *context) -> void {
         if (!event_data) {
             return;
         }
-        amxc_var_t *params = GET_ARG(event_data, "parameters");
-        const char *path   = GET_CHAR(event_data, "path");
-        if (!path) {
-            return;
-        }
-        bool config_changed = false;
-        amxc_var_for_each(param, params)
-        {
-            const char *key = amxc_var_key(param);
-            if (!key) {
-                continue;
-            }
-
-            auto const radio_path_regex =
-                std::regex(std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
-                           std::string(AMX_CL_RADIO_OBJ_NAME) + AMX_CL_OBJ_DELIMITER + "*" +
-                           AMX_CL_OBJ_DELIMITER);
-
-            auto const ssid_path_regex =
-                std::regex(std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
-                           std::string(AMX_CL_SSID_OBJ_NAME) + AMX_CL_OBJ_DELIMITER + "*" +
-                           AMX_CL_OBJ_DELIMITER);
-
-            auto const security_path_regex =
-                std::regex(std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
-                           std::string(AMX_CL_SSID_OBJ_NAME) + AMX_CL_OBJ_DELIMITER + "*" +
-                           +"Security" + AMX_CL_OBJ_DELIMITER);
-
-            if (std::regex_search(path, radio_path_regex)) {
-                if ((std::string(key) == "OperatingClass") || (std::string(key) == "Channel") ||
-                    (std::string(key) == "AP_Mode") || (std::string(key) == "MultiAPType")) {
-                    config_changed = true;
-                }
-            } else if (std::regex_search(path, ssid_path_regex)) {
-                if ((std::string(key) == "SSID")) {
-                    config_changed = true;
-                }
-            } else if (std::regex_search(path, security_path_regex)) {
-                if ((std::string(key) == "ModeEnabled") || (std::string(key) == "EncryptionMode") ||
-                    (std::string(key) == "KeyPassPhrase")) {
-                    config_changed = true;
-                }
-            }
-        }
-        if (config_changed) {
-            (static_cast<WifiManager *>(context))->bss_info_config_change();
-        }
+        (static_cast<WifiManager *>(context))->bss_info_config_change();
     };
     event_callback->context = this;
-    m_ambiorix_cl->subscribe_to_object_event(wifi_path, event_callback);
+
+    std::string filter = "path matches '" + wbapi_utils::search_path_radio() + "[0-9]+.'";
+    filter.append(" && (contains('parameters.OperatingClass') || contains('parameters.Channel')"
+                  " || contains('parameters.AP_Mode') || contains('parameters.MultiAPType'))");
+    m_ambiorix_cl->subscribe_to_object_event(wbapi_utils::search_path_radio(), event_callback);
+
+    filter = "path matches '" + wbapi_utils::search_path_ssid() + "[0-9]+.'";
+    filter.append(" && contains('parameters.SSID')");
+    m_ambiorix_cl->subscribe_to_object_event(wbapi_utils::search_path_ssid(), event_callback);
+
+    filter = "path matches '" + wbapi_utils::search_path_ap() + "[0-9]+.Security.'";
+    filter.append(" && (contains('parameters.ModeEnabled') || contains('parameters.EncryptionMode')"
+                  " || contains('parameters.KeyPassPhrase'))");
+    m_ambiorix_cl->subscribe_to_object_event(wbapi_utils::search_path_ap(), event_callback);
 }
 
 WifiManager::~WifiManager()

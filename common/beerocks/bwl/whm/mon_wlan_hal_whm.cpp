@@ -45,57 +45,42 @@ mon_wlan_hal_whm::~mon_wlan_hal_whm() {}
 
 bool mon_wlan_hal_whm::update_radio_stats(SRadioStats &radio_stats)
 {
-    std::string wifi_radio_path;
-    if (!whm_get_radio_ref(get_iface_name(), wifi_radio_path)) {
-        return false;
-    }
+    std::string stats_path = m_radio_path + "Stats.";
 
-    std::string stats_path = wifi_radio_path + "Stats.";
-
-    amxc_var_t *stats_obj = m_ambiorix_cl->get_object(stats_path, 0);
+    amxc_var_t *stats_obj = m_ambiorix_cl->get_object(stats_path);
     if (!stats_obj) {
-        LOG(ERROR) << "failed to get radio Stats object";
-        return false;
+        LOG(ERROR) << "failed to get radio Stats object " << stats_path;
+        return true;
     }
 
-    radio_stats.tx_bytes_cnt    = GET_UINT32(stats_obj, "BytesSent");
-    radio_stats.rx_bytes_cnt    = GET_UINT32(stats_obj, "BytesReceived");
+    radio_stats.tx_bytes_cnt    = amxc_var_dyncast(uint64_t, GET_ARG(stats_obj, "BytesSent"));
+    radio_stats.rx_bytes_cnt    = amxc_var_dyncast(uint64_t, GET_ARG(stats_obj, "BytesReceived"));
     radio_stats.tx_packets_cnt  = GET_UINT32(stats_obj, "PacketsSent");
     radio_stats.rx_packets_cnt  = GET_UINT32(stats_obj, "PacketsReceived");
     radio_stats.errors_sent     = GET_UINT32(stats_obj, "ErrorsSent");
     radio_stats.errors_received = GET_UINT32(stats_obj, "ErrorsReceived");
-
-    amxc_var_t *radio_obj = m_ambiorix_cl->get_object(wifi_radio_path, 0);
-    if (!radio_obj) {
-        LOG(ERROR) << "failed to get radio object";
-        return false;
-    }
-
-    radio_stats.noise = GET_UINT32(radio_obj, "Noise");
+    radio_stats.noise           = GET_INT32(stats_obj, "Noise");
 
     amxc_var_delete(&stats_obj);
-    amxc_var_delete(&radio_obj);
 
     return true;
 }
 
 bool mon_wlan_hal_whm::update_vap_stats(const std::string &vap_iface_name, SVapStats &vap_stats)
 {
-    std::string ssid_stats_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
-                                  std::string(AMX_CL_SSID_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
-                                  vap_iface_name + AMX_CL_OBJ_DELIMITER + "Stats.";
+    std::string ssid_stats_path = search_path_ssid_by_iface(vap_iface_name) + "Stats.";
 
-    amxc_var_t *ssid_stats_obj = m_ambiorix_cl->get_object(ssid_stats_path, 0);
+    amxc_var_t *ssid_stats_obj = m_ambiorix_cl->get_object(ssid_stats_path);
     if (!ssid_stats_obj) {
         LOG(ERROR) << "failed to get SSID Stats object, path:" << ssid_stats_path;
-        return false;
+        return true;
     }
 
-    vap_stats.tx_bytes_cnt    = GET_UINT32(ssid_stats_obj, "BytesSent");
-    vap_stats.rx_bytes_cnt    = GET_UINT32(ssid_stats_obj, "BytesReceived");
-    vap_stats.tx_packets_cnt  = GET_UINT32(ssid_stats_obj, "PacketsSent");
-    vap_stats.rx_packets_cnt  = GET_UINT32(ssid_stats_obj, "PacketsReceived");
-    vap_stats.errors_sent     = GET_UINT32(ssid_stats_obj, "ErrorsSent");
+    vap_stats.tx_bytes_cnt   = amxc_var_dyncast(uint64_t, GET_ARG(ssid_stats_obj, "BytesSent"));
+    vap_stats.rx_bytes_cnt   = amxc_var_dyncast(uint64_t, GET_ARG(ssid_stats_obj, "BytesReceived"));
+    vap_stats.tx_packets_cnt = GET_UINT32(ssid_stats_obj, "PacketsSent");
+    vap_stats.rx_packets_cnt = GET_UINT32(ssid_stats_obj, "PacketsReceived");
+    vap_stats.errors_sent    = GET_UINT32(ssid_stats_obj, "ErrorsSent");
     vap_stats.errors_received = GET_UINT32(ssid_stats_obj, "ErrorsReceived");
     vap_stats.retrans_count   = GET_UINT32(ssid_stats_obj, "RetransCount");
     amxc_var_delete(&ssid_stats_obj);
@@ -107,24 +92,29 @@ bool mon_wlan_hal_whm::update_stations_stats(const std::string &vap_iface_name,
                                              const std::string &sta_mac, SStaStats &sta_stats,
                                              bool is_read_unicast)
 {
-    std::string assoc_device_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
-                                    std::string(AMX_CL_AP_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
-                                    "[Alias == '" + vap_iface_name + "']" + AMX_CL_OBJ_DELIMITER +
-                                    "AssociatedDevice." + sta_mac;
+    std::string assoc_device_path = search_path_assocDev_by_mac(vap_iface_name, sta_mac);
 
-    amxc_var_t *assoc_device_obj = m_ambiorix_cl->get_object(assoc_device_path, 0);
+    amxc_var_t *assoc_device_obj = m_ambiorix_cl->get_object(assoc_device_path);
     if (!assoc_device_obj) {
-        LOG(ERROR) << "failed to get AssociatedDevice object";
-        return false;
+        LOG(ERROR) << "failed to get AssociatedDevice object " << assoc_device_path;
+        return true;
     }
 
-    sta_stats.rx_rssi_watt      = GET_UINT32(assoc_device_obj, "SignalStrength");
-    sta_stats.rx_snr_watt       = GET_UINT32(assoc_device_obj, "SignalNoiseRatio");
-    sta_stats.tx_phy_rate_100kb = GET_UINT32(assoc_device_obj, "LastDataDownlinkRate");
+    int8_t signal          = int8_t(GET_INT32(assoc_device_obj, "SignalStrength"));
+    sta_stats.rx_rssi_watt = std::pow(10, (signal / 10.0));
+    sta_stats.rx_rssi_watt_samples_cnt++;
+
+    float s_float = float(GET_UINT32(assoc_device_obj, "SignalNoiseRatio"));
+    if (s_float >= beerocks::SNR_MIN) {
+        sta_stats.rx_snr_watt = std::pow(10, s_float / float(10));
+        sta_stats.rx_snr_watt_samples_cnt++;
+    }
+
+    sta_stats.tx_phy_rate_100kb = GET_UINT32(assoc_device_obj, "LastDataDownlinkRate") / 100;
     sta_stats.dl_bandwidth      = GET_UINT32(assoc_device_obj, "DownlinkBandwidth");
-    sta_stats.rx_phy_rate_100kb = GET_UINT32(assoc_device_obj, "LastDataUplinkRate");
-    sta_stats.tx_bytes_cnt      = GET_UINT32(assoc_device_obj, "RxBytes");
-    sta_stats.rx_bytes_cnt      = GET_UINT32(assoc_device_obj, "TxBytes");
+    sta_stats.rx_phy_rate_100kb = GET_UINT32(assoc_device_obj, "LastDataUplinkRate") / 100;
+    sta_stats.tx_bytes_cnt      = amxc_var_dyncast(uint64_t, GET_ARG(assoc_device_obj, "RxBytes"));
+    sta_stats.rx_bytes_cnt      = amxc_var_dyncast(uint64_t, GET_ARG(assoc_device_obj, "TxBytes"));
     sta_stats.tx_packets_cnt    = GET_UINT32(assoc_device_obj, "TxPacketCount");
     sta_stats.rx_packets_cnt    = GET_UINT32(assoc_device_obj, "RxPacketCount");
     sta_stats.retrans_count     = GET_UINT32(assoc_device_obj, "Retransmissions");
@@ -161,9 +151,7 @@ bool mon_wlan_hal_whm::sta_beacon_11k_request(const std::string &vap_iface_name,
     amxc_var_add_new_key_uint8_t(&args, "class", req.op_class);
     amxc_var_add_new_key_uint8_t(&args, "channel", req.channel);
     amxc_var_add_new_key_cstring_t(&args, "ssid", (const char *)req.ssid);
-    std::string wifi_ap_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
-                               std::string(AMX_CL_AP_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
-                               "[Alias == '" + vap_iface_name + "']" + AMX_CL_OBJ_DELIMITER;
+    std::string wifi_ap_path = search_path_ap_by_iface(vap_iface_name);
     bool ret = m_ambiorix_cl->call(wifi_ap_path, "sendRemoteMeasumentRequest", &args, &result);
     amxc_var_clean(&args);
     amxc_var_clean(&result);

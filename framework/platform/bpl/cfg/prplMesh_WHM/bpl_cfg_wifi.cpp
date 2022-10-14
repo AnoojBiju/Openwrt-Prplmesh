@@ -19,63 +19,39 @@
 #include "bpl_cfg_pwhm.h"
 
 using namespace mapf;
+using namespace beerocks;
+using namespace wbapi;
 
 namespace beerocks {
 namespace bpl {
 
-static amxc_var_t *bpl_cfg_get_wifi_ap_object(const std::string &iface)
-{
-    std::string ap_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
-                          std::string(AMX_CL_AP_OBJ_NAME) + AMX_CL_OBJ_DELIMITER;
-    amxc_var_t *aps = m_ambiorix_cl->get_object(ap_path, 1);
-
-    if (aps) {
-        amxc_var_for_each(ap, aps)
-        {
-            const char *ifname = GET_CHAR(ap, "Alias");
-            if (!ifname) {
-                continue;
-            }
-            if (std::string(ifname) == iface) {
-                return ap;
-            }
-        }
-        amxc_var_delete(&aps);
-    }
-
-    return nullptr;
-}
-
 static amxc_var_t *bpl_cfg_get_wifi_ssid_object(const std::string &iface)
 {
-    amxc_var_t *ap_obj = bpl_cfg_get_wifi_ap_object(iface);
-    if (!ap_obj) {
-        return nullptr;
-    }
-
-    const char *ssid_ref_val = GET_CHAR(ap_obj, "SSIDReference");
-
-    std::string wifi_ssid_path = std::string(ssid_ref_val) + AMX_CL_OBJ_DELIMITER;
-    amxc_var_t *ssid_obj       = m_ambiorix_cl->get_object(wifi_ssid_path, 0);
-    if (!ssid_obj) {
-        LOG(ERROR) << "failed to get ssid object, iface:" << iface;
-    }
-    return ssid_obj;
+    std::string ssid_path = wbapi_utils::search_path_ssid_by_iface(iface);
+    return m_ambiorix_cl->get_object(ssid_path);
 }
 
-static amxc_var_t *bpl_cfg_get_wifi_radio_object(const std::string &iface)
+static amxc_var_t *bpl_cfg_get_wifi_radio_object(const std::string &rad_iface)
 {
-    amxc_var_t *ap_obj = bpl_cfg_get_wifi_ap_object(iface);
-    if (!ap_obj) {
-        return nullptr;
+    std::string path = wbapi_utils::search_path_radio_by_iface(rad_iface);
+
+    amxc_var_t *radio_obj = m_ambiorix_cl->get_object(path);
+    if (!radio_obj) {
+        LOG(ERROR) << "failed to get radio object, iface:" << rad_iface;
     }
 
-    const char *radio_ref_val = GET_CHAR(ap_obj, "RadioReference");
+    return radio_obj;
+}
 
-    std::string wifi_radio_path = std::string(radio_ref_val) + AMX_CL_OBJ_DELIMITER;
-    amxc_var_t *radio_obj       = m_ambiorix_cl->get_object(wifi_radio_path, 0);
+static amxc_var_t *bpl_cfg_get_wifi_radio_object(const amxc_var_t *ap_obj)
+{
+    std::string wifi_radio_path = wbapi_utils::get_path_radio_reference(ap_obj);
+    if (wifi_radio_path.empty()) {
+        return nullptr;
+    }
+    amxc_var_t *radio_obj = m_ambiorix_cl->get_object(wifi_radio_path);
     if (!radio_obj) {
-        LOG(ERROR) << "failed to get radio object, iface:" << iface;
+        LOG(ERROR) << "failed to get radio object, path:" << wifi_radio_path;
     }
 
     return radio_obj;
@@ -83,13 +59,9 @@ static amxc_var_t *bpl_cfg_get_wifi_radio_object(const std::string &iface)
 
 static amxc_var_t *bpl_cfg_get_wifi_security_object(const std::string &iface)
 {
-    std::string wifi_ap_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
-                               std::string(AMX_CL_AP_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
-                               "[Alias == '" + iface + "']" + AMX_CL_OBJ_DELIMITER;
-    const std::string sec_path         = "Security.";
-    const std::string wifi_ap_sec_path = wifi_ap_path + sec_path;
+    const std::string wifi_ap_sec_path = wbapi_utils::search_path_ap_by_iface(iface) + "Security.";
 
-    amxc_var_t *ap_sec_obj = m_ambiorix_cl->get_object(wifi_ap_sec_path, 0);
+    amxc_var_t *ap_sec_obj = m_ambiorix_cl->get_object(wifi_ap_sec_path);
     if (!ap_sec_obj) {
         LOG(ERROR) << "failed to get ap security object, iface:" << iface;
     }
@@ -114,16 +86,14 @@ int cfg_get_all_prplmesh_wifi_interfaces(BPL_WLAN_IFACE *interfaces, int *num_of
     }
 
     // pwhm dm path: WiFi.Radio.*.Name?
-    std::string radio_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
-                             std::string(AMX_CL_RADIO_OBJ_NAME) + AMX_CL_OBJ_DELIMITER + "*" +
-                             AMX_CL_OBJ_DELIMITER + "Name";
-    amxc_var_t *radios = m_ambiorix_cl->get_object(radio_path, 1);
+    std::string radio_path = wbapi_utils::search_path_radio_iface();
+    amxc_var_t *radios     = m_ambiorix_cl->get_object(radio_path, 0, false);
 
     int interfaces_count = 0;
     if (radios) {
         amxc_var_for_each(radio, radios)
         {
-            const char *ifname = GET_CHAR(radio, "Name");
+            const char *ifname = amxc_var_constcast(cstring_t, amxc_var_get_first(radio));
             if (!ifname) {
                 continue;
             }
@@ -157,37 +127,30 @@ int cfg_get_wifi_params(const char iface[BPL_IFNAME_LEN], struct BPL_WLAN_PARAMS
 
     // TODO: read sub_band_dfs + country_code wifi params (PPM-2108).
 
+    amxc_var_delete(&radio_obj);
+
     return RETURN_OK;
 }
 
 bool bpl_cfg_get_wireless_settings(std::list<son::wireless_utils::sBssInfoConf> &wireless_settings)
 {
-    int num_of_interfaces = beerocks::MAX_RADIOS_PER_AGENT;
-    for (int index = 0; index < num_of_interfaces; index++) {
-        char iface[BPL_IFNAME_LEN];
-        if (cfg_get_hostap_iface(index, iface) == RETURN_ERR) {
-            break;
-        }
-
-        amxc_var_t *radio_obj = bpl_cfg_get_wifi_radio_object(iface);
-        if (!radio_obj) {
-            break;
-        }
-
-        bool ap_mode = GET_BOOL(radio_obj, "AP_Mode");
-        if (!ap_mode) {
-            break;
-        }
-
-        amxc_var_t *ap_obj = bpl_cfg_get_wifi_ap_object(iface);
-        if (!ap_obj) {
-            break;
+    std::string ap_path = wbapi_utils::search_path_ap();
+    amxc_var_t *aps     = m_ambiorix_cl->get_object(ap_path, 1);
+    amxc_var_for_each(ap, aps)
+    {
+        auto iface = wbapi_utils::get_ap_iface(ap);
+        if (iface.empty()) {
+            continue;
         }
 
         son::wireless_utils::sBssInfoConf configuration;
-        configuration.fronthaul   = false;
-        configuration.backhaul    = false;
-        const char *multi_ap_type = GET_CHAR(ap_obj, "MultiAPType");
+        amxc_var_t *radio_obj = bpl_cfg_get_wifi_radio_object(ap);
+        if (radio_obj) {
+            configuration.operating_class = {GET_UINT32(radio_obj, "OperatingClass")};
+            amxc_var_delete(&radio_obj);
+        }
+
+        const char *multi_ap_type = GET_CHAR(ap, "MultiAPType");
         if (multi_ap_type) {
             std::string multi_ap_type_str = std::string(multi_ap_type);
             if (multi_ap_type_str.find("FronthaulBSS") != std::string::npos) {
@@ -202,6 +165,7 @@ bool bpl_cfg_get_wireless_settings(std::list<son::wireless_utils::sBssInfoConf> 
             wireless_settings.push_back(configuration);
         }
     }
+    amxc_var_delete(&aps);
 
     return true;
 }
@@ -209,33 +173,27 @@ bool bpl_cfg_get_wireless_settings(std::list<son::wireless_utils::sBssInfoConf> 
 bool bpl_cfg_get_wifi_credentials(const std::string &iface,
                                   son::wireless_utils::sBssInfoConf &configuration)
 {
-    amxc_var_t *radio_obj = bpl_cfg_get_wifi_radio_object(iface);
-    if (!radio_obj) {
-        return false;
-    }
-    configuration.operating_class = {GET_UINT32(radio_obj, "OperatingClass")};
-
     amxc_var_t *ssid_obj = bpl_cfg_get_wifi_ssid_object(iface);
     if (!ssid_obj) {
         return false;
     }
     configuration.ssid = std::string(GET_CHAR(ssid_obj, "SSID"));
+    amxc_var_delete(&ssid_obj);
 
     amxc_var_t *ap_sec_obj = bpl_cfg_get_wifi_security_object(iface);
     if (!ap_sec_obj) {
         return false;
     }
 
-    std::string mode_enabled = std::string(GET_CHAR(ap_sec_obj, "ModeEnabled"));
-    configuration.authentication_type =
-        beerocks::wbapi::wbapi_utils::security_mode_from_string(mode_enabled);
+    std::string mode_enabled          = std::string(GET_CHAR(ap_sec_obj, "ModeEnabled"));
+    configuration.authentication_type = wbapi_utils::security_mode_from_string(mode_enabled);
 
-    std::string encryption_mode = std::string(GET_CHAR(ap_sec_obj, "EncryptionMode"));
-    configuration.encryption_type =
-        beerocks::wbapi::wbapi_utils::encryption_type_from_string(encryption_mode);
+    std::string encryption_mode   = std::string(GET_CHAR(ap_sec_obj, "EncryptionMode"));
+    configuration.encryption_type = wbapi_utils::encryption_type_from_string(encryption_mode);
 
     std::string key_pass_phrase = std::string(GET_CHAR(ap_sec_obj, "KeyPassPhrase"));
     configuration.network_key   = key_pass_phrase;
+    amxc_var_delete(&ap_sec_obj);
 
     return true;
 }
@@ -243,9 +201,7 @@ bool bpl_cfg_get_wifi_credentials(const std::string &iface,
 bool bpl_cfg_set_wifi_credentials(const std::string &iface,
                                   const son::wireless_utils::sBssInfoConf &configuration)
 {
-    std::string wifi_ssid_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
-                                 std::string(AMX_CL_SSID_OBJ_NAME) + AMX_CL_OBJ_DELIMITER + iface +
-                                 AMX_CL_OBJ_DELIMITER;
+    std::string wifi_ssid_path = wbapi_utils::search_path_ssid_by_iface(iface);
     amxc_var_t new_obj;
     amxc_var_init(&new_obj);
     amxc_var_set_type(&new_obj, AMXC_VAR_ID_HTABLE);
@@ -260,13 +216,11 @@ bool bpl_cfg_set_wifi_credentials(const std::string &iface,
     }
 
     std::string security_mode =
-        beerocks::wbapi::wbapi_utils::security_mode_to_string(configuration.authentication_type);
+        wbapi_utils::security_mode_to_string(configuration.authentication_type);
     std::string encryption_type =
-        beerocks::wbapi::wbapi_utils::encryption_type_to_string(configuration.encryption_type);
+        wbapi_utils::encryption_type_to_string(configuration.encryption_type);
 
-    std::string wifi_ap_sec_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
-                                   std::string(AMX_CL_AP_OBJ_NAME) + AMX_CL_OBJ_DELIMITER + iface +
-                                   AMX_CL_OBJ_DELIMITER + "Security.";
+    std::string wifi_ap_sec_path = wbapi_utils::search_path_ap_by_iface(iface) + "Security.";
     amxc_var_init(&new_obj);
     amxc_var_set_type(&new_obj, AMXC_VAR_ID_HTABLE);
     amxc_var_add_new_key_cstring_t(&new_obj, "ModeEnabled", security_mode.c_str());

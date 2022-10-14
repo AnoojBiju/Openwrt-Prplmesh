@@ -33,7 +33,8 @@ typedef std::list<parsed_obj_map_t> parsed_obj_listed_map_t;
  * Base class for the whm abstraction layer.
  */
 class base_wlan_hal_whm : public virtual base_wlan_hal,
-                          protected beerocks::beerocks_fsm<whm_fsm_state, whm_fsm_event> {
+                          protected beerocks::beerocks_fsm<whm_fsm_state, whm_fsm_event>,
+                          protected beerocks::wbapi::wbapi_utils {
 
     // Public methods:
 public:
@@ -78,6 +79,11 @@ protected:
     amxc_var_t *get_radio_vaps();
 
     std::unique_ptr<beerocks::wbapi::AmbiorixClient> m_ambiorix_cl;
+    virtual const std::unique_ptr<beerocks::wbapi::AmbiorixClient> &get_amx_cli() override
+    {
+        return m_ambiorix_cl;
+    }
+    std::string m_radio_path;
 
     // Private data-members:
 private:

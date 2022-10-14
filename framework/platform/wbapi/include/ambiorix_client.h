@@ -24,13 +24,6 @@
 
 constexpr uint8_t AMX_CL_DEF_TIMEOUT = 3;
 
-constexpr char AMX_CL_WIFI_ROOT_NAME[]    = "WiFi";
-constexpr char AMX_CL_RADIO_OBJ_NAME[]    = "Radio";
-constexpr char AMX_CL_AP_OBJ_NAME[]       = "AccessPoint";
-constexpr char AMX_CL_SSID_OBJ_NAME[]     = "SSID";
-constexpr char AMX_CL_ENDPOINT_OBJ_NAME[] = "EndPoint";
-constexpr char AMX_CL_OBJ_DELIMITER       = '.';
-
 constexpr char AMX_CL_OBJECT_CHANGED_EVT[]   = "dm:object-changed";
 constexpr char AMX_CL_OBJECT_ADDED_EVT[]     = "dm:object-added";
 constexpr char AMX_CL_OBJECT_REMOVED_EVT[]   = "dm:object-removed";

@@ -27,15 +27,13 @@ namespace whm {
 base_wlan_hal_whm::base_wlan_hal_whm(HALType type, const std::string &iface_name,
                                      hal_event_cb_t callback, const hal_conf_t &hal_conf)
     : base_wlan_hal(type, iface_name, IfaceType::Intel, callback, hal_conf),
-      beerocks::beerocks_fsm<whm_fsm_state, whm_fsm_event>(whm_fsm_state::Delay)
+      beerocks::beerocks_fsm<whm_fsm_state, whm_fsm_event>(whm_fsm_state::Delay), wbapi_utils()
 {
     m_ambiorix_cl = beerocks::wbapi::AmbiorixClientFactory::create_instance();
     LOG_IF(!m_ambiorix_cl, FATAL) << "Unable to create ambiorix client instance!";
 
     int amx_fd = m_ambiorix_cl->get_fd();
-    if (amx_fd == -1) {
-        LOG(FATAL) << "Failed opening amx fd, errno: " << strerror(errno);
-    }
+    LOG_IF((amx_fd == -1), FATAL) << "Failed opening amx fd, errno: " << strerror(errno);
 
     int amxp_fd = m_ambiorix_cl->get_signal_fd();
     if (amxp_fd == -1) {
@@ -43,6 +41,9 @@ base_wlan_hal_whm::base_wlan_hal_whm(HALType type, const std::string &iface_name
     }
 
     m_fds_ext_events = {amx_fd, amxp_fd};
+
+    auto search_path = search_path_radio_by_iface(iface_name);
+    m_ambiorix_cl->resolve_path(search_path, m_radio_path);
 
     // Initialize the FSM
     fsm_setup();
@@ -84,41 +85,22 @@ bool base_wlan_hal_whm::ping() { return true; }
 
 bool base_wlan_hal_whm::refresh_radio_info()
 {
-    std::string wifi_radio_path;
-    if (!whm_get_radio_path(get_iface_name(), wifi_radio_path)) {
-        return false;
-    }
-
-    amxc_var_t *radio_obj = m_ambiorix_cl->get_object(wifi_radio_path, 0);
-    if (!radio_obj) {
-        LOG(ERROR) << "failed to get radio object";
-        return false;
-    }
-    m_radio_info.tx_power = GET_UINT32(radio_obj, "TransmitPower");
-    const char *op_band   = GET_CHAR(radio_obj, "CurrentOperatingChannelBandwidth");
-    beerocks::eWiFiBandwidth band =
-        beerocks::wbapi::wbapi_utils::bandwith_from_string(std::string(op_band));
-    m_radio_info.bandwidth         = beerocks::utils::convert_bandwidth_to_int(band);
-    m_radio_info.wifi_ctrl_enabled = GET_UINT32(radio_obj, "Enable");
-    m_radio_info.channel           = GET_UINT32(radio_obj, "Channel");
+    std::string sVal;
+    get_param<>(m_radio_info.tx_power, m_radio_path, "TransmitPower");
+    get_param<>(sVal, m_radio_path, "CurrentOperatingChannelBandwidth");
+    beerocks::eWiFiBandwidth band = beerocks::wbapi::wbapi_utils::bandwith_from_string(sVal);
+    m_radio_info.bandwidth        = beerocks::utils::convert_bandwidth_to_int(band);
+    get_param<>(m_radio_info.wifi_ctrl_enabled, m_radio_path, "Enable");
+    get_param<>(m_radio_info.channel, m_radio_path, "Channel");
     m_radio_info.is_5ghz =
         (son::wireless_utils::which_freq(m_radio_info.channel) == beerocks::eFreqType::FREQ_5G);
-
-    const char *radio_status = GET_CHAR(radio_obj, "Status");
-    m_radio_info.radio_state =
-        utils_wlan_hal_whm::radio_state_from_string(std::string(radio_status));
+    get_param<>(sVal, m_radio_path, "Status");
+    m_radio_info.radio_state = utils_wlan_hal_whm::radio_state_from_string(sVal);
     if (m_radio_info.radio_state == eRadioState::ENABLED) {
         m_radio_info.wifi_ctrl_enabled = 2; // Assume Operational
         m_radio_info.tx_enabled        = 1;
     }
-    amxc_var_delete(&radio_obj);
-    amxc_var_t *radio_driver_obj = m_ambiorix_cl->get_object(wifi_radio_path + "DriverStatus.", 0);
-    if (!radio_driver_obj) {
-        LOG(ERROR) << "failed to get radio DriverStatus object";
-    } else {
-        m_radio_info.ant_num = GET_UINT32(radio_driver_obj, "NrTxAntenna");
-        amxc_var_delete(&radio_driver_obj);
-    }
+    get_param<>(m_radio_info.ant_num, m_radio_path + "DriverStatus.", "NrTxAntenna");
 
     if (!m_radio_info.available_vaps.size()) {
         if (!refresh_vaps_info(beerocks::IFACE_RADIO_ID)) {
@@ -131,56 +113,30 @@ bool base_wlan_hal_whm::refresh_radio_info()
 
 amxc_var_t *base_wlan_hal_whm::get_radio_vaps()
 {
-    std::string search_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
-                              std::string(AMX_CL_RADIO_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
-                              "[Name == '" + m_radio_info.iface_name + "']" + AMX_CL_OBJ_DELIMITER +
-                              "OperatingFrequencyBand";
-
-    std::string radio_obj_path = "";
-    amxc_var_t *radios_obj     = m_ambiorix_cl->get_object(search_path, 1);
-    amxc_var_for_each(radio_obj, radios_obj)
-    {
-        const char *key = amxc_var_key(amxc_var_get_first(radio_obj));
-        if (!key)
+    amxc_var_t *plist  = nullptr;
+    amxc_var_t *aps    = m_ambiorix_cl->get_object(search_path_ap(), 0, false);
+    amxc_array_t *keys = amxc_htable_get_sorted_keys(amxc_var_constcast(amxc_htable_t, aps));
+    uint32_t size      = amxc_array_size(keys);
+    for (uint32_t i = 0; i < size; i++) {
+        const char *abs_path = (const char *)amxc_array_get_data_at(keys, i);
+        amxc_var_t *ap       = GET_ARG(aps, abs_path);
+        std::string radio_path;
+        if ((!ap) || (!get_amx_cli()->resolve_path(get_path_radio_reference(ap), radio_path)) ||
+            (radio_path != m_radio_path)) {
             continue;
-        radio_obj_path.assign(amxc_var_key(radio_obj));
-        break;
-    }
-    amxc_var_delete(&radios_obj);
-    if (radio_obj_path.empty()) {
-        LOG(ERROR) << "failed to get radio object path";
-        return nullptr;
-    }
-
-    std::string ap_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
-                          std::string(AMX_CL_AP_OBJ_NAME) + AMX_CL_OBJ_DELIMITER;
-    amxc_var_t *aps = m_ambiorix_cl->get_object(ap_path, 1);
-    amxc_var_for_each(ap, aps)
-    {
-        bool match      = false;
-        const char *key = GET_CHAR(ap, "RadioReference");
-        if (key && key[0]) {
-            radios_obj = m_ambiorix_cl->get_object(std::string(key) + ".Name", 1);
-            amxc_var_for_each(radio_obj, radios_obj)
-            {
-                key = amxc_var_key(amxc_var_get_first(radio_obj));
-                if (!key)
-                    continue;
-                if (amxc_var_key(radio_obj) == radio_obj_path) {
-                    match = true;
-                    break;
-                }
+        }
+        if (!plist) {
+            if (amxc_var_new(&plist) != 0) {
+                break;
             }
-            amxc_var_delete(&radios_obj);
+            amxc_var_set_type(plist, AMXC_VAR_ID_LIST);
         }
-        if (match) {
-            LOG(DEBUG) << "Found vap " << amxc_var_key(ap) << " of rad " << radio_obj_path;
-            continue;
-        }
-        amxc_var_take_it(ap);
-        amxc_var_clean(ap);
+        LOG(DEBUG) << "Found vap " << amxc_var_key(ap) << " of rad " << m_radio_path;
+        amxc_var_set_index(plist, -1, ap, AMXC_VAR_FLAG_COPY);
     }
-    return aps;
+    amxc_array_delete(&keys, NULL);
+    amxc_var_delete(&aps);
+    return plist;
 }
 
 bool base_wlan_hal_whm::refresh_vaps_info(int id)
@@ -207,15 +163,14 @@ bool base_wlan_hal_whm::refresh_vap_info(int id, amxc_var_t *ap_obj)
     LOG(TRACE) << __func__ << " - id = " << id;
 
     VAPElement vap_element;
-    const char *ssidRef = GET_CHAR(ap_obj, "SSIDReference");
-    const char *ifname  = GET_CHAR(ap_obj, "Alias");
-    if (ssidRef && ifname) {
-        std::string wifi_ssid_path = std::string(ssidRef) + AMX_CL_OBJ_DELIMITER;
 
-        amxc_var_t *ssid_obj = m_ambiorix_cl->get_object(wifi_ssid_path, 0);
+    auto wifi_ssid_path = get_path_ssid_reference(ap_obj);
+    auto ifname         = get_ap_iface(ap_obj);
+    if (!wifi_ssid_path.empty() && !ifname.empty()) {
+        amxc_var_t *ssid_obj = m_ambiorix_cl->get_object(wifi_ssid_path);
         if (!ssid_obj) {
-            LOG(ERROR) << "failed to get ssid object";
-        } else {
+            LOG(ERROR) << "failed to get ssid object " << wifi_ssid_path;
+        } else if (std::string(GET_CHAR(ap_obj, "Status")) == "Enabled") {
             vap_element.bss  = ifname;
             vap_element.mac  = GET_CHAR(ssid_obj, "MACAddress");
             vap_element.ssid = GET_CHAR(ssid_obj, "SSID");
@@ -238,15 +193,17 @@ bool base_wlan_hal_whm::refresh_vap_info(int id, amxc_var_t *ap_obj)
     // VAP does not exists
     if (vap_element.mac.empty()) {
         if (m_radio_info.available_vaps.find(id) != m_radio_info.available_vaps.end()) {
+            LOG(INFO) << "Removed VAP " << m_radio_info.available_vaps[id].bss << " id (" << id
+                      << ") ";
             m_radio_info.available_vaps.erase(id);
         }
 
-        return false;
+        return true;
     }
 
     // Store the VAP element
-    LOG(WARNING) << "Detected VAP id (" << id << ") - MAC: " << vap_element.mac
-                 << ", SSID: " << vap_element.ssid << ", BSS: " << vap_element.bss;
+    LOG(INFO) << "Detected VAP id (" << id << ") - MAC: " << vap_element.mac
+              << ", SSID: " << vap_element.ssid << ", BSS: " << vap_element.bss;
 
     auto &mapped_vap_element = m_radio_info.available_vaps[id];
     if (mapped_vap_element.bss.empty()) {
@@ -274,9 +231,9 @@ bool base_wlan_hal_whm::refresh_vap_info(int id, amxc_var_t *ap_obj)
 
 bool base_wlan_hal_whm::process_ext_events(int fd)
 {
-    if (m_fds_ext_events[0] == fd) {
+    if (m_ambiorix_cl->get_fd() == fd) {
         m_ambiorix_cl->read();
-    } else if (m_fds_ext_events[1] == fd) {
+    } else if (m_ambiorix_cl->get_signal_fd() == fd) {
         m_ambiorix_cl->read_signal();
     }
     return true;
@@ -284,47 +241,35 @@ bool base_wlan_hal_whm::process_ext_events(int fd)
 
 amxc_var_t *base_wlan_hal_whm::whm_get_wifi_ap_object(const std::string &iface)
 {
-    std::string ap_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
-                          std::string(AMX_CL_AP_OBJ_NAME) + AMX_CL_OBJ_DELIMITER + "[Alias == '" +
-                          iface + "']" + AMX_CL_OBJ_DELIMITER;
-    return m_ambiorix_cl->get_object(ap_path, 0);
+    std::string ap_path = search_path_ap_by_iface(iface);
+    return m_ambiorix_cl->get_object(ap_path);
 }
 
 amxc_var_t *base_wlan_hal_whm::whm_get_wifi_ssid_object(const std::string &iface)
 {
     // pwhm dm path: WiFi.SSID.[ Alias == 'iface' ].?
-    std::string ap_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
-                          std::string(AMX_CL_SSID_OBJ_NAME) + AMX_CL_OBJ_DELIMITER + "[Alias == '" +
-                          iface + "']" + AMX_CL_OBJ_DELIMITER;
-    return m_ambiorix_cl->get_object(ap_path, 0);
+    std::string ssid_path = search_path_ssid_by_iface(iface);
+    return m_ambiorix_cl->get_object(ssid_path);
 }
 
 int base_wlan_hal_whm::whm_get_vap_id(const std::string &iface)
 {
-    int vap_id = 0;
-    std::string radioRef;
-    if (whm_get_radio_ref(iface, radioRef)) {
-        std::string ap_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
-                              std::string(AMX_CL_AP_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
-                              "[RadioReference == '" + radioRef + "']" + AMX_CL_OBJ_DELIMITER +
-                              "Alias";
-        int cnt         = -1;
-        amxc_var_t *aps = m_ambiorix_cl->get_object(ap_path, 1);
-        amxc_var_for_each(ap, aps)
-        {
-            const char *ifname = GET_CHAR(ap, "Alias");
-            if (!ifname || !ifname[0]) {
-                continue;
-            }
-            cnt++;
-            if (iface == ifname) {
-                vap_id = cnt;
-                break;
-            }
+    bool found      = false;
+    int vap_id      = beerocks::IFACE_VAP_ID_MIN;
+    amxc_var_t *aps = get_radio_vaps();
+    amxc_var_for_each(ap, aps)
+    {
+        if (get_ap_iface(ap) == iface) {
+            found = true;
+            break;
         }
-        amxc_var_delete(&aps);
+        vap_id++;
     }
-    return vap_id;
+    amxc_var_delete(&aps);
+    if (found) {
+        return vap_id;
+    }
+    return int(beerocks::IFACE_ID_INVALID);
 }
 
 bool base_wlan_hal_whm::whm_get_radio_ref(const std::string &iface, std::string &ref)
@@ -332,7 +277,7 @@ bool base_wlan_hal_whm::whm_get_radio_ref(const std::string &iface, std::string 
     ref                = "";
     amxc_var_t *ap_obj = whm_get_wifi_ap_object(iface);
     if (!ap_obj) {
-        LOG(ERROR) << "failed to get ap object";
+        LOG(ERROR) << "failed to get ap object of iface " << iface;
         return false;
     }
     std::string ref_val = GET_CHAR(ap_obj, "RadioReference");
@@ -347,29 +292,14 @@ bool base_wlan_hal_whm::whm_get_radio_ref(const std::string &iface, std::string 
 
 bool base_wlan_hal_whm::whm_get_radio_path(const std::string &iface, std::string &path)
 {
-    bool ret = whm_get_radio_ref(iface, path);
-    if (ret) {
-        path += ".";
-    }
-    return ret;
+    return m_ambiorix_cl->resolve_path(search_path_radio_by_iface(iface), path);
 }
 
 std::string base_wlan_hal_whm::get_radio_mac()
 {
-    std::string mac;
-    std::string wifi_radio_path;
-    if (!whm_get_radio_path(get_iface_name(), wifi_radio_path)) {
-        return mac;
-    }
-
-    amxc_var_t *radio_obj = m_ambiorix_cl->get_object(wifi_radio_path, 0);
-    if (!radio_obj) {
-        LOG(ERROR) << "failed to get radio object";
-        return mac;
-    }
-
-    mac.assign(GET_CHAR(radio_obj, "BaseMACAddress"));
-    amxc_var_delete(&radio_obj);
+    std::string mac("");
+    std::string wifi_radio_path = search_path_radio_by_iface(get_iface_name());
+    get_param<>(mac, wifi_radio_path, "BaseMACAddress");
     return mac;
 }
 
