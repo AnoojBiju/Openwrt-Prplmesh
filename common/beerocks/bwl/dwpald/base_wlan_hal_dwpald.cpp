@@ -477,6 +477,11 @@ bool base_wlan_hal_dwpal::dwpal_send_cmd(const std::string &cmd, int vap_id)
     auto buff_size_copy = m_wpa_ctrl_buffer_size;
 
     do {
+        LOG(DEBUG) << "CW: Send dwpal cmd: " << cmd.c_str()
+                   << " From intf:" << get_iface_name().c_str();
+        LOG(INFO) << "CW: map for intf conn_state[" << get_iface_name().c_str() << "] is "
+                  << conn_state[get_iface_name().c_str()];
+
         result = DWPALD_DISCONNECTED;
         if ((conn_state[get_iface_name().c_str()] == true)) {
             result = dwpald_hostap_cmd(get_iface_name().c_str(), cmd.c_str(), cmd.length(), buffer,
