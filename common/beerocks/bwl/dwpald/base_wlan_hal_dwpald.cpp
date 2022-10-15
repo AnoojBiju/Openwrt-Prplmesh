@@ -145,6 +145,7 @@ bool base_wlan_hal_dwpal::fsm_setup()
                 // detach if wlan (hostapd/supplicant) was not attached
                 if (attached) {
                     if (get_type() != HALType::Station) {
+		        LOG(INFO) << "CW: interfcae info when attached " << get_iface_name().c_str();
                         return (transition.change_destination(dwpal_fsm_state::GetRadioInfo));
                     }
                     return true;
