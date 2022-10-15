@@ -4304,6 +4304,12 @@ bool Controller::handle_tlv_profile2_ap_radio_advanced_capabilities(
        << std::endl
        << "DSCP Policy support = " << radio->advanced_capabilities.dscp_policy << std::endl;
 
+    if (!database.dm_set_radio_advanced_capabilities(*radio)) {
+        LOG(ERROR) << "Failed to set AP Radio Advanced Capabilities in DM for radio="
+                   << radio->radio_uid;
+        return false;
+    }
+
     LOG(DEBUG) << ss.str();
     return true;
 }

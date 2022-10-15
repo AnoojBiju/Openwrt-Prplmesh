@@ -35,6 +35,9 @@
             on action validate call check_range [0, 255];
         }
 
+        %read-only bool TrafficSeparationCombinedFronthaul;
+        %read-only bool TrafficSeparationCombinedBackhaul;
+
         object CurrentOperatingClasses [] {
             counted with CurrentOperatingClassesNumberOfEntries;
             %read-only datetime TimeStamp = "2020-08-31T11:22:39Z";

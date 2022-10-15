@@ -7702,6 +7702,22 @@ bool db::dm_add_radio_akm_suite_capabilities(
     return ret_val;
 }
 
+bool db::dm_set_radio_advanced_capabilities(const Agent::sRadio &radio)
+{
+    if (radio.dm_path.empty()) {
+        return true;
+    }
+
+    bool ret_val = true;
+    ret_val &= m_ambiorix_datamodel->set(
+        radio.dm_path, "TrafficSeparationCombinedFronthaul",
+        radio.advanced_capabilities.traffic_separation_combined_fronthaul);
+    ret_val &=
+        m_ambiorix_datamodel->set(radio.dm_path, "TrafficSeparationCombinedBackhaul",
+                                  radio.advanced_capabilities.traffic_separation_combined_backhaul);
+    return ret_val;
+}
+
 bool db::dm_set_radio_vbss_capabilities(const sMacAddr &radio_uid, uint8_t max_vbss,
                                         bool vbsses_subtract, bool apply_vbssid_restrictions,
                                         bool apply_vbssid_match_mask_restrictions,

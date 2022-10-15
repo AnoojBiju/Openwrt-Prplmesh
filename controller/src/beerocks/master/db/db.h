@@ -28,6 +28,7 @@
 #include <tlvf/wfa_map/tlvApVhtCapabilities.h>
 #include <tlvf/wfa_map/tlvApWifi6Capabilities.h>
 #include <tlvf/wfa_map/tlvAssociatedStaExtendedLinkMetrics.h>
+#include <tlvf/wfa_map/tlvProfile2ApRadioAdvancedCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2CacCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2CacStatusReport.h>
 
@@ -2263,6 +2264,16 @@ public:
             &fronthaul_bss_selectors,
         const std::vector<wfa_map::tlvAkmSuiteCapabilities::sBssAkmSuiteSelector>
             &backhaul_bss_selectors);
+
+    /**
+     * @brief Sets advanced radio capabilities on given radio.
+     *
+     * Data model path: "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}."
+     *
+     * @param[in] radio Radio DB object.
+     * @return True on success, otherwise false.
+     */
+    bool dm_set_radio_advanced_capabilities(const Agent::sRadio &radio);
 
     /**
      * @brief Set the VBSS Capabilities for the specified radio. 
