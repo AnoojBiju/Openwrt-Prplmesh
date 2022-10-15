@@ -224,7 +224,11 @@ void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
             continue;
         }
 
-        add_channel_scan_capabilities(radio->front.iface_name, *channel_scan_capabilities_tlv);
+        if (!add_channel_scan_capabilities(radio, *channel_scan_capabilities_tlv)) {
+            LOG(ERROR) << "Failed to fill in tlvChannelScanCapabilities for radio "
+                       << radio->front.iface_name;
+            continue;
+        }
     }
 
     // 2.2 radio independent tlvs
@@ -584,15 +588,9 @@ bool CapabilityReportingTask::add_ap_wifi6_capabilities(const std::string &iface
 }
 
 bool CapabilityReportingTask::add_channel_scan_capabilities(
-    const std::string &iface_name,
+    const AgentDB::sRadio *radio,
     wfa_map::tlvChannelScanCapabilities &channel_scan_capabilities_tlv)
 {
-    auto db    = AgentDB::get();
-    auto radio = db->radio(iface_name);
-    if (!radio) {
-        return false;
-    }
-
     auto radio_channel_scan_capabilities = channel_scan_capabilities_tlv.create_radio_list();
     if (!radio_channel_scan_capabilities) {
         LOG(ERROR) << "create_radio_list() has failed!";
@@ -611,6 +609,8 @@ bool CapabilityReportingTask::add_channel_scan_capabilities(
         LOG(ERROR) << "create_operating_classes_list() has failed!";
         return false;
     }
+
+    // TODO: Fill values for operating classes and channels (PPM-2294).
 
     // Push operating class object to the list of operating class objects
     if (!channel_scan_capabilities_tlv.add_radio_list(radio_channel_scan_capabilities)) {

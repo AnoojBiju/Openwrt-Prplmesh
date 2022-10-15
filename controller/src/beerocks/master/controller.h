@@ -382,6 +382,16 @@ private:
     bool handle_tlv_profile2_cac_capabilities(Agent &agent, ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
+     * @brief Handles TLV of Channel Scan Capabilities (tlvChannelScanCapabilities).
+     *
+     * @param agent Agent DB shared object.
+     * @param cmdu_rx Received CMDU as Channel Scan Capabilities message.
+     * @return True on success, false otherwise.
+    */
+    bool handle_tlv_profile2_channel_scan_capabilities(std::shared_ptr<Agent> &agent,
+                                                       ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
      * @brief Extracts ESP value from est_service_info_field and set it to specified
      * with @param_name NBAPI EstServiceParameter.
      *

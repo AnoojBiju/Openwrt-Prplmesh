@@ -104,5 +104,30 @@
             }
         }
 
+        /* Describes the channel scan capabilities of a radio */
+        %read-only object ScanCapability {
+
+            %read-only bool OnBootOnly;
+            %read-only uint32 Impact = 0 {
+                on action validate call check_range [0, 3];
+            }
+            %read-only uint32 MinimumInterval = 0;
+
+            %read-only object OpClassChannels [] {
+                counted with OpClassChannelsNumberOfEntries;
+
+                %read-only uint32 OpClass = 0 {
+                    on action validate call check_range [0, 255];
+                }
+
+                %read-only object Channel [] {
+                    counted with ChannelNumberOfEntries;
+                    %read-only uint32 Channel = 0 {
+                        on action validate call check_range [0, 255];
+                    }
+                }
+            }
+        }
+
     }
 }

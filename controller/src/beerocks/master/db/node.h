@@ -16,7 +16,6 @@
 #include <tlvf/ieee_1905_1/tlvReceiverLinkMetric.h>
 #include <tlvf/ieee_1905_1/tlvTransmitterLinkMetric.h>
 #include <tlvf/wfa_map/tlvApMetrics.h>
-#include <tlvf/wfa_map/tlvChannelScanCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2ChannelScanResult.h>
 
 #include <list>
@@ -151,27 +150,6 @@ public:
         };
         std::shared_ptr<ap_stats_params> stats_info = std::make_shared<ap_stats_params>();
         std::unordered_map<int8_t, sVapElement> vaps_info;
-
-        class channel_scan_capabilities {
-        public:
-            // 1: True (Agent can only perform scan on boot), 0: False (Agent can perform Requested scans)
-            uint8_t on_boot_only = 1;
-
-            // 0x00: No impact (independent radio is available for scanning that is not used for Fronthaul or backhaul)
-            // 0x01: Reduced number of spatial streams
-            // 0x02: Time slicing impairment (Radio may go off channel for a series of short intervals)
-            // 0x03: Radio unavailable for >= 2 seconds)
-            uint8_t scan_impact = 0x02;
-
-            // The minimum interval in seconds between the start of two consecutive channel scans on this radio
-            uint32_t minimum_scan_interval = 0;
-
-            // An unordered-map of operating classes the radio can scan on
-            // Key: operating-class id, Value: operating
-            std::unordered_map<uint8_t, std::vector<beerocks::message::sWifiChannel>>
-                operating_classes;
-        };
-        channel_scan_capabilities scan_capabilities;
 
         /* The channel_scan_report structure holds channel scan report information
          * The channel_scan_report_key is comprised of an operating-class & channel-number pair
