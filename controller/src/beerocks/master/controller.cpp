@@ -1817,7 +1817,7 @@ bool Controller::handle_cmdu_1905_ap_capability_report(const sMacAddr &src_mac,
     }
 
     if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
-        !handle_tlv_profile2_cac_capabilities(agent, cmdu_rx)) {
+        !handle_tlv_profile2_cac_capabilities(*agent, cmdu_rx)) {
         LOG(ERROR) << "Profile2 CAC Capabilities are not supplied for Agent " << src_mac
                    << " with profile enum " << agent->profile;
     }
@@ -3982,7 +3982,7 @@ bool Controller::handle_tlv_profile2_ap_capability(std::shared_ptr<Agent> agent,
     return true;
 }
 
-bool Controller::handle_tlv_profile2_cac_capabilities(std::shared_ptr<Agent> agent,
+bool Controller::handle_tlv_profile2_cac_capabilities(Agent &agent,
                                                       ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto cac_capabilities_tlv = cmdu_rx.getClass<wfa_map::tlvProfile2CacCapabilities>();
@@ -4006,7 +4006,13 @@ bool Controller::handle_tlv_profile2_cac_capabilities(std::shared_ptr<Agent> age
         auto &cac_radio = std::get<1>(cac_capabilities_tlv->cac_radios(radio_idx));
         auto ruid       = cac_radio.radio_uid();
 
-        database.dm_clear_radio_cac_capabilities(ruid);
+        auto radio = agent.radios.get(ruid);
+        if (!radio) {
+            LOG(ERROR) << "No radio found for ruid=" << ruid << " on " << agent.al_mac;
+            continue;
+        }
+
+        database.dm_clear_radio_cac_capabilities(*radio);
 
         for (size_t type_idx = 0; type_idx < cac_radio.number_of_cac_type_supported(); type_idx++) {
             if (type_idx > 3) {
@@ -4056,9 +4062,9 @@ bool Controller::handle_tlv_profile2_cac_capabilities(std::shared_ptr<Agent> age
                 ss << std::endl;
             }
 
-            if (!database.dm_add_radio_cac_capabilities(ruid, cac_method, *cac_duration,
+            if (!database.dm_add_radio_cac_capabilities(*radio, cac_method, *cac_duration,
                                                         oc_channels)) {
-                LOG(ERROR) << "Failed to add CAC capabilities for ruid=" << ruid;
+                LOG(ERROR) << "Failed to add CAC capabilities for radio=" << radio->radio_uid;
                 return false;
             }
         }

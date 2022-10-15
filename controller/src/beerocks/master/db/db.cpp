@@ -7467,44 +7467,26 @@ bool db::dm_set_radio_bh_sta(const Agent::sRadio &radio, const sMacAddr &bh_sta_
     return m_ambiorix_datamodel->set(radio.dm_path + ".BackhaulSta", "MACAddress", bh_sta_mac);
 }
 
-bool db::dm_clear_radio_cac_capabilities(const sMacAddr &radio_uid)
+bool db::dm_clear_radio_cac_capabilities(const Agent::sRadio &radio)
 {
-    auto radio = get_radio_by_uid(radio_uid);
-    if (!radio) {
-        LOG(ERROR) << "Failed to get radio with RUID: " << radio_uid;
-        return false;
-    }
-
-    if (radio->dm_path.empty()) {
+    if (radio.dm_path.empty()) {
         return true;
     }
 
-    if (!m_ambiorix_datamodel->remove_all_instances(radio->dm_path + ".CACCapability")) {
-        LOG(ERROR) << "Failed to remove all instances for: " << radio->dm_path + ".CACCapability";
-        return false;
-    }
-
-    return true;
+    return m_ambiorix_datamodel->remove_all_instances(radio.dm_path + ".CACCapability");
 }
 
 bool db::dm_add_radio_cac_capabilities(
-    const sMacAddr &radio_uid, const wfa_map::eCacMethod &method, const uint8_t &duration,
+    const Agent::sRadio &radio, const wfa_map::eCacMethod &method, const uint8_t &duration,
     const std::unordered_map<uint8_t, std::vector<uint8_t>> &oc_channels)
 {
-    auto radio = get_radio_by_uid(radio_uid);
-    if (!radio) {
-        LOG(ERROR) << "Failed to get radio with RUID: " << radio_uid;
-        return false;
-    }
-
-    if (radio->dm_path.empty()) {
+    if (radio.dm_path.empty()) {
         return true;
     }
 
     auto cac_method_path =
-        m_ambiorix_datamodel->add_instance(radio->dm_path + ".CACCapability.CACMethod");
+        m_ambiorix_datamodel->add_instance(radio.dm_path + ".CACCapability.CACMethod");
     if (cac_method_path.empty()) {
-        LOG(ERROR) << "Failed to add: " << radio->dm_path << ".CACCapability.CACMethod";
         return false;
     }
 
@@ -7516,7 +7498,6 @@ bool db::dm_add_radio_cac_capabilities(
         auto oc_channels_path =
             m_ambiorix_datamodel->add_instance(cac_method_path + ".OpClassChannels");
         if (oc_channels_path.empty()) {
-            LOG(ERROR) << "Failed to add: " << cac_method_path << ".OpClassChannels";
             return false;
         }
 
@@ -7525,7 +7506,6 @@ bool db::dm_add_radio_cac_capabilities(
         for (auto &channel : oc_ch.second) {
             auto channels_path = m_ambiorix_datamodel->add_instance(oc_channels_path + ".Channel");
             if (oc_channels_path.empty()) {
-                LOG(ERROR) << "Failed to add: " << oc_channels_path << ".Channel";
                 return false;
             }
 

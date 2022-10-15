@@ -2171,10 +2171,10 @@ public:
      *
      * Data model path : "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.CACCapability."
      *
-     * @param[in] radio_uid Radio UID of the radio.
-     * @return true on success, otherwise false.
+     * @param[in] radio Radio DB object.
+     * @return True on success, otherwise false.
      */
-    bool dm_clear_radio_cac_capabilities(const sMacAddr &radio_uid);
+    bool dm_clear_radio_cac_capabilities(const Agent::sRadio &radio);
 
     /**
      * @brief Adds instance for CACCapability.CACMethod and fullfills it.
@@ -2186,14 +2186,14 @@ public:
      * "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.CACCapability.CACMethod.{i}.OpClassChannels.{i}."
      * "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.CACCapability.CACMethod.{i}.OpClassChannels.{i}.Channel.{i}."
      *
-     * @param[in] radio_uid Radio UID of the radio.
+     * @param[in] radio Radio DB object.
      * @param[in] method CAC method supported.
-     * @param[in] duration number of seconds required to complete given method of CAC.
-     * @param[in] oc_channels map holds vectors with channel numbers per operating class supported for given method of CAC.
-     * @return true on success, otherwise false.
+     * @param[in] duration Number of seconds required to complete given method of CAC.
+     * @param[in] oc_channels Map holds vectors with channel numbers per operating class supported for given method of CAC.
+     * @return True on success, otherwise false.
      */
     bool dm_add_radio_cac_capabilities(
-        const sMacAddr &radio_uid, const wfa_map::eCacMethod &method, const uint8_t &duration,
+        const Agent::sRadio &radio, const wfa_map::eCacMethod &method, const uint8_t &duration,
         const std::unordered_map<uint8_t, std::vector<uint8_t>> &oc_channels);
 
     /**
