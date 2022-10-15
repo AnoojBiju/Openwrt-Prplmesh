@@ -145,15 +145,15 @@ bool base_wlan_hal_dwpal::fsm_setup()
                 // detach if wlan (hostapd/supplicant) was not attached
                 if (attached) {
                     if (get_type() != HALType::Station) {
-		        LOG(INFO) << "CW: interfcae info when attached " << get_iface_name().c_str();
-			// Interface state is true as interface is attached
-			conn_state[get_iface_name().c_str()] = true;
+                        // Interface state is true as interface is attached
+                        conn_state[get_iface_name().c_str()] = true;
                         return (transition.change_destination(dwpal_fsm_state::GetRadioInfo));
                     }
                     return true;
                 } else {
                     LOG(ERROR) << "Failed attaching to the hostapd control interface of "
                                << m_radio_info.iface_name;
+                    conn_state[get_iface_name().c_str()] = false;
                     return (transition.change_destination(dwpal_fsm_state::Detach));
                 }
 

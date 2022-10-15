@@ -29,14 +29,12 @@ extern "C" {
 namespace bwl {
 namespace dwpal {
 
-#if 1
 #define MAX_VAPS_PER_RADIO 16
 #define IF_LENGTH IF_NAMESIZE + 1
 
 typedef struct {
     char name[IF_LENGTH];
 } vap_name_t;
-#endif
 enum class dwpal_fsm_state { Delay, Init, GetRadioInfo, AttachVaps, Attach, Operational, Detach };
 
 enum class dwpal_fsm_event { Attach, Detach };
