@@ -166,3 +166,6 @@ class NbapiCapabilities(PrplMeshBaseTest):
                         'TLV_PROFILE2_AP_RADIO_ADVANCED_CAPABILITIES']:
                     debug("Checking AP Radio Advanced Capabilities TLV")
                     # TODO: Check  AP Radio Advanced Capabilities and related DM objects (PPM-2345).
+                if tlv.tlv_type == self.ieee1905['eTlvTypeMap']['TLV_DEVICE_INVENTORY']:
+                    debug("Checking Profile-3 Device Inventory TLV")
+                    # TODO: Check Profile-3 Device Inventory TLV and related DM objects (PPM-2333).
