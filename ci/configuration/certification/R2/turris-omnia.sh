@@ -9,8 +9,29 @@ set -e
 # Start with a new log file:
 rm -f /var/log/messages && syslog-ng-ctl reload
 
-# We use WAN for the control interface.
+data_overlay_not_initialized()
+{
+  grep -q overlayfs:/tmp/root /proc/mounts || test -f /tmp/.switch_jffs2 || pgrep 'mount_root done'
+}
+
+if data_overlay_not_initialized; then
+  logger -t prplmesh -p daemon.info "Waiting for data overlay initialization..."
+  while data_overlay_not_initialized; do
+    sleep 2
+  done
+  logger -t prplmesh -p daemon.info "Data overlay is initialized."
+fi
+sleep 2
+
 ubus wait_for IP.Interface
+
+# Stop and disable the DHCP clients:
+/etc/init.d/tr181-dhcpv4client stop
+rm -f /etc/rc.d/S27tr181-dhcpv4client
+/etc/init.d/tr181-dhcpv6client stop
+rm -f /etc/rc.d/S25tr181-dhcpv6client
+
+# We use WAN for the control interface.
 # Add the IP address if there is none yet:
 ubus call IP.Interface _get '{ "rel_path": ".[Alias == \"wan\"].IPv4Address.[Alias == \"wan\"]." }' || {
     echo "Adding IP address $IP"

@@ -5,8 +5,29 @@ set -e
 # Start with a new log file:
 rm -f /var/log/messages ; syslog-ng-ctl reload || true
 
-# Set the LAN bridge IP:
+data_overlay_not_initialized()
+{
+  grep -q overlayfs:/tmp/root /proc/mounts || test -f /tmp/.switch_jffs2 || pgrep 'mount_root done'
+}
+
+if data_overlay_not_initialized; then
+  logger -t prplmesh -p daemon.info "Waiting for data overlay initialization..."
+  while data_overlay_not_initialized; do
+    sleep 2
+  done
+  logger -t prplmesh -p daemon.info "Data overlay is initialized."
+fi
+sleep 2
+
 ubus wait_for IP.Interface
+
+# Stop and disable the DHCP clients:
+/etc/init.d/tr181-dhcpv4client stop
+rm -f /etc/rc.d/S27tr181-dhcpv4client
+/etc/init.d/tr181-dhcpv6client stop
+rm -f /etc/rc.d/S25tr181-dhcpv6client
+
+# Set the LAN bridge IP:
 ubus call "IP.Interface" _set '{ "rel_path": ".[Name == \"br-lan\"].IPv4Address.[Alias == \"lan\"].", "parameters": { "IPAddress": "192.165.100.173" } }'
 
 # Move the WAN port into the LAN bridge if it's not there yet (to use it for data):
