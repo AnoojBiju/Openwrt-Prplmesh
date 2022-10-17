@@ -2324,7 +2324,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
         replyLen = strnlen(reply, HOSTAPD_TO_DWPAL_MSG_LENGTH);
 
         // Update connection status for VAP list on that radio
-        for (i = 0; i < MAX_VAPS_PER_RADIO; i++) {
+        for (i = 0; i < MAX_VAPS_PER_RADIO; i = i + 1) {
             char vap[IF_LENGTH] = {0};
             int status;
             status = snprintf(to_search.name, sizeof(vap_name_t), "bss[%d]=", i);
@@ -3428,7 +3428,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
     case Event::Interface_Disconnected: {
         LOG(INFO) << "INTERFACE_DISCONNECTED from intf " << ifname;
         std::unordered_map<std::string, bool>::iterator con;
-        for (con = conn_state.begin(); con != conn_state.end(); con++) {
+        for (con = conn_state.begin(); con != conn_state.end(); con = con + 1) {
             // Update interface connection status for vap to false
             conn_state[con->first] = false;
             LOG(INFO) << "updated connection status for intf " << con->first << " with false";
