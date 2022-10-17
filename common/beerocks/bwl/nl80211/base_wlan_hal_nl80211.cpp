@@ -217,6 +217,7 @@ base_wlan_hal_nl80211::base_wlan_hal_nl80211(HALType type, const std::string &if
         });
     }
 
+    register_wpa_ctrl_interface(global_iface);
     register_wpa_ctrl_interface(iface_name);
 
     // Initialize the FSM
@@ -315,6 +316,19 @@ bool base_wlan_hal_nl80211::fsm_setup()
                 if (wpa_ctrl_cmd->connect()) {
                     if (get_type() != HALType::Station) {
                         transition.change_destination(nl80211_fsm_state::GetRadioInfo);
+                    }
+                    // Open the global control interface.
+                    auto wpa_global_ctrl_cmd = m_wpa_ctrl_client.get_socket_cmd(global_iface);
+                    if (!wpa_global_ctrl_cmd) {
+                        LOG(ERROR) << "wpa_ctrl socket not found for interface " << global_iface;
+                        return false;
+                    }
+                    if (wpa_global_ctrl_cmd->connect()) {
+                        return true;
+                    } else {
+                        LOG(DEBUG)
+                            << "fail to open a wpa_ctrl_cmd sock to global hostapd interface:"
+                            << wpa_global_ctrl_cmd->path();
                     }
                     return true;
                 } else {
@@ -444,8 +458,9 @@ bool base_wlan_hal_nl80211::fsm_setup()
             // Init ext event FDS queue
             m_fds_ext_events = {-1};
 
-            // Re-register primary vap entry
-            // to be ready for new FSM Attach
+            // Re-register the global interface and the primary vap
+            // entry to be ready for new FSM Attach
+            register_wpa_ctrl_interface(global_iface);
             register_wpa_ctrl_interface(get_iface_name());
 
             return true;
