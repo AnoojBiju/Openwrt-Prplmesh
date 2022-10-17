@@ -117,6 +117,8 @@ public:
     void clear_cross_rssi();
     void set_bss(std::shared_ptr<Agent::sRadio::sBss> bss);
     std::shared_ptr<Agent::sRadio::sBss> get_bss();
+    void set_assoc_frame(std::shared_ptr<assoc_frame::AssocReqFrame> assoc_frame);
+    std::shared_ptr<assoc_frame::AssocReqFrame> get_assoc_frame();
 
     friend class ::son::db;
 
@@ -136,6 +138,7 @@ private:
     class rssi_measurement;
     std::unordered_map<std::string, std::shared_ptr<rssi_measurement>> m_cross_rx_rssi;
     std::weak_ptr<Agent::sRadio::sBss> m_bss;
+    std::shared_ptr<assoc_frame::AssocReqFrame> m_assoc_frame;
 };
 
 } // namespace db
