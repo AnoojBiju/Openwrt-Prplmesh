@@ -75,9 +75,10 @@ ubus call Ethernet.Link _get '{ "rel_path": ".[Name == \"eth0\"]." }' || {
 # We can now create an IP.Interface if there is none yet:
 ubus call IP.Interface _get '{ "rel_path": ".[Name == \"eth0\"]." }' || {
     echo "Adding IP.Interface"
-    ubus call IP.Interface _add "{ \"parameters\": { \"Name\": \"eth0\", \"UCISectionNameIPv4\": \"cert\", \"Alias\": \"eth0\", \"LowerLayers\": \"Device.Ethernet.Link.$ETH_LINK.\", \"Enable\": true } }"
+    IP_PATH="$(ubus call IP.Interface _add "{ \"parameters\": { \"Name\": \"eth0\", \"UCISectionNameIPv4\": \"cert\", \"Alias\": \"eth0\", \"LowerLayers\": \"Device.Ethernet.Link.$ETH_LINK.\", \"Enable\": true } }" | jsonfilter -e '@.path' | sed 's/.$//')"
 }
 # We can now add the IP address if there is none yet:
+ubus wait_for "$IP_PATH".IPv4Address
 ubus call IP.Interface _get '{ "rel_path": ".[Name == \"eth0\"].IPv4Address.[Alias == \"eth0\"]." }' || {
     echo "Adding IP address $IP"
     ubus call "IP.Interface" _add '{ "rel_path": ".[Name == \"eth0\"].IPv4Address.", "parameters": { "IPAddress": "192.168.250.172", "SubnetMask": "255.255.255.0", "AddressingType": "Static", "Alias": "eth0", "Enable" : true } }'
