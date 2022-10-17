@@ -31,6 +31,8 @@ namespace nl80211 {
 enum class nl80211_fsm_state { Delay, Init, GetRadioInfo, Attach, Operational, Detach };
 enum class nl80211_fsm_event { Attach, Detach };
 
+constexpr char global_iface[] = "global";
+
 /*!
  * Base class for the wav abstraction layer.
  * Read more about virtual inheritance: https://en.wikipedia.org/wiki/Virtual_inheritance
