@@ -466,6 +466,15 @@ private:
     bool handle_tlv_profile2_ap_radio_advanced_capabilities(Agent &agent,
                                                             ieee1905_1::CmduMessageRx &cmdu_rx);
 
+    /**
+     * @brief Handles TLV of Device Inventory (tlvDeviceInventory).
+     *
+     * @param agent Agent DB object.
+     * @param cmdu_rx Received CMDU as Profile-3 Device Inventory message.
+     * @return True on success, false otherwise.
+    */
+    bool handle_tlv_profile3_device_inventory(Agent &agent, ieee1905_1::CmduMessageRx &cmdu_rx);
+
     void set_esp(const std::string &param_name, const sMacAddr &reporting_agent_bssid,
                  uint8_t *est_service_info_field);
 

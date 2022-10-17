@@ -67,6 +67,7 @@
 #include <tlvf/wfa_map/tlvChannelSelectionResponse.h>
 #include <tlvf/wfa_map/tlvClientCapabilityReport.h>
 #include <tlvf/wfa_map/tlvClientInfo.h>
+#include <tlvf/wfa_map/tlvDeviceInventory.h>
 #include <tlvf/wfa_map/tlvErrorCode.h>
 #include <tlvf/wfa_map/tlvHigherLayerData.h>
 #include <tlvf/wfa_map/tlvOperatingChannelReport.h>
@@ -1854,6 +1855,12 @@ bool Controller::handle_cmdu_1905_ap_capability_report(const sMacAddr &src_mac,
         !handle_tlv_profile3_1905_layer_security_capabilities(*agent, cmdu_rx)) {
         LOG(ERROR) << "Profile3 1905 Layer Security Capability is not supplied for Agent "
                    << src_mac << " with profile enum " << agent->profile;
+    }
+
+    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_2 &&
+        !handle_tlv_profile3_device_inventory(*agent, cmdu_rx)) {
+        LOG(ERROR) << "Profile3 Device Inventory is not supplied for Agent " << src_mac
+                   << " with profile enum " << agent->profile;
     }
 
     return all_radio_capabilities_saved_successfully;
@@ -4313,6 +4320,52 @@ bool Controller::handle_tlv_profile2_ap_radio_advanced_capabilities(
         LOG(ERROR) << "Failed to set AP Radio Advanced Capabilities in DM for radio="
                    << radio->radio_uid;
         return false;
+    }
+
+    LOG(DEBUG) << ss.str();
+    return true;
+}
+
+bool Controller::handle_tlv_profile3_device_inventory(Agent &agent,
+                                                      ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto device_inventory = cmdu_rx.getClass<wfa_map::tlvDeviceInventory>();
+    if (!device_inventory) {
+        LOG(DEBUG) << "getClass wfa_map::tlvDeviceInventory has failed";
+        return false;
+    }
+
+    LOG(DEBUG) << "Profile-3 Device Inventory TLV is received";
+
+    std::stringstream ss;
+
+    agent.device_info.serial_number    = device_inventory->serial_number_str();
+    agent.device_info.software_version = device_inventory->software_version_str();
+    agent.device_info.execution_env    = device_inventory->execution_environment_str();
+
+    ss << "Device Inventory parameters: " << std::endl
+       << "Serial number = " << agent.device_info.serial_number << std::endl
+       << "Software version = " << agent.device_info.software_version << std::endl
+       << "Execution environment = " << agent.device_info.execution_env << std::endl;
+
+    for (size_t radio_idx = 0; radio_idx < device_inventory->number_of_radios(); radio_idx++) {
+        if (!std::get<0>(device_inventory->radios_vendor_info(radio_idx))) {
+            LOG(ERROR) << "Invalid Radio Vendor Info in tlvDeviceInventory";
+            continue;
+        }
+
+        auto &radio_vendor_info = std::get<1>(device_inventory->radios_vendor_info(radio_idx));
+
+        auto radio = agent.radios.get(radio_vendor_info.ruid());
+        if (!radio) {
+            LOG(ERROR) << "No radio found for ruid=" << radio_vendor_info.ruid() << " on "
+                       << agent.al_mac;
+            return false;
+        }
+        radio->chipset_vendor = radio_vendor_info.chipset_vendor_str();
+
+        ss << "Radio UID = " << radio->radio_uid << ", chipset vendor = " << radio->chipset_vendor
+           << std::endl;
     }
 
     LOG(DEBUG) << ss.str();
