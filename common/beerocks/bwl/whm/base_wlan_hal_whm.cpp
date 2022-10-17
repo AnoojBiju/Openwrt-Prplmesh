@@ -64,6 +64,110 @@ base_wlan_hal_whm::~base_wlan_hal_whm()
     base_wlan_hal_whm::detach();
 }
 
+void base_wlan_hal_whm::subscribe_to_radio_events()
+{
+    // subscribe to the WiFi.Radio.iface_name.Status
+    sAmxClEventCallback *event_callback = new sAmxClEventCallback();
+    event_callback->event_type          = {AMX_CL_OBJECT_CHANGED_EVT};
+    event_callback->callback_fn         = [](amxc_var_t *event_data, void *context) -> void {
+        if (!event_data) {
+            return;
+        }
+        base_wlan_hal_whm *hal = (static_cast<base_wlan_hal_whm *>(context));
+        hal->process_radio_event(hal->get_iface_name(), event_data);
+    };
+    event_callback->context = this;
+    std::string filter      = "path matches '" + m_radio_path + "'";
+    filter.append(" && contains('parameters.Status')");
+    m_ambiorix_cl->subscribe_to_object_event(m_radio_path, event_callback, filter);
+}
+
+void base_wlan_hal_whm::subscribe_to_ap_events()
+{
+    std::string wifi_ap_path            = search_path_ap();
+    sAmxClEventCallback *event_callback = new sAmxClEventCallback();
+    event_callback->event_type          = {AMX_CL_OBJECT_CHANGED_EVT};
+    event_callback->callback_fn         = [](amxc_var_t *event_data, void *context) -> void {
+        if (!event_data) {
+            return;
+        }
+        base_wlan_hal_whm *hal      = (static_cast<base_wlan_hal_whm *>(context));
+        std::string ap_obj_path_str = GET_CHAR(event_data, "path");
+        amxc_var_t *ap_obj;
+        if (!hal->get_object(ap_obj, ap_obj_path_str)) {
+            return;
+        }
+        std::string interface = get_ap_iface(ap_obj);
+        if (interface.empty()) {
+            amxc_var_delete(&ap_obj);
+            return;
+        }
+        auto rad_ref = get_path_radio_reference(ap_obj);
+        std::string rad_path;
+        hal->get_amx_cli()->resolve_path(rad_ref, rad_path);
+        amxc_var_delete(&ap_obj);
+        if (rad_path.empty() || (hal->m_radio_path != rad_path)) {
+            return;
+        }
+        hal->process_ap_event(interface, event_data);
+    };
+    event_callback->context = this;
+    std::string filter      = "path matches '" + wifi_ap_path + "[0-9]+.'";
+    filter.append(" && contains('parameters.Status')");
+    m_ambiorix_cl->subscribe_to_object_event(wifi_ap_path, event_callback, filter);
+}
+
+void base_wlan_hal_whm::subscribe_to_sta_events()
+{
+    std::string wifi_ad_path            = search_path_ap() + "[0-9]+.AssociatedDevice.";
+    sAmxClEventCallback *event_callback = new sAmxClEventCallback();
+    event_callback->event_type          = {AMX_CL_OBJECT_CHANGED_EVT};
+    event_callback->callback_fn         = [](amxc_var_t *event_data, void *context) -> void {
+        if (!event_data) {
+            return;
+        }
+        base_wlan_hal_whm *hal       = (static_cast<base_wlan_hal_whm *>(context));
+        std::string sta_obj_path_str = GET_CHAR(event_data, "path");
+        std::string ap_obj_path_str  = get_path_ap_iface_of_assocDev(sta_obj_path_str);
+        amxc_var_t *ap_obj;
+        if (!hal->get_object(ap_obj, ap_obj_path_str)) {
+            return;
+        }
+        auto interface = get_ap_iface(ap_obj);
+        amxc_var_delete(&ap_obj);
+        auto vap_id = hal->get_vap_id_with_bss(interface);
+        if (!hal->check_vap_id(vap_id)) {
+            return;
+        }
+        std::string sta_mac("");
+        hal->get_param<>(sta_mac, sta_obj_path_str, "MACAddress");
+        if (sta_mac.empty()) {
+            return;
+        }
+        hal->process_sta_event(interface, sta_mac, event_data);
+    };
+    event_callback->context = this;
+    std::string filter      = "path matches '" + wifi_ad_path + "[0-9]+.'";
+    filter.append(" && contains('parameters.AuthenticationState')");
+    m_ambiorix_cl->subscribe_to_object_event(wifi_ad_path, event_callback, filter);
+}
+
+bool base_wlan_hal_whm::process_radio_event(const std::string &interface, const amxc_var_t *data)
+{
+    return true;
+}
+
+bool base_wlan_hal_whm::process_ap_event(const std::string &interface, const amxc_var_t *data)
+{
+    return true;
+}
+
+bool base_wlan_hal_whm::process_sta_event(const std::string &interface, const std::string &sta_mac,
+                                          const amxc_var_t *data)
+{
+    return true;
+}
+
 bool base_wlan_hal_whm::fsm_setup() { return true; }
 
 HALState base_wlan_hal_whm::attach(bool block)
