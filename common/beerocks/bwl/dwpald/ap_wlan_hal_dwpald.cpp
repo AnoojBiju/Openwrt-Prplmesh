@@ -3427,11 +3427,10 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
     }
     case Event::Interface_Disconnected: {
         LOG(INFO) << "INTERFACE_DISCONNECTED from intf " << ifname;
-        std::unordered_map<std::string, bool>::iterator con;
-        for (con = conn_state.begin(); con != conn_state.end(); con = con + 1) {
+        for (auto & con:conn_state) {
             // Update interface connection status for vap to false
-            conn_state[con->first] = false;
-            LOG(INFO) << "updated connection status for intf " << con->first << " with false";
+            conn_state[con.first] = false;
+            LOG(INFO) << "updated connection status for intf " << con.first << " with false";
         }
         break;
     }
