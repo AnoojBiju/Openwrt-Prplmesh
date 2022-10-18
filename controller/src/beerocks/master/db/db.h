@@ -1460,6 +1460,18 @@ public:
     bool set_selection_channel_pool(const sMacAddr &ruid,
                                     const std::unordered_set<uint8_t> &channel_pool);
     /**
+     * @brief Add empty channel report entry incase of unsuccessful scan
+     *
+     * @param RUID Radio UID
+     * @param operating_class Operating class of report
+     * @param channel channel of report
+     * @param ISO_8601_timestamp Timestamp of the received Channel Scan Report
+     * @return true on success, false on failure
+     */
+    bool add_empty_channel_report_entry(const sMacAddr &RUID, const uint8_t &operating_class,
+                                        const uint8_t &channel,
+                                        const std::string &ISO_8601_timestamp);
+    /**
      * @brief
      *
      * @param RUID Radio UID
