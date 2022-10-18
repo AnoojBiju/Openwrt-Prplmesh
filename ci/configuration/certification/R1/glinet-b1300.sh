@@ -79,12 +79,12 @@ ubus call IP.Interface _get '{ "rel_path": ".[Name == \"eth0\"]." }' || {
 }
 # We can now add the IP address if there is none yet:
 ubus wait_for "$IP_PATH".IPv4Address
-ubus call IP.Interface _get '{ "rel_path": ".[Name == \"eth0\"].IPv4Address.[Alias == \"eth0\"]." }' || {
+ubus call "$IP_PATH".IPv4Address _get '{ "rel_path": ".[Alias == \"eth0\"]." }' || {
     echo "Adding IP address $IP"
-    ubus call "IP.Interface" _add '{ "rel_path": ".[Name == \"eth0\"].IPv4Address.", "parameters": { "IPAddress": "192.168.250.172", "SubnetMask": "255.255.255.0", "AddressingType": "Static", "Alias": "eth0", "Enable" : true } }'
+    ubus call "$IP_PATH".IPv4Address _add '{ "parameters": { "IPAddress": "192.168.250.172", "SubnetMask": "255.255.255.0", "AddressingType": "Static", "Alias": "eth0", "Enable" : true } }'
 }
 # Finally, we can enable it:
-ubus call "IP.Interface" _set '{ "rel_path": ".[Name == \"eth0\"].", "parameters": { "IPv4Enable": true } }'
+ubus call "$IP_PATH" _set '{ "parameters": { "IPv4Enable": true } }'
 
 # Wired backhaul interface:
 # Set the WAN interface as backhaul interface
