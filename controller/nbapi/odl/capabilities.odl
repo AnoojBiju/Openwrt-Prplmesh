@@ -21,6 +21,26 @@
         ** from mids which defined in controller.odl
         **/
 
+        /* Authentication and Key Management (AKM) Suite (security mode) capabilities for the fronthaul BSS. */
+        %read-only object AKMFrontHaul [] {
+            counted with AKMFrontHaulNumberOfEntries;
+
+            %read-only string OUI;
+            %read-only uint32 Type {
+                on action validate call check_range [0, 255];
+            }
+        }
+
+        /* Authentication and Key Management (AKM) Suite (security mode) capabilities for the backhaul BSS. */
+        %read-only object AKMBackhaul [] {
+            counted with AKMBackhaulNumberOfEntries;
+
+            %read-only string OUI;
+            %read-only uint32 Type {
+                on action validate call check_range [0, 255];
+            }
+        }
+
         object OperatingClasses [] {
             counted with OperatingClassesNumberOfEntries;
             %read-only uint32 Class = 0 {

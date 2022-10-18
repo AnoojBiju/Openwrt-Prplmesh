@@ -55,6 +55,7 @@
 #include <tlvf/ieee_1905_1/tlvSupportedFreqBand.h>
 #include <tlvf/ieee_1905_1/tlvSupportedRole.h>
 #include <tlvf/wfa_map/tlv1905LayerSecurityCapability.h>
+#include <tlvf/wfa_map/tlvAkmSuiteCapabilities.h>
 #include <tlvf/wfa_map/tlvApExtendedMetrics.h>
 #include <tlvf/wfa_map/tlvApMetrics.h>
 #include <tlvf/wfa_map/tlvApRadioIdentifier.h>
@@ -348,6 +349,7 @@ bool Controller::start()
             ieee1905_1::eMessageType::BACKHAUL_STEERING_RESPONSE_MESSAGE,
             ieee1905_1::eMessageType::TUNNELLED_MESSAGE,
             ieee1905_1::eMessageType::BACKHAUL_STA_CAPABILITY_REPORT_MESSAGE,
+            ieee1905_1::eMessageType::BSS_CONFIGURATION_REQUEST_MESSAGE,
             ieee1905_1::eMessageType::FAILED_CONNECTION_MESSAGE,
         })) {
         LOG(ERROR) << "Failed subscribing to the Bus";
@@ -529,6 +531,8 @@ bool Controller::handle_cmdu_1905_1_message(const sMacAddr &src_mac,
         return handle_cmdu_1905_tunnelled_message(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::BACKHAUL_STA_CAPABILITY_REPORT_MESSAGE:
         return handle_cmdu_1905_backhaul_sta_capability_report_message(src_mac, cmdu_rx);
+    case ieee1905_1::eMessageType::BSS_CONFIGURATION_REQUEST_MESSAGE:
+        return handle_cmdu_1905_bss_configuration_request_message(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::FAILED_CONNECTION_MESSAGE:
         return handle_cmdu_1905_failed_connection_message(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::ASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE:
@@ -4117,6 +4121,90 @@ bool Controller::handle_tlv_profile3_1905_layer_security_capabilities(
         LOG(ERROR) << "Failed to add IEEE 1905 security capability";
         return false;
     }
+
+    return true;
+}
+
+bool Controller::handle_cmdu_1905_bss_configuration_request_message(
+    const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto mid = cmdu_rx.getMessageId();
+    LOG(DEBUG) << "Received BSS_CONFIGURATION_REQUEST_MESSAGE, mid=" << std::hex << mid;
+
+    auto agent = database.m_agents.get(src_mac);
+    if (!agent) {
+        LOG(ERROR) << "Agent with mac is not found in database mac=" << src_mac;
+        return false;
+    }
+
+    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_2 &&
+        !handle_tlv_profile3_akm_suite_capabilities(*agent, cmdu_rx)) {
+        LOG(ERROR) << "Profile-3 AKM Suite Capabilities is not supplied for Agent " << agent->al_mac
+                   << " with profile enum " << agent->profile;
+    }
+
+    // TODO: Implement parsing of unhandled TLVs (PPM-2325)
+
+    return true;
+}
+
+bool Controller::handle_tlv_profile3_akm_suite_capabilities(Agent &agent,
+                                                            ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto akm_suite_capabilities_tlv = cmdu_rx.getClass<wfa_map::tlvAkmSuiteCapabilities>();
+    if (!akm_suite_capabilities_tlv) {
+        LOG(DEBUG) << "getClass wfa_map::tlvAkmSuiteCapabilities has failed";
+        return false;
+    }
+
+    LOG(DEBUG) << "Profile-3 AKM Suite Capabilities TLV is received";
+
+    std::vector<wfa_map::tlvAkmSuiteCapabilities::sBssAkmSuiteSelector> backhaul_bss_selectors;
+    std::vector<wfa_map::tlvAkmSuiteCapabilities::sBssAkmSuiteSelector> fronthaul_bss_selectors;
+
+    std::stringstream ss;
+    for (size_t i = 0; i < akm_suite_capabilities_tlv->number_of_bh_bss_akm_suite_selectors();
+         i++) {
+        if (!std::get<0>(akm_suite_capabilities_tlv->backhaul_bss_akm_suite_selectors(i))) {
+            LOG(ERROR) << "Invalid Backhaul BSS Selectors in tlvAkmSuiteCapabilities";
+            continue;
+        }
+
+        auto &selector =
+            std::get<1>(akm_suite_capabilities_tlv->backhaul_bss_akm_suite_selectors(i));
+
+        ss << "Backhaul BSS, OUI: "
+           << wfa_map::tlvAkmSuiteCapabilities::eAkmSuiteOUI_str(
+                  wfa_map::tlvAkmSuiteCapabilities::eAkmSuiteOUI(uint32_t(selector.oui)))
+           << ", suite type: " << (int)selector.akm_suite_type << std::endl;
+
+        backhaul_bss_selectors.push_back(selector);
+    }
+
+    for (size_t i = 0; i < akm_suite_capabilities_tlv->number_of_fh_bss_akm_suite_selectors();
+         i++) {
+        if (!std::get<0>(akm_suite_capabilities_tlv->fronthaul_bss_akm_suite_selectors(i))) {
+            LOG(ERROR) << "Invalid Fronthaul BSS Selectors in tlvAkmSuiteCapabilities";
+            continue;
+        }
+
+        auto &selector =
+            std::get<1>(akm_suite_capabilities_tlv->fronthaul_bss_akm_suite_selectors(i));
+
+        ss << "Fronthaul BSS, OUI: "
+           << wfa_map::tlvAkmSuiteCapabilities::eAkmSuiteOUI_str(
+                  wfa_map::tlvAkmSuiteCapabilities::eAkmSuiteOUI(uint32_t(selector.oui)))
+           << ", suite type: " << (int)selector.akm_suite_type << std::endl;
+
+        fronthaul_bss_selectors.push_back(selector);
+    }
+
+    /* TODO: Establish a accordance between radio and given AKM Suite сapabilities (PPM-2332).
+    if (!database.dm_add_radio_akm_suite_capabilities(radio, fronthaul_bss_selectors, backhaul_bss_selectors) {
+        LOG(ERROR) << "Failed to add AKM Suite Capabilities for radio=" << radio->radio_uid;
+        return false;
+    }
+    */
 
     return true;
 }

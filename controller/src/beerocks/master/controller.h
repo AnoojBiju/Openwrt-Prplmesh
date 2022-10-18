@@ -272,6 +272,9 @@ private:
                                                     ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_cmdu_1905_associated_sta_link_metrics_response_message(
         const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool handle_cmdu_1905_bss_configuration_request_message(const sMacAddr &src_mac,
+                                                            ieee1905_1::CmduMessageRx &cmdu_rx);
+
     bool autoconfig_wsc_parse_radio_caps(
         const sMacAddr &radio_mac,
         std::shared_ptr<wfa_map::tlvApRadioBasicCapabilities> radio_caps);
@@ -400,6 +403,16 @@ private:
     */
     bool handle_tlv_profile3_1905_layer_security_capabilities(const Agent &agent,
                                                               ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief Handles TLV of AKM Suite Capabilities (tlvAkmSuiteCapabilities).
+     *
+     * @param agent Agent DB object.
+     * @param cmdu_rx Received CMDU as Profile3 AKM Suite Capabilities message.
+     * @return True on success, false otherwise.
+    */
+    bool handle_tlv_profile3_akm_suite_capabilities(Agent &agent,
+                                                    ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
      * @brief Extracts ESP value from est_service_info_field and set it to specified
