@@ -392,6 +392,16 @@ private:
                                                        ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
+     * @brief Handles TLV of 1905 Layer Security (tlv1905LayerSecurityCapability).
+     *
+     * @param agent agent db object.
+     * @param cmdu_rx Received CMDU as Profile3 1905 Layer Security Capabilities Report message.
+     * @return True on success, false otherwise.
+    */
+    bool handle_tlv_profile3_1905_layer_security_capabilities(const Agent &agent,
+                                                              ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
      * @brief Extracts ESP value from est_service_info_field and set it to specified
      * with @param_name NBAPI EstServiceParameter.
      *

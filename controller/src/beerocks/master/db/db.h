@@ -19,6 +19,7 @@
 #include <bcl/son/son_wireless_utils.h>
 #include <bpl/bpl_board.h>
 
+#include <tlvf/wfa_map/tlv1905LayerSecurityCapability.h>
 #include <tlvf/wfa_map/tlvApHeCapabilities.h>
 #include <tlvf/wfa_map/tlvApHtCapabilities.h>
 #include <tlvf/wfa_map/tlvApOperationalBSS.h>
@@ -2259,6 +2260,23 @@ public:
      * @return True on success, otherwise false.
      */
     bool dm_add_radio_scan_capabilities(const Agent::sRadio &radio);
+
+    /** @brief Adds instance for Device.{i}.IEEE1905Security and fullfills it.
+     *
+     * Data model path :
+     * "Device.WiFi.DataElements.Network.Device.{i}.IEEE1905Security.{i}."
+     *
+     * @param[in] agent Agent DB object.
+     * @param[in] onboard_protocol Onboarding protocols supported. 0: 1905 Device.
+     * @param[in] integrity_algorithm Message integrity algorithms supported. 0: HMAC-SHA256.
+     * @param[in] encryption_algorithm Message encryption algorithms supported. 0: AES-SIV.
+     * @return true on success, otherwise false.
+     */
+    bool dm_add_agent_1905_layer_security_capabilities(
+        const Agent &agent,
+        const wfa_map::tlv1905LayerSecurityCapability::eOnboardingProtocol &onboard_protocol,
+        const wfa_map::tlv1905LayerSecurityCapability::eMicAlgorithm &integrity_algorithm,
+        const wfa_map::tlv1905LayerSecurityCapability::eEncryptionAlgorithm &encryption_algorithm);
 
     //
     // tasks
