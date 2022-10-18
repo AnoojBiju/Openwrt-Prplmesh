@@ -143,3 +143,7 @@ config_foreach set_channel wifi-device
 uci commit
 /etc/init.d/system restart
 /etc/init.d/network restart
+
+sleep 10
+
+/etc/init.d/prplmesh gateway_mode
