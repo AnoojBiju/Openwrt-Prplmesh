@@ -2157,6 +2157,18 @@ public:
     bool dm_set_profile1_device_info(const Agent &agent);
 
     /**
+     * @brief Sets Device datamodel info parameters.
+     *
+     * DM paths:
+     * "Device.WiFi.DataElements.Network.Device.{i}."
+     * "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}."
+     *
+     * @param agent Agent DB object.
+     * @return True on success, false otherwise.
+     */
+    bool dm_set_profile3_device_info(const Agent &agent);
+
+    /**
      * @brief Adds to data model an instance of object AssociationEventData.
      *
      * This object describes an event generated when a STA associates to a BSS.

@@ -4368,6 +4368,11 @@ bool Controller::handle_tlv_profile3_device_inventory(Agent &agent,
            << std::endl;
     }
 
+    if (!database.dm_set_profile3_device_info(agent)) {
+        LOG(ERROR) << "Failed to set device info parameters for Agent" << agent.al_mac;
+        return false;
+    }
+
     LOG(DEBUG) << ss.str();
     return true;
 }

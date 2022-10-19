@@ -7514,6 +7514,34 @@ bool db::dm_set_profile1_device_info(const Agent &agent)
     return ret_val;
 }
 
+bool db::dm_set_profile3_device_info(const Agent &agent)
+{
+    if (agent.dm_path.empty()) {
+        return true;
+    }
+
+    bool ret_val = true;
+    ret_val &=
+        m_ambiorix_datamodel->set(agent.dm_path, "SerialNumber", agent.device_info.serial_number);
+    ret_val &= m_ambiorix_datamodel->set(agent.dm_path, "SoftwareVersion",
+                                         agent.device_info.software_version);
+    ret_val &=
+        m_ambiorix_datamodel->set(agent.dm_path, "ExecutionEnv", agent.device_info.execution_env);
+    ret_val &=
+        m_ambiorix_datamodel->set(agent.dm_path, "CountryCode", agent.device_info.country_code);
+
+    for (const auto &radio : agent.radios) {
+        if (radio.second->dm_path.empty()) {
+            continue;
+        }
+
+        ret_val &= m_ambiorix_datamodel->set(radio.second->dm_path, "ChipsetVendor",
+                                             radio.second->chipset_vendor);
+    }
+
+    return ret_val;
+}
+
 bool db::dm_remove_radio(Agent::sRadio &radio)
 {
     if (radio.dm_path.empty()) {
