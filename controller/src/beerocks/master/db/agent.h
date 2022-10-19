@@ -105,6 +105,9 @@ public:
 
         bool is_acs_enabled = false;
 
+        /** Name of the Wi-Fi chip vendor of this radio */
+        std::string chipset_vendor;
+
         class s_ap_stats_params {
         public:
             int active_sta_count                 = 0;
