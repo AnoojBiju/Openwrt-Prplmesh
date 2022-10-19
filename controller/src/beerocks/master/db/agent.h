@@ -79,7 +79,14 @@ public:
 
     bool does_support_vbss = false;
 
-    std::string manufacturer;
+    struct sDeviceInfo {
+        std::string manufacturer;
+        std::string manufacturer_model;
+        std::string serial_number;
+        std::string software_version;
+        std::string execution_env;
+        std::string country_code;
+    } device_info;
 
     beerocks::eNodeState state = beerocks::STATE_CONNECTED;
 

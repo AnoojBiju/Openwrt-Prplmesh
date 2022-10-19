@@ -199,12 +199,6 @@ public:
         bool client_optimal_path_roaming_prefer_signal_strength = false;
     } sDbMasterSettings;
 
-    typedef struct {
-        std::string manufacturer;
-        std::string serial_number;
-        std::string manufacturer_model;
-    } sDeviceInfo;
-
     /**
      * @brief Avaliable configuration parameters in NBAPI.
      *
@@ -2155,13 +2149,12 @@ public:
     /**
      * @brief Sets Device datamodel board info parameters.
      *
-     * DM path : "Device.WiFi.DataElements.Network.Device.{i}"
+     * DM path: "Device.WiFi.DataElements.Network.Device.{i}."
      *
-     * @param agent agent whose Device object is set
-     * @param device_info struct with values of board info parameters
+     * @param agent Agent DB object.
      * @return True on success, false otherwise.
      */
-    bool dm_set_device_board_info(const Agent &agent, const sDeviceInfo &device_info);
+    bool dm_set_profile1_device_info(const Agent &agent);
 
     /**
      * @brief Adds to data model an instance of object AssociationEventData.

@@ -208,7 +208,7 @@ bool Controller::start()
         database.add_node_wired_backhaul(eth_switch_mac, database.get_local_bridge_mac());
         database.set_node_state(eth_switch_mac_str, beerocks::STATE_CONNECTED);
         database.set_node_name(eth_switch_mac_str, "GW_CONTROLLER_ETH");
-        database.set_node_manufacturer(eth_switch_mac_str, agent->manufacturer);
+        database.set_node_manufacturer(eth_switch_mac_str, agent->device_info.manufacturer);
     }
 
     // Create a timer to run internal tasks periodically
@@ -1207,8 +1207,10 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
         }
     }
 
-    database.dm_set_device_board_info(*agent,
-                                      {m1->manufacturer(), m1->serial_number(), m1->model_name()});
+    agent->device_info.manufacturer       = m1->manufacturer();
+    agent->device_info.manufacturer_model = m1->model_name();
+    agent->device_info.serial_number      = m1->serial_number();
+    database.dm_set_profile1_device_info(*agent);
 
     return true;
 }
@@ -2315,7 +2317,7 @@ bool Controller::handle_intel_slave_join(
         database.set_node_ipv4(backhaul_mac, bridge_ipv4);
         database.set_node_ipv4(bridge_mac_str, bridge_ipv4);
 
-        database.set_node_manufacturer(backhaul_mac, agent->manufacturer);
+        database.set_node_manufacturer(backhaul_mac, agent->device_info.manufacturer);
 
         database.set_node_type(backhaul_mac, beerocks::TYPE_IRE_BACKHAUL);
 
@@ -2332,7 +2334,7 @@ bool Controller::handle_intel_slave_join(
         database.set_node_state(eth_switch_mac, beerocks::STATE_CONNECTED);
         database.set_node_name(eth_switch_mac, slave_name + "_ETH");
         database.set_node_ipv4(eth_switch_mac, bridge_ipv4);
-        database.set_node_manufacturer(eth_switch_mac, agent->manufacturer);
+        database.set_node_manufacturer(eth_switch_mac, agent->device_info.manufacturer);
 
         //run locating task on ire
         if (!database.is_node_wireless(backhaul_mac)) {
@@ -2639,7 +2641,7 @@ bool Controller::handle_non_intel_slave_join(
     auto eth_switch_mac_binary = beerocks::net::network_utils::get_eth_sw_mac_from_bridge_mac(mac);
     std::string eth_switch_mac = tlvf::mac_to_string(eth_switch_mac_binary);
     LOG(INFO) << "IRE generic Slave joined" << std::endl
-              << "    manufacturer=" << agent->manufacturer << std::endl
+              << "    manufacturer=" << agent->device_info.manufacturer << std::endl
               << "    al_mac=" << bridge_mac << std::endl
               << "    eth_switch_mac=" << eth_switch_mac << std::endl
               << "    backhaul_mac=" << backhaul_mac << std::endl
@@ -2689,14 +2691,14 @@ bool Controller::handle_non_intel_slave_join(
     database.set_node_state(bridge_mac_str, beerocks::STATE_CONNECTED);
     database.set_node_backhaul_iface_type(backhaul_mac, beerocks::eIfaceType::IFACE_TYPE_ETHERNET);
     database.set_node_backhaul_iface_type(bridge_mac_str, beerocks::IFACE_TYPE_BRIDGE);
-    database.set_node_manufacturer(backhaul_mac, agent->manufacturer);
+    database.set_node_manufacturer(backhaul_mac, agent->device_info.manufacturer);
     database.set_node_type(backhaul_mac, beerocks::TYPE_IRE_BACKHAUL);
-    database.set_node_name(backhaul_mac, agent->manufacturer + "_BH");
-    database.set_node_name(bridge_mac_str, agent->manufacturer);
+    database.set_node_name(backhaul_mac, agent->device_info.manufacturer + "_BH");
+    database.set_node_name(bridge_mac_str, agent->device_info.manufacturer);
     database.add_node_wired_backhaul(tlvf::mac_from_string(eth_switch_mac), bridge_mac);
     database.set_node_state(eth_switch_mac, beerocks::STATE_CONNECTED);
-    database.set_node_name(eth_switch_mac, agent->manufacturer + "_ETH");
-    database.set_node_manufacturer(eth_switch_mac, agent->manufacturer);
+    database.set_node_name(eth_switch_mac, agent->device_info.manufacturer + "_ETH");
+    database.set_node_manufacturer(eth_switch_mac, agent->device_info.manufacturer);
 
     // Update existing node, or add a new one
     if (database.has_node(radio_mac)) {
@@ -4021,7 +4023,10 @@ bool Controller::handle_tlv_profile2_cac_capabilities(Agent &agent,
     LOG(DEBUG) << "Profile-2 CAC Capabilities TLV is received";
 
     std::stringstream ss;
-    ss << "Country code: " << int(*cac_capabilities_tlv->country_code()) << std::endl;
+
+    agent.device_info.country_code += static_cast<char>(*cac_capabilities_tlv->country_code(0));
+    agent.device_info.country_code += static_cast<char>(*cac_capabilities_tlv->country_code(1));
+    ss << "Country code: " << agent.device_info.country_code << std::endl;
 
     for (size_t radio_idx = 0; radio_idx < cac_capabilities_tlv->number_of_cac_radios();
          radio_idx++) {

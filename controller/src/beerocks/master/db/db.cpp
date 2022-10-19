@@ -636,7 +636,7 @@ bool db::set_node_manufacturer(const std::string &mac, const std::string &manufa
 bool db::set_agent_manufacturer(prplmesh::controller::db::Agent &agent,
                                 const std::string &manufacturer)
 {
-    agent.manufacturer = manufacturer;
+    agent.device_info.manufacturer = manufacturer;
     return true;
 }
 
@@ -7498,20 +7498,19 @@ bool db::dm_set_device_ssid_to_vid_map(const Agent &agent,
     return ret_val;
 }
 
-bool db::dm_set_device_board_info(const Agent &agent, const sDeviceInfo &device_info)
+bool db::dm_set_profile1_device_info(const Agent &agent)
 {
-    bool ret_val = true;
-
     if (agent.dm_path.empty()) {
         return true;
     }
 
-    const auto device_path = agent.dm_path;
-
-    ret_val &= m_ambiorix_datamodel->set(device_path, "Manufacturer", device_info.manufacturer);
-    ret_val &= m_ambiorix_datamodel->set(device_path, "SerialNumber", device_info.serial_number);
+    bool ret_val = true;
     ret_val &=
-        m_ambiorix_datamodel->set(device_path, "ManufacturerModel", device_info.manufacturer_model);
+        m_ambiorix_datamodel->set(agent.dm_path, "Manufacturer", agent.device_info.manufacturer);
+    ret_val &=
+        m_ambiorix_datamodel->set(agent.dm_path, "SerialNumber", agent.device_info.serial_number);
+    ret_val &= m_ambiorix_datamodel->set(agent.dm_path, "ManufacturerModel",
+                                         agent.device_info.manufacturer_model);
     return ret_val;
 }
 
