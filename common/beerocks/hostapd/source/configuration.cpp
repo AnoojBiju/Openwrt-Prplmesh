@@ -20,6 +20,8 @@ Configuration::Configuration(const std::string &file_name) : m_configuration_fil
 
 Configuration::operator bool() const { return m_ok; }
 
+bool Configuration::update_required() const { return m_update_required; }
+
 bool Configuration::load(const std::set<std::string> &vap_indications)
 {
     // please take a look at README.md (common/beerocks/hostapd/README.md) for
@@ -82,6 +84,8 @@ bool Configuration::load(const std::set<std::string> &vap_indications)
     // if we've got to parsing vaps and no read errors, assume all is good
     m_ok = parsing_vaps && !ifs.bad();
 
+    // reset the update required default state
+    m_update_required = false;
     // return this as bool
     return *this;
 }
@@ -130,14 +134,16 @@ bool Configuration::store()
         }
     }
 
-    m_ok           = true;
-    m_last_message = m_configuration_file + " was stored";
+    m_ok              = true;
+    m_last_message    = m_configuration_file + " was stored";
+    m_update_required = false;
 
     // close the file
     out_file.close();
     if (out_file.fail()) {
-        m_last_message = strerror(errno);
-        m_ok           = false;
+        m_last_message    = strerror(errno);
+        m_ok              = false;
+        m_update_required = true;
     }
 
     return *this;
@@ -195,6 +201,35 @@ std::string Configuration::get_head_value(const std::string &key)
     return line_iter->substr(line_iter->find('=') + 1);
 }
 
+const std::string Configuration::get_vap_by_bssid(const std::string &bssid) const
+{
+    auto bssid_matches = [&bssid](const std::string &line) -> bool {
+        // Split the line into two parts according to the following pattern:
+        //      "Key=Value"
+        const auto parts = beerocks::string_utils::str_split(line, '=');
+        if (parts.size() < 2) {
+            // Line does not match pattern
+            return false;
+        }
+        if (parts.at(0) != "bssid") {
+            // Line is not the bssid parameter
+            return false;
+        }
+        // Check if BSSID matches using case-insensitive comparison.
+        return beerocks::string_utils::case_insensitive_compare(parts.at(1), bssid);
+    };
+    for (const auto &vap_iter : m_hostapd_config_vaps) {
+        // Search the current vap if its BSSID matches the given one.
+        if (std::find_if(vap_iter.second.begin(), vap_iter.second.end(), bssid_matches) ==
+            vap_iter.second.end()) {
+            // Found the vap we are searching for, return it's name (key in the hostapd map).
+            return vap_iter.first;
+        }
+    }
+    // Return an empty string, meaning that the vap was not found.
+    return std::string();
+}
+
 bool Configuration::set_create_vap_value(const std::string &vap, const std::string &key,
                                          const std::string &value)
 {
@@ -236,7 +271,8 @@ bool Configuration::set_create_vap_value(const std::string &vap, const std::stri
             std::string(__FUNCTION__) + " the key '" + key + "' for vap " + vap + " was deleted";
     }
 
-    m_ok = true;
+    m_ok              = true;
+    m_update_required = true;
     return *this;
 }
 

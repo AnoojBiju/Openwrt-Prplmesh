@@ -56,8 +56,6 @@ class ApConfigBSSTeardownCli(PrplMeshBaseTest):
                 f"Radio 0 vap {ssid} bss type is {vap_bss_type.name} "
                 "when it should be Fronthaul")
 
-        self.check_log(agent.radios[1], r".* tear down radio")
-
         for vap in agent.radios[0].vaps:
             vap_ssid = vap.get_ssid()
             if vap_ssid not in (ssid, 'N/A'):
@@ -79,7 +77,6 @@ class ApConfigBSSTeardownCli(PrplMeshBaseTest):
         self.check_log(controller,
                        rf"Setting node '{agent.radios[1].mac}' as active", timeout=10)
 
-        self.check_log(agent.radios[0], r".* tear down radio")
         conn_map = controller.get_conn_map()
         repeater1 = conn_map[agent.mac]
         repeater1_wlan0 = repeater1.radios[agent.radios[0].mac]

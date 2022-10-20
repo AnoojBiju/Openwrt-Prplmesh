@@ -37,6 +37,17 @@ public:
     operator bool() const;
 
     /**
+     * @brief Returns the configuration state.
+     * 
+     * @details This flag is initialized when we load the configuration from the
+     * file, or store it in the file. It cannot be directly modified but when using
+     * this function we can read its state.
+     * 
+     * @return True if an update is required, false otherwise.
+     */
+    bool update_required() const;
+
+    /**
      * @brief load the configuration 
      * @details loads the file this object is constructed with
      * @param vap_indications - set the indications that a vap
@@ -92,6 +103,17 @@ public:
      * @return a string with the value or empty if not found
      */
     std::string get_head_value(const std::string &key);
+
+    /**
+     * @brief Find a VAP using the given BSSID.
+     * 
+     * @details Find a VAP using the given BSSID, assuming that the VAP configuration
+     * has BSSID information stored.
+     * 
+     * @param BSSID The BSSID to find in the VAP list.
+     * @return VAP name if exists, otherwise empty.
+     */
+    const std::string get_vap_by_bssid(const std::string &bssid) const;
 
     /**
      * @brief set key/value for the given vap
@@ -209,6 +231,13 @@ private:
     // m_ok itslef may be changed because of a call to
     // may be changed because of const functions, therefore mutable
     mutable bool m_ok = false;
+
+    // m_update_required holds the internal state on any pending changes
+    // the user may query the state of the configuration simply by readying
+    // this value of this variable.
+    // m_update_required may be changed because of a call to
+    // const functions, therefore mutable.
+    mutable bool m_update_required;
 
     // each string is a line in the original configuration file
     // that belongs to the "head" part. read the explenation at
