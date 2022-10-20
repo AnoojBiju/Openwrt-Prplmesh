@@ -3070,7 +3070,9 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
         std::string bssid = m_radio_info.available_vaps[iface_ids.vap_id].mac;
 
         auto op_class = son::wireless_utils::get_operating_class_by_channel(
-            beerocks::message::sWifiChannel(m_radio_info.channel, m_radio_info.bandwidth));
+            beerocks::WifiChannel(m_radio_info.channel, m_radio_info.vht_center_freq,
+                                  static_cast<beerocks::eWiFiBandwidth>(m_radio_info.bandwidth),
+                                  m_radio_info.channel_ext_above > 0 ? true : false));
         // According to easymesh R2 specification when STA sends BSS_TM_QUERY
         // AP should respond with BSS_TM_REQ with at least one neighbor AP.
         // This commit adds the answer to the BSS_TM_QUERY. The answer adds only
