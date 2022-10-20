@@ -1373,12 +1373,7 @@ bool ChannelSelectionTask::check_is_there_better_channel_than_current(const sMac
                << " has a preference score of " << (int)selected_channel.preference_score
                << " and a DFS state of " << (int)selected_channel.dfs_state << ".";
 
-    if (current_preference >= selected_channel.preference_score) {
-        LOG(DEBUG) << "Currect channel is better or as good as the next best channel, no need "
-                      "to switch";
-        return true;
-    }
-
+    // First validate whether we already operate on the best channel or selected channel.
     if (radio->channel == selected_channel.channel && radio->bandwidth == selected_channel.bw) {
 
         LOG(DEBUG) << "Already operating on channel: " << (int)selected_channel.channel
@@ -1388,6 +1383,12 @@ bool ChannelSelectionTask::check_is_there_better_channel_than_current(const sMac
                    << ".";
 
         radio_request.channel_switch_needed = false;
+        return true;
+    }
+
+    if (current_preference > selected_channel.preference_score) {
+        LOG(DEBUG) << "Currect channel is better than the next best channel, no need "
+                      "to switch";
         return true;
     }
 
@@ -1410,9 +1411,13 @@ ChannelSelectionTask::sSelectedChannel ChannelSelectionTask::select_next_channel
     }
 
     auto find_best_beacon_channel =
-        [&](const std::vector<uint8_t> beacon_channels) -> std::pair<uint8_t, uint8_t> {
-        uint8_t multiap_preference = 0;
-        uint8_t best_bcn_chan      = 0;
+        [&](const uint8_t primary_channel, const beerocks::eWiFiBandwidth bandwidth,
+            const uint8_t operating_class) -> std::pair<uint8_t, uint8_t> {
+        const auto beacon_channels =
+            son::wireless_utils::center_channel_5g_to_beacon_channels(primary_channel, bandwidth);
+
+        uint8_t best_bcn_pref = 0;
+        uint8_t best_bcn_chan = 0;
 
         for (const auto beacon_channel : beacon_channels) {
 
@@ -1420,26 +1425,37 @@ ChannelSelectionTask::sSelectedChannel ChannelSelectionTask::select_next_channel
             const auto operating_class_20Mhz = son::wireless_utils::get_operating_class_by_channel(
                 message::sWifiChannel(beacon_channel, eWiFiBandwidth::BANDWIDTH_20));
 
-            // Get the cumulative channel preference for the operating class & beacon channel using controller preferences.
-            auto tmp_radio_preference = get_cumulative_preference(
+            // Get the cumulative channel preference for the beacon channel.
+            auto beacon_preference = get_cumulative_preference(
                 radio, controller_preferences, operating_class_20Mhz, beacon_channel);
-
-            if (tmp_radio_preference == 0) {
-                LOG(INFO) << "Channel #" << beacon_channel << " in Class #" << operating_class_20Mhz
-                          << " is non-operable";
-            } else if (multiap_preference < tmp_radio_preference) {
+            if (beacon_preference == 0) {
+                LOG(ERROR) << "Channel #" << beacon_channel << " in Class #"
+                           << operating_class_20Mhz << " is non-operable";
+            } else if (best_bcn_pref < beacon_preference) {
                 // Set as the highest preference in the beacon channels
-                multiap_preference = tmp_radio_preference;
-                best_bcn_chan      = beacon_channel;
+                best_bcn_pref = beacon_preference;
+                best_bcn_chan = beacon_channel;
             }
         }
-        return std::make_pair(best_bcn_chan, multiap_preference);
+
+        // Get the 20Mhz operating class for the beacon channel
+        const auto operating_class_20Mhz = son::wireless_utils::get_operating_class_by_channel(
+            message::sWifiChannel(best_bcn_chan, eWiFiBandwidth::BANDWIDTH_20));
+
+        // Get the radio preference for the best beacon
+        auto bcn_radio_pref = get_preference_for_channel(radio->channel_preferences,
+                                                         operating_class_20Mhz, best_bcn_chan);
+        // Get the controller preference for the central channel
+        auto bcn_controller_pref =
+            get_preference_for_channel(controller_preferences, operating_class, primary_channel);
+        // Return the combination of the beacon's radio's preference with the primary's controller's preference.
+        return std::make_pair(best_bcn_chan, (bcn_controller_pref + bcn_radio_pref));
     };
 
     const auto &radio_request        = m_pending_selection.requests[radio_mac];
     const auto &received_preferences = radio_request.controller_preferences;
 
-    sSelectedChannel selected_channel = {};
+    sSelectedChannel best_channel = {};
 
     for (const auto &channel_iter : radio->channels_list) {
         const auto channel_number = channel_iter.first;
@@ -1479,25 +1495,31 @@ ChannelSelectionTask::sSelectedChannel ChannelSelectionTask::select_next_channel
                 continue;
             }
 
-            if (selected_channel.preference_score > cumulative_preference) {
-                // cumulative preference is lower then best, skip.
-                continue;
-            } else if (selected_channel.preference_score == cumulative_preference) {
-                // On a same preference, prefer a higher bandwidth.
-                if (selected_channel.bw <= bandwidth) {
-                    // found bandwidth is lower or equal to the best, skip.
-                    continue;
-                }
-            }
-
-            // For 80M & 160M need to choose best beacon channel according to 20M rankning
+            /** According to the MultiAP EasyMesh specifications R4 Appendix A.3.5
+             * The Multi-AP Controller can indicate its preference for a specific primary channel
+             * for a greater than 40 MHz (e.g., 80 MHz, 160 MHz) operation by including two
+             * operating classes in the Channel Preference TLV, one for the larger bandwidth and 
+             * one for the 20 MHz primary channel. For example, include opclass 128 with channel
+             * numbers 58, 106, 122, 138, and 155 with preference values 1 (implying 42 is the
+             * most preferred) and opclass 115 with channel numbers 36, 44, and 48 with
+             * preferences 1 (implying 40 is the most preferred) to indicate to the Multi-AP
+             * Agent that 80 MHz operation with channel number 40 as the Primary Channel is the
+             * most preferred.
+             *
+             * This means that for bandwidths 80M & 160M we need to choose best beacon
+             * channel according to 20M ranking.
+             * After we have found the best beacon we need to override the higher bandwidth's
+             * preference score so that our higher bandwidth selected channel will be considered
+             * the best primary channel.
+             */
+            //
             auto primary_preference = cumulative_preference;
             if (bandwidth >= eWiFiBandwidth::BANDWIDTH_80) {
-                LOG(INFO) << "Channel " << primary_channel << " is the central channel.";
-                LOG(INFO) << "Finding the best beacon channel";
-                auto best_channel_pair = find_best_beacon_channel(
-                    son::wireless_utils::center_channel_5g_to_beacon_channels(primary_channel,
-                                                                              bandwidth));
+                LOG(INFO) << "[" << primary_channel << "-" << operating_class << "("
+                          << utils::convert_bandwidth_to_int(bandwidth)
+                          << "MHz)] uses a beacon channel.";
+                auto best_channel_pair =
+                    find_best_beacon_channel(primary_channel, bandwidth, operating_class);
                 // For any fail case, we should switch to the selected primary channel
                 if (best_channel_pair.first != 0) {
                     primary_channel    = best_channel_pair.first;
@@ -1507,24 +1529,38 @@ ChannelSelectionTask::sSelectedChannel ChannelSelectionTask::select_next_channel
 
             LOG(INFO) << "[" << primary_channel << "-" << operating_class << "("
                       << utils::convert_bandwidth_to_int(bandwidth)
-                      << "MHz)] is the new Best-Channel, with a preference score of "
-                      << primary_preference;
+                      << "MHz)] has a preference score of " << primary_preference;
+
+            if (primary_preference < best_channel.preference_score) {
+                // Found preference is lower then best, skip.
+                continue;
+            } else if (primary_preference == best_channel.preference_score) {
+                // On a same preference, prefer a higher bandwidth.
+                if (bandwidth <= best_channel.bw) {
+                    // Found bandwidth is lower or equal to the best, skip.
+                    continue;
+                }
+            }
+
+            LOG(INFO) << "[" << primary_channel << "-" << operating_class << "("
+                      << utils::convert_bandwidth_to_int(bandwidth)
+                      << "MHz)] is the new Best-Channel";
             // Override selected channel
-            selected_channel.channel          = primary_channel;
-            selected_channel.preference_score = primary_preference;
-            selected_channel.operating_class  = operating_class;
-            selected_channel.bw               = bandwidth;
-            selected_channel.dfs_state        = channel_info.dfs_state;
+            best_channel.channel          = primary_channel;
+            best_channel.preference_score = primary_preference;
+            best_channel.operating_class  = operating_class;
+            best_channel.bw               = bandwidth;
+            best_channel.dfs_state        = channel_info.dfs_state;
         }
     }
 
-    if (selected_channel.preference_score == 0) {
+    if (best_channel.preference_score == 0) {
         LOG(ERROR) << "Could not find a suitable channel";
         return sSelectedChannel();
     }
 
     // Return our new selected channel.
-    return selected_channel;
+    return best_channel;
 }
 
 bool ChannelSelectionTask::handle_on_demand_selection_request_extension_tlv(
