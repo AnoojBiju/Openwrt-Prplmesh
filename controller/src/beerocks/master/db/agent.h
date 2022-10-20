@@ -19,6 +19,7 @@
 #include <tlvf/wfa_map/tlvChannelScanCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2ApCapability.h>
 #include <tlvf/wfa_map/tlvProfile2MultiApProfile.h>
+#include <tlvf/wfa_map/tlvSteeringPolicy.h>
 
 // Forward declaration of son::node
 namespace son {
@@ -89,6 +90,11 @@ public:
     } device_info;
 
     beerocks::eNodeState state = beerocks::STATE_CONNECTED;
+
+    /** Stations for which local steering is disallowed */
+    beerocks::mac_map<Station> disallowed_local_steering_stations;
+    /** Stations for which BTM steering is disallowed */
+    beerocks::mac_map<Station> disallowed_btm_steering_stations;
 
     struct sRadio {
         sRadio()               = delete;
@@ -183,6 +189,17 @@ public:
             // True: Include Associated Wi-Fi 6 STA Status Report TLV in AP Metrics Response, False: Don't include
             bool assoc_wifi6_sta_status_report_inclusion_policy;
         } metric_reporting_policies;
+
+        struct sSteeringPolicies {
+            // 0x00: Agent Initiated Steering Disallowed
+            // 0x01: Agent Initiated RCPI-based Steering Mandated
+            // 0x02: Agent Initiated RCPI-based Steering Allowed
+            wfa_map::tlvSteeringPolicy::eSteeringPolicy steering_policy;
+            // Defined per BSS Load element [Section 9.4.2.27/802.11-2020]
+            uint8_t channel_utilization_threshold;
+            // Encoded per [Table 9-176/802.11-2020]
+            uint8_t rcpi_steering_threshold;
+        } steering_policies;
 
         struct sBss {
             sBss()             = delete;

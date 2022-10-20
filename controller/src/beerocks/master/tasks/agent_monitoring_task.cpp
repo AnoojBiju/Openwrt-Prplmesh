@@ -22,6 +22,7 @@
 #include <tlvf/wfa_map/tlvProfile2RadioMetrics.h>
 #include <tlvf/wfa_map/tlvProfile2TrafficSeparationPolicy.h>
 #include <tlvf/wfa_map/tlvProfile2UnsuccessfulAssociationPolicy.h>
+#include <tlvf/wfa_map/tlvSteeringPolicy.h>
 
 using namespace beerocks;
 using namespace net;
@@ -362,6 +363,67 @@ bool agent_monitoring_task::send_multi_ap_policy_config_request(const sMacAddr &
 
         unsuccessful_association_policy_tlv->maximum_reporting_rate() =
             database.config.unsuccessful_assoc_max_reporting_rate;
+    }
+
+    auto steering_policy_tlv = cmdu_tx.addClass<wfa_map::tlvSteeringPolicy>();
+    if (!steering_policy_tlv) {
+        LOG(ERROR) << "addClass wfa_map::tlvSteeringPolicy has failed";
+        return false;
+    }
+
+    if (!agent->disallowed_local_steering_stations.empty() &&
+        steering_policy_tlv->alloc_local_steering_disallowed_sta_list(
+            agent->disallowed_local_steering_stations.size())) {
+        LOG(ERROR) << "alloc_local_steering_disallowed_sta_list() has failed!";
+        return false;
+    }
+
+    uint8_t sta_idx = 0;
+    for (const auto &sta : agent->disallowed_local_steering_stations) {
+        auto &sta_mac =
+            std::get<1>(steering_policy_tlv->local_steering_disallowed_sta_list(sta_idx));
+        sta_mac = sta.first;
+        sta_idx++;
+    }
+
+    if (!agent->disallowed_btm_steering_stations.empty() &&
+        steering_policy_tlv->alloc_btm_steering_disallowed_sta_list(
+            agent->disallowed_btm_steering_stations.size())) {
+        LOG(ERROR) << "alloc_btm_steering_disallowed_sta_list() has failed!";
+        return false;
+    }
+
+    sta_idx = 0;
+    for (const auto &sta : agent->disallowed_btm_steering_stations) {
+        auto &sta_mac = std::get<1>(steering_policy_tlv->btm_steering_disallowed_sta_list(sta_idx));
+        sta_mac       = sta.first;
+        sta_idx++;
+    }
+
+    if (!steering_policy_tlv->alloc_radio_ap_control_policy_list(agent->radios.size())) {
+        LOG(ERROR) << "alloc_radio_ap_control_policy_list() has failed!";
+        return false;
+    }
+
+    radio_idx = 0;
+    for (const auto &radio : agent->radios) {
+        if (!std::get<0>(steering_policy_tlv->radio_ap_control_policy_list(radio_idx))) {
+            LOG(ERROR) << "Failed to get radio_ap_control_policy_list from TLV_STEERING_POLICY";
+            return false;
+        }
+        auto &radio_ap_control_policy =
+            std::get<1>(steering_policy_tlv->radio_ap_control_policy_list(radio_idx));
+
+        radio_ap_control_policy.radio_ap_mac    = radio.second->radio_uid;
+        radio_ap_control_policy.steering_policy = radio.second->steering_policies.steering_policy =
+            wfa_map::tlvSteeringPolicy::eSteeringPolicy(database.config.steering_policy);
+        radio_ap_control_policy.channel_utilization_threshold =
+            radio.second->steering_policies.channel_utilization_threshold =
+                database.config.channel_utilization_threshold;
+        radio_ap_control_policy.rcpi_steering_threshold =
+            radio.second->steering_policies.rcpi_steering_threshold =
+                database.config.rcpi_steering_threshold;
+        radio_idx++;
     }
 
     return son_actions::send_cmdu_to_agent(dst_mac, cmdu_tx, database);
