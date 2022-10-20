@@ -8,6 +8,7 @@
 
 #include <bcl/beerocks_defines.h>
 #include <bcl/beerocks_utils.h>
+#include <bcl/beerocks_wifi_channel.h>
 #include <bcl/son/son_wireless_utils.h>
 
 #include <tlvf/wfa_map/tlvChannelPreference.h>
@@ -1467,8 +1468,8 @@ uint16_t wireless_utils::get_vht_central_frequency(uint8_t channel,
         }
         auto &chan_info_map = channel_it->second;
 
-        const auto operating_class =
-            get_operating_class_by_channel(beerocks::message::sWifiChannel(channel, bandwidth));
+        const auto operating_class = get_operating_class_by_channel(
+            beerocks::WifiChannel(channel, beerocks::eFreqType::FREQ_24G, bandwidth));
 
         auto center_freq_it = chan_info_map.find(operating_class);
         if (center_freq_it == chan_info_map.end()) {
