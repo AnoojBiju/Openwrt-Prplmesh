@@ -8,7 +8,17 @@ cp -r /home/openwrt/prplMesh_source /home/openwrt/prplMesh
     rm -rf build ipkg-* .built* .configured* .pkgdir .prepared .quilt_checked .source_dir)
 
 make package/prplmesh/prepare USE_SOURCE_DIR="/home/openwrt/prplMesh" V=s
-make package/prplmesh/compile V=sc -j"$(nproc)"
+# Rebuild the full image:
+
+if ! make -j"$(nproc)" ; then
+    # Building failed. Rebuild with V=sc, but exit immediately even if
+    # the second build succeeds (to let the user/CI know that the
+    # parallel build failed).
+    echo "Build failed. Rebuilding with -j1."
+    make V=sc
+    exit 1
+fi
+
 mkdir -p artifacts
 cat << EOT >> artifacts/prplmesh.buildinfo
 TARGET_SYSTEM=${TARGET_SYSTEM}
