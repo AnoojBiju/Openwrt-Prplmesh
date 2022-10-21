@@ -198,8 +198,8 @@ bool mon_wlan_hal_nl80211::update_stations_stats(const std::string &vap_iface_na
 
             // RX RSSI
             if (sinfo[NL80211_STA_INFO_SIGNAL]) {
-                int8_t signal          = int8_t(nla_get_u8(sinfo[NL80211_STA_INFO_SIGNAL]));
-                sta_stats.rx_rssi_watt = pow(10, (signal / 10.0));
+                int8_t signal = int8_t(nla_get_u8(sinfo[NL80211_STA_INFO_SIGNAL]));
+                sta_stats.rx_rssi_watt += pow(10, (signal / 10.0));
                 sta_stats.rx_rssi_watt_samples_cnt++;
             }
 
