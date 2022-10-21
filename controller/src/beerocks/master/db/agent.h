@@ -165,6 +165,25 @@ public:
             bool dscp_policy;
         } advanced_capabilities;
 
+        struct sMetricReportingPolicies {
+            // 0: Do not report STA Metrics based on RCPI threshold
+            // 1–220: RCPI threshold (encoded per [Table 9-176/802.11-2020])
+            uint8_t sta_reporting_rcpi_threshold;
+            // 0: Use Agent's implementation-specific default RCPI Hysteresis margin
+            // >0: RCPI hysteresis margin value. This field is coded as an unsigned integer in units of decibels (dB)
+            uint8_t sta_reporting_rcpi_hyst_margin_override_threshold;
+            // 0: Do not report AP Metrics based on Channel utilization threshold
+            // >0: AP Metrics Channel Utilization Reporting Threshold (similar to channel utilization measurement in [Section 9.4.2.27/802.11-2020])
+            uint8_t ap_reporting_channel_utilization_threshold;
+
+            // True: Include Associated STA Traffic Stats TLV in AP Metrics Response, False: Don't include
+            bool assoc_sta_traffic_stats_inclusion_policy;
+            // True: Include Associated STA Link Metrics TLV in AP Metrics Response, False: Don't include
+            bool assoc_sta_link_metrics_inclusion_policy;
+            // True: Include Associated Wi-Fi 6 STA Status Report TLV in AP Metrics Response, False: Don't include
+            bool assoc_wifi6_sta_status_report_inclusion_policy;
+        } metric_reporting_policies;
+
         struct sBss {
             sBss()             = delete;
             sBss(const sBss &) = delete;

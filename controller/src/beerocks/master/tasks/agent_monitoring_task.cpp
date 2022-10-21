@@ -302,30 +302,45 @@ bool agent_monitoring_task::send_multi_ap_policy_config_request(const sMacAddr &
     metric_reporting_policy_tlv->metrics_reporting_interval_sec() =
         database.config.link_metrics_request_interval_seconds.count();
 
-    // Add one radio configuration to list
-    // TODO Multiple radio can be implemented within one message (PPM-1139)
-    if (!metric_reporting_policy_tlv->alloc_metrics_reporting_conf_list()) {
-        LOG(ERROR) << "Failed to add metrics_reporting_conf to tlvMetricReportingPolicy";
+    if (!metric_reporting_policy_tlv->alloc_metrics_reporting_conf_list(agent->radios.size())) {
+        LOG(ERROR) << "alloc_metrics_reporting_conf_list() has failed";
         return false;
     }
 
-    auto tuple = metric_reporting_policy_tlv->metrics_reporting_conf_list(0);
-    if (!std::get<0>(tuple)) {
-        LOG(ERROR) << "Failed to get metrics_reporting_conf[0"
-                   << "] from TLV_METRIC_REPORTING_POLICY";
-        return false;
+    uint8_t radio_idx = 0;
+    for (const auto &radio : agent->radios) {
+        if (!std::get<0>(metric_reporting_policy_tlv->metrics_reporting_conf_list(radio_idx))) {
+            LOG(ERROR) << "Failed to get metrics_reporting_conf from TLV_METRIC_REPORTING_POLICY";
+            return false;
+        }
+
+        auto &reporting_conf =
+            std::get<1>(metric_reporting_policy_tlv->metrics_reporting_conf_list(radio_idx));
+
+        reporting_conf.radio_uid = radio.second->radio_uid;
+        reporting_conf.policy.include_associated_sta_link_metrics_tlv_in_ap_metrics_response =
+            radio.second->metric_reporting_policies.assoc_sta_link_metrics_inclusion_policy =
+                database.config.assoc_sta_link_metrics_inclusion_policy;
+        reporting_conf.policy.include_associated_sta_traffic_stats_tlv_in_ap_metrics_response =
+            radio.second->metric_reporting_policies.assoc_sta_traffic_stats_inclusion_policy =
+                database.config.assoc_sta_traffic_stats_inclusion_policy;
+        reporting_conf.policy
+            .include_associated_wifi_6_sta_status_report_tlv_in_ap_metrics_response =
+            radio.second->metric_reporting_policies.assoc_wifi6_sta_status_report_inclusion_policy =
+                database.config.assoc_wifi6_sta_status_report_inclusion_policy;
+
+        reporting_conf.sta_metrics_reporting_rcpi_threshold =
+            radio.second->metric_reporting_policies.sta_reporting_rcpi_threshold =
+                database.config.sta_reporting_rcpi_threshold;
+        reporting_conf.sta_metrics_reporting_rcpi_hysteresis_margin_override =
+            radio.second->metric_reporting_policies
+                .sta_reporting_rcpi_hyst_margin_override_threshold =
+                database.config.sta_reporting_rcpi_hysteresis_margin_override_threshold;
+        reporting_conf.ap_channel_utilization_reporting_threshold =
+            radio.second->metric_reporting_policies.ap_reporting_channel_utilization_threshold =
+                database.config.ap_reporting_channel_utilization_threshold;
+        radio_idx++;
     }
-
-    auto &reporting_conf     = std::get<1>(tuple);
-    reporting_conf.radio_uid = ruid;
-    reporting_conf.policy.include_associated_sta_link_metrics_tlv_in_ap_metrics_response  = 1;
-    reporting_conf.policy.include_associated_sta_traffic_stats_tlv_in_ap_metrics_response = 1;
-    reporting_conf.policy.include_associated_wifi_6_sta_status_report_tlv_in_ap_metrics_response =
-        1;
-
-    reporting_conf.sta_metrics_reporting_rcpi_threshold                  = 0;
-    reporting_conf.sta_metrics_reporting_rcpi_hysteresis_margin_override = 0;
-    reporting_conf.ap_channel_utilization_reporting_threshold            = 0;
 
     if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1) {
         auto unsuccessful_association_policy_tlv =
