@@ -209,7 +209,7 @@ bool agent_monitoring_task::start_agent_monitoring(const sMacAddr &src_mac,
 bool agent_monitoring_task::start_task(const sMacAddr &src_mac, std::shared_ptr<WSC::m1> m1,
                                        ieee1905_1::CmduMessageRx &cmdu_rx)
 {
-    if (!send_tlv_metric_reporting_policy(src_mac, m1, cmdu_rx, cmdu_tx)) {
+    if (!send_multi_ap_policy_config_request(src_mac, m1, cmdu_rx, cmdu_tx)) {
         LOG(ERROR) << "Failed to send Metric Reporting Policy to radio agent=" << src_mac;
     }
     if (!send_tlv_empty_channel_selection_request(src_mac, cmdu_tx)) {
@@ -248,10 +248,10 @@ bool agent_monitoring_task::start_task(const sMacAddr &src_mac, std::shared_ptr<
     return true;
 }
 
-bool agent_monitoring_task::send_tlv_metric_reporting_policy(const sMacAddr &dst_mac,
-                                                             std::shared_ptr<WSC::m1> m1,
-                                                             ieee1905_1::CmduMessageRx &cmdu_rx,
-                                                             ieee1905_1::CmduMessageTx &cmdu_tx)
+bool agent_monitoring_task::send_multi_ap_policy_config_request(const sMacAddr &dst_mac,
+                                                                std::shared_ptr<WSC::m1> m1,
+                                                                ieee1905_1::CmduMessageRx &cmdu_rx,
+                                                                ieee1905_1::CmduMessageTx &cmdu_tx)
 {
     auto radio_basic_caps = cmdu_rx.getClass<wfa_map::tlvApRadioBasicCapabilities>();
     if (!radio_basic_caps) {
@@ -282,6 +282,12 @@ bool agent_monitoring_task::send_tlv_metric_reporting_policy(const sMacAddr &dst
         return false;
     }
 
+    auto agent = database.m_agents.get(dst_mac);
+    if (!agent) {
+        LOG(ERROR) << "Agent with mac is not found in database mac=" << dst_mac;
+        return false;
+    }
+
     if (num_bsss) {
         add_traffic_policy_tlv(database, cmdu_tx, m1);
         add_profile_2default_802q_settings_tlv(database, cmdu_tx, m1);
@@ -303,28 +309,6 @@ bool agent_monitoring_task::send_tlv_metric_reporting_policy(const sMacAddr &dst
         return false;
     }
 
-    auto agent = database.m_agents.get(dst_mac);
-    if (!agent) {
-        LOG(ERROR) << "Agent with mac is not found in database mac=" << dst_mac;
-        return false;
-    }
-
-    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1) {
-        auto unsuccessful_association_policy_tlv =
-            cmdu_tx.addClass<wfa_map::tlvProfile2UnsuccessfulAssociationPolicy>();
-
-        if (!unsuccessful_association_policy_tlv) {
-            LOG(ERROR) << "addClass wfa_map::tlvProfile2UnsuccessfulAssociationPolicy has failed";
-            return false;
-        }
-
-        unsuccessful_association_policy_tlv->report_unsuccessful_associations().report =
-            database.config.unsuccessful_assoc_report_policy;
-
-        unsuccessful_association_policy_tlv->maximum_reporting_rate() =
-            database.config.unsuccessful_assoc_max_reporting_rate;
-    }
-
     auto tuple = metric_reporting_policy_tlv->metrics_reporting_conf_list(0);
     if (!std::get<0>(tuple)) {
         LOG(ERROR) << "Failed to get metrics_reporting_conf[0"
@@ -342,6 +326,22 @@ bool agent_monitoring_task::send_tlv_metric_reporting_policy(const sMacAddr &dst
     reporting_conf.sta_metrics_reporting_rcpi_threshold                  = 0;
     reporting_conf.sta_metrics_reporting_rcpi_hysteresis_margin_override = 0;
     reporting_conf.ap_channel_utilization_reporting_threshold            = 0;
+
+    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1) {
+        auto unsuccessful_association_policy_tlv =
+            cmdu_tx.addClass<wfa_map::tlvProfile2UnsuccessfulAssociationPolicy>();
+
+        if (!unsuccessful_association_policy_tlv) {
+            LOG(ERROR) << "addClass wfa_map::tlvProfile2UnsuccessfulAssociationPolicy has failed";
+            return false;
+        }
+
+        unsuccessful_association_policy_tlv->report_unsuccessful_associations().report =
+            database.config.unsuccessful_assoc_report_policy;
+
+        unsuccessful_association_policy_tlv->maximum_reporting_rate() =
+            database.config.unsuccessful_assoc_max_reporting_rate;
+    }
 
     return son_actions::send_cmdu_to_agent(dst_mac, cmdu_tx, database);
 }
