@@ -987,13 +987,14 @@ bool ChannelSelectionTask::build_channel_preference_report(const sMacAddr &radio
         }
 
         for (auto channel_of_oper_class : oper_class_channels) {
-            // Operating classes 128,129,130 use center channel **unlike the other classes**,
+            // Operating classes 128-130,132-135 use center channel **unlike the other classes**,
             // so convert center channel and bandwidth to main channel.
             // For more info, refer to Table E-4 in the 802.11 specification.
             const auto beacon_channels =
                 son::wireless_utils::is_operating_class_using_central_channel(oper_class_num)
-                    ? son::wireless_utils::center_channel_5g_to_beacon_channels(
-                          channel_of_oper_class, oper_class_bw)
+                    ? son::wireless_utils::center_channel_to_beacon_channels(
+                          channel_of_oper_class, oper_class_bw,
+                          son::wireless_utils::which_freq_op_cls(oper_class_num))
                     : std::vector<uint8_t>{channel_of_oper_class};
 
             // Assume non-operable

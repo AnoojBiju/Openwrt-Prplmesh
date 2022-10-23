@@ -3014,14 +3014,29 @@ int8_t db::get_channel_preference(const sMacAddr &radio_mac, const uint8_t opera
     uint8_t channel = channel_number;
     if (!is_central_channel &&
         wireless_utils::is_operating_class_using_central_channel(operating_class)) {
-        auto bandwidth         = wireless_utils::operating_class_to_bandwidth(operating_class);
-        auto source_channel_it = wireless_utils::channels_table_5g.find(channel_number);
-        if (source_channel_it == wireless_utils::channels_table_5g.end()) {
-            LOG(ERROR) << "Couldn't find source channel " << channel_number
-                       << " for overlapping channels";
+        auto bandwidth = wireless_utils::operating_class_to_bandwidth(operating_class);
+        if (freq_type == eFreqType::FREQ_5G) {
+            auto source_channel_it = wireless_utils::channels_table_5g.find(channel_number);
+            if (source_channel_it == wireless_utils::channels_table_5g.end()) {
+                LOG(ERROR) << "Couldn't find source channel " << channel_number
+                           << "from 5g channels table for overlapping channels";
+                return (int8_t)eChannelPreferenceRankingConsts::INVALID;
+            }
+            channel = source_channel_it->second.at(bandwidth).center_channel;
+        } else if (freq_type == eFreqType::FREQ_6G) {
+            auto source_channel_it = wireless_utils::channels_table_6g.find(channel_number);
+            if (source_channel_it == wireless_utils::channels_table_6g.end()) {
+                LOG(ERROR) << "Couldn't find source channel " << channel_number
+                           << "from 6g channels table for overlapping channels";
+                return (int8_t)eChannelPreferenceRankingConsts::INVALID;
+            }
+            channel = source_channel_it->second.at(bandwidth).center_channel;
+        } else {
+            LOG(ERROR) << "frequency type "
+                       << beerocks::utils::convert_frequency_type_to_string(freq_type)
+                       << " must be either 5g or 6g";
             return (int8_t)eChannelPreferenceRankingConsts::INVALID;
         }
-        channel = source_channel_it->second.at(bandwidth).center_channel;
     }
 
     if (!wireless_utils::is_channel_in_operating_class(operating_class, channel)) {
