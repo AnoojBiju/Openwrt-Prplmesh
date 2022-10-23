@@ -4996,13 +4996,14 @@ void slave_thread::save_cac_capabilities_params_to_db(const std::string &frontha
                 continue;
             }
             for (auto &bw_info : channel_info.supported_bw_list) {
-                auto wifi_channel    = beerocks::message::sWifiChannel(channel, bw_info.bandwidth);
+                auto wifi_channel =
+                    beerocks::WifiChannel(channel, beerocks::FREQ_5G, bw_info.bandwidth);
                 auto operating_class = wireless_utils::get_operating_class_by_channel(wifi_channel);
                 if (operating_class == 0) {
                     continue;
                 }
                 cac_capabilities_local.operating_classes[operating_class].push_back(
-                    wifi_channel.channel);
+                    wifi_channel.get_channel());
             }
         }
 

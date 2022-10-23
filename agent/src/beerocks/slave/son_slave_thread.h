@@ -515,7 +515,7 @@ private:
      * @return NON_OPERABLE if channel is restricted, channel preference otherwise.
      */
     wfa_map::cPreferenceOperatingClasses::ePreference
-    get_channel_preference(message::sWifiChannel channel,
+    get_channel_preference(beerocks::WifiChannel channel,
                            const AgentDB::sChannelPreference &preference,
                            const std::set<uint8_t> &preference_channels_list);
 };

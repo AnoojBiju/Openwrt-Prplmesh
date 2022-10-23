@@ -1420,6 +1420,15 @@ ChannelSelectionTask::sSelectedChannel ChannelSelectionTask::select_next_channel
         return sSelectedChannel();
     }
 
+    auto freq_type = radio->wifi_channel.get_freq_type();
+    if (radio->wifi_channel.is_empty()) {
+        LOG(WARNING) << "wifi channel is empty";
+        freq_type = beerocks::FREQ_5G;
+    } else {
+        LOG(WARNING) << "freq_type: "
+                     << beerocks::utils::convert_frequency_type_to_string(freq_type);
+    }
+
     auto find_best_beacon_channel =
         [&](const uint8_t primary_channel, const beerocks::eWiFiBandwidth bandwidth,
             const uint8_t operating_class) -> std::pair<uint8_t, uint8_t> {
@@ -1433,7 +1442,7 @@ ChannelSelectionTask::sSelectedChannel ChannelSelectionTask::select_next_channel
 
             // Get the 20Mhz operating class for the beacon channel
             const auto operating_class_20Mhz = son::wireless_utils::get_operating_class_by_channel(
-                message::sWifiChannel(beacon_channel, eWiFiBandwidth::BANDWIDTH_20));
+                beerocks::WifiChannel(beacon_channel, freq_type, eWiFiBandwidth::BANDWIDTH_20));
 
             // Get the cumulative channel preference for the beacon channel.
             auto beacon_preference = get_cumulative_preference(
@@ -1479,7 +1488,7 @@ ChannelSelectionTask::sSelectedChannel ChannelSelectionTask::select_next_channel
         for (auto &bw_info : channel_info.supported_bw_list) {
             const auto bandwidth       = bw_info.bandwidth;
             const auto operating_class = son::wireless_utils::get_operating_class_by_channel(
-                message::sWifiChannel(channel_number, bandwidth));
+                beerocks::WifiChannel(channel_number, freq_type, bandwidth));
 
             if (operating_class == 0) {
                 // Skip invalid operating class
