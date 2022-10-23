@@ -25,6 +25,8 @@
 #include <tlvf/wfa_map/tlvClientAssociationEvent.h>
 #include <tlvf/wfa_map/tlvProfile2ReasonCode.h>
 
+#include <beerocks/tlvf/beerocks_message_1905_vs.h>
+
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
 #include "pre_association_steering/pre_association_steering_task.h"
 #endif
@@ -214,6 +216,24 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
     tasks.push_event(database.get_bml_task_id(), bml_task::TOPOLOGY_RESPONSE_UPDATE,
                      &new_bml_event);
 
+    //Parse BssidIfaceMapping vsTLV
+    std::shared_ptr<beerocks_message::tlvVsBssidIfaceMapping> tlvBssidIfaceMapping;
+    auto beerocks_header = beerocks::message_com::parse_intel_vs_message(cmdu_rx);
+    if (beerocks_header) {
+        tlvBssidIfaceMapping =
+            beerocks_header->addClass<beerocks_message::tlvVsBssidIfaceMapping>();
+    }
+    if (tlvBssidIfaceMapping) {
+        LOG(DEBUG) << "Received Bssid Interface Mapping vsTLV from prplMesh agent";
+        for (uint8_t i = 0; i < tlvBssidIfaceMapping->bssid_vap_id_map_length(); i++) {
+            beerocks_message::sBssidVapId &bssid_vap_id =
+                std::get<1>(tlvBssidIfaceMapping->bssid_vap_id_map(i));
+            if (bssid_vap_id.bssid != network_utils::ZERO_MAC) {
+                bssid_vap_map.emplace(bssid_vap_id.bssid, bssid_vap_id.vap_id);
+            }
+        }
+    }
+
     auto tlvApInformation = cmdu_rx.getClass<wfa_map::tlvApOperationalBSS>();
     if (tlvApInformation) {
         for (uint8_t i = 0; i < tlvApInformation->radio_list_length(); i++) {
@@ -229,21 +249,50 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
             }
 
             radio->bsses.keep_new_prepare();
-
             for (uint8_t j = 0; j < radio_entry.radio_bss_list_length(); j++) {
                 auto bss_entry = std::get<1>(radio_entry.radio_bss_list(j));
                 LOG(DEBUG) << "Operational BSS " << bss_entry.radio_bssid();
 
-                auto bss     = radio->bsses.add(bss_entry.radio_bssid(), *radio);
+                //Setting default values.
+                int8_t vap_id = eBeeRocksIfaceIds::IFACE_ID_INVALID;
+
+                auto vap_map_it = bssid_vap_map.find(bss_entry.radio_bssid());
+                if (!bssid_vap_map.empty() && vap_map_it == bssid_vap_map.end()) {
+                    /* We don't expect the Controller to get inside this condition.
+                     * If we don't find the reported BSSID from the AP Operational BSS TLV
+                     * inside this bssid_vap_map and if the same map is not empty, then
+                     * there is a problem with the agent filling up wrong BSSIDs
+                     * inside the tlvVsBssidIfaceMapping, hence a fatal message is displayed.
+                     */
+                    LOG(FATAL) << "Fatal BssidIfaceMapping message";
+                    return false;
+                } else if (vap_map_it != bssid_vap_map.end()) {
+                    vap_id = vap_map_it->second;
+                    LOG(DEBUG) << "bssid=" << vap_map_it->first << ", vap_id=" << int(vap_id);
+                }
+
+                auto bss     = radio->bsses.add(bss_entry.radio_bssid(), *radio, vap_id);
                 bss->enabled = true;
                 bss->ssid    = bss_entry.ssid_str();
                 // Backhaul is not reported in this message. Leave it unchanged.
                 // TODO "backhaul" is not set in this TLV, so just assume false
-                if (!database.update_vap(radio_entry.radio_uid(), bss_entry.radio_bssid(),
-                                         bss_entry.ssid_str(), false)) {
-                    LOG(ERROR) << "Failed to update VAP for radio " << radio_entry.radio_uid()
-                               << " BSS " << bss_entry.radio_bssid() << " SSID "
-                               << bss_entry.ssid_str();
+                if (vap_id == eBeeRocksIfaceIds::IFACE_ID_INVALID) {
+                    LOG(DEBUG) << "Non-Prplmesh Agent";
+                    if (!database.update_vap(radio_entry.radio_uid(), bss_entry.radio_bssid(),
+                                             bss_entry.ssid_str(), false)) {
+                        LOG(ERROR) << "Failed to update VAP for radio " << radio_entry.radio_uid()
+                                   << " BSS " << bss_entry.radio_bssid() << " SSID "
+                                   << bss_entry.ssid_str();
+                    }
+                } else {
+                    LOG(DEBUG) << "Prplmesh Agent";
+                    if (!database.add_vap(tlvf::mac_to_string(radio_entry.radio_uid()), int(vap_id),
+                                          tlvf::mac_to_string(bss_entry.radio_bssid()),
+                                          bss_entry.ssid_str(), false)) {
+                        LOG(ERROR)
+                            << "Failed to add VAP for radio " << radio_entry.radio_uid() << " BSS "
+                            << bss_entry.radio_bssid() << " SSID " << bss_entry.ssid_str();
+                    }
                 }
             }
             auto removed = radio->bsses.keep_new_remove_old();
