@@ -162,16 +162,18 @@ private:
         uint8_t csa_count;
     };
     struct sOnDemandChannelSelectionRequest : public sChannelSelectionRequest {
-        sOnDemandChannelSelectionRequest(uint8_t channel_number_, uint8_t operating_class_,
-                                         uint8_t csa_count_)
+        sOnDemandChannelSelectionRequest(uint8_t channel_number_, uint8_t primary_beacon_channel_,
+                                         uint8_t operating_class_, uint8_t csa_count_)
             : sChannelSelectionRequest(csa_count_), channel_number(channel_number_),
-              operating_class(operating_class_)
+              primary_beacon_channel(primary_beacon_channel_), operating_class(operating_class_)
         {
         }
 
         uint8_t channel_number;
+        uint8_t primary_beacon_channel;
         uint8_t operating_class;
     };
+
     struct sOnDemandAutoChannelSelectionRequest : public sChannelSelectionRequest {
         sOnDemandAutoChannelSelectionRequest(const std::unordered_set<uint8_t> &channel_pool_,
                                              uint8_t csa_count_)

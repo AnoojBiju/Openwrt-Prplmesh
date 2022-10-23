@@ -93,7 +93,6 @@ get_preference_for_channel(const AgentDB::sRadio::channel_preferences_map &chann
      * This means that we need to assume that the channel has the
      * highest preference.
      */
-    LOG(DEBUG) << "Could not find Channel " << channel_number << " in the preference!";
     return (uint8_t)beerocks::eChannelPreferenceRankingConsts::BEST;
 }
 
@@ -132,18 +131,7 @@ get_cumulative_preference(const AgentDB::sRadio *radio,
     if (radio_preference == NON_OPERABLE || controller_preference == NON_OPERABLE) {
         return NON_OPERABLE;
     }
-
-    const auto cumulative_preference = (radio_preference + controller_preference);
-
-    LOG(INFO) << "Channel: " << channel_number << " "
-              << "Operating Class: " << operating_class << " "
-              << "Bandwidth: "
-              << utils::convert_bandwidth_to_int(
-                     son::wireless_utils::operating_class_to_bandwidth(operating_class))
-              << "MHz "
-              << "has a cumulative preference of " << cumulative_preference << "("
-              << radio_preference << "+" << controller_preference << ")";
-    return cumulative_preference;
+    return (radio_preference + controller_preference);
 }
 
 ChannelSelectionTask::ChannelSelectionTask(BackhaulManager &btl_ctx,
@@ -1388,7 +1376,8 @@ bool ChannelSelectionTask::check_is_there_better_channel_than_current(const sMac
      * And is better then our currect channel.
      * Switch to that channel.
      */
-    sSelectedChannel selected_channel = select_next_channel(radio_mac);
+    sSelectedChannel selected_channel =
+        select_next_channel(radio_mac, radio_request.controller_preferences);
     if (selected_channel.channel == 0) {
         LOG(ERROR) << "Could not find a better channel!";
         radio_request.response_code = wfa_map::tlvChannelSelectionResponse::eResponseCode::
@@ -1396,16 +1385,28 @@ bool ChannelSelectionTask::check_is_there_better_channel_than_current(const sMac
         return false;
     }
 
-    LOG(DEBUG) << "Next best channel " << (int)selected_channel.operating_class << "-"
-               << (int)selected_channel.channel << " bandwidth: "
+    LOG(DEBUG) << "Next best channel " << (int)selected_channel.channel << "-"
+               << (int)selected_channel.operating_class << " bandwidth: "
                << beerocks::utils::convert_bandwidth_to_int(
                       beerocks::eWiFiBandwidth(selected_channel.bw))
-               << " has a cumulative preference score of "
-               << (int)selected_channel.preference_score;
+               << " has a preference score of " << (int)selected_channel.preference_score
+               << " and a DFS state of " << (int)selected_channel.dfs_state << ".";
 
     if (current_preference >= selected_channel.preference_score) {
         LOG(DEBUG) << "Currect channel is better or as good as the next best channel, no need "
                       "to switch";
+        return true;
+    }
+
+    if (radio->channel == selected_channel.channel && radio->bandwidth == selected_channel.bw) {
+
+        LOG(DEBUG) << "Already operating on channel: " << (int)selected_channel.channel
+                   << " with bandwidth: "
+                   << beerocks::utils::convert_bandwidth_to_int(
+                          beerocks::eWiFiBandwidth(selected_channel.bw))
+                   << ".";
+
+        radio_request.channel_switch_needed = false;
         return true;
     }
 
@@ -1417,14 +1418,42 @@ bool ChannelSelectionTask::check_is_there_better_channel_than_current(const sMac
     return true;
 }
 
-ChannelSelectionTask::sSelectedChannel
-ChannelSelectionTask::select_next_channel(const sMacAddr &radio_mac)
+ChannelSelectionTask::sSelectedChannel ChannelSelectionTask::select_next_channel(
+    const sMacAddr &radio_mac,
+    const AgentDB::sRadio::channel_preferences_map &controller_preferences)
 {
     auto radio = AgentDB::get()->get_radio_by_mac(radio_mac);
     if (!radio) {
         LOG(DEBUG) << "Radio " << radio_mac << " does not exist on the db";
         return sSelectedChannel();
     }
+
+    auto find_best_beacon_channel =
+        [&](const std::vector<uint8_t> beacon_channels) -> std::pair<uint8_t, uint8_t> {
+        uint8_t multiap_preference = 0;
+        uint8_t best_bcn_chan      = 0;
+
+        for (const auto beacon_channel : beacon_channels) {
+
+            // Get the 20Mhz operating class for the beacon channel
+            const auto operating_class_20Mhz = son::wireless_utils::get_operating_class_by_channel(
+                message::sWifiChannel(beacon_channel, eWiFiBandwidth::BANDWIDTH_20));
+
+            // Get the cumulative channel preference for the operating class & beacon channel using controller preferences.
+            auto tmp_radio_preference = get_cumulative_preference(
+                radio, controller_preferences, operating_class_20Mhz, beacon_channel);
+
+            if (tmp_radio_preference == 0) {
+                LOG(INFO) << "Channel #" << beacon_channel << " in Class #" << operating_class_20Mhz
+                          << " is non-operable";
+            } else if (multiap_preference < tmp_radio_preference) {
+                // Set as the highest preference in the beacon channels
+                multiap_preference = tmp_radio_preference;
+                best_bcn_chan      = beacon_channel;
+            }
+        }
+        return std::make_pair(best_bcn_chan, multiap_preference);
+    };
 
     const auto &radio_request        = m_pending_selection.requests[radio_mac];
     const auto &received_preferences = radio_request.controller_preferences;
@@ -1446,14 +1475,11 @@ ChannelSelectionTask::select_next_channel(const sMacAddr &radio_mac)
                 message::sWifiChannel(channel_number, bandwidth));
 
             if (operating_class == 0) {
-                LOG(WARNING) << "Skipping invalid operating class for Channel " << channel_number
-                             << "& Bandwidth: " << utils::convert_bandwidth_to_int(bandwidth)
-                             << "MHz.";
                 // Skip invalid operating class
                 continue;
             }
 
-            auto central_channel = channel_number;
+            auto primary_channel = channel_number;
             if (son::wireless_utils::is_operating_class_using_central_channel(operating_class)) {
                 auto source_channel_it =
                     son::wireless_utils::channels_table_5g.find(channel_number);
@@ -1462,11 +1488,11 @@ ChannelSelectionTask::select_next_channel(const sMacAddr &radio_mac)
                                  << " for overlapping channels";
                     continue;
                 }
-                central_channel = source_channel_it->second.at(bandwidth).center_channel;
+                primary_channel = source_channel_it->second.at(bandwidth).center_channel;
             }
 
             const auto cumulative_preference = get_cumulative_preference(
-                radio, received_preferences, operating_class, central_channel);
+                radio, received_preferences, operating_class, primary_channel);
             if (cumulative_preference == 0) {
                 // Either radio or controller preference is Non-Operable, skipping
                 continue;
@@ -1475,25 +1501,39 @@ ChannelSelectionTask::select_next_channel(const sMacAddr &radio_mac)
             if (selected_channel.preference_score > cumulative_preference) {
                 // cumulative preference is lower then best, skip.
                 continue;
-            }
-
-            if (selected_channel.preference_score == cumulative_preference) {
+            } else if (selected_channel.preference_score == cumulative_preference) {
                 // On a same preference, prefer a higher bandwidth.
                 if (selected_channel.bw <= bandwidth) {
-                    // found bandwidth is lower or equals to the best, skip.
+                    // found bandwidth is lower or equal to the best, skip.
                     continue;
                 }
             }
 
-            LOG(INFO) << "[" << channel_number << "-" << operating_class << "("
+            // For 80M & 160M need to choose best beacon channel according to 20M rankning
+            auto primary_preference = cumulative_preference;
+            if (bandwidth >= eWiFiBandwidth::BANDWIDTH_80) {
+                LOG(INFO) << "Channel " << primary_channel << " is the central channel.";
+                LOG(INFO) << "Finding the best beacon channel";
+                auto best_channel_pair = find_best_beacon_channel(
+                    son::wireless_utils::center_channel_5g_to_beacon_channels(primary_channel,
+                                                                              bandwidth));
+                // For any fail case, we should switch to the selected primary channel
+                if (best_channel_pair.first != 0) {
+                    primary_channel    = best_channel_pair.first;
+                    primary_preference = best_channel_pair.second;
+                }
+            }
+
+            LOG(INFO) << "[" << primary_channel << "-" << operating_class << "("
                       << utils::convert_bandwidth_to_int(bandwidth)
-                      << "MHz)] is the new Best-Channel.";
+                      << "MHz)] is the new Best-Channel, with a preference score of "
+                      << primary_preference;
             // Override selected channel
-            selected_channel.channel          = channel_number;
+            selected_channel.channel          = primary_channel;
+            selected_channel.preference_score = primary_preference;
             selected_channel.operating_class  = operating_class;
             selected_channel.bw               = bandwidth;
             selected_channel.dfs_state        = channel_info.dfs_state;
-            selected_channel.preference_score = cumulative_preference;
         }
     }
 
@@ -1502,12 +1542,7 @@ ChannelSelectionTask::select_next_channel(const sMacAddr &radio_mac)
         return sSelectedChannel();
     }
 
-    LOG(INFO) << "Next Best channel is [" << selected_channel.channel << "-"
-              << selected_channel.operating_class << "("
-              << utils::convert_bandwidth_to_int(selected_channel.bw)
-              << "MHz)] with a preference score of " << selected_channel.preference_score
-              << " and has a DFS state of " << selected_channel.dfs_state;
-    // Override selected channel
+    // Return our new selected channel.
     return selected_channel;
 }
 
