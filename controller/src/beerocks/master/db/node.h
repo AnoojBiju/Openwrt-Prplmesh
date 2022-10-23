@@ -115,7 +115,7 @@ public:
 
         std::string iface_name;
         beerocks::eIfaceType iface_type;
-        std::vector<beerocks::message::sWifiChannel> supported_channels;
+        std::vector<beerocks::WifiChannel> supported_channels;
         uint8_t operating_class = 0;
         int ant_gain            = 0;
         int tx_power            = 0;

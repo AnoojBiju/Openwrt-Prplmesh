@@ -1118,9 +1118,8 @@ public:
     int get_hostap_tx_power(const sMacAddr &mac);
 
     bool set_hostap_supported_channels(const sMacAddr &mac,
-                                       beerocks::message::sWifiChannel *supported_channels,
-                                       int length);
-    std::vector<beerocks::message::sWifiChannel> get_hostap_supported_channels(const sMacAddr &mac);
+                                       beerocks::WifiChannel *supported_channels, int length);
+    std::vector<beerocks::WifiChannel> get_hostap_supported_channels(const sMacAddr &mac);
     std::string get_hostap_supported_channels_string(const sMacAddr &radio_mac);
 
     bool add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t operating_class,
