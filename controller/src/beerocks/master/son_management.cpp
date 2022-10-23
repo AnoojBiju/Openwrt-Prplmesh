@@ -25,6 +25,7 @@
 #include <beerocks/tlvf/beerocks_message_bml.h>
 #include <beerocks/tlvf/beerocks_message_cli.h>
 
+#include <tlvf/tlvftypes.h>
 #include <tlvf/wfa_map/tlvClientAssociationControlRequest.h>
 #include <tlvf/wfa_map/tlvUnassociatedStaLinkMetricsQuery.h>
 
@@ -1680,10 +1681,14 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             LOG(ERROR) << "Failed building cACTION_BML_TRIGGER_CHANNEL_SELECTION_RESPONSE";
         }
 
+        auto radio_mac_str = tlvf::mac_to_string(request->radio_mac());
+        auto freq_type     = database.get_node_wifi_channel(radio_mac_str).get_freq_type();
+
         LOG(INFO) << "ACTION_BML_TRIGGER_CHANNEL_SELECTION_REQUEST "
                   << ", radio_mac=" << request->radio_mac() << ", channel=" << request->channel()
                   << ", bandwidth=" << request->bandwidth()
-                  << ", csa_count=" << request->csa_count();
+                  << ", csa_count=" << request->csa_count() << ", band type of radio mac= "
+                  << beerocks::utils::convert_frequency_type_to_string(freq_type);
 
         if (!database.get_agent_by_radio_uid(request->radio_mac())) {
             response->code() = uint8_t(eChannelSwitchStatus::ERROR);
@@ -1698,7 +1703,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
 
             // Get operating-class & check validity
             operating_class = wireless_utils::get_operating_class_by_channel(
-                beerocks::message::sWifiChannel(request->channel(), request->bandwidth()));
+                beerocks::WifiChannel(request->channel(), freq_type, request->bandwidth()));
             if (operating_class == 0) {
                 LOG(ERROR) << "channel #" << request->channel() << " and bandwidth "
                            << beerocks::utils::convert_bandwidth_to_int(request->bandwidth())

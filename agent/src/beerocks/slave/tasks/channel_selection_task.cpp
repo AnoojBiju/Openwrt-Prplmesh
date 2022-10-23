@@ -1668,8 +1668,10 @@ bool ChannelSelectionTask::send_channel_switch_request(
     auto action_header         = message_com::get_beerocks_header(m_cmdu_tx)->actionhdr();
     action_header->radio_mac() = radio_mac;
 
-    LOG(DEBUG) << "Sending a CHANNEL_SWITCH request to radio " << radio_mac
-               << " with the following paramenters:" << std::endl
+    LOG(DEBUG) << "Sending a CHANNEL_SWITCH request to radio " << radio_mac << " (band: "
+               << beerocks::utils::convert_frequency_type_to_string(
+                      request.outgoing_request.freq_type)
+               << ") with the following paramenters:" << std::endl
                << "- Channel: " << request_msg->cs_params().channel << std::endl
                << "- bandwidth: " << request_msg->cs_params().bandwidth << std::endl
                << "- CSA count: " << request_msg->cs_params().csa_count << std::endl

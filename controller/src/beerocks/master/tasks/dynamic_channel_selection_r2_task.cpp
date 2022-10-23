@@ -721,11 +721,23 @@ bool dynamic_channel_selection_r2_task::handle_on_demand_channel_selection_reque
     } else {
         auto requested_channel = channel;
         if (wireless_utils::is_operating_class_using_central_channel(operating_class)) {
-            auto bandwidth         = wireless_utils::operating_class_to_bandwidth(operating_class);
-            auto source_channel_it = wireless_utils::channels_table_5g.find(channel);
-            if (source_channel_it == wireless_utils::channels_table_5g.end()) {
+            auto bandwidth = wireless_utils::operating_class_to_bandwidth(operating_class);
+            auto freq_type = wireless_utils::which_freq_op_cls(operating_class);
+            std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, son::wireless_utils::sChannel>>
+                channels_table;
+            if (freq_type == beerocks::eFreqType::FREQ_5G) {
+                channels_table = wireless_utils::channels_table_5g;
+            } else if (freq_type == beerocks::eFreqType::FREQ_6G) {
+                channels_table = wireless_utils::channels_table_6g;
+            } else {
+                LOG(ERROR) << "operating class " << operating_class
+                           << " needs to be of either 5G or 6G bands";
+                return false;
+            }
+            auto source_channel_it = channels_table.find(channel);
+            if (source_channel_it == channels_table.end()) {
                 LOG(ERROR) << "Couldn't find source channel " << channel
-                           << " for overlapping channels";
+                           << " for overlapping channels. operating class: " << operating_class;
                 return false;
             }
             requested_channel = source_channel_it->second.at(bandwidth).center_channel;
