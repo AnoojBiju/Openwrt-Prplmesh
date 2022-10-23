@@ -1983,23 +1983,30 @@ bool wireless_utils::get_subset_20MHz_channels(const uint8_t channel_number,
         // "channel_number" is an actual channel
         resulting_channels.insert(channel_number);
         return true;
-    }
-
-    // The given channel number is a central channel
-    // Iterate over the 5GHz channel table.
-    for (const auto &channel_it : son::wireless_utils::channels_table_5g) {
-        // Find the bandwidth within the channel
-        const auto bw_channel_elem = channel_it.second.find(operating_bandwidth);
-        if (bw_channel_elem == channel_it.second.end()) {
-            continue;
+    } else if (116 <= operating_class && operating_class <= 136) {
+        const std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, wireless_utils::sChannel>>
+            *channels_table = {};
+        if (operating_class <= 130) {
+            channels_table = &(son::wireless_utils::channels_table_5g);
+        } else {
+            channels_table = &(son::wireless_utils::channels_table_6g);
         }
-        // Check if the central channel matches the found bandwidth element
-        if (bw_channel_elem->second.center_channel != channel_number) {
-            continue;
+        // The given channel number is a central channel
+        // Iterate over the 5GHz/6GHz channel table.
+        for (const auto &channel_it : *channels_table) {
+            // Find the bandwidth within the channel
+            const auto bw_channel_elem = channel_it.second.find(operating_bandwidth);
+            if (bw_channel_elem == channel_it.second.end()) {
+                continue;
+            }
+            // Check if the central channel matches the found bandwidth element
+            if (bw_channel_elem->second.center_channel != channel_number) {
+                continue;
+            }
+            // Get the range of the subset of 20MHz channels
+            get_range(bw_channel_elem->second.overlap_beacon_channels_range);
+            return true;
         }
-        // Get the range of the subset of 20MHz channels
-        get_range(bw_channel_elem->second.overlap_beacon_channels_range);
-        return true;
     }
     // No matching elements were found
     return false;
