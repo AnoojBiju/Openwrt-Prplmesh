@@ -779,9 +779,7 @@ bool db::set_radio_channel_scan_capabilites(
             // add comma if not last channel in the list, else close list by add curl brackets
             ss << (((ch_idx + 1) != channel_list_length) ? "," : "}");
 
-            beerocks::message::sWifiChannel wifi_channel;
-            wifi_channel.channel = *channel;
-            operating_classes[operating_class].push_back(wifi_channel);
+            operating_classes[operating_class].push_back(*channel);
         }
     }
     ss << std::endl;
@@ -7764,13 +7762,13 @@ bool db::dm_add_radio_scan_capabilities(const Agent::sRadio &radio)
 
         ret_val &= m_ambiorix_datamodel->set(oc_channels_path, "OpClass", oc_ch.first);
 
-        for (auto &wifi_channel : oc_ch.second) {
+        for (auto &channel : oc_ch.second) {
             auto channels_path = m_ambiorix_datamodel->add_instance(oc_channels_path + ".Channel");
             if (oc_channels_path.empty()) {
                 return false;
             }
 
-            ret_val &= m_ambiorix_datamodel->set(channels_path, "Channel", wifi_channel.channel);
+            ret_val &= m_ambiorix_datamodel->set(channels_path, "Channel", channel);
         }
     }
 

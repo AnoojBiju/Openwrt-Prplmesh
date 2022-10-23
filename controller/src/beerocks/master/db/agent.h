@@ -180,8 +180,7 @@ public:
 
             // An unordered-map of operating classes the radio can scan on
             // Key: operating-class id, Value: vector with channels
-            std::unordered_map<uint8_t, std::vector<beerocks::message::sWifiChannel>>
-                operating_classes;
+            std::unordered_map<uint8_t, std::vector<uint8_t>> operating_classes;
         };
         channel_scan_capabilities scan_capabilities;
 
