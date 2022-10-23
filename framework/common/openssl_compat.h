@@ -14,6 +14,12 @@
 
 #include <openssl/engine.h>
 #include <openssl/hmac.h>
+#include <openssl/ecdsa.h>
+#include <openssl/dsa.h>
+#include <openssl/ossl_typ.h>
+#include <openssl/rsa.h>
+#include <openssl/bn.h>
+#include <openssl/dh.h>
 
 #ifdef __cplusplus
 extern "C" {
