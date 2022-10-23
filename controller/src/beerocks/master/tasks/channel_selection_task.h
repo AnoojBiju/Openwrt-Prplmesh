@@ -59,9 +59,6 @@ public:
     typedef struct {
         sMacAddr hostap_mac;
         beerocks_message::sApChannelSwitch cs_params;
-
-        beerocks::message::sWifiChannel
-            supported_channels[beerocks::message::SUPPORTED_CHANNELS_LENGTH];
     } sAcsResponse_event;
 
     typedef struct {
@@ -71,8 +68,6 @@ public:
         uint8_t backhaul_channel;
         uint8_t channel;
         beerocks_message::sApChannelSwitch cs_params;
-        beerocks::message::sWifiChannel
-            supported_channels[beerocks::message::SUPPORTED_CHANNELS_LENGTH];
     } sSlaveJoined_event;
 
     typedef struct {
