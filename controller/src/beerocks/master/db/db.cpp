@@ -2721,36 +2721,6 @@ bool db::set_supported_channel_radar_affected(const sMacAddr &mac,
     return true;
 }
 
-bool db::set_hostap_is_dfs(const sMacAddr &mac, bool enable)
-{
-    std::shared_ptr<node> n = get_node(mac);
-
-    if (!n) {
-        LOG(ERROR) << "node not found.... ";
-        return false;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
-        return false;
-    }
-    n->hostap->is_dfs = enable;
-    return true;
-}
-
-bool db::get_hostap_is_dfs(const sMacAddr &mac)
-{
-    auto n = get_node(mac);
-
-    if (!n) {
-        LOG(ERROR) << "node not found.... ";
-        return false;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(ERROR) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
-        return false;
-    }
-
-    return n->hostap->is_dfs;
-}
-
 bool db::set_hostap_cac_completed(const sMacAddr &mac, bool enable)
 {
     std::shared_ptr<node> n = get_node(mac);
@@ -5083,27 +5053,10 @@ bool db::set_node_wifi_channel(const sMacAddr &mac, const beerocks::WifiChannel 
     }
     if (n->get_type() == beerocks::TYPE_SLAVE) {
         if (n->hostap != nullptr) {
-            n->hostap->channel_ext_above_primary = wifi_channel.get_ext_above_primary();
-            n->hostap->vht_center_frequency      = wifi_channel.get_center_frequency();
-            auto is_dfs                          = wifi_channel.is_dfs_channel();
-            set_hostap_is_dfs(mac, is_dfs);
-
-            auto channel = wifi_channel.get_channel();
-            //TODO: check 6ghz operating channels
-            if (channel >= 1 && channel <= 13) {
-                n->hostap->operating_class = 81;
-            } else if (channel == 14) {
-                n->hostap->operating_class = 82;
-            } else if (channel >= 36 && channel <= 48) {
-                n->hostap->operating_class = 115;
-            } else if (channel >= 52 && channel <= 64) {
-                n->hostap->operating_class = 118;
-            } else if (channel >= 100 && channel <= 140) {
-                n->hostap->operating_class = 121;
-            } else if (channel >= 149 && channel <= 169) {
-                n->hostap->operating_class = 125;
-            } else {
-                LOG(ERROR) << "Unsupported Operating Class for channel=" << channel;
+            n->hostap->operating_class =
+                son::wireless_utils::get_operating_class_by_channel(wifi_channel);
+            if (n->hostap->operating_class == 0) {
+                LOG(ERROR) << "failed to get operating class of " << wifi_channel;
             }
         } else {
             LOG(ERROR) << __FUNCTION__ << " - node " << mac << " is null!";
@@ -5163,12 +5116,7 @@ bool db::update_node_wifi_channel_bw(const sMacAddr &mac, beerocks::eWiFiBandwid
         return true;
     }
     if (n->get_type() == beerocks::TYPE_SLAVE) {
-        if (n->hostap != nullptr) {
-            //calculate new vht center freq with the new channel width
-            n->hostap->vht_center_frequency = wireless_utils::channel_to_vht_center_freq(
-                n->wifi_channel.get_channel(), n->wifi_channel.get_freq_type(), bw,
-                n->wifi_channel.get_ext_above_secondary());
-        } else {
+        if (n->hostap == nullptr) {
             LOG(ERROR) << __FUNCTION__ << " - node " << mac << " is null!";
             return false;
         }
@@ -5194,31 +5142,6 @@ bool db::update_node_wifi_channel_bw(const sMacAddr &mac, beerocks::eWiFiBandwid
         child->wifi_channel.set_bandwidth(bw);
     }
     return true;
-}
-
-bool db::get_hostap_channel_ext_above_primary(const sMacAddr &hostap_mac)
-{
-    auto n = get_node(hostap_mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << hostap_mac << " does not exist!";
-        return false;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(WARNING) << __FUNCTION__ << "node " << hostap_mac << " is not a valid hostap!";
-        return false;
-    }
-    return n->hostap->channel_ext_above_primary;
-}
-
-uint16_t db::get_hostap_vht_center_frequency(const sMacAddr &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return 0;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        return 0;
-    }
-    return n->hostap->vht_center_frequency;
 }
 
 //

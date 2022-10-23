@@ -1249,9 +1249,6 @@ public:
                                               const std::vector<uint8_t> &channels, bool affected);
     //bool get_supported_channel_all_availble(const std::string &mac );
 
-    bool set_hostap_is_dfs(const sMacAddr &mac, bool enable);
-    bool get_hostap_is_dfs(const sMacAddr &mac);
-
     bool set_hostap_cac_completed(const sMacAddr &mac, bool enable);
     bool get_hostap_cac_completed(const sMacAddr &mac);
 
@@ -1922,9 +1919,6 @@ public:
      *      3. the node's type is TYPE_SLAVE and the node's hostap object is nullptr
      */
     bool update_node_wifi_channel_bw(const sMacAddr &mac, beerocks::eWiFiBandwidth bw);
-
-    bool get_hostap_channel_ext_above_primary(const sMacAddr &hostap_mac);
-    uint16_t get_hostap_vht_center_frequency(const sMacAddr &mac);
 
     void add_bss_info_configuration(const sMacAddr &al_mac,
                                     const wireless_utils::sBssInfoConf &bss_info);

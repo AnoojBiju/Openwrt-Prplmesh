@@ -121,9 +121,6 @@ public:
         int tx_power            = 0;
         std::string ssid;
         beerocks::eRadioBandCapability capability = beerocks::SUBBAND_CAPABILITY_UNKNOWN;
-        uint16_t vht_center_frequency             = 0;
-        int8_t channel_ext_above_primary          = 1;
-        bool is_dfs                               = false;
         bool cac_completed                        = false;
         bool on_dfs_reentry                       = false;
         std::set<std::string> dfs_reentry_clients;

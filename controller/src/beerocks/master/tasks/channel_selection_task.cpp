@@ -812,7 +812,7 @@ void channel_selection_task::work()
             LOG(WARNING) << "empty wifi channel of " << tlvf::mac_to_string(radio_mac) << " in DB";
         }
 
-        auto prev_vht_center_frequency = database.get_hostap_vht_center_frequency(radio_mac);
+        auto prev_vht_center_frequency = prev_wifi_channel.get_center_frequency();
         auto prev_channel              = prev_wifi_channel.get_channel();
         auto prev_bandwidth            = prev_wifi_channel.get_bandwidth();
         auto channel_ext_above_secondary =
