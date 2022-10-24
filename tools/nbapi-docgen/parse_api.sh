@@ -13,10 +13,12 @@ if [ ! -r "${rootdir}/build/controller.odl.xml" ]; then
     exit 1
 fi
 
-mkdir -p "${rootdir}/build/html"
+mkdir -p "${rootdir}/build/html/controller"
 amxo-xml-to -x html\
-                  -o output-dir="${rootdir}/build/html"\
+                  -o output-dir="${rootdir}/build/html/controller"\
                   -o title="prplMesh"\
                   -o sub-title="Northbound API"\
                   -o version="$VERSION"\
+                  -o stylesheet="prpl_style.css"\
+                  -o copyrights="Prpl"\
                   "${rootdir}/build/controller.odl.xml"
