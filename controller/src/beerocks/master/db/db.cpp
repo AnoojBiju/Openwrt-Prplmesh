@@ -6988,6 +6988,35 @@ bool db::dm_set_sta_traffic_stats(const sMacAddr &sta_mac, sAssociatedStaTraffic
     return ret_val;
 }
 
+bool db::dm_add_tid_queue_sizes(
+    const Station &station,
+    const std::vector<wfa_map::tlvAssociatedWiFi6StaStatusReport::sTidQueueSize> &tid_queue_vector)
+{
+    if (station.dm_path.empty()) {
+        return true;
+    }
+
+    if (!m_ambiorix_datamodel->remove_all_instances(station.dm_path + ".TIDQueueSizes")) {
+        return false;
+    }
+
+    bool ret_val = true;
+
+    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.TIDQueueSizes.{i}.
+    for (auto &tid_queue : tid_queue_vector) {
+        auto tid_queue_size_path =
+            m_ambiorix_datamodel->add_instance(station.dm_path + ".TIDQueueSizes");
+        if (tid_queue_size_path.empty()) {
+            return false;
+        }
+
+        ret_val &= m_ambiorix_datamodel->set(tid_queue_size_path, "TID", tid_queue.tid);
+        ret_val &= m_ambiorix_datamodel->set(tid_queue_size_path, "Size", tid_queue.queue_size);
+    }
+
+    return ret_val;
+}
+
 bool db::dm_clear_sta_stats(const sMacAddr &sta_mac)
 {
     dm_set_sta_link_metrics(sta_mac, 0, 0, 0);

@@ -132,5 +132,17 @@
                 }
             }
         }
+
+        /* Describes Traffic Identifiers (TIDs) and Queue Size (for each TID) for Associated Device (STA) */
+        %read-only object TIDQueueSizes [] {
+            counted with TIDQueueSizesNumberOfEntries;
+            %read-only uint32 TID = 0 {
+                on action validate call check_range [0, 255];
+            }
+
+             %read-only uint32 Size = 0 {
+                on action validate call check_range [0, 255];
+            }
+        }
     }
 }
