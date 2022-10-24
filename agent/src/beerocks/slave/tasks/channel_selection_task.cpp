@@ -1413,6 +1413,8 @@ ChannelSelectionTask::sSelectedChannel ChannelSelectionTask::select_next_channel
     auto find_best_beacon_channel =
         [&](const uint8_t primary_channel, const beerocks::eWiFiBandwidth bandwidth,
             const uint8_t operating_class) -> std::pair<uint8_t, uint8_t> {
+        LOG(ERROR) << "Badhri primary_channel = " << primary_channel << " bandwidth = " << bandwidth
+                   << " operating class = " << operating_class;
         const auto beacon_channels =
             son::wireless_utils::center_channel_5g_to_beacon_channels(primary_channel, bandwidth);
 
@@ -1422,12 +1424,19 @@ ChannelSelectionTask::sSelectedChannel ChannelSelectionTask::select_next_channel
         for (const auto beacon_channel : beacon_channels) {
 
             // Get the 20Mhz operating class for the beacon channel
+            if (beacon_channel == 0) {
+                continue;
+            }
             const auto operating_class_20Mhz = son::wireless_utils::get_operating_class_by_channel(
                 message::sWifiChannel(beacon_channel, eWiFiBandwidth::BANDWIDTH_20));
 
             // Get the cumulative channel preference for the beacon channel.
             auto beacon_preference = get_cumulative_preference(
                 radio, controller_preferences, operating_class_20Mhz, beacon_channel);
+            LOG(ERROR) << "Badhri beacon_channel = " << beacon_channel
+                       << " 20MHz operating class = " << operating_class_20Mhz
+                       << " beacon_preference = " << beacon_preference;
+
             if (beacon_preference == 0) {
                 LOG(ERROR) << "Channel #" << beacon_channel << " in Class #"
                            << operating_class_20Mhz << " is non-operable";
@@ -1441,6 +1450,8 @@ ChannelSelectionTask::sSelectedChannel ChannelSelectionTask::select_next_channel
         // Get the 20Mhz operating class for the beacon channel
         const auto operating_class_20Mhz = son::wireless_utils::get_operating_class_by_channel(
             message::sWifiChannel(best_bcn_chan, eWiFiBandwidth::BANDWIDTH_20));
+        LOG(ERROR) << "Badhri 2. beacon_channel = " << best_bcn_chan
+                   << " 20MHz operating class = " << operating_class_20Mhz;
 
         // Get the radio preference for the best beacon
         auto bcn_radio_pref = get_preference_for_channel(radio->channel_preferences,
@@ -1448,6 +1459,8 @@ ChannelSelectionTask::sSelectedChannel ChannelSelectionTask::select_next_channel
         // Get the controller preference for the central channel
         auto bcn_controller_pref =
             get_preference_for_channel(controller_preferences, operating_class, primary_channel);
+        LOG(ERROR) << "Badhri Controller Preference = " << bcn_controller_pref;
+        LOG(ERROR) << "Badhri Agent Preference = " << bcn_radio_pref;
         // Return the combination of the beacon's radio's preference with the primary's controller's preference.
         return std::make_pair(best_bcn_chan, (bcn_controller_pref + bcn_radio_pref));
     };
