@@ -11,6 +11,7 @@
 
 #include "../beerocks_defines.h"
 #include "../beerocks_message_structs.h"
+#include "../beerocks_wifi_channel.h"
 
 #include <tlvf/WSC/eWscAuth.h>
 #include <tlvf/WSC/eWscEncr.h>
@@ -277,6 +278,13 @@ public:
                                       beerocks::eWiFiBandwidth bandwidth);
 
     static uint8_t get_operating_class_by_channel(const beerocks::message::sWifiChannel &channel);
+    /**
+     * @brief Get the operating class of the wifiChannel object.
+     * 
+     * @param wifi_channel the wifiChannel object
+     * @return on success, the operating class number. otherwise, 0 is returned.
+     */
+    static uint8_t get_operating_class_by_channel(const beerocks::WifiChannel &wifi_channel);
 
     /**
     * @brief Match channel number in the given operating class.
@@ -395,6 +403,14 @@ public:
 
     static bool has_operating_class_5g_channel(const sOperatingClass &oper_class, uint8_t channel,
                                                beerocks::eWiFiBandwidth bw);
+
+    /**
+     * @brief Get a list of operating classes that are associated with the frequency type
+     * 
+     * @param freq_type operating class's frequency
+     * @return list of operating classes. otherwise, an empty list is returned.
+     */
+    static std::vector<uint8_t> get_operating_classes_of_freq_type(beerocks::eFreqType freq_type);
 
     /**
      * @brief get max supported bandwidth in station capabilities.

@@ -536,6 +536,39 @@ bool wireless_utils::has_operating_class_5g_channel(const sOperatingClass &oper_
     return true;
 }
 
+std::vector<uint8_t>
+wireless_utils::get_operating_classes_of_freq_type(beerocks::eFreqType freq_type)
+{
+    std::vector<uint8_t> op_classes = {};
+
+    // points to the start of the relevant operating classes,
+    // and one past the last of the relevant operating classes
+    decltype(operating_classes_list)::const_iterator first_iterator, last_iterator;
+
+    switch (freq_type) {
+    case beerocks::eFreqType::FREQ_24G:
+        first_iterator = operating_classes_list.find(81);
+        last_iterator  = operating_classes_list.find(115);
+        break;
+    case beerocks::eFreqType::FREQ_5G:
+        first_iterator = operating_classes_list.find(115);
+        last_iterator  = operating_classes_list.find(131);
+        break;
+    case beerocks::eFreqType::FREQ_6G:
+        first_iterator = operating_classes_list.find(131);
+        last_iterator  = operating_classes_list.end();
+        break;
+    default:
+        LOG(ERROR) << "freq type must be 2.4GHz, 5GHz, or 6GHz";
+        return {};
+    }
+
+    for (auto it = first_iterator; it != last_iterator; ++it) {
+        op_classes.push_back(it->first);
+    }
+    return op_classes;
+}
+
 wireless_utils::sPhyUlParams
 wireless_utils::estimate_ul_params(int ul_rssi, uint16_t sta_phy_tx_rate_100kb,
                                    const beerocks::message::sRadioCapabilities *sta_capabilities,
@@ -1523,6 +1556,57 @@ wireless_utils::get_operating_class_by_channel(const beerocks::message::sWifiCha
         }
     }
     LOG(WARNING) << "Failed to find operating class by channel #" << ch << " and bandwidth " << bw;
+    return 0;
+}
+
+uint8_t wireless_utils::get_operating_class_by_channel(const beerocks::WifiChannel &wifi_channel)
+{
+    auto ch       = wifi_channel.get_channel();
+    const auto bw = wifi_channel.get_bandwidth();
+    /*
+    some of the operating classes have a center channel instead of a normal channel.
+    thus, convert the channel to its center channel value.
+    */
+    if (wifi_channel.get_freq_type() == beerocks::FREQ_5G && bw >= beerocks::BANDWIDTH_80) {
+        ch = freq_to_channel(wifi_channel.get_center_frequency());
+    } else if (wifi_channel.get_freq_type() == beerocks::FREQ_6G && bw >= beerocks::BANDWIDTH_40) {
+        if (bw == beerocks::BANDWIDTH_160) {
+            ch = freq_to_channel(wifi_channel.get_center_frequency_2());
+        } else {
+            ch = freq_to_channel(wifi_channel.get_center_frequency());
+        }
+    }
+
+    decltype(operating_classes_list)::const_iterator first_operating_class_it;
+    decltype(operating_classes_list)::const_iterator last_operating_class_it;
+
+    /*
+     * since 5ghz and 6ghz have overlapping channels, we should
+     * not iterate over 6ghz channels when it is not a 6ghz band type.
+     */
+    const beerocks::eFreqType &freq_type = wifi_channel.get_freq_type();
+    if (freq_type == beerocks::FREQ_24G || freq_type == beerocks::FREQ_5G) {
+        first_operating_class_it = operating_classes_list.find(OPERATING_CLASS_24GHZ_FIRST);
+        last_operating_class_it  = operating_classes_list.find(
+            OPERATING_CLASS_6GHZ_FIRST); // one past the last 5GHz operating class
+    } else if (wifi_channel.get_freq_type() == beerocks::FREQ_6G) {
+        first_operating_class_it = operating_classes_list.find(OPERATING_CLASS_6GHZ_FIRST);
+        last_operating_class_it  = operating_classes_list.end();
+    } else {
+        LOG(ERROR) << "Invalid freq type "
+                   << beerocks::utils::convert_frequency_type_to_string(freq_type)
+                   << ", Possibly the given wifiChannel is empty";
+        return 0;
+    }
+
+    for (auto &operating_class_it = first_operating_class_it;
+         operating_class_it != last_operating_class_it; ++operating_class_it) {
+        if (operating_class_it->second.band == bw &&
+            operating_class_it->second.channels.find(ch) !=
+                operating_class_it->second.channels.end()) {
+            return operating_class_it->first;
+        }
+    }
     return 0;
 }
 
