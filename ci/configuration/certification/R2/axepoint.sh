@@ -75,9 +75,11 @@ ubus call "IP.Interface" _set '{ "rel_path": ".[Name == \"eth0_4\"].", "paramete
 # Wired backhaul interface:
 uci set prplmesh.config.backhaul_wire_iface='eth1'
 
-# Stop and disable the firewall:
-/etc/init.d/tr181-firewall stop
-rm -f /etc/rc.d/S22tr181-firewall
+# For now there is no way to disable the firewall (see PCF-590).
+# Instead, wait for it in the datamodel, then set the whole INPUT
+# chain to ACCEPT:
+ubus wait_for Firewall
+iptables -P INPUT ACCEPT
 
 uci batch << 'EOF'
 # TODO: The current channel selection does not work correctly when 80Mhz bandwidths are involved.
