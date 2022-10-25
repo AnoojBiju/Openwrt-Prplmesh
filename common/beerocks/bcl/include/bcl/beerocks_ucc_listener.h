@@ -195,6 +195,20 @@ protected:
         AGENT,
         NONE,
     };
+    // Enum AutoPrint generated code snippet begining- DON'T EDIT!
+    // clang-format off
+    static const char *eUccListenerRunOn_str(eUccListenerRunOn enum_value) {
+        switch (enum_value) {
+        case eUccListenerRunOn::CONTROLLER: return "eUccListenerRunOn::CONTROLLER";
+        case eUccListenerRunOn::AGENT:      return "eUccListenerRunOn::AGENT";
+        case eUccListenerRunOn::NONE:       return "eUccListenerRunOn::NONE";
+        }
+        static std::string out_str = std::to_string(int(enum_value));
+        return out_str.c_str();
+    }
+    friend inline std::ostream &operator<<(std::ostream &out, eUccListenerRunOn value) { return out << eUccListenerRunOn_str(value); }
+    // clang-format on
+    // Enum AutoPrint generated code snippet end
     eUccListenerRunOn m_ucc_listener_run_on = eUccListenerRunOn::NONE;
 
     struct tlv_hex_t {
@@ -224,9 +238,46 @@ private:
         CUSTOM_CMD,
         WFA_CA_COMMAND_MAX,
     };
+    // Enum AutoPrint generated code snippet begining- DON'T EDIT!
+    // clang-format off
+    static const char *eWfaCaCommand_str(eWfaCaCommand enum_value) {
+        switch (enum_value) {
+        case eWfaCaCommand::CA_GET_VERSION:         return "eWfaCaCommand::CA_GET_VERSION";
+        case eWfaCaCommand::DEVICE_GET_INFO:        return "eWfaCaCommand::DEVICE_GET_INFO";
+        case eWfaCaCommand::DEV_GET_PARAMETER:      return "eWfaCaCommand::DEV_GET_PARAMETER";
+        case eWfaCaCommand::DEV_RESET_DEFAULT:      return "eWfaCaCommand::DEV_RESET_DEFAULT";
+        case eWfaCaCommand::DEV_SEND_1905:          return "eWfaCaCommand::DEV_SEND_1905";
+        case eWfaCaCommand::DEV_SET_CONFIG:         return "eWfaCaCommand::DEV_SET_CONFIG";
+        case eWfaCaCommand::START_WPS_REGISTRATION: return "eWfaCaCommand::START_WPS_REGISTRATION";
+        case eWfaCaCommand::DEV_SET_RFEATURE:       return "eWfaCaCommand::DEV_SET_RFEATURE";
+        case eWfaCaCommand::DEV_EXEC_ACTION:        return "eWfaCaCommand::DEV_EXEC_ACTION";
+        case eWfaCaCommand::CUSTOM_CMD:             return "eWfaCaCommand::CUSTOM_CMD";
+        case eWfaCaCommand::WFA_CA_COMMAND_MAX:     return "eWfaCaCommand::WFA_CA_COMMAND_MAX";
+        }
+        static std::string out_str = std::to_string(int(enum_value));
+        return out_str.c_str();
+    }
+    friend inline std::ostream &operator<<(std::ostream &out, eWfaCaCommand value) { return out << eWfaCaCommand_str(value); }
+    // clang-format on
+    // Enum AutoPrint generated code snippet end
     static eWfaCaCommand wfa_ca_command_from_string(std::string command);
 
     enum class eWfaCaStatus : uint8_t { RUNNING, INVALID, ERROR, COMPLETE };
+    // Enum AutoPrint generated code snippet begining- DON'T EDIT!
+    // clang-format off
+    static const char *eWfaCaStatus_str(eWfaCaStatus enum_value) {
+        switch (enum_value) {
+        case eWfaCaStatus::RUNNING:  return "eWfaCaStatus::RUNNING";
+        case eWfaCaStatus::INVALID:  return "eWfaCaStatus::INVALID";
+        case eWfaCaStatus::ERROR:    return "eWfaCaStatus::ERROR";
+        case eWfaCaStatus::COMPLETE: return "eWfaCaStatus::COMPLETE";
+        }
+        static std::string out_str = std::to_string(int(enum_value));
+        return out_str.c_str();
+    }
+    friend inline std::ostream &operator<<(std::ostream &out, eWfaCaStatus value) { return out << eWfaCaStatus_str(value); }
+    // clang-format on
+    // Enum AutoPrint generated code snippet end
     static const std::string wfa_ca_status_to_string(eWfaCaStatus status);
 
     static bool parse_params(const std::vector<std::string> &command_tokens,

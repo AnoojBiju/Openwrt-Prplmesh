@@ -23,6 +23,20 @@ class mon_wlan_hal_dummy : public base_wlan_hal_dummy, public mon_wlan_hal {
     // Public definitions
 public:
     enum class Data { Invalid = 0, STA_Update_Stats, RRM_Update_Beacon_Measurements };
+    // Enum AutoPrint generated code snippet begining- DON'T EDIT!
+    // clang-format off
+    static const char *Data_str(Data enum_value) {
+        switch (enum_value) {
+        case Data::Invalid:                        return "Data::Invalid";
+        case Data::STA_Update_Stats:               return "Data::STA_Update_Stats";
+        case Data::RRM_Update_Beacon_Measurements: return "Data::RRM_Update_Beacon_Measurements";
+        }
+        static std::string out_str = std::to_string(int(enum_value));
+        return out_str.c_str();
+    }
+    friend inline std::ostream &operator<<(std::ostream &out, Data value) { return out << Data_str(value); }
+    // clang-format on
+    // Enum AutoPrint generated code snippet end
 
     // Public methods
 public:

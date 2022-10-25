@@ -38,6 +38,29 @@ struct s80211MgmtFrame {
         DEAUTH       = 12, /*<< De-authentication */
         ACTION       = 13  /*<< Action */
     };
+    // Enum AutoPrint generated code snippet begining- DON'T EDIT!
+    // clang-format off
+    static const char *eType_str(eType enum_value) {
+        switch (enum_value) {
+        case eType::ASSOC_REQ:    return "eType::ASSOC_REQ";
+        case eType::ASSOC_RESP:   return "eType::ASSOC_RESP";
+        case eType::REASSOC_REQ:  return "eType::REASSOC_REQ";
+        case eType::REASSOC_RESP: return "eType::REASSOC_RESP";
+        case eType::PROBE_REQ:    return "eType::PROBE_REQ";
+        case eType::PROBE_RESP:   return "eType::PROBE_RESP";
+        case eType::BEACON:       return "eType::BEACON";
+        case eType::ATIM:         return "eType::ATIM";
+        case eType::DISASSOC:     return "eType::DISASSOC";
+        case eType::AUTH:         return "eType::AUTH";
+        case eType::DEAUTH:       return "eType::DEAUTH";
+        case eType::ACTION:       return "eType::ACTION";
+        }
+        static std::string out_str = std::to_string(int(enum_value));
+        return out_str.c_str();
+    }
+    friend inline std::ostream &operator<<(std::ostream &out, eType value) { return out << eType_str(value); }
+    // clang-format on
+    // Enum AutoPrint generated code snippet end
 
     // Header
     struct sHeader {
@@ -117,6 +140,42 @@ struct s80211MgmtFrame {
                 VENDOR_SPECIFIC           = 127
                 /* Note: 128-255 used to report errors by setting category | 0x80 */
             };
+            // Enum AutoPrint generated code snippet begining- DON'T EDIT!
+            // clang-format off
+            static const char *eCategory_str(eCategory enum_value) {
+                switch (enum_value) {
+                case eCategory::SPECTRUM_MGMT:             return "eCategory::SPECTRUM_MGMT";
+                case eCategory::QOS:                       return "eCategory::QOS";
+                case eCategory::DLS:                       return "eCategory::DLS";
+                case eCategory::BLOCK_ACK:                 return "eCategory::BLOCK_ACK";
+                case eCategory::PUBLIC:                    return "eCategory::PUBLIC";
+                case eCategory::RADIO_MEASUREMENT:         return "eCategory::RADIO_MEASUREMENT";
+                case eCategory::FT:                        return "eCategory::FT";
+                case eCategory::HT:                        return "eCategory::HT";
+                case eCategory::SA_QUERY:                  return "eCategory::SA_QUERY";
+                case eCategory::PROTECTED_DUAL:            return "eCategory::PROTECTED_DUAL";
+                case eCategory::WNM:                       return "eCategory::WNM";
+                case eCategory::UNPROTECTED_WNM:           return "eCategory::UNPROTECTED_WNM";
+                case eCategory::TDLS:                      return "eCategory::TDLS";
+                case eCategory::MESH:                      return "eCategory::MESH";
+                case eCategory::MULTIHOP:                  return "eCategory::MULTIHOP";
+                case eCategory::SELF_PROTECTED:            return "eCategory::SELF_PROTECTED";
+                case eCategory::DMG:                       return "eCategory::DMG";
+                case eCategory::WMM:                       return "eCategory::WMM";
+                case eCategory::FST:                       return "eCategory::FST";
+                case eCategory::ROBUST_AV_STREAMING:       return "eCategory::ROBUST_AV_STREAMING";
+                case eCategory::UNPROTECTED_DMG:           return "eCategory::UNPROTECTED_DMG";
+                case eCategory::VHT:                       return "eCategory::VHT";
+                case eCategory::FILS:                      return "eCategory::FILS";
+                case eCategory::VENDOR_SPECIFIC_PROTECTED: return "eCategory::VENDOR_SPECIFIC_PROTECTED";
+                case eCategory::VENDOR_SPECIFIC:           return "eCategory::VENDOR_SPECIFIC";
+                }
+                static std::string out_str = std::to_string(int(enum_value));
+                return out_str.c_str();
+            }
+            friend inline std::ostream &operator<<(std::ostream &out, eCategory value) { return out << eCategory_str(value); }
+            // clang-format on
+            // Enum AutoPrint generated code snippet end
 
             /**
              * @brief 802.11 action frame codes
@@ -127,6 +186,20 @@ struct s80211MgmtFrame {
                 ANQP_REQ                 = 10, /**< ANQP Request (Public Category [4]) */
                 WNM_NOTIFICATION_REQ     = 26  /**< WNM Notification Request (WNM Category [10]) */
             };
+            // Enum AutoPrint generated code snippet begining- DON'T EDIT!
+            // clang-format off
+            static const char *eCode_str(eCode enum_value) {
+                switch (enum_value) {
+                case eCode::WNM_BSS_TRANS_MGMT_QUERY: return "eCode::WNM_BSS_TRANS_MGMT_QUERY";
+                case eCode::ANQP_REQ:                 return "eCode::ANQP_REQ";
+                case eCode::WNM_NOTIFICATION_REQ:     return "eCode::WNM_NOTIFICATION_REQ";
+                }
+                static std::string out_str = std::to_string(int(enum_value));
+                return out_str.c_str();
+            }
+            friend inline std::ostream &operator<<(std::ostream &out, eCode value) { return out << eCode_str(value); }
+            // clang-format on
+            // Enum AutoPrint generated code snippet end
 
             uint8_t category; // Action frame category
             uint8_t code;     // Action frame code
@@ -149,6 +222,24 @@ enum eChanWidthNr : uint8_t {
     NR_CHAN_WIDTH_MAX,
     NR_CHAN_WIDTH_UNKNOWN = 0xFF,
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *eChanWidthNr_str(eChanWidthNr enum_value) {
+    switch (enum_value) {
+    case NR_CHAN_WIDTH_20:      return "NR_CHAN_WIDTH_20";
+    case NR_CHAN_WIDTH_40:      return "NR_CHAN_WIDTH_40";
+    case NR_CHAN_WIDTH_80:      return "NR_CHAN_WIDTH_80";
+    case NR_CHAN_WIDTH_160:     return "NR_CHAN_WIDTH_160";
+    case NR_CHAN_WIDTH_80P80:   return "NR_CHAN_WIDTH_80P80";
+    case NR_CHAN_WIDTH_MAX:     return "NR_CHAN_WIDTH_MAX";
+    case NR_CHAN_WIDTH_UNKNOWN: return "NR_CHAN_WIDTH_UNKNOWN";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, eChanWidthNr value) { return out << eChanWidthNr_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 #define BIT(x) (1U << (x))
 

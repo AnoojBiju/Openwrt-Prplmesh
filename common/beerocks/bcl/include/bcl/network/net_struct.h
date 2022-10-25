@@ -22,6 +22,19 @@ enum eNetworkStructsConsts {
     MAC_ADDR_LEN = 6,
     IP_ADDR_LEN  = 4,
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *eNetworkStructsConsts_str(eNetworkStructsConsts enum_value) {
+    switch (enum_value) {
+    case MAC_ADDR_LEN: return "MAC_ADDR_LEN";
+    case IP_ADDR_LEN:  return "IP_ADDR_LEN";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, eNetworkStructsConsts value) { return out << eNetworkStructsConsts_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 typedef struct sIpv4Addr {
     uint8_t oct[IP_ADDR_LEN];

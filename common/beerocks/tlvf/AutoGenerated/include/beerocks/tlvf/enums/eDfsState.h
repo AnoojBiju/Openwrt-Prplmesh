@@ -26,6 +26,21 @@ enum eDfsState: uint8_t {
     AVAILABLE = 0x2,
     NOT_DFS = 0x3,
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *eDfsState_str(eDfsState enum_value) {
+    switch (enum_value) {
+    case USABLE:      return "USABLE";
+    case UNAVAILABLE: return "UNAVAILABLE";
+    case AVAILABLE:   return "AVAILABLE";
+    case NOT_DFS:     return "NOT_DFS";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, eDfsState value) { return out << eDfsState_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 
 }; // close namespace: beerocks_message

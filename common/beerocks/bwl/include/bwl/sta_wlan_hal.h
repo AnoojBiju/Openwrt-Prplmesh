@@ -34,6 +34,24 @@ public:
 
         STA_Unassoc_RSSI
     };
+    // Enum AutoPrint generated code snippet begining- DON'T EDIT!
+    // clang-format off
+    static const char *Event_str(Event enum_value) {
+        switch (enum_value) {
+        case Event::Invalid:          return "Event::Invalid";
+        case Event::Connected:        return "Event::Connected";
+        case Event::Disconnected:     return "Event::Disconnected";
+        case Event::Terminating:      return "Event::Terminating";
+        case Event::ScanResults:      return "Event::ScanResults";
+        case Event::ChannelSwitch:    return "Event::ChannelSwitch";
+        case Event::STA_Unassoc_RSSI: return "Event::STA_Unassoc_RSSI";
+        }
+        static std::string out_str = std::to_string(int(enum_value));
+        return out_str.c_str();
+    }
+    friend inline std::ostream &operator<<(std::ostream &out, Event value) { return out << Event_str(value); }
+    // clang-format on
+    // Enum AutoPrint generated code snippet end
 
     // Public methods:
 public:

@@ -47,6 +47,19 @@ public:
     virtual ~Socket();
 
     enum SocketMode { SocketModeBlocking, SocketModeNonBlocking };
+    // Enum AutoPrint generated code snippet begining- DON'T EDIT!
+    // clang-format off
+    static const char *SocketMode_str(SocketMode enum_value) {
+        switch (enum_value) {
+        case SocketModeBlocking:    return "SocketModeBlocking";
+        case SocketModeNonBlocking: return "SocketModeNonBlocking";
+        }
+        static std::string out_str = std::to_string(int(enum_value));
+        return out_str.c_str();
+    }
+    friend inline std::ostream &operator<<(std::ostream &out, SocketMode value) { return out << SocketMode_str(value); }
+    // clang-format on
+    // Enum AutoPrint generated code snippet end
 
     ssize_t getBytesReady();
     ssize_t readBytes(uint8_t *buf, size_t buf_size, bool blocking, size_t buf_len = 0,

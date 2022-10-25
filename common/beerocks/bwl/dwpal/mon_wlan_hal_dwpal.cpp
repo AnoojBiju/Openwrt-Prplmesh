@@ -45,8 +45,42 @@ enum ie_type : uint8_t {
     TYPE_VENDOR                   = 221,
     TYPE_EXTENISON                = 255
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+const char *ie_type_str(ie_type enum_value) {
+    switch (enum_value) {
+    case TYPE_SSID:                     return "TYPE_SSID";
+    case TYPE_SUPPORTED_RATES:          return "TYPE_SUPPORTED_RATES";
+    case TYPE_TIM:                      return "TYPE_TIM";
+    case TYPE_BSS_LOAD:                 return "TYPE_BSS_LOAD";
+    case TYPE_RSN:                      return "TYPE_RSN";
+    case TYPE_EXTENDED_SUPPORTED_RATES: return "TYPE_EXTENDED_SUPPORTED_RATES";
+    case TYPE_HT_OPERATION:             return "TYPE_HT_OPERATION";
+    case TYPE_VHT_OPERATION:            return "TYPE_VHT_OPERATION";
+    case TYPE_VENDOR:                   return "TYPE_VENDOR";
+    case TYPE_EXTENISON:                return "TYPE_EXTENISON";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+std::ostream &operator<<(std::ostream &out, ie_type value) { return out << ie_type_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 /* Element ID Extension (EID 255) values */
 enum ie_id_extension_values : uint8_t { TYPE_EXT_HE_CAPABILITIES = 35, TYPE_EXT_HE_OPERATION = 36 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+const char *ie_id_extension_values_str(ie_id_extension_values enum_value) {
+    switch (enum_value) {
+    case TYPE_EXT_HE_CAPABILITIES: return "TYPE_EXT_HE_CAPABILITIES";
+    case TYPE_EXT_HE_OPERATION:    return "TYPE_EXT_HE_OPERATION";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+std::ostream &operator<<(std::ostream &out, ie_id_extension_values value) { return out << ie_id_extension_values_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 #ifndef BIT
 // BIT(0) -> 0x1, BIT(1) -> 0x10, BIT(2) -> 0x100, etc.

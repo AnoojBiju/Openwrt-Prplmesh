@@ -28,11 +28,39 @@ enum class HALType {
     Monitor,
     Station
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *HALType_str(HALType enum_value) {
+    switch (enum_value) {
+    case HALType::Invalid:     return "HALType::Invalid";
+    case HALType::AccessPoint: return "HALType::AccessPoint";
+    case HALType::Monitor:     return "HALType::Monitor";
+    case HALType::Station:     return "HALType::Station";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, HALType value) { return out << HALType_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 enum class IfaceType {
     Unsupported = 0x00,
     Intel       = 0x01,
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *IfaceType_str(IfaceType enum_value) {
+    switch (enum_value) {
+    case IfaceType::Unsupported: return "IfaceType::Unsupported";
+    case IfaceType::Intel:       return "IfaceType::Intel";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, IfaceType value) { return out << IfaceType_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 enum class HALState {
     Uninitialized = 0, /*!< Not initialized */
@@ -40,8 +68,39 @@ enum class HALState {
     Operational   = 2, /*!< Initialized and active */
     Failed        = 3  /*!< Failed to initialize */
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *HALState_str(HALState enum_value) {
+    switch (enum_value) {
+    case HALState::Uninitialized: return "HALState::Uninitialized";
+    case HALState::Initializing:  return "HALState::Initializing";
+    case HALState::Operational:   return "HALState::Operational";
+    case HALState::Failed:        return "HALState::Failed";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, HALState value) { return out << HALState_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 enum class AntMode { Invalid = 0, ANT_1X1, ANT_2X2, ANT_3X3, ANT_4X4 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *AntMode_str(AntMode enum_value) {
+    switch (enum_value) {
+    case AntMode::Invalid: return "AntMode::Invalid";
+    case AntMode::ANT_1X1: return "AntMode::ANT_1X1";
+    case AntMode::ANT_2X2: return "AntMode::ANT_2X2";
+    case AntMode::ANT_3X3: return "AntMode::ANT_3X3";
+    case AntMode::ANT_4X4: return "AntMode::ANT_4X4";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, AntMode value) { return out << AntMode_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 struct VAPElement {
     /**
@@ -64,9 +123,42 @@ struct VAPElement {
 };
 
 enum class ChanSwReason { Unknown = 0, Radar = 1, CoEx_20 = 2, CoEx_40 = 3 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *ChanSwReason_str(ChanSwReason enum_value) {
+    switch (enum_value) {
+    case ChanSwReason::Unknown: return "ChanSwReason::Unknown";
+    case ChanSwReason::Radar:   return "ChanSwReason::Radar";
+    case ChanSwReason::CoEx_20: return "ChanSwReason::CoEx_20";
+    case ChanSwReason::CoEx_40: return "ChanSwReason::CoEx_40";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, ChanSwReason value) { return out << ChanSwReason_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 // WLAN Security Types
 enum class WiFiSec { Invalid = 0, None, WEP_64, WEP_128, WPA_PSK, WPA2_PSK, WPA_WPA2_PSK };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *WiFiSec_str(WiFiSec enum_value) {
+    switch (enum_value) {
+    case WiFiSec::Invalid:      return "WiFiSec::Invalid";
+    case WiFiSec::None:         return "WiFiSec::None";
+    case WiFiSec::WEP_64:       return "WiFiSec::WEP_64";
+    case WiFiSec::WEP_128:      return "WiFiSec::WEP_128";
+    case WiFiSec::WPA_PSK:      return "WiFiSec::WPA_PSK";
+    case WiFiSec::WPA2_PSK:     return "WiFiSec::WPA2_PSK";
+    case WiFiSec::WPA_WPA2_PSK: return "WiFiSec::WPA_WPA2_PSK";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, WiFiSec value) { return out << WiFiSec_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 enum eRadioState : uint8_t {
     UNINITIALIZED,
@@ -79,6 +171,26 @@ enum eRadioState : uint8_t {
     ENABLED,
     UNKNOWN
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *eRadioState_str(eRadioState enum_value) {
+    switch (enum_value) {
+    case UNINITIALIZED:  return "UNINITIALIZED";
+    case DISABLED:       return "DISABLED";
+    case COUNTRY_UPDATE: return "COUNTRY_UPDATE";
+    case ACS:            return "ACS";
+    case ACS_DONE:       return "ACS_DONE";
+    case HT_SCAN:        return "HT_SCAN";
+    case DFS:            return "DFS";
+    case ENABLED:        return "ENABLED";
+    case UNKNOWN:        return "UNKNOWN";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, eRadioState value) { return out << eRadioState_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 struct sChannelInfo {
     int8_t tx_power_dbm;
@@ -170,6 +282,24 @@ enum eWiFiStandard : uint8_t {
     STANDARD_AC   = 0x10,
     STANDARD_AX   = 0x20,
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *eWiFiStandard_str(eWiFiStandard enum_value) {
+    switch (enum_value) {
+    case STANDARD_NONE: return "STANDARD_NONE";
+    case STANDARD_A:    return "STANDARD_A";
+    case STANDARD_B:    return "STANDARD_B";
+    case STANDARD_G:    return "STANDARD_G";
+    case STANDARD_N:    return "STANDARD_N";
+    case STANDARD_AC:   return "STANDARD_AC";
+    case STANDARD_AX:   return "STANDARD_AX";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, eWiFiStandard value) { return out << eWiFiStandard_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 enum eWiFiMCS : uint8_t {
     MCS_0 = 0,
@@ -186,6 +316,30 @@ enum eWiFiMCS : uint8_t {
     MCS_11,
     MCS_MAX,
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *eWiFiMCS_str(eWiFiMCS enum_value) {
+    switch (enum_value) {
+    case MCS_0:   return "MCS_0";
+    case MCS_1:   return "MCS_1";
+    case MCS_2:   return "MCS_2";
+    case MCS_3:   return "MCS_3";
+    case MCS_4:   return "MCS_4";
+    case MCS_5:   return "MCS_5";
+    case MCS_6:   return "MCS_6";
+    case MCS_7:   return "MCS_7";
+    case MCS_8:   return "MCS_8";
+    case MCS_9:   return "MCS_9";
+    case MCS_10:  return "MCS_10";
+    case MCS_11:  return "MCS_11";
+    case MCS_MAX: return "MCS_MAX";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, eWiFiMCS value) { return out << eWiFiMCS_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 typedef struct {
     sNodeRssiMeasurement params;
@@ -340,6 +494,22 @@ enum class eManagementFrameType {
     WNM_REQUEST           = 0x03, /**< 802.11v transition request */
     ANQP_REQUEST          = 0x04  /**< Access Network Query Protocol request */
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *eManagementFrameType_str(eManagementFrameType enum_value) {
+    switch (enum_value) {
+    case eManagementFrameType::ASSOCIATION_REQUEST:   return "eManagementFrameType::ASSOCIATION_REQUEST";
+    case eManagementFrameType::REASSOCIATION_REQUEST: return "eManagementFrameType::REASSOCIATION_REQUEST";
+    case eManagementFrameType::BTM_QUERY:             return "eManagementFrameType::BTM_QUERY";
+    case eManagementFrameType::WNM_REQUEST:           return "eManagementFrameType::WNM_REQUEST";
+    case eManagementFrameType::ANQP_REQUEST:          return "eManagementFrameType::ANQP_REQUEST";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, eManagementFrameType value) { return out << eManagementFrameType_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 /**
  * @brief 802.11 management frame notification event.

@@ -30,12 +30,43 @@ enum eWiFiSec: uint8_t {
     eWiFiSec_WPA2_PSK = 0x4,
     eWiFiSec_WPA_WPA2_PSK = 0x5,
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *eWiFiSec_str(eWiFiSec enum_value) {
+    switch (enum_value) {
+    case eWiFiSec_None:         return "eWiFiSec_None";
+    case eWiFiSec_WEP64:        return "eWiFiSec_WEP64";
+    case eWiFiSec_WEP128:       return "eWiFiSec_WEP128";
+    case eWiFiSec_WPA_PSK:      return "eWiFiSec_WPA_PSK";
+    case eWiFiSec_WPA2_PSK:     return "eWiFiSec_WPA2_PSK";
+    case eWiFiSec_WPA_WPA2_PSK: return "eWiFiSec_WPA_WPA2_PSK";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, eWiFiSec value) { return out << eWiFiSec_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 enum eDHCPOp: uint8_t {
     eDHCPOp_Add = 0x0,
     eDHCPOp_Del = 0x1,
     eDHCPOp_Old = 0x2,
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *eDHCPOp_str(eDHCPOp enum_value) {
+    switch (enum_value) {
+    case eDHCPOp_Add: return "eDHCPOp_Add";
+    case eDHCPOp_Del: return "eDHCPOp_Del";
+    case eDHCPOp_Old: return "eDHCPOp_Old";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, eDHCPOp value) { return out << eDHCPOp_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 typedef struct sVapInfo {
     char iface_name[beerocks::message::IFACE_NAME_LENGTH];
@@ -1017,6 +1048,20 @@ enum eClientDisconnectSource: uint8_t {
     eClient_Disconnect_Source_Beerocks_cli = 0x1,
     eClient_Disconnect_Source_Pre_Association_Steering_Task = 0x2,
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *eClientDisconnectSource_str(eClientDisconnectSource enum_value) {
+    switch (enum_value) {
+    case eClient_Disconnect_Source_Ignore:                        return "eClient_Disconnect_Source_Ignore";
+    case eClient_Disconnect_Source_Beerocks_cli:                  return "eClient_Disconnect_Source_Beerocks_cli";
+    case eClient_Disconnect_Source_Pre_Association_Steering_Task: return "eClient_Disconnect_Source_Pre_Association_Steering_Task";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, eClientDisconnectSource value) { return out << eClientDisconnectSource_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 typedef struct sClientDisconnectResponse {
     int32_t error_code;
@@ -1062,18 +1107,60 @@ enum eDisconnectSource: uint8_t {
     eDisconnect_Source_Local = 0x1,
     eDisconnect_Source_Remote = 0x2,
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *eDisconnectSource_str(eDisconnectSource enum_value) {
+    switch (enum_value) {
+    case eDisconnect_Source_Unknown: return "eDisconnect_Source_Unknown";
+    case eDisconnect_Source_Local:   return "eDisconnect_Source_Local";
+    case eDisconnect_Source_Remote:  return "eDisconnect_Source_Remote";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, eDisconnectSource value) { return out << eDisconnectSource_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 enum eDisconnectType: uint8_t {
     eDisconnect_Type_Unknown = 0x0,
     eDisconnect_Type_Disassoc = 0x1,
     eDisconnect_Type_Deauth = 0x2,
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *eDisconnectType_str(eDisconnectType enum_value) {
+    switch (enum_value) {
+    case eDisconnect_Type_Unknown:  return "eDisconnect_Type_Unknown";
+    case eDisconnect_Type_Disassoc: return "eDisconnect_Type_Disassoc";
+    case eDisconnect_Type_Deauth:   return "eDisconnect_Type_Deauth";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, eDisconnectType value) { return out << eDisconnectType_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 enum eSteeringSnrChange: uint8_t {
     eWifi_Steering_Snr_Unchanged = 0x0,
     eWifi_Steering_Snr_Higher = 0x1,
     eWifi_Steering_Snr_Lower = 0x2,
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *eSteeringSnrChange_str(eSteeringSnrChange enum_value) {
+    switch (enum_value) {
+    case eWifi_Steering_Snr_Unchanged: return "eWifi_Steering_Snr_Unchanged";
+    case eWifi_Steering_Snr_Higher:    return "eWifi_Steering_Snr_Higher";
+    case eWifi_Steering_Snr_Lower:     return "eWifi_Steering_Snr_Lower";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, eSteeringSnrChange value) { return out << eSteeringSnrChange_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 enum eSteeringEventType: uint8_t {
     eWifi_Steering_Event_Probe_Req = 0x1,
@@ -1084,6 +1171,24 @@ enum eSteeringEventType: uint8_t {
     eWifi_Steering_Event_Snr = 0x6,
     eWifi_Steering_Event_Auth_Fail = 0x7,
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *eSteeringEventType_str(eSteeringEventType enum_value) {
+    switch (enum_value) {
+    case eWifi_Steering_Event_Probe_Req:         return "eWifi_Steering_Event_Probe_Req";
+    case eWifi_Steering_Event_Client_Connect:    return "eWifi_Steering_Event_Client_Connect";
+    case eWifi_Steering_Event_Client_Disconnect: return "eWifi_Steering_Event_Client_Disconnect";
+    case eWifi_Steering_Event_Client_Activity:   return "eWifi_Steering_Event_Client_Activity";
+    case eWifi_Steering_Event_Snr_Xing:          return "eWifi_Steering_Event_Snr_Xing";
+    case eWifi_Steering_Event_Snr:               return "eWifi_Steering_Event_Snr";
+    case eWifi_Steering_Event_Auth_Fail:         return "eWifi_Steering_Event_Auth_Fail";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, eSteeringEventType value) { return out << eSteeringEventType_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 typedef struct sSteeringEvConnect {
     sMacAddr client_mac;
@@ -1222,12 +1327,40 @@ enum eChannelScanResultMode: uint8_t {
     eMode_AdHoc = 0x1,
     eMode_Infrastructure = 0x2,
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *eChannelScanResultMode_str(eChannelScanResultMode enum_value) {
+    switch (enum_value) {
+    case eMode_NA:             return "eMode_NA";
+    case eMode_AdHoc:          return "eMode_AdHoc";
+    case eMode_Infrastructure: return "eMode_Infrastructure";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, eChannelScanResultMode value) { return out << eChannelScanResultMode_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 enum eChannelScanResultEncryptionMode: uint8_t {
     eEncryption_Mode_NA = 0x0,
     eEncryption_Mode_AES = 0x1,
     eEncryption_Mode_TKIP = 0x2,
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *eChannelScanResultEncryptionMode_str(eChannelScanResultEncryptionMode enum_value) {
+    switch (enum_value) {
+    case eEncryption_Mode_NA:   return "eEncryption_Mode_NA";
+    case eEncryption_Mode_AES:  return "eEncryption_Mode_AES";
+    case eEncryption_Mode_TKIP: return "eEncryption_Mode_TKIP";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, eChannelScanResultEncryptionMode value) { return out << eChannelScanResultEncryptionMode_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 enum eChannelScanResultSecurityMode: uint8_t {
     eSecurity_Mode_None = 0x0,
@@ -1235,12 +1368,41 @@ enum eChannelScanResultSecurityMode: uint8_t {
     eSecurity_Mode_WPA = 0x2,
     eSecurity_Mode_WPA2 = 0x3,
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *eChannelScanResultSecurityMode_str(eChannelScanResultSecurityMode enum_value) {
+    switch (enum_value) {
+    case eSecurity_Mode_None: return "eSecurity_Mode_None";
+    case eSecurity_Mode_WEP:  return "eSecurity_Mode_WEP";
+    case eSecurity_Mode_WPA:  return "eSecurity_Mode_WPA";
+    case eSecurity_Mode_WPA2: return "eSecurity_Mode_WPA2";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, eChannelScanResultSecurityMode value) { return out << eChannelScanResultSecurityMode_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 enum eChannelScanResultOperatingFrequencyBand: uint8_t {
     eOperating_Freq_Band_NA = 0x0,
     eOperating_Freq_Band_2_4GHz = 0x1,
     eOperating_Freq_Band_5GHz = 0x2,
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *eChannelScanResultOperatingFrequencyBand_str(eChannelScanResultOperatingFrequencyBand enum_value) {
+    switch (enum_value) {
+    case eOperating_Freq_Band_NA:     return "eOperating_Freq_Band_NA";
+    case eOperating_Freq_Band_2_4GHz: return "eOperating_Freq_Band_2_4GHz";
+    case eOperating_Freq_Band_5GHz:   return "eOperating_Freq_Band_5GHz";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, eChannelScanResultOperatingFrequencyBand value) { return out << eChannelScanResultOperatingFrequencyBand_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 enum eChannelScanResultStandards: uint8_t {
     eStandard_NA = 0x0,
@@ -1250,6 +1412,23 @@ enum eChannelScanResultStandards: uint8_t {
     eStandard_802_11n = 0x4,
     eStandard_802_11ac = 0x5,
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *eChannelScanResultStandards_str(eChannelScanResultStandards enum_value) {
+    switch (enum_value) {
+    case eStandard_NA:       return "eStandard_NA";
+    case eStandard_802_11a:  return "eStandard_802_11a";
+    case eStandard_802_11b:  return "eStandard_802_11b";
+    case eStandard_802_11g:  return "eStandard_802_11g";
+    case eStandard_802_11n:  return "eStandard_802_11n";
+    case eStandard_802_11ac: return "eStandard_802_11ac";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, eChannelScanResultStandards value) { return out << eChannelScanResultStandards_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 enum eChannelScanResultChannelBandwidth: uint8_t {
     eChannel_Bandwidth_NA = 0x0,
@@ -1259,6 +1438,23 @@ enum eChannelScanResultChannelBandwidth: uint8_t {
     eChannel_Bandwidth_160MHz = 0x4,
     eChannel_Bandwidth_80_80 = 0x5,
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *eChannelScanResultChannelBandwidth_str(eChannelScanResultChannelBandwidth enum_value) {
+    switch (enum_value) {
+    case eChannel_Bandwidth_NA:     return "eChannel_Bandwidth_NA";
+    case eChannel_Bandwidth_20MHz:  return "eChannel_Bandwidth_20MHz";
+    case eChannel_Bandwidth_40MHz:  return "eChannel_Bandwidth_40MHz";
+    case eChannel_Bandwidth_80MHz:  return "eChannel_Bandwidth_80MHz";
+    case eChannel_Bandwidth_160MHz: return "eChannel_Bandwidth_160MHz";
+    case eChannel_Bandwidth_80_80:  return "eChannel_Bandwidth_80_80";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, eChannelScanResultChannelBandwidth value) { return out << eChannelScanResultChannelBandwidth_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 typedef struct sChannelScanResults {
     //The current service set identifier in use by the neighboring WiFi SSID. The value MAY be empty for hidden SSIDs.
@@ -1348,6 +1544,22 @@ enum eClientSelectedBands: uint8_t {
     eSelectedBands_6G = 0x4,
     eSelectedBands_Unknown = 0xff,
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *eClientSelectedBands_str(eClientSelectedBands enum_value) {
+    switch (enum_value) {
+    case eSelectedBands_Disabled: return "eSelectedBands_Disabled";
+    case eSelectedBands_24G:      return "eSelectedBands_24G";
+    case eSelectedBands_5G:       return "eSelectedBands_5G";
+    case eSelectedBands_6G:       return "eSelectedBands_6G";
+    case eSelectedBands_Unknown:  return "eSelectedBands_Unknown";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, eClientSelectedBands value) { return out << eClientSelectedBands_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 typedef struct sClientConfig {
     //1 for true, 0 for false, -1 for "not configured".

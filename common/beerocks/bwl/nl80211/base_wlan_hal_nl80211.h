@@ -28,7 +28,37 @@ namespace bwl {
 namespace nl80211 {
 
 enum class nl80211_fsm_state { Delay, Init, GetRadioInfo, Attach, Operational, Detach };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *nl80211_fsm_state_str(nl80211_fsm_state enum_value) {
+    switch (enum_value) {
+    case nl80211_fsm_state::Delay:        return "nl80211_fsm_state::Delay";
+    case nl80211_fsm_state::Init:         return "nl80211_fsm_state::Init";
+    case nl80211_fsm_state::GetRadioInfo: return "nl80211_fsm_state::GetRadioInfo";
+    case nl80211_fsm_state::Attach:       return "nl80211_fsm_state::Attach";
+    case nl80211_fsm_state::Operational:  return "nl80211_fsm_state::Operational";
+    case nl80211_fsm_state::Detach:       return "nl80211_fsm_state::Detach";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, nl80211_fsm_state value) { return out << nl80211_fsm_state_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 enum class nl80211_fsm_event { Attach, Detach };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *nl80211_fsm_event_str(nl80211_fsm_event enum_value) {
+    switch (enum_value) {
+    case nl80211_fsm_event::Attach: return "nl80211_fsm_event::Attach";
+    case nl80211_fsm_event::Detach: return "nl80211_fsm_event::Detach";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, nl80211_fsm_event value) { return out << nl80211_fsm_event_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 /*!
  * Base class for the wav abstraction layer.

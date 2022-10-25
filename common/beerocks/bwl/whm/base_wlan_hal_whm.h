@@ -23,8 +23,38 @@ namespace bwl {
 namespace whm {
 
 enum class whm_fsm_state { Delay, Init, GetRadioInfo, Attach, Operational, Detach };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *whm_fsm_state_str(whm_fsm_state enum_value) {
+    switch (enum_value) {
+    case whm_fsm_state::Delay:        return "whm_fsm_state::Delay";
+    case whm_fsm_state::Init:         return "whm_fsm_state::Init";
+    case whm_fsm_state::GetRadioInfo: return "whm_fsm_state::GetRadioInfo";
+    case whm_fsm_state::Attach:       return "whm_fsm_state::Attach";
+    case whm_fsm_state::Operational:  return "whm_fsm_state::Operational";
+    case whm_fsm_state::Detach:       return "whm_fsm_state::Detach";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, whm_fsm_state value) { return out << whm_fsm_state_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 enum class whm_fsm_event { Attach, Detach };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *whm_fsm_event_str(whm_fsm_event enum_value) {
+    switch (enum_value) {
+    case whm_fsm_event::Attach: return "whm_fsm_event::Attach";
+    case whm_fsm_event::Detach: return "whm_fsm_event::Detach";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, whm_fsm_event value) { return out << whm_fsm_event_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 typedef std::unordered_map<std::string, std::string> parsed_obj_map_t;
 typedef std::list<parsed_obj_map_t> parsed_obj_listed_map_t;

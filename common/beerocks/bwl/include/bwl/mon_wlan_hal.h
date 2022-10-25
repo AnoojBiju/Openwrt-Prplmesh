@@ -41,6 +41,30 @@ public:
         Channel_Scan_Aborted,
         Channel_Scan_Finished
     };
+    // Enum AutoPrint generated code snippet begining- DON'T EDIT!
+    // clang-format off
+    static const char *Event_str(Event enum_value) {
+        switch (enum_value) {
+        case Event::Invalid:                        return "Event::Invalid";
+        case Event::STA_Connected:                  return "Event::STA_Connected";
+        case Event::STA_Disconnected:               return "Event::STA_Disconnected";
+        case Event::AP_Enabled:                     return "Event::AP_Enabled";
+        case Event::AP_Disabled:                    return "Event::AP_Disabled";
+        case Event::RRM_Channel_Load_Response:      return "Event::RRM_Channel_Load_Response";
+        case Event::RRM_Beacon_Request_Status:      return "Event::RRM_Beacon_Request_Status";
+        case Event::RRM_Beacon_Response:            return "Event::RRM_Beacon_Response";
+        case Event::Channel_Scan_Triggered:         return "Event::Channel_Scan_Triggered";
+        case Event::Channel_Scan_New_Results_Ready: return "Event::Channel_Scan_New_Results_Ready";
+        case Event::Channel_Scan_Dump_Result:       return "Event::Channel_Scan_Dump_Result";
+        case Event::Channel_Scan_Aborted:           return "Event::Channel_Scan_Aborted";
+        case Event::Channel_Scan_Finished:          return "Event::Channel_Scan_Finished";
+        }
+        static std::string out_str = std::to_string(int(enum_value));
+        return out_str.c_str();
+    }
+    friend inline std::ostream &operator<<(std::ostream &out, Event value) { return out << Event_str(value); }
+    // clang-format on
+    // Enum AutoPrint generated code snippet end
 
     // Public methods:
 public:

@@ -78,6 +78,20 @@ public:
         ESTIMATION_FAILURE_BELOW_RANGE  = 1,
         ESTIMATION_FAILURE_INVALID_RSSI = 2
     };
+    // Enum AutoPrint generated code snippet begining- DON'T EDIT!
+    // clang-format off
+    static const char *eEstimationStatus_str(eEstimationStatus enum_value) {
+        switch (enum_value) {
+        case ESTIMATION_SUCCESS:              return "ESTIMATION_SUCCESS";
+        case ESTIMATION_FAILURE_BELOW_RANGE:  return "ESTIMATION_FAILURE_BELOW_RANGE";
+        case ESTIMATION_FAILURE_INVALID_RSSI: return "ESTIMATION_FAILURE_INVALID_RSSI";
+        }
+        static std::string out_str = std::to_string(int(enum_value));
+        return out_str.c_str();
+    }
+    friend inline std::ostream &operator<<(std::ostream &out, eEstimationStatus value) { return out << eEstimationStatus_str(value); }
+    // clang-format on
+    // Enum AutoPrint generated code snippet end
 
     typedef struct {
         int tx_power;

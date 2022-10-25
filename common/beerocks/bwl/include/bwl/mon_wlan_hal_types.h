@@ -194,6 +194,20 @@ struct SBeaconRequest11k {
         Active,
         Table,
     };
+    // Enum AutoPrint generated code snippet begining- DON'T EDIT!
+    // clang-format off
+    static const char *MeasurementMode_str(MeasurementMode enum_value) {
+        switch (enum_value) {
+        case MeasurementMode::Passive: return "MeasurementMode::Passive";
+        case MeasurementMode::Active:  return "MeasurementMode::Active";
+        case MeasurementMode::Table:   return "MeasurementMode::Table";
+        }
+        static std::string out_str = std::to_string(int(enum_value));
+        return out_str.c_str();
+    }
+    friend inline std::ostream &operator<<(std::ostream &out, MeasurementMode value) { return out << MeasurementMode_str(value); }
+    // clang-format on
+    // Enum AutoPrint generated code snippet end
 
     uint8_t
         measurement_mode; // MeasurementMode - Should be replaced with string "passive" / "active" / "table"
@@ -391,12 +405,40 @@ enum class eChannelScanResultMode : uint8_t {
     eMode_AdHoc          = 0x1,
     eMode_Infrastructure = 0x2,
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *eChannelScanResultMode_str(eChannelScanResultMode enum_value) {
+    switch (enum_value) {
+    case eChannelScanResultMode::eMode_NA:             return "eChannelScanResultMode::eMode_NA";
+    case eChannelScanResultMode::eMode_AdHoc:          return "eChannelScanResultMode::eMode_AdHoc";
+    case eChannelScanResultMode::eMode_Infrastructure: return "eChannelScanResultMode::eMode_Infrastructure";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, eChannelScanResultMode value) { return out << eChannelScanResultMode_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 enum class eChannelScanResultEncryptionMode : uint8_t {
     eEncryption_Mode_NA   = 0x0,
     eEncryption_Mode_AES  = 0x1,
     eEncryption_Mode_TKIP = 0x2,
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *eChannelScanResultEncryptionMode_str(eChannelScanResultEncryptionMode enum_value) {
+    switch (enum_value) {
+    case eChannelScanResultEncryptionMode::eEncryption_Mode_NA:   return "eChannelScanResultEncryptionMode::eEncryption_Mode_NA";
+    case eChannelScanResultEncryptionMode::eEncryption_Mode_AES:  return "eChannelScanResultEncryptionMode::eEncryption_Mode_AES";
+    case eChannelScanResultEncryptionMode::eEncryption_Mode_TKIP: return "eChannelScanResultEncryptionMode::eEncryption_Mode_TKIP";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, eChannelScanResultEncryptionMode value) { return out << eChannelScanResultEncryptionMode_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 enum class eChannelScanResultSecurityMode : uint8_t {
     eSecurity_Mode_None = 0x0,
@@ -404,12 +446,41 @@ enum class eChannelScanResultSecurityMode : uint8_t {
     eSecurity_Mode_WPA  = 0x2,
     eSecurity_Mode_WPA2 = 0x3,
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *eChannelScanResultSecurityMode_str(eChannelScanResultSecurityMode enum_value) {
+    switch (enum_value) {
+    case eChannelScanResultSecurityMode::eSecurity_Mode_None: return "eChannelScanResultSecurityMode::eSecurity_Mode_None";
+    case eChannelScanResultSecurityMode::eSecurity_Mode_WEP:  return "eChannelScanResultSecurityMode::eSecurity_Mode_WEP";
+    case eChannelScanResultSecurityMode::eSecurity_Mode_WPA:  return "eChannelScanResultSecurityMode::eSecurity_Mode_WPA";
+    case eChannelScanResultSecurityMode::eSecurity_Mode_WPA2: return "eChannelScanResultSecurityMode::eSecurity_Mode_WPA2";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, eChannelScanResultSecurityMode value) { return out << eChannelScanResultSecurityMode_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 enum class eChannelScanResultOperatingFrequencyBand : uint8_t {
     eOperating_Freq_Band_NA     = 0x0,
     eOperating_Freq_Band_2_4GHz = 0x1,
     eOperating_Freq_Band_5GHz   = 0x2,
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *eChannelScanResultOperatingFrequencyBand_str(eChannelScanResultOperatingFrequencyBand enum_value) {
+    switch (enum_value) {
+    case eChannelScanResultOperatingFrequencyBand::eOperating_Freq_Band_NA:     return "eChannelScanResultOperatingFrequencyBand::eOperating_Freq_Band_NA";
+    case eChannelScanResultOperatingFrequencyBand::eOperating_Freq_Band_2_4GHz: return "eChannelScanResultOperatingFrequencyBand::eOperating_Freq_Band_2_4GHz";
+    case eChannelScanResultOperatingFrequencyBand::eOperating_Freq_Band_5GHz:   return "eChannelScanResultOperatingFrequencyBand::eOperating_Freq_Band_5GHz";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, eChannelScanResultOperatingFrequencyBand value) { return out << eChannelScanResultOperatingFrequencyBand_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 enum class eChannelScanResultStandards : uint8_t {
     eStandard_NA       = 0x0,
@@ -420,6 +491,24 @@ enum class eChannelScanResultStandards : uint8_t {
     eStandard_802_11ac = 0x5,
     eStandard_802_11ax = 0x6,
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *eChannelScanResultStandards_str(eChannelScanResultStandards enum_value) {
+    switch (enum_value) {
+    case eChannelScanResultStandards::eStandard_NA:       return "eChannelScanResultStandards::eStandard_NA";
+    case eChannelScanResultStandards::eStandard_802_11a:  return "eChannelScanResultStandards::eStandard_802_11a";
+    case eChannelScanResultStandards::eStandard_802_11b:  return "eChannelScanResultStandards::eStandard_802_11b";
+    case eChannelScanResultStandards::eStandard_802_11g:  return "eChannelScanResultStandards::eStandard_802_11g";
+    case eChannelScanResultStandards::eStandard_802_11n:  return "eChannelScanResultStandards::eStandard_802_11n";
+    case eChannelScanResultStandards::eStandard_802_11ac: return "eChannelScanResultStandards::eStandard_802_11ac";
+    case eChannelScanResultStandards::eStandard_802_11ax: return "eChannelScanResultStandards::eStandard_802_11ax";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, eChannelScanResultStandards value) { return out << eChannelScanResultStandards_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 enum class eChannelScanResultChannelBandwidth : uint8_t {
     eChannel_Bandwidth_NA     = 0x0,
@@ -429,6 +518,23 @@ enum class eChannelScanResultChannelBandwidth : uint8_t {
     eChannel_Bandwidth_160MHz = 0x4,
     eChannel_Bandwidth_80_80  = 0x5,
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *eChannelScanResultChannelBandwidth_str(eChannelScanResultChannelBandwidth enum_value) {
+    switch (enum_value) {
+    case eChannelScanResultChannelBandwidth::eChannel_Bandwidth_NA:     return "eChannelScanResultChannelBandwidth::eChannel_Bandwidth_NA";
+    case eChannelScanResultChannelBandwidth::eChannel_Bandwidth_20MHz:  return "eChannelScanResultChannelBandwidth::eChannel_Bandwidth_20MHz";
+    case eChannelScanResultChannelBandwidth::eChannel_Bandwidth_40MHz:  return "eChannelScanResultChannelBandwidth::eChannel_Bandwidth_40MHz";
+    case eChannelScanResultChannelBandwidth::eChannel_Bandwidth_80MHz:  return "eChannelScanResultChannelBandwidth::eChannel_Bandwidth_80MHz";
+    case eChannelScanResultChannelBandwidth::eChannel_Bandwidth_160MHz: return "eChannelScanResultChannelBandwidth::eChannel_Bandwidth_160MHz";
+    case eChannelScanResultChannelBandwidth::eChannel_Bandwidth_80_80:  return "eChannelScanResultChannelBandwidth::eChannel_Bandwidth_80_80";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, eChannelScanResultChannelBandwidth value) { return out << eChannelScanResultChannelBandwidth_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 typedef struct sChannelScanResults {
     //The current service set identifier in use by the neighboring WiFi SSID. The value MAY be empty for hidden SSIDs.

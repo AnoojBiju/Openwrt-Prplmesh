@@ -69,6 +69,54 @@ public:
         DPP_AUTHENTICATION_RESPONSE,
         DPP_CONFIGURATION_REQUEST
     };
+    // Enum AutoPrint generated code snippet begining- DON'T EDIT!
+    // clang-format off
+    static const char *Event_str(Event enum_value) {
+        switch (enum_value) {
+        case Event::Invalid:                                   return "Event::Invalid";
+        case Event::AP_Attached:                               return "Event::AP_Attached";
+        case Event::AP_Enabled:                                return "Event::AP_Enabled";
+        case Event::AP_Disabled:                               return "Event::AP_Disabled";
+        case Event::WPA_Event_EAP_Failure:                     return "Event::WPA_Event_EAP_Failure";
+        case Event::WPA_Event_EAP_Failure2:                    return "Event::WPA_Event_EAP_Failure2";
+        case Event::WPA_Event_EAP_Timeout_Failure:             return "Event::WPA_Event_EAP_Timeout_Failure";
+        case Event::WPA_Event_EAP_Timeout_Failure2:            return "Event::WPA_Event_EAP_Timeout_Failure2";
+        case Event::WPS_Event_Timeout:                         return "Event::WPS_Event_Timeout";
+        case Event::WPS_Event_Fail:                            return "Event::WPS_Event_Fail";
+        case Event::WPA_Event_SAE_Unknown_Password_Identifier: return "Event::WPA_Event_SAE_Unknown_Password_Identifier";
+        case Event::WPS_Event_Cancel:                          return "Event::WPS_Event_Cancel";
+        case Event::AP_Sta_Possible_Psk_Mismatch:              return "Event::AP_Sta_Possible_Psk_Mismatch";
+        case Event::STA_Connected:                             return "Event::STA_Connected";
+        case Event::STA_Disconnected:                          return "Event::STA_Disconnected";
+        case Event::STA_Unassoc_RSSI:                          return "Event::STA_Unassoc_RSSI";
+        case Event::STA_Softblock_Drop:                        return "Event::STA_Softblock_Drop";
+        case Event::STA_Steering_Probe_Req:                    return "Event::STA_Steering_Probe_Req";
+        case Event::STA_Steering_Auth_Fail:                    return "Event::STA_Steering_Auth_Fail";
+        case Event::Interface_Enabled:                         return "Event::Interface_Enabled";
+        case Event::Interface_Disabled:                        return "Event::Interface_Disabled";
+        case Event::ACS_Started:                               return "Event::ACS_Started";
+        case Event::ACS_Completed:                             return "Event::ACS_Completed";
+        case Event::ACS_Failed:                                return "Event::ACS_Failed";
+        case Event::CSA_Finished:                              return "Event::CSA_Finished";
+        case Event::CTRL_Channel_Switch:                       return "Event::CTRL_Channel_Switch";
+        case Event::BSS_TM_Query:                              return "Event::BSS_TM_Query";
+        case Event::BSS_TM_Response:                           return "Event::BSS_TM_Response";
+        case Event::DFS_CAC_Started:                           return "Event::DFS_CAC_Started";
+        case Event::DFS_CAC_Completed:                         return "Event::DFS_CAC_Completed";
+        case Event::DFS_NOP_Finished:                          return "Event::DFS_NOP_Finished";
+        case Event::DFS_RADAR_Detected:                        return "Event::DFS_RADAR_Detected";
+        case Event::AP_MGMT_FRAME_RECEIVED:                    return "Event::AP_MGMT_FRAME_RECEIVED";
+        case Event::MGMT_Frame:                                return "Event::MGMT_Frame";
+        case Event::DPP_PRESENCE_ANNOUNCEMENT:                 return "Event::DPP_PRESENCE_ANNOUNCEMENT";
+        case Event::DPP_AUTHENTICATION_RESPONSE:               return "Event::DPP_AUTHENTICATION_RESPONSE";
+        case Event::DPP_CONFIGURATION_REQUEST:                 return "Event::DPP_CONFIGURATION_REQUEST";
+        }
+        static std::string out_str = std::to_string(int(enum_value));
+        return out_str.c_str();
+    }
+    friend inline std::ostream &operator<<(std::ostream &out, Event value) { return out << Event_str(value); }
+    // clang-format on
+    // Enum AutoPrint generated code snippet end
 
     // Public methods
 public:

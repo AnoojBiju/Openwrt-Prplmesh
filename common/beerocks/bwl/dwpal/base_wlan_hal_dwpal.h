@@ -28,8 +28,39 @@ namespace bwl {
 namespace dwpal {
 
 enum class dwpal_fsm_state { Delay, Init, GetRadioInfo, AttachVaps, Attach, Operational, Detach };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *dwpal_fsm_state_str(dwpal_fsm_state enum_value) {
+    switch (enum_value) {
+    case dwpal_fsm_state::Delay:        return "dwpal_fsm_state::Delay";
+    case dwpal_fsm_state::Init:         return "dwpal_fsm_state::Init";
+    case dwpal_fsm_state::GetRadioInfo: return "dwpal_fsm_state::GetRadioInfo";
+    case dwpal_fsm_state::AttachVaps:   return "dwpal_fsm_state::AttachVaps";
+    case dwpal_fsm_state::Attach:       return "dwpal_fsm_state::Attach";
+    case dwpal_fsm_state::Operational:  return "dwpal_fsm_state::Operational";
+    case dwpal_fsm_state::Detach:       return "dwpal_fsm_state::Detach";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, dwpal_fsm_state value) { return out << dwpal_fsm_state_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 enum class dwpal_fsm_event { Attach, Detach };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *dwpal_fsm_event_str(dwpal_fsm_event enum_value) {
+    switch (enum_value) {
+    case dwpal_fsm_event::Attach: return "dwpal_fsm_event::Attach";
+    case dwpal_fsm_event::Detach: return "dwpal_fsm_event::Detach";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, dwpal_fsm_event value) { return out << dwpal_fsm_event_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 // list of issues that may prevent a client's connection
 enum generate_association_event_result : int32_t {
@@ -37,6 +68,20 @@ enum generate_association_event_result : int32_t {
     SUCCESS                    = 0,
     SKIP_CLIENT_NOT_ASSOCIATED = 1,
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *generate_association_event_result_str(generate_association_event_result enum_value) {
+    switch (enum_value) {
+    case FAILED_TO_PARSE_DWPAL:      return "FAILED_TO_PARSE_DWPAL";
+    case SUCCESS:                    return "SUCCESS";
+    case SKIP_CLIENT_NOT_ASSOCIATED: return "SKIP_CLIENT_NOT_ASSOCIATED";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, generate_association_event_result value) { return out << generate_association_event_result_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 // Context is created for each VAP and for main radio
 static constexpr uint8_t DWPAL_CONTEXTS_MAX_SIZE =
