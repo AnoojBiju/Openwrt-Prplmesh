@@ -1510,8 +1510,40 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
 bool ap_wlan_hal_nl80211::add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
                                   std::string &bridge, bool vbss)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
-    return false;
+    std::string conf_path =
+        std::string(bwl::nl80211::base_ctrl_path) + "hostapd-" + ifname + ".conf";
+    std::stringstream cmd;
+    // TODO: PPM-2347: check that the radio still has room for one more BSS.
+
+    prplmesh::hostapd::Configuration conf(conf_path);
+    conf.set_create_head_value("interface", ifname);
+    conf.set_create_head_value("bssid", tlvf::mac_to_string(bss_conf.bssid));
+    conf.set_create_head_value("ssid", bss_conf.ssid);
+    conf.set_create_head_value("ctrl_interface",
+                               std::string(bwl::nl80211::base_ctrl_path) + "/hostapd");
+
+    assign_auth_encr_parameters(conf, "", bss_conf);
+    if (!bridge.empty()) {
+        conf.set_create_head_value("bridge", bridge);
+    }
+    if (vbss) {
+        conf.set_create_head_value("broadcast_deauth", "0");
+    }
+    if (!conf.store()) {
+        LOG(ERROR) << "Failed to store the hostapd configuration!";
+        return false;
+    }
+
+    LOG(DEBUG) << "Adding new BSS on phy " << get_iface_name() << std::endl
+               << "BSS configuration: " << conf;
+
+    cmd << "ADD bss_config=" << get_iface_name() << ":" << conf_path;
+    if (!wpa_ctrl_send_msg(cmd.str(), "global")) {
+        LOG(ERROR) << "Failed to create the new BSS!";
+        return false;
+    }
+
+    return true;
 }
 
 bool ap_wlan_hal_nl80211::remove_bss(std::string &ifname)
