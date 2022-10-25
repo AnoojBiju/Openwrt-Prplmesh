@@ -93,6 +93,9 @@ ENV PRPLMESH_VARIANT=$PRPLMESH_VARIANT
 ARG MMX_ENABLE
 ENV MMX_ENABLE=$MMX_ENABLE
 
+ARG WHM_ENABLE
+ENV WHM_ENABLE=$WHM_ENABLE
+
 WORKDIR /home/openwrt/openwrt
 
 COPY --chown=openwrt:openwrt scripts/build-openwrt.sh /home/openwrt/openwrt/scripts/build-openwrt.sh
