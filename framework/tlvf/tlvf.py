@@ -507,8 +507,6 @@ class TlvF:
 
             for file in files:
                 self.logger.debug("eap.upgrade_enum: %s" % file)
-                if "common" in file:
-                    break
                 std_out = sys.stdout
                 eap.redirect_stdout_to_file("tlvf_output.log")
                 eap.upgrade_enum(file)

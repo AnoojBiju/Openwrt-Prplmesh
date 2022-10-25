@@ -239,8 +239,8 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
 
     /**
      * If the specified neighbor 1905.1 AL ID does not identify a neighbor of the receiving 1905.1
-     * AL, then a link metric ResultCode TLV (see Table 6-21) with a value set to “invalid
-     * neighbor” shall be included in this message.
+     * AL, then a link metric ResultCode TLV (see Table 6-21) with a value set to "invalid
+     * neighbor" shall be included in this message.
      */
     bool invalid_neighbor = specific_neighbor && neighbor_links_map.empty();
     if (invalid_neighbor) {

@@ -302,7 +302,14 @@ class EnumAutoPrint:
             return
 
         f = open(file_path, "r", encoding=self.conf.encoding)
-        lines = f.readlines()
+        lines = []
+        try:
+            lines = f.readlines()
+        except UnicodeDecodeError:
+            f.close()
+            message = str(f'\nFailed to readline on file: {file_path}.\nThe reason is probably'
+                          ' a non utf-8 character in the file.\nPlease format the file to utf-8.')
+            assert False, message
         f.close()
 
         header_file = file_path.endswith(".h")

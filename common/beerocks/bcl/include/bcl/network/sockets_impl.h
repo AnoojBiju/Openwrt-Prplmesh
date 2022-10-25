@@ -247,11 +247,11 @@ public:
      * host operating system.
      *
      * Valid socket types in the UNIX domain are:
-     * - SOCK_STREAM (compare to TCP) – for a stream-oriented socket.
-     * - SOCK_DGRAM (compare to UDP) – for a datagram-oriented socket that preserves message
+     * - SOCK_STREAM (compare to TCP) - for a stream-oriented socket.
+     * - SOCK_DGRAM (compare to UDP) - for a datagram-oriented socket that preserves message
      * boundaries (as on most UNIX implementations, UNIX domain datagram sockets are always
      * reliable and don't reorder datagrams).
-     * - SOCK_SEQPACKET (compare to SCTP) – for a sequenced-packet socket that is connection-
+     * - SOCK_SEQPACKET (compare to SCTP) - for a sequenced-packet socket that is connection-
      * oriented, preserves message boundaries, and delivers messages in the order that they were
      * sent.
      *

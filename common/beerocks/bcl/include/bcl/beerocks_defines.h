@@ -11,6 +11,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <iostream>
 #include <stdint.h>
 
 constexpr char BEEROCKS_CONTROLLER[] = "beerocks_controller";

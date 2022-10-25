@@ -9,9 +9,9 @@
 #ifndef _BWL_802_11_DEFS_H_
 #define _BWL_802_11_DEFS_H_
 
-#include <tlvf/common/sMacAddr.h>
-
+#include <iostream>
 #include <stdint.h>
+#include <tlvf/common/sMacAddr.h>
 
 namespace bwl {
 

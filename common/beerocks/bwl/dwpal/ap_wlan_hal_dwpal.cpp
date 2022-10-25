@@ -1731,7 +1731,7 @@ bool ap_wlan_hal_dwpal::cancel_cac(int chan, beerocks::eWiFiBandwidth bw, int vh
 
 bool ap_wlan_hal_dwpal::failsafe_channel_set(int chan, int bw, int vht_center_frequency)
 {
-    // Channel number of the new channel or ‘0’ to trigger low level channel selection algorithm.
+    // Channel number of the new channel or '0' to trigger low level channel selection algorithm.
     // '0' triggers the same behavior as if the failsafe channel is NOT set.
     std::string cmd = "SET_FAILSAFE_CHAN ";
 
@@ -1894,7 +1894,7 @@ bool ap_wlan_hal_dwpal::hybrid_mode_supported() { return true; }
 
 bool ap_wlan_hal_dwpal::restricted_channels_set(char *channel_list)
 {
-    // For example, the channel_list_str: “1 6 11 12 13”
+    // For example, the channel_list_str: "1 6 11 12 13"
     // *** WARNING: It is possible to set restricted channel only from the supported channels list!
     // *** setting channel that is not in the list, will cause this function to fail!
     std::stringstream channel_list_str;

@@ -117,7 +117,7 @@ private:
      *
      * If a Channel Selection Request message contains zero Channel Preference TLVs,
      * it is indicating the highest preference for all channels and operating classes supported
-     * by all of the Multi-AP Agent’s radios.
+     * by all of the Multi-AP Agent's radios.
      *
      * Operating Channel Report should be sent back from the Agent after this empty message.
      * That way operating classes are registered to data model.

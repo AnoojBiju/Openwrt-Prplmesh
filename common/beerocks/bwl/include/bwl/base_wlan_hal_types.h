@@ -68,34 +68,6 @@ enum class ChanSwReason { Unknown = 0, Radar = 1, CoEx_20 = 2, CoEx_40 = 3 };
 // WLAN Security Types
 enum class WiFiSec { Invalid = 0, None, WEP_64, WEP_128, WPA_PSK, WPA2_PSK, WPA_WPA2_PSK };
 
-inline std::ostream &operator<<(std::ostream &out, const bwl::WiFiSec &sec)
-{
-    switch (sec) {
-    case bwl::WiFiSec::Invalid:
-        out << "Invalid";
-        break;
-    case bwl::WiFiSec::None:
-        out << "None";
-        break;
-    case bwl::WiFiSec::WEP_64:
-        out << "WEP-64";
-        break;
-    case bwl::WiFiSec::WEP_128:
-        out << "WEP-128";
-        break;
-    case bwl::WiFiSec::WPA_PSK:
-        out << "WPA-Personal";
-        break;
-    case bwl::WiFiSec::WPA2_PSK:
-        out << "WPA2-Personal";
-        break;
-    case bwl::WiFiSec::WPA_WPA2_PSK:
-        out << "WPA-WPA2-Personal";
-        break;
-    }
-    return out;
-}
-
 enum eRadioState : uint8_t {
     UNINITIALIZED,
     DISABLED,
@@ -107,25 +79,6 @@ enum eRadioState : uint8_t {
     ENABLED,
     UNKNOWN
 };
-
-// clang-format off
-static const std::unordered_map<eRadioState, const char *, std::hash<int>> eRadioState_string = {
-  { eRadioState::UNINITIALIZED,  "UNINITIALIZED"  },
-  { eRadioState::DISABLED,       "DISABLED"       },
-  { eRadioState::COUNTRY_UPDATE, "COUNTRY_UPDATE" },
-  { eRadioState::ACS,            "ACS"            },
-  { eRadioState::ACS_DONE,       "ACS_DONE"       },
-  { eRadioState::HT_SCAN,        "HT_SCAN"        },
-  { eRadioState::DFS,            "DFS"            },
-  { eRadioState::ENABLED,        "ENABLED"        },
-  { eRadioState::UNKNOWN,        "UNKNOWN"        },
-};
-// clang-format on
-
-inline std::ostream &operator<<(std::ostream &out, eRadioState radio_state)
-{
-    return out << eRadioState_string.at(radio_state);
-}
 
 struct sChannelInfo {
     int8_t tx_power_dbm;

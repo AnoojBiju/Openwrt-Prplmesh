@@ -485,7 +485,7 @@ public:
 
     * It's possible to get value for ANPI with RCPI and RSNI based on formuladescribed
     * in 9.4.2.41 RSNI element of [Section 9.4.2.41 RSNI element/802.11].
-    * RSNI = (10 * log ((RCPI – ANPI) / ANPI) + 10) * 2;
+    * RSNI = (10 * log ((RCPI - ANPI) / ANPI) + 10) * 2;
     * From RSNI formula possible to get ANPI.
     * ANPI = RCPI/(1 + 10^((RSNI / 20.00) - 1))
     *

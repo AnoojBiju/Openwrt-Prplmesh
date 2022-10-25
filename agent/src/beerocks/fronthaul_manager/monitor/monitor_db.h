@@ -265,8 +265,8 @@ public:
         /**
          * STA Metrics Reporting RCPI Threshold.
          * 0: Do not report STA Metrics based on RCPI threshold.
-         * 1 – 220: RCPI threshold (encoded per Table 9-154 of [1]).
-         * 221 – 255: Reserved
+         * 1 - 220: RCPI threshold (encoded per Table 9-154 of [1]).
+         * 221 - 255: Reserved
          * (Value is obtained from Metric Reporting Policy TLV)
          */
         uint8_t sta_metrics_reporting_rcpi_threshold = 0;
