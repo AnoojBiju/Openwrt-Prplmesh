@@ -138,5 +138,12 @@ int cfg_set_prplmesh_config(const std::string &option, const std::string &value)
     return uci_set_section("prplmesh", "", "config", options, true);
 }
 
+int cfg_set_prplmesh_config_no_commit(const std::string &option, const std::string &value)
+{
+    OptionsUnorderedMap options{{option, value}};
+
+    return uci_set_section("prplmesh", "", "config", options, false);
+}
+
 } // namespace bpl
 } // namespace beerocks
