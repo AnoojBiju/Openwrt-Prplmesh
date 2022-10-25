@@ -2341,6 +2341,18 @@ public:
         const wfa_map::tlv1905LayerSecurityCapability::eMicAlgorithm &integrity_algorithm,
         const wfa_map::tlv1905LayerSecurityCapability::eEncryptionAlgorithm &encryption_algorithm);
 
+    /**
+     * @brief Sets metric reporting policy parameters.
+     *
+     * Data model paths:
+     * "Device.WiFi.DataElements.Network.Device.{i}."
+     * "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}."
+     *
+     * @param[in] agent Agent DB object.
+     * @return True on success, otherwise false.
+     */
+    bool dm_set_metric_reporting_policies(const Agent &agent);
+
     //
     // tasks
     //

@@ -39,6 +39,16 @@
         %read-only bool TrafficSeparationCombinedFronthaul;
         %read-only bool TrafficSeparationCombinedBackhaul;
 
+        uint32 STAReportingRCPIThreshold {
+            on action validate call check_range [0, 220];
+        }
+        uint32 STAReportingRCPIHysteresisMarginOverride;
+        uint32 ChannelUtilizationReportingThreshold;
+
+        bool AssociatedSTATrafficStatsInclusionPolicy;
+        bool AssociatedSTALinkMetricsInclusionPolicy;
+        bool APMetricsWiFi6;
+
         object CurrentOperatingClasses [] {
             counted with CurrentOperatingClassesNumberOfEntries;
             %read-only datetime TimeStamp = "2020-08-31T11:22:39Z";

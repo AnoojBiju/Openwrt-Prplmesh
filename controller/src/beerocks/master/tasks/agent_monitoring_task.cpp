@@ -342,6 +342,12 @@ bool agent_monitoring_task::send_multi_ap_policy_config_request(const sMacAddr &
         radio_idx++;
     }
 
+    if (!database.dm_set_metric_reporting_policies(*agent)) {
+        LOG(ERROR) << "Failed to set metric reporting policy parameters in DM for Agent"
+                   << agent->al_mac;
+        return false;
+    }
+
     if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1) {
         auto unsuccessful_association_policy_tlv =
             cmdu_tx.addClass<wfa_map::tlvProfile2UnsuccessfulAssociationPolicy>();

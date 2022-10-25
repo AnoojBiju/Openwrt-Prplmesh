@@ -7806,3 +7806,41 @@ bool db::dm_add_agent_1905_layer_security_capabilities(
 
     return ret_val;
 }
+
+bool db::dm_set_metric_reporting_policies(const Agent &agent)
+{
+    if (agent.dm_path.empty()) {
+        return true;
+    }
+
+    bool ret_val = true;
+    ret_val &= m_ambiorix_datamodel->set(agent.dm_path, "APMetricsReportingInterval",
+                                         config.link_metrics_request_interval_seconds.count());
+
+    for (const auto &radio : agent.radios) {
+        if (radio.second->dm_path.empty()) {
+            continue;
+        }
+
+        ret_val &= m_ambiorix_datamodel->set(
+            radio.second->dm_path, "STAReportingRCPIThreshold",
+            radio.second->metric_reporting_policies.sta_reporting_rcpi_threshold);
+        ret_val &= m_ambiorix_datamodel->set(
+            radio.second->dm_path, "STAReportingRCPIHysteresisMarginOverride",
+            radio.second->metric_reporting_policies
+                .sta_reporting_rcpi_hyst_margin_override_threshold);
+        ret_val &= m_ambiorix_datamodel->set(
+            radio.second->dm_path, "ChannelUtilizationReportingThreshold",
+            radio.second->metric_reporting_policies.ap_reporting_channel_utilization_threshold);
+        ret_val &= m_ambiorix_datamodel->set(
+            radio.second->dm_path, "AssociatedSTATrafficStatsInclusionPolicy",
+            radio.second->metric_reporting_policies.assoc_sta_traffic_stats_inclusion_policy);
+        ret_val &= m_ambiorix_datamodel->set(
+            radio.second->dm_path, "AssociatedSTALinkMetricsInclusionPolicy",
+            radio.second->metric_reporting_policies.assoc_sta_link_metrics_inclusion_policy);
+        ret_val &= m_ambiorix_datamodel->set(
+            radio.second->dm_path, "APMetricsWiFi6",
+            radio.second->metric_reporting_policies.assoc_wifi6_sta_status_report_inclusion_policy);
+    }
+    return ret_val;
+}
