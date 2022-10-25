@@ -947,5 +947,7 @@ bool cfg_get_clients_unicast_measurements(bool &client_unicast_measurements)
     return true;
 }
 
+bool cfg_commit_changes() { return uci_commit_changes("prplmesh"); }
+
 } // namespace bpl
 } // namespace beerocks

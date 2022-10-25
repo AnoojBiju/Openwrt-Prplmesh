@@ -821,5 +821,7 @@ bool cfg_get_clients_unicast_measurements(bool &clients_unicast_measurements)
     return true;
 }
 
+bool cfg_commit_changes() { return true; };
+
 } // namespace bpl
 } // namespace beerocks

@@ -7060,6 +7060,8 @@ bool db::update_master_configuration(const sDbNbapiConfig &nbapi_config)
     ret_val &=
         beerocks::bpl::cfg_set_steering_disassoc_timer_msec(config.steering_disassoc_timer_msec);
 
+    ret_val &= beerocks::bpl::cfg_commit_changes();
+
     update_master_settings_from_config();
 
     return ret_val;

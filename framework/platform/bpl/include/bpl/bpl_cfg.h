@@ -1129,6 +1129,15 @@ bool get_controller_heartbeat_state_timeout_seconds(std::chrono::seconds &timeou
 
 bool cfg_get_clients_unicast_measurements(bool &client_unicast_measurements);
 
+/**
+ * @brief Commit changes to prplmesh. uci package
+ *
+ * Used to close a sequence of set_no_commit operations
+ *
+ * @return true on success, otherwise false
+ */
+bool cfg_commit_changes();
+
 } // namespace bpl
 } // namespace beerocks
 
