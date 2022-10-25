@@ -687,6 +687,19 @@ bool ap_wlan_hal_dummy::set(const std::string &param, const std::string &value, 
     return true;
 }
 
+bool ap_wlan_hal_dummy::add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
+                                std::string &bridge, bool vbss)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
+bool ap_wlan_hal_dummy::remove_bss(std::string &ifname)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
 } // namespace dummy
 
 std::shared_ptr<ap_wlan_hal> ap_wlan_hal_create(std::string iface_name, bwl::hal_conf_t hal_conf,

@@ -1507,6 +1507,19 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
     return true;
 }
 
+bool ap_wlan_hal_nl80211::add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
+                                  std::string &bridge, bool vbss)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
+bool ap_wlan_hal_nl80211::remove_bss(std::string &ifname)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
 } // namespace nl80211
 
 std::shared_ptr<ap_wlan_hal> ap_wlan_hal_create(std::string iface_name, hal_conf_t hal_conf,
