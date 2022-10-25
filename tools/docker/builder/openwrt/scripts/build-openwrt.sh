@@ -36,6 +36,12 @@ fi
 # feed-prpl is in the prpl profile:
 args+=("prpl")
 
+if [ -z "$WHM_ENABLE" ] ; then
+    # Remove the PWHM, since we're not ready to use it yet:
+    sed -ri '/CONFIG_USE_PRPLMESH_WHM=y|CONFIG_SAH_WLD_INIT_SCRIPT=|# pwhm options|- pwhm/d' profiles/prpl.yml
+    printf '%s=%s\n' "/CONFIG_USE_PRPLMESH_WHM=" "n" >> files/etc/prplwrt-version
+fi
+
 ./scripts/gen_config.py "${args[@]}"
 
 # The initial 'make defconfig' invocation generates a wrong config, so
