@@ -79,8 +79,6 @@ bool vbss_task::handle_ieee1905_1_msg(const sMacAddr &src_mac, ieee1905_1::CmduM
     case ieee1905_1::eMessageType::BSS_CONFIGURATION_REQUEST_MESSAGE:
         return handle_ap_radio_vbss_caps_msg(src_mac, cmdu_rx);
     default:
-        TASK_LOG(ERROR) << "Unknown CMDU message type: " << std::hex
-                        << int(cmdu_rx.getMessageType());
         return false;
     }
 }
