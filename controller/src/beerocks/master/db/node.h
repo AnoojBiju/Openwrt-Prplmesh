@@ -67,12 +67,16 @@ public:
     std::string name;
     int hierarchy = -1; //redundant but more efficient
     beerocks::message::sRadioCapabilities *capabilities;
+    beerocks::message::sRadioCapabilities m_sta_6ghz_capabilities;
     beerocks::message::sRadioCapabilities m_sta_5ghz_capabilities;
     beerocks::message::sRadioCapabilities m_sta_24ghz_capabilities;
 
     bool channel_ext_above_secondary = true;
 
     beerocks::eNodeState state = beerocks::STATE_DISCONNECTED;
+
+    bool supports_6ghz            = true;
+    int failed_6ghz_steer_attemps = 0;
 
     bool supports_5ghz            = true;
     int failed_5ghz_steer_attemps = 0;

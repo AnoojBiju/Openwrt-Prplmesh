@@ -17,6 +17,7 @@ node::node(beerocks::eType type_, const std::string &mac_)
     : mac(mac_), capabilities(&m_sta_24ghz_capabilities) // deafult value
 {
     type                           = type_;
+    m_sta_6ghz_capabilities.valid  = false;
     m_sta_5ghz_capabilities.valid  = false;
     m_sta_24ghz_capabilities.valid = false;
 }

@@ -67,6 +67,8 @@ bool config_file::read_master_config_file(const std::string &config_file_path, s
                         mandatory_master),
         std::make_tuple("roaming_band_pathloss_delta_db=", &conf.roaming_band_pathloss_delta_db,
                         mandatory_master),
+        std::make_tuple("roaming_6ghz_failed_attemps_threshold=",
+                        &conf.roaming_6ghz_failed_attemps_threshold, mandatory_master),
         std::make_tuple("roaming_5ghz_failed_attemps_threshold=",
                         &conf.roaming_5ghz_failed_attemps_threshold, mandatory_master),
         std::make_tuple("roaming_24ghz_failed_attemps_threshold=",

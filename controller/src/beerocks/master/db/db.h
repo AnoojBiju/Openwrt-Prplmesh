@@ -130,6 +130,7 @@ public:
         bool certification_mode;
         bool persistent_db;
         int persistent_db_aging_interval;
+        int roaming_6ghz_failed_attemps_threshold;
         int roaming_5ghz_failed_attemps_threshold;
         int roaming_24ghz_failed_attemps_threshold;
         int roaming_11v_failed_attemps_threshold;
@@ -1101,6 +1102,9 @@ public:
 
     const beerocks::message::sRadioCapabilities *
     get_station_capabilities(const std::string &client_mac, bool is_bandtype_5ghz);
+
+    const beerocks::message::sRadioCapabilities *
+    get_station_capabilities(const std::string &client_mac, beerocks::eFreqType freq_type);
     bool set_station_capabilities(const std::string &client_mac,
                                   const beerocks::message::sRadioCapabilities &sta_cap);
 
@@ -1141,11 +1145,14 @@ public:
 
     bool capability_check(const std::string &mac, int channel);
 
+    bool get_node_6ghz_support(const std::string &mac);
     bool get_node_5ghz_support(
         const std::string &mac); // TODO: add a real learning algorithm for per-channel support
     bool get_node_24ghz_support(const std::string &mac);
+    bool is_node_6ghz(const std::string &mac);
     bool is_node_5ghz(const std::string &mac);
     bool is_node_24ghz(const std::string &mac);
+    bool update_node_failed_6ghz_steer_attempt(const std::string &mac);
     bool update_node_failed_5ghz_steer_attempt(const std::string &mac);
     bool update_node_failed_24ghz_steer_attempt(const std::string &mac);
 

@@ -31,6 +31,7 @@ ire_rssi_report_rate_sec=30
 global_restricted_channels=
 roaming_unconnected_client_rssi_compensation_db=0
 roaming_band_pathloss_delta_db=8
+roaming_6ghz_failed_attemps_threshold=3
 roaming_5ghz_failed_attemps_threshold=3
 roaming_24ghz_failed_attemps_threshold=3
 roaming_11v_failed_attemps_threshold=3

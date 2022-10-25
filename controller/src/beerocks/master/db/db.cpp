@@ -1791,7 +1791,10 @@ bool db::set_station_capabilities(const std::string &client_mac,
         n->m_sta_5ghz_capabilities       = sta_cap;
         n->m_sta_5ghz_capabilities.valid = true;
         n->capabilities                  = &n->m_sta_5ghz_capabilities;
-
+    } else if (is_node_6ghz(parent_radio)) {
+        n->m_sta_6ghz_capabilities       = sta_cap;
+        n->m_sta_6ghz_capabilities.valid = true;
+        n->capabilities                  = &n->m_sta_6ghz_capabilities;
     } else {
         n->m_sta_24ghz_capabilities       = sta_cap;
         n->m_sta_24ghz_capabilities.valid = true;
@@ -1877,6 +1880,39 @@ db::get_station_capabilities(const std::string &client_mac, bool is_bandtype_5gh
             return nullptr;
         }
     }
+}
+
+const beerocks::message::sRadioCapabilities *
+db::get_station_capabilities(const std::string &client_mac, beerocks::eFreqType freq_type)
+{
+    std::shared_ptr<node> n = get_node(client_mac);
+
+    if (!n) {
+        LOG(ERROR) << "Gateway node not found.... ";
+        return nullptr;
+    }
+
+    if ((freq_type != eFreqType::FREQ_24G) && (freq_type != eFreqType::FREQ_5G) &&
+        (freq_type != eFreqType::FREQ_6G)) {
+        LOG(ERROR) << "freq type must be 2.4GHz, 5GHz, or 6GHz";
+        return nullptr;
+    }
+
+    if ((freq_type == eFreqType::FREQ_24G) && (n->m_sta_24ghz_capabilities.valid == true)) {
+        return &n->m_sta_24ghz_capabilities;
+    }
+
+    if ((freq_type == eFreqType::FREQ_5G) && (n->m_sta_5ghz_capabilities.valid == true)) {
+        return &n->m_sta_24ghz_capabilities;
+    }
+
+    if ((freq_type == eFreqType::FREQ_6G) && (n->m_sta_6ghz_capabilities.valid == true)) {
+        return &n->m_sta_24ghz_capabilities;
+    }
+
+    LOG(ERROR) << "Failed to find valid sta capabilities for freq type "
+               << beerocks::utils::convert_frequency_type_to_string(freq_type);
+    return nullptr;
 }
 
 bool db::set_hostap_ant_num(const sMacAddr &mac, beerocks::eWiFiAntNum ant_num)
@@ -1993,7 +2029,7 @@ bool db::set_hostap_supported_channels(const sMacAddr &mac, beerocks::WifiChanne
         n->supports_5ghz = true;
         break;
     case eFreqType::FREQ_6G:
-        LOG(WARNING) << "6ghz should be supported";
+        n->supports_6ghz = true;
         break;
     default:
         LOG(ERROR) << "unknown frequency! channel: "
@@ -2051,21 +2087,22 @@ bool db::add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t
 {
     auto supported_channels = get_hostap_supported_channels(radio_mac);
     auto channel_set        = wireless_utils::operating_class_to_channel_set(operating_class);
-    auto class_bw           = wireless_utils::operating_class_to_bandwidth(operating_class);
+    auto op_class_bw        = wireless_utils::operating_class_to_bandwidth(operating_class);
     auto freq_type          = wireless_utils::which_freq_op_cls(operating_class);
 
     // Update current channels
     for (auto c : channel_set) {
         auto channel =
             std::find_if(supported_channels.begin(), supported_channels.end(),
-                         [&c, &class_bw](const beerocks::WifiChannel &ch) {
-                             return ch.get_channel() == c && ch.get_bandwidth() == class_bw;
+                         [&c, &op_class_bw](const beerocks::WifiChannel &ch) {
+                             return ch.get_channel() == c && ch.get_bandwidth() == op_class_bw;
                          });
         if (channel != supported_channels.end()) {
             channel->set_tx_power(tx_power);
-            channel->set_bandwidth(class_bw);
-        } else {
-            beerocks::WifiChannel ch(c, freq_type, class_bw);
+            channel->set_bandwidth(op_class_bw);
+        } else if (!son::wireless_utils::is_operating_class_using_central_channel(
+                       operating_class)) {
+            beerocks::WifiChannel ch(c, freq_type, op_class_bw);
             ch.set_tx_power(tx_power);
             supported_channels.push_back(ch);
         }
@@ -2134,6 +2171,15 @@ bool db::capability_check(const std::string &mac, int channel)
     return false;
 }
 
+bool db::get_node_6ghz_support(const std::string &mac)
+{
+    auto n = get_node(mac);
+    if (!n) {
+        return false;
+    }
+    return n->supports_6ghz;
+}
+
 bool db::get_node_5ghz_support(const std::string &mac)
 {
     auto n = get_node(mac);
@@ -2172,6 +2218,30 @@ bool db::is_node_5ghz(const std::string &mac)
     }
 
     return (n->wifi_channel.get_freq_type() == eFreqType::FREQ_5G);
+}
+
+bool db::is_node_6ghz(const std::string &mac)
+{
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(ERROR) << "node " << mac << " does not exist! return false as default";
+        return false;
+    }
+
+    return (n->wifi_channel.get_freq_type() == eFreqType::FREQ_6G);
+}
+
+bool db::update_node_failed_6ghz_steer_attempt(const std::string &mac)
+{
+    auto n = get_node(mac);
+    if (!n) {
+        return false;
+    }
+
+    if (++n->failed_6ghz_steer_attemps >= config.roaming_6ghz_failed_attemps_threshold) {
+        n->supports_6ghz = false;
+    }
+    return true;
 }
 
 bool db::update_node_failed_5ghz_steer_attempt(const std::string &mac)
@@ -5094,7 +5164,8 @@ bool db::set_node_wifi_channel(const sMacAddr &mac, const beerocks::WifiChannel 
         n->failed_5ghz_steer_attemps = 0;
     } break;
     case eFreqType::FREQ_6G: {
-        LOG(WARNING) << "node " << mac << " of 6ghz steer attempts not implemented yet";
+        n->supports_6ghz             = true;
+        n->failed_6ghz_steer_attemps = 0;
     } break;
     default:
         LOG(ERROR) << "frequency type unknown, channel=" << n->wifi_channel.get_channel();
