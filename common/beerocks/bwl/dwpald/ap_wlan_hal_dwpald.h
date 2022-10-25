@@ -108,6 +108,10 @@ public:
                                      const std::string &opcode) override;
     virtual bool process_dwpal_nl_event(struct nl_msg *msg, void *arg = nullptr) override;
     virtual bool set_cce_indication(uint16_t advertise_cce) override;
+    virtual bool add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
+                         std::string &bridge, bool vbss) override;
+    virtual bool remove_bss(std::string &ifname) override;
+
     // Protected methods:
 protected:
     virtual bool dwpald_attach(char *ifname) override;
