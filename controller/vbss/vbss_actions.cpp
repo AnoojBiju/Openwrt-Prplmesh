@@ -165,6 +165,13 @@ bool vbss_actions::create_vbss(const sClientVBSS &client_vbss, const sMacAddr &d
                                                           sta_association_frame->len());
     }
 
+    LOG(DEBUG) << "Sending VBSS creation request to Agent '" << agent->al_mac << "'." << std::endl
+               << " Client associated: '" << client_vbss.client_is_associated << "'"
+               << " Client MAC: '" << client_vbss.client_mac << "'"
+               << " BSSID: '" << client_vbss.vbssid << "'"
+               << " Radio UID: '" << radio->radio_uid << "'"
+               << " SSID: '" << ssid << "'";
+
     if (!son_actions::send_cmdu_to_agent(agent->al_mac, cmdu_tx, database,
                                          tlvf::mac_to_string(radio->radio_uid))) {
         LOG(ERROR) << "Request to create VBSS failed to send to agent (" << agent->al_mac
