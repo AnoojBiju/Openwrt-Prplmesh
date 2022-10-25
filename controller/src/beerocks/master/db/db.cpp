@@ -7018,53 +7018,47 @@ bool db::update_master_configuration(const sDbNbapiConfig &nbapi_config)
 {
     auto ret_val = true;
 
-    config.load_client_band_steering        = nbapi_config.client_band_steering;
-    config.load_client_11k_roaming          = nbapi_config.client_11k_roaming;
-    config.load_client_optimal_path_roaming = nbapi_config.client_optimal_path_roaming;
-    config.roaming_hysteresis_percent_bonus = nbapi_config.roaming_hysteresis_percent_bonus;
-    config.steering_disassoc_timer_msec     = nbapi_config.steering_disassoc_timer_msec;
-    config.link_metrics_request_interval_seconds =
-        nbapi_config.link_metrics_request_interval_seconds;
-
-    config.load_dfs_reentry = nbapi_config.enable_dfs_reentry;
-
-    config.load_load_balancing              = nbapi_config.load_balancing;
-    config.load_channel_select_task         = nbapi_config.channel_select_task;
-    config.load_dynamic_channel_select_task = nbapi_config.dynamic_channel_select_task;
-    config.load_health_check                = nbapi_config.health_check;
-    config.load_optimal_path_roaming_prefer_signal_strength =
-        nbapi_config.optimal_path_prefer_signal_strength;
-    config.load_ire_roaming = nbapi_config.ire_roaming;
-
-    config.load_diagnostics_measurements = nbapi_config.diagnostics_measurements;
     config.diagnostics_measurements_polling_rate_sec =
         nbapi_config.diagnostics_measurements_polling_rate_sec;
+    config.link_metrics_request_interval_seconds =
+        nbapi_config.link_metrics_request_interval_seconds;
+    config.load_channel_select_task         = nbapi_config.channel_select_task;
+    config.load_client_11k_roaming          = nbapi_config.client_11k_roaming;
+    config.load_client_band_steering        = nbapi_config.client_band_steering;
+    config.load_client_optimal_path_roaming = nbapi_config.client_optimal_path_roaming;
+    config.load_dfs_reentry                 = nbapi_config.enable_dfs_reentry;
+    config.load_diagnostics_measurements    = nbapi_config.diagnostics_measurements;
+    config.load_dynamic_channel_select_task = nbapi_config.dynamic_channel_select_task;
+    config.load_health_check                = nbapi_config.health_check;
+    config.load_ire_roaming                 = nbapi_config.ire_roaming;
+    config.load_load_balancing              = nbapi_config.load_balancing;
+    config.load_optimal_path_roaming_prefer_signal_strength =
+        nbapi_config.optimal_path_prefer_signal_strength;
+    config.roaming_hysteresis_percent_bonus = nbapi_config.roaming_hysteresis_percent_bonus;
+    config.steering_disassoc_timer_msec     = nbapi_config.steering_disassoc_timer_msec;
 
     // Update persistent configuration.
     ret_val &= beerocks::bpl::cfg_set_band_steering(config.load_client_band_steering);
+    ret_val &= beerocks::bpl::cfg_set_channel_select_task(config.load_channel_select_task);
     ret_val &= beerocks::bpl::cfg_set_client_11k_roaming(config.load_client_11k_roaming);
     ret_val &= beerocks::bpl::cfg_set_client_roaming(config.load_client_optimal_path_roaming);
-    ret_val &= beerocks::bpl::cfg_set_roaming_hysteresis_percent_bonus(
-        config.roaming_hysteresis_percent_bonus);
-    ret_val &= beerocks::bpl::cfg_set_optimal_path_prefer_signal_strenght(
-        config.load_optimal_path_roaming_prefer_signal_strength);
-
-    ret_val &=
-        beerocks::bpl::cfg_set_steering_disassoc_timer_msec(config.steering_disassoc_timer_msec);
-    ret_val &= beerocks::bpl::cfg_set_link_metrics_request_interval(
-        config.link_metrics_request_interval_seconds);
-
-    ret_val &= beerocks::bpl::cfg_set_load_balancing(config.load_load_balancing);
-    ret_val &= beerocks::bpl::cfg_set_channel_select_task(config.load_channel_select_task);
     ret_val &= beerocks::bpl::cfg_set_dfs_reentry(config.load_dfs_reentry);
     ret_val &= beerocks::bpl::cfg_set_dfs_task(config.load_dynamic_channel_select_task);
-    ret_val &= beerocks::bpl::cfg_set_health_check(config.load_health_check);
-    ret_val &= beerocks::bpl::cfg_set_ire_roaming(config.load_ire_roaming);
-
     ret_val &=
         beerocks::bpl::cfg_set_diagnostics_measurements(config.load_diagnostics_measurements);
     ret_val &= beerocks::bpl::cfg_set_diagnostics_measurements_polling_rate_sec(
         config.diagnostics_measurements_polling_rate_sec);
+    ret_val &= beerocks::bpl::cfg_set_health_check(config.load_health_check);
+    ret_val &= beerocks::bpl::cfg_set_ire_roaming(config.load_ire_roaming);
+    ret_val &= beerocks::bpl::cfg_set_link_metrics_request_interval(
+        config.link_metrics_request_interval_seconds);
+    ret_val &= beerocks::bpl::cfg_set_load_balancing(config.load_load_balancing);
+    ret_val &= beerocks::bpl::cfg_set_optimal_path_prefer_signal_strenght(
+        config.load_optimal_path_roaming_prefer_signal_strength);
+    ret_val &= beerocks::bpl::cfg_set_roaming_hysteresis_percent_bonus(
+        config.roaming_hysteresis_percent_bonus);
+    ret_val &=
+        beerocks::bpl::cfg_set_steering_disassoc_timer_msec(config.steering_disassoc_timer_msec);
 
     update_master_settings_from_config();
 
@@ -7074,17 +7068,17 @@ bool db::update_master_configuration(const sDbNbapiConfig &nbapi_config)
 void db::update_master_settings_from_config()
 {
     // calling these functions with "true" is equivalent to copying the value from config container
-    settings_client_band_steering(true);
-    settings_client_optimal_path_roaming(true);
-    settings_client_optimal_path_roaming_prefer_signal_strength(true);
-    settings_client_11k_roaming(true);
-    settings_dfs_reentry(true);
-    settings_dynamic_channel_select_task(true);
-    settings_ire_roaming(true);
-    settings_health_check(true);
-    settings_load_balancing(true);
     settings_channel_select_task(true);
+    settings_client_11k_roaming(true);
+    settings_client_band_steering(true);
+    settings_client_optimal_path_roaming_prefer_signal_strength(true);
+    settings_client_optimal_path_roaming(true);
+    settings_dfs_reentry(true);
     settings_diagnostics_measurements(true);
+    settings_dynamic_channel_select_task(true);
+    settings_health_check(true);
+    settings_ire_roaming(true);
+    settings_load_balancing(true);
 }
 
 uint64_t db::recalculate_attr_to_byte_units(
