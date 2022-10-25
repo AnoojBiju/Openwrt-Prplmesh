@@ -102,6 +102,10 @@ public:
     virtual bool set_primary_vlan_id(uint16_t primary_vlan_id) override;
     virtual bool set_cce_indication(uint16_t advertise_cce) override;
 
+    virtual bool add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
+                         std::string &bridge, bool vbss) override;
+    virtual bool remove_bss(std::string &ifname) override;
+
     // Protected methods:
 protected:
     virtual bool process_dummy_event(parsed_obj_map_t &parsed_obj) override;
