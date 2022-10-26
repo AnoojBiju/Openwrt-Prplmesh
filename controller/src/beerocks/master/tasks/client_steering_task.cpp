@@ -11,6 +11,7 @@
 #include "../son_actions.h"
 #include "bml_task.h"
 
+#include <bcl/beerocks_utils.h>
 #include <bcl/beerocks_wifi_channel.h>
 #include <beerocks/tlvf/beerocks_message_1905_vs.h>
 #include <ctime>
@@ -106,18 +107,39 @@ void client_steering_task::work()
             /*
                  * might need to split this logic to high and low bands of 5GHz
                  * since some clients can support one but not the other
-                 */
+            */
             if (m_database.is_node_24ghz(m_original_bssid) &&
                 m_database.is_node_5ghz(m_target_bssid)) {
                 TASK_LOG(DEBUG) << "steering from 2.4GHz to 5GHz failed --> updating failed 5ghz "
                                    "steering attempt";
                 m_database.update_node_failed_5ghz_steer_attempt(m_sta_mac);
+            } else if (m_database.is_node_24ghz(m_original_bssid) &&
+                       m_database.is_node_6ghz(m_target_bssid)) {
+                TASK_LOG(DEBUG) << "steering from 2.4GHz to 6GHz failed --> updating failed 6ghz "
+                                   "steering attempt";
+                m_database.update_node_failed_6ghz_steer_attempt(m_sta_mac);
             } else if (m_database.is_node_5ghz(m_original_bssid) &&
                        m_database.is_node_24ghz(m_target_bssid)) {
                 TASK_LOG(DEBUG) << "steering from 5GHz to 2.4GHz failed, updating failed 2.4ghz "
                                    "steering attempt";
                 m_database.update_node_failed_24ghz_steer_attempt(m_sta_mac);
+            } else if (m_database.is_node_5ghz(m_original_bssid) &&
+                       m_database.is_node_6ghz(m_target_bssid)) {
+                TASK_LOG(DEBUG) << "steering from 5GHz to 6GHz failed, updating failed 6ghz "
+                                   "steering attempt";
+                m_database.update_node_failed_6ghz_steer_attempt(m_sta_mac);
+            } else if (m_database.is_node_6ghz(m_original_bssid) &&
+                       m_database.is_node_24ghz(m_target_bssid)) {
+                TASK_LOG(DEBUG) << "steering from 6GHz to 2.4GHz failed, updating failed 2.4ghz "
+                                   "steering attempt";
+                m_database.update_node_failed_24ghz_steer_attempt(m_sta_mac);
+            } else if (m_database.is_node_6ghz(m_original_bssid) &&
+                       m_database.is_node_5ghz(m_target_bssid)) {
+                TASK_LOG(DEBUG) << "steering from 6GHz to 5GHz failed, updating failed 5ghz "
+                                   "steering attempt";
+                m_database.update_node_failed_5ghz_steer_attempt(m_sta_mac);
             }
+
         } else {
             if (m_database.get_node_11v_capability(*client)) {
                 client->steering_summary_stats.btm_successes++;
@@ -321,6 +343,9 @@ void client_steering_task::steer_sta()
     TASK_LOG(DEBUG) << "sending steering request, sta " << m_sta_mac << " steer from bssid "
                     << m_original_bssid << " to bssid " << m_target_bssid << " channel "
                     << std::to_string(std::get<1>(bssid_list).target_bss_channel_number)
+                    << " freq_type="
+                    << beerocks::utils::convert_frequency_type_to_string(
+                           wifi_channel.get_freq_type())
                     << " disassoc_timer=" << m_disassoc_timer_ms
                     << " disassoc_imminent=" << m_disassoc_imminent << " id=" << int(id);
 
