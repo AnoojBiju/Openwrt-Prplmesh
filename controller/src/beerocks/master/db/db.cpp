@@ -7844,3 +7844,60 @@ bool db::dm_set_metric_reporting_policies(const Agent &agent)
     }
     return ret_val;
 }
+
+bool db::dm_set_steering_policies(const Agent &agent)
+{
+    if (agent.dm_path.empty()) {
+        return true;
+    }
+
+    bool ret_val = true;
+
+    if (!m_ambiorix_datamodel->remove_all_instances(agent.dm_path +
+                                                    ".LocalSteeringDisallowedSTA")) {
+        return false;
+    }
+
+    for (auto &sta : agent.disallowed_local_steering_stations) {
+        auto disallowed_local_steering_sta_path =
+            m_ambiorix_datamodel->add_instance(agent.dm_path + ".LocalSteeringDisallowedSTA");
+        if (disallowed_local_steering_sta_path.empty()) {
+            return false;
+        }
+
+        ret_val &=
+            m_ambiorix_datamodel->set(disallowed_local_steering_sta_path, "MACAddress", sta.first);
+    }
+
+    if (!m_ambiorix_datamodel->remove_all_instances(agent.dm_path +
+                                                    ".BTMSteeringDisallowedSTAList")) {
+        return false;
+    }
+
+    for (auto &sta : agent.disallowed_btm_steering_stations) {
+        auto disallowed_btm_steering_sta_path =
+            m_ambiorix_datamodel->add_instance(agent.dm_path + ".BTMSteeringDisallowedSTAList");
+        if (disallowed_btm_steering_sta_path.empty()) {
+            return false;
+        }
+
+        ret_val &=
+            m_ambiorix_datamodel->set(disallowed_btm_steering_sta_path, "MACAddress", sta.first);
+    }
+
+    for (const auto &radio : agent.radios) {
+        if (radio.second->dm_path.empty()) {
+            continue;
+        }
+
+        ret_val &= m_ambiorix_datamodel->set(radio.second->dm_path, "SteeringPolicy",
+                                             int(radio.second->steering_policies.steering_policy));
+        ret_val &= m_ambiorix_datamodel->set(
+            radio.second->dm_path, "ChannelUtilizationThreshold",
+            radio.second->steering_policies.channel_utilization_threshold);
+        ret_val &=
+            m_ambiorix_datamodel->set(radio.second->dm_path, "RCPISteeringThreshold",
+                                      radio.second->steering_policies.rcpi_steering_threshold);
+    }
+    return ret_val;
+}

@@ -2356,6 +2356,18 @@ public:
      */
     bool dm_set_metric_reporting_policies(const Agent &agent);
 
+    /**
+     * @brief Sets steering policy parameters.
+     *
+     * Data model paths:
+     * "Device.WiFi.DataElements.Network.Device.{i}."
+     * "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}."
+     *
+     * @param[in] agent Agent DB object.
+     * @return True on success, otherwise false.
+     */
+    bool dm_set_steering_policies(const Agent &agent);
+
     //
     // tasks
     //

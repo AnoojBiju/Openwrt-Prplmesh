@@ -31,6 +31,15 @@
             on action validate call check_range [0, 255];
         }
 
+        %read-only object LocalSteeringDisallowedSTA [] {
+            counted with LocalSteeringDisallowedSTANumberOfEntries;
+            %read-only string MACAddress = "";
+        }
+        %read-only object BTMSteeringDisallowedSTAList [] {
+            counted with BTMSteeringDisallowedSTAListNumberOfEntries;
+            %read-only string MACAddress = "";
+        }
+
         /*
         ** The Multi-AP capabilities supported by this device
         */

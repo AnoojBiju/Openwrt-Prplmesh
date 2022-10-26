@@ -49,6 +49,16 @@
         bool AssociatedSTALinkMetricsInclusionPolicy;
         bool APMetricsWiFi6;
 
+        uint32 SteeringPolicy {
+            on action validate call check_range [0, 2];
+        }
+        uint32 ChannelUtilizationThreshold {
+            on action validate call check_range [0, 255];
+        }
+        uint32 RCPISteeringThreshold {
+            on action validate call check_range [0, 220];
+        }
+
         object CurrentOperatingClasses [] {
             counted with CurrentOperatingClassesNumberOfEntries;
             %read-only datetime TimeStamp = "2020-08-31T11:22:39Z";

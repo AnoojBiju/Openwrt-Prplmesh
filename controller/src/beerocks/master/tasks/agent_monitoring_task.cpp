@@ -426,6 +426,11 @@ bool agent_monitoring_task::send_multi_ap_policy_config_request(const sMacAddr &
         radio_idx++;
     }
 
+    if (!database.dm_set_steering_policies(*agent)) {
+        LOG(ERROR) << "Failed to set steering policy parameters in DM for Agent" << agent->al_mac;
+        return false;
+    }
+
     return son_actions::send_cmdu_to_agent(dst_mac, cmdu_tx, database);
 }
 
