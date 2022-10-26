@@ -5188,7 +5188,13 @@ bool db::assign_channel_selection_task_id(int new_task_id)
     return true;
 }
 
-int db::get_channel_selection_task_id() { return channel_selection_task_id; }
+int db::get_channel_selection_task_id()
+{
+    if (!(channel_selection_task_id > 0))
+        LOG(INFO) << "channel_selection_task not running";
+
+    return channel_selection_task_id;
+}
 
 bool db::assign_network_optimization_task_id(int new_task_id)
 {
@@ -5251,7 +5257,13 @@ bool db::assign_dynamic_channel_selection_r2_task_id(int new_task_id)
     return true;
 }
 
-int db::get_dynamic_channel_selection_r2_task_id() { return dynamic_channel_selection_r2_task_id; }
+int db::get_dynamic_channel_selection_r2_task_id()
+{
+    if (!(dynamic_channel_selection_r2_task_id > 0))
+        LOG(INFO) << "dynamic_channel_selection_r2_task not running";
+
+    return dynamic_channel_selection_r2_task_id;
+}
 
 bool db::assign_persistent_db_aging_operation_id(int new_operation_id)
 {
