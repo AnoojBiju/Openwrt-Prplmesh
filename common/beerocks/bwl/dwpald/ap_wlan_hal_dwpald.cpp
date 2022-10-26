@@ -2303,6 +2303,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
 
     auto event = dwpal_to_bwl_event(opcode);
 
+    /*
     auto update_conn_status = [&]() -> int {
         size_t numOfValidArgs;
         vap_name_t to_search;
@@ -2346,6 +2347,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
         }
         return 0;
     };
+    */
 
     // If there is monitored BSSs list, monitor all BSSs
     if (!m_hal_conf.monitored_BSSs.empty()) {
@@ -3421,13 +3423,13 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
     case Event::Interface_Connected_OK:
     case Event::Interface_Reconnected_OK: {
         LOG(INFO) << "INTERFACE_RECONNECTED_OK or INTERFACE_CONNECTED_OK from intf " << ifname;
-        auto ret = update_conn_status();
+        auto ret = update_conn_status(ifname);
         LOG(INFO) << "Status update return value " << ret;
         break;
     }
     case Event::Interface_Disconnected: {
         LOG(INFO) << "INTERFACE_DISCONNECTED from intf " << ifname;
-        for (auto & con:conn_state) {
+        for (auto &con : conn_state) {
             // Update interface connection status for vap to false
             conn_state[con.first] = false;
             LOG(INFO) << "updated connection status for intf " << con.first << " with false";

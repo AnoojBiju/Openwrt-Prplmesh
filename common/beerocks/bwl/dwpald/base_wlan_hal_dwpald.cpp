@@ -1008,5 +1008,50 @@ bool base_wlan_hal_dwpal::dwpal_get_phy_chan_status(sPhyChanStatus &status)
     return true;
 }
 
+int base_wlan_hal_dwpal::update_conn_status(char *ifname)
+{
+    size_t numOfValidArgs;
+    vap_name_t to_search;
+    int ret                       = -1, i;
+    char *reply                   = nullptr;
+    size_t replyLen               = HOSTAPD_TO_DWPAL_MSG_LENGTH - 1;
+    FieldsToParse fieldsToParse[] = {
+        {NULL, &numOfValidArgs, DWPAL_STR_PARAM, to_search.name, IF_LENGTH},
+        {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
+
+    // Make radio intf connection state as true before sending STATUS command
+    conn_state[ifname] = true;
+
+    if (!dwpal_send_cmd("STATUS", &reply)) {
+        LOG(ERROR) << "STATUS command send error";
+        return ret;
+    }
+
+    replyLen = strnlen(reply, HOSTAPD_TO_DWPAL_MSG_LENGTH);
+
+    // Update connection status for VAP list on that radio
+    for (i = 0; i < MAX_VAPS_PER_RADIO; i = i + 1) {
+        char vap[IF_LENGTH] = {0};
+        int status;
+        status = snprintf(to_search.name, sizeof(vap_name_t), "bss[%d]=", i);
+        if (status <= 0) {
+            LOG(ERROR) << "snprintf failed at " << i;
+            return ret;
+        }
+        fieldsToParse[0].field = vap;
+        if (DWPAL_SUCCESS !=
+            dwpal_string_to_struct_parse(reply, replyLen, fieldsToParse, sizeof(vap))) {
+            LOG(ERROR) << "STATUS reply parse error at " << i;
+            return ret;
+        }
+        if (!numOfValidArgs)
+            break;
+        // Update interface connection status for vap to true
+        conn_state[vap] = true;
+        LOG(INFO) << "updated connection status for intf " << vap << " with true";
+    }
+    return 0;
+}
+
 } // namespace dwpal
 } // namespace bwl
