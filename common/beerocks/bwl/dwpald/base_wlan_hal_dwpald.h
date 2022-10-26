@@ -98,12 +98,6 @@ public:
                                      const std::string &opcode)                  = 0;
     virtual bool process_dwpal_nl_event(struct nl_msg *msg, void *arg = nullptr) = 0;
 
-    /**
-     * @brief Update the interface connection status map
-     * @return int 
-     */
-    int update_conn_status(char *ifname) override;
-
     // Protected methods
 protected:
     base_wlan_hal_dwpal(HALType type, const std::string &iface_name, hal_event_cb_t callback,
@@ -151,6 +145,12 @@ protected:
                                     void *callback_args);
 
     bool dwpal_nl_cmd_scan_dump();
+
+    /**
+     * @brief Update the interface connection status map
+     * @return int
+     */
+    int update_conn_status(char *ifname);
 
     std::unique_ptr<nl80211_client> m_nl80211_client;
 
