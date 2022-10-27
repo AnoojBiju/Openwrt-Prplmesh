@@ -1081,6 +1081,19 @@ public:
     bool set_station_capabilities(const std::string &client_mac,
                                   const beerocks::message::sRadioCapabilities &sta_cap);
 
+    /**
+     * @brief Set ClientCapabilities values for Station and AssocEvent object
+     * Full path to data element:
+     * 'Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.ClientCapabilities'.
+     * 'Device.WiFi.DataElements.AssociationEvent.AssociationEventData.{i}.ClientCapabilities'.
+     *
+     * @param sta_mac Station MAC address.
+     * @param frame (Re)Association Request frame.
+     * @param database Database to fetch controller, agent, and radio contexts.
+     * @return True on success, false otherwise.
+     */
+    bool set_client_capabilities(const sMacAddr &sta_mac, const std::string &frame, db &database);
+
     bool set_hostap_ant_num(const sMacAddr &mac, beerocks::eWiFiAntNum ant_num);
     beerocks::eWiFiAntNum get_hostap_ant_num(const sMacAddr &mac);
 
