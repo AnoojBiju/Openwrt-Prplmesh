@@ -40,6 +40,18 @@ ubus call "IP.Interface" _set '{ "rel_path": ".[Alias == \"lan\"].IPv4Address.[A
 ubus call "WiFi.Radio.1" _set '{ "parameters": { "Enable": "true" } }'
 ubus call "WiFi.Radio.2" _set '{ "parameters": { "Enable": "true" } }'
 
+# Wired backhaul interface:
+uci set prplmesh.config.backhaul_wire_iface='eth0'
+
+# VLAN interface to control the device separatly:
+uci batch << 'EOF'
+set network.UCC=interface
+set network.UCC.ifname='eth0.200'
+set network.UCC.proto='static'
+set network.UCC.netmask='255.255.255.0'
+set network.UCC.ipaddr='192.168.200.110'
+EOF
+
 # all pwhm default configuration can be found in /etc/amx/wld/wld_defaults.odl.uc
 
 # For now there is no way to disable the firewall (see PCF-590).

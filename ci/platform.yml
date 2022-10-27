@@ -187,6 +187,52 @@ boardfarm-on-nec-wx3000hp-stability:
   rules:
     - if: '$STABILITY_TESTS == "yes"'
 
+boardfarm-on-glinet-b1300-whm:
+ extends: .test-on-target-whm
+ variables:
+  TARGET_DEVICE: glinet-b1300
+  TARGET_DEVICE_NAME: glinet-b1300-1
+  OPENWRT_IMAGE: $GLINET_B1300_FULLIMAGE
+ script:
+    - |
+       echo "Retrieving the job ID for 'build-in-docker-whm'."
+       PARENT_PIPELINE_JOBS_URL="$CI_API_V4_URL/projects/$CI_PROJECT_ID/pipelines/$PARENT_PIPELINE_ID/jobs?per_page=100"
+       echo "PARENT_PIPELINE_JOBS_URL: $PARENT_PIPELINE_JOBS_URL"
+       BUILD_IN_DOCKER_JOB_ID=$(curl  --retry 3 --location --header "PRIVATE-TOKEN: $ARTIFACTS_DOWNLOADER_TOKEN" "$PARENT_PIPELINE_JOBS_URL" | jq -c '.[] | select( .name == "build-in-docker" ) | .id')
+       echo "BUILD_IN_DOCKER_JOB_ID: $BUILD_IN_DOCKER_JOB_ID"
+       BUILD_IN_DOCKER_DOWNLOAD_URL="$CI_API_V4_URL/projects/$CI_PROJECT_ID/jobs/$BUILD_IN_DOCKER_JOB_ID/artifacts"
+       echo "BUILD_IN_DOCKER_DOWNLOAD_URL: $BUILD_IN_DOCKER_DOWNLOAD_URL"
+       echo "Downloading 'build-in-docker-whm' artifacts."
+       curl --location  --header "PRIVATE-TOKEN: $ARTIFACTS_DOWNLOADER_TOKEN" "$BUILD_IN_DOCKER_DOWNLOAD_URL" --output artifacts.zip
+       unzip artifacts.zip && rm artifacts.zip
+       echo Done
+    - ./dctest.py --dut $TARGET_DEVICE --test-suite test_flows_on_prplwrt
+ needs:
+   - build-for-glinet-b1300-whm
+
+boardfarm-on-turris-omnia-whm:
+ extends: .test-on-target-whm
+ variables:
+  TARGET_DEVICE: turris-omnia
+  TARGET_DEVICE_NAME: turris-omnia-1
+  OPENWRT_IMAGE: $TURRIS_OMNIA_FULLIMAGE
+ script:
+    - |
+       echo "Retrieving the job ID for 'build-in-docker-whm'."
+       PARENT_PIPELINE_JOBS_URL="$CI_API_V4_URL/projects/$CI_PROJECT_ID/pipelines/$PARENT_PIPELINE_ID/jobs?per_page=100"
+       echo "PARENT_PIPELINE_JOBS_URL: $PARENT_PIPELINE_JOBS_URL"
+       BUILD_IN_DOCKER_JOB_ID=$(curl  --retry 3 --location --header "PRIVATE-TOKEN: $ARTIFACTS_DOWNLOADER_TOKEN" "$PARENT_PIPELINE_JOBS_URL" | jq -c '.[] | select( .name == "build-in-docker-whm" ) | .id')
+       echo "BUILD_IN_DOCKER_JOB_ID: $BUILD_IN_DOCKER_JOB_ID"
+       BUILD_IN_DOCKER_DOWNLOAD_URL="$CI_API_V4_URL/projects/$CI_PROJECT_ID/jobs/$BUILD_IN_DOCKER_JOB_ID/artifacts"
+       echo "BUILD_IN_DOCKER_DOWNLOAD_URL: $BUILD_IN_DOCKER_DOWNLOAD_URL"
+       echo "Downloading 'build-in-docker-whm' artifacts."
+       curl --location  --header "PRIVATE-TOKEN: $ARTIFACTS_DOWNLOADER_TOKEN" "$BUILD_IN_DOCKER_DOWNLOAD_URL" --output artifacts.zip
+       unzip artifacts.zip && rm artifacts.zip
+       echo Done
+    - ./dctest.py --dut $TARGET_DEVICE --test-suite test_flows_on_prplwrt
+ needs:
+   - build-for-turris-omnia-whm
+
 boardfarm-on-turris-omnia-rdkb:
  extends: .test-on-rdkb
  variables:
