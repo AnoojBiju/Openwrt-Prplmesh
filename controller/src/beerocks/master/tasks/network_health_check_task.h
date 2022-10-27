@@ -18,7 +18,7 @@ class network_health_check_task : public task {
 public:
     network_health_check_task(
         db &database_, ieee1905_1::CmduMessageTx &cmdu_tx_, task_pool &tasks_,
-        int starting_delay_ms_,
+        int starting_delay_ms_        = 0,
         const std::string &task_name_ = std::string("network_health_check_task"));
     virtual ~network_health_check_task() {}
 
