@@ -1834,6 +1834,29 @@ bool db::set_station_capabilities(const std::string &client_mac,
     return true;
 }
 
+bool db::set_client_capabilities(const sMacAddr &sta_mac, const std::string &frame, db &database)
+{
+    auto station = database.get_station(sta_mac);
+    if (!station) {
+        LOG(ERROR) << "station " << sta_mac << " not found";
+        return false;
+    }
+
+    if (station->dm_path.empty()) {
+        return true;
+    }
+
+    if (station->assoc_event_path.empty()) {
+        return true;
+    }
+
+    bool ret_val = true;
+    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "ClientCapabilities", frame);
+    ret_val &= m_ambiorix_datamodel->set(station->assoc_event_path, "ClientCapabilities", frame);
+
+    return ret_val;
+}
+
 const beerocks::message::sRadioCapabilities *
 db::get_station_capabilities(const std::string &client_mac, bool is_bandtype_5ghz)
 {

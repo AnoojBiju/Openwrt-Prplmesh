@@ -17,6 +17,9 @@
     select Device.WiFi.DataElements.Network.Device.Radio.BSS.STA {
         %read-only string MACAddress = "00:00:00:00:00:00";
         %read-only string TimeStamp = "2020-08-31T11:22:39Z";
+        %read-only string ClientCapabilities;  /* The frame body of the most recently
+                                                received (Re)Association Request frame
+                                                from this client (STA) */
 
         /**
         ** Need to add here HTCapabilities, VHTCapabilities, HECapabilities
