@@ -1309,17 +1309,10 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const sMacAddr &src_mac,
 
     int result_count = 0;
     for (auto const &result_tlv : cmdu_rx.getClassList<wfa_map::tlvProfile2ChannelScanResult>()) {
-
-        //If scans status is not successful, it will not include other fields.
-        if (result_tlv->success() != wfa_map::tlvProfile2ChannelScanResult::eScanStatus::SUCCESS) {
-            LOG(WARNING) << "Channel Scan Status: " << result_tlv->success();
-            continue;
-        }
-        LOG(INFO) << "Channel Scan Status: " << result_tlv->success();
-
         auto neighbors_list_length = result_tlv->neighbors_list_length();
         LOG(DEBUG) << "Received Result TLV for:" << std::endl
                    << "RUID: " << result_tlv->radio_uid() << ", "
+                   << "Scan status: " << result_tlv->success() << ", "
                    << "Operating Class: " << result_tlv->operating_class() << ", "
                    << "Channel: " << result_tlv->channel() << ", "
                    << " containing " << neighbors_list_length << " neighbors";
@@ -1346,6 +1339,18 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const sMacAddr &src_mac,
             LOG(DEBUG) << "No previous report record were found for " << ISO_8601_timestamp << " ["
                        << result_tlv->operating_class() << "," << result_tlv->channel() << "] "
                        << " from radio:" << result_tlv->radio_uid() << ".";
+        }
+
+        // If scan status is not successful, Add an empty channel scan report entry in the
+        // Controller's DB with the report timestamp.
+        if (result_tlv->success() != wfa_map::tlvProfile2ChannelScanResult::eScanStatus::SUCCESS) {
+            if (!database.add_empty_channel_report_entry(
+                    result_tlv->radio_uid(), result_tlv->operating_class(), result_tlv->channel(),
+                    ISO_8601_timestamp)) {
+                LOG(ERROR) << "Failed to add empty channel report entry!";
+                return false;
+            }
+            continue;
         }
 
         std::vector<wfa_map::cNeighbors> neighbor_vec;

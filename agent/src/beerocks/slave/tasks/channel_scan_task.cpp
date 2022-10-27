@@ -38,6 +38,7 @@ using namespace beerocks;
 constexpr int PREFERRED_DWELLTIME_MS                       = 103; // 103 Millisec
 constexpr std::chrono::seconds SCAN_TRIGGERED_WAIT_TIME    = std::chrono::seconds(20);  // 20 Sec
 constexpr std::chrono::seconds SCAN_RESULTS_DUMP_WAIT_TIME = std::chrono::seconds(210); // 3.5 Min
+constexpr std::chrono::seconds SCAN_REQUEST_TIMEOUT_SEC    = std::chrono::seconds(300); // 5 Min
 /**
  * To allow for CMDU & TLV fragmentation a proximation of the size we need to keep free in the
  * Channel Scan Report Message building process is needed.
@@ -94,6 +95,12 @@ void ChannelScanTask::work()
     if (m_current_scan_info.is_scan_currently_running) {
         auto current_scan_request = m_current_scan_info.scan_request;
         auto current_radio_scan   = m_current_scan_info.radio_scan;
+
+        if ((current_scan_request->scan_start_timestamp + SCAN_REQUEST_TIMEOUT_SEC) <
+            std::chrono::system_clock::now()) {
+            LOG(INFO) << "Aborted scan as scan request exceeds the SCAN_REQUEST_TIMEOUT_SEC";
+            abort_scan_request(current_scan_request);
+        }
 
         // Handle current radio-scan's state
         switch (current_radio_scan->current_state) {
@@ -174,6 +181,12 @@ void ChannelScanTask::work()
             break;
         }
         case eState::SCAN_ABORTED: {
+            if (!is_scan_request_finished(current_scan_request)) {
+                LOG(INFO) << "Wait for other scans to complete";
+            } else {
+                current_scan_request->ready_to_send_report = true;
+            }
+            break;
         }
         default:
             break;
@@ -484,7 +497,8 @@ bool ChannelScanTask::is_scan_request_finished(const std::shared_ptr<sScanReques
     auto radio_scan_not_finished =
         [](std::pair<std::string, std::shared_ptr<sRadioScan>> radio_scan_iter) -> bool {
         return radio_scan_iter.second->current_state != eState::SCAN_DONE &&
-               radio_scan_iter.second->current_state != eState::SCAN_FAILED;
+               radio_scan_iter.second->current_state != eState::SCAN_FAILED &&
+               radio_scan_iter.second->current_state != eState::SCAN_ABORTED;
     };
     auto unfinished_radio_scan_in_request =
         std::find_if(radio_scans.begin(), radio_scans.end(), radio_scan_not_finished);

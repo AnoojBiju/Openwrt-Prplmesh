@@ -3389,6 +3389,34 @@ bool db::set_selection_channel_pool(const sMacAddr &ruid,
     return true;
 }
 
+bool db::add_empty_channel_report_entry(const sMacAddr &RUID, const uint8_t &operating_class,
+                                        const uint8_t &channel,
+                                        const std::string &ISO_8601_timestamp)
+{
+    auto radio = get_hostap(RUID);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << RUID;
+        return false;
+    }
+
+    const auto &key = std::make_pair(operating_class, channel);
+    LOG(DEBUG) << "Clearing neighbors for [" << key.first << "," << key.second << "]";
+    radio->scan_report[key].neighbors.clear();
+
+    // Find any existing report key to channel scan report record
+    const auto &report_record_iter = radio->channel_scan_report_records.find(ISO_8601_timestamp);
+    if (report_record_iter == radio->channel_scan_report_records.end()) {
+        // If record does not exist, create a new one.
+        radio->channel_scan_report_records.emplace(
+            ISO_8601_timestamp,
+            std::set<node::radio::channel_scan_report::channel_scan_report_key>{});
+    }
+
+    // Insert the key into the record
+    radio->channel_scan_report_records[ISO_8601_timestamp].insert(key);
+    return true;
+}
+
 bool db::add_channel_report(const sMacAddr &RUID, const uint8_t &operating_class,
                             const uint8_t &channel,
                             const std::vector<wfa_map::cNeighbors> &neighbors, uint8_t avg_noise,
