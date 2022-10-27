@@ -488,24 +488,24 @@ private:
     std::shared_ptr<LinkMetricsTask> m_link_metrics_task;
 
     /**
-     * Pointer used to stop/start the channel_selection_task without restarting the controller
+     * Task_id used to stop/start the channel_selection_task without restarting the controller
      */
-    std::shared_ptr<channel_selection_task> m_channel_selection_task = {};
+    int m_channel_selection_task_id = -1;
 
     /**
-     * Pointer used to stop/start the dynamic_channel_selection_r2_task without restarting the controller
+     * Task_id used to stop/start the dynamic_channel_selection_r2_task without restarting the controller
      */
-    std::shared_ptr<dynamic_channel_selection_r2_task> m_dynamic_channel_selection_task = {};
+    int m_dynamic_channel_selection_task_id = -1;
 
     /**
-     * Pointer used to start/stop the network_health_check_task without restarting the controller
+     * Task_id used to start/stop the network_health_check_task without restarting the controller
      */
-    std::shared_ptr<network_health_check_task> m_network_health_check_task = {};
+    int m_network_health_check_task_id = -1;
 
     /**
-     * Pointer used to stop/start the statistics_polling_task without restarting the controller
+     * Task_id used to stop/start the statistics_polling_task without restarting the controller
      */
-    std::shared_ptr<statistics_polling_task> m_statistics_polling_task = {};
+    int m_statistics_polling_task_id = -1;
 
     /**
      * Factory to create broker client instances connected to broker server.
