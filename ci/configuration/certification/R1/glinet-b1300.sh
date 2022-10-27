@@ -61,6 +61,7 @@ ubus call "Bridging.Bridge" _get '{ "rel_path": ".[Alias == \"lan\"].Port.[Name 
     echo "Removing LAN interface from LAN-bridge"
     echo "It will be used as control interface"
     ubus call "Bridging.Bridge" _del '{ "rel_path": ".[Alias == \"lan\"].Port.[Name == \"eth0\"]." }'
+    uci changes ; sleep 5
 }
 
 # To set the IP on the control interface, we first need to find the
