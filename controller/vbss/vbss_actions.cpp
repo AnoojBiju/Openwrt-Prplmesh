@@ -172,8 +172,7 @@ bool vbss_actions::create_vbss(const sClientVBSS &client_vbss, const sMacAddr &d
                << " Radio UID: '" << radio->radio_uid << "'"
                << " SSID: '" << ssid << "'";
 
-    if (!son_actions::send_cmdu_to_agent(agent->al_mac, cmdu_tx, database,
-                                         tlvf::mac_to_string(radio->radio_uid))) {
+    if (!son_actions::send_cmdu_to_agent(agent->al_mac, cmdu_tx, database)) {
         LOG(ERROR) << "Request to create VBSS failed to send to agent (" << agent->al_mac
                    << ") and radio (" << radio->radio_uid << ")";
         return false;
