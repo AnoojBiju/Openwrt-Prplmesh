@@ -35,6 +35,7 @@ enum eTaskType : uint8_t {
     SERVICE_PRIORITIZATION,
     PROXY_AGENT_DPP,
     CONTROLLER_CONNECTIVITY,
+    VBSS,
 };
 
 class Task {
