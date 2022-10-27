@@ -30,6 +30,7 @@
 #include <tlvf/wfa_map/tlvTunnelledData.h>
 #include <tlvf/wfa_map/tlvTunnelledProtocolType.h>
 #include <tlvf/wfa_map/tlvTunnelledSourceInfo.h>
+#include <tlvf/wfa_map/tlvVirtualBssCreation.h>
 
 #include <numeric>
 
@@ -677,6 +678,10 @@ void ApManager::handle_cmdu_ieee1905_1_message(ieee1905_1::CmduMessageRx &cmdu_r
         handle_direct_encap_dpp_message(cmdu_rx);
         break;
     }
+    case ieee1905_1::eMessageType::VIRTUAL_BSS_REQUEST_MESSAGE: {
+        handle_virtual_bss_request(cmdu_rx);
+        break;
+    }
     default:
         LOG(ERROR) << "Unknown CMDU message type: " << std::hex << int(cmdu_message_type);
     }
@@ -707,6 +712,12 @@ void ApManager::handle_direct_encap_dpp_message(ieee1905_1::CmduMessageRx &cmdu_
     }
 
     // forwarding of dpp authentication response message to BWL layer to be implemented.
+}
+
+void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    LOG(DEBUG) << "Received Virtual BSS Request";
+    auto virtual_bss_creation_tlv = cmdu_rx.getClass<wfa_map::VirtualBssCreation>();
 }
 
 void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
