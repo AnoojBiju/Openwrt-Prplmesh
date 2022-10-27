@@ -18,6 +18,7 @@
 #include "tasks/link_metrics_collection_task.h"
 #include "tasks/proxy_agent_dpp_task.h"
 #include "tasks/service_prioritization_task.h"
+#include "tasks/vbss_task.h"
 
 #include <bcl/beerocks_cmdu_client_factory_factory.h>
 #include <bcl/beerocks_cmdu_server_factory.h>
@@ -192,6 +193,7 @@ bool slave_thread::thread_init()
             ieee1905_1::eMessageType::MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE,
             ieee1905_1::eMessageType::SERVICE_PRIORITIZATION_REQUEST_MESSAGE,
             ieee1905_1::eMessageType::DPP_CCE_INDICATION_MESSAGE,
+            ieee1905_1::eMessageType::VIRTUAL_BSS_REQUEST_MESSAGE,
             // Controller's messages which are used to update connectivity
             ieee1905_1::eMessageType::ACK_MESSAGE,
             ieee1905_1::eMessageType::LINK_METRIC_QUERY_MESSAGE,
@@ -297,6 +299,7 @@ bool slave_thread::thread_init()
     m_task_pool.add_task(std::make_shared<ControllerConnectivityTask>(*this, cmdu_tx));
     m_task_pool.add_task(std::make_shared<CapabilityReportingTask>(*this, cmdu_tx));
     m_task_pool.add_task(std::make_shared<LinkMetricsCollectionTask>(*this, cmdu_tx));
+    m_task_pool.add_task(std::make_shared<VbssTask>(*this, cmdu_tx));
 
     m_agent_state = STATE_INIT;
     LOG(DEBUG) << "Agent Started";
