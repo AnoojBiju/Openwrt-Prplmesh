@@ -234,7 +234,7 @@ bool cfg_set_band_steering(bool band_steering)
     std::string option = "band_steering";
     std::string value  = std::to_string(((int)band_steering));
 
-    return cfg_set_prplmesh_config(option, value);
+    return cfg_set_prplmesh_config_no_commit(option, value);
 }
 
 bool cfg_get_client_11k_roaming(bool &eleven_k_roaming)
@@ -253,7 +253,7 @@ bool cfg_set_client_11k_roaming(bool eleven_k_roaming)
     std::string option = "client_11k_roaming";
     std::string value  = std::to_string(((int)eleven_k_roaming));
 
-    return cfg_set_prplmesh_config(option, value);
+    return cfg_set_prplmesh_config_no_commit(option, value);
 }
 
 bool cfg_get_client_roaming(bool &client_roaming)
@@ -272,7 +272,7 @@ bool cfg_set_client_roaming(bool client_roaming)
     std::string option = "client_roaming";
     std::string value  = std::to_string(((int)client_roaming));
 
-    return cfg_set_prplmesh_config(option, value);
+    return cfg_set_prplmesh_config_no_commit(option, value);
 }
 
 bool cfg_get_load_balancing(bool &load_balancing)
@@ -291,7 +291,7 @@ bool cfg_set_load_balancing(bool load_balancing)
     std::string option = "load_balancing";
     std::string value  = std::to_string(((int)load_balancing));
 
-    return cfg_set_prplmesh_config(option, value);
+    return cfg_set_prplmesh_config_no_commit(option, value);
 }
 
 bool cfg_get_channel_select_task(bool &channel_select_task_enabled)
@@ -310,7 +310,7 @@ bool cfg_set_channel_select_task(bool channel_select_task_enabled)
     std::string option = "channel_select_task_enabled";
     std::string value  = std::to_string(((int)channel_select_task_enabled));
 
-    return cfg_set_prplmesh_config(option, value);
+    return cfg_set_prplmesh_config_no_commit(option, value);
 }
 
 bool cfg_get_dfs_reentry(bool &dfs_reentry_enabled)
@@ -329,7 +329,7 @@ bool cfg_set_dfs_reentry(bool dfs_reentry_enabled)
     std::string option = "dfs_reentry";
     std::string value  = std::to_string(((int)dfs_reentry_enabled));
 
-    return cfg_set_prplmesh_config(option, value);
+    return cfg_set_prplmesh_config_no_commit(option, value);
 }
 
 bool cfg_get_dfs_task(bool &dfs_task_enabled)
@@ -348,7 +348,7 @@ bool cfg_set_dfs_task(bool dfs_task_enabled)
     std::string option = "dfs_task_enabled";
     std::string value  = std::to_string(((int)dfs_task_enabled));
 
-    return cfg_set_prplmesh_config(option, value);
+    return cfg_set_prplmesh_config_no_commit(option, value);
 }
 
 bool cfg_get_health_check(bool &health_check_enabled)
@@ -367,7 +367,7 @@ bool cfg_set_health_check(bool health_check_enabled)
     std::string option = "health_check_enabled";
     std::string value  = std::to_string(((int)health_check_enabled));
 
-    return cfg_set_prplmesh_config(option, value);
+    return cfg_set_prplmesh_config_no_commit(option, value);
 }
 
 bool cfg_get_ire_roaming(bool &ire_roaming)
@@ -386,7 +386,7 @@ bool cfg_set_ire_roaming(bool ire_roaming)
     std::string option = "ire_roaming";
     std::string value  = std::to_string(((int)ire_roaming));
 
-    return cfg_set_prplmesh_config(option, value);
+    return cfg_set_prplmesh_config_no_commit(option, value);
 }
 
 bool cfg_get_optimal_path_prefer_signal_strenght(bool &optimal_path_prefer_signal_strenght)
@@ -405,7 +405,7 @@ bool cfg_set_optimal_path_prefer_signal_strenght(bool optimal_path_prefer_signal
     std::string option = "optimal_path_prefer_signal_strenght";
     std::string value  = std::to_string(((int)optimal_path_prefer_signal_strenght));
 
-    return cfg_set_prplmesh_config(option, value);
+    return cfg_set_prplmesh_config_no_commit(option, value);
 }
 
 bool cfg_get_diagnostics_measurements(bool &diagnostics_measurements)
@@ -424,7 +424,7 @@ bool cfg_set_diagnostics_measurements(bool diagnostics_measurements)
     std::string option = "diagnostics_measurements";
     std::string value  = std::to_string(((int)diagnostics_measurements));
 
-    return cfg_set_prplmesh_config(option, value);
+    return cfg_set_prplmesh_config_no_commit(option, value);
 }
 
 bool cfg_get_diagnostics_measurements_polling_rate_sec(
@@ -450,7 +450,7 @@ bool cfg_set_diagnostics_measurements_polling_rate_sec(
     std::string option = "diagnostics_measurements_polling_rate_sec";
     std::string value  = std::to_string(diagnostics_measurements_polling_rate_sec);
 
-    return cfg_set_prplmesh_config(option, value);
+    return cfg_set_prplmesh_config_no_commit(option, value);
 }
 
 int cfg_get_backhaul_params(int *max_vaps, int *network_enabled, int *preferred_radio_band)
@@ -683,7 +683,7 @@ bool cfg_set_link_metrics_request_interval(std::chrono::seconds &link_metrics_re
     std::string option = "link_metrics_request_interval_sec";
     std::string value  = std::to_string(link_metrics_request_interval_sec.count());
 
-    return cfg_set_prplmesh_config(option, value);
+    return cfg_set_prplmesh_config_no_commit(option, value);
 }
 
 bool cfg_get_unsuccessful_assoc_report_policy(bool &unsuccessful_assoc_report_policy)
@@ -776,7 +776,7 @@ bool cfg_set_roaming_hysteresis_percent_bonus(int roaming_hysteresis_percent_bon
     std::string option = "roaming_hysteresis_percent_bonus";
     std::string value  = std::to_string(roaming_hysteresis_percent_bonus);
 
-    return cfg_set_prplmesh_config(option, value);
+    return cfg_set_prplmesh_config_no_commit(option, value);
 }
 
 bool cfg_get_steering_disassoc_timer_msec(std::chrono::milliseconds &steering_disassoc_timer_msec)
@@ -795,7 +795,7 @@ bool cfg_set_steering_disassoc_timer_msec(std::chrono::milliseconds &steering_di
     std::string option = "steering_disassoc_timer_msec";
     std::string value  = std::to_string(steering_disassoc_timer_msec.count());
 
-    return cfg_set_prplmesh_config(option, value);
+    return cfg_set_prplmesh_config_no_commit(option, value);
 }
 
 bool cfg_get_clients_measurement_mode(eClientsMeasurementMode &clients_measurement_mode)
@@ -946,6 +946,8 @@ bool cfg_get_clients_unicast_measurements(bool &client_unicast_measurements)
     client_unicast_measurements = bool(val == 1);
     return true;
 }
+
+bool cfg_commit_changes() { return uci_commit_changes("prplmesh"); }
 
 } // namespace bpl
 } // namespace beerocks
