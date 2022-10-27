@@ -314,7 +314,7 @@ changelog:
     - pipeline: $PARENT_PIPELINE_ID
       job: image-build-scripts
   script:
-    - tools/gen_changelog.py --latest-version > CHANGELOG.md
+    - tools/gen_changelog.py --latest-version --no-unreleased > CHANGELOG.md
   artifacts:
     paths:
       - CHANGELOG.md
