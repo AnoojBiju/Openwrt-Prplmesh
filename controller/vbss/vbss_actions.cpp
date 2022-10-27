@@ -115,12 +115,6 @@ bool vbss_actions::create_vbss(const sClientVBSS &client_vbss, const sMacAddr &d
         return false;
     }
 
-    auto client_capabilities_tlv_tx = cmdu_tx.addClass<wfa_map::tlvClientCapabilityReport>();
-    if (!client_capabilities_tlv_tx) {
-        LOG(ERROR) << "Creation of tlvClientCapabilityReport failed";
-        return false;
-    }
-
     auto agent = database.get_agent_by_radio_uid(dest_ruid);
     if (!agent) {
         LOG(ERROR) << "Failed to get agent for VBSSID " << client_vbss.vbssid;
@@ -150,17 +144,24 @@ bool vbss_actions::create_vbss(const sClientVBSS &client_vbss, const sMacAddr &d
             return false;
         }
 
-        auto sta_association_frame =
-            database.get_association_frame_by_sta_mac(client_vbss.client_mac);
-        if (!sta_association_frame) {
-            LOG(ERROR) << "Failed to send VBSS creation request! Client is associated but no "
-                          "client capatilities are given.";
-            return false;
-        }
         vbss_creation_req->set_ptk(client_sec_ctx->ptk, client_sec_ctx->key_length);
         vbss_creation_req->tx_packet_num() = client_sec_ctx->tx_packet_num;
         vbss_creation_req->set_gtk(client_sec_ctx->gtk, client_sec_ctx->group_key_length);
         vbss_creation_req->group_tx_packet_num() = client_sec_ctx->group_tx_packet_num;
+
+        auto sta_association_frame =
+            database.get_association_frame_by_sta_mac(client_vbss.client_mac);
+        if (!sta_association_frame) {
+            LOG(ERROR) << "No association frame found!";
+            return false;
+        }
+
+        auto client_capabilities_tlv_tx = cmdu_tx.addClass<wfa_map::tlvClientCapabilityReport>();
+        if (!client_capabilities_tlv_tx) {
+            LOG(ERROR) << "Creation of tlvClientCapabilityReport failed";
+            return false;
+        }
+
         client_capabilities_tlv_tx->set_association_frame(sta_association_frame->buffer(),
                                                           sta_association_frame->len());
     }
