@@ -39,7 +39,7 @@ const char *channel_selection_task::s_ar_events[] = {FOREACH_EVENT(GENERATE_STRI
 
 channel_selection_task::channel_selection_task(db &database_, ieee1905_1::CmduMessageTx &cmdu_tx_,
                                                task_pool &tasks_)
-    : database(database_), cmdu_tx(cmdu_tx_), tasks(tasks_)
+    : task("channel selection task"), database(database_), cmdu_tx(cmdu_tx_), tasks(tasks_)
 {
     fsm_state = eState::INIT;
 }

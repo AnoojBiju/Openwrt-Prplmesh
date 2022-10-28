@@ -14,13 +14,11 @@
 #include "tasks/agent_monitoring_task.h"
 #include "tasks/bml_task.h"
 #include "tasks/btm_request_task.h"
-#include "tasks/channel_selection_task.h"
 #include "tasks/client_association_task.h"
 #include "tasks/client_steering_task.h"
 #include "tasks/dhcp_task.h"
 #include "tasks/load_balancer_task.h"
 #include "tasks/optimal_path_task.h"
-#include "tasks/statistics_polling_task.h"
 #include "tasks/topology_task.h"
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
 #include "tasks/pre_association_steering/pre_association_steering_task.h"
@@ -28,9 +26,7 @@
 #include "db/db_algo.h"
 #include "db/network_map.h"
 #include "tasks/client_locating_task.h"
-#include "tasks/dynamic_channel_selection_r2_task.h"
 #include "tasks/dynamic_channel_selection_task.h"
-#include "tasks/network_health_check_task.h"
 
 #include <bcl/beerocks_backport.h>
 #include <bcl/beerocks_utils.h>
@@ -130,61 +126,8 @@ Controller::Controller(db &database_,
 
     database.set_controller_ctx(this);
 
-#ifndef BEEROCKS_LINUX
-    if (database.settings_diagnostics_measurements()) {
-        LOG_IF(!tasks.add_task(std::make_shared<statistics_polling_task>(database, cmdu_tx, tasks)),
-               FATAL)
-            << "Failed adding statistics polling task!";
-    }
-#endif
-
-    LOG_IF(!tasks.add_task(std::make_shared<bml_task>(database, cmdu_tx, tasks)), FATAL)
-        << "Failed adding BML task!";
-
-    LOG_IF(!tasks.add_task(std::make_shared<channel_selection_task>(database, cmdu_tx, tasks)),
-           FATAL)
-        << "Failed adding channel selection task!";
-
-    LOG_IF(!tasks.add_task(
-               std::make_shared<dynamic_channel_selection_r2_task>(database, cmdu_tx, tasks)),
-           FATAL)
-        << "Failed adding dynamic channel selection r2 task!";
-
-    LOG_IF(!tasks.add_task(std::make_shared<topology_task>(database, cmdu_tx, tasks)), FATAL)
-        << "Failed adding topology task!";
-
-    LOG_IF(!tasks.add_task(std::make_shared<client_association_task>(database, cmdu_tx, tasks)),
-           FATAL)
-        << "Failed adding client association task!";
-
-    LOG_IF(!tasks.add_task(std::make_shared<agent_monitoring_task>(database, cmdu_tx, tasks)),
-           FATAL)
-        << "Failed adding agent monitoring task!";
-
-    if (database.settings_health_check()) {
-        LOG_IF(!tasks.add_task(
-                   std::make_shared<network_health_check_task>(database, cmdu_tx, tasks, 0)),
-               FATAL)
-            << "Failed adding network health check task!";
-    } else {
-        LOG(DEBUG) << "Health check is DISABLED!";
-    }
-
-#ifdef ENABLE_VBSS
-    LOG_IF(!tasks.add_task(std::make_shared<vbss_task>(database, tasks)), FATAL)
-        << "Failed adding vbss task!";
-#else
-    LOG(INFO) << "VBSS is not enabled";
-#endif
-
-    if (database.config.management_mode != BPL_MGMT_MODE_NOT_MULTIAP) {
-        m_link_metrics_task =
-            std::make_shared<LinkMetricsTask>(database, cmdu_tx, cert_cmdu_tx, tasks);
-        LOG_IF(!tasks.add_task(m_link_metrics_task), FATAL) << "Failed adding link metrics task!";
-    }
-
-    LOG_IF(!tasks.add_task(std::make_shared<DhcpTask>(database, timer_manager)), FATAL)
-        << "Failed adding dhcp task!";
+    start_mandatory_tasks();
+    start_optional_tasks();
 
     beerocks::CmduServer::EventHandlers handlers{
         .on_client_connected    = [&](int fd) { handle_connected(fd); },
@@ -272,7 +215,7 @@ bool Controller::start()
         "Controller Tasks", tasks_timer_period, tasks_timer_period,
         [&](int fd, beerocks::EventLoop &loop) {
             // Allow tasks to execute up to 80% of the timer period
-            tasks.run_tasks(int(double(tasks_timer_period.count()) * 0.8));
+            m_task_pool.run_tasks(int(double(tasks_timer_period.count()) * 0.8));
             return true;
         });
     if (m_tasks_timer == beerocks::net::FileDescriptor::invalid_descriptor) {
@@ -389,6 +332,94 @@ bool Controller::stop()
     return ok;
 }
 
+void Controller::start_mandatory_tasks()
+{
+    LOG(DEBUG) << "Start mandatory periodic tasks";
+
+    LOG_IF(!m_task_pool.add_task(std::make_shared<bml_task>(database, cmdu_tx, m_task_pool)), FATAL)
+        << "Failed adding BML task!";
+
+    LOG_IF(!m_task_pool.add_task(std::make_shared<topology_task>(database, cmdu_tx, m_task_pool)),
+           FATAL)
+        << "Failed adding topology task!";
+
+    LOG_IF(!m_task_pool.add_task(
+               std::make_shared<client_association_task>(database, cmdu_tx, m_task_pool)),
+           FATAL)
+        << "Failed adding client association task!";
+
+    LOG_IF(!m_task_pool.add_task(
+               std::make_shared<agent_monitoring_task>(database, cmdu_tx, m_task_pool)),
+           FATAL)
+        << "Failed adding agent monitoring task!";
+
+#ifdef ENABLE_VBSS
+    LOG_IF(!m_task_pool.add_task(std::make_shared<vbss_task>(database, m_task_pool)), FATAL)
+        << "Failed adding vbss task!";
+#else
+    LOG(INFO) << "VBSS is not enabled";
+#endif
+
+    LOG_IF(!m_task_pool.add_task(std::make_shared<DhcpTask>(database, m_timer_manager)), FATAL)
+        << "Failed adding dhcp task!";
+}
+
+void Controller::start_optional_tasks()
+{
+    LOG(DEBUG) << "Start/Stop configurable periodic tasks";
+
+    if (database.config.management_mode != BPL_MGMT_MODE_NOT_MULTIAP) {
+        if (!m_link_metrics_task) {
+            LOG(DEBUG) << "Start Link metrics task";
+            m_link_metrics_task =
+                std::make_shared<LinkMetricsTask>(database, cmdu_tx, cert_cmdu_tx, m_task_pool);
+            LOG_IF(!m_task_pool.add_task(m_link_metrics_task), FATAL)
+                << "Failed adding Link metrics task!";
+        } else {
+            LOG(DEBUG) << "Link metrics task already running";
+        }
+    } else {
+        if (m_link_metrics_task) {
+            LOG(DEBUG) << "Stop Link metrics task";
+            m_task_pool.kill_task(m_link_metrics_task->id);
+            m_link_metrics_task = {};
+        } else {
+            LOG(DEBUG) << "Link metric task disabled";
+        }
+    }
+
+#ifndef BEEROCKS_LINUX
+    // update running status for statistics_polling_task
+    LOG(INFO) << "statistics polling task status update";
+    task_status_helper<statistics_polling_task>(database.settings_diagnostics_measurements(),
+                                                m_statistics_polling_task_id,
+                                                "statistics_polling_task");
+    database.assign_statistics_polling_task_id(m_statistics_polling_task_id);
+
+#endif
+
+    // update running status for channel_selection_task
+    LOG(INFO) << "channel selection task status update";
+    task_status_helper<channel_selection_task>(database.settings_channel_select_task(),
+                                               m_channel_selection_task_id,
+                                               "channel_selection_task");
+    database.assign_channel_selection_task_id(m_channel_selection_task_id);
+
+    // update running status for dynamic_channel_selection_task_2
+    LOG(INFO) << "dynamic channel selection r2 task status update";
+    task_status_helper<dynamic_channel_selection_r2_task>(
+        database.settings_dynamic_channel_select_task(), m_dynamic_channel_selection_task_id,
+        "dynamic_channel_selection_task_r2");
+    database.assign_dynamic_channel_selection_r2_task_id(m_dynamic_channel_selection_task_id);
+
+    // update running status for network_health_check_task
+    LOG(INFO) << "network health check task status update";
+    task_status_helper<network_health_check_task>(database.settings_health_check(),
+                                                  m_network_health_check_task_id,
+                                                  "network_health_check_task");
+    // database has no member network_health_check_task_id, so we are not setting it
+}
+
 bool Controller::send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
 {
     return m_cmdu_server->send_cmdu(fd, cmdu_tx);
@@ -424,8 +455,9 @@ void Controller::handle_disconnected(int fd)
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
     pre_association_steering_task::sListenerGeneralRegisterUnregisterEvent new_event;
     new_event.sd = fd;
-    tasks.push_event(database.get_pre_association_steering_task_id(),
-                     pre_association_steering_task::eEvents::STEERING_REMOVE_SOCKET, &new_event);
+    m_task_pool.push_event(database.get_pre_association_steering_task_id(),
+                           pre_association_steering_task::eEvents::STEERING_REMOVE_SOCKET,
+                           &new_event);
 #endif
 }
 
@@ -446,10 +478,10 @@ bool Controller::handle_cmdu(int fd, uint32_t iface_index, const sMacAddr &dst_m
         }
         switch (beerocks_header->action()) {
         case beerocks_message::ACTION_CLI: {
-            son_management::handle_cli_message(fd, beerocks_header, cmdu_tx, database, tasks);
+            son_management::handle_cli_message(fd, beerocks_header, cmdu_tx, database, m_task_pool);
         } break;
         case beerocks_message::ACTION_BML: {
-            son_management::handle_bml_message(fd, beerocks_header, cmdu_tx, database, tasks);
+            son_management::handle_bml_message(fd, beerocks_header, cmdu_tx, database, m_task_pool);
         } break;
         case beerocks_message::ACTION_CONTROL: {
             handle_cmdu_control_message(src_mac, beerocks_header);
@@ -461,7 +493,7 @@ bool Controller::handle_cmdu(int fd, uint32_t iface_index, const sMacAddr &dst_m
     } else {
         LOG(DEBUG) << "received 1905.1 cmdu message";
         handle_cmdu_1905_1_message(src_mac, cmdu_rx);
-        tasks.handle_ieee1905_1_msg(src_mac, cmdu_rx);
+        m_task_pool.handle_ieee1905_1_msg(src_mac, cmdu_rx);
 
         database.update_last_contact_time(src_mac);
     }
@@ -1249,9 +1281,9 @@ bool Controller::handle_cmdu_1905_client_steering_btm_report_message(
 
     int steering_task_id = client->steering_task_id;
     // Check if task is running before pushing the event
-    if (tasks.is_task_running(steering_task_id)) {
-        tasks.push_event(steering_task_id, client_steering_task::BTM_REPORT_RECEIVED,
-                         (void *)&status_code);
+    if (m_task_pool.is_task_running(steering_task_id)) {
+        m_task_pool.push_event(steering_task_id, client_steering_task::BTM_REPORT_RECEIVED,
+                               (void *)&status_code);
     }
     database.update_node_11v_responsiveness(*client, true);
 
@@ -1259,16 +1291,16 @@ bool Controller::handle_cmdu_1905_client_steering_btm_report_message(
         LOG(DEBUG) << "sta " << client_mac << " rejected BSS steer request";
         LOG(DEBUG) << "killing roaming task";
 
-        tasks.kill_task(client->roaming_task_id);
+        m_task_pool.kill_task(client->roaming_task_id);
 
-        tasks.push_event(steering_task_id, client_steering_task::BSS_TM_REQUEST_REJECTED);
+        m_task_pool.push_event(steering_task_id, client_steering_task::BSS_TM_REQUEST_REJECTED);
     }
 
     int btm_request_task_id = client->btm_request_task_id;
     // Check if task is running before pushing the event
-    if (tasks.is_task_running(btm_request_task_id)) {
-        tasks.push_event(btm_request_task_id, btm_request_task::BTM_REPORT_RECEIVED,
-                         (void *)&status_code);
+    if (m_task_pool.is_task_running(btm_request_task_id)) {
+        m_task_pool.push_event(btm_request_task_id, btm_request_task::BTM_REPORT_RECEIVED,
+                               (void *)&status_code);
         // no BSS_TM_REQUEST_REJECTED event for the btm_request_task since there is no particualr handling for
         // this value of the BTM_RESPONSE status;
     }
@@ -1414,9 +1446,9 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const sMacAddr &src_mac,
         dynamic_channel_selection_r2_task::sScanReportEvent new_event = {};
         new_event.ISO_8601_timestamp                                  = ISO_8601_timestamp;
         new_event.agent_mac                                           = src_mac;
-        tasks.push_event(database.get_dynamic_channel_selection_r2_task_id(),
-                         dynamic_channel_selection_r2_task::eEvent::RECEIVED_CHANNEL_SCAN_REPORT,
-                         &new_event);
+        m_task_pool.push_event(
+            database.get_dynamic_channel_selection_r2_task_id(),
+            dynamic_channel_selection_r2_task::eEvent::RECEIVED_CHANNEL_SCAN_REPORT, &new_event);
     }
     LOG(DEBUG) << "Report handling is done";
     return true;
@@ -1762,7 +1794,7 @@ bool Controller::handle_cmdu_1905_ap_capability_report(const sMacAddr &src_mac,
             continue;
         }
         son_actions::handle_dead_node(tlvf::mac_to_string(removed_radio->radio_uid), true, database,
-                                      cmdu_tx, tasks);
+                                      cmdu_tx, m_task_pool);
     }
 
     bool all_radio_capabilities_saved_successfully = true;
@@ -2187,7 +2219,8 @@ bool Controller::handle_intel_slave_join(
             bml_task::connection_change_event new_event;
             new_event.mac                     = backhaul_mac;
             new_event.force_client_disconnect = true;
-            tasks.push_event(database.get_bml_task_id(), bml_task::CONNECTION_CHANGE, &new_event);
+            m_task_pool.push_event(database.get_bml_task_id(), bml_task::CONNECTION_CHANGE,
+                                   &new_event);
         }
 
         //TODO might need to handle bssids of VAP nodes as well in this case
@@ -2292,9 +2325,9 @@ bool Controller::handle_intel_slave_join(
         //run locating task on ire
         if (!database.is_node_wireless(backhaul_mac)) {
             LOG(DEBUG) << "run_client_locating_task client_mac = " << bridge_mac;
-            auto new_task = std::make_shared<client_locating_task>(database, cmdu_tx, tasks,
+            auto new_task = std::make_shared<client_locating_task>(database, cmdu_tx, m_task_pool,
                                                                    bridge_mac_str, true, 2000);
-            tasks.add_task(new_task);
+            m_task_pool.add_task(new_task);
         }
 
         //Run the client locating tasks for the previously located wired IRE. If cascaded IREs are connected with wire
@@ -2311,8 +2344,8 @@ bool Controller::handle_intel_slave_join(
             if (!database.is_node_wireless(ire_backhaul_mac)) {
                 LOG(DEBUG) << "run_client_locating_task client_mac = " << a->al_mac;
                 auto new_task = std::make_shared<client_locating_task>(
-                    database, cmdu_tx, tasks, tlvf::mac_to_string(a->al_mac), true, 2000);
-                tasks.add_task(new_task);
+                    database, cmdu_tx, m_task_pool, tlvf::mac_to_string(a->al_mac), true, 2000);
+                m_task_pool.add_task(new_task);
             }
         }
     }
@@ -2357,11 +2390,11 @@ bool Controller::handle_intel_slave_join(
 #endif
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
         int prev_task_id = database.get_pre_association_steering_task_id();
-        if (!tasks.is_task_running(prev_task_id)) {
+        if (!m_task_pool.is_task_running(prev_task_id)) {
             LOG(DEBUG) << "starting Pre Association Steering task";
             auto new_pre_association_steering_task =
-                std::make_shared<pre_association_steering_task>(database, cmdu_tx, tasks);
-            tasks.add_task(new_pre_association_steering_task);
+                std::make_shared<pre_association_steering_task>(database, cmdu_tx, m_task_pool);
+            m_task_pool.add_task(new_pre_association_steering_task);
         }
 #endif
     }
@@ -2398,7 +2431,7 @@ bool Controller::handle_intel_slave_join(
     radio->is_acs_enabled = acs_enabled;
     // Make sure AP is marked as not active. It will be set as active after setting all the
     // radio parameters on the database.
-    son_actions::set_hostap_active(database, tasks, tlvf::mac_to_string(radio_mac), false);
+    son_actions::set_hostap_active(database, m_task_pool, tlvf::mac_to_string(radio_mac), false);
     if (backhaul_manager) {
         agent->backhaul.wireless_backhaul_radio = radio;
     }
@@ -2465,13 +2498,13 @@ bool Controller::handle_intel_slave_join(
 
     // calling this function to update arp monitor with new ip addr (bridge ip), which is diffrent from the ip received from, dhcp on the backhaul
     if (backhaul_manager && (!is_gw_slave) && database.is_node_wireless(backhaul_mac)) {
-        son_actions::handle_completed_connection(database, cmdu_tx, tasks, backhaul_mac);
+        son_actions::handle_completed_connection(database, cmdu_tx, m_task_pool, backhaul_mac);
     }
 
     // update bml listeners
     bml_task::connection_change_event bml_new_event;
     bml_new_event.mac = bridge_mac_str;
-    tasks.push_event(database.get_bml_task_id(), bml_task::CONNECTION_CHANGE, &bml_new_event);
+    m_task_pool.push_event(database.get_bml_task_id(), bml_task::CONNECTION_CHANGE, &bml_new_event);
     LOG(DEBUG) << "BML, sending IRE connect CONNECTION_CHANGE for mac " << bml_new_event.mac;
 
     // sending event to CS task
@@ -2486,15 +2519,16 @@ bool Controller::handle_intel_slave_join(
     cs_new_event->hostap_mac = radio_mac;
     cs_new_event->cs_params  = notification->cs_params();
 
-    tasks.push_event(database.get_channel_selection_task_id(),
-                     (int)channel_selection_task::eEvent::SLAVE_JOINED_EVENT, (void *)cs_new_event);
+    m_task_pool.push_event(database.get_channel_selection_task_id(),
+                           (int)channel_selection_task::eEvent::SLAVE_JOINED_EVENT,
+                           (void *)cs_new_event);
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
     // sending event to pre_association_steering_task
     LOG(DEBUG) << "pre_association_steering_task,sending STEERING_SLAVE_JOIN for mac " << radio_mac;
     pre_association_steering_task::sSteeringSlaveJoinEvent new_event{};
     new_event.radio_mac = tlvf::mac_to_string(radio_mac);
-    tasks.push_event(database.get_pre_association_steering_task_id(),
-                     pre_association_steering_task::eEvents::STEERING_SLAVE_JOIN, &new_event);
+    m_task_pool.push_event(database.get_pre_association_steering_task_id(),
+                           pre_association_steering_task::eEvents::STEERING_SLAVE_JOIN, &new_event);
 #endif
     // In the case where wireless-BH is lost and agents reconnect to the controller
     // it is required to re-activate the AP in the nodes-map since it is set as not-active
@@ -2699,7 +2733,7 @@ bool Controller::handle_non_intel_slave_join(
     // update bml listeners
     bml_task::connection_change_event bml_new_event;
     bml_new_event.mac = bridge_mac_str;
-    tasks.push_event(database.get_bml_task_id(), bml_task::CONNECTION_CHANGE, &bml_new_event);
+    m_task_pool.push_event(database.get_bml_task_id(), bml_task::CONNECTION_CHANGE, &bml_new_event);
     LOG(DEBUG) << "BML, sending IRE connect CONNECTION_CHANGE for mac " << bml_new_event.mac;
 
     LOG(DEBUG) << "send AP_AUTOCONFIG_WSC M2";
@@ -2754,9 +2788,10 @@ bool Controller::handle_cmdu_control_message(
         auto new_event        = new channel_selection_task::sRestrictedChannelResponse_event;
         new_event->hostap_mac = beerocks_header->actionhdr()->radio_mac();
         new_event->success    = response->success();
-        tasks.push_event(database.get_channel_selection_task_id(),
-                         (int)channel_selection_task::eEvent::RESTRICTED_CHANNEL_RESPONSE_EVENT,
-                         (void *)new_event);
+        m_task_pool.push_event(
+            database.get_channel_selection_task_id(),
+            (int)channel_selection_task::eEvent::RESTRICTED_CHANNEL_RESPONSE_EVENT,
+            (void *)new_event);
         break;
     }
     case beerocks_message::ACTION_CONTROL_HOSTAP_AP_DISABLED_NOTIFICATION: {
@@ -2782,7 +2817,7 @@ bool Controller::handle_cmdu_control_message(
             database.get_node_children(tlvf::mac_to_string(disabled_bssid), beerocks::TYPE_CLIENT);
 
         for (auto &client : client_list) {
-            son_actions::handle_dead_node(client, true, database, cmdu_tx, tasks);
+            son_actions::handle_dead_node(client, true, database, cmdu_tx, m_task_pool);
         }
 
         // Update BSSes in the Agent
@@ -2844,7 +2879,7 @@ bool Controller::handle_cmdu_control_message(
         // update bml listeners
         bml_task::connection_change_event new_event;
         new_event.mac = tlvf::mac_to_string(database.get_node_parent_ire(radio_mac_str));
-        tasks.push_event(database.get_bml_task_id(), bml_task::CONNECTION_CHANGE, &new_event);
+        m_task_pool.push_event(database.get_bml_task_id(), bml_task::CONNECTION_CHANGE, &new_event);
         LOG(DEBUG) << "BML, sending IRE connect CONNECTION_CHANGE for mac " << new_event.mac;
 
         break;
@@ -2855,7 +2890,7 @@ bool Controller::handle_cmdu_control_message(
         LOG(ERROR) << "Hostap CSA ERROR for IRE " << backhaul_mac << " hostap mac=" << radio_mac;
 
         // TODO handle CSA error
-        son_actions::set_hostap_active(database, tasks, radio_mac_str, false);
+        son_actions::set_hostap_active(database, m_task_pool, radio_mac_str, false);
         break;
     }
     case beerocks_message::ACTION_CONTROL_HOSTAP_CSA_NOTIFICATION: {
@@ -2872,8 +2907,8 @@ bool Controller::handle_cmdu_control_message(
         auto new_event        = new channel_selection_task::sCsa_event;
         new_event->hostap_mac = beerocks_header->actionhdr()->radio_mac();
         new_event->cs_params  = notification->cs_params();
-        tasks.push_event(database.get_channel_selection_task_id(),
-                         (int)channel_selection_task::eEvent::CSA_EVENT, (void *)new_event);
+        m_task_pool.push_event(database.get_channel_selection_task_id(),
+                               (int)channel_selection_task::eEvent::CSA_EVENT, (void *)new_event);
         break;
     }
     case beerocks_message::ACTION_CONTROL_HOSTAP_ACS_NOTIFICATION: {
@@ -2890,9 +2925,9 @@ bool Controller::handle_cmdu_control_message(
         auto new_event        = new channel_selection_task::sAcsResponse_event;
         new_event->hostap_mac = radio_mac;
         new_event->cs_params  = notification->cs_params();
-        tasks.push_event(database.get_channel_selection_task_id(),
-                         (int)channel_selection_task::eEvent::ACS_RESPONSE_EVENT,
-                         (void *)new_event);
+        m_task_pool.push_event(database.get_channel_selection_task_id(),
+                               (int)channel_selection_task::eEvent::ACS_RESPONSE_EVENT,
+                               (void *)new_event);
         break;
     }
     case beerocks_message::ACTION_CONTROL_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION: {
@@ -2954,7 +2989,7 @@ bool Controller::handle_cmdu_control_message(
             auto client_list =
                 database.get_node_children(tlvf::mac_to_string(bss->bssid), beerocks::TYPE_CLIENT);
             for (auto &client : client_list) {
-                son_actions::handle_dead_node(client, true, database, cmdu_tx, tasks);
+                son_actions::handle_dead_node(client, true, database, cmdu_tx, m_task_pool);
             }
 
             // Remove the vap from DB
@@ -2964,7 +2999,7 @@ bool Controller::handle_cmdu_control_message(
         // update bml listeners
         bml_task::connection_change_event new_event;
         new_event.mac = tlvf::mac_to_string(database.get_node_parent_ire(radio_mac_str));
-        tasks.push_event(database.get_bml_task_id(), bml_task::CONNECTION_CHANGE, &new_event);
+        m_task_pool.push_event(database.get_bml_task_id(), bml_task::CONNECTION_CHANGE, &new_event);
         LOG(DEBUG) << "BML, sending IRE connect CONNECTION_CHANGE for mac " << new_event.mac;
 
         break;
@@ -3036,7 +3071,8 @@ bool Controller::handle_cmdu_control_message(
             if (new_node || database.get_node_ipv4(client_mac) != client_ipv4) {
                 LOG(DEBUG) << "Update node IP - mac: " << client_mac << " ipv4: " << client_ipv4;
                 database.set_node_ipv4(client_mac, client_ipv4);
-                son_actions::handle_completed_connection(database, cmdu_tx, tasks, client_mac);
+                son_actions::handle_completed_connection(database, cmdu_tx, m_task_pool,
+                                                         client_mac);
             }
 
             // Run locating task only on CLIENTs or IREs
@@ -3057,7 +3093,8 @@ bool Controller::handle_cmdu_control_message(
 
                 LOG(DEBUG) << "Update node IP - mac: " << client_mac << " ipv4: " << client_ipv4;
                 database.set_node_ipv4(client_mac, client_ipv4);
-                son_actions::handle_completed_connection(database, cmdu_tx, tasks, client_mac);
+                son_actions::handle_completed_connection(database, cmdu_tx, m_task_pool,
+                                                         client_mac);
             }
         }
 
@@ -3089,13 +3126,14 @@ bool Controller::handle_cmdu_control_message(
 
             int prev_task_id = client->get_client_locating_task_id(true /*reachable*/);
 
-            if (tasks.is_task_running(prev_task_id)) {
+            if (m_task_pool.is_task_running(prev_task_id)) {
                 LOG(DEBUG) << "client locating task already running for " << client_mac;
             } else {
                 LOG(DEBUG) << "running client_locating_task on client = " << client_mac;
                 auto new_task = std::make_shared<client_locating_task>(
-                    database, cmdu_tx, tasks, client_mac, true /*reachable*/, 2000, eth_switch);
-                tasks.add_task(new_task);
+                    database, cmdu_tx, m_task_pool, client_mac, true /*reachable*/, 2000,
+                    eth_switch);
+                m_task_pool.add_task(new_task);
             }
         } else {
             LOG(INFO) << "Not running client_locating_task for client_mac " << client_mac
@@ -3190,10 +3228,10 @@ bool Controller::handle_cmdu_control_message(
             new_event.client_mac = notification->params().result.mac;
             new_event.bssid      = database.get_hostap_vap_mac(tlvf::mac_from_string(ap_mac),
                                                           notification->params().vap_id);
-            tasks.push_event(database.get_pre_association_steering_task_id(),
-                             pre_association_steering_task::eEvents::
-                                 STEERING_EVENT_RSSI_MEASUREMENT_SNR_NOTIFICATION,
-                             &new_event);
+            m_task_pool.push_event(database.get_pre_association_steering_task_id(),
+                                   pre_association_steering_task::eEvents::
+                                       STEERING_EVENT_RSSI_MEASUREMENT_SNR_NOTIFICATION,
+                                   &new_event);
         }
 #endif
         break;
@@ -3238,12 +3276,12 @@ bool Controller::handle_cmdu_control_message(
                 * when a notification arrives, it means a large change in rx_rssi occurred (above the defined thershold)
                 * therefore, we need to create an optimal path task to relocate the node if needed
                 */
-            if (tasks.is_task_running(client->roaming_task_id)) {
+            if (m_task_pool.is_task_running(client->roaming_task_id)) {
                 LOG(DEBUG) << "roaming task already running for " << client_mac;
             } else {
-                auto new_task = std::make_shared<optimal_path_task>(database, cmdu_tx, tasks,
+                auto new_task = std::make_shared<optimal_path_task>(database, cmdu_tx, m_task_pool,
                                                                     client_mac, 0, "");
-                tasks.add_task(new_task);
+                m_task_pool.add_task(new_task);
             }
         }
         break;
@@ -3266,7 +3304,8 @@ bool Controller::handle_cmdu_control_message(
                       << " hostap mac=" << radio_mac
                       << " closing socket and marking as disconnected";
             bool reported_by_parent = radio_mac_str == database.get_node_parent(client_mac);
-            son_actions::handle_dead_node(client_mac, reported_by_parent, database, cmdu_tx, tasks);
+            son_actions::handle_dead_node(client_mac, reported_by_parent, database, cmdu_tx,
+                                          m_task_pool);
         }
         break;
     }
@@ -3332,12 +3371,12 @@ bool Controller::handle_cmdu_control_message(
                 break;
             }
             int prev_task_id = client->get_client_locating_task_id(true);
-            if (tasks.is_task_running(prev_task_id)) {
+            if (m_task_pool.is_task_running(prev_task_id)) {
                 LOG(DEBUG) << "client locating task already running for " << client_mac;
             } else {
-                auto new_task = std::make_shared<client_locating_task>(database, cmdu_tx, tasks,
-                                                                       client_mac, true, 2000);
-                tasks.add_task(new_task);
+                auto new_task = std::make_shared<client_locating_task>(
+                    database, cmdu_tx, m_task_pool, client_mac, true, 2000);
+                m_task_pool.add_task(new_task);
             }
         }
         break;
@@ -3355,9 +3394,9 @@ bool Controller::handle_cmdu_control_message(
         auto new_event        = new channel_selection_task::sCacCompleted_event;
         new_event->hostap_mac = radio_mac;
         new_event->params     = notification->params();
-        tasks.push_event(database.get_channel_selection_task_id(),
-                         (int)channel_selection_task::eEvent::CAC_COMPLETED_EVENT,
-                         (void *)new_event);
+        m_task_pool.push_event(database.get_channel_selection_task_id(),
+                               (int)channel_selection_task::eEvent::CAC_COMPLETED_EVENT,
+                               (void *)new_event);
 
         auto channel_ext_above =
             (notification->params().frequency < notification->params().center_frequency1) ? true
@@ -3386,9 +3425,9 @@ bool Controller::handle_cmdu_control_message(
         auto new_event        = new channel_selection_task::sDfsChannelAvailable_event;
         new_event->hostap_mac = radio_mac;
         new_event->params     = notification->params();
-        tasks.push_event(database.get_channel_selection_task_id(),
-                         (int)channel_selection_task::eEvent::DFS_CHANNEL_AVAILABLE_EVENT,
-                         (void *)new_event);
+        m_task_pool.push_event(database.get_channel_selection_task_id(),
+                               (int)channel_selection_task::eEvent::DFS_CHANNEL_AVAILABLE_EVENT,
+                               (void *)new_event);
         break;
     }
     case beerocks_message::ACTION_CONTROL_HOSTAP_STATS_MEASUREMENT_RESPONSE: {
@@ -3473,12 +3512,12 @@ bool Controller::handle_cmdu_control_message(
                 */
             LOG(DEBUG) << "high load conditions, starting load balancer for ire " << ire_mac;
             int prev_task_id = database.get_load_balancer_task_id(ire_mac);
-            if (tasks.is_task_running(prev_task_id)) {
+            if (m_task_pool.is_task_running(prev_task_id)) {
                 LOG(DEBUG) << "load balancer task already running for " << ire_mac;
             } else {
                 auto new_task = std::make_shared<load_balancer_task>(
-                    database, cmdu_tx, tasks, ire_mac, "load notif (high)- load_balancer");
-                tasks.add_task(new_task);
+                    database, cmdu_tx, m_task_pool, ire_mac, "load notif (high)- load_balancer");
+                m_task_pool.add_task(new_task);
             }
         } else if ((active_client_count < database.config.monitor_min_active_clients) &&
                    (client_load_percent <
@@ -3506,13 +3545,13 @@ bool Controller::handle_cmdu_control_message(
                             * launch optimal path task
                             */
                         if (database.get_node_state(sta) == beerocks::STATE_CONNECTED) {
-                            if (tasks.is_task_running(station->roaming_task_id)) {
+                            if (m_task_pool.is_task_running(station->roaming_task_id)) {
                                 LOG(DEBUG) << "roaming task already running for " << sta;
                             } else {
                                 auto new_task = std::make_shared<optimal_path_task>(
-                                    database, cmdu_tx, tasks, sta, 0,
+                                    database, cmdu_tx, m_task_pool, sta, 0,
                                     "load notif (low) - optimal_path");
-                                tasks.add_task(new_task);
+                                m_task_pool.add_task(new_task);
                             }
                         } else {
                             database.set_node_handoff_flag(*station, false);
@@ -3597,13 +3636,13 @@ bool Controller::handle_cmdu_control_message(
             return false;
         }
 
-        if (tasks.is_task_running(client->roaming_task_id)) {
+        if (m_task_pool.is_task_running(client->roaming_task_id)) {
             LOG(DEBUG) << "roaming task already running for " << client_mac;
         } else {
             LOG(INFO) << "Starting optimal path for client" << client_mac;
-            auto new_task =
-                std::make_shared<optimal_path_task>(database, cmdu_tx, tasks, client_mac, 0, "");
-            tasks.add_task(new_task);
+            auto new_task = std::make_shared<optimal_path_task>(database, cmdu_tx, m_task_pool,
+                                                                client_mac, 0, "");
+            m_task_pool.add_task(new_task);
         }
         break;
     }
@@ -3622,9 +3661,9 @@ bool Controller::handle_cmdu_control_message(
             LOG(DEBUG) << "CS_task,sending AP_ACTIVITY_IDLE_EVENT for mac " << radio_mac;
             auto new_event        = new channel_selection_task::sApActivityIdle_event;
             new_event->hostap_mac = radio_mac;
-            tasks.push_event(database.get_channel_selection_task_id(),
-                             (int)channel_selection_task::eEvent::AP_ACTIVITY_IDLE_EVENT,
-                             (void *)new_event);
+            m_task_pool.push_event(database.get_channel_selection_task_id(),
+                                   (int)channel_selection_task::eEvent::AP_ACTIVITY_IDLE_EVENT,
+                                   (void *)new_event);
         }
 
         break;
@@ -3652,7 +3691,7 @@ bool Controller::handle_cmdu_control_message(
 
         beerocks_message::sSteeringEvActivity new_event;
         new_event = notification->params();
-        tasks.push_event(
+        m_task_pool.push_event(
             database.get_pre_association_steering_task_id(),
             pre_association_steering_task::eEvents::STEERING_EVENT_CLIENT_ACTIVITY_NOTIFICATION,
             &new_event);
@@ -3668,7 +3707,7 @@ bool Controller::handle_cmdu_control_message(
         }
         beerocks_message::sSteeringEvSnrXing new_event;
         new_event = notification->params();
-        tasks.push_event(
+        m_task_pool.push_event(
             database.get_pre_association_steering_task_id(),
             pre_association_steering_task::eEvents::STEERING_EVENT_SNR_XING_NOTIFICATION,
             &new_event);
@@ -3685,7 +3724,7 @@ bool Controller::handle_cmdu_control_message(
 
         beerocks_message::sSteeringEvProbeReq new_event;
         new_event = notification->params();
-        tasks.push_event(
+        m_task_pool.push_event(
             database.get_pre_association_steering_task_id(),
             pre_association_steering_task::eEvents::STEERING_EVENT_PROBE_REQ_NOTIFICATION,
             &new_event);
@@ -3701,7 +3740,7 @@ bool Controller::handle_cmdu_control_message(
         }
         beerocks_message::sSteeringEvAuthFail new_event;
         new_event = notification->params();
-        tasks.push_event(
+        m_task_pool.push_event(
             database.get_pre_association_steering_task_id(),
             pre_association_steering_task::eEvents::STEERING_EVENT_AUTH_FAIL_NOTIFICATION,
             &new_event);
@@ -3717,9 +3756,9 @@ bool Controller::handle_cmdu_control_message(
         }
         pre_association_steering_task::sSteeringSetGroupResponseEvent new_event;
         new_event.ret_code = notification->params().error_code;
-        tasks.push_event(database.get_pre_association_steering_task_id(),
-                         pre_association_steering_task::eEvents::STEERING_SET_GROUP_RESPONSE,
-                         &new_event);
+        m_task_pool.push_event(database.get_pre_association_steering_task_id(),
+                               pre_association_steering_task::eEvents::STEERING_SET_GROUP_RESPONSE,
+                               &new_event);
 
         break;
     }
@@ -3733,9 +3772,9 @@ bool Controller::handle_cmdu_control_message(
         }
         pre_association_steering_task::sSteeringClientSetResponseEvent new_event;
         new_event.ret_code = notification->params().error_code;
-        tasks.push_event(database.get_pre_association_steering_task_id(),
-                         pre_association_steering_task::eEvents::STEERING_CLIENT_SET_RESPONSE,
-                         &new_event);
+        m_task_pool.push_event(database.get_pre_association_steering_task_id(),
+                               pre_association_steering_task::eEvents::STEERING_CLIENT_SET_RESPONSE,
+                               &new_event);
 
         break;
     }
@@ -3753,7 +3792,7 @@ bool Controller::handle_cmdu_control_message(
             //push event to pre association steering task
             pre_association_steering_task::sSteeringClientDisconnectResponseEvent new_event;
             new_event.ret_code = notification->params().error_code;
-            tasks.push_event(
+            m_task_pool.push_event(
                 database.get_pre_association_steering_task_id(),
                 pre_association_steering_task::eEvents::STEERING_CLIENT_DISCONNECT_RESPONSE,
                 &new_event);
@@ -3788,7 +3827,7 @@ bool Controller::handle_cmdu_control_message(
     // If this is a response message to a task (header->id() == task id), send it to it directly - cmdu_rx is owned by the task
     // e.g. only the task may call addClass
     if (beerocks_header->id()) {
-        tasks.response_received(radio_mac_str, beerocks_header);
+        m_task_pool.response_received(radio_mac_str, beerocks_header);
         return true;
     }
 
@@ -3801,7 +3840,7 @@ bool Controller::start_client_steering(const std::string &sta_mac, const std::st
     bool disassoc_imminent = false;
 
     LOG(DEBUG) << "NBAPI client steer request for " << sta_mac << " to hostap: " << target_bssid;
-    son_actions::steer_sta(database, cmdu_tx, tasks, sta_mac, target_bssid, triggered_by,
+    son_actions::steer_sta(database, cmdu_tx, m_task_pool, sta_mac, target_bssid, triggered_by,
                            std::string(), disassoc_imminent,
                            database.config.steering_disassoc_timer_msec.count());
     return true;
@@ -3822,7 +3861,7 @@ bool Controller::send_btm_request(const bool &disassoc_imminent,
     int validity_interval_ms = BEACON_INTERVAL_MS_IN_BI * validity_interval;
 
     LOG(DEBUG) << "NBAPI BTMRequest to steer sta " << sta_mac << " to BSSID " << target_bssid;
-    son_actions::start_btm_request_task(database, cmdu_tx, tasks, disassoc_imminent,
+    son_actions::start_btm_request_task(database, cmdu_tx, m_task_pool, disassoc_imminent,
                                         disassoc_timer_ms, bss_term_duration, validity_interval_ms,
                                         steering_timer_ms, sta_mac, target_bssid, triggered_by);
 
@@ -3855,8 +3894,9 @@ bool Controller::trigger_scan(
 
     dynamic_channel_selection_r2_task::sSingleScanRequestEvent new_event = {};
     new_event.radio_mac                                                  = radio_mac;
-    tasks.push_event(database.get_dynamic_channel_selection_r2_task_id(),
-                     dynamic_channel_selection_r2_task::eEvent::TRIGGER_SINGLE_SCAN, &new_event);
+    m_task_pool.push_event(database.get_dynamic_channel_selection_r2_task_id(),
+                           dynamic_channel_selection_r2_task::eEvent::TRIGGER_SINGLE_SCAN,
+                           &new_event);
     return true;
 }
 
@@ -3929,7 +3969,7 @@ bool Controller::trigger_vbss_move(const sMacAddr &connected_ruid, const sMacAdd
     move_event.ssid                  = new_bss_ssid;
     move_event.password              = new_bss_pass;
 
-    tasks.push_event(task_id, vbss_task::eEventType::MOVE, &move_event);
+    m_task_pool.push_event(task_id, vbss_task::eEventType::MOVE, &move_event);
 
     return true;
 #endif

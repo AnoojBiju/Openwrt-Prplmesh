@@ -12,7 +12,11 @@
 #include "controller_ucc_listener.h"
 #include "db/db.h"
 #include "periodic/periodic_operation_pool.h"
+#include "tasks/channel_selection_task.h"
+#include "tasks/dynamic_channel_selection_r2_task.h"
 #include "tasks/link_metrics_task.h"
+#include "tasks/network_health_check_task.h"
+#include "tasks/statistics_polling_task.h"
 #include "tasks/task_pool.h"
 
 #include "../../../common/beerocks/bwl/include/bwl/base_wlan_hal.h"
@@ -176,6 +180,34 @@ public:
     bool trigger_vbss_move(const sMacAddr &connected_ruid, const sMacAddr &dest_ruid,
                            const sMacAddr &vbssid, const sMacAddr &client_mac,
                            const std::string &new_bss_ssid, const std::string &new_bss_pass);
+
+    /**
+     * @brief Function that starts all mandatory periodic tasks on controller start-up
+     * Mandatory task list is
+     * bml_task
+     * topology_task
+     * client_association_task
+     * agent_monitoring_task
+     * vbss_task (ifdef ENABLE_VBSS)
+     * DhcpTask
+     *
+     * @return void.
+     */
+    void start_mandatory_tasks();
+
+    /**
+     * @brief Function that starts/stops configurable periodic tasks based on database settings
+     * Optional tasks can be enabled/disabled via NbAPI flags.
+     * The following tasks are in this category:
+     * statistics_polling_task
+     * LinkMetricTask
+     * channel_selection_task
+     * dynamic_channel_selection_task_r2
+     * health_check_task
+     *
+     * @return void.
+     */
+    void start_optional_tasks();
 
 private:
     /**
@@ -447,13 +479,84 @@ private:
     ieee1905_1::CmduMessageTx cert_cmdu_tx;
 
     db &database;
-    task_pool tasks;
+    task_pool m_task_pool;
     periodic_operation_pool operations;
     beerocks::controller_ucc_listener m_controller_ucc_listener;
 
     // It is used only in handle_cmdu_1905_ap_metric_response() to call construct_combined_infra_metric().
     // TODO It can be removed after cert_cmdu_tx usage is removed (PPM-1130).
     std::shared_ptr<LinkMetricsTask> m_link_metrics_task;
+
+    /**
+     * Task_id used to stop/start the channel_selection_task without restarting the controller
+     */
+    int m_channel_selection_task_id = -1;
+
+    /**
+     * Task_id used to stop/start the dynamic_channel_selection_r2_task without restarting the controller
+     */
+    int m_dynamic_channel_selection_task_id = -1;
+
+    /**
+     * Task_id used to start/stop the network_health_check_task without restarting the controller
+     */
+    int m_network_health_check_task_id = -1;
+
+    /**
+     * Task_id used to stop/start the statistics_polling_task without restarting the controller
+     */
+    int m_statistics_polling_task_id = -1;
+
+    /**
+     * @brief Checks if the current status of the task (running/not running) corresponds with
+     * the configuration (enabled/disabled). Updates the status in accordance with the configuration
+     *
+     * @param[in] task_enabled should the task be running, as configured in the controller database
+     * @param[out] current_task_id may be -1 for a not running task or a positive integer for a running task
+     * @param[in] task_name string used to construct debug messages
+     *
+    */
+    template <class Task>
+    void task_status_helper(bool task_enabled, int &current_task_id, const std::string &task_name)
+    {
+
+        int current_status = ((current_task_id > 0) * 2) + (task_enabled * 1);
+        // (current_task_id > 0) : is the task running ?
+        // task_enabled : should it be running ?
+
+        // using a switch case instead of a if/else construction
+        // as it arranges the four possible cases linearly, and should be more readable
+
+        switch (current_status) {
+        case 0: // task disabled and not running: do nothing
+            LOG(DEBUG) << task_name << ": already disabled";
+            break;
+        case 1: // task enabled but not running: start task
+        {
+            auto new_task = std::make_shared<Task>(database, cmdu_tx, m_task_pool);
+            LOG(DEBUG) << task_name << ": starting with task_id " << new_task->id;
+            current_task_id = new_task->id;
+            LOG_IF(!m_task_pool.add_task(new_task), FATAL) << "Failed adding task!" << task_name;
+            break;
+        }
+        case 2: // task disabled but running : kill task
+        {
+            LOG(DEBUG) << task_name << ": running with " << current_task_id << ", disabling";
+            m_task_pool.kill_task(current_task_id);
+            current_task_id = -1;
+            break;
+        }
+        case 3: // task enabled and running : do nothing
+        {
+            if (m_task_pool.is_task_running(current_task_id)) {
+                LOG(DEBUG) << task_name << " already running with task_id " << current_task_id;
+            } else {
+                LOG(ERROR) << task_name << " should be running but is not";
+            }
+            break;
+        }
+        }
+    }
 
     /**
      * Factory to create broker client instances connected to broker server.

@@ -870,6 +870,15 @@ static void event_configuration_changed(const char *const sig_name, const amxc_v
         LOG(ERROR) << "Failed update collection intervals of all agents.";
     }
 
+    auto controller_ctx = g_database->get_controller_ctx();
+
+    if (!controller_ctx) {
+        LOG(WARNING) << "Failed to get controller context.";
+    } else {
+        LOG(DEBUG) << "Start/Stop reconfigured optional tasks";
+        controller_ctx->start_optional_tasks();
+    }
+
     // TODO Save persistent settings with amxo_parser_save() (PPM-1419)
 }
 

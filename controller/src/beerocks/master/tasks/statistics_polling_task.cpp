@@ -50,15 +50,13 @@ void statistics_polling_task::work()
         }
 
         //TASK_LOG(DEBUG) << "sent requests";
-        state = SEND_UPDATES;
-        set_responses_timeout(
-            1500 *
-            database.config
-                .diagnostics_measurements_polling_rate_sec); // 1500 msec to prevent missing statistics time gaps
-        wait_for(
-            1000 *
-            database.config
-                .diagnostics_measurements_polling_rate_sec); // 1000 msec to prevent the task getting to next step before 1000 msec
+        state       = SEND_UPDATES;
+        int timeout = std::max(1, database.config.diagnostics_measurements_polling_rate_sec);
+
+        set_responses_timeout(1500 * timeout);
+        // 1500 msec to prevent missing statistics time gaps
+        wait_for(1000 * timeout);
+        // 1000 msec to prevent the task getting to next step before 1000 msec
         break;
     }
     case SEND_UPDATES: {
