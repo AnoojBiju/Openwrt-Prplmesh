@@ -24,10 +24,17 @@ extern "C" {
 
 #include <chrono>
 #include <memory>
+#include <unordered_map>
 
 namespace bwl {
 namespace dwpal {
 
+#define MAX_VAPS_PER_RADIO 16
+#define IF_LENGTH IF_NAMESIZE + 1
+
+typedef struct {
+    char name[IF_LENGTH];
+} vap_name_t;
 enum class dwpal_fsm_state { Delay, Init, GetRadioInfo, AttachVaps, Attach, Operational, Detach };
 
 enum class dwpal_fsm_event { Attach, Detach };
@@ -87,8 +94,9 @@ public:
     int get_nl_evt_write_pfd() { return m_nl_event_pfd[1]; }
 
     // Process dwpal event
-    virtual bool process_dwpal_event(char *buffer, int bufLen, const std::string &opcode) = 0;
-    virtual bool process_dwpal_nl_event(struct nl_msg *msg, void *arg = nullptr)          = 0;
+    virtual bool process_dwpal_event(char *ifname, char *buffer, int bufLen,
+                                     const std::string &opcode)                  = 0;
+    virtual bool process_dwpal_nl_event(struct nl_msg *msg, void *arg = nullptr) = 0;
 
     // Protected methods
 protected:
@@ -138,12 +146,23 @@ protected:
 
     bool dwpal_nl_cmd_scan_dump();
 
+    /**
+     * @brief Update the interface connection status map
+     * @return int
+     */
+    int update_conn_status(char *ifname);
+
     std::unique_ptr<nl80211_client> m_nl80211_client;
 
     /**
      * Re-usable buffer to hold the response of NL80211_CMD_VENDOR commands
      */
     unsigned char m_nl_buffer[NL_MAX_REPLY_BUFFSIZE] = {'\0'};
+
+    /**
+     * map for maintaining dwpald interface connection state
+     */
+    std::unordered_map<std::string, bool> conn_state;
 
     // Private data-members:
 private:

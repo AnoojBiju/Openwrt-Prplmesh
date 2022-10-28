@@ -40,7 +40,6 @@ namespace bwl {
 namespace dwpal {
 
 #define CSA_EVENT_FILTERING_TIMEOUT_MS 1000
-
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////// Local Module Functions ///////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -101,6 +100,12 @@ static ap_wlan_hal::Event dwpal_to_bwl_event(const std::string &opcode)
         return ap_wlan_hal::Event::WPS_Event_Cancel;
     } else if (opcode == "AP-STA-POSSIBLE-PSK-MISMATCH") {
         return ap_wlan_hal::Event::AP_Sta_Possible_Psk_Mismatch;
+    } else if (opcode == "INTERFACE_CONNECTED_OK") {
+        return ap_wlan_hal::Event::Interface_Connected_OK;
+    } else if (opcode == "INTERFACE_RECONNECTED_OK") {
+        return ap_wlan_hal::Event::Interface_Reconnected_OK;
+    } else if (opcode == "INTERFACE_DISCONNECTED") {
+        return ap_wlan_hal::Event::Interface_Disconnected;
     }
 
     return ap_wlan_hal::Event::Invalid;
@@ -2347,7 +2352,8 @@ bool ap_wlan_hal_dwpal::set_cce_indication(uint16_t advertise_cce)
     return true;
 }
 
-bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std::string &opcode)
+bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufLen,
+                                            const std::string &opcode)
 {
     LOG(TRACE) << __func__ << " - opcode: |" << opcode << "|";
 
@@ -3428,6 +3434,22 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         event_queue_push(event, msg_buff); // send message to the AP manager
         break;
     }
+    case Event::Interface_Connected_OK:
+    case Event::Interface_Reconnected_OK: {
+        LOG(INFO) << "INTERFACE_RECONNECTED_OK or INTERFACE_CONNECTED_OK from intf " << ifname;
+        auto ret = update_conn_status(ifname);
+        LOG(INFO) << "Status update return value " << ret;
+        break;
+    }
+    case Event::Interface_Disconnected: {
+        LOG(INFO) << "INTERFACE_DISCONNECTED from intf " << ifname;
+        for (auto &con : conn_state) {
+            // Update interface connection status for vap to false
+            conn_state[con.first] = false;
+            LOG(INFO) << "updated connection status for intf " << con.first << " with false";
+        }
+        break;
+    }
 
     // Gracefully ignore unhandled events
     // TODO: Probably should be changed to an error once dwpal will stop
@@ -3453,7 +3475,7 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
     }
 #endif
     if (ctx) {
-        ctx->process_dwpal_event(buffer, len, opcode);
+        ctx->process_dwpal_event(ifname, buffer, len, opcode);
     }
     return 0;
 }
@@ -3487,7 +3509,10 @@ bool ap_wlan_hal_dwpal::dwpald_attach(char *ifname)
         {HAP_EVENT("WPS_EVENT_FAIL")},
         {HAP_EVENT("WPA_EVENT_SAE_UNKNOWN_PASSWORD_IDENTIFIER")},
         {HAP_EVENT("WPS_EVENT_CANCEL")},
-        {HAP_EVENT("AP-STA-POSSIBLE-PSK-MISMATCH")}};
+        {HAP_EVENT("AP-STA-POSSIBLE-PSK-MISMATCH")},
+        {HAP_EVENT("INTERFACE_CONNECTED_OK")},
+        {HAP_EVENT("INTERFACE_RECONNECTED_OK")},
+        {HAP_EVENT("INTERFACE_DISCONNECTED")}};
 
     if (iface_ids.vap_id == beerocks::IFACE_RADIO_ID) {
         if (dwpald_connect("ap_wlan_hal") != DWPALD_SUCCESS) {
