@@ -3326,8 +3326,8 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
             beerocks_message::cACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_START_NOTIFICATION>(
             cmdu_tx, beerocks_header->id());
         if (notification_out == nullptr) {
-            LOG(ERROR)
-                << "Failed building ACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_RESPONSE message!";
+            LOG(ERROR) << "Failed building "
+                          "ACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_START_NOTIFICATION message!";
             break;
         }
         notification_out->mac() = notification_in->mac();
