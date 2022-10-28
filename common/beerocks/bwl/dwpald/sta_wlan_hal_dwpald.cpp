@@ -54,6 +54,12 @@ static sta_wlan_hal::Event dwpal_to_bwl_event(const std::string &opcode)
         return sta_wlan_hal::Event::ChannelSwitch;
     } else if (opcode == "UNCONNECTED-STA-RSSI") {
         return sta_wlan_hal::Event::STA_Unassoc_RSSI;
+    } else if (opcode == "INTERFACE_CONNECTED_OK") {
+        return sta_wlan_hal::Event::Interface_Connected_OK;
+    } else if (opcode == "INTERFACE_RECONNECTED_OK") {
+        return sta_wlan_hal::Event::Interface_Reconnected_OK;
+    } else if (opcode == "INTERFACE_DISCONNECTED") {
+        return sta_wlan_hal::Event::Interface_Disconnected;
     }
 
     return sta_wlan_hal::Event::Invalid;
@@ -587,6 +593,22 @@ bool sta_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int buf
         event_queue_push(event);
 
     } break;
+    case Event::Interface_Connected_OK:
+    case Event::Interface_Reconnected_OK: {
+        LOG(INFO) << "INTERFACE_RECONNECTED_OK or INTERFACE_CONNECTED_OK from intf " << ifname;
+        auto ret = update_conn_status(ifname);
+        LOG(INFO) << "Status update return value " << ret;
+        break;
+    }
+    case Event::Interface_Disconnected: {
+        LOG(INFO) << "INTERFACE_DISCONNECTED from intf " << ifname;
+        for (auto &con : conn_state) {
+            // Update interface connection status for vap to false
+            conn_state[con.first] = false;
+            LOG(INFO) << "updated connection status for intf " << con.first << " with false";
+        }
+        break;
+    }
 
     // Gracefully ignore unhandled events
     // TODO: Probably should be changed to an error once dwpal will stop
@@ -619,7 +641,9 @@ bool sta_wlan_hal_dwpal::dwpald_attach(char *ifname)
     static dwpald_hostap_event supplicant_event_handlers[] = {
         {HAP_EVENT("CTRL-EVENT-CONNECTED")},      {HAP_EVENT("CTRL-EVENT-DISCONNECTED")},
         {HAP_EVENT("CTRL-EVENT-TERMINATING")},    {HAP_EVENT("CTRL-EVENT-SCAN-RESULTS")},
-        {HAP_EVENT("CTRL-EVENT-CHANNEL-SWITCH")}, {HAP_EVENT("UNCONNECTED-STA-RSSI")}};
+        {HAP_EVENT("CTRL-EVENT-CHANNEL-SWITCH")}, {HAP_EVENT("UNCONNECTED-STA-RSSI")},
+        {HAP_EVENT("INTERFACE_CONNECTED_OK")},    {HAP_EVENT("INTERFACE_RECONNECTED_OK")},
+        {HAP_EVENT("INTERFACE_DISCONNECTED")}};
 
     if (dwpald_connect("sta_wlan_hal") != DWPALD_SUCCESS) {
         LOG(ERROR) << "Failed to connect to dwpald";
