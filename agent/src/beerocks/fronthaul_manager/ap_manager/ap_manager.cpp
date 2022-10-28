@@ -714,6 +714,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
     auto beerocks_header = message_com::parse_intel_vs_message(cmdu_rx);
     if (beerocks_header == nullptr) {
         handle_cmdu_ieee1905_1_message(cmdu_rx);
+        return;
     }
 
     if (beerocks_header->action() != beerocks_message::ACTION_APMANAGER) {
