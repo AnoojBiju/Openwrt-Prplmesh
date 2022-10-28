@@ -32,7 +32,11 @@ public:
         ScanResults,
         ChannelSwitch,
 
-        STA_Unassoc_RSSI
+        STA_Unassoc_RSSI,
+
+        Interface_Connected_OK,
+        Interface_Reconnected_OK,
+        Interface_Disconnected
     };
 
     // Public methods:

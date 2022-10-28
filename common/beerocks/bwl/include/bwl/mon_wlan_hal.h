@@ -39,7 +39,11 @@ public:
         Channel_Scan_New_Results_Ready,
         Channel_Scan_Dump_Result,
         Channel_Scan_Aborted,
-        Channel_Scan_Finished
+        Channel_Scan_Finished,
+
+        Interface_Connected_OK,
+        Interface_Reconnected_OK,
+        Interface_Disconnected
     };
 
     // Public methods:
