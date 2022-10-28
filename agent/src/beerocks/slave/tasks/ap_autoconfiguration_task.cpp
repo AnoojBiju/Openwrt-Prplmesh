@@ -1800,7 +1800,6 @@ bool ApAutoConfigurationTask::validate_reconfiguration(
                       << ", authentication_type: " << std::hex << int(config.auth_type)
                       << ", encryption_type: " << std::hex << int(config.encr_type)
                       << ", bss_type: " << std::hex << int(config.bss_type) << std::endl;
-        ;
     }
     config_prints << "--" << std::endl;
 
@@ -1859,19 +1858,26 @@ bool ApAutoConfigurationTask::validate_reconfiguration(
 
         // SSID
         if (bss.ssid != config.ssid) {
+            LOG(DEBUG) << "SSID needs reconfiguration: " << bss.ssid << " != " << config.ssid;
             return true;
         }
 
         // BSS Type
         if (bss.active && bool(config.bss_type & WSC::eWscVendorExtSubelementBssType::TEARDOWN)) {
+            LOG(DEBUG) << "BSS type needs reconfiguration: bss.active: " << bss.active
+                       << " bss_type: " << config.bss_type;
             return true;
         }
         if (bss.backhaul_bss &&
             !bool(config.bss_type & WSC::eWscVendorExtSubelementBssType::BACKHAUL_BSS)) {
+            LOG(DEBUG) << "BSS type needs reconfiguration: bss.backhaul_bss: " << bss.backhaul_bss
+                       << " bss_type: " << config.bss_type;
             return true;
         }
         if (bss.fronthaul_bss &&
             !bool(config.bss_type & WSC::eWscVendorExtSubelementBssType::FRONTHAUL_BSS)) {
+            LOG(DEBUG) << "BSS type needs reconfiguration: bss.fronthaul_bss: " << bss.fronthaul_bss
+                       << " bss_type: " << config.bss_type;
             return true;
         }
 
