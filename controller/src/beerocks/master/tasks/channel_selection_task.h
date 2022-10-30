@@ -198,13 +198,13 @@ private:
     const static int DISASSOC_STEER_TIMER_MS               = 15000;
 
     typedef struct {
-        uint8_t channel = 0;
-        bool is_2G      = true;
+        uint8_t channel               = 0;
+        beerocks::eFreqType freq_type = beerocks::FREQ_24G;
         std::string backhaul_mac;
         bool low_pass_filter_on                 = true;
         bool backhaul_is_wireless               = false;
         int backhaul_channel                    = 0;
-        bool backhaul_is_2G                     = true;
+        beerocks::eFreqType backhaul_freq_type  = beerocks::FREQ_24G;
         beerocks::eSubbandType backhaul_subband = beerocks::SUBBAND_UNKNOWN;
         uint8_t bandwidth                       = 0;
     } sHostapParams;
