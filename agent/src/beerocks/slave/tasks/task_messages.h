@@ -86,6 +86,7 @@ struct sSwitchChannelRequest {
 
     std::string ifname;
     uint8_t channel          = 0;
+    eFreqType freq_type      = eFreqType::FREQ_UNKNOWN;
     eWiFiBandwidth bandwidth = eWiFiBandwidth::BANDWIDTH_UNKNOWN;
 };
 std::ostream &operator<<(std::ostream &os, const sSwitchChannelRequest &switch_channel_request);

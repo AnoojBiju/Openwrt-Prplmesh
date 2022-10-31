@@ -9,6 +9,7 @@
 #include "switch_channel_task.h"
 #include "../backhaul_manager/backhaul_manager.h"
 #include <bcl/beerocks_state_machine.h>
+#include <bcl/beerocks_utils.h>
 
 namespace beerocks {
 namespace switch_channel {
@@ -500,24 +501,42 @@ bool load_switch_channel_request_to_cmdu_tx(ieee1905_1::CmduMessageTx &cmdu_tx,
     request->cs_params().channel   = switch_channel_request.channel;
     request->cs_params().bandwidth = switch_channel_request.bandwidth;
 
+    auto channels_table =
+        (switch_channel_request.freq_type == eFreqType::FREQ_5G)
+            ? son::wireless_utils::channels_table_5g
+            : (switch_channel_request.freq_type == eFreqType::FREQ_6G)
+                  ? son::wireless_utils::channels_table_6g
+                  : std::map<uint8_t,
+                             std::map<beerocks::eWiFiBandwidth, son::wireless_utils::sChannel>>();
+    if (channels_table.empty()) {
+        LOG(ERROR) << "Invalid freq type: "
+                   << beerocks::utils::convert_frequency_type_to_string(
+                          switch_channel_request.freq_type)
+                   << ". Must be either 5GHz or 6GHz";
+        return false;
+    }
     uint8_t center_channel = 0;
-    auto center_channel_it =
-        son::wireless_utils::channels_table_5g.find(switch_channel_request.channel);
-    if (center_channel_it == son::wireless_utils::channels_table_5g.end()) {
-        LOG(ERROR) << "can't find channel " << switch_channel_request.channel
-                   << " in the 5g table, center channel is set to zero";
+    auto center_channel_it = channels_table.find(switch_channel_request.channel);
+    if (center_channel_it == channels_table.end()) {
+        LOG(ERROR) << "Failed find channel " << switch_channel_request.channel << " in the "
+                   << beerocks::utils::convert_frequency_type_to_string(
+                          switch_channel_request.freq_type)
+                   << " table, center channel is set to zero";
     } else {
         auto bandwidth_it = center_channel_it->second.find(switch_channel_request.bandwidth);
         if (bandwidth_it == center_channel_it->second.end()) {
-            LOG(ERROR) << "can't find bandwidth for " << switch_channel_request.channel
-                       << " in the 5g table, center channel is set to zero";
+            LOG(ERROR) << "Failed find bandwidth for " << switch_channel_request.channel
+                       << " in the "
+                       << beerocks::utils::convert_frequency_type_to_string(
+                              switch_channel_request.freq_type)
+                       << "table, center channel is set to zero";
         } else {
             center_channel = bandwidth_it->second.center_channel;
         }
     }
 
     request->cs_params().vht_center_frequency =
-        son::wireless_utils::channel_to_freq(center_channel);
+        son::wireless_utils::channel_to_freq(center_channel, switch_channel_request.freq_type);
 
     return true;
 }

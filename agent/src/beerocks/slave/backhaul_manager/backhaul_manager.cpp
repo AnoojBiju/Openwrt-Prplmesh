@@ -1288,8 +1288,8 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
 
                 iface_hal->refresh_radio_info();
 
-                if (son::wireless_utils::which_freq(iface_hal->get_radio_info().channel) ==
-                        beerocks::FREQ_24G &&
+                if (son::wireless_utils::which_freq_type(
+                        iface_hal->get_radio_info().frequency_band) == beerocks::FREQ_24G &&
                     pending_slave_sta_ifaces.size() > 1) {
                     ++it;
                     LOG(DEBUG) << "skipping 2.4GHz iface " << iface
@@ -1992,7 +1992,7 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
                             continue;
                         }
                         /* prevent low filter radio from connecting to high band in any case */
-                        if (son::wireless_utils::which_freq(bwl_radio_info.channel) ==
+                        if (son::wireless_utils::which_freq_type(bwl_radio_info.frequency_band) ==
                                 beerocks::FREQ_5G &&
                             radio->sta_iface_filter_low &&
                             !son::wireless_utils::is_low_subband(bwl_radio_info.channel)) {
@@ -2009,12 +2009,13 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
                                 break;
 
                             sta_iface_hal->refresh_radio_info();
-                            if (son::wireless_utils::which_freq(
-                                    sta_iface_hal->get_radio_info().channel) == beerocks::FREQ_5G) {
+                            if (son::wireless_utils::which_freq_type(
+                                    sta_iface_hal->get_radio_info().frequency_band) ==
+                                beerocks::FREQ_5G) {
                                 sta_iface_count_5ghz++;
                             }
                         }
-                        if (son::wireless_utils::which_freq(bwl_radio_info.channel) ==
+                        if (son::wireless_utils::which_freq_type(bwl_radio_info.frequency_band) ==
                                 beerocks::FREQ_5G &&
                             !radio->sta_iface_filter_low &&
                             son::wireless_utils::is_low_subband(bwl_radio_info.channel) &&
