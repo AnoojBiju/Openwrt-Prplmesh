@@ -167,6 +167,14 @@ public:
         int unsuccessful_assoc_max_reporting_rate;
         int optimal_path_rssi_timeout_msec;
         int optimal_path_beacon_timeout_msec;
+
+        // Must be applied to specific radio (PPM-2357)
+        unsigned int sta_reporting_rcpi_threshold;
+        unsigned int sta_reporting_rcpi_hysteresis_margin_override_threshold;
+        unsigned int ap_reporting_channel_utilization_threshold;
+        bool assoc_sta_traffic_stats_inclusion_policy;
+        bool assoc_sta_link_metrics_inclusion_policy;
+        bool assoc_wifi6_sta_status_report_inclusion_policy;
     } sDbMasterConfig;
 
     typedef struct {
