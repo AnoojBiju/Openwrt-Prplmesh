@@ -2417,6 +2417,15 @@ public:
      */
     bool dm_set_device_multi_ap_profile(const Agent &agent);
 
+    /** @brief Sets Unsuccessful Association policy parameters for corresponding device.
+     *
+     * DM path: "Device.WiFi.DataElements.Network.Device.{i}."
+     *
+     * @param[in] agent Agent DB object.
+     * @return true on success, otherwise false.
+     */
+    bool dm_set_device_unsuccessful_association_policy(const Agent &agent);
+
     //
     // tasks
     //

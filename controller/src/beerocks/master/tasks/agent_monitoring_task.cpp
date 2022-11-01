@@ -359,10 +359,18 @@ bool agent_monitoring_task::send_multi_ap_policy_config_request(const sMacAddr &
         }
 
         unsuccessful_association_policy_tlv->report_unsuccessful_associations().report =
-            database.config.unsuccessful_assoc_report_policy;
+            agent->unsuccessful_assoc_report_policy =
+                database.config.unsuccessful_assoc_report_policy;
 
         unsuccessful_association_policy_tlv->maximum_reporting_rate() =
-            database.config.unsuccessful_assoc_max_reporting_rate;
+            agent->unsuccessful_assoc_max_reporting_rate =
+                database.config.unsuccessful_assoc_max_reporting_rate;
+
+        if (!database.dm_set_device_unsuccessful_association_policy(*agent)) {
+            LOG(ERROR) << "Failed to set Unsuccessful Association policy in DM for Agent "
+                       << agent->al_mac;
+            return false;
+        }
     }
 
     auto steering_policy_tlv = cmdu_tx.addClass<wfa_map::tlvSteeringPolicy>();

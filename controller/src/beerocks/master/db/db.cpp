@@ -7986,3 +7986,18 @@ bool db::dm_set_device_multi_ap_profile(const Agent &agent)
 
     return m_ambiorix_datamodel->set(agent.dm_path, "MultiAPProfile", agent.profile);
 }
+
+bool db::dm_set_device_unsuccessful_association_policy(const Agent &agent)
+{
+    if (agent.dm_path.empty()) {
+        return true;
+    }
+
+    bool ret_val = true;
+    ret_val &= m_ambiorix_datamodel->set(agent.dm_path, "ReportUnsuccessfulAssociations",
+                                         agent.unsuccessful_assoc_report_policy);
+    ret_val &= m_ambiorix_datamodel->set(agent.dm_path, "MaxReportingRate",
+                                         agent.unsuccessful_assoc_max_reporting_rate);
+
+    return ret_val;
+}

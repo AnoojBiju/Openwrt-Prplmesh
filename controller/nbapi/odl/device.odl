@@ -44,6 +44,16 @@
             %read-only string MACAddress = "";
         }
 
+        /* Indicates whether the Multi-AP Agent or the single AP reports 
+        ** unsuccessful association attempts of client STAs to Multi-AP Controller.
+        */
+        bool ReportUnsuccessfulAssociations;
+
+        /* Maximum rate for reporting unsuccessful association attempts in attempts per minute */
+        %read-only uint32 MaxReportingRate {
+            on action validate call check_range [0, 255];
+        }
+
         /*
         ** The Multi-AP capabilities supported by this device
         */
