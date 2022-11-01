@@ -27,6 +27,10 @@
         %read-only string ExecutionEnv;
         %read-only string CountryCode;
 
+        uint32 MultiAPProfile {
+            on action validate call check_range [0, 5];
+        }
+
         uint32 APMetricsReportingInterval {
             on action validate call check_range [0, 255];
         }

@@ -86,6 +86,10 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
     auto tlvProfile2MultiApProfile = cmdu_rx.getClass<wfa_map::tlvProfile2MultiApProfile>();
     if (tlvProfile2MultiApProfile) {
         agent->profile = tlvProfile2MultiApProfile->profile();
+        if (!database.dm_set_device_multi_ap_profile(*agent)) {
+            LOG(ERROR) << "Failed to set Multi-AP profile in DM for Agent " << agent->al_mac;
+            return false;
+        }
     }
 
     // Set agent backhaul link as etherent and parent as empty for external Agents

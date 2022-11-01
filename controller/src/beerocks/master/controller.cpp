@@ -731,7 +731,7 @@ bool Controller::handle_cmdu_1905_autoconfiguration_search(const sMacAddr &src_m
         wfa_map::tlvSupportedService::eSupportedService::MULTI_AP_CONTROLLER;
 
     // Add MultiAp Profile TLV only if the agent added it to the seach message.
-    // Although R2 is profile1 competible, we found out that some certified agent
+    // Although R2 is profile1 compatible, we found out that some certified agent
     // fail to parse the response in case the TLV is present.
     auto tlvProfile2MultiApProfileAgent = cmdu_rx.getClass<wfa_map::tlvProfile2MultiApProfile>();
     if (tlvProfile2MultiApProfileAgent) {
@@ -784,6 +784,11 @@ bool Controller::handle_cmdu_1905_autoconfiguration_search(const sMacAddr &src_m
 
         agent->profile = tlvProfile2MultiApProfileAgent->profile();
         LOG(DEBUG) << "Agent profile is updated with enum " << agent->profile;
+
+        if (!database.dm_set_device_multi_ap_profile(*agent)) {
+            LOG(ERROR) << "Failed to set Multi-AP profile in DM for Agent " << agent->al_mac;
+            return false;
+        }
     }
 
     return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
@@ -4257,6 +4262,17 @@ bool Controller::handle_cmdu_1905_bss_configuration_request_message(
     if (!agent) {
         LOG(ERROR) << "Agent with mac is not found in database mac=" << src_mac;
         return false;
+    }
+
+    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_2) {
+        auto tlvProfile2MultiApProfile = cmdu_rx.getClass<wfa_map::tlvProfile2MultiApProfile>();
+        if (tlvProfile2MultiApProfile) {
+            agent->profile = tlvProfile2MultiApProfile->profile();
+            if (!database.dm_set_device_multi_ap_profile(*agent)) {
+                LOG(ERROR) << "Failed to set Multi-AP profile in DM for Agent " << agent->al_mac;
+                return false;
+            }
+        }
     }
 
     if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_2 &&
