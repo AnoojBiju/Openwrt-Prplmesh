@@ -89,6 +89,12 @@ public:
         std::string country_code;
     } device_info;
 
+    // True: Report unsuccessful association attempts, False: Don't report
+    bool unsuccessful_assoc_report_policy;
+
+    // Maximum rate for reporting unsuccessful association attempts (in attempts per minute)
+    uint8_t unsuccessful_assoc_max_reporting_rate;
+
     beerocks::eNodeState state = beerocks::STATE_CONNECTED;
 
     /** Stations for which local steering is disallowed */
