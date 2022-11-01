@@ -179,7 +179,7 @@ constexpr std::chrono::seconds DEFAULT_DHCP_MONITOR_INTERVAL_VALUE_SEC{300};
 constexpr int DEFAULT_UNSUCCESSFUL_ASSOC_REPORT_POLICY = 1;
 
 // Default value in attempts per minute for maximum rate for reporting unsuccessful association attempts
-constexpr int DEFAULT_UNSUCCESSFUL_ASSOC_MAX_REPORTING_RATE = 30;
+constexpr unsigned int DEFAULT_UNSUCCESSFUL_ASSOC_MAX_REPORTING_ATTEMPTS_PER_MINUTE = 30;
 
 // Default value for the diagnostics measurements interval in seconds
 constexpr int DEFAULT_DIAGNOSTICS_MEASUREMENT_POLLING_RATE_SEC = 10;
@@ -928,7 +928,7 @@ bool cfg_set_unsuccessful_assoc_report_policy(bool &unsuccessful_assoc_report_po
  * @param [out] max_reporting_rate Maximum reporting rate.value in attempts per minute.
  * @return true on success, otherwise false
  */
-bool cfg_get_unsuccessful_assoc_max_reporting_rate(int &max_reporting_rate);
+bool cfg_get_unsuccessful_assoc_max_reporting_rate(unsigned int &max_reporting_rate);
 
 /**
  * @brief Sets maximum rate for reporting unsuccessful association attempts.

@@ -657,12 +657,12 @@ bool cfg_get_unsuccessful_assoc_report_policy(bool &unsuccessful_assoc_report_po
 {
     int retVal = -1;
     if (cfg_get_param_int("unsuccessful_assoc_report_policy", retVal) == RETURN_ERR) {
-        MAPF_INFO("Failed to read unsuccessful_assoc_report_policy parameter - setting "
-                  "default value");
+        MAPF_DBG("Failed to read unsuccessful_assoc_report_policy parameter - setting "
+                 "default value");
         return false;
     }
 
-    unsuccessful_assoc_report_policy = (retVal == 1);
+    unsuccessful_assoc_report_policy = retVal;
 
     return true;
 }
@@ -672,12 +672,18 @@ bool cfg_set_unsuccessful_assoc_report_policy(bool &unsuccessful_assoc_report_po
     return true;
 }
 
-bool cfg_get_unsuccessful_assoc_max_reporting_rate(int &unsuccessful_assoc_max_reporting_rate)
+bool cfg_get_unsuccessful_assoc_max_reporting_rate(
+    unsigned int &unsuccessful_assoc_max_reporting_rate)
 {
     int retVal = -1;
     if (cfg_get_param_int("unsuccessful_assoc_max_reporting_rate", retVal) == RETURN_ERR) {
-        MAPF_INFO("Failed to read unsuccessful_assoc_max_reporting_rate parameter - setting "
-                  "default value");
+        MAPF_DBG("Failed to read unsuccessful_assoc_max_reporting_rate parameter - setting "
+                 "default value");
+        return false;
+    }
+
+    if (retVal < 0) {
+        MAPF_ERR("unsuccessful_assoc_max_reporting_rate is configured to a negative value");
         return false;
     }
 

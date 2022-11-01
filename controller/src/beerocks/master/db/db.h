@@ -165,7 +165,7 @@ public:
         std::chrono::milliseconds steering_disassoc_timer_msec;
         int management_mode;
         bool unsuccessful_assoc_report_policy;
-        int unsuccessful_assoc_max_reporting_rate;
+        unsigned int unsuccessful_assoc_max_reporting_rate;
         int optimal_path_rssi_timeout_msec;
         int optimal_path_beacon_timeout_msec;
 
