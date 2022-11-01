@@ -692,13 +692,13 @@ bool cfg_get_unsuccessful_assoc_report_policy(bool &unsuccessful_assoc_report_po
     if (cfg_get_prplmesh_param_int_default("unsuccessful_assoc_report_policy", &retVal,
                                            DEFAULT_UNSUCCESSFUL_ASSOC_REPORT_POLICY) ==
         RETURN_ERR) {
-        MAPF_INFO("Failed to read unsuccessful_assoc_report_policy parameter - setting "
-                  "default value");
+        MAPF_DBG("Failed to read unsuccessful_assoc_report_policy parameter - setting "
+                 "default value");
         return false;
     }
 
-    unsuccessful_assoc_report_policy = (retVal == 1);
-    LOG(DEBUG) << "get unsuccessful_assoc_report_policy: " << unsuccessful_assoc_report_policy;
+    unsuccessful_assoc_report_policy = retVal;
+
     return true;
 }
 
@@ -706,18 +706,24 @@ bool cfg_set_unsuccessful_assoc_report_policy(bool &unsuccessful_assoc_report_po
 {
     std::string option = "unsuccessful_assoc_report_policy";
     std::string value  = std::to_string((int)unsuccessful_assoc_report_policy);
-    LOG(DEBUG) << "set unsuccessful_assoc_report_policy: " << value;
+
     return cfg_set_prplmesh_config(option, value);
 }
 
-bool cfg_get_unsuccessful_assoc_max_reporting_rate(int &unsuccessful_assoc_max_reporting_rate)
+bool cfg_get_unsuccessful_assoc_max_reporting_rate(
+    unsigned int &unsuccessful_assoc_max_reporting_rate)
 {
     int retVal = -1;
-    if (cfg_get_prplmesh_param_int_default("unsuccessful_assoc_max_reporting_rate", &retVal,
-                                           DEFAULT_UNSUCCESSFUL_ASSOC_MAX_REPORTING_RATE) ==
-        RETURN_ERR) {
-        MAPF_INFO("Failed to read unsuccessful_assoc_max_reporting_rate parameter - setting "
-                  "default value");
+    if (cfg_get_prplmesh_param_int_default(
+            "unsuccessful_assoc_max_reporting_rate", &retVal,
+            DEFAULT_UNSUCCESSFUL_ASSOC_MAX_REPORTING_ATTEMPTS_PER_MINUTE) == RETURN_ERR) {
+        MAPF_DBG("Failed to read unsuccessful_assoc_max_reporting_rate parameter - setting "
+                 "default value");
+        return false;
+    }
+
+    if (retVal < 0) {
+        MAPF_ERR("unsuccessful_assoc_max_reporting_rate is configured to a negative value");
         return false;
     }
 
