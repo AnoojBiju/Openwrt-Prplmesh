@@ -7977,3 +7977,12 @@ bool db::dm_set_steering_policies(const Agent &agent)
     }
     return ret_val;
 }
+
+bool db::dm_set_device_multi_ap_profile(const Agent &agent)
+{
+    if (agent.dm_path.empty()) {
+        return true;
+    }
+
+    return m_ambiorix_datamodel->set(agent.dm_path, "MultiAPProfile", agent.profile);
+}
