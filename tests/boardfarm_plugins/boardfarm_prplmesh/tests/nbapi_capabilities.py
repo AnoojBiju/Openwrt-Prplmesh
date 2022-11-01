@@ -162,3 +162,7 @@ class NbapiCapabilities(PrplMeshBaseTest):
                 if tlv.tlv_type == self.ieee1905['eTlvTypeMap']['TLV_CHANNEL_SCAN_CAPABILITIES']:
                     debug("Checking Profile-2 Scan Capabilities TLV")
                     # TODO: Check Profile-2 Scan Capabilities TLV and related DM objects (PPM-2293).
+                if tlv.tlv_type == self.ieee1905['eTlvTypeMap'][
+                        'TLV_PROFILE2_AP_RADIO_ADVANCED_CAPABILITIES']:
+                    debug("Checking AP Radio Advanced Capabilities TLV")
+                    # TODO: Check  AP Radio Advanced Capabilities and related DM objects (PPM-2345).
