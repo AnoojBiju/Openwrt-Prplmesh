@@ -890,6 +890,55 @@ bool cfg_get_assoc_wifi6_sta_status_report_inclusion_policy(
     return true;
 }
 
+bool cfg_get_steering_policy(unsigned int &steering_policy)
+{
+    int retVal = -1;
+    if (cfg_get_param_int("steering_policy", retVal) == RETURN_ERR) {
+        MAPF_DBG("Failed to read steering_policy parameter - setting default value");
+        return false;
+    }
+
+    steering_policy = retVal;
+
+    return true;
+}
+
+bool cfg_get_channel_utilization_threshold(unsigned int &channel_utilization_threshold)
+{
+    int retVal = -1;
+    if (cfg_get_param_int("channel_utilization_threshold", retVal) == RETURN_ERR) {
+        MAPF_DBG("Failed to read channel_utilization_threshold parameter - setting default value");
+        return false;
+    }
+
+    if (retVal < 0) {
+        MAPF_ERR("channel_utilization_threshold is configured to a negative value");
+        return false;
+    }
+
+    channel_utilization_threshold = retVal;
+
+    return true;
+}
+
+bool cfg_get_rcpi_steering_threshold(unsigned int &rcpi_steering_threshold)
+{
+    int retVal = -1;
+    if (cfg_get_param_int("rcpi_steering_threshold", retVal) == RETURN_ERR) {
+        MAPF_DBG("Failed to read rcpi_steering_threshold parameter - setting default value");
+        return false;
+    }
+
+    if (retVal < 0) {
+        MAPF_ERR("rcpi_steering_threshold is configured to a negative value");
+        return false;
+    }
+
+    rcpi_steering_threshold = retVal;
+
+    return true;
+}
+
 bool get_check_connectivity_to_controller_enable(bool &check_connectivity_enable)
 {
     check_connectivity_enable = DEFAULT_CHECK_CONNECTIVITY_TO_CONTROLLER_ENABLE;

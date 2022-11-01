@@ -517,6 +517,29 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
         master_conf.assoc_wifi6_sta_status_report_inclusion_policy =
             beerocks::bpl::DEFAULT_ASSOC_WIFI6_STA_STATUS_REPORT_INCLUSION_POLICY;
     }
+
+    if (!beerocks::bpl::cfg_get_steering_policy(master_conf.steering_policy)) {
+        LOG(DEBUG) << "Failed to read steering_policy, setting to default value: "
+                   << beerocks::bpl::DEFAULT_STEERING_POLICY;
+
+        master_conf.steering_policy = beerocks::bpl::DEFAULT_STEERING_POLICY;
+    }
+
+    if (!beerocks::bpl::cfg_get_channel_utilization_threshold(
+            master_conf.channel_utilization_threshold)) {
+        LOG(DEBUG) << "Failed to read channel_utilization_threshold, setting to default value: "
+                   << beerocks::bpl::DEFAULT_CHANNEL_UTILIZATION_THRESHOLD;
+
+        master_conf.channel_utilization_threshold =
+            beerocks::bpl::DEFAULT_CHANNEL_UTILIZATION_THRESHOLD;
+    }
+
+    if (!beerocks::bpl::cfg_get_rcpi_steering_threshold(master_conf.rcpi_steering_threshold)) {
+        LOG(DEBUG) << "Failed to read rcpi_steering_threshold, setting to default value: "
+                   << beerocks::bpl::DEFAULT_RCPI_STEERING_THRESHOLD;
+
+        master_conf.rcpi_steering_threshold = beerocks::bpl::DEFAULT_RCPI_STEERING_THRESHOLD;
+    }
 }
 
 /**

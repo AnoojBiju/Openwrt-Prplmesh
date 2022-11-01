@@ -216,6 +216,15 @@ constexpr int DEFAULT_ASSOC_STA_LINK_METRICS_INCLUSION_POLICY = 1;
 // Default policy for inclusion of Associated Wi-Fi 6 STA Status Report TLV
 constexpr int DEFAULT_ASSOC_WIFI6_STA_STATUS_REPORT_INCLUSION_POLICY = 1;
 
+/* Steering policies (applied to a specific radio) */
+// Default value for steering policy
+constexpr unsigned int DEFAULT_STEERING_POLICY{0};
+// Default value for channel utilization threshold
+// Defined per Basic Service Set (BSS) Load element [Section 9.4.2.27/802.11-2020]
+constexpr unsigned int DEFAULT_CHANNEL_UTILIZATION_THRESHOLD{0};
+// Default value for RCPI steering threshold (encoded per [Table 9-176/802.11-2020])
+constexpr unsigned int DEFAULT_RCPI_STEERING_THRESHOLD{0};
+
 /****************************************************************************/
 /******************************* Structures *********************************/
 /****************************************************************************/
@@ -1136,6 +1145,35 @@ bool cfg_get_assoc_sta_link_metrics_inclusion_policy(bool &assoc_sta_link_metric
  */
 bool cfg_get_assoc_wifi6_sta_status_report_inclusion_policy(
     bool &assoc_wifi6_sta_status_report_inclusion_policy);
+
+/**
+ * @brief Get the steering policy.
+ *
+ * @param [out] steering_policy Steering policy.
+ *
+ * @return True on success, otherwise false.
+ */
+bool cfg_get_steering_policy(unsigned int &steering_policy);
+
+/**
+ * @brief Get the channel utilization threshold.
+ * 
+ * Defined per Basic Service Set (BSS) Load element [Section 9.4.2.27/802.11-2020].
+ *
+ * @param [out] channel_utilization_threshold Channel utilization threshold.
+ *
+ * @return True on success, otherwise false.
+ */
+bool cfg_get_channel_utilization_threshold(unsigned int &channel_utilization_threshold);
+
+/**
+ * @brief Get the RCPI steering threshold (encoded per [Table 9-176/802.11-2020])
+ *
+ * @param [out] rcpi_steering_threshold RCPI steering threshold.
+ *
+ * @return True on success, otherwise false.
+ */
+bool cfg_get_rcpi_steering_threshold(unsigned int &rcpi_steering_threshold);
 
 /**
  * @brief Reads enable flag setting for checking connectivity to the Controller from agent

@@ -175,6 +175,9 @@ public:
         bool assoc_sta_traffic_stats_inclusion_policy;
         bool assoc_sta_link_metrics_inclusion_policy;
         bool assoc_wifi6_sta_status_report_inclusion_policy;
+        unsigned int steering_policy;
+        unsigned int channel_utilization_threshold;
+        unsigned int rcpi_steering_threshold;
     } sDbMasterConfig;
 
     typedef struct {
