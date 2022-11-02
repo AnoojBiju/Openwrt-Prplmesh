@@ -25,13 +25,18 @@ sleep 2
 
 ubus wait_for DHCPv4
 ubus wait_for DHCPv6
-ubus wait_for IP.Interface
 
 # Stop and disable the DHCP clients and servers:
 ubus call DHCPv4.Client.1 _set '{"parameters": { "Enable": False }}'
 ubus call DHCPv6.Client.1 _set '{"parameters": { "Enable": False }}'
 ubus call DHCPv4.Server _set '{"parameters": { "Enable": False }}'
 ubus call DHCPv6.Server _set '{"parameters": { "Enable": False }}'
+
+# Save the IP settings persistently (PPM-2351):
+sed -ri 's/(dm-save.*) = false/\1 = true/g' /etc/amx/ip-manager/ip-manager.odl
+/etc/init.d/ip-manager restart
+
+ubus wait_for IP.Interface
 
 # Since for the GL-inet eth0 (LAN) is always detected as UP, eth1 (WAN) will be configured as a backhaul interface
 # This allows prplMesh to detect the state of the backhaul interface
