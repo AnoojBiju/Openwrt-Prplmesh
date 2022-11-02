@@ -943,8 +943,35 @@ bool nl80211_client_impl::add_key(const std::string &interface_name, const sKeyI
 bool nl80211_client_impl::add_station(const std::string &interface_name, const sMacAddr &mac,
                                       assoc_frame::AssocReqFrame &assoc_req, uint16_t aid)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
-    return false;
+    if (!m_socket) {
+        LOG(ERROR) << "Socket is NULL!";
+        return false;
+    }
+
+    // Get the interface index for given interface name
+    int iface_index = if_nametoindex(interface_name.c_str());
+    if (0 == iface_index) {
+        LOG(ERROR) << "Failed to read the index of interface " << interface_name << ": "
+                   << strerror(errno);
+
+        return false;
+    }
+
+    LOG(DEBUG) << "Adding station with MAC : '" << tlvf::mac_to_string(mac) << "'.";
+
+    return m_socket.get()->send_receive_msg(
+        NL80211_CMD_NEW_STATION, 0,
+        [&](struct nl_msg *msg) -> bool {
+            nla_put_u32(msg, NL80211_ATTR_IFINDEX, iface_index);
+            nla_put(msg, NL80211_ATTR_MAC, ETH_ALEN, mac.oct);
+            nla_put_u16(msg, NL80211_ATTR_STA_LISTEN_INTERVAL, assoc_req.listen_interval());
+            nla_put(msg, NL80211_ATTR_STA_SUPPORTED_RATES, assoc_req.supported_rates_length(),
+                    assoc_req.supported_rates());
+            nla_put_u16(msg, NL80211_ATTR_STA_AID, aid);
+            // TODO: PPM-2349: add station capabilities
+            return true;
+        },
+        [&](struct nl_msg *msg) {});
 }
 
 } // namespace bwl
