@@ -3393,6 +3393,12 @@ bool ap_wlan_hal_dwpal::add_key(const sKeyInfo &key_info)
     return false;
 }
 
+bool ap_wlan_hal_dwpal::add_station(const sMacAddr &mac, assoc_frame::AssocReqFrame &assoc_req)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
 } // namespace bwl
 
 std::shared_ptr<ap_wlan_hal> ap_wlan_hal_create(std::string iface_name, hal_conf_t hal_conf,

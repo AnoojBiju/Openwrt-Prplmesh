@@ -456,6 +456,15 @@ public:
      */
     virtual bool add_key(const sKeyInfo &key_info) = 0;
 
+    /**
+     * @brief Manually add a station on a BSS.
+     *
+     * @param bssid The BSSID on which to add the station.
+     * @param mac The MAC address of the station.
+     * @return true on success, false otherwise.
+     */
+    virtual bool add_station(const sMacAddr &mac, assoc_frame::AssocReqFrame &assoc_req) = 0;
+
 private:
     static const int frame_body_idx = (sizeof(s80211MgmtFrame::sHeader) * 2);
 
