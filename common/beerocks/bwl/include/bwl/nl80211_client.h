@@ -11,6 +11,7 @@
 #include <bcl/beerocks_defines.h>
 #include <bcl/beerocks_message_structs.h>
 #include <bcl/son/son_wireless_utils.h>
+#include <bwl/base_wlan_hal_types.h>
 #include <tlvf/common/sMacAddr.h>
 
 #include <algorithm>
@@ -517,6 +518,16 @@ public:
      * @return true on success and false otherwise.
      */
     virtual bool channel_scan_abort(const std::string &interface_name) = 0;
+
+    /**
+     * @brief Add a key for a station.
+     *
+     * @param[in] interface_name the name of the interface to add a station for.
+     * @param[in] key_info the key to add.
+     *
+     * @return true on success and false otherwise.
+     */
+    virtual bool add_key(const std::string &interface_name, const sKeyInfo &key_info) = 0;
 };
 
 } // namespace bwl

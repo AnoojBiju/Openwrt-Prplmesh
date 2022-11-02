@@ -890,4 +890,10 @@ bool nl80211_client_impl::channel_scan_abort(const std::string &interface_name)
                                             [&](struct nl_msg *msg) {});
 }
 
+bool nl80211_client_impl::add_key(const std::string &interface_name, const sKeyInfo &key_info)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
 } // namespace bwl

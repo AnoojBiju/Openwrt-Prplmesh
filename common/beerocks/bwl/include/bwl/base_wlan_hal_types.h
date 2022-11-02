@@ -411,6 +411,23 @@ struct sStaConnectionFail {
     sMacAddr bssid;   /**< The BSSID of the AP's interface */
     sMacAddr sta_mac; /**< The MAC address of the station */
 };
+
+/**
+ * @brief Station keys information.
+ *
+ * This structure contains the different parameters related station
+ * keys.
+ */
+struct sKeyInfo {
+    uint8_t key_idx;
+    sMacAddr mac;
+    uint8_t *key;
+    int key_len;
+    uint8_t *key_seq;
+    int key_seq_len;
+    uint32_t key_cipher;
+};
+
 } // namespace bwl
 
 #endif // _BWL_BASE_WLAN_HAL_TYPES_H_

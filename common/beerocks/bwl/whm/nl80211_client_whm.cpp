@@ -53,4 +53,9 @@ bool nl80211_client_whm::get_tx_power_dbm(const std::string &interface_name, uin
 
 bool nl80211_client_whm::channel_scan_abort(const std::string &interface_name) { return false; }
 
+bool nl80211_client_whm::add_key(const std::string &interface_name, const sKeyInfo &key_info)
+{
+    return false;
+}
+
 } // namespace bwl
