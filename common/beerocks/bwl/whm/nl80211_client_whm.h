@@ -110,6 +110,16 @@ public:
 
     bool channel_scan_abort(const std::string &interface_name) override;
 
+    /**
+     * @brief Add a key for a station.
+     *
+     * @param[in] interface_name the name of the interface to add a station for.
+     * @param[in] key_info the key to add.
+     *
+     * @return true on success and false otherwise.
+     */
+    bool add_key(const std::string &interface_name, const sKeyInfo &key_info) override;
+
 private:
     beerocks::wbapi::AmbiorixConnectionSmartPtr m_connection;
 };
