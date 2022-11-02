@@ -35,6 +35,7 @@
 #include "nl80211_client_impl.h"
 
 #include <bcl/beerocks_utils.h>
+#include <bcl/network/network_utils.h>
 #include <bwl/base_802_11_defs.h>
 
 #include <easylogging++.h>
@@ -892,8 +893,51 @@ bool nl80211_client_impl::channel_scan_abort(const std::string &interface_name)
 
 bool nl80211_client_impl::add_key(const std::string &interface_name, const sKeyInfo &key_info)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
-    return false;
+    if (!m_socket) {
+        LOG(ERROR) << "Socket is NULL!";
+        return false;
+    }
+
+    if (!key_info.key || !key_info.key_seq) {
+        LOG(ERROR) << "Key and key sequences must be provided!";
+        return false;
+    }
+
+    // Get the interface index for given interface name
+    int iface_index = if_nametoindex(interface_name.c_str());
+    if (0 == iface_index) {
+        LOG(ERROR) << "Failed to read the index of interface " << interface_name << ": "
+                   << strerror(errno);
+
+        return false;
+    }
+
+    LOG(DEBUG) << "Adding new key for interface '" << interface_name << "'." << std::endl
+               << "Key index: " << key_info.key_idx << " MAC: " << key_info.mac
+               << " Key cipher: " << key_info.key_cipher;
+
+    return m_socket.get()->send_receive_msg(
+        NL80211_CMD_NEW_KEY, 0,
+        [&](struct nl_msg *msg) -> bool {
+            nla_put_u32(msg, NL80211_ATTR_IFINDEX, iface_index);
+            nla_put_u8(msg, NL80211_ATTR_KEY_IDX, key_info.key_idx);
+            // If there is a MAC address, it's a pairwise key. If not,
+            // it's a group key.
+            if (key_info.mac != beerocks::net::network_utils::ZERO_MAC) {
+                LOG(DEBUG) << "Adding a pairwise key.";
+                nla_put(msg, NL80211_ATTR_MAC, ETH_ALEN, key_info.mac.oct);
+                nla_put_u32(msg, NL80211_ATTR_KEY_TYPE, NL80211_KEYTYPE_PAIRWISE);
+            } else {
+                LOG(DEBUG) << "Adding a group key.";
+                nla_put_u32(msg, NL80211_ATTR_KEY_TYPE, NL80211_KEYTYPE_GROUP);
+            }
+            nla_put(msg, NL80211_ATTR_KEY_DATA, key_info.key_len, key_info.key);
+            nla_put(msg, NL80211_ATTR_KEY_SEQ, key_info.key_seq_len, key_info.key_seq);
+            nla_put_u32(msg, NL80211_ATTR_KEY_CIPHER, key_info.key_cipher);
+
+            return true;
+        },
+        [&](struct nl_msg *msg) {});
 }
 
 } // namespace bwl
