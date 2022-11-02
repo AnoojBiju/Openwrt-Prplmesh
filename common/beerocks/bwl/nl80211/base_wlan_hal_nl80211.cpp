@@ -33,7 +33,6 @@ namespace nl80211 {
 ///////////////////////// Local Module Definitions ///////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-#define BASE_CTRL_PATH "/var/run/"
 #define AP_ENABELED_TIMEOUT_SEC 15
 #define AP_ENABELED_FIXED_DFS_TIMEOUT_SEC 660
 
