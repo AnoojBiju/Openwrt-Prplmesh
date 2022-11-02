@@ -1549,8 +1549,15 @@ bool ap_wlan_hal_nl80211::add_bss(std::string &ifname, son::wireless_utils::sBss
 
 bool ap_wlan_hal_nl80211::remove_bss(std::string &ifname)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
-    return false;
+
+    LOG(DEBUG) << "Removing BSS with ifname: '" << ifname << "'.";
+    std::stringstream cmd;
+    cmd << "REMOVE " << ifname;
+    if (!wpa_ctrl_send_msg(cmd.str(), "global")) {
+        LOG(ERROR) << "Failed to remove the BSS!";
+        return false;
+    }
+    return true;
 }
 
 } // namespace nl80211
