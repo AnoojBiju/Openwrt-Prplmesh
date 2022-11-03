@@ -455,6 +455,17 @@ private:
      * @param est_service_info_field Array with ESP values.
      *
     */
+
+    /**
+     * @brief Handles TLV of AP Radio Advanced Capabilities (tlvProfile2ApRadioAdvancedCapabilities).
+     *
+     * @param agent Agent DB object.
+     * @param cmdu_rx Received CMDU as Profile-2 AP Radio Advanced Capabilities message.
+     * @return True on success, false otherwise.
+    */
+    bool handle_tlv_profile2_ap_radio_advanced_capabilities(Agent &agent,
+                                                            ieee1905_1::CmduMessageRx &cmdu_rx);
+
     void set_esp(const std::string &param_name, const sMacAddr &reporting_agent_bssid,
                  uint8_t *est_service_info_field);
 

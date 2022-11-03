@@ -71,6 +71,7 @@
 #include <tlvf/wfa_map/tlvHigherLayerData.h>
 #include <tlvf/wfa_map/tlvOperatingChannelReport.h>
 #include <tlvf/wfa_map/tlvProfile2ApCapability.h>
+#include <tlvf/wfa_map/tlvProfile2ApRadioAdvancedCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2CacCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2CacStatusReport.h>
 #include <tlvf/wfa_map/tlvProfile2ChannelScanResult.h>
@@ -1097,6 +1098,12 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
                    << " with profile enum " << agent->profile;
     }
 
+    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
+        !handle_tlv_profile2_ap_radio_advanced_capabilities(*agent, cmdu_rx)) {
+        LOG(ERROR) << "Profile2 AP Radio Advanced Capabilities is not supplied for Agent " << al_mac
+                   << " with profile enum " << agent->profile;
+    }
+
     //TODO autoconfig process the rest of the class
     //TODO autoconfig Keep intel agent support only as intel enhancements
     /**
@@ -1829,6 +1836,10 @@ bool Controller::handle_cmdu_1905_ap_capability_report(const sMacAddr &src_mac,
         !handle_tlv_profile2_ap_capability(agent, cmdu_rx)) {
         LOG(ERROR) << "Profile2 AP Capability is not supplied for Agent " << src_mac
                    << " with profile enum " << agent->profile;
+    }
+
+    if (!handle_tlv_profile2_ap_radio_advanced_capabilities(*agent, cmdu_rx)) {
+        LOG(ERROR) << "Couldn't handle AP Radio Advanced Capabilities TLV from Agent " << src_mac;
     }
 
     if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
@@ -4176,6 +4187,11 @@ bool Controller::handle_cmdu_1905_bss_configuration_request_message(
                    << " with profile enum " << agent->profile;
     }
 
+    if (!handle_tlv_profile2_ap_radio_advanced_capabilities(*agent, cmdu_rx)) {
+        LOG(ERROR) << "Couldn't handle AP Radio Advanced Capabilities TLV from Agent "
+                   << agent->al_mac;
+    }
+
     // TODO: Implement parsing of unhandled TLVs (PPM-2325)
 
     return true;
@@ -4239,6 +4255,56 @@ bool Controller::handle_tlv_profile3_akm_suite_capabilities(Agent &agent,
     }
     */
 
+    return true;
+}
+
+bool Controller::handle_tlv_profile2_ap_radio_advanced_capabilities(
+    Agent &agent, ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto ap_radio_advanced_capabilities =
+        cmdu_rx.getClass<wfa_map::tlvProfile2ApRadioAdvancedCapabilities>();
+    if (!ap_radio_advanced_capabilities) {
+        LOG(DEBUG) << "getClass wfa_map::tlvProfile2ApRadioAdvancedCapabilities has failed";
+        return false;
+    }
+
+    LOG(DEBUG) << "Profile-2 AP Radio Advanced Capabilities TLV is received";
+
+    std::stringstream ss;
+
+    auto ruid = ap_radio_advanced_capabilities->radio_uid();
+
+    auto radio = agent.radios.get(ruid);
+    if (!radio) {
+        LOG(ERROR) << "No radio found for ruid=" << ruid << " on " << agent.al_mac;
+        return false;
+    }
+
+    auto advanced_radio_capabilities =
+        ap_radio_advanced_capabilities->advanced_radio_capabilities();
+
+    radio->advanced_capabilities.traffic_separation_combined_fronthaul =
+        advanced_radio_capabilities.combined_front_back;
+    radio->advanced_capabilities.traffic_separation_combined_backhaul =
+        advanced_radio_capabilities.combined_profile1_and_profile2;
+    radio->advanced_capabilities.mscs = advanced_radio_capabilities.mscs;
+    radio->advanced_capabilities.scs  = advanced_radio_capabilities.scs;
+    radio->advanced_capabilities.dscp_to_up_mapping =
+        advanced_radio_capabilities.dscp_to_up_mapping;
+    radio->advanced_capabilities.dscp_policy = advanced_radio_capabilities.dscp_policy;
+
+    ss << "Radio " << ruid << ", traffic separation capabilities:" << std::endl
+       << "Traffic separation on combined fronthaul and Profile-1 backhaul support = "
+       << radio->advanced_capabilities.traffic_separation_combined_fronthaul << std::endl
+       << "Traffic separation on combined Profile-1 backhaul and Profile-2 backhaul support = "
+       << radio->advanced_capabilities.traffic_separation_combined_backhaul << std::endl
+       << "MSCS support = " << radio->advanced_capabilities.mscs << std::endl
+       << "SCS support = " << radio->advanced_capabilities.scs << std::endl
+       << "DSCP-to-UP mapping support = " << radio->advanced_capabilities.dscp_to_up_mapping
+       << std::endl
+       << "DSCP Policy support = " << radio->advanced_capabilities.dscp_policy << std::endl;
+
+    LOG(DEBUG) << ss.str();
     return true;
 }
 

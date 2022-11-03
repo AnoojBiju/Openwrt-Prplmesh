@@ -139,6 +139,22 @@ public:
         };
         channel_scan_capabilities scan_capabilities;
 
+        struct sAdvancedCapabilities {
+            // Indicates traffic separation on combined fronthaul and Profile-1 backhaul support
+            bool traffic_separation_combined_fronthaul;
+            // Indicates traffic separation on combined Profile-1 backhaul and Profile-2 backhaul support
+            bool traffic_separation_combined_backhaul;
+            // Support for MSCS and EasyMesh configuration of extensions to MSCS
+            bool mscs;
+            // Support for SCS and EasyMesh configuration of extensions to SCS
+            bool scs;
+            // Support for DSCP-to-UP mapping
+            bool dscp_to_up_mapping;
+            // Support for sending DSCP Policy Requests to associated STAs
+            // and EasyMesh configuration of such policies
+            bool dscp_policy;
+        } advanced_capabilities;
+
         struct sBss {
             sBss()             = delete;
             sBss(const sBss &) = delete;
