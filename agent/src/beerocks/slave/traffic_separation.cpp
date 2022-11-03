@@ -16,6 +16,8 @@
 constexpr char DOT_PVID_SUFFIX[] = ".pvid";
 #define PVID_SUFFIX &DOT_PVID_SUFFIX[1]
 
+int beerocks::net::TrafficSeparation::m_profile_x_disallow_override_unsupported_configuration = 0;
+
 /**
  * @brief Configure interface on the Transport.
  *
@@ -240,7 +242,12 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
                              << "backhaul_bss_disallow_profile1_agent_association = "
                                 "backhaul_bss_disallow_profile2_agent_association = "
                              << bss.backhaul_bss_disallow_profile1_agent_association;
-                continue;
+
+                if (m_profile_x_disallow_override_unsupported_configuration == 0) {
+                    continue;
+                }
+                LOG(DEBUG) << "profile_x_disallow_override is set on profile "
+                           << m_profile_x_disallow_override_unsupported_configuration;
             }
             auto bss_iface_netdevs =
                 network_utils::get_bss_ifaces(bss_iface, db->bridge.iface_name);
@@ -258,7 +265,8 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
                 auto vlan_iface_added = false;
 
                 // Profile-2 Backhaul BSS
-                if (bss.backhaul_bss_disallow_profile1_agent_association) {
+                if (bss.backhaul_bss_disallow_profile1_agent_association ||
+                    m_profile_x_disallow_override_unsupported_configuration == 1) {
 
                     // Since multicast messages are not bridged (c83c81fa), and instead of being
                     // sent to all interfaces, they will lack a VLAN tag. To overcome it, add a VLAN
