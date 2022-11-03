@@ -294,7 +294,7 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
                     LOG(DEBUG) << "iface " << vlan_iface_name
                                << " was added to the bridge successfully";
 
-                    set_vlan_policy(bss_iface_netdev, ePortMode::TAGGED_PORT_PRIMARY_UNTAGGED,
+                    set_vlan_policy(bss_iface_netdev, ePortMode::TAGGED_PORT_PRIMARY_TAGGED,
                                     is_bridge);
                 }
                 // Profile-1 Backhaul BSS
