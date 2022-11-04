@@ -118,6 +118,7 @@ public:
     std::shared_ptr<cRmEnabledCaps> rm_enabled_caps();
     std::shared_ptr<cMultiBand> multi_band();
     uint8_t *supported_rates();
+    uint8_t supported_rates_length();
 
     eFrameType type;
     sFieldsPresent fields_present;
