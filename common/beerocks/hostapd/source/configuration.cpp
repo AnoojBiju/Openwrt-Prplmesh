@@ -282,6 +282,24 @@ bool Configuration::set_create_vap_value(const std::string &vap, const std::stri
     return set_create_vap_value(vap, key, std::to_string(value));
 }
 
+bool Configuration::set_create_value(const std::string &vap, const std::string &key,
+                                     const std::string &value)
+{
+    if (vap.empty()) {
+        return set_create_head_value(key, value);
+    }
+    return set_create_vap_value(vap, key, value);
+}
+
+bool Configuration::set_create_value(const std::string &vap, const std::string &key,
+                                     const int value)
+{
+    if (vap.empty()) {
+        return set_create_head_value(key, std::to_string(value));
+    }
+    return set_create_vap_value(vap, key, std::to_string(value));
+}
+
 std::string Configuration::get_vap_value(const std::string &vap, const std::string &key)
 {
     // search for the requested vap

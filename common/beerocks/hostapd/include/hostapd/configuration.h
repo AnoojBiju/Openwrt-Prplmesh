@@ -143,6 +143,30 @@ public:
     bool set_create_vap_value(const std::string &vap, const std::string &key, const int value);
 
     /**
+     * @brief set key/value for a vap or the head.
+     * @details set the key/value for the given vap if set (either
+     * replace or create), else for the head.
+     * @param
+     * - the vap to set the value for (string). Empty string means set for the head.
+     * - the key to set its value (string)
+     * - the value (string)
+     * @return true if the values were set correctly, false otherwise.
+     */
+    bool set_create_value(const std::string &vap, const std::string &key, const std::string &value);
+
+    /**
+     * @brief set key/value for a vap or the head.
+     * @details set the key/value for the given vap if set (either
+     * replace or create), else for the head.
+     * @param
+     * - the vap to set the value for (string). Empty string means set for the head.
+     * - the key to set its value (string)
+     * - the value (int)
+     * @return true if the values were set correctly, false otherwise.
+     */
+    bool set_create_value(const std::string &vap, const std::string &key, const int value);
+
+    /**
      * @brief get the value of the given key for the given vap
      * @param 
      * - the vap to get the value for (string)
