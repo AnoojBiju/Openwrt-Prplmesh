@@ -159,4 +159,10 @@ bool nl80211_client_dummy::add_key(const std::string &interface_name, const sKey
     return true;
 }
 
+bool nl80211_client_dummy::add_station(const std::string &interface_name, const sMacAddr &mac,
+                                       assoc_frame::AssocReqFrame &assoc_req, uint16_t aid)
+{
+    return true;
+}
+
 } // namespace bwl
