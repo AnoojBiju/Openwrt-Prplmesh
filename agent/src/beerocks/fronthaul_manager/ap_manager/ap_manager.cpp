@@ -8,6 +8,8 @@
 
 #include "ap_manager.h"
 
+#include <bwl/base_wlan_hal_types.h>
+
 #include <bcl/beerocks_string_utils.h>
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
@@ -22,6 +24,7 @@
 #include <tlvf/wfa_map/tlv1905EncapDpp.h>
 #include <tlvf/wfa_map/tlvBssid.h>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
+#include <tlvf/wfa_map/tlvClientCapabilityReport.h>
 #include <tlvf/wfa_map/tlvDppCceIndication.h>
 #include <tlvf/wfa_map/tlvDppChirpValue.h>
 #include <tlvf/wfa_map/tlvProfile2ReasonCode.h>
@@ -33,6 +36,7 @@
 #include <tlvf/wfa_map/tlvVirtualBssCreation.h>
 #include <tlvf/wfa_map/tlvVirtualBssDestruction.h>
 
+#include <iterator>
 #include <numeric>
 
 //////////////////////////////////////////////////////////////////////////////
@@ -739,7 +743,84 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
             LOG(ERROR) << "Failed to add a new BSS!";
             return;
         }
-        // TODO: PPM-2292: add the station and its keys
+
+        if (virtual_bss_creation_tlv->client_assoc()) {
+            LOG(DEBUG) << "The client was already associated, adding a new station and its keys.";
+            auto client_capability_report = cmdu_rx.getClass<wfa_map::tlvClientCapabilityReport>();
+            if (!client_capability_report) {
+                LOG(ERROR) << "Missing client capability report for an associated client!";
+                return;
+            }
+            auto association_request = assoc_frame::AssocReqFrame::parse(
+                client_capability_report->association_frame(),
+                client_capability_report->association_frame_length());
+            if (!association_request) {
+                LOG(ERROR) << "Failed to parse the association frame!";
+                return;
+            }
+
+            if (!ap_wlan_hal->add_station(virtual_bss_creation_tlv->client_mac(),
+                                          *association_request)) {
+                LOG(ERROR) << "Failed to add the station!";
+                return;
+            }
+
+            // To set the TX PN, we must provide the RX PN first,
+            // followed by the TX PN. We don't know the RX PN that was
+            // used on the source agent, so we set it to 0. As soon as
+            // the first frame from the station is received, the RX PN
+            // will be set back to the value that was used on the
+            // source agent.
+
+            // TODO: PPM-2368: the Virtual Creation Request TLV does
+            // not currently contain the authentication and encryption
+            // type. For now, assume CCMP for the encryption.
+            int key_seq_len = bwl::ePacketNumberLength::CCMP;
+            std::vector<uint8_t> key_seq_buf(0, key_seq_len);
+            auto tx_pn_ptr =
+                reinterpret_cast<uint8_t *>(&virtual_bss_creation_tlv->tx_packet_num());
+            key_seq_buf.insert(key_seq_buf.end(), tx_pn_ptr,
+                               tx_pn_ptr + sizeof(virtual_bss_creation_tlv->tx_packet_num()));
+            // Same for the group key:
+            int group_key_seq_len = bwl::ePacketNumberLength::CCMP;
+            std::vector<uint8_t> group_key_seq_buf(0, group_key_seq_len);
+            auto group_tx_pn_ptr =
+                reinterpret_cast<uint8_t *>(&virtual_bss_creation_tlv->group_tx_packet_num());
+            group_key_seq_buf.insert(group_key_seq_buf.end(), group_tx_pn_ptr,
+                                     group_tx_pn_ptr +
+                                         sizeof(virtual_bss_creation_tlv->tx_packet_num()));
+
+            // Add the pairwise key
+            bwl::sKeyInfo pairwise_key = {
+                .key_idx     = 0,
+                .mac         = virtual_bss_creation_tlv->client_mac(),
+                .key         = virtual_bss_creation_tlv->ptk(),
+                .key_len     = virtual_bss_creation_tlv->key_length(),
+                .key_seq     = key_seq_buf.data(),
+                .key_seq_len = key_seq_len,
+                // TODO: PPM-2368: We need to know the pairwise cipher. For now, use CCMP
+                .key_cipher = 0x000FAC04};
+            if (!ap_wlan_hal->add_key(pairwise_key)) {
+                LOG(ERROR) << "Failed to add the pairwise key!";
+                return;
+            }
+
+            // Add the group key
+            bwl::sKeyInfo group_key = {
+                .key_idx     = 1,
+                .mac         = beerocks::net::network_utils::ZERO_MAC,
+                .key         = virtual_bss_creation_tlv->gtk(),
+                .key_len     = virtual_bss_creation_tlv->group_key_length(),
+                .key_seq     = group_key_seq_buf.data(),
+                .key_seq_len = group_key_seq_len,
+                // TODO: PPM-2368: We need to know the groupwise cipher. For now, use CCMP
+                .key_cipher = 0x000FAC04};
+            if (!ap_wlan_hal->add_key(group_key)) {
+                LOG(ERROR) << "Failed to add the group key!";
+                return;
+            }
+        }
+
         // TODO: PPM-2349: add support for the client capabilities
         return;
     }

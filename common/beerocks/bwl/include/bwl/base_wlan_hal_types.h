@@ -428,6 +428,12 @@ struct sKeyInfo {
     uint32_t key_cipher;
 };
 
+/**
+ * @brief Packet number (key sequences) length. See also their
+ * definitions in "linux/ieee80211.h".
+ */
+enum ePacketNumberLength { CCMP = 6, CCMP_256 = 6, CMAC = 6, GMAC = 6, GCMP = 6 };
+
 } // namespace bwl
 
 #endif // _BWL_BASE_WLAN_HAL_TYPES_H_
