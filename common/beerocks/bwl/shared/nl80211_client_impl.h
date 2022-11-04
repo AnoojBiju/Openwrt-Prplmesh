@@ -143,6 +143,20 @@ public:
      */
     bool add_key(const std::string &interface_name, const sKeyInfo &key_info) override;
 
+    /**
+     * @brief Manually add a station.
+     *
+     * @param[in] interface_name the name of the interface to add a station for.
+     * @param[in] assoc_req the association request frame of a
+     * previous association of the station (used for station
+     * capabilities, listen_interval, etc).
+     * @param[in] aid the association ID of the station.
+     *
+     * @return true on success and false otherwise.
+     */
+    bool add_station(const std::string &interface_name, const sMacAddr &mac,
+                     assoc_frame::AssocReqFrame &assoc_req, uint16_t aid) override;
+
 private:
     /**
      * NL80211 socket to send messages and receive responses to/from the WiFi driver.
