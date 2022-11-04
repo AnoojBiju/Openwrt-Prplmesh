@@ -1617,6 +1617,12 @@ bool ap_wlan_hal_nl80211::remove_bss(std::string &ifname)
     return true;
 }
 
+bool ap_wlan_hal_nl80211::add_key(const std::string &ifname, const sKeyInfo &key_info)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
 } // namespace nl80211
 
 std::shared_ptr<ap_wlan_hal> ap_wlan_hal_create(std::string iface_name, hal_conf_t hal_conf,

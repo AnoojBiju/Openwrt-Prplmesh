@@ -3616,6 +3616,12 @@ bool ap_wlan_hal_dwpal::remove_bss(std::string &ifname)
     return false;
 }
 
+bool ap_wlan_hal_dwpald::add_key(const std::string &ifname, const sKeyInfo &key_info)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
 } // namespace dwpal
 
 std::shared_ptr<ap_wlan_hal> ap_wlan_hal_create(std::string iface_name, hal_conf_t hal_conf,
