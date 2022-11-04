@@ -12,6 +12,7 @@
 #include <bcl/beerocks_message_structs.h>
 #include <bcl/son/son_wireless_utils.h>
 #include <bwl/base_wlan_hal_types.h>
+#include <tlvf/AssociationRequestFrame/AssocReqFrame.h>
 #include <tlvf/common/sMacAddr.h>
 
 #include <algorithm>
@@ -528,6 +529,20 @@ public:
      * @return true on success and false otherwise.
      */
     virtual bool add_key(const std::string &interface_name, const sKeyInfo &key_info) = 0;
+
+    /**
+     * @brief Manually add a station.
+     *
+     * @param[in] interface_name the name of the interface to add a station for.
+     * @param[in] assoc_req the association request frame of a
+     * previous association of the station (used for station
+     * capabilities, listen_interval, etc).
+     * @param[in] aid the association ID of the station.
+     *
+     * @return true on success and false otherwise.
+     */
+    virtual bool add_station(const std::string &interface_name, const sMacAddr &mac,
+                             assoc_frame::AssocReqFrame &assoc_req, uint16_t aid) = 0;
 };
 
 } // namespace bwl

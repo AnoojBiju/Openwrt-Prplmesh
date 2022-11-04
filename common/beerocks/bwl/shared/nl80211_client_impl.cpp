@@ -940,4 +940,11 @@ bool nl80211_client_impl::add_key(const std::string &interface_name, const sKeyI
         [&](struct nl_msg *msg) {});
 }
 
+bool nl80211_client_impl::add_station(const std::string &interface_name, const sMacAddr &mac,
+                                      assoc_frame::AssocReqFrame &assoc_req, uint16_t aid)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
 } // namespace bwl

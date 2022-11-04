@@ -58,4 +58,10 @@ bool nl80211_client_whm::add_key(const std::string &interface_name, const sKeyIn
     return false;
 }
 
+bool nl80211_client_whm::add_station(const std::string &interface_name, const sMacAddr &mac,
+                                     assoc_frame::AssocReqFrame &assoc_req, uint16_t aid)
+{
+    return false;
+}
+
 } // namespace bwl
