@@ -164,6 +164,178 @@ static prplmesh::hostapd::Configuration load_hostapd_config(const std::string &r
     return prplmesh::hostapd::Configuration("file not found");
 }
 
+/**
+* @brief Assign hostapd parameters based on authentication and
+* encryption configuration.
+*
+* @param conf the hostapd configuration to save the parameters to.
+* @param the VAP id of the BSS.
+* @param authentication_type the authentication type.
+* @param encryption_type the encryption type.
+*
+* @return true on success, false otherwise.
+*/
+static bool assign_auth_encr_parameters(prplmesh::hostapd::Configuration &conf,
+                                        const std::string &vap_id,
+                                        const son::wireless_utils::sBssInfoConf &bss)
+{
+
+    // Hostapd "wpa" field.
+    // This field is a bit field that can be used to enable WPA (IEEE 802.11i/D3.0)
+    // and/or WPA2 (full IEEE 802.11i/RSN):
+    // bit0 = WPA
+    // bit1 = IEEE 802.11i/RSN (WPA2) (dot11RSNAEnabled)
+    int wpa = 0;
+
+    // Set of accepted key management algorithms (WPA-PSK, WPA-EAP, or both). The
+    // entries are separated with a space. WPA-PSK-SHA256 and WPA-EAP-SHA256 can be
+    // added to enable SHA256-based stronger algorithms.
+    // WPA-PSK = WPA-Personal / WPA2-Personal
+    std::string wpa_key_mgmt; // default to empty -> delete from hostapd config
+
+    // (dot11RSNAConfigPairwiseCiphersTable)
+    // Pairwise cipher for WPA (v1) (default: TKIP)
+    //  wpa_pairwise=TKIP CCMP
+    // Pairwise cipher for RSN/WPA2 (default: use wpa_pairwise value)
+    //  rsn_pairwise=CCMP
+    std::string wpa_pairwise; // default to empty -> delete from hostapd config
+
+    // WPA pre-shared keys for WPA-PSK. This can be either entered as a 256-bit
+    // secret in hex format (64 hex digits), wpa_psk, or as an ASCII passphrase
+    // (8..63 characters), wpa_passphrase.
+    std::string wpa_passphrase;
+    std::string wpa_psk;
+
+    // ieee80211w: Whether management frame protection (MFP) is enabled
+    // 0 = disabled (default)
+    // 1 = optional
+    // 2 = required
+    std::string ieee80211w;
+
+    // This parameter can be used to disable caching of PMKSA created through EAP
+    // authentication. RSN preauthentication may still end up using PMKSA caching if
+    // it is enabled (rsn_preauth=1).
+    // 0 = PMKSA caching enabled (default)
+    // 1 = PMKSA caching disabled
+    std::string disable_pmksa_caching;
+
+    // Opportunistic Key Caching (aka Proactive Key Caching)
+    // Allow PMK cache to be shared opportunistically among configured interfaces
+    // and BSSes (i.e., all configurations within a single hostapd process).
+    // 0 = disabled (default)
+    // 1 = enabled
+    std::string okc;
+
+    // This parameter can be used to disable retransmission of EAPOL-Key frames that
+    // are used to install keys (EAPOL-Key message 3/4 and group message 1/2). This
+    // is similar to setting wpa_group_update_count=1 and
+    std::string wpa_disable_eapol_key_retries;
+
+    // EasyMesh R1 only allows Open and WPA2 PSK auth&encryption methods.
+    // Quote: A Multi-AP Controller shall set the Authentication Type attribute
+    //        in M2 to indicate WPA2-Personal or Open System Authentication.
+    // bss.authentication_type is a bitfield, but we are not going
+    // to accept any combinations due to the above limitation.
+    if (bss.authentication_type == WSC::eWscAuth::WSC_AUTH_OPEN) {
+        wpa = 0x0;
+        if (bss.encryption_type != WSC::eWscEncr::WSC_ENCR_NONE) {
+            LOG(ERROR) << "Autoconfiguration: " << vap_id << " encryption set on open VAP";
+            return false;
+        }
+        if (bss.network_key.length() > 0) {
+            LOG(ERROR) << "Autoconfiguration: " << vap_id << " network key set for open VAP";
+            return false;
+        }
+    } else if (bss.authentication_type == WSC::eWscAuth::WSC_AUTH_WPA2PSK) {
+        wpa = 0x2;
+        wpa_key_mgmt.assign("WPA-PSK");
+        // Cipher must include AES for WPA2, TKIP is optional
+        if ((static_cast<uint16_t>(bss.encryption_type) &
+             static_cast<uint16_t>(WSC::eWscEncr::WSC_ENCR_AES)) == 0) {
+            LOG(ERROR) << "Autoconfiguration:  " << vap_id << " CCMP(AES) is required for WPA2";
+            return false;
+        }
+        if ((uint16_t(bss.encryption_type) & uint16_t(WSC::eWscEncr::WSC_ENCR_TKIP)) != 0) {
+            wpa_pairwise.assign("TKIP CCMP");
+        } else {
+            wpa_pairwise.assign("CCMP");
+        }
+        if (bss.network_key.length() < 8 || bss.network_key.length() > 64) {
+            LOG(ERROR) << "Autoconfiguration: " << vap_id << " invalid network key length "
+                       << bss.network_key.length();
+            return false;
+        }
+        if (bss.network_key.length() < 64) {
+            wpa_passphrase.assign(bss.network_key);
+        } else {
+            wpa_psk.assign(bss.network_key);
+        }
+        ieee80211w.assign("0");
+        disable_pmksa_caching.assign("1");
+        okc.assign("0");
+        wpa_disable_eapol_key_retries.assign("0");
+    } else if (bss.authentication_type ==
+               WSC::eWscAuth(WSC::eWscAuth::WSC_AUTH_WPA2PSK | WSC::eWscAuth::WSC_AUTH_SAE)) {
+        wpa = 0x2;
+        wpa_key_mgmt.assign("WPA-PSK SAE");
+
+        if (bss.encryption_type != WSC::eWscEncr::WSC_ENCR_AES) {
+            LOG(ERROR) << "Autoconfiguration:  " << vap_id << " CCMP(AES) is required for WPA3";
+            return false;
+        }
+        wpa_pairwise.assign("CCMP");
+
+        if (bss.network_key.length() < 8 || bss.network_key.length() > 64) {
+            LOG(ERROR) << "Autoconfiguration: " << vap_id << " invalid network key length "
+                       << bss.network_key.length();
+            return false;
+        }
+        wpa_passphrase.assign(bss.network_key);
+
+        ieee80211w.assign("2");
+        disable_pmksa_caching.assign("1");
+        okc.assign("1");
+        wpa_disable_eapol_key_retries.assign("0");
+    } else if (bss.authentication_type == WSC::eWscAuth::WSC_AUTH_SAE) {
+        wpa = 0x2;
+        wpa_key_mgmt.assign("SAE");
+
+        if (bss.encryption_type != WSC::eWscEncr::WSC_ENCR_AES) {
+            LOG(ERROR) << "Autoconfiguration:  " << vap_id << " CCMP(AES) is required for WPA3";
+            return false;
+        }
+        wpa_pairwise.assign("CCMP");
+
+        if (bss.network_key.length() < 8 || bss.network_key.length() > 64) {
+            LOG(ERROR) << "Autoconfiguration: " << vap_id << " invalid network key length "
+                       << bss.network_key.length();
+            return false;
+        }
+        wpa_passphrase.assign(bss.network_key);
+
+        ieee80211w.assign("2");
+        disable_pmksa_caching.assign("1");
+        okc.assign("1");
+        wpa_disable_eapol_key_retries.assign("0");
+    } else {
+        LOG(ERROR) << "Autoconfiguration: " << vap_id << " invalid authentication type: "
+                   << son::wireless_utils::wsc_to_bwl_authentication(bss.authentication_type);
+        return false;
+    }
+
+    conf.set_create_vap_value(vap_id, "wpa", wpa);
+    conf.set_create_vap_value(vap_id, "okc", okc);
+    conf.set_create_vap_value(vap_id, "wpa_key_mgmt", wpa_key_mgmt);
+    conf.set_create_vap_value(vap_id, "wpa_pairwise", wpa_pairwise);
+    conf.set_create_vap_value(vap_id, "wpa_psk", wpa_psk);
+    conf.set_create_vap_value(vap_id, "ieee80211w", ieee80211w);
+    conf.set_create_vap_value(vap_id, "wpa_passphrase", wpa_passphrase);
+    conf.set_create_vap_value(vap_id, "disable_pmksa_caching", disable_pmksa_caching);
+    conf.set_create_vap_value(vap_id, "wpa_disable_eapol_key_retries",
+                              wpa_disable_eapol_key_retries);
+    return true;
+}
+
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////////// Implementation ///////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -671,153 +843,8 @@ bool ap_wlan_hal_nl80211::update_vap_credentials(
             break;
         }
 
-        // settings
-
-        // Hostapd "wpa" field.
-        // This field is a bit field that can be used to enable WPA (IEEE 802.11i/D3.0)
-        // and/or WPA2 (full IEEE 802.11i/RSN):
-        // bit0 = WPA
-        // bit1 = IEEE 802.11i/RSN (WPA2) (dot11RSNAEnabled)
-        int wpa = 0;
-
-        // Set of accepted key management algorithms (WPA-PSK, WPA-EAP, or both). The
-        // entries are separated with a space. WPA-PSK-SHA256 and WPA-EAP-SHA256 can be
-        // added to enable SHA256-based stronger algorithms.
-        // WPA-PSK = WPA-Personal / WPA2-Personal
-        std::string wpa_key_mgmt; // default to empty -> delete from hostapd config
-
-        // (dot11RSNAConfigPairwiseCiphersTable)
-        // Pairwise cipher for WPA (v1) (default: TKIP)
-        //  wpa_pairwise=TKIP CCMP
-        // Pairwise cipher for RSN/WPA2 (default: use wpa_pairwise value)
-        //  rsn_pairwise=CCMP
-        std::string wpa_pairwise; // default to empty -> delete from hostapd config
-
-        // WPA pre-shared keys for WPA-PSK. This can be either entered as a 256-bit
-        // secret in hex format (64 hex digits), wpa_psk, or as an ASCII passphrase
-        // (8..63 characters), wpa_passphrase.
-        std::string wpa_passphrase;
-        std::string wpa_psk;
-
-        // ieee80211w: Whether management frame protection (MFP) is enabled
-        // 0 = disabled (default)
-        // 1 = optional
-        // 2 = required
-        std::string ieee80211w;
-
-        // This parameter can be used to disable caching of PMKSA created through EAP
-        // authentication. RSN preauthentication may still end up using PMKSA caching if
-        // it is enabled (rsn_preauth=1).
-        // 0 = PMKSA caching enabled (default)
-        // 1 = PMKSA caching disabled
-        std::string disable_pmksa_caching;
-
-        // Opportunistic Key Caching (aka Proactive Key Caching)
-        // Allow PMK cache to be shared opportunistically among configured interfaces
-        // and BSSes (i.e., all configurations within a single hostapd process).
-        // 0 = disabled (default)
-        // 1 = enabled
-        std::string okc;
-
-        // This parameter can be used to disable retransmission of EAPOL-Key frames that
-        // are used to install keys (EAPOL-Key message 3/4 and group message 1/2). This
-        // is similar to setting wpa_group_update_count=1 and
-        std::string wpa_disable_eapol_key_retries;
-
-        // EasyMesh R1 only allows Open and WPA2 PSK auth&encryption methods.
-        // Quote: A Multi-AP Controller shall set the Authentication Type attribute
-        //        in M2 to indicate WPA2-Personal or Open System Authentication.
-        // bss_it.authentication_type is a bitfield, but we are not going
-        // to accept any combinations due to the above limitation.
-        if (bss_it.authentication_type == WSC::eWscAuth::WSC_AUTH_OPEN) {
-            wpa = 0x0;
-            if (bss_it.encryption_type != WSC::eWscEncr::WSC_ENCR_NONE) {
-                LOG(ERROR) << "Autoconfiguration: " << vap_id << " encryption set on open VAP";
-                abort = true;
-                break;
-            }
-            if (bss_it.network_key.length() > 0) {
-                LOG(ERROR) << "Autoconfiguration: " << vap_id << " network key set for open VAP";
-                abort = true;
-                break;
-            }
-        } else if (bss_it.authentication_type == WSC::eWscAuth::WSC_AUTH_WPA2PSK) {
-            wpa = 0x2;
-            wpa_key_mgmt.assign("WPA-PSK");
-            // Cipher must include AES for WPA2, TKIP is optional
-            if ((static_cast<uint16_t>(bss_it.encryption_type) &
-                 static_cast<uint16_t>(WSC::eWscEncr::WSC_ENCR_AES)) == 0) {
-                LOG(ERROR) << "Autoconfiguration:  " << vap_id << " CCMP(AES) is required for WPA2";
-                abort = true;
-                break;
-            }
-            if ((uint16_t(bss_it.encryption_type) & uint16_t(WSC::eWscEncr::WSC_ENCR_TKIP)) != 0) {
-                wpa_pairwise.assign("TKIP CCMP");
-            } else {
-                wpa_pairwise.assign("CCMP");
-            }
-            if (bss_it.network_key.length() < 8 || bss_it.network_key.length() > 64) {
-                LOG(ERROR) << "Autoconfiguration: " << vap_id << " invalid network key length "
-                           << bss_it.network_key.length();
-                abort = true;
-                break;
-            }
-            if (bss_it.network_key.length() < 64) {
-                wpa_passphrase.assign(bss_it.network_key);
-            } else {
-                wpa_psk.assign(bss_it.network_key);
-            }
-            ieee80211w.assign("0");
-            disable_pmksa_caching.assign("1");
-            okc.assign("0");
-            wpa_disable_eapol_key_retries.assign("0");
-        } else if (bss_it.authentication_type ==
-                   WSC::eWscAuth(WSC::eWscAuth::WSC_AUTH_WPA2PSK | WSC::eWscAuth::WSC_AUTH_SAE)) {
-            wpa = 0x2;
-            wpa_key_mgmt.assign("WPA-PSK SAE");
-
-            if (bss_it.encryption_type != WSC::eWscEncr::WSC_ENCR_AES) {
-                LOG(ERROR) << "Autoconfiguration:  " << vap_id << " CCMP(AES) is required for WPA3";
-                continue;
-            }
-            wpa_pairwise.assign("CCMP");
-
-            if (bss_it.network_key.length() < 8 || bss_it.network_key.length() > 64) {
-                LOG(ERROR) << "Autoconfiguration: " << vap_id << " invalid network key length "
-                           << bss_it.network_key.length();
-                continue;
-            }
-            wpa_passphrase.assign(bss_it.network_key);
-
-            ieee80211w.assign("2");
-            disable_pmksa_caching.assign("1");
-            okc.assign("1");
-            wpa_disable_eapol_key_retries.assign("0");
-        } else if (bss_it.authentication_type == WSC::eWscAuth::WSC_AUTH_SAE) {
-            wpa = 0x2;
-            wpa_key_mgmt.assign("SAE");
-
-            if (bss_it.encryption_type != WSC::eWscEncr::WSC_ENCR_AES) {
-                LOG(ERROR) << "Autoconfiguration:  " << vap_id << " CCMP(AES) is required for WPA3";
-                continue;
-            }
-            wpa_pairwise.assign("CCMP");
-
-            if (bss_it.network_key.length() < 8 || bss_it.network_key.length() > 64) {
-                LOG(ERROR) << "Autoconfiguration: " << vap_id << " invalid network key length "
-                           << bss_it.network_key.length();
-                continue;
-            }
-            wpa_passphrase.assign(bss_it.network_key);
-
-            ieee80211w.assign("2");
-            disable_pmksa_caching.assign("1");
-            okc.assign("1");
-            wpa_disable_eapol_key_retries.assign("0");
-        } else {
-            LOG(ERROR) << "Autoconfiguration: " << vap_id << " invalid authentication type: "
-                       << son::wireless_utils::wsc_to_bwl_authentication(
-                              bss_it.authentication_type);
+        if (!assign_auth_encr_parameters(conf, vap_id, bss_it)) {
+            LOG(ERROR) << "Failed to set the authentication/encryption parameters!";
             abort = true;
             break;
         }
@@ -861,17 +888,6 @@ bool ap_wlan_hal_nl80211::update_vap_credentials(
             conf.set_create_vap_value(vap_id, "multi_ap_backhaul_ssid", "");
             conf.set_create_vap_value(vap_id, "multi_ap_backhaul_wpa_passphrase", "");
         }
-
-        conf.set_create_vap_value(vap_id, "wpa", wpa);
-        conf.set_create_vap_value(vap_id, "okc", okc);
-        conf.set_create_vap_value(vap_id, "wpa_key_mgmt", wpa_key_mgmt);
-        conf.set_create_vap_value(vap_id, "wpa_pairwise", wpa_pairwise);
-        conf.set_create_vap_value(vap_id, "wpa_psk", wpa_psk);
-        conf.set_create_vap_value(vap_id, "ieee80211w", ieee80211w);
-        conf.set_create_vap_value(vap_id, "wpa_passphrase", wpa_passphrase);
-        conf.set_create_vap_value(vap_id, "disable_pmksa_caching", disable_pmksa_caching);
-        conf.set_create_vap_value(vap_id, "wpa_disable_eapol_key_retries",
-                                  wpa_disable_eapol_key_retries);
 
         // we always need to get the mgmt frames (assoc req) for capability reports:
         conf.set_create_vap_value(vap_id, "notify_mgmt_frames", "1");
