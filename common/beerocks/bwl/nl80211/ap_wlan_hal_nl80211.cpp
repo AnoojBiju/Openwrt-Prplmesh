@@ -1561,8 +1561,7 @@ bool ap_wlan_hal_nl80211::remove_bss(std::string &ifname)
 
 bool ap_wlan_hal_nl80211::add_key(const sKeyInfo &key_info)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
-    return false;
+    return m_nl80211_client->add_key(get_iface_name(), key_info);
 }
 
 } // namespace nl80211
