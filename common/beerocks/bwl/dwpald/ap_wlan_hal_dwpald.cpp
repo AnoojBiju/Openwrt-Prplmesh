@@ -3436,9 +3436,19 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
     }
     case Event::Interface_Connected_OK:
     case Event::Interface_Reconnected_OK: {
-        LOG(INFO) << "INTERFACE_RECONNECTED_OK or INTERFACE_CONNECTED_OK from intf " << ifname;
-        auto ret = update_conn_status(ifname);
+        std::vector<int> vap_id = {};
+        LOG(INFO) << "INTERFACE_RECONNECTED_OK or INTERFACE_CONNECTED_OK from " << ifname;
+        auto ret = update_conn_status(ifname, vap_id);
         LOG(INFO) << "Status update return value " << ret;
+
+        for (auto &vap_it : vap_id) {
+            auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sHOSTAP_ENABLED_NOTIFICATION));
+            auto msg      = reinterpret_cast<sHOSTAP_ENABLED_NOTIFICATION *>(msg_buff.get());
+            LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+            memset(msg_buff.get(), 0, sizeof(sHOSTAP_ENABLED_NOTIFICATION));
+            msg->vap_id = vap_it;
+            event_queue_push(event, msg_buff);
+        }
         break;
     }
     case Event::Interface_Disconnected: {
