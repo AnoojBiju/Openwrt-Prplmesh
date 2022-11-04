@@ -127,6 +127,7 @@ private:
     // include it in STA-CONNECTED:
     std::unordered_map<std::string, std::shared_ptr<sMGMT_FRAME_NOTIFICATION>>
         m_latest_assoc_frame = {};
+    uint16_t m_aid           = 2007; // AIDs must be in the range 1-2007
 };
 
 } // namespace nl80211
