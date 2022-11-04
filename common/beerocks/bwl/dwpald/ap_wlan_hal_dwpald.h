@@ -111,6 +111,7 @@ public:
     virtual bool add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
                          std::string &bridge, bool vbss) override;
     virtual bool remove_bss(std::string &ifname) override;
+    virtual bool add_key(const sKeyInfo &key_info) override;
 
     // Protected methods:
 protected:

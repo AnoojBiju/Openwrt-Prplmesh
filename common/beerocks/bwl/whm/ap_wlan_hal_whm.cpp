@@ -1021,6 +1021,12 @@ bool ap_wlan_hal_whm::remove_bss(std::string &ifname)
     return false;
 }
 
+bool ap_wlan_hal_whm::add_key(const sKeyInfo &key_info)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
 } // namespace whm
 
 std::shared_ptr<ap_wlan_hal> ap_wlan_hal_create(std::string iface_name, bwl::hal_conf_t hal_conf,

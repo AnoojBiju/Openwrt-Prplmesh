@@ -11,6 +11,7 @@
 
 #include "base_wlan_hal.h"
 #include <bcl/beerocks_string_utils.h>
+#include <tlvf/AssociationRequestFrame/AssocReqFrame.h>
 
 namespace bwl {
 
@@ -445,6 +446,15 @@ public:
      * @return true on success, false otherwise.
      */
     virtual bool remove_bss(std::string &ifname) = 0;
+
+    /**
+     * @brief Add keys for a station..
+     *
+     * @param key_info The information about the key to add.
+     *
+     * @return true on success, false otherwise.
+     */
+    virtual bool add_key(const sKeyInfo &key_info) = 0;
 
 private:
     static const int frame_body_idx = (sizeof(s80211MgmtFrame::sHeader) * 2);
