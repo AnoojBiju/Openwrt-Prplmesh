@@ -253,7 +253,25 @@ public:
          */
         bool he_supported = false;
 
-        // TODO: add HE capability, MCS set and whatever else is required to report HE capabilities
+        /**
+	 * Information obtained with NL80211_BAND_ATTR_IFTYPE_DATA command through a NL80211 socket.
+	 * See nl80211_band_iftype_attr_* in <linux/nl80211.h> for a description of each field.
+	 *
+	 * HE capabilities are stored in structure and required bits are set in he_capability
+	 * if it is available in NL80211_BAND_ATTR_IFTYPE_DATA
+	 */
+        uint16_t he_capability = 0;
+        struct ieee80211_he_capabilities {
+            uint8_t he_mac_capab_info[6];
+            uint8_t he_phy_capab_info[11];
+            /**
+	     * Followed by 4, 8, or 12 octets of Supported HE-MCS And NSS Set field
+	     * and optional variable length PPE Thresholds field. PPE thresholds size can be
+	     * a max of 25 octets : 7 bits HDR + (8 NSS * 4 RU * 6 bits) = 199 bits => 25 octets.
+	     */
+            uint8_t he_mcs_nss_set[12];
+            uint8_t optional[25];
+        } he;
 
         /**
          * The Channels that are supported in this band.
