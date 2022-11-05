@@ -41,6 +41,7 @@
 
 #include <linux/if_ether.h>
 #include <linux/nl80211.h>
+#include <linux/version.h>
 #include <net/if.h>
 #include <netlink/genl/genl.h>
 
@@ -268,6 +269,10 @@ bool nl80211_client_impl::get_radio_info(const std::string &interface_name, radi
                               rem_band)
             {
                 struct nlattr *tb_band[NL80211_BAND_ATTR_MAX + 1];
+#if LINUX_VERSION_CODE > KERNEL_VERSION(4, 19, 1)
+                int rem_iftype;
+                struct nlattr *tb_iftype[NL80211_BAND_IFTYPE_ATTR_MAX + 1];
+#endif
 
                 if (last_band != nl_band->nla_type) {
                     width_40    = false;
@@ -347,18 +352,67 @@ bool nl80211_client_impl::get_radio_info(const std::string &interface_name, radi
                     }
                 }
 
-                /**
-                 * TODO: add HE support
-                 *
-                 * Inside NL80211_BAND_ATTR_IFTYPE_DATA, if HE is supported, there is
-                 * NL80211_BAND_IFTYPE_ATTR_HE_CAP_MAC, NL80211_BAND_IFTYPE_ATTR_HE_CAP_PHY,
-                 * NL80211_BAND_IFTYPE_ATTR_HE_CAP_MCS_SET, NL80211_BAND_IFTYPE_ATTR_HE_CAP_PPE.
-                 *
-                 * If RAX40 doesn't support HE, the attribute will be missing. In that case, we
-                 * can just add a TODO for HE support for the moment. It doesn't make sense adding
-                 * it if we can't test it.
-                 */
-                band.he_supported = false;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 1)
+                if (tb_band[NL80211_BAND_ATTR_IFTYPE_DATA]) {
+                    band.he_supported              = true;
+                    const struct nlattr *nl_he_cap = tb_band[NL80211_BAND_ATTR_IFTYPE_DATA];
+                    nla_for_each_attr(nl_band, static_cast<struct nlattr *>(nla_data(nl_he_cap)),
+                                      nla_len(nl_he_cap), rem_iftype)
+                    {
+                        nla_parse(tb_iftype, NL80211_BAND_IFTYPE_ATTR_MAX,
+                                  static_cast<nlattr *>(nla_data(nl_band)), nla_len(nl_band), NULL);
+
+                        if (tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_MAC]) {
+                            memcpy(band.he.he_mac_capab_info,
+                                   nla_data(tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_MAC]),
+                                   nla_len(tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_MAC]));
+                        }
+
+                        if (tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_PHY]) {
+                            memcpy(band.he.he_phy_capab_info,
+                                   nla_data(tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_PHY]),
+                                   nla_len(tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_PHY]));
+
+                            /**
+			     * check whether the 80_plus_80 and 160 mhz are supported.
+			     * if both are supported set 8th and 9th bit.
+			     * if only 160 supported set 8th.
+			     */
+                            switch ((band.he.he_phy_capab_info[0] >> 3) & 3) {
+                            case 3:
+                                band.he_capability = band.he_capability | (1 << 8);
+                                band.he_capability = band.he_capability | (1 << 9);
+                                break;
+                            case 1:
+                                band.he_capability = band.he_capability | (1 << 8);
+                                break;
+                            }
+
+                            if (band.he.he_phy_capab_info[3] >> 7) {
+                                //set 7th bit if su_beamformer is supported.
+                                band.he_capability = band.he_capability | (1 << 7);
+                            }
+
+                            if (band.he.he_phy_capab_info[4] & 2) {
+                                //set 6th bit if mu_beamformer is supported.
+                                band.he_capability = band.he_capability | (1 << 6);
+                            }
+                        }
+
+                        if (tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_MCS_SET]) {
+                            memcpy(band.he.he_mcs_nss_set,
+                                   nla_data(tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_MCS_SET]),
+                                   nla_len(tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_MCS_SET]));
+                        }
+
+                        if (tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_PPE]) {
+                            memcpy(band.he.optional,
+                                   nla_data(tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_PPE]),
+                                   nla_len(tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_PPE]));
+                        }
+                    }
+                }
+#endif
 
                 if (!tb_band[NL80211_BAND_ATTR_FREQS]) {
                     return;
