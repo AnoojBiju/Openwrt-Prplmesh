@@ -12,6 +12,7 @@
 #include "optimal_path_task.h"
 
 #include <bcl/beerocks_utils.h>
+#include <bcl/beerocks_wifi_channel.h>
 #include <bcl/network/network_utils.h>
 #include <easylogging++.h>
 
@@ -147,9 +148,13 @@ void association_handling_task::work()
             LOG(ERROR) << "Failed building ACTION_CONTROL_CLIENT_BEACON_11K_REQUEST message!";
             return;
         }
+        auto wifi_channel = database.get_node_wifi_channel(bssid);
+        if (wifi_channel.is_empty()) {
+            LOG(WARNING) << "empty wifi channel of " << bssid << " in DB";
+        }
         measurement_request->params().measurement_mode =
             beerocks::MEASURE_MODE_ACTIVE; // son::eMeasurementMode11K "passive"/"active"/"table"
-        measurement_request->params().channel = database.get_node_channel(bssid);
+        measurement_request->params().channel = wifi_channel.get_channel();
         measurement_request->params().op_class =
             database.get_hostap_operating_class(tlvf::mac_from_string(bssid));
         measurement_request->params().rand_ival = beerocks::
@@ -218,10 +223,14 @@ void association_handling_task::work()
                 << "Failed building ACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_REQUEST message!";
             return;
         }
+        auto hostap_wifi_channel = database.get_node_wifi_channel(hostap_mac);
+        if (hostap_wifi_channel.is_empty()) {
+            LOG(WARNING) << "empty wifi channel of " << hostap_mac << " in DB";
+        }
         measurement_request->params().mac       = tlvf::mac_from_string(sta_mac);
         measurement_request->params().ipv4      = network_utils::ipv4_from_string(ipv4);
-        measurement_request->params().channel   = database.get_node_channel(hostap_mac);
-        measurement_request->params().bandwidth = database.get_node_bw(hostap_mac);
+        measurement_request->params().channel   = hostap_wifi_channel.get_channel();
+        measurement_request->params().bandwidth = hostap_wifi_channel.get_bandwidth();
         measurement_request->params().cross     = 0;
 
         const auto parent_radio = database.get_node_parent_radio(hostap_mac);

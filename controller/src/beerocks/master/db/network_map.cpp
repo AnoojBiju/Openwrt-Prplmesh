@@ -9,6 +9,7 @@
 #include "network_map.h"
 
 #include <bcl/beerocks_utils.h>
+#include <bcl/beerocks_wifi_channel.h>
 #include <bcl/network/network_utils.h>
 #include <easylogging++.h>
 
@@ -226,15 +227,21 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
 
     if (n_type == beerocks::TYPE_IRE &&
         database.is_node_wireless(database.get_node_parent(n->mac))) {
-        auto parent_backhaul_mac = database.get_node_parent_backhaul(n->mac);
-        node->channel            = database.get_node_channel(parent_backhaul_mac);
-        node->bw                 = database.get_node_bw(parent_backhaul_mac);
-        node->channel_ext_above_secondary =
-            database.get_node_channel_ext_above_secondary(parent_backhaul_mac);
+        auto parent_backhaul_mac          = database.get_node_parent_backhaul(n->mac);
+        auto parent_backhaul_wifi_channel = database.get_node_wifi_channel(parent_backhaul_mac);
+        if (parent_backhaul_wifi_channel.is_empty()) {
+            LOG(WARNING) << "empty wifi channel of " << parent_backhaul_mac;
+        }
+        node->channel                     = parent_backhaul_wifi_channel.get_channel();
+        node->bw                          = parent_backhaul_wifi_channel.get_bandwidth();
+        node->channel_ext_above_secondary = parent_backhaul_wifi_channel.get_ext_above_secondary();
     } else {
-        node->channel                     = n->channel;
-        node->bw                          = n->bandwidth;
-        node->channel_ext_above_secondary = n->channel_ext_above_secondary;
+        if (n->wifi_channel.is_empty()) {
+            LOG(WARNING) << "wifi channel is empty";
+        }
+        node->channel                     = n->wifi_channel.get_channel();
+        node->bw                          = n->wifi_channel.get_bandwidth();
+        node->channel_ext_above_secondary = n->wifi_channel.get_ext_above_secondary();
     }
 
     tlvf::mac_from_string(node->mac, n->mac); // if IRE->bridge, else if STA->sta mac
@@ -324,11 +331,12 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
                     node->data.gw_ire.radio[i].vendor = BML_WLAN_VENDOR_UNKNOWN;
                 }
 
-                node->data.gw_ire.radio[i].channel       = !c->channel ? 255 : c->channel;
+                node->data.gw_ire.radio[i].channel =
+                    (c->wifi_channel.is_empty()) ? 255 : c->wifi_channel.get_channel();
                 node->data.gw_ire.radio[i].cac_completed = r->cac_completed;
-                node->data.gw_ire.radio[i].bw            = c->bandwidth;
+                node->data.gw_ire.radio[i].bw            = c->wifi_channel.get_bandwidth();
                 node->data.gw_ire.radio[i].channel_ext_above_secondary =
-                    c->channel_ext_above_secondary;
+                    c->wifi_channel.get_ext_above_secondary();
                 node->data.gw_ire.radio[i].ap_active = r->active;
 
                 // Copy the radio identifier string

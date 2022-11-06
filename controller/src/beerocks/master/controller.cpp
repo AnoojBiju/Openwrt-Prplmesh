@@ -31,6 +31,7 @@
 #include <bcl/beerocks_backport.h>
 #include <bcl/beerocks_utils.h>
 #include <bcl/beerocks_version.h>
+#include <bcl/beerocks_wifi_channel.h>
 #include <bcl/network/sockets.h>
 #include <bcl/son/son_wireless_utils.h>
 #include <bcl/transaction.h>
@@ -3708,11 +3709,16 @@ bool Controller::handle_cmdu_control_message(
             LOG(ERROR) << "addClass ACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_CMD_RESPONSE failed";
             return false;
         }
-        std::string client_mac = tlvf::mac_to_string(response->mac());
-        int channel            = database.get_node_channel(client_mac);
+        std::string client_mac   = tlvf::mac_to_string(response->mac());
+        auto client_wifi_channel = database.get_node_wifi_channel(client_mac);
+        if (client_wifi_channel.is_empty()) {
+            LOG(WARNING) << "empty wifi channel of " << client_mac << " in DB";
+        }
         LOG(DEBUG) << "ACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_CMD_RESPONSE client_mac="
                    << client_mac << " received from hostap " << radio_mac
-                   << " channel=" << int(channel) << " ïd = " << int(beerocks_header->id());
+                   << " channel=" << int(client_wifi_channel.get_channel())
+                   << " Frequency Type: " << client_wifi_channel.get_freq_type()
+                   << " ïd = " << int(beerocks_header->id());
         //calculating response delay for associate client ap and cross ap's
         database.set_measurement_recv_delta(radio_mac_str);
         break;
