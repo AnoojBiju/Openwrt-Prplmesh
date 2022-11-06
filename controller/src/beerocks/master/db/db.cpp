@@ -10,6 +10,7 @@
 
 #include "../tasks/agent_monitoring_task.h"
 #include <bcl/beerocks_utils.h>
+#include <bcl/beerocks_wifi_channel.h>
 #include <bcl/network/sockets.h>
 #include <bcl/son/son_wireless_utils.h>
 #include <beerocks/tlvf/beerocks_message.h>
@@ -5099,6 +5100,137 @@ bool db::set_node_channel_bw(const sMacAddr &mac, int channel, beerocks::eWiFiBa
         child->channel                     = channel;
         child->bandwidth                   = bw;
         child->channel_ext_above_secondary = channel_ext_above_secondary;
+    }
+    return true;
+}
+
+beerocks::WifiChannel db::get_node_wifi_channel(const std::string &mac)
+{
+    auto n = get_node(mac);
+    if (!n) {
+        return {};
+    }
+    return n->wifi_channel;
+}
+
+bool db::set_node_wifi_channel(const sMacAddr &mac, const beerocks::WifiChannel &wifi_channel)
+{
+    std::shared_ptr<node> n = get_node(mac);
+    if (!n) {
+        LOG(ERROR) << "node " << mac << " does not exist ";
+        return false;
+    }
+    if (n->get_type() == beerocks::TYPE_SLAVE) {
+        if (n->hostap != nullptr) {
+            n->hostap->channel_ext_above_primary = wifi_channel.get_ext_above_primary();
+            n->hostap->vht_center_frequency      = wifi_channel.get_center_frequency();
+            auto is_dfs                          = wifi_channel.is_dfs_channel();
+            set_hostap_is_dfs(mac, is_dfs);
+
+            auto channel = wifi_channel.get_channel();
+            //TODO: check 6ghz operating channels
+            if (channel >= 1 && channel <= 13) {
+                n->hostap->operating_class = 81;
+            } else if (channel == 14) {
+                n->hostap->operating_class = 82;
+            } else if (channel >= 36 && channel <= 48) {
+                n->hostap->operating_class = 115;
+            } else if (channel >= 52 && channel <= 64) {
+                n->hostap->operating_class = 118;
+            } else if (channel >= 100 && channel <= 140) {
+                n->hostap->operating_class = 121;
+            } else if (channel >= 149 && channel <= 169) {
+                n->hostap->operating_class = 125;
+            } else {
+                LOG(ERROR) << "Unsupported Operating Class for channel=" << channel;
+            }
+        } else {
+            LOG(ERROR) << __FUNCTION__ << " - node " << mac << " is null!";
+            return false;
+        }
+    }
+
+    LOG(INFO) << "set node " << mac;
+    LOG(INFO) << "previous wifiChannel node: " << wifi_channel;
+    n->wifi_channel = wifi_channel;
+
+    LOG(INFO) << "current wifiChannel node: " << wifi_channel;
+
+    switch (n->wifi_channel.get_freq_type()) {
+    case eFreqType::FREQ_24G: {
+        n->supports_24ghz             = true;
+        n->failed_24ghz_steer_attemps = 0;
+    } break;
+    case eFreqType::FREQ_5G: {
+        n->supports_5ghz             = true;
+        n->failed_5ghz_steer_attemps = 0;
+    } break;
+    case eFreqType::FREQ_6G: {
+        LOG(WARNING) << "node " << mac << " of 6ghz steer attempts not implemented yet";
+    } break;
+    default:
+        LOG(ERROR) << "frequency type unknown, channel=" << n->wifi_channel.get_channel();
+        break;
+    }
+
+    auto children = get_node_children(n);
+    for (auto child : children) {
+        child->wifi_channel = wifi_channel;
+    }
+    return true;
+}
+
+bool db::update_node_wifi_channel_bw(const sMacAddr &mac, beerocks::eWiFiBandwidth bw)
+{
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        return false;
+    }
+    if (n->wifi_channel.get_freq_type() == eFreqType::FREQ_UNKNOWN) {
+        LOG(ERROR) << "frequency type of node " << mac
+                   << " is unknown, channel=" << int(n->wifi_channel.get_channel());
+        return false;
+    }
+
+    if (bw == eWiFiBandwidth::BANDWIDTH_UNKNOWN) {
+        LOG(ERROR) << "the new bandwidth of node " << mac << " can't be unknown";
+        return false;
+    }
+
+    if (bw == n->wifi_channel.get_bandwidth()) {
+        return true;
+    }
+    if (n->get_type() == beerocks::TYPE_SLAVE) {
+        if (n->hostap != nullptr) {
+            //calculate new vht center freq with the new channel width
+            n->hostap->vht_center_frequency = wireless_utils::channel_to_vht_center_freq(
+                n->wifi_channel.get_channel(), n->wifi_channel.get_freq_type(), bw,
+                n->wifi_channel.get_ext_above_secondary());
+        } else {
+            LOG(ERROR) << __FUNCTION__ << " - node " << mac << " is null!";
+            return false;
+        }
+    }
+
+    if (bw == eWiFiBandwidth::BANDWIDTH_MAX) {
+        LOG(INFO) << "update wifiChannel node " << mac << " bw from "
+                  << beerocks::utils::convert_bandwidth_to_int(n->wifi_channel.get_bandwidth())
+                  << "MHz to MAX";
+    } else {
+        LOG(INFO) << "update wifiChannel node " << mac << " bw from "
+                  << beerocks::utils::convert_bandwidth_to_int(n->wifi_channel.get_bandwidth())
+                  << " to " << bw;
+    }
+
+    eWiFiBandwidth prev_bw = n->wifi_channel.get_bandwidth();
+    n->wifi_channel.set_bandwidth(bw);
+    LOG(INFO) << "updating node " << mac << " bandwidth from "
+              << beerocks::utils::convert_bandwidth_to_int(prev_bw) << "MHz to "
+              << beerocks::utils::convert_bandwidth_to_int(bw) << "MHz";
+    auto children = get_node_children(n);
+    for (auto child : children) {
+        child->wifi_channel.set_bandwidth(bw);
     }
     return true;
 }

@@ -15,6 +15,7 @@
 
 #include <bcl/beerocks_defines.h>
 #include <bcl/beerocks_logging.h>
+#include <bcl/beerocks_wifi_channel.h>
 #include <bcl/network/network_utils.h>
 #include <bcl/son/son_wireless_utils.h>
 #include <bpl/bpl_board.h>
@@ -1894,6 +1895,41 @@ public:
     bool set_node_channel_bw(const sMacAddr &mac, int channel, beerocks::eWiFiBandwidth bw,
                              bool channel_ext_above_secondary, int8_t channel_ext_above_primary,
                              uint16_t vht_center_frequency);
+
+    /**
+     * @brief Search a node that is identified by the mac
+     * and get a copy of the node's wifiChannel object
+     * @param mac the identifier of the node
+     * @return if the node is found, return a copy of node's wifiChannel object.
+     * otherwise, return an empty wifiChannel object
+     */
+    beerocks::WifiChannel get_node_wifi_channel(const std::string &mac);
+
+    /**
+     * @brief Set the node and its children's wifiChannel object
+     * @param mac identifier of the node
+     * @param wifi_channel wifiChannel those values will be copied to the wifiChannel
+     * of the DB's node.
+     * @return true if the node that is identified by the mac was found and setting has succeed
+     * @return false in the following cases:
+     *      1. the node that is identified by the mac was not found
+     *      2. the node's type is TYPE_SLAVE and the node's hostap object is nullptr
+     */
+    bool set_node_wifi_channel(const sMacAddr &mac, const beerocks::WifiChannel &wifi_channel);
+
+    /**
+     * @brief update the node and its children's wifiChannel objects
+     * with the new bandwidth
+     * @param mac identifier of the node
+     * @param bw the new bandwidth that will be assigned to the node's wifiChannel object
+     * @return true if the node that is identified by the mac was found and setting has succeed
+     * @return false in the following cases:
+     *      1. the node that is identified by the mac was not found
+     *      2. if the bandwidth is unknown,
+     *      3. the node's type is TYPE_SLAVE and the node's hostap object is nullptr
+     */
+    bool update_node_wifi_channel_bw(const sMacAddr &mac, beerocks::eWiFiBandwidth bw);
+
     bool update_node_bw(const sMacAddr &mac, beerocks::eWiFiBandwidth bw);
     beerocks::eWiFiBandwidth get_node_bw(const std::string &mac);
     bool get_hostap_channel_ext_above_primary(const sMacAddr &hostap_mac);
