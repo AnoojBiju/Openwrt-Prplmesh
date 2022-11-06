@@ -973,13 +973,21 @@ bool db::is_hostap_active(const sMacAddr &mac)
 
 bool db::is_ap_out_of_band(const std::string &mac, const std::string &sta_mac)
 {
-    bool client_on_5ghz =
-        (wireless_utils::which_freq(get_node_channel(sta_mac)) == eFreqType::FREQ_5G);
+    auto sta_wifi_channel = get_node_wifi_channel(sta_mac);
+    if (sta_wifi_channel.is_empty()) {
+        LOG(ERROR) << "empty wifi channel of " << sta_mac << " in DB";
+        return false;
+    }
+    bool client_on_5ghz = (sta_wifi_channel.get_freq_type() == eFreqType::FREQ_5G);
 
-    if (((wireless_utils::which_freq(get_node_channel(mac)) == eFreqType::FREQ_24G) &&
-         client_on_5ghz) ||
-        ((wireless_utils::which_freq(get_node_channel(mac)) == eFreqType::FREQ_5G) &&
-         (!client_on_5ghz))) {
+    auto wifi_channel = get_node_wifi_channel(mac);
+    if (wifi_channel.is_empty()) {
+        LOG(ERROR) << "empty wifi channel of " << mac << " in DB";
+        return false;
+    }
+
+    if (((wifi_channel.get_freq_type() == eFreqType::FREQ_24G) && client_on_5ghz) ||
+        ((wifi_channel.get_freq_type() == eFreqType::FREQ_5G) && (!client_on_5ghz))) {
         return true;
     }
     return false;
@@ -2159,10 +2167,8 @@ bool db::is_node_24ghz(const std::string &mac)
         LOG(ERROR) << "node " << mac << " does not exist! return false as default";
         return false;
     }
-    if (wireless_utils::which_freq(n->channel) == eFreqType::FREQ_24G) {
-        return true;
-    }
-    return false;
+
+    return (n->wifi_channel.get_freq_type() == eFreqType::FREQ_24G);
 }
 
 bool db::is_node_5ghz(const std::string &mac)
@@ -2172,10 +2178,8 @@ bool db::is_node_5ghz(const std::string &mac)
         LOG(ERROR) << "node " << mac << " does not exist! return false as default";
         return false;
     }
-    if (wireless_utils::which_freq(n->channel) == eFreqType::FREQ_5G) {
-        return true;
-    }
-    return false;
+
+    return (n->wifi_channel.get_freq_type() == eFreqType::FREQ_5G);
 }
 
 bool db::update_node_failed_5ghz_steer_attempt(const std::string &mac)
@@ -4096,8 +4100,13 @@ bool db::clear_client_persistent_db(const sMacAddr &mac)
 
 bool db::is_hostap_on_client_selected_bands(const sMacAddr &client_mac, const sMacAddr &hostap)
 {
-    auto hostap_band = wireless_utils::which_freq(get_node_channel(tlvf::mac_to_string(hostap)));
-    auto client      = get_station(client_mac);
+    auto hostap_wifi_channel = get_node_wifi_channel(tlvf::mac_to_string(hostap));
+    if (hostap_wifi_channel.is_empty()) {
+        LOG(ERROR) << "empty wifi channel of " << tlvf::mac_to_string(hostap) << " in DB";
+        return false;
+    }
+
+    auto client = get_station(client_mac);
     if (!client) {
         LOG(WARNING) << "client " << client_mac << " not found";
         return false;
@@ -4109,13 +4118,14 @@ bool db::is_hostap_on_client_selected_bands(const sMacAddr &client_mac, const sM
         return false;
     }
 
-    switch (hostap_band) {
+    auto freq_type = hostap_wifi_channel.get_freq_type();
+    switch (freq_type) {
     case beerocks::eFreqType::FREQ_24G:
         return (selected_bands & eClientSelectedBands::eSelectedBands_24G);
     case beerocks::eFreqType::FREQ_5G:
         return (selected_bands & eClientSelectedBands::eSelectedBands_5G);
     default:
-        LOG(WARNING) << "hostap band " << hostap_band << " is not supported by client";
+        LOG(WARNING) << "hostap band " << freq_type << " is not supported by client";
         return false;
     }
 }

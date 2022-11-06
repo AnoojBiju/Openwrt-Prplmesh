@@ -11,6 +11,7 @@
 #include "../son_actions.h"
 #include "bml_task.h"
 
+#include <bcl/beerocks_wifi_channel.h>
 #include <beerocks/tlvf/beerocks_message_1905_vs.h>
 #include <ctime>
 #include <easylogging++.h>
@@ -193,6 +194,11 @@ void btm_request_task::steer_sta()
         return;
     }
 
+    auto target_wifi_channel = m_database.get_node_wifi_channel(m_target_bssid);
+    if (target_wifi_channel.is_empty()) {
+        LOG(WARNING) << "empty wifi channel of " << m_target_bssid << "in DB";
+    }
+
     steering_request_tlv->request_flags().request_mode =
         wfa_map::tlvSteeringRequest::REQUEST_IS_A_STEERING_MANDATE_TO_TRIGGER_STEERING;
     steering_request_tlv->request_flags().btm_disassociation_imminent_bit = m_disassoc_imminent;
@@ -210,7 +216,7 @@ void btm_request_task::steer_sta()
     std::get<1>(bssid_list).target_bssid = tlvf::mac_from_string(m_target_bssid);
     std::get<1>(bssid_list).target_bss_operating_class =
         m_database.get_hostap_operating_class(tlvf::mac_from_string(m_target_bssid));
-    std::get<1>(bssid_list).target_bss_channel_number = m_database.get_node_channel(m_target_bssid);
+    std::get<1>(bssid_list).target_bss_channel_number = target_wifi_channel.get_channel();
 
     auto source_agent = m_database.get_agent_by_bssid(tlvf::mac_from_string(m_original_bssid));
 

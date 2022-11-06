@@ -15,6 +15,7 @@
 #include "client_steering_task.h"
 #include "dhcp_task.h"
 
+#include <bcl/beerocks_wifi_channel.h>
 #include <beerocks/tlvf/beerocks_message_1905_vs.h>
 #include <easylogging++.h>
 #include <tlvf/ieee_1905_1/s802_11SpecificInformation.h>
@@ -637,16 +638,21 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
 
         LOG(INFO) << "client connected, mac=" << client_mac_str << ", bssid=" << bssid_str;
 
-        auto bss_bw    = database.get_node_bw(bssid_str);
-        auto client_bw = bss_bw;
+        auto wifi_channel = database.get_node_wifi_channel(bssid_str);
+        if (wifi_channel.is_empty()) {
+            LOG(WARNING) << "empty wifi channel of " << bssid_str << " is empty";
+        }
+        auto bss_bw = wifi_channel.get_bandwidth();
+
+        auto client_bw = wifi_channel.get_bandwidth();
         if (vs_tlv) {
             if (son::wireless_utils::get_station_max_supported_bw(vs_tlv->capabilities(),
                                                                   client_bw)) {
                 client_bw = std::min(client_bw, bss_bw);
             }
         }
-        database.set_node_channel_bw(client_mac, database.get_node_channel(bssid_str), client_bw,
-                                     database.get_node_channel_ext_above_secondary(bssid_str), 0,
+        database.set_node_channel_bw(client_mac, wifi_channel.get_channel(), client_bw,
+                                     wifi_channel.get_ext_above_secondary(), 0,
                                      database.get_hostap_vht_center_frequency(bssid));
 
         // Note: The Database node stats and the Datamodels' stats are not the same.
