@@ -11,6 +11,7 @@
 
 #include "../tasks/task.h"
 #include "interface.h"
+#include <bcl/beerocks_wifi_channel.h>
 #include <bcl/network/network_utils.h>
 #include <tlvf/common/sMacAddr.h>
 #include <tlvf/ieee_1905_1/tlvReceiverLinkMetric.h>
@@ -58,6 +59,8 @@ public:
     std::string parent_mac;          // hostap
     std::string dm_path;             // data model path without dot in the end
     std::string previous_parent_mac; //hostap
+
+    beerocks::WifiChannel wifi_channel;
 
     std::string ipv4;
     std::string manufacturer;
