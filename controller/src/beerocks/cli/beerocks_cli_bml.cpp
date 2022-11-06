@@ -32,6 +32,7 @@ static void fill_conn_map_node(
     n->state                       = node->state;
     n->channel                     = node->channel;
     n->bw                          = node->bw;
+    n->freq_type                   = node->freq_type;
     n->channel_ext_above_secondary = node->channel_ext_above_secondary;
     n->rx_rssi                     = node->rx_rssi;
     n->mac                         = tlvf::mac_to_string(node->mac);
@@ -50,6 +51,7 @@ static void fill_conn_map_node(
                 r->channel       = node->data.gw_ire.radio[i].channel;
                 r->cac_completed = node->data.gw_ire.radio[i].cac_completed;
                 r->bw            = node->data.gw_ire.radio[i].bw;
+                r->freq_type     = node->data.gw_ire.radio[i].freq_type;
                 r->channel_ext_above_secondary =
                     node->data.gw_ire.radio[i].channel_ext_above_secondary;
                 r->radio_identifier =
@@ -192,8 +194,9 @@ static void bml_utils_dump_conn_map(
                    << utils::convert_channel_ext_above_to_string(
                           radio->channel_ext_above_secondary, (beerocks::eWiFiBandwidth)radio->bw)
                    << ", freq: "
-                   << std::to_string(son::wireless_utils::channel_to_freq(radio->channel)) << "MHz"
-                   << std::endl;
+                   << std::to_string(son::wireless_utils::channel_to_freq(
+                          radio->channel, static_cast<beerocks::eFreqType>(radio->freq_type)))
+                   << "MHz" << std::endl;
 
                 // VAP
                 ind_inc(ind_str);

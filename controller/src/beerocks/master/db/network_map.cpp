@@ -234,6 +234,7 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
         }
         node->channel                     = parent_backhaul_wifi_channel.get_channel();
         node->bw                          = parent_backhaul_wifi_channel.get_bandwidth();
+        node->freq_type                   = parent_backhaul_wifi_channel.get_freq_type();
         node->channel_ext_above_secondary = parent_backhaul_wifi_channel.get_ext_above_secondary();
     } else {
         if (n->wifi_channel.is_empty()) {
@@ -241,6 +242,7 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
         }
         node->channel                     = n->wifi_channel.get_channel();
         node->bw                          = n->wifi_channel.get_bandwidth();
+        node->freq_type                   = n->wifi_channel.get_freq_type();
         node->channel_ext_above_secondary = n->wifi_channel.get_ext_above_secondary();
     }
 
@@ -335,6 +337,7 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
                     (c->wifi_channel.is_empty()) ? 255 : c->wifi_channel.get_channel();
                 node->data.gw_ire.radio[i].cac_completed = r->cac_completed;
                 node->data.gw_ire.radio[i].bw            = c->wifi_channel.get_bandwidth();
+                node->data.gw_ire.radio[i].freq_type     = c->wifi_channel.get_freq_type();
                 node->data.gw_ire.radio[i].channel_ext_above_secondary =
                     c->wifi_channel.get_ext_above_secondary();
                 node->data.gw_ire.radio[i].ap_active = r->active;

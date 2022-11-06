@@ -27,6 +27,7 @@ public:
         uint8_t state;
         uint8_t channel;
         uint8_t bw;
+        uint8_t freq_type;
         uint8_t channel_ext_above_secondary;
         int8_t rx_rssi;
         std::string mac;
@@ -41,6 +42,7 @@ public:
                 uint8_t channel;
                 uint8_t cac_completed;
                 uint8_t bw;
+                uint8_t freq_type;
                 uint8_t channel_ext_above_secondary;
                 uint8_t ch_load;
                 std::string radio_identifier;
