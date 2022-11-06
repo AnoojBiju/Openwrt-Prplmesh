@@ -1,5 +1,6 @@
 #include "media_type.h"
 
+#include <bcl/beerocks_wifi_channel.h>
 #include <bcl/network/network_utils.h>
 
 #include "../agent_db.h"
@@ -96,8 +97,9 @@ bool MediaType::get_media_type(const std::string &interface_name,
 
         auto radio = db->radio(interface_name);
         if (radio) {
-            media_type = get_802_11_media_type(radio->freq_type, radio->max_supported_bw);
-            result     = true;
+            media_type =
+                get_802_11_media_type(radio->wifi_channel.get_freq_type(), radio->max_supported_bw);
+            result = true;
         }
 
     } else if (ieee1905_1::eMediaTypeGroup::IEEE_1901 == media_type_group) {

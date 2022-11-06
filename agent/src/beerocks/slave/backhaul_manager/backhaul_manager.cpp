@@ -21,6 +21,7 @@
 #include <bcl/beerocks_timer_manager_impl.h>
 #include <bcl/beerocks_ucc_server_factory.h>
 #include <bcl/beerocks_utils.h>
+#include <bcl/beerocks_wifi_channel.h>
 #include <bcl/son/son_wireless_utils.h>
 #include <bcl/transaction.h>
 #include <btl/broker_client_factory_factory.h>
@@ -771,7 +772,8 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
                 }
 
                 // Override backhaul_preferred_radio_band if UCC set it
-                db->device_conf.back_radio.backhaul_preferred_radio_band = selected_ruid->freq_type;
+                db->device_conf.back_radio.backhaul_preferred_radio_band =
+                    selected_ruid->wifi_channel.get_freq_type();
             }
 
             // Mark the connection as WIRELESS
@@ -1148,7 +1150,8 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
                 if (!radio) {
                     continue;
                 }
-                if (db->device_conf.back_radio.backhaul_preferred_radio_band == radio->freq_type) {
+                if (db->device_conf.back_radio.backhaul_preferred_radio_band ==
+                    radio->wifi_channel.get_freq_type()) {
                     preferred_band_is_available = true;
                 }
             }
@@ -1176,7 +1179,8 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
             if (preferred_band_is_available &&
                 db->device_conf.back_radio.backhaul_preferred_radio_band !=
                     beerocks::eFreqType::FREQ_AUTO &&
-                db->device_conf.back_radio.backhaul_preferred_radio_band != radio->freq_type) {
+                db->device_conf.back_radio.backhaul_preferred_radio_band !=
+                    radio->wifi_channel.get_freq_type()) {
                 LOG(DEBUG) << "slave iface=" << radios_info->sta_iface
                            << " is not of the preferred backhaul band";
                 continue;
@@ -2699,7 +2703,7 @@ std::string BackhaulManager::freq_to_radio_mac(eFreqType freq) const
         if (!radio) {
             continue;
         }
-        if (radio->freq_type == freq) {
+        if (radio->wifi_channel.get_freq_type() == freq) {
             return tlvf::mac_to_string(radio->front.iface_mac);
         }
     }

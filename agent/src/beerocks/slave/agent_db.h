@@ -11,6 +11,7 @@
 #include "cac_capabilities.h"
 #include "tasks/task_messages.h"
 #include <bcl/beerocks_defines.h>
+#include <bcl/beerocks_wifi_channel.h>
 #include <bcl/network/network_utils.h>
 #include <beerocks/tlvf/beerocks_message.h>
 #include <beerocks/tlvf/enums/eDfsState.h>
@@ -314,15 +315,16 @@ public:
         std::unordered_map<sMacAddr, sClient> associated_clients;
 
         bool sta_iface_filter_low;
-        eFreqType freq_type             = eFreqType::FREQ_UNKNOWN;
+
+        /**
+         * @brief The channel of the radio
+         */
+        beerocks::WifiChannel wifi_channel;
+
         eWiFiBandwidth max_supported_bw = eWiFiBandwidth::BANDWIDTH_UNKNOWN;
         uint8_t number_of_antennas;
         uint8_t antenna_gain_dB;
         uint8_t tx_power_dB;
-        uint8_t channel;
-        beerocks::eWiFiBandwidth bandwidth;
-        bool channel_ext_above_primary;
-        uint16_t vht_center_frequency;
 
         bool ht_supported; ///< Is 802.11n (High Throughput) protocol supported
         uint8_t ht_capability;

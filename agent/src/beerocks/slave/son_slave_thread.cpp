@@ -25,6 +25,7 @@
 #include <bcl/beerocks_timer_factory_impl.h>
 #include <bcl/beerocks_timer_manager_impl.h>
 #include <bcl/beerocks_utils.h>
+#include <bcl/beerocks_wifi_channel.h>
 #include <bcl/network/network_utils.h>
 #include <btl/broker_client_factory_factory.h>
 
@@ -1426,7 +1427,7 @@ bool slave_thread::handle_cmdu_control_message(int fd,
             return false;
         }
 
-        bool radio_5g = (radio->freq_type == beerocks::FREQ_5G);
+        bool radio_5g = (radio->wifi_channel.get_freq_type() == beerocks::FREQ_5G);
 
         // If received scan request and ZWDFS CAC is about to finish refuse to start the
         // background scan only on the 5G radio.
@@ -1948,7 +1949,7 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
             return false;
         }
 
-        bool radio_5g = wireless_utils::is_frequency_band_5ghz(radio->freq_type);
+        bool radio_5g = (radio->wifi_channel.get_freq_type() == beerocks::FREQ_5G);
 
         // If received scan request and ZWDFS CAC is about to finish refuse to start the
         // background scan only on the 5G radio.
@@ -2298,7 +2299,6 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
         radio->number_of_antennas = notification->params().ant_num;
         radio->antenna_gain_dB    = notification->params().ant_gain;
         radio->tx_power_dB        = notification->params().tx_power;
-        radio->freq_type          = notification->params().frequency_band;
         radio->max_supported_bw   = notification->params().max_bandwidth;
 
         radio->ht_supported  = notification->params().ht_supported;
@@ -2317,6 +2317,11 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
                     radio->he_mcs_set.begin());
 
         save_channel_params_to_db(fronthaul_iface, notification->cs_params());
+        if (notification->params().frequency_band != radio->wifi_channel.get_freq_type()) {
+            LOG(ERROR) << "Radio wifi channel's frequncy types does not match the frequency type "
+                          "of ACTION_APMANAGER_JOINED_NOTIFICATION message";
+            return false;
+        }
 
         radio->front.zwdfs                 = notification->params().zwdfs;
         radio->front.hybrid_mode_supported = notification->params().hybrid_mode_supported;
@@ -2828,14 +2833,9 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
             return false;
         }
 
-        radio->channel              = notification_in->params().channel;
-        radio->bandwidth            = beerocks::eWiFiBandwidth(notification_in->params().bandwidth);
-        radio->vht_center_frequency = notification_in->params().center_frequency1;
-        radio->channel_ext_above_primary =
-            radio->vht_center_frequency >
-            wireless_utils::channel_to_freq(
-                radio->channel,
-                wireless_utils::which_freq_type(notification_in->params().center_frequency1));
+        radio->wifi_channel = beerocks::WifiChannel(
+            notification_in->params().channel, notification_in->params().center_frequency1,
+            static_cast<beerocks::eWiFiBandwidth>(notification_in->params().bandwidth));
 
         auto notification_out = message_com::create_vs_message<
             beerocks_message::cACTION_CONTROL_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION>(cmdu_tx);
@@ -4896,18 +4896,17 @@ bool slave_thread::send_operating_channel_report(const std::string &fronthaul_if
     }
 
     auto &operating_class_entry = std::get<1>(operating_class_entry_tuple);
-    beerocks::message::sWifiChannel channel;
-    channel.channel_bandwidth = radio->bandwidth;
-    channel.channel           = radio->channel;
-    auto center_channel       = wireless_utils::freq_to_channel(radio->vht_center_frequency);
-    auto operating_class      = wireless_utils::get_operating_class_by_channel(channel);
+    auto operating_class = wireless_utils::get_operating_class_by_channel(radio->wifi_channel);
 
+    auto center_channel =
+        wireless_utils::freq_to_channel(radio->wifi_channel.get_center_frequency());
     operating_class_entry.operating_class = operating_class;
     // operating classes 128,129,130 use center channel **unlike the other classes** (See Table
     // E-4 in 802.11 spec)
     operating_class_entry.channel_number =
-        wireless_utils::is_operating_class_using_central_channel(operating_class) ? center_channel
-                                                                                  : channel.channel;
+        wireless_utils::is_operating_class_using_central_channel(operating_class)
+            ? center_channel
+            : radio->wifi_channel.get_channel();
     operating_channel_report_tlv->current_transmit_power() = radio->tx_power_dB;
 
     return send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
@@ -4960,11 +4959,17 @@ void slave_thread::save_channel_params_to_db(const std::string &fronthaul_iface,
         return;
     }
 
-    radio->channel                   = params.channel;
-    radio->bandwidth                 = static_cast<beerocks::eWiFiBandwidth>(params.bandwidth);
-    radio->channel_ext_above_primary = params.channel_ext_above_primary;
-    radio->vht_center_frequency      = params.vht_center_frequency;
-    radio->tx_power_dB               = params.tx_power;
+    radio->tx_power_dB = params.tx_power;
+
+    radio->wifi_channel =
+        beerocks::WifiChannel(params.channel, params.vht_center_frequency,
+                              static_cast<beerocks::eWiFiBandwidth>(params.bandwidth));
+
+    if (params.channel_ext_above_primary != radio->wifi_channel.get_ext_above_primary()) {
+        LOG(ERROR) << "the channel_ext_above_primary" << params.channel_ext_above_primary
+                   << " does not the same as wifi channel's channel_ext_above_primary"
+                   << radio->wifi_channel.get_ext_above_primary();
+    }
 }
 
 void slave_thread::save_cac_capabilities_params_to_db(const std::string &fronthaul_iface)
@@ -4975,7 +4980,7 @@ void slave_thread::save_cac_capabilities_params_to_db(const std::string &frontha
         LOG(DEBUG) << "Radio of interface " << fronthaul_iface << " does not exist on the db";
         return;
     }
-    if (radio->freq_type == beerocks::FREQ_5G) {
+    if (radio->wifi_channel.get_freq_type() == beerocks::FREQ_5G) {
         AgentDB::sRadio::sCacCapabilities::sCacMethodCapabilities cac_capabilities_local;
 
         // we'll update the value when we receive cac-started event.
