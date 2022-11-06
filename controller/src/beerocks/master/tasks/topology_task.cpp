@@ -651,9 +651,7 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
                 client_bw = std::min(client_bw, bss_bw);
             }
         }
-        database.set_node_channel_bw(client_mac, wifi_channel.get_channel(), client_bw,
-                                     wifi_channel.get_ext_above_secondary(), 0,
-                                     database.get_hostap_vht_center_frequency(bssid));
+        database.set_node_wifi_channel(client_mac, wifi_channel);
 
         // Note: The Database node stats and the Datamodels' stats are not the same.
         // Therefore, client information in data model and in node DB might differ.

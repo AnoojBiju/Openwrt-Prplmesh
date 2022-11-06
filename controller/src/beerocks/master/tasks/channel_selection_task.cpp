@@ -342,12 +342,14 @@ void channel_selection_task::work()
         auto channel_ext_above_primary = slave_joined_event->cs_params.channel_ext_above_primary;
 
         auto channel_ext_above_secondary = (freq < vht_center_frequency) ? true : false;
-        if (!database.set_node_channel_bw(
-                radio_mac, slave_joined_event->channel,
-                (beerocks::eWiFiBandwidth)slave_joined_event->cs_params.bandwidth,
-                bool(channel_ext_above_secondary), channel_ext_above_primary,
-                vht_center_frequency)) {
-            TASK_LOG(ERROR) << "set node hostap bw failed, mac=" << radio_mac;
+
+        beerocks::WifiChannel wifi_channel = beerocks::WifiChannel(
+            slave_joined_event->channel, vht_center_frequency,
+            static_cast<beerocks::eWiFiBandwidth>(slave_joined_event->cs_params.bandwidth),
+            channel_ext_above_secondary);
+
+        if (!database.set_node_wifi_channel(radio_mac, wifi_channel)) {
+            TASK_LOG(ERROR) << "set node wifi channel failed, mac=" << radio_mac;
         } else {
             // update bml listeners
             bml_task::connection_change_event new_event;
@@ -358,8 +360,7 @@ void channel_selection_task::work()
         TASK_LOG(DEBUG) << "vht_center_frequency = " << uint16_t(vht_center_frequency);
 
         TASK_LOG(DEBUG) << "hostap_mac = " << slave_joined_event->hostap_mac
-                        << " channel_ext_above_primary = "
-                        << int(slave_joined_event->cs_params.channel_ext_above_primary);
+                        << " channel_ext_above_primary = " << int(channel_ext_above_primary);
         FSM_MOVE_STATE(ON_HOSTAP_CHANNEL_REQUEST);
         break;
     }
@@ -655,19 +656,13 @@ void channel_selection_task::work()
                        << " vht_center_frequency = "
                        << uint16_t(csa_event->cs_params.vht_center_frequency);
 
-        auto vht_center_frequency = csa_event->cs_params.vht_center_frequency;
-        auto freq                 = wireless_utils::channel_to_freq(
-            csa_event->cs_params.channel, wireless_utils::which_freq_type(vht_center_frequency));
+        beerocks::WifiChannel wifi_channel = beerocks::WifiChannel(
+            csa_event->cs_params.channel, csa_event->cs_params.vht_center_frequency,
+            static_cast<beerocks::eWiFiBandwidth>(csa_event->cs_params.bandwidth),
+            csa_event->cs_params.channel_ext_above_primary > 0 ? true : false);
 
-        auto channel_ext_above_secondary = (freq < vht_center_frequency) ? true : false;
-        auto channel_ext_above_primary =
-            (csa_event->cs_params.channel_ext_above_primary > 0) ? true : false;
-        if (!database.set_node_channel_bw(radio_mac, csa_event->cs_params.channel,
-                                          (beerocks::eWiFiBandwidth)csa_event->cs_params.bandwidth,
-                                          bool(channel_ext_above_secondary),
-                                          bool(channel_ext_above_primary),
-                                          csa_event->cs_params.vht_center_frequency)) {
-            TASK_LOG(ERROR) << "set node channel bw failed, mac=" << radio_mac;
+        if (!database.set_node_wifi_channel(radio_mac, wifi_channel)) {
+            TASK_LOG(ERROR) << "set node wifi channel failed, mac=" << radio_mac;
         }
 
         // update bml listeners
@@ -822,14 +817,14 @@ void channel_selection_task::work()
         auto prev_bandwidth            = prev_wifi_channel.get_bandwidth();
         auto channel_ext_above_secondary =
             (freq < csa_event->cs_params.vht_center_frequency) ? true : false;
-        auto channel_ext_above_primary =
-            (csa_event->cs_params.channel_ext_above_primary > 0) ? true : false;
-        if (!database.set_node_channel_bw(radio_mac, csa_event->cs_params.channel,
-                                          beerocks::eWiFiBandwidth(csa_event->cs_params.bandwidth),
-                                          bool(channel_ext_above_secondary),
-                                          bool(channel_ext_above_primary),
-                                          csa_event->cs_params.vht_center_frequency)) {
-            TASK_LOG(ERROR) << "set node channel bw failed, mac=" << radio_mac;
+
+        beerocks::WifiChannel wifi_channel = beerocks::WifiChannel(
+            csa_event->cs_params.channel, csa_event->cs_params.vht_center_frequency,
+            static_cast<beerocks::eWiFiBandwidth>(csa_event->cs_params.bandwidth),
+            channel_ext_above_secondary);
+
+        if (!database.set_node_wifi_channel(radio_mac, wifi_channel)) {
+            TASK_LOG(ERROR) << "set node wifi channel failed, mac=" << radio_mac;
         }
 
         // update bml listeners
