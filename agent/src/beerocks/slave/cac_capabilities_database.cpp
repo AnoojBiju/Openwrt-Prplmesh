@@ -9,6 +9,7 @@
 #include "cac_capabilities_database.h"
 #include "agent_db.h"
 #include <bcl/beerocks_utils.h>
+#include <bcl/beerocks_wifi_channel.h>
 #include <bcl/son/son_wireless_utils.h>
 #include <tlvf/tlvftypes.h>
 
@@ -30,7 +31,7 @@ std::vector<sMacAddr> CacCapabilitiesDatabase::get_cac_radios() const
         if (!radio) {
             return {};
         }
-        if (radio->freq_type == beerocks::FREQ_5G) {
+        if (radio->wifi_channel.get_freq_type() == beerocks::FREQ_5G) {
             radios_5g.push_back(radio);
         }
     }
@@ -55,7 +56,7 @@ bool CacCapabilitiesDatabase::is_cac_method_supported(const sMacAddr &radio_mac,
     }
 
     // make sure it is 5g radio
-    if (!son::wireless_utils::is_frequency_band_5ghz(radio->freq_type)) {
+    if (radio->wifi_channel.get_freq_type() != beerocks::FREQ_5G) {
         // not a 5g radio therefore non of the cac methods is supported
         return false;
     }

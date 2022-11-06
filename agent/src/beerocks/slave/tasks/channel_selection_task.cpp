@@ -22,6 +22,7 @@
 
 #include "task_messages.h"
 #include <bcl/beerocks_utils.h>
+#include <bcl/beerocks_wifi_channel.h>
 #include <bcl/son/son_wireless_utils.h>
 
 #define ZWDFS_FSM_MOVE_STATE(new_state)                                                            \
@@ -972,7 +973,8 @@ bool ChannelSelectionTask::build_channel_preference_report(const sMacAddr &radio
         const auto &oper_class_channels = oper_class.second.channels;
         const auto oper_class_bw        = oper_class.second.band;
 
-        if (radio->freq_type != son::wireless_utils::which_freq_op_cls(oper_class_num)) {
+        if (radio->wifi_channel.get_freq_type() !=
+            son::wireless_utils::which_freq_op_cls(oper_class_num)) {
             // Operating Class not part of the current radio, skip.
             continue;
         }
@@ -1224,9 +1226,9 @@ bool ChannelSelectionTask::handle_transmit_power_limit(
      * 
      * In the outgoing request, set the channel & bandwidth to that of the current radio.
      */
-    radio_request.outgoing_request.channel        = radio->channel;
-    radio_request.outgoing_request.freq_type      = radio->freq_type;
-    radio_request.outgoing_request.bandwidth      = radio->bandwidth;
+    radio_request.outgoing_request.channel        = radio->wifi_channel.get_channel();
+    radio_request.outgoing_request.bandwidth      = radio->wifi_channel.get_bandwidth();
+    radio_request.outgoing_request.freq_type      = radio->wifi_channel.get_freq_type();
     radio_request.outgoing_request.tx_limit       = new_tx_power_limit_dbm;
     radio_request.outgoing_request.tx_limit_valid = true;
     radio_request.power_switch_received           = true;
@@ -1340,17 +1342,16 @@ bool ChannelSelectionTask::check_is_there_better_channel_than_current(const sMac
         return false;
     }
 
-    beerocks::message::sWifiChannel channel(radio->channel, radio->bandwidth);
-    const auto operating_class    = son::wireless_utils::get_operating_class_by_channel(channel);
-    auto &radio_request           = m_pending_selection.requests[radio_mac];
-    const auto current_preference = get_cumulative_preference(
-        radio, radio_request.controller_preferences, operating_class, radio->channel);
+    const auto operating_class =
+        son::wireless_utils::get_operating_class_by_channel(radio->wifi_channel);
+    auto &radio_request = m_pending_selection.requests[radio_mac];
+    const auto current_preference =
+        get_cumulative_preference(radio, radio_request.controller_preferences, operating_class,
+                                  radio->wifi_channel.get_channel());
 
-    LOG(DEBUG) << "Current Channel is [" << (int)channel.channel << "-" << (int)operating_class
-               << "("
-               << utils::convert_bandwidth_to_int(
-                      beerocks::eWiFiBandwidth(channel.channel_bandwidth))
-               << "MHz)] and has a cumulative preference score of " << (int)current_preference;
+    LOG(DEBUG) << "Current Channel is [" << radio->wifi_channel
+               << "] Operating Class:" << (int)operating_class
+               << " and has a cumulative preference score of " << (int)current_preference;
 
     /**
      * Find the next best channel.
@@ -1374,8 +1375,14 @@ bool ChannelSelectionTask::check_is_there_better_channel_than_current(const sMac
                << " has a preference score of " << (int)selected_channel.preference_score
                << " and a DFS state of " << (int)selected_channel.dfs_state << ".";
 
-    // First validate whether we already operate on the best channel or selected channel.
-    if (radio->channel == selected_channel.channel && radio->bandwidth == selected_channel.bw) {
+    if (current_preference >= selected_channel.preference_score) {
+        LOG(DEBUG) << "Currect channel is better or as good as the next best channel, no need "
+                      "to switch";
+        return true;
+    }
+
+    if (radio->wifi_channel.get_channel() == selected_channel.channel &&
+        radio->wifi_channel.get_bandwidth() == selected_channel.bw) {
 
         LOG(DEBUG) << "Already operating on channel: " << (int)selected_channel.channel
                    << " with bandwidth: "
@@ -1684,11 +1691,9 @@ bool ChannelSelectionTask::create_operating_channel_report(const sMacAddr &radio
     }
 
     auto &operating_class_entry = std::get<1>(operating_class_entry_tuple);
-    beerocks::message::sWifiChannel channel;
-    channel.channel_bandwidth = radio->bandwidth;
-    channel.channel           = radio->channel;
-    auto center_channel       = son::wireless_utils::freq_to_channel(radio->vht_center_frequency);
-    auto operating_class      = son::wireless_utils::get_operating_class_by_channel(channel);
+    auto center_channel =
+        son::wireless_utils::freq_to_channel(radio->wifi_channel.get_center_frequency());
+    auto operating_class = son::wireless_utils::get_operating_class_by_channel(radio->wifi_channel);
 
     operating_class_entry.operating_class = operating_class;
     // operating classes 128,129,130 use center channel **unlike the other classes** (See Table
@@ -1696,7 +1701,7 @@ bool ChannelSelectionTask::create_operating_channel_report(const sMacAddr &radio
     operating_class_entry.channel_number =
         son::wireless_utils::is_operating_class_using_central_channel(operating_class)
             ? center_channel
-            : channel.channel;
+            : radio->wifi_channel.get_channel();
     operating_channel_report_tlv->current_transmit_power() = radio->tx_power_dB;
 
     LOG(DEBUG) << "Created Operating Channel Report TLV";
@@ -1710,7 +1715,7 @@ bool ChannelSelectionTask::radio_scan_in_progress(eFreqType band)
         if (!radio) {
             continue;
         }
-        if (band != eFreqType::FREQ_UNKNOWN && radio->freq_type != band) {
+        if (band != eFreqType::FREQ_UNKNOWN && radio->wifi_channel.get_freq_type() != band) {
             continue;
         }
         if (radio->statuses.channel_scan_in_progress) {
@@ -1837,8 +1842,8 @@ void ChannelSelectionTask::zwdfs_fsm()
         // information about it.
         int32_t current_channel_rank = -1;
         for (const auto &channel_bw_info :
-             radio->channels_list.at(radio->channel).supported_bw_list) {
-            if (channel_bw_info.bandwidth == radio->bandwidth) {
+             radio->channels_list.at(radio->wifi_channel.get_channel()).supported_bw_list) {
+            if (channel_bw_info.bandwidth == radio->wifi_channel.get_bandwidth()) {
                 current_channel_rank = channel_bw_info.rank;
             }
         }
@@ -1865,8 +1870,8 @@ void ChannelSelectionTask::zwdfs_fsm()
         }
 
         // If current channel is the best channel - no need to switch-channel
-        if (m_selected_channel.channel == radio->channel &&
-            m_selected_channel.bw == radio->bandwidth) {
+        if (m_selected_channel.channel == radio->wifi_channel.get_channel() &&
+            m_selected_channel.bw == radio->wifi_channel.get_bandwidth()) {
             LOG(DEBUG) << "Failsafe is already second best channel, abort ZWDFS flow";
             if (m_zwdfs_ant_in_use) {
                 LOG(DEBUG) << "Release ZWDFS antenna in use";
@@ -1924,7 +1929,14 @@ void ChannelSelectionTask::zwdfs_fsm()
             break;
         }
 
-        if (radio_scan_in_progress(radio->freq_type)) {
+        auto freq_type = radio->wifi_channel.get_freq_type();
+        if (radio->wifi_channel.get_freq_type() != beerocks::eFreqType::FREQ_5G) {
+            LOG(ERROR) << "On ZWDFS request the frequency "
+                       << beerocks::utils::convert_frequency_type_to_string(freq_type)
+                       << " must be 5G";
+        }
+
+        if (radio_scan_in_progress(radio->wifi_channel.get_freq_type())) {
             LOG(INFO) << "Pause ZWDFS flow until background scan is finished";
             break;
         }
@@ -1951,7 +1963,8 @@ void ChannelSelectionTask::zwdfs_fsm()
                                   .at(request->bandwidth())
                                   .center_channel;
 
-        request->center_frequency() = son::wireless_utils::channel_to_freq(center_channel);
+        request->center_frequency() =
+            son::wireless_utils::channel_to_freq(center_channel, beerocks::eFreqType::FREQ_5G);
 
         LOG(DEBUG) << "Sending ZWDFS_ANT_CHANNEL_SWITCH_REQUEST on, channel="
                    << m_selected_channel.channel
@@ -2027,6 +2040,20 @@ void ChannelSelectionTask::zwdfs_fsm()
             break;
         }
 
+        // Filling the radio mac. This is temporary the task will be moved to the agent (PPM-1680).
+        auto db    = AgentDB::get();
+        auto radio = db->radio(m_zwdfs_primary_radio_iface);
+        if (!radio) {
+            break;
+        }
+
+        auto freq_type = radio->wifi_channel.get_freq_type();
+        if (freq_type != beerocks::eFreqType::FREQ_5G) {
+            LOG(ERROR) << "On ZWDFS the frequency "
+                       << beerocks::utils::convert_frequency_type_to_string(freq_type)
+                       << " must be 5G";
+        }
+
         auto request = message_com::create_vs_message<
             beerocks_message::cACTION_BACKHAUL_HOSTAP_CHANNEL_SWITCH_ACS_START>(m_cmdu_tx);
         if (!request) {
@@ -2044,7 +2071,7 @@ void ChannelSelectionTask::zwdfs_fsm()
                                   .center_channel;
 
         request->cs_params().vht_center_frequency =
-            son::wireless_utils::channel_to_freq(center_channel);
+            son::wireless_utils::channel_to_freq(center_channel, beerocks::eFreqType::FREQ_5G);
 
         auto agent_fd = m_btl_ctx.get_agent_fd();
         if (agent_fd == beerocks::net::FileDescriptor::invalid_descriptor) {
@@ -2053,12 +2080,6 @@ void ChannelSelectionTask::zwdfs_fsm()
             break;
         }
 
-        // Filling the radio mac. This is temporary the task will be moved to the agent (PPM-1680).
-        auto db    = AgentDB::get();
-        auto radio = db->radio(m_zwdfs_primary_radio_iface);
-        if (!radio) {
-            break;
-        }
         auto action_header         = message_com::get_beerocks_header(m_cmdu_tx)->actionhdr();
         action_header->radio_mac() = radio->front.iface_mac;
 
@@ -2194,13 +2215,15 @@ ChannelSelectionTask::select_best_usable_channel(const std::string &front_radio_
     // Initialize the best channel to the current channel, and add the ranking threshold
     // so only channel that has a better rank than the current channel (with threshold),
     // could be selected.
-    for (const auto &channel_bw_info : radio->channels_list.at(radio->channel).supported_bw_list) {
-        if (channel_bw_info.bandwidth == radio->bandwidth) {
-            best_rank                  = channel_bw_info.rank;
-            selected_channel.channel   = radio->channel;
-            selected_channel.bw        = channel_bw_info.bandwidth;
-            selected_channel.dfs_state = radio->channels_list.at(radio->channel).dfs_state;
-            selected_channel.rank      = channel_bw_info.rank;
+    for (const auto &channel_bw_info :
+         radio->channels_list.at(radio->wifi_channel.get_channel()).supported_bw_list) {
+        if (channel_bw_info.bandwidth == radio->wifi_channel.get_bandwidth()) {
+            best_rank                = channel_bw_info.rank;
+            selected_channel.channel = radio->wifi_channel.get_channel();
+            selected_channel.bw      = channel_bw_info.bandwidth;
+            selected_channel.dfs_state =
+                radio->channels_list.at(radio->wifi_channel.get_channel()).dfs_state;
+            selected_channel.rank = channel_bw_info.rank;
             break;
         }
     }

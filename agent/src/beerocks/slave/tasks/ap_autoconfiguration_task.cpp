@@ -15,6 +15,7 @@
 
 #include <bcl/beerocks_utils.h>
 #include <bcl/beerocks_version.h>
+#include <bcl/beerocks_wifi_channel.h>
 
 #include <beerocks/tlvf/beerocks_message.h>
 #include <beerocks/tlvf/beerocks_message_apmanager.h>
@@ -114,18 +115,18 @@ void ApAutoConfigurationTask::work()
 
             // If another radio with same band already finished the discovery phase, we can skip
             // directly to next phase (AP_CONFIGURATION).
-            if (m_discovery_status[radio->freq_type].completed) {
+            if (m_discovery_status[radio->wifi_channel.get_freq_type()].completed) {
                 FSM_MOVE_STATE(radio_iface, eState::SEND_AP_AUTOCONFIGURATION_WSC_M1);
             }
 
             // If another radio with same band already have sent the
             // AP_AUTOCONFIGURATION_SEARCH_MESSAGE, we can skip and let it handle it.
-            if (m_discovery_status[radio->freq_type].msg_sent) {
+            if (m_discovery_status[radio->wifi_channel.get_freq_type()].msg_sent) {
                 continue;
             }
 
             if (send_ap_autoconfiguration_search_message(radio_iface)) {
-                m_discovery_status[radio->freq_type].msg_sent = true;
+                m_discovery_status[radio->wifi_channel.get_freq_type()].msg_sent = true;
             }
 
             conf_params.timeout = std::chrono::steady_clock::now() +
@@ -140,14 +141,14 @@ void ApAutoConfigurationTask::work()
             if (!radio) {
                 continue;
             }
-            if (m_discovery_status[radio->freq_type].completed) {
+            if (m_discovery_status[radio->wifi_channel.get_freq_type()].completed) {
                 FSM_MOVE_STATE(radio_iface, eState::SEND_AP_AUTOCONFIGURATION_WSC_M1);
                 break;
             }
 
             if (std::chrono::steady_clock::now() > conf_params.timeout) {
                 FSM_MOVE_STATE(radio_iface, eState::CONTROLLER_DISCOVERY);
-                m_discovery_status[radio->freq_type].msg_sent = false;
+                m_discovery_status[radio->wifi_channel.get_freq_type()].msg_sent = false;
             }
             break;
         }
@@ -408,14 +409,14 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_search_message(
         LOG(DEBUG) << "Radio of iface " << radio_iface << " does not exist on the db";
         return false;
     }
-    if (radio->freq_type == beerocks::eFreqType::FREQ_24G) {
+    if (radio->wifi_channel.get_freq_type() == beerocks::eFreqType::FREQ_24G) {
         freq_band = ieee1905_1::tlvAutoconfigFreqBand::IEEE_802_11_2_4_GHZ;
-    } else if (radio->freq_type == beerocks::eFreqType::FREQ_5G) {
+    } else if (radio->wifi_channel.get_freq_type() == beerocks::eFreqType::FREQ_5G) {
         freq_band = ieee1905_1::tlvAutoconfigFreqBand::IEEE_802_11_5_GHZ;
-    } else if (radio->freq_type == beerocks::eFreqType::FREQ_6G) {
+    } else if (radio->wifi_channel.get_freq_type() == beerocks::eFreqType::FREQ_6G) {
         freq_band = ieee1905_1::tlvAutoconfigFreqBand::IEEE_802_11_6_GHZ;
     } else {
-        LOG(ERROR) << "unsupported freq_type=" << int(radio->freq_type)
+        LOG(ERROR) << "unsupported freq_type=" << int(radio->wifi_channel.get_freq_type())
                    << ", iface=" << radio_iface;
         return false;
     }
@@ -664,7 +665,8 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_wsc_m1_message(
     if (db->backhaul.connection_type == AgentDB::sBackhaul::eConnectionType::Wireless) {
         auto wireless_bh_radio                       = db->radio(db->backhaul.selected_iface_name);
         notification->backhaul_params().backhaul_mac = wireless_bh_radio->back.iface_mac;
-        notification->backhaul_params().backhaul_channel    = wireless_bh_radio->channel;
+        notification->backhaul_params().backhaul_channel =
+            wireless_bh_radio->wifi_channel.get_channel();
         notification->backhaul_params().backhaul_iface_type = eIfaceType::IFACE_TYPE_WIFI_INTEL;
     } else if (db->backhaul.connection_type == AgentDB::sBackhaul::eConnectionType::Wired) {
         notification->backhaul_params().backhaul_mac        = db->ethernet.wan.mac;
@@ -718,7 +720,7 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_wsc_m1_message(
     notification->hostap().iface_mac      = radio->front.iface_mac;
     notification->hostap().ant_num        = radio->number_of_antennas;
     notification->hostap().tx_power       = radio->tx_power_dB;
-    notification->hostap().frequency_band = radio->freq_type;
+    notification->hostap().frequency_band = radio->wifi_channel.get_freq_type();
     notification->hostap().max_bandwidth  = radio->max_supported_bw;
     notification->hostap().ht_supported   = radio->ht_supported;
     notification->hostap().ht_capability  = radio->ht_capability;
@@ -736,11 +738,12 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_wsc_m1_message(
     notification->hostap().ant_gain = config.radios.at(radio_iface).hostap_ant_gain;
 
     // Channel Selection Params
-    notification->cs_params().channel                   = radio->channel;
-    notification->cs_params().bandwidth                 = radio->bandwidth;
-    notification->cs_params().channel_ext_above_primary = radio->channel_ext_above_primary;
-    notification->cs_params().vht_center_frequency      = radio->vht_center_frequency;
-    notification->cs_params().tx_power                  = radio->tx_power_dB;
+    notification->cs_params().channel   = radio->wifi_channel.get_channel();
+    notification->cs_params().bandwidth = radio->wifi_channel.get_bandwidth();
+    notification->cs_params().channel_ext_above_primary =
+        radio->wifi_channel.get_ext_above_primary();
+    notification->cs_params().vht_center_frequency = radio->wifi_channel.get_center_frequency();
+    notification->cs_params().tx_power             = radio->tx_power_dB;
 
     m_btl_ctx.send_cmdu_to_controller(radio_iface, m_cmdu_tx);
     LOG(DEBUG) << "sending WSC M1 Size=" << m_cmdu_tx.getMessageLength();
@@ -797,7 +800,7 @@ bool ApAutoConfigurationTask::add_wsc_m1_tlv(const std::string &radio_iface)
     cfg.model_number        = "18.04";
     cfg.primary_dev_type_id = WSC::WSC_DEV_NETWORK_INFRA_AP;
     cfg.device_name         = "prplmesh-agent";
-    switch (radio->freq_type) {
+    switch (radio->wifi_channel.get_freq_type()) {
     case beerocks::FREQ_5G:
         cfg.bands = WSC::WSC_RF_BAND_5GHZ;
         break;

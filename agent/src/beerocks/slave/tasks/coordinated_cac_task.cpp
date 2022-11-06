@@ -11,6 +11,7 @@
 #include "task_pool_interface.h"
 #include <bcl/beerocks_defines.h>
 #include <bcl/beerocks_utils.h>
+#include <bcl/beerocks_wifi_channel.h>
 
 namespace beerocks {
 namespace coordinated_cac {
@@ -517,13 +518,14 @@ bool CacFsm::send_cac_request(beerocks::AgentDB::sRadio *db_radio)
         son::wireless_utils::operating_class_to_bandwidth(m_cac_request_radio.operating_class);
 
     // save current channel - to know where to switch back if needed
-    m_original_channel          = db_radio->channel;
-    m_original_bandwidth        = db_radio->bandwidth;
-    m_original_center_frequency = db_radio->vht_center_frequency;
+    m_original_channel          = db_radio->wifi_channel.get_channel();
+    m_original_bandwidth        = db_radio->wifi_channel.get_bandwidth();
+    m_original_center_frequency = db_radio->wifi_channel.get_center_frequency();
     if (m_original_bandwidth == eWiFiBandwidth::BANDWIDTH_20) {
         m_original_secondary_channel_offset = 0;
     } else {
-        m_original_secondary_channel_offset = db_radio->channel_ext_above_primary ? 1 : -1;
+        m_original_secondary_channel_offset =
+            db_radio->wifi_channel.get_ext_above_primary() ? 1 : -1;
     }
 
     // save the time point we started the switch channel

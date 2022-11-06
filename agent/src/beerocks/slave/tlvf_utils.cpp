@@ -19,41 +19,6 @@
 using namespace beerocks;
 
 /**
- * @brief Get a list of supported operating classes.
- *
- * @param channels_list List of supported channels.
- * @return std::vector<uint8_t> A vector of supported operating classes.
- */
-static std::vector<uint8_t> get_supported_operating_classes(
-    const std::unordered_map<uint8_t, beerocks::AgentDB::sRadio::sChannelInfo> &channels_list)
-{
-    std::vector<uint8_t> operating_classes;
-    //TODO handle regulatory domain operating classes, and handle 6GHz channels
-    for (const auto &oper_class : son::wireless_utils::operating_classes_list) {
-        if (son::wireless_utils::which_freq_op_cls(oper_class.first) == beerocks::FREQ_6G) {
-            continue;
-        }
-        for (const auto &channel_info_element : channels_list) {
-            auto channel       = channel_info_element.first;
-            auto &channel_info = channel_info_element.second;
-            bool found         = false;
-            for (const auto &bw_info : channel_info.supported_bw_list) {
-                if (son::wireless_utils::has_operating_class_5g_channel(oper_class.second, channel,
-                                                                        bw_info.bandwidth)) {
-                    operating_classes.push_back(oper_class.first);
-                    found = true;
-                    break;
-                }
-            }
-            if (found) {
-                break;
-            }
-        }
-    }
-    return operating_classes;
-}
-
-/**
  * @brief Get the maximum transmit power of operating class.
  *
  * @param channels_list List of supported channels.
@@ -160,8 +125,13 @@ bool tlvf_utils::add_ap_radio_basic_capabilities(ieee1905_1::CmduMessageTx &cmdu
     LOG(DEBUG) << "Radio reports " << num_bsses << " BSSes.";
 
     radio_basic_caps->maximum_number_of_bsss_supported() = num_bsses;
-    operating_classes = get_supported_operating_classes(radio->channels_list);
-    LOG(DEBUG) << "Filling Supported operating classes on radio " << radio->front.iface_name << ":";
+    LOG(DEBUG) << "Filling Supported operating classes on radio " << radio->front.iface_name
+               << " (band type: "
+               << beerocks::utils::convert_frequency_type_to_string(
+                      radio->wifi_channel.get_freq_type())
+               << "):";
+    operating_classes = son::wireless_utils::get_operating_classes_of_freq_type(
+        radio->wifi_channel.get_freq_type());
 
     for (auto op_class : operating_classes) {
         auto operationClassesInfo = radio_basic_caps->create_operating_classes_info_list();
