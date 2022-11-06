@@ -64,15 +64,13 @@ public:
 
     std::string ipv4;
     std::string manufacturer;
-    int channel = 0;
     std::string name;
     int hierarchy = -1; //redundant but more efficient
     beerocks::message::sRadioCapabilities *capabilities;
     beerocks::message::sRadioCapabilities m_sta_5ghz_capabilities;
     beerocks::message::sRadioCapabilities m_sta_24ghz_capabilities;
 
-    beerocks::eWiFiBandwidth bandwidth = beerocks::BANDWIDTH_160;
-    bool channel_ext_above_secondary   = true;
+    bool channel_ext_above_secondary = true;
 
     beerocks::eNodeState state = beerocks::STATE_DISCONNECTED;
 
