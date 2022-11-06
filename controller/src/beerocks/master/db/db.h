@@ -602,8 +602,6 @@ public:
     bool set_agent_manufacturer(prplmesh::controller::db::Agent &agent,
                                 const std::string &manufacturer);
 
-    int get_node_channel(const std::string &mac);
-
     int get_hostap_operating_class(const sMacAddr &mac);
 
     bool set_node_vap_id(const std::string &mac, int8_t vap_id);
@@ -1892,10 +1890,6 @@ public:
     int get_measurement_window_size(const std::string &mac);
     bool set_measurement_window_size(const std::string &mac, int window_size);
 
-    bool set_node_channel_bw(const sMacAddr &mac, int channel, beerocks::eWiFiBandwidth bw,
-                             bool channel_ext_above_secondary, int8_t channel_ext_above_primary,
-                             uint16_t vht_center_frequency);
-
     /**
      * @brief Search a node that is identified by the mac
      * and get a copy of the node's wifiChannel object
@@ -1930,10 +1924,7 @@ public:
      */
     bool update_node_wifi_channel_bw(const sMacAddr &mac, beerocks::eWiFiBandwidth bw);
 
-    bool update_node_bw(const sMacAddr &mac, beerocks::eWiFiBandwidth bw);
-    beerocks::eWiFiBandwidth get_node_bw(const std::string &mac);
     bool get_hostap_channel_ext_above_primary(const sMacAddr &hostap_mac);
-    bool get_node_channel_ext_above_secondary(const std::string &mac);
     uint16_t get_hostap_vht_center_frequency(const sMacAddr &mac);
 
     void add_bss_info_configuration(const sMacAddr &al_mac,
