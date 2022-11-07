@@ -2426,6 +2426,15 @@ public:
      */
     bool dm_set_device_unsuccessful_association_policy(const Agent &agent);
 
+    /** @brief Sets service prioritization rules for corresponding device.
+     *
+     * DM path: "Device.WiFi.DataElements.Network.Device.{i}."
+     *
+     * @param[in] agent Agent DB object.
+     * @return true on success, otherwise false.
+     */
+    bool dm_set_service_prioritization_rules(const Agent &agent);
+
     //
     // tasks
     //

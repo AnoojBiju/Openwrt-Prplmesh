@@ -54,6 +54,13 @@
             on action validate call check_range [0, 255];
         }
 
+        /* A hexadecimal string of 64 Priority Code Point (PCP) values (one octet per value)
+        ** corresponding to the Differentiated Services Code Point (DSCP)
+        */
+        %read-only string DSCPMap {
+            on action validate call check_range [0, 64];
+        }
+
         /*
         ** The Multi-AP capabilities supported by this device
         */
