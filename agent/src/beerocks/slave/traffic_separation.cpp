@@ -256,12 +256,13 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
 
                 // Delete old VLAN interface, since it is not possible to modify the VLAN ID of an
                 // interface. Only removing and re-create it.
-                auto vlan_iface_name = bss_iface_netdev + DOT_PVID_SUFFIX;
-
-                LOG(DEBUG) << "Deleting iface " << vlan_iface_name;
-                network_utils::delete_interface(vlan_iface_name);
-                LOG(DEBUG) << "iface " << vlan_iface_name << " deleted successfully";
-
+                if (string_utils::endswith(bss_iface_netdev, DOT_PVID_SUFFIX)) {
+                    LOG(DEBUG) << "Deleting interface " << bss_iface_netdev;
+                    network_utils::delete_interface(bss_iface_netdev);
+                    LOG(DEBUG) << "Interface " << bss_iface_netdev << " deleted successfully";
+                    continue;
+                }
+                auto vlan_iface_name  = bss_iface_netdev + DOT_PVID_SUFFIX;
                 auto vlan_iface_added = false;
 
                 // Profile-2 Backhaul BSS
