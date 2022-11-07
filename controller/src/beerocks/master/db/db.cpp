@@ -8001,3 +8001,17 @@ bool db::dm_set_device_unsuccessful_association_policy(const Agent &agent)
 
     return ret_val;
 }
+
+bool db::dm_set_service_prioritization_rules(const Agent &agent)
+{
+    if (agent.dm_path.empty()) {
+        return true;
+    }
+
+    std::string dscp_map_str;
+    std::transform(agent.service_prioritization.dscp_mapping_table.begin(),
+                   agent.service_prioritization.dscp_mapping_table.end(),
+                   std::back_inserter(dscp_map_str), [](int const &i) { return i + '0'; });
+
+    return m_ambiorix_datamodel->set(agent.dm_path, "DSCPMap", dscp_map_str);
+}
