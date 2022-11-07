@@ -102,6 +102,12 @@ public:
     /** Stations for which BTM steering is disallowed */
     beerocks::mac_map<Station> disallowed_btm_steering_stations;
 
+    struct sServicePrioritization {
+        // List of 64 PCP values corresponding to the DSCP markings (0x00 to 0x3F)
+        // Each value: 0x00 – 0x07
+        std::array<uint8_t, beerocks::message::DSCP_MAPPING_LIST_LENGTH> dscp_mapping_table;
+    } service_prioritization;
+
     struct sRadio {
         sRadio()               = delete;
         sRadio(const sRadio &) = delete;
