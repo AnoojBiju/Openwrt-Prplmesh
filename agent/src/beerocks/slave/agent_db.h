@@ -367,7 +367,7 @@ public:
         std::unordered_map<uint32_t,
                            wfa_map::tlvServicePrioritizationRule::sServicePrioritizationRule>
             rules;
-        std::array<uint8_t, 64> dscp_mapping_table;
+        std::array<uint8_t, beerocks::message::DSCP_MAPPING_LIST_LENGTH> dscp_mapping_table;
     } service_prioritization;
     struct {
         uint32_t reporting_interval_sec;

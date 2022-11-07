@@ -69,6 +69,7 @@
 #include <tlvf/wfa_map/tlvClientCapabilityReport.h>
 #include <tlvf/wfa_map/tlvClientInfo.h>
 #include <tlvf/wfa_map/tlvDeviceInventory.h>
+#include <tlvf/wfa_map/tlvDscpMappingTable.h>
 #include <tlvf/wfa_map/tlvErrorCode.h>
 #include <tlvf/wfa_map/tlvHigherLayerData.h>
 #include <tlvf/wfa_map/tlvOperatingChannelReport.h>
@@ -4493,7 +4494,32 @@ bool Controller::handle_cmdu_1905_qos_management_notification_message(
         // TODO: Implement handling of QoS Management Descriptor TLV (PPM-2364)
     }
 
-    return true;
+    auto agent = database.m_agents.get(src_mac);
+    if (!agent) {
+        LOG(ERROR) << "Agent with mac is not found in database mac=" << src_mac;
+        return false;
+    }
+
+    if (!cmdu_tx.create(0, ieee1905_1::eMessageType::SERVICE_PRIORITIZATION_REQUEST_MESSAGE)) {
+        LOG(ERROR) << "cmdu creation of type SERVICE_PRIORITIZATION_REQUEST_MESSAGE has failed";
+        return false;
+    }
+
+    auto dscp_mapping_table_tlv = cmdu_tx.addClass<wfa_map::tlvDscpMappingTable>();
+    if (!dscp_mapping_table_tlv) {
+        LOG(ERROR) << "addClass wfa_map::tlvDscpMappingTable has failed";
+        return false;
+    }
+
+    if (!dscp_mapping_table_tlv->set_dscp_pcp_mapping(
+            agent->service_prioritization.dscp_mapping_table.data(),
+            agent->service_prioritization.dscp_mapping_table.size())) {
+        LOG(ERROR) << "Failed to set DSCP mapping list in tlvDscpMappingTable!";
+        return false;
+    }
+
+    // TODO: Implement sending of remaining TLVs of Service Prioritization Request message (PPM-2366)
+    return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
 }
 
 } // namespace son

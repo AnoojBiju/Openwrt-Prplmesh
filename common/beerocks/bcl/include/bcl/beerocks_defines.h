@@ -83,6 +83,7 @@ enum eStructsConsts {
     VHT_MCS_SET_SIZE                     = 32,
     HE_MCS_SET_SIZE                      = 32,
     DEV_MAX_RADIOS                       = 3,
+    DSCP_MAPPING_LIST_LENGTH             = 64,
 };
 
 enum eMessageConsts {
