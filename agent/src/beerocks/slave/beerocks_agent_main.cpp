@@ -10,6 +10,7 @@
 #include "backhaul_manager/backhaul_manager.h"
 #include "platform_manager/platform_manager.h"
 #include "son_slave_thread.h"
+#include "traffic_separation.h"
 
 #include <bcl/beerocks_cmdu_server_factory.h>
 #include <bcl/beerocks_config_file.h>
@@ -320,6 +321,17 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
     beerocks::os_utils::write_pid_file(beerocks_slave_conf.temp_path, BEEROCKS_AGENT);
     std::string pid_file_path =
         beerocks_slave_conf.temp_path + "pid/" + BEEROCKS_AGENT; // for file touching
+
+    // Load and set traffic separation profile_x_disallow_override (See beerocks_agent.conf)
+    auto profile = beerocks::string_utils::stoi(
+        beerocks_slave_conf.profile_x_disallow_override_unsupported_configuration);
+    if (profile < 0 || profile > 2) {
+        LOG(ERROR) << "profile value is invalid, accept only values 0 <= profile <= 2";
+        return 1;
+    }
+    LOG(DEBUG) << "Set profile_x_disallow_override_unsupported_configuration to " << profile;
+    beerocks::net::TrafficSeparation::m_profile_x_disallow_override_unsupported_configuration =
+        profile;
 
     std::set<std::string> slave_ap_ifaces;
     for (auto &elm : interfaces_map) {
