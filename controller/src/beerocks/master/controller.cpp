@@ -4518,6 +4518,11 @@ bool Controller::handle_cmdu_1905_qos_management_notification_message(
         return false;
     }
 
+    if (!database.dm_set_service_prioritization_rules(*agent)) {
+        LOG(ERROR) << "Failed to set service prioritization rules in DM for Agent" << agent->al_mac;
+        return false;
+    }
+
     // TODO: Implement sending of remaining TLVs of Service Prioritization Request message (PPM-2366)
     return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
 }
