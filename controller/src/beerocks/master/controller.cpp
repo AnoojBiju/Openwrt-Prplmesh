@@ -81,6 +81,7 @@
 #include <tlvf/wfa_map/tlvProfile2RadioMetrics.h>
 #include <tlvf/wfa_map/tlvProfile2ReasonCode.h>
 #include <tlvf/wfa_map/tlvProfile2StatusCode.h>
+#include <tlvf/wfa_map/tlvQoSManagementDescriptor.h>
 #include <tlvf/wfa_map/tlvRadioOperationRestriction.h>
 #include <tlvf/wfa_map/tlvSearchedService.h>
 #include <tlvf/wfa_map/tlvStaMacAddressType.h>
@@ -297,6 +298,7 @@ bool Controller::start()
             ieee1905_1::eMessageType::BACKHAUL_STA_CAPABILITY_REPORT_MESSAGE,
             ieee1905_1::eMessageType::BSS_CONFIGURATION_REQUEST_MESSAGE,
             ieee1905_1::eMessageType::FAILED_CONNECTION_MESSAGE,
+            ieee1905_1::eMessageType::QOS_MANAGEMENT_NOTIFICATION_MESSAGE,
         })) {
         LOG(ERROR) << "Failed subscribing to the Bus";
         return false;
@@ -572,8 +574,10 @@ bool Controller::handle_cmdu_1905_1_message(const sMacAddr &src_mac,
         return handle_cmdu_1905_failed_connection_message(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::ASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE:
         return handle_cmdu_1905_associated_sta_link_metrics_response_message(src_mac, cmdu_rx);
+    case ieee1905_1::eMessageType::QOS_MANAGEMENT_NOTIFICATION_MESSAGE:
+        return handle_cmdu_1905_qos_management_notification_message(src_mac, cmdu_rx);
 
-    // Empty cases are used to prevent error logs. Below message types are proccessed within tasks.
+    // Empty cases are used to prevent error logs. Below message types are processed within tasks.
     case ieee1905_1::eMessageType::TOPOLOGY_RESPONSE_MESSAGE:
     case ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE:
     case ieee1905_1::eMessageType::LINK_METRIC_RESPONSE_MESSAGE:
@@ -4465,6 +4469,30 @@ bool Controller::handle_tlv_profile3_device_inventory(Agent &agent,
     }
 
     LOG(DEBUG) << ss.str();
+    return true;
+}
+
+bool Controller::handle_cmdu_1905_qos_management_notification_message(
+    const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto mid = cmdu_rx.getMessageId();
+    LOG(DEBUG) << "Received QOS_MANAGEMENT_NOTIFICATION_MESSAGE, mid=" << std::hex << mid;
+
+    for (auto const &qos_management_descriptor_tlv :
+         cmdu_rx.getClassList<wfa_map::tlvQoSManagementDescriptor>()) {
+        if (!qos_management_descriptor_tlv) {
+            LOG(DEBUG) << "getClass wfa_map::tlvQoSManagementDescriptor has failed";
+            return false;
+        }
+
+        LOG(DEBUG) << "QoS Management Descriptor TLV is received:" << std::endl
+                   << "Rule ID: " << qos_management_descriptor_tlv->qmid() << std::endl
+                   << "BSSID: " << qos_management_descriptor_tlv->bssid() << std::endl
+                   << "Client MAC: " << qos_management_descriptor_tlv->client_mac() << std::endl;
+
+        // TODO: Implement handling of QoS Management Descriptor TLV (PPM-2364)
+    }
+
     return true;
 }
 
