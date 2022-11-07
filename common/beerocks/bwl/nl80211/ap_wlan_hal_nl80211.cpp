@@ -323,16 +323,15 @@ static bool assign_auth_encr_parameters(prplmesh::hostapd::Configuration &conf,
         return false;
     }
 
-    conf.set_create_vap_value(vap_id, "wpa", wpa);
-    conf.set_create_vap_value(vap_id, "okc", okc);
-    conf.set_create_vap_value(vap_id, "wpa_key_mgmt", wpa_key_mgmt);
-    conf.set_create_vap_value(vap_id, "wpa_pairwise", wpa_pairwise);
-    conf.set_create_vap_value(vap_id, "wpa_psk", wpa_psk);
-    conf.set_create_vap_value(vap_id, "ieee80211w", ieee80211w);
-    conf.set_create_vap_value(vap_id, "wpa_passphrase", wpa_passphrase);
-    conf.set_create_vap_value(vap_id, "disable_pmksa_caching", disable_pmksa_caching);
-    conf.set_create_vap_value(vap_id, "wpa_disable_eapol_key_retries",
-                              wpa_disable_eapol_key_retries);
+    conf.set_create_value(vap_id, "wpa", wpa);
+    conf.set_create_value(vap_id, "okc", okc);
+    conf.set_create_value(vap_id, "wpa_key_mgmt", wpa_key_mgmt);
+    conf.set_create_value(vap_id, "wpa_pairwise", wpa_pairwise);
+    conf.set_create_value(vap_id, "wpa_psk", wpa_psk);
+    conf.set_create_value(vap_id, "ieee80211w", ieee80211w);
+    conf.set_create_value(vap_id, "wpa_passphrase", wpa_passphrase);
+    conf.set_create_value(vap_id, "disable_pmksa_caching", disable_pmksa_caching);
+    conf.set_create_value(vap_id, "wpa_disable_eapol_key_retries", wpa_disable_eapol_key_retries);
     return true;
 }
 
