@@ -50,7 +50,11 @@
 using namespace beerocks;
 using namespace net;
 
-static constexpr uint8_t AUTOCONFIG_DISCOVERY_TIMEOUT_SECONDS = 3;
+static constexpr auto AUTOCONFIG_DISCOVERY_TIMEOUT       = std::chrono::seconds(3);
+static constexpr auto AUTOCONFIG_MULTIAP_PROFILE_TIMEOUT = std::chrono::milliseconds(700);
+
+static constexpr uint8_t MULTIAP_MAX_PROFILE =
+    wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_3;
 
 #define FSM_MOVE_STATE(radio_iface, new_state)                                                     \
     ({                                                                                             \
@@ -128,8 +132,10 @@ void ApAutoConfigurationTask::work()
                 m_discovery_status[radio->freq_type].msg_sent = true;
             }
 
-            conf_params.timeout = std::chrono::steady_clock::now() +
-                                  std::chrono::seconds(AUTOCONFIG_DISCOVERY_TIMEOUT_SECONDS);
+            conf_params.answer_timeout =
+                std::chrono::steady_clock::now() + AUTOCONFIG_DISCOVERY_TIMEOUT;
+            conf_params.profile_timeout =
+                std::chrono::steady_clock::now() + AUTOCONFIG_MULTIAP_PROFILE_TIMEOUT;
 
             FSM_MOVE_STATE(radio_iface, eState::WAIT_FOR_CONTROLLER_DISCOVERY_COMPLETE);
             break;
@@ -145,7 +151,15 @@ void ApAutoConfigurationTask::work()
                 break;
             }
 
-            if (std::chrono::steady_clock::now() > conf_params.timeout) {
+            // An autoconfig response was received, but did not contain the highest multiAP profile
+            if (m_discovery_status[radio->freq_type].msg_received &&
+                std::chrono::steady_clock::now() > conf_params.profile_timeout) {
+                m_discovery_status[radio->freq_type].completed = true;
+                FSM_MOVE_STATE(radio_iface, eState::SEND_AP_AUTOCONFIGURATION_WSC_M1);
+                break;
+            }
+
+            if (std::chrono::steady_clock::now() > conf_params.answer_timeout) {
                 FSM_MOVE_STATE(radio_iface, eState::CONTROLLER_DISCOVERY);
                 m_discovery_status[radio->freq_type].msg_sent = false;
             }
@@ -153,14 +167,14 @@ void ApAutoConfigurationTask::work()
         }
         case eState::SEND_AP_AUTOCONFIGURATION_WSC_M1: {
             send_ap_autoconfiguration_wsc_m1_message(radio_iface);
-            conf_params.timeout =
+            conf_params.answer_timeout =
                 std::chrono::steady_clock::now() +
                 std::chrono::seconds(beerocks::ieee1905_1_consts::AUTOCONFIG_M2_TIMEOUT_SECONDS);
             FSM_MOVE_STATE(radio_iface, eState::WAIT_AP_AUTOCONFIGURATION_WSC_M2);
             break;
         }
         case eState::WAIT_AP_AUTOCONFIGURATION_WSC_M2: {
-            if (std::chrono::steady_clock::now() > conf_params.timeout) {
+            if (std::chrono::steady_clock::now() > conf_params.answer_timeout) {
                 FSM_MOVE_STATE(radio_iface, eState::SEND_AP_AUTOCONFIGURATION_WSC_M1);
             }
             break;
@@ -308,7 +322,7 @@ void ApAutoConfigurationTask::configuration_complete_wait_action(const std::stri
         // If expired and we did not receive AP_ENABLE on the radios BSSs, assume it was already
         // configured, and the AP_ENABLE will never come.
         // The timer is set on "handle_vs_wifi_credentials_update_response()""
-        if (std::chrono::steady_clock::now() < radio_conf_params.timeout) {
+        if (std::chrono::steady_clock::now() < radio_conf_params.answer_timeout) {
             return;
         }
     }
@@ -323,7 +337,7 @@ void ApAutoConfigurationTask::configuration_complete_wait_action(const std::stri
         }
         radio_conf_params.sent_vaps_list_update = true;
 
-        radio_conf_params.timeout =
+        radio_conf_params.answer_timeout =
             std::chrono::steady_clock::now() +
             std::chrono::seconds(WAIT_IFACES_INSIDE_THE_BRIDGE_TIMEOUT_SECONDS);
     }
@@ -348,10 +362,10 @@ void ApAutoConfigurationTask::configuration_complete_wait_action(const std::stri
 
         // Return if not all bssids are in the bridge, and print error.
         if (found == ifaces_in_bridge.end()) {
-            if (std::chrono::steady_clock::now() > radio_conf_params.timeout) {
+            if (std::chrono::steady_clock::now() > radio_conf_params.answer_timeout) {
                 auto timeout_sec =
                     std::chrono::duration_cast<std::chrono::seconds>(
-                        std::chrono::steady_clock::now() - radio_conf_params.timeout +
+                        std::chrono::steady_clock::now() - radio_conf_params.answer_timeout +
                         std::chrono::seconds(WAIT_IFACES_INSIDE_THE_BRIDGE_TIMEOUT_SECONDS))
                         .count();
                 LOG_EVERY_N(10, ERROR)
@@ -852,9 +866,23 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_response(
     if (discovery_status_it != m_discovery_status.end() && discovery_status_it->second.completed) {
         return;
     }
-    m_discovery_status[freq_type].completed = true;
 
     LOG(DEBUG) << "received ap_autoconfiguration response for " << band_name << " band";
+
+    auto multiap_profile_tlv = cmdu_rx.getClass<wfa_map::tlvProfile2MultiApProfile>();
+    if (multiap_profile_tlv) {
+        if (db->controller_info.profile_support < multiap_profile_tlv->profile()) {
+            if (m_discovery_status[freq_type].msg_received) {
+                LOG(DEBUG) << "This response contains a higher multiAP profile. Upgrading "
+                              "controller profile.";
+            }
+            db->controller_info.profile_support = multiap_profile_tlv->profile();
+        } else if (db->controller_info.profile_support > multiap_profile_tlv->profile()) {
+            LOG(DEBUG) << "This response contains a lower multiAP profile than the controller is "
+                          "supposed to be. Dropping response.";
+            return;
+        }
+    }
 
     // Set prplmesh_controller to false by default. If "SLAVE_HANDSHAKE_RESPONSE" is received, mark
     // it to 'true'.
@@ -869,11 +897,6 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_response(
         prplmesh_controller = true;
     } else {
         LOG(DEBUG) << "Not prplMesh controller " << src_mac;
-    }
-
-    auto tlvProfile2MultiApProfile = cmdu_rx.getClass<wfa_map::tlvProfile2MultiApProfile>();
-    if (tlvProfile2MultiApProfile) {
-        db->controller_info.profile_support = tlvProfile2MultiApProfile->profile();
     }
 
     auto tlvSupportedService = cmdu_rx.getClass<wfa_map::tlvSupportedService>();
@@ -900,18 +923,17 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_response(
         return;
     }
 
-    auto multiap_profile_tlv = cmdu_rx.getClass<wfa_map::tlvProfile2MultiApProfile>();
-    if (multiap_profile_tlv) {
-        db->controller_info.profile_support = multiap_profile_tlv->profile();
-    }
-
     // Mark discovery status completed on band mentioned on the response and fill AgentDB fields.
-    db->controller_info.prplmesh_controller = prplmesh_controller;
-    db->controller_info.bridge_mac          = src_mac;
-    m_discovery_status[freq_type].completed = true;
+    db->controller_info.prplmesh_controller    = prplmesh_controller;
+    db->controller_info.bridge_mac             = src_mac;
+    m_discovery_status[freq_type].msg_received = true;
     LOG(DEBUG) << "controller_discovered on " << band_name
                << " band, controller bridge_mac=" << src_mac
                << ", prplmesh_controller=" << prplmesh_controller;
+
+    if (db->controller_info.profile_support == MULTIAP_MAX_PROFILE) {
+        m_discovery_status[freq_type].completed = true;
+    }
 
     // Update the AP Manager with the Multi-AP Controller Profile
     m_btl_ctx.m_radio_managers.do_on_each_radio_manager(
@@ -1481,7 +1503,7 @@ void ApAutoConfigurationTask::handle_vs_wifi_credentials_update_response(
 
     // This value have an arbitrary value based on observation on real platform behavior.
     constexpr uint8_t WAIT_AP_ENABLED_TIMEOUT_SECONDS = 20;
-    radio_conf_params.timeout =
+    radio_conf_params.answer_timeout =
         std::chrono::steady_clock::now() + std::chrono::seconds(WAIT_AP_ENABLED_TIMEOUT_SECONDS);
 }
 
