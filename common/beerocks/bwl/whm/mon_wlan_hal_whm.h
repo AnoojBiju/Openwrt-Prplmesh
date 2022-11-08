@@ -75,6 +75,8 @@ public:
 
     virtual bool channel_scan_abort() override;
     virtual bool set_estimated_service_parameters(uint8_t *esp_info_field) override;
+    virtual bool process_sta_event(const std::string &interface, const std::string &sta_mac,
+                                   const amxc_var_t *data) override;
 
     // Protected methods:
 protected:

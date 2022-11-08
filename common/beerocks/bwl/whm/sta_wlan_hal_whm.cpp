@@ -21,6 +21,7 @@ sta_wlan_hal_whm::sta_wlan_hal_whm(const std::string &iface_name, hal_event_cb_t
     : base_wlan_hal(bwl::HALType::Station, iface_name, IfaceType::Intel, callback, hal_conf),
       base_wlan_hal_whm(bwl::HALType::Station, iface_name, callback, hal_conf)
 {
+    subscribe_to_ep_events(iface_name);
 }
 
 sta_wlan_hal_whm::~sta_wlan_hal_whm() { sta_wlan_hal_whm::detach(); }
@@ -174,12 +175,6 @@ int sta_wlan_hal_whm::get_channel() { return m_active_channel; }
 std::string sta_wlan_hal_whm::get_ssid() { return m_active_ssid; }
 
 std::string sta_wlan_hal_whm::get_bssid() { return m_active_bssid; }
-
-bool sta_wlan_hal_whm::process_whm_event(sta_wlan_hal::Event event, const amxc_var_t *data)
-{
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
-    return true;
-}
 
 bool sta_wlan_hal_whm::update_status()
 {
@@ -348,6 +343,87 @@ void sta_wlan_hal_whm::update_status(const Endpoint &endpoint)
 bool sta_wlan_hal_whm::is_connected(const std::string &status)
 {
     return (status.compare("Connected") == 0);
+}
+
+bool sta_wlan_hal_whm::process_ep_event(const std::string &interface, const amxc_var_t *data)
+{
+    const char *status = GETP_CHAR(data, "parameters.ConnectionStatus.to");
+    if (!status) {
+        return false;
+    }
+    sta_wlan_hal::Event event = sta_wlan_hal::Event::Disconnected;
+    if (std::string(status) == "Connected") {
+        event = sta_wlan_hal::Event::Connected;
+    }
+    process_whm_event(event, data);
+
+    return true;
+}
+
+bool sta_wlan_hal_whm::process_whm_event(sta_wlan_hal::Event event, const amxc_var_t *data)
+{
+    switch (event) {
+    // Client Connected
+    case Event::Connected: {
+
+        Endpoint endpoint;
+        if (!read_status(endpoint)) {
+            LOG(ERROR) << "Failed reading connection status for iface: " << get_iface_name();
+            return false;
+        }
+
+        LOG(DEBUG) << get_iface_name() << " - Connected: bssid = " << endpoint.bssid
+                   << ", channel = " << endpoint.channel;
+
+        update_status(endpoint);
+
+        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_BACKHAUL_CONNECTED_NOTIFICATION));
+        auto msg      = reinterpret_cast<sACTION_BACKHAUL_CONNECTED_NOTIFICATION *>(msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        // Initialize the message
+        memset(msg_buff.get(), 0, sizeof(sACTION_BACKHAUL_CONNECTED_NOTIFICATION));
+
+        // Forward the event
+        event_queue_push(event, msg_buff);
+    } break;
+
+    // Client disconnected
+    case Event::Disconnected: {
+
+        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_BACKHAUL_DISCONNECT_REASON_NOTIFICATION));
+        auto msg =
+            reinterpret_cast<sACTION_BACKHAUL_DISCONNECT_REASON_NOTIFICATION *>(msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        // Initialize the message
+        memset(msg_buff.get(), 0, sizeof(sACTION_BACKHAUL_DISCONNECT_REASON_NOTIFICATION));
+
+        // TODO: Read the disconnect reason value
+        Endpoint endpoint;
+        if (!read_status(endpoint)) {
+            LOG(ERROR) << "Failed reading connection status for iface: " << get_iface_name();
+            return false;
+        }
+
+        LOG(DEBUG) << get_iface_name() << " - Disconnected: bssid = " << endpoint.bssid
+                   << ", channel = " << endpoint.channel;
+
+        update_status(endpoint);
+
+        msg->bssid = tlvf::mac_from_string(endpoint.bssid);
+
+        // Forward the event
+        event_queue_push(event, msg_buff);
+
+    } break;
+
+    default:
+        LOG(DEBUG) << "Unhandled event received";
+        break;
+    }
+
+    return true;
 }
 
 } // namespace whm

@@ -112,11 +112,12 @@ protected:
     }
 
     virtual bool set(const std::string &param, const std::string &value, int vap_id) override;
+    virtual bool process_radio_event(const std::string &interface, const amxc_var_t *data) override;
+    virtual bool process_ap_event(const std::string &interface, const amxc_var_t *data) override;
+    virtual bool process_sta_event(const std::string &interface, const std::string &sta_mac,
+                                   const amxc_var_t *data) override;
 
 private:
-    void subscribe_to_radio_events(const std::string &iface_name);
-    void subscribe_to_ap_events(const std::string &iface_name);
-    void subscribe_to_sta_events(const std::string &iface_name);
     amxc_var_t *get_last_assoc_frame(const std::string &sta_mac);
     bool process_whm_event(ap_wlan_hal::Event event, const amxc_var_t *data);
 };

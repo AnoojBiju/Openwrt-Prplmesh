@@ -64,7 +64,7 @@ base_wlan_hal_whm::~base_wlan_hal_whm()
     base_wlan_hal_whm::detach();
 }
 
-void base_wlan_hal_whm::subscribe_to_radio_events()
+void base_wlan_hal_whm::subscribe_to_radio_events(const std::string &iface_name)
 {
     // subscribe to the WiFi.Radio.iface_name.Status
     sAmxClEventCallback *event_callback = new sAmxClEventCallback();
@@ -82,7 +82,7 @@ void base_wlan_hal_whm::subscribe_to_radio_events()
     m_ambiorix_cl->subscribe_to_object_event(m_radio_path, event_callback, filter);
 }
 
-void base_wlan_hal_whm::subscribe_to_ap_events()
+void base_wlan_hal_whm::subscribe_to_ap_events(const std::string &iface_name)
 {
     std::string wifi_ap_path            = search_path_ap();
     sAmxClEventCallback *event_callback = new sAmxClEventCallback();
@@ -117,7 +117,26 @@ void base_wlan_hal_whm::subscribe_to_ap_events()
     m_ambiorix_cl->subscribe_to_object_event(wifi_ap_path, event_callback, filter);
 }
 
-void base_wlan_hal_whm::subscribe_to_sta_events()
+void base_wlan_hal_whm::subscribe_to_ep_events(const std::string &iface_name)
+{
+    // subscribe to the WiFi.EndPoint.iface_name.ConnectionStatus
+    std::string wifi_ep_path            = search_path_ap_by_iface(iface_name);
+    sAmxClEventCallback *event_callback = new sAmxClEventCallback();
+    event_callback->event_type          = {AMX_CL_OBJECT_CHANGED_EVT};
+    event_callback->callback_fn         = [](amxc_var_t *event_data, void *context) -> void {
+        if (!event_data) {
+            return;
+        }
+        base_wlan_hal_whm *hal = (static_cast<base_wlan_hal_whm *>(context));
+        hal->process_ep_event(hal->get_iface_name(), event_data);
+    };
+    event_callback->context = this;
+    std::string filter      = "path matches '" + wifi_ep_path + "'";
+    filter.append(" && contains('parameters.ConnectionStatus')");
+    m_ambiorix_cl->subscribe_to_object_event(m_radio_path, event_callback, filter);
+}
+
+void base_wlan_hal_whm::subscribe_to_sta_events(const std::string &iface_name)
 {
     std::string wifi_ad_path            = search_path_ap() + "[0-9]+.AssociatedDevice.";
     sAmxClEventCallback *event_callback = new sAmxClEventCallback();
@@ -158,6 +177,11 @@ bool base_wlan_hal_whm::process_radio_event(const std::string &interface, const 
 }
 
 bool base_wlan_hal_whm::process_ap_event(const std::string &interface, const amxc_var_t *data)
+{
+    return true;
+}
+
+bool base_wlan_hal_whm::process_ep_event(const std::string &interface, const amxc_var_t *data)
 {
     return true;
 }

@@ -84,11 +84,13 @@ protected:
         return m_ambiorix_cl;
     }
     std::string m_radio_path;
-    void subscribe_to_radio_events();
-    void subscribe_to_ap_events();
-    void subscribe_to_sta_events();
+    void subscribe_to_radio_events(const std::string &iface_name);
+    void subscribe_to_ap_events(const std::string &iface_name);
+    void subscribe_to_ep_events(const std::string &iface_name);
+    void subscribe_to_sta_events(const std::string &iface_name);
     virtual bool process_radio_event(const std::string &interface, const amxc_var_t *data);
     virtual bool process_ap_event(const std::string &interface, const amxc_var_t *data);
+    virtual bool process_ep_event(const std::string &interface, const amxc_var_t *data);
     virtual bool process_sta_event(const std::string &interface, const std::string &sta_mac,
                                    const amxc_var_t *data);
 

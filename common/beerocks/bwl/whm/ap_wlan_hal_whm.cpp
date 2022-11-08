@@ -59,122 +59,6 @@ HALState ap_wlan_hal_whm::attach(bool block)
     return state;
 }
 
-void ap_wlan_hal_whm::subscribe_to_radio_events(const std::string &iface_name)
-{
-    sAmxClEventCallback *event_callback = new sAmxClEventCallback();
-    event_callback->event_type          = AMX_CL_OBJECT_CHANGED_EVT;
-    event_callback->callback_fn         = [](amxc_var_t *event_data, void *context) -> void {
-        if (!event_data) {
-            return;
-        }
-        amxc_var_t *params = GET_ARG(event_data, "parameters");
-        amxc_var_for_each(param, params)
-        {
-            const char *key = amxc_var_key(param);
-            if (!key) {
-                continue;
-            }
-            if (std::string(key) != "Status") {
-                continue;
-            }
-            amxc_var_t *status = GET_ARG(params, key);
-            if (!status) {
-                continue;
-            }
-            const char *status_val = GET_CHAR(status, "to");
-            if (!status_val) {
-                continue;
-            }
-            ap_wlan_hal::Event event = ap_wlan_hal::Event::Invalid;
-            if (std::string(status_val) == "Up") {
-                event = ap_wlan_hal::Event::Interface_Enabled;
-            } else {
-                event = ap_wlan_hal::Event::Interface_Disabled;
-            }
-            (static_cast<ap_wlan_hal_whm *>(context))->process_whm_event(event, event_data);
-        }
-    };
-    event_callback->context = this;
-    m_ambiorix_cl->subscribe_to_object_event(m_radio_path, event_callback);
-}
-
-void ap_wlan_hal_whm::subscribe_to_ap_events(const std::string &iface_name)
-{
-    std::string wifi_ap_path            = search_path_ap_by_iface(iface_name);
-    sAmxClEventCallback *event_callback = new sAmxClEventCallback();
-    event_callback->event_type          = AMX_CL_OBJECT_CHANGED_EVT;
-    event_callback->callback_fn         = [](amxc_var_t *event_data, void *context) -> void {
-        if (!event_data) {
-            return;
-        }
-        amxc_var_t *params = GET_ARG(event_data, "parameters");
-        amxc_var_for_each(param, params)
-        {
-            const char *key = amxc_var_key(param);
-            if (!key) {
-                continue;
-            }
-            if (std::string(key) != "Status") {
-                continue;
-            }
-            amxc_var_t *status = GET_ARG(params, key);
-            if (!status) {
-                continue;
-            }
-            const char *status_val = GET_CHAR(status, "to");
-            if (!status_val) {
-                continue;
-            }
-            ap_wlan_hal::Event event = ap_wlan_hal::Event::Invalid;
-            if (std::string(status_val) == "Enabled") {
-                event = ap_wlan_hal::Event::AP_Enabled;
-            } else {
-                event = ap_wlan_hal::Event::AP_Disabled;
-            }
-            (static_cast<ap_wlan_hal_whm *>(context))->process_whm_event(event, event_data);
-        }
-    };
-    event_callback->context = this;
-    m_ambiorix_cl->subscribe_to_object_event(wifi_ap_path, event_callback);
-}
-
-void ap_wlan_hal_whm::subscribe_to_sta_events(const std::string &iface_name)
-{
-    std::string wifi_ap_sta_path        = search_path_ap_by_iface(iface_name) + "AssociatedDevice.";
-    sAmxClEventCallback *event_callback = new sAmxClEventCallback();
-    event_callback->event_type          = AMX_CL_OBJECT_CHANGED_EVT;
-    event_callback->callback_fn         = [](amxc_var_t *event_data, void *context) -> void {
-        if (!event_data) {
-            return;
-        }
-        amxc_var_t *params = GET_ARG(event_data, "parameters");
-        amxc_var_for_each(param, params)
-        {
-            const char *key = amxc_var_key(param);
-            if (!key) {
-                continue;
-            }
-            if (std::string(key) != "Active") {
-                continue;
-            }
-            amxc_var_t *active = GET_ARG(params, key);
-            if (!active) {
-                continue;
-            }
-            const bool active_val    = GET_BOOL(active, "to");
-            ap_wlan_hal::Event event = ap_wlan_hal::Event::Invalid;
-            if (active_val) {
-                event = ap_wlan_hal::Event::STA_Connected;
-            } else {
-                event = ap_wlan_hal::Event::STA_Disconnected;
-            }
-            (static_cast<ap_wlan_hal_whm *>(context))->process_whm_event(event, event_data);
-        }
-    };
-    event_callback->context = this;
-    m_ambiorix_cl->subscribe_to_object_event(wifi_ap_sta_path, event_callback);
-}
-
 bool ap_wlan_hal_whm::refresh_radio_info()
 {
     std::string sVal;
@@ -745,6 +629,49 @@ amxc_var_t *ap_wlan_hal_whm::get_last_assoc_frame(const std::string &sta_mac)
     amxc_var_clean(&data);
 
     return frame;
+}
+
+bool ap_wlan_hal_whm::process_radio_event(const std::string &interface, const amxc_var_t *data)
+{
+    const char *status = GETP_CHAR(data, "parameters.Status.to");
+    if (!status) {
+        return false;
+    }
+    ap_wlan_hal::Event event = ap_wlan_hal::Event::Interface_Disabled;
+    if (std::string(status) == "Up") {
+        event = ap_wlan_hal::Event::Interface_Enabled;
+    }
+    process_whm_event(event, data);
+
+    return true;
+}
+
+bool ap_wlan_hal_whm::process_ap_event(const std::string &interface, const amxc_var_t *data)
+{
+    const char *status = GETP_CHAR(data, "parameters.Status.to");
+    if (!status) {
+        return false;
+    }
+    ap_wlan_hal::Event event = ap_wlan_hal::Event::AP_Disabled;
+    if (std::string(status) == "Enabled") {
+        event = ap_wlan_hal::Event::AP_Enabled;
+    }
+    process_whm_event(event, data);
+
+    return true;
+}
+
+bool ap_wlan_hal_whm::process_sta_event(const std::string &interface, const std::string &sta_mac,
+                                        const amxc_var_t *data)
+{
+    bool active              = GETP_BOOL(data, "parameters.Active.to");
+    ap_wlan_hal::Event event = ap_wlan_hal::Event::STA_Disconnected;
+    if (active) {
+        event = ap_wlan_hal::Event::STA_Connected;
+    }
+    process_whm_event(event, data);
+
+    return true;
 }
 
 bool ap_wlan_hal_whm::process_whm_event(ap_wlan_hal::Event event, const amxc_var_t *data)
