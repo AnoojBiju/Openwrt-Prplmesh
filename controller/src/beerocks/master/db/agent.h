@@ -175,6 +175,18 @@ public:
             /** True if this BSS was created virtually for use by a single station */
             bool is_vbss = false;
 
+            /**
+             * @brief Byte Counter Units.
+             *
+             * The units used for byte counters when the Multi-AP Agent
+             * reports traffic statistics.
+             *
+             * BYTES = 0x0
+             * KIBIBYTES = 0x1
+             * MEBIBYTES = 0x2
+             */
+            uint32_t byte_counter_units = 0x0;
+
             /** Stations (backhaul or fronthaul) connected to this BSS. */
             beerocks::mac_map<Station> connected_stations;
         };
