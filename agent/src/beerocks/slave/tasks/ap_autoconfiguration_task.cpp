@@ -1418,26 +1418,39 @@ bool ApAutoConfigurationTask::handle_wsc_m2_tlv(
 
             LOG(WARNING) << "Controller configured Backhaul BSS for combined Profile1 and "
                          << "Profile2, but it is not supported!";
-            // bss_errors.push_back(
-            //     {wfa_map::tlvProfile2ErrorCode::eReasonCode::
-            //          TRAFFIC_SEPARATION_ON_COMBINED_PROFILE1_BACKHAUL_AND_PROFILE2_BACKHAUL_UNSUPPORTED,
-            //      config.bssid});
-
-            // // Multi-AP standard requires to tear down any misconfigured BSS.
-            // config.bss_type = WSC::eWscVendorExtSubelementBssType::TEARDOWN;
-
             /**
-             * We currently do not support bBSS with both profile 1/2 disallow
-             * flags set to false (Combined Profile bBSS mode).
+             * We currently do not support bBSS with both profile 1/2 disallow flags set to false
+             * (Combined Profile bBSS mode).
              * When we are configured in a way we don't support, we should tear down the BSS, and
              * send an error response on that BSS.
              * Currently R2 certified controllers (Mediatek/Marvel) have a bug (PPM-1389) that ends
              * up sending M2 with both profile 1/2 disallow flags set to false although we report 
              * combined_profile1_and_profile2 = 0 in ap_radio_advanced_capabilities_tlv.
-             * To deal with it, temporarily comment the lines above and allow the BSS to be
-             * configured successfully until PPM-1389 is resolved.
+             * To deal with it, we using
+             * TrafficSeparation::m_profile_x_disallow_override_unsupported_configuration integer
+             * originated in the beerocks_agent.conf to resolve the conflict with predefined
+             * value. PPM-1389.
              */
-            LOG(DEBUG) << "Currently ignore bad configuration";
+            if (TrafficSeparation::m_profile_x_disallow_override_unsupported_configuration == 0) {
+                bss_errors.push_back(
+                    {wfa_map::tlvProfile2ErrorCode::eReasonCode::
+                         TRAFFIC_SEPARATION_ON_COMBINED_PROFILE1_BACKHAUL_AND_PROFILE2_BACKHAUL_UNSUPPORTED,
+                     config.bssid});
+
+                // Multi-AP standard requires to tear down any misconfigured BSS.
+                config.bss_type = WSC::eWscVendorExtSubelementBssType::TEARDOWN;
+                continue;
+            } else if (TrafficSeparation::m_profile_x_disallow_override_unsupported_configuration ==
+                       1) {
+                config.bss_type |= WSC::eWscVendorExtSubelementBssType::
+                    PROFILE1_BACKHAUL_STA_ASSOCIATION_DISALLOWED;
+            }
+            // TrafficSeparation::m_profile_x_disallow_override_unsupported_configuration == 2
+            else {
+                config.bss_type |= WSC::eWscVendorExtSubelementBssType::
+                    PROFILE2_BACKHAUL_STA_ASSOCIATION_DISALLOWED;
+            }
+            LOG(DEBUG) << "Override unsupported 'profile disallow' configuration";
         }
 
         LOG(DEBUG) << m2.manufacturer() << " config data:" << std::endl
