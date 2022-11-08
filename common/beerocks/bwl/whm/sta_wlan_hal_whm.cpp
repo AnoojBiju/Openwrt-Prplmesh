@@ -125,9 +125,9 @@ bool sta_wlan_hal_whm::disconnect()
     }
 
     // Connection status id must be the same as the active profile id
-    if (m_active_profile_id != endpoint.active_profile_id) {
+    if (m_active_profile_id != endpoint.id) {
         LOG(ERROR) << "Profile id mismatch: m_active_profile_id(" << m_active_profile_id << ") != "
-                   << "endpoint.active_profile_id(" << endpoint.active_profile_id << ")";
+                   << "endpoint.id(" << endpoint.id << ")";
         return false;
     }
 
@@ -140,6 +140,7 @@ bool sta_wlan_hal_whm::disconnect()
     m_active_ssid       = "";
     m_active_bssid      = "";
     m_active_pass       = "";
+    m_active_radio_ref  = "";
     m_active_channel    = 0;
     m_active_profile_id = -1;
 
@@ -317,11 +318,19 @@ bool sta_wlan_hal_whm::read_status(Endpoint &endpoint)
     }
     endpoint.bssid             = GET_CHAR(endpoint_obj, "BSSID");
     endpoint.ssid              = GET_CHAR(endpoint_obj, "SSID");
-    endpoint.active_profile_id = GET_UINT32(endpoint_obj, "ProfileReference");
+    endpoint.id                = GET_UINT32(endpoint_obj, "ProfileReference");
     endpoint.connection_status = GET_CHAR(endpoint_obj, "ConnectionStatus");
-    endpoint.channel           = GET_UINT32(endpoint_obj, "Channel");
+    endpoint.radio_ref         = GET_CHAR(endpoint_obj, "RadioReference");
 
     amxc_var_delete(&endpoint_obj);
+
+    std::string radio_path = endpoint.radio_ref + ".";
+    amxc_var_t *radio_obj  = m_ambiorix_cl->get_object(radio_path);
+    if (!radio_obj) {
+        LOG(ERROR) << "failed to get radio object, RadioReference:" << radio_path;
+    }
+    endpoint.channel = GET_UINT32(radio_obj, "Channel");
+    amxc_var_delete(&radio_obj);
 
     LOG(DEBUG) << "active profile " << m_active_profile_id;
 
@@ -330,9 +339,10 @@ bool sta_wlan_hal_whm::read_status(Endpoint &endpoint)
 
 void sta_wlan_hal_whm::update_status(const Endpoint &endpoint)
 {
+    m_active_profile_id = endpoint.id;
     m_active_bssid      = endpoint.bssid;
     m_active_ssid       = endpoint.ssid;
-    m_active_profile_id = endpoint.active_profile_id;
+    m_active_radio_ref  = endpoint.radio_ref;
     m_active_channel    = endpoint.channel;
 
     LOG(DEBUG) << "m_active_profile_id= " << m_active_profile_id
