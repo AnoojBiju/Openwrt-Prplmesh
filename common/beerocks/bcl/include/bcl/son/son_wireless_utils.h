@@ -147,7 +147,7 @@ public:
      *      1. The frequency type is not included in one of the following bands: 2.4ghz, 5ghz or 6ghz.
      *      2. The channel number does is not match the frequency type.
      */
-    static int channel_to_freq(int channel, beerocks::eFreqType freq_type);
+    static uint16_t channel_to_freq(int channel, beerocks::eFreqType freq_type);
     /**
      * @brief Translate a channel number to its frequency value
      * 

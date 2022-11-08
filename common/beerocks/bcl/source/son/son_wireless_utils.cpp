@@ -892,7 +892,7 @@ int wireless_utils::channel_to_freq(int channel)
     return (channel + 1000) * 5;
 }
 
-int wireless_utils::channel_to_freq(int channel, beerocks::eFreqType freq_type)
+uint16_t wireless_utils::channel_to_freq(int channel, beerocks::eFreqType freq_type)
 {
     switch (freq_type) {
     case beerocks::FREQ_24G:
