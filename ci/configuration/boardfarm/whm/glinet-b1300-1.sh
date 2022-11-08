@@ -33,8 +33,19 @@ ubus call DHCPv6.Client.1 _set '{"parameters": { "Enable": False }}'
 ubus call DHCPv4.Server _set '{"parameters": { "Enable": False }}'
 ubus call DHCPv6.Server _set '{"parameters": { "Enable": False }}'
 
-# IP for device upgrades, operational tests, Boardfarm data network, ...
+# IP for operation tests, Boardfarm data network, ...
 ubus call "IP.Interface" _set '{ "rel_path": ".[Alias == \"lan\"].IPv4Address.[Alias == \"lan\"].", "parameters": { "IPAddress": "192.168.1.110" } }'
+
+# IP used to control the device:
+# Add the IP address if there is none yet:
+ubus call IP.Interface _get '{ "rel_path": ".[Alias == \"wan\"].IPv4Address.[Alias == \"wan\"]." }' || {
+    echo "Adding IP address $IP"
+    ubus call "IP.Interface" _add '{ "rel_path": ".[Alias == \"wan\"].IPv4Address.", "parameters": { "Alias": "wan", "AddressingType": "Static" } }'
+}
+# Configure it:
+ubus call "IP.Interface" _set '{ "rel_path": ".[Alias == \"wan\"].IPv4Address.1", "parameters": { "IPAddress": "192.168.3.100", "SubnetMask": "255.255.255.0", "AddressingType": "Static", "Enable" : true } }'
+# Enable it:
+ubus call "IP.Interface" _set '{ "rel_path": ".[Alias == \"wan\"].", "parameters": { "IPv4Enable": true } }'
 
 # enable Wi-Fi radios
 ubus call "WiFi.Radio.1" _set '{ "parameters": { "Enable": "true" } }'
@@ -44,13 +55,20 @@ ubus call "WiFi.Radio.2" _set '{ "parameters": { "Enable": "true" } }'
 uci set prplmesh.config.backhaul_wire_iface='eth0'
 
 # VLAN interface to control the device separatly:
-uci batch << 'EOF'
-set network.UCC=interface
-set network.UCC.ifname='eth0.200'
-set network.UCC.proto='static'
-set network.UCC.netmask='255.255.255.0'
-set network.UCC.ipaddr='192.168.200.110'
-EOF
+# uci batch << 'EOF'
+# set network.UCC=interface
+# set network.UCC.ifname='eth0.200'
+# set network.UCC.proto='static'
+# set network.UCC.netmask='255.255.255.0'
+# set network.UCC.ipaddr='192.168.200.110'
+# EOF
+
+# uci batch << 'EOF'
+# add network switch_vlan
+# set network.@switch_vlan[-1].device='switch0'
+# set network.@switch_vlan[-1].vlan='200'
+# set network.@switch_vlan[-1].ports='3t 4t 0t 5t'
+# EOF
 
 # all pwhm default configuration can be found in /etc/amx/wld/wld_defaults.odl.uc
 
@@ -86,6 +104,8 @@ ubus call "WiFi.Radio.1" _set '{ "parameters": { "Channel": "1" } }'
 ubus call "WiFi.Radio.2" _set '{ "parameters": { "Channel": "48" } }'
 
 # secondary vaps and backhaul are not supported yet (WIP)
+
+uci commit
 
 # Try to work around PCF-681: if we don't have a connectivity, restart
 # tr181-bridging
