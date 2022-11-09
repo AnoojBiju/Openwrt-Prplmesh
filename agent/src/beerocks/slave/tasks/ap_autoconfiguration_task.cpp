@@ -1361,16 +1361,13 @@ bool ApAutoConfigurationTask::handle_wsc_m2_tlv(
         ss << "ssid: " << config.ssid << std::endl;
         ss << "fBSS: " << fBSS << std::endl;
         ss << "bBSS: " << bBSS << std::endl;
-        ss << "encr:" << std::hex << int(config.encr_type) << std::endl;
-        ss << "auth:" << std::hex << int(config.auth_type) << std::endl;
+        ss << "teardown: " << teardown << std::endl;
         if (bBSS) {
             ss << "profile1_backhaul_sta_association_disallowed: " << bBSS_p1_disallowed;
             ss << "profile2_backhaul_sta_association_disallowed: " << bBSS_p2_disallowed;
         }
 
-        // Keep this log print commented as it floods the logs,
-        // but could be helpful with future debugging.
-        // LOG(DEBUG) << m2.manufacturer() << " " << ss.str();
+        LOG(DEBUG) << m2.manufacturer() << " " << ss.str();
 
         if (teardown) {
             LOG(DEBUG) << "BSSID: " << config.bssid << " is flagged for teardown!";
@@ -1388,14 +1385,13 @@ bool ApAutoConfigurationTask::handle_wsc_m2_tlv(
             continue;
         }
 
-        LOG(INFO) << "bss_type: " << std::hex << int(config.bss_type);
-
         // BACKHAUL_STA bit is not expected to be set
         if (bSTA) {
             LOG(WARNING) << "Unexpected backhaul STA bit";
         }
 
         if (misconfigured_ssids.find(config.ssid) != misconfigured_ssids.end()) {
+            LOG(WARNING) << "Controller configured VLANs more than maximum supported";
             bss_errors.push_back({wfa_map::tlvProfile2ErrorCode::eReasonCode::
                                       NUMBER_OF_UNIQUE_VLAN_ID_EXCEEDS_MAXIMUM_SUPPORTED,
                                   config.bssid});
@@ -1432,6 +1428,8 @@ bool ApAutoConfigurationTask::handle_wsc_m2_tlv(
              * value. PPM-1389.
              */
             if (TrafficSeparation::m_profile_x_disallow_override_unsupported_configuration == 0) {
+                LOG(WARNING) << "Sending error and Tearing down BSS that controller configured to "
+                             << config.ssid;
                 bss_errors.push_back(
                     {wfa_map::tlvProfile2ErrorCode::eReasonCode::
                          TRAFFIC_SEPARATION_ON_COMBINED_PROFILE1_BACKHAUL_AND_PROFILE2_BACKHAUL_UNSUPPORTED,
@@ -1450,13 +1448,11 @@ bool ApAutoConfigurationTask::handle_wsc_m2_tlv(
                 config.bss_type |= WSC::eWscVendorExtSubelementBssType::
                     PROFILE2_BACKHAUL_STA_ASSOCIATION_DISALLOWED;
             }
-            LOG(DEBUG) << "Override unsupported 'profile disallow' configuration";
+            LOG(DEBUG)
+                << "Override unsupported 'profile disallow' configuration and disallow profile "
+                << TrafficSeparation::m_profile_x_disallow_override_unsupported_configuration;
         }
 
-        LOG(DEBUG) << m2.manufacturer() << " config data:" << std::endl
-                   << " ssid: " << config.ssid << ", bssid: " << config.bssid
-                   << ", authentication_type: " << std::hex << int(config.auth_type)
-                   << ", encryption_type: " << int(config.encr_type);
         configs.push_back(config);
     }
 
@@ -1688,7 +1684,7 @@ bool ApAutoConfigurationTask::ap_autoconfiguration_wsc_parse_encrypted_settings(
     int datalen = cipherlen + 16;
     uint8_t decrypted[datalen];
 
-    LOG(DEBUG) << "M2 Parse: received encrypted settings with length " << cipherlen;
+    // LOG(DEBUG) << "M2 Parse: received encrypted settings with length " << cipherlen;
 
     LOG(DEBUG) << "M2 Parse: aes decrypt";
     if (!mapf::encryption::aes_decrypt(keywrapkey, iv, ciphertext, cipherlen, decrypted, datalen)) {
@@ -1697,8 +1693,8 @@ bool ApAutoConfigurationTask::ap_autoconfiguration_wsc_parse_encrypted_settings(
     }
 
     LOG(DEBUG) << "M2 Parse: parse config_data, len = " << datalen;
-    LOG(DEBUG) << "decrypted config_data buffer: " << std::endl
-               << utils::dump_buffer(decrypted, datalen);
+    // LOG(DEBUG) << "decrypted config_data buffer: " << std::endl
+    //            << utils::dump_buffer(decrypted, datalen);
 
     // Parsing failure means that the config data is invalid,
     // in which case it is unclear what we should do.
