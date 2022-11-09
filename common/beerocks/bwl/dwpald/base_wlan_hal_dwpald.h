@@ -148,9 +148,11 @@ protected:
 
     /**
      * @brief Update the interface connection status map
-     * @return int
+     * @param ifname The interface name
+     * @param vap_id An empty vector which is expected to be filled by vap_id(s).
+     * @return true on success, otherwise false
      */
-    int update_conn_status(char *ifname);
+    bool update_conn_status(char *ifname, std::vector<int> &vap_id);
 
     std::unique_ptr<nl80211_client> m_nl80211_client;
 
