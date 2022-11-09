@@ -4083,13 +4083,28 @@ bool Controller::handle_tlv_profile2_ap_capability(std::shared_ptr<Agent> agent,
         return false;
     }
 
+    agent->max_prioritization_rules = profile2_ap_capability_tlv->max_prioritization_rules();
     agent->byte_counter_units = static_cast<wfa_map::tlvProfile2ApCapability::eByteCounterUnits>(
         profile2_ap_capability_tlv->capabilities_bit_field().byte_counter_units);
-
+    agent->prioritization_support =
+        profile2_ap_capability_tlv->capabilities_bit_field().prioritization;
+    agent->dpp_onboarding_support =
+        profile2_ap_capability_tlv->capabilities_bit_field().dpp_onboarding;
+    agent->traffic_separation_support =
+        profile2_ap_capability_tlv->capabilities_bit_field().traffic_separation;
     agent->max_total_number_of_vids = profile2_ap_capability_tlv->max_total_number_of_vids();
 
-    LOG(DEBUG) << "Profile-2 AP Capability is received, agent bytecounters enum="
-               << agent->byte_counter_units;
+    LOG(DEBUG) << "Profile-2 AP Capability TLV is received:" << std::endl
+               << "The maximum total number of supported service priroritization rules: "
+               << agent->max_prioritization_rules << std::endl
+               << "The units used for byte counters: "
+               << wfa_map::tlvProfile2ApCapability::eByteCounterUnits_str(agent->byte_counter_units)
+               << std::endl
+               << "Service Prioritization support: " << agent->prioritization_support << std::endl
+               << "DPP Onboarding procedure support: " << agent->dpp_onboarding_support << std::endl
+               << "Traffic Separation support: " << agent->traffic_separation_support << std::endl
+               << "The maximum total number of supported unique VLAN IDs: "
+               << agent->max_total_number_of_vids << std::endl;
 
     return true;
 }
@@ -4278,6 +4293,10 @@ bool Controller::handle_cmdu_1905_bss_configuration_request_message(
                 return false;
             }
         }
+    }
+
+    if (!handle_tlv_profile2_ap_capability(agent, cmdu_rx)) {
+        LOG(ERROR) << "Couldn't handle Profile-2 AP Capability TLV from Agent " << src_mac;
     }
 
     if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_2 &&

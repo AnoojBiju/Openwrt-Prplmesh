@@ -55,6 +55,9 @@ public:
     wfa_map::tlvProfile2MultiApProfile::eMultiApProfile profile =
         wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1;
 
+    // The maximum total number of service prioritization rules supported by the Multi-AP Agent
+    uint8_t max_prioritization_rules;
+
     /**
      * @brief Byte counters unit types related TLVs.
      *
@@ -67,6 +70,15 @@ public:
      */
     wfa_map::tlvProfile2ApCapability::eByteCounterUnits byte_counter_units =
         wfa_map::tlvProfile2ApCapability::eByteCounterUnits::BYTES;
+
+    // 802.1Q C-TAG Service Prioritization support
+    bool prioritization_support;
+
+    // DPP Onboarding procedure support
+    bool dpp_onboarding_support;
+
+    // 802.1Q C-TAG Traffic Separation support
+    bool traffic_separation_support;
 
     /**
      * @brief Max Total Number of unique VLAN identifiers the Multi-AP Agent supports.
