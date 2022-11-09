@@ -4106,6 +4106,11 @@ bool Controller::handle_tlv_profile2_ap_capability(std::shared_ptr<Agent> agent,
                << "The maximum total number of supported unique VLAN IDs: "
                << agent->max_total_number_of_vids << std::endl;
 
+    if (!database.dm_set_device_ap_capabilities(*agent)) {
+        LOG(ERROR) << "Failed to set AP capability parameters in DM for Agent" << agent->al_mac;
+        return false;
+    }
+
     return true;
 }
 

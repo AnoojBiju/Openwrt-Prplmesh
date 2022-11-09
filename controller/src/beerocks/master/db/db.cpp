@@ -8015,3 +8015,18 @@ bool db::dm_set_service_prioritization_rules(const Agent &agent)
 
     return m_ambiorix_datamodel->set(agent.dm_path, "DSCPMap", dscp_map_str);
 }
+
+bool db::dm_set_device_ap_capabilities(const Agent &agent)
+{
+    if (agent.dm_path.empty()) {
+        return true;
+    }
+
+    bool ret_val = true;
+    ret_val &= m_ambiorix_datamodel->set(agent.dm_path, "MaxPrioritizationRules",
+                                         agent.max_prioritization_rules);
+    ret_val &= m_ambiorix_datamodel->set(agent.dm_path, "PrioritizationSupport",
+                                         agent.prioritization_support);
+    ret_val &= m_ambiorix_datamodel->set(agent.dm_path, "MaxVIDs", agent.max_total_number_of_vids);
+    return ret_val;
+}

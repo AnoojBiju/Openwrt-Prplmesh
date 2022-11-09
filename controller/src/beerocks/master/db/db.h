@@ -2435,6 +2435,15 @@ public:
      */
     bool dm_set_service_prioritization_rules(const Agent &agent);
 
+    /** @brief Sets AP capability parameters for corresponding device.
+     *
+     * DM path: "Device.WiFi.DataElements.Network.Device.{i}."
+     *
+     * @param[in] agent Agent DB object.
+     * @return true on success, otherwise false.
+     */
+    bool dm_set_device_ap_capabilities(const Agent &agent);
+
     //
     // tasks
     //
