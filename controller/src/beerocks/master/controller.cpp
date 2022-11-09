@@ -85,6 +85,7 @@
 #include <tlvf/wfa_map/tlvQoSManagementDescriptor.h>
 #include <tlvf/wfa_map/tlvRadioOperationRestriction.h>
 #include <tlvf/wfa_map/tlvSearchedService.h>
+#include <tlvf/wfa_map/tlvServicePrioritizationRule.h>
 #include <tlvf/wfa_map/tlvStaMacAddressType.h>
 #include <tlvf/wfa_map/tlvSteeringBTMReport.h>
 #include <tlvf/wfa_map/tlvSupportedService.h>
@@ -4527,6 +4528,18 @@ bool Controller::handle_cmdu_1905_qos_management_notification_message(
     if (!cmdu_tx.create(0, ieee1905_1::eMessageType::SERVICE_PRIORITIZATION_REQUEST_MESSAGE)) {
         LOG(ERROR) << "cmdu creation of type SERVICE_PRIORITIZATION_REQUEST_MESSAGE has failed";
         return false;
+    }
+
+    for (const auto &rule : agent->service_prioritization.rules) {
+
+        auto service_prioritization_rule_tlv =
+            cmdu_tx.addClass<wfa_map::tlvServicePrioritizationRule>();
+        if (!service_prioritization_rule_tlv) {
+            LOG(ERROR) << "addClass wfa_map::tlvServicePrioritizationRule has failed";
+            return false;
+        }
+
+        service_prioritization_rule_tlv->rule_params() = rule.second;
     }
 
     auto dscp_mapping_table_tlv = cmdu_tx.addClass<wfa_map::tlvDscpMappingTable>();
