@@ -129,6 +129,23 @@
             }
         }
 
+        %read-only object SPRule [] {
+            counted with SPRuleNumberOfEntries;
+
+            /* The Service Prioritization (SP) rule */
+            %read-only uint32 ID;
+            /* Rule precedence – higher number means higher priority */
+            %read-only uint32 Precedence = 0 {
+                on action validate call check_range [0, 254];
+            }
+            /* Rule output - the value of, or method used to select, the 802.1Q C-TAG PCP output value */
+            %read-only uint32 Output = 0 {
+                on action validate call check_range [0, 9];
+            }
+            /* Indicates if the rule always matches */
+            %read-only bool AlwaysMatch;
+        }
+
         /*
         ** The list of Radio objects.
         */
