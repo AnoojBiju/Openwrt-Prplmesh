@@ -61,6 +61,17 @@
             on action validate call check_range [0, 64];
         }
 
+        /* The maximum total number of service prioritization rules supported by the Agent */
+        %read-only uint32 MaxPrioritizationRules {
+            on action validate call check_range [0, 255];
+        }
+
+        // 802.1Q C-TAG Service Prioritization support
+        %read-only bool PrioritizationSupport;
+
+        /* The maximum total number of unique VLAN IDs (VIDs) the Multi-AP Agent supports */
+        %read-only uint32 MaxVIDs;
+
         /*
         ** The Multi-AP capabilities supported by this device
         */
