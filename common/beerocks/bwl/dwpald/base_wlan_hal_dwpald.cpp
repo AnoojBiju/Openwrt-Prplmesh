@@ -1012,49 +1012,74 @@ bool base_wlan_hal_dwpal::dwpal_get_phy_chan_status(sPhyChanStatus &status)
     }
     return true;
 }
-
-int base_wlan_hal_dwpal::update_conn_status(char *ifname)
+bool base_wlan_hal_dwpal::update_conn_status(char *ifname, std::vector<int> &vap_id)
 {
-    size_t numOfValidArgs;
-    vap_name_t to_search;
-    int ret                       = -1, i;
-    char *reply                   = nullptr;
-    FieldsToParse fieldsToParse[] = {
-        {NULL, &numOfValidArgs, DWPAL_STR_PARAM, to_search.name, IF_LENGTH},
-        {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
+    const char *tmp_str = nullptr;
+    parsed_line_t reply;
 
-    // Make radio intf connection state as true before sending STATUS command
+    /* Make radio interface connection state as true before sending STATUS command. */
     conn_state[ifname] = true;
-
-    if (!dwpal_send_cmd("STATUS", &reply)) {
+    if (!dwpal_send_cmd("STATUS", reply)) {
         LOG(ERROR) << "STATUS command send error";
-        return ret;
+        return false;
     }
+    /*  reply:
+    state=ENABLED
+    phy=phy2 freq=2412
+    num_sta_non_erp=0
+    num_sta_no_short_slot_time=0
+    num_sta_no_short_preamble=0
+    olbc=0 num_sta_ht_no_gf=1
+    num_sta_no_ht=0 num_sta_ht_20_mhz=1
+    num_sta_ht40_intolerant=0 olbc_ht=0
+    ht_op_mode=0x4 cac_time_seconds=0
+    cac_time_left_seconds=N/A
+    channel=1 edmg_enable=0
+    edmg_channel=0 secondary_channel=0
+    ieee80211n=1 ieee80211ac=0
+    ieee80211ax=1 beacon_int=100
+    dtim_period=2 he_oper_chwidth=0
+    he_oper_centr_freq_seg0_idx=1
+    he_oper_centr_freq_seg1_idx=0
+    he_bss_color=28 he_bss_color_disabled=0
+    ht_caps_info=18ed
+    ht_mcs_bitmask=ffffffff010000000000
+    supported_rates=02 04 0b 16 0c 12 18 24 30 48 60 6c
+    max_txpower=30
+    bss[0]=wlan0
+    bssid[0]=00:50:f1:20:e2:93
+    ssid[0]=dummy_ssid_2.4G
+    beacon_int[0]=100
+    beacon_set_done[0]=1
+    num_sta[0]=0
+    bss[1]=wlan0.1
+    bssid[1]=00:50:f1:20:e2:94
+    ssid[1]=test_ssid
+    beacon_int[1]=100
+    beacon_set_done[1]=1
+    num_sta[1]=1
+    */
 
-    size_t replyLen = strnlen(reply, HOSTAPD_TO_DWPAL_MSG_LENGTH);
-
-    // Update connection status for VAP list on that radio
-    for (i = 0; i < MAX_VAPS_PER_RADIO; i = i + 1) {
-        char vap[IF_LENGTH] = {0};
-        int status;
-        status = snprintf(to_search.name, sizeof(vap_name_t), "bss[%d]=", i);
-        if (status <= 0) {
-            LOG(ERROR) << "snprintf failed at " << i;
-            return ret;
-        }
-        fieldsToParse[0].field = vap;
-        if (DWPAL_SUCCESS !=
-            dwpal_string_to_struct_parse(reply, replyLen, fieldsToParse, sizeof(vap))) {
-            LOG(ERROR) << "STATUS reply parse error at " << i;
-            return ret;
-        }
-        if (!numOfValidArgs)
+    for (auto vap_it = 0; vap_it < MAX_VAPS_PER_RADIO; vap_it++) {
+        std::ostringstream os;
+        os << "bss[" << vap_it << "]"; /* bss[0] - bss[15]*/
+        if (!read_param(os.str(), reply, &tmp_str)) {
+            if (vap_it == 0) {
+                return false;
+            }
             break;
-        // Update interface connection status for vap to true
-        conn_state[vap] = true;
-        LOG(INFO) << "updated connection status for intf " << vap << " with true";
+        }
+        auto iface_ids = beerocks::utils::get_ids_from_iface_string(tmp_str);
+        if (iface_ids.vap_id == beerocks::IFACE_RADIO_ID) {
+            LOG(DEBUG) << "Ignore INTERFACE_RECONNECTED_OK or INTERFACE_CONNECTED_OK on radio";
+            continue;
+        }
+        vap_id.push_back(iface_ids.vap_id);
+        conn_state[tmp_str] = true;
+        /* Update connection status for VAP list on radio */
+        LOG(INFO) << "updated connection status for vap " << tmp_str << " with true";
     }
-    return 0;
+    return true;
 }
 
 } // namespace dwpal
