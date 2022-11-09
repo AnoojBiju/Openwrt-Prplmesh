@@ -128,8 +128,36 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
 
         // TODO Name and Status of Interface should be add
         database.add_interface(al_mac, iface_mac, media_type);
-        LOG(DEBUG) << "Interface is added al_mac:" << al_mac << " iface_mac:" << iface_mac;
 
+        auto print_media_type_group = [](const int media_type_group) -> std::string {
+            switch (media_type_group) {
+            case ieee1905_1::eMediaTypeGroup::IEEE_802_3:
+                return "IEEE 802.3";
+            case ieee1905_1::eMediaTypeGroup::IEEE_802_11:
+                return "IEEE 802.11";
+            case ieee1905_1::eMediaTypeGroup::IEEE_1901:
+                return "IEEE 1901";
+            case ieee1905_1::eMediaTypeGroup::MoCA:
+                return "MoCA";
+            case ieee1905_1::eMediaTypeGroup::UNKNOWN:
+                return "Unknown";
+            default:
+                return "NA";
+            }
+        };
+
+        LOG(DEBUG) << "Interface is added al_mac:" << al_mac << " iface_mac:" << iface_mac;
+        LOG(DEBUG) << "media type: " << media_type
+                   << " group: " << print_media_type_group(media_type_group)
+                   << " info length: " << iface_info.media_info_length();
+
+        // Check that the interface belongs to the IEEE 802.3 group.
+        if (ieee1905_1::eMediaTypeGroup::IEEE_802_3 == media_type_group) {
+            LOG(DEBUG) << "New 802.3 interface is reported with mac=" << iface_mac;
+            // TODO Add implementation for 802.3 interfaces.
+        }
+
+        // Check that the interface belongs to the IEEE 802.11 group.
         // For wireless interface it is defined on IEEE 1905.1 that the size of the media info
         // is n=10 octets, which the size of s802_11SpecificInformation struct.
         // For wired interface n=0.
@@ -139,6 +167,26 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
             const auto media_info = reinterpret_cast<ieee1905_1::s802_11SpecificInformation *>(
                 iface_info.media_info(0));
             const auto iface_role = media_info->role;
+
+            auto print_interface_role = [](const ieee1905_1::eRole iface_role) -> std::string {
+                switch (iface_role) {
+                case ieee1905_1::eRole::AP:
+                    return "AP";
+                case ieee1905_1::eRole::NON_AP_NON_PCP_STA:
+                    return "STA";
+                case ieee1905_1::eRole::WI_FI_P2P_CLIENT:
+                    return "P2P-Client";
+                case ieee1905_1::eRole::WI_FI_P2P_GROUP_OWNER:
+                    return "GO";
+                case ieee1905_1::eRole::IEEE_802_11AD_PCP:
+                    return "PCP";
+                default:
+                    return "NA";
+                }
+            };
+
+            LOG(DEBUG) << "New 1905.1 wireless interface is reported with mac=" << iface_mac
+                       << ", role=" << print_interface_role(iface_role);
 
             // For future implementation
             // const auto iface_bw     = media_info->ap_channel_bandwidth;
@@ -175,7 +223,7 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
                 // This case could occur, if we can topology response before topology notification
                 // with JOIN notification for that station.
                 if (media_info->network_membership != parent_bss->bssid) {
-                    LOG(INFO) << "Network membership does not allign with database, parent_bssid="
+                    LOG(INFO) << "Network membership does not align with database, parent_bssid="
                               << parent_bss->bssid
                               << ", network_membership=" << media_info->network_membership;
                     continue;
@@ -197,11 +245,10 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
                     database.get_radio_by_backhaul_cap(media_info->network_membership);
             }
 
-            // TODO: fix updating bml event it assumes Radios is reported (PPM-1977)
-            new_bml_event.radio_interfaces.push_back(iface_info);
-
-            LOG(DEBUG) << "New wireless interface is reported with mac=" << iface_mac
-                       << ", role=" << (uint8_t)iface_role;
+            // Only interfaces marked as an AP role should be marked as a radio interface.
+            if (iface_role == ieee1905_1::eRole::AP) {
+                new_bml_event.radio_interfaces.push_back(iface_info);
+            }
         }
     }
 
