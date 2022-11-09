@@ -101,6 +101,7 @@ public:
 
     static beerocks::eWiFiBandwidth convert_bandwidth_to_enum(int bandwidth_int);
     static int convert_bandwidth_to_int(beerocks::eWiFiBandwidth bw);
+    static std::string convert_frequency_type_to_string(beerocks::eFreqType freq_type);
     static std::string convert_channel_ext_above_to_string(bool channel_ext_above_secondary,
                                                            beerocks::eWiFiBandwidth bandwidth);
     static void hex_dump(const std::string &description, uint8_t *addr, int len,

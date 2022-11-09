@@ -18,6 +18,13 @@
 
 using namespace son;
 
+#define OPERATING_CLASS_24GHZ_FIRST 81
+#define OPERATING_CLASS_24GHZ_LAST 84
+#define OPERATING_CLASS_5GHZ_FIRST 115
+#define OPERATING_CLASS_5GHZ_LAST 130
+#define OPERATING_CLASS_6GHZ_FIRST 131
+#define OPERATING_CLASS_6GHZ_LAST 136
+
 //Based on hostapd global_op_class struct, file ieee802_11_common.c
 // clang-format off
 const std::map<uint8_t, wireless_utils::sOperatingClass> wireless_utils::operating_classes_list = {
@@ -33,8 +40,8 @@ const std::map<uint8_t, wireless_utils::sOperatingClass> wireless_utils::operati
     {119,       {{52, 60},                                                     beerocks::BANDWIDTH_40}},
     {120,       {{56, 64},                                                     beerocks::BANDWIDTH_40}},
     {121,       {{100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144}, beerocks::BANDWIDTH_20}},
-    {122,       {{100, 108, 116, 124, 132, 136, 140},                          beerocks::BANDWIDTH_40}},
-    {123,       {{104, 112, 120, 128, 134, 136, 138, 144},                     beerocks::BANDWIDTH_40}},
+    {122,       {{100, 108, 116, 124, 132, 140},                               beerocks::BANDWIDTH_40}},
+    {123,       {{104, 112, 120, 128, 136, 144},                               beerocks::BANDWIDTH_40}},
     {124,       {{149, 153, 157, 161},                                         beerocks::BANDWIDTH_20}},
     {125,       {{149, 153, 157, 161, 165, 169},                               beerocks::BANDWIDTH_20}},
     {126,       {{149, 157},                                                   beerocks::BANDWIDTH_40}},
@@ -42,7 +49,23 @@ const std::map<uint8_t, wireless_utils::sOperatingClass> wireless_utils::operati
 //  {OP Class   {Channel center Frequency index},                              Bandwidth              }}
     {128,       {{42, 58, 106, 122, 138, 155},                                 beerocks::BANDWIDTH_80}},
     {129,       {{50, 114},                                                    beerocks::BANDWIDTH_160}},
-    {130,       {{42, 58, 106, 122, 138, 155},                                 beerocks::BANDWIDTH_80_80}}
+    {130,       {{42, 58, 106, 122, 138, 155},                                 beerocks::BANDWIDTH_80_80}},
+//  {OP Class   {Channels List,                                                Bandwidth             }}
+    {131,       {{1, 5, 9, 13, 17, 21, 25, 29, 33, 37, 41, 45, 49, 53, 57,
+                  61, 65, 69, 73, 77, 81, 85, 89, 93, 97, 101, 105, 109, 113,
+                  117, 121, 125, 129, 133, 137, 141, 145, 149, 153, 157, 161,
+                  165, 169, 173, 177, 181, 185, 189, 193, 197, 201, 205, 209,
+                  213, 217, 221, 225, 229, 233},                               beerocks::BANDWIDTH_20}},
+//  {OP Class   {Channel center Frequency index},                              Bandwidth              }}
+    {132,       {{3, 11, 19, 27, 35, 43, 51, 59, 67, 75, 83, 91, 99, 107,
+                  115, 123, 131, 139, 147, 155, 163, 171, 179, 187, 195,
+                  203, 211, 219, 227},                                         beerocks::BANDWIDTH_40}},
+    {133,       {{7, 23, 39, 55, 71, 87, 103, 119, 135, 151,
+                  167, 183, 199, 215},                                         beerocks::BANDWIDTH_80}},
+    {134,       {{15, 47, 79, 111, 143, 175, 207},                             beerocks::BANDWIDTH_160}},
+    {135,       {{7, 23, 39, 55, 71, 87, 103, 119, 135, 151,
+                  167, 183, 199, 215},                                         beerocks::BANDWIDTH_80_80}},
+    {136,       {{2},                                                          beerocks::BANDWIDTH_20}}
 };
 
 const std::map<uint8_t, std::map<uint8_t, uint8_t>> wireless_utils::channels_table_24g = 
@@ -282,35 +305,63 @@ const std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, wireless_utils::sChan
                    { beerocks::BANDWIDTH_20,  { 149,            { 149, 149                      } } },
                    { beerocks::BANDWIDTH_40,  { 151,            { 149, 153                      } } },
                    { beerocks::BANDWIDTH_80,  { 155,            { 149, 161                      } } },
+                   { beerocks::BANDWIDTH_160, { 163,            { 149, 177                      } } },
                 }
     },
     { 153,      {
                    { beerocks::BANDWIDTH_20,  { 153,            { 153, 153                      } } },
                    { beerocks::BANDWIDTH_40,  { 151,            { 149, 153                      } } },
                    { beerocks::BANDWIDTH_80,  { 155,            { 149, 161                      } } },
+                   { beerocks::BANDWIDTH_160, { 163,            { 149, 177                      } } },
                 }
     },
     { 157,      {
                    { beerocks::BANDWIDTH_20,  { 157,            { 157, 157                      } } },
                    { beerocks::BANDWIDTH_40,  { 159,            { 157, 161                      } } },
                    { beerocks::BANDWIDTH_80,  { 155,            { 149, 161                      } } },
+                   { beerocks::BANDWIDTH_160, { 163,            { 149, 177                      } } },
                 }
     },
     { 161,      {
                    { beerocks::BANDWIDTH_20,  { 161,            { 161, 161                      } } },
                    { beerocks::BANDWIDTH_40,  { 159,            { 157, 161                      } } },
                    { beerocks::BANDWIDTH_80,  { 155,            { 149, 161                      } } },
+                   { beerocks::BANDWIDTH_160, { 163,            { 149, 177                      } } },
                 }
     },
     { 165,      {
                    { beerocks::BANDWIDTH_20,  { 165,            { 165, 165                      } } },
+                   { beerocks::BANDWIDTH_40,  { 167,            { 165, 169                      } } },
+                   { beerocks::BANDWIDTH_80,  { 171,            { 165, 177                      } } },
+                   { beerocks::BANDWIDTH_160, { 163,            { 149, 177                      } } },
                 }
     },
     { 169,      {
                    { beerocks::BANDWIDTH_20,  { 169,            { 169, 169                      } } },
+                   { beerocks::BANDWIDTH_40,  { 167,            { 165, 169                      } } },
+                   { beerocks::BANDWIDTH_80,  { 171,            { 165, 177                      } } },
+                   { beerocks::BANDWIDTH_160, { 163,            { 149, 177                      } } },
+
+                }
+    },
+    { 173,      {
+                   { beerocks::BANDWIDTH_20,  { 173,            { 173, 173                      } } },
+                   { beerocks::BANDWIDTH_40,  { 175,            { 165, 169                      } } },
+                   { beerocks::BANDWIDTH_80,  { 171,            { 165, 177                      } } },
+                   { beerocks::BANDWIDTH_160, { 163,            { 149, 177                      } } },
+                }
+    },
+    { 177,      {
+                   { beerocks::BANDWIDTH_20,  { 177,            { 177, 177                      } } },
+                   { beerocks::BANDWIDTH_40,  { 175,            { 173, 177                      } } },
+                   { beerocks::BANDWIDTH_80,  { 171,            { 165, 177                      } } },
+                   { beerocks::BANDWIDTH_160, { 163,            { 149, 177                      } } },
                 }
     }
 };
+
+
+const std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, wireless_utils::sChannel>> wireless_utils::channels_table_6g = wireless_utils::initialize_channels_table_6g();
 
 const wireless_utils::sPhyRateTableEntry wireless_utils::phy_rate_table[PHY_RATE_TABLE_ANT_MODE_MAX][PHY_RATE_TABLE_MCS_MAX] = {
     // 1X1_SS1_table
@@ -457,8 +508,8 @@ constexpr beerocks::eWiFiSS wireless_utils::phy_rate_table_mode_to_ss[PHY_RATE_T
 constexpr wireless_utils::sPhyRateBitRateEntry
     wireless_utils::bit_rate_max_table_mbps[BIT_RATE_MAX_TABLE_SIZE];
 
-bool wireless_utils::has_operating_class_channel(const sOperatingClass &oper_class, uint8_t channel,
-                                                 beerocks::eWiFiBandwidth bw)
+bool wireless_utils::has_operating_class_5g_channel(const sOperatingClass &oper_class,
+                                                    uint8_t channel, beerocks::eWiFiBandwidth bw)
 {
     if (oper_class.band != bw) {
         return false;
@@ -483,6 +534,39 @@ bool wireless_utils::has_operating_class_channel(const sOperatingClass &oper_cla
         return false;
     }
     return true;
+}
+
+std::vector<uint8_t>
+wireless_utils::get_operating_classes_of_freq_type(beerocks::eFreqType freq_type)
+{
+    std::vector<uint8_t> op_classes = {};
+
+    // points to the start of the relevant operating classes,
+    // and one past the last of the relevant operating classes
+    decltype(operating_classes_list)::const_iterator first_iterator, last_iterator;
+
+    switch (freq_type) {
+    case beerocks::eFreqType::FREQ_24G:
+        first_iterator = operating_classes_list.find(81);
+        last_iterator  = operating_classes_list.find(115);
+        break;
+    case beerocks::eFreqType::FREQ_5G:
+        first_iterator = operating_classes_list.find(115);
+        last_iterator  = operating_classes_list.find(131);
+        break;
+    case beerocks::eFreqType::FREQ_6G:
+        first_iterator = operating_classes_list.find(131);
+        last_iterator  = operating_classes_list.end();
+        break;
+    default:
+        LOG(ERROR) << "freq type must be 2.4GHz, 5GHz, or 6GHz";
+        return {};
+    }
+
+    for (auto it = first_iterator; it != last_iterator; ++it) {
+        op_classes.push_back(it->first);
+    }
+    return op_classes;
 }
 
 wireless_utils::sPhyUlParams
@@ -808,6 +892,42 @@ int wireless_utils::channel_to_freq(int channel)
     return (channel + 1000) * 5;
 }
 
+uint16_t wireless_utils::channel_to_freq(int channel, beerocks::eFreqType freq_type)
+{
+    switch (freq_type) {
+    case beerocks::FREQ_24G:
+        if (channel < 1 || channel > 14) {
+            LOG(ERROR) << "invalid 2.4ghz channel: " << channel;
+            return 0;
+        }
+        if (channel == 14)
+            return 2484;
+
+        if (channel < 14)
+            return (channel * 5) + 2407;
+        break;
+    case beerocks::FREQ_5G:
+        if (channel < 7 || channel > 196) {
+            LOG(ERROR) << "invalid 5ghz channel: " << channel;
+            return 0;
+        }
+        return (channel + 1000) * 5;
+        break;
+    case beerocks::FREQ_6G:
+        if (channel < 1 || channel > 233) {
+            LOG(ERROR) << "invalid 6ghz channel: " << channel;
+            return 0;
+        }
+        return BAND_6G_MIN_FREQ + 5 + (channel * 5);
+        break;
+    default:
+        LOG(ERROR) << "Given frequency type: " << freq_type
+                   << " is not one of 2.4ghz, 5ghz, or 6ghz";
+        break;
+    }
+    return 0;
+}
+
 int wireless_utils::freq_to_channel(int center_freq)
 {
     /* see 802.11-2007 17.3.8.3.2 and Annex J */
@@ -830,8 +950,8 @@ int wireless_utils::freq_to_channel(int center_freq)
     }
 }
 
-uint16_t wireless_utils::channel_to_vht_center_freq(int channel, beerocks::eWiFiBandwidth bandwidth,
-                                                    bool channel_ext_above_secondary)
+int wireless_utils::channel_to_vht_center_freq(int channel, beerocks::eWiFiBandwidth bandwidth,
+                                               bool channel_ext_above_secondary)
 {
     int freq = channel_to_freq(channel);
     uint16_t vht_center_freq;
@@ -856,16 +976,90 @@ uint16_t wireless_utils::channel_to_vht_center_freq(int channel, beerocks::eWiFi
     return vht_center_freq;
 }
 
+int wireless_utils::channel_to_vht_center_freq(int channel, beerocks::eFreqType freq_type,
+                                               beerocks::eWiFiBandwidth bandwidth,
+                                               bool channel_ext_above_secondary)
+{
+    switch (freq_type) {
+    case beerocks::FREQ_24G: {
+        auto channel_it = channels_table_24g.find(channel);
+        if (channel_it == channels_table_24g.end()) {
+            LOG(ERROR) << "Failed find channel " << channel << " in 2.4g channel table";
+            return 0;
+        }
+        if (bandwidth == beerocks::BANDWIDTH_20) {
+            return channel_to_freq(channel, freq_type);
+        } else if (bandwidth == beerocks::BANDWIDTH_40) {
+            if (channel >= 1 && channel <= 4) {
+                return channel_to_freq(channel + 2, freq_type);
+            } else if (channel >= 5 && channel <= 9) {
+                if (channel_ext_above_secondary) {
+                    return channel_to_freq(channel + 2, freq_type);
+                } else {
+                    return channel_to_freq(channel - 2, freq_type);
+                }
+            } else {
+                return channel_to_freq(channel - 2, freq_type);
+            }
+        } else {
+            LOG(ERROR) << "2.4ghz channel must be of either 20 or 40 bandwidth. can't be bandwidth "
+                       << bandwidth;
+            return 0;
+        }
+    } break;
+    case beerocks::FREQ_5G: {
+        // treat 80+80MHz as 80MHz
+        if (bandwidth == beerocks::eWiFiBandwidth::BANDWIDTH_80_80) {
+            bandwidth = beerocks::eWiFiBandwidth::BANDWIDTH_80;
+        }
+        auto channel_it = channels_table_5g.find(channel);
+        if (channel_it == channels_table_5g.end()) {
+            LOG(ERROR) << "Failed find channel " << channel << " in 5g channel table";
+            return 0;
+        }
+        auto center_channel_it = channel_it->second.find(bandwidth);
+        if (center_channel_it == channel_it->second.end()) {
+            LOG(ERROR) << "Failed find bandwidth "
+                       << beerocks::utils::convert_bandwidth_to_int(bandwidth) << " of channel "
+                       << channel << " in channels table of 5ghz band";
+            return 0;
+        }
+        return channel_to_freq(center_channel_it->second.center_channel, freq_type);
+    } break;
+    case beerocks::FREQ_6G: {
+        auto channel_it = channels_table_6g.find(channel);
+        if (channel_it == channels_table_6g.end()) {
+            LOG(ERROR) << "Failed find channel " << channel << " in 6g channel table";
+            return 0;
+        }
+        auto center_channel_it = channel_it->second.find(bandwidth);
+        if (center_channel_it == channel_it->second.end()) {
+            LOG(ERROR) << "Failed find bandwidth "
+                       << beerocks::utils::convert_bandwidth_to_int(bandwidth) << " of channel "
+                       << channel << " in channels table of 6ghz band";
+            return 0;
+        }
+        return channel_to_freq(center_channel_it->second.center_channel, freq_type);
+    } break;
+    default: {
+        LOG(ERROR) << "band type " << freq_type
+                   << " is not supported. it must be 2.4ghz, 5ghz, or 6ghz";
+    } break;
+    }
+
+    return 0;
+}
+
 beerocks::eFreqType wireless_utils::which_freq_op_cls(const uint8_t op_cls)
 {
-
-    constexpr uint8_t operating_classes_24G_min = 81, operating_classes_24G_max = 84,
-                      operating_classes_5G_min = 115, operating_classes_5G_max = 130;
-    if ((op_cls >= operating_classes_24G_min) && (op_cls <= operating_classes_24G_max)) {
+    if ((OPERATING_CLASS_24GHZ_FIRST <= op_cls) && (op_cls <= OPERATING_CLASS_24GHZ_LAST)) {
         return beerocks::eFreqType::FREQ_24G;
     }
-    if ((op_cls >= operating_classes_5G_min) && (op_cls <= operating_classes_5G_max)) {
+    if ((OPERATING_CLASS_5GHZ_FIRST <= op_cls) && (op_cls <= OPERATING_CLASS_5GHZ_LAST)) {
         return beerocks::eFreqType::FREQ_5G;
+    }
+    if ((OPERATING_CLASS_6GHZ_FIRST <= op_cls) && (op_cls <= OPERATING_CLASS_6GHZ_LAST)) {
+        return beerocks::eFreqType::FREQ_6G;
     }
     return beerocks::eFreqType::FREQ_UNKNOWN;
 }
@@ -1024,6 +1218,80 @@ wireless_utils::split_channel_to_20MHz(int channel, beerocks::eWiFiBandwidth bw,
     return ret;
 }
 
+std::vector<std::pair<uint8_t, beerocks::eWifiChannelType>>
+wireless_utils::split_channel_to_20MHz(beerocks::WifiChannel &wifi_channel)
+{
+    std::vector<std::pair<uint8_t, beerocks::eWifiChannelType>> splitted_channels = {};
+
+    if (wifi_channel.is_empty()) {
+        return {};
+    }
+
+    if (wifi_channel.get_freq_type() == beerocks::FREQ_24G) {
+        auto channel = wifi_channel.get_channel();
+        if (channel != 1 && channel != 6 && channel != 11) {
+            LOG(ERROR) << "channel " << channel << " of band 2.4GHz must be 1, 6, or 11";
+            return {};
+        }
+        splitted_channels.push_back({channel, beerocks::eWifiChannelType::CH_PRIMARY});
+        if (wifi_channel.get_bandwidth() == beerocks::BANDWIDTH_40) {
+            if (channel == 1) {
+                splitted_channels.push_back(
+                    {channel + 5, beerocks::eWifiChannelType::CH_SECONDARY});
+            } else if (channel == 11) {
+                splitted_channels.push_back(
+                    {channel - 5, beerocks::eWifiChannelType::CH_SECONDARY});
+            } else { // channel is 6
+                if (wifi_channel.get_ext_above_secondary()) {
+                    splitted_channels.push_back(
+                        {channel + 5, beerocks::eWifiChannelType::CH_SECONDARY});
+                } else {
+                    splitted_channels.push_back(
+                        {channel - 5, beerocks::eWifiChannelType::CH_SECONDARY});
+                }
+            }
+        }
+        return splitted_channels;
+    }
+
+    const std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, wireless_utils::sChannel>>
+        *channels_table = {};
+    if (wifi_channel.get_freq_type() == beerocks::FREQ_5G) {
+        channels_table = &(son::wireless_utils::channels_table_5g);
+    } else if (wifi_channel.get_freq_type() == beerocks::FREQ_6G) {
+        channels_table = &(son::wireless_utils::channels_table_6g);
+    }
+    auto channel_it = channels_table->find(wifi_channel.get_channel());
+    if (channel_it == channels_table->end()) {
+        LOG(ERROR) << "Failed to find channel " << wifi_channel.get_channel() << " of "
+                   << beerocks::utils::convert_frequency_type_to_string(
+                          wifi_channel.get_freq_type())
+                   << " banf in channels table";
+        return {};
+    }
+    auto channel_bw_it = channel_it->second.find(wifi_channel.get_bandwidth());
+    if (channel_bw_it == channel_it->second.end()) {
+        LOG(ERROR) << "Failed to find bandwidth "
+                   << beerocks::utils::convert_bandwidth_to_int(wifi_channel.get_bandwidth())
+                   << " of channel " << wifi_channel.get_channel() << " of "
+                   << beerocks::utils::convert_frequency_type_to_string(
+                          wifi_channel.get_freq_type())
+                   << " band in channels table";
+        return {};
+    }
+
+    auto overlap_channels_range = channel_bw_it->second.overlap_beacon_channels_range;
+    for (auto ch = overlap_channels_range.first; ch <= overlap_channels_range.second; ch += 4) {
+        if (ch != wifi_channel.get_channel()) {
+            splitted_channels.push_back({ch, beerocks::eWifiChannelType::CH_SECONDARY});
+        } else {
+            splitted_channels.push_back({ch, beerocks::eWifiChannelType::CH_PRIMARY});
+        }
+    }
+
+    return splitted_channels;
+}
+
 std::vector<uint8_t> wireless_utils::get_5g_20MHz_channels(beerocks::eWiFiBandwidth bw,
                                                            uint16_t vht_center_frequency)
 {
@@ -1124,6 +1392,53 @@ uint8_t wireless_utils::get_5g_center_channel(uint8_t channel, beerocks::eWiFiBa
     return bw_info_it->second.center_channel;
 }
 
+uint8_t wireless_utils::get_center_channel(uint8_t channel, beerocks::eFreqType freq_type,
+                                           beerocks::eWiFiBandwidth bandwidth)
+{
+    if (freq_type != beerocks::eFreqType::FREQ_5G && freq_type != beerocks::eFreqType::FREQ_6G) {
+        LOG(ERROR) << "The band type "
+                   << beerocks::utils::convert_frequency_type_to_string(freq_type)
+                   << " must be either 5G or 6G";
+        return 0;
+    }
+
+    std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, son::wireless_utils::sChannel>>
+        channels_table;
+    if (freq_type == beerocks::eFreqType::FREQ_5G) {
+        channels_table = channels_table_5g;
+        if (channel >= 132 && channel <= 144 &&
+            bandwidth == beerocks::eWiFiBandwidth::BANDWIDTH_160) {
+            return 0;
+        }
+    } else if (freq_type == beerocks::eFreqType::FREQ_6G) {
+        channels_table = channels_table_6g;
+    }
+
+    auto channel_it = channels_table.find(channel);
+    if (channel_it == channels_table.end()) {
+        LOG(ERROR) << "Failed find channel " << channel << " (freq type: "
+                   << beerocks::utils::convert_frequency_type_to_string(freq_type)
+                   << ") on channels table";
+        return 0;
+    }
+    auto &bw_info_map = channel_it->second;
+
+    if (bandwidth == beerocks::eWiFiBandwidth::BANDWIDTH_80_80) {
+        bandwidth = beerocks::eWiFiBandwidth::BANDWIDTH_80;
+    }
+
+    auto bw_info_it = bw_info_map.find(bandwidth);
+    if (bw_info_it == bw_info_map.end()) {
+        LOG(ERROR) << "Failed find bandwidth "
+                   << beerocks::utils::convert_bandwidth_to_int(bandwidth) << " of channel "
+                   << channel << " (freq type: "
+                   << beerocks::utils::convert_frequency_type_to_string(freq_type)
+                   << ") on channels table";
+        return 0;
+    }
+    return bw_info_it->second.center_channel;
+}
+
 uint16_t wireless_utils::get_vht_central_frequency(uint8_t channel,
                                                    beerocks::eWiFiBandwidth bandwidth)
 {
@@ -1164,6 +1479,59 @@ uint16_t wireless_utils::get_vht_central_frequency(uint8_t channel,
     return 0;
 }
 
+uint16_t wireless_utils::get_vht_central_frequency(uint8_t channel,
+                                                   beerocks::eWiFiBandwidth bandwidth,
+                                                   beerocks::eFreqType freq_type)
+{
+    if (freq_type == beerocks::eFreqType::FREQ_6G) {
+        auto channel_it = channels_table_6g.find(channel);
+        if (channel_it == channels_table_6g.end()) {
+            return 0;
+        }
+        auto &bw_info_map = channel_it->second;
+
+        auto bw_info_it = bw_info_map.find(bandwidth);
+        if (bw_info_it == bw_info_map.end()) {
+            return 0;
+        }
+
+        return channel_to_freq(bw_info_it->second.center_channel, freq_type);
+    } else if (freq_type == beerocks::eFreqType::FREQ_5G) {
+        auto channel_it = channels_table_5g.find(channel);
+        if (channel_it == channels_table_5g.end()) {
+            return 0;
+        }
+        auto &bw_info_map = channel_it->second;
+
+        if (bandwidth == beerocks::eWiFiBandwidth::BANDWIDTH_80_80) {
+            bandwidth = beerocks::eWiFiBandwidth::BANDWIDTH_80;
+        }
+
+        auto bw_info_it = bw_info_map.find(bandwidth);
+        if (bw_info_it == bw_info_map.end()) {
+            return 0;
+        }
+
+        return channel_to_freq(bw_info_it->second.center_channel, freq_type);
+    } else if (freq_type == beerocks::eFreqType::FREQ_24G) {
+        auto channel_it = channels_table_24g.find(channel);
+        if (channel_it == channels_table_24g.end()) {
+            return 0;
+        }
+        auto &chan_info_map = channel_it->second;
+
+        const auto operating_class =
+            get_operating_class_by_channel(beerocks::message::sWifiChannel(channel, bandwidth));
+
+        auto center_freq_it = chan_info_map.find(operating_class);
+        if (center_freq_it == chan_info_map.end()) {
+            return 0;
+        }
+        return channel_to_freq(center_freq_it->second, freq_type);
+    }
+    return 0;
+}
+
 /**
  * @brief get operating class number by channel and channel bandwidth
  *
@@ -1188,6 +1556,57 @@ wireless_utils::get_operating_class_by_channel(const beerocks::message::sWifiCha
         }
     }
     LOG(WARNING) << "Failed to find operating class by channel #" << ch << " and bandwidth " << bw;
+    return 0;
+}
+
+uint8_t wireless_utils::get_operating_class_by_channel(const beerocks::WifiChannel &wifi_channel)
+{
+    auto ch       = wifi_channel.get_channel();
+    const auto bw = wifi_channel.get_bandwidth();
+    /*
+    some of the operating classes have a center channel instead of a normal channel.
+    thus, convert the channel to its center channel value.
+    */
+    if (wifi_channel.get_freq_type() == beerocks::FREQ_5G && bw >= beerocks::BANDWIDTH_80) {
+        ch = freq_to_channel(wifi_channel.get_center_frequency());
+    } else if (wifi_channel.get_freq_type() == beerocks::FREQ_6G && bw >= beerocks::BANDWIDTH_40) {
+        if (bw == beerocks::BANDWIDTH_160) {
+            ch = freq_to_channel(wifi_channel.get_center_frequency_2());
+        } else {
+            ch = freq_to_channel(wifi_channel.get_center_frequency());
+        }
+    }
+
+    decltype(operating_classes_list)::const_iterator first_operating_class_it;
+    decltype(operating_classes_list)::const_iterator last_operating_class_it;
+
+    /*
+     * since 5ghz and 6ghz have overlapping channels, we should
+     * not iterate over 6ghz channels when it is not a 6ghz band type.
+     */
+    const beerocks::eFreqType &freq_type = wifi_channel.get_freq_type();
+    if (freq_type == beerocks::FREQ_24G || freq_type == beerocks::FREQ_5G) {
+        first_operating_class_it = operating_classes_list.find(OPERATING_CLASS_24GHZ_FIRST);
+        last_operating_class_it  = operating_classes_list.find(
+            OPERATING_CLASS_6GHZ_FIRST); // one past the last 5GHz operating class
+    } else if (wifi_channel.get_freq_type() == beerocks::FREQ_6G) {
+        first_operating_class_it = operating_classes_list.find(OPERATING_CLASS_6GHZ_FIRST);
+        last_operating_class_it  = operating_classes_list.end();
+    } else {
+        LOG(ERROR) << "Invalid freq type "
+                   << beerocks::utils::convert_frequency_type_to_string(freq_type)
+                   << ", Possibly the given wifiChannel is empty";
+        return 0;
+    }
+
+    for (auto &operating_class_it = first_operating_class_it;
+         operating_class_it != last_operating_class_it; ++operating_class_it) {
+        if (operating_class_it->second.band == bw &&
+            operating_class_it->second.channels.find(ch) !=
+                operating_class_it->second.channels.end()) {
+            return operating_class_it->first;
+        }
+    }
     return 0;
 }
 
@@ -1341,13 +1760,14 @@ bool wireless_utils::is_frequency_band_5ghz(beerocks::eFreqType frequency_band)
     }
 }
 
-wireless_utils::OverlappingChannels wireless_utils::get_overlapping_channels(uint8_t source_channel)
+wireless_utils::OverlappingChannels
+wireless_utils::get_overlapping_5g_channels(uint8_t source_channel)
 {
     OverlappingChannels ret;
 
     auto source_channel_it = channels_table_5g.find(source_channel);
     if (source_channel_it == channels_table_5g.end()) {
-        LOG(ERROR) << "Couldn't find source channel " << source_channel
+        LOG(ERROR) << "Failed find source channel " << source_channel
                    << " for overlapping channles";
         return ret;
     }
@@ -1364,6 +1784,53 @@ wireless_utils::OverlappingChannels wireless_utils::get_overlapping_channels(uin
             auto min_channel = current_bandwidth_it.second.overlap_beacon_channels_range.first;
             auto max_channel = current_bandwidth_it.second.overlap_beacon_channels_range.second;
             if (source_channel >= min_channel && source_channel <= max_channel) {
+                ret.emplace_back(current_channel, current_bandwidth);
+            }
+        }
+    }
+    return ret;
+}
+
+wireless_utils::OverlappingChannels
+wireless_utils::get_overlapping_channels(uint8_t source_channel, beerocks::eFreqType freq_type)
+{
+    OverlappingChannels ret = {};
+
+    if (freq_type != beerocks::eFreqType::FREQ_5G && freq_type != beerocks::eFreqType::FREQ_6G) {
+        LOG(ERROR) << "The band type "
+                   << beerocks::utils::convert_frequency_type_to_string(freq_type)
+                   << " must be either 5G or 6G";
+        return ret;
+    }
+
+    std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, son::wireless_utils::sChannel>>
+        channels_table;
+    if (freq_type == beerocks::eFreqType::FREQ_5G) {
+        channels_table = channels_table_5g;
+    } else if (freq_type == beerocks::eFreqType::FREQ_6G) {
+        channels_table = channels_table_6g;
+    }
+
+    auto source_channel_it = channels_table.find(source_channel);
+    if (source_channel_it == channels_table.end()) {
+        LOG(ERROR) << "Failed find source channel " << source_channel << " (freq type: "
+                   << beerocks::utils::convert_frequency_type_to_string(freq_type)
+                   << ") for overlapping channles";
+        return ret;
+    }
+
+    // go over the table and if the source-cannel
+    // is within the range of the current-channel, current-bandwidth
+    // add current-channel, current-bandwidth to the output
+
+    for (const auto &current_channel_it : channels_table) {
+        auto &bandwidth_map  = current_channel_it.second;
+        auto current_channel = current_channel_it.first;
+        for (const auto &current_bandwidth_it : bandwidth_map) {
+            auto current_bandwidth = current_bandwidth_it.first;
+            auto min_channel = current_bandwidth_it.second.overlap_beacon_channels_range.first;
+            auto max_channel = current_bandwidth_it.second.overlap_beacon_channels_range.second;
+            if (source_channel >= min_channel && source_channel <= max_channel) {
                 ret.push_back(std::make_pair(current_channel, current_bandwidth));
             }
         }
@@ -1371,20 +1838,20 @@ wireless_utils::OverlappingChannels wireless_utils::get_overlapping_channels(uin
     return ret;
 }
 
-std::vector<uint8_t> wireless_utils::get_overlapping_beacon_channels(uint8_t beacon_channel,
-                                                                     beerocks::eWiFiBandwidth bw)
+std::vector<uint8_t> wireless_utils::get_overlapping_5g_beacon_channels(uint8_t beacon_channel,
+                                                                        beerocks::eWiFiBandwidth bw)
 {
     std::vector<uint8_t> overlapping_beacon_channels;
 
     auto ch_it = channels_table_5g.find(beacon_channel);
     if (ch_it == channels_table_5g.end()) {
-        LOG(ERROR) << "Couldn't find channel " << beacon_channel;
+        LOG(ERROR) << "Failed find channel " << beacon_channel;
         return {};
     }
 
     auto bw_it = ch_it->second.find(bw);
     if (bw_it == ch_it->second.end()) {
-        LOG(ERROR) << "Couldn't find bw " << beerocks::utils::convert_bandwidth_to_int(bw)
+        LOG(ERROR) << "Failed find bw " << beerocks::utils::convert_bandwidth_to_int(bw)
                    << " on channel " << beacon_channel;
         return {};
     }
@@ -1402,6 +1869,102 @@ std::vector<uint8_t> wireless_utils::get_overlapping_beacon_channels(uint8_t bea
         overlapping_beacon_channels.push_back(overlap_ch);
     }
     return overlapping_beacon_channels;
+}
+
+std::vector<uint8_t> wireless_utils::get_overlapping_beacon_channels(uint8_t beacon_channel,
+                                                                     beerocks::eFreqType freq_type,
+                                                                     beerocks::eWiFiBandwidth bw)
+{
+    std::vector<uint8_t> overlapping_beacon_channels;
+
+    if (freq_type != beerocks::eFreqType::FREQ_5G && freq_type != beerocks::eFreqType::FREQ_6G) {
+        LOG(ERROR) << "The band type "
+                   << beerocks::utils::convert_frequency_type_to_string(freq_type)
+                   << " must be either 5G or 6G";
+        return {};
+    }
+
+    std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, son::wireless_utils::sChannel>>
+        channels_table;
+    if (freq_type == beerocks::eFreqType::FREQ_5G) {
+        channels_table = channels_table_5g;
+    } else if (freq_type == beerocks::eFreqType::FREQ_6G) {
+        channels_table = channels_table_6g;
+    }
+
+    auto ch_it = channels_table.find(beacon_channel);
+    if (ch_it == channels_table.end()) {
+        LOG(ERROR) << "Failed find channel " << beacon_channel << " (freq type: "
+                   << beerocks::utils::convert_frequency_type_to_string(freq_type)
+                   << ") on channels table";
+        return {};
+    }
+
+    auto bw_it = ch_it->second.find(bw);
+    if (bw_it == ch_it->second.end()) {
+        LOG(ERROR) << "Failed find bw " << beerocks::utils::convert_bandwidth_to_int(bw)
+                   << " of channel " << beacon_channel << " (freq type: "
+                   << beerocks::utils::convert_frequency_type_to_string(freq_type)
+                   << ") on channels table";
+        return {};
+    }
+
+    auto channel_range_min = bw_it->second.overlap_beacon_channels_range.first;
+    auto channel_range_max = bw_it->second.overlap_beacon_channels_range.second;
+
+    constexpr uint8_t channels_distance = 4; // both 5G and 6G have the same channels distance
+    overlapping_beacon_channels.reserve(
+        (channel_range_max - channel_range_min) / channels_distance + 1);
+
+    // Ignore if one of beacon channels is unavailable.
+    for (uint8_t overlap_ch = channel_range_min; overlap_ch <= channel_range_max;
+         overlap_ch += channels_distance) {
+        overlapping_beacon_channels.push_back(overlap_ch);
+    }
+    return overlapping_beacon_channels;
+}
+
+std::vector<uint8_t> wireless_utils::center_channel_to_beacon_channels(
+    uint8_t center_channel, beerocks::eWiFiBandwidth bw, beerocks::eFreqType freq_type)
+{
+    // Return nothing on 2.4G channels
+    if (freq_type != beerocks::eFreqType::FREQ_5G && freq_type != beerocks::eFreqType::FREQ_6G) {
+        LOG(ERROR) << "the frequency type "
+                   << beerocks::utils::convert_frequency_type_to_string(freq_type)
+                   << " must be either 5G or 6G";
+        return {};
+    }
+
+    std::vector<uint8_t> beacon_channels;
+    uint8_t beacon_channel;
+    switch (bw) {
+    case beerocks::BANDWIDTH_20:
+        beacon_channels.push_back(center_channel);
+        return beacon_channels;
+    case beerocks::BANDWIDTH_40:
+        beacon_channel = center_channel - 2;
+        beacon_channels.reserve(2);
+        break;
+    case beerocks::BANDWIDTH_80:
+    case beerocks::BANDWIDTH_80_80:
+        beacon_channel = center_channel - 6;
+        beacon_channels.reserve(4);
+        break;
+    case beerocks::BANDWIDTH_160:
+        beacon_channel = center_channel - 14;
+        beacon_channels.reserve(8);
+        break;
+    default: {
+        LOG(DEBUG) << "Invalid BW: " << beerocks::utils::convert_bandwidth_to_int(bw)
+                   << ", center_channel=" << center_channel;
+        return {};
+    }
+    }
+    for (size_t i = 0; i < beacon_channels.capacity(); i++) {
+        beacon_channels.push_back(beacon_channel);
+        beacon_channel += 4;
+    }
+    return beacon_channels;
 }
 
 std::vector<uint8_t>
@@ -1504,23 +2067,30 @@ bool wireless_utils::get_subset_20MHz_channels(const uint8_t channel_number,
         // "channel_number" is an actual channel
         resulting_channels.insert(channel_number);
         return true;
-    }
-
-    // The given channel number is a central channel
-    // Iterate over the 5GHz channel table.
-    for (const auto &channel_it : son::wireless_utils::channels_table_5g) {
-        // Find the bandwidth within the channel
-        const auto bw_channel_elem = channel_it.second.find(operating_bandwidth);
-        if (bw_channel_elem == channel_it.second.end()) {
-            continue;
+    } else if (116 <= operating_class && operating_class <= 136) {
+        const std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, wireless_utils::sChannel>>
+            *channels_table = {};
+        if (operating_class <= 130) {
+            channels_table = &(son::wireless_utils::channels_table_5g);
+        } else {
+            channels_table = &(son::wireless_utils::channels_table_6g);
         }
-        // Check if the central channel matches the found bandwidth element
-        if (bw_channel_elem->second.center_channel != channel_number) {
-            continue;
+        // The given channel number is a central channel
+        // Iterate over the 5GHz/6GHz channel table.
+        for (const auto &channel_it : *channels_table) {
+            // Find the bandwidth within the channel
+            const auto bw_channel_elem = channel_it.second.find(operating_bandwidth);
+            if (bw_channel_elem == channel_it.second.end()) {
+                continue;
+            }
+            // Check if the central channel matches the found bandwidth element
+            if (bw_channel_elem->second.center_channel != channel_number) {
+                continue;
+            }
+            // Get the range of the subset of 20MHz channels
+            get_range(bw_channel_elem->second.overlap_beacon_channels_range);
+            return true;
         }
-        // Get the range of the subset of 20MHz channels
-        get_range(bw_channel_elem->second.overlap_beacon_channels_range);
-        return true;
     }
     // No matching elements were found
     return false;
@@ -1639,4 +2209,123 @@ uint16_t wireless_utils::get_vht_mcs_set(uint8_t vht_mcs, uint8_t vht_ss)
         vht_mcs_set &= ~(((10 - vht_mcs) & 0x03) << (i * 2));
     }
     return vht_mcs_set;
+}
+
+const std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, wireless_utils::sChannel>>
+wireless_utils::initialize_channels_table_6g()
+{
+    /**
+     * same pattern as the global variable variable channels_table_5g.
+     * The is the first 160MHz chunk of 6G band.
+     * This is used as the pattern to create a full 6GHz channels table.
+     * https://en.wikipedia.org/wiki/List_of_WLAN_channels#6_GHz_(802.11ax)
+     */
+    const std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, wireless_utils::sChannel>>
+        channels_table_6g_pattern = {{1,
+                                      {
+                                          {beerocks::BANDWIDTH_20, {1, {1, 1}}},
+                                          {beerocks::BANDWIDTH_40, {3, {1, 5}}},
+                                          {beerocks::BANDWIDTH_80, {7, {1, 13}}},
+                                          {beerocks::BANDWIDTH_160, {15, {1, 29}}},
+                                      }},
+                                     {5,
+                                      {
+                                          {beerocks::BANDWIDTH_20, {5, {5, 5}}},
+                                          {beerocks::BANDWIDTH_40, {3, {1, 5}}},
+                                          {beerocks::BANDWIDTH_80, {7, {1, 13}}},
+                                          {beerocks::BANDWIDTH_160, {15, {1, 29}}},
+                                      }},
+                                     {9,
+                                      {
+                                          {beerocks::BANDWIDTH_20, {9, {9, 9}}},
+                                          {beerocks::BANDWIDTH_40, {11, {9, 13}}},
+                                          {beerocks::BANDWIDTH_80, {7, {1, 13}}},
+                                          {beerocks::BANDWIDTH_160, {15, {1, 29}}},
+                                      }},
+                                     {13,
+                                      {
+                                          {beerocks::BANDWIDTH_20, {13, {13, 13}}},
+                                          {beerocks::BANDWIDTH_40, {11, {9, 13}}},
+                                          {beerocks::BANDWIDTH_80, {7, {1, 13}}},
+                                          {beerocks::BANDWIDTH_160, {15, {1, 29}}},
+                                      }},
+                                     {17,
+                                      {
+                                          {beerocks::BANDWIDTH_20, {17, {17, 17}}},
+                                          {beerocks::BANDWIDTH_40, {19, {17, 21}}},
+                                          {beerocks::BANDWIDTH_80, {23, {17, 29}}},
+                                          {beerocks::BANDWIDTH_160, {15, {1, 29}}},
+                                      }},
+                                     {21,
+                                      {
+                                          {beerocks::BANDWIDTH_20, {21, {21, 21}}},
+                                          {beerocks::BANDWIDTH_40, {19, {17, 21}}},
+                                          {beerocks::BANDWIDTH_80, {23, {17, 29}}},
+                                          {beerocks::BANDWIDTH_160, {15, {1, 29}}},
+                                      }},
+                                     {25,
+                                      {
+                                          {beerocks::BANDWIDTH_20, {25, {25, 25}}},
+                                          {beerocks::BANDWIDTH_40, {27, {25, 29}}},
+                                          {beerocks::BANDWIDTH_80, {23, {17, 29}}},
+                                          {beerocks::BANDWIDTH_160, {15, {1, 29}}},
+                                      }},
+                                     {29,
+                                      {
+                                          {beerocks::BANDWIDTH_20, {29, {29, 29}}},
+                                          {beerocks::BANDWIDTH_40, {27, {25, 29}}},
+                                          {beerocks::BANDWIDTH_80, {23, {17, 29}}},
+                                          {beerocks::BANDWIDTH_160, {15, {1, 29}}},
+                                      }}};
+
+    std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, wireless_utils::sChannel>> channels_table =
+        {};
+
+    /**
+     * @brief 6GHz channels have 7 chunks of 160MHz.
+     * Each chunk has 8 channels of 20MHz.
+     * For example, the first chunk contains channels between 1 to 29.
+     * The second chunk contains channel between 33 to 61.
+     * and so on.
+     * https://en.wikipedia.org/wiki/List_of_WLAN_channels#6_GHz_(802.11ax)
+     */
+    constexpr int num_of_6g_160mhz_chunks = 7;
+    size_t offset                         = 0;
+
+    std::pair<uint8_t, std::map<beerocks::eWiFiBandwidth, son::wireless_utils::sChannel>> pair;
+    for (int i = 0; i < num_of_6g_160mhz_chunks; ++i) {
+        for (auto &entry : channels_table_6g_pattern) {
+            pair = entry;
+            pair.first += offset;
+            for (auto &bw_to_channels : pair.second) {
+                bw_to_channels.second.center_channel += offset;
+                bw_to_channels.second.overlap_beacon_channels_range.first += offset;
+                bw_to_channels.second.overlap_beacon_channels_range.second += offset;
+            }
+            channels_table.insert(pair);
+        }
+        /*
+         * proceed to the next chunk. the values of the next chuck are the 
+         * the same as in channels_table_6g_pattern, but with an offset addition.
+         * 32 is the offet between the chunks.
+         * For example, The corresponding of channel 1 in the first chanel is channel 33
+         * in the second chunk (1 + 32 = 33).
+         * The corresponding channel of channel 37 in the second chunk is channel 69
+         * in the third chunk (37 + 32 = 69).
+        */
+        offset += 32;
+    }
+
+    /*
+     * These channels don't have 80MHz and 160MHz bandwidth, hence they
+     * don't fit the pattern of channels_table_6g_pattern.
+     * Hence, add them manually.
+    */
+    channels_table[225] = {{beerocks::BANDWIDTH_20, {225, {225, 225}}},
+                           {beerocks::BANDWIDTH_40, {227, {225, 229}}}};
+    channels_table[229] = {{beerocks::BANDWIDTH_20, {229, {229, 229}}},
+                           {beerocks::BANDWIDTH_40, {227, {225, 229}}}};
+    channels_table[233] = {{beerocks::BANDWIDTH_20, {233, {233, 233}}}};
+
+    return channels_table;
 }

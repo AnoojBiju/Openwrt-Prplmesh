@@ -11,6 +11,7 @@
 
 #include "../beerocks_defines.h"
 #include "../beerocks_message_structs.h"
+#include "../beerocks_wifi_channel.h"
 
 #include <tlvf/WSC/eWscAuth.h>
 #include <tlvf/WSC/eWscEncr.h>
@@ -136,6 +137,25 @@ public:
                                   const beerocks::eWiFiBandwidth bw, uint8_t &mcs,
                                   uint8_t &short_gi);
 
+    /**
+     * @brief Translate a channel number to its frequency value
+     * 
+     * @param channel the channel number to be translated
+     * @param freq_type the frequency type: 2.4ghz, 5ghz or 6ghz
+     * @return the frequency value of the channel number.
+     *  In case of failure, return 0 on the following scenarios:
+     *      1. The frequency type is not included in one of the following bands: 2.4ghz, 5ghz or 6ghz.
+     *      2. The channel number does is not match the frequency type.
+     */
+    static uint16_t channel_to_freq(int channel, beerocks::eFreqType freq_type);
+    /**
+     * @brief Translate a channel number to its frequency value
+     * 
+     * @deprecated This function is deprecated since it doesn't support a 6GHz band.
+     * It will be removed in the upcoming commits.
+     * @param channel a channel number
+     * @return the frequency value. in case of an invalid channel, 0 is returned.
+     */
     static int channel_to_freq(int channel);
 
     /**
@@ -145,10 +165,50 @@ public:
      * @return channel number.
      */
     static int freq_to_channel(int center_freq);
-    static uint16_t channel_to_vht_center_freq(int channel, beerocks::eWiFiBandwidth bandwidth,
-                                               bool channel_ext_above_secondary);
+    /**
+     * @brief Get the center frequency of a channel.
+     * 
+     * @deprecated This function is deprecated since it doesn't support a 6GHz band.
+     * It will be removed in the upcoming commits.
+     * @param channel a 20MHz channel
+     * @param bandwidth the bandwidth of the channel
+     * @param channel_ext_above_secondary true if the secondary channel is above the channel.
+     * @return On success, return the center frequency of the channel.
+     * Otherwise, -1 is returned.
+     */
+    static int channel_to_vht_center_freq(int channel, beerocks::eWiFiBandwidth bandwidth,
+                                          bool channel_ext_above_secondary);
+    /**
+     * @brief Get the center frequency of a channel.
+     * 
+     * @param channel a 20MHz channel
+     * @param freq_type frequency type of a 2.4ghz, 5ghz or 6ghz
+     * @param bandwidth the bandwidth of the channel
+     * @param channel_ext_above_secondary true if the secondary channel is above the channel.
+     * @return On success, return the center frequency of the channel.
+     * Otherwise, -1 is returned.
+     */
+    static int channel_to_vht_center_freq(int channel, beerocks::eFreqType freq_type,
+                                          beerocks::eWiFiBandwidth bandwidth,
+                                          bool channel_ext_above_secondary);
+    /**
+     * @brief Get a frequency type based on a channel number
+     * 
+     * @deprecated This function is deprecated since it doesn't support a 6GHz band.
+     * It will be removed in the upcoming commits. Use which_freq_type(...) instead.
+     * @param chn a channel number
+     * @return the frequency type of the channel number. In case of an invalid
+     * channel number, FREQ_UNKNOWN is returned.
+     */
     static beerocks::eFreqType which_freq(uint32_t chn);
     static beerocks::eFreqType which_freq_op_cls(const uint8_t op_cls);
+    /**
+     * @brief Get a frequency type based on a frequency
+
+     * @param frequency a channel's frequency
+     * @return the frequency type. In case of an invalid
+     * frequency, FREQ_UNKNOWN is returned.
+     */
     static beerocks::eFreqType which_freq_type(uint32_t frequency);
     static bool is_same_freq_band(int chn1, int chn2);
     static beerocks::eSubbandType which_subband(uint32_t chn);
@@ -159,6 +219,8 @@ public:
     static std::vector<std::pair<uint8_t, beerocks::eWifiChannelType>>
     split_channel_to_20MHz(int channel, beerocks::eWiFiBandwidth bw,
                            bool channel_ext_above_secondary, bool channel_ext_above_primary);
+    static std::vector<std::pair<uint8_t, beerocks::eWifiChannelType>>
+    split_channel_to_20MHz(beerocks::WifiChannel &wifi_channel);
     static uint8_t channel_step_multiply(bool channel_ext_above_secondary,
                                          bool channel_ext_above_primary);
     static std::vector<uint8_t> get_5g_20MHz_channels(beerocks::eWiFiBandwidth bw,
@@ -173,9 +235,56 @@ public:
     static std::string wsc_to_bwl_encryption(WSC::eWscEncr enctype);
     static beerocks::eBssType wsc_to_bwl_bss_type(WSC::eWscVendorExtSubelementBssType bss_type);
     static std::list<uint8_t> string_to_wsc_oper_class(const std::string &operating_class);
+    /**
+     * @brief Get the vht central frequency object
+     * 
+     * @deprecated This function is deprecated since it doesn't support a 6GHz band.
+     * It will be removed in the upcoming commits.
+     * @param channel the channel number
+     * @param bandwidth the bandwidth
+     * @return the center frequency of the channel
+     */
     static uint16_t get_vht_central_frequency(uint8_t channel, beerocks::eWiFiBandwidth bandwidth);
+    /**
+     * @brief Get the vht central frequency object
+     * 
+     * @param channel the channel number
+     * @param bandwidth the bandwidth
+     * @param freq_type the frequency type - 2.4GHz, 5GHz, or 6GHz
+     * @return the center frequency of the channel
+     */
+    static uint16_t get_vht_central_frequency(uint8_t channel, beerocks::eWiFiBandwidth bandwidth,
+                                              beerocks::eFreqType freq_type);
+    /**
+     * @brief Get the center channel of the channel
+     * @deprecated This function is deprecated since it doesn't support a 6GHz band.
+     * It will be removed in the upcoming commits.
+     * 
+     * @param channel channel number
+     * @param bandwidth the bandiwdth of the channel
+     * @return the centeral channel. on failure, 0 is returned.
+     */
     static uint8_t get_5g_center_channel(uint8_t channel, beerocks::eWiFiBandwidth bandwidth);
+
+    /**
+     * @brief Get the center channel of the channel
+     * 
+     * @param channel channel number
+     * @param freq_type either 5G or 6G frequency type
+     * @param bandwidth the bandiwdth of the channel
+     * @return the centeral channel. on failure, 0 is returned.
+     */
+    static uint8_t get_center_channel(uint8_t channel, beerocks::eFreqType freq_type,
+                                      beerocks::eWiFiBandwidth bandwidth);
+
     static uint8_t get_operating_class_by_channel(const beerocks::message::sWifiChannel &channel);
+    /**
+     * @brief Get the operating class of the wifiChannel object.
+     * 
+     * @param wifi_channel the wifiChannel object
+     * @return on success, the operating class number. otherwise, 0 is returned.
+     */
+    static uint8_t get_operating_class_by_channel(const beerocks::WifiChannel &wifi_channel);
 
     /**
     * @brief Match channel number in the given operating class.
@@ -203,29 +312,58 @@ public:
     using OverlappingChannels = std::vector<std::pair<uint8_t, beerocks::eWiFiBandwidth>>;
 
     /**
-     * @brief Calculates the list of overlapping channels and bandwidths
+     * @brief Calculates the list of overlapping 5GHz channels and bandwidths
      * for the given source channel.
+     * @deprecated This function is deprecated since it doesn't support a 6GHz band.
+     * It will be removed in the upcoming commits.
      *
-     * @param source_channel The channel to calculate its overlapping pairs.
+     * @param source_channel The 5Ghz channel to calculate its overlapping pairs.
      * @return OverlappingChannles A vector of the overlapping channels for the
      * given source channel. Empty list if not as such.
      */
-    static OverlappingChannels get_overlapping_channels(uint8_t source_channel);
+    static OverlappingChannels get_overlapping_5g_channels(uint8_t source_channel);
 
     /**
-     * @brief Get a list of overlapping beacon channel for a given channel and bandwidth.
+     * @brief Calculates the list of overlapping 5GHz channels and bandwidths
+     * for the given source channel.
+     *
+     * @param source_channel The 5Ghz/6G channel to calculate its overlapping pairs.
+     * @param freq_type Either 5G or 6G frequency type
+     * @return OverlappingChannles A vector of the overlapping channels for the
+     * given source channel. Empty list if not as such.
+     */
+    static OverlappingChannels get_overlapping_channels(uint8_t source_channel,
+                                                        beerocks::eFreqType freq_type);
+
+    /**
+     * @brief Get a list of overlapping 5GHz beacon channel for a given channel and bandwidth.
+     * @deprecated This function is deprecated since it doesn't support a 6GHz band.
+     * It will be removed in the upcoming commits.
      *
      * @param beacon_channel Channel.
      * @param bw Bandwidth.
      * @return std::vector<uint8_t> List of overlapping beacon channels (20 MHz).
      */
+    static std::vector<uint8_t> get_overlapping_5g_beacon_channels(uint8_t beacon_channel,
+                                                                   beerocks::eWiFiBandwidth bw);
+
+    /**
+     * @brief Get a list of overlapping 5GHz/6GHz beacon channel for a given channel and bandwidth.
+     * 
+     * @param beacon_channel Channel.
+     * @param freq_type Either 5G or 6G frequency type
+     * @param bw Bandwidth.
+     * @return std::vector<uint8_t> List of overlapping beacon channels (20 MHz).
+     */
     static std::vector<uint8_t> get_overlapping_beacon_channels(uint8_t beacon_channel,
+                                                                beerocks::eFreqType freq_type,
                                                                 beerocks::eWiFiBandwidth bw);
 
     /**
      * @brief Get list of all possible beacon channels for a give center channel and bandwidth on
      * the 5G band.
-     *
+     * @deprecated This function is deprecated since it doesn't support a 6GHz band.
+     * It will be removed in the upcoming commits.
      * @param center_channel Center channel.
      * @param bw Bandwidth.
      * @return List of beacon channels that have the given center channel.
@@ -233,10 +371,26 @@ public:
     static std::vector<uint8_t> center_channel_5g_to_beacon_channels(uint8_t center_channel,
                                                                      beerocks::eWiFiBandwidth bw);
 
+    /**
+     * @brief Get list of all possible beacon channels for a give center channel and bandwidth on
+     * the 5G or 6G band.
+     *
+     * @param center_channel Center channel.
+     * @param bw Bandwidth.
+     * @param freq_type either 5G or 6G band
+     * 
+     * @return List of beacon channels that have the given center channel.
+     */
+    static std::vector<uint8_t> center_channel_to_beacon_channels(uint8_t center_channel,
+                                                                  beerocks::eWiFiBandwidth bw,
+                                                                  beerocks::eFreqType freq_type);
+
     struct sChannel {
         uint8_t center_channel;
         std::pair<uint8_t, uint8_t> overlap_beacon_channels_range;
     };
+
+    static const std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, sChannel>> channels_table_6g;
     static const std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, sChannel>> channels_table_5g;
     static const std::map<uint8_t, std::map<uint8_t, uint8_t>> channels_table_24g;
 
@@ -247,8 +401,16 @@ public:
     // Key: Operating Class
     static const std::map<uint8_t, sOperatingClass> operating_classes_list;
 
-    static bool has_operating_class_channel(const sOperatingClass &oper_class, uint8_t channel,
-                                            beerocks::eWiFiBandwidth bw);
+    static bool has_operating_class_5g_channel(const sOperatingClass &oper_class, uint8_t channel,
+                                               beerocks::eWiFiBandwidth bw);
+
+    /**
+     * @brief Get a list of operating classes that are associated with the frequency type
+     * 
+     * @param freq_type operating class's frequency
+     * @return list of operating classes. otherwise, an empty list is returned.
+     */
+    static std::vector<uint8_t> get_operating_classes_of_freq_type(beerocks::eFreqType freq_type);
 
     /**
      * @brief get max supported bandwidth in station capabilities.
@@ -327,7 +489,8 @@ public:
 
     static bool is_operating_class_using_central_channel(int operating_class)
     {
-        return (operating_class == 128 || operating_class == 129 || operating_class == 130);
+        return ((128 <= operating_class && operating_class <= 130) ||
+                (132 <= operating_class && operating_class <= 136));
     }
 
 private:
@@ -367,6 +530,18 @@ private:
             {2633,169}, {2700,232}, {2925,189}, {3240,237}, {3510,251}, {3600,246}, {3900,328}, {4680,251}, {5265,253}, {5850,261},
             {7020,266}, {7800,266}
     };
+
+    /**
+     * @brief Initialized 6GHz channels table variable on son_wireless-utils.cpp
+     * 
+     * Instead of initializing a huge map of 6GHz channels, like in channels_table_5g, which will inflate
+     * the size of the file in son_wireless_utils.cpp, this function does the same.
+     * It is called and assigned once to channels_table_6g member.
+     * 
+     * @return const std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, sChannel>> 
+     */
+    static const std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, sChannel>>
+    initialize_channels_table_6g();
 
     // clang-format on
 };

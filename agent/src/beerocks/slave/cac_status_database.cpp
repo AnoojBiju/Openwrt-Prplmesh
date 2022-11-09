@@ -235,7 +235,7 @@ sCacCompletionStatus CacStatusDatabase::get_completion_status(const AgentDB::sRa
     // fill the detected operating class and channels.
     if (channel_info->second.dfs_state == beerocks_message::eDfsState::UNAVAILABLE) {
         ret.completion_status     = sCacCompletionStatus::eCacCompletionStatus::RADAR_DETECTED;
-        auto overlapping_channels = son::wireless_utils::get_overlapping_channels(
+        auto overlapping_channels = son::wireless_utils::get_overlapping_5g_channels(
             radio->last_switch_channel_request->channel);
         // TODO: Add missing values. See PPM-1089.
         for (auto &overlap_ch : overlapping_channels) {

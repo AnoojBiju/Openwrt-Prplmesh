@@ -2233,8 +2233,8 @@ ChannelSelectionTask::select_best_usable_channel(const std::string &front_radio_
 
             auto filter_channel_bw_with_unavailable_overlapping_channel = [&]() {
                 auto overlapping_beacon_channels =
-                    son::wireless_utils::get_overlapping_beacon_channels(channel,
-                                                                         supported_bw.bandwidth);
+                    son::wireless_utils::get_overlapping_5g_beacon_channels(channel,
+                                                                            supported_bw.bandwidth);
 
                 // Ignore if one of beacon channels is unavailable.
                 for (const auto overlap_ch : overlapping_beacon_channels) {
