@@ -19,6 +19,7 @@
 #include <tlvf/wfa_map/tlvChannelScanCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2ApCapability.h>
 #include <tlvf/wfa_map/tlvProfile2MultiApProfile.h>
+#include <tlvf/wfa_map/tlvServicePrioritizationRule.h>
 #include <tlvf/wfa_map/tlvSteeringPolicy.h>
 
 // Forward declaration of son::node
@@ -115,6 +116,11 @@ public:
     beerocks::mac_map<Station> disallowed_btm_steering_stations;
 
     struct sServicePrioritization {
+        // Key: rule ID
+        std::unordered_map<uint32_t,
+                           wfa_map::tlvServicePrioritizationRule::sServicePrioritizationRule>
+            rules;
+
         // List of 64 PCP values corresponding to the DSCP markings (0x00 to 0x3F)
         // Each value: 0x00 – 0x07
         std::array<uint8_t, beerocks::message::DSCP_MAPPING_LIST_LENGTH> dscp_mapping_table;
