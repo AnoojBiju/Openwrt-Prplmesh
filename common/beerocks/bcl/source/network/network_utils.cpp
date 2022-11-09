@@ -443,9 +443,9 @@ network_utils::get_arp_table(bool mac_as_key)
                 nl_cache_get_next(reinterpret_cast<nl_object *>(neighbor_entry)));
             continue;
         }
-
         char *mac = nl_addr2str(nl_addr_mac, buffer_mac, sizeof(buffer_mac));
         char *ip  = nl_addr2str(nl_addr_ip, buffer_ip, sizeof(buffer_ip));
+        LOG(DEBUG) << "Badhri MAC = " << mac << " IP = " << ip;
 
         if (mac_as_key) {
             arp_table[mac] = ip;
@@ -844,17 +844,6 @@ bool network_utils::linux_iface_get_pci_info(const std::string &iface, std::stri
     pci_id = vendor + ":" + device;
 
     return true;
-}
-
-std::string network_utils::linux_iface_get_host_bridge(const std::string &iface)
-{
-    std::string bridge_path("/sys/class/net/" + iface + "/brport/bridge");
-    char resolvedPath[PATH_MAX];
-    if (!realpath(bridge_path.c_str(), resolvedPath)) {
-        return "";
-    }
-    std::string pathStr = resolvedPath;
-    return pathStr.substr(pathStr.rfind('/') + 1);
 }
 
 bool network_utils::linux_iface_exists(const std::string &iface)
@@ -1561,25 +1550,20 @@ bool network_utils::set_vlan_packet_filter(bool set, const std::string &bss_ifac
 
     cmd.append("ebtables -t nat ");
 
-    // Before adding rule, remove existing rules.
-    std::string vlan_filter_entry_cmd = cmd + "-L PREROUTING | grep " + bss_iface;
-    std::string vlan_filter_entry_cmd_output =
-        os_utils::system_call_with_output(vlan_filter_entry_cmd, true);
-    auto lines = string_utils::str_split(vlan_filter_entry_cmd_output, '\n');
-    for (const auto &line : lines) {
-        std::string cmd_delete_old;
-        cmd_delete_old.reserve(150);
-        cmd_delete_old.append(cmd).append("-D PREROUTING ").append(line);
-        os_utils::system_call(cmd_delete_old);
+    if (set) {
+        // Append rule.
+        cmd.append("-A ");
+    } else {
+        // Before removing an entry, check if it exists
+        std::string vlan_filter_entry_cmd = cmd + "-L PREROUTING | grep " + bss_iface;
+        std::string vlan_filter_entry_cmd_output =
+            os_utils::system_call_with_output(vlan_filter_entry_cmd, true);
+        if (vlan_filter_entry_cmd_output.empty()) {
+            return true;
+        }
+        // Delete rule.
+        cmd.append("-D ");
     }
-
-    // If function called for removeing, the removal of rules finished above.
-    if (!set) {
-        return true;
-    }
-
-    // Append rule.
-    cmd.append("-A ");
 
     cmd.append("PREROUTING -p 802_1Q -j DROP -i ").append(bss_iface);
     auto cmd_base_len = cmd.length();

@@ -1069,10 +1069,11 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_wsc_renew(
     const auto &src_mac = tlvAlMac->mac();
     LOG(DEBUG) << "AP-Autoconfiguration Renew Message from Controller " << src_mac;
     auto db = AgentDB::get();
-    if (src_mac != db->controller_info.bridge_mac) {
+    LOG(DEBUG) << "Badhri Controller Bridge MAC = " << db->controller_info.bridge_mac;
+    /*if (src_mac != db->controller_info.bridge_mac) {
         LOG(ERROR) << "Ignoring AP-Autoconfiguration Renew Message from an unknown Controller";
         return;
-    }
+    }*/
 
     auto tlvSupportedRole = cmdu_rx.getClass<ieee1905_1::tlvSupportedRole>();
     if (!tlvSupportedRole) {

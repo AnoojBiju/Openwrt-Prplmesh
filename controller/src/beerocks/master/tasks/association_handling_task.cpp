@@ -108,7 +108,9 @@ void association_handling_task::work()
             LOG(ERROR) << "Failed building ACTION_CONTROL_CLIENT_START_MONITORING_REQUEST message!";
             return;
         }
-
+        if (database.get_node_ipv4(sta_mac).empty()) {
+            LOG(ERROR) << "Can't get the IP Address for sta_mac = " << sta_mac;
+        }
         request->params().mac    = tlvf::mac_from_string(sta_mac);
         request->params().ipv4   = network_utils::ipv4_from_string(database.get_node_ipv4(sta_mac));
         request->params().is_ire = false;
