@@ -21,6 +21,7 @@
 #include <beerocks/tlvf/beerocks_message.h>
 #include <beerocks/tlvf/beerocks_message_apmanager.h>
 
+#include "tlvf/wfa_map/tlvClientInfo.h"
 #include <tlvf/wfa_map/tlv1905EncapDpp.h>
 #include <tlvf/wfa_map/tlvBssid.h>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
@@ -647,6 +648,10 @@ void ApManager::handle_cmdu_ieee1905_1_message(ieee1905_1::CmduMessageRx &cmdu_r
     }
     case ieee1905_1::eMessageType::VIRTUAL_BSS_REQUEST_MESSAGE: {
         handle_virtual_bss_request(cmdu_rx);
+        break;
+    }
+    case ieee1905_1::eMessageType::CLIENT_SECURITY_CONTEXT_REQUEST_MESSAGE: {
+        handle_vbss_security_request(cmdu_rx);
         break;
     }
     default:
@@ -2764,4 +2769,16 @@ std::string ApManager::get_vbss_interface_name(const sMacAddr &bssid)
     // TODO: PPM-2402: use a better (small) radio identifier.
     size_t index = m_iface.find_first_of("0123456789");
     return ifname + m_iface.at(index);
+}
+
+void ApManager::handle_vbss_security_request(ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    LOG(DEBUG) << "Received Client Security Context Request message";
+
+    auto client_info_tlv = cmdu_rx.getClass<wfa_map::tlvClientInfo>();
+
+    if (!client_info_tlv) {
+        LOG(ERROR) << "Client Info TLV is missing!";
+        return;
+    }
 }
