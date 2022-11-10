@@ -118,6 +118,13 @@ public:
     } sBssInfoConf;
 
     typedef struct {
+        sMacAddr bssid;
+        sMacAddr client_mac;
+        std::vector<uint8_t> tk;
+        std::vector<uint8_t> txpn;
+    } sClientSecurityContext;
+
+    typedef struct {
         uint16_t phy_rate_100kb;
         double bit_rate_max_mbps;
     } sPhyRateBitRateEntry;
