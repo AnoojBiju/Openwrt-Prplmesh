@@ -2,6 +2,7 @@
 #include "../son_slave_thread.h"
 #include <tlvf/wfa_map/tlvVirtualBssCreation.h>
 #include <tlvf/wfa_map/tlvVirtualBssDestruction.h>
+#include <tlvf/wfa_map/tlvClientInfo.h>
 
 namespace beerocks {
 
@@ -17,6 +18,10 @@ bool VbssTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t iface_in
     switch (cmdu_rx.getMessageType()) {
     case ieee1905_1::eMessageType::VIRTUAL_BSS_REQUEST_MESSAGE: {
         handle_virtual_bss_request(cmdu_rx);
+        return true;
+    }
+    case ieee1905_1::eMessageType::CLIENT_SECURITY_CONTEXT_REQUEST_MESSAGE: {
+        handle_security_context_request(cmdu_rx);
         return true;
     }
     default: {
@@ -58,6 +63,29 @@ void VbssTask::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
         LOG(ERROR) << "Failed to forward message to ap_manager!";
         return;
     }
+}
+
+bool VbssTask::handle_security_context_request(ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto client_info_tlv = cmdu_rx.getClass<wfa_map::tlvClientInfo>();
+    if(!client_info_tlv){
+        LOG(ERROR) << "Security Context Request didn't contain client cap tlv";
+        return false;
+    }
+
+    // DB is a singleton with locks. Need to perform Get First
+    auto db = AgentDB::get();
+    auto radio = db->get_radio_by_mac(client_info_tlv->bssid(), AgentDB::eMacType::BSSID);
+    if(!radio){
+        LOG(ERROR) << "Could not find radio with BSSID " << client_info_tlv->bssid();
+        return false;
+    }
+    auto ap_manager_fd = m_btl_ctx.get_ap_manager_fd(radio->front.iface_name);
+    if(!m_btl_ctx.forward_cmdu_to_uds(ap_manager_fd, cmdu_rx)){
+        LOG(ERROR) << "Failed to forward message to AP manager";
+        return false;
+    }
+    return true;
 }
 
 } // namespace beerocks

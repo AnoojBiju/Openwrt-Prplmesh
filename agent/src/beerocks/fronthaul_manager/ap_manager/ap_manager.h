@@ -119,6 +119,12 @@ private:
     void handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
+     * @brief Handles the request for the security context of a given vbss client
+     * @param cmdu_rx Received CMDU to be handled.
+     */
+    void handle_vbss_security_request(ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
      * @brief Runs the Finite State Machine of the AP manager.
      * 
      * @param[out] continue_processing Flag that means that state machine transitioned to a 
