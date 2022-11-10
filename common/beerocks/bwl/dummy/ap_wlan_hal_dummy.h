@@ -105,6 +105,7 @@ public:
     virtual bool add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
                          std::string &bridge, bool vbss) override;
     virtual bool remove_bss(std::string &ifname) override;
+    virtual bool get_security_context(son::wireless_utils::sClientSecurityContext &clnt_sec) override;
 
     // Protected methods:
 protected:

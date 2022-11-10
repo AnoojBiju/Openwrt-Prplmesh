@@ -446,6 +446,13 @@ public:
      */
     virtual bool remove_bss(std::string &ifname) = 0;
 
+    /**
+     * @brief Get the security contexts for a given client
+     *
+     * @param clnt_sec contains the bssid and client mac
+     * @return true if clnt_sec has txpn and tk filled, false otherwise
+     */
+    virtual bool get_security_context(son::wireless_utils::sClientSecurityContext &clnt_sec) = 0;
 private:
     static const int frame_body_idx = (sizeof(s80211MgmtFrame::sHeader) * 2);
 

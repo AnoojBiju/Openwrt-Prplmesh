@@ -20,3 +20,6 @@ __pycache__/
 ipkg-*/
 /rdk
 .dccache
+.idea
+.idea/*
+cmake-build-debug

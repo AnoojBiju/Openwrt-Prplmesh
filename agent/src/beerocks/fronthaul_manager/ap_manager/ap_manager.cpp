@@ -7,6 +7,7 @@
  */
 
 #include "ap_manager.h"
+#include "tlvf/wfa_map/tlvClientInfo.h"
 
 #include <bcl/beerocks_string_utils.h>
 #include <bcl/beerocks_utils.h>
@@ -681,6 +682,10 @@ void ApManager::handle_cmdu_ieee1905_1_message(ieee1905_1::CmduMessageRx &cmdu_r
     }
     case ieee1905_1::eMessageType::VIRTUAL_BSS_REQUEST_MESSAGE: {
         handle_virtual_bss_request(cmdu_rx);
+        break;
+    }
+    case ieee1905_1::eMessageType::CLIENT_SECURITY_CONTEXT_REQUEST_MESSAGE: {
+        handle_vbss_security_request(cmdu_rx);
         break;
     }
     default:
@@ -2621,3 +2626,20 @@ bool ApManager::zwdfs_ap() const
 
     return m_ap_support_zwdfs;
 }
+
+void ApManager::handle_vbss_security_request(ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto client_info_tlv = cmdu_rx.getClass<wfa_map::tlvClientInfo>();
+    if(client_info_tlv) {
+        son::wireless_utils::sClientSecurityContext clnt_sec = {};
+        clnt_sec.bssid                                       = client_info_tlv->bssid();
+        clnt_sec.client_mac                                  = client_info_tlv->client_mac();
+        // Set length of TK and TxPN now? Holding till function fully implemented
+        if (!ap_wlan_hal->get_security_context(clnt_sec)) {
+            LOG(ERROR) << "Failed to get the security context";
+            return;
+        }
+    }
+    return;
+}
+

@@ -108,6 +108,8 @@ public:
                          std::string &bridge, bool vbss) override;
     virtual bool remove_bss(std::string &ifname) override;
 
+    virtual bool get_security_context(son::wireless_utils::sClientSecurityContext &clnt_sec) override;
+
     // Protected methods:
 protected:
     virtual bool process_dwpal_event(char *buffer, int bufLen, const std::string &opcode) override;

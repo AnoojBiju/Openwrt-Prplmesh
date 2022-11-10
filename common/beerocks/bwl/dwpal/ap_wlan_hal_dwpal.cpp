@@ -3387,6 +3387,12 @@ bool ap_wlan_hal_dwpal::remove_bss(std::string &ifname)
     return false;
 }
 
+bool ap_wlan_hal_dwpal::get_security_context(son::wireless_utils::sClientSecurityContext &clnt_sec)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
 } // namespace bwl
 
 std::shared_ptr<ap_wlan_hal> ap_wlan_hal_create(std::string iface_name, hal_conf_t hal_conf,

@@ -31,6 +31,15 @@ private:
      * @return true on success, otherwise false.
      */
     void handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief Parse the add station message from controller
+     *
+     * @param cmdu_rx
+     * @return true on success, otherwise false
+     */
+    bool handle_security_context_request(ieee1905_1::CmduMessageRx &cmdu_rx);
+
 };
 } // namespace beerocks
 
