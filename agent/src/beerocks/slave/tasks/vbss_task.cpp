@@ -88,4 +88,11 @@ bool VbssTask::handle_security_context_request(ieee1905_1::CmduMessageRx &cmdu_r
     return true;
 }
 
+bool VbssTask::handle_security_context_response(ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    LOG(DEBUG) << "Forwarding security context response to controller";
+    // CMDU received from ap_manager
+    return m_btl_ctx.forward_cmdu_to_controller(cmdu_rx);
+}
+
 } // namespace beerocks
