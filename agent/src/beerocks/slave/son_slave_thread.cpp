@@ -15,6 +15,7 @@
 #include "tasks/ap_autoconfiguration_task.h"
 #include "tasks/capability_reporting_task.h"
 #include "tasks/controller_connectivity_task.h"
+#include "tasks/link_metrics_collection_task.h"
 #include "tasks/proxy_agent_dpp_task.h"
 #include "tasks/service_prioritization_task.h"
 
@@ -193,6 +194,9 @@ bool slave_thread::thread_init()
             ieee1905_1::eMessageType::ACK_MESSAGE,
             ieee1905_1::eMessageType::LINK_METRIC_QUERY_MESSAGE,
             ieee1905_1::eMessageType::AP_METRICS_QUERY_MESSAGE,
+            ieee1905_1::eMessageType::ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE,
+            ieee1905_1::eMessageType::BEACON_METRICS_QUERY_MESSAGE,
+            ieee1905_1::eMessageType::COMBINED_INFRASTRUCTURE_METRICS_MESSAGE,
             ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE,
             ieee1905_1::eMessageType::CLIENT_CAPABILITY_QUERY_MESSAGE,
             ieee1905_1::eMessageType::AP_CAPABILITY_QUERY_MESSAGE,
@@ -290,6 +294,7 @@ bool slave_thread::thread_init()
     m_task_pool.add_task(std::make_shared<ProxyAgentDppTask>(*this, cmdu_tx));
     m_task_pool.add_task(std::make_shared<ControllerConnectivityTask>(*this, cmdu_tx));
     m_task_pool.add_task(std::make_shared<CapabilityReportingTask>(*this, cmdu_tx));
+    m_task_pool.add_task(std::make_shared<LinkMetricsCollectionTask>(*this, cmdu_tx));
 
     m_agent_state = STATE_INIT;
     LOG(DEBUG) << "Agent Started";
@@ -4398,6 +4403,9 @@ bool slave_thread::agent_fsm()
         break;
     }
     case STATE_STOPPED: {
+        m_task_pool.send_event(eTaskType::LINK_METRICS_COLLECTION,
+                               LinkMetricsCollectionTask::eEvent::RESET_QUERIES);
+
         if (m_platform_manager_client) {
             m_platform_manager_client.reset();
         }
