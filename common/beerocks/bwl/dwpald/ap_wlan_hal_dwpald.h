@@ -113,6 +113,7 @@ public:
     virtual bool remove_bss(std::string &ifname) override;
     virtual bool add_key(const std::string &ifname, const sKeyInfo &key_info) override;
     virtual bool add_station(const std::string &ifname, const sMacAddr &mac, assoc_frame::AssocReqFrame &assoc_req) override;
+    virtual bool get_key(const std::string &ifname, sKeyInfo &key_info) override;
 
     // Protected methods:
 protected:
