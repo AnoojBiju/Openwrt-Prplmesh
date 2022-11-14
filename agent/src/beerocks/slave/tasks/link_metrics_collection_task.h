@@ -23,12 +23,12 @@
 
 namespace beerocks {
 
-// Forward declaration for BackhaulManager context saving
-class BackhaulManager;
+// Forward declaration for Agent context saving
+class slave_thread;
 
 class LinkMetricsCollectionTask : public Task {
 public:
-    LinkMetricsCollectionTask(BackhaulManager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu_tx);
+    LinkMetricsCollectionTask(slave_thread &btl_ctx, ieee1905_1::CmduMessageTx &cmdu_tx);
 
     bool handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t iface_index,
                      const sMacAddr &dst_mac, const sMacAddr &src_mac, int fd,
@@ -48,7 +48,7 @@ public:
     };
 
 private:
-    BackhaulManager &m_btl_ctx;
+    slave_thread &m_btl_ctx;
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
 
     void handle_link_metric_query(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac);
