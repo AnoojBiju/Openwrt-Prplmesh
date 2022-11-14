@@ -13,7 +13,6 @@
 #include "../tasks/channel_scan_task.h"
 #include "../tasks/channel_selection_task.h"
 #include "../tasks/coordinated_cac_task.h"
-#include "../tasks/link_metrics_collection_task.h"
 #include "../tasks/switch_channel_task.h"
 #include "../tasks/topology_task.h"
 #include <bcl/beerocks_cmdu_client_factory_factory.h>
@@ -130,7 +129,6 @@ BackhaulManager::BackhaulManager(const config_file::sConfigSlave &config,
     m_task_pool.add_task(std::make_shared<TopologyTask>(*this, cmdu_tx));
     m_task_pool.add_task(std::make_shared<ChannelSelectionTask>(*this, cmdu_tx));
     m_task_pool.add_task(std::make_shared<ChannelScanTask>(*this, cmdu_tx));
-    m_task_pool.add_task(std::make_shared<LinkMetricsCollectionTask>(*this, cmdu_tx));
     m_task_pool.add_task(
         std::make_shared<switch_channel::SwitchChannelTask>(m_task_pool, *this, cmdu_tx));
     m_task_pool.add_task(
@@ -284,10 +282,7 @@ bool BackhaulManager::thread_init()
     // Subscribe for the reception of CMDU messages that this process is interested in
     if (!m_broker_client->subscribe(std::set<ieee1905_1::eMessageType>{
             ieee1905_1::eMessageType::ACK_MESSAGE,
-            ieee1905_1::eMessageType::AP_METRICS_QUERY_MESSAGE,
-            ieee1905_1::eMessageType::ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE,
             ieee1905_1::eMessageType::BACKHAUL_STEERING_REQUEST_MESSAGE,
-            ieee1905_1::eMessageType::BEACON_METRICS_QUERY_MESSAGE,
             ieee1905_1::eMessageType::CAC_REQUEST_MESSAGE,
             ieee1905_1::eMessageType::CAC_TERMINATION_MESSAGE,
             ieee1905_1::eMessageType::CHANNEL_PREFERENCE_QUERY_MESSAGE,
@@ -295,9 +290,7 @@ bool BackhaulManager::thread_init()
             ieee1905_1::eMessageType::CHANNEL_SELECTION_REQUEST_MESSAGE,
             ieee1905_1::eMessageType::CLIENT_ASSOCIATION_CONTROL_REQUEST_MESSAGE,
             ieee1905_1::eMessageType::CLIENT_STEERING_REQUEST_MESSAGE,
-            ieee1905_1::eMessageType::COMBINED_INFRASTRUCTURE_METRICS_MESSAGE,
             ieee1905_1::eMessageType::HIGHER_LAYER_DATA_MESSAGE,
-            ieee1905_1::eMessageType::LINK_METRIC_QUERY_MESSAGE,
             ieee1905_1::eMessageType::TOPOLOGY_DISCOVERY_MESSAGE,
             ieee1905_1::eMessageType::TOPOLOGY_QUERY_MESSAGE,
             ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE,
@@ -933,9 +926,6 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
         } else {
             FSM_MOVE_STATE(INIT);
         }
-
-        m_task_pool.send_event(eTaskType::LINK_METRICS_COLLECTION,
-                               LinkMetricsCollectionTask::eEvent::RESET_QUERIES);
 
         ap_blacklist.clear();
 
