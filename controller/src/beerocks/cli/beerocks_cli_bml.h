@@ -117,6 +117,10 @@ private:
     int get_bml_version_caller(int numOfArgs);
     int get_master_slave_versions_caller(int numOfArgs);
 
+    int get_unassociated_station_stats_caller(int numOfArgs);
+    int add_unassociated_station_stats_caller(int numOfArgs);
+    int remove_unassociated_station_stats_caller(int numOfArgs);
+
     int enable_legacy_client_roaming_caller(int numOfArgs);
     int enable_client_roaming_caller(int numOfArgs);
     int enable_client_roaming_11k_support_caller(int numOfArgs);
@@ -243,6 +247,11 @@ private:
         conn_map_nodes; // key=parent_mac, val=conn_map_node_t
 
     uint8_t rx_buffer[message::MESSAGE_BUFFER_LENGTH];
+
+    //unassociated stations stats
+    int get_unassociated_stations_stats();
+    int add_unassociated_station_stats(std::string &mac_address, std::string &channel);
+    int remove_unassociated_station_stats(std::string &mac_address);
 };
 } // namespace beerocks
 

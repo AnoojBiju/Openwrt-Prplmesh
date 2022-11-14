@@ -585,7 +585,23 @@ void cli_bml::setFunctionsMapAndArray()
         "bml_enable_11k_support", "[<1 or 0>]",
         "if input was given - enable/disable the 802.11k support, prints current value",
         static_cast<pFunction>(&cli_bml::enable_client_roaming_11k_support_caller), 0, 1, INT_ARG);
-    //bool insertCommandToMap(std::string command, std::string help_args, std::string help,  pFunction funcPtr, uint8_t minNumOfArgs, uint8_t maxNumOfArgs,
+    insertCommandToMap(
+        "bml_add_unassociated_station_stats", "[<mac> <channel>]",
+        " add station with mac_address <mac> to the list of unassociated stations."
+        "Monitoring will be done on channel <channel>."
+        "For this version, the newly added station will be sent to all connected agents",
+        static_cast<pFunction>(&cli_bml::add_unassociated_station_stats_caller), 2, 2, STRING_ARG,
+        STRING_ARG);
+    insertCommandToMap("bml_remove_unassociated_station_stats", "[<mac>]",
+                       "remove the station with mac_address <mac> from the list of monitored "
+                       "unassociated stations.",
+                       static_cast<pFunction>(&cli_bml::remove_unassociated_station_stats_caller),
+                       1, 1, STRING_ARG);
+    insertCommandToMap("bml_get_unassociated_stations_stats", "",
+                       " get stats for unassociated stations already being monitored. For this "
+                       "first version, stats will be printed out in the controller log file",
+                       static_cast<pFunction>(&cli_bml::get_unassociated_station_stats_caller), 0,
+                       0);
 }
 
 void cli_bml::printBmlReturnVals(const std::string &func_name, int ret_val)
@@ -2511,4 +2527,57 @@ template <typename T> const std::string cli_bml::string_from_int_array(T *arr, s
         }
     }
     return ss.str();
+}
+
+int cli_bml::get_unassociated_station_stats_caller(int numOfArgs)
+{
+    if (numOfArgs != 0) {
+        LOG(ERROR) << "wring argument! needs no arguments";
+        return -1;
+    }
+    return get_unassociated_stations_stats();
+}
+
+int cli_bml::get_unassociated_stations_stats()
+{
+    unsigned int number_characters_max                  = 3000;
+    char un_station_stats_report[number_characters_max] = {
+        0}; //random value that should be safe to use!
+    unsigned int size_report = number_characters_max;
+    if (bml_get_unassociated_station_stats(ctx, un_station_stats_report, &size_report) ==
+        BML_RET_OK) {
+        std::cout << un_station_stats_report;
+        return BML_RET_OP_FAILED;
+    } else {
+        std::cout << "Error while getting the stats of unassociated stations!";
+    }
+    return BML_RET_OK;
+}
+
+int cli_bml::add_unassociated_station_stats_caller(int numOfArgs)
+{
+    if (numOfArgs != 2) {
+        LOG(ERROR) << "wring argument! needs exacly 2 arguments: mac_address and channel";
+        return -1;
+    }
+    return add_unassociated_station_stats(args.stringArgs[0], args.stringArgs[1]);
+}
+
+int cli_bml::remove_unassociated_station_stats_caller(int numOfArgs)
+{
+    if (numOfArgs != 1) {
+        LOG(ERROR) << "wring argument! needs exacly 1 arguments: mac_address";
+        return -1;
+    }
+    return remove_unassociated_station_stats(args.stringArgs[0]);
+}
+
+int cli_bml::add_unassociated_station_stats(std::string &mac_address, std::string &channel_string)
+{
+    return bml_add_unassociated_station_stats(ctx, mac_address.c_str(), channel_string.c_str());
+}
+
+int cli_bml::remove_unassociated_station_stats(std::string &mac_address)
+{
+    return bml_remove_unassociated_station_stats(ctx, mac_address.c_str());
 }
