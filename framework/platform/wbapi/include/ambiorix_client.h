@@ -85,7 +85,7 @@ public:
      * @param[in] depth: relative depth, if not zero it indicates how many levels of child objects are returned
      * @return amxc_var_t object.
     */
-    amxc_var_t *get_object(const std::string &object_path, const int32_t depth);
+    amxc_var_t *get_object(const std::string &object_path, const int32_t depth = 0);
 
     /**
      * @brief update a given object.

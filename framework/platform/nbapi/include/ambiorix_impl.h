@@ -125,8 +125,8 @@ public:
      * @param param parameter name which is default as TimeStamp.
      * @return True if date and time successfully set, false otherwise.
      */
-    bool set_current_time(const std::string &path_to_object,
-                          const std::string &param = "TimeStamp") override;
+    bool set_time(const std::string &path_to_object, const std::string &param = "TimeStamp",
+                  const std::string &time_stamp = std::string()) override;
 
     bool remove_all_instances(const std::string &relative_path) override;
 
