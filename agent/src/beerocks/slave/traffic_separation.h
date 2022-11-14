@@ -76,6 +76,27 @@ public:
      */
     static void traffic_seperation_configuration_clear();
 
+    /**
+     * @brief This variable is a workaround that turn on the profile_x_disallow flag when
+     * configuring the traffic separation, if the Controller sent unsupported configuration
+     * on the profile disallow flags.
+     * 
+     * @details It is possible that the Controller will configure bBSS in a way we don't support,
+     * i.e a bBSS that allows connection of profile1 and profile2 Agents.
+     * When it happens during certification, we can't configure the bBSS correctly in terms of
+     * traffic separation.
+     * if m_profile_x_disallow_override_unsupported_configuration == 0 -> Do nothing, no effect.
+     * 
+     * if m_profile_x_disallow_override_unsupported_configuration == 1 -> 
+     *  The backhaul_bss_disallow_profile1_agent_association will be overriden to 'true', when the
+     *  profile disallow flags sent by the Controller is unsupported.
+     * 
+     * if m_profile_x_disallow_override_unsupported_configuration == 2 -> 
+     *  The backhaul_bss_disallow_profile2_agent_association will be overriden to 'true', when the
+     *  profile disallow flags sent by the Controller is unsupported.
+     */
+    static int m_profile_x_disallow_override_unsupported_configuration;
+
 private:
     enum class ePortMode {
         UNTAGGED_PORT,
