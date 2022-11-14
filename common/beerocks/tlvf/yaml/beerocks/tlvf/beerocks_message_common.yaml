@@ -1051,3 +1051,19 @@ sBssidVapId:
   _type: struct
   bssid: sMacAddr
   vap_id: int8_t
+
+sUnassociatedStationInfo:
+  _type: struct
+  sta_mac: sMacAddr
+  channel:
+    _comment: The channel to use to calculate the RSSI
+    _type: uint32_t
+
+sUnassociatedStationStats:
+  _type: struct
+  sta_mac: sMacAddr
+  signal_strength: 
+    comment: RSSI 
+    _type: uint32_t
+  time_stamp:
+    _type: uint32_t

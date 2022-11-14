@@ -96,6 +96,32 @@ cACTION_MONITOR_CLIENT_ASSOCIATED_STA_LINK_METRIC_RESPONSE:
     _type: sBssidInfo
     _length: [bssid_info_list_length]
 
+cACTION_MONITOR_CLIENT_UNASSOCIATED_STA_LINK_METRIC_REQUEST:
+  _type: class
+  _is_tlv_class: True
+  length: uint16_t
+  stations_list_length:
+    _type: uint8_t
+    _length_var: True
+  stations_list:
+    _type: sUnassociatedStationInfo
+    _length: [stations_list_length]
+
+cACTION_MONITOR_CLIENT_UNASSOCIATED_STA_LINK_METRIC_RESPONSE:
+  _type: class
+  _is_tlv_class: True
+  length: uint16_t
+  radio_mac_address:
+    _comment: mac_address of the radio
+    _type: sMacAddr
+  stations_list_length:
+    _type: uint8_t
+    _length_var: True
+  stations_list:
+    _type: sUnassociatedStationStats
+    _length: [stations_list_length]
+
+
 #################################################
 # HOSTAP
 #################################################

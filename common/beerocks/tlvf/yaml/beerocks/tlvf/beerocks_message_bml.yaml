@@ -479,6 +479,36 @@ cACTION_BML_WIFI_CREDENTIALS_CLEAR_RESPONSE:
 cACTION_BML_CLIENT_GET_CLIENT_LIST_REQUEST:
   _type: class
 
+cACTION_BML_ADD_UNASSOCIATED_STATION_STATS_REQUEST:
+  _type: class
+  mac_address: sMacAddr
+  channel: uint32_t
+
+cACTION_BML_REMOVE_UNASSOCIATED_STATION_STATS_REQUEST:
+  _type: class
+  mac_address: sMacAddr
+
+cACTION_BML_GET_UNASSOCIATED_STATIONS_STATS_REQUEST:
+  _type: class
+
+sStaMetrics:
+  _type: struct
+  sta_mac: sMacAddr
+  channel_number: uint8_t
+  uplink_rcpi_dbm_enc: uint8_t
+  time_stamp:
+    _type: char
+    _length: [40]
+
+cACTION_BML_GET_UNASSOCIATED_STATIONS_STATS_RESPONSE:
+  _type: class
+  sta_list_length:
+    _type: uint8_t
+    _length_var: True
+  sta_list:
+    _type: sStaMetrics
+    _length: [ sta_list_length ]
+
 cACTION_BML_CLIENT_GET_CLIENT_LIST_RESPONSE:
   _type: class
   result:
