@@ -1584,8 +1584,7 @@ bool ap_wlan_hal_nl80211::add_station(const sMacAddr &mac, assoc_frame::AssocReq
 
 bool ap_wlan_hal_nl80211::get_key(const std::string &ifname, sKeyInfo &key_info)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
-    return false;
+    return m_nl80211_client->get_key(ifname, key_info);
 }
 
 } // namespace nl80211
