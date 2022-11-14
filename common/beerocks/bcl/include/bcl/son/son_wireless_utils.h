@@ -122,6 +122,8 @@ public:
         sMacAddr client_mac;
         std::vector<uint8_t> tk;
         std::vector<uint8_t> txpn;
+        std::vector<uint8_t> group_tk;
+        std::vector<uint8_t> group_txpn;
     } sClientSecurityContext;
 
     typedef struct {
