@@ -465,6 +465,16 @@ public:
      */
     virtual bool add_station(const sMacAddr &mac, assoc_frame::AssocReqFrame &assoc_req) = 0;
 
+    /**
+     * @brief Get a key for a station.
+     *
+     * @param key_info The MAC and key index as inputs, information
+     * about the retrieved key as output.
+     *
+     * @return true on success, false otherwise.
+     */
+    virtual bool get_key(const std::string &ifname, sKeyInfo &key_info) = 0;
+
 private:
     static const int frame_body_idx = (sizeof(s80211MgmtFrame::sHeader) * 2);
 

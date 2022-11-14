@@ -712,6 +712,12 @@ bool ap_wlan_hal_dummy::add_station(const sMacAddr &mac, assoc_frame::AssocReqFr
     return false;
 }
 
+bool ap_wlan_hal_dummy::get_key(const std::string &ifname, sKeyInfo &key_info)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
 } // namespace dummy
 
 std::shared_ptr<ap_wlan_hal> ap_wlan_hal_create(std::string iface_name, bwl::hal_conf_t hal_conf,
