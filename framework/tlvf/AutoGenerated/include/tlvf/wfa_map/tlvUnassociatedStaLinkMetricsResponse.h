@@ -21,8 +21,8 @@
 #include <tlvf/BaseClass.h>
 #include <tlvf/ClassList.h>
 #include "tlvf/wfa_map/eTlvTypeMap.h"
-#include <tuple>
 #include "tlvf/common/sMacAddr.h"
+#include <tuple>
 
 namespace wfa_map {
 
@@ -37,11 +37,11 @@ class tlvUnassociatedStaLinkMetricsResponse : public BaseClass
         typedef struct sStaMetrics {
             sMacAddr sta_mac;
             uint8_t channel_number;
-            uint32_t measurement_to_report_delta_msec;
             uint8_t uplink_rcpi_dbm_enc;
+            uint32_t time_stamp;
             void struct_swap(){
                 sta_mac.struct_swap();
-                tlvf_swap(32, reinterpret_cast<uint8_t*>(&measurement_to_report_delta_msec));
+                tlvf_swap(32, reinterpret_cast<uint8_t*>(&time_stamp));
             }
             void struct_init(){
                 sta_mac.struct_init();
@@ -51,6 +51,8 @@ class tlvUnassociatedStaLinkMetricsResponse : public BaseClass
         const eTlvTypeMap& type();
         const uint16_t& length();
         uint8_t& operating_class_of_channel_list();
+        //mac_address of the source radio responsible where the measurement was taken
+        sMacAddr& radio_mac_address();
         uint8_t& sta_list_length();
         std::tuple<bool, sStaMetrics&> sta_list(size_t idx);
         bool alloc_sta_list(size_t count = 1);
@@ -63,6 +65,7 @@ class tlvUnassociatedStaLinkMetricsResponse : public BaseClass
         eTlvTypeMap* m_type = nullptr;
         uint16_t* m_length = nullptr;
         uint8_t* m_operating_class_of_channel_list = nullptr;
+        sMacAddr* m_radio_mac_address = nullptr;
         uint8_t* m_sta_list_length = nullptr;
         sStaMetrics* m_sta_list = nullptr;
         size_t m_sta_list_idx__ = 0;

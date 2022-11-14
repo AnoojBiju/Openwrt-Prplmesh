@@ -37,6 +37,10 @@ uint8_t& tlvUnassociatedStaLinkMetricsResponse::operating_class_of_channel_list(
     return (uint8_t&)(*m_operating_class_of_channel_list);
 }
 
+sMacAddr& tlvUnassociatedStaLinkMetricsResponse::radio_mac_address() {
+    return (sMacAddr&)(*m_radio_mac_address);
+}
+
 uint8_t& tlvUnassociatedStaLinkMetricsResponse::sta_list_length() {
     return (uint8_t&)(*m_sta_list_length);
 }
@@ -83,6 +87,7 @@ bool tlvUnassociatedStaLinkMetricsResponse::alloc_sta_list(size_t count) {
 void tlvUnassociatedStaLinkMetricsResponse::class_swap()
 {
     tlvf_swap(16, reinterpret_cast<uint8_t*>(m_length));
+    m_radio_mac_address->struct_swap();
     for (size_t i = 0; i < m_sta_list_idx__; i++){
         m_sta_list[i].struct_swap();
     }
@@ -122,6 +127,7 @@ size_t tlvUnassociatedStaLinkMetricsResponse::get_initial_size()
     class_size += sizeof(eTlvTypeMap); // type
     class_size += sizeof(uint16_t); // length
     class_size += sizeof(uint8_t); // operating_class_of_channel_list
+    class_size += sizeof(sMacAddr); // radio_mac_address
     class_size += sizeof(uint8_t); // sta_list_length
     return class_size;
 }
@@ -150,6 +156,13 @@ bool tlvUnassociatedStaLinkMetricsResponse::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
+    m_radio_mac_address = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(sMacAddr))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sMacAddr) << ") Failed!";
+        return false;
+    }
+    if(m_length && !m_parse__){ (*m_length) += sizeof(sMacAddr); }
+    if (!m_parse__) { m_radio_mac_address->struct_init(); }
     m_sta_list_length = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (!m_parse__) *m_sta_list_length = 0;
     if (!buffPtrIncrementSafe(sizeof(uint8_t))) {

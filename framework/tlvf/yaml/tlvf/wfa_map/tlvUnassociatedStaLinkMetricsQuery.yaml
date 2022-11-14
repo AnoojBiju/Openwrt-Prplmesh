@@ -10,19 +10,16 @@ tlvUnassociatedStaLinkMetricsQuery:
     _value_const: TLV_UNASSOCIATED_STA_LINK_METRICS_QUERY
   length: uint16_t
   operating_class_of_channel_list: uint8_t
-  channel_list_length:
+  un_stations_list_length:
     _type: uint8_t
     _length_var: True
-  channel_list:
-    _type: sChannelPrameters
-    _length: [ channel_list_length ]
+  un_stations_list:
+    _type: sUnassociatedStationInfo
+    _length: [ un_stations_list_length ]
 
-sChannelPrameters:
+sUnassociatedStationInfo:
   _type: struct
-  channel_number: uint8_t
-  sta_list_length:
-    _type: uint8_t
-    _length_var: True
-  sta_list:
-    _type: sMacAddr
-    _length: [ sta_list_length ]
+  sta_mac: sMacAddr
+  channel:
+    _comment: The channel to use to calculate the RSSI
+    _type: uint32_t

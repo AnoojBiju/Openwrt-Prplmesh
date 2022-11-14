@@ -37,45 +37,45 @@ uint8_t& tlvUnassociatedStaLinkMetricsQuery::operating_class_of_channel_list() {
     return (uint8_t&)(*m_operating_class_of_channel_list);
 }
 
-uint8_t& tlvUnassociatedStaLinkMetricsQuery::channel_list_length() {
-    return (uint8_t&)(*m_channel_list_length);
+uint8_t& tlvUnassociatedStaLinkMetricsQuery::un_stations_list_length() {
+    return (uint8_t&)(*m_un_stations_list_length);
 }
 
-std::tuple<bool, tlvUnassociatedStaLinkMetricsQuery::sChannelPrameters&> tlvUnassociatedStaLinkMetricsQuery::channel_list(size_t idx) {
-    bool ret_success = ( (m_channel_list_idx__ > 0) && (m_channel_list_idx__ > idx) );
+std::tuple<bool, tlvUnassociatedStaLinkMetricsQuery::sUnassociatedStationInfo&> tlvUnassociatedStaLinkMetricsQuery::un_stations_list(size_t idx) {
+    bool ret_success = ( (m_un_stations_list_idx__ > 0) && (m_un_stations_list_idx__ > idx) );
     size_t ret_idx = ret_success ? idx : 0;
     if (!ret_success) {
         TLVF_LOG(ERROR) << "Requested index is greater than the number of available entries";
     }
-    return std::forward_as_tuple(ret_success, m_channel_list[ret_idx]);
+    return std::forward_as_tuple(ret_success, m_un_stations_list[ret_idx]);
 }
 
-bool tlvUnassociatedStaLinkMetricsQuery::alloc_channel_list(size_t count) {
+bool tlvUnassociatedStaLinkMetricsQuery::alloc_un_stations_list(size_t count) {
     if (m_lock_order_counter__ > 0) {;
-        TLVF_LOG(ERROR) << "Out of order allocation for variable length list channel_list, abort!";
+        TLVF_LOG(ERROR) << "Out of order allocation for variable length list un_stations_list, abort!";
         return false;
     }
-    size_t len = sizeof(sChannelPrameters) * count;
+    size_t len = sizeof(sUnassociatedStationInfo) * count;
     if(getBuffRemainingBytes() < len )  {
         TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
         return false;
     }
     m_lock_order_counter__ = 0;
-    uint8_t *src = (uint8_t *)&m_channel_list[*m_channel_list_length];
+    uint8_t *src = (uint8_t *)&m_un_stations_list[*m_un_stations_list_length];
     uint8_t *dst = src + len;
     if (!m_parse__) {
         size_t move_length = getBuffRemainingBytes(src) - len;
         std::copy_n(src, move_length, dst);
     }
-    m_channel_list_idx__ += count;
-    *m_channel_list_length += count;
+    m_un_stations_list_idx__ += count;
+    *m_un_stations_list_length += count;
     if (!buffPtrIncrementSafe(len)) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
         return false;
     }
     if(m_length){ (*m_length) += len; }
     if (!m_parse__) { 
-        for (size_t i = m_channel_list_idx__ - count; i < m_channel_list_idx__; i++) { m_channel_list[i].struct_init(); }
+        for (size_t i = m_un_stations_list_idx__ - count; i < m_un_stations_list_idx__; i++) { m_un_stations_list[i].struct_init(); }
     }
     return true;
 }
@@ -83,8 +83,8 @@ bool tlvUnassociatedStaLinkMetricsQuery::alloc_channel_list(size_t count) {
 void tlvUnassociatedStaLinkMetricsQuery::class_swap()
 {
     tlvf_swap(16, reinterpret_cast<uint8_t*>(m_length));
-    for (size_t i = 0; i < m_channel_list_idx__; i++){
-        m_channel_list[i].struct_swap();
+    for (size_t i = 0; i < m_un_stations_list_idx__; i++){
+        m_un_stations_list[i].struct_swap();
     }
 }
 
@@ -122,7 +122,7 @@ size_t tlvUnassociatedStaLinkMetricsQuery::get_initial_size()
     class_size += sizeof(eTlvTypeMap); // type
     class_size += sizeof(uint16_t); // length
     class_size += sizeof(uint8_t); // operating_class_of_channel_list
-    class_size += sizeof(uint8_t); // channel_list_length
+    class_size += sizeof(uint8_t); // un_stations_list_length
     return class_size;
 }
 
@@ -150,18 +150,18 @@ bool tlvUnassociatedStaLinkMetricsQuery::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_channel_list_length = reinterpret_cast<uint8_t*>(m_buff_ptr__);
-    if (!m_parse__) *m_channel_list_length = 0;
+    m_un_stations_list_length = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!m_parse__) *m_un_stations_list_length = 0;
     if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_channel_list = reinterpret_cast<sChannelPrameters*>(m_buff_ptr__);
-    uint8_t channel_list_length = *m_channel_list_length;
-    m_channel_list_idx__ = channel_list_length;
-    if (!buffPtrIncrementSafe(sizeof(sChannelPrameters) * (channel_list_length))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sChannelPrameters) * (channel_list_length) << ") Failed!";
+    m_un_stations_list = reinterpret_cast<sUnassociatedStationInfo*>(m_buff_ptr__);
+    uint8_t un_stations_list_length = *m_un_stations_list_length;
+    m_un_stations_list_idx__ = un_stations_list_length;
+    if (!buffPtrIncrementSafe(sizeof(sUnassociatedStationInfo) * (un_stations_list_length))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sUnassociatedStationInfo) * (un_stations_list_length) << ") Failed!";
         return false;
     }
     if (m_parse__) { class_swap(); }

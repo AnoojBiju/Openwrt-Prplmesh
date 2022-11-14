@@ -34,22 +34,25 @@ class tlvUnassociatedStaLinkMetricsQuery : public BaseClass
         explicit tlvUnassociatedStaLinkMetricsQuery(std::shared_ptr<BaseClass> base, bool parse = false);
         ~tlvUnassociatedStaLinkMetricsQuery();
 
-        typedef struct sChannelPrameters {
-            uint8_t channel_number;
-            uint8_t sta_list_length;
-            sMacAddr* sta_list; //TLVF_TODO: not supported yet
+        typedef struct sUnassociatedStationInfo {
+            sMacAddr sta_mac;
+            //The channel to use to calculate the RSSI
+            uint32_t channel;
             void struct_swap(){
+                sta_mac.struct_swap();
+                tlvf_swap(32, reinterpret_cast<uint8_t*>(&channel));
             }
             void struct_init(){
+                sta_mac.struct_init();
             }
-        } __attribute__((packed)) sChannelPrameters;
+        } __attribute__((packed)) sUnassociatedStationInfo;
         
         const eTlvTypeMap& type();
         const uint16_t& length();
         uint8_t& operating_class_of_channel_list();
-        uint8_t& channel_list_length();
-        std::tuple<bool, sChannelPrameters&> channel_list(size_t idx);
-        bool alloc_channel_list(size_t count = 1);
+        uint8_t& un_stations_list_length();
+        std::tuple<bool, sUnassociatedStationInfo&> un_stations_list(size_t idx);
+        bool alloc_un_stations_list(size_t count = 1);
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -59,9 +62,9 @@ class tlvUnassociatedStaLinkMetricsQuery : public BaseClass
         eTlvTypeMap* m_type = nullptr;
         uint16_t* m_length = nullptr;
         uint8_t* m_operating_class_of_channel_list = nullptr;
-        uint8_t* m_channel_list_length = nullptr;
-        sChannelPrameters* m_channel_list = nullptr;
-        size_t m_channel_list_idx__ = 0;
+        uint8_t* m_un_stations_list_length = nullptr;
+        sUnassociatedStationInfo* m_un_stations_list = nullptr;
+        size_t m_un_stations_list_idx__ = 0;
         int m_lock_order_counter__ = 0;
 };
 

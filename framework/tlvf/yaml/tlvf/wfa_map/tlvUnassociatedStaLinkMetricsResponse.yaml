@@ -10,6 +10,9 @@ tlvUnassociatedStaLinkMetricsResponse:
     _value_const: TLV_UNASSOCIATED_STA_LINK_METRICS_RESPONSE
   length: uint16_t
   operating_class_of_channel_list: uint8_t
+  radio_mac_address:
+    _comment: mac_address of the source radio responsible where the measurement was taken
+    _type: sMacAddr
   sta_list_length:
     _type: uint8_t
     _length_var: True
@@ -21,5 +24,6 @@ sStaMetrics:
   _type: struct
   sta_mac: sMacAddr
   channel_number: uint8_t
-  measurement_to_report_delta_msec: uint32_t
   uplink_rcpi_dbm_enc: uint8_t
+  time_stamp:
+    _type: uint32_t
