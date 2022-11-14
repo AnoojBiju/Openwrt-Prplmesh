@@ -3457,6 +3457,14 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
             LOG(ERROR) << "adding wfa_map::tlvAssociatedStaExtendedLinkMetrics failed";
             return false;
         }
+        auto response_out = message_com::create_vs_message<
+            beerocks_message::cACTION_BACKHAUL_CLIENT_UNASSOCIATED_STA_LINK_METRIC_RESPONSE>(
+            cmdu_tx, beerocks_header->id());
+        if (response_out == nullptr) {
+            LOG(ERROR) << "Failed building "
+                          "cACTION_BACKHAUL_CLIENT_UNASSOCIATED_STA_LINK_METRIC_RESPONSE message!";
+            break;
+        }
 
         extended->associated_sta() = response_in->sta_mac();
 
@@ -3464,6 +3472,10 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
             LOG(ERROR) << "allocation of per BSS STA metrics failed";
             return false;
         }
+        response_out->radio_mac_address() = response_in->radio_mac_address();
+        for (size_t i = 0; i < response_out->stations_list_length(); ++i) {
+            auto &stat_in  = std::get<1>(response_in->stations_list(i));
+            auto &stat_out = std::get<1>(response_out->stations_list(i));
 
         auto db = AgentDB::get();
 
