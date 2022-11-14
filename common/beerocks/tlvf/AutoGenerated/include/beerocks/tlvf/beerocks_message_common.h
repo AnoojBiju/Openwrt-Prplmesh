@@ -1419,6 +1419,33 @@ typedef struct sBssidVapId {
     }
 } __attribute__((packed)) sBssidVapId;
 
+typedef struct sUnassociatedStationInfo {
+    sMacAddr sta_mac;
+    //The channel to use to calculate the RSSI
+    uint32_t channel;
+    void struct_swap(){
+        sta_mac.struct_swap();
+        tlvf_swap(32, reinterpret_cast<uint8_t*>(&channel));
+    }
+    void struct_init(){
+        sta_mac.struct_init();
+    }
+} __attribute__((packed)) sUnassociatedStationInfo;
+
+typedef struct sUnassociatedStationStats {
+    sMacAddr sta_mac;
+    uint32_t signal_strength;
+    uint32_t time_stamp;
+    void struct_swap(){
+        sta_mac.struct_swap();
+        tlvf_swap(32, reinterpret_cast<uint8_t*>(&signal_strength));
+        tlvf_swap(32, reinterpret_cast<uint8_t*>(&time_stamp));
+    }
+    void struct_init(){
+        sta_mac.struct_init();
+    }
+} __attribute__((packed)) sUnassociatedStationStats;
+
 
 }; // close namespace: beerocks_message
 
