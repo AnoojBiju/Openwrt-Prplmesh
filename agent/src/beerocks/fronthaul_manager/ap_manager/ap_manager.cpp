@@ -26,6 +26,7 @@
 #include <tlvf/wfa_map/tlvChannelPreference.h>
 #include <tlvf/wfa_map/tlvClientCapabilityReport.h>
 #include "tlvf/wfa_map/tlvClientInfo.h"
+#include <tlvf/wfa_map/tlvClientSecurityContext.h>
 #include <tlvf/wfa_map/tlvDppCceIndication.h>
 #include <tlvf/wfa_map/tlvDppChirpValue.h>
 #include <tlvf/wfa_map/tlvProfile2ReasonCode.h>
@@ -2710,17 +2711,59 @@ bool ApManager::zwdfs_ap() const
 
 void ApManager::handle_vbss_security_request(ieee1905_1::CmduMessageRx &cmdu_rx)
 {
+    LOG(DEBUG) << "Received Client Security Context Request message";
+
     auto client_info_tlv = cmdu_rx.getClass<wfa_map::tlvClientInfo>();
-    if(client_info_tlv) {
-        son::wireless_utils::sClientSecurityContext clnt_sec = {};
-        clnt_sec.bssid                                       = client_info_tlv->bssid();
-        clnt_sec.client_mac                                  = client_info_tlv->client_mac();
-        // Set length of TK and TxPN now? Holding till function fully implemented
-        if (!ap_wlan_hal->get_security_context(clnt_sec)) {
-            LOG(ERROR) << "Failed to get the security context";
-            return;
-        }
+    if (!client_info_tlv) {
+        LOG(ERROR) << "Client Info TLV is missing!";
+        return;
     }
-    return;
+
+    std::string ifname = son::wireless_utils::get_vbss_interface_name(client_info_tlv->bssid());
+
+    bwl::sKeyInfo pairwise_key = {};
+    pairwise_key.mac = client_info_tlv->client_mac();
+    pairwise_key.key_idx = 0;
+    if (!ap_wlan_hal->get_key(ifname, pairwise_key)) {
+        LOG(ERROR) << "Failed to get the pairwise key!";
+        return;
+    }
+
+    bwl::sKeyInfo group_key = {};
+    group_key.mac = client_info_tlv->client_mac();
+    group_key.key_idx = 1;
+    if (!ap_wlan_hal->get_key(ifname, group_key)) {
+        LOG(ERROR) << "Failed to get the group key!";
+        return;
+    }
+
+    if (!cmdu_tx.create(0, ieee1905_1::eMessageType::CLIENT_SECURITY_CONTEXT_RESPONSE_MESSAGE)) {
+        LOG(ERROR) << "cmdu creation of type CLIENT_SECURITY_CONTEXT_REQUEST_MESSAGE failed!";
+        return;
+    }
+
+    auto tx_client_info_tlv = cmdu_tx.addClass<wfa_map::tlvClientInfo>();
+    if (!tx_client_info_tlv) {
+        LOG(ERROR) << "addClass wfa_map::tlvClientInfo failed!";
+        return;
+    }
+
+    tx_client_info_tlv->bssid() = client_info_tlv->bssid();
+    tx_client_info_tlv->client_mac() = client_info_tlv->client_mac();
+
+    auto client_security_context_tlv = cmdu_tx.addClass<wfa_map::ClientSecurityContext>();
+    if (!client_security_context_tlv) {
+        LOG(ERROR) << "addClass wfa_map::ClientSecurityContext failed!";
+        return;
+    }
+
+    // At this point we have the key, so the client is connected:
+    client_security_context_tlv->client_connected_flags().client_connected = 1;
+    client_security_context_tlv->set_ptk(pairwise_key.key, pairwise_key.key_len);
+    std::memcpy(&client_security_context_tlv->tx_packet_num(), pairwise_key.key_seq, pairwise_key.key_seq_len);
+    client_security_context_tlv->set_gtk(group_key.key, group_key.key_len);
+    std::memcpy(&client_security_context_tlv->group_tx_packet_num(), group_key.key_seq, group_key.key_seq_len);
+
+    send_cmdu(cmdu_tx);
 }
 
