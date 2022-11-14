@@ -89,6 +89,8 @@ protected:
 
     virtual bool set(const std::string &param, const std::string &value, int vap_id) override;
 
+    bool sta_unassoc_rssi_measurement(std::unordered_map<std::string, uint> &new_list) final;
+
     // Private data-members:
 private:
     std::shared_ptr<char> m_temp_dummy_value;

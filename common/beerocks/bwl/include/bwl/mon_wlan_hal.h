@@ -30,6 +30,7 @@ public:
         STA_Disconnected,
         AP_Enabled,
         AP_Disabled,
+        Unassociation_Stations_Stats,
         // RRM (802.11k) Events
         RRM_Channel_Load_Response,
         RRM_Beacon_Request_Status,
@@ -118,6 +119,18 @@ public:
     virtual bool pre_generate_connected_clients_events() = 0;
 
     virtual bool set_estimated_service_parameters(uint8_t *esp_info_field) = 0;
+
+    /**
+     * TODO: Move to the base class?
+     * 
+     * @brief Measure the RSSI of unassociated stations in the new_list
+     * The result of the measurement should be sent as an internal event.
+     * 
+     * @param [in] list of unassociated stations to be monitored, contains the ones already being monitored together with the new ones
+     *
+     * @return true on success or false on error.
+     */
+    virtual bool sta_unassoc_rssi_measurement(std::unordered_map<std::string, uint> &new_list) = 0;
 };
 
 // mon HAL factory types

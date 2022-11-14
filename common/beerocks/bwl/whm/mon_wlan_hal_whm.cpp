@@ -8,6 +8,7 @@
 
 #include "mon_wlan_hal_whm.h"
 
+#include <amxd/amxd_object.h>
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
 
@@ -236,6 +237,128 @@ bool mon_wlan_hal_whm::set(const std::string &param, const std::string &value, i
 bool mon_wlan_hal_whm::set_estimated_service_parameters(uint8_t *esp_info_field)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    return true;
+}
+
+/*  will get the unassociated stations stats from Ambirorix
+*/
+bool mon_wlan_hal_whm::sta_unassoc_rssi_measurement(std::unordered_map<std::string, uint> &new_list)
+{
+    /*
+        Example of NonAssociatedDevice object:
+        WiFi.Radio.wifi0.NaStaMonitor.NonAssociatedDevice
+        WiFi.Radio.wifi0.NaStaMonitor.NonAssociatedDevice.AA:BB:CC:DD:EE:FF
+        WiFi.Radio.wifi0.NaStaMonitor.NonAssociatedDevice.AA:BB:CC:DD:EE:FF.MACAddress=AA:BB:CC:DD:EE:FF
+        WiFi.Radio.wifi0.NaStaMonitor.NonAssociatedDevice.AA:BB:CC:DD:EE:FF.SignalStrength=0
+        WiFi.Radio.wifi0.NaStaMonitor.NonAssociatedDevice.AA:BB:CC:DD:EE:FF.TimeStamp=0001-01-01T00:00:00Z
+    */
+    std::string create_nasta_device_string("createNonAssociatedDevice");
+    std::string delete_non_associated_device("deleteNonAssociatedDevice");
+    std::vector<sUnassociatedStationStats> stats;
+
+    std::string wifi_radio_path;
+    if (!whm_get_radio_path(get_iface_name(), wifi_radio_path)) {
+        LOG(ERROR) << __func__ << " RADIO PATH not found!";
+        return false;
+    }
+
+    std::unordered_map<std::string, uint32_t> amx_un_stations_to_be_removed;
+
+    std::string non_associated_device_path = wifi_radio_path + "NaStaMonitor.NonAssociatedDevice.*";
+
+    amxc_var_t *non_associated_device_amx_object =
+        m_ambiorix_cl->get_object(non_associated_device_path, -1);
+
+    //Lets iterate through all instances
+    amxc_var_for_each(device, non_associated_device_amx_object)
+    {
+        const char *mac_address_amx = GET_CHAR(device, "MACAddress");
+        auto signal_strength        = GET_UINT32(device, "SignalStrength");
+
+        amxc_var_t *ts             = GET_ARG(device, "TimeStamp");
+        const char *time_stamp_str = amxc_var_dyncast(cstring_t, ts);
+        amxc_ts_t time;
+        memset(&time, 0, sizeof(amxc_ts_t));
+        amxc_ts_parse(&time, time_stamp_str, strlen(time_stamp_str));
+
+        if (new_list.find(std::string(mac_address_amx)) != new_list.end()) {
+            //NonAssociatedDevice exists -->get the result and update the channel
+            sUnassociatedStationStats new_stat = {
+                tlvf::mac_from_string(mac_address_amx),
+                signal_strength,
+                (uint32_t)time.sec,
+
+            };
+            stats.push_back(new_stat);
+            LOG(DEBUG) << " read unassociated station stats for mac_address: " << mac_address_amx
+                       << "SignalStrength: " << signal_strength
+                       << "and TimeStamp(string): " << time_stamp_str
+                       << " TimeStamp(seconds): " << (uint32_t)time.sec;
+            new_list.erase(mac_address_amx); // consumed!
+        } else {                             // -->controller is not interested on it any more
+            const char *mac_address_amx = GET_CHAR(device, "MACAddress");
+            uint32_t index              = GET_UINT32(device, "index");
+            amx_un_stations_to_be_removed.insert(
+                std::make_pair(std::string(mac_address_amx), index));
+        }
+    }
+
+    std::string nasta_monitor_path = wifi_radio_path + "NaStaMonitor.";
+    //Now add the newly added unassociated stations
+    for (auto &new_station : new_list) {
+        std::string mac_address(new_station.first);
+        amxc_var_t args;
+        amxc_var_init(&args);
+        amxc_var_set_type(&args, AMXC_VAR_ID_HTABLE);
+        amxc_var_add_key(cstring_t, &args, "MACAddress", mac_address.c_str());
+        if (!m_ambiorix_cl->call(nasta_monitor_path, create_nasta_device_string.c_str(), &args,
+                                 NULL)) {
+            LOG(ERROR) << " remote function call " << create_nasta_device_string << " for object "
+                       << nasta_monitor_path << " Failed!";
+            amxc_var_clean(&args);
+            continue;
+        }
+        amxc_var_clean(&args);
+
+        LOG(TRACE) << "Non Associated Station with MACAddress: " << mac_address << "added to "
+                   << non_associated_device_path;
+    }
+
+    // Now lets remove all stations the controller do not want them anymore
+    for (auto &station_to_remove : amx_un_stations_to_be_removed) {
+        LOG(DEBUG) << "removing unassociated station  with path: " << station_to_remove.first;
+        amxc_var_t args;
+        amxc_var_init(&args);
+        amxc_var_set_type(&args, AMXC_VAR_ID_HTABLE);
+        amxc_var_add_key(cstring_t, &args, "MACAddress", station_to_remove.first.c_str());
+
+        if (!m_ambiorix_cl->call(nasta_monitor_path, delete_non_associated_device.c_str(), &args,
+                                 NULL)) {
+            LOG(ERROR) << " remote function call " << delete_non_associated_device << " for object "
+                       << nasta_monitor_path << " Failed!";
+            amxc_var_clean(&args);
+            continue;
+        } else {
+            amxc_var_clean(&args);
+            LOG(TRACE) << "Successfully removed unassociated station with mac: "
+                       << station_to_remove.first;
+        }
+    }
+    sUnassociatedStationsStats stats_out{stats};
+    auto msg_buff = ALLOC_SMART_BUFFER(sizeof(stats_out));
+    if (!msg_buff) {
+        LOG(FATAL) << "Memory allocation failed for "
+                      "sUnassociatedStationsStats!";
+        return false;
+    }
+    auto msg = reinterpret_cast<sUnassociatedStationsStats *>(msg_buff.get());
+    memset(msg_buff.get(), 0, sizeof(stats_out));
+    std::copy(stats_out.un_stations_stats.begin(), stats_out.un_stations_stats.end(),
+              back_inserter(msg->un_stations_stats));
+
+    event_queue_push(Event::Unassociation_Stations_Stats,
+                     msg_buff); // send message internally the monitor
+
     return true;
 }
 

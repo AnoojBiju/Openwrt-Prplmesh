@@ -193,6 +193,16 @@ typedef struct {
 } sNodeRssiMeasurement;
 
 typedef struct {
+    sMacAddr mac_adress;
+    uint32_t signal_strength;
+    uint32_t time_stamp;
+} sUnassociatedStationStats;
+
+typedef struct {
+    std::vector<sUnassociatedStationStats> un_stations_stats;
+} sUnassociatedStationsStats;
+
+typedef struct {
     uint8_t multi_ap_profile;
     uint16_t multi_ap_primary_vlan_id;
 } sACTION_BACKHAUL_CONNECTED_NOTIFICATION;

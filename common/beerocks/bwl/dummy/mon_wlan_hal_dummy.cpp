@@ -461,6 +461,58 @@ bool mon_wlan_hal_dummy::set_estimated_service_parameters(uint8_t *esp_info_fiel
     return true;
 }
 
+bool mon_wlan_hal_dummy::sta_unassoc_rssi_measurement(
+    std::unordered_map<std::string, uint> &new_list)
+{
+    // Temporary, just for simulation!
+
+    auto now          = std::chrono::system_clock::now();
+    std::time_t now_c = std::chrono::system_clock::to_time_t(now);
+
+    std::vector<sUnassociatedStationStats> stats;
+    sUnassociatedStationStats new_stat = {
+        tlvf::mac_from_string("BB:06:e2:4d:6d:3a"),
+        10,
+        (uint32_t)now_c,
+    };
+
+    stats.push_back(new_stat);
+
+    new_stat = {
+        tlvf::mac_from_string("AA:06:e2:4d:6d:cb"),
+        200,
+        (uint32_t)now_c,
+    };
+    stats.push_back(new_stat);
+
+    sUnassociatedStationsStats stats_out{stats};
+
+    auto msg_buff = ALLOC_SMART_BUFFER(sizeof(stats_out));
+    if (!msg_buff) {
+        LOG(FATAL) << "Memory allocation failed for "
+                      "sUnassociatedStationsStats!";
+        return false;
+    }
+
+    auto msg = reinterpret_cast<sUnassociatedStationsStats *>(msg_buff.get());
+    memset(msg_buff.get(), 0, sizeof(stats_out));
+    std::copy(stats_out.un_stations_stats.begin(), stats_out.un_stations_stats.end(),
+              back_inserter(msg->un_stations_stats));
+
+    for (auto &element : msg->un_stations_stats) {
+        LOG(DEBUG) << "adding new unassociated_stations_stat  for "
+                   << tlvf::mac_to_string(element.mac_adress)
+                   << " and signal_strength = " << element.signal_strength
+                   << " and time_stamp(string format) "
+                   << beerocks::utils::get_ISO_8601_timestamp_string(now);
+    }
+
+    event_queue_push(Event::Unassociation_Stations_Stats,
+                     msg_buff); // send message internally to the monitor
+
+    return true;
+};
+
 } // namespace dummy
 
 std::shared_ptr<mon_wlan_hal> mon_wlan_hal_create(const std::string &iface_name,
