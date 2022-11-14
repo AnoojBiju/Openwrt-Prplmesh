@@ -122,6 +122,17 @@ public:
      */
     bool add_station(const std::string &interface_name, const sMacAddr &mac,
                      assoc_frame::AssocReqFrame &assoc_req, uint16_t aid) override;
+
+    /**
+     * @brief Get a key for a station.
+     *
+     * @param[in] interface_name the name of the interface to get a key for.
+     * @param[in/out] key_info the MAC and key index [in]. The
+     * information about the retrieved key [out].
+     *
+     * @return true on success and false otherwise.
+     */
+    bool get_key(const std::string &interface_name, sKeyInfo &key_info) override;
 };
 
 } // namespace bwl

@@ -974,4 +974,10 @@ bool nl80211_client_impl::add_station(const std::string &interface_name, const s
         [&](struct nl_msg *msg) {});
 }
 
+bool nl80211_client_impl::get_key(const std::string &interface_name, sKeyInfo &key_info)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
 } // namespace bwl

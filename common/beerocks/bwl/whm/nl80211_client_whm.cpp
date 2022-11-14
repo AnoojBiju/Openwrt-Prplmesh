@@ -64,4 +64,9 @@ bool nl80211_client_whm::add_station(const std::string &interface_name, const sM
     return false;
 }
 
+bool nl80211_client_whm::get_key(const std::string &interface_name, sKeyInfo &key_info)
+{
+    return false;
+}
+
 } // namespace bwl
