@@ -548,7 +548,7 @@ void agent_monitoring_task::dm_add_sta_to_agent_connected_event(
                     LOG(ERROR) << "Failed to add " << obj_path << ".STA, mac: " << sta.mac();
                     return;
                 }
-                ambiorix_dm->set_current_time(sta_path);
+                ambiorix_dm->set_time(sta_path);
                 ambiorix_dm->set(sta_path, "MACAddress", sta.mac());
                 ambiorix_dm->set(sta_path, "LastConnectTime",
                                  sta.time_since_last_association_sec());
@@ -585,7 +585,7 @@ std::string agent_monitoring_task::dm_add_agent_connected_event(
     }
 
     ambiorix_dm->set(agent_connected_path, "ID", agent_mac);
-    ambiorix_dm->set_current_time(agent_connected_path);
+    ambiorix_dm->set_time(agent_connected_path);
     for (int i = 0; i < ap_op_bss_tlv->radio_list_length(); i++) {
         auto radio      = std::get<1>(ap_op_bss_tlv->radio_list(i));
         auto radio_path = ambiorix_dm->add_instance(agent_connected_path + ".Radio");

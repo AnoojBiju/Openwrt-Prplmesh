@@ -1175,6 +1175,40 @@ int bml_internal::process_cmdu_header(std::shared_ptr<beerocks_header> beerocks_
             *m_client_list_size = m_client_list->size();
             m_prmClientListGet->set_value(!failed_to_copy);
         } break;
+        case beerocks_message::ACTION_BML_GET_UNASSOCIATED_STATIONS_STATS_RESPONSE: {
+            LOG(DEBUG) << "cACTION_BML_GET_UNASSOCIATED_STATIONS_STATS_RESPONSE received";
+
+            if (!m_prmUnStationsStatsGet) {
+                LOG(WARNING) << "Received cACTION_BML_GET_UNASSOCIATED_STATIONS_STATS_RESPONSE "
+                                "response, but no one is waiting...";
+                break;
+            }
+
+            auto response = beerocks_header->addClass<
+                beerocks_message::cACTION_BML_GET_UNASSOCIATED_STATIONS_STATS_RESPONSE>();
+            if (!response) {
+                LOG(ERROR)
+                    << "addClass cACTION_BML_GET_UNASSOCIATED_STATIONS_STATS_RESPONSE failed";
+                return (-BML_RET_OP_FAILED);
+            }
+
+            size_t stats_size = response->sta_list_length();
+            if (stats_size == 0) {
+                LOG(DEBUG) << "cACTION_BML_GET_UNASSOCIATED_STATIONS_STATS_RESPONSE is empty! ";
+                break;
+            }
+            m_un_stations_stats.clear();
+            m_un_stations_stats += " Unassociated stations stats report: \n";
+            for (size_t count = 0; count < stats_size; count++) {
+                auto data = std::get<1>(response->sta_list(count));
+                m_un_stations_stats +=
+                    " MACAddress=: " + tlvf::mac_to_string(data.sta_mac) +
+                    " SignalStrength= " + std::to_string(data.uplink_rcpi_dbm_enc) +
+                    " TimeStamp=" + std::string(data.time_stamp) + "\n";
+            }
+            //LOG(DEBUG) << m_un_stations_stats;
+            m_prmUnStationsStatsGet->set_value(true);
+        } break;
         case beerocks_message::ACTION_BML_CLIENT_SET_CLIENT_RESPONSE: {
             LOG(DEBUG) << "ACTION_BML_CLIENT_SET_CLIENT_RESPONSE received";
             auto response =
@@ -1431,8 +1465,8 @@ int bml_internal::process_cmdu_header(std::shared_ptr<beerocks_header> beerocks_
             auto response = beerocks_header->addClass<
                 beerocks_message::cACTION_BML_STEERING_EVENT_REGISTER_UNREGISTER_RESPONSE>();
             if (!response) {
-                LOG(ERROR)
-                    << "addClass cACTION_BML_STEERING_EVENT_REGISTER_UNREGISTER_RESPONSE failed";
+                LOG(ERROR) << "addClass "
+                              "cACTION_BML_STEERING_EVENT_REGISTER_UNREGISTER_RESPONSE failed";
                 return BML_RET_OP_FAILED;
             }
 
@@ -1552,8 +1586,8 @@ int bml_internal::process_cmdu_header(std::shared_ptr<beerocks_header> beerocks_
                 }
                 m_prmWiFiCredentialsGet = nullptr;
             } else {
-                LOG(WARNING)
-                    << "Received WIFI_CREDENTIALS_GET_RESPONSE response, but no one is waiting...";
+                LOG(WARNING) << "Received WIFI_CREDENTIALS_GET_RESPONSE response, but no one "
+                                "is waiting...";
             }
         } break;
         case beerocks_message::ACTION_PLATFORM_ADMIN_CREDENTIALS_GET_RESPONSE: {
@@ -1574,8 +1608,8 @@ int bml_internal::process_cmdu_header(std::shared_ptr<beerocks_header> beerocks_
                 }
                 m_prmAdminCredentialsGet = nullptr;
             } else {
-                LOG(WARNING)
-                    << "Received ADMIN_CREDENTIALS_GET_RESPONSE response, but no one is waiting...";
+                LOG(WARNING) << "Received ADMIN_CREDENTIALS_GET_RESPONSE response, but no one "
+                                "is waiting...";
             }
         } break;
         case beerocks_message::ACTION_PLATFORM_GET_MASTER_SLAVE_VERSIONS_RESPONSE: {
@@ -1601,8 +1635,8 @@ int bml_internal::process_cmdu_header(std::shared_ptr<beerocks_header> beerocks_
                 }
                 m_prmMasterSlaveVersions = nullptr;
             } else {
-                LOG(WARNING)
-                    << "Received MASTER_SLAVE_VERSIONS_RESPONSE response, but no one is waiting...";
+                LOG(WARNING) << "Received MASTER_SLAVE_VERSIONS_RESPONSE response, but no one "
+                                "is waiting...";
             }
         } break;
         default: {
@@ -1787,8 +1821,8 @@ int bml_internal::set_dcs_continuous_scan_enable(const sMacAddr &mac, int enable
         beerocks_message::cACTION_BML_CHANNEL_SCAN_SET_CONTINUOUS_ENABLE_REQUEST>(cmdu_tx);
 
     if (!request) {
-        LOG(ERROR)
-            << "Failed building cACTION_BML_CHANNEL_SCAN_SET_CONTINUOUS_ENABLE_REQUEST message!";
+        LOG(ERROR) << "Failed building cACTION_BML_CHANNEL_SCAN_SET_CONTINUOUS_ENABLE_REQUEST "
+                      "message!";
         return (-BML_RET_OP_FAILED);
     }
 
@@ -1857,8 +1891,8 @@ int bml_internal::set_dcs_continuous_scan_params(const sMacAddr &mac, int dwell_
         beerocks_message::cACTION_BML_CHANNEL_SCAN_SET_CONTINUOUS_PARAMS_REQUEST>(cmdu_tx);
 
     if (!request) {
-        LOG(ERROR)
-            << "Failed building cACTION_BML_CHANNEL_SCAN_SET_CONTINUOUS_PARAMS_REQUEST message!";
+        LOG(ERROR) << "Failed building cACTION_BML_CHANNEL_SCAN_SET_CONTINUOUS_PARAMS_REQUEST "
+                      "message!";
         return (-BML_RET_OP_FAILED);
     }
 
@@ -2201,6 +2235,119 @@ int bml_internal::client_get_client_list(char *client_list, unsigned int *client
     return BML_RET_OK;
 }
 
+int bml_internal::add_unassociated_station_stats(const char *mac_address,
+                                                 const char *channel_string)
+{
+    auto request = message_com::create_vs_message<
+        beerocks_message::cACTION_BML_ADD_UNASSOCIATED_STATION_STATS_REQUEST>(cmdu_tx);
+    if (request == nullptr) {
+        LOG(ERROR) << "Failed building cACTION_BML_ADD_UNASSOCIATED_STATION_STATS_REQUEST message!";
+        return -1;
+    }
+    request->mac_address() = tlvf::mac_from_string(std::string(mac_address));
+    request->channel()     = string_utils::stoi(std::string(channel_string));
+    LOG(DEBUG) << "sending ACTION_CLI_CLIENT_UNASSOCIATED_STATION_STATS_REQUEST with mac_address "
+               << mac_address << " and channel " << channel_string;
+
+    if (!message_com::send_cmdu(m_sockMaster, cmdu_tx)) {
+        LOG(ERROR) << "Failed cACTION_BML_ADD_UNASSOCIATED_STATION_STATS_REQUEST";
+        return -1;
+    }
+    return 0;
+}
+
+int bml_internal::remove_unassociated_station_stats(const char *mac_address)
+{
+    auto request = message_com::create_vs_message<
+        beerocks_message::cACTION_BML_REMOVE_UNASSOCIATED_STATION_STATS_REQUEST>(cmdu_tx);
+    if (request == nullptr) {
+        LOG(ERROR) << "Failed building "
+                      "cACTION_BML_REMOVE_UNASSOCIATED_STATION_STATS_REQUEST message!";
+        return -1;
+    }
+    request->mac_address() = tlvf::mac_from_string(std::string(mac_address));
+    LOG(DEBUG)
+        << "sending ACTION_CLI_CLIENT_REMOVE_UNASSOCIATED_STATION_STATS_REQUEST with mac_address";
+    if (!message_com::send_cmdu(m_sockMaster, cmdu_tx)) {
+        LOG(ERROR) << "Failed cACTION_BML_ADD_UNASSOCIATED_STATION_STATS_REQUEST";
+        return -1;
+    }
+    return 0;
+}
+
+int bml_internal::get_un_stations_stats(char *stats_results, unsigned int *stats_results_size)
+{
+    LOG(DEBUG) << "get_un_stations_stats";
+
+    // If the socket is not valid, attempt to re-establish the connection
+    if (!m_sockMaster) {
+        int iRet = connect_to_master();
+        if (iRet != BML_RET_OK) {
+            LOG(ERROR) << " Unable to create context, connect_to_master failed!";
+            return iRet;
+        }
+    }
+
+    // Initialize the promise for receiving the response
+    beerocks::promise<bool> prmUnStationsStatsGet;
+    m_prmUnStationsStatsGet = &prmUnStationsStatsGet;
+    int iOpTimeout          = RESPONSE_TIMEOUT; // Default timeout
+
+    auto request = message_com::create_vs_message<
+        beerocks_message::cACTION_BML_GET_UNASSOCIATED_STATIONS_STATS_REQUEST>(cmdu_tx);
+
+    if (!request) {
+        LOG(ERROR) << "Failed building ACTION_BML_GET_UNASSOCIATED_STATIONS_STATS_REQUEST message!";
+        return (-BML_RET_OP_FAILED);
+    }
+
+    // Build and send the message
+    if (!message_com::send_cmdu(m_sockMaster, cmdu_tx)) {
+        LOG(ERROR) << "Failed sending param get message!";
+        m_prmUnStationsStatsGet = nullptr;
+        return (-BML_RET_OP_FAILED);
+    }
+    LOG(DEBUG) << "cACTION_BML_GET_UNASSOCIATED_STATION_STATS_REQUEST sent";
+
+    int iRet = BML_RET_OK;
+
+    if (!m_prmUnStationsStatsGet->wait_for(iOpTimeout)) {
+        LOG(WARNING)
+            << "Timeout while waiting for GET_UNASSOCIATED_STATION_STATS_REQUEST response...";
+        iRet = -BML_RET_TIMEOUT;
+    }
+
+    // Clear the promise holder
+    m_prmUnStationsStatsGet = nullptr;
+
+    if (iRet != BML_RET_OK) {
+        LOG(ERROR) << "GET_UNASSOCIATED_STATION_STATS_REQUEST returned with error code:" << iRet;
+        return (iRet);
+    }
+
+    bool result = prmUnStationsStatsGet.get_value();
+    if (!result) {
+        LOG(ERROR) << "GET_UNASSOCIATED_STATION_STATS_REQUEST request failed";
+        return (-BML_RET_OP_FAILED);
+    }
+
+    // Return results
+    if (m_un_stations_stats.size() >= *stats_results_size) {
+        LOG(ERROR) << " size of buffer to get un_stations stats is not big enough, needed: "
+                   << m_un_stations_stats.size() << " allocated: " << *stats_results_size
+                   << ". Report will be non complete";
+        std::string warning = "Warning, report is INCOMPLETE! \n";
+        m_un_stations_stats.resize(*stats_results_size - 1);
+    } else {
+        *stats_results_size = m_un_stations_stats.size() + 1;
+    }
+    m_un_stations_stats += "\0";
+    beerocks::string_utils::copy_string(stats_results, m_un_stations_stats.c_str(),
+                                        *stats_results_size);
+
+    return BML_RET_OK;
+}
+
 int bml_internal::client_set_client(const sMacAddr &sta_mac, const BML_CLIENT_CONFIG &client_config)
 {
     LOG(DEBUG) << "client_set_client";
@@ -2308,7 +2455,6 @@ int bml_internal::client_get_client(const sMacAddr &sta_mac, BML_CLIENT *client)
 
     return BML_RET_OK;
 }
-
 int bml_internal::ping()
 {
     // Command supported only on local master

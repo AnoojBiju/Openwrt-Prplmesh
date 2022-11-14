@@ -774,6 +774,25 @@ int bml_client_get_client_list(BML_CTX ctx, char *client_list, unsigned int *cli
     return pBML->client_get_client_list(client_list, client_list_size);
 }
 
+int bml_add_unassociated_station_stats(BML_CTX ctx, const char *mac_address,
+                                       const char *channel_string)
+{
+    auto pBML = static_cast<bml_internal *>(ctx);
+    return pBML->add_unassociated_station_stats(mac_address, channel_string);
+}
+int bml_remove_unassociated_station_stats(BML_CTX ctx, const char *mac_address)
+{
+    auto pBML = static_cast<bml_internal *>(ctx);
+    return pBML->remove_unassociated_station_stats(mac_address);
+}
+
+int bml_get_unassociated_station_stats(BML_CTX ctx, char *stats_results,
+                                       unsigned int *stats_results_size)
+{
+    auto pBML = static_cast<bml_internal *>(ctx);
+    return pBML->get_un_stations_stats(stats_results, stats_results_size);
+}
+
 int bml_client_set_client(BML_CTX ctx, const char *sta_mac,
                           const struct BML_CLIENT_CONFIG *client_config)
 {

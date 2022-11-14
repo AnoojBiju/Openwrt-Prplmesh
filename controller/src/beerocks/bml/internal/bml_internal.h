@@ -279,11 +279,36 @@ public:
     /**
      * Get client list.
      *
-     * @param [in,out] client_list List of MAC addresses sepereted by a comma.
-     * @param [in,out] client_list_size Size of client list.
+     * @param [out] pointer where to write the status 
+     * @param [out] stats_results_size Size size of the char output
      * @return BML_RET_OK on success.
      */
     int client_get_client_list(char *client_list, unsigned int *client_list_size);
+
+    /**
+     * Add a station to the unassociated stations 
+     *  Note: this function shall expand to accept the desired agents list!
+     * @param [in] mac_address address of the station
+     * @param [in] desired channel
+     * @return BML_RET_OK on success.
+     */
+    int add_unassociated_station_stats(const char *mac_address, const char *channel_string);
+
+    /**
+     * Remove a station from the unassociated stations 
+     *  Note: this function shall expand to accept the desired agents list!
+     * @param [in] mac_address address of the station
+     * @return BML_RET_OK on success,BML_RET_OP_FAILED is station does not exist or any other issue.
+     */
+    int remove_unassociated_station_stats(const char *mac_address);
+    /**
+     * Get unassociated stations stats.
+     *
+     * @param [out] pointer where to write the status 
+     * @param [out] stats_results_size Size number of char being written to the buffer stats_results
+     * @return BML_RET_OK on success.
+     */
+    int get_un_stations_stats(char *stats_results, unsigned int *stats_results_size);
 
     /**
      * Set client configuration.
@@ -447,6 +472,7 @@ private:
     //Promise used to indicate the GetResults response was received
     beerocks::promise<int> *m_prmChannelScanResultsGet = nullptr;
     beerocks::promise<bool> *m_prmClientListGet        = nullptr;
+    beerocks::promise<bool> *m_prmUnStationsStatsGet   = nullptr;
     beerocks::promise<bool> *m_prmClientGet            = nullptr;
     beerocks::promise<bool> *m_prmSelectionPoolGet     = nullptr;
 
@@ -478,7 +504,8 @@ private:
     uint8_t *m_pvaps_list_size             = nullptr;
     std::vector<uint8_t> *m_selection_pool = nullptr;
     uint32_t *m_selection_pool_size        = nullptr;
-    uint16_t id                            = 0;
+    std::string m_un_stations_stats;
+    uint16_t id = 0;
     static bool s_fExtLogContext;
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
     bool handle_steering_event_update(uint8_t *data_buffer);

@@ -26,6 +26,7 @@
 #include <beerocks/tlvf/beerocks_message_cli.h>
 
 #include <tlvf/wfa_map/tlvClientAssociationControlRequest.h>
+#include <tlvf/wfa_map/tlvUnassociatedStaLinkMetricsQuery.h>
 
 #include <bcl/beerocks_utils.h>
 #include <easylogging++.h>
@@ -2427,9 +2428,131 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         }
         break;
     }
+    case beerocks_message::ACTION_BML_ADD_UNASSOCIATED_STATION_STATS_REQUEST: {
+
+        LOG(DEBUG) << "received ACTION_BML_ADD_UNASSOCIATED_STATION_STATS_REQUEST";
+
+        auto request =
+            beerocks_header
+                ->addClass<beerocks_message::cACTION_BML_ADD_UNASSOCIATED_STATION_STATS_REQUEST>();
+        if (request == nullptr) {
+            LOG(ERROR) << "addClass cACTION_BML_ADD_UNASSOCIATED_STATION_STATS_REQUEST failed";
+            break;
+        }
+
+        if (!database.add_unassociated_station(request->mac_address())) {
+            break;
+        }
+
+        send_unassociated_sta_link_metrics_query_message(cmdu_tx, database);
+        break;
+    }
+    case beerocks_message::ACTION_BML_REMOVE_UNASSOCIATED_STATION_STATS_REQUEST: {
+        LOG(DEBUG) << "received ACTION_BML_REMOVE_UNASSOCIATED_STATION_STATS_REQUEST";
+
+        auto request = beerocks_header->addClass<
+            beerocks_message::cACTION_BML_REMOVE_UNASSOCIATED_STATION_STATS_REQUEST>();
+        if (request == nullptr) {
+            LOG(ERROR) << "addClass cACTION_BML_REMOVE_UNASSOCIATED_STATION_STATS_REQUEST failed";
+            break;
+        }
+
+        if (!database.remove_unassociated_station(request->mac_address())) {
+            break;
+        }
+
+        send_unassociated_sta_link_metrics_query_message(cmdu_tx, database);
+        break;
+    }
+
+    case beerocks_message::ACTION_BML_GET_UNASSOCIATED_STATIONS_STATS_REQUEST: {
+        LOG(TRACE) << "ACTION_BML_GET_UNASSOCIATED_STATIONS_STATS_REQUEST";
+
+        auto request =
+            beerocks_header
+                ->addClass<beerocks_message::cACTION_BML_GET_UNASSOCIATED_STATIONS_STATS_REQUEST>();
+        if (!request) {
+            LOG(ERROR) << "addClass cACTION_BML_GET_UNASSOCIATED_STATIONS_STATS_REQUEST failed";
+            break;
+        }
+
+        auto response = message_com::create_vs_message<
+            beerocks_message::cACTION_BML_GET_UNASSOCIATED_STATIONS_STATS_RESPONSE>(cmdu_tx);
+        if (!response) {
+            LOG(ERROR) << "Failed building message "
+                          "cACTION_BML_GET_UNASSOCIATED_STATIONS_STATS_RESPONSE !";
+            break;
+        }
+
+        auto un_stations_stats = database.get_unassociated_stations_stats();
+        size_t size            = un_stations_stats.size();
+        if (!response->alloc_sta_list(size)) {
+            LOG(ERROR) << " failed allocating memory or size " << un_stations_stats.size();
+            break;
+        }
+
+        size_t count = 0;
+        for (auto &un_station : un_stations_stats) {
+            auto &out_stat               = std::get<1>(response->sta_list(count));
+            out_stat.sta_mac             = tlvf::mac_from_string(un_station.first);
+            out_stat.uplink_rcpi_dbm_enc = un_station.second->uplink_rcpi_dbm_enc;
+            strncpy(out_stat.time_stamp, un_station.second->time_stamp.c_str(), 40);
+            //Also logging it
+            LOG(TRACE) << " Station with mac address : " << out_stat.sta_mac
+                       << " has a signal strength of " << out_stat.uplink_rcpi_dbm_enc
+                       << " TimeStamp: " << out_stat.time_stamp;
+            count++;
+        }
+
+        if (!controller_ctx->send_cmdu(sd, cmdu_tx)) {
+            LOG(ERROR) << "Error cACTION_BML_GET_UNASSOCIATED_STATIONS_STATS_RESPONSE message";
+        }
+        break;
+    }
     default: {
         LOG(ERROR) << "Unsupported BML action_op:" << int(beerocks_header->action_op());
         break;
     }
+    }
+}
+
+void son_management::send_unassociated_sta_link_metrics_query_message(
+    ieee1905_1::CmduMessageTx &cmdu_tx, db &database)
+{
+    if (!cmdu_tx.create(0, ieee1905_1::eMessageType::UNASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE)) {
+        LOG(ERROR) << "Failed building message UNASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE!";
+        return;
+    }
+    auto unassociated_sta_query = cmdu_tx.addClass<wfa_map::tlvUnassociatedStaLinkMetricsQuery>();
+
+    auto un_stations_db = database.get_unassociated_stations();
+
+    if (un_stations_db.size()) {
+
+        unassociated_sta_query->alloc_un_stations_list(un_stations_db.size());
+
+        size_t iter(0);
+        for (auto &station : un_stations_db) {
+            wfa_map::tlvUnassociatedStaLinkMetricsQuery::sUnassociatedStationInfo params;
+            params.sta_mac = station.first;
+            params.channel = station.second->get_channel();
+            std::get<1>(unassociated_sta_query->un_stations_list(iter)) = params;
+            LOG(DEBUG) << "adding unassociated station with mac_address: "
+                       << tlvf::mac_to_string(params.sta_mac) << " and channel " << params.channel
+                       << " to tlvUnassociatedStaLinkMetricsQuery";
+            iter++;
+        }
+    } else { // this is a command to remove all monitored stations
+        for (const auto &agent : database.get_all_connected_agents()) {
+            son_actions::send_cmdu_to_agent(agent->al_mac, cmdu_tx, database);
+            LOG(DEBUG) << "s monitored non_associated stations to "
+                          "agent with mac_address "
+                       << tlvf::mac_to_string(agent->al_mac);
+            return;
+        }
+    }
+    //TODO shall we not narrow the destinations to some specific agents ??
+    for (const auto &agent : database.get_all_connected_agents()) {
+        son_actions::send_cmdu_to_agent(agent->al_mac, cmdu_tx, database);
     }
 }

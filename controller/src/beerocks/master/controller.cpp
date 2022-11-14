@@ -67,12 +67,10 @@
 #include <tlvf/wfa_map/tlvChannelSelectionResponse.h>
 #include <tlvf/wfa_map/tlvClientCapabilityReport.h>
 #include <tlvf/wfa_map/tlvClientInfo.h>
-#include <tlvf/wfa_map/tlvDeviceInventory.h>
 #include <tlvf/wfa_map/tlvErrorCode.h>
 #include <tlvf/wfa_map/tlvHigherLayerData.h>
 #include <tlvf/wfa_map/tlvOperatingChannelReport.h>
 #include <tlvf/wfa_map/tlvProfile2ApCapability.h>
-#include <tlvf/wfa_map/tlvProfile2ApRadioAdvancedCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2CacCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2CacStatusReport.h>
 #include <tlvf/wfa_map/tlvProfile2ChannelScanResult.h>
@@ -209,7 +207,7 @@ bool Controller::start()
         database.add_node_wired_backhaul(eth_switch_mac, database.get_local_bridge_mac());
         database.set_node_state(eth_switch_mac_str, beerocks::STATE_CONNECTED);
         database.set_node_name(eth_switch_mac_str, "GW_CONTROLLER_ETH");
-        database.set_node_manufacturer(eth_switch_mac_str, agent->device_info.manufacturer);
+        database.set_node_manufacturer(eth_switch_mac_str, agent->manufacturer);
     }
 
     // Create a timer to run internal tasks periodically
@@ -286,6 +284,7 @@ bool Controller::start()
             ieee1905_1::eMessageType::CLIENT_STEERING_BTM_REPORT_MESSAGE,
             ieee1905_1::eMessageType::HIGHER_LAYER_DATA_MESSAGE,
             ieee1905_1::eMessageType::LINK_METRIC_RESPONSE_MESSAGE,
+            ieee1905_1::eMessageType::UNASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE,
             ieee1905_1::eMessageType::OPERATING_CHANNEL_REPORT_MESSAGE,
             ieee1905_1::eMessageType::STEERING_COMPLETED_MESSAGE,
             ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE,
@@ -576,6 +575,7 @@ bool Controller::handle_cmdu_1905_1_message(const sMacAddr &src_mac,
     case ieee1905_1::eMessageType::TOPOLOGY_RESPONSE_MESSAGE:
     case ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE:
     case ieee1905_1::eMessageType::LINK_METRIC_RESPONSE_MESSAGE:
+    case ieee1905_1::eMessageType::UNASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE:
     case ieee1905_1::eMessageType::CLIENT_CAPABILITY_REPORT_MESSAGE:
     case ieee1905_1::eMessageType::CHANNEL_PREFERENCE_REPORT_MESSAGE:
     case ieee1905_1::eMessageType::CHANNEL_SELECTION_RESPONSE_MESSAGE:
@@ -1099,12 +1099,6 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
                    << " with profile enum " << agent->profile;
     }
 
-    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
-        !handle_tlv_profile2_ap_radio_advanced_capabilities(*agent, cmdu_rx)) {
-        LOG(ERROR) << "Profile2 AP Radio Advanced Capabilities is not supplied for Agent " << al_mac
-                   << " with profile enum " << agent->profile;
-    }
-
     //TODO autoconfig process the rest of the class
     //TODO autoconfig Keep intel agent support only as intel enhancements
     /**
@@ -1209,10 +1203,8 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
         }
     }
 
-    agent->device_info.manufacturer       = m1->manufacturer();
-    agent->device_info.manufacturer_model = m1->model_name();
-    agent->device_info.serial_number      = m1->serial_number();
-    database.dm_set_profile1_device_info(*agent);
+    database.dm_set_device_board_info(*agent,
+                                      {m1->manufacturer(), m1->serial_number(), m1->model_name()});
 
     return true;
 }
@@ -1842,10 +1834,6 @@ bool Controller::handle_cmdu_1905_ap_capability_report(const sMacAddr &src_mac,
                    << " with profile enum " << agent->profile;
     }
 
-    if (!handle_tlv_profile2_ap_radio_advanced_capabilities(*agent, cmdu_rx)) {
-        LOG(ERROR) << "Couldn't handle AP Radio Advanced Capabilities TLV from Agent " << src_mac;
-    }
-
     if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
         !handle_tlv_profile2_cac_capabilities(*agent, cmdu_rx)) {
         LOG(ERROR) << "Profile2 CAC Capabilities are not supplied for Agent " << src_mac
@@ -1856,12 +1844,6 @@ bool Controller::handle_cmdu_1905_ap_capability_report(const sMacAddr &src_mac,
         !handle_tlv_profile3_1905_layer_security_capabilities(*agent, cmdu_rx)) {
         LOG(ERROR) << "Profile3 1905 Layer Security Capability is not supplied for Agent "
                    << src_mac << " with profile enum " << agent->profile;
-    }
-
-    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_2 &&
-        !handle_tlv_profile3_device_inventory(*agent, cmdu_rx)) {
-        LOG(ERROR) << "Profile3 Device Inventory is not supplied for Agent " << src_mac
-                   << " with profile enum " << agent->profile;
     }
 
     return all_radio_capabilities_saved_successfully;
@@ -2325,7 +2307,7 @@ bool Controller::handle_intel_slave_join(
         database.set_node_ipv4(backhaul_mac, bridge_ipv4);
         database.set_node_ipv4(bridge_mac_str, bridge_ipv4);
 
-        database.set_node_manufacturer(backhaul_mac, agent->device_info.manufacturer);
+        database.set_node_manufacturer(backhaul_mac, agent->manufacturer);
 
         database.set_node_type(backhaul_mac, beerocks::TYPE_IRE_BACKHAUL);
 
@@ -2342,7 +2324,7 @@ bool Controller::handle_intel_slave_join(
         database.set_node_state(eth_switch_mac, beerocks::STATE_CONNECTED);
         database.set_node_name(eth_switch_mac, slave_name + "_ETH");
         database.set_node_ipv4(eth_switch_mac, bridge_ipv4);
-        database.set_node_manufacturer(eth_switch_mac, agent->device_info.manufacturer);
+        database.set_node_manufacturer(eth_switch_mac, agent->manufacturer);
 
         //run locating task on ire
         if (!database.is_node_wireless(backhaul_mac)) {
@@ -2649,7 +2631,7 @@ bool Controller::handle_non_intel_slave_join(
     auto eth_switch_mac_binary = beerocks::net::network_utils::get_eth_sw_mac_from_bridge_mac(mac);
     std::string eth_switch_mac = tlvf::mac_to_string(eth_switch_mac_binary);
     LOG(INFO) << "IRE generic Slave joined" << std::endl
-              << "    manufacturer=" << agent->device_info.manufacturer << std::endl
+              << "    manufacturer=" << agent->manufacturer << std::endl
               << "    al_mac=" << bridge_mac << std::endl
               << "    eth_switch_mac=" << eth_switch_mac << std::endl
               << "    backhaul_mac=" << backhaul_mac << std::endl
@@ -2699,14 +2681,14 @@ bool Controller::handle_non_intel_slave_join(
     database.set_node_state(bridge_mac_str, beerocks::STATE_CONNECTED);
     database.set_node_backhaul_iface_type(backhaul_mac, beerocks::eIfaceType::IFACE_TYPE_ETHERNET);
     database.set_node_backhaul_iface_type(bridge_mac_str, beerocks::IFACE_TYPE_BRIDGE);
-    database.set_node_manufacturer(backhaul_mac, agent->device_info.manufacturer);
+    database.set_node_manufacturer(backhaul_mac, agent->manufacturer);
     database.set_node_type(backhaul_mac, beerocks::TYPE_IRE_BACKHAUL);
-    database.set_node_name(backhaul_mac, agent->device_info.manufacturer + "_BH");
-    database.set_node_name(bridge_mac_str, agent->device_info.manufacturer);
+    database.set_node_name(backhaul_mac, agent->manufacturer + "_BH");
+    database.set_node_name(bridge_mac_str, agent->manufacturer);
     database.add_node_wired_backhaul(tlvf::mac_from_string(eth_switch_mac), bridge_mac);
     database.set_node_state(eth_switch_mac, beerocks::STATE_CONNECTED);
-    database.set_node_name(eth_switch_mac, agent->device_info.manufacturer + "_ETH");
-    database.set_node_manufacturer(eth_switch_mac, agent->device_info.manufacturer);
+    database.set_node_name(eth_switch_mac, agent->manufacturer + "_ETH");
+    database.set_node_manufacturer(eth_switch_mac, agent->manufacturer);
 
     // Update existing node, or add a new one
     if (database.has_node(radio_mac)) {
@@ -4031,10 +4013,7 @@ bool Controller::handle_tlv_profile2_cac_capabilities(Agent &agent,
     LOG(DEBUG) << "Profile-2 CAC Capabilities TLV is received";
 
     std::stringstream ss;
-
-    agent.device_info.country_code += static_cast<char>(*cac_capabilities_tlv->country_code(0));
-    agent.device_info.country_code += static_cast<char>(*cac_capabilities_tlv->country_code(1));
-    ss << "Country code: " << agent.device_info.country_code << std::endl;
+    ss << "Country code: " << int(*cac_capabilities_tlv->country_code()) << std::endl;
 
     for (size_t radio_idx = 0; radio_idx < cac_capabilities_tlv->number_of_cac_radios();
          radio_idx++) {
@@ -4198,11 +4177,6 @@ bool Controller::handle_cmdu_1905_bss_configuration_request_message(
         !handle_tlv_profile3_akm_suite_capabilities(*agent, cmdu_rx)) {
         LOG(ERROR) << "Profile-3 AKM Suite Capabilities is not supplied for Agent " << agent->al_mac
                    << " with profile enum " << agent->profile;
-    }
-
-    if (!handle_tlv_profile2_ap_radio_advanced_capabilities(*agent, cmdu_rx)) {
-        LOG(ERROR) << "Couldn't handle AP Radio Advanced Capabilities TLV from Agent "
-                   << agent->al_mac;
     }
 
     // TODO: Implement parsing of unhandled TLVs (PPM-2325)

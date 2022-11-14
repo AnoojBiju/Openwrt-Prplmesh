@@ -12,6 +12,7 @@
 #include "agent.h"
 #include "node.h"
 #include "station.h"
+#include "unassociatedStation.h"
 
 #include <bcl/beerocks_defines.h>
 #include <bcl/beerocks_logging.h>
@@ -48,8 +49,9 @@
 
 using namespace beerocks_message;
 
-using Agent   = prplmesh::controller::db::Agent;
-using Station = prplmesh::controller::db::Station;
+using Agent               = prplmesh::controller::db::Agent;
+using Station             = prplmesh::controller::db::Station;
+using UnassociatedStation = prplmesh::controller::db::UnassociatedStation;
 
 namespace son {
 
@@ -267,6 +269,8 @@ public:
 
     beerocks::mac_map<Agent> m_agents;
     beerocks::mac_map<Station> m_stations;
+    beerocks::mac_map<UnassociatedStation>
+        m_unassociated_stations; //TODO discuss wether to use the same class Agent, or use this small new one....
 
     db(sDbMasterConfig &config_, beerocks::logging &logger_, const sMacAddr &local_bridge_mac,
        std::shared_ptr<beerocks::nbapi::Ambiorix> ambiorix_object)
@@ -2556,6 +2560,51 @@ public:
     // vars
     //
     sDbMasterConfig &config;
+
+    /**
+     * @brief Adds a single station to the unassociated_stations list
+     * @param new station mac_address
+     * 
+     * @return true if success, false if the station exists or any other issue
+     */
+    bool add_unassociated_station(sMacAddr const &new_station_mac_add);
+
+    /**
+     * @brief Removes a single station from the unassociated_stations list
+     * @param mac_address of the station to be removed
+     * 
+     * @return True if success, false if the station does not exists or any other issue
+     */
+    bool remove_unassociated_station(sMacAddr const &mac_address);
+
+    /**
+     * @brief Get unassociated stations being monitored
+     * 
+     * @return unassociated stations 
+     */
+    const beerocks::mac_map<UnassociatedStation> &get_unassociated_stations() const;
+
+    /**
+     * @brief Get list of stats for unassociated stations being monitored
+     * 
+     * @return unassociated stations 
+     */
+    std::list<std::pair<std::string, std::shared_ptr<UnassociatedStation::Stats>>>
+    get_unassociated_stations_stats() const;
+
+    /**
+     * @brief Update Stats of a sopecific unassociated station
+     * 
+     * @param mac_address of the station
+     * @param new_stats new Stats
+     * @param  radio_dm_path   data model of the unassociated station
+     *          example:Device.WiFi.DataElements.Network.Device.1.Radio.1.
+     * 
+     * @return unassociated stations 
+     */
+    void update_unassociated_station_stats(const sMacAddr &mac_address,
+                                           UnassociatedStation::Stats &new_stats,
+                                           const std::string &radio_dm_path);
 
 private:
     /**

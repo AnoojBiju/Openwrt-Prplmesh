@@ -705,6 +705,37 @@ int bml_start_dcs_single_scan(BML_CTX ctx, const char *radio_mac, int dwell_time
 int bml_client_get_client_list(BML_CTX ctx, char *client_list, unsigned int *client_list_size);
 
 /**
+     * Add a station to the unassociated stations 
+     *  Note: this function shall expand to accept the desired agents list!
+     * @param [in] ctx BML Context.
+     * @param [in] mac_address address of the station
+     * @param [in] desired channel
+     * @return BML_RET_OK on success.
+     */
+int bml_add_unassociated_station_stats(BML_CTX ctx, const char *mac_address,
+                                       const char *channel_string);
+
+/**
+     * Remove a station from the unassociated stations 
+     *  Note: this function shall expand to accept the desired agents list!
+     * @param [in] ctx BML Context.
+     * @param [in] mac_address address of the station
+     * @return BML_RET_OK on success,BML_RET_OP_FAILED is station does not exist or any other issue.
+     */
+int bml_remove_unassociated_station_stats(BML_CTX ctx, const char *mac_address);
+
+/**
+ * Get unassociated station stats as a string
+ *
+ * @param [in] ctx BML Context.
+ * @param [in] stats_results pointer where to sopy the results
+ * @param [in] stats_results_size buffer size. It wil return the numbetr of Char that has been written including the "\0"
+ * @return BML_RET_OK on success.
+ */
+int bml_get_unassociated_station_stats(BML_CTX ctx, char *stats_results,
+                                       unsigned int *stats_results_size);
+
+/**
  * Set client configuration.
  *
  * @param [in] ctx BML Context.

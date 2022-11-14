@@ -13,6 +13,7 @@
 
 #include <beerocks/tlvf/beerocks_message.h>
 #include <tlvf/ieee_1905_1/tlvLinkMetricQuery.h>
+#include <tlvf/wfa_map/tlvUnassociatedStaLinkMetricsResponse.h>
 
 #include <easylogging++.h>
 
@@ -69,8 +70,10 @@ bool LinkMetricsTask::handle_ieee1905_1_msg(const sMacAddr &src_mac,
 {
     switch (cmdu_rx.getMessageType()) {
     case ieee1905_1::eMessageType::LINK_METRIC_RESPONSE_MESSAGE: {
-        handle_cmdu_1905_link_metric_response(src_mac, cmdu_rx);
-        break;
+        return handle_cmdu_1905_link_metric_response(src_mac, cmdu_rx);
+    }
+    case ieee1905_1::eMessageType::UNASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE: {
+        return handle_cmdu_1905_unassociated_station_link_metric_response(src_mac, cmdu_rx);
     }
     default: {
         return false;
@@ -83,8 +86,8 @@ bool LinkMetricsTask::handle_cmdu_1905_link_metric_response(const sMacAddr &src_
                                                             ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto mid = cmdu_rx.getMessageId();
-    LOG(INFO) << "Received LINK_METRIC_RESPONSE_MESSAGE, mid=" << std::dec << int(mid)
-              << " src_mac:" << src_mac;
+    LOG(DEBUG) << "Received LINK_METRIC_RESPONSE_MESSAGE, mid=" << std::dec << int(mid)
+               << " src_mac:" << src_mac;
 
     //getting reference for link metric data storage from db
     auto &link_metric_data          = database.get_link_metric_data_map();
@@ -256,6 +259,90 @@ bool LinkMetricsTask::handle_cmdu_1905_link_metric_response(const sMacAddr &src_
     if (database.setting_certification_mode())
         construct_combined_infra_metric();
 
+    return true;
+}
+
+bool LinkMetricsTask::handle_cmdu_1905_unassociated_station_link_metric_response(
+    const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    const auto message_id = cmdu_rx.getMessageId();
+    LOG(DEBUG) << "Received an Unassociated STA Link Metrics Response, mid=" << message_id
+               << " from agent with src_mac=" << src_mac;
+
+    auto unassoc_sta_link_metrics_tlv =
+        cmdu_rx.getClass<wfa_map::tlvUnassociatedStaLinkMetricsResponse>();
+    if (!unassoc_sta_link_metrics_tlv) {
+        LOG(ERROR) << "Unassociated STA Link Metrics Response message did not contain an "
+                      "Unassociated STA Link Metrics TLV!";
+        return false;
+    }
+
+    LOG(DEBUG) << "tlvUnassociatedStaLinkMetricsResponse contains stats for  "
+               << unassoc_sta_link_metrics_tlv->sta_list_length() << " unassociated stations";
+    auto number_of_station_entries = unassoc_sta_link_metrics_tlv->sta_list_length();
+    if (number_of_station_entries == 0) {
+        LOG(DEBUG) << "Unassociated STA Link Metrics Response from Agent " << src_mac
+                   << " reports zero stations, nothing to do!";
+        // return OK, as this is not necessarily an error.
+        // TODO: maybe parse DB for STAs previously heard from this Agent, and remove them?
+        return true;
+    }
+    for (int i = 0; i < number_of_station_entries; ++i) {
+        const auto station_tuple = unassoc_sta_link_metrics_tlv->sta_list(i);
+        const bool success       = std::get<0>(station_tuple);
+        const auto sta_metrics   = std::get<1>(station_tuple);
+
+        // TODO what is this 'success' field? It's not called out in the spec.
+        (void)success;
+        if (sta_metrics.sta_mac == beerocks::net::network_utils::ZERO_MAC) {
+            // skip dud entries
+            LOG(DEBUG) << " Zero_MAC!!--> skipped " << tlvf::mac_to_string(sta_metrics.sta_mac);
+            continue;
+        }
+
+        std::string mac_addr_str = tlvf::mac_to_string(sta_metrics.sta_mac);
+        LOG(DEBUG) << "Controller received Unassoc STA Link Metrics Response entry " << i
+                   << " from Agent " << src_mac << ", MAC: " << sta_metrics.sta_mac
+                   << ", RCPI: " << sta_metrics.uplink_rcpi_dbm_enc
+                   << ", ChannelNum: " << sta_metrics.channel_number
+                   << ", time_stamp(uint_32): " << sta_metrics.time_stamp;
+
+        // updating the DM
+        auto radio = database.get_radio(src_mac, unassoc_sta_link_metrics_tlv->radio_mac_address());
+        if (!radio) {
+            LOG(ERROR) << "Failed to get radio with al_mac: " << src_mac << " and radio_uid"
+                       << unassoc_sta_link_metrics_tlv->radio_mac_address();
+            return false;
+        }
+        if (radio->dm_path.empty()) {
+            LOG(ERROR) << "radio dm path is empty! , unassociated station DM will not be updated! ";
+        }
+
+        auto existing_stat = database.get_unassociated_stations().get(sta_metrics.sta_mac);
+        if (existing_stat != nullptr) {
+            UnassociatedStation::Stats stats;
+            stats.uplink_rcpi_dbm_enc = sta_metrics.uplink_rcpi_dbm_enc;
+
+            time_t received_time = sta_metrics.time_stamp;
+#ifdef ENABLE_NBAPI
+            tm local;
+            localtime_r(&received_time, &local);
+            amxc_ts_t time_to_be_used;
+            amxc_ts_from_tm(&time_to_be_used, &local);
+
+            char time_string[40];
+            amxc_ts_format(&time_to_be_used, time_string, 40);
+#else
+            std::stringstream ss;
+            ss << received_time;
+            std::string time_string = ss.str();
+
+#endif
+
+            stats.time_stamp = time_string;
+            database.update_unassociated_station_stats(sta_metrics.sta_mac, stats, radio->dm_path);
+        }
+    }
     return true;
 }
 
