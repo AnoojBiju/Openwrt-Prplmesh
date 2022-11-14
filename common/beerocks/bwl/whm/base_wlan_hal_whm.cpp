@@ -102,8 +102,8 @@ bool base_wlan_hal_whm::refresh_radio_info()
     m_radio_info.bandwidth         = beerocks::utils::convert_bandwidth_to_int(band);
     m_radio_info.wifi_ctrl_enabled = GET_UINT32(radio_obj, "Enable");
     m_radio_info.channel           = GET_UINT32(radio_obj, "Channel");
-    m_radio_info.is_5ghz =
-        (son::wireless_utils::which_freq(m_radio_info.channel) == beerocks::eFreqType::FREQ_5G);
+    m_radio_info.is_5ghz = (son::wireless_utils::which_freq_type(m_radio_info.vht_center_freq) ==
+                            beerocks::eFreqType::FREQ_5G);
 
     const char *radio_status = GET_CHAR(radio_obj, "Status");
     m_radio_info.radio_state =

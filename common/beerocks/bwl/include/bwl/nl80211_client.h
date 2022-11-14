@@ -276,7 +276,8 @@ public:
                 return beerocks::eFreqType::FREQ_UNKNOWN;
             }
 
-            return son::wireless_utils::which_freq(supported_channels.begin()->first);
+            return son::wireless_utils::which_freq_type(
+                supported_channels.begin()->second.center_freq);
         }
 
         /**

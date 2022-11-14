@@ -1618,9 +1618,15 @@ bool ap_wlan_hal_dwpal::sta_unassoc_rssi_measurement(const std::string &mac, int
                                                      int vht_center_frequency, int delay,
                                                      int window_size)
 {
+    auto freq_type = son::wireless_utils::which_freq_type(vht_center_frequency);
+    if (freq_type == beerocks::FREQ_UNKNOWN) {
+        LOG(ERROR) << "Unknown frequency. Must be 2.4GHz, 5GHz, or 6GHz";
+        return false;
+    }
+
     // Convert values to strings
-    std::string chanBandwidth     = std::to_string(bw);
-    std::string centerFreq        = std::to_string(son::wireless_utils::channel_to_freq(chan));
+    std::string chanBandwidth = std::to_string(bw);
+    std::string centerFreq = std::to_string(son::wireless_utils::channel_to_freq(chan, freq_type));
     std::string waveVhtCenterFreq = std::to_string(vht_center_frequency);
 
     // Build command string
@@ -1698,8 +1704,9 @@ bool ap_wlan_hal_dwpal::switch_channel(int chan, beerocks::eWiFiBandwidth bw,
     } else {
         m_drop_csa = false;
 
-        int freq                              = son::wireless_utils::channel_to_freq(chan);
-        std::string freq_str                  = std::to_string(freq);
+        auto freq_type       = son::wireless_utils::which_freq_type(vht_center_frequency);
+        int freq             = son::wireless_utils::channel_to_freq(chan, freq_type);
+        std::string freq_str = std::to_string(freq);
         std::string wave_vht_center_frequency = std::to_string(vht_center_frequency);
 
         // Center Freq
@@ -1714,16 +1721,32 @@ bool ap_wlan_hal_dwpal::switch_channel(int chan, beerocks::eWiFiBandwidth bw,
             }
         }
 
-        // Channel bandwidth
-        if ((bw == beerocks::BANDWIDTH_80) || (bw == beerocks::BANDWIDTH_160)) {
-            cmd += " center_freq1=" + wave_vht_center_frequency;
+        /*
+        according to the P802.11ax_D7.0 standard, Section 9.4.2.249:
+        On 6GHz band, center_frequency_1 shall be the center frequency of the primary 80MHz channel,
+        and center_frequency_2 shall be the center frequency of the 160MHz channel
+        */
+        if (freq_type != beerocks::FREQ_6G) {
+            if (bw == beerocks::BANDWIDTH_80 || bw == beerocks::BANDWIDTH_160) {
+                cmd += " center_freq1=" + wave_vht_center_frequency;
+            }
+        } else {
+            if (bw == beerocks::BANDWIDTH_160) {
+                auto primary_80mhz_freq = (freq < vht_center_frequency) ? vht_center_frequency - 40
+                                                                        : vht_center_frequency + 40;
+                cmd += " center_freq1=" + std::to_string(primary_80mhz_freq);
+                cmd += " center_freq2=" + wave_vht_center_frequency;
+            } else {
+                cmd += " center_freq1=" + wave_vht_center_frequency;
+            }
         }
 
         cmd += " bandwidth=" + std::to_string(beerocks::utils::convert_bandwidth_to_int(
                                    static_cast<beerocks::eWiFiBandwidth>(bw)));
 
-        // Supported Standard n/ac
-        if (bw == beerocks::BANDWIDTH_20 || bw == beerocks::BANDWIDTH_40) {
+        if (freq_type == beerocks::FREQ_6G) {
+            cmd += " he";
+        } else if (bw == beerocks::BANDWIDTH_20 || bw == beerocks::BANDWIDTH_40) {
             cmd += " ht"; //n
         } else if ((bw == beerocks::BANDWIDTH_80) || (bw == beerocks::BANDWIDTH_160)) {
             cmd += " vht"; // ac
@@ -1809,7 +1832,8 @@ bool ap_wlan_hal_dwpal::failsafe_channel_set(int chan, int bw, int vht_center_fr
     // Build command string
     if (chan) {
         std::string bw_str   = std::to_string(bw);
-        std::string chan_str = std::to_string(son::wireless_utils::channel_to_freq(chan));
+        std::string chan_str = std::to_string(son::wireless_utils::channel_to_freq(
+            chan, son::wireless_utils::which_freq_type(vht_center_frequency)));
         std::string freq_str = std::to_string(vht_center_frequency);
         LOG(DEBUG) << "chan_str = " << chan_str << " bw_str = " << bw_str
                    << " vht_freq_str = " << freq_str;
@@ -2102,8 +2126,8 @@ bool ap_wlan_hal_dwpal::read_acs_report()
     m_radio_info.is_5ghz = false;
 
     // Check if channel is 5GHz
-    auto ch = m_radio_info.channels_list.begin()->first;
-    if (son::wireless_utils::which_freq(ch) == beerocks::eFreqType::FREQ_5G) {
+    if (son::wireless_utils::which_freq_type(m_radio_info.vht_center_freq) ==
+        beerocks::eFreqType::FREQ_5G) {
         m_radio_info.is_5ghz = true;
     }
 
@@ -2484,7 +2508,8 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
         m_radio_info.last_csa_sw_reason = chanSwReason;
 
         // Update the radio information structure
-        if (son::wireless_utils::which_freq(m_radio_info.channel) == beerocks::eFreqType::FREQ_5G) {
+        if (son::wireless_utils::which_freq_type(m_radio_info.vht_center_freq) ==
+            beerocks::eFreqType::FREQ_5G) {
             m_radio_info.is_5ghz = true;
         }
 

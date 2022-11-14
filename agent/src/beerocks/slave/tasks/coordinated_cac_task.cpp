@@ -490,6 +490,7 @@ CacFsm::send_switch_channel_request(uint8_t channel, beerocks::eWiFiBandwidth ba
 
     switch_channel_request->ifname    = m_ifname;
     switch_channel_request->channel   = channel;
+    switch_channel_request->freq_type = eFreqType::FREQ_5G;
     switch_channel_request->bandwidth = bandwidth;
 
     LOG(DEBUG) << *switch_channel_request;

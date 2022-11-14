@@ -1118,7 +1118,7 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
     case EState::INITIATE_SCAN: {
 
         hidden_ssid            = false;
-        selected_bssid_channel = 0;
+        selected_bssid_channel = {0, beerocks::FREQ_AUTO};
         selected_bssid.clear();
 
         if (state_attempts > MAX_FAILED_SCAN_ATTEMPTS && !roam_flag) {
@@ -1134,7 +1134,7 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
         if ((state_attempts > MAX_FAILED_ROAM_SCAN_ATTEMPTS) && roam_flag) {
             LOG(DEBUG) << "exceeded MAX_FAILED_ROAM_SCAN_ATTEMPTS";
             roam_flag                   = false;
-            roam_selected_bssid_channel = 0;
+            roam_selected_bssid_channel = {0, eFreqType::FREQ_AUTO};
             roam_selected_bssid.clear();
             state_attempts = 0;
             FSM_MOVE_STATE(RESTART);
@@ -1288,8 +1288,8 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
 
                 iface_hal->refresh_radio_info();
 
-                if (son::wireless_utils::which_freq(iface_hal->get_radio_info().channel) ==
-                        beerocks::FREQ_24G &&
+                if (son::wireless_utils::which_freq_type(
+                        iface_hal->get_radio_info().frequency_band) == beerocks::FREQ_24G &&
                     pending_slave_sta_ifaces.size() > 1) {
                     ++it;
                     LOG(DEBUG) << "skipping 2.4GHz iface " << iface
@@ -1310,7 +1310,8 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
                                 db->device_conf.back_radio.mem_only_psk, selected_bssid,
                                 selected_bssid_channel, hidden_ssid)) {
             LOG(DEBUG) << "successful call to active_hal->connect(), bssid=" << selected_bssid
-                       << ", channel=" << selected_bssid_channel
+                       << ", channel=" << selected_bssid_channel.first
+                       << ", freq type=" << selected_bssid_channel.second
                        << ", iface=" << db->backhaul.selected_iface_name;
         } else {
             LOG(ERROR) << "connect command failed for iface " << db->backhaul.selected_iface_name;
@@ -1991,7 +1992,7 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
                             continue;
                         }
                         /* prevent low filter radio from connecting to high band in any case */
-                        if (son::wireless_utils::which_freq(bwl_radio_info.channel) ==
+                        if (son::wireless_utils::which_freq_type(bwl_radio_info.frequency_band) ==
                                 beerocks::FREQ_5G &&
                             radio->sta_iface_filter_low &&
                             !son::wireless_utils::is_low_subband(bwl_radio_info.channel)) {
@@ -2008,12 +2009,13 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
                                 break;
 
                             sta_iface_hal->refresh_radio_info();
-                            if (son::wireless_utils::which_freq(
-                                    sta_iface_hal->get_radio_info().channel) == beerocks::FREQ_5G) {
+                            if (son::wireless_utils::which_freq_type(
+                                    sta_iface_hal->get_radio_info().frequency_band) ==
+                                beerocks::FREQ_5G) {
                                 sta_iface_count_5ghz++;
                             }
                         }
-                        if (son::wireless_utils::which_freq(bwl_radio_info.channel) ==
+                        if (son::wireless_utils::which_freq_type(bwl_radio_info.frequency_band) ==
                                 beerocks::FREQ_5G &&
                             !radio->sta_iface_filter_low &&
                             son::wireless_utils::is_low_subband(bwl_radio_info.channel) &&
@@ -2126,7 +2128,8 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
             }
 
             LOG(DEBUG) << "Steering to BSSID " << m_backhaul_steering_bssid
-                       << ", channel=" << m_backhaul_steering_channel;
+                       << ", channel=" << m_backhaul_steering_channel.first
+                       << ", freq type=" << m_backhaul_steering_channel.second;
             auto associate =
                 active_hal->roam(m_backhaul_steering_bssid, m_backhaul_steering_channel);
             if (!associate) {
@@ -2284,21 +2287,23 @@ bool BackhaulManager::select_bssid()
             }
             if (roam_flag) {
                 if ((bssid == roam_selected_bssid) &&
-                    (scan_result.channel == roam_selected_bssid_channel)) {
+                    (scan_result.channel == roam_selected_bssid_channel.first &&
+                     scan_result.freq_type == roam_selected_bssid_channel.second)) {
                     LOG(DEBUG) << "roaming flag on  - found bssid match = " << roam_selected_bssid
                                << " roam_selected_bssid_channel = "
-                               << int(roam_selected_bssid_channel);
+                               << int(roam_selected_bssid_channel.first)
+                               << " freq type = " << roam_selected_bssid_channel.second;
                     db->backhaul.selected_iface_name = iface;
                     return true;
                 }
             } else if ((db->backhaul.preferred_bssid != beerocks::net::network_utils::ZERO_MAC) &&
                        (tlvf::mac_from_string(bssid) == db->backhaul.preferred_bssid)) {
                 LOG(DEBUG) << "preferred bssid - found bssid match = " << bssid;
-                selected_bssid_channel           = scan_result.channel;
+                selected_bssid_channel           = {scan_result.channel, scan_result.freq_type};
                 selected_bssid                   = bssid;
                 db->backhaul.selected_iface_name = iface;
                 return true;
-            } else if (son::wireless_utils::which_freq(scan_result.channel) == eFreqType::FREQ_5G) {
+            } else if (scan_result.freq_type == eFreqType::FREQ_5G) {
                 auto radio = db->radio(radio_info->sta_iface);
                 if (!radio) {
                     return false;
@@ -2334,7 +2339,7 @@ bool BackhaulManager::select_bssid()
                     best_5_sta_iface     = iface;
                 }
 
-            } else {
+            } else if (scan_result.freq_type == eFreqType::FREQ_24G) {
                 // best 2.4G
                 if (scan_result.rssi > max_rssi_24) {
                     max_rssi_24           = scan_result.rssi;
@@ -2342,6 +2347,8 @@ bool BackhaulManager::select_bssid()
                     best_bssid_channel_24 = scan_result.channel;
                     best_24_sta_iface     = iface;
                 }
+            } else {
+                LOG(WARNING) << "scan results for 6ghz band: NOT YET IMPLEMENTED";
             }
         }
     }
@@ -2414,23 +2421,23 @@ bool BackhaulManager::select_bssid()
         return false;
     } else if (max_rssi_24 == beerocks::RSSI_INVALID) {
         selected_bssid                   = best_bssid_5;
-        selected_bssid_channel           = best_bssid_channel_5;
+        selected_bssid_channel           = {best_bssid_channel_5, eFreqType::FREQ_5G};
         db->backhaul.selected_iface_name = best_5_sta_iface;
     } else if (max_rssi_5_best == beerocks::RSSI_INVALID) {
         selected_bssid                   = best_bssid_24;
-        selected_bssid_channel           = best_bssid_channel_24;
+        selected_bssid_channel           = {best_bssid_channel_24, eFreqType::FREQ_24G};
         db->backhaul.selected_iface_name = best_24_sta_iface;
     } else if ((max_rssi_5_best > RSSI_THRESHOLD_5GHZ)) {
         selected_bssid                   = best_bssid_5;
-        selected_bssid_channel           = best_bssid_channel_5;
+        selected_bssid_channel           = {best_bssid_channel_5, eFreqType::FREQ_5G};
         db->backhaul.selected_iface_name = best_5_sta_iface;
     } else if (max_rssi_24 < max_rssi_5_best + RSSI_BAND_DELTA_THRESHOLD) {
         selected_bssid                   = best_bssid_5;
-        selected_bssid_channel           = best_bssid_channel_5;
+        selected_bssid_channel           = {best_bssid_channel_5, eFreqType::FREQ_5G};
         db->backhaul.selected_iface_name = best_5_sta_iface;
     } else {
         selected_bssid                   = best_bssid_24;
-        selected_bssid_channel           = best_bssid_channel_24;
+        selected_bssid_channel           = {best_bssid_channel_24, eFreqType::FREQ_24G};
         db->backhaul.selected_iface_name = best_24_sta_iface;
     }
 
@@ -2644,6 +2651,12 @@ bool BackhaulManager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx
         return true;
     }
 
+    auto freq_type = son::wireless_utils::which_freq_op_cls(oper_class);
+    if (freq_type == beerocks::FREQ_UNKNOWN) {
+        LOG(ERROR) << "Unknown frequency type. must be 2.4GHz, 5GHz or 6GHz";
+        return false;
+    }
+
     // Trigger (asynchronously) a scan of the target BSSID on the target channel.
     // The steering itself will be done when the scan results are received.
     // If this function call fails for some reason (for example because a scan was already in
@@ -2652,7 +2665,7 @@ bool BackhaulManager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx
     // Backhaul Steering Response message with "error" result code if this function fails nor return
     // false, just log a warning and let the execution continue. If we do not steer after the
     // timeout elapses, a response will anyway be sent to the controller.
-    auto scan_result = active_hal->scan_bss(bssid, channel);
+    auto scan_result = active_hal->scan_bss(bssid, channel, freq_type);
     if (!scan_result) {
         LOG(WARNING) << "Failed to scan for the target BSSID: " << bssid << " on channel "
                      << channel << ".";
@@ -2671,7 +2684,7 @@ bool BackhaulManager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx
     // succeed to associate with the specified BSSID within 10 seconds.
     // Set the channel and BSSID of the target BSS so we can use them later.
     m_backhaul_steering_bssid   = bssid;
-    m_backhaul_steering_channel = channel;
+    m_backhaul_steering_channel = {channel, freq_type};
 
     // Create a timer to check if this Backhaul Steering Request times out.
     m_backhaul_steering_timer = m_timer_manager->add_timer(
@@ -2765,7 +2778,7 @@ bool BackhaulManager::create_backhaul_steering_response(
 void BackhaulManager::cancel_backhaul_steering_operation()
 {
     m_backhaul_steering_bssid   = beerocks::net::network_utils::ZERO_MAC;
-    m_backhaul_steering_channel = 0;
+    m_backhaul_steering_channel = {0, eFreqType::FREQ_UNKNOWN};
 
     m_timer_manager->remove_timer(m_backhaul_steering_timer);
 }

@@ -333,9 +333,11 @@ void channel_selection_task::work()
         break;
     }
     case eState::ON_SLAVE_JOINED: {
-
-        auto freq                 = wireless_utils::channel_to_freq(slave_joined_event->channel);
         auto vht_center_frequency = slave_joined_event->cs_params.vht_center_frequency;
+        auto freq                 = wireless_utils::channel_to_freq(
+            slave_joined_event->channel,
+            son::wireless_utils::which_freq_type(vht_center_frequency));
+
         auto channel_ext_above_primary = slave_joined_event->cs_params.channel_ext_above_primary;
 
         auto channel_ext_above_secondary = (freq < vht_center_frequency) ? true : false;
@@ -652,8 +654,9 @@ void channel_selection_task::work()
                        << " vht_center_frequency = "
                        << uint16_t(csa_event->cs_params.vht_center_frequency);
 
-        auto freq                 = wireless_utils::channel_to_freq(csa_event->cs_params.channel);
         auto vht_center_frequency = csa_event->cs_params.vht_center_frequency;
+        auto freq                 = wireless_utils::channel_to_freq(
+            csa_event->cs_params.channel, wireless_utils::which_freq_type(vht_center_frequency));
 
         auto channel_ext_above_secondary = (freq < vht_center_frequency) ? true : false;
         auto channel_ext_above_primary =
@@ -709,7 +712,8 @@ void channel_selection_task::work()
         }
 
         if (csa_event) {
-            if (!is_2G_channel(csa_event->cs_params.channel)) {
+            if (son::wireless_utils::which_freq_type(csa_event->cs_params.vht_center_frequency) !=
+                beerocks::FREQ_24G) {
                 TASK_LOG(DEBUG) << "radio_mac - " << radio_mac << " csa_event != null";
                 if (csa_event->cs_params.is_dfs_channel) {
                     wait_for_cac_completed(csa_event->cs_params.channel,
@@ -803,7 +807,9 @@ void channel_selection_task::work()
                        << " channel = " << int(csa_event->cs_params.channel)
                        << " channel_ext_above_primary = "
                        << int(csa_event->cs_params.channel_ext_above_primary);
-        auto freq = wireless_utils::channel_to_freq(csa_event->cs_params.channel);
+        auto freq = wireless_utils::channel_to_freq(
+            csa_event->cs_params.channel,
+            wireless_utils::which_freq_type(csa_event->cs_params.vht_center_frequency));
         auto prev_vht_center_frequency = database.get_hostap_vht_center_frequency(radio_mac);
         auto prev_channel              = database.get_node_channel(tlvf::mac_to_string(radio_mac));
         auto prev_bandwidth            = database.get_node_bw(tlvf::mac_to_string(radio_mac));
@@ -857,6 +863,14 @@ void channel_selection_task::work()
                 prev_bandwidth, prev_vht_center_frequency,
                 beerocks::eWiFiBandwidth(csa_event->cs_params.bandwidth),
                 csa_event->cs_params.vht_center_frequency);
+
+            auto freq_type =
+                son::wireless_utils::which_freq_type(csa_event->cs_params.vht_center_frequency);
+            if (freq_type != eFreqType::FREQ_5G) {
+                LOG(ERROR) << "the freq type "
+                           << beerocks::utils::convert_frequency_type_to_string(freq_type)
+                           << " should be 5G";
+            }
             database.set_supported_channel_radar_affected(radio_mac, vec_channels, true);
             FSM_MOVE_STATE(ACTIVATE_SLAVE);
             break;
@@ -1442,6 +1456,7 @@ bool channel_selection_task::ccl_fill_channel_switch_request_with_least_used_cha
         align_channel_to_80Mhz();
         channel_switch_request.vht_center_frequency = wireless_utils::channel_to_vht_center_freq(
             channel_switch_request.channel,
+            wireless_utils::which_freq_type(channel_switch_request.vht_center_frequency),
             beerocks::eWiFiBandwidth(channel_switch_request.bandwidth),
             min_channels.begin()->second.channel_ext_above_secondary);
         TASK_LOG(DEBUG) << "channel_switch_request.channel = " << int(min_channels.begin()->first)
@@ -1485,6 +1500,7 @@ bool channel_selection_task::ccl_fill_channel_switch_request_with_least_used_cha
         align_channel_to_80Mhz();
         channel_switch_request.vht_center_frequency = wireless_utils::channel_to_vht_center_freq(
             channel_switch_request.channel,
+            wireless_utils::which_freq_type(channel_switch_request.vht_center_frequency),
             beerocks::eWiFiBandwidth(channel_switch_request.bandwidth),
             it_res->second.channel_ext_above_secondary);
     }
@@ -1561,9 +1577,11 @@ bool channel_selection_task::fill_restricted_channels_from_ccl_busy_bands(uint8_
 {
     int channel_step = CHANNEL_20MHZ_STEP;
 
-    auto channel                     = channel_switch_request.channel;
-    auto freq                        = wireless_utils::channel_to_freq(channel);
-    auto vht_center_frequency        = channel_switch_request.vht_center_frequency;
+    auto channel              = channel_switch_request.channel;
+    auto vht_center_frequency = channel_switch_request.vht_center_frequency;
+    auto freq                 = wireless_utils::channel_to_freq(
+        channel, wireless_utils::which_freq_type(vht_center_frequency));
+
     auto channel_ext_above_secondary = (freq < vht_center_frequency) ? true : false;
 
     std::set<uint8_t> least_used_channels;

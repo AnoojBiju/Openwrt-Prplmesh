@@ -35,7 +35,11 @@ bool sta_wlan_hal_whm::detach() { return true; }
 
 bool sta_wlan_hal_whm::initiate_scan() { return true; }
 
-bool sta_wlan_hal_whm::scan_bss(const sMacAddr &bssid, uint8_t channel) { return true; }
+bool sta_wlan_hal_whm::scan_bss(const sMacAddr &bssid, uint8_t channel,
+                                beerocks::eFreqType freq_type)
+{
+    return true;
+}
 
 int sta_wlan_hal_whm::get_scan_results(const std::string &ssid, std::vector<SScanResult> &list,
                                        bool parse_vsie)
@@ -45,11 +49,12 @@ int sta_wlan_hal_whm::get_scan_results(const std::string &ssid, std::vector<SSca
 }
 
 bool sta_wlan_hal_whm::connect(const std::string &ssid, const std::string &pass, WiFiSec sec,
-                               bool mem_only_psk, const std::string &bssid, uint8_t channel,
+                               bool mem_only_psk, const std::string &bssid, ChannelFreqPair channel,
                                bool hidden_ssid)
 {
     LOG(DEBUG) << "Connect interface " << get_iface_name() << " to SSID = " << ssid
-               << ", BSSID = " << bssid << ", Channel = " << int(channel)
+               << ", BSSID = " << bssid << ", Channel = " << int(channel.first)
+               << ", freq type =" << channel.second
                << ", Sec = " << utils_wlan_hal_whm::security_val(sec)
                << ", mem_only_psk=" << int(mem_only_psk);
 
@@ -74,7 +79,7 @@ bool sta_wlan_hal_whm::connect(const std::string &ssid, const std::string &pass,
 
     // Update profile parameters
     if (!set_profile_params(profile_id, ssid, bssid, sec, mem_only_psk, pass, hidden_ssid,
-                            channel)) {
+                            channel.first)) {
         LOG(ERROR) << "Failed setting profile id = " << profile_id
                    << " on interface: " << get_iface_name();
         return false;
@@ -94,7 +99,7 @@ bool sta_wlan_hal_whm::connect(const std::string &ssid, const std::string &pass,
     m_active_ssid.assign(ssid);
     m_active_bssid.assign(bssid);
     m_active_pass.assign(pass);
-    m_active_channel    = channel;
+    m_active_channel    = channel.first;
     m_active_profile_id = profile_id;
 
     return true;
@@ -145,7 +150,7 @@ bool sta_wlan_hal_whm::disconnect()
     return true;
 }
 
-bool sta_wlan_hal_whm::roam(const sMacAddr &bssid, uint8_t channel) { return true; }
+bool sta_wlan_hal_whm::roam(const sMacAddr &bssid, ChannelFreqPair channel) { return true; }
 
 bool sta_wlan_hal_whm::get_4addr_mode() { return true; }
 

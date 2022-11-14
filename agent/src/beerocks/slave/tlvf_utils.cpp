@@ -10,6 +10,7 @@
 
 #include "agent_db.h"
 
+#include <bcl/beerocks_utils.h>
 #include <bcl/son/son_wireless_utils.h>
 #include <easylogging++.h>
 
@@ -113,8 +114,9 @@ std::vector<uint8_t> get_operating_class_non_oper_channels(
                 auto channel = channel_info_element.first;
                 if (son::wireless_utils::is_operating_class_using_central_channel(
                         operating_class)) {
-                    channel =
-                        son::wireless_utils::get_5g_center_channel(channel, bw_info.bandwidth);
+                    channel = son::wireless_utils::get_center_channel(
+                        channel, son::wireless_utils::which_freq_op_cls(operating_class),
+                        bw_info.bandwidth);
                 }
                 if (op_class_channel == channel && oper_class.band == bw_info.bandwidth) {
                     found = true;

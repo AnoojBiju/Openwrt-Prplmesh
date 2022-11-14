@@ -2861,7 +2861,10 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
         radio->bandwidth            = beerocks::eWiFiBandwidth(notification_in->params().bandwidth);
         radio->vht_center_frequency = notification_in->params().center_frequency1;
         radio->channel_ext_above_primary =
-            radio->vht_center_frequency > wireless_utils::channel_to_freq(radio->channel);
+            radio->vht_center_frequency >
+            wireless_utils::channel_to_freq(
+                radio->channel,
+                wireless_utils::which_freq_type(notification_in->params().center_frequency1));
 
         auto notification_out = message_com::create_vs_message<
             beerocks_message::cACTION_CONTROL_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION>(cmdu_tx);

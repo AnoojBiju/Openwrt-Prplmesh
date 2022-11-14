@@ -1225,6 +1225,7 @@ bool ChannelSelectionTask::handle_transmit_power_limit(
      * In the outgoing request, set the channel & bandwidth to that of the current radio.
      */
     radio_request.outgoing_request.channel        = radio->channel;
+    radio_request.outgoing_request.freq_type      = radio->freq_type;
     radio_request.outgoing_request.bandwidth      = radio->bandwidth;
     radio_request.outgoing_request.tx_limit       = new_tx_power_limit_dbm;
     radio_request.outgoing_request.tx_limit_valid = true;
@@ -1392,8 +1393,10 @@ bool ChannelSelectionTask::check_is_there_better_channel_than_current(const sMac
         return true;
     }
 
-    radio_request.selected_channel           = selected_channel;
-    radio_request.outgoing_request.channel   = selected_channel.channel;
+    radio_request.selected_channel         = selected_channel;
+    radio_request.outgoing_request.channel = selected_channel.channel;
+    radio_request.outgoing_request.freq_type =
+        son::wireless_utils::which_freq_op_cls(selected_channel.operating_class);
     radio_request.outgoing_request.bandwidth = selected_channel.bw;
     radio_request.channel_switch_needed      = true;
 
@@ -1621,11 +1624,12 @@ bool ChannelSelectionTask::send_channel_switch_request(
         // We need to find the central frequancy and set it to the VHT param.
         const auto beacon_channel = request.outgoing_request.channel;
         const auto bandwidth      = request.outgoing_request.bandwidth;
+        const auto freq_type      = request.outgoing_request.freq_type;
         request_msg->cs_params().vht_center_frequency =
-            son::wireless_utils::get_vht_central_frequency(beacon_channel, bandwidth);
+            son::wireless_utils::get_vht_central_frequency(beacon_channel, bandwidth, freq_type);
     } else {
-        request_msg->cs_params().vht_center_frequency =
-            son::wireless_utils::channel_to_freq(request.outgoing_request.channel);
+        request_msg->cs_params().vht_center_frequency = son::wireless_utils::channel_to_freq(
+            request.outgoing_request.channel, request.outgoing_request.freq_type);
     }
 
     request_msg->tx_limit()       = request.outgoing_request.tx_limit;

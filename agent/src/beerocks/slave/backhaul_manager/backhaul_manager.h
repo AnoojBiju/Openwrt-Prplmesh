@@ -350,9 +350,10 @@ private:
     bool hidden_ssid = false;
 
     std::string selected_bssid;
-    int selected_bssid_channel;
+    // a selected BSSID channel, and to which band it belongs
+    std::pair<int, beerocks::eFreqType> selected_bssid_channel;
     std::string roam_selected_bssid;
-    int roam_selected_bssid_channel;
+    std::pair<int, beerocks::eFreqType> roam_selected_bssid_channel;
     bool roam_flag = false;
     std::unordered_map<std::string, net::sScanResult> scan_measurement_list;
 
@@ -432,7 +433,7 @@ private:
      * The channel of the target BSS in an ongoing backhaul steering operation.
      * Zero if no steering operation is in progress.
      */
-    int m_backhaul_steering_channel = 0;
+    std::pair<int, beerocks::eFreqType> m_backhaul_steering_channel = {0, beerocks::FREQ_UNKNOWN};
 
     /**
      * File descriptor of the timer to check if a backhaul steering request timed out.
