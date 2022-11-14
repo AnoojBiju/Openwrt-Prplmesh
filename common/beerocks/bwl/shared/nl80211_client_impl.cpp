@@ -976,8 +976,75 @@ bool nl80211_client_impl::add_station(const std::string &interface_name, const s
 
 bool nl80211_client_impl::get_key(const std::string &interface_name, sKeyInfo &key_info)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
-    return false;
+    if (!m_socket) {
+        LOG(ERROR) << "Socket is NULL!";
+        return false;
+    }
+
+    // Get the interface index for given interface name
+    int iface_index = if_nametoindex(interface_name.c_str());
+    if (0 == iface_index) {
+        LOG(ERROR) << "Failed to read the index of interface " << interface_name << ": "
+                   << strerror(errno);
+
+        return false;
+    }
+
+    LOG(DEBUG) << "Getting key with index '" << key_info.key_idx
+               << "' for MAC '" << tlvf::mac_to_string(key_info.mac) << "'.";
+
+    return m_socket.get()->send_receive_msg(
+        NL80211_CMD_GET_KEY, 0,
+        [&](struct nl_msg *msg) -> bool {
+            nla_put_u32(msg, NL80211_ATTR_IFINDEX, iface_index);
+            nla_put_u8(msg, NL80211_ATTR_KEY_IDX, key_info.key_idx);
+            // If there is a MAC address, it's a pairwise key. If not,
+            // it's a group key.
+            if (key_info.mac != beerocks::net::network_utils::ZERO_MAC) {
+                LOG(DEBUG) << "Getting a pairwise key.";
+                nla_put(msg, NL80211_ATTR_MAC, ETH_ALEN, key_info.mac.oct);
+                nla_put_u32(msg, NL80211_ATTR_KEY_TYPE, NL80211_KEYTYPE_PAIRWISE);
+            } else {
+                LOG(DEBUG) << "Getting a group key.";
+                nla_put_u32(msg, NL80211_ATTR_KEY_TYPE, NL80211_KEYTYPE_GROUP);
+            }
+            return true;
+        },
+        [&](struct nl_msg *msg) {
+            struct nlattr *tb[NL80211_ATTR_MAX + 1];
+            struct genlmsghdr *gnlh = static_cast<genlmsghdr *>(nlmsg_data(nlmsg_hdr(msg)));
+
+            // Parse the netlink message
+            if (nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0), genlmsg_attrlen(gnlh, 0),
+                          NULL)) {
+                LOG(ERROR) << "Failed to parse netlink message!";
+                return;
+            }
+
+            if (!tb[NL80211_ATTR_KEY_IDX]) {
+                LOG(ERROR) << "Key index missing!";
+                return;
+            }
+
+            if (!tb[NL80211_ATTR_KEY_DATA]) {
+                LOG(ERROR) << "Key data missing!";
+                return;
+            }
+
+            std::memcpy(key_info.key, nla_data(tb[NL80211_ATTR_KEY_DATA]),
+                        nla_len(tb[NL80211_ATTR_KEY_DATA]));
+            key_info.key_len = static_cast<int>(nla_len(tb[NL80211_ATTR_KEY_DATA]));
+
+            if (!tb[NL80211_ATTR_KEY_SEQ]) {
+                LOG(ERROR) << "Key sequence missing!";
+                return;
+            }
+
+            std::memcpy(key_info.key_seq, nla_data(tb[NL80211_ATTR_KEY_SEQ]),
+                        nla_len(tb[NL80211_ATTR_KEY_SEQ]));
+            key_info.key_seq_len = static_cast<int>(nla_len(tb[NL80211_ATTR_KEY_SEQ]));
+            key_info.key_cipher  = nla_get_u32(tb[NL80211_ATTR_KEY_CIPHER]);
+        });
 }
 
 } // namespace bwl
