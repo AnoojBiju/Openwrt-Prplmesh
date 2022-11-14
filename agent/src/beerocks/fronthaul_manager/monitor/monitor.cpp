@@ -1150,6 +1150,33 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
         }
         break;
     }
+    case beerocks_message::ACTION_MONITOR_CLIENT_UNASSOCIATED_STA_LINK_METRIC_REQUEST: {
+        LOG(ERROR) << "received ACTION_MONITOR_CLIENT_UNASSOCIATED_STA_LINK_METRIC_REQUEST";
+        auto request = beerocks_header->addClass<
+            beerocks_message::cACTION_MONITOR_CLIENT_UNASSOCIATED_STA_LINK_METRIC_REQUEST>();
+        if (request == nullptr) {
+            LOG(ERROR)
+                << "addClass ACTION_MONITOR_CLIENT_UNASSOCIATED_STA_LINK_METRIC_REQUEST failed";
+            return;
+        }
+
+        // The list can also be empty which mean the controller is not interested on any station
+        std::unordered_map<std::string, uint> new_list_unassociated_stations;
+
+        for (size_t i = 0; i < request->stations_list_length(); ++i) {
+            auto &unassociated_station = std::get<1>(request->stations_list(i));
+            std::string mac_address    = tlvf::mac_to_string(unassociated_station.sta_mac);
+            uint channel               = unassociated_station.channel;
+
+            new_list_unassociated_stations.insert(std::make_pair(mac_address, channel));
+            LOG(DEBUG) << " New unassociated stations list contain station with mac_address"
+                       << mac_address << " and channel" << channel;
+        }
+        mon_wlan_hal->sta_unassoc_rssi_measurement(new_list_unassociated_stations);
+
+        break;
+    }
+
     case beerocks_message::ACTION_MONITOR_CHANGE_MODULE_LOGGING_LEVEL: {
         LOG(TRACE) << "received ACTION_MONITOR_CHANGE_MODULE_LOGGING_LEVEL";
         auto request =
@@ -2124,6 +2151,51 @@ bool Monitor::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
         LOG(INFO) << "STA_Disconnected event: mac = " << mac;
 
         mon_db.sta_erase(mac);
+        break;
+    }
+
+    case Event::Unassociation_Stations_Stats: {
+        LOG(DEBUG) << " received an internal event of type Event::Unassociation_Stations_Stats";
+        auto msg = static_cast<bwl::sUnassociatedStationsStats *>(data);
+
+        auto response = message_com::create_vs_message<
+            beerocks_message::cACTION_MONITOR_CLIENT_UNASSOCIATED_STA_LINK_METRIC_RESPONSE>(
+            cmdu_tx);
+        if (response == nullptr) {
+            LOG(ERROR)
+                << "Failed building cACTION_MONITOR_CLIENT_UNASSOCIATED_STA_LINK_METRIC_RESPONSE "
+                   "message!";
+            break;
+        }
+        if (!response->alloc_stations_list(msg->un_stations_stats.size())) {
+            LOG(ERROR) << "Failed to allocate un_stations_stats of size "
+                       << msg->un_stations_stats.size();
+            break;
+        }
+        response->radio_mac_address() = m_radio_mac;
+        size_t iter(0);
+        for (auto &station_out : msg->un_stations_stats) {
+            auto station_stat         = response->stations_list(iter);
+            std::get<0>(station_stat) = true;
+            beerocks_message::sUnassociatedStationStats un_sta_stats = {
+                station_out.mac_adress,
+                station_out.signal_strength,
+                station_out.time_stamp,
+            };
+            std::get<1>(station_stat) = un_sta_stats;
+            LOG(DEBUG) << "adding unassociated station stats for: "
+                       << tlvf::mac_to_string(station_out.mac_adress)
+                       << " and signal_strength = " << station_out.signal_strength
+                       << " and time_stamp:" << station_out.time_stamp;
+            iter++;
+        }
+
+        LOG(DEBUG) << " sending cACTION_MONITOR_CLIENT_UNASSOCIATED_STA_LINK_METRIC_RESPONSE "
+                      "containing stats for  "
+                   << msg->un_stations_stats.size() << " unassociated stations";
+
+        send_cmdu(cmdu_tx);
+
         break;
     }
 

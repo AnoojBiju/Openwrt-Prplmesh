@@ -33,6 +33,8 @@
 #include <tlvf/wfa_map/tlvProfile2RadioMetrics.h>
 #include <tlvf/wfa_map/tlvProfile2TrafficSeparationPolicy.h>
 #include <tlvf/wfa_map/tlvStaMacAddressType.h>
+#include <tlvf/wfa_map/tlvUnassociatedStaLinkMetricsQuery.h>
+#include <tlvf/wfa_map/tlvUnassociatedStaLinkMetricsResponse.h>
 
 #include "../gate/1905_beacon_query_to_vs.h"
 
@@ -64,6 +66,10 @@ bool LinkMetricsCollectionTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx,
     }
     case ieee1905_1::eMessageType::ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE: {
         handle_associated_sta_link_metrics_query(cmdu_rx, src_mac);
+        break;
+    }
+    case ieee1905_1::eMessageType::UNASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE: {
+        handle_unassociated_sta_link_metrics_query(cmdu_rx, src_mac);
         break;
     }
     case ieee1905_1::eMessageType::AP_METRICS_QUERY_MESSAGE: {
@@ -413,6 +419,69 @@ void LinkMetricsCollectionTask::handle_beacon_metrics_query(ieee1905_1::CmduMess
     m_btl_ctx.send_cmdu(monitor_fd, m_cmdu_tx);
 }
 
+void LinkMetricsCollectionTask::handle_unassociated_sta_link_metrics_query(
+    ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac)
+{
+    const auto message_id = cmdu_rx.getMessageId();
+
+    LOG(DEBUG) << "Received Unassociated STA Link Metrics Query, mid=" << message_id;
+
+    if (!m_cmdu_tx.create(
+            message_id, ieee1905_1::eMessageType::UNASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE)) {
+        LOG(ERROR) << "Could not create a UNASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE";
+        return;
+    }
+
+    const auto unassociated_sta_link_metrics_query_tlv =
+        cmdu_rx.getClass<wfa_map::tlvUnassociatedStaLinkMetricsQuery>();
+    if (!unassociated_sta_link_metrics_query_tlv) {
+        LOG(ERROR) << "Unassociated STA Link Metrics Query message did not contain an Unassociated "
+                      "STA Link Metrics Query TLV!";
+        return;
+    }
+
+    const auto n_stations = unassociated_sta_link_metrics_query_tlv->un_stations_list_length();
+
+    //forward the request  to the agent/son_slave thread, even if it contains 0 stations
+    auto request_out = message_com::create_vs_message<
+        beerocks_message::cACTION_BACKHAUL_CLIENT_UNASSOCIATED_STA_LINK_METRIC_REQUEST>(m_cmdu_tx,
+                                                                                        message_id);
+    if (request_out == nullptr) {
+        LOG(ERROR)
+            << "Failed building cACTION_BACKHAUL_CLIENT_UNASSOCIATED_STA_LINK_METRIC_REQUEST "
+               "message!";
+        return;
+    }
+
+    if (!request_out->alloc_stations_list(n_stations)) {
+        LOG(ERROR) << "tx_buffer overflow! elements_to_allocate=" << n_stations;
+        return;
+    }
+
+    size_t it = 0;
+    for (int station = 0; station < n_stations; ++station) {
+        const auto un_station_tuple =
+            unassociated_sta_link_metrics_query_tlv->un_stations_list(station);
+        const auto station_info = std::get<1>(un_station_tuple);
+        LOG(DEBUG) << " Unassociated station with mac:" << station_info.sta_mac << " and channel "
+                   << station_info.channel;
+        std::get<1>(request_out->stations_list(it)).sta_mac = station_info.sta_mac;
+        std::get<1>(request_out->stations_list(it)).channel = station_info.channel;
+        it++;
+    }
+
+    /*
+        * TODO: https://jira.prplfoundation.org/browse/PPM-657
+        *
+        * When link metric collection task moves to agent context
+        * send the message to fronthaul, not slave.
+        */
+    if (!m_btl_ctx.send_cmdu(m_btl_ctx.get_agent_fd(), m_cmdu_tx)) {
+        LOG(ERROR) << "Failed sending cACTION_BACKHAUL_CLIENT_UNASSOCIATED_STA_LINK_METRIC_REQUEST "
+                      "message to fronthaul";
+    }
+}
+
 void LinkMetricsCollectionTask::handle_associated_sta_link_metrics_query(
     ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac)
 {
@@ -706,6 +775,12 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
 
     for (auto ap_metrics_tlv : ap_metrics_tlv_list) {
         std::shared_ptr<wfa_map::tlvApExtendedMetrics> ap_extended_metrics_tlv;
+        for (auto tmp : ap_extended_metrics_tlv_list) {
+            if (tmp->bssid() == ap_metrics_tlv->bssid()) {
+                ap_extended_metrics_tlv = tmp;
+                break;
+            }
+        }
 
         if (!ap_metrics_tlv) {
             LOG(WARNING) << "found null ap_metrics_tlv in response, skipping. mid=" << std::hex
@@ -714,16 +789,9 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
         }
 
         auto bssid_tlv = ap_metrics_tlv->bssid();
-        for (auto tmp : ap_extended_metrics_tlv_list) {
-            if (tmp->bssid() == bssid_tlv) {
-                ap_extended_metrics_tlv = tmp;
-                break;
-            }
-        }
-
-        auto mac = std::find_if(
-            m_ap_metric_query.begin(), m_ap_metric_query.end(),
-            [&bssid_tlv](sApMetricsQuery const &query) { return query.bssid == bssid_tlv; });
+        auto mac       = std::find_if(
+                  m_ap_metric_query.begin(), m_ap_metric_query.end(),
+                  [&bssid_tlv](sApMetricsQuery const &query) { return query.bssid == bssid_tlv; });
 
         if (mac == m_ap_metric_query.end()) {
             LOG(ERROR) << "Failed search in ap_metric_query for bssid: " << bssid_tlv
