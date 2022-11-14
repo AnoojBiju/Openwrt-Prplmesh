@@ -19,7 +19,7 @@
 vbss_task::vbss_task(son::db &database, task_pool &tasks, const std::string &task_name_)
     : task(task_name_), m_database(database), m_tasks(tasks)
 {
-    if (database.get_vbss_task_id() != db::TASK_ID_NOT_FOUND) {
+    if (database.get_vbss_task_id() == db::TASK_ID_NOT_FOUND) {
         database.assign_vbss_task_id(id);
     }
 }
