@@ -775,15 +775,16 @@ int bml_client_get_client_list(BML_CTX ctx, char *client_list, unsigned int *cli
 }
 
 int bml_add_unassociated_station_stats(BML_CTX ctx, const char *mac_address,
-                                       const char *channel_string)
+                                       const char *channel_string, const char *agent_mac_address)
 {
     auto pBML = static_cast<bml_internal *>(ctx);
-    return pBML->add_unassociated_station_stats(mac_address, channel_string);
+    return pBML->add_unassociated_station_stats(mac_address, channel_string, agent_mac_address);
 }
-int bml_remove_unassociated_station_stats(BML_CTX ctx, const char *mac_address)
+int bml_remove_unassociated_station_stats(BML_CTX ctx, const char *mac_address,
+                                          const char *agent_mac_address)
 {
     auto pBML = static_cast<bml_internal *>(ctx);
-    return pBML->remove_unassociated_station_stats(mac_address);
+    return pBML->remove_unassociated_station_stats(mac_address, agent_mac_address);
 }
 
 int bml_get_unassociated_station_stats(BML_CTX ctx, char *stats_results,

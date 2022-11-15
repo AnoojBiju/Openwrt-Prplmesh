@@ -2564,18 +2564,22 @@ public:
     /**
      * @brief Adds a single station to the unassociated_stations list
      * @param new station mac_address
+     * @param channel
+     * @param agent mac_address, if equals to ZERO_MAC_STRING all connected agents will be chosed
      * 
      * @return true if success, false if the station exists or any other issue
      */
-    bool add_unassociated_station(sMacAddr const &new_station_mac_add);
+    bool add_unassociated_station(sMacAddr const &new_station_mac_add, uint32_t channel,
+                                  sMacAddr const &agent_mac_addr);
 
     /**
      * @brief Removes a single station from the unassociated_stations list
      * @param mac_address of the station to be removed
+     * @param agent mac_address, if equals to ZERO_MAC_STRING all connected agents will be chosed
      * 
      * @return True if success, false if the station does not exists or any other issue
      */
-    bool remove_unassociated_station(sMacAddr const &mac_address);
+    bool remove_unassociated_station(sMacAddr const &mac_address, sMacAddr const &agent_mac_addr);
 
     /**
      * @brief Get unassociated stations being monitored

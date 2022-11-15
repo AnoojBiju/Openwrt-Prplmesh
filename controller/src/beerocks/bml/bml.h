@@ -710,19 +710,22 @@ int bml_client_get_client_list(BML_CTX ctx, char *client_list, unsigned int *cli
      * @param [in] ctx BML Context.
      * @param [in] mac_address address of the station
      * @param [in] desired channel
+     * @param [in] agent_mac_address  MAcAddress of the agent to be monitoring the station, if empty, all agents are selected
      * @return BML_RET_OK on success.
      */
 int bml_add_unassociated_station_stats(BML_CTX ctx, const char *mac_address,
-                                       const char *channel_string);
+                                       const char *channel_string, const char *agent_mac_address);
 
 /**
      * Remove a station from the unassociated stations 
      *  Note: this function shall expand to accept the desired agents list!
      * @param [in] ctx BML Context.
      * @param [in] mac_address address of the station
+     * @param [in] agent_mac_address  MAcAddress of the monitoring agent, if empty, all agents are selected
      * @return BML_RET_OK on success,BML_RET_OP_FAILED is station does not exist or any other issue.
      */
-int bml_remove_unassociated_station_stats(BML_CTX ctx, const char *mac_address);
+int bml_remove_unassociated_station_stats(BML_CTX ctx, const char *mac_address,
+                                          const char *agent_mac_address);
 
 /**
  * Get unassociated station stats as a string

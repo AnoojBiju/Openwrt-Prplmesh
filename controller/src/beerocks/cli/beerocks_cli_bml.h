@@ -250,8 +250,10 @@ private:
 
     //unassociated stations stats
     int get_unassociated_stations_stats();
-    int add_unassociated_station_stats(std::string &mac_address, std::string &channel);
-    int remove_unassociated_station_stats(std::string &mac_address);
+    int add_unassociated_station_stats(const std::string &mac_address, const std::string &channel,
+                                       const std::string &agent_mac_addr);
+    int remove_unassociated_station_stats(std::string &mac_address,
+                                          const std::string &agent_mac_addr);
 };
 } // namespace beerocks
 

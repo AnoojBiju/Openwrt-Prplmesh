@@ -2236,7 +2236,8 @@ int bml_internal::client_get_client_list(char *client_list, unsigned int *client
 }
 
 int bml_internal::add_unassociated_station_stats(const char *mac_address,
-                                                 const char *channel_string)
+                                                 const char *channel_string,
+                                                 const char *agent_mac_address)
 {
     auto request = message_com::create_vs_message<
         beerocks_message::cACTION_BML_ADD_UNASSOCIATED_STATION_STATS_REQUEST>(cmdu_tx);
@@ -2246,17 +2247,29 @@ int bml_internal::add_unassociated_station_stats(const char *mac_address,
     }
     request->mac_address() = tlvf::mac_from_string(std::string(mac_address));
     request->channel()     = string_utils::stoi(std::string(channel_string));
-    LOG(DEBUG) << "sending ACTION_CLI_CLIENT_UNASSOCIATED_STATION_STATS_REQUEST with mac_address "
-               << mac_address << " and channel " << channel_string;
-
+    if (agent_mac_address) {
+        request->agent_mac_address() = tlvf::mac_from_string(std::string(agent_mac_address));
+    } else {
+        request->agent_mac_address() =
+            tlvf::mac_from_string(beerocks::net::network_utils::ZERO_MAC_STRING);
+    }
+    std::string debug_mesg =
+        "sending ACTION_CLI_CLIENT_UNASSOCIATED_STATION_STATS_REQUEST with mac_address " +
+        std::string(mac_address) + " and channel " + channel_string;
+    if (agent_mac_address) {
+        debug_mesg += " and agent_mac_addr: ";
+        debug_mesg += agent_mac_address;
+    }
+    LOG(DEBUG) << debug_mesg;
     if (!message_com::send_cmdu(m_sockMaster, cmdu_tx)) {
-        LOG(ERROR) << "Failed cACTION_BML_ADD_UNASSOCIATED_STATION_STATS_REQUEST";
+        LOG(ERROR) << "Failed sending cACTION_BML_ADD_UNASSOCIATED_STATION_STATS_REQUEST";
         return -1;
     }
     return 0;
 }
 
-int bml_internal::remove_unassociated_station_stats(const char *mac_address)
+int bml_internal::remove_unassociated_station_stats(const char *mac_address,
+                                                    const char *agent_mac_address)
 {
     auto request = message_com::create_vs_message<
         beerocks_message::cACTION_BML_REMOVE_UNASSOCIATED_STATION_STATS_REQUEST>(cmdu_tx);
@@ -2266,10 +2279,22 @@ int bml_internal::remove_unassociated_station_stats(const char *mac_address)
         return -1;
     }
     request->mac_address() = tlvf::mac_from_string(std::string(mac_address));
-    LOG(DEBUG)
-        << "sending ACTION_CLI_CLIENT_REMOVE_UNASSOCIATED_STATION_STATS_REQUEST with mac_address";
+    if (agent_mac_address) {
+        request->agent_mac_address() = tlvf::mac_from_string(std::string(agent_mac_address));
+    } else {
+        request->agent_mac_address() =
+            tlvf::mac_from_string(beerocks::net::network_utils::ZERO_MAC_STRING);
+    }
+    std::string debug_mesg =
+        "sending cACTION_BML_REMOVE_UNASSOCIATED_STATION_STATS_REQUEST with mac_address " +
+        std::string(mac_address);
+    if (agent_mac_address) {
+        debug_mesg += " and agent_mac_addr: ";
+        debug_mesg += agent_mac_address;
+    }
+    LOG(DEBUG) << debug_mesg;
     if (!message_com::send_cmdu(m_sockMaster, cmdu_tx)) {
-        LOG(ERROR) << "Failed cACTION_BML_ADD_UNASSOCIATED_STATION_STATS_REQUEST";
+        LOG(ERROR) << "Failed sending cACTION_BML_REMOVE_UNASSOCIATED_STATION_STATS_REQUEST";
         return -1;
     }
     return 0;

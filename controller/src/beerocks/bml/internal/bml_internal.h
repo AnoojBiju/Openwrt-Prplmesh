@@ -290,17 +290,20 @@ public:
      *  Note: this function shall expand to accept the desired agents list!
      * @param [in] mac_address address of the station
      * @param [in] desired channel
+     * @param [in] mac_add of the agent to be monitoring the station. IF empty, all agents will be chosen.
      * @return BML_RET_OK on success.
      */
-    int add_unassociated_station_stats(const char *mac_address, const char *channel_string);
+    int add_unassociated_station_stats(const char *mac_address, const char *channel_string,
+                                       const char *agent_mac_address);
 
     /**
      * Remove a station from the unassociated stations 
      *  Note: this function shall expand to accept the desired agents list!
      * @param [in] mac_address address of the station
+     * @param [in] mac_add of monitoring station. IF empty, all agents will be chosen.
      * @return BML_RET_OK on success,BML_RET_OP_FAILED is station does not exist or any other issue.
      */
-    int remove_unassociated_station_stats(const char *mac_address);
+    int remove_unassociated_station_stats(const char *mac_address, const char *agent_mac_address);
     /**
      * Get unassociated stations stats.
      *

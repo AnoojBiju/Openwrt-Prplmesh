@@ -289,11 +289,8 @@ bool LinkMetricsTask::handle_cmdu_1905_unassociated_station_link_metric_response
     }
     for (int i = 0; i < number_of_station_entries; ++i) {
         const auto station_tuple = unassoc_sta_link_metrics_tlv->sta_list(i);
-        const bool success       = std::get<0>(station_tuple);
         const auto sta_metrics   = std::get<1>(station_tuple);
 
-        // TODO what is this 'success' field? It's not called out in the spec.
-        (void)success;
         if (sta_metrics.sta_mac == beerocks::net::network_utils::ZERO_MAC) {
             // skip dud entries
             LOG(DEBUG) << " Zero_MAC!!--> skipped " << tlvf::mac_to_string(sta_metrics.sta_mac);
@@ -318,8 +315,20 @@ bool LinkMetricsTask::handle_cmdu_1905_unassociated_station_link_metric_response
             LOG(ERROR) << "radio dm path is empty! , unassociated station DM will not be updated! ";
         }
 
-        auto existing_stat = database.get_unassociated_stations().get(sta_metrics.sta_mac);
-        if (existing_stat != nullptr) {
+        auto un_stat_database = database.get_unassociated_stations().get(sta_metrics.sta_mac);
+        if (un_stat_database != nullptr) {
+
+            auto agent_radio = un_stat_database->get_agents().find(src_mac);
+            if (agent_radio != un_stat_database->get_agents().end()) {
+                //update the station with the mac_addr of the radio that is monitoring it
+                un_stat_database->set_radio_mac(src_mac,
+                                                unassoc_sta_link_metrics_tlv->radio_mac_address());
+            } else {
+                LOG(WARNING) << "is agent: " << tlvf::mac_to_string(src_mac)
+                             << " non intentially monitoring station with mac_address: "
+                             << tlvf::mac_to_string(un_stat_database->get_mac_Address()) << " ? ";
+            }
+
             UnassociatedStation::Stats stats;
             stats.uplink_rcpi_dbm_enc = sta_metrics.uplink_rcpi_dbm_enc;
 

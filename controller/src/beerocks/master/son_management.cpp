@@ -2440,7 +2440,8 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
 
-        if (!database.add_unassociated_station(request->mac_address())) {
+        if (!database.add_unassociated_station(request->mac_address(), request->channel(),
+                                               request->agent_mac_address())) {
             break;
         }
 
@@ -2457,7 +2458,8 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
 
-        if (!database.remove_unassociated_station(request->mac_address())) {
+        if (!database.remove_unassociated_station(request->mac_address(),
+                                                  request->agent_mac_address())) {
             break;
         }
 
@@ -2537,22 +2539,22 @@ void son_management::send_unassociated_sta_link_metrics_query_message(
             params.sta_mac = station.first;
             params.channel = station.second->get_channel();
             std::get<1>(unassociated_sta_query->un_stations_list(iter)) = params;
-            LOG(DEBUG) << "adding unassociated station with mac_address: "
-                       << tlvf::mac_to_string(params.sta_mac) << " and channel " << params.channel
-                       << " to tlvUnassociatedStaLinkMetricsQuery";
-            iter++;
+            LOG(DEBUG) << "sending sta_link_metrics_query_message containing:  \n";
+            for (const auto &agent : station.second->get_agents()) {
+                LOG(DEBUG) << " unassociated station with mac_address: "
+                           << tlvf::mac_to_string(params.sta_mac) << " and channel "
+                           << params.channel
+                           << " to agent with mac_addr: " << tlvf::mac_to_string(agent.first);
+                son_actions::send_cmdu_to_agent(agent.first, cmdu_tx, database);
+            }
         }
+        iter++;
     } else { // this is a command to remove all monitored stations
         for (const auto &agent : database.get_all_connected_agents()) {
             son_actions::send_cmdu_to_agent(agent->al_mac, cmdu_tx, database);
-            LOG(DEBUG) << "s monitored non_associated stations to "
-                          "agent with mac_address "
+            LOG(DEBUG) << "removing  non_associated stations from  agent with mac_address "
                        << tlvf::mac_to_string(agent->al_mac);
             return;
         }
-    }
-    //TODO shall we not narrow the destinations to some specific agents ??
-    for (const auto &agent : database.get_all_connected_agents()) {
-        son_actions::send_cmdu_to_agent(agent->al_mac, cmdu_tx, database);
     }
 }

@@ -482,11 +482,13 @@ cACTION_BML_CLIENT_GET_CLIENT_LIST_REQUEST:
 cACTION_BML_ADD_UNASSOCIATED_STATION_STATS_REQUEST:
   _type: class
   mac_address: sMacAddr
+  agent_mac_address: sMacAddr
   channel: uint32_t
 
 cACTION_BML_REMOVE_UNASSOCIATED_STATION_STATS_REQUEST:
   _type: class
   mac_address: sMacAddr
+  agent_mac_address: sMacAddr
 
 cACTION_BML_GET_UNASSOCIATED_STATIONS_STATS_REQUEST:
   _type: class

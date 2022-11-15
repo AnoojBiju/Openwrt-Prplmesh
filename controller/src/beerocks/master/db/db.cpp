@@ -7947,3 +7947,84 @@ bool db::dm_set_steering_policies(const Agent &agent)
     }
     return ret_val;
 }
+bool db::add_unassociated_station(sMacAddr const &new_station_mac_add)
+{
+    auto new_station = m_unassociated_stations.add(new_station_mac_add);
+
+    LOG(DEBUG) << "added un_station with mac_address: " << tlvf::mac_to_string(new_station_mac_add);
+
+    return new_station != nullptr;
+}
+
+bool db::remove_unassociated_station(sMacAddr const &mac_address)
+{
+    if (m_unassociated_stations.erase(mac_address) == 1) {
+        LOG(DEBUG) << "removed station with mac_address:" << mac_address;
+        return true;
+    } else {
+        LOG(DEBUG) << "failed to remove un_station with mac_address:" << mac_address;
+        return false;
+    }
+}
+
+const beerocks::mac_map<UnassociatedStation> &db::get_unassociated_stations() const
+{
+    return m_unassociated_stations;
+}
+
+void db::update_unassociated_station_stats(const sMacAddr &mac_address,
+                                           UnassociatedStation::Stats &new_stats,
+                                           const std::string &radio_dm_path = std::string())
+{
+    auto station = m_unassociated_stations.find(mac_address);
+    if (station != m_unassociated_stations.end()) {
+        station->second->update_stats(new_stats);
+
+        // update DM
+        std::string new_station_path;
+        if (!radio_dm_path.empty()) {
+            std::string unassociated_sta_path = radio_dm_path + ".UnassociatedSTA";
+            auto index                        = m_ambiorix_datamodel->get_instance_index(
+                unassociated_sta_path + ".[MACAddress== '%s'].", tlvf::mac_to_string(mac_address));
+            if (!index) {
+                LOG(ERROR) << " UnassociatedSTA with mac " << mac_address
+                           << " does not exists under the path " << unassociated_sta_path
+                           << ".Lets add it ";
+                //add its!
+                new_station_path = m_ambiorix_datamodel->add_instance(unassociated_sta_path);
+                if (new_station_path.empty()) {
+                    LOG(ERROR) << "Failed to add new unassociated station stats with path "
+                               << unassociated_sta_path;
+                    return;
+                } else {
+                    new_station_path.append(".");
+                    LOG(DEBUG) << "Successfully added object with path : " << new_station_path;
+                }
+            } else {
+                new_station_path.append(".");
+                new_station_path.append(std::to_string(index));
+            }
+            m_ambiorix_datamodel->set(new_station_path, "MACAddress", mac_address);
+            m_ambiorix_datamodel->set(new_station_path, " SignalStrength",
+                                      new_stats.uplink_rcpi_dbm_enc);
+            m_ambiorix_datamodel->set_time(new_station_path, "TimeStamp", new_stats.time_stamp);
+            LOG(DEBUG) << "Setting MACAddress " << mac_address
+                       << "SignalStrength: " << new_stats.uplink_rcpi_dbm_enc << " TimeStamp"
+                       << new_stats.time_stamp;
+        }
+    }
+    return;
+}
+
+std::list<std::pair<std::string, std::shared_ptr<UnassociatedStation::Stats>>>
+db::get_unassociated_stations_stats() const
+{
+    std::list<std::pair<std::string, std::shared_ptr<UnassociatedStation::Stats>>> stats;
+    for (auto &station : m_unassociated_stations) {
+        auto stat(std::make_shared<UnassociatedStation::Stats>());
+        stat->time_stamp          = station.second->get_stats().time_stamp;
+        stat->uplink_rcpi_dbm_enc = station.second->get_stats().uplink_rcpi_dbm_enc;
+        stats.push_back(std::make_pair(tlvf::mac_to_string(station.first), stat));
+    }
+    return stats;
+}
