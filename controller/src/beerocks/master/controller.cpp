@@ -1185,7 +1185,8 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
         }
     } else {
         agent_monitoring_task::add_traffic_policy_tlv(database, cmdu_tx, m1);
-        agent_monitoring_task::add_profile_2default_802q_settings_tlv(database, cmdu_tx, m1);
+        agent_monitoring_task::add_profile_2default_802q_settings_tlv(database, cmdu_tx,
+                                                                      m1->mac_addr());
     }
 
     auto beerocks_header = beerocks::message_com::parse_intel_vs_message(cmdu_rx);
@@ -4206,7 +4207,16 @@ bool Controller::handle_cmdu_1905_bss_configuration_request_message(
 
     // TODO: Implement parsing of unhandled TLVs (PPM-2325)
 
-    return true;
+    auto cmdu_tx_header =
+        cmdu_tx.create(mid, ieee1905_1::eMessageType::BSS_CONFIGURATION_RESPONSE_MESSAGE);
+    if (!cmdu_tx_header) {
+        LOG(ERROR) << "cmdu creation of type BSS_CONFIGURATION_RESPONSE_MESSAGE, has failed";
+        return false;
+    }
+
+    agent_monitoring_task::add_profile_2default_802q_settings_tlv(database, cmdu_tx, src_mac);
+
+    return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
 }
 
 bool Controller::handle_tlv_profile3_akm_suite_capabilities(Agent &agent,
