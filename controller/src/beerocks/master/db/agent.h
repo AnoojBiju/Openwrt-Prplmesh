@@ -19,6 +19,7 @@
 #include <tlvf/wfa_map/tlvChannelScanCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2ApCapability.h>
 #include <tlvf/wfa_map/tlvProfile2MultiApProfile.h>
+#include <tlvf/wfa_map/tlvSteeringPolicy.h>
 
 // Forward declaration of son::node
 namespace son {
@@ -79,9 +80,21 @@ public:
 
     bool does_support_vbss = false;
 
-    std::string manufacturer;
+    struct sDeviceInfo {
+        std::string manufacturer;
+        std::string manufacturer_model;
+        std::string serial_number;
+        std::string software_version;
+        std::string execution_env;
+        std::string country_code;
+    } device_info;
 
     beerocks::eNodeState state = beerocks::STATE_CONNECTED;
+
+    /** Stations for which local steering is disallowed */
+    beerocks::mac_map<Station> disallowed_local_steering_stations;
+    /** Stations for which BTM steering is disallowed */
+    beerocks::mac_map<Station> disallowed_btm_steering_stations;
 
     struct sRadio {
         sRadio()               = delete;
@@ -97,6 +110,9 @@ public:
         sMacAddr backhaul_station_mac;
 
         bool is_acs_enabled = false;
+
+        /** Name of the Wi-Fi chip vendor of this radio */
+        std::string chipset_vendor;
 
         class s_ap_stats_params {
         public:
@@ -138,6 +154,52 @@ public:
                 operating_classes;
         };
         channel_scan_capabilities scan_capabilities;
+
+        struct sAdvancedCapabilities {
+            // Indicates traffic separation on combined fronthaul and Profile-1 backhaul support
+            bool traffic_separation_combined_fronthaul;
+            // Indicates traffic separation on combined Profile-1 backhaul and Profile-2 backhaul support
+            bool traffic_separation_combined_backhaul;
+            // Support for MSCS and EasyMesh configuration of extensions to MSCS
+            bool mscs;
+            // Support for SCS and EasyMesh configuration of extensions to SCS
+            bool scs;
+            // Support for DSCP-to-UP mapping
+            bool dscp_to_up_mapping;
+            // Support for sending DSCP Policy Requests to associated STAs
+            // and EasyMesh configuration of such policies
+            bool dscp_policy;
+        } advanced_capabilities;
+
+        struct sMetricReportingPolicies {
+            // 0: Do not report STA Metrics based on RCPI threshold
+            // 1–220: RCPI threshold (encoded per [Table 9-176/802.11-2020])
+            uint8_t sta_reporting_rcpi_threshold;
+            // 0: Use Agent's implementation-specific default RCPI Hysteresis margin
+            // >0: RCPI hysteresis margin value. This field is coded as an unsigned integer in units of decibels (dB)
+            uint8_t sta_reporting_rcpi_hyst_margin_override_threshold;
+            // 0: Do not report AP Metrics based on Channel utilization threshold
+            // >0: AP Metrics Channel Utilization Reporting Threshold (similar to channel utilization measurement in [Section 9.4.2.27/802.11-2020])
+            uint8_t ap_reporting_channel_utilization_threshold;
+
+            // True: Include Associated STA Traffic Stats TLV in AP Metrics Response, False: Don't include
+            bool assoc_sta_traffic_stats_inclusion_policy;
+            // True: Include Associated STA Link Metrics TLV in AP Metrics Response, False: Don't include
+            bool assoc_sta_link_metrics_inclusion_policy;
+            // True: Include Associated Wi-Fi 6 STA Status Report TLV in AP Metrics Response, False: Don't include
+            bool assoc_wifi6_sta_status_report_inclusion_policy;
+        } metric_reporting_policies;
+
+        struct sSteeringPolicies {
+            // 0x00: Agent Initiated Steering Disallowed
+            // 0x01: Agent Initiated RCPI-based Steering Mandated
+            // 0x02: Agent Initiated RCPI-based Steering Allowed
+            wfa_map::tlvSteeringPolicy::eSteeringPolicy steering_policy;
+            // Defined per BSS Load element [Section 9.4.2.27/802.11-2020]
+            uint8_t channel_utilization_threshold;
+            // Encoded per [Table 9-176/802.11-2020]
+            uint8_t rcpi_steering_threshold;
+        } steering_policies;
 
         struct sBss {
             sBss()             = delete;

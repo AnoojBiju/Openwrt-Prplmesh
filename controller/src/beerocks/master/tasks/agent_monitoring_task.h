@@ -130,17 +130,17 @@ private:
                                                   ieee1905_1::CmduMessageTx &cmdu_tx);
 
     /**
-     * @brief Sends Tlv metric resporting policy within 'MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE'
+     * @brief Sends Multi-AP Policy Config Request message.
      *
      * @param dst_mac Destination MAC address.
-     * @param m1 M1.
-     * @param cmdu_rx AP AUTOCONFIGURATION WSC MESSAGE.
+     * @param m1 M1 message.
+     * @param cmdu_rx AP-Autoconfiguration WSC message.
      * @param cmdu_tx CMDU to be transmitted.
      * @return True on success, false otherwise.
     */
-    bool send_tlv_metric_reporting_policy(const sMacAddr &dst_mac, std::shared_ptr<WSC::m1> m1,
-                                          ieee1905_1::CmduMessageRx &cmdu_rx,
-                                          ieee1905_1::CmduMessageTx &cmdu_tx);
+    bool send_multi_ap_policy_config_request(const sMacAddr &dst_mac, std::shared_ptr<WSC::m1> m1,
+                                             ieee1905_1::CmduMessageRx &cmdu_rx,
+                                             ieee1905_1::CmduMessageTx &cmdu_tx);
 
     /**
      * @brief Sends Backhaul STA Capability Query Message to Agent.

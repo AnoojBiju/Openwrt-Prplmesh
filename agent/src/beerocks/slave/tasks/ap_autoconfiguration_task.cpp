@@ -545,7 +545,7 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_wsc_m1_message(
         /* One Profile-2 AP Capability TLV */
         auto profile2_ap_capability_tlv = m_cmdu_tx.addClass<wfa_map::tlvProfile2ApCapability>();
         if (!profile2_ap_capability_tlv) {
-            LOG(ERROR) << "Failed building message!";
+            LOG(ERROR) << "addClass wfa_map::tlvProfile2ApCapability failed";
             return false;
         }
 
@@ -569,17 +569,19 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_wsc_m1_message(
         auto ap_radio_advanced_capabilities_tlv =
             m_cmdu_tx.addClass<wfa_map::tlvProfile2ApRadioAdvancedCapabilities>();
         if (!ap_radio_advanced_capabilities_tlv) {
-            LOG(ERROR) << "Failed building message!";
+            LOG(ERROR) << "addClass wfa_map::tlvProfile2ApRadioAdvancedCapabilities failed";
             return false;
         }
 
         ap_radio_advanced_capabilities_tlv->radio_uid() = radio->front.iface_mac;
 
         // Currently Set the flag as we don't support traffic separation.
-        ap_radio_advanced_capabilities_tlv->traffic_separation_flag().combined_front_back =
+        ap_radio_advanced_capabilities_tlv->advanced_radio_capabilities().combined_front_back =
             radio->front.hybrid_mode_supported;
-        ap_radio_advanced_capabilities_tlv->traffic_separation_flag()
+        ap_radio_advanced_capabilities_tlv->advanced_radio_capabilities()
             .combined_profile1_and_profile2 = 0;
+
+        // TODO: Fill in the missing fields (related to R4 specification, PPM-2327).
     }
 
     if (!db->controller_info.prplmesh_controller) {

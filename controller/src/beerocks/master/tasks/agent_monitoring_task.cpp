@@ -22,6 +22,7 @@
 #include <tlvf/wfa_map/tlvProfile2RadioMetrics.h>
 #include <tlvf/wfa_map/tlvProfile2TrafficSeparationPolicy.h>
 #include <tlvf/wfa_map/tlvProfile2UnsuccessfulAssociationPolicy.h>
+#include <tlvf/wfa_map/tlvSteeringPolicy.h>
 
 using namespace beerocks;
 using namespace net;
@@ -209,7 +210,7 @@ bool agent_monitoring_task::start_agent_monitoring(const sMacAddr &src_mac,
 bool agent_monitoring_task::start_task(const sMacAddr &src_mac, std::shared_ptr<WSC::m1> m1,
                                        ieee1905_1::CmduMessageRx &cmdu_rx)
 {
-    if (!send_tlv_metric_reporting_policy(src_mac, m1, cmdu_rx, cmdu_tx)) {
+    if (!send_multi_ap_policy_config_request(src_mac, m1, cmdu_rx, cmdu_tx)) {
         LOG(ERROR) << "Failed to send Metric Reporting Policy to radio agent=" << src_mac;
     }
     if (!send_tlv_empty_channel_selection_request(src_mac, cmdu_tx)) {
@@ -248,10 +249,10 @@ bool agent_monitoring_task::start_task(const sMacAddr &src_mac, std::shared_ptr<
     return true;
 }
 
-bool agent_monitoring_task::send_tlv_metric_reporting_policy(const sMacAddr &dst_mac,
-                                                             std::shared_ptr<WSC::m1> m1,
-                                                             ieee1905_1::CmduMessageRx &cmdu_rx,
-                                                             ieee1905_1::CmduMessageTx &cmdu_tx)
+bool agent_monitoring_task::send_multi_ap_policy_config_request(const sMacAddr &dst_mac,
+                                                                std::shared_ptr<WSC::m1> m1,
+                                                                ieee1905_1::CmduMessageRx &cmdu_rx,
+                                                                ieee1905_1::CmduMessageTx &cmdu_tx)
 {
     auto radio_basic_caps = cmdu_rx.getClass<wfa_map::tlvApRadioBasicCapabilities>();
     if (!radio_basic_caps) {
@@ -282,6 +283,12 @@ bool agent_monitoring_task::send_tlv_metric_reporting_policy(const sMacAddr &dst
         return false;
     }
 
+    auto agent = database.m_agents.get(dst_mac);
+    if (!agent) {
+        LOG(ERROR) << "Agent with mac is not found in database mac=" << dst_mac;
+        return false;
+    }
+
     if (num_bsss) {
         add_traffic_policy_tlv(database, cmdu_tx, m1);
         add_profile_2default_802q_settings_tlv(database, cmdu_tx, m1);
@@ -296,16 +303,49 @@ bool agent_monitoring_task::send_tlv_metric_reporting_policy(const sMacAddr &dst
     metric_reporting_policy_tlv->metrics_reporting_interval_sec() =
         database.config.link_metrics_request_interval_seconds.count();
 
-    // Add one radio configuration to list
-    // TODO Multiple radio can be implemented within one message (PPM-1139)
-    if (!metric_reporting_policy_tlv->alloc_metrics_reporting_conf_list()) {
-        LOG(ERROR) << "Failed to add metrics_reporting_conf to tlvMetricReportingPolicy";
+    if (!metric_reporting_policy_tlv->alloc_metrics_reporting_conf_list(agent->radios.size())) {
+        LOG(ERROR) << "alloc_metrics_reporting_conf_list() has failed";
         return false;
     }
 
-    auto agent = database.m_agents.get(dst_mac);
-    if (!agent) {
-        LOG(ERROR) << "Agent with mac is not found in database mac=" << dst_mac;
+    uint8_t radio_idx = 0;
+    for (const auto &radio : agent->radios) {
+        if (!std::get<0>(metric_reporting_policy_tlv->metrics_reporting_conf_list(radio_idx))) {
+            LOG(ERROR) << "Failed to get metrics_reporting_conf from TLV_METRIC_REPORTING_POLICY";
+            return false;
+        }
+
+        auto &reporting_conf =
+            std::get<1>(metric_reporting_policy_tlv->metrics_reporting_conf_list(radio_idx));
+
+        reporting_conf.radio_uid = radio.second->radio_uid;
+        reporting_conf.policy.include_associated_sta_link_metrics_tlv_in_ap_metrics_response =
+            radio.second->metric_reporting_policies.assoc_sta_link_metrics_inclusion_policy =
+                database.config.assoc_sta_link_metrics_inclusion_policy;
+        reporting_conf.policy.include_associated_sta_traffic_stats_tlv_in_ap_metrics_response =
+            radio.second->metric_reporting_policies.assoc_sta_traffic_stats_inclusion_policy =
+                database.config.assoc_sta_traffic_stats_inclusion_policy;
+        reporting_conf.policy
+            .include_associated_wifi_6_sta_status_report_tlv_in_ap_metrics_response =
+            radio.second->metric_reporting_policies.assoc_wifi6_sta_status_report_inclusion_policy =
+                database.config.assoc_wifi6_sta_status_report_inclusion_policy;
+
+        reporting_conf.sta_metrics_reporting_rcpi_threshold =
+            radio.second->metric_reporting_policies.sta_reporting_rcpi_threshold =
+                database.config.sta_reporting_rcpi_threshold;
+        reporting_conf.sta_metrics_reporting_rcpi_hysteresis_margin_override =
+            radio.second->metric_reporting_policies
+                .sta_reporting_rcpi_hyst_margin_override_threshold =
+                database.config.sta_reporting_rcpi_hysteresis_margin_override_threshold;
+        reporting_conf.ap_channel_utilization_reporting_threshold =
+            radio.second->metric_reporting_policies.ap_reporting_channel_utilization_threshold =
+                database.config.ap_reporting_channel_utilization_threshold;
+        radio_idx++;
+    }
+
+    if (!database.dm_set_metric_reporting_policies(*agent)) {
+        LOG(ERROR) << "Failed to set metric reporting policy parameters in DM for Agent"
+                   << agent->al_mac;
         return false;
     }
 
@@ -325,23 +365,71 @@ bool agent_monitoring_task::send_tlv_metric_reporting_policy(const sMacAddr &dst
             database.config.unsuccessful_assoc_max_reporting_rate;
     }
 
-    auto tuple = metric_reporting_policy_tlv->metrics_reporting_conf_list(0);
-    if (!std::get<0>(tuple)) {
-        LOG(ERROR) << "Failed to get metrics_reporting_conf[0"
-                   << "] from TLV_METRIC_REPORTING_POLICY";
+    auto steering_policy_tlv = cmdu_tx.addClass<wfa_map::tlvSteeringPolicy>();
+    if (!steering_policy_tlv) {
+        LOG(ERROR) << "addClass wfa_map::tlvSteeringPolicy has failed";
         return false;
     }
 
-    auto &reporting_conf     = std::get<1>(tuple);
-    reporting_conf.radio_uid = ruid;
-    reporting_conf.policy.include_associated_sta_link_metrics_tlv_in_ap_metrics_response  = 1;
-    reporting_conf.policy.include_associated_sta_traffic_stats_tlv_in_ap_metrics_response = 1;
-    reporting_conf.policy.include_associated_wifi_6_sta_status_report_tlv_in_ap_metrics_response =
-        1;
+    if (!agent->disallowed_local_steering_stations.empty() &&
+        steering_policy_tlv->alloc_local_steering_disallowed_sta_list(
+            agent->disallowed_local_steering_stations.size())) {
+        LOG(ERROR) << "alloc_local_steering_disallowed_sta_list() has failed!";
+        return false;
+    }
 
-    reporting_conf.sta_metrics_reporting_rcpi_threshold                  = 0;
-    reporting_conf.sta_metrics_reporting_rcpi_hysteresis_margin_override = 0;
-    reporting_conf.ap_channel_utilization_reporting_threshold            = 0;
+    uint8_t sta_idx = 0;
+    for (const auto &sta : agent->disallowed_local_steering_stations) {
+        auto &sta_mac =
+            std::get<1>(steering_policy_tlv->local_steering_disallowed_sta_list(sta_idx));
+        sta_mac = sta.first;
+        sta_idx++;
+    }
+
+    if (!agent->disallowed_btm_steering_stations.empty() &&
+        steering_policy_tlv->alloc_btm_steering_disallowed_sta_list(
+            agent->disallowed_btm_steering_stations.size())) {
+        LOG(ERROR) << "alloc_btm_steering_disallowed_sta_list() has failed!";
+        return false;
+    }
+
+    sta_idx = 0;
+    for (const auto &sta : agent->disallowed_btm_steering_stations) {
+        auto &sta_mac = std::get<1>(steering_policy_tlv->btm_steering_disallowed_sta_list(sta_idx));
+        sta_mac       = sta.first;
+        sta_idx++;
+    }
+
+    if (!steering_policy_tlv->alloc_radio_ap_control_policy_list(agent->radios.size())) {
+        LOG(ERROR) << "alloc_radio_ap_control_policy_list() has failed!";
+        return false;
+    }
+
+    radio_idx = 0;
+    for (const auto &radio : agent->radios) {
+        if (!std::get<0>(steering_policy_tlv->radio_ap_control_policy_list(radio_idx))) {
+            LOG(ERROR) << "Failed to get radio_ap_control_policy_list from TLV_STEERING_POLICY";
+            return false;
+        }
+        auto &radio_ap_control_policy =
+            std::get<1>(steering_policy_tlv->radio_ap_control_policy_list(radio_idx));
+
+        radio_ap_control_policy.radio_ap_mac    = radio.second->radio_uid;
+        radio_ap_control_policy.steering_policy = radio.second->steering_policies.steering_policy =
+            wfa_map::tlvSteeringPolicy::eSteeringPolicy(database.config.steering_policy);
+        radio_ap_control_policy.channel_utilization_threshold =
+            radio.second->steering_policies.channel_utilization_threshold =
+                database.config.channel_utilization_threshold;
+        radio_ap_control_policy.rcpi_steering_threshold =
+            radio.second->steering_policies.rcpi_steering_threshold =
+                database.config.rcpi_steering_threshold;
+        radio_idx++;
+    }
+
+    if (!database.dm_set_steering_policies(*agent)) {
+        LOG(ERROR) << "Failed to set steering policy parameters in DM for Agent" << agent->al_mac;
+        return false;
+    }
 
     return son_actions::send_cmdu_to_agent(dst_mac, cmdu_tx, database);
 }

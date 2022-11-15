@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-2-Clause-Patent
  *
- * SPDX-FileCopyrightText: 2016-2020 the prplMesh contributors (see AUTHORS.md)
+ * SPDX-FileCopyrightText: 2016-2022 the prplMesh contributors (see AUTHORS.md)
  *
  * This code is subject to the terms of the BSD+Patent license.
  * See LICENSE file for more details.
@@ -169,7 +169,7 @@ constexpr int DEFAULT_BEST_CHANNEL_RANKING_TH = 0;
 // Link metrics tasks send request with this interval.
 constexpr std::chrono::seconds DEFAULT_LINK_METRICS_REQUEST_INTERVAL_VALUE_SEC{60};
 
-// Default Linux Lan interface names. It needs to be space separeted.
+// Default Linux Lan interface names. It needs to be space separated.
 constexpr char DEFAULT_LINUX_LAN_INTERFACE_NAMES[] = "eth0_1 eth0_2 eth0_3 eth0_4";
 
 // Default DHCP tasks process lease information with this interval.
@@ -201,6 +201,29 @@ constexpr std::chrono::seconds DEFAULT_CONTROLLER_DISCOVERY_TIMEOUT_SEC{120};
 constexpr std::chrono::seconds DEFAULT_CONTROLLER_MESSAGE_TIMEOUT_SEC{70};
 // Default value for heartbeat state timeout in controller connectivity task
 constexpr std::chrono::seconds DEFAULT_CONTROLLER_HEARTBEAT_STATE_TIMEOUT_SEC{30};
+
+/* Metric Reporting policies (applied to a specific radio) */
+// Default value for STA Metrics reporting RCPI threshold (encoded per [Table 9-176/802.11-2020])
+constexpr unsigned int DEFAULT_STA_REPORTING_RCPI_THRESHOLD{0};
+// Default value for STA Metrics reporting RCPI hysteresis margin override in decibels (dB)
+constexpr unsigned int DEFAULT_STA_REPORTING_RCPI_HYSTERESIS_MARGIN_OVERRIDE_THRESHOLD{0};
+// Default value for AP Metrics channel utilization reporting threshold
+constexpr unsigned int DEFAULT_AP_REPORTING_CHANNEL_UTILIZATION_THRESHOLD{0};
+// Default policy for inclusion of Associated STA Traffic Stats TLV
+constexpr int DEFAULT_ASSOC_STA_TRAFFIC_STATS_INCLUSION_POLICY = 1;
+// Default policy for inclusion of Associated STA Link Metrics TLV
+constexpr int DEFAULT_ASSOC_STA_LINK_METRICS_INCLUSION_POLICY = 1;
+// Default policy for inclusion of Associated Wi-Fi 6 STA Status Report TLV
+constexpr int DEFAULT_ASSOC_WIFI6_STA_STATUS_REPORT_INCLUSION_POLICY = 1;
+
+/* Steering policies (applied to a specific radio) */
+// Default value for steering policy
+constexpr unsigned int DEFAULT_STEERING_POLICY{0};
+// Default value for channel utilization threshold
+// Defined per Basic Service Set (BSS) Load element [Section 9.4.2.27/802.11-2020]
+constexpr unsigned int DEFAULT_CHANNEL_UTILIZATION_THRESHOLD{0};
+// Default value for RCPI steering threshold (encoded per [Table 9-176/802.11-2020])
+constexpr unsigned int DEFAULT_RCPI_STEERING_THRESHOLD{0};
 
 /****************************************************************************/
 /******************************* Structures *********************************/
@@ -1062,6 +1085,95 @@ bool cfg_get_rssi_measurements_timeout(int &rssi_measurements_timeout_msec);
  * @return true on success, otherwise false.
  */
 bool cfg_get_beacon_measurements_timeout(int &beacon_measurements_timeout_msec);
+
+/**
+ * @brief Get the STA Metrics reporting RCPI threshold (encoded per [Table 9-176/802.11-2020]).
+ *
+ * @param [out] sta_reporting_rcpi_threshold STA Metrics reporting RCPI threshold.
+ *
+ * @return True on success, otherwise false.
+ */
+bool cfg_get_sta_reporting_rcpi_threshold(unsigned int &sta_reporting_rcpi_threshold);
+
+/**
+ * @brief Get the STA Metrics reporting RCPI hysteresis margin override threshold.
+ *
+ * @param [out] sta_reporting_rcpi_hyst_margin_override_threshold STA Metrics reporting RCPI hysteresis margin override threshold in decibels (dB).
+ *
+ * @return True on success, otherwise false.
+ */
+bool cfg_get_sta_reporting_rcpi_hyst_margin_override_threshold(
+    unsigned int &sta_reporting_rcpi_hyst_margin_override_threshold);
+
+/**
+ * @brief Get the AP Metrics channel utilization reporting threshold.
+ * 
+ * Similar to channel utilization measurement in [Section 9.4.2.27/802.11-2020]
+ *
+ * @param [out] ap_reporting_channel_utilization_threshold AP Metrics channel utilization reporting threshold.
+ *
+ * @return True on success, otherwise false.
+ */
+bool cfg_get_ap_reporting_channel_utilization_threshold(
+    unsigned int &ap_reporting_channel_utilization_threshold);
+
+/**
+ * @brief Get policy for inclusion of Associated STA Traffic Stats TLV.
+ *
+ * @param [out] assoc_sta_traffic_stats_inclusion_policy Policy for inclusion of Associated STA Traffic Stats TLV.
+ *
+ * @return True on success, otherwise false.
+ */
+bool cfg_get_assoc_sta_traffic_stats_inclusion_policy(
+    bool &assoc_sta_traffic_stats_inclusion_policy);
+
+/**
+ * @brief Get policy for inclusion of Associated STA Link Metrics TLV.
+ *
+ * @param [out] assoc_sta_link_metrics_inclusion_policy Policy for inclusion of Associated STA Link Metrics TLV.
+ *
+ * @return True on success, otherwise false.
+ */
+bool cfg_get_assoc_sta_link_metrics_inclusion_policy(bool &assoc_sta_link_metrics_inclusion_policy);
+
+/**
+ * @brief Get policy for inclusion of Associated Wi-Fi 6 STA Status Report TLV.
+ *
+ * @param [out] assoc_wifi6_sta_status_report_inclusion_policy Policy for inclusion of Associated Wi-Fi 6 STA Status Report TLV.
+ *
+ * @return True on success, otherwise false.
+ */
+bool cfg_get_assoc_wifi6_sta_status_report_inclusion_policy(
+    bool &assoc_wifi6_sta_status_report_inclusion_policy);
+
+/**
+ * @brief Get the steering policy.
+ *
+ * @param [out] steering_policy Steering policy.
+ *
+ * @return True on success, otherwise false.
+ */
+bool cfg_get_steering_policy(unsigned int &steering_policy);
+
+/**
+ * @brief Get the channel utilization threshold.
+ * 
+ * Defined per Basic Service Set (BSS) Load element [Section 9.4.2.27/802.11-2020].
+ *
+ * @param [out] channel_utilization_threshold Channel utilization threshold.
+ *
+ * @return True on success, otherwise false.
+ */
+bool cfg_get_channel_utilization_threshold(unsigned int &channel_utilization_threshold);
+
+/**
+ * @brief Get the RCPI steering threshold (encoded per [Table 9-176/802.11-2020])
+ *
+ * @param [out] rcpi_steering_threshold RCPI steering threshold.
+ *
+ * @return True on success, otherwise false.
+ */
+bool cfg_get_rcpi_steering_threshold(unsigned int &rcpi_steering_threshold);
 
 /**
  * @brief Reads enable flag setting for checking connectivity to the Controller from agent

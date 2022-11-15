@@ -636,7 +636,7 @@ bool db::set_node_manufacturer(const std::string &mac, const std::string &manufa
 bool db::set_agent_manufacturer(prplmesh::controller::db::Agent &agent,
                                 const std::string &manufacturer)
 {
-    agent.manufacturer = manufacturer;
+    agent.device_info.manufacturer = manufacturer;
     return true;
 }
 
@@ -7498,20 +7498,47 @@ bool db::dm_set_device_ssid_to_vid_map(const Agent &agent,
     return ret_val;
 }
 
-bool db::dm_set_device_board_info(const Agent &agent, const sDeviceInfo &device_info)
+bool db::dm_set_profile1_device_info(const Agent &agent)
 {
-    bool ret_val = true;
-
     if (agent.dm_path.empty()) {
         return true;
     }
 
-    const auto device_path = agent.dm_path;
-
-    ret_val &= m_ambiorix_datamodel->set(device_path, "Manufacturer", device_info.manufacturer);
-    ret_val &= m_ambiorix_datamodel->set(device_path, "SerialNumber", device_info.serial_number);
+    bool ret_val = true;
     ret_val &=
-        m_ambiorix_datamodel->set(device_path, "ManufacturerModel", device_info.manufacturer_model);
+        m_ambiorix_datamodel->set(agent.dm_path, "Manufacturer", agent.device_info.manufacturer);
+    ret_val &=
+        m_ambiorix_datamodel->set(agent.dm_path, "SerialNumber", agent.device_info.serial_number);
+    ret_val &= m_ambiorix_datamodel->set(agent.dm_path, "ManufacturerModel",
+                                         agent.device_info.manufacturer_model);
+    return ret_val;
+}
+
+bool db::dm_set_profile3_device_info(const Agent &agent)
+{
+    if (agent.dm_path.empty()) {
+        return true;
+    }
+
+    bool ret_val = true;
+    ret_val &=
+        m_ambiorix_datamodel->set(agent.dm_path, "SerialNumber", agent.device_info.serial_number);
+    ret_val &= m_ambiorix_datamodel->set(agent.dm_path, "SoftwareVersion",
+                                         agent.device_info.software_version);
+    ret_val &=
+        m_ambiorix_datamodel->set(agent.dm_path, "ExecutionEnv", agent.device_info.execution_env);
+    ret_val &=
+        m_ambiorix_datamodel->set(agent.dm_path, "CountryCode", agent.device_info.country_code);
+
+    for (const auto &radio : agent.radios) {
+        if (radio.second->dm_path.empty()) {
+            continue;
+        }
+
+        ret_val &= m_ambiorix_datamodel->set(radio.second->dm_path, "ChipsetVendor",
+                                             radio.second->chipset_vendor);
+    }
+
     return ret_val;
 }
 
@@ -7702,6 +7729,22 @@ bool db::dm_add_radio_akm_suite_capabilities(
     return ret_val;
 }
 
+bool db::dm_set_radio_advanced_capabilities(const Agent::sRadio &radio)
+{
+    if (radio.dm_path.empty()) {
+        return true;
+    }
+
+    bool ret_val = true;
+    ret_val &= m_ambiorix_datamodel->set(
+        radio.dm_path, "TrafficSeparationCombinedFronthaul",
+        radio.advanced_capabilities.traffic_separation_combined_fronthaul);
+    ret_val &=
+        m_ambiorix_datamodel->set(radio.dm_path, "TrafficSeparationCombinedBackhaul",
+                                  radio.advanced_capabilities.traffic_separation_combined_backhaul);
+    return ret_val;
+}
+
 bool db::dm_set_radio_vbss_capabilities(const sMacAddr &radio_uid, uint8_t max_vbss,
                                         bool vbsses_subtract, bool apply_vbssid_restrictions,
                                         bool apply_vbssid_match_mask_restrictions,
@@ -7761,5 +7804,100 @@ bool db::dm_add_agent_1905_layer_security_capabilities(
     ret_val &=
         m_ambiorix_datamodel->set(ieee_1905_sec_path, "EncryptionAlgorithm", encryption_algorithm);
 
+    return ret_val;
+}
+
+bool db::dm_set_metric_reporting_policies(const Agent &agent)
+{
+    if (agent.dm_path.empty()) {
+        return true;
+    }
+
+    bool ret_val = true;
+    ret_val &= m_ambiorix_datamodel->set(agent.dm_path, "APMetricsReportingInterval",
+                                         config.link_metrics_request_interval_seconds.count());
+
+    for (const auto &radio : agent.radios) {
+        if (radio.second->dm_path.empty()) {
+            continue;
+        }
+
+        ret_val &= m_ambiorix_datamodel->set(
+            radio.second->dm_path, "STAReportingRCPIThreshold",
+            radio.second->metric_reporting_policies.sta_reporting_rcpi_threshold);
+        ret_val &= m_ambiorix_datamodel->set(
+            radio.second->dm_path, "STAReportingRCPIHysteresisMarginOverride",
+            radio.second->metric_reporting_policies
+                .sta_reporting_rcpi_hyst_margin_override_threshold);
+        ret_val &= m_ambiorix_datamodel->set(
+            radio.second->dm_path, "ChannelUtilizationReportingThreshold",
+            radio.second->metric_reporting_policies.ap_reporting_channel_utilization_threshold);
+        ret_val &= m_ambiorix_datamodel->set(
+            radio.second->dm_path, "AssociatedSTATrafficStatsInclusionPolicy",
+            radio.second->metric_reporting_policies.assoc_sta_traffic_stats_inclusion_policy);
+        ret_val &= m_ambiorix_datamodel->set(
+            radio.second->dm_path, "AssociatedSTALinkMetricsInclusionPolicy",
+            radio.second->metric_reporting_policies.assoc_sta_link_metrics_inclusion_policy);
+        ret_val &= m_ambiorix_datamodel->set(
+            radio.second->dm_path, "APMetricsWiFi6",
+            radio.second->metric_reporting_policies.assoc_wifi6_sta_status_report_inclusion_policy);
+    }
+    return ret_val;
+}
+
+bool db::dm_set_steering_policies(const Agent &agent)
+{
+    if (agent.dm_path.empty()) {
+        return true;
+    }
+
+    bool ret_val = true;
+
+    if (!m_ambiorix_datamodel->remove_all_instances(agent.dm_path +
+                                                    ".LocalSteeringDisallowedSTA")) {
+        return false;
+    }
+
+    for (auto &sta : agent.disallowed_local_steering_stations) {
+        auto disallowed_local_steering_sta_path =
+            m_ambiorix_datamodel->add_instance(agent.dm_path + ".LocalSteeringDisallowedSTA");
+        if (disallowed_local_steering_sta_path.empty()) {
+            return false;
+        }
+
+        ret_val &=
+            m_ambiorix_datamodel->set(disallowed_local_steering_sta_path, "MACAddress", sta.first);
+    }
+
+    if (!m_ambiorix_datamodel->remove_all_instances(agent.dm_path +
+                                                    ".BTMSteeringDisallowedSTAList")) {
+        return false;
+    }
+
+    for (auto &sta : agent.disallowed_btm_steering_stations) {
+        auto disallowed_btm_steering_sta_path =
+            m_ambiorix_datamodel->add_instance(agent.dm_path + ".BTMSteeringDisallowedSTAList");
+        if (disallowed_btm_steering_sta_path.empty()) {
+            return false;
+        }
+
+        ret_val &=
+            m_ambiorix_datamodel->set(disallowed_btm_steering_sta_path, "MACAddress", sta.first);
+    }
+
+    for (const auto &radio : agent.radios) {
+        if (radio.second->dm_path.empty()) {
+            continue;
+        }
+
+        ret_val &= m_ambiorix_datamodel->set(radio.second->dm_path, "SteeringPolicy",
+                                             int(radio.second->steering_policies.steering_policy));
+        ret_val &= m_ambiorix_datamodel->set(
+            radio.second->dm_path, "ChannelUtilizationThreshold",
+            radio.second->steering_policies.channel_utilization_threshold);
+        ret_val &=
+            m_ambiorix_datamodel->set(radio.second->dm_path, "RCPISteeringThreshold",
+                                      radio.second->steering_policies.rcpi_steering_threshold);
+    }
     return ret_val;
 }

@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-2-Clause-Patent
  *
- * SPDX-FileCopyrightText: 2016-2020 the prplMesh contributors (see AUTHORS.md)
+ * SPDX-FileCopyrightText: 2016-2022 the prplMesh contributors (see AUTHORS.md)
  *
  * This code is subject to the terms of the BSD+Patent license.
  * See LICENSE file for more details.
@@ -858,6 +858,164 @@ bool cfg_get_beacon_measurements_timeout(int &beacon_measurements_timeout_msec)
     }
 
     beacon_measurements_timeout_msec = retVal;
+
+    return true;
+}
+
+bool cfg_get_sta_reporting_rcpi_threshold(unsigned int &sta_reporting_rcpi_threshold)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int("sta_reporting_rcpi_threshold", &retVal) == RETURN_ERR) {
+        MAPF_ERR("Failed to read sta_reporting_rcpi_threshold parameter - setting default value");
+        return false;
+    }
+
+    if (retVal < 0) {
+        MAPF_ERR("sta_reporting_rcpi_threshold is configured to a negative value");
+        return false;
+    }
+
+    sta_reporting_rcpi_threshold = retVal;
+
+    return true;
+}
+
+bool cfg_get_sta_reporting_rcpi_hyst_margin_override_threshold(
+    unsigned int &sta_reporting_rcpi_hyst_margin_override_threshold)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int("sta_reporting_rcpi_hysteresis_margin_override_threshold",
+                                   &retVal) == RETURN_ERR) {
+        MAPF_ERR("Failed to read sta_reporting_rcpi_hysteresis_margin_override_threshold parameter "
+                 "- setting default value");
+        return false;
+    }
+
+    if (retVal < 0) {
+        MAPF_ERR("sta_reporting_rcpi_hysteresis_margin_override_threshold is configured to a "
+                 "negative value");
+        return false;
+    }
+
+    sta_reporting_rcpi_hyst_margin_override_threshold = retVal;
+
+    return true;
+}
+
+bool cfg_get_ap_reporting_channel_utilization_threshold(
+    unsigned int &ap_reporting_channel_utilization_threshold)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int("ap_reporting_channel_utilization_threshold", &retVal) ==
+        RETURN_ERR) {
+        MAPF_ERR("Failed to read ap_reporting_channel_utilization_threshold parameter - setting "
+                 "default value");
+        return false;
+    }
+
+    if (retVal < 0) {
+        MAPF_ERR("ap_reporting_channel_utilization_threshold is configured to a negative value");
+        return false;
+    }
+
+    ap_reporting_channel_utilization_threshold = retVal;
+
+    return true;
+}
+
+bool cfg_get_assoc_sta_traffic_stats_inclusion_policy(
+    bool &assoc_sta_traffic_stats_inclusion_policy)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int("assoc_sta_traffic_stats_inclusion_policy", &retVal) ==
+        RETURN_ERR) {
+        MAPF_ERR("Failed to read assoc_sta_traffic_stats_inclusion_policy parameter - setting "
+                 "default value");
+        return false;
+    }
+
+    assoc_sta_traffic_stats_inclusion_policy = retVal > 0;
+
+    return true;
+}
+
+bool cfg_get_assoc_sta_link_metrics_inclusion_policy(bool &assoc_sta_link_metrics_inclusion_policy)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int("assoc_sta_link_metrics_inclusion_policy", &retVal) ==
+        RETURN_ERR) {
+        MAPF_ERR("Failed to read assoc_sta_link_metrics_inclusion_policy parameter - setting "
+                 "default value");
+        return false;
+    }
+
+    assoc_sta_link_metrics_inclusion_policy = retVal > 0;
+
+    return true;
+}
+
+bool cfg_get_assoc_wifi6_sta_status_report_inclusion_policy(
+    bool &assoc_wifi6_sta_status_report_inclusion_policy)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int("assoc_wifi6_sta_status_report_inclusion_policy", &retVal) ==
+        RETURN_ERR) {
+        MAPF_ERR(
+            "Failed to read assoc_wifi6_sta_status_report_inclusion_policy parameter - setting "
+            "default value");
+        return false;
+    }
+
+    assoc_wifi6_sta_status_report_inclusion_policy = retVal > 0;
+
+    return true;
+}
+
+bool cfg_get_steering_policy(unsigned int &steering_policy)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int("steering_policy", &retVal) == RETURN_ERR) {
+        MAPF_ERR("Failed to read steering_policy parameter - setting default value");
+        return false;
+    }
+
+    steering_policy = retVal;
+
+    return true;
+}
+
+bool cfg_get_channel_utilization_threshold(unsigned int &channel_utilization_threshold)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int("channel_utilization_threshold", &retVal) == RETURN_ERR) {
+        MAPF_ERR("Failed to read channel_utilization_threshold parameter - setting default value");
+        return false;
+    }
+
+    if (retVal < 0) {
+        MAPF_ERR("channel_utilization_threshold is configured to a negative value");
+        return false;
+    }
+
+    channel_utilization_threshold = retVal;
+
+    return true;
+}
+
+bool cfg_get_rcpi_steering_threshold(unsigned int &rcpi_steering_threshold)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int("rcpi_steering_threshold", &retVal) == RETURN_ERR) {
+        MAPF_ERR("Failed to read rcpi_steering_threshold parameter - setting default value");
+        return false;
+    }
+
+    if (retVal < 0) {
+        MAPF_ERR("rcpi_steering_threshold is configured to a negative value");
+        return false;
+    }
+
+    rcpi_steering_threshold = retVal;
 
     return true;
 }

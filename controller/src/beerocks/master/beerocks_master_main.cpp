@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-2-Clause-Patent
  *
- * SPDX-FileCopyrightText: 2016-2020 the prplMesh contributors (see AUTHORS.md)
+ * SPDX-FileCopyrightText: 2016-2022 the prplMesh contributors (see AUTHORS.md)
  *
  * This code is subject to the terms of the BSD+Patent license.
  * See LICENSE file for more details.
@@ -456,6 +456,89 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
                    << beerocks::bpl::DEFAULT_BEACON_MEASUREMENT_TIMEOUT_MSEC;
         master_conf.optimal_path_beacon_timeout_msec =
             beerocks::bpl::DEFAULT_BEACON_MEASUREMENT_TIMEOUT_MSEC;
+    }
+
+    if (!beerocks::bpl::cfg_get_sta_reporting_rcpi_threshold(
+            master_conf.sta_reporting_rcpi_threshold)) {
+        LOG(DEBUG) << "Failed to read sta_reporting_rcpi_threshold, setting to default value: "
+                   << beerocks::bpl::DEFAULT_STA_REPORTING_RCPI_THRESHOLD;
+
+        master_conf.sta_reporting_rcpi_threshold =
+            beerocks::bpl::DEFAULT_STA_REPORTING_RCPI_THRESHOLD;
+    }
+
+    if (!beerocks::bpl::cfg_get_sta_reporting_rcpi_hyst_margin_override_threshold(
+            master_conf.sta_reporting_rcpi_hysteresis_margin_override_threshold)) {
+        LOG(DEBUG)
+            << "Failed to read sta_reporting_rcpi_hysteresis_margin_override_threshold, setting to "
+               "default value: "
+            << beerocks::bpl::DEFAULT_STA_REPORTING_RCPI_HYSTERESIS_MARGIN_OVERRIDE_THRESHOLD;
+
+        master_conf.sta_reporting_rcpi_hysteresis_margin_override_threshold =
+            beerocks::bpl::DEFAULT_STA_REPORTING_RCPI_HYSTERESIS_MARGIN_OVERRIDE_THRESHOLD;
+    }
+
+    if (!beerocks::bpl::cfg_get_ap_reporting_channel_utilization_threshold(
+            master_conf.ap_reporting_channel_utilization_threshold)) {
+        LOG(DEBUG) << "Failed to read ap_reporting_channel_utilization_threshold, setting to "
+                      "default value: "
+                   << beerocks::bpl::DEFAULT_AP_REPORTING_CHANNEL_UTILIZATION_THRESHOLD;
+
+        master_conf.ap_reporting_channel_utilization_threshold =
+            beerocks::bpl::DEFAULT_AP_REPORTING_CHANNEL_UTILIZATION_THRESHOLD;
+    }
+
+    if (!beerocks::bpl::cfg_get_assoc_sta_traffic_stats_inclusion_policy(
+            master_conf.assoc_sta_traffic_stats_inclusion_policy)) {
+        LOG(DEBUG) << "Failed to read assoc_sta_traffic_stats_inclusion_policy, setting to "
+                      "default value: "
+                   << beerocks::bpl::DEFAULT_ASSOC_STA_TRAFFIC_STATS_INCLUSION_POLICY;
+
+        master_conf.assoc_sta_traffic_stats_inclusion_policy =
+            beerocks::bpl::DEFAULT_ASSOC_STA_TRAFFIC_STATS_INCLUSION_POLICY;
+    }
+
+    if (!beerocks::bpl::cfg_get_assoc_sta_link_metrics_inclusion_policy(
+            master_conf.assoc_sta_link_metrics_inclusion_policy)) {
+        LOG(DEBUG) << "Failed to read assoc_sta_link_metrics_inclusion_policy, setting to "
+                      "default value: "
+                   << beerocks::bpl::DEFAULT_ASSOC_STA_LINK_METRICS_INCLUSION_POLICY;
+
+        master_conf.assoc_sta_link_metrics_inclusion_policy =
+            beerocks::bpl::DEFAULT_ASSOC_STA_LINK_METRICS_INCLUSION_POLICY;
+    }
+
+    if (!beerocks::bpl::cfg_get_assoc_wifi6_sta_status_report_inclusion_policy(
+            master_conf.assoc_wifi6_sta_status_report_inclusion_policy)) {
+        LOG(DEBUG) << "Failed to read assoc_wifi6_sta_status_report_inclusion_policy, setting to "
+                      "default value: "
+                   << beerocks::bpl::DEFAULT_ASSOC_WIFI6_STA_STATUS_REPORT_INCLUSION_POLICY;
+
+        master_conf.assoc_wifi6_sta_status_report_inclusion_policy =
+            beerocks::bpl::DEFAULT_ASSOC_WIFI6_STA_STATUS_REPORT_INCLUSION_POLICY;
+    }
+
+    if (!beerocks::bpl::cfg_get_steering_policy(master_conf.steering_policy)) {
+        LOG(DEBUG) << "Failed to read steering_policy, setting to default value: "
+                   << beerocks::bpl::DEFAULT_STEERING_POLICY;
+
+        master_conf.steering_policy = beerocks::bpl::DEFAULT_STEERING_POLICY;
+    }
+
+    if (!beerocks::bpl::cfg_get_channel_utilization_threshold(
+            master_conf.channel_utilization_threshold)) {
+        LOG(DEBUG) << "Failed to read channel_utilization_threshold, setting to default value: "
+                   << beerocks::bpl::DEFAULT_CHANNEL_UTILIZATION_THRESHOLD;
+
+        master_conf.channel_utilization_threshold =
+            beerocks::bpl::DEFAULT_CHANNEL_UTILIZATION_THRESHOLD;
+    }
+
+    if (!beerocks::bpl::cfg_get_rcpi_steering_threshold(master_conf.rcpi_steering_threshold)) {
+        LOG(DEBUG) << "Failed to read rcpi_steering_threshold, setting to default value: "
+                   << beerocks::bpl::DEFAULT_RCPI_STEERING_THRESHOLD;
+
+        master_conf.rcpi_steering_threshold = beerocks::bpl::DEFAULT_RCPI_STEERING_THRESHOLD;
     }
 }
 

@@ -28,6 +28,7 @@
 #include <tlvf/wfa_map/tlvApVhtCapabilities.h>
 #include <tlvf/wfa_map/tlvApWifi6Capabilities.h>
 #include <tlvf/wfa_map/tlvAssociatedStaExtendedLinkMetrics.h>
+#include <tlvf/wfa_map/tlvProfile2ApRadioAdvancedCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2CacCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2CacStatusReport.h>
 
@@ -166,6 +167,17 @@ public:
         int unsuccessful_assoc_max_reporting_rate;
         int optimal_path_rssi_timeout_msec;
         int optimal_path_beacon_timeout_msec;
+
+        // Must be applied to specific radio (PPM-2357)
+        unsigned int sta_reporting_rcpi_threshold;
+        unsigned int sta_reporting_rcpi_hysteresis_margin_override_threshold;
+        unsigned int ap_reporting_channel_utilization_threshold;
+        bool assoc_sta_traffic_stats_inclusion_policy;
+        bool assoc_sta_link_metrics_inclusion_policy;
+        bool assoc_wifi6_sta_status_report_inclusion_policy;
+        unsigned int steering_policy;
+        unsigned int channel_utilization_threshold;
+        unsigned int rcpi_steering_threshold;
     } sDbMasterConfig;
 
     typedef struct {
@@ -197,12 +209,6 @@ public:
         // Params
         bool client_optimal_path_roaming_prefer_signal_strength = false;
     } sDbMasterSettings;
-
-    typedef struct {
-        std::string manufacturer;
-        std::string serial_number;
-        std::string manufacturer_model;
-    } sDeviceInfo;
 
     /**
      * @brief Avaliable configuration parameters in NBAPI.
@@ -2154,13 +2160,24 @@ public:
     /**
      * @brief Sets Device datamodel board info parameters.
      *
-     * DM path : "Device.WiFi.DataElements.Network.Device.{i}"
+     * DM path: "Device.WiFi.DataElements.Network.Device.{i}."
      *
-     * @param agent agent whose Device object is set
-     * @param device_info struct with values of board info parameters
+     * @param agent Agent DB object.
      * @return True on success, false otherwise.
      */
-    bool dm_set_device_board_info(const Agent &agent, const sDeviceInfo &device_info);
+    bool dm_set_profile1_device_info(const Agent &agent);
+
+    /**
+     * @brief Sets Device datamodel info parameters.
+     *
+     * DM paths:
+     * "Device.WiFi.DataElements.Network.Device.{i}."
+     * "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}."
+     *
+     * @param agent Agent DB object.
+     * @return True on success, false otherwise.
+     */
+    bool dm_set_profile3_device_info(const Agent &agent);
 
     /**
      * @brief Adds to data model an instance of object AssociationEventData.
@@ -2265,6 +2282,16 @@ public:
             &backhaul_bss_selectors);
 
     /**
+     * @brief Sets advanced radio capabilities on given radio.
+     *
+     * Data model path: "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}."
+     *
+     * @param[in] radio Radio DB object.
+     * @return True on success, otherwise false.
+     */
+    bool dm_set_radio_advanced_capabilities(const Agent::sRadio &radio);
+
+    /**
      * @brief Set the VBSS Capabilities for the specified radio. 
      *  VBSS Capabilities information defined more in the EasyMesh specification.
      * 
@@ -2316,6 +2343,30 @@ public:
         const wfa_map::tlv1905LayerSecurityCapability::eOnboardingProtocol &onboard_protocol,
         const wfa_map::tlv1905LayerSecurityCapability::eMicAlgorithm &integrity_algorithm,
         const wfa_map::tlv1905LayerSecurityCapability::eEncryptionAlgorithm &encryption_algorithm);
+
+    /**
+     * @brief Sets metric reporting policy parameters.
+     *
+     * Data model paths:
+     * "Device.WiFi.DataElements.Network.Device.{i}."
+     * "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}."
+     *
+     * @param[in] agent Agent DB object.
+     * @return True on success, otherwise false.
+     */
+    bool dm_set_metric_reporting_policies(const Agent &agent);
+
+    /**
+     * @brief Sets steering policy parameters.
+     *
+     * Data model paths:
+     * "Device.WiFi.DataElements.Network.Device.{i}."
+     * "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}."
+     *
+     * @param[in] agent Agent DB object.
+     * @return True on success, otherwise false.
+     */
+    bool dm_set_steering_policies(const Agent &agent);
 
     //
     // tasks
