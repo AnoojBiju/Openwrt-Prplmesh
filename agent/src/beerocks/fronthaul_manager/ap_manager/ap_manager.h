@@ -153,6 +153,15 @@ private:
     bool add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
                  std::string &bridge, bool vbss);
 
+    /**
+     * @brief Get the interface name to be used for a VBSS, based on its BSSID.
+     *
+     * @param bssid the BSSID of the VBSS.
+     *
+     * @return The interface name for the VBSS.
+     */
+    std::string get_vbss_interface_name(const sMacAddr &bssid);
+
     // Class constants
     static constexpr uint8_t BEACON_TRANSMIT_TIME_MS = 100;
     static constexpr uint8_t BSS_STEER_IMMINENT_VALID_INT_BTT =

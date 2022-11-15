@@ -688,10 +688,7 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
 
     if (virtual_bss_creation_tlv) {
 
-        // Use the BSSID as the ifname. Since Linux interface names are
-        // limited to 15 characters, remove the colons.
-        std::string ifname = tlvf::mac_to_string(virtual_bss_creation_tlv->bssid());
-        ifname.erase(std::remove(ifname.begin(), ifname.end(), ':'), ifname.end());
+        std::string ifname = get_vbss_interface_name(virtual_bss_creation_tlv->bssid());
         std::string bridge = "br-lan";
 
         // TODO: PPM-2348 add the bridge name to BPL
@@ -802,9 +799,7 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
     auto virtual_bss_destruction_tlv = cmdu_rx.getClass<wfa_map::VirtualBssDestruction>();
     if (virtual_bss_destruction_tlv) {
 
-        // Use the same ifname as when we added the BSS:
-        std::string ifname = tlvf::mac_to_string(virtual_bss_destruction_tlv->bssid());
-        ifname.erase(std::remove(ifname.begin(), ifname.end(), ':'), ifname.end());
+        std::string ifname = get_vbss_interface_name(virtual_bss_destruction_tlv->bssid());
 
         if (!ap_wlan_hal->remove_bss(ifname)) {
             LOG(ERROR) << "Failed to remove the BSS!";
@@ -2754,4 +2749,14 @@ bool ApManager::register_ext_events_handlers(int fd)
     }
 
     return true;
+}
+
+std::string ApManager::get_vbss_interface_name(const sMacAddr &bssid)
+{
+    // Use the MAC address as the ifname. Since Linux interface names
+    // are limited to 15 characters, remove the colons.
+    std::string ifname = tlvf::mac_to_string(bssid);
+    ifname.erase(std::remove(ifname.begin(), ifname.end(), ':'), ifname.end());
+
+    return ifname;
 }
