@@ -613,7 +613,7 @@ private:
     /**
      * Broker client to exchange CMDU messages with broker server running in transport process.
      */
-    std::unique_ptr<beerocks::btl::BrokerClient> m_broker_client;
+    std::shared_ptr<beerocks::btl::BrokerClient> m_broker_client;
 };
 
 } // namespace son

@@ -11,6 +11,7 @@
 
 #include "agent_db.h"
 #include "tasks/task_pool.h"
+#include "traffic_separation.h"
 
 #include <bcl/beerocks_backport.h>
 #include <bcl/beerocks_cmdu_client.h>
@@ -313,11 +314,6 @@ private:
     std::unique_ptr<CmduServer> m_cmdu_server;
 
     /**
-     * Broker client to exchange CMDU messages with broker server running in transport process.
-     */
-    std::unique_ptr<btl::BrokerClient> m_broker_client;
-
-    /**
      * CMDU client connected to the the CMDU server running in platform manager.
      * This object is dynamically created using the CMDU client factory for the platform manager
      * provided in class constructor.
@@ -442,6 +438,11 @@ public:
             return success;
         };
     } m_radio_managers;
+
+    /**
+     * Broker client to exchange CMDU messages with broker server running in transport process.
+     */
+    std::shared_ptr<btl::BrokerClient> m_broker_client;
 
 private:
     /**

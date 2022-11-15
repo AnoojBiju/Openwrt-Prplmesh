@@ -9,6 +9,9 @@
 #ifndef _TRAFFIC_SEPARATION_H
 #define _TRAFFIC_SEPARATION_H
 
+#include <bcl/network/net_struct.h>
+#include <btl/broker_client.h>
+
 namespace beerocks {
 namespace net {
 
@@ -58,9 +61,11 @@ namespace net {
  *                  ID - The Primary VLAN or one of the Secondary VLANs.
  */
 
-class TrafficSeparation {
+class TrafficSeparation final {
 
 public:
+    TrafficSeparation(std::shared_ptr<btl::BrokerClient> broker_client);
+
     /**
      * @brief Apply traffic separation policy on the given radio interfaces, and all not
      * radio related interface (e.g bridge, LAN ports).
@@ -68,13 +73,13 @@ public:
      * @param radio_iface Radio interface to apply VLAN policy on. If not given, apply the policy
      * only on the bridge, ethernet ports and the wireless backhaul interface.
      */
-    static void apply_traffic_separation(const std::string &radio_iface = {});
+    void apply_policy(const std::string &radio_iface = {});
 
     /**
      * @brief Clear the traffic separation configuration from the Agent and the platform.
      * 
      */
-    static void traffic_seperation_configuration_clear();
+    void traffic_seperation_configuration_clear();
 
     /**
      * @brief This variable is a workaround that turn on the profile_x_disallow flag when
@@ -126,8 +131,8 @@ private:
      * is a bridge interface.
      * @param untagged_port_vid The interface VID when @a 'port_mode' is @b 'UNTAGGED_PORT'. 
      */
-    static void set_vlan_policy(const std::string &iface, ePortMode port_mode, bool is_bridge,
-                                uint16_t untagged_port_vid = 0);
+    void set_vlan_policy(const std::string &iface, ePortMode port_mode, bool is_bridge,
+                         uint16_t untagged_port_vid = 0);
 
     /**
      * @brief Reconfigure DHCP server with list of interfaces.
@@ -137,7 +142,7 @@ private:
      * @param vlans_of_bridge List of VLANs of the bridge information. 
      * @return true on success, false otherwise.
      */
-    static bool reconf_dhcp(std::list<sBridgeVlanInfo> &vlans_of_bridge);
+    bool reconf_dhcp(std::list<sBridgeVlanInfo> &vlans_of_bridge);
 
     /**
      * @brief Send DHCP request on each VLAN of the bridge and assigning the responded IP to the
@@ -147,7 +152,21 @@ private:
      * 
      * @param vlans_of_bridge List of VLANs of the bridge information. 
      */
-    static void assign_ip_to_vlan_iface(const std::list<sBridgeVlanInfo> &vlans_of_bridge);
+    void assign_ip_to_vlan_iface(const std::list<sBridgeVlanInfo> &vlans_of_bridge);
+
+    /**
+     * @brief Configure interface on the Transport.
+     *
+     * @param iface Interface to configure.
+     * @param add true for adding interface, false to remove.
+     * @param bridge Bridge name if the interface is inside a bridge, otherwise should be empty.
+     */
+    void configure_transport(const std::string &iface, bool add, const std::string &bridge);
+
+    /**
+     * Broker client to exchange CMDU messages with broker server running in transport process.
+     */
+    std::shared_ptr<btl::BrokerClient> m_broker_client;
 };
 } // namespace net
 } // namespace beerocks
