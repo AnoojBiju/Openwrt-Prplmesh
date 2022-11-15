@@ -195,6 +195,7 @@ bool slave_thread::thread_init()
             ieee1905_1::eMessageType::SERVICE_PRIORITIZATION_REQUEST_MESSAGE,
             ieee1905_1::eMessageType::DPP_CCE_INDICATION_MESSAGE,
             ieee1905_1::eMessageType::VIRTUAL_BSS_REQUEST_MESSAGE,
+            ieee1905_1::eMessageType::VIRTUAL_BSS_RESPONSE_MESSAGE,
             // Controller's messages which are used to update connectivity
             ieee1905_1::eMessageType::ACK_MESSAGE,
             ieee1905_1::eMessageType::LINK_METRIC_QUERY_MESSAGE,
