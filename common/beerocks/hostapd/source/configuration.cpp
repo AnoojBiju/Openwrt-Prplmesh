@@ -220,7 +220,7 @@ const std::string Configuration::get_vap_by_bssid(const std::string &bssid) cons
     };
     for (const auto &vap_iter : m_hostapd_config_vaps) {
         // Search the current vap if its BSSID matches the given one.
-        if (std::find_if(vap_iter.second.begin(), vap_iter.second.end(), bssid_matches) ==
+        if (std::find_if(vap_iter.second.begin(), vap_iter.second.end(), bssid_matches) !=
             vap_iter.second.end()) {
             // Found the vap we are searching for, return it's name (key in the hostapd map).
             return vap_iter.first;
