@@ -38,6 +38,7 @@
 #include <tlvf/wfa_map/tlvTunnelledSourceInfo.h>
 #include <tlvf/wfa_map/tlvVirtualBssCreation.h>
 #include <tlvf/wfa_map/tlvVirtualBssDestruction.h>
+#include <tlvf/wfa_map/tlvVirtualBssEvent.h>
 
 #include <iterator>
 #include <numeric>
@@ -695,6 +696,30 @@ void ApManager::handle_direct_encap_dpp_message(ieee1905_1::CmduMessageRx &cmdu_
 void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     LOG(DEBUG) << "Received Virtual BSS Request";
+
+    // Use a lambda to later send the response:
+    auto send_virtual_bss_response = [this](const sMacAddr &radio_uid, const sMacAddr &bssid,
+                                            bool success) {
+        auto cmdu_tx_header =
+            cmdu_tx.create(0, ieee1905_1::eMessageType::VIRTUAL_BSS_RESPONSE_MESSAGE);
+        if (!cmdu_tx_header) {
+            LOG(ERROR) << "cmdu creation of type VIRTUAL_BSS_RESPONSE_MESSAGE failed!";
+            return;
+        }
+
+        // Add the Source Info TLV
+        auto virtual_bss_event_tlv = cmdu_tx.addClass<wfa_map::VirtualBssEvent>();
+        if (!virtual_bss_event_tlv) {
+            LOG(ERROR) << "addClass wfa_map::VirtualBssEvent failed!";
+            return;
+        }
+
+        virtual_bss_event_tlv->radio_uid() = radio_uid;
+        virtual_bss_event_tlv->success()   = success;
+        virtual_bss_event_tlv->bssid()     = bssid;
+        send_cmdu(cmdu_tx);
+    };
+
     auto virtual_bss_creation_tlv = cmdu_rx.getClass<wfa_map::VirtualBssCreation>();
 
     if (virtual_bss_creation_tlv) {
@@ -714,6 +739,8 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
 
         if (!add_bss(ifname, bss_conf, bridge, true)) {
             LOG(ERROR) << "Failed to add a new BSS!";
+            send_virtual_bss_response(virtual_bss_creation_tlv->radio_uid(),
+                                      virtual_bss_creation_tlv->bssid(), false);
             return;
         }
 
@@ -722,6 +749,8 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
             auto client_capability_report = cmdu_rx.getClass<wfa_map::tlvClientCapabilityReport>();
             if (!client_capability_report) {
                 LOG(ERROR) << "Missing client capability report for an associated client!";
+                send_virtual_bss_response(virtual_bss_creation_tlv->radio_uid(),
+                                          virtual_bss_creation_tlv->bssid(), false);
                 return;
             }
             auto association_request = assoc_frame::AssocReqFrame::parse(
@@ -729,12 +758,16 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
                 client_capability_report->association_frame_length());
             if (!association_request) {
                 LOG(ERROR) << "Failed to parse the association frame!";
+                send_virtual_bss_response(virtual_bss_creation_tlv->radio_uid(),
+                                          virtual_bss_creation_tlv->bssid(), false);
                 return;
             }
 
             if (!ap_wlan_hal->add_station(ifname, virtual_bss_creation_tlv->client_mac(),
                                           *association_request)) {
                 LOG(ERROR) << "Failed to add the station!";
+                send_virtual_bss_response(virtual_bss_creation_tlv->radio_uid(),
+                                          virtual_bss_creation_tlv->bssid(), false);
                 return;
             }
 
@@ -771,6 +804,8 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
 
             if (!ap_wlan_hal->add_key(ifname, pairwise_key)) {
                 LOG(ERROR) << "Failed to add the pairwise key!";
+                send_virtual_bss_response(virtual_bss_creation_tlv->radio_uid(),
+                                          virtual_bss_creation_tlv->bssid(), false);
                 return;
             }
 
@@ -798,12 +833,17 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
 
             if (!ap_wlan_hal->add_key(ifname, group_key)) {
                 LOG(ERROR) << "Failed to add the group key!";
+                send_virtual_bss_response(virtual_bss_creation_tlv->radio_uid(),
+                                          virtual_bss_creation_tlv->bssid(), false);
                 return;
             }
         }
 
         // TODO: PPM-2349: add support for the client capabilities
 
+        // If we get here, we handled the creation successfully.
+        send_virtual_bss_response(virtual_bss_creation_tlv->radio_uid(),
+                                  virtual_bss_creation_tlv->bssid(), true);
         return;
     }
 
@@ -814,10 +854,17 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
 
         if (!ap_wlan_hal->remove_bss(ifname)) {
             LOG(ERROR) << "Failed to remove the BSS!";
+            send_virtual_bss_response(virtual_bss_destruction_tlv->radio_uid(),
+                                      virtual_bss_destruction_tlv->bssid(), false);
             return;
         }
 
         // TODO: PPM-2350: add support for disassociating the client
+
+        // If we get here, we handled the destruction successfully.
+        send_virtual_bss_response(virtual_bss_destruction_tlv->radio_uid(),
+                                  virtual_bss_destruction_tlv->bssid(), true);
+        return;
     }
 
     LOG(ERROR) << "No virtual BSS creation nor destruction TLV found in Virtual BSS request!";
