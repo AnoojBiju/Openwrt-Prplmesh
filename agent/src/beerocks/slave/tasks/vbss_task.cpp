@@ -24,6 +24,10 @@ bool VbssTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t iface_in
         handle_security_context_request(cmdu_rx);
         return true;
     }
+    case ieee1905_1::eMessageType::VIRTUAL_BSS_RESPONSE_MESSAGE: {
+        handle_virtual_bss_response(cmdu_rx);
+        return true;
+    }
     default: {
         // Message was not handled, therefore return false.
         return false;
@@ -63,6 +67,13 @@ void VbssTask::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
         LOG(ERROR) << "Failed to forward message to ap_manager!";
         return;
     }
+}
+
+void VbssTask::handle_virtual_bss_response(ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    LOG(DEBUG) << "Received Virtual BSS Response";
+    // CMDU received from ap_manager
+    m_btl_ctx.forward_cmdu_to_controller(cmdu_rx);
 }
 
 bool VbssTask::handle_security_context_request(ieee1905_1::CmduMessageRx &cmdu_rx)
