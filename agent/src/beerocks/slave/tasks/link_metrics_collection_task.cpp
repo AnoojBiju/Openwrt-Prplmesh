@@ -765,6 +765,14 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
         for (size_t i = 0; i < ap_metrics_tlv->estimated_service_info_field_length(); i++) {
             metric.estimated_service_info_field.push_back(info[i]);
         }
+
+        // Check the BSSID to which STA is connected before adding it (to avoid duplication)
+        auto radio = db->get_radio_by_mac(metric.bssid, AgentDB::eMacType::BSSID);
+        if (!radio) {
+            LOG(ERROR) << "radio containing BSS " << metric.bssid << " not found";
+            continue;
+        }
+
         std::vector<sStaTrafficStats> traffic_stats_response;
 
         for (auto &sta_traffic : cmdu_rx.getClassList<wfa_map::tlvAssociatedStaTrafficStats>()) {
@@ -773,11 +781,15 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
                 continue;
             }
 
-            traffic_stats_response.push_back(
-                {sta_traffic->sta_mac(), sta_traffic->byte_sent(), sta_traffic->byte_received(),
-                 sta_traffic->packets_sent(), sta_traffic->packets_received(),
-                 sta_traffic->tx_packets_error(), sta_traffic->rx_packets_error(),
-                 sta_traffic->retransmission_count()});
+            auto assoc_client = radio->associated_clients.find(sta_traffic->sta_mac());
+            if (assoc_client != radio->associated_clients.end() &&
+                assoc_client->second.bssid == metric.bssid) {
+                traffic_stats_response.push_back(
+                    {sta_traffic->sta_mac(), sta_traffic->byte_sent(), sta_traffic->byte_received(),
+                     sta_traffic->packets_sent(), sta_traffic->packets_received(),
+                     sta_traffic->tx_packets_error(), sta_traffic->rx_packets_error(),
+                     sta_traffic->retransmission_count()});
+            }
         }
 
         std::vector<sStaLinkMetrics> link_metrics_response;
@@ -791,8 +803,10 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
                 continue;
             }
             auto response_list = sta_link_metric->bssid_info_list(0);
-            link_metrics_response.push_back(
-                {sta_link_metric->sta_mac(), std::get<1>(response_list)});
+            if (std::get<1>(response_list).bssid == metric.bssid) {
+                link_metrics_response.push_back(
+                    {sta_link_metric->sta_mac(), std::get<1>(response_list)});
+            }
         }
 
         std::vector<sStaQosCtrlParams> qos_ctrl_response;
@@ -802,17 +816,21 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
                 LOG(ERROR) << "Failed getClassList<wfa_map::tlvAssociatedWiFi6StaStatusReport>";
                 return;
             }
-            uint8_t tid_list_length = sta_qos_ctrl_params->tid_queue_size_list_length();
+            auto assoc_client = radio->associated_clients.find(sta_qos_ctrl_params->sta_mac());
+            if (assoc_client != radio->associated_clients.end() &&
+                assoc_client->second.bssid == metric.bssid) {
+                uint8_t tid_list_length = sta_qos_ctrl_params->tid_queue_size_list_length();
 
-            sStaQosCtrlParams sta_qos_params;
-            sta_qos_params.sta_mac = sta_qos_ctrl_params->sta_mac();
-            for (uint8_t tid_index = 0; tid_index < tid_list_length; tid_index++) {
-                auto tid_tuple        = sta_qos_ctrl_params->tid_queue_size_list(tid_index);
-                auto &qos_ctrl_params = std::get<1>(tid_tuple);
-                sta_qos_params.tid_queue_size[tid_index] = qos_ctrl_params.queue_size;
+                sStaQosCtrlParams sta_qos_params;
+                sta_qos_params.sta_mac = sta_qos_ctrl_params->sta_mac();
+                for (uint8_t tid_index = 0; tid_index < tid_list_length; tid_index++) {
+                    auto tid_tuple        = sta_qos_ctrl_params->tid_queue_size_list(tid_index);
+                    auto &qos_ctrl_params = std::get<1>(tid_tuple);
+                    sta_qos_params.tid_queue_size[tid_index] = qos_ctrl_params.queue_size;
+                }
+
+                qos_ctrl_response.push_back({sta_qos_params});
             }
-
-            qos_ctrl_response.push_back({sta_qos_params});
         }
 
         // Fill a response vector
