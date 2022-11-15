@@ -596,19 +596,44 @@ bool sta_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int buf
         event_queue_push(event);
 
     } break;
+
+    /* Events about connection between dwpald and hostapd*/
     case Event::Interface_Connected_OK:
     case Event::Interface_Reconnected_OK: {
-        LOG(INFO) << "INTERFACE_RECONNECTED_OK or INTERFACE_CONNECTED_OK from intf " << ifname;
-        auto ret = update_conn_status(ifname);
-        LOG(INFO) << "Status update return value " << ret;
+        std::vector<int> vap_id = {};
+        LOG(INFO) << "INTERFACE_RECONNECTED_OK or INTERFACE_CONNECTED_OK from " << ifname;
+        if (update_conn_status(ifname, vap_id)) {
+            LOG(INFO) << "dwpald connection status updated successfully";
+        } else {
+            LOG(INFO) << "dwpald connection status update failed";
+        }
+
+        for (auto &vap_it : vap_id) {
+            auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sHOSTAP_ENABLED_NOTIFICATION));
+            auto msg      = reinterpret_cast<sHOSTAP_ENABLED_NOTIFICATION *>(msg_buff.get());
+            LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+            msg->vap_id = vap_it;
+            event_queue_push(event, msg_buff);
+        }
         break;
     }
     case Event::Interface_Disconnected: {
-        LOG(INFO) << "INTERFACE_DISCONNECTED from intf " << ifname;
+        LOG(INFO) << "INTERFACE_DISCONNECTED from interface " << ifname;
         for (auto &con : conn_state) {
             // Update interface connection status for vap to false
+            auto iface_ids = beerocks::utils::get_ids_from_iface_string(con.first);
+            if (iface_ids.vap_id == beerocks::IFACE_RADIO_ID) {
+                LOG(DEBUG) << "Ignore INTERFACE_Disconnected on radio";
+                continue;
+            }
             conn_state[con.first] = false;
-            LOG(INFO) << "updated connection status for intf " << con.first << " with false";
+            LOG(INFO) << "updated connection status for vap " << con.first << " with false";
+
+            auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sHOSTAP_ENABLED_NOTIFICATION));
+            auto msg      = reinterpret_cast<sHOSTAP_ENABLED_NOTIFICATION *>(msg_buff.get());
+            LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+            msg->vap_id = iface_ids.vap_id;
+            event_queue_push(Event::Interface_Disconnected, msg_buff);
         }
         break;
     }
