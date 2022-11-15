@@ -330,6 +330,11 @@ public:
         return (operating_class == 128 || operating_class == 129 || operating_class == 130);
     }
 
+    /**
+     * @brief Get the interface name to be used for a VBSS, based on its BSSID.
+     */
+    static std::string get_vbss_interface_name(const sMacAddr &bssid);
+
 private:
     enum eAntennaFactor {
         ANT_FACTOR_1X1 = 0,

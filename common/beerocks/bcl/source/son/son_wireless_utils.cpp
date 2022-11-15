@@ -1640,3 +1640,11 @@ uint16_t wireless_utils::get_vht_mcs_set(uint8_t vht_mcs, uint8_t vht_ss)
     }
     return vht_mcs_set;
 }
+
+std::string wireless_utils::get_vbss_interface_name(const sMacAddr &bssid) {
+    // Use the MAC address as the ifname. Since Linux interface names
+    // are limited to 15 characters, remove the colons.
+    std::string ifname = tlvf::mac_to_string(bssid);
+    ifname.erase(std::remove(ifname.begin(), ifname.end(), ':'), ifname.end());
+    return ifname;
+}
