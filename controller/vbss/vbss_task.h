@@ -13,25 +13,6 @@
 #include "../src/beerocks/master/tasks/task.h"
 #include "vbss_actions.h"
 
-namespace vbss {
-struct sAPRadioVBSSCapabilities {
-    uint8_t max_vbss;
-    bool vbsses_subtract;
-    bool apply_vbssid_restrict;
-    bool apply_vbssid_match_mask_restrict;
-    bool apply_fixed_bits_restrict;
-    sMacAddr fixed_bits_mask;
-    sMacAddr fixed_bits_value;
-
-    sAPRadioVBSSCapabilities(sMacAddr ruid, sAPRadioVBSSCapabilities &caps)
-        : sAPRadioVBSSCapabilities(caps)
-    {
-    }
-    sAPRadioVBSSCapabilities() {}
-};
-
-} // end namespace vbss
-
 class vbss_task : public son::task {
 
 public:

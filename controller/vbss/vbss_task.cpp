@@ -299,9 +299,14 @@ bool vbss_task::handle_ap_radio_vbss_caps_msg(const sMacAddr &src_mac,
 
         ruid_caps_map.add(ap_vbss_caps_tlv->radio_uid(), ap_radio_caps);
     }
-
-    return true;
+    auto controller_ctx = m_database.get_controller_ctx();
+    if(controller_ctx == nullptr){
+        LOG(ERROR) << "controller ctx is a nullptr, failing";
+        return false;
+    }
+    return controller_ctx->send_agent_capabilities_to_vbss_manager(src_mac, ruid_caps_map);
 }
+
 bool vbss_task::handle_move_response_msg(const sMacAddr &src_mac,
                                          ieee1905_1::CmduMessageRx &cmdu_rx, bool is_cancelled)
 {

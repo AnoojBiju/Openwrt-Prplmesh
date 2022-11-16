@@ -18,6 +18,7 @@
 #include "tasks/network_health_check_task.h"
 #include "tasks/statistics_polling_task.h"
 #include "tasks/task_pool.h"
+#include "vbss_manager.h"
 
 #include "../../../common/beerocks/bwl/include/bwl/base_wlan_hal.h"
 #include <bcl/beerocks_cmdu_server.h>
@@ -180,6 +181,9 @@ public:
     bool trigger_vbss_move(const sMacAddr &connected_ruid, const sMacAddr &dest_ruid,
                            const sMacAddr &vbssid, const sMacAddr &client_mac,
                            const std::string &new_bss_ssid, const std::string &new_bss_pass);
+
+    bool send_agent_capabilities_to_vbss_manager(const sMacAddr &agent_mac,
+                                                 const beerocks::mac_map<vbss::sAPRadioVBSSCapabilities> &ruid_cap_map);
 
     /**
      * @brief Function that starts all mandatory periodic tasks on controller start-up
@@ -594,6 +598,8 @@ private:
      * Broker client to exchange CMDU messages with broker server running in transport process.
      */
     std::unique_ptr<beerocks::btl::BrokerClient> m_broker_client;
+
+    std::unique_ptr<vbss::VbssManager> m_vbss_manager;
 };
 
 } // namespace son

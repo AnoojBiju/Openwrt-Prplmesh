@@ -98,6 +98,9 @@ public:
 
         bool is_acs_enabled = false;
 
+        /** VBSS Capable radio willing to participate */
+        bool vbss_radio = false;
+
         class s_ap_stats_params {
         public:
             int active_sta_count                 = 0;
@@ -181,6 +184,19 @@ public:
 
         /** BSSes configured/reported on this radio. */
         beerocks::mac_map<sBss> bsses;
+
+        /** Pre-populated with available bss id's this radio can support */
+        std::unordered_map<sMacAddr, bool> vbss_ids_used;
+
+        /** Next 3 values are related to the values in the vbss capabilities TLV */
+        bool vbss_subtract = false;
+
+        uint8_t max_vbss = 0;
+
+        uint8_t current_vbss_used = 0;
+
+        /** Is there restrictions for the creations of BSSIDs for the VBSS */
+        bool has_vbss_restrictions = false;
     };
 
     struct sBackhaul {

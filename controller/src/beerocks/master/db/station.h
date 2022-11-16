@@ -122,6 +122,8 @@ public:
 
     friend class ::son::db;
 
+    void set_vsta_status(const bool &is_vsta){m_is_vsta = is_vsta;}
+    bool get_vsta_status(){return m_is_vsta;}
 private:
     int m_client_locating_task_id_new_connection   = -1;
     int m_client_locating_task_id_exist_connection = -1;
@@ -131,6 +133,8 @@ private:
 
     bool m_handoff     = false;
     bool m_ire_handoff = false;
+
+    bool m_is_vsta = false;
 
     class beacon_measurement;
     std::unordered_map<std::string, std::shared_ptr<beacon_measurement>> m_beacon_measurements;
