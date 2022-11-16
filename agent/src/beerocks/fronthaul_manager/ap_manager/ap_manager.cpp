@@ -841,6 +841,10 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
 
         // TODO: PPM-2349: add support for the client capabilities
 
+        // refresh the vaps info.
+        // TODO: re-visit after PPM-1923 is fixed.
+        handle_aps_update_list();
+
         // If we get here, we handled the creation successfully.
         send_virtual_bss_response(virtual_bss_creation_tlv->radio_uid(),
                                   virtual_bss_creation_tlv->bssid(), true);
@@ -860,6 +864,9 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
         }
 
         // TODO: PPM-2350: add support for disassociating the client
+
+        // refresh the vaps info.
+        handle_aps_update_list();
 
         // If we get here, we handled the destruction successfully.
         send_virtual_bss_response(virtual_bss_destruction_tlv->radio_uid(),
