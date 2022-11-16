@@ -2478,6 +2478,11 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
 
+        //send a request to gather the newest stats from agents
+        send_unassociated_sta_link_metrics_query_message(cmdu_tx, database);
+
+        //TODO: do we need to wait for the "RESPONSE" so that our stats report contains the latest data ??
+        // or this is enough because the pooling of stats will be done frequenty?
         auto response = message_com::create_vs_message<
             beerocks_message::cACTION_BML_GET_UNASSOCIATED_STATIONS_STATS_RESPONSE>(cmdu_tx);
         if (!response) {
@@ -2525,36 +2530,61 @@ void son_management::send_unassociated_sta_link_metrics_query_message(
         LOG(ERROR) << "Failed building message UNASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE!";
         return;
     }
-    auto unassociated_sta_query = cmdu_tx.addClass<wfa_map::tlvUnassociatedStaLinkMetricsQuery>();
+
+    using list_station_per_agent = std::list<
+        std::shared_ptr<wfa_map::tlvUnassociatedStaLinkMetricsQuery::sUnassociatedStationInfo>>;
+
+    std::unordered_map<sMacAddr, list_station_per_agent>
+        agents_stations_map; //mapping all the stations for every single agent
 
     auto un_stations_db = database.get_unassociated_stations();
-
     if (un_stations_db.size()) {
-
-        unassociated_sta_query->alloc_un_stations_list(un_stations_db.size());
-
-        size_t iter(0);
         for (auto &station : un_stations_db) {
-            wfa_map::tlvUnassociatedStaLinkMetricsQuery::sUnassociatedStationInfo params;
-            params.sta_mac = station.first;
-            params.channel = station.second->get_channel();
-            std::get<1>(unassociated_sta_query->un_stations_list(iter)) = params;
-            LOG(DEBUG) << "sending sta_link_metrics_query_message containing:  \n";
             for (const auto &agent : station.second->get_agents()) {
-                LOG(DEBUG) << " unassociated station with mac_address: "
-                           << tlvf::mac_to_string(params.sta_mac) << " and channel "
-                           << params.channel
-                           << " to agent with mac_addr: " << tlvf::mac_to_string(agent.first);
-                son_actions::send_cmdu_to_agent(agent.first, cmdu_tx, database);
+                auto params = std::make_shared<
+                    wfa_map::tlvUnassociatedStaLinkMetricsQuery::sUnassociatedStationInfo>();
+                params->sta_mac          = station.first;
+                params->channel          = station.second->get_channel();
+                auto agent_stations_list = agents_stations_map.find(agent.first);
+                if (agent_stations_list != agents_stations_map.end()) {
+                    agent_stations_list->second.emplace_back(params);
+
+                } else {
+                    auto agent_stations = agents_stations_map.insert(
+                        std::make_pair(agent.first, list_station_per_agent()));
+                    agent_stations.first->second.emplace_back(params);
+                }
             }
         }
-        iter++;
     } else { // this is a command to remove all monitored stations
         for (const auto &agent : database.get_all_connected_agents()) {
+            auto remove_all_stations_query =
+                cmdu_tx.addClass<wfa_map::tlvUnassociatedStaLinkMetricsQuery>();
             son_actions::send_cmdu_to_agent(agent->al_mac, cmdu_tx, database);
             LOG(DEBUG) << "removing  non_associated stations from  agent with mac_address "
                        << tlvf::mac_to_string(agent->al_mac);
             return;
         }
+    }
+
+    //now sending a different telemetry for every agent with its specific stations
+    for (auto &agent : agents_stations_map) {
+        auto unassociated_sta_query =
+            cmdu_tx.addClass<wfa_map::tlvUnassociatedStaLinkMetricsQuery>();
+        if (agent.second.size() == 0) {
+            continue; // no stations so nothing to do
+        }
+        unassociated_sta_query->alloc_un_stations_list(agent.second.size());
+        size_t count(0);
+        LOG(DEBUG) << " Filling a new tlvUnassociatedStaLinkMetricsQuery to agent: "
+                   << tlvf::mac_to_string(agent.first) << " with ";
+        for (auto station_info : agent.second) {
+            std::get<1>(unassociated_sta_query->un_stations_list(count)) = *station_info;
+            LOG(DEBUG) << "station with mac_add " << tlvf::mac_to_string(station_info->sta_mac)
+                       << " and channel " << station_info->channel;
+            count++;
+        }
+
+        son_actions::send_cmdu_to_agent(agent.first, cmdu_tx, database);
     }
 }

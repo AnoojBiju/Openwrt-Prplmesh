@@ -1191,14 +1191,14 @@ int bml_internal::process_cmdu_header(std::shared_ptr<beerocks_header> beerocks_
                     << "addClass cACTION_BML_GET_UNASSOCIATED_STATIONS_STATS_RESPONSE failed";
                 return (-BML_RET_OP_FAILED);
             }
-
+            m_un_stations_stats.clear();
+            m_un_stations_stats += " Unassociated stations stats report: \n";
             size_t stats_size = response->sta_list_length();
             if (stats_size == 0) {
                 LOG(DEBUG) << "cACTION_BML_GET_UNASSOCIATED_STATIONS_STATS_RESPONSE is empty! ";
-                break;
+                m_un_stations_stats += " NO Unassociated Stations is being monitored !! \n";
             }
-            m_un_stations_stats.clear();
-            m_un_stations_stats += " Unassociated stations stats report: \n";
+
             for (size_t count = 0; count < stats_size; count++) {
                 auto data = std::get<1>(response->sta_list(count));
                 m_un_stations_stats +=
@@ -2355,7 +2355,6 @@ int bml_internal::get_un_stations_stats(char *stats_results, unsigned int *stats
         LOG(ERROR) << "GET_UNASSOCIATED_STATION_STATS_REQUEST request failed";
         return (-BML_RET_OP_FAILED);
     }
-
     // Return results
     if (m_un_stations_stats.size() >= *stats_results_size) {
         LOG(ERROR) << " size of buffer to get un_stations stats is not big enough, needed: "

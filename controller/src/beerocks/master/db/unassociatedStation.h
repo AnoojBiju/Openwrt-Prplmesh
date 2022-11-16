@@ -54,6 +54,24 @@ public:
             return false;
         }
     }
+
+    /**
+     * @brief get radio mac_addr monitoring the station
+     *
+     * @param agent_mac_addr agent mac_addr
+     * @param radio_mac_addr 
+     * @return true if agent found, false otherwise.
+     */
+    bool get_radio_mac(const sMacAddr &agent_mac_addr, sMacAddr &radio_mac_addr) const
+    {
+        auto entry = m_agents.find(agent_mac_addr);
+        if (entry != m_agents.end()) {
+            radio_mac_addr = entry->second;
+            return true;
+        } else {
+            return false;
+        }
+    }
     /**
      * @brief add agent to be monitoring the station
      *
@@ -87,6 +105,11 @@ public:
         }
     }
 
+    /**
+     * @brief get agents monitoring this specific station
+     *
+     * @return list of <mac_agent, mac_radio_inside_agent>
+     */
     const std::unordered_map<sMacAddr, sMacAddr> &get_agents() const { return m_agents; };
 
 private:

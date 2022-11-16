@@ -2565,6 +2565,17 @@ int cli_bml::add_unassociated_station_stats_caller(int numOfArgs)
                    << numOfArgs << " provided!";
         return -1;
     }
+    if (!beerocks::net::network_utils::is_valid_mac(args.stringArgs[0])) {
+        LOG(ERROR) << "entered station mac_addr " << args.stringArgs[0]
+                   << "is not a valid mac_address!";
+        return -1;
+    }
+
+    if (!std::all_of(args.stringArgs[1].begin(), args.stringArgs[1].end(), ::isdigit)) {
+        LOG(ERROR) << args.stringArgs[1] << "is not a valid number! ";
+        return -1;
+    }
+
     if (numOfArgs == 2) {
         return add_unassociated_station_stats(args.stringArgs[0], args.stringArgs[1],
                                               std::string());
@@ -2589,11 +2600,13 @@ int cli_bml::remove_unassociated_station_stats_caller(int numOfArgs)
     if (!beerocks::net::network_utils::is_valid_mac(args.stringArgs[0])) {
         LOG(ERROR) << "entered station mac_addr " << args.stringArgs[0]
                    << "is not a valid mac_address!";
+        return -1;
     }
     if (numOfArgs == 2) {
         if (!beerocks::net::network_utils::is_valid_mac(args.stringArgs[1])) {
             LOG(ERROR) << "entered agent mac_addr " << args.stringArgs[1]
                        << "is not a valid mac_address!";
+            return -1;
         }
         return remove_unassociated_station_stats(args.stringArgs[0], args.stringArgs[1]);
     } else {

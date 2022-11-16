@@ -2575,7 +2575,7 @@ public:
     /**
      * @brief Removes a single station from the unassociated_stations list
      * @param mac_address of the station to be removed
-     * @param agent mac_address, if equals to ZERO_MAC_STRING all connected agents will be chosed
+     * @param agent mac_address, if equals to ZERO_MAC_STRING all connected agents will be selected
      * 
      * @return True if success, false if the station does not exists or any other issue
      */
