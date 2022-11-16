@@ -1,0 +1,28 @@
+#
+---
+_namespace: wfa_map
+
+tlvQoSManagementDescriptor:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_QOS_MANAGEMENT_DESCRIPTOR
+  length: uint16_t
+  qmid:
+    _type: uint16_t
+    _comment: An identifier that uniquely identifies a QoS Management rule
+  bssid: 
+    _type: sMacAddr
+    _comment: BSSID of BSS for which this descriptor applies
+  client_mac: 
+    _type: sMacAddr
+    _comment: MAC address of STA for which this descriptor applies
+  descriptor_element:
+    _type: uint8_t
+    _length: []
+    _comment: |
+      One of:
+        - MSCS Descriptor element (as described in 9.4.2.243 of IEEE 802.11-2020) or
+        - SCS Descriptor element (as described in 9.4.2.121 of IEEE 802.11-2020) or
+        - QoS Management element (as described in 5.3 of QoS Management Specification R2)

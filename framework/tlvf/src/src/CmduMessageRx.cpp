@@ -107,6 +107,7 @@
 #include <tlvf/wfa_map/tlvProfile2SteeringRequest.h>
 #include <tlvf/wfa_map/tlvProfile2TrafficSeparationPolicy.h>
 #include <tlvf/wfa_map/tlvProfile2UnsuccessfulAssociationPolicy.h>
+#include <tlvf/wfa_map/tlvQoSManagementDescriptor.h>
 #include <tlvf/wfa_map/tlvQoSManagementPolicy.h>
 #include <tlvf/wfa_map/tlvRadioOperationRestriction.h>
 #include <tlvf/wfa_map/tlvSearchedService.h>
@@ -557,6 +558,9 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     }
     case (wfa_map::eTlvTypeMap::TLV_AP_WIFI_6_CAPABILITIES): {
         return msg.addClass<wfa_map::tlvApWifi6Capabilities>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_QOS_MANAGEMENT_DESCRIPTOR): {
+        return msg.addClass<wfa_map::tlvQoSManagementDescriptor>();
     }
     }
     LOG(FATAL) << "Unknown TLV type: " << unsigned(tlv_type);
