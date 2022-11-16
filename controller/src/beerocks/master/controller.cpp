@@ -3074,8 +3074,9 @@ bool Controller::handle_cmdu_control_message(
                   << vaps_list;
 
         for (auto vap : vaps_info) {
-            if (!database.has_node(tlvf::mac_from_string(vap.second.mac))) {
-                database.add_virtual_node(tlvf::mac_from_string(vap.second.mac), radio_mac);
+            if (!database.update_vap(radio_mac, tlvf::mac_from_string(vap.second.mac), vap.second.ssid, vap.second.backhaul_vap)) {
+                LOG(ERROR) << "Failed to update VAP for radio " << radio_mac << " BSS " << vap.second.mac
+                           << " SSID " << vap.second.ssid;
             }
         }
 
