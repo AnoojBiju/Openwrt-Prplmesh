@@ -864,6 +864,22 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
         // TODO: PPM-2349: add support for the client capabilities
 
         // If we get here, we handled the creation successfully.
+
+        // refresh the vaps info:
+        auto notification = message_com::create_vs_message<
+            beerocks_message::cACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION>(cmdu_tx);
+        if (notification == nullptr) {
+            LOG(ERROR) << "Failed building message!";
+            return;
+        }
+
+        copy_vaps_info(ap_wlan_hal, notification->params().vaps);
+        LOG(DEBUG) << "Sending Vap List update to controller";
+        if (!send_cmdu(cmdu_tx)) {
+            LOG(ERROR) << "Failed sending cmdu!";
+            return;
+        }
+
         send_virtual_bss_response(virtual_bss_creation_tlv->radio_uid(), true, virtual_bss_creation_tlv->bssid());
         return;
     }
@@ -882,6 +898,22 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
         // TODO: PPM-2350: add support for diassociating the client
 
         // If we get here, we handled the destruction successfully.
+
+        // refresh the vaps info:
+        auto notification = message_com::create_vs_message<
+            beerocks_message::cACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION>(cmdu_tx);
+        if (notification == nullptr) {
+            LOG(ERROR) << "Failed building message!";
+            return;
+        }
+
+        copy_vaps_info(ap_wlan_hal, notification->params().vaps);
+        LOG(DEBUG) << "Sending Vap List update to controller";
+        if (!send_cmdu(cmdu_tx)) {
+            LOG(ERROR) << "Failed sending cmdu!";
+            return;
+        }
+
         send_virtual_bss_response(virtual_bss_destruction_tlv->radio_uid(), true, virtual_bss_destruction_tlv->bssid());
         return;
     }
