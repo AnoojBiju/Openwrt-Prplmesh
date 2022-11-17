@@ -708,17 +708,19 @@ amxd_status_t trigger_vbss_move(amxd_object_t *object, amxd_function_t *func, am
 
     // Read Radio object
 
-    amxd_object_t *radio_object = NULL;
-    radio_object                = amxd_object_get_parent(object);
+    LOG(INFO) << "vbssid_str is: : " << vbssid_str;
+    amxd_object_t *radio_object = nullptr;
+    radio_object                = amxd_object_get_parent(amxd_object_get_parent(object));
 
-    if (radio_object == NULL) {
-        LOG(ERROR) << "Failed retrieving the Radio grandparent of the VBSSClient object";
+    if (!radio_object) {
+        LOG(ERROR) << "Failed retrieving the Radio grandparent of the BSS object";
         return amxd_status_object_not_found;
     }
 
     amxd_object_get_param(radio_object, "ID", &value);
-    std::string connected_ruid_str = amxc_var_constcast(cstring_t, &value);
 
+    std::string connected_ruid_str = amxc_var_constcast(cstring_t, &value);
+    LOG(INFO) << "connected_ruid_str is: " << connected_ruid_str;
     if (connected_ruid_str.empty()) {
         LOG(ERROR) << "connected_ruid_str is empty";
         return amxd_status_parameter_not_found;
