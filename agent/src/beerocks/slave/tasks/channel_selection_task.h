@@ -258,6 +258,14 @@ private:
     // above request in handle_vs_channels_list_response()
     bool m_send_preference_report_after_cac_completion_event = false;
 
+    /**
+     * CSA event from the radio will trigger SWITCH_CHANNEL_NOTIFICATION_EVENT to the
+     * switch_channel task which results in sending ACTION_BACKHAUL_CHANNELS_LIST_REQUEST.
+     * Set this flag to true to send preference report when handling the response for the
+     * above request in handle_vs_channels_list_response()
+     */
+    bool m_send_preference_report_after_csa_finished_event = false;
+
     /* Class members */
 
     sPendingChannelSelection m_pending_selection;

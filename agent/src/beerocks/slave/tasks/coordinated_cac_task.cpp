@@ -191,7 +191,7 @@ void CacFsm::config_fsm()
                 m_ifname = switch_channel_report->switch_channel_notification->ifname;
 
                 send_preference_report();
-                return true;
+                return false;
             })
 
         /////////////////////////////////////////
