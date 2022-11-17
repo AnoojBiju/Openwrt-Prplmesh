@@ -2009,7 +2009,6 @@ class cACTION_BML_WIFI_CREDENTIALS_UPDATE_REQUEST : public BaseClass
         static eActionOp_BML get_action_op(){
             return (eActionOp_BML)(ACTION_BML_WIFI_CREDENTIALS_UPDATE_REQUEST);
         }
-        sMacAddr& al_mac();
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -2017,7 +2016,6 @@ class cACTION_BML_WIFI_CREDENTIALS_UPDATE_REQUEST : public BaseClass
     private:
         bool init();
         eActionOp_BML* m_action_op = nullptr;
-        sMacAddr* m_al_mac = nullptr;
 };
 
 class cACTION_BML_WIFI_CREDENTIALS_UPDATE_RESPONSE : public BaseClass
