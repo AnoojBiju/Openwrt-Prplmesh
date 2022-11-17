@@ -75,7 +75,7 @@ public:
 
     virtual bool channel_scan_abort() override;
     virtual bool set_estimated_service_parameters(uint8_t *esp_info_field) override;
-    bool sta_unassoc_rssi_measurement(std::unordered_map<std::string, uint> &new_list) final;
+    bool sta_unassoc_rssi_measurement(std::unordered_map<std::string, uint32_t> &new_list) final;
 
     // Protected methods:
 protected:

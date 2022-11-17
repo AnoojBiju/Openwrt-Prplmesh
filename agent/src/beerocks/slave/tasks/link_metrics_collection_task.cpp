@@ -790,8 +790,8 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
 
         auto bssid_tlv = ap_metrics_tlv->bssid();
         auto mac       = std::find_if(
-                  m_ap_metric_query.begin(), m_ap_metric_query.end(),
-                  [&bssid_tlv](sApMetricsQuery const &query) { return query.bssid == bssid_tlv; });
+            m_ap_metric_query.begin(), m_ap_metric_query.end(),
+            [&bssid_tlv](sApMetricsQuery const &query) { return query.bssid == bssid_tlv; });
 
         if (mac == m_ap_metric_query.end()) {
             LOG(ERROR) << "Failed search in ap_metric_query for bssid: " << bssid_tlv

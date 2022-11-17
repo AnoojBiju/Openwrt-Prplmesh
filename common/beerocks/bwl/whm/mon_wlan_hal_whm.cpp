@@ -242,7 +242,8 @@ bool mon_wlan_hal_whm::set_estimated_service_parameters(uint8_t *esp_info_field)
 
 /*  will get the unassociated stations stats from Ambirorix
 */
-bool mon_wlan_hal_whm::sta_unassoc_rssi_measurement(std::unordered_map<std::string, uint> &new_list)
+bool mon_wlan_hal_whm::sta_unassoc_rssi_measurement(
+    std::unordered_map<std::string, uint32_t> &new_list)
 {
     /*
         Example of NonAssociatedDevice object:

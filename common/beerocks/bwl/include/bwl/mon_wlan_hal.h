@@ -130,7 +130,8 @@ public:
      *
      * @return true on success or false on error.
      */
-    virtual bool sta_unassoc_rssi_measurement(std::unordered_map<std::string, uint> &new_list) = 0;
+    virtual bool
+    sta_unassoc_rssi_measurement(std::unordered_map<std::string, uint32_t> &new_list) = 0;
 };
 
 // mon HAL factory types

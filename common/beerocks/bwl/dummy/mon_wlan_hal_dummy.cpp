@@ -462,7 +462,7 @@ bool mon_wlan_hal_dummy::set_estimated_service_parameters(uint8_t *esp_info_fiel
 }
 
 bool mon_wlan_hal_dummy::sta_unassoc_rssi_measurement(
-    std::unordered_map<std::string, uint> &new_list)
+    std::unordered_map<std::string, uint32_t> &new_list)
 {
     // Temporary, just for simulation!
 

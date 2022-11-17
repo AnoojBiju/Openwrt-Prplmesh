@@ -1196,7 +1196,7 @@ int bml_internal::process_cmdu_header(std::shared_ptr<beerocks_header> beerocks_
             size_t stats_size = response->sta_list_length();
             if (stats_size == 0) {
                 LOG(DEBUG) << "cACTION_BML_GET_UNASSOCIATED_STATIONS_STATS_RESPONSE is empty! ";
-                m_un_stations_stats += " NO Unassociated Stations is being monitored !! \n";
+                m_un_stations_stats += " Unassociated stations list is empty!! \n";
             }
 
             for (size_t count = 0; count < stats_size; count++) {
