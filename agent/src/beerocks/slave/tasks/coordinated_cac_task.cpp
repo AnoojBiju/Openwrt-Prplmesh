@@ -182,6 +182,18 @@ void CacFsm::config_fsm()
         // nothing to terminate
         .on(fsm_event::CAC_TERMINATION_REQUEST, fsm_state::IDLE)
 
+        // send preference report when SWITCH_CHANNEL_REPORT event is received in IDLE state
+        .on(fsm_event::SWITCH_CHANNEL_REPORT, {fsm_state::IDLE},
+            [&](TTransition &transition, const void *args) -> bool {
+                auto switch_channel_report = *(
+                    static_cast<std::shared_ptr<sSwitchChannelReport> *>(const_cast<void *>(args)));
+
+                m_ifname = switch_channel_report->switch_channel_notification->ifname;
+
+                send_preference_report();
+                return true;
+            })
+
         /////////////////////////////////////////
         //// WAIT_FOR_SWITCH_CHANNEL_REPORT ///
         /////////////////////////////////////////
