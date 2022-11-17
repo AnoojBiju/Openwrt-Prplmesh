@@ -693,47 +693,28 @@ amxd_status_t trigger_vbss_move(amxd_object_t *object, amxd_function_t *func, am
         return amxd_status_invalid_value;
     }
 
-    amxc_var_t value;
-    amxc_var_init(&value);
-
-    // Read BSS object
-
-    amxd_object_get_param(object, "BSSID", &value);
-    std::string vbssid_str = amxc_var_constcast(cstring_t, &value);
-
-    if (vbssid_str.empty()) {
-        LOG(ERROR) << "vbssid_str is empty";
-        return amxd_status_parameter_not_found;
+    auto station = g_database->get_station(client_mac);
+    if (!station) {
+        LOG(ERROR) << "Station not found in the database!";
+        return amxd_status_invalid_value;
     }
 
-    // Read Radio object
-
-    amxd_object_t *radio_object = NULL;
-    radio_object                = amxd_object_get_parent(object);
-
-    if (radio_object == NULL) {
-        LOG(ERROR) << "Failed retrieving the Radio grandparent of the VBSSClient object";
-        return amxd_status_object_not_found;
-    }
-
-    amxd_object_get_param(radio_object, "ID", &value);
-    std::string connected_ruid_str = amxc_var_constcast(cstring_t, &value);
-
-    if (connected_ruid_str.empty()) {
-        LOG(ERROR) << "connected_ruid_str is empty";
-        return amxd_status_parameter_not_found;
+    auto bss = station->get_bss();
+    if (!bss) {
+        LOG(ERROR) << "Failed to move VBSS via NB API! The station is not currently connected!";
+        return amxd_status_invalid_value;
     }
 
     // Send Request
 
-    sMacAddr connected_ruid = tlvf::mac_from_string(connected_ruid_str);
-    sMacAddr vbssid         = tlvf::mac_from_string(vbssid_str);
+    sMacAddr connected_ruid = bss->radio.radio_uid;
+    sMacAddr vbssid         = bss->bssid;
 
     if (!controller_ctx->trigger_vbss_move(connected_ruid, dest_ruid, vbssid, client_mac, ssid,
                                            password)) {
-        LOG(ERROR) << "Failed to trigger VBSS Move from NBAPI for VBSSID: " << vbssid_str
-                   << ", on current Radio: " << connected_ruid_str
-                   << ", for client: " << client_mac_str << ", moving to Radio: " << dest_ruid_str;
+        LOG(ERROR) << "Failed to trigger VBSS Move from NBAPI for VBSSID: " << vbssid
+                   << ", on current Radio: " << connected_ruid << ", for client: " << client_mac_str
+                   << ", moving to Radio: " << dest_ruid_str;
         return amxd_status_unknown_error;
     }
 
