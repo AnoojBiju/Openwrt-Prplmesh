@@ -171,6 +171,24 @@ void base_wlan_hal_whm::subscribe_to_sta_events(const std::string &iface_name)
     m_ambiorix_cl->subscribe_to_object_event(wifi_ad_path, event_callback, filter);
 }
 
+void base_wlan_hal_whm::subscribe_to_ep_wps_events(const std::string &iface_name)
+{
+    // subscribe to the WiFi.EndPoint.iface_name.WPS.PairingInProgress
+    std::string wifi_ep_wps_path        = search_path_ap_by_iface(iface_name) + "WPS.";
+    sAmxClEventCallback *event_callback = new sAmxClEventCallback();
+    event_callback->event_type          = {AMX_CL_WPS_PAIRING_DONE};
+    event_callback->callback_fn         = [](amxc_var_t *event_data, void *context) -> void {
+        if (!event_data) {
+            return;
+        }
+        base_wlan_hal_whm *hal = (static_cast<base_wlan_hal_whm *>(context));
+        hal->process_ep_wps_event(hal->get_iface_name(), event_data);
+    };
+    event_callback->context = this;
+    std::string filter      = "path matches '" + wifi_ep_wps_path + "'";
+    m_ambiorix_cl->subscribe_to_object_event(m_radio_path, event_callback, filter);
+}
+
 bool base_wlan_hal_whm::process_radio_event(const std::string &interface, const amxc_var_t *data)
 {
     return true;
@@ -188,6 +206,11 @@ bool base_wlan_hal_whm::process_ep_event(const std::string &interface, const amx
 
 bool base_wlan_hal_whm::process_sta_event(const std::string &interface, const std::string &sta_mac,
                                           const amxc_var_t *data)
+{
+    return true;
+}
+
+bool base_wlan_hal_whm::process_ep_wps_event(const std::string &interface, const amxc_var_t *data)
 {
     return true;
 }

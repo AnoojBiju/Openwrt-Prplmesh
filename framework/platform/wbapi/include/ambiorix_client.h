@@ -30,6 +30,7 @@ constexpr char AMX_CL_OBJECT_REMOVED_EVT[]   = "dm:object-removed";
 constexpr char AMX_CL_INSTANCE_ADDED_EVT[]   = "dm:instance-added";
 constexpr char AMX_CL_INSTANCE_CHANGED_EVT[] = "dm:instance-removed";
 constexpr char AMX_CL_PERIODIC_INFORM_EVT[]  = "dm:periodic-inform";
+constexpr char AMX_CL_WPS_PAIRING_DONE[]     = "pairingDone";
 
 using AmxClEventCb = std::function<void(amxc_var_t *event_data, void *context)>;
 

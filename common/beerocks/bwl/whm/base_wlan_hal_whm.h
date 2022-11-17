@@ -88,11 +88,13 @@ protected:
     void subscribe_to_ap_events(const std::string &iface_name);
     void subscribe_to_ep_events(const std::string &iface_name);
     void subscribe_to_sta_events(const std::string &iface_name);
+    void subscribe_to_ep_wps_events(const std::string &iface_name);
     virtual bool process_radio_event(const std::string &interface, const amxc_var_t *data);
     virtual bool process_ap_event(const std::string &interface, const amxc_var_t *data);
     virtual bool process_ep_event(const std::string &interface, const amxc_var_t *data);
     virtual bool process_sta_event(const std::string &interface, const std::string &sta_mac,
                                    const amxc_var_t *data);
+    virtual bool process_ep_wps_event(const std::string &interface, const amxc_var_t *data);
 
     // Private data-members:
 private:

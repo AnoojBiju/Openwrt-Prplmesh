@@ -69,6 +69,8 @@ protected:
         return base_wlan_hal::event_queue_push(int(event), data);
     }
     virtual bool process_ep_event(const std::string &interface, const amxc_var_t *data) override;
+    virtual bool process_ep_wps_event(const std::string &interface,
+                                      const amxc_var_t *data) override;
 
 private:
     bool process_whm_event(sta_wlan_hal::Event event, const amxc_var_t *data);

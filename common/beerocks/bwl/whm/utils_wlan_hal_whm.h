@@ -26,7 +26,8 @@ public:
     /**
      * @brief Converts BWL to pwhm security string
      */
-    static std::string security_val(WiFiSec sec);
+    static std::string security_bwl_to_pwhm(WiFiSec sec);
+    static WiFiSec security_pwhm_to_bwl(const std::string &sec);
 };
 
 } // namespace whm

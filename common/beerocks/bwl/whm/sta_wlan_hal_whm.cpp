@@ -22,13 +22,27 @@ sta_wlan_hal_whm::sta_wlan_hal_whm(const std::string &iface_name, hal_event_cb_t
       base_wlan_hal_whm(bwl::HALType::Station, iface_name, callback, hal_conf)
 {
     subscribe_to_ep_events(iface_name);
+    subscribe_to_ep_wps_events(iface_name);
 }
 
 sta_wlan_hal_whm::~sta_wlan_hal_whm() { sta_wlan_hal_whm::detach(); }
 
 bool sta_wlan_hal_whm::start_wps_pbc()
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    amxc_var_t args;
+    amxc_var_t result;
+    amxc_var_init(&args);
+    amxc_var_init(&result);
+    std::string endpoint_path = search_path_ep_by_iface(get_iface_name());
+    std::string wps_path      = endpoint_path + "WPS.";
+    bool ret                  = m_ambiorix_cl->call(wps_path, "pushButton", &args, &result);
+    amxc_var_clean(&args);
+    amxc_var_clean(&result);
+
+    if (!ret) {
+        LOG(ERROR) << "start_wps_pbc() failed!";
+        return false;
+    }
     return true;
 }
 
@@ -51,7 +65,7 @@ bool sta_wlan_hal_whm::connect(const std::string &ssid, const std::string &pass,
 {
     LOG(DEBUG) << "Connect interface " << get_iface_name() << " to SSID = " << ssid
                << ", BSSID = " << bssid << ", Channel = " << int(channel)
-               << ", Sec = " << utils_wlan_hal_whm::security_val(sec)
+               << ", Sec = " << utils_wlan_hal_whm::security_bwl_to_pwhm(sec)
                << ", mem_only_psk=" << int(mem_only_psk);
 
     if (ssid.empty() || sec == WiFiSec::Invalid) {
@@ -252,7 +266,7 @@ bool sta_wlan_hal_whm::set_profile_params(int profile_id, const std::string &ssi
     std::string profile_security_path = profile_path + "Security.";
     amxc_var_init(&params);
     amxc_var_set_type(&params, AMXC_VAR_ID_HTABLE);
-    std::string mode_enabled = utils_wlan_hal_whm::security_val(sec);
+    std::string mode_enabled = utils_wlan_hal_whm::security_bwl_to_pwhm(sec);
     amxc_var_add_new_key_cstring_t(&params, "ModeEnabled", mode_enabled.c_str());
     ret = m_ambiorix_cl->update_object(profile_security_path, &params);
     if (!ret) {
@@ -370,9 +384,46 @@ bool sta_wlan_hal_whm::process_ep_event(const std::string &interface, const amxc
     return true;
 }
 
+bool sta_wlan_hal_whm::process_ep_wps_event(const std::string &interface, const amxc_var_t *data)
+{
+    const char *reason = GETP_CHAR(data, "parameters.reason");
+    if (!reason) {
+        return false;
+    }
+    sta_wlan_hal::Event event = sta_wlan_hal::Event::WPSFailure;
+    if (std::string(reason) == "Success") {
+        event = sta_wlan_hal::Event::WPSSuccess;
+    } else if (std::string(reason) == "Timeout") {
+        event = sta_wlan_hal::Event::WPSTimeout;
+    }
+    process_whm_event(event, data);
+
+    return true;
+}
+
 bool sta_wlan_hal_whm::process_whm_event(sta_wlan_hal::Event event, const amxc_var_t *data)
 {
     switch (event) {
+    case Event::WPSSuccess: {
+        const char *ssid = GETP_CHAR(data, "SSID");
+        const char *key  = GETP_CHAR(data, "KeyPassPhrase");
+        const char *mode = GETP_CHAR(data, "securitymode");
+        if (!ssid || !key || !mode) {
+            return false;
+        }
+        WiFiSec sec = utils_wlan_hal_whm::security_pwhm_to_bwl(mode);
+        LOG(DEBUG) << "WPS Success!";
+        connect(std::string(ssid), std::string(key), sec, false, "", 0, false);
+    } break;
+
+    case Event::WPSFailure: {
+        LOG(DEBUG) << "WPS Failure!";
+    } break;
+
+    case Event::WPSTimeout: {
+        LOG(DEBUG) << "WPS Timeout!";
+    } break;
+
     // Client Connected
     case Event::Connected: {
 

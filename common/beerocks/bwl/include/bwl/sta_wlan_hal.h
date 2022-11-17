@@ -31,6 +31,9 @@ public:
         Terminating,
         ScanResults,
         ChannelSwitch,
+        WPSSuccess,
+        WPSFailure,
+        WPSTimeout,
 
         STA_Unassoc_RSSI
     };
