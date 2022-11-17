@@ -2837,7 +2837,7 @@ int bml_internal::clear_wifi_credentials(const sMacAddr &al_mac)
     return BML_RET_OK;
 }
 
-int bml_internal::update_wifi_credentials(const sMacAddr &al_mac)
+int bml_internal::update_wifi_credentials()
 {
     beerocks::promise<bool> prmWiFiCredentialsUpdate;
     int iOpTimeout = 60000; // Default timeout
@@ -2875,9 +2875,7 @@ int bml_internal::update_wifi_credentials(const sMacAddr &al_mac)
         return (-BML_RET_OP_FAILED);
     }
 
-    update_request->al_mac() = al_mac;
-
-    LOG(TRACE) << "Sending update message to master for AL-MAC: " << al_mac;
+    LOG(TRACE) << "Sending update message to master.";
 
     if (!message_com::send_cmdu(m_sockMaster, cmdu_tx)) {
         LOG(ERROR) << "Failed sending update message!";
