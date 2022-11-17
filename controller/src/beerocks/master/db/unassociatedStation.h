@@ -31,7 +31,7 @@ public:
         std::string time_stamp;
     };
 
-    void update_stats(Stats &new_stats) { m_stats = new_stats; };
+    void update_stats(const Stats &new_stats) { m_stats = new_stats; };
     const Stats get_stats() const { return m_stats; };
     void set_channel(uint channel_in) { m_channel = channel_in; };
     const sMacAddr &get_mac_Address() const { return m_mac_address; };

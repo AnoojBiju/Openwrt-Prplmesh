@@ -297,8 +297,7 @@ bool mon_wlan_hal_whm::sta_unassoc_rssi_measurement(
                        << " TimeStamp(seconds): " << (uint32_t)time.sec;
             new_list.erase(mac_address_amx); // consumed!
         } else {                             // -->controller is not interested on it any more
-            const char *mac_address_amx = GET_CHAR(device, "MACAddress");
-            uint32_t index              = GET_UINT32(device, "index");
+            uint32_t index = GET_UINT32(device, "index");
             amx_un_stations_to_be_removed.insert(
                 std::make_pair(std::string(mac_address_amx), index));
         }

@@ -6519,6 +6519,7 @@ bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, cons
     ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "FronthaulUse", bss->fronthaul);
     ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "BackhaulUse", bss->backhaul);
     ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "IsVBSS", is_vbss);
+    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "ByteCounterUnits", bss->byte_counter_units);
 
     /*
         Set value for LastChange variable - it is creation time, when someone will

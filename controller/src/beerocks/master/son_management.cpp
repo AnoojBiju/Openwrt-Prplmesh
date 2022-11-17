@@ -2558,8 +2558,7 @@ void son_management::send_unassociated_sta_link_metrics_query_message(
         }
     } else { // this is a command to remove all monitored stations
         for (const auto &agent : database.get_all_connected_agents()) {
-            auto remove_all_stations_query =
-                cmdu_tx.addClass<wfa_map::tlvUnassociatedStaLinkMetricsQuery>();
+            cmdu_tx.addClass<wfa_map::tlvUnassociatedStaLinkMetricsQuery>();
             son_actions::send_cmdu_to_agent(agent->al_mac, cmdu_tx, database);
             LOG(DEBUG) << "removing  non_associated stations from  agent with mac_address "
                        << tlvf::mac_to_string(agent->al_mac);

@@ -2360,7 +2360,7 @@ int bml_internal::get_un_stations_stats(char *stats_results, unsigned int *stats
         LOG(ERROR) << " size of buffer to get un_stations stats is not big enough, needed: "
                    << m_un_stations_stats.size() << " allocated: " << *stats_results_size
                    << ". Report will be non complete";
-        std::string warning = "Warning, report is INCOMPLETE! \n";
+        LOG(WARNING) << "Warning, unassociated stations stats report is INCOMPLETE! \n";
         m_un_stations_stats.resize(*stats_results_size - 1);
     } else {
         *stats_results_size = m_un_stations_stats.size() + 1;
