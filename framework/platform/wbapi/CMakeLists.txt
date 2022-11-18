@@ -14,6 +14,7 @@ set(MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
 
 list(APPEND wbapi_sources ${MODULE_PATH}/ambiorix_variant.cpp)
 list(APPEND wbapi_sources ${MODULE_PATH}/ambiorix_connection.cpp)
+list(APPEND wbapi_sources ${MODULE_PATH}/ambiorix_connection_manager.cpp)
 list(APPEND wbapi_sources ${MODULE_PATH}/ambiorix_client.cpp)
 list(APPEND wbapi_sources ${MODULE_PATH}/wbapi_utils.cpp)
 
