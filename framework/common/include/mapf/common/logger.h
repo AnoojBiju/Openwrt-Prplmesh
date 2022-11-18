@@ -67,7 +67,7 @@ public:
         std::string level_ = "DEBUG", file_path_ = "logs.log";
         bool write_to_syslog_ = false, write_to_console_ = true, write_to_file_ = false;
         size_t max_file_size_ = 1024, log_flush_threshold_ = 100;
-        const char *kMessageFormat = "%datetime{%H:%m:%s} [%proc] [%level] %fbase[%line]: %msg";
+        const char *kMessageFormat = "%datetime{%H:%m:%s:%g} [%proc] [%level] %fbase[%line]: %msg";
         void SetValuesFromJson(struct json_object *jlogger, const std::string &logger_name);
     };
 
