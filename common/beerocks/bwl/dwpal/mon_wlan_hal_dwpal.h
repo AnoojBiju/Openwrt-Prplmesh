@@ -73,6 +73,8 @@ public:
     virtual bool channel_scan_abort() override;
     virtual bool set_estimated_service_parameters(uint8_t *esp_info_field) override;
 
+    bool sta_unassoc_rssi_measurement(std::unordered_map<std::string, uint32_t> &new_list) final;
+
     // Protected methods:
 protected:
     virtual bool process_dwpal_event(char *buffer, int bufLen, const std::string &opcode) override;
