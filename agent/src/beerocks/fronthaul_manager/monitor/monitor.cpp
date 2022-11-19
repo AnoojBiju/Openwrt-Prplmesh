@@ -2270,13 +2270,26 @@ void Monitor::update_vaps_in_db()
             auto iface_name = radio_vaps.at(vap_id).bss;
 
             auto curr_vap = radio_vaps.at(vap_id);
+            std::string vap_bridge_iface_mac;
+            std::string vap_bridge_iface_ip;
+            auto vap_bridge_iface =
+                beerocks::net::network_utils::linux_iface_get_host_bridge(iface_name);
+            if (vap_bridge_iface == bridge_iface) {
+                vap_bridge_iface_mac = bridge_iface_mac;
+                vap_bridge_iface_ip  = bridge_iface_ip;
+            } else if (vap_bridge_iface != "") {
+                beerocks::net::network_utils::linux_iface_get_mac(vap_bridge_iface,
+                                                                  vap_bridge_iface_mac);
+                beerocks::net::network_utils::linux_iface_get_ip(vap_bridge_iface,
+                                                                 vap_bridge_iface_ip);
+            }
 
             auto vap_node = mon_db.vap_add(iface_name, vap_id);
             vap_node->set_mac(curr_vap.mac);
 
-            vap_node->set_bridge_iface(bridge_iface);
-            vap_node->set_bridge_mac(bridge_iface_mac);
-            vap_node->set_bridge_ipv4(bridge_iface_ip);
+            vap_node->set_bridge_iface(vap_bridge_iface);
+            vap_node->set_bridge_mac(vap_bridge_iface_mac);
+            vap_node->set_bridge_ipv4(vap_bridge_iface_ip);
 
         } else if (mon_db.vap_get_by_id(vap_id)) { // vap does not exist in HAL but is in local DB
             mon_db.vap_remove(vap_id);
