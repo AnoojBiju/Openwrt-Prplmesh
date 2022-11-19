@@ -1530,17 +1530,8 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
         break;
     }
     case beerocks_message::ACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_REQUEST: {
-        auto notification = message_com::create_vs_message<
-            beerocks_message::cACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION>(cmdu_tx);
-        if (notification == nullptr) {
-            LOG(ERROR) << "Failed building message!";
-            return;
-        }
-
-        copy_vaps_info(ap_wlan_hal, notification->params().vaps);
-        LOG(DEBUG) << "Sending Vap List update to controller";
-        if (!send_cmdu(cmdu_tx)) {
-            LOG(ERROR) << "Failed sending cmdu!";
+        if (!handle_aps_update_list()) {
+            LOG(ERROR) << "Failed notifying vaps list update!";
             return;
         }
 
@@ -1682,6 +1673,10 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
         auto msg = static_cast<bwl::sHOSTAP_ENABLED_NOTIFICATION *>(data);
         handle_ap_enabled(msg->vap_id);
 
+    } break;
+
+    case Event::APS_update_list: {
+        handle_aps_update_list();
     } break;
 
     // ACS/CSA Completed
@@ -2446,6 +2441,24 @@ void ApManager::send_heartbeat()
     }
 
     send_cmdu(cmdu_tx);
+}
+
+bool ApManager::handle_aps_update_list()
+{
+    auto notification = message_com::create_vs_message<
+        beerocks_message::cACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION>(cmdu_tx);
+    if (notification == nullptr) {
+        LOG(ERROR) << "Failed building message!";
+        return false;
+    }
+
+    copy_vaps_info(ap_wlan_hal, notification->params().vaps);
+    LOG(DEBUG) << "Sending Vap List update to controller";
+    if (!send_cmdu(cmdu_tx)) {
+        LOG(ERROR) << "Failed sending cmdu!";
+        return false;
+    }
+    return true;
 }
 
 bool ApManager::handle_ap_enabled(int vap_id)

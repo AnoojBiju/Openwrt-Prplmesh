@@ -71,7 +71,8 @@ public:
 
         Interface_Connected_OK,
         Interface_Reconnected_OK,
-        Interface_Disconnected
+        Interface_Disconnected,
+        APS_update_list,
     };
 
     // Public methods

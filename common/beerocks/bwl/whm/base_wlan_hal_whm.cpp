@@ -119,6 +119,10 @@ void base_wlan_hal_whm::subscribe_to_ap_events()
             }
             if (key == "Status") {
                 auto status = value->get<std::string>();
+                if (status == "Enabled" && !hal->has_enabled_vap()) {
+                    hal->process_radio_event(hal->get_iface_name(), "AccessPointNumberOfEntries",
+                                             AmbiorixVariant::copy(1).get());
+                }
                 hal->process_ap_event(vap_it->first, key, value.get());
                 vap_it->second.status = status;
             } else {
@@ -403,7 +407,9 @@ bool base_wlan_hal_whm::refresh_vaps_info(int id)
     get_radio_vaps(curr_vaps);
 
     AmbiorixVariant empty_vap;
+    bool detectNewVaps = false;
     std::vector<std::string> newEnabledVaps;
+    bool wasActive   = has_enabled_vap();
     int nb_curr_vaps = curr_vaps.size();
     while (++vap_id < std::max(int(beerocks::IFACE_VAP_ID_MAX), nb_curr_vaps)) {
         if (id == beerocks::IFACE_RADIO_ID || id == vap_id) {
@@ -416,6 +422,7 @@ bool base_wlan_hal_whm::refresh_vaps_info(int id)
                 ret |= refresh_vap_info(vap_id, curr_vaps.at(vap_id));
                 bool isKnown   = (saved_vaps.find(vap_id) != saved_vaps.end());
                 bool isEnabled = isKnown && check_enabled_vap(saved_vaps[vap_id].bss);
+                detectNewVaps |= ((isKnown != wasKnown) || (!wasActive && isEnabled));
                 if (!wasEnabled && isEnabled) {
                     newEnabledVaps.push_back(saved_vaps[vap_id].bss);
                 }
@@ -426,6 +433,10 @@ bool base_wlan_hal_whm::refresh_vaps_info(int id)
         }
     };
 
+    if (detectNewVaps) {
+        process_radio_event(get_iface_name(), "AccessPointNumberOfEntries",
+                            AmbiorixVariant::copy(nb_curr_vaps).get());
+    }
     if (!newEnabledVaps.empty()) {
         auto status = AmbiorixVariant::copy("Enabled");
         for (const auto &bss : newEnabledVaps) {
