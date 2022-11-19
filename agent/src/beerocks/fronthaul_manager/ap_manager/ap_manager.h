@@ -123,6 +123,7 @@ private:
     bool hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr);
     void handle_hostapd_attached();
     bool handle_ap_enabled(int vap_id);
+    bool handle_aps_update_list();
     void fill_cs_params(beerocks_message::sApChannelSwitch &params);
     bool create_ap_wlan_hal();
     void send_heartbeat();
