@@ -70,8 +70,6 @@ protected:
     }
 
 private:
-    bool process_whm_event(sta_wlan_hal::Event event, const amxc_var_t *data);
-
     struct Endpoint {
         std::string bssid;
         std::string ssid;

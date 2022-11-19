@@ -7,24 +7,16 @@
  */
 #include "ambiorix_client.h"
 
+#include "ambiorix_connection_manager.h"
+
 namespace beerocks {
 namespace wbapi {
 
 bool AmbiorixClient::connect(const std::string &amxb_backend, const std::string &bus_uri)
 {
-    int ret = 0;
-
-    // Load the backend .so file
-    ret = amxb_be_load(amxb_backend.c_str());
-    if (ret != 0) {
-        LOG(ERROR) << "Failed to load the " << amxb_backend.c_str() << " backend, ret: " << ret;
-        return false;
-    }
-
-    // Connect to the bus
-    ret = amxb_connect(&m_bus_ctx, bus_uri.c_str());
-    if (ret != 0) {
-        LOG(ERROR) << "Failed to connect to the " << bus_uri.c_str() << " bus, ret: " << ret;
+    m_connection = AmbiorixConnectionManager::get_connection(amxb_backend, bus_uri);
+    if (!m_connection) {
+        LOG(ERROR) << "Failed to connect to the " << bus_uri.c_str() << " bus";
         return false;
     }
 
@@ -33,81 +25,76 @@ bool AmbiorixClient::connect(const std::string &amxb_backend, const std::string 
     return true;
 }
 
-amxc_var_t *AmbiorixClient::get_object(const std::string &object_path, const int32_t depth)
+AmbiorixVariantSmartPtr AmbiorixClient::get_object(const std::string &object_path,
+                                                   const int32_t depth)
 {
-    amxc_var_t data;
-    amxc_var_init(&data);
-    amxc_var_t *result = nullptr;
-
-    int ret = amxb_get(m_bus_ctx, object_path.c_str(), depth, &data, AMX_CL_DEF_TIMEOUT);
-    if (ret == AMXB_STATUS_OK) {
-        result = GETI_ARG(&data, 0);
-        if (depth == 0) {
-            result = amxc_var_get_first(result);
-        }
-        amxc_var_take_it(result);
-    } else {
-        LOG(DEBUG) << "Request path [" << object_path << "] failed ret: " << std::to_string(ret);
+    if (!m_connection) {
+        LOG(ERROR) << "Client is not connected to bus";
+        return AmbiorixVariantSmartPtr{};
     }
-    amxc_var_clean(&data);
-
-    return result;
+    return m_connection->get_object(object_path, depth, true);
 }
 
-bool AmbiorixClient::update_object(const std::string &object_path, amxc_var_t *object)
+AmbiorixVariantSmartPtr AmbiorixClient::get_param(const std::string &obj_path,
+                                                  const std::string &param_name)
 {
-    amxc_var_t data;
-    amxc_var_init(&data);
-    int ret = amxb_set(m_bus_ctx, object_path.c_str(), object, &data, AMX_CL_DEF_TIMEOUT);
-    amxc_var_clean(&data);
-    return (ret == AMXB_STATUS_OK);
+    if (!m_connection) {
+        LOG(ERROR) << "Client is not connected to bus";
+        return AmbiorixVariantSmartPtr{};
+    }
+    return m_connection->get_param(obj_path, param_name);
 }
 
-bool AmbiorixClient::add_instance(const std::string &object_path, amxc_var_t *parameter,
+bool AmbiorixClient::resolve_path_multi(const std::string &search_path,
+                                        std::vector<std::string> &absolute_path_list)
+{
+    if (!m_connection) {
+        LOG(ERROR) << "Client is not connected to bus";
+        return false;
+    }
+    return m_connection->resolve_path(search_path, absolute_path_list);
+}
+
+bool AmbiorixClient::resolve_path(const std::string &search_path, std::string &absolute_path)
+{
+    std::vector<std::string> absolute_path_list;
+    if (resolve_path_multi(search_path, absolute_path_list) && !absolute_path_list.empty()) {
+        absolute_path = absolute_path_list[0];
+        return true;
+    }
+    absolute_path = "";
+    return false;
+}
+
+bool AmbiorixClient::update_object(const std::string &object_path, AmbiorixVariant &object_data)
+{
+    return (m_connection && m_connection->update_object(object_path, object_data));
+}
+
+bool AmbiorixClient::add_instance(const std::string &object_path, AmbiorixVariant &object_data,
                                   int &instance_id)
 {
-    amxc_var_t data;
-    amxc_var_init(&data);
-    bool success = false;
-    if (amxb_add(m_bus_ctx, object_path.c_str(), 0, NULL, parameter, &data, AMX_CL_DEF_TIMEOUT) ==
-        AMXB_STATUS_OK) {
-        const char *path = GETP_CHAR(&data, "0.path");
-        if (path) {
-            std::string instance_path   = std::string(path).substr(0, std::string(path).size() - 1);
-            std::size_t found           = instance_path.find_last_of(AMX_CL_OBJ_DELIMITER);
-            std::string instance_id_str = instance_path.substr(found + 1);
-            instance_id                 = std::stoi(instance_id_str);
-            success                     = true;
-        }
-    }
-    amxc_var_clean(&data);
-    return success;
+    return (m_connection && m_connection->add_instance(object_path, object_data, instance_id));
 }
 
 bool AmbiorixClient::remove_instance(const std::string &object_path, int instance_id)
 {
-    amxc_var_t data;
-    amxc_var_init(&data);
-    int ret =
-        amxb_del(m_bus_ctx, object_path.c_str(), instance_id, NULL, &data, AMX_CL_DEF_TIMEOUT);
-    amxc_var_clean(&data);
-    return (ret == AMXB_STATUS_OK);
+    return (m_connection && m_connection->remove_instance(object_path, instance_id));
 }
 
-bool AmbiorixClient::call(const std::string &object_path, const char *method, amxc_var_t *args,
-                          amxc_var_t *result)
+bool AmbiorixClient::call(const std::string &object_path, const char *method, AmbiorixVariant &args,
+                          AmbiorixVariant &result)
 {
-    int ret = amxb_call(m_bus_ctx, object_path.c_str(), method, args, result, AMX_CL_DEF_TIMEOUT);
-    return (ret == AMXB_STATUS_OK);
+    return (m_connection && m_connection->call(object_path, method, args, result));
 }
 
-int AmbiorixClient::get_fd() { return amxb_get_fd(m_bus_ctx); }
+int AmbiorixClient::get_fd() { return (m_connection ? m_connection->get_fd() : -1); }
 
-int AmbiorixClient::get_signal_fd() { return amxp_signal_fd(); }
+int AmbiorixClient::get_signal_fd() { return (m_connection ? m_connection->get_signal_fd() : -1); }
 
-int AmbiorixClient::read() { return amxb_read(m_bus_ctx); }
+int AmbiorixClient::read() { return (m_connection ? m_connection->read() : -1); }
 
-int AmbiorixClient::read_signal() { return amxp_signal_read(); }
+int AmbiorixClient::read_signal() { return (m_connection ? m_connection->read_signal() : -1); }
 
 bool AmbiorixClient::init_event_loop(std::shared_ptr<EventLoop> event_loop)
 {
@@ -123,7 +110,10 @@ bool AmbiorixClient::init_event_loop(std::shared_ptr<EventLoop> event_loop)
         .name = "ambiorix_events",
         .on_read =
             [&](int fd, EventLoop &loop) {
-                amxb_read(m_bus_ctx);
+                auto &cnx = AmbiorixConnectionManager::fetch_connection(fd);
+                if (cnx) {
+                    cnx->read();
+                }
                 return true;
             },
 
@@ -139,6 +129,9 @@ bool AmbiorixClient::init_event_loop(std::shared_ptr<EventLoop> event_loop)
             },
     };
 
+    if (event_loop->remove_handlers(ambiorix_fd)) {
+        LOG(WARNING) << "Replacing old handlers for the Amx fd " << std::to_string(ambiorix_fd);
+    }
     if (!event_loop->register_handlers(ambiorix_fd, handlers)) {
         LOG(ERROR) << "Couldn't register event handlers for the Ambiorix fd in the event loop.";
         return false;
@@ -164,7 +157,10 @@ bool AmbiorixClient::init_signal_loop(std::shared_ptr<EventLoop> event_loop)
         .name = "ambiorix_signal",
         .on_read =
             [&](int fd, EventLoop &loop) {
-                amxp_signal_read();
+                auto &cnx = AmbiorixConnectionManager::fetch_connection(fd);
+                if (cnx) {
+                    cnx->read_signal();
+                }
                 return true;
             },
         // Not implemented
@@ -179,6 +175,9 @@ bool AmbiorixClient::init_signal_loop(std::shared_ptr<EventLoop> event_loop)
             },
     };
 
+    if (event_loop->remove_handlers(ambiorix_fd)) {
+        LOG(WARNING) << "Replacing old handlers for the Amx sig fd " << std::to_string(ambiorix_fd);
+    }
     if (!event_loop->register_handlers(ambiorix_fd, handlers)) {
         LOG(ERROR) << "Couldn't register event handlers for the Ambiorix signals in the "
                       "event loop.";
@@ -233,33 +232,30 @@ bool AmbiorixClient::remove_signal_loop(std::shared_ptr<EventLoop> event_loop)
     return true;
 }
 
-bool AmbiorixClient::subscribe_to_object_event(const std::string &object_path,
-                                               sAmxClEventCallback *event_callback)
+bool AmbiorixClient::subscribe_to_object_event(
+    const std::string &object_path, std::shared_ptr<sAmbiorixEventHandler> &event_handler,
+    const std::string &filter)
 {
-    auto sub_cb = [](const char *const sig_name, const amxc_var_t *const data,
-                     void *const priv) -> void {
-        sAmxClEventCallback *event_callback = static_cast<sAmxClEventCallback *>(priv);
-        if (event_callback) {
-            const char *notification = GET_CHAR(data, "notification");
-            if (notification && (event_callback->event_type == std::string(notification))) {
-                if (event_callback->callback_fn) {
-                    event_callback->callback_fn((amxc_var_t *)data, event_callback->context);
-                }
-            }
-        }
-    };
-    int retval =
-        amxb_subscribe(m_bus_ctx, object_path.c_str(), nullptr, sub_cb, (void *)event_callback);
-    if (retval != AMXB_STATUS_OK) {
-        LOG(ERROR) << "Subscribing to object events failed, path:" << object_path
-                   << ", errno:" << retval;
+    if (!m_connection) {
         return false;
     }
-    LOG(DEBUG) << "subscribe successfully to object events, path:" << object_path;
+    m_subscriptions.emplace_back(event_handler);
+    if (!m_connection->subscribe(object_path, filter, m_subscriptions.back())) {
+        LOG(ERROR) << "Subscribing to object events failed, path:" << object_path;
+        m_subscriptions.pop_back();
+        return false;
+    }
+    LOG(INFO) << "subscribe successfully to object events, path:" << object_path;
     return true;
 }
 
-AmbiorixClient::~AmbiorixClient() { amxb_free(&m_bus_ctx); }
+AmbiorixClient::~AmbiorixClient()
+{
+    while (!m_subscriptions.empty()) {
+        m_connection->unsubscribe(m_subscriptions.back());
+        m_subscriptions.pop_back();
+    }
+}
 
 } // namespace wbapi
 } // namespace beerocks
