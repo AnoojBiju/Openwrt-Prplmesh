@@ -846,6 +846,17 @@ bool network_utils::linux_iface_get_pci_info(const std::string &iface, std::stri
     return true;
 }
 
+std::string network_utils::linux_iface_get_host_bridge(const std::string &iface)
+{
+    std::string bridge_path("/sys/class/net/" + iface + "/brport/bridge");
+    char resolvedPath[PATH_MAX];
+    if (!realpath(bridge_path.c_str(), resolvedPath)) {
+        return "";
+    }
+    std::string pathStr = resolvedPath;
+    return pathStr.substr(pathStr.rfind('/') + 1);
+}
+
 bool network_utils::linux_iface_exists(const std::string &iface)
 {
     struct ifreq flags;
