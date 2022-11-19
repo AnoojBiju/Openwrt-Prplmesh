@@ -12,6 +12,7 @@
 #include "utils_wlan_hal_whm.h"
 #include <bcl/beerocks_state_machine.h>
 #include <bwl/base_wlan_hal.h>
+#include <bwl/nl80211_client.h>
 
 #include "ambiorix_client.h"
 #include "wbapi_utils.h"
@@ -26,8 +27,24 @@ enum class whm_fsm_state { Delay, Init, GetRadioInfo, Attach, Operational, Detac
 
 enum class whm_fsm_event { Attach, Detach };
 
-typedef std::unordered_map<std::string, std::string> parsed_obj_map_t;
-typedef std::list<parsed_obj_map_t> parsed_obj_listed_map_t;
+struct VAPExtInfo {
+    std::string path;
+    std::string ssid_path;
+    std::string status;
+    bool teardown = false;
+
+    bool operator==(const VAPExtInfo &other) const { return (path == other.path); }
+
+    bool operator!=(const VAPExtInfo &other) const { return !(*this == other); }
+};
+
+struct STAExtInfo {
+    std::string path;
+
+    bool operator==(const STAExtInfo &other) const { return (path == other.path); }
+
+    bool operator!=(const STAExtInfo &other) const { return !(*this == other); }
+};
 
 /*!
  * Base class for the whm abstraction layer.
@@ -59,8 +76,6 @@ public:
      * @return True on success and false otherwise.
      */
     bool get_channel_utilization(uint8_t &channel_utilization) override;
-    bool refresh_vap_info(int id);
-    std::string whm_get_vap_instance_name(const std::string &iface);
 
     // Protected methods
 protected:
@@ -69,15 +84,29 @@ protected:
 
     virtual bool set(const std::string &param, const std::string &value,
                      int vap_id = beerocks::IFACE_RADIO_ID) override;
-    amxc_var_t *whm_get_wifi_ap_object(const std::string &iface);
-    amxc_var_t *whm_get_wifi_ssid_object(const std::string &iface);
     int whm_get_vap_id(const std::string &iface);
     bool whm_get_radio_ref(const std::string &iface, std::string &ref);
     bool whm_get_radio_path(const std::string &iface, std::string &path);
-    bool refresh_vap_info(int id, amxc_var_t *ap_obj);
-    amxc_var_t *get_radio_vaps();
+    bool refresh_vap_info(int id, const beerocks::wbapi::AmbiorixVariant &ap_obj);
+    bool get_radio_vaps(beerocks::wbapi::AmbiorixVariantList &aps);
+    bool has_enabled_vap() const;
+    bool check_enabled_vap(const std::string &bss) const;
 
     std::shared_ptr<beerocks::wbapi::AmbiorixClient> m_ambiorix_cl;
+    std::unique_ptr<nl80211_client> m_iso_nl80211_client; //impl nl80211 client apis with whm dm
+    std::string m_radio_path;
+    std::unordered_map<std::string, VAPExtInfo> m_vapsExtInfo; // key = vap_ifname
+    std::unordered_map<std::string, STAExtInfo> m_stations;    // key = sta_mac
+    void subscribe_to_radio_events();
+    void subscribe_to_ap_events();
+    void subscribe_to_sta_events();
+    virtual bool process_radio_event(const std::string &interface, const std::string &key,
+                                     const beerocks::wbapi::AmbiorixVariant *value);
+    virtual bool process_ap_event(const std::string &interface, const std::string &key,
+                                  const beerocks::wbapi::AmbiorixVariant *value);
+    virtual bool process_sta_event(const std::string &interface, const std::string &sta_mac,
+                                   const std::string &key,
+                                   const beerocks::wbapi::AmbiorixVariant *value);
 
     // Private data-members:
 private:

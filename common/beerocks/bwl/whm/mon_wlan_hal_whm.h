@@ -87,7 +87,11 @@ protected:
     virtual bool set(const std::string &param, const std::string &value, int vap_id) override;
 
 private:
-    bool process_whm_event(mon_wlan_hal::Event event, const amxc_var_t *data);
+    bool process_ap_event(const std::string &interface, const std::string &key,
+                          const beerocks::wbapi::AmbiorixVariant *value) override;
+    bool process_sta_event(const std::string &interface, const std::string &sta_mac,
+                           const std::string &key,
+                           const beerocks::wbapi::AmbiorixVariant *value) override;
 };
 
 } // namespace whm
