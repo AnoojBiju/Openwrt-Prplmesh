@@ -110,6 +110,17 @@ void WifiManager::subscribe_to_bss_info_config_change()
              " || contains('parameters.KeyPassPhrase'))";
 
     m_ambiorix_cl->subscribe_to_object_event(wbapi_utils::search_path_ap(), event_handler, filter);
+
+    // subscribe for VAPs enabling to re-trigger autoConf when new BSS is enabled
+    // and potentially resume previously timeouted agent configuration
+    filter = "(path matches '" + wbapi_utils::search_path_ap() +
+             "[0-9]+.$')"
+             " && (notification == '" +
+             AMX_CL_OBJECT_CHANGED_EVT +
+             "')"
+             " && (contains('parameters.Enable'))";
+
+    m_ambiorix_cl->subscribe_to_object_event(wbapi_utils::search_path_ap(), event_handler, filter);
 }
 
 WifiManager::~WifiManager()
