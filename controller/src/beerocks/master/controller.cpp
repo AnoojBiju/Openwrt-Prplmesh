@@ -990,6 +990,14 @@ bool Controller::autoconfig_wsc_add_m2(WSC::m1 &m1,
         if (bss_info_conf->backhaul) {
             cfg.bss_type |= WSC::eWscVendorExtSubelementBssType::BACKHAUL_BSS;
         }
+        if (bss_info_conf->profile1_backhaul_sta_association_disallowed) {
+            cfg.bss_type |=
+                WSC::eWscVendorExtSubelementBssType::PROFILE1_BACKHAUL_STA_ASSOCIATION_DISALLOWED;
+        }
+        if (bss_info_conf->profile2_backhaul_sta_association_disallowed) {
+            cfg.bss_type |=
+                WSC::eWscVendorExtSubelementBssType::PROFILE2_BACKHAUL_STA_ASSOCIATION_DISALLOWED;
+        }
 
         LOG(DEBUG) << "WSC config_data:" << std::hex << std::endl
                    << "     ssid: " << cfg.ssid << std::endl
