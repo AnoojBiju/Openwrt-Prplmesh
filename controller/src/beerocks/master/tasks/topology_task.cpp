@@ -334,6 +334,8 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
                     }
                 } else {
                     LOG(DEBUG) << "Prplmesh Agent";
+                    // update BSS vap_id if still undefined
+                    bss->update_vap_id(vap_id);
                     if (!database.add_vap(tlvf::mac_to_string(radio_entry.radio_uid()), int(vap_id),
                                           tlvf::mac_to_string(bss_entry.radio_bssid()),
                                           bss_entry.ssid_str(), false)) {
