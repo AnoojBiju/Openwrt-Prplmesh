@@ -15,6 +15,7 @@
 #include "tasks/ap_autoconfiguration_task.h"
 #include "tasks/capability_reporting_task.h"
 #include "tasks/controller_connectivity_task.h"
+#include "tasks/link_metrics_collection_task.h"
 #include "tasks/proxy_agent_dpp_task.h"
 #include "tasks/service_prioritization_task.h"
 
@@ -38,6 +39,8 @@
 #include <tlvf/AttrList.h>
 #include <tlvf/ieee_1905_1/tlvAlMacAddress.h>
 #include <tlvf/wfa_map/tlvApMetricQuery.h>
+#include <tlvf/wfa_map/tlvAssociatedStaExtendedLinkMetrics.h>
+#include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaTrafficStats.h>
 #include <tlvf/wfa_map/tlvBeaconMetricsResponse.h>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
@@ -193,6 +196,9 @@ bool slave_thread::thread_init()
             ieee1905_1::eMessageType::ACK_MESSAGE,
             ieee1905_1::eMessageType::LINK_METRIC_QUERY_MESSAGE,
             ieee1905_1::eMessageType::AP_METRICS_QUERY_MESSAGE,
+            ieee1905_1::eMessageType::ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE,
+            ieee1905_1::eMessageType::BEACON_METRICS_QUERY_MESSAGE,
+            ieee1905_1::eMessageType::COMBINED_INFRASTRUCTURE_METRICS_MESSAGE,
             ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE,
             ieee1905_1::eMessageType::CLIENT_CAPABILITY_QUERY_MESSAGE,
             ieee1905_1::eMessageType::AP_CAPABILITY_QUERY_MESSAGE,
@@ -290,6 +296,7 @@ bool slave_thread::thread_init()
     m_task_pool.add_task(std::make_shared<ProxyAgentDppTask>(*this, cmdu_tx));
     m_task_pool.add_task(std::make_shared<ControllerConnectivityTask>(*this, cmdu_tx));
     m_task_pool.add_task(std::make_shared<CapabilityReportingTask>(*this, cmdu_tx));
+    m_task_pool.add_task(std::make_shared<LinkMetricsCollectionTask>(*this, cmdu_tx));
 
     m_agent_state = STATE_INIT;
     LOG(DEBUG) << "Agent Started";
@@ -1669,40 +1676,6 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
         // The Agent send the request message to the Controller only if the backhaul link is
         // wireless. The Controller expects a response from the backhaul manager radio.
         send_cmdu_to_controller(db->backhaul.selected_iface_name, cmdu_tx);
-        break;
-    }
-    case beerocks_message::ACTION_BACKHAUL_ASSOCIATED_STA_LINK_METRICS_REQUEST: {
-        LOG(DEBUG) << "ACTION_BACKHAUL_ASSOCIATED_STA_LINK_METRICS_REQUEST";
-        auto &radio_mac = beerocks_header->actionhdr()->radio_mac();
-        auto db         = AgentDB::get();
-        auto radio      = db->get_radio_by_mac(radio_mac, AgentDB::eMacType::RADIO);
-        if (!radio) {
-            break;
-        }
-        auto &radio_manager = m_radio_managers[radio->front.iface_name];
-
-        if (radio_manager.monitor_fd == beerocks::net::FileDescriptor::invalid_descriptor) {
-            LOG(ERROR) << "monitor_fd is invalid";
-            return false;
-        }
-        auto request_in = beerocks_header->addClass<
-            beerocks_message::cACTION_BACKHAUL_ASSOCIATED_STA_LINK_METRICS_REQUEST>();
-        if (!request_in) {
-            LOG(ERROR) << "addClass cACTION_BACKHAUL_ASSOCIATED_STA_LINK_METRICS_REQUEST failed";
-            return false;
-        }
-
-        auto request_out = message_com::create_vs_message<
-            beerocks_message::cACTION_MONITOR_CLIENT_ASSOCIATED_STA_LINK_METRIC_REQUEST>(
-            cmdu_tx, beerocks_header->id());
-        if (!request_out) {
-            LOG(ERROR) << "Failed building message!";
-            return false;
-        }
-        request_out->sync()    = request_in->sync();
-        request_out->sta_mac() = request_in->sta_mac();
-        LOG(DEBUG) << "send ACTION_MONITOR_CLIENT_ASSOCIATED_STA_LINK_METRIC_REQUEST";
-        send_cmdu(radio_manager.monitor_fd, cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_BACKHAUL_START_WPS_PBC_REQUEST: {
@@ -3400,31 +3373,75 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
                 << "addClass ACTION_MONITOR_CLIENT_ASSOCIATED_STA_LINK_METRIC_RESPONSE failed";
             return false;
         }
-        auto response_out = message_com::create_vs_message<
-            beerocks_message::cACTION_BACKHAUL_ASSOCIATED_STA_LINK_METRICS_RESPONSE>(
-            cmdu_tx, beerocks_header->id());
-        if (response_out == nullptr) {
-            LOG(ERROR)
-                << "Failed building ACTION_BACKHAUL_ASSOCIATED_STA_LINK_METRICS_RESPONSE message!";
-            break;
+
+        auto mid = beerocks_header->id();
+
+        if (!cmdu_tx.create(
+                mid, ieee1905_1::eMessageType::ASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE)) {
+            LOG(ERROR) << "cmdu creation of type ASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE "
+                          "has failed";
+            return false;
         }
+
+        auto response_out = cmdu_tx.addClass<wfa_map::tlvAssociatedStaLinkMetrics>();
+        if (!response_out) {
+            LOG(ERROR) << "adding wfa_map::tlvAssociatedStaLinkMetrics failed";
+            return false;
+        }
+
+        response_out->sta_mac() = response_in->sta_mac();
 
         if (!response_out->alloc_bssid_info_list(response_in->bssid_info_list_length())) {
             LOG(ERROR) << "alloc_per_bss_sta_link_metrics failed";
             return false;
         }
 
-        response_out->sta_mac() = response_in->sta_mac();
-
-        for (size_t i = 0; i < response_out->bssid_info_list_length(); ++i) {
-            auto &bss_in  = std::get<1>(response_in->bssid_info_list(i));
-            auto &bss_out = std::get<1>(response_out->bssid_info_list(i));
-
-            bss_out = bss_in;
+        // adding (currently empty) an associated sta EXTENDED link metrics tlv.
+        // The values will be filled part of PPM-1259
+        auto extended = cmdu_tx.addClass<wfa_map::tlvAssociatedStaExtendedLinkMetrics>();
+        if (!extended) {
+            LOG(ERROR) << "adding wfa_map::tlvAssociatedStaExtendedLinkMetrics failed";
+            return false;
         }
 
-        LOG(DEBUG) << "Send ACTION_BACKHAUL_ASSOCIATED_STA_LINK_METRICS_RESPONSE";
-        m_backhaul_manager_client->send_cmdu(cmdu_tx);
+        extended->associated_sta() = response_in->sta_mac();
+
+        if (!extended->alloc_metrics_list(response_in->bssid_info_list_length())) {
+            LOG(ERROR) << "allocation of per BSS STA metrics failed";
+            return false;
+        }
+
+        auto db = AgentDB::get();
+
+        for (size_t i = 0; i < response_out->bssid_info_list_length(); ++i) {
+            auto &bss_in     = std::get<1>(response_in->bssid_info_list(i));
+            auto &bss_out    = std::get<1>(response_out->bssid_info_list(i));
+            auto &client_mac = response_out->sta_mac();
+
+            auto radio = db->get_radio_by_mac(client_mac, AgentDB::eMacType::CLIENT);
+            if (!radio) {
+                LOG(ERROR) << "radio for client mac " << client_mac << " not found";
+                return false;
+            }
+
+            // If get_radio_by_mac() found the radio, it means that 'client_mac' is on the radio
+            // 'associated_clients' list.
+            bss_out.bssid = radio->associated_clients.at(client_mac).bssid;
+            if (bss_out.bssid == beerocks::net::network_utils::ZERO_MAC) {
+                LOG(ERROR) << "bssid is ZERO_MAC";
+                return false;
+            }
+
+            bss_out.earliest_measurement_delta = bss_in.earliest_measurement_delta;
+            bss_out.downlink_estimated_mac_data_rate_mbps =
+                bss_in.downlink_estimated_mac_data_rate_mbps;
+            bss_out.uplink_estimated_mac_data_rate_mbps =
+                bss_in.uplink_estimated_mac_data_rate_mbps;
+            bss_out.sta_measured_uplink_rcpi_dbm_enc = bss_in.sta_measured_uplink_rcpi_dbm_enc;
+        }
+
+        LOG(DEBUG) << "Send AssociatedStaLinkMetrics to controller, mid = " << mid;
+        send_cmdu_to_controller({}, cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_MONITOR_HOSTAP_LOAD_MEASUREMENT_NOTIFICATION: {
@@ -4398,6 +4415,9 @@ bool slave_thread::agent_fsm()
         break;
     }
     case STATE_STOPPED: {
+        m_task_pool.send_event(eTaskType::LINK_METRICS_COLLECTION,
+                               LinkMetricsCollectionTask::eEvent::RESET_QUERIES);
+
         if (m_platform_manager_client) {
             m_platform_manager_client.reset();
         }
@@ -4840,8 +4860,8 @@ bool slave_thread::handle_monitor_ap_metrics_response(const std::string &frontha
 {
     LOG(DEBUG) << "Received AP_METRICS_QUERY_RESPONSE, mid=" << std::hex << cmdu_rx.getMessageId();
 
-    if (!m_backhaul_manager_client->forward_cmdu(cmdu_rx)) {
-        LOG(ERROR) << "Failed sending AP_METRICS_RESPONSE_MESSAGE message to backhaul_manager";
+    if (!m_task_pool.handle_cmdu(cmdu_rx, 0, {}, {}, fd)) {
+        LOG(ERROR) << "Failed handling AP_METRICS_RESPONSE_MESSAGE message";
         return false;
     }
     return true;

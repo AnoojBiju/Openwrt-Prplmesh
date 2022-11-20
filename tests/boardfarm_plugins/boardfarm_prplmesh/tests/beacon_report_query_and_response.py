@@ -40,7 +40,7 @@ class BeaconReportQueryAndResponse(PrplMeshBaseTest):
             tlv(self.ieee1905['eTlvTypeMap']['TLV_STAMAC_ADDRESS_TYPE'], sta.mac))
         time.sleep(5)
         debug("STA sends a valid Association Request frame to MAUT")
-        self.check_log(agent,
+        self.check_log(agent.radios[0],
                        "Send AssociatedStaLinkMetrics to controller, mid = {}".format(mid),
                        timeout=20)
         self.check_cmdu_type_single("Associated STA Link Metrics Response", 0x800E,
