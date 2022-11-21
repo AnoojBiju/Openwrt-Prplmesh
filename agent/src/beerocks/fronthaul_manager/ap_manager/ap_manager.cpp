@@ -237,7 +237,8 @@ static void build_channels_list(ieee1905_1::CmduMessageTx &cmdu_tx,
                                   beerocks::eWiFiBandwidth(bw_it->first))
                            << ", rank=" << supported_bw_info_tlv.rank << ", multiap_preference="
                            << int(supported_bw_info_tlv.multiap_preference)
-                           << ", dfs_state=" << dfs_state_to_string(channel_info_tlv->dfs_state());
+                           << ", dfs_state=" << dfs_state_to_string(channel_info_tlv->dfs_state())
+                           << ", i=" << i;
             };
 
             // If channel's DFS State is unavailable, set the channel preference to "Not Usable" (0).
