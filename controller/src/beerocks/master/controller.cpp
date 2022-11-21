@@ -302,6 +302,7 @@ bool Controller::start()
             ieee1905_1::eMessageType::BSS_CONFIGURATION_REQUEST_MESSAGE,
             ieee1905_1::eMessageType::FAILED_CONNECTION_MESSAGE,
             ieee1905_1::eMessageType::QOS_MANAGEMENT_NOTIFICATION_MESSAGE,
+            ieee1905_1::eMessageType::VIRTUAL_BSS_RESPONSE_MESSAGE,
         })) {
         LOG(ERROR) << "Failed subscribing to the Bus";
         return false;
