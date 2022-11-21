@@ -496,7 +496,7 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
 bool vbss_task::handle_client_security_ctx_resp(const sMacAddr &src_mac,
                                                 ieee1905_1::CmduMessageRx &cmdu_rx)
 {
-
+    LOG(DEBUG) << "Received Client Security Context response from '" << tlvf::mac_to_string(src_mac) << "'";
     auto client_info_tlv = cmdu_rx.getClass<wfa_map::tlvClientInfo>();
 
     if (!client_info_tlv) {
