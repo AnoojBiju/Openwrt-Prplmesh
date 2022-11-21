@@ -391,9 +391,8 @@ void cli_bml::setFunctionsMapAndArray()
     insertCommandToMap(
         "bml_clear_wifi_credentials", "<al_mac>", "Removes wifi credentials for specific AL-MAC.",
         static_cast<pFunction>(&cli_bml::clear_wifi_credentials_caller), 1, 1, STRING_ARG);
-    insertCommandToMap(
-        "bml_update_wifi_credentials", "<al_mac>", "Updates wifi credentials for specific AL-MAC.",
-        static_cast<pFunction>(&cli_bml::update_wifi_credentials_caller), 1, 1, STRING_ARG);
+    insertCommandToMap("bml_update_wifi_credentials", "", "Updates wifi credentials.",
+                       static_cast<pFunction>(&cli_bml::update_wifi_credentials_caller), 0, 0);
     insertCommandToMap("bml_get_wifi_credentials", "[<vap_id>]",
                        "Get SSID and security type for the given VAP (or Vap=0 by default)",
                        static_cast<pFunction>(&cli_bml::get_wifi_credentials_caller), 0, 1,
@@ -995,8 +994,8 @@ int cli_bml::clear_wifi_credentials_caller(int numOfArgs)
 
 int cli_bml::update_wifi_credentials_caller(int numOfArgs)
 {
-    if (numOfArgs == 1)
-        return update_wifi_credentials(args.stringArgs[0]);
+    if (numOfArgs == 0)
+        return update_wifi_credentials();
     else
         return -1;
 }
@@ -1590,10 +1589,10 @@ int cli_bml::clear_wifi_credentials(const std::string &al_mac)
     return 0;
 }
 
-int cli_bml::update_wifi_credentials(const std::string &al_mac)
+int cli_bml::update_wifi_credentials()
 {
 
-    int ret = bml_update_wifi_credentials(ctx, al_mac.c_str());
+    int ret = bml_update_wifi_credentials(ctx);
 
     printBmlReturnVals("bml_update_wifi_credentials", ret);
     return 0;

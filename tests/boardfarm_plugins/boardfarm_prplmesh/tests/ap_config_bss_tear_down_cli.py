@@ -37,7 +37,7 @@ class ApConfigBSSTeardownCli(PrplMeshBaseTest):
                                                 "maprocks1",
                                                 "24g",
                                                 "fronthaul"))
-        controller.beerocks_cli_command('bml_update_wifi_credentials {}'.format(agent.mac))
+        controller.beerocks_cli_command('bml_update_wifi_credentials')
 
         # Wait until the connection map is updated:
         self.check_log(controller,
@@ -69,7 +69,7 @@ class ApConfigBSSTeardownCli(PrplMeshBaseTest):
         self.checkpoint()
 
         controller.beerocks_cli_command('bml_clear_wifi_credentials {}'.format(agent.mac))
-        controller.beerocks_cli_command('bml_update_wifi_credentials {}'.format(agent.mac))
+        controller.beerocks_cli_command('bml_update_wifi_credentials')
 
         # Wait until the connection map is updated:
         self.check_log(controller,

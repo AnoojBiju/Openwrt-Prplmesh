@@ -6911,14 +6911,9 @@ BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
 }
 cACTION_BML_WIFI_CREDENTIALS_UPDATE_REQUEST::~cACTION_BML_WIFI_CREDENTIALS_UPDATE_REQUEST() {
 }
-sMacAddr& cACTION_BML_WIFI_CREDENTIALS_UPDATE_REQUEST::al_mac() {
-    return (sMacAddr&)(*m_al_mac);
-}
-
 void cACTION_BML_WIFI_CREDENTIALS_UPDATE_REQUEST::class_swap()
 {
     tlvf_swap(8*sizeof(eActionOp_BML), reinterpret_cast<uint8_t*>(m_action_op));
-    m_al_mac->struct_swap();
 }
 
 bool cACTION_BML_WIFI_CREDENTIALS_UPDATE_REQUEST::finalize()
@@ -6951,7 +6946,6 @@ bool cACTION_BML_WIFI_CREDENTIALS_UPDATE_REQUEST::finalize()
 size_t cACTION_BML_WIFI_CREDENTIALS_UPDATE_REQUEST::get_initial_size()
 {
     size_t class_size = 0;
-    class_size += sizeof(sMacAddr); // al_mac
     return class_size;
 }
 
@@ -6961,12 +6955,6 @@ bool cACTION_BML_WIFI_CREDENTIALS_UPDATE_REQUEST::init()
         TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
         return false;
     }
-    m_al_mac = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(sMacAddr))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sMacAddr) << ") Failed!";
-        return false;
-    }
-    if (!m_parse__) { m_al_mac->struct_init(); }
     if (m_parse__) { class_swap(); }
     return true;
 }

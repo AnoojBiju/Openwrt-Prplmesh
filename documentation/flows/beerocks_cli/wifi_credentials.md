@@ -62,11 +62,11 @@ Example for 24g-5g:
 
 ## Update credentials
 
-`bml_update_wifi_credentials AL-MAC`
+`bml_update_wifi_credentials`
 
 Example:
 
-`bml_update_wifi_credentials 11:22:33:44:55:66`
+`bml_update_wifi_credentials`
 
 ![UML for set_wifi_credentials flow](../../images/plantuml/beerocks_cli/update_credentials.png)
 
