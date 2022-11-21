@@ -35,7 +35,7 @@ class ApConfigBSSTeardownCli(PrplMeshBaseTest):
                                         .format(agent.mac,
                                                 ssid,
                                                 "maprocks1",
-                                                "24g",
+                                                "2g",
                                                 "fronthaul"))
         controller.beerocks_cli_command('bml_update_wifi_credentials')
 

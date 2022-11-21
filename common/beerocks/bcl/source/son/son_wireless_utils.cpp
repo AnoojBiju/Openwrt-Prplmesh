@@ -1716,7 +1716,7 @@ std::list<uint8_t> wireless_utils::string_to_wsc_oper_class(const std::string &o
                                    123, 124, 125, 126, 127, 128, 129, 130};
     std::list<uint8_t> radio_6g  = {131, 132, 133, 134, 135, 136};
 
-    if (operating_class == "24g") {
+    if (operating_class == "2g") {
         return radio_24g;
     }
     if (operating_class == "5gh") {

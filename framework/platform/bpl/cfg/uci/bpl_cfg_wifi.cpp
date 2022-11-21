@@ -252,7 +252,7 @@ bool bpl_cfg_get_wireless_settings(std::list<son::wireless_utils::sBssInfoConf> 
         if (hwmode.empty() || (hwmode == "11b") || (hwmode == "11g") || hwmode == "11bgnax") {
             configuration.operating_class.splice(
                 configuration.operating_class.end(),
-                son::wireless_utils::string_to_wsc_oper_class("24g"));
+                son::wireless_utils::string_to_wsc_oper_class("2g"));
         } else if (hwmode == "11a" || hwmode == "11anacax") {
             configuration.operating_class.splice(
                 configuration.operating_class.end(),

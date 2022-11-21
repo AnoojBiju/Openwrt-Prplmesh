@@ -37,7 +37,7 @@ Where:
 - ssid - service set identifier
 - network_key - password.
 Default - empty password, without security.
-- operating_class - can be 24g,5g or 24g-5g, list of operating classes.
+- operating_class - can be 2g,5g or 24g-5g, list of operating classes.
 Default - 24g-5g[1]
 - bss_type - can be fronthaul, backhaul, fronthaul-backhaul.
 Default - fronthaul.
@@ -46,9 +46,9 @@ Example with default values:
 
 `bml_set_wifi_credentials 11:22:33:44:55:66 multiap`
 
-Example for 24g:
+Example for 2g:
 
-`bml_set_wifi_credentials 11:22:33:44:55:66 multiap-24g maprocks1 24g backhaul`
+`bml_set_wifi_credentials 11:22:33:44:55:66 multiap-2g maprocks1 2g backhaul`
 
 Example for 5g:
 

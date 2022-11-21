@@ -49,7 +49,7 @@ class CapiWirelessOnboarding(PrplMeshBaseTest):
             self.ieee1905['eMessageType']['AP_AUTOCONFIGURATION_SEARCH_MESSAGE'], agent.mac)
 
         # Step 3: start WPS
-        agent.ucc_socket.start_wps_registration("24G")
+        agent.ucc_socket.start_wps_registration("2G")
         self.check_log(agent, r"Initiating wps_pbc", timeout=60)
 
         # TODO start WPS on CTT agent as well to complete onboarding
