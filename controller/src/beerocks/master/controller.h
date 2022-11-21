@@ -398,6 +398,16 @@ private:
                                                  ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
+     * @brief Handles TLV of Associated Wi-Fi 6 STA Status Report (tlvAssociatedWiFi6StaStatusReport).
+     *
+     * @param src_mac Source MAC address.
+     * @param cmdu_rx  AP Metrics Response message.
+     * @return True on success, false otherwise.
+    */
+    bool handle_tlv_associated_wifi6_sta_status_report(const sMacAddr &src_mac,
+                                                       ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
      * @brief Handles Tlv of Profile-2 AP Capability (tlvProfile2ApCapability).
      *
      * @param agent agent db shared object.

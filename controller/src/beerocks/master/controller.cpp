@@ -59,6 +59,7 @@
 #include <tlvf/wfa_map/tlvApWifi6Capabilities.h>
 #include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaTrafficStats.h>
+#include <tlvf/wfa_map/tlvAssociatedWiFi6StaStatusReport.h>
 #include <tlvf/wfa_map/tlvBackhaulStaRadioCapabilities.h>
 #include <tlvf/wfa_map/tlvBackhaulSteeringResponse.h>
 #include <tlvf/wfa_map/tlvBssid.h>
@@ -1551,6 +1552,7 @@ bool Controller::handle_cmdu_1905_ap_metric_response(const sMacAddr &src_mac,
     ret_val &= handle_tlv_associated_sta_link_metrics(src_mac, cmdu_rx);
     ret_val &= handle_tlv_associated_sta_extended_link_metrics(src_mac, cmdu_rx);
     ret_val &= handle_tlv_associated_sta_traffic_stats(src_mac, cmdu_rx);
+    ret_val &= handle_tlv_associated_wifi6_sta_status_report(src_mac, cmdu_rx);
 
     // For now, this is only used for certification so update the certification cmdu.
     if (database.setting_certification_mode() &&
@@ -1745,6 +1747,57 @@ bool Controller::handle_tlv_associated_sta_traffic_stats(const sMacAddr &src_mac
 
         if (!database.dm_set_sta_traffic_stats(sta_traffic_stat->sta_mac(), stats)) {
             LOG(ERROR) << "Failed to set traffic stats for STA:" << sta_traffic_stat->sta_mac();
+            ret_val = false;
+        }
+    }
+    return ret_val;
+}
+
+bool Controller::handle_tlv_associated_wifi6_sta_status_report(const sMacAddr &src_mac,
+                                                               ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    bool ret_val = true;
+
+    auto agent = database.m_agents.get(src_mac);
+    if (!agent) {
+        LOG(ERROR) << "Agent with mac is not found in database mac=" << src_mac;
+        return false;
+    }
+
+    for (auto &wifi6_sta_status_rep :
+         cmdu_rx.getClassList<wfa_map::tlvAssociatedWiFi6StaStatusReport>()) {
+
+        auto station = database.get_station(wifi6_sta_status_rep->sta_mac());
+        if (!station) {
+            LOG(ERROR) << "Failed to get station on db with mac: "
+                       << wifi6_sta_status_rep->sta_mac();
+            return false;
+        }
+
+        std::vector<wfa_map::tlvAssociatedWiFi6StaStatusReport::sTidQueueSize> tid_queue_vector;
+        uint8_t tid_list_length = wifi6_sta_status_rep->tid_queue_size_list_length();
+
+        LOG(DEBUG) << "TID list length: " << tid_list_length
+                   << " of MAC address of the associated STA: " << wifi6_sta_status_rep->sta_mac();
+
+        for (uint8_t tid_index = 0; tid_index < tid_list_length; tid_index++) {
+            auto tid_tuple = wifi6_sta_status_rep->tid_queue_size_list(tid_index);
+            if (!std::get<0>(tid_tuple)) {
+                LOG(ERROR) << "Invalid TID with queue size in tlvAssociatedWiFi6StaStatusReport";
+                continue;
+            }
+
+            auto &qos_ctrl_params = std::get<1>(tid_tuple);
+
+            LOG(DEBUG) << "TID: " << qos_ctrl_params.tid
+                       << ", Queue Size: " << qos_ctrl_params.queue_size;
+
+            tid_queue_vector.push_back(qos_ctrl_params);
+        }
+
+        if (!database.dm_add_tid_queue_sizes(*station, tid_queue_vector)) {
+            LOG(ERROR) << "Failed to set TID and corresponding Queue Size for STA:"
+                       << wifi6_sta_status_rep->sta_mac();
             ret_val = false;
         }
     }

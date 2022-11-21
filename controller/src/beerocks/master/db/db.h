@@ -28,6 +28,7 @@
 #include <tlvf/wfa_map/tlvApVhtCapabilities.h>
 #include <tlvf/wfa_map/tlvApWifi6Capabilities.h>
 #include <tlvf/wfa_map/tlvAssociatedStaExtendedLinkMetrics.h>
+#include <tlvf/wfa_map/tlvAssociatedWiFi6StaStatusReport.h>
 #include <tlvf/wfa_map/tlvProfile2ApRadioAdvancedCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2CacCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2CacStatusReport.h>
@@ -893,6 +894,20 @@ public:
     bool dm_set_sta_extended_link_metrics(
         const sMacAddr &sta_mac,
         const wfa_map::tlvAssociatedStaExtendedLinkMetrics::sMetrics &metrics);
+
+    /**
+     * @brief Sets Traffic Identifiers (TIDs), and Queue Size for each TID, for Associated Device (STA)
+     *
+     * Path: Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.TIDQueueSizes.{i}.
+     *
+     * @param station Station object
+     * @param tid_queue_vector Vector with values of TID and Queue Size for each TID
+     * @return true on success, false otherwise.
+     */
+    bool dm_add_tid_queue_sizes(
+        const Station &station,
+        const std::vector<wfa_map::tlvAssociatedWiFi6StaStatusReport::sTidQueueSize>
+            &tid_queue_vector);
 
     /**
      * @brief Sets Traffic Stats for corresponding STA.
