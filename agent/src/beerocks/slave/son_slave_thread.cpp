@@ -57,6 +57,7 @@
 #include <tlvf/wfa_map/tlvSteeringBTMReport.h>
 #include <tlvf/wfa_map/tlvSteeringRequest.h>
 #include <tlvf/wfa_map/tlvTransmitPowerLimit.h>
+#include <tlvf/wfa_map/tlvUnassociatedStaLinkMetricsResponse.h>
 
 #include "gate/1905_beacon_query_to_vs.h"
 #include "gate/vs_beacon_response_to_1905.h"
@@ -197,6 +198,7 @@ bool slave_thread::thread_init()
             ieee1905_1::eMessageType::LINK_METRIC_QUERY_MESSAGE,
             ieee1905_1::eMessageType::AP_METRICS_QUERY_MESSAGE,
             ieee1905_1::eMessageType::ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE,
+            ieee1905_1::eMessageType::UNASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE,
             ieee1905_1::eMessageType::BEACON_METRICS_QUERY_MESSAGE,
             ieee1905_1::eMessageType::COMBINED_INFRASTRUCTURE_METRICS_MESSAGE,
             ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE,
@@ -1676,58 +1678,6 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
         // The Agent send the request message to the Controller only if the backhaul link is
         // wireless. The Controller expects a response from the backhaul manager radio.
         send_cmdu_to_controller(db->backhaul.selected_iface_name, cmdu_tx);
-        break;
-    }
-case beerocks_message::ACTION_BACKHAUL_CLIENT_UNASSOCIATED_STA_LINK_METRIC_REQUEST: {
-        LOG(DEBUG) << "ACTION_BACKHAUL_CLIENT_UNASSOCIATED_STA_LINK_METRIC_REQUEST";
-        auto &radio_mac = beerocks_header->actionhdr()->radio_mac();
-        auto db         = AgentDB::get();
-        auto radio      = db->get_radio_by_mac(radio_mac, AgentDB::eMacType::RADIO);
-        if (!radio) {
-            return false;
-        }
-        auto &radio_manager = m_radio_managers[radio->front.iface_name];
-
-        if (radio_manager.monitor_fd == beerocks::net::FileDescriptor::invalid_descriptor) {
-            LOG(ERROR) << "monitor_fd is invalid";
-            return false;
-        }
-        auto request_in = beerocks_header->addClass<
-            beerocks_message::cACTION_BACKHAUL_CLIENT_UNASSOCIATED_STA_LINK_METRIC_REQUEST>();
-        if (!request_in) {
-            LOG(ERROR)
-                << "addClass cACTION_BACKHAUL_CLIENT_UNASSOCIATED_STA_LINK_METRIC_REQUEST failed";
-            return false;
-        }
-        LOG(DEBUG) << "ACTION_BACKHAUL_CLIENT_UNASSOCIATED_STA_LINK_METRIC_REQUEST contains "
-                   << request_in->stations_list_length() << " stations";
-
-        auto request_out = message_com::create_vs_message<
-            beerocks_message::cACTION_MONITOR_CLIENT_UNASSOCIATED_STA_LINK_METRIC_REQUEST>(
-            cmdu_tx, beerocks_header->id());
-        if (!request_out) {
-            LOG(ERROR) << "Failed building message "
-                          "cACTION_MONITOR_CLIENT_UNASSOCIATED_STA_LINK_METRIC_REQUEST!";
-            return false;
-        }
-
-        if (!request_out->alloc_stations_list(request_in->stations_list_length())) {
-            LOG(ERROR) << "alloc_stations_list failed";
-            return false;
-        }
-
-        request_out->stations_list_length() = request_in->stations_list_length();
-        for (size_t i = 0; i < request_out->stations_list_length(); ++i) {
-            auto &station_in  = std::get<1>(request_in->stations_list(i));
-            auto &station_out = std::get<1>(request_out->stations_list(i));
-            LOG(DEBUG) << "chan " << station_in.channel << " Unassociated STA MAC"
-                       << station_in.sta_mac;
-            station_out = station_in;
-        }
-
-        LOG(DEBUG) << "send ACTION_MONITOR_CLIENT_UNASSOCIATED_STA_LINK_METRIC_REQUEST";
-
-        send_cmdu(radio_manager.monitor_fd, cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_BACKHAUL_START_WPS_PBC_REQUEST: {
@@ -3256,8 +3206,7 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
     }
 
     if (!link_to_controller()) {
-        LOG(DEBUG)
-            << "link_to_controller is broken!";
+        LOG(DEBUG) << "link_to_controller is broken!";
         return true;
     }
 
@@ -3457,14 +3406,6 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
             LOG(ERROR) << "adding wfa_map::tlvAssociatedStaExtendedLinkMetrics failed";
             return false;
         }
-        auto response_out = message_com::create_vs_message<
-            beerocks_message::cACTION_BACKHAUL_CLIENT_UNASSOCIATED_STA_LINK_METRIC_RESPONSE>(
-            cmdu_tx, beerocks_header->id());
-        if (response_out == nullptr) {
-            LOG(ERROR) << "Failed building "
-                          "cACTION_BACKHAUL_CLIENT_UNASSOCIATED_STA_LINK_METRIC_RESPONSE message!";
-            break;
-        }
 
         extended->associated_sta() = response_in->sta_mac();
 
@@ -3472,10 +3413,6 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
             LOG(ERROR) << "allocation of per BSS STA metrics failed";
             return false;
         }
-        response_out->radio_mac_address() = response_in->radio_mac_address();
-        for (size_t i = 0; i < response_out->stations_list_length(); ++i) {
-            auto &stat_in  = std::get<1>(response_in->stations_list(i));
-            auto &stat_out = std::get<1>(response_out->stations_list(i));
 
         auto db = AgentDB::get();
 

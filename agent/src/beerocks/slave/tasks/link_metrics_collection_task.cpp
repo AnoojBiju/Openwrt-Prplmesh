@@ -419,69 +419,6 @@ void LinkMetricsCollectionTask::handle_beacon_metrics_query(ieee1905_1::CmduMess
     m_btl_ctx.send_cmdu(monitor_fd, m_cmdu_tx);
 }
 
-void LinkMetricsCollectionTask::handle_unassociated_sta_link_metrics_query(
-    ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac)
-{
-    const auto message_id = cmdu_rx.getMessageId();
-
-    LOG(DEBUG) << "Received Unassociated STA Link Metrics Query, mid=" << message_id;
-
-    if (!m_cmdu_tx.create(
-            message_id, ieee1905_1::eMessageType::UNASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE)) {
-        LOG(ERROR) << "Could not create a UNASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE";
-        return;
-    }
-
-    const auto unassociated_sta_link_metrics_query_tlv =
-        cmdu_rx.getClass<wfa_map::tlvUnassociatedStaLinkMetricsQuery>();
-    if (!unassociated_sta_link_metrics_query_tlv) {
-        LOG(ERROR) << "Unassociated STA Link Metrics Query message did not contain an Unassociated "
-                      "STA Link Metrics Query TLV!";
-        return;
-    }
-
-    const auto n_stations = unassociated_sta_link_metrics_query_tlv->un_stations_list_length();
-
-    //forward the request  to the agent/son_slave thread, even if it contains 0 stations
-    auto request_out = message_com::create_vs_message<
-        beerocks_message::cACTION_BACKHAUL_CLIENT_UNASSOCIATED_STA_LINK_METRIC_REQUEST>(m_cmdu_tx,
-                                                                                        message_id);
-    if (request_out == nullptr) {
-        LOG(ERROR)
-            << "Failed building cACTION_BACKHAUL_CLIENT_UNASSOCIATED_STA_LINK_METRIC_REQUEST "
-               "message!";
-        return;
-    }
-
-    if (!request_out->alloc_stations_list(n_stations)) {
-        LOG(ERROR) << "tx_buffer overflow! elements_to_allocate=" << n_stations;
-        return;
-    }
-
-    size_t it = 0;
-    for (int station = 0; station < n_stations; ++station) {
-        const auto un_station_tuple =
-            unassociated_sta_link_metrics_query_tlv->un_stations_list(station);
-        const auto station_info = std::get<1>(un_station_tuple);
-        LOG(DEBUG) << " Unassociated station with mac:" << station_info.sta_mac << " and channel "
-                   << station_info.channel;
-        std::get<1>(request_out->stations_list(it)).sta_mac = station_info.sta_mac;
-        std::get<1>(request_out->stations_list(it)).channel = station_info.channel;
-        it++;
-    }
-
-    /*
-        * TODO: https://jira.prplfoundation.org/browse/PPM-657
-        *
-        * When link metric collection task moves to agent context
-        * send the message to fronthaul, not slave.
-        */
-    if (!m_btl_ctx.send_cmdu(m_btl_ctx.get_agent_fd(), m_cmdu_tx)) {
-        LOG(ERROR) << "Failed sending cACTION_BACKHAUL_CLIENT_UNASSOCIATED_STA_LINK_METRIC_REQUEST "
-                      "message to fronthaul";
-    }
-}
-
 void LinkMetricsCollectionTask::handle_associated_sta_link_metrics_query(
     ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac)
 {
@@ -560,6 +497,84 @@ void LinkMetricsCollectionTask::handle_associated_sta_link_metrics_query(
 
     auto monitor_fd = m_btl_ctx.get_monitor_fd(radio->front.iface_name);
     m_btl_ctx.send_cmdu(monitor_fd, m_cmdu_tx);
+}
+
+void LinkMetricsCollectionTask::handle_unassociated_sta_link_metrics_query(
+    ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac)
+{
+    const auto message_id = cmdu_rx.getMessageId();
+
+    LOG(DEBUG) << "Received Unassociated STA Link Metrics Query, mid=" << message_id;
+
+    const auto unassociated_sta_link_metrics_query_tlv =
+        cmdu_rx.getClass<wfa_map::tlvUnassociatedStaLinkMetricsQuery>();
+    if (!unassociated_sta_link_metrics_query_tlv) {
+        LOG(ERROR) << "Unassociated STA Link Metrics Query message did not contain an Unassociated "
+                      "STA Link Metrics Query TLV!";
+        return;
+    }
+
+    const auto n_stations = unassociated_sta_link_metrics_query_tlv->un_stations_list_length();
+
+    //create separate list , for each radio
+    std::unordered_map<beerocks::AgentDB::sRadio *, std::list<std::pair<uint32_t, sMacAddr>>>
+        radio_stations_map;
+
+    for (int station = 0; station < n_stations; ++station) {
+        const auto un_station_tuple =
+            unassociated_sta_link_metrics_query_tlv->un_stations_list(station);
+        const auto station_info = std::get<1>(un_station_tuple);
+        LOG(DEBUG) << " tlvUnassociatedStaLinkMetricsQuery: Unassociated station with mac:"
+                   << station_info.sta_mac << " and channel " << station_info.channel;
+        // check which radio is concerned
+        bool channel_is_ok(false);
+        auto db = AgentDB::get();
+        for (auto &radio : db->get_radios_list()) {
+            if (radio->channels_list.find(station_info.channel) != radio->channels_list.end()) {
+                channel_is_ok = true;
+                auto iter     = radio_stations_map.find(radio);
+                if (iter == radio_stations_map.end()) {
+                    radio_stations_map.insert(
+                        std::make_pair(radio, std::list<std::pair<uint32_t, sMacAddr>>()));
+                }
+                radio_stations_map[radio].push_back(
+                    std::make_pair(station_info.channel, station_info.sta_mac));
+            }
+        }
+        if (!channel_is_ok) {
+            LOG(ERROR) << "channel " << station_info.channel
+                       << " does not fit in any radio! Unassociated station with mac_addr: "
+                       << tlvf::mac_to_string(station_info.sta_mac) << " is ignored!";
+            continue;
+        }
+    }
+
+    for (auto &un_station_per_radio : radio_stations_map) {
+        //Send a request to the monitor , even if it contains 0 stations. As that means remove all stations
+        auto request_out = message_com::create_vs_message<
+            beerocks_message::cACTION_MONITOR_CLIENT_UNASSOCIATED_STA_LINK_METRIC_REQUEST>(
+            m_cmdu_tx, message_id);
+        if (request_out == nullptr) {
+            LOG(ERROR)
+                << "Failed building cACTION_MONITOR_CLIENT_UNASSOCIATED_STA_LINK_METRIC_REQUEST "
+                   "message!";
+            return;
+        }
+        size_t number_stations_radio = un_station_per_radio.second.size();
+        if (!request_out->alloc_stations_list(un_station_per_radio.second.size())) {
+            LOG(ERROR) << "tx_buffer overflow! elements_to_allocate=" << number_stations_radio;
+            continue;
+        }
+        size_t it = 0;
+        for (auto &station : un_station_per_radio.second) {
+            std::get<1>(request_out->stations_list(it)).sta_mac = station.second;
+            std::get<1>(request_out->stations_list(it)).channel = station.first;
+            it++;
+        }
+        //send a different message to each monitor containig its specific un_stations
+        auto monitor_fd = m_btl_ctx.get_monitor_fd(un_station_per_radio.first->front.iface_name);
+        m_btl_ctx.send_cmdu(monitor_fd, m_cmdu_tx);
+    }
 }
 
 void LinkMetricsCollectionTask::handle_ap_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx,

@@ -1170,7 +1170,7 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
 
             new_list_unassociated_stations.insert(std::make_pair(mac_address, channel));
             LOG(DEBUG) << " New unassociated stations list contain station with mac_address"
-                       << mac_address << " and channel" << channel;
+                       << mac_address << " and channel: " << channel;
         }
         mon_wlan_hal->sta_unassoc_rssi_measurement(new_list_unassociated_stations);
 

@@ -194,29 +194,3 @@ cACTION_BACKHAUL_CHANNEL_SCAN_ABORTED_NOTIFICATION:
 cACTION_BACKHAUL_CHANNEL_SCAN_FINISHED_NOTIFICATION:
   _type: class
   radio_mac: sMacAddr
-
-cACTION_BACKHAUL_CLIENT_UNASSOCIATED_STA_LINK_METRIC_REQUEST:
-  _type: class
-  _is_tlv_class: True
-  length: uint16_t
-  stations_list_length:
-    _type: uint8_t
-    _length_var: True
-  stations_list:
-    _type: sUnassociatedStationInfo
-    _length: [stations_list_length]
-
-cACTION_BACKHAUL_CLIENT_UNASSOCIATED_STA_LINK_METRIC_RESPONSE:
-  _type: class
-  _is_tlv_class: True
-  length: uint16_t
-  radio_mac_address:
-    _comment: mac_address of the radio
-    _type: sMacAddr
-  stations_list_length:
-    _type: uint8_t
-    _length_var: True
-  signal_strength: int8_t
-  stations_list:
-    _type: sUnassociatedStationStats
-    _length: [stations_list_length]

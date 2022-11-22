@@ -34,7 +34,6 @@
 #include <tlvf/wfa_map/tlvBackhaulSteeringRequest.h>
 #include <tlvf/wfa_map/tlvBackhaulSteeringResponse.h>
 #include <tlvf/wfa_map/tlvProfile2AssociationStatusNotification.h>
-#include <tlvf/wfa_map/tlvUnassociatedStaLinkMetricsResponse.h>
 
 // BPL Error Codes
 #include <bpl/bpl_cfg.h>
@@ -293,7 +292,6 @@ bool BackhaulManager::thread_init()
             ieee1905_1::eMessageType::TOPOLOGY_DISCOVERY_MESSAGE,
             ieee1905_1::eMessageType::TOPOLOGY_QUERY_MESSAGE,
             ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE,
- 	    ieee1905_1::eMessageType::UNASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE,
         })) {
         LOG(ERROR) << "Failed subscribing to the Bus";
         return false;
@@ -1605,85 +1603,6 @@ bool BackhaulManager::handle_slave_backhaul_message(int fd, ieee1905_1::CmduMess
             response->params().rx_packets = -1;
             send_cmdu(m_agent_fd, cmdu_tx);
         }
-        break;
-    }
-    case beerocks_message::ACTION_BACKHAUL_ASSOCIATED_STA_LINK_METRICS_RESPONSE: {
-        auto response_in = beerocks_header->addClass<
-            beerocks_message::cACTION_BACKHAUL_ASSOCIATED_STA_LINK_METRICS_RESPONSE>();
-        if (!response_in) {
-            LOG(ERROR) << "addClass ACTION_BACKHAUL_ASSOCIATED_STA_LINK_METRICS_RESPONSE failed";
-            return false;
-        }
-
-        auto mid = beerocks_header->id();
-
-        if (!cmdu_tx.create(
-                mid, ieee1905_1::eMessageType::ASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE)) {
-            LOG(ERROR) << "cmdu creation of type ASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE "
-                          "has failed";
-            return false;
-        }
-
-        auto response_out = cmdu_tx.addClass<wfa_map::tlvAssociatedStaLinkMetrics>();
-        if (!response_out) {
-            LOG(ERROR) << "adding wfa_map::tlvAssociatedStaLinkMetrics failed";
-            return false;
-        }
-
-        response_out->sta_mac() = response_in->sta_mac();
-
-        if (!response_out->alloc_bssid_info_list(response_in->bssid_info_list_length())) {
-            LOG(ERROR) << "alloc_per_bss_sta_link_metrics failed";
-            return false;
-        }
-
-        // adding (currently empty) an associated sta EXTENDED link metrics tlv.
-        // The values will be filled part of PPM-1259
-        auto extended = cmdu_tx.addClass<wfa_map::tlvAssociatedStaExtendedLinkMetrics>();
-        if (!extended) {
-            LOG(ERROR) << "adding wfa_map::tlvAssociatedStaExtendedLinkMetrics failed";
-            return false;
-        }
-
-        extended->associated_sta() = response_in->sta_mac();
-
-        if (!extended->alloc_metrics_list(response_in->bssid_info_list_length())) {
-            LOG(ERROR) << "allocation of per BSS STA metrics failed";
-            return false;
-        }
-
-        auto db = AgentDB::get();
-
-        for (size_t i = 0; i < response_out->bssid_info_list_length(); ++i) {
-            auto &bss_in  = std::get<1>(response_in->bssid_info_list(i));
-            auto &bss_out = std::get<1>(response_out->bssid_info_list(i));
-
-            auto &client_mac = response_out->sta_mac();
-
-            auto radio = db->get_radio_by_mac(client_mac, AgentDB::eMacType::CLIENT);
-            if (!radio) {
-                LOG(ERROR) << "radio for client mac " << client_mac << " not found";
-                return false;
-            }
-
-            // If get_radio_by_mac() found the radio, it means that 'client_mac' is on the radio
-            // 'associated_clients' list.
-            bss_out.bssid = radio->associated_clients.at(client_mac).bssid;
-            if (bss_out.bssid == beerocks::net::network_utils::ZERO_MAC) {
-                LOG(ERROR) << "bssid is ZERO_MAC";
-                return false;
-            }
-
-            bss_out.earliest_measurement_delta = bss_in.earliest_measurement_delta;
-            bss_out.downlink_estimated_mac_data_rate_mbps =
-                bss_in.downlink_estimated_mac_data_rate_mbps;
-            bss_out.uplink_estimated_mac_data_rate_mbps =
-                bss_in.uplink_estimated_mac_data_rate_mbps;
-            bss_out.sta_measured_uplink_rcpi_dbm_enc = bss_in.sta_measured_uplink_rcpi_dbm_enc;
-        }
-
-        LOG(DEBUG) << "Send AssociatedStaLinkMetrics to controller, mid = " << mid;
-        send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac, db->bridge.mac);
         break;
     }
     case beerocks_message::ACTION_BACKHAUL_ZWDFS_RADIO_DETECTED: {

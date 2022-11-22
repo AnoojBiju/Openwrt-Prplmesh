@@ -7985,17 +7985,28 @@ bool db::add_unassociated_station(sMacAddr const &new_station_mac_add, uint32_t 
 
     if (!all_connected_agents) {
         std::string agent_mac_string(tlvf::mac_to_string(agent_mac_addr));
-
-        if (m_agents.get(agent_mac_addr) == nullptr) {
+        auto existing_agent = m_agents.get(agent_mac_addr);
+        if (existing_agent == nullptr) {
             LOG(ERROR) << " agent with mac_addr: " << agent_mac_string
                        << " could not be found! station will not be added. ";
             return false;
         } else {
-            if (m_unassociated_stations.get(new_station_mac_add)) {
-                LOG(DEBUG) << " un_station" << tlvf::mac_to_string(new_station_mac_add)
-                           << " is already being monitored by agent: "
-                           << tlvf::mac_to_string(agent_mac_addr) << "ignoring...";
-                return false;
+            auto existing_un_station = m_unassociated_stations.get(new_station_mac_add);
+            if (existing_un_station) {
+                // maybe the command is to change the channel!
+                if (existing_un_station->get_channel() != channel) {
+                    existing_un_station->set_channel(channel);
+                    LOG(DEBUG) << " un_station" << tlvf::mac_to_string(new_station_mac_add)
+                               << " will be monitored on the new channel : " << channel
+                               << " by agent: " << tlvf::mac_to_string(agent_mac_addr);
+                    return true;
+                } else {
+                    LOG(DEBUG) << " un_station" << tlvf::mac_to_string(new_station_mac_add)
+                               << " is already being monitored by agent: "
+                               << tlvf::mac_to_string(agent_mac_addr) << "on channel: " << channel
+                               << " command is ignored...";
+                    return false;
+                }
             }
             new_station = m_unassociated_stations.add(new_station_mac_add);
             new_station->add_agent(agent_mac_addr);
@@ -8007,10 +8018,6 @@ bool db::add_unassociated_station(sMacAddr const &new_station_mac_add, uint32_t 
                               tlvf::mac_to_string(new_station_mac_add));*/
         }
     } else { //all connected agents
-        if (m_unassociated_stations.get(new_station_mac_add)) {
-            LOG(DEBUG) << " un_station is already being monitored!, ignoring ...";
-            return false;
-        }
         new_station = m_unassociated_stations.add(new_station_mac_add);
         for (auto &agent : m_agents) {
             new_station->add_agent(agent.first);
@@ -8021,8 +8028,9 @@ bool db::add_unassociated_station(sMacAddr const &new_station_mac_add, uint32_t 
             /*add_un_station_dm(tlvf::mac_to_string(agent_mac_addr),
                               tlvf::mac_to_string(new_station_mac_add));*/
         }
+        new_station->set_channel(channel);
     }
-    new_station->set_channel(channel);
+
     LOG(DEBUG) << debug_msg;
     return new_station != nullptr;
 }

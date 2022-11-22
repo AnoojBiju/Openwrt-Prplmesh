@@ -2576,7 +2576,7 @@ void son_management::send_unassociated_sta_link_metrics_query_message(
         unassociated_sta_query->alloc_un_stations_list(agent.second.size());
         size_t count(0);
         LOG(DEBUG) << " Filling a new tlvUnassociatedStaLinkMetricsQuery to agent: "
-                   << tlvf::mac_to_string(agent.first) << " with ";
+                   << tlvf::mac_to_string(agent.first) << " with: ";
         for (auto station_info : agent.second) {
             std::get<1>(unassociated_sta_query->un_stations_list(count)) = *station_info;
             LOG(DEBUG) << "station with mac_add " << tlvf::mac_to_string(station_info->sta_mac)
