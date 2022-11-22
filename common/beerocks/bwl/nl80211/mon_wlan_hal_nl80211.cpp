@@ -7,6 +7,8 @@
  */
 
 #include "mon_wlan_hal_nl80211.h"
+#include "uslm_messages.h"
+#include "uslm_utils.h"
 
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
@@ -719,15 +721,76 @@ bool mon_wlan_hal_nl80211::sta_unassoc_rssi_measurement(
             return false;
         }
         is_socket_setup_complete = true;
+        LOG(DEBUG) << "Opened a Unix client socket to " << m_unassociated_stations_socket_path;
     }
     if (m_unassociated_stations_client_fd == -1) {
         LOG(ERROR) << "Unassociated station client socket is -1";
         is_socket_setup_complete = false;
         return false;
     }
-    // TO DO: implement it later!
-    new_list.clear();
-    LOG(DEBUG) << __func__ << " - NOT IMPLEMENTED";
+
+    for (const auto &mac_pair : new_list) {
+        if (!uslm_utils::send_register_sta_message(mac_pair.first,
+                                                   m_unassociated_stations_client_fd)) {
+            LOG(ERROR)
+                << "Failed to send monitor registration request for unassociated station, MAC="
+                << mac_pair.first;
+            return false;
+        }
+        uint8_t rx_buffer[256] = {};
+        if (recv(m_unassociated_stations_client_fd, rx_buffer, sizeof(rx_buffer), 0) < 0) {
+            LOG(ERROR) << "Failed to recv() response for unassociated station monitoring "
+                          "registration request for STA "
+                       << mac_pair.first;
+            return false;
+        }
+        const response *response_header = (response *)rx_buffer;
+        if (uslm_utils::get_response_error_code(*response_header) != error_code_t::ERROR_OK) {
+            LOG(ERROR) << "Failed to register STA " << mac_pair.first << " to be monitored.";
+            return false;
+        }
+    }
+
+    sUnassociatedStationsStats stats_list = {};
+
+    for (const auto &mac_pair : new_list) {
+        if (!uslm_utils::send_sta_link_metrics_request_message(mac_pair.first,
+                                                               m_unassociated_stations_client_fd)) {
+            LOG(ERROR) << "Failed to send STA link metrics request message to "
+                       << m_unassociated_stations_socket_path;
+            return false;
+        }
+        auto request_tx_time   = std::chrono::system_clock::now();
+        uint8_t rx_buffer[256] = {};
+        if (recv(m_unassociated_stations_client_fd, rx_buffer, sizeof(rx_buffer), 0) < 0) {
+            LOG(ERROR) << "Failed to recv() response for unassociated STA link metrics for STA "
+                       << mac_pair.first;
+            return false;
+        }
+        sUnassociatedStationStats stats = {};
+        if (!uslm_utils::parse_station_stats_from_buf(rx_buffer, sizeof(rx_buffer), stats)) {
+            LOG(ERROR) << "Could not parse link metrics for unassociated STA " << mac_pair.first;
+            return false;
+        }
+        auto response_rx_time = std::chrono::system_clock::now();
+        stats.mac_adress      = tlvf::mac_from_string(mac_pair.first);
+
+        // Spec states that timestamp field is the delta between the request for a measurement, and
+        // the response being read.
+        stats.time_stamp = std::chrono::duration_cast<std::chrono::milliseconds>(response_rx_time -
+                                                                                 request_tx_time)
+                               .count();
+        stats_list.un_stations_stats.push_back(stats);
+    }
+
+    auto resp_buff = ALLOC_SMART_BUFFER(sizeof(sUnassociatedStationsStats));
+    auto resp      = reinterpret_cast<sUnassociatedStationsStats *>(resp_buff.get());
+    LOG_IF(!resp, FATAL) << "Memory allocation failed!";
+
+    std::memset(resp_buff.get(), 0, sizeof(sUnassociatedStationsStats));
+    std::copy(stats_list.un_stations_stats.begin(), stats_list.un_stations_stats.end(),
+              std::back_inserter(resp->un_stations_stats));
+    event_queue_push(Event::Unassociation_Stations_Stats, resp_buff);
     return true;
 }
 
