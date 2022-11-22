@@ -40,6 +40,7 @@ build_image() {
            --build-arg OPENWRT_VERSION="$OPENWRT_VERSION" \
            --build-arg OPENWRT_TOOLCHAIN_VERSION="$OPENWRT_TOOLCHAIN_VERSION" \
            --build-arg TARGET_SYSTEM="$TARGET_SYSTEM" \
+           --build-arg WHM_ENABLE="$WHM_ENABLE" \
            --build-arg PRPLMESH_VARIANT="$PRPLMESH_VARIANT" \
            --target="$DOCKER_TARGET_STAGE" \
            "$scriptdir/" \
