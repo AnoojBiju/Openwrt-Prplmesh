@@ -26,6 +26,7 @@ extern "C" {
 #include <netlink/genl/genl.h>
 #include <netlink/msg.h>
 #include <netlink/netlink.h>
+#include <sys/un.h>
 
 namespace bwl {
 namespace nl80211 {
@@ -698,6 +699,32 @@ bool mon_wlan_hal_nl80211::set_estimated_service_parameters(uint8_t *esp_info_fi
 bool mon_wlan_hal_nl80211::sta_unassoc_rssi_measurement(
     std::unordered_map<std::string, uint32_t> &new_list)
 {
+    static bool is_socket_setup_complete = false;
+
+    if (!is_socket_setup_complete) {
+        sockaddr_un remote = {0};
+        remote.sun_family  = AF_UNIX;
+        std::strncpy(remote.sun_path, m_unassociated_stations_socket_path,
+                     std::strlen(m_unassociated_stations_socket_path) + 1);
+        m_unassociated_stations_client_fd = socket(PF_UNIX, SOCK_STREAM, 0);
+        if (m_unassociated_stations_client_fd < 0) {
+            LOG(ERROR) << " socket() failed";
+            return false;
+        }
+        socklen_t len =
+            std::strlen(m_unassociated_stations_socket_path) + sizeof(remote.sun_family);
+        if (connect(m_unassociated_stations_client_fd, (sockaddr *)&remote, len) < 0) {
+            LOG(ERROR) << "connect() failed: could not connect to "
+                       << m_unassociated_stations_socket_path;
+            return false;
+        }
+        is_socket_setup_complete = true;
+    }
+    if (m_unassociated_stations_client_fd == -1) {
+        LOG(ERROR) << "Unassociated station client socket is -1";
+        is_socket_setup_complete = false;
+        return false;
+    }
     // TO DO: implement it later!
     new_list.clear();
     return true;
