@@ -63,7 +63,8 @@ private:
 
     struct sConfigurationParams {
         eState state = eState::UNCONFIGURED;
-        std::chrono::steady_clock::time_point timeout;
+        std::chrono::steady_clock::time_point answer_timeout;
+        std::chrono::steady_clock::time_point profile_timeout;
         std::unique_ptr<mapf::encryption::diffie_hellman> dh = nullptr;
         //copy of M1 message used for authentication
         uint8_t *m1_auth_buf         = nullptr;
@@ -105,8 +106,9 @@ private:
      * Value: Struct that contain flags on the discovery phase of mapped band.
      */
     struct sDiscoveryStatus {
-        bool completed = false;
-        bool msg_sent  = false;
+        bool completed    = false;
+        bool msg_sent     = false;
+        bool msg_received = false;
     };
     // Decalaring unordered_map with key which is an enum, does not compiles on older gcc version.
     // It was considered a defect in the standard, and was fixed in C++14, and also fixed in the
