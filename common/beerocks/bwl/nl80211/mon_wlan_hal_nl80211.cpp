@@ -149,7 +149,7 @@ bool mon_wlan_hal_nl80211::update_stations_stats(const std::string &vap_iface_na
     stats_policy[NL80211_STA_INFO_TX_RETRIES]    = {NLA_U32, 0, 0};
     stats_policy[NL80211_STA_INFO_TX_FAILED]     = {NLA_U32, 0, 0};
     stats_policy[NL80211_STA_INFO_STA_FLAGS]  = {NLA_UNSPEC, sizeof(struct nl80211_sta_flag_update),
-                                                0};
+                                                 0};
     stats_policy[NL80211_STA_INFO_LOCAL_PM]   = {NLA_U32, 0, 0};
     stats_policy[NL80211_STA_INFO_PEER_PM]    = {NLA_U32, 0, 0};
     stats_policy[NL80211_STA_INFO_NONPEER_PM] = {NLA_U32, 0, 0};
