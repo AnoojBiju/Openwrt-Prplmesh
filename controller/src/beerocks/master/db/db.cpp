@@ -7163,6 +7163,7 @@ bool db::update_master_configuration(const sDbNbapiConfig &nbapi_config)
 void db::update_master_settings_from_config()
 {
     // calling these functions with "true" is equivalent to copying the value from config container
+    LOG(DEBUG) << "Badhri Im inside " << __func__;
     settings_channel_select_task(true);
     settings_client_11k_roaming(true);
     settings_client_band_steering(true);

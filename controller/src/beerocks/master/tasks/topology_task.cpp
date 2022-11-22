@@ -642,6 +642,8 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
         database.set_node_channel_bw(client_mac, database.get_node_channel(bssid_str), client_bw,
                                      database.get_node_channel_ext_above_secondary(bssid_str), 0,
                                      database.get_hostap_vht_center_frequency(bssid));
+        LOG(ERROR) << "Badhri Channel = "
+                   << database.get_node_channel(tlvf::mac_to_string(client_mac));
 
         // Note: The Database node stats and the Datamodels' stats are not the same.
         // Therefore, client information in data model and in node DB might differ.

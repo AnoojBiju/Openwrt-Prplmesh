@@ -352,6 +352,8 @@ void channel_selection_task::work()
             bml_task::connection_change_event new_event;
             new_event.mac = database.get_node_parent(tlvf::mac_to_string(radio_mac));
             tasks.push_event(database.get_bml_task_id(), bml_task::CONNECTION_CHANGE, &new_event);
+            LOG(ERROR) << "Badhri Channel = "
+                       << database.get_node_channel(tlvf::mac_to_string(radio_mac));
             TASK_LOG(DEBUG) << "BML, sending CONNECTION_CHANGE for mac " << new_event.mac;
         }
         TASK_LOG(DEBUG) << "vht_center_frequency = " << uint16_t(vht_center_frequency);
@@ -668,7 +670,8 @@ void channel_selection_task::work()
                                           csa_event->cs_params.vht_center_frequency)) {
             TASK_LOG(ERROR) << "set node channel bw failed, mac=" << radio_mac;
         }
-
+        LOG(ERROR) << "Badhri Channel = "
+                   << database.get_node_channel(tlvf::mac_to_string(radio_mac));
         // update bml listeners
         bml_task::csa_notification_event csa_notification_event;
         csa_notification_event.hostap_mac = tlvf::mac_to_string(radio_mac);
@@ -824,6 +827,8 @@ void channel_selection_task::work()
                                           csa_event->cs_params.vht_center_frequency)) {
             TASK_LOG(ERROR) << "set node channel bw failed, mac=" << radio_mac;
         }
+        LOG(ERROR) << "Badhri Channel = "
+                   << database.get_node_channel(tlvf::mac_to_string(radio_mac));
 
         // update bml listeners
         bml_task::csa_notification_event csa_notification_event;

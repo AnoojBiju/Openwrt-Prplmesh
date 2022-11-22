@@ -324,6 +324,10 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
                     node->data.gw_ire.radio[i].vendor = BML_WLAN_VENDOR_UNKNOWN;
                 }
 
+                LOG(ERROR) << "Badhri Channel = " << std::to_string(c->channel);
+                LOG(ERROR) << "Badhri Frequency = "
+                           << son::wireless_utils::channel_to_freq(c->channel);
+                LOG(ERROR) << "Badhri bw = " << c->bandwidth;
                 node->data.gw_ire.radio[i].channel       = !c->channel ? 255 : c->channel;
                 node->data.gw_ire.radio[i].cac_completed = r->cac_completed;
                 node->data.gw_ire.radio[i].bw            = c->bandwidth;

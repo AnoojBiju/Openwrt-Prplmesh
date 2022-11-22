@@ -333,6 +333,7 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
                    << beerocks::bpl::DEFAULT_CHANNEL_SELECT_TASK;
         master_conf.load_channel_select_task = beerocks::bpl::DEFAULT_CHANNEL_SELECT_TASK;
     }
+    LOG(DEBUG) << "Channel Select Task Config = " << master_conf.load_channel_select_task;
 
     if (!beerocks::bpl::cfg_get_dfs_task(master_conf.load_dynamic_channel_select_task)) {
         LOG(DEBUG) << "Failed to read dfs_task, setting to default value: "

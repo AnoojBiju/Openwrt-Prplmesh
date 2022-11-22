@@ -549,7 +549,8 @@ private:
     template <class Task>
     void task_status_helper(bool task_enabled, int &current_task_id, const std::string &task_name)
     {
-
+        LOG(DEBUG) << "Badhri current_task_id = " << current_task_id
+                   << " task_enabled = " << task_enabled << " Task Name = " << task_name;
         int current_status = ((current_task_id > 0) * 2) + (task_enabled * 1);
         // (current_task_id > 0) : is the task running ?
         // task_enabled : should it be running ?

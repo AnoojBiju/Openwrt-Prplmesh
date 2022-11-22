@@ -204,8 +204,8 @@ public:
 
         bool rdkb_extensions = false;
 
-        bool channel_select_task         = false;
-        bool dynamic_channel_select_task = false;
+        bool channel_select_task         = true;
+        bool dynamic_channel_select_task = true;
 
         // Params
         bool client_optimal_path_roaming_prefer_signal_strength = false;
