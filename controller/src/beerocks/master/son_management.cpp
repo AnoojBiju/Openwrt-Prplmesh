@@ -429,6 +429,25 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
         auto agent_mac         = database.get_node_parent_ire(hostap_mac);
         LOG(DEBUG) << "CLI ap channel switch request for " << hostap_mac;
 
+        /*
+        Construct a wifiChannel object with given parameters
+        to check if the requested channel switch parameters are a valid ones.
+        */
+        beerocks::WifiChannel wifi_channel(
+            cli_request->cs_params().channel,
+            son::wireless_utils::which_freq_type(cli_request->cs_params().vht_center_frequency),
+            static_cast<beerocks::eWiFiBandwidth>(cli_request->cs_params().bandwidth));
+        if (wifi_channel.is_empty()) {
+            LOG(ERROR) << "Invalid channel switch request. channel="
+                       << cli_request->cs_params().channel << ", bandwidth="
+                       << beerocks::utils::convert_bandwidth_to_int(
+                              static_cast<beerocks::eWiFiBandwidth>(
+                                  cli_request->cs_params().bandwidth))
+                       << ", center_frequency=" << cli_request->cs_params().vht_center_frequency;
+            isOK = false;
+            break;
+        }
+
         auto request = message_com::create_vs_message<
             beerocks_message::cACTION_CONTROL_HOSTAP_CHANNEL_SWITCH_ACS_START>(cmdu_tx);
         if (request == nullptr) {
