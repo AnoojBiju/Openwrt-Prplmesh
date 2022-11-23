@@ -119,11 +119,22 @@ HALState ap_wlan_hal_dummy::attach(bool block)
     auto state = base_wlan_hal_dummy::attach(block);
 
     // Initialize status files
-    if (m_radio_info.is_5ghz) {
-        set_channel(149, beerocks::eWiFiBandwidth::BANDWIDTH_80, 5775);
-    } else {
+    switch (m_radio_info.frequency_band) {
+    case beerocks::eFreqType::FREQ_24G:
         set_channel(1, beerocks::eWiFiBandwidth::BANDWIDTH_40, 2422);
-    }
+        break;
+    case beerocks::eFreqType::FREQ_5G:
+        set_channel(149, beerocks::eWiFiBandwidth::BANDWIDTH_80, 5775);
+        break;
+    case beerocks::eFreqType::FREQ_6G:
+        set_channel(65, beerocks::eWiFiBandwidth::BANDWIDTH_20, 6275);
+        break;
+    default:
+        LOG(ERROR) << "Invalid frequency type "
+                   << beerocks::utils::convert_frequency_type_to_string(m_radio_info.frequency_band)
+                   << " . Must be 2.4Ghz, 5GHz or 6GHz";
+        break;
+    };
 
     std::list<son::wireless_utils::sBssInfoConf> bss_info_conf_list;
     update_vap_credentials(bss_info_conf_list, "", "");
@@ -147,7 +158,10 @@ bool ap_wlan_hal_dummy::set_channel(int chan, beerocks::eWiFiBandwidth bw, int c
     m_radio_info.channel         = chan;
     m_radio_info.bandwidth       = beerocks::utils::convert_bandwidth_to_int(bw);
     m_radio_info.vht_center_freq = center_channel;
-    m_radio_info.is_dfs_channel  = son::wireless_utils::is_dfs_channel(chan);
+    m_radio_info.is_dfs_channel =
+        (son::wireless_utils::which_freq_type(center_channel) == beerocks::eFreqType::FREQ_5G)
+            ? son::wireless_utils::is_dfs_channel(chan)
+            : false;
     std::stringstream value;
     value << "channel: " << chan << std::endl;
     value << "bw: " << m_radio_info.bandwidth << std::endl;
@@ -526,7 +540,7 @@ bool ap_wlan_hal_dummy::process_dummy_event(parsed_obj_map_t &parsed_obj)
             msg->params.capabilities.ht_mcs              = beerocks::MCS_7;
             msg->params.capabilities.ht_low_bw_short_gi  = 1;
             msg->params.capabilities.ht_high_bw_short_gi = 0;
-            if (m_radio_info.is_5ghz) {
+            if (m_radio_info.frequency_band == beerocks::eFreqType::FREQ_5G) {
                 msg->params.capabilities.wifi_standard |= STANDARD_AC;
                 msg->params.capabilities.vht_ss               = 1;
                 msg->params.capabilities.vht_bw               = beerocks::BANDWIDTH_80;
@@ -537,6 +551,18 @@ bool ap_wlan_hal_dummy::process_dummy_event(parsed_obj_map_t &parsed_obj)
                 msg->params.capabilities.wifi_standard |= STANDARD_AX;
                 msg->params.capabilities.he_ss  = 1;
                 msg->params.capabilities.he_bw  = beerocks::BANDWIDTH_80;
+                msg->params.capabilities.he_mcs = beerocks::MCS_11;
+            } else if (m_radio_info.frequency_band == beerocks::eFreqType::FREQ_6G) {
+                msg->params.capabilities.wifi_standard |= STANDARD_AC;
+                msg->params.capabilities.vht_ss               = 1;
+                msg->params.capabilities.vht_bw               = beerocks::BANDWIDTH_80;
+                msg->params.capabilities.vht_mcs              = beerocks::MCS_9;
+                msg->params.capabilities.vht_low_bw_short_gi  = 1;
+                msg->params.capabilities.vht_high_bw_short_gi = 0;
+
+                msg->params.capabilities.wifi_standard |= STANDARD_AX;
+                msg->params.capabilities.he_ss  = 1;
+                msg->params.capabilities.he_bw  = beerocks::BANDWIDTH_160;
                 msg->params.capabilities.he_mcs = beerocks::MCS_11;
             }
         }
