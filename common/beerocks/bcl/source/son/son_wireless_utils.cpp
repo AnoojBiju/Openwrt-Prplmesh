@@ -1003,7 +1003,7 @@ int wireless_utils::channel_to_vht_center_freq(int channel, beerocks::eFreqType 
             }
         } else {
             LOG(ERROR) << "2.4ghz channel must be of either 20 or 40 bandwidth. can't be bandwidth "
-                       << bandwidth;
+                       << beerocks::utils::convert_bandwidth_to_int(bandwidth);
             return 0;
         }
     } break;
