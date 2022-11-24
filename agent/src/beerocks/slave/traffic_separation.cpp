@@ -17,7 +17,13 @@ constexpr char DOT_PVID_SUFFIX[] = ".pvid";
 #define PVID_SUFFIX &DOT_PVID_SUFFIX[1]
 
 int beerocks::net::TrafficSeparation::m_profile_x_disallow_override_unsupported_configuration = 0;
+namespace beerocks {
+namespace net {
 
+TrafficSeparation::TrafficSeparation(std::shared_ptr<btl::BrokerClient> broker_client)
+    : m_broker_client(broker_client)
+{
+}
 /**
  * @brief Configure interface on the Transport.
  *
@@ -51,9 +57,6 @@ static void configure_transport(const std::string &iface, bool add, const std::s
     // }
     // LOG(DEBUG) << "Transport configuration message sent for iface=" << iface;
 }
-
-namespace beerocks {
-namespace net {
 
 void TrafficSeparation::traffic_seperation_configuration_clear()
 {
@@ -98,7 +101,7 @@ void TrafficSeparation::traffic_seperation_configuration_clear()
     network_utils::set_vlan_filtering(db->bridge.iface_name, 0);
 }
 
-void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
+void TrafficSeparation::apply_policy(const std::string &radio_iface)
 {
     // Since the following call is locking the database, thread safety is promised on this function.
     auto db = AgentDB::get();
@@ -112,7 +115,7 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
         return;
     }
 
-    LOG(DEBUG) << "Apply_traffic_separation";
+    LOG(DEBUG) << "Apply traffic separation policy";
     // The Bridge, the WAN ports and the LAN ports should all have "Tagged Port" policy.
     // Update the Bridge Policy
     bool is_bridge = true;
