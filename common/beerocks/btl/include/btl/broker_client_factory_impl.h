@@ -46,7 +46,7 @@ public:
      *
      * @see BrokerClientFactory::create_instance
      */
-    std::unique_ptr<BrokerClient> create_instance() override;
+    std::shared_ptr<BrokerClient> create_instance() override;
 
 private:
     /**

@@ -39,7 +39,7 @@ public:
      *
      * @return Broker client instance.
      */
-    virtual std::unique_ptr<BrokerClient> create_instance() = 0;
+    virtual std::shared_ptr<BrokerClient> create_instance() = 0;
 };
 
 } // namespace btl
