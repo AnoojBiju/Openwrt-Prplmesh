@@ -194,6 +194,15 @@ void ApAutoConfigurationTask::handle_event(uint8_t event_enum_value, const void 
 
         db->statuses.ap_autoconfiguration_completed = false;
 
+        if (!m_traffic_separation_configurator) {
+            m_traffic_separation_configurator =
+                std::make_unique<TrafficSeparation>(m_btl_ctx.m_broker_client);
+        }
+
+        // Reset the traffic separation configuration as they will be reconfigured on
+        // autoconfiguration.
+        m_traffic_separation_configurator->traffic_seperation_configuration_clear();
+
         // Reset the discovery statuses.
         for (auto &discovery_status : m_discovery_status) {
             discovery_status.second = {};
@@ -285,6 +294,11 @@ bool ApAutoConfigurationTask::handle_vendor_specific(
         handle_vs_vaps_list_update_notification(cmdu_rx, sd, beerocks_header);
         break;
     }
+    case beerocks_message::ACTION_BACKHAUL_APPLY_VLAN_POLICY_REQUEST: {
+        handle_vs_apply_vlan_policy_request(cmdu_rx, sd, beerocks_header);
+        break;
+    }
+
     default: {
         // Message was not handled, therefore return false.
         return false;
@@ -373,7 +387,7 @@ void ApAutoConfigurationTask::configuration_complete_wait_action(const std::stri
     FSM_MOVE_STATE(radio_iface, eState::CONFIGURED);
 
     LOG(TRACE) << "Finished configuration on " << radio_iface;
-    TrafficSeparation::apply_traffic_separation(radio_iface);
+    m_traffic_separation_configurator->apply_policy(radio_iface);
 
     return;
 }
@@ -1226,7 +1240,7 @@ void ApAutoConfigurationTask::handle_multi_ap_policy_config_request(
         const auto &conf_params = radios_conf_param_kv.second;
 
         if (conf_params.state == eState::CONFIGURED) {
-            TrafficSeparation::apply_traffic_separation(radio_iface);
+            m_traffic_separation_configurator->apply_policy(radio_iface);
         } else {
             LOG(WARNING) << "autoconfiguration procedure is not completed yet, traffic separation "
                          << "policy cannot be applied";
@@ -1629,6 +1643,12 @@ void ApAutoConfigurationTask::handle_vs_vaps_list_update_notification(
                       [](beerocks::AgentDB::sRadio::sFront::sBssid b) {
                           return b.mac != net::network_utils::ZERO_MAC;
                       });
+}
+
+void ApAutoConfigurationTask::handle_vs_apply_vlan_policy_request(
+    ieee1905_1::CmduMessageRx &cmdu_rx, int fd, std::shared_ptr<beerocks_header> beerocks_header)
+{
+    m_traffic_separation_configurator->apply_policy();
 }
 
 bool ApAutoConfigurationTask::ap_autoconfiguration_wsc_calculate_keys(

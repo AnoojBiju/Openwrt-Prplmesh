@@ -1612,11 +1612,6 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
             ControllerConnectivityTask::eEvent::BACKHAUL_DISCONNECTED_NOTIFICATION);
         break;
     }
-    case beerocks_message::ACTION_BACKHAUL_APPLY_VLAN_POLICY_REQUEST: {
-        LOG(DEBUG) << "received ACTION_BACKHAUL_APPLY_VLAN_POLICY_REQUEST";
-        TrafficSeparation::apply_traffic_separation();
-        break;
-    }
     case beerocks_message::ACTION_BACKHAUL_CLIENT_RX_RSSI_MEASUREMENT_RESPONSE: {
         LOG(DEBUG) << "ACTION_BACKHAUL_CLIENT_RX_RSSI_MEASUREMENT_RESPONSE";
 
@@ -4006,10 +4001,6 @@ bool slave_thread::agent_fsm()
 
         m_task_pool.send_event(eTaskType::AP_AUTOCONFIGURATION,
                                ApAutoConfigurationTask::eEvent::INIT_TASK);
-
-        // Reset the traffic separation configuration as they will be reconfigured on
-        // autoconfiguration.
-        TrafficSeparation::traffic_seperation_configuration_clear();
 
         // Clear the channel_list
         // When FCC/ETSI is set, the prplmesh is not restarted, but the salve is.
