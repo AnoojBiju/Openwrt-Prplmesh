@@ -39,6 +39,11 @@ ubus call "Bridging.Bridge" _get '{ "rel_path": ".[Alias == \"lan\"].Port.[Name 
     ubus call "Bridging.Bridge" _add '{ "rel_path": ".[Alias == \"lan\"].Port.",  "parameters": { "Name": "eth1", "Alias": "ETH1", "Enable": true } }'
 }
 
+# Set the WAN interface as backhaul interface
+# Due to PPM-1644, the GL-Inet will report the wrong backhaul address to the controller if eth0 is used
+# (Even if onboarded wirelessly)
+uci set prplmesh.config.backhaul_wire_iface='eth1'
+
 uci set system.@system[0].hostname='glinet-b1300-2'
 uci commit
 /etc/init.d/system restart
@@ -159,4 +164,3 @@ config_foreach set_channel wifi-device
 uci commit
 /etc/init.d/system restart
 /etc/init.d/network restart
-
