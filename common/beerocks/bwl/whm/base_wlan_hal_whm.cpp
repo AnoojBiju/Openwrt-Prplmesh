@@ -250,6 +250,62 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
                                              filter);
 }
 
+void base_wlan_hal_whm::subscribe_to_ep_events()
+{
+    // subscribe to the WiFi.EndPoint.iface_name.ConnectionStatus
+    std::string wifi_ep_path = wbapi_utils::search_path_ep_profiles_by_iface(get_iface_name());
+    auto event_handler         = std::make_shared<sAmbiorixEventHandler>();
+    event_handler->event_type  = AMX_CL_OBJECT_CHANGED_EVT;
+    event_handler->callback_fn = [](AmbiorixVariant &event_data, void *context) -> void {
+        base_wlan_hal_whm *hal = (static_cast<base_wlan_hal_whm *>(context));
+        auto parameters        = event_data.find_child("parameters");
+        if (!parameters || parameters->empty()) {
+            return;
+        }
+        auto params_map = parameters->read_childs<AmbiorixVariantMapSmartPtr>();
+        if (!params_map) {
+            return;
+        }
+        for (auto &param_it : *params_map) {
+            auto key   = param_it.first;
+            auto value = param_it.second.find_child("to");
+            if (key.empty() || !value || value->empty()) {
+                continue;
+            }
+            hal->process_ep_event(hal->get_iface_name(), key, value.get());
+        }
+    };
+    event_handler->context = this;
+
+    std::string filter = "(path matches '" + wifi_ep_path +
+                         "$')"
+                         " && (notification == '" +
+                         AMX_CL_OBJECT_CHANGED_EVT +
+                         "')"
+                         " && (contains('parameters.Connectionstatus'))";
+
+    m_ambiorix_cl->subscribe_to_object_event(m_radio_path, event_handler, filter);
+}
+
+void base_wlan_hal_whm::subscribe_to_ep_wps_events()
+{
+    // subscribe to the WiFi.EndPoint.iface_name.WPS.
+    std::string wifi_ep_path = wbapi_utils::search_path_ep_profiles_by_iface(get_iface_name());
+    std::string wifi_wps_path = wifi_ep_path + "WPS.";
+    auto event_handler         = std::make_shared<sAmbiorixEventHandler>();
+    event_handler->event_type  = AMX_CL_WPS_PAIRING_DONE;
+    event_handler->callback_fn = [](AmbiorixVariant &event_data, void *context) -> void {
+        if (!event_data) {
+            return;
+        }
+        base_wlan_hal_whm *hal = (static_cast<base_wlan_hal_whm *>(context));
+        hal->process_ep_wps_event(hal->get_iface_name(), event_data);
+    };
+    event_handler->context = this;
+    std::string filter      = "path matches '" + wifi_wps_path + "'";
+    m_ambiorix_cl->subscribe_to_object_event(m_radio_path, event_handler, filter);
+}
+
 bool base_wlan_hal_whm::process_radio_event(const std::string &interface, const std::string &key,
                                             const AmbiorixVariant *value)
 {
@@ -264,6 +320,17 @@ bool base_wlan_hal_whm::process_ap_event(const std::string &interface, const std
 
 bool base_wlan_hal_whm::process_sta_event(const std::string &interface, const std::string &sta_mac,
                                           const std::string &key, const AmbiorixVariant *value)
+{
+    return true;
+}
+
+bool base_wlan_hal_whm::process_ep_event(const std::string &interface, const std::string &key,
+                                         const AmbiorixVariant *value)
+{
+    return true;
+}
+
+bool base_wlan_hal_whm::process_ep_wps_event(const std::string &interface, const AmbiorixVariant *data)
 {
     return true;
 }

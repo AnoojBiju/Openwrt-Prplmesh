@@ -70,6 +70,10 @@ protected:
     }
 
 private:
+    virtual bool process_ep_event(const std::string &interface, const std::string &key,
+                                  const beerocks::wbapi::AmbiorixVariant *value) override;
+    virtual bool process_ep_wps_event(const std::string &interface,
+                                      const beerocks::wbapi::AmbiorixVariant *data) override;
     struct Endpoint {
         int id;
         std::string bssid;

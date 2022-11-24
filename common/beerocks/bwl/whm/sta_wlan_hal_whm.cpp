@@ -24,13 +24,23 @@ sta_wlan_hal_whm::sta_wlan_hal_whm(const std::string &iface_name, hal_event_cb_t
     : base_wlan_hal(bwl::HALType::Station, iface_name, IfaceType::Intel, callback, hal_conf),
       base_wlan_hal_whm(bwl::HALType::Station, iface_name, callback, hal_conf)
 {
+    subscribe_to_ep_events();
+    subscribe_to_ep_wps_events();
 }
 
 sta_wlan_hal_whm::~sta_wlan_hal_whm() { sta_wlan_hal_whm::detach(); }
 
 bool sta_wlan_hal_whm::start_wps_pbc()
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    AmbiorixVariant args, result;
+    std::string endpoint_path = wbapi_utils::search_path_ep_by_iface(get_iface_name());
+    std::string wps_path      = endpoint_path + "WPS.";
+    bool ret                  = m_ambiorix_cl->call(wps_path, "pushButton", args, result);
+
+    if (!ret) {
+        LOG(ERROR) << "start_wps_pbc() failed!";
+        return false;
+    }
     return true;
 }
 
@@ -348,6 +358,75 @@ void sta_wlan_hal_whm::update_status(const Endpoint &endpoint)
 bool sta_wlan_hal_whm::is_connected(const std::string &status)
 {
     return (status.compare("Connected") == 0);
+}
+
+bool sta_wlan_hal_whm::process_ep_event(const std::string &interface, const std::string &key,
+                                       const AmbiorixVariant *value)
+{
+    if (key == "ConnectionStatus") {
+        std::string status = value->get<std::string>();
+        if (status.empty()) {
+            return true;
+        }
+        LOG(WARNING) << "endpoint " << interface << " ConnectionStatus " << status;
+        if (status == "Connected") {
+            Endpoint endpoint;
+            if (!read_status(endpoint)) {
+                LOG(ERROR) << "Failed reading connection status for iface: " << get_iface_name();
+                return false;
+            }
+            LOG(DEBUG) << get_iface_name() << " - Connected: bssid = " << endpoint.bssid
+                   << ", channel = " << endpoint.channel;
+            update_status(endpoint);
+            auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_BACKHAUL_CONNECTED_NOTIFICATION));
+            auto msg      = reinterpret_cast<sACTION_BACKHAUL_CONNECTED_NOTIFICATION *>(msg_buff.get());
+            LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+            memset(msg_buff.get(), 0, sizeof(sACTION_BACKHAUL_CONNECTED_NOTIFICATION));
+            event_queue_push(Event::Connected, msg_buff);
+        } else {
+            auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_BACKHAUL_DISCONNECT_REASON_NOTIFICATION));
+            auto msg =
+                reinterpret_cast<sACTION_BACKHAUL_DISCONNECT_REASON_NOTIFICATION *>(msg_buff.get());
+            LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+            memset(msg_buff.get(), 0, sizeof(sACTION_BACKHAUL_DISCONNECT_REASON_NOTIFICATION));
+            // Opitional: disconnect reason (not supported by whm)
+            Endpoint endpoint;
+            if (!read_status(endpoint)) {
+                LOG(ERROR) << "Failed reading connection status for iface: " << get_iface_name();
+                return false;
+            }
+            LOG(DEBUG) << get_iface_name() << " - Disconnected: bssid = " << endpoint.bssid
+                   << ", channel = " << endpoint.channel;
+            update_status(endpoint);
+            msg->bssid = tlvf::mac_from_string(endpoint.bssid);
+            event_queue_push(Event::Disconnected, msg_buff);
+        }
+    }
+    return true;
+}
+
+bool sta_wlan_hal_whm::process_ep_wps_event(const std::string &interface, const AmbiorixVariant *data)
+{
+    std::string reason;
+    data->read_child<>(reason, "reason");
+    if (reason.empty()) {
+        return true;
+    }
+    LOG(WARNING) << "WPS end, interface:" << interface << ", reason: " << reason;
+    if (reason == "Success") {
+        std::string ssid, key, mode, bssid;
+        ChannelFreqPair channel;
+        //bssid and channel not vailables
+        data->read_child<>(ssid, "SSID");
+        data->read_child<>(key, "KeyPassPhrase");
+        data->read_child<>(mode, "securitymode");
+        if (ssid.empty() || key.empty() || mode.empty()) {
+            return false;
+        }
+        WiFiSec sec = utils_wlan_hal_whm::security_pwhm_to_bwl(mode);
+        connect(ssid, key, sec, false, bssid, channel, false);
+    }
+    return true;
 }
 
 } // namespace whm

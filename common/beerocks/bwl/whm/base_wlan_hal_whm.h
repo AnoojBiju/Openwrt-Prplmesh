@@ -100,6 +100,8 @@ protected:
     void subscribe_to_radio_events();
     void subscribe_to_ap_events();
     void subscribe_to_sta_events();
+    void subscribe_to_ep_events();
+    void subscribe_to_ep_wps_events();
     virtual bool process_radio_event(const std::string &interface, const std::string &key,
                                      const beerocks::wbapi::AmbiorixVariant *value);
     virtual bool process_ap_event(const std::string &interface, const std::string &key,
@@ -107,6 +109,10 @@ protected:
     virtual bool process_sta_event(const std::string &interface, const std::string &sta_mac,
                                    const std::string &key,
                                    const beerocks::wbapi::AmbiorixVariant *value);
+    virtual bool process_ep_event(const std::string &interface, const std::string &key,
+                                  const beerocks::wbapi::AmbiorixVariant *value);
+    virtual bool process_ep_wps_event(const std::string &interface,
+                                      const beerocks::wbapi::AmbiorixVariant *data);
 
     // Private data-members:
 private:
