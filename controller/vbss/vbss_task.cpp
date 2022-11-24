@@ -148,7 +148,7 @@ bool vbss_task::handle_move_client_event(const sMoveEvent &move_event)
     // Add a new sMoveEvent to the mac_map with the new state CLIENT_SEC_CTX (Client Security Context Request)
     // which is the first step of the move process
     active_moves.add(client_vbss.vbssid, client_vbss, move_event.dest_ruid, move_event.ssid,
-                     move_event.password);
+                     move_event.password, eMoveProcessState::CLIENT_SEC_CTX);
 
     sMacAddr agent_mac = agent->al_mac;
 
