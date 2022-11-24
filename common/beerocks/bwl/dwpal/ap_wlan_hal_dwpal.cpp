@@ -2933,15 +2933,15 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
     }
 
     case Event::Interface_Connected_OK: {
-        LOG(INFO) << "GEORGE: Interface_Connected_OK buffer" << buffer;
+        LOG(INFO) << "GEORGE: ap_wlan_hal_dwpal.cpp Interface_Connected_OK buffer" << buffer;
         break;
     }
     case Event::Interface_Reconnected_OK: {
-        LOG(INFO) << "GEORGE: Interface_Reconnected_OK buffer" << buffer;
+        LOG(INFO) << "GEORGE: ap_wlan_hal_dwpal.cpp Interface_Reconnected_OK buffer" << buffer;
         break;
     }
     case Event::Interface_Disconnected: {
-        LOG(INFO) << "GEORGE: Interface_Disconnected buffer" << buffer;
+        LOG(INFO) << "GEORGE: ap_wlan_hal_dwpal.cpp Interface_Disconnected buffer" << buffer;
         break;
     }
 

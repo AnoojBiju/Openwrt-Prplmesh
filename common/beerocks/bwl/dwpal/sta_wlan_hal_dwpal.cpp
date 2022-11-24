@@ -53,6 +53,12 @@ static sta_wlan_hal::Event dwpal_to_bwl_event(const std::string &opcode)
         return sta_wlan_hal::Event::ChannelSwitch;
     } else if (opcode == "UNCONNECTED-STA-RSSI") {
         return sta_wlan_hal::Event::STA_Unassoc_RSSI;
+    } else if (opcode == "INTERFACE_CONNECTED_OK") {
+        return sta_wlan_hal::Event::Interface_Connected_OK;
+    } else if (opcode == "INTERFACE_RECONNECTED_OK") {
+        return sta_wlan_hal::Event::Interface_Reconnected_OK;
+    } else if (opcode == "INTERFACE_DISCONNECTED") {
+        return sta_wlan_hal::Event::Interface_Disconnected;
     }
 
     return sta_wlan_hal::Event::Invalid;
@@ -574,6 +580,19 @@ bool sta_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std
         event_queue_push(event);
 
     } break;
+
+    case Event::Interface_Connected_OK: {
+        LOG(INFO) << "GEORGE: sta_wlan_hal_dwpal.cpp Interface_Connected_OK buffer" << buffer;
+        break;
+    }
+    case Event::Interface_Reconnected_OK: {
+        LOG(INFO) << "GEORGE: sta_wlan_hal_dwpal.cpp Interface_Reconnected_OK buffer" << buffer;
+        break;
+    }
+    case Event::Interface_Disconnected: {
+        LOG(INFO) << "GEORGE: sta_wlan_hal_dwpal.cpp Interface_Disconnected buffer" << buffer;
+        break;
+    }
 
     // Gracefully ignore unhandled events
     // TODO: Probably should be changed to an error once dwpal will stop

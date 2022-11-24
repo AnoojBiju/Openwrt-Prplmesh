@@ -68,6 +68,12 @@ static mon_wlan_hal::Event dwpal_to_bwl_event(const std::string &opcode)
         return mon_wlan_hal::Event::STA_Connected;
     } else if (opcode == "AP-STA-DISCONNECTED") {
         return mon_wlan_hal::Event::STA_Disconnected;
+    } else if (opcode == "INTERFACE_CONNECTED_OK") {
+        return mon_wlan_hal::Event::Interface_Connected_OK;
+    } else if (opcode == "INTERFACE_RECONNECTED_OK") {
+        return mon_wlan_hal::Event::Interface_Reconnected_OK;
+    } else if (opcode == "INTERFACE_DISCONNECTED") {
+        return mon_wlan_hal::Event::Interface_Disconnected;
     }
 
     return mon_wlan_hal::Event::Invalid;
@@ -1394,6 +1400,19 @@ bool mon_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std
     }
     case Event::RRM_Channel_Load_Response:
         break;
+    case Event::Interface_Connected_OK: {
+        LOG(INFO) << "GEORGE: mon_wlan_hal_dwpal.cpp Interface_Connected_OK buffer" << buffer;
+        break;
+    }
+    case Event::Interface_Reconnected_OK: {
+        LOG(INFO) << "GEORGE: mon_wlan_hal_dwpal.cpp Interface_Reconnected_OK buffer" << buffer;
+        break;
+    }
+    case Event::Interface_Disconnected: {
+        LOG(INFO) << "GEORGE: mon_wlan_hal_dwpal.cpp Interface_Disconnected buffer" << buffer;
+        break;
+    }
+
     // Gracefully ignore unhandled events
     // TODO: Probably should be changed to an error once dwpal will stop
     //       sending empty or irrelevant events...
