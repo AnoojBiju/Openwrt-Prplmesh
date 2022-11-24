@@ -57,8 +57,7 @@ bool sta_wlan_hal_whm::connect(const std::string &ssid, const std::string &pass,
 {
     LOG(DEBUG) << "Connect interface " << get_iface_name() << " to SSID = " << ssid
                << ", BSSID = " << bssid << ", Channel = " << int(channel.first)
-               << ", freq type =" << channel.second
-               << ", Sec = " << utils_wlan_hal_whm::security_val(sec)
+               << ", freq type =" << channel.second << ", Sec = " << sec
                << ", mem_only_psk=" << int(mem_only_psk);
 
     if (ssid.empty() || sec == WiFiSec::Invalid) {
@@ -259,7 +258,7 @@ bool sta_wlan_hal_whm::set_profile_params(int profile_id, const std::string &ssi
     // Set Security
     // Path example: WiFi.EndPoint.[IntfName == 'wlan0'].Profile.1.Security.
     std::string profile_security_path = profile_path + "Security.";
-    std::string mode_enabled          = utils_wlan_hal_whm::security_val(sec);
+    std::string mode_enabled          = utils_wlan_hal_whm::security_type_to_string(sec);
     params.set_type(AMXC_VAR_ID_HTABLE);
     params.add_child<>("ModeEnabled", mode_enabled);
     ret = m_ambiorix_cl->update_object(profile_security_path, params);
@@ -299,8 +298,10 @@ bool sta_wlan_hal_whm::enable_profile(int profile_id)
 
     // Path example: WiFi.EndPoint.[IntfName == 'wlan0'].
     std::string endpoint_path = wbapi_utils::search_path_ep_by_iface(get_iface_name());
+    std::string profile_ref;
+    m_ambiorix_cl->resolve_path(profile_path, profile_ref);
     params.set_type(AMXC_VAR_ID_HTABLE);
-    params.add_child<uint8_t>("ProfileReference", profile_id);
+    params.add_child<>("ProfileReference", profile_ref);
     ret = m_ambiorix_cl->update_object(endpoint_path, params);
     if (!ret) {
         LOG(ERROR) << "Failed to set profile preference " << get_iface_name();
@@ -319,14 +320,36 @@ bool sta_wlan_hal_whm::read_status(Endpoint &endpoint)
         LOG(ERROR) << "failed to get endpoint object";
         return false;
     }
-    endpoint_obj->read_child<>(endpoint.bssid, "BSSID");
-    endpoint_obj->read_child<>(endpoint.ssid, "SSID");
-    endpoint_obj->read_child<>(endpoint.active_profile_id, "ProfileReference");
+
     endpoint_obj->read_child<>(endpoint.connection_status, "ConnectionStatus");
-    endpoint_obj->read_child<>(endpoint.channel, "Channel");
+
+    std::string ssid_ref, ssid_path;
+    if (endpoint_obj->read_child<>(ssid_ref, "SSIDReference") &&
+        m_ambiorix_cl->resolve_path(ssid_ref + ".", ssid_path)) {
+        auto ssid_obj = m_ambiorix_cl->get_object(ssid_path);
+        if (!ssid_obj) {
+            LOG(ERROR) << "failed to get ssid object";
+            return false;
+        }
+        ssid_obj->read_child<>(endpoint.bssid, "BSSID");
+        ssid_obj->read_child<>(endpoint.ssid, "SSID");
+        std::string radio_path;
+        if (ssid_obj->read_child<>(radio_path, "LowerLayers")) {
+            m_radio_path = radio_path;
+        }
+        if (!m_ambiorix_cl->get_param<>(endpoint.channel, m_radio_path, "Channel")) {
+            LOG(ERROR) << "failed to get radio channel from: " << m_radio_path;
+            return false;
+        }
+    }
+
+    std::string profile_ref, profile_path;
+    if (endpoint_obj->read_child<>(profile_ref, "ProfileReference") &&
+        m_ambiorix_cl->resolve_path(profile_ref + ".", profile_path)) {
+        endpoint.active_profile_id = wbapi_utils::get_object_id(profile_path);
+    }
 
     LOG(DEBUG) << "active profile " << m_active_profile_id;
-
     return true;
 }
 
