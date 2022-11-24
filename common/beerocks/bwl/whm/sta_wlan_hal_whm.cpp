@@ -58,7 +58,7 @@ bool sta_wlan_hal_whm::connect(const std::string &ssid, const std::string &pass,
     LOG(DEBUG) << "Connect interface " << get_iface_name() << " to SSID = " << ssid
                << ", BSSID = " << bssid << ", Channel = " << int(channel.first)
                << ", freq type =" << channel.second
-               << ", Sec = " << utils_wlan_hal_whm::security_val(sec)
+               << ", Sec = " << utils_wlan_hal_whm::security_bwl_to_pwhm(sec)
                << ", mem_only_psk=" << int(mem_only_psk);
 
     if (ssid.empty() || sec == WiFiSec::Invalid) {
@@ -132,9 +132,9 @@ bool sta_wlan_hal_whm::disconnect()
     }
 
     // Connection status id must be the same as the active profile id
-    if (m_active_profile_id != endpoint.active_profile_id) {
+    if (m_active_profile_id != endpoint.id) {
         LOG(ERROR) << "Profile id mismatch: m_active_profile_id(" << m_active_profile_id << ") != "
-                   << "endpoint.active_profile_id(" << endpoint.active_profile_id << ")";
+                   << "endpoint.id(" << endpoint.id << ")";
         return false;
     }
 
@@ -147,6 +147,7 @@ bool sta_wlan_hal_whm::disconnect()
     m_active_ssid       = "";
     m_active_bssid      = "";
     m_active_pass       = "";
+    m_active_radio_ref  = "";
     m_active_channel    = 0;
     m_active_profile_id = -1;
 
@@ -253,7 +254,7 @@ bool sta_wlan_hal_whm::set_profile_params(int profile_id, const std::string &ssi
     // Set Security
     // Path example: WiFi.EndPoint.[IntfName == 'wlan0'].Profile.1.Security.
     std::string profile_security_path = profile_path + "Security.";
-    std::string mode_enabled          = utils_wlan_hal_whm::security_val(sec);
+    std::string mode_enabled          = utils_wlan_hal_whm::security_bwl_to_pwhm(sec);
     params.set_type(AMXC_VAR_ID_HTABLE);
     params.add_child<>("ModeEnabled", mode_enabled);
     ret = m_ambiorix_cl->update_object(profile_security_path, params);
@@ -317,18 +318,26 @@ bool sta_wlan_hal_whm::read_status(Endpoint &endpoint)
     endpoint_obj->read_child<>(endpoint.ssid, "SSID");
     endpoint_obj->read_child<>(endpoint.active_profile_id, "ProfileReference");
     endpoint_obj->read_child<>(endpoint.connection_status, "ConnectionStatus");
-    endpoint_obj->read_child<>(endpoint.channel, "Channel");
+    endpoint_obj->read_child<>(endpoint.radio_ref, "RadioReference");
 
     LOG(DEBUG) << "active profile " << m_active_profile_id;
 
+    std::string radio_path = endpoint.radio_ref + ".";
+    auto radio_obj  = m_ambiorix_cl->get_object(radio_path);
+    if (!radio_obj) {
+        LOG(ERROR) << "failed to get radio object, path: " << radio_path;
+        return false;
+    }
+    radio_obj->read_child<>(endpoint.channel, "Channel");
     return true;
 }
 
 void sta_wlan_hal_whm::update_status(const Endpoint &endpoint)
 {
+    m_active_profile_id = endpoint.id;
     m_active_bssid      = endpoint.bssid;
     m_active_ssid       = endpoint.ssid;
-    m_active_profile_id = endpoint.active_profile_id;
+    m_active_radio_ref  = endpoint.radio_ref;
     m_active_channel    = endpoint.channel;
 
     LOG(DEBUG) << "m_active_profile_id= " << m_active_profile_id

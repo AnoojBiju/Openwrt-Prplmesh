@@ -71,11 +71,13 @@ protected:
 
 private:
     struct Endpoint {
+        int id;
         std::string bssid;
         std::string ssid;
         std::string connection_status;
         int channel;
         int active_profile_id;
+        std::string radio_ref;
     };
 
     int add_profile();
@@ -93,6 +95,7 @@ private:
     std::string m_active_ssid;
     std::string m_active_bssid;
     std::string m_active_pass;
+    std::string m_active_radio_ref;
     WiFiSec m_active_secutiry = WiFiSec::Invalid;
     uint8_t m_active_channel  = 0;
     int m_active_profile_id   = -1;

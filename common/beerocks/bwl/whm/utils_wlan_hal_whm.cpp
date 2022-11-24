@@ -23,7 +23,7 @@ eRadioState utils_wlan_hal_whm::radio_state_from_string(const std::string &state
     }
 }
 
-std::string utils_wlan_hal_whm::security_val(WiFiSec sec)
+std::string utils_wlan_hal_whm::security_bwl_to_pwhm(WiFiSec sec)
 {
     switch (sec) {
     case WiFiSec::None:
@@ -41,6 +41,25 @@ std::string utils_wlan_hal_whm::security_val(WiFiSec sec)
 
     default:
         return "INVALID";
+    }
+}
+
+WiFiSec utils_wlan_hal_whm::security_pwhm_to_bwl(const std::string &sec)
+{
+    if (sec == "NONE") {
+        return WiFiSec::None;
+    } else if (sec == "WEP-64") {
+        return WiFiSec::WEP_64;
+    } else if (sec == "WEP-128") {
+        return WiFiSec::WEP_128;
+    } else if (sec == "WPA-Personal") {
+        return WiFiSec::WPA_PSK;
+    } else if (sec == "WPA2-Personal") {
+        return WiFiSec::WPA2_PSK;
+    } else if (sec == "WPA-WPA2-Personal") {
+        return WiFiSec::WPA_WPA2_PSK;
+    } else {
+        return WiFiSec::Invalid;
     }
 }
 
