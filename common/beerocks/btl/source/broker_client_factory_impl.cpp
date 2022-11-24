@@ -32,7 +32,7 @@ BrokerClientFactoryImpl::BrokerClientFactoryImpl(
     LOG_IF(!m_event_loop, FATAL) << "Event loop is a null pointer!";
 }
 
-std::unique_ptr<BrokerClient> BrokerClientFactoryImpl::create_instance()
+std::shared_ptr<BrokerClient> BrokerClientFactoryImpl::create_instance()
 {
     // Create UDS socket
     auto socket = std::make_shared<beerocks::net::UdsSocket>();
@@ -75,7 +75,7 @@ std::unique_ptr<BrokerClient> BrokerClientFactoryImpl::create_instance()
     }
 
     LOG(DEBUG) << "Broker client created with fd = " << connection->socket()->fd();
-    auto broker_client = std::make_unique<BrokerClientImpl>(std::move(connection), m_message_parser,
+    auto broker_client = std::make_shared<BrokerClientImpl>(std::move(connection), m_message_parser,
                                                             m_message_serializer, m_event_loop);
     if (!broker_client) {
         LOG(ERROR) << "Unable to create broker client connected to '" << address.path() + "'";
