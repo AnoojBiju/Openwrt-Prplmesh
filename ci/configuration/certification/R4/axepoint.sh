@@ -19,13 +19,17 @@ if data_overlay_not_initialized; then
 fi
 sleep 2
 
-ubus wait_for IP.Interface
-
 # Stop and disable the DHCP clients:
 /etc/init.d/tr181-dhcpv4client stop
 rm -f /etc/rc.d/S27tr181-dhcpv4client
 /etc/init.d/tr181-dhcpv6client stop
 rm -f /etc/rc.d/S25tr181-dhcpv6client
+
+# Save the IP settings persistently (PPM-2351):
+sed -ri 's/(dm-save.*) = false/\1 = true/g' /etc/amx/ip-manager/ip-manager.odl
+/etc/init.d/ip-manager restart
+
+ubus wait_for IP.Interface
 
 # Set the LAN bridge IP:
 ubus call "IP.Interface" _set '{ "rel_path": ".[Name == \"br-lan\"].IPv4Address.[Alias == \"lan\"].", "parameters": { "IPAddress": "192.165.100.173" } }'
