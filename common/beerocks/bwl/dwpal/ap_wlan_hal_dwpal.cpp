@@ -78,6 +78,12 @@ static ap_wlan_hal::Event dwpal_to_bwl_event(const std::string &opcode)
         return ap_wlan_hal::Event::MGMT_Frame;
     } else if (opcode == "AP-STA-POSSIBLE-PSK-MISMATCH") {
         return ap_wlan_hal::Event::AP_Sta_Possible_Psk_Mismatch;
+    } else if (opcode == "INTERFACE_CONNECTED_OK") {
+        return ap_wlan_hal::Event::Interface_Connected_OK;
+    } else if (opcode == "INTERFACE_RECONNECTED_OK") {
+        return ap_wlan_hal::Event::Interface_Reconnected_OK;
+    } else if (opcode == "INTERFACE_DISCONNECTED") {
+        return ap_wlan_hal::Event::Interface_Disconnected;
     }
 
     return ap_wlan_hal::Event::Invalid;
@@ -2923,6 +2929,19 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
 
         event_queue_push(Event::AP_Sta_Possible_Psk_Mismatch,
                          msg_buff); // send message to the AP manager
+        break;
+    }
+
+    case Event::Interface_Connected_OK: {
+        LOG(INFO) << "GEORGE: Interface_Connected_OK buffer" << buffer;
+        break;
+    }
+    case Event::Interface_Reconnected_OK: {
+        LOG(INFO) << "GEORGE: Interface_Reconnected_OK buffer" << buffer;
+        break;
+    }
+    case Event::Interface_Disconnected: {
+        LOG(INFO) << "GEORGE: Interface_Disconnected buffer" << buffer;
         break;
     }
 
