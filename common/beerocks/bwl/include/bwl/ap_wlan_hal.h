@@ -427,6 +427,26 @@ public:
      */
     virtual bool set_cce_indication(uint16_t advertise_cce) = 0;
 
+    /**
+     * @brief Dynamically add a new BSS for the radio.
+     *
+     * @param ifname The name of the interface to be created.
+     * @param bss_conf the configuration for the new BSS.
+     * @param bridge The bridge the new interface should be part of (set to an empty string to disable).
+     * @param vbss Whether the BSS to create is a VBSS or not.
+     * @return true on success, false otherwise.
+     */
+    virtual bool add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
+                         std::string &bridge, bool vbss) = 0;
+
+    /**
+     * @brief Dynamically remove a BSS for the radio.
+     *
+     * @param ifname The name of the interface to remove.
+     * @return true on success, false otherwise.
+     */
+    virtual bool remove_bss(std::string &ifname) = 0;
+
 private:
     static const int frame_body_idx = (sizeof(s80211MgmtFrame::sHeader) * 2);
 
