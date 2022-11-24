@@ -9,6 +9,7 @@
 #ifndef _AP_AUTOCONFIGURATION_TASK_H_
 #define _AP_AUTOCONFIGURATION_TASK_H_
 
+#include "../traffic_separation.h"
 #include "task.h"
 
 #include <mapf/common/encryption.h>
@@ -115,6 +116,8 @@ private:
     // template argument.
     std::unordered_map<eFreqType, sDiscoveryStatus, std::hash<int>> m_discovery_status;
 
+    std::unique_ptr<net::TrafficSeparation> m_traffic_separation_configurator;
+
     bool m_task_is_active = false;
 
     slave_thread &m_btl_ctx;
@@ -193,6 +196,9 @@ private:
 
     void handle_vs_vaps_list_update_notification(ieee1905_1::CmduMessageRx &cmdu_rx, int fd,
                                                  std::shared_ptr<beerocks_header> beerocks_header);
+
+    void handle_vs_apply_vlan_policy_request(ieee1905_1::CmduMessageRx &cmdu_rx, int fd,
+                                             std::shared_ptr<beerocks_header> beerocks_header);
 
     /* Helper functions */
     /**
