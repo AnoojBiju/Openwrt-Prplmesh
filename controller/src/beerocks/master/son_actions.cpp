@@ -380,6 +380,10 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
                                      &new_event);
                     LOG(DEBUG) << "BML, sending client disconnect CONNECTION_CHANGE for mac "
                                << new_event.mac;
+
+                    LOG(DEBUG) << "Remove network device with mac " << node_mac
+                               << " from datamodel";
+                    database.remove_node(tlvf::mac_from_string(node_mac));
                 }
             }
         }
