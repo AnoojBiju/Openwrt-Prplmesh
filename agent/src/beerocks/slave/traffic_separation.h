@@ -155,6 +155,15 @@ private:
     void assign_ip_to_vlan_iface(const std::list<sBridgeVlanInfo> &vlans_of_bridge);
 
     /**
+     * @brief Configure interface on the Transport.
+     *
+     * @param iface Interface to configure.
+     * @param add true for adding interface, false to remove.
+     * @param bridge Bridge name if the interface is inside a bridge, otherwise should be empty.
+     */
+    void configure_transport(const std::string &iface, bool add, const std::string &bridge);
+
+    /**
      * Broker client to exchange CMDU messages with broker server running in transport process.
      */
     std::shared_ptr<btl::BrokerClient> m_broker_client;
