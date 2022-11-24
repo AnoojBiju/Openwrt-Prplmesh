@@ -2470,7 +2470,9 @@ void ApManager::handle_hostapd_attached()
     LOG(INFO) << " current channel = " << ap_wlan_hal->get_radio_info().channel;
     LOG(INFO) << " vht_center_frequency = " << ap_wlan_hal->get_radio_info().vht_center_freq;
     LOG(INFO) << " current bw = " << ap_wlan_hal->get_radio_info().bandwidth;
-    LOG(INFO) << " frequency_band = " << ap_wlan_hal->get_radio_info().frequency_band;
+    LOG(INFO) << " frequency_band = "
+              << beerocks::utils::convert_frequency_type_to_string(
+                     ap_wlan_hal->get_radio_info().frequency_band);
     LOG(INFO) << " max_bandwidth = " << ap_wlan_hal->get_radio_info().max_bandwidth;
     LOG(INFO) << " ht_supported = " << ap_wlan_hal->get_radio_info().ht_supported;
     LOG(INFO) << " ht_capability = " << std::hex << ap_wlan_hal->get_radio_info().ht_capability;
