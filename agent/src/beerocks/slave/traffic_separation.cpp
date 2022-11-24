@@ -24,39 +24,6 @@ TrafficSeparation::TrafficSeparation(std::shared_ptr<btl::BrokerClient> broker_c
     : m_broker_client(broker_client)
 {
 }
-/**
- * @brief Configure interface on the Transport.
- *
- * @param iface Interface to configure.
- * @param add true for adding interface, false to remove.
- * @param bridge Bridge name if the interface is inside a bridge, otherwise should be empty.
- */
-static void configure_transport(const std::string &iface, bool add, const std::string bridge)
-{
-    // Since this function currently is suspicious to crash the transport process comment it out for
-    // now.
-
-    // TODO: It would have been better if the traffic would be using the broker interface of caller
-    // instead of creating it every time.
-    // Since the Agent (son_slave) is the only user of the traffic sepaeration class, the broker
-    // interface cannot be provided, because the son_slave does not have it.
-    // It will be possible only after PPM-1529 will be done.
-
-    // // Create broker client factory to create broker clients when requested
-    // std::string broker_uds_path = std::string("/tmp/beerocks/") + std::string(BEEROCKS_BROKER_UDS);
-    // auto event_loop             = std::make_shared<beerocks::EventLoopImpl>();
-    // LOG_IF(!event_loop, FATAL) << "Unable to create event loop!";
-    // auto broker_client_factory =
-    //     beerocks::btl::create_broker_client_factory(broker_uds_path, event_loop);
-    // LOG_IF(!broker_client_factory, FATAL) << "Unable to create broker client factory!";
-    // auto broker_client = broker_client_factory->create_instance();
-    // LOG_IF(!broker_client, FATAL) << "Failed to create instance of broker client";
-    // LOG(DEBUG) << (add ? "Add" : "Remove") << " iface '" << iface << "' Transport monitoring";
-    // if (!broker_client->configure_interfaces(iface, bridge, false, add)) {
-    //     LOG(ERROR) << "Failed configuring transport process!";
-    // }
-    // LOG(DEBUG) << "Transport configuration message sent for iface=" << iface;
-}
 
 void TrafficSeparation::traffic_seperation_configuration_clear()
 {
@@ -99,6 +66,11 @@ void TrafficSeparation::traffic_seperation_configuration_clear()
     db->traffic_separation.secondary_vlans_ids.clear();
     db->traffic_separation.ssid_vid_mapping.clear();
     network_utils::set_vlan_filtering(db->bridge.iface_name, 0);
+
+    // Reset the transport monitoring on bridge interfaces
+    if (!m_broker_client->configure_interfaces(db->bridge.iface_name, {}, true, true)) {
+        LOG(ERROR) << "Failed configuring transport process!";
+    }
 }
 
 void TrafficSeparation::apply_policy(const std::string &radio_iface)
@@ -189,8 +161,12 @@ void TrafficSeparation::apply_policy(const std::string &radio_iface)
 
         // If a VLAN interface has beed added remove the wireless interface from transport
         // monitoring so a packet will not be sent twice, otherwise add it.
-        configure_transport(db->backhaul.selected_iface_name, !vlan_iface_added,
-                            db->bridge.iface_name);
+        if (!m_broker_client->configure_interfaces(db->backhaul.selected_iface_name,
+                                                   db->bridge.iface_name, false,
+                                                   !vlan_iface_added)) {
+            LOG(ERROR) << "Failed configuring transport process!";
+        }
+
         LOG(DEBUG) << "Removed " << db->backhaul.selected_iface_name
                    << " from transport configuration";
     }
@@ -309,7 +285,10 @@ void TrafficSeparation::apply_policy(const std::string &radio_iface)
 
                 // If a VLAN interface has beed added remove the wireless interface from transport
                 // monitoring so a packet will not be sent twice, otherwise add it.
-                configure_transport(bss_iface_netdev, !vlan_iface_added, db->bridge.iface_name);
+                if (!m_broker_client->configure_interfaces(bss_iface_netdev, db->bridge.iface_name,
+                                                           false, !vlan_iface_added)) {
+                    LOG(ERROR) << "Failed configuring transport process!";
+                }
                 LOG(DEBUG) << "Removed " << bss_iface_netdev << " from transport configuration";
             }
         }
