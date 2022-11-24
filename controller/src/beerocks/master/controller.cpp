@@ -990,6 +990,14 @@ bool Controller::autoconfig_wsc_add_m2(WSC::m1 &m1,
         if (bss_info_conf->backhaul) {
             cfg.bss_type |= WSC::eWscVendorExtSubelementBssType::BACKHAUL_BSS;
         }
+        if (bss_info_conf->profile1_backhaul_sta_association_disallowed) {
+            cfg.bss_type |=
+                WSC::eWscVendorExtSubelementBssType::PROFILE1_BACKHAUL_STA_ASSOCIATION_DISALLOWED;
+        }
+        if (bss_info_conf->profile2_backhaul_sta_association_disallowed) {
+            cfg.bss_type |=
+                WSC::eWscVendorExtSubelementBssType::PROFILE2_BACKHAUL_STA_ASSOCIATION_DISALLOWED;
+        }
 
         LOG(DEBUG) << "WSC config_data:" << std::hex << std::endl
                    << "     ssid: " << cfg.ssid << std::endl
@@ -2941,8 +2949,10 @@ bool Controller::handle_cmdu_control_message(
         }
 
         auto bss = radio->bsses.add(bssid, *radio, vap_id);
-        LOG_IF(bss->vap_id != vap_id, ERROR)
-            << "BSS " << bssid << " changed vap_id " << bss->vap_id << " -> " << vap_id;
+        // update BSS vap_id if still undefined
+        bss->update_vap_id(vap_id);
+        LOG_IF(bss->get_vap_id() != vap_id, ERROR)
+            << "BSS " << bssid << " changed vap_id " << bss->get_vap_id() << " -> " << vap_id;
         bss->enabled   = true;
         bss->ssid      = ssid;
         bss->fronthaul = notification->vap_info().fronthaul_vap;
@@ -3030,6 +3040,8 @@ bool Controller::handle_cmdu_control_message(
             if (vap_mac != beerocks::net::network_utils::ZERO_MAC_STRING) {
                 auto bss =
                     radio->bsses.add(notification->params().vaps[vap_id].mac, *radio, vap_id);
+                // update BSS vap_id if still undefined
+                bss->update_vap_id(vap_id);
                 bss->ssid      = std::string((char *)notification->params().vaps[vap_id].ssid);
                 bss->fronthaul = notification->params().vaps[vap_id].fronthaul_vap;
                 bss->backhaul  = notification->params().vaps[vap_id].backhaul_vap;

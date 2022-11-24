@@ -2299,11 +2299,11 @@ std::unordered_map<int8_t, sVapElement> &db::get_hostap_vap_list(const sMacAddr 
 bool db::remove_vap(Agent::sRadio &radio, Agent::sRadio::sBss &bss)
 {
     auto vap_list = get_hostap_vap_list(radio.radio_uid);
-    auto vap      = vap_list.find(bss.vap_id);
+    auto vap      = vap_list.find(bss.get_vap_id());
 
     if (vap != vap_list.end()) {
-        if (!vap_list.erase(bss.vap_id)) {
-            LOG(ERROR) << "Failed to remove VAP, id: " << bss.vap_id
+        if (!vap_list.erase(bss.get_vap_id())) {
+            LOG(ERROR) << "Failed to remove VAP, id: " << bss.get_vap_id()
                        << "bssid: " << vap->second.mac;
             return false;
         }

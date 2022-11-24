@@ -215,13 +215,6 @@ public:
             sRadio &radio;
             std::string dm_path; /**< data model path */
 
-            /**
-             * @brief VAP ID.
-             *
-             * Only exists on prplmesh devices. -1 if not set.
-             */
-            const int vap_id;
-
             /** SSID of the BSS - empty if unconfigured. */
             std::string ssid;
 
@@ -251,6 +244,34 @@ public:
 
             /** Stations (backhaul or fronthaul) connected to this BSS. */
             beerocks::mac_map<Station> connected_stations;
+
+            /**
+             * @brief Updates vap_id with valid value, if is was undefined
+             * @param[in] vap_id_ : new vap_id value, only applied when valid
+             *                      and that current one is still undefined
+             * @return current/updated vap_id.
+             */
+            int update_vap_id(int vap_id_) const
+            {
+                if ((vap_id == beerocks::eBeeRocksIfaceIds::IFACE_ID_INVALID) &&
+                    (vap_id_ >= beerocks::eBeeRocksIfaceIds::IFACE_VAP_ID_MIN)) {
+                    vap_id = vap_id_;
+                }
+                return vap_id;
+            }
+
+            /**
+             * @brief Returns current BSS vap_id value
+             */
+            int get_vap_id() const { return vap_id; }
+
+            /**
+             * @brief VAP ID.
+             *
+             * Only exists on prplmesh devices. -1 if not set.
+             */
+        private:
+            mutable int vap_id;
         };
 
         /** BSSes configured/reported on this radio. */

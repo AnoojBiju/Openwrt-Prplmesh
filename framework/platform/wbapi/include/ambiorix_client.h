@@ -14,44 +14,7 @@
 #include <easylogging++.h>
 
 // Ambiorix
-#include <amxc/amxc.h>
-
-#include <amxp/amxp.h>
-
-#include <amxd/amxd_dm.h>
-
-#include <amxb/amxb.h>
-
-#ifndef AMBIORIX_WBAPI_BACKEND_PATH
-#define AMBIORIX_WBAPI_BACKEND_PATH "/usr/bin/mods/amxb/mod-amxb-ubus.so"
-#endif
-#ifndef AMBIORIX_WBAPI_BUS_URI
-#define AMBIORIX_WBAPI_BUS_URI "ubus:/var/run/ubus.sock"
-#endif
-
-constexpr uint8_t AMX_CL_DEF_TIMEOUT = 3;
-
-constexpr char AMX_CL_WIFI_ROOT_NAME[]    = "WiFi";
-constexpr char AMX_CL_RADIO_OBJ_NAME[]    = "Radio";
-constexpr char AMX_CL_AP_OBJ_NAME[]       = "AccessPoint";
-constexpr char AMX_CL_SSID_OBJ_NAME[]     = "SSID";
-constexpr char AMX_CL_ENDPOINT_OBJ_NAME[] = "EndPoint";
-constexpr char AMX_CL_OBJ_DELIMITER       = '.';
-
-constexpr char AMX_CL_OBJECT_CHANGED_EVT[]   = "dm:object-changed";
-constexpr char AMX_CL_OBJECT_ADDED_EVT[]     = "dm:object-added";
-constexpr char AMX_CL_OBJECT_REMOVED_EVT[]   = "dm:object-removed";
-constexpr char AMX_CL_INSTANCE_ADDED_EVT[]   = "dm:instance-added";
-constexpr char AMX_CL_INSTANCE_CHANGED_EVT[] = "dm:instance-removed";
-constexpr char AMX_CL_PERIODIC_INFORM_EVT[]  = "dm:periodic-inform";
-
-using AmxClEventCb = std::function<void(amxc_var_t *event_data, void *context)>;
-
-struct sAmxClEventCallback {
-    AmxClEventCb callback_fn;
-    std::string event_type;
-    void *context;
-};
+#include "ambiorix_connection.h"
 
 namespace beerocks {
 namespace wbapi {
@@ -76,35 +39,106 @@ public:
      * @return True on success and false otherwise.
      * 
     */
-    bool connect(const std::string &amxb_backend, const std::string &bus_uri);
+    bool connect(const std::string &amxb_backend = {AMBIORIX_WBAPI_BACKEND_PATH},
+                 const std::string &bus_uri      = {AMBIORIX_WBAPI_BUS_URI});
 
     /**
-     * @brief read and return a given object.
+     * @brief read and return content tree of first object matching requested path.
      *
-     * @param[in] object_path: relative path to object.
-     * @param[in] depth: relative depth, if not zero it indicates how many levels of child objects are returned
-     * @return amxc_var_t object.
+     * @param[in] object_path: may be search path (possibly multiple match) or absolute path (unique match)
+     * @param[in] depth: relative depth, it indicates how many levels of child objects are returned
+     * @return AmbiorixVariantSmartPtr smart pointer to ambiorixVariant including result.
+     *                                 Empty when operation fails.
+     */
+    AmbiorixVariantSmartPtr get_object(const std::string &object_path, const int32_t depth = 0);
+
+    /**
+     * @brief read and return object parameter content.
+     *
+     * @param[in] obj_path: parent object path.
+     * @param[in] param_name: parameter name.
+     * @return AmbiorixVariantSmartPtr smart pointer to ambiorixVariant including result.
+     *                                 Empty when operation fails.
+     */
+    AmbiorixVariantSmartPtr get_param(const std::string &obj_path, const std::string &param_name);
+
+    /**
+     * @brief get content, with provided depth, of all objects matching path
+     * in map of Ambiorix variant objects, sorted by path string
+     *
+     * @param[in] object_path: may be search path (possibly multiple match) or absolute path (unique match)
+     * @param[in] depth: relative depth, it indicates how many levels of child objects are returned
+     * @return AmbiorixVariantListSmartPtr including variant childs
+     *      or AmbiorixVariantMapSmartPtr sorting childs in pairs of [object path, object content],
+     *      or Empty when operation fails.
+     */
+    template <typename T>
+    T get_object_multi(const std::string &object_path, const int32_t depth = 0)
+    {
+        if (!m_connection) {
+            return T{};
+        }
+        auto objs = m_connection->get_object(object_path, depth, false);
+        if (!objs) {
+            return T{};
+        }
+        return objs->take_childs<T>();
+    }
+
+    /**
+     * @brief request parameter value and converts it to basic types
+     * through template specialization.
+     *
+     * @param[out] result: reference to typed result, filled with converted parameter value
+     * @param[in] obj_path: parent object path.
+     * @param[in] param_name: parameter name.
+     * @return true on success, false otherwise.
+     */
+    template <typename T>
+    bool get_param(T &result, const std::string &obj_path, const std::string &param_name)
+    {
+        auto var = get_param(obj_path, param_name);
+        return (var && var->get(result));
+    }
+
+    /**
+     * @brief resolve a search path, and retrieve first matching result.
+     *
+     * @param[in] search_path: search path to object/parameter.
+     * @param[out] absolute_path: first resolved path string, empty when failing.
+     * @return true when search path is resolved, false otherwise.
     */
-    amxc_var_t *get_object(const std::string &object_path, const int32_t depth);
+    bool resolve_path(const std::string &search_path, std::string &absolute_path);
+
+    /**
+     * @brief resolve a search path, and retrieve all matching results.
+     *
+     * @param[in] search_path: search path to object/parameter.
+     * @param[out] absolute_path_list: all resolved path strings, cleared when failing.
+     * @return true when search path is resolved, false otherwise.
+    */
+    bool resolve_path_multi(const std::string &search_path,
+                            std::vector<std::string> &absolute_path_list);
 
     /**
      * @brief update a given object.
      *
      * @param[in] object_path: relative path to object.
-     * @param[in] object: amxc_var_t object to update.
+     * @param[in] object_data: data to be updated.
      * @return True on success and false otherwise.
     */
-    bool update_object(const std::string &object_path, amxc_var_t *object);
+    bool update_object(const std::string &object_path, AmbiorixVariant &object_data);
 
     /**
      * @brief add instance.
      *
      * @param[in] object_path: relative path to object.
-     * @param[in] object: amxc_var_t parameter: list of parameters values of the instance.
+     * @param[in] object_data: parameters values of the instance.
      * @param[out] instance_id: the new instance id.
      * @return True on success and false otherwise.
     */
-    bool add_instance(const std::string &object_path, amxc_var_t *parameter, int &instance_id);
+    bool add_instance(const std::string &object_path, AmbiorixVariant &object_data,
+                      int &instance_id);
 
     /**
      * @brief remove instance.
@@ -124,8 +158,8 @@ public:
      * @param[out] result: will contain the return value(s) and/or the out arguments.
      * @return True on success and false otherwise.
     */
-    bool call(const std::string &object_path, const char *method, amxc_var_t *args,
-              amxc_var_t *result);
+    bool call(const std::string &object_path, const char *method, AmbiorixVariant &args,
+              AmbiorixVariant &result);
 
     /**
      * @brief get the amxb file descriptor.
@@ -197,15 +231,17 @@ public:
      * @brief subscribe for event for a given object.
      *
      * @param[in] object_path: path to object.
+     * @param[in] event_handler: event handler structure.
      * @param[in] filter: filter expression.
-     * @param[in] event_callback: event callback structure.
      * @return true on success, false otherwise.
-    */
+     */
     bool subscribe_to_object_event(const std::string &object_path,
-                                   sAmxClEventCallback *event_callback);
+                                   std::shared_ptr<sAmbiorixEventHandler> &event_handler,
+                                   const std::string &filter = {});
 
 private:
-    amxb_bus_ctx_t *m_bus_ctx = nullptr;
+    AmbiorixConnectionSmartPtr m_connection;
+    std::vector<sAmbiorixSubscriptionInfo> m_subscriptions;
 };
 
 } // namespace wbapi

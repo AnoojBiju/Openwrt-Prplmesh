@@ -13,6 +13,9 @@
 
 #include <easylogging++.h>
 
+using namespace beerocks;
+using namespace wbapi;
+
 namespace bwl {
 namespace whm {
 
@@ -180,12 +183,6 @@ std::string sta_wlan_hal_whm::get_ssid() { return m_active_ssid; }
 
 std::string sta_wlan_hal_whm::get_bssid() { return m_active_bssid; }
 
-bool sta_wlan_hal_whm::process_whm_event(sta_wlan_hal::Event event, const amxc_var_t *data)
-{
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
-    return true;
-}
-
 bool sta_wlan_hal_whm::update_status()
 {
     Endpoint endpoint;
@@ -201,12 +198,10 @@ bool sta_wlan_hal_whm::update_status()
 int sta_wlan_hal_whm::add_profile()
 {
     // Path example: WiFi.EndPoint.[IntfName == 'wlan0'].Profile+
-    std::string profiles_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
-                                std::string(AMX_CL_ENDPOINT_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
-                                "[IntfName == '" + get_iface_name() + "']" + AMX_CL_OBJ_DELIMITER +
-                                "Profile." + AMX_CL_OBJ_DELIMITER;
-    int profile_id = -1;
-    bool ret       = m_ambiorix_cl->add_instance(profiles_path, nullptr, profile_id);
+    std::string profiles_path = wbapi_utils::search_path_ep_profiles_by_iface(get_iface_name());
+    int profile_id            = -1;
+    AmbiorixVariant obj_data(nullptr, false);
+    bool ret = m_ambiorix_cl->add_instance(profiles_path, obj_data, profile_id);
     if (!ret) {
         LOG(ERROR) << "Failed to add profile instance " << get_iface_name();
     }
@@ -216,10 +211,7 @@ int sta_wlan_hal_whm::add_profile()
 int sta_wlan_hal_whm::remove_profile(int profile_id)
 {
     // Path example: WiFi.EndPoint.[IntfName == 'wlan0'].Profile+
-    std::string profiles_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
-                                std::string(AMX_CL_ENDPOINT_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
-                                "[IntfName == '" + get_iface_name() + "']" + AMX_CL_OBJ_DELIMITER +
-                                "Profile." + AMX_CL_OBJ_DELIMITER;
+    std::string profiles_path = wbapi_utils::search_path_ep_profiles_by_iface(get_iface_name());
 
     bool ret = m_ambiorix_cl->remove_instance(profiles_path, profile_id);
     if (!ret) {
@@ -233,34 +225,27 @@ bool sta_wlan_hal_whm::set_profile_params(int profile_id, const std::string &ssi
                                           const std::string &pass, bool hidden_ssid, int channel)
 {
     // Path example: WiFi.EndPoint.[IntfName == 'wlan0'].Profile.1.
-    std::string profile_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
-                               std::string(AMX_CL_ENDPOINT_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
-                               "[IntfName == '" + get_iface_name() + "']" + AMX_CL_OBJ_DELIMITER +
-                               "Profile." + std::to_string(profile_id) + AMX_CL_OBJ_DELIMITER;
-    amxc_var_t params;
+    std::string profile_path =
+        wbapi_utils::search_path_ep_profile_by_id(get_iface_name(), profile_id);
+    AmbiorixVariant params(AMXC_VAR_ID_HTABLE);
 
     // Set SSID
-    amxc_var_init(&params);
-    amxc_var_set_type(&params, AMXC_VAR_ID_HTABLE);
-    amxc_var_add_new_key_cstring_t(&params, "SSID", ssid.c_str());
-    bool ret = m_ambiorix_cl->update_object(profile_path, &params);
+    params.add_child<>("SSID", ssid);
+    bool ret = m_ambiorix_cl->update_object(profile_path, params);
     if (!ret) {
         LOG(ERROR) << "Failed setting ssid on interface " << get_iface_name();
         return false;
     }
-    amxc_var_clean(&params);
 
     // Set BSSID : optional
     if (!bssid.empty()) {
-        amxc_var_init(&params);
-        amxc_var_set_type(&params, AMXC_VAR_ID_HTABLE);
-        amxc_var_add_new_key_cstring_t(&params, "ForceBSSID", bssid.c_str());
-        ret = m_ambiorix_cl->update_object(profile_path, &params);
+        params.set_type(AMXC_VAR_ID_HTABLE);
+        params.add_child<>("ForceBSSID", bssid);
+        ret = m_ambiorix_cl->update_object(profile_path, params);
         if (!ret) {
             LOG(ERROR) << "Failed setting bssid on interface " << get_iface_name();
             return false;
         }
-        amxc_var_clean(&params);
     }
 
     // Optional: set channel : not supported by pwhm
@@ -268,26 +253,23 @@ bool sta_wlan_hal_whm::set_profile_params(int profile_id, const std::string &ssi
     // Set Security
     // Path example: WiFi.EndPoint.[IntfName == 'wlan0'].Profile.1.Security.
     std::string profile_security_path = profile_path + "Security.";
-    amxc_var_init(&params);
-    amxc_var_set_type(&params, AMXC_VAR_ID_HTABLE);
-    std::string mode_enabled = utils_wlan_hal_whm::security_val(sec);
-    amxc_var_add_new_key_cstring_t(&params, "ModeEnabled", mode_enabled.c_str());
-    ret = m_ambiorix_cl->update_object(profile_security_path, &params);
+    std::string mode_enabled          = utils_wlan_hal_whm::security_val(sec);
+    params.set_type(AMXC_VAR_ID_HTABLE);
+    params.add_child<>("ModeEnabled", mode_enabled);
+    ret = m_ambiorix_cl->update_object(profile_security_path, params);
     if (!ret) {
         LOG(ERROR) << "Failed setting security on interface " << get_iface_name();
         return false;
     }
-    amxc_var_clean(&params);
 
     // Optional: set hidden-ssid: not supported by pwhm
 
     // mem_only_psk not supported by pwhm
 
     // Set psk
-    amxc_var_init(&params);
-    amxc_var_set_type(&params, AMXC_VAR_ID_HTABLE);
-    amxc_var_add_new_key_cstring_t(&params, "KeyPassPhrase", pass.c_str());
-    ret = m_ambiorix_cl->update_object(profile_security_path, &params);
+    params.set_type(AMXC_VAR_ID_HTABLE);
+    params.add_child<>("KeyPassPhrase", pass);
+    ret = m_ambiorix_cl->update_object(profile_security_path, params);
     if (!ret) {
         LOG(ERROR) << "Failed setting security psk on interface " << get_iface_name();
         return false;
@@ -298,29 +280,22 @@ bool sta_wlan_hal_whm::set_profile_params(int profile_id, const std::string &ssi
 bool sta_wlan_hal_whm::enable_profile(int profile_id)
 {
     // Path example: WiFi.EndPoint.[IntfName == 'wlan0'].Profile.1.
-    std::string profile_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
-                               std::string(AMX_CL_ENDPOINT_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
-                               "[IntfName == '" + get_iface_name() + "']" + AMX_CL_OBJ_DELIMITER +
-                               "Profile." + std::to_string(profile_id) + AMX_CL_OBJ_DELIMITER;
-    amxc_var_t params;
-    amxc_var_init(&params);
-    amxc_var_set_type(&params, AMXC_VAR_ID_HTABLE);
-    amxc_var_add_new_key_uint8_t(&params, "Enable", 1);
-    bool ret = m_ambiorix_cl->update_object(profile_path, &params);
+    std::string profile_path =
+        wbapi_utils::search_path_ep_profile_by_id(get_iface_name(), profile_id);
+
+    AmbiorixVariant params(AMXC_VAR_ID_HTABLE);
+    params.add_child<bool>("Enable", true);
+    bool ret = m_ambiorix_cl->update_object(profile_path, params);
     if (!ret) {
         LOG(ERROR) << "Failed to enable profile " << get_iface_name();
         return false;
     }
-    amxc_var_clean(&params);
 
     // Path example: WiFi.EndPoint.[IntfName == 'wlan0'].
-    std::string endpoint_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
-                                std::string(AMX_CL_ENDPOINT_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
-                                "[IntfName == '" + get_iface_name() + "']" + AMX_CL_OBJ_DELIMITER;
-    amxc_var_init(&params);
-    amxc_var_set_type(&params, AMXC_VAR_ID_HTABLE);
-    amxc_var_add_new_key_uint8_t(&params, "ProfileReference", profile_id);
-    ret = m_ambiorix_cl->update_object(endpoint_path, &params);
+    std::string endpoint_path = wbapi_utils::search_path_ep_by_iface(get_iface_name());
+    params.set_type(AMXC_VAR_ID_HTABLE);
+    params.add_child<uint8_t>("ProfileReference", profile_id);
+    ret = m_ambiorix_cl->update_object(endpoint_path, params);
     if (!ret) {
         LOG(ERROR) << "Failed to set profile preference " << get_iface_name();
         return false;
@@ -331,22 +306,18 @@ bool sta_wlan_hal_whm::enable_profile(int profile_id)
 bool sta_wlan_hal_whm::read_status(Endpoint &endpoint)
 {
     // Path example: WiFi.EndPoint.[IntfName == 'wlan0'].
-    std::string endpoint_path = std::string(AMX_CL_WIFI_ROOT_NAME) + AMX_CL_OBJ_DELIMITER +
-                                std::string(AMX_CL_ENDPOINT_OBJ_NAME) + AMX_CL_OBJ_DELIMITER +
-                                "[IntfName == '" + get_iface_name() + "']" + AMX_CL_OBJ_DELIMITER;
+    std::string endpoint_path = wbapi_utils::search_path_ep_by_iface(get_iface_name());
 
-    amxc_var_t *endpoint_obj = m_ambiorix_cl->get_object(endpoint_path, 0);
+    auto endpoint_obj = m_ambiorix_cl->get_object(endpoint_path);
     if (!endpoint_obj) {
         LOG(ERROR) << "failed to get endpoint object";
         return false;
     }
-    endpoint.bssid             = GET_CHAR(endpoint_obj, "BSSID");
-    endpoint.ssid              = GET_CHAR(endpoint_obj, "SSID");
-    endpoint.active_profile_id = GET_UINT32(endpoint_obj, "ProfileReference");
-    endpoint.connection_status = GET_CHAR(endpoint_obj, "ConnectionStatus");
-    endpoint.channel           = GET_UINT32(endpoint_obj, "Channel");
-
-    amxc_var_delete(&endpoint_obj);
+    endpoint_obj->read_child<>(endpoint.bssid, "BSSID");
+    endpoint_obj->read_child<>(endpoint.ssid, "SSID");
+    endpoint_obj->read_child<>(endpoint.active_profile_id, "ProfileReference");
+    endpoint_obj->read_child<>(endpoint.connection_status, "ConnectionStatus");
+    endpoint_obj->read_child<>(endpoint.channel, "Channel");
 
     LOG(DEBUG) << "active profile " << m_active_profile_id;
 

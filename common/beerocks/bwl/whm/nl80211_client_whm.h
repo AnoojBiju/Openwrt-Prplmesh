@@ -10,16 +10,27 @@
 
 #include <bwl/nl80211_client.h>
 
+// Ambiorix
+#include "ambiorix_connection.h"
+
 namespace bwl {
 
 /**
- * @brief NL80211 client whm implementation.
- *
- * This class is used by the whm flavor of the BWL library.
+ * @Class implements NL80211 client methods, using wbapi shared connection for requests
  */
 class nl80211_client_whm : public nl80211_client {
 
 public:
+    /**
+     * @brief Class constructor.
+     */
+    nl80211_client_whm();
+
+    /**
+     * @brief Class destructor.
+     */
+    virtual ~nl80211_client_whm() = default;
+
     /**
      * @brief Gets a list with the names of existing wireless VAP interfaces.
      *
@@ -98,6 +109,9 @@ public:
     bool get_tx_power_dbm(const std::string &interface_name, uint32_t &power) override;
 
     bool channel_scan_abort(const std::string &interface_name) override;
+
+private:
+    beerocks::wbapi::AmbiorixConnectionSmartPtr m_connection;
 };
 
 } // namespace bwl

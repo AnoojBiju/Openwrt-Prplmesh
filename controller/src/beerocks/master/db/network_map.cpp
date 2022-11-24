@@ -277,11 +277,11 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
 
             unsigned vap_id = 0;
             for (const auto &bss : radio.second->bsses) {
-                if (bss.second->vap_id >= 0) {
+                if (bss.second->get_vap_id() >= 0) {
                     // If vap_id is set, use it. Normally if one BSS has vap_id set, all of them
                     // should have it set. Still, we increment vap_id at the end of the loop so we
                     // can deal with unset vap_id as well.
-                    vap_id = bss.second->vap_id;
+                    vap_id = bss.second->get_vap_id();
                 }
                 if (vap_id >= beerocks::utils::array_length(node->data.gw_ire.radio[i].vap)) {
                     LOG(ERROR) << "exceeded size of data.gw_ire.radio[i].vap[] on " << radio.first;

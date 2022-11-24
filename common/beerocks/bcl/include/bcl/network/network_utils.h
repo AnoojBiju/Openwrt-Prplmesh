@@ -124,6 +124,13 @@ public:
     static std::vector<std::string> linux_get_iface_list_from_bridge(const std::string &bridge);
 
     /**
+     * @brief Gets the bridge name hosting the provided interface.
+     *
+     * @return bridge interface name, empty when none
+     */
+    static std::string linux_iface_get_host_bridge(const std::string &iface);
+
+    /**
      * @brief Gets the interface index corresponding to a particular name.
      *
      * @param iface_name The name of the network interface.

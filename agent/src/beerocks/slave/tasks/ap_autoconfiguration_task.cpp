@@ -302,7 +302,10 @@ void ApAutoConfigurationTask::configuration_complete_wait_action(const std::stri
         return;
     }
 
-    if (radio_conf_params.enabled_bssids.size() != radio_conf_params.num_of_bss_available) {
+    // Ap AutoConf starts to be applied once radio is up, i.e at least one BSS is enabled
+    // So no need to require for all BBSs to be enabled, (or even timeouting here)
+    // to follow up with auto conf completion
+    if (radio_conf_params.enabled_bssids.size() < 1) {
 
         // Wait until WAIT_AP_ENABLED_TIMEOUT_SECONDS timeout is expired.
         // If expired and we did not receive AP_ENABLE on the radios BSSs, assume it was already
@@ -348,6 +351,11 @@ void ApAutoConfigurationTask::configuration_complete_wait_action(const std::stri
 
         // Return if not all bssids are in the bridge, and print error.
         if (found == ifaces_in_bridge.end()) {
+            auto host_bridge = network_utils::linux_iface_get_host_bridge(bssid.iface_name);
+            if (!host_bridge.empty()) {
+                // skip secondary bss, already belonging to different bridge
+                continue;
+            }
             if (std::chrono::steady_clock::now() > radio_conf_params.timeout) {
                 auto timeout_sec =
                     std::chrono::duration_cast<std::chrono::seconds>(
@@ -1615,6 +1623,12 @@ void ApAutoConfigurationTask::handle_vs_vaps_list_update_notification(
     auto &radio_conf_params = m_radios_conf_params[radio_iface];
 
     radio_conf_params.received_vaps_list_update = true;
+
+    radio_conf_params.num_of_bss_available =
+        std::count_if(radio->front.bssids.begin(), radio->front.bssids.end(),
+                      [](beerocks::AgentDB::sRadio::sFront::sBssid b) {
+                          return b.mac != net::network_utils::ZERO_MAC;
+                      });
 }
 
 bool ApAutoConfigurationTask::ap_autoconfiguration_wsc_calculate_keys(
