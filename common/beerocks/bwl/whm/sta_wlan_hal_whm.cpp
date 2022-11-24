@@ -33,6 +33,7 @@ sta_wlan_hal_whm::sta_wlan_hal_whm(const std::string &iface_name, hal_event_cb_t
     m_ambiorix_cl->resolve_path(wbapi_utils::search_path_ep_by_iface(iface_name), m_ep_path);
 
     subscribe_to_ep_events();
+    subscribe_to_ep_wps_events();
 }
 
 sta_wlan_hal_whm::~sta_wlan_hal_whm() { sta_wlan_hal_whm::detach(); }
@@ -111,9 +112,33 @@ void sta_wlan_hal_whm::subscribe_to_ep_events()
     m_ambiorix_cl->subscribe_to_object_event(wifi_ep_path, event_handler, filter);
 }
 
+void sta_wlan_hal_whm::subscribe_to_ep_wps_events()
+{
+    std::string wifi_wps_path  = m_ep_path + "WPS.";
+    auto event_handler         = std::make_shared<sAmbiorixEventHandler>();
+    event_handler->event_type  = AMX_CL_WPS_PAIRING_DONE;
+    event_handler->callback_fn = [](AmbiorixVariant &event_data, void *context) -> void {
+        if (!event_data) {
+            return;
+        }
+        sta_wlan_hal_whm *hal = (static_cast<sta_wlan_hal_whm *>(context));
+        hal->process_ep_wps_event(hal->get_iface_name(), &event_data);
+    };
+    event_handler->context = this;
+    std::string filter     = "path matches '" + wifi_wps_path + "'";
+    m_ambiorix_cl->subscribe_to_object_event(wifi_wps_path, event_handler, filter);
+}
+
 bool sta_wlan_hal_whm::start_wps_pbc()
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    AmbiorixVariant args, result;
+    std::string wps_path = m_ep_path + "WPS.";
+    bool ret             = m_ambiorix_cl->call(wps_path, "pushButton", args, result);
+
+    if (!ret) {
+        LOG(ERROR) << "start_wps_pbc() failed!";
+        return false;
+    }
     return true;
 }
 
@@ -493,6 +518,57 @@ bool sta_wlan_hal_whm::process_ep_event(const std::string &interface, const std:
             clear_conn_state();
             event_queue_push(Event::Disconnected, msg_buff);
         }
+    }
+    return true;
+}
+
+bool sta_wlan_hal_whm::process_ep_wps_event(const std::string &interface,
+                                            const AmbiorixVariant *data)
+{
+    std::string reason;
+    data->read_child<>(reason, "reason");
+    if (reason.empty()) {
+        return true;
+    }
+    LOG(WARNING) << "WPS end, interface:" << interface << ", reason: " << reason;
+    if (reason == "Success") {
+        std::string ssid, key, mode;
+        data->read_child<>(ssid, "SSID");
+        data->read_child<>(key, "KeyPassPhrase");
+        data->read_child<>(mode, "securitymode");
+        if (ssid.empty() || key.empty() || mode.empty()) {
+            return false;
+        }
+
+        std::string ep_path;
+        data->read_child<>(ep_path, "path");
+
+        auto endpoint_obj = m_ambiorix_cl->get_object(ep_path);
+        if (!endpoint_obj) {
+            LOG(ERROR) << "failed to get endpoint object, path:" << ep_path;
+            return false;
+        }
+        std::string ssid_ref, ssid_path, bssid;
+        ChannelFreqPair channel;
+        if (endpoint_obj->read_child<>(ssid_ref, "SSIDReference") &&
+            m_ambiorix_cl->resolve_path(ssid_ref + ".", ssid_path)) {
+            auto ssid_obj = m_ambiorix_cl->get_object(ssid_path);
+            if (!ssid_obj) {
+                LOG(ERROR) << "failed to get ssid object";
+                return false;
+            }
+            ssid_obj->read_child<>(bssid, "BSSID");
+            std::string radio_path;
+            if (ssid_obj->read_child<>(radio_path, "LowerLayers")) {
+                if (!m_ambiorix_cl->get_param<>(channel.first, radio_path, "Channel")) {
+                    LOG(ERROR) << "failed to get channel from: " << radio_path;
+                    return false;
+                }
+            }
+        }
+
+        WiFiSec sec = utils_wlan_hal_whm::security_type_from_string(mode);
+        connect(ssid, key, sec, false, bssid, channel, false);
     }
     return true;
 }

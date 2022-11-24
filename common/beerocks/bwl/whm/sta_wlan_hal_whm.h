@@ -76,8 +76,17 @@ private:
      * @brief subscribe to WiFi.EndPoint.*.ConnectionStatus and IntfName dm object change
      */
     void subscribe_to_ep_events();
+
+    /**
+     * @brief subscribe to WiFi.EndPoint.*.WPS. pairingDone dm notification
+     */
+    void subscribe_to_ep_wps_events();
+
     bool process_ep_event(const std::string &interface, const std::string &key,
-                          const beerocks::wbapi::AmbiorixVariant *new_value, const beerocks::wbapi::AmbiorixVariant *old_value);
+                          const beerocks::wbapi::AmbiorixVariant *new_value,
+                          const beerocks::wbapi::AmbiorixVariant *old_value);
+    bool process_ep_wps_event(const std::string &interface,
+                              const beerocks::wbapi::AmbiorixVariant *data);
     struct Endpoint {
         std::string bssid;
         std::string ssid;
