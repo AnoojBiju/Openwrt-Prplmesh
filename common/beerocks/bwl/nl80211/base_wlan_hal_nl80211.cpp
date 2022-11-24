@@ -738,6 +738,21 @@ bool base_wlan_hal_nl80211::refresh_radio_info()
         m_radio_info.is_5ghz = (son::wireless_utils::which_freq_type(
                                     m_radio_info.vht_center_freq) == beerocks::eFreqType::FREQ_5G);
 
+        if (m_radio_info.frequency_band == beerocks::eFreqType::FREQ_UNKNOWN ||
+            m_radio_info.vht_center_freq == 0) {
+            iter = reply.find("freq");
+            if (iter != reply.end()) {
+                m_radio_info.frequency_band = son::wireless_utils::which_freq_type(
+                    beerocks::string_utils::stoi(iter->second));
+                m_radio_info.vht_center_freq = son::wireless_utils::channel_to_vht_center_freq(
+                    m_radio_info.channel, m_radio_info.frequency_band,
+                    beerocks::utils::convert_bandwidth_to_enum(m_radio_info.bandwidth),
+                    m_radio_info.channel_ext_above);
+            } else {
+                LOG(ERROR) << "Failed to find freq value in reply";
+            }
+        }
+
         // If the VAPs map is empty, refresh it as well
         // TODO: update on every refresh?
         if (!m_radio_info.available_vaps.size()) {
