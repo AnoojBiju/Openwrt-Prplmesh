@@ -88,5 +88,11 @@ bool AmbiorixDummy::read_param(const std::string &obj_path, const std::string &p
     return true;
 }
 
+bool AmbiorixDummy::read_param(const std::string &obj_path, const std::string &param_name,
+                               std::string *param_val)
+{
+    return true;
+}
+
 } // namespace nbapi
 } // namespace beerocks

@@ -68,6 +68,10 @@ public:
     MOCK_METHOD(bool, read_param,
                 (const std::string &path_to_object, const std::string &object, uint64_t *param_val),
                 (override));
+    MOCK_METHOD(bool, read_param,
+                (const std::string &path_to_object, const std::string &object,
+                 std::string *param_val),
+                (override));
 };
 
 } // namespace nbapi
