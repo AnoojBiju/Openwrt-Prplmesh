@@ -244,6 +244,13 @@ bool agent_monitoring_task::start_task(const sMacAddr &src_mac, std::shared_ptr<
         if (!send_backhaul_sta_capability_query(src_mac, cmdu_tx)) {
             LOG(ERROR) << "Failed to send Backhaul STA Capability Query to agent=" << src_mac;
         }
+
+        if (agent->prioritization_support) {
+            database.dm_get_service_prioritization_rules(agent);
+            if (!send_prioritization_rule(*agent)) {
+                LOG(ERROR) << "Failed sending Service Priotitization to agent " << src_mac;
+            }
+        }
     }
 
     return true;
@@ -452,6 +459,45 @@ bool agent_monitoring_task::send_backhaul_sta_capability_query(const sMacAddr &d
     }
 
     return son_actions::send_cmdu_to_agent(dst_mac, cmdu_tx, database);
+}
+
+bool agent_monitoring_task::send_prioritization_rule(const Agent &agent)
+{
+    if (agent.max_prioritization_rules < 1)
+        return true;
+
+    int64_t activeRule{-1};
+    uint8_t precedence{0};
+    for (const auto &rule : agent.service_prioritization.rules) {
+        if (rule.second.bits_field2.always_match) {
+            if (rule.second.precedence >= precedence) {
+                precedence = rule.second.precedence;
+                activeRule = rule.first;
+            }
+        }
+    }
+    if (activeRule < 0) {
+        return false;
+    }
+
+    if (!cmdu_tx.create(0, ieee1905_1::eMessageType::SERVICE_PRIORITIZATION_REQUEST_MESSAGE)) {
+        LOG(ERROR) << "failed creating prioritity request message";
+        return false;
+    }
+
+    auto priorityRequest = cmdu_tx.addClass<wfa_map::tlvServicePrioritizationRule>();
+    if (priorityRequest) {
+        priorityRequest->rule_params() = agent.service_prioritization.rules.at(activeRule);
+        priorityRequest->rule_params().bits_field1.add_remove = 1;
+
+        constexpr uint8_t USE_DSCP{0x08};
+        if (priorityRequest->rule_params().output == USE_DSCP) {
+
+            //TODO add DSCP map if exists (PPM 2386)
+        }
+    }
+
+    return son_actions::send_cmdu_to_agent(agent.al_mac, cmdu_tx, database);
 }
 
 bool agent_monitoring_task::send_tlv_empty_channel_selection_request(
