@@ -160,6 +160,8 @@ public:
         CountryCode country_code;
         wfa_map::tlvProfile2ApCapability::eByteCounterUnits byte_counter_units;
         uint32_t max_prioritization_rules;
+        wfa_map::tlvProfile2MultiApProfile::eMultiApProfile certification_profile =
+            wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::PRPLMESH_PROFILE_UNKNOWN;
     } device_conf;
 
     struct sControllerInfo {
