@@ -2879,6 +2879,21 @@ void BackhaulManager::handle_dev_reset_default(
     auto bridge_ifaces = beerocks::net::network_utils::linux_get_iface_list_from_bridge(bridge);
     auto eth_iface     = db->ethernet.wan.iface_name;
 
+    auto program = params.at("program");
+    if (program == supported_programs[0]) {
+        // If certification program is map, set the certification_profile to Profile 1.
+        db->device_conf.certification_profile =
+            wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1;
+    } else if (program == supported_programs[1]) {
+        // If certification program is mapr2, set the certification_profile to Profile 2.
+        db->device_conf.certification_profile =
+            wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_2;
+    } else if (program == supported_programs[2]) {
+        // If certification program is mapr3, set the certification_profile to Profile 3.
+        db->device_conf.certification_profile =
+            wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_3;
+    }
+
     //check if wired interface is enabled or try to enable it.
     if (!beerocks::net::network_utils::linux_iface_is_up_and_running(eth_iface)) {
         LOG(INFO) << "The wired interface " << eth_iface << " is not up, lets try to enable it";
