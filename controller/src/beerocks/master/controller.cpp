@@ -2700,11 +2700,13 @@ bool Controller::handle_non_intel_slave_join(
 {
 
     // Multi-AP Agent doesn't say anything about the backhaul, so simulate ethernet backhaul to satisfy
-    // network map. MAC address is the bridge MAC with the last octet incremented by 1.
+    // network map. MAC address is the bridge MAC with the fifth octet incremented by 1.
     // The mac address for the backhaul is the same since it is ethernet backhaul.
     sMacAddr bridge_mac = agent->al_mac;
     sMacAddr mac        = bridge_mac;
-    mac.oct[5]++;
+    mac.oct[4]++;
+    //Set locally administered flag
+    mac.oct[0] |= 1 << 1;
     std::string backhaul_mac = tlvf::mac_to_string(mac);
     // generate eth address from bridge address
     auto eth_switch_mac_binary = beerocks::net::network_utils::get_eth_sw_mac_from_bridge_mac(mac);
