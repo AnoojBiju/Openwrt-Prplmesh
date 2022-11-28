@@ -321,7 +321,7 @@ void optimal_path_task::work()
             database.dm_uint64_param_one_up(station->dm_path + ".MultiAPSTA.SteeringSummaryStats",
                                             "NoCandidateAPFailures");
             database.dm_uint64_param_one_up(
-                "Device.WiFi.DataElements.Network.MultiAPSteeringSummaryStats",
+                CONTROLLER_ROOT_DM ".Network.MultiAPSteeringSummaryStats",
                 "NoCandidateAPFailures");
             finish();
             break;
@@ -334,7 +334,7 @@ void optimal_path_task::work()
             database.dm_uint64_param_one_up(station->dm_path + ".MultiAPSTA.SteeringSummaryStats",
                                             "NoCandidateAPFailures");
             database.dm_uint64_param_one_up(
-                "Device.WiFi.DataElements.Network.MultiAPSteeringSummaryStats",
+                CONTROLLER_ROOT_DM ".Network.MultiAPSteeringSummaryStats",
                 "NoCandidateAPFailures");
             finish();
             break;
@@ -756,7 +756,7 @@ void optimal_path_task::work()
             database.dm_uint64_param_one_up(station->dm_path + ".MultiAPSTA.SteeringSummaryStats",
                                             "NoCandidateAPFailures");
             database.dm_uint64_param_one_up(
-                "Device.WiFi.DataElements.Network.MultiAPSteeringSummaryStats",
+                CONTROLLER_ROOT_DM ".Network.MultiAPSteeringSummaryStats",
                 "NoCandidateAPFailures");
             finish();
         } else {
@@ -1160,7 +1160,7 @@ void optimal_path_task::work()
             database.dm_uint64_param_one_up(station->dm_path + ".MultiAPSTA.SteeringSummaryStats",
                                             "NoCandidateAPFailures");
             database.dm_uint64_param_one_up(
-                "Device.WiFi.DataElements.Network.MultiAPSteeringSummaryStats",
+                CONTROLLER_ROOT_DM ".Network.MultiAPSteeringSummaryStats",
                 "NoCandidateAPFailures");
             finish();
             break;
@@ -1173,7 +1173,7 @@ void optimal_path_task::work()
             database.dm_uint64_param_one_up(station->dm_path + ".MultiAPSTA.SteeringSummaryStats",
                                             "NoCandidateAPFailures");
             database.dm_uint64_param_one_up(
-                "Device.WiFi.DataElements.Network.MultiAPSteeringSummaryStats",
+                CONTROLLER_ROOT_DM ".Network.MultiAPSteeringSummaryStats",
                 "NoCandidateAPFailures");
             finish();
             break;
@@ -1447,7 +1447,7 @@ void optimal_path_task::work()
             database.dm_uint64_param_one_up(station->dm_path + ".MultiAPSTA.SteeringSummaryStats",
                                             "NoCandidateAPFailures");
             database.dm_uint64_param_one_up(
-                "Device.WiFi.DataElements.Network.MultiAPSteeringSummaryStats",
+                CONTROLLER_ROOT_DM".Network.MultiAPSteeringSummaryStats",
                 "NoCandidateAPFailures");
             finish();
         } else {

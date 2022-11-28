@@ -476,7 +476,7 @@ std::string agent_monitoring_task::dm_add_agent_connected_event(
     }
 
     std::string agent_connected_event_path =
-        "Device.WiFi.DataElements.AgentConnectedEvent.AgentConnected";
+        CONTROLLER_ROOT_DM ".AgentConnectedEvent.AgentConnected";
     std::string agent_connected_path = ambiorix_dm->add_instance(agent_connected_event_path);
 
     if (agent_connected_path.empty() && NBAPI_ON) {
@@ -615,7 +615,7 @@ bool agent_monitoring_task::dm_add_agent_disconnected_event(const sMacAddr &agen
     }
 
     std::string agent_discon_event_path =
-        "Device.WiFi.DataElements.AgentDisconnectedEvent.AgentDisconnected";
+        CONTROLLER_ROOT_DM ".AgentDisconnectedEvent.AgentDisconnected";
     std::string agent_discon_path = ambiorix_dm->add_instance(agent_discon_event_path);
 
     if (agent_discon_path.empty()) {

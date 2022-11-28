@@ -8,7 +8,7 @@
  */
 
 %define {
-    select Device.WiFi.DataElements.AgentDisconnectedEvent {
+    select @CONTROLLER_ROOT_DM@.AgentDisconnectedEvent {
         %read-only object AgentDisconnected [] {
             counted with AgentDisconnectedNumberOfEntries;
             %read-only string ID = "00:00:00:00:00:00";

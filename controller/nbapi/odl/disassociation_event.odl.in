@@ -14,7 +14,7 @@
 }
 
 %define {
-    select Device.WiFi.DataElements {
+    select @CONTROLLER_ROOT_DM@ {
         // The events generated when a STA disassociates from a BSS.
         object DisassociationEvent {
             object DisassociationEventData[] {

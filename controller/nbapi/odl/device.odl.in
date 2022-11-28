@@ -14,7 +14,8 @@
 }
 
 %define {
-    select Device.WiFi.DataElements.Network.Device {
+    select @CONTROLLER_ROOT_DM@.Network.Device {
+        
         /*
         ** A unique identifier for this particular device
         ** within the Wi-Fi network
