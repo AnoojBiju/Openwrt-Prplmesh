@@ -477,7 +477,7 @@ bool agent_monitoring_task::send_prioritization_rule(const Agent &agent)
         }
     }
     if (activeRule < 0) {
-        return false;
+        return true;
     }
 
     if (!cmdu_tx.create(0, ieee1905_1::eMessageType::SERVICE_PRIORITIZATION_REQUEST_MESSAGE)) {

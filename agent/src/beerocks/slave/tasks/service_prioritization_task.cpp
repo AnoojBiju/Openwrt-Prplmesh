@@ -135,7 +135,82 @@ void ServicePrioritizationTask::handle_service_prioritization_request(
                   db->service_prioritization.dscp_mapping_table.begin());
     }
 
-    // TODO: Configure Rules (PPM-1874).
+    if (!qos_apply_active_rule()) {
+        LOG(ERROR) << "Failed setting up QoS active rule";
+    }
+}
+
+bool ServicePrioritizationTask::qos_apply_active_rule()
+{
+    const auto &rules = AgentDB::get()->service_prioritization.rules;
+    auto it           = rules.cbegin();
+    auto active       = rules.cend();
+    while (it != rules.cend()) {
+        if (it->second.bits_field2.always_match) {
+            if ((active == rules.cend()) || (active->second.precedence < it->second.precedence)) {
+                active = it;
+            }
+        }
+        ++it;
+    }
+    if (active != rules.cend()) {
+        switch (active->second.output) {
+        case QOS_USE_DSCP_MAP:
+            return qos_setup_dscp_map();
+        case QOS_USE_UP:
+            return qos_setup_up_map();
+        default:
+            return qos_setup_single_value_map(active->second.output);
+        }
+    }
+
+    return true;
+}
+
+bool ServicePrioritizationTask::qos_flush_setup()
+{
+    //TODO: PPM-2389, drive ebtables or external software
+    return true;
+}
+
+bool ServicePrioritizationTask::qos_setup_single_value_map(uint8_t pcp)
+{
+    if (pcp >= QOS_USE_DSCP_MAP) {
+        LOG(ERROR) << "invalid output value for QoS single rule (" << static_cast<uint16_t>(pcp)
+                   << ')';
+        return false;
+    }
+
+    qos_flush_setup();
+
+    LOG(DEBUG) << "ServicePrioritizationTask::qos_create_single_value_map - NOT IMPLEMENTED YET";
+
+    //TODO: PPM-2389, drive ebtables or external software
+    return true;
+}
+
+bool ServicePrioritizationTask::qos_setup_dscp_map()
+{
+    LOG(DEBUG) << "ServicePrioritizationTask::qos_setup_dscp_map - DSCP custom map used for PCP";
+
+    qos_flush_setup();
+
+    LOG(DEBUG) << "ServicePrioritizationTask::qos_setup_dscp_map - NOT IMPLEMENTED YET";
+
+    //TODO: PPM-2389, drive ebtables or external software
+    return true;
+}
+
+bool ServicePrioritizationTask::qos_setup_up_map()
+{
+    LOG(DEBUG) << "ServicePrioritizationTask::qos_setup_up_map - UP used for PCP";
+
+    qos_flush_setup();
+
+    LOG(DEBUG) << "ServicePrioritizationTask::qos_setup_up_map - NOT IMPLEMENTED YET";
+
+    //TODO: PPM-2389, drive ebtables or external software
+    return true;
 }
 
 } // namespace beerocks

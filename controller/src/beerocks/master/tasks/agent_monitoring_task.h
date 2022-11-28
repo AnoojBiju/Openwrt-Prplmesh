@@ -157,7 +157,7 @@ private:
     /**
      * @brief Send Service Prioritization Request Message to an Agent
      *
-     * Initiate an Agent configuration for Service Prioritization (EasyMech R3, minimal)
+     * Initiate an Agent configuration for Service Prioritization
      *
      * @param agent Target Agent where configuration must be sent
      * @return True on success, false otherwise.
