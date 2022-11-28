@@ -165,7 +165,7 @@ public:
         std::chrono::milliseconds steering_disassoc_timer_msec;
         int management_mode;
         bool unsuccessful_assoc_report_policy;
-        int unsuccessful_assoc_max_reporting_rate;
+        unsigned int unsuccessful_assoc_max_reporting_rate;
         int optimal_path_rssi_timeout_msec;
         int optimal_path_beacon_timeout_msec;
 
@@ -2407,6 +2407,42 @@ public:
      * @return True on success, otherwise false.
      */
     bool dm_set_steering_policies(const Agent &agent);
+
+    /** @brief Sets Multi-AP profile for corresponding device.
+     *
+     * DM path: "Device.WiFi.DataElements.Network.Device.{i}."
+     *
+     * @param[in] agent Agent DB object.
+     * @return true on success, otherwise false.
+     */
+    bool dm_set_device_multi_ap_profile(const Agent &agent);
+
+    /** @brief Sets Unsuccessful Association policy parameters for corresponding device.
+     *
+     * DM path: "Device.WiFi.DataElements.Network.Device.{i}."
+     *
+     * @param[in] agent Agent DB object.
+     * @return true on success, otherwise false.
+     */
+    bool dm_set_device_unsuccessful_association_policy(const Agent &agent);
+
+    /** @brief Sets service prioritization rules for corresponding device.
+     *
+     * DM path: "Device.WiFi.DataElements.Network.Device.{i}."
+     *
+     * @param[in] agent Agent DB object.
+     * @return true on success, otherwise false.
+     */
+    bool dm_set_service_prioritization_rules(const Agent &agent);
+
+    /** @brief Sets AP capability parameters for corresponding device.
+     *
+     * DM path: "Device.WiFi.DataElements.Network.Device.{i}."
+     *
+     * @param[in] agent Agent DB object.
+     * @return true on success, otherwise false.
+     */
+    bool dm_set_device_ap_capabilities(const Agent &agent);
 
     //
     // tasks

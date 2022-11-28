@@ -27,6 +27,10 @@
         %read-only string ExecutionEnv;
         %read-only string CountryCode;
 
+        uint32 MultiAPProfile {
+            on action validate call check_range [0, 5];
+        }
+
         uint32 APMetricsReportingInterval {
             on action validate call check_range [0, 255];
         }
@@ -39,6 +43,34 @@
             counted with BTMSteeringDisallowedSTAListNumberOfEntries;
             %read-only string MACAddress = "";
         }
+
+        /* Indicates whether the Multi-AP Agent or the single AP reports 
+        ** unsuccessful association attempts of client STAs to Multi-AP Controller.
+        */
+        bool ReportUnsuccessfulAssociations;
+
+        /* Maximum rate for reporting unsuccessful association attempts in attempts per minute */
+        %read-only uint32 MaxReportingRate {
+            on action validate call check_range [0, 255];
+        }
+
+        /* A hexadecimal string of 64 Priority Code Point (PCP) values (one octet per value)
+        ** corresponding to the Differentiated Services Code Point (DSCP)
+        */
+        %read-only string DSCPMap {
+            on action validate call check_range [0, 64];
+        }
+
+        /* The maximum total number of service prioritization rules supported by the Agent */
+        %read-only uint32 MaxPrioritizationRules {
+            on action validate call check_range [0, 255];
+        }
+
+        // 802.1Q C-TAG Service Prioritization support
+        %read-only bool PrioritizationSupport;
+
+        /* The maximum total number of unique VLAN IDs (VIDs) the Multi-AP Agent supports */
+        %read-only uint32 MaxVIDs;
 
         /*
         ** The Multi-AP capabilities supported by this device
@@ -95,6 +127,23 @@
             %read-only uint64 VID = 0 {
                 on action validate call check_range [0, 4095];
             }
+        }
+
+        %read-only object SPRule [] {
+            counted with SPRuleNumberOfEntries;
+
+            /* The Service Prioritization (SP) rule */
+            %read-only uint32 ID;
+            /* Rule precedence – higher number means higher priority */
+            %read-only uint32 Precedence = 0 {
+                on action validate call check_range [0, 254];
+            }
+            /* Rule output - the value of, or method used to select, the 802.1Q C-TAG PCP output value */
+            %read-only uint32 Output = 0 {
+                on action validate call check_range [0, 9];
+            }
+            /* Indicates if the rule always matches */
+            %read-only bool AlwaysMatch;
         }
 
         /*

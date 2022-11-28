@@ -7977,3 +7977,77 @@ bool db::dm_set_steering_policies(const Agent &agent)
     }
     return ret_val;
 }
+
+bool db::dm_set_device_multi_ap_profile(const Agent &agent)
+{
+    if (agent.dm_path.empty()) {
+        return true;
+    }
+
+    return m_ambiorix_datamodel->set(agent.dm_path, "MultiAPProfile", agent.profile);
+}
+
+bool db::dm_set_device_unsuccessful_association_policy(const Agent &agent)
+{
+    if (agent.dm_path.empty()) {
+        return true;
+    }
+
+    bool ret_val = true;
+    ret_val &= m_ambiorix_datamodel->set(agent.dm_path, "ReportUnsuccessfulAssociations",
+                                         agent.unsuccessful_assoc_report_policy);
+    ret_val &= m_ambiorix_datamodel->set(agent.dm_path, "MaxReportingRate",
+                                         agent.unsuccessful_assoc_max_reporting_rate);
+
+    return ret_val;
+}
+
+bool db::dm_set_service_prioritization_rules(const Agent &agent)
+{
+    if (agent.dm_path.empty()) {
+        return true;
+    }
+
+    bool ret_val = true;
+
+    std::string dscp_map_str;
+    std::transform(agent.service_prioritization.dscp_mapping_table.begin(),
+                   agent.service_prioritization.dscp_mapping_table.end(),
+                   std::back_inserter(dscp_map_str), [](int const &i) { return i + '0'; });
+
+    ret_val &= m_ambiorix_datamodel->set(agent.dm_path, "DSCPMap", dscp_map_str);
+
+    if (!m_ambiorix_datamodel->remove_all_instances(agent.dm_path + ".SPRule")) {
+        return false;
+    }
+
+    for (const auto &rule : agent.service_prioritization.rules) {
+        auto sp_rule_path = m_ambiorix_datamodel->add_instance(agent.dm_path + ".SPRule");
+        if (sp_rule_path.empty()) {
+            return false;
+        }
+
+        ret_val &= m_ambiorix_datamodel->set(sp_rule_path, "ID", rule.first);
+        ret_val &= m_ambiorix_datamodel->set(sp_rule_path, "Precedence", rule.second.precedence);
+        ret_val &= m_ambiorix_datamodel->set(sp_rule_path, "Output", rule.second.output);
+        ret_val &= m_ambiorix_datamodel->set(sp_rule_path, "AlwaysMatch",
+                                             rule.second.bits_field2.always_match);
+    }
+
+    return ret_val;
+}
+
+bool db::dm_set_device_ap_capabilities(const Agent &agent)
+{
+    if (agent.dm_path.empty()) {
+        return true;
+    }
+
+    bool ret_val = true;
+    ret_val &= m_ambiorix_datamodel->set(agent.dm_path, "MaxPrioritizationRules",
+                                         agent.max_prioritization_rules);
+    ret_val &= m_ambiorix_datamodel->set(agent.dm_path, "PrioritizationSupport",
+                                         agent.prioritization_support);
+    ret_val &= m_ambiorix_datamodel->set(agent.dm_path, "MaxVIDs", agent.max_total_number_of_vids);
+    return ret_val;
+}

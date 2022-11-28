@@ -436,10 +436,10 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
             master_conf.unsuccessful_assoc_max_reporting_rate)) {
         LOG(DEBUG) << "Failed to read unsuccessful_assoc_max_reporting_rate, setting to "
                       "default value: "
-                   << beerocks::bpl::DEFAULT_UNSUCCESSFUL_ASSOC_MAX_REPORTING_RATE;
+                   << beerocks::bpl::DEFAULT_UNSUCCESSFUL_ASSOC_MAX_REPORTING_ATTEMPTS_PER_MINUTE;
 
         master_conf.unsuccessful_assoc_max_reporting_rate =
-            beerocks::bpl::DEFAULT_UNSUCCESSFUL_ASSOC_MAX_REPORTING_RATE;
+            beerocks::bpl::DEFAULT_UNSUCCESSFUL_ASSOC_MAX_REPORTING_ATTEMPTS_PER_MINUTE;
     }
 
     if (!beerocks::bpl::cfg_get_rssi_measurements_timeout(

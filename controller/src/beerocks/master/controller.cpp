@@ -69,6 +69,7 @@
 #include <tlvf/wfa_map/tlvClientCapabilityReport.h>
 #include <tlvf/wfa_map/tlvClientInfo.h>
 #include <tlvf/wfa_map/tlvDeviceInventory.h>
+#include <tlvf/wfa_map/tlvDscpMappingTable.h>
 #include <tlvf/wfa_map/tlvErrorCode.h>
 #include <tlvf/wfa_map/tlvHigherLayerData.h>
 #include <tlvf/wfa_map/tlvOperatingChannelReport.h>
@@ -81,8 +82,10 @@
 #include <tlvf/wfa_map/tlvProfile2RadioMetrics.h>
 #include <tlvf/wfa_map/tlvProfile2ReasonCode.h>
 #include <tlvf/wfa_map/tlvProfile2StatusCode.h>
+#include <tlvf/wfa_map/tlvQoSManagementDescriptor.h>
 #include <tlvf/wfa_map/tlvRadioOperationRestriction.h>
 #include <tlvf/wfa_map/tlvSearchedService.h>
+#include <tlvf/wfa_map/tlvServicePrioritizationRule.h>
 #include <tlvf/wfa_map/tlvStaMacAddressType.h>
 #include <tlvf/wfa_map/tlvSteeringBTMReport.h>
 #include <tlvf/wfa_map/tlvSupportedService.h>
@@ -297,6 +300,7 @@ bool Controller::start()
             ieee1905_1::eMessageType::BACKHAUL_STA_CAPABILITY_REPORT_MESSAGE,
             ieee1905_1::eMessageType::BSS_CONFIGURATION_REQUEST_MESSAGE,
             ieee1905_1::eMessageType::FAILED_CONNECTION_MESSAGE,
+            ieee1905_1::eMessageType::QOS_MANAGEMENT_NOTIFICATION_MESSAGE,
         })) {
         LOG(ERROR) << "Failed subscribing to the Bus";
         return false;
@@ -572,8 +576,10 @@ bool Controller::handle_cmdu_1905_1_message(const sMacAddr &src_mac,
         return handle_cmdu_1905_failed_connection_message(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::ASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE:
         return handle_cmdu_1905_associated_sta_link_metrics_response_message(src_mac, cmdu_rx);
+    case ieee1905_1::eMessageType::QOS_MANAGEMENT_NOTIFICATION_MESSAGE:
+        return handle_cmdu_1905_qos_management_notification_message(src_mac, cmdu_rx);
 
-    // Empty cases are used to prevent error logs. Below message types are proccessed within tasks.
+    // Empty cases are used to prevent error logs. Below message types are processed within tasks.
     case ieee1905_1::eMessageType::TOPOLOGY_RESPONSE_MESSAGE:
     case ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE:
     case ieee1905_1::eMessageType::LINK_METRIC_RESPONSE_MESSAGE:
@@ -731,7 +737,7 @@ bool Controller::handle_cmdu_1905_autoconfiguration_search(const sMacAddr &src_m
         wfa_map::tlvSupportedService::eSupportedService::MULTI_AP_CONTROLLER;
 
     // Add MultiAp Profile TLV only if the agent added it to the seach message.
-    // Although R2 is profile1 competible, we found out that some certified agent
+    // Although R2 is profile1 compatible, we found out that some certified agent
     // fail to parse the response in case the TLV is present.
     auto tlvProfile2MultiApProfileAgent = cmdu_rx.getClass<wfa_map::tlvProfile2MultiApProfile>();
     if (tlvProfile2MultiApProfileAgent) {
@@ -784,6 +790,11 @@ bool Controller::handle_cmdu_1905_autoconfiguration_search(const sMacAddr &src_m
 
         agent->profile = tlvProfile2MultiApProfileAgent->profile();
         LOG(DEBUG) << "Agent profile is updated with enum " << agent->profile;
+
+        if (!database.dm_set_device_multi_ap_profile(*agent)) {
+            LOG(ERROR) << "Failed to set Multi-AP profile in DM for Agent " << agent->al_mac;
+            return false;
+        }
     }
 
     return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
@@ -4073,13 +4084,33 @@ bool Controller::handle_tlv_profile2_ap_capability(std::shared_ptr<Agent> agent,
         return false;
     }
 
+    agent->max_prioritization_rules = profile2_ap_capability_tlv->max_prioritization_rules();
     agent->byte_counter_units = static_cast<wfa_map::tlvProfile2ApCapability::eByteCounterUnits>(
         profile2_ap_capability_tlv->capabilities_bit_field().byte_counter_units);
-
+    agent->prioritization_support =
+        profile2_ap_capability_tlv->capabilities_bit_field().prioritization;
+    agent->dpp_onboarding_support =
+        profile2_ap_capability_tlv->capabilities_bit_field().dpp_onboarding;
+    agent->traffic_separation_support =
+        profile2_ap_capability_tlv->capabilities_bit_field().traffic_separation;
     agent->max_total_number_of_vids = profile2_ap_capability_tlv->max_total_number_of_vids();
 
-    LOG(DEBUG) << "Profile-2 AP Capability is received, agent bytecounters enum="
-               << agent->byte_counter_units;
+    LOG(DEBUG) << "Profile-2 AP Capability TLV is received:" << std::endl
+               << "The maximum total number of supported service priroritization rules: "
+               << agent->max_prioritization_rules << std::endl
+               << "The units used for byte counters: "
+               << wfa_map::tlvProfile2ApCapability::eByteCounterUnits_str(agent->byte_counter_units)
+               << std::endl
+               << "Service Prioritization support: " << agent->prioritization_support << std::endl
+               << "DPP Onboarding procedure support: " << agent->dpp_onboarding_support << std::endl
+               << "Traffic Separation support: " << agent->traffic_separation_support << std::endl
+               << "The maximum total number of supported unique VLAN IDs: "
+               << agent->max_total_number_of_vids << std::endl;
+
+    if (!database.dm_set_device_ap_capabilities(*agent)) {
+        LOG(ERROR) << "Failed to set AP capability parameters in DM for Agent" << agent->al_mac;
+        return false;
+    }
 
     return true;
 }
@@ -4257,6 +4288,21 @@ bool Controller::handle_cmdu_1905_bss_configuration_request_message(
     if (!agent) {
         LOG(ERROR) << "Agent with mac is not found in database mac=" << src_mac;
         return false;
+    }
+
+    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_2) {
+        auto tlvProfile2MultiApProfile = cmdu_rx.getClass<wfa_map::tlvProfile2MultiApProfile>();
+        if (tlvProfile2MultiApProfile) {
+            agent->profile = tlvProfile2MultiApProfile->profile();
+            if (!database.dm_set_device_multi_ap_profile(*agent)) {
+                LOG(ERROR) << "Failed to set Multi-AP profile in DM for Agent " << agent->al_mac;
+                return false;
+            }
+        }
+    }
+
+    if (!handle_tlv_profile2_ap_capability(agent, cmdu_rx)) {
+        LOG(ERROR) << "Couldn't handle Profile-2 AP Capability TLV from Agent " << src_mac;
     }
 
     if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_2 &&
@@ -4450,6 +4496,72 @@ bool Controller::handle_tlv_profile3_device_inventory(Agent &agent,
 
     LOG(DEBUG) << ss.str();
     return true;
+}
+
+bool Controller::handle_cmdu_1905_qos_management_notification_message(
+    const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto mid = cmdu_rx.getMessageId();
+    LOG(DEBUG) << "Received QOS_MANAGEMENT_NOTIFICATION_MESSAGE, mid=" << std::hex << mid;
+
+    for (auto const &qos_management_descriptor_tlv :
+         cmdu_rx.getClassList<wfa_map::tlvQoSManagementDescriptor>()) {
+        if (!qos_management_descriptor_tlv) {
+            LOG(DEBUG) << "getClass wfa_map::tlvQoSManagementDescriptor has failed";
+            return false;
+        }
+
+        LOG(DEBUG) << "QoS Management Descriptor TLV is received:" << std::endl
+                   << "Rule ID: " << qos_management_descriptor_tlv->qmid() << std::endl
+                   << "BSSID: " << qos_management_descriptor_tlv->bssid() << std::endl
+                   << "Client MAC: " << qos_management_descriptor_tlv->client_mac() << std::endl;
+
+        // TODO: Implement handling of QoS Management Descriptor TLV (PPM-2364)
+    }
+
+    auto agent = database.m_agents.get(src_mac);
+    if (!agent) {
+        LOG(ERROR) << "Agent with mac is not found in database mac=" << src_mac;
+        return false;
+    }
+
+    if (!cmdu_tx.create(0, ieee1905_1::eMessageType::SERVICE_PRIORITIZATION_REQUEST_MESSAGE)) {
+        LOG(ERROR) << "cmdu creation of type SERVICE_PRIORITIZATION_REQUEST_MESSAGE has failed";
+        return false;
+    }
+
+    for (const auto &rule : agent->service_prioritization.rules) {
+
+        auto service_prioritization_rule_tlv =
+            cmdu_tx.addClass<wfa_map::tlvServicePrioritizationRule>();
+        if (!service_prioritization_rule_tlv) {
+            LOG(ERROR) << "addClass wfa_map::tlvServicePrioritizationRule has failed";
+            return false;
+        }
+
+        service_prioritization_rule_tlv->rule_params() = rule.second;
+    }
+
+    auto dscp_mapping_table_tlv = cmdu_tx.addClass<wfa_map::tlvDscpMappingTable>();
+    if (!dscp_mapping_table_tlv) {
+        LOG(ERROR) << "addClass wfa_map::tlvDscpMappingTable has failed";
+        return false;
+    }
+
+    if (!dscp_mapping_table_tlv->set_dscp_pcp_mapping(
+            agent->service_prioritization.dscp_mapping_table.data(),
+            agent->service_prioritization.dscp_mapping_table.size())) {
+        LOG(ERROR) << "Failed to set DSCP mapping list in tlvDscpMappingTable!";
+        return false;
+    }
+
+    if (!database.dm_set_service_prioritization_rules(*agent)) {
+        LOG(ERROR) << "Failed to set service prioritization rules in DM for Agent" << agent->al_mac;
+        return false;
+    }
+
+    // TODO: Implement sending of remaining TLVs of Service Prioritization Request message (PPM-2366)
+    return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
 }
 
 } // namespace son

@@ -19,6 +19,7 @@
 #include <tlvf/wfa_map/tlvChannelScanCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2ApCapability.h>
 #include <tlvf/wfa_map/tlvProfile2MultiApProfile.h>
+#include <tlvf/wfa_map/tlvServicePrioritizationRule.h>
 #include <tlvf/wfa_map/tlvSteeringPolicy.h>
 
 // Forward declaration of son::node
@@ -55,6 +56,9 @@ public:
     wfa_map::tlvProfile2MultiApProfile::eMultiApProfile profile =
         wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1;
 
+    // The maximum total number of service prioritization rules supported by the Multi-AP Agent
+    uint8_t max_prioritization_rules;
+
     /**
      * @brief Byte counters unit types related TLVs.
      *
@@ -67,6 +71,15 @@ public:
      */
     wfa_map::tlvProfile2ApCapability::eByteCounterUnits byte_counter_units =
         wfa_map::tlvProfile2ApCapability::eByteCounterUnits::BYTES;
+
+    // 802.1Q C-TAG Service Prioritization support
+    bool prioritization_support;
+
+    // DPP Onboarding procedure support
+    bool dpp_onboarding_support;
+
+    // 802.1Q C-TAG Traffic Separation support
+    bool traffic_separation_support;
 
     /**
      * @brief Max Total Number of unique VLAN identifiers the Multi-AP Agent supports.
@@ -89,12 +102,29 @@ public:
         std::string country_code;
     } device_info;
 
+    // True: Report unsuccessful association attempts, False: Don't report
+    bool unsuccessful_assoc_report_policy;
+
+    // Maximum rate for reporting unsuccessful association attempts (in attempts per minute)
+    uint8_t unsuccessful_assoc_max_reporting_rate;
+
     beerocks::eNodeState state = beerocks::STATE_CONNECTED;
 
     /** Stations for which local steering is disallowed */
     beerocks::mac_map<Station> disallowed_local_steering_stations;
     /** Stations for which BTM steering is disallowed */
     beerocks::mac_map<Station> disallowed_btm_steering_stations;
+
+    struct sServicePrioritization {
+        // Key: rule ID
+        std::unordered_map<uint32_t,
+                           wfa_map::tlvServicePrioritizationRule::sServicePrioritizationRule>
+            rules;
+
+        // List of 64 PCP values corresponding to the DSCP markings (0x00 to 0x3F)
+        // Each value: 0x00 – 0x07
+        std::array<uint8_t, beerocks::message::DSCP_MAPPING_LIST_LENGTH> dscp_mapping_table;
+    } service_prioritization;
 
     struct sRadio {
         sRadio()               = delete;
