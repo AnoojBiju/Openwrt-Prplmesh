@@ -25,7 +25,7 @@ TrafficSeparation::TrafficSeparation(std::shared_ptr<btl::BrokerClient> broker_c
 {
 }
 
-void TrafficSeparation::traffic_seperation_configuration_clear()
+void TrafficSeparation::clear_configuration()
 {
     LOG(DEBUG) << "Clearing traffic separation policy!";
 
