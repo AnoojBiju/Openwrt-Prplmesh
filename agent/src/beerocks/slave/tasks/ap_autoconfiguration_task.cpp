@@ -512,6 +512,12 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_search_message(
         return false;
     }
 
+    if (db->device_conf.certification_mode && db->device_conf.certification_profile) {
+        // If certification is enabled, override the MultiApProfile in Autoconfiguration
+        // Search Message according to the certification program.
+        tlvProfile2MultiApProfile->profile() = db->device_conf.certification_profile;
+    }
+
     LOG(DEBUG) << "sending autoconfig search message, bridge_mac=" << db->bridge.mac
                << " with Profile TLV";
     return m_btl_ctx.send_cmdu_to_controller({}, m_cmdu_tx);
