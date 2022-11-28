@@ -157,6 +157,11 @@ public:
     static std::string search_path_ep_by_iface(const std::string &ep_ifname);
 
     /**
+     * @brief return search path of EndPoint object instance by radio reference.
+     */
+    static std::string search_path_ep_by_radio_ref(const std::string &radio_ref);
+
+    /**
      * @brief return search path of EndPoint profile object instance by endpoint interface name.
      */
     static std::string search_path_ep_profiles_by_iface(const std::string &ep_ifname);

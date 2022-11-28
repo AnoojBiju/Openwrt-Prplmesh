@@ -234,8 +234,36 @@ int cfg_get_sta_iface(const char iface[BPL_IFNAME_LEN], char sta_iface[BPL_IFNAM
         return RETURN_ERR;
     }
 
-    mapf::utils::copy_string(sta_iface, iface, BPL_IFNAME_LEN);
-    return RETURN_OK;
+    // Get the current radio reference for the given iface
+    std::string radio_path;
+    if (!m_ambiorix_cl->resolve_path(wbapi_utils::search_path_radio_by_iface(iface), radio_path)) {
+        return RETURN_ERR;
+    }
+
+    // Find the endpoint that its radioreference is the current one
+    auto result =
+        m_ambiorix_cl->get_object_multi<AmbiorixVariantMapSmartPtr>(wbapi_utils::search_path_ep());
+    if (!result) {
+        return false;
+    }
+    std::string ep_radio_path;
+    std::string ep_ifname;
+    for (auto &it : *result) {
+        auto &ep = it.second;
+        if ((ep.empty()) ||
+            !(m_ambiorix_cl->resolve_path(wbapi_utils::get_path_radio_reference(ep),
+                                          ep_radio_path)) ||
+            (ep_radio_path != radio_path) || !(ep.read_child<>(ep_ifname, "IntfName"))) {
+            continue;
+        }
+
+        // The sta iface is the value of the endpoint IntfName field
+        // Ex: WiFi.EndPoint.ep5g0.IntfName="wlan1"
+        mapf::utils::copy_string(sta_iface, ep_ifname.c_str(), BPL_IFNAME_LEN);
+        return RETURN_OK;
+    }
+
+    return RETURN_ERR;
 }
 
 int cfg_get_hostap_iface(int32_t radio_num, char hostap_iface[BPL_IFNAME_LEN])
