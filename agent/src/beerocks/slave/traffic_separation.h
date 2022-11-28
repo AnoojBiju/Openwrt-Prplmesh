@@ -79,7 +79,7 @@ public:
      * @brief Clear the traffic separation configuration from the Agent and the platform.
      * 
      */
-    void traffic_seperation_configuration_clear();
+    void clear_configuration();
 
     /**
      * @brief This variable is a workaround that turn on the profile_x_disallow flag when

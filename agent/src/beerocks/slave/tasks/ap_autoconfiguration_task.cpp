@@ -201,7 +201,7 @@ void ApAutoConfigurationTask::handle_event(uint8_t event_enum_value, const void 
 
         // Reset the traffic separation configuration as they will be reconfigured on
         // autoconfiguration.
-        m_traffic_separation_configurator->traffic_seperation_configuration_clear();
+        m_traffic_separation_configurator->clear_configuration();
 
         // Reset the discovery statuses.
         for (auto &discovery_status : m_discovery_status) {
