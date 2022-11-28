@@ -566,14 +566,15 @@ bool db::remove_node(const sMacAddr &mac)
 
             it = nodes[i].erase(it);
 
-            auto index = m_ambiorix_datamodel->get_instance_index("Network.Device.[ID == '%s'].",
-                                                                  tlvf::mac_to_string(mac));
+            auto index = m_ambiorix_datamodel->get_instance_index(
+                "Device.WiFi.DataElements.Network.Device.[ID == '%s'].", tlvf::mac_to_string(mac));
             if (!index) {
                 LOG(ERROR) << "Failed to get Network.Device index for mac: " << mac;
                 return false;
             }
 
-            if (!m_ambiorix_datamodel->remove_instance("Network.Device", index)) {
+            if (!m_ambiorix_datamodel->remove_instance("Device.WiFi.DataElements.Network.Device",
+                                                       index)) {
                 LOG(ERROR) << "Failed to remove Network.Device." << index << " instance.";
                 return false;
             }
