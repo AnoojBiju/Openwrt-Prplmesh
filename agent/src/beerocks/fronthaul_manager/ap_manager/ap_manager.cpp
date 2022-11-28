@@ -30,6 +30,8 @@
 #include <tlvf/wfa_map/tlvTunnelledData.h>
 #include <tlvf/wfa_map/tlvTunnelledProtocolType.h>
 #include <tlvf/wfa_map/tlvTunnelledSourceInfo.h>
+#include <tlvf/wfa_map/tlvVirtualBssCreation.h>
+#include <tlvf/wfa_map/tlvVirtualBssDestruction.h>
 
 #include <numeric>
 
@@ -677,6 +679,10 @@ void ApManager::handle_cmdu_ieee1905_1_message(ieee1905_1::CmduMessageRx &cmdu_r
         handle_direct_encap_dpp_message(cmdu_rx);
         break;
     }
+    case ieee1905_1::eMessageType::VIRTUAL_BSS_REQUEST_MESSAGE: {
+        handle_virtual_bss_request(cmdu_rx);
+        break;
+    }
     default:
         LOG(ERROR) << "Unknown CMDU message type: " << std::hex << int(cmdu_message_type);
     }
@@ -707,6 +713,58 @@ void ApManager::handle_direct_encap_dpp_message(ieee1905_1::CmduMessageRx &cmdu_
     }
 
     // forwarding of dpp authentication response message to BWL layer to be implemented.
+}
+
+void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    LOG(DEBUG) << "Received Virtual BSS Request";
+    auto virtual_bss_creation_tlv = cmdu_rx.getClass<wfa_map::VirtualBssCreation>();
+
+    if (virtual_bss_creation_tlv) {
+
+        // Use the BSSID as the ifname. Since Linux interface names are
+        // limited to 15 characters, remove the colons.
+        std::string ifname = tlvf::mac_to_string(virtual_bss_creation_tlv->bssid());
+        ifname.erase(std::remove(ifname.begin(), ifname.end(), ':'), ifname.end());
+        std::string bridge = "br-lan";
+
+        // TODO: PPM-2348 add the bridge name to BPL
+
+        // TODO: the VirtualBSSCreation TLV doesn't specify authentication and encryption types
+        son::wireless_utils::sBssInfoConf bss_conf = {};
+        bss_conf.ssid                              = virtual_bss_creation_tlv->ssid_str();
+        bss_conf.authentication_type               = WSC::eWscAuth::WSC_AUTH_WPA2PSK;
+        bss_conf.encryption_type                   = WSC::eWscEncr::WSC_ENCR_AES;
+        bss_conf.network_key                       = virtual_bss_creation_tlv->pass_str();
+        bss_conf.bssid                             = virtual_bss_creation_tlv->bssid();
+
+        if (!ap_wlan_hal->add_bss(ifname, bss_conf, bridge, true)) {
+            LOG(ERROR) << "Failed to add a new BSS!";
+            return;
+        }
+
+        // TODO: PPM-2292: add the station and its keys
+        // TODO: PPM-2349: add support for the client capabilities
+
+        return;
+    }
+
+    auto virtual_bss_destruction_tlv = cmdu_rx.getClass<wfa_map::VirtualBssDestruction>();
+    if (virtual_bss_destruction_tlv) {
+
+        // Use the same ifname as when we added the BSS:
+        std::string ifname = tlvf::mac_to_string(virtual_bss_creation_tlv->bssid());
+        ifname.erase(std::remove(ifname.begin(), ifname.end(), ':'), ifname.end());
+
+        if (!ap_wlan_hal->remove_bss(ifname)) {
+            LOG(ERROR) << "Failed to remove the BSS!";
+            return;
+        }
+
+        // TODO: PPM-2350: add support for disassociating the client
+    }
+
+    LOG(ERROR) << "No virtual BSS creation nor destruction TLV found in Virtual BSS request!";
 }
 
 void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
