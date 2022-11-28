@@ -32,8 +32,16 @@ private:
     void handle_slave_channel_selection_response(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                  const sMacAddr &src_mac);
 
+    bool qos_apply_active_rule();
+    bool qos_flush_setup();
+    bool qos_setup_single_value_map(uint8_t pcp);
+    bool qos_setup_dscp_map();
+    bool qos_setup_up_map();
+
     slave_thread &m_btl_ctx;
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
+
+    enum : uint8_t { QOS_USE_DSCP_MAP = 0x08, QOS_USE_UP = 0x09 };
 };
 
 } // namespace beerocks
