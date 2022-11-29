@@ -151,7 +151,7 @@ bool vbss_actions::create_vbss(const sClientVBSS &client_vbss, const sMacAddr &d
 
         auto sta_association_frame =
             database.get_association_frame_by_sta_mac(client_vbss.client_mac);
-        if (!sta_association_frame) {
+        if (sta_association_frame.empty()) {
             LOG(ERROR) << "No association frame found!";
             return false;
         }
@@ -162,8 +162,8 @@ bool vbss_actions::create_vbss(const sClientVBSS &client_vbss, const sMacAddr &d
             return false;
         }
 
-        client_capabilities_tlv_tx->set_association_frame(sta_association_frame->buffer(),
-                                                          sta_association_frame->len());
+        client_capabilities_tlv_tx->set_association_frame(sta_association_frame.data(),
+                                                          sta_association_frame.size());
     }
 
     LOG(DEBUG) << "Sending VBSS creation request to Agent '" << agent->al_mac << "'." << std::endl
