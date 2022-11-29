@@ -10,6 +10,7 @@
 #include "../agent_db.h"
 #include "../backhaul_manager/backhaul_manager.h"
 #include "../cac_status_database.h"
+#include "../tlvf_utils.h"
 
 #include <beerocks/tlvf/beerocks_message_1905_vs.h>
 #include <beerocks/tlvf/beerocks_message_backhaul.h>
@@ -415,7 +416,7 @@ void ChannelSelectionTask::handle_channel_selection_request(ieee1905_1::CmduMess
         // we need to explicitly send the event.
         if (request_iter == m_pending_selection.requests.end() ||
             request_iter->second.manually_send_operating_report) {
-            if (!create_operating_channel_report(radio_mac)) {
+            if (!tlvf_utils::create_operating_channel_report(m_cmdu_tx, radio_mac)) {
                 LOG(ERROR) << "Failed creating Operating Channel Report";
                 continue;
             }
@@ -1679,51 +1680,6 @@ bool ChannelSelectionTask::send_channel_switch_request(
                << "- TX limit valid: " << (request_msg->tx_limit_valid() ? "True" : "False");
 
     m_btl_ctx.send_cmdu(agent_fd, m_cmdu_tx);
-    return true;
-}
-
-bool ChannelSelectionTask::create_operating_channel_report(const sMacAddr &radio_mac)
-{
-    auto radio = AgentDB::get()->get_radio_by_mac(radio_mac);
-    if (!radio) {
-        LOG(ERROR) << "Radio " << radio_mac << " does not exist on the db";
-        return false;
-    }
-
-    auto operating_channel_report_tlv = m_cmdu_tx.addClass<wfa_map::tlvOperatingChannelReport>();
-    if (!operating_channel_report_tlv) {
-        LOG(ERROR) << "addClass ieee1905_1::operating_channel_report_tlv has failed";
-        return false;
-    }
-    operating_channel_report_tlv->radio_uid() = radio_mac;
-
-    auto op_classes_list = operating_channel_report_tlv->alloc_operating_classes_list();
-    if (!op_classes_list) {
-        LOG(ERROR) << "alloc_operating_classes_list() has failed!";
-        return false;
-    }
-
-    auto operating_class_entry_tuple = operating_channel_report_tlv->operating_classes_list(0);
-    if (!std::get<0>(operating_class_entry_tuple)) {
-        LOG(ERROR) << "getting operating class entry has failed!";
-        return false;
-    }
-
-    auto &operating_class_entry = std::get<1>(operating_class_entry_tuple);
-    auto center_channel =
-        son::wireless_utils::freq_to_channel(radio->wifi_channel.get_center_frequency());
-    auto operating_class = son::wireless_utils::get_operating_class_by_channel(radio->wifi_channel);
-
-    operating_class_entry.operating_class = operating_class;
-    // operating classes 128,129,130 use center channel **unlike the other classes** (See Table
-    // E-4 in 802.11 spec)
-    operating_class_entry.channel_number =
-        son::wireless_utils::is_operating_class_using_central_channel(operating_class)
-            ? center_channel
-            : radio->wifi_channel.get_channel();
-    operating_channel_report_tlv->current_transmit_power() = radio->tx_power_dB;
-
-    LOG(DEBUG) << "Created Operating Channel Report TLV";
     return true;
 }
 
