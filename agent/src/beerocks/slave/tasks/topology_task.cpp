@@ -261,6 +261,12 @@ void TopologyTask::handle_topology_query(ieee1905_1::CmduMessageRx &cmdu_rx,
             LOG(ERROR) << "addClass wfa_map::tlvProfile2MultiApProfile failed";
             return;
         }
+
+        if (db->device_conf.certification_mode && db->device_conf.certification_profile) {
+            // If certification is enabled, override the MultiApProfile in Topology Response
+            // according to the certification program.
+            tlvProfile2MultiApProfile->profile() = db->device_conf.certification_profile;
+        }
     } else {
         // If the controller didn't add the MultiAp Profile TLV assume that the controller is Profile1
         db->controller_info.profile_support =
