@@ -145,7 +145,7 @@
                         on action validate call check_range [1, 10000];
                     }
                     bool DFSReentry = false;
-
+                    bool DaisyChainingDisabled = false;
                     object QoS {
                         uint32 SPRuleOutput = 0 {
                             on action validate call check_range [0, 9];
