@@ -8,6 +8,7 @@
 #include "son_slave_thread.h"
 
 #include "agent_db.h"
+#include "tlvf_utils.h"
 
 #include "cac_status_database.h"
 #include "gate/1905_beacon_query_to_vs.h"
@@ -4948,39 +4949,10 @@ bool slave_thread::send_operating_channel_report(const std::string &fronthaul_if
         return false;
     }
 
-    auto operating_channel_report_tlv = cmdu_tx.addClass<wfa_map::tlvOperatingChannelReport>();
-    if (!operating_channel_report_tlv) {
-        LOG(ERROR) << "addClass ieee1905_1::operating_channel_report_tlv has failed";
+    if (!tlvf_utils::create_operating_channel_report(cmdu_tx, radio->front.iface_mac)) {
+        LOG(ERROR) << "Failed adding Operating Channel Report TLV";
         return false;
     }
-    operating_channel_report_tlv->radio_uid() = radio->front.iface_mac;
-
-    auto op_classes_list = operating_channel_report_tlv->alloc_operating_classes_list();
-    if (!op_classes_list) {
-        LOG(ERROR) << "alloc_operating_classes_list() has failed!";
-        return false;
-    }
-
-    auto operating_class_entry_tuple = operating_channel_report_tlv->operating_classes_list(0);
-    if (!std::get<0>(operating_class_entry_tuple)) {
-        LOG(ERROR) << "getting operating class entry has failed!";
-        return false;
-    }
-
-    auto &operating_class_entry = std::get<1>(operating_class_entry_tuple);
-    auto operating_class = wireless_utils::get_operating_class_by_channel(radio->wifi_channel);
-
-    auto center_channel =
-        wireless_utils::freq_to_channel(radio->wifi_channel.get_center_frequency());
-    operating_class_entry.operating_class = operating_class;
-    // operating classes 128,129,130 use center channel **unlike the other classes** (See Table
-    // E-4 in 802.11 spec)
-    operating_class_entry.channel_number =
-        wireless_utils::is_operating_class_using_central_channel(operating_class)
-            ? center_channel
-            : radio->wifi_channel.get_channel();
-    operating_channel_report_tlv->current_transmit_power() = radio->tx_power_dB;
-
     return send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
 }
 

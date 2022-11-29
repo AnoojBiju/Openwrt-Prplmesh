@@ -15,6 +15,7 @@
 #include <easylogging++.h>
 
 #include <tlvf/wfa_map/tlvApRadioBasicCapabilities.h>
+#include <tlvf/wfa_map/tlvOperatingChannelReport.h>
 
 using namespace beerocks;
 
@@ -178,5 +179,51 @@ bool tlvf_utils::add_ap_radio_basic_capabilities(ieee1905_1::CmduMessageTx &cmdu
         }
     }
 
+    return true;
+}
+
+bool tlvf_utils::create_operating_channel_report(ieee1905_1::CmduMessageTx &cmdu_tx,
+                                                 const sMacAddr &radio_mac)
+{
+    auto radio = AgentDB::get()->get_radio_by_mac(radio_mac);
+    if (!radio) {
+        LOG(ERROR) << "Radio " << radio_mac << " does not exist on the db";
+        return false;
+    }
+
+    auto operating_channel_report_tlv = cmdu_tx.addClass<wfa_map::tlvOperatingChannelReport>();
+    if (!operating_channel_report_tlv) {
+        LOG(ERROR) << "addClass ieee1905_1::operating_channel_report_tlv has failed";
+        return false;
+    }
+    operating_channel_report_tlv->radio_uid() = radio_mac;
+
+    auto op_classes_list = operating_channel_report_tlv->alloc_operating_classes_list();
+    if (!op_classes_list) {
+        LOG(ERROR) << "alloc_operating_classes_list() has failed!";
+        return false;
+    }
+
+    auto operating_class_entry_tuple = operating_channel_report_tlv->operating_classes_list(0);
+    if (!std::get<0>(operating_class_entry_tuple)) {
+        LOG(ERROR) << "getting operating class entry has failed!";
+        return false;
+    }
+
+    auto &operating_class_entry = std::get<1>(operating_class_entry_tuple);
+    auto operating_class = son::wireless_utils::get_operating_class_by_channel(radio->wifi_channel);
+
+    auto center_channel =
+        son::wireless_utils::freq_to_channel(radio->wifi_channel.get_center_frequency());
+    operating_class_entry.operating_class = operating_class;
+    // operating classes 128,129,130 use center channel **unlike the other classes** (See Table
+    // E-4 in 802.11 spec)
+    operating_class_entry.channel_number =
+        son::wireless_utils::is_operating_class_using_central_channel(operating_class)
+            ? center_channel
+            : radio->wifi_channel.get_channel();
+    operating_channel_report_tlv->current_transmit_power() = radio->tx_power_dB;
+
+    LOG(DEBUG) << "Created Operating Channel Report TLV";
     return true;
 }
