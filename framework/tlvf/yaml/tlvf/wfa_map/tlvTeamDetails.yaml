@@ -1,0 +1,55 @@
+#
+---
+_namespace: wfa_map
+
+tlvTeamDetails:
+  _type: class
+  _is_tlv_class : True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_TEAM_DETAILS
+  length: uint16_t
+  team_list_length:
+    _type: uint8_t
+    _length_var: True
+  team_list:
+    _type: cTeamInfo
+    _length: [ team_list_length ]
+
+cTeamInfo:
+  _type: class
+  team_name:
+    _type: char
+    _length: [ 8 ]
+    #    _value: 0
+  scrum_master:
+    _type: char
+    _length: [ 16 ]
+    #    _value: [ 0 ]
+  no_of_developer:
+    _type: uint8_t
+    _length_var: True
+  developer_list:
+    _type: cDeveloper
+    _length: [ no_of_developer ]
+
+cDeveloper:
+  _type: class
+  name_len:
+    _type: uint8_t
+    _length_var: True
+  name:
+    _type: char
+    _length: [ name_len ]
+  num_of_mr:
+    _type: uint8_t
+    _length_var: True
+  exp_and_loc: sExp_and_loc
+
+sExp_and_loc:
+  _type: struct
+  _bit_field: uint8_t
+  exp:
+    _bit_range: [7,2]
+  loc:
+    _bit_range: [1,0]
