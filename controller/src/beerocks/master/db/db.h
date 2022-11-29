@@ -377,19 +377,17 @@ public:
      * @param sta_mac MAC of the originating station.
      * @param assoc_frame The (Re)association frame from `sta_mac`
      */
-    bool set_sta_association_frame(const sMacAddr &sta_mac,
-                                   std::shared_ptr<assoc_frame::AssocReqFrame> assoc_frame);
+    bool set_sta_association_frame(const sMacAddr &sta_mac, std::vector<uint8_t> assoc_frame);
 
     /**
      * @brief Get the most recent (Re)association frame by station MAC
      * 
-     * If no association frame data exists, a warning is logged and nullptr is returned.
+     * If no association frame data exists, a warning is logged and an empty frame is returned.
      * 
      * @param sta_mac The station MAC of interest
-     * @return The association frame object, or nullptr
+     * @return The association frame object, or an empty vector.
      */
-    std::shared_ptr<assoc_frame::AssocReqFrame>
-    get_association_frame_by_sta_mac(const sMacAddr &sta_mac);
+    std::vector<uint8_t> get_association_frame_by_sta_mac(const sMacAddr &sta_mac);
 
     /**
      * @brief Get agent containing a specific bssid

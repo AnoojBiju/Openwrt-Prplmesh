@@ -176,7 +176,11 @@ bool client_association_task::handle_cmdu_1905_client_capability_report_message(
         return false;
     }
 
-    if (!m_database.set_sta_association_frame(sta_mac, assoc_frame)) {
+    if (!m_database.set_sta_association_frame(
+            sta_mac,
+            std::vector<uint8_t>(client_capability_report_tlv->association_frame(),
+                                 client_capability_report_tlv->association_frame() +
+                                     client_capability_report_tlv->association_frame_length()))) {
         LOG(ERROR) << "Failed to save association frame for STA " << sta_mac;
         return false;
     }
