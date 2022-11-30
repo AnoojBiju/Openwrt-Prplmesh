@@ -420,7 +420,6 @@ bool ap_wlan_hal_nl80211::refresh_radio_info()
 
             m_radio_info.frequency_band = freq_type;
         } else {
-
             // If there are multiple bands, then select the band which frequency matches the
             // operation mode read from hostapd.conf file.
             // For efficiency reasons, parse hostapd.conf only once, the first time this method is
@@ -433,29 +432,67 @@ bool ap_wlan_hal_nl80211::refresh_radio_info()
                            << m_radio_info.iface_name;
                 return false;
             }
-
-            // Compute frequency band out of parameter `hw_mode` in hostapd.conf
-            auto hw_mode = conf.get_head_value("hw_mode");
-
-            // The mode used by hostapd (11b, 11g, 11n, 11ac, 11ax) is governed by several
-            // parameters in the configuration file. However, as explained in the comment below from
-            // hostapd.conf, the hw_mode parameter is sufficient to determine the band.
-            //
-            // # Operation mode (a = IEEE 802.11a (5 GHz), b = IEEE 802.11b (2.4 GHz),
-            // # g = IEEE 802.11g (2.4 GHz), ad = IEEE 802.11ad (60 GHz); a/g options are used
-            // # with IEEE 802.11n (HT), too, to specify band). For IEEE 802.11ac (VHT), this
-            // # needs to be set to hw_mode=a. For IEEE 802.11ax (HE) on 6 GHz this needs
-            // # to be set to hw_mode=a.
-            //
-            // Note that this will need to be revisited for 6GHz operation, which we don't support
-            // at the moment.
-            if (hw_mode.empty() || (hw_mode == "b") || (hw_mode == "g")) {
-                m_radio_info.frequency_band = beerocks::eFreqType::FREQ_24G;
-            } else if (hw_mode == "a") {
-                m_radio_info.frequency_band = beerocks::eFreqType::FREQ_5G;
+            // The name "band" is OpenWRT common option name, taken from the following link:
+            // https://openwrt.org/docs/guide-user/network/wifi/basic
+            // Basically, there are two option names that determines
+            // the band type: "band" and "hwmode", but "hwmode" is
+            // deprecated, as stated in the link.
+            auto band = conf.get_head_value("band");
+            if (!band.empty()) {
+                if (band == "2g") {
+                    m_radio_info.frequency_band = beerocks::eFreqType::FREQ_24G;
+                } else if (band == "5g") {
+                    m_radio_info.frequency_band = beerocks::eFreqType::FREQ_5G;
+                } else if (band == "6g") {
+                    m_radio_info.frequency_band = beerocks::eFreqType::FREQ_6G;
+                } else {
+                    LOG(ERROR) << "Unknown operation mode for interface "
+                               << m_radio_info.iface_name;
+                    return false;
+                }
             } else {
-                LOG(ERROR) << "Unknown operation mode for interface " << m_radio_info.iface_name;
-                return false;
+                // Compute frequency band out of parameter `hw_mode` in hostapd.conf
+                auto hw_mode = conf.get_head_value("hw_mode");
+                if (!hw_mode.empty()) {
+                    // The mode used by hostapd (11b, 11g, 11n, 11ac, 11ax) is governed by several
+                    // parameters in the configuration file. However, as explained in the comment below from
+                    // hostapd.conf, the hw_mode parameter is sufficient to determine the band.
+                    //
+                    // # Operation mode (a = IEEE 802.11a (5 GHz), b = IEEE 802.11b (2.4 GHz),
+                    // # g = IEEE 802.11g (2.4 GHz), ad = IEEE 802.11ad (60 GHz); a/g options are used
+                    // # with IEEE 802.11n (HT), too, to specify band). For IEEE 802.11ac (VHT), this
+                    // # needs to be set to hw_mode=a. For IEEE 802.11ax (HE) on 6 GHz this needs
+                    // # to be set to hw_mode=a.
+                    //
+                    // Note that this will need to be revisited for 6GHz operation, which we don't support
+                    // at the moment.
+                    if ((hw_mode == "b") || (hw_mode == "g")) {
+                        m_radio_info.frequency_band = beerocks::eFreqType::FREQ_24G;
+                    } else if (hw_mode == "a") {
+                        m_radio_info.frequency_band = beerocks::eFreqType::FREQ_5G;
+                    } else {
+                        LOG(ERROR)
+                            << "Unknown operation mode for interface " << m_radio_info.iface_name;
+                        return false;
+                    }
+                } else {
+                    // when both "band" and "hw_mode" are not exist, then choose the
+                    // highest frequency band
+                    m_radio_info.frequency_band = radio_info.bands.begin()->get_frequency_band();
+                    beerocks::eFreqType current_freq_type = beerocks::FREQ_UNKNOWN;
+                    for (auto it = radio_info.bands.begin() + 1; it != radio_info.bands.end();
+                         it++) {
+                        current_freq_type = it->get_frequency_band();
+                        if (current_freq_type == beerocks::eFreqType::FREQ_UNKNOWN) {
+                            LOG(ERROR)
+                                << "Unknown band type for interface " << m_radio_info.iface_name;
+                            return false;
+                        }
+                        if (current_freq_type > m_radio_info.frequency_band) {
+                            m_radio_info.frequency_band = current_freq_type;
+                        }
+                    }
+                }
             }
         }
     }

@@ -11,6 +11,7 @@
 
 #include "../tasks/task.h"
 #include "interface.h"
+#include <bcl/beerocks_wifi_channel.h>
 #include <bcl/network/network_utils.h>
 #include <tlvf/common/sMacAddr.h>
 #include <tlvf/ieee_1905_1/tlvReceiverLinkMetric.h>
@@ -59,17 +60,17 @@ public:
     std::string dm_path;             // data model path without dot in the end
     std::string previous_parent_mac; //hostap
 
+    beerocks::WifiChannel wifi_channel;
+
     std::string ipv4;
     std::string manufacturer;
-    int channel = 0;
     std::string name;
     int hierarchy = -1; //redundant but more efficient
     beerocks::message::sRadioCapabilities *capabilities;
     beerocks::message::sRadioCapabilities m_sta_5ghz_capabilities;
     beerocks::message::sRadioCapabilities m_sta_24ghz_capabilities;
 
-    beerocks::eWiFiBandwidth bandwidth = beerocks::BANDWIDTH_160;
-    bool channel_ext_above_secondary   = true;
+    bool channel_ext_above_secondary = true;
 
     beerocks::eNodeState state = beerocks::STATE_DISCONNECTED;
 

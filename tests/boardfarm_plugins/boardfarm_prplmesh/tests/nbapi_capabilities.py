@@ -44,14 +44,8 @@ class NbapiCapabilities(PrplMeshBaseTest):
                 channel = controller.nbapi_get_parameter(non_op_channel_nbapi, "NonOpChannelNumber")
 
                 non_op_channels = [
-                    o for o in op_class.non_operating_channel if int(o.non_op_channel) == channel
+                    o for o in op_class.non_operating_channel if str(channel) in vars(o).values()
                 ]
-
-                if non_op_ch_count_nbapi == 2 and not non_op_channels:
-                    non_op_channels = [
-                        o for o in op_class.non_operating_channel
-                        if int(o.non_op_channel_2) == channel
-                    ]
 
                 assert len(non_op_channels) == 1, f"Non-operable channel {channel} was not found."
         supported_op_classes.remove(op_class)

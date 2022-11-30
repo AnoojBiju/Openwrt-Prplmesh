@@ -11,6 +11,7 @@
 #include "../son_actions.h"
 #include "bml_task.h"
 
+#include <bcl/beerocks_wifi_channel.h>
 #include <beerocks/tlvf/beerocks_message_1905_vs.h>
 #include <ctime>
 #include <easylogging++.h>
@@ -217,9 +218,14 @@ void client_steering_task::steer_sta()
             return;
         }
 
+        auto wifi_channel = m_database.get_node_wifi_channel(m_target_bssid);
+        if (wifi_channel.is_empty()) {
+            LOG(WARNING) << "empty wifi channel of " << m_target_bssid << " in DB";
+        }
+
         bh_steer_req_tlv->backhaul_station_mac()  = tlvf::mac_from_string(m_sta_mac);
         bh_steer_req_tlv->target_bssid()          = tlvf::mac_from_string(m_target_bssid);
-        bh_steer_req_tlv->target_channel_number() = m_database.get_node_channel(m_target_bssid);
+        bh_steer_req_tlv->target_channel_number() = wifi_channel.get_channel();
         bh_steer_req_tlv->operating_class() =
             m_database.get_hostap_operating_class(tlvf::mac_from_string(m_target_bssid));
         bh_steer_req_tlv->finalize();
@@ -231,7 +237,7 @@ void client_steering_task::steer_sta()
         // update bml listeners
         bml_task::bh_roam_req_available_event bh_roam_event;
         bh_roam_event.bssid   = m_target_bssid;
-        bh_roam_event.channel = m_database.get_node_channel(m_target_bssid);
+        bh_roam_event.channel = wifi_channel.get_channel();
         m_tasks.push_event(m_database.get_bml_task_id(), bml_task::BH_ROAM_REQ_EVENT_AVAILABLE,
                            &bh_roam_event);
 
@@ -301,7 +307,12 @@ void client_steering_task::steer_sta()
     std::get<1>(bssid_list).target_bssid = tlvf::mac_from_string(m_target_bssid);
     std::get<1>(bssid_list).target_bss_operating_class =
         m_database.get_hostap_operating_class(tlvf::mac_from_string(m_target_bssid));
-    std::get<1>(bssid_list).target_bss_channel_number = m_database.get_node_channel(m_target_bssid);
+
+    auto wifi_channel = m_database.get_node_wifi_channel(m_target_bssid);
+    if (wifi_channel.is_empty()) {
+        LOG(WARNING) << "empty wifi channel of " << m_target_bssid << " in DB";
+    }
+    std::get<1>(bssid_list).target_bss_channel_number = wifi_channel.get_channel();
 
     auto source_agent = m_database.get_agent_by_bssid(tlvf::mac_from_string(m_original_bssid));
 
