@@ -895,7 +895,7 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
 
         if (!ap_wlan_hal->remove_bss(ifname)) {
             LOG(ERROR) << "Failed to remove the BSS!";
-            send_virtual_bss_response(virtual_bss_creation_tlv->radio_uid(), false, virtual_bss_creation_tlv->bssid());
+            send_virtual_bss_response(virtual_bss_destruction_tlv->radio_uid(), false, virtual_bss_destruction_tlv->bssid());
             return;
         }
 
