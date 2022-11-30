@@ -704,7 +704,7 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
         bss_conf.network_key                       = virtual_bss_creation_tlv->pass_str();
         bss_conf.bssid                             = virtual_bss_creation_tlv->bssid();
 
-        if (!ap_wlan_hal->add_bss(ifname, bss_conf, bridge, true)) {
+        if (!add_bss(ifname, bss_conf, bridge, true)) {
             LOG(ERROR) << "Failed to add a new BSS!";
             return;
         }
@@ -2694,6 +2694,21 @@ bool ApManager::zwdfs_ap() const
     }
 
     return m_ap_support_zwdfs;
+}
+
+bool ApManager::add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
+                        std::string &bridge, bool vbss)
+{
+    if (!ap_wlan_hal->add_bss(ifname, bss_conf, bridge, true)) {
+        LOG(ERROR) << "Failed to add a new BSS!";
+        return false;
+    }
+
+    if (!register_ext_events_handlers(ap_wlan_hal->get_ext_events_fds().back())) {
+        LOG(ERROR) << "Failed to register ext_events handlers for the new BSS!";
+        return false;
+    }
+    return true;
 }
 
 bool ApManager::register_ext_events_handlers(int fd)
