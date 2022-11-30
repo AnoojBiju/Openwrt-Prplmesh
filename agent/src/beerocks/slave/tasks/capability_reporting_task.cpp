@@ -465,14 +465,21 @@ bool CapabilityReportingTask::add_ap_he_capabilities(const std::string &iface_na
     tlv->set_supported_he_mcs(&radio->he_mcs_set[1], radio->he_mcs_set[0]);
     tlv->flags1().max_num_of_supported_tx_spatial_streams =
         HECaps->max_num_of_supported_tx_spatial_streams;
+    LOG(DEBUG) << "******THE MAX NO OF TX ******" << HECaps->max_num_of_supported_tx_spatial_streams;
+    LOG(DEBUG) << "*******THE MAX NO OF RX******" << HECaps->max_num_of_supported_rx_spatial_streams;
     tlv->flags1().max_num_of_supported_rx_spatial_streams =
         HECaps->max_num_of_supported_rx_spatial_streams;
     tlv->flags1().he_support_80_80mhz         = HECaps->he_support_80_80mhz;
     tlv->flags1().he_support_160mhz           = HECaps->he_support_160mhz;
     tlv->flags2().dl_ofdm_capable             = HECaps->dl_ofdm_capable;
+    LOG(DEBUG) << "******UL_OFDMA******" << HECaps->ul_ofdm_capable;
+    LOG(DEBUG) << "******DL_OFDMA******" << HECaps->dl_ofdm_capable;
+    LOG(DEBUG) << "******UL_MIMO + UL_OFDMA******" << HECaps->ul_mu_mimo_and_ofdm_capable;
+    LOG(DEBUG) << "******DL_MIMO + DL_OFDMA******" << HECaps->dl_mu_mimo_and_ofdm_capable;
     tlv->flags2().ul_ofdm_capable             = HECaps->ul_ofdm_capable;
     tlv->flags2().dl_mu_mimo_and_ofdm_capable = HECaps->dl_mu_mimo_and_ofdm_capable;
     tlv->flags2().ul_mu_mimo_and_ofdm_capable = HECaps->ul_mu_mimo_and_ofdm_capable;
+    LOG(DEBUG) << "******UL_MIMO******" << HECaps->ul_mu_mimo_capable;
     tlv->flags2().ul_mu_mimo_capable          = HECaps->ul_mu_mimo_capable;
     tlv->flags2().mu_beamformer_capable       = HECaps->mu_beamformer_capable;
     tlv->flags2().su_beamformer_capable       = HECaps->su_beamformer_capable;
