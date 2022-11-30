@@ -152,6 +152,9 @@ private:
     void remove_client_from_disallowed_list(const sMacAddr &mac, const sMacAddr &bssid);
     void allow_expired_clients();
 
+    bool add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
+                 std::string &bridge, bool vbss);
+
     std::string get_vbss_interface_name(sMacAddr bssid);
 
     // Class constants
