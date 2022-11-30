@@ -40,6 +40,14 @@ private:
      * @return true on success, otherwise false
      */
     bool handle_security_context_request(ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief Handle the Virtual BSS Move Preparation Request message.
+     *
+     * @param cmdu_rx Received CMDU.
+     * @return true on success, otherwise false
+     */
+    bool handle_virtual_bss_move_preparation_request(ieee1905_1::CmduMessageRx &cmdu_rx);
 };
 } // namespace beerocks
 
