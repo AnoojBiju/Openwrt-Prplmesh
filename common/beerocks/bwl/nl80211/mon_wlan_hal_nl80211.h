@@ -82,6 +82,8 @@ protected:
         return base_wlan_hal::event_queue_push(int(event), data);
     }
 
+    bool sta_unassoc_rssi_measurement(std::unordered_map<std::string, uint32_t> &new_list) final;
+
     // Private data-members:
 private:
     std::shared_ptr<char> m_temp_wav_value;
