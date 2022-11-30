@@ -841,7 +841,7 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
     if (virtual_bss_destruction_tlv) {
 
         // Use the same ifname as when we added the BSS:
-        std::string ifname = tlvf::mac_to_string(virtual_bss_creation_tlv->bssid());
+        std::string ifname = tlvf::mac_to_string(virtual_bss_destruction_tlv->bssid());
         ifname.erase(std::remove(ifname.begin(), ifname.end(), ':'), ifname.end());
 
         if (!ap_wlan_hal->remove_bss(ifname)) {
