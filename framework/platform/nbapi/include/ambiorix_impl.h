@@ -123,10 +123,11 @@ public:
      *
      * @param path_to_object Path to NBAPI object which has parameter object.
      * @param param parameter name which is default as TimeStamp.
+     * @param param time_stamp specific time_stamp, by default, it will use the actual time.
      * @return True if date and time successfully set, false otherwise.
      */
-    bool set_current_time(const std::string &path_to_object,
-                          const std::string &param = "TimeStamp") override;
+    bool set_time(const std::string &path_to_object, const std::string &param = "TimeStamp",
+                  const std::string &time_stamp = std::string()) override;
 
     bool remove_all_instances(const std::string &relative_path) override;
 
