@@ -2105,6 +2105,15 @@ bool Controller::handle_cmdu_1905_tunnelled_message(const sMacAddr &src_mac,
             LOG(ERROR) << "Failed to parse Reassociation Request frame";
         }
     }
+
+    // Note that we can't save the association frame in the DB after
+    // we parsed it, because the tunneled message can be (and is)
+    // received before the topology notification message that allows
+    // us to create the station in the DB is received by the
+    // controller.
+    // This is not always a problem for prplMesh agents which use a
+    // VS messages to add the station before the topology
+    // notification, but it can be for non-prplMesh agents.
     return true;
 }
 
