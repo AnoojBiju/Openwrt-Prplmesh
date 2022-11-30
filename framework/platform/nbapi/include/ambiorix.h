@@ -122,10 +122,11 @@ public:
      *
      * @param path_to_object Path to NBAPI object which has parameter object.
      * @param param parameter name which is TimeStamp as default.
+     * @param param time_stamp time stamp in string format, if empty, actual time/date will be set
      * @return True if date and time successfully set, false otherwise.
      */
-    virtual bool set_current_time(const std::string &path_to_object,
-                                  const std::string &param = "TimeStamp") = 0;
+    virtual bool set_time(const std::string &path_to_object, std::string const &param = "TimeStamp",
+                          const std::string &time_stamp = std::string()) = 0;
 
     virtual bool read_param(const std::string &obj_path, const std::string &param_name,
                             uint64_t *param_val) = 0;

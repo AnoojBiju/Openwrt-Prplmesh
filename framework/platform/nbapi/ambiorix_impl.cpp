@@ -622,16 +622,21 @@ std::string AmbiorixImpl::get_datamodel_time_format()
     return result_time;
 }
 
-bool AmbiorixImpl::set_current_time(const std::string &path_to_object, const std::string &param)
+bool AmbiorixImpl::set_time(const std::string &path_to_object, const std::string &param,
+                            const std::string &time_stamp)
 {
-    auto time_stamp = get_datamodel_time_format();
+    std::string time_stamp_local(time_stamp);
+    if (time_stamp_local.empty()) {
+        time_stamp_local = get_datamodel_time_format();
+    }
 
-    if (time_stamp.empty()) {
+    if (time_stamp_local.empty()) {
         LOG(ERROR) << "Failed to get Date and Time in RFC 3339 format.";
         return false;
     }
-    if (!set(path_to_object, param, time_stamp)) {
-        LOG(ERROR) << "Failed to set " << path_to_object << "." << param << ": " << time_stamp;
+    if (!set(path_to_object, param, time_stamp_local)) {
+        LOG(ERROR) << "Failed to set " << path_to_object << "." << param << ": "
+                   << time_stamp_local;
         return false;
     }
     return true;
