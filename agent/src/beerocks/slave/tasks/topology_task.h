@@ -102,6 +102,13 @@ private:
     bool add_device_information_tlv();
 
     /**
+     * @brief Add and fill vendor-specific device information tlv.
+     * 
+     * @return true on success, otherwise false.
+     */
+    bool add_vs_device_information_tlv();
+
+    /**
      * @brief Add and fill 1905_neighbor_device tlv for each know neighbor.
      * 
      * @return true on success, otherwise false.

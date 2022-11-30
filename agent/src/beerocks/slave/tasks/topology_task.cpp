@@ -230,6 +230,10 @@ void TopologyTask::handle_topology_query(ieee1905_1::CmduMessageRx &cmdu_rx,
         return;
     }
 
+    if (!add_vs_device_information_tlv()) {
+        return;
+    }
+
     if (!add_1905_neighbor_device_tlv()) {
         return;
     }
@@ -580,6 +584,46 @@ bool TopologyTask::add_device_information_tlv()
             return false;
         }
     }
+    return true;
+}
+
+bool TopologyTask::add_vs_device_information_tlv()
+{
+
+    auto tlvVsDeviceInformation =
+        beerocks::message_com::add_vs_tlv<beerocks_message::tlvVsDeviceInformation>(m_cmdu_tx);
+    if (!tlvVsDeviceInformation) {
+        LOG(ERROR) << "addClass beerocks_message::tlvVsDeviceInformation failed";
+        return false;
+    }
+
+    auto db = AgentDB::get();
+
+    /**
+     * 1905.1 AL MAC address of the device.
+     */
+    tlvVsDeviceInformation->al_mac() = db->bridge.mac;
+
+    /**
+     * Add a radiofield for each wireless interface.
+     */
+    const auto &radio_list = db->get_radios_list();
+    if (!tlvVsDeviceInformation->alloc_radio_mac_list(radio_list.size())) {
+        LOG(ERROR) << "Failed to allocate radio mac list!";
+        return false;
+    }
+    uint8_t idx = 0;
+    for (const auto radio : radio_list) {
+        if (idx >= tlvVsDeviceInformation->radio_mac_list_length()) {
+            break;
+        }
+        auto &radio_mac = std::get<1>(tlvVsDeviceInformation->radio_mac_list(idx));
+        LOG(INFO) << "Added radio " << radio->front.iface_name << " MAC: " << radio->front.iface_mac
+                  << " to VS Device Information TLV.";
+        radio_mac = radio->front.iface_mac;
+        idx++;
+    }
+
     return true;
 }
 
