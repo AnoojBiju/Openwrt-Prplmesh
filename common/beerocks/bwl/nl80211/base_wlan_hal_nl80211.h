@@ -102,6 +102,16 @@ protected:
                           std::function<bool(struct nl_msg *msg)> msg_handle,
                           const std::string &ifName = {});
 
+    /**
+     * @brief Register a new interface and immediately connect to it
+     * for commands and event handling.
+     *
+     * @param interface the interface to add.
+     *
+     * @return true on success, false otherwise.
+     */
+    bool add_interface(const std::string &interface);
+
     std::unique_ptr<nl80211_client> m_nl80211_client;
 
     // Private data-members:
