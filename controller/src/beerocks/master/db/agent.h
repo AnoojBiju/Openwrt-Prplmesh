@@ -184,6 +184,15 @@ public:
         };
         channel_scan_capabilities scan_capabilities;
 
+        struct sApCapabilities {
+            //Support Unassociated STA Link Metrics reporting on the channels its BSSs are currently operating on.
+            uint8_t support_unassociated_sta_link_metrics_on_operating_bssid;
+            //Support Unassociated STA Link Metrics reporting on channels its BSSs are not currently operating on.
+            bool support_unassociated_sta_link_metrics_on_non_operating_bssid;
+            //Support Agent-initiated RCPI-based Steering.
+            bool support_agent_initiated_rcpi_based_steering;
+        } ap_capabilities;
+
         struct sAdvancedCapabilities {
             // Indicates traffic separation on combined fronthaul and Profile-1 backhaul support
             bool traffic_separation_combined_fronthaul;
