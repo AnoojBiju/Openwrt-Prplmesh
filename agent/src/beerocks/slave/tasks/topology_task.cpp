@@ -217,6 +217,7 @@ void TopologyTask::handle_topology_discovery(ieee1905_1::CmduMessageRx &cmdu_rx,
 void TopologyTask::handle_topology_query(ieee1905_1::CmduMessageRx &cmdu_rx,
                                          const sMacAddr &src_mac)
 {
+    auto db        = AgentDB::get();
     const auto mid = cmdu_rx.getMessageId();
     LOG(DEBUG) << "Received TOPOLOGY_QUERY_MESSAGE, mid=" << std::hex << mid;
     auto cmdu_tx_header =
@@ -230,8 +231,11 @@ void TopologyTask::handle_topology_query(ieee1905_1::CmduMessageRx &cmdu_rx,
         return;
     }
 
-    if (!add_vs_device_information_tlv()) {
-        return;
+    // For prplMesh controller send the VS-TLV
+    if (db->controller_info.prplmesh_controller) {
+        if (!add_vs_device_information_tlv()) {
+            return;
+        }
     }
 
     if (!add_1905_neighbor_device_tlv()) {
@@ -253,8 +257,6 @@ void TopologyTask::handle_topology_query(ieee1905_1::CmduMessageRx &cmdu_rx,
     if (!add_vs_tlv_bssid_iface_mapping()) {
         return;
     }
-
-    auto db = AgentDB::get();
 
     auto multiap_profile_tlv = cmdu_rx.getClass<wfa_map::tlvProfile2MultiApProfile>();
     if (multiap_profile_tlv) {
