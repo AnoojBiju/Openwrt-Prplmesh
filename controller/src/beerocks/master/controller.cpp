@@ -52,6 +52,7 @@
 #include <tlvf/ieee_1905_1/tlvSupportedRole.h>
 #include <tlvf/wfa_map/tlv1905LayerSecurityCapability.h>
 #include <tlvf/wfa_map/tlvAkmSuiteCapabilities.h>
+#include <tlvf/wfa_map/tlvApCapability.h>
 #include <tlvf/wfa_map/tlvApExtendedMetrics.h>
 #include <tlvf/wfa_map/tlvApMetrics.h>
 #include <tlvf/wfa_map/tlvApRadioIdentifier.h>
@@ -290,6 +291,7 @@ bool Controller::start()
             ieee1905_1::eMessageType::CLIENT_STEERING_BTM_REPORT_MESSAGE,
             ieee1905_1::eMessageType::HIGHER_LAYER_DATA_MESSAGE,
             ieee1905_1::eMessageType::LINK_METRIC_RESPONSE_MESSAGE,
+            ieee1905_1::eMessageType::UNASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE,
             ieee1905_1::eMessageType::OPERATING_CHANNEL_REPORT_MESSAGE,
             ieee1905_1::eMessageType::STEERING_COMPLETED_MESSAGE,
             ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE,
@@ -583,6 +585,7 @@ bool Controller::handle_cmdu_1905_1_message(const sMacAddr &src_mac,
     case ieee1905_1::eMessageType::TOPOLOGY_RESPONSE_MESSAGE:
     case ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE:
     case ieee1905_1::eMessageType::LINK_METRIC_RESPONSE_MESSAGE:
+    case ieee1905_1::eMessageType::UNASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE:
     case ieee1905_1::eMessageType::CLIENT_CAPABILITY_REPORT_MESSAGE:
     case ieee1905_1::eMessageType::CHANNEL_PREFERENCE_REPORT_MESSAGE:
     case ieee1905_1::eMessageType::CHANNEL_SELECTION_RESPONSE_MESSAGE:
@@ -1622,6 +1625,29 @@ bool Controller::handle_tlv_ap_he_capabilities(ieee1905_1::CmduMessageRx &cmdu_r
     return ret_val;
 }
 
+bool Controller::handle_tlv_apCapability(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                         std::shared_ptr<Agent> agent)
+{
+    auto tlv_ap_capability = cmdu_rx.getClass<wfa_map::tlvApCapability>();
+    if (!tlv_ap_capability) {
+        LOG(ERROR) << "addClass wfa_map::tlvApCapability failed";
+        return false;
+    }
+
+    for (auto &radio : agent->radios) {
+        radio.second->ap_capabilities.support_agent_initiated_rcpi_based_steering =
+            tlv_ap_capability->value().support_agent_initiated_rcpi_based_steering;
+        radio.second->ap_capabilities.support_unassociated_sta_link_metrics_on_non_operating_bssid =
+            tlv_ap_capability->value().support_unassociated_sta_link_metrics_on_non_operating_bssid;
+        radio.second->ap_capabilities.support_unassociated_sta_link_metrics_on_operating_bssid =
+            tlv_ap_capability->value().support_unassociated_sta_link_metrics_on_operating_bssid;
+    }
+
+    //TODO : shall we update the datamodel here ???
+
+    return true;
+}
+
 bool Controller::handle_cmdu_1905_associated_sta_link_metrics_response_message(
     const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
 {
@@ -1897,6 +1923,11 @@ bool Controller::handle_cmdu_1905_ap_capability_report(const sMacAddr &src_mac,
         LOG(ERROR) << "Couldn't handle TLV AP HE Capabilities";
         return false;
     }
+    if (handle_tlv_apCapability(cmdu_rx, agent)) {
+        LOG(ERROR) << "Couldn't handle TLV tlvApCapability";
+        return false;
+    }
+
     if (!handle_tlv_ap_vht_capabilities(cmdu_rx)) {
         LOG(ERROR) << "Couldn't handle TLV AP VHTCapabilities";
         return false;

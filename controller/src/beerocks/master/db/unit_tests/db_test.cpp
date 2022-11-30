@@ -99,7 +99,7 @@ protected:
 
         m_db->set_prplmesh(tlvf::mac_from_string(g_bridge_mac));
         EXPECT_EQ(std::string(g_device_path) + ".1", m_db->get_node_data_model_path(g_bridge_mac));
-        EXPECT_CALL(*m_ambiorix, set_current_time(_, _)).WillRepeatedly(Return(true));
+        EXPECT_CALL(*m_ambiorix, set_time(_, _, _)).WillRepeatedly(Return(true));
     }
 };
 
@@ -166,7 +166,7 @@ protected:
             .WillOnce(Return(true));
         EXPECT_CALL(*m_ambiorix, set(bss_path + ".1", "LastChange", Matcher<const uint32_t &>(_)))
             .WillOnce(Return(true));
-        EXPECT_CALL(*m_ambiorix, set_current_time(_, _)).WillOnce(Return(true));
+        EXPECT_CALL(*m_ambiorix, set_time(_, _, _)).WillOnce(Return(true));
 
         //add virtual AP to radio
         // Update BSSes in the Agent otherwise, add_vap fails.
@@ -196,9 +196,8 @@ protected:
                     set(std::string(g_sta_path_1), "MACAddress",
                         Matcher<const sMacAddr &>(tlvf::mac_from_string(g_client_mac))))
             .WillOnce(Return(true));
-        EXPECT_CALL(*m_ambiorix, set_current_time(std::string(g_sta_path_1), _))
-            .WillOnce(Return(true));
-        EXPECT_CALL(*m_ambiorix, set_current_time(std::string(g_sta_path_1 + ".MultiAPSTA"), _))
+        EXPECT_CALL(*m_ambiorix, set_time(std::string(g_sta_path_1), _, _)).WillOnce(Return(true));
+        EXPECT_CALL(*m_ambiorix, set_time(std::string(g_sta_path_1 + ".MultiAPSTA"), _, _))
             .WillOnce(Return(true));
         EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1 + ".MultiAPSTA.SteeringSummaryStats"),
                                      "BlacklistAttempts", Matcher<const uint64_t &>(_)))
@@ -333,8 +332,7 @@ TEST_F(DbTest, test_add_vap)
     EXPECT_CALL(*m_ambiorix,
                 set(std::string(bss_path) + ".1", "LastChange", Matcher<const uint32_t &>(_)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix, set_current_time(std::string(bss_path) + ".1", _))
-        .WillOnce(Return(true));
+    EXPECT_CALL(*m_ambiorix, set_time(std::string(bss_path) + ".1", _, _)).WillOnce(Return(true));
 
     //add virtual AP to radio
     // Update BSSes in the Agent otherwise, add_vap fails.
@@ -611,8 +609,7 @@ TEST_F(DbTest, test_add_current_op_class)
     //expectations for add_current_op_class
     EXPECT_CALL(*m_ambiorix, add_instance(radio_path_1_operating_classes))
         .WillOnce(Return(radio_path_1_operating_classes + ".1"));
-    EXPECT_CALL(*m_ambiorix,
-                set_current_time(std::string(radio_path_1_operating_classes + ".1"), _))
+    EXPECT_CALL(*m_ambiorix, set_time(std::string(radio_path_1_operating_classes + ".1"), _, _))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(std::string(radio_path_1_operating_classes) + ".1", "Class",
                                  Matcher<const int32_t &>(0x01)))
@@ -682,7 +679,7 @@ TEST_F(DbTestRadio1Sta1, test_set_node_stats_info)
                                  Matcher<const uint32_t &>(stats.m_rx_packets_error)))
         .WillOnce(Return(true));
 
-    EXPECT_CALL(*m_ambiorix, set_current_time(g_sta_path_1, _)).WillOnce(Return(true));
+    EXPECT_CALL(*m_ambiorix, set_time(g_sta_path_1, _, _)).WillOnce(Return(true));
 
     EXPECT_TRUE(
         m_db->dm_set_sta_extended_link_metrics(tlvf::mac_from_string(g_client_mac), metrics));
@@ -723,7 +720,7 @@ TEST_F(DbTest, test_set_vap_stats_info)
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(_, _, Matcher<const bool &>(_))).WillRepeatedly(Return(true));
     EXPECT_CALL(*m_ambiorix, set(_, _, Matcher<const uint32_t &>(_))).WillRepeatedly(Return(true));
-    EXPECT_CALL(*m_ambiorix, set_current_time(_, _)).WillOnce(Return(true));
+    EXPECT_CALL(*m_ambiorix, set_time(_, _, _)).WillOnce(Return(true));
 
     //add virtual AP to radio
     // Update BSSes in the Agent otherwise, add_vap fails.
@@ -757,7 +754,7 @@ TEST_F(DbTest, test_set_vap_stats_info)
                                  Matcher<const uint64_t &>(6U)))
         .WillOnce(Return(true));
 
-    EXPECT_CALL(*m_ambiorix, set_current_time(_, _)).WillOnce(Return(true));
+    EXPECT_CALL(*m_ambiorix, set_time(_, _, _)).WillOnce(Return(true));
 
     //execute test
     EXPECT_TRUE(m_db->set_vap_stats_info(tlvf::mac_from_string(g_bssid_1), 1, 2, 3, 4, 5, 6));
@@ -933,7 +930,7 @@ TEST_F(DbTestRadio1Sta1, test_set_station_capabilities)
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(vht_capabilities2, "MUBeamformer", Matcher<const bool &>(_)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix, set_current_time(g_assoc_event_path_1, _)).WillOnce(Return(true));
+    EXPECT_CALL(*m_ambiorix, set_time(g_assoc_event_path_1, _, _)).WillOnce(Return(true));
 
     EXPECT_CALL(*m_ambiorix,
                 set(he_capabilities2, "MaxNumberOfTxSpatialStreams", Matcher<const int32_t &>(_)))
@@ -1030,7 +1027,7 @@ TEST_F(DbTestRadio1Sta1, test_add_sta_twice_with_same_mac)
     EXPECT_CALL(*m_ambiorix,
                 set(std::string(g_assoc_event_path_1), "StatusCode", Matcher<const uint32_t &>(0U)))
         .WillRepeatedly(Return(true));
-    EXPECT_CALL(*m_ambiorix, set_current_time(std::string(g_assoc_event_path_1), _))
+    EXPECT_CALL(*m_ambiorix, set_time(std::string(g_assoc_event_path_1), _, _))
         .WillRepeatedly(Return(true));
     //prepare scenario
     EXPECT_TRUE(m_db->add_node_station(tlvf::mac_from_string(g_client_mac),

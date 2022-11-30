@@ -815,7 +815,7 @@ int main(int argc, char *argv[])
     son::Controller controller(master_db, std::move(broker_client_factory), std::move(ucc_server),
                                std::move(cmdu_server), timer_manager, event_loop);
 
-    if (!amb_dm_obj->set_current_time("Device.WiFi.DataElements.Network")) {
+    if (!amb_dm_obj->set_time("Device.WiFi.DataElements.Network")) {
         return false;
     };
 
