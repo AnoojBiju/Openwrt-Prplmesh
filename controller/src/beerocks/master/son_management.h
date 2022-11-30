@@ -23,6 +23,10 @@ public:
                                    std::shared_ptr<beerocks::beerocks_header> beerocks_header,
                                    ieee1905_1::CmduMessageTx &cmdu_tx, db &database,
                                    task_pool &tasks);
+
+private:
+    static void send_unassociated_sta_link_metrics_query_message(ieee1905_1::CmduMessageTx &cmdu_tx,
+                                                                 db &database);
 };
 
 } // namespace son
