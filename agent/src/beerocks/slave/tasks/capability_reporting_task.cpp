@@ -164,6 +164,11 @@ void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
     }
 
     auto ap_capability_tlv = m_cmdu_tx.addClass<wfa_map::tlvApCapability>();
+    //TODO : who is responsible fot these settings ??? for this version, lets  enable all of them to be able to test
+    ap_capability_tlv->value().support_agent_initiated_rcpi_based_steering                  = true;
+    ap_capability_tlv->value().support_unassociated_sta_link_metrics_on_non_operating_bssid = true;
+    ap_capability_tlv->value().support_unassociated_sta_link_metrics_on_operating_bssid     = true;
+
     if (!ap_capability_tlv) {
         LOG(ERROR) << "addClass wfa_map::tlvApCapability has failed";
         return;
