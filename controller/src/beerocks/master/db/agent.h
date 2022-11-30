@@ -201,6 +201,15 @@ public:
             bool dscp_policy;
         } advanced_capabilities;
 
+        struct sApCapabilities {
+            //Support Unassociated STA Link Metrics reporting on the channels its BSSs are currently operating on.
+            uint8_t support_unassociated_sta_link_metrics_on_operating_bssid;
+            //Support Unassociated STA Link Metrics reporting on channels its BSSs are not currently operating on.
+            bool support_unassociated_sta_link_metrics_on_non_operating_bssid;
+            //Support Agent-initiated RCPI-based Steering.
+            bool support_agent_initiated_rcpi_based_steering;
+        } ap_capabilities;
+
         struct sMetricReportingPolicies {
             // 0: Do not report STA Metrics based on RCPI threshold
             // 1–220: RCPI threshold (encoded per [Table 9-176/802.11-2020])
