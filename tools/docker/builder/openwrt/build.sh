@@ -155,6 +155,11 @@ main() {
             ;;
     esac
 
+    if [ "$TARGET_DEVICE" == "turris-omnia" ] ; then
+        OPENWRT_TOOLCHAIN_VERSION='750d3b48630c35dadf510dd2f2beddbbf4bf240b'
+        OPENWRT_VERSION='750d3b48630c35dadf510dd2f2beddbbf4bf240b'
+    fi
+
     dbg "OPENWRT_REPOSITORY=$OPENWRT_REPOSITORY"
     dbg "OPENWRT_TOOLCHAIN_VERSION=$OPENWRT_TOOLCHAIN_VERSION"
     dbg "OPENWRT_VERSION=$OPENWRT_VERSION"
