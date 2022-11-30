@@ -4686,7 +4686,7 @@ bool db::notify_disconnection(const std::string &client_mac, const uint16_t reas
         m_ambiorix_datamodel->set(path_to_eventdata, "ErrorsReceived", static_cast<uint32_t>(0));
     ret_val &=
         m_ambiorix_datamodel->set(path_to_eventdata, "RetransCount", n->stats_info->retrans_count);
-    ret_val &= m_ambiorix_datamodel->set_time(path_to_eventdata);
+    ret_val &= m_ambiorix_datamodel->set_current_time(path_to_eventdata);
 
     return ret_val;
 }
@@ -4746,7 +4746,7 @@ bool db::set_vap_stats_info(const sMacAddr &bssid, uint64_t uc_tx_bytes, uint64_
     ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "BroadcastBytesSent", bc_tx_bytes);
     ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "BroadcastBytesReceived", bc_rx_bytes);
 
-    m_ambiorix_datamodel->set_time(bss->dm_path);
+    m_ambiorix_datamodel->set_current_time(bss->dm_path);
 
     return ret_val;
 }
@@ -6134,8 +6134,8 @@ bool db::dm_add_sta_element(const sMacAddr &bssid, Station &station)
         return false;
     }
 
-    m_ambiorix_datamodel->set_time(station.dm_path);
-    m_ambiorix_datamodel->set_time(station.dm_path + ".MultiAPSTA", "AssociationTime");
+    m_ambiorix_datamodel->set_current_time(station.dm_path);
+    m_ambiorix_datamodel->set_current_time(station.dm_path + ".MultiAPSTA", "AssociationTime");
 
     uint64_t add_sta_time = time(NULL);
     if (!m_ambiorix_datamodel->set(station.dm_path, "LastConnectTime", add_sta_time)) {
@@ -6229,7 +6229,7 @@ bool db::dm_add_failed_connection_event(const sMacAddr &bssid, const sMacAddr &s
 
     bool ret_val = true;
 
-    ret_val &= m_ambiorix_datamodel->set_time(event_path);
+    ret_val &= m_ambiorix_datamodel->set_current_time(event_path);
     ret_val &= m_ambiorix_datamodel->set(event_path, "BSSID", bssid);
     ret_val &= m_ambiorix_datamodel->set(event_path, "MACAddress", sta_mac);
     ret_val &= m_ambiorix_datamodel->set(event_path, "StatusCode", status_code);
@@ -6262,7 +6262,7 @@ std::string db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &
     }
 
     if (assoc_ts.empty()) {
-        m_ambiorix_datamodel->set_time(path_association_event);
+        m_ambiorix_datamodel->set_current_time(path_association_event);
     } else if (!m_ambiorix_datamodel->set(path_association_event, "TimeStamp", assoc_ts)) {
         LOG(ERROR) << "Failed to set " << path_association_event << ".TimeStamp: " << client_mac;
         return {};
@@ -6328,7 +6328,7 @@ bool db::add_current_op_class(const sMacAddr &radio_mac, uint8_t op_class, uint8
         return false;
     }
 
-    m_ambiorix_datamodel->set_time(op_class_path_instance);
+    m_ambiorix_datamodel->set_current_time(op_class_path_instance);
 
     //Set Operating class
     //Data model path: Device.WiFi.DataElements.Network.Device.1.Radio.1.CurrentOperatingClasses.Class
@@ -6490,7 +6490,7 @@ bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, cons
                                   std::chrono::steady_clock::now().time_since_epoch())
                                   .count());
     ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "LastChange", creation_time);
-    ret_val &= m_ambiorix_datamodel->set_time(bss->dm_path);
+    ret_val &= m_ambiorix_datamodel->set_current_time(bss->dm_path);
 
     return ret_val;
 }
@@ -6941,7 +6941,7 @@ bool db::dm_set_sta_traffic_stats(const sMacAddr &sta_mac, sAssociatedStaTraffic
     ret_val &= m_ambiorix_datamodel->set(station->dm_path, "ErrorsSent", stats.m_tx_packets_error);
     ret_val &=
         m_ambiorix_datamodel->set(station->dm_path, "ErrorsReceived", stats.m_rx_packets_error);
-    ret_val &= m_ambiorix_datamodel->set_time(station->dm_path);
+    ret_val &= m_ambiorix_datamodel->set_current_time(station->dm_path);
 
     return ret_val;
 }
@@ -7293,7 +7293,7 @@ bool db::dm_add_cac_status_report(
         }
     }
 
-    ret_val &= m_ambiorix_datamodel->set_time(cac_status_path);
+    ret_val &= m_ambiorix_datamodel->set_current_time(cac_status_path);
 
     return ret_val;
 }
@@ -7321,7 +7321,8 @@ bool db::update_last_contact_time(const sMacAddr &agent_mac)
     }
 
     agent->last_contact_time = std::chrono::system_clock::now();
-    ret_val = m_ambiorix_datamodel->set_time(agent->dm_path + ".MultiAPDevice", "LastContactTime");
+    ret_val = m_ambiorix_datamodel->set_current_time(agent->dm_path + ".MultiAPDevice",
+                                                     "LastContactTime");
     return ret_val;
 }
 
@@ -8412,7 +8413,7 @@ void db::update_unassociated_station_stats(const sMacAddr &mac_address,
             m_ambiorix_datamodel->set(new_station_path, "MACAddress", mac_address);
             m_ambiorix_datamodel->set(new_station_path, " SignalStrength",
                                       new_stats.uplink_rcpi_dbm_enc);
-            m_ambiorix_datamodel->set_time(new_station_path, "TimeStamp", new_stats.time_stamp);
+            m_ambiorix_datamodel->set_time(new_station_path, new_stats.time_stamp);
             LOG(DEBUG) << "Setting MACAddress " << mac_address
                        << "SignalStrength: " << new_stats.uplink_rcpi_dbm_enc << " TimeStamp"
                        << new_stats.time_stamp;

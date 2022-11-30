@@ -637,6 +637,23 @@ bool AmbiorixImpl::set_current_time(const std::string &path_to_object, const std
     return true;
 }
 
+bool AmbiorixImpl::set_time(const std::string &path_to_object, const std::string &time_stamp)
+{
+    std::string time_stamp_local(time_stamp);
+
+    amxc_ts_t time;
+    if (amxc_ts_parse(&time, time_stamp.c_str(), time_stamp.size()) != 0) {
+        LOG(ERROR) << " time_stamp: " << time_stamp << " does not contain a valid unix epoch time!";
+        return false;
+    }
+
+    if (!set(path_to_object, "TimeStamp", time_stamp_local)) {
+        LOG(ERROR) << "Failed to set " << path_to_object << ".TimeStamp";
+        return false;
+    }
+    return true;
+}
+
 bool AmbiorixImpl::remove_all_instances(const std::string &relative_path)
 {
     amxd_trans_t transaction;

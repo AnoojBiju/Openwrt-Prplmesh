@@ -82,6 +82,11 @@ bool AmbiorixDummy::set_current_time(const std::string &path_to_object, const st
     return true;
 }
 
+bool AmbiorixDummy::set_time(const std::string &path_to_object, const std::string &time_stamp)
+{
+    return true;
+}
+
 bool AmbiorixDummy::read_param(const std::string &obj_path, const std::string &param_name,
                                uint64_t *param_val)
 {
