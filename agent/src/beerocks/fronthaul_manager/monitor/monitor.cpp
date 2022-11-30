@@ -1157,12 +1157,12 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
         }
 
         // The list can also be empty which mean the controller is not interested on any station
-        std::unordered_map<std::string, uint> new_list_unassociated_stations;
+        std::unordered_map<std::string, uint8_t> new_list_unassociated_stations;
 
         for (size_t i = 0; i < request->stations_list_length(); ++i) {
             auto &unassociated_station = std::get<1>(request->stations_list(i));
             std::string mac_address    = tlvf::mac_to_string(unassociated_station.sta_mac);
-            uint channel               = unassociated_station.channel;
+            uint8_t channel            = unassociated_station.channel;
 
             new_list_unassociated_stations.insert(std::make_pair(mac_address, channel));
             LOG(DEBUG) << " New unassociated stations list contain station with mac_address"
@@ -2185,12 +2185,7 @@ bool Monitor::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
             iter++;
         }
 
-        LOG(DEBUG) << " sending cACTION_MONITOR_CLIENT_UNASSOCIATED_STA_LINK_METRIC_RESPONSE "
-                      "containing stats for  "
-                   << msg->un_stations_stats.size() << " unassociated stations";
-
         send_cmdu(cmdu_tx);
-
         break;
     }
 
