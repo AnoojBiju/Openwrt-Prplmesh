@@ -443,8 +443,8 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
 
             existing_move->state = eMoveProcessState::VBSS_MOVE_CANCEL;
 
-            if (vbss::vbss_actions::send_move_cancel_request(agent_mac, existing_move->client_vbss,
-                                                             m_database)) {
+            if (!vbss::vbss_actions::send_move_cancel_request(agent_mac, existing_move->client_vbss,
+                                                              m_database)) {
                 LOG(ERROR) << "Failed to send Move Cancel Request!";
                 return false;
             }
