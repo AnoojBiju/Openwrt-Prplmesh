@@ -87,6 +87,7 @@ The following table presents these options, see also [Configuration via NBAPI](h
 | diagnostics_measurements_polling_rate_sec | StatisticsPollingRateSec           | int  | 10      | statistics_polling_task as interval for sending beerocks_message::cACTION_CONTROL_HOSTAP_STATS_MEASUREMENT_REQUEST to known agents           |
 | channel_select_task_enabled               | ChannelSelectionTaskEnabled        | bool | true    | controller to start / stop channel_select_task                                                                                               |
 | dfs_task_enabled                          | DynamicChannelSelectionTaskEnabled | bool | true    | controller to start / stop dynamic_channel_selection_task_r2                                                                                 |
+| daisy_chaining_disabled                   | DaisyChainingDisabled              | bool | false   | handle_cmdu_1905_autoconfiguration_WSC; don`t send backhaul BSS to extenders if enabled                                                      |
 
 ### A short overview of controller tasks
 

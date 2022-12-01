@@ -861,6 +861,9 @@ static void event_configuration_changed(const char *const sig_name, const amxc_v
 
     nbapi_config.enable_dfs_reentry = amxd_object_get_bool(configuration, "DFSReentry", nullptr);
 
+    nbapi_config.daisy_chaining_disabled =
+        amxd_object_get_bool(configuration, "DaisyChainingDisabled", nullptr);
+
     if (!g_database->update_master_configuration(nbapi_config)) {
         LOG(ERROR) << "Failed update master configuration from NBAPI.";
     }

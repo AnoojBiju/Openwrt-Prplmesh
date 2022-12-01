@@ -124,7 +124,6 @@
 
                 object Configuration {
                     bool BandSteeringEnabled = false;
-                    bool DaisyChainingEnabled = false;
                     bool ClientRoamingEnabled = false;
 
                     uint32 SteeringCurrentBonus = 0 {
@@ -146,6 +145,7 @@
                         on action validate call check_range [1, 10000];
                     }
                     bool DFSReentry = false;
+                    bool DaisyChainingDisabled = false;
                 }
 
                 // Define controller.Network element

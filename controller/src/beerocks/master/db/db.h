@@ -120,6 +120,7 @@ public:
         bool load_monitor_on_vaps;
         bool load_channel_select_task;
         bool load_dynamic_channel_select_task;
+        bool daisy_chaining_disabled;
 
         bool certification_mode;
         bool persistent_db;
@@ -204,6 +205,8 @@ public:
 
         bool rdkb_extensions = false;
 
+        bool daisy_chaining_disabled = false;
+
         bool channel_select_task         = false;
         bool dynamic_channel_select_task = false;
 
@@ -228,6 +231,7 @@ public:
         bool health_check;
         bool enable_dfs_reentry;
         bool diagnostics_measurements;
+        bool daisy_chaining_disabled;
         int diagnostics_measurements_polling_rate_sec;
 
         int roaming_hysteresis_percent_bonus;
@@ -289,6 +293,7 @@ public:
         settings.health_check &= config_.load_health_check;
         settings.service_fairness &= config_.load_service_fairness;
         settings.rdkb_extensions &= config_.load_rdkb_extensions;
+        settings.daisy_chaining_disabled &= config_.daisy_chaining_disabled;
     }
     ~db(){};
 
@@ -2501,6 +2506,11 @@ public:
         settings.enable_dfs_reentry = en && config.load_dfs_reentry;
     }
     bool settings_dfs_reentry() { return settings.enable_dfs_reentry; }
+    void settings_daisy_chaining_disabled(bool en)
+    {
+        settings.daisy_chaining_disabled = en && config.daisy_chaining_disabled;
+    }
+    bool settings_daisy_chaining_disabled() { return settings.daisy_chaining_disabled; }
     void settings_client_band_steering(bool en)
     {
         settings.client_band_steering = en && config.load_client_band_steering;

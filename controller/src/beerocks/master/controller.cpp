@@ -1179,6 +1179,14 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
             LOG(INFO) << "Configured #BSS exceeds maximum for " << al_mac << " radio " << ruid;
             break;
         }
+        // Check if the agent is external one or not to decide propagating Backhaul BSS
+        // TODO: What will happen if backhaul and fronthaul flag is set at the same time. We should send it as only FH!
+        if (database.settings_daisy_chaining_disabled() && !agent->is_gateway &&
+            bss_info_conf.backhaul) {
+            LOG(INFO) << "Daisy chaining is disabled for  " << al_mac << " radio " << ruid
+                      << " skip BH BSS";
+            break;
+        }
         if (!autoconfig_wsc_add_m2(*m1, &bss_info_conf)) {
             LOG(ERROR) << "Failed setting M2 attributes";
             return false;

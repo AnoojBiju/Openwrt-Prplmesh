@@ -134,6 +134,7 @@ constexpr int DEFAULT_HEALTH_CHECK                        = 0;
 constexpr int DEFAULT_LOAD_BALANCING                      = 0;
 constexpr int DEFAULT_OPTIMAL_PATH_PREFER_SIGNAL_STRENGTH = 0;
 constexpr int DEFAULT_ROAMING_HYSTERESIS_PERCENT_BONUS    = 10;
+constexpr int DEFAULT_DAISY_CHAINING_DISABLED             = 0;
 constexpr std::chrono::milliseconds DEFAULT_STEERING_DISASSOC_TIMER_MSEC{200};
 
 // by-default the persistent DB is disabled to allow backwards compatability
@@ -465,15 +466,15 @@ bool cfg_set_band_steering(bool band_steering);
  * @param [out] enable true if the Daisy Chaining is enabled and false otherwise.
  * @return true on success, otherwise false.
  */
-bool cfg_get_daisy_chaining(bool &daisy_chaining);
+bool cfg_get_daisy_chaining_disabled(bool &daisy_chaining_disabled);
 
 /**
  * @brief Sets Daisy Chaining in configuration.
  *
- * @param[in] daisy_chaining  true for enabled daisy_chaining.
+ * @param[in] daisy_chaining_disabled  true for enabled daisy_chaining_disabled.
  * @return true on success, otherwise false
  */
-bool cfg_set_daisy_chaining(bool daisy_chaining);
+bool cfg_set_daisy_chaining_disabled(bool daisy_chaining_disabled);
 
 /**
  * @brief Returns whether 11k Roaming feature is enabled or not.

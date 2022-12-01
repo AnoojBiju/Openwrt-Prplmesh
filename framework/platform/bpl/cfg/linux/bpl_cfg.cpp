@@ -315,18 +315,18 @@ bool cfg_get_band_steering(bool &band_steering)
 
 bool cfg_set_band_steering(bool band_steering) { return true; }
 
-bool cfg_get_daisy_chaining(bool &daisy_chaining)
+bool cfg_get_daisy_chaining_disabled(bool &daisy_chaining_disabled)
 {
     int retVal = -1;
-    if (cfg_get_param_int("daisy_chaining", retVal) == RETURN_ERR) {
+    if (cfg_get_param_int("daisy_chaining_disabled", retVal) == RETURN_ERR) {
         return false;
     }
 
-    daisy_chaining = (retVal == 1);
+    daisy_chaining_disabled = (retVal == 1);
     return true;
 }
 
-bool cfg_set_daisy_chaining(bool daisy_chaining) { return true; }
+bool cfg_set_daisy_chaining_disabled(bool daisy_chaining_disabled) { return true; }
 
 bool cfg_get_client_11k_roaming(bool &eleven_k_roaming)
 {
