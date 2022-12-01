@@ -2758,5 +2758,10 @@ std::string ApManager::get_vbss_interface_name(const sMacAddr &bssid)
     std::string ifname = tlvf::mac_to_string(bssid);
     ifname.erase(std::remove(ifname.begin(), ifname.end(), ':'), ifname.end());
 
-    return ifname;
+    // Since we might have to move the VBSSID from one radio to
+    // another one on the same device, also append the radio index
+    // from the interface name.
+    // TODO: PPM-2402: use a better (small) radio identifier.
+    size_t index = m_iface.find_first_of("0123456789");
+    return ifname + m_iface.at(index);
 }
