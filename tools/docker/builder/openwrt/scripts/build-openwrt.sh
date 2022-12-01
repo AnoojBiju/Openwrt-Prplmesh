@@ -34,7 +34,12 @@ else
 fi
 
 # feed-prpl is in the prpl profile:
-args+=("prpl")
+if [ -n "$WHM_ENABLE" ] ; then
+    args+=("prpl")
+else
+    sed -e '/- pwhm/d' -e '/- libswlc/d' -e '/- libswla/d'  -e '/CONFIG_USE_PRPLMESH_WHM=y/d' -e '/CONFIG_SAH_WLD_INIT_SCRIPT="prplmesh_whm"/d' profiles/prpl.yml > profiles/prpl-no-whm.yml
+    args+=("prpl-no-whm")
+fi
 
 ./scripts/gen_config.py "${args[@]}"
 
