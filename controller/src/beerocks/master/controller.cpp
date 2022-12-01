@@ -1145,8 +1145,8 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
 
     tlvRuid->radio_uid() = ruid;
 
-    const auto &bss_info_confs = database.get_bss_info_configuration(m1->mac_addr());
-    uint8_t num_bsss           = 0;
+    auto &bss_info_confs = database.get_bss_info_configuration(m1->mac_addr());
+    uint8_t num_bsss     = 0;
 
     // Update BSSes in the Agent
     if (!database.has_node(ruid)) {
@@ -1158,7 +1158,7 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
         return false;
     }
 
-    for (const auto &bss_info_conf : bss_info_confs) {
+    for (auto &bss_info_conf : bss_info_confs) {
         // Check if the radio supports it
         if (!son_actions::has_matching_operating_class(*radio_basic_caps, bss_info_conf)) {
             LOG(INFO) << "Skipping " << bss_info_conf.ssid << " due to operclass mismatch";
@@ -1182,11 +1182,17 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
         // Check if the agent is external one or not to decide propagating Backhaul BSS
         // TODO: What will happen if backhaul and fronthaul flag is set at the same time. We should send it as only FH!
         if (database.settings_daisy_chaining_disabled() && !agent->is_gateway &&
-            bss_info_conf.backhaul) {
+            bss_info_conf.backhaul && !bss_info_conf.fronthaul) {
             LOG(INFO) << "Daisy chaining is disabled for  " << al_mac << " radio " << ruid
                       << " skip BH BSS";
-            break;
+            continue;
         }
+        // Clear backhaul flag for both mode configurations
+        else if (database.settings_daisy_chaining_disabled() && !agent->is_gateway &&
+                 bss_info_conf.backhaul && bss_info_conf.fronthaul) {
+            bss_info_conf.backhaul = false;
+        }
+
         if (!autoconfig_wsc_add_m2(*m1, &bss_info_conf)) {
             LOG(ERROR) << "Failed setting M2 attributes";
             return false;
