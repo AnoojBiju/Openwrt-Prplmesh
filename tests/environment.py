@@ -24,10 +24,9 @@ import pexpect
 import yaml
 
 # Local imports:
-import sniffer
 from capi import UCCSocket
 from connmap import MapDevice
-from opts import opts, debug, err
+from opts import debug, err
 
 MemoryStat = namedtuple('MemoryStat', 'total_memory free_memory buffers cached used_memory')
 CpuStat = namedtuple('CpuStat', 'cpu_usage cpu_avg')
@@ -948,39 +947,6 @@ def _get_bridge_interface(unique_id: str):
         bridge = 'br-' + bridge_id[:12]
 
     return bridge
-
-
-def launch_environment_docker(unique_id: str, skip_init: bool = False, tag: str = ""):
-    global wired_sniffer
-    iface = _get_bridge_interface(unique_id)
-    wired_sniffer = sniffer.Sniffer(iface, opts.tcpdump_dir)
-
-    gateway = 'gateway-' + unique_id
-    repeater1 = 'repeater1-' + unique_id
-    repeater2 = 'repeater2-' + unique_id
-
-    if not skip_init:
-        command = [os.path.join(rootdir, "tests", "test_gw_repeater.sh"), "-f", "-u", unique_id,
-                   "-g", gateway, "-r", repeater1, "-r", repeater2, "-d", "7"]
-        if tag:
-            command += ["-t", tag]
-        wired_sniffer.start('init')
-        try:
-            subprocess.check_call(command)
-        finally:
-            wired_sniffer.stop()
-
-    global controller, agents
-    controller = ALEntityDocker(name=gateway, is_controller=True)
-    agents = (ALEntityDocker(name=repeater1), ALEntityDocker(name=repeater2))
-
-    debug('controller: {}'.format(controller.mac))
-    debug('agent1: {}'.format(agents[0].mac))
-    debug('agent1 wlan0: {}'.format(agents[0].radios[0].mac))
-    debug('agent1 wlan2: {}'.format(agents[0].radios[1].mac))
-    debug('agent2: {}'.format(agents[1].mac))
-    debug('agent2 wlan0: {}'.format(agents[1].radios[0].mac))
-    debug('agent2 wlan2: {}'.format(agents[1].radios[1].mac))
 
 
 class ALEntityPrplWrt(ALEntity):

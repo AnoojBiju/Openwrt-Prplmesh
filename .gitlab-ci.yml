@@ -266,6 +266,19 @@ nbapi_unit_tests:
 db_unit_tests:
   extends: .run-test-in-docker
 
+test-gw-repeater:
+  stage: test
+  script:
+    - tests/test_gw_repeater.sh --rm --unique-id $CI_JOB_ID
+  artifacts:
+    paths:
+      - logs
+    when: always
+  needs:
+    - job: build-in-docker
+  tags:
+    - docker-build
+
 boardfarm-tests:
   stage: test
   script:
