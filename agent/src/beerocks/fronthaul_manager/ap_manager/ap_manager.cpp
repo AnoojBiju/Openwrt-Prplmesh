@@ -493,14 +493,14 @@ bool ApManager::ap_manager_fsm(bool &continue_processing)
             ext_event_fd_max = 0;
         } else {
             for (auto &ext_event_fd : m_ap_hal_ext_events) {
-                if (ext_event_fd > 0) {
-                    if (!register_ext_events_handlers(ext_event_fd)) {
-                        return false;
-                    } else if (ext_event_fd < 0) {
-                        ext_event_fd = beerocks::net::FileDescriptor::invalid_descriptor;
-                    }
-                    LOG(DEBUG) << "External events queue with fd = " << ext_event_fd;
+                if (ext_event_fd < 0) {
+                    ext_event_fd = beerocks::net::FileDescriptor::invalid_descriptor;
+                    continue;
                 }
+                if (!register_ext_events_handlers(ext_event_fd)) {
+                    return false;
+                }
+                LOG(DEBUG) << "External events queue with fd = " << ext_event_fd;
                 ext_event_fd_max = std::max(ext_event_fd_max, ext_event_fd);
             }
         }
