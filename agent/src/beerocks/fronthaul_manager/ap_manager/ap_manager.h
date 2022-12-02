@@ -138,6 +138,7 @@ private:
                                      int32_t status);
     void remove_client_from_disallowed_list(const sMacAddr &mac, const sMacAddr &bssid);
     void allow_expired_clients();
+    bool register_ext_events_handlers(int fd);
 
     // Class constants
     static constexpr uint8_t BEACON_TRANSMIT_TIME_MS = 100;
