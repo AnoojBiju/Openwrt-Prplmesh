@@ -28,7 +28,7 @@ ubus wait_for Firewall
 iptables -P INPUT ACCEPT
 
 # Set the LAN bridge IP:
-ubus call "IP.Interface" _set '{ "rel_path": ".[Name == \"br-lan\"].IPv4Address.[Alias == \"lan\"].", "parameters": { "IPAddress": "192.165.100.174" } }'
+ubus call "IP.Interface" _set '{ "rel_path": ".[Name == \"br-lan\"].IPv4Address.[Alias == \"lan\"].", "parameters": { "IPAddress": "192.165.100.175" } }'
 
 # Move the WAN port into the LAN bridge if it's not there yet (to use it for data):
 ubus wait_for Bridging.Bridge
@@ -70,7 +70,7 @@ ubus call IP.Interface _get '{ "rel_path": ".[Name == \"eth0\"]." }' || {
 # We can now add the IP address if there is none yet:
 ubus call IP.Interface _get '{ "rel_path": ".[Name == \"eth0\"].IPv4Address.[Alias == \"eth0\"]." }' || {
     echo "Adding IP address $IP"
-    ubus call "IP.Interface" _add '{ "rel_path": ".[Name == \"eth0\"].IPv4Address.", "parameters": { "IPAddress": "192.168.250.174", "SubnetMask": "255.255.255.0", "AddressingType": "Static", "Alias": "eth0", "Enable" : true } }'
+    ubus call "IP.Interface" _add '{ "rel_path": ".[Name == \"eth0\"].IPv4Address.", "parameters": { "IPAddress": "192.168.250.175", "SubnetMask": "255.255.255.0", "AddressingType": "Static", "Alias": "eth0", "Enable" : true } }'
 }
 # Finally, we can enable it:
 ubus call "IP.Interface" _set '{ "rel_path": ".[Name == \"eth0\"].", "parameters": { "IPv4Enable": true } }'
@@ -78,7 +78,7 @@ ubus call "IP.Interface" _set '{ "rel_path": ".[Name == \"eth0\"].", "parameters
 # Wired backhaul interface:
 uci set prplmesh.config.backhaul_wire_iface='eth1'
 
-uci set system.@system[0].hostname='glinet-b1300-2'
+uci set system.@system[0].hostname='glinet-b1300-3'
 uci commit
 /etc/init.d/system restart
 
@@ -107,7 +107,7 @@ set wireless.default_radio0.network='lan'
 set wireless.default_radio0.mode='ap'
 set wireless.default_radio0.key='prplmesh_pass'
 set wireless.default_radio0.encryption='psk2'
-set wireless.default_radio0.ssid='default'
+set wireless.default_radio0.ssid='prplmesh_demo'
 set wireless.default_radio0.wps_pushbutton='1'
 set wireless.default_radio0.ieee80211v='1'
 set wireless.default_radio0.bss_transition='1'
@@ -118,7 +118,7 @@ set wireless.default_radio1.network='lan'
 set wireless.default_radio1.mode='ap'
 set wireless.default_radio1.key='prplmesh_pass'
 set wireless.default_radio1.encryption='psk2'
-set wireless.default_radio1.ssid='default'
+set wireless.default_radio1.ssid='prplmesh_demo'
 set wireless.default_radio1.wps_pushbutton='1'
 set wireless.default_radio1.ieee80211v='1'
 set wireless.default_radio1.bss_transition='1'
@@ -129,7 +129,7 @@ set wireless.default_radio10.network='lan'
 set wireless.default_radio10.mode='ap'
 set wireless.default_radio10.key='prplmesh_pass'
 set wireless.default_radio10.encryption='psk2'
-set wireless.default_radio10.ssid='default'
+set wireless.default_radio10.ssid='prplmesh_demo'
 set wireless.default_radio10.ieee80211v='1'
 set wireless.default_radio10.bss_transition='1'
 
@@ -139,7 +139,7 @@ set wireless.default_radio20.network='lan'
 set wireless.default_radio20.mode='ap'
 set wireless.default_radio20.key='prplmesh_pass'
 set wireless.default_radio20.encryption='psk2'
-set wireless.default_radio20.ssid='default'
+set wireless.default_radio20.ssid='prplmesh_demo'
 set wireless.default_radio20.ieee80211v='1'
 set wireless.default_radio20.bss_transition='1'
 
