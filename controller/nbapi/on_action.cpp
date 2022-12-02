@@ -740,6 +740,137 @@ amxd_status_t trigger_vbss_move(amxd_object_t *object, amxd_function_t *func, am
     return amxd_status_ok;
 }
 
+/**
+ * @brief add an unassociated station using the channel given in the arguments
+ * 
+ * Example of usage:
+ * Device.WiFi.DataElements.Network.Device.1.Radio.1.AddUnassociatedStation(un_station_mac="AA:BB:CC:DD:12:04",channel=4,agent_mac="b2:83:c4:14:93:08")
+ *
+ */
+amxd_status_t add_unassociated_station(amxd_object_t *object, amxd_function_t *func,
+                                       amxc_var_t *args, amxc_var_t *ret)
+{
+    amxd_status_t result(amxd_status_ok);
+
+    amxc_var_t value;
+    amxc_var_init(&value);
+    amxd_object_get_param(object, "ID", &value);
+    std::string radio_mac = amxc_var_constcast(cstring_t, &value);
+    if (radio_mac.empty()) {
+        LOG(ERROR) << "radio_mac is empty";
+        return amxd_status_parameter_not_found;
+    }
+
+    //get agent mac
+    amxd_object_t *parent = amxd_object_get_parent(object);
+    amxd_object_get_param(parent, "ID", &value);
+    std::string agent_mac = amxc_var_constcast(cstring_t, &value);
+    if (agent_mac.empty()) {
+        LOG(ERROR) << "agent_mac is empty";
+        return amxd_status_parameter_not_found;
+    }
+
+    auto controller_ctx = g_database->get_controller_ctx();
+
+    if (!controller_ctx) {
+        LOG(ERROR) << "Failed to get controller context.";
+        return amxd_status_unknown_error;
+    }
+
+    std::string station_mac_addr = GET_CHAR(args, "un_station_mac");
+    if (!network_utils::is_valid_mac(station_mac_addr)) {
+        LOG(ERROR) << station_mac_addr << " is not avalid mac_address!";
+        return amxd_status_invalid_value;
+    }
+    uint32_t channel = GET_UINT32(args, "channel");
+    if (channel == 0) {
+        LOG(ERROR) << "entered channel is not valid! ";
+        return amxd_status_invalid_value;
+    }
+
+    if (!controller_ctx->add_unassociated_station(
+            tlvf::mac_from_string(station_mac_addr), (uint8_t)channel,
+            tlvf::mac_from_string(agent_mac), tlvf::mac_from_string(radio_mac))) {
+        result = amxd_status_unknown_error;
+    }
+    return result;
+}
+
+/**
+ * @brief remove the unassociated station being monitored
+ * 
+ * Example of usage:
+ * Device.WiFi.DataElements.Network.Device.1.Radio.1.RemoveUnassociatedStation(un_station_mac="AA:BB:CC:DD:12:04")
+ *
+ */
+amxd_status_t remove_unassociated_station(amxd_object_t *object, amxd_function_t *func,
+                                          amxc_var_t *args, amxc_var_t *ret)
+{
+    amxd_status_t result(amxd_status_ok);
+
+    amxc_var_t value;
+
+    amxc_var_init(&value);
+    amxd_object_get_param(object, "ID", &value);
+    std::string radio_mac = amxc_var_constcast(cstring_t, &value);
+    if (radio_mac.empty()) {
+        LOG(ERROR) << "radio_mac is empty";
+        return amxd_status_parameter_not_found;
+    }
+
+    //get agent mac
+    amxd_object_t *parent = amxd_object_get_parent(object);
+    amxd_object_get_param(parent, "ID", &value);
+    std::string agent_mac = amxc_var_constcast(cstring_t, &value);
+    if (agent_mac.empty()) {
+        LOG(ERROR) << "agent_mac is empty";
+        return amxd_status_parameter_not_found;
+    }
+
+    auto controller_ctx = g_database->get_controller_ctx();
+
+    if (!controller_ctx) {
+        LOG(ERROR) << "Failed to get controller context.";
+        return amxd_status_unknown_error;
+    }
+
+    std::string station_mac_addr = GET_CHAR(args, "un_station_mac");
+    if (!network_utils::is_valid_mac(station_mac_addr)) {
+        LOG(ERROR) << station_mac_addr << " is not avalid mac_address!";
+        return amxd_status_invalid_value;
+    }
+
+    if (!controller_ctx->remove_unassociated_station(tlvf::mac_from_string(station_mac_addr),
+                                                     tlvf::mac_from_string(agent_mac),
+                                                     tlvf::mac_from_string(radio_mac))) {
+        result = amxd_status_unknown_error;
+    }
+    return result;
+}
+
+/**
+ * @brief update the datamodel with new stats from all connected agents
+ * 
+ * Example of usage:
+ * ubus call Device.WiFi.DataElements.Network UpdateUnassociatedStationsStats
+ *
+ */
+amxd_status_t update_unassociatedStations_stats(amxd_object_t *object, amxd_function_t *func,
+                                                amxc_var_t *args, amxc_var_t *ret)
+{
+    amxd_status_t result(amxd_status_ok);
+    auto controller_ctx = g_database->get_controller_ctx();
+
+    if (!controller_ctx) {
+        LOG(ERROR) << "Failed to get controller context.";
+        return amxd_status_unknown_error;
+    }
+    if (!controller_ctx->get_unassociated_stations_stats()) {
+        result = amxd_status_unknown_error;
+    }
+    return result;
+}
+
 // Events
 
 amxd_dm_t *g_data_model = nullptr;
@@ -922,7 +1053,16 @@ std::vector<beerocks::nbapi::sFunctions> get_func_list(void)
          "Device.WiFi.DataElements.Network.Device.Radio.BSS.TriggerVBSSDestruction",
          trigger_vbss_destruction},
         {"trigger_vbss_move", "Device.WiFi.DataElements.Network.Device.Radio.BSS.TriggerVBSSMove",
-         trigger_vbss_move}};
+         trigger_vbss_move},
+        {"add_unassociated_station",
+         "Device.WiFi.DataElements.Network.Device.Radio.AddUnassociatedStation",
+         add_unassociated_station},
+        {"remove_unassociated_station",
+         "Device.WiFi.DataElements.Network.Device.Radio.RemoveUnassociatedStation",
+         remove_unassociated_station},
+        {"update_unassociatedStations_stats",
+         "Device.WiFi.DataElements.Network.UpdateUnassociatedStationsStats",
+         update_unassociatedStations_stats}};
     return functions_list;
 }
 

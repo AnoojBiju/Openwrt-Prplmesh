@@ -2469,12 +2469,14 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
 
-        if (!database.add_unassociated_station(request->mac_address(), request->channel(),
-                                               request->agent_mac_address())) {
+        auto controller_ctx = database.get_controller_ctx();
+        if (!controller_ctx) {
+            LOG(ERROR) << "controller_ctx == nullptr";
             break;
         }
 
-        send_unassociated_sta_link_metrics_query_message(cmdu_tx, database);
+        controller_ctx->add_unassociated_station(request->mac_address(), request->channel(),
+                                                 request->agent_mac_address());
         break;
     }
     case beerocks_message::ACTION_BML_REMOVE_UNASSOCIATED_STATION_STATS_REQUEST: {
@@ -2487,12 +2489,14 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
 
-        if (!database.remove_unassociated_station(request->mac_address(),
-                                                  request->agent_mac_address())) {
+        auto controller_ctx = database.get_controller_ctx();
+        if (!controller_ctx) {
+            LOG(ERROR) << "controller_ctx == nullptr";
             break;
         }
 
-        send_unassociated_sta_link_metrics_query_message(cmdu_tx, database);
+        controller_ctx->remove_unassociated_station(request->mac_address(),
+                                                    request->agent_mac_address());
         break;
     }
 
@@ -2508,10 +2512,14 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         }
 
         //send a request to gather the newest stats from agents
-        send_unassociated_sta_link_metrics_query_message(cmdu_tx, database);
+        auto controller_ctx = database.get_controller_ctx();
+        if (!controller_ctx) {
+            LOG(ERROR) << "controller_ctx == nullptr";
+            break;
+        }
 
-        //TODO: do we need to wait for the "RESPONSE" so that our stats report contains the latest data ??
-        // or this is enough because the pooling of stats will be done frequenty?
+        controller_ctx->get_unassociated_stations_stats();
+
         auto response = message_com::create_vs_message<
             beerocks_message::cACTION_BML_GET_UNASSOCIATED_STATIONS_STATS_RESPONSE>(cmdu_tx);
         if (!response) {
@@ -2549,101 +2557,5 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         LOG(ERROR) << "Unsupported BML action_op:" << int(beerocks_header->action_op());
         break;
     }
-    }
-}
-
-void son_management::send_unassociated_sta_link_metrics_query_message(
-    ieee1905_1::CmduMessageTx &cmdu_tx, db &database)
-{
-    if (!cmdu_tx.create(0, ieee1905_1::eMessageType::UNASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE)) {
-        LOG(ERROR) << "Failed building message UNASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE!";
-        return;
-    }
-
-    using map_stations_per_channel = std::unordered_map<uint8_t, std::list<sMacAddr>>;
-
-    using map_operating_classes_per_agent = std::unordered_map<uint8_t, map_stations_per_channel>;
-
-    using map_all_agents = std::unordered_map<
-        sMacAddr,
-        map_operating_classes_per_agent>; //mapping all opetating_classes to agents
-
-    map_all_agents global_map;
-
-    auto un_stations_db = database.get_unassociated_stations();
-    if (un_stations_db.size()) {
-        for (auto &station : un_stations_db) {
-            for (const auto &agent : station.second->get_agents()) {
-
-                if (global_map.find(agent.first) == global_map.end()) {
-                    global_map.insert(
-                        std::make_pair(agent.first, map_operating_classes_per_agent()));
-                }
-                auto &agents_operating_classes = global_map[agent.first];
-
-                // now check if the operating_class exists
-                uint8_t operating_class = station.second->get_operating_class();
-                if (agents_operating_classes.find(operating_class) ==
-                    agents_operating_classes.end()) {
-                    agents_operating_classes.insert(
-                        std::make_pair(operating_class, map_stations_per_channel()));
-                }
-                auto &stations_per_channel = agents_operating_classes[operating_class];
-
-                // now check if the channel exist
-                uint8_t channel = station.second->get_channel();
-                if (stations_per_channel.find(channel) == stations_per_channel.end()) {
-                    stations_per_channel.insert(std::make_pair(channel, std::list<sMacAddr>()));
-                }
-
-                auto &list_stations = stations_per_channel[channel];
-                list_stations.emplace_back(station.first);
-            }
-        }
-    } else { // this is a command to remove all monitored stations
-        for (const auto &agent : database.get_all_connected_agents()) {
-            cmdu_tx.addClass<wfa_map::tlvUnassociatedStaLinkMetricsQuery>();
-            son_actions::send_cmdu_to_agent(agent->al_mac, cmdu_tx, database);
-            LOG(DEBUG) << "removing  non_associated stations from  agent with mac_address "
-                       << tlvf::mac_to_string(agent->al_mac);
-            return;
-        }
-    }
-
-    //now loop over all agents  and send a specific telemtry for each operating_class
-    for (auto &agent : global_map) {
-
-        for (auto &operating_class : agent.second) {
-            auto unassociated_sta_query =
-                cmdu_tx.addClass<wfa_map::tlvUnassociatedStaLinkMetricsQuery>();
-            if (operating_class.second.size() == 0) {
-                continue; // no stations so nothing to do
-            }
-            for (auto &stations_per_channel : operating_class.second) {
-                std::shared_ptr<wfa_map::cChannelParameters> channels =
-                    unassociated_sta_query->create_channel_list();
-                channels->channel_number() = stations_per_channel.first;
-                channels->alloc_sta_list(stations_per_channel.second.size());
-                size_t count(0);
-                for (auto &station : stations_per_channel.second) {
-                    std::get<1>(channels->sta_list(count)) =
-                        station; // here we are setting the mac address into the telemtry
-                    count++;
-                }
-                // Add channel_list object to TLV
-                if (!unassociated_sta_query->add_channel_list(channels)) {
-                    LOG(ERROR) << "add_channel_list() failed";
-                    return;
-                }
-            }
-
-            LOG(DEBUG) << " sending a new tlvUnassociatedStaLinkMetricsQuery to agent: "
-                       << tlvf::mac_to_string(agent.first)
-                       << " with: operating_class: " << operating_class.first;
-            unassociated_sta_query->operating_class_of_channel_list() = operating_class.first;
-            unassociated_sta_query->channel_list_length() =
-                operating_class.second.size(); //number of channels
-            son_actions::send_cmdu_to_agent(agent.first, cmdu_tx, database);
-        }
     }
 }

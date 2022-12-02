@@ -2642,22 +2642,28 @@ public:
     /**
      * @brief Adds a single station to the unassociated_stations list
      * @param new station mac_address
-     * @param channel
-     * @param agent mac_address, if equals to ZERO_MAC_STRING all connected agents will be chosed
+     * @param channel, no check swill be done if the channel is valid/available or not, because the standard gives preference to use the active channel.
+     *          and as an option, may use the new asked channel, se we leave it up to the monitoring module to decide about the channel value.
+     * @param agent mac_address, if equals to ZERO_MAC all connected agents will be chosed
+     * @param radio mac_address, if equals to ZERO_MAC, radio will be deduced based on the channel value.If it fails, first radio will be selected.
      * 
      * @return true if success, false if the station exists or any other issue
      */
-    bool add_unassociated_station(sMacAddr const &new_station_mac_add, uint8_t channel,
-                                  sMacAddr const &agent_mac_addr);
+    bool add_unassociated_station(
+        sMacAddr const &new_station_mac_add, uint8_t channel, sMacAddr const &agent_mac_addr,
+        sMacAddr const &radio_mac_addr = beerocks::net::network_utils::ZERO_MAC);
 
     /**
      * @brief Removes a single station from the unassociated_stations list
      * @param mac_address of the station to be removed
-     * @param agent mac_address, if equals to ZERO_MAC_STRING all connected agents will be selected
+     * @param agent mac_address, if equals to ZERO_MAC all connected agents will be selected
+     * @param radio_mac_addr, if equals to ZERO_MAC , it will be taken from the database
      * 
      * @return True if success, false if the station does not exists or any other issue
      */
-    bool remove_unassociated_station(sMacAddr const &mac_address, sMacAddr const &agent_mac_addr);
+    bool remove_unassociated_station(
+        sMacAddr const &mac_address, sMacAddr const &agent_mac_addr,
+        sMacAddr const &radio_mac_addr = beerocks::net::network_utils::ZERO_MAC);
 
     /**
      * @brief Get unassociated stations being monitored

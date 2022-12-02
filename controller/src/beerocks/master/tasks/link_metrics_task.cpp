@@ -13,6 +13,7 @@
 
 #include <beerocks/tlvf/beerocks_message.h>
 #include <tlvf/ieee_1905_1/tlvLinkMetricQuery.h>
+#include <tlvf/wfa_map/tlvUnassociatedStaLinkMetricsQuery.h>
 #include <tlvf/wfa_map/tlvUnassociatedStaLinkMetricsResponse.h>
 
 #include <easylogging++.h>
@@ -56,10 +57,21 @@ void LinkMetricsTask::work()
             LOG(ERROR) << "addClass ieee1905_1::tlvLinkMetricQueryAllNeighbors failed";
             return;
         }
-
         for (const auto &agent : database.get_all_connected_agents()) {
             son_actions::send_cmdu_to_agent(agent->al_mac, cmdu_tx, database);
         }
+
+        // TODO: is the unassociated station request interval the same as the link metric ? or shall we consider a different one ?
+        if (!cmdu_tx.create(
+                0, ieee1905_1::eMessageType::UNASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE)) {
+            LOG(ERROR) << "Failed building message UNASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE!";
+            return;
+        }
+        cmdu_tx.addClass<wfa_map::tlvUnassociatedStaLinkMetricsQuery>();
+        for (const auto &agent : database.get_all_connected_agents()) {
+            son_actions::send_cmdu_to_agent(agent->al_mac, cmdu_tx, database);
+        }
+
         last_query_request = std::chrono::steady_clock::now();
     }
     return;
@@ -339,7 +351,7 @@ bool LinkMetricsTask::handle_cmdu_1905_unassociated_station_link_metric_response
         if (tlvf::mac_to_string(radio_mac_address) ==
             beerocks::net::network_utils::ZERO_MAC_STRING) {
             LOG(ERROR) << "Agent with mac_addr: " << tlvf::mac_to_string((*agent)->al_mac)
-                       << " has no radio that supports operaying_class: "
+                       << " has no radio that supports operating_class: "
                        << operating_class_received
                        << " !!, un_station stats will not get updated! ";
             return false;
@@ -375,7 +387,7 @@ bool LinkMetricsTask::handle_cmdu_1905_unassociated_station_link_metric_response
             tm local;
             localtime_r(&received_time, &local);
             amxc_ts_t time_to_be_used;
-            amxc_ts_from_tm(&time_to_be_used, &local);
+            //amxc_ts_from_tm(&time_to_be_used, &local);
 
             char time_string[40];
             amxc_ts_format(&time_to_be_used, time_string, 40);

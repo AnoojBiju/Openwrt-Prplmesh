@@ -8069,7 +8069,7 @@ bool db::dm_set_device_ap_capabilities(const Agent &agent)
     return ret_val;
 }
 bool db::add_unassociated_station(sMacAddr const &new_station_mac_add, uint8_t channel,
-                                  sMacAddr const &agent_mac_addr)
+                                  sMacAddr const &agent_mac_addr, sMacAddr const &radio_mac_addr)
 {
     std::string debug_msg;
     bool all_connected_agents =
@@ -8155,8 +8155,13 @@ bool db::add_unassociated_station(sMacAddr const &new_station_mac_add, uint8_t c
                        << " could not be found! station will not be added. ";
             return false;
         } else {
-            std::shared_ptr<Agent::sRadio> agent_radio =
-                get_agent_radio(existing_agent->radios, channel);
+            std::shared_ptr<Agent::sRadio> agent_radio(nullptr);
+            if (radio_mac_addr == network_utils::ZERO_MAC) {
+                agent_radio = get_agent_radio(existing_agent->radios, channel);
+            } else {
+                agent_radio = get_radio_by_uid(radio_mac_addr);
+            }
+
             if (!agent_radio) {
                 //The channel is not accepted/available for any radios! --> lets revert to the active channel in one radio
                 // and warn the user!
@@ -8218,9 +8223,13 @@ bool db::add_unassociated_station(sMacAddr const &new_station_mac_add, uint8_t c
     } else { //all connected agents
         for (auto &agent : m_agents) {
             new_station = m_unassociated_stations.add(new_station_mac_add);
-            //first try to detect which radio in the agent is concerned
-            std::shared_ptr<Agent::sRadio> agent_radio =
-                get_agent_radio(agent.second->radios, channel);
+            std::shared_ptr<Agent::sRadio> agent_radio(nullptr);
+            if (radio_mac_addr == network_utils::ZERO_MAC) {
+                agent_radio = get_agent_radio(agent.second->radios, channel);
+            } else {
+                agent_radio = get_radio_by_uid(radio_mac_addr);
+            }
+
             if (!agent_radio) {
                 //The channel is not accepted/available for any radios! --> lets revert to the active channel in one radio
                 // and warn the user!
@@ -8271,23 +8280,28 @@ bool db::add_unassociated_station(sMacAddr const &new_station_mac_add, uint8_t c
     return new_station != nullptr;
 }
 
-bool db::remove_unassociated_station(sMacAddr const &mac_address, sMacAddr const &agent_mac_addr)
+bool db::remove_unassociated_station(sMacAddr const &mac_address, sMacAddr const &agent_mac_addr,
+                                     sMacAddr const &radio_mac_addr)
 {
 
     auto remove_un_staton_from_dm = [&](std::string agent_mac, std::string station_mac) {
         LOG(DEBUG) << "removing un_station with mac_addr " << mac_address
-                   << " connected to agent with mac_addr " << agent_mac;
+                   << " connected to agent with mac_addr " << agent_mac
+                   << " on radio: " << tlvf::mac_to_string(radio_mac_addr);
         //example Device.WiFi.DataElements.Network.Device.1.Radio.2.UnassociatedSTA.
         std::string device_path = "Device.WiFi.DataElements.Network.Device";
-        sMacAddr radio_mac;
-        auto station = m_unassociated_stations.get(tlvf::mac_from_string(station_mac));
-        if (station != nullptr) {
-            station->get_radio_mac(tlvf::mac_from_string(agent_mac), radio_mac);
-        } else {
-            LOG(ERROR) << "radio_mac for agent with mac_addr: " << agent_mac
-                       << " not found!,  failure to remove station with mac: " << station_mac;
-            return false;
-        }
+        sMacAddr radio_mac(radio_mac_addr);
+        if (radio_mac == network_utils::ZERO_MAC) {
+            // if not given as an argument, for example, from a bml command--> deduc it from the db
+            auto station = m_unassociated_stations.get(tlvf::mac_from_string(station_mac));
+            if (station != nullptr) {
+                station->get_radio_mac(tlvf::mac_from_string(agent_mac), radio_mac);
+            } else {
+                LOG(ERROR) << "radio_mac for agent with mac_addr: " << agent_mac
+                           << " not found!,  failure to remove station with mac: " << station_mac;
+                return false;
+            }
+        };
         //Device.WiFi.DataElements.Network.Device.1.Radio.2.UnassociatedSTA.1.MACAddress
         auto agent_path_index =
             m_ambiorix_datamodel->get_instance_index(device_path + ".[ID== '%s'].", agent_mac);
