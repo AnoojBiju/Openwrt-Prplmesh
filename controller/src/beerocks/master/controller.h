@@ -215,6 +215,39 @@ public:
      */
     void start_optional_tasks();
 
+    /**
+     * @brief add an unassociated station to be monitored
+     * 
+     * @param station_mac_addr The MAC address of the unassociated station
+     * @param channel used by the measurement. Note that the agent may ignore this value and use his active channel. 
+     * @param agent_mac_addr The MAC address of the agent, if null, all agents are concerned.
+     * @param radio_mac_addrress of the agent which supports the channel to be used for monitoring, if not given, it will be deduced automatically.
+     * 
+     * @return true if station added successfully, false if it exists already or any other issue.
+     */
+    bool add_unassociated_station(
+        const sMacAddr &station_mac_addr, uint8_t channel, const sMacAddr &agent_mac_addr,
+        const sMacAddr &radio_mac_addr = beerocks::net::network_utils::ZERO_MAC);
+
+    /**
+     * @brief remove an unassociated station to be monitored
+     * 
+     * @param station_mac_addr The MAC address of the unassociated station
+     * @param agent_mac_addr The MAC address of the agent, if null, all agents are concerned.
+     * 
+     * @return true if station removed successfully, false if it does not exists  or any other issue.
+     */
+    bool remove_unassociated_station(
+        const sMacAddr &station_mac_addr, const sMacAddr &agent_mac_addr,
+        const sMacAddr &radio_mac_addr = beerocks::net::network_utils::ZERO_MAC);
+
+    /**
+     * @brief get all stats from all connected agents and update the DM.
+     * 
+     * @return true ifsuccess, false for any issue.
+     */
+    bool get_unassociated_stations_stats();
+
 private:
     /**
      * @brief Handles the client-connected event in the CMDU server.
@@ -642,6 +675,17 @@ private:
      * Broker client to exchange CMDU messages with broker server running in transport process.
      */
     std::shared_ptr<beerocks::btl::BrokerClient> m_broker_client;
+
+    /**
+     * @brief sends a message of type UNASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE, it contains list/ddata of unassociated stations 
+     *
+     * @param cmdu_tx CMDU message to send.
+     * @param database 
+     *
+     *  @return true on success and false otherwise.
+    */
+    bool send_unassociated_sta_link_metrics_query_message(ieee1905_1::CmduMessageTx &cmdu_tx,
+                                                          db &database);
 };
 
 } // namespace son

@@ -2254,7 +2254,7 @@ int bml_internal::add_unassociated_station_stats(const char *mac_address,
             tlvf::mac_from_string(beerocks::net::network_utils::ZERO_MAC_STRING);
     }
     std::string debug_mesg =
-        "sending ACTION_CLI_CLIENT_UNASSOCIATED_STATION_STATS_REQUEST with mac_address " +
+        "sending cACTION_BML_ADD_UNASSOCIATED_STATION_STATS_REQUEST with mac_address " +
         std::string(mac_address) + " and channel " + channel_string;
     if (agent_mac_address) {
         debug_mesg += " and agent_mac_addr: ";

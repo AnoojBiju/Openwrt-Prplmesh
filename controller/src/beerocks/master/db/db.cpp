@@ -8070,13 +8070,13 @@ bool db::add_unassociated_station(sMacAddr const &new_station_mac_add, uint8_t c
 
         //Device.WiFi.DataElements.Network.Device.1.Radio.2.UnassociatedSTA.1.MACAddress
         auto agent_path_index =
-            m_ambiorix_datamodel->get_instance_index(device_path + ".[ID== '%s'].", agent_mac);
+            m_ambiorix_datamodel->get_instance_index(device_path + ".[ID == '%s'].", agent_mac);
         if (agent_path_index == 0) {
             LOG(ERROR) << "could not find device/agent with mac_addr: " << agent_mac;
             return false;
         }
         auto radio_path_index = m_ambiorix_datamodel->get_instance_index(
-            device_path + "." + std::to_string(agent_path_index) + ".Radio" + ".[ID== '%s'].",
+            device_path + "." + std::to_string(agent_path_index) + ".Radio" + ".[ID == '%s'].",
             radio_mac);
         if (radio_path_index == 0) {
             LOG(ERROR) << "could not find radio path with ID " << radio_mac;
@@ -8086,7 +8086,7 @@ bool db::add_unassociated_station(sMacAddr const &new_station_mac_add, uint8_t c
                                             ".Radio." + std::to_string(radio_path_index) +
                                             ".UnassociatedSTA";
         auto index = m_ambiorix_datamodel->get_instance_index(
-            unassociated_sta_path + ".[MACAddress== '%s'].", station_mac);
+            unassociated_sta_path + ".[MACAddress == '%s'].", station_mac);
         if (!index) {
             //add its!
             auto new_station_path = m_ambiorix_datamodel->add_instance(unassociated_sta_path);
@@ -8288,7 +8288,7 @@ bool db::remove_unassociated_station(sMacAddr const &mac_address, sMacAddr const
         };
         //Device.WiFi.DataElements.Network.Device.1.Radio.2.UnassociatedSTA.1.MACAddress
         auto agent_path_index =
-            m_ambiorix_datamodel->get_instance_index(device_path + ".[ID== '%s'].", agent_mac);
+            m_ambiorix_datamodel->get_instance_index(device_path + ".[ID == '%s'].", agent_mac);
 
         if (agent_path_index == 0) {
             LOG(ERROR) << "could not find device/agent with mac_addr: " << agent_mac;
@@ -8296,7 +8296,7 @@ bool db::remove_unassociated_station(sMacAddr const &mac_address, sMacAddr const
         }
 
         auto radio_path_index = m_ambiorix_datamodel->get_instance_index(
-            device_path + "." + std::to_string(agent_path_index) + ".Radio" + ".[ID== '%s'].",
+            device_path + "." + std::to_string(agent_path_index) + ".Radio" + ".[ID == '%s'].",
             tlvf::mac_to_string(radio_mac));
 
         if (radio_path_index == 0) {
@@ -8309,7 +8309,7 @@ bool db::remove_unassociated_station(sMacAddr const &mac_address, sMacAddr const
                                             ".UnassociatedSTA";
 
         auto index = m_ambiorix_datamodel->get_instance_index(
-            unassociated_sta_path + ".[MACAddress== '%s'].", station_mac);
+            unassociated_sta_path + ".[MACAddress == '%s'].", station_mac);
         if (index == 0) {
             LOG(ERROR) << " UnassociatedSTA with mac " << station_mac
                        << " does not exists under the path " << unassociated_sta_path;
@@ -8392,7 +8392,7 @@ void db::update_unassociated_station_stats(const sMacAddr &mac_address,
         if (!radio_dm_path.empty()) {
             std::string unassociated_sta_path = radio_dm_path + ".UnassociatedSTA";
             auto index                        = m_ambiorix_datamodel->get_instance_index(
-                unassociated_sta_path + ".[MACAddress== '%s'].", tlvf::mac_to_string(mac_address));
+                unassociated_sta_path + ".[MACAddress == '%s'].", tlvf::mac_to_string(mac_address));
             if (!index) {
                 LOG(ERROR) << " UnassociatedSTA with mac " << mac_address
                            << " does not exists under the path " << unassociated_sta_path << " !";
