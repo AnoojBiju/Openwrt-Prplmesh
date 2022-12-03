@@ -104,6 +104,9 @@ public:
     virtual bool add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
                          std::string &bridge, bool vbss) override;
     virtual bool remove_bss(std::string &ifname) override;
+    virtual bool add_key(const std::string &ifname, const sKeyInfo &key_info) override;
+    virtual bool add_station(const std::string &ifname, const sMacAddr &mac,
+                             assoc_frame::AssocReqFrame &assoc_req) override;
 
     // Protected methods:
 protected:

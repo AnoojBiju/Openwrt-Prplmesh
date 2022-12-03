@@ -1617,6 +1617,30 @@ bool ap_wlan_hal_nl80211::remove_bss(std::string &ifname)
     return true;
 }
 
+bool ap_wlan_hal_nl80211::add_key(const std::string &ifname, const sKeyInfo &key_info)
+{
+    return m_nl80211_client->add_key(ifname, key_info);
+}
+
+bool ap_wlan_hal_nl80211::add_station(const std::string &ifname, const sMacAddr &mac,
+                                      assoc_frame::AssocReqFrame &assoc_req)
+{
+    // TODO: PPM-2358: the AIDs are managed by hostapd. We currently
+    // have no way to know what AIDs hostapd already assigned. As a
+    // temporary measure, choose AIDs starting from the end to avoid
+    // colliding with the ones assigned by hostapd. In the future the
+    // station should be added through hostapd, which would avoid this
+    // problem entirely.
+    uint16_t aid = m_aid--;
+
+    if (aid < 1) {
+        LOG(ERROR) << "No more AIDs available!";
+        return false;
+    }
+
+    return m_nl80211_client->add_station(ifname, mac, assoc_req, aid);
+}
+
 } // namespace nl80211
 
 std::shared_ptr<ap_wlan_hal> ap_wlan_hal_create(std::string iface_name, hal_conf_t hal_conf,

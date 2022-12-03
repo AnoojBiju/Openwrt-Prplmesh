@@ -496,6 +496,14 @@ uint8_t *AssocReqFrame::supported_rates()
     return {};
 }
 
+uint8_t AssocReqFrame::supported_rates_length()
+{
+    if (fields_present.supported_rates) {
+        return getAttr<cSupportRates>()->length();
+    };
+    return 0;
+}
+
 std::shared_ptr<assoc_frame::cPowerCapability> AssocReqFrame::power_capability()
 {
     if (fields_present.power_capability) {

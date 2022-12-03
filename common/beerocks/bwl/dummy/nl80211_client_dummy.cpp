@@ -154,4 +154,15 @@ bool nl80211_client_dummy::get_tx_power_dbm(const std::string &interface_name, u
 
 bool nl80211_client_dummy::channel_scan_abort(const std::string &interface_name) { return true; }
 
+bool nl80211_client_dummy::add_key(const std::string &interface_name, const sKeyInfo &key_info)
+{
+    return true;
+}
+
+bool nl80211_client_dummy::add_station(const std::string &interface_name, const sMacAddr &mac,
+                                       assoc_frame::AssocReqFrame &assoc_req, uint16_t aid)
+{
+    return true;
+}
+
 } // namespace bwl
