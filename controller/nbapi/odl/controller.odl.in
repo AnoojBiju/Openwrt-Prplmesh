@@ -118,9 +118,7 @@
 %define {
 
     // Define main data model
-    object Device {
-        object WiFi {
-            object DataElements {
+@CONTROLLER_ROOT_DM_Header@
 
                 object Configuration {
                     bool BandSteeringEnabled = false;
@@ -238,14 +236,12 @@
                 }
                 %read-only object AgentConnectedEvent[];
                 %read-only object AgentDisconnectedEvent[];
-            }
-        }
-    }
+    @CONTROLLER_ROOT_DM_Footer@ 
 }
 
 %populate {
     on event "dm:object-changed" call event_configuration_changed
-        filter 'object matches "Device\.WiFi\.DataElements\.Configuration\."';
+        filter 'object matches "CONTROLLER_ROOT_DM_literal\.Configuration\."';
 }
 
 include "device.odl";

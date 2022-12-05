@@ -9,6 +9,8 @@
 #ifndef _DB_H_
 #define _DB_H_
 
+#include "config.h"
+
 #include "agent.h"
 #include "node.h"
 #include "station.h"

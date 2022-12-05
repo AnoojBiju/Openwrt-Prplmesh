@@ -9,6 +9,17 @@ if(NOT DEFINED TARGET_PLATFORM)
     set(TARGET_PLATFORM "linux")
 endif()
 
+set (CONTROLLER_ROOT_DM "Device.WiFi.DataModel")
+
+string(REPLACE "." "\\." CONTROLLER_ROOT_DM_literal ${CONTROLLER_ROOT_DM})
+set(CONTROLLER_ROOT_DM_Header "")
+set(CONTROLLER_ROOT_DM_Footer "")
+string(REPLACE "." ";" CONTROLLER_ROOT_DM_SPLIT ${CONTROLLER_ROOT_DM})
+foreach(object IN LISTS CONTROLLER_ROOT_DM_SPLIT)
+    set(CONTROLLER_ROOT_DM_Header "${CONTROLLER_ROOT_DM_Header}object ${object} {   ")
+    set(CONTROLLER_ROOT_DM_Footer "${CONTROLLER_ROOT_DM_Footer}} ")
+endforeach()
+
 option (BUILD_AGENT "Build EasyMesh agent" ON)
 option (BUILD_CONTROLLER "Build EasyMesh controller" ON)
 

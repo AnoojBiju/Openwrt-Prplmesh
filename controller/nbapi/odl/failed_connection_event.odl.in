@@ -14,7 +14,7 @@
 }
 
 %define {
-    select Device.WiFi.DataElements {
+    select @CONTROLLER_ROOT_DM@ {
         object FailedConnectionEvent {
             object FailedConnectionEventData[] {
                 counted with FailedConnectionEventDataNumberOfEntries;

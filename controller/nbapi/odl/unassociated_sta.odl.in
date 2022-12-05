@@ -13,7 +13,7 @@
 }
 
 %define {
-    select Device.WiFi.DataElements.Network.Device.Radio.UnassociatedSTA {
+    select @CONTROLLER_ROOT_DM@.Network.Device.Radio.UnassociatedSTA {
         %read-only string MACAddress = "00:00:00:00:00:00";
         %read-only uint32 SignalStrength = 0 {
             on action validate call check_range [0, 220];
