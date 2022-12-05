@@ -20,6 +20,7 @@ workflow:
 stages:
   - build
   - test
+  - deploy-on-devices
   - certification-R1-turris-omnia
   - certification-R1-axepoint
   - certification-R1-glinet
@@ -39,12 +40,16 @@ build-for-rdkb-turris-omnia:
   extends: .build-for-rdkb
   variables:
     TARGET_DEVICE: "turris-omnia"
+  rules:
+    - when: manual
   retry: 2
 
 build-for-turris-omnia:
   extends: .build-for-openwrt
   variables:
     TARGET_DEVICE: "turris-omnia"
+  rules:
+    - when: manual
 
 build-for-glinet-b1300:
   extends: .build-for-openwrt
@@ -55,16 +60,22 @@ build-for-intel-mips:
   extends: .build-for-openwrt
   variables:
     TARGET_DEVICE: "intel_mips"
+  rules:
+    - when: manual
 
 build-for-turris-omnia-whm:
   extends: .build-for-openwrt-whm
   variables:
     TARGET_DEVICE: "turris-omnia"
+  rules:
+    - when: manual
 
 build-for-glinet-b1300-whm:
   extends: .build-for-openwrt-whm
   variables:
     TARGET_DEVICE: "glinet-b1300"
+  rules:
+    - when: manual
 
 build-for-cgr:
   stage: build
@@ -76,6 +87,63 @@ build-for-cgr:
   needs: []
   rules:
     - if: '$CI_PARENT_PIPELINE_SOURCE == "schedule" && $BUILD_CGR == "yes"'
+
+deploy-turris-omnia:
+  stage: deploy-on-devices
+  variables:
+    RUN_ON_DEVICE: "turris-omnia"
+  rules:
+    - when: manual
+  script:
+    - tools/deploy_ipk.sh --certification-mode $RUN_ON_DEVICE build/turris-omnia/prplmesh.ipk
+  needs:
+    - job: build-for-turris-omnia
+  tags:
+    - debug-flash-R4
+  timeout: 3m
+
+
+deploy-glinet-1:
+  stage: deploy-on-devices
+  variables:
+    RUN_ON_DEVICE: "glinet-b1300-1"
+  rules:
+    - when: manual
+  script:
+    - tools/deploy_ipk.sh --certification-mode $RUN_ON_DEVICE build/glinet-b1300/prplmesh.ipk
+  needs:
+    - job: build-for-glinet-b1300
+  tags:
+    - debug-flash-R4
+  timeout: 3m
+
+deploy-glinet-2:
+  stage: deploy-on-devices
+  variables:
+    RUN_ON_DEVICE: "glinet-b1300-2"
+  rules:
+    - when: manual
+  script:
+    - tools/deploy_ipk.sh --certification-mode $RUN_ON_DEVICE build/glinet-b1300/prplmesh.ipk
+  needs:
+    - job: build-for-glinet-b1300
+  tags:
+    - debug-flash-R4
+  timeout: 3m
+
+deploy-glinet-3:
+  stage: deploy-on-devices
+  variables:
+    RUN_ON_DEVICE: "glinet-b1300-3"
+  rules:
+    - when: manual
+  script:
+    - tools/deploy_ipk.sh --certification-mode $RUN_ON_DEVICE build/glinet-b1300/prplmesh.ipk
+  needs:
+    - job: build-for-glinet-b1300
+  tags:
+    - debug-flash-R4
+  timeout: 3m
 
 test-upgrade-image-on-turris-omnia:
   extends: .test-upgrade-image
