@@ -482,7 +482,7 @@ void ChannelSelectionTask::handle_vs_csa_notification(
     auto notification =
         beerocks_header->addClass<beerocks_message::cACTION_BACKHAUL_HOSTAP_CSA_NOTIFICATION>();
     if (!notification) {
-        LOG(ERROR) << "addClass cACTION_APMANAGER_HOSTAP_CSA_NOTIFICATION failed";
+        LOG(ERROR) << "addClass cACTION_BACKHAUL_HOSTAP_CSA_NOTIFICATION failed";
         return;
     }
 
@@ -495,7 +495,7 @@ void ChannelSelectionTask::handle_vs_csa_notification(
 
     const auto &sender_iface_name = radio->front.iface_name;
 
-    LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_CSA_NOTIFICATION from " << sender_iface_name;
+    LOG(TRACE) << "received ACTION_BACKHAUL_HOSTAP_CSA_NOTIFICATION from " << sender_iface_name;
 
     // send inner task message
     auto switch_channel_notification = std::make_shared<sSwitchChannelNotification>();
