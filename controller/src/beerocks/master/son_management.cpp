@@ -274,9 +274,8 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
         request->params().channel = sta_parent_wifi_channel.get_channel();
         request->params().bandwidth = sta_parent_wifi_channel.get_bandwidth();
         request->params().vht_center_frequency =
-            cli_request->center_frequency()
-                ? cli_request->center_frequency()
-                : database.get_hostap_vht_center_frequency(tlvf::mac_from_string(sta_parent));
+            cli_request->center_frequency() ? cli_request->center_frequency()
+                                            : sta_parent_wifi_channel.get_center_frequency();
         request->params().cross                  = 0;
         request->params().mon_ping_burst_pkt_num = 0;
 
@@ -1621,8 +1620,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         new_event.params.ipv4      = network_utils::ipv4_from_string(network_utils::ZERO_IP_STRING);
         new_event.params.channel   = sta_parent_wifi_channel.get_channel();
         new_event.params.bandwidth = sta_parent_wifi_channel.get_bandwidth();
-        new_event.params.vht_center_frequency =
-            database.get_hostap_vht_center_frequency(tlvf::mac_from_string(sta_parent));
+        new_event.params.vht_center_frequency   = sta_parent_wifi_channel.get_center_frequency();
         new_event.params.cross                  = 0;
         new_event.params.mon_ping_burst_pkt_num = 0;
 

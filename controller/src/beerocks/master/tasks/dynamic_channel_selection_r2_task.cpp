@@ -368,10 +368,15 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
                 // Convert channels list to operating_class: channels list
                 std::unordered_map<uint8_t, std::set<uint8_t>> operating_class_to_classes_map;
 
+                auto wifi_channel = database.get_node_wifi_channel(tlvf::mac_to_string(radio_mac));
+                if (wifi_channel.is_empty()) {
+                    LOG(ERROR) << "WifiChannel is empty";
+                }
+
                 for (auto const &ch : current_channel_pool) {
                     auto operating_class = wireless_utils::get_operating_class_by_channel(
-                        beerocks::message::sWifiChannel(ch,
-                                                        beerocks::eWiFiBandwidth::BANDWIDTH_20));
+                        beerocks::WifiChannel(ch, wifi_channel.get_freq_type(),
+                                              beerocks::eWiFiBandwidth::BANDWIDTH_20));
                     // Check if channel has a valid operating class in a 20MHz band
                     if (operating_class == 0) {
                         // Skip unsupported channel

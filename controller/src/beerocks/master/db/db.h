@@ -1118,9 +1118,8 @@ public:
     int get_hostap_tx_power(const sMacAddr &mac);
 
     bool set_hostap_supported_channels(const sMacAddr &mac,
-                                       beerocks::message::sWifiChannel *supported_channels,
-                                       int length);
-    std::vector<beerocks::message::sWifiChannel> get_hostap_supported_channels(const sMacAddr &mac);
+                                       beerocks::WifiChannel *supported_channels, int length);
+    std::vector<beerocks::WifiChannel> get_hostap_supported_channels(const sMacAddr &mac);
     std::string get_hostap_supported_channels_string(const sMacAddr &radio_mac);
 
     bool add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t operating_class,
@@ -1249,9 +1248,6 @@ public:
     bool set_supported_channel_radar_affected(const sMacAddr &mac,
                                               const std::vector<uint8_t> &channels, bool affected);
     //bool get_supported_channel_all_availble(const std::string &mac );
-
-    bool set_hostap_is_dfs(const sMacAddr &mac, bool enable);
-    bool get_hostap_is_dfs(const sMacAddr &mac);
 
     bool set_hostap_cac_completed(const sMacAddr &mac, bool enable);
     bool get_hostap_cac_completed(const sMacAddr &mac);
@@ -1923,9 +1919,6 @@ public:
      *      3. the node's type is TYPE_SLAVE and the node's hostap object is nullptr
      */
     bool update_node_wifi_channel_bw(const sMacAddr &mac, beerocks::eWiFiBandwidth bw);
-
-    bool get_hostap_channel_ext_above_primary(const sMacAddr &hostap_mac);
-    uint16_t get_hostap_vht_center_frequency(const sMacAddr &mac);
 
     void add_bss_info_configuration(const sMacAddr &al_mac,
                                     const wireless_utils::sBssInfoConf &bss_info);
