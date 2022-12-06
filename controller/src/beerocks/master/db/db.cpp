@@ -7094,6 +7094,7 @@ bool db::update_master_configuration(const sDbNbapiConfig &nbapi_config)
         nbapi_config.optimal_path_prefer_signal_strength;
     config.roaming_hysteresis_percent_bonus = nbapi_config.roaming_hysteresis_percent_bonus;
     config.steering_disassoc_timer_msec     = nbapi_config.steering_disassoc_timer_msec;
+    config.daisy_chaining_disabled          = nbapi_config.daisy_chaining_disabled;
 
     // Update persistent configuration.
     ret_val &= beerocks::bpl::cfg_set_band_steering(config.load_client_band_steering);
@@ -7117,6 +7118,7 @@ bool db::update_master_configuration(const sDbNbapiConfig &nbapi_config)
         config.roaming_hysteresis_percent_bonus);
     ret_val &=
         beerocks::bpl::cfg_set_steering_disassoc_timer_msec(config.steering_disassoc_timer_msec);
+    ret_val &= beerocks::bpl::cfg_set_daisy_chaining_disabled(config.daisy_chaining_disabled);
 
     ret_val &= beerocks::bpl::cfg_commit_changes();
 
@@ -7139,6 +7141,7 @@ void db::update_master_settings_from_config()
     settings_health_check(true);
     settings_ire_roaming(true);
     settings_load_balancing(true);
+    settings_daisy_chaining_disabled(true);
 }
 
 uint64_t db::recalculate_attr_to_byte_units(

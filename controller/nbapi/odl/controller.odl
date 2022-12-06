@@ -145,6 +145,7 @@
                         on action validate call check_range [1, 10000];
                     }
                     bool DFSReentry = false;
+                    bool DaisyChainingDisabled = false;
                 }
 
                 // Define controller.Network element
