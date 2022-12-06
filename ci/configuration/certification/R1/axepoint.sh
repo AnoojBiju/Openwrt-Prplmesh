@@ -62,8 +62,13 @@ ubus call Ethernet.Link _get '{ "rel_path": ".[Name == \"eth0_4\"]." }' || {
 # We can now create an IP.Interface if there is none yet:
 ubus call IP.Interface _get '{ "rel_path": ".[Name == \"eth0_4\"]." }' || {
     echo "Adding IP.Interface"
-    ubus call IP.Interface _add "{ \"parameters\": { \"Name\": \"eth0_4\", \"UCISectionNameIPv4\": \"cert\", \"Alias\": \"eth0_4\", \"LowerLayers\": \"Device.Ethernet.Link.$ETH_LINK.\", \"Enable\": true } }"
+    LAN_INTERFACE="$(ubus call IP.Interface _add "{ \"parameters\": { \"Name\": \"eth0_4\", \"UCISectionNameIPv4\": \"cert\", \"Alias\": \"eth0_4\", \"LowerLayers\": \"Device.Ethernet.Link.$ETH_LINK.\", \"Enable\": true } }" | jsonfilter -e '@.index')"
 }
+
+# Wait until the interface is created, it seems like we can not add to the newly created interface object directly after creating it
+ubus wait_for "IP.Interface.$LAN_INTERFACE"
+sleep 10
+
 # We can now add the IP address if there is none yet:
 ubus call IP.Interface _get '{ "rel_path": ".[Name == \"eth0_4\"].IPv4Address.[Alias == \"eth0_4\"]." }' || {
     echo "Adding IP address $IP"
@@ -132,3 +137,4 @@ sh /rom/etc/uci-defaults/15_wireless-generate-macaddr || true
 uci commit
 /etc/init.d/system restart
 /etc/init.d/network restart
+/etc/init.d/ip-manager restart
