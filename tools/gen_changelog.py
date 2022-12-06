@@ -114,12 +114,12 @@ def main():
 
         o += "\n### Changed\n\n"
         for f in features:
-            o += "- [{}]({})\n".format(f[1], 'https://jira.prplfoundation.org/browse/' + f[2])
+            o += "- [{}]({})\n".format(f[1], 'https://prplfoundationcloud.atlassian.net/browse/' + f[2])
 
         o += "\n### Fixed\n\n"
         for b in bugs:
             if b[2]:
-                o += "- [{}]({})\n".format(b[1], 'https://jira.prplfoundation.org/browse/' + b[2])
+                o += "- [{}]({})\n".format(b[1], 'https://prplfoundationcloud.atlassian.net/browse/' + b[2])
             else:
                 o += "- {}\n".format(b[1])
 
