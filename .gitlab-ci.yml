@@ -277,7 +277,7 @@ test-gw-repeater:
   needs:
     - job: build-in-docker
   tags:
-    - docker-build
+    - docker-test
 
 boardfarm-tests:
   stage: test
