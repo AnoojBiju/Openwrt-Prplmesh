@@ -135,6 +135,8 @@
       - logs
     expire_in: 4 weeks
     when: always
+  rules:
+    - when: manual
   tags:
     - targets
   timeout: 20m
