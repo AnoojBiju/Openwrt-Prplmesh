@@ -124,7 +124,6 @@
 
                 object Configuration {
                     bool BandSteeringEnabled = false;
-                    bool DaisyChainingEnabled = false;
                     bool ClientRoamingEnabled = false;
 
                     uint32 SteeringCurrentBonus = 0 {

@@ -460,22 +460,6 @@ bool cfg_get_band_steering(bool &band_steering);
 bool cfg_set_band_steering(bool band_steering);
 
 /**
- * @brief Returns whether Daisy Chaining feature is enabled or not.
- *
- * @param [out] enable true if the Daisy Chaining is enabled and false otherwise.
- * @return true on success, otherwise false.
- */
-bool cfg_get_daisy_chaining(bool &daisy_chaining);
-
-/**
- * @brief Sets Daisy Chaining in configuration.
- *
- * @param[in] daisy_chaining  true for enabled daisy_chaining.
- * @return true on success, otherwise false
- */
-bool cfg_set_daisy_chaining(bool daisy_chaining);
-
-/**
  * @brief Returns whether 11k Roaming feature is enabled or not.
  *
  * @param [out] enable true if the 11k Roaming is enabled and false otherwise.
