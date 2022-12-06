@@ -8002,6 +8002,66 @@ bool db::dm_set_service_prioritization_rules(const Agent &agent)
     return ret_val;
 }
 
+bool db::dm_get_service_prioritization_rules(std::shared_ptr<Agent> agent)
+{
+    if (!agent || agent->dm_path.empty()) {
+        return true;
+    }
+
+    uint64_t count{0};
+    if (!m_ambiorix_datamodel->read_param(agent->dm_path, "SPRuleNumberOfEntries", &count) ||
+        (count < 1) || (count > 254)) {
+        LOG(DEBUG) << "no valid priority rule configured for " << agent->dm_path;
+        return false;
+    }
+
+    agent->service_prioritization.rules.clear();
+    for (uint8_t i = 0; i < count; ++i) {
+        auto rulePath = agent->dm_path + ".SPRule." + std::to_string(i);
+
+        uint64_t id{0};
+        if (!m_ambiorix_datamodel->read_param(rulePath, "ID", &id)) {
+            continue;
+        }
+
+        uint64_t alwaysMatch{0};
+        if (!m_ambiorix_datamodel->read_param(rulePath, "AlwaysMatch", &alwaysMatch)) {
+            continue;
+        }
+
+        uint64_t precedence{0};
+        if (!m_ambiorix_datamodel->read_param(rulePath, "Precedence", &precedence)) {
+            continue;
+        }
+
+        uint64_t output{0};
+        if (!m_ambiorix_datamodel->read_param(rulePath, "Output", &output)) {
+            continue;
+        }
+
+        wfa_map::tlvServicePrioritizationRule::sServicePrioritizationRule rule;
+        rule.id                       = static_cast<uint32_t>(id);
+        rule.precedence               = static_cast<uint8_t>(precedence);
+        rule.output                   = static_cast<uint8_t>(output);
+        rule.bits_field1.add_remove   = 1;
+        rule.bits_field2.always_match = static_cast<uint8_t>(alwaysMatch);
+
+        agent->service_prioritization.rules.insert({id, rule});
+    }
+
+    auto &dscpTable = agent->service_prioritization.dscp_mapping_table;
+    dscpTable.fill(0);
+    std::string dscpHex;
+    if (m_ambiorix_datamodel->read_param(agent->dm_path, "DSCPMap", &dscpHex)) {
+        if (dscpHex.length() == dscpTable.size()) {
+            std::transform(dscpHex.cbegin(), dscpHex.cend(), dscpTable.begin(),
+                           [](uint8_t h) { return h - '0'; });
+        }
+    }
+
+    return true;
+}
+
 bool db::dm_set_device_ap_capabilities(const Agent &agent)
 {
     if (agent.dm_path.empty()) {

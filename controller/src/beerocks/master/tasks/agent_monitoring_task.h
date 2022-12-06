@@ -155,6 +155,16 @@ private:
                                             ieee1905_1::CmduMessageTx &cmdu_tx);
 
     /**
+     * @brief Send Service Prioritization Request Message to an Agent
+     *
+     * Initiate an Agent configuration for Service Prioritization (EasyMech R3, minimal)
+     *
+     * @param agent Target Agent where configuration must be sent
+     * @return True on success, false otherwise.
+    */
+    bool send_prioritization_rule(const Agent &agent);
+
+    /**
      * @brief Add NBAPI AgentConnected event and its sub-objects: Radios, BSSes, STAs to data model.
      *
      * @param device_mac Mac address of Agent for which AgentConnected event will be created.
