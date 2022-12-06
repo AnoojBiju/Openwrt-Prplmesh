@@ -1156,4 +1156,11 @@ bool nl80211_client_impl::get_key(const std::string &interface_name, sKeyInfo &k
         });
 }
 
+bool nl80211_client_impl::send_delba(const std::string &interface_name, const sMacAddr &dst,
+                                     const sMacAddr &src, const sMacAddr &bssid)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
 } // namespace bwl

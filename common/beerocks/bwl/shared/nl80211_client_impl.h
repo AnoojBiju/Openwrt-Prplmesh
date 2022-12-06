@@ -168,6 +168,18 @@ public:
      */
     bool get_key(const std::string &interface_name, sKeyInfo &key_info) override;
 
+    /**
+     * @brief Send a DELBA frame to a specific station.
+     *
+     * @param[in] dst the destination MAC address.
+     * @param[in] src the source MAC address.
+     * @param[in] bssid the BSSID.
+     *
+     * @return true on success, false otherwise.
+     */
+    bool send_delba(const std::string &interface_name, const sMacAddr &dst, const sMacAddr &src,
+                    const sMacAddr &bssid) override;
+
 private:
     /**
      * NL80211 socket to send messages and receive responses to/from the WiFi driver.

@@ -170,4 +170,10 @@ bool nl80211_client_dummy::get_key(const std::string &interface_name, sKeyInfo &
     return true;
 }
 
+bool nl80211_client_dummy::send_delba(const std::string &interface_name, const sMacAddr &dst,
+                                      const sMacAddr &src, const sMacAddr &bssid)
+{
+    return true;
+}
+
 } // namespace bwl
