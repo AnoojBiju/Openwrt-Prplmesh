@@ -134,6 +134,18 @@ public:
     bool add_station(const std::string &interface_name, const sMacAddr &mac,
                      assoc_frame::AssocReqFrame &assoc_req, uint16_t aid) override;
 
+    /**
+     * @brief Send a DELBA frame to a specific station.
+     *
+     * @param[in] dst the destination MAC address.
+     * @param[in] src the source MAC address.
+     * @param[in] bssid the BSSID.
+     *
+     * @return true on success, false otherwise.
+     */
+    bool send_delba(const std::string &interface_name, const sMacAddr &dst, const sMacAddr &src,
+                    const sMacAddr &bssid) override;
+
 private:
     beerocks::wbapi::AmbiorixConnectionSmartPtr m_connection;
 };

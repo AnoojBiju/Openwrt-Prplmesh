@@ -165,4 +165,10 @@ bool nl80211_client_dummy::add_station(const std::string &interface_name, const 
     return true;
 }
 
+bool nl80211_client_dummy::send_delba(const std::string &interface_name, const sMacAddr &dst,
+                                      const sMacAddr &src, const sMacAddr &bssid)
+{
+    return true;
+}
+
 } // namespace bwl

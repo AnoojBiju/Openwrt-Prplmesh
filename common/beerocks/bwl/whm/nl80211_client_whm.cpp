@@ -126,4 +126,10 @@ bool nl80211_client_whm::add_station(const std::string &interface_name, const sM
     return false;
 }
 
+bool nl80211_client_whm::send_delba(const std::string &interface_name, const sMacAddr &dst,
+                                    const sMacAddr &src, const sMacAddr &bssid)
+{
+    return false;
+}
+
 } // namespace bwl
