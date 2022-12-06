@@ -539,6 +539,20 @@ bool base_wlan_hal_nl80211::ping()
     return true;
 }
 
+bool base_wlan_hal_nl80211::reassociate()
+{
+    parsed_obj_map_t reply;
+
+    if (!wpa_ctrl_send_msg("REASSOCIATE", reply)) {
+        LOG(ERROR) << __func__ << " failed";
+        return false;
+    }
+
+    // oguzz print reply out here
+
+    return true;
+}
+
 bool base_wlan_hal_nl80211::wpa_ctrl_send_msg(const std::string &cmd, const std::string &ifname)
 {
     std::string iface_name = ifname;

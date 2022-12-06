@@ -80,6 +80,8 @@ public:
      */
     virtual bool ping() = 0;
 
+    virtual bool reassociate() = 0;
+
     /*!
      * Refresh the VAPs information structure on the 
      * internal radio information structure.

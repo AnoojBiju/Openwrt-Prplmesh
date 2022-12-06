@@ -70,7 +70,8 @@ public:
                          bool mem_only_psk, const std::string &bssid, ChannelFreqPair channel,
                          bool hidden_ssid) = 0;
 
-    virtual bool disconnect() = 0;
+    virtual bool disconnect()  = 0;
+    virtual bool reassociate() = 0;
 
     virtual bool roam(const sMacAddr &bssid, ChannelFreqPair channel) = 0;
 

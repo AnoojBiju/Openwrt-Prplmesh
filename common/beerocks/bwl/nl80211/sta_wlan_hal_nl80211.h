@@ -61,6 +61,8 @@ public:
     virtual int get_channel() override;
     virtual bool update_status() override;
 
+    virtual bool reassociate() override;
+
     std::string get_ssid() override;
     std::string get_bssid() override;
 
