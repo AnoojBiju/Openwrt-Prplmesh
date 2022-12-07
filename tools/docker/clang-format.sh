@@ -47,6 +47,15 @@ main() {
 
     DOCKEROPTS="$DOCKEROPTS --rm"
 
+    GIT_COMMON_DIR="$(git rev-parse --git-common-dir)"
+
+    # If the root directory is a worktree, we have to mount the common
+    # dir as a volume as well to be able to use git from inside the
+    # container:
+    if [ -n "$GIT_COMMON_DIR" ] && [ "$GIT_COMMON_DIR" != ".git" ] ; then
+        DOCKEROPTS="$DOCKEROPTS -v $GIT_COMMON_DIR:$GIT_COMMON_DIR"
+    fi
+
     # TODO: replace DOCKEROPTS with a bash array (and require bash)
     # We disable SC2086 because of the DOCKEROPTS variable
     # shellcheck disable=SC2086
