@@ -73,7 +73,10 @@ main() {
     for _network in "$NETWORK" "$NETWORK_UCC" ; do
             docker network inspect "${_network}" >/dev/null 2>&1 || {
                 echo "Network ${_network} does not exist, creating..."
-                run docker network create --label prplmesh --label prplmesh-id="${UNIQUE_ID}" "${_network}" >/dev/null 2>&1
+                run docker network create --label prplmesh --label prplmesh-id="${UNIQUE_ID}" "${_network}" || {
+                    echo "Network creation failed!"
+                    exit 1
+                }
             }
     done
 
