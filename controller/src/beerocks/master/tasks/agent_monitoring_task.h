@@ -32,6 +32,8 @@ public:
     static bool add_traffic_policy_tlv(db &database, ieee1905_1::CmduMessageTx &cmdu_tx,
                                        std::shared_ptr<WSC::m1> m1);
 
+    enum Event : uint8_t { DISCONNECTED, CONFIGURE_QOS };
+
 protected:
     void work() override;
     virtual void handle_event(int event_type, void *obj) override;
@@ -162,7 +164,7 @@ private:
      * @param agent Target Agent where configuration must be sent
      * @return True on success, false otherwise.
     */
-    bool send_prioritization_rule(const Agent &agent);
+    bool send_prioritization(const Agent &agent);
 
     /**
      * @brief Add NBAPI AgentConnected event and its sub-objects: Radios, BSSes, STAs to data model.

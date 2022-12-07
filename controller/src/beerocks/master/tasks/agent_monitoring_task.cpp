@@ -96,16 +96,28 @@ bool agent_monitoring_task::handle_ieee1905_1_msg(const sMacAddr &src_mac,
 void agent_monitoring_task::handle_event(int event_type, void *obj)
 {
     switch (event_type) {
-    case (STATE_DISCONNECTED): {
-        std::string agent_mac = *static_cast<std::string *>(obj);
+    case (DISCONNECTED): {
+        if (!obj) {
+            LOG(ERROR) << "Missing required Agent MAC";
+            return;
+        }
 
-        auto agent = database.m_agents.get(tlvf::mac_from_string(agent_mac));
+        std::string agent_mac = *static_cast<std::string *>(obj);
+        auto agent            = database.m_agents.get(tlvf::mac_from_string(agent_mac));
         if (!agent) {
             LOG(INFO) << "Agent with mac is not found in database mac=" << agent_mac;
             return;
         }
 
         dm_add_agent_disconnected_event(agent->al_mac);
+        break;
+    }
+    case (CONFIGURE_QOS): {
+        for (const auto &agent : database.m_agents) {
+            if (agent.second->prioritization_support) {
+                send_prioritization(*agent.second);
+            }
+        }
         break;
     }
     default:
@@ -246,8 +258,7 @@ bool agent_monitoring_task::start_task(const sMacAddr &src_mac, std::shared_ptr<
         }
 
         if (agent->prioritization_support) {
-            database.dm_get_service_prioritization_rules(agent);
-            if (!send_prioritization_rule(*agent)) {
+            if (!send_prioritization(*agent)) {
                 LOG(ERROR) << "Failed sending Service Priotitization to agent " << src_mac;
             }
         }
@@ -461,7 +472,7 @@ bool agent_monitoring_task::send_backhaul_sta_capability_query(const sMacAddr &d
     return son_actions::send_cmdu_to_agent(dst_mac, cmdu_tx, database);
 }
 
-bool agent_monitoring_task::send_prioritization_rule(const Agent &agent)
+bool agent_monitoring_task::send_prioritization(const Agent &agent)
 {
     if (agent.max_prioritization_rules < 1)
         return true;

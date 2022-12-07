@@ -740,6 +740,25 @@ amxd_status_t trigger_vbss_move(amxd_object_t *object, amxd_function_t *func, am
     return amxd_status_ok;
 }
 
+amxd_status_t trigger_prioritization(amxd_object_t *object, amxd_function_t *func, amxc_var_t *args,
+                                     amxc_var_t *ret)
+{
+    if (!g_database) {
+        LOG(ERROR) << "Invalid database access";
+        return amxd_status_unknown_error;
+    }
+
+    auto controller = g_database->get_controller_ctx();
+    if (!controller) {
+        LOG(ERROR) << "Failed to get controller context";
+        return amxd_status_unknown_error;
+    }
+
+    g_database->dm_configure_service_prioritization();
+    controller->trigger_prioritization_config();
+    return amxd_status_ok;
+}
+
 // Events
 
 amxd_dm_t *g_data_model = nullptr;
@@ -922,7 +941,9 @@ std::vector<beerocks::nbapi::sFunctions> get_func_list(void)
          "Device.WiFi.DataElements.Network.Device.Radio.BSS.TriggerVBSSDestruction",
          trigger_vbss_destruction},
         {"trigger_vbss_move", "Device.WiFi.DataElements.Network.Device.Radio.BSS.TriggerVBSSMove",
-         trigger_vbss_move}};
+         trigger_vbss_move},
+        {"trigger_prioritization", "Device.WiFi.DataElements.Network.SetServicePrioritization",
+         trigger_prioritization}};
     return functions_list;
 }
 

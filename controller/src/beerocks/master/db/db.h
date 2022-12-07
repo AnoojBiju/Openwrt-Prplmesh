@@ -2455,14 +2455,13 @@ public:
      */
     bool dm_set_service_prioritization_rules(const Agent &agent);
 
-    /** @brief Get Service Prioritization Rules (and DSCP map) from DM.
+    /** @brief Retrieve Service Prioritization configuration for agents.
      *
-     * DM path: "Device.WiFi.DataElements.Network.Device.{i}."
+     * DM path: "Device.WiFi.DataElements.Configuration."
      *
-     * @param[out] agent Agent DB object.
      * @return true on success, otherwise false.
      */
-    bool dm_get_service_prioritization_rules(std::shared_ptr<Agent> agent);
+    bool dm_configure_service_prioritization();
 
     /** @brief Sets AP capability parameters for corresponding device.
      *
