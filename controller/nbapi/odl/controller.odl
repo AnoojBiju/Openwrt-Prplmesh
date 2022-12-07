@@ -172,6 +172,10 @@
 
                     void AccessPointCommit();
 
+                    void SetServicePrioritization(
+                        %in %mandatory string agent_mac
+                    );
+
                     void ClientSteering(
                         %in %mandatory string station_mac,
                         %in %mandatory string target_bssid

@@ -740,6 +740,25 @@ amxd_status_t trigger_vbss_move(amxd_object_t *object, amxd_function_t *func, am
     return amxd_status_ok;
 }
 
+amxd_status_t trigger_prioritization(amxd_object_t *object, amxd_function_t *func, amxc_var_t *args,
+                                     amxc_var_t *ret)
+{
+    auto controller = g_database->get_controller_ctx();
+    if (!controller) {
+        LOG(ERROR) << "Failed to get controller context";
+        return amxd_status_unknown_error;
+    }
+
+    std::string agent_mac = GET_CHAR(args, "agent_mac");
+    if (agent_mac.empty()) {
+        LOG(ERROR) << "Missing agent mac parameter";
+        return amxd_status_parameter_not_found;
+    }
+
+    controller->trigger_prioritization_config(agent_mac);
+    return amxd_status_ok;
+}
+
 // Events
 
 amxd_dm_t *g_data_model = nullptr;
@@ -950,7 +969,9 @@ std::vector<beerocks::nbapi::sFunctions> get_func_list(void)
          "Device.WiFi.DataElements.Network.Device.Radio.BSS.TriggerVBSSDestruction",
          trigger_vbss_destruction},
         {"trigger_vbss_move", "Device.WiFi.DataElements.Network.Device.Radio.BSS.TriggerVBSSMove",
-         trigger_vbss_move}};
+         trigger_vbss_move},
+        {"trigger_prioritization", "Device.WiFi.DataElements.Network.SetServicePrioritization",
+         trigger_prioritization}};
     return functions_list;
 }
 

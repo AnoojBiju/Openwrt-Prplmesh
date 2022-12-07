@@ -32,6 +32,8 @@ public:
     static bool add_traffic_policy_tlv(db &database, ieee1905_1::CmduMessageTx &cmdu_tx,
                                        std::shared_ptr<WSC::m1> m1);
 
+    enum Event : uint8_t { DISCONNECTED, CONFIGURE_PRIORITY };
+
 protected:
     void work() override;
     virtual void handle_event(int event_type, void *obj) override;

@@ -4102,6 +4102,14 @@ bool Controller::trigger_vbss_move(const sMacAddr &connected_ruid, const sMacAdd
     return false;
 }
 
+void Controller::trigger_prioritization_config(const std::string &agent_mac)
+{
+    auto ev      = agent_monitoring_task::CONFIGURE_PRIORITY;
+    auto payload = reinterpret_cast<const void *>(&agent_mac);
+    m_task_pool.push_event(database.get_agent_monitoring_task_id(), ev,
+                           const_cast<void *>(payload));
+}
+
 bool Controller::handle_tlv_profile2_ap_capability(std::shared_ptr<Agent> agent,
                                                    ieee1905_1::CmduMessageRx &cmdu_rx)
 {
