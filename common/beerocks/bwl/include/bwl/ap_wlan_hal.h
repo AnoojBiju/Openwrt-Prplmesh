@@ -470,6 +470,18 @@ public:
     virtual bool add_station(const std::string &ifname, const sMacAddr &mac,
                              assoc_frame::AssocReqFrame &assoc_req) = 0;
 
+    /**
+     * @brief Send a DELBA frame to a specific station.
+     *
+     * @param dst the destination MAC address.
+     * @param src the source MAC address.
+     * @param bssid the BSSID.
+     *
+     * @return true on success, false otherwise.
+     */
+    virtual bool send_delba(const std::string &ifname, const sMacAddr &dst, const sMacAddr &src,
+                            const sMacAddr &bssid) = 0;
+
 private:
     static const int frame_body_idx = (sizeof(s80211MgmtFrame::sHeader) * 2);
 
