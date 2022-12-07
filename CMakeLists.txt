@@ -9,7 +9,7 @@ if(NOT DEFINED TARGET_PLATFORM)
     set(TARGET_PLATFORM "linux")
 endif()
 
-set (CONTROLLER_ROOT_DM "Device.WiFi.DataModel")
+set (CONTROLLER_ROOT_DM "Device.WiFi.DataElements")
 
 string(REPLACE "." "\\." CONTROLLER_ROOT_DM_literal ${CONTROLLER_ROOT_DM})
 set(CONTROLLER_ROOT_DM_Header "")
