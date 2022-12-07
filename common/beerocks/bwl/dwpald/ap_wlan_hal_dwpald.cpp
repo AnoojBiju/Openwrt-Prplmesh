@@ -3631,6 +3631,13 @@ bool ap_wlan_hal_dwpal::add_station(const std::string &ifname, const sMacAddr &m
     return false;
 }
 
+bool ap_wlan_hal_dwpal::send_delba(const std::string &ifname, const sMacAddr &dst,
+                                   const sMacAddr &src, const sMacAddr &bssid)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
 } // namespace dwpal
 
 std::shared_ptr<ap_wlan_hal> ap_wlan_hal_create(std::string iface_name, hal_conf_t hal_conf,
