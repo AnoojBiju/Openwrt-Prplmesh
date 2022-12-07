@@ -354,8 +354,13 @@ bool nl80211_client_impl::get_radio_info(const std::string &interface_name, radi
                 }
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 1)
+                // Refer linux/ieee80211.h for each bit representation.
                 if (tb_band[NL80211_BAND_ATTR_IFTYPE_DATA]) {
-                    band.he_supported              = true;
+                    band.he_supported = true;
+
+                    // If HE is supported UL and DL-OFDMA are mandatory.
+                    band.he_capability = band.he_capability | (3 << 1);
+
                     const struct nlattr *nl_he_cap = tb_band[NL80211_BAND_ATTR_IFTYPE_DATA];
                     nla_for_each_attr(nl_band, static_cast<struct nlattr *>(nla_data(nl_he_cap)),
                                       nla_len(nl_he_cap), rem_iftype)
@@ -389,6 +394,24 @@ bool nl80211_client_impl::get_radio_info(const std::string &interface_name, radi
                                 break;
                             }
 
+                            /**
+			     * check whether UL_MU_MIMO and UL_MU_MIMO plus OFDMA
+			     * are supported.
+			     */
+                            switch (band.he.he_phy_capab_info[2] >> 6) {
+                            case 3:
+                                band.he_capability = band.he_capability | (3 << 4);
+                                break;
+                            case 2:
+                                band.he_capability = band.he_capability | (1 << 4);
+                                break;
+                            case 1:
+                                band.he_capability = band.he_capability | (1 << 5);
+                                break;
+                            default:
+                                break;
+                            }
+
                             if (band.he.he_phy_capab_info[3] >> 7) {
                                 //set 7th bit if su_beamformer is supported.
                                 band.he_capability = band.he_capability | (1 << 7);
@@ -398,12 +421,41 @@ bool nl80211_client_impl::get_radio_info(const std::string &interface_name, radi
                                 //set 6th bit if mu_beamformer is supported.
                                 band.he_capability = band.he_capability | (1 << 6);
                             }
+                            if ((band.he.he_phy_capab_info[6] >> 6) & 1) {
+                                //set 3rd bit if DL_MU_MIMO plus OFDMA is supported.
+                                band.he_capability = band.he_capability | (1 << 3);
+                            }
                         }
 
+                        // According to definition in "linux/iee80211.h" and 9.4.2.248.4 of IEEE P802.11.
                         if (tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_MCS_SET]) {
+                            int he_rx_nss, he_tx_nss, he_mcs;
                             memcpy(band.he.he_mcs_nss_set,
                                    nla_data(tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_MCS_SET]),
                                    nla_len(tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_MCS_SET]));
+
+                            uint16_t he_rx_mcs_map =
+                                band.he.he_mcs_nss_set[0] | (band.he.he_mcs_nss_set[1] << 8);
+                            for (he_rx_nss = 8; he_rx_nss > 0; he_rx_nss--) {
+                                he_mcs = ((he_rx_mcs_map >> (2 * (he_rx_nss - 1))) & 3);
+
+                                // 3 represents HE_MCS_NOT_SUPPORTED
+                                if (he_mcs != 3)
+                                    break;
+                            }
+
+                            band.he_capability = band.he_capability | ((7 & (he_rx_nss - 1)) << 10);
+
+                            uint16_t he_tx_mcs_map =
+                                band.he.he_mcs_nss_set[2] | (band.he.he_mcs_nss_set[3] << 8);
+                            for (he_tx_nss = 8; he_tx_nss > 0; he_tx_nss--) {
+                                he_mcs = ((he_tx_mcs_map >> (2 * (he_tx_nss - 1))) & 3);
+
+                                if (he_mcs != 3)
+                                    break;
+                            }
+
+                            band.he_capability = band.he_capability | ((7 & (he_tx_nss - 1)) << 13);
                         }
 
                         if (tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_PPE]) {
