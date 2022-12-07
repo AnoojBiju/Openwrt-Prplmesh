@@ -1653,6 +1653,13 @@ bool ap_wlan_hal_nl80211::get_key(const std::string &ifname, sKeyInfo &key_info)
     return m_nl80211_client->get_key(ifname, key_info);
 }
 
+bool ap_wlan_hal_nl80211::send_delba(const std::string &ifname, const sMacAddr &dst,
+                                     const sMacAddr &src, const sMacAddr &bssid)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
 } // namespace nl80211
 
 std::shared_ptr<ap_wlan_hal> ap_wlan_hal_create(std::string iface_name, hal_conf_t hal_conf,
