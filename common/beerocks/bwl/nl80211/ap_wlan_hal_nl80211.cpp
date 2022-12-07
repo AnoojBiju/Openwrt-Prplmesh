@@ -1656,8 +1656,7 @@ bool ap_wlan_hal_nl80211::get_key(const std::string &ifname, sKeyInfo &key_info)
 bool ap_wlan_hal_nl80211::send_delba(const std::string &ifname, const sMacAddr &dst,
                                      const sMacAddr &src, const sMacAddr &bssid)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
-    return false;
+    return m_nl80211_client->send_delba(ifname, dst, src, bssid);
 }
 
 } // namespace nl80211
