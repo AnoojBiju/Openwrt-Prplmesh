@@ -34,9 +34,12 @@
 
 #include "nl80211_client_impl.h"
 
+#include <bcl/beerocks_defines.h>
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
 #include <bwl/base_802_11_defs.h>
+#include <tlvf/CmduMessageTx.h>
+#include <tlvf/ieee_80211/sMacHeader.h>
 
 #include <easylogging++.h>
 
@@ -1085,8 +1088,63 @@ bool nl80211_client_impl::add_station(const std::string &interface_name, const s
 bool nl80211_client_impl::send_delba(const std::string &interface_name, const sMacAddr &dst,
                                      const sMacAddr &src, const sMacAddr &bssid)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
-    return false;
+    if (!m_socket) {
+        LOG(ERROR) << "Socket is NULL!";
+        return false;
+    }
+
+    // Get the interface index for given interface name
+    int iface_index = if_nametoindex(interface_name.c_str());
+    if (0 == iface_index) {
+        LOG(ERROR) << "Failed to read the index of interface " << interface_name << ": "
+                   << strerror(errno);
+
+        return false;
+    }
+
+    // Create the MAC header that we will include as an attribute:
+    uint8_t tx_buffer[beerocks::message::MESSAGE_BUFFER_LENGTH];
+    ieee1905_1::CmduMessageTx cmdu_tx{tx_buffer, sizeof(tx_buffer)};
+
+    auto mac_header = std::make_shared<ieee80211::sMacHeader>(tx_buffer, sizeof(tx_buffer));
+    if (!mac_header->isInitialized()) {
+        LOG(ERROR) << "Failed to create sMacHeader!";
+        return false;
+    }
+
+    mac_header->frame_control_b1().type = static_cast<uint8_t>(ieee80211::sMacHeader::eType::MGMT);
+    mac_header->frame_control_b1().subtype =
+        static_cast<uint8_t>(ieee80211::sMacHeader::eSubtypeMgmt::ACTION);
+    mac_header->addr1() = dst;
+    mac_header->addr2() = src;
+    mac_header->addr3() = bssid;
+
+    constexpr uint8_t action_fields[] = {
+        0x03, // Block ack
+        0x02, // Delba
+        0x80, // Initiator and TID
+        0x08, // Reserved
+        0x25, // Reason code (STA does not want to use the mechanism)
+        0x00  // Reason code
+    };
+
+    // Initialize frame_attr with the MAC header
+    std::vector<uint8_t> frame_attr = {cmdu_tx.getMessageBuff(),
+                                       cmdu_tx.getMessageBuff() + mac_header->getLen()};
+
+    // add the action fields:
+    frame_attr.insert(frame_attr.end(), std::begin(action_fields), std::end(action_fields));
+
+    LOG(DEBUG) << "Sending DELBA frame on interface '" << interface_name << "' to MAC '" << dst
+               << "' with source '" << src << "' bssid '" << bssid << "'";
+    return m_socket.get()->send_receive_msg(NL80211_CMD_FRAME, 0,
+                                            [&](struct nl_msg *msg) -> bool {
+                                                nla_put_u32(msg, NL80211_ATTR_IFINDEX, iface_index);
+                                                nla_put(msg, NL80211_ATTR_FRAME, frame_attr.size(),
+                                                        frame_attr.data());
+                                                return true;
+                                            },
+                                            [&](struct nl_msg *msg) {});
 }
 
 } // namespace bwl
