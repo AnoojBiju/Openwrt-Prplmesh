@@ -106,6 +106,7 @@ bool Monitor::send_cmdu(ieee1905_1::CmduMessageTx &cmdu_tx)
 
 bool Monitor::thread_init()
 {
+    LOG(DEBUG) << "____Monitor::thread_init()_____";
     // Get Agent UDS file
     std::string agent_uds_path = beerocks_slave_conf.temp_path + std::string(BEEROCKS_AGENT_UDS);
 
