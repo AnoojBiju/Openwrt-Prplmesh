@@ -65,3 +65,7 @@ VirtualBssCreation:
     _length: [group_key_length]
   group_tx_packet_num:
     _type: uint64_t
+  authentication_type:
+    _type: uint16_t
+  encryption_suite_type:
+    _type: uint16_t
