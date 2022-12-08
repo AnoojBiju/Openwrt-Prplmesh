@@ -81,6 +81,13 @@ public:
     virtual bool ping() = 0;
 
     /*!
+     * Try to reassociate over an sta
+     *
+     * @return true if sendign command succeeds otherwise false
+     */
+    virtual bool reassociate() = 0;
+
+    /*!
      * Refresh the VAPs information structure on the 
      * internal radio information structure.
      *
