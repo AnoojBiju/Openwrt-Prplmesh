@@ -8,7 +8,7 @@
 
 #include "bpl_cfg_uci.h"
 #include "../../common/utils/utils.h"
-
+#include <easylogging++.h>
 #include <mapf/common/utils.h>
 
 #include <string>
@@ -73,20 +73,20 @@ int cfg_uci_get_wireless_from_ifname(enum paramType type, const char *interface_
 {
     struct uci_context *ctx = uci_alloc_context();
     if (!ctx) {
-        ERROR("%s, uci alloc context failed!\n", __FUNCTION__);
+        LOG(ERROR) << __FUNCTION__ << ", uci alloc context failed!";
         return RETURN_ERR;
     }
 
     char lookup_str[MAX_UCI_BUF_LEN] = "wireless";
     struct uci_ptr ptr;
     if ((uci_lookup_ptr(ctx, &ptr, lookup_str, true) != UCI_OK)) {
-        ERROR("%s, uci lookup failed!\n", __FUNCTION__);
+        LOG(ERROR) << __FUNCTION__ << ", uci lookup failed!";
         uci_free_context(ctx);
         return RETURN_ERR;
     }
 
     if (!ptr.p) {
-        ERROR("%s, returned pointer is null\n", __FUNCTION__);
+        LOG(ERROR) << __FUNCTION__ << ", returned pointer is null";
         uci_free_context(ctx);
         return RETURN_ERR;
     }
@@ -177,8 +177,8 @@ int cfg_uci_get_wireless_from_ifname(enum paramType type, const char *interface_
                     closedir(dir);
                 } else {
                     // Could not open directory
-                    ERROR("%s, could not open directory %s \n", __FUNCTION__,
-                          path_interface_name.c_str());
+                    LOG(ERROR) << __FUNCTION__ << ", could not open directory "
+                               << path_interface_name.c_str();
                     return RETURN_ERR;
                 }
 
@@ -192,7 +192,7 @@ int cfg_uci_get_wireless_from_ifname(enum paramType type, const char *interface_
 
     //if interface not found in wireless
     if (!is_section_found) {
-        ERROR("%s, interface(%s) not found in wireless", __FUNCTION__, interface_name);
+        LOG(ERROR) << __FUNCTION__ << ", interface(" << interface_name << ") not found in wireless";
         uci_free_context(ctx);
         return RETURN_ERR;
     }
@@ -217,7 +217,7 @@ int cfg_uci_get_wireless_from_ifname(enum paramType type, const char *interface_
 
         if (!device_option_exist) {
             // radio not found
-            ERROR("%s device option not found\n", __func__);
+            LOG(ERROR) << __func__ << " device option not found";
             return RETURN_ERR;
         }
 
@@ -243,8 +243,8 @@ int cfg_uci_get_wireless_from_ifname(enum paramType type, const char *interface_
         }
 
         // param not found in option
-        ERROR("%s, interface(%s) found but param(%s) isn't configured\n", __FUNCTION__,
-              interface_name, param);
+        LOG(ERROR) << __FUNCTION__ << ", interface(" << interface_name << ") found but param("
+                   << param << ") isn't configured";
         uci_free_context(ctx);
         return RETURN_ERR;
     }
@@ -267,16 +267,17 @@ int cfg_uci_get_wireless_bool(enum paramType type, const char *interface_name, c
 int cfg_uci_get_all_options_by_section_type(char *pkg_name, char *sct_type, char *opt_name,
                                             std::unordered_map<std::string, std::string> &options)
 {
-    DEBUG("%s, pkg: %s, sct type: %s, opt name: %s\n", __FUNCTION__, pkg_name, sct_type, opt_name);
+    LOG(DEBUG) << __FUNCTION__ << ", pkg: " << pkg_name << ", sct type: " << sct_type
+               << ", opt name: " << opt_name;
     struct uci_context *ctx = uci_alloc_context();
     if (!ctx) {
-        ERROR("%s, uci alloc context failed!\n", __FUNCTION__);
+        LOG(ERROR) << __FUNCTION__ << ", uci alloc context failed!";
         return RETURN_ERR;
     }
 
     struct uci_ptr ptr;
     if ((uci_lookup_ptr(ctx, &ptr, pkg_name, true) != UCI_OK) || !ptr.p) {
-        ERROR("%s, uci lookup package failed!\n", __FUNCTION__);
+        LOG(ERROR) << __FUNCTION__ << ", uci lookup package failed!";
         return RETURN_ERR;
     }
 
@@ -293,7 +294,7 @@ int cfg_uci_get_all_options_by_section_type(char *pkg_name, char *sct_type, char
             if (!opt) {
                 continue;
             } else {
-                DEBUG("%s, name: %s, value: %s\n", __FUNCTION__, e->name, opt->v.string);
+                LOG(DEBUG) << __FUNCTION__ << ", name: " << e->name << ", value: " << opt->v.string;
                 options.emplace(e->name, opt->v.string);
             }
         }
