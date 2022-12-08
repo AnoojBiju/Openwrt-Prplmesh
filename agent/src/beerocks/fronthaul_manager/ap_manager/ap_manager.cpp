@@ -734,13 +734,13 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
 
         // TODO: PPM-2348 add the bridge name to BPL
 
-        // TODO: the VirtualBSSCreation TLV doesn't specify authentication and encryption types
         son::wireless_utils::sBssInfoConf bss_conf = {};
         bss_conf.ssid                              = virtual_bss_creation_tlv->ssid_str();
-        bss_conf.authentication_type               = WSC::eWscAuth::WSC_AUTH_WPA2PSK;
-        bss_conf.encryption_type                   = WSC::eWscEncr::WSC_ENCR_AES;
-        bss_conf.network_key                       = virtual_bss_creation_tlv->pass_str();
-        bss_conf.bssid                             = virtual_bss_creation_tlv->bssid();
+        bss_conf.authentication_type =
+            WSC::eWscAuth(virtual_bss_creation_tlv->authentication_type());
+        bss_conf.encryption_type = WSC::eWscEncr(virtual_bss_creation_tlv->encryption_suite_type());
+        bss_conf.network_key     = virtual_bss_creation_tlv->pass_str();
+        bss_conf.bssid           = virtual_bss_creation_tlv->bssid();
 
         if (!ap_wlan_hal->add_bss(ifname, bss_conf, bridge, true)) {
             LOG(ERROR) << "Failed to add a new BSS!";
