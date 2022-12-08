@@ -8011,10 +8011,13 @@ bool db::dm_get_service_prioritization_rules(std::shared_ptr<Agent> agent)
         return true;
     }
 
-    uint64_t count{0};
-    if (!m_ambiorix_datamodel->read_param(agent->dm_path, "SPRuleNumberOfEntries", &count) ||
-        (count < 1) || (count > 254)) {
+    uint64_t count{3};
+    if (!m_ambiorix_datamodel->read_param(agent->dm_path, "SPRuleNumberOfEntries", &count)) {
         LOG(DEBUG) << "no valid priority rule configured for " << agent->dm_path;
+        return false;
+    }
+    if ((count < 1) || (count > 254)) {
+        LOG(DEBUG) << "invalid rule count for " << agent->dm_path << " (" << count << ")";
         return false;
     }
 
