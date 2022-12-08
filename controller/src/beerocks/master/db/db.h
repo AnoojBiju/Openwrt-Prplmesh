@@ -206,7 +206,7 @@ public:
 
         bool rdkb_extensions = false;
 
-        bool daisy_chaining_disabled = false;
+        bool daisy_chaining_disabled     = false;
         bool channel_select_task         = true;
         bool dynamic_channel_select_task = true;
 
