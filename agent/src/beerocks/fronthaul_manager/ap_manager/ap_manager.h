@@ -138,6 +138,20 @@ private:
                                      int32_t status);
     void remove_client_from_disallowed_list(const sMacAddr &mac, const sMacAddr &bssid);
     void allow_expired_clients();
+    bool register_ext_events_handlers(int fd);
+
+    /**
+     * @brief Create a new BSS and register handlers for it.
+     *
+     * @param ifname the interface name.
+     * @param bss_conf the configuration for the new BSS.
+     * @param bridge the bridge name.
+     * @param vbss whether the new BSS is a VBSS or not.
+     *
+     * @return true on success, false otherwise.
+     */
+    bool add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
+                 std::string &bridge, bool vbss);
 
     // Class constants
     static constexpr uint8_t BEACON_TRANSMIT_TIME_MS = 100;

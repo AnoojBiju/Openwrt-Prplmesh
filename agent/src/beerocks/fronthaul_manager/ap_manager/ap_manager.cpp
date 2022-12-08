@@ -492,53 +492,15 @@ bool ApManager::ap_manager_fsm(bool &continue_processing)
         if (m_ap_hal_ext_events.empty()) {
             ext_event_fd_max = 0;
         } else {
-            beerocks::EventLoop::EventHandlers ext_events_handlers{
-                .name = "ap_hal_ext_events",
-                .on_read =
-                    [&](int fd, EventLoop &loop) {
-                        if (!ap_wlan_hal->process_ext_events(fd)) {
-                            LOG(ERROR) << "process_ext_events(" << fd << ") failed!";
-                            return false;
-                        }
-                        return true;
-                    },
-                .on_write = nullptr,
-                .on_disconnect =
-                    [&](int fd, EventLoop &loop) {
-                        LOG(ERROR) << "ap_hal_ext_event disconnected! on fd " << fd;
-                        auto it =
-                            std::find(m_ap_hal_ext_events.begin(), m_ap_hal_ext_events.end(), fd);
-                        if (it != m_ap_hal_ext_events.end()) {
-                            *it = beerocks::net::FileDescriptor::invalid_descriptor;
-                        }
-                        return false;
-                    },
-                .on_error =
-                    [&](int fd, EventLoop &loop) {
-                        LOG(ERROR) << "ap_hal_ext_events error! on fd " << fd;
-#ifdef USE_PRPLMESH_WHM
-                        // amx signal event loop on_error should return true
-                        return true;
-#endif //USE_PRPLMESH_WHM
-                        auto it =
-                            std::find(m_ap_hal_ext_events.begin(), m_ap_hal_ext_events.end(), fd);
-                        if (it != m_ap_hal_ext_events.end()) {
-                            *it = beerocks::net::FileDescriptor::invalid_descriptor;
-                        }
-                        return false;
-                    },
-            };
             for (auto &ext_event_fd : m_ap_hal_ext_events) {
-                if (ext_event_fd > 0) {
-                    if (!m_event_loop->register_handlers(ext_event_fd, ext_events_handlers)) {
-                        LOG(ERROR)
-                            << "Unable to register handlers for external event fd " << ext_event_fd;
-                        return false;
-                    } else if (ext_event_fd < 0) {
-                        ext_event_fd = beerocks::net::FileDescriptor::invalid_descriptor;
-                    }
-                    LOG(DEBUG) << "External events queue with fd = " << ext_event_fd;
+                if (ext_event_fd < 0) {
+                    ext_event_fd = beerocks::net::FileDescriptor::invalid_descriptor;
+                    continue;
                 }
+                if (!register_ext_events_handlers(ext_event_fd)) {
+                    return false;
+                }
+                LOG(DEBUG) << "External events queue with fd = " << ext_event_fd;
                 ext_event_fd_max = std::max(ext_event_fd_max, ext_event_fd);
             }
         }
@@ -742,7 +704,7 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
         bss_conf.network_key                       = virtual_bss_creation_tlv->pass_str();
         bss_conf.bssid                             = virtual_bss_creation_tlv->bssid();
 
-        if (!ap_wlan_hal->add_bss(ifname, bss_conf, bridge, true)) {
+        if (!add_bss(ifname, bss_conf, bridge, true)) {
             LOG(ERROR) << "Failed to add a new BSS!";
             return;
         }
@@ -2732,4 +2694,64 @@ bool ApManager::zwdfs_ap() const
     }
 
     return m_ap_support_zwdfs;
+}
+
+bool ApManager::add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
+                        std::string &bridge, bool vbss)
+{
+    if (!ap_wlan_hal->add_bss(ifname, bss_conf, bridge, true)) {
+        LOG(ERROR) << "Failed to add a new BSS!";
+        return false;
+    }
+
+    if (!register_ext_events_handlers(ap_wlan_hal->get_ext_events_fds().back())) {
+        LOG(ERROR) << "Failed to register ext_events handlers for the new BSS!";
+        return false;
+    }
+    return true;
+}
+
+bool ApManager::register_ext_events_handlers(int fd)
+{
+    beerocks::EventLoop::EventHandlers ext_events_handlers{
+        .name = "ap_hal_ext_events",
+        .on_read =
+            [&](int fd, EventLoop &loop) {
+                if (!ap_wlan_hal->process_ext_events(fd)) {
+                    LOG(ERROR) << "process_ext_events(" << fd << ") failed!";
+                    return false;
+                }
+                return true;
+            },
+        .on_write = nullptr,
+        .on_disconnect =
+            [&](int fd, EventLoop &loop) {
+                LOG(ERROR) << "ap_hal_ext_event disconnected! on fd " << fd;
+                auto it = std::find(m_ap_hal_ext_events.begin(), m_ap_hal_ext_events.end(), fd);
+                if (it != m_ap_hal_ext_events.end()) {
+                    *it = beerocks::net::FileDescriptor::invalid_descriptor;
+                }
+                return false;
+            },
+        .on_error =
+            [&](int fd, EventLoop &loop) {
+                LOG(ERROR) << "ap_hal_ext_events error! on fd " << fd;
+#ifdef USE_PRPLMESH_WHM
+                // amx signal event loop on_error should return true
+                return true;
+#endif //USE_PRPLMESH_WHM
+                auto it = std::find(m_ap_hal_ext_events.begin(), m_ap_hal_ext_events.end(), fd);
+                if (it != m_ap_hal_ext_events.end()) {
+                    *it = beerocks::net::FileDescriptor::invalid_descriptor;
+                }
+                return false;
+            },
+    };
+
+    if (!m_event_loop->register_handlers(fd, ext_events_handlers)) {
+        LOG(ERROR) << "Unable to register handlers for external event fd " << fd;
+        return false;
+    }
+
+    return true;
 }

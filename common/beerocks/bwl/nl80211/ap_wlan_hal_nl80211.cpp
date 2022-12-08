@@ -1604,6 +1604,11 @@ bool ap_wlan_hal_nl80211::add_bss(std::string &ifname, son::wireless_utils::sBss
         return false;
     }
 
+    if (!base_wlan_hal_nl80211::add_interface(ifname)) {
+        LOG(DEBUG) << "Failed to register and connect the new BSS interface!";
+        return false;
+    }
+
     return true;
 }
 
