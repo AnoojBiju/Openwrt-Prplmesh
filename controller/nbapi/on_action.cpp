@@ -743,6 +743,11 @@ amxd_status_t trigger_vbss_move(amxd_object_t *object, amxd_function_t *func, am
 amxd_status_t trigger_prioritization(amxd_object_t *object, amxd_function_t *func, amxc_var_t *args,
                                      amxc_var_t *ret)
 {
+    if (!g_database) {
+        LOG(ERROR) << "Invalid database access";
+        return amxd_status_unknown_error;
+    }
+
     auto controller = g_database->get_controller_ctx();
     if (!controller) {
         LOG(ERROR) << "Failed to get controller context";
@@ -754,6 +759,13 @@ amxd_status_t trigger_prioritization(amxd_object_t *object, amxd_function_t *fun
         LOG(ERROR) << "Missing agent mac parameter";
         return amxd_status_parameter_not_found;
     }
+
+    auto agent = g_database->m_agents.get(tlvf::mac_from_string(agent_mac));
+    if (!agent) {
+        LOG(INFO) << "Agent with mac " << agent_mac << " not found in db";
+        return amxd_status_parameter_not_found;
+    }
+    g_database->dm_get_service_prioritization_rules(agent);
 
     controller->trigger_prioritization_config(agent_mac);
     return amxd_status_ok;

@@ -113,7 +113,6 @@ void agent_monitoring_task::handle_event(int event_type, void *obj)
         break;
     }
     case (CONFIGURE_PRIORITY): {
-        database.dm_get_service_prioritization_rules(agent);
         send_prioritization_rule(*agent);
         break;
     }
