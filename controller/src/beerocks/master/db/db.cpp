@@ -8011,6 +8011,13 @@ bool db::dm_get_service_prioritization_rules(std::shared_ptr<Agent> agent)
         return true;
     }
 
+    //DEBUG investigation
+    std::string manufacturer;
+    if (!m_ambiorix_datamodel->read_param(agent->dm_path, "ManufacturerModel", &manufacturer)) {
+        LOG(DEBUG) << "!!!DEBUG INVESTIGATION!!! can't read manufacturer at " << agent->dm_path;
+    }
+    LOG(DEBUG) << "!!!DEBUG INVESTIGATION!!! manufacturer is \"" << manufacturer << "\"";
+
     uint64_t count{3};
     if (!m_ambiorix_datamodel->read_param(agent->dm_path, "SPRuleNumberOfEntries", &count)) {
         LOG(DEBUG) << "no valid priority rule configured for " << agent->dm_path;
