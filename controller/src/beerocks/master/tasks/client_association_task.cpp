@@ -10,6 +10,7 @@
 #include "../son_actions.h"
 
 #include <bcl/beerocks_utils.h>
+#include <bcl/beerocks_wifi_channel.h>
 #include <bcl/son/son_assoc_frame_utils.h>
 #include <tlvf/wfa_map/tlvClientAssociationEvent.h>
 #include <tlvf/wfa_map/tlvClientCapabilityReport.h>
@@ -157,10 +158,10 @@ bool client_association_task::handle_cmdu_1905_client_capability_report_message(
         return true;
     }
 
-    LOG(DEBUG) << "(Re)Association Request frame= "
-               << beerocks::utils::dump_buffer(
-                      client_capability_report_tlv->association_frame(),
-                      client_capability_report_tlv->association_frame_length());
+    std::string re_assoc_frame =
+        beerocks::utils::dump_buffer(client_capability_report_tlv->association_frame(),
+                                     client_capability_report_tlv->association_frame_length());
+    LOG(DEBUG) << "(Re)Association Request frame= " << re_assoc_frame;
 
     /*
      * Client capability data is latest assoc/reassoc request frame data
@@ -193,19 +194,30 @@ bool client_association_task::handle_cmdu_1905_client_capability_report_message(
     auto sta_mac_str = tlvf::mac_to_string(sta_mac);
     result           = m_database.set_station_capabilities(sta_mac_str, capabilities);
     if (!result) {
-        LOG(ERROR) << "Failed to save capabilities.";
+        LOG(ERROR) << "Failed to save station capabilities.";
         return false;
     }
 
     // Save station capabilities into DM AssocEvent object
     dm_add_sta_association_event_caps(client_info_tlv->client_mac(), client_info_tlv->bssid());
 
+    // Save ClientCapabilities to Station and AssocEvent object
+    result = m_database.set_client_capabilities(sta_mac, re_assoc_frame, m_database);
+    if (!result) {
+        LOG(ERROR) << "Failed to save client capabilities.";
+        return false;
+    }
+
     // Update the station's link bw with the received caps
-    auto client_bw     = m_database.get_node_bw(sta_mac_str);
+    WifiChannel sta_wifi_channel = m_database.get_node_wifi_channel(sta_mac_str);
+    if (sta_wifi_channel.is_empty()) {
+        LOG(WARNING) << "empty wifi channel of " << sta_mac_str << " in DB";
+    }
+    auto client_bw     = sta_wifi_channel.get_bandwidth();
     auto client_bw_max = client_bw;
     if (son::wireless_utils::get_station_max_supported_bw(capabilities, client_bw_max)) {
         if (client_bw_max < client_bw) {
-            m_database.update_node_bw(sta_mac, client_bw_max);
+            m_database.update_node_wifi_channel_bw(sta_mac, client_bw_max);
         }
     }
 

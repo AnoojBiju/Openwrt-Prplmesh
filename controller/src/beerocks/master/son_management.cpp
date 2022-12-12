@@ -28,6 +28,7 @@
 #include <tlvf/wfa_map/tlvClientAssociationControlRequest.h>
 
 #include <bcl/beerocks_utils.h>
+#include <bcl/beerocks_wifi_channel.h>
 #include <easylogging++.h>
 
 using namespace beerocks;
@@ -264,14 +265,17 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
 
+        auto sta_parent_wifi_channel = database.get_node_wifi_channel(sta_parent);
+        if (sta_parent_wifi_channel.is_empty()) {
+            LOG(WARNING) << "empty wifi channel of " << sta_parent << " in DB";
+        }
         request->params().mac     = tlvf::mac_from_string(client_mac);
         request->params().ipv4    = network_utils::ipv4_from_string(network_utils::ZERO_IP_STRING);
-        request->params().channel = database.get_node_channel(sta_parent);
-        request->params().bandwidth = database.get_node_bw(sta_parent);
+        request->params().channel = sta_parent_wifi_channel.get_channel();
+        request->params().bandwidth = sta_parent_wifi_channel.get_bandwidth();
         request->params().vht_center_frequency =
-            cli_request->center_frequency()
-                ? cli_request->center_frequency()
-                : database.get_hostap_vht_center_frequency(tlvf::mac_from_string(sta_parent));
+            cli_request->center_frequency() ? cli_request->center_frequency()
+                                            : sta_parent_wifi_channel.get_center_frequency();
         request->params().cross                  = 0;
         request->params().mon_ping_burst_pkt_num = 0;
 
@@ -428,6 +432,25 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
         std::string hostap_mac = tlvf::mac_to_string(cli_request->mac());
         auto agent_mac         = database.get_node_parent_ire(hostap_mac);
         LOG(DEBUG) << "CLI ap channel switch request for " << hostap_mac;
+
+        /*
+        Construct a wifiChannel object with given parameters
+        to check if the requested channel switch parameters are a valid ones.
+        */
+        beerocks::WifiChannel wifi_channel(
+            cli_request->cs_params().channel,
+            son::wireless_utils::which_freq_type(cli_request->cs_params().vht_center_frequency),
+            static_cast<beerocks::eWiFiBandwidth>(cli_request->cs_params().bandwidth));
+        if (wifi_channel.is_empty()) {
+            LOG(ERROR) << "Invalid channel switch request. channel="
+                       << cli_request->cs_params().channel << ", bandwidth="
+                       << beerocks::utils::convert_bandwidth_to_int(
+                              static_cast<beerocks::eWiFiBandwidth>(
+                                  cli_request->cs_params().bandwidth))
+                       << ", center_frequency=" << cli_request->cs_params().vht_center_frequency;
+            isOK = false;
+            break;
+        }
 
         auto request = message_com::create_vs_message<
             beerocks_message::cACTION_CONTROL_HOSTAP_CHANNEL_SWITCH_ACS_START>(cmdu_tx);
@@ -1587,13 +1610,17 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         std::string client_mac = tlvf::mac_to_string(request->client_mac());
         std::string sta_parent = database.get_node_parent(client_mac);
 
+        auto sta_parent_wifi_channel = database.get_node_wifi_channel(sta_parent);
+        if (sta_parent_wifi_channel.is_empty()) {
+            LOG(WARNING) << "empty wifi channel of " << sta_parent_wifi_channel << " in DB";
+            break;
+        }
         new_event.bssid            = tlvf::mac_to_string(request->bssid());
         new_event.params.mac       = tlvf::mac_from_string(client_mac);
         new_event.params.ipv4      = network_utils::ipv4_from_string(network_utils::ZERO_IP_STRING);
-        new_event.params.channel   = database.get_node_channel(sta_parent);
-        new_event.params.bandwidth = database.get_node_bw(sta_parent);
-        new_event.params.vht_center_frequency =
-            database.get_hostap_vht_center_frequency(tlvf::mac_from_string(sta_parent));
+        new_event.params.channel   = sta_parent_wifi_channel.get_channel();
+        new_event.params.bandwidth = sta_parent_wifi_channel.get_bandwidth();
+        new_event.params.vht_center_frequency   = sta_parent_wifi_channel.get_center_frequency();
         new_event.params.cross                  = 0;
         new_event.params.mon_ping_burst_pkt_num = 0;
 

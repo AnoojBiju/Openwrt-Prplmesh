@@ -15,6 +15,7 @@
 
 #include <bcl/beerocks_utils.h>
 #include <bcl/beerocks_version.h>
+#include <bcl/beerocks_wifi_channel.h>
 
 #include <beerocks/tlvf/beerocks_message.h>
 #include <beerocks/tlvf/beerocks_message_apmanager.h>
@@ -114,18 +115,18 @@ void ApAutoConfigurationTask::work()
 
             // If another radio with same band already finished the discovery phase, we can skip
             // directly to next phase (AP_CONFIGURATION).
-            if (m_discovery_status[radio->freq_type].completed) {
+            if (m_discovery_status[radio->wifi_channel.get_freq_type()].completed) {
                 FSM_MOVE_STATE(radio_iface, eState::SEND_AP_AUTOCONFIGURATION_WSC_M1);
             }
 
             // If another radio with same band already have sent the
             // AP_AUTOCONFIGURATION_SEARCH_MESSAGE, we can skip and let it handle it.
-            if (m_discovery_status[radio->freq_type].msg_sent) {
+            if (m_discovery_status[radio->wifi_channel.get_freq_type()].msg_sent) {
                 continue;
             }
 
             if (send_ap_autoconfiguration_search_message(radio_iface)) {
-                m_discovery_status[radio->freq_type].msg_sent = true;
+                m_discovery_status[radio->wifi_channel.get_freq_type()].msg_sent = true;
             }
 
             conf_params.timeout = std::chrono::steady_clock::now() +
@@ -140,14 +141,14 @@ void ApAutoConfigurationTask::work()
             if (!radio) {
                 continue;
             }
-            if (m_discovery_status[radio->freq_type].completed) {
+            if (m_discovery_status[radio->wifi_channel.get_freq_type()].completed) {
                 FSM_MOVE_STATE(radio_iface, eState::SEND_AP_AUTOCONFIGURATION_WSC_M1);
                 break;
             }
 
             if (std::chrono::steady_clock::now() > conf_params.timeout) {
                 FSM_MOVE_STATE(radio_iface, eState::CONTROLLER_DISCOVERY);
-                m_discovery_status[radio->freq_type].msg_sent = false;
+                m_discovery_status[radio->wifi_channel.get_freq_type()].msg_sent = false;
             }
             break;
         }
@@ -193,6 +194,15 @@ void ApAutoConfigurationTask::handle_event(uint8_t event_enum_value, const void 
         auto db = AgentDB::get();
 
         db->statuses.ap_autoconfiguration_completed = false;
+
+        if (!m_traffic_separation_configurator) {
+            m_traffic_separation_configurator =
+                std::make_unique<TrafficSeparation>(m_btl_ctx.m_broker_client);
+        }
+
+        // Reset the traffic separation configuration as they will be reconfigured on
+        // autoconfiguration.
+        m_traffic_separation_configurator->clear_configuration();
 
         // Reset the discovery statuses.
         for (auto &discovery_status : m_discovery_status) {
@@ -285,6 +295,11 @@ bool ApAutoConfigurationTask::handle_vendor_specific(
         handle_vs_vaps_list_update_notification(cmdu_rx, sd, beerocks_header);
         break;
     }
+    case beerocks_message::ACTION_BACKHAUL_APPLY_VLAN_POLICY_REQUEST: {
+        handle_vs_apply_vlan_policy_request(cmdu_rx, sd, beerocks_header);
+        break;
+    }
+
     default: {
         // Message was not handled, therefore return false.
         return false;
@@ -302,7 +317,10 @@ void ApAutoConfigurationTask::configuration_complete_wait_action(const std::stri
         return;
     }
 
-    if (radio_conf_params.enabled_bssids.size() != radio_conf_params.num_of_bss_available) {
+    // Ap AutoConf starts to be applied once radio is up, i.e at least one BSS is enabled
+    // So no need to require for all BBSs to be enabled, (or even timeouting here)
+    // to follow up with auto conf completion
+    if (radio_conf_params.enabled_bssids.size() < 1) {
 
         // Wait until WAIT_AP_ENABLED_TIMEOUT_SECONDS timeout is expired.
         // If expired and we did not receive AP_ENABLE on the radios BSSs, assume it was already
@@ -348,6 +366,11 @@ void ApAutoConfigurationTask::configuration_complete_wait_action(const std::stri
 
         // Return if not all bssids are in the bridge, and print error.
         if (found == ifaces_in_bridge.end()) {
+            auto host_bridge = network_utils::linux_iface_get_host_bridge(bssid.iface_name);
+            if (!host_bridge.empty()) {
+                // skip secondary bss, already belonging to different bridge
+                continue;
+            }
             if (std::chrono::steady_clock::now() > radio_conf_params.timeout) {
                 auto timeout_sec =
                     std::chrono::duration_cast<std::chrono::seconds>(
@@ -365,7 +388,7 @@ void ApAutoConfigurationTask::configuration_complete_wait_action(const std::stri
     FSM_MOVE_STATE(radio_iface, eState::CONFIGURED);
 
     LOG(TRACE) << "Finished configuration on " << radio_iface;
-    TrafficSeparation::apply_traffic_separation(radio_iface);
+    m_traffic_separation_configurator->apply_policy(radio_iface);
 
     return;
 }
@@ -386,14 +409,14 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_search_message(
         LOG(DEBUG) << "Radio of iface " << radio_iface << " does not exist on the db";
         return false;
     }
-    if (radio->freq_type == beerocks::eFreqType::FREQ_24G) {
+    if (radio->wifi_channel.get_freq_type() == beerocks::eFreqType::FREQ_24G) {
         freq_band = ieee1905_1::tlvAutoconfigFreqBand::IEEE_802_11_2_4_GHZ;
-    } else if (radio->freq_type == beerocks::eFreqType::FREQ_5G) {
+    } else if (radio->wifi_channel.get_freq_type() == beerocks::eFreqType::FREQ_5G) {
         freq_band = ieee1905_1::tlvAutoconfigFreqBand::IEEE_802_11_5_GHZ;
-    } else if (radio->freq_type == beerocks::eFreqType::FREQ_6G) {
+    } else if (radio->wifi_channel.get_freq_type() == beerocks::eFreqType::FREQ_6G) {
         freq_band = ieee1905_1::tlvAutoconfigFreqBand::IEEE_802_11_6_GHZ;
     } else {
-        LOG(ERROR) << "unsupported freq_type=" << int(radio->freq_type)
+        LOG(ERROR) << "unsupported freq_type=" << int(radio->wifi_channel.get_freq_type())
                    << ", iface=" << radio_iface;
         return false;
     }
@@ -504,6 +527,12 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_search_message(
         return false;
     }
 
+    if (db->device_conf.certification_mode && db->device_conf.certification_profile) {
+        // If certification is enabled, override the MultiApProfile in Autoconfiguration
+        // Search Message according to the certification program.
+        tlvProfile2MultiApProfile->profile() = db->device_conf.certification_profile;
+    }
+
     LOG(DEBUG) << "sending autoconfig search message, bridge_mac=" << db->bridge.mac
                << " with Profile TLV";
     return m_btl_ctx.send_cmdu_to_controller({}, m_cmdu_tx);
@@ -545,7 +574,7 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_wsc_m1_message(
         /* One Profile-2 AP Capability TLV */
         auto profile2_ap_capability_tlv = m_cmdu_tx.addClass<wfa_map::tlvProfile2ApCapability>();
         if (!profile2_ap_capability_tlv) {
-            LOG(ERROR) << "Failed building message!";
+            LOG(ERROR) << "addClass wfa_map::tlvProfile2ApCapability failed";
             return false;
         }
 
@@ -569,17 +598,19 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_wsc_m1_message(
         auto ap_radio_advanced_capabilities_tlv =
             m_cmdu_tx.addClass<wfa_map::tlvProfile2ApRadioAdvancedCapabilities>();
         if (!ap_radio_advanced_capabilities_tlv) {
-            LOG(ERROR) << "Failed building message!";
+            LOG(ERROR) << "addClass wfa_map::tlvProfile2ApRadioAdvancedCapabilities failed";
             return false;
         }
 
         ap_radio_advanced_capabilities_tlv->radio_uid() = radio->front.iface_mac;
 
         // Currently Set the flag as we don't support traffic separation.
-        ap_radio_advanced_capabilities_tlv->traffic_separation_flag().combined_front_back =
+        ap_radio_advanced_capabilities_tlv->advanced_radio_capabilities().combined_front_back =
             radio->front.hybrid_mode_supported;
-        ap_radio_advanced_capabilities_tlv->traffic_separation_flag()
+        ap_radio_advanced_capabilities_tlv->advanced_radio_capabilities()
             .combined_profile1_and_profile2 = 0;
+
+        // TODO: Fill in the missing fields (related to R4 specification, PPM-2327).
     }
 
     if (!db->controller_info.prplmesh_controller) {
@@ -634,7 +665,8 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_wsc_m1_message(
     if (db->backhaul.connection_type == AgentDB::sBackhaul::eConnectionType::Wireless) {
         auto wireless_bh_radio                       = db->radio(db->backhaul.selected_iface_name);
         notification->backhaul_params().backhaul_mac = wireless_bh_radio->back.iface_mac;
-        notification->backhaul_params().backhaul_channel    = wireless_bh_radio->channel;
+        notification->backhaul_params().backhaul_channel =
+            wireless_bh_radio->wifi_channel.get_channel();
         notification->backhaul_params().backhaul_iface_type = eIfaceType::IFACE_TYPE_WIFI_INTEL;
     } else if (db->backhaul.connection_type == AgentDB::sBackhaul::eConnectionType::Wired) {
         notification->backhaul_params().backhaul_mac        = db->ethernet.wan.mac;
@@ -688,7 +720,7 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_wsc_m1_message(
     notification->hostap().iface_mac      = radio->front.iface_mac;
     notification->hostap().ant_num        = radio->number_of_antennas;
     notification->hostap().tx_power       = radio->tx_power_dB;
-    notification->hostap().frequency_band = radio->freq_type;
+    notification->hostap().frequency_band = radio->wifi_channel.get_freq_type();
     notification->hostap().max_bandwidth  = radio->max_supported_bw;
     notification->hostap().ht_supported   = radio->ht_supported;
     notification->hostap().ht_capability  = radio->ht_capability;
@@ -706,11 +738,12 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_wsc_m1_message(
     notification->hostap().ant_gain = config.radios.at(radio_iface).hostap_ant_gain;
 
     // Channel Selection Params
-    notification->cs_params().channel                   = radio->channel;
-    notification->cs_params().bandwidth                 = radio->bandwidth;
-    notification->cs_params().channel_ext_above_primary = radio->channel_ext_above_primary;
-    notification->cs_params().vht_center_frequency      = radio->vht_center_frequency;
-    notification->cs_params().tx_power                  = radio->tx_power_dB;
+    notification->cs_params().channel   = radio->wifi_channel.get_channel();
+    notification->cs_params().bandwidth = radio->wifi_channel.get_bandwidth();
+    notification->cs_params().channel_ext_above_primary =
+        radio->wifi_channel.get_ext_above_primary();
+    notification->cs_params().vht_center_frequency = radio->wifi_channel.get_center_frequency();
+    notification->cs_params().tx_power             = radio->tx_power_dB;
 
     m_btl_ctx.send_cmdu_to_controller(radio_iface, m_cmdu_tx);
     LOG(DEBUG) << "sending WSC M1 Size=" << m_cmdu_tx.getMessageLength();
@@ -767,7 +800,7 @@ bool ApAutoConfigurationTask::add_wsc_m1_tlv(const std::string &radio_iface)
     cfg.model_number        = "18.04";
     cfg.primary_dev_type_id = WSC::WSC_DEV_NETWORK_INFRA_AP;
     cfg.device_name         = "prplmesh-agent";
-    switch (radio->freq_type) {
+    switch (radio->wifi_channel.get_freq_type()) {
     case beerocks::FREQ_5G:
         cfg.bands = WSC::WSC_RF_BAND_5GHZ;
         break;
@@ -1216,7 +1249,7 @@ void ApAutoConfigurationTask::handle_multi_ap_policy_config_request(
         const auto &conf_params = radios_conf_param_kv.second;
 
         if (conf_params.state == eState::CONFIGURED) {
-            TrafficSeparation::apply_traffic_separation(radio_iface);
+            m_traffic_separation_configurator->apply_policy(radio_iface);
         } else {
             LOG(WARNING) << "autoconfiguration procedure is not completed yet, traffic separation "
                          << "policy cannot be applied";
@@ -1361,16 +1394,13 @@ bool ApAutoConfigurationTask::handle_wsc_m2_tlv(
         ss << "ssid: " << config.ssid << std::endl;
         ss << "fBSS: " << fBSS << std::endl;
         ss << "bBSS: " << bBSS << std::endl;
-        ss << "encr:" << std::hex << int(config.encr_type) << std::endl;
-        ss << "auth:" << std::hex << int(config.auth_type) << std::endl;
+        ss << "teardown: " << teardown << std::endl;
         if (bBSS) {
             ss << "profile1_backhaul_sta_association_disallowed: " << bBSS_p1_disallowed;
             ss << "profile2_backhaul_sta_association_disallowed: " << bBSS_p2_disallowed;
         }
 
-        // Keep this log print commented as it floods the logs,
-        // but could be helpful with future debugging.
-        // LOG(DEBUG) << m2.manufacturer() << " " << ss.str();
+        LOG(DEBUG) << m2.manufacturer() << " " << ss.str();
 
         if (teardown) {
             LOG(DEBUG) << "BSSID: " << config.bssid << " is flagged for teardown!";
@@ -1388,14 +1418,13 @@ bool ApAutoConfigurationTask::handle_wsc_m2_tlv(
             continue;
         }
 
-        LOG(INFO) << "bss_type: " << std::hex << int(config.bss_type);
-
         // BACKHAUL_STA bit is not expected to be set
         if (bSTA) {
             LOG(WARNING) << "Unexpected backhaul STA bit";
         }
 
         if (misconfigured_ssids.find(config.ssid) != misconfigured_ssids.end()) {
+            LOG(WARNING) << "Controller configured VLANs more than maximum supported";
             bss_errors.push_back({wfa_map::tlvProfile2ErrorCode::eReasonCode::
                                       NUMBER_OF_UNIQUE_VLAN_ID_EXCEEDS_MAXIMUM_SUPPORTED,
                                   config.bssid});
@@ -1418,32 +1447,45 @@ bool ApAutoConfigurationTask::handle_wsc_m2_tlv(
 
             LOG(WARNING) << "Controller configured Backhaul BSS for combined Profile1 and "
                          << "Profile2, but it is not supported!";
-            // bss_errors.push_back(
-            //     {wfa_map::tlvProfile2ErrorCode::eReasonCode::
-            //          TRAFFIC_SEPARATION_ON_COMBINED_PROFILE1_BACKHAUL_AND_PROFILE2_BACKHAUL_UNSUPPORTED,
-            //      config.bssid});
-
-            // // Multi-AP standard requires to tear down any misconfigured BSS.
-            // config.bss_type = WSC::eWscVendorExtSubelementBssType::TEARDOWN;
-
             /**
-             * We currently do not support bBSS with both profile 1/2 disallow
-             * flags set to false (Combined Profile bBSS mode).
+             * We currently do not support bBSS with both profile 1/2 disallow flags set to false
+             * (Combined Profile bBSS mode).
              * When we are configured in a way we don't support, we should tear down the BSS, and
              * send an error response on that BSS.
              * Currently R2 certified controllers (Mediatek/Marvel) have a bug (PPM-1389) that ends
              * up sending M2 with both profile 1/2 disallow flags set to false although we report 
              * combined_profile1_and_profile2 = 0 in ap_radio_advanced_capabilities_tlv.
-             * To deal with it, temporarily comment the lines above and allow the BSS to be
-             * configured successfully until PPM-1389 is resolved.
+             * To deal with it, we using
+             * TrafficSeparation::m_profile_x_disallow_override_unsupported_configuration integer
+             * originated in the beerocks_agent.conf to resolve the conflict with predefined
+             * value. PPM-1389.
              */
-            LOG(DEBUG) << "Currently ignore bad configuration";
+            if (TrafficSeparation::m_profile_x_disallow_override_unsupported_configuration == 0) {
+                LOG(WARNING) << "Sending error and Tearing down BSS that controller configured to "
+                             << config.ssid;
+                bss_errors.push_back(
+                    {wfa_map::tlvProfile2ErrorCode::eReasonCode::
+                         TRAFFIC_SEPARATION_ON_COMBINED_PROFILE1_BACKHAUL_AND_PROFILE2_BACKHAUL_UNSUPPORTED,
+                     config.bssid});
+
+                // Multi-AP standard requires to tear down any misconfigured BSS.
+                config.bss_type = WSC::eWscVendorExtSubelementBssType::TEARDOWN;
+                continue;
+            } else if (TrafficSeparation::m_profile_x_disallow_override_unsupported_configuration ==
+                       1) {
+                config.bss_type |= WSC::eWscVendorExtSubelementBssType::
+                    PROFILE1_BACKHAUL_STA_ASSOCIATION_DISALLOWED;
+            }
+            // TrafficSeparation::m_profile_x_disallow_override_unsupported_configuration == 2
+            else {
+                config.bss_type |= WSC::eWscVendorExtSubelementBssType::
+                    PROFILE2_BACKHAUL_STA_ASSOCIATION_DISALLOWED;
+            }
+            LOG(DEBUG)
+                << "Override unsupported 'profile disallow' configuration and disallow profile "
+                << TrafficSeparation::m_profile_x_disallow_override_unsupported_configuration;
         }
 
-        LOG(DEBUG) << m2.manufacturer() << " config data:" << std::endl
-                   << " ssid: " << config.ssid << ", bssid: " << config.bssid
-                   << ", authentication_type: " << std::hex << int(config.auth_type)
-                   << ", encryption_type: " << int(config.encr_type);
         configs.push_back(config);
     }
 
@@ -1604,6 +1646,18 @@ void ApAutoConfigurationTask::handle_vs_vaps_list_update_notification(
     auto &radio_conf_params = m_radios_conf_params[radio_iface];
 
     radio_conf_params.received_vaps_list_update = true;
+
+    radio_conf_params.num_of_bss_available =
+        std::count_if(radio->front.bssids.begin(), radio->front.bssids.end(),
+                      [](beerocks::AgentDB::sRadio::sFront::sBssid b) {
+                          return b.mac != net::network_utils::ZERO_MAC;
+                      });
+}
+
+void ApAutoConfigurationTask::handle_vs_apply_vlan_policy_request(
+    ieee1905_1::CmduMessageRx &cmdu_rx, int fd, std::shared_ptr<beerocks_header> beerocks_header)
+{
+    m_traffic_separation_configurator->apply_policy();
 }
 
 bool ApAutoConfigurationTask::ap_autoconfiguration_wsc_calculate_keys(
@@ -1675,7 +1729,7 @@ bool ApAutoConfigurationTask::ap_autoconfiguration_wsc_parse_encrypted_settings(
     int datalen = cipherlen + 16;
     uint8_t decrypted[datalen];
 
-    LOG(DEBUG) << "M2 Parse: received encrypted settings with length " << cipherlen;
+    // LOG(DEBUG) << "M2 Parse: received encrypted settings with length " << cipherlen;
 
     LOG(DEBUG) << "M2 Parse: aes decrypt";
     if (!mapf::encryption::aes_decrypt(keywrapkey, iv, ciphertext, cipherlen, decrypted, datalen)) {
@@ -1684,8 +1738,8 @@ bool ApAutoConfigurationTask::ap_autoconfiguration_wsc_parse_encrypted_settings(
     }
 
     LOG(DEBUG) << "M2 Parse: parse config_data, len = " << datalen;
-    LOG(DEBUG) << "decrypted config_data buffer: " << std::endl
-               << utils::dump_buffer(decrypted, datalen);
+    // LOG(DEBUG) << "decrypted config_data buffer: " << std::endl
+    //            << utils::dump_buffer(decrypted, datalen);
 
     // Parsing failure means that the config data is invalid,
     // in which case it is unclear what we should do.
@@ -1800,7 +1854,6 @@ bool ApAutoConfigurationTask::validate_reconfiguration(
                       << ", authentication_type: " << std::hex << int(config.auth_type)
                       << ", encryption_type: " << std::hex << int(config.encr_type)
                       << ", bss_type: " << std::hex << int(config.bss_type) << std::endl;
-        ;
     }
     config_prints << "--" << std::endl;
 
@@ -1859,19 +1912,26 @@ bool ApAutoConfigurationTask::validate_reconfiguration(
 
         // SSID
         if (bss.ssid != config.ssid) {
+            LOG(DEBUG) << "SSID needs reconfiguration: " << bss.ssid << " != " << config.ssid;
             return true;
         }
 
         // BSS Type
         if (bss.active && bool(config.bss_type & WSC::eWscVendorExtSubelementBssType::TEARDOWN)) {
+            LOG(DEBUG) << "BSS type needs reconfiguration: bss.active: " << bss.active
+                       << " bss_type: " << config.bss_type;
             return true;
         }
         if (bss.backhaul_bss &&
             !bool(config.bss_type & WSC::eWscVendorExtSubelementBssType::BACKHAUL_BSS)) {
+            LOG(DEBUG) << "BSS type needs reconfiguration: bss.backhaul_bss: " << bss.backhaul_bss
+                       << " bss_type: " << config.bss_type;
             return true;
         }
         if (bss.fronthaul_bss &&
             !bool(config.bss_type & WSC::eWscVendorExtSubelementBssType::FRONTHAUL_BSS)) {
+            LOG(DEBUG) << "BSS type needs reconfiguration: bss.fronthaul_bss: " << bss.fronthaul_bss
+                       << " bss_type: " << config.bss_type;
             return true;
         }
 

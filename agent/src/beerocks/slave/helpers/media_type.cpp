@@ -1,5 +1,6 @@
 #include "media_type.h"
 
+#include <bcl/beerocks_wifi_channel.h>
 #include <bcl/network/network_utils.h>
 
 #include "../agent_db.h"
@@ -22,6 +23,7 @@ namespace beerocks {
  * 7 IEEE 802.11af (whitespace)                          Not supported
  * 8 IEEE 802.11ax (2.4 GHz)     2.4 GHz    160 MHz      Not included in Table 6-12—Media type (intfType), WiFi6 is specified to use 0x0108 in R2
  * 8 IEEE 802.11ax (5 GHz)       5 GHz      160 MHz      Not included in Table 6-12—Media type (intfType), WiFi6 is specified to use 0x0108 in R2
+ * 8 IEEE 802.11ax (6 GHz)       6 GHz      160 MHz
  */
 static const std::vector<std::tuple<eFreqType, eWiFiBandwidth, ieee1905_1::eMediaType>>
     table_6_12_media_type_802_11{
@@ -31,14 +33,23 @@ static const std::vector<std::tuple<eFreqType, eWiFiBandwidth, ieee1905_1::eMedi
         std::make_tuple(eFreqType::FREQ_5G, eWiFiBandwidth::BANDWIDTH_20,
                         ieee1905_1::eMediaType::IEEE_802_11A_5_GHZ),
 
+        std::make_tuple(eFreqType::FREQ_6G, eWiFiBandwidth::BANDWIDTH_20,
+                        ieee1905_1::eMediaType::IEEE_802_11AX),
+
         std::make_tuple(eFreqType::FREQ_24G, eWiFiBandwidth::BANDWIDTH_40,
                         ieee1905_1::eMediaType::IEEE_802_11N_2_4_GHZ),
 
         std::make_tuple(eFreqType::FREQ_5G, eWiFiBandwidth::BANDWIDTH_40,
                         ieee1905_1::eMediaType::IEEE_802_11N_5_GHZ),
 
+        std::make_tuple(eFreqType::FREQ_6G, eWiFiBandwidth::BANDWIDTH_40,
+                        ieee1905_1::eMediaType::IEEE_802_11AX),
+
         std::make_tuple(eFreqType::FREQ_5G, eWiFiBandwidth::BANDWIDTH_80,
                         ieee1905_1::eMediaType::IEEE_802_11AC_5_GHZ),
+
+        std::make_tuple(eFreqType::FREQ_6G, eWiFiBandwidth::BANDWIDTH_80,
+                        ieee1905_1::eMediaType::IEEE_802_11AX),
 
         std::make_tuple(eFreqType::FREQ_24G, eWiFiBandwidth::BANDWIDTH_160,
                         ieee1905_1::eMediaType::IEEE_802_11AX),
@@ -46,6 +57,8 @@ static const std::vector<std::tuple<eFreqType, eWiFiBandwidth, ieee1905_1::eMedi
         std::make_tuple(eFreqType::FREQ_5G, eWiFiBandwidth::BANDWIDTH_160,
                         ieee1905_1::eMediaType::IEEE_802_11AX),
 
+        std::make_tuple(eFreqType::FREQ_6G, eWiFiBandwidth::BANDWIDTH_160,
+                        ieee1905_1::eMediaType::IEEE_802_11AX),
     };
 
 ieee1905_1::eMediaType MediaType::get_802_11_media_type(eFreqType frequency_band,
@@ -84,8 +97,9 @@ bool MediaType::get_media_type(const std::string &interface_name,
 
         auto radio = db->radio(interface_name);
         if (radio) {
-            media_type = get_802_11_media_type(radio->freq_type, radio->max_supported_bw);
-            result     = true;
+            media_type =
+                get_802_11_media_type(radio->wifi_channel.get_freq_type(), radio->max_supported_bw);
+            result = true;
         }
 
     } else if (ieee1905_1::eMediaTypeGroup::IEEE_1901 == media_type_group) {

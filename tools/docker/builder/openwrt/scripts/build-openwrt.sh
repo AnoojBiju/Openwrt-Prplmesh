@@ -27,11 +27,7 @@ if [ "$TARGET_SYSTEM" = "intel_mips" ]; then
     sed -i '/iw-full$/d' "profiles/debug.yml"
 fi
 
-if [ -n "$MMX_ENABLE" ] ; then
-    args+=("mmx")
-else
-    args+=("webui")
-fi
+args+=("webui")
 
 # feed-prpl is in the prpl profile:
 args+=("prpl")

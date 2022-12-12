@@ -411,6 +411,27 @@ struct sStaConnectionFail {
     sMacAddr bssid;   /**< The BSSID of the AP's interface */
     sMacAddr sta_mac; /**< The MAC address of the station */
 };
+
+/**
+ * @brief Station keys information.
+ *
+ * This structure contains the different parameters related to station
+ * keys.
+ */
+struct sKeyInfo {
+    uint8_t key_idx;
+    sMacAddr mac;
+    std::vector<uint8_t> key;
+    std::vector<uint8_t> key_seq;
+    uint32_t key_cipher;
+};
+
+/**
+ * @brief Packet number (key sequences) length. See also their
+ * definitions in "linux/ieee80211.h".
+ */
+enum ePacketNumberLength { CCMP = 6, CCMP_256 = 6, CMAC = 6, GMAC = 6, GCMP = 6 };
+
 } // namespace bwl
 
 #endif // _BWL_BASE_WLAN_HAL_TYPES_H_

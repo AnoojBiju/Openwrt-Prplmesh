@@ -21,6 +21,7 @@ namespace bwl {
 struct SScanResult {
     sMacAddr bssid;
     uint8_t channel;
+    beerocks::eFreqType freq_type;
     int8_t rssi;
 };
 

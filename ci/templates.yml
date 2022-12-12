@@ -60,17 +60,6 @@
   - when: always
     allow_failure: false
 
-.build-for-openwrt-mmx:
-  extends: .build-for-openwrt
-  script:
-    - mkdir -p "build/$TARGET_DEVICE"
-    - tools/docker/builder/openwrt/build.sh --verbose -d "$TARGET_DEVICE" -t "prplmesh-builder-$TARGET_DEVICE:$CI_COMMIT_SHORT_SHA-$CI_PIPELINE_ID" --mmx 2>&1
-  rules:
-  - if: '$CI_PARENT_PIPELINE_SOURCE == "schedule"'
-  - when: manual
-    allow_failure: true
-
-
 .build-for-rdkb:
   stage: build
   script:

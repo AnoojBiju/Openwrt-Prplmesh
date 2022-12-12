@@ -8,6 +8,7 @@
 
 #include "cac_status_database.h"
 #include "cac_capabilities_database.h"
+#include <bcl/beerocks_utils.h>
 
 namespace beerocks {
 
@@ -45,6 +46,15 @@ bool CacStatusDatabase::update_cac_status_db(const AgentDB::sRadio *radio)
         return false;
     }
 
+    auto freq_type = radio->wifi_channel.get_freq_type();
+    if (radio->wifi_channel.is_empty()) {
+        LOG(WARNING) << "wifi channel is empty";
+        freq_type = beerocks::FREQ_5G;
+    } else {
+        LOG(WARNING) << "freq_type: "
+                     << beerocks::utils::convert_frequency_type_to_string(freq_type);
+    }
+
     CacAvailableChannels available_channels;
     CacNonOccupancyChannels non_occupancy_channels;
     CacActiveChannels active_channels;
@@ -57,7 +67,7 @@ bool CacStatusDatabase::update_cac_status_db(const AgentDB::sRadio *radio)
         switch (channel_info.dfs_state) {
         case beerocks_message::eDfsState::AVAILABLE:
             for (auto &bw_info : channel_info.supported_bw_list) {
-                beerocks::message::sWifiChannel wifi_ch(channel, bw_info.bandwidth);
+                beerocks::WifiChannel wifi_ch(channel, freq_type, bw_info.bandwidth);
                 cac_status.operating_class =
                     son::wireless_utils::get_operating_class_by_channel(wifi_ch);
                 if (!cac_status.operating_class) {
@@ -73,7 +83,7 @@ bool CacStatusDatabase::update_cac_status_db(const AgentDB::sRadio *radio)
             break;
         case beerocks_message::eDfsState::UNAVAILABLE:
             for (auto &bw_info : channel_info.supported_bw_list) {
-                beerocks::message::sWifiChannel wifi_ch(channel, bw_info.bandwidth);
+                beerocks::WifiChannel wifi_ch(channel, freq_type, bw_info.bandwidth);
                 cac_status.operating_class =
                     son::wireless_utils::get_operating_class_by_channel(wifi_ch);
                 if (!cac_status.operating_class) {
@@ -89,7 +99,7 @@ bool CacStatusDatabase::update_cac_status_db(const AgentDB::sRadio *radio)
             break;
         case beerocks_message::eDfsState::USABLE:
             for (auto &bw_info : channel_info.supported_bw_list) {
-                beerocks::message::sWifiChannel wifi_ch(channel, bw_info.bandwidth);
+                beerocks::WifiChannel wifi_ch(channel, freq_type, bw_info.bandwidth);
                 cac_status.operating_class =
                     son::wireless_utils::get_operating_class_by_channel(wifi_ch);
                 if (!cac_status.operating_class) {
@@ -212,6 +222,15 @@ sCacCompletionStatus CacStatusDatabase::get_completion_status(const AgentDB::sRa
         return ret;
     }
 
+    auto freq_type = radio->wifi_channel.get_freq_type();
+    if (radio->wifi_channel.is_empty()) {
+        LOG(WARNING) << "wifi channel is empty";
+        freq_type = beerocks::FREQ_5G;
+    } else {
+        LOG(WARNING) << "freq_type: "
+                     << beerocks::utils::convert_frequency_type_to_string(freq_type);
+    }
+
     // TODO: Below condition should not be reached (PPM-1833).
     if (!radio->last_switch_channel_request) {
         LOG(WARNING) << "No switch channel request to relate to, thus completion status is empty"
@@ -228,18 +247,19 @@ sCacCompletionStatus CacStatusDatabase::get_completion_status(const AgentDB::sRa
     }
 
     // main operating class and channel
-    message::sWifiChannel wifi_ch(main_channel, radio->last_switch_channel_request->bandwidth);
+    beerocks::WifiChannel wifi_ch(main_channel, freq_type,
+                                  radio->last_switch_channel_request->bandwidth);
     ret.channel         = main_channel;
     ret.operating_class = son::wireless_utils::get_operating_class_by_channel(wifi_ch);
 
     // fill the detected operating class and channels.
     if (channel_info->second.dfs_state == beerocks_message::eDfsState::UNAVAILABLE) {
         ret.completion_status     = sCacCompletionStatus::eCacCompletionStatus::RADAR_DETECTED;
-        auto overlapping_channels = son::wireless_utils::get_overlapping_channels(
+        auto overlapping_channels = son::wireless_utils::get_overlapping_5g_channels(
             radio->last_switch_channel_request->channel);
         // TODO: Add missing values. See PPM-1089.
         for (auto &overlap_ch : overlapping_channels) {
-            message::sWifiChannel overlap_wifi_ch(overlap_ch.first, overlap_ch.second);
+            beerocks::WifiChannel overlap_wifi_ch(overlap_ch.first, freq_type, overlap_ch.second);
             ret.overlapping_channels.emplace_back(
                 son::wireless_utils::get_operating_class_by_channel(overlap_wifi_ch),
                 overlap_ch.first);

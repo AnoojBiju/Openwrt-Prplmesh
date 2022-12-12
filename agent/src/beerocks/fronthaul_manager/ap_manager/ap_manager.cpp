@@ -9,6 +9,8 @@
 #include "ap_manager.h"
 #include "tlvf/wfa_map/tlvClientInfo.h"
 
+#include <bwl/base_wlan_hal_types.h>
+
 #include <bcl/beerocks_string_utils.h>
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
@@ -23,6 +25,7 @@
 #include <tlvf/wfa_map/tlv1905EncapDpp.h>
 #include <tlvf/wfa_map/tlvBssid.h>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
+#include <tlvf/wfa_map/tlvClientCapabilityReport.h>
 #include <tlvf/wfa_map/tlvDppCceIndication.h>
 #include <tlvf/wfa_map/tlvDppChirpValue.h>
 #include <tlvf/wfa_map/tlvProfile2ReasonCode.h>
@@ -34,6 +37,7 @@
 #include <tlvf/wfa_map/tlvVirtualBssCreation.h>
 #include <tlvf/wfa_map/tlvVirtualBssDestruction.h>
 
+#include <iterator>
 #include <numeric>
 
 //////////////////////////////////////////////////////////////////////////////
@@ -489,53 +493,15 @@ bool ApManager::ap_manager_fsm(bool &continue_processing)
         if (m_ap_hal_ext_events.empty()) {
             ext_event_fd_max = 0;
         } else {
-            beerocks::EventLoop::EventHandlers ext_events_handlers{
-                .name = "ap_hal_ext_events",
-                .on_read =
-                    [&](int fd, EventLoop &loop) {
-                        if (!ap_wlan_hal->process_ext_events(fd)) {
-                            LOG(ERROR) << "process_ext_events(" << fd << ") failed!";
-                            return false;
-                        }
-                        return true;
-                    },
-                .on_write = nullptr,
-                .on_disconnect =
-                    [&](int fd, EventLoop &loop) {
-                        LOG(ERROR) << "ap_hal_ext_event disconnected! on fd " << fd;
-                        auto it =
-                            std::find(m_ap_hal_ext_events.begin(), m_ap_hal_ext_events.end(), fd);
-                        if (it != m_ap_hal_ext_events.end()) {
-                            *it = beerocks::net::FileDescriptor::invalid_descriptor;
-                        }
-                        return false;
-                    },
-                .on_error =
-                    [&](int fd, EventLoop &loop) {
-                        LOG(ERROR) << "ap_hal_ext_events error! on fd " << fd;
-#ifdef USE_PRPLMESH_WHM
-                        // amx signal event loop on_error should return true
-                        return true;
-#endif //USE_PRPLMESH_WHM
-                        auto it =
-                            std::find(m_ap_hal_ext_events.begin(), m_ap_hal_ext_events.end(), fd);
-                        if (it != m_ap_hal_ext_events.end()) {
-                            *it = beerocks::net::FileDescriptor::invalid_descriptor;
-                        }
-                        return false;
-                    },
-            };
             for (auto &ext_event_fd : m_ap_hal_ext_events) {
-                if (ext_event_fd > 0) {
-                    if (!m_event_loop->register_handlers(ext_event_fd, ext_events_handlers)) {
-                        LOG(ERROR)
-                            << "Unable to register handlers for external event fd " << ext_event_fd;
-                        return false;
-                    } else if (ext_event_fd < 0) {
-                        ext_event_fd = beerocks::net::FileDescriptor::invalid_descriptor;
-                    }
-                    LOG(DEBUG) << "External events queue with fd = " << ext_event_fd;
+                if (ext_event_fd < 0) {
+                    ext_event_fd = beerocks::net::FileDescriptor::invalid_descriptor;
+                    continue;
                 }
+                if (!register_ext_events_handlers(ext_event_fd)) {
+                    return false;
+                }
+                LOG(DEBUG) << "External events queue with fd = " << ext_event_fd;
                 ext_event_fd_max = std::max(ext_event_fd_max, ext_event_fd);
             }
         }
@@ -684,10 +650,6 @@ void ApManager::handle_cmdu_ieee1905_1_message(ieee1905_1::CmduMessageRx &cmdu_r
         handle_virtual_bss_request(cmdu_rx);
         break;
     }
-    case ieee1905_1::eMessageType::CLIENT_SECURITY_CONTEXT_REQUEST_MESSAGE: {
-        handle_vbss_security_request(cmdu_rx);
-        break;
-    }
     default:
         LOG(ERROR) << "Unknown CMDU message type: " << std::hex << int(cmdu_message_type);
     }
@@ -724,12 +686,15 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     LOG(DEBUG) << "Received Virtual BSS Request";
     auto virtual_bss_creation_tlv = cmdu_rx.getClass<wfa_map::VirtualBssCreation>();
+
     if (virtual_bss_creation_tlv) {
+
         // Use the BSSID as the ifname. Since Linux interface names are
         // limited to 15 characters, remove the colons.
         std::string ifname = tlvf::mac_to_string(virtual_bss_creation_tlv->bssid());
         ifname.erase(std::remove(ifname.begin(), ifname.end(), ':'), ifname.end());
         std::string bridge = "br-lan";
+
         // TODO: PPM-2348 add the bridge name to BPL
 
         // TODO: the VirtualBSSCreation TLV doesn't specify authentication and encryption types
@@ -740,19 +705,106 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
         bss_conf.network_key                       = virtual_bss_creation_tlv->pass_str();
         bss_conf.bssid                             = virtual_bss_creation_tlv->bssid();
 
-        if (!ap_wlan_hal->add_bss(ifname, bss_conf, bridge, true)) {
+        if (!add_bss(ifname, bss_conf, bridge, true)) {
             LOG(ERROR) << "Failed to add a new BSS!";
             return;
         }
-        // TODO: PPM-2292: add the station and its keys
+
+        if (virtual_bss_creation_tlv->client_assoc()) {
+            LOG(DEBUG) << "The client was already associated, adding a new station and its keys.";
+            auto client_capability_report = cmdu_rx.getClass<wfa_map::tlvClientCapabilityReport>();
+            if (!client_capability_report) {
+                LOG(ERROR) << "Missing client capability report for an associated client!";
+                return;
+            }
+            auto association_request = assoc_frame::AssocReqFrame::parse(
+                client_capability_report->association_frame(),
+                client_capability_report->association_frame_length());
+            if (!association_request) {
+                LOG(ERROR) << "Failed to parse the association frame!";
+                return;
+            }
+
+            if (!ap_wlan_hal->add_station(ifname, virtual_bss_creation_tlv->client_mac(),
+                                          *association_request)) {
+                LOG(ERROR) << "Failed to add the station!";
+                return;
+            }
+
+            // To set the TX PN, we must provide the RX PN first,
+            // followed by the TX PN. We don't know the RX PN that was
+            // used on the source agent, so we set it to 0. As soon as
+            // the first frame from the station is received, the RX PN
+            // will be set back to the value that was used on the
+            // source agent.
+
+            // TODO: PPM-2368: the Virtual Creation Request TLV does
+            // not currently contain the authentication and encryption
+            // type. For now, assume CCMP for the encryption.
+
+            // Add the pairwise key
+            bwl::sKeyInfo pairwise_key = {
+                .key_idx = 0,
+                .mac     = virtual_bss_creation_tlv->client_mac(),
+                .key     = {virtual_bss_creation_tlv->ptk(),
+                        virtual_bss_creation_tlv->ptk() + virtual_bss_creation_tlv->key_length()},
+                .key_seq = {},
+
+                // TODO: PPM-2368: We need to know the pairwise cipher. For now, use CCMP
+                .key_cipher = 0x000FAC04};
+
+            auto &key_seq   = pairwise_key.key_seq;
+            int key_seq_len = bwl::ePacketNumberLength::CCMP;
+            // Zero for the RX PN:
+            key_seq.insert(key_seq.begin(), key_seq_len, 0);
+            // The actual TX PN:
+            auto tx_pn_ptr =
+                reinterpret_cast<uint8_t *>(&virtual_bss_creation_tlv->tx_packet_num());
+            key_seq.insert(key_seq.end(), tx_pn_ptr, tx_pn_ptr + key_seq_len);
+
+            if (!ap_wlan_hal->add_key(ifname, pairwise_key)) {
+                LOG(ERROR) << "Failed to add the pairwise key!";
+                return;
+            }
+
+            // Add the group key
+            bwl::sKeyInfo group_key = {
+                .key_idx = 1,
+                .mac     = beerocks::net::network_utils::ZERO_MAC,
+                .key     = {virtual_bss_creation_tlv->gtk(),
+                        virtual_bss_creation_tlv->gtk() + virtual_bss_creation_tlv->key_length()},
+                .key_seq = {},
+
+                // TODO: PPM-2368: We need to know the groupwise cipher. For now, use CCMP
+                .key_cipher = 0x000FAC04};
+
+            // Same for the group key as for the pairwise key:
+            auto &group_key_seq   = group_key.key_seq;
+            int group_key_seq_len = bwl::ePacketNumberLength::CCMP;
+            // Zero for the RX PN:
+            group_key_seq.insert(group_key_seq.begin(), group_key_seq_len, 0);
+            // The actual TX PN:
+            auto group_tx_pn_ptr =
+                reinterpret_cast<uint8_t *>(&virtual_bss_creation_tlv->group_tx_packet_num());
+            group_key_seq.insert(group_key_seq.end(), group_tx_pn_ptr,
+                                 group_tx_pn_ptr + group_key_seq_len);
+
+            if (!ap_wlan_hal->add_key(ifname, group_key)) {
+                LOG(ERROR) << "Failed to add the group key!";
+                return;
+            }
+        }
+
         // TODO: PPM-2349: add support for the client capabilities
+
         return;
     }
 
     auto virtual_bss_destruction_tlv = cmdu_rx.getClass<wfa_map::VirtualBssDestruction>();
     if (virtual_bss_destruction_tlv) {
+
         // Use the same ifname as when we added the BSS:
-        std::string ifname = tlvf::mac_to_string(virtual_bss_creation_tlv->bssid());
+        std::string ifname = tlvf::mac_to_string(virtual_bss_destruction_tlv->bssid());
         ifname.erase(std::remove(ifname.begin(), ifname.end(), ':'), ifname.end());
 
         if (!ap_wlan_hal->remove_bss(ifname)) {
@@ -760,7 +812,7 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
             return;
         }
 
-        // TODO: PPM-2350: add support for diassociating the client
+        // TODO: PPM-2350: add support for disassociating the client
     }
 
     LOG(ERROR) << "No virtual BSS creation nor destruction TLV found in Virtual BSS request!";
@@ -1587,17 +1639,8 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
         break;
     }
     case beerocks_message::ACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_REQUEST: {
-        auto notification = message_com::create_vs_message<
-            beerocks_message::cACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION>(cmdu_tx);
-        if (notification == nullptr) {
-            LOG(ERROR) << "Failed building message!";
-            return;
-        }
-
-        copy_vaps_info(ap_wlan_hal, notification->params().vaps);
-        LOG(DEBUG) << "Sending Vap List update to controller";
-        if (!send_cmdu(cmdu_tx)) {
-            LOG(ERROR) << "Failed sending cmdu!";
+        if (!handle_aps_update_list()) {
+            LOG(ERROR) << "Failed notifying vaps list update!";
             return;
         }
 
@@ -1728,6 +1771,8 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
         handle_hostapd_attached();
     } break;
 
+    case Event::Interface_Connected_OK:
+    case Event::Interface_Reconnected_OK:
     case Event::AP_Enabled: {
         if (!data) {
             LOG(ERROR) << "AP_Enabled without data!";
@@ -1737,6 +1782,10 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
         auto msg = static_cast<bwl::sHOSTAP_ENABLED_NOTIFICATION *>(data);
         handle_ap_enabled(msg->vap_id);
 
+    } break;
+
+    case Event::APS_update_list: {
+        handle_aps_update_list();
     } break;
 
     // ACS/CSA Completed
@@ -2102,6 +2151,7 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
     } break;
 
     // AP/Interface Disabled
+    case Event::Interface_Disconnected:
     case Event::AP_Disabled: {
         if (!data) {
             LOG(ERROR) << "AP_Disabled without data!";
@@ -2471,7 +2521,9 @@ void ApManager::handle_hostapd_attached()
     LOG(INFO) << " current channel = " << ap_wlan_hal->get_radio_info().channel;
     LOG(INFO) << " vht_center_frequency = " << ap_wlan_hal->get_radio_info().vht_center_freq;
     LOG(INFO) << " current bw = " << ap_wlan_hal->get_radio_info().bandwidth;
-    LOG(INFO) << " frequency_band = " << ap_wlan_hal->get_radio_info().frequency_band;
+    LOG(INFO) << " frequency_band = "
+              << beerocks::utils::convert_frequency_type_to_string(
+                     ap_wlan_hal->get_radio_info().frequency_band);
     LOG(INFO) << " max_bandwidth = " << ap_wlan_hal->get_radio_info().max_bandwidth;
     LOG(INFO) << " ht_supported = " << ap_wlan_hal->get_radio_info().ht_supported;
     LOG(INFO) << " ht_capability = " << std::hex << ap_wlan_hal->get_radio_info().ht_capability;
@@ -2500,6 +2552,24 @@ void ApManager::send_heartbeat()
     }
 
     send_cmdu(cmdu_tx);
+}
+
+bool ApManager::handle_aps_update_list()
+{
+    auto notification = message_com::create_vs_message<
+        beerocks_message::cACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION>(cmdu_tx);
+    if (notification == nullptr) {
+        LOG(ERROR) << "Failed building message!";
+        return false;
+    }
+
+    copy_vaps_info(ap_wlan_hal, notification->params().vaps);
+    LOG(DEBUG) << "Sending Vap List update to controller";
+    if (!send_cmdu(cmdu_tx)) {
+        LOG(ERROR) << "Failed sending cmdu!";
+        return false;
+    }
+    return true;
 }
 
 bool ApManager::handle_ap_enabled(int vap_id)
@@ -2627,19 +2697,62 @@ bool ApManager::zwdfs_ap() const
     return m_ap_support_zwdfs;
 }
 
-void ApManager::handle_vbss_security_request(ieee1905_1::CmduMessageRx &cmdu_rx)
+bool ApManager::add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
+                        std::string &bridge, bool vbss)
 {
-    auto client_info_tlv = cmdu_rx.getClass<wfa_map::tlvClientInfo>();
-    if(client_info_tlv) {
-        son::wireless_utils::sClientSecurityContext clnt_sec = {};
-        clnt_sec.bssid                                       = client_info_tlv->bssid();
-        clnt_sec.client_mac                                  = client_info_tlv->client_mac();
-        // Set length of TK and TxPN now? Holding till function fully implemented
-        if (!ap_wlan_hal->get_security_context(clnt_sec)) {
-            LOG(ERROR) << "Failed to get the security context";
-            return;
-        }
+    if (!ap_wlan_hal->add_bss(ifname, bss_conf, bridge, true)) {
+        LOG(ERROR) << "Failed to add a new BSS!";
+        return false;
     }
-    return;
+
+    if (!register_ext_events_handlers(ap_wlan_hal->get_ext_events_fds().back())) {
+        LOG(ERROR) << "Failed to register ext_events handlers for the new BSS!";
+        return false;
+    }
+    return true;
 }
 
+bool ApManager::register_ext_events_handlers(int fd)
+{
+    beerocks::EventLoop::EventHandlers ext_events_handlers{
+        .name = "ap_hal_ext_events",
+        .on_read =
+            [&](int fd, EventLoop &loop) {
+                if (!ap_wlan_hal->process_ext_events(fd)) {
+                    LOG(ERROR) << "process_ext_events(" << fd << ") failed!";
+                    return false;
+                }
+                return true;
+            },
+        .on_write = nullptr,
+        .on_disconnect =
+            [&](int fd, EventLoop &loop) {
+                LOG(ERROR) << "ap_hal_ext_event disconnected! on fd " << fd;
+                auto it = std::find(m_ap_hal_ext_events.begin(), m_ap_hal_ext_events.end(), fd);
+                if (it != m_ap_hal_ext_events.end()) {
+                    *it = beerocks::net::FileDescriptor::invalid_descriptor;
+                }
+                return false;
+            },
+        .on_error =
+            [&](int fd, EventLoop &loop) {
+                LOG(ERROR) << "ap_hal_ext_events error! on fd " << fd;
+#ifdef USE_PRPLMESH_WHM
+                // amx signal event loop on_error should return true
+                return true;
+#endif //USE_PRPLMESH_WHM
+                auto it = std::find(m_ap_hal_ext_events.begin(), m_ap_hal_ext_events.end(), fd);
+                if (it != m_ap_hal_ext_events.end()) {
+                    *it = beerocks::net::FileDescriptor::invalid_descriptor;
+                }
+                return false;
+            },
+    };
+
+    if (!m_event_loop->register_handlers(fd, ext_events_handlers)) {
+        LOG(ERROR) << "Unable to register handlers for external event fd " << fd;
+        return false;
+    }
+
+    return true;
+}

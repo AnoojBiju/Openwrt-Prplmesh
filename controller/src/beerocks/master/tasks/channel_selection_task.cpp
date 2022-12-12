@@ -13,6 +13,7 @@
 #include "optimal_path_task.h"
 
 #include <bcl/beerocks_utils.h>
+#include <bcl/beerocks_wifi_channel.h>
 #include <bcl/network/network_utils.h>
 #include <bcl/son/son_wireless_utils.h>
 #include <easylogging++.h>
@@ -333,18 +334,22 @@ void channel_selection_task::work()
         break;
     }
     case eState::ON_SLAVE_JOINED: {
-
-        auto freq                 = wireless_utils::channel_to_freq(slave_joined_event->channel);
         auto vht_center_frequency = slave_joined_event->cs_params.vht_center_frequency;
+        auto freq                 = wireless_utils::channel_to_freq(
+            slave_joined_event->channel,
+            son::wireless_utils::which_freq_type(vht_center_frequency));
+
         auto channel_ext_above_primary = slave_joined_event->cs_params.channel_ext_above_primary;
 
         auto channel_ext_above_secondary = (freq < vht_center_frequency) ? true : false;
-        if (!database.set_node_channel_bw(
-                radio_mac, slave_joined_event->channel,
-                (beerocks::eWiFiBandwidth)slave_joined_event->cs_params.bandwidth,
-                bool(channel_ext_above_secondary), channel_ext_above_primary,
-                vht_center_frequency)) {
-            TASK_LOG(ERROR) << "set node hostap bw failed, mac=" << radio_mac;
+
+        beerocks::WifiChannel wifi_channel = beerocks::WifiChannel(
+            slave_joined_event->channel, vht_center_frequency,
+            static_cast<beerocks::eWiFiBandwidth>(slave_joined_event->cs_params.bandwidth),
+            channel_ext_above_secondary);
+
+        if (!database.set_node_wifi_channel(radio_mac, wifi_channel)) {
+            TASK_LOG(ERROR) << "set node wifi channel failed, mac=" << radio_mac;
         } else {
             // update bml listeners
             bml_task::connection_change_event new_event;
@@ -355,8 +360,7 @@ void channel_selection_task::work()
         TASK_LOG(DEBUG) << "vht_center_frequency = " << uint16_t(vht_center_frequency);
 
         TASK_LOG(DEBUG) << "hostap_mac = " << slave_joined_event->hostap_mac
-                        << " channel_ext_above_primary = "
-                        << int(slave_joined_event->cs_params.channel_ext_above_primary);
+                        << " channel_ext_above_primary = " << int(channel_ext_above_primary);
         FSM_MOVE_STATE(ON_HOSTAP_CHANNEL_REQUEST);
         break;
     }
@@ -652,18 +656,13 @@ void channel_selection_task::work()
                        << " vht_center_frequency = "
                        << uint16_t(csa_event->cs_params.vht_center_frequency);
 
-        auto freq                 = wireless_utils::channel_to_freq(csa_event->cs_params.channel);
-        auto vht_center_frequency = csa_event->cs_params.vht_center_frequency;
+        beerocks::WifiChannel wifi_channel = beerocks::WifiChannel(
+            csa_event->cs_params.channel, csa_event->cs_params.vht_center_frequency,
+            static_cast<beerocks::eWiFiBandwidth>(csa_event->cs_params.bandwidth),
+            csa_event->cs_params.channel_ext_above_primary > 0 ? true : false);
 
-        auto channel_ext_above_secondary = (freq < vht_center_frequency) ? true : false;
-        auto channel_ext_above_primary =
-            (csa_event->cs_params.channel_ext_above_primary > 0) ? true : false;
-        if (!database.set_node_channel_bw(radio_mac, csa_event->cs_params.channel,
-                                          (beerocks::eWiFiBandwidth)csa_event->cs_params.bandwidth,
-                                          bool(channel_ext_above_secondary),
-                                          bool(channel_ext_above_primary),
-                                          csa_event->cs_params.vht_center_frequency)) {
-            TASK_LOG(ERROR) << "set node channel bw failed, mac=" << radio_mac;
+        if (!database.set_node_wifi_channel(radio_mac, wifi_channel)) {
+            TASK_LOG(ERROR) << "set node wifi channel failed, mac=" << radio_mac;
         }
 
         // update bml listeners
@@ -709,7 +708,8 @@ void channel_selection_task::work()
         }
 
         if (csa_event) {
-            if (!is_2G_channel(csa_event->cs_params.channel)) {
+            if (son::wireless_utils::which_freq_type(csa_event->cs_params.vht_center_frequency) !=
+                beerocks::FREQ_24G) {
                 TASK_LOG(DEBUG) << "radio_mac - " << radio_mac << " csa_event != null";
                 if (csa_event->cs_params.is_dfs_channel) {
                     wait_for_cac_completed(csa_event->cs_params.channel,
@@ -803,20 +803,28 @@ void channel_selection_task::work()
                        << " channel = " << int(csa_event->cs_params.channel)
                        << " channel_ext_above_primary = "
                        << int(csa_event->cs_params.channel_ext_above_primary);
-        auto freq = wireless_utils::channel_to_freq(csa_event->cs_params.channel);
-        auto prev_vht_center_frequency = database.get_hostap_vht_center_frequency(radio_mac);
-        auto prev_channel              = database.get_node_channel(tlvf::mac_to_string(radio_mac));
-        auto prev_bandwidth            = database.get_node_bw(tlvf::mac_to_string(radio_mac));
+        auto freq = wireless_utils::channel_to_freq(
+            csa_event->cs_params.channel,
+            wireless_utils::which_freq_type(csa_event->cs_params.vht_center_frequency));
+
+        auto prev_wifi_channel = database.get_node_wifi_channel(tlvf::mac_to_string(radio_mac));
+        if (prev_wifi_channel.is_empty()) {
+            LOG(WARNING) << "empty wifi channel of " << tlvf::mac_to_string(radio_mac) << " in DB";
+        }
+
+        auto prev_vht_center_frequency = prev_wifi_channel.get_center_frequency();
+        auto prev_channel              = prev_wifi_channel.get_channel();
+        auto prev_bandwidth            = prev_wifi_channel.get_bandwidth();
         auto channel_ext_above_secondary =
             (freq < csa_event->cs_params.vht_center_frequency) ? true : false;
-        auto channel_ext_above_primary =
-            (csa_event->cs_params.channel_ext_above_primary > 0) ? true : false;
-        if (!database.set_node_channel_bw(radio_mac, csa_event->cs_params.channel,
-                                          beerocks::eWiFiBandwidth(csa_event->cs_params.bandwidth),
-                                          bool(channel_ext_above_secondary),
-                                          bool(channel_ext_above_primary),
-                                          csa_event->cs_params.vht_center_frequency)) {
-            TASK_LOG(ERROR) << "set node channel bw failed, mac=" << radio_mac;
+
+        beerocks::WifiChannel wifi_channel = beerocks::WifiChannel(
+            csa_event->cs_params.channel, csa_event->cs_params.vht_center_frequency,
+            static_cast<beerocks::eWiFiBandwidth>(csa_event->cs_params.bandwidth),
+            channel_ext_above_secondary);
+
+        if (!database.set_node_wifi_channel(radio_mac, wifi_channel)) {
+            TASK_LOG(ERROR) << "set node wifi channel failed, mac=" << radio_mac;
         }
 
         // update bml listeners
@@ -857,6 +865,14 @@ void channel_selection_task::work()
                 prev_bandwidth, prev_vht_center_frequency,
                 beerocks::eWiFiBandwidth(csa_event->cs_params.bandwidth),
                 csa_event->cs_params.vht_center_frequency);
+
+            auto freq_type =
+                son::wireless_utils::which_freq_type(csa_event->cs_params.vht_center_frequency);
+            if (freq_type != eFreqType::FREQ_5G) {
+                LOG(ERROR) << "the freq type "
+                           << beerocks::utils::convert_frequency_type_to_string(freq_type)
+                           << " should be 5G";
+            }
             database.set_supported_channel_radar_affected(radio_mac, vec_channels, true);
             FSM_MOVE_STATE(ACTIVATE_SLAVE);
             break;
@@ -933,7 +949,11 @@ void channel_selection_task::work()
         auto hostap_mac_2g = std::find_if(
             std::begin(hostaps_sibling), std::end(hostaps_sibling),
             [&](std::string hostap_sibling) {
-                return (is_2G_channel(database.get_node_channel(hostap_sibling)) &&
+                auto hostap_sibling_wifi_channel = database.get_node_wifi_channel(hostap_sibling);
+                if (hostap_sibling_wifi_channel.is_empty()) {
+                    LOG(WARNING) << "empty wifi channel of " << hostap_sibling << " in DB";
+                }
+                return (hostap_sibling_wifi_channel.get_freq_type() == eFreqType::FREQ_24G &&
                         database.is_hostap_active(tlvf::mac_from_string(hostap_sibling)));
             });
         if (hostap_mac_2g == std::end(hostaps_sibling)) {
@@ -1139,7 +1159,11 @@ bool channel_selection_task::is_5G_channel(int channel)
 
 void channel_selection_task::get_hostap_params()
 {
-    hostap_params.channel = database.get_node_channel(tlvf::mac_to_string(radio_mac));
+    auto hostap_wifi_channel = database.get_node_wifi_channel(tlvf::mac_to_string(radio_mac));
+    if (hostap_wifi_channel.is_empty()) {
+        LOG(WARNING) << "empty wifi channel of " << tlvf::mac_to_string(radio_mac) << " in DB";
+    }
+    hostap_params.channel = hostap_wifi_channel.get_channel();
     hostap_params.is_2G   = is_2G_channel(hostap_params.channel);
     TASK_LOG(DEBUG) << "get_hostap_params()  for = " << radio_mac;
     //use slave_joined_event as backhaul may have not connected yet
@@ -1153,9 +1177,14 @@ void channel_selection_task::get_hostap_params()
                         << " slave_joined_event->low_pass_filter_on = "
                         << int(slave_joined_event->low_pass_filter_on);
     } else {
+        auto backhaul_wifi_channel = database.get_node_wifi_channel(hostap_params.backhaul_mac);
+        if (backhaul_wifi_channel.is_empty()) {
+            LOG(ERROR) << "empty wifi channel of " << hostap_params.backhaul_mac << " in DB";
+            return;
+        }
         auto backhaul_mac = database.get_node_parent_backhaul(tlvf::mac_to_string(radio_mac));
         hostap_params.backhaul_is_wireless = backhaul_mac.empty();
-        hostap_params.backhaul_channel     = database.get_node_channel(hostap_params.backhaul_mac);
+        hostap_params.backhaul_channel     = backhaul_wifi_channel.get_channel();
         //TODO add low_pass_filter_on to the DB, only needed for DFS
     }
     hostap_params.backhaul_is_2G = is_2G_channel(hostap_params.backhaul_channel);
@@ -1182,13 +1211,13 @@ void channel_selection_task::ccl_fill_supported_channels()
     /*1. Fill active channel list with the suppoted channels and
         2. Initialize all the supported channels as available in active list to start with*/
     for (auto hostap_channel : hostap_supported_channels) {
-        if (hostap_channel.channel_bandwidth == beerocks::BANDWIDTH_20 &&
-            hostap_channel.channel > 0) {
+        if (hostap_channel.get_bandwidth() == beerocks::BANDWIDTH_20 &&
+            hostap_channel.get_channel() > 0) {
             sCandidateChannel cc;
             cc.primary_channel   = 0;
             cc.secondary_channel = 0;
             cc.disallow          = false;
-            ccl.insert({hostap_channel.channel, cc});
+            ccl.insert({hostap_channel.get_channel(), cc});
         }
     }
 }
@@ -1201,12 +1230,12 @@ void channel_selection_task::ccl_fill_affected_supported_channels()
 
     /*1. Fill active channel list with the radar affected suppoted channels */
     for (auto hostap_channel : hostap_supported_channels) {
-        if (hostap_channel.channel_bandwidth == beerocks::BANDWIDTH_20 &&
-            hostap_channel.channel > 0) {
-            ccl[hostap_channel.channel].radar_affected = hostap_channel.radar_affected;
-            TASK_LOG(DEBUG) << " channel = " << int(hostap_channel.channel)
+        if (hostap_channel.get_bandwidth() == beerocks::BANDWIDTH_20 &&
+            hostap_channel.get_channel() > 0) {
+            ccl[hostap_channel.get_channel()].radar_affected = hostap_channel.get_radar_affected();
+            TASK_LOG(DEBUG) << " channel = " << int(hostap_channel.get_channel())
                             << " hostap_channel.radar_affected "
-                            << int(hostap_channel.radar_affected);
+                            << int(hostap_channel.get_radar_affected());
         }
     }
 }
@@ -1215,14 +1244,20 @@ void channel_selection_task::ccl_fill_active_channels()
 {
     TASK_LOG(DEBUG) << "*****************ccl_fill_active_channels**************************** :";
     for (const auto &hostap : database.get_active_hostaps()) {
-        auto channel                     = database.get_node_channel(hostap);
-        auto bw                          = database.get_node_bw(hostap);
-        auto channel_ext_above_secondary = database.get_node_channel_ext_above_secondary(hostap);
-        auto channel_ext_above_primary =
-            database.get_hostap_channel_ext_above_primary(tlvf::mac_from_string(hostap));
-        TASK_LOG(DEBUG) << "hostap = " << hostap << " channel = " << int(channel)
-                        << " bw = " << int(bw)
-                        << " channel_ext_above_secondary = " << int(channel_ext_above_secondary);
+        if (database.get_node_type(hostap) != beerocks::TYPE_SLAVE) {
+            TASK_LOG(WARNING) << "node " << hostap << " is not a valid hostap!";
+        }
+        auto wifi_channel = database.get_node_wifi_channel(hostap);
+        if (wifi_channel.is_empty()) {
+            LOG(ERROR) << "empty wifi channel of " << hostap
+                       << " in DB. possibly not initialized yet. skip this iteration";
+            continue;
+        }
+        auto channel                     = wifi_channel.get_channel();
+        auto bw                          = wifi_channel.get_bandwidth();
+        auto channel_ext_above_secondary = wifi_channel.get_ext_above_secondary();
+        auto channel_ext_above_primary   = wifi_channel.get_ext_above_primary();
+        TASK_LOG(DEBUG) << "hostap=" << hostap << " " << wifi_channel;
 
         // add active hostap channels to ccl
         auto channel_list_20MHz = son::wireless_utils::split_channel_to_20MHz(
@@ -1442,6 +1477,7 @@ bool channel_selection_task::ccl_fill_channel_switch_request_with_least_used_cha
         align_channel_to_80Mhz();
         channel_switch_request.vht_center_frequency = wireless_utils::channel_to_vht_center_freq(
             channel_switch_request.channel,
+            wireless_utils::which_freq_type(channel_switch_request.vht_center_frequency),
             beerocks::eWiFiBandwidth(channel_switch_request.bandwidth),
             min_channels.begin()->second.channel_ext_above_secondary);
         TASK_LOG(DEBUG) << "channel_switch_request.channel = " << int(min_channels.begin()->first)
@@ -1485,6 +1521,7 @@ bool channel_selection_task::ccl_fill_channel_switch_request_with_least_used_cha
         align_channel_to_80Mhz();
         channel_switch_request.vht_center_frequency = wireless_utils::channel_to_vht_center_freq(
             channel_switch_request.channel,
+            wireless_utils::which_freq_type(channel_switch_request.vht_center_frequency),
             beerocks::eWiFiBandwidth(channel_switch_request.bandwidth),
             it_res->second.channel_ext_above_secondary);
     }
@@ -1561,9 +1598,11 @@ bool channel_selection_task::fill_restricted_channels_from_ccl_busy_bands(uint8_
 {
     int channel_step = CHANNEL_20MHZ_STEP;
 
-    auto channel                     = channel_switch_request.channel;
-    auto freq                        = wireless_utils::channel_to_freq(channel);
-    auto vht_center_frequency        = channel_switch_request.vht_center_frequency;
+    auto channel              = channel_switch_request.channel;
+    auto vht_center_frequency = channel_switch_request.vht_center_frequency;
+    auto freq                 = wireless_utils::channel_to_freq(
+        channel, wireless_utils::which_freq_type(vht_center_frequency));
+
     auto channel_ext_above_secondary = (freq < vht_center_frequency) ? true : false;
 
     std::set<uint8_t> least_used_channels;
@@ -1613,8 +1652,9 @@ uint8_t channel_selection_task::get_gw_slave_5g_channel()
 
     for (const auto &radio : gw->radios) {
         std::string radio_mac = tlvf::mac_to_string(radio.first);
-        if (database.is_node_5ghz(radio_mac)) {
-            return database.get_node_channel(radio_mac);
+        auto wifi_channel     = database.get_node_wifi_channel(radio_mac);
+        if (!wifi_channel.is_empty() && wifi_channel.get_freq_type() == eFreqType::FREQ_5G) {
+            return wifi_channel.get_channel();
         }
     }
 
@@ -1685,7 +1725,11 @@ void channel_selection_task::run_optimal_path_for_connected_clients()
         database.get_node_siblings(tlvf::mac_to_string(radio_mac), beerocks::TYPE_SLAVE);
     auto hostap_mac_2g = std::find_if(
         std::begin(hostaps_sibling), std::end(hostaps_sibling), [&](std::string hostap_sibling) {
-            return (is_2G_channel(database.get_node_channel(hostap_sibling)) &&
+            auto hostap_sibling_wifi_channel = database.get_node_wifi_channel(hostap_sibling);
+            if (hostap_sibling_wifi_channel.is_empty()) {
+                LOG(WARNING) << "empty wifi channel of " << hostap_sibling << "in DB";
+            }
+            return (hostap_sibling_wifi_channel.get_freq_type() == eFreqType::FREQ_24G &&
                     database.is_hostap_active(tlvf::mac_from_string(hostap_sibling)));
         });
 

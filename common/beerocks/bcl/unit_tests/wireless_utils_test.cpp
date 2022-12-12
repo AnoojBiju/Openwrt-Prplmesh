@@ -24,29 +24,39 @@ struct sOperatingClass {
 
 // clang-format off
 const std::vector<sOperatingClass>
-    table_E_4_global_operating_classes_802_11{
-    { 81, beerocks::BANDWIDTH_20, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13}},
-    { 82, beerocks::BANDWIDTH_20, {14}},
-    { 83, beerocks::BANDWIDTH_40, {1, 2, 3, 4, 5, 6, 7, 8, 9}},
+    global_operating_classes_802_11{
+    { 81, beerocks::BANDWIDTH_20,  {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13}},
+    { 82, beerocks::BANDWIDTH_20,  {14}},
+    { 83, beerocks::BANDWIDTH_40,  {1, 2, 3, 4, 5, 6, 7, 8, 9}},
     /* Note: we have no way to distinguish 40- and 40+, so operating class 83 is used for all bandwidth=40MHz */
-    { 84, beerocks::BANDWIDTH_40, {/*5, 6, 7, 8, 9, */10, 11, 12, 13}},
-    {115, beerocks::BANDWIDTH_20, {36, 40, 44, 48}},
-    {116, beerocks::BANDWIDTH_40, {36, 44}},
-    {117, beerocks::BANDWIDTH_40, {40, 48}},
-    {118, beerocks::BANDWIDTH_20, {52, 56, 60, 64}},
-    {119, beerocks::BANDWIDTH_40, {52, 60}},
-    {120, beerocks::BANDWIDTH_40, {56, 64}},
-    {121, beerocks::BANDWIDTH_20, {100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144}},
-    {122, beerocks::BANDWIDTH_40, {100, 108, 116, 124, 132, 136, 140}},
-    {123, beerocks::BANDWIDTH_40, {104, 112, 120, 128, 134, 138, 144}},
-    {124, beerocks::BANDWIDTH_20, {149, 153, 157, 161}},
+    { 84, beerocks::BANDWIDTH_40,  {/*5, 6, 7, 8, 9, */10, 11, 12, 13}},
+    {115, beerocks::BANDWIDTH_20,  {36, 40, 44, 48}},
+    {116, beerocks::BANDWIDTH_40,  {36, 44}},
+    {117, beerocks::BANDWIDTH_40,  {40, 48}},
+    {118, beerocks::BANDWIDTH_20,  {52, 56, 60, 64}},
+    {119, beerocks::BANDWIDTH_40,  {52, 60}},
+    {120, beerocks::BANDWIDTH_40,  {56, 64}},
+    {121, beerocks::BANDWIDTH_20,  {100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144}},
+    {122, beerocks::BANDWIDTH_40,  {100, 108, 116, 124, 132, 140}},
+    {123, beerocks::BANDWIDTH_40,  {104, 112, 120, 128, 136, 144}},
+    {124, beerocks::BANDWIDTH_20,  {149, 153, 157, 161}},
     /* Note: we have no way to distinguish repeated channels in operating classes 124 and 125 used for bandwidth=20MHz */
-    {125, beerocks::BANDWIDTH_20, {/*149, 153, 157, 161,*/ 165, 169}},
-    {126, beerocks::BANDWIDTH_40, {149, 157}},
-    {127, beerocks::BANDWIDTH_40, {153, 161}},
-    {128, beerocks::BANDWIDTH_80, {42, 58, 106, 122, 138, 155}},
+    {125, beerocks::BANDWIDTH_20,  {/*149, 153, 157, 161,*/ 165, 169}},
+    {126, beerocks::BANDWIDTH_40,  {149, 157}},
+    {127, beerocks::BANDWIDTH_40,  {153, 161}},
+    {128, beerocks::BANDWIDTH_80,  {42, 58, 106, 122, 138, 155}},
     {129, beerocks::BANDWIDTH_160, {50, 114}},
-    {130, beerocks::BANDWIDTH_80_80, {42, 58, 106, 122, 138, 155}}
+    {131, beerocks::BANDWIDTH_20,  {1, 5, 9, 13, 17, 21, 25, 29, 33, 37, 41, 45, 49, 53, 57,
+                                    61, 65, 69, 73, 77, 81, 85, 89, 93, 97, 101, 105, 109, 113,
+                                    117, 121, 125, 129, 133, 137, 141, 145, 149, 153, 157, 161,
+                                    165, 169, 173, 177, 181, 185, 189, 193, 197, 201, 205, 209,
+                                    213, 217, 221, 225, 229, 233}},
+    {132, beerocks::BANDWIDTH_40,  {3, 11, 19, 27, 35, 43, 51, 59, 67, 75, 83, 91, 99, 107,
+                                    115, 123, 131, 139, 147, 155, 163, 171, 179, 187, 195,
+                                    203, 211, 219, 227}},
+    {133, beerocks::BANDWIDTH_80,  {7, 23, 39, 55, 71, 87, 103, 119, 135, 151,
+                                      167, 183, 199, 215}},
+    {134, beerocks::BANDWIDTH_160, {15, 47, 79, 111, 143, 175, 207}}
 };
 // clang-format on
 
@@ -55,7 +65,7 @@ const std::vector<sOperatingClass>
  * Tuple elements are the WiFi channel used as parameter to the function and the expected
  * operating class obtained as result.
  */
-typedef std::tuple<beerocks::message::sWifiChannel, uint8_t> tGetOperatingClassByChannelParam;
+typedef std::tuple<beerocks::WifiChannel, uint8_t> tGetOperatingClassByChannelParam;
 
 /**
  * @brief Gets starting channel for given center channel and bandwidth values.
@@ -68,20 +78,25 @@ typedef std::tuple<beerocks::message::sWifiChannel, uint8_t> tGetOperatingClassB
  * @param bandwidth Channel bandwidth.
  * @return Starting channel number.
  */
-uint8_t get_starting_channel(uint8_t center_channel, beerocks::eWiFiBandwidth bandwidth)
+uint8_t get_starting_channel(uint8_t op_class, uint8_t center_channel,
+                             beerocks::eFreqType freq_type, beerocks::eWiFiBandwidth bandwidth)
 {
     const uint8_t first_vht_20_mhz_channel  = 36;
+    const uint8_t first_vht_40_mhz_channel  = 38;
     const uint8_t first_vht_80_mhz_channel  = 42;
     const uint8_t first_vht_160_mhz_channel = 50;
 
-    if (bandwidth == beerocks::eWiFiBandwidth::BANDWIDTH_160) {
-        return center_channel - (first_vht_160_mhz_channel - first_vht_20_mhz_channel);
+    if (son::wireless_utils::is_operating_class_using_central_channel(op_class)) {
+        if (bandwidth == beerocks::eWiFiBandwidth::BANDWIDTH_160) {
+            return center_channel - (first_vht_160_mhz_channel - first_vht_20_mhz_channel);
+        }
+        if (bandwidth >= beerocks::eWiFiBandwidth::BANDWIDTH_80) {
+            return center_channel - (first_vht_80_mhz_channel - first_vht_20_mhz_channel);
+        }
+        if (bandwidth == beerocks::eWiFiBandwidth::BANDWIDTH_40) {
+            return center_channel - (first_vht_40_mhz_channel - first_vht_20_mhz_channel);
+        }
     }
-
-    if (bandwidth >= beerocks::eWiFiBandwidth::BANDWIDTH_80) {
-        return center_channel - (first_vht_80_mhz_channel - first_vht_20_mhz_channel);
-    }
-
     return center_channel;
 }
 
@@ -89,8 +104,8 @@ uint8_t get_starting_channel(uint8_t center_channel, beerocks::eWiFiBandwidth ba
  * @brief Gets a list of all possible valid parameters to get_operating_class_by_channel() function
  * together with the expected result for each one of them.
  *
- * Creates a container with all possible combinations of channel number and channel bandwidth to
- * create a valid sWifiChannel to use as parameter to get_operating_class_by_channel() function and
+ * Creates a container with all possible combinations of channel number, frequency type and channel bandwidth
+ * to create a valid WifiChannel to use as parameter to get_operating_class_by_channel() function and
  * the expected operating class to be obtained as result.
  *
  * @return vector with pairs of valid WiFi channels and their expected operating class result.
@@ -99,82 +114,27 @@ std::vector<tGetOperatingClassByChannelParam> get_operating_class_by_channel_val
 {
     std::vector<tGetOperatingClassByChannelParam> result;
 
-    for (const auto &entry : table_E_4_global_operating_classes_802_11) {
-        for (const auto channel : entry.channels) {
-            beerocks::message::sWifiChannel ch;
-            ch.channel           = get_starting_channel(channel, entry.bandwidth);
-            ch.channel_bandwidth = entry.bandwidth;
+    beerocks::eFreqType freq_type;
+    for (auto &entry : global_operating_classes_802_11) {
+        if (entry.operating_class >= 81 && entry.operating_class <= 84) {
+            freq_type = beerocks::eFreqType::FREQ_24G;
+        } else if (entry.operating_class >= 115 && entry.operating_class <= 130) {
+            freq_type = beerocks::eFreqType::FREQ_5G;
+        } else if (entry.operating_class >= 131 && entry.operating_class <= 136) {
+            freq_type = beerocks::eFreqType::FREQ_6G;
+        } else {
+            return {};
+        }
 
-            result.emplace_back(std::make_tuple(ch, entry.operating_class));
+        for (const auto &channel : entry.channels) {
+            beerocks::WifiChannel wifi_channel(
+                get_starting_channel(entry.operating_class, channel, freq_type, entry.bandwidth),
+                freq_type, entry.bandwidth);
+            result.emplace_back(std::make_tuple(wifi_channel, entry.operating_class));
         }
     }
 
-    return result;
-}
-
-/**
- * @brief Gets a list of invalid parameters to get_operating_class_by_channel() function.
- *
- * Creates a container of sWifiChannel objects built up with invalid combinations of channel
- * number and channel bandwidth. The get_operating_class_by_channel() function returns 0 when
- * called with any of these invalid channels as parameter.
- *
- * @return vector of invalid WiFi channels.
- */
-std::vector<tGetOperatingClassByChannelParam> get_operating_class_by_channel_invalid_parameters()
-{
-    // clang-format off
-    const beerocks::eWiFiBandwidth bandwidths[]{
-        beerocks::BANDWIDTH_UNKNOWN,
-        beerocks::BANDWIDTH_20,
-        beerocks::BANDWIDTH_40,
-        beerocks::BANDWIDTH_80,
-        beerocks::BANDWIDTH_80_80,
-        beerocks::BANDWIDTH_160
-    };
-    // clang-format on
-
-    std::vector<tGetOperatingClassByChannelParam> result;
-
-    /**
-     * Note: Google Test documentation says that using value-parameterized tests to test your code
-     * over various inputs (a.k.a. data-driven testing) is a feature easy to abuse of.
-     * This might well be a good example of such an abuse.
-     */
-
-    /**
-     * Why do-while instead of for loop?
-     * So that the loop executes up until and INCLUDING channel == UINT8_MAX,
-     * for (uint8_t channel = 0; channel <= UINT8_MAX; ++channel) would loop forever !!!
-     */
-    uint8_t channel = 0;
-    do {
-        for (auto bandwidth : bandwidths) {
-            const auto &table = table_E_4_global_operating_classes_802_11;
-
-            auto it = std::find_if(
-                table.begin(), table.end(), [&](const sOperatingClass &operating_class) {
-                    if (operating_class.bandwidth != bandwidth) {
-                        return false;
-                    }
-                    auto op_class            = operating_class.operating_class;
-                    uint8_t channel_to_check = channel;
-                    if (son::wireless_utils::is_operating_class_using_central_channel(op_class)) {
-                        channel_to_check =
-                            son::wireless_utils::get_5g_center_channel(channel, bandwidth);
-                    }
-                    return operating_class.channels.end() !=
-                           operating_class.channels.find(channel_to_check);
-                });
-            if (it == table.end()) {
-                beerocks::message::sWifiChannel ch;
-                ch.channel           = channel;
-                ch.channel_bandwidth = bandwidth;
-
-                result.emplace_back(std::make_tuple(ch, 0));
-            }
-        }
-    } while (channel++ < UINT8_MAX);
+    std::cout << "Result size: " << result.size() << std::endl;
 
     return result;
 }
@@ -263,34 +223,31 @@ std::string operating_class_by_channel_param_to_string(
 {
     const auto &param = info.param;
 
-    return channel_to_string(std::get<0>(param).channel) + "_" +
-           bandwidth_to_string(std::get<0>(param).channel_bandwidth) + "_" +
+    return channel_to_string(std::get<0>(param).get_channel()) + "_" +
+           bandwidth_to_string(std::get<0>(param).get_bandwidth()) + "_" +
            operating_class_to_string(std::get<1>(param));
 }
 
 TEST_P(WirelessUtilsGetOperatingClassByChannelTest, should_return_expected)
 {
-    beerocks::message::sWifiChannel channel;
+    beerocks::WifiChannel wifi_channel;
     uint8_t expected_operating_class;
-    std::tie(channel, expected_operating_class) = GetParam();
+    std::tie(wifi_channel, expected_operating_class) = GetParam();
 
-    EXPECT_EQ(son::wireless_utils::get_operating_class_by_channel(channel),
-              expected_operating_class);
+    EXPECT_EQ(son::wireless_utils::get_operating_class_by_channel(wifi_channel),
+              expected_operating_class)
+        << wifi_channel;
 }
 
 INSTANTIATE_TEST_SUITE_P(ValidParamsInstance, WirelessUtilsGetOperatingClassByChannelTest,
                          testing::ValuesIn(get_operating_class_by_channel_valid_parameters()),
                          operating_class_by_channel_param_to_string);
 
-INSTANTIATE_TEST_SUITE_P(InvalidParamsInstance, WirelessUtilsGetOperatingClassByChannelTest,
-                         testing::ValuesIn(get_operating_class_by_channel_invalid_parameters()),
-                         operating_class_by_channel_param_to_string);
-
 TEST(overlapping_channels, channel_112)
 {
     // channel 112 test
     son::wireless_utils::OverlappingChannels result =
-        son::wireless_utils::get_overlapping_channels(112);
+        son::wireless_utils::get_overlapping_5g_channels(112);
 
     EXPECT_EQ(result.size(), 15);
     EXPECT_FALSE(std::find(result.begin(), result.end(),

@@ -39,6 +39,8 @@ public:
         Interface_Disconnected
     };
 
+    using ChannelFreqPair = std::pair<uint8_t, beerocks::eFreqType>;
+
     // Public methods:
 public:
     virtual ~sta_wlan_hal() = default;
@@ -58,18 +60,19 @@ public:
      * @param[in] channel The channel to scan on.
      * If not provided, all channels are scanned.
      */
-    virtual bool scan_bss(const sMacAddr &bssid, uint8_t channel) = 0;
+    virtual bool scan_bss(const sMacAddr &bssid, uint8_t channel,
+                          beerocks::eFreqType freq_type) = 0;
 
     virtual int get_scan_results(const std::string &ssid, std::vector<SScanResult> &list,
                                  bool parse_vsie = false) = 0;
 
     virtual bool connect(const std::string &ssid, const std::string &pass, WiFiSec sec,
-                         bool mem_only_psk, const std::string &bssid, uint8_t channel,
+                         bool mem_only_psk, const std::string &bssid, ChannelFreqPair channel,
                          bool hidden_ssid) = 0;
 
     virtual bool disconnect() = 0;
 
-    virtual bool roam(const sMacAddr &bssid, uint8_t channel) = 0;
+    virtual bool roam(const sMacAddr &bssid, ChannelFreqPair channel) = 0;
 
     virtual bool get_4addr_mode()            = 0;
     virtual bool set_4addr_mode(bool enable) = 0;

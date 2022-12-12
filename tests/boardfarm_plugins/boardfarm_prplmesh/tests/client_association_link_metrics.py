@@ -34,7 +34,7 @@ class ClientAssociationLinkMetrics(PrplMeshBaseTest):
                                             tlv(self.ieee1905['eTlvTypeMap']
                                                 ['TLV_STAMAC_ADDRESS_TYPE'],
                                                 '{sta_mac}'.format(sta_mac=sta_mac)))
-        self.check_log(agent,
+        self.check_log(agent.radios[0],
                        "client with mac address {sta_mac} not found".format(sta_mac=sta_mac))
         time.sleep(1)
 
@@ -49,6 +49,6 @@ class ClientAssociationLinkMetrics(PrplMeshBaseTest):
                                                   ['TLV_STAMAC_ADDRESS_TYPE'],
                                                       '{sta_mac}'.format(sta_mac=sta.mac)))
         time.sleep(1)
-        self.check_log(agent,
+        self.check_log(agent.radios[0],
                        "Send AssociatedStaLinkMetrics to controller, mid = {}".format(mid),
                        timeout=20)

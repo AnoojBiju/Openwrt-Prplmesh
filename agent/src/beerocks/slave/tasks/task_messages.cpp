@@ -7,6 +7,7 @@
  */
 
 #include "task_messages.h"
+#include <bcl/beerocks_utils.h>
 #include <beerocks/tlvf/beerocks_message.h>
 
 namespace beerocks {
@@ -14,12 +15,12 @@ namespace beerocks {
 // switch channel request //
 
 sSwitchChannelRequest::sSwitchChannelRequest()
-    : channel(0), bandwidth(eWiFiBandwidth::BANDWIDTH_UNKNOWN)
+    : channel(0), freq_type(eFreqType::FREQ_UNKNOWN), bandwidth(eWiFiBandwidth::BANDWIDTH_UNKNOWN)
 {
 }
 
 sSwitchChannelRequest::sSwitchChannelRequest(const sSwitchChannelRequest &rhs)
-    : ifname(rhs.ifname), channel(rhs.channel), bandwidth(rhs.bandwidth)
+    : ifname(rhs.ifname), channel(rhs.channel), freq_type(rhs.freq_type), bandwidth(rhs.bandwidth)
 {
 }
 
@@ -28,7 +29,11 @@ std::ostream &operator<<(std::ostream &os, const sSwitchChannelRequest &switch_c
     os << "switch channel request - " << '\n'
        << "ifname:    " << switch_channel_request.ifname << '\n'
        << "channel:   " << +switch_channel_request.channel << '\n'
-       << "bandwidth: " << +switch_channel_request.bandwidth << '\n';
+       << "freq type: "
+       << beerocks::utils::convert_frequency_type_to_string(switch_channel_request.freq_type)
+       << '\n'
+       << "bandwidth: "
+       << beerocks::utils::convert_bandwidth_to_int(switch_channel_request.bandwidth) << '\n';
 
     return os;
 }

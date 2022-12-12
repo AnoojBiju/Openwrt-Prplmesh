@@ -512,7 +512,7 @@ amxd_status_t update_vbss_capabilities(amxd_object_t *object, amxd_function_t *f
  *
  * Example of usage:
  * ubus call Device.WiFi.DataElements.Network.Device.1.Radio.1 TriggerVBSSCreation
- * '{"vbssid": "aa:bb:cc:dd:ee:ff", "client_mac": "aa:bb:cc:dd:ee:ff", "ssid": "prplMeshNetwork", "pass": "prpl"}'
+ * '{"vbssid": "aa:bb:cc:dd:ee:ff", "client_mac": "aa:bb:cc:dd:ee:ff", "ssid": "prplMeshNetwork", "pass": "prplmeshpass"}'
  *
  */
 amxd_status_t trigger_vbss_creation(amxd_object_t *object, amxd_function_t *func, amxc_var_t *args,
@@ -650,7 +650,7 @@ amxd_status_t trigger_vbss_destruction(amxd_object_t *object, amxd_function_t *f
  *
  * Example of usage:
  * ubus call Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.1.VBSSClient.1 TriggerVBSSMove
- * '{"client_mac" : "aa:bb:cc:dd:ee:ff", "dest_ruid" : "aa:bb:cc:dd:ee:ff", "ssid": "prplMeshNetwork", "pass": "prpl"}'
+ * '{"client_mac" : "aa:bb:cc:dd:ee:ff", "dest_ruid" : "aa:bb:cc:dd:ee:ff", "ssid": "prplMeshNetwork", "pass": "prplmeshpass"}'
  *
  */
 amxd_status_t trigger_vbss_move(amxd_object_t *object, amxd_function_t *func, amxc_var_t *args,

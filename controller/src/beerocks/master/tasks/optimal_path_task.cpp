@@ -11,6 +11,7 @@
 #include "../son_actions.h"
 
 #include <bcl/beerocks_utils.h>
+#include <bcl/beerocks_wifi_channel.h>
 #include <bcl/son/son_wireless_utils.h>
 #include <easylogging++.h>
 
@@ -410,8 +411,14 @@ void optimal_path_task::work()
                         ++potential_ap_iter;
                         continue;
                     }
+                    auto ap_wifi_channel = database.get_node_wifi_channel(ap_mac);
+                    if (ap_wifi_channel.is_empty()) {
+                        LOG(ERROR)
+                            << "empty wifi channel of " << vap_mac << " in DB. skip this iteration";
+                        continue;
+                    }
                     measurement_request.bssid   = tlvf::mac_from_string(vap_mac);
-                    measurement_request.channel = database.get_node_channel(ap_mac);
+                    measurement_request.channel = ap_wifi_channel.get_channel();
                     measurement_request.op_class =
                         database.get_hostap_operating_class(tlvf::mac_from_string(ap_mac));
                     measurement_request.expected_reports_count = 1;
@@ -553,8 +560,12 @@ void optimal_path_task::work()
                 }
             }
 
-            int hostap_channel  = database.get_node_channel(hostap);
-            auto hostap_is_5ghz = database.is_node_5ghz(hostap);
+            auto hostap_wifi_channel = database.get_node_wifi_channel(hostap);
+            if (hostap_wifi_channel.is_empty()) {
+                LOG(WARNING) << "empty wifi channel of " << hostap << " in DB. skip this iteration";
+            }
+            int hostap_channel  = hostap_wifi_channel.get_channel();
+            auto hostap_is_5ghz = (hostap_wifi_channel.get_freq_type() == eFreqType::FREQ_5G);
             if (!force_signal_strength_decision &&
                 !database.settings_client_optimal_path_roaming_prefer_signal_strength()) {
                 // Get sta capabilities
@@ -576,7 +587,7 @@ void optimal_path_task::work()
                                 << " ht_bw=" << int(sta_capabilities->ht_bw)
                                 << " vht_bw=" << int(sta_capabilities->vht_bw);
 
-                auto hostap_bw = database.get_node_bw(hostap);
+                auto hostap_bw = hostap_wifi_channel.get_bandwidth();
 
                 int8_t dl_rssi;
 
@@ -692,8 +703,9 @@ void optimal_path_task::work()
                     auto radio_mac = tlvf::mac_from_string(hostap);
 
                     son::wireless_utils::sPhyApParams hostap_params;
-                    hostap_params.is_5ghz  = database.is_node_5ghz(hostap);
-                    hostap_params.bw       = database.get_node_bw(hostap);
+                    hostap_params.is_5ghz =
+                        (hostap_wifi_channel.get_freq_type() == eFreqType::FREQ_5G);
+                    hostap_params.bw       = hostap_wifi_channel.get_bandwidth();
                     hostap_params.ant_num  = database.get_hostap_ant_num(radio_mac);
                     hostap_params.ant_gain = database.get_hostap_ant_gain(radio_mac);
                     hostap_params.tx_power = database.get_hostap_tx_power(radio_mac);
@@ -814,7 +826,11 @@ void optimal_path_task::work()
                          return (subtree.find(tlvf::mac_to_string(agent->al_mac)) == subtree.end());
                      });
 
-        auto channel = database.get_node_channel(sta_mac);
+        auto sta_wifi_channel = database.get_node_wifi_channel(sta_mac);
+        if (sta_wifi_channel.is_empty()) {
+            LOG(WARNING) << "empty wifi channel of " << sta_mac << " in DB";
+        }
+        auto sta_channel = sta_wifi_channel.get_channel();
 
         //searching for sub band hostap /backhaul(client) measurement match for each ire
         for (auto &agent : agents_outside_subtree) {
@@ -836,10 +852,16 @@ void optimal_path_task::work()
 
             //searching for hostap 5Ghz Low/High direct match ,2.4Ghz auto picked when sta is 2.4
             for (const auto &radio_map_element : agent->radios) {
-                auto radio         = radio_map_element.second;
-                auto hostap        = tlvf::mac_to_string(radio->radio_uid);
-                hostap_backhaul    = database.get_node_parent_backhaul(hostap);
-                int hostap_channel = database.get_node_channel(hostap);
+                auto radio               = radio_map_element.second;
+                auto hostap              = tlvf::mac_to_string(radio->radio_uid);
+                hostap_backhaul          = database.get_node_parent_backhaul(hostap);
+                auto hostap_wifi_channel = database.get_node_wifi_channel(hostap);
+                if (hostap_wifi_channel.is_empty()) {
+                    LOG(ERROR) << "empty wifi channel of " << hostap
+                               << " in DB. skip this iteration";
+                    continue;
+                }
+                int hostap_channel = hostap_wifi_channel.get_channel();
                 if (database.is_ap_out_of_band(hostap, sta_mac) ||
                     (!database.is_hostap_active(tlvf::mac_from_string(hostap))) ||
                     is_hostap_on_cs_process(hostap)) {
@@ -847,7 +869,7 @@ void optimal_path_task::work()
                     continue;
                 }
                 bool hostap_meas = ((!database.get_node_5ghz_support(hostap)) ||
-                                    (wireless_utils::which_subband(channel)) ==
+                                    (wireless_utils::which_subband(sta_channel)) ==
                                         (wireless_utils::which_subband(hostap_channel)));
                 if (hostap_meas) {
                     TASK_LOG(DEBUG) << "sub band match insert to list, hostap  = " << hostap;
@@ -861,9 +883,16 @@ void optimal_path_task::work()
             if (!found_band_match && database.settings_front_measurements()) {
                 if (database.is_node_wireless(hostap_backhaul) &&
                     (database.get_node_type(hostap_backhaul) != beerocks::TYPE_GW) &&
-                    database.is_node_5ghz(sta_mac)) {
-                    auto backhaul_channel = database.get_node_channel(hostap_backhaul);
-                    auto hostap_meas      = ((wireless_utils::which_subband(channel)) ==
+                    sta_wifi_channel.get_freq_type() == eFreqType::FREQ_5G) {
+                    auto hostap_backhaul_wifi_channel =
+                        database.get_node_wifi_channel(hostap_backhaul);
+                    if (hostap_backhaul_wifi_channel.is_empty()) {
+                        LOG(ERROR) << "empty wifi channel of " << hostap_backhaul
+                                   << " in DB. skip this iteration";
+                        continue;
+                    }
+                    auto backhaul_channel = hostap_backhaul_wifi_channel.get_channel();
+                    auto hostap_meas      = ((wireless_utils::which_subband(sta_channel)) ==
                                         (wireless_utils::which_subband(backhaul_channel)));
                     if (hostap_meas) {
                         TASK_LOG(DEBUG)
@@ -884,7 +913,7 @@ void optimal_path_task::work()
                         (!database.is_hostap_active(tlvf::mac_from_string(hostap)))) {
                         continue;
                     }
-                    if (database.capability_check(hostap, channel)) {
+                    if (database.capability_check(hostap, sta_channel)) {
                         TASK_LOG(DEBUG)
                             << "sub band support match insert to list, hostap = " << hostap;
                         hostaps.insert(hostap);
@@ -917,10 +946,15 @@ void optimal_path_task::work()
             break;
         }
 
+        auto current_hostap_wifi_channel = database.get_node_wifi_channel(current_hostap);
+        if (current_hostap_wifi_channel.is_empty()) {
+            LOG(WARNING) << "empty wifi channel of " << current_hostap << " in DB";
+        }
+
         request->params().mac  = tlvf::mac_from_string(sta_mac);
         request->params().ipv4 = network_utils::ipv4_from_string(database.get_node_ipv4(sta_mac));
-        request->params().channel   = database.get_node_channel(current_hostap);
-        request->params().bandwidth = database.get_node_bw(current_hostap);
+        request->params().channel   = current_hostap_wifi_channel.get_channel();
+        request->params().bandwidth = current_hostap_wifi_channel.get_bandwidth();
         request->params().cross     = hostaps.empty() ? 0 : 1;
         request->params().mon_ping_burst_pkt_num =
             database.get_measurement_window_size(current_hostap);
@@ -1210,7 +1244,12 @@ void optimal_path_task::work()
 
             auto radio_mac = tlvf::mac_from_string(hostap);
 
-            int hostap_channel    = database.get_node_channel(hostap);
+            auto hostap_wifi_channel = database.get_node_wifi_channel(hostap);
+            if (hostap_wifi_channel.is_empty()) {
+                LOG(ERROR) << "empty wifi channel of " << hostap << " in DB. skip this iteration";
+                continue;
+            }
+            int hostap_channel    = hostap_wifi_channel.get_channel();
             auto skip_estimation  = false; // initialise for each HostAP candidate
             hostap_params.is_5ghz = database.is_node_5ghz(hostap);
 
@@ -1239,7 +1278,7 @@ void optimal_path_task::work()
                             << " ht_bw=" << int(sta_capabilities->ht_bw)
                             << " vht_bw=" << int(sta_capabilities->vht_bw);
 
-            hostap_params.bw       = database.get_node_bw(hostap);
+            hostap_params.bw       = hostap_wifi_channel.get_bandwidth();
             hostap_params.ant_num  = database.get_hostap_ant_num(radio_mac);
             hostap_params.ant_gain = database.get_hostap_ant_gain(radio_mac);
             hostap_params.tx_power = database.get_hostap_tx_power(radio_mac);
@@ -1575,14 +1614,19 @@ void optimal_path_task::send_rssi_measurement_request(const sMacAddr &agent_mac,
         return;
     }
     database.get_node_parent_backhaul(hostap);
+
+    WifiChannel hostap_wifi_channel = database.get_node_wifi_channel(hostap_mac);
+    if (hostap_wifi_channel.is_empty()) {
+        LOG(WARNING) << "empty wifi channel of " << hostap_wifi_channel << " in DB";
+    }
+
     request->params().mac                    = tlvf::mac_from_string(client_mac);
     request->params().ipv4                   = network_utils::ipv4_from_string("0.0.0.0");
     request->params().cross                  = 1;
     request->params().channel                = channel;
-    request->params().bandwidth              = database.get_node_bw(hostap_mac);
+    request->params().bandwidth              = hostap_wifi_channel.get_bandwidth();
     request->params().mon_ping_burst_pkt_num = database.get_measurement_window_size(current_hostap);
-    request->params().vht_center_frequency =
-        database.get_hostap_vht_center_frequency(tlvf::mac_from_string(hostap_mac));
+    request->params().vht_center_frequency   = hostap_wifi_channel.get_center_frequency();
     TASK_LOG(DEBUG) << "vht_center_frequency = " << int(request->params().vht_center_frequency);
     //taking measurement request time stamp
     database.set_measurement_sent_timestamp(hostap);
@@ -1630,9 +1674,13 @@ void optimal_path_task::handle_response(std::string mac,
             return;
         }
 
-        std::string client_mac = tlvf::mac_to_string(notification->mac());
-        std::string hostap_mac = mac;
-        int channel            = database.get_node_channel(client_mac);
+        std::string client_mac   = tlvf::mac_to_string(notification->mac());
+        std::string hostap_mac   = mac;
+        auto client_wifi_channel = database.get_node_wifi_channel(client_mac);
+        if (client_wifi_channel.is_empty()) {
+            LOG(WARNING) << "empty wifi channel of " << client_mac << " in DB";
+        }
+        int client_channel = client_wifi_channel.get_channel();
 
         TASK_LOG(DEBUG) << "optimal_path - handle_response ";
         for (auto &hostap : hostaps) {
@@ -1641,11 +1689,12 @@ void optimal_path_task::handle_response(std::string mac,
 
         LOG_CLI(DEBUG, "ACTION_CONTROL_CLIENT_MEASUREMENT_START connected AP, client_mac="
                            << client_mac << " received from hostap " << hostap_mac
-                           << " channel=" << channel);
+                           << " channel=" << client_channel
+                           << " frequency type: " << client_wifi_channel.get_freq_type());
 
         for (auto &hostap : hostaps) {
             auto agent_mac = database.get_node_parent_ire(hostap);
-            send_rssi_measurement_request(agent_mac, client_mac, channel, hostap, id);
+            send_rssi_measurement_request(agent_mac, client_mac, client_channel, hostap, id);
         }
 
         break;
@@ -2024,9 +2073,13 @@ double optimal_path_task::calculate_weighted_phy_rate(const Station &client)
 
 bool optimal_path_task::is_hostap_on_cs_process(const std::string &hostap_mac)
 {
+    auto wifi_channel = database.get_node_wifi_channel(hostap_mac);
+    if (wifi_channel.is_empty()) {
+        LOG(WARNING) << "Empty wifi channel";
+    }
+
     if (database.get_hostap_on_dfs_reentry(tlvf::mac_from_string(hostap_mac)) ||
-        (database.is_node_5ghz(hostap_mac) &&
-         database.get_hostap_is_dfs(tlvf::mac_from_string(hostap_mac)) &&
+        (wifi_channel.get_freq_type() == eFreqType::FREQ_5G && wifi_channel.is_dfs_channel() &&
          !database.get_hostap_cac_completed(tlvf::mac_from_string(hostap_mac)))) {
         TASK_LOG(DEBUG) << "is_hostap_on_cs_process return true";
         return true;

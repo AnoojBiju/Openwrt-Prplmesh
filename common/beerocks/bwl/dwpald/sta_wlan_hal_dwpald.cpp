@@ -134,13 +134,14 @@ bool sta_wlan_hal_dwpal::initiate_scan()
     return true;
 }
 
-bool sta_wlan_hal_dwpal::scan_bss(const sMacAddr &bssid, uint8_t channel)
+bool sta_wlan_hal_dwpal::scan_bss(const sMacAddr &bssid, uint8_t channel,
+                                  beerocks::eFreqType freq_type)
 {
     if (bssid == beerocks::net::network_utils::ZERO_MAC || channel == 0) {
         LOG(ERROR) << "Invalid parameters";
         return false;
     }
-    auto freq = son::wireless_utils::channel_to_freq(channel);
+    auto freq = son::wireless_utils::channel_to_freq(channel, freq_type);
 
     LOG(DEBUG) << "Scan with TYPE=ONLY on interface: " << get_iface_name() << " for bssid " << bssid
                << " channel " << channel << " (frequency " << freq << ").";
@@ -218,9 +219,10 @@ int sta_wlan_hal_dwpal::get_scan_results(const std::string &ssid, std::vector<SS
         }
 
         SScanResult ap;
-        ap.bssid   = tlvf::mac_from_string(scan_results[i].bssid);
-        ap.channel = son::wireless_utils::freq_to_channel(scan_results[i].frequency);
-        ap.rssi    = scan_results[i].rssi;
+        ap.bssid     = tlvf::mac_from_string(scan_results[i].bssid);
+        ap.channel   = son::wireless_utils::freq_to_channel(scan_results[i].frequency);
+        ap.freq_type = son::wireless_utils::which_freq_type(scan_results[i].frequency);
+        ap.rssi      = scan_results[i].rssi;
 
         list.insert(list.begin(), ap);
         aps_found++;
@@ -230,12 +232,13 @@ int sta_wlan_hal_dwpal::get_scan_results(const std::string &ssid, std::vector<SS
 }
 
 bool sta_wlan_hal_dwpal::connect(const std::string &ssid, const std::string &pass, WiFiSec sec,
-                                 bool mem_only_psk, const std::string &bssid, uint8_t channel,
-                                 bool hidden_ssid)
+                                 bool mem_only_psk, const std::string &bssid,
+                                 ChannelFreqPair channel, bool hidden_ssid)
 {
     LOG(DEBUG) << " connect iface " << get_iface_name() << " to SSID = " << ssid
-               << ", BSSID = " << bssid << ", Channel = " << int(channel)
-               << ", Sec = " << dwpal_security_val(sec) << ", mem_only_psk=" << int(mem_only_psk);
+               << ", BSSID = " << bssid << ", Channel = " << int(channel.first)
+               << ", freq type = " << channel.second << ", Sec = " << dwpal_security_val(sec)
+               << ", mem_only_psk=" << int(mem_only_psk);
 
     if (ssid.empty() || bssid.empty() || sec == WiFiSec::Invalid) {
         LOG(ERROR) << "Invalid params!";
@@ -255,7 +258,7 @@ bool sta_wlan_hal_dwpal::connect(const std::string &ssid, const std::string &pas
         return false;
     }
 
-    auto freq = son::wireless_utils::channel_to_freq(int(channel));
+    auto freq = son::wireless_utils::channel_to_freq(int(channel.first), channel.second);
 
     // Update network parameters
     if (!set_network_params(network_id, ssid, bssid, sec, mem_only_psk, pass, hidden_ssid, freq)) {
@@ -275,7 +278,7 @@ bool sta_wlan_hal_dwpal::connect(const std::string &ssid, const std::string &pas
     m_active_ssid.assign(ssid);
     m_active_bssid.assign(bssid);
     m_active_pass.assign(pass);
-    m_active_channel    = channel;
+    m_active_channel    = channel.first;
     m_active_security   = sec;
     m_active_network_id = network_id;
 
@@ -330,7 +333,7 @@ bool sta_wlan_hal_dwpal::disconnect()
     return true;
 }
 
-bool sta_wlan_hal_dwpal::roam(const sMacAddr &bssid, uint8_t channel)
+bool sta_wlan_hal_dwpal::roam(const sMacAddr &bssid, ChannelFreqPair channel)
 {
     if (m_active_network_id == -1) {
         LOG(ERROR) << "Incorrect active network " << m_active_network_id;
@@ -350,7 +353,7 @@ bool sta_wlan_hal_dwpal::roam(const sMacAddr &bssid, uint8_t channel)
         return false;
     }
 
-    auto freq = son::wireless_utils::channel_to_freq(int(channel));
+    auto freq = son::wireless_utils::channel_to_freq(int(channel.first), channel.second);
     if (!set_network(m_active_network_id, "freq_list", std::to_string(freq))) {
         LOG(ERROR) << "Failed setting frequency on iface " << get_iface_name();
         return false;
@@ -358,7 +361,7 @@ bool sta_wlan_hal_dwpal::roam(const sMacAddr &bssid, uint8_t channel)
 
     // Update the active channel and bssid
     m_active_bssid.assign(bssid_str);
-    m_active_channel = channel;
+    m_active_channel = channel.first;
 
     return true;
 }
@@ -593,19 +596,44 @@ bool sta_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int buf
         event_queue_push(event);
 
     } break;
+
+    /* Events about connection between dwpald and hostapd*/
     case Event::Interface_Connected_OK:
     case Event::Interface_Reconnected_OK: {
-        LOG(INFO) << "INTERFACE_RECONNECTED_OK or INTERFACE_CONNECTED_OK from intf " << ifname;
-        auto ret = update_conn_status(ifname);
-        LOG(INFO) << "Status update return value " << ret;
+        std::vector<int> vap_id = {};
+        LOG(INFO) << "INTERFACE_RECONNECTED_OK or INTERFACE_CONNECTED_OK from " << ifname;
+        if (update_conn_status(ifname, vap_id)) {
+            LOG(INFO) << "dwpald connection status updated successfully";
+        } else {
+            LOG(INFO) << "dwpald connection status update failed";
+        }
+
+        for (auto &vap_it : vap_id) {
+            auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sHOSTAP_ENABLED_NOTIFICATION));
+            auto msg      = reinterpret_cast<sHOSTAP_ENABLED_NOTIFICATION *>(msg_buff.get());
+            LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+            msg->vap_id = vap_it;
+            event_queue_push(event, msg_buff);
+        }
         break;
     }
     case Event::Interface_Disconnected: {
-        LOG(INFO) << "INTERFACE_DISCONNECTED from intf " << ifname;
+        LOG(INFO) << "INTERFACE_DISCONNECTED from interface " << ifname;
         for (auto &con : conn_state) {
             // Update interface connection status for vap to false
+            auto iface_ids = beerocks::utils::get_ids_from_iface_string(con.first);
+            if (iface_ids.vap_id == beerocks::IFACE_RADIO_ID) {
+                LOG(DEBUG) << "Ignore INTERFACE_Disconnected on radio";
+                continue;
+            }
             conn_state[con.first] = false;
-            LOG(INFO) << "updated connection status for intf " << con.first << " with false";
+            LOG(INFO) << "updated connection status for vap " << con.first << " with false";
+
+            auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sHOSTAP_ENABLED_NOTIFICATION));
+            auto msg      = reinterpret_cast<sHOSTAP_ENABLED_NOTIFICATION *>(msg_buff.get());
+            LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+            msg->vap_id = iface_ids.vap_id;
+            event_queue_push(Event::Interface_Disconnected, msg_buff);
         }
         break;
     }

@@ -37,15 +37,15 @@ sMacAddr& tlvProfile2ApRadioAdvancedCapabilities::radio_uid() {
     return (sMacAddr&)(*m_radio_uid);
 }
 
-tlvProfile2ApRadioAdvancedCapabilities::sTrafficSeparationFlag& tlvProfile2ApRadioAdvancedCapabilities::traffic_separation_flag() {
-    return (sTrafficSeparationFlag&)(*m_traffic_separation_flag);
+tlvProfile2ApRadioAdvancedCapabilities::sAdvancedRadioCapabilities& tlvProfile2ApRadioAdvancedCapabilities::advanced_radio_capabilities() {
+    return (sAdvancedRadioCapabilities&)(*m_advanced_radio_capabilities);
 }
 
 void tlvProfile2ApRadioAdvancedCapabilities::class_swap()
 {
     tlvf_swap(16, reinterpret_cast<uint8_t*>(m_length));
     m_radio_uid->struct_swap();
-    m_traffic_separation_flag->struct_swap();
+    m_advanced_radio_capabilities->struct_swap();
 }
 
 bool tlvProfile2ApRadioAdvancedCapabilities::finalize()
@@ -82,7 +82,7 @@ size_t tlvProfile2ApRadioAdvancedCapabilities::get_initial_size()
     class_size += sizeof(eTlvTypeMap); // type
     class_size += sizeof(uint16_t); // length
     class_size += sizeof(sMacAddr); // radio_uid
-    class_size += sizeof(sTrafficSeparationFlag); // traffic_separation_flag
+    class_size += sizeof(sAdvancedRadioCapabilities); // advanced_radio_capabilities
     return class_size;
 }
 
@@ -111,13 +111,13 @@ bool tlvProfile2ApRadioAdvancedCapabilities::init()
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(sMacAddr); }
     if (!m_parse__) { m_radio_uid->struct_init(); }
-    m_traffic_separation_flag = reinterpret_cast<sTrafficSeparationFlag*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(sTrafficSeparationFlag))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sTrafficSeparationFlag) << ") Failed!";
+    m_advanced_radio_capabilities = reinterpret_cast<sAdvancedRadioCapabilities*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(sAdvancedRadioCapabilities))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sAdvancedRadioCapabilities) << ") Failed!";
         return false;
     }
-    if(m_length && !m_parse__){ (*m_length) += sizeof(sTrafficSeparationFlag); }
-    if (!m_parse__) { m_traffic_separation_flag->struct_init(); }
+    if(m_length && !m_parse__){ (*m_length) += sizeof(sAdvancedRadioCapabilities); }
+    if (!m_parse__) { m_advanced_radio_capabilities->struct_init(); }
     if (m_parse__) { class_swap(); }
     if (m_parse__) {
         if (*m_type != eTlvTypeMap::TLV_PROFILE2_AP_RADIO_ADVANCED_CAPABILITIES) {

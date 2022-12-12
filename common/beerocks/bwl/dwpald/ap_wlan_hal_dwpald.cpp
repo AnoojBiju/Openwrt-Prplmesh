@@ -956,6 +956,8 @@ bool ap_wlan_hal_dwpal::refresh_radio_info()
         m_radio_info.vht_capability = band_info_it->vht_capability;
         std::copy_n(band_info_it->vht_mcs_set, m_radio_info.vht_mcs_set.size(),
                     m_radio_info.vht_mcs_set.begin());
+        m_radio_info.he_supported  = band_info_it->he_supported;
+        m_radio_info.he_capability = band_info_it->he_capability;
 
         for (auto const &pair : band_info_it->supported_channels) {
             auto &supported_channel_info = pair.second;
@@ -1618,9 +1620,15 @@ bool ap_wlan_hal_dwpal::sta_unassoc_rssi_measurement(const std::string &mac, int
                                                      int vht_center_frequency, int delay,
                                                      int window_size)
 {
+    auto freq_type = son::wireless_utils::which_freq_type(vht_center_frequency);
+    if (freq_type == beerocks::FREQ_UNKNOWN) {
+        LOG(ERROR) << "Unknown frequency. Must be 2.4GHz, 5GHz, or 6GHz";
+        return false;
+    }
+
     // Convert values to strings
-    std::string chanBandwidth     = std::to_string(bw);
-    std::string centerFreq        = std::to_string(son::wireless_utils::channel_to_freq(chan));
+    std::string chanBandwidth = std::to_string(bw);
+    std::string centerFreq = std::to_string(son::wireless_utils::channel_to_freq(chan, freq_type));
     std::string waveVhtCenterFreq = std::to_string(vht_center_frequency);
 
     // Build command string
@@ -1698,8 +1706,9 @@ bool ap_wlan_hal_dwpal::switch_channel(int chan, beerocks::eWiFiBandwidth bw,
     } else {
         m_drop_csa = false;
 
-        int freq                              = son::wireless_utils::channel_to_freq(chan);
-        std::string freq_str                  = std::to_string(freq);
+        auto freq_type       = son::wireless_utils::which_freq_type(vht_center_frequency);
+        int freq             = son::wireless_utils::channel_to_freq(chan, freq_type);
+        std::string freq_str = std::to_string(freq);
         std::string wave_vht_center_frequency = std::to_string(vht_center_frequency);
 
         // Center Freq
@@ -1714,16 +1723,32 @@ bool ap_wlan_hal_dwpal::switch_channel(int chan, beerocks::eWiFiBandwidth bw,
             }
         }
 
-        // Channel bandwidth
-        if ((bw == beerocks::BANDWIDTH_80) || (bw == beerocks::BANDWIDTH_160)) {
-            cmd += " center_freq1=" + wave_vht_center_frequency;
+        /*
+        according to the P802.11ax_D7.0 standard, Section 9.4.2.249:
+        On 6GHz band, center_frequency_1 shall be the center frequency of the primary 80MHz channel,
+        and center_frequency_2 shall be the center frequency of the 160MHz channel
+        */
+        if (freq_type != beerocks::FREQ_6G) {
+            if (bw == beerocks::BANDWIDTH_80 || bw == beerocks::BANDWIDTH_160) {
+                cmd += " center_freq1=" + wave_vht_center_frequency;
+            }
+        } else {
+            if (bw == beerocks::BANDWIDTH_160) {
+                auto primary_80mhz_freq = (freq < vht_center_frequency) ? vht_center_frequency - 40
+                                                                        : vht_center_frequency + 40;
+                cmd += " center_freq1=" + std::to_string(primary_80mhz_freq);
+                cmd += " center_freq2=" + wave_vht_center_frequency;
+            } else {
+                cmd += " center_freq1=" + wave_vht_center_frequency;
+            }
         }
 
         cmd += " bandwidth=" + std::to_string(beerocks::utils::convert_bandwidth_to_int(
                                    static_cast<beerocks::eWiFiBandwidth>(bw)));
 
-        // Supported Standard n/ac
-        if (bw == beerocks::BANDWIDTH_20 || bw == beerocks::BANDWIDTH_40) {
+        if (freq_type == beerocks::FREQ_6G) {
+            cmd += " he";
+        } else if (bw == beerocks::BANDWIDTH_20 || bw == beerocks::BANDWIDTH_40) {
             cmd += " ht"; //n
         } else if ((bw == beerocks::BANDWIDTH_80) || (bw == beerocks::BANDWIDTH_160)) {
             cmd += " vht"; // ac
@@ -1809,7 +1834,8 @@ bool ap_wlan_hal_dwpal::failsafe_channel_set(int chan, int bw, int vht_center_fr
     // Build command string
     if (chan) {
         std::string bw_str   = std::to_string(bw);
-        std::string chan_str = std::to_string(son::wireless_utils::channel_to_freq(chan));
+        std::string chan_str = std::to_string(son::wireless_utils::channel_to_freq(
+            chan, son::wireless_utils::which_freq_type(vht_center_frequency)));
         std::string freq_str = std::to_string(vht_center_frequency);
         LOG(DEBUG) << "chan_str = " << chan_str << " bw_str = " << bw_str
                    << " vht_freq_str = " << freq_str;
@@ -2102,8 +2128,8 @@ bool ap_wlan_hal_dwpal::read_acs_report()
     m_radio_info.is_5ghz = false;
 
     // Check if channel is 5GHz
-    auto ch = m_radio_info.channels_list.begin()->first;
-    if (son::wireless_utils::which_freq(ch) == beerocks::eFreqType::FREQ_5G) {
+    if (son::wireless_utils::which_freq_type(m_radio_info.vht_center_freq) ==
+        beerocks::eFreqType::FREQ_5G) {
         m_radio_info.is_5ghz = true;
     }
 
@@ -2484,7 +2510,8 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
         m_radio_info.last_csa_sw_reason = chanSwReason;
 
         // Update the radio information structure
-        if (son::wireless_utils::which_freq(m_radio_info.channel) == beerocks::eFreqType::FREQ_5G) {
+        if (son::wireless_utils::which_freq_type(m_radio_info.vht_center_freq) ==
+            beerocks::eFreqType::FREQ_5G) {
             m_radio_info.is_5ghz = true;
         }
 
@@ -3043,7 +3070,9 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
         std::string bssid = m_radio_info.available_vaps[iface_ids.vap_id].mac;
 
         auto op_class = son::wireless_utils::get_operating_class_by_channel(
-            beerocks::message::sWifiChannel(m_radio_info.channel, m_radio_info.bandwidth));
+            beerocks::WifiChannel(m_radio_info.channel, m_radio_info.vht_center_freq,
+                                  static_cast<beerocks::eWiFiBandwidth>(m_radio_info.bandwidth),
+                                  m_radio_info.channel_ext_above > 0 ? true : false));
         // According to easymesh R2 specification when STA sends BSS_TM_QUERY
         // AP should respond with BSS_TM_REQ with at least one neighbor AP.
         // This commit adds the answer to the BSS_TM_QUERY. The answer adds only
@@ -3436,17 +3465,40 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
     }
     case Event::Interface_Connected_OK:
     case Event::Interface_Reconnected_OK: {
-        LOG(INFO) << "INTERFACE_RECONNECTED_OK or INTERFACE_CONNECTED_OK from intf " << ifname;
-        auto ret = update_conn_status(ifname);
-        LOG(INFO) << "Status update return value " << ret;
+        std::vector<int> vap_id = {};
+        LOG(INFO) << "INTERFACE_RECONNECTED_OK or INTERFACE_CONNECTED_OK from " << ifname;
+        if (update_conn_status(ifname, vap_id)) {
+            LOG(INFO) << "dwpald connection status updated successfully";
+        } else {
+            LOG(INFO) << "dwpald connection status update failed";
+        }
+
+        for (auto &vap_it : vap_id) {
+            auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sHOSTAP_ENABLED_NOTIFICATION));
+            auto msg      = reinterpret_cast<sHOSTAP_ENABLED_NOTIFICATION *>(msg_buff.get());
+            LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+            msg->vap_id = vap_it;
+            event_queue_push(event, msg_buff);
+        }
         break;
     }
     case Event::Interface_Disconnected: {
-        LOG(INFO) << "INTERFACE_DISCONNECTED from intf " << ifname;
+        LOG(INFO) << "INTERFACE_DISCONNECTED from interface " << ifname;
         for (auto &con : conn_state) {
             // Update interface connection status for vap to false
+            auto iface_ids = beerocks::utils::get_ids_from_iface_string(con.first);
+            if (iface_ids.vap_id == beerocks::IFACE_RADIO_ID) {
+                LOG(DEBUG) << "Ignore INTERFACE_Disconnected on radio";
+                continue;
+            }
             conn_state[con.first] = false;
-            LOG(INFO) << "updated connection status for intf " << con.first << " with false";
+            LOG(INFO) << "updated connection status for vap " << con.first << " with false";
+
+            auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sHOSTAP_ENABLED_NOTIFICATION));
+            auto msg      = reinterpret_cast<sHOSTAP_ENABLED_NOTIFICATION *>(msg_buff.get());
+            LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+            msg->vap_id = iface_ids.vap_id;
+            event_queue_push(Event::Interface_Disconnected, msg_buff);
         }
         break;
     }
@@ -3561,6 +3613,19 @@ bool ap_wlan_hal_dwpal::add_bss(std::string &ifname, son::wireless_utils::sBssIn
 }
 
 bool ap_wlan_hal_dwpal::remove_bss(std::string &ifname)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
+bool ap_wlan_hal_dwpal::add_key(const std::string &ifname, const sKeyInfo &key_info)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
+bool ap_wlan_hal_dwpal::add_station(const std::string &ifname, const sMacAddr &mac,
+                                    assoc_frame::AssocReqFrame &assoc_req)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return false;

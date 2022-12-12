@@ -15,6 +15,7 @@
 
 #include <bcl/beerocks_defines.h>
 #include <bcl/beerocks_logging.h>
+#include <bcl/beerocks_wifi_channel.h>
 #include <bcl/network/network_utils.h>
 #include <bcl/son/son_wireless_utils.h>
 #include <bpl/bpl_board.h>
@@ -28,6 +29,8 @@
 #include <tlvf/wfa_map/tlvApVhtCapabilities.h>
 #include <tlvf/wfa_map/tlvApWifi6Capabilities.h>
 #include <tlvf/wfa_map/tlvAssociatedStaExtendedLinkMetrics.h>
+#include <tlvf/wfa_map/tlvAssociatedWiFi6StaStatusReport.h>
+#include <tlvf/wfa_map/tlvProfile2ApRadioAdvancedCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2CacCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2CacStatusReport.h>
 
@@ -163,9 +166,20 @@ public:
         std::chrono::milliseconds steering_disassoc_timer_msec;
         int management_mode;
         bool unsuccessful_assoc_report_policy;
-        int unsuccessful_assoc_max_reporting_rate;
+        unsigned int unsuccessful_assoc_max_reporting_rate;
         int optimal_path_rssi_timeout_msec;
         int optimal_path_beacon_timeout_msec;
+
+        // Must be applied to specific radio (PPM-2357)
+        unsigned int sta_reporting_rcpi_threshold;
+        unsigned int sta_reporting_rcpi_hysteresis_margin_override_threshold;
+        unsigned int ap_reporting_channel_utilization_threshold;
+        bool assoc_sta_traffic_stats_inclusion_policy;
+        bool assoc_sta_link_metrics_inclusion_policy;
+        bool assoc_wifi6_sta_status_report_inclusion_policy;
+        unsigned int steering_policy;
+        unsigned int channel_utilization_threshold;
+        unsigned int rcpi_steering_threshold;
     } sDbMasterConfig;
 
     typedef struct {
@@ -191,18 +205,12 @@ public:
 
         bool rdkb_extensions = false;
 
-        bool channel_select_task         = false;
-        bool dynamic_channel_select_task = false;
+        bool channel_select_task         = true;
+        bool dynamic_channel_select_task = true;
 
         // Params
         bool client_optimal_path_roaming_prefer_signal_strength = false;
     } sDbMasterSettings;
-
-    typedef struct {
-        std::string manufacturer;
-        std::string serial_number;
-        std::string manufacturer_model;
-    } sDeviceInfo;
 
     /**
      * @brief Avaliable configuration parameters in NBAPI.
@@ -594,8 +602,6 @@ public:
     bool set_agent_manufacturer(prplmesh::controller::db::Agent &agent,
                                 const std::string &manufacturer);
 
-    int get_node_channel(const std::string &mac);
-
     int get_hostap_operating_class(const sMacAddr &mac);
 
     bool set_node_vap_id(const std::string &mac, int8_t vap_id);
@@ -889,6 +895,20 @@ public:
         const wfa_map::tlvAssociatedStaExtendedLinkMetrics::sMetrics &metrics);
 
     /**
+     * @brief Sets Traffic Identifiers (TIDs), and Queue Size for each TID, for Associated Device (STA)
+     *
+     * Path: Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.TIDQueueSizes.{i}.
+     *
+     * @param station Station object
+     * @param tid_queue_vector Vector with values of TID and Queue Size for each TID
+     * @return true on success, false otherwise.
+     */
+    bool dm_add_tid_queue_sizes(
+        const Station &station,
+        const std::vector<wfa_map::tlvAssociatedWiFi6StaStatusReport::sTidQueueSize>
+            &tid_queue_vector);
+
+    /**
      * @brief Sets Traffic Stats for corresponding STA.
      *
      * Path: Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}
@@ -1075,6 +1095,19 @@ public:
     bool set_station_capabilities(const std::string &client_mac,
                                   const beerocks::message::sRadioCapabilities &sta_cap);
 
+    /**
+     * @brief Set ClientCapabilities values for Station and AssocEvent object
+     * Full path to data element:
+     * 'Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.ClientCapabilities'.
+     * 'Device.WiFi.DataElements.AssociationEvent.AssociationEventData.{i}.ClientCapabilities'.
+     *
+     * @param sta_mac Station MAC address.
+     * @param frame (Re)Association Request frame.
+     * @param database Database to fetch controller, agent, and radio contexts.
+     * @return True on success, false otherwise.
+     */
+    bool set_client_capabilities(const sMacAddr &sta_mac, const std::string &frame, db &database);
+
     bool set_hostap_ant_num(const sMacAddr &mac, beerocks::eWiFiAntNum ant_num);
     beerocks::eWiFiAntNum get_hostap_ant_num(const sMacAddr &mac);
 
@@ -1085,9 +1118,8 @@ public:
     int get_hostap_tx_power(const sMacAddr &mac);
 
     bool set_hostap_supported_channels(const sMacAddr &mac,
-                                       beerocks::message::sWifiChannel *supported_channels,
-                                       int length);
-    std::vector<beerocks::message::sWifiChannel> get_hostap_supported_channels(const sMacAddr &mac);
+                                       beerocks::WifiChannel *supported_channels, int length);
+    std::vector<beerocks::WifiChannel> get_hostap_supported_channels(const sMacAddr &mac);
     std::string get_hostap_supported_channels_string(const sMacAddr &radio_mac);
 
     bool add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t operating_class,
@@ -1216,9 +1248,6 @@ public:
     bool set_supported_channel_radar_affected(const sMacAddr &mac,
                                               const std::vector<uint8_t> &channels, bool affected);
     //bool get_supported_channel_all_availble(const std::string &mac );
-
-    bool set_hostap_is_dfs(const sMacAddr &mac, bool enable);
-    bool get_hostap_is_dfs(const sMacAddr &mac);
 
     bool set_hostap_cac_completed(const sMacAddr &mac, bool enable);
     bool get_hostap_cac_completed(const sMacAddr &mac);
@@ -1857,14 +1886,39 @@ public:
     int get_measurement_window_size(const std::string &mac);
     bool set_measurement_window_size(const std::string &mac, int window_size);
 
-    bool set_node_channel_bw(const sMacAddr &mac, int channel, beerocks::eWiFiBandwidth bw,
-                             bool channel_ext_above_secondary, int8_t channel_ext_above_primary,
-                             uint16_t vht_center_frequency);
-    bool update_node_bw(const sMacAddr &mac, beerocks::eWiFiBandwidth bw);
-    beerocks::eWiFiBandwidth get_node_bw(const std::string &mac);
-    bool get_hostap_channel_ext_above_primary(const sMacAddr &hostap_mac);
-    bool get_node_channel_ext_above_secondary(const std::string &mac);
-    uint16_t get_hostap_vht_center_frequency(const sMacAddr &mac);
+    /**
+     * @brief Search a node that is identified by the mac
+     * and get a copy of the node's wifiChannel object
+     * @param mac the identifier of the node
+     * @return if the node is found, return a copy of node's wifiChannel object.
+     * otherwise, return an empty wifiChannel object
+     */
+    beerocks::WifiChannel get_node_wifi_channel(const std::string &mac);
+
+    /**
+     * @brief Set the node and its children's wifiChannel object
+     * @param mac identifier of the node
+     * @param wifi_channel wifiChannel those values will be copied to the wifiChannel
+     * of the DB's node.
+     * @return true if the node that is identified by the mac was found and setting has succeed
+     * @return false in the following cases:
+     *      1. the node that is identified by the mac was not found
+     *      2. the node's type is TYPE_SLAVE and the node's hostap object is nullptr
+     */
+    bool set_node_wifi_channel(const sMacAddr &mac, const beerocks::WifiChannel &wifi_channel);
+
+    /**
+     * @brief update the node and its children's wifiChannel objects
+     * with the new bandwidth
+     * @param mac identifier of the node
+     * @param bw the new bandwidth that will be assigned to the node's wifiChannel object
+     * @return true if the node that is identified by the mac was found and setting has succeed
+     * @return false in the following cases:
+     *      1. the node that is identified by the mac was not found
+     *      2. if the bandwidth is unknown,
+     *      3. the node's type is TYPE_SLAVE and the node's hostap object is nullptr
+     */
+    bool update_node_wifi_channel_bw(const sMacAddr &mac, beerocks::eWiFiBandwidth bw);
 
     void add_bss_info_configuration(const sMacAddr &al_mac,
                                     const wireless_utils::sBssInfoConf &bss_info);
@@ -2152,15 +2206,38 @@ public:
                                        const wireless_utils::sTrafficSeparationSsid &config);
 
     /**
-     * @brief Sets Device datamodel board info parameters.
+     * @brief Sets the default 802.1Q settings for EasyMesh service prioritization.
      *
-     * DM path : "Device.WiFi.DataElements.Network.Device.{i}"
+     * DM path : "Device.WiFi.DataElements.Network.Device.{i}.Default8021Q.{i}."
      *
-     * @param agent agent whose Device object is set
-     * @param device_info struct with values of board info parameters
+     * @param[in] agent agent whose Default8021Q object is set.
+     * @param[in] primary_vlan_id The primary 802.1Q C-TAG (VLAN ID).
+     * @param[in] default_pcp The default Priority Code Point (PCP).
      * @return True on success, false otherwise.
      */
-    bool dm_set_device_board_info(const Agent &agent, const sDeviceInfo &device_info);
+    bool dm_set_default_8021q(const Agent &agent, const uint16_t primary_vlan_id,
+                              const uint8_t default_pcp);
+    /**
+     * @brief Sets Device datamodel board info parameters.
+     *
+     * DM path: "Device.WiFi.DataElements.Network.Device.{i}."
+     *
+     * @param agent Agent DB object.
+     * @return True on success, false otherwise.
+     */
+    bool dm_set_profile1_device_info(const Agent &agent);
+
+    /**
+     * @brief Sets Device datamodel info parameters.
+     *
+     * DM paths:
+     * "Device.WiFi.DataElements.Network.Device.{i}."
+     * "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}."
+     *
+     * @param agent Agent DB object.
+     * @return True on success, false otherwise.
+     */
+    bool dm_set_profile3_device_info(const Agent &agent);
 
     /**
      * @brief Adds to data model an instance of object AssociationEventData.
@@ -2265,6 +2342,16 @@ public:
             &backhaul_bss_selectors);
 
     /**
+     * @brief Sets advanced radio capabilities on given radio.
+     *
+     * Data model path: "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}."
+     *
+     * @param[in] radio Radio DB object.
+     * @return True on success, otherwise false.
+     */
+    bool dm_set_radio_advanced_capabilities(const Agent::sRadio &radio);
+
+    /**
      * @brief Set the VBSS Capabilities for the specified radio. 
      *  VBSS Capabilities information defined more in the EasyMesh specification.
      * 
@@ -2316,6 +2403,66 @@ public:
         const wfa_map::tlv1905LayerSecurityCapability::eOnboardingProtocol &onboard_protocol,
         const wfa_map::tlv1905LayerSecurityCapability::eMicAlgorithm &integrity_algorithm,
         const wfa_map::tlv1905LayerSecurityCapability::eEncryptionAlgorithm &encryption_algorithm);
+
+    /**
+     * @brief Sets metric reporting policy parameters.
+     *
+     * Data model paths:
+     * "Device.WiFi.DataElements.Network.Device.{i}."
+     * "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}."
+     *
+     * @param[in] agent Agent DB object.
+     * @return True on success, otherwise false.
+     */
+    bool dm_set_metric_reporting_policies(const Agent &agent);
+
+    /**
+     * @brief Sets steering policy parameters.
+     *
+     * Data model paths:
+     * "Device.WiFi.DataElements.Network.Device.{i}."
+     * "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}."
+     *
+     * @param[in] agent Agent DB object.
+     * @return True on success, otherwise false.
+     */
+    bool dm_set_steering_policies(const Agent &agent);
+
+    /** @brief Sets Multi-AP profile for corresponding device.
+     *
+     * DM path: "Device.WiFi.DataElements.Network.Device.{i}."
+     *
+     * @param[in] agent Agent DB object.
+     * @return true on success, otherwise false.
+     */
+    bool dm_set_device_multi_ap_profile(const Agent &agent);
+
+    /** @brief Sets Unsuccessful Association policy parameters for corresponding device.
+     *
+     * DM path: "Device.WiFi.DataElements.Network.Device.{i}."
+     *
+     * @param[in] agent Agent DB object.
+     * @return true on success, otherwise false.
+     */
+    bool dm_set_device_unsuccessful_association_policy(const Agent &agent);
+
+    /** @brief Sets service prioritization rules for corresponding device.
+     *
+     * DM path: "Device.WiFi.DataElements.Network.Device.{i}."
+     *
+     * @param[in] agent Agent DB object.
+     * @return true on success, otherwise false.
+     */
+    bool dm_set_service_prioritization_rules(const Agent &agent);
+
+    /** @brief Sets AP capability parameters for corresponding device.
+     *
+     * DM path: "Device.WiFi.DataElements.Network.Device.{i}."
+     *
+     * @param[in] agent Agent DB object.
+     * @return true on success, otherwise false.
+     */
+    bool dm_set_device_ap_capabilities(const Agent &agent);
 
     //
     // tasks

@@ -34,7 +34,6 @@ public:
     virtual ~ap_wlan_hal_whm();
 
     virtual HALState attach(bool block = false) override;
-    bool refresh_radio_info() override;
     virtual bool enable() override;
     virtual bool disable() override;
     virtual bool set_start_disabled(bool enable, int vap_id = beerocks::IFACE_RADIO_ID) override;
@@ -105,7 +104,10 @@ public:
     virtual bool add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
                          std::string &bridge, bool vbss) override;
     virtual bool remove_bss(std::string &ifname) override;
-    virtual bool get_security_context(son::wireless_utils::sClientSecurityContext &clnt_sec) override;
+    virtual bool add_key(const std::string &ifname, const sKeyInfo &key_info) override;
+    virtual bool add_station(const std::string &ifname, const sMacAddr &mac,
+                             assoc_frame::AssocReqFrame &assoc_req) override;
+
     // Protected methods:
 protected:
     // Overload for AP events
@@ -117,11 +119,15 @@ protected:
     virtual bool set(const std::string &param, const std::string &value, int vap_id) override;
 
 private:
-    void subscribe_to_radio_events(const std::string &iface_name);
-    void subscribe_to_ap_events(const std::string &iface_name);
-    void subscribe_to_sta_events(const std::string &iface_name);
-    amxc_var_t *get_last_assoc_frame(const std::string &sta_mac);
-    bool process_whm_event(ap_wlan_hal::Event event, const amxc_var_t *data);
+    beerocks::wbapi::AmbiorixVariantSmartPtr get_last_assoc_frame(const std::string &vap_iface,
+                                                                  const std::string &sta_mac);
+    bool process_radio_event(const std::string &interface, const std::string &key,
+                             const beerocks::wbapi::AmbiorixVariant *value) override;
+    bool process_ap_event(const std::string &interface, const std::string &key,
+                          const beerocks::wbapi::AmbiorixVariant *value) override;
+    bool process_sta_event(const std::string &interface, const std::string &sta_mac,
+                           const std::string &key,
+                           const beerocks::wbapi::AmbiorixVariant *value) override;
 };
 
 } // namespace whm

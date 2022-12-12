@@ -168,3 +168,9 @@ bool string_utils::case_insensitive_compare(const std::string &lstr, const std::
            std::equal(lstr.begin(), lstr.end(), rstr.begin(),
                       [](char a, char b) -> bool { return (tolower(a) == tolower(b)); });
 }
+
+bool string_utils::endswith(const std::string &str, const std::string &suffix)
+{
+    return ((str.size() >= suffix.size()) &&
+            (str.compare(str.size() - suffix.size(), suffix.size(), suffix)) == 0);
+}

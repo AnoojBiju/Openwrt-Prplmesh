@@ -11,6 +11,7 @@
 
 #include "../tasks/task.h"
 #include "interface.h"
+#include <bcl/beerocks_wifi_channel.h>
 #include <bcl/network/network_utils.h>
 #include <tlvf/common/sMacAddr.h>
 #include <tlvf/ieee_1905_1/tlvReceiverLinkMetric.h>
@@ -59,17 +60,17 @@ public:
     std::string dm_path;             // data model path without dot in the end
     std::string previous_parent_mac; //hostap
 
+    beerocks::WifiChannel wifi_channel;
+
     std::string ipv4;
     std::string manufacturer;
-    int channel = 0;
     std::string name;
     int hierarchy = -1; //redundant but more efficient
     beerocks::message::sRadioCapabilities *capabilities;
     beerocks::message::sRadioCapabilities m_sta_5ghz_capabilities;
     beerocks::message::sRadioCapabilities m_sta_24ghz_capabilities;
 
-    beerocks::eWiFiBandwidth bandwidth = beerocks::BANDWIDTH_160;
-    bool channel_ext_above_secondary   = true;
+    bool channel_ext_above_secondary = true;
 
     beerocks::eNodeState state = beerocks::STATE_DISCONNECTED;
 
@@ -114,15 +115,12 @@ public:
 
         std::string iface_name;
         beerocks::eIfaceType iface_type;
-        std::vector<beerocks::message::sWifiChannel> supported_channels;
+        std::vector<beerocks::WifiChannel> supported_channels;
         uint8_t operating_class = 0;
         int ant_gain            = 0;
         int tx_power            = 0;
         std::string ssid;
         beerocks::eRadioBandCapability capability = beerocks::SUBBAND_CAPABILITY_UNKNOWN;
-        uint16_t vht_center_frequency             = 0;
-        int8_t channel_ext_above_primary          = 1;
-        bool is_dfs                               = false;
         bool cac_completed                        = false;
         bool on_dfs_reentry                       = false;
         std::set<std::string> dfs_reentry_clients;

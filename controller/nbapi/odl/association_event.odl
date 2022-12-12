@@ -30,6 +30,9 @@
                                                 latest Association Response frame */
                 // The time this event was collected
                 %read-only string TimeStamp = "2020-08-31T11:22:39Z";
+                %read-only string ClientCapabilities; /* The frame body of the most recently
+                                                       received (Re)Association Request frame
+                                                       from this client (STA) */
             }
         }
     }

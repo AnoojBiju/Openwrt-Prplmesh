@@ -124,6 +124,13 @@ public:
     static std::vector<std::string> linux_get_iface_list_from_bridge(const std::string &bridge);
 
     /**
+     * @brief Gets the bridge name hosting the provided interface.
+     *
+     * @return bridge interface name, empty when none
+     */
+    static std::string linux_iface_get_host_bridge(const std::string &iface);
+
+    /**
      * @brief Gets the interface index corresponding to a particular name.
      *
      * @param iface_name The name of the network interface.
@@ -270,9 +277,11 @@ public:
      * @brief Filter (or Remove Filter) packets containing a given VLAN ID and double-tagged packets
      * with S-Tag, by adding new rules to the nat table.
      *
-     * @param set If true, set the filter, otherwise clear it.
+     * @param set If true, set the filter, otherwise clear all rule containing the
+     *  @a bss_iface name.
      * @param bss_iface An interface name to apply the rule on.
-     * @param vid VLAN IDs. If zero (default value), only filter double-tagged packets.
+     * @param vid VLAN IDs for add command. If zero (default value), only filter double-tagged
+     *  packets.
      * @return true on success, false otherwise.
      */
     static bool set_vlan_packet_filter(bool set, const std::string &bss_iface, uint16_t vid = 0);

@@ -10,9 +10,9 @@ tlvProfile2ApRadioAdvancedCapabilities:
     _value_const: TLV_PROFILE2_AP_RADIO_ADVANCED_CAPABILITIES
   length: uint16_t
   radio_uid: sMacAddr
-  traffic_separation_flag: sTrafficSeparationFlag
+  advanced_radio_capabilities: sAdvancedRadioCapabilities
 
-sTrafficSeparationFlag:
+sAdvancedRadioCapabilities:
   _type: struct
   _bit_field: uint8_t
   combined_front_back:
@@ -21,5 +21,17 @@ sTrafficSeparationFlag:
   combined_profile1_and_profile2:
     _bit_range: [6,6]
     _comment: Traffic Separation on combined Profile-1 backhaul and Profile-2 backhaul support.
+  mscs:
+    _bit_range: [5,5]
+    _comment: Support for MSCS and EasyMesh configuration of / extensions to MSCS.
+  scs:
+    _bit_range: [4,4]
+    _comment: Support for SCS and EasyMesh configuration of / extensions to SCS.
+  dscp_to_up_mapping:
+    _bit_range: [3,3]
+    _comment: Support for DSCP-to-UP mapping.
+  dscp_policy:
+    _bit_range: [2,2]
+    _comment: Support for sending DSCP Policy Requests to associated STAs, and EasyMesh configuration of such policies.
   reserved:
-    _bit_range: [5,0]
+    _bit_range: [1,0]

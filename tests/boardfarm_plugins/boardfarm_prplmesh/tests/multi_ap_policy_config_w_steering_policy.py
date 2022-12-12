@@ -47,3 +47,8 @@ class MultiApPolicyConfigWSteeringPolicy(PrplMeshBaseTest):
         debug("Confirming multi-ap policy config ack message has been received on the controller")
         self.check_cmdu_type_single(
             "ACK", self.ieee1905['eMessageType']['ACK_MESSAGE'], agent.mac, controller.mac, mid)
+
+        # TODO: Check related TLVs:
+        # - Metric Reporting Policy TLV
+        # - Steering Policy TLV
+        # and the corresponding DM objects (PPM-2360).

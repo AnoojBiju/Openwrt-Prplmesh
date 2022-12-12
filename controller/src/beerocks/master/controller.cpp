@@ -31,6 +31,7 @@
 #include <bcl/beerocks_backport.h>
 #include <bcl/beerocks_utils.h>
 #include <bcl/beerocks_version.h>
+#include <bcl/beerocks_wifi_channel.h>
 #include <bcl/network/sockets.h>
 #include <bcl/son/son_wireless_utils.h>
 #include <bcl/transaction.h>
@@ -59,6 +60,7 @@
 #include <tlvf/wfa_map/tlvApWifi6Capabilities.h>
 #include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaTrafficStats.h>
+#include <tlvf/wfa_map/tlvAssociatedWiFi6StaStatusReport.h>
 #include <tlvf/wfa_map/tlvBackhaulStaRadioCapabilities.h>
 #include <tlvf/wfa_map/tlvBackhaulSteeringResponse.h>
 #include <tlvf/wfa_map/tlvBssid.h>
@@ -67,10 +69,13 @@
 #include <tlvf/wfa_map/tlvChannelSelectionResponse.h>
 #include <tlvf/wfa_map/tlvClientCapabilityReport.h>
 #include <tlvf/wfa_map/tlvClientInfo.h>
+#include <tlvf/wfa_map/tlvDeviceInventory.h>
+#include <tlvf/wfa_map/tlvDscpMappingTable.h>
 #include <tlvf/wfa_map/tlvErrorCode.h>
 #include <tlvf/wfa_map/tlvHigherLayerData.h>
 #include <tlvf/wfa_map/tlvOperatingChannelReport.h>
 #include <tlvf/wfa_map/tlvProfile2ApCapability.h>
+#include <tlvf/wfa_map/tlvProfile2ApRadioAdvancedCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2CacCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2CacStatusReport.h>
 #include <tlvf/wfa_map/tlvProfile2ChannelScanResult.h>
@@ -78,8 +83,10 @@
 #include <tlvf/wfa_map/tlvProfile2RadioMetrics.h>
 #include <tlvf/wfa_map/tlvProfile2ReasonCode.h>
 #include <tlvf/wfa_map/tlvProfile2StatusCode.h>
+#include <tlvf/wfa_map/tlvQoSManagementDescriptor.h>
 #include <tlvf/wfa_map/tlvRadioOperationRestriction.h>
 #include <tlvf/wfa_map/tlvSearchedService.h>
+#include <tlvf/wfa_map/tlvServicePrioritizationRule.h>
 #include <tlvf/wfa_map/tlvStaMacAddressType.h>
 #include <tlvf/wfa_map/tlvSteeringBTMReport.h>
 #include <tlvf/wfa_map/tlvSupportedService.h>
@@ -207,7 +214,7 @@ bool Controller::start()
         database.add_node_wired_backhaul(eth_switch_mac, database.get_local_bridge_mac());
         database.set_node_state(eth_switch_mac_str, beerocks::STATE_CONNECTED);
         database.set_node_name(eth_switch_mac_str, "GW_CONTROLLER_ETH");
-        database.set_node_manufacturer(eth_switch_mac_str, agent->manufacturer);
+        database.set_node_manufacturer(eth_switch_mac_str, agent->device_info.manufacturer);
     }
 
     // Create a timer to run internal tasks periodically
@@ -294,6 +301,7 @@ bool Controller::start()
             ieee1905_1::eMessageType::BACKHAUL_STA_CAPABILITY_REPORT_MESSAGE,
             ieee1905_1::eMessageType::BSS_CONFIGURATION_REQUEST_MESSAGE,
             ieee1905_1::eMessageType::FAILED_CONNECTION_MESSAGE,
+            ieee1905_1::eMessageType::QOS_MANAGEMENT_NOTIFICATION_MESSAGE,
         })) {
         LOG(ERROR) << "Failed subscribing to the Bus";
         return false;
@@ -569,8 +577,10 @@ bool Controller::handle_cmdu_1905_1_message(const sMacAddr &src_mac,
         return handle_cmdu_1905_failed_connection_message(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::ASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE:
         return handle_cmdu_1905_associated_sta_link_metrics_response_message(src_mac, cmdu_rx);
+    case ieee1905_1::eMessageType::QOS_MANAGEMENT_NOTIFICATION_MESSAGE:
+        return handle_cmdu_1905_qos_management_notification_message(src_mac, cmdu_rx);
 
-    // Empty cases are used to prevent error logs. Below message types are proccessed within tasks.
+    // Empty cases are used to prevent error logs. Below message types are processed within tasks.
     case ieee1905_1::eMessageType::TOPOLOGY_RESPONSE_MESSAGE:
     case ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE:
     case ieee1905_1::eMessageType::LINK_METRIC_RESPONSE_MESSAGE:
@@ -728,7 +738,7 @@ bool Controller::handle_cmdu_1905_autoconfiguration_search(const sMacAddr &src_m
         wfa_map::tlvSupportedService::eSupportedService::MULTI_AP_CONTROLLER;
 
     // Add MultiAp Profile TLV only if the agent added it to the seach message.
-    // Although R2 is profile1 competible, we found out that some certified agent
+    // Although R2 is profile1 compatible, we found out that some certified agent
     // fail to parse the response in case the TLV is present.
     auto tlvProfile2MultiApProfileAgent = cmdu_rx.getClass<wfa_map::tlvProfile2MultiApProfile>();
     if (tlvProfile2MultiApProfileAgent) {
@@ -781,6 +791,11 @@ bool Controller::handle_cmdu_1905_autoconfiguration_search(const sMacAddr &src_m
 
         agent->profile = tlvProfile2MultiApProfileAgent->profile();
         LOG(DEBUG) << "Agent profile is updated with enum " << agent->profile;
+
+        if (!database.dm_set_device_multi_ap_profile(*agent)) {
+            LOG(ERROR) << "Failed to set Multi-AP profile in DM for Agent " << agent->al_mac;
+            return false;
+        }
     }
 
     return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
@@ -987,6 +1002,14 @@ bool Controller::autoconfig_wsc_add_m2(WSC::m1 &m1,
         if (bss_info_conf->backhaul) {
             cfg.bss_type |= WSC::eWscVendorExtSubelementBssType::BACKHAUL_BSS;
         }
+        if (bss_info_conf->profile1_backhaul_sta_association_disallowed) {
+            cfg.bss_type |=
+                WSC::eWscVendorExtSubelementBssType::PROFILE1_BACKHAUL_STA_ASSOCIATION_DISALLOWED;
+        }
+        if (bss_info_conf->profile2_backhaul_sta_association_disallowed) {
+            cfg.bss_type |=
+                WSC::eWscVendorExtSubelementBssType::PROFILE2_BACKHAUL_STA_ASSOCIATION_DISALLOWED;
+        }
 
         LOG(DEBUG) << "WSC config_data:" << std::hex << std::endl
                    << "     ssid: " << cfg.ssid << std::endl
@@ -1097,6 +1120,12 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
                    << " with profile enum " << agent->profile;
     }
 
+    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
+        !handle_tlv_profile2_ap_radio_advanced_capabilities(*agent, cmdu_rx)) {
+        LOG(ERROR) << "Profile2 AP Radio Advanced Capabilities is not supplied for Agent " << al_mac
+                   << " with profile enum " << agent->profile;
+    }
+
     //TODO autoconfig process the rest of the class
     //TODO autoconfig Keep intel agent support only as intel enhancements
     /**
@@ -1156,11 +1185,12 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
             return false;
         }
 
-        auto bss       = radio->bsses.add(radio->radio_uid, *radio);
-        bss->enabled   = false;
-        bss->ssid      = bss_info_conf.ssid;
-        bss->fronthaul = bss_info_conf.fronthaul;
-        bss->backhaul  = bss_info_conf.backhaul;
+        auto bss                = radio->bsses.add(radio->radio_uid, *radio);
+        bss->enabled            = false;
+        bss->ssid               = bss_info_conf.ssid;
+        bss->fronthaul          = bss_info_conf.fronthaul;
+        bss->backhaul           = bss_info_conf.backhaul;
+        bss->byte_counter_units = agent->byte_counter_units;
         if (!database.update_vap(ruid, bss->bssid, bss->ssid, bss->backhaul)) {
             LOG(ERROR) << "Failed to update VAP for radio " << ruid << " BSS " << bss->bssid
                        << " SSID " << bss->ssid;
@@ -1176,7 +1206,8 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
         }
     } else {
         agent_monitoring_task::add_traffic_policy_tlv(database, cmdu_tx, m1);
-        agent_monitoring_task::add_profile_2default_802q_settings_tlv(database, cmdu_tx, m1);
+        agent_monitoring_task::add_profile_2default_802q_settings_tlv(database, cmdu_tx,
+                                                                      m1->mac_addr());
     }
 
     auto beerocks_header = beerocks::message_com::parse_intel_vs_message(cmdu_rx);
@@ -1199,8 +1230,10 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
         }
     }
 
-    database.dm_set_device_board_info(*agent,
-                                      {m1->manufacturer(), m1->serial_number(), m1->model_name()});
+    agent->device_info.manufacturer       = m1->manufacturer();
+    agent->device_info.manufacturer_model = m1->model_name();
+    agent->device_info.serial_number      = m1->serial_number();
+    database.dm_set_profile1_device_info(*agent);
 
     return true;
 }
@@ -1539,6 +1572,7 @@ bool Controller::handle_cmdu_1905_ap_metric_response(const sMacAddr &src_mac,
     ret_val &= handle_tlv_associated_sta_link_metrics(src_mac, cmdu_rx);
     ret_val &= handle_tlv_associated_sta_extended_link_metrics(src_mac, cmdu_rx);
     ret_val &= handle_tlv_associated_sta_traffic_stats(src_mac, cmdu_rx);
+    ret_val &= handle_tlv_associated_wifi6_sta_status_report(src_mac, cmdu_rx);
 
     // For now, this is only used for certification so update the certification cmdu.
     if (database.setting_certification_mode() &&
@@ -1739,6 +1773,57 @@ bool Controller::handle_tlv_associated_sta_traffic_stats(const sMacAddr &src_mac
     return ret_val;
 }
 
+bool Controller::handle_tlv_associated_wifi6_sta_status_report(const sMacAddr &src_mac,
+                                                               ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    bool ret_val = true;
+
+    auto agent = database.m_agents.get(src_mac);
+    if (!agent) {
+        LOG(ERROR) << "Agent with mac is not found in database mac=" << src_mac;
+        return false;
+    }
+
+    for (auto &wifi6_sta_status_rep :
+         cmdu_rx.getClassList<wfa_map::tlvAssociatedWiFi6StaStatusReport>()) {
+
+        auto station = database.get_station(wifi6_sta_status_rep->sta_mac());
+        if (!station) {
+            LOG(ERROR) << "Failed to get station on db with mac: "
+                       << wifi6_sta_status_rep->sta_mac();
+            return false;
+        }
+
+        std::vector<wfa_map::tlvAssociatedWiFi6StaStatusReport::sTidQueueSize> tid_queue_vector;
+        uint8_t tid_list_length = wifi6_sta_status_rep->tid_queue_size_list_length();
+
+        LOG(DEBUG) << "TID list length: " << tid_list_length
+                   << " of MAC address of the associated STA: " << wifi6_sta_status_rep->sta_mac();
+
+        for (uint8_t tid_index = 0; tid_index < tid_list_length; tid_index++) {
+            auto tid_tuple = wifi6_sta_status_rep->tid_queue_size_list(tid_index);
+            if (!std::get<0>(tid_tuple)) {
+                LOG(ERROR) << "Invalid TID with queue size in tlvAssociatedWiFi6StaStatusReport";
+                continue;
+            }
+
+            auto &qos_ctrl_params = std::get<1>(tid_tuple);
+
+            LOG(DEBUG) << "TID: " << qos_ctrl_params.tid
+                       << ", Queue Size: " << qos_ctrl_params.queue_size;
+
+            tid_queue_vector.push_back(qos_ctrl_params);
+        }
+
+        if (!database.dm_add_tid_queue_sizes(*station, tid_queue_vector)) {
+            LOG(ERROR) << "Failed to set TID and corresponding Queue Size for STA:"
+                       << wifi6_sta_status_rep->sta_mac();
+            ret_val = false;
+        }
+    }
+    return ret_val;
+}
+
 bool Controller::handle_tlv_ap_vht_capabilities(ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     bool ret_val = true;
@@ -1830,6 +1915,10 @@ bool Controller::handle_cmdu_1905_ap_capability_report(const sMacAddr &src_mac,
                    << " with profile enum " << agent->profile;
     }
 
+    if (!handle_tlv_profile2_ap_radio_advanced_capabilities(*agent, cmdu_rx)) {
+        LOG(ERROR) << "Couldn't handle AP Radio Advanced Capabilities TLV from Agent " << src_mac;
+    }
+
     if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
         !handle_tlv_profile2_cac_capabilities(*agent, cmdu_rx)) {
         LOG(ERROR) << "Profile2 CAC Capabilities are not supplied for Agent " << src_mac
@@ -1840,6 +1929,12 @@ bool Controller::handle_cmdu_1905_ap_capability_report(const sMacAddr &src_mac,
         !handle_tlv_profile3_1905_layer_security_capabilities(*agent, cmdu_rx)) {
         LOG(ERROR) << "Profile3 1905 Layer Security Capability is not supplied for Agent "
                    << src_mac << " with profile enum " << agent->profile;
+    }
+
+    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_2 &&
+        !handle_tlv_profile3_device_inventory(*agent, cmdu_rx)) {
+        LOG(ERROR) << "Profile3 Device Inventory is not supplied for Agent " << src_mac
+                   << " with profile enum " << agent->profile;
     }
 
     return all_radio_capabilities_saved_successfully;
@@ -2303,7 +2398,7 @@ bool Controller::handle_intel_slave_join(
         database.set_node_ipv4(backhaul_mac, bridge_ipv4);
         database.set_node_ipv4(bridge_mac_str, bridge_ipv4);
 
-        database.set_node_manufacturer(backhaul_mac, agent->manufacturer);
+        database.set_node_manufacturer(backhaul_mac, agent->device_info.manufacturer);
 
         database.set_node_type(backhaul_mac, beerocks::TYPE_IRE_BACKHAUL);
 
@@ -2320,7 +2415,7 @@ bool Controller::handle_intel_slave_join(
         database.set_node_state(eth_switch_mac, beerocks::STATE_CONNECTED);
         database.set_node_name(eth_switch_mac, slave_name + "_ETH");
         database.set_node_ipv4(eth_switch_mac, bridge_ipv4);
-        database.set_node_manufacturer(eth_switch_mac, agent->manufacturer);
+        database.set_node_manufacturer(eth_switch_mac, agent->device_info.manufacturer);
 
         //run locating task on ire
         if (!database.is_node_wireless(backhaul_mac)) {
@@ -2627,7 +2722,7 @@ bool Controller::handle_non_intel_slave_join(
     auto eth_switch_mac_binary = beerocks::net::network_utils::get_eth_sw_mac_from_bridge_mac(mac);
     std::string eth_switch_mac = tlvf::mac_to_string(eth_switch_mac_binary);
     LOG(INFO) << "IRE generic Slave joined" << std::endl
-              << "    manufacturer=" << agent->manufacturer << std::endl
+              << "    manufacturer=" << agent->device_info.manufacturer << std::endl
               << "    al_mac=" << bridge_mac << std::endl
               << "    eth_switch_mac=" << eth_switch_mac << std::endl
               << "    backhaul_mac=" << backhaul_mac << std::endl
@@ -2677,14 +2772,14 @@ bool Controller::handle_non_intel_slave_join(
     database.set_node_state(bridge_mac_str, beerocks::STATE_CONNECTED);
     database.set_node_backhaul_iface_type(backhaul_mac, beerocks::eIfaceType::IFACE_TYPE_ETHERNET);
     database.set_node_backhaul_iface_type(bridge_mac_str, beerocks::IFACE_TYPE_BRIDGE);
-    database.set_node_manufacturer(backhaul_mac, agent->manufacturer);
+    database.set_node_manufacturer(backhaul_mac, agent->device_info.manufacturer);
     database.set_node_type(backhaul_mac, beerocks::TYPE_IRE_BACKHAUL);
-    database.set_node_name(backhaul_mac, agent->manufacturer + "_BH");
-    database.set_node_name(bridge_mac_str, agent->manufacturer);
+    database.set_node_name(backhaul_mac, agent->device_info.manufacturer + "_BH");
+    database.set_node_name(bridge_mac_str, agent->device_info.manufacturer);
     database.add_node_wired_backhaul(tlvf::mac_from_string(eth_switch_mac), bridge_mac);
     database.set_node_state(eth_switch_mac, beerocks::STATE_CONNECTED);
-    database.set_node_name(eth_switch_mac, agent->manufacturer + "_ETH");
-    database.set_node_manufacturer(eth_switch_mac, agent->manufacturer);
+    database.set_node_name(eth_switch_mac, agent->device_info.manufacturer + "_ETH");
+    database.set_node_manufacturer(eth_switch_mac, agent->device_info.manufacturer);
 
     // Update existing node, or add a new one
     if (database.has_node(radio_mac)) {
@@ -2866,8 +2961,10 @@ bool Controller::handle_cmdu_control_message(
         }
 
         auto bss = radio->bsses.add(bssid, *radio, vap_id);
-        LOG_IF(bss->vap_id != vap_id, ERROR)
-            << "BSS " << bssid << " changed vap_id " << bss->vap_id << " -> " << vap_id;
+        // update BSS vap_id if still undefined
+        bss->update_vap_id(vap_id);
+        LOG_IF(bss->get_vap_id() != vap_id, ERROR)
+            << "BSS " << bssid << " changed vap_id " << bss->get_vap_id() << " -> " << vap_id;
         bss->enabled   = true;
         bss->ssid      = ssid;
         bss->fronthaul = notification->vap_info().fronthaul_vap;
@@ -2955,6 +3052,8 @@ bool Controller::handle_cmdu_control_message(
             if (vap_mac != beerocks::net::network_utils::ZERO_MAC_STRING) {
                 auto bss =
                     radio->bsses.add(notification->params().vaps[vap_id].mac, *radio, vap_id);
+                // update BSS vap_id if still undefined
+                bss->update_vap_id(vap_id);
                 bss->ssid      = std::string((char *)notification->params().vaps[vap_id].ssid);
                 bss->fronthaul = notification->params().vaps[vap_id].fronthaul_vap;
                 bss->backhaul  = notification->params().vaps[vap_id].backhaul_vap;
@@ -3401,11 +3500,13 @@ bool Controller::handle_cmdu_control_message(
         auto channel_ext_above =
             (notification->params().frequency < notification->params().center_frequency1) ? true
                                                                                           : false;
-        if (!database.set_node_channel_bw(
-                radio_mac, notification->params().channel,
-                beerocks::eWiFiBandwidth(notification->params().bandwidth), channel_ext_above,
-                channel_ext_above, notification->params().center_frequency1)) {
-            LOG(ERROR) << "set node channel bw failed, mac=" << radio_mac;
+
+        beerocks::WifiChannel wifi_channel = beerocks::WifiChannel(
+            notification->params().channel, notification->params().center_frequency1,
+            static_cast<beerocks::eWiFiBandwidth>(notification->params().bandwidth),
+            channel_ext_above);
+        if (!database.set_node_wifi_channel(radio_mac, wifi_channel)) {
+            LOG(ERROR) << "set node wifi channel failed, mac=" << radio_mac;
         }
 
         break;
@@ -3460,7 +3561,7 @@ bool Controller::handle_cmdu_control_message(
             //update station bandwidth from the current downlink bandwidth
             if ((sta_stats.dl_bandwidth != beerocks::BANDWIDTH_UNKNOWN) &&
                 (sta_stats.dl_bandwidth < beerocks::BANDWIDTH_MAX)) {
-                database.update_node_bw(
+                database.update_node_wifi_channel_bw(
                     sta_stats.mac, static_cast<beerocks::eWiFiBandwidth>(sta_stats.dl_bandwidth));
             }
 
@@ -3610,11 +3711,16 @@ bool Controller::handle_cmdu_control_message(
             LOG(ERROR) << "addClass ACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_CMD_RESPONSE failed";
             return false;
         }
-        std::string client_mac = tlvf::mac_to_string(response->mac());
-        int channel            = database.get_node_channel(client_mac);
+        std::string client_mac   = tlvf::mac_to_string(response->mac());
+        auto client_wifi_channel = database.get_node_wifi_channel(client_mac);
+        if (client_wifi_channel.is_empty()) {
+            LOG(WARNING) << "empty wifi channel of " << client_mac << " in DB";
+        }
         LOG(DEBUG) << "ACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_CMD_RESPONSE client_mac="
                    << client_mac << " received from hostap " << radio_mac
-                   << " channel=" << int(channel) << " ïd = " << int(beerocks_header->id());
+                   << " channel=" << int(client_wifi_channel.get_channel())
+                   << " Frequency Type: " << client_wifi_channel.get_freq_type()
+                   << " ïd = " << int(beerocks_header->id());
         //calculating response delay for associate client ap and cross ap's
         database.set_measurement_recv_delta(radio_mac_str);
         break;
@@ -3992,13 +4098,33 @@ bool Controller::handle_tlv_profile2_ap_capability(std::shared_ptr<Agent> agent,
         return false;
     }
 
+    agent->max_prioritization_rules = profile2_ap_capability_tlv->max_prioritization_rules();
     agent->byte_counter_units = static_cast<wfa_map::tlvProfile2ApCapability::eByteCounterUnits>(
         profile2_ap_capability_tlv->capabilities_bit_field().byte_counter_units);
-
+    agent->prioritization_support =
+        profile2_ap_capability_tlv->capabilities_bit_field().prioritization;
+    agent->dpp_onboarding_support =
+        profile2_ap_capability_tlv->capabilities_bit_field().dpp_onboarding;
+    agent->traffic_separation_support =
+        profile2_ap_capability_tlv->capabilities_bit_field().traffic_separation;
     agent->max_total_number_of_vids = profile2_ap_capability_tlv->max_total_number_of_vids();
 
-    LOG(DEBUG) << "Profile-2 AP Capability is received, agent bytecounters enum="
-               << agent->byte_counter_units;
+    LOG(DEBUG) << "Profile-2 AP Capability TLV is received:" << std::endl
+               << "The maximum total number of supported service priroritization rules: "
+               << agent->max_prioritization_rules << std::endl
+               << "The units used for byte counters: "
+               << wfa_map::tlvProfile2ApCapability::eByteCounterUnits_str(agent->byte_counter_units)
+               << std::endl
+               << "Service Prioritization support: " << agent->prioritization_support << std::endl
+               << "DPP Onboarding procedure support: " << agent->dpp_onboarding_support << std::endl
+               << "Traffic Separation support: " << agent->traffic_separation_support << std::endl
+               << "The maximum total number of supported unique VLAN IDs: "
+               << agent->max_total_number_of_vids << std::endl;
+
+    if (!database.dm_set_device_ap_capabilities(*agent)) {
+        LOG(ERROR) << "Failed to set AP capability parameters in DM for Agent" << agent->al_mac;
+        return false;
+    }
 
     return true;
 }
@@ -4015,7 +4141,10 @@ bool Controller::handle_tlv_profile2_cac_capabilities(Agent &agent,
     LOG(DEBUG) << "Profile-2 CAC Capabilities TLV is received";
 
     std::stringstream ss;
-    ss << "Country code: " << int(*cac_capabilities_tlv->country_code()) << std::endl;
+
+    agent.device_info.country_code += static_cast<char>(*cac_capabilities_tlv->country_code(0));
+    agent.device_info.country_code += static_cast<char>(*cac_capabilities_tlv->country_code(1));
+    ss << "Country code: " << agent.device_info.country_code << std::endl;
 
     for (size_t radio_idx = 0; radio_idx < cac_capabilities_tlv->number_of_cac_radios();
          radio_idx++) {
@@ -4175,15 +4304,44 @@ bool Controller::handle_cmdu_1905_bss_configuration_request_message(
         return false;
     }
 
+    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_2) {
+        auto tlvProfile2MultiApProfile = cmdu_rx.getClass<wfa_map::tlvProfile2MultiApProfile>();
+        if (tlvProfile2MultiApProfile) {
+            agent->profile = tlvProfile2MultiApProfile->profile();
+            if (!database.dm_set_device_multi_ap_profile(*agent)) {
+                LOG(ERROR) << "Failed to set Multi-AP profile in DM for Agent " << agent->al_mac;
+                return false;
+            }
+        }
+    }
+
+    if (!handle_tlv_profile2_ap_capability(agent, cmdu_rx)) {
+        LOG(ERROR) << "Couldn't handle Profile-2 AP Capability TLV from Agent " << src_mac;
+    }
+
     if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_2 &&
         !handle_tlv_profile3_akm_suite_capabilities(*agent, cmdu_rx)) {
         LOG(ERROR) << "Profile-3 AKM Suite Capabilities is not supplied for Agent " << agent->al_mac
                    << " with profile enum " << agent->profile;
     }
 
+    if (!handle_tlv_profile2_ap_radio_advanced_capabilities(*agent, cmdu_rx)) {
+        LOG(ERROR) << "Couldn't handle AP Radio Advanced Capabilities TLV from Agent "
+                   << agent->al_mac;
+    }
+
     // TODO: Implement parsing of unhandled TLVs (PPM-2325)
 
-    return true;
+    auto cmdu_tx_header =
+        cmdu_tx.create(mid, ieee1905_1::eMessageType::BSS_CONFIGURATION_RESPONSE_MESSAGE);
+    if (!cmdu_tx_header) {
+        LOG(ERROR) << "cmdu creation of type BSS_CONFIGURATION_RESPONSE_MESSAGE, has failed";
+        return false;
+    }
+
+    agent_monitoring_task::add_profile_2default_802q_settings_tlv(database, cmdu_tx, src_mac);
+
+    return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
 }
 
 bool Controller::handle_tlv_profile3_akm_suite_capabilities(Agent &agent,
@@ -4245,6 +4403,179 @@ bool Controller::handle_tlv_profile3_akm_suite_capabilities(Agent &agent,
     */
 
     return true;
+}
+
+bool Controller::handle_tlv_profile2_ap_radio_advanced_capabilities(
+    Agent &agent, ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto ap_radio_advanced_capabilities =
+        cmdu_rx.getClass<wfa_map::tlvProfile2ApRadioAdvancedCapabilities>();
+    if (!ap_radio_advanced_capabilities) {
+        LOG(DEBUG) << "getClass wfa_map::tlvProfile2ApRadioAdvancedCapabilities has failed";
+        return false;
+    }
+
+    LOG(DEBUG) << "Profile-2 AP Radio Advanced Capabilities TLV is received";
+
+    std::stringstream ss;
+
+    auto ruid = ap_radio_advanced_capabilities->radio_uid();
+
+    auto radio = agent.radios.get(ruid);
+    if (!radio) {
+        LOG(ERROR) << "No radio found for ruid=" << ruid << " on " << agent.al_mac;
+        return false;
+    }
+
+    auto advanced_radio_capabilities =
+        ap_radio_advanced_capabilities->advanced_radio_capabilities();
+
+    radio->advanced_capabilities.traffic_separation_combined_fronthaul =
+        advanced_radio_capabilities.combined_front_back;
+    radio->advanced_capabilities.traffic_separation_combined_backhaul =
+        advanced_radio_capabilities.combined_profile1_and_profile2;
+    radio->advanced_capabilities.mscs = advanced_radio_capabilities.mscs;
+    radio->advanced_capabilities.scs  = advanced_radio_capabilities.scs;
+    radio->advanced_capabilities.dscp_to_up_mapping =
+        advanced_radio_capabilities.dscp_to_up_mapping;
+    radio->advanced_capabilities.dscp_policy = advanced_radio_capabilities.dscp_policy;
+
+    ss << "Radio " << ruid << ", traffic separation capabilities:" << std::endl
+       << "Traffic separation on combined fronthaul and Profile-1 backhaul support = "
+       << radio->advanced_capabilities.traffic_separation_combined_fronthaul << std::endl
+       << "Traffic separation on combined Profile-1 backhaul and Profile-2 backhaul support = "
+       << radio->advanced_capabilities.traffic_separation_combined_backhaul << std::endl
+       << "MSCS support = " << radio->advanced_capabilities.mscs << std::endl
+       << "SCS support = " << radio->advanced_capabilities.scs << std::endl
+       << "DSCP-to-UP mapping support = " << radio->advanced_capabilities.dscp_to_up_mapping
+       << std::endl
+       << "DSCP Policy support = " << radio->advanced_capabilities.dscp_policy << std::endl;
+
+    if (!database.dm_set_radio_advanced_capabilities(*radio)) {
+        LOG(ERROR) << "Failed to set AP Radio Advanced Capabilities in DM for radio="
+                   << radio->radio_uid;
+        return false;
+    }
+
+    LOG(DEBUG) << ss.str();
+    return true;
+}
+
+bool Controller::handle_tlv_profile3_device_inventory(Agent &agent,
+                                                      ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto device_inventory = cmdu_rx.getClass<wfa_map::tlvDeviceInventory>();
+    if (!device_inventory) {
+        LOG(DEBUG) << "getClass wfa_map::tlvDeviceInventory has failed";
+        return false;
+    }
+
+    LOG(DEBUG) << "Profile-3 Device Inventory TLV is received";
+
+    std::stringstream ss;
+
+    agent.device_info.serial_number    = device_inventory->serial_number_str();
+    agent.device_info.software_version = device_inventory->software_version_str();
+    agent.device_info.execution_env    = device_inventory->execution_environment_str();
+
+    ss << "Device Inventory parameters: " << std::endl
+       << "Serial number = " << agent.device_info.serial_number << std::endl
+       << "Software version = " << agent.device_info.software_version << std::endl
+       << "Execution environment = " << agent.device_info.execution_env << std::endl;
+
+    for (size_t radio_idx = 0; radio_idx < device_inventory->number_of_radios(); radio_idx++) {
+        if (!std::get<0>(device_inventory->radios_vendor_info(radio_idx))) {
+            LOG(ERROR) << "Invalid Radio Vendor Info in tlvDeviceInventory";
+            continue;
+        }
+
+        auto &radio_vendor_info = std::get<1>(device_inventory->radios_vendor_info(radio_idx));
+
+        auto radio = agent.radios.get(radio_vendor_info.ruid());
+        if (!radio) {
+            LOG(ERROR) << "No radio found for ruid=" << radio_vendor_info.ruid() << " on "
+                       << agent.al_mac;
+            return false;
+        }
+        radio->chipset_vendor = radio_vendor_info.chipset_vendor_str();
+
+        ss << "Radio UID = " << radio->radio_uid << ", chipset vendor = " << radio->chipset_vendor
+           << std::endl;
+    }
+
+    if (!database.dm_set_profile3_device_info(agent)) {
+        LOG(ERROR) << "Failed to set device info parameters for Agent" << agent.al_mac;
+        return false;
+    }
+
+    LOG(DEBUG) << ss.str();
+    return true;
+}
+
+bool Controller::handle_cmdu_1905_qos_management_notification_message(
+    const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto mid = cmdu_rx.getMessageId();
+    LOG(DEBUG) << "Received QOS_MANAGEMENT_NOTIFICATION_MESSAGE, mid=" << std::hex << mid;
+
+    for (auto const &qos_management_descriptor_tlv :
+         cmdu_rx.getClassList<wfa_map::tlvQoSManagementDescriptor>()) {
+        if (!qos_management_descriptor_tlv) {
+            LOG(DEBUG) << "getClass wfa_map::tlvQoSManagementDescriptor has failed";
+            return false;
+        }
+
+        LOG(DEBUG) << "QoS Management Descriptor TLV is received:" << std::endl
+                   << "Rule ID: " << qos_management_descriptor_tlv->qmid() << std::endl
+                   << "BSSID: " << qos_management_descriptor_tlv->bssid() << std::endl
+                   << "Client MAC: " << qos_management_descriptor_tlv->client_mac() << std::endl;
+
+        // TODO: Implement handling of QoS Management Descriptor TLV (PPM-2364)
+    }
+
+    auto agent = database.m_agents.get(src_mac);
+    if (!agent) {
+        LOG(ERROR) << "Agent with mac is not found in database mac=" << src_mac;
+        return false;
+    }
+
+    if (!cmdu_tx.create(0, ieee1905_1::eMessageType::SERVICE_PRIORITIZATION_REQUEST_MESSAGE)) {
+        LOG(ERROR) << "cmdu creation of type SERVICE_PRIORITIZATION_REQUEST_MESSAGE has failed";
+        return false;
+    }
+
+    for (const auto &rule : agent->service_prioritization.rules) {
+
+        auto service_prioritization_rule_tlv =
+            cmdu_tx.addClass<wfa_map::tlvServicePrioritizationRule>();
+        if (!service_prioritization_rule_tlv) {
+            LOG(ERROR) << "addClass wfa_map::tlvServicePrioritizationRule has failed";
+            return false;
+        }
+
+        service_prioritization_rule_tlv->rule_params() = rule.second;
+    }
+
+    auto dscp_mapping_table_tlv = cmdu_tx.addClass<wfa_map::tlvDscpMappingTable>();
+    if (!dscp_mapping_table_tlv) {
+        LOG(ERROR) << "addClass wfa_map::tlvDscpMappingTable has failed";
+        return false;
+    }
+
+    if (!dscp_mapping_table_tlv->set_dscp_pcp_mapping(
+            agent->service_prioritization.dscp_mapping_table.data(),
+            agent->service_prioritization.dscp_mapping_table.size())) {
+        LOG(ERROR) << "Failed to set DSCP mapping list in tlvDscpMappingTable!";
+        return false;
+    }
+
+    if (!database.dm_set_service_prioritization_rules(*agent)) {
+        LOG(ERROR) << "Failed to set service prioritization rules in DM for Agent" << agent->al_mac;
+        return false;
+    }
+
+    // TODO: Implement sending of remaining TLVs of Service Prioritization Request message (PPM-2366)
+    return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
 }
 
 } // namespace son

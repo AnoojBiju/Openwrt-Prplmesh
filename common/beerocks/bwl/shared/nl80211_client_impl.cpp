@@ -35,12 +35,14 @@
 #include "nl80211_client_impl.h"
 
 #include <bcl/beerocks_utils.h>
+#include <bcl/network/network_utils.h>
 #include <bwl/base_802_11_defs.h>
 
 #include <easylogging++.h>
 
 #include <linux/if_ether.h>
 #include <linux/nl80211.h>
+#include <linux/version.h>
 #include <net/if.h>
 #include <netlink/genl/genl.h>
 
@@ -268,6 +270,10 @@ bool nl80211_client_impl::get_radio_info(const std::string &interface_name, radi
                               rem_band)
             {
                 struct nlattr *tb_band[NL80211_BAND_ATTR_MAX + 1];
+#if LINUX_VERSION_CODE > KERNEL_VERSION(4, 19, 1)
+                int rem_iftype;
+                struct nlattr *tb_iftype[NL80211_BAND_IFTYPE_ATTR_MAX + 1];
+#endif
 
                 if (last_band != nl_band->nla_type) {
                     width_40    = false;
@@ -347,18 +353,119 @@ bool nl80211_client_impl::get_radio_info(const std::string &interface_name, radi
                     }
                 }
 
-                /**
-                 * TODO: add HE support
-                 *
-                 * Inside NL80211_BAND_ATTR_IFTYPE_DATA, if HE is supported, there is
-                 * NL80211_BAND_IFTYPE_ATTR_HE_CAP_MAC, NL80211_BAND_IFTYPE_ATTR_HE_CAP_PHY,
-                 * NL80211_BAND_IFTYPE_ATTR_HE_CAP_MCS_SET, NL80211_BAND_IFTYPE_ATTR_HE_CAP_PPE.
-                 *
-                 * If RAX40 doesn't support HE, the attribute will be missing. In that case, we
-                 * can just add a TODO for HE support for the moment. It doesn't make sense adding
-                 * it if we can't test it.
-                 */
-                band.he_supported = false;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 1)
+                // Refer linux/ieee80211.h for each bit representation.
+                if (tb_band[NL80211_BAND_ATTR_IFTYPE_DATA]) {
+                    band.he_supported = true;
+
+                    // If HE is supported UL and DL-OFDMA are mandatory.
+                    band.he_capability = band.he_capability | (3 << 1);
+
+                    const struct nlattr *nl_he_cap = tb_band[NL80211_BAND_ATTR_IFTYPE_DATA];
+                    nla_for_each_attr(nl_band, static_cast<struct nlattr *>(nla_data(nl_he_cap)),
+                                      nla_len(nl_he_cap), rem_iftype)
+                    {
+                        nla_parse(tb_iftype, NL80211_BAND_IFTYPE_ATTR_MAX,
+                                  static_cast<nlattr *>(nla_data(nl_band)), nla_len(nl_band), NULL);
+
+                        if (tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_MAC]) {
+                            memcpy(band.he.he_mac_capab_info,
+                                   nla_data(tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_MAC]),
+                                   nla_len(tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_MAC]));
+                        }
+
+                        if (tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_PHY]) {
+                            memcpy(band.he.he_phy_capab_info,
+                                   nla_data(tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_PHY]),
+                                   nla_len(tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_PHY]));
+
+                            /**
+			     * check whether the 80_plus_80 and 160 mhz are supported.
+			     * if both are supported set 8th and 9th bit.
+			     * if only 160 supported set 8th.
+			     */
+                            switch ((band.he.he_phy_capab_info[0] >> 3) & 3) {
+                            case 3:
+                                band.he_capability = band.he_capability | (1 << 8);
+                                band.he_capability = band.he_capability | (1 << 9);
+                                break;
+                            case 1:
+                                band.he_capability = band.he_capability | (1 << 8);
+                                break;
+                            }
+
+                            /**
+			     * check whether UL_MU_MIMO and UL_MU_MIMO plus OFDMA
+			     * are supported.
+			     */
+                            switch (band.he.he_phy_capab_info[2] >> 6) {
+                            case 3:
+                                band.he_capability = band.he_capability | (3 << 4);
+                                break;
+                            case 2:
+                                band.he_capability = band.he_capability | (1 << 4);
+                                break;
+                            case 1:
+                                band.he_capability = band.he_capability | (1 << 5);
+                                break;
+                            default:
+                                break;
+                            }
+
+                            if (band.he.he_phy_capab_info[3] >> 7) {
+                                //set 7th bit if su_beamformer is supported.
+                                band.he_capability = band.he_capability | (1 << 7);
+                            }
+
+                            if (band.he.he_phy_capab_info[4] & 2) {
+                                //set 6th bit if mu_beamformer is supported.
+                                band.he_capability = band.he_capability | (1 << 6);
+                            }
+                            if ((band.he.he_phy_capab_info[6] >> 6) & 1) {
+                                //set 3rd bit if DL_MU_MIMO plus OFDMA is supported.
+                                band.he_capability = band.he_capability | (1 << 3);
+                            }
+                        }
+
+                        // According to definition in "linux/iee80211.h" and 9.4.2.248.4 of IEEE P802.11.
+                        if (tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_MCS_SET]) {
+                            int he_rx_nss, he_tx_nss, he_mcs;
+                            memcpy(band.he.he_mcs_nss_set,
+                                   nla_data(tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_MCS_SET]),
+                                   nla_len(tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_MCS_SET]));
+
+                            uint16_t he_rx_mcs_map =
+                                band.he.he_mcs_nss_set[0] | (band.he.he_mcs_nss_set[1] << 8);
+                            for (he_rx_nss = 8; he_rx_nss > 0; he_rx_nss--) {
+                                he_mcs = ((he_rx_mcs_map >> (2 * (he_rx_nss - 1))) & 3);
+
+                                // 3 represents HE_MCS_NOT_SUPPORTED
+                                if (he_mcs != 3)
+                                    break;
+                            }
+
+                            band.he_capability = band.he_capability | ((7 & (he_rx_nss - 1)) << 10);
+
+                            uint16_t he_tx_mcs_map =
+                                band.he.he_mcs_nss_set[2] | (band.he.he_mcs_nss_set[3] << 8);
+                            for (he_tx_nss = 8; he_tx_nss > 0; he_tx_nss--) {
+                                he_mcs = ((he_tx_mcs_map >> (2 * (he_tx_nss - 1))) & 3);
+
+                                if (he_mcs != 3)
+                                    break;
+                            }
+
+                            band.he_capability = band.he_capability | ((7 & (he_tx_nss - 1)) << 13);
+                        }
+
+                        if (tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_PPE]) {
+                            memcpy(band.he.optional,
+                                   nla_data(tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_PPE]),
+                                   nla_len(tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_PPE]));
+                        }
+                    }
+                }
+#endif
 
                 if (!tb_band[NL80211_BAND_ATTR_FREQS]) {
                     return;
@@ -888,6 +995,91 @@ bool nl80211_client_impl::channel_scan_abort(const std::string &interface_name)
                                                 return true;
                                             },
                                             [&](struct nl_msg *msg) {});
+}
+
+bool nl80211_client_impl::add_key(const std::string &interface_name, const sKeyInfo &key_info)
+{
+    if (!m_socket) {
+        LOG(ERROR) << "Socket is NULL!";
+        return false;
+    }
+
+    if (key_info.key.empty() || key_info.key_seq.empty()) {
+        LOG(ERROR) << "Key and key sequences must be provided!";
+        return false;
+    }
+
+    // Get the interface index for given interface name
+    int iface_index = if_nametoindex(interface_name.c_str());
+    if (0 == iface_index) {
+        LOG(ERROR) << "Failed to read the index of interface " << interface_name << ": "
+                   << strerror(errno);
+
+        return false;
+    }
+
+    LOG(DEBUG) << "Adding new key for interface '" << interface_name << "'." << std::endl
+               << "Key index: " << key_info.key_idx << " MAC: " << key_info.mac
+               << " Key cipher: " << key_info.key_cipher;
+
+    return m_socket.get()->send_receive_msg(
+        NL80211_CMD_NEW_KEY, 0,
+        [&](struct nl_msg *msg) -> bool {
+            nla_put_u32(msg, NL80211_ATTR_IFINDEX, iface_index);
+            nla_put_u8(msg, NL80211_ATTR_KEY_IDX, key_info.key_idx);
+
+            // If there is a MAC address, it's a pairwise key. If not,
+            // it's a group key.
+            if (key_info.mac != beerocks::net::network_utils::ZERO_MAC) {
+                LOG(DEBUG) << "Adding a pairwise key.";
+                nla_put(msg, NL80211_ATTR_MAC, ETH_ALEN, key_info.mac.oct);
+                nla_put_u32(msg, NL80211_ATTR_KEY_TYPE, NL80211_KEYTYPE_PAIRWISE);
+            } else {
+                LOG(DEBUG) << "Adding a group key.";
+                nla_put_u32(msg, NL80211_ATTR_KEY_TYPE, NL80211_KEYTYPE_GROUP);
+            }
+            nla_put(msg, NL80211_ATTR_KEY_DATA, key_info.key.size(), key_info.key.data());
+            nla_put(msg, NL80211_ATTR_KEY_SEQ, key_info.key_seq.size(), key_info.key_seq.data());
+            nla_put_u32(msg, NL80211_ATTR_KEY_CIPHER, key_info.key_cipher);
+
+            return true;
+        },
+        [&](struct nl_msg *msg) {});
+}
+
+bool nl80211_client_impl::add_station(const std::string &interface_name, const sMacAddr &mac,
+                                      assoc_frame::AssocReqFrame &assoc_req, uint16_t aid)
+{
+    if (!m_socket) {
+        LOG(ERROR) << "Socket is NULL!";
+        return false;
+    }
+
+    // Get the interface index for given interface name
+    int iface_index = if_nametoindex(interface_name.c_str());
+    if (0 == iface_index) {
+        LOG(ERROR) << "Failed to read the index of interface " << interface_name << ": "
+                   << strerror(errno);
+
+        return false;
+    }
+
+    LOG(DEBUG) << "Adding station with MAC : '" << tlvf::mac_to_string(mac) << "'.";
+
+    return m_socket.get()->send_receive_msg(
+        NL80211_CMD_NEW_STATION, 0,
+        [&](struct nl_msg *msg) -> bool {
+            nla_put_u32(msg, NL80211_ATTR_IFINDEX, iface_index);
+            nla_put(msg, NL80211_ATTR_MAC, ETH_ALEN, mac.oct);
+            nla_put_u16(msg, NL80211_ATTR_STA_LISTEN_INTERVAL, assoc_req.listen_interval());
+            nla_put(msg, NL80211_ATTR_STA_SUPPORTED_RATES, assoc_req.supported_rates_length(),
+                    assoc_req.supported_rates());
+            nla_put_u16(msg, NL80211_ATTR_STA_AID, aid);
+
+            // TODO: PPM-2349: add station capabilities
+            return true;
+        },
+        [&](struct nl_msg *msg) {});
 }
 
 } // namespace bwl

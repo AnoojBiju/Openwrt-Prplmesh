@@ -89,10 +89,6 @@ RUN cd openwrt \
 ARG PRPLMESH_VARIANT
 ENV PRPLMESH_VARIANT=$PRPLMESH_VARIANT
 
-# optional: whether to include MMX in the build or not.
-ARG MMX_ENABLE
-ENV MMX_ENABLE=$MMX_ENABLE
-
 WORKDIR /home/openwrt/openwrt
 
 COPY --chown=openwrt:openwrt scripts/build-openwrt.sh /home/openwrt/openwrt/scripts/build-openwrt.sh

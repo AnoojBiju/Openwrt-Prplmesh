@@ -10,6 +10,7 @@
 #include "../db/db_algo.h"
 #include "../son_actions.h"
 
+#include <bcl/beerocks_wifi_channel.h>
 #include <bcl/son/son_wireless_utils.h>
 #include <easylogging++.h>
 
@@ -310,7 +311,11 @@ void load_balancer_task::work()
 
             auto radio_mac = tlvf::mac_from_string(hostap);
 
-            hostap_params.bw       = database.get_node_bw(hostap);
+            WifiChannel hostap_wifi_channel = database.get_node_wifi_channel(hostap);
+            if (hostap_wifi_channel.is_empty()) {
+                LOG(WARNING) << "empty wifi channel of " << hostap_wifi_channel << " in DB";
+            }
+            hostap_params.bw       = hostap_wifi_channel.get_bandwidth();
             hostap_params.ant_num  = database.get_hostap_ant_num(radio_mac);
             hostap_params.ant_gain = database.get_hostap_ant_gain(radio_mac);
             hostap_params.tx_power = database.get_hostap_tx_power(radio_mac);

@@ -420,7 +420,6 @@ bool ap_wlan_hal_nl80211::refresh_radio_info()
 
             m_radio_info.frequency_band = freq_type;
         } else {
-
             // If there are multiple bands, then select the band which frequency matches the
             // operation mode read from hostapd.conf file.
             // For efficiency reasons, parse hostapd.conf only once, the first time this method is
@@ -433,29 +432,67 @@ bool ap_wlan_hal_nl80211::refresh_radio_info()
                            << m_radio_info.iface_name;
                 return false;
             }
-
-            // Compute frequency band out of parameter `hw_mode` in hostapd.conf
-            auto hw_mode = conf.get_head_value("hw_mode");
-
-            // The mode used by hostapd (11b, 11g, 11n, 11ac, 11ax) is governed by several
-            // parameters in the configuration file. However, as explained in the comment below from
-            // hostapd.conf, the hw_mode parameter is sufficient to determine the band.
-            //
-            // # Operation mode (a = IEEE 802.11a (5 GHz), b = IEEE 802.11b (2.4 GHz),
-            // # g = IEEE 802.11g (2.4 GHz), ad = IEEE 802.11ad (60 GHz); a/g options are used
-            // # with IEEE 802.11n (HT), too, to specify band). For IEEE 802.11ac (VHT), this
-            // # needs to be set to hw_mode=a. For IEEE 802.11ax (HE) on 6 GHz this needs
-            // # to be set to hw_mode=a.
-            //
-            // Note that this will need to be revisited for 6GHz operation, which we don't support
-            // at the moment.
-            if (hw_mode.empty() || (hw_mode == "b") || (hw_mode == "g")) {
-                m_radio_info.frequency_band = beerocks::eFreqType::FREQ_24G;
-            } else if (hw_mode == "a") {
-                m_radio_info.frequency_band = beerocks::eFreqType::FREQ_5G;
+            // The name "band" is OpenWRT common option name, taken from the following link:
+            // https://openwrt.org/docs/guide-user/network/wifi/basic
+            // Basically, there are two option names that determines
+            // the band type: "band" and "hwmode", but "hwmode" is
+            // deprecated, as stated in the link.
+            auto band = conf.get_head_value("band");
+            if (!band.empty()) {
+                if (band == "2g") {
+                    m_radio_info.frequency_band = beerocks::eFreqType::FREQ_24G;
+                } else if (band == "5g") {
+                    m_radio_info.frequency_band = beerocks::eFreqType::FREQ_5G;
+                } else if (band == "6g") {
+                    m_radio_info.frequency_band = beerocks::eFreqType::FREQ_6G;
+                } else {
+                    LOG(ERROR) << "Unknown operation mode for interface "
+                               << m_radio_info.iface_name;
+                    return false;
+                }
             } else {
-                LOG(ERROR) << "Unknown operation mode for interface " << m_radio_info.iface_name;
-                return false;
+                // Compute frequency band out of parameter `hw_mode` in hostapd.conf
+                auto hw_mode = conf.get_head_value("hw_mode");
+                if (!hw_mode.empty()) {
+                    // The mode used by hostapd (11b, 11g, 11n, 11ac, 11ax) is governed by several
+                    // parameters in the configuration file. However, as explained in the comment below from
+                    // hostapd.conf, the hw_mode parameter is sufficient to determine the band.
+                    //
+                    // # Operation mode (a = IEEE 802.11a (5 GHz), b = IEEE 802.11b (2.4 GHz),
+                    // # g = IEEE 802.11g (2.4 GHz), ad = IEEE 802.11ad (60 GHz); a/g options are used
+                    // # with IEEE 802.11n (HT), too, to specify band). For IEEE 802.11ac (VHT), this
+                    // # needs to be set to hw_mode=a. For IEEE 802.11ax (HE) on 6 GHz this needs
+                    // # to be set to hw_mode=a.
+                    //
+                    // Note that this will need to be revisited for 6GHz operation, which we don't support
+                    // at the moment.
+                    if ((hw_mode == "b") || (hw_mode == "g")) {
+                        m_radio_info.frequency_band = beerocks::eFreqType::FREQ_24G;
+                    } else if (hw_mode == "a") {
+                        m_radio_info.frequency_band = beerocks::eFreqType::FREQ_5G;
+                    } else {
+                        LOG(ERROR)
+                            << "Unknown operation mode for interface " << m_radio_info.iface_name;
+                        return false;
+                    }
+                } else {
+                    // when both "band" and "hw_mode" are not exist, then choose the
+                    // highest frequency band
+                    m_radio_info.frequency_band = radio_info.bands.begin()->get_frequency_band();
+                    beerocks::eFreqType current_freq_type = beerocks::FREQ_UNKNOWN;
+                    for (auto it = radio_info.bands.begin() + 1; it != radio_info.bands.end();
+                         it++) {
+                        current_freq_type = it->get_frequency_band();
+                        if (current_freq_type == beerocks::eFreqType::FREQ_UNKNOWN) {
+                            LOG(ERROR)
+                                << "Unknown band type for interface " << m_radio_info.iface_name;
+                            return false;
+                        }
+                        if (current_freq_type > m_radio_info.frequency_band) {
+                            m_radio_info.frequency_band = current_freq_type;
+                        }
+                    }
+                }
             }
         }
     }
@@ -482,6 +519,8 @@ bool ap_wlan_hal_nl80211::refresh_radio_info()
         m_radio_info.vht_capability = band_info_it->vht_capability;
         std::copy_n(band_info_it->vht_mcs_set, m_radio_info.vht_mcs_set.size(),
                     m_radio_info.vht_mcs_set.begin());
+        m_radio_info.he_supported  = band_info_it->he_supported;
+        m_radio_info.he_capability = band_info_it->he_capability;
 
         for (auto const &pair : band_info_it->supported_channels) {
             auto &supported_channel_info = pair.second;
@@ -981,8 +1020,9 @@ bool ap_wlan_hal_nl80211::switch_channel(int chan, beerocks::eWiFiBandwidth bw,
         return false;
     }
 
-    int freq                              = son::wireless_utils::channel_to_freq(chan);
-    std::string freq_str                  = std::to_string(freq);
+    auto freq_type       = son::wireless_utils::which_freq_type(vht_center_frequency);
+    int freq             = son::wireless_utils::channel_to_freq(chan, freq_type);
+    std::string freq_str = std::to_string(freq);
     std::string wave_vht_center_frequency = std::to_string(vht_center_frequency);
 
     // Center Freq
@@ -997,16 +1037,33 @@ bool ap_wlan_hal_nl80211::switch_channel(int chan, beerocks::eWiFiBandwidth bw,
         }
     }
 
-    // Channel bandwidth
-    if (bw == beerocks::BANDWIDTH_80) {
-        cmd += " center_freq1=" + wave_vht_center_frequency;
+    /*
+    according to the P802.11ax_D7.0 standard, Section 9.4.2.249:
+    On 6GHz band, center_frequency_1 shall be the center frequency of the primary 80MHz channel,
+    and center_frequency_2 shall be the center frequency of the 160MHz channel
+    */
+    if (freq_type != beerocks::FREQ_6G) {
+        if (bw == beerocks::BANDWIDTH_80 || bw == beerocks::BANDWIDTH_160) {
+            cmd += " center_freq1=" + wave_vht_center_frequency;
+        }
+    } else {
+        if (bw == beerocks::BANDWIDTH_160) {
+            auto primary_80mhz_freq = (freq < vht_center_frequency) ? vht_center_frequency - 40
+                                                                    : vht_center_frequency + 40;
+            cmd += " center_freq1=" + std::to_string(primary_80mhz_freq);
+            cmd += " center_freq2=" + wave_vht_center_frequency;
+        } else {
+            cmd += " center_freq1=" + wave_vht_center_frequency;
+        }
     }
 
     cmd += " bandwidth=" +
            std::to_string(beerocks::utils::convert_bandwidth_to_int((beerocks::eWiFiBandwidth)bw));
 
     // Supported Standard n/ac
-    if (bw == beerocks::BANDWIDTH_20 || bw == beerocks::BANDWIDTH_40) {
+    if (freq_type == beerocks::FREQ_6G) {
+        cmd += " he";
+    } else if (bw == beerocks::BANDWIDTH_20 || bw == beerocks::BANDWIDTH_40) {
         cmd += " ht"; //n
     } else if (bw == beerocks::BANDWIDTH_80 || bw == beerocks::BANDWIDTH_160) {
         cmd += " vht"; // ac
@@ -1254,7 +1311,7 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
         //init the freq band cap with the target radio freq band info
         msg->params.capabilities.band_5g_capable = m_radio_info.is_5ghz;
         msg->params.capabilities.band_2g_capable =
-            (son::wireless_utils::which_freq(m_radio_info.channel) ==
+            (son::wireless_utils::which_freq_type(m_radio_info.vht_center_freq) ==
              beerocks::eFreqType::FREQ_24G);
 
         auto assoc_frame_type = assoc_frame::AssocReqFrame::UNKNOWN;
@@ -1345,7 +1402,9 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
         std::string bssid = m_radio_info.available_vaps[vap_id].mac;
 
         auto op_class = son::wireless_utils::get_operating_class_by_channel(
-            beerocks::message::sWifiChannel(m_radio_info.channel, m_radio_info.bandwidth));
+            beerocks::WifiChannel(m_radio_info.channel, m_radio_info.vht_center_freq,
+                                  static_cast<beerocks::eWiFiBandwidth>(m_radio_info.bandwidth),
+                                  m_radio_info.channel_ext_above > 0 ? true : false));
         // According to easymesh R2 specification when STA sends BSS_TM_QUERY
         // AP should respond with BSS_TM_REQ with at least one neighbor AP.
         // This commit adds the answer to the BSS_TM_QUERY. The answer adds only
@@ -1404,7 +1463,8 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
         m_radio_info.vht_center_freq    = beerocks::string_utils::stoi(parsed_obj["cf1"]);
         m_radio_info.is_dfs_channel     = beerocks::string_utils::stoi(parsed_obj["dfs"]);
         m_radio_info.last_csa_sw_reason = ChanSwReason::Unknown;
-        if (son::wireless_utils::which_freq(m_radio_info.channel) == beerocks::eFreqType::FREQ_5G) {
+        if (son::wireless_utils::which_freq_type(m_radio_info.vht_center_freq) ==
+            beerocks::eFreqType::FREQ_5G) {
             m_radio_info.is_5ghz = true;
         }
     } break;
@@ -1513,6 +1573,7 @@ bool ap_wlan_hal_nl80211::add_bss(std::string &ifname, son::wireless_utils::sBss
     std::string conf_path =
         std::string(bwl::nl80211::base_ctrl_path) + "hostapd-" + ifname + ".conf";
     std::stringstream cmd;
+
     // TODO: PPM-2347: check that the radio still has room for one more BSS.
 
     prplmesh::hostapd::Configuration conf(conf_path);
@@ -1538,8 +1599,13 @@ bool ap_wlan_hal_nl80211::add_bss(std::string &ifname, son::wireless_utils::sBss
                << "BSS configuration: " << conf;
 
     cmd << "ADD bss_config=" << get_iface_name() << ":" << conf_path;
-    if (!wpa_ctrl_send_msg(cmd.str(), "global")) {
+    if (!wpa_ctrl_send_msg(cmd.str(), global_iface)) {
         LOG(ERROR) << "Failed to create the new BSS!";
+        return false;
+    }
+
+    if (!base_wlan_hal_nl80211::add_interface(ifname)) {
+        LOG(DEBUG) << "Failed to register and connect the new BSS interface!";
         return false;
     }
 
@@ -1548,15 +1614,38 @@ bool ap_wlan_hal_nl80211::add_bss(std::string &ifname, son::wireless_utils::sBss
 
 bool ap_wlan_hal_nl80211::remove_bss(std::string &ifname)
 {
-
     LOG(DEBUG) << "Removing BSS with ifname: '" << ifname << "'.";
     std::stringstream cmd;
     cmd << "REMOVE " << ifname;
-    if (!wpa_ctrl_send_msg(cmd.str(), "global")) {
+    if (!wpa_ctrl_send_msg(cmd.str(), global_iface)) {
         LOG(ERROR) << "Failed to remove the BSS!";
         return false;
     }
     return true;
+}
+
+bool ap_wlan_hal_nl80211::add_key(const std::string &ifname, const sKeyInfo &key_info)
+{
+    return m_nl80211_client->add_key(ifname, key_info);
+}
+
+bool ap_wlan_hal_nl80211::add_station(const std::string &ifname, const sMacAddr &mac,
+                                      assoc_frame::AssocReqFrame &assoc_req)
+{
+    // TODO: PPM-2358: the AIDs are managed by hostapd. We currently
+    // have no way to know what AIDs hostapd already assigned. As a
+    // temporary measure, choose AIDs starting from the end to avoid
+    // colliding with the ones assigned by hostapd. In the future the
+    // station should be added through hostapd, which would avoid this
+    // problem entirely.
+    uint16_t aid = m_aid--;
+
+    if (aid < 1) {
+        LOG(ERROR) << "No more AIDs available!";
+        return false;
+    }
+
+    return m_nl80211_client->add_station(ifname, mac, assoc_req, aid);
 }
 
 } // namespace nl80211

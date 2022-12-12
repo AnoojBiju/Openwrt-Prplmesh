@@ -32,6 +32,7 @@ static void fill_conn_map_node(
     n->state                       = node->state;
     n->channel                     = node->channel;
     n->bw                          = node->bw;
+    n->freq_type                   = node->freq_type;
     n->channel_ext_above_secondary = node->channel_ext_above_secondary;
     n->rx_rssi                     = node->rx_rssi;
     n->mac                         = tlvf::mac_to_string(node->mac);
@@ -50,6 +51,7 @@ static void fill_conn_map_node(
                 r->channel       = node->data.gw_ire.radio[i].channel;
                 r->cac_completed = node->data.gw_ire.radio[i].cac_completed;
                 r->bw            = node->data.gw_ire.radio[i].bw;
+                r->freq_type     = node->data.gw_ire.radio[i].freq_type;
                 r->channel_ext_above_secondary =
                     node->data.gw_ire.radio[i].channel_ext_above_secondary;
                 r->radio_identifier =
@@ -192,8 +194,9 @@ static void bml_utils_dump_conn_map(
                    << utils::convert_channel_ext_above_to_string(
                           radio->channel_ext_above_secondary, (beerocks::eWiFiBandwidth)radio->bw)
                    << ", freq: "
-                   << std::to_string(son::wireless_utils::channel_to_freq(radio->channel)) << "MHz"
-                   << std::endl;
+                   << std::to_string(son::wireless_utils::channel_to_freq(
+                          radio->channel, static_cast<beerocks::eFreqType>(radio->freq_type)))
+                   << "MHz" << std::endl;
 
                 // VAP
                 ind_inc(ind_str);
@@ -391,9 +394,8 @@ void cli_bml::setFunctionsMapAndArray()
     insertCommandToMap(
         "bml_clear_wifi_credentials", "<al_mac>", "Removes wifi credentials for specific AL-MAC.",
         static_cast<pFunction>(&cli_bml::clear_wifi_credentials_caller), 1, 1, STRING_ARG);
-    insertCommandToMap(
-        "bml_update_wifi_credentials", "<al_mac>", "Updates wifi credentials for specific AL-MAC.",
-        static_cast<pFunction>(&cli_bml::update_wifi_credentials_caller), 1, 1, STRING_ARG);
+    insertCommandToMap("bml_update_wifi_credentials", "", "Updates wifi credentials.",
+                       static_cast<pFunction>(&cli_bml::update_wifi_credentials_caller), 0, 0);
     insertCommandToMap("bml_get_wifi_credentials", "[<vap_id>]",
                        "Get SSID and security type for the given VAP (or Vap=0 by default)",
                        static_cast<pFunction>(&cli_bml::get_wifi_credentials_caller), 0, 1,
@@ -995,8 +997,8 @@ int cli_bml::clear_wifi_credentials_caller(int numOfArgs)
 
 int cli_bml::update_wifi_credentials_caller(int numOfArgs)
 {
-    if (numOfArgs == 1)
-        return update_wifi_credentials(args.stringArgs[0]);
+    if (numOfArgs == 0)
+        return update_wifi_credentials();
     else
         return -1;
 }
@@ -1590,10 +1592,10 @@ int cli_bml::clear_wifi_credentials(const std::string &al_mac)
     return 0;
 }
 
-int cli_bml::update_wifi_credentials(const std::string &al_mac)
+int cli_bml::update_wifi_credentials()
 {
 
-    int ret = bml_update_wifi_credentials(ctx, al_mac.c_str());
+    int ret = bml_update_wifi_credentials(ctx);
 
     printBmlReturnVals("bml_update_wifi_credentials", ret);
     return 0;

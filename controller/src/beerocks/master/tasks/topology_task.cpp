@@ -15,6 +15,7 @@
 #include "client_steering_task.h"
 #include "dhcp_task.h"
 
+#include <bcl/beerocks_wifi_channel.h>
 #include <beerocks/tlvf/beerocks_message_1905_vs.h>
 #include <easylogging++.h>
 #include <tlvf/ieee_1905_1/s802_11SpecificInformation.h>
@@ -86,6 +87,10 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
     auto tlvProfile2MultiApProfile = cmdu_rx.getClass<wfa_map::tlvProfile2MultiApProfile>();
     if (tlvProfile2MultiApProfile) {
         agent->profile = tlvProfile2MultiApProfile->profile();
+        if (!database.dm_set_device_multi_ap_profile(*agent)) {
+            LOG(ERROR) << "Failed to set Multi-AP profile in DM for Agent " << agent->al_mac;
+            return false;
+        }
     }
 
     // Set agent backhaul link as etherent and parent as empty for external Agents
@@ -128,8 +133,36 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
 
         // TODO Name and Status of Interface should be add
         database.add_interface(al_mac, iface_mac, media_type);
-        LOG(DEBUG) << "Interface is added al_mac:" << al_mac << " iface_mac:" << iface_mac;
 
+        auto print_media_type_group = [](const int media_type_group) -> std::string {
+            switch (media_type_group) {
+            case ieee1905_1::eMediaTypeGroup::IEEE_802_3:
+                return "IEEE 802.3";
+            case ieee1905_1::eMediaTypeGroup::IEEE_802_11:
+                return "IEEE 802.11";
+            case ieee1905_1::eMediaTypeGroup::IEEE_1901:
+                return "IEEE 1901";
+            case ieee1905_1::eMediaTypeGroup::MoCA:
+                return "MoCA";
+            case ieee1905_1::eMediaTypeGroup::UNKNOWN:
+                return "Unknown";
+            default:
+                return "NA";
+            }
+        };
+
+        LOG(DEBUG) << "Interface is added al_mac:" << al_mac << " iface_mac:" << iface_mac;
+        LOG(DEBUG) << "media type: " << media_type
+                   << " group: " << print_media_type_group(media_type_group)
+                   << " info length: " << iface_info.media_info_length();
+
+        // Check that the interface belongs to the IEEE 802.3 group.
+        if (ieee1905_1::eMediaTypeGroup::IEEE_802_3 == media_type_group) {
+            LOG(DEBUG) << "New 802.3 interface is reported with mac=" << iface_mac;
+            // TODO Add implementation for 802.3 interfaces.
+        }
+
+        // Check that the interface belongs to the IEEE 802.11 group.
         // For wireless interface it is defined on IEEE 1905.1 that the size of the media info
         // is n=10 octets, which the size of s802_11SpecificInformation struct.
         // For wired interface n=0.
@@ -139,6 +172,26 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
             const auto media_info = reinterpret_cast<ieee1905_1::s802_11SpecificInformation *>(
                 iface_info.media_info(0));
             const auto iface_role = media_info->role;
+
+            auto print_interface_role = [](const ieee1905_1::eRole iface_role) -> std::string {
+                switch (iface_role) {
+                case ieee1905_1::eRole::AP:
+                    return "AP";
+                case ieee1905_1::eRole::NON_AP_NON_PCP_STA:
+                    return "STA";
+                case ieee1905_1::eRole::WI_FI_P2P_CLIENT:
+                    return "P2P-Client";
+                case ieee1905_1::eRole::WI_FI_P2P_GROUP_OWNER:
+                    return "GO";
+                case ieee1905_1::eRole::IEEE_802_11AD_PCP:
+                    return "PCP";
+                default:
+                    return "NA";
+                }
+            };
+
+            LOG(DEBUG) << "New 1905.1 wireless interface is reported with mac=" << iface_mac
+                       << ", role=" << print_interface_role(iface_role);
 
             // For future implementation
             // const auto iface_bw     = media_info->ap_channel_bandwidth;
@@ -175,7 +228,7 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
                 // This case could occur, if we can topology response before topology notification
                 // with JOIN notification for that station.
                 if (media_info->network_membership != parent_bss->bssid) {
-                    LOG(INFO) << "Network membership does not allign with database, parent_bssid="
+                    LOG(INFO) << "Network membership does not align with database, parent_bssid="
                               << parent_bss->bssid
                               << ", network_membership=" << media_info->network_membership;
                     continue;
@@ -197,11 +250,10 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
                     database.get_radio_by_backhaul_cap(media_info->network_membership);
             }
 
-            // TODO: fix updating bml event it assumes Radios is reported (PPM-1977)
-            new_bml_event.radio_interfaces.push_back(iface_info);
-
-            LOG(DEBUG) << "New wireless interface is reported with mac=" << iface_mac
-                       << ", role=" << (uint8_t)iface_role;
+            // Only interfaces marked as an AP role should be marked as a radio interface.
+            if (iface_role == ieee1905_1::eRole::AP) {
+                new_bml_event.radio_interfaces.push_back(iface_info);
+            }
         }
     }
 
@@ -287,6 +339,8 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
                     }
                 } else {
                     LOG(DEBUG) << "Prplmesh Agent";
+                    // update BSS vap_id if still undefined
+                    bss->update_vap_id(vap_id);
                     if (!database.add_vap(tlvf::mac_to_string(radio_entry.radio_uid()), int(vap_id),
                                           tlvf::mac_to_string(bss_entry.radio_bssid()),
                                           bss_entry.ssid_str(), false)) {
@@ -584,17 +638,20 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
 
         LOG(INFO) << "client connected, mac=" << client_mac_str << ", bssid=" << bssid_str;
 
-        auto bss_bw    = database.get_node_bw(bssid_str);
-        auto client_bw = bss_bw;
+        auto wifi_channel = database.get_node_wifi_channel(bssid_str);
+        if (wifi_channel.is_empty()) {
+            LOG(WARNING) << "empty wifi channel of " << bssid_str << " is empty";
+        }
+        auto bss_bw = wifi_channel.get_bandwidth();
+
+        auto client_bw = wifi_channel.get_bandwidth();
         if (vs_tlv) {
             if (son::wireless_utils::get_station_max_supported_bw(vs_tlv->capabilities(),
                                                                   client_bw)) {
                 client_bw = std::min(client_bw, bss_bw);
             }
         }
-        database.set_node_channel_bw(client_mac, database.get_node_channel(bssid_str), client_bw,
-                                     database.get_node_channel_ext_above_secondary(bssid_str), 0,
-                                     database.get_hostap_vht_center_frequency(bssid));
+        database.set_node_wifi_channel(client_mac, wifi_channel);
 
         // Note: The Database node stats and the Datamodels' stats are not the same.
         // Therefore, client information in data model and in node DB might differ.

@@ -34,15 +34,23 @@ class tlvProfile2ApRadioAdvancedCapabilities : public BaseClass
         explicit tlvProfile2ApRadioAdvancedCapabilities(std::shared_ptr<BaseClass> base, bool parse = false);
         ~tlvProfile2ApRadioAdvancedCapabilities();
 
-        typedef struct sTrafficSeparationFlag {
+        typedef struct sAdvancedRadioCapabilities {
             #if defined(__LITTLE_ENDIAN_BITFIELD)
-            uint8_t reserved : 6;
+            uint8_t reserved : 2;
+            uint8_t dscp_policy : 1;
+            uint8_t dscp_to_up_mapping : 1;
+            uint8_t scs : 1;
+            uint8_t mscs : 1;
             uint8_t combined_profile1_and_profile2 : 1;
             uint8_t combined_front_back : 1;
             #elif defined(__BIG_ENDIAN_BITFIELD)
             uint8_t combined_front_back : 1;
             uint8_t combined_profile1_and_profile2 : 1;
-            uint8_t reserved : 6;
+            uint8_t mscs : 1;
+            uint8_t scs : 1;
+            uint8_t dscp_to_up_mapping : 1;
+            uint8_t dscp_policy : 1;
+            uint8_t reserved : 2;
             #else
             #error "Bitfield macros are not defined"
             #endif
@@ -50,12 +58,12 @@ class tlvProfile2ApRadioAdvancedCapabilities : public BaseClass
             }
             void struct_init(){
             }
-        } __attribute__((packed)) sTrafficSeparationFlag;
+        } __attribute__((packed)) sAdvancedRadioCapabilities;
         
         const eTlvTypeMap& type();
         const uint16_t& length();
         sMacAddr& radio_uid();
-        sTrafficSeparationFlag& traffic_separation_flag();
+        sAdvancedRadioCapabilities& advanced_radio_capabilities();
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -65,7 +73,7 @@ class tlvProfile2ApRadioAdvancedCapabilities : public BaseClass
         eTlvTypeMap* m_type = nullptr;
         uint16_t* m_length = nullptr;
         sMacAddr* m_radio_uid = nullptr;
-        sTrafficSeparationFlag* m_traffic_separation_flag = nullptr;
+        sAdvancedRadioCapabilities* m_advanced_radio_capabilities = nullptr;
 };
 
 }; // close namespace: wfa_map

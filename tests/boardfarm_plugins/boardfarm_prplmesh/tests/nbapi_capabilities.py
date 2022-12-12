@@ -44,14 +44,8 @@ class NbapiCapabilities(PrplMeshBaseTest):
                 channel = controller.nbapi_get_parameter(non_op_channel_nbapi, "NonOpChannelNumber")
 
                 non_op_channels = [
-                    o for o in op_class.non_operating_channel if int(o.non_op_channel) == channel
+                    o for o in op_class.non_operating_channel if str(channel) in vars(o).values()
                 ]
-
-                if non_op_ch_count_nbapi == 2 and not non_op_channels:
-                    non_op_channels = [
-                        o for o in op_class.non_operating_channel
-                        if int(o.non_op_channel_2) == channel
-                    ]
 
                 assert len(non_op_channels) == 1, f"Non-operable channel {channel} was not found."
         supported_op_classes.remove(op_class)
@@ -162,3 +156,10 @@ class NbapiCapabilities(PrplMeshBaseTest):
                 if tlv.tlv_type == self.ieee1905['eTlvTypeMap']['TLV_CHANNEL_SCAN_CAPABILITIES']:
                     debug("Checking Profile-2 Scan Capabilities TLV")
                     # TODO: Check Profile-2 Scan Capabilities TLV and related DM objects (PPM-2293).
+                if tlv.tlv_type == self.ieee1905['eTlvTypeMap'][
+                        'TLV_PROFILE2_AP_RADIO_ADVANCED_CAPABILITIES']:
+                    debug("Checking AP Radio Advanced Capabilities TLV")
+                    # TODO: Check  AP Radio Advanced Capabilities and related DM objects (PPM-2345).
+                if tlv.tlv_type == self.ieee1905['eTlvTypeMap']['TLV_DEVICE_INVENTORY']:
+                    debug("Checking Profile-3 Device Inventory TLV")
+                    # TODO: Check Profile-3 Device Inventory TLV and related DM objects (PPM-2333).

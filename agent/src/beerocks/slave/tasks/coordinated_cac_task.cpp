@@ -11,6 +11,7 @@
 #include "task_pool_interface.h"
 #include <bcl/beerocks_defines.h>
 #include <bcl/beerocks_utils.h>
+#include <bcl/beerocks_wifi_channel.h>
 
 namespace beerocks {
 namespace coordinated_cac {
@@ -181,6 +182,18 @@ void CacFsm::config_fsm()
 
         // nothing to terminate
         .on(fsm_event::CAC_TERMINATION_REQUEST, fsm_state::IDLE)
+
+        // send preference report when SWITCH_CHANNEL_REPORT event is received in IDLE state
+        .on(fsm_event::SWITCH_CHANNEL_REPORT, {fsm_state::IDLE},
+            [&](TTransition &transition, const void *args) -> bool {
+                auto switch_channel_report = *(
+                    static_cast<std::shared_ptr<sSwitchChannelReport> *>(const_cast<void *>(args)));
+
+                m_ifname = switch_channel_report->switch_channel_notification->ifname;
+
+                send_preference_report();
+                return false;
+            })
 
         /////////////////////////////////////////
         //// WAIT_FOR_SWITCH_CHANNEL_REPORT ///
@@ -490,6 +503,7 @@ CacFsm::send_switch_channel_request(uint8_t channel, beerocks::eWiFiBandwidth ba
 
     switch_channel_request->ifname    = m_ifname;
     switch_channel_request->channel   = channel;
+    switch_channel_request->freq_type = eFreqType::FREQ_5G;
     switch_channel_request->bandwidth = bandwidth;
 
     LOG(DEBUG) << *switch_channel_request;
@@ -516,13 +530,14 @@ bool CacFsm::send_cac_request(beerocks::AgentDB::sRadio *db_radio)
         son::wireless_utils::operating_class_to_bandwidth(m_cac_request_radio.operating_class);
 
     // save current channel - to know where to switch back if needed
-    m_original_channel          = db_radio->channel;
-    m_original_bandwidth        = db_radio->bandwidth;
-    m_original_center_frequency = db_radio->vht_center_frequency;
+    m_original_channel          = db_radio->wifi_channel.get_channel();
+    m_original_bandwidth        = db_radio->wifi_channel.get_bandwidth();
+    m_original_center_frequency = db_radio->wifi_channel.get_center_frequency();
     if (m_original_bandwidth == eWiFiBandwidth::BANDWIDTH_20) {
         m_original_secondary_channel_offset = 0;
     } else {
-        m_original_secondary_channel_offset = db_radio->channel_ext_above_primary ? 1 : -1;
+        m_original_secondary_channel_offset =
+            db_radio->wifi_channel.get_ext_above_primary() ? 1 : -1;
     }
 
     // save the time point we started the switch channel

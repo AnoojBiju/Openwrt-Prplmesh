@@ -195,11 +195,10 @@ int bml_clear_wifi_credentials(BML_CTX ctx, const char *al_mac);
  * Updates the Wi-Fi credentials for the client with AL-MAC
  *
  * @param [in] ctx BML Context.
- * @param [in] al_mac client AL-MAC address
  *
  * @return BML_RET_OK on success.
  */
-int bml_update_wifi_credentials(BML_CTX ctx, const char *al_mac);
+int bml_update_wifi_credentials(BML_CTX ctx);
 
 /**
  * Get Wi-Fi credentials (SSID and security) for the beerocks network.

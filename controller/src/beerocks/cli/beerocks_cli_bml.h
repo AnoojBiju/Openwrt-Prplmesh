@@ -27,6 +27,7 @@ public:
         uint8_t state;
         uint8_t channel;
         uint8_t bw;
+        uint8_t freq_type;
         uint8_t channel_ext_above_secondary;
         int8_t rx_rssi;
         std::string mac;
@@ -41,6 +42,7 @@ public:
                 uint8_t channel;
                 uint8_t cac_completed;
                 uint8_t bw;
+                uint8_t freq_type;
                 uint8_t channel_ext_above_secondary;
                 uint8_t ch_load;
                 std::string radio_identifier;
@@ -167,7 +169,7 @@ private:
                              const std::string &bands       = "24g-5g",
                              const std::string &bss_type = "fronthaul", bool add_sae = false);
     int clear_wifi_credentials(const std::string &al_mac);
-    int update_wifi_credentials(const std::string &al_mac);
+    int update_wifi_credentials();
     int get_wifi_credentials(int vap_id = 0);
     int set_onboarding_state(int enable);
     int get_onboarding_state();

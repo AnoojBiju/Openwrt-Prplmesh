@@ -23,13 +23,17 @@ if data_overlay_not_initialized; then
 fi
 sleep 2
 
-ubus wait_for IP.Interface
-
 # Stop and disable the DHCP clients:
 /etc/init.d/tr181-dhcpv4client stop
 rm -f /etc/rc.d/S27tr181-dhcpv4client
 /etc/init.d/tr181-dhcpv6client stop
 rm -f /etc/rc.d/S25tr181-dhcpv6client
+
+# Save the IP settings persistently (PPM-2351):
+sed -ri 's/(dm-save.*) = false/\1 = true/g' /etc/amx/ip-manager/ip-manager.odl
+/etc/init.d/ip-manager restart
+
+ubus wait_for IP.Interface
 
 # We use WAN for the control interface.
 # Add the IP address if there is none yet:

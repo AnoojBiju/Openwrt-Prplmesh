@@ -161,8 +161,11 @@ protected:
             .WillOnce(Return(true));
         EXPECT_CALL(*m_ambiorix, set(bss_path + ".1", "IsVBSS", Matcher<const bool &>(false)))
             .WillOnce(Return(true));
-        EXPECT_CALL(*m_ambiorix, set(_, _, Matcher<const uint32_t &>(_)))
-            .WillRepeatedly(Return(true));
+        EXPECT_CALL(*m_ambiorix,
+                    set(bss_path + ".1", "ByteCounterUnits", Matcher<const uint32_t &>(0U)))
+            .WillOnce(Return(true));
+        EXPECT_CALL(*m_ambiorix, set(bss_path + ".1", "LastChange", Matcher<const uint32_t &>(_)))
+            .WillOnce(Return(true));
         EXPECT_CALL(*m_ambiorix, set_current_time(_, _)).WillOnce(Return(true));
 
         //add virtual AP to radio
@@ -323,6 +326,9 @@ TEST_F(DbTest, test_add_vap)
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix,
                 set(std::string(bss_path) + ".1", "IsVBSS", Matcher<const bool &>(false)))
+        .WillOnce(Return(true));
+    EXPECT_CALL(*m_ambiorix, set(std::string(bss_path) + ".1", "ByteCounterUnits",
+                                 Matcher<const uint32_t &>(0U)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix,
                 set(std::string(bss_path) + ".1", "LastChange", Matcher<const uint32_t &>(_)))

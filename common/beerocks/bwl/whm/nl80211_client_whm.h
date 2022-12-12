@@ -10,16 +10,27 @@
 
 #include <bwl/nl80211_client.h>
 
+// Ambiorix
+#include "ambiorix_connection.h"
+
 namespace bwl {
 
 /**
- * @brief NL80211 client whm implementation.
- *
- * This class is used by the whm flavor of the BWL library.
+ * @Class implements NL80211 client methods, using wbapi shared connection for requests
  */
 class nl80211_client_whm : public nl80211_client {
 
 public:
+    /**
+     * @brief Class constructor.
+     */
+    nl80211_client_whm();
+
+    /**
+     * @brief Class destructor.
+     */
+    virtual ~nl80211_client_whm() = default;
+
     /**
      * @brief Gets a list with the names of existing wireless VAP interfaces.
      *
@@ -98,6 +109,33 @@ public:
     bool get_tx_power_dbm(const std::string &interface_name, uint32_t &power) override;
 
     bool channel_scan_abort(const std::string &interface_name) override;
+
+    /**
+     * @brief Add a key for a station.
+     *
+     * @param[in] interface_name the name of the interface to add a station for.
+     * @param[in] key_info the key to add.
+     *
+     * @return true on success and false otherwise.
+     */
+    bool add_key(const std::string &interface_name, const sKeyInfo &key_info) override;
+
+    /**
+     * @brief Manually add a station.
+     *
+     * @param[in] interface_name the name of the interface to add a station for.
+     * @param[in] assoc_req the association request frame of a
+     * previous association of the station (used for station
+     * capabilities, listen_interval, etc).
+     * @param[in] aid the association ID of the station.
+     *
+     * @return true on success and false otherwise.
+     */
+    bool add_station(const std::string &interface_name, const sMacAddr &mac,
+                     assoc_frame::AssocReqFrame &assoc_req, uint16_t aid) override;
+
+private:
+    beerocks::wbapi::AmbiorixConnectionSmartPtr m_connection;
 };
 
 } // namespace bwl

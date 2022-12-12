@@ -313,11 +313,6 @@ private:
     std::unique_ptr<CmduServer> m_cmdu_server;
 
     /**
-     * Broker client to exchange CMDU messages with broker server running in transport process.
-     */
-    std::unique_ptr<btl::BrokerClient> m_broker_client;
-
-    /**
      * CMDU client connected to the the CMDU server running in platform manager.
      * This object is dynamically created using the CMDU client factory for the platform manager
      * provided in class constructor.
@@ -443,6 +438,11 @@ public:
         };
     } m_radio_managers;
 
+    /**
+     * Broker client to exchange CMDU messages with broker server running in transport process.
+     */
+    std::shared_ptr<btl::BrokerClient> m_broker_client;
+
 private:
     /**
      * @brief check if there was an error in the constructor
@@ -515,7 +515,7 @@ private:
      * @return NON_OPERABLE if channel is restricted, channel preference otherwise.
      */
     wfa_map::cPreferenceOperatingClasses::ePreference
-    get_channel_preference(message::sWifiChannel channel,
+    get_channel_preference(beerocks::WifiChannel channel,
                            const AgentDB::sChannelPreference &preference,
                            const std::set<uint8_t> &preference_channels_list);
 };

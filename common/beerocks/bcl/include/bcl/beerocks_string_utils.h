@@ -73,6 +73,15 @@ public:
 
     static bool case_insensitive_compare(const std::string &, const std::string &);
 
+    /**
+     * @brief Check is string @a str ends with the string @a suffix.
+     * 
+     * @param str A string to check if it ends with @a suffix. 
+     * @param suffix A suffix to check whether @a str ends with it.
+     * @return true if @a str ends with @a suffix, false otherwise.
+     */
+    static bool endswith(const std::string &str, const std::string &suffix);
+
 #ifndef __GNUC__
 #define __builtin_FILE() __FILE__
 #define __builtin_LINE() __LINE__

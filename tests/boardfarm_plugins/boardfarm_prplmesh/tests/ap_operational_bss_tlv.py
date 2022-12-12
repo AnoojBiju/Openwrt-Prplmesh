@@ -34,7 +34,7 @@ class ApOperationalBss(PrplMeshBaseTest):
                                                 "maprocks1",
                                                 "24g-5g",
                                                 "fronthaul"))
-        controller.beerocks_cli_command('bml_update_wifi_credentials {}'.format(agent.mac))
+        controller.beerocks_cli_command('bml_update_wifi_credentials')
         time.sleep(3)
 
         debug("Check the currently used BSS type")
@@ -94,7 +94,7 @@ class ApOperationalBss(PrplMeshBaseTest):
                                                 "maprocks1",
                                                 "24g-5g",
                                                 "backhaul"))
-        controller.beerocks_cli_command('bml_update_wifi_credentials {}'.format(agent.mac))
+        controller.beerocks_cli_command('bml_update_wifi_credentials')
         time.sleep(3)
 
         debug("Check the currently used BSS type")

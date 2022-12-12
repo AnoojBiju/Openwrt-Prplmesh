@@ -735,8 +735,23 @@ bool base_wlan_hal_nl80211::refresh_radio_info()
         // Channel
         m_radio_info.channel = beerocks::string_utils::stoi(reply["channel"]);
 
-        m_radio_info.is_5ghz =
-            (son::wireless_utils::which_freq(m_radio_info.channel) == beerocks::eFreqType::FREQ_5G);
+        m_radio_info.is_5ghz = (son::wireless_utils::which_freq_type(
+                                    m_radio_info.vht_center_freq) == beerocks::eFreqType::FREQ_5G);
+
+        if (m_radio_info.frequency_band == beerocks::eFreqType::FREQ_UNKNOWN ||
+            m_radio_info.vht_center_freq == 0) {
+            iter = reply.find("freq");
+            if (iter != reply.end()) {
+                m_radio_info.frequency_band = son::wireless_utils::which_freq_type(
+                    beerocks::string_utils::stoi(iter->second));
+                m_radio_info.vht_center_freq = son::wireless_utils::channel_to_vht_center_freq(
+                    m_radio_info.channel, m_radio_info.frequency_band,
+                    beerocks::utils::convert_bandwidth_to_enum(m_radio_info.bandwidth),
+                    m_radio_info.channel_ext_above);
+            } else {
+                LOG(ERROR) << "Failed to find freq value in reply";
+            }
+        }
 
         // If the VAPs map is empty, refresh it as well
         // TODO: update on every refresh?
@@ -796,26 +811,7 @@ bool base_wlan_hal_nl80211::refresh_vaps_info(int id)
         // Secondary BSSs are detected in STATUS reply.
         // At that time, the relative wpa_ctrl socket files are created.
         // Only refresh primary BSS or those BSSs to be monitored.
-        if (!register_wpa_ctrl_interface(vap_element.bss)) {
-            LOG(DEBUG) << "Skip non-monitored VAP ID (" << vap_id << ") - BSS: " << vap_element.bss;
-            return true;
-        } else {
-
-            // and we can immediately connect to them (i.e attach)
-            m_wpa_ctrl_client.get_socket_cmd(vap_element.bss)->connect();
-            m_wpa_ctrl_client.get_socket_event(vap_element.bss)->connect();
-
-            // get vap interface index if not yet retrieved
-            if (m_iface_index.find(vap_element.bss) == m_iface_index.end()) {
-                int iface_index = if_nametoindex(vap_element.bss.c_str());
-                if (iface_index == 0) {
-                    LOG(ERROR) << "Failed reading the index of interface " << vap_element.bss
-                               << ": " << strerror(errno);
-                } else {
-                    m_iface_index.emplace(vap_element.bss, iface_index);
-                }
-            }
-        }
+        add_interface(vap_element.bss);
 
         // Read network configuration
         NetworkConfiguration network_configuration;
@@ -1167,6 +1163,34 @@ bool base_wlan_hal_nl80211::get_config(NetworkConfiguration &network_configurati
         reply_str += entry.first + "=" + entry.second;
     }
     LOG(TRACE) << "GET_CONFIG reply for " << iface_name << " = \n" << reply_str;
+
+    return true;
+}
+
+bool base_wlan_hal_nl80211::add_interface(const std::string &interface)
+{
+    if (!register_wpa_ctrl_interface(interface)) {
+        LOG(INFO) << "Failed to register interface '" << interface << "'. Is it not monitored?";
+        // unfortunately register_wpa_ctrl_interface() both returns
+        // false for failures and for the allowed case where a
+        // monitor interface is not in the list of interfaces, so we
+        // still have to return true;
+        return true;
+    }
+
+    m_wpa_ctrl_client.get_socket_cmd(interface)->connect();
+    m_wpa_ctrl_client.get_socket_event(interface)->connect();
+
+    // get vap interface index if not yet retrieved
+    if (m_iface_index.find(interface) == m_iface_index.end()) {
+        int iface_index = if_nametoindex(interface.c_str());
+        if (iface_index == 0) {
+            LOG(ERROR) << "Failed reading the index of interface " << interface << ": "
+                       << strerror(errno);
+            return false;
+        }
+        m_iface_index.emplace(interface, iface_index);
+    }
 
     return true;
 }

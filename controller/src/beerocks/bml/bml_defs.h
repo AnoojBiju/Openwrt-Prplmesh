@@ -189,6 +189,9 @@ struct BML_NODE {
     /* Bandwidth */
     uint8_t bw;
 
+    /* Bandwidth */
+    uint8_t freq_type;
+
     /* channel_ext_above_secondary. */
     uint8_t channel_ext_above_secondary;
 
@@ -245,6 +248,9 @@ struct BML_NODE {
 
                 /* Bandwidth */
                 uint8_t bw;
+
+                /* frequency type */
+                uint8_t freq_type;
 
                 /* channel_ext_above_secondary. */
                 uint8_t channel_ext_above_secondary;

@@ -70,6 +70,7 @@ Individuals:
 - Vladyslav Tupikin (prpl Foundation via Inango)
 - Yevheniy-Vilhelm Vall (GlobalLogic)
 - Yaniv Yitzhak (MaxLinear)
+- Yoni Abecassis (MaxLinear via Devalore)
 - Yuriy Masechko (GlobalLogic)
 - Zackary Foreman (CableLabs)
 

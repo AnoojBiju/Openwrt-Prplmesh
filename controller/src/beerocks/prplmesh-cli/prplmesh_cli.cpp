@@ -100,6 +100,8 @@ float prplmesh_cli::get_freq_from_class(const uint32_t oper_class)
         freq = 4.0025;
     } else if (oper_class >= 115 && oper_class <= 130) {
         freq = 5.00;
+    } else if (oper_class >= 131 && oper_class <= 136) {
+        freq = 6.00;
     } else if (oper_class >= 180 && oper_class <= 181) {
         freq = 56.16;
     } else if (oper_class == 182) {

@@ -11,6 +11,8 @@
 #include <bcl/beerocks_defines.h>
 #include <bcl/beerocks_message_structs.h>
 #include <bcl/son/son_wireless_utils.h>
+#include <bwl/base_wlan_hal_types.h>
+#include <tlvf/AssociationRequestFrame/AssocReqFrame.h>
 #include <tlvf/common/sMacAddr.h>
 
 #include <algorithm>
@@ -253,7 +255,25 @@ public:
          */
         bool he_supported = false;
 
-        // TODO: add HE capability, MCS set and whatever else is required to report HE capabilities
+        /**
+	 * Information obtained with NL80211_BAND_ATTR_IFTYPE_DATA command through a NL80211 socket.
+	 * See nl80211_band_iftype_attr_* in <linux/nl80211.h> for a description of each field.
+	 *
+	 * HE capabilities are stored in structure and required bits are set in he_capability
+	 * if it is available in NL80211_BAND_ATTR_IFTYPE_DATA
+	 */
+        uint16_t he_capability = 0;
+        struct ieee80211_he_capabilities {
+            uint8_t he_mac_capab_info[6];
+            uint8_t he_phy_capab_info[11];
+            /**
+	     * Followed by 4, 8, or 12 octets of Supported HE-MCS And NSS Set field
+	     * and optional variable length PPE Thresholds field. PPE thresholds size can be
+	     * a max of 25 octets : 7 bits HDR + (8 NSS * 4 RU * 6 bits) = 199 bits => 25 octets.
+	     */
+            uint8_t he_mcs_nss_set[12];
+            uint8_t optional[25];
+        } he;
 
         /**
          * The Channels that are supported in this band.
@@ -276,7 +296,8 @@ public:
                 return beerocks::eFreqType::FREQ_UNKNOWN;
             }
 
-            return son::wireless_utils::which_freq(supported_channels.begin()->first);
+            return son::wireless_utils::which_freq_type(
+                supported_channels.begin()->second.center_freq);
         }
 
         /**
@@ -517,6 +538,30 @@ public:
      * @return true on success and false otherwise.
      */
     virtual bool channel_scan_abort(const std::string &interface_name) = 0;
+
+    /**
+     * @brief Add a key for a station.
+     *
+     * @param[in] interface_name the name of the interface to add a station for.
+     * @param[in] key_info the key to add.
+     *
+     * @return true on success and false otherwise.
+     */
+    virtual bool add_key(const std::string &interface_name, const sKeyInfo &key_info) = 0;
+
+    /**
+     * @brief Manually add a station.
+     *
+     * @param[in] interface_name the name of the interface to add a station for.
+     * @param[in] assoc_req the association request frame of a
+     * previous association of the station (used for station
+     * capabilities, listen_interval, etc).
+     * @param[in] aid the association ID of the station.
+     *
+     * @return true on success and false otherwise.
+     */
+    virtual bool add_station(const std::string &interface_name, const sMacAddr &mac,
+                             assoc_frame::AssocReqFrame &assoc_req, uint16_t aid) = 0;
 };
 
 } // namespace bwl

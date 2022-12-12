@@ -170,7 +170,7 @@ bool vbss_actions::create_vbss(const sClientVBSS &client_vbss, const sMacAddr &d
                << " Client associated: '" << client_vbss.client_is_associated << "'"
                << " Client MAC: '" << client_vbss.client_mac << "'"
                << " BSSID: '" << client_vbss.vbssid << "'"
-               << " radio_uid: '" << radio->radio_uid << "'"
+               << " Radio UID: '" << radio->radio_uid << "'"
                << " SSID: '" << ssid << "'";
 
     if (!son_actions::send_cmdu_to_agent(agent->al_mac, cmdu_tx, database)) {

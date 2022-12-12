@@ -240,6 +240,29 @@ int utils::convert_bandwidth_to_int(beerocks::eWiFiBandwidth bandwidth)
     }
 }
 
+std::string utils::convert_frequency_type_to_string(beerocks::eFreqType freq_type)
+{
+    switch (freq_type) {
+    case beerocks::FREQ_24G:
+        return "2.4GHz";
+    case beerocks::FREQ_24G_5G:
+        return "2.4GHz/5GHz";
+    case beerocks::FREQ_58G:
+        return "5.8Ghz";
+    case beerocks::FREQ_5G:
+        return "5GHz";
+    case beerocks::FREQ_6G:
+        return "6GHz";
+    case beerocks::FREQ_AUTO:
+        return "Auto Frequency";
+    case beerocks::FREQ_UNKNOWN:
+        return "Unknown Frequency";
+    default:
+        LOG(ERROR) << "Frequency Type Error";
+        return "<Frequency Type Error>";
+    }
+}
+
 std::string utils::convert_channel_ext_above_to_string(bool channel_ext_above_secondary,
                                                        beerocks::eWiFiBandwidth bandwidth)
 {

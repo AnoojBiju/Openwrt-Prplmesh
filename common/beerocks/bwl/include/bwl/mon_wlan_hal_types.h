@@ -409,6 +409,7 @@ enum class eChannelScanResultOperatingFrequencyBand : uint8_t {
     eOperating_Freq_Band_NA     = 0x0,
     eOperating_Freq_Band_2_4GHz = 0x1,
     eOperating_Freq_Band_5GHz   = 0x2,
+    eOperating_Freq_Band_6GHz   = 0x3,
 };
 
 enum class eChannelScanResultStandards : uint8_t {

@@ -16,44 +16,16 @@
 constexpr char DOT_PVID_SUFFIX[] = ".pvid";
 #define PVID_SUFFIX &DOT_PVID_SUFFIX[1]
 
-/**
- * @brief Configure interface on the Transport.
- *
- * @param iface Interface to configure.
- * @param add true for adding interface, false to remove.
- * @param bridge Bridge name if the interface is inside a bridge, otherwise should be empty.
- */
-static void configure_transport(const std::string &iface, bool add, const std::string bridge)
-{
-    // Since this function currently is suspicious to crash the transport process comment it out for
-    // now.
-
-    // TODO: It would have been better if the traffic would be using the broker interface of caller
-    // instead of creating it every time.
-    // Since the Agent (son_slave) is the only user of the traffic sepaeration class, the broker
-    // interface cannot be provided, because the son_slave does not have it.
-    // It will be possible only after PPM-1529 will be done.
-
-    // // Create broker client factory to create broker clients when requested
-    // std::string broker_uds_path = std::string("/tmp/beerocks/") + std::string(BEEROCKS_BROKER_UDS);
-    // auto event_loop             = std::make_shared<beerocks::EventLoopImpl>();
-    // LOG_IF(!event_loop, FATAL) << "Unable to create event loop!";
-    // auto broker_client_factory =
-    //     beerocks::btl::create_broker_client_factory(broker_uds_path, event_loop);
-    // LOG_IF(!broker_client_factory, FATAL) << "Unable to create broker client factory!";
-    // auto broker_client = broker_client_factory->create_instance();
-    // LOG_IF(!broker_client, FATAL) << "Failed to create instance of broker client";
-    // LOG(DEBUG) << (add ? "Add" : "Remove") << " iface '" << iface << "' Transport monitoring";
-    // if (!broker_client->configure_interfaces(iface, bridge, false, add)) {
-    //     LOG(ERROR) << "Failed configuring transport process!";
-    // }
-    // LOG(DEBUG) << "Transport configuration message sent for iface=" << iface;
-}
-
+int beerocks::net::TrafficSeparation::m_profile_x_disallow_override_unsupported_configuration = 0;
 namespace beerocks {
 namespace net {
 
-void TrafficSeparation::traffic_seperation_configuration_clear()
+TrafficSeparation::TrafficSeparation(std::shared_ptr<btl::BrokerClient> broker_client)
+    : m_broker_client(broker_client)
+{
+}
+
+void TrafficSeparation::clear_configuration()
 {
     LOG(DEBUG) << "Clearing traffic separation policy!";
 
@@ -94,9 +66,14 @@ void TrafficSeparation::traffic_seperation_configuration_clear()
     db->traffic_separation.secondary_vlans_ids.clear();
     db->traffic_separation.ssid_vid_mapping.clear();
     network_utils::set_vlan_filtering(db->bridge.iface_name, 0);
+
+    // Reset the transport monitoring on bridge interfaces
+    if (!m_broker_client->configure_interfaces(db->bridge.iface_name, {}, true, true)) {
+        LOG(ERROR) << "Failed configuring transport process!";
+    }
 }
 
-void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
+void TrafficSeparation::apply_policy(const std::string &radio_iface)
 {
     // Since the following call is locking the database, thread safety is promised on this function.
     auto db = AgentDB::get();
@@ -110,7 +87,7 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
         return;
     }
 
-    LOG(DEBUG) << "Apply_traffic_separation";
+    LOG(DEBUG) << "Apply traffic separation policy";
     // The Bridge, the WAN ports and the LAN ports should all have "Tagged Port" policy.
     // Update the Bridge Policy
     bool is_bridge = true;
@@ -184,8 +161,12 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
 
         // If a VLAN interface has beed added remove the wireless interface from transport
         // monitoring so a packet will not be sent twice, otherwise add it.
-        configure_transport(db->backhaul.selected_iface_name, !vlan_iface_added,
-                            db->bridge.iface_name);
+        if (!m_broker_client->configure_interfaces(db->backhaul.selected_iface_name,
+                                                   db->bridge.iface_name, false,
+                                                   !vlan_iface_added)) {
+            LOG(ERROR) << "Failed configuring transport process!";
+        }
+
         LOG(DEBUG) << "Removed " << db->backhaul.selected_iface_name
                    << " from transport configuration";
     }
@@ -240,7 +221,12 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
                              << "backhaul_bss_disallow_profile1_agent_association = "
                                 "backhaul_bss_disallow_profile2_agent_association = "
                              << bss.backhaul_bss_disallow_profile1_agent_association;
-                continue;
+
+                if (m_profile_x_disallow_override_unsupported_configuration == 0) {
+                    continue;
+                }
+                LOG(DEBUG) << "profile_x_disallow_override is set on profile "
+                           << m_profile_x_disallow_override_unsupported_configuration;
             }
             auto bss_iface_netdevs =
                 network_utils::get_bss_ifaces(bss_iface, db->bridge.iface_name);
@@ -249,16 +235,18 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
 
                 // Delete old VLAN interface, since it is not possible to modify the VLAN ID of an
                 // interface. Only removing and re-create it.
-                auto vlan_iface_name = bss_iface_netdev + DOT_PVID_SUFFIX;
-
-                LOG(DEBUG) << "Deleting iface " << vlan_iface_name;
-                network_utils::delete_interface(vlan_iface_name);
-                LOG(DEBUG) << "iface " << vlan_iface_name << " deleted successfully";
-
+                if (string_utils::endswith(bss_iface_netdev, DOT_PVID_SUFFIX)) {
+                    LOG(DEBUG) << "Deleting interface " << bss_iface_netdev;
+                    network_utils::delete_interface(bss_iface_netdev);
+                    LOG(DEBUG) << "Interface " << bss_iface_netdev << " deleted successfully";
+                    continue;
+                }
+                auto vlan_iface_name  = bss_iface_netdev + DOT_PVID_SUFFIX;
                 auto vlan_iface_added = false;
 
                 // Profile-2 Backhaul BSS
-                if (bss.backhaul_bss_disallow_profile1_agent_association) {
+                if (bss.backhaul_bss_disallow_profile1_agent_association ||
+                    m_profile_x_disallow_override_unsupported_configuration == 1) {
 
                     // Since multicast messages are not bridged (c83c81fa), and instead of being
                     // sent to all interfaces, they will lack a VLAN tag. To overcome it, add a VLAN
@@ -286,7 +274,7 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
                     LOG(DEBUG) << "iface " << vlan_iface_name
                                << " was added to the bridge successfully";
 
-                    set_vlan_policy(bss_iface_netdev, ePortMode::TAGGED_PORT_PRIMARY_UNTAGGED,
+                    set_vlan_policy(bss_iface_netdev, ePortMode::TAGGED_PORT_PRIMARY_TAGGED,
                                     is_bridge);
                 }
                 // Profile-1 Backhaul BSS
@@ -297,7 +285,10 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
 
                 // If a VLAN interface has beed added remove the wireless interface from transport
                 // monitoring so a packet will not be sent twice, otherwise add it.
-                configure_transport(bss_iface_netdev, !vlan_iface_added, db->bridge.iface_name);
+                if (!m_broker_client->configure_interfaces(bss_iface_netdev, db->bridge.iface_name,
+                                                           false, !vlan_iface_added)) {
+                    LOG(ERROR) << "Failed configuring transport process!";
+                }
                 LOG(DEBUG) << "Removed " << bss_iface_netdev << " from transport configuration";
             }
         }

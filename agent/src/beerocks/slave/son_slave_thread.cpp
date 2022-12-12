@@ -15,6 +15,7 @@
 #include "tasks/ap_autoconfiguration_task.h"
 #include "tasks/capability_reporting_task.h"
 #include "tasks/controller_connectivity_task.h"
+#include "tasks/link_metrics_collection_task.h"
 #include "tasks/proxy_agent_dpp_task.h"
 #include "tasks/service_prioritization_task.h"
 #include "tasks/vbss_task.h"
@@ -24,6 +25,7 @@
 #include <bcl/beerocks_timer_factory_impl.h>
 #include <bcl/beerocks_timer_manager_impl.h>
 #include <bcl/beerocks_utils.h>
+#include <bcl/beerocks_wifi_channel.h>
 #include <bcl/network/network_utils.h>
 #include <btl/broker_client_factory_factory.h>
 
@@ -39,6 +41,8 @@
 #include <tlvf/AttrList.h>
 #include <tlvf/ieee_1905_1/tlvAlMacAddress.h>
 #include <tlvf/wfa_map/tlvApMetricQuery.h>
+#include <tlvf/wfa_map/tlvAssociatedStaExtendedLinkMetrics.h>
+#include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaTrafficStats.h>
 #include <tlvf/wfa_map/tlvBeaconMetricsResponse.h>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
@@ -195,6 +199,9 @@ bool slave_thread::thread_init()
             ieee1905_1::eMessageType::ACK_MESSAGE,
             ieee1905_1::eMessageType::LINK_METRIC_QUERY_MESSAGE,
             ieee1905_1::eMessageType::AP_METRICS_QUERY_MESSAGE,
+            ieee1905_1::eMessageType::ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE,
+            ieee1905_1::eMessageType::BEACON_METRICS_QUERY_MESSAGE,
+            ieee1905_1::eMessageType::COMBINED_INFRASTRUCTURE_METRICS_MESSAGE,
             ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE,
             ieee1905_1::eMessageType::CLIENT_CAPABILITY_QUERY_MESSAGE,
             ieee1905_1::eMessageType::AP_CAPABILITY_QUERY_MESSAGE,
@@ -292,6 +299,7 @@ bool slave_thread::thread_init()
     m_task_pool.add_task(std::make_shared<ProxyAgentDppTask>(*this, cmdu_tx));
     m_task_pool.add_task(std::make_shared<ControllerConnectivityTask>(*this, cmdu_tx));
     m_task_pool.add_task(std::make_shared<CapabilityReportingTask>(*this, cmdu_tx));
+    m_task_pool.add_task(std::make_shared<LinkMetricsCollectionTask>(*this, cmdu_tx));
     m_task_pool.add_task(std::make_shared<VbssTask>(*this, cmdu_tx));
 
     m_agent_state = STATE_INIT;
@@ -1419,7 +1427,7 @@ bool slave_thread::handle_cmdu_control_message(int fd,
             return false;
         }
 
-        bool radio_5g = (radio->freq_type == beerocks::FREQ_5G);
+        bool radio_5g = (radio->wifi_channel.get_freq_type() == beerocks::FREQ_5G);
 
         // If received scan request and ZWDFS CAC is about to finish refuse to start the
         // background scan only on the 5G radio.
@@ -1608,11 +1616,6 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
             ControllerConnectivityTask::eEvent::BACKHAUL_DISCONNECTED_NOTIFICATION);
         break;
     }
-    case beerocks_message::ACTION_BACKHAUL_APPLY_VLAN_POLICY_REQUEST: {
-        LOG(DEBUG) << "received ACTION_BACKHAUL_APPLY_VLAN_POLICY_REQUEST";
-        TrafficSeparation::apply_traffic_separation();
-        break;
-    }
     case beerocks_message::ACTION_BACKHAUL_CLIENT_RX_RSSI_MEASUREMENT_RESPONSE: {
         LOG(DEBUG) << "ACTION_BACKHAUL_CLIENT_RX_RSSI_MEASUREMENT_RESPONSE";
 
@@ -1672,40 +1675,6 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
         // The Agent send the request message to the Controller only if the backhaul link is
         // wireless. The Controller expects a response from the backhaul manager radio.
         send_cmdu_to_controller(db->backhaul.selected_iface_name, cmdu_tx);
-        break;
-    }
-    case beerocks_message::ACTION_BACKHAUL_ASSOCIATED_STA_LINK_METRICS_REQUEST: {
-        LOG(DEBUG) << "ACTION_BACKHAUL_ASSOCIATED_STA_LINK_METRICS_REQUEST";
-        auto &radio_mac = beerocks_header->actionhdr()->radio_mac();
-        auto db         = AgentDB::get();
-        auto radio      = db->get_radio_by_mac(radio_mac, AgentDB::eMacType::RADIO);
-        if (!radio) {
-            break;
-        }
-        auto &radio_manager = m_radio_managers[radio->front.iface_name];
-
-        if (radio_manager.monitor_fd == beerocks::net::FileDescriptor::invalid_descriptor) {
-            LOG(ERROR) << "monitor_fd is invalid";
-            return false;
-        }
-        auto request_in = beerocks_header->addClass<
-            beerocks_message::cACTION_BACKHAUL_ASSOCIATED_STA_LINK_METRICS_REQUEST>();
-        if (!request_in) {
-            LOG(ERROR) << "addClass cACTION_BACKHAUL_ASSOCIATED_STA_LINK_METRICS_REQUEST failed";
-            return false;
-        }
-
-        auto request_out = message_com::create_vs_message<
-            beerocks_message::cACTION_MONITOR_CLIENT_ASSOCIATED_STA_LINK_METRIC_REQUEST>(
-            cmdu_tx, beerocks_header->id());
-        if (!request_out) {
-            LOG(ERROR) << "Failed building message!";
-            return false;
-        }
-        request_out->sync()    = request_in->sync();
-        request_out->sta_mac() = request_in->sta_mac();
-        LOG(DEBUG) << "send ACTION_MONITOR_CLIENT_ASSOCIATED_STA_LINK_METRIC_REQUEST";
-        send_cmdu(radio_manager.monitor_fd, cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_BACKHAUL_START_WPS_PBC_REQUEST: {
@@ -1980,7 +1949,7 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
             return false;
         }
 
-        bool radio_5g = wireless_utils::is_frequency_band_5ghz(radio->freq_type);
+        bool radio_5g = (radio->wifi_channel.get_freq_type() == beerocks::FREQ_5G);
 
         // If received scan request and ZWDFS CAC is about to finish refuse to start the
         // background scan only on the 5G radio.
@@ -2330,7 +2299,6 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
         radio->number_of_antennas = notification->params().ant_num;
         radio->antenna_gain_dB    = notification->params().ant_gain;
         radio->tx_power_dB        = notification->params().tx_power;
-        radio->freq_type          = notification->params().frequency_band;
         radio->max_supported_bw   = notification->params().max_bandwidth;
 
         radio->ht_supported  = notification->params().ht_supported;
@@ -2349,6 +2317,11 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
                     radio->he_mcs_set.begin());
 
         save_channel_params_to_db(fronthaul_iface, notification->cs_params());
+        if (notification->params().frequency_band != radio->wifi_channel.get_freq_type()) {
+            LOG(ERROR) << "Radio wifi channel's frequncy types does not match the frequency type "
+                          "of ACTION_APMANAGER_JOINED_NOTIFICATION message";
+            return false;
+        }
 
         radio->front.zwdfs                 = notification->params().zwdfs;
         radio->front.hybrid_mode_supported = notification->params().hybrid_mode_supported;
@@ -2860,11 +2833,9 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
             return false;
         }
 
-        radio->channel              = notification_in->params().channel;
-        radio->bandwidth            = beerocks::eWiFiBandwidth(notification_in->params().bandwidth);
-        radio->vht_center_frequency = notification_in->params().center_frequency1;
-        radio->channel_ext_above_primary =
-            radio->vht_center_frequency > wireless_utils::channel_to_freq(radio->channel);
+        radio->wifi_channel = beerocks::WifiChannel(
+            notification_in->params().channel, notification_in->params().center_frequency1,
+            static_cast<beerocks::eWiFiBandwidth>(notification_in->params().bandwidth));
 
         auto notification_out = message_com::create_vs_message<
             beerocks_message::cACTION_CONTROL_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION>(cmdu_tx);
@@ -3400,31 +3371,75 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
                 << "addClass ACTION_MONITOR_CLIENT_ASSOCIATED_STA_LINK_METRIC_RESPONSE failed";
             return false;
         }
-        auto response_out = message_com::create_vs_message<
-            beerocks_message::cACTION_BACKHAUL_ASSOCIATED_STA_LINK_METRICS_RESPONSE>(
-            cmdu_tx, beerocks_header->id());
-        if (response_out == nullptr) {
-            LOG(ERROR)
-                << "Failed building ACTION_BACKHAUL_ASSOCIATED_STA_LINK_METRICS_RESPONSE message!";
-            break;
+
+        auto mid = beerocks_header->id();
+
+        if (!cmdu_tx.create(
+                mid, ieee1905_1::eMessageType::ASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE)) {
+            LOG(ERROR) << "cmdu creation of type ASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE "
+                          "has failed";
+            return false;
         }
+
+        auto response_out = cmdu_tx.addClass<wfa_map::tlvAssociatedStaLinkMetrics>();
+        if (!response_out) {
+            LOG(ERROR) << "adding wfa_map::tlvAssociatedStaLinkMetrics failed";
+            return false;
+        }
+
+        response_out->sta_mac() = response_in->sta_mac();
 
         if (!response_out->alloc_bssid_info_list(response_in->bssid_info_list_length())) {
             LOG(ERROR) << "alloc_per_bss_sta_link_metrics failed";
             return false;
         }
 
-        response_out->sta_mac() = response_in->sta_mac();
-
-        for (size_t i = 0; i < response_out->bssid_info_list_length(); ++i) {
-            auto &bss_in  = std::get<1>(response_in->bssid_info_list(i));
-            auto &bss_out = std::get<1>(response_out->bssid_info_list(i));
-
-            bss_out = bss_in;
+        // adding (currently empty) an associated sta EXTENDED link metrics tlv.
+        // The values will be filled part of PPM-1259
+        auto extended = cmdu_tx.addClass<wfa_map::tlvAssociatedStaExtendedLinkMetrics>();
+        if (!extended) {
+            LOG(ERROR) << "adding wfa_map::tlvAssociatedStaExtendedLinkMetrics failed";
+            return false;
         }
 
-        LOG(DEBUG) << "Send ACTION_BACKHAUL_ASSOCIATED_STA_LINK_METRICS_RESPONSE";
-        m_backhaul_manager_client->send_cmdu(cmdu_tx);
+        extended->associated_sta() = response_in->sta_mac();
+
+        if (!extended->alloc_metrics_list(response_in->bssid_info_list_length())) {
+            LOG(ERROR) << "allocation of per BSS STA metrics failed";
+            return false;
+        }
+
+        auto db = AgentDB::get();
+
+        for (size_t i = 0; i < response_out->bssid_info_list_length(); ++i) {
+            auto &bss_in     = std::get<1>(response_in->bssid_info_list(i));
+            auto &bss_out    = std::get<1>(response_out->bssid_info_list(i));
+            auto &client_mac = response_out->sta_mac();
+
+            auto radio = db->get_radio_by_mac(client_mac, AgentDB::eMacType::CLIENT);
+            if (!radio) {
+                LOG(ERROR) << "radio for client mac " << client_mac << " not found";
+                return false;
+            }
+
+            // If get_radio_by_mac() found the radio, it means that 'client_mac' is on the radio
+            // 'associated_clients' list.
+            bss_out.bssid = radio->associated_clients.at(client_mac).bssid;
+            if (bss_out.bssid == beerocks::net::network_utils::ZERO_MAC) {
+                LOG(ERROR) << "bssid is ZERO_MAC";
+                return false;
+            }
+
+            bss_out.earliest_measurement_delta = bss_in.earliest_measurement_delta;
+            bss_out.downlink_estimated_mac_data_rate_mbps =
+                bss_in.downlink_estimated_mac_data_rate_mbps;
+            bss_out.uplink_estimated_mac_data_rate_mbps =
+                bss_in.uplink_estimated_mac_data_rate_mbps;
+            bss_out.sta_measured_uplink_rcpi_dbm_enc = bss_in.sta_measured_uplink_rcpi_dbm_enc;
+        }
+
+        LOG(DEBUG) << "Send AssociatedStaLinkMetrics to controller, mid = " << mid;
+        send_cmdu_to_controller({}, cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_MONITOR_HOSTAP_LOAD_MEASUREMENT_NOTIFICATION: {
@@ -3990,10 +4005,6 @@ bool slave_thread::agent_fsm()
         m_task_pool.send_event(eTaskType::AP_AUTOCONFIGURATION,
                                ApAutoConfigurationTask::eEvent::INIT_TASK);
 
-        // Reset the traffic separation configuration as they will be reconfigured on
-        // autoconfiguration.
-        TrafficSeparation::traffic_seperation_configuration_clear();
-
         // Clear the channel_list
         // When FCC/ETSI is set, the prplmesh is not restarted, but the salve is.
         // Must clear the map to prevent residues of previous country configuration.
@@ -4398,6 +4409,9 @@ bool slave_thread::agent_fsm()
         break;
     }
     case STATE_STOPPED: {
+        m_task_pool.send_event(eTaskType::LINK_METRICS_COLLECTION,
+                               LinkMetricsCollectionTask::eEvent::RESET_QUERIES);
+
         if (m_platform_manager_client) {
             m_platform_manager_client.reset();
         }
@@ -4840,8 +4854,8 @@ bool slave_thread::handle_monitor_ap_metrics_response(const std::string &frontha
 {
     LOG(DEBUG) << "Received AP_METRICS_QUERY_RESPONSE, mid=" << std::hex << cmdu_rx.getMessageId();
 
-    if (!m_backhaul_manager_client->forward_cmdu(cmdu_rx)) {
-        LOG(ERROR) << "Failed sending AP_METRICS_RESPONSE_MESSAGE message to backhaul_manager";
+    if (!m_task_pool.handle_cmdu(cmdu_rx, 0, {}, {}, fd)) {
+        LOG(ERROR) << "Failed handling AP_METRICS_RESPONSE_MESSAGE message";
         return false;
     }
     return true;
@@ -4882,18 +4896,17 @@ bool slave_thread::send_operating_channel_report(const std::string &fronthaul_if
     }
 
     auto &operating_class_entry = std::get<1>(operating_class_entry_tuple);
-    beerocks::message::sWifiChannel channel;
-    channel.channel_bandwidth = radio->bandwidth;
-    channel.channel           = radio->channel;
-    auto center_channel       = wireless_utils::freq_to_channel(radio->vht_center_frequency);
-    auto operating_class      = wireless_utils::get_operating_class_by_channel(channel);
+    auto operating_class = wireless_utils::get_operating_class_by_channel(radio->wifi_channel);
 
+    auto center_channel =
+        wireless_utils::freq_to_channel(radio->wifi_channel.get_center_frequency());
     operating_class_entry.operating_class = operating_class;
     // operating classes 128,129,130 use center channel **unlike the other classes** (See Table
     // E-4 in 802.11 spec)
     operating_class_entry.channel_number =
-        wireless_utils::is_operating_class_using_central_channel(operating_class) ? center_channel
-                                                                                  : channel.channel;
+        wireless_utils::is_operating_class_using_central_channel(operating_class)
+            ? center_channel
+            : radio->wifi_channel.get_channel();
     operating_channel_report_tlv->current_transmit_power() = radio->tx_power_dB;
 
     return send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
@@ -4946,11 +4959,17 @@ void slave_thread::save_channel_params_to_db(const std::string &fronthaul_iface,
         return;
     }
 
-    radio->channel                   = params.channel;
-    radio->bandwidth                 = static_cast<beerocks::eWiFiBandwidth>(params.bandwidth);
-    radio->channel_ext_above_primary = params.channel_ext_above_primary;
-    radio->vht_center_frequency      = params.vht_center_frequency;
-    radio->tx_power_dB               = params.tx_power;
+    radio->tx_power_dB = params.tx_power;
+
+    radio->wifi_channel =
+        beerocks::WifiChannel(params.channel, params.vht_center_frequency,
+                              static_cast<beerocks::eWiFiBandwidth>(params.bandwidth));
+
+    if (params.channel_ext_above_primary != radio->wifi_channel.get_ext_above_primary()) {
+        LOG(ERROR) << "the channel_ext_above_primary" << params.channel_ext_above_primary
+                   << " does not the same as wifi channel's channel_ext_above_primary"
+                   << radio->wifi_channel.get_ext_above_primary();
+    }
 }
 
 void slave_thread::save_cac_capabilities_params_to_db(const std::string &fronthaul_iface)
@@ -4961,7 +4980,7 @@ void slave_thread::save_cac_capabilities_params_to_db(const std::string &frontha
         LOG(DEBUG) << "Radio of interface " << fronthaul_iface << " does not exist on the db";
         return;
     }
-    if (radio->freq_type == beerocks::FREQ_5G) {
+    if (radio->wifi_channel.get_freq_type() == beerocks::FREQ_5G) {
         AgentDB::sRadio::sCacCapabilities::sCacMethodCapabilities cac_capabilities_local;
 
         // we'll update the value when we receive cac-started event.
@@ -4977,13 +4996,14 @@ void slave_thread::save_cac_capabilities_params_to_db(const std::string &frontha
                 continue;
             }
             for (auto &bw_info : channel_info.supported_bw_list) {
-                auto wifi_channel    = beerocks::message::sWifiChannel(channel, bw_info.bandwidth);
+                auto wifi_channel =
+                    beerocks::WifiChannel(channel, beerocks::FREQ_5G, bw_info.bandwidth);
                 auto operating_class = wireless_utils::get_operating_class_by_channel(wifi_channel);
                 if (operating_class == 0) {
                     continue;
                 }
                 cac_capabilities_local.operating_classes[operating_class].push_back(
-                    wifi_channel.channel);
+                    wifi_channel.get_channel());
             }
         }
 

@@ -119,12 +119,6 @@ private:
     void handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
-     * @brief Handles the request for the security context of a given vbss client
-     * @param cmdu_rx Received CMDU to be handled.
-     */
-    void handle_vbss_security_request(ieee1905_1::CmduMessageRx &cmdu_rx);
-
-    /**
      * @brief Runs the Finite State Machine of the AP manager.
      * 
      * @param[out] continue_processing Flag that means that state machine transitioned to a 
@@ -136,6 +130,7 @@ private:
     bool hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr);
     void handle_hostapd_attached();
     bool handle_ap_enabled(int vap_id);
+    bool handle_aps_update_list();
     void fill_cs_params(beerocks_message::sApChannelSwitch &params);
     bool create_ap_wlan_hal();
     void send_heartbeat();
@@ -143,6 +138,20 @@ private:
                                      int32_t status);
     void remove_client_from_disallowed_list(const sMacAddr &mac, const sMacAddr &bssid);
     void allow_expired_clients();
+    bool register_ext_events_handlers(int fd);
+
+    /**
+     * @brief Create a new BSS and register handlers for it.
+     *
+     * @param ifname the interface name.
+     * @param bss_conf the configuration for the new BSS.
+     * @param bridge the bridge name.
+     * @param vbss whether the new BSS is a VBSS or not.
+     *
+     * @return true on success, false otherwise.
+     */
+    bool add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
+                 std::string &bridge, bool vbss);
 
     // Class constants
     static constexpr uint8_t BEACON_TRANSMIT_TIME_MS = 100;

@@ -10,44 +10,13 @@
 
 #include "agent_db.h"
 
+#include <bcl/beerocks_utils.h>
 #include <bcl/son/son_wireless_utils.h>
 #include <easylogging++.h>
 
 #include <tlvf/wfa_map/tlvApRadioBasicCapabilities.h>
 
 using namespace beerocks;
-
-/**
- * @brief Get a list of supported operating classes.
- *
- * @param channels_list List of supported channels.
- * @return std::vector<uint8_t> A vector of supported operating classes.
- */
-static std::vector<uint8_t> get_supported_operating_classes(
-    const std::unordered_map<uint8_t, beerocks::AgentDB::sRadio::sChannelInfo> &channels_list)
-{
-    std::vector<uint8_t> operating_classes;
-    //TODO handle regulatory domain operating classes
-    for (const auto &oper_class : son::wireless_utils::operating_classes_list) {
-        for (const auto &channel_info_element : channels_list) {
-            auto channel       = channel_info_element.first;
-            auto &channel_info = channel_info_element.second;
-            bool found         = false;
-            for (const auto &bw_info : channel_info.supported_bw_list) {
-                if (son::wireless_utils::has_operating_class_channel(oper_class.second, channel,
-                                                                     bw_info.bandwidth)) {
-                    operating_classes.push_back(oper_class.first);
-                    found = true;
-                    break;
-                }
-            }
-            if (found) {
-                break;
-            }
-        }
-    }
-    return operating_classes;
-}
 
 /**
  * @brief Get the maximum transmit power of operating class.
@@ -73,8 +42,8 @@ static int8_t get_operating_class_max_tx_power(
         auto channel       = channel_info_element.first;
         auto &channel_info = channel_info_element.second;
         for (const auto &bw_info : channel_info.supported_bw_list) {
-            if (son::wireless_utils::has_operating_class_channel(oper_class, channel,
-                                                                 bw_info.bandwidth)) {
+            if (son::wireless_utils::has_operating_class_5g_channel(oper_class, channel,
+                                                                    bw_info.bandwidth)) {
                 max_tx_power = std::max(max_tx_power, channel_info.tx_power_dbm);
             }
         }
@@ -110,8 +79,9 @@ std::vector<uint8_t> get_operating_class_non_oper_channels(
                 auto channel = channel_info_element.first;
                 if (son::wireless_utils::is_operating_class_using_central_channel(
                         operating_class)) {
-                    channel =
-                        son::wireless_utils::get_5g_center_channel(channel, bw_info.bandwidth);
+                    channel = son::wireless_utils::get_center_channel(
+                        channel, son::wireless_utils::which_freq_op_cls(operating_class),
+                        bw_info.bandwidth);
                 }
                 if (op_class_channel == channel && oper_class.band == bw_info.bandwidth) {
                     found = true;
@@ -155,8 +125,13 @@ bool tlvf_utils::add_ap_radio_basic_capabilities(ieee1905_1::CmduMessageTx &cmdu
     LOG(DEBUG) << "Radio reports " << num_bsses << " BSSes.";
 
     radio_basic_caps->maximum_number_of_bsss_supported() = num_bsses;
-    operating_classes = get_supported_operating_classes(radio->channels_list);
-    LOG(DEBUG) << "Filling Supported operating classes on radio " << radio->front.iface_name << ":";
+    LOG(DEBUG) << "Filling Supported operating classes on radio " << radio->front.iface_name
+               << " (band type: "
+               << beerocks::utils::convert_frequency_type_to_string(
+                      radio->wifi_channel.get_freq_type())
+               << "):";
+    operating_classes = son::wireless_utils::get_operating_classes_of_freq_type(
+        radio->wifi_channel.get_freq_type());
 
     for (auto op_class : operating_classes) {
         auto operationClassesInfo = radio_basic_caps->create_operating_classes_info_list();

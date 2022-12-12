@@ -17,6 +17,9 @@
     select Device.WiFi.DataElements.Network.Device.Radio.BSS.STA {
         %read-only string MACAddress = "00:00:00:00:00:00";
         %read-only string TimeStamp = "2020-08-31T11:22:39Z";
+        %read-only string ClientCapabilities;  /* The frame body of the most recently
+                                                received (Re)Association Request frame
+                                                from this client (STA) */
 
         /**
         ** Need to add here HTCapabilities, VHTCapabilities, HECapabilities
@@ -127,6 +130,18 @@
                 %read-only uint32 LastSteerTime = 0 {
                     on action read call action_last_steer_time;
                 }
+            }
+        }
+
+        /* Describes Traffic Identifiers (TIDs) and Queue Size (for each TID) for Associated Device (STA) */
+        %read-only object TIDQueueSizes [] {
+            counted with TIDQueueSizesNumberOfEntries;
+            %read-only uint32 TID = 0 {
+                on action validate call check_range [0, 255];
+            }
+
+             %read-only uint32 Size = 0 {
+                on action validate call check_range [0, 255];
             }
         }
     }

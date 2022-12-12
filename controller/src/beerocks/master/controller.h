@@ -310,6 +310,8 @@ private:
         const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_cmdu_1905_bss_configuration_request_message(const sMacAddr &src_mac,
                                                             ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool handle_cmdu_1905_qos_management_notification_message(const sMacAddr &src_mac,
+                                                              ieee1905_1::CmduMessageRx &cmdu_rx);
 
     bool autoconfig_wsc_parse_radio_caps(
         const sMacAddr &radio_mac,
@@ -402,6 +404,16 @@ private:
                                                  ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
+     * @brief Handles TLV of Associated Wi-Fi 6 STA Status Report (tlvAssociatedWiFi6StaStatusReport).
+     *
+     * @param src_mac Source MAC address.
+     * @param cmdu_rx  AP Metrics Response message.
+     * @return True on success, false otherwise.
+    */
+    bool handle_tlv_associated_wifi6_sta_status_report(const sMacAddr &src_mac,
+                                                       ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
      * @brief Handles Tlv of Profile-2 AP Capability (tlvProfile2ApCapability).
      *
      * @param agent agent db shared object.
@@ -459,6 +471,26 @@ private:
      * @param est_service_info_field Array with ESP values.
      *
     */
+
+    /**
+     * @brief Handles TLV of AP Radio Advanced Capabilities (tlvProfile2ApRadioAdvancedCapabilities).
+     *
+     * @param agent Agent DB object.
+     * @param cmdu_rx Received CMDU as Profile-2 AP Radio Advanced Capabilities message.
+     * @return True on success, false otherwise.
+    */
+    bool handle_tlv_profile2_ap_radio_advanced_capabilities(Agent &agent,
+                                                            ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief Handles TLV of Device Inventory (tlvDeviceInventory).
+     *
+     * @param agent Agent DB object.
+     * @param cmdu_rx Received CMDU as Profile-3 Device Inventory message.
+     * @return True on success, false otherwise.
+    */
+    bool handle_tlv_profile3_device_inventory(Agent &agent, ieee1905_1::CmduMessageRx &cmdu_rx);
+
     void set_esp(const std::string &param_name, const sMacAddr &reporting_agent_bssid,
                  uint8_t *est_service_info_field);
 
@@ -597,9 +629,7 @@ private:
     /**
      * Broker client to exchange CMDU messages with broker server running in transport process.
      */
-    std::unique_ptr<beerocks::btl::BrokerClient> m_broker_client;
-
-    std::unique_ptr<vbss::VbssManager> m_vbss_manager;
+    std::shared_ptr<beerocks::btl::BrokerClient> m_broker_client;
 };
 
 } // namespace son

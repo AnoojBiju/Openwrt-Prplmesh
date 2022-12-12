@@ -69,6 +69,7 @@ private:
         AgentDB::sRadio::channel_preferences_map controller_preferences;
         struct sChannelSelectionParams {
             uint8_t channel                    = 0;
+            beerocks::eFreqType freq_type      = beerocks::eFreqType::FREQ_UNKNOWN;
             beerocks::eWiFiBandwidth bandwidth = beerocks::eWiFiBandwidth::BANDWIDTH_UNKNOWN;
             int8_t tx_limit                    = 0;
             bool tx_limit_valid                = false;
@@ -256,6 +257,14 @@ private:
     // Set this flag to true to send preference report when handling the response for the
     // above request in handle_vs_channels_list_response()
     bool m_send_preference_report_after_cac_completion_event = false;
+
+    /**
+     * CSA event from the radio will trigger SWITCH_CHANNEL_NOTIFICATION_EVENT to the
+     * switch_channel task which results in sending ACTION_BACKHAUL_CHANNELS_LIST_REQUEST.
+     * Set this flag to true to send preference report when handling the response for the
+     * above request in handle_vs_channels_list_response()
+     */
+    bool m_send_preference_report_after_csa_finished_event = false;
 
     /* Class members */
 

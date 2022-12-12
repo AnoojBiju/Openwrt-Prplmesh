@@ -10,6 +10,7 @@
 
 #include "../tasks/agent_monitoring_task.h"
 #include <bcl/beerocks_utils.h>
+#include <bcl/beerocks_wifi_channel.h>
 #include <bcl/network/sockets.h>
 #include <bcl/son/son_wireless_utils.h>
 #include <beerocks/tlvf/beerocks_message.h>
@@ -636,17 +637,8 @@ bool db::set_node_manufacturer(const std::string &mac, const std::string &manufa
 bool db::set_agent_manufacturer(prplmesh::controller::db::Agent &agent,
                                 const std::string &manufacturer)
 {
-    agent.manufacturer = manufacturer;
+    agent.device_info.manufacturer = manufacturer;
     return true;
-}
-
-int db::get_node_channel(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return 0;
-    }
-    return n->channel;
 }
 
 int db::get_hostap_operating_class(const sMacAddr &mac)
@@ -787,9 +779,7 @@ bool db::set_radio_channel_scan_capabilites(
             // add comma if not last channel in the list, else close list by add curl brackets
             ss << (((ch_idx + 1) != channel_list_length) ? "," : "}");
 
-            beerocks::message::sWifiChannel wifi_channel;
-            wifi_channel.channel = *channel;
-            operating_classes[operating_class].push_back(wifi_channel);
+            operating_classes[operating_class].push_back(*channel);
         }
     }
     ss << std::endl;
@@ -972,13 +962,21 @@ bool db::is_hostap_active(const sMacAddr &mac)
 
 bool db::is_ap_out_of_band(const std::string &mac, const std::string &sta_mac)
 {
-    bool client_on_5ghz =
-        (wireless_utils::which_freq(get_node_channel(sta_mac)) == eFreqType::FREQ_5G);
+    auto sta_wifi_channel = get_node_wifi_channel(sta_mac);
+    if (sta_wifi_channel.is_empty()) {
+        LOG(ERROR) << "empty wifi channel of " << sta_mac << " in DB";
+        return false;
+    }
+    bool client_on_5ghz = (sta_wifi_channel.get_freq_type() == eFreqType::FREQ_5G);
 
-    if (((wireless_utils::which_freq(get_node_channel(mac)) == eFreqType::FREQ_24G) &&
-         client_on_5ghz) ||
-        ((wireless_utils::which_freq(get_node_channel(mac)) == eFreqType::FREQ_5G) &&
-         (!client_on_5ghz))) {
+    auto wifi_channel = get_node_wifi_channel(mac);
+    if (wifi_channel.is_empty()) {
+        LOG(ERROR) << "empty wifi channel of " << mac << " in DB";
+        return false;
+    }
+
+    if (((wifi_channel.get_freq_type() == eFreqType::FREQ_24G) && client_on_5ghz) ||
+        ((wifi_channel.get_freq_type() == eFreqType::FREQ_5G) && (!client_on_5ghz))) {
         return true;
     }
     return false;
@@ -1834,6 +1832,29 @@ bool db::set_station_capabilities(const std::string &client_mac,
     return true;
 }
 
+bool db::set_client_capabilities(const sMacAddr &sta_mac, const std::string &frame, db &database)
+{
+    auto station = database.get_station(sta_mac);
+    if (!station) {
+        LOG(ERROR) << "station " << sta_mac << " not found";
+        return false;
+    }
+
+    if (station->dm_path.empty()) {
+        return true;
+    }
+
+    if (station->assoc_event_path.empty()) {
+        return true;
+    }
+
+    bool ret_val = true;
+    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "ClientCapabilities", frame);
+    ret_val &= m_ambiorix_datamodel->set(station->assoc_event_path, "ClientCapabilities", frame);
+
+    return ret_val;
+}
+
 const beerocks::message::sRadioCapabilities *
 db::get_station_capabilities(const std::string &client_mac, bool is_bandtype_5ghz)
 {
@@ -1946,8 +1967,8 @@ int db::get_hostap_tx_power(const sMacAddr &mac)
     return n->hostap->tx_power;
 }
 
-bool db::set_hostap_supported_channels(const sMacAddr &mac,
-                                       beerocks::message::sWifiChannel *channels, int length)
+bool db::set_hostap_supported_channels(const sMacAddr &mac, beerocks::WifiChannel *channels,
+                                       int length)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -1957,7 +1978,7 @@ bool db::set_hostap_supported_channels(const sMacAddr &mac,
         LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return false;
     }
-    std::vector<beerocks::message::sWifiChannel> supported_channels_(channels, channels + length);
+    std::vector<beerocks::WifiChannel> supported_channels_(channels, channels + length);
     n->hostap->supported_channels = supported_channels_;
 
     if (n->hostap->supported_channels.size() == 0) {
@@ -1965,30 +1986,34 @@ bool db::set_hostap_supported_channels(const sMacAddr &mac,
         return false;
     }
 
-    if (wireless_utils::which_freq(n->hostap->supported_channels[0].channel) ==
-        eFreqType::FREQ_5G) {
-        n->supports_5ghz = true;
-    } else if (wireless_utils::which_freq(n->hostap->supported_channels[0].channel) ==
-               eFreqType::FREQ_24G) {
+    switch (n->hostap->supported_channels[0].get_freq_type()) {
+    case eFreqType::FREQ_24G:
         n->supports_24ghz = true;
-    } else {
-        LOG(ERROR) << "unknown frequency! channel:"
-                   << int(n->hostap->supported_channels[0].channel);
+        break;
+    case eFreqType::FREQ_5G:
+        n->supports_5ghz = true;
+        break;
+    case eFreqType::FREQ_6G:
+        LOG(WARNING) << "6ghz should be supported";
+        break;
+    default:
+        LOG(ERROR) << "unknown frequency! channel: "
+                   << int(n->hostap->supported_channels[0].get_channel());
         return false;
     }
 
     return true;
 }
 
-std::vector<beerocks::message::sWifiChannel> db::get_hostap_supported_channels(const sMacAddr &mac)
+std::vector<beerocks::WifiChannel> db::get_hostap_supported_channels(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
         LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return std::vector<beerocks::message::sWifiChannel>();
+        return std::vector<beerocks::WifiChannel>();
     } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
         LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
-        return std::vector<beerocks::message::sWifiChannel>();
+        return std::vector<beerocks::WifiChannel>();
     }
     return n->hostap->supported_channels;
 }
@@ -1998,11 +2023,10 @@ std::string db::get_hostap_supported_channels_string(const sMacAddr &radio_mac)
     std::ostringstream os;
     auto supported_channels = get_hostap_supported_channels(radio_mac);
     for (const auto &val : supported_channels) {
-        if (val.channel > 0) {
-            os << " ch = " << int(val.channel) << " | dfs = " << int(val.is_dfs_channel)
-               << " | bw = " << int(val.channel_bandwidth) << " | tx_pow = " << int(val.tx_pow)
-               << " | noise = " << int(val.noise) << " [dbm]"
-               << " | bss_overlap = " << int(val.bss_overlap) << std::endl;
+        if (val.get_channel() > 0) {
+            os << " ch = " << int(val.get_channel()) << " | dfs = " << int(val.is_dfs_channel())
+               << " | bw = " << beerocks::utils::convert_bandwidth_to_enum(val.get_bandwidth())
+               << " | tx_pow = " << int(val.get_tx_power());
         }
     }
 
@@ -2029,29 +2053,30 @@ bool db::add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t
     auto supported_channels = get_hostap_supported_channels(radio_mac);
     auto channel_set        = wireless_utils::operating_class_to_channel_set(operating_class);
     auto class_bw           = wireless_utils::operating_class_to_bandwidth(operating_class);
+    auto freq_type          = wireless_utils::which_freq_op_cls(operating_class);
+
     // Update current channels
     for (auto c : channel_set) {
-        auto channel = std::find_if(supported_channels.begin(), supported_channels.end(),
-                                    [&c, &class_bw](const beerocks::message::sWifiChannel &ch) {
-                                        return ch.channel == c && ch.channel_bandwidth == class_bw;
-                                    });
+        auto channel =
+            std::find_if(supported_channels.begin(), supported_channels.end(),
+                         [&c, &class_bw](const beerocks::WifiChannel &ch) {
+                             return ch.get_channel() == c && ch.get_bandwidth() == class_bw;
+                         });
         if (channel != supported_channels.end()) {
-            channel->tx_pow            = tx_power;
-            channel->channel_bandwidth = class_bw;
+            channel->set_tx_power(tx_power);
+            channel->set_bandwidth(class_bw);
         } else {
-            beerocks::message::sWifiChannel ch;
-            ch.channel           = c;
-            ch.tx_pow            = tx_power;
-            ch.channel_bandwidth = class_bw;
+            beerocks::WifiChannel ch(c, freq_type, class_bw);
+            ch.set_tx_power(tx_power);
             supported_channels.push_back(ch);
         }
     }
 
     // Delete non-operable channels
     for (auto c : non_operable_channels) {
-        auto channel = std::find_if(
-            supported_channels.begin(), supported_channels.end(),
-            [&c](const beerocks::message::sWifiChannel &ch) { return ch.channel == c; });
+        auto channel =
+            std::find_if(supported_channels.begin(), supported_channels.end(),
+                         [&c](const beerocks::WifiChannel &ch) { return ch.get_channel() == c; });
         if (channel != supported_channels.end())
             supported_channels.erase(channel);
     }
@@ -2135,10 +2160,8 @@ bool db::is_node_24ghz(const std::string &mac)
         LOG(ERROR) << "node " << mac << " does not exist! return false as default";
         return false;
     }
-    if (wireless_utils::which_freq(n->channel) == eFreqType::FREQ_24G) {
-        return true;
-    }
-    return false;
+
+    return (n->wifi_channel.get_freq_type() == eFreqType::FREQ_24G);
 }
 
 bool db::is_node_5ghz(const std::string &mac)
@@ -2148,10 +2171,8 @@ bool db::is_node_5ghz(const std::string &mac)
         LOG(ERROR) << "node " << mac << " does not exist! return false as default";
         return false;
     }
-    if (wireless_utils::which_freq(n->channel) == eFreqType::FREQ_5G) {
-        return true;
-    }
-    return false;
+
+    return (n->wifi_channel.get_freq_type() == eFreqType::FREQ_5G);
 }
 
 bool db::update_node_failed_5ghz_steer_attempt(const std::string &mac)
@@ -2276,11 +2297,11 @@ std::unordered_map<int8_t, sVapElement> &db::get_hostap_vap_list(const sMacAddr 
 bool db::remove_vap(Agent::sRadio &radio, Agent::sRadio::sBss &bss)
 {
     auto vap_list = get_hostap_vap_list(radio.radio_uid);
-    auto vap      = vap_list.find(bss.vap_id);
+    auto vap      = vap_list.find(bss.get_vap_id());
 
     if (vap != vap_list.end()) {
-        if (!vap_list.erase(bss.vap_id)) {
-            LOG(ERROR) << "Failed to remove VAP, id: " << bss.vap_id
+        if (!vap_list.erase(bss.get_vap_id())) {
+            LOG(ERROR) << "Failed to remove VAP, id: " << bss.get_vap_id()
                        << "bssid: " << vap->second.mac;
             return false;
         }
@@ -2677,20 +2698,19 @@ bool db::set_supported_channel_radar_affected(const sMacAddr &mac,
     }
     auto it =
         find_if(std::begin(n->hostap->supported_channels), std::end(n->hostap->supported_channels),
-                [&](beerocks::message::sWifiChannel supported_channel) {
-                    return supported_channel.channel == *channels.begin();
+                [&](beerocks::WifiChannel supported_channel) {
+                    return supported_channel.get_channel() == *channels.begin();
                 });
 
     if (it == std::end(n->hostap->supported_channels)) {
         LOG(ERROR) << "channels not found ,not suppose to happen!!";
         return false;
     }
-    std::for_each(it, std::next(it, channels_count),
-                  [&](beerocks::message::sWifiChannel &supported_channel) {
-                      LOG(DEBUG) << " supported_channel = " << int(supported_channel.channel)
-                                 << " affected = " << int(affected);
-                      supported_channel.radar_affected = affected;
-                  });
+    std::for_each(it, std::next(it, channels_count), [&](beerocks::WifiChannel &supported_channel) {
+        LOG(DEBUG) << " supported_channel = " << int(supported_channel.get_channel())
+                   << " affected = " << int(affected);
+        supported_channel.set_radar_affected(affected);
+    });
 
     // for(auto supported_channel : n->hostap->supported_channels) {
     //     if(supported_channel.channel > 0) {
@@ -2699,36 +2719,6 @@ bool db::set_supported_channel_radar_affected(const sMacAddr &mac,
     // }
 
     return true;
-}
-
-bool db::set_hostap_is_dfs(const sMacAddr &mac, bool enable)
-{
-    std::shared_ptr<node> n = get_node(mac);
-
-    if (!n) {
-        LOG(ERROR) << "node not found.... ";
-        return false;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
-        return false;
-    }
-    n->hostap->is_dfs = enable;
-    return true;
-}
-
-bool db::get_hostap_is_dfs(const sMacAddr &mac)
-{
-    auto n = get_node(mac);
-
-    if (!n) {
-        LOG(ERROR) << "node not found.... ";
-        return false;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(ERROR) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
-        return false;
-    }
-
-    return n->hostap->is_dfs;
 }
 
 bool db::set_hostap_cac_completed(const sMacAddr &mac, bool enable)
@@ -3016,6 +3006,12 @@ int8_t db::get_channel_preference(const sMacAddr &radio_mac, const uint8_t opera
         return (int8_t)eChannelPreferenceRankingConsts::INVALID;
     }
 
+    auto freq_type = son::wireless_utils::which_freq_op_cls(operating_class);
+    if (freq_type == eFreqType::FREQ_UNKNOWN) {
+        LOG(ERROR) << "the frequency type of operating class " << operating_class << " is unknown";
+        return (int8_t)eChannelPreferenceRankingConsts::INVALID;
+    }
+
     uint8_t channel = channel_number;
     if (!is_central_channel &&
         wireless_utils::is_operating_class_using_central_channel(operating_class)) {
@@ -3040,11 +3036,14 @@ int8_t db::get_channel_preference(const sMacAddr &radio_mac, const uint8_t opera
 
     // Find if the channel is supported by the radio
     if (std::find_if(supported_channels.begin(), supported_channels.end(),
-                     [channel, bw](const message::sWifiChannel chan) {
+                     [channel, bw, &freq_type](const beerocks::WifiChannel chan) {
                          // Find if matching channel number & bandwidth.
-                         return ((chan.channel == channel) && (chan.channel_bandwidth == bw));
+                         return ((chan.get_channel() == channel) && (chan.get_bandwidth() == bw) &&
+                                 chan.get_freq_type() == freq_type);
                      }) == supported_channels.end()) {
-        LOG(ERROR) << "Channel #" << channel << " in Operating Class #" << operating_class
+        LOG(ERROR) << "Channel #" << channel
+                   << "(freq type: " << beerocks::utils::convert_frequency_type_to_string(freq_type)
+                   << ") in Operating Class #" << operating_class
                    << " is not supported by the radio.";
         return (int8_t)eChannelPreferenceRankingConsts::NON_OPERABLE;
     }
@@ -3079,7 +3078,7 @@ node::radio::PreferenceReportMap db::get_radio_channel_preference(const sMacAddr
             // Failed to get Operating Class number
             continue;
         }
-        const auto key = std::make_pair(operating_class, supported_channel.channel);
+        const auto key = std::make_pair(operating_class, supported_channel.get_channel());
         if (preference_map.find(key) != preference_map.end()) {
             // Preference already exists in map, skip.
             continue;
@@ -3155,8 +3154,8 @@ bool db::is_channel_scan_pool_supported(const sMacAddr &mac,
     for (const auto &channel : channel_pool) {
         auto found_channel =
             std::find_if(supported_channels.begin(), supported_channels.end(),
-                         [&channel](const beerocks::message::sWifiChannel &supported_channel) {
-                             return supported_channel.channel == channel;
+                         [&channel](const beerocks::WifiChannel &supported_channel) {
+                             return supported_channel.get_channel() == channel;
                          });
         if (found_channel == supported_channels.end()) {
             LOG(ERROR) << "channel #" << int(channel) << " is not supported";
@@ -3336,16 +3335,16 @@ bool db::get_pool_of_all_supported_channels(std::unordered_set<uint8_t> &channel
         return false;
     }
     // Take only the 20MHz channels
-    std::vector<beerocks::message::sWifiChannel> subset_20MHz_channels;
+    std::vector<beerocks::WifiChannel> subset_20MHz_channels;
     std::copy_if(all_channels.begin(), all_channels.end(),
                  std::back_inserter(subset_20MHz_channels),
-                 [](const beerocks::message::sWifiChannel &c) -> bool {
-                     return c.channel_bandwidth == eWiFiBandwidth::BANDWIDTH_20;
+                 [](const beerocks::WifiChannel &c) -> bool {
+                     return c.get_bandwidth() == eWiFiBandwidth::BANDWIDTH_20;
                  });
-    // Convert from beerocks::message::sWifiChannel to uint8_t
+    // Convert from beerocks::WifiChannel to uint8_t
     std::transform(subset_20MHz_channels.begin(), subset_20MHz_channels.end(),
                    std::inserter(channel_pool_set, channel_pool_set.end()),
-                   [](const beerocks::message::sWifiChannel &c) -> uint8_t { return c.channel; });
+                   [](const beerocks::WifiChannel &c) -> uint8_t { return c.get_channel(); });
     return true;
 }
 
@@ -3550,11 +3549,24 @@ const std::vector<sChannelScanResults> db::get_channel_scan_report(const sMacAdd
         return empty_report;
     }
 
+    auto wifi_Channel = get_node_wifi_channel(tlvf::mac_to_string(RUID));
+    if (wifi_Channel.is_empty()) {
+        LOG(ERROR) << "wifi channel is empty";
+        return empty_report;
+    }
+
     node::radio::channel_scan_report_index index;
     const auto &pool = get_channel_scan_pool(RUID, single_scan);
     for (const auto &channel : pool) {
-        auto operating_class = wireless_utils::get_operating_class_by_channel(
-            beerocks::message::sWifiChannel(channel, eWiFiBandwidth::BANDWIDTH_20));
+        auto operating_class = wireless_utils::get_operating_class_by_channel(beerocks::WifiChannel(
+            channel, wifi_Channel.get_freq_type(), eWiFiBandwidth::BANDWIDTH_20));
+        if (operating_class == 0) {
+            LOG(ERROR) << "failed to find operating class of channel " << channel << " (freq type: "
+                       << beerocks::utils::convert_frequency_type_to_string(
+                              wifi_Channel.get_freq_type())
+                       << ") and bandwidth 20MHz";
+            return empty_report;
+        }
         index.insert(std::make_pair(operating_class, channel));
     }
     return get_channel_scan_report(RUID, index);
@@ -4072,8 +4084,13 @@ bool db::clear_client_persistent_db(const sMacAddr &mac)
 
 bool db::is_hostap_on_client_selected_bands(const sMacAddr &client_mac, const sMacAddr &hostap)
 {
-    auto hostap_band = wireless_utils::which_freq(get_node_channel(tlvf::mac_to_string(hostap)));
-    auto client      = get_station(client_mac);
+    auto hostap_wifi_channel = get_node_wifi_channel(tlvf::mac_to_string(hostap));
+    if (hostap_wifi_channel.is_empty()) {
+        LOG(ERROR) << "empty wifi channel of " << tlvf::mac_to_string(hostap) << " in DB";
+        return false;
+    }
+
+    auto client = get_station(client_mac);
     if (!client) {
         LOG(WARNING) << "client " << client_mac << " not found";
         return false;
@@ -4085,13 +4102,14 @@ bool db::is_hostap_on_client_selected_bands(const sMacAddr &client_mac, const sM
         return false;
     }
 
-    switch (hostap_band) {
+    auto freq_type = hostap_wifi_channel.get_freq_type();
+    switch (freq_type) {
     case beerocks::eFreqType::FREQ_24G:
         return (selected_bands & eClientSelectedBands::eSelectedBands_24G);
     case beerocks::eFreqType::FREQ_5G:
         return (selected_bands & eClientSelectedBands::eSelectedBands_5G);
     default:
-        LOG(WARNING) << "hostap band " << hostap_band << " is not supported by client";
+        LOG(WARNING) << "hostap band " << freq_type << " is not supported by client";
         return false;
     }
 }
@@ -5017,9 +5035,16 @@ bool db::set_measurement_window_size(const std::string &mac, int window_size)
     return true;
 }
 
-bool db::set_node_channel_bw(const sMacAddr &mac, int channel, beerocks::eWiFiBandwidth bw,
-                             bool channel_ext_above_secondary, int8_t channel_ext_above_primary,
-                             uint16_t vht_center_frequency)
+beerocks::WifiChannel db::get_node_wifi_channel(const std::string &mac)
+{
+    auto n = get_node(mac);
+    if (!n) {
+        return {};
+    }
+    return n->wifi_channel;
+}
+
+bool db::set_node_wifi_channel(const sMacAddr &mac, const beerocks::WifiChannel &wifi_channel)
 {
     std::shared_ptr<node> n = get_node(mac);
     if (!n) {
@@ -5028,24 +5053,10 @@ bool db::set_node_channel_bw(const sMacAddr &mac, int channel, beerocks::eWiFiBa
     }
     if (n->get_type() == beerocks::TYPE_SLAVE) {
         if (n->hostap != nullptr) {
-            n->hostap->channel_ext_above_primary = channel_ext_above_primary;
-            n->hostap->vht_center_frequency      = vht_center_frequency;
-            auto is_dfs                          = wireless_utils::is_dfs_channel(channel);
-            set_hostap_is_dfs(mac, is_dfs);
-            if (channel >= 1 && channel <= 13) {
-                n->hostap->operating_class = 81;
-            } else if (channel == 14) {
-                n->hostap->operating_class = 82;
-            } else if (channel >= 36 && channel <= 48) {
-                n->hostap->operating_class = 115;
-            } else if (channel >= 52 && channel <= 64) {
-                n->hostap->operating_class = 118;
-            } else if (channel >= 100 && channel <= 140) {
-                n->hostap->operating_class = 121;
-            } else if (channel >= 149 && channel <= 169) {
-                n->hostap->operating_class = 125;
-            } else {
-                LOG(ERROR) << "Unsupported Operating Class for channel=" << channel;
+            n->hostap->operating_class =
+                son::wireless_utils::get_operating_class_by_channel(wifi_channel);
+            if (n->hostap->operating_class == 0) {
+                LOG(ERROR) << "failed to get operating class of " << wifi_channel;
             }
         } else {
             LOG(ERROR) << __FUNCTION__ << " - node " << mac << " is null!";
@@ -5053,108 +5064,84 @@ bool db::set_node_channel_bw(const sMacAddr &mac, int channel, beerocks::eWiFiBa
         }
     }
 
-    LOG(INFO) << "set node " << mac << " to channel=" << channel << ", bw=" << int(bw)
-              << ", channel_ext_above_secondary=" << int(channel_ext_above_secondary)
-              << ", channel_ext_above_primary=" << int(channel_ext_above_primary)
-              << ", vht_center_frequency=" << int(vht_center_frequency);
+    LOG(INFO) << "set node " << mac;
+    LOG(INFO) << "previous wifiChannel node: " << wifi_channel;
+    n->wifi_channel = wifi_channel;
 
-    n->channel                     = channel;
-    n->bandwidth                   = bw;
-    n->channel_ext_above_secondary = channel_ext_above_secondary;
-    if (wireless_utils::which_freq(channel) == eFreqType::FREQ_24G) { //2.4G
+    LOG(INFO) << "current wifiChannel node: " << wifi_channel;
+
+    switch (n->wifi_channel.get_freq_type()) {
+    case eFreqType::FREQ_24G: {
         n->supports_24ghz             = true;
         n->failed_24ghz_steer_attemps = 0;
-    } else if (wireless_utils::which_freq(channel) == eFreqType::FREQ_5G) {
+    } break;
+    case eFreqType::FREQ_5G: {
         n->supports_5ghz             = true;
         n->failed_5ghz_steer_attemps = 0;
-    } else {
-        LOG(ERROR) << "frequency type unknown, channel=" << int(channel);
+    } break;
+    case eFreqType::FREQ_6G: {
+        LOG(WARNING) << "node " << mac << " of 6ghz steer attempts not implemented yet";
+    } break;
+    default:
+        LOG(ERROR) << "frequency type unknown, channel=" << n->wifi_channel.get_channel();
+        break;
     }
 
     auto children = get_node_children(n);
     for (auto child : children) {
-        child->channel                     = channel;
-        child->bandwidth                   = bw;
-        child->channel_ext_above_secondary = channel_ext_above_secondary;
+        child->wifi_channel = wifi_channel;
     }
     return true;
 }
 
-bool db::update_node_bw(const sMacAddr &mac, beerocks::eWiFiBandwidth bw)
+bool db::update_node_wifi_channel_bw(const sMacAddr &mac, beerocks::eWiFiBandwidth bw)
 {
     auto n = get_node(mac);
     if (!n) {
         LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
         return false;
     }
-    if (wireless_utils::which_freq(n->channel) == eFreqType::FREQ_UNKNOWN) {
-        LOG(ERROR) << "frequency type unknown, channel=" << int(n->channel);
+    if (n->wifi_channel.get_freq_type() == eFreqType::FREQ_UNKNOWN) {
+        LOG(ERROR) << "frequency type of node " << mac
+                   << " is unknown, channel=" << int(n->wifi_channel.get_channel());
         return false;
     }
-    if (bw == n->bandwidth) {
+
+    if (bw == eWiFiBandwidth::BANDWIDTH_UNKNOWN) {
+        LOG(ERROR) << "the new bandwidth of node " << mac << " can't be unknown";
+        return false;
+    }
+
+    if (bw == n->wifi_channel.get_bandwidth()) {
         return true;
     }
     if (n->get_type() == beerocks::TYPE_SLAVE) {
-        if (n->hostap != nullptr) {
-            //calculate new vht center freq with the new channel width
-            n->hostap->vht_center_frequency = wireless_utils::channel_to_vht_center_freq(
-                n->channel, bw, n->channel_ext_above_secondary);
-        } else {
+        if (n->hostap == nullptr) {
             LOG(ERROR) << __FUNCTION__ << " - node " << mac << " is null!";
             return false;
         }
     }
-    n->bandwidth  = bw;
+
+    if (bw == eWiFiBandwidth::BANDWIDTH_MAX) {
+        LOG(INFO) << "update wifiChannel node " << mac << " bw from "
+                  << beerocks::utils::convert_bandwidth_to_int(n->wifi_channel.get_bandwidth())
+                  << "MHz to MAX";
+    } else {
+        LOG(INFO) << "update wifiChannel node " << mac << " bw from "
+                  << beerocks::utils::convert_bandwidth_to_int(n->wifi_channel.get_bandwidth())
+                  << " to " << bw;
+    }
+
+    eWiFiBandwidth prev_bw = n->wifi_channel.get_bandwidth();
+    n->wifi_channel.set_bandwidth(bw);
+    LOG(INFO) << "updating node " << mac << " bandwidth from "
+              << beerocks::utils::convert_bandwidth_to_int(prev_bw) << "MHz to "
+              << beerocks::utils::convert_bandwidth_to_int(bw) << "MHz";
     auto children = get_node_children(n);
     for (auto child : children) {
-        child->bandwidth = bw;
+        child->wifi_channel.set_bandwidth(bw);
     }
     return true;
-}
-
-beerocks::eWiFiBandwidth db::get_node_bw(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return beerocks::BANDWIDTH_MAX;
-    }
-    return n->bandwidth;
-}
-
-bool db::get_node_channel_ext_above_secondary(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    }
-    return n->channel_ext_above_secondary;
-}
-
-bool db::get_hostap_channel_ext_above_primary(const sMacAddr &hostap_mac)
-{
-    auto n = get_node(hostap_mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << hostap_mac << " does not exist!";
-        return false;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(WARNING) << __FUNCTION__ << "node " << hostap_mac << " is not a valid hostap!";
-        return false;
-    }
-    return n->hostap->channel_ext_above_primary;
-}
-
-uint16_t db::get_hostap_vht_center_frequency(const sMacAddr &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return 0;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        return 0;
-    }
-    return n->hostap->vht_center_frequency;
 }
 
 //
@@ -6421,7 +6408,7 @@ bool db::remove_hostap_supported_operating_classes(const sMacAddr &radio_mac)
     }
 
     // Remove from database
-    std::vector<beerocks::message::sWifiChannel>().swap(supported_channels);
+    std::vector<beerocks::WifiChannel>().swap(supported_channels);
 
     return true;
 }
@@ -6496,6 +6483,7 @@ bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, cons
     ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "FronthaulUse", bss->fronthaul);
     ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "BackhaulUse", bss->backhaul);
     ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "IsVBSS", is_vbss);
+    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "ByteCounterUnits", bss->byte_counter_units);
 
     /*
         Set value for LastChange variable - it is creation time, when someone will
@@ -6960,6 +6948,35 @@ bool db::dm_set_sta_traffic_stats(const sMacAddr &sta_mac, sAssociatedStaTraffic
     ret_val &=
         m_ambiorix_datamodel->set(station->dm_path, "ErrorsReceived", stats.m_rx_packets_error);
     ret_val &= m_ambiorix_datamodel->set_current_time(station->dm_path);
+
+    return ret_val;
+}
+
+bool db::dm_add_tid_queue_sizes(
+    const Station &station,
+    const std::vector<wfa_map::tlvAssociatedWiFi6StaStatusReport::sTidQueueSize> &tid_queue_vector)
+{
+    if (station.dm_path.empty()) {
+        return true;
+    }
+
+    if (!m_ambiorix_datamodel->remove_all_instances(station.dm_path + ".TIDQueueSizes")) {
+        return false;
+    }
+
+    bool ret_val = true;
+
+    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.TIDQueueSizes.{i}.
+    for (auto &tid_queue : tid_queue_vector) {
+        auto tid_queue_size_path =
+            m_ambiorix_datamodel->add_instance(station.dm_path + ".TIDQueueSizes");
+        if (tid_queue_size_path.empty()) {
+            return false;
+        }
+
+        ret_val &= m_ambiorix_datamodel->set(tid_queue_size_path, "TID", tid_queue.tid);
+        ret_val &= m_ambiorix_datamodel->set(tid_queue_size_path, "Size", tid_queue.queue_size);
+    }
 
     return ret_val;
 }
@@ -7497,7 +7514,8 @@ bool db::dm_set_device_ssid_to_vid_map(const Agent &agent,
     return ret_val;
 }
 
-bool db::dm_set_device_board_info(const Agent &agent, const sDeviceInfo &device_info)
+bool db::dm_set_default_8021q(const Agent &agent, const uint16_t primary_vlan_id,
+                              const uint8_t default_pcp)
 {
     bool ret_val = true;
 
@@ -7505,12 +7523,62 @@ bool db::dm_set_device_board_info(const Agent &agent, const sDeviceInfo &device_
         return true;
     }
 
-    const auto device_path = agent.dm_path;
+    if (!m_ambiorix_datamodel->remove_all_instances(agent.dm_path + ".Default8021Q")) {
+        return false;
+    }
 
-    ret_val &= m_ambiorix_datamodel->set(device_path, "Manufacturer", device_info.manufacturer);
-    ret_val &= m_ambiorix_datamodel->set(device_path, "SerialNumber", device_info.serial_number);
+    auto default_8021q_path = m_ambiorix_datamodel->add_instance(agent.dm_path + ".Default8021Q");
+    if (default_8021q_path.empty()) {
+        return false;
+    }
+    ret_val &= m_ambiorix_datamodel->set(default_8021q_path, "Enable", bool(primary_vlan_id > 0));
+    ret_val &= m_ambiorix_datamodel->set(default_8021q_path, "PrimaryVID", primary_vlan_id);
+    ret_val &= m_ambiorix_datamodel->set(default_8021q_path, "DefaultPCP", default_pcp);
+
+    return ret_val;
+}
+
+bool db::dm_set_profile1_device_info(const Agent &agent)
+{
+    if (agent.dm_path.empty()) {
+        return true;
+    }
+
+    bool ret_val = true;
     ret_val &=
-        m_ambiorix_datamodel->set(device_path, "ManufacturerModel", device_info.manufacturer_model);
+        m_ambiorix_datamodel->set(agent.dm_path, "Manufacturer", agent.device_info.manufacturer);
+    ret_val &=
+        m_ambiorix_datamodel->set(agent.dm_path, "SerialNumber", agent.device_info.serial_number);
+    ret_val &= m_ambiorix_datamodel->set(agent.dm_path, "ManufacturerModel",
+                                         agent.device_info.manufacturer_model);
+    return ret_val;
+}
+
+bool db::dm_set_profile3_device_info(const Agent &agent)
+{
+    if (agent.dm_path.empty()) {
+        return true;
+    }
+
+    bool ret_val = true;
+    ret_val &=
+        m_ambiorix_datamodel->set(agent.dm_path, "SerialNumber", agent.device_info.serial_number);
+    ret_val &= m_ambiorix_datamodel->set(agent.dm_path, "SoftwareVersion",
+                                         agent.device_info.software_version);
+    ret_val &=
+        m_ambiorix_datamodel->set(agent.dm_path, "ExecutionEnv", agent.device_info.execution_env);
+    ret_val &=
+        m_ambiorix_datamodel->set(agent.dm_path, "CountryCode", agent.device_info.country_code);
+
+    for (const auto &radio : agent.radios) {
+        if (radio.second->dm_path.empty()) {
+            continue;
+        }
+
+        ret_val &= m_ambiorix_datamodel->set(radio.second->dm_path, "ChipsetVendor",
+                                             radio.second->chipset_vendor);
+    }
+
     return ret_val;
 }
 
@@ -7642,13 +7710,13 @@ bool db::dm_add_radio_scan_capabilities(const Agent::sRadio &radio)
 
         ret_val &= m_ambiorix_datamodel->set(oc_channels_path, "OpClass", oc_ch.first);
 
-        for (auto &wifi_channel : oc_ch.second) {
+        for (auto &channel : oc_ch.second) {
             auto channels_path = m_ambiorix_datamodel->add_instance(oc_channels_path + ".Channel");
             if (oc_channels_path.empty()) {
                 return false;
             }
 
-            ret_val &= m_ambiorix_datamodel->set(channels_path, "Channel", wifi_channel.channel);
+            ret_val &= m_ambiorix_datamodel->set(channels_path, "Channel", channel);
         }
     }
 
@@ -7698,6 +7766,22 @@ bool db::dm_add_radio_akm_suite_capabilities(
         ret_val &= m_ambiorix_datamodel->set(akm_backhaul_path, "Type", selector.akm_suite_type);
     }
 
+    return ret_val;
+}
+
+bool db::dm_set_radio_advanced_capabilities(const Agent::sRadio &radio)
+{
+    if (radio.dm_path.empty()) {
+        return true;
+    }
+
+    bool ret_val = true;
+    ret_val &= m_ambiorix_datamodel->set(
+        radio.dm_path, "TrafficSeparationCombinedFronthaul",
+        radio.advanced_capabilities.traffic_separation_combined_fronthaul);
+    ret_val &=
+        m_ambiorix_datamodel->set(radio.dm_path, "TrafficSeparationCombinedBackhaul",
+                                  radio.advanced_capabilities.traffic_separation_combined_backhaul);
     return ret_val;
 }
 
@@ -7760,5 +7844,174 @@ bool db::dm_add_agent_1905_layer_security_capabilities(
     ret_val &=
         m_ambiorix_datamodel->set(ieee_1905_sec_path, "EncryptionAlgorithm", encryption_algorithm);
 
+    return ret_val;
+}
+
+bool db::dm_set_metric_reporting_policies(const Agent &agent)
+{
+    if (agent.dm_path.empty()) {
+        return true;
+    }
+
+    bool ret_val = true;
+    ret_val &= m_ambiorix_datamodel->set(agent.dm_path, "APMetricsReportingInterval",
+                                         config.link_metrics_request_interval_seconds.count());
+
+    for (const auto &radio : agent.radios) {
+        if (radio.second->dm_path.empty()) {
+            continue;
+        }
+
+        ret_val &= m_ambiorix_datamodel->set(
+            radio.second->dm_path, "STAReportingRCPIThreshold",
+            radio.second->metric_reporting_policies.sta_reporting_rcpi_threshold);
+        ret_val &= m_ambiorix_datamodel->set(
+            radio.second->dm_path, "STAReportingRCPIHysteresisMarginOverride",
+            radio.second->metric_reporting_policies
+                .sta_reporting_rcpi_hyst_margin_override_threshold);
+        ret_val &= m_ambiorix_datamodel->set(
+            radio.second->dm_path, "ChannelUtilizationReportingThreshold",
+            radio.second->metric_reporting_policies.ap_reporting_channel_utilization_threshold);
+        ret_val &= m_ambiorix_datamodel->set(
+            radio.second->dm_path, "AssociatedSTATrafficStatsInclusionPolicy",
+            radio.second->metric_reporting_policies.assoc_sta_traffic_stats_inclusion_policy);
+        ret_val &= m_ambiorix_datamodel->set(
+            radio.second->dm_path, "AssociatedSTALinkMetricsInclusionPolicy",
+            radio.second->metric_reporting_policies.assoc_sta_link_metrics_inclusion_policy);
+        ret_val &= m_ambiorix_datamodel->set(
+            radio.second->dm_path, "APMetricsWiFi6",
+            radio.second->metric_reporting_policies.assoc_wifi6_sta_status_report_inclusion_policy);
+    }
+    return ret_val;
+}
+
+bool db::dm_set_steering_policies(const Agent &agent)
+{
+    if (agent.dm_path.empty()) {
+        return true;
+    }
+
+    bool ret_val = true;
+
+    if (!m_ambiorix_datamodel->remove_all_instances(agent.dm_path +
+                                                    ".LocalSteeringDisallowedSTA")) {
+        return false;
+    }
+
+    for (auto &sta : agent.disallowed_local_steering_stations) {
+        auto disallowed_local_steering_sta_path =
+            m_ambiorix_datamodel->add_instance(agent.dm_path + ".LocalSteeringDisallowedSTA");
+        if (disallowed_local_steering_sta_path.empty()) {
+            return false;
+        }
+
+        ret_val &=
+            m_ambiorix_datamodel->set(disallowed_local_steering_sta_path, "MACAddress", sta.first);
+    }
+
+    if (!m_ambiorix_datamodel->remove_all_instances(agent.dm_path +
+                                                    ".BTMSteeringDisallowedSTAList")) {
+        return false;
+    }
+
+    for (auto &sta : agent.disallowed_btm_steering_stations) {
+        auto disallowed_btm_steering_sta_path =
+            m_ambiorix_datamodel->add_instance(agent.dm_path + ".BTMSteeringDisallowedSTAList");
+        if (disallowed_btm_steering_sta_path.empty()) {
+            return false;
+        }
+
+        ret_val &=
+            m_ambiorix_datamodel->set(disallowed_btm_steering_sta_path, "MACAddress", sta.first);
+    }
+
+    for (const auto &radio : agent.radios) {
+        if (radio.second->dm_path.empty()) {
+            continue;
+        }
+
+        ret_val &= m_ambiorix_datamodel->set(radio.second->dm_path, "SteeringPolicy",
+                                             int(radio.second->steering_policies.steering_policy));
+        ret_val &= m_ambiorix_datamodel->set(
+            radio.second->dm_path, "ChannelUtilizationThreshold",
+            radio.second->steering_policies.channel_utilization_threshold);
+        ret_val &=
+            m_ambiorix_datamodel->set(radio.second->dm_path, "RCPISteeringThreshold",
+                                      radio.second->steering_policies.rcpi_steering_threshold);
+    }
+    return ret_val;
+}
+
+bool db::dm_set_device_multi_ap_profile(const Agent &agent)
+{
+    if (agent.dm_path.empty()) {
+        return true;
+    }
+
+    return m_ambiorix_datamodel->set(agent.dm_path, "MultiAPProfile", agent.profile);
+}
+
+bool db::dm_set_device_unsuccessful_association_policy(const Agent &agent)
+{
+    if (agent.dm_path.empty()) {
+        return true;
+    }
+
+    bool ret_val = true;
+    ret_val &= m_ambiorix_datamodel->set(agent.dm_path, "ReportUnsuccessfulAssociations",
+                                         agent.unsuccessful_assoc_report_policy);
+    ret_val &= m_ambiorix_datamodel->set(agent.dm_path, "MaxReportingRate",
+                                         agent.unsuccessful_assoc_max_reporting_rate);
+
+    return ret_val;
+}
+
+bool db::dm_set_service_prioritization_rules(const Agent &agent)
+{
+    if (agent.dm_path.empty()) {
+        return true;
+    }
+
+    bool ret_val = true;
+
+    std::string dscp_map_str;
+    std::transform(agent.service_prioritization.dscp_mapping_table.begin(),
+                   agent.service_prioritization.dscp_mapping_table.end(),
+                   std::back_inserter(dscp_map_str), [](int const &i) { return i + '0'; });
+
+    ret_val &= m_ambiorix_datamodel->set(agent.dm_path, "DSCPMap", dscp_map_str);
+
+    if (!m_ambiorix_datamodel->remove_all_instances(agent.dm_path + ".SPRule")) {
+        return false;
+    }
+
+    for (const auto &rule : agent.service_prioritization.rules) {
+        auto sp_rule_path = m_ambiorix_datamodel->add_instance(agent.dm_path + ".SPRule");
+        if (sp_rule_path.empty()) {
+            return false;
+        }
+
+        ret_val &= m_ambiorix_datamodel->set(sp_rule_path, "ID", rule.first);
+        ret_val &= m_ambiorix_datamodel->set(sp_rule_path, "Precedence", rule.second.precedence);
+        ret_val &= m_ambiorix_datamodel->set(sp_rule_path, "Output", rule.second.output);
+        ret_val &= m_ambiorix_datamodel->set(sp_rule_path, "AlwaysMatch",
+                                             rule.second.bits_field2.always_match);
+    }
+
+    return ret_val;
+}
+
+bool db::dm_set_device_ap_capabilities(const Agent &agent)
+{
+    if (agent.dm_path.empty()) {
+        return true;
+    }
+
+    bool ret_val = true;
+    ret_val &= m_ambiorix_datamodel->set(agent.dm_path, "MaxPrioritizationRules",
+                                         agent.max_prioritization_rules);
+    ret_val &= m_ambiorix_datamodel->set(agent.dm_path, "PrioritizationSupport",
+                                         agent.prioritization_support);
+    ret_val &= m_ambiorix_datamodel->set(agent.dm_path, "MaxVIDs", agent.max_total_number_of_vids);
     return ret_val;
 }

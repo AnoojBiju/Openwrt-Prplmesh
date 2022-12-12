@@ -13,7 +13,6 @@
 #include "../tasks/channel_scan_task.h"
 #include "../tasks/channel_selection_task.h"
 #include "../tasks/coordinated_cac_task.h"
-#include "../tasks/link_metrics_collection_task.h"
 #include "../tasks/switch_channel_task.h"
 #include "../tasks/topology_task.h"
 #include <bcl/beerocks_cmdu_client_factory_factory.h>
@@ -22,6 +21,7 @@
 #include <bcl/beerocks_timer_manager_impl.h>
 #include <bcl/beerocks_ucc_server_factory.h>
 #include <bcl/beerocks_utils.h>
+#include <bcl/beerocks_wifi_channel.h>
 #include <bcl/son/son_wireless_utils.h>
 #include <bcl/transaction.h>
 #include <btl/broker_client_factory_factory.h>
@@ -32,8 +32,6 @@
 #include <beerocks/tlvf/beerocks_message_control.h>
 #include <beerocks/tlvf/beerocks_message_platform.h>
 
-#include <tlvf/wfa_map/tlvAssociatedStaExtendedLinkMetrics.h>
-#include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
 #include <tlvf/wfa_map/tlvBackhaulSteeringRequest.h>
 #include <tlvf/wfa_map/tlvBackhaulSteeringResponse.h>
 #include <tlvf/wfa_map/tlvProfile2AssociationStatusNotification.h>
@@ -130,7 +128,6 @@ BackhaulManager::BackhaulManager(const config_file::sConfigSlave &config,
     m_task_pool.add_task(std::make_shared<TopologyTask>(*this, cmdu_tx));
     m_task_pool.add_task(std::make_shared<ChannelSelectionTask>(*this, cmdu_tx));
     m_task_pool.add_task(std::make_shared<ChannelScanTask>(*this, cmdu_tx));
-    m_task_pool.add_task(std::make_shared<LinkMetricsCollectionTask>(*this, cmdu_tx));
     m_task_pool.add_task(
         std::make_shared<switch_channel::SwitchChannelTask>(m_task_pool, *this, cmdu_tx));
     m_task_pool.add_task(
@@ -284,10 +281,7 @@ bool BackhaulManager::thread_init()
     // Subscribe for the reception of CMDU messages that this process is interested in
     if (!m_broker_client->subscribe(std::set<ieee1905_1::eMessageType>{
             ieee1905_1::eMessageType::ACK_MESSAGE,
-            ieee1905_1::eMessageType::AP_METRICS_QUERY_MESSAGE,
-            ieee1905_1::eMessageType::ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE,
             ieee1905_1::eMessageType::BACKHAUL_STEERING_REQUEST_MESSAGE,
-            ieee1905_1::eMessageType::BEACON_METRICS_QUERY_MESSAGE,
             ieee1905_1::eMessageType::CAC_REQUEST_MESSAGE,
             ieee1905_1::eMessageType::CAC_TERMINATION_MESSAGE,
             ieee1905_1::eMessageType::CHANNEL_PREFERENCE_QUERY_MESSAGE,
@@ -295,9 +289,7 @@ bool BackhaulManager::thread_init()
             ieee1905_1::eMessageType::CHANNEL_SELECTION_REQUEST_MESSAGE,
             ieee1905_1::eMessageType::CLIENT_ASSOCIATION_CONTROL_REQUEST_MESSAGE,
             ieee1905_1::eMessageType::CLIENT_STEERING_REQUEST_MESSAGE,
-            ieee1905_1::eMessageType::COMBINED_INFRASTRUCTURE_METRICS_MESSAGE,
             ieee1905_1::eMessageType::HIGHER_LAYER_DATA_MESSAGE,
-            ieee1905_1::eMessageType::LINK_METRIC_QUERY_MESSAGE,
             ieee1905_1::eMessageType::TOPOLOGY_DISCOVERY_MESSAGE,
             ieee1905_1::eMessageType::TOPOLOGY_QUERY_MESSAGE,
             ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE,
@@ -780,7 +772,8 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
                 }
 
                 // Override backhaul_preferred_radio_band if UCC set it
-                db->device_conf.back_radio.backhaul_preferred_radio_band = selected_ruid->freq_type;
+                db->device_conf.back_radio.backhaul_preferred_radio_band =
+                    selected_ruid->wifi_channel.get_freq_type();
             }
 
             // Mark the connection as WIRELESS
@@ -933,9 +926,6 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
         } else {
             FSM_MOVE_STATE(INIT);
         }
-
-        m_task_pool.send_event(eTaskType::LINK_METRICS_COLLECTION,
-                               LinkMetricsCollectionTask::eEvent::RESET_QUERIES);
 
         ap_blacklist.clear();
 
@@ -1118,7 +1108,7 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
     case EState::INITIATE_SCAN: {
 
         hidden_ssid            = false;
-        selected_bssid_channel = 0;
+        selected_bssid_channel = {0, beerocks::FREQ_AUTO};
         selected_bssid.clear();
 
         if (state_attempts > MAX_FAILED_SCAN_ATTEMPTS && !roam_flag) {
@@ -1134,7 +1124,7 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
         if ((state_attempts > MAX_FAILED_ROAM_SCAN_ATTEMPTS) && roam_flag) {
             LOG(DEBUG) << "exceeded MAX_FAILED_ROAM_SCAN_ATTEMPTS";
             roam_flag                   = false;
-            roam_selected_bssid_channel = 0;
+            roam_selected_bssid_channel = {0, eFreqType::FREQ_AUTO};
             roam_selected_bssid.clear();
             state_attempts = 0;
             FSM_MOVE_STATE(RESTART);
@@ -1160,7 +1150,8 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
                 if (!radio) {
                     continue;
                 }
-                if (db->device_conf.back_radio.backhaul_preferred_radio_band == radio->freq_type) {
+                if (db->device_conf.back_radio.backhaul_preferred_radio_band ==
+                    radio->wifi_channel.get_freq_type()) {
                     preferred_band_is_available = true;
                 }
             }
@@ -1188,7 +1179,8 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
             if (preferred_band_is_available &&
                 db->device_conf.back_radio.backhaul_preferred_radio_band !=
                     beerocks::eFreqType::FREQ_AUTO &&
-                db->device_conf.back_radio.backhaul_preferred_radio_band != radio->freq_type) {
+                db->device_conf.back_radio.backhaul_preferred_radio_band !=
+                    radio->wifi_channel.get_freq_type()) {
                 LOG(DEBUG) << "slave iface=" << radios_info->sta_iface
                            << " is not of the preferred backhaul band";
                 continue;
@@ -1288,8 +1280,8 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
 
                 iface_hal->refresh_radio_info();
 
-                if (son::wireless_utils::which_freq(iface_hal->get_radio_info().channel) ==
-                        beerocks::FREQ_24G &&
+                if (son::wireless_utils::which_freq_type(
+                        iface_hal->get_radio_info().frequency_band) == beerocks::FREQ_24G &&
                     pending_slave_sta_ifaces.size() > 1) {
                     ++it;
                     LOG(DEBUG) << "skipping 2.4GHz iface " << iface
@@ -1310,7 +1302,8 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
                                 db->device_conf.back_radio.mem_only_psk, selected_bssid,
                                 selected_bssid_channel, hidden_ssid)) {
             LOG(DEBUG) << "successful call to active_hal->connect(), bssid=" << selected_bssid
-                       << ", channel=" << selected_bssid_channel
+                       << ", channel=" << selected_bssid_channel.first
+                       << ", freq type=" << selected_bssid_channel.second
                        << ", iface=" << db->backhaul.selected_iface_name;
         } else {
             LOG(ERROR) << "connect command failed for iface " << db->backhaul.selected_iface_name;
@@ -1616,85 +1609,6 @@ bool BackhaulManager::handle_slave_backhaul_message(int fd, ieee1905_1::CmduMess
         }
         break;
     }
-    case beerocks_message::ACTION_BACKHAUL_ASSOCIATED_STA_LINK_METRICS_RESPONSE: {
-        auto response_in = beerocks_header->addClass<
-            beerocks_message::cACTION_BACKHAUL_ASSOCIATED_STA_LINK_METRICS_RESPONSE>();
-        if (!response_in) {
-            LOG(ERROR) << "addClass ACTION_BACKHAUL_ASSOCIATED_STA_LINK_METRICS_RESPONSE failed";
-            return false;
-        }
-
-        auto mid = beerocks_header->id();
-
-        if (!cmdu_tx.create(
-                mid, ieee1905_1::eMessageType::ASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE)) {
-            LOG(ERROR) << "cmdu creation of type ASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE "
-                          "has failed";
-            return false;
-        }
-
-        auto response_out = cmdu_tx.addClass<wfa_map::tlvAssociatedStaLinkMetrics>();
-        if (!response_out) {
-            LOG(ERROR) << "adding wfa_map::tlvAssociatedStaLinkMetrics failed";
-            return false;
-        }
-
-        response_out->sta_mac() = response_in->sta_mac();
-
-        if (!response_out->alloc_bssid_info_list(response_in->bssid_info_list_length())) {
-            LOG(ERROR) << "alloc_per_bss_sta_link_metrics failed";
-            return false;
-        }
-
-        // adding (currently empty) an associated sta EXTENDED link metrics tlv.
-        // The values will be filled part of PPM-1259
-        auto extended = cmdu_tx.addClass<wfa_map::tlvAssociatedStaExtendedLinkMetrics>();
-        if (!extended) {
-            LOG(ERROR) << "adding wfa_map::tlvAssociatedStaExtendedLinkMetrics failed";
-            return false;
-        }
-
-        extended->associated_sta() = response_in->sta_mac();
-
-        if (!extended->alloc_metrics_list(response_in->bssid_info_list_length())) {
-            LOG(ERROR) << "allocation of per BSS STA metrics failed";
-            return false;
-        }
-
-        auto db = AgentDB::get();
-
-        for (size_t i = 0; i < response_out->bssid_info_list_length(); ++i) {
-            auto &bss_in  = std::get<1>(response_in->bssid_info_list(i));
-            auto &bss_out = std::get<1>(response_out->bssid_info_list(i));
-
-            auto &client_mac = response_out->sta_mac();
-
-            auto radio = db->get_radio_by_mac(client_mac, AgentDB::eMacType::CLIENT);
-            if (!radio) {
-                LOG(ERROR) << "radio for client mac " << client_mac << " not found";
-                return false;
-            }
-
-            // If get_radio_by_mac() found the radio, it means that 'client_mac' is on the radio
-            // 'associated_clients' list.
-            bss_out.bssid = radio->associated_clients.at(client_mac).bssid;
-            if (bss_out.bssid == beerocks::net::network_utils::ZERO_MAC) {
-                LOG(ERROR) << "bssid is ZERO_MAC";
-                return false;
-            }
-
-            bss_out.earliest_measurement_delta = bss_in.earliest_measurement_delta;
-            bss_out.downlink_estimated_mac_data_rate_mbps =
-                bss_in.downlink_estimated_mac_data_rate_mbps;
-            bss_out.uplink_estimated_mac_data_rate_mbps =
-                bss_in.uplink_estimated_mac_data_rate_mbps;
-            bss_out.sta_measured_uplink_rcpi_dbm_enc = bss_in.sta_measured_uplink_rcpi_dbm_enc;
-        }
-
-        LOG(DEBUG) << "Send AssociatedStaLinkMetrics to controller, mid = " << mid;
-        send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac, db->bridge.mac);
-        break;
-    }
     case beerocks_message::ACTION_BACKHAUL_ZWDFS_RADIO_DETECTED: {
         auto msg_in =
             beerocks_header->addClass<beerocks_message::cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED>();
@@ -1991,7 +1905,7 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
                             continue;
                         }
                         /* prevent low filter radio from connecting to high band in any case */
-                        if (son::wireless_utils::which_freq(bwl_radio_info.channel) ==
+                        if (son::wireless_utils::which_freq_type(bwl_radio_info.frequency_band) ==
                                 beerocks::FREQ_5G &&
                             radio->sta_iface_filter_low &&
                             !son::wireless_utils::is_low_subband(bwl_radio_info.channel)) {
@@ -2008,12 +1922,13 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
                                 break;
 
                             sta_iface_hal->refresh_radio_info();
-                            if (son::wireless_utils::which_freq(
-                                    sta_iface_hal->get_radio_info().channel) == beerocks::FREQ_5G) {
+                            if (son::wireless_utils::which_freq_type(
+                                    sta_iface_hal->get_radio_info().frequency_band) ==
+                                beerocks::FREQ_5G) {
                                 sta_iface_count_5ghz++;
                             }
                         }
-                        if (son::wireless_utils::which_freq(bwl_radio_info.channel) ==
+                        if (son::wireless_utils::which_freq_type(bwl_radio_info.frequency_band) ==
                                 beerocks::FREQ_5G &&
                             !radio->sta_iface_filter_low &&
                             son::wireless_utils::is_low_subband(bwl_radio_info.channel) &&
@@ -2126,7 +2041,8 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
             }
 
             LOG(DEBUG) << "Steering to BSSID " << m_backhaul_steering_bssid
-                       << ", channel=" << m_backhaul_steering_channel;
+                       << ", channel=" << m_backhaul_steering_channel.first
+                       << ", freq type=" << m_backhaul_steering_channel.second;
             auto associate =
                 active_hal->roam(m_backhaul_steering_bssid, m_backhaul_steering_channel);
             if (!associate) {
@@ -2284,21 +2200,23 @@ bool BackhaulManager::select_bssid()
             }
             if (roam_flag) {
                 if ((bssid == roam_selected_bssid) &&
-                    (scan_result.channel == roam_selected_bssid_channel)) {
+                    (scan_result.channel == roam_selected_bssid_channel.first &&
+                     scan_result.freq_type == roam_selected_bssid_channel.second)) {
                     LOG(DEBUG) << "roaming flag on  - found bssid match = " << roam_selected_bssid
                                << " roam_selected_bssid_channel = "
-                               << int(roam_selected_bssid_channel);
+                               << int(roam_selected_bssid_channel.first)
+                               << " freq type = " << roam_selected_bssid_channel.second;
                     db->backhaul.selected_iface_name = iface;
                     return true;
                 }
             } else if ((db->backhaul.preferred_bssid != beerocks::net::network_utils::ZERO_MAC) &&
                        (tlvf::mac_from_string(bssid) == db->backhaul.preferred_bssid)) {
                 LOG(DEBUG) << "preferred bssid - found bssid match = " << bssid;
-                selected_bssid_channel           = scan_result.channel;
+                selected_bssid_channel           = {scan_result.channel, scan_result.freq_type};
                 selected_bssid                   = bssid;
                 db->backhaul.selected_iface_name = iface;
                 return true;
-            } else if (son::wireless_utils::which_freq(scan_result.channel) == eFreqType::FREQ_5G) {
+            } else if (scan_result.freq_type == eFreqType::FREQ_5G) {
                 auto radio = db->radio(radio_info->sta_iface);
                 if (!radio) {
                     return false;
@@ -2334,7 +2252,7 @@ bool BackhaulManager::select_bssid()
                     best_5_sta_iface     = iface;
                 }
 
-            } else {
+            } else if (scan_result.freq_type == eFreqType::FREQ_24G) {
                 // best 2.4G
                 if (scan_result.rssi > max_rssi_24) {
                     max_rssi_24           = scan_result.rssi;
@@ -2342,6 +2260,8 @@ bool BackhaulManager::select_bssid()
                     best_bssid_channel_24 = scan_result.channel;
                     best_24_sta_iface     = iface;
                 }
+            } else {
+                LOG(WARNING) << "scan results for 6ghz band: NOT YET IMPLEMENTED";
             }
         }
     }
@@ -2414,23 +2334,23 @@ bool BackhaulManager::select_bssid()
         return false;
     } else if (max_rssi_24 == beerocks::RSSI_INVALID) {
         selected_bssid                   = best_bssid_5;
-        selected_bssid_channel           = best_bssid_channel_5;
+        selected_bssid_channel           = {best_bssid_channel_5, eFreqType::FREQ_5G};
         db->backhaul.selected_iface_name = best_5_sta_iface;
     } else if (max_rssi_5_best == beerocks::RSSI_INVALID) {
         selected_bssid                   = best_bssid_24;
-        selected_bssid_channel           = best_bssid_channel_24;
+        selected_bssid_channel           = {best_bssid_channel_24, eFreqType::FREQ_24G};
         db->backhaul.selected_iface_name = best_24_sta_iface;
     } else if ((max_rssi_5_best > RSSI_THRESHOLD_5GHZ)) {
         selected_bssid                   = best_bssid_5;
-        selected_bssid_channel           = best_bssid_channel_5;
+        selected_bssid_channel           = {best_bssid_channel_5, eFreqType::FREQ_5G};
         db->backhaul.selected_iface_name = best_5_sta_iface;
     } else if (max_rssi_24 < max_rssi_5_best + RSSI_BAND_DELTA_THRESHOLD) {
         selected_bssid                   = best_bssid_5;
-        selected_bssid_channel           = best_bssid_channel_5;
+        selected_bssid_channel           = {best_bssid_channel_5, eFreqType::FREQ_5G};
         db->backhaul.selected_iface_name = best_5_sta_iface;
     } else {
         selected_bssid                   = best_bssid_24;
-        selected_bssid_channel           = best_bssid_channel_24;
+        selected_bssid_channel           = {best_bssid_channel_24, eFreqType::FREQ_24G};
         db->backhaul.selected_iface_name = best_24_sta_iface;
     }
 
@@ -2644,6 +2564,12 @@ bool BackhaulManager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx
         return true;
     }
 
+    auto freq_type = son::wireless_utils::which_freq_op_cls(oper_class);
+    if (freq_type == beerocks::FREQ_UNKNOWN) {
+        LOG(ERROR) << "Unknown frequency type. must be 2.4GHz, 5GHz or 6GHz";
+        return false;
+    }
+
     // Trigger (asynchronously) a scan of the target BSSID on the target channel.
     // The steering itself will be done when the scan results are received.
     // If this function call fails for some reason (for example because a scan was already in
@@ -2652,7 +2578,7 @@ bool BackhaulManager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx
     // Backhaul Steering Response message with "error" result code if this function fails nor return
     // false, just log a warning and let the execution continue. If we do not steer after the
     // timeout elapses, a response will anyway be sent to the controller.
-    auto scan_result = active_hal->scan_bss(bssid, channel);
+    auto scan_result = active_hal->scan_bss(bssid, channel, freq_type);
     if (!scan_result) {
         LOG(WARNING) << "Failed to scan for the target BSSID: " << bssid << " on channel "
                      << channel << ".";
@@ -2671,7 +2597,7 @@ bool BackhaulManager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx
     // succeed to associate with the specified BSSID within 10 seconds.
     // Set the channel and BSSID of the target BSS so we can use them later.
     m_backhaul_steering_bssid   = bssid;
-    m_backhaul_steering_channel = channel;
+    m_backhaul_steering_channel = {channel, freq_type};
 
     // Create a timer to check if this Backhaul Steering Request times out.
     m_backhaul_steering_timer = m_timer_manager->add_timer(
@@ -2765,7 +2691,7 @@ bool BackhaulManager::create_backhaul_steering_response(
 void BackhaulManager::cancel_backhaul_steering_operation()
 {
     m_backhaul_steering_bssid   = beerocks::net::network_utils::ZERO_MAC;
-    m_backhaul_steering_channel = 0;
+    m_backhaul_steering_channel = {0, eFreqType::FREQ_UNKNOWN};
 
     m_timer_manager->remove_timer(m_backhaul_steering_timer);
 }
@@ -2777,7 +2703,7 @@ std::string BackhaulManager::freq_to_radio_mac(eFreqType freq) const
         if (!radio) {
             continue;
         }
-        if (radio->freq_type == freq) {
+        if (radio->wifi_channel.get_freq_type() == freq) {
             return tlvf::mac_to_string(radio->front.iface_mac);
         }
     }
@@ -2956,6 +2882,21 @@ void BackhaulManager::handle_dev_reset_default(
     auto bridge        = db->bridge.iface_name;
     auto bridge_ifaces = beerocks::net::network_utils::linux_get_iface_list_from_bridge(bridge);
     auto eth_iface     = db->ethernet.wan.iface_name;
+
+    auto program = params.at("program");
+    if (program == supported_programs[0]) {
+        // If certification program is map, set the certification_profile to Profile 1.
+        db->device_conf.certification_profile =
+            wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1;
+    } else if (program == supported_programs[1]) {
+        // If certification program is mapr2, set the certification_profile to Profile 2.
+        db->device_conf.certification_profile =
+            wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_2;
+    } else if (program == supported_programs[2]) {
+        // If certification program is mapr3, set the certification_profile to Profile 3.
+        db->device_conf.certification_profile =
+            wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_3;
+    }
 
     //check if wired interface is enabled or try to enable it.
     if (!beerocks::net::network_utils::linux_iface_is_up_and_running(eth_iface)) {
