@@ -26,6 +26,7 @@
 #include <tlvf/wfa_map/tlvBssid.h>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
 #include <tlvf/wfa_map/tlvClientCapabilityReport.h>
+#include <tlvf/wfa_map/tlvClientInfo.h>
 #include <tlvf/wfa_map/tlvDppCceIndication.h>
 #include <tlvf/wfa_map/tlvDppChirpValue.h>
 #include <tlvf/wfa_map/tlvProfile2ReasonCode.h>
@@ -650,6 +651,10 @@ void ApManager::handle_cmdu_ieee1905_1_message(ieee1905_1::CmduMessageRx &cmdu_r
         handle_virtual_bss_request(cmdu_rx);
         break;
     }
+    case ieee1905_1::eMessageType::VIRTUAL_BSS_MOVE_PREPARATION_REQUEST_MESSAGE: {
+        handle_virtual_bss_move_preparation_request(cmdu_rx);
+        break;
+    }
     default:
         LOG(ERROR) << "Unknown CMDU message type: " << std::hex << int(cmdu_message_type);
     }
@@ -816,6 +821,37 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
     }
 
     LOG(ERROR) << "No virtual BSS creation nor destruction TLV found in Virtual BSS request!";
+}
+
+void ApManager::handle_virtual_bss_move_preparation_request(ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    LOG(DEBUG) << "Received virtual BSS move preparation request";
+    auto cmdu_tx_header =
+        cmdu_tx.create(0, ieee1905_1::eMessageType::VIRTUAL_BSS_MOVE_PREPARATION_RESPONSE_MESSAGE);
+    if (!cmdu_tx_header) {
+        LOG(ERROR) << "cmdu creation of type VIRTUAL_BSS_MOVE_PREPARATION_RESPONSE_MESSAGE failed!";
+        return;
+    }
+
+    auto client_info_tlv_rx = cmdu_rx.getClass<wfa_map::tlvClientInfo>();
+    if (!client_info_tlv_rx) {
+        LOG(ERROR) << "Client Info TLV is missing!";
+        return;
+    }
+
+    // Add the Client Info TLV
+    auto client_info_tlv_tx = cmdu_tx.addClass<wfa_map::tlvClientInfo>();
+    if (!client_info_tlv_tx) {
+        LOG(ERROR) << "addClass wfa_map::ClientInfoTlv failed!";
+        return;
+    }
+
+    client_info_tlv_tx->bssid()      = client_info_tlv_rx->bssid();
+    client_info_tlv_tx->client_mac() = client_info_tlv_rx->client_mac();
+
+    send_cmdu(cmdu_tx);
+
+    // TODO: PPM-2290: send the delba
 }
 
 void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)

@@ -119,6 +119,13 @@ private:
     void handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
+     * @brief Handles Virtual BSS Move preparation Request message.
+     *
+     * @param cmdu_rx Received CMDU to be handled.
+     */
+    void handle_virtual_bss_move_preparation_request(ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
      * @brief Runs the Finite State Machine of the AP manager.
      * 
      * @param[out] continue_processing Flag that means that state machine transitioned to a 
