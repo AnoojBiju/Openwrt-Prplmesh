@@ -1101,9 +1101,6 @@ public:
     get_station_current_capabilities(const std::string &mac);
 
     const beerocks::message::sRadioCapabilities *
-    get_station_capabilities(const std::string &client_mac, bool is_bandtype_5ghz);
-
-    const beerocks::message::sRadioCapabilities *
     get_station_capabilities(const std::string &client_mac, beerocks::eFreqType freq_type);
     bool set_station_capabilities(const std::string &client_mac,
                                   const beerocks::message::sRadioCapabilities &sta_cap);

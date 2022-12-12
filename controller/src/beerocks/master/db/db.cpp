@@ -1858,31 +1858,6 @@ bool db::set_client_capabilities(const sMacAddr &sta_mac, const std::string &fra
 }
 
 const beerocks::message::sRadioCapabilities *
-db::get_station_capabilities(const std::string &client_mac, bool is_bandtype_5ghz)
-{
-    std::shared_ptr<node> n = get_node(client_mac);
-
-    if (!n) {
-        LOG(ERROR) << "Gateway node not found.... ";
-        return nullptr;
-    }
-
-    if (is_bandtype_5ghz) {
-        if (n->m_sta_5ghz_capabilities.valid == true) {
-            return &n->m_sta_5ghz_capabilities;
-        } else {
-            return nullptr;
-        }
-    } else {
-        if (n->m_sta_24ghz_capabilities.valid == true) {
-            return &n->m_sta_24ghz_capabilities;
-        } else {
-            return nullptr;
-        }
-    }
-}
-
-const beerocks::message::sRadioCapabilities *
 db::get_station_capabilities(const std::string &client_mac, beerocks::eFreqType freq_type)
 {
     std::shared_ptr<node> n = get_node(client_mac);
