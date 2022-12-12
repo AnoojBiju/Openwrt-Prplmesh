@@ -257,13 +257,19 @@ bool client_association_task::dm_add_sta_association_event_caps(const sMacAddr &
         return false;
     }
 
+    auto wifi_channel = m_database.get_node_wifi_channel(parent_radio);
+    if (wifi_channel.is_empty()) {
+        LOG(ERROR) << "WifiChannel is empty";
+        return false;
+    }
+
     /* if station caps are available here
      * 1) caps were retrieved from VS field in BSS_JOIN notification
      * 2) station was previously associated to same freq band, so caps won't change
      * Otherwise, controller has to query agent for client capabilities
      */
     auto capabilities =
-        m_database.get_station_capabilities(sta_mac_str, m_database.is_node_5ghz(parent_radio));
+        m_database.get_station_capabilities(sta_mac_str, wifi_channel.get_freq_type());
     if (!capabilities || !capabilities->valid) {
         return false;
     }
