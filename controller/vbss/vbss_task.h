@@ -50,6 +50,14 @@ public:
         {
         }
 
+        sMoveEvent(const sMacAddr &vbssid, const vbss::sClientVBSS &client_vbss_,
+                   sMacAddr dest_ruid_, const std::string &ssid_, const std::string &password_,
+                   const eMoveProcessState &state_)
+            : client_vbss(client_vbss_), dest_ruid(dest_ruid_), ssid(ssid_), password(password_),
+              state(state_)
+        {
+        }
+
         sMoveEvent(){};
     };
 
