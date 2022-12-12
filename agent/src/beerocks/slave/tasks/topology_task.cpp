@@ -487,7 +487,8 @@ bool TopologyTask::add_device_information_tlv()
 
         // Iterate on front radio iface and then switch to back radio iface
         auto fill_radio_iface_info = [&](ieee1905_1::eMediaType media_type, bool front_iface) {
-            LOG(DEBUG) << "filling interface information on radio="
+            LOG(DEBUG) << "filling " << (front_iface ? "fronthaul" : "backhaul")
+                       << " information on radio="
                        << (front_iface ? radio->front.iface_name : radio->back.iface_name);
 
             if ((front_iface && radio->front.iface_mac == network_utils::ZERO_MAC) ||
@@ -507,11 +508,7 @@ bool TopologyTask::add_device_information_tlv()
                                      bool front_iface) {
                 auto localInterfaceInfo = tlvDeviceInformation->create_local_interface_list();
 
-                localInterfaceInfo->mac() = mac;
-
-                LOG(DEBUG) << "Added radio interface to tlvDeviceInformation: "
-                           << localInterfaceInfo->mac();
-
+                localInterfaceInfo->mac()        = mac;
                 localInterfaceInfo->media_type() = media_type;
 
                 ieee1905_1::s802_11SpecificInformation media_info = {};
@@ -556,7 +553,27 @@ bool TopologyTask::add_device_information_tlv()
 
                 std::copy_n(reinterpret_cast<uint8_t *>(&media_info), sizeof(media_info),
                             media_info_ptr);
+                auto print_media_type_group = [](const int media_type_group) -> std::string {
+                    switch (media_type_group) {
+                    case ieee1905_1::eMediaTypeGroup::IEEE_802_3:
+                        return "IEEE 802.3";
+                    case ieee1905_1::eMediaTypeGroup::IEEE_802_11:
+                        return "IEEE 802.11";
+                    case ieee1905_1::eMediaTypeGroup::IEEE_1901:
+                        return "IEEE 1901";
+                    case ieee1905_1::eMediaTypeGroup::MoCA:
+                        return "MoCA";
+                    case ieee1905_1::eMediaTypeGroup::UNKNOWN:
+                        return "Unknown";
+                    default:
+                        return "NA";
+                    }
+                };
 
+                LOG(DEBUG) << "Adding " << (front_iface ? "fronthaul" : "backhaul") << " BSS "
+                           << mac << " media type: " << media_type
+                           << " group: " << print_media_type_group((media_type >> 8))
+                           << " info length: " << sizeof(media_info);
                 tlvDeviceInformation->add_local_interface_list(localInterfaceInfo);
                 return true;
             };
