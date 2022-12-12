@@ -2,12 +2,15 @@
 
 # We have to copy the source directory, because we may not have
 # write access to it, and openwrt needs to at least write '.source_dir':
+# first clean any residue from possible previous build 
+rm -rf /home/openwrt/prplMesh
 cp -r /home/openwrt/prplMesh_source /home/openwrt/prplMesh
 # We want to make sure that we do not keep anything built from the host:
 (cd /home/openwrt/prplMesh && \
     rm -rf build ipkg-* .built* .configured* .pkgdir .prepared .quilt_checked .source_dir)
 
 make package/prplmesh/prepare USE_SOURCE_DIR="/home/openwrt/prplMesh" V=s
+
 # Rebuild the full image:
 
 if ! make -j"$(nproc)" ; then

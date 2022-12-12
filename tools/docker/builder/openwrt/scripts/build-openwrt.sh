@@ -32,6 +32,8 @@ args+=("webui")
 # feed-prpl is in the prpl profile:
 args+=("prpl")
 
+args+=("ccache")
+
 ./scripts/gen_config.py "${args[@]}"
 
 # The initial 'make defconfig' invocation generates a wrong config, so

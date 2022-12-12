@@ -53,11 +53,11 @@ build_image() {
 
 build_prplmesh() {
     build_dir="$1"
-    container_name="prplmesh-builder-${TARGET_DEVICE}-$(uuidgen)"
-    local command interactive
+    container_name="prplmesh-builder-${TARGET_DEVICE}"
+    local interactive
     if [ "$SHELL_ONLY" == true ] ; then
         command="bash"
-        # to get an interactive shell, we have to use `-it`:
+        # to get an interactive shell with a terminal, we use `-it`:
         interactive="-it"
     else
         command="./build_scripts/build.sh"
@@ -66,17 +66,24 @@ build_prplmesh() {
         interactive="-i"
     fi
     dbg "Container name will be $container_name"
-    trap 'docker rm -f $container_name' EXIT
-    docker run "$interactive" \
-           --name "$container_name" \
-           -e TARGET_SYSTEM \
-           -e OPENWRT_VERSION \
-           -e OPENWRT_TOOLCHAIN_VERSION \
-           -e PRPLMESH_VERSION \
-           -v "$scriptdir/scripts:/home/openwrt/openwrt/build_scripts/:ro" \
-           -v "${rootdir}:/home/openwrt/prplMesh_source:ro" \
-           "$image_tag" \
-           "$command"
+    trap 'docker stop "$container_name"' INT QUIT TERM EXIT
+    if ! docker start "$container_name" 2>/dev/null; then
+        # generate a new container in detached mode kept running
+        docker run -id \
+            --name "$container_name" \
+            -e TARGET_SYSTEM \
+            -e OPENWRT_VERSION \
+            -e OPENWRT_TOOLCHAIN_VERSION \
+            -e PRPLMESH_VERSION \
+            -v "$scriptdir/scripts:/home/openwrt/openwrt/build_scripts/:ro" \
+            -v "${rootdir}:/home/openwrt/prplMesh_source:ro" \
+            "$image_tag" \
+            bash
+    fi
+
+    # run the command (on a terminal) in the container
+    docker exec "$interactive" "$container_name" "$command"
+
     mkdir -p "$build_dir"
     # Note: docker cp does not support globbing, so we need to copy the folder
     docker cp "${container_name}:/home/openwrt/openwrt/artifacts/" "$build_dir"
@@ -91,12 +98,6 @@ build_prplmesh() {
 }
 
 main() {
-
-    if ! command -v uuidgen > /dev/null ; then
-        err "You need uuidgen to use this script. Please install it and try again."
-        exit 1
-    fi
-
     if ! OPTS=$(getopt -o 'hvd:io:r:st:' --long help,verbose,target-device:,docker-target-stage:,whm,image,openwrt-version:,openwrt-repository:,shell,tag: -n 'parse-options' -- "$@"); then
         err "Failed parsing options." >&2
         usage
@@ -200,8 +201,8 @@ main() {
 VERBOSE=false
 IMAGE_ONLY=false
 OPENWRT_REPOSITORY='https://gitlab.com/prpl-foundation/prplos/prplos.git'
-OPENWRT_TOOLCHAIN_VERSION='750d3b48630c35dadf510dd2f2beddbbf4bf240b'
-OPENWRT_VERSION='750d3b48630c35dadf510dd2f2beddbbf4bf240b'
+OPENWRT_TOOLCHAIN_VERSION='28b18ff4274219b15bd5633b1e73d53953de58b3'
+OPENWRT_VERSION='28b18ff4274219b15bd5633b1e73d53953de58b3'
 PRPLMESH_VARIANT="-nl80211"
 DOCKER_TARGET_STAGE="prplmesh-builder"
 SHELL_ONLY=false
