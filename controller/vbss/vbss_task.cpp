@@ -548,15 +548,13 @@ bool vbss_task::handle_client_security_ctx_resp(const sMacAddr &src_mac,
             return false;
         }
 
-        sMacAddr agent_mac = agent->al_mac;
-
         existing_move->state = eMoveProcessState::VBSS_MOVE_PREP;
 
-        LOG(DEBUG) << "Sending move preparation request to agent '" << agent_mac << "'";
+        LOG(DEBUG) << "Sending move preparation request to agent '" << agent->al_mac << "'";
         // Next step is move preperation request. Execute and return since this data should not be sent to VBSS Manager
-        if (!vbss::vbss_actions::send_move_prep_request(agent_mac, client_vbss, m_database)) {
+        if (!vbss::vbss_actions::send_move_prep_request(agent->al_mac, client_vbss, m_database)) {
             LOG(ERROR) << "Failed to send move preparation request for client with MAC address "
-                       << client_mac << " to agent " << agent_mac;
+                       << client_mac << " to agent " << agent->al_mac;
             return false;
         }
         return true;
