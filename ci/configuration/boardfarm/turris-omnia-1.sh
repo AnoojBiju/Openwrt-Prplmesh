@@ -67,7 +67,6 @@ iptables -P INPUT ACCEPT
 
 logger -t prplmesh -p daemon.info "Applying wifi configuration."
 rm -f /etc/config/wireless
-wifi config
 
 uci batch << 'EOF'
 set wireless.default_radio0=wifi-iface
