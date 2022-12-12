@@ -165,4 +165,9 @@ bool nl80211_client_dummy::add_station(const std::string &interface_name, const 
     return true;
 }
 
+bool nl80211_client_dummy::get_key(const std::string &interface_name, sKeyInfo &key_info)
+{
+    return true;
+}
+
 } // namespace bwl

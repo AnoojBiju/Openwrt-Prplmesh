@@ -27,6 +27,7 @@
 #include <tlvf/wfa_map/tlvChannelPreference.h>
 #include <tlvf/wfa_map/tlvClientCapabilityReport.h>
 #include <tlvf/wfa_map/tlvClientInfo.h>
+#include <tlvf/wfa_map/tlvClientSecurityContext.h>
 #include <tlvf/wfa_map/tlvDppCceIndication.h>
 #include <tlvf/wfa_map/tlvDppChirpValue.h>
 #include <tlvf/wfa_map/tlvProfile2ReasonCode.h>
@@ -655,6 +656,10 @@ void ApManager::handle_cmdu_ieee1905_1_message(ieee1905_1::CmduMessageRx &cmdu_r
         handle_virtual_bss_move_preparation_request(cmdu_rx);
         break;
     }
+    case ieee1905_1::eMessageType::CLIENT_SECURITY_CONTEXT_REQUEST_MESSAGE: {
+        handle_vbss_security_request(cmdu_rx);
+        break;
+    }
     default:
         LOG(ERROR) << "Unknown CMDU message type: " << std::hex << int(cmdu_message_type);
     }
@@ -694,10 +699,7 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
 
     if (virtual_bss_creation_tlv) {
 
-        // Use the BSSID as the ifname. Since Linux interface names are
-        // limited to 15 characters, remove the colons.
-        std::string ifname = tlvf::mac_to_string(virtual_bss_creation_tlv->bssid());
-        ifname.erase(std::remove(ifname.begin(), ifname.end(), ':'), ifname.end());
+        std::string ifname = get_vbss_interface_name(virtual_bss_creation_tlv->bssid());
         std::string bridge = "br-lan";
 
         // TODO: PPM-2348 add the bridge name to BPL
@@ -808,9 +810,7 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
     auto virtual_bss_destruction_tlv = cmdu_rx.getClass<wfa_map::VirtualBssDestruction>();
     if (virtual_bss_destruction_tlv) {
 
-        // Use the same ifname as when we added the BSS:
-        std::string ifname = tlvf::mac_to_string(virtual_bss_destruction_tlv->bssid());
-        ifname.erase(std::remove(ifname.begin(), ifname.end(), ':'), ifname.end());
+        std::string ifname = get_vbss_interface_name(virtual_bss_destruction_tlv->bssid());
 
         if (!ap_wlan_hal->remove_bss(ifname)) {
             LOG(ERROR) << "Failed to remove the BSS!";
@@ -2791,4 +2791,88 @@ bool ApManager::register_ext_events_handlers(int fd)
     }
 
     return true;
+}
+
+std::string ApManager::get_vbss_interface_name(const sMacAddr &bssid)
+{
+    // Use the MAC address as the ifname. Since Linux interface names
+    // are limited to 15 characters, remove the colons.
+    std::string ifname = tlvf::mac_to_string(bssid);
+    ifname.erase(std::remove(ifname.begin(), ifname.end(), ':'), ifname.end());
+
+    // Since we might have to move the VBSSID from one radio to
+    // another one on the same device, also append the radio index
+    // from the interface name.
+    // TODO: PPM-2402: use a better (small) radio identifier.
+    size_t index = m_iface.find_first_of("0123456789");
+    return ifname + m_iface.at(index);
+}
+
+void ApManager::handle_vbss_security_request(ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    LOG(DEBUG) << "Received Client Security Context Request message";
+
+    auto client_info_tlv = cmdu_rx.getClass<wfa_map::tlvClientInfo>();
+    if (!client_info_tlv) {
+        LOG(ERROR) << "Client Info TLV is missing!";
+        return;
+    }
+
+    std::string ifname = get_vbss_interface_name(client_info_tlv->bssid());
+
+    bwl::sKeyInfo pairwise_key = {};
+    pairwise_key.mac           = client_info_tlv->client_mac();
+    pairwise_key.key_idx       = 0;
+    if (!ap_wlan_hal->get_key(ifname, pairwise_key)) {
+        LOG(ERROR) << "Failed to get the pairwise key!";
+        return;
+    }
+
+    bwl::sKeyInfo group_key = {};
+    group_key.mac           = beerocks::net::network_utils::ZERO_MAC;
+    group_key.key_idx       = 1;
+    if (!ap_wlan_hal->get_key(ifname, group_key)) {
+        LOG(ERROR) << "Failed to get the group key!";
+        return;
+    }
+
+    if (!cmdu_tx.create(0, ieee1905_1::eMessageType::CLIENT_SECURITY_CONTEXT_RESPONSE_MESSAGE)) {
+        LOG(ERROR) << "cmdu creation of type CLIENT_SECURITY_CONTEXT_REQUEST_MESSAGE failed!";
+        return;
+    }
+
+    auto tx_client_info_tlv = cmdu_tx.addClass<wfa_map::tlvClientInfo>();
+    if (!tx_client_info_tlv) {
+        LOG(ERROR) << "addClass wfa_map::tlvClientInfo failed!";
+        return;
+    }
+
+    tx_client_info_tlv->bssid()      = client_info_tlv->bssid();
+    tx_client_info_tlv->client_mac() = client_info_tlv->client_mac();
+
+    auto client_security_context_tlv = cmdu_tx.addClass<wfa_map::ClientSecurityContext>();
+    if (!client_security_context_tlv) {
+        LOG(ERROR) << "addClass wfa_map::ClientSecurityContext failed!";
+        return;
+    }
+
+    // At this point we have the key, so the client is connected:
+    client_security_context_tlv->client_connected_flags().client_connected = 1;
+    client_security_context_tlv->set_ptk(pairwise_key.key.data(), pairwise_key.key.size());
+    if (pairwise_key.key_seq.size() > sizeof(client_security_context_tlv->tx_packet_num())) {
+        LOG(ERROR) << "Key sequence bigger than allowed size!";
+        return;
+    }
+    memcpy(&client_security_context_tlv->tx_packet_num(), pairwise_key.key_seq.data(),
+           pairwise_key.key_seq.size());
+    client_security_context_tlv->set_gtk(group_key.key.data(), group_key.key.size());
+    if (group_key.key_seq.size() > sizeof(client_security_context_tlv->group_tx_packet_num())) {
+        LOG(ERROR) << "Key sequence bigger than allowed size!";
+        return;
+    }
+    memcpy(&client_security_context_tlv->group_tx_packet_num(), group_key.key_seq.data(),
+           group_key.key_seq.size());
+
+    LOG(DEBUG) << "Sending Client Security Context Reponse back to controller";
+    send_cmdu(cmdu_tx);
 }
