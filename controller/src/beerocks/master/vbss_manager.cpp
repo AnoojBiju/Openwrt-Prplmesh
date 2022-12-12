@@ -73,14 +73,14 @@ bool VbssManager::analyze_radio_restriction(
             }
         }
         // Set agent to vbss capable along with other information
-        agent->does_support_vbss = true;
-        agent->radios[radio_id]->vbss_radio    = true;
-        agent->radios[radio_id]->max_vbss      = radio_caps->max_vbss;
-        agent->radios[radio_id]->vbss_subtract = radio_caps->vbsses_subtract;
-        LOG(DEBUG) << "Added vbss capable radio: " << radio_id << std::endl
-                   << "On agent with mac: " << agent_mac << std::endl
-                   << "Max number of vbss supported is: " << agent->radios[radio_id]->max_vbss
-                   << std::endl;
+        // agent->does_support_vbss = true;
+        // agent->radios[radio_id]->vbss_radio    = true;
+        // agent->radios[radio_id]->max_vbss      = radio_caps->max_vbss;
+        // agent->radios[radio_id]->vbss_subtract = radio_caps->vbsses_subtract;
+        // LOG(DEBUG) << "Added vbss capable radio: " << radio_id << std::endl
+        //            << "On agent with mac: " << agent_mac << std::endl
+        //            << "Max number of vbss supported is: " << agent->radios[radio_id]->max_vbss
+        //            << std::endl;
     }
     return ret_val;
 }
@@ -94,11 +94,11 @@ bool VbssManager::can_radio_support_another_vbss(const sMacAddr &agent_mac, cons
                    << " not found, vbss analysis failed new client" << std::endl;
         return false;
     }
-    if (!radio->vbss_radio) {
-        LOG(ERROR) << "Radio: " << radio->radio_uid
-                   << " is not capable of supporting vbss functionality" << std::endl;
-        return false;
-    }
+    // if (!radio->vbss_radio) {
+    //     LOG(ERROR) << "Radio: " << radio->radio_uid
+    //                << " is not capable of supporting vbss functionality" << std::endl;
+    //     return false;
+    // }
 
     if (radio->current_vbss_used >= radio->max_vbss) {
         LOG(ERROR) << "Radio with id: " << radio->radio_uid << " has no space for a vbss!"

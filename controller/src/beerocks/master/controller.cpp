@@ -4100,7 +4100,8 @@ bool Controller::trigger_vbss_move(const sMacAddr &connected_ruid, const sMacAdd
 bool Controller::send_agent_capabilities_to_vbss_manager(const sMacAddr &agent_mac,
                                                          const beerocks::mac_map<vbss::sAPRadioVBSSCapabilities> &ruid_cap_map)
 {
-    return m_vbss_manager->analyze_radio_restriction(agent_mac, ruid_cap_map);
+    //    return m_vbss_manager->analyze_radio_restriction(agent_mac, ruid_cap_map);
+    return false;
 }
 
 bool Controller::handle_tlv_profile2_ap_capability(std::shared_ptr<Agent> agent,
