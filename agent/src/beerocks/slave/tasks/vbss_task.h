@@ -47,6 +47,14 @@ private:
      * @return true on success, otherwise false
      */
     bool handle_security_context_request(ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief Forward Virtual BSS Response messages to the Controller.
+     *
+     * @param cmdu_rx Received CMDU.
+     * @return true on success, otherwise false.
+     */
+    void handle_virtual_bss_response(ieee1905_1::CmduMessageRx &cmdu_rx);
 };
 } // namespace beerocks
 

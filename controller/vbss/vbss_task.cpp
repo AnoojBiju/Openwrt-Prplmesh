@@ -389,6 +389,7 @@ bool vbss_task::handle_trigger_chan_switch_announce_resp(const sMacAddr &src_mac
 bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
                                            ieee1905_1::CmduMessageRx &cmdu_rx)
 {
+    LOG(DEBUG) << "Received Virtual BSS Response from '" << tlvf::mac_to_string(src_mac) << "'";
     auto vbss_event_tlv = cmdu_rx.getClass<wfa_map::VirtualBssEvent>();
 
     if (!vbss_event_tlv) {
