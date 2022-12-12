@@ -573,6 +573,18 @@ public:
      * @return true on success and false otherwise.
      */
     virtual bool get_key(const std::string &interface_name, sKeyInfo &key_info) = 0;
+
+    /**
+     * @brief Send a DELBA frame to a specific station.
+     *
+     * @param[in] dst the destination MAC address.
+     * @param[in] src the source MAC address.
+     * @param[in] bssid the BSSID.
+     *
+     * @return true on success, false otherwise.
+     */
+    virtual bool send_delba(const std::string &interface_name, const sMacAddr &dst,
+                            const sMacAddr &src, const sMacAddr &bssid) = 0;
 };
 
 } // namespace bwl

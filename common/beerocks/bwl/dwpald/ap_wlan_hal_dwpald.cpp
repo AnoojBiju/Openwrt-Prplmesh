@@ -3631,7 +3631,14 @@ bool ap_wlan_hal_dwpal::add_station(const std::string &ifname, const sMacAddr &m
     return false;
 }
 
-bool ap_wlan_hal_dwpald::get_key(const std::string &ifname, sKeyInfo &key_info)
+bool ap_wlan_hal_dwpal::get_key(const std::string &ifname, sKeyInfo &key_info)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
+bool ap_wlan_hal_dwpal::send_delba(const std::string &ifname, const sMacAddr &dst,
+                                   const sMacAddr &src, const sMacAddr &bssid)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return false;

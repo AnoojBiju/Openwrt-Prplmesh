@@ -787,6 +787,13 @@ bool ap_wlan_hal_whm::get_key(const std::string &ifname, sKeyInfo &key_info)
     return false;
 }
 
+bool ap_wlan_hal_whm::send_delba(const std::string &ifname, const sMacAddr &dst,
+                                 const sMacAddr &src, const sMacAddr &bssid)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
 } // namespace whm
 
 std::shared_ptr<ap_wlan_hal> ap_wlan_hal_create(std::string iface_name, bwl::hal_conf_t hal_conf,
