@@ -1187,7 +1187,8 @@ bool nl80211_client_impl::send_delba(const std::string &interface_name, const sM
     }
 
     mac_header->frame_control_b1().type = static_cast<uint8_t>(ieee80211::sMacHeader::eType::MGMT);
-    mac_header->frame_control_b1().subtype = static_cast<uint8_t>(ieee80211::sMacHeader::eSubtypeMgmt::ACTION);
+    mac_header->frame_control_b1().subtype =
+        static_cast<uint8_t>(ieee80211::sMacHeader::eSubtypeMgmt::ACTION);
     mac_header->addr1() = dst;
     mac_header->addr2() = src;
     mac_header->addr3() = bssid;
