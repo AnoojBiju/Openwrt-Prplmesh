@@ -974,8 +974,20 @@ bool Controller::autoconfig_wsc_add_m2(WSC::m1 &m1,
         WSC::eWscAuth(WSC::eWscAuth::WSC_AUTH_OPEN | WSC::eWscAuth::WSC_AUTH_WPA2PSK |
                       WSC::eWscAuth::WSC_AUTH_SAE);
     // TODO Maybe the band should be taken from bss_info_conf.operating_class instead?
-    m2_cfg.bands =
-        (m1.rf_bands() & WSC::WSC_RF_BAND_5GHZ) ? WSC::WSC_RF_BAND_5GHZ : WSC::WSC_RF_BAND_2GHZ;
+
+    if (m1.rf_bands() & WSC::WSC_RF_BAND_2GHZ) {
+        m2_cfg.bands = WSC::WSC_RF_BAND_2GHZ;
+    } else if (m1.rf_bands() & WSC::WSC_RF_BAND_5GHZ) {
+        m2_cfg.bands = WSC::WSC_RF_BAND_5GHZ;
+    } else if (m1.rf_bands() & WSC::WSC_RF_BAND_2GHZ_5GHZ) {
+        m2_cfg.bands = WSC::WSC_RF_BAND_2GHZ_5GHZ;
+    } else if (m1.rf_bands() & WSC::WSC_RF_BAND_6GHZ) {
+        m2_cfg.bands = WSC::WSC_RF_BAND_6GHZ;
+    } else {
+        LOG(WARNING) << "WSC's M1 RF bands is not 2.4GHz, 5GHz, 2.4GHz and 5Ghz or 6GHz. Assigning "
+                        "RF bands default value to 2.4GHz and 5Ghz";
+        m2_cfg.bands = WSC::WSC_RF_BAND_2GHZ_5GHZ;
+    }
 
     // association_state, configuration_error, device_password_id, os_version and vendor_extension
     // have default values
