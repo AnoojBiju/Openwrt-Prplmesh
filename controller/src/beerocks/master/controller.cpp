@@ -4095,6 +4095,12 @@ bool Controller::trigger_vbss_move(const sMacAddr &connected_ruid, const sMacAdd
     return false;
 }
 
+void Controller::trigger_prioritization_config()
+{
+    auto ev = agent_monitoring_task::CONFIGURE_QOS;
+    m_task_pool.push_event(database.get_agent_monitoring_task_id(), ev);
+}
+
 bool Controller::handle_tlv_profile2_ap_capability(std::shared_ptr<Agent> agent,
                                                    ieee1905_1::CmduMessageRx &cmdu_rx)
 {

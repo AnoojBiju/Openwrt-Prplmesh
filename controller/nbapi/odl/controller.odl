@@ -145,6 +145,15 @@
                         on action validate call check_range [1, 10000];
                     }
                     bool DFSReentry = false;
+
+                    object QoS {
+                        uint32 SPRuleOutput = 0 {
+                            on action validate call check_range [0, 9];
+                        }
+                        string DSCPMap {
+                            on action validate call check_range [0, 64];
+                        }
+                    }
                 }
 
                 // Define controller.Network element
@@ -170,6 +179,8 @@
                     }
 
                     void AccessPointCommit();
+
+                    void SetServicePrioritization();
 
                     void ClientSteering(
                         %in %mandatory string station_mac,

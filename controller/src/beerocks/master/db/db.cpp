@@ -8000,6 +8000,45 @@ bool db::dm_set_service_prioritization_rules(const Agent &agent)
     return ret_val;
 }
 
+bool db::dm_configure_service_prioritization()
+{
+    const std::string cfgPath = "Device.WiFi.DataElements.Configuration.QoS";
+    uint64_t ruleOutput{0};
+    if (!m_ambiorix_datamodel->read_param(cfgPath, "SPRuleOutput", &ruleOutput)) {
+        LOG(ERROR) << "no valid priority rule found at " << cfgPath;
+        return false;
+    }
+    std::string dscpHex;
+    m_ambiorix_datamodel->read_param(cfgPath, "DSCPMap", &dscpHex);
+
+    for (auto it = m_agents.begin(); it != m_agents.end(); ++it) {
+        auto &agent = it->second;
+
+        agent->service_prioritization.rules.clear();
+
+        wfa_map::tlvServicePrioritizationRule::sServicePrioritizationRule rule;
+        rule.id                       = 1;
+        rule.precedence               = 1;
+        rule.output                   = static_cast<uint8_t>(ruleOutput);
+        rule.bits_field1.add_remove   = 1;
+        rule.bits_field2.always_match = 1;
+
+        uint32_t id = rule.id;
+        agent->service_prioritization.rules.insert({id, rule});
+
+        auto &dscpTable = agent->service_prioritization.dscp_mapping_table;
+        for (uint8_t i = 0; i < dscpTable.size(); ++i) {
+            if (i < dscpHex.length()) {
+                dscpTable[i] = dscpHex[i] - '0';
+            } else {
+                dscpTable[i] = 0;
+            }
+        }
+    }
+
+    return true;
+}
+
 bool db::dm_set_device_ap_capabilities(const Agent &agent)
 {
     if (agent.dm_path.empty()) {

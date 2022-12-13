@@ -182,6 +182,12 @@ public:
                            const std::string &new_bss_ssid, const std::string &new_bss_pass);
 
     /**
+     * @brief Triggers the sending of QoS configuration to agents
+     *
+     */
+    void trigger_prioritization_config();
+
+    /**
      * @brief Function that starts all mandatory periodic tasks on controller start-up
      * Mandatory task list is
      * bml_task

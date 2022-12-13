@@ -2453,6 +2453,14 @@ public:
      */
     bool dm_set_service_prioritization_rules(const Agent &agent);
 
+    /** @brief Retrieve Service Prioritization configuration for agents.
+     *
+     * DM path: "Device.WiFi.DataElements.Configuration."
+     *
+     * @return true on success, otherwise false.
+     */
+    bool dm_configure_service_prioritization();
+
     /** @brief Sets AP capability parameters for corresponding device.
      *
      * DM path: "Device.WiFi.DataElements.Network.Device.{i}."

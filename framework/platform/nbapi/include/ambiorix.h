@@ -129,6 +129,9 @@ public:
 
     virtual bool read_param(const std::string &obj_path, const std::string &param_name,
                             uint64_t *param_val) = 0;
+
+    virtual bool read_param(const std::string &obj_path, const std::string &param_name,
+                            std::string *param_val) = 0;
 };
 
 inline Ambiorix::~Ambiorix() {}
