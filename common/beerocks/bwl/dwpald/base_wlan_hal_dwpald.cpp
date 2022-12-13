@@ -449,6 +449,8 @@ bool base_wlan_hal_dwpal::ping()
     return true;
 }
 
+bool base_wlan_hal_dwpal::reassociate() { return dwpal_send_cmd("REASSOCIATE"); }
+
 bool base_wlan_hal_dwpal::dwpal_send_cmd(const std::string &cmd, parsed_line_t &reply, int vap_id)
 {
     if (!dwpal_send_cmd(cmd, vap_id)) {

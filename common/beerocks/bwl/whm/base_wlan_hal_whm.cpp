@@ -286,6 +286,7 @@ bool base_wlan_hal_whm::set(const std::string &param, const std::string &value, 
 }
 
 bool base_wlan_hal_whm::ping() { return true; }
+bool base_wlan_hal_whm::reassociate() { return true; }
 
 bool base_wlan_hal_whm::refresh_radio_info()
 {
