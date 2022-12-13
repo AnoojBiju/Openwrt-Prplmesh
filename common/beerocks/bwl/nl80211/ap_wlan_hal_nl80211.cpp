@@ -1648,6 +1648,11 @@ bool ap_wlan_hal_nl80211::add_station(const std::string &ifname, const sMacAddr 
     return m_nl80211_client->add_station(ifname, mac, assoc_req, aid);
 }
 
+bool ap_wlan_hal_nl80211::get_key(const std::string &ifname, sKeyInfo &key_info)
+{
+    return m_nl80211_client->get_key(ifname, key_info);
+}
+
 } // namespace nl80211
 
 std::shared_ptr<ap_wlan_hal> ap_wlan_hal_create(std::string iface_name, hal_conf_t hal_conf,
