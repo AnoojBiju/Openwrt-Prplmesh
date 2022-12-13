@@ -1958,6 +1958,10 @@ int test_virtual_bss_creation()
         0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
         // Group TX Packet num (4097)
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x01,
+        // auth type
+        0x00, 0x01,
+        // encryption type
+        0x00, 0x01,
     };
     // clang-format on
 
@@ -2001,6 +2005,10 @@ int test_virtual_bss_creation()
     errors += check_field<std::vector<uint8_t>>(parsed_gtk, expected_gtk, "GTK");
     errors += check_field<uint64_t>(virtual_bss_creation.group_tx_packet_num(), 0x1001,
                                     "group_tx_packet_num");
+    errors +=
+        check_field<uint16_t>(virtual_bss_creation.authentication_type(), 1, "authentication_type");
+    errors += check_field<uint16_t>(virtual_bss_creation.encryption_suite_type(), 1,
+                                    "encryption_suite_type");
 
     MAPF_INFO(__FUNCTION__ << " Finished, errors = " << errors << std::endl);
     return errors;
