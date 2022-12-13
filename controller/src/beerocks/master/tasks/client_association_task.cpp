@@ -75,18 +75,11 @@ bool client_association_task::verify_sta_association(const sMacAddr &src_mac,
         dm_add_sta_association_event(sta_assoc_tlv->client_mac(), sta_assoc_tlv->bssid());
 
         /*
-         * If sta capabilities are available, then add sta cap sub-objects to created assoc event object
-         * (i.e station associated to prplmesh agent => caps retrieved in a VS field
-         * so no need to query again for station caps).
-         */
-        if (dm_add_sta_association_event_caps(sta_assoc_tlv->client_mac(),
-                                              sta_assoc_tlv->bssid())) {
-            return true;
-        }
-
-        /*
-         * otherwise, (case of generic easymesh agent), query client capabilities
-         * to fill station caps in STA object and AssocEvent object
+         * Even though client capabilities exist in a legacy vendor
+         * specific TLV, send a client capability query anyway to
+         * treat prplMesh and non-prplMesh agents the same way. This
+         * also allows us to get the association frame from the
+         * client capability response.
          */
         if (!send_sta_capability_query(src_mac, cmdu_rx)) {
             LOG(ERROR) << "Failed to send Client Capability Query.";
@@ -176,7 +169,11 @@ bool client_association_task::handle_cmdu_1905_client_capability_report_message(
         return false;
     }
 
-    if (!m_database.set_sta_association_frame(sta_mac, assoc_frame)) {
+    if (!m_database.set_sta_association_frame(
+            sta_mac,
+            std::vector<uint8_t>(client_capability_report_tlv->association_frame(),
+                                 client_capability_report_tlv->association_frame() +
+                                     client_capability_report_tlv->association_frame_length()))) {
         LOG(ERROR) << "Failed to save association frame for STA " << sta_mac;
         return false;
     }

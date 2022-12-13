@@ -148,7 +148,7 @@ bool vbss_task::handle_move_client_event(const sMoveEvent &move_event)
     // Add a new sMoveEvent to the mac_map with the new state CLIENT_SEC_CTX (Client Security Context Request)
     // which is the first step of the move process
     active_moves.add(client_vbss.vbssid, client_vbss, move_event.dest_ruid, move_event.ssid,
-                     move_event.password);
+                     move_event.password, eMoveProcessState::CLIENT_SEC_CTX);
 
     sMacAddr agent_mac = agent->al_mac;
 
@@ -307,6 +307,7 @@ bool vbss_task::handle_move_response_msg(const sMacAddr &src_mac,
                                          ieee1905_1::CmduMessageRx &cmdu_rx, bool is_cancelled)
 {
 
+    LOG(DEBUG) << "Received move preparation response";
     auto client_info_tlv = cmdu_rx.getClass<wfa_map::tlvClientInfo>();
     std::string msg_desc = is_cancelled ? "Move Cancel" : "Move Preparation";
 
@@ -495,6 +496,7 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
 bool vbss_task::handle_client_security_ctx_resp(const sMacAddr &src_mac,
                                                 ieee1905_1::CmduMessageRx &cmdu_rx)
 {
+    LOG(DEBUG) << "Received Client Security Context response from '" << src_mac << "'";
 
     auto client_info_tlv = cmdu_rx.getClass<wfa_map::tlvClientInfo>();
 
@@ -530,6 +532,7 @@ bool vbss_task::handle_client_security_ctx_resp(const sMacAddr &src_mac,
 
     auto existing_move = get_matching_active_move(bssid, eMoveProcessState::CLIENT_SEC_CTX);
     if (existing_move) {
+        LOG(DEBUG) << "A move is in progress for client '" << client_mac << "'";
         // A move is in process for this mac address (and vbssid) and this state is the state that should be processed
 
         // Copy over security context info for later processing
@@ -545,14 +548,13 @@ bool vbss_task::handle_client_security_ctx_resp(const sMacAddr &src_mac,
             return false;
         }
 
-        sMacAddr agent_mac = agent->al_mac;
-
         existing_move->state = eMoveProcessState::VBSS_MOVE_PREP;
 
+        LOG(DEBUG) << "Sending move preparation request to agent '" << agent->al_mac << "'";
         // Next step is move preperation request. Execute and return since this data should not be sent to VBSS Manager
-        if (!vbss::vbss_actions::send_move_prep_request(agent_mac, client_vbss, m_database)) {
+        if (!vbss::vbss_actions::send_move_prep_request(agent->al_mac, client_vbss, m_database)) {
             LOG(ERROR) << "Failed to send move preparation request for client with MAC address "
-                       << client_mac << " to agent " << agent_mac;
+                       << client_mac << " to agent " << agent->al_mac;
             return false;
         }
         return true;
@@ -561,6 +563,7 @@ bool vbss_task::handle_client_security_ctx_resp(const sMacAddr &src_mac,
     auto existing_creation = active_creation_events.get(bssid);
 
     if (existing_creation) {
+        LOG(DEBUG) << "Found matching creation event for BSSID " << bssid << "'";
         existing_creation->sec_ctx_info = sec_ctx_info;
 
         vbss::sClientVBSS client_vbss = existing_creation->client_vbss;
