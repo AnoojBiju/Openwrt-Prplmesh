@@ -109,10 +109,6 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
 
     std::vector<sMacAddr> interface_macs{};
 
-    // create topology response update event for bml listeners
-    bml_task::topology_response_update_event new_bml_event;
-    new_bml_event.al_mac = al_mac;
-
     for (uint8_t i = 0; i < tlvDeviceInformation->local_interface_list_length(); i++) {
         const auto iface_info_tuple = tlvDeviceInformation->local_interface_list(i);
         if (!std::get<0>(iface_info_tuple)) {
@@ -249,11 +245,6 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
                 agent->backhaul.wireless_backhaul_radio =
                     database.get_radio_by_backhaul_cap(media_info->network_membership);
             }
-
-            // Only interfaces marked as an AP role should be marked as a radio interface.
-            if (iface_role == ieee1905_1::eRole::AP) {
-                new_bml_event.radio_interfaces.push_back(iface_info);
-            }
         }
     }
 
@@ -265,6 +256,13 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
     // Update active mac list of the device node
     database.dm_update_interface_elements(al_mac, interface_macs);
 
+    // create topology response update event for bml listeners
+    bml_task::topology_response_update_event new_bml_event;
+    new_bml_event.al_mac = al_mac;
+    for (const auto &radio_elm : agent->radios) {
+        LOG(INFO) << "Added radio " << radio_elm.first << " to the BML event.";
+        new_bml_event.radio_interfaces.push_back(radio_elm.first);
+    }
     tasks.push_event(database.get_bml_task_id(), bml_task::TOPOLOGY_RESPONSE_UPDATE,
                      &new_bml_event);
 

@@ -74,11 +74,11 @@ public:
      * used to update bml_task of a new topology response update from agents
      * 
      * @al_mac: mac address of reporting agent 
-     * @radio_interfaces: aganet's local radio interfaces information
+     * @radio_interfaces: agent's local radio interfaces information
      */
     struct topology_response_update_event {
         sMacAddr al_mac;
-        std::vector<ieee1905_1::cLocalInterfaceInfo> radio_interfaces;
+        std::vector<sMacAddr> radio_interfaces;
     };
 
     enum events {
