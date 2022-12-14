@@ -83,10 +83,12 @@ bool ClientSecurityContext::alloc_ptk(size_t count) {
         size_t move_length = getBuffRemainingBytes(src) - len;
         std::copy_n(src, move_length, dst);
     }
-    m_tx_packet_num = (uint64_t *)((uint8_t *)(m_tx_packet_num) + len);
+    m_tx_pn_length = (uint16_t *)((uint8_t *)(m_tx_pn_length) + len);
+    m_tx_packet_num = (uint8_t *)((uint8_t *)(m_tx_packet_num) + len);
     m_group_key_length = (uint16_t *)((uint8_t *)(m_group_key_length) + len);
     m_gtk = (uint8_t *)((uint8_t *)(m_gtk) + len);
-    m_group_tx_packet_num = (uint64_t *)((uint8_t *)(m_group_tx_packet_num) + len);
+    m_group_tx_pn_length = (uint16_t *)((uint8_t *)(m_group_tx_pn_length) + len);
+    m_group_tx_packet_num = (uint8_t *)((uint8_t *)(m_group_tx_packet_num) + len);
     m_ptk_idx__ += count;
     *m_key_length += count;
     if (!buffPtrIncrementSafe(len)) {
@@ -97,8 +99,60 @@ bool ClientSecurityContext::alloc_ptk(size_t count) {
     return true;
 }
 
-uint64_t& ClientSecurityContext::tx_packet_num() {
-    return (uint64_t&)(*m_tx_packet_num);
+uint16_t& ClientSecurityContext::tx_pn_length() {
+    return (uint16_t&)(*m_tx_pn_length);
+}
+
+uint8_t* ClientSecurityContext::tx_packet_num(size_t idx) {
+    if ( (m_tx_packet_num_idx__ == 0) || (m_tx_packet_num_idx__ <= idx) ) {
+        TLVF_LOG(ERROR) << "Requested index is greater than the number of available entries";
+        return nullptr;
+    }
+    return &(m_tx_packet_num[idx]);
+}
+
+bool ClientSecurityContext::set_tx_packet_num(const void* buffer, size_t size) {
+    if (buffer == nullptr) {
+        TLVF_LOG(WARNING) << "set_tx_packet_num received a null pointer.";
+        return false;
+    }
+    if (m_tx_packet_num_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_tx_packet_num was already allocated!";
+        return false;
+    }
+    if (!alloc_tx_packet_num(size)) { return false; }
+    std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_tx_packet_num);
+    return true;
+}
+bool ClientSecurityContext::alloc_tx_packet_num(size_t count) {
+    if (m_lock_order_counter__ > 1) {;
+        TLVF_LOG(ERROR) << "Out of order allocation for variable length list tx_packet_num, abort!";
+        return false;
+    }
+    size_t len = sizeof(uint8_t) * count;
+    if(getBuffRemainingBytes() < len )  {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
+        return false;
+    }
+    m_lock_order_counter__ = 1;
+    uint8_t *src = (uint8_t *)&m_tx_packet_num[*m_tx_pn_length];
+    uint8_t *dst = src + len;
+    if (!m_parse__) {
+        size_t move_length = getBuffRemainingBytes(src) - len;
+        std::copy_n(src, move_length, dst);
+    }
+    m_group_key_length = (uint16_t *)((uint8_t *)(m_group_key_length) + len);
+    m_gtk = (uint8_t *)((uint8_t *)(m_gtk) + len);
+    m_group_tx_pn_length = (uint16_t *)((uint8_t *)(m_group_tx_pn_length) + len);
+    m_group_tx_packet_num = (uint8_t *)((uint8_t *)(m_group_tx_packet_num) + len);
+    m_tx_packet_num_idx__ += count;
+    *m_tx_pn_length += count;
+    if (!buffPtrIncrementSafe(len)) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
+        return false;
+    }
+    if(m_length){ (*m_length) += len; }
+    return true;
 }
 
 uint16_t& ClientSecurityContext::group_key_length() {
@@ -127,7 +181,7 @@ bool ClientSecurityContext::set_gtk(const void* buffer, size_t size) {
     return true;
 }
 bool ClientSecurityContext::alloc_gtk(size_t count) {
-    if (m_lock_order_counter__ > 1) {;
+    if (m_lock_order_counter__ > 2) {;
         TLVF_LOG(ERROR) << "Out of order allocation for variable length list gtk, abort!";
         return false;
     }
@@ -136,14 +190,15 @@ bool ClientSecurityContext::alloc_gtk(size_t count) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
         return false;
     }
-    m_lock_order_counter__ = 1;
+    m_lock_order_counter__ = 2;
     uint8_t *src = (uint8_t *)&m_gtk[*m_group_key_length];
     uint8_t *dst = src + len;
     if (!m_parse__) {
         size_t move_length = getBuffRemainingBytes(src) - len;
         std::copy_n(src, move_length, dst);
     }
-    m_group_tx_packet_num = (uint64_t *)((uint8_t *)(m_group_tx_packet_num) + len);
+    m_group_tx_pn_length = (uint16_t *)((uint8_t *)(m_group_tx_pn_length) + len);
+    m_group_tx_packet_num = (uint8_t *)((uint8_t *)(m_group_tx_packet_num) + len);
     m_gtk_idx__ += count;
     *m_group_key_length += count;
     if (!buffPtrIncrementSafe(len)) {
@@ -154,8 +209,56 @@ bool ClientSecurityContext::alloc_gtk(size_t count) {
     return true;
 }
 
-uint64_t& ClientSecurityContext::group_tx_packet_num() {
-    return (uint64_t&)(*m_group_tx_packet_num);
+uint16_t& ClientSecurityContext::group_tx_pn_length() {
+    return (uint16_t&)(*m_group_tx_pn_length);
+}
+
+uint8_t* ClientSecurityContext::group_tx_packet_num(size_t idx) {
+    if ( (m_group_tx_packet_num_idx__ == 0) || (m_group_tx_packet_num_idx__ <= idx) ) {
+        TLVF_LOG(ERROR) << "Requested index is greater than the number of available entries";
+        return nullptr;
+    }
+    return &(m_group_tx_packet_num[idx]);
+}
+
+bool ClientSecurityContext::set_group_tx_packet_num(const void* buffer, size_t size) {
+    if (buffer == nullptr) {
+        TLVF_LOG(WARNING) << "set_group_tx_packet_num received a null pointer.";
+        return false;
+    }
+    if (m_group_tx_packet_num_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_group_tx_packet_num was already allocated!";
+        return false;
+    }
+    if (!alloc_group_tx_packet_num(size)) { return false; }
+    std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_group_tx_packet_num);
+    return true;
+}
+bool ClientSecurityContext::alloc_group_tx_packet_num(size_t count) {
+    if (m_lock_order_counter__ > 3) {;
+        TLVF_LOG(ERROR) << "Out of order allocation for variable length list group_tx_packet_num, abort!";
+        return false;
+    }
+    size_t len = sizeof(uint8_t) * count;
+    if(getBuffRemainingBytes() < len )  {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
+        return false;
+    }
+    m_lock_order_counter__ = 3;
+    uint8_t *src = (uint8_t *)&m_group_tx_packet_num[*m_group_tx_pn_length];
+    uint8_t *dst = src + len;
+    if (!m_parse__) {
+        size_t move_length = getBuffRemainingBytes(src) - len;
+        std::copy_n(src, move_length, dst);
+    }
+    m_group_tx_packet_num_idx__ += count;
+    *m_group_tx_pn_length += count;
+    if (!buffPtrIncrementSafe(len)) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
+        return false;
+    }
+    if(m_length){ (*m_length) += len; }
+    return true;
 }
 
 void ClientSecurityContext::class_swap()
@@ -164,9 +267,9 @@ void ClientSecurityContext::class_swap()
     tlvf_swap(16, reinterpret_cast<uint8_t*>(m_subtype));
     m_client_connected_flags->struct_swap();
     tlvf_swap(16, reinterpret_cast<uint8_t*>(m_key_length));
-    tlvf_swap(64, reinterpret_cast<uint8_t*>(m_tx_packet_num));
+    tlvf_swap(16, reinterpret_cast<uint8_t*>(m_tx_pn_length));
     tlvf_swap(16, reinterpret_cast<uint8_t*>(m_group_key_length));
-    tlvf_swap(64, reinterpret_cast<uint8_t*>(m_group_tx_packet_num));
+    tlvf_swap(16, reinterpret_cast<uint8_t*>(m_group_tx_pn_length));
 }
 
 bool ClientSecurityContext::finalize()
@@ -205,9 +308,9 @@ size_t ClientSecurityContext::get_initial_size()
     class_size += sizeof(eVirtualBssSubtype); // subtype
     class_size += sizeof(ClientSecurityContext::sClientConnectedFlags); // client_connected_flags
     class_size += sizeof(uint16_t); // key_length
-    class_size += sizeof(uint64_t); // tx_packet_num
+    class_size += sizeof(uint16_t); // tx_pn_length
     class_size += sizeof(uint16_t); // group_key_length
-    class_size += sizeof(uint64_t); // group_tx_packet_num
+    class_size += sizeof(uint16_t); // group_tx_pn_length
     return class_size;
 }
 
@@ -258,12 +361,21 @@ bool ClientSecurityContext::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) * (key_length) << ") Failed!";
         return false;
     }
-    m_tx_packet_num = reinterpret_cast<uint64_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint64_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint64_t) << ") Failed!";
+    m_tx_pn_length = reinterpret_cast<uint16_t*>(m_buff_ptr__);
+    if (!m_parse__) *m_tx_pn_length = 0;
+    if (!buffPtrIncrementSafe(sizeof(uint16_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
         return false;
     }
-    if(m_length && !m_parse__){ (*m_length) += sizeof(uint64_t); }
+    if(m_length && !m_parse__){ (*m_length) += sizeof(uint16_t); }
+    m_tx_packet_num = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    uint16_t tx_pn_length = *m_tx_pn_length;
+    if (m_parse__) {  tlvf_swap(16, reinterpret_cast<uint8_t*>(&tx_pn_length)); }
+    m_tx_packet_num_idx__ = tx_pn_length;
+    if (!buffPtrIncrementSafe(sizeof(uint8_t) * (tx_pn_length))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) * (tx_pn_length) << ") Failed!";
+        return false;
+    }
     m_group_key_length = reinterpret_cast<uint16_t*>(m_buff_ptr__);
     if (!m_parse__) *m_group_key_length = 0;
     if (!buffPtrIncrementSafe(sizeof(uint16_t))) {
@@ -279,12 +391,21 @@ bool ClientSecurityContext::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) * (group_key_length) << ") Failed!";
         return false;
     }
-    m_group_tx_packet_num = reinterpret_cast<uint64_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint64_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint64_t) << ") Failed!";
+    m_group_tx_pn_length = reinterpret_cast<uint16_t*>(m_buff_ptr__);
+    if (!m_parse__) *m_group_tx_pn_length = 0;
+    if (!buffPtrIncrementSafe(sizeof(uint16_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
         return false;
     }
-    if(m_length && !m_parse__){ (*m_length) += sizeof(uint64_t); }
+    if(m_length && !m_parse__){ (*m_length) += sizeof(uint16_t); }
+    m_group_tx_packet_num = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    uint16_t group_tx_pn_length = *m_group_tx_pn_length;
+    if (m_parse__) {  tlvf_swap(16, reinterpret_cast<uint8_t*>(&group_tx_pn_length)); }
+    m_group_tx_packet_num_idx__ = group_tx_pn_length;
+    if (!buffPtrIncrementSafe(sizeof(uint8_t) * (group_tx_pn_length))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) * (group_tx_pn_length) << ") Failed!";
+        return false;
+    }
     if (m_parse__) { class_swap(); }
     if (m_parse__) {
         if (*m_type != eTlvTypeMap::TLV_VIRTUAL_BSS) {

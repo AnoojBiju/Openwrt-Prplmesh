@@ -55,13 +55,21 @@ VirtualBssCreation:
   ptk:
     _type: uint8_t
     _length: [key_length]
+  tx_pn_length:
+    _type: uint16_t
+    _length_var: True
   tx_packet_num:
-    _type: uint64_t
+    _type: uint8_t
+    _length: [tx_pn_length]
   group_key_length:
     _type: uint16_t
     _length_var: True
   gtk:
     _type: uint8_t
     _length: [group_key_length]
+  group_tx_pn_length:
+    _type: uint16_t
+    _length_var: True
   group_tx_packet_num:
-    _type: uint64_t
+    _type: uint8_t
+    _length: [group_tx_pn_length]
