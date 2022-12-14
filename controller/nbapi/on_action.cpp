@@ -825,6 +825,26 @@ static void event_add_hidden_params(const char *const sig_name, const amxc_var_t
 }
 
 /**
+ * @brief Renew configurations on agents.
+ *
+ * send_ap_config_renew is invoked when new configurations need to be propagated to agents.
+ */
+bool send_ap_config_renew()
+{
+    uint8_t tx_buffer[beerocks::message::MESSAGE_BUFFER_LENGTH];
+    ieee1905_1::CmduMessageTx cmdu_tx(tx_buffer, sizeof(tx_buffer));
+    auto connected_agents = g_database->get_all_connected_agents();
+
+    if (!connected_agents.empty()) {
+        if (!son_actions::send_ap_config_renew_msg(cmdu_tx, *g_database)) {
+            LOG(ERROR) << "Failed son_actions::send_ap_config_renew_msg ! ";
+            return false;
+        }
+    }
+    return true;
+}
+
+/**
  * @brief Event handler for controller configuration change.
  *
  * event_configuration_changed is invoked when value of parameter
@@ -879,6 +899,14 @@ static void event_configuration_changed(const char *const sig_name, const amxc_v
         amxd_object_get_int32_t(configuration, "StatisticsPollingRateSec", nullptr);
 
     nbapi_config.enable_dfs_reentry = amxd_object_get_bool(configuration, "DFSReentry", nullptr);
+
+    nbapi_config.daisy_chaining_disabled =
+        amxd_object_get_bool(configuration, "DaisyChainingDisabled", nullptr);
+
+    // Send config renew if setting is changed
+    if (nbapi_config.daisy_chaining_disabled != g_database->settings_daisy_chaining_disabled()) {
+        send_ap_config_renew();
+    }
 
     if (!g_database->update_master_configuration(nbapi_config)) {
         LOG(ERROR) << "Failed update master configuration from NBAPI.";
