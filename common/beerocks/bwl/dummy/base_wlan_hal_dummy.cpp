@@ -323,6 +323,7 @@ bool base_wlan_hal_dummy::set(const std::string &param, const std::string &value
 }
 
 bool base_wlan_hal_dummy::ping() { return true; }
+bool base_wlan_hal_dummy::reassociate() { return true; }
 
 bool base_wlan_hal_dummy::write_status_file(const std::string &filename,
                                             const std::string &value) const

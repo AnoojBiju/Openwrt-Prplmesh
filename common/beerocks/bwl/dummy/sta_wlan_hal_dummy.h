@@ -45,6 +45,7 @@ public:
                          bool hidden_ssid) override;
 
     virtual bool disconnect() override;
+    virtual bool reassociate() override;
 
     virtual bool roam(const sMacAddr &bssid, ChannelFreqPair channel) override;
 

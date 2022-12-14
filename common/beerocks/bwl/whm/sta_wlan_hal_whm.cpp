@@ -167,6 +167,12 @@ bool sta_wlan_hal_whm::unassoc_rssi_measurement(const std::string &mac, int chan
     return true;
 }
 
+bool sta_wlan_hal_whm::reassociate()
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    return true;
+}
+
 bool sta_wlan_hal_whm::is_connected()
 {
     Endpoint endpoint;

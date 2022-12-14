@@ -1103,6 +1103,24 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
                        << " seconds has passed on state WAIT_WPS, move state to RESTART!";
             FSM_MOVE_STATE(RESTART);
         }
+
+        // check if we are still waiting for WPS although sta is connected
+        for (auto &radio_info : m_radios_info) {
+            std::string iface = radio_info->sta_iface;
+            if (radio_info->sta_iface.empty()) {
+                continue;
+            }
+            if (!roam_flag && radio_info->sta_wlan_hal->is_connected()) {
+                for (const auto &sta_iface : slave_sta_ifaces) {
+                    auto sta_iface_hal = get_wireless_hal(sta_iface);
+                    if (!sta_iface_hal) {
+                        break;
+                    }
+                    sta_iface_hal->reassociate();
+                }
+            }
+        }
+
         break;
     }
     case EState::INITIATE_SCAN: {

@@ -46,6 +46,8 @@ public:
 
     virtual bool disconnect() override;
 
+    virtual bool reassociate() override;
+
     virtual bool roam(const sMacAddr &bssid, ChannelFreqPair channel) override;
 
     virtual bool get_4addr_mode() override;

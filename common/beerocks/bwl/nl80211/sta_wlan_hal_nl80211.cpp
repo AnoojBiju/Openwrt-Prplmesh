@@ -359,6 +359,8 @@ bool sta_wlan_hal_nl80211::update_status()
     return true;
 }
 
+bool sta_wlan_hal_nl80211::reassociate() { return wpa_ctrl_send_msg("REASSOCIATE"); }
+
 int sta_wlan_hal_nl80211::add_network()
 {
     char *reply = nullptr;
