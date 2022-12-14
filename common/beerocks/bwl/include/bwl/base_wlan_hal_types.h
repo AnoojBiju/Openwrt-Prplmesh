@@ -66,7 +66,17 @@ struct VAPElement {
 enum class ChanSwReason { Unknown = 0, Radar = 1, CoEx_20 = 2, CoEx_40 = 3 };
 
 // WLAN Security Types
-enum class WiFiSec { Invalid = 0, None, WEP_64, WEP_128, WPA_PSK, WPA2_PSK, WPA_WPA2_PSK };
+enum class WiFiSec {
+    Invalid = 0,
+    None,
+    WEP_64,
+    WEP_128,
+    WPA_PSK,
+    WPA2_PSK,
+    WPA_WPA2_PSK,
+    WPA2_WP3_PSK,
+    WPA3_PSK
+};
 
 inline std::ostream &operator<<(std::ostream &out, const bwl::WiFiSec &sec)
 {
@@ -91,6 +101,12 @@ inline std::ostream &operator<<(std::ostream &out, const bwl::WiFiSec &sec)
         break;
     case bwl::WiFiSec::WPA_WPA2_PSK:
         out << "WPA-WPA2-Personal";
+        break;
+    case bwl::WiFiSec::WPA2_WP3_PSK:
+        out << "WPA2-WPA3-Personal";
+        break;
+    case bwl::WiFiSec::WPA3_PSK:
+        out << "WPA3-Personal";
         break;
     }
     return out;
