@@ -3,7 +3,7 @@ project(btlvf VERSION ${prplmesh_VERSION})
 if ((TARGET_PLATFORM_TYPE STREQUAL "ugw") OR (TARGET_PLATFORM STREQUAL "rdkb"))
     find_package(PythonInterp REQUIRED)
 else()
-    set(PYTHON_EXECUTABLE python3)
+    set(PYTHON_EXECUTABLE /usr/bin/python3)
 endif()
 
 get_property(PythonTlvf TARGET tlvf PROPERTY PythonTlvf)
