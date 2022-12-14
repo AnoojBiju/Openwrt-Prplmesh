@@ -149,14 +149,69 @@ bool sta_wlan_hal_whm::initiate_scan() { return true; }
 bool sta_wlan_hal_whm::scan_bss(const sMacAddr &bssid, uint8_t channel,
                                 beerocks::eFreqType freq_type)
 {
+    if (bssid == beerocks::net::network_utils::ZERO_MAC || channel == 0) {
+        LOG(ERROR) << "Invalid parameters";
+        return false;
+    }
+
+    AmbiorixVariant result;
+    AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
+    args.add_child<>("BSSID", tlvf::mac_to_string(bssid));
+    args.add_child<>("channels", channel);
+    if (!m_ambiorix_cl->call(m_radio_path, "startScan", args, result)) {
+        LOG(ERROR) << " remote function call startScan Failed!";
+        return false;
+    }
     return true;
 }
 
 int sta_wlan_hal_whm::get_scan_results(const std::string &ssid, std::vector<SScanResult> &list,
                                        bool parse_vsie)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
-    return 0;
+    AmbiorixVariant result;
+    list.clear();
+    AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
+    if (!m_ambiorix_cl->call(m_radio_path, "getScanResults", args, result)) {
+        LOG(ERROR) << " remote function call getScanResults Failed!";
+        return list.size();
+    }
+    AmbiorixVariantListSmartPtr scan_results = result.read_childs<AmbiorixVariantListSmartPtr>();
+    if (!scan_results) {
+        LOG(ERROR) << "failed reading scan_results!";
+        return list.size();
+    }
+    for (auto &scan_result : *scan_results) {
+        std::string ssid_scan;
+        if (!scan_result.read_child<>(ssid_scan, "SSID")) {
+            LOG(ERROR) << "getScanResults() does not contain SSID!";
+            return list.size();
+        }
+        if (ssid_scan != ssid) {
+            continue;
+        }
+        std::string bssid;
+        scan_result.read_child<>(bssid, "BSSID");
+
+        int32_t centre_channel(0);
+        scan_result.read_child<>(centre_channel, "CentreChannel");
+        int32_t bandwidth(0);
+        scan_result.read_child<>(bandwidth, "Bandwidth");
+        int32_t channel(0);
+        scan_result.read_child<>(channel, "channel");
+        WifiChannel wifi_chan(channel, centre_channel, utils::convert_bandwidth_to_enum(bandwidth));
+
+        int32_t rssi(0);
+        scan_result.read_child<>(channel, "RSSI");
+
+        SScanResult ap;
+        ap.bssid     = tlvf::mac_from_string(bssid);
+        ap.channel   = (uint8_t)channel;
+        ap.freq_type = wifi_chan.get_freq_type();
+        ap.rssi      = rssi;
+
+        list.insert(list.begin(), ap);
+    }
+    return list.size();
 }
 
 bool sta_wlan_hal_whm::connect(const std::string &ssid, const std::string &pass, WiFiSec sec,
