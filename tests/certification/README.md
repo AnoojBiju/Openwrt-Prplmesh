@@ -32,7 +32,7 @@ Unsupported tests:
 
 The total amount of time needed to run all the certification tests prplMesh is passing is too big to be able to run them every night.
 
-Because of this, the list of passing tests has been split into two: variant A and variant B.
+Because of this, the list of passing tests has been split into four variants: A, B, C and D.
 
 To make a change to the list of passing tests, *do not edit the variants files by hand*: instead, edit `passing_tests.txt` and re-generate the variants files.
 
@@ -41,14 +41,28 @@ To re-generate the variant files, run the following snippet from the top level d
 # Variant A:
 {
   echo "# GENERATED FILE - DO NOT EDIT. See tests/certification/README.md"
-  awk 'NR%2==0' tests/certification/passing_tests.txt &&
+  awk 'NR%4==0' tests/certification/passing_tests.txt &&
   printf 'MAP-4.2.1\nMAP-5.3.1\nMAP-5.5.1\nMAP-5.6.1\nMAP-5.7.1\nMAP-5.10.1\nMAP-5.10.2\n';
 } | sort -V -u > tests/certification/passing_tests_variant_A.txt
 
 # Variant B:
 {
   echo "# GENERATED FILE - DO NOT EDIT. See tests/certification/README.md"
-  awk 'NR%2==1' tests/certification/passing_tests.txt &&
+  awk 'NR%4==1' tests/certification/passing_tests.txt &&
   printf 'MAP-4.2.1\nMAP-5.3.1\nMAP-5.5.1\nMAP-5.6.1\nMAP-5.7.1\nMAP-5.10.1\nMAP-5.10.2\n';
 } | sort -V -u > tests/certification/passing_tests_variant_B.txt
+
+# Variant C:
+{
+  echo "# GENERATED FILE - DO NOT EDIT. See tests/certification/README.md"
+  awk 'NR%4==2' tests/certification/passing_tests.txt &&
+  printf 'MAP-4.2.1\nMAP-5.3.1\nMAP-5.5.1\nMAP-5.6.1\nMAP-5.7.1\nMAP-5.10.1\nMAP-5.10.2\n';
+} | sort -V -u > tests/certification/passing_tests_variant_C.txt
+
+# Variant D:
+{
+  echo "# GENERATED FILE - DO NOT EDIT. See tests/certification/README.md"
+  awk 'NR%4==3' tests/certification/passing_tests.txt &&
+  printf 'MAP-4.2.1\nMAP-5.3.1\nMAP-5.5.1\nMAP-5.6.1\nMAP-5.7.1\nMAP-5.10.1\nMAP-5.10.2\n';
+} | sort -V -u > tests/certification/passing_tests_variant_D.txt
 ```
