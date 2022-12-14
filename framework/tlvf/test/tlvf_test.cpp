@@ -1925,7 +1925,7 @@ int test_virtual_bss_creation()
         // type
         0xde,
         // length
-        0x00, 0x46,
+        0x00, 0x44,
         // subtype
         0x00, 0x02,
         // radio_uid
@@ -1950,21 +1950,25 @@ int test_virtual_bss_creation()
         0x00, 0x8,
         // PTK,
         0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+        // TX Packet num length
+        0x00, 0x06,
         // TX Packet num (257)
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01,
+        0x00, 0x00, 0x00, 0x00, 0x01, 0x01,
         // Group key length
         0x00, 0x5,
         // GTK
         0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+        // Group TX Packet num length
+        0x00, 0x06,
         // Group TX Packet num (4097)
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x01,
+        0x00, 0x00, 0x00, 0x00, 0x10, 0x01,
     };
     // clang-format on
 
     auto virtual_bss_creation = VirtualBssCreation(vbss_buffer.data(), vbss_buffer.size(), true);
     errors +=
         check_field<eTlvTypeMap>(virtual_bss_creation.type(), eTlvTypeMap::TLV_VIRTUAL_BSS, "type");
-    errors += check_field<uint16_t>(virtual_bss_creation.length(), 0x46, "length");
+    errors += check_field<uint16_t>(virtual_bss_creation.length(), 0x44, "length");
     errors += check_field<wfa_map::eVirtualBssSubtype>(
         virtual_bss_creation.subtype(), wfa_map::eVirtualBssSubtype::VIRTUAL_BSS_CREATION,
         "subtype");
@@ -1990,7 +1994,15 @@ int test_virtual_bss_creation()
     std::vector<uint8_t> parsed_ptk(virtual_bss_creation.ptk(),
                                     virtual_bss_creation.ptk() + virtual_bss_creation.key_length());
     errors += check_field<std::vector<uint8_t>>(parsed_ptk, expected_ptk, "PTK");
-    errors += check_field<uint64_t>(virtual_bss_creation.tx_packet_num(), 257, "tx_packet_num");
+    errors += check_field<uint16_t>(virtual_bss_creation.tx_pn_length(), 6, "TX PN length");
+
+    std::vector<uint8_t> expected_tx_pn = {
+        0x00, 0x00, 0x00, 0x00, 0x01, 0x01,
+    };
+    std::vector<uint8_t> parsed_tx_pn(virtual_bss_creation.tx_packet_num(),
+                                      virtual_bss_creation.tx_packet_num() +
+                                          virtual_bss_creation.tx_pn_length());
+    errors += check_field<std::vector<uint8_t>>(parsed_tx_pn, expected_tx_pn, "TX PN");
     errors += check_field<uint16_t>(virtual_bss_creation.group_key_length(), 5, "group_key_length");
     std::vector<uint8_t> expected_gtk = {
         0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
@@ -1999,8 +2011,17 @@ int test_virtual_bss_creation()
                                     virtual_bss_creation.gtk() +
                                         virtual_bss_creation.group_key_length());
     errors += check_field<std::vector<uint8_t>>(parsed_gtk, expected_gtk, "GTK");
-    errors += check_field<uint64_t>(virtual_bss_creation.group_tx_packet_num(), 0x1001,
-                                    "group_tx_packet_num");
+    errors +=
+        check_field<uint16_t>(virtual_bss_creation.group_tx_pn_length(), 6, "Group TX PN length");
+
+    std::vector<uint8_t> expected_group_tx_pn = {
+        0x00, 0x00, 0x00, 0x00, 0x10, 0x01,
+    };
+    std::vector<uint8_t> parsed_group_tx_pn(virtual_bss_creation.group_tx_packet_num(),
+                                            virtual_bss_creation.group_tx_packet_num() +
+                                                virtual_bss_creation.group_tx_pn_length());
+    errors +=
+        check_field<std::vector<uint8_t>>(parsed_group_tx_pn, expected_group_tx_pn, "Group TX PN");
 
     MAPF_INFO(__FUNCTION__ << " Finished, errors = " << errors << std::endl);
     return errors;

@@ -70,12 +70,18 @@ class VirtualBssCreation : public BaseClass
         uint8_t* ptk(size_t idx = 0);
         bool set_ptk(const void* buffer, size_t size);
         bool alloc_ptk(size_t count = 1);
-        uint64_t& tx_packet_num();
+        uint16_t& tx_pn_length();
+        uint8_t* tx_packet_num(size_t idx = 0);
+        bool set_tx_packet_num(const void* buffer, size_t size);
+        bool alloc_tx_packet_num(size_t count = 1);
         uint16_t& group_key_length();
         uint8_t* gtk(size_t idx = 0);
         bool set_gtk(const void* buffer, size_t size);
         bool alloc_gtk(size_t count = 1);
-        uint64_t& group_tx_packet_num();
+        uint16_t& group_tx_pn_length();
+        uint8_t* group_tx_packet_num(size_t idx = 0);
+        bool set_group_tx_packet_num(const void* buffer, size_t size);
+        bool alloc_group_tx_packet_num(size_t count = 1);
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -102,11 +108,15 @@ class VirtualBssCreation : public BaseClass
         uint16_t* m_key_length = nullptr;
         uint8_t* m_ptk = nullptr;
         size_t m_ptk_idx__ = 0;
-        uint64_t* m_tx_packet_num = nullptr;
+        uint16_t* m_tx_pn_length = nullptr;
+        uint8_t* m_tx_packet_num = nullptr;
+        size_t m_tx_packet_num_idx__ = 0;
         uint16_t* m_group_key_length = nullptr;
         uint8_t* m_gtk = nullptr;
         size_t m_gtk_idx__ = 0;
-        uint64_t* m_group_tx_packet_num = nullptr;
+        uint16_t* m_group_tx_pn_length = nullptr;
+        uint8_t* m_group_tx_packet_num = nullptr;
+        size_t m_group_tx_packet_num_idx__ = 0;
 };
 
 }; // close namespace: wfa_map
