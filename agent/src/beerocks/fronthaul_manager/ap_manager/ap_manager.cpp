@@ -808,8 +808,7 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
             // Zero for the RX PN:
             key_seq.insert(key_seq.begin(), key_seq_len, 0);
             // The actual TX PN:
-            auto tx_pn_ptr =
-                reinterpret_cast<uint8_t *>(&virtual_bss_creation_tlv->tx_packet_num());
+            auto tx_pn_ptr = virtual_bss_creation_tlv->tx_packet_num(0);
             key_seq.insert(key_seq.end(), tx_pn_ptr, tx_pn_ptr + key_seq_len);
 
             if (!ap_wlan_hal->add_key(ifname, pairwise_key)) {
@@ -836,8 +835,7 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
             // Zero for the RX PN:
             group_key_seq.insert(group_key_seq.begin(), group_key_seq_len, 0);
             // The actual TX PN:
-            auto group_tx_pn_ptr =
-                reinterpret_cast<uint8_t *>(&virtual_bss_creation_tlv->group_tx_packet_num());
+            auto group_tx_pn_ptr = virtual_bss_creation_tlv->group_tx_packet_num(0);
             group_key_seq.insert(group_key_seq.end(), group_tx_pn_ptr,
                                  group_tx_pn_ptr + group_key_seq_len);
 
@@ -3044,19 +3042,19 @@ void ApManager::handle_vbss_security_request(ieee1905_1::CmduMessageRx &cmdu_rx)
     // At this point we have the key, so the client is connected:
     client_security_context_tlv->client_connected_flags().client_connected = 1;
     client_security_context_tlv->set_ptk(pairwise_key.key.data(), pairwise_key.key.size());
-    if (pairwise_key.key_seq.size() > sizeof(client_security_context_tlv->tx_packet_num())) {
+    if (pairwise_key.key_seq.size() > sizeof(uint64_t)) {
         LOG(ERROR) << "Key sequence bigger than allowed size!";
         return;
     }
-    memcpy(&client_security_context_tlv->tx_packet_num(), pairwise_key.key_seq.data(),
-           pairwise_key.key_seq.size());
+    client_security_context_tlv->set_tx_packet_num(pairwise_key.key_seq.data(),
+                                                   pairwise_key.key_seq.size());
     client_security_context_tlv->set_gtk(group_key.key.data(), group_key.key.size());
-    if (group_key.key_seq.size() > sizeof(client_security_context_tlv->group_tx_packet_num())) {
+    if (group_key.key_seq.size() > sizeof(uint64_t)) {
         LOG(ERROR) << "Key sequence bigger than allowed size!";
         return;
     }
-    memcpy(&client_security_context_tlv->group_tx_packet_num(), group_key.key_seq.data(),
-           group_key.key_seq.size());
+    client_security_context_tlv->set_group_tx_packet_num(group_key.key_seq.data(),
+                                                         group_key.key_seq.size());
 
     LOG(DEBUG) << "Sending Client Security Context Reponse back to controller";
     send_cmdu(cmdu_tx);
