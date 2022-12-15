@@ -383,6 +383,8 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
 
         db->init_data_model(amb_dm_obj);
 
+        // Read the backhole interface from the configuration file.
+        // Need to fix
         if (!beerocks::bpl::bpl_cfg_get_backhaul_wire_iface(db->ethernet.wan.iface_name)) {
             LOG(ERROR) << "Failed reading 'backhaul_wire_iface'";
             return false;
