@@ -540,6 +540,12 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
 
         master_conf.rcpi_steering_threshold = beerocks::bpl::DEFAULT_RCPI_STEERING_THRESHOLD;
     }
+
+    if (!beerocks::bpl::cfg_get_daisy_chaining_disabled(master_conf.daisy_chaining_disabled)) {
+        LOG(DEBUG) << "Failed to read daisy_chaining_disabled, setting to default value: "
+                   << beerocks::bpl::DEFAULT_DAISY_CHAINING_DISABLED;
+        master_conf.daisy_chaining_disabled = beerocks::bpl::DEFAULT_DAISY_CHAINING_DISABLED;
+    }
 }
 
 /**
@@ -604,6 +610,9 @@ fill_nbapi_config_from_master_conf(std::shared_ptr<beerocks::nbapi::Ambiorix> am
 
     ret_val &= ambiorix_datamodel->set(configuration_path, "Client_11kRoaming",
                                        master_conf.load_client_11k_roaming);
+
+    ret_val &= ambiorix_datamodel->set(configuration_path, "DaisyChainingDisabled",
+                                       master_conf.daisy_chaining_disabled);
 
     return ret_val;
 }
