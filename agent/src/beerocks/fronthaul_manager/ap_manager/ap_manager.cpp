@@ -856,14 +856,37 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
 
         std::string ifname = get_vbss_interface_name(virtual_bss_destruction_tlv->bssid());
 
+        if (virtual_bss_destruction_tlv->disassociate_client()) {
+            LOG(DEBUG) << "Disassociating clients from BSS '"
+                       << virtual_bss_destruction_tlv->bssid() << "'";
+            auto vap_id = ap_wlan_hal->get_vap_id_with_mac(
+                tlvf::mac_to_string(virtual_bss_destruction_tlv->bssid()));
+            if (vap_id == beerocks::IFACE_ID_INVALID) {
+                LOG(ERROR) << "Could not find a VAP with BSSID '"
+                           << virtual_bss_destruction_tlv->bssid() << "'";
+                send_virtual_bss_response(virtual_bss_destruction_tlv->radio_uid(),
+                                          virtual_bss_destruction_tlv->bssid(), false);
+                return;
+            }
+
+            // There is no station MAC included in the virtual BSS destruction TLV, and
+            // there is no convenient way to get a list of the stations connected to a VAP,
+            // so nuke all associated stations (since the BSS will subsequently be removed anyway).
+            if (!ap_wlan_hal->sta_disassoc(vap_id, beerocks::net::network_utils::WILD_MAC_STRING)) {
+                LOG(ERROR) << "Could not disassociate clients from BSS '"
+                           << virtual_bss_destruction_tlv->bssid() << "'";
+                send_virtual_bss_response(virtual_bss_destruction_tlv->radio_uid(),
+                                          virtual_bss_destruction_tlv->bssid(), false);
+                return;
+            }
+        }
+
         if (!ap_wlan_hal->remove_bss(ifname)) {
             LOG(ERROR) << "Failed to remove the BSS!";
             send_virtual_bss_response(virtual_bss_destruction_tlv->radio_uid(),
                                       virtual_bss_destruction_tlv->bssid(), false);
             return;
         }
-
-        // TODO: PPM-2350: add support for disassociating the client
 
         // refresh the vaps info.
         handle_aps_update_list();
