@@ -183,7 +183,7 @@ bool prplmesh_cli::print_radio(std::string device_path)
 bool prplmesh_cli::print_device_info(std::string agent_mac, std::string skip_mac)
 {
     std::string backhaul_device_id;
-    std::string device_ht_path     = "Device.WiFi.DataElements.Network.Device.*.";
+    std::string device_ht_path     = CONTROLLER_ROOT_DM ".Network.Device.*.";
     const amxc_htable_t *ht_device = m_amx_client->get_htable_object(device_ht_path);
 
     amxc_htable_iterate(device_it, ht_device)
@@ -234,7 +234,7 @@ bool prplmesh_cli::prpl_conn_map()
 
     std::cout << "Start conn map" << std::endl;
 
-    std::string network_path = "Device.WiFi.DataElements.Network.";
+    std::string network_path = CONTROLLER_ROOT_DM ".Network.";
     amxc_var_t *network_obj  = m_amx_client->get_object(network_path);
     conn_map.controller_id   = GET_CHAR(network_obj, "ControllerID");
     conn_map.device_number   = GET_UINT32(network_obj, "DeviceNumberOfEntries");

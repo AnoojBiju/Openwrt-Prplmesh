@@ -9,6 +9,8 @@
 #ifndef PRPLMESH_AMX_CLIENT_H
 #define PRPLMESH_AMX_CLIENT_H
 
+#include "config.h"
+
 #include <amxc/amxc.h>
 #include <amxp/amxp.h>
 

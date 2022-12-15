@@ -4653,7 +4653,7 @@ bool db::notify_disconnection(const std::string &client_mac, const uint16_t reas
     }
 
     std::string path_to_disassoc_event_data =
-        "Device.WiFi.DataElements.DisassociationEvent.DisassociationEventData";
+        CONTROLLER_ROOT_DM ".DisassociationEvent.DisassociationEventData";
 
     if (!dm_check_objects_limit(m_disassoc_events, MAX_EVENT_HISTORY_SIZE)) {
         return false;
@@ -5386,8 +5386,7 @@ void db::disable_periodic_link_metrics_requests()
     beerocks::bpl::cfg_set_link_metrics_request_interval(
         config.link_metrics_request_interval_seconds);
 
-    m_ambiorix_datamodel->set("Device.WiFi.DataElements.Configuration",
-                              "LinkMetricsRequestInterval",
+    m_ambiorix_datamodel->set(CONTROLLER_ROOT_DM ".Configuration", "LinkMetricsRequestInterval",
                               config.link_metrics_request_interval_seconds.count());
 }
 
@@ -6174,11 +6173,10 @@ std::string db::dm_add_steer_event()
         return {};
     }
 
-    std::string event_path =
-        m_ambiorix_datamodel->add_instance("Device.WiFi.DataElements.SteerEvent");
+    std::string event_path = m_ambiorix_datamodel->add_instance(CONTROLLER_ROOT_DM ".SteerEvent");
 
     if (event_path.empty() && NBAPI_ON) {
-        LOG(ERROR) << "Failed to add instance Device.WiFi.DataElements.SteerEvent";
+        LOG(ERROR) << "Failed to add instance " CONTROLLER_ROOT_DM ".SteerEvent";
         return {};
     }
     m_steer_events.push(event_path);
@@ -6215,15 +6213,13 @@ bool db::dm_restore_steering_summary_stats(Station &station)
 
 void db::dm_increment_steer_summary_stats(const std::string &param_name)
 {
-    dm_uint64_param_one_up("Device.WiFi.DataElements.Network.MultiAPSteeringSummaryStats",
-                           param_name);
+    dm_uint64_param_one_up(CONTROLLER_ROOT_DM ".Network.MultiAPSteeringSummaryStats", param_name);
 }
 
 bool db::dm_add_failed_connection_event(const sMacAddr &bssid, const sMacAddr &sta_mac,
                                         const uint16_t reason_code, const uint16_t status_code)
 {
-    std::string event_path =
-        "Device.WiFi.DataElements.FailedConnectionEvent.FailedConnectionEventData";
+    std::string event_path = CONTROLLER_ROOT_DM ".FailedConnectionEvent.FailedConnectionEventData";
 
     event_path = m_ambiorix_datamodel->add_instance(event_path);
 
@@ -6245,7 +6241,7 @@ std::string db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &
                                          const std::string &assoc_ts)
 {
     std::string path_association_event =
-        "Device.WiFi.DataElements.AssociationEvent.AssociationEventData";
+        CONTROLLER_ROOT_DM ".AssociationEvent.AssociationEventData";
 
     if (!dm_check_objects_limit(m_assoc_events, MAX_EVENT_HISTORY_SIZE)) {
         return {};
@@ -6288,14 +6284,13 @@ std::string db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &
 std::string db::dm_add_device_element(const sMacAddr &mac)
 {
     auto index = m_ambiorix_datamodel->get_instance_index(
-        "Device.WiFi.DataElements.Network.Device.[ID == '%s'].", tlvf::mac_to_string(mac));
+        CONTROLLER_ROOT_DM ".Network.Device.[ID == '%s'].", tlvf::mac_to_string(mac));
     if (index) {
         LOG(WARNING) << "Device with ID: " << mac << " exists in the data model!";
         return {};
     }
 
-    auto device_path =
-        m_ambiorix_datamodel->add_instance("Device.WiFi.DataElements.Network.Device");
+    auto device_path = m_ambiorix_datamodel->add_instance(CONTROLLER_ROOT_DM ".Network.Device");
     if (device_path.empty()) {
         LOG(ERROR) << "Failed to add instance " << device_path << ". Device mac: " << mac;
         return {};

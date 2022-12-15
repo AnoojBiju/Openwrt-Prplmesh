@@ -69,7 +69,7 @@ public:
     std::shared_ptr<beerocks::prplmesh_amx::AmxClient> m_amx_client;
 
     typedef struct conn_map_t {
-        std::string device_ht_path = "Device.WiFi.DataElements.Network.Device.*.";
+        std::string device_ht_path = CONTROLLER_ROOT_DM ".Network.Device.*.";
         uint32_t device_number;
         std::string controller_id;
         std::string bridge_ip_v4;
