@@ -208,8 +208,8 @@ bool vbss_actions::destroy_vbss(const sClientVBSS &client_vbss, const bool shoul
                    << "\"";
         return false;
     }
-    if (son_actions::send_cmdu_to_agent(agent->al_mac, cmdu_tx, database,
-                                        tlvf::mac_to_string(client_vbss.current_connected_ruid))) {
+    if (!son_actions::send_cmdu_to_agent(agent->al_mac, cmdu_tx, database,
+                                         tlvf::mac_to_string(client_vbss.current_connected_ruid))) {
         LOG(ERROR) << "Request to destroy VBSS failed to send!";
         return false;
     }
