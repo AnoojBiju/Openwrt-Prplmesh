@@ -128,6 +128,15 @@ public:
     bool set_current_time(const std::string &path_to_object,
                           const std::string &param = "TimeStamp") override;
 
+    /**
+     * @brief Set field 'TimeStamp'  in RFC 3339 format.
+     *
+     * @param path_to_object Path to NBAPI object which has parameter object 'TimeStamp'
+     * @param param time_stamp specific time_stamp.
+     * @return True if date and time successfully set, false otherwise.
+     */
+    bool set_time(const std::string &path_to_object, const std::string &time_stamp) override;
+
     bool remove_all_instances(const std::string &relative_path) override;
 
     bool add_optional_subobject(const std::string &path_to_obj,

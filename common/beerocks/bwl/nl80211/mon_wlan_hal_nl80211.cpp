@@ -695,6 +695,14 @@ bool mon_wlan_hal_nl80211::set_estimated_service_parameters(uint8_t *esp_info_fi
     return true;
 }
 
+bool mon_wlan_hal_nl80211::sta_unassoc_rssi_measurement(
+    std::unordered_map<std::string, uint8_t> &new_list)
+{
+    new_list.clear();
+    LOG(DEBUG) << __func__ << " - NOT IMPLEMENTED";
+    return true;
+}
+
 } // namespace nl80211
 
 std::shared_ptr<mon_wlan_hal> mon_wlan_hal_create(const std::string &iface_name,

@@ -33,6 +33,8 @@
 #include <tlvf/wfa_map/tlvProfile2RadioMetrics.h>
 #include <tlvf/wfa_map/tlvProfile2TrafficSeparationPolicy.h>
 #include <tlvf/wfa_map/tlvStaMacAddressType.h>
+#include <tlvf/wfa_map/tlvUnassociatedStaLinkMetricsQuery.h>
+#include <tlvf/wfa_map/tlvUnassociatedStaLinkMetricsResponse.h>
 
 #include "../gate/1905_beacon_query_to_vs.h"
 
@@ -64,6 +66,10 @@ bool LinkMetricsCollectionTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx,
     }
     case ieee1905_1::eMessageType::ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE: {
         handle_associated_sta_link_metrics_query(cmdu_rx, src_mac);
+        break;
+    }
+    case ieee1905_1::eMessageType::UNASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE: {
+        handle_unassociated_sta_link_metrics_query(cmdu_rx, src_mac, dst_mac);
         break;
     }
     case ieee1905_1::eMessageType::AP_METRICS_QUERY_MESSAGE: {
@@ -493,6 +499,133 @@ void LinkMetricsCollectionTask::handle_associated_sta_link_metrics_query(
     m_btl_ctx.send_cmdu(monitor_fd, m_cmdu_tx);
 }
 
+void LinkMetricsCollectionTask::handle_unassociated_sta_link_metrics_query(
+    ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac, const sMacAddr &agent_mac)
+{
+    const auto message_id = cmdu_rx.getMessageId();
+
+    LOG(DEBUG) << "Received Unassociated STA Link Metrics Query, mid=" << message_id;
+
+    const auto unassociated_sta_link_metrics_query_tlv =
+        cmdu_rx.getClass<wfa_map::tlvUnassociatedStaLinkMetricsQuery>();
+    if (!unassociated_sta_link_metrics_query_tlv) {
+        LOG(ERROR) << "Unassociated STA Link Metrics Query message did not contain an Unassociated "
+                      "STA Link Metrics Query TLV!";
+        return;
+    }
+
+    auto db = AgentDB::get();
+
+    //Now map stations to radios
+    std::unordered_map<sMacAddr, std::unordered_map<uint8_t, std::list<sMacAddr>>>
+        map_stations_per_radio; //sMacAddr : mac_address of the radio
+                                //uint8_t channel
+                                //std::list<sMacAddr>  list of un_stations
+
+    //make sure we insert all radios, even with if no stations are monitored on them
+    //reason: a query with no stations means remove all monitored stations, if any
+    for (auto &radio : db->get_radios_list()) {
+        map_stations_per_radio.insert(std::make_pair(
+            radio->front.iface_mac, std::unordered_map<uint8_t, std::list<sMacAddr>>()));
+    }
+
+    bool station_connected(false); //if a station is already connected to the agent
+    for (size_t count = 0; count < unassociated_sta_link_metrics_query_tlv->channel_list_length();
+         count++) {
+        auto &one_channel_params =
+            std::get<1>(unassociated_sta_link_metrics_query_tlv->channel_list(
+                count)); //1 channel that might contains a list of un_stations
+        auto channel = one_channel_params.channel_number();
+        for (auto &radio : db->get_radios_list()) {
+            //The telemtry does not contain any reference to the radio, thus the need to detect it using channel and operating_class
+            if (radio->channels_list.find(channel) != radio->channels_list.end()) {
+                auto &map_stations_per_channel = map_stations_per_radio[radio->front.iface_mac];
+                if (map_stations_per_channel.find(channel) == map_stations_per_channel.end()) {
+                    map_stations_per_channel.insert(std::make_pair(channel, std::list<sMacAddr>()));
+                }
+
+                //now append the received list of un_stations mac_addresses to the telemtry
+                for (size_t internal_count = 0;
+                     internal_count < one_channel_params.sta_list_length(); internal_count++) {
+                    auto &un_station_mac = std::get<1>(one_channel_params.sta_list(internal_count));
+                    if (radio->associated_clients.find(un_station_mac) !=
+                        radio->associated_clients.end()) {
+                        station_connected = true;
+                        /*
+                    If any of the STAs specified in the Unassociated STA Link Metrics Query message is associated with
+                    any BSS operated by the Multi-AP Agent (an error scenario), for each of those associated STAs, the Multi-AP Agent shall
+                    include an Error Code TLV with the reason code field set to 0x01 and the STA MAC address field included per section
+                    17.2.36 in the 1905 Ack message*/
+                        auto error_code_tlv = m_cmdu_tx.addClass<wfa_map::tlvErrorCode>();
+                        if (!error_code_tlv) {
+                            LOG(ERROR) << "addClass wfa_map::tlvErrorCode has failed";
+                            return;
+                        }
+
+                        error_code_tlv->reason_code() =
+                            wfa_map::tlvErrorCode::STA_ASSOCIATED_WITH_A_BSS_OPERATED_BY_THE_AGENT;
+
+                        error_code_tlv->sta_mac() = un_station_mac;
+                        // send the ack containing the error
+                        m_btl_ctx.send_cmdu_to_controller({}, m_cmdu_tx);
+                        LOG(WARNING)
+                            << " Station with mac_addr: " << tlvf::mac_to_string(un_station_mac)
+                            << " is already connected to the radio with mac_addr: "
+                            << tlvf::mac_to_string(radio->front.iface_mac)
+                            << " --> it will not get monitored as non_assocated station!";
+                    }
+                    map_stations_per_channel[channel].emplace_back(un_station_mac);
+                }
+            }
+        }
+    }
+    if (!station_connected) { // if station is connected, an acknowledgment including an error message is already sent
+        const auto mid      = cmdu_rx.getMessageId();
+        auto cmdu_tx_header = m_cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE);
+        if (!cmdu_tx_header) {
+            LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
+            return;
+        }
+    }
+
+    //send differents telemeries for each radio
+    for (auto &radio : map_stations_per_radio) {
+        size_t total_number_stations(0);
+        for (auto &channels_map : radio.second) {
+            total_number_stations += channels_map.second.size();
+        }
+
+        //Send a request to the monitor , even if it contains 0 stations. As that means remove all stations
+        auto request_out = message_com::create_vs_message<
+            beerocks_message::cACTION_MONITOR_CLIENT_UNASSOCIATED_STA_LINK_METRIC_REQUEST>(
+            m_cmdu_tx, message_id);
+        if (request_out == nullptr) {
+            LOG(ERROR)
+                << "Failed building cACTION_MONITOR_CLIENT_UNASSOCIATED_STA_LINK_METRIC_REQUEST "
+                   "message!";
+            return;
+        }
+        if (!request_out->alloc_stations_list(total_number_stations)) {
+            LOG(ERROR) << "tx_buffer overflow! elements_to_allocate=" << total_number_stations;
+            continue;
+        }
+        //now fill in data for all stations for this specific radio
+        size_t count(0);
+        for (auto &stations_per_channel : radio.second) {
+            for (auto &single_station : stations_per_channel.second) {
+                std::get<1>(request_out->stations_list(count)).sta_mac = single_station;
+                std::get<1>(request_out->stations_list(count)).channel = stations_per_channel.first;
+                count++;
+            }
+        }
+
+        //send a different message to each monitor containig only its specific un_stations's list
+        auto monitor_fd =
+            m_btl_ctx.get_monitor_fd(db->get_radio_by_mac(radio.first)->front.iface_name);
+        m_btl_ctx.send_cmdu(monitor_fd, m_cmdu_tx);
+    }
+}
+
 void LinkMetricsCollectionTask::handle_ap_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                         const sMacAddr &src_mac)
 {
@@ -732,7 +865,6 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
                 break;
             }
         }
-
         auto mac = std::find_if(
             ap_metric_queries_map->second.begin(), ap_metric_queries_map->second.end(),
             [&](sApMetricsQuery const &query) {

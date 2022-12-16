@@ -14,11 +14,11 @@ tlvUnassociatedStaLinkMetricsQuery:
     _type: uint8_t
     _length_var: True
   channel_list:
-    _type: sChannelPrameters
+    _type: cChannelParameters
     _length: [ channel_list_length ]
 
-sChannelPrameters:
-  _type: struct
+cChannelParameters:
+  _type: class
   channel_number: uint8_t
   sta_list_length:
     _type: uint8_t

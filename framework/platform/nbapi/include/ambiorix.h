@@ -117,6 +117,7 @@ public:
      */
     virtual bool remove_optional_subobject(const std::string &path_to_obj,
                                            const std::string &subobject_name) = 0;
+
     /**
      * @brief Set current data and time in RFC 3339 format.
      *
@@ -126,6 +127,14 @@ public:
      */
     virtual bool set_current_time(const std::string &path_to_object,
                                   const std::string &param = "TimeStamp") = 0;
+    /**
+     * @brief Set field 'TimeStamp'  in RFC 3339 format.
+     *
+     * @param path_to_object Path to NBAPI object which has parameter object 'TimeStamp'
+     * @param param time_stamp specific time_stamp, by default, it will use the actual time.
+     * @return True if date and time successfully set, false otherwise.
+     */
+    virtual bool set_time(const std::string &path_to_object, const std::string &time_stamp) = 0;
 
     virtual bool read_param(const std::string &obj_path, const std::string &param_name,
                             uint64_t *param_val) = 0;

@@ -235,15 +235,16 @@ bool agent_monitoring_task::start_task(const sMacAddr &src_mac, std::shared_ptr<
 
         // trigger channel selection
         if (!cmdu_tx.create(0, ieee1905_1::eMessageType::CHANNEL_PREFERENCE_QUERY_MESSAGE)) {
-            LOG(ERROR) << "Failed building message!";
+            LOG(ERROR) << "Failed building message CHANNEL_PREFERENCE_QUERY_MESSAGE!";
             return false;
         }
         son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
     }
+
     if (!database.setting_certification_mode()) {
         // trigger AP capability query
         if (!cmdu_tx.create(0, ieee1905_1::eMessageType::AP_CAPABILITY_QUERY_MESSAGE)) {
-            LOG(ERROR) << "Failed building message!";
+            LOG(ERROR) << "Failed building message AP_CAPABILITY_QUERY_MESSAGE!";
             return false;
         }
         son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);

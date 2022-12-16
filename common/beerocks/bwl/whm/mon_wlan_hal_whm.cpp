@@ -8,6 +8,7 @@
 
 #include "mon_wlan_hal_whm.h"
 
+#include <amxd/amxd_object.h>
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
 
@@ -292,6 +293,124 @@ bool mon_wlan_hal_whm::set_estimated_service_parameters(uint8_t *esp_info_field)
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
     return true;
 }
+
+/*  will get the unassociated stations stats from Ambirorix
+*/
+bool mon_wlan_hal_whm::sta_unassoc_rssi_measurement(
+    std::unordered_map<std::string, uint8_t> &new_list)
+{
+    /*
+        Example of NonAssociatedDevice object:
+        WiFi.Radio.wifi0.NaStaMonitor.NonAssociatedDevice
+        WiFi.Radio.wifi0.NaStaMonitor.NonAssociatedDevice.{i}.
+        WiFi.Radio.wifi0.NaStaMonitor.NonAssociatedDevice.{i}.MACAddress=AA:BB:CC:DD:EE:FF
+        WiFi.Radio.wifi0.NaStaMonitor.NonAssociatedDevice.{i}.SignalStrength=0
+        WiFi.Radio.wifi0.NaStaMonitor.NonAssociatedDevice.{i}.TimeStamp=0001-01-01T00:00:00Z
+    */
+    std::vector<sUnassociatedStationStats> stats;
+
+    std::list<std::string> amx_un_stations_to_be_removed;
+
+    std::string non_associated_device_path = m_radio_path + "NaStaMonitor.NonAssociatedDevice.";
+
+    auto non_ass_devices =
+        m_ambiorix_cl->get_object_multi<AmbiorixVariantMapSmartPtr>(non_associated_device_path);
+    if (!non_ass_devices) {
+        return false;
+    }
+
+    //Lets iterate through all instances
+    for (auto &non_ass_device : *non_ass_devices) {
+        uint8_t signal_strength(0);
+        uint8_t channel(0);
+        uint8_t operating_class(0);
+        std::string time_stamp_str;
+        std::string mac_address_amx;
+        non_ass_device.second.read_child<>(mac_address_amx, "MACAddress");
+        if (mac_address_amx.empty()) {
+            continue;
+        }
+        non_ass_device.second.read_child<>(signal_strength, "SignalStrength");
+        non_ass_device.second.read_child<>(channel, "Channel");
+        non_ass_device.second.read_child<>(operating_class, "OperatingClass");
+        non_ass_device.second.read_child<>(time_stamp_str, "TimeStamp");
+
+        amxc_ts_t time;
+        memset(&time, 0, sizeof(amxc_ts_t));
+        amxc_ts_parse(&time, time_stamp_str.c_str(), time_stamp_str.size());
+
+        if (new_list.find(mac_address_amx) != new_list.end()) {
+            //NonAssociatedDevice exists -->get the result and update the data
+            sUnassociatedStationStats new_stat = {
+                tlvf::mac_from_string(mac_address_amx),
+                signal_strength,
+                channel,
+                operating_class,
+                (uint32_t)time.sec,
+            };
+            stats.push_back(new_stat);
+            LOG(DEBUG) << " read unassociated station stats for mac_address: " << mac_address_amx
+                       << " SignalStrength: " << signal_strength << " channel: " << channel
+                       << " operating_class: " << operating_class
+                       << " TimeStamp(string): " << time_stamp_str
+                       << " and TimeStamp(seconds): " << (uint32_t)time.sec;
+            new_list.erase(mac_address_amx); // consumed!
+        } else { // -->controller is not interested on it any more--> remove it from the dm
+            amx_un_stations_to_be_removed.push_back(mac_address_amx);
+        }
+    }
+
+    std::string nasta_monitor_path = m_radio_path + "NaStaMonitor";
+    //Now add the newly added unassociated stations
+    for (auto &new_station : new_list) {
+        std::string mac_address(new_station.first);
+
+        AmbiorixVariant result;
+        AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
+        args.add_child<>("MACAddress", mac_address);
+        if (!m_ambiorix_cl->call(nasta_monitor_path, "createNonAssociatedDevice", args, result)) {
+            LOG(ERROR) << " remote function call createNonAssociatedDevice for object "
+                       << nasta_monitor_path << " Failed!";
+            continue;
+        }
+
+        LOG(TRACE) << "Non Associated Station with MACAddress: " << mac_address << "added to "
+                   << non_associated_device_path;
+    }
+
+    // Now lets remove all stations the controller do not want them anymore
+    for (auto &station_to_remove : amx_un_stations_to_be_removed) {
+        AmbiorixVariant result;
+        AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
+        args.add_child<>("MACAddress", station_to_remove);
+        if (!m_ambiorix_cl->call(nasta_monitor_path, "deleteNonAssociatedDevice", args, result)) {
+            LOG(ERROR) << " remote function call deleteNonAssociatedDevice"
+                       << " for object " << nasta_monitor_path
+                       << " and  MACAddress: " << station_to_remove << " Failed!!";
+            continue;
+        } else {
+            LOG(TRACE) << "Successfully removed unassociated station with mac: "
+                       << station_to_remove
+                       << " and path: " << nasta_monitor_path + station_to_remove;
+        }
+    }
+    sUnassociatedStationsStats stats_out{stats};
+    auto msg_buff = ALLOC_SMART_BUFFER(sizeof(stats_out));
+    if (!msg_buff) {
+        LOG(FATAL) << "Memory allocation failed for "
+                      "sUnassociatedStationsStats!";
+        return false;
+    }
+    auto msg = reinterpret_cast<sUnassociatedStationsStats *>(msg_buff.get());
+    memset(msg_buff.get(), 0, sizeof(stats_out));
+    std::copy(stats_out.un_stations_stats.begin(), stats_out.un_stations_stats.end(),
+              back_inserter(msg->un_stations_stats));
+
+    event_queue_push(Event::Unassociation_Stations_Stats,
+                     msg_buff); // send message internally the monitor
+
+    return true;
+} // namespace whm
 
 } // namespace whm
 

@@ -1943,6 +1943,14 @@ bool mon_wlan_hal_dwpal::set_estimated_service_parameters(uint8_t *esp_info_fiel
     return true;
 }
 
+bool mon_wlan_hal_dwpal::sta_unassoc_rssi_measurement(
+    std::unordered_map<std::string, uint8_t> &new_list)
+{
+    new_list.clear();
+    LOG(DEBUG) << __func__ << " - NOT IMPLEMENTED";
+    return true;
+}
+
 } // namespace dwpal
 
 std::shared_ptr<mon_wlan_hal> mon_wlan_hal_create(const std::string &iface_name,

@@ -43,7 +43,8 @@ public:
 
         Interface_Connected_OK,
         Interface_Reconnected_OK,
-        Interface_Disconnected
+        Interface_Disconnected,
+        Unassociation_Stations_Stats
     };
 
     // Public methods:
@@ -118,6 +119,17 @@ public:
     virtual bool pre_generate_connected_clients_events() = 0;
 
     virtual bool set_estimated_service_parameters(uint8_t *esp_info_field) = 0;
+
+    /**
+     * @brief Measure the RSSI of unassociated stations in the new_list
+     * The result of the measurement should be sent as an internal event.
+     * 
+     * @param [in] map<mac,channel> of unassociated stations to be monitored, This map is all the un_stations being monitored on this interface
+     *
+     * @return true on success or false on error.
+     */
+    virtual bool
+    sta_unassoc_rssi_measurement(std::unordered_map<std::string, uint8_t> &new_list) = 0;
 };
 
 // mon HAL factory types

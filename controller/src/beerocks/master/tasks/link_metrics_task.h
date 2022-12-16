@@ -38,6 +38,10 @@ public:
     bool handle_cmdu_1905_link_metric_response(const sMacAddr &src_mac,
                                                ieee1905_1::CmduMessageRx &cmdu_rx);
 
+    bool
+    handle_cmdu_1905_unassociated_station_link_metric_response(const sMacAddr &src_mac,
+                                                               ieee1905_1::CmduMessageRx &cmdu_rx);
+
     /**
      * @brief Method is used only for certification so update the certification cmdu
      *
