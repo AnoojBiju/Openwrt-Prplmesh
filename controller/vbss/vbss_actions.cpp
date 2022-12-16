@@ -145,9 +145,11 @@ bool vbss_actions::create_vbss(const sClientVBSS &client_vbss, const sMacAddr &d
         }
 
         vbss_creation_req->set_ptk(client_sec_ctx->ptk, client_sec_ctx->key_length);
-        vbss_creation_req->tx_packet_num() = client_sec_ctx->tx_packet_num;
+        vbss_creation_req->set_tx_packet_num(client_sec_ctx->tx_packet_num.data(),
+                                             client_sec_ctx->tx_packet_num.size());
         vbss_creation_req->set_gtk(client_sec_ctx->gtk, client_sec_ctx->group_key_length);
-        vbss_creation_req->group_tx_packet_num() = client_sec_ctx->group_tx_packet_num;
+        vbss_creation_req->set_group_tx_packet_num(client_sec_ctx->group_tx_packet_num.data(),
+                                                   client_sec_ctx->group_tx_packet_num.size());
 
         auto sta_association_frame =
             database.get_association_frame_by_sta_mac(client_vbss.client_mac);
