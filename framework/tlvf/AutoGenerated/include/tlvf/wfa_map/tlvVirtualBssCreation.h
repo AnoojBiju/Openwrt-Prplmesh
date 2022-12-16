@@ -46,6 +46,7 @@ class VirtualBssCreation : public BaseClass
         bool set_ssid(const std::string& str);
         bool set_ssid(const char buffer[], size_t size);
         bool alloc_ssid(size_t count = 1);
+        uint16_t& authentication_type();
         //0 indicates that the WPA2 or SAE Pass is not present
         uint16_t& pass_length();
         std::string pass_str();
@@ -53,6 +54,9 @@ class VirtualBssCreation : public BaseClass
         bool set_pass(const std::string& str);
         bool set_pass(const char buffer[], size_t size);
         bool alloc_pass(size_t count = 1);
+        uint8_t* encryption_oui(size_t idx = 0);
+        bool set_encryption_oui(const void* buffer, size_t size);
+        uint16_t& encryption_suite_type();
         //0 indicates that DPP Connector is not present
         uint16_t& dpp_connector_length();
         std::string dpp_connector_str();
@@ -91,9 +95,13 @@ class VirtualBssCreation : public BaseClass
         char* m_ssid = nullptr;
         size_t m_ssid_idx__ = 0;
         int m_lock_order_counter__ = 0;
+        uint16_t* m_authentication_type = nullptr;
         uint16_t* m_pass_length = nullptr;
         char* m_pass = nullptr;
         size_t m_pass_idx__ = 0;
+        uint8_t* m_encryption_oui = nullptr;
+        size_t m_encryption_oui_idx__ = 0;
+        uint16_t* m_encryption_suite_type = nullptr;
         uint16_t* m_dpp_connector_length = nullptr;
         char* m_dpp_connector = nullptr;
         size_t m_dpp_connector_idx__ = 0;
