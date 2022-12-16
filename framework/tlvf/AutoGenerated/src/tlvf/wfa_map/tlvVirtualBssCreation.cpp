@@ -99,8 +99,11 @@ bool VirtualBssCreation::alloc_ssid(size_t count) {
         size_t move_length = getBuffRemainingBytes(src) - len;
         std::copy_n(src, move_length, dst);
     }
+    m_authentication_type = (uint16_t *)((uint8_t *)(m_authentication_type) + len);
     m_pass_length = (uint16_t *)((uint8_t *)(m_pass_length) + len);
     m_pass = (char *)((uint8_t *)(m_pass) + len);
+    m_encryption_oui = (uint8_t *)((uint8_t *)(m_encryption_oui) + len);
+    m_encryption_suite_type = (uint16_t *)((uint8_t *)(m_encryption_suite_type) + len);
     m_dpp_connector_length = (uint16_t *)((uint8_t *)(m_dpp_connector_length) + len);
     m_dpp_connector = (char *)((uint8_t *)(m_dpp_connector) + len);
     m_client_mac = (sMacAddr *)((uint8_t *)(m_client_mac) + len);
@@ -119,6 +122,10 @@ bool VirtualBssCreation::alloc_ssid(size_t count) {
     }
     if(m_length){ (*m_length) += len; }
     return true;
+}
+
+uint16_t& VirtualBssCreation::authentication_type() {
+    return (uint16_t&)(*m_authentication_type);
 }
 
 uint16_t& VirtualBssCreation::pass_length() {
@@ -175,6 +182,8 @@ bool VirtualBssCreation::alloc_pass(size_t count) {
         size_t move_length = getBuffRemainingBytes(src) - len;
         std::copy_n(src, move_length, dst);
     }
+    m_encryption_oui = (uint8_t *)((uint8_t *)(m_encryption_oui) + len);
+    m_encryption_suite_type = (uint16_t *)((uint8_t *)(m_encryption_suite_type) + len);
     m_dpp_connector_length = (uint16_t *)((uint8_t *)(m_dpp_connector_length) + len);
     m_dpp_connector = (char *)((uint8_t *)(m_dpp_connector) + len);
     m_client_mac = (sMacAddr *)((uint8_t *)(m_client_mac) + len);
@@ -193,6 +202,30 @@ bool VirtualBssCreation::alloc_pass(size_t count) {
     }
     if(m_length){ (*m_length) += len; }
     return true;
+}
+
+uint8_t* VirtualBssCreation::encryption_oui(size_t idx) {
+    if ( (m_encryption_oui_idx__ == 0) || (m_encryption_oui_idx__ <= idx) ) {
+        TLVF_LOG(ERROR) << "Requested index is greater than the number of available entries";
+        return nullptr;
+    }
+    return &(m_encryption_oui[idx]);
+}
+
+bool VirtualBssCreation::set_encryption_oui(const void* buffer, size_t size) {
+    if (buffer == nullptr) {
+        TLVF_LOG(WARNING) << "set_encryption_oui received a null pointer.";
+        return false;
+    }
+    if (size > 3) {
+        TLVF_LOG(ERROR) << "Received buffer size is smaller than buffer length";
+        return false;
+    }
+    std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_encryption_oui);
+    return true;
+}
+uint16_t& VirtualBssCreation::encryption_suite_type() {
+    return (uint16_t&)(*m_encryption_suite_type);
 }
 
 uint16_t& VirtualBssCreation::dpp_connector_length() {
@@ -399,7 +432,9 @@ void VirtualBssCreation::class_swap()
     m_radio_uid->struct_swap();
     m_bssid->struct_swap();
     tlvf_swap(16, reinterpret_cast<uint8_t*>(m_ssid_length));
+    tlvf_swap(16, reinterpret_cast<uint8_t*>(m_authentication_type));
     tlvf_swap(16, reinterpret_cast<uint8_t*>(m_pass_length));
+    tlvf_swap(16, reinterpret_cast<uint8_t*>(m_encryption_suite_type));
     tlvf_swap(16, reinterpret_cast<uint8_t*>(m_dpp_connector_length));
     m_client_mac->struct_swap();
     tlvf_swap(16, reinterpret_cast<uint8_t*>(m_key_length));
@@ -445,7 +480,10 @@ size_t VirtualBssCreation::get_initial_size()
     class_size += sizeof(sMacAddr); // radio_uid
     class_size += sizeof(sMacAddr); // bssid
     class_size += sizeof(uint16_t); // ssid_length
+    class_size += sizeof(uint16_t); // authentication_type
     class_size += sizeof(uint16_t); // pass_length
+    class_size += 3 * sizeof(uint8_t); // encryption_oui
+    class_size += sizeof(uint16_t); // encryption_suite_type
     class_size += sizeof(uint16_t); // dpp_connector_length
     class_size += sizeof(sMacAddr); // client_mac
     class_size += sizeof(uint8_t); // client_assoc
@@ -510,6 +548,12 @@ bool VirtualBssCreation::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (ssid_length) << ") Failed!";
         return false;
     }
+    m_authentication_type = reinterpret_cast<uint16_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint16_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
+        return false;
+    }
+    if(m_length && !m_parse__){ (*m_length) += sizeof(uint16_t); }
     m_pass_length = reinterpret_cast<uint16_t*>(m_buff_ptr__);
     if (!m_parse__) *m_pass_length = 0;
     if (!buffPtrIncrementSafe(sizeof(uint16_t))) {
@@ -525,6 +569,21 @@ bool VirtualBssCreation::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (pass_length) << ") Failed!";
         return false;
     }
+    m_encryption_oui = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint8_t) * (3))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) * (3) << ") Failed!";
+        return false;
+    }
+    m_encryption_oui_idx__  = 3;
+    if (!m_parse__) {
+        if (m_length) { (*m_length) += (sizeof(uint8_t) * 3); }
+    }
+    m_encryption_suite_type = reinterpret_cast<uint16_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint16_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
+        return false;
+    }
+    if(m_length && !m_parse__){ (*m_length) += sizeof(uint16_t); }
     m_dpp_connector_length = reinterpret_cast<uint16_t*>(m_buff_ptr__);
     if (!m_parse__) *m_dpp_connector_length = 0;
     if (!buffPtrIncrementSafe(sizeof(uint16_t))) {
