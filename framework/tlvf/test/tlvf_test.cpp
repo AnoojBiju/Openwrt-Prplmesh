@@ -1936,10 +1936,16 @@ int test_virtual_bss_creation()
         0x00, 0x08,
         // SSID ("prplmesh")
         0x70, 0x72, 0x70, 0x6c, 0x6d, 0x65, 0x73, 0x68,
+        // Authentication type
+        0x00, 0x01,
         // Pass length
         0x00, 0x04,
         // Pass ("pass")
         0x70, 0x61, 0x73, 0x73,
+        // Encryption OUI
+        0x00, 0x00, 0x01,
+        // Encryption Type
+        0x00, 0x01,
         // DPP Connector length
         0x00, 0x00,
         // Client MAC
@@ -1974,8 +1980,17 @@ int test_virtual_bss_creation()
                                     tlvf::mac_from_string("07:08:09:0a:0b:0c"), "bssid");
     errors += check_field<uint16_t>(virtual_bss_creation.ssid_length(), 8, "ssid_length");
     errors += check_field<std::string>(virtual_bss_creation.ssid_str(), "prplmesh", "ssid");
+    errors +=
+        check_field<uint16_t>(virtual_bss_creation.authentication_type(), 1, "authentication_type");
     errors += check_field<uint16_t>(virtual_bss_creation.pass_length(), 4, "pass_length");
     errors += check_field<std::string>(virtual_bss_creation.pass(), "pass", "pass");
+    std::vector<uint8_t> expected_encryption_oui = {0x00, 0x00, 0x01};
+    std::vector<uint8_t> parsed_encryption_oui(virtual_bss_creation.encryption_oui(),
+                                               virtual_bss_creation.encryption_oui() + 3);
+    errors += check_field<std::vector<uint8_t>>(expected_encryption_oui, parsed_encryption_oui,
+                                                "encryption_oui");
+    errors += check_field<uint16_t>(virtual_bss_creation.encryption_suite_type(), 1,
+                                    "encryption_suite_type");
     errors += check_field<uint16_t>(virtual_bss_creation.dpp_connector_length(), 0,
                                     "dpp_connector_length");
     errors += check_field<std::size_t>(virtual_bss_creation.dpp_connector_str().size(), 0,
