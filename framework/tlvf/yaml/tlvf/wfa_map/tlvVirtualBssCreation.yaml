@@ -27,6 +27,8 @@ VirtualBssCreation:
   ssid:
     _type: char
     _length: [ssid_length]
+  authentication_type:
+    _type: uint16_t
   pass_length:
     _type: uint16_t
     _length_var: True
@@ -34,6 +36,11 @@ VirtualBssCreation:
   pass:
     _type: char
     _length: [pass_length]
+  encryption_oui:
+    _type: uint8_t
+    _length: [3]
+  encryption_suite_type:
+    _type: uint16_t
   dpp_connector_length:
     _type: uint16_t
     _length_var: True
