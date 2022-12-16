@@ -849,9 +849,18 @@ void ApManager::handle_virtual_bss_move_preparation_request(ieee1905_1::CmduMess
     client_info_tlv_tx->bssid()      = client_info_tlv_rx->bssid();
     client_info_tlv_tx->client_mac() = client_info_tlv_rx->client_mac();
 
-    send_cmdu(cmdu_tx);
+    LOG(DEBUG) << "Sending DELBA frame to '" << client_info_tlv_rx->client_mac() << "'";
 
-    // TODO: PPM-2290: send the delba
+    // TODO: PPM-2191: disable block acks through the kernel instead
+    // of manually sending a delba.
+    if (!ap_wlan_hal->send_delba(get_vbss_interface_name(client_info_tlv_tx->bssid()),
+                                 client_info_tlv_rx->client_mac(), client_info_tlv_tx->bssid(),
+                                 client_info_tlv_tx->bssid())) {
+        LOG(ERROR) << "Failed to send DELBA to '" << client_info_tlv_rx->client_mac() << "'!";
+        return;
+    }
+
+    send_cmdu(cmdu_tx);
 }
 
 void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)

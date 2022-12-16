@@ -131,4 +131,10 @@ bool nl80211_client_whm::get_key(const std::string &interface_name, sKeyInfo &ke
     return false;
 }
 
+bool nl80211_client_whm::send_delba(const std::string &interface_name, const sMacAddr &dst,
+                                    const sMacAddr &src, const sMacAddr &bssid)
+{
+    return false;
+}
+
 } // namespace bwl

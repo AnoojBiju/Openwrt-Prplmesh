@@ -1,0 +1,89 @@
+#
+---
+_namespace: ieee802_11
+
+_include: {
+  tlvf/common/sMacAddr.h,
+}
+
+sMacHeader:
+  _type: class
+  frame_control_b1: sFrameControlB1
+  frame_control_b2: sFrameControlB2
+  duration_id: uint16_t
+  addr1: sMacAddr
+  addr2: sMacAddr
+  addr3: sMacAddr
+  seq_ctrl: uint16_t
+
+sFrameControlB1:
+  _type: struct
+  _bit_field: uint8_t
+  subtype:
+    _bit_range: [7,4]
+  type:
+    _bit_range: [3,2]
+  protocol_version:
+    _bit_range: [1,0]
+
+sFrameControlB2:
+  _type: struct
+  _bit_field: uint8_t
+  unused:
+    _bit_range: [7,0]
+    _comment: |
+      These fields do exists and are in use in the frame control
+      field, but they are currently unused in prplMesh.
+
+eType:
+  _type: enum_class
+  _enum_storage: uint8_t
+  MGMT: 0
+  CTRL: 1
+  DATA: 2
+
+eSubtypeMgmt:
+  _type: enum_class
+  _enum_storage: uint8_t
+  ASSOC_REQ: 0
+  ASSOC_RESP: 1
+  REASSOC_REQ: 2
+  REASSOC_RESP: 3
+  PROBE_REQ: 4
+  PROBE_RESP: 5
+  BEACON: 8
+  ATIM: 9
+  DISASSOC: 10
+  AUTH: 11
+  DEAUTH: 12
+  ACTION: 13
+  ACTION_NO_ACK: 14
+
+eSubtypeCtrl:
+  _type: enum_class
+  _enum_storage: uint8_t
+  PSPOLL: 10
+  RTS: 11
+  CTS: 12
+  ACK: 13
+  CFEND: 14
+  CFENDACK: 15
+
+eSubtypeData:
+  _type: enum_class
+  _enum_storage: uint8_t
+  DATA: 0
+  DATA_CFACK: 1
+  DATA_CFPOLL: 2
+  DATA_CFACKPOLL: 3
+  NULLFUNC: 4
+  CFACK: 5
+  CFPOLL: 6
+  CFACKPOLL: 7
+  QOS_DATA: 8
+  QOS_DATA_CFACK: 9
+  QOS_DATA_CFPOLL: 10
+  QOS_DATA_CFACKPOLL: 11
+  QOS_NULL: 12
+  QOS_CFPOLL: 14
+  QOS_CFACKPOLL: 15
