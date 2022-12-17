@@ -1516,6 +1516,43 @@ int bml_internal::process_cmdu_header(std::shared_ptr<beerocks_header> beerocks_
             }
         } break;
 #endif /* FEATURE_PRE_ASSOCIATION_STEERING */
+        case beerocks_message::ACTION_BML_UNASSOC_STA_RCPI_QUERY_RESPONSE: {
+            auto response =
+                beerocks_header
+                    ->addClass<beerocks_message::cACTION_BML_UNASSOC_STA_RCPI_QUERY_RESPONSE>();
+            if (!response) {
+                LOG(ERROR) << "addClass cACTION_BML_UNASSOC_STA_RCPI_QUERY_RESPONSE failed";
+                return BML_RET_OP_FAILED;
+            }
+
+            //Signal any waiting threads
+            if (!wake_up(beerocks_message::ACTION_BML_UNASSOC_STA_RCPI_QUERY_REQUEST,
+                         response->op_error_code())) {
+                LOG(WARNING) << "Received ACTION_BML_UNASSOC_STA_RCPI_QUERY_RESPONSE"
+                             << " response, but no one is waiting...";
+            }
+        } break;
+        case beerocks_message::ACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_RESPONSE: {
+            auto response = beerocks_header->addClass<
+                beerocks_message::cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_RESPONSE>();
+            if (!response) {
+                LOG(ERROR) << "addClass cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_RESPONSE failed";
+                return BML_RET_OP_FAILED;
+            }
+
+            //Signal any waiting threads
+            if (m_prmUnAssocStaLinkMetricGet) {
+                if (m_unassoc_sta_link_metric) {
+                    uint8_t op_error_code                        = response->op_error_code();
+                    m_unassoc_sta_link_metric->opclass           = response->opclass();
+                    m_unassoc_sta_link_metric->channel           = response->channel();
+                    m_unassoc_sta_link_metric->rcpi              = response->rcpi();
+                    m_unassoc_sta_link_metric->measurement_delta = response->measurement_delta();
+                    tlvf::mac_to_array(response->sta_mac(), m_unassoc_sta_link_metric->sta_mac);
+                    m_prmUnAssocStaLinkMetricGet->set_value(op_error_code);
+                }
+            }
+        } break;
         default: {
             LOG(WARNING) << "unhandled header BML action type 0x" << std::hex
                          << int(beerocks_header->action_op());
@@ -1839,6 +1876,94 @@ int bml_internal::set_dcs_continuous_scan_enable(const sMacAddr &mac, int enable
         LOG(ERROR) << "ACTION_BML_CHANNEL_SCAN_SET_CONTINUOUS_ENABLE_REQUEST returned error code:"
                    << result;
         return result;
+    }
+
+    return BML_RET_OK;
+}
+
+int bml_internal::send_unassoc_sta_rcpi_query(const sMacAddr &mac, int16_t opclass, int16_t channel)
+{
+    auto request = message_com::create_vs_message<
+        beerocks_message::cACTION_BML_UNASSOC_STA_RCPI_QUERY_REQUEST>(cmdu_tx);
+
+    if (!request) {
+        LOG(ERROR) << "Failed building cACTION_BML_UNASSOC_STA_RCPI_QUERY_REQUEST message!";
+        return (-BML_RET_OP_FAILED);
+    }
+
+    request->sta_mac() = mac;
+    request->opclass() = opclass;
+    request->channel() = channel;
+
+    int result = 0;
+    if (send_bml_cmdu(result, request->get_action_op()) != BML_RET_OK) {
+        LOG(ERROR) << "Send cACTION_BML_UNASSOC_STA_RCPI_QUERY_REQUEST failed";
+        return (-BML_RET_OP_FAILED);
+    }
+
+    if (result != int(eUnAssocStaLinkMetricErrCode::SUCCESS)) {
+        LOG(ERROR) << "cACTION_BML_UNASSOC_STA_RCPI_QUERY_REQUEST returned error code:" << result;
+        return result;
+    }
+    return BML_RET_OK;
+}
+
+int bml_internal::get_unassoc_sta_rcpi_query_result(const sMacAddr &mac,
+                                                    struct BML_UNASSOC_STA_LINK_METRIC *sta_info)
+{
+    // If the socket is not valid, attempt to re-establish the connection
+    if (!m_sockMaster) {
+        int iRet = connect_to_master();
+        if (iRet != BML_RET_OK) {
+            return iRet;
+        }
+    }
+
+    // Initialize the promise for receiving the response
+    beerocks::promise<int> prmUnAssocStaLinkMetricGet;
+    m_prmUnAssocStaLinkMetricGet = &prmUnAssocStaLinkMetricGet;
+    int iOpTimeout               = DELAYED_RESPONSE_TIMEOUT; // Default timeout
+    m_unassoc_sta_link_metric    = sta_info;
+
+    auto request = message_com::create_vs_message<
+        beerocks_message::cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_REQUEST>(cmdu_tx);
+
+    if (!request) {
+        LOG(ERROR) << "Failed building cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_REQUEST message!";
+        return (-BML_RET_OP_FAILED);
+    }
+
+    request->sta_mac() = mac;
+
+    int iRet = BML_RET_OK;
+    // Send the message
+    if (!message_com::send_cmdu(m_sockMaster, cmdu_tx)) {
+        LOG(ERROR) << "Failed sending param get message!";
+        m_prmUnAssocStaLinkMetricGet = nullptr;
+        m_unassoc_sta_link_metric    = nullptr;
+        return (-BML_RET_OP_FAILED);
+    }
+    if (!m_prmUnAssocStaLinkMetricGet->wait_for(iOpTimeout)) {
+        LOG(WARNING) << "Timeout while waiting for unassoc results get response...";
+        iRet = -BML_RET_TIMEOUT;
+    }
+
+    // clear promise
+    m_prmUnAssocStaLinkMetricGet = nullptr;
+    // Clear result
+    m_unassoc_sta_link_metric = nullptr;
+
+    if (iRet != BML_RET_OK) {
+        LOG(ERROR) << "Get results failed!";
+        return (iRet);
+    }
+
+    iRet = prmUnAssocStaLinkMetricGet.get_value();
+
+    if (iRet != int(eUnAssocStaLinkMetricErrCode::SUCCESS)) {
+        LOG(ERROR) << "cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_REQUEST returned error code:"
+                   << iRet;
+        return iRet;
     }
 
     return BML_RET_OK;

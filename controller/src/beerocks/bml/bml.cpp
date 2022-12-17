@@ -688,6 +688,32 @@ int bml_set_dcs_continuous_scan_enable(BML_CTX ctx, const char *radio_mac, int e
                                                 enable);
 }
 
+int bml_send_unassoc_sta_rcpi_query(BML_CTX ctx, const char *sta_mac, int16_t opclass,
+                                    int16_t channel)
+{
+    // Validate input parameters
+    if (!ctx) {
+        return (-BML_RET_INVALID_ARGS);
+    }
+
+    auto pBML = static_cast<bml_internal *>(ctx);
+    return pBML->send_unassoc_sta_rcpi_query(tlvf::mac_from_string(std::string(sta_mac)), opclass,
+                                             channel);
+}
+
+int bml_get_unassoc_sta_rcpi_query_result(BML_CTX ctx, const char *sta_mac,
+                                          struct BML_UNASSOC_STA_LINK_METRIC *sta_info)
+{
+    // Validate input parameters
+    if (!ctx) {
+        return (-BML_RET_INVALID_ARGS);
+    }
+
+    auto pBML = static_cast<bml_internal *>(ctx);
+    return pBML->get_unassoc_sta_rcpi_query_result(tlvf::mac_from_string(std::string(sta_mac)),
+                                                   sta_info);
+}
+
 int bml_get_dcs_continuous_scan_enable(BML_CTX ctx, const char *radio_mac, int *enable)
 {
     // Validate input parameters
