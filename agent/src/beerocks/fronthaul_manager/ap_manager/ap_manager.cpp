@@ -660,6 +660,11 @@ void ApManager::handle_cmdu_ieee1905_1_message(ieee1905_1::CmduMessageRx &cmdu_r
         handle_virtual_bss_move_preparation_request(cmdu_rx);
         break;
     }
+    case ieee1905_1::eMessageType::UNASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE: {
+        handle_unassoc_sta_link_metrics_query_message(cmdu_rx);
+        break;
+    }
+
     default:
         LOG(ERROR) << "Unknown CMDU message type: " << std::hex << int(cmdu_message_type);
     }
@@ -861,6 +866,18 @@ void ApManager::handle_virtual_bss_move_preparation_request(ieee1905_1::CmduMess
     }
 
     send_cmdu(cmdu_tx);
+}
+
+void ApManager::handle_unassoc_sta_link_metrics_query_message(ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    const auto mid = cmdu_rx.getMessageId();
+    auto unassoc_sta_link_metric_query =
+        cmdu_rx.getClass<wfa_map::tlvUnassociatedStaLinkMetricsQuery>();
+    if (!unassoc_sta_link_metric_query) {
+        LOG(ERROR) << "Unassoc sta link metric query cmdu mid =" << mid << " get class failed";
+        return;
+    }
+    ap_wlan_hal->send_unassoc_sta_link_metric_query(unassoc_sta_link_metric_query);
 }
 
 void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
@@ -2033,6 +2050,36 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
 
         // Clear the ID
         sta_unassociated_rssi_measurement_header_id = -1;
+
+    } break;
+
+    case Event::STA_Unassoc_Link_Metrics: {
+        // Create Unassoc STA Link Metrics Response Message
+        auto cmdu_tx_header = cmdu_tx.create(
+            0, ieee1905_1::eMessageType::UNASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE);
+        if (!cmdu_tx_header) {
+            LOG(ERROR)
+                << "cmdu creation of type UNASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE failed!";
+            return false;
+        }
+        auto tlvUnassociatedStaLinkMetricsResponse =
+            cmdu_tx.addClass<wfa_map::tlvUnassociatedStaLinkMetricsResponse>();
+        if (!tlvUnassociatedStaLinkMetricsResponse) {
+            LOG(ERROR) << "addClass tlvUnassociatedStaLinkMetricsResponse failed!";
+            return false;
+        }
+
+        // Fill the response data
+        if (!ap_wlan_hal->prepare_unassoc_sta_link_metrics_response(
+                tlvUnassociatedStaLinkMetricsResponse)) {
+            LOG(ERROR) << " prepare_unassoc_sta_link_metrics_response failed!";
+            return false;
+        }
+
+        LOG(DEBUG)
+            << "Sending ieee1905_1::eMessageType::UNASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE";
+        // Send Unassoc Sta link metrics report
+        send_cmdu(cmdu_tx);
 
     } break;
 
