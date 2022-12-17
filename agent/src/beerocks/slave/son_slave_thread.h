@@ -479,6 +479,7 @@ private:
     bool handle_client_steering_request(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_beacon_metrics_query(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_ack_message(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool handle_unassoc_sta_link_metric_query(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
 
     bool read_platform_configuration();
 
