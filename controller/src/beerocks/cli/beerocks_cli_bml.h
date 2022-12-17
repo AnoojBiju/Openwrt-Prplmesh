@@ -159,6 +159,8 @@ private:
     int client_set_client_caller(int numOfArgs);
     int client_get_client_caller(int numOfArgs);
     int client_clear_client_caller(int numOfArgs);
+    int send_unassoc_sta_rcpi_query_caller(int numOfArgs);
+    int get_unassoc_sta_rcpi_result_caller(int numOfArgs);
     // Functions
     int onboard_status();
     int ping();
@@ -234,6 +236,8 @@ private:
                           int8_t stay_on_initial_radio, int32_t time_life_delay_minutes);
     int client_get_client(const std::string &sta_mac);
     int client_clear_client(const std::string &sta_mac);
+    int send_unassoc_sta_rcpi_query(const std::string &sta_mac, int16_t opclass, int16_t channel);
+    int get_unassoc_sta_rcpi_query_result(const std::string &sta_mac);
     template <typename T> const std::string string_from_int_array(T *arr, size_t arr_max_size);
     // Variable
     std::string beerocks_conf_path;
