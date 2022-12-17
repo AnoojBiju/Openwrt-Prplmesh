@@ -481,6 +481,13 @@ enum class eChannelPreferenceRankingConsts : int8_t {
     BEST         = 15
 };
 
+enum class eUnAssocStaLinkMetricErrCode : uint8_t {
+    SUCCESS = 0,
+    ERROR, /* Generic error apart from below self explained errors */
+    LINK_METRICS_COLLECTION_NOT_DONE,
+    RESULT_NOT_AVAILABLE_FOR_STA
+};
+
 #define CHANNEL_SCAN_INVALID_PARAM -1
 #define SCAN_ALL_CHANNELS 0
 
