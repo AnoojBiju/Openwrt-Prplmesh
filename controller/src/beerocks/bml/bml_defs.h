@@ -631,6 +631,15 @@ struct BML_CLIENT {
     int32_t time_life_delay_minutes;
 };
 
+struct BML_UNASSOC_STA_LINK_METRIC {
+    // Unassociated sta MAC.
+    uint8_t sta_mac[BML_MAC_ADDR_LEN];
+    uint16_t opclass;
+    uint8_t channel;
+    uint8_t rcpi;
+    uint32_t measurement_delta;
+};
+
 /****************************************************************************/
 /****************************** Callback Types ******************************/
 /****************************************************************************/

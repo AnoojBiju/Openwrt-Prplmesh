@@ -621,6 +621,28 @@ int bml_get_vap_list_credentials(BML_CTX ctx, struct BML_VAP_INFO *vap_list, uin
 int bml_set_dcs_continuous_scan_enable(BML_CTX ctx, const char *radio_mac, int enable);
 
 /**
+ * Sends unassoc sta link metrics query to agents
+ *
+ * @param [in] sta_mac is mac address of unassociated sta
+ * @param [in] opclass is operating class
+ * @param [in] channel is channel from the operating class
+ *
+ * @return 0 on success.
+ */
+int bml_send_unassoc_sta_rcpi_query(BML_CTX ctx, const char *sta_mac, int16_t opclass,
+                                    int16_t channel);
+/**
+ * Fetch unassoc sta link metric query result
+ *
+ * @param [in] sta_mac is mac address of unassociated sta
+ * @param [in] sta_info has link metric data result
+ *
+ * @return 0 on success.
+ */
+int bml_get_unassoc_sta_rcpi_query_result(BML_CTX ctx, const char *sta_mac,
+                                          struct BML_UNASSOC_STA_LINK_METRIC *sta_info);
+
+/**
  * get DCS continuous scans param.
  *
  * @param [in] ctx BML Context.
