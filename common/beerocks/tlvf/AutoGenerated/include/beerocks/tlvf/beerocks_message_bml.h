@@ -2542,6 +2542,106 @@ class cACTION_BML_GET_SELECTION_CHANNEL_POOL_RESPONSE : public BaseClass
         int m_lock_order_counter__ = 0;
 };
 
+class cACTION_BML_UNASSOC_STA_RCPI_QUERY_REQUEST : public BaseClass
+{
+    public:
+        cACTION_BML_UNASSOC_STA_RCPI_QUERY_REQUEST(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_BML_UNASSOC_STA_RCPI_QUERY_REQUEST(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_BML_UNASSOC_STA_RCPI_QUERY_REQUEST();
+
+        static eActionOp_BML get_action_op(){
+            return (eActionOp_BML)(ACTION_BML_UNASSOC_STA_RCPI_QUERY_REQUEST);
+        }
+        sMacAddr& sta_mac();
+        uint16_t& opclass();
+        uint8_t& channel();
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_BML* m_action_op = nullptr;
+        sMacAddr* m_sta_mac = nullptr;
+        uint16_t* m_opclass = nullptr;
+        uint8_t* m_channel = nullptr;
+};
+
+class cACTION_BML_UNASSOC_STA_RCPI_QUERY_RESPONSE : public BaseClass
+{
+    public:
+        cACTION_BML_UNASSOC_STA_RCPI_QUERY_RESPONSE(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_BML_UNASSOC_STA_RCPI_QUERY_RESPONSE(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_BML_UNASSOC_STA_RCPI_QUERY_RESPONSE();
+
+        static eActionOp_BML get_action_op(){
+            return (eActionOp_BML)(ACTION_BML_UNASSOC_STA_RCPI_QUERY_RESPONSE);
+        }
+        //0 - Success, Otherwise error
+        uint8_t& op_error_code();
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_BML* m_action_op = nullptr;
+        uint8_t* m_op_error_code = nullptr;
+};
+
+class cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_REQUEST : public BaseClass
+{
+    public:
+        cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_REQUEST(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_REQUEST(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_REQUEST();
+
+        static eActionOp_BML get_action_op(){
+            return (eActionOp_BML)(ACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_REQUEST);
+        }
+        sMacAddr& sta_mac();
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_BML* m_action_op = nullptr;
+        sMacAddr* m_sta_mac = nullptr;
+};
+
+class cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_RESPONSE : public BaseClass
+{
+    public:
+        cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_RESPONSE(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_RESPONSE(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_RESPONSE();
+
+        static eActionOp_BML get_action_op(){
+            return (eActionOp_BML)(ACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_RESPONSE);
+        }
+        sMacAddr& sta_mac();
+        uint16_t& opclass();
+        uint8_t& channel();
+        uint8_t& rcpi();
+        uint32_t& measurement_delta();
+        //0 - Success, Otherwise error
+        uint8_t& op_error_code();
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_BML* m_action_op = nullptr;
+        sMacAddr* m_sta_mac = nullptr;
+        uint16_t* m_opclass = nullptr;
+        uint8_t* m_channel = nullptr;
+        uint8_t* m_rcpi = nullptr;
+        uint32_t* m_measurement_delta = nullptr;
+        uint8_t* m_op_error_code = nullptr;
+};
+
 }; // close namespace: beerocks_message
 
 #endif //_BEEROCKS/TLVF_BEEROCKS_MESSAGE_BML_H_

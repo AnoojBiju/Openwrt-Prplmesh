@@ -8746,4 +8746,355 @@ bool cACTION_BML_GET_SELECTION_CHANNEL_POOL_RESPONSE::init()
     return true;
 }
 
+cACTION_BML_UNASSOC_STA_RCPI_QUERY_REQUEST::cACTION_BML_UNASSOC_STA_RCPI_QUERY_REQUEST(uint8_t* buff, size_t buff_len, bool parse) :
+    BaseClass(buff, buff_len, parse) {
+    m_init_succeeded = init();
+}
+cACTION_BML_UNASSOC_STA_RCPI_QUERY_REQUEST::cACTION_BML_UNASSOC_STA_RCPI_QUERY_REQUEST(std::shared_ptr<BaseClass> base, bool parse) :
+BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
+    m_init_succeeded = init();
+}
+cACTION_BML_UNASSOC_STA_RCPI_QUERY_REQUEST::~cACTION_BML_UNASSOC_STA_RCPI_QUERY_REQUEST() {
+}
+sMacAddr& cACTION_BML_UNASSOC_STA_RCPI_QUERY_REQUEST::sta_mac() {
+    return (sMacAddr&)(*m_sta_mac);
+}
+
+uint16_t& cACTION_BML_UNASSOC_STA_RCPI_QUERY_REQUEST::opclass() {
+    return (uint16_t&)(*m_opclass);
+}
+
+uint8_t& cACTION_BML_UNASSOC_STA_RCPI_QUERY_REQUEST::channel() {
+    return (uint8_t&)(*m_channel);
+}
+
+void cACTION_BML_UNASSOC_STA_RCPI_QUERY_REQUEST::class_swap()
+{
+    tlvf_swap(8*sizeof(eActionOp_BML), reinterpret_cast<uint8_t*>(m_action_op));
+    m_sta_mac->struct_swap();
+    tlvf_swap(16, reinterpret_cast<uint8_t*>(m_opclass));
+}
+
+bool cACTION_BML_UNASSOC_STA_RCPI_QUERY_REQUEST::finalize()
+{
+    if (m_parse__) {
+        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
+        return true;
+    }
+    if (m_finalized__) {
+        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
+        return true;
+    }
+    if (!isPostInitSucceeded()) {
+        TLVF_LOG(ERROR) << "post init check failed";
+        return false;
+    }
+    if (m_inner__) {
+        if (!m_inner__->finalize()) {
+            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
+            return false;
+        }
+        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
+        m_buff_ptr__ -= tailroom;
+    }
+    class_swap();
+    m_finalized__ = true;
+    return true;
+}
+
+size_t cACTION_BML_UNASSOC_STA_RCPI_QUERY_REQUEST::get_initial_size()
+{
+    size_t class_size = 0;
+    class_size += sizeof(sMacAddr); // sta_mac
+    class_size += sizeof(uint16_t); // opclass
+    class_size += sizeof(uint8_t); // channel
+    return class_size;
+}
+
+bool cACTION_BML_UNASSOC_STA_RCPI_QUERY_REQUEST::init()
+{
+    if (getBuffRemainingBytes() < get_initial_size()) {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
+        return false;
+    }
+    m_sta_mac = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(sMacAddr))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sMacAddr) << ") Failed!";
+        return false;
+    }
+    if (!m_parse__) { m_sta_mac->struct_init(); }
+    m_opclass = reinterpret_cast<uint16_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint16_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
+        return false;
+    }
+    m_channel = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
+        return false;
+    }
+    if (m_parse__) { class_swap(); }
+    return true;
+}
+
+cACTION_BML_UNASSOC_STA_RCPI_QUERY_RESPONSE::cACTION_BML_UNASSOC_STA_RCPI_QUERY_RESPONSE(uint8_t* buff, size_t buff_len, bool parse) :
+    BaseClass(buff, buff_len, parse) {
+    m_init_succeeded = init();
+}
+cACTION_BML_UNASSOC_STA_RCPI_QUERY_RESPONSE::cACTION_BML_UNASSOC_STA_RCPI_QUERY_RESPONSE(std::shared_ptr<BaseClass> base, bool parse) :
+BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
+    m_init_succeeded = init();
+}
+cACTION_BML_UNASSOC_STA_RCPI_QUERY_RESPONSE::~cACTION_BML_UNASSOC_STA_RCPI_QUERY_RESPONSE() {
+}
+uint8_t& cACTION_BML_UNASSOC_STA_RCPI_QUERY_RESPONSE::op_error_code() {
+    return (uint8_t&)(*m_op_error_code);
+}
+
+void cACTION_BML_UNASSOC_STA_RCPI_QUERY_RESPONSE::class_swap()
+{
+    tlvf_swap(8*sizeof(eActionOp_BML), reinterpret_cast<uint8_t*>(m_action_op));
+}
+
+bool cACTION_BML_UNASSOC_STA_RCPI_QUERY_RESPONSE::finalize()
+{
+    if (m_parse__) {
+        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
+        return true;
+    }
+    if (m_finalized__) {
+        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
+        return true;
+    }
+    if (!isPostInitSucceeded()) {
+        TLVF_LOG(ERROR) << "post init check failed";
+        return false;
+    }
+    if (m_inner__) {
+        if (!m_inner__->finalize()) {
+            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
+            return false;
+        }
+        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
+        m_buff_ptr__ -= tailroom;
+    }
+    class_swap();
+    m_finalized__ = true;
+    return true;
+}
+
+size_t cACTION_BML_UNASSOC_STA_RCPI_QUERY_RESPONSE::get_initial_size()
+{
+    size_t class_size = 0;
+    class_size += sizeof(uint8_t); // op_error_code
+    return class_size;
+}
+
+bool cACTION_BML_UNASSOC_STA_RCPI_QUERY_RESPONSE::init()
+{
+    if (getBuffRemainingBytes() < get_initial_size()) {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
+        return false;
+    }
+    m_op_error_code = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
+        return false;
+    }
+    if (m_parse__) { class_swap(); }
+    return true;
+}
+
+cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_REQUEST::cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_REQUEST(uint8_t* buff, size_t buff_len, bool parse) :
+    BaseClass(buff, buff_len, parse) {
+    m_init_succeeded = init();
+}
+cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_REQUEST::cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_REQUEST(std::shared_ptr<BaseClass> base, bool parse) :
+BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
+    m_init_succeeded = init();
+}
+cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_REQUEST::~cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_REQUEST() {
+}
+sMacAddr& cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_REQUEST::sta_mac() {
+    return (sMacAddr&)(*m_sta_mac);
+}
+
+void cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_REQUEST::class_swap()
+{
+    tlvf_swap(8*sizeof(eActionOp_BML), reinterpret_cast<uint8_t*>(m_action_op));
+    m_sta_mac->struct_swap();
+}
+
+bool cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_REQUEST::finalize()
+{
+    if (m_parse__) {
+        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
+        return true;
+    }
+    if (m_finalized__) {
+        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
+        return true;
+    }
+    if (!isPostInitSucceeded()) {
+        TLVF_LOG(ERROR) << "post init check failed";
+        return false;
+    }
+    if (m_inner__) {
+        if (!m_inner__->finalize()) {
+            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
+            return false;
+        }
+        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
+        m_buff_ptr__ -= tailroom;
+    }
+    class_swap();
+    m_finalized__ = true;
+    return true;
+}
+
+size_t cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_REQUEST::get_initial_size()
+{
+    size_t class_size = 0;
+    class_size += sizeof(sMacAddr); // sta_mac
+    return class_size;
+}
+
+bool cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_REQUEST::init()
+{
+    if (getBuffRemainingBytes() < get_initial_size()) {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
+        return false;
+    }
+    m_sta_mac = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(sMacAddr))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sMacAddr) << ") Failed!";
+        return false;
+    }
+    if (!m_parse__) { m_sta_mac->struct_init(); }
+    if (m_parse__) { class_swap(); }
+    return true;
+}
+
+cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_RESPONSE::cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_RESPONSE(uint8_t* buff, size_t buff_len, bool parse) :
+    BaseClass(buff, buff_len, parse) {
+    m_init_succeeded = init();
+}
+cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_RESPONSE::cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_RESPONSE(std::shared_ptr<BaseClass> base, bool parse) :
+BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
+    m_init_succeeded = init();
+}
+cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_RESPONSE::~cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_RESPONSE() {
+}
+sMacAddr& cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_RESPONSE::sta_mac() {
+    return (sMacAddr&)(*m_sta_mac);
+}
+
+uint16_t& cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_RESPONSE::opclass() {
+    return (uint16_t&)(*m_opclass);
+}
+
+uint8_t& cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_RESPONSE::channel() {
+    return (uint8_t&)(*m_channel);
+}
+
+uint8_t& cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_RESPONSE::rcpi() {
+    return (uint8_t&)(*m_rcpi);
+}
+
+uint32_t& cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_RESPONSE::measurement_delta() {
+    return (uint32_t&)(*m_measurement_delta);
+}
+
+uint8_t& cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_RESPONSE::op_error_code() {
+    return (uint8_t&)(*m_op_error_code);
+}
+
+void cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_RESPONSE::class_swap()
+{
+    tlvf_swap(8*sizeof(eActionOp_BML), reinterpret_cast<uint8_t*>(m_action_op));
+    m_sta_mac->struct_swap();
+    tlvf_swap(16, reinterpret_cast<uint8_t*>(m_opclass));
+    tlvf_swap(32, reinterpret_cast<uint8_t*>(m_measurement_delta));
+}
+
+bool cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_RESPONSE::finalize()
+{
+    if (m_parse__) {
+        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
+        return true;
+    }
+    if (m_finalized__) {
+        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
+        return true;
+    }
+    if (!isPostInitSucceeded()) {
+        TLVF_LOG(ERROR) << "post init check failed";
+        return false;
+    }
+    if (m_inner__) {
+        if (!m_inner__->finalize()) {
+            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
+            return false;
+        }
+        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
+        m_buff_ptr__ -= tailroom;
+    }
+    class_swap();
+    m_finalized__ = true;
+    return true;
+}
+
+size_t cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_RESPONSE::get_initial_size()
+{
+    size_t class_size = 0;
+    class_size += sizeof(sMacAddr); // sta_mac
+    class_size += sizeof(uint16_t); // opclass
+    class_size += sizeof(uint8_t); // channel
+    class_size += sizeof(uint8_t); // rcpi
+    class_size += sizeof(uint32_t); // measurement_delta
+    class_size += sizeof(uint8_t); // op_error_code
+    return class_size;
+}
+
+bool cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_RESPONSE::init()
+{
+    if (getBuffRemainingBytes() < get_initial_size()) {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
+        return false;
+    }
+    m_sta_mac = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(sMacAddr))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sMacAddr) << ") Failed!";
+        return false;
+    }
+    if (!m_parse__) { m_sta_mac->struct_init(); }
+    m_opclass = reinterpret_cast<uint16_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint16_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
+        return false;
+    }
+    m_channel = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
+        return false;
+    }
+    m_rcpi = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
+        return false;
+    }
+    m_measurement_delta = reinterpret_cast<uint32_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint32_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint32_t) << ") Failed!";
+        return false;
+    }
+    m_op_error_code = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
+        return false;
+    }
+    if (m_parse__) { class_swap(); }
+    return true;
+}
+
 
