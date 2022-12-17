@@ -912,6 +912,11 @@ std::unordered_map<sMacAddr, son::node::ap_metrics_data> &db::get_ap_metric_data
     return m_ap_metric_data;
 }
 
+std::unordered_map<std::string, son::db::sUnAssocStaInfo> &db::get_unassoc_sta_map()
+{
+    return m_unassoc_sta_map;
+}
+
 bool db::set_hostap_active(const sMacAddr &mac, bool active)
 {
     auto radio = get_radio_by_uid(mac);
@@ -5292,6 +5297,13 @@ bool db::assign_vbss_task_id(const int new_task_id)
 }
 int db::get_vbss_task_id() { return vbss_task_id; }
 
+bool db::assign_link_metrics_task_id(int new_task_id)
+{
+    link_metrics_task_id = new_task_id;
+    return true;
+}
+
+int db::get_link_metrics_task_id() { return link_metrics_task_id; }
 void db::lock() { db_mutex.lock(); }
 
 void db::unlock() { db_mutex.unlock(); }

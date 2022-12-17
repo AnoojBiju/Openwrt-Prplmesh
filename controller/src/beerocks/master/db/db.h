@@ -273,7 +273,20 @@ public:
         std::string public_key;
     } dpp_bootstrapping_info;
 
+    typedef struct {
+        int channel;
+        uint8_t rcpi;
+        uint32_t measurement_delta;
+    } sUnAssocStaInfo;
+
     std::unordered_map<sMacAddr, std::vector<sStaSteeringEvent>> m_stations_steering_events;
+
+    // Unassoc sta link metrics variables
+    bool m_measurement_done = false;
+    int m_opclass;
+    // Map for the unassoc sta link metrics. Here key is mac address in
+    // the form of string.
+    std::unordered_map<std::string, sUnAssocStaInfo> m_unassoc_sta_map;
 
     beerocks::mac_map<Agent> m_agents;
     beerocks::mac_map<Station> m_stations;
@@ -657,6 +670,12 @@ public:
      * @return reference to the map that holds ap metric data of all agents.
      */
     std::unordered_map<sMacAddr, son::node::ap_metrics_data> &get_ap_metric_data_map();
+
+    /**
+     * @brief Get the unassoc sta link metrics map
+     * @return reference to the map that holds unassoc sta link metrics data of all agents.
+     */
+    std::unordered_map<std::string, sUnAssocStaInfo> &get_unassoc_sta_map();
 
     /**
      * @brief Add Current Operating Class to the Device.WiFi.DataElements Data model.
@@ -2514,6 +2533,9 @@ public:
     bool assign_dhcp_task_id(int new_task_id);
     int get_dhcp_task_id();
 
+    bool assign_link_metrics_task_id(int new_task_id);
+    int get_link_metrics_task_id();
+
     bool assign_agent_monitoring_task_id(int new_task_id);
     int get_agent_monitoring_task_id();
 
@@ -2953,6 +2975,7 @@ private:
     int agent_monitoring_task_id               = -1;
     int statistics_polling_task_id             = -1;
     int vbss_task_id                           = -1;
+    int link_metrics_task_id                   = -1;
 
     std::shared_ptr<node> last_accessed_node;
     std::string last_accessed_node_mac;
