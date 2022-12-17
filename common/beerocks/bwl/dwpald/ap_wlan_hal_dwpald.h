@@ -118,6 +118,11 @@ public:
     virtual bool send_delba(const std::string &ifname, const sMacAddr &dst, const sMacAddr &src,
                             const sMacAddr &bssid);
 
+    virtual void send_unassoc_sta_link_metric_query(
+        std::shared_ptr<wfa_map::tlvUnassociatedStaLinkMetricsQuery> &query) override;
+    virtual bool prepare_unassoc_sta_link_metrics_response(
+        std::shared_ptr<wfa_map::tlvUnassociatedStaLinkMetricsResponse> &response) override;
+
     // Protected methods:
 protected:
     virtual bool dwpald_attach(char *ifname) override;
@@ -129,6 +134,12 @@ protected:
     }
 
 private:
+    struct sUnAssocStaInfo {
+        int channel;
+        uint8_t rcpi;
+        bool last_sta;
+        std::chrono::steady_clock::time_point m_unassoc_sta_metrics_start;
+    };
     bool set_wifi_bw(beerocks::eWiFiBandwidth);
 
     bool set_multiap_wps(std::map<std::string, std::vector<std::string>> &hostapd_config_vaps);
@@ -147,6 +158,11 @@ private:
     sMacAddr m_prev_client_mac = beerocks::net::network_utils::ZERO_MAC;
     bool m_queried_first       = false;
     int m_vap_id_in_progress   = INVALID_VAP_ID;
+
+    // Unassoc sta link metrics variables
+    bool m_measurement_start = false;
+    int m_opclass;
+    std::unordered_map<std::string, sUnAssocStaInfo> m_unassoc_sta_map;
 };
 
 } // namespace dwpal

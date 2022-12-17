@@ -1659,6 +1659,19 @@ bool ap_wlan_hal_nl80211::send_delba(const std::string &ifname, const sMacAddr &
     return m_nl80211_client->send_delba(ifname, dst, src, bssid);
 }
 
+void ap_wlan_hal_nl80211::send_unassoc_sta_link_metric_query(
+    std::shared_ptr<wfa_map::tlvUnassociatedStaLinkMetricsQuery> &query)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+}
+
+bool ap_wlan_hal_nl80211::prepare_unassoc_sta_link_metrics_response(
+    std::shared_ptr<wfa_map::tlvUnassociatedStaLinkMetricsResponse> &response)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
 } // namespace nl80211
 
 std::shared_ptr<ap_wlan_hal> ap_wlan_hal_create(std::string iface_name, hal_conf_t hal_conf,

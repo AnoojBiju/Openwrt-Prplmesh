@@ -112,6 +112,11 @@ public:
     virtual bool send_delba(const std::string &ifname, const sMacAddr &dst, const sMacAddr &src,
                             const sMacAddr &bssid) override;
 
+    virtual void send_unassoc_sta_link_metric_query(
+        std::shared_ptr<wfa_map::tlvUnassociatedStaLinkMetricsQuery> &query) override;
+    virtual bool prepare_unassoc_sta_link_metrics_response(
+        std::shared_ptr<wfa_map::tlvUnassociatedStaLinkMetricsResponse> &response) override;
+
     // Protected methods:
 protected:
     virtual bool process_dummy_event(parsed_obj_map_t &parsed_obj) override;
@@ -133,6 +138,17 @@ private:
 
     bool m_drop_csa = false;
     std::chrono::steady_clock::time_point m_csa_event_filtering_timestamp;
+
+    struct sUnAssocStaInfo {
+        int channel;
+        uint8_t rcpi;
+        bool last_sta;
+        std::chrono::steady_clock::time_point m_unassoc_sta_metrics_start;
+    };
+    // Unassoc sta link metrics variables
+    bool m_measurement_start = false;
+    int m_opclass;
+    std::unordered_map<std::string, sUnAssocStaInfo> m_unassoc_sta_map;
 };
 
 } // namespace dummy

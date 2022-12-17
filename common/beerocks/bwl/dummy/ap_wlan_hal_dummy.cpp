@@ -726,6 +726,71 @@ bool ap_wlan_hal_dummy::send_delba(const std::string &ifname, const sMacAddr &ds
     return false;
 }
 
+void ap_wlan_hal_dummy::send_unassoc_sta_link_metric_query(
+    std::shared_ptr<wfa_map::tlvUnassociatedStaLinkMetricsQuery> &query)
+{
+    auto opclass       = query->operating_class_of_channel_list();
+    auto chan_list_len = query->channel_list_length();
+    if (m_measurement_start == true) {
+        LOG(DEBUG) << "Unassociate Sta link metrics measurement already running";
+        return;
+    }
+    m_measurement_start = true;
+    LOG(DEBUG) << "Unassociate Sta link metrics: opclass = " << opclass
+               << ", channel_list_len = " << chan_list_len;
+    for (int i = 0; i < chan_list_len; i = i + 1) {
+        auto channel_list    = std::get<1>(query->channel_list(i));
+        auto sta_list_length = channel_list.sta_list_length();
+        auto channel         = channel_list.channel_number();
+        LOG(INFO) << "channel = " << channel << ", With below STA list len=" << sta_list_length;
+        for (int j = 0; j < sta_list_length; j = j + 1) {
+            auto sta = std::get<1>(channel_list.sta_list(j));
+            LOG(INFO) << "Sta[" << j << "] = " << sta;
+
+            std::string mac = tlvf::mac_to_string(sta);
+            // Fill relevant information
+            sUnAssocStaInfo unassoc_sta;
+            m_opclass                               = opclass;
+            unassoc_sta.channel                     = channel;
+            unassoc_sta.rcpi                        = 90;
+            unassoc_sta.last_sta                    = true;
+            unassoc_sta.m_unassoc_sta_metrics_start = std::chrono::steady_clock::now();
+            // Add to the MAP
+            m_unassoc_sta_map[mac] = unassoc_sta;
+        }
+    }
+
+    // simulating response and pushing event to handle the reponse case
+    event_queue_push(Event::STA_Unassoc_Link_Metrics);
+}
+
+bool ap_wlan_hal_dummy::prepare_unassoc_sta_link_metrics_response(
+    std::shared_ptr<wfa_map::tlvUnassociatedStaLinkMetricsResponse> &response)
+{
+    response->operating_class_of_channel_list() = m_opclass;
+    auto now                                    = std::chrono::steady_clock::now();
+    for (auto &sta_entry : m_unassoc_sta_map) {
+        if (!response->alloc_sta_list(1)) {
+            LOG(ERROR) << "Failed allocate_sta_list";
+            return false;
+        }
+        auto &unassoc_sta               = std::get<1>(response->sta_list(0));
+        unassoc_sta.channel_number      = sta_entry.second.channel;
+        unassoc_sta.uplink_rcpi_dbm_enc = sta_entry.second.rcpi;
+        unassoc_sta.sta_mac             = tlvf::mac_from_string(sta_entry.first);
+        unassoc_sta.measurement_to_report_delta_msec =
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                now - sta_entry.second.m_unassoc_sta_metrics_start)
+                .count();
+    }
+
+    // clear the map and mark measurement_start as false
+    m_unassoc_sta_map.clear();
+    m_measurement_start = false;
+
+    return true;
+}
+
 } // namespace dummy
 
 std::shared_ptr<ap_wlan_hal> ap_wlan_hal_create(std::string iface_name, bwl::hal_conf_t hal_conf,
