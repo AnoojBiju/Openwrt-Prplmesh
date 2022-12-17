@@ -38,6 +38,16 @@ public:
     bool handle_cmdu_1905_link_metric_response(const sMacAddr &src_mac,
                                                ieee1905_1::CmduMessageRx &cmdu_rx);
 
+    /**
+     * @brief Handles CMDU of 1905 Unassoc Sta Link Metrics Response
+     *
+     * This handler is written to handle Unassoc Link Metrics Response for the unassociated
+     * stations. It will update the map.
+     *
+     * @param src_mac Source MAC address.
+     * @param cmdu_rx Received CMDU to be handled.
+     * @return true on success and false otherwise.
+     */
     bool
     handle_cmdu_1905_unassociated_station_link_metric_response(const sMacAddr &src_mac,
                                                                ieee1905_1::CmduMessageRx &cmdu_rx);
@@ -48,6 +58,22 @@ public:
      * @return true on success and false otherwise.
      */
     bool construct_combined_infra_metric();
+
+    /**
+     * @brief Method is used for handling event like sending unassoc sta link metrics to supported agent(s)
+     * who announced support in capability info.
+     *
+     * @return none
+     */
+    void handle_event(int event_enum_value, void *event_obj) override;
+
+    struct sUnAssociatedLinkMetricsQueryEvent {
+        uint8_t opClass;
+        uint8_t channel;
+        sMacAddr unassoc_sta_mac;
+    };
+
+    enum eEvent : uint8_t { UNASSOC_STA_LINK_METRICS_QUERY };
 
 protected:
     virtual void work() override;
