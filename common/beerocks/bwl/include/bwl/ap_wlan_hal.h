@@ -12,6 +12,8 @@
 #include "base_wlan_hal.h"
 #include <bcl/beerocks_string_utils.h>
 #include <tlvf/AssociationRequestFrame/AssocReqFrame.h>
+#include <tlvf/wfa_map/tlvUnassociatedStaLinkMetricsQuery.h>
+#include <tlvf/wfa_map/tlvUnassociatedStaLinkMetricsResponse.h>
 
 namespace bwl {
 
@@ -45,6 +47,7 @@ public:
         STA_Softblock_Drop,
         STA_Steering_Probe_Req,
         STA_Steering_Auth_Fail,
+        STA_Unassoc_Link_Metrics,
 
         Interface_Enabled,
         Interface_Disabled,
@@ -492,6 +495,25 @@ public:
      */
     virtual bool send_delba(const std::string &ifname, const sMacAddr &dst, const sMacAddr &src,
                             const sMacAddr &bssid) = 0;
+
+    /**
+     * @brief Prepare and send unassoc query to hostapd.
+     * 
+     * @param query class consists of unassoc sta link tlvs.
+     * @return none.
+     */
+    virtual void send_unassoc_sta_link_metric_query(
+        std::shared_ptr<wfa_map::tlvUnassociatedStaLinkMetricsQuery> &query) = 0;
+
+    /**
+     * @brief Prepared unassoc link metrics response message from
+     * the data received from dwpald.
+     * 
+     * @param response class consists of unassoc sta link metrics response tlvs.
+     * @return true if success else false.
+     */
+    virtual bool prepare_unassoc_sta_link_metrics_response(
+        std::shared_ptr<wfa_map::tlvUnassociatedStaLinkMetricsResponse> &response) = 0;
 
 private:
     static const int frame_body_idx = (sizeof(s80211MgmtFrame::sHeader) * 2);

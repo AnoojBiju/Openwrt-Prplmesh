@@ -3432,6 +3432,19 @@ bool ap_wlan_hal_dwpal::send_delba(const std::string &ifname, const sMacAddr &ds
     return false;
 }
 
+void ap_wlan_hal_dwpal::send_unassoc_sta_link_metric_query(
+    std::shared_ptr<wfa_map::tlvUnassociatedStaLinkMetricsQuery> &query)
+{
+    LOG(TRACE) << __func__ << " Not implemented";
+}
+
+bool ap_wlan_hal_dwpal::prepare_unassoc_sta_link_metrics_response(
+    std::shared_ptr<wfa_map::tlvUnassociatedStaLinkMetricsResponse> &response)
+{
+    LOG(TRACE) << __func__ << " Not implemented";
+    return false
+}
+
 } // namespace bwl
 
 std::shared_ptr<ap_wlan_hal> ap_wlan_hal_create(std::string iface_name, hal_conf_t hal_conf,
