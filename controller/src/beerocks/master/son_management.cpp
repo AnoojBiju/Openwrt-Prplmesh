@@ -2533,6 +2533,89 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         }
         break;
     }
+    case beerocks_message::ACTION_BML_UNASSOC_STA_RCPI_QUERY_REQUEST: {
+
+        LOG(DEBUG) << "ACTION_BML_UNASSOC_STA_RCPI_QUERY_REQUEST";
+
+        auto request =
+            beerocks_header
+                ->addClass<beerocks_message::cACTION_BML_UNASSOC_STA_RCPI_QUERY_REQUEST>();
+        if (!request) {
+            LOG(ERROR) << "addClass cACTION_BML_UNASSOC_STA_RCPI_QUERY_REQUEST failed";
+            break;
+        }
+
+        auto response = message_com::create_vs_message<
+            beerocks_message::cACTION_BML_UNASSOC_STA_RCPI_QUERY_RESPONSE>(cmdu_tx,
+                                                                           beerocks_header->id());
+        if (!response) {
+            LOG(ERROR) << "Failed building message "
+                          "cACTION_BML_UNASSOC_STA_RCPI_QUERY_RESPONSE !";
+            return;
+        }
+        response->op_error_code() = uint8_t(eUnAssocStaLinkMetricErrCode::SUCCESS);
+
+        //send response to bml
+        controller_ctx->send_cmdu(sd, cmdu_tx);
+
+        auto sta_mac = request->sta_mac();
+        auto opclass = request->opclass();
+        auto channel = request->channel();
+        LOG(DEBUG) << "request for unassociated sta_mac: " << sta_mac;
+        LinkMetricsTask::sUnAssociatedLinkMetricsQueryEvent new_event;
+        new_event.channel         = channel;
+        new_event.opClass         = opclass;
+        new_event.unassoc_sta_mac = sta_mac;
+
+        tasks.push_event(database.get_link_metrics_task_id(),
+                         (int)LinkMetricsTask::eEvent::UNASSOC_STA_LINK_METRICS_QUERY,
+                         (void *)&new_event);
+        break;
+    }
+    case beerocks_message::ACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_REQUEST: {
+
+        LOG(DEBUG) << "ACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_REQUEST";
+
+        auto request =
+            beerocks_header
+                ->addClass<beerocks_message::cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_REQUEST>();
+        if (!request) {
+            LOG(ERROR) << "addClass cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_REQUEST failed";
+            break;
+        }
+
+        auto response = message_com::create_vs_message<
+            beerocks_message::cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_RESPONSE>(
+            cmdu_tx, beerocks_header->id());
+        if (!response) {
+            LOG(ERROR) << "Failed building message "
+                          "cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_RESPONSE !";
+            return;
+        }
+        response->op_error_code() =
+            uint8_t(eUnAssocStaLinkMetricErrCode::LINK_METRICS_COLLECTION_NOT_DONE);
+        if (database.m_measurement_done) {
+            response->op_error_code() =
+                uint8_t(eUnAssocStaLinkMetricErrCode::RESULT_NOT_AVAILABLE_FOR_STA);
+            auto &unassoc_sta_metric = database.get_unassoc_sta_map();
+            std::string mac          = tlvf::mac_to_string(request->sta_mac());
+            auto it                  = unassoc_sta_metric.find(mac);
+            if (it != unassoc_sta_metric.end()) {
+                response->op_error_code()     = uint8_t(eUnAssocStaLinkMetricErrCode::SUCCESS);
+                auto sta                      = it->second;
+                response->sta_mac()           = request->sta_mac();
+                response->opclass()           = database.m_opclass;
+                response->channel()           = sta.channel;
+                response->rcpi()              = sta.rcpi;
+                response->measurement_delta() = sta.measurement_delta;
+            }
+        }
+
+        //send response to bml
+        controller_ctx->send_cmdu(sd, cmdu_tx);
+        break;
+    }
+
     default: {
         LOG(ERROR) << "Unsupported BML action_op:" << int(beerocks_header->action_op());
         break;
