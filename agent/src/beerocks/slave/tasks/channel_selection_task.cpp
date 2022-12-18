@@ -987,13 +987,14 @@ bool ChannelSelectionTask::build_channel_preference_report(const sMacAddr &radio
         }
 
         for (auto channel_of_oper_class : oper_class_channels) {
-            // Operating classes 128,129,130 use center channel **unlike the other classes**,
+            // Operating classes 128-130,132-135 use center channel **unlike the other classes**,
             // so convert center channel and bandwidth to main channel.
             // For more info, refer to Table E-4 in the 802.11 specification.
             const auto beacon_channels =
                 son::wireless_utils::is_operating_class_using_central_channel(oper_class_num)
-                    ? son::wireless_utils::center_channel_5g_to_beacon_channels(
-                          channel_of_oper_class, oper_class_bw)
+                    ? son::wireless_utils::center_channel_to_beacon_channels(
+                          channel_of_oper_class, oper_class_bw,
+                          son::wireless_utils::which_freq_op_cls(oper_class_num))
                     : std::vector<uint8_t>{channel_of_oper_class};
 
             // Assume non-operable
@@ -1667,8 +1668,10 @@ bool ChannelSelectionTask::send_channel_switch_request(
     auto action_header         = message_com::get_beerocks_header(m_cmdu_tx)->actionhdr();
     action_header->radio_mac() = radio_mac;
 
-    LOG(DEBUG) << "Sending a CHANNEL_SWITCH request to radio " << radio_mac
-               << " with the following paramenters:" << std::endl
+    LOG(DEBUG) << "Sending a CHANNEL_SWITCH request to radio " << radio_mac << " (band: "
+               << beerocks::utils::convert_frequency_type_to_string(
+                      request.outgoing_request.freq_type)
+               << ") with the following paramenters:" << std::endl
                << "- Channel: " << request_msg->cs_params().channel << std::endl
                << "- bandwidth: " << request_msg->cs_params().bandwidth << std::endl
                << "- CSA count: " << request_msg->cs_params().csa_count << std::endl

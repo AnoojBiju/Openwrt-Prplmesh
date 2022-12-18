@@ -160,6 +160,8 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
         beerocks::string_utils::stoi(main_master_conf.roaming_hop_percent_penalty);
     master_conf.roaming_band_pathloss_delta_db =
         beerocks::string_utils::stoi(main_master_conf.roaming_band_pathloss_delta_db);
+    master_conf.roaming_6ghz_failed_attemps_threshold =
+        beerocks::string_utils::stoi(main_master_conf.roaming_6ghz_failed_attemps_threshold);
     master_conf.roaming_5ghz_failed_attemps_threshold =
         beerocks::string_utils::stoi(main_master_conf.roaming_5ghz_failed_attemps_threshold);
     master_conf.roaming_24ghz_failed_attemps_threshold =

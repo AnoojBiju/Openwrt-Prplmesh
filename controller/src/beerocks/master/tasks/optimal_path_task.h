@@ -58,8 +58,9 @@ private:
     bool is_delay_match_window(const std::set<std::string> &temp_cross_hostaps,
                                const std::string &sta_ap);
     void change_measurement_window_size(const std::string &sta_ap, bool inc);
-    bool get_station_default_capabilities(bool is_bandtype_5ghz,
+    bool get_station_default_capabilities(beerocks::eFreqType freq_type,
                                           beerocks::message::sRadioCapabilities &default_sta_cap);
+    void print_station_capabilities(const beerocks::message::sRadioCapabilities *sta_capabilities);
 
     double calculate_weighted_phy_rate(const Station &client);
     bool is_hostap_on_cs_process(const std::string &hostap_mac);
