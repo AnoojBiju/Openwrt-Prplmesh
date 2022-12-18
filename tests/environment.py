@@ -595,9 +595,10 @@ class ALEntityDocker(ALEntity):
         program = "controller" if is_controller else "backhaul"
         self.logfilenames = [self.logfilename(program)]
 
-        # We always have two radios, wlan0 and wlan2
+        # We always have three radios, wlan0, wlan2 and wlan4
         RadioDocker(self, "wlan0")
         RadioDocker(self, "wlan2")
+        RadioDocker(self, "wlan4")
 
         self.refresh_vaps()
 
