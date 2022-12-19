@@ -9,7 +9,10 @@ if(NOT DEFINED TARGET_PLATFORM)
     set(TARGET_PLATFORM "linux")
 endif()
 
-set (CONTROLLER_ROOT_DM "Device.WiFi.DataElements")
+## PrplMesh Controller datamodel root path
+if (NOT DEFINED CONTROLLER_ROOT_DM)
+    set(CONTROLLER_ROOT_DM "Device.WiFi.DataElements")
+endif()
 
 string(REPLACE "." "\\." CONTROLLER_ROOT_DM_literal ${CONTROLLER_ROOT_DM})
 set(CONTROLLER_ROOT_DM_Header "")
