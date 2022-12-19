@@ -511,10 +511,8 @@ bool monitor_stats::add_ap_assoc_sta_traffic_stat(ieee1905_1::CmduMessageTx &cmd
     ap_assoc_sta_traffic_stat_tlv->byte_received()    = stat.rx_bytes_cnt;
     ap_assoc_sta_traffic_stat_tlv->packets_sent()     = stat.tx_packets_cnt;
     ap_assoc_sta_traffic_stat_tlv->packets_received() = stat.rx_packets_cnt;
-    //TODO: add tx_packets_error in bwl::SStaStats
-    ap_assoc_sta_traffic_stat_tlv->tx_packets_error() = 0;
-    //TODO: rx_packets_error in bwl::SStaStats
-    ap_assoc_sta_traffic_stat_tlv->rx_packets_error()     = 0;
+    ap_assoc_sta_traffic_stat_tlv->tx_packets_error() = stat.tx_errors_cnt;
+    ap_assoc_sta_traffic_stat_tlv->rx_packets_error() = stat.rx_errors_cnt;
     ap_assoc_sta_traffic_stat_tlv->retransmission_count() = stat.retrans_count;
 
     return true;
