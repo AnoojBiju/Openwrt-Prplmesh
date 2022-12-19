@@ -87,10 +87,14 @@ struct SStaStats {
     uint64_t rx_bytes_cnt   = 0;
     uint64_t tx_packets_cnt = 0;
     uint64_t rx_packets_cnt = 0;
+    uint64_t tx_errors_cnt  = 0;
+    uint64_t rx_errors_cnt  = 0;
     uint32_t tx_packets     = 0;
     uint32_t tx_bytes       = 0;
+    uint32_t tx_errors      = 0;
     uint32_t rx_packets     = 0;
     uint32_t rx_bytes       = 0;
+    uint32_t rx_errors      = 0;
     uint32_t retrans_count  = 0;
     // uint8_t  tx_load_percent_curr=0;
     // uint8_t  tx_load_percent_prev=0;
@@ -123,6 +127,27 @@ struct sStaExtendedStats {
     uint32_t LastDataDownlinkRate     = 0;
     uint32_t LastDataUplinkRate       = 0;
     int32_t SignalStrength            = 0;
+};
+
+struct sPeerStats {
+    uint64_t retryCount              = 0;
+    uint64_t successCount            = 0;
+    uint64_t exhaustedCount          = 0;
+    uint64_t clonedCount             = 0;
+    uint64_t oneOrMoreRetryCount     = 0;
+    uint64_t packetRetransCount      = 0;
+    uint64_t dropCntReasonClassifier = 0;
+    uint64_t dropCntReasonDisconnect = 0;
+    uint64_t dropCntReasonATF        = 0;
+    uint64_t dropCntReasonTSFlush    = 0;
+    uint64_t dropCntReasonReKey      = 0;
+    uint64_t dropCntReasonSetKey     = 0;
+    uint64_t dropCntReasonDiscard    = 0;
+    uint64_t dropCntReasonDsabled    = 0;
+    uint64_t dropCntReasonAggError   = 0;
+    uint64_t mpduRetryCount          = 0;
+    uint64_t mpduInAmpdu             = 0;
+    uint64_t ampdu                   = 0;
 };
 
 struct SStaQosCtrlParams {
