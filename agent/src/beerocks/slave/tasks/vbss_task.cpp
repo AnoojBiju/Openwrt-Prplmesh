@@ -1,8 +1,10 @@
 #include "vbss_task.h"
 #include "../son_slave_thread.h"
+#include <tlvf/ieee_1905_1/tlvAlMacAddress.h>
 #include <tlvf/wfa_map/tlvClientInfo.h>
 #include <tlvf/wfa_map/tlvVirtualBssCreation.h>
 #include <tlvf/wfa_map/tlvVirtualBssDestruction.h>
+#include <tlvf/wfa_map/tlvVirtualBssEvent.h>
 
 namespace beerocks {
 
@@ -26,6 +28,10 @@ bool VbssTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t iface_in
     }
     case ieee1905_1::eMessageType::VIRTUAL_BSS_MOVE_PREPARATION_REQUEST_MESSAGE: {
         handle_virtual_bss_move_preparation_request(cmdu_rx);
+        return true;
+    }
+    case ieee1905_1::eMessageType::VIRTUAL_BSS_RESPONSE_MESSAGE: {
+        handle_virtual_bss_response(cmdu_rx);
         return true;
     }
     default: {
@@ -112,6 +118,44 @@ bool VbssTask::handle_virtual_bss_move_preparation_request(ieee1905_1::CmduMessa
         return false;
     }
     return true;
+}
+
+void VbssTask::handle_virtual_bss_response(ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    LOG(DEBUG) << "Received Virtual BSS Response";
+    auto virtual_bss_event_tlv = cmdu_rx.getClass<wfa_map::VirtualBssEvent>();
+    if (!virtual_bss_event_tlv) {
+        LOG(ERROR) << "Virtual BSS Response does not contain Virtual BSS Event TLV!";
+        return;
+    }
+
+    // CMDU received from ap_manager
+    m_btl_ctx.forward_cmdu_to_controller(cmdu_rx);
+
+    if (virtual_bss_event_tlv->success()) {
+
+        // If the request was handled successfully, we have to send a
+        // topology notification as a BSS has either be created or
+        // removed as a result.
+        LOG(INFO) << "Sending topology notification to notify controller of the BSS change";
+
+        auto cmdu_header =
+            m_cmdu_tx.create(0, ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE);
+        if (!cmdu_header) {
+            LOG(ERROR) << "Failed to create TOPOLOGY_NOTIFICATION_MESSAGE cmdu";
+            return;
+        }
+
+        auto tlvAlMacAddress = m_cmdu_tx.addClass<ieee1905_1::tlvAlMacAddress>();
+        if (!tlvAlMacAddress) {
+            LOG(ERROR) << "addClass ieee1905_1::tlvAlMacAddress failed";
+            return;
+        }
+
+        auto db                = AgentDB::get();
+        tlvAlMacAddress->mac() = db->bridge.mac;
+        m_btl_ctx.send_cmdu_to_controller({}, m_cmdu_tx);
+    }
 }
 
 } // namespace beerocks
