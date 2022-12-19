@@ -6,7 +6,7 @@ rootdir="${scriptdir%/*/*}"
 [ -z "$VERSION" ] && VERSION="custom-$(date -Iminutes)"
 
 mkdir -p "${rootdir}/build" && pushd "${rootdir}/build" || exit 1
-amxo-cg -G xml "${rootdir}/controller/nbapi/odl/controller.odl"
+amxo-cg -G xml "${rootdir}/build/controller/nbapi/odl/controller.odl"
 popd || exit 1
 if [ ! -r "${rootdir}/build/controller.odl.xml" ]; then
     echo -e "\\033[1;31mXML generation failed -- ODL syntax issue?\\033[0m"

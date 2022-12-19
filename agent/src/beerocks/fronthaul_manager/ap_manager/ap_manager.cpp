@@ -22,6 +22,7 @@
 #include <beerocks/tlvf/beerocks_message.h>
 #include <beerocks/tlvf/beerocks_message_apmanager.h>
 
+#include "tlvf/wfa_map/tlvClientInfo.h"
 #include <tlvf/wfa_map/tlv1905EncapDpp.h>
 #include <tlvf/wfa_map/tlvBssid.h>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
@@ -653,12 +654,12 @@ void ApManager::handle_cmdu_ieee1905_1_message(ieee1905_1::CmduMessageRx &cmdu_r
         handle_virtual_bss_request(cmdu_rx);
         break;
     }
-    case ieee1905_1::eMessageType::VIRTUAL_BSS_MOVE_PREPARATION_REQUEST_MESSAGE: {
-        handle_virtual_bss_move_preparation_request(cmdu_rx);
-        break;
-    }
     case ieee1905_1::eMessageType::CLIENT_SECURITY_CONTEXT_REQUEST_MESSAGE: {
         handle_vbss_security_request(cmdu_rx);
+        break;
+    }
+    case ieee1905_1::eMessageType::VIRTUAL_BSS_MOVE_PREPARATION_REQUEST_MESSAGE: {
+        handle_virtual_bss_move_preparation_request(cmdu_rx);
         break;
     }
     default:
@@ -858,8 +859,8 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
 
         if (!ap_wlan_hal->remove_bss(ifname)) {
             LOG(ERROR) << "Failed to remove the BSS!";
-            send_virtual_bss_response(virtual_bss_creation_tlv->radio_uid(),
-                                      virtual_bss_creation_tlv->bssid(), false);
+            send_virtual_bss_response(virtual_bss_destruction_tlv->radio_uid(),
+                                      virtual_bss_destruction_tlv->bssid(), false);
             return;
         }
 
@@ -905,10 +906,12 @@ void ApManager::handle_virtual_bss_move_preparation_request(ieee1905_1::CmduMess
 
     LOG(DEBUG) << "Sending DELBA frame to '" << client_info_tlv_rx->client_mac() << "'";
 
+    // TODO: PPM-2191: disable block acks through the kernel instead
+    // of manually sending a delba.
     if (!ap_wlan_hal->send_delba(get_vbss_interface_name(client_info_tlv_tx->bssid()),
                                  client_info_tlv_rx->client_mac(), client_info_tlv_tx->bssid(),
                                  client_info_tlv_tx->bssid())) {
-        LOG(ERROR) << "Failed to send DELBA!";
+        LOG(ERROR) << "Failed to send DELBA to '" << client_info_tlv_rx->client_mac() << "'!";
         return;
     }
 
@@ -2834,10 +2837,6 @@ bool ApManager::register_ext_events_handlers(int fd)
         .on_error =
             [&](int fd, EventLoop &loop) {
                 LOG(ERROR) << "ap_hal_ext_events error! on fd " << fd;
-#ifdef USE_PRPLMESH_WHM
-                // amx signal event loop on_error should return true
-                return true;
-#endif //USE_PRPLMESH_WHM
                 auto it = std::find(m_ap_hal_ext_events.begin(), m_ap_hal_ext_events.end(), fd);
                 if (it != m_ap_hal_ext_events.end()) {
                     *it = beerocks::net::FileDescriptor::invalid_descriptor;

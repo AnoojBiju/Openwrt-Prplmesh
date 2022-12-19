@@ -96,16 +96,28 @@ bool agent_monitoring_task::handle_ieee1905_1_msg(const sMacAddr &src_mac,
 void agent_monitoring_task::handle_event(int event_type, void *obj)
 {
     switch (event_type) {
-    case (STATE_DISCONNECTED): {
-        std::string agent_mac = *static_cast<std::string *>(obj);
+    case (DISCONNECTED): {
+        if (!obj) {
+            LOG(ERROR) << "Missing required Agent MAC";
+            return;
+        }
 
-        auto agent = database.m_agents.get(tlvf::mac_from_string(agent_mac));
+        std::string agent_mac = *static_cast<std::string *>(obj);
+        auto agent            = database.m_agents.get(tlvf::mac_from_string(agent_mac));
         if (!agent) {
             LOG(INFO) << "Agent with mac is not found in database mac=" << agent_mac;
             return;
         }
 
         dm_add_agent_disconnected_event(agent->al_mac);
+        break;
+    }
+    case (CONFIGURE_QOS): {
+        for (const auto &agent : database.m_agents) {
+            if (agent.second->prioritization_support) {
+                send_prioritization(*agent.second);
+            }
+        }
         break;
     }
     default:
@@ -223,15 +235,16 @@ bool agent_monitoring_task::start_task(const sMacAddr &src_mac, std::shared_ptr<
 
         // trigger channel selection
         if (!cmdu_tx.create(0, ieee1905_1::eMessageType::CHANNEL_PREFERENCE_QUERY_MESSAGE)) {
-            LOG(ERROR) << "Failed building message!";
+            LOG(ERROR) << "Failed building message CHANNEL_PREFERENCE_QUERY_MESSAGE!";
             return false;
         }
         son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
     }
+
     if (!database.setting_certification_mode()) {
         // trigger AP capability query
         if (!cmdu_tx.create(0, ieee1905_1::eMessageType::AP_CAPABILITY_QUERY_MESSAGE)) {
-            LOG(ERROR) << "Failed building message!";
+            LOG(ERROR) << "Failed building message AP_CAPABILITY_QUERY_MESSAGE!";
             return false;
         }
         son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
@@ -243,6 +256,12 @@ bool agent_monitoring_task::start_task(const sMacAddr &src_mac, std::shared_ptr<
 
         if (!send_backhaul_sta_capability_query(src_mac, cmdu_tx)) {
             LOG(ERROR) << "Failed to send Backhaul STA Capability Query to agent=" << src_mac;
+        }
+
+        if (agent->prioritization_support) {
+            if (!send_prioritization(*agent)) {
+                LOG(ERROR) << "Failed sending Service Priotitization to agent " << src_mac;
+            }
         }
     }
 
@@ -454,6 +473,45 @@ bool agent_monitoring_task::send_backhaul_sta_capability_query(const sMacAddr &d
     return son_actions::send_cmdu_to_agent(dst_mac, cmdu_tx, database);
 }
 
+bool agent_monitoring_task::send_prioritization(const Agent &agent)
+{
+    if (agent.max_prioritization_rules < 1)
+        return true;
+
+    int64_t activeRule{-1};
+    uint8_t precedence{0};
+    for (const auto &rule : agent.service_prioritization.rules) {
+        if (rule.second.bits_field2.always_match) {
+            if (rule.second.precedence >= precedence) {
+                precedence = rule.second.precedence;
+                activeRule = rule.first;
+            }
+        }
+    }
+    if (activeRule < 0) {
+        return true;
+    }
+
+    if (!cmdu_tx.create(0, ieee1905_1::eMessageType::SERVICE_PRIORITIZATION_REQUEST_MESSAGE)) {
+        LOG(ERROR) << "Failed creating Service Prioritization request message";
+        return false;
+    }
+
+    auto priorityRequest = cmdu_tx.addClass<wfa_map::tlvServicePrioritizationRule>();
+    if (priorityRequest) {
+        priorityRequest->rule_params() = agent.service_prioritization.rules.at(activeRule);
+        priorityRequest->rule_params().bits_field1.add_remove = 1;
+
+        constexpr uint8_t USE_DSCP{0x08};
+        if (priorityRequest->rule_params().output == USE_DSCP) {
+
+            //TODO add DSCP map if exists (PPM 2386)
+        }
+    }
+
+    return son_actions::send_cmdu_to_agent(agent.al_mac, cmdu_tx, database);
+}
+
 bool agent_monitoring_task::send_tlv_empty_channel_selection_request(
     const sMacAddr &dst_mac, ieee1905_1::CmduMessageTx &cmdu_tx)
 {
@@ -584,7 +642,7 @@ std::string agent_monitoring_task::dm_add_agent_connected_event(
     }
 
     std::string agent_connected_event_path =
-        "Device.WiFi.DataElements.AgentConnectedEvent.AgentConnected";
+        CONTROLLER_ROOT_DM ".AgentConnectedEvent.AgentConnected";
     std::string agent_connected_path = ambiorix_dm->add_instance(agent_connected_event_path);
 
     if (agent_connected_path.empty() && NBAPI_ON) {
@@ -723,7 +781,7 @@ bool agent_monitoring_task::dm_add_agent_disconnected_event(const sMacAddr &agen
     }
 
     std::string agent_discon_event_path =
-        "Device.WiFi.DataElements.AgentDisconnectedEvent.AgentDisconnected";
+        CONTROLLER_ROOT_DM ".AgentDisconnectedEvent.AgentDisconnected";
     std::string agent_discon_path = ambiorix_dm->add_instance(agent_discon_event_path);
 
     if (agent_discon_path.empty()) {

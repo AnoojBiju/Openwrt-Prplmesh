@@ -24,9 +24,20 @@ public:
     static eRadioState radio_state_from_string(const std::string &state);
 
     /**
-     * @brief Converts BWL to pwhm security string
+     * @brief Converts WiFiSec security type to string
      */
-    static std::string security_val(WiFiSec sec);
+    static std::string security_type_to_string(const WiFiSec &security_type);
+
+    /**
+     * @brief Converts a string-based security type to WiFiSec
+     */
+    static WiFiSec security_type_from_string(const std::string &security_type);
+
+private:
+    /**
+     * @brief Convertion table of Security type from string to WiFiSec.
+     */
+    static const std::map<std::string, WiFiSec> security_type_table;
 };
 
 } // namespace whm

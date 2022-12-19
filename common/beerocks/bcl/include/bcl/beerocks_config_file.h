@@ -50,6 +50,7 @@ public:
         std::string roaming_unconnected_client_rssi_compensation_db;
         std::string roaming_hop_percent_penalty;
         std::string roaming_band_pathloss_delta_db;
+        std::string roaming_6ghz_failed_attemps_threshold;
         std::string roaming_5ghz_failed_attemps_threshold;
         std::string roaming_24ghz_failed_attemps_threshold;
         std::string roaming_11v_failed_attemps_threshold;

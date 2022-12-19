@@ -137,7 +137,18 @@ void optimal_path_task::work()
             return;
         }
 
-        current_hostap      = database.get_node_parent_radio(current_hostap_vap);
+        current_hostap                   = database.get_node_parent_radio(current_hostap_vap);
+        auto current_hostap_wifi_channel = database.get_node_wifi_channel(current_hostap);
+        if (current_hostap_wifi_channel.is_empty()) {
+            TASK_LOG(ERROR) << "wifiChannel is empty. killing task";
+            finish();
+            return;
+        } else if (current_hostap_wifi_channel.get_freq_type() == eFreqType::FREQ_6G) {
+            TASK_LOG(ERROR) << "current_hostap " << current_hostap
+                            << " of 6GHz band is not supported. killing task";
+            finish();
+            return;
+        }
         current_hostap_ssid = database.get_hostap_ssid(tlvf::mac_from_string(current_hostap_vap));
 
         sta_support_11k = database.settings_client_11k_roaming() &&
@@ -322,8 +333,7 @@ void optimal_path_task::work()
             database.dm_uint64_param_one_up(station->dm_path + ".MultiAPSTA.SteeringSummaryStats",
                                             "NoCandidateAPFailures");
             database.dm_uint64_param_one_up(
-                "Device.WiFi.DataElements.Network.MultiAPSteeringSummaryStats",
-                "NoCandidateAPFailures");
+                CONTROLLER_ROOT_DM ".Network.MultiAPSteeringSummaryStats", "NoCandidateAPFailures");
             finish();
             break;
         }
@@ -335,8 +345,7 @@ void optimal_path_task::work()
             database.dm_uint64_param_one_up(station->dm_path + ".MultiAPSTA.SteeringSummaryStats",
                                             "NoCandidateAPFailures");
             database.dm_uint64_param_one_up(
-                "Device.WiFi.DataElements.Network.MultiAPSteeringSummaryStats",
-                "NoCandidateAPFailures");
+                CONTROLLER_ROOT_DM ".Network.MultiAPSteeringSummaryStats", "NoCandidateAPFailures");
             finish();
             break;
         }
@@ -511,9 +520,15 @@ void optimal_path_task::work()
         TASK_LOG(DEBUG) << "Finished gathering 11k measurements";
         TASK_LOG(DEBUG) << "calculating estimate hostap dl rssi/rate for sta " << sta_mac;
 
+        if (database.get_node_wifi_channel(current_hostap).get_freq_type() == eFreqType::FREQ_6G) {
+            TASK_LOG(ERROR) << "current hostap " << current_hostap
+                            << " of 6GHz band is not supported. return";
+            return;
+        }
+
         //calculate tx phy rate and find best_weighted_phy_rate
         int roaming_hysteresis_percent_bonus = database.config.roaming_hysteresis_percent_bonus;
-        const beerocks::message::sRadioCapabilities *sta_capabilities;
+        const beerocks::message::sRadioCapabilities *sta_capabilities = nullptr;
         beerocks::message::sRadioCapabilities default_sta_cap;
         son::wireless_utils::sPhyUlParams current_ul_params;
         double hostap_phy_rate;
@@ -563,6 +578,11 @@ void optimal_path_task::work()
             auto hostap_wifi_channel = database.get_node_wifi_channel(hostap);
             if (hostap_wifi_channel.is_empty()) {
                 LOG(WARNING) << "empty wifi channel of " << hostap << " in DB. skip this iteration";
+                continue;
+            }
+            if (hostap_wifi_channel.get_freq_type() == eFreqType::FREQ_6G) {
+                TASK_LOG(ERROR) << "hostap " << hostap << " of 6GHz band is not supported. skip";
+                continue;
             }
             int hostap_channel  = hostap_wifi_channel.get_channel();
             auto hostap_is_5ghz = (hostap_wifi_channel.get_freq_type() == eFreqType::FREQ_5G);
@@ -571,21 +591,17 @@ void optimal_path_task::work()
                 // Get sta capabilities
                 TASK_LOG(DEBUG) << "getting capabilities for sta_mac " << sta_mac << " on band "
                                 << (hostap_is_5ghz ? "5GHz" : "2.4GHz");
-                sta_capabilities = database.get_station_capabilities(sta_mac, hostap_is_5ghz);
+                sta_capabilities =
+                    database.get_station_capabilities(sta_mac, hostap_wifi_channel.get_freq_type());
                 if (sta_capabilities == nullptr) {
                     TASK_LOG(WARNING) << "STA capabilities are empty - use default capabilities";
-                    get_station_default_capabilities(hostap_is_5ghz, default_sta_cap);
+                    if (!get_station_default_capabilities(hostap_wifi_channel.get_freq_type(),
+                                                          default_sta_cap)) {
+                        continue;
+                    }
                     sta_capabilities = &default_sta_cap;
                 }
-
-                TASK_LOG(DEBUG) << "sta_capabilities:"
-                                << " ht_ss=" << int(sta_capabilities->ht_ss)
-                                << " ht_mcs=" << int(sta_capabilities->ht_mcs)
-                                << " vht_ss=" << int(sta_capabilities->vht_ss)
-                                << " vht_mcs=" << int(sta_capabilities->vht_mcs)
-                                << " ant_num=" << int(sta_capabilities->ant_num)
-                                << " ht_bw=" << int(sta_capabilities->ht_bw)
-                                << " vht_bw=" << int(sta_capabilities->vht_bw);
+                print_station_capabilities(sta_capabilities);
 
                 auto hostap_bw = hostap_wifi_channel.get_bandwidth();
 
@@ -710,8 +726,8 @@ void optimal_path_task::work()
                     hostap_params.ant_gain = database.get_hostap_ant_gain(radio_mac);
                     hostap_params.tx_power = database.get_hostap_tx_power(radio_mac);
 
-                    sta_capabilities =
-                        database.get_station_capabilities(sta_mac, hostap_params.is_5ghz);
+                    sta_capabilities = database.get_station_capabilities(
+                        sta_mac, hostap_wifi_channel.get_freq_type());
                     current_ul_params = son::wireless_utils::estimate_ul_params(
                         rx_rssi, sta_phy_tx_rate_100kb, sta_capabilities, hostap_params.bw,
                         hostap_params.is_5ghz);
@@ -768,8 +784,7 @@ void optimal_path_task::work()
             database.dm_uint64_param_one_up(station->dm_path + ".MultiAPSTA.SteeringSummaryStats",
                                             "NoCandidateAPFailures");
             database.dm_uint64_param_one_up(
-                "Device.WiFi.DataElements.Network.MultiAPSteeringSummaryStats",
-                "NoCandidateAPFailures");
+                CONTROLLER_ROOT_DM ".Network.MultiAPSteeringSummaryStats", "NoCandidateAPFailures");
             finish();
         } else {
             chosen_bssid = database.get_hostap_vap_with_ssid(tlvf::mac_from_string(chosen_hostap),
@@ -1194,8 +1209,7 @@ void optimal_path_task::work()
             database.dm_uint64_param_one_up(station->dm_path + ".MultiAPSTA.SteeringSummaryStats",
                                             "NoCandidateAPFailures");
             database.dm_uint64_param_one_up(
-                "Device.WiFi.DataElements.Network.MultiAPSteeringSummaryStats",
-                "NoCandidateAPFailures");
+                CONTROLLER_ROOT_DM ".Network.MultiAPSteeringSummaryStats", "NoCandidateAPFailures");
             finish();
             break;
         }
@@ -1207,8 +1221,7 @@ void optimal_path_task::work()
             database.dm_uint64_param_one_up(station->dm_path + ".MultiAPSTA.SteeringSummaryStats",
                                             "NoCandidateAPFailures");
             database.dm_uint64_param_one_up(
-                "Device.WiFi.DataElements.Network.MultiAPSteeringSummaryStats",
-                "NoCandidateAPFailures");
+                CONTROLLER_ROOT_DM ".Network.MultiAPSteeringSummaryStats", "NoCandidateAPFailures");
             finish();
             break;
         }
@@ -1249,6 +1262,10 @@ void optimal_path_task::work()
                 LOG(ERROR) << "empty wifi channel of " << hostap << " in DB. skip this iteration";
                 continue;
             }
+            if (hostap_wifi_channel.get_freq_type() == eFreqType::FREQ_6G) {
+                LOG(ERROR) << "hostap " << hostap << " of 6GHz band is not supported. skip";
+                continue;
+            }
             int hostap_channel    = hostap_wifi_channel.get_channel();
             auto skip_estimation  = false; // initialise for each HostAP candidate
             hostap_params.is_5ghz = database.is_node_5ghz(hostap);
@@ -1262,21 +1279,18 @@ void optimal_path_task::work()
             // Get STA capabilities
             TASK_LOG(DEBUG) << "getting capabilities for sta_mac " << sta_mac << " on band "
                             << (hostap_params.is_5ghz ? "5GHz" : "2.4GHz");
-            sta_capabilities = database.get_station_capabilities(sta_mac, hostap_params.is_5ghz);
+            sta_capabilities =
+                database.get_station_capabilities(sta_mac, hostap_wifi_channel.get_freq_type());
             if (sta_capabilities == nullptr) {
                 TASK_LOG(WARNING) << "STA capabilities are empty - use default capabilities";
-                get_station_default_capabilities(hostap_params.is_5ghz, default_sta_cap);
+                if (!get_station_default_capabilities(hostap_wifi_channel.get_freq_type(),
+                                                      default_sta_cap)) {
+                    continue;
+                }
                 sta_capabilities = &default_sta_cap;
             }
 
-            TASK_LOG(DEBUG) << "sta_capabilities:"
-                            << " ht_ss=" << int(sta_capabilities->ht_ss)
-                            << " ht_mcs=" << int(sta_capabilities->ht_mcs)
-                            << " vht_ss=" << int(sta_capabilities->vht_ss)
-                            << " vht_mcs=" << int(sta_capabilities->vht_mcs)
-                            << " ant_num=" << int(sta_capabilities->ant_num)
-                            << " ht_bw=" << int(sta_capabilities->ht_bw)
-                            << " vht_bw=" << int(sta_capabilities->vht_bw);
+            print_station_capabilities(sta_capabilities);
 
             hostap_params.bw       = hostap_wifi_channel.get_bandwidth();
             hostap_params.ant_num  = database.get_hostap_ant_num(radio_mac);
@@ -1486,8 +1500,7 @@ void optimal_path_task::work()
             database.dm_uint64_param_one_up(station->dm_path + ".MultiAPSTA.SteeringSummaryStats",
                                             "NoCandidateAPFailures");
             database.dm_uint64_param_one_up(
-                "Device.WiFi.DataElements.Network.MultiAPSteeringSummaryStats",
-                "NoCandidateAPFailures");
+                CONTROLLER_ROOT_DM ".Network.MultiAPSteeringSummaryStats", "NoCandidateAPFailures");
             finish();
         } else {
             if (!database.settings_client_optimal_path_roaming_prefer_signal_strength()) {
@@ -2024,25 +2037,10 @@ void optimal_path_task::change_measurement_window_size(const std::string &curren
 }
 
 bool optimal_path_task::get_station_default_capabilities(
-    bool is_bandtype_5ghz, beerocks::message::sRadioCapabilities &default_sta_cap)
+    beerocks::eFreqType freq_type, beerocks::message::sRadioCapabilities &default_sta_cap)
 {
-    if (is_bandtype_5ghz) {
-        //default values are set so that the decision is more towards 5GHZ....
-        default_sta_cap.ht_mcs               = 7;
-        default_sta_cap.vht_mcs              = 9;
-        default_sta_cap.ht_ss                = 2;
-        default_sta_cap.vht_ss               = 2;
-        default_sta_cap.ht_bw                = beerocks::BANDWIDTH_40;
-        default_sta_cap.vht_bw               = beerocks::BANDWIDTH_80;
-        default_sta_cap.ht_low_bw_short_gi   = 1;
-        default_sta_cap.ht_high_bw_short_gi  = 1;
-        default_sta_cap.vht_low_bw_short_gi  = 1;
-        default_sta_cap.vht_high_bw_short_gi = 0;
-        default_sta_cap.ant_num              = 2;
-        default_sta_cap.wifi_standard        = beerocks::STANDARD_AC;
-        return true;
-    } else {
-        //return default values....
+    switch (freq_type) {
+    case beerocks::FREQ_24G:
         default_sta_cap.ht_mcs               = 7;
         default_sta_cap.vht_mcs              = 0;
         default_sta_cap.ht_ss                = 1;
@@ -2056,7 +2054,44 @@ bool optimal_path_task::get_station_default_capabilities(
         default_sta_cap.ant_num              = 1;
         default_sta_cap.wifi_standard        = beerocks::STANDARD_N;
         return true;
+    case beerocks::FREQ_5G:
+        default_sta_cap.ht_mcs               = 7;
+        default_sta_cap.vht_mcs              = 9;
+        default_sta_cap.ht_ss                = 2;
+        default_sta_cap.vht_ss               = 2;
+        default_sta_cap.ht_bw                = beerocks::BANDWIDTH_40;
+        default_sta_cap.vht_bw               = beerocks::BANDWIDTH_80;
+        default_sta_cap.ht_low_bw_short_gi   = 1;
+        default_sta_cap.ht_high_bw_short_gi  = 1;
+        default_sta_cap.vht_low_bw_short_gi  = 1;
+        default_sta_cap.vht_high_bw_short_gi = 0;
+        default_sta_cap.ant_num              = 2;
+        default_sta_cap.wifi_standard        = beerocks::STANDARD_AC;
+        return true;
+    case beerocks::FREQ_6G:
+        LOG(ERROR) << "6GHz is not supported yet";
+        return false;
+    default:
+        LOG(ERROR) << "freq type must be 2.4GHz, 5Ghz or 6GHz";
+        return false;
     }
+}
+
+void optimal_path_task::print_station_capabilities(
+    const beerocks::message::sRadioCapabilities *sta_capabilities)
+{
+    if (sta_capabilities == nullptr) {
+        LOG(WARNING) << "sta_capabilities is nullptr";
+        return;
+    }
+    TASK_LOG(DEBUG) << "sta_capabilities:"
+                    << " ht_ss=" << int(sta_capabilities->ht_ss)
+                    << " ht_mcs=" << int(sta_capabilities->ht_mcs)
+                    << " vht_ss=" << int(sta_capabilities->vht_ss)
+                    << " vht_mcs=" << int(sta_capabilities->vht_mcs)
+                    << " ant_num=" << int(sta_capabilities->ant_num)
+                    << " ht_bw=" << int(sta_capabilities->ht_bw)
+                    << " vht_bw=" << int(sta_capabilities->vht_bw);
 }
 
 double optimal_path_task::calculate_weighted_phy_rate(const Station &client)

@@ -53,6 +53,7 @@
 #include <tlvf/ieee_1905_1/tlvSupportedRole.h>
 #include <tlvf/wfa_map/tlv1905LayerSecurityCapability.h>
 #include <tlvf/wfa_map/tlvAkmSuiteCapabilities.h>
+#include <tlvf/wfa_map/tlvApCapability.h>
 #include <tlvf/wfa_map/tlvApExtendedMetrics.h>
 #include <tlvf/wfa_map/tlvApMetrics.h>
 #include <tlvf/wfa_map/tlvApRadioIdentifier.h>
@@ -94,6 +95,7 @@
 #include <tlvf/wfa_map/tlvTunnelledData.h>
 #include <tlvf/wfa_map/tlvTunnelledProtocolType.h>
 #include <tlvf/wfa_map/tlvTunnelledSourceInfo.h>
+#include <tlvf/wfa_map/tlvUnassociatedStaLinkMetricsQuery.h>
 
 #include <net/if.h> // if_nametoindex
 
@@ -291,6 +293,7 @@ bool Controller::start()
             ieee1905_1::eMessageType::CLIENT_STEERING_BTM_REPORT_MESSAGE,
             ieee1905_1::eMessageType::HIGHER_LAYER_DATA_MESSAGE,
             ieee1905_1::eMessageType::LINK_METRIC_RESPONSE_MESSAGE,
+            ieee1905_1::eMessageType::UNASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE,
             ieee1905_1::eMessageType::OPERATING_CHANNEL_REPORT_MESSAGE,
             ieee1905_1::eMessageType::STEERING_COMPLETED_MESSAGE,
             ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE,
@@ -302,8 +305,8 @@ bool Controller::start()
             ieee1905_1::eMessageType::BSS_CONFIGURATION_REQUEST_MESSAGE,
             ieee1905_1::eMessageType::FAILED_CONNECTION_MESSAGE,
             ieee1905_1::eMessageType::QOS_MANAGEMENT_NOTIFICATION_MESSAGE,
-            ieee1905_1::eMessageType::VIRTUAL_BSS_MOVE_PREPARATION_RESPONSE_MESSAGE,
             ieee1905_1::eMessageType::CLIENT_SECURITY_CONTEXT_RESPONSE_MESSAGE,
+            ieee1905_1::eMessageType::VIRTUAL_BSS_MOVE_PREPARATION_RESPONSE_MESSAGE,
             ieee1905_1::eMessageType::VIRTUAL_BSS_RESPONSE_MESSAGE,
         })) {
         LOG(ERROR) << "Failed subscribing to the Bus";
@@ -587,6 +590,7 @@ bool Controller::handle_cmdu_1905_1_message(const sMacAddr &src_mac,
     case ieee1905_1::eMessageType::TOPOLOGY_RESPONSE_MESSAGE:
     case ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE:
     case ieee1905_1::eMessageType::LINK_METRIC_RESPONSE_MESSAGE:
+    case ieee1905_1::eMessageType::UNASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE:
     case ieee1905_1::eMessageType::CLIENT_CAPABILITY_REPORT_MESSAGE:
     case ieee1905_1::eMessageType::CHANNEL_PREFERENCE_REPORT_MESSAGE:
     case ieee1905_1::eMessageType::CHANNEL_SELECTION_RESPONSE_MESSAGE:
@@ -971,8 +975,20 @@ bool Controller::autoconfig_wsc_add_m2(WSC::m1 &m1,
         WSC::eWscAuth(WSC::eWscAuth::WSC_AUTH_OPEN | WSC::eWscAuth::WSC_AUTH_WPA2PSK |
                       WSC::eWscAuth::WSC_AUTH_SAE);
     // TODO Maybe the band should be taken from bss_info_conf.operating_class instead?
-    m2_cfg.bands =
-        (m1.rf_bands() & WSC::WSC_RF_BAND_5GHZ) ? WSC::WSC_RF_BAND_5GHZ : WSC::WSC_RF_BAND_2GHZ;
+
+    if (m1.rf_bands() & WSC::WSC_RF_BAND_2GHZ) {
+        m2_cfg.bands = WSC::WSC_RF_BAND_2GHZ;
+    } else if (m1.rf_bands() & WSC::WSC_RF_BAND_5GHZ) {
+        m2_cfg.bands = WSC::WSC_RF_BAND_5GHZ;
+    } else if (m1.rf_bands() & WSC::WSC_RF_BAND_2GHZ_5GHZ) {
+        m2_cfg.bands = WSC::WSC_RF_BAND_2GHZ_5GHZ;
+    } else if (m1.rf_bands() & WSC::WSC_RF_BAND_6GHZ) {
+        m2_cfg.bands = WSC::WSC_RF_BAND_6GHZ;
+    } else {
+        LOG(WARNING) << "WSC's M1 RF bands is not 2.4GHz, 5GHz, 2.4GHz and 5Ghz or 6GHz. Assigning "
+                        "RF bands default value to 2.4GHz and 5Ghz";
+        m2_cfg.bands = WSC::WSC_RF_BAND_2GHZ_5GHZ;
+    }
 
     // association_state, configuration_error, device_password_id, os_version and vendor_extension
     // have default values
@@ -1149,8 +1165,8 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
 
     tlvRuid->radio_uid() = ruid;
 
-    const auto &bss_info_confs = database.get_bss_info_configuration(m1->mac_addr());
-    uint8_t num_bsss           = 0;
+    auto &bss_info_confs = database.get_bss_info_configuration(m1->mac_addr());
+    uint8_t num_bsss     = 0;
 
     // Update BSSes in the Agent
     if (!database.has_node(ruid)) {
@@ -1162,7 +1178,7 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
         return false;
     }
 
-    for (const auto &bss_info_conf : bss_info_confs) {
+    for (auto &bss_info_conf : bss_info_confs) {
         // Check if the radio supports it
         if (!son_actions::has_matching_operating_class(*radio_basic_caps, bss_info_conf)) {
             LOG(INFO) << "Skipping " << bss_info_conf.ssid << " due to operclass mismatch";
@@ -1183,6 +1199,23 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
             LOG(INFO) << "Configured #BSS exceeds maximum for " << al_mac << " radio " << ruid;
             break;
         }
+
+        // Check if the agent is external one or not to decide propagating Backhaul BSS
+        if (database.settings_daisy_chaining_disabled() && !agent->is_gateway &&
+            bss_info_conf.backhaul && !bss_info_conf.fronthaul) {
+            LOG(INFO) << "Daisy chaining is disabled for " << al_mac << " radio " << ruid
+                      << " skip BH BSS";
+            continue;
+        }
+
+        // Clear backhaul flag for FH+BH configurations
+        else if (database.settings_daisy_chaining_disabled() && !agent->is_gateway &&
+                 bss_info_conf.backhaul && bss_info_conf.fronthaul) {
+            LOG(INFO) << "Daisy chaining is disabled. Clear BH flag for" << al_mac << " radio "
+                      << ruid;
+            bss_info_conf.backhaul = false;
+        }
+
         if (!autoconfig_wsc_add_m2(*m1, &bss_info_conf)) {
             LOG(ERROR) << "Failed setting M2 attributes";
             return false;
@@ -1626,6 +1659,29 @@ bool Controller::handle_tlv_ap_he_capabilities(ieee1905_1::CmduMessageRx &cmdu_r
     return ret_val;
 }
 
+bool Controller::handle_tlv_apCapability(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                         std::shared_ptr<Agent> agent)
+{
+    auto tlv_ap_capability = cmdu_rx.getClass<wfa_map::tlvApCapability>();
+    if (!tlv_ap_capability) {
+        LOG(ERROR) << "addClass wfa_map::tlvApCapability failed";
+        return false;
+    }
+
+    for (auto &radio : agent->radios) {
+        radio.second->ap_capabilities.support_agent_initiated_rcpi_based_steering =
+            tlv_ap_capability->value().support_agent_initiated_rcpi_based_steering;
+        radio.second->ap_capabilities.support_unassociated_sta_link_metrics_on_non_operating_bssid =
+            tlv_ap_capability->value().support_unassociated_sta_link_metrics_on_non_operating_bssid;
+        radio.second->ap_capabilities.support_unassociated_sta_link_metrics_on_operating_bssid =
+            tlv_ap_capability->value().support_unassociated_sta_link_metrics_on_operating_bssid;
+    }
+
+    //TODO : shall we update the datamodel here ???
+
+    return true;
+}
+
 bool Controller::handle_cmdu_1905_associated_sta_link_metrics_response_message(
     const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
 {
@@ -1903,6 +1959,10 @@ bool Controller::handle_cmdu_1905_ap_capability_report(const sMacAddr &src_mac,
     }
     if (!handle_tlv_ap_vht_capabilities(cmdu_rx)) {
         LOG(ERROR) << "Couldn't handle TLV AP VHTCapabilities";
+        return false;
+    }
+    if (handle_tlv_apCapability(cmdu_rx, agent)) {
+        LOG(ERROR) << "Couldn't handle TLV tlvApCapability";
         return false;
     }
     if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_3 &&
@@ -2724,11 +2784,13 @@ bool Controller::handle_non_intel_slave_join(
 {
 
     // Multi-AP Agent doesn't say anything about the backhaul, so simulate ethernet backhaul to satisfy
-    // network map. MAC address is the bridge MAC with the last octet incremented by 1.
+    // network map. MAC address is the bridge MAC with the fifth octet incremented by 1.
     // The mac address for the backhaul is the same since it is ethernet backhaul.
     sMacAddr bridge_mac = agent->al_mac;
     sMacAddr mac        = bridge_mac;
-    mac.oct[5]++;
+    mac.oct[4]++;
+    //Set locally administered flag
+    mac.oct[0] |= 1 << 1;
     std::string backhaul_mac = tlvf::mac_to_string(mac);
     // generate eth address from bridge address
     auto eth_switch_mac_binary = beerocks::net::network_utils::get_eth_sw_mac_from_bridge_mac(mac);
@@ -4104,6 +4166,12 @@ bool Controller::send_agent_capabilities_to_vbss_manager(const sMacAddr &agent_m
     return false;
 }
 
+void Controller::trigger_prioritization_config()
+{
+    auto ev = agent_monitoring_task::CONFIGURE_QOS;
+    m_task_pool.push_event(database.get_agent_monitoring_task_id(), ev);
+}
+
 bool Controller::handle_tlv_profile2_ap_capability(std::shared_ptr<Agent> agent,
                                                    ieee1905_1::CmduMessageRx &cmdu_rx)
 {
@@ -4591,6 +4659,131 @@ bool Controller::handle_cmdu_1905_qos_management_notification_message(
 
     // TODO: Implement sending of remaining TLVs of Service Prioritization Request message (PPM-2366)
     return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
+}
+
+bool Controller::add_unassociated_station(const sMacAddr &station_mac_addr, uint8_t channel,
+                                          const sMacAddr &agent_mac_addr,
+                                          const sMacAddr &radio_mac_addr)
+{
+    if (!database.add_unassociated_station(station_mac_addr, channel, agent_mac_addr,
+                                           radio_mac_addr)) {
+        return false;
+    }
+    return send_unassociated_sta_link_metrics_query_message(cmdu_tx, database);
+}
+
+bool Controller::remove_unassociated_station(const sMacAddr &station_mac_addr,
+                                             const sMacAddr &agent_mac_addr,
+                                             const sMacAddr &radio_mac_addr)
+{
+    if (!database.remove_unassociated_station(station_mac_addr, agent_mac_addr, radio_mac_addr)) {
+        return false;
+    }
+
+    return send_unassociated_sta_link_metrics_query_message(cmdu_tx, database);
+}
+
+bool Controller::get_unassociated_stations_stats()
+{
+    return send_unassociated_sta_link_metrics_query_message(cmdu_tx, database);
+}
+
+bool Controller::send_unassociated_sta_link_metrics_query_message(
+    ieee1905_1::CmduMessageTx &cmdu_tx, db &database)
+{
+    if (!cmdu_tx.create(0, ieee1905_1::eMessageType::UNASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE)) {
+        LOG(ERROR) << "Failed building message UNASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE!";
+        return false;
+    }
+
+    using map_stations_per_channel = std::unordered_map<uint8_t, std::list<sMacAddr>>;
+
+    using map_operating_classes_per_agent = std::unordered_map<uint8_t, map_stations_per_channel>;
+
+    using map_all_agents = std::unordered_map<
+        sMacAddr,
+        map_operating_classes_per_agent>; //mapping all opetating_classes to agents
+
+    map_all_agents global_map;
+
+    auto un_stations_db = database.get_unassociated_stations();
+    if (un_stations_db.size()) {
+        for (auto &station : un_stations_db) {
+            for (const auto &agent : station.second->get_agents()) {
+
+                if (global_map.find(agent.first) == global_map.end()) {
+                    global_map.insert(
+                        std::make_pair(agent.first, map_operating_classes_per_agent()));
+                }
+                auto &agents_operating_classes = global_map[agent.first];
+
+                // now check if the operating_class exists
+                uint8_t operating_class = station.second->get_operating_class();
+                if (agents_operating_classes.find(operating_class) ==
+                    agents_operating_classes.end()) {
+                    agents_operating_classes.insert(
+                        std::make_pair(operating_class, map_stations_per_channel()));
+                }
+                auto &stations_per_channel = agents_operating_classes[operating_class];
+
+                // now check if the channel exist
+                uint8_t channel = station.second->get_channel();
+                if (stations_per_channel.find(channel) == stations_per_channel.end()) {
+                    stations_per_channel.insert(std::make_pair(channel, std::list<sMacAddr>()));
+                }
+
+                auto &list_stations = stations_per_channel[channel];
+                list_stations.emplace_back(station.first);
+            }
+        }
+    } else { // this is a command to remove all monitored stations
+        for (const auto &agent : database.get_all_connected_agents()) {
+            cmdu_tx.addClass<wfa_map::tlvUnassociatedStaLinkMetricsQuery>();
+            son_actions::send_cmdu_to_agent(agent->al_mac, cmdu_tx, database);
+            LOG(DEBUG) << "removed  non_associated stations from  agent with mac_address "
+                       << tlvf::mac_to_string(agent->al_mac);
+            return true;
+        }
+    }
+
+    //now loop over all agents  and send a specific telemtry for each operating_class
+    for (auto &agent : global_map) {
+
+        for (auto &operating_class : agent.second) {
+            auto unassociated_sta_query =
+                cmdu_tx.addClass<wfa_map::tlvUnassociatedStaLinkMetricsQuery>();
+            if (operating_class.second.size() == 0) {
+                continue; // no stations so nothing to do
+            }
+            for (auto &stations_per_channel : operating_class.second) {
+                std::shared_ptr<wfa_map::cChannelParameters> channels =
+                    unassociated_sta_query->create_channel_list();
+                channels->channel_number() = stations_per_channel.first;
+                channels->alloc_sta_list(stations_per_channel.second.size());
+                size_t count(0);
+                for (auto &station : stations_per_channel.second) {
+                    std::get<1>(channels->sta_list(count)) =
+                        station; // here we are setting the mac address into the telemtry
+                    count++;
+                }
+                // Add channel_list object to TLV
+                if (!unassociated_sta_query->add_channel_list(channels)) {
+                    LOG(ERROR)
+                        << "add_channel_list() failed  in tlvUnassociatedStaLinkMetricsQuery";
+                    return false;
+                }
+            }
+
+            LOG(DEBUG) << " sending a new tlvUnassociatedStaLinkMetricsQuery to agent: "
+                       << tlvf::mac_to_string(agent.first)
+                       << " with: operating_class: " << operating_class.first;
+            unassociated_sta_query->operating_class_of_channel_list() = operating_class.first;
+            unassociated_sta_query->channel_list_length() =
+                operating_class.second.size(); //number of channels
+            son_actions::send_cmdu_to_agent(agent.first, cmdu_tx, database);
+        }
+    }
+    return true;
 }
 
 } // namespace son

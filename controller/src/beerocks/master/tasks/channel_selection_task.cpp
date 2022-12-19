@@ -399,25 +399,45 @@ void channel_selection_task::work()
 
         bool eth_bh = !hostap_params.backhaul_is_wireless;
 
-        TASK_LOG(DEBUG) << "eth_bh " << int(eth_bh)
-                        << " hostap_params.backhaul_is_2G = " << int(hostap_params.backhaul_is_2G)
-                        << " hostap_params.is_2G = " << int(hostap_params.is_2G)
-                        << " hostap_params.channel = " << int();
+        TASK_LOG(DEBUG)
+            << "eth_bh " << int(eth_bh) << " hostap_params.backhaul_freq_type = "
+            << beerocks::utils::convert_frequency_type_to_string(hostap_params.freq_type)
+            << " hostap_params.freq_type = "
+            << beerocks::utils::convert_frequency_type_to_string(hostap_params.freq_type)
+            << " hostap_params.channel = " << int();
 
-        if ((!eth_bh) && (!hostap_params.backhaul_is_2G) && (!hostap_params.is_2G)) {
+        if ((!eth_bh) && (hostap_params.backhaul_freq_type == beerocks::FREQ_5G) &&
+            (hostap_params.freq_type == beerocks::FREQ_5G)) {
             // 5G / 5G concurrent, remove BH subband
             ccl_remove_5G_subband(hostap_params.backhaul_subband);
         }
 
+        bool has_free_channel = false;
         //General selection logic
-        bool has_free_channel = hostap_params.is_2G
-                                    ? ccl_has_free_channels_2G()
-                                    : ccl_has_free_channels_5G(beerocks::BANDWIDTH_160);
+        switch (hostap_params.freq_type) {
+        case beerocks::FREQ_24G:
+            has_free_channel = ccl_has_free_channels_2G();
+            break;
+        case beerocks::FREQ_5G:
+            has_free_channel = ccl_has_free_channels_5G(beerocks::BANDWIDTH_160);
+            break;
+        case beerocks::FREQ_6G:
+            TASK_LOG(ERROR) << "6Ghz is not supported";
+            FSM_MOVE_STATE(GOTO_IDLE);
+            break;
+        default:
+            LOG(ERROR) << "Invalid frequency type "
+                       << beerocks::utils::convert_frequency_type_to_string(
+                              hostap_params.freq_type);
+            FSM_MOVE_STATE(GOTO_IDLE);
+            break;
+        }
+
         if (has_free_channel) {
             // Send restricted channles and send ACS
             FSM_MOVE_STATE(SEND_RESTRICTED_FAIL_SAFE_CHANNEL);
         } else {
-            if (!hostap_params.is_2G) {
+            if (hostap_params.freq_type == eFreqType::FREQ_5G) {
                 if (!ccl_fill_channel_switch_request_with_least_used_channel()) {
                     FSM_MOVE_STATE(GOTO_IDLE);
                     break;
@@ -469,13 +489,14 @@ void channel_selection_task::work()
             return;
         }
         request->params().failsafe_channel =
-            hostap_params.is_2G
-                ? 0
-                : wireless_utils::freq_to_channel(database.config.fail_safe_5G_frequency);
+            hostap_params.freq_type == beerocks::FREQ_5G
+                ? wireless_utils::freq_to_channel(database.config.fail_safe_5G_frequency)
+                : 0;
         request->params().failsafe_channel_bandwidth =
-            hostap_params.is_2G ? 0 : database.config.fail_safe_5G_bw;
-        request->params().vht_center_frequency =
-            hostap_params.is_2G ? 0 : database.config.fail_safe_5G_vht_frequency;
+            (hostap_params.freq_type == beerocks::FREQ_5G) ? database.config.fail_safe_5G_bw : 0;
+        request->params().vht_center_frequency = (hostap_params.freq_type == beerocks::FREQ_5G)
+                                                     ? database.config.fail_safe_5G_vht_frequency
+                                                     : 0;
         memset(request->params().restricted_channels, 0, message::RESTRICTED_CHANNEL_LENGTH);
         fill_restricted_channels_from_ccl_and_supported(request->params().restricted_channels);
         TASK_LOG(INFO) << "***** send_restricted_channel to hostap: " << radio_mac;
@@ -530,14 +551,15 @@ void channel_selection_task::work()
             return;
         }
         request->params().failsafe_channel =
-            hostap_params.is_2G
-                ? 0
-                : wireless_utils::freq_to_channel(database.config.fail_safe_5G_frequency);
+            (hostap_params.freq_type == beerocks::FREQ_5G)
+                ? wireless_utils::freq_to_channel(database.config.fail_safe_5G_frequency)
+                : 0;
         ;
         request->params().failsafe_channel_bandwidth =
-            hostap_params.is_2G ? 0 : database.config.fail_safe_5G_bw;
-        request->params().vht_center_frequency =
-            hostap_params.is_2G ? 0 : database.config.fail_safe_5G_vht_frequency;
+            (hostap_params.freq_type == beerocks::FREQ_5G) ? database.config.fail_safe_5G_bw : 0;
+        request->params().vht_center_frequency = (hostap_params.freq_type == beerocks::FREQ_5G)
+                                                     ? database.config.fail_safe_5G_vht_frequency
+                                                     : 0;
         memset(request->params().restricted_channels, 0, message::RESTRICTED_CHANNEL_LENGTH);
         fill_restricted_channels_from_ccl_busy_bands(request->params().restricted_channels);
         TASK_LOG(INFO) << "***** send_restricted_channel to hostap: " << radio_mac;
@@ -708,8 +730,9 @@ void channel_selection_task::work()
         }
 
         if (csa_event) {
-            if (son::wireless_utils::which_freq_type(csa_event->cs_params.vht_center_frequency) !=
-                beerocks::FREQ_24G) {
+            auto freq_type =
+                son::wireless_utils::which_freq_type(csa_event->cs_params.vht_center_frequency);
+            if (freq_type == beerocks::FREQ_5G) {
                 TASK_LOG(DEBUG) << "radio_mac - " << radio_mac << " csa_event != null";
                 if (csa_event->cs_params.is_dfs_channel) {
                     wait_for_cac_completed(csa_event->cs_params.channel,
@@ -738,8 +761,13 @@ void channel_selection_task::work()
                     }
                     TASK_LOG(DEBUG) << "radio_mac - " << radio_mac << " non DFS not a reentry flow";
                 }
+            } else if (freq_type == beerocks::FREQ_24G) {
+                TASK_LOG(DEBUG) << "2GHz AP ignore";
+            } else if (freq_type == beerocks::FREQ_6G) {
+                TASK_LOG(DEBUG) << "6GHz AP ignore";
             } else {
-                TASK_LOG(DEBUG) << "2G AP ignore";
+                TASK_LOG(ERROR) << "Invalid frequency type "
+                                << beerocks::utils::convert_frequency_type_to_string(freq_type);
             }
         } else {
             // CAC completed will not arrive in passive mode, so set the indication to 'completed'
@@ -1163,8 +1191,8 @@ void channel_selection_task::get_hostap_params()
     if (hostap_wifi_channel.is_empty()) {
         LOG(WARNING) << "empty wifi channel of " << tlvf::mac_to_string(radio_mac) << " in DB";
     }
-    hostap_params.channel = hostap_wifi_channel.get_channel();
-    hostap_params.is_2G   = is_2G_channel(hostap_params.channel);
+    hostap_params.channel   = hostap_wifi_channel.get_channel();
+    hostap_params.freq_type = hostap_wifi_channel.get_freq_type();
     TASK_LOG(DEBUG) << "get_hostap_params()  for = " << radio_mac;
     //use slave_joined_event as backhaul may have not connected yet
     if (slave_joined_event) {
@@ -1185,11 +1213,12 @@ void channel_selection_task::get_hostap_params()
         auto backhaul_mac = database.get_node_parent_backhaul(tlvf::mac_to_string(radio_mac));
         hostap_params.backhaul_is_wireless = backhaul_mac.empty();
         hostap_params.backhaul_channel     = backhaul_wifi_channel.get_channel();
+        hostap_params.backhaul_freq_type   = backhaul_wifi_channel.get_freq_type();
         //TODO add low_pass_filter_on to the DB, only needed for DFS
     }
-    hostap_params.backhaul_is_2G = is_2G_channel(hostap_params.backhaul_channel);
+
     // which_subband works only for 5G
-    if (is_5G_channel(hostap_params.channel)) {
+    if (hostap_params.freq_type == beerocks::FREQ_5G) {
         hostap_params.backhaul_subband =
             son::wireless_utils::which_subband(hostap_params.backhaul_channel);
     } else {
@@ -1253,15 +1282,10 @@ void channel_selection_task::ccl_fill_active_channels()
                        << " in DB. possibly not initialized yet. skip this iteration";
             continue;
         }
-        auto channel                     = wifi_channel.get_channel();
-        auto bw                          = wifi_channel.get_bandwidth();
-        auto channel_ext_above_secondary = wifi_channel.get_ext_above_secondary();
-        auto channel_ext_above_primary   = wifi_channel.get_ext_above_primary();
         TASK_LOG(DEBUG) << "hostap=" << hostap << " " << wifi_channel;
 
         // add active hostap channels to ccl
-        auto channel_list_20MHz = son::wireless_utils::split_channel_to_20MHz(
-            channel, bw, channel_ext_above_secondary, channel_ext_above_primary);
+        auto channel_list_20MHz = son::wireless_utils::split_channel_to_20MHz(wifi_channel);
         for (auto &channel_20MHz : channel_list_20MHz) {
             TASK_LOG(DEBUG) << "channel_20MHz = " << int(channel_20MHz.first);
             auto it = ccl.find(channel_20MHz.first);
@@ -1270,7 +1294,7 @@ void channel_selection_task::ccl_fill_active_channels()
                 continue;
             }
             TASK_LOG(DEBUG) << "channel_20MHz.second  = " << int(channel_20MHz.second);
-            if (is_2G_channel(it->first)) {
+            if (wifi_channel.get_freq_type() == beerocks::FREQ_24G) {
                 get_overlapping_channels_for_24G(it->first);
             }
             if (channel_20MHz.second == beerocks::CH_PRIMARY) {

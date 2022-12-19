@@ -740,6 +740,184 @@ amxd_status_t trigger_vbss_move(amxd_object_t *object, amxd_function_t *func, am
     return amxd_status_ok;
 }
 
+amxd_status_t trigger_prioritization(amxd_object_t *object, amxd_function_t *func, amxc_var_t *args,
+                                     amxc_var_t *ret)
+{
+    if (!g_database) {
+        LOG(ERROR) << "Invalid database access";
+        return amxd_status_unknown_error;
+    }
+
+    auto controller = g_database->get_controller_ctx();
+    if (!controller) {
+        LOG(ERROR) << "Failed to get controller context";
+        return amxd_status_unknown_error;
+    }
+
+    g_database->dm_configure_service_prioritization();
+    controller->trigger_prioritization_config();
+    return amxd_status_ok;
+}
+/**
+ * @brief add an unassociated station using the channel given in the arguments
+ * 
+ * Example of usage:
+ * Device.WiFi.DataElements.Network.Device.1.Radio.1.AddUnassociatedStation(un_station_mac="AA:BB:CC:DD:12:04",channel=4,agent_mac="b2:83:c4:14:93:08")
+ *
+ */
+amxd_status_t add_unassociated_station(amxd_object_t *object, amxd_function_t *func,
+                                       amxc_var_t *args, amxc_var_t *ret)
+{
+    amxd_status_t result(amxd_status_ok);
+
+    amxc_var_t value;
+    amxc_var_init(&value);
+    amxd_object_get_param(object, "ID", &value);
+    const char *str = amxc_var_constcast(cstring_t, &value);
+    if (str == nullptr) {
+        LOG(ERROR) << "Failed fetching ID";
+        amxc_var_clean(&value);
+        return amxd_status_object_not_found;
+    };
+    std::string radio_mac(str);
+    if (radio_mac.empty()) {
+        LOG(ERROR) << "radio_mac is empty";
+        amxc_var_clean(&value);
+        return amxd_status_parameter_not_found;
+    }
+
+    //get agent mac
+    amxd_object_t *parent = amxd_object_get_parent(object);
+    amxd_object_get_param(parent, "ID", &value);
+    str = amxc_var_constcast(cstring_t, &value);
+    if (str == nullptr) {
+        LOG(ERROR) << "Failed fetching ID";
+        amxc_var_clean(&value);
+        return amxd_status_object_not_found;
+    };
+    std::string agent_mac(str);
+    if (agent_mac.empty()) {
+        LOG(ERROR) << "agent_mac is empty";
+        amxc_var_clean(&value);
+        return amxd_status_parameter_not_found;
+    }
+    amxc_var_clean(&value);
+
+    auto controller_ctx = g_database->get_controller_ctx();
+
+    if (!controller_ctx) {
+        LOG(ERROR) << "Failed to get controller context.";
+        return amxd_status_unknown_error;
+    }
+
+    std::string station_mac_addr = GET_CHAR(args, "un_station_mac");
+    if (!network_utils::is_valid_mac(station_mac_addr)) {
+        LOG(ERROR) << station_mac_addr << " is not avalid mac_address!";
+        return amxd_status_invalid_value;
+    }
+    uint32_t channel = GET_UINT32(args, "channel");
+    if (channel == 0) {
+        LOG(ERROR) << "entered channel is not valid! ";
+        return amxd_status_invalid_value;
+    }
+
+    if (!controller_ctx->add_unassociated_station(
+            tlvf::mac_from_string(station_mac_addr), (uint8_t)channel,
+            tlvf::mac_from_string(agent_mac), tlvf::mac_from_string(radio_mac))) {
+        result = amxd_status_unknown_error;
+    }
+    return result;
+}
+
+/**
+ * @brief remove the unassociated station being monitored
+ * 
+ * Example of usage:
+ * Device.WiFi.DataElements.Network.Device.1.Radio.1.RemoveUnassociatedStation(un_station_mac="AA:BB:CC:DD:12:04")
+ *
+ */
+amxd_status_t remove_unassociated_station(amxd_object_t *object, amxd_function_t *func,
+                                          amxc_var_t *args, amxc_var_t *ret)
+{
+    amxd_status_t result(amxd_status_ok);
+
+    amxc_var_t value;
+
+    amxc_var_init(&value);
+    amxd_object_get_param(object, "ID", &value);
+    const char *str = amxc_var_constcast(cstring_t, &value);
+    if (str == nullptr) {
+        LOG(ERROR) << "Failed fetching ID";
+        amxc_var_clean(&value);
+        return amxd_status_object_not_found;
+    };
+    std::string radio_mac(str);
+    if (radio_mac.empty()) {
+        LOG(ERROR) << "radio_mac is empty";
+        amxc_var_clean(&value);
+        return amxd_status_parameter_not_found;
+    }
+
+    //get agent mac
+    amxd_object_t *parent = amxd_object_get_parent(object);
+    amxd_object_get_param(parent, "ID", &value);
+    str = amxc_var_constcast(cstring_t, &value);
+    amxc_var_clean(&value);
+
+    if (str == nullptr) {
+        LOG(ERROR) << "Failed fetching ID";
+        return amxd_status_object_not_found;
+    };
+    std::string agent_mac(str);
+    if (agent_mac.empty()) {
+        LOG(ERROR) << "agent_mac is empty";
+        return amxd_status_parameter_not_found;
+    }
+
+    auto controller_ctx = g_database->get_controller_ctx();
+
+    if (!controller_ctx) {
+        LOG(ERROR) << "Failed to get controller context.";
+        return amxd_status_unknown_error;
+    }
+
+    std::string station_mac_addr = GET_CHAR(args, "un_station_mac");
+    if (!network_utils::is_valid_mac(station_mac_addr)) {
+        LOG(ERROR) << station_mac_addr << " is not avalid mac_address!";
+        return amxd_status_invalid_value;
+    }
+
+    if (!controller_ctx->remove_unassociated_station(tlvf::mac_from_string(station_mac_addr),
+                                                     tlvf::mac_from_string(agent_mac),
+                                                     tlvf::mac_from_string(radio_mac))) {
+        result = amxd_status_unknown_error;
+    }
+    return result;
+}
+
+/**
+ * @brief update the datamodel with new stats from all connected agents
+ * 
+ * Example of usage:
+ * ubus call Device.WiFi.DataElements.Network UpdateUnassociatedStationsStats
+ *
+ */
+amxd_status_t update_unassociatedStations_stats(amxd_object_t *object, amxd_function_t *func,
+                                                amxc_var_t *args, amxc_var_t *ret)
+{
+    amxd_status_t result(amxd_status_ok);
+    auto controller_ctx = g_database->get_controller_ctx();
+
+    if (!controller_ctx) {
+        LOG(ERROR) << "Failed to get controller context.";
+        return amxd_status_unknown_error;
+    }
+    if (!controller_ctx->get_unassociated_stations_stats()) {
+        result = amxd_status_unknown_error;
+    }
+    return result;
+}
+
 // Events
 
 amxd_dm_t *g_data_model = nullptr;
@@ -775,8 +953,8 @@ static void event_rm_params(const char *const sig_name, const amxc_var_t *const 
     amxd_object_t *security_obj = amxd_dm_signal_get_object(g_data_model, data);
 
     if (!security_obj) {
-        LOG(WARNING)
-            << "Failed to get object Device.WiFi.DataElements.Network.AccessPoint.*.Security";
+        LOG(WARNING) << "Failed to get object " CONTROLLER_ROOT_DM
+                        ".Network.AccessPoint.*.Security";
         return;
     }
     rm_params(security_obj, "PreSharedKey");
@@ -796,13 +974,33 @@ static void event_add_hidden_params(const char *const sig_name, const amxc_var_t
     amxd_object_t *security_obj = amxd_dm_signal_get_object(g_data_model, data);
 
     if (!security_obj) {
-        LOG(WARNING)
-            << "Failed to get object Device.WiFi.DataElements.Network.AccessPoint.*.Security";
+        LOG(WARNING) << "Failed to get object " CONTROLLER_ROOT_DM
+                        ".Network.AccessPoint.*.Security";
         return;
     }
     add_string_param("PreSharedKey", security_obj);
     add_string_param("KeyPassphrase", security_obj);
     add_string_param("SAEPassphrase", security_obj);
+}
+
+/**
+ * @brief Renew configurations on agents.
+ *
+ * send_ap_config_renew is invoked when new configurations need to be propagated to agents.
+ */
+bool send_ap_config_renew()
+{
+    uint8_t tx_buffer[beerocks::message::MESSAGE_BUFFER_LENGTH];
+    ieee1905_1::CmduMessageTx cmdu_tx(tx_buffer, sizeof(tx_buffer));
+    auto connected_agents = g_database->get_all_connected_agents();
+
+    if (!connected_agents.empty()) {
+        if (!son_actions::send_ap_config_renew_msg(cmdu_tx, *g_database)) {
+            LOG(ERROR) << "Failed son_actions::send_ap_config_renew_msg ! ";
+            return false;
+        }
+    }
+    return true;
 }
 
 /**
@@ -817,7 +1015,7 @@ static void event_configuration_changed(const char *const sig_name, const amxc_v
     amxd_object_t *configuration = amxd_dm_signal_get_object(g_data_model, data);
 
     if (!configuration) {
-        LOG(WARNING) << "Failed to get object Device.WiFi.DataElements.Configuration";
+        LOG(WARNING) << "Failed to get object " CONTROLLER_ROOT_DM ".Configuration";
         return;
     }
 
@@ -860,6 +1058,14 @@ static void event_configuration_changed(const char *const sig_name, const amxc_v
         amxd_object_get_int32_t(configuration, "StatisticsPollingRateSec", nullptr);
 
     nbapi_config.enable_dfs_reentry = amxd_object_get_bool(configuration, "DFSReentry", nullptr);
+
+    nbapi_config.daisy_chaining_disabled =
+        amxd_object_get_bool(configuration, "DaisyChainingDisabled", nullptr);
+
+    // Send config renew if setting is changed
+    if (nbapi_config.daisy_chaining_disabled != g_database->settings_daisy_chaining_disabled()) {
+        send_ap_config_renew();
+    }
 
     if (!g_database->update_master_configuration(nbapi_config)) {
         LOG(ERROR) << "Failed update master configuration from NBAPI.";
@@ -905,24 +1111,23 @@ std::vector<beerocks::nbapi::sEvents> get_events_list(void)
 std::vector<beerocks::nbapi::sFunctions> get_func_list(void)
 {
     const std::vector<beerocks::nbapi::sFunctions> functions_list = {
-        {"access_point_commit", "Device.WiFi.DataElements.Network.AccessPointCommit",
+        {"access_point_commit", CONTROLLER_ROOT_DM ".Network.AccessPointCommit",
          access_point_commit},
-        {"client_steering", "Device.WiFi.DataElements.Network.ClientSteering", client_steering},
-        {"trigger_scan", "Device.WiFi.DataElements.Network.Device.Radio.ScanTrigger", trigger_scan},
-        {"BTMRequest",
-         "Device.WiFi.DataElements.Network.Device.Radio.BSS.STA.MultiAPSTA.BTMRequest",
+        {"client_steering", CONTROLLER_ROOT_DM ".Network.ClientSteering", client_steering},
+        {"trigger_scan", CONTROLLER_ROOT_DM ".Network.Device.Radio.ScanTrigger", trigger_scan},
+        {"BTMRequest", CONTROLLER_ROOT_DM ".Network.Device.Radio.BSS.STA.MultiAPSTA.BTMRequest",
          btm_request},
-        {"update_vbss_capabilities",
-         "Device.WiFi.DataElements.Network.Device.UpdateVBSSCapabilities",
+        {"update_vbss_capabilities", CONTROLLER_ROOT_DM ".Network.Device.UpdateVBSSCapabilities",
          update_vbss_capabilities},
-        {"trigger_vbss_creation",
-         "Device.WiFi.DataElements.Network.Device.Radio.TriggerVBSSCreation",
+        {"trigger_vbss_creation", CONTROLLER_ROOT_DM ".Network.Device.Radio.TriggerVBSSCreation",
          trigger_vbss_creation},
         {"trigger_vbss_destruction",
-         "Device.WiFi.DataElements.Network.Device.Radio.BSS.TriggerVBSSDestruction",
+         CONTROLLER_ROOT_DM ".Network.Device.Radio.BSS.TriggerVBSSDestruction",
          trigger_vbss_destruction},
-        {"trigger_vbss_move", "Device.WiFi.DataElements.Network.Device.Radio.BSS.TriggerVBSSMove",
-         trigger_vbss_move}};
+        {"trigger_vbss_move", CONTROLLER_ROOT_DM ".Network.Device.Radio.BSS.TriggerVBSSMove",
+         trigger_vbss_move},
+        {"trigger_prioritization", CONTROLLER_ROOT_DM ".Network.SetServicePrioritization",
+         trigger_prioritization}};
     return functions_list;
 }
 

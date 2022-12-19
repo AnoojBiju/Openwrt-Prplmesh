@@ -6,7 +6,7 @@ include_yaml_path: {
     "tlvf/WEC/",
     "tlvf/common/",
     "tlvf/ieee_1905_1/",
-    "tlvf/ieee_80211/",
+    "tlvf/ieee_802_11/",
     "tlvf/test/",
     "tlvf/association_frame/AssocReqFields.yaml",
     "tlvf/association_frame/cMobilityDomain.yaml",

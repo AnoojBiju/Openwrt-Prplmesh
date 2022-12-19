@@ -13,6 +13,8 @@
 
 #include <beerocks/tlvf/beerocks_message.h>
 #include <tlvf/ieee_1905_1/tlvLinkMetricQuery.h>
+#include <tlvf/wfa_map/tlvUnassociatedStaLinkMetricsQuery.h>
+#include <tlvf/wfa_map/tlvUnassociatedStaLinkMetricsResponse.h>
 
 #include <easylogging++.h>
 
@@ -55,10 +57,21 @@ void LinkMetricsTask::work()
             LOG(ERROR) << "addClass ieee1905_1::tlvLinkMetricQueryAllNeighbors failed";
             return;
         }
-
         for (const auto &agent : database.get_all_connected_agents()) {
             son_actions::send_cmdu_to_agent(agent->al_mac, cmdu_tx, database);
         }
+
+        // TODO: is the unassociated station request interval the same as the link metric ? or shall we consider a different one ?
+        if (!cmdu_tx.create(
+                0, ieee1905_1::eMessageType::UNASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE)) {
+            LOG(ERROR) << "Failed building message UNASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE!";
+            return;
+        }
+        cmdu_tx.addClass<wfa_map::tlvUnassociatedStaLinkMetricsQuery>();
+        for (const auto &agent : database.get_all_connected_agents()) {
+            son_actions::send_cmdu_to_agent(agent->al_mac, cmdu_tx, database);
+        }
+
         last_query_request = std::chrono::steady_clock::now();
     }
     return;
@@ -69,8 +82,10 @@ bool LinkMetricsTask::handle_ieee1905_1_msg(const sMacAddr &src_mac,
 {
     switch (cmdu_rx.getMessageType()) {
     case ieee1905_1::eMessageType::LINK_METRIC_RESPONSE_MESSAGE: {
-        handle_cmdu_1905_link_metric_response(src_mac, cmdu_rx);
-        break;
+        return handle_cmdu_1905_link_metric_response(src_mac, cmdu_rx);
+    }
+    case ieee1905_1::eMessageType::UNASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE: {
+        return handle_cmdu_1905_unassociated_station_link_metric_response(src_mac, cmdu_rx);
     }
     default: {
         return false;
@@ -256,6 +271,123 @@ bool LinkMetricsTask::handle_cmdu_1905_link_metric_response(const sMacAddr &src_
     if (database.setting_certification_mode())
         construct_combined_infra_metric();
 
+    return true;
+}
+
+bool LinkMetricsTask::handle_cmdu_1905_unassociated_station_link_metric_response(
+    const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    const auto message_id = cmdu_rx.getMessageId();
+    LOG(DEBUG) << "Received an Unassociated STA Link Metrics Response, mid=" << message_id
+               << " from agent with src_mac=" << src_mac;
+
+    auto unassoc_sta_link_metrics_tlv =
+        cmdu_rx.getClass<wfa_map::tlvUnassociatedStaLinkMetricsResponse>();
+    if (!unassoc_sta_link_metrics_tlv) {
+        LOG(ERROR) << "Unassociated STA Link Metrics Response message did not contain an "
+                      "Unassociated STA Link Metrics TLV!";
+        return false;
+    }
+
+    // build ACK message CMDU
+    const auto mid      = cmdu_rx.getMessageId();
+    auto cmdu_tx_header = cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE);
+    if (!cmdu_tx_header) {
+        LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
+        return false;
+    }
+    // send the ack
+    son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
+
+    auto number_of_station_entries = unassoc_sta_link_metrics_tlv->sta_list_length();
+    if (number_of_station_entries == 0) {
+        LOG(DEBUG) << "Unassociated STA Link Metrics Response from Agent " << src_mac
+                   << " reports zero stations, nothing to do!";
+        return true;
+    }
+    for (int i = 0; i < number_of_station_entries; ++i) {
+        const auto station_tuple = unassoc_sta_link_metrics_tlv->sta_list(i);
+        const auto sta_metrics   = std::get<1>(station_tuple);
+
+        if (sta_metrics.sta_mac == beerocks::net::network_utils::ZERO_MAC) {
+            // skip dud entries
+            LOG(DEBUG) << " Zero_MAC!!--> skipped " << tlvf::mac_to_string(sta_metrics.sta_mac);
+            continue;
+        }
+
+        uint8_t operating_class_received =
+            unassoc_sta_link_metrics_tlv->operating_class_of_channel_list();
+        std::string mac_addr_str = tlvf::mac_to_string(sta_metrics.sta_mac);
+        LOG(DEBUG) << "Controller received Unassoc STA Link Metrics Response  with operating_class="
+                   << operating_class_received << " entry: " << i << " from Agent "
+                   << tlvf::mac_to_string(src_mac)
+                   << ", MAC: " << tlvf::mac_to_string(sta_metrics.sta_mac)
+                   << ", RCPI: " << sta_metrics.uplink_rcpi_dbm_enc
+                   << ", ChannelNum: " << sta_metrics.channel_number
+                   << ", time_stamp(uint_32): " << sta_metrics.measurement_to_report_delta_msec;
+
+        // updating the DM and the database
+        auto agents = database.get_all_connected_agents();
+
+        auto agent =
+            std::find_if(agents.begin(), agents.end(), [&src_mac](std::shared_ptr<Agent> input) {
+                return (tlvf::mac_to_string(input->al_mac) == tlvf::mac_to_string(src_mac));
+            });
+        if (agent == end(agents)) {
+            LOG(ERROR) << "Failed to get agent with mac_addr: " << tlvf::mac_to_string(src_mac);
+            return false;
+        }
+        sMacAddr radio_mac_address(beerocks::net::network_utils::ZERO_MAC);
+        for (auto &radio : (*agent)->radios) {
+            for (auto &operating_class : radio.second->scan_capabilities.operating_classes) {
+                if (operating_class_received == operating_class.first) {
+                    radio_mac_address = radio.first;
+                }
+            }
+        }
+
+        if (tlvf::mac_to_string(radio_mac_address) ==
+            beerocks::net::network_utils::ZERO_MAC_STRING) {
+            LOG(ERROR) << "Agent with mac_addr: " << tlvf::mac_to_string((*agent)->al_mac)
+                       << " has no radio that supports operating_class: "
+                       << operating_class_received
+                       << " !!, un_station stats will not get updated! ";
+            return false;
+        }
+
+        auto radio = database.get_radio(src_mac, radio_mac_address);
+        if (!radio) {
+            LOG(ERROR) << "Failed to get radio with in agent with mac_addr: " << src_mac
+                       << " and radio_uid: " << tlvf::mac_to_string(radio_mac_address);
+            return false;
+        }
+        if (radio->dm_path.empty()) {
+            LOG(ERROR) << "radio dm path is empty! , unassociated station DM will not be updated! ";
+        }
+
+        auto un_stat_database = database.get_unassociated_stations().get(sta_metrics.sta_mac);
+        if (un_stat_database != nullptr) {
+            auto agent_radio = un_stat_database->get_agents().find(src_mac);
+            if (agent_radio != un_stat_database->get_agents().end()) {
+                //update the station with the mac_addr of the radio that is monitoring it
+                un_stat_database->set_radio_mac(src_mac, radio_mac_address);
+            } else {
+                LOG(WARNING) << "is agent: " << tlvf::mac_to_string(src_mac)
+                             << " non intentially monitoring station with mac_address: "
+                             << tlvf::mac_to_string(un_stat_database->get_mac_Address()) << " ? ";
+            }
+
+            UnassociatedStation::Stats stats;
+            stats.uplink_rcpi_dbm_enc = sta_metrics.uplink_rcpi_dbm_enc;
+
+            time_t received_time = sta_metrics.measurement_to_report_delta_msec;
+            char buf[sizeof "2011-10-08T07:07:09Z"];
+            strftime(buf, sizeof buf, "%FT%TZ", gmtime(&received_time));
+            stats.time_stamp = buf;
+
+            database.update_unassociated_station_stats(sta_metrics.sta_mac, stats, radio->dm_path);
+        }
+    }
     return true;
 }
 

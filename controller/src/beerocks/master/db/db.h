@@ -9,9 +9,12 @@
 #ifndef _DB_H_
 #define _DB_H_
 
+#include "config.h"
+
 #include "agent.h"
 #include "node.h"
 #include "station.h"
+#include "unassociatedStation.h"
 
 #include <bcl/beerocks_defines.h>
 #include <bcl/beerocks_logging.h>
@@ -50,8 +53,9 @@
 
 using namespace beerocks_message;
 
-using Agent   = prplmesh::controller::db::Agent;
-using Station = prplmesh::controller::db::Station;
+using Agent               = prplmesh::controller::db::Agent;
+using Station             = prplmesh::controller::db::Station;
+using UnassociatedStation = prplmesh::controller::db::UnassociatedStation;
 
 namespace son {
 
@@ -121,10 +125,12 @@ public:
         bool load_monitor_on_vaps;
         bool load_channel_select_task;
         bool load_dynamic_channel_select_task;
+        bool daisy_chaining_disabled;
 
         bool certification_mode;
         bool persistent_db;
         int persistent_db_aging_interval;
+        int roaming_6ghz_failed_attemps_threshold;
         int roaming_5ghz_failed_attemps_threshold;
         int roaming_24ghz_failed_attemps_threshold;
         int roaming_11v_failed_attemps_threshold;
@@ -208,6 +214,8 @@ public:
         bool channel_select_task         = true;
         bool dynamic_channel_select_task = true;
 
+        bool daisy_chaining_disabled = false;
+
         // Params
         bool client_optimal_path_roaming_prefer_signal_strength = false;
     } sDbMasterSettings;
@@ -229,6 +237,7 @@ public:
         bool health_check;
         bool enable_dfs_reentry;
         bool diagnostics_measurements;
+        bool daisy_chaining_disabled;
         int diagnostics_measurements_polling_rate_sec;
 
         int roaming_hysteresis_percent_bonus;
@@ -269,6 +278,8 @@ public:
 
     beerocks::mac_map<Agent> m_agents;
     beerocks::mac_map<Station> m_stations;
+    beerocks::mac_map<UnassociatedStation>
+        m_unassociated_stations; //TODO discuss wether to use the same class Agent, or use this small new one....
 
     db(sDbMasterConfig &config_, beerocks::logging &logger_, const sMacAddr &local_bridge_mac,
        std::shared_ptr<beerocks::nbapi::Ambiorix> ambiorix_object)
@@ -290,6 +301,7 @@ public:
         settings.health_check &= config_.load_health_check;
         settings.service_fairness &= config_.load_service_fairness;
         settings.rdkb_extensions &= config_.load_rdkb_extensions;
+        settings.daisy_chaining_disabled &= config_.daisy_chaining_disabled;
     }
     ~db(){};
 
@@ -1089,7 +1101,7 @@ public:
     get_station_current_capabilities(const std::string &mac);
 
     const beerocks::message::sRadioCapabilities *
-    get_station_capabilities(const std::string &client_mac, bool is_bandtype_5ghz);
+    get_station_capabilities(const std::string &client_mac, beerocks::eFreqType freq_type);
     bool set_station_capabilities(const std::string &client_mac,
                                   const beerocks::message::sRadioCapabilities &sta_cap);
 
@@ -1130,11 +1142,14 @@ public:
 
     bool capability_check(const std::string &mac, int channel);
 
+    bool get_node_6ghz_support(const std::string &mac);
     bool get_node_5ghz_support(
         const std::string &mac); // TODO: add a real learning algorithm for per-channel support
     bool get_node_24ghz_support(const std::string &mac);
+    bool is_node_6ghz(const std::string &mac);
     bool is_node_5ghz(const std::string &mac);
     bool is_node_24ghz(const std::string &mac);
+    bool update_node_failed_6ghz_steer_attempt(const std::string &mac);
     bool update_node_failed_5ghz_steer_attempt(const std::string &mac);
     bool update_node_failed_24ghz_steer_attempt(const std::string &mac);
 
@@ -2453,6 +2468,14 @@ public:
      */
     bool dm_set_service_prioritization_rules(const Agent &agent);
 
+    /** @brief Retrieve Service Prioritization configuration for agents.
+     *
+     * DM path: "Device.WiFi.DataElements.Configuration."
+     *
+     * @return true on success, otherwise false.
+     */
+    bool dm_configure_service_prioritization();
+
     /** @brief Sets AP capability parameters for corresponding device.
      *
      * DM path: "Device.WiFi.DataElements.Network.Device.{i}."
@@ -2519,6 +2542,11 @@ public:
         settings.enable_dfs_reentry = en && config.load_dfs_reentry;
     }
     bool settings_dfs_reentry() { return settings.enable_dfs_reentry; }
+    void settings_daisy_chaining_disabled(bool en)
+    {
+        settings.daisy_chaining_disabled = en && config.daisy_chaining_disabled;
+    }
+    bool settings_daisy_chaining_disabled() { return settings.daisy_chaining_disabled; }
     void settings_client_band_steering(bool en)
     {
         settings.client_band_steering = en && config.load_client_band_steering;
@@ -2625,6 +2653,61 @@ public:
     // vars
     //
     sDbMasterConfig &config;
+
+    /**
+     * @brief Adds a single station to the unassociated_stations list
+     * @param new station mac_address
+     * @param channel, no check swill be done if the channel is valid/available or not, because the standard gives preference to use the active channel.
+     *          and as an option, may use the new asked channel, se we leave it up to the monitoring module to decide about the channel value.
+     * @param agent mac_address, if equals to ZERO_MAC all connected agents will be chosed
+     * @param radio mac_address, if equals to ZERO_MAC, radio will be deduced based on the channel value.If it fails, first radio will be selected.
+     * 
+     * @return true if success, false if the station exists or any other issue
+     */
+    bool add_unassociated_station(
+        sMacAddr const &new_station_mac_add, uint8_t channel, sMacAddr const &agent_mac_addr,
+        sMacAddr const &radio_mac_addr = beerocks::net::network_utils::ZERO_MAC);
+
+    /**
+     * @brief Removes a single station from the unassociated_stations list
+     * @param mac_address of the station to be removed
+     * @param agent mac_address, if equals to ZERO_MAC all connected agents will be selected
+     * @param radio_mac_addr, if equals to ZERO_MAC , it will be taken from the database
+     * 
+     * @return True if success, false if the station does not exists or any other issue
+     */
+    bool remove_unassociated_station(
+        sMacAddr const &mac_address, sMacAddr const &agent_mac_addr,
+        sMacAddr const &radio_mac_addr = beerocks::net::network_utils::ZERO_MAC);
+
+    /**
+     * @brief Get unassociated stations being monitored
+     * 
+     * @return unassociated stations 
+     */
+    const beerocks::mac_map<UnassociatedStation> &get_unassociated_stations() const;
+
+    /**
+     * @brief Get list of stats for unassociated stations being monitored
+     * 
+     * @return unassociated stations 
+     */
+    std::list<std::pair<std::string, std::shared_ptr<UnassociatedStation::Stats>>>
+    get_unassociated_stations_stats() const;
+
+    /**
+     * @brief Update Stats of a specific unassociated station
+     * 
+     * @param mac_address of the station
+     * @param new_stats new Stats
+     * @param  radio_dm_path   radio data model:
+     *          example:Device.WiFi.DataElements.Network.Device.1.Radio.1.
+     * 
+     * @return unassociated stations 
+     */
+    void update_unassociated_station_stats(const sMacAddr &mac_address,
+                                           UnassociatedStation::Stats &new_stats,
+                                           const std::string &radio_dm_path);
 
 private:
     /**

@@ -801,15 +801,24 @@ bool ApAutoConfigurationTask::add_wsc_m1_tlv(const std::string &radio_iface)
     cfg.primary_dev_type_id = WSC::WSC_DEV_NETWORK_INFRA_AP;
     cfg.device_name         = "prplmesh-agent";
     switch (radio->wifi_channel.get_freq_type()) {
+    case beerocks::FREQ_24G:
+        cfg.bands = WSC::WSC_RF_BAND_2GHZ;
+        break;
     case beerocks::FREQ_5G:
         cfg.bands = WSC::WSC_RF_BAND_5GHZ;
+        break;
+    case beerocks::FREQ_24G_5G:
+        cfg.bands = WSC::WSC_RF_BAND_2GHZ_5GHZ;
         break;
     case beerocks::FREQ_6G:
         cfg.bands = WSC::WSC_RF_BAND_6GHZ;
         break;
     default:
-        cfg.bands = WSC::WSC_RF_BAND_2GHZ;
-        break;
+        LOG(ERROR) << "The frequency type of " << radio_iface
+                   << " must be 2.4GHz, 5GHz or 6GHz. Frequency:"
+                   << beerocks::utils::convert_frequency_type_to_string(
+                          radio->wifi_channel.get_freq_type());
+        return false;
     }
     auto attributes = WSC::m1::create(*tlv, cfg);
     if (!attributes)

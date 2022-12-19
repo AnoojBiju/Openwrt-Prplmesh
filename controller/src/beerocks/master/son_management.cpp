@@ -25,7 +25,9 @@
 #include <beerocks/tlvf/beerocks_message_bml.h>
 #include <beerocks/tlvf/beerocks_message_cli.h>
 
+#include <tlvf/tlvftypes.h>
 #include <tlvf/wfa_map/tlvClientAssociationControlRequest.h>
+#include <tlvf/wfa_map/tlvUnassociatedStaLinkMetricsQuery.h>
 
 #include <bcl/beerocks_utils.h>
 #include <bcl/beerocks_wifi_channel.h>
@@ -1679,10 +1681,14 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             LOG(ERROR) << "Failed building cACTION_BML_TRIGGER_CHANNEL_SELECTION_RESPONSE";
         }
 
+        auto radio_mac_str = tlvf::mac_to_string(request->radio_mac());
+        auto freq_type     = database.get_node_wifi_channel(radio_mac_str).get_freq_type();
+
         LOG(INFO) << "ACTION_BML_TRIGGER_CHANNEL_SELECTION_REQUEST "
                   << ", radio_mac=" << request->radio_mac() << ", channel=" << request->channel()
                   << ", bandwidth=" << request->bandwidth()
-                  << ", csa_count=" << request->csa_count();
+                  << ", csa_count=" << request->csa_count() << ", band type of radio mac= "
+                  << beerocks::utils::convert_frequency_type_to_string(freq_type);
 
         if (!database.get_agent_by_radio_uid(request->radio_mac())) {
             response->code() = uint8_t(eChannelSwitchStatus::ERROR);
@@ -1697,7 +1703,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
 
             // Get operating-class & check validity
             operating_class = wireless_utils::get_operating_class_by_channel(
-                beerocks::message::sWifiChannel(request->channel(), request->bandwidth()));
+                beerocks::WifiChannel(request->channel(), freq_type, request->bandwidth()));
             if (operating_class == 0) {
                 LOG(ERROR) << "channel #" << request->channel() << " and bandwidth "
                            << beerocks::utils::convert_bandwidth_to_int(request->bandwidth())
@@ -2451,6 +2457,84 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         LOG(INFO) << "Sending GET_SELECTION_CHANNEL_POOL_RESPONSE";
         if (!controller_ctx->send_cmdu(sd, cmdu_tx)) {
             LOG(ERROR) << "Error sending response message";
+        }
+        break;
+    }
+    case beerocks_message::ACTION_BML_ADD_UNASSOCIATED_STATION_STATS_REQUEST: {
+
+        LOG(DEBUG) << "received ACTION_BML_ADD_UNASSOCIATED_STATION_STATS_REQUEST";
+
+        auto request =
+            beerocks_header
+                ->addClass<beerocks_message::cACTION_BML_ADD_UNASSOCIATED_STATION_STATS_REQUEST>();
+        if (request == nullptr) {
+            LOG(ERROR) << "addClass cACTION_BML_ADD_UNASSOCIATED_STATION_STATS_REQUEST failed";
+            break;
+        }
+
+        controller_ctx->add_unassociated_station(request->mac_address(), request->channel(),
+                                                 request->agent_mac_address());
+        break;
+    }
+    case beerocks_message::ACTION_BML_REMOVE_UNASSOCIATED_STATION_STATS_REQUEST: {
+        LOG(DEBUG) << "received ACTION_BML_REMOVE_UNASSOCIATED_STATION_STATS_REQUEST";
+
+        auto request = beerocks_header->addClass<
+            beerocks_message::cACTION_BML_REMOVE_UNASSOCIATED_STATION_STATS_REQUEST>();
+        if (request == nullptr) {
+            LOG(ERROR) << "addClass cACTION_BML_REMOVE_UNASSOCIATED_STATION_STATS_REQUEST failed";
+            break;
+        }
+
+        controller_ctx->remove_unassociated_station(request->mac_address(),
+                                                    request->agent_mac_address());
+        break;
+    }
+
+    case beerocks_message::ACTION_BML_GET_UNASSOCIATED_STATIONS_STATS_REQUEST: {
+        LOG(TRACE) << "ACTION_BML_GET_UNASSOCIATED_STATIONS_STATS_REQUEST";
+
+        auto request =
+            beerocks_header
+                ->addClass<beerocks_message::cACTION_BML_GET_UNASSOCIATED_STATIONS_STATS_REQUEST>();
+        if (!request) {
+            LOG(ERROR) << "addClass cACTION_BML_GET_UNASSOCIATED_STATIONS_STATS_REQUEST failed";
+            break;
+        }
+
+        //send a request to gather the newest stats from agents
+        controller_ctx->get_unassociated_stations_stats();
+
+        auto response = message_com::create_vs_message<
+            beerocks_message::cACTION_BML_GET_UNASSOCIATED_STATIONS_STATS_RESPONSE>(cmdu_tx);
+        if (!response) {
+            LOG(ERROR) << "Failed building message "
+                          "cACTION_BML_GET_UNASSOCIATED_STATIONS_STATS_RESPONSE !";
+            break;
+        }
+
+        auto un_stations_stats = database.get_unassociated_stations_stats();
+        size_t size            = un_stations_stats.size();
+        if (!response->alloc_sta_list(size)) {
+            LOG(ERROR) << " failed allocating memory or size " << un_stations_stats.size();
+            break;
+        }
+
+        size_t count = 0;
+        for (auto &un_station : un_stations_stats) {
+            auto &out_stat               = std::get<1>(response->sta_list(count));
+            out_stat.sta_mac             = tlvf::mac_from_string(un_station.first);
+            out_stat.uplink_rcpi_dbm_enc = un_station.second->uplink_rcpi_dbm_enc;
+            strncpy(out_stat.time_stamp, un_station.second->time_stamp.c_str(), 40);
+            //Also logging it
+            LOG(TRACE) << " Station with mac address : " << out_stat.sta_mac
+                       << " has a signal strength of " << out_stat.uplink_rcpi_dbm_enc
+                       << " TimeStamp: " << out_stat.time_stamp;
+            count++;
+        }
+
+        if (!controller_ctx->send_cmdu(sd, cmdu_tx)) {
+            LOG(ERROR) << "Error cACTION_BML_GET_UNASSOCIATED_STATIONS_STATS_RESPONSE message";
         }
         break;
     }

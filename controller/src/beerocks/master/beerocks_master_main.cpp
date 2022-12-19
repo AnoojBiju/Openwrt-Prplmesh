@@ -160,6 +160,8 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
         beerocks::string_utils::stoi(main_master_conf.roaming_hop_percent_penalty);
     master_conf.roaming_band_pathloss_delta_db =
         beerocks::string_utils::stoi(main_master_conf.roaming_band_pathloss_delta_db);
+    master_conf.roaming_6ghz_failed_attemps_threshold =
+        beerocks::string_utils::stoi(main_master_conf.roaming_6ghz_failed_attemps_threshold);
     master_conf.roaming_5ghz_failed_attemps_threshold =
         beerocks::string_utils::stoi(main_master_conf.roaming_5ghz_failed_attemps_threshold);
     master_conf.roaming_24ghz_failed_attemps_threshold =
@@ -540,6 +542,12 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
 
         master_conf.rcpi_steering_threshold = beerocks::bpl::DEFAULT_RCPI_STEERING_THRESHOLD;
     }
+
+    if (!beerocks::bpl::cfg_get_daisy_chaining_disabled(master_conf.daisy_chaining_disabled)) {
+        LOG(DEBUG) << "Failed to read daisy_chaining_disabled, setting to default value: "
+                   << beerocks::bpl::DEFAULT_DAISY_CHAINING_DISABLED;
+        master_conf.daisy_chaining_disabled = beerocks::bpl::DEFAULT_DAISY_CHAINING_DISABLED;
+    }
 }
 
 /**
@@ -557,7 +565,7 @@ fill_nbapi_config_from_master_conf(std::shared_ptr<beerocks::nbapi::Ambiorix> am
 
     // ambiorix->set methods trigger data change event. It is not harmfull, but needed to be remembered.
 
-    const std::string configuration_path = "Device.WiFi.DataElements.Configuration";
+    const std::string configuration_path = CONTROLLER_ROOT_DM ".Configuration";
 
     ret_val &= ambiorix_datamodel->set(configuration_path, "BandSteeringEnabled",
                                        master_conf.load_client_band_steering);
@@ -604,6 +612,9 @@ fill_nbapi_config_from_master_conf(std::shared_ptr<beerocks::nbapi::Ambiorix> am
 
     ret_val &= ambiorix_datamodel->set(configuration_path, "Client_11kRoaming",
                                        master_conf.load_client_11k_roaming);
+
+    ret_val &= ambiorix_datamodel->set(configuration_path, "DaisyChainingDisabled",
+                                       master_conf.daisy_chaining_disabled);
 
     return ret_val;
 }
@@ -751,12 +762,12 @@ int main(int argc, char *argv[])
 #endif //ENABLE_NBAPI
 
     // Set Network.ID to the Data Model
-    if (!amb_dm_obj->set("Device.WiFi.DataElements.Network", "ID", bridge_info.mac)) {
+    if (!amb_dm_obj->set(CONTROLLER_ROOT_DM ".Network", "ID", bridge_info.mac)) {
         LOG(ERROR) << "Failed to add Network.ID, mac: " << bridge_info.mac;
         return false;
     }
 
-    if (!amb_dm_obj->set("Device.WiFi.DataElements.Network", "ControllerID", bridge_info.mac)) {
+    if (!amb_dm_obj->set(CONTROLLER_ROOT_DM ".Network", "ControllerID", bridge_info.mac)) {
         LOG(ERROR) << "Failed to add Network.ControllerID, mac: " << bridge_info.mac;
         return false;
     }
@@ -815,7 +826,7 @@ int main(int argc, char *argv[])
     son::Controller controller(master_db, std::move(broker_client_factory), std::move(ucc_server),
                                std::move(cmdu_server), timer_manager, event_loop);
 
-    if (!amb_dm_obj->set_current_time("Device.WiFi.DataElements.Network")) {
+    if (!amb_dm_obj->set_current_time(CONTROLLER_ROOT_DM ".Network")) {
         return false;
     };
 

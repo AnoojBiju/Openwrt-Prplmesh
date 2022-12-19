@@ -403,6 +403,8 @@ int bml_utils_event_to_string(const struct BML_EVENT *event, char *buffer, int b
             additional_event_data +=
                 ", BandCap5G: " + std::to_string(event_data->data.connect.bandCap5G);
             additional_event_data +=
+                ", BandCap6G: " + std::to_string(event_data->data.connect.bandCap6G);
+            additional_event_data +=
                 ", Client MAC: " + tlvf::mac_to_string(event_data->data.connect.client_mac);
             break;
         }

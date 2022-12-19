@@ -14,7 +14,7 @@
 }
 
 %define {
-    select Device.WiFi.DataElements.Network.Device.Radio {
+    select @CONTROLLER_ROOT_DM@.Network.Device.Radio {
 
         bool Enabled = false;
         %read-only string ID = "00:00:00:00:00:00";
@@ -98,6 +98,18 @@
         object UnassociatedSTA []{
             counted with UnassociatedSTANumberOfEntries;
         }
+
+        /* Add a new  unassociated station to the UnassociatedSTA object*/
+        %instance bool AddUnassociatedStation(
+                %in %mandatory string un_station_mac,
+                %in %mandatory uint32 channel,
+                %in string agent_mac
+        );
+
+        /* Remove an unassociated station from the UnassociatedSTA object*/
+        %instance bool RemoveUnassociatedStation(
+            %in %mandatory string un_station_mac
+        );
 
         %read-only object ScanResult [] {
             counted with ScanResultNumberOfEntries;

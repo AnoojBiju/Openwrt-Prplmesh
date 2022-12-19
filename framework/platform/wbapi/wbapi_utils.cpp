@@ -224,6 +224,11 @@ std::string wbapi_utils::search_path_ep_by_iface(const std::string &ep_ifname)
     return search_path_ep() + "[IntfName == '" + ep_ifname + "'].";
 }
 
+std::string wbapi_utils::search_path_ep_by_radio_ref(const std::string &radio_ref)
+{
+    return search_path_ep() + "[RadioReference == '" + radio_ref + "'].";
+}
+
 std::string wbapi_utils::search_path_ep_profiles_by_iface(const std::string &ep_ifname)
 {
     return search_path_ep_by_iface(ep_ifname) + "Profile.";

@@ -46,6 +46,8 @@ public:
 
     virtual bool disconnect() override;
 
+    virtual bool reassociate() override;
+
     virtual bool roam(const sMacAddr &bssid, ChannelFreqPair channel) override;
 
     virtual bool get_4addr_mode() override;
@@ -70,6 +72,21 @@ protected:
     }
 
 private:
+    /**
+     * @brief subscribe to WiFi.EndPoint.*.ConnectionStatus and IntfName dm object change
+     */
+    void subscribe_to_ep_events();
+
+    /**
+     * @brief subscribe to WiFi.EndPoint.*.WPS. pairingDone dm notification
+     */
+    void subscribe_to_ep_wps_events();
+
+    bool process_ep_event(const std::string &interface, const std::string &key,
+                          const beerocks::wbapi::AmbiorixVariant *new_value,
+                          const beerocks::wbapi::AmbiorixVariant *old_value);
+    bool process_ep_wps_event(const std::string &interface,
+                              const beerocks::wbapi::AmbiorixVariant *data);
     struct Endpoint {
         std::string bssid;
         std::string ssid;
@@ -87,8 +104,10 @@ private:
 
     bool read_status(Endpoint &endpoint);
     void update_status(const Endpoint &endpoint);
+    void clear_conn_state();
     bool is_connected(const std::string &status);
 
+    std::string m_ep_path;
     // Active profile parameters
     std::string m_active_ssid;
     std::string m_active_bssid;

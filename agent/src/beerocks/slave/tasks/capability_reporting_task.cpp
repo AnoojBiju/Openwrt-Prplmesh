@@ -164,6 +164,11 @@ void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
     }
 
     auto ap_capability_tlv = m_cmdu_tx.addClass<wfa_map::tlvApCapability>();
+    //TODO : These looks like a vendor specific params, where to read them from ?For now, lets  enable all of them to be able to develop/test the unassocaited stations stats feature
+    ap_capability_tlv->value().support_agent_initiated_rcpi_based_steering                  = true;
+    ap_capability_tlv->value().support_unassociated_sta_link_metrics_on_non_operating_bssid = true;
+    ap_capability_tlv->value().support_unassociated_sta_link_metrics_on_operating_bssid     = true;
+
     if (!ap_capability_tlv) {
         LOG(ERROR) << "addClass wfa_map::tlvApCapability has failed";
         return;
@@ -768,7 +773,7 @@ bool CapabilityReportingTask::add_profile2_ap_capability_tlv(ieee1905_1::CmduMes
     profile2_ap_capability_tlv->max_prioritization_rules() =
         db->device_conf.max_prioritization_rules;
     profile2_ap_capability_tlv->capabilities_bit_field().prioritization =
-        db->device_conf.max_prioritization_rules > 0;
+        (db->device_conf.max_prioritization_rules > 0) ? 1 : 0;
     return true;
 }
 

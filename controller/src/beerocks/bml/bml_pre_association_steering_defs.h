@@ -121,6 +121,7 @@ struct BML_STEERING_EV_CONNECT {
     uint8_t isRRMSupported;                          /**< Client supports RRM                    */
     uint8_t bandCap2G;                               /**< Client is 2.4GHz capable               */
     uint8_t bandCap5G;                               /**< Client is 5GHz capable                 */
+    uint8_t bandCap6G;                               /**< Client is 6GHz capable                 */
     struct BML_STEERING_DATA_RATE_INFO datarateInfo; /**< Client supported datarate information  */
     struct BML_STEERING_RRM_CAPS rmCaps;             /**< Client supported RRM capabilites       */
 };

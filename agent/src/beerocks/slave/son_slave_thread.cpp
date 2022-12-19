@@ -59,6 +59,7 @@
 #include <tlvf/wfa_map/tlvSteeringBTMReport.h>
 #include <tlvf/wfa_map/tlvSteeringRequest.h>
 #include <tlvf/wfa_map/tlvTransmitPowerLimit.h>
+#include <tlvf/wfa_map/tlvUnassociatedStaLinkMetricsResponse.h>
 
 #include "gate/1905_beacon_query_to_vs.h"
 #include "gate/vs_beacon_response_to_1905.h"
@@ -203,6 +204,7 @@ bool slave_thread::thread_init()
             ieee1905_1::eMessageType::LINK_METRIC_QUERY_MESSAGE,
             ieee1905_1::eMessageType::AP_METRICS_QUERY_MESSAGE,
             ieee1905_1::eMessageType::ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE,
+            ieee1905_1::eMessageType::UNASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE,
             ieee1905_1::eMessageType::BEACON_METRICS_QUERY_MESSAGE,
             ieee1905_1::eMessageType::COMBINED_INFRASTRUCTURE_METRICS_MESSAGE,
             ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE,
@@ -3205,6 +3207,7 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
     }
 
     if (!link_to_controller()) {
+        LOG(DEBUG) << "link_to_controller is broken!";
         return true;
     }
 
@@ -3443,6 +3446,72 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
 
         LOG(DEBUG) << "Send AssociatedStaLinkMetrics to controller, mid = " << mid;
         send_cmdu_to_controller({}, cmdu_tx);
+        break;
+    }
+    case beerocks_message::ACTION_MONITOR_CLIENT_UNASSOCIATED_STA_LINK_METRIC_RESPONSE: {
+        auto response_in = beerocks_header->addClass<
+            beerocks_message::cACTION_MONITOR_CLIENT_UNASSOCIATED_STA_LINK_METRIC_RESPONSE>();
+        if (!response_in) {
+            LOG(ERROR)
+                << "addClass ACTION_MONITOR_CLIENT_UNASSOCIATED_STA_LINK_METRIC_RESPONSE failed";
+            return false;
+        }
+
+        auto mid = beerocks_header->id();
+
+        if (!cmdu_tx.create(
+                mid, ieee1905_1::eMessageType::UNASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE)) {
+            LOG(ERROR) << "cmdu creation of type UNASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE "
+                          "has failed";
+            return false;
+        }
+
+        using stations_stats = wfa_map::tlvUnassociatedStaLinkMetricsResponse::sStaMetrics;
+        std::unordered_map<uint8_t, std::list<stations_stats>> map_stations_per_operating_class;
+        for (size_t count = 0; count < response_in->stations_list_length(); count++) {
+            beerocks_message::sUnassociatedStationStats &station_in =
+                std::get<1>(response_in->stations_list(count));
+            if (map_stations_per_operating_class.find(station_in.operating_class) ==
+                map_stations_per_operating_class.end()) {
+                map_stations_per_operating_class.insert(
+                    std::make_pair(station_in.operating_class, std::list<stations_stats>()));
+            }
+
+            stations_stats one_station_stats;
+            one_station_stats.channel_number                   = station_in.channel;
+            one_station_stats.uplink_rcpi_dbm_enc              = station_in.signal_strength;
+            one_station_stats.sta_mac                          = station_in.sta_mac;
+            one_station_stats.measurement_to_report_delta_msec = station_in.time_stamp;
+
+            map_stations_per_operating_class[station_in.operating_class].push_back(
+                one_station_stats);
+        }
+
+        //Now send a telemetries to the controller, each telemetry with only 1 operating_class
+        for (auto &operaying_class : map_stations_per_operating_class) {
+            auto response_out = cmdu_tx.addClass<wfa_map::tlvUnassociatedStaLinkMetricsResponse>();
+            if (!response_out) {
+                LOG(ERROR) << "adding wfa_map::tlvUnassociatedStaLinkMetricsResponse failed";
+                return false;
+            }
+            response_out->operating_class_of_channel_list() = operaying_class.first;
+            response_out->alloc_sta_list(operaying_class.second.size());
+            response_out->sta_list_length() = operaying_class.second.size();
+            size_t count(0);
+            for (auto &station : operaying_class.second) {
+                auto &stats_out          = std::get<1>(response_out->sta_list(count));
+                stats_out.channel_number = station.channel_number;
+                stats_out.measurement_to_report_delta_msec =
+                    station.measurement_to_report_delta_msec;
+                stats_out.sta_mac             = station.sta_mac;
+                stats_out.uplink_rcpi_dbm_enc = station.uplink_rcpi_dbm_enc;
+            }
+
+            LOG(DEBUG)
+                << "Send tlvUnassociatedStaLinkMetricsResponse to controller with operating_class= "
+                << operaying_class.first << "and  mid = " << mid;
+            send_cmdu_to_controller({}, cmdu_tx);
+        }
         break;
     }
     case beerocks_message::ACTION_MONITOR_HOSTAP_LOAD_MEASUREMENT_NOTIFICATION: {

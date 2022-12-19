@@ -23,25 +23,32 @@ eRadioState utils_wlan_hal_whm::radio_state_from_string(const std::string &state
     }
 }
 
-std::string utils_wlan_hal_whm::security_val(WiFiSec sec)
-{
-    switch (sec) {
-    case WiFiSec::None:
-        return "NONE";
-    case WiFiSec::WEP_64:
-        return "WEP-64";
-    case WiFiSec::WEP_128:
-        return "WEP-128";
-    case WiFiSec::WPA_PSK:
-        return "WPA-Personal";
-    case WiFiSec::WPA2_PSK:
-        return "WPA2-Personal";
-    case WiFiSec::WPA_WPA2_PSK:
-        return "WPA-WPA2-Personal";
+const std::map<std::string, WiFiSec> utils_wlan_hal_whm::security_type_table = {
+    {"INVALID", WiFiSec::Invalid},
+    {"None", WiFiSec::None},
+    {"WEP-64", WiFiSec::WEP_64},
+    {"WEP-128", WiFiSec::WEP_128},
+    {"WPA-Personal", WiFiSec::WPA_PSK},
+    {"WPA2-Personal", WiFiSec::WPA2_PSK},
+    {"WPA-WPA2-Personal", WiFiSec::WPA_WPA2_PSK},
+    {"WPA2-WPA3-Personal", WiFiSec::WPA2_WP3_PSK},
+    {"WPA3-Personal", WiFiSec::WPA3_PSK},
+};
 
-    default:
-        return "INVALID";
+std::string utils_wlan_hal_whm::security_type_to_string(const WiFiSec &security_type)
+{
+    for (const auto &map_it : security_type_table) {
+        if (map_it.second == security_type) {
+            return map_it.first;
+        }
     }
+    return "INVALID";
+}
+
+WiFiSec utils_wlan_hal_whm::security_type_from_string(const std::string &security_type)
+{
+    auto map_it = security_type_table.find(security_type);
+    return map_it == security_type_table.end() ? WiFiSec::Invalid : map_it->second;
 }
 
 } // namespace whm

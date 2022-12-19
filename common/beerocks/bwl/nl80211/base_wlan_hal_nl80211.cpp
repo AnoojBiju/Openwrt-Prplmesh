@@ -539,6 +539,8 @@ bool base_wlan_hal_nl80211::ping()
     return true;
 }
 
+bool base_wlan_hal_nl80211::reassociate() { return wpa_ctrl_send_msg("REASSOCIATE"); }
+
 bool base_wlan_hal_nl80211::wpa_ctrl_send_msg(const std::string &cmd, const std::string &ifname)
 {
     std::string iface_name = ifname;

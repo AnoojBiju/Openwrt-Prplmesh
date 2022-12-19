@@ -565,14 +565,15 @@ bool db::remove_node(const sMacAddr &mac)
 
             it = nodes[i].erase(it);
 
-            auto index = m_ambiorix_datamodel->get_instance_index("Network.Device.[ID == '%s'].",
-                                                                  tlvf::mac_to_string(mac));
+            auto index = m_ambiorix_datamodel->get_instance_index(
+                "Device.WiFi.DataElements.Network.Device.[ID == '%s'].", tlvf::mac_to_string(mac));
             if (!index) {
                 LOG(ERROR) << "Failed to get Network.Device index for mac: " << mac;
                 return false;
             }
 
-            if (!m_ambiorix_datamodel->remove_instance("Network.Device", index)) {
+            if (!m_ambiorix_datamodel->remove_instance("Device.WiFi.DataElements.Network.Device",
+                                                       index)) {
                 LOG(ERROR) << "Failed to remove Network.Device." << index << " instance.";
                 return false;
             }
@@ -1790,7 +1791,10 @@ bool db::set_station_capabilities(const std::string &client_mac,
         n->m_sta_5ghz_capabilities       = sta_cap;
         n->m_sta_5ghz_capabilities.valid = true;
         n->capabilities                  = &n->m_sta_5ghz_capabilities;
-
+    } else if (is_node_6ghz(parent_radio)) {
+        n->m_sta_6ghz_capabilities       = sta_cap;
+        n->m_sta_6ghz_capabilities.valid = true;
+        n->capabilities                  = &n->m_sta_6ghz_capabilities;
     } else {
         n->m_sta_24ghz_capabilities       = sta_cap;
         n->m_sta_24ghz_capabilities.valid = true;
@@ -1854,7 +1858,7 @@ bool db::set_client_capabilities(const sMacAddr &sta_mac, const std::string &fra
 }
 
 const beerocks::message::sRadioCapabilities *
-db::get_station_capabilities(const std::string &client_mac, bool is_bandtype_5ghz)
+db::get_station_capabilities(const std::string &client_mac, beerocks::eFreqType freq_type)
 {
     std::shared_ptr<node> n = get_node(client_mac);
 
@@ -1863,19 +1867,27 @@ db::get_station_capabilities(const std::string &client_mac, bool is_bandtype_5gh
         return nullptr;
     }
 
-    if (is_bandtype_5ghz) {
-        if (n->m_sta_5ghz_capabilities.valid == true) {
-            return &n->m_sta_5ghz_capabilities;
-        } else {
-            return nullptr;
-        }
-    } else {
-        if (n->m_sta_24ghz_capabilities.valid == true) {
-            return &n->m_sta_24ghz_capabilities;
-        } else {
-            return nullptr;
-        }
+    if ((freq_type != eFreqType::FREQ_24G) && (freq_type != eFreqType::FREQ_5G) &&
+        (freq_type != eFreqType::FREQ_6G)) {
+        LOG(ERROR) << "freq type must be 2.4GHz, 5GHz, or 6GHz";
+        return nullptr;
     }
+
+    if ((freq_type == eFreqType::FREQ_24G) && (n->m_sta_24ghz_capabilities.valid == true)) {
+        return &n->m_sta_24ghz_capabilities;
+    }
+
+    if ((freq_type == eFreqType::FREQ_5G) && (n->m_sta_5ghz_capabilities.valid == true)) {
+        return &n->m_sta_24ghz_capabilities;
+    }
+
+    if ((freq_type == eFreqType::FREQ_6G) && (n->m_sta_6ghz_capabilities.valid == true)) {
+        return &n->m_sta_24ghz_capabilities;
+    }
+
+    LOG(ERROR) << "Failed to find valid sta capabilities for freq type "
+               << beerocks::utils::convert_frequency_type_to_string(freq_type);
+    return nullptr;
 }
 
 bool db::set_hostap_ant_num(const sMacAddr &mac, beerocks::eWiFiAntNum ant_num)
@@ -1992,7 +2004,7 @@ bool db::set_hostap_supported_channels(const sMacAddr &mac, beerocks::WifiChanne
         n->supports_5ghz = true;
         break;
     case eFreqType::FREQ_6G:
-        LOG(WARNING) << "6ghz should be supported";
+        n->supports_6ghz = true;
         break;
     default:
         LOG(ERROR) << "unknown frequency! channel: "
@@ -2050,21 +2062,22 @@ bool db::add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t
 {
     auto supported_channels = get_hostap_supported_channels(radio_mac);
     auto channel_set        = wireless_utils::operating_class_to_channel_set(operating_class);
-    auto class_bw           = wireless_utils::operating_class_to_bandwidth(operating_class);
+    auto op_class_bw        = wireless_utils::operating_class_to_bandwidth(operating_class);
     auto freq_type          = wireless_utils::which_freq_op_cls(operating_class);
 
     // Update current channels
     for (auto c : channel_set) {
         auto channel =
             std::find_if(supported_channels.begin(), supported_channels.end(),
-                         [&c, &class_bw](const beerocks::WifiChannel &ch) {
-                             return ch.get_channel() == c && ch.get_bandwidth() == class_bw;
+                         [&c, &op_class_bw](const beerocks::WifiChannel &ch) {
+                             return ch.get_channel() == c && ch.get_bandwidth() == op_class_bw;
                          });
         if (channel != supported_channels.end()) {
             channel->set_tx_power(tx_power);
-            channel->set_bandwidth(class_bw);
-        } else {
-            beerocks::WifiChannel ch(c, freq_type, class_bw);
+            channel->set_bandwidth(op_class_bw);
+        } else if (!son::wireless_utils::is_operating_class_using_central_channel(
+                       operating_class)) {
+            beerocks::WifiChannel ch(c, freq_type, op_class_bw);
             ch.set_tx_power(tx_power);
             supported_channels.push_back(ch);
         }
@@ -2133,6 +2146,15 @@ bool db::capability_check(const std::string &mac, int channel)
     return false;
 }
 
+bool db::get_node_6ghz_support(const std::string &mac)
+{
+    auto n = get_node(mac);
+    if (!n) {
+        return false;
+    }
+    return n->supports_6ghz;
+}
+
 bool db::get_node_5ghz_support(const std::string &mac)
 {
     auto n = get_node(mac);
@@ -2171,6 +2193,30 @@ bool db::is_node_5ghz(const std::string &mac)
     }
 
     return (n->wifi_channel.get_freq_type() == eFreqType::FREQ_5G);
+}
+
+bool db::is_node_6ghz(const std::string &mac)
+{
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(ERROR) << "node " << mac << " does not exist! return false as default";
+        return false;
+    }
+
+    return (n->wifi_channel.get_freq_type() == eFreqType::FREQ_6G);
+}
+
+bool db::update_node_failed_6ghz_steer_attempt(const std::string &mac)
+{
+    auto n = get_node(mac);
+    if (!n) {
+        return false;
+    }
+
+    if (++n->failed_6ghz_steer_attemps >= config.roaming_6ghz_failed_attemps_threshold) {
+        n->supports_6ghz = false;
+    }
+    return true;
 }
 
 bool db::update_node_failed_5ghz_steer_attempt(const std::string &mac)
@@ -3013,14 +3059,29 @@ int8_t db::get_channel_preference(const sMacAddr &radio_mac, const uint8_t opera
     uint8_t channel = channel_number;
     if (!is_central_channel &&
         wireless_utils::is_operating_class_using_central_channel(operating_class)) {
-        auto bandwidth         = wireless_utils::operating_class_to_bandwidth(operating_class);
-        auto source_channel_it = wireless_utils::channels_table_5g.find(channel_number);
-        if (source_channel_it == wireless_utils::channels_table_5g.end()) {
-            LOG(ERROR) << "Couldn't find source channel " << channel_number
-                       << " for overlapping channels";
+        auto bandwidth = wireless_utils::operating_class_to_bandwidth(operating_class);
+        if (freq_type == eFreqType::FREQ_5G) {
+            auto source_channel_it = wireless_utils::channels_table_5g.find(channel_number);
+            if (source_channel_it == wireless_utils::channels_table_5g.end()) {
+                LOG(ERROR) << "Couldn't find source channel " << channel_number
+                           << "from 5g channels table for overlapping channels";
+                return (int8_t)eChannelPreferenceRankingConsts::INVALID;
+            }
+            channel = source_channel_it->second.at(bandwidth).center_channel;
+        } else if (freq_type == eFreqType::FREQ_6G) {
+            auto source_channel_it = wireless_utils::channels_table_6g.find(channel_number);
+            if (source_channel_it == wireless_utils::channels_table_6g.end()) {
+                LOG(ERROR) << "Couldn't find source channel " << channel_number
+                           << "from 6g channels table for overlapping channels";
+                return (int8_t)eChannelPreferenceRankingConsts::INVALID;
+            }
+            channel = source_channel_it->second.at(bandwidth).center_channel;
+        } else {
+            LOG(ERROR) << "frequency type "
+                       << beerocks::utils::convert_frequency_type_to_string(freq_type)
+                       << " must be either 5g or 6g";
             return (int8_t)eChannelPreferenceRankingConsts::INVALID;
         }
-        channel = source_channel_it->second.at(bandwidth).center_channel;
     }
 
     if (!wireless_utils::is_channel_in_operating_class(operating_class, channel)) {
@@ -4652,7 +4713,7 @@ bool db::notify_disconnection(const std::string &client_mac, const uint16_t reas
     }
 
     std::string path_to_disassoc_event_data =
-        "Device.WiFi.DataElements.DisassociationEvent.DisassociationEventData";
+        CONTROLLER_ROOT_DM ".DisassociationEvent.DisassociationEventData";
 
     if (!dm_check_objects_limit(m_disassoc_events, MAX_EVENT_HISTORY_SIZE)) {
         return false;
@@ -5078,7 +5139,8 @@ bool db::set_node_wifi_channel(const sMacAddr &mac, const beerocks::WifiChannel 
         n->failed_5ghz_steer_attemps = 0;
     } break;
     case eFreqType::FREQ_6G: {
-        LOG(WARNING) << "node " << mac << " of 6ghz steer attempts not implemented yet";
+        n->supports_6ghz             = true;
+        n->failed_6ghz_steer_attemps = 0;
     } break;
     default:
         LOG(ERROR) << "frequency type unknown, channel=" << n->wifi_channel.get_channel();
@@ -5385,8 +5447,7 @@ void db::disable_periodic_link_metrics_requests()
     beerocks::bpl::cfg_set_link_metrics_request_interval(
         config.link_metrics_request_interval_seconds);
 
-    m_ambiorix_datamodel->set("Device.WiFi.DataElements.Configuration",
-                              "LinkMetricsRequestInterval",
+    m_ambiorix_datamodel->set(CONTROLLER_ROOT_DM ".Configuration", "LinkMetricsRequestInterval",
                               config.link_metrics_request_interval_seconds.count());
 }
 
@@ -6173,11 +6234,10 @@ std::string db::dm_add_steer_event()
         return {};
     }
 
-    std::string event_path =
-        m_ambiorix_datamodel->add_instance("Device.WiFi.DataElements.SteerEvent");
+    std::string event_path = m_ambiorix_datamodel->add_instance(CONTROLLER_ROOT_DM ".SteerEvent");
 
     if (event_path.empty() && NBAPI_ON) {
-        LOG(ERROR) << "Failed to add instance Device.WiFi.DataElements.SteerEvent";
+        LOG(ERROR) << "Failed to add instance " CONTROLLER_ROOT_DM ".SteerEvent";
         return {};
     }
     m_steer_events.push(event_path);
@@ -6214,15 +6274,13 @@ bool db::dm_restore_steering_summary_stats(Station &station)
 
 void db::dm_increment_steer_summary_stats(const std::string &param_name)
 {
-    dm_uint64_param_one_up("Device.WiFi.DataElements.Network.MultiAPSteeringSummaryStats",
-                           param_name);
+    dm_uint64_param_one_up(CONTROLLER_ROOT_DM ".Network.MultiAPSteeringSummaryStats", param_name);
 }
 
 bool db::dm_add_failed_connection_event(const sMacAddr &bssid, const sMacAddr &sta_mac,
                                         const uint16_t reason_code, const uint16_t status_code)
 {
-    std::string event_path =
-        "Device.WiFi.DataElements.FailedConnectionEvent.FailedConnectionEventData";
+    std::string event_path = CONTROLLER_ROOT_DM ".FailedConnectionEvent.FailedConnectionEventData";
 
     event_path = m_ambiorix_datamodel->add_instance(event_path);
 
@@ -6244,7 +6302,7 @@ std::string db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &
                                          const std::string &assoc_ts)
 {
     std::string path_association_event =
-        "Device.WiFi.DataElements.AssociationEvent.AssociationEventData";
+        CONTROLLER_ROOT_DM ".AssociationEvent.AssociationEventData";
 
     if (!dm_check_objects_limit(m_assoc_events, MAX_EVENT_HISTORY_SIZE)) {
         return {};
@@ -6287,14 +6345,13 @@ std::string db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &
 std::string db::dm_add_device_element(const sMacAddr &mac)
 {
     auto index = m_ambiorix_datamodel->get_instance_index(
-        "Device.WiFi.DataElements.Network.Device.[ID == '%s'].", tlvf::mac_to_string(mac));
+        CONTROLLER_ROOT_DM ".Network.Device.[ID == '%s'].", tlvf::mac_to_string(mac));
     if (index) {
         LOG(WARNING) << "Device with ID: " << mac << " exists in the data model!";
         return {};
     }
 
-    auto device_path =
-        m_ambiorix_datamodel->add_instance("Device.WiFi.DataElements.Network.Device");
+    auto device_path = m_ambiorix_datamodel->add_instance(CONTROLLER_ROOT_DM ".Network.Device");
     if (device_path.empty()) {
         LOG(ERROR) << "Failed to add instance " << device_path << ". Device mac: " << mac;
         return {};
@@ -7091,6 +7148,7 @@ bool db::update_master_configuration(const sDbNbapiConfig &nbapi_config)
         nbapi_config.optimal_path_prefer_signal_strength;
     config.roaming_hysteresis_percent_bonus = nbapi_config.roaming_hysteresis_percent_bonus;
     config.steering_disassoc_timer_msec     = nbapi_config.steering_disassoc_timer_msec;
+    config.daisy_chaining_disabled          = nbapi_config.daisy_chaining_disabled;
 
     // Update persistent configuration.
     ret_val &= beerocks::bpl::cfg_set_band_steering(config.load_client_band_steering);
@@ -7114,6 +7172,7 @@ bool db::update_master_configuration(const sDbNbapiConfig &nbapi_config)
         config.roaming_hysteresis_percent_bonus);
     ret_val &=
         beerocks::bpl::cfg_set_steering_disassoc_timer_msec(config.steering_disassoc_timer_msec);
+    ret_val &= beerocks::bpl::cfg_set_daisy_chaining_disabled(config.daisy_chaining_disabled);
 
     ret_val &= beerocks::bpl::cfg_commit_changes();
 
@@ -7136,6 +7195,7 @@ void db::update_master_settings_from_config()
     settings_health_check(true);
     settings_ire_roaming(true);
     settings_load_balancing(true);
+    settings_daisy_chaining_disabled(true);
 }
 
 uint64_t db::recalculate_attr_to_byte_units(
@@ -7999,6 +8059,45 @@ bool db::dm_set_service_prioritization_rules(const Agent &agent)
     return ret_val;
 }
 
+bool db::dm_configure_service_prioritization()
+{
+    const std::string cfgPath = "Device.WiFi.DataElements.Configuration.QoS";
+    uint64_t ruleOutput{0};
+    if (!m_ambiorix_datamodel->read_param(cfgPath, "SPRuleOutput", &ruleOutput)) {
+        LOG(ERROR) << "no valid priority rule found at " << cfgPath;
+        return false;
+    }
+    std::string dscpHex;
+    m_ambiorix_datamodel->read_param(cfgPath, "DSCPMap", &dscpHex);
+
+    for (auto it = m_agents.begin(); it != m_agents.end(); ++it) {
+        auto &agent = it->second;
+
+        agent->service_prioritization.rules.clear();
+
+        wfa_map::tlvServicePrioritizationRule::sServicePrioritizationRule rule;
+        rule.id                       = 1;
+        rule.precedence               = 1;
+        rule.output                   = static_cast<uint8_t>(ruleOutput);
+        rule.bits_field1.add_remove   = 1;
+        rule.bits_field2.always_match = 1;
+
+        uint32_t id = rule.id;
+        agent->service_prioritization.rules.insert({id, rule});
+
+        auto &dscpTable = agent->service_prioritization.dscp_mapping_table;
+        for (uint8_t i = 0; i < dscpTable.size(); ++i) {
+            if (i < dscpHex.length()) {
+                dscpTable[i] = dscpHex[i] - '0';
+            } else {
+                dscpTable[i] = 0;
+            }
+        }
+    }
+
+    return true;
+}
+
 bool db::dm_set_device_ap_capabilities(const Agent &agent)
 {
     if (agent.dm_path.empty()) {
@@ -8012,4 +8111,387 @@ bool db::dm_set_device_ap_capabilities(const Agent &agent)
                                          agent.prioritization_support);
     ret_val &= m_ambiorix_datamodel->set(agent.dm_path, "MaxVIDs", agent.max_total_number_of_vids);
     return ret_val;
+}
+
+bool db::add_unassociated_station(sMacAddr const &new_station_mac_add, uint8_t channel,
+                                  sMacAddr const &agent_mac_addr, sMacAddr const &radio_mac_addr)
+{
+    std::string debug_msg;
+    bool all_connected_agents =
+        tlvf::mac_to_string(agent_mac_addr) ==
+        network_utils::
+            ZERO_MAC_STRING; //flag if the command is for a specific agent or to all of them
+    std::shared_ptr<UnassociatedStation> new_station(nullptr);
+    uint8_t operating_class_un_station = 0;
+
+    auto add_un_station_dm = [&](std::string agent_mac, std::string radio_mac,
+                                 std::string station_mac) {
+        //example Device.WiFi.DataElements.Network.Device.1.Radio.2.UnassociatedSTA.
+        std::string device_path = "Device.WiFi.DataElements.Network.Device";
+
+        //Device.WiFi.DataElements.Network.Device.1.Radio.2.UnassociatedSTA.1.MACAddress
+        auto agent_path_index =
+            m_ambiorix_datamodel->get_instance_index(device_path + ".[ID == '%s'].", agent_mac);
+        if (agent_path_index == 0) {
+            LOG(ERROR) << "could not find device/agent with mac_addr: " << agent_mac;
+            return false;
+        }
+        auto radio_path_index = m_ambiorix_datamodel->get_instance_index(
+            device_path + "." + std::to_string(agent_path_index) + ".Radio" + ".[ID == '%s'].",
+            radio_mac);
+        if (radio_path_index == 0) {
+            LOG(ERROR) << "could not find radio path with ID " << radio_mac;
+            return false;
+        }
+        std::string unassociated_sta_path = device_path + "." + std::to_string(agent_path_index) +
+                                            ".Radio." + std::to_string(radio_path_index) +
+                                            ".UnassociatedSTA";
+        auto index = m_ambiorix_datamodel->get_instance_index(
+            unassociated_sta_path + ".[MACAddress == '%s'].", station_mac);
+        if (!index) {
+            //add its!
+            auto new_station_path = m_ambiorix_datamodel->add_instance(unassociated_sta_path);
+            if (new_station_path.empty()) {
+                LOG(ERROR) << "Failed to add new unassociated station stats with path "
+                           << unassociated_sta_path;
+                return false;
+            } else {
+                new_station_path.append(".");
+                m_ambiorix_datamodel->set(new_station_path, "MACAddress", station_mac);
+                LOG(DEBUG) << "Successfully added  UnassociatedSTA with path : "
+                           << new_station_path;
+            }
+        } else {
+            LOG(DEBUG) << "UnassociatedSTA with mac_addr " << station_mac
+                       << " already exists! under path: " << unassociated_sta_path << "."
+                       << station_mac;
+        }
+        return true;
+    };
+
+    // local function to detect which radio supports the input channel
+    auto get_agent_radio = [&operating_class_un_station](
+                               const beerocks::mac_map<Agent::sRadio> &radios, uint8_t channel) {
+        std::shared_ptr<Agent::sRadio> agent_radio = nullptr;
+
+        for (auto &radio_it : radios) {
+            auto &scan_capabilities = radio_it.second->scan_capabilities;
+            for (auto &oc_ch : scan_capabilities.operating_classes) {
+                std::vector<uint8_t>::iterator iter =
+                    std::find_if(oc_ch.second.begin(), oc_ch.second.end(),
+                                 [channel](uint8_t input) { return (input == channel); });
+
+                if (iter != oc_ch.second.end()) {
+                    operating_class_un_station = oc_ch.first;
+                    agent_radio                = radio_it.second;
+                    return agent_radio;
+                }
+            }
+        }
+        return agent_radio;
+    };
+
+    if (!all_connected_agents) { //This case treats 1 single agent
+        std::string agent_mac_string(tlvf::mac_to_string(agent_mac_addr));
+        auto existing_agent = m_agents.get(agent_mac_addr);
+        if (existing_agent == nullptr) {
+            LOG(ERROR) << " agent with mac_addr: " << agent_mac_string
+                       << " could not be found! station will not be added. ";
+            return false;
+        } else {
+            std::shared_ptr<Agent::sRadio> agent_radio(nullptr);
+            if (radio_mac_addr == network_utils::ZERO_MAC) {
+                agent_radio = get_agent_radio(existing_agent->radios, channel);
+            } else {
+                agent_radio = get_radio_by_uid(radio_mac_addr);
+            }
+
+            if (!agent_radio) {
+                //The channel is not accepted/available for any radios! --> lets revert to the active channel in one radio
+                // and warn the user!
+                agent_radio = existing_agent->radios.begin()->second;
+                beerocks::WifiChannel local;
+                local.set_channel(get_node(agent_radio->radio_uid)->wifi_channel.get_channel());
+                local.set_bandwidth(get_node(agent_radio->radio_uid)->wifi_channel.get_bandwidth());
+                operating_class_un_station = wireless_utils::get_operating_class_by_channel(local);
+                channel = get_node(agent_radio->radio_uid)->wifi_channel.get_channel();
+                LOG(WARNING) << "add_unassociated_station : channel: " << channel
+                             << " is not available on any radios of agent :"
+                             << tlvf::mac_to_string(agent_mac_addr)
+                             << " -->  Instead:  Using radio with mac_addr: "
+                             << tlvf::mac_to_string(agent_radio->radio_uid)
+                             << " and active channel: " << channel;
+            }
+
+            //TODO : do more filtering whether the station is already associated to one current BSS or not
+            if (!agent_radio->ap_capabilities
+                     .support_unassociated_sta_link_metrics_on_operating_bssid ||
+                !agent_radio->ap_capabilities
+                     .support_unassociated_sta_link_metrics_on_non_operating_bssid) {
+                LOG(ERROR) << "radio  with mac_addr: " << tlvf::mac_to_string(agent_mac_addr)
+                           << " does not support unassociated stations stats!!, un_station "
+                              "with mac_addr: "
+                           << tlvf::mac_to_string(new_station_mac_add)
+                           << " will not be added to the radio";
+                return false;
+            }
+            auto existing_un_station = m_unassociated_stations.get(new_station_mac_add);
+            if (existing_un_station) {
+                // maybe the command is to change the channel!
+                if (existing_un_station->get_channel() != channel) {
+                    existing_un_station->set_channel(channel);
+                    LOG(DEBUG) << " agent: " << tlvf::mac_to_string(agent_mac_addr)
+                               << " will consider the new channel: " << channel
+                               << "for  un_station: " << tlvf::mac_to_string(new_station_mac_add);
+                    return true;
+                } else {
+                    LOG(DEBUG) << " un_station" << tlvf::mac_to_string(new_station_mac_add)
+                               << " is already being monitored by agent: "
+                               << tlvf::mac_to_string(agent_mac_addr) << "on channel: " << channel
+                               << " command is ignored...";
+                    return false;
+                }
+            }
+            new_station = m_unassociated_stations.add(new_station_mac_add);
+            new_station->add_agent(agent_mac_addr, agent_radio->radio_uid);
+            debug_msg +=
+                "added un_station with mac_address: " + tlvf::mac_to_string(new_station_mac_add) +
+                " and channel: " + std::to_string(channel) +
+                "to monitoring agent: " + tlvf::mac_to_string(agent_mac_addr);
+            add_un_station_dm(tlvf::mac_to_string(agent_mac_addr),
+                              tlvf::mac_to_string(agent_radio->radio_uid),
+                              tlvf::mac_to_string(new_station_mac_add));
+            new_station->set_channel(channel);
+            new_station->set_operating_class(operating_class_un_station);
+        }
+    } else { //all connected agents
+        for (auto &agent : m_agents) {
+
+            new_station = m_unassociated_stations.add(new_station_mac_add);
+            std::shared_ptr<Agent::sRadio> agent_radio(nullptr);
+            if (radio_mac_addr == network_utils::ZERO_MAC) {
+                agent_radio = get_agent_radio(agent.second->radios, channel);
+            } else {
+                agent_radio = get_radio_by_uid(radio_mac_addr);
+            }
+
+            if (!agent_radio) {
+                //The channel is not accepted/available for any radios! --> lets revert to the active channel in one radio
+                // and warn the user!
+                agent_radio         = agent.second->radios.begin()->second;
+                auto active_channel = get_node(agent_radio->radio_uid)->wifi_channel.get_channel();
+                auto active_bandwidth =
+                    get_node(agent_radio->radio_uid)->wifi_channel.get_bandwidth();
+                operating_class_un_station = wireless_utils::get_operating_class_by_channel(
+                    beerocks::message::sWifiChannel(active_channel, active_bandwidth));
+
+                LOG(WARNING) << "add_unassociated_station : channel: " << channel
+                             << " is not available on any radios of agent :"
+                             << tlvf::mac_to_string(agent.first)
+                             << " -->  Reverting to radio with mac_addr: "
+                             << tlvf::mac_to_string(agent_radio->radio_uid)
+                             << " , active channel: " << active_channel
+                             << " bandwidth: " << active_bandwidth
+                             << " operating_class: " << operating_class_un_station;
+                channel = active_channel;
+
+                if (!agent_radio->ap_capabilities
+                         .support_unassociated_sta_link_metrics_on_operating_bssid ||
+                    !agent_radio->ap_capabilities
+                         .support_unassociated_sta_link_metrics_on_non_operating_bssid) {
+                    LOG(ERROR) << "radio  with mac_addr: " << tlvf::mac_to_string(agent.first)
+                               << " does not support unassociated stations stats!!, un_station "
+                                  "with mac_addr: "
+                               << tlvf::mac_to_string(new_station_mac_add)
+                               << " will not be added to the radio";
+                    return false;
+                }
+            }
+
+            new_station->add_agent(agent.first, agent_radio->radio_uid);
+            debug_msg +=
+                "added un_station with mac_address: " + tlvf::mac_to_string(new_station_mac_add) +
+                " and channel: " + std::to_string(channel) +
+                "to monitoring agent: " + tlvf::mac_to_string(agent.first);
+            add_un_station_dm(tlvf::mac_to_string(agent.first),
+                              tlvf::mac_to_string(agent_radio->radio_uid),
+                              tlvf::mac_to_string(new_station_mac_add));
+            new_station->set_channel(channel);
+            new_station->set_operating_class(operating_class_un_station);
+        }
+    }
+
+    LOG(DEBUG) << debug_msg;
+    return new_station != nullptr;
+}
+
+bool db::remove_unassociated_station(sMacAddr const &mac_address, sMacAddr const &agent_mac_addr,
+                                     sMacAddr const &radio_mac_addr)
+{
+
+    auto remove_un_staton_from_dm = [&](std::string agent_mac, std::string station_mac) {
+        LOG(DEBUG) << "removing un_station with mac_addr " << mac_address
+                   << " connected to agent with mac_addr " << agent_mac
+                   << " on radio: " << tlvf::mac_to_string(radio_mac_addr);
+        //example Device.WiFi.DataElements.Network.Device.1.Radio.2.UnassociatedSTA.
+        std::string device_path = "Device.WiFi.DataElements.Network.Device";
+        sMacAddr radio_mac(radio_mac_addr);
+        if (radio_mac == network_utils::ZERO_MAC) {
+            // if not given as an argument, for example, from a bml command--> deduc it from the db
+            auto station = m_unassociated_stations.get(tlvf::mac_from_string(station_mac));
+            if (station != nullptr) {
+                station->get_radio_mac(tlvf::mac_from_string(agent_mac), radio_mac);
+            } else {
+                LOG(ERROR) << "radio_mac for agent with mac_addr: " << agent_mac
+                           << " not found!,  failure to remove station with mac: " << station_mac;
+                return false;
+            }
+        };
+        //Device.WiFi.DataElements.Network.Device.1.Radio.2.UnassociatedSTA.1.MACAddress
+        auto agent_path_index =
+            m_ambiorix_datamodel->get_instance_index(device_path + ".[ID == '%s'].", agent_mac);
+
+        if (agent_path_index == 0) {
+            LOG(ERROR) << "could not find device/agent with mac_addr: " << agent_mac;
+            return false;
+        }
+
+        auto radio_path_index = m_ambiorix_datamodel->get_instance_index(
+            device_path + "." + std::to_string(agent_path_index) + ".Radio" + ".[ID == '%s'].",
+            tlvf::mac_to_string(radio_mac));
+
+        if (radio_path_index == 0) {
+            LOG(ERROR) << "could not find radio path with ID " << tlvf::mac_to_string(radio_mac);
+            return false;
+        }
+
+        std::string unassociated_sta_path = device_path + "." + std::to_string(agent_path_index) +
+                                            ".Radio." + std::to_string(radio_path_index) +
+                                            ".UnassociatedSTA";
+
+        auto index = m_ambiorix_datamodel->get_instance_index(
+            unassociated_sta_path + ".[MACAddress == '%s'].", station_mac);
+        if (index == 0) {
+            LOG(ERROR) << " UnassociatedSTA with mac " << station_mac
+                       << " does not exists under the path " << unassociated_sta_path;
+            return false;
+        } else {
+            if (m_ambiorix_datamodel->remove_instance(unassociated_sta_path, index)) {
+                LOG(DEBUG) << " Successfully removed un_station with mac_addr  " << station_mac
+                           << " with the path " << unassociated_sta_path << "." << station_mac;
+                return true;
+            } else
+                return false;
+        }
+        return true;
+    };
+
+    auto un_station = m_unassociated_stations.get(mac_address);
+    bool all_connected_agents =
+        tlvf::mac_to_string(agent_mac_addr) == network_utils::ZERO_MAC_STRING;
+    if (!un_station) {
+        LOG(ERROR) << " unassociated station with mac_addr: " << tlvf::mac_to_string(mac_address)
+                   << " is not being monitored!";
+        return false;
+    }
+
+    if (!all_connected_agents) {
+        if (un_station->get_agents().find(agent_mac_addr) != un_station->get_agents().end()) {
+
+            auto result = remove_un_staton_from_dm(tlvf::mac_to_string(agent_mac_addr),
+                                                   tlvf::mac_to_string(mac_address));
+
+            m_unassociated_stations.erase(mac_address);
+            LOG(DEBUG) << "successfully removed un_station with mac_address:"
+                       << tlvf::mac_to_string(mac_address) << " from the database";
+            if (result == false) {
+                LOG(ERROR) << tlvf::mac_to_string(mac_address)
+                           << " was not removed from the datamodel!!";
+            }
+        } else {
+            LOG(ERROR) << "un_station with mac:" << tlvf::mac_to_string(mac_address)
+                       << " is not being monitored by " << tlvf::mac_to_string(agent_mac_addr);
+            return false;
+        }
+    } else { // remove it for all connected agents
+             // first remove all instance in the datamodel
+        for (auto &agent : un_station->get_agents()) {
+            auto result = remove_un_staton_from_dm(tlvf::mac_to_string(agent.first),
+                                                   tlvf::mac_to_string(mac_address));
+            if (result == false) {
+                LOG(ERROR) << tlvf::mac_to_string(mac_address)
+                           << " not found OR not removed from the datamodel!!";
+            }
+        }
+        if (m_unassociated_stations.erase(mac_address) == 1) {
+            LOG(DEBUG) << "db: removed station with mac_address:" << mac_address;
+
+        } else {
+            LOG(DEBUG) << "db: failed to remove un_station with mac_address:" << mac_address;
+            return false;
+        }
+    }
+    return true;
+}
+
+const beerocks::mac_map<UnassociatedStation> &db::get_unassociated_stations() const
+{
+    return m_unassociated_stations;
+}
+
+void db::update_unassociated_station_stats(const sMacAddr &mac_address,
+                                           UnassociatedStation::Stats &new_stats,
+                                           const std::string &radio_dm_path = std::string())
+{
+    auto station = m_unassociated_stations.find(mac_address);
+    if (station != m_unassociated_stations.end()) {
+        station->second->update_stats(new_stats);
+
+        // update  controller DM
+        //Example of path : Device.WiFi.DataElements.Network.Device.1.Radio.2.UnassociatedSTA.
+        std::string new_station_path;
+        if (!radio_dm_path.empty()) {
+            std::string unassociated_sta_path = radio_dm_path + ".UnassociatedSTA";
+            auto index                        = m_ambiorix_datamodel->get_instance_index(
+                unassociated_sta_path + ".[MACAddress == '%s'].", tlvf::mac_to_string(mac_address));
+            if (!index) {
+                LOG(ERROR) << " UnassociatedSTA with mac " << mac_address
+                           << " does not exists under the path " << unassociated_sta_path << " !";
+
+                new_station_path = m_ambiorix_datamodel->add_instance(unassociated_sta_path);
+                if (new_station_path.empty()) {
+                    LOG(ERROR) << "Failed to add new unassociated station stats with path "
+                               << unassociated_sta_path;
+                    return;
+                } else {
+                    new_station_path.append(".");
+                    LOG(DEBUG) << "Successfully added object with path : " << new_station_path;
+                }
+            } else {
+                new_station_path.append(".");
+                new_station_path.append(std::to_string(index));
+            }
+            m_ambiorix_datamodel->set(new_station_path, "MACAddress", mac_address);
+            m_ambiorix_datamodel->set(new_station_path, " SignalStrength",
+                                      new_stats.uplink_rcpi_dbm_enc);
+            m_ambiorix_datamodel->set_time(new_station_path, new_stats.time_stamp);
+            LOG(DEBUG) << "Setting MACAddress " << mac_address
+                       << "SignalStrength: " << new_stats.uplink_rcpi_dbm_enc << " TimeStamp"
+                       << new_stats.time_stamp;
+        }
+    }
+    return;
+}
+
+std::list<std::pair<std::string, std::shared_ptr<UnassociatedStation::Stats>>>
+db::get_unassociated_stations_stats() const
+{
+    std::list<std::pair<std::string, std::shared_ptr<UnassociatedStation::Stats>>> stats;
+    for (auto &station : m_unassociated_stations) {
+        auto stat(std::make_shared<UnassociatedStation::Stats>());
+        stat->time_stamp          = station.second->get_stats().time_stamp;
+        stat->uplink_rcpi_dbm_enc = station.second->get_stats().uplink_rcpi_dbm_enc;
+        stats.push_back(std::make_pair(tlvf::mac_to_string(station.first), stat));
+    }
+    return stats;
 }

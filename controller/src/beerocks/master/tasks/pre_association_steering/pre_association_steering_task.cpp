@@ -762,8 +762,15 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
                 break;
             }
 
-            auto band_5g = m_database.is_node_5ghz(m_database.get_node_parent_radio(client_mac));
-            auto client_caps = m_database.get_station_capabilities(client_mac, band_5g);
+            auto wifi_channel =
+                m_database.get_node_wifi_channel(m_database.get_node_parent_radio(client_mac));
+            if (wifi_channel.is_empty()) {
+                TASK_LOG(ERROR) << "wifiChannel of " << m_database.get_node_parent_radio(client_mac)
+                                << " is empty";
+                break;
+            }
+            auto freq_type   = wifi_channel.get_freq_type();
+            auto client_caps = m_database.get_station_capabilities(client_mac, freq_type);
 
             auto response = message_com::create_vs_message<
                 beerocks_message::cACTION_BML_STEERING_EVENTS_UPDATE>(m_cmdu_tx);
@@ -795,6 +802,7 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
             connect_event->data.connect.isRRMSupported = client_caps->rrm_supported;
             connect_event->data.connect.bandCap2G      = client_caps->band_2g_capable;
             connect_event->data.connect.bandCap5G      = client_caps->band_5g_capable;
+            connect_event->data.connect.bandCap6G      = client_caps->band_6g_capable;
 
             connect_event->data.connect.datarateInfo.maxChwidth = client_caps->max_ch_width;
             connect_event->data.connect.datarateInfo.maxStreams = client_caps->max_streams;
@@ -1238,9 +1246,10 @@ bool pre_association_steering_task::check_ap_cfgs_are_valid(
                 << vap_bssid << " is empty";
             return false;
         }
-        if (!(m_database.is_node_24ghz(radio_mac) || m_database.is_node_5ghz(radio_mac))) {
+        if (!(m_database.is_node_24ghz(radio_mac) || m_database.is_node_5ghz(radio_mac) ||
+              m_database.is_node_6ghz(radio_mac))) {
             TASK_LOG(ERROR) << "STEERING_SET_GROUP_REQUEST event: radio mac " << radio_mac
-                            << " is neither 2.4ghz nor 5ghz";
+                            << " is not 2.4GHz, 5GHz, or 6GHz";
             return false;
         }
 

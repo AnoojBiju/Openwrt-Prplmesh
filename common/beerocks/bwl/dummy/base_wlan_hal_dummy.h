@@ -46,6 +46,7 @@ public:
     virtual HALState attach(bool block = false) override;
     virtual bool detach() override;
     virtual bool ping() override;
+    virtual bool reassociate() override;
     virtual bool refresh_radio_info() override;
     virtual bool refresh_vaps_info(int id) override;
     virtual bool process_ext_events(int fd = 0) override;

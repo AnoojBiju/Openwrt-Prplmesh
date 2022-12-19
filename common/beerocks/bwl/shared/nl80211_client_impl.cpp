@@ -39,7 +39,7 @@
 #include <bcl/network/network_utils.h>
 #include <bwl/base_802_11_defs.h>
 #include <tlvf/CmduMessageTx.h>
-#include <tlvf/ieee_80211/sMacHeader.h>
+#include <tlvf/ieee_802_11/sMacHeader.h>
 
 #include <easylogging++.h>
 
@@ -1180,15 +1180,15 @@ bool nl80211_client_impl::send_delba(const std::string &interface_name, const sM
     uint8_t tx_buffer[beerocks::message::MESSAGE_BUFFER_LENGTH];
     ieee1905_1::CmduMessageTx cmdu_tx{tx_buffer, sizeof(tx_buffer)};
 
-    auto mac_header = std::make_shared<ieee80211::sMacHeader>(tx_buffer, sizeof(tx_buffer));
+    auto mac_header = std::make_shared<ieee802_11::sMacHeader>(tx_buffer, sizeof(tx_buffer));
     if (!mac_header->isInitialized()) {
         LOG(ERROR) << "Failed to create sMacHeader!";
         return false;
     }
 
-    mac_header->frame_control_b1().type = static_cast<uint8_t>(ieee80211::sMacHeader::eType::MGMT);
+    mac_header->frame_control_b1().type = static_cast<uint8_t>(ieee802_11::sMacHeader::eType::MGMT);
     mac_header->frame_control_b1().subtype =
-        static_cast<uint8_t>(ieee80211::sMacHeader::eSubtypeMgmt::ACTION);
+        static_cast<uint8_t>(ieee802_11::sMacHeader::eSubtypeMgmt::ACTION);
     mac_header->addr1() = dst;
     mac_header->addr2() = src;
     mac_header->addr3() = bssid;

@@ -118,9 +118,7 @@
 %define {
 
     // Define main data model
-    object Device {
-        object WiFi {
-            object DataElements {
+@CONTROLLER_ROOT_DM_Header@
 
                 object Configuration {
                     bool BandSteeringEnabled = false;
@@ -145,6 +143,15 @@
                         on action validate call check_range [1, 10000];
                     }
                     bool DFSReentry = false;
+                    bool DaisyChainingDisabled = false;
+                    object QoS {
+                        uint32 SPRuleOutput = 0 {
+                            on action validate call check_range [0, 9];
+                        }
+                        string DSCPMap {
+                            on action validate call check_range [0, 64];
+                        }
+                    }
                 }
 
                 // Define controller.Network element
@@ -171,6 +178,8 @@
 
                     void AccessPointCommit();
 
+                    void SetServicePrioritization();
+
                     void ClientSteering(
                         %in %mandatory string station_mac,
                         %in %mandatory string target_bssid
@@ -186,6 +195,8 @@
                         %read-only uint64 BTMFailures = 0;
                         %read-only uint64 BTMQueryResponses = 0;
                     }
+                    /* Update all unassociated stations stats, from all agents and all radios */
+                    bool UpdateUnassociatedStationsStats();
                 }
                 %persistent %read-only object SteerEvent[] {
                     counted with SteerEventNumberOfEntries;
@@ -227,14 +238,12 @@
                 }
                 %read-only object AgentConnectedEvent[];
                 %read-only object AgentDisconnectedEvent[];
-            }
-        }
-    }
+    @CONTROLLER_ROOT_DM_Footer@ 
 }
 
 %populate {
     on event "dm:object-changed" call event_configuration_changed
-        filter 'object matches "Device\.WiFi\.DataElements\.Configuration\."';
+        filter 'object matches "CONTROLLER_ROOT_DM_literal\.Configuration\."';
 }
 
 include "device.odl";
