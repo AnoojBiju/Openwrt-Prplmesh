@@ -1069,6 +1069,7 @@ bool nl80211_client_impl::add_station(const std::string &interface_name, const s
 
     LOG(DEBUG) << "Adding station with MAC : '" << tlvf::mac_to_string(mac) << "'.";
 
+    // TODO: PPM-2358: add the station through hostapd instead
     return m_socket.get()->send_receive_msg(
         NL80211_CMD_NEW_STATION, 0,
         [&](struct nl_msg *msg) -> bool {
@@ -1078,6 +1079,8 @@ bool nl80211_client_impl::add_station(const std::string &interface_name, const s
             nla_put(msg, NL80211_ATTR_STA_SUPPORTED_RATES, assoc_req.supported_rates_length(),
                     assoc_req.supported_rates());
             nla_put_u16(msg, NL80211_ATTR_STA_AID, aid);
+            // Set the station as authorized:
+            nla_put_u64(msg, NL80211_ATTR_STA_FLAGS2, 0x0000000200000002);
 
             // TODO: PPM-2349: add station capabilities
             return true;

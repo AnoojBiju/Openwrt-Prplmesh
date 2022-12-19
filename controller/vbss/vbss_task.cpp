@@ -429,8 +429,10 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
         return true;
     }
 
+    LOG(DEBUG) << "Checking existing moves with creation state";
     auto existing_move = get_matching_active_move(vbssid, eMoveProcessState::VBSS_CREATION);
     if (existing_move) {
+        LOG(DEBUG) << "Found existing move with creation state";
         // Received creation request response during a move
 
         sMacAddr src_ruid = existing_move->client_vbss.current_connected_ruid;
@@ -461,6 +463,7 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
         uint8_t channel, opclass;
         if (should_trigger_channel_switch(src_ruid, existing_move->dest_ruid, channel, opclass)) {
 
+            LOG(DEBUG) << "Triggering channel switch";
             existing_move->state = eMoveProcessState::TRIGGER_CHANNEL_SWITCH;
             if (vbss::vbss_actions::send_trigger_channel_switch_announcement(
                     agent_mac, channel, opclass, existing_move->client_vbss, m_database)) {
@@ -473,6 +476,7 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
         }
         // Creation succeeded, send VBSS Destruction since Trigger Switch Announcement is not required.
         existing_move->state = eMoveProcessState::VBSS_DESTRUCTION;
+        LOG(DEBUG) << "Sending destruction event";
         if (!vbss::vbss_actions::destroy_vbss(existing_move->client_vbss, false, m_database)) {
             LOG(ERROR) << "Move creation succeeded, but vbss destruction request to radio "
                        << src_ruid << " failed to send!";
@@ -482,6 +486,7 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
         return true;
     }
 
+    LOG(DEBUG) << "Checking existing moves with destruction state";
     existing_move = get_matching_active_move(vbssid, eMoveProcessState::VBSS_DESTRUCTION);
     if (existing_move) {
         // Recieved destruction request response during a move
