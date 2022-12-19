@@ -980,6 +980,10 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
                     return false;
                 }
 
+                if (beerocks::bpl::cfg_get_operating_mode() == BPL_OPER_MODE_WDS_REPEATER) {
+                    hal_conf.is_repeater = true;
+                }
+
                 using namespace std::placeholders; // for `_1`
                 radio_info->sta_wlan_hal = bwl::sta_wlan_hal_create(
                     radio_info->sta_iface,
