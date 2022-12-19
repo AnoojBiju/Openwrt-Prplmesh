@@ -1574,6 +1574,8 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
         handle_hostapd_attached();
     } break;
 
+    case Event::Interface_Connected_OK:
+    case Event::Interface_Reconnected_OK:
     case Event::AP_Enabled: {
         if (!data) {
             LOG(ERROR) << "AP_Enabled without data!";
@@ -1947,6 +1949,7 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
     } break;
 
     // AP/Interface Disabled
+    case Event::Interface_Disconnected:
     case Event::AP_Disabled: {
         if (!data) {
             LOG(ERROR) << "AP_Disabled without data!";
@@ -1955,6 +1958,8 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
 
         auto msg = static_cast<bwl::sHOSTAP_DISABLED_NOTIFICATION *>(data);
         LOG(INFO) << "AP_Disabled on vap_id = " << int(msg->vap_id);
+        LOG(ERROR) << " Badhri get_iface_name().c_str() = "
+                   << ap_wlan_hal->get_iface_name().c_str();
 
         if (msg->vap_id == beerocks::IFACE_RADIO_ID) {
             auto timeout = std::chrono::steady_clock::now() +
