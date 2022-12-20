@@ -669,91 +669,93 @@ bool base_wlan_hal_dwpal::refresh_radio_info()
         return true;
     }
 
-    LOG(DEBUG) << "GET_RADIO_INFO";
-    if (!dwpal_send_cmd("GET_RADIO_INFO", &reply)) {
-        LOG(ERROR) << __func__ << " failed";
-        return false;
-    }
-
-    // update radio info struct
-    size_t replyLen               = strnlen(reply, HOSTAPD_TO_DWPAL_MSG_LENGTH);
-    size_t numOfValidArgs[7]      = {0};
-    FieldsToParse fieldsToParse[] = {
-        {(void *)&m_radio_info.ant_num, &numOfValidArgs[0], DWPAL_INT_PARAM, "TxAntennas=", 0},
-        {(void *)&m_radio_info.tx_power, &numOfValidArgs[1], DWPAL_INT_PARAM, "TxPower=", 0},
-        {(void *)&m_radio_info.bandwidth, &numOfValidArgs[2], DWPAL_INT_PARAM,
-         "OperatingChannelBandwidt=", 0},
-        {(void *)&m_radio_info.vht_center_freq, &numOfValidArgs[3], DWPAL_INT_PARAM, "Cf1=", 0},
-        {(void *)&m_radio_info.wifi_ctrl_enabled, &numOfValidArgs[4], DWPAL_INT_PARAM,
-         "HostapdEnabled=", 0},
-        {(void *)&m_radio_info.tx_enabled, &numOfValidArgs[5], DWPAL_BOOL_PARAM, "TxEnabled=", 0},
-        {(void *)&m_radio_info.channel, &numOfValidArgs[6], DWPAL_INT_PARAM, "Channel=", 0},
-        /* Must be at the end */
-        {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
-    if (dwpal_string_to_struct_parse(reply, replyLen, fieldsToParse, sizeof(m_radio_info)) ==
-        DWPAL_FAILURE) {
-        LOG(ERROR) << "DWPAL parse error ==> Abort";
-        return false;
-    }
-    /* TEMP: Traces... */
-    // LOG(DEBUG) << "GET_RADIO_INFO reply=\n" << reply;
-    // LOG(DEBUG) << "numOfValidArgs[0]= " << numOfValidArgs[0] << " ant_num= " << m_radio_info.ant_num;
-    // LOG(DEBUG) << "numOfValidArgs[1]= " << numOfValidArgs[1] << " tx_power= " << m_radio_info.tx_power;
-    // LOG(DEBUG) << "numOfValidArgs[2]= " << numOfValidArgs[2] << " bandwidth= " << m_radio_info.bandwidth;
-    // LOG(DEBUG) << "numOfValidArgs[3]= " << numOfValidArgs[3] << " vht_center_freq= " << m_radio_info.vht_center_freq;
-    // LOG(DEBUG) << "numOfValidArgs[4]= " << numOfValidArgs[4] << " wifi_ctrl_enabled= " << m_radio_info.wifi_ctrl_enabled;
-    // LOG(DEBUG) << "numOfValidArgs[5]= " << numOfValidArgs[5] << " tx_enabled= " << m_radio_info.tx_enabled;
-    // LOG(DEBUG) << "numOfValidArgs[6]= " << numOfValidArgs[6] << " channel= " << m_radio_info.channel;
-    /* End of TEMP: Traces... */
-    for (uint8_t i = 0; i < (sizeof(numOfValidArgs) / sizeof(size_t)); i++) {
-        if (numOfValidArgs[i] == 0) {
-            LOG(ERROR) << "Failed reading parsed parameter " << (int)i << " ==> Abort";
+    if ((conn_state[get_iface_name().c_str()] == true)) {
+        LOG(DEBUG) << "GET_RADIO_INFO";
+        if (!dwpal_send_cmd("GET_RADIO_INFO", &reply)) {
+            LOG(ERROR) << __func__ << " failed";
             return false;
         }
-    }
-    m_radio_info.is_5ghz =
-        (son::wireless_utils::which_freq(m_radio_info.channel) == beerocks::eFreqType::FREQ_5G);
-    // If the VAPs map is empty, refresh it as well
-    // TODO: update on every refresh?
 
-    // Read Radio status
-    const char *tmp_str;
-    int64_t tmp_int;
-    parsed_line_t reply_obj;
-
-    std::string cmd = "STATUS";
-
-    if (!dwpal_send_cmd(cmd, reply_obj)) {
-        LOG(ERROR) << __func__ << " failed";
-        return false;
-    }
-
-    // secondary channel (a.k.a channel_ext_above)
-    if (!read_param("secondary_channel", reply_obj, tmp_int)) {
-        LOG(ERROR) << "Failed reading 'secondary_channel' parameter!";
-        return false;
-    }
-    m_radio_info.channel_ext_above = tmp_int;
-
-    // RSSI
-    if (!read_param("state", reply_obj, &tmp_str)) {
-        LOG(ERROR) << "Failed reading 'state' parameter!";
-        return false;
-    }
-
-    m_radio_info.radio_state = radio_state_from_string(tmp_str);
-
-    auto print_status = m_radio_info.radio_state != eRadioState::ENABLED &&
-                        m_radio_info.radio_state != eRadioState::DISABLED;
-    LOG_IF(print_status, DEBUG) << "Radio state=" << m_radio_info.radio_state;
-
-    if (m_radio_info.radio_state == eRadioState::DISABLED) {
-        return true;
-    }
-
-    if (!m_radio_info.available_vaps.size()) {
-        if (!refresh_vaps_info(beerocks::IFACE_RADIO_ID)) {
+	// update radio info struct
+        size_t replyLen               = strnlen(reply, HOSTAPD_TO_DWPAL_MSG_LENGTH);
+        size_t numOfValidArgs[7]      = {0};
+        FieldsToParse fieldsToParse[] = {
+            {(void *)&m_radio_info.ant_num, &numOfValidArgs[0], DWPAL_INT_PARAM, "TxAntennas=", 0},
+            {(void *)&m_radio_info.tx_power, &numOfValidArgs[1], DWPAL_INT_PARAM, "TxPower=", 0},
+            {(void *)&m_radio_info.bandwidth, &numOfValidArgs[2], DWPAL_INT_PARAM,
+             "OperatingChannelBandwidt=", 0},
+            {(void *)&m_radio_info.vht_center_freq, &numOfValidArgs[3], DWPAL_INT_PARAM, "Cf1=", 0},
+            {(void *)&m_radio_info.wifi_ctrl_enabled, &numOfValidArgs[4], DWPAL_INT_PARAM,
+             "HostapdEnabled=", 0},
+            {(void *)&m_radio_info.tx_enabled, &numOfValidArgs[5], DWPAL_BOOL_PARAM, "TxEnabled=", 0},
+            {(void *)&m_radio_info.channel, &numOfValidArgs[6], DWPAL_INT_PARAM, "Channel=", 0},
+            /* Must be at the end */
+            {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
+        if (dwpal_string_to_struct_parse(reply, replyLen, fieldsToParse, sizeof(m_radio_info)) ==
+            DWPAL_FAILURE) {
+            LOG(ERROR) << "DWPAL parse error ==> Abort";
             return false;
+        }
+        /* TEMP: Traces... */
+        // LOG(DEBUG) << "GET_RADIO_INFO reply=\n" << reply;
+        // LOG(DEBUG) << "numOfValidArgs[0]= " << numOfValidArgs[0] << " ant_num= " << m_radio_info.ant_num;
+        // LOG(DEBUG) << "numOfValidArgs[1]= " << numOfValidArgs[1] << " tx_power= " << m_radio_info.tx_power;
+        // LOG(DEBUG) << "numOfValidArgs[2]= " << numOfValidArgs[2] << " bandwidth= " << m_radio_info.bandwidth;
+        // LOG(DEBUG) << "numOfValidArgs[3]= " << numOfValidArgs[3] << " vht_center_freq= " << m_radio_info.vht_center_freq;
+        // LOG(DEBUG) << "numOfValidArgs[4]= " << numOfValidArgs[4] << " wifi_ctrl_enabled= " << m_radio_info.wifi_ctrl_enabled;
+        // LOG(DEBUG) << "numOfValidArgs[5]= " << numOfValidArgs[5] << " tx_enabled= " << m_radio_info.tx_enabled;
+        // LOG(DEBUG) << "numOfValidArgs[6]= " << numOfValidArgs[6] << " channel= " << m_radio_info.channel;
+        /* End of TEMP: Traces... */
+        for (uint8_t i = 0; i < (sizeof(numOfValidArgs) / sizeof(size_t)); i++) {
+            if (numOfValidArgs[i] == 0) {
+                LOG(ERROR) << "Failed reading parsed parameter " << (int)i << " ==> Abort";
+                return false;
+            }
+        }
+        m_radio_info.is_5ghz =
+            (son::wireless_utils::which_freq(m_radio_info.channel) == beerocks::eFreqType::FREQ_5G);
+        // If the VAPs map is empty, refresh it as well
+        // TODO: update on every refresh?
+
+	// Read Radio status
+        const char *tmp_str;
+        int64_t tmp_int;
+        parsed_line_t reply_obj;
+
+        std::string cmd = "STATUS";
+
+        if (!dwpal_send_cmd(cmd, reply_obj)) {
+            LOG(ERROR) << __func__ << " failed";
+            return false;
+        }
+
+        // secondary channel (a.k.a channel_ext_above)
+        if (!read_param("secondary_channel", reply_obj, tmp_int)) {
+            LOG(ERROR) << "Failed reading 'secondary_channel' parameter!";
+            return false;
+        }
+        m_radio_info.channel_ext_above = tmp_int;
+
+        // RSSI
+        if (!read_param("state", reply_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading 'state' parameter!";
+            return false;
+        }
+
+	m_radio_info.radio_state = radio_state_from_string(tmp_str);
+
+        auto print_status = m_radio_info.radio_state != eRadioState::ENABLED &&
+                            m_radio_info.radio_state != eRadioState::DISABLED;
+        LOG_IF(print_status, DEBUG) << "Radio state=" << m_radio_info.radio_state;
+
+        if (m_radio_info.radio_state == eRadioState::DISABLED) {
+            return true;
+        }
+
+        if (!m_radio_info.available_vaps.size()) {
+            if (!refresh_vaps_info(beerocks::IFACE_RADIO_ID)) {
+                return false;
+            }
         }
     }
 

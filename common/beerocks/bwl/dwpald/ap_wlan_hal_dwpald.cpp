@@ -3186,6 +3186,10 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
             LOG(ERROR) << "DWPAL parse error ==> Abort";
             return false;
         }
+        // Update interface connection status for interface to false
+        conn_state[get_iface_name().c_str()] = false;
+        LOG(DEBUG) << "updated connection status of " << get_iface_name().c_str()
+                   << " with false";
 
         auto iface_ids = beerocks::utils::get_ids_from_iface_string(interface);
         msg->vap_id    = iface_ids.vap_id;
@@ -3214,6 +3218,10 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
             LOG(ERROR) << "DWPAL parse error ==> Abort";
             return false;
         }
+        // Update interface connection status for interface to true
+        conn_state[interface] = true;
+        LOG(DEBUG) << "updated connection status of " << interface
+                   << " with true";
 
         auto iface_ids = beerocks::utils::get_ids_from_iface_string(interface);
         msg->vap_id    = iface_ids.vap_id;

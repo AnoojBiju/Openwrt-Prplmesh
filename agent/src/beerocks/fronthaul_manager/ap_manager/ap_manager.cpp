@@ -1574,6 +1574,8 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
         handle_hostapd_attached();
     } break;
 
+    case Event::Interface_Connected_OK:
+    case Event::Interface_Reconnected_OK:
     case Event::AP_Enabled: {
         if (!data) {
             LOG(ERROR) << "AP_Enabled without data!";
@@ -1946,7 +1948,7 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
 
     } break;
 
-    // AP/Interface Disabled
+    case Event::Interface_Disconnected:
     case Event::AP_Disabled: {
         if (!data) {
             LOG(ERROR) << "AP_Disabled without data!";
