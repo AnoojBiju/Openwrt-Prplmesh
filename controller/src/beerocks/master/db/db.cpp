@@ -5447,7 +5447,8 @@ void db::disable_periodic_link_metrics_requests()
     beerocks::bpl::cfg_set_link_metrics_request_interval(
         config.link_metrics_request_interval_seconds);
 
-    m_ambiorix_datamodel->set(CONTROLLER_ROOT_DM ".Configuration", "LinkMetricsRequestInterval",
+    m_ambiorix_datamodel->set(CONTROLLER_ROOT_DM ".Configuration",
+                              "LinkMetricsRequestInterval",
                               config.link_metrics_request_interval_seconds.count());
 }
 
@@ -6234,7 +6235,8 @@ std::string db::dm_add_steer_event()
         return {};
     }
 
-    std::string event_path = m_ambiorix_datamodel->add_instance(CONTROLLER_ROOT_DM ".SteerEvent");
+    std::string event_path =
+        m_ambiorix_datamodel->add_instance(CONTROLLER_ROOT_DM ".SteerEvent");
 
     if (event_path.empty() && NBAPI_ON) {
         LOG(ERROR) << "Failed to add instance " CONTROLLER_ROOT_DM ".SteerEvent";
@@ -6274,13 +6276,15 @@ bool db::dm_restore_steering_summary_stats(Station &station)
 
 void db::dm_increment_steer_summary_stats(const std::string &param_name)
 {
-    dm_uint64_param_one_up(CONTROLLER_ROOT_DM ".Network.MultiAPSteeringSummaryStats", param_name);
+    dm_uint64_param_one_up(CONTROLLER_ROOT_DM ".Network.MultiAPSteeringSummaryStats",
+                           param_name);
 }
 
 bool db::dm_add_failed_connection_event(const sMacAddr &bssid, const sMacAddr &sta_mac,
                                         const uint16_t reason_code, const uint16_t status_code)
 {
-    std::string event_path = CONTROLLER_ROOT_DM ".FailedConnectionEvent.FailedConnectionEventData";
+    std::string event_path =
+        CONTROLLER_ROOT_DM ".FailedConnectionEvent.FailedConnectionEventData";
 
     event_path = m_ambiorix_datamodel->add_instance(event_path);
 
@@ -6351,7 +6355,8 @@ std::string db::dm_add_device_element(const sMacAddr &mac)
         return {};
     }
 
-    auto device_path = m_ambiorix_datamodel->add_instance(CONTROLLER_ROOT_DM ".Network.Device");
+    auto device_path =
+        m_ambiorix_datamodel->add_instance(CONTROLLER_ROOT_DM ".Network.Device");
     if (device_path.empty()) {
         LOG(ERROR) << "Failed to add instance " << device_path << ". Device mac: " << mac;
         return {};

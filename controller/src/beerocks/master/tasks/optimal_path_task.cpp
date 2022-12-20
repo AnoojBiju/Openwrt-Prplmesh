@@ -333,7 +333,8 @@ void optimal_path_task::work()
             database.dm_uint64_param_one_up(station->dm_path + ".MultiAPSTA.SteeringSummaryStats",
                                             "NoCandidateAPFailures");
             database.dm_uint64_param_one_up(
-                CONTROLLER_ROOT_DM ".Network.MultiAPSteeringSummaryStats", "NoCandidateAPFailures");
+                CONTROLLER_ROOT_DM ".Network.MultiAPSteeringSummaryStats",
+                "NoCandidateAPFailures");
             finish();
             break;
         }
@@ -345,7 +346,8 @@ void optimal_path_task::work()
             database.dm_uint64_param_one_up(station->dm_path + ".MultiAPSTA.SteeringSummaryStats",
                                             "NoCandidateAPFailures");
             database.dm_uint64_param_one_up(
-                CONTROLLER_ROOT_DM ".Network.MultiAPSteeringSummaryStats", "NoCandidateAPFailures");
+                CONTROLLER_ROOT_DM ".Network.MultiAPSteeringSummaryStats",
+                "NoCandidateAPFailures");
             finish();
             break;
         }
@@ -784,7 +786,8 @@ void optimal_path_task::work()
             database.dm_uint64_param_one_up(station->dm_path + ".MultiAPSTA.SteeringSummaryStats",
                                             "NoCandidateAPFailures");
             database.dm_uint64_param_one_up(
-                CONTROLLER_ROOT_DM ".Network.MultiAPSteeringSummaryStats", "NoCandidateAPFailures");
+                CONTROLLER_ROOT_DM ".Network.MultiAPSteeringSummaryStats",
+                "NoCandidateAPFailures");
             finish();
         } else {
             chosen_bssid = database.get_hostap_vap_with_ssid(tlvf::mac_from_string(chosen_hostap),
@@ -1209,7 +1212,8 @@ void optimal_path_task::work()
             database.dm_uint64_param_one_up(station->dm_path + ".MultiAPSTA.SteeringSummaryStats",
                                             "NoCandidateAPFailures");
             database.dm_uint64_param_one_up(
-                CONTROLLER_ROOT_DM ".Network.MultiAPSteeringSummaryStats", "NoCandidateAPFailures");
+                CONTROLLER_ROOT_DM ".Network.MultiAPSteeringSummaryStats",
+                "NoCandidateAPFailures");
             finish();
             break;
         }
@@ -1221,7 +1225,8 @@ void optimal_path_task::work()
             database.dm_uint64_param_one_up(station->dm_path + ".MultiAPSTA.SteeringSummaryStats",
                                             "NoCandidateAPFailures");
             database.dm_uint64_param_one_up(
-                CONTROLLER_ROOT_DM ".Network.MultiAPSteeringSummaryStats", "NoCandidateAPFailures");
+                CONTROLLER_ROOT_DM ".Network.MultiAPSteeringSummaryStats",
+                "NoCandidateAPFailures");
             finish();
             break;
         }
@@ -1500,7 +1505,8 @@ void optimal_path_task::work()
             database.dm_uint64_param_one_up(station->dm_path + ".MultiAPSTA.SteeringSummaryStats",
                                             "NoCandidateAPFailures");
             database.dm_uint64_param_one_up(
-                CONTROLLER_ROOT_DM ".Network.MultiAPSteeringSummaryStats", "NoCandidateAPFailures");
+                CONTROLLER_ROOT_DM".Network.MultiAPSteeringSummaryStats",
+                "NoCandidateAPFailures");
             finish();
         } else {
             if (!database.settings_client_optimal_path_roaming_prefer_signal_strength()) {

@@ -934,8 +934,8 @@ static void event_rm_params(const char *const sig_name, const amxc_var_t *const 
     amxd_object_t *security_obj = amxd_dm_signal_get_object(g_data_model, data);
 
     if (!security_obj) {
-        LOG(WARNING) << "Failed to get object " CONTROLLER_ROOT_DM
-                        ".Network.AccessPoint.*.Security";
+        LOG(WARNING)
+            << "Failed to get object " CONTROLLER_ROOT_DM ".Network.AccessPoint.*.Security";
         return;
     }
     rm_params(security_obj, "PreSharedKey");
@@ -955,8 +955,8 @@ static void event_add_hidden_params(const char *const sig_name, const amxc_var_t
     amxd_object_t *security_obj = amxd_dm_signal_get_object(g_data_model, data);
 
     if (!security_obj) {
-        LOG(WARNING) << "Failed to get object " CONTROLLER_ROOT_DM
-                        ".Network.AccessPoint.*.Security";
+        LOG(WARNING)
+            << "Failed to get object " CONTROLLER_ROOT_DM ".Network.AccessPoint.*.Security";
         return;
     }
     add_string_param("PreSharedKey", security_obj);
@@ -1096,19 +1096,20 @@ std::vector<beerocks::nbapi::sFunctions> get_func_list(void)
          access_point_commit},
         {"client_steering", CONTROLLER_ROOT_DM ".Network.ClientSteering", client_steering},
         {"trigger_scan", CONTROLLER_ROOT_DM ".Network.Device.Radio.ScanTrigger", trigger_scan},
-        {"BTMRequest", CONTROLLER_ROOT_DM ".Network.Device.Radio.BSS.STA.MultiAPSTA.BTMRequest",
+        {"BTMRequest",
+         CONTROLLER_ROOT_DM ".Network.Device.Radio.BSS.STA.MultiAPSTA.BTMRequest",
          btm_request},
-        {"update_vbss_capabilities", CONTROLLER_ROOT_DM ".Network.Device.UpdateVBSSCapabilities",
+        {"update_vbss_capabilities",
+         CONTROLLER_ROOT_DM ".Network.Device.UpdateVBSSCapabilities",
          update_vbss_capabilities},
-        {"trigger_vbss_creation", CONTROLLER_ROOT_DM ".Network.Device.Radio.TriggerVBSSCreation",
+        {"trigger_vbss_creation",
+         CONTROLLER_ROOT_DM ".Network.Device.Radio.TriggerVBSSCreation",
          trigger_vbss_creation},
         {"trigger_vbss_destruction",
          CONTROLLER_ROOT_DM ".Network.Device.Radio.BSS.TriggerVBSSDestruction",
          trigger_vbss_destruction},
         {"trigger_vbss_move", CONTROLLER_ROOT_DM ".Network.Device.Radio.BSS.TriggerVBSSMove",
-         trigger_vbss_move},
-        {"trigger_prioritization", CONTROLLER_ROOT_DM ".Network.SetServicePrioritization",
-         trigger_prioritization}};
+         trigger_vbss_move}};
     return functions_list;
 }
 
