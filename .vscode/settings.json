@@ -76,8 +76,7 @@
         "BEEROCKS_BIN_PATH=\"build/install/bin\"",
         "BEEROCKS_VERSION=\"\"",
         "BEEROCKS_REVISION=\"\"",
-        "BEEROCKS_BUILD_DATE=\"\"",
-        "HAVE_READLINE"
+        "BEEROCKS_BUILD_DATE=\"\""
     ],
     "C_Cpp.default.includePath": [
         "/usr/include",
