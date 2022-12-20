@@ -1108,7 +1108,16 @@ std::vector<beerocks::nbapi::sFunctions> get_func_list(void)
         {"trigger_vbss_move", CONTROLLER_ROOT_DM ".Network.Device.Radio.BSS.TriggerVBSSMove",
          trigger_vbss_move},
         {"trigger_prioritization", CONTROLLER_ROOT_DM ".Network.SetServicePrioritization",
-         trigger_prioritization}};
+         trigger_prioritization},
+        {"add_unassociated_station",
+         CONTROLLER_ROOT_DM ".Network.Device.Radio.AddUnassociatedStation",
+         add_unassociated_station},
+        {"remove_unassociated_station",
+         CONTROLLER_ROOT_DM ".Network.Device.Radio.RemoveUnassociatedStation",
+         remove_unassociated_station},
+        {"update_unassociatedStations_stats",
+         CONTROLLER_ROOT_DM ".Network.UpdateUnassociatedStationsStats",
+         update_unassociatedStations_stats}};
     return functions_list;
 }
 
