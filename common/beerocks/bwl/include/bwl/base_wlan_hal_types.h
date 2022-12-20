@@ -178,8 +178,9 @@ struct RadioInfo {
     /**< 32-byte attribute containing the MCS set as defined in 802.11ac */
     std::array<uint8_t, beerocks::message::VHT_MCS_SET_SIZE> vht_mcs_set;
 
-    bool he_supported      = false; /**< Is HE supported flag */
-    uint16_t he_capability = 0;     /**< HE capabilities */
+    bool he_supported         = false; /**< Is HE supported flag */
+    uint16_t he_capability    = 0;     /**< HE capabilities */
+    uint64_t wifi6_capability = 0;
     /**< 32-byte attribute containing the MCS set as defined in 802.11ax */
     std::array<uint8_t, beerocks::message::HE_MCS_SET_SIZE> he_mcs_set;
 

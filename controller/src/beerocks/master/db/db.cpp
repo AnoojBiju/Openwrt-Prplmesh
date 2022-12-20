@@ -2381,7 +2381,7 @@ bool db::update_vap(const sMacAddr &radio_mac, const sMacAddr &bssid, const std:
 
     auto &vaps_info = get_hostap_vap_list(radio_mac);
     auto it         = std::find_if(vaps_info.begin(), vaps_info.end(),
-                           [&](const std::pair<int8_t, sVapElement> &vap) {
+                                   [&](const std::pair<int8_t, sVapElement> &vap) {
                                return vap.second.mac == tlvf::mac_to_string(bssid);
                            });
     if (it == vaps_info.end()) {
@@ -8453,7 +8453,7 @@ void db::update_unassociated_station_stats(const sMacAddr &mac_address,
         if (!radio_dm_path.empty()) {
             std::string unassociated_sta_path = radio_dm_path + ".UnassociatedSTA";
             auto index                        = m_ambiorix_datamodel->get_instance_index(
-                unassociated_sta_path + ".[MACAddress == '%s'].", tlvf::mac_to_string(mac_address));
+                                       unassociated_sta_path + ".[MACAddress == '%s'].", tlvf::mac_to_string(mac_address));
             if (!index) {
                 LOG(ERROR) << " UnassociatedSTA with mac " << mac_address
                            << " does not exists under the path " << unassociated_sta_path << " !";

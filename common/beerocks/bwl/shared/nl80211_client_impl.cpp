@@ -261,13 +261,29 @@ bool nl80211_client_impl::get_radio_info(const std::string &interface_name, radi
                 return;
             }
 
+			if (tb[NL80211_ATTR_EXT_CAPA]) {
+				LOG(DEBUG) << "***********INSIDE THE FIRST EXT CAPAA**********";
+				size_t actual_length   = nla_len(tb[NL80211_ATTR_EXT_CAPA]);
+				if (radio_info.bands.empty()) {
+                    LOG(ERROR) << "i*********************Array of bands is empty**********";
+                    return;
+                }
+
+                band_info &band = radio_info.bands.at(radio_info.bands.size() - 1);
+				memcpy(band.ext_capa, nla_data(tb[NL80211_ATTR_EXT_CAPA]),
+                               actual_length);
+				if(band.ext_capa[2] >> 6 & 1) {
+					band.wifi6_capability = band.wifi6_capability | (1 << 5);
+				}
+
+			}
+
             if (!tb[NL80211_ATTR_WIPHY_BANDS]) {
                 return;
             }
 
             struct nlattr *nl_band;
             int rem_band;
-
             const struct nlattr *nla = tb[NL80211_ATTR_WIPHY_BANDS];
             nla_for_each_attr(nl_band, static_cast<struct nlattr *>(nla_data(nla)), nla_len(nla),
                               rem_band)
@@ -275,6 +291,7 @@ bool nl80211_client_impl::get_radio_info(const std::string &interface_name, radi
                 struct nlattr *tb_band[NL80211_BAND_ATTR_MAX + 1];
 #if LINUX_VERSION_CODE > KERNEL_VERSION(4, 19, 1)
                 int rem_iftype;
+                unsigned long mcs_nss_size = 4;
                 struct nlattr *tb_iftype[NL80211_BAND_IFTYPE_ATTR_MAX + 1];
 #endif
 
@@ -362,7 +379,11 @@ bool nl80211_client_impl::get_radio_info(const std::string &interface_name, radi
                     band.he_supported = true;
 
                     // If HE is supported UL and DL-OFDMA are mandatory.
-                    band.he_capability = band.he_capability | (3 << 1);
+                    band.he_capability    = band.he_capability | (3 << 1);
+                    band.wifi6_capability = band.wifi6_capability | ((uint64_t)3 << 32);
+
+                    band.wifi6_capability = band.wifi6_capability | (3 << 6);
+                    band.wifi6_capability = band.wifi6_capability | (1 << 4);
 
                     const struct nlattr *nl_he_cap = tb_band[NL80211_BAND_ATTR_IFTYPE_DATA];
                     nla_for_each_attr(nl_band, static_cast<struct nlattr *>(nla_data(nl_he_cap)),
@@ -375,6 +396,13 @@ bool nl80211_client_impl::get_radio_info(const std::string &interface_name, radi
                             memcpy(band.he.he_mac_capab_info,
                                    nla_data(tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_MAC]),
                                    nla_len(tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_MAC]));
+
+                            if (band.he.he_mac_capab_info[0] & 2) {
+                                band.wifi6_capability = band.wifi6_capability | (1 << 3);
+                            }
+                            if (band.he.he_mac_capab_info[0] & 4) {
+                                band.wifi6_capability = band.wifi6_capability | (1 << 2);
+                            }
                         }
 
                         if (tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_PHY]) {
@@ -389,13 +417,22 @@ bool nl80211_client_impl::get_radio_info(const std::string &interface_name, radi
 			     */
                             switch ((band.he.he_phy_capab_info[0] >> 3) & 3) {
                             case 3:
-                                band.he_capability = band.he_capability | (1 << 8);
-                                band.he_capability = band.he_capability | (1 << 9);
+                                band.he_capability    = band.he_capability | (1 << 8);
+                                band.he_capability    = band.he_capability | (1 << 9);
+                                band.wifi6_capability = band.wifi6_capability | ((uint64_t)3 << 44);
+                                mcs_nss_size += 8;
+
+								band.wifi6_capability = band.wifi6_capability | (74 << 8);
                                 break;
                             case 1:
-                                band.he_capability = band.he_capability | (1 << 8);
+                                band.he_capability    = band.he_capability | (1 << 8);
+                                band.wifi6_capability = band.wifi6_capability | ((uint64_t)1 << 45);
+                                mcs_nss_size += 4;
+
+								band.wifi6_capability = band.wifi6_capability | (74 << 8);
                                 break;
                             }
+                            band.wifi6_capability = band.wifi6_capability | ((uint64_t)mcs_nss_size << 40);
 
                             /**
 			     * check whether UL_MU_MIMO and UL_MU_MIMO plus OFDMA
@@ -409,23 +446,45 @@ bool nl80211_client_impl::get_radio_info(const std::string &interface_name, radi
                                 band.he_capability = band.he_capability | (1 << 4);
                                 break;
                             case 1:
-                                band.he_capability = band.he_capability | (1 << 5);
+                                band.he_capability    = band.he_capability | (1 << 5);
+                                band.wifi6_capability = band.wifi6_capability | ((uint64_t)1 << 34);
                                 break;
                             default:
                                 break;
                             }
 
                             if (band.he.he_phy_capab_info[3] >> 7) {
-                                //set 7th bit if su_beamformer is supported.
-                                band.he_capability = band.he_capability | (1 << 7);
+                                //set the bit if su_beamformer is supported.
+                                band.he_capability    = band.he_capability | (1 << 7);
+                                band.wifi6_capability = band.wifi6_capability | ((uint64_t)1 << 39);
                             }
 
-                            if (band.he.he_phy_capab_info[4] & 2) {
-                                //set 6th bit if mu_beamformer is supported.
-                                band.he_capability = band.he_capability | (1 << 6);
+                            switch (band.he.he_phy_capab_info[4] & 3)
+                            {
+                            case 3:
+                                //set the bit if mu_beamformer is supported.
+                                band.he_capability    = band.he_capability | (1 << 6);
+                                band.wifi6_capability = band.wifi6_capability | ((uint64_t)1 << 37);
+                                break;
+                            case 1:
+                                //set the bit if su_beamformee is supported.
+                                band.wifi6_capability = band.wifi6_capability | ((uint64_t)1 << 38);
+                                break;
+                            default:
+                                break;
                             }
+
+                            if ((band.he.he_phy_capab_info[4] >> 2) & 3) {
+                                //set the bit if beamformee_sts_less_80mhz is supported.
+                                band.wifi6_capability = band.wifi6_capability | ((uint64_t)1 << 36);
+                            }
+                            if ((band.he.he_phy_capab_info[4] >> 5) & 3) {
+                                //set the bit if beamformee_sts_greater_80mhz is supported.
+                                band.wifi6_capability = band.wifi6_capability | ((uint64_t)1 << 35);
+                            }
+
                             if ((band.he.he_phy_capab_info[6] >> 6) & 1) {
-                                //set 3rd bit if DL_MU_MIMO plus OFDMA is supported.
+                                //set the bit if DL_MU_MIMO plus OFDMA is supported.
                                 band.he_capability = band.he_capability | (1 << 3);
                             }
                         }
@@ -448,6 +507,7 @@ bool nl80211_client_impl::get_radio_info(const std::string &interface_name, radi
                             }
 
                             band.he_capability = band.he_capability | ((7 & (he_rx_nss - 1)) << 10);
+                            band.wifi6_capability = band.wifi6_capability | (he_rx_nss << 24);
 
                             uint16_t he_tx_mcs_map =
                                 band.he.he_mcs_nss_set[2] | (band.he.he_mcs_nss_set[3] << 8);
@@ -459,6 +519,7 @@ bool nl80211_client_impl::get_radio_info(const std::string &interface_name, radi
                             }
 
                             band.he_capability = band.he_capability | ((7 & (he_tx_nss - 1)) << 13);
+                            band.wifi6_capability = band.wifi6_capability | (he_rx_nss << 28);
                         }
 
                         if (tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_PPE]) {
@@ -594,6 +655,22 @@ bool nl80211_client_impl::get_radio_info(const std::string &interface_name, radi
 
                     band.supported_channels[channel.number] = channel;
                 }
+            }
+			if (tb[NL80211_ATTR_EXT_CAPA]) {
+				LOG(DEBUG) << "*********INSIDE THE SECOND EXT CAPA************";
+                size_t actual_length   = nla_len(tb[NL80211_ATTR_EXT_CAPA]);
+                if (radio_info.bands.empty()) {
+                    LOG(ERROR) << "Array of bands is empty";
+                    return;
+                }
+
+                band_info &band = radio_info.bands.at(radio_info.bands.size() - 1);
+                memcpy(band.ext_capa, nla_data(tb[NL80211_ATTR_EXT_CAPA]),
+                               actual_length);
+                if(band.ext_capa[2] >> 6 & 1) {
+                    band.wifi6_capability = band.wifi6_capability | (1 << 5);
+                }
+
             }
         });
 }
@@ -992,12 +1069,13 @@ bool nl80211_client_impl::channel_scan_abort(const std::string &interface_name)
         return false;
     }
 
-    return m_socket.get()->send_receive_msg(NL80211_CMD_ABORT_SCAN, 0,
-                                            [&](struct nl_msg *msg) -> bool {
-                                                nla_put_u32(msg, NL80211_ATTR_IFINDEX, iface_index);
-                                                return true;
-                                            },
-                                            [&](struct nl_msg *msg) {});
+    return m_socket.get()->send_receive_msg(
+        NL80211_CMD_ABORT_SCAN, 0,
+        [&](struct nl_msg *msg) -> bool {
+            nla_put_u32(msg, NL80211_ATTR_IFINDEX, iface_index);
+            return true;
+        },
+        [&](struct nl_msg *msg) {});
 }
 
 bool nl80211_client_impl::add_key(const std::string &interface_name, const sKeyInfo &key_info)
@@ -1214,14 +1292,14 @@ bool nl80211_client_impl::send_delba(const std::string &interface_name, const sM
 
     LOG(DEBUG) << "Sending DELBA frame on interface '" << interface_name << "' to MAC '" << dst
                << "' with source '" << src << "' bssid '" << bssid << "'";
-    return m_socket.get()->send_receive_msg(NL80211_CMD_FRAME, 0,
-                                            [&](struct nl_msg *msg) -> bool {
-                                                nla_put_u32(msg, NL80211_ATTR_IFINDEX, iface_index);
-                                                nla_put(msg, NL80211_ATTR_FRAME, frame_attr.size(),
-                                                        frame_attr.data());
-                                                return true;
-                                            },
-                                            [&](struct nl_msg *msg) {});
+    return m_socket.get()->send_receive_msg(
+        NL80211_CMD_FRAME, 0,
+        [&](struct nl_msg *msg) -> bool {
+            nla_put_u32(msg, NL80211_ATTR_IFINDEX, iface_index);
+            nla_put(msg, NL80211_ATTR_FRAME, frame_attr.size(), frame_attr.data());
+            return true;
+        },
+        [&](struct nl_msg *msg) {});
 }
 
 } // namespace bwl

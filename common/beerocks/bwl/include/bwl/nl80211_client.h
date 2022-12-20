@@ -263,6 +263,7 @@ public:
 	 * if it is available in NL80211_BAND_ATTR_IFTYPE_DATA
 	 */
         uint16_t he_capability = 0;
+		uint64_t wifi6_capability = 0;
         struct ieee80211_he_capabilities {
             uint8_t he_mac_capab_info[6];
             uint8_t he_phy_capab_info[11];
@@ -274,6 +275,8 @@ public:
             uint8_t he_mcs_nss_set[12];
             uint8_t optional[25];
         } he;
+
+		uint8_t ext_capa[15];
 
         /**
          * The Channels that are supported in this band.

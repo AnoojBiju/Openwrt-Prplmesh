@@ -2601,6 +2601,7 @@ void ApManager::handle_hostapd_attached()
                 beerocks::message::VHT_MCS_SET_SIZE, notification->params().vht_mcs_set);
     notification->params().he_supported  = ap_wlan_hal->get_radio_info().he_supported;
     notification->params().he_capability = ap_wlan_hal->get_radio_info().he_capability;
+	notification->params().wifi6_capability = ap_wlan_hal->get_radio_info().wifi6_capability;
     std::copy_n(ap_wlan_hal->get_radio_info().he_mcs_set.data(), beerocks::message::HE_MCS_SET_SIZE,
                 notification->params().he_mcs_set);
 
@@ -2630,6 +2631,7 @@ void ApManager::handle_hostapd_attached()
     LOG(INFO) << " vht_capability = " << std::hex << ap_wlan_hal->get_radio_info().vht_capability;
     LOG(INFO) << " he_supported = " << ap_wlan_hal->get_radio_info().he_supported;
     LOG(INFO) << " he_capability = " << std::hex << ap_wlan_hal->get_radio_info().he_capability;
+	LOG(INFO) << " wifi6_capability = " << std::hex << ap_wlan_hal->get_radio_info().wifi6_capability;
     LOG(INFO) << " zwdfs = " << m_ap_support_zwdfs;
 
     copy_vaps_info(ap_wlan_hal, notification->vap_list().vaps);

@@ -2318,6 +2318,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
 
         radio->he_supported  = notification->params().he_supported;
         radio->he_capability = notification->params().he_capability;
+		radio->wifi6_capability = notification->params().wifi6_capability;
         std::copy_n(notification->params().he_mcs_set, beerocks::message::HE_MCS_SET_SIZE,
                     radio->he_mcs_set.begin());
 

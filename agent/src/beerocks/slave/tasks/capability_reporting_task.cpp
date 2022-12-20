@@ -508,8 +508,13 @@ bool CapabilityReportingTask::add_ap_wifi6_capabilities(const std::string &iface
     }
 
     tlv->radio_uid() = radio->front.iface_mac;
-    // TODO: Need to get number of role supported (PPM-2288)
-    auto number_of_role = 1; //dummy value;
+	int number_of_role;
+	if(radio->wifi6_capability >> 46 & 1) {
+		number_of_role = 2;
+	}
+	else {
+		number_of_role = 1;
+	}
 
     for (int i = 0; i < number_of_role; i++) {
         auto role = tlv->create_role();
@@ -551,36 +556,39 @@ bool CapabilityReportingTask::add_ap_wifi6_capabilities(const std::string &iface
          * Bits 0     : Support for Anticipated Channel Usage
 	*/
 
-        // TODO: Need to get Agent_role (PPM-2288)
-        role->flags1().agent_role          = wifi6_caps->agent_role;
-        role->flags1().he_support_160mhz   = wifi6_caps->he_support_160mhz;
+        if(i) {
+			role->flags1().agent_role = 1;
+		}
+		else {
+			role->flags1().agent_role = 0;
+		}
+        role->flags1().he_support_160mhz = wifi6_caps->he_support_160mhz;
         role->flags1().he_support_80_80mhz = wifi6_caps->he_support_80_80mhz;
-        role->flags1().mcs_nss_length      = wifi6_caps->mcs_nss_length;
-        // TODO: Need to get the supported mcs_nss value (PPM-2288)
+        role->flags1().mcs_nss_length = wifi6_caps->mcs_nss_length;
         if (role->flags1().he_support_160mhz) {
             role->set_mcs_nss_160(role->flags1().he_support_160mhz);
         }
         if (role->flags1().he_support_80_80mhz) {
             role->set_mcs_nss_80_80(role->flags1().he_support_80_80mhz);
         }
-        role->flags2().su_beamformer                = wifi6_caps->su_beamformer;
-        role->flags2().su_beamformee                = wifi6_caps->su_beamformee;
-        role->flags2().mu_Beamformer_status         = wifi6_caps->mu_Beamformer_status;
-        role->flags2().beamformee_sts_less_80mhz    = wifi6_caps->beamformee_sts_less_80mhz;
+        role->flags2().su_beamformer = wifi6_caps->su_beamformer;
+        role->flags2().su_beamformee = wifi6_caps->su_beamformee;
+        role->flags2().mu_Beamformer_status = wifi6_caps->mu_Beamformer_status;
+        role->flags2().beamformee_sts_less_80mhz = wifi6_caps->beamformee_sts_less_80mhz;
         role->flags2().beamformee_sts_greater_80mhz = wifi6_caps->beamformee_sts_greater_80mhz;
-        role->flags2().ul_mu_mimo                   = wifi6_caps->ul_mu_mimo;
-        role->flags2().ul_ofdma                     = wifi6_caps->ul_ofdma;
-        role->flags2().dl_ofdma                     = wifi6_caps->dl_ofdma;
-        role->flags3().max_dl_mu_mimo_tx            = wifi6_caps->max_dl_mu_mimo_tx;
-        role->flags3().max_ul_mu_mimo_rx            = wifi6_caps->max_ul_mu_mimo_rx;
-        // TODO: Need to get Max number of users supported per DL OFDMA TX and
-        // UL OFDMA RX in an AP role (PPM-2288)
-        role->flags4().rts                       = wifi6_caps->rts;
-        role->flags4().mu_rts                    = wifi6_caps->mu_rts;
-        role->flags4().multi_bssid               = wifi6_caps->multi_bssid;
-        role->flags4().mu_edca                   = wifi6_caps->mu_edca;
-        role->flags4().twt_requester             = wifi6_caps->twt_requester;
-        role->flags4().twt_responder             = wifi6_caps->twt_responder;
+        role->flags2().ul_mu_mimo = wifi6_caps->ul_mu_mimo;
+        role->flags2().ul_ofdma = wifi6_caps->ul_ofdma;
+        role->flags2().dl_ofdma = wifi6_caps->dl_ofdma;
+        role->flags3().max_dl_mu_mimo_tx = wifi6_caps->max_dl_mu_mimo_tx;
+        role->flags3().max_ul_mu_mimo_rx = wifi6_caps->max_ul_mu_mimo_rx;
+		role->max_ul_ofdma_rx() = wifi6_caps->max_ul_ofdma_rx;
+		role->max_dl_ofdma_tx() = wifi6_caps->max_dl_ofdma_tx;
+        role->flags4().rts = wifi6_caps->rts;
+        role->flags4().mu_rts = wifi6_caps->mu_rts;
+        role->flags4().multi_bssid = wifi6_caps->multi_bssid;
+        role->flags4().mu_edca     = wifi6_caps->mu_edca;
+        role->flags4().twt_requester = wifi6_caps->twt_requester;
+        role->flags4().twt_responder = wifi6_caps->twt_responder;
         role->flags4().spatial_reuse             = wifi6_caps->spatial_reuse;
         role->flags4().anticipated_channel_usage = wifi6_caps->anticipated_channel_usage;
 

@@ -956,16 +956,17 @@ bool ap_wlan_hal_dwpal::refresh_radio_info()
         m_radio_info.vht_capability = band_info_it->vht_capability;
         std::copy_n(band_info_it->vht_mcs_set, m_radio_info.vht_mcs_set.size(),
                     m_radio_info.vht_mcs_set.begin());
-        m_radio_info.he_supported  = band_info_it->he_supported;
-        m_radio_info.he_capability = band_info_it->he_capability;
+        m_radio_info.he_supported     = band_info_it->he_supported;
+        m_radio_info.he_capability    = band_info_it->he_capability;
+        m_radio_info.wifi6_capability = band_info_it->wifi6_capability;
 
         for (auto const &pair : band_info_it->supported_channels) {
             auto &supported_channel_info = pair.second;
             auto &channel_info        = m_radio_info.channels_list[supported_channel_info.number];
             channel_info.tx_power_dbm = supported_channel_info.tx_power;
             channel_info.dfs_state    = supported_channel_info.is_dfs
-                                         ? supported_channel_info.dfs_state
-                                         : beerocks::eDfsState::DFS_STATE_MAX;
+                                            ? supported_channel_info.dfs_state
+                                            : beerocks::eDfsState::DFS_STATE_MAX;
 
             for (auto bw : supported_channel_info.supported_bandwidths) {
                 // If rank does not exist, set it to -1. It will be set by "read_acs_report()".
@@ -2282,7 +2283,7 @@ bool ap_wlan_hal_dwpal::generate_connected_clients_events(
 
             int32_t result = generate_association_event_result::SUCCESS;
             auto msg_buff  = generate_client_assoc_event(reply, m_vap_id_in_progress,
-                                                        get_radio_info().is_5ghz, result);
+                                                         get_radio_info().is_5ghz, result);
 
             if (!msg_buff) {
                 LOG(DEBUG) << "Failed to generate client association event from reply";
@@ -2699,14 +2700,14 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
         char MACAddress[MAC_ADDR_SIZE] = {0};
         size_t numOfValidArgs[6]       = {0};
         FieldsToParse fieldsToParse[]  = {
-            {NULL /*opCode*/, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
-            {(void *)VAP, &numOfValidArgs[1], DWPAL_STR_PARAM, NULL, sizeof(VAP)},
-            {(void *)MACAddress, &numOfValidArgs[2], DWPAL_STR_PARAM, NULL, sizeof(MACAddress)},
-            {(void *)&msg->params.reason, &numOfValidArgs[3], DWPAL_CHAR_PARAM, "reason=", 0},
-            {(void *)&msg->params.source, &numOfValidArgs[4], DWPAL_CHAR_PARAM, "source=", 0},
-            {(void *)&msg->params.type, &numOfValidArgs[5], DWPAL_CHAR_PARAM, "type=", 0},
-            /* Must be at the end */
-            {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
+             {NULL /*opCode*/, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
+             {(void *)VAP, &numOfValidArgs[1], DWPAL_STR_PARAM, NULL, sizeof(VAP)},
+             {(void *)MACAddress, &numOfValidArgs[2], DWPAL_STR_PARAM, NULL, sizeof(MACAddress)},
+             {(void *)&msg->params.reason, &numOfValidArgs[3], DWPAL_CHAR_PARAM, "reason=", 0},
+             {(void *)&msg->params.source, &numOfValidArgs[4], DWPAL_CHAR_PARAM, "source=", 0},
+             {(void *)&msg->params.type, &numOfValidArgs[5], DWPAL_CHAR_PARAM, "type=", 0},
+             /* Must be at the end */
+             {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
 
         if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse, sizeof(VAP)) ==
             DWPAL_FAILURE) {
@@ -2750,13 +2751,13 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
         uint64_t rx_packets            = 0;
         size_t numOfValidArgs[5]       = {0};
         FieldsToParse fieldsToParse[]  = {
-            {NULL /*opCode*/, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
-            {NULL, &numOfValidArgs[1], DWPAL_STR_PARAM, NULL, 0},
-            {(void *)MACAddress, &numOfValidArgs[2], DWPAL_STR_PARAM, NULL, sizeof(MACAddress)},
-            {(void *)rssi, &numOfValidArgs[3], DWPAL_STR_PARAM, "rssi=", sizeof(rssi)},
-            {(void *)&rx_packets, &numOfValidArgs[4], DWPAL_LONG_LONG_INT_PARAM, "rx_packets=", 0},
-            /* Must be at the end */
-            {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
+             {NULL /*opCode*/, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
+             {NULL, &numOfValidArgs[1], DWPAL_STR_PARAM, NULL, 0},
+             {(void *)MACAddress, &numOfValidArgs[2], DWPAL_STR_PARAM, NULL, sizeof(MACAddress)},
+             {(void *)rssi, &numOfValidArgs[3], DWPAL_STR_PARAM, "rssi=", sizeof(rssi)},
+             {(void *)&rx_packets, &numOfValidArgs[4], DWPAL_LONG_LONG_INT_PARAM, "rx_packets=", 0},
+             /* Must be at the end */
+             {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
 
         if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse, sizeof(MACAddress)) ==
             DWPAL_FAILURE) {
@@ -3100,13 +3101,13 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
         char vap_name[beerocks::message::IFACE_NAME_LENGTH] = {0};
         size_t numOfValidArgs[4]                            = {0};
         FieldsToParse fieldsToParse[]                       = {
-            {NULL /*opCode*/, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
-            {(void *)vap_name, &numOfValidArgs[1], DWPAL_STR_PARAM, NULL,
-             beerocks::message::IFACE_NAME_LENGTH},
-            {(void *)MACAddress, &numOfValidArgs[2], DWPAL_STR_PARAM, NULL, sizeof(MACAddress)},
-            {(void *)&status_code, &numOfValidArgs[3], DWPAL_INT_PARAM, "status_code=", 0},
-            /* Must be at the end */
-            {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
+                                  {NULL /*opCode*/, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
+                                  {(void *)vap_name, &numOfValidArgs[1], DWPAL_STR_PARAM, NULL,
+                                   beerocks::message::IFACE_NAME_LENGTH},
+                                  {(void *)MACAddress, &numOfValidArgs[2], DWPAL_STR_PARAM, NULL, sizeof(MACAddress)},
+                                  {(void *)&status_code, &numOfValidArgs[3], DWPAL_INT_PARAM, "status_code=", 0},
+                                  /* Must be at the end */
+                                  {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
 
         if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse,
                                          sizeof(vap_name) + sizeof(MACAddress) +

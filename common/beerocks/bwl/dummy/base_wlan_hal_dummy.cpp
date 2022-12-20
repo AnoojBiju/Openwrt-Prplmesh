@@ -415,6 +415,7 @@ bool base_wlan_hal_dummy::refresh_radio_info()
     m_radio_info.vht_mcs_set    = {};
     m_radio_info.he_supported   = true;
     m_radio_info.he_capability  = 0;
+	m_radio_info.wifi6_capability = 0;
     m_radio_info.he_mcs_set     = {};
 
     std::string radio_mac;
