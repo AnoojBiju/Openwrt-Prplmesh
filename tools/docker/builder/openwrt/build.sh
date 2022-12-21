@@ -40,6 +40,8 @@ build_image() {
            --build-arg OPENWRT_VERSION="$OPENWRT_VERSION" \
            --build-arg OPENWRT_TOOLCHAIN_VERSION="$OPENWRT_TOOLCHAIN_VERSION" \
            --build-arg TARGET_SYSTEM="$TARGET_SYSTEM" \
+           --build-arg MMX_ENABLE="$MMX_ENABLE" \
+           --build-arg WHM_ENABLE="$WHM_ENABLE" \
            --build-arg PRPLMESH_VARIANT="$PRPLMESH_VARIANT" \
            --target="$DOCKER_TARGET_STAGE" \
            "$scriptdir/" \
@@ -151,9 +153,9 @@ main() {
             ;;
     esac
 
-    if [ -n "$WHM_ENABLE" ] ; then
-        OPENWRT_TOOLCHAIN_VERSION='aa18ae3839eef9694bee8d7687cc8e2ce64347f2'
-        OPENWRT_VERSION='aa18ae3839eef9694bee8d7687cc8e2ce64347f2'
+    if [ "$TARGET_DEVICE" == "turris-omnia" ] ; then
+        OPENWRT_TOOLCHAIN_VERSION='750d3b48630c35dadf510dd2f2beddbbf4bf240b'
+        OPENWRT_VERSION='750d3b48630c35dadf510dd2f2beddbbf4bf240b'
     fi
 
     dbg "OPENWRT_REPOSITORY=$OPENWRT_REPOSITORY"
@@ -200,8 +202,8 @@ main() {
 VERBOSE=false
 IMAGE_ONLY=false
 OPENWRT_REPOSITORY='https://gitlab.com/prpl-foundation/prplos/prplos.git'
-OPENWRT_TOOLCHAIN_VERSION='750d3b48630c35dadf510dd2f2beddbbf4bf240b'
-OPENWRT_VERSION='750d3b48630c35dadf510dd2f2beddbbf4bf240b'
+OPENWRT_TOOLCHAIN_VERSION='a3bcb642fc62b6405e9b266a8e4a47c2e7a5b333'
+OPENWRT_VERSION='a3bcb642fc62b6405e9b266a8e4a47c2e7a5b333'
 PRPLMESH_VARIANT="-nl80211"
 DOCKER_TARGET_STAGE="prplmesh-builder"
 SHELL_ONLY=false
