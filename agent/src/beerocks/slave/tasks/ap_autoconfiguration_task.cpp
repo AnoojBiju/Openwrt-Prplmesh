@@ -1030,6 +1030,27 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_wsc(ieee1905_1::CmduMe
     if (db->device_conf.management_mode != BPL_MGMT_MODE_NOT_MULTIAP) {
         validate_reconfiguration(radio->front.iface_name, configs);
         if (!configs.empty()) {
+            // Update the BSS credentials if a backhaul link for this radio already exists
+            // or add a new one otherwise.
+            auto it =
+                find_if(db->backhaul.backhaul_links.begin(), db->backhaul.backhaul_links.end(),
+                        [&](const AgentDB::sBackhaul::sBackhaulLink &c) {
+                            return c.iface_name == radio->front.iface_name;
+                        });
+            if (it != db->backhaul.backhaul_links.end()) {
+                LOG(DEBUG) << "Updating credentials for backhaul link with type="
+                           << int(it->connection_type) << ", iface_name=" << it->iface_name
+                           << ", iface_mac=" << it->iface_mac;
+                it->credentials = configs;
+            } else {
+                LOG(DEBUG) << "Create new wireless backhaul link with type="
+                           << int(it->connection_type) << ", iface_name=" << radio->front.iface_name
+                           << ", iface_mac=" << radio->front.iface_mac;
+                db->backhaul.backhaul_links.emplace_back(
+                    AgentDB::sBackhaul::eConnectionType::Wireless, radio->front.iface_name,
+                    radio->front.iface_mac, configs);
+            }
+
             send_ap_bss_configuration_message(radio->front.iface_name, configs);
         } else {
             LOG(INFO) << "Reconfiguration is not needed";
