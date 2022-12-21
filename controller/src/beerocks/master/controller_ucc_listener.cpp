@@ -520,6 +520,8 @@ controller_ucc_listener::parse_bss_info(const std::string &bss_info_str,
         bss_info_conf.operating_class = {115, 116};
     } else if (operating_class_str == "12x") {
         bss_info_conf.operating_class = {124, 125, 126};
+    } else if (operating_class_str == "13x") {
+        bss_info_conf.operating_class = {131, 132, 133, 134, 135, 136};
     } else {
         err_string = "invalid operating class " + operating_class_str;
         return std::string();
