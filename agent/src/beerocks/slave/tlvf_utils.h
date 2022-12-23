@@ -27,6 +27,8 @@ public:
      */
     static bool add_ap_radio_basic_capabilities(ieee1905_1::CmduMessageTx &cmdu_tx,
                                                 const sMacAddr &ruid);
+    static bool create_operating_channel_report(ieee1905_1::CmduMessageTx &cmdu_tx,
+                                                const sMacAddr &radio_mac);
 };
 
 } // namespace beerocks
