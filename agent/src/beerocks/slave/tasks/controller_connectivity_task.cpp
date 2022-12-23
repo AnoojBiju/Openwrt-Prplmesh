@@ -275,6 +275,24 @@ bool ControllerConnectivityTask::send_hle_to_controller()
     return m_btl_ctx.send_cmdu_to_controller({}, m_cmdu_tx);
 }
 
+bool ControllerConnectivityTask::send_reconnect_to_backhaul_manager()
+{
+    auto bh_reconnect_cmd =
+        message_com::create_vs_message<beerocks_message::cACTION_BACKHAUL_RECONNECT_COMMAND>(
+            m_cmdu_tx);
+    if (bh_reconnect_cmd == nullptr) {
+        LOG(ERROR) << "Failed building message ACTION_BACKHAUL_DISCONNECT_COMMAND!";
+        return false;
+    }
+    auto backhaul_manager_cmdu_client = m_btl_ctx.get_backhaul_manager_cmdu_client();
+    if (!backhaul_manager_cmdu_client) {
+        LOG(ERROR) << "Failed to get backhaul manager cmdu client";
+        return false;
+    }
+    LOG(ERROR) << "Sending ACTION_BACKHAUL_RECONNECT_COMMAND to BH manager";
+    return backhaul_manager_cmdu_client->send_cmdu(m_cmdu_tx);
+}
+
 bool ControllerConnectivityTask::send_disconnect_to_backhaul_manager()
 {
     auto bh_disconnect_cmd =
