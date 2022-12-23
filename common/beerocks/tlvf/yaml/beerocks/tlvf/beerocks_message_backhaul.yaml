@@ -144,6 +144,9 @@ cACTION_BACKHAUL_RADIO_TEAR_DOWN_REQUEST:
 cACTION_BACKHAUL_DISCONNECT_COMMAND:
   _type: class
 
+cACTION_BACKHAUL_RECONNECT_COMMAND:
+  _type: class
+
 ################################################
 # CHANNEL SCAN REQUESTS/RESPONSES
 ################################################

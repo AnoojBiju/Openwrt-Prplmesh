@@ -82,6 +82,7 @@ private:
         WAIT_RESPONSE_FROM_CONTROLLER,
         CONNECTION_TIMEOUT,
         BACKHAUL_LINK_DISCONNECTED,
+        RECONNECTION,
     };
 
     struct sConfigurationParams {
@@ -228,6 +229,15 @@ private:
      * @return true on success and false otherwise.
      */
     bool send_disconnect_to_backhaul_manager();
+
+    /**
+     * @brief Sends BACKHAUL_RECONNECT_COMMAND to Backhaul Manager
+     *
+     * This could be triggered for unsuccessful backhaul link or loosed controller connection.
+     *
+     * @return true on success and false otherwise.
+     */
+    bool send_reconnect_to_backhaul_manager();
 
     /**
      * @brief Reads agent configuration to enable/disable the task.
