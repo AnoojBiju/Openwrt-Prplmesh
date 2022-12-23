@@ -1038,14 +1038,13 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_wsc(ieee1905_1::CmduMe
                             return c.iface_name == radio->front.iface_name;
                         });
             if (it != db->backhaul.backhaul_links.end()) {
-                LOG(DEBUG) << "Updating credentials for backhaul link with type="
+                LOG(DEBUG) << "Updating credentials for backhaul interface with type="
                            << int(it->connection_type) << ", iface_name=" << it->iface_name
                            << ", iface_mac=" << it->iface_mac;
                 it->credentials = configs;
             } else {
-                LOG(DEBUG) << "Create new wireless backhaul link with type="
-                           << int(it->connection_type) << ", iface_name=" << radio->front.iface_name
-                           << ", iface_mac=" << radio->front.iface_mac;
+                LOG(DEBUG) << "Storing backhaul credentials for new interface: "
+                           << radio->front.iface_name << ", iface_mac=" << radio->front.iface_mac;
                 db->backhaul.backhaul_links.emplace_back(
                     AgentDB::sBackhaul::eConnectionType::Wireless, radio->front.iface_name,
                     radio->front.iface_mac, configs);
