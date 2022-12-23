@@ -281,24 +281,9 @@ bool agent_monitoring_task::send_multi_ap_policy_config_request(const sMacAddr &
         return false;
     }
 
-    auto ruid                  = radio_basic_caps->radio_uid();
-    auto al_mac                = m1->mac_addr();
-    const auto &bss_info_confs = database.get_bss_info_configuration(m1->mac_addr());
-    uint8_t num_bsss           = 0;
-
-    for (const auto &bss_info_conf : bss_info_confs) {
-        // Check if the radio supports it
-        if (!son_actions::has_matching_operating_class(*radio_basic_caps, bss_info_conf)) {
-            continue;
-        }
-        if (num_bsss >= radio_basic_caps->maximum_number_of_bsss_supported()) {
-            LOG(INFO) << "Configured BSSes exceed maximum for " << al_mac << " radio " << ruid;
-            break;
-        }
-        m_bss_configured[ruid].push_back(bss_info_conf);
-        num_bsss++;
-    }
-
+    auto ruid              = radio_basic_caps->radio_uid();
+    m_bss_configured[ruid] = database.get_configured_bss_info(ruid);
+    uint8_t num_bsss       = m_bss_configured[ruid].size();
     if (!cmdu_tx.create(0, ieee1905_1::eMessageType::MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE)) {
         LOG(ERROR) << "Failed building MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE ! ";
         return false;

@@ -1971,8 +1971,25 @@ public:
      * @brief Return bss_infos_global list with BSS information.
      */
     std::list<wireless_utils::sBssInfoConf> &get_bss_info_configuration();
+
+    /**
+     * @brief Store a BSS configured on the given radio.
+     */
+    void add_configured_bss_info(const sMacAddr &ruid,
+                                 const wireless_utils::sBssInfoConf &bss_info);
+
+    /**
+     * @brief Get the list of BSS configured on a given radio.
+     */
+    std::list<wireless_utils::sBssInfoConf> &get_configured_bss_info(const sMacAddr &ruid);
+
     void clear_bss_info_configuration();
     void clear_bss_info_configuration(const sMacAddr &al_mac);
+
+    /**
+     * @brief Clear the list of BSSs configured on a given radio.
+     */
+    void clear_configured_bss_info(const sMacAddr &ruid);
 
     /**
      * @brief Store traffic separation policy for agent.
@@ -3042,6 +3059,12 @@ private:
     std::shared_ptr<uint8_t> certification_tx_buffer;
     std::unordered_map<sMacAddr, std::list<wireless_utils::sBssInfoConf>> bss_infos; // key=al_mac
     std::list<wireless_utils::sBssInfoConf> bss_infos_global;
+
+    /**
+     * @brief List of BSSs currently configured on the radio
+     */
+    std::unordered_map<sMacAddr, std::list<wireless_utils::sBssInfoConf>>
+        configured_bss_infos; // key=ruid
 
     /**
      * @brief This map holds traffic separation policy per Agent sMacAddr.
