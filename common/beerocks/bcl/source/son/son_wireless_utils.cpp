@@ -1586,6 +1586,7 @@ uint8_t wireless_utils::get_operating_class_by_channel(const beerocks::WifiChann
      * not iterate over 6ghz channels when it is not a 6ghz band type.
      */
     const beerocks::eFreqType &freq_type = wifi_channel.get_freq_type();
+    LOG(DEBUG) << "CW: " << "freq type " << freq_type;
     if (freq_type == beerocks::FREQ_24G || freq_type == beerocks::FREQ_5G) {
         first_operating_class_it = operating_classes_list.find(OPERATING_CLASS_24GHZ_FIRST);
         last_operating_class_it  = operating_classes_list.find(
@@ -1600,6 +1601,7 @@ uint8_t wireless_utils::get_operating_class_by_channel(const beerocks::WifiChann
         return 0;
     }
 
+    int i = 0;
     for (auto &operating_class_it = first_operating_class_it;
          operating_class_it != last_operating_class_it; ++operating_class_it) {
         if (operating_class_it->second.band == bw &&
@@ -1607,7 +1609,9 @@ uint8_t wireless_utils::get_operating_class_by_channel(const beerocks::WifiChann
                 operating_class_it->second.channels.end()) {
             return operating_class_it->first;
         }
+	i++;
     }
+    LOG(DEBUG) << "CW: value of i " << i;
     return 0;
 }
 

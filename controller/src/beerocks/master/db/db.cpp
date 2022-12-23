@@ -2036,7 +2036,7 @@ std::string db::get_hostap_supported_channels_string(const sMacAddr &radio_mac)
         if (val.get_channel() > 0) {
             os << " ch = " << int(val.get_channel()) << " | dfs = " << int(val.is_dfs_channel())
                << " | bw = " << beerocks::utils::convert_bandwidth_to_enum(val.get_bandwidth())
-               << " | tx_pow = " << int(val.get_tx_power());
+               << " | tx_pow = " << int(val.get_tx_power()) << std::endl;
         }
     }
 
