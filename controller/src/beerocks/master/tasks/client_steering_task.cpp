@@ -281,6 +281,23 @@ void client_steering_task::steer_sta()
                 continue;
             }
 
+            /*
+             * TODO: PPM-2250
+             * Temporay fix: when steering station supporting 11v,
+             * do not disallow station on the original bss to let btm happen before deauth,
+             */
+            if (hostap_vap.second.mac == m_original_bssid) {
+
+                /*
+                 * consider BTM support in current station capabilities (when available)
+                 * independently from updated 11v responsiveness
+		 */
+                auto cur_sta_cap = m_database.get_station_current_capabilities(m_sta_mac);
+                if (cur_sta_cap && cur_sta_cap->btm_supported) {
+                    continue;
+                }
+            }
+
             // Send 17.1.27	Client Association Control Request : Block
             sMacAddr agent_mac = m_database.get_node_parent_ire(hostap);
             std::unordered_set<sMacAddr> block_list{tlvf::mac_from_string(m_sta_mac)};
