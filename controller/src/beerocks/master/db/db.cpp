@@ -3093,9 +3093,17 @@ int8_t db::get_channel_preference(const sMacAddr &radio_mac, const uint8_t opera
     const auto &bw                 = wireless_utils::operating_class_to_bandwidth(operating_class);
     const auto &supported_channels = radio->supported_channels;
 
+    LOG(DEBUG) << "CW: supported channel list ";
+    for (auto &it1 : supported_channels) {
+	    LOG(DEBUG) << "CW: channel = " << it1.first; 
+    }
+
     // Find if the channel is supported by the radio
     if (std::find_if(supported_channels.begin(), supported_channels.end(),
                      [channel, bw, &freq_type](const beerocks::WifiChannel chan) {
+		         LOG(DEBUG) << "CW: chan.get_channel() = " << chan.get_channel() << " channel = " << channel;
+			 LOG(DEBUG) << "CW: chan.get_bandwidth() = " << chan.get_bandwidth() << " bw = " << bw; 
+			 LOG(DEBUG) << "CW: chan.get_freq_type() = " << chan.get_freq_type() << " freq_type = " << freq_type;
                          // Find if matching channel number & bandwidth.
                          return ((chan.get_channel() == channel) && (chan.get_bandwidth() == bw) &&
                                  chan.get_freq_type() == freq_type);
