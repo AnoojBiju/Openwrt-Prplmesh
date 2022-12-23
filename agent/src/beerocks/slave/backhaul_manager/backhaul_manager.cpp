@@ -1727,6 +1727,20 @@ bool BackhaulManager::handle_slave_backhaul_message(int fd, ieee1905_1::CmduMess
         }
         break;
     }
+
+    case beerocks_message::ACTION_BACKHAUL_RECONNECT_COMMAND: {
+        LOG(DEBUG) << "ACTION_BACKHAUL_RECONNECT_COMMAND is received, when active state is "
+                   << FSM_CURR_STATE_STR;
+
+        auto db = AgentDB::get();
+
+        if (db->backhaul.connection_type == AgentDB::sBackhaul::eConnectionType::Wireless) {
+            FSM_MOVE_STATE(INIT_HAL);
+        } else {
+            FSM_MOVE_STATE(RESTART);
+        }
+        break;
+    }
     default: {
         bool handled =
             m_task_pool.handle_cmdu(cmdu_rx, 0, sMacAddr(), sMacAddr(), fd, beerocks_header);
