@@ -59,6 +59,8 @@ public:
 
     std::string get_ssid() override;
     std::string get_bssid() override;
+    int get_multi_ap_profile() override;
+    int get_multi_ap_primary_vlan_id() override;
 
     virtual bool process_dwpal_event(char *ifname, char *buffer, int bufLen,
                                      const std::string &opcode) override;
@@ -87,6 +89,8 @@ private:
         std::string wpa_state;
         std::string address;
         std::string uuid;
+        int multi_ap_profile;
+        int multi_ap_primary_vlanid;
     };
 
     int add_network();
@@ -103,9 +107,11 @@ private:
     std::string m_active_ssid;
     std::string m_active_bssid;
     std::string m_active_pass;
-    WiFiSec m_active_security = WiFiSec::Invalid;
-    uint8_t m_active_channel  = 0;
-    int m_active_network_id   = -1;
+    WiFiSec m_active_security     = WiFiSec::Invalid;
+    uint8_t m_active_channel      = 0;
+    int m_active_network_id       = -1;
+    int m_multi_ap_profile        = -1;
+    int m_multi_ap_primary_vlanid = -1;
 
     // Unassociated measurement state variables
     std::chrono::steady_clock::time_point m_unassoc_measure_start;

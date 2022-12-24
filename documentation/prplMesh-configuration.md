@@ -58,6 +58,7 @@ In the following table, "default" means default value used within prplMesh if it
 | diagnostics_measurements_polling_rate_sec    | int     | no       | 10              | used by statistics_polling_task as interval for sending beerocks_message::cACTION_CONTROL_HOSTAP_STATS_MEASUREMENT_REQUEST to known agents            |
 | channel_select_task_enabled                  | bool    | no       | true            | used by controller to start / stop channel_select_task                                                                                                |
 | dfs_task_enabled                             | bool    | no       | true            | used by controller to start / stop dynamic_channel_selection_task_r2                                                                                  |
+| non_tx_vaps_present                          | int     | yes      | 0               | If set to 1, non-transmitting vap is present similar to Maxlinear platforms. The non-transmitting vaps are interfaces marked under hostap_iface parameter.               |
 
 ### NBAPI control options for controller tasks
 

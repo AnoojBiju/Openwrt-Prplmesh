@@ -63,6 +63,8 @@ public:
 
     std::string get_ssid() override;
     std::string get_bssid() override;
+    int get_multi_ap_profile() override;
+    int get_multi_ap_primary_vlan_id() override;
 
 protected:
     // Overload for Monitor events

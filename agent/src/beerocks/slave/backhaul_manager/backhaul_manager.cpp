@@ -1155,17 +1155,31 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
         // check if we are still waiting for WPS although sta is connected
         for (auto &radio_info : m_radios_info) {
             std::string iface = radio_info->sta_iface;
-            if (radio_info->sta_iface.empty()) {
+            if (radio_info->sta_iface.empty() || !radio_info->sta_wlan_hal) {
                 continue;
             }
+            LOG(DEBUG) << "Badhri radio_info->sta_iface = " << radio_info->sta_iface;
             if (!roam_flag && radio_info->sta_wlan_hal->is_connected()) {
-                for (const auto &sta_iface : slave_sta_ifaces) {
-                    auto sta_iface_hal = get_wireless_hal(sta_iface);
-                    if (!sta_iface_hal) {
-                        break;
-                    }
-                    sta_iface_hal->reassociate();
-                }
+
+                LOG(DEBUG) << "Badhri Im inside if";
+                db->backhaul.selected_iface_name = radio_info->sta_iface;
+                db->backhaul.connection_type     = AgentDB::sBackhaul::eConnectionType::Wireless;
+                selected_bssid                   = radio_info->sta_wlan_hal->get_bssid();
+                selected_bssid_channel           = {
+                    radio_info->sta_wlan_hal->get_channel(),
+                    son::wireless_utils::which_freq(radio_info->sta_wlan_hal->get_channel())};
+                multi_ap_profile        = radio_info->sta_wlan_hal->get_multi_ap_profile();
+                multi_ap_primary_vlanid = radio_info->sta_wlan_hal->get_multi_ap_primary_vlan_id();
+
+                LOG(DEBUG) << "db->backhaul.selected_iface_name = "
+                           << db->backhaul.selected_iface_name;
+                LOG(DEBUG) << "Selected Bssid = " << selected_bssid;
+                LOG(DEBUG) << "Selected Bssid channel = " << selected_bssid_channel.first;
+                LOG(DEBUG) << "multi_ap_profile = " << multi_ap_profile;
+                LOG(DEBUG) << "multi_ap_primary_vlanid = " << multi_ap_primary_vlanid;
+
+                send_slaves_enable();
+                FSM_MOVE_STATE(CONNECTED);
             }
         }
 

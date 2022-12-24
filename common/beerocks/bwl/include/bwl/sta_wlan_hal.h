@@ -84,8 +84,10 @@ public:
     virtual int get_channel()    = 0;
     virtual bool update_status() = 0;
 
-    virtual std::string get_ssid()  = 0;
-    virtual std::string get_bssid() = 0;
+    virtual std::string get_ssid()             = 0;
+    virtual std::string get_bssid()            = 0;
+    virtual int get_multi_ap_profile()         = 0;
+    virtual int get_multi_ap_primary_vlan_id() = 0;
 };
 
 // STA HAL factory types

@@ -356,6 +356,8 @@ private:
     std::pair<int, beerocks::eFreqType> roam_selected_bssid_channel;
     bool roam_flag = false;
     std::unordered_map<std::string, net::sScanResult> scan_measurement_list;
+    int multi_ap_profile        = -1;
+    int multi_ap_primary_vlanid = -1;
 
     const int RSSI_THRESHOLD_5GHZ       = -80;
     const int RSSI_BAND_DELTA_THRESHOLD = 5;

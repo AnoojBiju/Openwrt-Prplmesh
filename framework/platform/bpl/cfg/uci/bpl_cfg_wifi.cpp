@@ -35,6 +35,7 @@ static bool bpl_cfg_get_bss_configuration(const std::string &section_name,
 
     // Fill in wireless credentials from option values read from UCI configuration.
     configuration.ssid = options["ssid"];
+    LOG(ERROR) << "Badhri Inside bssInfoConfiguration structure ssid = " << configuration.ssid;
 
     auto starts_with = [](const std::string &prefix, const std::string &value) {
         return (value.compare(0, prefix.size(), prefix) == 0);
@@ -177,6 +178,35 @@ bool bpl_cfg_get_wireless_settings(std::list<son::wireless_utils::sBssInfoConf> 
             continue;
         }
 
+        std::string non_tx_vaps_present;
+        if (!uci_get_option("prplmesh", "prplmesh", "config", "non_tx_vaps_present",
+                            non_tx_vaps_present)) {
+            LOG(DEBUG) << "Failed to get 'non_tx_vaps_present' from prplmesh configuration";
+            continue;
+        }
+
+        if (non_tx_vaps_present == "1") {
+
+            std::string ifname;
+            if (!uci_get_option(package_name, section_type, section_name, "ifname",
+                                ifname)) { //ifname = wlan0 or wlan0.0 etc
+                LOG(DEBUG) << "No 'ifname' found for section " << section_name;
+                continue;
+            }
+
+            std::string base_radio;
+            if (!uci_find_section_by_option("prplmesh", "wifi-device", "hostap_iface", ifname,
+                                            base_radio)) {
+                LOG(DEBUG) << "Failed to get hostap-iface from section prplmesh configuration";
+                continue;
+            }
+
+            // Silently ignore radio configurations, only VAPS are needed.
+            if (!base_radio.empty()) {
+                continue;
+            }
+        }
+
         std::string hidden;
         uci_get_option(package_name, section_type, section_name, "hidden", hidden);
         // the hidden option might not exist, in which case we treat
@@ -200,8 +230,9 @@ bool bpl_cfg_get_wireless_settings(std::list<son::wireless_utils::sBssInfoConf> 
             LOG(INFO) << "Skipping configuration for section with unset or empty SSID: "
                       << section_name;
             continue;
+        } else {
+            LOG(ERROR) << "Badhri Main ssid = " << ssid;
         }
-
         son::wireless_utils::sBssInfoConf configuration;
         if (!bpl_cfg_get_bss_configuration(section_name, configuration)) {
             LOG(DEBUG) << "Failed to get SSID and WiFi credentials from section " << section_name;
@@ -282,20 +313,24 @@ bool bpl_cfg_get_wireless_settings(std::list<son::wireless_utils::sBssInfoConf> 
                 case beerocks::eBssType::BSS_TYPE_BACKHAUL:
                     configuration.fronthaul = false;
                     configuration.backhaul  = true;
+                    LOG(ERROR) << "Badhri BH configuration.ssid = " << configuration.ssid;
                     break;
                 case beerocks::eBssType::BSS_TYPE_FRONTHAUL:
                     configuration.fronthaul = true;
                     configuration.backhaul  = false;
+                    LOG(ERROR) << "Badhri FH configuration.ssid = " << configuration.ssid;
                     break;
                 case beerocks::eBssType::BSS_TYPE_BACK_FRONTHAUL:
                     configuration.fronthaul = true;
                     configuration.backhaul  = true;
+                    LOG(ERROR) << "Badhri EH configuration.ssid = " << configuration.ssid;
                     break;
                 default:
                     LOG(ERROR) << "Multi AP configuration value is unrecognized " << multi_ap
                                << ", assign as only fronthaul support";
                     configuration.fronthaul = true;
                     configuration.backhaul  = false;
+                    LOG(ERROR) << "Badhri default configuration.ssid = " << configuration.ssid;
                     break;
                 }
             }

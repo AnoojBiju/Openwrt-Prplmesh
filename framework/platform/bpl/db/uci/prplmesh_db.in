@@ -33,6 +33,7 @@ config prplmesh 'config'
     option unsuccessful_assoc_report_policy '1'
     option unsuccessful_assoc_max_reporting_rate '30'
     option ire_roaming '1'
+    option non_tx_vaps_present '0'
 
 
 config wifi-device 'radio0'

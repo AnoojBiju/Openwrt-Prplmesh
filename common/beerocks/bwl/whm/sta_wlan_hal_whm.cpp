@@ -314,6 +314,10 @@ std::string sta_wlan_hal_whm::get_ssid() { return m_active_ssid; }
 
 std::string sta_wlan_hal_whm::get_bssid() { return m_active_bssid; }
 
+int sta_wlan_hal_whm::get_multi_ap_profile() { return 1; }
+
+int sta_wlan_hal_whm::get_multi_ap_primary_vlan_id() { return 0; }
+
 bool sta_wlan_hal_whm::update_status()
 {
     Endpoint endpoint;

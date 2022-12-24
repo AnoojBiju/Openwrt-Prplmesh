@@ -57,6 +57,8 @@ bool sta_wlan_hal_dummy::connect(const std::string &ssid, const std::string &pas
 
 bool sta_wlan_hal_dummy::disconnect() { return true; }
 bool sta_wlan_hal_dummy::reassociate() { return true; }
+int sta_wlan_hal_dummy::get_multi_ap_profile() { return 1; }
+int sta_wlan_hal_dummy::get_multi_ap_primary_vlan_id() { return 0; }
 
 bool sta_wlan_hal_dummy::roam(const sMacAddr &bssid, ChannelFreqPair channel) { return true; }
 

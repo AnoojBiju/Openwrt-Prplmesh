@@ -478,6 +478,10 @@ std::string sta_wlan_hal_dwpal::get_ssid() { return m_active_ssid; }
 
 std::string sta_wlan_hal_dwpal::get_bssid() { return m_active_bssid; }
 
+int sta_wlan_hal_dwpal::get_multi_ap_profile() { return m_multi_ap_profile; }
+
+int sta_wlan_hal_dwpal::get_multi_ap_primary_vlan_id() { return m_multi_ap_primary_vlanid; }
+
 bool sta_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufLen,
                                              const std::string &opcode)
 {
@@ -813,18 +817,21 @@ bool sta_wlan_hal_dwpal::read_status(ConnectionStatus &connection_status)
         return false;
     }
 
-    size_t numOfValidArgs[11] = {0}, replyLen = strnlen(reply, HOSTAPD_TO_DWPAL_MSG_LENGTH);
-    char bssid[MAC_ADDR_SIZE]     = {0};
-    int freq                      = -1;
-    char ssid[SSID_MAX_SIZE]      = {0};
-    int id                        = -1;
-    char mode[32]                 = {0}; // size?
-    char pairwise_cipher[32]      = {0}; // size?
-    char group_cipher[32]         = {0}; // size?
-    char key_mgmt[32]             = {0}; // size?
-    char wpa_state[32]            = {0}; // size?
-    char address[MAC_ADDR_SIZE]   = {0};
-    char uuid[UUID_STR_SIZE]      = {0};
+    size_t numOfValidArgs[13] = {0}, replyLen = strnlen(reply, HOSTAPD_TO_DWPAL_MSG_LENGTH);
+    char bssid[MAC_ADDR_SIZE]   = {0};
+    int freq                    = -1;
+    char ssid[SSID_MAX_SIZE]    = {0};
+    int id                      = -1;
+    char mode[32]               = {0}; // size?
+    char pairwise_cipher[32]    = {0}; // size?
+    char group_cipher[32]       = {0}; // size?
+    char key_mgmt[32]           = {0}; // size?
+    char wpa_state[32]          = {0}; // size?
+    char address[MAC_ADDR_SIZE] = {0};
+    char uuid[UUID_STR_SIZE]    = {0};
+    int multi_ap_profile        = -1;
+    int multi_ap_primary_vlanid = -1;
+
     FieldsToParse fieldsToParse[] = {
         {(void *)wpa_state, &numOfValidArgs[0], DWPAL_STR_PARAM, "wpa_state=", sizeof(wpa_state)},
         {(void *)&freq, &numOfValidArgs[1], DWPAL_INT_PARAM, "freq=", 0},
@@ -838,6 +845,10 @@ bool sta_wlan_hal_dwpal::read_status(ConnectionStatus &connection_status)
         {(void *)bssid, &numOfValidArgs[8], DWPAL_STR_PARAM, "bssid=", sizeof(bssid)},
         {(void *)address, &numOfValidArgs[9], DWPAL_STR_PARAM, "address=", sizeof(address)},
         {(void *)uuid, &numOfValidArgs[10], DWPAL_STR_PARAM, "uuid=", sizeof(uuid)},
+        {(void *)multi_ap_profile, &numOfValidArgs[11], DWPAL_INT_PARAM, "multi_ap_profile",
+         sizeof(multi_ap_profile)},
+        {(void *)multi_ap_primary_vlanid, &numOfValidArgs[12], DWPAL_INT_PARAM,
+         "multi_ap_primary_vlanid", sizeof(multi_ap_primary_vlanid)},
         /* Must be at the end */
         {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
 
@@ -849,17 +860,19 @@ bool sta_wlan_hal_dwpal::read_status(ConnectionStatus &connection_status)
         return false;
     }
 
-    connection_status.bssid           = std::string(bssid);
-    connection_status.freq            = freq;
-    connection_status.ssid            = std::string(ssid);
-    connection_status.id              = id;
-    connection_status.mode            = std::string(mode);
-    connection_status.pairwise_cipher = std::string(pairwise_cipher);
-    connection_status.group_cipher    = std::string(group_cipher);
-    connection_status.key_mgmt        = std::string(key_mgmt);
-    connection_status.wpa_state       = std::string(wpa_state);
-    connection_status.address         = std::string(address);
-    connection_status.uuid            = std::string(uuid);
+    connection_status.bssid                   = std::string(bssid);
+    connection_status.freq                    = freq;
+    connection_status.ssid                    = std::string(ssid);
+    connection_status.id                      = id;
+    connection_status.mode                    = std::string(mode);
+    connection_status.pairwise_cipher         = std::string(pairwise_cipher);
+    connection_status.group_cipher            = std::string(group_cipher);
+    connection_status.key_mgmt                = std::string(key_mgmt);
+    connection_status.wpa_state               = std::string(wpa_state);
+    connection_status.address                 = std::string(address);
+    connection_status.uuid                    = std::string(uuid);
+    connection_status.multi_ap_profile        = multi_ap_profile;
+    connection_status.multi_ap_primary_vlanid = multi_ap_primary_vlanid;
 
     /* TEMP: Traces... */
     LOG(DEBUG) << "STATUS reply= \n" << reply;
@@ -881,6 +894,11 @@ bool sta_wlan_hal_dwpal::read_status(ConnectionStatus &connection_status)
                << " address= " << connection_status.address;
     LOG(DEBUG) << "numOfValidArgs[10]= " << numOfValidArgs[10]
                << " uuid= " << connection_status.uuid;
+    LOG(DEBUG) << "numOfValidArgs[11]= " << numOfValidArgs[11]
+               << " multi_ap_profile= " << connection_status.multi_ap_profile;
+    LOG(DEBUG) << "numOfValidArgs[12]= " << numOfValidArgs[12]
+               << " multi_ap_primary_vlanid= " << connection_status.multi_ap_primary_vlanid;
+
     /* End of TEMP: Traces... */
 
     LOG(DEBUG) << "active network " << m_active_network_id;
@@ -895,15 +913,19 @@ bool sta_wlan_hal_dwpal::read_status(ConnectionStatus &connection_status)
 
 void sta_wlan_hal_dwpal::update_status(const ConnectionStatus &connection_status)
 {
-    m_active_network_id = connection_status.id;
-    m_active_bssid      = connection_status.bssid;
-    m_active_channel    = son::wireless_utils::freq_to_channel(connection_status.freq);
-    m_active_ssid       = connection_status.ssid;
+    m_active_network_id       = connection_status.id;
+    m_active_bssid            = connection_status.bssid;
+    m_active_channel          = son::wireless_utils::freq_to_channel(connection_status.freq);
+    m_active_ssid             = connection_status.ssid;
+    m_multi_ap_profile        = connection_status.multi_ap_profile;
+    m_multi_ap_primary_vlanid = connection_status.multi_ap_primary_vlanid;
 
     LOG(DEBUG) << "m_active_network_id= " << m_active_network_id;
     LOG(DEBUG) << "m_active_bssid= " << m_active_bssid;
     LOG(DEBUG) << "m_active_channel= " << m_active_channel;
     LOG(DEBUG) << "m_active_ssid= " << m_active_ssid;
+    LOG(DEBUG) << "m_multi_ap_profile= " << m_multi_ap_profile;
+    LOG(DEBUG) << "m_multi_ap_primary_vlanid= " << m_multi_ap_primary_vlanid;
 }
 
 #if 0
