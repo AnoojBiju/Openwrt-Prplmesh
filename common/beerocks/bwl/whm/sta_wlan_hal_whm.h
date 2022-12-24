@@ -95,11 +95,23 @@ private:
         int active_profile_id;
     };
 
+    struct Profile {
+        int id;
+        std::string alias;
+        std::string ssid;
+        std::string bssid;
+        WiFiSec sec;
+        bool mem_only_psk;
+        std::string pass;
+        bool hidden_ssid;
+        ChannelFreqPair channel;
+    };
+
+    bool set_profile(Profile &profile);
     int add_profile();
+    int find_profile_by_alias(const std::string &alias);
     int remove_profile(int profile_id);
-    bool set_profile_params(int profile_id, const std::string &ssid, const std::string &bssid,
-                            WiFiSec sec, bool mem_only_psk, const std::string &pass,
-                            bool hidden_ssid, int channel = 0);
+    bool set_profile_params(const Profile &profile);
     bool enable_profile(int profile_id);
 
     bool read_status(Endpoint &endpoint);
@@ -112,6 +124,7 @@ private:
     std::string m_active_ssid;
     std::string m_active_bssid;
     std::string m_active_pass;
+    std::string m_active_connection_status;
     WiFiSec m_active_secutiry = WiFiSec::Invalid;
     uint8_t m_active_channel  = 0;
     int m_active_profile_id   = -1;

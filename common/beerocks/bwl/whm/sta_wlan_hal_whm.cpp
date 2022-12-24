@@ -32,6 +32,14 @@ sta_wlan_hal_whm::sta_wlan_hal_whm(const std::string &iface_name, hal_event_cb_t
 
     m_ambiorix_cl->resolve_path(wbapi_utils::search_path_ep_by_iface(iface_name), m_ep_path);
 
+    if (!m_ep_path.empty() && hal_conf.is_repeater) {
+        // Enable the endpoint instance
+        AmbiorixVariant params(AMXC_VAR_ID_HTABLE);
+        params.add_child<bool>("Enable", true);
+        bool ret = m_ambiorix_cl->update_object(m_ep_path, params);
+        LOG_IF((!ret), ERROR) << "Failed to enable endpoint, path:" << m_ep_path;
+    }
+
     subscribe_to_ep_events();
     subscribe_to_ep_wps_events();
 }
@@ -92,10 +100,12 @@ void sta_wlan_hal_whm::subscribe_to_ep_events()
         for (auto &param_it : *params_map) {
             auto key       = param_it.first;
             auto new_value = param_it.second.find_child("to");
-            if (key.empty() || !new_value || new_value->empty()) {
+            auto old_value = param_it.second.find_child("from");
+
+            if (key.empty() || !new_value || new_value->empty() || !old_value ||
+                old_value->empty()) {
                 continue;
             }
-            auto old_value = param_it.second.find_child("from");
             hal->process_ep_event(hal->get_iface_name(), key, new_value.get(), old_value.get());
         }
     };
@@ -179,17 +189,34 @@ bool sta_wlan_hal_whm::connect(const std::string &ssid, const std::string &pass,
         return false;
     }
 
-    // Add a new profile
-    int profile_id = add_profile();
-    if (profile_id < 0) {
-        LOG(ERROR) << "Failed (" << profile_id
-                   << ") adding new profile to interface: " << get_iface_name();
+    // Set profile
+    Profile profile = {-1, "prplMesh", ssid, bssid, sec, mem_only_psk, pass, hidden_ssid, channel};
+    if (!set_profile(profile)) {
+        LOG(ERROR) << "Unable to connect to profile, on interface: " << get_iface_name();
         return false;
     }
 
+    return true;
+}
+
+bool sta_wlan_hal_whm::set_profile(Profile &profile)
+{
+    // Find profile
+    int profile_id = find_profile_by_alias(profile.alias);
+    if (profile_id <= 0) {
+        // Add a new profile
+        profile_id = add_profile();
+        if (profile_id <= 0) {
+            LOG(ERROR) << "Failed (" << profile_id
+                       << ") adding new profile to interface: " << get_iface_name();
+            return false;
+        }
+    }
+    // Update profile id
+    profile.id = profile_id;
+
     // Update profile parameters
-    if (!set_profile_params(profile_id, ssid, bssid, sec, mem_only_psk, pass, hidden_ssid,
-                            channel.first)) {
+    if (!set_profile_params(profile)) {
         LOG(ERROR) << "Failed setting profile id = " << profile_id
                    << " on interface: " << get_iface_name();
         return false;
@@ -202,15 +229,10 @@ bool sta_wlan_hal_whm::connect(const std::string &ssid, const std::string &pass,
         return false;
     }
 
+    m_active_profile_id = profile_id;
+
     LOG(DEBUG) << "Profile with id " << profile_id << " has been added and enabled on interface "
                << get_iface_name();
-
-    // Update active endpoint parameters
-    m_active_ssid.assign(ssid);
-    m_active_bssid.assign(bssid);
-    m_active_pass.assign(pass);
-    m_active_channel    = channel.first;
-    m_active_profile_id = profile_id;
 
     return true;
 }
@@ -233,7 +255,7 @@ bool sta_wlan_hal_whm::disconnect()
     }
 
     // Return gracefully if no endpoint connection_status is connected
-    if (m_active_profile_id < 0) {
+    if (m_active_profile_id <= 0) {
         LOG(DEBUG) << "Active profile does not exist";
         return true;
     }
@@ -317,6 +339,18 @@ int sta_wlan_hal_whm::add_profile()
     return profile_id;
 }
 
+int sta_wlan_hal_whm::find_profile_by_alias(const std::string &alias)
+{
+    std::string profile_find_path = m_ep_path + "Profile.[Alias == '" + alias + "'].";
+    int profile_id                = -1;
+    std::string profile_path;
+    m_ambiorix_cl->resolve_path(profile_find_path, profile_path);
+    if (!profile_path.empty()) {
+        profile_id = wbapi_utils::get_object_id(profile_path);
+    }
+    return profile_id;
+}
+
 int sta_wlan_hal_whm::remove_profile(int profile_id)
 {
     // Path example: WiFi.EndPoint.[IntfName == 'wlan0'].Profile+
@@ -329,26 +363,26 @@ int sta_wlan_hal_whm::remove_profile(int profile_id)
     return profile_id;
 }
 
-bool sta_wlan_hal_whm::set_profile_params(int profile_id, const std::string &ssid,
-                                          const std::string &bssid, WiFiSec sec, bool mem_only_psk,
-                                          const std::string &pass, bool hidden_ssid, int channel)
+bool sta_wlan_hal_whm::set_profile_params(const Profile &profile)
 {
     // Path example: WiFi.EndPoint.[IntfName == 'wlan0'].Profile.1.
-    std::string profile_path = m_ep_path + "Profile." + std::to_string(profile_id) + ".";
+    std::string profile_path = m_ep_path + "Profile." + std::to_string(profile.id) + ".";
     AmbiorixVariant params(AMXC_VAR_ID_HTABLE);
 
+    // Set Alias
+    params.add_child<>("Alias", profile.alias);
     // Set SSID
-    params.add_child<>("SSID", ssid);
+    params.add_child<>("SSID", profile.ssid);
     bool ret = m_ambiorix_cl->update_object(profile_path, params);
     if (!ret) {
-        LOG(ERROR) << "Failed setting ssid on interface " << get_iface_name();
+        LOG(ERROR) << "Failed setting alias or ssid on interface " << get_iface_name();
         return false;
     }
 
     // Set BSSID : optional
-    if (!bssid.empty()) {
+    if (!profile.bssid.empty()) {
         params.set_type(AMXC_VAR_ID_HTABLE);
-        params.add_child<>("ForceBSSID", bssid);
+        params.add_child<>("ForceBSSID", profile.bssid);
         ret = m_ambiorix_cl->update_object(profile_path, params);
         if (!ret) {
             LOG(ERROR) << "Failed setting bssid on interface " << get_iface_name();
@@ -361,7 +395,7 @@ bool sta_wlan_hal_whm::set_profile_params(int profile_id, const std::string &ssi
     // Set Security
     // Path example: WiFi.EndPoint.[IntfName == 'wlan0'].Profile.1.Security.
     std::string profile_security_path = profile_path + "Security.";
-    std::string mode_enabled          = utils_wlan_hal_whm::security_type_to_string(sec);
+    std::string mode_enabled          = utils_wlan_hal_whm::security_type_to_string(profile.sec);
     params.set_type(AMXC_VAR_ID_HTABLE);
     params.add_child<>("ModeEnabled", mode_enabled);
     ret = m_ambiorix_cl->update_object(profile_security_path, params);
@@ -376,7 +410,7 @@ bool sta_wlan_hal_whm::set_profile_params(int profile_id, const std::string &ssi
 
     // Set psk
     params.set_type(AMXC_VAR_ID_HTABLE);
-    params.add_child<>("KeyPassPhrase", pass);
+    params.add_child<>("KeyPassPhrase", profile.pass);
     ret = m_ambiorix_cl->update_object(profile_security_path, params);
     if (!ret) {
         LOG(ERROR) << "Failed setting security psk on interface " << get_iface_name();
@@ -445,18 +479,19 @@ bool sta_wlan_hal_whm::read_status(Endpoint &endpoint)
     if (endpoint_obj->read_child<>(profile_ref, "ProfileReference") &&
         m_ambiorix_cl->resolve_path(profile_ref + ".", profile_path)) {
         endpoint.active_profile_id = wbapi_utils::get_object_id(profile_path);
+        LOG(DEBUG) << "active profile id:" << endpoint.active_profile_id;
     }
 
-    LOG(DEBUG) << "active profile " << m_active_profile_id;
     return true;
 }
 
 void sta_wlan_hal_whm::update_status(const Endpoint &endpoint)
 {
-    m_active_bssid      = endpoint.bssid;
-    m_active_ssid       = endpoint.ssid;
-    m_active_profile_id = endpoint.active_profile_id;
-    m_active_channel    = endpoint.channel;
+    m_active_bssid             = endpoint.bssid;
+    m_active_ssid              = endpoint.ssid;
+    m_active_connection_status = endpoint.connection_status;
+    m_active_profile_id        = endpoint.active_profile_id;
+    m_active_channel           = endpoint.channel;
 
     LOG(DEBUG) << "m_active_profile_id= " << m_active_profile_id
                << ", active_bssid= " << m_active_bssid << ", active_channel= " << m_active_channel
@@ -466,11 +501,12 @@ void sta_wlan_hal_whm::update_status(const Endpoint &endpoint)
 void sta_wlan_hal_whm::clear_conn_state()
 {
     // Clear state
-    m_active_ssid       = "";
-    m_active_bssid      = "";
-    m_active_pass       = "";
-    m_active_channel    = 0;
-    m_active_profile_id = -1;
+    m_active_ssid              = "";
+    m_active_bssid             = "";
+    m_active_pass              = "";
+    m_active_connection_status = "";
+    m_active_channel           = 0;
+    m_active_profile_id        = -1;
 }
 
 bool sta_wlan_hal_whm::is_connected(const std::string &status)
@@ -483,8 +519,8 @@ bool sta_wlan_hal_whm::process_ep_event(const std::string &interface, const std:
                                         const AmbiorixVariant *old_value)
 {
     if (key == "ConnectionStatus") {
-        std::string old_status = old_value->get<std::string>();
         std::string new_status = new_value->get<std::string>();
+        std::string old_status = old_value->get<std::string>();
         if (old_status.empty() || new_status.empty()) {
             return true;
         }
@@ -567,8 +603,9 @@ bool sta_wlan_hal_whm::process_ep_wps_event(const std::string &interface,
             }
         }
 
-        WiFiSec sec = utils_wlan_hal_whm::security_type_from_string(mode);
-        connect(ssid, key, sec, false, bssid, channel, false);
+        WiFiSec sec     = utils_wlan_hal_whm::security_type_from_string(mode);
+        Profile profile = {-1, "WPS", ssid, bssid, sec, false, key, false, channel};
+        set_profile(profile);
     }
     return true;
 }
