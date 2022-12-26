@@ -3095,7 +3095,7 @@ int8_t db::get_channel_preference(const sMacAddr &radio_mac, const uint8_t opera
 
     LOG(DEBUG) << "CW: supported channel list ";
     for (auto &it1 : supported_channels) {
-	    LOG(DEBUG) << "CW: channel = " << it1.first; 
+	    LOG(DEBUG) << "CW: channel = " << it1.get_channel() << " chan.get_bandwidth() = " << chan.get_bandwidth(); 
     }
 
     // Find if the channel is supported by the radio
