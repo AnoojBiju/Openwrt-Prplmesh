@@ -2065,6 +2065,12 @@ bool db::add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t
     auto op_class_bw        = wireless_utils::operating_class_to_bandwidth(operating_class);
     auto freq_type          = wireless_utils::which_freq_op_cls(operating_class);
 
+    LOG(DEBUG) << "CW: supported channel list start from " << __func__;
+    for (auto &it1 : supported_channels) {
+        LOG(DEBUG) << "CW: channel = " << it1.channel << " and bw = " << it1.channel_bandwidth;
+    }
+    LOG(DEBUG) << "CW: supported channel list end from " << __func__;
+
     // Update current channels
     for (auto c : channel_set) {
         auto channel =
@@ -2088,8 +2094,10 @@ bool db::add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t
         auto channel =
             std::find_if(supported_channels.begin(), supported_channels.end(),
                          [&c](const beerocks::WifiChannel &ch) { return ch.get_channel() == c; });
-        if (channel != supported_channels.end())
+        if (channel != supported_channels.end()) {
+            LOG(DEBUG) << "CW: erasing channel = " << channel.get_channel() << " bw = " << channel.get_bandwidth();
             supported_channels.erase(channel);
+	}
     }
 
     // Set values for Device.WiFi.DataElements.Network.Device.Radio.Capabilities.OperatingClasses
@@ -2098,9 +2106,9 @@ bool db::add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t
 
     set_hostap_supported_channels(radio_mac, &supported_channels[0], supported_channels.size());
     // dump new supported channels state
-    // LOG(DEBUG) << "New supported channels for hostap" << radio_mac << " operating class "
-    //            << int(operating_class) << std::endl
-    //            << get_hostap_supported_channels_string(radio_mac);
+    LOG(DEBUG) << "New supported channels for hostap" << radio_mac << " operating class "
+                << int(operating_class) << std::endl
+                << get_hostap_supported_channels_string(radio_mac);
 
     return true;
 }
@@ -3095,7 +3103,7 @@ int8_t db::get_channel_preference(const sMacAddr &radio_mac, const uint8_t opera
 
     LOG(DEBUG) << "CW: supported channel list ";
     for (auto &it1 : supported_channels) {
-	    LOG(DEBUG) << "CW: channel = " << it1.get_channel() << " chan.get_bandwidth() = " << chan.get_bandwidth(); 
+	    LOG(DEBUG) << "CW: channel = " << it1.get_channel() << " chan.get_bandwidth() = " << it1.get_bandwidth(); 
     }
 
     // Find if the channel is supported by the radio
