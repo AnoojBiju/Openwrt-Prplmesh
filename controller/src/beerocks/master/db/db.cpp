@@ -2065,11 +2065,16 @@ bool db::add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t
     auto op_class_bw        = wireless_utils::operating_class_to_bandwidth(operating_class);
     auto freq_type          = wireless_utils::which_freq_op_cls(operating_class);
 
-    LOG(DEBUG) << "CW: supported channel list start from " << __func__;
+    LOG(DEBUG) << "CW: Channel list with op_class_bw = " << op_class_bw << " and opclass = " << operating_class;
+
+    LOG(DEBUG) << "**** CW: supported channel list start from " << __func__ << " ****";
     for (auto &it1 : supported_channels) {
-        LOG(DEBUG) << "CW: channel = " << it1.get_channel() << " and bw = " << it1.get_bandwidth();
+        LOG(DEBUG) << " channel = " << it1.get_channel() << " and bw = " << it1.get_bandwidth();
     }
-    LOG(DEBUG) << "CW: supported channel list end from " << __func__;
+    LOG(DEBUG) << "**** CW: supported channel list end from " << __func__ << " ****";
+    LOG(DEBUG) << "Old supported channels for hostap" << radio_mac << " operating class "
+                << int(operating_class) << std::endl
+                << get_hostap_supported_channels_string(radio_mac);
 
     // Update current channels
     for (auto c : channel_set) {
@@ -2081,13 +2086,20 @@ bool db::add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t
         if (channel != supported_channels.end()) {
             channel->set_tx_power(tx_power);
             channel->set_bandwidth(op_class_bw);
-        //} else if (!son::wireless_utils::is_operating_class_using_central_channel(
-        } else {
+	} else if (!son::wireless_utils::is_operating_class_using_central_channel(
+                       operating_class)) {
             beerocks::WifiChannel ch(c, freq_type, op_class_bw);
             ch.set_tx_power(tx_power);
             supported_channels.push_back(ch);
-        }
+        } else {
+	    LOG(DEBUG) << "CW: channel = " << c << " bw = " << op_class_bw << " Not added";
+	}
     }
+    LOG(DEBUG) << "@@@@ CW: supported channel list start from " << __func__ << " ****";
+    for (auto &it1 : supported_channels) {
+        LOG(DEBUG) << " channel = " << it1.get_channel() << " and bw = " << it1.get_bandwidth();
+    }
+    LOG(DEBUG) << "@@@@ CW: supported channel list end from " << __func__ << " ****";
 
     // Delete non-operable channels
     for (auto c : non_operable_channels) {
@@ -2100,6 +2112,11 @@ bool db::add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t
 	}
     }
 
+    LOG(DEBUG) << "#### CW: supported channel list start from " << __func__ << " ****";
+    for (auto &it1 : supported_channels) {
+        LOG(DEBUG) << " channel = " << it1.get_channel() << " and bw = " << it1.get_bandwidth();
+    }
+    LOG(DEBUG) << "#### CW: supported channel list end from " << __func__ << " ****";
     // Set values for Device.WiFi.DataElements.Network.Device.Radio.Capabilities.OperatingClasses
     dm_add_ap_operating_classes(tlvf::mac_to_string(radio_mac), tx_power, operating_class,
                                 non_operable_channels);
