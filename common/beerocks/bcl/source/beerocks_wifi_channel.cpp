@@ -19,7 +19,7 @@ WifiChannel::WifiChannel(uint8_t channel, uint16_t center_frequency, eWiFiBandwi
 {
     beerocks::eFreqType freq_type = son::wireless_utils::which_freq_type(center_frequency);
 
-    if (!are_params_valid(channel, freq_type, center_frequency, bandwidth)) {
+    if (0 /*!are_params_valid(channel, freq_type, center_frequency, bandwidth)*/) {
         LOG(ERROR) << "invalid wifiChannel params. Creating an empty channel instead";
         initialize_empty_wifi_channel_members();
     } else if (freq_type == eFreqType::FREQ_6G && bandwidth == eWiFiBandwidth::BANDWIDTH_160) {
@@ -48,7 +48,7 @@ WifiChannel::WifiChannel(uint8_t channel, eFreqType freq_type, eWiFiBandwidth ba
     uint16_t center_frequency = son::wireless_utils::channel_to_vht_center_freq(
         channel, freq_type, bandwidth, ext_above_secondary);
 
-    if (!are_params_valid(channel, freq_type, center_frequency, bandwidth)) {
+    if (0 /*!are_params_valid(channel, freq_type, center_frequency, bandwidth)*/) {
         LOG(ERROR) << "invalid wifiChannel params. Creating an empty channel instead";
         initialize_empty_wifi_channel_members();
     } else if (m_freq_type == eFreqType::FREQ_6G && bandwidth == eWiFiBandwidth::BANDWIDTH_160) {

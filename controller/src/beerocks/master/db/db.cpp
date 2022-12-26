@@ -2035,7 +2035,7 @@ std::string db::get_hostap_supported_channels_string(const sMacAddr &radio_mac)
     for (const auto &val : supported_channels) {
         if (val.get_channel() > 0) {
             os << " ch = " << int(val.get_channel()) << " | dfs = " << int(val.is_dfs_channel())
-               << " | bw = " << beerocks::utils::convert_bandwidth_to_enum(val.get_bandwidth())
+               << " | bw = " << beerocks::utils::convert_bandwidth_to_int(val.get_bandwidth())
                << " | tx_pow = " << int(val.get_tx_power()) << std::endl;
         }
     }
@@ -2064,17 +2064,6 @@ bool db::add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t
     auto channel_set        = wireless_utils::operating_class_to_channel_set(operating_class);
     auto op_class_bw        = wireless_utils::operating_class_to_bandwidth(operating_class);
     auto freq_type          = wireless_utils::which_freq_op_cls(operating_class);
-
-    LOG(DEBUG) << "CW: Channel list with op_class_bw = " << op_class_bw << " and opclass = " << operating_class;
-
-    LOG(DEBUG) << "**** CW: supported channel list start from " << __func__ << " ****";
-    for (auto &it1 : supported_channels) {
-        LOG(DEBUG) << " channel = " << it1.get_channel() << " and bw = " << it1.get_bandwidth();
-    }
-    LOG(DEBUG) << "**** CW: supported channel list end from " << __func__ << " ****";
-    LOG(DEBUG) << "Old supported channels for hostap" << radio_mac << " operating class "
-                << int(operating_class) << std::endl
-                << get_hostap_supported_channels_string(radio_mac);
 
     // Update current channels
     for (auto c : channel_set) {
@@ -2109,12 +2098,6 @@ bool db::add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t
     // Set values for Device.WiFi.DataElements.Network.Device.Radio.Capabilities.OperatingClasses
     dm_add_ap_operating_classes(tlvf::mac_to_string(radio_mac), tx_power, operating_class,
                                 non_operable_channels);
-
-    LOG(DEBUG) << "#### CW: supported channel list start from " << __func__ << " ****";
-    for (auto &it1 : supported_channels) {
-        LOG(DEBUG) << " channel = " << it1.get_channel() << " and bw = " << it1.get_bandwidth();
-    }
-    LOG(DEBUG) << "#### CW: supported channel list end from " << __func__ << " ****";
 
     set_hostap_supported_channels(radio_mac, &supported_channels[0], supported_channels.size());
     // dump new supported channels state
