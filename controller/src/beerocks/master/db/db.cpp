@@ -1933,6 +1933,16 @@ bool db::add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t
     auto supported_channels = get_hostap_supported_channels(radio_mac);
     auto channel_set        = wireless_utils::operating_class_to_channel_set(operating_class);
     auto class_bw           = wireless_utils::operating_class_to_bandwidth(operating_class);
+
+    LOG(DEBUG) << "CW: Channel list with op_class_bw = " << class_bw << " and opclass = " << operating_class;
+    LOG(DEBUG) << "**** CW: supported channel list start from " << __func__ << " ****";
+    for (auto &it1 : supported_channels) {
+        LOG(DEBUG) << " channel = " << it1.channel << " and bw = " << it1.channel_bandwidth;
+    }
+    LOG(DEBUG) << "**** CW: supported channel list end from " << __func__ << " ****";
+    LOG(DEBUG) << "Old supported channels for hostap" << radio_mac << " operating class "
+                << int(operating_class) << std::endl
+                << get_hostap_supported_channels_string(radio_mac);
     // Update current channels
     for (auto c : channel_set) {
         auto channel = std::find_if(supported_channels.begin(), supported_channels.end(),
@@ -1964,11 +1974,17 @@ bool db::add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t
     dm_add_ap_operating_classes(tlvf::mac_to_string(radio_mac), tx_power, operating_class,
                                 non_operable_channels);
 
+    LOG(DEBUG) << "#### CW: supported channel list start from " << __func__ << " ****";
+    for (auto &it1 : supported_channels) {
+        LOG(DEBUG) << " channel = " << it1.channel << " and bw = " << it1.channel_bandwidth;
+    }
+    LOG(DEBUG) << "#### CW: supported channel list end from " << __func__ << " ****";
+
     set_hostap_supported_channels(radio_mac, &supported_channels[0], supported_channels.size());
     // dump new supported channels state
-    // LOG(DEBUG) << "New supported channels for hostap" << radio_mac << " operating class "
-    //            << int(operating_class) << std::endl
-    //            << get_hostap_supported_channels_string(radio_mac);
+    LOG(DEBUG) << "New supported channels for hostap" << radio_mac << " operating class "
+               << int(operating_class) << std::endl
+               << get_hostap_supported_channels_string(radio_mac);
 
     return true;
 }
@@ -2930,9 +2946,16 @@ int8_t db::get_channel_preference(const sMacAddr &radio_mac, const uint8_t opera
     const auto &bw                 = wireless_utils::operating_class_to_bandwidth(operating_class);
     const auto &supported_channels = radio->supported_channels;
 
+    LOG(DEBUG) << "CW: supported channel list ";
+    for (auto &it1 : supported_channels) {
+            LOG(DEBUG) << "CW: channel = " << it1.channel << " chan.get_bandwidth() = " << it1.channel_bandwidth;
+    }
+
     // Find if the channel is supported by the radio
     if (std::find_if(supported_channels.begin(), supported_channels.end(),
                      [channel, bw](const message::sWifiChannel chan) {
+		         LOG(DEBUG) << "CW: chan.get_channel() = " << chan.channel << " channel = " << channel;
+			 LOG(DEBUG) << "CW: chan.get_bandwidth() = " << chan.channel_bandwidth << " bw = " << bw;
                          // Find if matching channel number & bandwidth.
                          return ((chan.channel == channel) && (chan.channel_bandwidth == bw));
                      }) == supported_channels.end()) {
