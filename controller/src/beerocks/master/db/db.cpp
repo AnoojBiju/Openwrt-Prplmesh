@@ -2067,7 +2067,7 @@ bool db::add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t
 
     LOG(DEBUG) << "CW: supported channel list start from " << __func__;
     for (auto &it1 : supported_channels) {
-        LOG(DEBUG) << "CW: channel = " << it1.channel << " and bw = " << it1.channel_bandwidth;
+        LOG(DEBUG) << "CW: channel = " << it1.get_channel() << " and bw = " << it1.get_bandwidth();
     }
     LOG(DEBUG) << "CW: supported channel list end from " << __func__;
 
@@ -2081,8 +2081,8 @@ bool db::add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t
         if (channel != supported_channels.end()) {
             channel->set_tx_power(tx_power);
             channel->set_bandwidth(op_class_bw);
-        } else if (!son::wireless_utils::is_operating_class_using_central_channel(
-                       operating_class)) {
+        //} else if (!son::wireless_utils::is_operating_class_using_central_channel(
+        } else {
             beerocks::WifiChannel ch(c, freq_type, op_class_bw);
             ch.set_tx_power(tx_power);
             supported_channels.push_back(ch);
@@ -2095,7 +2095,7 @@ bool db::add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t
             std::find_if(supported_channels.begin(), supported_channels.end(),
                          [&c](const beerocks::WifiChannel &ch) { return ch.get_channel() == c; });
         if (channel != supported_channels.end()) {
-            LOG(DEBUG) << "CW: erasing channel = " << channel.get_channel() << " bw = " << channel.get_bandwidth();
+            LOG(DEBUG) << "CW: erasing channel = " << channel->get_channel() << " bw = " << channel->get_bandwidth();
             supported_channels.erase(channel);
 	}
     }
