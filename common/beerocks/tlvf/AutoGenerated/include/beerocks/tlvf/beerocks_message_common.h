@@ -350,6 +350,7 @@ typedef struct sNodeHostap {
     uint8_t vht_mcs_set[beerocks::message::VHT_MCS_SET_SIZE];
     uint8_t he_supported;
     uint16_t he_capability;
+    uint64_t wifi6_capability;
     uint8_t he_mcs_set[beerocks::message::HE_MCS_SET_SIZE];
     //Boolean. When set to 'true', the radio can be used only for zwdfs purpose.
     uint8_t zwdfs;
@@ -361,6 +362,7 @@ typedef struct sNodeHostap {
         tlvf_swap(8*sizeof(beerocks::eWiFiBandwidth), reinterpret_cast<uint8_t*>(&max_bandwidth));
         tlvf_swap(16, reinterpret_cast<uint8_t*>(&vht_capability));
         tlvf_swap(16, reinterpret_cast<uint8_t*>(&he_capability));
+        tlvf_swap(64, reinterpret_cast<uint8_t*>(&wifi6_capability));
     }
     void struct_init(){
         iface_mac.struct_init();
