@@ -57,6 +57,7 @@ class NbapiRadioBackhaulSta(PrplMeshBaseTest):
             ['TLV_BACKHAUL_STA_RADIO_CAPABILITIES'])
 
         debug("Checking TLV contents")
+        radio_idx_list = list(range(len(agent.radios)))
         for tlv, index in zip(backhaul_sta_radio_caps_tlvs, range(len(radios))):
 
             assert tlv.tlv_length, "tlv_length of Backhaul STA Radio Capabilities TLV is empty!"
@@ -65,8 +66,15 @@ class NbapiRadioBackhaulSta(PrplMeshBaseTest):
                 tlv.backhaul_sta_radio_capabilities_flags_tree
                 ['ieee1905.backhaul_sta_radio_capabilities.mac_address_included'])
 
-            assert tlv_ruid == agent.radios[index].mac, \
-                f"Wrong ruid: {tlv_ruid}, expected {agent.radios[index].mac}"
+            """
+            the removal of an index from the radio_idx_list list is used to mark
+            a Backhaul STA Radio Capabilities TLVs (there can be a couple of Backhaul
+            STA Radio Capabilities TLV in the BACKHAUL_STA_CAPABILITY_REPORT_MESSAGE message)
+            so it won't be checked in the next iterations
+            """
+            [radio_idx_list.remove(idx) for idx in radio_idx_list
+             if tlv_ruid == agent.radios[idx].mac]
+
             debug(f'TLV Radio UID: {tlv_ruid}')
 
             if tlv_sta_mac_included:
@@ -102,3 +110,9 @@ class NbapiRadioBackhaulSta(PrplMeshBaseTest):
                 debug(f'BackhaulSta.MACAddress: {nbapi_backhaul_sta_mac}')
             else:
                 assert False, "Backhaul STA MAC address is not included in TLV!"
+        '''
+        if radio_idx_list is not empty, then there were some ruid's that were
+        not matched to any of the agent radio's macs
+        '''
+        assert len(radio_idx_list) == 0, f"expected TLVs ruids for the " \
+            f"following: {[agent.radios[idx].mac for idx in radio_idx_list]}"
