@@ -407,15 +407,16 @@ bool base_wlan_hal_dummy::refresh_radio_info()
         }
     }
 
-    m_radio_info.ht_supported   = true;
-    m_radio_info.ht_capability  = 0;
-    m_radio_info.ht_mcs_set     = {};
-    m_radio_info.vht_supported  = true;
-    m_radio_info.vht_capability = 0;
-    m_radio_info.vht_mcs_set    = {};
-    m_radio_info.he_supported   = true;
-    m_radio_info.he_capability  = 0;
-    m_radio_info.he_mcs_set     = {};
+    m_radio_info.ht_supported     = true;
+    m_radio_info.ht_capability    = 0;
+    m_radio_info.ht_mcs_set       = {};
+    m_radio_info.vht_supported    = true;
+    m_radio_info.vht_capability   = 0;
+    m_radio_info.vht_mcs_set      = {};
+    m_radio_info.he_supported     = true;
+    m_radio_info.he_capability    = 0;
+    m_radio_info.wifi6_capability = 0;
+    m_radio_info.he_mcs_set       = {};
 
     std::string radio_mac;
     beerocks::net::network_utils::linux_iface_get_mac(m_radio_info.iface_name, radio_mac);
