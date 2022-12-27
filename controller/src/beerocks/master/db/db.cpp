@@ -3121,10 +3121,13 @@ int8_t db::get_channel_preference(const sMacAddr &radio_mac, const uint8_t opera
     const auto key  = std::make_pair(operating_class, channel);
     const auto iter = radio->channel_preference_report.find(key);
     if (iter == radio->channel_preference_report.end()) {
+        LOG(DEBUG) << "CW: Returning pref rank as best " << (int8_t)eChannelPreferenceRankingConsts::BEST;
         // Key is not found on radio's preference, returning BEST
         return (int8_t)eChannelPreferenceRankingConsts::BEST;
     }
 
+    int pref = iter->second;
+    LOG(DEBUG) << "CW: Returning pref report ranking " << pref;
     // Converting to signed to fit return type
     return (int8_t)iter->second;
 }
