@@ -344,7 +344,7 @@ public:
         // With introduction of Wi-Fi 6 certification extra HE capabilities has been identified,
         // To capture these additional capabilities, EasyMesh R3 [4] includes
         // new capability announcements for a WiFi 6 AP
-        uint32_t wifi6_capability;
+        uint64_t wifi6_capability;
 
         // 32-byte attribute containing the MCS set as defined in 802.11ax
         std::array<uint8_t, beerocks::message::HE_MCS_SET_SIZE> he_mcs_set;
