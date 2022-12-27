@@ -509,11 +509,13 @@ bool CapabilityReportingTask::add_ap_wifi6_capabilities(const std::string &iface
 
     tlv->radio_uid() = radio->front.iface_mac;
     int number_of_role;
-    if (radio->wifi6_capability >> 46 & 1) {
-        number_of_role = 2;
-    } else {
-        number_of_role = 1;
-    }
+	LOG(DEBUG) << "*********THE VALUE OF OPERATING_MODE **********  " << radio->front.hybrid_mode_supported;
+	if (radio->front.hybrid_mode_supported) {
+		number_of_role = 2;
+	}
+	else {
+		number_of_role = 1;
+	}
 
     for (int i = 0; i < number_of_role; i++) {
         auto role = tlv->create_role();
