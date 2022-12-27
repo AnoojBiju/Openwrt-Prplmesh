@@ -731,8 +731,9 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_wsc_m1_message(
     notification->hostap().vht_capability = radio->vht_capability;
     std::copy_n(radio->vht_mcs_set.begin(), beerocks::message::VHT_MCS_SET_SIZE,
                 notification->hostap().vht_mcs_set);
-    notification->hostap().he_supported  = radio->he_supported;
-    notification->hostap().he_capability = radio->he_capability;
+    notification->hostap().he_supported     = radio->he_supported;
+    notification->hostap().he_capability    = radio->he_capability;
+    notification->hostap().wifi6_capability = radio->wifi6_capability;
     std::copy_n(radio->he_mcs_set.begin(), beerocks::message::HE_MCS_SET_SIZE,
                 notification->hostap().he_mcs_set);
 
