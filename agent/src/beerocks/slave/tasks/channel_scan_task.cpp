@@ -519,29 +519,33 @@ bool ChannelScanTask::abort_scan_request(const std::shared_ptr<sScanRequest> req
             return false;
         }
 
-        auto abort_request = beerocks::message_com::create_vs_message<
-            beerocks_message::cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_REQUEST>(m_cmdu_tx);
-        if (!abort_request) {
-            LOG(ERROR) << "Failed to build cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_REQUEST";
-            return false;
-        }
-
         // Filling the radio mac. This is temporary the task will be moved to the agent (PPM-1679).
         auto db    = AgentDB::get();
         auto radio = db->radio(radio_iface);
         if (!radio) {
             return false;
         }
-        auto action_header         = message_com::get_beerocks_header(m_cmdu_tx)->actionhdr();
-        action_header->radio_mac() = radio->front.iface_mac;
 
-        if (!m_btl_ctx.send_cmdu(agent_fd, m_cmdu_tx)) {
-            LOG(ERROR) << "Failed to send cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_REQUEST for "
-                       << radio_iface;
-            return false;
+        if (!radio->m_on_boot_only_scan) {
+
+            auto abort_request = beerocks::message_com::create_vs_message<
+                beerocks_message::cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_REQUEST>(m_cmdu_tx);
+            if (!abort_request) {
+                LOG(ERROR) << "Failed to build cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_REQUEST";
+                return false;
+            }
+
+            auto action_header         = message_com::get_beerocks_header(m_cmdu_tx)->actionhdr();
+            action_header->radio_mac() = radio->front.iface_mac;
+
+            if (!m_btl_ctx.send_cmdu(agent_fd, m_cmdu_tx)) {
+                LOG(ERROR) << "Failed to send cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_REQUEST for "
+                           << radio_iface;
+                return false;
+            }
+
+            LOG(TRACE) << "Sent ABORT_CHANNEL_SCAN for radio " << radio_iface;
         }
-
-        LOG(TRACE) << "Sent ABORT_CHANNEL_SCAN for radio " << radio_iface;
     }
 
     return true;
@@ -867,6 +871,7 @@ bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmd
     }
 
     const auto &perform_fresh_scan = channel_scan_request_tlv->perform_fresh_scan();
+    auto db                        = AgentDB::get();
 
     LOG(INFO) << "Received CHANNEL_SCAN_REQUEST_MESSAGE from "
               << "radio MAC: " << src_mac << " mid: " << std::hex << mid << "." << std::endl
@@ -885,7 +890,6 @@ bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmd
     }
 
     LOG(DEBUG) << "Sending ACK message to the originator, mid=" << std::hex << mid;
-    auto db = AgentDB::get();
     if (!m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, db->bridge.mac)) {
         LOG(ERROR) << "Failed to send ACK_MESSAGE back to controller";
         return false;
@@ -905,7 +909,8 @@ bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmd
     }
 
     sControllerRequestInfo request_info;
-    request_info.src_mac            = src_mac;
+    request_info.src_mac = src_mac;
+
     request_info.perform_fresh_scan = perform_fresh_scan;
 
     auto new_request = std::shared_ptr<sScanRequest>(new sScanRequest(), [](sScanRequest *ptr) {
@@ -927,6 +932,7 @@ bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmd
         auto &radio_list_entry    = std::get<1>(radio_list_tuple);
         const auto radio_mac      = radio_list_entry.radio_uid();
         const auto class_list_len = radio_list_entry.operating_classes_list_length();
+
         if (class_list_len == 0 && perform_fresh_scan) {
             LOG(ERROR) << "Invalid request! A fresh scan was requested, but no operating classed "
                           "were sent";
@@ -955,7 +961,7 @@ bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmd
 
         if (!perform_fresh_scan) {
             new_radio_scan->operating_classes = create_stored_operating_classes();
-        } else {
+        } else if (!radio->m_on_boot_only_scan && perform_fresh_scan) {
             // Iterate over operating classes
             for (int class_idx = 0; class_idx < class_list_len; class_idx++) {
                 const auto &class_tuple = radio_list_entry.operating_classes_list(class_idx);
@@ -1145,10 +1151,10 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
     // Lambda function that adds a Scan-Results TLV to the buffer.
     // The Lambda is also responsible for adding the found neighboring APs to the TLV
     auto add_scan_results_tlv_to_report =
-        [this, &set_neighbor_in_scan_results_tlv](
-            sMacAddr ruid, uint8_t operating_class, uint8_t channel, eScanStatus status,
-            std::chrono::system_clock::time_point timestamp,
-            std::vector<beerocks_message::sChannelScanResults> results) -> bool {
+        [this, &set_neighbor_in_scan_results_tlv,
+         &request](sMacAddr ruid, uint8_t operating_class, uint8_t channel, eScanStatus status,
+                   std::chrono::system_clock::time_point timestamp,
+                   std::vector<beerocks_message::sChannelScanResults> results) -> bool {
         LOG(DEBUG) << "Adding new Scan Results TLV";
         auto results_tlv = m_cmdu_tx.addClass<wfa_map::tlvProfile2ChannelScanResult>();
         if (!results_tlv) {
@@ -1163,7 +1169,19 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
 
         // Set Results TLV status
         results_tlv->success() = status;
-        if (results_tlv->success() != eScanStatus::SUCCESS) {
+        auto db                = AgentDB::get();
+        auto radio             = db->get_radio_by_mac(ruid);
+        if (!radio) {
+            LOG(ERROR) << "ruid not found: " << ruid;
+            return false;
+        }
+        if (request->request_info->perform_fresh_scan && radio->m_on_boot_only_scan) {
+            results_tlv->success() =
+                eScanStatus::FRESH_SCAN_NOT_SUPPORTED_RADIO_ONLY_SUPPORTS_ON_BOOT_SCANS;
+        }
+        if (results_tlv->success() != eScanStatus::SUCCESS &&
+            results_tlv->success() !=
+                eScanStatus::FRESH_SCAN_NOT_SUPPORTED_RADIO_ONLY_SUPPORTS_ON_BOOT_SCANS) {
             // If results status is not successful, need to finish TLV.
             return true;
         }
