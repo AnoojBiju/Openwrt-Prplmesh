@@ -131,6 +131,13 @@ private:
      */
     void handle_virtual_bss_move_preparation_request(ieee1905_1::CmduMessageRx &cmdu_rx);
 
+    /*
+     * @brief Handles unassoc sta link metrics query
+     *
+     * @param cmdu_rx Received CMDU to be handled.
+     */
+    void handle_unassoc_sta_link_metrics_query_message(ieee1905_1::CmduMessageRx &cmdu_rx);
+
     /**
      * @brief Runs the Finite State Machine of the AP manager.
      * 

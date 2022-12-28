@@ -608,6 +608,16 @@ void cli_bml::setFunctionsMapAndArray()
                        "first version, stats will be printed out in the controller log file",
                        static_cast<pFunction>(&cli_bml::get_unassociated_station_stats_caller), 0,
                        0);
+    insertCommandToMap("bml_unassoc_sta_rcpi_query", "<sta mac> <opclass> <channel>",
+                       "Sends all capable agent(s) a unassoc STA link metric query request with "
+                       "given sta, opclass and a channel",
+                       static_cast<pFunction>(&cli_bml::send_unassoc_sta_rcpi_query_caller), 3, 3,
+                       STRING_ARG, INT_ARG, INT_ARG);
+    insertCommandToMap("bml_get_unassoc_sta_query_result", "<sta mac>",
+                       "Prints unassoc STA link metric query result for given sta",
+                       static_cast<pFunction>(&cli_bml::get_unassoc_sta_rcpi_result_caller), 1, 1,
+                       STRING_ARG);
+
     //bool insertCommandToMap(std::string command, std::string help_args, std::string help,  pFunction funcPtr, uint8_t minNumOfArgs, uint8_t maxNumOfArgs,
 }
 
@@ -1300,6 +1310,37 @@ int cli_bml::set_dcs_continuous_scan_enable_caller(int numOfArgs)
 {
     if (numOfArgs == 2) {
         return set_dcs_continuous_scan_enable(args.stringArgs[0], args.intArgs[1]);
+    }
+    return -1;
+}
+
+/**
+ * caller function for triggering unassoc link metrics query
+ *
+ * @param [in] numOfArgs Num of received arguments
+ *
+ * @return 0 on success.
+ */
+int cli_bml::send_unassoc_sta_rcpi_query_caller(int numOfArgs)
+{
+    if (numOfArgs == 3) {
+        return send_unassoc_sta_rcpi_query(args.stringArgs[0], args.intArgs[1],
+                                           uint8_t(args.intArgs[2]));
+    }
+    return -1;
+}
+
+/**
+ * caller function for fetching unassoc link metric query result for a sta
+ *
+ * @param [in] numOfArgs Num of received arguments
+ *
+ * @return 0 on success.
+ */
+int cli_bml::get_unassoc_sta_rcpi_result_caller(int numOfArgs)
+{
+    if (numOfArgs == 1) {
+        return get_unassoc_sta_rcpi_query_result(args.stringArgs[0]);
     }
     return -1;
 }
@@ -2138,6 +2179,54 @@ int cli_bml::set_dcs_continuous_scan_enable(const std::string &radio_mac, int8_t
     int ret = bml_set_dcs_continuous_scan_enable(ctx, radio_mac.c_str(), enable);
 
     printBmlReturnVals("bml_set_dcs_continuous_scan_enable", ret);
+
+    return 0;
+}
+
+/**
+ * Sends unassoc sta link metrics query to agents
+ *
+ * @param [in] sta_mac is mac address of unassociated sta
+ * @param [in] opclass is operating class
+ * @param [in] channel is channel from the operating class
+ *
+ * @return 0 on success.
+ */
+int cli_bml::send_unassoc_sta_rcpi_query(const std::string &sta_mac, int16_t opclass,
+                                         int16_t channel)
+{
+    std::cout << __func__ << ", mac=" << sta_mac << ", opclass=" << opclass
+              << ", channel=" << channel << std::endl;
+    int ret = bml_send_unassoc_sta_rcpi_query(ctx, sta_mac.c_str(), opclass, channel);
+
+    printBmlReturnVals("bml_send_unassoc_sta_rcpi_query", ret);
+
+    return 0;
+}
+
+/**
+ * Fetch unassoc sta link metrics response result from db
+ * if response exist for sta mac
+ *
+ * @param [in] sta_mac is mac address of unassociated sta
+ *
+ * @return 0 on success.
+ */
+int cli_bml::get_unassoc_sta_rcpi_query_result(const std::string &sta_mac)
+{
+    std::cout << __func__ << ", mac=" << sta_mac << std::endl;
+    struct BML_UNASSOC_STA_LINK_METRIC sta;
+    int ret = bml_get_unassoc_sta_rcpi_query_result(ctx, sta_mac.c_str(), &sta);
+
+    if (ret == BML_RET_OK) {
+        std::cout << "Unassoc sta link metric result for sta " << sta_mac << std::endl
+                  << "sta opclass=" << int(sta.opclass) << std::endl
+                  << "sta channel=" << int(sta.channel) << std::endl
+                  << "sta uplink rcpi=" << int(sta.rcpi) << std::endl
+                  << "sta measurement delta=" << sta.measurement_delta << std::endl;
+    }
+
+    printBmlReturnVals("bml_get_unassoc_sta_rcpi_query_result", ret);
 
     return 0;
 }

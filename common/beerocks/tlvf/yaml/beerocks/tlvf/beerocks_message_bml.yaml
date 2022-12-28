@@ -596,3 +596,30 @@ cACTION_BML_GET_SELECTION_CHANNEL_POOL_RESPONSE:
   channel_pool:
     _type: uint8_t
     _length: ["beerocks::message::SUPPORTED_CHANNELS_LENGTH"]
+
+cACTION_BML_UNASSOC_STA_RCPI_QUERY_REQUEST:
+  _type: class
+  sta_mac: sMacAddr
+  opclass: uint16_t
+  channel: uint8_t
+
+cACTION_BML_UNASSOC_STA_RCPI_QUERY_RESPONSE:
+  _type: class
+  op_error_code:
+    _type: uint8_t
+    _comment: 0 - Success, Otherwise error
+
+cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_REQUEST:
+  _type: class
+  sta_mac: sMacAddr
+
+cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_RESPONSE:
+  _type: class
+  sta_mac: sMacAddr
+  opclass: uint16_t
+  channel: uint8_t
+  rcpi: uint8_t
+  measurement_delta: uint32_t
+  op_error_code:
+    _type: uint8_t
+    _comment: 0 - Success, Otherwise error

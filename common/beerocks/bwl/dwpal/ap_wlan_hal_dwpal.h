@@ -114,6 +114,11 @@ public:
     virtual bool send_delba(const std::string &ifname, const sMacAddr &dst, const sMacAddr &src,
                             const sMacAddr &bssid) override;
 
+    virtual void send_unassoc_sta_link_metric_query(
+        std::shared_ptr<wfa_map::tlvUnassociatedStaLinkMetricsQuery> &query) override;
+    virtual bool prepare_unassoc_sta_link_metrics_response(
+        std::shared_ptr<wfa_map::tlvUnassociatedStaLinkMetricsResponse> &response) override;
+
     // Protected methods:
 protected:
     virtual bool process_dwpal_event(char *buffer, int bufLen, const std::string &opcode) override;

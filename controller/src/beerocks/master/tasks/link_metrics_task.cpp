@@ -26,6 +26,8 @@ LinkMetricsTask::LinkMetricsTask(db &database_, ieee1905_1::CmduMessageTx &cmdu_
     : task("link metrics task"), database(database_), cmdu_tx(cmdu_tx_),
       cert_cmdu_tx(cert_cmdu_tx_), tasks(tasks_)
 {
+    LOG(DEBUG) << "Start LinkMetricsTask(id=" << id << ")";
+    database.assign_link_metrics_task_id(id);
     last_query_request = std::chrono::steady_clock::now();
 }
 
@@ -75,6 +77,54 @@ void LinkMetricsTask::work()
         last_query_request = std::chrono::steady_clock::now();
     }
     return;
+}
+
+void LinkMetricsTask::handle_event(int event_enum_value, void *event_obj)
+{
+    switch (eEvent(event_enum_value)) {
+    case UNASSOC_STA_LINK_METRICS_QUERY: {
+        //Take request
+        auto unassoc_sta_link_metric_event =
+            reinterpret_cast<const sUnAssociatedLinkMetricsQueryEvent *>(event_obj);
+
+        if (!cmdu_tx.create(
+                0, ieee1905_1::eMessageType::UNASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE)) {
+            LOG(ERROR) << "Failed building UNASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE message!";
+            return;
+        }
+
+        auto tlvUnassociatedStaLinkMetricsQuery =
+            cmdu_tx.addClass<wfa_map::tlvUnassociatedStaLinkMetricsQuery>();
+        if (!tlvUnassociatedStaLinkMetricsQuery) {
+            LOG(ERROR) << "addClass tlvUnassociatedStaLinkMetricsQuery failed!";
+            return;
+        }
+        tlvUnassociatedStaLinkMetricsQuery->operating_class_of_channel_list() =
+            unassoc_sta_link_metric_event->opClass;
+        auto unassocChanList = tlvUnassociatedStaLinkMetricsQuery->create_channel_list();
+        unassocChanList->channel_number() = unassoc_sta_link_metric_event->channel;
+
+        if (!unassocChanList->alloc_sta_list(1)) {
+            LOG(ERROR) << "allocate_sta_list failed";
+            return;
+        }
+
+        auto &unassoc_sta_list = std::get<1>(unassocChanList->sta_list(0));
+        unassoc_sta_list       = unassoc_sta_link_metric_event->unassoc_sta_mac;
+
+        // Add channel_list object to TLV
+        if (!tlvUnassociatedStaLinkMetricsQuery->add_channel_list(unassocChanList)) {
+            LOG(ERROR) << "add_channel_list() failed";
+            return;
+        }
+
+        // TODO: Check the capability of agent and send only to those which support unassoc sta link metric
+        for (const auto &agent : database.get_all_connected_agents()) {
+            son_actions::send_cmdu_to_agent(agent->al_mac, cmdu_tx, database);
+        }
+        break;
+    }
+    }
 }
 
 bool LinkMetricsTask::handle_ieee1905_1_msg(const sMacAddr &src_mac,
@@ -305,6 +355,10 @@ bool LinkMetricsTask::handle_cmdu_1905_unassociated_station_link_metric_response
                    << " reports zero stations, nothing to do!";
         return true;
     }
+
+    //getting reference for unassoc link metrics data storage from db
+    auto &unassoc_sta_metric = database.get_unassoc_sta_map();
+
     for (int i = 0; i < number_of_station_entries; ++i) {
         const auto station_tuple = unassoc_sta_link_metrics_tlv->sta_list(i);
         const auto sta_metrics   = std::get<1>(station_tuple);
@@ -325,6 +379,16 @@ bool LinkMetricsTask::handle_cmdu_1905_unassociated_station_link_metric_response
                    << ", RCPI: " << sta_metrics.uplink_rcpi_dbm_enc
                    << ", ChannelNum: " << sta_metrics.channel_number
                    << ", time_stamp(uint_32): " << sta_metrics.measurement_to_report_delta_msec;
+
+        // Updating flag for measurement done
+        database.m_measurement_done = true;
+        database.m_opclass          = operating_class_received;
+        son::db::sUnAssocStaInfo sta_details;
+        std::string mac               = tlvf::mac_to_string(sta_metrics.sta_mac);
+        sta_details.channel           = sta_metrics.channel_number;
+        sta_details.rcpi              = sta_metrics.uplink_rcpi_dbm_enc;
+        sta_details.measurement_delta = sta_metrics.measurement_to_report_delta_msec;
+        unassoc_sta_metric[mac]       = sta_details;
 
         // updating the DM and the database
         auto agents = database.get_all_connected_agents();

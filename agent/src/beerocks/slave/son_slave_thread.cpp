@@ -866,6 +866,8 @@ bool slave_thread::handle_cmdu_control_ieee1905_1_message(int fd,
         return handle_client_steering_request(fd, cmdu_rx);
     case ieee1905_1::eMessageType::HIGHER_LAYER_DATA_MESSAGE:
         return handle_1905_higher_layer_data_message(fd, cmdu_rx);
+    case ieee1905_1::eMessageType::UNASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE:
+        return handle_unassoc_sta_link_metric_query(fd, cmdu_rx);
     default:
         LOG(ERROR) << "Unknown CMDU message type: " << std::hex << int(cmdu_message_type);
         return false;
@@ -4881,6 +4883,20 @@ bool slave_thread::handle_beacon_metrics_query(int fd, ieee1905_1::CmduMessageRx
     }
 
     send_cmdu(m_radio_managers[radio->front.iface_name].monitor_fd, cmdu_tx);
+    return true;
+}
+
+bool slave_thread::handle_unassoc_sta_link_metric_query(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto db = AgentDB::get();
+    for (auto radio : db->get_radios_list()) {
+        if (!forward_cmdu_to_uds(m_radio_managers[radio->front.iface_name].ap_manager_fd,
+                                 cmdu_rx)) {
+            LOG(ERROR) << "Failed sending UNASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE message to "
+                          "ap_manager_socket ";
+        }
+    }
+
     return true;
 }
 

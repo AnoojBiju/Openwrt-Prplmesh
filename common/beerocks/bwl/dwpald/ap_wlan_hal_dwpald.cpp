@@ -40,6 +40,7 @@ namespace bwl {
 namespace dwpal {
 
 #define CSA_EVENT_FILTERING_TIMEOUT_MS 1000
+#define MAX_RSSI_STRNG_SZ 6
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////// Local Module Functions ///////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -2745,33 +2746,44 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
         // Initialize the message
         memset(msg_buff.get(), 0, sizeof(sACTION_APMANAGER_CLIENT_RX_RSSI_MEASUREMENT_RESPONSE));
 
-        char MACAddress[MAC_ADDR_SIZE] = {0};
-        char rssi[24]                  = {0};
-        uint64_t rx_packets            = 0;
-        size_t numOfValidArgs[5]       = {0};
-        FieldsToParse fieldsToParse[]  = {
+        char MACAddress[MAC_ADDR_SIZE]  = {0};
+        char rssi[4][MAX_RSSI_STRNG_SZ] = {0};
+        uint64_t rx_packets             = 0;
+        size_t numOfValidArgs[11]       = {0};
+        FieldsToParse fieldsToParse[]   = {
             {NULL /*opCode*/, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
             {NULL, &numOfValidArgs[1], DWPAL_STR_PARAM, NULL, 0},
             {(void *)MACAddress, &numOfValidArgs[2], DWPAL_STR_PARAM, NULL, sizeof(MACAddress)},
-            {(void *)rssi, &numOfValidArgs[3], DWPAL_STR_PARAM, "rssi=", sizeof(rssi)},
-            {(void *)&rx_packets, &numOfValidArgs[4], DWPAL_LONG_LONG_INT_PARAM, "rx_packets=", 0},
+            {NULL, &numOfValidArgs[3], DWPAL_STR_PARAM, NULL, 0},
+            {NULL, &numOfValidArgs[4], DWPAL_STR_PARAM, NULL, 0},
+            {NULL, &numOfValidArgs[5], DWPAL_STR_PARAM, NULL, 0},
+            {(void *)rssi[0], &numOfValidArgs[6], DWPAL_STR_PARAM, "rssi=", sizeof(rssi[0])},
+            {(void *)rssi[1], &numOfValidArgs[7], DWPAL_STR_PARAM, NULL, sizeof(rssi[1])},
+            {(void *)rssi[2], &numOfValidArgs[8], DWPAL_STR_PARAM, NULL, sizeof(rssi[2])},
+            {(void *)rssi[3], &numOfValidArgs[9], DWPAL_STR_PARAM, NULL, sizeof(rssi[3])},
+            {(void *)&rx_packets, &numOfValidArgs[10], DWPAL_LONG_LONG_INT_PARAM, "rx_packets=", 0},
             /* Must be at the end */
             {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
 
         if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse, sizeof(MACAddress)) ==
             DWPAL_FAILURE) {
             LOG(ERROR) << "DWPAL parse error ==> Abort";
+            m_measurement_start = false;
             return false;
         }
 
         /* TEMP: Traces... */
         LOG(DEBUG) << "numOfValidArgs[2]= " << numOfValidArgs[2] << " MACAddress= " << MACAddress;
-        LOG(DEBUG) << "numOfValidArgs[3]= " << numOfValidArgs[3] << " rssi= " << rssi;
-        LOG(DEBUG) << "numOfValidArgs[4]= " << numOfValidArgs[4] << " rx_packets= " << rx_packets;
+        LOG(DEBUG) << "numOfValidArgs[6]= " << numOfValidArgs[3] << " rssi= " << rssi[0];
+        LOG(DEBUG) << "numOfValidArgs[7]= " << numOfValidArgs[7] << " rssi= " << rssi[1];
+        LOG(DEBUG) << "numOfValidArgs[8]= " << numOfValidArgs[8] << " rssi= " << rssi[2];
+        LOG(DEBUG) << "numOfValidArgs[9]= " << numOfValidArgs[9] << " rssi= " << rssi[3];
+        LOG(DEBUG) << "numOfValidArgs[10]= " << numOfValidArgs[10] << " rx_packets= " << rx_packets;
 
         for (uint8_t i = 0; i < (sizeof(numOfValidArgs) / sizeof(size_t)); i++) {
             if (numOfValidArgs[i] == 0) {
                 LOG(ERROR) << "Failed reading parsed parameter " << (int)i << " ==> Abort";
+                m_measurement_start = false;
                 return false;
             }
         }
@@ -2780,15 +2792,11 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
         msg->params.rx_snr     = beerocks::SNR_INVALID;
         msg->params.result.mac = tlvf::mac_from_string(MACAddress);
 
-        // Split the RSSI values
-        auto rssiVec = beerocks::string_utils::str_split(rssi, ' ');
-        auto snrVec  = beerocks::string_utils::str_split(rssi, ' ');
-
         // -128 -128 -128 -128
         int rssi_cnt    = 0;
         float rssi_watt = 0;
         float rssi_tmp  = 0;
-        for (auto v : rssiVec) {
+        for (auto v : rssi) {
             rssi_tmp = float(beerocks::string_utils::stoi(v));
             if (rssi_tmp > beerocks::RSSI_MIN) {
                 rssi_watt += pow(10, rssi_tmp / float(10));
@@ -2798,46 +2806,44 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
 
         msg->params.rx_packets = (rx_packets >= 127) ? 127 : rx_packets;
 
-        // Measurement succeeded
-        if ((rssi_cnt > 0) && (msg->params.rx_packets > 1)) {
-            rssi_watt           = (rssi_watt / float(rssi_cnt));
-            msg->params.rx_rssi = int(10 * log10(rssi_watt));
-            // TODO: add snr measurements when implementing unconnected station measurement on rdkb
-        } else { // Measurement failed
-            auto now = std::chrono::steady_clock::now();
-            auto delta =
-                std::chrono::duration_cast<std::chrono::milliseconds>(now - m_unassoc_measure_start)
-                    .count();
-            auto temp_sum_delay = (delta - m_unassoc_measure_delay);
-
-            if (temp_sum_delay > m_unassoc_measure_window_size) {
-                LOG(ERROR) << "event_obj->params.rx_packets = -2 , delay = " << int(temp_sum_delay);
-                msg->params.rx_packets =
-                    -2; // means the actual measurment started later then aspected
+        // Check if it is triggered by unassoc sta link metrics
+        if (m_measurement_start) {
+            if (rssi_cnt > 0) {
+                rssi_watt           = (rssi_watt / float(rssi_cnt));
+                msg->params.rx_rssi = int(10 * log10(rssi_watt));
             }
-        }
+            auto unassoc_sta  = &m_unassoc_sta_map[MACAddress];
+            unassoc_sta->rcpi = son::wireless_utils::convert_rcpi_from_rssi(msg->params.rx_rssi);
+            LOG(DEBUG) << "STA " << MACAddress << " has rcpi "
+                       << son::wireless_utils::convert_rcpi_from_rssi(msg->params.rx_rssi);
 
-        // Measurement succeeded
-        if ((rssi_cnt > 0) && (msg->params.rx_packets > 1)) {
-            rssi_watt           = (rssi_watt / float(rssi_cnt));
-            msg->params.rx_rssi = int(10 * log10(rssi_watt));
-            // TODO: add snr measurements when implementing unconnected station measurement on rdkb
-        } else { // Measurement failed
-            auto now = std::chrono::steady_clock::now();
-            auto delta =
-                std::chrono::duration_cast<std::chrono::milliseconds>(now - m_unassoc_measure_start)
-                    .count();
-            auto temp_sum_delay = (delta - m_unassoc_measure_delay);
+            if (unassoc_sta->last_sta)
+                event_queue_push(Event::STA_Unassoc_Link_Metrics, msg_buff);
+        } else {
 
-            if (temp_sum_delay > m_unassoc_measure_window_size) {
-                LOG(ERROR) << "event_obj->params.rx_packets = -2 , delay = " << int(temp_sum_delay);
-                msg->params.rx_packets =
-                    -2; // means the actual measurment started later then aspected
+            // Measurement succeeded
+            if ((rssi_cnt > 0) && (msg->params.rx_packets > 1)) {
+                rssi_watt           = (rssi_watt / float(rssi_cnt));
+                msg->params.rx_rssi = int(10 * log10(rssi_watt));
+                // TODO: add snr measurements when implementing unconnected station measurement on rdkb
+            } else { // Measurement failed
+                auto now   = std::chrono::steady_clock::now();
+                auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                 now - m_unassoc_measure_start)
+                                 .count();
+                auto temp_sum_delay = (delta - m_unassoc_measure_delay);
+
+                if (temp_sum_delay > m_unassoc_measure_window_size) {
+                    LOG(ERROR) << "event_obj->params.rx_packets = -2 , delay = "
+                               << int(temp_sum_delay);
+                    msg->params.rx_packets =
+                        -2; // means the actual measurment started later then aspected
+                }
             }
-        }
 
-        // Add the message to the queue
-        event_queue_push(Event::STA_Unassoc_RSSI, msg_buff);
+            // Add the message to the queue
+            event_queue_push(Event::STA_Unassoc_RSSI, msg_buff);
+        }
         break;
     }
 
@@ -3642,6 +3648,125 @@ bool ap_wlan_hal_dwpal::send_delba(const std::string &ifname, const sMacAddr &ds
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return false;
+}
+
+void ap_wlan_hal_dwpal::send_unassoc_sta_link_metric_query(
+    std::shared_ptr<wfa_map::tlvUnassociatedStaLinkMetricsQuery> &query)
+{
+    auto opclass              = query->operating_class_of_channel_list();
+    auto chan_list_len        = query->channel_list_length();
+    bool measurement_req_sent = false;
+    std::string last_sta_mac;
+    if (m_measurement_start) {
+        LOG(DEBUG) << "Unassociate Sta link metrics measurement already running";
+        return;
+    }
+
+    auto get_central_freq = [&](uint32_t chan, const beerocks::eWiFiBandwidth bw,
+                                int *freq) -> bool {
+        const auto freq_band =
+            son::wireless_utils::which_freq_type(son::wireless_utils::channel_to_freq(chan));
+        LOG(DEBUG) << "freq band for channel " << chan << " is " << freq_band;
+        if (freq_band != m_radio_info.frequency_band) {
+            LOG(WARNING) << "Channel " << chan << " is not suitable for radio band "
+                         << m_radio_info.frequency_band;
+            return false;
+        }
+        *freq = int(son::wireless_utils::get_vht_central_frequency(chan, bw));
+        return true;
+    };
+    m_measurement_start = true;
+    LOG(DEBUG) << "Unassociate Sta link metrics: opclass = " << opclass
+               << ", channel_list_len = " << chan_list_len;
+    m_opclass      = opclass;
+    auto bw        = son::wireless_utils::operating_class_to_bandwidth(opclass);
+    auto bandwidth = beerocks::utils::convert_bandwidth_to_int(bw);
+    for (int i = 0; i < chan_list_len; i = i + 1) {
+        auto channel_list    = std::get<1>(query->channel_list(i));
+        auto sta_list_length = channel_list.sta_list_length();
+        auto channel         = channel_list.channel_number();
+        LOG(DEBUG) << "channel = " << channel << ", With below STA list len=" << sta_list_length;
+        // Initializing default central freq with primary channel frequency
+        auto central_freq = son::wireless_utils::channel_to_freq(channel);
+        // Convert values to strings
+        std::string chan_freq = std::to_string(son::wireless_utils::channel_to_freq(channel));
+        // Get central freq if it is suitable for current radio band
+        if (!get_central_freq(channel, bw, &central_freq)) {
+            continue;
+        }
+
+        for (int j = 0; j < sta_list_length; j = j + 1) {
+            auto sta = std::get<1>(channel_list.sta_list(j));
+            LOG(INFO) << "Sta[" << j << "] = " << sta;
+
+            std::string central_freq_str = std::to_string(central_freq);
+            std::string mac              = tlvf::mac_to_string(sta);
+
+            // Build command string
+            std::string cmd = "UNCONNECTED_STA_RSSI " + mac + " " + chan_freq +
+                              " center_freq1=" + central_freq_str +
+                              " bandwidth=" + std::to_string(bandwidth);
+
+            // Fill relevant information
+            sUnAssocStaInfo unassoc_sta;
+            unassoc_sta.channel                     = channel;
+            unassoc_sta.rcpi                        = 0;
+            unassoc_sta.last_sta                    = false;
+            unassoc_sta.m_unassoc_sta_metrics_start = std::chrono::steady_clock::now();
+
+            // Trigger a measurement
+            if (!dwpal_send_cmd(cmd)) {
+                LOG(WARNING) << "send_unassoc_sta_link_metric_query() failed!";
+                continue;
+            }
+
+            // Set flag to true as request sent to hostapd
+            measurement_req_sent = true;
+
+            //Add to the MAP
+            m_unassoc_sta_map[mac] = unassoc_sta;
+
+            // Used for marking last mac for sending the report to controller
+            last_sta_mac = mac;
+        }
+    }
+
+    if (measurement_req_sent) {
+        // Marking last station in query as true
+        auto last_sta_entry      = &m_unassoc_sta_map[last_sta_mac];
+        last_sta_entry->last_sta = true;
+        LOG(DEBUG) << "Unassoc Sta " << last_sta_mac
+                   << " has last_sta = " << last_sta_entry->last_sta;
+    } else {
+        // Channel list is not suitable for this radio so skip it
+        m_measurement_start = false;
+    }
+}
+
+bool ap_wlan_hal_dwpal::prepare_unassoc_sta_link_metrics_response(
+    std::shared_ptr<wfa_map::tlvUnassociatedStaLinkMetricsResponse> &response)
+{
+    response->operating_class_of_channel_list() = m_opclass;
+    auto now                                    = std::chrono::steady_clock::now();
+    for (auto &sta_entry : m_unassoc_sta_map) {
+        if (!response->alloc_sta_list(1)) {
+            LOG(ERROR) << "Failed allocate_sta_list";
+            return false;
+        }
+        auto &unassoc_sta               = std::get<1>(response->sta_list(0));
+        unassoc_sta.channel_number      = sta_entry.second.channel;
+        unassoc_sta.uplink_rcpi_dbm_enc = sta_entry.second.rcpi;
+        unassoc_sta.sta_mac             = tlvf::mac_from_string(sta_entry.first);
+        unassoc_sta.measurement_to_report_delta_msec =
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                now - sta_entry.second.m_unassoc_sta_metrics_start)
+                .count();
+    }
+
+    // clear the map and mark measurement_start as false
+    m_unassoc_sta_map.clear();
+    m_measurement_start = false;
+    return true;
 }
 
 } // namespace dwpal

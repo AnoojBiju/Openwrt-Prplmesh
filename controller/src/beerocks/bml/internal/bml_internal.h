@@ -209,6 +209,28 @@ public:
     * @return BML_RET_OK on success.
     */
     int set_dcs_continuous_scan_enable(const sMacAddr &mac, int enable);
+
+    /**
+    * @brief Sends unassoc rcpi query to capable agents.
+    *
+    * @param [in] sta_mac Unassociated sta MAC.
+    * @param [in] opclass    operating class.
+    * @param [in] channel    channel from operating class.
+    *
+    * @return BML_RET_OK on success.
+    */
+    int send_unassoc_sta_rcpi_query(const sMacAddr &mac, int16_t opclass, int16_t channel);
+
+    /**
+    * @brief fetches the unassoc sta link metrics from db
+    *
+    * @param [in] sta_mac Unassociated sta MAC.
+    *
+    * @return BML_RET_OK on success.
+    */
+    int get_unassoc_sta_rcpi_query_result(const sMacAddr &mac,
+                                          struct BML_UNASSOC_STA_LINK_METRIC *sta_info);
+
     /**
     * @brief Get DCS continuous scans param.
     *
@@ -472,11 +494,12 @@ private:
     //Promise used to indicate the GetParams response was received
     beerocks::promise<bool> *m_prmChannelScanParamsGet = nullptr;
     //Promise used to indicate the GetResults response was received
-    beerocks::promise<int> *m_prmChannelScanResultsGet = nullptr;
-    beerocks::promise<bool> *m_prmClientListGet        = nullptr;
-    beerocks::promise<bool> *m_prmUnStationsStatsGet   = nullptr;
-    beerocks::promise<bool> *m_prmClientGet            = nullptr;
-    beerocks::promise<bool> *m_prmSelectionPoolGet     = nullptr;
+    beerocks::promise<int> *m_prmChannelScanResultsGet   = nullptr;
+    beerocks::promise<bool> *m_prmClientListGet          = nullptr;
+    beerocks::promise<bool> *m_prmUnStationsStatsGet     = nullptr;
+    beerocks::promise<bool> *m_prmClientGet              = nullptr;
+    beerocks::promise<bool> *m_prmSelectionPoolGet       = nullptr;
+    beerocks::promise<int> *m_prmUnAssocStaLinkMetricGet = nullptr;
 
     std::map<uint8_t, beerocks::promise<int> *> m_prmCliResponses;
 
@@ -514,6 +537,7 @@ private:
     beerocks::promise<int> *m_prmPreAssociationSteering = nullptr;
     BML_EVENT_CB m_cbSteeringEvent                      = nullptr;
 #endif /* FEATURE_PRE_ASSOCIATION_STEERING */
+    struct BML_UNASSOC_STA_LINK_METRIC *m_unassoc_sta_link_metric = nullptr;
 };
 
 #endif /* _BML_INTERNAL_H_ */
