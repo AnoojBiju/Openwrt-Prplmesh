@@ -356,6 +356,9 @@ public:
         std::shared_ptr<sSwitchChannelRequest> last_switch_channel_request;
 
         std::string chipset_vendor;
+
+        //Indicates support for on_boot_only_scan
+        bool m_on_boot_only_scan = false;
     };
     struct {
         uint16_t max_number_of_vlans_ids;
