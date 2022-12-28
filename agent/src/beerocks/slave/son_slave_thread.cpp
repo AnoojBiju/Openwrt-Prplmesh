@@ -613,6 +613,14 @@ bool slave_thread::read_platform_configuration()
             }
         }
     }
+
+    for (auto radio : db->get_radios_list()) {
+        if (!radio) {
+            return {};
+        }
+        radio->m_on_boot_only_scan = bpl::bpl_cfg_get_on_boot_only_scan();
+    }
+
     LOG(DEBUG) << "client_band_steering_enabled: " << db->device_conf.client_band_steering_enabled;
     LOG(DEBUG) << "client_optimal_path_roaming_enabled: "
                << db->device_conf.client_optimal_path_roaming_enabled;
