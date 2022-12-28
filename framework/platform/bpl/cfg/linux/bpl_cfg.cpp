@@ -217,6 +217,8 @@ int cfg_get_operating_mode()
     return RETURN_ERR;
 }
 
+bool bpl_cfg_get_on_boot_only_scan() { return false; }
+
 int cfg_get_certification_mode()
 {
     int retVal = 0;
