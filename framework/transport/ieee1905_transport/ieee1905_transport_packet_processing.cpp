@@ -12,10 +12,6 @@
 #include <arpa/inet.h>
 #include <chrono>
 
-#ifndef ETHER_IS_MULTICAST
-#define ETHER_IS_MULTICAST(addr) (*(addr)&0x01) // is address multicast or broadcast
-#endif
-
 #define ETHER_IS_SAME(addr1, addr2) (memcmp((addr1), (addr2), ETH_ALEN) == 0)
 
 namespace beerocks {

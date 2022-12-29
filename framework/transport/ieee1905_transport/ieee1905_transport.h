@@ -25,6 +25,11 @@
 #include <map>
 #include <net/if.h>
 
+// Address is a multicast address if the most significant byte in the address is 0x01
+#ifndef ETHER_IS_MULTICAST
+#define ETHER_IS_MULTICAST(addr) (*(addr)&0x01) // is address multicast or broadcast
+#endif
+
 //
 // Notes:
 //
@@ -139,6 +144,25 @@ private:
     // Primary VLAN Identifier to be added for IEEE 1905 Multicast packets
     uint16_t primary_vlan_id_        = 0;
     bool traffic_separation_enabled_ = false;
+
+    // Bridge name that the transport monitors
+    std::string bridge_name_;
+
+    // IEEE 802.1Q Protocol Identifier
+    static constexpr uint16_t ieee_8021q_protocol_id = 0x8100;
+
+    // Ethernet Header with 802.1Q VLAN Information
+    struct ether_header_vlan {
+        uint8_t ether_dhost[ETH_ALEN]; /* destination eth addr  */
+        uint8_t ether_shost[ETH_ALEN]; /* source ether addr */
+        uint16_t tpid;                 /* 802.1Q header TPID */
+        struct TCI {
+            uint16_t vid : 12; /* VLAN Identifier */
+            uint16_t dei : 1;  /* Drop eligible indicator */
+            uint16_t pcp : 3;  /* Priority code point */
+        } __attribute__((__packed__)) tci;
+        uint16_t ether_type; /* packet type ID field    */
+    } __attribute__((__packed__));
 
 // IEEE1905 CMDU header in packed format
 #pragma pack(push, 1)
