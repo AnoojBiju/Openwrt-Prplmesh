@@ -138,6 +138,10 @@ private:
     // interface name (ifname) is used as Key to the table
     std::map<std::string, NetworkInterface> network_interfaces_;
 
+    // Pending Network interface table
+    // This table holds the network interfaces that transport fails to create a raw socket for it.
+    std::list<std::string> pending_network_interfaces_;
+
     uint16_t message_id_           = 0;
     uint8_t al_mac_addr_[ETH_ALEN] = {0};
 

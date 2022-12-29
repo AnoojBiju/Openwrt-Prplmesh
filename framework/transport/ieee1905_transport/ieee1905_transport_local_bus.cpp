@@ -110,6 +110,7 @@ void Ieee1905Transport::handle_broker_interface_configuration_request_message(
 
     if (msg.metadata()->is_bridge) {
         auto bridge_name = msg.metadata()->iface_name;
+        bridge_name_     = bridge_name;
         MAPF_INFO("Using bridge: " << bridge_name);
 
         // fill a set with the interfaces that are part of the bridge:
