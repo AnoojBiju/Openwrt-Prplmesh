@@ -92,11 +92,9 @@ std::vector<uint8_t> get_operating_class_non_oper_channels(
                 break;
             }
         }
-        /*
         if (!found) {
             non_oper_channels.push_back(op_class_channel);
         }
-	*/
     }
     return non_oper_channels;
 }
