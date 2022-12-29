@@ -479,20 +479,35 @@ bool Ieee1905Transport::send_packet_to_network_interface(unsigned int if_index, 
 
     counters_[CounterId::OUTGOING_NETWORK_PACKETS]++;
 
-    struct ether_header eh;
-    tlvf::mac_to_array(packet.dst, eh.ether_dhost);
-    tlvf::mac_to_array(packet.src, eh.ether_shost);
-    eh.ether_type = htons(packet.ether_type);
+    uint8_t eh_buffer[sizeof(ether_header_vlan)];
+    uint8_t size;
 
-    packet.header = {.iov_base = &eh, .iov_len = sizeof(eh)};
+    if (ETHER_IS_MULTICAST(packet.dst.oct) && traffic_separation_enabled_) {
+        auto eh = reinterpret_cast<ether_header_vlan *>(eh_buffer);
+        size    = sizeof(ether_header_vlan);
+        tlvf::mac_to_array(packet.dst, eh->ether_dhost);
+        tlvf::mac_to_array(packet.src, eh->ether_shost);
+        eh->tpid       = htons(ieee_8021q_protocol_id);
+        eh->tci.vid    = htons(primary_vlan_id_);
+        eh->tci.pcp    = 0;
+        eh->tci.dei    = 0;
+        eh->ether_type = htons(packet.ether_type);
+        packet.header  = {.iov_base = eh, .iov_len = size};
+    } else {
+        auto eh = reinterpret_cast<struct ether_header *>(eh_buffer);
+        size    = sizeof(struct ether_header);
+        tlvf::mac_to_array(packet.dst, eh->ether_dhost);
+        tlvf::mac_to_array(packet.src, eh->ether_shost);
+        eh->ether_type = htons(packet.ether_type);
+        packet.header  = {.iov_base = eh, .iov_len = size};
+    }
 
     int fd             = network_interfaces_[ifname].fd->getSocketFd();
     struct iovec iov[] = {packet.header, packet.payload};
     int n              = writev(fd, iov, sizeof(iov) / sizeof(struct iovec));
 
-    // Clear the packet header to prevent leaking locally allocated stack pointer
-    packet.header = {.iov_base = nullptr, .iov_len = sizeof(eh)};
-    if (size_t(n) != sizeof(eh) + packet.payload.iov_len) {
+    packet.header = {.iov_base = nullptr, .iov_len = size};
+    if (size_t(n) != size + packet.payload.iov_len) {
         MAPF_ERR("cannot write to socket, error: \"" << strerror(errno) << "\" (" << errno << ").");
         return false;
     }
