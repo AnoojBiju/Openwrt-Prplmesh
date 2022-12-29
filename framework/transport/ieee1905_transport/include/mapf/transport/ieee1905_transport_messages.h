@@ -43,7 +43,8 @@ enum class Type {
     SubscribeMessage                     = 3,
     CmduTxConfirmationMessage            = 4,
     InterfaceConfigurationRequestMessage = 5,
-    AlMacAddressConfigurationMessage     = 6
+    AlMacAddressConfigurationMessage     = 6,
+    VlanConfigurationRequestMessage      = 7
 };
 // Enum AutoPrint generated code snippet begining- DON'T EDIT!
 // clang-format off
@@ -56,6 +57,7 @@ static const char *Type_str(Type enum_value) {
     case Type::CmduTxConfirmationMessage:            return "Type::CmduTxConfirmationMessage";
     case Type::InterfaceConfigurationRequestMessage: return "Type::InterfaceConfigurationRequestMessage";
     case Type::AlMacAddressConfigurationMessage:     return "Type::AlMacAddressConfigurationMessage";
+    case Type::VlanConfigurationRequestMessage:      return "Type::VlanConfigurationRequestMessage";
     }
     static std::string out_str = std::to_string(int(enum_value));
     return out_str.c_str();
@@ -521,6 +523,46 @@ public:
         ss << " metadata:" << std::endl;
         ss << " version: " << (unsigned)m->version << std::endl;
         ss << " al_mac:" << m->al_mac;
+
+        return os << ss.str();
+    }
+};
+
+class VlanConfigurationRequestMessage : public Message {
+    static const uint8_t kVersion = 0;
+
+public:
+    struct Metadata {
+        uint8_t version = kVersion;
+        uint16_t vlan_id;
+        bool add = false;
+    };
+
+    explicit VlanConfigurationRequestMessage(std::initializer_list<Frame> frames = {})
+        : Message(Type::VlanConfigurationRequestMessage, frames)
+    {
+        // maximum one frame is allowed (if none are given we will allocate one below)
+        mapf_assert(this->frames().size() <= 1);
+
+        if (this->frames().empty()) {
+            Message::Frame frame(sizeof(Metadata));
+            Add(frame);
+        } else if (this->frames().back().len() < sizeof(Metadata)) {
+            this->frames().back().set_size(sizeof(Metadata));
+        }
+    }
+
+    Metadata *metadata() const { return reinterpret_cast<Metadata *>(frames().back().data()); };
+
+    virtual std::ostream &print(std::ostream &os) const override
+    {
+        Message::print(os);
+
+        std::stringstream ss;
+        Metadata *m = metadata();
+        ss << " metadata:" << std::endl;
+        ss << " version: " << (unsigned)m->version << std::endl;
+        ss << " vlan_id:" << m->vlan_id;
 
         return os << ss.str();
     }

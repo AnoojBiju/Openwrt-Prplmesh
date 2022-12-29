@@ -517,6 +517,20 @@ void Ieee1905Transport::set_al_mac_addr(const uint8_t *addr)
     }
 }
 
+void Ieee1905Transport::set_primary_vlan_id(const uint16_t vlan_id, bool add)
+{
+    if (!vlan_id)
+        return;
+
+    if (add) {
+        traffic_separation_enabled_ = true;
+        primary_vlan_id_            = vlan_id;
+    } else {
+        traffic_separation_enabled_ = false;
+        primary_vlan_id_            = 0;
+    }
+}
+
 } // namespace transport
 } // namespace beerocks
 
