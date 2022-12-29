@@ -44,6 +44,9 @@ create_transport_message(Type type, std::initializer_list<messages::Message::Fra
     case messages::Type::AlMacAddressConfigurationMessage:
         return std::unique_ptr<messages::AlMacAddressConfigurationMessage>{
             new messages::AlMacAddressConfigurationMessage(frame)};
+    case messages::Type::VlanConfigurationRequestMessage:
+        return std::unique_ptr<messages::VlanConfigurationRequestMessage>{
+            new messages::VlanConfigurationRequestMessage(frame)};
     default:
         LOG(WARNING) << "Received unknown message type: " << int(type);
         return std::unique_ptr<messages::Message>{new messages::Message(Type::Invalid, frame)};
