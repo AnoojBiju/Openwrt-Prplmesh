@@ -2040,8 +2040,8 @@ std::string db::get_hostap_supported_channels_string(const sMacAddr &radio_mac)
     for (const auto &val : supported_channels) {
         if (val.get_channel() > 0) {
             os << " ch = " << int(val.get_channel()) << " | dfs = " << int(val.is_dfs_channel())
-               << " | bw = " << beerocks::utils::convert_bandwidth_to_enum(val.get_bandwidth())
-               << " | tx_pow = " << int(val.get_tx_power());
+               << " | bw = " << beerocks::utils::convert_bandwidth_to_int(val.get_bandwidth())
+               << " | tx_pow = " << int(val.get_tx_power()) << std::endl;
         }
     }
 
@@ -2080,21 +2080,33 @@ bool db::add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t
         if (channel != supported_channels.end()) {
             channel->set_tx_power(tx_power);
             channel->set_bandwidth(op_class_bw);
-        } else if (!son::wireless_utils::is_operating_class_using_central_channel(
-                       operating_class)) {
-            beerocks::WifiChannel ch(c, freq_type, op_class_bw);
-            ch.set_tx_power(tx_power);
-            supported_channels.push_back(ch);
+
+        } else {
+            if (son::wireless_utils::is_operating_class_using_central_channel(operating_class)) {
+                // These classes contains only centre channels
+                beerocks::WifiChannel ch(c, wireless_utils::channel_to_freq(c, freq_type),
+                                         op_class_bw);
+                ch.set_tx_power(tx_power);
+                supported_channels.push_back(ch);
+            } else {
+                beerocks::WifiChannel ch(c, freq_type, op_class_bw);
+                ch.set_tx_power(tx_power);
+                supported_channels.push_back(ch);
+            }
         }
     }
 
     // Delete non-operable channels
     for (auto c : non_operable_channels) {
-        auto channel =
-            std::find_if(supported_channels.begin(), supported_channels.end(),
-                         [&c](const beerocks::WifiChannel &ch) { return ch.get_channel() == c; });
-        if (channel != supported_channels.end())
+        auto channel = std::find_if(supported_channels.begin(), supported_channels.end(),
+                                    [&c, op_class_bw, freq_type](const beerocks::WifiChannel &ch) {
+                                        return ((ch.get_channel() == c) &&
+                                                (ch.get_bandwidth() == op_class_bw) &&
+                                                ch.get_freq_type() == freq_type);
+                                    });
+        if (channel != supported_channels.end()) {
             supported_channels.erase(channel);
+        }
     }
 
     // Set values for Device.WiFi.DataElements.Network.Device.Radio.Capabilities.OperatingClasses
