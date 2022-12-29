@@ -269,8 +269,7 @@ bool WifiChannel::are_params_valid(uint8_t channel, eFreqType freq_type, uint16_
             for (const auto &oper_class : son::wireless_utils::operating_classes_list) {
                 if (oper_class.second.band == bandwidth &&
                     oper_class.second.channels.find(channel) != oper_class.second.channels.end()) {
-                    LOG(DEBUG) << "CW: channel " << channel
-                               << " has oper_class = " << oper_class.first;
+                    //LOG(DEBUG) << "channel " << channel << " has oper_class = " << oper_class.first;
                     return son::wireless_utils::is_operating_class_using_central_channel(
                         oper_class.first);
                 }
