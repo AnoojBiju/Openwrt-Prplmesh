@@ -75,6 +75,13 @@ public:
     bool configure_al_mac(const sMacAddr &al_mac) override;
 
     /**
+     * @brief Configures the transport process to use the primary vlan id.
+     *
+     * @see BrokerClient::configure_primary_vlan_id()
+     */
+    bool configure_primary_vlan_id(const uint16_t vlan_id, bool add) override;
+
+    /**
      * @brief Sends a CDMU message to the transport process for dispatching.
      *
      * @see BrokerClient::send_cmdu()
