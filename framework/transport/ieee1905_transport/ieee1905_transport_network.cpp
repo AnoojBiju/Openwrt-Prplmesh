@@ -70,8 +70,10 @@ bool Ieee1905Transport::update_network_interface(const std::string &bridge_name,
         // Add the new interface to network_interfaces_
         unsigned int if_index = if_nametoindex(ifname.c_str());
         if (if_index == 0) {
-            MAPF_ERR("Failed to get index for interface " << ifname);
+            MAPF_ERR("Failed to get index for interface " << ifname << " errno "
+                                                          << strerror(errno));
             remove_network_interface(ifname);
+            pending_network_interfaces_.push_back(ifname);
             return false;
         }
 
@@ -86,6 +88,7 @@ bool Ieee1905Transport::update_network_interface(const std::string &bridge_name,
             MAPF_ERR("Failed to get address of interface " << ifname << " with index " << if_index
                                                            << ".");
             remove_network_interface(ifname);
+            pending_network_interfaces_.push_back(ifname);
             return false;
         }
 
@@ -260,6 +263,20 @@ void Ieee1905Transport::handle_interface_state_change(const std::string &ifname,
     auto it = network_interfaces_.find(ifname);
     if (it == network_interfaces_.end()) {
         MAPF_INFO("Ignoring event from untracked interface " << ifname << ".");
+
+        if (pending_network_interfaces_.empty())
+            return;
+
+        auto iter = std::find(pending_network_interfaces_.begin(),
+                              pending_network_interfaces_.end(), ifname);
+        if (iter != pending_network_interfaces_.end() && is_active) {
+            if (update_network_interface(bridge_name_, ifname, true, false)) {
+                MAPF_INFO("Activated pending network interface " << ifname << ".");
+                pending_network_interfaces_.erase(iter);
+            } else {
+                MAPF_INFO("Failed to create raw socket for " << ifname << ".");
+            }
+        }
         return;
     }
     auto &interface = it->second;
