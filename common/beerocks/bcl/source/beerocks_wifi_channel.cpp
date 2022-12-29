@@ -331,21 +331,21 @@ bool WifiChannel::are_params_valid(uint8_t channel, eFreqType freq_type, uint16_
                            << "MHz of channel " << channel << " in 6ghz channels table.";
                 return false;
             }
-        }
 
-        if (bandwidth == eWiFiBandwidth::BANDWIDTH_160) {
-            /*
+            if (bandwidth == eWiFiBandwidth::BANDWIDTH_160) {
+                /*
             According to the standard, center_frequency_1 shall be the center frequency
             of the primary 80MHz channel, and center_frequency_2 shall be the center frequency
             of the 160MHz channel
             */
-            auto primary_80mhz_center_channel_it =
-                channel_it->second.find(eWiFiBandwidth::BANDWIDTH_80);
-            if (primary_80mhz_center_channel_it == channel_it->second.end()) {
-                LOG(ERROR) << "Failed find channel's " << channel
-                           << " primary center channel of bandwidth 80MHz from "
-                              "channels_table_6g. ";
-                return false;
+                auto primary_80mhz_center_channel_it =
+                    channel_it->second.find(eWiFiBandwidth::BANDWIDTH_80);
+                if (primary_80mhz_center_channel_it == channel_it->second.end()) {
+                    LOG(ERROR) << "Failed find channel's " << channel
+                               << " primary center channel of bandwidth 80MHz from "
+                                  "channels_table_6g. ";
+                    return false;
+                }
             }
         }
     } break;

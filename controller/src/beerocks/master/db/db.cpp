@@ -2082,6 +2082,8 @@ bool db::add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t
                 // These classes contains only centre channels
                 beerocks::WifiChannel ch(c, wireless_utils::channel_to_freq(c, freq_type),
                                          op_class_bw);
+                ch.set_tx_power(tx_power);
+                supported_channels.push_back(ch);
             } else {
                 beerocks::WifiChannel ch(c, freq_type, op_class_bw);
                 ch.set_tx_power(tx_power);
