@@ -2075,13 +2075,19 @@ bool db::add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t
         if (channel != supported_channels.end()) {
             channel->set_tx_power(tx_power);
             channel->set_bandwidth(op_class_bw);
-	//} else if (!son::wireless_utils::is_operating_class_using_central_channel(
-        //               operating_class)) {
-	} else {
-            beerocks::WifiChannel ch(c, freq_type, op_class_bw);
-            ch.set_tx_power(tx_power);
-            supported_channels.push_back(ch);
-	}
+            //} else if (!son::wireless_utils::is_operating_class_using_central_channel(
+            //               operating_class)) {
+        } else {
+            if (son::wireless_utils::is_operating_class_using_central_channel(operating_class)) {
+                // These classes contains only centre channels
+                beerocks::WifiChannel ch(c, wireless_utils::channel_to_freq(c, freq_type),
+                                         op_class_bw);
+            } else {
+                beerocks::WifiChannel ch(c, freq_type, op_class_bw);
+                ch.set_tx_power(tx_power);
+                supported_channels.push_back(ch);
+            }
+        }
     }
 
     // Delete non-operable channels
@@ -2090,9 +2096,10 @@ bool db::add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t
             std::find_if(supported_channels.begin(), supported_channels.end(),
                          [&c](const beerocks::WifiChannel &ch) { return ch.get_channel() == c; });
         if (channel != supported_channels.end()) {
-            LOG(DEBUG) << "CW: erasing channel = " << channel->get_channel() << " bw = " << channel->get_bandwidth();
+            LOG(DEBUG) << "CW: erasing channel = " << channel->get_channel()
+                       << " bw = " << channel->get_bandwidth();
             supported_channels.erase(channel);
-	}
+        }
     }
 
     // Set values for Device.WiFi.DataElements.Network.Device.Radio.Capabilities.OperatingClasses
@@ -2102,8 +2109,8 @@ bool db::add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t
     set_hostap_supported_channels(radio_mac, &supported_channels[0], supported_channels.size());
     // dump new supported channels state
     LOG(DEBUG) << "New supported channels for hostap" << radio_mac << " operating class "
-                << int(operating_class) << std::endl
-                << get_hostap_supported_channels_string(radio_mac);
+               << int(operating_class) << std::endl
+               << get_hostap_supported_channels_string(radio_mac);
 
     return true;
 }
@@ -3098,15 +3105,19 @@ int8_t db::get_channel_preference(const sMacAddr &radio_mac, const uint8_t opera
 
     LOG(DEBUG) << "CW: supported channel list ";
     for (auto &it1 : supported_channels) {
-	    LOG(DEBUG) << "CW: channel = " << it1.get_channel() << " chan.get_bandwidth() = " << it1.get_bandwidth(); 
+        LOG(DEBUG) << "CW: channel = " << it1.get_channel()
+                   << " chan.get_bandwidth() = " << it1.get_bandwidth();
     }
 
     // Find if the channel is supported by the radio
     if (std::find_if(supported_channels.begin(), supported_channels.end(),
                      [channel, bw, &freq_type](const beerocks::WifiChannel chan) {
-		         LOG(DEBUG) << "CW: chan.get_channel() = " << chan.get_channel() << " channel = " << channel;
-			 LOG(DEBUG) << "CW: chan.get_bandwidth() = " << chan.get_bandwidth() << " bw = " << bw; 
-			 LOG(DEBUG) << "CW: chan.get_freq_type() = " << chan.get_freq_type() << " freq_type = " << freq_type;
+                         LOG(DEBUG) << "CW: chan.get_channel() = " << chan.get_channel()
+                                    << " channel = " << channel;
+                         LOG(DEBUG) << "CW: chan.get_bandwidth() = " << chan.get_bandwidth()
+                                    << " bw = " << bw;
+                         LOG(DEBUG) << "CW: chan.get_freq_type() = " << chan.get_freq_type()
+                                    << " freq_type = " << freq_type;
                          // Find if matching channel number & bandwidth.
                          return ((chan.get_channel() == channel) && (chan.get_bandwidth() == bw) &&
                                  chan.get_freq_type() == freq_type);
@@ -3121,7 +3132,8 @@ int8_t db::get_channel_preference(const sMacAddr &radio_mac, const uint8_t opera
     const auto key  = std::make_pair(operating_class, channel);
     const auto iter = radio->channel_preference_report.find(key);
     if (iter == radio->channel_preference_report.end()) {
-        LOG(DEBUG) << "CW: Returning pref rank as best " << (int8_t)eChannelPreferenceRankingConsts::BEST;
+        LOG(DEBUG) << "CW: Returning pref rank as best "
+                   << (int8_t)eChannelPreferenceRankingConsts::BEST;
         // Key is not found on radio's preference, returning BEST
         return (int8_t)eChannelPreferenceRankingConsts::BEST;
     }

@@ -264,6 +264,20 @@ void WifiChannel::initialize_wifi_channel_members(uint8_t channel, eFreqType fre
 bool WifiChannel::are_params_valid(uint8_t channel, eFreqType freq_type, uint16_t center_frequency,
                                    eWiFiBandwidth bandwidth)
 {
+    auto is_centre_channel = [&]() -> bool {
+        if (bandwidth >= eWiFiBandwidth::BANDWIDTH_80) {
+            for (const auto &oper_class : son::wireless_utils::operating_classes_list) {
+                if (oper_class.second.band == bandwidth &&
+                    oper_class.second.channels.find(channel) != oper_class.second.channels.end()) {
+                    LOG(DEBUG) << "CW: channel " << channel
+                               << " has oper_class = " << oper_class.first;
+                    return son::wireless_utils::is_operating_class_using_central_channel(
+                        oper_class.first);
+                }
+            }
+        }
+        return false;
+    };
     if (bandwidth == eWiFiBandwidth::BANDWIDTH_UNKNOWN ||
         bandwidth == eWiFiBandwidth::BANDWIDTH_MAX) {
         LOG(ERROR) << "The bandwidth Failed be "
@@ -292,27 +306,31 @@ bool WifiChannel::are_params_valid(uint8_t channel, eFreqType freq_type, uint16_
         }
     } break;
     case eFreqType::FREQ_5G: {
-        auto channel_it = son::wireless_utils::channels_table_5g.find(channel);
-        if (channel_it == son::wireless_utils::channels_table_5g.end()) {
-            LOG(ERROR) << "Failed find " << channel << " channel in 5ghz channels table.";
-            return false;
-        } else if (channel_it->second.find(bandwidth) == channel_it->second.end()) {
-            LOG(ERROR) << "Failed find bandwidth "
-                       << beerocks::utils::convert_bandwidth_to_int(bandwidth) << "MHz of channel "
-                       << channel << " in 5ghz channels table.";
-            return false;
+        if (!is_centre_channel()) {
+            auto channel_it = son::wireless_utils::channels_table_5g.find(channel);
+            if (channel_it == son::wireless_utils::channels_table_5g.end()) {
+                LOG(ERROR) << "Failed find " << channel << " channel in 5ghz channels table.";
+                return false;
+            } else if (channel_it->second.find(bandwidth) == channel_it->second.end()) {
+                LOG(ERROR) << "Failed find bandwidth "
+                           << beerocks::utils::convert_bandwidth_to_int(bandwidth)
+                           << "MHz of channel " << channel << " in 5ghz channels table.";
+                return false;
+            }
         }
     } break;
     case eFreqType::FREQ_6G: {
-        auto channel_it = son::wireless_utils::channels_table_6g.find(channel);
-        if (channel_it == son::wireless_utils::channels_table_6g.end()) {
-            LOG(ERROR) << "Failed find " << channel << " channel in 6ghz channels table.";
-            return false;
-        } else if (channel_it->second.find(bandwidth) == channel_it->second.end()) {
-            LOG(ERROR) << "Failed find bandwidth "
-                       << beerocks::utils::convert_bandwidth_to_int(bandwidth) << "MHz of channel "
-                       << channel << " in 6ghz channels table.";
-            return false;
+        if (!is_centre_channel()) {
+            auto channel_it = son::wireless_utils::channels_table_6g.find(channel);
+            if (channel_it == son::wireless_utils::channels_table_6g.end()) {
+                LOG(ERROR) << "Failed find " << channel << " channel in 6ghz channels table.";
+                return false;
+            } else if (channel_it->second.find(bandwidth) == channel_it->second.end()) {
+                LOG(ERROR) << "Failed find bandwidth "
+                           << beerocks::utils::convert_bandwidth_to_int(bandwidth)
+                           << "MHz of channel " << channel << " in 6ghz channels table.";
+                return false;
+            }
         }
 
         if (bandwidth == eWiFiBandwidth::BANDWIDTH_160) {
