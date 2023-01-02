@@ -3210,7 +3210,8 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
     }
 
     if (!link_to_controller()) {
-        LOG(DEBUG) << "link_to_controller is broken!";
+        //Removing this log since it is flooding.
+        //LOG(DEBUG) << "link_to_controller is broken!";
         return true;
     }
 
