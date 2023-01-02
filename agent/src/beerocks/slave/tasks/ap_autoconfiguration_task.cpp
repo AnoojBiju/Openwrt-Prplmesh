@@ -184,6 +184,7 @@ void ApAutoConfigurationTask::work()
     if (configured_aps_count > 0 && configured_aps_count == m_radios_conf_params.size()) {
         db->statuses.ap_autoconfiguration_completed = true;
         m_task_is_active                            = false;
+        LOG(DEBUG) << "Link to the controller is established";
     }
 }
 
