@@ -177,6 +177,33 @@ bool bpl_cfg_get_wireless_settings(std::list<son::wireless_utils::sBssInfoConf> 
             continue;
         }
 
+        std::string exclude_hostap_iface;
+        if (!uci_get_option("prplmesh", "prplmesh", "config", "exclude_hostap_iface",
+                            exclude_hostap_iface)) {
+            LOG(DEBUG) << "Failed to get 'exclude_hostap_iface' from prplmesh configuration";
+        }
+
+        if (exclude_hostap_iface == "1") {
+            std::string ifname;
+            if (!uci_get_option(package_name, section_type, section_name, "ifname",
+                                ifname)) { //ifname = wlan0 or wlan0.0 etc
+                LOG(DEBUG) << "No 'ifname' found for section " << section_name;
+                continue;
+            }
+
+            std::string base_radio;
+            if (!uci_find_section_by_option("prplmesh", "wifi-device", "hostap_iface", ifname,
+                                            base_radio)) {
+                LOG(DEBUG) << "Failed to get hostap-iface from section prplmesh configuration";
+                continue;
+            }
+
+            // Silently ignore radio configurations, only VAPS are needed.
+            if (!base_radio.empty()) {
+                continue;
+            }
+        }
+
         std::string hidden;
         uci_get_option(package_name, section_type, section_name, "hidden", hidden);
         // the hidden option might not exist, in which case we treat
