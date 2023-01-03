@@ -291,8 +291,7 @@ public:
              */
             int update_vap_id(int vap_id_) const
             {
-                if ((vap_id == beerocks::eBeeRocksIfaceIds::IFACE_ID_INVALID) &&
-                    (vap_id_ >= beerocks::eBeeRocksIfaceIds::IFACE_VAP_ID_MIN)) {
+                if ((vap_id_ >= beerocks::eBeeRocksIfaceIds::IFACE_VAP_ID_MIN)) {
                     vap_id = vap_id_;
                 }
                 return vap_id;

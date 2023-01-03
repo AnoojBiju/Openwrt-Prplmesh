@@ -1566,7 +1566,7 @@ void ApAutoConfigurationTask::handle_vs_ap_enabled_notification(
 
     const auto &vap_info = notification_in->vap_info();
     auto bssid           = std::find_if(radio->front.bssids.begin(), radio->front.bssids.end(),
-                              [&vap_info](const beerocks::AgentDB::sRadio::sFront::sBssid &bssid) {
+                                        [&vap_info](const beerocks::AgentDB::sRadio::sFront::sBssid &bssid) {
                                   return bssid.mac == vap_info.mac;
                               });
     if (bssid == radio->front.bssids.end()) {
@@ -1594,6 +1594,7 @@ void ApAutoConfigurationTask::handle_vs_ap_enabled_notification(
 
     notification_out->vap_id()   = notification_in->vap_id();
     notification_out->vap_info() = notification_in->vap_info();
+    LOG(DEBUG) << "********THE VALUE OF IFNAME******" << notification_in->vap_info().iface_name;
     m_btl_ctx.send_cmdu_to_controller(radio->front.iface_name, m_cmdu_tx);
 
     // Marked BSSID as "enabled".
