@@ -1139,6 +1139,16 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
 
         state_time_stamp_timeout =
             std::chrono::steady_clock::now() + std::chrono::seconds(STATE_WAIT_WPS_TIMEOUT_SECONDS);
+        // check if we are still waiting for WPS although sta is connected
+        for (auto &radio_info : m_radios_info) {
+            std::string iface = radio_info->sta_iface;
+            if (radio_info->sta_iface.empty() && !radio_info->sta_wlan_hal) {
+                continue;
+            }
+            if (!roam_flag && radio_info->sta_wlan_hal->is_connected()) {
+                radio_info->sta_wlan_hal->reassociate();
+            }
+        }
         FSM_MOVE_STATE(WAIT_WPS);
         break;
     }
@@ -1150,23 +1160,6 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
             LOG(ERROR) << STATE_WAIT_WPS_TIMEOUT_SECONDS
                        << " seconds has passed on state WAIT_WPS, move state to RESTART!";
             FSM_MOVE_STATE(RESTART);
-        }
-
-        // check if we are still waiting for WPS although sta is connected
-        for (auto &radio_info : m_radios_info) {
-            std::string iface = radio_info->sta_iface;
-            if (radio_info->sta_iface.empty()) {
-                continue;
-            }
-            if (!roam_flag && radio_info->sta_wlan_hal->is_connected()) {
-                for (const auto &sta_iface : slave_sta_ifaces) {
-                    auto sta_iface_hal = get_wireless_hal(sta_iface);
-                    if (!sta_iface_hal) {
-                        break;
-                    }
-                    sta_iface_hal->reassociate();
-                }
-            }
         }
 
         break;
