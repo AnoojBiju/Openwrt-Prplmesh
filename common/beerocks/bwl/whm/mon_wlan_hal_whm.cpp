@@ -7,6 +7,7 @@
  */
 
 #include "mon_wlan_hal_whm.h"
+#include <bwl/mon_wlan_hal_types.h>
 
 #include <amxd/amxd_object.h>
 #include <bcl/beerocks_utils.h>
@@ -45,8 +46,9 @@ mon_wlan_hal_whm::mon_wlan_hal_whm(const std::string &iface_name, hal_event_cb_t
 {
     subscribe_to_ap_events();
     subscribe_to_sta_events();
+    subscribe_to_scan_complete_events();
 }
-subscribe_to_scan_complete_events();
+
 mon_wlan_hal_whm::~mon_wlan_hal_whm() {}
 
 bool mon_wlan_hal_whm::update_radio_stats(SRadioStats &radio_stats)
@@ -178,20 +180,259 @@ bool mon_wlan_hal_whm::sta_link_measurements_11k_request(const std::string &vap_
 bool mon_wlan_hal_whm::channel_scan_trigger(int dwell_time_msec,
                                             const std::vector<unsigned int> &channel_pool)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
-    return false;
+    if (m_scan_active) {
+        AmbiorixVariant result_abort;
+        AmbiorixVariant args_abort(AMXC_VAR_ID_HTABLE);
+        //scan is already active, as per spec, cancel the old one and start new one
+        if (!m_ambiorix_cl->call(m_radio_path, "stopScan", args_abort, result_abort)) {
+            LOG(INFO) << " remote function stopScan Failed!";
+            m_scan_active =
+                false; // if for some reasons, no scan is active, stopScan will return error, thus the need to reset m_scan_active
+            event_queue_push(Event::Channel_Scan_Aborted);
+        }
+    }
+
+    if (channel_pool.empty()) {
+        LOG(INFO) << "channel_pool is empty!, scanning all channels";
+    }
+
+    std::string channels;
+    if (!channel_pool.empty()) {
+        for (auto &input_channel : channel_pool) {
+            channels += std::to_string(input_channel);
+            channels += ",";
+        }
+        channels.pop_back();
+    }
+
+    AmbiorixVariant result;
+    AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
+    if (!channels.empty()) {
+        args.add_child<>("channels", channels);
+    }
+    if (!m_ambiorix_cl->call(m_radio_path, "startScan", args, result)) {
+        LOG(ERROR) << " remote function call startScan Failed!";
+        return false;
+    }
+    event_queue_push(Event::Channel_Scan_Triggered);
+    m_scan_active = true;
+    return true;
 }
 
 bool mon_wlan_hal_whm::channel_scan_dump_cached_results()
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    auto get_bandwidth_from_int = [](const int32_t bw) -> bwl::eChannelScanResultChannelBandwidth {
+        if (bw == 20) {
+            return bwl::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_20MHz;
+        } else if (bw == 40) {
+            return bwl::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_40MHz;
+        } else if (bw == 80) {
+            return bwl::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_80MHz;
+        } else if (bw == 160) {
+            return bwl::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_160MHz;
+        } else {
+            return bwl::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_NA;
+        }
+    };
+
+    auto eFreqType_to_eChannelScanResultOperatingFrequencyBand =
+        [](const beerocks::eFreqType freq_type) {
+            switch (freq_type) {
+            case FREQ_24G: {
+                return bwl::eChannelScanResultOperatingFrequencyBand::eOperating_Freq_Band_2_4GHz;
+            }
+            case FREQ_5G: {
+                return bwl::eChannelScanResultOperatingFrequencyBand::eOperating_Freq_Band_5GHz;
+            }
+            case FREQ_24G_5G: {
+                return bwl::eChannelScanResultOperatingFrequencyBand::eOperating_Freq_Band_2_4GHz;
+            }
+            default: {
+                return bwl::eChannelScanResultOperatingFrequencyBand::eOperating_Freq_Band_NA;
+            }
+            }
+        };
+
+    //read stats from pwhm
+    AmbiorixVariant result;
+    AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
+    if (!m_ambiorix_cl->call(m_radio_path, "getScanResults", args, result)) {
+        LOG(ERROR) << " remote function call getScanResults Failed!";
+        return false;
+    }
+    AmbiorixVariantListSmartPtr scan_results_list =
+        result.read_children<AmbiorixVariantListSmartPtr>();
+    if (!scan_results_list) {
+        LOG(ERROR) << "failed reading scan_results!";
+        return false;
+    }
+
+    auto results_as_wrapped_list = scan_results_list->front();
+    if (results_as_wrapped_list.empty()) {
+        LOG(ERROR) << "getScanResults wrapped list is empty!";
+        return false;
+    }
+
+    auto ssid_results_as_list =
+        results_as_wrapped_list.read_children<AmbiorixVariantListSmartPtr>();
+
+    for (auto &ssid_results_map : *ssid_results_as_list) {
+
+        auto data_map = ssid_results_map.read_children<AmbiorixVariantMapSmartPtr>();
+
+        auto &map = *data_map;
+
+        auto results_notif = std::make_shared<sCHANNEL_SCAN_RESULTS_NOTIFICATION>();
+        auto &results      = results_notif->channel_scan_results;
+
+        if (map.find("SSID") == map.end()) {
+            LOG(DEBUG) << " no SSID, skipping...";
+            continue;
+        }
+        std::string ssid;
+        map["SSID"].get(ssid);
+        string_utils::copy_string(results.ssid, ssid.c_str(),
+                                  beerocks::message::WIFI_SSID_MAX_LENGTH);
+
+        if (map.find("BSSID") != map.end()) {
+            std::string bssid;
+            map["BSSID"].get(bssid);
+            results.bssid = tlvf::mac_from_string(bssid);
+        } else {
+            LOG(DEBUG) << " no BSSID, skipping...";
+            continue;
+        }
+
+        int32_t center_channel(0);
+        if (map.find("CentreChannel") != map.end()) {
+            map["CentreChannel"].get(center_channel);
+        }
+
+        int32_t bandwidth(0);
+        if (map.find("Bandwidth") != map.end()) {
+
+            map["Bandwidth"].get(bandwidth);
+            results.operating_channel_bandwidth = get_bandwidth_from_int(bandwidth);
+        }
+
+        if (map.find("Channel") != map.end()) {
+            map["Channel"].get(results.channel);
+        } else {
+            LOG(DEBUG) << " no Channel, skipping...";
+            continue;
+        }
+        if (results.channel <= 0) {
+            LOG(DEBUG) << "Channel value= " << results.channel << " is not valid, skipping...";
+            continue;
+        }
+
+        WifiChannel wifi_channel(results.channel, center_channel,
+                                 utils::convert_bandwidth_to_enum(bandwidth));
+        results.operating_frequency_band =
+            eFreqType_to_eChannelScanResultOperatingFrequencyBand(wifi_channel.get_freq_type());
+
+        if (map.find("RSSI") != map.end()) {
+            map["RSSI"].get(results.signal_strength_dBm);
+        } else {
+            LOG(DEBUG) << " no RSSI, skipping...";
+            continue;
+        }
+
+        if (map.find("Noise") != map.end()) {
+            map["RSSI"].get(results.noise_dBm);
+        }
+
+        if (map.find("SecurityModeEnabled") != map.end()) {
+            std::string security_mode_enabled;
+            map["SecurityModeEnabled"].get(security_mode_enabled);
+            if (security_mode_enabled.find("WEP-") != std::string::npos) {
+                results.security_mode_enabled.push_back(
+                    bwl::eChannelScanResultSecurityMode::eSecurity_Mode_WEP);
+            }
+            if (security_mode_enabled.find("WPA-") != std::string::npos) {
+                results.security_mode_enabled.push_back(
+                    bwl::eChannelScanResultSecurityMode::eSecurity_Mode_WPA);
+            }
+            if (security_mode_enabled.find("WPA2-") != std::string::npos) {
+                results.security_mode_enabled.push_back(
+                    bwl::eChannelScanResultSecurityMode::eSecurity_Mode_WPA2);
+            }
+            if (security_mode_enabled.find("WPA3-") != std::string::npos) {
+                results.security_mode_enabled.push_back(
+                    bwl::eChannelScanResultSecurityMode::eSecurity_Mode_WPA3);
+            }
+        }
+
+        if (map.find("EncryptionMode") != map.end()) {
+            std::string encryption_mode;
+            map["EncryptionMode"].get(encryption_mode);
+
+            if (encryption_mode.find("Default") != std::string::npos) {
+                results.encryption_mode.push_back(
+                    bwl::eChannelScanResultEncryptionMode::eEncryption_Mode_NA);
+            }
+            if (encryption_mode.find("AES") != std::string::npos) {
+                results.encryption_mode.push_back(
+                    bwl::eChannelScanResultEncryptionMode::eEncryption_Mode_AES);
+            }
+            if (encryption_mode.find("TKIP") != std::string::npos) {
+                results.encryption_mode.push_back(
+                    bwl::eChannelScanResultEncryptionMode::eEncryption_Mode_TKIP);
+            }
+        }
+
+        if (map.find("OperatingStandards") != map.end()) {
+            std::string supported_standards;
+            map["OperatingStandards"].get(supported_standards);
+
+            std::unordered_set<std::string>
+                all_standards; // split the standards received as a string, mostly to differentiate between a, ac and ax
+            const char *delim = ",";
+            char *token       = strtok(&supported_standards[0], delim);
+            while (token) {
+                all_standards.insert(std::string(token));
+                token = strtok(NULL, delim);
+            }
+
+            if (all_standards.find("a") != all_standards.end()) {
+                results.supported_standards.push_back(
+                    bwl::eChannelScanResultStandards::eStandard_802_11a);
+            }
+            if (all_standards.find("b") != all_standards.end()) {
+                results.supported_standards.push_back(
+                    bwl::eChannelScanResultStandards::eStandard_802_11b);
+            }
+            if (all_standards.find("g") != all_standards.end()) {
+                results.supported_standards.push_back(
+                    bwl::eChannelScanResultStandards::eStandard_802_11g);
+            }
+            if (all_standards.find("n") != all_standards.end()) {
+                results.supported_standards.push_back(
+                    bwl::eChannelScanResultStandards::eStandard_802_11n);
+            }
+            if (all_standards.find("ac") != all_standards.end()) {
+                results.supported_standards.push_back(
+                    bwl::eChannelScanResultStandards::eStandard_802_11ac);
+            }
+            if (all_standards.find("ax") != all_standards.end()) {
+                results.supported_standards.push_back(
+                    bwl::eChannelScanResultStandards::eStandard_802_11ax);
+            }
+        }
+
+        LOG(DEBUG) << "Processing results for BSSID:" << results.bssid
+                   << " on Channel: " << results.channel;
+        event_queue_push(Event::Channel_Scan_Dump_Result, results_notif);
+        event_queue_push(Event::Channel_Scan_New_Results_Ready, results_notif);
+    }
+
     return true;
 }
 
 bool mon_wlan_hal_whm::channel_scan_dump_results()
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
-    return false;
+    //same logic ad the cached one
+    return channel_scan_dump_cached_results();
 }
 
 bool mon_wlan_hal_whm::generate_connected_clients_events(
@@ -267,8 +508,14 @@ bool mon_wlan_hal_whm::pre_generate_connected_clients_events()
 
 bool mon_wlan_hal_whm::channel_scan_abort()
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
-    return false;
+    AmbiorixVariant result;
+    AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
+    if (!m_ambiorix_cl->call(m_radio_path, "stopScan", args, result)) {
+        LOG(ERROR) << " remote function call stopScan Failed!";
+        return false;
+    }
+    event_queue_push(Event::Channel_Scan_Aborted);
+    return true;
 }
 
 bool mon_wlan_hal_whm::process_ap_event(const std::string &interface, const std::string &key,
@@ -479,7 +726,26 @@ bool mon_wlan_hal_whm::sta_unassoc_rssi_measurement(
                      msg_buff); // send message internally the monitor
 
     return true;
-} // namespace whm
+}
+
+bool mon_wlan_hal_whm::process_scan_complete_event(
+    const beerocks::wbapi::AmbiorixVariant *event_data)
+{
+    if (m_scan_active) {
+        std::string result;
+        if (!event_data->read_child<>(result, "Result")) {
+            LOG(WARNING) << " Received a " << AMX_CL_SCAN_COMPLETE_EVT
+                         << " Notification without Result param!";
+        }
+        if (result == "done") {
+            event_queue_push(Event::Channel_Scan_Finished);
+        } else if (result == "error") {
+            event_queue_push(Event::Channel_Scan_Aborted);
+        }
+        m_scan_active = false;
+    }
+    return true;
+}
 
 } // namespace whm
 

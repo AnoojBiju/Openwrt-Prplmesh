@@ -95,6 +95,10 @@ private:
     bool process_sta_event(const std::string &interface, const std::string &sta_mac,
                            const std::string &key,
                            const beerocks::wbapi::AmbiorixVariant *value) override;
+    virtual bool
+    process_scan_complete_event(const beerocks::wbapi::AmbiorixVariant *value) override;
+
+    bool m_scan_active = false;
 };
 
 } // namespace whm
