@@ -35,6 +35,11 @@ void Ieee1905Transport::handle_broker_pollin_event(std::unique_ptr<messages::Mes
                  << std::endl
                  << *al_mac_addr_configuration_msg);
         handle_al_mac_addr_configuration_message(*al_mac_addr_configuration_msg);
+    } else if (auto *vlan_configuration_msg =
+                   dynamic_cast<VlanConfigurationRequestMessage *>(msg.get())) {
+        MAPF_DBG("received VlanConfigurationRequestMessage message:" << std::endl
+                                                                     << *vlan_configuration_msg);
+        handle_vlan_configuration_request_message(*vlan_configuration_msg);
     } else {
         // should never receive messages which we are not subscribed to
         MAPF_WARN("received un-expected message:" << std::endl << *msg);
@@ -105,6 +110,7 @@ void Ieee1905Transport::handle_broker_interface_configuration_request_message(
 
     if (msg.metadata()->is_bridge) {
         auto bridge_name = msg.metadata()->iface_name;
+        bridge_name_     = bridge_name;
         MAPF_INFO("Using bridge: " << bridge_name);
 
         // fill a set with the interfaces that are part of the bridge:
@@ -155,6 +161,15 @@ void Ieee1905Transport::handle_al_mac_addr_configuration_message(
     MAPF_INFO("Using AL MAC: " << al_mac);
 
     set_al_mac_addr(al_mac.oct);
+}
+
+void Ieee1905Transport::handle_vlan_configuration_request_message(
+    VlanConfigurationRequestMessage &msg)
+{
+    auto primary_vlan_id = msg.metadata()->vlan_id;
+    MAPF_INFO("Using Primary Vlan ID: " << primary_vlan_id << " add =" << msg.metadata()->add);
+
+    set_primary_vlan_id(primary_vlan_id, msg.metadata()->add);
 }
 
 bool Ieee1905Transport::send_packet_to_broker(Packet &packet)

@@ -67,6 +67,11 @@ void TrafficSeparation::clear_configuration()
     db->traffic_separation.ssid_vid_mapping.clear();
     network_utils::set_vlan_filtering(db->bridge.iface_name, 0);
 
+    // Remove the Primary Vlan configuration in Transport process
+    if (!m_broker_client->configure_primary_vlan_id(0, false)) {
+        LOG(ERROR) << "Failed configuring transport process!";
+    }
+
     // Reset the transport monitoring on bridge interfaces
     if (!m_broker_client->configure_interfaces(db->bridge.iface_name, {}, true, true)) {
         LOG(ERROR) << "Failed configuring transport process!";
@@ -88,6 +93,12 @@ void TrafficSeparation::apply_policy(const std::string &radio_iface)
     }
 
     LOG(DEBUG) << "Apply traffic separation policy";
+
+    // Configure the Primary VLAN in Transport Process
+    if (!m_broker_client->configure_primary_vlan_id(db->traffic_separation.primary_vlan_id, true)) {
+        LOG(ERROR) << "Failed configuring transport process!";
+    }
+
     // The Bridge, the WAN ports and the LAN ports should all have "Tagged Port" policy.
     // Update the Bridge Policy
     bool is_bridge = true;
@@ -117,58 +128,12 @@ void TrafficSeparation::apply_policy(const std::string &radio_iface)
             return;
         }
 
-        // Delete old VLAN interface, since it is not possible to modify the VLAN ID of an
-        // interface. Only removing and re-create it.
-        auto vlan_iface_name = db->backhaul.selected_iface_name + DOT_PVID_SUFFIX;
-        LOG(DEBUG) << "Deleting iface " << vlan_iface_name;
-        network_utils::delete_interface(vlan_iface_name);
-        LOG(DEBUG) << "iface " << vlan_iface_name << " deleted successfully";
-
-        bool vlan_iface_added = false;
-
         if (db->backhaul.bssid_multi_ap_profile > 1) {
-
-            // Since multicast messages are not bridged (c83c81fa), and instead of being sent to all
-            // interfaces, they will lack a VLAN tag. To overcome it, add a VLAN interface with the
-            // Primary VLAN on the backhaul interface. Only a Primary VLAN is needed since it is the
-            // only VLAN that IEEE 1905.1 messages could be sent on.
-            // Use ".pvid" suffix so it will be easy to change the VLAN ID if changed by the
-            // Controller.
-            // The same is done on any Profile 2 bAP interface.
-            network_utils::create_vlan_interface(db->backhaul.selected_iface_name,
-                                                 db->traffic_separation.primary_vlan_id,
-                                                 PVID_SUFFIX);
-            vlan_iface_added = true;
-
-            if (!network_utils::linux_iface_ctrl(vlan_iface_name, true)) {
-                LOG(ERROR) << "Failed to bring up iface " << vlan_iface_name;
-            }
-
-            LOG(DEBUG) << "Adding iface " << vlan_iface_name << " to the bridge";
-            if (!beerocks::net::network_utils::linux_add_iface_to_bridge(db->bridge.iface_name,
-                                                                         vlan_iface_name)) {
-                LOG(ERROR) << "Failed to add iface " << vlan_iface_name << " to bridge "
-                           << db->bridge.iface_name;
-                return;
-            }
-            LOG(DEBUG) << "iface " << vlan_iface_name << " was added to the bridge successfully";
-
             set_vlan_policy(radio->back.iface_name, ePortMode::TAGGED_PORT_PRIMARY_TAGGED,
                             is_bridge);
         } else {
             set_vlan_policy(radio->back.iface_name, ePortMode::UNTAGGED_PORT, is_bridge);
         }
-
-        // If a VLAN interface has beed added remove the wireless interface from transport
-        // monitoring so a packet will not be sent twice, otherwise add it.
-        if (!m_broker_client->configure_interfaces(db->backhaul.selected_iface_name,
-                                                   db->bridge.iface_name, false,
-                                                   !vlan_iface_added)) {
-            LOG(ERROR) << "Failed configuring transport process!";
-        }
-
-        LOG(DEBUG) << "Removed " << db->backhaul.selected_iface_name
-                   << " from transport configuration";
     }
 
     // If radio interface has not been given, then stop configuring the VLAN policy after finished
@@ -233,47 +198,9 @@ void TrafficSeparation::apply_policy(const std::string &radio_iface)
 
             for (const auto &bss_iface_netdev : bss_iface_netdevs) {
 
-                // Delete old VLAN interface, since it is not possible to modify the VLAN ID of an
-                // interface. Only removing and re-create it.
-                if (string_utils::endswith(bss_iface_netdev, DOT_PVID_SUFFIX)) {
-                    LOG(DEBUG) << "Deleting interface " << bss_iface_netdev;
-                    network_utils::delete_interface(bss_iface_netdev);
-                    LOG(DEBUG) << "Interface " << bss_iface_netdev << " deleted successfully";
-                    continue;
-                }
-                auto vlan_iface_name  = bss_iface_netdev + DOT_PVID_SUFFIX;
-                auto vlan_iface_added = false;
-
                 // Profile-2 Backhaul BSS
                 if (bss.backhaul_bss_disallow_profile1_agent_association ||
                     m_profile_x_disallow_override_unsupported_configuration == 1) {
-
-                    // Since multicast messages are not bridged (c83c81fa), and instead of being
-                    // sent to all interfaces, they will lack a VLAN tag. To overcome it, add a VLAN
-                    // interfacewith the Primary VLAN on the backhaul interface. Only a Primary VLAN
-                    // is needed since it is the only VLAN that IEEE 1905.1 messages could be sent
-                    // on.
-                    // Use ".pvid" suffix so it will be easy to change the VLAN ID if changed by the
-                    // Controller.
-                    // The same is done on the Profile 2 bSTA interface.
-                    network_utils::create_vlan_interface(
-                        bss_iface_netdev, db->traffic_separation.primary_vlan_id, PVID_SUFFIX);
-                    vlan_iface_added = true;
-
-                    if (!network_utils::linux_iface_ctrl(vlan_iface_name, true)) {
-                        LOG(ERROR) << "Failed to bring up iface " << vlan_iface_name;
-                    }
-
-                    LOG(DEBUG) << "Adding iface " << vlan_iface_name << " to the bridge";
-                    if (!beerocks::net::network_utils::linux_add_iface_to_bridge(
-                            db->bridge.iface_name, vlan_iface_name)) {
-                        LOG(ERROR) << "Failed to add iface " << vlan_iface_name << " to bridge "
-                                   << db->bridge.iface_name;
-                        return;
-                    }
-                    LOG(DEBUG) << "iface " << vlan_iface_name
-                               << " was added to the bridge successfully";
-
                     set_vlan_policy(bss_iface_netdev, ePortMode::TAGGED_PORT_PRIMARY_TAGGED,
                                     is_bridge);
                 }
@@ -282,14 +209,6 @@ void TrafficSeparation::apply_policy(const std::string &radio_iface)
                     set_vlan_policy(bss_iface_netdev, ePortMode::UNTAGGED_PORT, is_bridge,
                                     db->traffic_separation.primary_vlan_id);
                 }
-
-                // If a VLAN interface has beed added remove the wireless interface from transport
-                // monitoring so a packet will not be sent twice, otherwise add it.
-                if (!m_broker_client->configure_interfaces(bss_iface_netdev, db->bridge.iface_name,
-                                                           false, !vlan_iface_added)) {
-                    LOG(ERROR) << "Failed configuring transport process!";
-                }
-                LOG(DEBUG) << "Removed " << bss_iface_netdev << " from transport configuration";
             }
         }
         // Combined fBSS & bBSS - Currently Support only Profile-1 (PPM-1418)

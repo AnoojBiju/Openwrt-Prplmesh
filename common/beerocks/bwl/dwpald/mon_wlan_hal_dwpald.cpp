@@ -493,9 +493,17 @@ static void parse_info_elements(unsigned char *ie, int ielen, sChannelScanResult
 static bool translate_nl_data_to_bwl_results(sChannelScanResults &results,
                                              const struct nlattr **bss)
 {
+    static uint8_t ch_counter = 0;
     if (!bss[NL80211_BSS_BSSID]) {
         LOG(ERROR) << "Invalid BSSID in the netlink message";
         return false;
+    }
+    uint8_t bssid[8];
+    memcpy(bssid, nla_data(bss[NL80211_BSS_BSSID]), 6);
+
+    LOG(ERROR) << "Hemanth bsssid = ";
+    for (int i = 0; i < 8; i++) {
+        LOG(ERROR) << bssid[i] << ":";
     }
 
     std::copy_n(reinterpret_cast<unsigned char *>(nla_data(bss[NL80211_BSS_BSSID])),
@@ -522,6 +530,15 @@ static bool translate_nl_data_to_bwl_results(sChannelScanResults &results,
             return false;
         }
         results.channel = son::wireless_utils::freq_to_channel(freq);
+        LOG(ERROR) << "Hemanth channel = " << results.channel;
+        LOG(ERROR) << "Hemanth bssid = ";
+        for (int i = 0; i < 8; i++) {
+            LOG(ERROR) << bssid[i] << ":";
+        }
+        if (results.channel == 149) {
+            ch_counter++;
+            LOG(ERROR) << "Hemanth number of times channel 149 present = " << ch_counter;
+        }
     }
 
     // get beacon period

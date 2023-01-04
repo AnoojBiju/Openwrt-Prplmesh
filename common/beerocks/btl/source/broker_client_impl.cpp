@@ -122,6 +122,18 @@ bool BrokerClientImpl::configure_al_mac(const sMacAddr &al_mac)
     return send_message(message);
 }
 
+bool BrokerClientImpl::configure_primary_vlan_id(const uint16_t vlan_id, bool add)
+{
+    beerocks::transport::messages::VlanConfigurationRequestMessage message;
+
+    message.metadata()->vlan_id = vlan_id;
+    message.metadata()->add     = add;
+
+    LOG(DEBUG) << "Configuring Vlan ID " << vlan_id << " to ieee1905 transport";
+
+    return send_message(message);
+}
+
 bool BrokerClientImpl::send_cmdu(ieee1905_1::CmduMessageTx &cmdu_tx, const sMacAddr &dst_mac,
                                  const sMacAddr &src_mac, uint32_t iface_index)
 {
