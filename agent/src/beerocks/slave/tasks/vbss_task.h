@@ -42,6 +42,14 @@ private:
     bool handle_security_context_request(ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
+     * @brief Handle the channel switch announcement request sent by the controller.
+     * 
+     * @param cmdu_rx Received CMDU to be handled.
+     * @return true on success, false otherwise.
+     */
+    bool handle_channel_switch_request(ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
      * @brief Handle the Virtual BSS Move Preparation Request message.
      *
      * @param cmdu_rx Received CMDU.
