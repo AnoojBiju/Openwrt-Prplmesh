@@ -90,6 +90,8 @@ bool vbss_actions::send_trigger_channel_switch_announcement(const sMacAddr &agen
     trigger_chan_switch_tlv->opclass()     = op_class;
     trigger_chan_switch_tlv->csa_channel() = csa_channel;
 
+    LOG(DEBUG) << "Sending Channel Switch Announcement Request to Agent '" << agent_mac << "'";
+
     if (!son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database)) {
         LOG(ERROR) << "Failed to send Trigger Channel Switch Announcement request to agent ("
                    << agent_mac << ")";
