@@ -10,11 +10,16 @@
 ####
 FROM ubuntu:bionic-20210930 as openwrt-prerequisites
 
+ARG SSH_PRV_KEY
+ARG SSH_PUB_KEY
+ENV SSH_PRV_KEY=$SSH_PRV_KEY
+ENV SSH_PUB_KEY=$SSH_PUB_KEY
+
 RUN apt-get update \
     && apt-get -y install --no-install-recommends \
     autoconf-archive build-essential libncurses5 libncurses5-dev python python3 \
     unzip git ca-certificates gawk wget file bash fakeroot \
-    python-yaml python3-yaml rsync less vim gnupg software-properties-common \
+    python-yaml python3-yaml rsync less vim gnupg software-properties-common openssh-client \
     #   yq is available in a separate ppa (needs gnupg and software-properties-common):
     && if [ -n "$HTTP_PROXY" ]; then KEYSERVER_OPTIONS="--keyserver-options http-proxy=$HTTP_PROXY"; fi \
     && apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 $KEYSERVER_OPTIONS --recv-keys CC86BB64 \
@@ -28,12 +33,23 @@ RUN apt-get update \
 
 RUN useradd -ms /bin/bash openwrt
 
+# Add the MXL SSH keys and set permissions
+RUN echo "    IdentityFile ~/.ssh/id_ed25519" >> /etc/ssh/ssh_config
+
 ####
 ## OpenWrt tree and scripts to build it.
 ####
 FROM openwrt-prerequisites as openwrt-builder
 
 USER openwrt
+
+# Add the MXL SSH keys and set permissions
+RUN mkdir /home/openwrt/.ssh && \
+    ssh-keyscan git.maxlinear.com >> /home/openwrt/.ssh/known_hosts && \
+    echo "$SSH_PRV_KEY" > /home/openwrt/.ssh/id_ed25519 && \
+    echo "$SSH_PUB_KEY" > /home/openwrt/.ssh/id_ed25519.pub && \
+    chmod 600 /home/openwrt/.ssh/id_ed25519 && \
+    chmod 600 /home/openwrt/.ssh/id_ed25519.pub
 
 # The following args are mandatory, do not expect the build to
 # succeed without specifying them on the command line.

@@ -33,6 +33,7 @@ args+=("webui")
 args+=("prpl")
 
 ./scripts/gen_config.py "${args[@]}"
+printf '\033[1;35m%s Made gen_config\n\033[0m' "$(date --iso-8601=seconds --universal)"
 
 # The initial 'make defconfig' invocation generates a wrong config, so
 # run it again. Remove this workaround once PPM-2279 is fixed.

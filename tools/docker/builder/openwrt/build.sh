@@ -41,6 +41,8 @@ build_image() {
            --build-arg OPENWRT_TOOLCHAIN_VERSION="$OPENWRT_TOOLCHAIN_VERSION" \
            --build-arg TARGET_SYSTEM="$TARGET_SYSTEM" \
            --build-arg PRPLMESH_VARIANT="$PRPLMESH_VARIANT" \
+           --build-arg SSH_PRV_KEY="$SSH_PRV_KEY" \
+           --build-arg SSH_PUB_KEY="$SSH_PUB_KEY" \
            --target="$DOCKER_TARGET_STAGE" \
            "$scriptdir/" \
       | awk -v LOGFILE="$build_dir/openwrt-build.log" '
@@ -105,7 +107,7 @@ main() {
 
     eval set -- "$OPTS"
 
-    SUPPORTED_TARGETS="turris-omnia glinet-b1300 axepoint nec-wx3000hp intel_mips"
+    SUPPORTED_TARGETS="turris-omnia glinet-b1300 axepoint nec-wx3000hp intel_mips urx"
 
     while true; do
         case "$1" in
@@ -140,6 +142,9 @@ main() {
             ;;
         axepoint|intel_mips|nec-wx3000hp)
             TARGET_SYSTEM=intel_mips
+            ;;
+		urx)
+            TARGET_SYSTEM=mxl_x86
             ;;
         *)
             err "Unknown target device: $TARGET_DEVICE"
@@ -183,6 +188,8 @@ main() {
     export PRPLMESH_VERSION
     export WHM_ENABLE
     export PRPLMESH_VARIANT
+    export SSH_PRV_KEY
+    export SSH_PUB_KEY
 
     if [ -n "$WHM_ENABLE" ] ; then
         build_directory="$rootdir/buildWHM"
@@ -200,10 +207,13 @@ main() {
 VERBOSE=false
 IMAGE_ONLY=false
 OPENWRT_REPOSITORY='https://gitlab.com/prpl-foundation/prplos/prplos.git'
-OPENWRT_TOOLCHAIN_VERSION='750d3b48630c35dadf510dd2f2beddbbf4bf240b'
-OPENWRT_VERSION='750d3b48630c35dadf510dd2f2beddbbf4bf240b'
+OPENWRT_TOOLCHAIN_VERSION='382a4455cd5d1c72a82469be1d93f21b4013e02b'
+OPENWRT_VERSION='382a4455cd5d1c72a82469be1d93f21b4013e02b'
 PRPLMESH_VARIANT="-nl80211"
 DOCKER_TARGET_STAGE="prplmesh-builder"
 SHELL_ONLY=false
+
+SSH_PRV_KEY="$(cat $scriptdir/.ssh_builder/id_ecdsa)"
+SSH_PUB_KEY="$(cat $scriptdir/.ssh_builder/id_ecdsa.pub)"
 
 main "$@"
