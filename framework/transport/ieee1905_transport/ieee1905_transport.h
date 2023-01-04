@@ -25,6 +25,11 @@
 #include <map>
 #include <net/if.h>
 
+// Address is a multicast address if the most significant byte in the address is 0x01
+#ifndef ETHER_IS_MULTICAST
+#define ETHER_IS_MULTICAST(addr) (*(addr)&0x01) // is address multicast or broadcast
+#endif
+
 //
 // Notes:
 //
@@ -133,8 +138,35 @@ private:
     // interface name (ifname) is used as Key to the table
     std::map<std::string, NetworkInterface> network_interfaces_;
 
+    // Pending Network interface table
+    // This table holds the network interfaces that transport fails to create a raw socket for it.
+    std::list<std::string> pending_network_interfaces_;
+
     uint16_t message_id_           = 0;
     uint8_t al_mac_addr_[ETH_ALEN] = {0};
+
+    // Primary VLAN Identifier to be added for IEEE 1905 Multicast packets
+    uint16_t primary_vlan_id_        = 0;
+    bool traffic_separation_enabled_ = false;
+
+    // Bridge name that the transport monitors
+    std::string bridge_name_;
+
+    // IEEE 802.1Q Protocol Identifier
+    static constexpr uint16_t ieee_8021q_protocol_id = 0x8100;
+
+    // Ethernet Header with 802.1Q VLAN Information
+    struct ether_header_vlan {
+        uint8_t ether_dhost[ETH_ALEN]; /* destination eth addr  */
+        uint8_t ether_shost[ETH_ALEN]; /* source ether addr */
+        uint16_t tpid;                 /* 802.1Q header TPID */
+        struct TCI {
+            uint16_t vid : 12; /* VLAN Identifier */
+            uint16_t dei : 1;  /* Drop eligible indicator */
+            uint16_t pcp : 3;  /* Priority code point */
+        } __attribute__((__packed__)) tci;
+        uint16_t ether_type; /* packet type ID field    */
+    } __attribute__((__packed__));
 
 // IEEE1905 CMDU header in packed format
 #pragma pack(push, 1)
@@ -375,6 +407,7 @@ private:
     bool get_interface_mac_addr(unsigned int if_index, uint8_t *addr);
     bool send_packet_to_network_interface(unsigned int if_index, Packet &packet);
     void set_al_mac_addr(const uint8_t *addr);
+    void set_primary_vlan_id(const uint16_t primary_vlan_id, bool add);
 
     //
     // BROKER STUFF
@@ -384,6 +417,7 @@ private:
     void handle_broker_interface_configuration_request_message(
         messages::InterfaceConfigurationRequestMessage &msg);
     void handle_al_mac_addr_configuration_message(messages::AlMacAddressConfigurationMessage &msg);
+    void handle_vlan_configuration_request_message(messages::VlanConfigurationRequestMessage &msg);
     bool send_packet_to_broker(Packet &packet);
     uint16_t get_next_message_id();
 

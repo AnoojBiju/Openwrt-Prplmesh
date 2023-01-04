@@ -154,6 +154,18 @@ public:
     virtual bool configure_al_mac(const sMacAddr &al_mac) = 0;
 
     /**
+     * @brief Configures the transport process to use primary vlan id.
+     *
+     * Builds a configuration message with the primary vlan id and sends it to the server.
+     * The transport process will set the primary vlan id in the Multicast packets it generates.
+     *
+     * @param vlan_id Vlan Identifier to be set in packets by the transport process.
+     *
+     * @return true on success and false otherwise
+     */
+    virtual bool configure_primary_vlan_id(const uint16_t vlan_id, bool add) = 0;
+
+    /**
      * @brief Sends a CDMU message to the transport process for dispatching.
      *
      * Finalizes CMDU if not already finalized. Then builds a message including the CMDU and sends

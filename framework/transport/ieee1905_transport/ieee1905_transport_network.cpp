@@ -70,8 +70,10 @@ bool Ieee1905Transport::update_network_interface(const std::string &bridge_name,
         // Add the new interface to network_interfaces_
         unsigned int if_index = if_nametoindex(ifname.c_str());
         if (if_index == 0) {
-            MAPF_ERR("Failed to get index for interface " << ifname);
+            MAPF_ERR("Failed to get index for interface " << ifname << " errno "
+                                                          << strerror(errno));
             remove_network_interface(ifname);
+            pending_network_interfaces_.push_back(ifname);
             return false;
         }
 
@@ -86,6 +88,7 @@ bool Ieee1905Transport::update_network_interface(const std::string &bridge_name,
             MAPF_ERR("Failed to get address of interface " << ifname << " with index " << if_index
                                                            << ".");
             remove_network_interface(ifname);
+            pending_network_interfaces_.push_back(ifname);
             return false;
         }
 
@@ -260,6 +263,20 @@ void Ieee1905Transport::handle_interface_state_change(const std::string &ifname,
     auto it = network_interfaces_.find(ifname);
     if (it == network_interfaces_.end()) {
         MAPF_INFO("Ignoring event from untracked interface " << ifname << ".");
+
+        if (pending_network_interfaces_.empty())
+            return;
+
+        auto iter = std::find(pending_network_interfaces_.begin(),
+                              pending_network_interfaces_.end(), ifname);
+        if (iter != pending_network_interfaces_.end() && is_active) {
+            if (update_network_interface(bridge_name_, ifname, true, false)) {
+                MAPF_INFO("Activated pending network interface " << ifname << ".");
+                pending_network_interfaces_.erase(iter);
+            } else {
+                MAPF_INFO("Failed to create raw socket for " << ifname << ".");
+            }
+        }
         return;
     }
     auto &interface = it->second;
@@ -479,20 +496,35 @@ bool Ieee1905Transport::send_packet_to_network_interface(unsigned int if_index, 
 
     counters_[CounterId::OUTGOING_NETWORK_PACKETS]++;
 
-    struct ether_header eh;
-    tlvf::mac_to_array(packet.dst, eh.ether_dhost);
-    tlvf::mac_to_array(packet.src, eh.ether_shost);
-    eh.ether_type = htons(packet.ether_type);
+    uint8_t eh_buffer[sizeof(ether_header_vlan)];
+    uint8_t size;
 
-    packet.header = {.iov_base = &eh, .iov_len = sizeof(eh)};
+    if (ETHER_IS_MULTICAST(packet.dst.oct) && traffic_separation_enabled_) {
+        auto eh = reinterpret_cast<ether_header_vlan *>(eh_buffer);
+        size    = sizeof(ether_header_vlan);
+        tlvf::mac_to_array(packet.dst, eh->ether_dhost);
+        tlvf::mac_to_array(packet.src, eh->ether_shost);
+        eh->tpid       = htons(ieee_8021q_protocol_id);
+        eh->tci.vid    = htons(primary_vlan_id_);
+        eh->tci.pcp    = 0;
+        eh->tci.dei    = 0;
+        eh->ether_type = htons(packet.ether_type);
+        packet.header  = {.iov_base = eh, .iov_len = size};
+    } else {
+        auto eh = reinterpret_cast<struct ether_header *>(eh_buffer);
+        size    = sizeof(struct ether_header);
+        tlvf::mac_to_array(packet.dst, eh->ether_dhost);
+        tlvf::mac_to_array(packet.src, eh->ether_shost);
+        eh->ether_type = htons(packet.ether_type);
+        packet.header  = {.iov_base = eh, .iov_len = size};
+    }
 
     int fd             = network_interfaces_[ifname].fd->getSocketFd();
     struct iovec iov[] = {packet.header, packet.payload};
     int n              = writev(fd, iov, sizeof(iov) / sizeof(struct iovec));
 
-    // Clear the packet header to prevent leaking locally allocated stack pointer
-    packet.header = {.iov_base = nullptr, .iov_len = sizeof(eh)};
-    if (size_t(n) != sizeof(eh) + packet.payload.iov_len) {
+    packet.header = {.iov_base = nullptr, .iov_len = size};
+    if (size_t(n) != size + packet.payload.iov_len) {
         MAPF_ERR("cannot write to socket, error: \"" << strerror(errno) << "\" (" << errno << ").");
         return false;
     }
@@ -514,6 +546,20 @@ void Ieee1905Transport::set_al_mac_addr(const uint8_t *addr)
         if (network_interface.fd) {
             attach_interface_socket_filter(network_interface);
         }
+    }
+}
+
+void Ieee1905Transport::set_primary_vlan_id(const uint16_t vlan_id, bool add)
+{
+    if (!vlan_id)
+        return;
+
+    if (add) {
+        traffic_separation_enabled_ = true;
+        primary_vlan_id_            = vlan_id;
+    } else {
+        traffic_separation_enabled_ = false;
+        primary_vlan_id_            = 0;
     }
 }
 
