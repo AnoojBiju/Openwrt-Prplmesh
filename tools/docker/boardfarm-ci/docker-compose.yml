@@ -10,9 +10,11 @@ networks:
         name: 1-prplMesh-net-$RUN_ID-ucc
         driver: bridge
 
-x-prplmesh: &prplmesh # Template for the prplmesh services
-    image: registry.gitlab.com/prpl-foundation/prplmesh/prplmesh/prplmesh-builder-ubuntu-bionic:${IMAGE_TAG}
-    privileged: true    # For the creation of the bridge to work
+x-prplmesh:
+    # Template for the prplmesh services
+    &prplmesh
+    image: yoni-6ghz-wlan-ubuntu
+    privileged: true # For the creation of the bridge to work
     networks:
         - ucc
         - prplmesh
@@ -30,7 +32,7 @@ services:
     controller:
         <<: *prplmesh
         container_name: lan-$RUN_ID
-        entrypoint: ["/root/start-prplmesh.sh", "start-controller-agent"]
+        entrypoint: [ "/root/start-prplmesh.sh", "start-controller-agent" ]
         volumes:
             - "/lib/modules:/lib/modules:ro"
             - "$ROOT_DIR:${FINAL_ROOT_DIR}"
@@ -39,29 +41,39 @@ services:
     agent:
         <<: *prplmesh
         container_name: agent-$RUN_ID
-        entrypoint: ["bash", "-c", "sleep 7; /root/start-prplmesh.sh start-agent"]
+        entrypoint:
+            [
+                "bash",
+                "-c",
+                "sleep 7; /root/start-prplmesh.sh start-agent"
+            ]
         volumes:
             - "/lib/modules:/lib/modules:ro"
             - "$ROOT_DIR:${FINAL_ROOT_DIR}"
             - "$ROOT_DIR/logs/agent-$RUN_ID/:/tmp/beerocks/logs/"
         depends_on:
-          - controller
+            - controller
 
     agent_2:
         <<: *prplmesh
         container_name: lan2-$RUN_ID
-        entrypoint: ["bash", "-c", "sleep 12; /root/start-prplmesh.sh start-agent"]
+        entrypoint:
+            [
+                "bash",
+                "-c",
+                "sleep 12; /root/start-prplmesh.sh start-agent"
+            ]
         volumes:
             - "/lib/modules:/lib/modules:ro"
             - "$ROOT_DIR:${FINAL_ROOT_DIR}"
             - "$ROOT_DIR/logs/lan2-$RUN_ID/:/tmp/beerocks/logs/"
         depends_on:
-          - controller
+            - controller
 
     # Boardfarm image is launched from dctest.py, TARGET_DIR refers to the
     # path inside the controller, will be referred as $ROOT_DIR inside
     boardfarm:
-        image: registry.gitlab.com/prpl-foundation/prplmesh/prplmesh/prplmesh-boardfarm-ci:${IMAGE_TAG}
+        image: yoni-boardfarm-test
         privileged: true
         container_name: boardfarm-$RUN_ID
         environment:
@@ -77,8 +89,13 @@ services:
             - "/var/run/docker:/var/run/docker"
             - "/var/run/docker.sock:/var/run/docker.sock"
         working_dir: $ROOT_DIR/tests
-        entrypoint: ["bash","-c","$ROOT_DIR/tools/docker/boardfarm-ci/start.sh; ./run_bf.sh --dut $DUT --test-suite $TEST_SUITE"]
+        entrypoint:
+            [
+                "bash",
+                "-c",
+                "$ROOT_DIR/tools/docker/boardfarm-ci/start.sh; ./run_bf.sh --dut $DUT --test-suite $TEST_SUITE"
+            ]
         depends_on:
-          - controller
-          - agent
-          - agent_2
+            - controller
+            - agent
+            - agent_2

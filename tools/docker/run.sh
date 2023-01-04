@@ -54,7 +54,8 @@ main() {
         esac
     done
 
-    image=${PRPLMESH_RUNNER_IMAGE-"${DOCKER_REGISTRY}prplmesh-builder-ubuntu-bionic$TAG"}
+    #image=${PRPLMESH_RUNNER_IMAGE-"${DOCKER_REGISTRY}prplmesh-builder-ubuntu-bionic$TAG"}
+    image=yoni-6ghz-wlan-ubuntu
     dbg "VERBOSE=${VERBOSE}"
     dbg "DETACH=${DETACH}"
     dbg "NETWORK=${NETWORK}"
