@@ -33,6 +33,7 @@
 #include <tlvf/wfa_map/tlvProfile2ReasonCode.h>
 #include <tlvf/wfa_map/tlvProfile2StatusCode.h>
 #include <tlvf/wfa_map/tlvStaMacAddressType.h>
+#include <tlvf/wfa_map/tlvTriggerChannelSwitchAnnouncement.h>
 #include <tlvf/wfa_map/tlvTunnelledData.h>
 #include <tlvf/wfa_map/tlvTunnelledProtocolType.h>
 #include <tlvf/wfa_map/tlvTunnelledSourceInfo.h>
@@ -663,6 +664,10 @@ void ApManager::handle_cmdu_ieee1905_1_message(ieee1905_1::CmduMessageRx &cmdu_r
     }
     case ieee1905_1::eMessageType::UNASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE: {
         handle_unassoc_sta_link_metrics_query_message(cmdu_rx);
+        break;
+    }
+    case ieee1905_1::eMessageType::TRIGGER_CHANNEL_SWITCH_ANNOUNCEMENT_REQUEST_MESSAGE: {
+        handle_trigger_channel_switch_announcement_request(cmdu_rx);
         break;
     }
 
@@ -2935,6 +2940,54 @@ std::string ApManager::get_vbss_interface_name(const sMacAddr &bssid)
     // TODO: PPM-2402: use a better (small) radio identifier.
     size_t index = m_iface.find_first_of("0123456789");
     return ifname + m_iface.at(index);
+}
+
+void ApManager::handle_trigger_channel_switch_announcement_request(
+    ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    LOG(DEBUG) << "Received Trigger Channel Switch Announcement Request";
+    auto client_info_tlv = cmdu_rx.getClass<wfa_map::tlvClientInfo>();
+    if (!client_info_tlv) {
+        LOG(ERROR) << "Client Info TLV is missing!";
+        return;
+    }
+
+    auto csa_tlv = cmdu_rx.getClass<wfa_map::TriggerChannelSwitchAnnouncement>();
+    if (!csa_tlv) {
+        LOG(ERROR) << "Trigger Channel Switch Announcement TLV is missing!";
+        return;
+    }
+
+    // TODO: Implement (unicast) CSA in BWL and call it here based on contents of the CSA TLV! PPM-2194
+
+    if (!cmdu_tx.create(
+            0, ieee1905_1::eMessageType::TRIGGER_CHANNEL_SWITCH_ANNOUNCEMENT_RESPONSE_MESSAGE)) {
+        LOG(ERROR)
+            << "cmdu creation of type TRIGGER_CHANNEL_SWITCH_ANNOUNCEMENT_RESPONSE_MESSAGE failed!";
+        return;
+    }
+
+    auto client_info_tlv_tx = cmdu_tx.addClass<wfa_map::tlvClientInfo>();
+    if (!client_info_tlv_tx) {
+        LOG(ERROR)
+            << "Failed to add Client Info TLV to the Trigger Channel Switch Announcement response!";
+        return;
+    }
+
+    client_info_tlv_tx->bssid()      = client_info_tlv->bssid();
+    client_info_tlv_tx->client_mac() = client_info_tlv->client_mac();
+
+    auto csa_tlv_tx = cmdu_tx.addClass<wfa_map::TriggerChannelSwitchAnnouncement>();
+    if (!csa_tlv_tx) {
+        LOG(ERROR) << "Failed to add Trigger Channel Switch Announcement TLV to the response!";
+        return;
+    }
+
+    // VBSS spec states that the CSA response TLV should mirror the request TLV.
+    csa_tlv_tx->csa_channel() = csa_tlv->csa_channel();
+    csa_tlv_tx->opclass()     = csa_tlv->opclass();
+    LOG(DEBUG) << __func__ << " - NOT IMPLEMENTED! Not sending response to controller.";
+    // TODO -- send_cmdu once BWL is implemented and error checking can be done.
 }
 
 void ApManager::handle_vbss_security_request(ieee1905_1::CmduMessageRx &cmdu_rx)
