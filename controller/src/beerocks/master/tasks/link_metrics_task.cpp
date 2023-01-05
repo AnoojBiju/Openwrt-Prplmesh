@@ -413,8 +413,7 @@ bool LinkMetricsTask::handle_cmdu_1905_unassociated_station_link_metric_response
         if (tlvf::mac_to_string(radio_mac_address) ==
             beerocks::net::network_utils::ZERO_MAC_STRING) {
             LOG(ERROR) << "Agent with mac_addr: " << tlvf::mac_to_string((*agent)->al_mac)
-                       << " has no radio that supports operating_class: "
-                       << operating_class_received
+                       << " has no radio that supports operating_class " << operating_class_received
                        << " !!, un_station stats will not get updated! ";
             return false;
         }
