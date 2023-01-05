@@ -731,12 +731,14 @@ int bml_client_get_client_list(BML_CTX ctx, char *client_list, unsigned int *cli
      * @param [in] ctx BML Context.
      * @param [in] mac_address address of the station
      * @param [in] desired channel
+     * @param [in] desired operating_class
      * @param [in] agent_mac_address  MAcAddress of the agent to be monitoring the station, if empty, all agents are selected
      * 
      * @return BML_RET_OK on success.
      */
 int bml_add_unassociated_station_stats(BML_CTX ctx, const char *mac_address,
-                                       const char *channel_string, const char *agent_mac_address);
+                                       const char *channel_str, const char *operating_class,
+                                       const char *agent_mac_address);
 
 /**
      * Remove a station from the unassociated stations 
