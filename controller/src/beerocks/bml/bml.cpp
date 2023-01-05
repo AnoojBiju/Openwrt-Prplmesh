@@ -801,10 +801,12 @@ int bml_client_get_client_list(BML_CTX ctx, char *client_list, unsigned int *cli
 }
 
 int bml_add_unassociated_station_stats(BML_CTX ctx, const char *mac_address,
-                                       const char *channel_string, const char *agent_mac_address)
+                                       const char *channel_str, const char *operating_class_str,
+                                       const char *agent_mac_address)
 {
     auto pBML = static_cast<bml_internal *>(ctx);
-    return pBML->add_unassociated_station_stats(mac_address, channel_string, agent_mac_address);
+    return pBML->add_unassociated_station_stats(mac_address, channel_str, operating_class_str,
+                                                agent_mac_address);
 }
 int bml_remove_unassociated_station_stats(BML_CTX ctx, const char *mac_address,
                                           const char *agent_mac_address)

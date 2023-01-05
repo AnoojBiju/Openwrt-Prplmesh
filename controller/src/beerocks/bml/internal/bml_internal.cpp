@@ -1202,9 +1202,9 @@ int bml_internal::process_cmdu_header(std::shared_ptr<beerocks_header> beerocks_
             for (size_t count = 0; count < stats_size; count++) {
                 auto data = std::get<1>(response->sta_list(count));
                 m_un_stations_stats +=
-                    " MACAddress=: " + tlvf::mac_to_string(data.sta_mac) +
-                    " SignalStrength= " + std::to_string(data.uplink_rcpi_dbm_enc) +
-                    " TimeStamp=" + std::string(data.time_stamp) + "\n";
+                    " MACAddress: " + tlvf::mac_to_string(data.sta_mac) +
+                    " SignalStrength: " + std::to_string(data.uplink_rcpi_dbm_enc) +
+                    " TimeStamp: " + std::string(data.time_stamp) + "\n";
             }
             //LOG(DEBUG) << m_un_stations_stats;
             m_prmUnStationsStatsGet->set_value(true);
@@ -2360,8 +2360,8 @@ int bml_internal::client_get_client_list(char *client_list, unsigned int *client
     return BML_RET_OK;
 }
 
-int bml_internal::add_unassociated_station_stats(const char *mac_address,
-                                                 const char *channel_string,
+int bml_internal::add_unassociated_station_stats(const char *mac_address, const char *channel,
+                                                 const char *operating_class,
                                                  const char *agent_mac_address)
 {
     auto request = message_com::create_vs_message<
@@ -2370,8 +2370,9 @@ int bml_internal::add_unassociated_station_stats(const char *mac_address,
         LOG(ERROR) << "Failed building cACTION_BML_ADD_UNASSOCIATED_STATION_STATS_REQUEST message!";
         return -1;
     }
-    request->mac_address() = tlvf::mac_from_string(std::string(mac_address));
-    request->channel()     = string_utils::stoi(std::string(channel_string));
+    request->mac_address()     = tlvf::mac_from_string(std::string(mac_address));
+    request->channel()         = string_utils::stoi(std::string(channel));
+    request->operating_class() = string_utils::stoi(std::string(operating_class));
     if (agent_mac_address) {
         request->agent_mac_address() = tlvf::mac_from_string(std::string(agent_mac_address));
     } else {
@@ -2380,7 +2381,7 @@ int bml_internal::add_unassociated_station_stats(const char *mac_address,
     }
     std::string debug_mesg =
         "sending cACTION_BML_ADD_UNASSOCIATED_STATION_STATS_REQUEST with mac_address " +
-        std::string(mac_address) + " and channel " + channel_string;
+        std::string(mac_address) + " and channel " + channel;
     if (agent_mac_address) {
         debug_mesg += " and agent_mac_addr: ";
         debug_mesg += agent_mac_address;

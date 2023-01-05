@@ -310,18 +310,18 @@ public:
     /**
      * Add a station to the unassociated stations 
      * @param [in] mac_address address of the station
-     * @param [in] desired channel, agent may still decide to use its active channel instead
+     * @param [in] desired channel, Access point  might  still decide to use its active channel instead
+     * @param [in] desired operating_class.Access point  might  still decide to use its active operating_class.
      * @param [in] mac_add of the agent that will be monitoring the station. IF empty, all connected agents will be selected.
      * @return BML_RET_OK on success.
      */
-    int add_unassociated_station_stats(const char *mac_address, const char *channel_string,
-                                       const char *agent_mac_address);
+    int add_unassociated_station_stats(const char *mac_address, const char *channel_str,
+                                       const char *operating_class, const char *agent_mac_address);
 
     /**
      * Remove a station from the unassociated stations 
-     *  Note: this function shall expand to accept the desired agents list!
      * @param [in] mac_address address of the station
-     * @param [in] mac_add of monitoring station. IF empty, all agents will be chosen.
+     * @param [in] mac_add of monitoring station. IF empty, all agents will be selected.
      * @return BML_RET_OK on success,BML_RET_OP_FAILED is station does not exist or any other issue.
      */
     int remove_unassociated_station_stats(const char *mac_address, const char *agent_mac_address);
