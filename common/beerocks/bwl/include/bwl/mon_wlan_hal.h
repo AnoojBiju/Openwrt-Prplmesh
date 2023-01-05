@@ -11,6 +11,7 @@
 
 #include "base_wlan_hal.h"
 #include "mon_wlan_hal_types.h"
+#include "tlvf/wfa_map/tlvApMetrics.h"
 #include <vector>
 
 namespace bwl {
@@ -118,7 +119,9 @@ public:
      */
     virtual bool pre_generate_connected_clients_events() = 0;
 
-    virtual bool set_estimated_service_parameters(uint8_t *esp_info_field) = 0;
+    virtual bool set_available_estimated_service_parameters(
+        wfa_map::tlvApMetrics::sEstimatedService &estimated_service_parameters) = 0;
+    virtual bool set_estimated_service_parameters(uint8_t *esp_info_field)      = 0;
 
     /**
      * @brief Measure the RSSI of unassociated stations in the new_list

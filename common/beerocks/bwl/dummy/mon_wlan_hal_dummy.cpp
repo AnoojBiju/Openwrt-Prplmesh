@@ -452,6 +452,17 @@ bool mon_wlan_hal_dummy::set(const std::string &param, const std::string &value,
     return true;
 }
 
+bool mon_wlan_hal_dummy::set_available_estimated_service_parameters(
+    wfa_map::tlvApMetrics::sEstimatedService &estimated_service_parameters)
+{
+    estimated_service_parameters.include_ac_bk = 1;
+    estimated_service_parameters.include_ac_be = 1;
+    estimated_service_parameters.include_ac_vo = 1;
+    estimated_service_parameters.include_ac_vi = 1;
+
+    return true;
+}
+
 bool mon_wlan_hal_dummy::set_estimated_service_parameters(uint8_t *esp_info_field)
 {
     std::fill_n(&esp_info_field[0], 1, 1); // be
