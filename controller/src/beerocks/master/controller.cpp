@@ -1961,9 +1961,8 @@ bool Controller::handle_cmdu_1905_ap_capability_report(const sMacAddr &src_mac,
         LOG(ERROR) << "Couldn't handle TLV AP VHTCapabilities";
         return false;
     }
-    if (handle_tlv_apCapability(cmdu_rx, agent)) {
+    if (!handle_tlv_apCapability(cmdu_rx, agent)) {
         LOG(ERROR) << "Couldn't handle TLV tlvApCapability";
-        return false;
     }
     if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_3 &&
         !handle_tlv_ap_wifi6_capabilities(cmdu_rx)) {
@@ -4655,11 +4654,11 @@ bool Controller::handle_cmdu_1905_qos_management_notification_message(
 }
 
 bool Controller::add_unassociated_station(const sMacAddr &station_mac_addr, uint8_t channel,
-                                          const sMacAddr &agent_mac_addr,
+                                          uint8_t operating_class, const sMacAddr &agent_mac_addr,
                                           const sMacAddr &radio_mac_addr)
 {
-    if (!database.add_unassociated_station(station_mac_addr, channel, agent_mac_addr,
-                                           radio_mac_addr)) {
+    if (!database.add_unassociated_station(station_mac_addr, channel, operating_class,
+                                           agent_mac_addr, radio_mac_addr)) {
         return false;
     }
     return send_unassociated_sta_link_metrics_query_message(cmdu_tx, database);

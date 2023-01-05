@@ -102,7 +102,8 @@
         /* Add a new  unassociated station to the UnassociatedSTA object*/
         %instance bool AddUnassociatedStation(
                 %in %mandatory string un_station_mac,
-                %in %mandatory uint32 channel,
+                %in %mandatory uint8 channel,
+                %in %mandatory uint8 operating_class,
                 %in string agent_mac
         );
 

@@ -8138,18 +8138,22 @@ bool db::dm_set_device_ap_capabilities(const Agent &agent)
 }
 
 bool db::add_unassociated_station(sMacAddr const &new_station_mac_add, uint8_t channel,
-                                  sMacAddr const &agent_mac_addr, sMacAddr const &radio_mac_addr)
+                                  uint8_t operating_class, sMacAddr const &agent_mac_addr,
+                                  sMacAddr const &radio_mac_addr)
 {
-    std::string debug_msg;
+    std::string new_station_mac_add_str(tlvf::mac_to_string(new_station_mac_add));
+    std::string agent_mac_addr_str(tlvf::mac_to_string(agent_mac_addr));
+
     bool all_connected_agents =
-        tlvf::mac_to_string(agent_mac_addr) ==
+        agent_mac_addr_str ==
         network_utils::
             ZERO_MAC_STRING; //flag if the command is for a specific agent or to all of them
     std::shared_ptr<UnassociatedStation> new_station(nullptr);
-    uint8_t operating_class_un_station = 0;
 
-    auto add_un_station_dm = [&](std::string agent_mac, std::string radio_mac,
-                                 std::string station_mac) {
+    //Lambda function responsbible of updating the datamodel
+    //return false for any problem, otherwise true
+    auto add_un_station_dm = [&](const std::string &agent_mac, const std::string &radio_mac,
+                                 const std::string &station_mac) {
         //example Device.WiFi.DataElements.Network.Device.1.Radio.2.UnassociatedSTA.
         std::string device_path = "Device.WiFi.DataElements.Network.Device";
 
@@ -8187,27 +8191,49 @@ bool db::add_unassociated_station(sMacAddr const &new_station_mac_add, uint8_t c
             }
         } else {
             LOG(DEBUG) << "UnassociatedSTA with mac_addr " << station_mac
-                       << " already exists! under path: " << unassociated_sta_path << "."
+                       << " already exists! under path " << unassociated_sta_path << "."
                        << station_mac;
         }
         return true;
     };
 
-    // local function to detect which radio supports the input channel
-    auto get_agent_radio = [&operating_class_un_station](
-                               const beerocks::mac_map<Agent::sRadio> &radios, uint8_t channel) {
+    //Lambda function to update an existing un_station(related to one specific agent)
+    //return false if the station has not been updated, true otherwise
+    auto update_existing_un_station = [](std::shared_ptr<UnassociatedStation> &existing_un_station,
+                                         const std::string &agent_mac_str, uint8_t new_channel,
+                                         uint8_t new_operating_class) {
+        if ((existing_un_station->get_channel() != new_channel)) {
+            LOG(DEBUG) << " agent " << agent_mac_str << ", un_station "
+                       << tlvf::mac_to_string(existing_un_station->get_mac_Address())
+                       << "'s channel changed into " << new_channel;
+            existing_un_station->set_channel(new_channel);
+        }
+        if ((existing_un_station->get_operating_class() != new_operating_class)) {
+            LOG(DEBUG) << " agent " << agent_mac_str << ", un_station "
+                       << tlvf::mac_to_string(existing_un_station->get_mac_Address())
+                       << "'s operating_class changed into " << new_operating_class;
+            existing_un_station->set_operating_class(new_operating_class);
+        }
+    };
+
+    // lambda function to detect which radio supports the preferred  channel|operating_class
+    // return pointer to radio if one of the radios supports channel and operating_class, else nullptr.
+    auto get_agent_radio = [channel,
+                            operating_class](const beerocks::mac_map<Agent::sRadio> &radios) {
         std::shared_ptr<Agent::sRadio> agent_radio = nullptr;
 
         for (auto &radio_it : radios) {
             auto &scan_capabilities = radio_it.second->scan_capabilities;
             for (auto &oc_ch : scan_capabilities.operating_classes) {
+                if (oc_ch.first != operating_class) {
+                    continue;
+                }
                 std::vector<uint8_t>::iterator iter =
                     std::find_if(oc_ch.second.begin(), oc_ch.second.end(),
                                  [channel](uint8_t input) { return (input == channel); });
 
                 if (iter != oc_ch.second.end()) {
-                    operating_class_un_station = oc_ch.first;
-                    agent_radio                = radio_it.second;
+                    agent_radio = radio_it.second;
                     return agent_radio;
                 }
             }
@@ -8215,138 +8241,95 @@ bool db::add_unassociated_station(sMacAddr const &new_station_mac_add, uint8_t c
         return agent_radio;
     };
 
+    //lambda function to add/update an unassociated station related to a specific agent
+    //return a shared pointer to the new  added/updated station, nullptr otherwise
+    auto add_update_unassociated_station_within_agent =
+        [&](const std::shared_ptr<Agent> &agent) -> std::shared_ptr<UnassociatedStation> {
+        std::shared_ptr<UnassociatedStation> new_updated_station(nullptr);
+        std::shared_ptr<Agent::sRadio> agent_radio(nullptr);
+        if (radio_mac_addr == network_utils::ZERO_MAC) {
+            agent_radio = get_agent_radio(agent->radios);
+        } else {
+            agent_radio = get_radio_by_uid(radio_mac_addr);
+        }
+        std::string agent_mac_addr_str = tlvf::mac_to_string(agent->al_mac);
+
+        if (!agent_radio) {
+            //The channel is not accepted/available for any radios! --> lets revert to the active channel in one radio
+            // and warn the user!
+            // NOTE: We do this "overwride" because the Specs allow the agent to use its active channel instead of the preferrred one received by the command!
+            agent_radio = agent->radios.begin()->second;
+            uint8_t channel_overwrite =
+                get_node(agent_radio->radio_uid)->wifi_channel.get_channel();
+            beerocks::message::sWifiChannel local(
+                channel_overwrite, get_node(agent_radio->radio_uid)->wifi_channel.get_bandwidth());
+            uint8_t operating_class_overwrite =
+                wireless_utils::get_operating_class_by_channel(local);
+            LOG(WARNING) << "add_unassociated_station : channel " << channel << ",operating_class "
+                         << operating_class << " ARE NOT AVAILABE on any radios of agent "
+                         << agent_mac_addr_str
+                         << " -->  REVERTING to use active radio with mac_addr "
+                         << tlvf::mac_to_string(agent_radio->radio_uid) << ",active channel "
+                         << channel_overwrite << " and operating_class "
+                         << operating_class_overwrite;
+            channel         = channel_overwrite;
+            operating_class = operating_class_overwrite;
+        }
+
+        if (!agent_radio->ap_capabilities
+                 .support_unassociated_sta_link_metrics_on_operating_bssid ||
+            !agent_radio->ap_capabilities
+                 .support_unassociated_sta_link_metrics_on_non_operating_bssid) {
+            LOG(ERROR) << "Agent  with mac_addr " << agent_mac_addr_str
+                       << " does not support unassociated stations!!, un_station with mac_addr "
+                       << new_station_mac_add_str << " will NOT be added.";
+            return nullptr;
+        }
+
+        new_updated_station = m_unassociated_stations.get(new_station_mac_add);
+        if (new_updated_station) {
+            update_existing_un_station(new_updated_station, agent_mac_addr_str, channel,
+                                       operating_class);
+        } else {
+            new_updated_station = m_unassociated_stations.add(new_station_mac_add);
+            new_updated_station->set_channel(channel);
+            new_updated_station->set_operating_class(operating_class);
+        }
+        new_updated_station->add_agent(agent_mac_addr, agent_radio->radio_uid);
+
+        LOG(DEBUG) << "added un_station with mac_address " + new_station_mac_add_str + ",channel " +
+                          std::to_string(channel) + ",operating_class " +
+                          std::to_string(operating_class) + " to monitoring agent " +
+                          agent_mac_addr_str;
+
+        //lets update the data model
+        add_un_station_dm(agent_mac_addr_str, tlvf::mac_to_string(agent_radio->radio_uid),
+                          new_station_mac_add_str);
+
+        return new_updated_station;
+    };
+
     if (!all_connected_agents) { //This case treats 1 single agent
-        std::string agent_mac_string(tlvf::mac_to_string(agent_mac_addr));
         auto existing_agent = m_agents.get(agent_mac_addr);
         if (existing_agent == nullptr) {
-            LOG(ERROR) << " agent with mac_addr: " << agent_mac_string
+            LOG(ERROR) << " agent with mac_addr " << agent_mac_addr_str
                        << " could not be found! station will not be added. ";
             return false;
         } else {
-            std::shared_ptr<Agent::sRadio> agent_radio(nullptr);
-            if (radio_mac_addr == network_utils::ZERO_MAC) {
-                agent_radio = get_agent_radio(existing_agent->radios, channel);
-            } else {
-                agent_radio = get_radio_by_uid(radio_mac_addr);
-            }
-
-            if (!agent_radio) {
-                //The channel is not accepted/available for any radios! --> lets revert to the active channel in one radio
-                // and warn the user!
-                agent_radio = existing_agent->radios.begin()->second;
-                beerocks::WifiChannel local;
-                local.set_channel(get_node(agent_radio->radio_uid)->wifi_channel.get_channel());
-                local.set_bandwidth(get_node(agent_radio->radio_uid)->wifi_channel.get_bandwidth());
-                operating_class_un_station = wireless_utils::get_operating_class_by_channel(local);
-                channel = get_node(agent_radio->radio_uid)->wifi_channel.get_channel();
-                LOG(WARNING) << "add_unassociated_station : channel: " << channel
-                             << " is not available on any radios of agent :"
-                             << tlvf::mac_to_string(agent_mac_addr)
-                             << " -->  Instead:  Using radio with mac_addr: "
-                             << tlvf::mac_to_string(agent_radio->radio_uid)
-                             << " and active channel: " << channel;
-            }
-
-            //TODO : do more filtering whether the station is already associated to one current BSS or not
-            if (!agent_radio->ap_capabilities
-                     .support_unassociated_sta_link_metrics_on_operating_bssid ||
-                !agent_radio->ap_capabilities
-                     .support_unassociated_sta_link_metrics_on_non_operating_bssid) {
-                LOG(ERROR) << "radio  with mac_addr: " << tlvf::mac_to_string(agent_mac_addr)
-                           << " does not support unassociated stations stats!!, un_station "
-                              "with mac_addr: "
-                           << tlvf::mac_to_string(new_station_mac_add)
-                           << " will not be added to the radio";
-                return false;
-            }
-            auto existing_un_station = m_unassociated_stations.get(new_station_mac_add);
-            if (existing_un_station) {
-                // maybe the command is to change the channel!
-                if (existing_un_station->get_channel() != channel) {
-                    existing_un_station->set_channel(channel);
-                    LOG(DEBUG) << " agent: " << tlvf::mac_to_string(agent_mac_addr)
-                               << " will consider the new channel: " << channel
-                               << "for  un_station: " << tlvf::mac_to_string(new_station_mac_add);
-                    return true;
-                } else {
-                    LOG(DEBUG) << " un_station" << tlvf::mac_to_string(new_station_mac_add)
-                               << " is already being monitored by agent: "
-                               << tlvf::mac_to_string(agent_mac_addr) << "on channel: " << channel
-                               << " command is ignored...";
-                    return false;
-                }
-            }
-            new_station = m_unassociated_stations.add(new_station_mac_add);
-            new_station->add_agent(agent_mac_addr, agent_radio->radio_uid);
-            debug_msg +=
-                "added un_station with mac_address: " + tlvf::mac_to_string(new_station_mac_add) +
-                " and channel: " + std::to_string(channel) +
-                "to monitoring agent: " + tlvf::mac_to_string(agent_mac_addr);
-            add_un_station_dm(tlvf::mac_to_string(agent_mac_addr),
-                              tlvf::mac_to_string(agent_radio->radio_uid),
-                              tlvf::mac_to_string(new_station_mac_add));
-            new_station->set_channel(channel);
-            new_station->set_operating_class(operating_class_un_station);
+            new_station = add_update_unassociated_station_within_agent(existing_agent);
         }
+        return new_station != nullptr;
     } else { //all connected agents
+        bool status(true);
         for (auto &agent : m_agents) {
-
-            new_station = m_unassociated_stations.add(new_station_mac_add);
-            std::shared_ptr<Agent::sRadio> agent_radio(nullptr);
-            if (radio_mac_addr == network_utils::ZERO_MAC) {
-                agent_radio = get_agent_radio(agent.second->radios, channel);
-            } else {
-                agent_radio = get_radio_by_uid(radio_mac_addr);
+            new_station = add_update_unassociated_station_within_agent(agent.second);
+            if (new_station == nullptr) {
+                status = false;
             }
-
-            if (!agent_radio) {
-                //The channel is not accepted/available for any radios! --> lets revert to the active channel in one radio
-                // and warn the user!
-                agent_radio         = agent.second->radios.begin()->second;
-                auto active_channel = get_node(agent_radio->radio_uid)->wifi_channel.get_channel();
-                auto active_bandwidth =
-                    get_node(agent_radio->radio_uid)->wifi_channel.get_bandwidth();
-                operating_class_un_station = wireless_utils::get_operating_class_by_channel(
-                    beerocks::message::sWifiChannel(active_channel, active_bandwidth));
-
-                LOG(WARNING) << "add_unassociated_station : channel: " << channel
-                             << " is not available on any radios of agent :"
-                             << tlvf::mac_to_string(agent.first)
-                             << " -->  Reverting to radio with mac_addr: "
-                             << tlvf::mac_to_string(agent_radio->radio_uid)
-                             << " , active channel: " << active_channel
-                             << " bandwidth: " << active_bandwidth
-                             << " operating_class: " << operating_class_un_station;
-                channel = active_channel;
-
-                if (!agent_radio->ap_capabilities
-                         .support_unassociated_sta_link_metrics_on_operating_bssid ||
-                    !agent_radio->ap_capabilities
-                         .support_unassociated_sta_link_metrics_on_non_operating_bssid) {
-                    LOG(ERROR) << "radio  with mac_addr: " << tlvf::mac_to_string(agent.first)
-                               << " does not support unassociated stations stats!!, un_station "
-                                  "with mac_addr: "
-                               << tlvf::mac_to_string(new_station_mac_add)
-                               << " will not be added to the radio";
-                    return false;
-                }
-            }
-
-            new_station->add_agent(agent.first, agent_radio->radio_uid);
-            debug_msg +=
-                "added un_station with mac_address: " + tlvf::mac_to_string(new_station_mac_add) +
-                " and channel: " + std::to_string(channel) +
-                "to monitoring agent: " + tlvf::mac_to_string(agent.first);
-            add_un_station_dm(tlvf::mac_to_string(agent.first),
-                              tlvf::mac_to_string(agent_radio->radio_uid),
-                              tlvf::mac_to_string(new_station_mac_add));
-            new_station->set_channel(channel);
-            new_station->set_operating_class(operating_class_un_station);
         }
-    }
 
-    LOG(DEBUG) << debug_msg;
-    return new_station != nullptr;
+        return status;
+    }
 }
 
 bool db::remove_unassociated_station(sMacAddr const &mac_address, sMacAddr const &agent_mac_addr,
