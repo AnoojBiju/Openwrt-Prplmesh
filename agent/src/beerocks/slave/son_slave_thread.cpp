@@ -3473,6 +3473,7 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
 
         using stations_stats = wfa_map::tlvUnassociatedStaLinkMetricsResponse::sStaMetrics;
         std::unordered_map<uint8_t, std::list<stations_stats>> map_stations_per_operating_class;
+
         for (size_t count = 0; count < response_in->stations_list_length(); count++) {
             beerocks_message::sUnassociatedStationStats &station_in =
                 std::get<1>(response_in->stations_list(count));
@@ -3493,17 +3494,16 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
         }
 
         //Now send a telemetries to the controller, each telemetry with only 1 operating_class
-        for (auto &operaying_class : map_stations_per_operating_class) {
+        for (auto &operating_class : map_stations_per_operating_class) {
             auto response_out = cmdu_tx.addClass<wfa_map::tlvUnassociatedStaLinkMetricsResponse>();
             if (!response_out) {
                 LOG(ERROR) << "adding wfa_map::tlvUnassociatedStaLinkMetricsResponse failed";
                 return false;
             }
-            response_out->operating_class_of_channel_list() = operaying_class.first;
-            response_out->alloc_sta_list(operaying_class.second.size());
-            response_out->sta_list_length() = operaying_class.second.size();
+            response_out->operating_class_of_channel_list() = operating_class.first;
+            response_out->alloc_sta_list(operating_class.second.size());
             size_t count(0);
-            for (auto &station : operaying_class.second) {
+            for (auto &station : operating_class.second) {
                 auto &stats_out          = std::get<1>(response_out->sta_list(count));
                 stats_out.channel_number = station.channel_number;
                 stats_out.measurement_to_report_delta_msec =
@@ -3514,7 +3514,7 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
 
             LOG(DEBUG)
                 << "Send tlvUnassociatedStaLinkMetricsResponse to controller with operating_class= "
-                << operaying_class.first << "and  mid = " << mid;
+                << operating_class.first << "and  mid = " << mid;
             send_cmdu_to_controller({}, cmdu_tx);
         }
         break;
