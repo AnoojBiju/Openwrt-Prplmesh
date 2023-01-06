@@ -1141,9 +1141,7 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
             return;
         }
         mon_stats.add_request(beerocks_header->id(), request->sync(), request->sta_mac());
-        if (request->sync()) {
-            mon_db.set_poll_next_time(std::chrono::steady_clock::now(), true);
-        }
+        mon_stats.process(true);
         break;
     }
     case beerocks_message::ACTION_MONITOR_CLIENT_UNASSOCIATED_STA_LINK_METRIC_REQUEST: {
