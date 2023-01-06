@@ -252,6 +252,7 @@ sNodeHostap:
     _length: ["beerocks::message::VHT_MCS_SET_SIZE"]
   he_supported: uint8_t #bool
   he_capability: uint16_t
+  wifi6_capability: uint64_t
   he_mcs_set:
     _type: uint8_t
     _length: ["beerocks::message::HE_MCS_SET_SIZE"]
