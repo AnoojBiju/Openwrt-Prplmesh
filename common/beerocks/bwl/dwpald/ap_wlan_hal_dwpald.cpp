@@ -1265,6 +1265,7 @@ static bool create_multiap_map(const son::wireless_utils::sBssInfoConf &bss_info
     uint8_t multi_ap_mode = 0;
     multi_ap_mode |= bss_info_conf.backhaul ? 0x01 : 0x00;
     multi_ap_mode |= bss_info_conf.fronthaul ? 0x02 : 0x00;
+    multi_ap_mode |= (bss_info_conf.fronthaul && bss_info_conf.backhaul) ? 0x03 : 0x00;
     value_map["multi_ap"] = std::to_string(multi_ap_mode);
 
     std::string mesh_mode;
