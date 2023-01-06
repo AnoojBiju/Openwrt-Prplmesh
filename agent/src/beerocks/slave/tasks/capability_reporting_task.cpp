@@ -774,6 +774,7 @@ bool CapabilityReportingTask::add_profile2_ap_capability_tlv(ieee1905_1::CmduMes
         db->device_conf.max_prioritization_rules;
     profile2_ap_capability_tlv->capabilities_bit_field().prioritization =
         (db->device_conf.max_prioritization_rules > 0) ? 1 : 0;
+    LOG(ERROR) << "serv_prio: max_prio = " << db->device_conf.max_prioritization_rules;
     return true;
 }
 

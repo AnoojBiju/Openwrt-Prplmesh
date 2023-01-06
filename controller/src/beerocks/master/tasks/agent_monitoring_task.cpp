@@ -222,6 +222,9 @@ bool agent_monitoring_task::start_agent_monitoring(const sMacAddr &src_mac,
 bool agent_monitoring_task::start_task(const sMacAddr &src_mac, std::shared_ptr<WSC::m1> m1,
                                        ieee1905_1::CmduMessageRx &cmdu_rx)
 {
+    auto agent = database.m_agents.get(src_mac);
+    LOG(ERROR) << "serv_prio: inside start task : MAC=" << src_mac
+               << "prio support =" << agent->prioritization_support;
     if (!send_multi_ap_policy_config_request(src_mac, m1, cmdu_rx, cmdu_tx)) {
         LOG(ERROR) << "Failed to send Metric Reporting Policy to radio agent=" << src_mac;
     }
@@ -250,7 +253,6 @@ bool agent_monitoring_task::start_task(const sMacAddr &src_mac, std::shared_ptr<
         son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
     }
 
-    auto agent = database.m_agents.get(src_mac);
     if (agent &&
         agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1) {
 
@@ -259,6 +261,7 @@ bool agent_monitoring_task::start_task(const sMacAddr &src_mac, std::shared_ptr<
         }
 
         if (agent->prioritization_support) {
+            LOG(ERROR) << "serv_prio: inside start task : prio_support";
             if (!send_prioritization(*agent)) {
                 LOG(ERROR) << "Failed sending Service Priotitization to agent " << src_mac;
             }
@@ -475,8 +478,11 @@ bool agent_monitoring_task::send_backhaul_sta_capability_query(const sMacAddr &d
 
 bool agent_monitoring_task::send_prioritization(const Agent &agent)
 {
+    LOG(ERROR) << "serv_prio: inside send_prioritization";
     if (agent.max_prioritization_rules < 1)
         return true;
+
+    LOG(ERROR) << "serv_prio: inside send_prioritization after if";
 
     int64_t activeRule{-1};
     uint8_t precedence{0};
