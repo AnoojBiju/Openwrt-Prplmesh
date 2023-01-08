@@ -161,7 +161,9 @@ private:
 
     bool check_is_there_better_channel_than_current(const sMacAddr &radio_mac);
 
-    ChannelSelectionTask::sSelectedChannel select_next_channel(const sMacAddr &radio_mac);
+    ChannelSelectionTask::sSelectedChannel
+    select_next_channel(const sMacAddr &radio_mac,
+                        const AgentDB::sRadio::channel_preferences_map &controller_preferences);
 
     bool handle_on_demand_selection_request_extension_tlv(ieee1905_1::CmduMessageRx &cmdu_rx);
 

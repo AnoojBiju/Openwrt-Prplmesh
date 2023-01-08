@@ -263,7 +263,7 @@ bool slave_thread::thread_init()
 
     m_tasks_timer = m_timer_manager->add_timer(
         "Agent Tasks", tasks_timer_period, tasks_timer_period,
-        [&](int fd, beerocks::EventLoop &loop) {
+        [&, tasks_timer_period](int fd, beerocks::EventLoop &loop) {
             // Allow tasks to execute up to 80% of the timer period
             m_task_pool.run_tasks(int(double(tasks_timer_period.count()) * 0.8));
             return true;
@@ -3977,7 +3977,8 @@ bool slave_thread::agent_fsm()
             handlers.on_connection_closed = [&]() {
                 LOG(ERROR) << "Client to Platform Manager disconnected, restarting "
                               "Agent";
-                m_platform_manager_client.reset();
+                // Don't put here a "m_platform_manager_client.reset()" since it will destruct this
+                // function before it ends, and will lead to a crash.
                 LOG(DEBUG) << "goto STATE_STOPPED";
                 m_agent_state = STATE_STOPPED;
                 return true;
@@ -4034,9 +4035,9 @@ bool slave_thread::agent_fsm()
                 handle_cmdu(m_backhaul_manager_client->get_fd(), cmdu_rx);
             };
             handlers.on_connection_closed = [&]() {
-                LOG(ERROR) << "Client to Backhaul Manager disconnected, restarting "
-                              "Agent";
-                m_backhaul_manager_client.reset();
+                LOG(ERROR) << "Client to Backhaul Manager disconnected, stopping the Agent";
+                // Don't put here a "m_backhaul_manager_client.reset()" since it will destruct this
+                // function before it ends, and will lead to a crash.
                 LOG(DEBUG) << "goto STATE_STOPPED";
                 m_agent_state = STATE_STOPPED;
                 return true;
@@ -4327,6 +4328,13 @@ bool slave_thread::agent_fsm()
         break;
     }
     case STATE_STOPPED: {
+        if (m_platform_manager_client) {
+            m_platform_manager_client.reset();
+        }
+
+        if (m_backhaul_manager_client) {
+            m_backhaul_manager_client.reset();
+        }
         break;
     }
     default: {

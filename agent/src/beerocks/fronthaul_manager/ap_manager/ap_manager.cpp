@@ -118,7 +118,7 @@ static void build_channels_list(ieee1905_1::CmduMessageTx &cmdu_tx,
         const auto &channel_info = channel_element.second;
         for (const auto &bw_info : channel_info.bw_info_list) {
             auto rank = bw_info.second;
-            if (rank == -1) {
+            if (rank == -1 && channel_info.dfs_state == beerocks::eDfsState::UNAVAILABLE) {
                 continue;
             }
 
@@ -238,14 +238,7 @@ static void build_channels_list(ieee1905_1::CmduMessageTx &cmdu_tx,
                            << ", dfs_state=" << dfs_state_to_string(channel_info_tlv->dfs_state());
             };
 
-            // If channel & bw has undefined rank (-1), set the channel preference to
-            // "Not Usable" (0).
-            if (supported_bw_info_tlv.rank == -1) {
-                supported_bw_info_tlv.multiap_preference = 0;
-                print_channel_info();
-                continue;
-            }
-
+            // If channel's DFS State is unavailable, set the channel preference to "Not Usable" (0).
             if (channel_info_tlv->dfs_state() == beerocks_message::eDfsState::UNAVAILABLE) {
                 supported_bw_info_tlv.multiap_preference = 0;
                 supported_bw_info_tlv.rank               = -1;
@@ -373,8 +366,8 @@ bool ApManager::start()
     // Install a connection-closed event handler.
     handlers.on_connection_closed = [&]() {
         LOG(ERROR) << "Slave socket disconnected!";
-        m_slave_client.reset();
-
+        // Don't put here a "m_slave_client.reset()" since it will destruct this function before it
+        // ends, and will lead to a crash.
         m_state = eApManagerState::TERMINATED;
     };
 
@@ -656,6 +649,10 @@ bool ApManager::ap_manager_fsm(bool &continue_processing)
         break;
     }
     case eApManagerState::TERMINATED: {
+        LOG(DEBUG) << "State TERMINATED, removing Agent client";
+        if (m_slave_client) {
+            m_slave_client.reset();
+        }
         return false;
     }
     default:
@@ -696,6 +693,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
     auto beerocks_header = message_com::parse_intel_vs_message(cmdu_rx);
     if (beerocks_header == nullptr) {
         handle_cmdu_ieee1905_1_message(cmdu_rx);
+        return;
     }
 
     if (beerocks_header->action() != beerocks_message::ACTION_APMANAGER) {

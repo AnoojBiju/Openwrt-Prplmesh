@@ -208,6 +208,8 @@ private:
      * class constructor.
      */
     std::shared_ptr<beerocks::CmduClient> m_slave_client;
+
+    bool m_remove_agent_client = false;
 };
 } // namespace son
 
