@@ -155,13 +155,13 @@ bool ap_wlan_hal_dummy::set_channel(int chan, beerocks::eWiFiBandwidth bw, int c
     return write_status_file("channel", value.str());
 }
 
-bool ap_wlan_hal_dummy::sta_allow(const std::string &mac, const std::string &bssid)
+bool ap_wlan_hal_dummy::sta_allow(const sMacAddr &mac, const sMacAddr &bssid)
 {
     LOG(DEBUG) << "Got client allow request for " << mac << " on bssid " << bssid;
     return true;
 }
 
-bool ap_wlan_hal_dummy::sta_deny(const std::string &mac, const std::string &bssid)
+bool ap_wlan_hal_dummy::sta_deny(const sMacAddr &mac, const sMacAddr &bssid)
 {
     LOG(DEBUG) << "Got client disallow request for " << mac << " on bssid " << bssid
                << " reject_sta: 33";

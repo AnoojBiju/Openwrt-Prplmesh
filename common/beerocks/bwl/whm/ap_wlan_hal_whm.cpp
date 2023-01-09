@@ -107,9 +107,9 @@ bool ap_wlan_hal_whm::set_channel(int chan, beerocks::eWiFiBandwidth bw, int cen
     return true;
 }
 
-bool ap_wlan_hal_whm::sta_allow(const std::string &mac, const std::string &bssid)
+bool ap_wlan_hal_whm::sta_allow(const sMacAddr &mac, const sMacAddr &bssid)
 {
-    auto vap_id = get_vap_id_with_mac(bssid);
+    auto vap_id = get_vap_id_with_mac(tlvf::mac_to_string(bssid));
     if (vap_id < 0) {
         LOG(ERROR) << "no vap has bssid " << bssid;
         return false;
@@ -130,8 +130,9 @@ bool ap_wlan_hal_whm::sta_allow(const std::string &mac, const std::string &bssid
     }
 
     // check if the sta is included in accesslist entries
-    std::string entry_path = wbapi_utils::search_path_mac_filtering_entry_by_mac(ifname, mac);
-    bool sta_found         = m_ambiorix_cl->resolve_path(entry_path, entry_path);
+    std::string entry_path =
+        wbapi_utils::search_path_mac_filtering_entry_by_mac(ifname, tlvf::mac_to_string(mac));
+    bool sta_found = m_ambiorix_cl->resolve_path(entry_path, entry_path);
 
     if (sta_found && mode == "WhiteList") {
         LOG(TRACE) << "sta allowed in WhiteList mode";
@@ -145,7 +146,7 @@ bool ap_wlan_hal_whm::sta_allow(const std::string &mac, const std::string &bssid
     // delete sta from the BlackList
     AmbiorixVariant result;
     AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
-    args.add_child<>("mac", mac);
+    args.add_child("mac", tlvf::mac_to_string(mac));
     bool ret = true;
     if (mode == "WhiteList") {
         ret = m_ambiorix_cl->call(mac_filter_path, "addEntry", args, result);
@@ -161,9 +162,9 @@ bool ap_wlan_hal_whm::sta_allow(const std::string &mac, const std::string &bssid
     return true;
 }
 
-bool ap_wlan_hal_whm::sta_deny(const std::string &mac, const std::string &bssid)
+bool ap_wlan_hal_whm::sta_deny(const sMacAddr &mac, const sMacAddr &bssid)
 {
-    auto vap_id = get_vap_id_with_mac(bssid);
+    auto vap_id = get_vap_id_with_mac(tlvf::mac_to_string(bssid));
     if (vap_id < 0) {
         LOG(ERROR) << "no vap has bssid " << bssid;
         return false;
@@ -184,8 +185,9 @@ bool ap_wlan_hal_whm::sta_deny(const std::string &mac, const std::string &bssid)
     }
 
     // check if the sta is included in accesslist entries
-    std::string entry_path = wbapi_utils::search_path_mac_filtering_entry_by_mac(ifname, mac);
-    bool sta_found         = m_ambiorix_cl->resolve_path(entry_path, entry_path);
+    std::string entry_path =
+        wbapi_utils::search_path_mac_filtering_entry_by_mac(ifname, tlvf::mac_to_string(mac));
+    bool sta_found = m_ambiorix_cl->resolve_path(entry_path, entry_path);
 
     if (sta_found && mode == "BlackList") {
         LOG(TRACE) << "sta denied in BlackList mode";
@@ -199,7 +201,7 @@ bool ap_wlan_hal_whm::sta_deny(const std::string &mac, const std::string &bssid)
     bool ret = true;
     AmbiorixVariant result;
     AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
-    args.add_child<>("mac", mac);
+    args.add_child("mac", tlvf::mac_to_string(mac));
     if (mode == "Off") {
         LOG(WARNING) << "change MACFiltering mode to BlackList";
         AmbiorixVariant new_obj(AMXC_VAR_ID_HTABLE);
