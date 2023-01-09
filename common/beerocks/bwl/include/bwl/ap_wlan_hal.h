@@ -126,7 +126,7 @@ public:
      *
      * @return true on success or false on error.
      */
-    virtual bool sta_allow(const std::string &mac, const std::string &bssid) = 0;
+    virtual bool sta_allow(const sMacAddr &mac, const sMacAddr &bssid) = 0;
 
     /**
      * @brief Deny the station with the given MAC address from connecting to the AP.
@@ -136,7 +136,7 @@ public:
      * 
      * @return true on success or false on error.
      */
-    virtual bool sta_deny(const std::string &mac, const std::string &bssid) = 0;
+    virtual bool sta_deny(const sMacAddr &mac, const sMacAddr &bssid) = 0;
 
     /**
      * @brief Disassociate the station with the given MAC address.

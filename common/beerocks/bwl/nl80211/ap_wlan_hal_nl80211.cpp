@@ -649,15 +649,15 @@ bool ap_wlan_hal_nl80211::set_channel(int chan, beerocks::eWiFiBandwidth bw, int
     return true;
 }
 
-bool ap_wlan_hal_nl80211::sta_allow(const std::string &mac, const std::string &bssid)
+bool ap_wlan_hal_nl80211::sta_allow(const sMacAddr &mac, const sMacAddr &bssid)
 {
     LOG(TRACE) << __func__ << " mac: " << mac << ", bssid: " << bssid;
 
     // Build command string
     // We use the DENY_ACL list only
-    const std::string cmd = "DENY_ACL DEL_MAC " + mac;
+    const std::string cmd = "DENY_ACL DEL_MAC " + tlvf::mac_to_string(mac);
 
-    auto vap_id = get_vap_id_with_mac(bssid);
+    auto vap_id = get_vap_id_with_mac(tlvf::mac_to_string(bssid));
     if (vap_id < 0) {
         LOG(ERROR) << "no vap has bssid " << bssid;
         return false;
@@ -673,15 +673,15 @@ bool ap_wlan_hal_nl80211::sta_allow(const std::string &mac, const std::string &b
     return true;
 }
 
-bool ap_wlan_hal_nl80211::sta_deny(const std::string &mac, const std::string &bssid)
+bool ap_wlan_hal_nl80211::sta_deny(const sMacAddr &mac, const sMacAddr &bssid)
 {
     LOG(TRACE) << __func__ << " mac: " << mac << ", bssid: " << bssid;
 
     // Build command string
     // We use the DENY_ACL list only
-    const std::string cmd = "DENY_ACL ADD_MAC " + mac;
+    const std::string cmd = "DENY_ACL ADD_MAC " + tlvf::mac_to_string(mac);
 
-    auto vap_id = get_vap_id_with_mac(bssid);
+    auto vap_id = get_vap_id_with_mac(tlvf::mac_to_string(bssid));
     if (vap_id < 0) {
         LOG(ERROR) << "no vap has bssid " << bssid;
         return false;

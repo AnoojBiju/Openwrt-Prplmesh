@@ -1095,7 +1095,7 @@ bool ap_wlan_hal_dwpal::set_channel(int chan, beerocks::eWiFiBandwidth bw, int c
     return true;
 }
 
-bool ap_wlan_hal_dwpal::sta_allow(const std::string &mac, const std::string &bssid)
+bool ap_wlan_hal_dwpal::sta_allow(const sMacAddr &mac, const sMacAddr &bssid)
 {
     // Check if the requested BSSID is part of this radio
     for (const auto &vap : m_radio_info.available_vaps) {
@@ -1115,7 +1115,7 @@ bool ap_wlan_hal_dwpal::sta_allow(const std::string &mac, const std::string &bss
     return true;
 }
 
-bool ap_wlan_hal_dwpal::sta_deny(const std::string &mac, const std::string &bssid)
+bool ap_wlan_hal_dwpal::sta_deny(const sMacAddr &mac, const sMacAddr &bssid)
 {
     // Check if the requested BSSID is part of this radio
     for (const auto &vap : m_radio_info.available_vaps) {

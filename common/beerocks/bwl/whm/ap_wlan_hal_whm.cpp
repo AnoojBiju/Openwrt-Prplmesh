@@ -107,7 +107,7 @@ bool ap_wlan_hal_whm::set_channel(int chan, beerocks::eWiFiBandwidth bw, int cen
     return true;
 }
 
-bool ap_wlan_hal_whm::sta_allow(const std::string &mac, const std::string &bssid)
+bool ap_wlan_hal_whm::sta_allow(const sMacAddr &mac, const sMacAddr &bssid)
 {
     auto vap_id = get_vap_id_with_mac(bssid);
     if (vap_id < 0) {
@@ -161,7 +161,7 @@ bool ap_wlan_hal_whm::sta_allow(const std::string &mac, const std::string &bssid
     return true;
 }
 
-bool ap_wlan_hal_whm::sta_deny(const std::string &mac, const std::string &bssid)
+bool ap_wlan_hal_whm::sta_deny(const sMacAddr &mac, const sMacAddr &bssid)
 {
     auto vap_id = get_vap_id_with_mac(bssid);
     if (vap_id < 0) {
