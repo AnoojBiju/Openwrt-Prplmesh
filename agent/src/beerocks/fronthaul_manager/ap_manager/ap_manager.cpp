@@ -1393,23 +1393,22 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             return;
         }
 
-        std::string sta_mac = tlvf::mac_to_string(request->mac());
-        std::string bssid   = tlvf::mac_to_string(request->bssid());
-
         const auto &vap_unordered_map = ap_wlan_hal->get_radio_info().available_vaps;
-        auto it = std::find_if(vap_unordered_map.begin(), vap_unordered_map.end(),
-                               [&](const std::pair<int, bwl::VAPElement> &element) {
-                                   return element.second.mac == bssid;
-                               });
+        auto it =
+            std::find_if(vap_unordered_map.begin(), vap_unordered_map.end(),
+                         [&](const std::pair<int, bwl::VAPElement> &element) {
+                             return element.second.mac == tlvf::mac_to_string(request->bssid());
+                         });
 
         if (it == vap_unordered_map.end()) {
             //AP does not have the requested vap, probably will be handled on the other AP
             return;
         }
 
-        LOG(DEBUG) << "CLIENT_DISALLOW: mac = " << sta_mac << ", bssid = " << bssid;
+        LOG(DEBUG) << "CLIENT_DISALLOW: mac = " << request->mac()
+                   << ", bssid = " << request->bssid();
 
-        ap_wlan_hal->sta_deny(sta_mac, bssid);
+        ap_wlan_hal->sta_deny(request->mac(), request->bssid());
 
         // Check if validity period is set then add it to the "disallowed client timeouts" list
         // This list will be polled in ap_manager_fsm() while in operational state through method
@@ -1452,14 +1451,12 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             return;
         }
 
-        std::string sta_mac = tlvf::mac_to_string(request->mac());
-        std::string bssid   = tlvf::mac_to_string(request->bssid());
-
         const auto &vap_unordered_map = ap_wlan_hal->get_radio_info().available_vaps;
-        auto it = std::find_if(vap_unordered_map.begin(), vap_unordered_map.end(),
-                               [&](const std::pair<int, bwl::VAPElement> &element) {
-                                   return element.second.mac == bssid;
-                               });
+        auto it =
+            std::find_if(vap_unordered_map.begin(), vap_unordered_map.end(),
+                         [&](const std::pair<int, bwl::VAPElement> &element) {
+                             return element.second.mac == tlvf::mac_to_string(request->bssid());
+                         });
 
         if (it == vap_unordered_map.end()) {
             //AP does not have the requested vap, probably will be handled on the other AP
@@ -1468,8 +1465,8 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
 
         remove_client_from_disallowed_list(request->mac(), request->bssid());
 
-        LOG(DEBUG) << "CLIENT_ALLOW: mac = " << sta_mac << ", bssid = " << bssid;
-        ap_wlan_hal->sta_allow(sta_mac, bssid);
+        LOG(DEBUG) << "CLIENT_ALLOW: mac = " << request->mac() << ", bssid = " << request->bssid();
+        ap_wlan_hal->sta_allow(request->mac(), request->bssid());
 
         break;
     }
@@ -2896,7 +2893,7 @@ void ApManager::allow_expired_clients()
     for (auto it = m_disallowed_clients.begin(); it != m_disallowed_clients.end();) {
         if (std::chrono::steady_clock::now() > it->timeout) {
             LOG(DEBUG) << "CLIENT_ALLOW: mac = " << it->mac << ", bssid = " << it->bssid;
-            ap_wlan_hal->sta_allow(tlvf::mac_to_string(it->mac), tlvf::mac_to_string(it->bssid));
+            ap_wlan_hal->sta_allow(it->mac, it->bssid);
             it = m_disallowed_clients.erase(it);
         } else {
             it++;

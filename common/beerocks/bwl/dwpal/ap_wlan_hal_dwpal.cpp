@@ -1095,13 +1095,13 @@ bool ap_wlan_hal_dwpal::set_channel(int chan, beerocks::eWiFiBandwidth bw, int c
     return true;
 }
 
-bool ap_wlan_hal_dwpal::sta_allow(const std::string &mac, const std::string &bssid)
+bool ap_wlan_hal_dwpal::sta_allow(const sMacAddr &mac, const sMacAddr &bssid)
 {
     // Check if the requested BSSID is part of this radio
     for (const auto &vap : m_radio_info.available_vaps) {
-        if (vap.second.mac == bssid) {
+        if (vap.second.mac == tlvf::mac_to_string(bssid)) {
             // Send the command
-            std::string cmd = "STA_ALLOW " + mac;
+            std::string cmd = "STA_ALLOW " + tlvf::mac_to_string(mac);
             if (!dwpal_send_cmd(cmd, vap.first)) {
                 LOG(ERROR) << "sta_allow() failed!";
                 return false;
@@ -1115,13 +1115,13 @@ bool ap_wlan_hal_dwpal::sta_allow(const std::string &mac, const std::string &bss
     return true;
 }
 
-bool ap_wlan_hal_dwpal::sta_deny(const std::string &mac, const std::string &bssid)
+bool ap_wlan_hal_dwpal::sta_deny(const sMacAddr &mac, const sMacAddr &bssid)
 {
     // Check if the requested BSSID is part of this radio
     for (const auto &vap : m_radio_info.available_vaps) {
-        if (vap.second.mac == bssid) {
+        if (vap.second.mac == tlvf::mac_to_string(bssid)) {
             // Send the command
-            std::string cmd = "DENY_MAC " + mac + " reject_sta=33";
+            std::string cmd = "DENY_MAC " + tlvf::mac_to_string(mac) + " reject_sta=33";
             if (!dwpal_send_cmd(cmd, vap.first)) {
                 LOG(ERROR) << "sta_allow() failed!";
                 return false;
