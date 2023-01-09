@@ -3402,7 +3402,7 @@ bool Controller::handle_cmdu_control_message(
             new_event.snr        = notification->params().rx_snr;
             new_event.client_mac = notification->params().result.mac;
             new_event.bssid      = database.get_hostap_vap_mac(tlvf::mac_from_string(ap_mac),
-                                                          notification->params().vap_id);
+                                                               notification->params().vap_id);
             m_task_pool.push_event(database.get_pre_association_steering_task_id(),
                                    pre_association_steering_task::eEvents::
                                        STEERING_EVENT_RSSI_MEASUREMENT_SNR_NOTIFICATION,
@@ -4168,6 +4168,7 @@ void Controller::trigger_prioritization_config()
 bool Controller::handle_tlv_profile2_ap_capability(std::shared_ptr<Agent> agent,
                                                    ieee1905_1::CmduMessageRx &cmdu_rx)
 {
+    LOG(ERROR) << "serv_prio: inside " << __func__;
     auto profile2_ap_capability_tlv = cmdu_rx.getClass<wfa_map::tlvProfile2ApCapability>();
     if (!profile2_ap_capability_tlv) {
         LOG(DEBUG) << "getClass wfa_map::tlvProfile2ApCapability has failed";
