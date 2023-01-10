@@ -36,6 +36,7 @@ class vbss_task : public son::task {
 
 public:
     vbss_task(son::db &database, task_pool &tasks,
+              std::shared_ptr<beerocks::TimerManager> timer_manager,
               const std::string &task_name_ = std::string("vbss_task"));
     virtual ~vbss_task() {}
     bool handle_ieee1905_1_msg(const sMacAddr &src_mac,
@@ -116,6 +117,7 @@ protected:
 private:
     son::db &m_database;
     son::task_pool &m_tasks;
+    std::shared_ptr<beerocks::TimerManager> m_timer_manager;
 
     /**
      * @brief A map between VBSSIDs and active (in the process of executing) move events
