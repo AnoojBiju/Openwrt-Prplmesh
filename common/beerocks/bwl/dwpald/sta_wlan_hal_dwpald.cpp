@@ -862,7 +862,11 @@ bool sta_wlan_hal_dwpal::read_status(ConnectionStatus &connection_status)
     connection_status.uuid            = std::string(uuid);
 
     /* TEMP: Traces... */
-    LOG(DEBUG) << "STATUS reply= \n" << reply;
+    /* Removing the Status reply since it is duplicated */
+    //LOG(DEBUG) << "STATUS reply= \n" << reply;
+    /* Values not parsed from Status buffer is listed below */
+    /* multi_ap_profile=2 multi_ap_primary_vlanid=0 wifi_generation=5 pmf=2 mgmt_group_cipher=BIP sae_group=19 sae_h2e=0 sae_pk=0 ieee80211ac=1 */
+
     LOG(DEBUG) << "numOfValidArgs[0]= " << numOfValidArgs[0]
                << " wpa_state= " << connection_status.wpa_state;
     LOG(DEBUG) << "numOfValidArgs[1]= " << numOfValidArgs[1] << " freq= " << connection_status.freq;
