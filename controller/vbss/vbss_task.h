@@ -38,7 +38,7 @@ public:
     vbss_task(son::db &database, task_pool &tasks,
               std::shared_ptr<beerocks::TimerManager> timer_manager,
               const std::string &task_name_ = std::string("vbss_task"));
-    virtual ~vbss_task() {}
+    virtual ~vbss_task();
     bool handle_ieee1905_1_msg(const sMacAddr &src_mac,
                                ieee1905_1::CmduMessageRx &cmdu_rx) override;
 

@@ -36,6 +36,14 @@ vbss_task::vbss_task(son::db &database, task_pool &tasks,
     }
 }
 
+vbss_task::~vbss_task()
+{
+    for (const auto &e : active_moves)
+        remove_timer_for_timed_event(e.first);
+    for (const auto &e : active_creation_events)
+        remove_timer_for_timed_event(e.first);
+}
+
 /*
  Virtual BSS Capabilities Response
     - AP Radio VBSS Capabilities TLV
