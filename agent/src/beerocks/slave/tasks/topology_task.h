@@ -11,6 +11,7 @@
 
 #include "task.h"
 
+#include <beerocks/tlvf/beerocks_message_1905_vs.h>
 #include <tlvf/CmduMessageTx.h>
 
 namespace beerocks {
@@ -123,10 +124,17 @@ private:
 
     /**
      * @brief Add and fill associated_clients tlv.
-     * 
+     *
      * @return true on success, otherwise false.
      */
     bool add_associated_clients_tlv();
+
+    /**
+     * @brief Add and fill bssid_iface_mapping tlv.
+     *
+     * @return true on success, otherwise false.
+     */
+    bool add_vs_tlv_bssid_iface_mapping();
 
     std::chrono::steady_clock::time_point m_periodic_discovery_timestamp;
 

@@ -263,7 +263,7 @@ bool slave_thread::thread_init()
 
     m_tasks_timer = m_timer_manager->add_timer(
         "Agent Tasks", tasks_timer_period, tasks_timer_period,
-        [&](int fd, beerocks::EventLoop &loop) {
+        [&, tasks_timer_period](int fd, beerocks::EventLoop &loop) {
             // Allow tasks to execute up to 80% of the timer period
             m_task_pool.run_tasks(int(double(tasks_timer_period.count()) * 0.8));
             return true;
