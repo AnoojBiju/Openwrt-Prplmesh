@@ -119,6 +119,8 @@ private:
     son::task_pool &m_tasks;
     std::shared_ptr<beerocks::TimerManager> m_timer_manager;
 
+    std::unordered_map<sMacAddr, int> m_active_event_to_timer_fd;
+
     /**
      * @brief A map between VBSSIDs and active (in the process of executing) move events
      */
@@ -252,6 +254,31 @@ private:
      * @return True if the function successfully incremented the TX PN and updated the provided vector, false otherwise.
     */
     bool increment_tx_pn(std::vector<uint8_t> &tx_pn, size_t tx_pn_len, size_t amount);
+
+    /**
+     * @brief Handles a timeout situation where a Multi-AP Agent has not replied to a VBSS message
+     * within some timeout threshold.
+     * 
+     * @param dest_ruid The destination radio UID of interest for a given VBSS message
+     * @param client_vbss The client VBSS of interest.
+     */
+    void handle_timeout(const vbss::sClientVBSS &client_vbss);
+
+    /**
+     * @brief Begins a timer for a timed VBSS event.
+     * 
+     * @param vbssid The VBSSID of the (move|creation) event.
+     * @param timer_period_ms The period the timer will elapse on. Also the initial delay.
+     */
+    void begin_timer_for_timed_event(const vbss::sClientVBSS &vbssid,
+                                     std::chrono::milliseconds timer_period_ms);
+
+    /**
+     * @brief Removes a timer for a timed VBSS event.
+     * 
+     * @param vbssid The VBSSID of the event to remove the timer for.
+     */
+    void remove_timer_for_timed_event(const sMacAddr &vbssid);
 };
 
 #endif // VBSS_TASK_H
