@@ -460,6 +460,15 @@ struct sKeyInfo {
  */
 enum ePacketNumberLength { CCMP = 6, CCMP_256 = 6, CMAC = 6, GMAC = 6, GCMP = 6 };
 
+/**
+ *  @brief Actions used for MAC ACL operations.
+ */
+enum class sta_acl_action {
+    ADD,
+    DEL,
+    CLEAR,
+};
+
 } // namespace bwl
 
 #endif // _BWL_BASE_WLAN_HAL_TYPES_H_

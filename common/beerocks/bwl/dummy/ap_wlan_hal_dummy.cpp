@@ -168,6 +168,12 @@ bool ap_wlan_hal_dummy::sta_deny(const sMacAddr &mac, const sMacAddr &bssid)
     return true;
 }
 
+bool ap_wlan_hal_dummy::sta_acceptlist_modify(const sMacAddr &mac, const sMacAddr &bssid,
+                                              bwl::sta_acl_action action)
+{
+    return true;
+}
+
 bool ap_wlan_hal_dummy::sta_disassoc(int8_t vap_id, const std::string &mac, uint32_t reason)
 {
     return true;
