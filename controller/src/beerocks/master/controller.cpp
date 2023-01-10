@@ -369,7 +369,9 @@ void Controller::start_mandatory_tasks()
         << "Failed adding agent monitoring task!";
 
 #ifdef ENABLE_VBSS
-    LOG_IF(!m_task_pool.add_task(std::make_shared<vbss_task>(database, m_task_pool)), FATAL)
+    LOG_IF(
+        !m_task_pool.add_task(std::make_shared<vbss_task>(database, m_task_pool, m_timer_manager)),
+        FATAL)
         << "Failed adding vbss task!";
 #else
     LOG(INFO) << "VBSS is not enabled";

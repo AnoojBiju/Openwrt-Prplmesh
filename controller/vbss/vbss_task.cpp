@@ -17,8 +17,19 @@
 #include <tlvf/wfa_map/tlvVbssConfigurationReport.h>
 #include <tlvf/wfa_map/tlvVirtualBssEvent.h>
 
-vbss_task::vbss_task(son::db &database, task_pool &tasks, const std::string &task_name_)
-    : task(task_name_), m_database(database), m_tasks(tasks)
+/**
+ * @brief Timeout thresholds for VBSS creation/move events.
+ * Canonically, in the VBSS spec, the timeout threshold is 1 second.
+ * But, due to the blocking, round-robin nature of the tasking system,
+ * we give it a little more wiggle room.
+ */
+static constexpr std::chrono::milliseconds VBSS_EVENT_TIMEOUT_MS{3000};
+
+vbss_task::vbss_task(son::db &database, task_pool &tasks,
+                     std::shared_ptr<beerocks::TimerManager> timer_manager,
+                     const std::string &task_name_)
+    : task(task_name_), m_database(database), m_tasks(tasks),
+      m_timer_manager(std::move(timer_manager))
 {
     if (database.get_vbss_task_id() == db::TASK_ID_NOT_FOUND) {
         database.assign_vbss_task_id(id);
