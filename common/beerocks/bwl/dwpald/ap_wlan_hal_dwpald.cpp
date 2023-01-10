@@ -1155,6 +1155,18 @@ bool ap_wlan_hal_dwpal::sta_deny(const sMacAddr &mac, const sMacAddr &bssid)
     return true;
 }
 
+bool ap_wlan_hal_dwpal::sta_acceptlist_remove(const sMacAddr &mac, const sMacAddr &bssid)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
+bool ap_wlan_hal_dwpal::sta_acceptlist_add(const sMacAddr &mac, const sMacAddr &bssid)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
 bool ap_wlan_hal_dwpal::sta_disassoc(int8_t vap_id, const std::string &mac, uint32_t reason)
 {
     // Build command string
