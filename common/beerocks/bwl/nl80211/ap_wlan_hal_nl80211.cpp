@@ -699,14 +699,48 @@ bool ap_wlan_hal_nl80211::sta_deny(const sMacAddr &mac, const sMacAddr &bssid)
 
 bool ap_wlan_hal_nl80211::sta_acceptlist_remove(const sMacAddr &mac, const sMacAddr &bssid)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
-    return false;
+    LOG(TRACE) << __func__ << " mac: " << mac << ", bssid: " << bssid;
+
+    // Build command string
+    const std::string cmd = "ACCEPT_ACL DEL_MAC " + tlvf::mac_to_string(mac);
+
+    auto vap_id = get_vap_id_with_mac(tlvf::mac_to_string(bssid));
+    if (vap_id < 0) {
+        LOG(ERROR) << "no vap has bssid " << bssid;
+        return false;
+    }
+    std::string ifname = m_radio_info.available_vaps[vap_id].bss;
+
+    // Send command
+    if (!wpa_ctrl_send_msg(cmd, ifname)) {
+        LOG(ERROR) << __func__ << " failed!";
+        return false;
+    }
+
+    return true;
 }
 
 bool ap_wlan_hal_nl80211::sta_acceptlist_add(const sMacAddr &mac, const sMacAddr &bssid)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
-    return false;
+    LOG(TRACE) << __func__ << " mac: " << mac << ", bssid: " << bssid;
+
+    // Build command string
+    const std::string cmd = "ACCEPT_ACL ADD_MAC " + tlvf::mac_to_string(mac);
+
+    auto vap_id = get_vap_id_with_mac(tlvf::mac_to_string(bssid));
+    if (vap_id < 0) {
+        LOG(ERROR) << "no vap has bssid " << bssid;
+        return false;
+    }
+    std::string ifname = m_radio_info.available_vaps[vap_id].bss;
+
+    // Send command
+    if (!wpa_ctrl_send_msg(cmd, ifname)) {
+        LOG(ERROR) << __func__ << " failed!";
+        return false;
+    }
+
+    return true;
 }
 
 bool ap_wlan_hal_nl80211::sta_disassoc(int8_t vap_id, const std::string &mac, uint32_t reason)
