@@ -151,6 +151,16 @@ public:
                                        bwl::sta_acl_action action) = 0;
 
     /**
+     * @brief Set the MAC ACL type (see struct eMacACLType).
+     *
+     * @param [in] acl_type the new ACL type.
+     * @param [in] bssid The BSSID to which the operation is applicable.
+     *
+     * @return true on success or false on error.
+     */
+    virtual bool set_macacl_type(const eMacACLType &acl_type, const sMacAddr &bssid) = 0;
+
+    /**
      * @brief Disassociate the station with the given MAC address.
      *
      * @param [in] vap_id

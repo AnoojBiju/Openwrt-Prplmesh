@@ -1142,6 +1142,12 @@ bool ap_wlan_hal_dwpal::sta_acceptlist_modify(const sMacAddr &mac, const sMacAdd
     return false;
 }
 
+bool ap_wlan_hal_dwpal::set_macacl_type(const eMacACLType &acl_type, const sMacAddr &bssid)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
 bool ap_wlan_hal_dwpal::sta_disassoc(int8_t vap_id, const std::string &mac, uint32_t reason)
 {
     // Build command string
