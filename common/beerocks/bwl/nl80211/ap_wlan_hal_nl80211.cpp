@@ -697,6 +697,13 @@ bool ap_wlan_hal_nl80211::sta_deny(const sMacAddr &mac, const sMacAddr &bssid)
     return true;
 }
 
+bool ap_wlan_hal_nl80211::sta_acceptlist_modify(const sMacAddr &mac, const sMacAddr &bssid,
+                                                bwl::sta_acl_action action)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
 bool ap_wlan_hal_nl80211::sta_disassoc(int8_t vap_id, const std::string &mac, uint32_t reason)
 {
     LOG(TRACE) << __func__ << " mac: " << mac << " vap_id: " << vap_id;

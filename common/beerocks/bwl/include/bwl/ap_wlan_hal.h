@@ -139,6 +139,18 @@ public:
     virtual bool sta_deny(const sMacAddr &mac, const sMacAddr &bssid) = 0;
 
     /**
+     * @brief Remove the station with the given MAC address from the accept list.
+     *
+     * @param [in] mac The MAC address of the station.
+     * @param [in] bssid The BSSID to which the operation is applicable.
+     * @param [in] action The action to perform (add, remove, ...).
+     *
+     * @return true on success or false on error.
+     */
+    virtual bool sta_acceptlist_modify(const sMacAddr &mac, const sMacAddr &bssid,
+                                       bwl::sta_acl_action action) = 0;
+
+    /**
      * @brief Disassociate the station with the given MAC address.
      *
      * @param [in] vap_id
