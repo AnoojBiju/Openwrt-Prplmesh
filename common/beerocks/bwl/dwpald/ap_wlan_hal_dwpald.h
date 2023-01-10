@@ -47,6 +47,7 @@ public:
     virtual bool sta_deny(const sMacAddr &mac, const sMacAddr &bssid) override;
     virtual bool sta_acceptlist_remove(const sMacAddr &mac, const sMacAddr &bssid) override;
     virtual bool sta_acceptlist_add(const sMacAddr &mac, const sMacAddr &bssid) override;
+    virtual bool set_macacl_type(const eMacACLType &acl_type, const sMacAddr &bssid) override;
     virtual bool sta_disassoc(int8_t vap_id, const std::string &mac, uint32_t reason = 0) override;
     virtual bool sta_deauth(int8_t vap_id, const std::string &mac, uint32_t reason = 0) override;
     virtual bool sta_bss_steer(int8_t vap_id, const std::string &mac, const std::string &bssid,

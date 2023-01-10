@@ -462,6 +462,15 @@ struct sKeyInfo {
  */
 enum ePacketNumberLength { CCMP = 6, CCMP_256 = 6, CMAC = 6, GMAC = 6, GCMP = 6 };
 
+/**
+ * @brief Type of ACLs (deny list or accept list). Corresponds to
+ * hostapd's macaddr_acl parameter.
+ */
+enum class eMacACLType {
+    DENY_LIST   = 0 /** Accept unless in deny list */,
+    ACCEPT_LIST = 1 /** Deny unless in accept list */,
+};
+
 } // namespace bwl
 
 #endif // _BWL_BASE_WLAN_HAL_TYPES_H_

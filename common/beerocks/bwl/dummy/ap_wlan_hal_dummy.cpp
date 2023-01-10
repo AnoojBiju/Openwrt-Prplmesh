@@ -178,6 +178,11 @@ bool ap_wlan_hal_dummy::sta_acceptlist_add(const sMacAddr &mac, const sMacAddr &
     return true;
 }
 
+bool ap_wlan_hal_dummy::set_macacl_type(const eMacACLType &acl_type, const sMacAddr &bssid)
+{
+    return true;
+}
+
 bool ap_wlan_hal_dummy::sta_disassoc(int8_t vap_id, const std::string &mac, uint32_t reason)
 {
     return true;
