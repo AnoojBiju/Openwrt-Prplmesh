@@ -354,6 +354,19 @@ bool vbss_task::handle_move_response_msg(const sMacAddr &src_mac,
     if (existing_move != nullptr && !is_cancelled) {
         // Move exists for VBSSID and is in response to a MOVE_PREP request
         existing_move->state = vbss::eMoveProcessState::VBSS_CREATION;
+
+        // TODO: once PPM-2367/PPM-2368 is done, save+parse the encryption type for
+        // the TX_PN length instead of assuming CCMP.
+        if (!increment_tx_pn(existing_move->sec_ctx_info->tx_packet_num,
+                             bwl::ePacketNumberLength::CCMP, TX_PN_INCREASE_AMOUNT)) {
+            LOG(ERROR) << "Could not increment TX PN!";
+            return false;
+        }
+        if (!increment_tx_pn(existing_move->sec_ctx_info->group_tx_packet_num,
+                             bwl::ePacketNumberLength::CCMP, TX_PN_INCREASE_AMOUNT)) {
+            LOG(ERROR) << "Could not increment group TX PN!";
+            return false;
+        }
         if (!vbss::vbss_actions::create_vbss(existing_move->client_vbss, existing_move->dest_ruid,
                                              existing_move->ssid, existing_move->password,
                                              existing_move->sec_ctx_info.get(), m_database)) {
@@ -714,4 +727,21 @@ bool vbss_task::handle_station_disconnect_event(const vbss::sStationDisconEvent 
         return false;
     }
     return controller_ctx->handle_sta_disconnect_vbss(stationDiscon);
+}
+
+bool vbss_task::increment_tx_pn(std::vector<uint8_t> &tx_pn, size_t tx_pn_len, size_t amount)
+{
+    if (tx_pn.empty()) {
+        LOG(ERROR) << "Empty TX PN!";
+        return false;
+    }
+    // Read+increment+write the TX PN.
+    uint64_t new_tx_pn{0};
+    std::memcpy(&new_tx_pn, tx_pn.data(), tx_pn_len);
+    new_tx_pn = le64toh(new_tx_pn + amount);
+    // Remove old TX PN
+    tx_pn.clear();
+    uint8_t *p_new_tx_pn = reinterpret_cast<uint8_t *>(&new_tx_pn);
+    tx_pn.insert(tx_pn.end(), p_new_tx_pn, p_new_tx_pn + tx_pn_len);
+    return true;
 }
