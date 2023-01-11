@@ -28,8 +28,8 @@ WifiChannel::WifiChannel(uint8_t channel, uint16_t center_frequency, eWiFiBandwi
         center_frequency_1 shall be the center frequency of the primary 80MHz channel,
         and center_frequency_2 shall be the center frequency of the 160MHz channel
         */
-        auto channel_it = son::wireless_utils::channels_table_6g.find(channel);
-        if (channel_it != son::wireless_utils::channels_table_6g.end()) {
+        if (!is_central_channel(channel, bandwidth)) {
+            auto channel_it = son::wireless_utils::channels_table_6g.find(channel);
             auto primary_80mhz_center_channel_it =
                 channel_it->second.find(eWiFiBandwidth::BANDWIDTH_80);
             auto primary_80mhz_center_frequency = son::wireless_utils::channel_to_freq(
@@ -38,8 +38,9 @@ WifiChannel::WifiChannel(uint8_t channel, uint16_t center_frequency, eWiFiBandwi
             initialize_wifi_channel_members(channel, freq_type, primary_80mhz_center_frequency,
                                             center_frequency, bandwidth, ext_above_secondary);
         } else {
-            LOG(ERROR) << "CW: invalid wifiChannel params. Creating an empty channel instead";
-            initialize_empty_wifi_channel_members();
+            // These classes contains only center channels
+            initialize_wifi_channel_members(channel, freq_type, center_frequency, center_frequency,
+                                            bandwidth, ext_above_secondary);
         }
     } else {
         initialize_wifi_channel_members(channel, freq_type, center_frequency, 0, bandwidth,
@@ -264,22 +265,24 @@ void WifiChannel::initialize_wifi_channel_members(uint8_t channel, eFreqType fre
     }
 }
 
+bool WifiChannel::is_central_channel(uint8_t channel, eWiFiBandwidth bandwidth)
+{
+    if (bandwidth >= eWiFiBandwidth::BANDWIDTH_80) {
+        for (const auto &oper_class : son::wireless_utils::operating_classes_list) {
+            if (oper_class.second.band == bandwidth &&
+                oper_class.second.channels.find(channel) != oper_class.second.channels.end()) {
+                LOG(DEBUG) << "channel " << channel << " has oper_class = " << oper_class.first;
+                return son::wireless_utils::is_operating_class_using_central_channel(
+                    oper_class.first);
+            }
+        }
+    }
+    return false;
+}
+
 bool WifiChannel::are_params_valid(uint8_t channel, eFreqType freq_type, uint16_t center_frequency,
                                    eWiFiBandwidth bandwidth)
 {
-    auto is_central_channel = [&]() -> bool {
-        if (bandwidth >= eWiFiBandwidth::BANDWIDTH_80) {
-            for (const auto &oper_class : son::wireless_utils::operating_classes_list) {
-                if (oper_class.second.band == bandwidth &&
-                    oper_class.second.channels.find(channel) != oper_class.second.channels.end()) {
-                    LOG(DEBUG) << "channel " << channel << " has oper_class = " << oper_class.first;
-                    return son::wireless_utils::is_operating_class_using_central_channel(
-                        oper_class.first);
-                }
-            }
-        }
-        return false;
-    };
     if (bandwidth == eWiFiBandwidth::BANDWIDTH_UNKNOWN ||
         bandwidth == eWiFiBandwidth::BANDWIDTH_MAX) {
         LOG(ERROR) << "The bandwidth Failed be "
@@ -308,7 +311,7 @@ bool WifiChannel::are_params_valid(uint8_t channel, eFreqType freq_type, uint16_
         }
     } break;
     case eFreqType::FREQ_5G: {
-        if (!is_central_channel()) {
+        if (!is_central_channel(channel, bandwidth)) {
             auto channel_it = son::wireless_utils::channels_table_5g.find(channel);
             if (channel_it == son::wireless_utils::channels_table_5g.end()) {
                 LOG(ERROR) << "Failed find " << channel << " channel in 5ghz channels table.";
@@ -322,7 +325,7 @@ bool WifiChannel::are_params_valid(uint8_t channel, eFreqType freq_type, uint16_
         }
     } break;
     case eFreqType::FREQ_6G: {
-        if (!is_central_channel()) {
+        if (!is_central_channel(channel, bandwidth)) {
             auto channel_it = son::wireless_utils::channels_table_6g.find(channel);
             if (channel_it == son::wireless_utils::channels_table_6g.end()) {
                 LOG(ERROR) << "Failed find " << channel << " channel in 6ghz channels table.";
