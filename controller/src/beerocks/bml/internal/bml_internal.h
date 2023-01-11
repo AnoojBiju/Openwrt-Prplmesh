@@ -360,6 +360,17 @@ public:
      */
     int client_clear_client(const sMacAddr &sta_mac);
 
+    /**
+    * @brief Triggers Service Prioritization Rule request
+    * @param [in] al_mac MAC address of a agent.
+    * @param [in] rule_id service prioritization rule identifier.
+    * @param [in] add_remove To add or remove rule. 1 for add, 0 for remove.
+    * @param [in] precedence rule precedence value to be set
+    * @param [in] output rule output value to be set.
+    * @param [in] always_match rule always matches value.
+    **/
+    int trigger_service_prioritization(const sMacAddr &al_mac, uint32_t rule_id, bool add_remove,
+                                       uint8_t precedence, uint8_t output, bool always_match);
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
     /*
     * A steering group defines a group of apIndex's which can have steering done

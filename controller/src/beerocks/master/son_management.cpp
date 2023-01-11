@@ -706,7 +706,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         LOG(ERROR) << "controller_ctx == nullptr";
         return;
     }
-
+    LOG(ERROR) << "beerocks_header->action_op() =" << beerocks_header->action_op();
     switch (beerocks_header->action_op()) {
     case beerocks_message::ACTION_BML_PING_REQUEST: {
         LOG(TRACE) << "ACTION_BML_PING_REQUEST";
@@ -1758,6 +1758,25 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             database.get_dynamic_channel_selection_r2_task_id(),
             dynamic_channel_selection_r2_task::eEvent::TRIGGER_ON_DEMAND_CHANNEL_SELECTION,
             &new_event);
+        break;
+    }
+    case beerocks_message::ACTION_BML_TRIGGER_SERVICE_PRIORITIZATION_RULE: {
+
+        auto request =
+            beerocks_header
+                ->addClass<beerocks_message::cACTION_BML_TRIGGER_SERVICE_PRIORITIZATION_RULE>();
+        if (!request) {
+            LOG(ERROR) << "addClass cACTION_BML_TRIGGER_SERVICE_PRIORITIZATION_RULE failed";
+            break;
+        }
+
+        auto al_mac_str = tlvf::mac_to_string(request->al_mac());
+
+        LOG(DEBUG) << "ACTION_BML_TRIGGER_SERVICE_PRIORITIZATION_RULE "
+                   << ", al_mac=" << request->al_mac() << ", rule_id=" << request->rule_id()
+                   << ", add_remove=" << request->add_remove()
+                   << ", precedence=" << request->precedence() << ", output=" << request->output()
+                   << ",always_match= " << request->always_match();
         break;
     }
     case beerocks_message::ACTION_BML_CHANNEL_SCAN_SET_CONTINUOUS_PARAMS_REQUEST: {

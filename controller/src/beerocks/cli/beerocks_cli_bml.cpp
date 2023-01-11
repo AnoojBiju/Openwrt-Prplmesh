@@ -617,6 +617,17 @@ void cli_bml::setFunctionsMapAndArray()
                        "Prints unassoc STA link metric query result for given sta",
                        static_cast<pFunction>(&cli_bml::get_unassoc_sta_rcpi_result_caller), 1, 1,
                        STRING_ARG);
+    insertCommandToMap("bml_trigger_spr",
+                       "<al_mac> <rule_id> <add/remove> <precedence> <output> <always match>",
+                       "Triggers Service Prioritization Rule"
+                       "al_mac - agent mac address "
+                       "rule_id - service prioritization rule identifier."
+                       "add/remove - to add or remove rule. 1 for add, 0 for remove."
+                       "precedence - rule precedence, ranges between 0x00 to 0xFE."
+                       "output - rule output value ranges between 0x00 to 0x09."
+                       "always_match - rule always matches or not. 1 for match, 0 for not match",
+                       static_cast<pFunction>(&cli_bml::trigger_service_prioritization_caller), 6,
+                       6, STRING_ARG, INT_ARG, INT_ARG, INT_ARG, INT_ARG, INT_ARG);
 
     //bool insertCommandToMap(std::string command, std::string help_args, std::string help,  pFunction funcPtr, uint8_t minNumOfArgs, uint8_t maxNumOfArgs,
 }
@@ -1223,6 +1234,15 @@ int cli_bml::bml_trigger_topology_discovery_caller(int numOfArgs)
     return -1;
 }
 
+int cli_bml::trigger_service_prioritization_caller(int numOfArgs)
+{
+    if (numOfArgs == 6) {
+        return trigger_service_prioritization(args.stringArgs[0], args.intArgs[1], args.intArgs[2],
+                                              args.intArgs[3], args.intArgs[4], args.intArgs[5]);
+    }
+    return -1;
+}
+
 int cli_bml::bml_channel_selection_caller(int numOfArgs)
 {
     if (numOfArgs == 3) {
@@ -1752,7 +1772,7 @@ int cli_bml::enable_client_roaming(int8_t isEnable)
 {
     int result = -1;
     int ret    = (isEnable < 0) ? bml_get_client_roaming(ctx, &result)
-                             : bml_set_client_roaming(ctx, isEnable);
+                                : bml_set_client_roaming(ctx, isEnable);
     printBmlReturnVals("bml_enable_client_roaming", ret);
     if (isEnable < 0 && ret == BML_RET_OK)
         std::cout << "client_roaming mode = " << result << std::endl;
@@ -1763,7 +1783,7 @@ int cli_bml::enable_client_roaming_11k_support(int8_t isEnable)
 {
     int result = -1;
     int ret    = (isEnable < 0) ? bml_get_client_roaming_11k_support(ctx, &result)
-                             : bml_set_client_roaming_11k_support(ctx, isEnable);
+                                : bml_set_client_roaming_11k_support(ctx, isEnable);
     printBmlReturnVals("bml_enable_client_roaming_11k_support", ret);
     if (isEnable < 0 && ret == BML_RET_OK)
         std::cout << "client_roaming_11k_support mode = " << result << std::endl;
@@ -1774,7 +1794,7 @@ int cli_bml::enable_legacy_client_roaming(int8_t isEnable)
 {
     int result = -1;
     int ret    = (isEnable < 0) ? bml_get_legacy_client_roaming(ctx, &result)
-                             : bml_set_legacy_client_roaming(ctx, isEnable);
+                                : bml_set_legacy_client_roaming(ctx, isEnable);
     printBmlReturnVals("bml_enable_legacy_client_roaming", ret);
     if (isEnable < 0 && ret == BML_RET_OK)
         std::cout << "legacy_client_roaming mode = " << result << std::endl;
@@ -1785,7 +1805,7 @@ int cli_bml::enable_client_roaming_prefer_signal_strength(int8_t isEnable)
 {
     int result = -1;
     int ret    = (isEnable < 0) ? bml_get_client_roaming_prefer_signal_strength(ctx, &result)
-                             : bml_set_client_roaming_prefer_signal_strength(ctx, isEnable);
+                                : bml_set_client_roaming_prefer_signal_strength(ctx, isEnable);
     printBmlReturnVals("bml_enable_client_roaming_prefer_signal_strength", ret);
     if (isEnable < 0 && ret == BML_RET_OK)
         std::cout << "client roaming prefer signal strength mode = " << result << std::endl;
@@ -1796,7 +1816,7 @@ int cli_bml::enable_client_band_steering(int8_t isEnable)
 {
     int result = -1;
     int ret    = (isEnable < 0) ? bml_get_client_band_steering(ctx, &result)
-                             : bml_set_client_band_steering(ctx, isEnable);
+                                : bml_set_client_band_steering(ctx, isEnable);
     printBmlReturnVals("bml_enable_client_band_steering", ret);
     if (isEnable < 0 && ret == BML_RET_OK)
         std::cout << "client_band_steering mode = " << result << std::endl;
@@ -1829,7 +1849,7 @@ int cli_bml::enable_service_fairness(int8_t isEnable)
 {
     int result = -1;
     int ret    = (isEnable < 0) ? bml_get_service_fairness(ctx, &result)
-                             : bml_set_service_fairness(ctx, isEnable);
+                                : bml_set_service_fairness(ctx, isEnable);
     printBmlReturnVals("bml_enable_service_fairness", ret);
     if (isEnable < 0 && ret == BML_RET_OK)
         std::cout << "service_fairness mode = " << result << std::endl;
@@ -1851,7 +1871,7 @@ int cli_bml::enable_certification_mode(int8_t isEnable)
 {
     int result = -1;
     int ret    = (isEnable < 0) ? bml_get_certification_mode(ctx, &result)
-                             : bml_set_certification_mode(ctx, isEnable);
+                                : bml_set_certification_mode(ctx, isEnable);
     printBmlReturnVals("bml_enable_certification_mode", ret);
     if (isEnable < 0 && ret == BML_RET_OK)
         std::cout << "enable_certification_mode = " << result << std::endl;
@@ -2014,6 +2034,16 @@ int cli_bml::topology_discovery(const std::string &al_mac)
 {
     int ret = bml_trigger_topology_discovery(ctx, al_mac.c_str());
     printBmlReturnVals("topology discovery", ret);
+    return 0;
+}
+
+int cli_bml::trigger_service_prioritization(std::string &mac_address, uint32_t rule_id,
+                                            bool add_remove, uint8_t precedence, uint8_t output,
+                                            bool always_match)
+{
+    int ret = bml_trigger_service_prioritization(ctx, mac_address.c_str(), rule_id, add_remove,
+                                                 precedence, output, always_match);
+    printBmlReturnVals("Service Prioritization", ret);
     return 0;
 }
 

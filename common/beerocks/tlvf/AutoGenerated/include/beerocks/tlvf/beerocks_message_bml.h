@@ -2642,6 +2642,37 @@ class cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_RESPONSE : public BaseClass
         uint8_t* m_op_error_code = nullptr;
 };
 
+class cACTION_BML_TRIGGER_SERVICE_PRIORITIZATION_RULE : public BaseClass
+{
+    public:
+        cACTION_BML_TRIGGER_SERVICE_PRIORITIZATION_RULE(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_BML_TRIGGER_SERVICE_PRIORITIZATION_RULE(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_BML_TRIGGER_SERVICE_PRIORITIZATION_RULE();
+
+        static eActionOp_BML get_action_op(){
+            return (eActionOp_BML)(ACTION_BML_TRIGGER_SERVICE_PRIORITIZATION_RULE);
+        }
+        sMacAddr& al_mac();
+        uint32_t& rule_id();
+        uint8_t& add_remove();
+        uint8_t& precedence();
+        uint8_t& output();
+        uint8_t& always_match();
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_BML* m_action_op = nullptr;
+        sMacAddr* m_al_mac = nullptr;
+        uint32_t* m_rule_id = nullptr;
+        uint8_t* m_add_remove = nullptr;
+        uint8_t* m_precedence = nullptr;
+        uint8_t* m_output = nullptr;
+        uint8_t* m_always_match = nullptr;
+};
+
 }; // close namespace: beerocks_message
 
 #endif //_BEEROCKS/TLVF_BEEROCKS_MESSAGE_BML_H_

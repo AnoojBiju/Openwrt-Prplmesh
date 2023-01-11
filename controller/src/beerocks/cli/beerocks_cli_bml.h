@@ -161,6 +161,7 @@ private:
     int client_clear_client_caller(int numOfArgs);
     int send_unassoc_sta_rcpi_query_caller(int numOfArgs);
     int get_unassoc_sta_rcpi_result_caller(int numOfArgs);
+    int trigger_service_prioritization_caller(int numOfArgs);
     // Functions
     int onboard_status();
     int ping();
@@ -260,6 +261,8 @@ private:
                                        const std::string &agent_mac_addr);
     int remove_unassociated_station_stats(std::string &mac_address,
                                           const std::string &agent_mac_addr);
+    int trigger_service_prioritization(std::string &mac_address, uint32_t rule_id, bool add_remove,
+                                       uint8_t precedence, uint8_t output, bool always_match);
 };
 } // namespace beerocks
 

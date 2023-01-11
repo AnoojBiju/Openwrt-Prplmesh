@@ -790,6 +790,20 @@ int bml_client_get_client(BML_CTX ctx, const char *sta_mac, struct BML_CLIENT *c
  */
 int bml_client_clear_client(BML_CTX ctx, const char *sta_mac);
 
+/**
+    * @brief Triggers Service Prioritization Rule request
+    * @param [in] ctx BML Context.
+    * @param [in] al_mac MAC address of a agent.
+    * @param [in] rule_id service prioritization rule identifier.
+    * @param [in] add_remove To add or remove rule. 1 for add, 0 for remove.
+    * @param [in] precedence rule precedence value to be set
+    * @param [in] output rule output value to be set.
+    * @param [in] always_match rule always matches valueq.
+    **/
+int bml_trigger_service_prioritization(BML_CTX ctx, const char *al_mac, uint32_t rule_id,
+                                       bool add_remove, uint8_t precedence, uint8_t output,
+                                       bool always_match);
+
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
 
 /*

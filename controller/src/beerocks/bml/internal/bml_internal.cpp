@@ -384,7 +384,7 @@ bool bml_internal::handle_nw_map_query_update(int elements_num, int last_node, v
     // get_node()
     static __thread std::function<void *()> node_iter_get_node_cb_wrapper;
     node_iter_get_node_cb_wrapper = [&]() -> void * { return (cNodeIter.data()); };
-    sNodeIter.get_node            = []() -> BML_NODE * {
+    sNodeIter.get_node            = []() -> BML_NODE            *{
         return ((BML_NODE *)node_iter_get_node_cb_wrapper());
     };
 
@@ -424,7 +424,7 @@ bool bml_internal::handle_stats_update(int elements_num, void *data_buffer)
     // get_node()
     static __thread std::function<void *()> stat_iter_get_node_cb_wrapper;
     stat_iter_get_node_cb_wrapper = [&]() -> void * { return (cStatIter.data()); };
-    sStatIter.get_node            = []() -> BML_STATS * {
+    sStatIter.get_node            = []() -> BML_STATS            *{
         return ((BML_STATS *)stat_iter_get_node_cb_wrapper());
     };
 
@@ -4077,6 +4077,56 @@ int bml_internal::trigger_topology_discovery_query(const char *al_mac)
     if (!message_com::send_cmdu(m_sockMaster, cmdu_tx)) {
         LOG(ERROR) << "Failed sending CMDU TRIGGER_TOPOLOGY_QUERY message";
         return (-BML_RET_OP_FAILED);
+    }
+
+    return BML_RET_OK;
+}
+
+int bml_internal::trigger_service_prioritization(const sMacAddr &al_mac, uint32_t rule_id,
+                                                 bool add_remove, uint8_t precedence,
+                                                 uint8_t output, bool always_match)
+{
+    auto request = message_com::create_vs_message<
+        beerocks_message::cACTION_BML_TRIGGER_SERVICE_PRIORITIZATION_RULE>(cmdu_tx);
+
+    if (request == nullptr) {
+        LOG(ERROR) << "Failed building ACTION_BML_TRIGGER_SERVICE_PRIORITIZATION_RULE message!";
+        return (-BML_RET_OP_FAILED);
+    }
+
+    request->al_mac()       = al_mac;
+    request->rule_id()      = rule_id;
+    request->add_remove()   = add_remove;
+    request->precedence()   = precedence;
+    request->output()       = output;
+    request->always_match() = always_match;
+    LOG(ERROR) << "serv_prio : action_op =" << request->get_action_op();
+
+    int result = 0;
+    if (send_bml_cmdu(result, request->get_action_op()) != BML_RET_OK) {
+        LOG(ERROR) << "send_bml_cmdu failed for ACTION_BML_TRIGGER_SERVICE_PRIORITIZATION_RULE";
+        return (-BML_RET_OP_FAILED);
+    }
+
+    if (result != 0) {
+        LOG(ERROR) << "ACTION_BML_TRIGGER_SERVICE_PRIORITIZATION_RULE returned error: ";
+#if 0
+                   << ([](int res) -> std::string {
+                          switch (eChannelSwitchStatus(res)) {
+                          case eChannelSwitchStatus::SUCCESS:
+                              return "Success";
+                          case eChannelSwitchStatus::ERROR:
+                              return "Error";
+                          case eChannelSwitchStatus::INVALID_BANDWIDTH_AND_CHANNEL:
+                              return "Invalid Bandwidth & Channel";
+                          case eChannelSwitchStatus::INOPERABLE_CHANNEL:
+                              return "Inoperable Channel";
+                          default:
+                              return "NA";
+                          }
+                      })(result);
+#endif
+        return result;
     }
 
     return BML_RET_OK;

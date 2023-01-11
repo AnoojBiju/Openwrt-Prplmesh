@@ -623,3 +623,12 @@ cACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_RESPONSE:
   op_error_code:
     _type: uint8_t
     _comment: 0 - Success, Otherwise error
+
+cACTION_BML_TRIGGER_SERVICE_PRIORITIZATION_RULE:
+  _type: class
+  al_mac: sMacAddr
+  rule_id: uint32_t
+  add_remove: uint8_t
+  precedence: uint8_t
+  output: uint8_t
+  always_match: uint8_t

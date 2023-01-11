@@ -635,6 +635,21 @@ int bml_trigger_topology_discovery(BML_CTX ctx, const char *al_mac)
     return (pBML->trigger_topology_discovery_query(al_mac));
 }
 
+int bml_trigger_service_prioritization(BML_CTX ctx, const char *al_mac, uint32_t rule_id,
+                                       bool add_remove, uint8_t precedence, uint8_t output,
+                                       bool always_match)
+{
+    // Validate input parameters
+    if (!ctx) {
+        return (-BML_RET_INVALID_ARGS);
+    }
+
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
+
+    return pBML->trigger_service_prioritization(tlvf::mac_from_string(std::string(al_mac)), rule_id,
+                                                add_remove, precedence, output, always_match);
+}
+
 int bml_channel_selection(BML_CTX ctx, const char *radio_mac, uint8_t channel, uint8_t bandwidth,
                           uint8_t csa_count)
 {
