@@ -192,6 +192,7 @@ private:
                                          eWiFiBandwidth m_bandwidth, bool m_ext_above_secondary);
     bool are_params_valid(uint8_t channel, eFreqType freq_type, uint16_t center_frequency,
                           eWiFiBandwidth m_bandwidth);
+    bool is_central_channel(uint8_t channel, eWiFiBandwidth bandwidth, eFreqType freq_type);
 
     /**
      * @brief channel number

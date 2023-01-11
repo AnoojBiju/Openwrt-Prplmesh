@@ -44,6 +44,7 @@ TEST(BeerocksWifiChannel, check_24ghz_getters_and_setters_are_valid)
     ASSERT_EQ(wc.get_bandwidth(), bw);
     ASSERT_EQ(wc.get_center_frequency(),
               son::wireless_utils::channel_to_freq(channel, beerocks::eFreqType::FREQ_24G));
+    ASSERT_EQ(wc.get_freq_type(), beerocks::FREQ_24G);
 }
 
 TEST(BeerocksWifiChannel, check_5ghz_getters_and_setters_are_valid)

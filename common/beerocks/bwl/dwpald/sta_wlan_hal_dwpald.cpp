@@ -456,6 +456,7 @@ bool sta_wlan_hal_dwpal::is_connected()
         }
         usleep(1000);
     }
+    update_status(connection_status);
 
     return is_connected(connection_status.wpa_state);
 }

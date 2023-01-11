@@ -120,7 +120,7 @@ HALState ap_wlan_hal_dummy::attach(bool block)
 
     // Initialize status files
     if (m_radio_info.is_5ghz) {
-        set_channel(149, beerocks::eWiFiBandwidth::BANDWIDTH_80, 5775);
+        set_channel(149, beerocks::eWiFiBandwidth::BANDWIDTH_40, 5775);
     } else {
         set_channel(1, beerocks::eWiFiBandwidth::BANDWIDTH_40, 2422);
     }
@@ -144,10 +144,14 @@ bool ap_wlan_hal_dummy::set_start_disabled(bool enable, int vap_id) { return tru
 
 bool ap_wlan_hal_dummy::set_channel(int chan, beerocks::eWiFiBandwidth bw, int center_channel)
 {
+    LOG(DEBUG) << "Badhri somebody is setting channel in dummy";
     m_radio_info.channel         = chan;
     m_radio_info.bandwidth       = beerocks::utils::convert_bandwidth_to_int(bw);
     m_radio_info.vht_center_freq = center_channel;
     m_radio_info.is_dfs_channel  = son::wireless_utils::is_dfs_channel(chan);
+    LOG(DEBUG) << "Badhri Channel: " << chan;
+    LOG(DEBUG) << "Badhri BW: " << m_radio_info.bandwidth;
+    LOG(DEBUG) << "Badhri Center_Channel: " << center_channel;
     std::stringstream value;
     value << "channel: " << chan << std::endl;
     value << "bw: " << m_radio_info.bandwidth << std::endl;
