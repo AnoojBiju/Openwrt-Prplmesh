@@ -1073,12 +1073,13 @@ bool nl80211_client_impl::channel_scan_abort(const std::string &interface_name)
         return false;
     }
 
-    return m_socket.get()->send_receive_msg(NL80211_CMD_ABORT_SCAN, 0,
-                                            [&](struct nl_msg *msg) -> bool {
-                                                nla_put_u32(msg, NL80211_ATTR_IFINDEX, iface_index);
-                                                return true;
-                                            },
-                                            [&](struct nl_msg *msg) {});
+    return m_socket.get()->send_receive_msg(
+        NL80211_CMD_ABORT_SCAN, 0,
+        [&](struct nl_msg *msg) -> bool {
+            nla_put_u32(msg, NL80211_ATTR_IFINDEX, iface_index);
+            return true;
+        },
+        [&](struct nl_msg *msg) {});
 }
 
 bool nl80211_client_impl::add_key(const std::string &interface_name, const sKeyInfo &key_info)
@@ -1295,14 +1296,14 @@ bool nl80211_client_impl::send_delba(const std::string &interface_name, const sM
 
     LOG(DEBUG) << "Sending DELBA frame on interface '" << interface_name << "' to MAC '" << dst
                << "' with source '" << src << "' bssid '" << bssid << "'";
-    return m_socket.get()->send_receive_msg(NL80211_CMD_FRAME, 0,
-                                            [&](struct nl_msg *msg) -> bool {
-                                                nla_put_u32(msg, NL80211_ATTR_IFINDEX, iface_index);
-                                                nla_put(msg, NL80211_ATTR_FRAME, frame_attr.size(),
-                                                        frame_attr.data());
-                                                return true;
-                                            },
-                                            [&](struct nl_msg *msg) {});
+    return m_socket.get()->send_receive_msg(
+        NL80211_CMD_FRAME, 0,
+        [&](struct nl_msg *msg) -> bool {
+            nla_put_u32(msg, NL80211_ATTR_IFINDEX, iface_index);
+            nla_put(msg, NL80211_ATTR_FRAME, frame_attr.size(), frame_attr.data());
+            return true;
+        },
+        [&](struct nl_msg *msg) {});
 }
 
 } // namespace bwl
