@@ -743,7 +743,7 @@ amxd_status_t trigger_prioritization(amxd_object_t *object, amxd_function_t *fun
  * @brief add an unassociated station using the channel given in the arguments
  * 
  * Example of usage:
- * Device.WiFi.DataElements.Network.Device.1.Radio.1.AddUnassociatedStation(un_station_mac="AA:BB:CC:DD:12:04",channel=4,agent_mac="b2:83:c4:14:93:08")
+ * Device.WiFi.DataElements.Network.Device.1.Radio.1.AddUnassociatedStation(un_station_mac="AA:BB:CC:DD:12:04",operating_class=81,channel=4,agent_mac="b2:83:c4:14:93:08")
  *
  */
 amxd_status_t add_unassociated_station(amxd_object_t *object, amxd_function_t *func,
@@ -796,15 +796,22 @@ amxd_status_t add_unassociated_station(amxd_object_t *object, amxd_function_t *f
         LOG(ERROR) << station_mac_addr << " is not avalid mac_address!";
         return amxd_status_invalid_value;
     }
-    uint32_t channel = GET_UINT32(args, "channel");
-    if (channel == 0) {
+
+    uint8_t channel = amxc_var_dyncast(uint8_t, GET_ARG(args, "channel"));
+    if (channel < 1) {
         LOG(ERROR) << "entered channel is not valid! ";
         return amxd_status_invalid_value;
     }
 
-    if (!controller_ctx->add_unassociated_station(
-            tlvf::mac_from_string(station_mac_addr), (uint8_t)channel,
-            tlvf::mac_from_string(agent_mac), tlvf::mac_from_string(radio_mac))) {
+    uint8_t operating_class = amxc_var_dyncast(uint8_t, GET_ARG(args, "operating_class"));
+    if (operating_class < 1) {
+        LOG(ERROR) << "entered operating_class is not valid! ";
+        return amxd_status_invalid_value;
+    }
+
+    if (!controller_ctx->add_unassociated_station(tlvf::mac_from_string(station_mac_addr), channel,
+                                                  operating_class, tlvf::mac_from_string(agent_mac),
+                                                  tlvf::mac_from_string(radio_mac))) {
         result = amxd_status_unknown_error;
     }
     return result;

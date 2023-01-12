@@ -7243,8 +7243,12 @@ sMacAddr& cACTION_BML_ADD_UNASSOCIATED_STATION_STATS_REQUEST::agent_mac_address(
     return (sMacAddr&)(*m_agent_mac_address);
 }
 
-uint32_t& cACTION_BML_ADD_UNASSOCIATED_STATION_STATS_REQUEST::channel() {
-    return (uint32_t&)(*m_channel);
+uint8_t& cACTION_BML_ADD_UNASSOCIATED_STATION_STATS_REQUEST::channel() {
+    return (uint8_t&)(*m_channel);
+}
+
+uint8_t& cACTION_BML_ADD_UNASSOCIATED_STATION_STATS_REQUEST::operating_class() {
+    return (uint8_t&)(*m_operating_class);
 }
 
 void cACTION_BML_ADD_UNASSOCIATED_STATION_STATS_REQUEST::class_swap()
@@ -7252,7 +7256,6 @@ void cACTION_BML_ADD_UNASSOCIATED_STATION_STATS_REQUEST::class_swap()
     tlvf_swap(8*sizeof(eActionOp_BML), reinterpret_cast<uint8_t*>(m_action_op));
     m_mac_address->struct_swap();
     m_agent_mac_address->struct_swap();
-    tlvf_swap(32, reinterpret_cast<uint8_t*>(m_channel));
 }
 
 bool cACTION_BML_ADD_UNASSOCIATED_STATION_STATS_REQUEST::finalize()
@@ -7287,7 +7290,8 @@ size_t cACTION_BML_ADD_UNASSOCIATED_STATION_STATS_REQUEST::get_initial_size()
     size_t class_size = 0;
     class_size += sizeof(sMacAddr); // mac_address
     class_size += sizeof(sMacAddr); // agent_mac_address
-    class_size += sizeof(uint32_t); // channel
+    class_size += sizeof(uint8_t); // channel
+    class_size += sizeof(uint8_t); // operating_class
     return class_size;
 }
 
@@ -7309,9 +7313,14 @@ bool cACTION_BML_ADD_UNASSOCIATED_STATION_STATS_REQUEST::init()
         return false;
     }
     if (!m_parse__) { m_agent_mac_address->struct_init(); }
-    m_channel = reinterpret_cast<uint32_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint32_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint32_t) << ") Failed!";
+    m_channel = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
+        return false;
+    }
+    m_operating_class = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
     if (m_parse__) { class_swap(); }

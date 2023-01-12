@@ -2473,6 +2473,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         }
 
         controller_ctx->add_unassociated_station(request->mac_address(), request->channel(),
+                                                 request->operating_class(),
                                                  request->agent_mac_address());
         break;
     }

@@ -220,13 +220,15 @@ public:
      * 
      * @param station_mac_addr The MAC address of the unassociated station
      * @param channel used by the measurement. Note that the agent may ignore this value and use his active channel. 
+     * @param preferred operating_class for the measurement.
      * @param agent_mac_addr The MAC address of the agent, if null, all agents are concerned.
      * @param radio_mac_addrress of the agent which supports the channel to be used for monitoring, if not given, it will be deduced automatically.
      * 
      * @return true if station added successfully, false if it exists already or any other issue.
      */
     bool add_unassociated_station(
-        const sMacAddr &station_mac_addr, uint8_t channel, const sMacAddr &agent_mac_addr,
+        const sMacAddr &station_mac_addr, uint8_t channel, uint8_t operating_class,
+        const sMacAddr &agent_mac_addr,
         const sMacAddr &radio_mac_addr = beerocks::net::network_utils::ZERO_MAC);
 
     /**

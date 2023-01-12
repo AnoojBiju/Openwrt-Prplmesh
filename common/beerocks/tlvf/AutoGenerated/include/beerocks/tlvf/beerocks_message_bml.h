@@ -2112,7 +2112,8 @@ class cACTION_BML_ADD_UNASSOCIATED_STATION_STATS_REQUEST : public BaseClass
         }
         sMacAddr& mac_address();
         sMacAddr& agent_mac_address();
-        uint32_t& channel();
+        uint8_t& channel();
+        uint8_t& operating_class();
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -2122,7 +2123,8 @@ class cACTION_BML_ADD_UNASSOCIATED_STATION_STATS_REQUEST : public BaseClass
         eActionOp_BML* m_action_op = nullptr;
         sMacAddr* m_mac_address = nullptr;
         sMacAddr* m_agent_mac_address = nullptr;
-        uint32_t* m_channel = nullptr;
+        uint8_t* m_channel = nullptr;
+        uint8_t* m_operating_class = nullptr;
 };
 
 class cACTION_BML_REMOVE_UNASSOCIATED_STATION_STATS_REQUEST : public BaseClass

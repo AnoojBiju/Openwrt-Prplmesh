@@ -484,8 +484,8 @@ bool mon_wlan_hal_dummy::sta_unassoc_rssi_measurement(
     sUnassociatedStationStats new_stat = {
         tlvf::mac_from_string("BB:06:e2:4d:6d:3a"),
         100, //signal_strength
-        6,   //channel
-        81,  //operating_class
+        36,  //channel
+        115, //operating_class(5Ghz)
         (uint32_t)now_c,
     };
 
@@ -494,8 +494,8 @@ bool mon_wlan_hal_dummy::sta_unassoc_rssi_measurement(
     new_stat = {
         tlvf::mac_from_string("AA:06:e2:4d:6d:cb"),
         200, //signal_strength
-        36,  //channel
-        115, //operating_class
+        1,   //channel
+        81,  //operating_class(2Ghz)
         (uint32_t)now_c,
     };
     stats.push_back(new_stat);

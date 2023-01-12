@@ -589,13 +589,15 @@ void cli_bml::setFunctionsMapAndArray()
         "if input was given - enable/disable the 802.11k support, prints current value",
         static_cast<pFunction>(&cli_bml::enable_client_roaming_11k_support_caller), 0, 1, INT_ARG);
     insertCommandToMap("bml_add_unassociated_station_stats",
-                       "[<mac> <channel> <agent_mac_address>]",
+                       "[<mac> <channel> <operating_class> <agent_mac_address>]",
                        "adds station with mac_address <mac> to the list of unassociated stations."
-                       "Monitoring will be done on channel <channel>."
-                       "If agent_mac_address is given, ony that agent will be monitoring the "
-                       "statinon,if empty,all connected agents will be selected ",
-                       static_cast<pFunction>(&cli_bml::add_unassociated_station_stats_caller), 2,
-                       3, STRING_ARG, STRING_ARG, STRING_ARG);
+                       "Monitoring will be done on channel <channel> on  <operating_class>."
+                       "Please note that the Access point can still use the active channel instead "
+                       "of the new proposed value!"
+                       "If agent_mac_address is entered, only that agent will be monitoring the "
+                       "station,if empty,all connected agents will be selected ",
+                       static_cast<pFunction>(&cli_bml::add_unassociated_station_stats_caller), 3,
+                       4, STRING_ARG, STRING_ARG, STRING_ARG, STRING_ARG);
     insertCommandToMap(
         "bml_remove_unassociated_station_stats", "[<mac> <agent_mac_address>]",
         "remove the station with mac_address <mac> from the list of monitored "
@@ -2652,34 +2654,38 @@ int cli_bml::get_unassociated_stations_stats()
 
 int cli_bml::add_unassociated_station_stats_caller(int numOfArgs)
 {
-    if ((numOfArgs != 2) && (numOfArgs != 3)) {
-        LOG(ERROR) << "wrong argument! needs 2 or 3 arguments: "
-                      "mac_address,channel,agent_mac_ad(optional) but "
+    if ((numOfArgs != 3) && (numOfArgs != 4)) {
+        LOG(ERROR) << "wrong argument! needs 3 or 4 arguments: "
+                      "mac_address,channel,operating_class and agent_mac_ad(optional) but "
                    << numOfArgs << " provided!";
         return -1;
     }
     if (!beerocks::net::network_utils::is_valid_mac(args.stringArgs[0])) {
         LOG(ERROR) << "entered station mac_addr " << args.stringArgs[0]
-                   << "is not a valid mac_address!";
+                   << " is not a valid mac_address!";
         return -1;
     }
 
     if (!std::all_of(args.stringArgs[1].begin(), args.stringArgs[1].end(), ::isdigit)) {
-        LOG(ERROR) << args.stringArgs[1] << "is not a valid number! ";
+        LOG(ERROR) << args.stringArgs[1] << " is not a valid channel value! ";
+        return -1;
+    }
+    if (!std::all_of(args.stringArgs[2].begin(), args.stringArgs[2].end(), ::isdigit)) {
+        LOG(ERROR) << args.stringArgs[2] << " is not a valid operating_class value! ";
         return -1;
     }
 
-    if (numOfArgs == 2) {
+    if (numOfArgs == 3) {
         return add_unassociated_station_stats(args.stringArgs[0], args.stringArgs[1],
-                                              std::string());
+                                              args.stringArgs[2], std::string());
     } else {
-        if (!beerocks::net::network_utils::is_valid_mac(args.stringArgs[2])) {
-            LOG(ERROR) << "entered agent mac_addr " << args.stringArgs[2]
+        if (!beerocks::net::network_utils::is_valid_mac(args.stringArgs[3])) {
+            LOG(ERROR) << "entered agent mac_addr " << args.stringArgs[3]
                        << "is not a valid mac_address!";
             return -1;
         }
         return add_unassociated_station_stats(args.stringArgs[0], args.stringArgs[1],
-                                              args.stringArgs[2]);
+                                              args.stringArgs[2], args.stringArgs[3]);
     }
 }
 
@@ -2708,12 +2714,13 @@ int cli_bml::remove_unassociated_station_stats_caller(int numOfArgs)
 }
 
 int cli_bml::add_unassociated_station_stats(const std::string &mac_address,
-                                            const std::string &channel_string,
+                                            const std::string &channel,
+                                            const std::string &operating_class,
                                             const std::string &agent_mac_addr)
 {
-    return bml_add_unassociated_station_stats(ctx, mac_address.c_str(), channel_string.c_str(),
-                                              agent_mac_addr.empty() ? nullptr
-                                                                     : agent_mac_addr.c_str());
+    return bml_add_unassociated_station_stats(
+        ctx, mac_address.c_str(), channel.c_str(), operating_class.c_str(),
+        agent_mac_addr.empty() ? nullptr : agent_mac_addr.c_str());
 }
 
 int cli_bml::remove_unassociated_station_stats(std::string &mac_address,
