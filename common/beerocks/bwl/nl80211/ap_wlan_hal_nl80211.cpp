@@ -1804,8 +1804,18 @@ bool ap_wlan_hal_nl80211::set_beacon_da(const std::string &ifname, const sMacAdd
 
 bool ap_wlan_hal_nl80211::update_beacon(const std::string &ifname)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
-    return false;
+    LOG(TRACE) << __func__ << " ifname: " << ifname;
+
+    // Build command string
+    const std::string cmd = "UPDATE_BEACON";
+
+    // Send command
+    if (!wpa_ctrl_send_msg(cmd, ifname)) {
+        LOG(ERROR) << __func__ << " failed!";
+        return false;
+    }
+
+    return true;
 }
 
 } // namespace nl80211
