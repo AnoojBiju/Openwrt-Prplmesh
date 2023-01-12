@@ -17,7 +17,7 @@ if data_overlay_not_initialized; then
   done
   logger -t prplmesh -p daemon.info "Data overlay is initialized."
 fi
-sleep 2
+sleep 25
 
 # Stop and disable the DHCP clients:
 /etc/init.d/tr181-dhcpv4client stop
