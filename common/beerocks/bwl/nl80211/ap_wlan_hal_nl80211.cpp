@@ -1802,6 +1802,12 @@ bool ap_wlan_hal_nl80211::set_beacon_da(const std::string &ifname, const sMacAdd
     return true;
 }
 
+bool ap_wlan_hal_nl80211::update_beacon(const std::string &ifname)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
 } // namespace nl80211
 
 std::shared_ptr<ap_wlan_hal> ap_wlan_hal_create(std::string iface_name, hal_conf_t hal_conf,

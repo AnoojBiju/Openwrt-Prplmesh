@@ -115,6 +115,7 @@ public:
                             const sMacAddr &bssid) override;
     virtual bool set_no_deauth_unknown_sta(const std::string &ifname, bool value) override;
     virtual bool set_beacon_da(const std::string &ifname, const sMacAddr &mac) override;
+    virtual bool update_beacon(const std::string &ifname) override;
 
     // Protected methods:
 protected:
