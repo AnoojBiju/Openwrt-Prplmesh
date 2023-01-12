@@ -116,6 +116,7 @@ public:
         std::shared_ptr<wfa_map::tlvUnassociatedStaLinkMetricsQuery> &query) override;
     virtual bool prepare_unassoc_sta_link_metrics_response(
         std::shared_ptr<wfa_map::tlvUnassociatedStaLinkMetricsResponse> &response) override;
+    virtual bool set_beacon_da(const std::string &ifname, const sMacAddr &mac) override;
 
     // Protected methods:
 protected:

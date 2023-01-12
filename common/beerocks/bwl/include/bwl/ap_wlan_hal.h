@@ -536,6 +536,16 @@ public:
     virtual bool prepare_unassoc_sta_link_metrics_response(
         std::shared_ptr<wfa_map::tlvUnassociatedStaLinkMetricsResponse> &response) = 0;
 
+    /**
+     * @brief Set the beacons destination MAC address.
+     *
+     * @param [in] ifname the interface name.
+     * @param [in] mac the MAC address to set to.
+     *
+     * @return true on success or false on error.
+     */
+    virtual bool set_beacon_da(const std::string &ifname, const sMacAddr &mac) = 0;
+
 private:
     static const int frame_body_idx = (sizeof(s80211MgmtFrame::sHeader) * 2);
 
