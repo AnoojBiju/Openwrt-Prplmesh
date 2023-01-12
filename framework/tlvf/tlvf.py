@@ -808,8 +808,8 @@ class TlvF:
         if param_length_type == None:
             if TypeInfo(param_type).type == TypeInfo.CLASS:
                 if param_meta and param_meta.condition is not None:
-                    self.abort("%s.yaml --> conditional parameters are only supported " +
-                               "for arithmetic types" % self.yaml_fname)
+                    self.abort("%s.yaml --> conditional parameters are only supported "
+                               % self.yaml_fname + "for arithmetic types")
                 lines_h.append("%s *m_%s = nullptr;" % (param_type, param_name))
                 lines_h.append("std::shared_ptr<%s> m_%s_ptr = nullptr;" % (param_type, param_name))
                 self.overrideIsPostInitSucceeded(obj_meta, param_name, lines_h)
