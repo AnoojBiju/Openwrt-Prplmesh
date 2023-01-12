@@ -114,6 +114,7 @@ public:
     virtual bool get_key(const std::string &ifname, sKeyInfo &key_info) override;
     virtual bool send_delba(const std::string &ifname, const sMacAddr &dst, const sMacAddr &src,
                             const sMacAddr &bssid) override;
+    virtual bool set_beacon_da(const std::string &ifname, const sMacAddr &mac) override;
 
     virtual void send_unassoc_sta_link_metric_query(
         std::shared_ptr<wfa_map::tlvUnassociatedStaLinkMetricsQuery> &query) override;
