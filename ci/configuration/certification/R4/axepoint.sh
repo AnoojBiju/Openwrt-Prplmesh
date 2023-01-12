@@ -17,7 +17,7 @@ if data_overlay_not_initialized; then
   done
   logger -t prplmesh -p daemon.info "Data overlay is initialized."
 fi
-sleep 2
+sleep 30
 
 ubus wait_for IP.Interface
 
@@ -59,16 +59,19 @@ ubus call Ethernet.Link _get '{ "rel_path": ".[Name == \"eth0_4\"]." }' || {
     echo "Adding Ethernet Link"
     ETH_LINK="$(ubus call Ethernet.Link _add "{ \"parameters\": { \"Name\": \"eth0_4\", \"Alias\": \"eth0_4\",\"LowerLayers\": \"Device.Ethernet.Interface.$ETH_IF.\", \"Enable\": true } }" | jsonfilter -e '@.index')"
 }
+sleep 12
 # We can now create an IP.Interface if there is none yet:
 ubus call IP.Interface _get '{ "rel_path": ".[Name == \"eth0_4\"]." }' || {
     echo "Adding IP.Interface"
     ubus call IP.Interface _add "{ \"parameters\": { \"Name\": \"eth0_4\", \"UCISectionNameIPv4\": \"cert\", \"Alias\": \"eth0_4\", \"LowerLayers\": \"Device.Ethernet.Link.$ETH_LINK.\", \"Enable\": true } }"
 }
+sleep 10
 # We can now add the IP address if there is none yet:
 ubus call IP.Interface _get '{ "rel_path": ".[Name == \"eth0_4\"].IPv4Address.[Alias == \"eth0_4\"]." }' || {
     echo "Adding IP address $IP"
     ubus call "IP.Interface" _add '{ "rel_path": ".[Name == \"eth0_4\"].IPv4Address.", "parameters": { "IPAddress": "192.168.250.173", "SubnetMask": "255.255.255.0", "AddressingType": "Static", "Alias": "eth0_4", "Enable" : true } }'
 }
+sleep 10
 # Finally, we can enable it:
 ubus call "IP.Interface" _set '{ "rel_path": ".[Name == \"eth0_4\"].", "parameters": { "IPv4Enable": true } }'
 
