@@ -1757,8 +1757,18 @@ bool ap_wlan_hal_nl80211::prepare_unassoc_sta_link_metrics_response(
 
 bool ap_wlan_hal_nl80211::set_beacon_da(const std::string &ifname, const sMacAddr &mac)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
-    return false;
+    LOG(TRACE) << __func__ << " ifname: " << ifname << ", mac: " << mac;
+
+    // Build command string
+    const std::string cmd = "SET beacon_da " + tlvf::mac_to_string(mac);
+
+    // Send command
+    if (!wpa_ctrl_send_msg(cmd, ifname)) {
+        LOG(ERROR) << __func__ << " failed!";
+        return false;
+    }
+
+    return true;
 }
 
 } // namespace nl80211
