@@ -546,6 +546,15 @@ public:
      */
     virtual bool set_beacon_da(const std::string &ifname, const sMacAddr &mac) = 0;
 
+    /**
+     * @brief Update beacon frames content.
+     *
+     * @param [in] ifname the interface name.
+     *
+     * @return true on success or false on error.
+     */
+    virtual bool update_beacon(const std::string &ifname) = 0;
+
 private:
     static const int frame_body_idx = (sizeof(s80211MgmtFrame::sHeader) * 2);
 

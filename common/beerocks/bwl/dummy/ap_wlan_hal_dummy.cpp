@@ -809,6 +809,12 @@ bool ap_wlan_hal_dummy::set_beacon_da(const std::string &ifname, const sMacAddr 
     return false;
 }
 
+bool ap_wlan_hal_dummy::update_beacon(const std::string &ifname)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
 } // namespace dummy
 
 std::shared_ptr<ap_wlan_hal> ap_wlan_hal_create(std::string iface_name, bwl::hal_conf_t hal_conf,
