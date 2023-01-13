@@ -74,7 +74,7 @@ public:
     template <class T> std::shared_ptr<T> getClass(size_t idx) const
     {
         size_t idx_ = 0;
-        for (auto it : m_class_vector) {
+        for (const auto &it : m_class_vector) {
             if (auto c = std::dynamic_pointer_cast<T>(it)) {
                 if (idx_++ == idx)
                     return c;
@@ -92,9 +92,9 @@ public:
     template <class T> std::list<std::shared_ptr<T>> getClassList() const
     {
         std::list<std::shared_ptr<T>> list;
-        for (auto it : m_class_vector) {
+        for (const auto &it : m_class_vector) {
             if (auto c = std::dynamic_pointer_cast<T>(it)) {
-                list.push_back(c);
+                list.push_back(std::move(c));
             }
         }
         return list;
