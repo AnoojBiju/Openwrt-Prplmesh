@@ -777,7 +777,18 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
         }
 
         if (virtual_bss_creation_tlv->client_assoc()) {
+
             LOG(DEBUG) << "The client was already associated, adding a new station and its keys.";
+
+            // Configure unicast beacons:
+            if (!ap_wlan_hal->set_beacon_da(ifname, virtual_bss_creation_tlv->client_mac())) {
+                LOG(ERROR) << "Failed to setup unicast beacons! MAC: "
+                           << virtual_bss_creation_tlv->client_mac();
+                send_virtual_bss_response(virtual_bss_creation_tlv->radio_uid(),
+                                          virtual_bss_creation_tlv->bssid(), false);
+                return;
+            }
+
             auto client_capability_report = cmdu_rx.getClass<wfa_map::tlvClientCapabilityReport>();
             if (!client_capability_report) {
                 LOG(ERROR) << "Missing client capability report for an associated client!";
@@ -888,6 +899,14 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
         if (m_vbss_deauth_unknown_stas_timer == beerocks::net::FileDescriptor::invalid_descriptor) {
             LOG(WARNING) << "Failed to create the vbss_deauth_unknown_stas timer!";
             // This is not a blocker, keep going.
+        }
+        // Now that the BSS is ready, update the beacon in case it's
+        // needed (e.g. unicast beacons have been configured):
+        if (!ap_wlan_hal->update_beacon(ifname)) {
+            LOG(ERROR) << "Failed to update beacons! ifname: " << ifname;
+            send_virtual_bss_response(virtual_bss_creation_tlv->radio_uid(),
+                                      virtual_bss_creation_tlv->bssid(), false);
+            return;
         }
         // If we get here, we handled the creation successfully.
         send_virtual_bss_response(virtual_bss_creation_tlv->radio_uid(),
