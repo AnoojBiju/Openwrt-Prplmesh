@@ -2,6 +2,7 @@
 #include "../son_slave_thread.h"
 #include <tlvf/ieee_1905_1/tlvAlMacAddress.h>
 #include <tlvf/wfa_map/tlvClientInfo.h>
+#include <tlvf/wfa_map/tlvTriggerChannelSwitchAnnouncement.h>
 #include <tlvf/wfa_map/tlvVirtualBssCreation.h>
 #include <tlvf/wfa_map/tlvVirtualBssDestruction.h>
 #include <tlvf/wfa_map/tlvVirtualBssEvent.h>
@@ -32,6 +33,10 @@ bool VbssTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t iface_in
     }
     case ieee1905_1::eMessageType::VIRTUAL_BSS_RESPONSE_MESSAGE: {
         handle_virtual_bss_response(cmdu_rx);
+        return true;
+    }
+    case ieee1905_1::eMessageType::TRIGGER_CHANNEL_SWITCH_ANNOUNCEMENT_REQUEST_MESSAGE: {
+        handle_channel_switch_request(cmdu_rx);
         return true;
     }
     default: {
@@ -93,6 +98,39 @@ bool VbssTask::handle_security_context_request(ieee1905_1::CmduMessageRx &cmdu_r
     auto ap_manager_fd = m_btl_ctx.get_ap_manager_fd(radio->front.iface_name);
     if (!m_btl_ctx.forward_cmdu_to_uds(ap_manager_fd, cmdu_rx)) {
         LOG(ERROR) << "Failed to forward message to AP manager";
+        return false;
+    }
+    return true;
+}
+
+bool VbssTask::handle_channel_switch_request(ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    LOG(DEBUG) << "Channel Switch Announcement request";
+    auto client_info_tlv = cmdu_rx.getClass<wfa_map::tlvClientInfo>();
+    if (!client_info_tlv) {
+        LOG(ERROR)
+            << "Trigger Channel Switch Announcement Request did not contain a Client Info TLV!";
+        return false;
+    }
+
+    auto db    = AgentDB::get();
+    auto radio = db->get_radio_by_mac(client_info_tlv->bssid(), AgentDB::eMacType::BSSID);
+    if (!radio) {
+        LOG(ERROR) << "Could not find radio with BSSID '" << client_info_tlv->bssid() << "'";
+        return false;
+    }
+
+    auto csa_tlv = cmdu_rx.getClass<wfa_map::TriggerChannelSwitchAnnouncement>();
+    if (!csa_tlv) {
+        LOG(ERROR) << "Trigger Channel Switch Announcement Request did not contain a Trigger "
+                      "Channel Switch Announcement TLV!";
+        return false;
+    }
+
+    auto ap_manager_fd = m_btl_ctx.get_ap_manager_fd(radio->front.iface_name);
+    if (!m_btl_ctx.forward_cmdu_to_uds(ap_manager_fd, cmdu_rx)) {
+        LOG(ERROR) << "Could not forward Trigger Channel Switch Announcement to AP manager! fd="
+                   << ap_manager_fd;
         return false;
     }
     return true;

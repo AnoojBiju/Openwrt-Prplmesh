@@ -139,6 +139,13 @@ private:
     void handle_unassoc_sta_link_metrics_query_message(ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
+     * @brief Handles Trigger Channel Switch Announcement requests
+     * 
+     * @param cmdu_rx Received CMDU to be handled.
+     */
+    void handle_trigger_channel_switch_announcement_request(ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
      * @brief Runs the Finite State Machine of the AP manager.
      * 
      * @param[out] continue_processing Flag that means that state machine transitioned to a 
