@@ -792,6 +792,15 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
                 return;
             }
 
+            // Configure unicast beacons:
+            if (!ap_wlan_hal->set_beacon_da(ifname, virtual_bss_creation_tlv->client_mac())) {
+                LOG(ERROR) << "Failed to setup unicast beacons! MAC: "
+                           << virtual_bss_creation_tlv->client_mac();
+                send_virtual_bss_response(virtual_bss_creation_tlv->radio_uid(),
+                                          virtual_bss_creation_tlv->bssid(), false);
+                return;
+            }
+
             auto client_capability_report = cmdu_rx.getClass<wfa_map::tlvClientCapabilityReport>();
             if (!client_capability_report) {
                 LOG(ERROR) << "Missing client capability report for an associated client!";
@@ -883,6 +892,15 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
         }
 
         // TODO: PPM-2349: add support for the client capabilities
+
+        // Now that the BSS is ready, update the beacon in case it's
+        // needed (e.g. unicast beacons have been configured):
+        if (!ap_wlan_hal->update_beacon(ifname)) {
+            LOG(ERROR) << "Failed to update beacons! ifname: " << ifname;
+            send_virtual_bss_response(virtual_bss_creation_tlv->radio_uid(),
+                                      virtual_bss_creation_tlv->bssid(), false);
+            return;
+        }
 
         // refresh the vaps info.
         // TODO: re-visit after PPM-1923 is fixed.
