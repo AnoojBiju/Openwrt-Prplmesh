@@ -754,6 +754,29 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
             return;
         }
 
+        // refresh vaps info so that the new vap id can be retrieved
+        // from the BSSID (needed for ACLs):
+        if (!ap_wlan_hal->refresh_vaps_info()) {
+            LOG(ERROR) << "Failed to refresh vaps info!";
+            return;
+        }
+
+        if (!ap_wlan_hal->set_macacl_type(bwl::eMacACLType::ACCEPT_LIST,
+                                    virtual_bss_creation_tlv->bssid())) {
+            LOG(ERROR) << "Failed to configure MAC ACL!";
+            send_virtual_bss_response(virtual_bss_creation_tlv->radio_uid(),
+                                      virtual_bss_creation_tlv->bssid(), false);
+            return;
+        }
+        if (!ap_wlan_hal->sta_acceptlist_add(virtual_bss_creation_tlv->client_mac(),
+                                    virtual_bss_creation_tlv->bssid())) {
+            LOG(ERROR) << "Failed to allow the new STA! MAC: "
+                       << virtual_bss_creation_tlv->client_mac();
+            send_virtual_bss_response(virtual_bss_creation_tlv->radio_uid(),
+                                      virtual_bss_creation_tlv->bssid(), false);
+            return;
+        }
+
         if (virtual_bss_creation_tlv->client_assoc()) {
             LOG(DEBUG) << "The client was already associated, adding a new station and its keys.";
             auto client_capability_report = cmdu_rx.getClass<wfa_map::tlvClientCapabilityReport>();
