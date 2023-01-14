@@ -231,10 +231,26 @@ cRole::sFlags1& cRole::flags1() {
     return (sFlags1&)(*m_flags1);
 }
 
-uint32_t& cRole::mcs_nss_80() {
-    return (uint32_t&)(*m_mcs_nss_80);
+uint8_t* cRole::mcs_nss_80(size_t idx) {
+    if ( (m_mcs_nss_80_idx__ == 0) || (m_mcs_nss_80_idx__ <= idx) ) {
+        TLVF_LOG(ERROR) << "Requested index is greater than the number of available entries";
+        return nullptr;
+    }
+    return &(m_mcs_nss_80[idx]);
 }
 
+bool cRole::set_mcs_nss_80(const void* buffer, size_t size) {
+    if (buffer == nullptr) {
+        TLVF_LOG(WARNING) << "set_mcs_nss_80 received a null pointer.";
+        return false;
+    }
+    if (size > 4) {
+        TLVF_LOG(ERROR) << "Received buffer size is smaller than buffer length";
+        return false;
+    }
+    std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_mcs_nss_80);
+    return true;
+}
 bool cRole::alloc_mcs_nss_160() {
     if (m_mcs_nss_160_allocated) {
         LOG(ERROR) << "mcs_nss_160 already allocated!";
@@ -351,7 +367,6 @@ cRole::sFlags4& cRole::flags4() {
 void cRole::class_swap()
 {
     m_flags1->struct_swap();
-    tlvf_swap(32, reinterpret_cast<uint8_t*>(m_mcs_nss_80));
     if (m_flags1->he_support_160mhz) {
         tlvf_swap(32, reinterpret_cast<uint8_t*>(m_mcs_nss_160));
     }
@@ -394,7 +409,7 @@ size_t cRole::get_initial_size()
 {
     size_t class_size = 0;
     class_size += sizeof(sFlags1); // flags1
-    class_size += sizeof(uint32_t); // mcs_nss_80
+    class_size += 4 * sizeof(uint8_t); // mcs_nss_80
     class_size += sizeof(sFlags2); // flags2
     class_size += sizeof(sFlags3); // flags3
     class_size += sizeof(uint8_t); // max_dl_ofdma_tx
@@ -415,11 +430,12 @@ bool cRole::init()
         return false;
     }
     if (!m_parse__) { m_flags1->struct_init(); }
-    m_mcs_nss_80 = reinterpret_cast<uint32_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint32_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint32_t) << ") Failed!";
+    m_mcs_nss_80 = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint8_t) * (4))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) * (4) << ") Failed!";
         return false;
     }
+    m_mcs_nss_80_idx__  = 4;
     m_mcs_nss_160 = reinterpret_cast<uint32_t*>(m_buff_ptr__);
     if ((m_flags1->he_support_160mhz) && !buffPtrIncrementSafe(sizeof(uint32_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint32_t) << ") Failed!";

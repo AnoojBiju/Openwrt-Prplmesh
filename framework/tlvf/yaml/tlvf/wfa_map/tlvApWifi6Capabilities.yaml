@@ -21,7 +21,8 @@ cRole:
   _type: class
   flags1: sFlags1
   mcs_nss_80:
-    _type: uint32_t
+    _type: uint8_t
+    _length: [4]
     _comment: MCS for channel width lower or equal to 80 MHz
   mcs_nss_160:
     _type: uint32_t

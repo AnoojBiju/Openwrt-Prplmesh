@@ -162,7 +162,8 @@ class cRole : public BaseClass
         
         sFlags1& flags1();
         //MCS for channel width lower or equal to 80 MHz
-        uint32_t& mcs_nss_80();
+        uint8_t* mcs_nss_80(size_t idx = 0);
+        bool set_mcs_nss_80(const void* buffer, size_t size);
         bool alloc_mcs_nss_160();
         uint32_t* mcs_nss_160();
         bool set_mcs_nss_160(const uint32_t mcs_nss_160);
@@ -181,7 +182,9 @@ class cRole : public BaseClass
     private:
         bool init();
         sFlags1* m_flags1 = nullptr;
-        uint32_t* m_mcs_nss_80 = nullptr;
+        uint8_t* m_mcs_nss_80 = nullptr;
+        size_t m_mcs_nss_80_idx__ = 0;
+        int m_lock_order_counter__ = 0;
         uint32_t* m_mcs_nss_160 = nullptr;
         bool m_mcs_nss_160_allocated = false;
         uint32_t* m_mcs_nss_80_80 = nullptr;
