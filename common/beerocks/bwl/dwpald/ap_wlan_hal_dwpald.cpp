@@ -960,6 +960,8 @@ bool ap_wlan_hal_dwpal::refresh_radio_info()
         m_radio_info.he_supported     = band_info_it->he_supported;
         m_radio_info.he_capability    = band_info_it->he_capability;
         m_radio_info.wifi6_capability = band_info_it->wifi6_capability;
+        std::copy_n(band_info_it->he_mcs_set, m_radio_info.he_mcs_set.size(),
+                    m_radio_info.he_mcs_set.begin());
 
         for (auto const &pair : band_info_it->supported_channels) {
             auto &supported_channel_info = pair.second;

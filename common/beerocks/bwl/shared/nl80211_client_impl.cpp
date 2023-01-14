@@ -509,12 +509,11 @@ bool nl80211_client_impl::get_radio_info(const std::string &interface_name, radi
                         // According to definition in "linux/iee80211.h" and 9.4.2.248.4 of IEEE P802.11.
                         if (tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_MCS_SET]) {
                             int he_rx_nss, he_tx_nss, he_mcs;
-                            memcpy(band.he.he_mcs_nss_set,
+                            memcpy(band.he_mcs_set,
                                    nla_data(tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_MCS_SET]),
                                    nla_len(tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_MCS_SET]));
 
-                            uint16_t he_rx_mcs_map =
-                                band.he.he_mcs_nss_set[0] | (band.he.he_mcs_nss_set[1] << 8);
+                            uint16_t he_rx_mcs_map = band.he_mcs_set[0] | (band.he_mcs_set[1] << 8);
                             for (he_rx_nss = 8; he_rx_nss > 0; he_rx_nss--) {
                                 he_mcs = ((he_rx_mcs_map >> (2 * (he_rx_nss - 1))) & 3);
 
@@ -526,8 +525,7 @@ bool nl80211_client_impl::get_radio_info(const std::string &interface_name, radi
                             band.he_capability = band.he_capability | ((7 & (he_rx_nss - 1)) << 10);
                             band.wifi6_capability = band.wifi6_capability | (he_rx_nss << 24);
 
-                            uint16_t he_tx_mcs_map =
-                                band.he.he_mcs_nss_set[2] | (band.he.he_mcs_nss_set[3] << 8);
+                            uint16_t he_tx_mcs_map = band.he_mcs_set[2] | (band.he_mcs_set[3] << 8);
                             for (he_tx_nss = 8; he_tx_nss > 0; he_tx_nss--) {
                                 he_mcs = ((he_tx_mcs_map >> (2 * (he_tx_nss - 1))) & 3);
 
