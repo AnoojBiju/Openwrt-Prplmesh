@@ -467,7 +467,14 @@ bool CapabilityReportingTask::add_ap_he_capabilities(const std::string &iface_na
      * Bit  1     : DL OFDMA capable.
     */
 
-    tlv->set_supported_he_mcs(&radio->he_mcs_set[1], radio->he_mcs_set[0]);
+    uint8_t mcs_nss_size = 4;
+    if (HECaps->he_support_160mhz) {
+        mcs_nss_size += 4;
+    }
+    if (HECaps->he_support_80_80mhz) {
+        mcs_nss_size += 4;
+    }
+    tlv->set_supported_he_mcs(radio->he_mcs_set.begin(), mcs_nss_size);
     tlv->flags1().max_num_of_supported_tx_spatial_streams =
         HECaps->max_num_of_supported_tx_spatial_streams;
     tlv->flags1().max_num_of_supported_rx_spatial_streams =
@@ -565,11 +572,14 @@ bool CapabilityReportingTask::add_ap_wifi6_capabilities(const std::string &iface
         role->flags1().he_support_160mhz   = wifi6_caps->he_support_160mhz;
         role->flags1().he_support_80_80mhz = wifi6_caps->he_support_80_80mhz;
         role->flags1().mcs_nss_length      = wifi6_caps->mcs_nss_length;
+        role->set_mcs_nss_80(radio->he_mcs_set.begin(), 4);
         if (role->flags1().he_support_160mhz) {
-            role->set_mcs_nss_160(role->flags1().he_support_160mhz);
+            role->set_mcs_nss_160(radio->he_mcs_set[7] | (radio->he_mcs_set[6] << 8) |
+                                  (radio->he_mcs_set[5] << 16) | (radio->he_mcs_set[4] << 24));
         }
         if (role->flags1().he_support_80_80mhz) {
-            role->set_mcs_nss_80_80(role->flags1().he_support_80_80mhz);
+            role->set_mcs_nss_80_80(radio->he_mcs_set[11] | (radio->he_mcs_set[10] << 8) |
+                                    (radio->he_mcs_set[9] << 16) | (radio->he_mcs_set[8] << 24));
         }
         role->flags2().su_beamformer                = wifi6_caps->su_beamformer;
         role->flags2().su_beamformee                = wifi6_caps->su_beamformee;
