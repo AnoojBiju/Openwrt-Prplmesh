@@ -34,8 +34,9 @@ static constexpr size_t ht_mcs_set_size = beerocks::message::HT_MCS_SET_SIZE;
  * According to <linux/nl80211.h>, NL80211_BAND_ATTR_VHT_MCS_SET is a 32-byte attribute containing
  * the MCS set as defined in 802.11ac
  */
-static constexpr size_t vht_mcs_set_size = beerocks::message::VHT_MCS_SET_SIZE;
 
+static constexpr size_t vht_mcs_set_size = beerocks::message::VHT_MCS_SET_SIZE;
+static constexpr size_t he_mcs_set_size  = beerocks::message::HE_MCS_SET_SIZE;
 namespace bwl {
 
 /**
@@ -248,6 +249,7 @@ public:
          * interpretation example.
          */
         uint8_t vht_mcs_set[vht_mcs_set_size];
+        uint8_t he_mcs_set[he_mcs_set_size];
 
         /**
          * Is HE supported flag.

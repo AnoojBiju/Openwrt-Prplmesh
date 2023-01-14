@@ -512,6 +512,8 @@ bool nl80211_client_impl::get_radio_info(const std::string &interface_name, radi
                             memcpy(band.he.he_mcs_nss_set,
                                    nla_data(tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_MCS_SET]),
                                    nla_len(tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_MCS_SET]));
+                            memcpy(band.he_mcs_set, band.he.he_mcs_nss_set,
+                                   nla_len(tb_iftype[NL80211_BAND_IFTYPE_ATTR_HE_CAP_MCS_SET]));
 
                             uint16_t he_rx_mcs_map =
                                 band.he.he_mcs_nss_set[0] | (band.he.he_mcs_nss_set[1] << 8);
