@@ -153,8 +153,8 @@ main() {
     esac
 
     if [ "$TARGET_DEVICE" == "turris-omnia" ] ; then
-        OPENWRT_TOOLCHAIN_VERSION='750d3b48630c35dadf510dd2f2beddbbf4bf240b'
-        OPENWRT_VERSION='750d3b48630c35dadf510dd2f2beddbbf4bf240b'
+        OPENWRT_TOOLCHAIN_VERSION='ca52cf8f87ac2a0377f3f7943147ee850dfacdd6'
+        OPENWRT_VERSION='ca52cf8f87ac2a0377f3f7943147ee850dfacdd6'
     fi
 
     dbg "OPENWRT_REPOSITORY=$OPENWRT_REPOSITORY"
@@ -201,8 +201,8 @@ main() {
 VERBOSE=false
 IMAGE_ONLY=false
 OPENWRT_REPOSITORY='https://gitlab.com/prpl-foundation/prplos/prplos.git'
-OPENWRT_TOOLCHAIN_VERSION='a3bcb642fc62b6405e9b266a8e4a47c2e7a5b333'
-OPENWRT_VERSION='a3bcb642fc62b6405e9b266a8e4a47c2e7a5b333'
+OPENWRT_TOOLCHAIN_VERSION='ca52cf8f87ac2a0377f3f7943147ee850dfacdd6'
+OPENWRT_VERSION='ca52cf8f87ac2a0377f3f7943147ee850dfacdd6'
 PRPLMESH_VARIANT="-nl80211"
 DOCKER_TARGET_STAGE="prplmesh-builder"
 SHELL_ONLY=false
