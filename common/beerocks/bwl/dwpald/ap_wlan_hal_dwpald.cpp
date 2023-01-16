@@ -3762,6 +3762,11 @@ bool ap_wlan_hal_dwpal::prepare_unassoc_sta_link_metrics_response(
             std::chrono::duration_cast<std::chrono::milliseconds>(
                 now - sta_entry.second.m_unassoc_sta_metrics_start)
                 .count();
+        LOG(DEBUG) << "Unassociate Sta link metrics response: opclass = " << m_opclass
+                   << " Channel " << unassoc_sta.channel_number
+                   << " RCPI = " << unassoc_sta.uplink_rcpi_dbm_enc
+                   << " time delta = " << unassoc_sta.measurement_to_report_delta_msec
+                   << " STA MAC = " << unassoc_sta.sta_mac;
     }
 
     // clear the map and mark measurement_start as false

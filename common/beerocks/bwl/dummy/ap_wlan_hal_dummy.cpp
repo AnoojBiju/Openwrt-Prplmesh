@@ -768,20 +768,26 @@ bool ap_wlan_hal_dummy::prepare_unassoc_sta_link_metrics_response(
     std::shared_ptr<wfa_map::tlvUnassociatedStaLinkMetricsResponse> &response)
 {
     response->operating_class_of_channel_list() = m_opclass;
-    auto now                                    = std::chrono::steady_clock::now();
+    //auto now                                    = std::chrono::steady_clock::now();
     for (auto &sta_entry : m_unassoc_sta_map) {
         if (!response->alloc_sta_list(1)) {
             LOG(ERROR) << "Failed allocate_sta_list";
             return false;
         }
-        auto &unassoc_sta               = std::get<1>(response->sta_list(0));
-        unassoc_sta.channel_number      = sta_entry.second.channel;
-        unassoc_sta.uplink_rcpi_dbm_enc = sta_entry.second.rcpi;
-        unassoc_sta.sta_mac             = tlvf::mac_from_string(sta_entry.first);
-        unassoc_sta.measurement_to_report_delta_msec =
-            std::chrono::duration_cast<std::chrono::milliseconds>(
-                now - sta_entry.second.m_unassoc_sta_metrics_start)
-                .count();
+        auto &unassoc_sta                            = std::get<1>(response->sta_list(0));
+        unassoc_sta.channel_number                   = sta_entry.second.channel;
+        unassoc_sta.uplink_rcpi_dbm_enc              = sta_entry.second.rcpi;
+        unassoc_sta.sta_mac                          = tlvf::mac_from_string(sta_entry.first);
+        unassoc_sta.measurement_to_report_delta_msec = 17;
+        //unassoc_sta.measurement_to_report_delta_msec =
+        //    std::chrono::duration_cast<std::chrono::milliseconds>(
+        //        now - sta_entry.second.m_unassoc_sta_metrics_start)
+        //        .count();
+        LOG(DEBUG) << "Unassociate Sta link metrics response: opclass = " << m_opclass
+                   << " Channel " << unassoc_sta.channel_number
+                   << " RCPI = " << unassoc_sta.uplink_rcpi_dbm_enc
+                   << " time delta = " << unassoc_sta.measurement_to_report_delta_msec
+                   << " STA MAC = " << unassoc_sta.sta_mac;
     }
 
     // clear the map and mark measurement_start as false
