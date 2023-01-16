@@ -71,14 +71,14 @@ main() {
 
     while true; do
         case "$1" in
-            -v | --verbose)       VERBOSE_OPT="-v"; shift ;;
+            -v | --verbose)       VERBOSE=true; VERBOSE_OPT="-v"; shift ;;
             -h | --help)          usage; exit 0; shift ;;
             -d | --delay)         DELAY="$2"; shift; shift ;;
             -f | --force)         docker_opts+=("-f"); shift ;;
             -u | --unique-id)     UNIQUE_ID="$2"; shift; shift ;;
             -t | --tag)           docker_opts+=("--tag" "$2"); shift; shift ;;
             -g | --gateway)       GW_NAME="$2"; shift; shift ;;
-            -r | --repeater)      REPEATER_NAMES="$REPEATER_NAMES $2"; shift; shift ;;
+            -r | --repeater)      REPEATER_NAMES+=("$2"); shift; shift ;;
             --rm)                 REMOVE=true; shift ;;
             --gateway-only)       START_REPEATER=false; shift ;;
             --repeater-only)      START_GATEWAY=false; shift ;;
@@ -89,21 +89,30 @@ main() {
 
     check_wsl
 
-    status "Starting GW+Repeater test"
-
     # default values for gateway and repeater[s] names
-    REPEATER_NAMES=${REPEATER_NAMES-repeater-${UNIQUE_ID}}
+    ((${#REPEATER_NAMES[@]})) || REPEATER_NAMES=("repeater-${UNIQUE_ID}")
     GW_NAME=${GW_NAME-gateway-${UNIQUE_ID}}
 
     dbg REMOVE="${REMOVE}"
     dbg GW_NAME="${GW_NAME}"
-    dbg REPEATER_NAMES="${REPEATER_NAMES}"
+    dbg REPEATER_NAMES="${REPEATER_NAMES[*]}"
     dbg START_GATEWAY="${START_GATEWAY}"
     dbg START_REPEATER="${START_REPEATER}"
     dbg DELAY="${DELAY}"
     dbg UNIQUE_ID="${UNIQUE_ID}"
 
     docker_opts+=("-u" "${UNIQUE_ID}")
+
+    [ "$REMOVE" = "true" ] && {
+        CONTAINERS=()
+        [ "$START_GATEWAY"  = "true" ] && CONTAINERS+=("${GW_NAME}")
+        [ "$START_REPEATER" = "true" ] && CONTAINERS+=("${REPEATER_NAMES[@]}")
+        status "Deleting containers ${CONTAINERS[*]}"
+        docker rm -f "${CONTAINERS[@]}" >/dev/null 2>&1
+        return
+    }
+
+    status "Starting GW+Repeater test"
 
     [ "$START_GATEWAY" = "true" ] && {
         status "Start GW (Controller + local Agent)"
@@ -117,7 +126,7 @@ main() {
     }
 
     [ "$START_REPEATER" = "true" ] && {
-        for repeater in $REPEATER_NAMES; do
+        for repeater in "${REPEATER_NAMES[@]}"; do
             status "Start Repeater (Remote Agent): $repeater"
             "${rootdir}"/tools/docker/run.sh ${VERBOSE_OPT} "${docker_opts[@]}" "${RP_EXTRA_OPT[@]}" \
                 start-agent -d -n "${repeater}" -- "$@"
@@ -133,17 +142,12 @@ main() {
 
 
     [ "$START_REPEATER" = "true" ] && {
-        for repeater in $REPEATER_NAMES
+        for repeater in "${REPEATER_NAMES[@]}"
         do
             REPEATER_BRIDGE_MAC=$(get_repater_bridge_mac "${repeater}")
             report "Repeater $repeater operational" \
             "${rootdir}"/tools/docker/test.sh ${VERBOSE_OPT} -n "${GW_NAME}" -b "${REPEATER_BRIDGE_MAC}"
         done
-    }
-
-    [ "$REMOVE" = "true" ] && {
-        status "Deleting containers ${GW_NAME} ${REPEATER_NAMES}"
-        docker rm -f "${GW_NAME}" "${REPEATER_NAMES}" >/dev/null 2>&1
     }
 
     return $error
@@ -153,6 +157,7 @@ REMOVE=false
 START_GATEWAY=true
 START_REPEATER=true
 UNIQUE_ID=${SUDO_USER:-${USER}}
+REPEATER_NAMES=()
 DELAY=10
 docker_opts=()
 
