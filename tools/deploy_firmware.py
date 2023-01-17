@@ -87,6 +87,7 @@ def main():
     if needs_upgrade:
         print("The device {} will be upgraded".format(dev.name))
         do_upgrade(dev)
+        # do_upgrade will wait for the specified initialisation time
     else:
         print("The device is already using the same version, no upgrade will be done.")
 
@@ -95,10 +96,10 @@ def main():
         print("A configuration file was provided, it will be applied.")
         configure_device(dev, Path(args.configuration))
 
-    if args.configuration or needs_upgrade:
-        # If the device was configured or upgraded (or both), give it some time to initialize:
+    if args.configuration:
+        # If the device was configured, give it some time to initialize:
         print("Waiting for the device to initialize.")
-        time.sleep(dev.initialization_time)
+        time.sleep(dev.configuration_initialization_time)
 
     print("Checking if the device is reachable.")
     if not dev.reach(attempts=10):

@@ -21,7 +21,7 @@ if data_overlay_not_initialized; then
   done
   logger -t prplmesh -p daemon.info "Data overlay is initialized."
 fi
-sleep 20
+sleep 10
 
 # Stop and disable the DHCP clients:
 /etc/init.d/tr181-dhcpv4client stop
@@ -32,6 +32,7 @@ rm -f /etc/rc.d/S25tr181-dhcpv6client
 # Save the IP settings persistently (PPM-2351):
 sed -ri 's/(dm-save.*) = false/\1 = true/g' /etc/amx/ip-manager/ip-manager.odl
 /etc/init.d/ip-manager restart
+sleep 12
 
 ubus wait_for IP.Interface
 
@@ -178,3 +179,22 @@ config_foreach set_channel wifi-device
 uci commit
 /etc/init.d/system restart
 /etc/init.d/network restart
+sleep 10
+
+# Try to work around PCF-681: if we don't have a connectivity, restart
+# tr181-bridging
+# Check the status of the LAN bridge
+ip a |grep "br-lan:" |grep "state UP" >/dev/null || (echo "LAN Bridge DOWN, restarting bridge manager" && /etc/init.d/tr181-bridging restart && sleep 15)
+
+# If we still can't ping the UCC, restart the IP manager
+ping -i 1 -c 2 192.168.250.199 || (/etc/init.d/ip-manager restart && sleep 12)
+
+# Restart the ssh server
+# (necessary when prplOS will be upstepped for this platform)
+# /etc/init.d/ssh-server restart
+# sleep 5
+
+# Start an ssh server on the control interfce
+# The ssh server that is already running will only accept connections from 
+# the IP interface that was configured with the IP-Manager
+# dropbear -F -T 10 -p192.168.250.190:22 &

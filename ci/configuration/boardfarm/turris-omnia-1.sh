@@ -176,3 +176,23 @@ config_foreach set_channel wifi-device
 uci commit
 /etc/init.d/system restart
 /etc/init.d/network restart
+
+# (necessary when prplOS will be upstepped for this platform)
+#sleep 10
+
+# Try to work around PCF-681: if we don't have a connectivity, restart
+# tr181-bridging
+# Check the status of the LAN bridge
+# ip a |grep "br-lan:" |grep "state UP" >/dev/null || (echo "LAN Bridge DOWN, restarting bridge manager" && /etc/init.d/tr181-bridging restart && sleep 15)
+
+# If we still can't ping the UCC, restart the IP manager
+# ping -i 1 -c 2 192.168.250.199 || (/etc/init.d/ip-manager restart && sleep 12)
+
+# Restart the ssh server
+# /etc/init.d/ssh-server restart
+# sleep 5
+
+# Start an ssh server on the control interfce
+# The ssh server that is already running will only accept connections from 
+# the IP interface that was configured with the IP-Manager
+# dropbear -F -T 10 -p192.168.250.190:22 &
