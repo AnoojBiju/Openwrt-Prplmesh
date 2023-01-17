@@ -288,9 +288,9 @@ bool sta_wlan_hal_whm::roam(const sMacAddr &bssid, ChannelFreqPair channel)
 
     AmbiorixVariant result;
     AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
-    args.add_child<>("bssid", tlvf::mac_to_string(bssid));
-    args.add_child<>("tries", 2);        //arbitrary choice
-    args.add_child<>("timeoutInSec", 5); //arbitrary choice
+    args.add_child("bssid", tlvf::mac_to_string(bssid));
+    args.add_child("tries", 2);        //arbitrary choice
+    args.add_child("timeoutInSec", 5); //arbitrary choice
     if (!m_ambiorix_cl->call(m_ep_path, "roamTo", args, result)) {
         LOG(ERROR) << " remote function call roamTo Failed!";
         return false;
