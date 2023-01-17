@@ -21,17 +21,21 @@ if data_overlay_not_initialized; then
   done
   logger -t prplmesh -p daemon.info "Data overlay is initialized."
 fi
-sleep 20
+sleep 10
 
 ubus wait_for DHCPv4
 ubus wait_for DHCPv6
-ubus wait_for IP.Interface
 
 # Stop and disable the DHCP clients and servers:
 ubus call DHCPv4.Client.1 _set '{"parameters": { "Enable": False }}'
 ubus call DHCPv6.Client.1 _set '{"parameters": { "Enable": False }}'
 ubus call DHCPv4.Server _set '{"parameters": { "Enable": False }}'
 ubus call DHCPv6.Server _set '{"parameters": { "Enable": False }}'
+
+# Save the IP settings persistently (PPM-2351):
+sed -ri 's/(dm-save.*) = false/\1 = true/g' /etc/amx/ip-manager/ip-manager.odl
+/etc/init.d/ip-manager restart
+sleep 12
 
 # Since for the GL-inet eth0 (LAN) is always detected as UP, eth1 (WAN) will be configured as a backhaul interface
 # This allows prplMesh to detect the state of the backhaul interface
@@ -74,6 +78,7 @@ ubus call Ethernet.Link _get '{ "rel_path": ".[Name == \"eth0\"]." }' || {
     ETH_LINK="$(ubus call Ethernet.Link _add "{ \"parameters\": { \"Name\": \"eth0\", \"Alias\": \"eth0\",\"LowerLayers\": \"Device.Ethernet.Interface.$ETH_IF.\", \"Enable\": true } }" | jsonfilter -e '@.index')"
 }
 # We can now create an IP.Interface if there is none yet:
+LAN_INTERFACE="IP.Interface"
 ubus call IP.Interface _get '{ "rel_path": ".[Name == \"eth0\"]." }' || {
     echo "Adding IP.Interface"
     LAN_INTERFACE=".""$(ubus call IP.Interface _add "{ \"parameters\": { \"Name\": \"eth0\", \"UCISectionNameIPv4\": \"cert\", \"Alias\": \"eth0\", \"LowerLayers\": \"Device.Ethernet.Link.$ETH_LINK.\", \"Enable\": true } }" | jsonfilter -e '@.index')"
@@ -99,6 +104,9 @@ uci set prplmesh.config.backhaul_wire_iface='eth1'
 # Stop and disable the firewall:
 /etc/init.d/tr181-firewall stop
 rm -f /etc/rc.d/S22tr181-firewall
+
+# Restart the ssh server
+/etc/init.d/ssh-server restart
 
 # Required for config_load:
 . /lib/functions/system.sh
@@ -134,7 +142,17 @@ ubus call "WiFi.Radio.2" _set '{ "parameters": { "Channel": "48" } }'
 
 # Try to work around PCF-681: if we don't have a connectivity, restart
 # tr181-bridging
-ping 192.168.1.2 -c 3 || /etc/init.d/tr181-bridging restart
-sleep 10
+# Check the status of the LAN bridge
+ip a |grep "br-lan:" |grep "state UP" >/dev/null || (echo "LAN Bridge DOWN, restarting bridge manager" && /etc/init.d/tr181-bridging restart && sleep 15)
+
+# If we still can't ping the UCC, restart the IP manager
 ping -i 1 -c 2 192.168.250.199 || (/etc/init.d/ip-manager restart && sleep 12)
-ping -i 1 -c 2 192.168.250.199 || /etc/init.d/ip-manager restart
+
+# Restart the ssh server
+/etc/init.d/ssh-server restart
+sleep 5
+
+# Start an ssh server on the control interfce
+# The ssh server that is already running will only accept connections from 
+# the IP interface that was configured with the IP-Manager
+dropbear -F -T 10 -p192.168.250.172:22 &
