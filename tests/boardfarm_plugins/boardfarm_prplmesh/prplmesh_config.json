@@ -76,7 +76,7 @@
             }
         ]
     },
-    "glinet-b1300-1-remote": {
+    "glinet-b1300": {
         "name": "agent-glinet",
         "board_type": "prplWRT",
         "role": "agent",
@@ -84,8 +84,7 @@
         "conn_cmd": "cu -s 115200 -l glinet-b1300-1 -f",
         "delay": "30",
         "iface_to_device": "to-dut",
-        "control_ip": "192.168.100.120",
-        "host_ip_to_device": "192.168.2.2/24",
+        "control_ip": "192.168.200.110",
         "devices": [
             {
                 "name": "lan",
@@ -138,6 +137,34 @@
                 "name": "wifi",
                 "type": "RDKB_STA",
                 "iface": "wlp4s0",
+                "driver": "nl80211,wext",
+                "connection_type": "local_cmd",
+                "conn_cmd": "bash",
+                "color": "yellow"
+            }
+        ]
+    },
+    "turris-omnia": {
+        "name": "agent-turris-prplOS",
+        "board_type": "prplWRT",
+        "role": "agent",
+        "docker_network": "prplMesh-net-turris-omnia-1",
+        "conn_cmd": "not used",
+        "delay": "30",
+        "iface_to_device": "to-dut",
+        "control_ip": "192.168.200.100",
+        "devices": [
+            {
+                "name": "lan",
+                "type": "prplmesh_compose",
+                "role": "controller",
+                "docker_network": "prplMesh-net-turris-omnia-1",
+                "conn_cmd": ""
+            },
+            {
+                "name": "wifi",
+                "type": "prplWRT_STA",
+                "iface": "wlan0",
                 "driver": "nl80211,wext",
                 "connection_type": "local_cmd",
                 "conn_cmd": "bash",
