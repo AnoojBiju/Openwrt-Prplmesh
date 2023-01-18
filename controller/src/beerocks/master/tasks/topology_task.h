@@ -62,6 +62,11 @@ private:
     ieee1905_1::CmduMessageTx &cmdu_tx;
     task_pool &tasks;
     std::unordered_map<sMacAddr, std::chrono::steady_clock::time_point> recently_reported_neighbors;
+
+    /** Used inside parsing logic
+     *  of vsTLV BssidIfaceMapping
+     */
+    std::unordered_map<sMacAddr, int8_t> bssid_vap_map;
 };
 
 } // namespace son
