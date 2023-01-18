@@ -36,6 +36,14 @@ static constexpr size_t ht_mcs_set_size = beerocks::message::HT_MCS_SET_SIZE;
  */
 static constexpr size_t vht_mcs_set_size = beerocks::message::VHT_MCS_SET_SIZE;
 
+/**
+ * @brief Length of HE MCS set.
+ *
+ * According to <linux/nl80211.h>, NL80211_BAND_IFTYPE_ATTR_HE_CAP_MCS_SET is a 32-byte attribute containing
+ * the MCS set as defined in 802.11ax
+ */
+static constexpr size_t he_mcs_set_size = beerocks::message::HE_MCS_SET_SIZE;
+
 namespace bwl {
 
 /**
@@ -254,6 +262,11 @@ public:
          * Set to true if NL80211_BAND_ATTR_IFTYPE_DATA attribute is included in response.
          */
         bool he_supported = false;
+
+        /**
+         * Value of NL80211_BAND_IFTYPE_ATTR_HE_CAP_MCS_SET, see iw/util.c.
+         */
+        uint8_t he_mcs_set[he_mcs_set_size];
 
         /**
 	 * Information obtained with NL80211_BAND_ATTR_IFTYPE_DATA command through a NL80211 socket.
