@@ -185,6 +185,24 @@ void ApAutoConfigurationTask::work()
         db->statuses.ap_autoconfiguration_completed = true;
         m_task_is_active                            = false;
         LOG(DEBUG) << "Link to the controller is established";
+
+        // Send topology Notification to controller without client assoc list. Controller should
+        // trigger topology query to get the complete MAP
+
+        if (!m_cmdu_tx.create(0, ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE)) {
+            LOG(ERROR) << "cmdu creation of type TOPOLOGY_NOTIFICATION_MESSAGE, has failed";
+            return;
+        }
+
+        auto tlvAlMacAddress = m_cmdu_tx.addClass<ieee1905_1::tlvAlMacAddress>();
+        if (!tlvAlMacAddress) {
+            LOG(ERROR) << "addClass ieee1905_1::tlvAlMacAddress failed";
+            return;
+        }
+
+        tlvAlMacAddress->mac() = db->bridge.mac;
+        m_btl_ctx.send_cmdu_to_controller({}, m_cmdu_tx);
+        LOG(DEBUG) << "Sent TOPOLOGY_NOTIFICATION_MESSAGE message";
     }
 }
 
