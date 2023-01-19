@@ -752,11 +752,15 @@ bool TopologyTask::add_associated_clients_tlv()
             continue;
         }
         if (radio->associated_clients.size() > 0) {
-	    LOG(DEBUG) << "CW: ***radio has associated clients" << " fronthaul " << radio->front.iface_name << " and backhaul" << radio->back.iface_name ;
+            LOG(DEBUG) << "CW: ***radio has associated clients"
+                       << " fronthaul " << radio->front.iface_name << " and backhaul"
+                       << radio->back.iface_name;
             include_associated_clients_tlv = true;
             break;
         }
-	LOG(DEBUG) << "CW: ###radio has no associated clients" << " fronthaul " << radio->front.iface_name << " and backhaul" << radio->back.iface_name ;
+        LOG(DEBUG) << "CW: ###radio has no associated clients"
+                   << " fronthaul " << radio->front.iface_name << " and backhaul"
+                   << radio->back.iface_name;
     }
 
     if (include_associated_clients_tlv) {
