@@ -7,9 +7,52 @@
  */
 #include "ambiorix_impl.h"
 #include "tlvf/tlvftypes.h"
+#include <amxd/amxd_types.h>
+#include <bcl/beerocks_backport.h>
+#include <memory>
 
 namespace beerocks {
 namespace nbapi {
+
+class AmbiorixImpl::Transaction : public Ambiorix::Transaction {
+public:
+    AmbiorixImpl *parent;
+    amxd_trans_t transaction;
+
+    Transaction(AmbiorixImpl *parent) : parent(parent) { amxd_trans_init(&transaction); }
+    ~Transaction() { amxd_trans_clean(&transaction); }
+
+    bool commit() override { return parent->apply_transaction(transaction); }
+
+    bool set(const std::string &parameter, const std::string &value) override
+    {
+        return amxd_trans_set_value(cstring_t, &transaction, parameter.c_str(), value.c_str()) ==
+               amxd_status_ok;
+    }
+    bool set(const std::string &parameter, const sMacAddr &value) override
+    {
+        return set(parameter, tlvf::mac_to_string(value));
+    }
+    bool set_current_time(const std::string &param) override
+    {
+        auto time_stamp = parent->get_datamodel_time_format();
+
+        return !time_stamp.empty() && set(param, time_stamp);
+    }
+
+#define TRANS_SET(TYPE) \
+    bool set(const std::string &parameter, const TYPE &value) override \
+    { \
+        return amxd_trans_set_value(TYPE, &transaction, parameter.c_str(), value) == amxd_status_ok; \
+    }
+    TRANS_SET(int32_t)
+    TRANS_SET(int64_t)
+    TRANS_SET(uint32_t)
+    TRANS_SET(uint64_t)
+    TRANS_SET(bool)
+    TRANS_SET(double)
+#undef TRANS_SET
+};
 
 amxd_dm_t *g_data_model = nullptr;
 
@@ -345,6 +388,18 @@ bool AmbiorixImpl::apply_transaction(amxd_trans_t &transaction)
     }
 
     amxd_trans_clean(&transaction);
+
+    return ret;
+}
+
+std::unique_ptr<Ambiorix::Transaction> AmbiorixImpl::start_transaction(const std::string &relative_path)
+{
+    auto ret = std::make_unique<Transaction>(this);
+
+    if (!prepare_transaction(relative_path, ret->transaction)) {
+        LOG(ERROR) << "Failed to prepare transaction: "  << relative_path;
+        return {};
+    }
 
     return ret;
 }

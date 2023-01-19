@@ -11,6 +11,7 @@
 
 #include "tlvf/common/sMacAddr.h"
 #include <easylogging++.h>
+#include <memory>
 
 namespace beerocks {
 namespace nbapi {
@@ -21,10 +22,32 @@ namespace nbapi {
  */
 class Ambiorix {
 public:
-    Ambiorix(){};
-    Ambiorix(const Ambiorix &) = delete;
-    Ambiorix &operator=(const Ambiorix &) = delete;
-    virtual ~Ambiorix()                   = 0;
+    /**
+     * @brief Destruction shall not commit
+     */
+    class Transaction {
+        public:
+        virtual ~Transaction() = default;
+
+        virtual bool commit() = 0;
+
+        virtual bool set(const std::string &parameter, const int32_t &value)     = 0;
+        virtual bool set(const std::string &parameter, const int64_t &value)     = 0;
+        virtual bool set(const std::string &parameter, const uint32_t &value)    = 0;
+        virtual bool set(const std::string &parameter, const uint64_t &value)    = 0;
+        virtual bool set(const std::string &parameter, const bool &value)        = 0;
+        virtual bool set(const std::string &parameter, const double &value)      = 0;
+        virtual bool set(const std::string &parameter, const std::string &value) = 0;
+        virtual bool set(const std::string &parameter, const sMacAddr &value)    = 0;
+        virtual bool set_current_time(const std::string &param = "TimeStamp")    = 0;
+    };
+
+    virtual ~Ambiorix() = default;
+
+    /**
+     * @brief Starts a transaction
+     */
+    virtual std::unique_ptr<Transaction> start_transaction(const std::string &relative_path) = 0;
 
     /**
      * @brief Set the value to the object variable.
@@ -142,8 +165,6 @@ public:
     virtual bool read_param(const std::string &obj_path, const std::string &param_name,
                             std::string *param_val) = 0;
 };
-
-inline Ambiorix::~Ambiorix() {}
 
 } // namespace nbapi
 } // namespace beerocks

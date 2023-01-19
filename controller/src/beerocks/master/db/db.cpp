@@ -6555,14 +6555,15 @@ bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, cons
     }
 
     auto ret_val = true;
+    auto transaction = m_ambiorix_datamodel->start_transaction(bss->dm_path);
 
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "BSSID", bssid);
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "SSID", ssid);
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "Enabled", bss->enabled);
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "FronthaulUse", bss->fronthaul);
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "BackhaulUse", bss->backhaul);
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "IsVBSS", is_vbss);
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "ByteCounterUnits", bss->byte_counter_units);
+    ret_val &= transaction->set("BSSID", bssid);
+    ret_val &= transaction->set("SSID", ssid);
+    ret_val &= transaction->set("Enabled", bss->enabled);
+    ret_val &= transaction->set("FronthaulUse", bss->fronthaul);
+    ret_val &= transaction->set("BackhaulUse", bss->backhaul);
+    ret_val &= transaction->set("IsVBSS", is_vbss);
+    ret_val &= transaction->set("ByteCounterUnits", bss->byte_counter_units);
 
     /*
         Set value for LastChange variable - it is creation time, when someone will
@@ -6574,10 +6575,10 @@ bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, cons
         static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::seconds>(
                                   std::chrono::steady_clock::now().time_since_epoch())
                                   .count());
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "LastChange", creation_time);
-    ret_val &= m_ambiorix_datamodel->set_current_time(bss->dm_path);
+    ret_val &= transaction->set("LastChange", creation_time);
+    ret_val &= transaction->set_current_time();
 
-    return ret_val;
+    return ret_val && transaction->commit();
 }
 
 bool db::dm_uint64_param_one_up(const std::string &obj_path, const std::string &param_name)

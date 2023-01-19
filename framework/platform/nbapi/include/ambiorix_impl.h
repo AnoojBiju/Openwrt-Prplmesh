@@ -29,6 +29,7 @@
 
 #include <amxo/amxo.h>
 #include <amxo/amxo_save.h>
+#include <memory>
 
 #include "ambiorix.h"
 
@@ -70,6 +71,8 @@ extern amxd_dm_t *g_data_model;
 class AmbiorixImpl : public Ambiorix {
 
 public:
+    class Transaction;
+
     explicit AmbiorixImpl(std::shared_ptr<EventLoop> event_loop,
                           const std::vector<sActionsCallback> &on_action,
                           const std::vector<sEvents> &events,
@@ -92,6 +95,8 @@ public:
      */
     bool init(const std::string &amxb_backend, const std::string &bus_uri,
               const std::string &datamodel_path);
+
+    std::unique_ptr<Ambiorix::Transaction> start_transaction(const std::string &relative_path) override;
 
     bool set(const std::string &relative_path, const std::string &parameter,
              const std::string &value) override;
