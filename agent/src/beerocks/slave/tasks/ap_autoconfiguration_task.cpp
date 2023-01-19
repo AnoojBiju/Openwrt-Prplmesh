@@ -186,6 +186,8 @@ void ApAutoConfigurationTask::work()
         m_task_is_active                            = false;
         LOG(DEBUG) << "Link to the controller is established";
 
+#if 0
+
         // Send topology Notification to controller without client assoc list. Controller should
         // trigger topology query to get the complete MAP
 
@@ -203,6 +205,7 @@ void ApAutoConfigurationTask::work()
         tlvAlMacAddress->mac() = db->bridge.mac;
         m_btl_ctx.send_cmdu_to_controller({}, m_cmdu_tx);
         LOG(DEBUG) << "Sent TOPOLOGY_NOTIFICATION_MESSAGE message";
+#endif
     }
 }
 

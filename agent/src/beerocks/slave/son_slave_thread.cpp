@@ -2938,10 +2938,6 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
             return true;
         }
 
-	/* Just looking if we are able to handle the situation or not*/
-        LOG(DEBUG) << "Controller is not connected";
-        return true;
-
         // build 1905.1 message CMDU to send to the controller
         if (!cmdu_tx.create(0, ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE)) {
             LOG(ERROR) << "cmdu creation of type TOPOLOGY_NOTIFICATION_MESSAGE, has failed";
@@ -2955,6 +2951,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
         }
         tlvAlMacAddress->mac() = db->bridge.mac;
 
+#if 0
         auto client_association_event_tlv = cmdu_tx.addClass<wfa_map::tlvClientAssociationEvent>();
         if (!client_association_event_tlv) {
             LOG(ERROR) << "addClass tlvClientAssociationEvent failed";
@@ -2982,8 +2979,10 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
             vs_tlv->vap_id()       = notification_in->vap_id();
             vs_tlv->capabilities() = notification_in->capabilities();
         }
+#endif
 
         send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
+        LOG(DEBUG) << "Sent TOPOLOGY_NOTIFICATION_MESSAGE without client info to controller";
 
         break;
     }
