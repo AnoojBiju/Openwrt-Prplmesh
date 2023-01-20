@@ -1883,7 +1883,7 @@ bool Monitor::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
             auto notify_disabled = true;
 
             while (std::chrono::steady_clock::now() < timeout) {
-                if (!mon_wlan_hal->refresh_radio_info()) {
+                if (1) {
                     LOG(WARNING) << "Radio could be temporary disabled, wait grace time "
                                  << std::chrono::duration_cast<std::chrono::seconds>(
                                         timeout - std::chrono::steady_clock::now())

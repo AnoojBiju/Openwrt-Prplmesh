@@ -77,6 +77,12 @@ static mon_wlan_hal::Event dwpal_to_bwl_event(const std::string &opcode)
         return mon_wlan_hal::Event::STA_Connected;
     } else if (opcode == "AP-STA-DISCONNECTED") {
         return mon_wlan_hal::Event::STA_Disconnected;
+    } else if (opcode == "INTERFACE_CONNECTED_OK") {
+        return mon_wlan_hal::Event::Interface_Connected_OK;
+    } else if (opcode == "INTERFACE_RECONNECTED_OK") {
+        return mon_wlan_hal::Event::Interface_Reconnected_OK;
+    } else if (opcode == "INTERFACE_DISCONNECTED") {
+        return mon_wlan_hal::Event::Interface_Disconnected;
     }
 
     return mon_wlan_hal::Event::Invalid;
@@ -303,7 +309,7 @@ static void get_he_operation(const uint8_t *data, uint8_t len, sChannelScanResul
     if (results.operating_frequency_band !=
             eChannelScanResultOperatingFrequencyBand::eOperating_Freq_Band_5GHz ||
         !(data[2] & BIT(6))) {
-        LOG(ERROR) << "Unable to parse the HE operation element";
+        LOG(ERROR) << "Unable to parse the HE operation element, this segment should be filtered";
         return;
     }
 
@@ -651,6 +657,7 @@ mon_wlan_hal_dwpal::~mon_wlan_hal_dwpal()
             LOG(ERROR) << " Failed to detach from dwpald for interface" << vap_name;
         }
     }
+    ctx = NULL;
 }
 
 bool mon_wlan_hal_dwpal::update_radio_stats(SRadioStats &radio_stats)
@@ -1276,7 +1283,8 @@ bool mon_wlan_hal_dwpal::pre_generate_connected_clients_events()
     return true;
 }
 
-bool mon_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std::string &opcode)
+bool mon_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufLen,
+                                             const std::string &opcode)
 {
     LOG(TRACE) << __func__ << " - opcode: |" << opcode << "|";
 
@@ -1306,7 +1314,8 @@ bool mon_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std
             }
 
             // Check if the event's BSSID is present in the monitored BSSIDs list.
-            if (m_hal_conf.monitored_BSSs.find(BSS_str) == m_hal_conf.monitored_BSSs.end()) {
+            if (iface_ids.vap_id != beerocks::IFACE_RADIO_ID &&
+                m_hal_conf.monitored_BSSs.find(BSS_str) == m_hal_conf.monitored_BSSs.end()) {
                 // Log print commented as to not flood the logs
                 //LOG(DEBUG) << "Event received on BSS " << BSS_str << " that is not on monitored BSSs list, ignoring";
                 return true;
@@ -1563,6 +1572,22 @@ bool mon_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std
     }
     case Event::RRM_Channel_Load_Response:
         break;
+    case Event::Interface_Connected_OK:
+    case Event::Interface_Reconnected_OK: {
+        LOG(INFO) << "INTERFACE_RECONNECTED_OK or INTERFACE_CONNECTED_OK from intf " << ifname;
+        auto ret = update_conn_status(ifname);
+        LOG(INFO) << "Status update return value " << ret;
+        break;
+    }
+    case Event::Interface_Disconnected: {
+        LOG(INFO) << "INTERFACE_DISCONNECTED from intf " << ifname;
+        for (auto &con : conn_state) {
+            // Update interface connection status for vap to false
+            conn_state[con.first] = false;
+            LOG(INFO) << "updated connection status for intf " << con.first << " with false";
+        }
+        break;
+    }
     // Gracefully ignore unhandled events
     // TODO: Probably should be changed to an error once dwpal will stop
     //       sending empty or irrelevant events...
@@ -1738,10 +1763,14 @@ bool mon_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)
 
 static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t len)
 {
+    std::string opcode(op_code);
+#if 0
     if (write(ctx->get_ext_evt_write_pfd(), buffer, len) < 0) {
         LOG(ERROR) << "Failed writing hostap event callback data";
         return -1;
     }
+#endif
+    ctx->process_dwpal_event(ifname, buffer, len, opcode);
     return 0;
 }
 
@@ -1757,7 +1786,10 @@ static int drv_evt_callback(struct nl_msg *msg)
     }
 #endif
     LOG(DEBUG) << "DWPAL nl event recv";
-    ctx->process_dwpal_nl_event(msg, ctx);
+    if(ctx)
+    {
+        ctx->process_dwpal_nl_event(msg, ctx);
+    }
     return 0;
 }
 
@@ -1770,15 +1802,11 @@ bool mon_wlan_hal_dwpal::dwpald_attach(char *ifname)
         {HAP_EVENT("RRM-CHANNEL-LOAD-RECEIVED")},
         {HAP_EVENT("AP-DISABLED")},
         {HAP_EVENT("AP-STA-CONNECTED")},
-        {HAP_EVENT("AP-STA-DISCONNECTED")}};
+        {HAP_EVENT("AP-STA-DISCONNECTED")},
+        {HAP_EVENT("INTERFACE_CONNECTED_OK")},
+        {HAP_EVENT("INTERFACE_RECONNECTED_OK")},
+        {HAP_EVENT("INTERFACE_DISCONNECTED")}};
 
-    static dwpald_hostap_event hostap_vap_event_handlers[] = {
-        {HAP_EVENT("RRM-BEACON-REP-RECEIVED")},
-        {HAP_EVENT("RRM-CHANNEL-LOAD-RECEIVED")},
-        {HAP_EVENT("AP-ENABLED")},
-        {HAP_EVENT("AP-DISABLED")},
-        {HAP_EVENT("AP-STA-CONNECTED")},
-        {HAP_EVENT("AP-STA-DISCONNECTED")}};
     /*
         As dwpald allows only once dwpald_hostap_attach/nl_attach API to be called from per process,
         In order to register additional event handlers for monitor, dwpald_hostap_attach_with_id/nl_attach_with_id
@@ -1798,9 +1826,12 @@ bool mon_wlan_hal_dwpal::dwpald_attach(char *ifname)
             return false;
         }
     } else {
-        if (dwpald_hostap_attach_with_id(
-                ifname, sizeof(hostap_vap_event_handlers) / sizeof(dwpald_hostap_event),
-                hostap_vap_event_handlers, 0, MONITOR_DWPALD_ATTACH_ID) != DWPALD_SUCCESS) {
+        /*
+        hostapd's VAP related events come from a radio interface,
+        and contain VAP information
+        */
+        if (dwpald_hostap_attach_with_id(ifname, 0, {}, 0, MONITOR_DWPALD_ATTACH_ID) !=
+            DWPALD_SUCCESS) {
             LOG(ERROR) << "Failed to attach to dwpald for interface " << ifname;
             return false;
         }

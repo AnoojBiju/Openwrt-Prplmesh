@@ -1962,7 +1962,7 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
             auto notify_disabled = true;
 
             while (std::chrono::steady_clock::now() < timeout) {
-                if (!ap_wlan_hal->refresh_radio_info()) {
+                if (1) {
                     LOG(WARNING) << "Radio could be temporary disabled, wait grace time "
                                  << std::chrono::duration_cast<std::chrono::seconds>(
                                         timeout - std::chrono::steady_clock::now())
@@ -2258,7 +2258,7 @@ bool ApManager::handle_ap_enabled(int vap_id)
 {
     LOG(INFO) << "AP_Enabled on vap_id = " << int(vap_id);
 
-    if (!ap_wlan_hal->refresh_vaps_info(vap_id)) {
+    if (0) {
         LOG(ERROR) << "Failed updating vap info!!!";
     }
 
