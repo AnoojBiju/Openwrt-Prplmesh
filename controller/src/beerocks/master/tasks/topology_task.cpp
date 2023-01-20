@@ -23,6 +23,7 @@
 #include <tlvf/ieee_1905_1/tlvDeviceInformation.h>
 #include <tlvf/ieee_1905_1/tlvNon1905neighborDeviceList.h>
 #include <tlvf/wfa_map/tlvApOperationalBSS.h>
+#include <tlvf/wfa_map/tlvAssociatedClients.h>
 #include <tlvf/wfa_map/tlvClientAssociationEvent.h>
 #include <tlvf/wfa_map/tlvProfile2ReasonCode.h>
 
@@ -486,77 +487,56 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
         }
     }
 
-    // Process Client association tlv
-    auto client_association_event_tlv = cmdu_rx.getClass<wfa_map::tlvClientAssociationEvent>();
-    if (client_association_event_tlv) {
+    // Proces associated client tlv
+    auto tlvAssociatedClients = cmdu_rx.getClass<wfa_map::tlvAssociatedClients>();
+    if (tlvAssociatedClients) {
 
-        std::shared_ptr<beerocks_message::tlvVsClientAssociationEvent> vs_tlv = nullptr;
-        auto beerocks_header = beerocks::message_com::parse_intel_vs_message(cmdu_rx);
-        if (beerocks_header) {
-            vs_tlv = beerocks_header->addClass<beerocks_message::tlvVsClientAssociationEvent>();
-            if (!vs_tlv) {
-                LOG(ERROR) << "addClass wfa_map::tlvVsClientAssociationEvent failed";
-                return false;
-            }
-        }
+        auto bss_list_len = tlvAssociatedClients->bss_list_length();
 
-        auto &client_mac    = client_association_event_tlv->client_mac();
-        auto client_mac_str = tlvf::mac_to_string(client_mac);
+        for (int i = 0; i < bss_list_len; i++) {
 
-        auto &bssid    = client_association_event_tlv->bssid();
-        auto bssid_str = tlvf::mac_to_string(bssid);
+            auto &bss      = std::get<1>(tlvAssociatedClients->bss_list(i));
+            auto &bssid    = bss.bssid();
+            auto bssid_str = tlvf::mac_to_string(bssid);
 
-        auto association_event = client_association_event_tlv->association_event();
-        bool client_connected =
-            (association_event == wfa_map::tlvClientAssociationEvent::CLIENT_HAS_JOINED_THE_BSS);
+            auto sta_list_len = bss.clients_associated_list_length();
 
-        LOG(INFO) << "client " << (client_connected ? "connected" : "disconnected")
-                  << ", client_mac=" << client_mac_str << ", bssid=" << bssid_str;
+            for (int j = 0; j < sta_list_len; j++) {
+                auto &associated_client = std::get<1>(bss.clients_associated_list(j));
+                auto &client_mac        = associated_client.mac();
+                auto client_mac_str     = tlvf::mac_to_string(client_mac);
+                auto association_time   = associated_client.time_since_last_association_sec();
 
-        if (client_connected) {
-            //add or update node parent
-            auto client = database.add_node_station(client_mac, bssid);
-            if (!client) {
-                LOG(ERROR) << "client " << client_mac << " not created";
-                return false;
-            }
+                LOG(INFO) << "CW: client connected"
+                          << ", mac=" << client_mac_str << ", bssid=" << bssid_str
+                          << " association time with device is " << association_time << " secs";
 
-            LOG(INFO) << "client connected, mac=" << client_mac_str << ", bssid=" << bssid_str;
-
-            auto wifi_channel = database.get_node_wifi_channel(bssid_str);
-            if (wifi_channel.is_empty()) {
-                LOG(WARNING) << "empty wifi channel of " << bssid_str << " is empty";
-            }
-            auto bss_bw = wifi_channel.get_bandwidth();
-
-            auto client_bw = wifi_channel.get_bandwidth();
-            if (vs_tlv) {
-                if (son::wireless_utils::get_station_max_supported_bw(vs_tlv->capabilities(),
-                                                                      client_bw)) {
-                    client_bw = std::min(client_bw, bss_bw);
+                //add or update node parent
+                auto client = database.add_node_station(client_mac, bssid);
+                if (!client) {
+                    LOG(ERROR) << "client " << client_mac << " not created";
+                    return false;
                 }
-            }
-            database.set_node_wifi_channel(client_mac, wifi_channel);
 
-            // Note: The Database node stats and the Datamodels' stats are not the same.
-            // Therefore, client information in data model and in node DB might differ.
-            database.clear_node_stats_info(client_mac);
-            client->clear_cross_rssi();
-            database.dm_clear_sta_stats(tlvf::mac_from_string(client_mac_str));
+                auto wifi_channel = database.get_node_wifi_channel(bssid_str);
+                if (wifi_channel.is_empty()) {
+                    LOG(WARNING) << "empty wifi channel of " << bssid_str << " is empty";
+                }
 
-            if (!(database.get_node_type(client_mac_str) == beerocks::TYPE_IRE_BACKHAUL &&
-                  database.get_node_handoff_flag(*client))) {
-                // The node is not an IRE in handoff
-                database.set_node_type(client_mac_str, beerocks::TYPE_CLIENT);
-            }
+                database.set_node_wifi_channel(client_mac, wifi_channel);
 
-            database.set_node_backhaul_iface_type(client_mac_str,
-                                                  beerocks::IFACE_TYPE_WIFI_UNSPECIFIED);
-            if (vs_tlv) {
-                database.set_node_vap_id(client_mac_str, vs_tlv->vap_id());
-                database.set_station_capabilities(client_mac_str, vs_tlv->capabilities());
+                //TODO reseting datamodel is required for client?
+
+                if (!(database.get_node_type(client_mac_str) == beerocks::TYPE_IRE_BACKHAUL &&
+                      database.get_node_handoff_flag(*client))) {
+                    // The node is not an IRE in handoff
+                    database.set_node_type(client_mac_str, beerocks::TYPE_CLIENT);
+                }
+
+                database.set_node_backhaul_iface_type(client_mac_str,
+                                                      beerocks::IFACE_TYPE_WIFI_UNSPECIFIED);
+                son_actions::handle_completed_connection(database, cmdu_tx, tasks, client_mac_str);
             }
-            son_actions::handle_completed_connection(database, cmdu_tx, tasks, client_mac_str);
         }
     }
 
