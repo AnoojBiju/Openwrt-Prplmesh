@@ -97,4 +97,22 @@ sh /rom/etc/uci-defaults/15_wireless-generate-macaddr || true
 
 uci commit
 /etc/init.d/system restart
-/etc/init.d/network restart
+# /etc/init.d/network restart
+sleep 15
+
+# Try to work around PCF-681: if we don't have a connectivity, restart
+# tr181-bridging
+# Check the status of the LAN bridge
+ip a |grep "br-lan:" |grep "state UP" >/dev/null || (echo "LAN Bridge DOWN, restarting bridge manager" && /etc/init.d/tr181-bridging restart && sleep 15)
+
+# Restart the IP manager if a ping to UCC fails
+ping -i 1 -c 2 192.168.1.2 || (/etc/init.d/ip-manager restart && sleep 12)
+
+# Restart the ssh server
+/etc/init.d/ssh-server restart
+sleep 15
+
+# Start an ssh server on the VLAN interface
+# The ssh server that is already running will only accept connections from 
+# the IP interface that was configured with the IP-Manager
+dropbear -F -T 10 -p192.168.200.130:22 &

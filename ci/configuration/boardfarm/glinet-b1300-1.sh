@@ -164,8 +164,16 @@ config_foreach set_channel wifi-device
 
 uci commit
 /etc/init.d/system restart
-/etc/init.d/network restart
+#/etc/init.d/network restart
+sleep 10
 
 # Try to work around PCF-681: if we don't have a connectivity, restart
 # tr181-bridging
-ping 192.168.1.2 -c 3 || /etc/init.d/tr181-bridging restart
+# Check the status of the LAN bridge
+ip a |grep "br-lan:" |grep "state UP" >/dev/null || (echo "LAN Bridge DOWN, restarting bridge manager" && /etc/init.d/tr181-bridging restart && sleep 15)
+
+# If we still can't ping the UCC, restart the IP manager
+ping -i 1 -c 2 192.168.1.2 || (/etc/init.d/ip-manager restart && sleep 12)
+
+# Restart the ssh server
+/etc/init.d/ssh-server restart
