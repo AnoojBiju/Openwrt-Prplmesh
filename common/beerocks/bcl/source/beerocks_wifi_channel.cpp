@@ -195,11 +195,13 @@ std::ostream &operator<<(std::ostream &out, const WifiChannel &wifi_channel)
     if (wifi_channel.is_empty()) {
         return (out << "Empty WifiChannel");
     }
-    std::string center_freq_2_str =
-        ((wifi_channel.m_freq_type == eFreqType::FREQ_6G) &&
-         (wifi_channel.m_bandwidth == eWiFiBandwidth::BANDWIDTH_160))
-            ? ", Center Frequency 2: " + wifi_channel.m_center_frequency_2
-            : "";
+
+    std::string center_freq_2_str;
+    if ((wifi_channel.m_freq_type == eFreqType::FREQ_6G) &&
+        (wifi_channel.m_bandwidth == eWiFiBandwidth::BANDWIDTH_160)) {
+        center_freq_2_str += ", Center Frequency 2: ";
+        center_freq_2_str += std::to_string(wifi_channel.m_center_frequency_2);
+    }
 
     std::string is_dfs_str = "";
     if (wifi_channel.m_freq_type == eFreqType::FREQ_5G) {
