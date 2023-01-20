@@ -237,6 +237,9 @@ bool PlatformManager::stop()
     // Stop the ARP Monitor
     stop_arp_monitor();
 
+    m_event_loop->remove_handlers(m_agent_fd);
+    m_cmdu_server->disconnect(m_agent_fd);
+
     bpl::bpl_close();
     LOG(DEBUG) << "Closed BPL.";
 

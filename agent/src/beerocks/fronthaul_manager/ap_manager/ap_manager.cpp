@@ -452,6 +452,7 @@ bool ApManager::ap_manager_fsm(bool &continue_processing)
             break;
         }
         request->set_iface_name(m_iface);
+        LOG(DEBUG) << "Badhri Sending out ACTION_AP_MANAGER_UP_NOTIFICATION";
 
         send_cmdu(cmdu_tx);
 

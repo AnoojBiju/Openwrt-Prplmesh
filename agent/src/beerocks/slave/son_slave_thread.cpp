@@ -4033,6 +4033,9 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
 
 bool slave_thread::agent_fsm()
 {
+    bool backhaul_wireless_iface_exist = false;
+    bool is_repeater_agent             = false;
+    bool all_fronthauls_joined         = true;
     switch (m_agent_state) {
     case STATE_WAIT_BEFORE_INIT: {
         if (std::chrono::steady_clock::now() > m_agent_state_timer_sec) {
@@ -4260,8 +4263,23 @@ bool slave_thread::agent_fsm()
             break;
         }
 
-        m_radio_managers.do_on_each_radio_manager(
-            [&](const sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
+        if (db->device_conf.management_mode == BPL_MGMT_MODE_MULTIAP_AGENT &&
+            db->device_conf.operating_mode == BPL_OPER_MODE_WDS_REPEATER) {
+            LOG(DEBUG) << "Platform configured as Repeater Agent";
+            is_repeater_agent = true;
+            std::string sta_iface;
+            for (const auto &radio_conf_element : config.radios) {
+                if (!radio_conf_element.second.backhaul_wireless_iface.empty()) {
+                    sta_iface = radio_conf_element.second.backhaul_wireless_iface;
+                    backhaul_wireless_iface_exist = true;
+                    break;
+                }
+            }
+            LOG(DEBUG) << "Badhri I'm here after the for loop, Sleeping for 100 ms";
+            // Give some time to the AP manager to register fd(s)
+            //UTILS_SLEEP_MSEC(100);
+            m_radio_managers.do_on_each_radio_manager([&](const sManagedRadio &radio_manager,
+                                                          const std::string &fronthaul_iface) {
                 auto db = AgentDB::get();
                 if (!db->device_conf.front_radio.config.at(fronthaul_iface).band_enabled) {
                     return true;
@@ -4272,12 +4290,22 @@ bool slave_thread::agent_fsm()
                     radio->front.zwdfs = false;
                 }
                 if (!radio_manager.fronthaul_started) {
-                    // Start the fronthaul process. Before starting, kill the existing one.
+                    LOG(DEBUG) << "Badhri Start the fronthaul process. Before starting, kill the "
+                                  "existing one.";
                     fronthaul_stop(fronthaul_iface);
                     fronthaul_start(fronthaul_iface);
                 }
                 return true;
             });
+
+            if (beerocks::net::network_utils::linux_iface_is_up(sta_iface) &&
+                backhaul_wireless_iface_exist) {
+                LOG(TRACE) << "goto STATE_BACKHAUL_ENABLE";
+                UTILS_SLEEP_MSEC(1000);
+                m_agent_state = STATE_BACKHAUL_ENABLE;
+                break;
+            }
+        }
 
         LOG(TRACE) << "goto STATE_WAIT_FOR_FRONTHAUL_THREADS_JOINED";
         m_agent_state_timer_sec =
@@ -4287,7 +4315,6 @@ bool slave_thread::agent_fsm()
     }
     case STATE_WAIT_FOR_FRONTHAUL_THREADS_JOINED: {
 
-        bool all_fronthauls_joined = true;
         std::vector<std::string> pending_fronthauls;
         m_radio_managers.do_on_each_radio_manager([&](const sManagedRadio &radio_manager,
                                                       const std::string &fronthaul_iface) {
@@ -4298,8 +4325,18 @@ bool slave_thread::agent_fsm()
 
             // ZWDFS Monitor will not join
             auto radio = db->radio(fronthaul_iface);
+            if (radio) {
+                // Set zwdfs to initial value.
+                radio->front.zwdfs = false;
+            }
             if (radio && radio->front.zwdfs) {
                 return true;
+            }
+            if (!is_repeater_agent && !radio_manager.fronthaul_started) {
+                LOG(DEBUG) << "Badhri Start the fronthaul process. Before starting, kill the "
+                              "existing one.";
+                fronthaul_stop(fronthaul_iface);
+                fronthaul_start(fronthaul_iface);
             }
 
             bool fronthaul_joined =
@@ -4313,9 +4350,10 @@ bool slave_thread::agent_fsm()
             return true;
         });
 
-        if (all_fronthauls_joined) {
-            LOG(TRACE) << "goto STATE_BACKHAUL_ENABLE";
-            m_agent_state = STATE_BACKHAUL_ENABLE;
+        if (all_fronthauls_joined && is_repeater_agent) {
+            LOG(DEBUG) << "All fronthauls joined";
+            m_agent_state = STATE_WAIT_FOR_AUTO_CONFIGURATION_COMPLETE;
+            break;
         } else if (std::chrono::steady_clock::now() > m_agent_state_timer_sec) {
             if (pending_fronthauls.empty()) {
                 LOG(ERROR) << "Timed out while waiting for fronthauls";
@@ -4337,6 +4375,9 @@ bool slave_thread::agent_fsm()
                 });
             LOG(DEBUG) << "goto STATE_JOIN_INIT";
             m_agent_state = STATE_JOIN_INIT;
+        } else {
+            LOG(TRACE) << "goto STATE_BACKHAUL_ENABLE";
+            m_agent_state = STATE_BACKHAUL_ENABLE;
         }
         break;
     }
@@ -4352,13 +4393,6 @@ bool slave_thread::agent_fsm()
 
         // Go over all the radios and check if at least for one of them a wireless backhaul is
         // defined.
-        bool backhaul_wireless_iface_exist = false;
-        for (const auto &radio_conf_element : config.radios) {
-            if (!radio_conf_element.second.backhaul_wireless_iface.empty()) {
-                backhaul_wireless_iface_exist = true;
-                break;
-            }
-        }
         if (db->ethernet.wan.iface_name.empty() && !backhaul_wireless_iface_exist) {
             LOG(DEBUG) << "No valid backhaul iface!";
             platform_notify_error(bpl::eErrorCode::CONFIG_NO_VALID_BACKHAUL_INTERFACE, "");
@@ -4398,7 +4432,21 @@ bool slave_thread::agent_fsm()
 
         // Next state
         LOG(TRACE) << "goto STATE_WAIT_FOR_BACKHAUL_MANAGER_CONNECTED_NOTIFICATION";
-        m_agent_state = STATE_WAIT_FOR_BACKHAUL_MANAGER_CONNECTED_NOTIFICATION;
+
+        m_radio_managers.do_on_each_radio_manager([&](const sManagedRadio &radio_manager,
+                                                      const std::string &fronthaul_iface) {
+            bool fronthaul_joined =
+                (radio_manager.ap_manager_fd != beerocks::net::FileDescriptor::invalid_descriptor &&
+                 radio_manager.monitor_fd != beerocks::net::FileDescriptor::invalid_descriptor);
+            all_fronthauls_joined &= fronthaul_joined;
+            return true;
+        });
+
+        if (!is_repeater_agent) {
+            m_agent_state = STATE_WAIT_FOR_BACKHAUL_MANAGER_CONNECTED_NOTIFICATION;
+        } else if (!all_fronthauls_joined) {
+            m_agent_state = STATE_WAIT_FOR_FRONTHAUL_THREADS_JOINED;
+        }
         break;
     }
     case STATE_WAIT_FOR_BACKHAUL_MANAGER_CONNECTED_NOTIFICATION: {
@@ -4447,6 +4495,7 @@ bool slave_thread::agent_fsm()
     }
     case STATE_WAIT_FOR_AUTO_CONFIGURATION_COMPLETE: {
         auto db = AgentDB::get();
+
         if (db->statuses.ap_autoconfiguration_completed) {
             LOG(TRACE) << "goto STATE_OPERATIONAL";
             m_agent_state = STATE_OPERATIONAL;

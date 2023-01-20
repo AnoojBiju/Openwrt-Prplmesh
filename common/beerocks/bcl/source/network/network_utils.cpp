@@ -1054,6 +1054,7 @@ bool network_utils::linux_iface_get_speed(const std::string &iface, uint32_t &li
             ecmd_legacy.cmd = ETHTOOL_GSET;
 
             rc = ioctl(sock, SIOCETHTOOL, &ifr);
+            LOG(DEBUG) << "Badhri rc = " << rc;
             if (0 == rc) {
                 link_speed           = ethtool_cmd_speed(&ecmd_legacy);
                 max_advertised_speed = link_speed;

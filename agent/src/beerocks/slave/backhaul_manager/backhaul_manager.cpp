@@ -1139,7 +1139,44 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
 
         state_time_stamp_timeout =
             std::chrono::steady_clock::now() + std::chrono::seconds(STATE_WAIT_WPS_TIMEOUT_SECONDS);
-        FSM_MOVE_STATE(WAIT_WPS);
+        // check if we are still waiting for WPS although sta is connected
+        std::shared_ptr<beerocks::BackhaulManager::sRadioInfo> tmp_radio_info = nullptr;
+        for (auto &radio_info : m_radios_info) {
+            std::string iface = radio_info->sta_iface;
+            if (radio_info->sta_iface.empty() || !radio_info->sta_wlan_hal) {
+                continue;
+            }
+            tmp_radio_info = radio_info;
+        }
+        if (!tmp_radio_info) {
+            break;
+        }
+        if (!roam_flag && tmp_radio_info->sta_wlan_hal->is_connected()) {
+            LOG(DEBUG) << "Badhri Im inside if";
+            db->backhaul.selected_iface_name = tmp_radio_info->sta_iface;
+            db->backhaul.connection_type     = AgentDB::sBackhaul::eConnectionType::Wireless;
+            selected_bssid                   = tmp_radio_info->sta_wlan_hal->get_bssid();
+            selected_bssid_channel           = {
+                tmp_radio_info->sta_wlan_hal->get_channel(),
+                son::wireless_utils::which_freq(tmp_radio_info->sta_wlan_hal->get_channel())};
+            LOG(DEBUG) << "db->backhaul.selected_iface_name = " << db->backhaul.selected_iface_name;
+            LOG(DEBUG) << "Selected Bssid = " << selected_bssid;
+            LOG(DEBUG) << "Selected Bssid channel = " << selected_bssid_channel.first;
+
+            auto bridge = db->bridge.iface_name;
+            auto bridge_ifaces =
+                beerocks::net::network_utils::linux_get_iface_list_from_bridge(bridge);
+            if (!beerocks::net::network_utils::linux_add_iface_to_bridge(
+                    bridge, tmp_radio_info->sta_iface)) {
+                LOG(INFO) << "The wireless interface " << tmp_radio_info->sta_iface
+                          << " is already in the bridge";
+            }
+
+            send_slaves_enable();
+            FSM_MOVE_STATE(CONNECTED);
+        } else {
+            FSM_MOVE_STATE(WAIT_WPS);
+        }
         break;
     }
     // Wait for WPS command
@@ -1151,23 +1188,7 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
                        << " seconds has passed on state WAIT_WPS, move state to RESTART!";
             FSM_MOVE_STATE(RESTART);
         }
-
-        // check if we are still waiting for WPS although sta is connected
-        for (auto &radio_info : m_radios_info) {
-            std::string iface = radio_info->sta_iface;
-            if (radio_info->sta_iface.empty()) {
-                continue;
-            }
-            if (!roam_flag && radio_info->sta_wlan_hal->is_connected()) {
-                for (const auto &sta_iface : slave_sta_ifaces) {
-                    auto sta_iface_hal = get_wireless_hal(sta_iface);
-                    if (!sta_iface_hal) {
-                        break;
-                    }
-                    sta_iface_hal->reassociate();
-                }
-            }
-        }
+        LOG(DEBUG) << "WPS button is either not pushed nor recognised";
 
         break;
     }
@@ -2783,6 +2804,10 @@ std::string BackhaulManager::freq_to_radio_mac(eFreqType freq) const
         if (!radio) {
             continue;
         }
+        LOG(DEBUG) << "Badhri radio->wifi_channel.get_freq_type() = "
+                   << radio->wifi_channel.get_freq_type();
+        LOG(DEBUG) << "Badhri freq = " << freq;
+        LOG(DEBUG) << "Badhri channel = " << radio->wifi_channel.get_channel();
         if (radio->wifi_channel.get_freq_type() == freq) {
             return tlvf::mac_to_string(radio->front.iface_mac);
         }
