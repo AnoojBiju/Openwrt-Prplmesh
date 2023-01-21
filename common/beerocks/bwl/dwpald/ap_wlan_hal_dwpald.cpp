@@ -3503,8 +3503,8 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
             conn_state[con.first] = false;
             LOG(INFO) << "updated connection status for vap " << con.first << " with false";
 
-            auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sHOSTAP_ENABLED_NOTIFICATION));
-            auto msg      = reinterpret_cast<sHOSTAP_ENABLED_NOTIFICATION *>(msg_buff.get());
+            auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sHOSTAP_DISABLED_NOTIFICATION));
+            auto msg      = reinterpret_cast<sHOSTAP_DISABLED_NOTIFICATION *>(msg_buff.get());
             LOG_IF(!msg, FATAL) << "Memory allocation failed!";
             msg->vap_id = iface_ids.vap_id;
             event_queue_push(Event::Interface_Disconnected, msg_buff);
