@@ -236,6 +236,20 @@ private:
      */
     bool handle_client_security_ctx_resp(const sMacAddr &src_mac,
                                          ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief Amount to increase a TXPN by when moving a VBSS.
+     */
+    static constexpr size_t TX_PN_INCREASE_AMOUNT{1000};
+
+    /**
+     * @brief Increments the value of a transmission packet number (TX PN) by a given amount.
+     * @param[in,out] tx_pn Reference to a vector of bytes representing the current TX PN.
+     * @param[in] tx_pn_len The length of the TX PN.
+     * @param[in] amount The amount by which to increment the current TX PN.
+     * @return True if the function successfully incremented the TX PN and updated the provided vector, false otherwise.
+    */
+    bool increment_tx_pn(std::vector<uint8_t> &tx_pn, size_t tx_pn_len, size_t amount);
 };
 
 #endif // VBSS_TASK_H

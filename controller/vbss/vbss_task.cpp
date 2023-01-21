@@ -326,6 +326,19 @@ bool vbss_task::handle_move_response_msg(const sMacAddr &src_mac,
     if (existing_move != nullptr && !is_cancelled) {
         // Move exists for VBSSID and is in response to a MOVE_PREP request
         existing_move->state = eMoveProcessState::VBSS_CREATION;
+
+        // TODO: once PPM-2367/PPM-2368 is done, save+parse the encryption type for
+        // the TX_PN length instead of assuming CCMP.
+        if (!increment_tx_pn(existing_move->sec_ctx_info->tx_packet_num,
+                             bwl::ePacketNumberLength::CCMP, TX_PN_INCREASE_AMOUNT)) {
+            LOG(ERROR) << "Could not increment TX PN!";
+            return false;
+        }
+        if (!increment_tx_pn(existing_move->sec_ctx_info->group_tx_packet_num,
+                             bwl::ePacketNumberLength::CCMP, TX_PN_INCREASE_AMOUNT)) {
+            LOG(ERROR) << "Could not increment group TX PN!";
+            return false;
+        }
         if (!vbss::vbss_actions::create_vbss(existing_move->client_vbss, existing_move->dest_ruid,
                                              existing_move->ssid, existing_move->password,
                                              existing_move->sec_ctx_info.get(), m_database)) {
@@ -526,8 +539,14 @@ bool vbss_task::handle_client_security_ctx_resp(const sMacAddr &src_mac,
     bool is_connected = client_sec_ctx_tlv->client_connected_flags().client_connected;
     std::shared_ptr<vbss::sClientSecCtxInfo> sec_ctx_info =
         std::make_shared<vbss::sClientSecCtxInfo>(
-            is_connected, client_sec_ctx_tlv->key_length(), client_sec_ctx_tlv->tx_packet_num(),
-            client_sec_ctx_tlv->group_key_length(), client_sec_ctx_tlv->group_tx_packet_num());
+            is_connected, client_sec_ctx_tlv->key_length(),
+            std::vector<uint8_t>{client_sec_ctx_tlv->tx_packet_num(),
+                                 client_sec_ctx_tlv->tx_packet_num() +
+                                     client_sec_ctx_tlv->tx_pn_length()},
+            client_sec_ctx_tlv->group_key_length(),
+            std::vector<uint8_t>{client_sec_ctx_tlv->group_tx_packet_num(),
+                                 client_sec_ctx_tlv->group_tx_packet_num() +
+                                     client_sec_ctx_tlv->group_tx_pn_length()});
 
     // Keep PTK and GTK in memory even when Client Security Context Info TLV is out of scope
     sec_ctx_info->ptk = new uint8_t[sec_ctx_info->key_length];
@@ -627,5 +646,22 @@ bool vbss_task::should_trigger_channel_switch(const sMacAddr src_ruid, const sMa
 
     out_channel = dest_channel;
     out_opclass = dest_op_class;
+    return true;
+}
+
+bool vbss_task::increment_tx_pn(std::vector<uint8_t> &tx_pn, size_t tx_pn_len, size_t amount)
+{
+    if (tx_pn.empty()) {
+        LOG(ERROR) << "Empty TX PN!";
+        return false;
+    }
+    // Read+increment+write the TX PN.
+    uint64_t new_tx_pn{0};
+    std::memcpy(&new_tx_pn, tx_pn.data(), tx_pn_len);
+    new_tx_pn = le64toh(new_tx_pn + amount);
+    // Remove old TX PN
+    tx_pn.clear();
+    uint8_t *p_new_tx_pn = reinterpret_cast<uint8_t *>(&new_tx_pn);
+    tx_pn.insert(tx_pn.end(), p_new_tx_pn, p_new_tx_pn + tx_pn_len);
     return true;
 }
