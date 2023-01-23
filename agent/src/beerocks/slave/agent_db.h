@@ -19,6 +19,7 @@
 #include <bwl/sta_wlan_hal.h>
 #include <memory>
 #include <mutex>
+#include <tlvf/WSC/configData.h>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
 #include <tlvf/wfa_map/tlvProfile2ApCapability.h>
 #include <tlvf/wfa_map/tlvProfile2MultiApProfile.h>
@@ -193,6 +194,24 @@ public:
         sMacAddr preferred_bssid;
         uint8_t bssid_multi_ap_profile;
         sMacAddr backhaul_bssid;
+
+        struct sBackhaulLink {
+            explicit sBackhaulLink(const sBackhaul::eConnectionType &connection_type_,
+                                   const std::string &iface_name_,
+                                   const sMacAddr &iface_mac_ = net::network_utils::ZERO_MAC,
+                                   const std::vector<WSC::configData::config> &credentials_ = {})
+                : connection_type(connection_type_), iface_name(std::move(iface_name_)),
+                  iface_mac(std::move(iface_mac_)), credentials(std::move(credentials_))
+            {
+            }
+            sBackhaul::eConnectionType connection_type;
+            std::string iface_name;
+            sMacAddr iface_mac;
+            // BSS credentials received from M2 message
+            std::vector<WSC::configData::config> credentials;
+        };
+        // List with all available backhaul links to the controller
+        std::list<sBackhaulLink> backhaul_links;
     } backhaul;
 
     struct {

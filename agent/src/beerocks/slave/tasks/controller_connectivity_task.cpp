@@ -11,6 +11,8 @@
 #include "../agent_db.h"
 #include "../son_slave_thread.h"
 
+#include <bwl/base_wlan_hal_types.h>
+#include <tlvf/WSC/m1.h>
 #include <tlvf/wfa_map/tlvHigherLayerData.h>
 
 #include <easylogging++.h>
@@ -30,6 +32,20 @@ static constexpr uint8_t INDIRECT_TIMEOUT_MULTIPLIER{3};
                    << fsm_state_to_string(eState::new_state);                                      \
         m_task_state = eState::new_state;                                                          \
     })
+
+bwl::WiFiSec wsc_to_bwl_authentication(WSC::eWscAuth authtype)
+{
+    switch (authtype) {
+    case WSC::eWscAuth::WSC_AUTH_INVALID:
+        return bwl::WiFiSec::Invalid;
+    case WSC::eWscAuth::WSC_AUTH_WPAPSK:
+        return bwl::WiFiSec::WPA_PSK;
+    case WSC::eWscAuth::WSC_AUTH_WPA2PSK:
+        return bwl::WiFiSec::WPA2_PSK;
+    default:
+        return bwl::WiFiSec::Invalid;
+    }
+}
 
 const std::string ControllerConnectivityTask::fsm_state_to_string(eState status)
 {
@@ -100,11 +116,55 @@ void ControllerConnectivityTask::work()
         break;
     }
     case eState::CONNECTION_TIMEOUT: {
-        // TODO: Change to RECONNECTION state and search other possible links (PPM-2282)
+        auto db = AgentDB::get();
+
+        auto it =
+            find_if(db->backhaul.backhaul_links.begin(), db->backhaul.backhaul_links.end(),
+                    [&](const AgentDB::sBackhaul::sBackhaulLink &c) {
+                        return c.connection_type == AgentDB::sBackhaul::eConnectionType::Wireless;
+                    });
+        // Try to reconnect to the wireless using the existing credentials
+        if (it != db->backhaul.backhaul_links.end()) {
+
+            // Debug log
+            for (auto &link : db->backhaul.backhaul_links) {
+                LOG(DEBUG) << "Existing BH interfaces: " << std::endl
+                           << "type: " << int(link.connection_type) << std::endl
+                           << "iface_name: " << link.iface_name << std::endl
+                           << "iface_mac: " << link.iface_mac << std::endl;
+                for (auto &cred : link.credentials) {
+                    LOG(DEBUG) << "Credentials: " << std::endl
+                               << "ssid: " << cred.ssid << std::endl
+                               << "bssid: " << cred.bssid << std::endl
+                               << "bss_type: " << cred.bss_type << std::endl
+                               << "auth_type: " << WSC::eWscAuth_str(cred.auth_type) << std::endl
+                               << "encr_type: " << WSC::eWscEncr_str(cred.encr_type) << std::endl
+                               << "network_key: " << cred.network_key << std::endl;
+                }
+            }
+
+            db->backhaul.connection_type     = AgentDB::sBackhaul::eConnectionType::Wireless;
+            db->backhaul.selected_iface_name = it->iface_name;
+
+            // Filling in credentials for a future backhaul connection
+            db->device_conf.back_radio.ssid = it->credentials.front().ssid;
+            db->device_conf.back_radio.pass = it->credentials.front().network_key;
+            db->device_conf.back_radio.security_type =
+                wsc_to_bwl_authentication(it->credentials.front().auth_type);
+
+            FSM_MOVE_STATE(RECONNECTION);
+            break;
+        }
+
         send_disconnect_to_backhaul_manager();
         break;
     }
     case eState::BACKHAUL_LINK_DISCONNECTED: {
+        break;
+    }
+    case eState::RECONNECTION: {
+        LOG(DEBUG) << "state RECONNECTION";
+        send_reconnect_to_backhaul_manager();
         break;
     }
     default:
@@ -273,6 +333,24 @@ bool ControllerConnectivityTask::send_hle_to_controller()
         return false;
     }
     return m_btl_ctx.send_cmdu_to_controller({}, m_cmdu_tx);
+}
+
+bool ControllerConnectivityTask::send_reconnect_to_backhaul_manager()
+{
+    auto bh_reconnect_cmd =
+        message_com::create_vs_message<beerocks_message::cACTION_BACKHAUL_RECONNECT_COMMAND>(
+            m_cmdu_tx);
+    if (!bh_reconnect_cmd) {
+        LOG(ERROR) << "Failed building message ACTION_BACKHAUL_DISCONNECT_COMMAND!";
+        return false;
+    }
+    auto backhaul_manager_cmdu_client = m_btl_ctx.get_backhaul_manager_cmdu_client();
+    if (!backhaul_manager_cmdu_client) {
+        LOG(ERROR) << "Failed to get backhaul manager cmdu client";
+        return false;
+    }
+    LOG(ERROR) << "Sending ACTION_BACKHAUL_RECONNECT_COMMAND to BH manager";
+    return backhaul_manager_cmdu_client->send_cmdu(m_cmdu_tx);
 }
 
 bool ControllerConnectivityTask::send_disconnect_to_backhaul_manager()
