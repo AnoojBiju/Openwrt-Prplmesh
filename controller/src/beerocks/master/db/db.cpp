@@ -6543,26 +6543,33 @@ bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, cons
         return false;
     }
 
-    if (bss->dm_path.empty()) {
+    bool new_instance    = bss->dm_path.empty();
+    std::string new_path = new_instance ? radio->dm_path + ".BSS" : "";
 
-        auto bss_path     = radio->dm_path + ".BSS";
-        auto bss_instance = m_ambiorix_datamodel->add_instance(bss_path);
-        if (bss_instance.empty()) {
-            LOG(ERROR) << "Failed to add " << bss_path << " instance.";
-            return false;
-        }
-        bss->dm_path = bss_instance;
+    const std::string &relative_path = new_instance ? new_path : bss->dm_path;
+    auto transaction = m_ambiorix_datamodel->start_transaction(relative_path, new_instance);
+    if (!transaction) {
+        LOG(ERROR) << "Failed to start a transaction for "
+                   << (new_instance ? "a new object instance at " : "") << relative_path;
+
+        return false;
     }
 
-    auto ret_val = true;
+#define TRANS_SET(KEY, VALUE)                                                                      \
+    do {                                                                                           \
+        if (!transaction->set(KEY, VALUE)) {                                                       \
+            LOG(ERROR) << "Failed to set key " << KEY << " to value " << VALUE;                    \
+            return false;                                                                          \
+        }                                                                                          \
+    } while (0)
 
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "BSSID", bssid);
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "SSID", ssid);
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "Enabled", bss->enabled);
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "FronthaulUse", bss->fronthaul);
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "BackhaulUse", bss->backhaul);
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "IsVBSS", is_vbss);
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "ByteCounterUnits", bss->byte_counter_units);
+    TRANS_SET("BSSID", bssid);
+    TRANS_SET("SSID", ssid);
+    TRANS_SET("Enabled", bss->enabled);
+    TRANS_SET("FronthaulUse", bss->fronthaul);
+    TRANS_SET("BackhaulUse", bss->backhaul);
+    TRANS_SET("IsVBSS", is_vbss);
+    TRANS_SET("ByteCounterUnits", bss->byte_counter_units);
 
     /*
         Set value for LastChange variable - it is creation time, when someone will
@@ -6574,10 +6581,24 @@ bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, cons
         static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::seconds>(
                                   std::chrono::steady_clock::now().time_since_epoch())
                                   .count());
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "LastChange", creation_time);
-    ret_val &= m_ambiorix_datamodel->set_current_time(bss->dm_path);
+    TRANS_SET("LastChange", creation_time);
+    if (!transaction->set_current_time()) {
+        LOG(ERROR) << "Failed to set the current time";
+        return false;
+    }
 
-    return ret_val;
+#undef TRANS_SET
+
+    auto commit_ret = m_ambiorix_datamodel->commit_transaction(std::move(transaction));
+    if (commit_ret.empty()) {
+        LOG(ERROR) << "Failed to commit the transaction";
+        return false;
+    }
+    if (bss->dm_path.empty()) {
+        bss->dm_path = std::move(commit_ret);
+    }
+
+    return true;
 }
 
 bool db::dm_uint64_param_one_up(const std::string &obj_path, const std::string &param_name)
