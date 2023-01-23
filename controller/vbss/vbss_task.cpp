@@ -17,12 +17,31 @@
 #include <tlvf/wfa_map/tlvVbssConfigurationReport.h>
 #include <tlvf/wfa_map/tlvVirtualBssEvent.h>
 
-vbss_task::vbss_task(son::db &database, task_pool &tasks, const std::string &task_name_)
-    : task(task_name_), m_database(database), m_tasks(tasks)
+/**
+ * @brief Timeout thresholds for VBSS creation/move events.
+ * Canonically, in the VBSS spec, the timeout threshold is 1 second.
+ * But, due to the blocking, round-robin nature of the tasking system,
+ * we give it a little more wiggle room.
+ */
+static constexpr std::chrono::milliseconds VBSS_EVENT_TIMEOUT_MS{3000};
+
+vbss_task::vbss_task(son::db &database, task_pool &tasks,
+                     std::shared_ptr<beerocks::TimerManager> timer_manager,
+                     const std::string &task_name_)
+    : task(task_name_), m_database(database), m_tasks(tasks),
+      m_timer_manager(std::move(timer_manager))
 {
     if (database.get_vbss_task_id() == db::TASK_ID_NOT_FOUND) {
         database.assign_vbss_task_id(id);
     }
+}
+
+vbss_task::~vbss_task()
+{
+    for (const auto &e : active_moves)
+        remove_timer_for_timed_event(e.first);
+    for (const auto &e : active_creation_events)
+        remove_timer_for_timed_event(e.first);
 }
 
 /*
@@ -149,6 +168,7 @@ bool vbss_task::handle_move_client_event(const sMoveEvent &move_event)
     // which is the first step of the move process
     active_moves.add(client_vbss.vbssid, client_vbss, move_event.dest_ruid, move_event.ssid,
                      move_event.password, eMoveProcessState::CLIENT_SEC_CTX);
+    begin_timer_for_timed_event(client_vbss, VBSS_EVENT_TIMEOUT_MS);
 
     sMacAddr agent_mac = agent->al_mac;
 
@@ -195,6 +215,10 @@ bool vbss_task::handle_vbss_creation_event(const sCreationEvent &create_event)
 
     active_creation_events.add(client_vbss.vbssid, client_vbss, create_event.dest_ruid,
                                create_event.ssid, create_event.password);
+
+    // VBSS spec states that during a move, the Agent should process/reply to the creation request
+    // within some time span. So, spin up a timer at this point in the move state machine.
+    begin_timer_for_timed_event(client_vbss, VBSS_EVENT_TIMEOUT_MS);
 
     sMacAddr agent_mac = agent->al_mac;
 
@@ -412,6 +436,7 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
     if (existing_creation) {
         // Recieved the response to an active creation request
 
+        remove_timer_for_timed_event(vbssid);
         active_creation_events.erase(vbssid);
         if (!is_succeeded) {
             LOG(ERROR) << "Virtual BSS Creation failed on destination radio " << ruid
@@ -503,6 +528,7 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
             LOG(ERROR) << "VBSS Destruction on radio "
                        << existing_move->client_vbss.current_connected_ruid << " failed!";
         }
+        remove_timer_for_timed_event(vbssid);
         active_moves.erase(vbssid);
         return true;
     }
@@ -664,4 +690,78 @@ bool vbss_task::increment_tx_pn(std::vector<uint8_t> &tx_pn, size_t tx_pn_len, s
     uint8_t *p_new_tx_pn = reinterpret_cast<uint8_t *>(&new_tx_pn);
     tx_pn.insert(tx_pn.end(), p_new_tx_pn, p_new_tx_pn + tx_pn_len);
     return true;
+}
+
+void vbss_task::handle_timeout(const vbss::sClientVBSS &client_vbss)
+{
+    /**
+     * From VBSS spec (rev 7, section 4):
+     * If, within 1 second the Multi-AP Controller has not received a Virtual BSS Response message
+     * (see section 5.4) from the destination Multi-AP Agent containing the Virtual BSS Event TLV
+     * (see section 6.4) indicating the virtual BSS is active on the destination, it shall terminate
+     * the attempted move by sending the source Multi-AP Agent a Virtual BSS Move Cancel Request
+     * message containing the same Client Info TLV sent in step 1.
+     */
+    auto send_move_cancel = [this](const sMacAddr &dest_ruid,
+                                   const vbss::sClientVBSS &client_vbss) -> void {
+        const auto agent = m_database.get_agent_by_radio_uid(dest_ruid);
+        if (!agent) {
+            LOG(ERROR) << "Agent not known for RUID=" << dest_ruid;
+            return;
+        }
+        if (!vbss::vbss_actions::send_move_cancel_request(agent->al_mac, client_vbss, m_database)) {
+            LOG(ERROR) << "Could not send move cancel request! Destination RUID=" << dest_ruid
+                       << ", Agent MAC=" << agent->al_mac << ", VBSSID=" << client_vbss.vbssid;
+            return;
+        }
+        LOG(DEBUG) << "Sent Move Cancel message to Agent '" << agent->al_mac << "', VBSSID '"
+                   << client_vbss.vbssid << "'.";
+    };
+    if (active_moves.get(client_vbss.vbssid)) {
+        send_move_cancel(active_moves.get(client_vbss.vbssid)->dest_ruid, client_vbss);
+    } else if (active_creation_events.get(client_vbss.vbssid)) {
+        send_move_cancel(active_creation_events.get(client_vbss.vbssid)->dest_ruid, client_vbss);
+    } else {
+        LOG(ERROR) << "No active events to be canceled! VBSSID=" << client_vbss.vbssid;
+        return;
+    }
+    remove_timer_for_timed_event(client_vbss.vbssid);
+}
+
+void vbss_task::begin_timer_for_timed_event(const vbss::sClientVBSS &vbssid,
+                                            std::chrono::milliseconds timer_period_ms)
+{
+    auto it = m_active_event_to_timer_fd.find(vbssid.vbssid);
+    // Event already being tracked, nothing to do.
+    if (it != m_active_event_to_timer_fd.end()) {
+        LOG(ERROR) << "Timer FD already tracking for event associated with VBSSID="
+                   << vbssid.vbssid;
+        return;
+    }
+    const int fd = m_timer_manager->add_timer(
+        tlvf::mac_to_string(vbssid.vbssid), timer_period_ms, timer_period_ms,
+        [this, vbssid](int fd, beerocks::EventLoop &ev_loop) {
+            LOG(DEBUG) << "Timer has elapsed! VBSSID= " << vbssid.vbssid;
+            this->handle_timeout(vbssid);
+            return true;
+        });
+    if (beerocks::net::FileDescriptor::invalid_descriptor == fd) {
+        LOG(ERROR) << "Could not start a timer! VBSSID=" << vbssid.vbssid;
+        return;
+    }
+    m_active_event_to_timer_fd[vbssid.vbssid] = fd;
+}
+
+void vbss_task::remove_timer_for_timed_event(const sMacAddr &vbssid)
+{
+    auto it = m_active_event_to_timer_fd.find(vbssid);
+    if (it == m_active_event_to_timer_fd.end()) {
+        LOG(WARNING) << "No known timer entry for VBSS event! VBSSID=" << vbssid;
+        return;
+    }
+    if (!m_timer_manager->remove_timer(it->second)) {
+        LOG(ERROR) << "Could not remove timer from timer manager! fd=" << it->second;
+    }
+    m_active_event_to_timer_fd.erase(it);
+    LOG(DEBUG) << "Removed timer manager timer entry for VBSS event. VBSSID=" << vbssid;
 }
