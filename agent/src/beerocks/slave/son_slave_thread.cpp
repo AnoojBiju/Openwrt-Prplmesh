@@ -2951,7 +2951,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
         }
         tlvAlMacAddress->mac() = db->bridge.mac;
 
-#if 0
+#if 1
         auto client_association_event_tlv = cmdu_tx.addClass<wfa_map::tlvClientAssociationEvent>();
         if (!client_association_event_tlv) {
             LOG(ERROR) << "addClass tlvClientAssociationEvent failed";
@@ -2982,7 +2982,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
 #endif
 
         send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
-        LOG(DEBUG) << "Sent TOPOLOGY_NOTIFICATION_MESSAGE without client info to controller";
+        //LOG(DEBUG) << "Sent TOPOLOGY_NOTIFICATION_MESSAGE without client info to controller";
 
         break;
     }

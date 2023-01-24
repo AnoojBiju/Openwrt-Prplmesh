@@ -487,6 +487,7 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
         }
     }
 
+#if 0
     // Proces associated client tlv
     auto tlvAssociatedClients = cmdu_rx.getClass<wfa_map::tlvAssociatedClients>();
     if (tlvAssociatedClients) {
@@ -539,6 +540,7 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
             }
         }
     }
+#endif
 
     //TODO: After handling Device and Neighbor Information, identify Parent Agent (PPM-2043)
 

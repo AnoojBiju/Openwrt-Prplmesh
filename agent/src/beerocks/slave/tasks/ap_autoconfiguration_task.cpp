@@ -185,6 +185,16 @@ void ApAutoConfigurationTask::work()
         db->statuses.ap_autoconfiguration_completed = true;
         m_task_is_active                            = false;
         LOG(DEBUG) << "Link to the controller is established";
+#if 1
+        for (auto &radios_conf_param_kv : m_radios_conf_params) {
+            const auto &radio_iface = radios_conf_param_kv.first;
+            if (!send_ap_connected_sta_notifications_request(radio_iface)) {
+                LOG(ERROR) << "send_ap_connected_sta_notifications_request failed";
+            }
+            LOG(ERROR) << "CW: send_ap_connected_sta_notifications_request done for radio iface "
+                       << radio_iface;
+        }
+#endif
 
 #if 0
 
@@ -2201,10 +2211,12 @@ bool ApAutoConfigurationTask::handle_ap_autoconfiguration_wsc_vs_extension_tlv(
         return false;
     }
 
+#if 0
     if (!send_ap_connected_sta_notifications_request(radio_iface)) {
         LOG(ERROR) << "send_ap_connected_sta_notifications_request failed";
         return false;
     }
+#endif
 
     return true;
 }
