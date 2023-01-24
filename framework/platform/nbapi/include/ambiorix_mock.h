@@ -27,11 +27,27 @@ public:
                 (override));
     MOCK_METHOD(bool, set,
                 (const std::string &relative_path, const std::string &parameter,
+                 const int8_t &value),
+                (override));
+    MOCK_METHOD(bool, set,
+                (const std::string &relative_path, const std::string &parameter,
+                 const int16_t &value),
+                (override));
+    MOCK_METHOD(bool, set,
+                (const std::string &relative_path, const std::string &parameter,
                  const int32_t &value),
                 (override));
     MOCK_METHOD(bool, set,
                 (const std::string &relative_path, const std::string &parameter,
                  const int64_t &value),
+                (override));
+    MOCK_METHOD(bool, set,
+                (const std::string &relative_path, const std::string &parameter,
+                 const uint8_t &value),
+                (override));
+    MOCK_METHOD(bool, set,
+                (const std::string &relative_path, const std::string &parameter,
+                 const uint16_t &value),
                 (override));
     MOCK_METHOD(bool, set,
                 (const std::string &relative_path, const std::string &parameter,

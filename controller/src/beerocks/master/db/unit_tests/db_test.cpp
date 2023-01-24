@@ -238,7 +238,7 @@ protected:
                         Matcher<const sMacAddr &>(tlvf::mac_from_string(g_client_mac))))
             .WillRepeatedly(Return(true));
         EXPECT_CALL(*m_ambiorix, set(std::string(g_assoc_event_path_1), "StatusCode",
-                                     Matcher<const uint32_t &>(0U)))
+                                     Matcher<const uint16_t &>(static_cast<uint16_t>(0))))
             .WillRepeatedly(Return(true));
 
         //prepare scenario
@@ -476,23 +476,23 @@ TEST_F(DbTest, test_add_hostap_supported_operating_class)
     EXPECT_CALL(*m_ambiorix, add_instance(std::string(operating_classes)))
         .WillOnce(Return(std::string(operating_classes) + ".1"));
     EXPECT_CALL(*m_ambiorix, set(std::string(operating_classes) + ".1", "MaxTxPower",
-                                 Matcher<const int32_t &>(0x01)))
+                                 Matcher<const uint8_t &>(0x01)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix,
-                set(std::string(operating_classes) + ".1", "Class", Matcher<const int32_t &>(0xFF)))
+                set(std::string(operating_classes) + ".1", "Class", Matcher<const uint8_t &>(0xFF)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, add_instance(std::string(non_operable)))
         .WillOnce(Return(std::string(non_operable) + ".1"))
         .WillOnce(Return(std::string(non_operable) + ".2"))
         .WillOnce(Return(std::string(non_operable) + ".3"));
     EXPECT_CALL(*m_ambiorix, set(std::string(non_operable) + ".1", "NonOpChannelNumber",
-                                 Matcher<const int32_t &>(0x01)))
+                                 Matcher<const uint8_t &>(0x01)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(std::string(non_operable) + ".2", "NonOpChannelNumber",
-                                 Matcher<const int32_t &>(0x02)))
+                                 Matcher<const uint8_t &>(0x02)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(std::string(non_operable) + ".3", "NonOpChannelNumber",
-                                 Matcher<const int32_t &>(0x03)))
+                                 Matcher<const uint8_t &>(0x03)))
         .WillOnce(Return(true));
 
     //execute test
@@ -574,7 +574,7 @@ TEST_F(DbTest, test_set_ap_he_capabilities)
     EXPECT_CALL(*m_ambiorix, add_instance(he_capabilities_path + "MCSNSS"))
         .WillRepeatedly(
             Return(he_capabilities_path + "MCSNSS." + std::to_string(supported_MCS_index++)));
-    EXPECT_CALL(*m_ambiorix, set(_, "MCSNSSSet", Matcher<const int32_t &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(_, "MCSNSSSet", Matcher<const uint8_t &>(_)))
         .WillRepeatedly(Return(true));
 
     //execute test
@@ -614,13 +614,13 @@ TEST_F(DbTest, test_add_current_op_class)
                 set_current_time(std::string(radio_path_1_operating_classes + ".1"), _))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(std::string(radio_path_1_operating_classes) + ".1", "Class",
-                                 Matcher<const int32_t &>(0x01)))
+                                 Matcher<const uint8_t &>(0x01)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(std::string(radio_path_1_operating_classes) + ".1", "Channel",
-                                 Matcher<const int32_t &>(0x02)))
+                                 Matcher<const uint8_t &>(0x02)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(std::string(radio_path_1_operating_classes) + ".1", "TxPower",
-                                 Matcher<const int32_t &>(10)))
+                                 Matcher<const int8_t &>(10)))
         .WillOnce(Return(true));
 
     //execute test
@@ -798,21 +798,21 @@ TEST_F(DbTestRadio1Sta1, test_set_station_capabilities)
     EXPECT_CALL(*m_ambiorix, set(ht_capabilities1, "HT40", Matcher<const bool &>(_)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix,
-                set(ht_capabilities1, "MaxNumberOfTxSpatialStreams", Matcher<const int32_t &>(_)))
+                set(ht_capabilities1, "MaxNumberOfTxSpatialStreams", Matcher<const uint8_t &>(_)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix,
-                set(ht_capabilities1, "MaxNumberOfRxSpatialStreams", Matcher<const int32_t &>(_)))
+                set(ht_capabilities1, "MaxNumberOfRxSpatialStreams", Matcher<const uint8_t &>(_)))
         .WillOnce(Return(true));
 
-    EXPECT_CALL(*m_ambiorix, set(vht_capabilities1, "MCSNSSTxSet", Matcher<const int32_t &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(vht_capabilities1, "MCSNSSTxSet", Matcher<const uint16_t &>(_)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix, set(vht_capabilities1, "MCSNSSRxSet", Matcher<const int32_t &>(_)))
-        .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix,
-                set(vht_capabilities1, "MaxNumberOfTxSpatialStreams", Matcher<const int32_t &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(vht_capabilities1, "MCSNSSRxSet", Matcher<const uint16_t &>(_)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix,
-                set(vht_capabilities1, "MaxNumberOfRxSpatialStreams", Matcher<const int32_t &>(_)))
+                set(vht_capabilities1, "MaxNumberOfTxSpatialStreams", Matcher<const uint8_t &>(_)))
+        .WillOnce(Return(true));
+    EXPECT_CALL(*m_ambiorix,
+                set(vht_capabilities1, "MaxNumberOfRxSpatialStreams", Matcher<const uint8_t &>(_)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(vht_capabilities1, "VHTShortGI80", Matcher<const bool &>(_)))
         .WillOnce(Return(true));
@@ -828,10 +828,10 @@ TEST_F(DbTestRadio1Sta1, test_set_station_capabilities)
         .WillOnce(Return(true));
 
     EXPECT_CALL(*m_ambiorix,
-                set(he_capabilities1, "MaxNumberOfTxSpatialStreams", Matcher<const int32_t &>(_)))
+                set(he_capabilities1, "MaxNumberOfTxSpatialStreams", Matcher<const uint8_t &>(_)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix,
-                set(he_capabilities1, "MaxNumberOfRxSpatialStreams", Matcher<const int32_t &>(_)))
+                set(he_capabilities1, "MaxNumberOfRxSpatialStreams", Matcher<const uint8_t &>(_)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(he_capabilities1, "HE160", Matcher<const bool &>(_)))
         .WillOnce(Return(true));
@@ -853,13 +853,13 @@ TEST_F(DbTestRadio1Sta1, test_set_station_capabilities)
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(he_capabilities1, "DLOFDMA", Matcher<const bool &>(_)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix, set(he_capabilities1, "MaxDLMUMIMO", Matcher<const int32_t &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(he_capabilities1, "MaxDLMUMIMO", Matcher<const uint8_t &>(_)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix, set(he_capabilities1, "MaxULMUMIMO", Matcher<const int32_t &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(he_capabilities1, "MaxULMUMIMO", Matcher<const uint8_t &>(_)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix, set(he_capabilities1, "MaxDLOFDMA", Matcher<const int32_t &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(he_capabilities1, "MaxDLOFDMA", Matcher<const uint8_t &>(_)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix, set(he_capabilities1, "MaxULOFDMA", Matcher<const int32_t &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(he_capabilities1, "MaxULOFDMA", Matcher<const uint8_t &>(_)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(he_capabilities1, "RTS", Matcher<const bool &>(_)))
         .WillOnce(Return(true));
@@ -904,21 +904,21 @@ TEST_F(DbTestRadio1Sta1, test_set_station_capabilities)
     EXPECT_CALL(*m_ambiorix, set(ht_capabilities2, "HT40", Matcher<const bool &>(_)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix,
-                set(ht_capabilities2, "MaxNumberOfTxSpatialStreams", Matcher<const int32_t &>(_)))
+                set(ht_capabilities2, "MaxNumberOfTxSpatialStreams", Matcher<const uint8_t &>(_)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix,
-                set(ht_capabilities2, "MaxNumberOfRxSpatialStreams", Matcher<const int32_t &>(_)))
+                set(ht_capabilities2, "MaxNumberOfRxSpatialStreams", Matcher<const uint8_t &>(_)))
         .WillOnce(Return(true));
 
-    EXPECT_CALL(*m_ambiorix, set(vht_capabilities2, "MCSNSSTxSet", Matcher<const int32_t &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(vht_capabilities2, "MCSNSSTxSet", Matcher<const uint16_t &>(_)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix, set(vht_capabilities2, "MCSNSSRxSet", Matcher<const int32_t &>(_)))
-        .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix,
-                set(vht_capabilities2, "MaxNumberOfTxSpatialStreams", Matcher<const int32_t &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(vht_capabilities2, "MCSNSSRxSet", Matcher<const uint16_t &>(_)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix,
-                set(vht_capabilities2, "MaxNumberOfRxSpatialStreams", Matcher<const int32_t &>(_)))
+                set(vht_capabilities2, "MaxNumberOfTxSpatialStreams", Matcher<const uint8_t &>(_)))
+        .WillOnce(Return(true));
+    EXPECT_CALL(*m_ambiorix,
+                set(vht_capabilities2, "MaxNumberOfRxSpatialStreams", Matcher<const uint8_t &>(_)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(vht_capabilities2, "VHTShortGI80", Matcher<const bool &>(_)))
         .WillOnce(Return(true));
@@ -935,10 +935,10 @@ TEST_F(DbTestRadio1Sta1, test_set_station_capabilities)
     EXPECT_CALL(*m_ambiorix, set_current_time(g_assoc_event_path_1, _)).WillOnce(Return(true));
 
     EXPECT_CALL(*m_ambiorix,
-                set(he_capabilities2, "MaxNumberOfTxSpatialStreams", Matcher<const int32_t &>(_)))
+                set(he_capabilities2, "MaxNumberOfTxSpatialStreams", Matcher<const uint8_t &>(_)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix,
-                set(he_capabilities2, "MaxNumberOfRxSpatialStreams", Matcher<const int32_t &>(_)))
+                set(he_capabilities2, "MaxNumberOfRxSpatialStreams", Matcher<const uint8_t &>(_)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(he_capabilities2, "HE160", Matcher<const bool &>(_)))
         .WillOnce(Return(true));
@@ -960,13 +960,13 @@ TEST_F(DbTestRadio1Sta1, test_set_station_capabilities)
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(he_capabilities2, "DLOFDMA", Matcher<const bool &>(_)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix, set(he_capabilities2, "MaxDLMUMIMO", Matcher<const int32_t &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(he_capabilities2, "MaxDLMUMIMO", Matcher<const uint8_t &>(_)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix, set(he_capabilities2, "MaxULMUMIMO", Matcher<const int32_t &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(he_capabilities2, "MaxULMUMIMO", Matcher<const uint8_t &>(_)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix, set(he_capabilities2, "MaxDLOFDMA", Matcher<const int32_t &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(he_capabilities2, "MaxDLOFDMA", Matcher<const uint8_t &>(_)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix, set(he_capabilities2, "MaxULOFDMA", Matcher<const int32_t &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(he_capabilities2, "MaxULOFDMA", Matcher<const uint8_t &>(_)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(he_capabilities2, "RTS", Matcher<const bool &>(_)))
         .WillOnce(Return(true));
@@ -1009,7 +1009,7 @@ TEST_F(DbTestRadio1Sta1, test_set_sta_link_metrics)
                                  Matcher<const uint32_t &>(2U)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix,
-                set(std::string(g_sta_path_1), "SignalStrength", Matcher<const int32_t &>(3)))
+                set(std::string(g_sta_path_1), "SignalStrength", Matcher<const uint8_t &>(3)))
         .WillOnce(Return(true));
 
     //execute test
@@ -1026,8 +1026,8 @@ TEST_F(DbTestRadio1Sta1, test_add_sta_twice_with_same_mac)
     EXPECT_CALL(*m_ambiorix, set(std::string(g_assoc_event_path_1), "MACAddress",
                                  Matcher<const sMacAddr &>(tlvf::mac_from_string(g_client_mac))))
         .WillRepeatedly(Return(true));
-    EXPECT_CALL(*m_ambiorix,
-                set(std::string(g_assoc_event_path_1), "StatusCode", Matcher<const uint32_t &>(0U)))
+    EXPECT_CALL(*m_ambiorix, set(std::string(g_assoc_event_path_1), "StatusCode",
+                                 Matcher<const uint16_t &>(static_cast<uint16_t>(0))))
         .WillRepeatedly(Return(true));
     EXPECT_CALL(*m_ambiorix, set_current_time(std::string(g_assoc_event_path_1), _))
         .WillRepeatedly(Return(true));

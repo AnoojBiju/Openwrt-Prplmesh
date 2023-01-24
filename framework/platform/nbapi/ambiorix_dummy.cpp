@@ -17,12 +17,32 @@ bool AmbiorixDummy::set(const std::string &relative_path, const std::string &par
     return true;
 }
 bool AmbiorixDummy::set(const std::string &relative_path, const std::string &parameter,
+                        const int8_t &value)
+{
+    return true;
+}
+bool AmbiorixDummy::set(const std::string &relative_path, const std::string &parameter,
+                        const int16_t &value)
+{
+    return true;
+}
+bool AmbiorixDummy::set(const std::string &relative_path, const std::string &parameter,
                         const int32_t &value)
 {
     return true;
 }
 bool AmbiorixDummy::set(const std::string &relative_path, const std::string &parameter,
                         const int64_t &value)
+{
+    return true;
+}
+bool AmbiorixDummy::set(const std::string &relative_path, const std::string &parameter,
+                        const uint8_t &value)
+{
+    return true;
+}
+bool AmbiorixDummy::set(const std::string &relative_path, const std::string &parameter,
+                        const uint16_t &value)
 {
     return true;
 }
