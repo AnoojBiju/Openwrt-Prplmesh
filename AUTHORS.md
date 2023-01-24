@@ -29,6 +29,7 @@ Individuals:
 - Allan Dickow (Greenwave Systems)
 - Anton Bilohai (prpl Foundation via Inango)
 - Arnout Vandecappelle (Deutsche Telekom and prpl Foundation via Essensium/Mind)
+- Badhrinaarayanan Srinivasan (MaxLinear)
 - Benjamin Carlson (CableLabs)
 - Cihangir Odabas (ASSIA)
 - Coral Malachi (Intel Corporation)
