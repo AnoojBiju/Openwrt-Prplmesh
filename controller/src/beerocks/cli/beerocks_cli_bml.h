@@ -50,7 +50,7 @@ public:
                 struct vap_t {
                     std::string ssid;
                     std::string bssid;
-                    uint8_t vap_id;
+                    int vap_id;
                     bool backhaul_vap;
                 };
 
