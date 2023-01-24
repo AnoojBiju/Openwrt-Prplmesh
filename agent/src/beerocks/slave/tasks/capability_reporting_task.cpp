@@ -595,6 +595,7 @@ bool CapabilityReportingTask::add_ap_wifi6_capabilities(const std::string &iface
         role->max_dl_ofdma_tx()                     = wifi6_caps->max_dl_ofdma_tx;
         role->flags4().rts                          = wifi6_caps->rts;
         role->flags4().mu_rts                       = wifi6_caps->mu_rts;
+	LOG(DEBUG) << "******* THE VALUE OF MULTI_BSSID *******" << wifi6_caps->multi_bssid;
         role->flags4().multi_bssid                  = wifi6_caps->multi_bssid;
         role->flags4().mu_edca                      = wifi6_caps->mu_edca;
         role->flags4().twt_requester                = wifi6_caps->twt_requester;
