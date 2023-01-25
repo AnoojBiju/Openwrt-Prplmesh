@@ -12,6 +12,7 @@ variables:
   AXEPOINT_FULLIMAGE: "AX3000_1600_ETH_11AXUCI-squashfs-fullimage.img"
   NEC_WX3000HP_FULLIMAGE: "AX3000_1600_ETH_11AXUCI_ASURADA-squashfs-fullimage.img"
   TURRIS_OMNIA_RDKB_FULLIMAGE: "rdkb-generic-broadband-image_turris-omnia.rootfs.tar.gz"
+  URX_OSP_FULLIMAGE: "openwrt-intel_x86-lgm-PRPL_OSP_TB341-osp_tb341_fullimage.img"
 
 workflow:
   rules:
@@ -65,6 +66,29 @@ build-for-glinet-b1300-whm:
   extends: .build-for-openwrt-whm
   variables:
     TARGET_DEVICE: "glinet-b1300"
+
+build-for-urx-osp-trigger:
+  stage: build
+  variables:
+    PRPLMESH_REVISION: $CI_COMMIT_SHA
+  trigger:
+    project: essensium-mind/prplmesh/osp-urx
+    strategy: depend
+  needs: []
+
+build-for-urx-osp:
+  stage: build
+  script:
+    - mkdir -p "build/urx_osp"
+  artifacts:
+    paths:
+      - "build/*"
+    expire_in: 4 weeks
+    when: always
+  tags:
+    - shell
+  needs:
+    - job: build-for-urx-osp-trigger
 
 build-for-cgr:
   stage: build

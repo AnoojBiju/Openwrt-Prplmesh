@@ -106,7 +106,7 @@ main() {
 
     eval set -- "$OPTS"
 
-    SUPPORTED_TARGETS="turris-omnia glinet-b1300 axepoint nec-wx3000hp intel_mips"
+    SUPPORTED_TARGETS="turris-omnia glinet-b1300 axepoint nec-wx3000hp intel_mips urx"
 
     while true; do
         case "$1" in
@@ -141,6 +141,9 @@ main() {
             ;;
         axepoint|intel_mips|nec-wx3000hp)
             TARGET_SYSTEM=intel_mips
+            ;;
+        urx_osp)
+            TARGET_SYSTEM=mxl_x86_osp_tb341
             ;;
         *)
             err "Unknown target device: $TARGET_DEVICE"
@@ -201,8 +204,9 @@ main() {
 VERBOSE=false
 IMAGE_ONLY=false
 OPENWRT_REPOSITORY='https://gitlab.com/prpl-foundation/prplos/prplos.git'
-OPENWRT_TOOLCHAIN_VERSION='c09edd49049afb1b826b1f61647036ac22294ce0'
-OPENWRT_VERSION='c09edd49049afb1b826b1f61647036ac22294ce0'
+# Build on temporary branch of prplOS to support URX
+OPENWRT_TOOLCHAIN_VERSION='524c9bd442741383cc8256e3186c19d0e2f74ebb'
+OPENWRT_VERSION='524c9bd442741383cc8256e3186c19d0e2f74ebb'
 PRPLMESH_VARIANT="-nl80211"
 DOCKER_TARGET_STAGE="prplmesh-builder"
 SHELL_ONLY=false
