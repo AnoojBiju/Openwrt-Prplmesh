@@ -58,7 +58,7 @@ void base_wlan_hal_whm::subscribe_to_radio_events()
         if (!parameters || parameters->empty()) {
             return;
         }
-        auto params_map = parameters->read_childs<AmbiorixVariantMapSmartPtr>();
+        auto params_map = parameters->read_children<AmbiorixVariantMapSmartPtr>();
         if (!params_map) {
             return;
         }
@@ -107,7 +107,7 @@ void base_wlan_hal_whm::subscribe_to_ap_events()
         if (!parameters || parameters->empty()) {
             return;
         }
-        auto params_map = parameters->read_childs<AmbiorixVariantMapSmartPtr>();
+        auto params_map = parameters->read_children<AmbiorixVariantMapSmartPtr>();
         if (!params_map) {
             return;
         }
@@ -189,7 +189,7 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
         if (!parameters || parameters->empty()) {
             return;
         }
-        auto params_map = parameters->read_childs<AmbiorixVariantMapSmartPtr>();
+        auto params_map = parameters->read_children<AmbiorixVariantMapSmartPtr>();
         if (!params_map) {
             return;
         }
