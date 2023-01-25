@@ -57,6 +57,9 @@ class GenericDevice():
     boot_stop_sequence = "\n"
     """The sequence to use to stop the device in its bootloader."""
 
+    bootloader_reboot_command = "reset"
+    """The command to reboot the device in u-boot"""
+
     tftp_dir = "/srv/tftp"
     """The root directory of the tftp server. OS images will be copied there."""
 
@@ -145,7 +148,10 @@ class GenericDevice():
             print("Reset board.")
 
             if serial_type == ShellType.UBOOT:
-                shell.sendline("reset")
+                if stop_in_bootloader:
+                    shell.sendline("reset")
+                else:
+                    shell.sendline(self.bootloader_reboot_command)
             elif serial_type in [ShellType.PRPLOS, ShellType.RDKB, ShellType.LINUX_UNKNOWN]:
                 shell.sendline("reboot ; sleep 15 && echo force rebooting && reboot -f")
             if stop_in_bootloader:

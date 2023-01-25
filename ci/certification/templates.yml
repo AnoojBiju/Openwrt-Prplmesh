@@ -68,13 +68,27 @@
     - certs-tests-R4
     - turris-omnia
 
+.certification:R4:urx_osp:
+  stage: certification-R4-OSP
+  extends: .certification-generic-R4
+  variables:
+    RUN_ON_DEVICE: "urx_osp"
+  before_script:
+    - tools/deploy_firmware.py --device urx_osp --target-name "$RUN_ON_DEVICE" --image "$URX_OSP_FULLIMAGE" --whm --configuration ci/configuration/certification/R4/whm/urx_osp.sh
+    - tools/deploy_ipk.sh --certification-mode $RUN_ON_DEVICE buildWHM/$RUN_ON_DEVICE/prplmesh.ipk
+  needs:
+    - job: build-for-osp
+  tags:
+    - certs-tests-R4
+    - osp
+
 include:
   - local: "ci/certification/R1/axepoint.yml"
   - local: "ci/certification/R1/turris-omnia.yml"
   - local: "ci/certification/R1/glinet-b1300.yml"
   - local: "ci/certification/R4/axepoint.yml"
   - local: "ci/certification/R4/turris-omnia.yml"
-
+  - local: "ci/certification/R4/urx_osp.yml"
 
 # Merge train tests
 ##################
