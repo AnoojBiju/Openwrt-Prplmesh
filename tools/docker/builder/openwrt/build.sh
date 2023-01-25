@@ -106,7 +106,7 @@ main() {
 
     eval set -- "$OPTS"
 
-    SUPPORTED_TARGETS="turris-omnia glinet-b1300 axepoint nec-wx3000hp intel_mips"
+    SUPPORTED_TARGETS="turris-omnia glinet-b1300 axepoint nec-wx3000hp intel_mips urx_osp"
 
     while true; do
         case "$1" in
@@ -141,6 +141,9 @@ main() {
             ;;
         axepoint|intel_mips|nec-wx3000hp)
             TARGET_SYSTEM=intel_mips
+            ;;
+        urx_osp)
+            TARGET_SYSTEM=mxl_x86_osp_tb341
             ;;
         *)
             err "Unknown target device: $TARGET_DEVICE"
