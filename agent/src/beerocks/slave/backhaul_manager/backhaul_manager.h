@@ -417,8 +417,8 @@ public:
         std::string sta_iface;    /**< Name of the bSTA interface on the radio (if any) */
 
         std::shared_ptr<bwl::sta_wlan_hal> sta_wlan_hal;
-        int sta_hal_ext_events = beerocks::net::FileDescriptor::invalid_descriptor;
-        int sta_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
+        std::vector<int> sta_hal_ext_events = {beerocks::net::FileDescriptor::invalid_descriptor};
+        int sta_hal_int_events              = beerocks::net::FileDescriptor::invalid_descriptor;
     };
 
 private:
@@ -578,6 +578,8 @@ private:
      * "dev_set_config" command has not been received yet.
      */
     std::string m_selected_backhaul;
+
+    bool m_remove_platform_manager_client = false;
 };
 
 } // namespace beerocks

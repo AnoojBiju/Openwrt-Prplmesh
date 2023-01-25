@@ -332,11 +332,12 @@ void BackhaulManager::on_thread_stop()
             if (radio_info->sta_wlan_hal) {
                 radio_info->sta_wlan_hal.reset();
             }
-            if (radio_info->sta_hal_ext_events !=
-                beerocks::net::FileDescriptor::invalid_descriptor) {
-                m_event_loop->remove_handlers(radio_info->sta_hal_ext_events);
-                radio_info->sta_hal_ext_events = beerocks::net::FileDescriptor::invalid_descriptor;
+            for (auto &fd : radio_info->sta_hal_ext_events) {
+                if (fd > 0) {
+                    m_event_loop->remove_handlers(fd);
+                }
             }
+            radio_info->sta_hal_ext_events.clear();
             if (radio_info->sta_hal_int_events !=
                 beerocks::net::FileDescriptor::invalid_descriptor) {
                 m_event_loop->remove_handlers(radio_info->sta_hal_int_events);
@@ -448,11 +449,12 @@ void BackhaulManager::handle_disconnected(int fd)
                 LOG(INFO) << "dereferencing sta_wlan_hal";
                 radio_info->sta_wlan_hal.reset();
             }
-            if (radio_info->sta_hal_ext_events !=
-                beerocks::net::FileDescriptor::invalid_descriptor) {
-                m_event_loop->remove_handlers(radio_info->sta_hal_ext_events);
-                radio_info->sta_hal_ext_events = beerocks::net::FileDescriptor::invalid_descriptor;
+            for (auto &fd_ext : radio_info->sta_hal_ext_events) {
+                if (fd_ext > 0) {
+                    m_event_loop->remove_handlers(fd_ext);
+                }
             }
+            radio_info->sta_hal_ext_events.clear();
             if (radio_info->sta_hal_int_events !=
                 beerocks::net::FileDescriptor::invalid_descriptor) {
                 m_event_loop->remove_handlers(radio_info->sta_hal_int_events);
@@ -606,12 +608,12 @@ bool BackhaulManager::finalize_slaves_connect_state(bool fConnected)
                 if (radio_info->sta_wlan_hal) {
                     radio_info->sta_wlan_hal.reset();
                 }
-                if (radio_info->sta_hal_ext_events !=
-                    beerocks::net::FileDescriptor::invalid_descriptor) {
-                    m_event_loop->remove_handlers(radio_info->sta_hal_ext_events);
-                    radio_info->sta_hal_ext_events =
-                        beerocks::net::FileDescriptor::invalid_descriptor;
+                for (auto &fd : radio_info->sta_hal_ext_events) {
+                    if (fd > 0) {
+                        m_event_loop->remove_handlers(fd);
+                    }
                 }
+                radio_info->sta_hal_ext_events.clear();
                 if (radio_info->sta_hal_int_events !=
                     beerocks::net::FileDescriptor::invalid_descriptor) {
                     m_event_loop->remove_handlers(radio_info->sta_hal_int_events);
@@ -712,7 +714,9 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
                 handlers.on_connection_closed = [&]() {
                     LOG(ERROR) << "Client to Platform Manager disconnected, restarting "
                                   "Backhaul Manager";
-                    m_platform_manager_client.reset();
+                    // Don't put here a "m_platform_manager_client.reset()" since it will destruct
+                    // this function before it ends, and will lead to a crash.
+                    m_remove_platform_manager_client = true;
                     FSM_MOVE_STATE(RESTART);
                     return true;
                 };
@@ -894,6 +898,11 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
 
         LOG(DEBUG) << "Restarting ...";
 
+        if (m_remove_platform_manager_client) {
+            m_platform_manager_client.reset();
+            m_remove_platform_manager_client = false;
+        }
+
         auto db = AgentDB::get();
 
         for (auto &radio_info : m_radios_info) {
@@ -907,11 +916,12 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
             if (radio_info->sta_wlan_hal) {
                 radio_info->sta_wlan_hal.reset();
             }
-            if (radio_info->sta_hal_ext_events !=
-                beerocks::net::FileDescriptor::invalid_descriptor) {
-                m_event_loop->remove_handlers(radio_info->sta_hal_ext_events);
-                radio_info->sta_hal_ext_events = beerocks::net::FileDescriptor::invalid_descriptor;
+            for (auto &fd : radio_info->sta_hal_ext_events) {
+                if (fd > 0) {
+                    m_event_loop->remove_handlers(fd);
+                }
             }
+            radio_info->sta_hal_ext_events.clear();
             if (radio_info->sta_hal_int_events !=
                 beerocks::net::FileDescriptor::invalid_descriptor) {
                 m_event_loop->remove_handlers(radio_info->sta_hal_int_events);
@@ -999,27 +1009,9 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
             // Attach in BLOCKING mode
             auto attach_state = radio_info->sta_wlan_hal->attach(true);
             if (attach_state == bwl::HALState::Operational) {
-
-                // Events
-                int ext_events_fd = radio_info->sta_wlan_hal->get_ext_events_fd();
+                // Internal Events
                 int int_events_fd = radio_info->sta_wlan_hal->get_int_events_fd();
-                if (ext_events_fd >= 0 && int_events_fd) {
-                    beerocks::EventLoop::EventHandlers ext_events_handlers{
-                        .name = "sta_hal_ext_events",
-                        .on_read =
-                            [radio_info](int fd, EventLoop &loop) {
-                                radio_info->sta_wlan_hal->process_ext_events(fd);
-                                return true;
-                            },
-                    };
-                    if (!m_event_loop->register_handlers(ext_events_fd, ext_events_handlers)) {
-                        LOG(ERROR) << "Unable to register handlers for external events queue!";
-                        return false;
-                    }
-
-                    LOG(DEBUG) << "External events queue with fd = " << ext_events_fd;
-                    radio_info->sta_hal_ext_events = ext_events_fd;
-
+                if (int_events_fd >= 0) {
                     beerocks::EventLoop::EventHandlers int_events_handlers{
                         .name = "sta_hal_int_events",
                         .on_read =
@@ -1036,12 +1028,70 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
                     LOG(DEBUG) << "Internal events queue with fd = " << int_events_fd;
                     radio_info->sta_hal_int_events = int_events_fd;
                 } else {
-                    LOG(ERROR) << "Invalid event file descriptors - "
-                               << "External = " << ext_events_fd
-                               << ", Internal = " << int_events_fd;
-
+                    LOG(WARNING) << "Invalid event file descriptors - "
+                                 << "Internal = " << int_events_fd;
                     success = false;
                     break;
+                }
+                // External events
+                int ext_event_fd_max           = -1;
+                radio_info->sta_hal_ext_events = radio_info->sta_wlan_hal->get_ext_events_fds();
+                if (radio_info->sta_hal_ext_events.empty()) {
+                    ext_event_fd_max = 0;
+                } else {
+                    beerocks::EventLoop::EventHandlers ext_events_handlers{
+                        .name = "sta_hal_ext_events",
+                        .on_read =
+                            [radio_info](int fd, EventLoop &loop) {
+                                if (!radio_info->sta_wlan_hal->process_ext_events(fd)) {
+                                    LOG(ERROR) << "process_ext_events(" << fd << ") failed!";
+                                    return false;
+                                }
+                                return true;
+                            },
+                        .on_write = nullptr,
+                        .on_disconnect =
+                            [radio_info](int fd, EventLoop &loop) {
+                                LOG(ERROR) << "sta_hal_ext_events disconnected! on fd " << fd;
+                                auto it = std::find(radio_info->sta_hal_ext_events.begin(),
+                                                    radio_info->sta_hal_ext_events.end(), fd);
+                                if (it != radio_info->sta_hal_ext_events.end()) {
+                                    *it = beerocks::net::FileDescriptor::invalid_descriptor;
+                                }
+                                return false;
+                            },
+                        .on_error =
+                            [radio_info](int fd, EventLoop &loop) {
+                                LOG(ERROR) << "sta_hal_ext_events error! on fd " << fd;
+                                auto it = std::find(radio_info->sta_hal_ext_events.begin(),
+                                                    radio_info->sta_hal_ext_events.end(), fd);
+                                if (it != radio_info->sta_hal_ext_events.end()) {
+                                    *it = beerocks::net::FileDescriptor::invalid_descriptor;
+                                }
+                                return false;
+                            },
+                    };
+                    for (auto &ext_event_fd : radio_info->sta_hal_ext_events) {
+                        if (ext_event_fd > 0) {
+                            if (!m_event_loop->register_handlers(ext_event_fd,
+                                                                 ext_events_handlers)) {
+                                LOG(ERROR) << "Unable to register handlers for external event fd "
+                                           << ext_event_fd;
+                                return false;
+                            } else if (ext_event_fd < 0) {
+                                ext_event_fd = beerocks::net::FileDescriptor::invalid_descriptor;
+                            }
+                            LOG(DEBUG) << "External events queue with fd = " << ext_event_fd;
+                        }
+                        ext_event_fd_max = std::max(ext_event_fd_max, ext_event_fd);
+                    }
+                }
+                if (ext_event_fd_max == 0) {
+                    LOG(DEBUG) << "No external event FD is available, periodic polling will be "
+                                  "done instead.";
+                } else if (ext_event_fd_max < 0) {
+                    LOG(ERROR) << "Invalid external event file descriptors: " << ext_event_fd_max;
+                    return false;
                 }
 
                 /**

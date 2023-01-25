@@ -4327,6 +4327,14 @@ bool slave_thread::agent_fsm()
         break;
     }
     case STATE_STOPPED: {
+
+        if (m_platform_manager_client) {
+            m_platform_manager_client.reset();
+        }
+
+        if (m_backhaul_manager_client) {
+            m_backhaul_manager_client.reset();
+        }
         break;
     }
     default: {
