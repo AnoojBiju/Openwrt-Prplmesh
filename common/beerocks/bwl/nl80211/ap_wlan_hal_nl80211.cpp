@@ -1672,6 +1672,7 @@ bool ap_wlan_hal_nl80211::add_bss(std::string &ifname, son::wireless_utils::sBss
     }
     if (vbss) {
         conf.set_create_head_value("broadcast_deauth", "0");
+        conf.set_create_head_value("no_deauth_unknown_sta", "1");
     }
     if (!conf.store()) {
         LOG(ERROR) << "Failed to store the hostapd configuration!";

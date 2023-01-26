@@ -883,6 +883,14 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
             return;
         }
 
+        // Restore the behavior of deauthenticating unknown STAs:
+        if (!ap_wlan_hal->set_no_deauth_unknown_sta(ifname, false)) {
+            LOG(ERROR) << "Failed to set no_deauth_unknown_sta! ifname: " << ifname;
+            send_virtual_bss_response(virtual_bss_creation_tlv->radio_uid(),
+                                      virtual_bss_creation_tlv->bssid(), false);
+            return;
+        }
+
         // refresh the vaps info.
         // TODO: re-visit after PPM-1923 is fixed.
         handle_aps_update_list();
