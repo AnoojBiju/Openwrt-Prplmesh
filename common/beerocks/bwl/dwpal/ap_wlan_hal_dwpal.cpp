@@ -945,8 +945,8 @@ bool ap_wlan_hal_dwpal::refresh_radio_info()
             auto &channel_info        = m_radio_info.channels_list[supported_channel_info.number];
             channel_info.tx_power_dbm = supported_channel_info.tx_power;
             channel_info.dfs_state    = supported_channel_info.is_dfs
-                                         ? supported_channel_info.dfs_state
-                                         : beerocks::eDfsState::DFS_STATE_MAX;
+                                            ? supported_channel_info.dfs_state
+                                            : beerocks::eDfsState::DFS_STATE_MAX;
 
             for (auto bw : supported_channel_info.supported_bandwidths) {
                 // If rank does not exist, set it to -1. It will be set by "read_acs_report()".
@@ -2204,7 +2204,7 @@ bool ap_wlan_hal_dwpal::generate_connected_clients_events(
 
             int32_t result = generate_association_event_result::SUCCESS;
             auto msg_buff  = generate_client_assoc_event(reply, m_vap_id_in_progress,
-                                                        get_radio_info().is_5ghz, result);
+                                                         get_radio_info().is_5ghz, result);
 
             if (!msg_buff) {
                 LOG(DEBUG) << "Failed to generate client association event from reply";
@@ -3016,7 +3016,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         FieldsToParse fieldsToParse[]                       = {
             {NULL /*opCode*/, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
             {(void *)vap_name, &numOfValidArgs[1], DWPAL_STR_PARAM, NULL,
-             beerocks::message::IFACE_NAME_LENGTH},
+                                   beerocks::message::IFACE_NAME_LENGTH},
             {(void *)MACAddress, &numOfValidArgs[2], DWPAL_STR_PARAM, NULL, sizeof(MACAddress)},
             {(void *)&status_code, &numOfValidArgs[3], DWPAL_INT_PARAM, "status_code=", 0},
             /* Must be at the end */
@@ -3427,6 +3427,12 @@ bool ap_wlan_hal_dwpal::get_key(const std::string &ifname, sKeyInfo &key_info)
 
 bool ap_wlan_hal_dwpal::send_delba(const std::string &ifname, const sMacAddr &dst,
                                    const sMacAddr &src, const sMacAddr &bssid)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
+bool ap_wlan_hal_dwpal::set_no_deauth_unknown_sta(const std::string &ifname, bool value)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return false;

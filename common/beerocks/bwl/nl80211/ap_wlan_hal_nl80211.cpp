@@ -527,8 +527,8 @@ bool ap_wlan_hal_nl80211::refresh_radio_info()
             auto &channel_info        = m_radio_info.channels_list[supported_channel_info.number];
             channel_info.tx_power_dbm = supported_channel_info.tx_power;
             channel_info.dfs_state    = supported_channel_info.is_dfs
-                                         ? supported_channel_info.dfs_state
-                                         : beerocks::eDfsState::DFS_STATE_MAX;
+                                            ? supported_channel_info.dfs_state
+                                            : beerocks::eDfsState::DFS_STATE_MAX;
 
             for (auto bw : supported_channel_info.supported_bandwidths) {
                 // Since bwl nl8011 does not support ranking, set all ranking to highest rank (1).
@@ -1691,6 +1691,12 @@ bool ap_wlan_hal_nl80211::send_delba(const std::string &ifname, const sMacAddr &
                                      const sMacAddr &src, const sMacAddr &bssid)
 {
     return m_nl80211_client->send_delba(ifname, dst, src, bssid);
+}
+
+bool ap_wlan_hal_nl80211::set_no_deauth_unknown_sta(const std::string &ifname, bool value)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
 }
 
 } // namespace nl80211

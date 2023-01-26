@@ -112,6 +112,8 @@ public:
     virtual bool send_delba(const std::string &ifname, const sMacAddr &dst, const sMacAddr &src,
                             const sMacAddr &bssid) override;
 
+    virtual bool set_no_deauth_unknown_sta(const std::string &ifname, bool value) override;
+
     // Protected methods:
 protected:
     virtual bool process_dummy_event(parsed_obj_map_t &parsed_obj) override;

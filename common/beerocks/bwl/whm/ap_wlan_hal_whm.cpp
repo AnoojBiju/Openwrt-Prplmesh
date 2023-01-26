@@ -794,6 +794,12 @@ bool ap_wlan_hal_whm::send_delba(const std::string &ifname, const sMacAddr &dst,
     return false;
 }
 
+bool ap_wlan_hal_whm::set_no_deauth_unknown_sta(const std::string &ifname, bool value)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    return true;
+}
+
 } // namespace whm
 
 std::shared_ptr<ap_wlan_hal> ap_wlan_hal_create(std::string iface_name, bwl::hal_conf_t hal_conf,

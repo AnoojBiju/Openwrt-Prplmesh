@@ -117,6 +117,7 @@ public:
     virtual bool get_key(const std::string &ifname, sKeyInfo &key_info) override;
     virtual bool send_delba(const std::string &ifname, const sMacAddr &dst, const sMacAddr &src,
                             const sMacAddr &bssid);
+    virtual bool set_no_deauth_unknown_sta(const std::string &ifname, bool value) override;
 
     // Protected methods:
 protected:
