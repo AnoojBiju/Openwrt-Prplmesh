@@ -78,15 +78,28 @@ private:
     void subscribe_to_ep_events();
 
     /**
+     * *@brief Process the event WiFi.EndPoint.*.ConnectionStatus and IntfName dm event
+     */
+    bool process_ep_event(const std::string &interface, const std::string &key,
+                          const beerocks::wbapi::AmbiorixVariant *new_value,
+                          const beerocks::wbapi::AmbiorixVariant *old_value);
+
+    /**
      * @brief subscribe to WiFi.EndPoint.*.WPS. pairingDone dm notification
      */
     void subscribe_to_ep_wps_events();
 
-    bool process_ep_event(const std::string &interface, const std::string &key,
-                          const beerocks::wbapi::AmbiorixVariant *new_value,
-                          const beerocks::wbapi::AmbiorixVariant *old_value);
+    /**
+     * *@brief Process the event "pairingDone" when received from the dm
+     */
     bool process_ep_wps_event(const std::string &interface,
                               const beerocks::wbapi::AmbiorixVariant *data);
+
+    /**
+     * @brief Process the event "ScanComplete" when received from the dm
+     */
+    bool process_scan_complete_event(const std::string &result) override;
+
     struct Endpoint {
         std::string bssid;
         std::string ssid;
@@ -128,6 +141,7 @@ private:
     WiFiSec m_active_secutiry = WiFiSec::Invalid;
     uint8_t m_active_channel  = 0;
     int m_active_profile_id   = -1;
+    bool m_scan_active        = false;
 };
 
 } // namespace whm

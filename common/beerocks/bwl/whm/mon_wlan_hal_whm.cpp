@@ -46,7 +46,7 @@ mon_wlan_hal_whm::mon_wlan_hal_whm(const std::string &iface_name, hal_event_cb_t
     subscribe_to_ap_events();
     subscribe_to_sta_events();
 }
-
+subscribe_to_scan_complete_events();
 mon_wlan_hal_whm::~mon_wlan_hal_whm() {}
 
 bool mon_wlan_hal_whm::update_radio_stats(SRadioStats &radio_stats)

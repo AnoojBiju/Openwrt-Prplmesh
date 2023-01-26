@@ -42,7 +42,7 @@ sta_wlan_hal_whm::sta_wlan_hal_whm(const std::string &iface_name, hal_event_cb_t
 
     subscribe_to_ep_events();
     subscribe_to_ep_wps_events();
-    subscribe_to_scan_complete_event();
+    subscribe_to_scan_complete_events();
 }
 
 sta_wlan_hal_whm::~sta_wlan_hal_whm() { sta_wlan_hal_whm::detach(); }
@@ -140,12 +140,17 @@ void sta_wlan_hal_whm::subscribe_to_ep_wps_events()
     m_ambiorix_cl->subscribe_to_object_event(wifi_wps_path, event_handler, filter);
 }
 
-bool sta_wlan_hal_whm::process_scan_complete_event(const std::string &,
-                                                   const beerocks::wbapi::AmbiorixVariant *value)
+bool sta_wlan_hal_whm::process_scan_complete_event(const std::string &result)
 {
-    if (m_scan_active) {
+
+    if (result == "error") {
+        LOG(DEBUG) << " received ScanComplete event with Error indication!";
         m_scan_active = false;
+        return false;
+    }
+    if (result == "done" && m_scan_active) {
         event_queue_push(Event::ScanResults);
+        m_scan_active = false;
     }
     return true;
 }
@@ -250,8 +255,8 @@ int sta_wlan_hal_whm::get_scan_results(const std::string &ssid, std::vector<sSca
         }
         if (map.find("Channel") != map.end()) {
             int32_t channel(0);
-            ap.channel = (uint8_t)channel;
             map["Channel"].get(channel);
+            ap.channel = (uint8_t)channel;
             if (bandwidth != 0 && center_channel != 0) {
                 WifiChannel wifi_chan(channel, center_channel,
                                       utils::convert_bandwidth_to_enum(bandwidth));
