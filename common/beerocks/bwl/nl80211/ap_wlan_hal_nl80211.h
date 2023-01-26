@@ -117,6 +117,7 @@ public:
         std::shared_ptr<wfa_map::tlvUnassociatedStaLinkMetricsResponse> &response) override;
     virtual bool set_beacon_da(const std::string &ifname, const sMacAddr &mac) override;
     virtual bool update_beacon(const std::string &ifname) override;
+    virtual bool set_no_deauth_unknown_sta(const std::string &ifname, bool value) override;
 
     // Protected methods:
 protected:

@@ -564,6 +564,20 @@ public:
      */
     virtual bool update_beacon(const std::string &ifname) = 0;
 
+    /**
+     * @brief Set the option to not deauthenticate unknown stations
+     * when data frames are received from stations that are not known
+     * yet.
+     *
+     * @param [in] ifname the interface name.
+     * @param [in] value the value for the option (true means do not
+     * deauthenticate unknown stations, false means deauthenticate
+     * unknown stations).
+     *
+     * @return true on success or false on error.
+     */
+    virtual bool set_no_deauth_unknown_sta(const std::string &ifname, bool value) = 0;
+
 private:
     static const int frame_body_idx = (sizeof(s80211MgmtFrame::sHeader) * 2);
 

@@ -116,6 +116,7 @@ public:
                             const sMacAddr &bssid) override;
     virtual bool set_beacon_da(const std::string &ifname, const sMacAddr &mac) override;
     virtual bool update_beacon(const std::string &ifname) override;
+    virtual bool set_no_deauth_unknown_sta(const std::string &ifname, bool value) override;
 
     virtual void send_unassoc_sta_link_metric_query(
         std::shared_ptr<wfa_map::tlvUnassociatedStaLinkMetricsQuery> &query) override;
