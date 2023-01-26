@@ -3477,6 +3477,12 @@ bool ap_wlan_hal_dwpal::update_beacon(const std::string &ifname)
     return false;
 }
 
+bool ap_wlan_hal_dwpal::set_no_deauth_unknown_sta(const std::string &ifname, bool value)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
 } // namespace bwl
 
 std::shared_ptr<ap_wlan_hal> ap_wlan_hal_create(std::string iface_name, hal_conf_t hal_conf,
