@@ -893,6 +893,14 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
 
         // TODO: PPM-2349: add support for the client capabilities
 
+        // Restore the behavior of deauthenticating unknown STAs:
+        if (!ap_wlan_hal->set_no_deauth_unknown_sta(ifname, false)) {
+            LOG(ERROR) << "Failed to set no_deauth_unknown_sta! ifname: " << ifname;
+            send_virtual_bss_response(virtual_bss_creation_tlv->radio_uid(),
+                                      virtual_bss_creation_tlv->bssid(), false);
+            return;
+        }
+
         // Now that the BSS is ready, update the beacon in case it's
         // needed (e.g. unicast beacons have been configured):
         if (!ap_wlan_hal->update_beacon(ifname)) {
