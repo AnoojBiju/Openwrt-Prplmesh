@@ -1309,40 +1309,46 @@ bool db::dm_add_ap_operating_classes(const std::string &radio_mac, uint8_t max_t
         return false;
     }
 
-    std::string path_to_obj = radio->dm_path;
-    if (path_to_obj.empty()) {
+    if (radio->dm_path.empty()) {
         return true;
     }
 
-    path_to_obj += ".Capabilities.OperatingClasses";
-    std::string path_to_obj_instance = m_ambiorix_datamodel->add_instance(path_to_obj);
-    if (path_to_obj_instance.empty()) {
+    std::string path_to_obj = radio->dm_path + ".Capabilities.OperatingClasses";
+    auto transaction        = m_ambiorix_datamodel->start_transaction(path_to_obj, true);
+    if (!transaction) {
         LOG(ERROR) << "Failed to add object: " << path_to_obj;
         return false;
     }
 
-    if (!m_ambiorix_datamodel->set(path_to_obj_instance, "MaxTxPower", max_tx_power)) {
+    if (!transaction->set("MaxTxPower", max_tx_power)) {
         LOG(ERROR) << "Failed to set " << path_to_obj << " MaxTxPower: " << max_tx_power;
         return_value = false;
     }
 
-    if (!m_ambiorix_datamodel->set(path_to_obj_instance, "Class", op_class)) {
+    if (!transaction->set("Class", op_class)) {
         LOG(ERROR) << "Failed to set " << path_to_obj << " Class: " << op_class;
         return_value = false;
     }
 
+    auto path_to_obj_instance = m_ambiorix_datamodel->commit_transaction(std::move(transaction));
+    if (path_to_obj_instance.empty()) {
+        LOG(ERROR) << "Failed to commit creation of new object at " << path_to_obj;
+        return false;
+    }
     path_to_obj = path_to_obj_instance + ".NonOperable";
     for (auto non_op_channel : non_operable_channels) {
-        auto path_to_non_operable_instance = m_ambiorix_datamodel->add_instance(path_to_obj);
-        if (path_to_non_operable_instance.empty()) {
+        transaction = m_ambiorix_datamodel->start_transaction(path_to_obj, true);
+        if (!transaction) {
             LOG(ERROR) << "Failed to add object: " << path_to_obj;
             return_value = false;
             continue;
         }
-        if (!m_ambiorix_datamodel->set(path_to_non_operable_instance, "NonOpChannelNumber",
-                                       non_op_channel)) {
-            LOG(ERROR) << "Failed to set " << path_to_non_operable_instance
-                       << "NonOpChannelNumber: " << non_op_channel;
+        if (!transaction->set("NonOpChannelNumber", non_op_channel)) {
+            LOG(ERROR) << "Failed to set NonOpChannelNumber: " << non_op_channel;
+            return_value = false;
+        }
+        if (m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty()) {
+            LOG(ERROR) << "Failed to commit creation of new object at " << path_to_obj;
             return_value = false;
         }
     }
