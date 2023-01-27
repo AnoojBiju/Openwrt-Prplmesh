@@ -10,6 +10,7 @@
 #define AMBIORIX_MOCK_H
 
 #include "ambiorix.h"
+#include <bcl/beerocks_backport.h>
 #include <gmock/gmock.h>
 
 namespace beerocks {
@@ -21,54 +22,89 @@ namespace nbapi {
  */
 class AmbiorixMock : public Ambiorix {
 public:
+    struct Transaction : SingleObjectTransaction {
+        AmbiorixMock *parent;
+        std::string relative_path;
+
+#define TRANS_SET(TYPE)                                                                            \
+    bool set(const std::string &parameter, const TYPE &value) override                             \
+    {                                                                                              \
+        return parent->set(relative_path, parameter, value);                                       \
+    }
+        TRANS_SET(int8_t)
+        TRANS_SET(int16_t)
+        TRANS_SET(int32_t)
+        TRANS_SET(int64_t)
+        TRANS_SET(uint8_t)
+        TRANS_SET(uint16_t)
+        TRANS_SET(uint32_t)
+        TRANS_SET(uint64_t)
+        TRANS_SET(bool)
+        TRANS_SET(double)
+        TRANS_SET(std::string)
+        TRANS_SET(sMacAddr)
+#undef TRANS_SET
+        bool set_time(const std::string &time_stamp) override
+        {
+            return parent->set_time(relative_path, time_stamp);
+        }
+        bool set_current_time(const std::string &param) override
+        {
+            return parent->set_current_time(relative_path, param);
+        }
+    };
+    std::unique_ptr<SingleObjectTransaction> start_transaction(const std::string &relative_path,
+                                                               bool new_instance) override
+    {
+        auto ret = std::make_unique<Transaction>();
+
+        ret->parent        = this;
+        ret->relative_path = new_instance ? add_instance(relative_path) : relative_path;
+
+        return ret;
+    }
+    std::string commit_transaction(std::unique_ptr<SingleObjectTransaction> trans) override
+    {
+        return static_cast<Transaction &>(*trans).relative_path;
+    }
+
     MOCK_METHOD(bool, set,
                 (const std::string &relative_path, const std::string &parameter,
-                 const std::string &value),
-                (override));
+                 const std::string &value));
     MOCK_METHOD(bool, set,
                 (const std::string &relative_path, const std::string &parameter,
-                 const int8_t &value),
-                (override));
+                 const int8_t &value));
     MOCK_METHOD(bool, set,
                 (const std::string &relative_path, const std::string &parameter,
-                 const int16_t &value),
-                (override));
+                 const int16_t &value));
     MOCK_METHOD(bool, set,
                 (const std::string &relative_path, const std::string &parameter,
-                 const int32_t &value),
-                (override));
+                 const int32_t &value));
     MOCK_METHOD(bool, set,
                 (const std::string &relative_path, const std::string &parameter,
-                 const int64_t &value),
-                (override));
+                 const int64_t &value));
     MOCK_METHOD(bool, set,
                 (const std::string &relative_path, const std::string &parameter,
-                 const uint8_t &value),
-                (override));
+                 const uint8_t &value));
     MOCK_METHOD(bool, set,
                 (const std::string &relative_path, const std::string &parameter,
-                 const uint16_t &value),
-                (override));
+                 const uint16_t &value));
     MOCK_METHOD(bool, set,
                 (const std::string &relative_path, const std::string &parameter,
-                 const uint32_t &value),
-                (override));
+                 const uint32_t &value));
     MOCK_METHOD(bool, set,
                 (const std::string &relative_path, const std::string &parameter,
-                 const uint64_t &value),
-                (override));
-    MOCK_METHOD(bool, set,
-                (const std::string &relative_path, const std::string &parameter, const bool &value),
-                (override));
+                 const uint64_t &value));
     MOCK_METHOD(bool, set,
                 (const std::string &relative_path, const std::string &parameter,
-                 const double &value),
-                (override));
+                 const bool &value));
     MOCK_METHOD(bool, set,
                 (const std::string &relative_path, const std::string &parameter,
-                 const sMacAddr &value),
-                (override));
-    MOCK_METHOD(std::string, add_instance, (const std::string &relative_path), (override));
+                 const double &value));
+    MOCK_METHOD(bool, set,
+                (const std::string &relative_path, const std::string &parameter,
+                 const sMacAddr &value));
+    MOCK_METHOD(std::string, add_instance, (const std::string &relative_path));
     MOCK_METHOD(bool, remove_instance, (const std::string &relative_path, uint32_t index),
                 (override));
     MOCK_METHOD(uint32_t, get_instance_index,
@@ -80,9 +116,8 @@ public:
     MOCK_METHOD(bool, remove_optional_subobject,
                 (const std::string &path_to_obj, const std::string &subobject_name), (override));
     MOCK_METHOD(bool, set_current_time,
-                (const std::string &path_to_object, const std::string &object), (override));
-    MOCK_METHOD(bool, set_time, (const std::string &path_to_object, const std::string &time_stamp),
-                (override));
+                (const std::string &path_to_object, const std::string &object));
+    MOCK_METHOD(bool, set_time, (const std::string &path_to_object, const std::string &time_stamp));
     MOCK_METHOD(bool, read_param,
                 (const std::string &path_to_object, const std::string &object, uint64_t *param_val),
                 (override));

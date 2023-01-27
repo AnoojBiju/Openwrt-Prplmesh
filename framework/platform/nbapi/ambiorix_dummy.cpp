@@ -11,67 +11,16 @@
 namespace beerocks {
 namespace nbapi {
 
-bool AmbiorixDummy::set(const std::string &relative_path, const std::string &parameter,
-                        const std::string &value)
+std::unique_ptr<Ambiorix::SingleObjectTransaction>
+AmbiorixDummy::start_transaction(const std::string &relative_path, bool new_instance)
 {
-    return true;
+    return {};
 }
-bool AmbiorixDummy::set(const std::string &relative_path, const std::string &parameter,
-                        const int8_t &value)
+
+std::string AmbiorixDummy::commit_transaction(std::unique_ptr<SingleObjectTransaction> trans)
 {
-    return true;
+    return {};
 }
-bool AmbiorixDummy::set(const std::string &relative_path, const std::string &parameter,
-                        const int16_t &value)
-{
-    return true;
-}
-bool AmbiorixDummy::set(const std::string &relative_path, const std::string &parameter,
-                        const int32_t &value)
-{
-    return true;
-}
-bool AmbiorixDummy::set(const std::string &relative_path, const std::string &parameter,
-                        const int64_t &value)
-{
-    return true;
-}
-bool AmbiorixDummy::set(const std::string &relative_path, const std::string &parameter,
-                        const uint8_t &value)
-{
-    return true;
-}
-bool AmbiorixDummy::set(const std::string &relative_path, const std::string &parameter,
-                        const uint16_t &value)
-{
-    return true;
-}
-bool AmbiorixDummy::set(const std::string &relative_path, const std::string &parameter,
-                        const uint32_t &value)
-{
-    return true;
-}
-bool AmbiorixDummy::set(const std::string &relative_path, const std::string &parameter,
-                        const uint64_t &value)
-{
-    return true;
-}
-bool AmbiorixDummy::set(const std::string &relative_path, const std::string &parameter,
-                        const bool &value)
-{
-    return true;
-}
-bool AmbiorixDummy::set(const std::string &relative_path, const std::string &parameter,
-                        const double &value)
-{
-    return true;
-}
-bool AmbiorixDummy::set(const std::string &relative_path, const std::string &parameter,
-                        const sMacAddr &value)
-{
-    return true;
-}
-std::string AmbiorixDummy::add_instance(const std::string &relative_path) { return {}; }
 bool AmbiorixDummy::remove_instance(const std::string &relative_path, uint32_t index)
 {
     return true;
@@ -93,16 +42,6 @@ bool AmbiorixDummy::add_optional_subobject(const std::string &path_to_obj,
 
 bool AmbiorixDummy::remove_optional_subobject(const std::string &path_to_obj,
                                               const std::string &subobject_name)
-{
-    return true;
-}
-
-bool AmbiorixDummy::set_current_time(const std::string &path_to_object, const std::string &param)
-{
-    return true;
-}
-
-bool AmbiorixDummy::set_time(const std::string &path_to_object, const std::string &time_stamp)
 {
     return true;
 }
