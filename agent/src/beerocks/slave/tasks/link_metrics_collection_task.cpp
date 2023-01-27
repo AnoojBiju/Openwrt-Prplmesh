@@ -1331,8 +1331,7 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
 
             interface.iface_name = radio->front.iface_name;
             interface.iface_mac  = bssid;
-            interface.media_type = MediaType::get_802_11_media_type(
-                radio->wifi_channel.get_freq_type(), radio->max_supported_bw);
+            interface.media_type = MediaType::get_802_11_media_type(*radio);
 
             if (ieee1905_1::eMediaType::UNKNOWN_MEDIA == interface.media_type) {
                 LOG(ERROR) << "Unknown media type for interface " << interface.iface_name;

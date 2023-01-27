@@ -5,23 +5,23 @@
 
 #include <string>
 
+#include "../agent_db.h"
+
 namespace beerocks {
 
 class MediaType {
 
 public:
     /**
-     * @brief Gets media type from given frequency band and max bandwidth values.
+     * @brief Gets media type for the given radio.
      *
-     * Media type value is obtained by looking up into table_6_12_media_type_802_11 table.
-     * Returns UNKNOWN_MEDIA if frequency band and max bandwidth are not found in table.
+     * Media type value is obtained by checking the IEEE802.11 revisions supported.
+     * Returns UNKNOWN_MEDIA if media type can't be determined.
      *
-     * @param frequency_band Frequency band.
-     * @param max_bandwidth Maximum bandwidth.
-     * @return Media type value as per table_6_12_media_type_802_11 table.
+     * @param radio Reference on a radio object.
+     * @return Media type value.
      */
-    static ieee1905_1::eMediaType get_802_11_media_type(eFreqType frequency_band,
-                                                        eWiFiBandwidth max_bandwidth);
+    static ieee1905_1::eMediaType get_802_11_media_type(const beerocks::AgentDB::sRadio &radio);
     /**
      * @brief Gets media type for given interface.
      *
