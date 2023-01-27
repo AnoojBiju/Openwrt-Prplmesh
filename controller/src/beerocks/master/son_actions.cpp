@@ -258,7 +258,7 @@ void son_actions::send_cli_debug_message(db &database, ieee1905_1::CmduMessageTx
 }
 
 void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db &database,
-                                   ieee1905_1::CmduMessageTx &cmdu_tx, task_pool &tasks)
+                                   task_pool &tasks)
 {
     beerocks::eType mac_type = database.get_node_type(mac);
     auto node_state          = database.get_node_state(mac);

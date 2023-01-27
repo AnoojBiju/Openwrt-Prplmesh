@@ -337,7 +337,7 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
                 auto client_list = database.get_node_children(tlvf::mac_to_string(bss->bssid),
                                                               beerocks::TYPE_CLIENT);
                 for (auto &client : client_list) {
-                    son_actions::handle_dead_node(client, true, database, cmdu_tx, tasks);
+                    son_actions::handle_dead_node(client, true, database, tasks);
                 }
 
                 // Remove the vap from DB
@@ -563,7 +563,7 @@ void topology_task::handle_dead_neighbors(const sMacAddr &src_mac, const sMacAdd
 
         LOG(DEBUG) << "known neighbor al_mac  " << neighbor_al_mac_on_db
                    << " is not reported on 1905 Neighbor Device TLV, removing the al_mac node";
-        son_actions::handle_dead_node(backhhaul_mac, true, database, cmdu_tx, tasks);
+        son_actions::handle_dead_node(backhhaul_mac, true, database, tasks);
     }
 }
 
@@ -742,7 +742,7 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
         }
 
         // TODO: Validate usages of reported_by_parent flag usages (PPM-1948)
-        son_actions::handle_dead_node(client_mac_str, reported_by_parent, database, cmdu_tx, tasks);
+        son_actions::handle_dead_node(client_mac_str, reported_by_parent, database, tasks);
     }
 
     return true;
