@@ -67,6 +67,10 @@ if (TARGET_PLATFORM STREQUAL "openwrt")
             ${MODULE_PATH}/*/uci/*.c*
             ${MODULE_PATH}/cfg/vendor/*.c*
         )
+        
+		file(GLOB_RECURSE bpl_platform_sources 
+            ${MODULE_PATH}/service_prioritization/mxl/service_prio_utils.c
+        )
 
         # UGW specific libraries
         find_package(ubus REQUIRED)
@@ -91,6 +95,9 @@ if (TARGET_PLATFORM STREQUAL "openwrt")
           ${MODULE_PATH}/common/uci/*.c*
           ${MODULE_PATH}/board/system_ubus/*.c*
         )
+		file(GLOB_RECURSE bpl_platform_sources 
+            ${MODULE_PATH}/service_prioritization/dummy/service_prio_utils.c
+        )
 
         find_package(ubus REQUIRED)
 
@@ -113,6 +120,10 @@ elseif (TARGET_PLATFORM STREQUAL "rdkb")
     file(GLOB_RECURSE bpl_platform_sources 
         ${MODULE_PATH}/*/uci/*.c*
         ${MODULE_PATH}/cfg/vendor/*.c*
+    )
+
+	file(GLOB_RECURSE bpl_platform_sources 
+        ${MODULE_PATH}/service_prioritization/mxl/service_prio_utils.c
     )
 
     # RDKB specific libraries
@@ -139,10 +150,17 @@ elseif (TARGET_PLATFORM STREQUAL "linux")
         ${MODULE_PATH}/*/linux/*.c*
         ${MODULE_PATH}/cfg/vendor/*.c*
     )
+	file(GLOB_RECURSE bpl_platform_sources 
+        ${MODULE_PATH}/service_prioritization/dummy/service_prio_utils.c
+    )
 
     add_definitions(-DPLATFORM_DB_PATH_TEMP="${TMP_PATH}/prplmesh_platform_db")
 
 else()
+
+	file(GLOB_RECURSE bpl_platform_sources 
+        ${MODULE_PATH}/service_prioritization/dummy/service_prio_utils.c
+    )
 
     message(WARNING "${BoldWhite}Skipping ${BoldGreen}${PROJECT_NAME}${BoldWhite} build for unsupported platform...${ColourReset}")
     return()
