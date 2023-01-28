@@ -11,6 +11,7 @@
 
 #include <bcl/beerocks_defines.h>
 #include <bwl/base_wlan_hal_types.h>
+#include <bwl/mon_wlan_hal_types.h>
 
 namespace bwl {
 namespace whm {
@@ -32,6 +33,17 @@ public:
      * @brief Converts a string-based security type to WiFiSec
      */
     static WiFiSec security_type_from_string(const std::string &security_type);
+
+    /**
+     * @brief converts int bandwith to eChannelScanResultChannelBandwidth
+     */
+    static bwl::eChannelScanResultChannelBandwidth get_bandwidth_from_int(const int32_t bw);
+
+    /**
+     * @brief converts eFreqType to eChannelScanResultOperatingFrequencyBand
+     */
+    static bwl::eChannelScanResultOperatingFrequencyBand
+    eFreqType_to_eCh_scan_Op_Fr_Ba(const beerocks::eFreqType freq_type);
 
 private:
     /**

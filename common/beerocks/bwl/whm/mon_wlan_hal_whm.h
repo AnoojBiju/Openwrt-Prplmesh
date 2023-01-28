@@ -79,6 +79,8 @@ public:
     virtual bool set_estimated_service_parameters(uint8_t *esp_info_field) override;
     bool sta_unassoc_rssi_measurement(std::unordered_map<std::string, uint8_t> &new_list) final;
 
+    std::list<std::unordered_map<std::string, std::string>> m_scan_results; //cached scan resuls
+
     // Protected methods:
 protected:
     // Overload for Monitor events
@@ -95,8 +97,10 @@ private:
     bool process_sta_event(const std::string &interface, const std::string &sta_mac,
                            const std::string &key,
                            const beerocks::wbapi::AmbiorixVariant *value) override;
-    virtual bool
-    process_scan_complete_event(const beerocks::wbapi::AmbiorixVariant *value) override;
+
+    virtual bool process_scan_complete_event(const std::string &result) override;
+
+    bool get_scan_results_from_pwhm();
 
     bool m_scan_active = false;
 };

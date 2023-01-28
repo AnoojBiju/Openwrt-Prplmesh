@@ -180,18 +180,6 @@ bool mon_wlan_hal_whm::sta_link_measurements_11k_request(const std::string &vap_
 bool mon_wlan_hal_whm::channel_scan_trigger(int dwell_time_msec,
                                             const std::vector<unsigned int> &channel_pool)
 {
-    if (m_scan_active) {
-        AmbiorixVariant result_abort;
-        AmbiorixVariant args_abort(AMXC_VAR_ID_HTABLE);
-        //scan is already active, as per spec, cancel the old one and start new one
-        if (!m_ambiorix_cl->call(m_radio_path, "stopScan", args_abort, result_abort)) {
-            LOG(INFO) << " remote function stopScan Failed!";
-            m_scan_active =
-                false; // if for some reasons, no scan is active, stopScan will return error, thus the need to reset m_scan_active
-            event_queue_push(Event::Channel_Scan_Aborted);
-        }
-    }
-
     if (channel_pool.empty()) {
         LOG(INFO) << "channel_pool is empty!, scanning all channels";
     }
@@ -205,6 +193,18 @@ bool mon_wlan_hal_whm::channel_scan_trigger(int dwell_time_msec,
         channels.pop_back();
     }
 
+    if (m_scan_active) {
+        AmbiorixVariant result_abort;
+        AmbiorixVariant args_abort(AMXC_VAR_ID_HTABLE);
+        //scan is already active, as per spec, cancel the old one and start new one
+        if (!m_ambiorix_cl->call(m_radio_path, "stopScan", args_abort, result_abort)) {
+            LOG(INFO) << " remote function stopScan startScan Failed!";
+            return false;
+        } else {
+            m_scan_active = false;
+            event_queue_push(Event::Channel_Scan_Aborted);
+        }
+    }
     AmbiorixVariant result;
     AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
     if (!channels.empty()) {
@@ -221,130 +221,38 @@ bool mon_wlan_hal_whm::channel_scan_trigger(int dwell_time_msec,
 
 bool mon_wlan_hal_whm::channel_scan_dump_cached_results()
 {
-    auto get_bandwidth_from_int = [](const int32_t bw) -> bwl::eChannelScanResultChannelBandwidth {
-        if (bw == 20) {
-            return bwl::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_20MHz;
-        } else if (bw == 40) {
-            return bwl::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_40MHz;
-        } else if (bw == 80) {
-            return bwl::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_80MHz;
-        } else if (bw == 160) {
-            return bwl::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_160MHz;
-        } else {
-            return bwl::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_NA;
-        }
-    };
-
-    auto eFreqType_to_eChannelScanResultOperatingFrequencyBand =
-        [](const beerocks::eFreqType freq_type) {
-            switch (freq_type) {
-            case FREQ_24G: {
-                return bwl::eChannelScanResultOperatingFrequencyBand::eOperating_Freq_Band_2_4GHz;
-            }
-            case FREQ_5G: {
-                return bwl::eChannelScanResultOperatingFrequencyBand::eOperating_Freq_Band_5GHz;
-            }
-            case FREQ_24G_5G: {
-                return bwl::eChannelScanResultOperatingFrequencyBand::eOperating_Freq_Band_2_4GHz;
-            }
-            default: {
-                return bwl::eChannelScanResultOperatingFrequencyBand::eOperating_Freq_Band_NA;
-            }
-            }
-        };
-
-    //read stats from pwhm
-    AmbiorixVariant result;
-    AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
-    if (!m_ambiorix_cl->call(m_radio_path, "getScanResults", args, result)) {
-        LOG(ERROR) << " remote function call getScanResults Failed!";
-        return false;
-    }
-    AmbiorixVariantListSmartPtr scan_results_list =
-        result.read_children<AmbiorixVariantListSmartPtr>();
-    if (!scan_results_list) {
-        LOG(ERROR) << "failed reading scan_results!";
-        return false;
-    }
-
-    auto results_as_wrapped_list = scan_results_list->front();
-    if (results_as_wrapped_list.empty()) {
-        LOG(ERROR) << "getScanResults wrapped list is empty!";
-        return false;
-    }
-
-    auto ssid_results_as_list =
-        results_as_wrapped_list.read_children<AmbiorixVariantListSmartPtr>();
-
-    for (auto &ssid_results_map : *ssid_results_as_list) {
-
-        auto data_map = ssid_results_map.read_children<AmbiorixVariantMapSmartPtr>();
-
-        auto &map = *data_map;
-
+    //read stats cached internally
+    for (auto &map : m_scan_results) {
         auto results_notif = std::make_shared<sCHANNEL_SCAN_RESULTS_NOTIFICATION>();
         auto &results      = results_notif->channel_scan_results;
 
         if (map.find("SSID") == map.end()) {
-            LOG(DEBUG) << " no SSID, skipping...";
-            continue;
-        }
-        std::string ssid;
-        map["SSID"].get(ssid);
-        string_utils::copy_string(results.ssid, ssid.c_str(),
-                                  beerocks::message::WIFI_SSID_MAX_LENGTH);
-
-        if (map.find("BSSID") != map.end()) {
-            std::string bssid;
-            map["BSSID"].get(bssid);
-            results.bssid = tlvf::mac_from_string(bssid);
-        } else {
-            LOG(DEBUG) << " no BSSID, skipping...";
-            continue;
+            string_utils::copy_string(results.ssid, map["SSID"].c_str(),
+                                      beerocks::message::WIFI_SSID_MAX_LENGTH);
         }
 
-        int32_t center_channel(0);
-        if (map.find("CentreChannel") != map.end()) {
-            map["CentreChannel"].get(center_channel);
-        }
+        results.bssid = tlvf::mac_from_string(map["BSSID"]);
 
-        int32_t bandwidth(0);
-        if (map.find("Bandwidth") != map.end()) {
+        int32_t center_channel = std::stoi(map["CentreChannel"]);
 
-            map["Bandwidth"].get(bandwidth);
-            results.operating_channel_bandwidth = get_bandwidth_from_int(bandwidth);
-        }
+        int32_t bandwidth                   = std::stoi(map["Bandwidth"]);
+        results.operating_channel_bandwidth = utils_wlan_hal_whm::get_bandwidth_from_int(bandwidth);
 
-        if (map.find("Channel") != map.end()) {
-            map["Channel"].get(results.channel);
-        } else {
-            LOG(DEBUG) << " no Channel, skipping...";
-            continue;
-        }
-        if (results.channel <= 0) {
-            LOG(DEBUG) << "Channel value= " << results.channel << " is not valid, skipping...";
-            continue;
-        }
+        results.channel = std::stoul(map["Channel"]);
 
         WifiChannel wifi_channel(results.channel, center_channel,
                                  utils::convert_bandwidth_to_enum(bandwidth));
         results.operating_frequency_band =
-            eFreqType_to_eChannelScanResultOperatingFrequencyBand(wifi_channel.get_freq_type());
+            utils_wlan_hal_whm::eFreqType_to_eCh_scan_Op_Fr_Ba(wifi_channel.get_freq_type());
 
-        if (map.find("RSSI") != map.end()) {
-            map["RSSI"].get(results.signal_strength_dBm);
-        } else {
-            LOG(DEBUG) << " no RSSI, skipping...";
-            continue;
-        }
+        results.signal_strength_dBm = std::stoi(map["RSSI"]);
 
         if (map.find("Noise") != map.end()) {
-            map["RSSI"].get(results.noise_dBm);
+            results.noise_dBm = std::stoi(map["Noise"]);
         }
 
         if (map.find("SecurityModeEnabled") != map.end()) {
-            std::string security_mode_enabled;
-            map["SecurityModeEnabled"].get(security_mode_enabled);
+            std::string security_mode_enabled(map["SecurityModeEnabled"]);
             if (security_mode_enabled.find("WEP-") != std::string::npos) {
                 results.security_mode_enabled.push_back(
                     bwl::eChannelScanResultSecurityMode::eSecurity_Mode_WEP);
@@ -364,9 +272,7 @@ bool mon_wlan_hal_whm::channel_scan_dump_cached_results()
         }
 
         if (map.find("EncryptionMode") != map.end()) {
-            std::string encryption_mode;
-            map["EncryptionMode"].get(encryption_mode);
-
+            std::string encryption_mode(map["EncryptionMode"]);
             if (encryption_mode.find("Default") != std::string::npos) {
                 results.encryption_mode.push_back(
                     bwl::eChannelScanResultEncryptionMode::eEncryption_Mode_NA);
@@ -382,9 +288,7 @@ bool mon_wlan_hal_whm::channel_scan_dump_cached_results()
         }
 
         if (map.find("OperatingStandards") != map.end()) {
-            std::string supported_standards;
-            map["OperatingStandards"].get(supported_standards);
-
+            std::string supported_standards(map["OperatingStandards"]);
             std::unordered_set<std::string>
                 all_standards; // split the standards received as a string, mostly to differentiate between a, ac and ax
             const char *delim = ",";
@@ -431,8 +335,10 @@ bool mon_wlan_hal_whm::channel_scan_dump_cached_results()
 
 bool mon_wlan_hal_whm::channel_scan_dump_results()
 {
-    //same logic ad the cached one
-    return channel_scan_dump_cached_results();
+    //Lets update our internal results from the pwhm then dump them
+    get_scan_results_from_pwhm();
+    channel_scan_dump_cached_results(); //lets dump the results
+    return true;
 }
 
 bool mon_wlan_hal_whm::generate_connected_clients_events(
@@ -728,21 +634,134 @@ bool mon_wlan_hal_whm::sta_unassoc_rssi_measurement(
     return true;
 }
 
-bool mon_wlan_hal_whm::process_scan_complete_event(
-    const beerocks::wbapi::AmbiorixVariant *event_data)
+bool mon_wlan_hal_whm::process_scan_complete_event(const std::string &result)
 {
-    if (m_scan_active) {
-        std::string result;
-        if (!event_data->read_child<>(result, "Result")) {
-            LOG(WARNING) << " Received a " << AMX_CL_SCAN_COMPLETE_EVT
-                         << " Notification without Result param!";
-        }
-        if (result == "done") {
-            event_queue_push(Event::Channel_Scan_Finished);
-        } else if (result == "error") {
-            event_queue_push(Event::Channel_Scan_Aborted);
-        }
+    if (result == "error") {
+        LOG(DEBUG) << " received ScanComplete event with Error indication!";
         m_scan_active = false;
+        event_queue_push(Event::Channel_Scan_Finished);
+        return false;
+    }
+    if (result == "done" && m_scan_active) {
+        m_scan_results.clear();
+        event_queue_push(Event::Channel_Scan_Finished);
+        m_scan_active = false;
+        get_scan_results_from_pwhm();
+    }
+    return true;
+}
+
+bool mon_wlan_hal_whm::get_scan_results_from_pwhm()
+{
+    AmbiorixVariant result;
+    AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
+    if (!m_ambiorix_cl->call(m_radio_path, "getScanResults", args, result)) {
+        LOG(ERROR) << " remote function call getScanResults Failed!";
+        return false;
+    }
+    AmbiorixVariantListSmartPtr scan_results_list =
+        result.read_children<AmbiorixVariantListSmartPtr>();
+    if (!scan_results_list) {
+        LOG(ERROR) << "failed reading scan_results!";
+        return false;
+    }
+
+    if (scan_results_list->empty()) {
+        LOG(ERROR) << "scan_results are empty";
+        return false;
+    }
+
+    m_scan_results.clear();
+
+    auto results_as_wrapped_list = scan_results_list->front();
+
+    auto ssid_results_as_list =
+        results_as_wrapped_list.read_children<AmbiorixVariantListSmartPtr>();
+
+    for (auto &ssid_results_map : *ssid_results_as_list) {
+        auto data_map = ssid_results_map.read_children<AmbiorixVariantMapSmartPtr>();
+        auto &map     = *data_map;
+
+        std::unordered_map<std::string, std::string> map_cach_bssid;
+
+        std::string bssid;
+        if (map.find("BSSID") != map.end()) {
+            map["BSSID"].get(bssid);
+            map_cach_bssid["BSSID"] = bssid;
+        } else {
+            LOG(DEBUG) << "BSSID is missing,skipping";
+            continue;
+        }
+
+        if (map.find("SSID") != map.end()) {
+            std::string ssid;
+            map["SSID"].get(ssid);
+            map_cach_bssid["SSID"] = ssid;
+        } else {
+            LOG(DEBUG) << "SSID is missing,skipping";
+            continue;
+        }
+
+        if (map.find("CentreChannel") != map.end()) {
+            std::string center_channel;
+            map["CentreChannel"].get(center_channel);
+            map_cach_bssid["CentreChannel"] = center_channel;
+        } else {
+            LOG(DEBUG) << "CentreChannel is missing,skipping";
+            continue;
+        }
+
+        std::string bandwidth;
+        if (map.find("Bandwidth") != map.end()) {
+            map["Bandwidth"].get(bandwidth);
+            map_cach_bssid["Bandwidth"] = bandwidth;
+        } else {
+            LOG(DEBUG) << "Bandwidth is missing,skipping";
+            continue;
+        }
+        if (map.find("Channel") != map.end()) {
+            std::string channel;
+            map["Channel"].get(channel);
+            map_cach_bssid["Channel"] = channel;
+        } else {
+            LOG(DEBUG) << "Channel is missing,skipping";
+            continue;
+        }
+
+        if (map.find("RSSI") != map.end()) {
+            std::string rssi;
+            map["RSSI"].get(rssi);
+            map_cach_bssid["RSSI"] = rssi;
+        } else {
+            LOG(DEBUG) << "RSSI is missing,skipping";
+            continue;
+        }
+
+        if (map.find("Noise") != map.end()) {
+            std::string noise;
+            map["Noise"].get(noise);
+            map_cach_bssid["Noise"] = noise;
+        }
+
+        if (map.find("SecurityModeEnabled") != map.end()) {
+            std::string security_mode_enabled;
+            map["SecurityModeEnabled"].get(security_mode_enabled);
+            map_cach_bssid["SecurityModeEnabled"] = security_mode_enabled;
+        }
+
+        if (map.find("EncryptionMode") != map.end()) {
+            std::string encryption_mode;
+            map["EncryptionMode"].get(encryption_mode);
+            map_cach_bssid["EncryptionMode"] = encryption_mode;
+        }
+
+        if (map.find("OperatingStandards") != map.end()) {
+            std::string operating_standards;
+            map["OperatingStandards"].get(operating_standards);
+            map_cach_bssid["OperatingStandards"] = operating_standards;
+        }
+
+        m_scan_results.push_back(map_cach_bssid);
     }
     return true;
 }

@@ -51,5 +51,41 @@ WiFiSec utils_wlan_hal_whm::security_type_from_string(const std::string &securit
     return map_it == security_type_table.end() ? WiFiSec::Invalid : map_it->second;
 }
 
+bwl::eChannelScanResultChannelBandwidth utils_wlan_hal_whm::get_bandwidth_from_int(const int32_t bw)
+{
+    using namespace bwl;
+    if (bw == 20) {
+        return eChannelScanResultChannelBandwidth::eChannel_Bandwidth_20MHz;
+    } else if (bw == 40) {
+        return eChannelScanResultChannelBandwidth::eChannel_Bandwidth_40MHz;
+    } else if (bw == 80) {
+        return eChannelScanResultChannelBandwidth::eChannel_Bandwidth_80MHz;
+    } else if (bw == 160) {
+        return eChannelScanResultChannelBandwidth::eChannel_Bandwidth_160MHz;
+    } else {
+        return bwl::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_NA;
+    }
+}
+
+bwl::eChannelScanResultOperatingFrequencyBand
+utils_wlan_hal_whm::eFreqType_to_eCh_scan_Op_Fr_Ba(const beerocks::eFreqType freq_type)
+{
+    using namespace beerocks;
+    switch (freq_type) {
+    case FREQ_24G: {
+        return bwl::eChannelScanResultOperatingFrequencyBand::eOperating_Freq_Band_2_4GHz;
+    }
+    case FREQ_5G: {
+        return bwl::eChannelScanResultOperatingFrequencyBand::eOperating_Freq_Band_5GHz;
+    }
+    case FREQ_24G_5G: {
+        return bwl::eChannelScanResultOperatingFrequencyBand::eOperating_Freq_Band_2_4GHz;
+    }
+    default: {
+        return bwl::eChannelScanResultOperatingFrequencyBand::eOperating_Freq_Band_NA;
+    }
+    }
+};
+
 } // namespace whm
 } // namespace bwl
