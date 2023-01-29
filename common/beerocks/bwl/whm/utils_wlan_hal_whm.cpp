@@ -11,8 +11,9 @@
 
 namespace bwl {
 namespace whm {
+namespace utils_wlan_hal_whm {
 
-eRadioState utils_wlan_hal_whm::radio_state_from_string(const std::string &state)
+eRadioState radio_state_from_string(const std::string &state)
 {
     if (state == "Down") {
         return eRadioState::DISABLED;
@@ -23,19 +24,7 @@ eRadioState utils_wlan_hal_whm::radio_state_from_string(const std::string &state
     }
 }
 
-const std::map<std::string, WiFiSec> utils_wlan_hal_whm::security_type_table = {
-    {"INVALID", WiFiSec::Invalid},
-    {"None", WiFiSec::None},
-    {"WEP-64", WiFiSec::WEP_64},
-    {"WEP-128", WiFiSec::WEP_128},
-    {"WPA-Personal", WiFiSec::WPA_PSK},
-    {"WPA2-Personal", WiFiSec::WPA2_PSK},
-    {"WPA-WPA2-Personal", WiFiSec::WPA_WPA2_PSK},
-    {"WPA2-WPA3-Personal", WiFiSec::WPA2_WP3_PSK},
-    {"WPA3-Personal", WiFiSec::WPA3_PSK},
-};
-
-std::string utils_wlan_hal_whm::security_type_to_string(const WiFiSec &security_type)
+std::string security_type_to_string(const WiFiSec &security_type)
 {
     for (const auto &map_it : security_type_table) {
         if (map_it.second == security_type) {
@@ -45,13 +34,13 @@ std::string utils_wlan_hal_whm::security_type_to_string(const WiFiSec &security_
     return "INVALID";
 }
 
-WiFiSec utils_wlan_hal_whm::security_type_from_string(const std::string &security_type)
+WiFiSec security_type_from_string(const std::string &security_type)
 {
     auto map_it = security_type_table.find(security_type);
     return map_it == security_type_table.end() ? WiFiSec::Invalid : map_it->second;
 }
 
-bwl::eChannelScanResultChannelBandwidth utils_wlan_hal_whm::get_bandwidth_from_int(const int32_t bw)
+bwl::eChannelScanResultChannelBandwidth get_bandwidth_from_int(const int32_t bw)
 {
     using namespace bwl;
     if (bw == 20) {
@@ -68,7 +57,7 @@ bwl::eChannelScanResultChannelBandwidth utils_wlan_hal_whm::get_bandwidth_from_i
 }
 
 bwl::eChannelScanResultOperatingFrequencyBand
-utils_wlan_hal_whm::eFreqType_to_eCh_scan_Op_Fr_Ba(const beerocks::eFreqType freq_type)
+eFreqType_to_eCh_scan_Op_Fr_Ba(const beerocks::eFreqType freq_type)
 {
     using namespace beerocks;
     switch (freq_type) {
@@ -87,5 +76,21 @@ utils_wlan_hal_whm::eFreqType_to_eCh_scan_Op_Fr_Ba(const beerocks::eFreqType fre
     }
 };
 
+namespace {
+
+const std::map<std::string, WiFiSec> security_type_table = {
+    {"INVALID", WiFiSec::Invalid},
+    {"None", WiFiSec::None},
+    {"WEP-64", WiFiSec::WEP_64},
+    {"WEP-128", WiFiSec::WEP_128},
+    {"WPA-Personal", WiFiSec::WPA_PSK},
+    {"WPA2-Personal", WiFiSec::WPA2_PSK},
+    {"WPA-WPA2-Personal", WiFiSec::WPA_WPA2_PSK},
+    {"WPA2-WPA3-Personal", WiFiSec::WPA2_WP3_PSK},
+    {"WPA3-Personal", WiFiSec::WPA3_PSK},
+};
+
+} // namespace
+} // namespace utils_wlan_hal_whm
 } // namespace whm
 } // namespace bwl

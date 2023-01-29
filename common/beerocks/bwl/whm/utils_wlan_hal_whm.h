@@ -16,42 +16,40 @@
 namespace bwl {
 namespace whm {
 
-class utils_wlan_hal_whm {
+namespace utils_wlan_hal_whm {
 
-public:
-    /**
-     * @brief Converts a string-based radio state to an eRadioState.
-     */
-    static eRadioState radio_state_from_string(const std::string &state);
+/**
+* @brief Converts a string-based radio state to an eRadioState.
+*/
+eRadioState radio_state_from_string(const std::string &state);
 
-    /**
-     * @brief Converts WiFiSec security type to string
-     */
-    static std::string security_type_to_string(const WiFiSec &security_type);
+/**
+* @brief Converts WiFiSec security type to string
+*/
+std::string security_type_to_string(const WiFiSec &security_type);
 
-    /**
-     * @brief Converts a string-based security type to WiFiSec
-     */
-    static WiFiSec security_type_from_string(const std::string &security_type);
+/**
+* @brief Converts a string-based security type to WiFiSec
+*/
+WiFiSec security_type_from_string(const std::string &security_type);
 
-    /**
-     * @brief converts int bandwith to eChannelScanResultChannelBandwidth
-     */
-    static bwl::eChannelScanResultChannelBandwidth get_bandwidth_from_int(const int32_t bw);
+/**
+* @brief converts int bandwith to eChannelScanResultChannelBandwidth
+*/
+bwl::eChannelScanResultChannelBandwidth get_bandwidth_from_int(const int32_t bw);
 
-    /**
-     * @brief converts eFreqType to eChannelScanResultOperatingFrequencyBand
-     */
-    static bwl::eChannelScanResultOperatingFrequencyBand
-    eFreqType_to_eCh_scan_Op_Fr_Ba(const beerocks::eFreqType freq_type);
+/**
+* @brief converts eFreqType to eChannelScanResultOperatingFrequencyBand
+*/
+bwl::eChannelScanResultOperatingFrequencyBand
+eFreqType_to_eCh_scan_Op_Fr_Ba(const beerocks::eFreqType freq_type);
 
-private:
-    /**
-     * @brief Convertion table of Security type from string to WiFiSec.
-     */
-    static const std::map<std::string, WiFiSec> security_type_table;
-};
+/**
+* @brief Convertion table of Security type from string to WiFiSec.
+*/
+const std::map<std::string, WiFiSec> security_type_table;
 
+} // namespace utils_wlan_hal_whm
 } // namespace whm
 } // namespace bwl
 
