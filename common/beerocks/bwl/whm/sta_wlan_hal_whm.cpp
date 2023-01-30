@@ -170,7 +170,29 @@ bool sta_wlan_hal_whm::start_wps_pbc()
 
 bool sta_wlan_hal_whm::detach() { return true; }
 
-bool sta_wlan_hal_whm::initiate_scan() { return true; }
+bool sta_wlan_hal_whm::initiate_scan()
+{
+
+    //scan is already active, as per spec, cancel the old one and start new one
+    if (m_scan_active) {
+        AmbiorixVariant result_abort;
+        AmbiorixVariant args_abort(AMXC_VAR_ID_HTABLE);
+        if (!m_ambiorix_cl->call(m_radio_path, "stopScan", args_abort, result_abort)) {
+            LOG(INFO) << " remote function stopScan Failed!";
+        }
+        m_scan_active =
+            false; // if for some reasons, no scan is active, stopScan will return error, thus the need to reset m_scan_active
+    }
+
+    AmbiorixVariant result;
+    AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
+    if (!m_ambiorix_cl->call(m_radio_path, "startScan", args, result)) {
+        LOG(ERROR) << " remote function call startScan Failed!";
+        return false;
+    }
+    m_scan_active = true;
+    return true;
+}
 
 bool sta_wlan_hal_whm::scan_bss(const sMacAddr &bssid, uint8_t channel,
                                 beerocks::eFreqType freq_type)
