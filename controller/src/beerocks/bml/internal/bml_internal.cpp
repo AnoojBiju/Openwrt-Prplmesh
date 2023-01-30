@@ -1549,6 +1549,7 @@ int bml_internal::process_cmdu_header(std::shared_ptr<beerocks_header> beerocks_
                     m_unassoc_sta_link_metric->rcpi              = response->rcpi();
                     m_unassoc_sta_link_metric->measurement_delta = response->measurement_delta();
                     tlvf::mac_to_array(response->sta_mac(), m_unassoc_sta_link_metric->sta_mac);
+		    LOG(DEBUG) << "CW: response->measurement_delta=" << response->measurement_delta() << " m_unassoc_sta_link_metric->measurement_delta=" << m_unassoc_sta_link_metric->measurement_delta << " For STA " << tlvf::mac_to_string(response->sta_mac());
                     m_prmUnAssocStaLinkMetricGet->set_value(op_error_code);
                 }
             }
