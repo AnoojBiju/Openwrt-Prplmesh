@@ -1275,30 +1275,32 @@ bool db::set_ap_vht_capabilities(wfa_map::tlvApVhtCapabilities &vht_caps_tlv)
     auto flags1 = vht_caps_tlv.flags1();
     auto flags2 = vht_caps_tlv.flags2();
 
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_obj, "MCSNSSTxSet", vht_caps_tlv.supported_vht_tx_mcs());
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_obj, "MCSNSSRxSet", vht_caps_tlv.supported_vht_rx_mcs());
+    auto transaction = m_ambiorix_datamodel->begin_transaction(path_to_obj);
+    if (!transaction) {
+        LOG(ERROR) << "Failed to start transaction for " << path_to_obj;
+        return false;
+    }
 
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfTxSpatialStreams",
-                                         flags1.max_num_of_supported_tx_spatial_streams + 1);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfRxSpatialStreams",
-                                         flags1.max_num_of_supported_rx_spatial_streams + 1);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "VHTShortGI80",
-                                         static_cast<bool>(flags1.short_gi_support_80mhz));
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_obj, "VHTShortGI160",
-                                  static_cast<bool>(flags1.short_gi_support_160mhz_and_80_80mhz));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "VHT8080",
-                                         static_cast<bool>(flags2.vht_support_80_80mhz));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "VHT160",
-                                         static_cast<bool>(flags2.vht_support_160mhz));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SUBeamformer",
-                                         static_cast<bool>(flags2.su_beamformer_capable));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MUBeamformer",
-                                         static_cast<bool>(flags2.mu_beamformer_capable));
+    ret_val &= transaction->set("MCSNSSTxSet", vht_caps_tlv.supported_vht_tx_mcs());
+    ret_val &= transaction->set("MCSNSSRxSet", vht_caps_tlv.supported_vht_rx_mcs());
 
-    return ret_val;
+    ret_val &= transaction->set("MaxNumberOfTxSpatialStreams",
+                                flags1.max_num_of_supported_tx_spatial_streams + 1);
+    ret_val &= transaction->set("MaxNumberOfRxSpatialStreams",
+                                flags1.max_num_of_supported_rx_spatial_streams + 1);
+    ret_val &= transaction->set("VHTShortGI80", static_cast<bool>(flags1.short_gi_support_80mhz));
+    ret_val &= transaction->set("VHTShortGI160",
+                                static_cast<bool>(flags1.short_gi_support_160mhz_and_80_80mhz));
+    ret_val &= transaction->set("VHT8080", static_cast<bool>(flags2.vht_support_80_80mhz));
+    ret_val &= transaction->set("VHT160", static_cast<bool>(flags2.vht_support_160mhz));
+    ret_val &= transaction->set("SUBeamformer", static_cast<bool>(flags2.su_beamformer_capable));
+    ret_val &= transaction->set("MUBeamformer", static_cast<bool>(flags2.mu_beamformer_capable));
+
+    if (!ret_val || m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty()) {
+        LOG(ERROR) << "Failed to commit sub-object" << path_to_obj;
+        return false;
+    }
+    return true;
 }
 
 bool db::dm_add_ap_operating_classes(const std::string &radio_mac, uint8_t max_tx_power,
