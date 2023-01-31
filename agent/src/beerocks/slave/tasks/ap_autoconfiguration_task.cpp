@@ -45,11 +45,13 @@
 
 #include <bpl/bpl_board.h>
 #include <bpl/bpl_cfg.h>
+#include <bpl_network/bpl_network.h>
 
 #include <easylogging++.h>
 
 using namespace beerocks;
 using namespace net;
+using namespace bpl;
 
 static constexpr uint8_t AUTOCONFIG_DISCOVERY_TIMEOUT_SECONDS = 3;
 
@@ -365,7 +367,7 @@ void ApAutoConfigurationTask::configuration_complete_wait_action(const std::stri
 
     // Check if all reported interfaces are in the bridge
     auto db               = AgentDB::get();
-    auto ifaces_in_bridge = network_utils::linux_get_iface_list_from_bridge(db->bridge.iface_name);
+    auto ifaces_in_bridge = bpl::bpl_network::get_iface_list_from_bridge(db->bridge.iface_name);
 
     auto radio = db->radio(radio_iface);
     if (!radio) {

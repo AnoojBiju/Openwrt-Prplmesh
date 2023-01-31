@@ -13,6 +13,8 @@
 
 #include <bcl/network/network_utils.h>
 
+#include <bpl_network/bpl_network.h>
+
 #include <beerocks/tlvf/beerocks_message_backhaul.h>
 
 #include <tlvf/ieee_1905_1/s802_11SpecificInformation.h>
@@ -30,6 +32,7 @@
 
 using namespace beerocks;
 using namespace net;
+using namespace bpl;
 using namespace son;
 
 constexpr uint8_t TOPOLOGY_DISCOVERY_TX_CYCLE_SEC = 60;
@@ -340,7 +343,7 @@ void TopologyTask::send_topology_discovery()
     auto db = AgentDB::get();
 
     // Make list of ifaces Macs to send on the message.
-    auto ifaces = network_utils::linux_get_iface_list_from_bridge(db->bridge.iface_name);
+    auto ifaces = bpl_network::get_iface_list_from_bridge(db->bridge.iface_name);
     for (const auto &iface_name : ifaces) {
         if (!network_utils::linux_iface_is_up_and_running(iface_name)) {
             continue;

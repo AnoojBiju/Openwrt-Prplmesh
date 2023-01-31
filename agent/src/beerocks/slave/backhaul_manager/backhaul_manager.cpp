@@ -36,6 +36,7 @@
 #include <tlvf/wfa_map/tlvBackhaulSteeringResponse.h>
 #include <tlvf/wfa_map/tlvProfile2AssociationStatusNotification.h>
 
+#include <bpl_network/bpl_network.h>
 // BPL Error Codes
 #include <bpl/bpl_cfg.h>
 #include <bpl/bpl_err.h>
@@ -728,8 +729,7 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
         }
 
         // link establish
-        auto ifaces =
-            beerocks::net::network_utils::linux_get_iface_list_from_bridge(db->bridge.iface_name);
+        auto ifaces = bpl::bpl_network::get_iface_list_from_bridge(db->bridge.iface_name);
 
         // If a wired (WAN) interface was provided, try it first, check if the interface is UP
         wan_monitor::ELinkState wired_link_state = wan_monitor::ELinkState::eInvalid;
@@ -1925,7 +1925,7 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
         // Try adding wireless backhaul STA interface to the bridge in case there is no
         // entity (hostapd) that adds it automaticaly.
         auto bridge        = db->bridge.iface_name;
-        auto bridge_ifaces = beerocks::net::network_utils::linux_get_iface_list_from_bridge(bridge);
+        auto bridge_ifaces = bpl::bpl_network::get_iface_list_from_bridge(bridge);
         if (!beerocks::net::network_utils::linux_add_iface_to_bridge(bridge, iface)) {
             LOG(INFO) << "The wireless interface " << iface << " is already in the bridge";
         }
@@ -2960,7 +2960,7 @@ void BackhaulManager::handle_dev_reset_default(
     // It will be removed later on (dev_set_config) in case of wireless backhaul connection is needed.
     auto db            = AgentDB::get();
     auto bridge        = db->bridge.iface_name;
-    auto bridge_ifaces = beerocks::net::network_utils::linux_get_iface_list_from_bridge(bridge);
+    auto bridge_ifaces = bpl::bpl_network::get_iface_list_from_bridge(bridge);
     auto eth_iface     = db->ethernet.wan.iface_name;
 
     auto program = params.at("program");
@@ -3071,7 +3071,7 @@ bool BackhaulManager::handle_dev_set_config(
         // remove wired (ethernet) interface from the bridge
         auto db            = AgentDB::get();
         auto bridge        = db->bridge.iface_name;
-        auto bridge_ifaces = beerocks::net::network_utils::linux_get_iface_list_from_bridge(bridge);
+        auto bridge_ifaces = bpl::bpl_network::get_iface_list_from_bridge(bridge);
         auto eth_iface     = db->ethernet.wan.iface_name;
         if (std::find(bridge_ifaces.begin(), bridge_ifaces.end(), eth_iface) !=
             bridge_ifaces.end()) {
