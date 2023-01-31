@@ -64,16 +64,21 @@ ubus call Ethernet.Link _get '{ "rel_path": ".[Name == \"eth0_4\"]." }' || {
     echo "Adding Ethernet Link"
     ETH_LINK="$(ubus call Ethernet.Link _add "{ \"parameters\": { \"Name\": \"eth0_4\", \"Alias\": \"eth0_4\",\"LowerLayers\": \"Device.Ethernet.Interface.$ETH_IF.\", \"Enable\": true } }" | jsonfilter -e '@.index')"
 }
+
 # We can now create an IP.Interface if there is none yet:
-LAN_INTERFACE="IP.Interface"
 ubus call IP.Interface _get '{ "rel_path": ".[Name == \"eth0_4\"]." }' || {
     echo "Adding IP.Interface"
-    LAN_INTERFACE="IP.Interface.""$(ubus call IP.Interface _add "{ \"parameters\": { \"Name\": \"eth0_4\", \"UCISectionNameIPv4\": \"cert\", \"Alias\": \"eth0_4\", \"LowerLayers\": \"Device.Ethernet.Link.$ETH_LINK.\", \"Enable\": true } }" | jsonfilter -e '@.index')"
+    ubus call IP.Interface _add "{ \"parameters\": { \"Name\": \"eth0_4\", \"UCISectionNameIPv4\": \"cert\", \"Alias\": \"eth0_4\", \"LowerLayers\": \"Device.Ethernet.Link.$ETH_LINK.\", \"Enable\": true } }"
+    # Adding this interface can take a long time
+    sleep 30
 }
 
+# Get the interface index
+CONTROL_INTERFACE="$(ubus call IP.Interface _get '{ "rel_path": ".[Name == \"eth0_4\"]." }' |grep -o '"[^"]\+"' | head -n 1| tr -d '"' )"
+
 # Wait until the interface is created, it seems like we can not add to the newly created interface object directly after creating it
-ubus wait_for "$LAN_INTERFACE"
-sleep 15
+ubus wait_for "$(echo "$CONTROL_INTERFACE"| sed 's/.$//')"
+sleep 2
 
 # We can now add the IP address if there is none yet:
 ubus call IP.Interface _get '{ "rel_path": ".[Name == \"eth0_4\"].IPv4Address.[Alias == \"eth0_4\"]." }' || {
@@ -83,11 +88,6 @@ ubus call IP.Interface _get '{ "rel_path": ".[Name == \"eth0_4\"].IPv4Address.[A
 sleep 5
 # Finally, we can enable it:
 ubus call "IP.Interface" _set '{ "rel_path": ".[Name == \"eth0_4\"].", "parameters": { "IPv4Enable": true } }'
-
-# Add an SSH-server to the control interface and enable it
-#ubus call "SSH.Server" _add "{ \"rel_path\": \".\", \"parameters\": { \"Interface\": \"Device.$LAN_INTERFACE.\", \"AllowRootPasswordLogin\": true, \"Alias\": \"control\" } }"
-#sleep 2
-#ubus call "SSH.Server" _set '{ "rel_path": ".[Alias == \"control\"].", "parameters": { "Enable": true } }'
 
 # Wired backhaul interface:
 uci set prplmesh.config.backhaul_wire_iface='eth1'
@@ -158,11 +158,23 @@ ip a |grep "br-lan:" |grep "state UP" >/dev/null || (echo "LAN Bridge DOWN, rest
 # If we can't ping the UCC, restart the IP manager
 ping -i 1 -c 2 192.168.250.199 || (/etc/init.d/ip-manager restart && sleep 12)
 
-# Restart the ssh server
-/etc/init.d/ssh-server restart
-sleep 5
+# Set up an ssh server on the control interface
+# Remove the default ssh servers
+ubus call SSH.Server _get '{ "rel_path": ".[Alias == \"lan\"]." }'  && {
+    echo "Removing default lan SSH server"
+    ubus call SSH.Server _del '{ "rel_path": ".[Alias == \"lan\"]." }'
+}
+ubus call SSH.Server _get '{ "rel_path": ".[Alias == \"wan\"]." }'  && {
+    echo "Removing default wan SSH server"
+    ubus call SSH.Server _del '{ "rel_path": ".[Alias == \"wan\"]." }'
+}
+# Add an ssh server on the control interface
 
-# Start an ssh server on the control interfce
-# The ssh server that is already running will only accept connections from 
-# the IP interface that was configured with the IP-Manager
-dropbear -F -T 10 -p192.168.250.173:22 &
+ubus call SSH.Server _get '{ "rel_path": ".[Alias == \"control-server\"]." }' || {
+    echo "Adding SSH server on control interface"
+    ubus call "SSH.Server" _add "{ \"rel_path\": \".\", \"parameters\": { \"Interface\": \"Device.$CONTROL_INTERFACE\", \"Alias\": \"control-server\", \"AllowRootPasswordLogin\": true } }"
+    sleep 5
+}
+
+# Enable the server
+ubus call "SSH.Server" _set '{ "rel_path": ".[Alias == \"control-server\"].", "parameters": { "Enable": true } }'
