@@ -1388,36 +1388,39 @@ bool db::set_ap_he_capabilities(wfa_map::tlvApHeCapabilities &he_caps_tlv)
     auto flags1 = he_caps_tlv.flags1();
     auto flags2 = he_caps_tlv.flags2();
 
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfTxSpatialStreams",
-                                         flags1.max_num_of_supported_tx_spatial_streams + 1);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfRxSpatialStreams",
-                                         flags1.max_num_of_supported_rx_spatial_streams + 1);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HE8080",
-                                         static_cast<bool>(flags1.he_support_80_80mhz));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HE160",
-                                         static_cast<bool>(flags1.he_support_160mhz));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SUBeamformer",
-                                         static_cast<bool>(flags2.su_beamformer_capable));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MUBeamformer",
-                                         static_cast<bool>(flags2.mu_beamformer_capable));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "ULMUMIMO",
-                                         static_cast<bool>(flags2.ul_mu_mimo_capable));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "ULOFDMA",
-                                         static_cast<bool>(flags2.ul_ofdm_capable));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "DLOFDMA",
-                                         static_cast<bool>(flags2.dl_ofdm_capable));
+    auto transaction = m_ambiorix_datamodel->begin_transaction(path_to_obj);
+    if (!transaction) {
+        LOG(ERROR) << "Failed to start transaction for " << path_to_obj;
+        return false;
+    }
+
+    ret_val &= transaction->set("MaxNumberOfTxSpatialStreams",
+                                flags1.max_num_of_supported_tx_spatial_streams + 1);
+    ret_val &= transaction->set("MaxNumberOfRxSpatialStreams",
+                                flags1.max_num_of_supported_rx_spatial_streams + 1);
+    ret_val &= transaction->set("HE8080", static_cast<bool>(flags1.he_support_80_80mhz));
+    ret_val &= transaction->set("HE160", static_cast<bool>(flags1.he_support_160mhz));
+    ret_val &= transaction->set("SUBeamformer", static_cast<bool>(flags2.su_beamformer_capable));
+    ret_val &= transaction->set("MUBeamformer", static_cast<bool>(flags2.mu_beamformer_capable));
+    ret_val &= transaction->set("ULMUMIMO", static_cast<bool>(flags2.ul_mu_mimo_capable));
+    ret_val &= transaction->set("ULOFDMA", static_cast<bool>(flags2.ul_ofdm_capable));
+    ret_val &= transaction->set("DLOFDMA", static_cast<bool>(flags2.dl_ofdm_capable));
+    ret_val &= !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
 
     uint8_t supported_he_mcs_length = he_caps_tlv.supported_he_mcs_length();
     path_to_obj += "MCSNSS";
     for (int i = 0; i < supported_he_mcs_length; i++) {
-        auto path_to_obj_instance = m_ambiorix_datamodel->add_instance(path_to_obj);
-        if (path_to_obj_instance.empty()) {
+        transaction = m_ambiorix_datamodel->begin_transaction(path_to_obj, true);
+        if (!transaction) {
             LOG(ERROR) << "Failed to add " << path_to_obj;
             ret_val = false;
             continue;
         }
-        ret_val &= m_ambiorix_datamodel->set(path_to_obj_instance + '.', "MCSNSSSet",
-                                             *he_caps_tlv.supported_he_mcs(i));
+        ret_val &= transaction->set("MCSNSSSet", *he_caps_tlv.supported_he_mcs(i));
+        if (m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty()) {
+            LOG(ERROR) << "Failed to commit " << path_to_obj;
+            ret_val = false;
+        }
     }
 
     return ret_val;
