@@ -17,15 +17,20 @@ if data_overlay_not_initialized; then
   done
   logger -t prplmesh -p daemon.info "Data overlay is initialized."
 fi
-sleep 25
-
-ubus wait_for IP.Interface
+sleep 10
 
 # Stop and disable the DHCP clients:
 /etc/init.d/tr181-dhcpv4client stop
 rm -f /etc/rc.d/S27tr181-dhcpv4client
 /etc/init.d/tr181-dhcpv6client stop
 rm -f /etc/rc.d/S25tr181-dhcpv6client
+
+# Save the IP settings persistently (PPM-2351):
+sed -ri 's/(dm-save.*) = false/\1 = true/g' /etc/amx/ip-manager/ip-manager.odl
+/etc/init.d/ip-manager restart
+sleep 12
+
+ubus wait_for IP.Interface
 
 # Set the LAN bridge IP:
 ubus call "IP.Interface" _set '{ "rel_path": ".[Name == \"br-lan\"].IPv4Address.[Alias == \"lan\"].", "parameters": { "IPAddress": "192.165.100.173" } }'
@@ -59,21 +64,30 @@ ubus call Ethernet.Link _get '{ "rel_path": ".[Name == \"eth0_4\"]." }' || {
     echo "Adding Ethernet Link"
     ETH_LINK="$(ubus call Ethernet.Link _add "{ \"parameters\": { \"Name\": \"eth0_4\", \"Alias\": \"eth0_4\",\"LowerLayers\": \"Device.Ethernet.Interface.$ETH_IF.\", \"Enable\": true } }" | jsonfilter -e '@.index')"
 }
-sleep 12
 # We can now create an IP.Interface if there is none yet:
+LAN_INTERFACE="IP.Interface"
 ubus call IP.Interface _get '{ "rel_path": ".[Name == \"eth0_4\"]." }' || {
     echo "Adding IP.Interface"
-    ubus call IP.Interface _add "{ \"parameters\": { \"Name\": \"eth0_4\", \"UCISectionNameIPv4\": \"cert\", \"Alias\": \"eth0_4\", \"LowerLayers\": \"Device.Ethernet.Link.$ETH_LINK.\", \"Enable\": true } }"
+    LAN_INTERFACE="IP.Interface.""$(ubus call IP.Interface _add "{ \"parameters\": { \"Name\": \"eth0_4\", \"UCISectionNameIPv4\": \"cert\", \"Alias\": \"eth0_4\", \"LowerLayers\": \"Device.Ethernet.Link.$ETH_LINK.\", \"Enable\": true } }" | jsonfilter -e '@.index')"
 }
-sleep 10
+
+# Wait until the interface is created, it seems like we can not add to the newly created interface object directly after creating it
+ubus wait_for "$LAN_INTERFACE"
+sleep 15
+
 # We can now add the IP address if there is none yet:
 ubus call IP.Interface _get '{ "rel_path": ".[Name == \"eth0_4\"].IPv4Address.[Alias == \"eth0_4\"]." }' || {
     echo "Adding IP address $IP"
     ubus call "IP.Interface" _add '{ "rel_path": ".[Name == \"eth0_4\"].IPv4Address.", "parameters": { "IPAddress": "192.168.250.173", "SubnetMask": "255.255.255.0", "AddressingType": "Static", "Alias": "eth0_4", "Enable" : true } }'
 }
-sleep 10
+sleep 5
 # Finally, we can enable it:
 ubus call "IP.Interface" _set '{ "rel_path": ".[Name == \"eth0_4\"].", "parameters": { "IPv4Enable": true } }'
+
+# Add an SSH-server to the control interface and enable it
+#ubus call "SSH.Server" _add "{ \"rel_path\": \".\", \"parameters\": { \"Interface\": \"Device.$LAN_INTERFACE.\", \"AllowRootPasswordLogin\": true, \"Alias\": \"control\" } }"
+#sleep 2
+#ubus call "SSH.Server" _set '{ "rel_path": ".[Alias == \"control\"].", "parameters": { "Enable": true } }'
 
 # Wired backhaul interface:
 uci set prplmesh.config.backhaul_wire_iface='eth1'
@@ -134,7 +148,7 @@ sh /rom/etc/uci-defaults/15_wireless-generate-macaddr || true
 
 uci commit
 /etc/init.d/system restart
-#/etc/init.d/network restart
+# /etc/init.d/network restart
 sleep 10
 
 # Try to work around PCF-681: if we don't have a connectivity, restart
@@ -145,8 +159,8 @@ ip a |grep "br-lan:" |grep "state UP" >/dev/null || (echo "LAN Bridge DOWN, rest
 ping -i 1 -c 2 192.168.250.199 || (/etc/init.d/ip-manager restart && sleep 12)
 
 # Restart the ssh server
-# /etc/init.d/ssh-server restart
-# sleep 10
+/etc/init.d/ssh-server restart
+sleep 5
 
 # Start an ssh server on the control interfce
 # The ssh server that is already running will only accept connections from 
