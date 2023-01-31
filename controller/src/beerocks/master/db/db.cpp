@@ -477,10 +477,10 @@ bool db::dm_add_sta_beacon_measurement(const beerocks_message::sBeaconResponse11
     }
     m_dialog_tokens[beacon.sta_mac] = beacon.dialog_token;
 
-    std::string measurement_inst =
-        m_ambiorix_datamodel->add_instance(sta->dm_path + ".MeasurementReport");
+    auto measurement_inst =
+        m_ambiorix_datamodel->start_transaction(sta->dm_path + ".MeasurementReport", true);
 
-    if (measurement_inst.empty()) {
+    if (!measurement_inst) {
         LOG(ERROR) << "Failed to add: " << sta->dm_path << ".MeasurementReport";
         return false;
     }
@@ -488,20 +488,24 @@ bool db::dm_add_sta_beacon_measurement(const beerocks_message::sBeaconResponse11
 
     ret_val &= dm_set_multi_ap_sta_noise_param(*sta, beacon.rcpi, beacon.rsni);
 
-    ret_val &= m_ambiorix_datamodel->set(measurement_inst, "BSSID", beacon.bssid);
-    ret_val &=
-        m_ambiorix_datamodel->set(measurement_inst, "MeasurementToken", beacon.measurement_token);
-    ret_val &= m_ambiorix_datamodel->set(measurement_inst, "RCPI", beacon.rcpi);
-    ret_val &= m_ambiorix_datamodel->set(measurement_inst, "RSNI", beacon.rsni);
-    ret_val &= m_ambiorix_datamodel->set(measurement_inst, "Channel", beacon.channel);
-    ret_val &= m_ambiorix_datamodel->set(measurement_inst, "OpClass", beacon.op_class);
-    ret_val &= m_ambiorix_datamodel->set(measurement_inst, "DialogToken", beacon.dialog_token);
-    ret_val &= m_ambiorix_datamodel->set(measurement_inst, "RepMode", beacon.rep_mode);
-    ret_val &= m_ambiorix_datamodel->set(measurement_inst, "PhyType", beacon.phy_type);
-    ret_val &= m_ambiorix_datamodel->set(measurement_inst, "AntId", beacon.ant_id);
-    ret_val &= m_ambiorix_datamodel->set(measurement_inst, "Duration", beacon.duration);
-    ret_val &= m_ambiorix_datamodel->set(measurement_inst, "StartTime", beacon.start_time);
-    return ret_val;
+    ret_val &= measurement_inst->set("BSSID", beacon.bssid);
+    ret_val &= measurement_inst->set("MeasurementToken", beacon.measurement_token);
+    ret_val &= measurement_inst->set("RCPI", beacon.rcpi);
+    ret_val &= measurement_inst->set("RSNI", beacon.rsni);
+    ret_val &= measurement_inst->set("Channel", beacon.channel);
+    ret_val &= measurement_inst->set("OpClass", beacon.op_class);
+    ret_val &= measurement_inst->set("DialogToken", beacon.dialog_token);
+    ret_val &= measurement_inst->set("RepMode", beacon.rep_mode);
+    ret_val &= measurement_inst->set("PhyType", beacon.phy_type);
+    ret_val &= measurement_inst->set("AntId", beacon.ant_id);
+    ret_val &= measurement_inst->set("Duration", beacon.duration);
+    ret_val &= measurement_inst->set("StartTime", beacon.start_time);
+
+    if (!ret_val || m_ambiorix_datamodel->commit_transaction(std::move(measurement_inst)).empty()) {
+        LOG(ERROR) << "Failed to commit: " << sta->dm_path << ".MeasurementReport";
+        return false;
+    }
+    return true;
 }
 
 bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac)
