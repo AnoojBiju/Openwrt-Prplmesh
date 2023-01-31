@@ -701,7 +701,7 @@ amxd_status_t trigger_vbss_move(amxd_object_t *object, amxd_function_t *func, am
 
     auto bss = station->get_bss();
     if (!bss) {
-        LOG(ERROR) << "Failed to move VBSS via NB API! The station is not currently connected!";
+        LOG(ERROR) << "Failed to move VBSS via NB API! The station is not currently connected! Station MAC: " << station->mac;
         return amxd_status_invalid_value;
     }
 

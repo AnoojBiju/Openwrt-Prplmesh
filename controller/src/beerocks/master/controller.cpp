@@ -3004,6 +3004,7 @@ bool Controller::handle_cmdu_control_message(
             break;
         }
 
+        LOG(DEBUG) << "Removing vap from DB: " << bss->dm_path;
         database.remove_vap(*radio, *bss);
 
         if (radio->bsses.erase(disabled_bssid) != 1) {
@@ -3170,6 +3171,7 @@ bool Controller::handle_cmdu_control_message(
             }
 
             // Remove the vap from DB
+            LOG(DEBUG) << "Removing BSS " << bss->bssid << " with path " << bss->dm_path << " from DB";
             database.remove_vap(*radio, *bss);
         }
 

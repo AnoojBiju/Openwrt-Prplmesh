@@ -527,10 +527,12 @@ std::shared_ptr<Station> db::add_node_station(const sMacAddr &mac, const sMacAdd
 {
     auto station = m_stations.add(mac);
     auto bss     = get_bss(parent_mac);
+    LOG(DEBUG) << "Adding Station node with mac " << mac << " parent mac: " << parent_mac;
 
     if (!bss) {
         LOG(ERROR) << "Failed to get sBss: " << parent_mac;
     } else {
+        LOG(DEBUG) << "Setting the BSS of station " << mac << " to " << bss->dm_path;
         station->set_bss(bss);
     }
     if (!add_node(mac, parent_mac, beerocks::TYPE_CLIENT)) {
@@ -6019,6 +6021,7 @@ void db::add_node_from_data(const std::string &client_entry, const ValuesMap &va
     auto client_mac = client_db_entry_to_mac(client_entry);
 
     // Add client node with defaults and in default location
+    LOG(DEBUG) << "Adding station node from data: " << client_mac;
     if (!add_node_station(client_mac)) {
         LOG(ERROR) << "Failed to add client node for client_entry " << client_entry;
         result.first = 1;
@@ -6168,6 +6171,7 @@ bool db::dm_add_sta_element(const sMacAddr &bssid, Station &station)
         return false;
     }
     if (bss->dm_path.empty()) {
+        LOG(DEBUG) << __func__ << " ignoring empty datamodel path for BSS " << bssid;
         return true;
     }
 
@@ -6527,6 +6531,7 @@ bool db::set_radio_utilization(const sMacAddr &bssid, uint8_t utilization)
 bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, const std::string &ssid,
                           bool is_vbss)
 {
+    LOG(DEBUG) << "Setting BSS for radio " << radio_mac << " bssid " << bssid;
     auto radio = get_radio_by_uid(radio_mac);
     if (!radio) {
         LOG(ERROR) << "Failed to get radio with mac: " << radio_mac;
@@ -6534,6 +6539,7 @@ bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, cons
     }
 
     if (radio->dm_path.empty()) {
+        LOG(DEBUG) << __func__ << "Ignoring empty datamodel path for radio " << radio_mac;
         return true;
     }
 
@@ -6546,12 +6552,14 @@ bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, cons
     if (bss->dm_path.empty()) {
 
         auto bss_path     = radio->dm_path + ".BSS";
+        LOG(DEBUG) << "Adding new BSS instance for radio MAC " << radio_mac << " bssid " <<  bssid;
         auto bss_instance = m_ambiorix_datamodel->add_instance(bss_path);
         if (bss_instance.empty()) {
             LOG(ERROR) << "Failed to add " << bss_path << " instance.";
             return false;
         }
         bss->dm_path = bss_instance;
+        LOG(DEBUG) << "New BSS instance successfully added. Path: " << bss_instance;
     }
 
     auto ret_val = true;
@@ -7683,6 +7691,7 @@ bool db::dm_remove_radio(Agent::sRadio &radio)
 
 bool db::dm_remove_bss(Agent::sRadio::sBss &bss)
 {
+    LOG(DEBUG) << "Removing BSS with path " << bss.dm_path << " from the datamodel";
     if (bss.dm_path.empty()) {
         return true;
     }
