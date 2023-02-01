@@ -4825,4 +4825,24 @@ bool Controller::handle_vbss_creation(const sMacAddr &radio_mac, const sMacAddr 
     return m_vbss_manager->handle_vbss_creation(radio_mac, vbss_id);
 }
 
+bool Controller::handle_sta_connect_vbss(const vbss::sStationConnectedEvent &stationConnect)
+{
+    // Assume things will fail
+    bool ret_val = false;
+    if ((ret_val = m_vbss_manager->handle_station_connect(stationConnect)) == false) {
+        LOG(ERROR) << "Failed to handle the station at the vbss manager level";
+    }
+
+    //We should try to start up another vbss since this one is used
+    auto agent = database.get_agent_by_bssid(stationConnect.bss_id);
+    if (agent) {
+        if (!create_and_send_vbss_creation(agent->al_mac)) {
+            LOG(DEBUG) << "Unable to start another vbss on agent " << agent->al_mac;
+        }
+    } else {
+        LOG(ERROR) << "Unable to find agent associated to bssid " << stationConnect.bss_id;
+    }
+    return ret_val;
+}
+
 } // namespace son

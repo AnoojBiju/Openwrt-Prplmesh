@@ -280,6 +280,15 @@ public:
      */
     bool create_and_send_vbss_creation(const sMacAddr &agent_mac);
 
+    /**
+     * @brief Pass the station connect event to the vbss manager for book keeping
+     * 
+     * @param stationConnect 
+     * @return true if no errors
+     * @return false if an error occurred
+     */
+    bool handle_sta_connect_vbss(const vbss::sStationConnectedEvent &stationConnect);
+
 private:
     /**
      * @brief Handles the client-connected event in the CMDU server.

@@ -32,6 +32,11 @@
 #include "pre_association_steering/pre_association_steering_task.h"
 #endif
 
+#ifdef ENABLE_VBSS
+#include "../../../../vbss/vbss_actions.h"
+#include "../../../../vbss/vbss_task.h"
+#endif
+
 using namespace beerocks;
 using namespace net;
 using namespace son;
@@ -325,6 +330,14 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
                 auto bss     = radio->bsses.add(bss_entry.radio_bssid(), *radio, vap_id);
                 bss->enabled = true;
                 bss->ssid    = bss_entry.ssid_str();
+
+#ifdef ENABLE_VBSS
+                auto vbss_it = radio->vbss_ids_used.find(bss_entry.radio_bssid());
+                if (vbss_it != radio->vbss_ids_used.end()) {
+                    bss->is_vbss = true;
+                }
+#endif // ENABLE_VBSS
+
                 // Backhaul is not reported in this message. Leave it unchanged.
                 // TODO "backhaul" is not set in this TLV, so just assume false
                 if (vap_id == eBeeRocksIfaceIds::IFACE_ID_INVALID) {
@@ -656,6 +669,14 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
         database.clear_node_stats_info(client_mac);
         client->clear_cross_rssi();
         database.dm_clear_sta_stats(tlvf::mac_from_string(client_mac_str));
+
+#ifdef ENABLE_VBSS
+        vbss::sStationConnectedEvent sta_conn_event = {};
+        sta_conn_event.client_mac                   = client_mac;
+        sta_conn_event.bss_id                       = bssid;
+        tasks.push_event(database.get_vbss_task_id(), vbss_task::eEventType::STATION_CONNECTED,
+                         &sta_conn_event);
+#endif
 
         if (!(database.get_node_type(client_mac_str) == beerocks::TYPE_IRE_BACKHAUL &&
               database.get_node_handoff_flag(*client))) {

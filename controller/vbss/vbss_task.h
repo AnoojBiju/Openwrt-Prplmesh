@@ -22,7 +22,7 @@ public:
     bool handle_ieee1905_1_msg(const sMacAddr &src_mac,
                                ieee1905_1::CmduMessageRx &cmdu_rx) override;
 
-    enum eEventType { MOVE, CREATE, DESTROY };
+    enum eEventType { MOVE, CREATE, DESTROY, STATION_CONNECTED };
 
 protected:
     virtual void work() override;
@@ -152,6 +152,15 @@ private:
      */
     bool handle_client_security_ctx_resp(const sMacAddr &src_mac,
                                          ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief When a station connects lets analyze to see if it's a VSTA
+     * 
+     * @param stationConnected 
+     * @return true If no errors occurred. a true does not mean it's a VSTA
+     * @return false If an error occurred processing this event
+     */
+    bool handle_station_connected_event(const vbss::sStationConnectedEvent &stationConnected);
 };
 
 #endif // VBSS_TASK_H

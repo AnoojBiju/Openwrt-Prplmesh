@@ -118,6 +118,14 @@ void vbss_task::handle_event(int event_enum_value, void *event_obj)
         handle_vbss_destruction_event(*destroy_event);
         break;
     }
+    case eEventType::STATION_CONNECTED: {
+        LOG(INFO) << "VBSS Task recieved a station connect event";
+        auto sta_connected_event = reinterpret_cast<vbss::sStationConnectedEvent *>(event_obj);
+        if (!handle_station_connected_event(*sta_connected_event)) {
+            LOG(ERROR) << "Failed to handle a station connected event in vbss task";
+        }
+        break;
+    }
     default:
         LOG(WARNING) << "VBSS Task recieved an unhandled event type (" << event_enum_value << ")";
         break;
@@ -637,4 +645,25 @@ bool vbss_task::should_trigger_channel_switch(const sMacAddr src_ruid, const sMa
     out_channel = dest_channel;
     out_opclass = dest_op_class;
     return true;
+}
+
+bool vbss_task::handle_station_connected_event(const vbss::sStationConnectedEvent &stationConnected)
+{
+    LOG(DEBUG) << "We are going to handle station connect event";
+    auto radio = m_database.get_radio_by_bssid(stationConnected.bss_id);
+    if (!radio) {
+        LOG(ERROR) << "Failed to find radio associated with bssid " << stationConnected.bss_id;
+        return false;
+    }
+    auto vbss_it = radio->vbss_ids_used.find(stationConnected.bss_id);
+    if (vbss_it == radio->vbss_ids_used.end()) {
+        //Not a vbss, just return
+        return true;
+    }
+    auto controller_ctx = m_database.get_controller_ctx();
+    if (!controller_ctx) {
+        LOG(ERROR) << "Failed to get controller context needed to handle client connected";
+        return false;
+    }
+    return controller_ctx->handle_sta_connect_vbss(stationConnected);
 }
