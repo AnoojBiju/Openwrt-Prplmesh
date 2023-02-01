@@ -199,6 +199,19 @@ bool VbssManager::find_and_create_vbss(const sMacAddr &agent_mac, vbss::sCreatio
     return false;
 }
 
+bool VbssManager::handle_vbss_creation(const sMacAddr &radio_mac, const sMacAddr &vbss_id)
+{
+    auto radio = m_database.get_radio_by_uid(radio_mac);
+    if (!radio) {
+        LOG(ERROR) << "Failed to get radio with radio mac: " << radio_mac;
+        return false;
+    }
+    radio->vbss_ids_used[vbss_id] = true;
+    ++m_current_num_vbss;
+    LOG(DEBUG) << "We now have " << m_current_num_vbss << " vbss running";
+    return true;
+}
+
 bool VbssManager::can_radio_support_another_vbss(const sMacAddr &agent_mac, const sMacAddr &bssid)
 {
     // First get radio that the BSS is currently associated on

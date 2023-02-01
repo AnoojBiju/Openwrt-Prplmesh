@@ -4820,4 +4820,9 @@ bool Controller::create_and_send_vbss_creation(const sMacAddr &agent_mac)
     return false;
 }
 
+bool Controller::handle_vbss_creation(const sMacAddr &radio_mac, const sMacAddr &vbss_id)
+{
+    return m_vbss_manager->handle_vbss_creation(radio_mac, vbss_id);
+}
+
 } // namespace son
