@@ -412,8 +412,10 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
                        << "! Creation event failed";
             return false;
         }
-        //TODO: Add VBSSes to DM
-
+        auto cntrCtx = m_database.get_controller_ctx();
+        if (cntrCtx) {
+            return cntrCtx->handle_vbss_creation(ruid, vbssid);
+        }
         return true;
     }
 

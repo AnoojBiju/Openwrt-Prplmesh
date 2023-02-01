@@ -74,6 +74,16 @@ public:
     /// @return true if possible to move; false if radio agent couldn't support the vbss operation
     bool can_radio_support_another_vbss(const sMacAddr &agent_mac, const sMacAddr &bssid);
 
+    /**
+     * @brief Handle the response from radio when successful Vbss Creation
+     * 
+     * @param radio_mac Radio that created vbss
+     * @param vbssid Id of vbss
+     * @return true if no errors
+     * @return false if errors
+     */
+    bool handle_vbss_creation(const sMacAddr &radio_mac, const sMacAddr &vbss_id);
+
     bool attempt_move_associated_client(const sMacAddr &agent_mac, const sMacAddr &cur_bssid,
                                         const sMacAddr &cl_mac);
 
