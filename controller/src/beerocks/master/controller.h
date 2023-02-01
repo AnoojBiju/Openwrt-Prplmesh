@@ -182,9 +182,6 @@ public:
                            const sMacAddr &vbssid, const sMacAddr &client_mac,
                            const std::string &new_bss_ssid, const std::string &new_bss_pass);
 
-    bool send_agent_capabilities_to_vbss_manager(const sMacAddr &agent_mac,
-                                                 const beerocks::mac_map<vbss::sAPRadioVBSSCapabilities> &ruid_cap_map);
-
     /**
      * @brief Triggers the sending of QoS configuration to agents
      *
@@ -251,6 +248,37 @@ public:
      * @return true ifsuccess, false for any issue.
      */
     bool get_unassociated_stations_stats();
+
+    /**
+     * @brief Sends the Agent Info from ApRadioVbssCapabilities to Vbss manager
+     * 
+     * @param agent_mac Mac Address of the Agent that is hosting the radio who sent the message
+     * @param ruid_cap_map Map of capabilities sent by radios
+     * @return true if no errors
+     * @return false if errors along with log messages
+     */
+    bool send_agent_capabilities_to_vbss_manager(
+        const sMacAddr &agent_mac,
+        const beerocks::mac_map<vbss::sAPRadioVBSSCapabilities> &ruid_cap_map);
+
+    /**
+     * @brief Handle the respond from an radio when a vbss creation was sent
+     * 
+     * @param radio_mac mac address of the radio that created the vbss
+     * @param vbss_id mac address of the vbss
+     * @return true if no errors
+     * @return false if an error occurs
+     */
+    bool handle_vbss_creation(const sMacAddr &radio_mac, const sMacAddr &vbss_id);
+
+    /**
+     * @brief Create and send vbss creation object
+     * 
+     * @param agent_mac mac of agent to send the possible creation to 
+     * @return true on success
+     * @return false if an error has occurred
+     */
+    bool create_and_send_vbss_creation(const sMacAddr &agent_mac);
 
 private:
     /**
@@ -679,6 +707,8 @@ private:
      * Broker client to exchange CMDU messages with broker server running in transport process.
      */
     std::shared_ptr<beerocks::btl::BrokerClient> m_broker_client;
+
+    std::unique_ptr<vbss::VbssManager> m_vbss_manager;
 
     /**
      * @brief sends a message of type UNASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE, it contains list/ddata of unassociated stations 

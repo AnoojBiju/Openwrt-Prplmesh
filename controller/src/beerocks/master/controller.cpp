@@ -135,6 +135,11 @@ Controller::Controller(db &database_,
 
     database.set_controller_ctx(this);
 
+#ifdef ENABLE_VBSS
+    LOG(DEBUG) << "Starting vbss manager";
+    m_vbss_manager = std::make_unique<vbss::VbssManager>(database, timer_manager);
+#endif
+
     start_mandatory_tasks();
     start_optional_tasks();
 
@@ -314,6 +319,13 @@ bool Controller::start()
     }
 
     transaction.commit();
+
+#ifdef ENABLE_VBSS
+    if (!m_vbss_manager->initialize()) {
+        LOG(ERROR) << "Failed to initialize VBSS Manager";
+        return false;
+    }
+#endif
 
     LOG(DEBUG) << "started";
 
@@ -3402,7 +3414,7 @@ bool Controller::handle_cmdu_control_message(
             new_event.snr        = notification->params().rx_snr;
             new_event.client_mac = notification->params().result.mac;
             new_event.bssid      = database.get_hostap_vap_mac(tlvf::mac_from_string(ap_mac),
-                                                          notification->params().vap_id);
+                                                               notification->params().vap_id);
             m_task_pool.push_event(database.get_pre_association_steering_task_id(),
                                    pre_association_steering_task::eEvents::
                                        STEERING_EVENT_RSSI_MEASUREMENT_SNR_NOTIFICATION,
@@ -4145,24 +4157,17 @@ bool Controller::trigger_vbss_move(const sMacAddr &connected_ruid, const sMacAdd
     client_vbss.current_connected_ruid = connected_ruid;
     client_vbss.vbssid                 = vbssid;
 
-    vbss_task::sMoveEvent move_event = {};
-    move_event.client_vbss           = client_vbss;
-    move_event.dest_ruid             = dest_ruid;
-    move_event.ssid                  = new_bss_ssid;
-    move_event.password              = new_bss_pass;
+    vbss::sMoveEvent move_event = {};
+    move_event.client_vbss      = client_vbss;
+    move_event.dest_ruid        = dest_ruid;
+    move_event.ssid             = new_bss_ssid;
+    move_event.password         = new_bss_pass;
 
     m_task_pool.push_event(task_id, vbss_task::eEventType::MOVE, &move_event);
 
     return true;
 #endif
     LOG(ERROR) << "Failed to trigger VBSS move! VBSS is not enabled!";
-    return false;
-}
-
-bool Controller::send_agent_capabilities_to_vbss_manager(const sMacAddr &agent_mac,
-                                                         const beerocks::mac_map<vbss::sAPRadioVBSSCapabilities> &ruid_cap_map)
-{
-    //    return m_vbss_manager->analyze_radio_restriction(agent_mac, ruid_cap_map);
     return false;
 }
 
@@ -4784,6 +4789,35 @@ bool Controller::send_unassociated_sta_link_metrics_query_message(
         }
     }
     return true;
+}
+
+bool Controller::send_agent_capabilities_to_vbss_manager(
+    const sMacAddr &agent_mac,
+    const beerocks::mac_map<vbss::sAPRadioVBSSCapabilities> &ruid_cap_map)
+{
+    if (m_vbss_manager->analyze_radio_restriction(agent_mac, ruid_cap_map)) {
+        //Check to see if Agent is currently hosting a VBSS, if not, tell it to
+        if (m_vbss_manager->currently_have_vbss_free(agent_mac)) {
+            return create_and_send_vbss_creation(agent_mac);
+        }
+        // Don't have space, not a error
+        return true;
+    }
+    LOG(ERROR) << "Failed to analyze the VBSS Restrictions for agent " << agent_mac;
+    return false;
+}
+
+bool Controller::create_and_send_vbss_creation(const sMacAddr &agent_mac)
+{
+    vbss::sCreationEvent createEvent = {};
+    if (m_vbss_manager->find_and_create_vbss(agent_mac, createEvent)) {
+        m_task_pool.push_event(database.get_vbss_task_id(), vbss_task::eEventType::CREATE,
+                               &createEvent);
+        LOG(DEBUG) << "Sent create event for open vbss on agent: " << agent_mac;
+        return true;
+    }
+    LOG(ERROR) << "There was a error attempting to find vbss specifics for agent " << agent_mac;
+    return false;
 }
 
 } // namespace son

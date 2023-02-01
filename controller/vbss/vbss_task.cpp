@@ -96,14 +96,14 @@ void vbss_task::handle_event(int event_enum_value, void *event_obj)
 
     switch (event_enum_value) {
     case eEventType::MOVE: {
-        auto move_event = reinterpret_cast<sMoveEvent *>(event_obj);
+        auto move_event = reinterpret_cast<vbss::sMoveEvent *>(event_obj);
         LOG(INFO) << "VBSS Task recieved a MOVE event. Starting move process for client \""
                   << move_event->client_vbss.client_mac << "\"";
         handle_move_client_event(*move_event);
         break;
     }
     case eEventType::CREATE: {
-        auto create_event = reinterpret_cast<sCreationEvent *>(event_obj);
+        auto create_event = reinterpret_cast<vbss::sCreationEvent *>(event_obj);
         LOG(INFO)
             << "VBSS Task received a CREATE event. Starting vbss creation process for client \""
             << create_event->client_vbss.client_mac << "\"";
@@ -111,7 +111,7 @@ void vbss_task::handle_event(int event_enum_value, void *event_obj)
         break;
     }
     case eEventType::DESTROY: {
-        auto destroy_event = reinterpret_cast<sDestructionEvent *>(event_obj);
+        auto destroy_event = reinterpret_cast<vbss::sDestructionEvent *>(event_obj);
         LOG(INFO)
             << "VBSS Task received a DESTROY event. Starting vbss destruction process for client \""
             << destroy_event->client_vbss.client_mac << "\"";
@@ -124,7 +124,7 @@ void vbss_task::handle_event(int event_enum_value, void *event_obj)
     }
 }
 
-bool vbss_task::handle_move_client_event(const sMoveEvent &move_event)
+bool vbss_task::handle_move_client_event(const vbss::sMoveEvent &move_event)
 {
     vbss::sClientVBSS client_vbss = move_event.client_vbss;
     sMacAddr client_mac           = client_vbss.client_mac;
@@ -148,7 +148,7 @@ bool vbss_task::handle_move_client_event(const sMoveEvent &move_event)
     // Add a new sMoveEvent to the mac_map with the new state CLIENT_SEC_CTX (Client Security Context Request)
     // which is the first step of the move process
     active_moves.add(client_vbss.vbssid, client_vbss, move_event.dest_ruid, move_event.ssid,
-                     move_event.password, eMoveProcessState::CLIENT_SEC_CTX);
+                     move_event.password, vbss::eMoveProcessState::CLIENT_SEC_CTX);
 
     sMacAddr agent_mac = agent->al_mac;
 
@@ -163,7 +163,7 @@ bool vbss_task::handle_move_client_event(const sMoveEvent &move_event)
     return true;
 }
 
-bool vbss_task::handle_vbss_creation_event(const sCreationEvent &create_event)
+bool vbss_task::handle_vbss_creation_event(const vbss::sCreationEvent &create_event)
 {
     vbss::sClientVBSS client_vbss = create_event.client_vbss;
     sMacAddr client_mac           = client_vbss.client_mac;
@@ -220,7 +220,7 @@ bool vbss_task::handle_vbss_creation_event(const sCreationEvent &create_event)
     return true;
 }
 
-bool vbss_task::handle_vbss_destruction_event(const sDestructionEvent &destroy_event)
+bool vbss_task::handle_vbss_destruction_event(const vbss::sDestructionEvent &destroy_event)
 {
 
     vbss::sClientVBSS client_vbss = destroy_event.client_vbss;
@@ -263,9 +263,10 @@ bool vbss_task::handle_ap_radio_vbss_caps_msg(const sMacAddr &src_mac,
 
     auto ap_vbss_caps_tlv_list = cmdu_rx.getClassList<wfa_map::ApRadioVbssCapabilities>();
     if (ap_vbss_caps_tlv_list.empty()) {
-        TASK_LOG(ERROR) << "BSS Configuration Request CMDU mid=" << std::hex
-                        << cmdu_rx.getMessageId()
-                        << " does not have AP Radio VBSS Capabilities TLV";
+        LOG(ERROR) << "BSS Configuration Request from: " << src_mac << " CMDU mid=" << std::hex
+                   << cmdu_rx.getMessageId() << " does not have AP Radio VBSS Capabilities TLV";
+        LOG(DEBUG) << "Requesting VBSS Capabilities from " << src_mac;
+        vbss::vbss_actions::request_ap_radio_vbss_caps(src_mac, m_database);
         return false;
     }
 
@@ -301,7 +302,7 @@ bool vbss_task::handle_ap_radio_vbss_caps_msg(const sMacAddr &src_mac,
         ruid_caps_map.add(ap_vbss_caps_tlv->radio_uid(), ap_radio_caps);
     }
     auto controller_ctx = m_database.get_controller_ctx();
-    if(controller_ctx == nullptr){
+    if (controller_ctx == nullptr) {
         LOG(ERROR) << "controller ctx is a nullptr, failing";
         return false;
     }
@@ -327,10 +328,10 @@ bool vbss_task::handle_move_response_msg(const sMacAddr &src_mac,
     LOG(INFO) << "Recieved " << msg_desc << "Response for Client MAC " << client_mac
               << " and BSSID " << bssid;
 
-    auto existing_move = get_matching_active_move(bssid, eMoveProcessState::VBSS_MOVE_PREP);
+    auto existing_move = get_matching_active_move(bssid, vbss::eMoveProcessState::VBSS_MOVE_PREP);
     if (existing_move != nullptr && !is_cancelled) {
         // Move exists for VBSSID and is in response to a MOVE_PREP request
-        existing_move->state = eMoveProcessState::VBSS_CREATION;
+        existing_move->state = vbss::eMoveProcessState::VBSS_CREATION;
         if (!vbss::vbss_actions::create_vbss(existing_move->client_vbss, existing_move->dest_ruid,
                                              existing_move->ssid, existing_move->password,
                                              existing_move->sec_ctx_info.get(), m_database)) {
@@ -370,11 +371,12 @@ bool vbss_task::handle_trigger_chan_switch_announce_resp(const sMacAddr &src_mac
     LOG(INFO) << "Recieved Trigger Channel Switch Announcement Response for Client " << client_mac
               << ", Channel #" << csa_channel << " and Op Class (" << op_class << ")";
 
-    auto existing_move = get_matching_active_move(bssid, eMoveProcessState::TRIGGER_CHANNEL_SWITCH);
+    auto existing_move =
+        get_matching_active_move(bssid, vbss::eMoveProcessState::TRIGGER_CHANNEL_SWITCH);
     if (existing_move != nullptr) {
         // Recieved Trigger Channel Switch Announcement during move
         // Destroy existing VBSS now that channel has been switched
-        existing_move->state = eMoveProcessState::VBSS_DESTRUCTION;
+        existing_move->state = vbss::eMoveProcessState::VBSS_DESTRUCTION;
         if (!vbss::vbss_actions::destroy_vbss(existing_move->client_vbss, false, m_database)) {
             LOG(ERROR) << "Move creation succeeded, but vbss destruction request to radio "
                        << existing_move->client_vbss.current_connected_ruid << " failed to send!";
@@ -430,7 +432,7 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
     }
 
     LOG(DEBUG) << "Checking existing moves with creation state";
-    auto existing_move = get_matching_active_move(vbssid, eMoveProcessState::VBSS_CREATION);
+    auto existing_move = get_matching_active_move(vbssid, vbss::eMoveProcessState::VBSS_CREATION);
     if (existing_move) {
         LOG(DEBUG) << "Found existing move with creation state";
         // Received creation request response during a move
@@ -450,7 +452,7 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
             LOG(INFO) << "Virtual BSS Creation failed on destination radio " << ruid
                       << "! Sending Move Cancel request to currently connected radio";
 
-            existing_move->state = eMoveProcessState::VBSS_MOVE_CANCEL;
+            existing_move->state = vbss::eMoveProcessState::VBSS_MOVE_CANCEL;
 
             if (!vbss::vbss_actions::send_move_cancel_request(agent_mac, existing_move->client_vbss,
                                                               m_database)) {
@@ -464,7 +466,7 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
         if (should_trigger_channel_switch(src_ruid, existing_move->dest_ruid, channel, opclass)) {
 
             LOG(DEBUG) << "Triggering channel switch";
-            existing_move->state = eMoveProcessState::TRIGGER_CHANNEL_SWITCH;
+            existing_move->state = vbss::eMoveProcessState::TRIGGER_CHANNEL_SWITCH;
             if (vbss::vbss_actions::send_trigger_channel_switch_announcement(
                     agent_mac, channel, opclass, existing_move->client_vbss, m_database)) {
                 // Trigger Channel Switch Succeeded
@@ -475,7 +477,7 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
             return false;
         }
         // Creation succeeded, send VBSS Destruction since Trigger Switch Announcement is not required.
-        existing_move->state = eMoveProcessState::VBSS_DESTRUCTION;
+        existing_move->state = vbss::eMoveProcessState::VBSS_DESTRUCTION;
         LOG(DEBUG) << "Sending destruction event";
         if (!vbss::vbss_actions::destroy_vbss(existing_move->client_vbss, false, m_database)) {
             LOG(ERROR) << "Move creation succeeded, but vbss destruction request to radio "
@@ -487,7 +489,7 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
     }
 
     LOG(DEBUG) << "Checking existing moves with destruction state";
-    existing_move = get_matching_active_move(vbssid, eMoveProcessState::VBSS_DESTRUCTION);
+    existing_move = get_matching_active_move(vbssid, vbss::eMoveProcessState::VBSS_DESTRUCTION);
     if (existing_move) {
         // Recieved destruction request response during a move
 
@@ -541,7 +543,7 @@ bool vbss_task::handle_client_security_ctx_resp(const sMacAddr &src_mac,
     std::copy_n(client_sec_ctx_tlv->ptk(), sec_ctx_info->key_length, sec_ctx_info->ptk);
     std::copy_n(client_sec_ctx_tlv->gtk(), sec_ctx_info->group_key_length, sec_ctx_info->gtk);
 
-    auto existing_move = get_matching_active_move(bssid, eMoveProcessState::CLIENT_SEC_CTX);
+    auto existing_move = get_matching_active_move(bssid, vbss::eMoveProcessState::CLIENT_SEC_CTX);
     if (existing_move) {
         LOG(DEBUG) << "A move is in progress for client '" << client_mac << "'";
         // A move is in process for this mac address (and vbssid) and this state is the state that should be processed
@@ -559,7 +561,7 @@ bool vbss_task::handle_client_security_ctx_resp(const sMacAddr &src_mac,
             return false;
         }
 
-        existing_move->state = eMoveProcessState::VBSS_MOVE_PREP;
+        existing_move->state = vbss::eMoveProcessState::VBSS_MOVE_PREP;
 
         LOG(DEBUG) << "Sending move preparation request to agent '" << agent->al_mac << "'";
         // Next step is move preperation request. Execute and return since this data should not be sent to VBSS Manager
@@ -593,8 +595,8 @@ bool vbss_task::handle_client_security_ctx_resp(const sMacAddr &src_mac,
     return true;
 }
 
-std::shared_ptr<vbss_task::sMoveEvent>
-vbss_task::get_matching_active_move(const sMacAddr vbssid, const eMoveProcessState state)
+std::shared_ptr<vbss::sMoveEvent>
+vbss_task::get_matching_active_move(const sMacAddr vbssid, const vbss::eMoveProcessState state)
 {
     auto existing_move = active_moves.get(vbssid);
     if (existing_move == nullptr) {

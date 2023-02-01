@@ -315,6 +315,7 @@ public:
         /** BSSes configured/reported on this radio. */
         beerocks::mac_map<sBss> bsses;
 
+        bool vbss_capable_radio = false;
         /** Pre-populated with available bss id's this radio can support */
         std::unordered_map<sMacAddr, bool> vbss_ids_used;
 

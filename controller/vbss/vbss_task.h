@@ -24,72 +24,6 @@ public:
 
     enum eEventType { MOVE, CREATE, DESTROY };
 
-    // TODO: Might be able to be moved to private. Revisit later
-    // Keeping public for now in case people want to check later
-    enum eMoveProcessState {
-        INIT,
-        CLIENT_SEC_CTX,
-        VBSS_MOVE_PREP,
-        VBSS_CREATION,
-        VBSS_MOVE_CANCEL,
-        TRIGGER_CHANNEL_SWITCH,
-        VBSS_DESTRUCTION
-    };
-
-    struct sMoveEvent {
-        vbss::sClientVBSS client_vbss;
-        sMacAddr dest_ruid;
-        std::string ssid;
-        std::string password;
-        eMoveProcessState state = INIT;
-        std::shared_ptr<vbss::sClientSecCtxInfo> sec_ctx_info;
-
-        sMoveEvent(const sMacAddr &vbssid, const vbss::sClientVBSS &client_vbss_,
-                   sMacAddr dest_ruid_, const std::string &ssid_, const std::string &password_)
-            : client_vbss(client_vbss_), dest_ruid(dest_ruid_), ssid(ssid_), password(password_)
-        {
-        }
-
-        sMoveEvent(const sMacAddr &vbssid, const vbss::sClientVBSS &client_vbss_,
-                   sMacAddr dest_ruid_, const std::string &ssid_, const std::string &password_,
-                   const eMoveProcessState &state_)
-            : client_vbss(client_vbss_), dest_ruid(dest_ruid_), ssid(ssid_), password(password_),
-              state(state_)
-        {
-        }
-
-        sMoveEvent(){};
-    };
-
-    struct sCreationEvent {
-        vbss::sClientVBSS client_vbss;
-        sMacAddr dest_ruid;
-        std::string ssid;
-        std::string password;
-        std::shared_ptr<vbss::sClientSecCtxInfo> sec_ctx_info;
-
-        sCreationEvent(const sMacAddr &vbssid, const vbss::sClientVBSS &client_vbss_,
-                       sMacAddr dest_ruid_, const std::string &ssid_, const std::string &password_)
-            : client_vbss(client_vbss_), dest_ruid(dest_ruid_), ssid(ssid_), password(password_)
-        {
-        }
-
-        sCreationEvent() {}
-    };
-
-    struct sDestructionEvent {
-        vbss::sClientVBSS client_vbss;
-        bool should_disassociate;
-
-        sDestructionEvent(const sMacAddr &vbssid, const vbss::sClientVBSS &client_vbss_,
-                          bool should_disassociate_)
-            : client_vbss(client_vbss_), should_disassociate(should_disassociate_)
-        {
-        }
-
-        sDestructionEvent() {}
-    };
-
 protected:
     virtual void work() override;
     virtual void handle_event(int event_enum_value, void *event_obj) override;
@@ -101,19 +35,19 @@ private:
     /**
      * @brief A map between VBSSIDs and active (in the process of executing) move events
      */
-    beerocks::mac_map<sMoveEvent> active_moves;
+    beerocks::mac_map<vbss::sMoveEvent> active_moves;
 
     /**
      * @brief A map between VBSSIDs and active (in the process of executing) VBSS creation events 
      * 
      */
-    beerocks::mac_map<sCreationEvent> active_creation_events;
+    beerocks::mac_map<vbss::sCreationEvent> active_creation_events;
 
     /**
      * @brief A map between VBSSIDs and active (in the process of executing) VBSS destruction events 
      * 
      */
-    beerocks::mac_map<sDestructionEvent> active_destruction_events;
+    beerocks::mac_map<vbss::sDestructionEvent> active_destruction_events;
 
     /**
      * @brief Get the active move event which corresponds to the given VBSSID and is in the given state
@@ -122,7 +56,8 @@ private:
      * @param state The state to verify
      * @return If an active move event exists for the given VBSSID in the given state, the move event's pointer. Otherwise nullptr
      */
-    std::shared_ptr<sMoveEvent> get_matching_active_move(sMacAddr vbssid, eMoveProcessState state);
+    std::shared_ptr<vbss::sMoveEvent> get_matching_active_move(sMacAddr vbssid,
+                                                               vbss::eMoveProcessState state);
 
     /**
      * @brief Determines whether a channel switch should occur during the move between two radios
@@ -142,7 +77,7 @@ private:
      * @param move_event The event struct received in handle_event containing the necessary info
      * @return True if the first request executed successfully, false otherwise.
      */
-    bool handle_move_client_event(const sMoveEvent &move_event);
+    bool handle_move_client_event(const vbss::sMoveEvent &move_event);
 
     /**
      * @brief Begin process of creating a VBSS after recieving a create event, starting with fetching the Client Security Context
@@ -150,7 +85,7 @@ private:
      * @param create_event The event struct received in handle_event containing the necessary info
      * @return True if the first request executed successfully, false otherwise.
      */
-    bool handle_vbss_creation_event(const sCreationEvent &create_event);
+    bool handle_vbss_creation_event(const vbss::sCreationEvent &create_event);
 
     /**
      * @brief Send a VBSS Request with the VBSS Destruction TLV to the given agent
@@ -158,7 +93,7 @@ private:
      * @param destroy_event The event struct received in handle_event containing the necessary info
      * @return True if the destroy VBSS request executed successfully, false otherwise.
      */
-    bool handle_vbss_destruction_event(const sDestructionEvent &destroy_event);
+    bool handle_vbss_destruction_event(const vbss::sDestructionEvent &destroy_event);
 
     /**
      * @brief Generic method to handle the three responses that send AP Radio VBSS Capabilities TLVs in the response
