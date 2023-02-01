@@ -8224,10 +8224,13 @@ bool db::add_unassociated_station(sMacAddr const &new_station_mac_add, uint8_t c
 
         for (auto &radio_it : radios) {
             auto &scan_capabilities = radio_it.second->scan_capabilities;
+	    LOG(DEBUG) << "CW: Radio with radio iface " << radio_it.first << " has supported oplcass"; 
             for (auto &oc_ch : scan_capabilities.operating_classes) {
+	        LOG(DEBUG) << oc_ch.first << ","; 
                 if (oc_ch.first != operating_class) {
                     continue;
                 }
+	        LOG(DEBUG) << "opclass "<< oc_ch.first << " found"; 
                 std::vector<uint8_t>::iterator iter =
                     std::find_if(oc_ch.second.begin(), oc_ch.second.end(),
                                  [channel](uint8_t input) { return (input == channel); });

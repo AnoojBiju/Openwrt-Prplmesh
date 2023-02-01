@@ -1945,6 +1945,7 @@ bool Controller::handle_cmdu_1905_ap_capability_report(const sMacAddr &src_mac,
     }
 
     bool all_radio_capabilities_saved_successfully = true;
+    LOG(DEBUG) << "CW: agent supported profile " << agent->profile;
     if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
         !handle_tlv_profile2_channel_scan_capabilities(agent, cmdu_rx)) {
         LOG(ERROR) << "Profile2 Channel Scan Capabilities are not supplied for Agent " << src_mac
@@ -4305,6 +4306,7 @@ bool Controller::handle_tlv_profile2_cac_capabilities(Agent &agent,
 bool Controller::handle_tlv_profile2_channel_scan_capabilities(std::shared_ptr<Agent> &agent,
                                                                ieee1905_1::CmduMessageRx &cmdu_rx)
 {
+    LOG(DEBUG) << "CW: agent supports tlv profile2 ";
     auto channel_scan_capabilities_tlv = cmdu_rx.getClass<wfa_map::tlvChannelScanCapabilities>();
     if (!channel_scan_capabilities_tlv) {
         LOG(ERROR) << "getClass wfa_map::tlvChannelScanCapabilities has failed";
