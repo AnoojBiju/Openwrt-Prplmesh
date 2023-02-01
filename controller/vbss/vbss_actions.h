@@ -43,6 +43,70 @@ struct sClientSecCtxInfo {
     }
 };
 
+enum eMoveProcessState {
+    INIT,
+    CLIENT_SEC_CTX,
+    VBSS_MOVE_PREP,
+    VBSS_CREATION,
+    VBSS_MOVE_CANCEL,
+    TRIGGER_CHANNEL_SWITCH,
+    VBSS_DESTRUCTION
+};
+
+struct sMoveEvent {
+    vbss::sClientVBSS client_vbss;
+    sMacAddr dest_ruid;
+    std::string ssid;
+    std::string password;
+    eMoveProcessState state = INIT;
+    std::shared_ptr<vbss::sClientSecCtxInfo> sec_ctx_info;
+
+    sMoveEvent(const sMacAddr &vbssid, const vbss::sClientVBSS &client_vbss_, sMacAddr dest_ruid_,
+               const std::string &ssid_, const std::string &password_)
+        : client_vbss(client_vbss_), dest_ruid(dest_ruid_), ssid(ssid_), password(password_)
+    {
+    }
+
+    sMoveEvent(const sMacAddr &vbssid, const vbss::sClientVBSS &client_vbss_, sMacAddr dest_ruid_,
+               const std::string &ssid_, const std::string &password_,
+               const eMoveProcessState &state_)
+        : client_vbss(client_vbss_), dest_ruid(dest_ruid_), ssid(ssid_), password(password_),
+          state(state_)
+    {
+    }
+
+    sMoveEvent(){};
+};
+
+struct sCreationEvent {
+    vbss::sClientVBSS client_vbss;
+    sMacAddr dest_ruid;
+    std::string ssid;
+    std::string password;
+    std::shared_ptr<vbss::sClientSecCtxInfo> sec_ctx_info;
+
+    sCreationEvent(const sMacAddr &vbssid, const vbss::sClientVBSS &client_vbss_,
+                   sMacAddr dest_ruid_, const std::string &ssid_, const std::string &password_)
+        : client_vbss(client_vbss_), dest_ruid(dest_ruid_), ssid(ssid_), password(password_)
+    {
+    }
+
+    sCreationEvent() {}
+};
+
+struct sDestructionEvent {
+    vbss::sClientVBSS client_vbss;
+    bool should_disassociate;
+
+    sDestructionEvent(const sMacAddr &vbssid, const vbss::sClientVBSS &client_vbss_,
+                      bool should_disassociate_)
+        : client_vbss(client_vbss_), should_disassociate(should_disassociate_)
+    {
+    }
+
+    sDestructionEvent() {}
+};
+
 class vbss_actions {
 
 public:

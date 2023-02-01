@@ -39,7 +39,6 @@ public:
                                 const uint8_t fixed_bits[ETH_ALEN], const uint8_t &max_numbers,
                                 std::vector<vbss_id> &vbss_id_list);
 
-
     /**
      * @brief Attempt to add a new station
      *
@@ -50,11 +49,19 @@ public:
     bool add_new_station(const uint8_t vsta_mac[ETH_ALEN]);
 
 protected:
+    /**
+     * Max number of vbss in the system
+    */
+    uint8_t m_max_num_vbss_system;
+    /**
+     * Current number of used vbss in system
+    */
+    uint8_t m_current_num_vbss;
+
     uint8_t copy_fixed_and_base(const uint8_t fixed[ETH_ALEN], const uint8_t base[ETH_ALEN],
                                 vbss::vbss_id &tmp_bssid);
 
 private:
-
     std::vector<uint8_t> determine_orthogonal_vals(const uint8_t &b_val);
 };
 
