@@ -1941,7 +1941,7 @@ bool Controller::handle_cmdu_1905_ap_capability_report(const sMacAddr &src_mac,
             continue;
         }
         son_actions::handle_dead_node(tlvf::mac_to_string(removed_radio->radio_uid), true, database,
-                                      cmdu_tx, m_task_pool);
+                                      m_task_pool);
     }
 
     bool all_radio_capabilities_saved_successfully = true;
@@ -2988,7 +2988,7 @@ bool Controller::handle_cmdu_control_message(
             database.get_node_children(tlvf::mac_to_string(disabled_bssid), beerocks::TYPE_CLIENT);
 
         for (auto &client : client_list) {
-            son_actions::handle_dead_node(client, true, database, cmdu_tx, m_task_pool);
+            son_actions::handle_dead_node(client, true, database, m_task_pool);
         }
 
         // Update BSSes in the Agent
@@ -3166,7 +3166,7 @@ bool Controller::handle_cmdu_control_message(
             auto client_list =
                 database.get_node_children(tlvf::mac_to_string(bss->bssid), beerocks::TYPE_CLIENT);
             for (auto &client : client_list) {
-                son_actions::handle_dead_node(client, true, database, cmdu_tx, m_task_pool);
+                son_actions::handle_dead_node(client, true, database, m_task_pool);
             }
 
             // Remove the vap from DB
@@ -3481,8 +3481,7 @@ bool Controller::handle_cmdu_control_message(
                       << " hostap mac=" << radio_mac
                       << " closing socket and marking as disconnected";
             bool reported_by_parent = radio_mac_str == database.get_node_parent(client_mac);
-            son_actions::handle_dead_node(client_mac, reported_by_parent, database, cmdu_tx,
-                                          m_task_pool);
+            son_actions::handle_dead_node(client_mac, reported_by_parent, database, m_task_pool);
         }
         break;
     }
