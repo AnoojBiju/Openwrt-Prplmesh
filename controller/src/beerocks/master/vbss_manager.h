@@ -84,6 +84,15 @@ public:
      */
     bool handle_vbss_creation(const sMacAddr &radio_mac, const sMacAddr &vbss_id);
 
+    /**
+     * @brief Book keeping for when a station successfully connects to a vbss
+     * 
+     * @param stationConnect 
+     * @return true 
+     * @return false 
+     */
+    bool handle_station_connect(const vbss::sStationConnectedEvent &stationConnect);
+
     bool attempt_move_associated_client(const sMacAddr &agent_mac, const sMacAddr &cur_bssid,
                                         const sMacAddr &cl_mac);
 
@@ -104,6 +113,15 @@ protected:
     bool find_available_vbssid(const sMacAddr &radio_mac, sMacAddr &nVbss_id);
 
     bool can_system_have_another_vbss();
+
+    /**
+     * @brief Registers this station to get rssi values from agents it's not associated to
+     * 
+     * @param client_mac 
+     * @return true 
+     * @return false 
+     */
+    bool register_client_for_rssi(const sMacAddr &client_mac);
 
 private:
     /*
@@ -137,6 +155,8 @@ private:
     std::vector<std::string> m_used_ssid_extensions;
 
     std::unordered_map<sMacAddr, sMacAddr> m_open_vbsses;
+
+    std::unordered_map<sMacAddr, sMacAddr> m_client_agent;
 
     //beerocks::mac_map<sMacAddr> m_pre_associated_clients;
     // I don't need a shared_pointer for this...

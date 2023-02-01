@@ -107,6 +107,16 @@ struct sDestructionEvent {
     sDestructionEvent() {}
 };
 
+struct sStationConnectedEvent {
+    sMacAddr client_mac;
+    sMacAddr bss_id;
+    sStationConnectedEvent(const sMacAddr &clnt_mac, const sMacAddr &Bss_id)
+        : client_mac(clnt_mac), bss_id(Bss_id)
+    {
+    }
+    sStationConnectedEvent() {}
+};
+
 class vbss_actions {
 
 public:

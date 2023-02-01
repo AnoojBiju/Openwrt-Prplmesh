@@ -212,6 +212,28 @@ bool VbssManager::handle_vbss_creation(const sMacAddr &radio_mac, const sMacAddr
     return true;
 }
 
+bool VbssManager::handle_station_connect(const vbss::sStationConnectedEvent &stationConnect)
+{
+    // Do some book keeping
+    auto client = m_database.get_station(stationConnect.client_mac);
+    if (!client) {
+        // This shouldn't happen
+        LOG(ERROR) << "Failed to find station with mac: " << stationConnect.client_mac;
+        return false;
+    }
+    client->set_vsta_status(true);
+    auto agent = m_database.get_agent_by_bssid(stationConnect.bss_id);
+    if (!agent) {
+        LOG(ERROR) << "Failed to find agent hosting bssid: " << stationConnect.bss_id;
+        return false;
+    }
+    m_client_agent[stationConnect.client_mac] = agent->al_mac;
+
+    return register_client_for_rssi(stationConnect.client_mac);
+}
+
+bool VbssManager::register_client_for_rssi(const sMacAddr &client_mac) { return true; }
+
 bool VbssManager::can_radio_support_another_vbss(const sMacAddr &agent_mac, const sMacAddr &bssid)
 {
     // First get radio that the BSS is currently associated on
