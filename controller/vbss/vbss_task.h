@@ -22,7 +22,7 @@ public:
     bool handle_ieee1905_1_msg(const sMacAddr &src_mac,
                                ieee1905_1::CmduMessageRx &cmdu_rx) override;
 
-    enum eEventType { MOVE, CREATE, DESTROY, STATION_CONNECTED };
+    enum eEventType { MOVE, CREATE, DESTROY, STATION_CONNECTED, STATION_DISCONNECT };
 
 protected:
     virtual void work() override;
@@ -161,6 +161,15 @@ private:
      * @return false If an error occurred processing this event
      */
     bool handle_station_connected_event(const vbss::sStationConnectedEvent &stationConnected);
+
+    /**
+     * @brief When a station disconnect lets pass that info to the manager to get everything cleaned up
+     * 
+     * @param stationDisconnect 
+     * @return true 
+     * @return false 
+     */
+    bool handle_station_disconnect_event(const vbss::sStationDisconEvent &stationDisconnect);
 };
 
 #endif // VBSS_TASK_H

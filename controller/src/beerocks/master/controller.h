@@ -283,11 +283,20 @@ public:
     /**
      * @brief Pass the station connect event to the vbss manager for book keeping
      * 
-     * @param stationConnect 
+     * @param stationConnect information of the station connecting
      * @return true if no errors
      * @return false if an error occurred
      */
     bool handle_sta_connect_vbss(const vbss::sStationConnectedEvent &stationConnect);
+
+    /**
+     * @brief Handle a virtual station disconnect
+     * 
+     * @param stationDisconnect information about the station disconnecting
+     * @return true 
+     * @return false 
+     */
+    bool handle_sta_disconnect_vbss(const vbss::sStationDisconEvent &stationDisconnect);
 
 private:
     /**

@@ -93,6 +93,18 @@ public:
      */
     bool handle_station_connect(const vbss::sStationConnectedEvent &stationConnect);
 
+    /**
+     * @brief Book keeping of when station disconnects along with making a destroy
+     *          vbss event message
+     * 
+     * @param stationDisconn information about disconnected station
+     * @param destroyEvent Event to be passed back to caller to send to vbss task
+     * @return true 
+     * @return false 
+     */
+    bool handle_station_disconnect(const vbss::sStationDisconEvent &stationDisconn,
+                                   vbss::sDestructionEvent &destroyEvent);
+
     bool attempt_move_associated_client(const sMacAddr &agent_mac, const sMacAddr &cur_bssid,
                                         const sMacAddr &cl_mac);
 
@@ -154,9 +166,9 @@ private:
 
     std::vector<std::string> m_used_ssid_extensions;
 
-    std::unordered_map<sMacAddr, sMacAddr> m_open_vbsses;
-
     std::unordered_map<sMacAddr, sMacAddr> m_client_agent;
+
+    std::unordered_map<sMacAddr, sMacAddr> m_open_vbsses;
 
     //beerocks::mac_map<sMacAddr> m_pre_associated_clients;
     // I don't need a shared_pointer for this...
