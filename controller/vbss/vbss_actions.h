@@ -117,6 +117,16 @@ struct sStationConnectedEvent {
     sStationConnectedEvent() {}
 };
 
+struct sStationDisconEvent {
+    vbss::sClientVBSS client_vbss;
+    bool from_topology_notification;
+    sStationDisconEvent(const vbss::sClientVBSS &clnt_vbss, const bool &from_topo)
+        : client_vbss(clnt_vbss), from_topology_notification(from_topo)
+    {
+    }
+    sStationDisconEvent() {}
+};
+
 class vbss_actions {
 
 public:

@@ -4845,4 +4845,24 @@ bool Controller::handle_sta_connect_vbss(const vbss::sStationConnectedEvent &sta
     return ret_val;
 }
 
+bool Controller::handle_sta_disconnect_vbss(const vbss::sStationDisconEvent &stationDisconnect)
+{
+    LOG(DEBUG) << "Handling station disconnect for a VBSS for station "
+               << stationDisconnect.client_vbss.client_mac;
+    if (!m_vbss_manager->is_nbapi_active()) {
+        // Internal logic is on
+        vbss::sDestructionEvent destroy_event = {};
+        if (!m_vbss_manager->handle_station_disconnect(stationDisconnect, destroy_event)) {
+            LOG(ERROR) << "An error occurred processing handle disconnect event for vbss id: "
+                       << stationDisconnect.client_vbss.vbssid;
+            return false;
+        }
+        m_task_pool.push_event(database.get_vbss_task_id(), vbss_task::eEventType::DESTROY,
+                               &destroy_event);
+        return true;
+    }
+    // Currently return true until book keeping requirements is determine for NBAPI
+    return true;
+}
+
 } // namespace son

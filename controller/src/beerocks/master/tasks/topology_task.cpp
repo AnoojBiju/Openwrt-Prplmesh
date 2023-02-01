@@ -773,6 +773,19 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
             LOG(INFO) << "BSS of the Station is empty mac: " << client->mac;
             return false;
         }
+#ifdef ENABLE_VBSS
+        if (bss->is_vbss) {
+            // If this is a virtual bss, and it's reporting a station disconnected, then we need to handle clean up
+            vbss::sStationDisconEvent station_disconnect_event          = {};
+            station_disconnect_event.client_vbss.client_is_associated   = false;
+            station_disconnect_event.client_vbss.client_mac             = client_mac;
+            station_disconnect_event.client_vbss.vbssid                 = bss->bssid;
+            station_disconnect_event.client_vbss.current_connected_ruid = bss->radio.radio_uid;
+            station_disconnect_event.from_topology_notification         = true;
+            tasks.push_event(database.get_vbss_task_id(), vbss_task::eEventType::STATION_DISCONNECT,
+                             &station_disconnect_event);
+        }
+#endif
         bool reported_by_parent = bssid == bss->bssid;
 
         if (reported_by_parent && !database.dm_remove_sta(*client)) {

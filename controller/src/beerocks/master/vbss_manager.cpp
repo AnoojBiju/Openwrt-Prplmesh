@@ -232,6 +232,24 @@ bool VbssManager::handle_station_connect(const vbss::sStationConnectedEvent &sta
     return register_client_for_rssi(stationConnect.client_mac);
 }
 
+bool VbssManager::handle_station_disconnect(const vbss::sStationDisconEvent &stationDisconn,
+                                            vbss::sDestructionEvent &destroyEvent)
+{
+    auto radio = m_database.get_radio_by_bssid(stationDisconn.client_vbss.vbssid);
+    if (!radio) {
+        LOG(ERROR) << "Failed to find radio with bss id: " << stationDisconn.client_vbss.vbssid;
+        return false;
+    }
+    // update that vbss id is no longer being used
+    radio->vbss_ids_used[stationDisconn.client_vbss.vbssid] = false;
+    destroyEvent.client_vbss                                = stationDisconn.client_vbss;
+    destroyEvent.should_disassociate                        = false;
+    LOG(DEBUG) << "Station: " << stationDisconn.client_vbss.client_mac << " has disconnected\n"
+               << "From VBSS ID: " << stationDisconn.client_vbss.vbssid
+               << "\nReported by Topology: " << stationDisconn.from_topology_notification;
+    return true;
+}
+
 bool VbssManager::register_client_for_rssi(const sMacAddr &client_mac) { return true; }
 
 bool VbssManager::can_radio_support_another_vbss(const sMacAddr &agent_mac, const sMacAddr &bssid)

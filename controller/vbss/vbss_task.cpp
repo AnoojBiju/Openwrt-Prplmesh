@@ -126,6 +126,14 @@ void vbss_task::handle_event(int event_enum_value, void *event_obj)
         }
         break;
     }
+    case eEventType::STATION_DISCONNECT: {
+        auto sta_disconn_event = reinterpret_cast<vbss::sStationDisconEvent *>(event_obj);
+        LOG(INFO) << "VBSS Task received a station disconnected event.";
+        if (!handle_station_disconnect_event(*sta_disconn_event)) {
+            LOG(ERROR) << "Failed to handle a station disconnect event in vbss task";
+        }
+        break;
+    }
     default:
         LOG(WARNING) << "VBSS Task recieved an unhandled event type (" << event_enum_value << ")";
         break;
@@ -666,4 +674,18 @@ bool vbss_task::handle_station_connected_event(const vbss::sStationConnectedEven
         return false;
     }
     return controller_ctx->handle_sta_connect_vbss(stationConnected);
+}
+
+bool vbss_task::handle_station_disconnect_event(const vbss::sStationDisconEvent &stationDiscon)
+{
+    // Station has disconnect; let's notify the controller
+    // Two outcomes; 1. If Manager active, it'll need to perform book keeping before sending destroy
+    //               2. If Manager not active, need to update NBAPI stuff
+    // Perhaps we could do some stuff from here to quicken the process
+    auto controller_ctx = m_database.get_controller_ctx();
+    if (!controller_ctx) {
+        LOG(ERROR) << "Failed to get controller context needed to handle client disconnected";
+        return false;
+    }
+    return controller_ctx->handle_sta_disconnect_vbss(stationDiscon);
 }
