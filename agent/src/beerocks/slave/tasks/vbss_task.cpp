@@ -1,6 +1,7 @@
 #include "vbss_task.h"
 #include "../son_slave_thread.h"
 #include <tlvf/ieee_1905_1/tlvAlMacAddress.h>
+#include <tlvf/wfa_map/tlvApRadioVbssCapabilities.h>
 #include <tlvf/wfa_map/tlvClientInfo.h>
 #include <tlvf/wfa_map/tlvVirtualBssCreation.h>
 #include <tlvf/wfa_map/tlvVirtualBssDestruction.h>
@@ -32,6 +33,10 @@ bool VbssTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t iface_in
     }
     case ieee1905_1::eMessageType::VIRTUAL_BSS_RESPONSE_MESSAGE: {
         handle_virtual_bss_response(cmdu_rx);
+        return true;
+    }
+    case ieee1905_1::eMessageType::VIRTUAL_BSS_CAPABILITIES_REQUEST_MESSAGE: {
+        handle_virtual_bss_cap_request(cmdu_rx);
         return true;
     }
     default: {
@@ -156,6 +161,55 @@ void VbssTask::handle_virtual_bss_response(ieee1905_1::CmduMessageRx &cmdu_rx)
         tlvAlMacAddress->mac() = db->bridge.mac;
         m_btl_ctx.send_cmdu_to_controller({}, m_cmdu_tx);
     }
+}
+
+void VbssTask::handle_virtual_bss_cap_request(ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    LOG(DEBUG) << "Received virtual BSS Cap request";
+    // This RX Is blank, no need to parse
+    auto cmdu_header =
+        m_cmdu_tx.create(0, ieee1905_1::eMessageType::VIRTUAL_BSS_CAPABILITIES_REPONSE_MESSAGE);
+    if (!cmdu_header) {
+        LOG(ERROR) << "Failed to create VBSS Cap Response Message";
+        return;
+    }
+    sMacAddr zeroMac = {};
+    auto db          = AgentDB::get();
+    auto radList     = db->get_radios_list();
+    for (auto radio : radList) {
+        LOG(DEBUG) << "Creating Ap Cap message for radio: " << radio->front.iface_mac;
+        auto tlvVbssCap = m_cmdu_tx.addClass<wfa_map::ApRadioVbssCapabilities>();
+        if (!tlvVbssCap) {
+            LOG(ERROR) << "Failed to add ap radio vbss capabilities to cmdu tx";
+            // DO we have to do a clean up?
+            return;
+        }
+        // The information we need from this will nl80211 is stored NL80211_ATTR_INTERFACE_COMBINATIONS
+        // IW Code info.c line 543 has the reference
+        // For now hard coding
+        // Will need to implement this information NL80211_ATTR_INTERFACE_COMBINATIONS
+        sMacAddr mask = radio->front.iface_mac;
+        // Dirty trick; zero out last 4 bytes of address to make sure we can create the required number of
+        // orthogonal
+        mask.oct[2] = 0;
+        mask.oct[3] = 0;
+        mask.oct[4] = 0;
+        mask.oct[5] = 0;
+
+        tlvVbssCap->radio_uid()                                        = radio->front.iface_mac;
+        tlvVbssCap->max_vbss()                                         = beerocks::IFACE_TOTAL_VAPS;
+        tlvVbssCap->vbss_settings().vbsss_subtract                     = true;
+        tlvVbssCap->vbss_settings().vbssid_restrictions                = true;
+        tlvVbssCap->vbss_settings().vbssid_match_and_mask_restrictions = true;
+        tlvVbssCap->vbss_settings().fixed_bit_restrictions             = false;
+        tlvVbssCap->fixed_bits_mask()                                  = mask;
+        tlvVbssCap->fixed_bits_value()                                 = zeroMac;
+    }
+    if (!m_btl_ctx.send_cmdu_to_controller({}, m_cmdu_tx)) {
+        LOG(ERROR) << "Failed to send ap auto bss capability response message";
+        return;
+    }
+    return;
 }
 
 } // namespace beerocks

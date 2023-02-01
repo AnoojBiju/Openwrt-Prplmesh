@@ -56,6 +56,13 @@ private:
      * @return true on success, otherwise false.
      */
     void handle_virtual_bss_response(ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief Handle the vbss capabilities request
+     * 
+     * @param cmdu_rx 
+     */
+    void handle_virtual_bss_cap_request(ieee1905_1::CmduMessageRx &cmdu_rx);
 };
 } // namespace beerocks
 
