@@ -185,6 +185,18 @@ void ApAutoConfigurationTask::work()
         db->statuses.ap_autoconfiguration_completed = true;
         m_task_is_active                            = false;
         LOG(DEBUG) << "Link to the controller is established";
+
+        // Send pre-associated sta notification request to all radio
+        for (const auto &radios_conf_param_kv : m_radios_conf_params) {
+            const auto &radio_iface = radios_conf_param_kv.first;
+            if (!send_ap_connected_sta_notifications_request(radio_iface)) {
+                LOG(ERROR) << "send_ap_connected_sta_notifications_request failed for "
+                           << radio_iface;
+                continue;
+            }
+            LOG(DEBUG) << "Pre-associated station notification request send done for radio iface "
+                       << radio_iface;
+        }
     }
 }
 
@@ -2197,11 +2209,6 @@ bool ApAutoConfigurationTask::handle_ap_autoconfiguration_wsc_vs_extension_tlv(
 
     if (!send_monitor_son_config(radio_iface, joined_response->config())) {
         LOG(ERROR) << "send_monitor_son_config failed";
-        return false;
-    }
-
-    if (!send_ap_connected_sta_notifications_request(radio_iface)) {
-        LOG(ERROR) << "send_ap_connected_sta_notifications_request failed";
         return false;
     }
 
