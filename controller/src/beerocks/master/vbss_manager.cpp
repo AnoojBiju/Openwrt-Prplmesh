@@ -242,11 +242,33 @@ bool VbssManager::handle_station_disconnect(const vbss::sStationDisconEvent &sta
     }
     // update that vbss id is no longer being used
     radio->vbss_ids_used[stationDisconn.client_vbss.vbssid] = false;
-    destroyEvent.client_vbss                                = stationDisconn.client_vbss;
-    destroyEvent.should_disassociate                        = false;
+    m_client_agent.erase(stationDisconn.client_vbss.client_mac);
+    destroyEvent.client_vbss         = stationDisconn.client_vbss;
+    destroyEvent.should_disassociate = false;
     LOG(DEBUG) << "Station: " << stationDisconn.client_vbss.client_mac << " has disconnected\n"
                << "From VBSS ID: " << stationDisconn.client_vbss.vbssid
                << "\nReported by Topology: " << stationDisconn.from_topology_notification;
+    return true;
+}
+
+bool VbssManager::handle_vbss_destruction(const sMacAddr &vbssid)
+{
+    auto radio = m_database.get_radio_by_bssid(vbssid);
+    if (!radio) {
+        LOG(ERROR) << "Failed to find radio associated with vbssid: " << vbssid;
+        return false;
+    }
+    radio->vbss_ids_used[vbssid] = false;
+    auto vbss                    = m_database.get_bss(vbssid);
+    if (!vbss) {
+        LOG(ERROR) << "Failed to find instance of vbss object in database";
+        return false;
+    }
+    // Get the vbss substring to place back in unused vbss options
+    std::size_t pos           = vbss->ssid.find("_vbss_");
+    std::string ssid_addition = vbss->ssid.substr(pos);
+    m_unused_ssid_extensions.push_back(ssid_addition);
+    --m_current_num_vbss;
     return true;
 }
 

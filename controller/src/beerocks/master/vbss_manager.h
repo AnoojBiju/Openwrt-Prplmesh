@@ -105,6 +105,11 @@ public:
     bool handle_station_disconnect(const vbss::sStationDisconEvent &stationDisconn,
                                    vbss::sDestructionEvent &destroyEvent);
 
+    /// @brief Book keeping for when a vbss is destroyed
+    /// @param vbssid
+    /// @return
+    bool handle_vbss_destruction(const sMacAddr &vbssid);
+
     bool attempt_move_associated_client(const sMacAddr &agent_mac, const sMacAddr &cur_bssid,
                                         const sMacAddr &cl_mac);
 

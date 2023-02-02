@@ -298,6 +298,16 @@ public:
      */
     bool handle_sta_disconnect_vbss(const vbss::sStationDisconEvent &stationDisconnect);
 
+    /**
+     * @brief Sends information to vbss manager for booking purposes when an
+     *          agent notifies a vbss has been destroyed
+     * 
+     * @param vbss_id 
+     * @return true 
+     * @return false 
+     */
+    bool handle_vbss_destruction(const sMacAddr &vbss_id);
+
 private:
     /**
      * @brief Handles the client-connected event in the CMDU server.
