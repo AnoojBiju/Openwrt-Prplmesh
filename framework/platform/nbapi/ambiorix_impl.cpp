@@ -7,9 +7,75 @@
  */
 #include "ambiorix_impl.h"
 #include "tlvf/tlvftypes.h"
+#include <bcl/beerocks_backport.h>
+
+#include <memory>
 
 namespace beerocks {
 namespace nbapi {
+
+namespace {
+namespace priv {
+class Transaction : public Ambiorix::SingleObjectTransaction {
+public:
+    AmbiorixImpl *parent;
+    std::string relative_path;
+    bool new_instance;
+    amxd_trans_t transaction;
+
+    ~Transaction() override { amxd_trans_clean(&transaction); }
+
+#define TRANS_SET(TYPE)                                                                            \
+    bool set(const std::string &parameter, const TYPE &value) override                             \
+    {                                                                                              \
+        return amxd_trans_set_value(TYPE, &transaction, parameter.c_str(), value) ==               \
+               amxd_status_ok;                                                                     \
+    }
+    TRANS_SET(int8_t)
+    TRANS_SET(int16_t)
+    TRANS_SET(int32_t)
+    TRANS_SET(int64_t)
+    TRANS_SET(uint8_t)
+    TRANS_SET(uint16_t)
+    TRANS_SET(uint32_t)
+    TRANS_SET(uint64_t)
+    TRANS_SET(bool)
+    TRANS_SET(double)
+#undef TRANS_SET
+
+    bool set(const std::string &parameter, const std::string &value) override
+    {
+        return amxd_trans_set_value(cstring_t, &transaction, parameter.c_str(), value.c_str()) ==
+               amxd_status_ok;
+    }
+    bool set(const std::string &parameter, const sMacAddr &value) override
+    {
+        return set(parameter, tlvf::mac_to_string(value));
+    }
+    bool set_time(const std::string &time_stamp) override
+    {
+        amxc_ts_t time;
+        if (amxc_ts_parse(&time, time_stamp.c_str(), time_stamp.size()) != 0) {
+            LOG(ERROR) << " time_stamp: " << time_stamp
+                       << " does not contain a valid unix epoch time!";
+            return false;
+        }
+
+        if (!set("TimeStamp", time_stamp)) {
+            LOG(ERROR) << "Failed to set " << relative_path << ".TimeStamp";
+            return false;
+        }
+        return true;
+    }
+    bool set_current_time(const std::string &param) override
+    {
+        auto time_stamp = parent->get_datamodel_time_format();
+
+        return !time_stamp.empty() && set(param, time_stamp);
+    }
+};
+} // namespace priv
+} // namespace
 
 amxd_dm_t *g_data_model = nullptr;
 
@@ -349,298 +415,59 @@ bool AmbiorixImpl::apply_transaction(amxd_trans_t &transaction)
     return ret;
 }
 
-bool AmbiorixImpl::set(const std::string &relative_path, const std::string &parameter,
-                       const std::string &value)
+std::unique_ptr<Ambiorix::SingleObjectTransaction>
+AmbiorixImpl::begin_transaction(const std::string &relative_path, bool new_instance)
 {
-    amxd_trans_t transaction;
-    auto object = prepare_transaction(relative_path, transaction);
+    auto ret = std::make_unique<priv::Transaction>();
 
-    if (!object) {
-        LOG(ERROR) << "Failed to prepare transaction: " << relative_path << "." << parameter << "="
-                   << value;
-        return false;
-    }
+    ret->parent        = this;
+    ret->relative_path = relative_path;
+    ret->new_instance  = new_instance;
 
-    // LOG(DEBUG) << "Set " << relative_path << "." << parameter << ": " << value;
-
-    amxd_trans_set_value(cstring_t, &transaction, parameter.c_str(), value.c_str());
-
-    if (!apply_transaction(transaction)) {
-        LOG(ERROR) << "Couldn't apply transaction: " << relative_path << "." << parameter << "="
-                   << value;
-        return false;
-    }
-
-    return true;
-}
-
-bool AmbiorixImpl::set(const std::string &relative_path, const std::string &parameter,
-                       const int8_t &value)
-{
-    amxd_trans_t transaction;
-    auto object = prepare_transaction(relative_path, transaction);
-
-    if (!object) {
-        LOG(ERROR) << "Failed to prepare transaction: " << relative_path << parameter << "="
-                   << value;
-        return false;
-    }
-
-    amxd_trans_set_value(int8_t, &transaction, parameter.c_str(), value);
-
-    if (!apply_transaction(transaction)) {
-        LOG(ERROR) << "Couldn't apply transaction: " << relative_path << parameter << "=" << value;
-        return false;
-    }
-
-    return true;
-}
-
-bool AmbiorixImpl::set(const std::string &relative_path, const std::string &parameter,
-                       const int16_t &value)
-{
-    amxd_trans_t transaction;
-    auto object = prepare_transaction(relative_path, transaction);
-
-    if (!object) {
-        LOG(ERROR) << "Failed to prepare transaction: " << relative_path << parameter << "="
-                   << value;
-        return false;
-    }
-
-    amxd_trans_set_value(int16_t, &transaction, parameter.c_str(), value);
-
-    if (!apply_transaction(transaction)) {
-        LOG(ERROR) << "Couldn't apply transaction: " << relative_path << parameter << "=" << value;
-        return false;
-    }
-
-    return true;
-}
-
-bool AmbiorixImpl::set(const std::string &relative_path, const std::string &parameter,
-                       const int32_t &value)
-{
-    amxd_trans_t transaction;
-    auto object = prepare_transaction(relative_path, transaction);
-
-    if (!object) {
-        LOG(ERROR) << "Failed to prepare transaction: " << relative_path << parameter << "="
-                   << value;
-        return false;
-    }
-
-    // LOG(DEBUG) << "Set " << relative_path << "." << parameter << ": " << value;
-
-    amxd_trans_set_value(int32_t, &transaction, parameter.c_str(), value);
-
-    if (!apply_transaction(transaction)) {
-        LOG(ERROR) << "Couldn't apply transaction: " << relative_path << parameter << "=" << value;
-        return false;
-    }
-
-    return true;
-}
-
-bool AmbiorixImpl::set(const std::string &relative_path, const std::string &parameter,
-                       const int64_t &value)
-{
-    amxd_trans_t transaction;
-    auto object = prepare_transaction(relative_path, transaction);
-
-    if (!object) {
-        LOG(ERROR) << "Failed to prepare transaction: " << relative_path << parameter << "="
-                   << value;
-        return false;
-    }
-
-    // LOG(DEBUG) << "Set " << relative_path << "." << parameter << ": " << value;
-
-    amxd_trans_set_value(int64_t, &transaction, parameter.c_str(), value);
-
-    if (!apply_transaction(transaction)) {
-        LOG(ERROR) << "Couldn't apply transaction: " << relative_path << parameter << "=" << value;
-        return false;
-    }
-
-    return true;
-}
-
-bool AmbiorixImpl::set(const std::string &relative_path, const std::string &parameter,
-                       const uint8_t &value)
-{
-    amxd_trans_t transaction;
-    auto object = prepare_transaction(relative_path, transaction);
-
-    if (!object) {
-        LOG(ERROR) << "Failed to prepare transaction: " << relative_path << parameter << "="
-                   << value;
-        return false;
-    }
-
-    amxd_trans_set_value(uint8_t, &transaction, parameter.c_str(), value);
-
-    if (!apply_transaction(transaction)) {
-        LOG(ERROR) << "Couldn't apply transaction: " << relative_path << parameter << "=" << value;
-        return false;
-    }
-
-    return true;
-}
-
-bool AmbiorixImpl::set(const std::string &relative_path, const std::string &parameter,
-                       const uint16_t &value)
-{
-    amxd_trans_t transaction;
-    auto object = prepare_transaction(relative_path, transaction);
-
-    if (!object) {
-        LOG(ERROR) << "Failed to prepare transaction: " << relative_path << parameter << "="
-                   << value;
-        return false;
-    }
-
-    amxd_trans_set_value(uint16_t, &transaction, parameter.c_str(), value);
-
-    if (!apply_transaction(transaction)) {
-        LOG(ERROR) << "Couldn't apply transaction: " << relative_path << parameter << "=" << value;
-        return false;
-    }
-
-    return true;
-}
-
-bool AmbiorixImpl::set(const std::string &relative_path, const std::string &parameter,
-                       const uint32_t &value)
-{
-    amxd_trans_t transaction;
-    auto object = prepare_transaction(relative_path, transaction);
-
-    if (!object) {
-        LOG(ERROR) << "Failed to prepare transaction: " << relative_path << parameter << "="
-                   << value;
-        return false;
-    }
-
-    // LOG(DEBUG) << "Set " << relative_path << "." << parameter << ": " << value;
-
-    amxd_trans_set_value(uint32_t, &transaction, parameter.c_str(), value);
-
-    if (!apply_transaction(transaction)) {
-        LOG(ERROR) << "Couldn't apply transaction: " << relative_path << parameter << "=" << value;
-        return false;
-    }
-
-    return true;
-}
-
-bool AmbiorixImpl::set(const std::string &relative_path, const std::string &parameter,
-                       const uint64_t &value)
-{
-    amxd_trans_t transaction;
-    auto object = prepare_transaction(relative_path, transaction);
-
-    if (!object) {
-        LOG(ERROR) << "Failed to prepare transaction: " << relative_path << parameter << "="
-                   << value;
-        return false;
-    }
-
-    // LOG(DEBUG) << "Set " << relative_path << "." << parameter << ": " << value;
-
-    amxd_trans_set_value(uint64_t, &transaction, parameter.c_str(), value);
-
-    if (!apply_transaction(transaction)) {
-        LOG(ERROR) << "Couldn't apply transaction: " << relative_path << parameter << "=" << value;
-        return false;
-    }
-
-    return true;
-}
-
-bool AmbiorixImpl::set(const std::string &relative_path, const std::string &parameter,
-                       const double &value)
-{
-    amxd_trans_t transaction;
-    auto object = prepare_transaction(relative_path, transaction);
-
-    if (!object) {
-        LOG(ERROR) << "Failed to prepare transaction: " << relative_path << parameter << "="
-                   << value;
-        return false;
-    }
-
-    // LOG(DEBUG) << "Set " << relative_path << "." << parameter << ": " << value;
-
-    amxd_trans_set_value(double, &transaction, parameter.c_str(), value);
-
-    if (!apply_transaction(transaction)) {
-        LOG(ERROR) << "Couldn't apply transaction: " << relative_path << parameter << "=" << value;
-        return false;
-    }
-
-    return true;
-}
-
-bool AmbiorixImpl::set(const std::string &relative_path, const std::string &parameter,
-                       const bool &value)
-{
-    amxd_trans_t transaction;
-    auto object = prepare_transaction(relative_path, transaction);
-
-    if (!object) {
-        LOG(ERROR) << "Failed to prepare transaction: " << relative_path << parameter << "="
-                   << value;
-        return false;
-    }
-
-    // LOG(DEBUG) << "Set " << relative_path << "." << parameter << ": " << value;
-
-    amxd_trans_set_value(bool, &transaction, parameter.c_str(), value);
-
-    if (!apply_transaction(transaction)) {
-        LOG(ERROR) << "Couldn't apply transaction: " << relative_path << parameter << "=" << value;
-        return false;
-    }
-
-    return true;
-}
-
-bool AmbiorixImpl::set(const std::string &relative_path, const std::string &parameter,
-                       const sMacAddr &value)
-{
-    return set(relative_path, parameter, tlvf::mac_to_string(value));
-}
-
-std::string AmbiorixImpl::add_instance(const std::string &relative_path)
-{
-    amxd_trans_t transaction;
-    uint32_t index;
-
-    auto object = prepare_transaction(relative_path, transaction);
-    if (!object) {
-        LOG(ERROR) << "Couldn't find the object for: " << relative_path;
+    if (!prepare_transaction(relative_path, ret->transaction)) {
+        LOG(ERROR) << "Failed to prepare transaction: " << relative_path;
         return {};
     }
 
-    auto status = amxd_trans_add_inst(&transaction, 0, NULL);
+    if (!new_instance) {
+        return ret;
+    }
+
+    auto status = amxd_trans_add_inst(&ret->transaction, 0, NULL);
     if (status != amxd_status_ok) {
         LOG(ERROR) << "Failed to add instance for: " << relative_path
                    << " status: " << amxd_status_string(status);
-    }
-
-    if (!apply_transaction(transaction)) {
-        LOG(ERROR) << "Failed to apply transaction for: " << relative_path;
         return {};
     }
 
-    index = amxd_object_get_index(transaction.current);
-    if (!index) {
-        LOG(ERROR) << "Failed to get index for object: " << transaction.current->name;
+    return ret;
+}
+
+std::string AmbiorixImpl::commit_transaction(std::unique_ptr<SingleObjectTransaction> trans)
+{
+    auto derived = static_cast<priv::Transaction *>(trans.get());
+
+    auto &transaction = derived->transaction;
+    if (!apply_transaction(transaction)) {
+        LOG(ERROR) << "Couldn't apply transaction";
+        return {};
     }
 
-    LOG(DEBUG) << "Instance " << transaction.current->name << " added for: " << relative_path;
-    return relative_path + "." + std::to_string(index);
+    auto relative_path = std::move(derived->relative_path);
+    if (!derived->new_instance) {
+        return relative_path;
+    }
+
+    auto index = amxd_object_get_index(transaction.current);
+    if (!index) {
+        LOG(ERROR) << "Failed to get index for object: " << transaction.current->name;
+        return {};
+    }
+
+    relative_path += '.';
+    relative_path += std::to_string(index);
+
+    return relative_path;
 }
 
 bool AmbiorixImpl::remove_instance(const std::string &relative_path, uint32_t index)
@@ -708,38 +535,6 @@ std::string AmbiorixImpl::get_datamodel_time_format()
 
     std::string result_time = buf;
     return result_time;
-}
-
-bool AmbiorixImpl::set_current_time(const std::string &path_to_object, const std::string &param)
-{
-    auto time_stamp = get_datamodel_time_format();
-
-    if (time_stamp.empty()) {
-        LOG(ERROR) << "Failed to get Date and Time in RFC 3339 format.";
-        return false;
-    }
-    if (!set(path_to_object, param, time_stamp)) {
-        LOG(ERROR) << "Failed to set " << path_to_object << "." << param << ": " << time_stamp;
-        return false;
-    }
-    return true;
-}
-
-bool AmbiorixImpl::set_time(const std::string &path_to_object, const std::string &time_stamp)
-{
-    std::string time_stamp_local(time_stamp);
-
-    amxc_ts_t time;
-    if (amxc_ts_parse(&time, time_stamp.c_str(), time_stamp.size()) != 0) {
-        LOG(ERROR) << " time_stamp: " << time_stamp << " does not contain a valid unix epoch time!";
-        return false;
-    }
-
-    if (!set(path_to_object, "TimeStamp", time_stamp_local)) {
-        LOG(ERROR) << "Failed to set " << path_to_object << ".TimeStamp";
-        return false;
-    }
-    return true;
 }
 
 bool AmbiorixImpl::remove_all_instances(const std::string &relative_path)
