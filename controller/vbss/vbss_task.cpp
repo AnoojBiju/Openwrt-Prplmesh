@@ -432,7 +432,6 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
         if (cntrCtx) {
             return cntrCtx->handle_vbss_creation(ruid, vbssid);
         }
-        return true;
     }
 
     auto existing_destruction = active_destruction_events.get(vbssid);
@@ -444,9 +443,10 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
                        << "! Destroy event failed";
             return false;
         }
-        //TODO: Add VBSSes to DM
-
-        return true;
+        auto cntrxCtx = m_database.get_controller_ctx();
+        if (cntrxCtx) {
+            return cntrxCtx->handle_vbss_destruction(vbssid);
+        }
     }
 
     LOG(DEBUG) << "Checking existing moves with creation state";

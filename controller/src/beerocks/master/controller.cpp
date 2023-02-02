@@ -4865,4 +4865,9 @@ bool Controller::handle_sta_disconnect_vbss(const vbss::sStationDisconEvent &sta
     return true;
 }
 
+bool Controller::handle_vbss_destruction(const sMacAddr &vbssid)
+{
+    return m_vbss_manager->handle_vbss_destruction(vbssid);
+}
+
 } // namespace son
