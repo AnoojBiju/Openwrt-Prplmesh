@@ -1447,50 +1447,42 @@ bool db::dm_set_sta_he_capabilities(const std::string &path_to_sta,
     bool ret_val            = true;
     std::string path_to_obj = path_to_sta + "WiFi6Capabilities.";
 
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfTxSpatialStreams", sta_cap.he_ss);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfRxSpatialStreams", sta_cap.he_ss);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HE8080",
-                                         static_cast<bool>(sta_cap.he_bw == BANDWIDTH_80_80));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HE160",
-                                         static_cast<bool>(sta_cap.he_bw == BANDWIDTH_160));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SUBeamformer",
-                                         static_cast<bool>(sta_cap.he_su_beamformer));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SUBeamformee",
-                                         static_cast<bool>(sta_cap.he_su_beamformee));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MUBeamformer",
-                                         static_cast<bool>(sta_cap.he_mu_beamformer));
-    ret_val &= m_ambiorix_datamodel->set(
-        path_to_obj, "Beamformee80orLess",
-        static_cast<bool>(sta_cap.he_su_beamformee ? sta_cap.he_beamformee_sts_less_80mhz : false));
-    ret_val &= m_ambiorix_datamodel->set(
-        path_to_obj, "BeamformeeAbove80",
-        static_cast<bool>(sta_cap.he_su_beamformee && (sta_cap.he_bw > BANDWIDTH_80)
-                              ? sta_cap.he_beamformee_sts_great_80mhz
-                              : false));
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_obj, "ULMUMIMO", static_cast<bool>(sta_cap.ul_mu_mimo));
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_obj, "ULOFDMA", static_cast<bool>(sta_cap.ul_ofdma));
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_obj, "DLOFDMA", static_cast<bool>(sta_cap.dl_ofdma));
-    // TODO: find the values for the unfilled parameters, PPM-2112
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxDLMUMIMO", sta_cap.dl_mu_mimo_max_users);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxULMUMIMO", sta_cap.ul_mu_mimo_max_users);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxDLOFDMA", sta_cap.dl_ofdma_max_users);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxULOFDMA", sta_cap.ul_ofdma_max_users);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "RTS", static_cast<bool>(false));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MURTS", static_cast<bool>(sta_cap.ul_ofdma));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MultiBSSID", static_cast<bool>(false));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MUEDCA", static_cast<bool>(false));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "TWTRequestor",
-                                         static_cast<bool>(sta_cap.twt_requester));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "TWTResponder",
-                                         static_cast<bool>(sta_cap.twt_responder));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SpatialReuse", static_cast<bool>(false));
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_obj, "AnticipatedChannelUsage", static_cast<bool>(false));
+    auto transaction = m_ambiorix_datamodel->start_transaction(path_to_obj);
+    if (!transaction) {
+        LOG(ERROR) << "Failed to start transaction for " << path_to_obj;
+        return false;
+    }
 
-    return ret_val;
+    ret_val &= transaction->set("MaxNumberOfTxSpatialStreams", sta_cap.he_ss);
+    ret_val &= transaction->set("MaxNumberOfRxSpatialStreams", sta_cap.he_ss);
+    ret_val &= transaction->set("HE8080", static_cast<bool>(sta_cap.he_bw == BANDWIDTH_80_80));
+    ret_val &= transaction->set("HE160", static_cast<bool>(sta_cap.he_bw == BANDWIDTH_160));
+    ret_val &= transaction->set("SUBeamformer", static_cast<bool>(sta_cap.he_su_beamformer));
+    ret_val &= transaction->set("SUBeamformee", static_cast<bool>(sta_cap.he_su_beamformee));
+    ret_val &= transaction->set("MUBeamformer", static_cast<bool>(sta_cap.he_mu_beamformer));
+    ret_val &= transaction->set("Beamformee80orLess",
+                                sta_cap.he_su_beamformee && sta_cap.he_beamformee_sts_less_80mhz);
+    ret_val &= transaction->set("BeamformeeAbove80", sta_cap.he_su_beamformee &&
+                                                         (sta_cap.he_bw > BANDWIDTH_80) &&
+                                                         sta_cap.he_beamformee_sts_great_80mhz);
+    ret_val &= transaction->set("ULMUMIMO", static_cast<bool>(sta_cap.ul_mu_mimo));
+    ret_val &= transaction->set("ULOFDMA", static_cast<bool>(sta_cap.ul_ofdma));
+    ret_val &= transaction->set("DLOFDMA", static_cast<bool>(sta_cap.dl_ofdma));
+    // TODO: find the values for the unfilled parameters, PPM-2112
+    ret_val &= transaction->set("MaxDLMUMIMO", sta_cap.dl_mu_mimo_max_users);
+    ret_val &= transaction->set("MaxULMUMIMO", sta_cap.ul_mu_mimo_max_users);
+    ret_val &= transaction->set("MaxDLOFDMA", sta_cap.dl_ofdma_max_users);
+    ret_val &= transaction->set("MaxULOFDMA", sta_cap.ul_ofdma_max_users);
+    ret_val &= transaction->set("RTS", static_cast<bool>(false));
+    ret_val &= transaction->set("MURTS", static_cast<bool>(sta_cap.ul_ofdma));
+    ret_val &= transaction->set("MultiBSSID", static_cast<bool>(false));
+    ret_val &= transaction->set("MUEDCA", static_cast<bool>(false));
+    ret_val &= transaction->set("TWTRequestor", static_cast<bool>(sta_cap.twt_requester));
+    ret_val &= transaction->set("TWTResponder", static_cast<bool>(sta_cap.twt_responder));
+    ret_val &= transaction->set("SpatialReuse", static_cast<bool>(false));
+    ret_val &= transaction->set("AnticipatedChannelUsage", static_cast<bool>(false));
+
+    return ret_val && !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
 }
 
 bool db::set_ap_wifi6_capabilities(wfa_map::tlvApWifi6Capabilities &wifi6_caps_tlv)
