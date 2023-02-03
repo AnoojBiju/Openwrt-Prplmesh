@@ -777,8 +777,12 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
                 return;
             }
 
+            std::vector<uint8_t> raw_association_frame = {
+                client_capability_report->association_frame(),
+                client_capability_report->association_frame() +
+                    client_capability_report->association_frame_length()};
             if (!ap_wlan_hal->add_station(ifname, virtual_bss_creation_tlv->client_mac(),
-                                          *association_request)) {
+                                          raw_association_frame)) {
                 LOG(ERROR) << "Failed to add the station!";
                 send_virtual_bss_response(virtual_bss_creation_tlv->radio_uid(),
                                           virtual_bss_creation_tlv->bssid(), false);
