@@ -1693,31 +1693,29 @@ bool db::dm_set_assoc_event_sta_vht_cap(const std::string &path_to_event,
         return false;
     }
 
-    bool ret_val               = true;
-    std::string path_to_ht_cap = path_to_event + "VHTCapabilities.";
+    bool ret_val            = true;
+    std::string path_to_obj = path_to_event + "VHTCapabilities.";
+
+    auto transaction = m_ambiorix_datamodel->begin_transaction(path_to_obj);
+    if (!transaction) {
+        LOG(ERROR) << "Failed to start transaction for " << path_to_obj;
+        return false;
+    }
 
     auto vht_mcs_set = son::wireless_utils::get_vht_mcs_set(sta_cap.vht_mcs, sta_cap.vht_ss);
 
-    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "MCSNSSTxSet", vht_mcs_set);
-    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "MCSNSSRxSet", vht_mcs_set);
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_ht_cap, "MaxNumberOfTxSpatialStreams", sta_cap.vht_ss);
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_ht_cap, "MaxNumberOfRxSpatialStreams", sta_cap.vht_ss);
-    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "VHTShortGI80",
-                                         static_cast<bool>(sta_cap.vht_low_bw_short_gi));
-    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "VHTShortGI160",
-                                         static_cast<bool>(sta_cap.vht_high_bw_short_gi));
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_ht_cap, "VHT8080", (BANDWIDTH_80_80 <= sta_cap.vht_bw));
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_ht_cap, "VHT160", (BANDWIDTH_160 <= sta_cap.vht_bw));
-    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "SUBeamformer",
-                                         static_cast<bool>(sta_cap.vht_su_beamformer));
-    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "MUBeamformer",
-                                         static_cast<bool>(sta_cap.vht_mu_beamformer));
+    ret_val &= transaction->set("MCSNSSTxSet", vht_mcs_set);
+    ret_val &= transaction->set("MCSNSSRxSet", vht_mcs_set);
+    ret_val &= transaction->set("MaxNumberOfTxSpatialStreams", sta_cap.vht_ss);
+    ret_val &= transaction->set("MaxNumberOfRxSpatialStreams", sta_cap.vht_ss);
+    ret_val &= transaction->set("VHTShortGI80", static_cast<bool>(sta_cap.vht_low_bw_short_gi));
+    ret_val &= transaction->set("VHTShortGI160", static_cast<bool>(sta_cap.vht_high_bw_short_gi));
+    ret_val &= transaction->set("VHT8080", (BANDWIDTH_80_80 <= sta_cap.vht_bw));
+    ret_val &= transaction->set("VHT160", (BANDWIDTH_160 <= sta_cap.vht_bw));
+    ret_val &= transaction->set("SUBeamformer", static_cast<bool>(sta_cap.vht_su_beamformer));
+    ret_val &= transaction->set("MUBeamformer", static_cast<bool>(sta_cap.vht_mu_beamformer));
 
-    return ret_val;
+    return ret_val && !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
 }
 
 bool db::dm_set_assoc_event_sta_he_cap(const std::string &path_to_event,
