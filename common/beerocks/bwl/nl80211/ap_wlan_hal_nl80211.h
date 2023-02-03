@@ -105,6 +105,8 @@ public:
     virtual bool add_key(const std::string &ifname, const sKeyInfo &key_info) override;
     virtual bool add_station(const std::string &ifname, const sMacAddr &mac,
                              assoc_frame::AssocReqFrame &assoc_req) override;
+    virtual bool add_station(const std::string &ifname, const sMacAddr &mac,
+                             std::vector<uint8_t> &raw_assoc_frame) override;
     virtual bool get_key(const std::string &ifname, sKeyInfo &key_info) override;
     virtual bool send_delba(const std::string &ifname, const sMacAddr &dst, const sMacAddr &src,
                             const sMacAddr &bssid) override;

@@ -781,6 +781,13 @@ bool ap_wlan_hal_whm::add_station(const std::string &ifname, const sMacAddr &mac
     return false;
 }
 
+bool ap_wlan_hal_whm::add_station(const std::string &ifname, const sMacAddr &mac,
+                                  std::vector<uint8_t> &raw_assoc_req)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
 bool ap_wlan_hal_whm::get_key(const std::string &ifname, sKeyInfo &key_info)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
