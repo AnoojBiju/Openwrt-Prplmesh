@@ -3664,30 +3664,35 @@ static void dm_add_bss_neighbors(beerocks::nbapi::Ambiorix *m_ambiorix_datamodel
     }
 }
 
-static std::string
-dm_add_channel_scan(std::shared_ptr<beerocks::nbapi::Ambiorix> m_ambiorix_datamodel,
-                    const std::string &class_path, const uint8_t &channel, const uint8_t noise,
-                    const uint8_t utilization, const std::string &ISO_8601_timestamp)
+static std::string dm_add_channel_scan(beerocks::nbapi::Ambiorix *m_ambiorix_datamodel,
+                                       const std::string &class_path, const uint8_t &channel,
+                                       const uint8_t noise, const uint8_t utilization,
+                                       const std::string &ISO_8601_timestamp)
 {
     // Device.WiFi.DataElements.Network.Device.1.Radio.2.ScanResult.3.OpClassScan.4.ChannelScan.5
-    std::string channel_path;
+    std::string channel_path = class_path + ".ChannelScan";
     uint32_t channel_index = m_ambiorix_datamodel->get_instance_index(
         class_path + ".ChannelScan.[Channel == '%s'].", std::to_string(channel));
 
     if (channel_index) {
-        channel_path = class_path + ".ChannelScan." + std::to_string(channel_index);
-    } else {
-        channel_path = m_ambiorix_datamodel->add_instance(class_path + ".ChannelScan");
-        if (channel_path.empty()) {
-            LOG(ERROR) << "Failed to add ChannelScan instance to " << class_path;
-            return {};
-        }
+        channel_path += '.';
+        channel_path += std::to_string(channel_index);
     }
-    m_ambiorix_datamodel->set(channel_path, "TimeStamp", ISO_8601_timestamp);
-    m_ambiorix_datamodel->set(channel_path, "Channel", channel);
-    m_ambiorix_datamodel->set(channel_path, "Utilization", utilization);
-    m_ambiorix_datamodel->set(channel_path, "Noise", noise);
-    return channel_path;
+
+    auto transaction = m_ambiorix_datamodel->begin_transaction(channel_path, !channel_index);
+    if (!transaction) {
+        LOG(ERROR) << "Failed to start a transaction for "
+                   << (!channel_index ? "a new object instance at " : "") << channel_path;
+
+        return "";
+    }
+
+    transaction->set("TimeStamp", ISO_8601_timestamp);
+    transaction->set("Channel", channel);
+    transaction->set("Utilization", utilization);
+    transaction->set("Noise", noise);
+
+    return m_ambiorix_datamodel->commit_transaction(std::move(transaction));
 }
 
 static std::string
@@ -3755,7 +3760,7 @@ bool db::dm_add_scan_result(const sMacAddr &ruid, const uint8_t &operating_class
 
     auto op_class_path =
         dm_add_op_class_scan(m_ambiorix_datamodel, scan_result_path, operating_class);
-    auto channel_path = dm_add_channel_scan(m_ambiorix_datamodel, op_class_path, channel, noise,
+    auto channel_path = dm_add_channel_scan(&*m_ambiorix_datamodel, op_class_path, channel, noise,
                                             utilization, ISO_8601_timestamp);
     dm_add_bss_neighbors(&*m_ambiorix_datamodel, channel_path, neighbors);
     return true;
