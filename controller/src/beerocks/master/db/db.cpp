@@ -3822,7 +3822,7 @@ bool db::restore_steer_history()
     if (steer_history.empty()) {
         return true;
     }
-    for (auto entry : steer_history) {
+    for (auto &entry : steer_history) {
 
         auto obj_path = dm_add_steer_event();
 
@@ -3831,16 +3831,22 @@ bool db::restore_steer_history()
             return false;
         }
         m_steer_history.push(entry.first);
-        ret &= m_ambiorix_datamodel->set(obj_path, "DeviceId", entry.second["device_id"]);
-        ret &= m_ambiorix_datamodel->set(obj_path, "SteeredFrom", entry.second["steered_from"]);
-        ret &= m_ambiorix_datamodel->set(obj_path, "SteeredTo", entry.second["steered_to"]);
-        ret &= m_ambiorix_datamodel->set(obj_path, "Result", entry.second["result"]);
-        ret &= m_ambiorix_datamodel->set(obj_path, "TimeStamp", entry.second["time_stamp"]);
-        ret &= m_ambiorix_datamodel->set(obj_path, "SteeringType", entry.second["steering_type"]);
-        ret &=
-            m_ambiorix_datamodel->set(obj_path, "SteeringOrigin", entry.second["steering_origin"]);
-        ret &=
-            m_ambiorix_datamodel->set(obj_path, "TimeTaken", std::stoi(entry.second["time_taken"]));
+
+        auto transaction = m_ambiorix_datamodel->begin_transaction(obj_path);
+        if (!transaction) {
+            LOG(ERROR) << "Failed to start transaction for " << obj_path;
+            return false;
+        }
+
+        ret &= transaction->set("DeviceId", entry.second["device_id"]);
+        ret &= transaction->set("SteeredFrom", entry.second["steered_from"]);
+        ret &= transaction->set("SteeredTo", entry.second["steered_to"]);
+        ret &= transaction->set("Result", entry.second["result"]);
+        ret &= transaction->set("TimeStamp", entry.second["time_stamp"]);
+        ret &= transaction->set("SteeringType", entry.second["steering_type"]);
+        ret &= transaction->set("SteeringOrigin", entry.second["steering_origin"]);
+        ret &= transaction->set("TimeTaken", std::stoi(entry.second["time_taken"]));
+        ret &= !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
     }
     return ret;
 }
