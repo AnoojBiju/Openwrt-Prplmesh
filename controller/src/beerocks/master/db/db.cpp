@@ -1580,18 +1580,21 @@ bool db::dm_set_sta_ht_capabilities(const std::string &path_to_sta,
     bool ret_val            = true;
     std::string path_to_obj = path_to_sta + "HTCapabilities.";
 
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HTShortGI20",
-                                         static_cast<bool>(sta_cap.ht_low_bw_short_gi));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HTShortGI40",
-                                         static_cast<bool>(sta_cap.ht_high_bw_short_gi));
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_obj, "HT40", (sta_cap.ht_bw == beerocks::BANDWIDTH_40));
+    auto transaction = m_ambiorix_datamodel->begin_transaction(path_to_obj);
+    if (!transaction) {
+        LOG(ERROR) << "Failed to start transaction for " << path_to_obj;
+        return false;
+    }
+
+    ret_val &= transaction->set("HTShortGI20", static_cast<bool>(sta_cap.ht_low_bw_short_gi));
+    ret_val &= transaction->set("HTShortGI40", static_cast<bool>(sta_cap.ht_high_bw_short_gi));
+    ret_val &= transaction->set("HT40", (sta_cap.ht_bw == beerocks::BANDWIDTH_40));
     // TODO: find value for tx_spatial_streams PPM-792.
     // Parse the (Re)Association Request frame.
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfTxSpatialStreams", sta_cap.ht_ss);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfRxSpatialStreams", sta_cap.ht_ss);
+    ret_val &= transaction->set("MaxNumberOfTxSpatialStreams", sta_cap.ht_ss);
+    ret_val &= transaction->set("MaxNumberOfRxSpatialStreams", sta_cap.ht_ss);
 
-    return ret_val;
+    return ret_val && !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
 }
 
 bool db::dm_set_sta_vht_capabilities(const std::string &path_to_sta,
