@@ -3640,27 +3640,26 @@ const std::vector<sChannelScanResults> db::get_channel_scan_report(const sMacAdd
     return get_channel_scan_report(RUID, index);
 }
 
-static void dm_add_bss_neighbors(std::shared_ptr<beerocks::nbapi::Ambiorix> m_ambiorix_datamodel,
+static void dm_add_bss_neighbors(beerocks::nbapi::Ambiorix *m_ambiorix_datamodel,
                                  const std::string &channel_path,
                                  const std::vector<wfa_map::cNeighbors> &neighbors)
 {
+    std::string path_to_object = channel_path + ".NeighborBSS";
     for (auto neighbor : neighbors) {
         // Device.WiFi.DataElements.Network.Device.1.Radio.2.ScanResult.3.OpClassScan.4.ChannelScan.5.NeighborBSS
-        auto neighbor_path = m_ambiorix_datamodel->add_instance(channel_path + ".NeighborBSS");
+        auto transaction = m_ambiorix_datamodel->begin_transaction(path_to_object, true);
 
-        if (neighbor_path.empty()) {
+        if (!transaction) {
             LOG(ERROR) << "Failed to add NeighborBSS to " << channel_path;
             return;
         }
-        m_ambiorix_datamodel->set(neighbor_path, "BSSID", neighbor.bssid());
-        m_ambiorix_datamodel->set(neighbor_path, "SSID", neighbor.ssid_str());
-        m_ambiorix_datamodel->set(neighbor_path, "SignalStrength", neighbor.signal_strength());
-        m_ambiorix_datamodel->set(neighbor_path, "ChannelBandwidth",
-                                  neighbor.channels_bw_list_str());
+        transaction->set("BSSID", neighbor.bssid());
+        transaction->set("SSID", neighbor.ssid_str());
+        transaction->set("SignalStrength", neighbor.signal_strength());
+        transaction->set("ChannelBandwidth", neighbor.channels_bw_list_str());
         if (neighbor.bss_load_element_present()) {
-            m_ambiorix_datamodel->set(neighbor_path, "ChannelUtilization",
-                                      neighbor.channel_utilization());
-            m_ambiorix_datamodel->set(neighbor_path, "StationCount", neighbor.station_count());
+            transaction->set("ChannelUtilization", neighbor.channel_utilization());
+            transaction->set("StationCount", neighbor.station_count());
         }
     }
 }
@@ -3758,7 +3757,7 @@ bool db::dm_add_scan_result(const sMacAddr &ruid, const uint8_t &operating_class
         dm_add_op_class_scan(m_ambiorix_datamodel, scan_result_path, operating_class);
     auto channel_path = dm_add_channel_scan(m_ambiorix_datamodel, op_class_path, channel, noise,
                                             utilization, ISO_8601_timestamp);
-    dm_add_bss_neighbors(m_ambiorix_datamodel, channel_path, neighbors);
+    dm_add_bss_neighbors(&*m_ambiorix_datamodel, channel_path, neighbors);
     return true;
 }
 
