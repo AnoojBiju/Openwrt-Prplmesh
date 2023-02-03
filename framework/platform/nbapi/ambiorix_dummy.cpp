@@ -79,6 +79,7 @@ bool AmbiorixDummy::remove_instance(const std::string &relative_path, uint32_t i
 uint32_t AmbiorixDummy::get_instance_index(const std::string &specific_path, const std::string &key)
 {
     // Return false (0) because method can be used for checking instance present in Data Model or not
+    LOG(DEBUG) << "CW: Currently using Dummy version of func " << __func__;
     return 0;
 }
 std::string AmbiorixDummy::get_datamodel_time_format() { return {}; }
