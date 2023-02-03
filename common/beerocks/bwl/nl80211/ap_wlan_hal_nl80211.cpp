@@ -1655,6 +1655,13 @@ bool ap_wlan_hal_nl80211::add_station(const std::string &ifname, const sMacAddr 
     return m_nl80211_client->add_station(ifname, mac, assoc_req, aid);
 }
 
+bool ap_wlan_hal_nl80211::add_station(const std::string &ifname, const sMacAddr &mac,
+                                      std::vector<uint8_t> &raw_assoc_req)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
 bool ap_wlan_hal_nl80211::get_key(const std::string &ifname, sKeyInfo &key_info)
 {
     return m_nl80211_client->get_key(ifname, key_info);
