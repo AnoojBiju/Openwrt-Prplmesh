@@ -1666,22 +1666,23 @@ bool db::dm_set_assoc_event_sta_ht_cap(const std::string &path_to_event,
         return false;
     }
 
-    bool ret_val               = true;
-    std::string path_to_ht_cap = path_to_event + "HTCapabilities.";
+    bool ret_val            = true;
+    std::string path_to_obj = path_to_event + "HTCapabilities.";
 
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_ht_cap, "MaxNumberOfTxSpatialStreams", sta_cap.ht_ss);
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_ht_cap, "MaxNumberOfRxSpatialStreams", sta_cap.ht_ss);
-    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "HTShortGI20",
-                                         static_cast<bool>(sta_cap.ht_low_bw_short_gi));
-    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "HTShortGI40",
-                                         static_cast<bool>(sta_cap.ht_high_bw_short_gi));
+    auto transaction = m_ambiorix_datamodel->begin_transaction(path_to_obj);
+    if (!transaction) {
+        LOG(ERROR) << "Failed to start transaction for " << path_to_obj;
+        return false;
+    }
+
+    ret_val &= transaction->set("MaxNumberOfTxSpatialStreams", sta_cap.ht_ss);
+    ret_val &= transaction->set("MaxNumberOfRxSpatialStreams", sta_cap.ht_ss);
+    ret_val &= transaction->set("HTShortGI20", static_cast<bool>(sta_cap.ht_low_bw_short_gi));
+    ret_val &= transaction->set("HTShortGI40", static_cast<bool>(sta_cap.ht_high_bw_short_gi));
     // Set to 1 if both 20 MHz and 40 MHz operation is supported
-    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "HT40",
-                                         (sta_cap.ht_bw == beerocks::BANDWIDTH_40));
+    ret_val &= transaction->set("HT40", (sta_cap.ht_bw == beerocks::BANDWIDTH_40));
 
-    return ret_val;
+    return ret_val && !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
 }
 
 bool db::dm_set_assoc_event_sta_vht_cap(const std::string &path_to_event,
