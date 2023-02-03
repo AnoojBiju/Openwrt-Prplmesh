@@ -11,6 +11,7 @@
 #include "wpa_ctrl_client.h"
 #include <bcl/beerocks_string_utils.h>
 #include <bcl/beerocks_utils.h>
+#include <bcl/network/file_descriptor.h>
 #include <bcl/network/network_utils.h>
 #include <bcl/son/son_wireless_utils.h>
 #include <bwl/key_value_parser.h>
@@ -815,7 +816,7 @@ bool base_wlan_hal_nl80211::refresh_vaps_info(int id)
         // At that time, the relative wpa_ctrl socket files are created.
         // Only refresh primary BSS or those BSSs to be monitored.
 
-        if (!add_interface(vap_element.bss)) {
+        if (add_interface(vap_element.bss) < 0) {
             LOG(INFO) << "Failed to add interface for " << vap_element.bss
                       << ". Is it not monitored?";
             // unfortunately register_wpa_ctrl_interface() both returns
@@ -1179,14 +1180,24 @@ bool base_wlan_hal_nl80211::get_config(NetworkConfiguration &network_configurati
     return true;
 }
 
-bool base_wlan_hal_nl80211::add_interface(const std::string &interface)
+int base_wlan_hal_nl80211::add_interface(const std::string &interface)
 {
     if (!register_wpa_ctrl_interface(interface)) {
-        return false;
+        return beerocks::net::FileDescriptor::invalid_descriptor;
     }
 
-    m_wpa_ctrl_client.get_socket_cmd(interface)->connect();
-    m_wpa_ctrl_client.get_socket_event(interface)->connect();
+    if (!m_wpa_ctrl_client.get_socket_cmd(interface)->connect()) {
+        LOG(ERROR) << "Failed to connect cmd socket for interface " << interface;
+        m_wpa_ctrl_client.del_interface(interface);
+        return beerocks::net::FileDescriptor::invalid_descriptor;
+    }
+
+    auto event_socket = m_wpa_ctrl_client.get_socket_event(interface);
+    if (!event_socket->connect()) {
+        LOG(ERROR) << "Failed to connect event socket for interface " << interface;
+        m_wpa_ctrl_client.del_interface(interface);
+        return beerocks::net::FileDescriptor::invalid_descriptor;
+    }
 
     // get vap interface index if not yet retrieved
     if (m_iface_index.find(interface) == m_iface_index.end()) {
@@ -1194,12 +1205,12 @@ bool base_wlan_hal_nl80211::add_interface(const std::string &interface)
         if (iface_index == 0) {
             LOG(ERROR) << "Failed reading the index of interface " << interface << ": "
                        << strerror(errno);
-            return false;
+            return beerocks::net::FileDescriptor::invalid_descriptor;
         }
         m_iface_index.emplace(interface, iface_index);
     }
 
-    return true;
+    return event_socket->fd();
 }
 
 } // namespace nl80211

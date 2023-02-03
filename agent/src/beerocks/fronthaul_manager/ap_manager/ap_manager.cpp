@@ -2916,12 +2916,14 @@ bool ApManager::zwdfs_ap() const
 bool ApManager::add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
                         std::string &bridge, bool vbss)
 {
-    if (!ap_wlan_hal->add_bss(ifname, bss_conf, bridge, true)) {
+    int fd = ap_wlan_hal->add_bss(ifname, bss_conf, bridge, true);
+
+    if (fd < 0) {
         LOG(ERROR) << "Failed to add a new BSS!";
         return false;
     }
 
-    if (!register_ext_events_handlers(ap_wlan_hal->get_ext_events_fds().back())) {
+    if (!register_ext_events_handlers(fd)) {
         LOG(ERROR) << "Failed to register ext_events handlers for the new BSS!";
         return false;
     }

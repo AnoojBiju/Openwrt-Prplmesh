@@ -109,8 +109,8 @@ public:
                                      const std::string &opcode) override;
     virtual bool process_dwpal_nl_event(struct nl_msg *msg, void *arg = nullptr) override;
     virtual bool set_cce_indication(uint16_t advertise_cce) override;
-    virtual bool add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
-                         std::string &bridge, bool vbss) override;
+    virtual int add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
+                        std::string &bridge, bool vbss) override;
     virtual bool remove_bss(std::string &ifname) override;
     virtual bool add_key(const std::string &ifname, const sKeyInfo &key_info) override;
     virtual bool add_station(const std::string &ifname, const sMacAddr &mac,
