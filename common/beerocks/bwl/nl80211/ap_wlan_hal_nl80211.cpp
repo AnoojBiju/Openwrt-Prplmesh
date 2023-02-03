@@ -1650,7 +1650,7 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
     return true;
 }
 
-bool ap_wlan_hal_nl80211::add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
+int ap_wlan_hal_nl80211::add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
                                   std::string &bridge, bool vbss)
 {
     std::string conf_path =
@@ -1688,12 +1688,12 @@ bool ap_wlan_hal_nl80211::add_bss(std::string &ifname, son::wireless_utils::sBss
         return false;
     }
 
-    if (!base_wlan_hal_nl80211::add_interface(ifname)) {
+    int fd = base_wlan_hal_nl80211::add_interface(ifname);
+    if (fd < 0) {
         LOG(DEBUG) << "Failed to register and connect the new BSS interface!";
-        return false;
     }
 
-    return true;
+    return fd;
 }
 
 bool ap_wlan_hal_nl80211::remove_bss(std::string &ifname)

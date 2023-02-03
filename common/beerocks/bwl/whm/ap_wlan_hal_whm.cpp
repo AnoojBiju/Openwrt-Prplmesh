@@ -773,7 +773,7 @@ bool ap_wlan_hal_whm::set(const std::string &param, const std::string &value, in
     return true;
 }
 
-bool ap_wlan_hal_whm::add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
+int ap_wlan_hal_whm::add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
                               std::string &bridge, bool vbss)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
