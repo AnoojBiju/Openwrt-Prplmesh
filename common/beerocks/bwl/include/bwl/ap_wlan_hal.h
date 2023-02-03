@@ -462,18 +462,6 @@ public:
      * @brief Manually add a station on a BSS.
      *
      * @param ifname The interface name on which to add the station.
-     * @param mac The MAC address of the station.
-     * @param mac An association request of the station (used for
-     * capabilities).
-     * @return true on success, false otherwise.
-     */
-    virtual bool add_station(const std::string &ifname, const sMacAddr &mac,
-                             assoc_frame::AssocReqFrame &assoc_req) = 0;
-
-    /**
-     * @brief Manually add a station on a BSS.
-     *
-     * @param ifname The interface name on which to add the station.
      * @param mac The MAC address of the station to add.
      * @param raw_assoc_req The raw association request of the station.
      * @return true on success, false otherwise.
