@@ -1679,6 +1679,25 @@ bool ap_wlan_hal_nl80211::add_station(const std::string &ifname, const sMacAddr 
         LOG(ERROR) << "Could not add station";
         return false;
     }
+    auto vap_id = get_vap_id_with_bss(ifname);
+    if (vap_id < 0) {
+        LOG(ERROR) << "Failed to find vap id from BSS '" << ifname << "'";
+        return false;
+    }
+    auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION));
+    auto msg = reinterpret_cast<sACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION *>(msg_buff.get());
+    LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+    // Initialize the message
+    memset(msg_buff.get(), 0, sizeof(sACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION));
+
+    msg->params.mac    = mac;
+    msg->params.vap_id = vap_id;
+    std::copy_n(raw_assoc_req.begin(), raw_assoc_req.size(), msg->params.association_frame);
+    msg->params.association_frame_length = raw_assoc_req.size();
+    son::assoc_frame_utils::get_station_capabilities_from_assoc_frame(assoc_req,
+                                                                      msg->params.capabilities);
+    event_queue_push(Event::STA_Connected, msg_buff);
     return true;
 }
 
