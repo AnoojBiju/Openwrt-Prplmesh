@@ -791,6 +791,7 @@ bool base_wlan_hal_nl80211::refresh_vaps_info(int id)
         if (vap_element.mac.empty()) {
             if (m_radio_info.available_vaps.find(vap_id) != m_radio_info.available_vaps.end()) {
 
+                LOG(DEBUG) << "Removing non-existent vap with id " << vap_id;
                 // clean wpa_ctrl_sockets which relative BSS is more valid (null mac)
                 auto &ifname = m_radio_info.available_vaps.at(vap_id).bss;
                 m_wpa_ctrl_client.del_interface(ifname);
@@ -813,7 +814,15 @@ bool base_wlan_hal_nl80211::refresh_vaps_info(int id)
         // Secondary BSSs are detected in STATUS reply.
         // At that time, the relative wpa_ctrl socket files are created.
         // Only refresh primary BSS or those BSSs to be monitored.
-        add_interface(vap_element.bss);
+
+        if (!add_interface(vap_element.bss)) {
+            LOG(INFO) << "Failed to add interface for " << vap_element.bss << ". Is it not monitored?";
+            // unfortunately register_wpa_ctrl_interface() both returns
+            // false for failures and for the allowed case where a
+            // monitor interface is not in the list of interfaces, so we
+            // still have to return true;
+            return true;
+        }
 
         // Read network configuration
         NetworkConfiguration network_configuration;
@@ -1172,12 +1181,7 @@ bool base_wlan_hal_nl80211::get_config(NetworkConfiguration &network_configurati
 bool base_wlan_hal_nl80211::add_interface(const std::string &interface)
 {
     if (!register_wpa_ctrl_interface(interface)) {
-        LOG(INFO) << "Failed to register interface '" << interface << "'. Is it not monitored?";
-        // unfortunately register_wpa_ctrl_interface() both returns
-        // false for failures and for the allowed case where a
-        // monitor interface is not in the list of interfaces, so we
-        // still have to return true;
-        return true;
+        return false;
     }
 
     m_wpa_ctrl_client.get_socket_cmd(interface)->connect();
