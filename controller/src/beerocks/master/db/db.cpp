@@ -8218,11 +8218,12 @@ bool db::add_unassociated_station(sMacAddr const &new_station_mac_add, uint8_t c
 
     // lambda function to detect which radio supports the preferred  channel|operating_class
     // return pointer to radio if one of the radios supports channel and operating_class, else nullptr.
-    auto get_agent_radio = [channel,
-                            operating_class](const beerocks::mac_map<Agent::sRadio> &radios) {
+    auto get_agent_radio = [channel, operating_class,
+                            this](const beerocks::mac_map<Agent::sRadio> &radios) {
         std::shared_ptr<Agent::sRadio> agent_radio = nullptr;
 
-        for (auto &radio_it : radios) {
+        for (const auto &radio_it : radios) {
+#if 0
             auto &scan_capabilities = radio_it.second->scan_capabilities;
 	    LOG(DEBUG) << "CW: Radio with radio iface " << radio_it.first << " has supported oplcass"; 
             for (auto &oc_ch : scan_capabilities.operating_classes) {
@@ -8240,6 +8241,27 @@ bool db::add_unassociated_station(sMacAddr const &new_station_mac_add, uint8_t c
                     return agent_radio;
                 }
             }
+#else
+            auto radio = get_hostap(radio_it.first);
+            if (!radio) {
+                LOG(ERROR) << "CW: unable to get radio " << radio_it.first;
+                continue;
+            }
+            const auto &bw = wireless_utils::operating_class_to_bandwidth(operating_class);
+            const auto &supported_channels = radio->supported_channels;
+            // Find if the channel is supported by the radio
+            if (std::find_if(supported_channels.begin(), supported_channels.end(),
+                             [channel, bw](const beerocks::WifiChannel chan) {
+                                 // Find if matching channel number & bandwidth.
+                                 return ((chan.get_channel() == channel) &&
+                                         (chan.get_bandwidth() == bw));
+                             }) != supported_channels.end()) {
+                LOG(ERROR) << "CW: Channel #" << channel << " in Operating Class #" << operating_class
+                           << " is supported by the radio " << radio_it.first;
+                agent_radio = radio_it.second;
+                return agent_radio;
+            }
+#endif
         }
         return agent_radio;
     };

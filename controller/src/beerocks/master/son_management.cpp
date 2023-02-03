@@ -2614,7 +2614,9 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
                 response->channel()           = sta.channel;
                 response->rcpi()              = sta.rcpi;
                 response->measurement_delta() = sta.measurement_delta;
-		LOG(DEBUG) << "CW: response->measurement_delta=" << response->measurement_delta() << " sta.measurement_delta=" << sta.measurement_delta << " For sta " << mac;
+                LOG(DEBUG) << "CW: response->measurement_delta=" << response->measurement_delta()
+                           << " sta.measurement_delta=" << sta.measurement_delta << " For sta "
+                           << mac;
             }
         }
 
