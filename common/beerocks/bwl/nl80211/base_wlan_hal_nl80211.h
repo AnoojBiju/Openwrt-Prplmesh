@@ -109,9 +109,9 @@ protected:
      *
      * @param interface the interface to add.
      *
-     * @return true on success, false otherwise.
+     * @return the file descriptor for the event socket (or -1 on failure).
      */
-    bool add_interface(const std::string &interface);
+    int add_interface(const std::string &interface);
 
     std::unique_ptr<nl80211_client> m_nl80211_client;
 

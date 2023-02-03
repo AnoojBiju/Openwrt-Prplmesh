@@ -687,8 +687,8 @@ bool ap_wlan_hal_dummy::set(const std::string &param, const std::string &value, 
     return true;
 }
 
-bool ap_wlan_hal_dummy::add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
-                                std::string &bridge, bool vbss)
+int ap_wlan_hal_dummy::add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
+                               std::string &bridge, bool vbss)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return false;
