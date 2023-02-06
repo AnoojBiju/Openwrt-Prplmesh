@@ -1628,7 +1628,9 @@ bool ap_wlan_hal_nl80211::remove_bss(std::string &ifname)
         LOG(ERROR) << "Failed to remove the BSS!";
         return false;
     }
-    return true;
+
+    LOG(DEBUG) << "Removing the interface from the list";
+    return base_wlan_hal_nl80211::remove_interface(ifname);
 }
 
 bool ap_wlan_hal_nl80211::add_key(const std::string &ifname, const sKeyInfo &key_info)

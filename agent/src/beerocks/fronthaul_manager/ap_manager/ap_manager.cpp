@@ -414,6 +414,7 @@ bool ApManager::stop()
                 m_event_loop->remove_handlers(fd);
             }
         }
+        m_dynamic_bss_ext_events_fds.clear();
 
         if (m_ap_hal_int_events > 0) {
             m_event_loop->remove_handlers(m_ap_hal_int_events);
@@ -892,7 +893,7 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
             }
         }
 
-        if (!ap_wlan_hal->remove_bss(ifname)) {
+        if (!remove_bss(ifname)) {
             LOG(ERROR) << "Failed to remove the BSS!";
             send_virtual_bss_response(virtual_bss_destruction_tlv->radio_uid(),
                                       virtual_bss_destruction_tlv->bssid(), false);
@@ -2923,10 +2924,36 @@ bool ApManager::add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &
         return false;
     }
 
+    m_dynamic_bss_ext_events_fds[ifname] = fd;
+
     if (!register_ext_events_handlers(fd)) {
         LOG(ERROR) << "Failed to register ext_events handlers for the new BSS!";
         return false;
     }
+    return true;
+}
+
+bool ApManager::remove_bss(std::string &ifname)
+{
+    LOG(DEBUG) << "Removing bss " << ifname;
+
+    if (m_dynamic_bss_ext_events_fds.count(ifname) < 1) {
+        LOG(WARNING) << "Could not find ext events fd for interface " << ifname;
+        // Continue, try to remove the BSS anyway.
+    }
+    int fd = m_dynamic_bss_ext_events_fds[ifname];
+
+    if (!m_event_loop->remove_handlers(fd)) {
+        LOG(WARNING) << "Unable to remove handlers for external event fd " << fd;
+        // Continue, try to remove the BSS anyway.
+    }
+    m_dynamic_bss_ext_events_fds.erase(ifname);
+
+    if (!ap_wlan_hal->remove_bss(ifname)) {
+        LOG(ERROR) << "Failed to remove the BSS!";
+        return false;
+    }
+
     return true;
 }
 
@@ -2950,6 +2977,12 @@ bool ApManager::register_ext_events_handlers(int fd)
                 if (it != m_ap_hal_ext_events.end()) {
                     *it = beerocks::net::FileDescriptor::invalid_descriptor;
                 }
+                auto if_it = std::find_if(
+                    m_dynamic_bss_ext_events_fds.begin(), m_dynamic_bss_ext_events_fds.end(),
+                    [fd](const std::pair<std::string, int> &i) -> bool { return i.second == fd; });
+                if (if_it != m_dynamic_bss_ext_events_fds.end()) {
+                    m_dynamic_bss_ext_events_fds.erase(if_it);
+                }
                 return false;
             },
         .on_error =
@@ -2958,6 +2991,12 @@ bool ApManager::register_ext_events_handlers(int fd)
                 auto it = std::find(m_ap_hal_ext_events.begin(), m_ap_hal_ext_events.end(), fd);
                 if (it != m_ap_hal_ext_events.end()) {
                     *it = beerocks::net::FileDescriptor::invalid_descriptor;
+                }
+                auto if_it = std::find_if(
+                    m_dynamic_bss_ext_events_fds.begin(), m_dynamic_bss_ext_events_fds.end(),
+                    [fd](const std::pair<std::string, int> &i) -> bool { return i.second == fd; });
+                if (if_it != m_dynamic_bss_ext_events_fds.end()) {
+                    m_dynamic_bss_ext_events_fds.erase(if_it);
                 }
                 return false;
             },

@@ -188,6 +188,15 @@ private:
                  std::string &bridge, bool vbss);
 
     /**
+     * @brief Remove a BSS and its external event handlers.
+     *
+     * @param ifname the interface name.
+     *
+     * @return true on success, false otherwise.
+     */
+    bool remove_bss(std::string &ifname);
+
+    /**
      * @brief Get the interface name to be used for a VBSS, based on its BSSID.
      *
      * @param bssid the BSSID of the VBSS.
@@ -236,6 +245,12 @@ private:
      * File descriptor to the external events queue.
      */
     std::vector<int> m_ap_hal_ext_events = {beerocks::net::FileDescriptor::invalid_descriptor};
+
+    /**
+     * Maps dynamically created interfaces to their external events
+     * queue file descriptor.
+     */
+    std::unordered_map<std::string, int> m_dynamic_bss_ext_events_fds;
 
     /**
      * File descriptor to the internal events queue.
