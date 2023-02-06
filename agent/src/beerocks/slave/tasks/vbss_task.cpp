@@ -39,6 +39,10 @@ bool VbssTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t iface_in
         handle_channel_switch_request(cmdu_rx);
         return true;
     }
+    case ieee1905_1::eMessageType::VIRTUAL_BSS_MOVE_CANCEL_REQUEST_MESSAGE: {
+        handle_move_cancel_request(cmdu_rx);
+        return true;
+    }
     default: {
         // Message was not handled, therefore return false.
         return false;
@@ -194,6 +198,28 @@ void VbssTask::handle_virtual_bss_response(ieee1905_1::CmduMessageRx &cmdu_rx)
         tlvAlMacAddress->mac() = db->bridge.mac;
         m_btl_ctx.send_cmdu_to_controller({}, m_cmdu_tx);
     }
+}
+
+bool VbssTask::handle_move_cancel_request(ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    LOG(DEBUG) << "Received Virtual BSS Move Cancel Request";
+    auto client_info_tlv = cmdu_rx.getClass<wfa_map::tlvClientInfo>();
+    if (!client_info_tlv) {
+        LOG(ERROR) << "Virtual BSS Move Cancel Request does not contain Client Info TLV!";
+        return false;
+    }
+    auto db    = AgentDB::get();
+    auto radio = db->get_radio_by_mac(client_info_tlv->bssid(), AgentDB::eMacType::BSSID);
+    if (!radio) {
+        LOG(ERROR) << "Could not find radio with BSSID " << client_info_tlv->bssid();
+        return false;
+    }
+    auto ap_manager_fd = m_btl_ctx.get_ap_manager_fd(radio->front.iface_name);
+    if (!m_btl_ctx.forward_cmdu_to_uds(ap_manager_fd, cmdu_rx)) {
+        LOG(ERROR) << "Could not forward Virtual BSS Move Cancel Message to AP manager!";
+        return false;
+    }
+    return true;
 }
 
 } // namespace beerocks

@@ -119,6 +119,13 @@ private:
     void handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
+     * @brief Handles Virtual BSS Move Cancel Message
+     *
+     * @param cmdu_rx Received CMDU to be handled.
+     */
+    void handle_virtual_bss_move_cancel_request(ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
      * @brief Handles the request for the security context of a given vbss client
      * @param cmdu_rx Received CMDU to be handled.
      */

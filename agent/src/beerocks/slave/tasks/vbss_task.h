@@ -64,6 +64,14 @@ private:
      * @return true on success, otherwise false.
      */
     void handle_virtual_bss_response(ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief Handle the Move Cancel request sent by the controller.
+     *
+     * @param cmdu_rx Received CMDU to be handled.
+     * @return true on success, false otherwise.
+     */
+    bool handle_move_cancel_request(ieee1905_1::CmduMessageRx &cmdu_rx);
 };
 } // namespace beerocks
 

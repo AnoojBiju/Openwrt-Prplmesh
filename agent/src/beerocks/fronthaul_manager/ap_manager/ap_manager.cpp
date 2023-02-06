@@ -662,6 +662,10 @@ void ApManager::handle_cmdu_ieee1905_1_message(ieee1905_1::CmduMessageRx &cmdu_r
         handle_virtual_bss_move_preparation_request(cmdu_rx);
         break;
     }
+    case ieee1905_1::eMessageType::VIRTUAL_BSS_MOVE_CANCEL_REQUEST_MESSAGE: {
+        handle_virtual_bss_move_cancel_request(cmdu_rx);
+        break;
+    }
     case ieee1905_1::eMessageType::UNASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE: {
         handle_unassoc_sta_link_metrics_query_message(cmdu_rx);
         break;
@@ -940,6 +944,33 @@ void ApManager::handle_virtual_bss_move_preparation_request(ieee1905_1::CmduMess
         return;
     }
 
+    send_cmdu(cmdu_tx);
+}
+
+void ApManager::handle_virtual_bss_move_cancel_request(ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    LOG(DEBUG) << "Received Virtual BSS Move Cancel Request";
+    auto client_info_tlv_rx = cmdu_rx.getClass<wfa_map::tlvClientInfo>();
+    if (!client_info_tlv_rx) {
+        LOG(ERROR) << "Client Info TLV is missing!";
+        return;
+    }
+    auto cmdu_tx_header =
+        cmdu_tx.create(0, ieee1905_1::eMessageType::VIRTUAL_BSS_MOVE_CANCEL_RESPONSE_MESSAGE);
+    if (!cmdu_tx_header) {
+        LOG(DEBUG) << "cmdu creation of type VIRTUAL_BSS_MOVE_CANCEL_RESPONSE_MESSAGE failed!";
+        return;
+    }
+
+    auto client_info_tlv_tx          = cmdu_tx.addClass<wfa_map::tlvClientInfo>();
+    client_info_tlv_tx->bssid()      = client_info_tlv_rx->bssid();
+    client_info_tlv_tx->client_mac() = client_info_tlv_rx->client_mac();
+    std::string ifname               = get_vbss_interface_name(client_info_tlv_rx->bssid());
+    // The VBSS spec leaves the actions needed to handle a Move Cancel up to the Agent.
+    if (!ap_wlan_hal->remove_bss(ifname)) {
+        LOG(WARNING) << "Could not remove BSS '" << ifname << "'";
+    }
+    // TODO PPM-2191: renegotiate Block Acks.
     send_cmdu(cmdu_tx);
 }
 
