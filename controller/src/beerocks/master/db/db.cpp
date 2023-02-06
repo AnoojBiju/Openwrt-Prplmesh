@@ -523,11 +523,12 @@ bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac)
     return dm_add_radio_element(*radio, *agent);
 }
 
-std::shared_ptr<Station> db::add_node_station(const sMacAddr &mac, const sMacAddr &parent_mac)
+std::shared_ptr<Station> db::add_node_station(const sMacAddr &al_mac, const sMacAddr &mac, const sMacAddr &parent_mac)
 {
     auto station = m_stations.add(mac);
-    auto bss     = get_bss(parent_mac);
-    LOG(DEBUG) << "Adding Station node with mac " << mac << " parent mac: " << parent_mac;
+    auto bss     = get_bss(parent_mac, al_mac);
+    LOG(DEBUG) << "Adding Station node " << " for AL-MAC " << al_mac
+               << " station mac " << mac << " parent mac: " << parent_mac;
 
     if (!bss) {
         LOG(ERROR) << "Failed to get sBss: " << parent_mac;
@@ -547,7 +548,7 @@ std::shared_ptr<Station> db::add_node_station(const sMacAddr &mac, const sMacAdd
 
     // Add STA to the controller data model via m_ambiorix_datamodel
     // for connected station (WiFi client)
-    if (!dm_add_sta_element(parent_mac, *station)) {
+    if (!dm_add_sta_element(al_mac, parent_mac, *station)) {
         LOG(ERROR) << "Failed to add station datamodel, mac: " << station->mac;
     }
 
@@ -2375,7 +2376,7 @@ bool db::remove_vap(Agent::sRadio &radio, Agent::sRadio::sBss &bss)
     return dm_remove_bss(bss);
 }
 
-bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bssid,
+bool db::add_vap(const sMacAddr &al_mac, const std::string &radio_mac, int vap_id, const std::string &bssid,
                  const std::string &ssid, bool backhaul)
 {
     if (!has_node(tlvf::mac_from_string(bssid)) &&
@@ -2388,11 +2389,11 @@ bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bs
     vaps_info[vap_id].ssid         = ssid;
     vaps_info[vap_id].backhaul_vap = backhaul;
 
-    return dm_set_radio_bss(tlvf::mac_from_string(radio_mac), tlvf::mac_from_string(bssid), ssid);
+    return dm_set_radio_bss(al_mac, tlvf::mac_from_string(radio_mac), tlvf::mac_from_string(bssid), ssid);
 }
 
-bool db::update_vap(const sMacAddr &radio_mac, const sMacAddr &bssid, const std::string &ssid,
-                    bool backhaul)
+bool db::update_vap(const sMacAddr &al_mac, const sMacAddr &radio_mac, const sMacAddr &bssid,
+                    const std::string &ssid, bool backhaul)
 {
     if (!has_node(bssid) && !add_virtual_node(bssid, radio_mac)) {
         return false;
@@ -2413,12 +2414,12 @@ bool db::update_vap(const sMacAddr &radio_mac, const sMacAddr &bssid, const std:
                 return a.first < b.first;
             });
         int8_t new_vap_id = (max_vap_it == vaps_info.end()) ? 0 : max_vap_it->first + 1;
-        return add_vap(tlvf::mac_to_string(radio_mac), new_vap_id, tlvf::mac_to_string(bssid), ssid,
+        return add_vap(al_mac, tlvf::mac_to_string(radio_mac), new_vap_id, tlvf::mac_to_string(bssid), ssid,
                        backhaul);
     }
     it->second.ssid         = ssid;
     it->second.backhaul_vap = backhaul;
-    return dm_set_radio_bss(radio_mac, bssid, ssid);
+    return dm_set_radio_bss(al_mac, radio_mac, bssid, ssid);
 }
 
 std::set<std::string> db::get_hostap_vaps_bssids(const std::string &mac)
@@ -5581,9 +5582,12 @@ std::shared_ptr<Agent::sRadio> db::get_radio_by_uid(const sMacAddr &radio_uid)
     return {};
 }
 
-std::shared_ptr<Agent::sRadio::sBss> db::get_bss(const sMacAddr &bssid)
+std::shared_ptr<Agent::sRadio::sBss> db::get_bss(const sMacAddr &bssid, const sMacAddr &al_mac)
 {
     for (const auto &agent : m_agents) {
+        if (al_mac != beerocks::net::network_utils::ZERO_MAC && al_mac != agent.second->al_mac) {
+            continue;
+        }
         for (const auto &radio : agent.second->radios) {
             auto bss = radio.second->bsses.get(bssid);
             if (bss) {
@@ -6022,7 +6026,7 @@ void db::add_node_from_data(const std::string &client_entry, const ValuesMap &va
 
     // Add client node with defaults and in default location
     LOG(DEBUG) << "Adding station node from data: " << client_mac;
-    if (!add_node_station(client_mac)) {
+    if (!add_node_station(network_utils::ZERO_MAC, client_mac)) {
         LOG(ERROR) << "Failed to add client node for client_entry " << client_entry;
         result.first = 1;
         return;
@@ -6162,10 +6166,10 @@ bool db::dm_set_device_multi_ap_capabilities(const std::string &device_mac)
     return return_val;
 }
 
-bool db::dm_add_sta_element(const sMacAddr &bssid, Station &station)
+bool db::dm_add_sta_element(const sMacAddr &al_mac, const sMacAddr &bssid, Station &station)
 {
 
-    auto bss = get_bss(bssid);
+    auto bss = get_bss(bssid, al_mac);
     if (!bss) {
         LOG(ERROR) << "Failed to get BSS with BSSID: " << bssid;
         return false;
@@ -6528,10 +6532,10 @@ bool db::set_radio_utilization(const sMacAddr &bssid, uint8_t utilization)
     return true;
 }
 
-bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, const std::string &ssid,
+bool db::dm_set_radio_bss(const sMacAddr &al_mac, const sMacAddr &radio_mac, const sMacAddr &bssid, const std::string &ssid,
                           bool is_vbss)
 {
-    LOG(DEBUG) << "Setting BSS for radio " << radio_mac << " bssid " << bssid;
+    LOG(DEBUG) << "Setting BSS for radio " << radio_mac << " bssid " << bssid << " al_mac " << al_mac;
     auto radio = get_radio_by_uid(radio_mac);
     if (!radio) {
         LOG(ERROR) << "Failed to get radio with mac: " << radio_mac;
@@ -6543,7 +6547,7 @@ bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, cons
         return true;
     }
 
-    auto bss = get_bss(bssid);
+    auto bss = get_bss(bssid, al_mac);
     if (!bss) {
         LOG(ERROR) << "Failed to get BSS with BSSID: " << bssid;
         return false;

@@ -448,12 +448,14 @@ public:
     std::shared_ptr<Agent::sRadio> get_radio_by_uid(const sMacAddr &radio_uid);
 
     /**
-     * @brief Finds and returns sBss with a specified BSSID.
+     * @brief Finds and returns sBss with a specified BSSID (and optionaly al_mac).
      *
      * @param bssid BSSID of searched BSS.
+     * @param al_mac the AL MAC of the agent on which to search for the BSS.
      * @return The sBss object, or nullptr if it doesn't exist.
      */
-    std::shared_ptr<Agent::sRadio::sBss> get_bss(const sMacAddr &bssid);
+    std::shared_ptr<Agent::sRadio::sBss> get_bss(const sMacAddr &bssid,
+                                                 const sMacAddr &al_mac = beerocks::net::network_utils::ZERO_MAC);
 
     /**
      * @brief Get radio containing a BSS with a specific BSSID
@@ -595,12 +597,14 @@ public:
      *
      * Adds a station node and a Station object if they don't exist.
      *
+     * @param al_mac the AL-MAC under which to add the client.
      * @param mac MAC address of the client.
      * @param parent_mac MAC address of the parent node in the legacy node structure.
      * @return the existing Station if it was already there or the newly added Station otherwise.
      */
     std::shared_ptr<Station>
-    add_node_station(const sMacAddr &mac,
+    add_node_station(const sMacAddr &al_mac,
+                     const sMacAddr &mac,
                      const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
 
     bool remove_node(const sMacAddr &mac);
@@ -1211,19 +1215,20 @@ public:
      */
     bool remove_vap(Agent::sRadio &radio, Agent::sRadio::sBss &bss);
 
-    bool add_vap(const std::string &radio_mac, int vap_id, const std::string &bssid,
+    bool add_vap(const sMacAddr &al_mac, const std::string &radio_mac, int vap_id, const std::string &bssid,
                  const std::string &ssid, bool backhaul);
 
     /** Update VAP information
      *
-     * Add or update the VAP information for the given BSSID on the given radio. If the VAP exists
-     * already, it is updated. If no VAP with the given BSSID exists, a new one is created with
-     * a unique vap_id.
+     * Add or update the VAP information for the given BSSID on the
+     * given radio on a specific agent. If the VAP exists already, it
+     * is updated. If no VAP with the given BSSID exists, a new one is
+     * created with a unique vap_id.
      *
      * For prplMesh agents, this function should be called after the VAPs were created (with
      * add_vap) so the vap_id is correct. For non-prplMesh agents, the vap_id doesn't matter.
      */
-    bool update_vap(const sMacAddr &radio_mac, const sMacAddr &bssid, const std::string &ssid,
+    bool update_vap(const sMacAddr &al_mac, const sMacAddr &radio_mac, const sMacAddr &bssid, const std::string &ssid,
                     bool backhaul);
 
     std::string get_hostap_ssid(const sMacAddr &mac);
@@ -2916,11 +2921,12 @@ private:
      *
      * Data model path example: "Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.2.STA.3"
      *
+     * @param al_mac the AL MAC of the agent to which the BSSID belongs.
      * @param bssid BSS mac address.
      * @param station Station object
      * @return True on success, false otherwise.
      */
-    bool dm_add_sta_element(const sMacAddr &bssid, Station &station);
+    bool dm_add_sta_element(const sMacAddr &al_mac, const sMacAddr &bssid, Station &station);
 
     /**
      * @brief Set clients (device) multi ap capabilities
@@ -2957,7 +2963,7 @@ private:
      * @param ssid SSID of the BSS. If empty, BSS is considered disabled.
      * @param is_vbss Whether this is a Virtual BSS or not
      */
-    bool dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, const std::string &ssid,
+    bool dm_set_radio_bss(const sMacAddr &al_mac, const sMacAddr &radio_mac, const sMacAddr &bssid, const std::string &ssid,
                           bool is_vbss = false);
 
     /**

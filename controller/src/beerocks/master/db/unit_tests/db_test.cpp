@@ -175,7 +175,7 @@ protected:
             radio->bsses.add(tlvf::mac_from_string(g_bssid_1), *radio, g_vap_id_1);
         }
 
-        EXPECT_TRUE(m_db->add_vap(g_radio_mac_1, g_vap_id_1, g_bssid_1, g_ssid_1, false));
+        EXPECT_TRUE(m_db->add_vap(tlvf::mac_from_string(g_bridge_mac), g_radio_mac_1, g_vap_id_1, g_bssid_1, g_ssid_1, false));
     }
 };
 
@@ -292,7 +292,7 @@ TEST_F(DbTest, test_add_vap)
     EXPECT_FALSE(m_db->has_node(tlvf::mac_from_string(g_radio_mac_1)));
 
     //must fail because radio does not exist
-    EXPECT_FALSE(m_db->add_vap(g_radio_mac_1, g_vap_id_1, g_bssid_1, g_ssid_1, false));
+    EXPECT_FALSE(m_db->add_vap(tlvf::mac_from_string(g_bridge_mac), g_radio_mac_1, g_vap_id_1, g_bssid_1, g_ssid_1, false));
 
     //expectations for add_node_radio
     EXPECT_CALL(*m_ambiorix, get_instance_index(_, g_radio_mac_1)).WillRepeatedly(Return(1));
@@ -343,7 +343,7 @@ TEST_F(DbTest, test_add_vap)
         radio->bsses.add(tlvf::mac_from_string(g_bssid_1), *radio, g_vap_id_1);
     }
 
-    EXPECT_TRUE(m_db->add_vap(g_radio_mac_1, g_vap_id_1, g_bssid_1, g_ssid_1, false));
+    EXPECT_TRUE(m_db->add_vap(tlvf::mac_from_string(g_bridge_mac), g_radio_mac_1, g_vap_id_1, g_bssid_1, g_ssid_1, false));
     //BSS node and path must exist
     EXPECT_TRUE(m_db->has_node(tlvf::mac_from_string(g_bssid_1)));
 }
@@ -732,7 +732,7 @@ TEST_F(DbTest, test_set_vap_stats_info)
         radio->bsses.add(tlvf::mac_from_string(g_bssid_1), *radio, g_vap_id_1);
     }
 
-    EXPECT_TRUE(m_db->add_vap(g_radio_mac_1, g_vap_id_1, g_bssid_1, g_ssid_1, false));
+    EXPECT_TRUE(m_db->add_vap(tlvf::mac_from_string(g_bridge_mac), g_radio_mac_1, g_vap_id_1, g_bssid_1, g_ssid_1, false));
 
     //expectations for set_vap_stats_info
     EXPECT_CALL(*m_ambiorix, get_instance_index(_, g_bssid_1)).WillRepeatedly(Return(1));

@@ -312,7 +312,7 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
                 // TODO "backhaul" is not set in this TLV, so just assume false
                 if (vap_id == eBeeRocksIfaceIds::IFACE_ID_INVALID) {
                     LOG(DEBUG) << "Non-Prplmesh Agent";
-                    if (!database.update_vap(radio_entry.radio_uid(), bss_entry.radio_bssid(),
+                    if (!database.update_vap(src_mac, radio_entry.radio_uid(), bss_entry.radio_bssid(),
                                              bss_entry.ssid_str(), false)) {
                         LOG(ERROR) << "Failed to update VAP for radio " << radio_entry.radio_uid()
                                    << " BSS " << bss_entry.radio_bssid() << " SSID "
@@ -322,7 +322,7 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
                     LOG(DEBUG) << "Prplmesh Agent";
                     // update BSS vap_id if still undefined
                     bss->update_vap_id(vap_id);
-                    if (!database.add_vap(tlvf::mac_to_string(radio_entry.radio_uid()), int(vap_id),
+                    if (!database.add_vap(al_mac, tlvf::mac_to_string(radio_entry.radio_uid()), int(vap_id),
                                           tlvf::mac_to_string(bss_entry.radio_bssid()),
                                           bss_entry.ssid_str(), false)) {
                         LOG(ERROR)
@@ -612,13 +612,13 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
 
     if (client_connected) {
         //add or update node parent
-        auto client = database.add_node_station(client_mac, bssid);
+        auto client = database.add_node_station(src_mac, client_mac, bssid);
         if (!client) {
             LOG(ERROR) << "client " << client_mac << " not created";
             return false;
         }
 
-        LOG(INFO) << "client connected, mac=" << client_mac_str << ", bssid=" << bssid_str;
+        LOG(INFO) << "client connected, al_mac=" << src_mac << " mac=" << client_mac_str << ", bssid=" << bssid_str;
 
         auto wifi_channel = database.get_node_wifi_channel(bssid_str);
         if (wifi_channel.is_empty()) {
