@@ -7031,17 +7031,18 @@ bool db::dm_set_sta_extended_link_metrics(
         return true;
     }
 
-    bool ret_val = true;
-    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "LastDataDownlinkRate",
-                                         metrics.last_data_down_link_rate);
-    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "LastDataUplinkRate",
-                                         metrics.last_data_up_link_rate);
-    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "UtilizationReceive",
-                                         metrics.utilization_receive);
-    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "UtilizationTransmit",
-                                         metrics.utilization_transmit);
+    auto transaction = m_ambiorix_datamodel->begin_transaction(station->dm_path);
+    if (!transaction) {
+        return false;
+    }
 
-    return ret_val;
+    bool ret_val = true;
+    ret_val &= transaction->set("LastDataDownlinkRate", metrics.last_data_down_link_rate);
+    ret_val &= transaction->set("LastDataUplinkRate", metrics.last_data_up_link_rate);
+    ret_val &= transaction->set("UtilizationReceive", metrics.utilization_receive);
+    ret_val &= transaction->set("UtilizationTransmit", metrics.utilization_transmit);
+
+    return ret_val && !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
 }
 
 bool db::dm_set_sta_traffic_stats(const sMacAddr &sta_mac, sAssociatedStaTrafficStats &stats)
