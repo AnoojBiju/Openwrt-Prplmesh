@@ -6327,14 +6327,20 @@ bool db::dm_add_failed_connection_event(const sMacAddr &bssid, const sMacAddr &s
         return false;
     }
 
+    auto transaction = m_ambiorix_datamodel->begin_transaction(event_path);
+    if (!transaction) {
+        return false;
+    }
+
     bool ret_val = true;
 
-    ret_val &= m_ambiorix_datamodel->set_current_time(event_path);
-    ret_val &= m_ambiorix_datamodel->set(event_path, "BSSID", bssid);
-    ret_val &= m_ambiorix_datamodel->set(event_path, "MACAddress", sta_mac);
-    ret_val &= m_ambiorix_datamodel->set(event_path, "StatusCode", status_code);
-    ret_val &= m_ambiorix_datamodel->set(event_path, "ReasonCode", reason_code);
-    return ret_val;
+    ret_val &= transaction->set_current_time();
+    ret_val &= transaction->set("BSSID", bssid);
+    ret_val &= transaction->set("MACAddress", sta_mac);
+    ret_val &= transaction->set("StatusCode", status_code);
+    ret_val &= transaction->set("ReasonCode", reason_code);
+
+    return ret_val && !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
 }
 
 std::string db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_mac,
