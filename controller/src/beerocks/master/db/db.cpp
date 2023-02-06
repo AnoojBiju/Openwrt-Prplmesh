@@ -7057,20 +7057,22 @@ bool db::dm_set_sta_traffic_stats(const sMacAddr &sta_mac, sAssociatedStaTraffic
         return true;
     }
 
-    bool ret_val = true;
-    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "BytesSent", stats.m_byte_sent);
-    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "BytesReceived", stats.m_byte_received);
-    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "PacketsSent", stats.m_packets_sent);
-    ret_val &=
-        m_ambiorix_datamodel->set(station->dm_path, "PacketsReceived", stats.m_packets_received);
-    ret_val &=
-        m_ambiorix_datamodel->set(station->dm_path, "RetransCount", stats.m_retransmission_count);
-    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "ErrorsSent", stats.m_tx_packets_error);
-    ret_val &=
-        m_ambiorix_datamodel->set(station->dm_path, "ErrorsReceived", stats.m_rx_packets_error);
-    ret_val &= m_ambiorix_datamodel->set_current_time(station->dm_path);
+    auto transaction = m_ambiorix_datamodel->begin_transaction(station->dm_path);
+    if (!transaction) {
+        return false;
+    }
 
-    return ret_val;
+    bool ret_val = true;
+    ret_val &= transaction->set("BytesSent", stats.m_byte_sent);
+    ret_val &= transaction->set("BytesReceived", stats.m_byte_received);
+    ret_val &= transaction->set("PacketsSent", stats.m_packets_sent);
+    ret_val &= transaction->set("PacketsReceived", stats.m_packets_received);
+    ret_val &= transaction->set("RetransCount", stats.m_retransmission_count);
+    ret_val &= transaction->set("ErrorsSent", stats.m_tx_packets_error);
+    ret_val &= transaction->set("ErrorsReceived", stats.m_rx_packets_error);
+    ret_val &= transaction->set_current_time();
+
+    return ret_val && !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
 }
 
 bool db::dm_add_tid_queue_sizes(
