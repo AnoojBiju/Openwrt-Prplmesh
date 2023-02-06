@@ -113,6 +113,8 @@ protected:
      */
     int add_interface(const std::string &interface);
 
+    bool remove_interface(const std::string &interface);
+
     std::unique_ptr<nl80211_client> m_nl80211_client;
 
     // Private data-members:

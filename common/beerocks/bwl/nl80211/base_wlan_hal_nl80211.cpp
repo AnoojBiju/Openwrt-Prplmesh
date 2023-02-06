@@ -1213,5 +1213,14 @@ int base_wlan_hal_nl80211::add_interface(const std::string &interface)
     return event_socket->fd();
 }
 
+bool base_wlan_hal_nl80211::remove_interface(const std::string &interface)
+{
+    if (!m_wpa_ctrl_client.del_interface(interface)) {
+        LOG(WARNING) << "Failed to remove interface " << interface;
+        return false;
+    }
+    return true;
+}
+
 } // namespace nl80211
 } // namespace bwl
