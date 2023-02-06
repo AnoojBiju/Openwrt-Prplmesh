@@ -7501,28 +7501,34 @@ bool db::add_sta_steering_event(const sMacAddr &sta_mac, sStaSteeringEvent &even
     bool ret_val          = true;
     auto steering_history = station->dm_path + ".MultiAPSTA.SteeringHistory";
 
-    auto steering_event_path = m_ambiorix_datamodel->add_instance(steering_history);
-    if (steering_event_path.empty()) {
+    auto transaction = m_ambiorix_datamodel->begin_transaction(steering_history, true);
+    if (!transaction) {
         LOG(ERROR) << "Failed to add instance to " << steering_history;
         return false;
     }
 
     LOG(DEBUG) << "Add station steering event to database sta:" << sta_mac;
+
+    ret_val &= transaction->set("APOrigin", event.original_bssid);
+    ret_val &= transaction->set("APDestination", event.target_bssid);
+    ret_val &= transaction->set("SteeringDuration", event.duration.count());
+    ret_val &= transaction->set("SteeringApproach", event.steering_approach);
+    ret_val &= transaction->set("TriggerEvent", event.trigger_event);
+    ret_val &= transaction->set("Time", event.timestamp);
+
+    auto steering_event_path = m_ambiorix_datamodel->commit_transaction(std::move(transaction));
+    ret_val &= !steering_event_path.empty();
+
+    if (!ret_val) {
+        return false;
+    }
+
     sta_events.push_back(event);
 
     // Update steering event data model path
-    sta_events.back().dm_path = steering_event_path;
+    sta_events.back().dm_path = std::move(steering_event_path);
 
-    ret_val &= m_ambiorix_datamodel->set(steering_event_path, "APOrigin", event.original_bssid);
-    ret_val &= m_ambiorix_datamodel->set(steering_event_path, "APDestination", event.target_bssid);
-    ret_val &=
-        m_ambiorix_datamodel->set(steering_event_path, "SteeringDuration", event.duration.count());
-    ret_val &=
-        m_ambiorix_datamodel->set(steering_event_path, "SteeringApproach", event.steering_approach);
-    ret_val &= m_ambiorix_datamodel->set(steering_event_path, "TriggerEvent", event.trigger_event);
-    ret_val &= m_ambiorix_datamodel->set(steering_event_path, "Time", event.timestamp);
-
-    return ret_val;
+    return true;
 }
 
 bool db::dm_restore_sta_steering_event(const Station &station)
