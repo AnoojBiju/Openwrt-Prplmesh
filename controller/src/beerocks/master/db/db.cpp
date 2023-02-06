@@ -4821,18 +4821,22 @@ bool db::set_vap_stats_info(const sMacAddr &bssid, uint64_t uc_tx_bytes, uint64_
         return true;
     }
 
+    auto transaction = m_ambiorix_datamodel->begin_transaction(bss->dm_path);
+    if (!transaction) {
+        return false;
+    }
+
     bool ret_val = true;
 
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "UnicastBytesSent", uc_tx_bytes);
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "UnicastBytesReceived", uc_rx_bytes);
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "MulticastBytesSent", mc_tx_bytes);
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "MulticastBytesReceived", mc_rx_bytes);
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "BroadcastBytesSent", bc_tx_bytes);
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "BroadcastBytesReceived", bc_rx_bytes);
+    ret_val &= transaction->set("UnicastBytesSent", uc_tx_bytes);
+    ret_val &= transaction->set("UnicastBytesReceived", uc_rx_bytes);
+    ret_val &= transaction->set("MulticastBytesSent", mc_tx_bytes);
+    ret_val &= transaction->set("MulticastBytesReceived", mc_rx_bytes);
+    ret_val &= transaction->set("BroadcastBytesSent", bc_tx_bytes);
+    ret_val &= transaction->set("BroadcastBytesReceived", bc_rx_bytes);
+    ret_val &= transaction->set_current_time();
 
-    m_ambiorix_datamodel->set_current_time(bss->dm_path);
-
-    return ret_val;
+    return ret_val && !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
 }
 
 bool db::commit_persistent_db_changes()
