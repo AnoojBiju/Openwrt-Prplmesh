@@ -4738,7 +4738,33 @@ bool db::notify_disconnection(const std::string &client_mac, const uint16_t reas
         return false;
     }
 
-    std::string path_to_eventdata = m_ambiorix_datamodel->add_instance(path_to_disassoc_event_data);
+    auto transaction = m_ambiorix_datamodel->begin_transaction(path_to_disassoc_event_data, true);
+    if (!transaction) {
+        return false;
+    }
+
+    bool ret_val = true;
+
+    ret_val &= transaction->set("BSSID", bssid);
+    ret_val &= transaction->set("MACAddress", client_mac);
+    ret_val &= transaction->set("ReasonCode", reason_code);
+    ret_val &= transaction->set("BytesSent", n->stats_info->tx_bytes);
+    ret_val &= transaction->set("BytesReceived", n->stats_info->rx_bytes);
+    ret_val &= transaction->set("PacketsSent", n->stats_info->tx_packets);
+    ret_val &= transaction->set("PacketsReceived", n->stats_info->rx_packets);
+
+    // ErrorsSent and ErrorsReceived are not available yet on stats_info
+    ret_val &= transaction->set("ErrorsSent", static_cast<uint32_t>(0));
+    ret_val &= transaction->set("ErrorsReceived", static_cast<uint32_t>(0));
+    ret_val &= transaction->set("RetransCount", n->stats_info->retrans_count);
+    ret_val &= transaction->set_current_time();
+
+    if (!ret_val) {
+        return false;
+    }
+
+    std::string path_to_eventdata =
+        m_ambiorix_datamodel->commit_transaction(std::move(transaction));
 
     if (path_to_eventdata.empty()) {
         return false;
@@ -4746,28 +4772,7 @@ bool db::notify_disconnection(const std::string &client_mac, const uint16_t reas
 
     m_disassoc_events.push(path_to_eventdata);
 
-    bool ret_val = true;
-
-    ret_val &= m_ambiorix_datamodel->set(path_to_eventdata, "BSSID", bssid);
-    ret_val &= m_ambiorix_datamodel->set(path_to_eventdata, "MACAddress", client_mac);
-    ret_val &= m_ambiorix_datamodel->set(path_to_eventdata, "ReasonCode", reason_code);
-    ret_val &= m_ambiorix_datamodel->set(path_to_eventdata, "BytesSent", n->stats_info->tx_bytes);
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_eventdata, "BytesReceived", n->stats_info->rx_bytes);
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_eventdata, "PacketsSent", n->stats_info->tx_packets);
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_eventdata, "PacketsReceived", n->stats_info->rx_packets);
-
-    // ErrorsSent and ErrorsReceived are not available yet on stats_info
-    ret_val &= m_ambiorix_datamodel->set(path_to_eventdata, "ErrorsSent", static_cast<uint32_t>(0));
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_eventdata, "ErrorsReceived", static_cast<uint32_t>(0));
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_eventdata, "RetransCount", n->stats_info->retrans_count);
-    ret_val &= m_ambiorix_datamodel->set_current_time(path_to_eventdata);
-
-    return ret_val;
+    return true;
 }
 
 bool db::set_node_stats_info(const sMacAddr &mac, const beerocks_message::sStaStatsParams *params)
