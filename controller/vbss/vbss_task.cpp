@@ -91,9 +91,9 @@ bool vbss_task::handle_ieee1905_1_msg(const sMacAddr &src_mac, ieee1905_1::CmduM
     case ieee1905_1::eMessageType::TRIGGER_CHANNEL_SWITCH_ANNOUNCEMENT_RESPONSE_MESSAGE:
         return handle_trigger_chan_switch_announce_resp(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::VIRTUAL_BSS_MOVE_PREPARATION_RESPONSE_MESSAGE:
-        return handle_move_response_msg(src_mac, cmdu_rx, false);
+        return handle_move_response_msg(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::VIRTUAL_BSS_MOVE_CANCEL_RESPONSE_MESSAGE:
-        return handle_move_response_msg(src_mac, cmdu_rx, true);
+        return handle_move_cancel_response(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_WSC_MESSAGE:
         return handle_ap_radio_vbss_caps_msg(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::BSS_CONFIGURATION_REQUEST_MESSAGE:
@@ -327,52 +327,57 @@ bool vbss_task::handle_ap_radio_vbss_caps_msg(const sMacAddr &src_mac,
 
     return true;
 }
+
 bool vbss_task::handle_move_response_msg(const sMacAddr &src_mac,
-                                         ieee1905_1::CmduMessageRx &cmdu_rx, bool is_cancelled)
+                                         ieee1905_1::CmduMessageRx &cmdu_rx)
 {
 
-    LOG(DEBUG) << "Received move preparation response";
     auto client_info_tlv = cmdu_rx.getClass<wfa_map::tlvClientInfo>();
-    std::string msg_desc = is_cancelled ? "Move Cancel" : "Move Preparation";
 
     if (!client_info_tlv) {
-        LOG(ERROR) << msg_desc << " Response did not contain a Client Info TLV!";
+        LOG(ERROR) << " Move Response did not contain a Client Info TLV!";
+        return false;
+    }
+    LOG(INFO) << "Received Move Response for client MAC " << client_info_tlv->client_mac()
+              << " and BSSID " << client_info_tlv->bssid();
+
+    auto existing_move =
+        get_matching_active_move(client_info_tlv->bssid(), eMoveProcessState::VBSS_MOVE_PREP);
+    if (!existing_move) {
+        LOG(WARNING) << "Spurious Move Response message received! No known active move for BSSID '"
+                     << client_info_tlv->bssid() << "'";
+        return true;
+    }
+    // Move exists for VBSSID and is in response to a MOVE_PREP request
+    existing_move->state = eMoveProcessState::VBSS_CREATION;
+
+    // TODO: once PPM-2367/PPM-2368 is done, save+parse the encryption type for
+    // the TX_PN length instead of assuming CCMP.
+    if (!increment_tx_pn(existing_move->sec_ctx_info->tx_packet_num, bwl::ePacketNumberLength::CCMP,
+                         TX_PN_INCREASE_AMOUNT)) {
+        LOG(ERROR) << "Could not increment TX PN!";
+        return false;
+    }
+    if (!increment_tx_pn(existing_move->sec_ctx_info->group_tx_packet_num,
+                         bwl::ePacketNumberLength::CCMP, TX_PN_INCREASE_AMOUNT)) {
+        LOG(ERROR) << "Could not increment group TX PN!";
+        return false;
+    }
+    if (!vbss::vbss_actions::create_vbss(existing_move->client_vbss, existing_move->dest_ruid,
+                                         existing_move->ssid, existing_move->password,
+                                         existing_move->sec_ctx_info.get(), m_database)) {
+        LOG(ERROR) << "Failed to send Create VBSS request during move operation!";
         return false;
     }
 
-    sMacAddr client_mac = client_info_tlv->client_mac();
-    sMacAddr bssid      = client_info_tlv->bssid();
-
-    LOG(INFO) << "Recieved " << msg_desc << "Response for Client MAC " << client_mac
-              << " and BSSID " << bssid;
-
-    auto existing_move = get_matching_active_move(bssid, eMoveProcessState::VBSS_MOVE_PREP);
-    if (existing_move != nullptr && !is_cancelled) {
-        // Move exists for VBSSID and is in response to a MOVE_PREP request
-        existing_move->state = eMoveProcessState::VBSS_CREATION;
-
-        // TODO: once PPM-2367/PPM-2368 is done, save+parse the encryption type for
-        // the TX_PN length instead of assuming CCMP.
-        if (!increment_tx_pn(existing_move->sec_ctx_info->tx_packet_num,
-                             bwl::ePacketNumberLength::CCMP, TX_PN_INCREASE_AMOUNT)) {
-            LOG(ERROR) << "Could not increment TX PN!";
-            return false;
-        }
-        if (!increment_tx_pn(existing_move->sec_ctx_info->group_tx_packet_num,
-                             bwl::ePacketNumberLength::CCMP, TX_PN_INCREASE_AMOUNT)) {
-            LOG(ERROR) << "Could not increment group TX PN!";
-            return false;
-        }
-        if (!vbss::vbss_actions::create_vbss(existing_move->client_vbss, existing_move->dest_ruid,
-                                             existing_move->ssid, existing_move->password,
-                                             existing_move->sec_ctx_info.get(), m_database)) {
-            LOG(ERROR) << "Failed to send Create VBSS request during move operation!";
-            return false;
-        }
-        return true;
-    }
-
     return true;
+}
+
+bool vbss_task::handle_move_cancel_response(const sMacAddr &src_mac,
+                                            ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    LOG(DEBUG) << " - NOT IMPLEMENTED!";
+    return false;
 }
 
 bool vbss_task::handle_trigger_chan_switch_announce_resp(const sMacAddr &src_mac,
