@@ -6124,18 +6124,21 @@ bool db::set_ap_ht_capabilities(const sMacAddr &radio_mac,
     bool ret_val = true;
     path_to_obj += "HTCapabilities.";
 
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HTShortGI20",
-                                         static_cast<bool>(flags.short_gi_support_20mhz));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HTShortGI40",
-                                         static_cast<bool>(flags.short_gi_support_40mhz));
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_obj, "HT40", static_cast<bool>(flags.ht_support_40mhz));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfTxSpatialStreams",
-                                         flags.max_num_of_supported_tx_spatial_streams + 1);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfRxSpatialStreams",
-                                         flags.max_num_of_supported_rx_spatial_streams + 1);
+    auto transaction = m_ambiorix_datamodel->begin_transaction(path_to_obj);
+    if (!transaction) {
+        LOG(ERROR) << "Failed to start transaction for " << path_to_obj;
+        return false;
+    }
 
-    return ret_val;
+    ret_val &= transaction->set("HTShortGI20", static_cast<bool>(flags.short_gi_support_20mhz));
+    ret_val &= transaction->set("HTShortGI40", static_cast<bool>(flags.short_gi_support_40mhz));
+    ret_val &= transaction->set("HT40", static_cast<bool>(flags.ht_support_40mhz));
+    ret_val &= transaction->set("MaxNumberOfTxSpatialStreams",
+                                flags.max_num_of_supported_tx_spatial_streams + 1);
+    ret_val &= transaction->set("MaxNumberOfRxSpatialStreams",
+                                flags.max_num_of_supported_rx_spatial_streams + 1);
+
+    return ret_val && !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
 }
 
 bool db::dm_set_device_multi_ap_capabilities(const std::string &device_mac)
