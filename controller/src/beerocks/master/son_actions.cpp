@@ -97,7 +97,7 @@ bool son_actions::add_node_to_default_location(db &database, std::string client_
         gw_lan_switch = *gw_lan_switches.begin();
     }
 
-    if (!database.add_node_station(tlvf::mac_from_string(client_mac),
+    if (!database.add_node_station(network_utils::ZERO_MAC, tlvf::mac_from_string(client_mac),
                                    tlvf::mac_from_string(gw_lan_switch))) {
         LOG(ERROR) << "add_node_to_default_location - add_node failed";
         return false;
