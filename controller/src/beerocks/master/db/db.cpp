@@ -7092,14 +7092,14 @@ bool db::dm_add_tid_queue_sizes(
 
     // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.TIDQueueSizes.{i}.
     for (auto &tid_queue : tid_queue_vector) {
-        auto tid_queue_size_path =
-            m_ambiorix_datamodel->add_instance(station.dm_path + ".TIDQueueSizes");
-        if (tid_queue_size_path.empty()) {
+        auto transaction = m_ambiorix_datamodel->begin_transaction(station.dm_path + ".TIDQueueSizes", true);
+        if (!transaction) {
             return false;
         }
 
-        ret_val &= m_ambiorix_datamodel->set(tid_queue_size_path, "TID", tid_queue.tid);
-        ret_val &= m_ambiorix_datamodel->set(tid_queue_size_path, "Size", tid_queue.queue_size);
+        ret_val &= transaction->set("TID", tid_queue.tid);
+        ret_val &= transaction->set("Size", tid_queue.queue_size);
+        ret_val &= !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
     }
 
     return ret_val;
