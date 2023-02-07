@@ -6934,15 +6934,26 @@ bool db::dm_update_interface_rx_stats(const sMacAddr &device_mac, const sMacAddr
     // Prepare path to the Interface object Stats, like Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.Stats
     auto stats_path = iface->m_dm_path + ".Stats";
 
+    auto transaction = m_ambiorix_datamodel->begin_transaction(stats_path);
+    if (!transaction) {
+        LOG(ERROR) << "Failed to start transaction for " << stats_path;
+        return false;
+    }
+
     // Set value for the path as Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.Stats.PacketsReceived
-    if (!m_ambiorix_datamodel->set(stats_path, "PacketsReceived", packets_received)) {
+    if (!transaction->set("PacketsReceived", packets_received)) {
         LOG(ERROR) << "Failed to set " << stats_path << ".PacketsReceived: " << packets_received;
         return false;
     }
 
     // Set value for the path as Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.Stats.ErrorsReceived
-    if (!m_ambiorix_datamodel->set(stats_path, "ErrorsReceived", errors_received)) {
+    if (!transaction->set("ErrorsReceived", errors_received)) {
         LOG(ERROR) << "Failed to set " << stats_path << ".ErrorsReceived: " << errors_received;
+        return false;
+    }
+
+    if (m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty()) {
+        LOG(ERROR) << "Failed to commit transaction for " << stats_path;
         return false;
     }
 
