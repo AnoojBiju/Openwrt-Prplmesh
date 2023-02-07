@@ -153,11 +153,11 @@ bool mon_wlan_hal_whm::sta_beacon_11k_request(const std::string &vap_iface_name,
 {
     AmbiorixVariant result;
     AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
-    args.add_child<>("mac", tlvf::mac_to_string(req.sta_mac.oct));
-    args.add_child<>("bssid", tlvf::mac_to_string(req.bssid.oct));
-    args.add_child<>("class", uint8_t(req.op_class));
-    args.add_child<>("channel", uint8_t(req.channel));
-    args.add_child<>("ssid", std::string((const char *)req.ssid));
+    args.add_child("mac", tlvf::mac_to_string(req.sta_mac.oct));
+    args.add_child("bssid", tlvf::mac_to_string(req.bssid.oct));
+    args.add_child("class", uint8_t(req.op_class));
+    args.add_child("channel", uint8_t(req.channel));
+    args.add_child("ssid", std::string((const char *)req.ssid));
     std::string wifi_ap_path = wbapi_utils::search_path_ap_by_iface(vap_iface_name);
     bool ret = m_ambiorix_cl->call(wifi_ap_path, "sendRemoteMeasumentRequest", args, result);
 
@@ -378,7 +378,7 @@ bool mon_wlan_hal_whm::sta_unassoc_rssi_measurement(
 
         AmbiorixVariant result;
         AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
-        args.add_child<>("MACAddress", mac_address);
+        args.add_child("MACAddress", mac_address);
         if (!m_ambiorix_cl->call(nasta_monitor_path, "createNonAssociatedDevice", args, result)) {
             LOG(ERROR) << " remote function call createNonAssociatedDevice for object "
                        << nasta_monitor_path << " Failed!";
@@ -393,7 +393,7 @@ bool mon_wlan_hal_whm::sta_unassoc_rssi_measurement(
     for (auto &station_to_remove : amx_un_stations_to_be_removed) {
         AmbiorixVariant result;
         AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
-        args.add_child<>("MACAddress", station_to_remove);
+        args.add_child("MACAddress", station_to_remove);
         if (!m_ambiorix_cl->call(nasta_monitor_path, "deleteNonAssociatedDevice", args, result)) {
             LOG(ERROR) << " remote function call deleteNonAssociatedDevice"
                        << " for object " << nasta_monitor_path

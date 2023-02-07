@@ -278,7 +278,30 @@ bool sta_wlan_hal_whm::disconnect()
     return true;
 }
 
-bool sta_wlan_hal_whm::roam(const sMacAddr &bssid, ChannelFreqPair channel) { return true; }
+bool sta_wlan_hal_whm::roam(const sMacAddr &bssid, ChannelFreqPair channel)
+{
+
+    if (!is_connected()) {
+        LOG(ERROR) << get_iface_name() << " Not connected, can't roam";
+        return false;
+    }
+
+    AmbiorixVariant result;
+    AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
+    args.add_child("bssid", tlvf::mac_to_string(bssid));
+    args.add_child("tries", 2);        //arbitrary choice
+    args.add_child("timeoutInSec", 5); //arbitrary choice
+    if (!m_ambiorix_cl->call(m_ep_path, "roamTo", args, result)) {
+        LOG(ERROR) << " remote function call roamTo Failed!";
+        return false;
+    }
+
+    // Update the active channel and bssid
+    m_active_bssid   = tlvf::mac_to_string(bssid);
+    m_active_channel = channel.first;
+
+    return true;
+}
 
 bool sta_wlan_hal_whm::get_4addr_mode() { return true; }
 

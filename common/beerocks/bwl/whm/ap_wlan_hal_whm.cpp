@@ -145,7 +145,7 @@ bool ap_wlan_hal_whm::sta_allow(const std::string &mac, const std::string &bssid
     // delete sta from the BlackList
     AmbiorixVariant result;
     AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
-    args.add_child<>("mac", mac);
+    args.add_child("mac", mac);
     bool ret = true;
     if (mode == "WhiteList") {
         ret = m_ambiorix_cl->call(mac_filter_path, "addEntry", args, result);
@@ -199,7 +199,7 @@ bool ap_wlan_hal_whm::sta_deny(const std::string &mac, const std::string &bssid)
     bool ret = true;
     AmbiorixVariant result;
     AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
-    args.add_child<>("mac", mac);
+    args.add_child("mac", mac);
     if (mode == "Off") {
         LOG(WARNING) << "change MACFiltering mode to BlackList";
         AmbiorixVariant new_obj(AMXC_VAR_ID_HTABLE);
@@ -240,8 +240,8 @@ bool ap_wlan_hal_whm::sta_deauth(int8_t vap_id, const std::string &mac, uint32_t
     std::string ifname = m_radio_info.available_vaps[vap_id].bss;
     AmbiorixVariant result;
     AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
-    args.add_child<>("macaddress", mac);
-    args.add_child<>("reason", reason);
+    args.add_child("macaddress", mac);
+    args.add_child("reason", reason);
     std::string wifi_ap_path = wbapi_utils::search_path_ap_by_iface(ifname);
     bool ret                 = m_ambiorix_cl->call(wifi_ap_path, "kickStationReason", args, result);
 
@@ -264,13 +264,13 @@ bool ap_wlan_hal_whm::sta_bss_steer(int8_t vap_id, const std::string &mac, const
 
     AmbiorixVariant result;
     AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
-    args.add_child<>("mac", mac);
-    args.add_child<>("target", bssid);
-    args.add_child<>("class", oper_class);
-    args.add_child<>("channel", chan);
-    args.add_child<>("validity", valid_int_btt);
-    args.add_child<>("disassoc", disassoc_timer_btt);
-    args.add_child<>("transitionReason", reason);
+    args.add_child("mac", mac);
+    args.add_child("target", bssid);
+    args.add_child("class", oper_class);
+    args.add_child("channel", chan);
+    args.add_child("validity", valid_int_btt);
+    args.add_child("disassoc", disassoc_timer_btt);
+    args.add_child("transitionReason", reason);
     auto wifi_ap_path = wbapi_utils::search_path_ap_by_iface(ifname);
     bool ret          = m_ambiorix_cl->call(wifi_ap_path, "sendBssTransferRequest", args, result);
 
@@ -583,7 +583,7 @@ AmbiorixVariantSmartPtr ap_wlan_hal_whm::get_last_assoc_frame(const std::string 
 {
     AmbiorixVariant data;
     AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
-    args.add_child<>("mac", sta_mac);
+    args.add_child("mac", sta_mac);
 
     std::string ap_path = wbapi_utils::search_path_assocDev_by_mac(vap_iface, sta_mac);
 
