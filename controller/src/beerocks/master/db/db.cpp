@@ -7939,21 +7939,24 @@ bool db::dm_set_radio_vbss_capabilities(const sMacAddr &radio_uid, uint8_t max_v
 
     std::string vbss_caps_dm_path = radio->dm_path + ".Capabilities.VBSSCapabilities";
 
+    auto transaction = m_ambiorix_datamodel->begin_transaction(vbss_caps_dm_path);
+    if (!transaction) {
+        LOG(ERROR) << "Failed to start transaction for " << vbss_caps_dm_path;
+        return false;
+    }
+
     bool ret_val = true;
 
-    ret_val &= m_ambiorix_datamodel->set(vbss_caps_dm_path, "MaxVBSS", max_vbss);
-    ret_val &= m_ambiorix_datamodel->set(vbss_caps_dm_path, "VBSSsSubtract", vbsses_subtract);
-    ret_val &= m_ambiorix_datamodel->set(vbss_caps_dm_path, "ApplyVBSSIDRestrictions",
-                                         apply_vbssid_restrictions);
-    ret_val &= m_ambiorix_datamodel->set(vbss_caps_dm_path, "ApplyVBSSIDMatchMaskRestrictions",
-                                         apply_vbssid_match_mask_restrictions);
-    ret_val &= m_ambiorix_datamodel->set(vbss_caps_dm_path, "ApplyVBSSIDFixedBitsRestrictions",
-                                         apply_fixed_bits_restrictions);
-    ret_val &= m_ambiorix_datamodel->set(vbss_caps_dm_path, "VBSSIDFixedBitsMask", fixed_bits_mask);
+    ret_val &= transaction->set("MaxVBSS", max_vbss);
+    ret_val &= transaction->set("VBSSsSubtract", vbsses_subtract);
+    ret_val &= transaction->set("ApplyVBSSIDRestrictions", apply_vbssid_restrictions);
     ret_val &=
-        m_ambiorix_datamodel->set(vbss_caps_dm_path, "VBSSIDFixedBitsValue", fixed_bits_value);
+        transaction->set("ApplyVBSSIDMatchMaskRestrictions", apply_vbssid_match_mask_restrictions);
+    ret_val &= transaction->set("ApplyVBSSIDFixedBitsRestrictions", apply_fixed_bits_restrictions);
+    ret_val &= transaction->set("VBSSIDFixedBitsMask", fixed_bits_mask);
+    ret_val &= transaction->set("VBSSIDFixedBitsValue", fixed_bits_value);
 
-    return ret_val;
+    return ret_val && !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
 }
 
 bool db::dm_add_agent_1905_layer_security_capabilities(
