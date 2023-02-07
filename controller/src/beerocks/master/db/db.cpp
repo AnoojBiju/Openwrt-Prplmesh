@@ -6652,29 +6652,40 @@ bool db::set_radio_metrics(const sMacAddr &radio_mac, uint8_t noise, uint8_t tra
         return false;
     }
 
-    auto radio_path = radio->dm_path;
-    if (radio_path.empty()) {
+    auto &radio_path = radio->dm_path;
+    if (radio->dm_path.empty()) {
         return true;
     }
 
+    auto transaction = m_ambiorix_datamodel->begin_transaction(radio_path);
+    if (!transaction) {
+        LOG(ERROR) << "Failed to start transaction for " << radio_path;
+        return false;
+    }
+
     // Data model path example: Device.WiFi.DataElements.Network.Device.1.Radio.1.Noise
-    if (!m_ambiorix_datamodel->set(radio_path, "Noise", noise)) {
+    if (!transaction->set("Noise", noise)) {
         LOG(ERROR) << "Failed to set " << radio_path << ".Noise " << noise;
         return false;
     }
 
-    if (!m_ambiorix_datamodel->set(radio_path, "Transmit", transmit)) {
+    if (!transaction->set("Transmit", transmit)) {
         LOG(ERROR) << "Failed to set " << radio_path << ".Transmit " << transmit;
         return false;
     }
 
-    if (!m_ambiorix_datamodel->set(radio_path, "ReceiveSelf", receive_self)) {
+    if (!transaction->set("ReceiveSelf", receive_self)) {
         LOG(ERROR) << "Failed to set " << radio_path << ".ReceiveSelf " << receive_self;
         return false;
     }
 
-    if (!m_ambiorix_datamodel->set(radio_path, "ReceiveOther", receive_other)) {
+    if (!transaction->set("ReceiveOther", receive_other)) {
         LOG(ERROR) << "Failed to set " << radio_path << ".ReceiveOther " << receive_other;
+        return false;
+    }
+
+    if (m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty()) {
+        LOG(ERROR) << "Failed to commit transaction for " << radio_path;
         return false;
     }
 
