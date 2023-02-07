@@ -8120,16 +8120,16 @@ bool db::dm_set_service_prioritization_rules(const Agent &agent)
     }
 
     for (const auto &rule : agent.service_prioritization.rules) {
-        auto sp_rule_path = m_ambiorix_datamodel->add_instance(agent.dm_path + ".SPRule");
-        if (sp_rule_path.empty()) {
+        auto transaction = m_ambiorix_datamodel->begin_transaction(agent.dm_path + ".SPRule", true);
+        if (!transaction) {
             return false;
         }
 
-        ret_val &= m_ambiorix_datamodel->set(sp_rule_path, "ID", rule.first);
-        ret_val &= m_ambiorix_datamodel->set(sp_rule_path, "Precedence", rule.second.precedence);
-        ret_val &= m_ambiorix_datamodel->set(sp_rule_path, "Output", rule.second.output);
-        ret_val &= m_ambiorix_datamodel->set(sp_rule_path, "AlwaysMatch",
-                                             rule.second.bits_field2.always_match);
+        ret_val &= transaction->set("ID", rule.first);
+        ret_val &= transaction->set("Precedence", rule.second.precedence);
+        ret_val &= transaction->set("Output", rule.second.output);
+        ret_val &= transaction->set("AlwaysMatch", rule.second.bits_field2.always_match);
+        ret_val &= !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
     }
 
     return ret_val;
