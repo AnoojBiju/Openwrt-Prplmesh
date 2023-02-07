@@ -2381,7 +2381,7 @@ bool db::update_vap(const sMacAddr &radio_mac, const sMacAddr &bssid, const std:
 
     auto &vaps_info = get_hostap_vap_list(radio_mac);
     auto it         = std::find_if(vaps_info.begin(), vaps_info.end(),
-                           [&](const std::pair<int8_t, sVapElement> &vap) {
+                                   [&](const std::pair<int8_t, sVapElement> &vap) {
                                return vap.second.mac == tlvf::mac_to_string(bssid);
                            });
     if (it == vaps_info.end()) {
@@ -8111,6 +8111,169 @@ bool db::dm_set_device_ap_capabilities(const Agent &agent)
                                          agent.prioritization_support);
     ret_val &= m_ambiorix_datamodel->set(agent.dm_path, "MaxVIDs", agent.max_total_number_of_vids);
     return ret_val;
+}
+
+bool db::dm_set_unassociated_sta(const std::string &radio_dm, const std::string &sta_mac)
+{
+    std::string unassociated_path = radio_dm + ".UnassociatedSTA";
+    auto unassociated_sta_path    = m_ambiorix_datamodel->add_instance(unassociated_path);
+    if (unassociated_sta_path.empty()) {
+        LOG(ERROR) << "Failed to add instance unassociated station to DM with mac " << sta_mac
+                   << "\nTo DM path: " << unassociated_path;
+        return false;
+    }
+    unassociated_sta_path.append(".");
+    if (!m_ambiorix_datamodel->set(unassociated_sta_path, "MACAddress", sta_mac)) {
+        LOG(ERROR) << "Failed to set STA Mac in unassociated STA DM path";
+        return false;
+    }
+    return true;
+}
+
+bool db::dm_remove_unassociated_sta(const std::string &radio_dm, const std::string &sta_mac)
+{
+    std::string unassociated_path = radio_dm + ".UnassociatedSTA";
+    auto indx = m_ambiorix_datamodel->get_instance_index(unassociated_path, sta_mac);
+    if (indx == 0) {
+        LOG(ERROR) << "Cound no find unassociated STA with mac " << sta_mac << " at path "
+                   << unassociated_path;
+        return false;
+    }
+    if (m_ambiorix_datamodel->remove_instance(unassociated_path, indx)) {
+        LOG(DEBUG) << "Removed unassociated station with mac " << sta_mac << " at datapath "
+                   << unassociated_path;
+        return true;
+    } else {
+        LOG(ERROR) << "Failed to remove unassociated station with mac " << sta_mac
+                   << " at datapath " << unassociated_path;
+        return false;
+    }
+}
+
+bool db::add_unassociated_station(const sMacAddr &unassociated_sta_mac, const uint8_t &channel,
+                                  const std::vector<sMacAddr> &agent_macs)
+{
+    // Create the entry in the database
+    LOG(DEBUG) << "Looking for radios on agents that support scanning on channel: " << channel
+               << "for unassociated station mac: " << unassociated_sta_mac;
+    auto new_unassociated_sta = m_unassociated_stations.add(unassociated_sta_mac);
+    bool ret_val              = false;
+    std::string sta_str_mac   = tlvf::mac_to_string(unassociated_sta_mac);
+    for (auto &agent_mac : agent_macs) {
+        // Now update the agent list along with updating the dm as we go
+        uint8_t chan_op_class;
+        auto radio = get_radio_by_channel(agent_mac, channel, chan_op_class);
+        if (!radio) {
+            continue;
+        }
+        ret_val = true;
+        // If we got here then we know agent exists;
+        new_unassociated_sta->add_agent(agent_mac, radio->radio_uid);
+        // Theoretically should always be the same, can add checks later
+        new_unassociated_sta->set_operating_class(chan_op_class);
+        new_unassociated_sta->set_channel(channel);
+        if (!dm_set_unassociated_sta(radio->dm_path, sta_str_mac)) {
+            LOG(ERROR) << "Failed to update datamodel for agent mac: " << agent_mac;
+        }
+    }
+    if (!ret_val) {
+        m_unassociated_stations.erase(unassociated_sta_mac);
+        LOG(ERROR)
+            << "Did not managed to find agent with radio that could support unassociated stations";
+    }
+    return ret_val;
+}
+
+bool db::update_unassociated_station_agents(const sMacAddr &sta_mac,
+                                            const std::vector<sMacAddr> &agent_macs)
+{
+    //Iterate over list of agents known
+    //if in new list then keep; if not mark for deletion
+    bool ret_val                       = true;
+    std::vector<sMacAddr> agent_vector = agent_macs;
+    auto unassociated_sta              = m_unassociated_stations.get(sta_mac);
+    if (!unassociated_sta) {
+        LOG(ERROR) << "Failed to find the unassociated station with MAC " << sta_mac;
+        return false;
+    }
+    std::vector<sMacAddr> to_be_removed;
+    std::string str_sta_mac = tlvf::mac_to_string(sta_mac);
+    for (auto &agent_cur : unassociated_sta->get_agents()) {
+        auto iter = std::find(agent_vector.end(), agent_vector.begin(), agent_cur.first);
+        if (iter == agent_macs.end()) {
+            to_be_removed.push_back(agent_cur.first);
+            auto agent = m_agents.get(agent_cur.first);
+            if (!agent) {
+                LOG(ERROR) << "Failed to find agent with mac " << agent_cur.first;
+                ret_val = false;
+                continue;
+            }
+            auto radio = agent->radios[agent_cur.second];
+            if (!radio) {
+                LOG(ERROR) << "Failed to get radio with UID " << agent_cur.second;
+                ret_val = false;
+                continue;
+            }
+            if (!dm_remove_unassociated_sta(radio->dm_path, str_sta_mac)) {
+                LOG(ERROR) << "Failed to remove unassociated station from datamodel with mac: "
+                           << sta_mac;
+                ret_val = false;
+                continue;
+            }
+        } else {
+            // This agent radio combo already exists
+            agent_vector.erase(iter);
+        }
+    }
+    // Remove agents that didn't make the cut
+    for (auto &old_agents : to_be_removed) {
+        unassociated_sta->remove_agent(old_agents);
+    }
+
+    //Now add remaining agents
+    uint8_t throwAwayOpClass;
+    for (auto &incoming_agent : agent_vector) {
+        auto radio =
+            get_radio_by_channel(incoming_agent, unassociated_sta->get_channel(), throwAwayOpClass);
+        if (!radio) {
+            LOG(DEBUG) << "Agent " << incoming_agent
+                       << " does not have a radio that can listen on channel "
+                       << unassociated_sta->get_channel();
+            continue;
+        }
+        unassociated_sta->add_agent(incoming_agent, radio->radio_uid);
+        if (!dm_set_unassociated_sta(radio->dm_path, str_sta_mac)) {
+            LOG(ERROR) << "Failed to set DM for station: " << sta_mac << " on radio "
+                       << radio->radio_uid;
+            ret_val = false;
+        }
+    }
+
+    return ret_val;
+}
+
+std::shared_ptr<Agent::sRadio>
+db::get_radio_by_channel(const sMacAddr &agent_mac, const uint8_t &channel, uint8_t &chan_op_class)
+{
+    auto agent = m_agents.get(agent_mac);
+    if (!agent) {
+        LOG(ERROR) << "Can't find agent with mac: " << agent_mac;
+        return nullptr;
+    }
+    auto comp_fnct = [channel](uint8_t val) { return (val == channel); };
+    for (auto &radio : agent->radios) {
+        auto chan_scan_cap = radio.second->scan_capabilities;
+        for (auto &operating_class : chan_scan_cap.operating_classes) {
+            auto iter = std::find_if(operating_class.second.begin(), operating_class.second.end(),
+                                     comp_fnct);
+            if (iter != operating_class.second.end()) {
+                chan_op_class = operating_class.first;
+                return radio.second;
+            }
+        }
+    }
+    LOG(DEBUG) << "No radio found in Agent " << agent_mac << " using channel " << channel;
+    return nullptr;
 }
 
 bool db::add_unassociated_station(sMacAddr const &new_station_mac_add, uint8_t channel,

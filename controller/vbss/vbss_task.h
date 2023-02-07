@@ -22,7 +22,14 @@ public:
     bool handle_ieee1905_1_msg(const sMacAddr &src_mac,
                                ieee1905_1::CmduMessageRx &cmdu_rx) override;
 
-    enum eEventType { MOVE, CREATE, DESTROY, STATION_CONNECTED, STATION_DISCONNECT };
+    enum eEventType {
+        MOVE,
+        CREATE,
+        DESTROY,
+        STATION_CONNECTED,
+        STATION_DISCONNECT,
+        UNASSOCIATED_STATS
+    };
 
 protected:
     virtual void work() override;
@@ -170,6 +177,9 @@ private:
      * @return false 
      */
     bool handle_station_disconnect_event(const vbss::sStationDisconEvent &stationDisconnect);
+
+    bool
+    handle_unassociated_vsta_stats(const vbss::sUnassociatedStatsEvent &unassociated_stat_event);
 };
 
 #endif // VBSS_TASK_H

@@ -110,6 +110,36 @@ public:
     /// @return
     bool handle_vbss_destruction(const sMacAddr &vbssid);
 
+    bool process_vsta_stats_event(const vbss::sUnassociatedStatsEvent &unassociated_stats,
+                                  bool &shouldMove, std::vector<vbss::sMoveEvent> &moveVals);
+
+    bool handle_success_move(const sMacAddr &sta_mac, const sMacAddr &cur_ruid,
+                             const sMacAddr &old_ruid);
+
+    struct sVStaStats {
+        sMacAddr vbss_id;
+        sMacAddr next_best_agent;
+        int8_t next_best_rssi;
+        uint8_t next_best_count;
+
+        sVStaStats(const sMacAddr &Vbss_Id) : vbss_id(Vbss_Id)
+        {
+            next_best_rssi  = -120;
+            next_best_count = 0;
+            next_best_agent = {};
+        }
+
+        sVStaStats()
+        {
+            vbss_id         = {};
+            next_best_rssi  = -120;
+            next_best_count = 0;
+            next_best_agent = {};
+        }
+
+        ~sVStaStats() {}
+    };
+
     bool attempt_move_associated_client(const sMacAddr &agent_mac, const sMacAddr &cur_bssid,
                                         const sMacAddr &cl_mac);
 
@@ -126,6 +156,10 @@ public:
 
     bool use_legacy_steering() { return m_use_legacy_steering; }
 
+    void set_last_sent_mid_unassoc(const uint16_t &mid) { last_sent_unassociated_mid = mid; }
+
+    uint16_t get_last_sent_mid() { return last_sent_unassociated_mid; }
+
 protected:
     bool find_available_vbssid(const sMacAddr &radio_mac, sMacAddr &nVbss_id);
 
@@ -138,7 +172,7 @@ protected:
      * @return true 
      * @return false 
      */
-    bool register_client_for_rssi(const sMacAddr &client_mac);
+    bool register_client_for_rssi(const vbss::sStationConnectedEvent &stationConnect);
 
 private:
     /*
@@ -173,7 +207,18 @@ private:
 
     std::unordered_map<sMacAddr, sMacAddr> m_client_agent;
 
+    std::unordered_map<sMacAddr, bool> m_global_vbssid_map;
+
     std::unordered_map<sMacAddr, sMacAddr> m_open_vbsses;
+
+    std::unordered_map<sMacAddr, sVStaStats> m_vsta_stats;
+
+    std::vector<sMacAddr> m_cur_move_vbssid;
+
+    uint16_t last_sent_unassociated_mid;
+
+    // Save for later for possible better performance
+    //std::unordered_map<uint8_t, std::list<sMacAddr>> m_channel_to_sta_map;
 
     //beerocks::mac_map<sMacAddr> m_pre_associated_clients;
     // I don't need a shared_pointer for this...

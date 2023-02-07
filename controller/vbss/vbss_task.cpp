@@ -134,6 +134,13 @@ void vbss_task::handle_event(int event_enum_value, void *event_obj)
         }
         break;
     }
+    case eEventType::UNASSOCIATED_STATS: {
+        auto unassociated_stats = reinterpret_cast<vbss::sUnassociatedStatsEvent *>(event_obj);
+        if (!handle_unassociated_vsta_stats(*unassociated_stats)) {
+            LOG(ERROR) << "Failed to properly handle unassociated stats event";
+        }
+        break;
+    }
     default:
         LOG(WARNING) << "VBSS Task recieved an unhandled event type (" << event_enum_value << ")";
         break;
@@ -202,19 +209,18 @@ bool vbss_task::handle_vbss_creation_event(const vbss::sCreationEvent &create_ev
         return false;
     }
 
-    auto agent = m_database.get_agent_by_radio_uid(client_vbss.current_connected_ruid);
-    if (!agent) {
-        LOG(ERROR) << "Could not start VBSS creation for client with MAC address " << client_mac
-                   << "! Could not find agent for radio uid " << client_vbss.current_connected_ruid;
-        return false;
-    }
-
     active_creation_events.add(client_vbss.vbssid, client_vbss, create_event.dest_ruid,
                                create_event.ssid, create_event.password);
 
-    sMacAddr agent_mac = agent->al_mac;
-
     if (client_vbss.client_is_associated) {
+        auto agent = m_database.get_agent_by_radio_uid(client_vbss.current_connected_ruid);
+        if (!agent) {
+            LOG(ERROR) << "Could not start VBSS creation for client with MAC address " << client_mac
+                       << "! Could not find agent for radio uid "
+                       << client_vbss.current_connected_ruid;
+            return false;
+        }
+        sMacAddr agent_mac = agent->al_mac;
         // Client is already associated, Must have the Security Context to create a VBSS
         if (!vbss::vbss_actions::send_client_security_ctx_request(agent_mac, client_vbss,
                                                                   m_database)) {
@@ -526,6 +532,20 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
     // TODO: Send to VBSS Manager (include src_mac = agent_mac)
 
     return true;
+}
+
+bool vbss_task::handle_unassociated_vsta_stats(
+    const vbss::sUnassociatedStatsEvent &unassociated_stat_event)
+{
+    LOG(DEBUG) << "Handling unassociated station stats event";
+
+    // Currently we are just going to push up to controller to give off to vbss maanger
+    auto cntrlCntx = m_database.get_controller_ctx();
+    if (!cntrlCntx) {
+        LOG(ERROR) << "Failed to get controller context";
+        return false;
+    }
+    return cntrlCntx->handle_vsta_unassociated_stats(unassociated_stat_event);
 }
 
 bool vbss_task::handle_client_security_ctx_resp(const sMacAddr &src_mac,

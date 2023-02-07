@@ -313,7 +313,7 @@ bool Controller::start()
             ieee1905_1::eMessageType::CLIENT_SECURITY_CONTEXT_RESPONSE_MESSAGE,
             ieee1905_1::eMessageType::VIRTUAL_BSS_MOVE_PREPARATION_RESPONSE_MESSAGE,
             ieee1905_1::eMessageType::VIRTUAL_BSS_RESPONSE_MESSAGE,
-        })) {
+            ieee1905_1::eMessageType::VIRTUAL_BSS_CAPABILITIES_REPONSE_MESSAGE})) {
         LOG(ERROR) << "Failed subscribing to the Bus";
         return false;
     }
@@ -413,6 +413,22 @@ void Controller::start_optional_tasks()
             LOG(DEBUG) << "Link metric task disabled";
         }
     }
+#ifdef ENABLE_VBSS
+    // We want the link metrics to handle the processing of the incoming from agents
+    // However we want to control metrics timing;
+    // As such we will kill it if it is running right now
+    // Then we will send out requests by VbssManager
+    database.config.link_metrics_request_interval_seconds = std::chrono::seconds(1);
+    if (!m_link_metrics_task) {
+        LOG(DEBUG) << "Starting link metrics for vbss manager";
+        m_link_metrics_task =
+            std::make_shared<LinkMetricsTask>(database, cmdu_tx, cert_cmdu_tx, m_task_pool);
+        LOG_IF(!m_task_pool.add_task(m_link_metrics_task), FATAL);
+    } else {
+        LOG(DEBUG) << "Failed to start link metric task for vbss";
+    }
+
+#endif
 
 #ifndef BEEROCKS_LINUX
     // update running status for statistics_polling_task
@@ -4788,6 +4804,10 @@ bool Controller::send_unassociated_sta_link_metrics_query_message(
             son_actions::send_cmdu_to_agent(agent.first, cmdu_tx, database);
         }
     }
+#ifdef ENABLE_VBSS
+    m_vbss_manager->set_last_sent_mid_unassoc(cmdu_tx.getMessageId());
+
+#endif // DEBUG
     return true;
 }
 
@@ -4836,6 +4856,13 @@ bool Controller::handle_sta_connect_vbss(const vbss::sStationConnectedEvent &sta
     //We should try to start up another vbss since this one is used
     auto agent = database.get_agent_by_bssid(stationConnect.bss_id);
     if (agent) {
+        if (ret_val) {
+            //Register this station for collection
+            // TODO: Add ability to specify certain agents in DB..
+            //    add_unassociated_station(stationConnect.client_mac, stationConnect.channel,
+            //                            beerocks::net::network_utils::ZERO_MAC);
+            get_unassociated_stations_stats();
+        }
         if (!create_and_send_vbss_creation(agent->al_mac)) {
             LOG(DEBUG) << "Unable to start another vbss on agent " << agent->al_mac;
         }
@@ -4857,6 +4884,13 @@ bool Controller::handle_sta_disconnect_vbss(const vbss::sStationDisconEvent &sta
                        << stationDisconnect.client_vbss.vbssid;
             return false;
         }
+        auto agent = database.get_agent_by_bssid(stationDisconnect.client_vbss.vbssid);
+        if (!agent) {
+            LOG(ERROR) << "Failed to find agent associated with vbss id "
+                       << stationDisconnect.client_vbss.vbssid;
+        } else {
+            remove_unassociated_station(stationDisconnect.client_vbss.client_mac, agent->al_mac);
+        }
         m_task_pool.push_event(database.get_vbss_task_id(), vbss_task::eEventType::DESTROY,
                                &destroy_event);
         return true;
@@ -4868,6 +4902,38 @@ bool Controller::handle_sta_disconnect_vbss(const vbss::sStationDisconEvent &sta
 bool Controller::handle_vbss_destruction(const sMacAddr &vbssid)
 {
     return m_vbss_manager->handle_vbss_destruction(vbssid);
+}
+
+bool Controller::handle_vsta_unassociated_stats(
+    const vbss::sUnassociatedStatsEvent &unassociatedStats)
+{
+    bool ret_val = true;
+    std::vector<vbss::sMoveEvent> possibleMove;
+    bool shouldWeMove = false;
+    if (m_vbss_manager->process_vsta_stats_event(unassociatedStats, shouldWeMove, possibleMove)) {
+        LOG(ERROR) << "An error occurred processing unassociated stats in VBSS Manager";
+        ret_val = false;
+    }
+    // Since we process many, there may have been a few that were good processes; so check
+    if (shouldWeMove) {
+        // This is where we will trigger moves
+        for (auto &moveE : possibleMove) {
+            m_task_pool.push_event(database.get_vbss_task_id(), vbss_task::eEventType::MOVE,
+                                   &moveE);
+            LOG(DEBUG) << "Started move for sta: " << moveE.client_vbss.client_mac;
+        }
+    }
+    return ret_val;
+}
+
+bool Controller::handle_move_complete(const sMacAddr &sta_mac, const sMacAddr &cur_ruid,
+                                      const sMacAddr &old_ruid)
+{
+    if (!m_vbss_manager->handle_success_move(sta_mac, cur_ruid, old_ruid)) {
+        LOG(ERROR) << "Internal error in VBSS Manager has occurred";
+        return false;
+    }
+    return true;
 }
 
 } // namespace son

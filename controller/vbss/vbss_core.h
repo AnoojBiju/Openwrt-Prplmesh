@@ -21,6 +21,7 @@ public:
     static constexpr uint8_t MAX_FLIPPED_BITS = 5;
     static constexpr uint8_t ZERO_MASK        = 0;
     static constexpr uint8_t BYTE_LEN         = 8;
+    static constexpr uint8_t BEST_MOVE_COUNT  = 3;
 
     VbssCore();
 
@@ -47,6 +48,8 @@ public:
      * @return false
      */
     bool add_new_station(const uint8_t vsta_mac[ETH_ALEN]);
+
+    bool compare_incoming_to_curr(const int8_t &cur_rssi, const int8_t &income_rssi);
 
 protected:
     /**
