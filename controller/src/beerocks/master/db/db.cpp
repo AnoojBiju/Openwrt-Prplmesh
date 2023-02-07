@@ -7660,15 +7660,16 @@ bool db::dm_set_default_8021q(const Agent &agent, const uint16_t primary_vlan_id
         return false;
     }
 
-    auto default_8021q_path = m_ambiorix_datamodel->add_instance(agent.dm_path + ".Default8021Q");
-    if (default_8021q_path.empty()) {
+    auto transaction =
+        m_ambiorix_datamodel->begin_transaction(agent.dm_path + ".Default8021Q", true);
+    if (!transaction) {
         return false;
     }
-    ret_val &= m_ambiorix_datamodel->set(default_8021q_path, "Enable", bool(primary_vlan_id > 0));
-    ret_val &= m_ambiorix_datamodel->set(default_8021q_path, "PrimaryVID", primary_vlan_id);
-    ret_val &= m_ambiorix_datamodel->set(default_8021q_path, "DefaultPCP", default_pcp);
+    ret_val &= transaction->set("Enable", bool(primary_vlan_id > 0));
+    ret_val &= transaction->set("PrimaryVID", primary_vlan_id);
+    ret_val &= transaction->set("DefaultPCP", default_pcp);
 
-    return ret_val;
+    return ret_val && !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
 }
 
 bool db::dm_set_profile1_device_info(const Agent &agent)
