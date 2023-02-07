@@ -7578,16 +7578,18 @@ bool db::dm_set_device_multi_ap_backhaul(const Agent &agent)
 
     const auto multiap_backhaul_path = agent.dm_path + ".MultiAPDevice.Backhaul";
 
+    auto transaction = m_ambiorix_datamodel->begin_transaction(multiap_backhaul_path);
+    if (!transaction) {
+        return false;
+    }
+
     // Controller does not have any Backhaul, so leave it as TR-181 states it.
     if (agent.is_gateway) {
-        ret_val &=
-            m_ambiorix_datamodel->set(multiap_backhaul_path, "LinkType", std::string{"None"});
-        ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "MACAddress", std::string{});
-        ret_val &=
-            m_ambiorix_datamodel->set(multiap_backhaul_path, "BackhaulMACAddress", std::string{});
-        ret_val &=
-            m_ambiorix_datamodel->set(multiap_backhaul_path, "BackhaulDeviceID", std::string{});
-        return ret_val;
+        ret_val &= transaction->set("LinkType", std::string{"None"});
+        ret_val &= transaction->set("MACAddress", std::string{});
+        ret_val &= transaction->set("BackhaulMACAddress", std::string{});
+        ret_val &= transaction->set("BackhaulDeviceID", std::string{});
+        return ret_val && !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
     }
 
     // TODO: Implement different link types (PPM-1656)
@@ -7607,23 +7609,21 @@ bool db::dm_set_device_multi_ap_backhaul(const Agent &agent)
         break;
     }
 
-    ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "LinkType", iface_link_str);
-    ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "MACAddress",
-                                         agent.backhaul.backhaul_interface);
-    ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "BackhaulMACAddress",
-                                         agent.backhaul.parent_interface);
+    ret_val &= transaction->set("LinkType", iface_link_str);
+    ret_val &= transaction->set("MACAddress", agent.backhaul.backhaul_interface);
+    ret_val &= transaction->set("BackhaulMACAddress", agent.backhaul.parent_interface);
 
     auto parent_agent = agent.backhaul.parent_agent.lock();
     if (!parent_agent) {
 
         //TODO: Error log could be added after (PPM-2043), otherwise it floods logs
-        m_ambiorix_datamodel->set(multiap_backhaul_path, "BackhaulDeviceID", std::string{});
+        transaction->set("BackhaulDeviceID", std::string{});
+        m_ambiorix_datamodel->commit_transaction(std::move(transaction));
         return false;
     }
-    ret_val &=
-        m_ambiorix_datamodel->set(multiap_backhaul_path, "BackhaulDeviceID", parent_agent->al_mac);
+    ret_val &= transaction->set("BackhaulDeviceID", parent_agent->al_mac);
 
-    return ret_val;
+    return ret_val && !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
 }
 
 bool db::dm_set_device_ssid_to_vid_map(const Agent &agent,
