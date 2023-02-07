@@ -449,13 +449,17 @@ bool ap_wlan_hal_whm::cancel_cac(int chan, beerocks::eWiFiBandwidth bw, int vht_
 
 bool ap_wlan_hal_whm::failsafe_channel_set(int chan, int bw, int vht_center_frequency)
 {
+    // when DFS_OFFLOAD- is not set(our case for now), DFS management will be handled by Hostapd.
+    // Thus no need to implement this function.
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
     return true;
 }
 
 bool ap_wlan_hal_whm::failsafe_channel_get(int &chan, int &bw)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    // Failsafe will be handled by hostapd, thus no need to implement this function.
+    // Morover, this function is not being called for now.
+    LOG(TRACE) << __func__ << "- NOT IMPLEMENTED";
     return true;
 }
 
