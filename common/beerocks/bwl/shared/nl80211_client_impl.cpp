@@ -267,7 +267,11 @@ bool nl80211_client_impl::get_radio_info(const std::string &interface_name, radi
 	     * Multiple BSSID capability is set in the 6th bit of 3rd byte of the
 	     * @WLAN_EID_EXT_CAPABILITY information element.
 	     */
+<<<<<<< HEAD
             uint8_t ext_capability[15] = {};
+=======
+            uint8_t ext_capability[15];
+>>>>>>> origin/hotfix/use_findpython
             if (tb[NL80211_ATTR_EXT_CAPA]) {
                 size_t actual_length = nla_len(tb[NL80211_ATTR_EXT_CAPA]);
                 if (radio_info.bands.empty()) {

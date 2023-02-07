@@ -185,6 +185,7 @@ void ApAutoConfigurationTask::work()
         db->statuses.ap_autoconfiguration_completed = true;
         m_task_is_active                            = false;
         LOG(DEBUG) << "Link to the controller is established";
+<<<<<<< HEAD
 
         // Send pre-associated sta notification request to all radio
         for (const auto &radios_conf_param_kv : m_radios_conf_params) {
@@ -197,6 +198,8 @@ void ApAutoConfigurationTask::work()
             LOG(DEBUG) << "Pre-associated station notification request send done for radio iface "
                        << radio_iface;
         }
+=======
+>>>>>>> origin/hotfix/use_findpython
     }
 }
 
