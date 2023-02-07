@@ -7996,25 +7996,25 @@ bool db::dm_set_metric_reporting_policies(const Agent &agent)
             continue;
         }
 
-        ret_val &= m_ambiorix_datamodel->set(
-            radio.second->dm_path, "STAReportingRCPIThreshold",
-            radio.second->metric_reporting_policies.sta_reporting_rcpi_threshold);
-        ret_val &= m_ambiorix_datamodel->set(
-            radio.second->dm_path, "STAReportingRCPIHysteresisMarginOverride",
-            radio.second->metric_reporting_policies
-                .sta_reporting_rcpi_hyst_margin_override_threshold);
-        ret_val &= m_ambiorix_datamodel->set(
-            radio.second->dm_path, "ChannelUtilizationReportingThreshold",
-            radio.second->metric_reporting_policies.ap_reporting_channel_utilization_threshold);
-        ret_val &= m_ambiorix_datamodel->set(
-            radio.second->dm_path, "AssociatedSTATrafficStatsInclusionPolicy",
-            radio.second->metric_reporting_policies.assoc_sta_traffic_stats_inclusion_policy);
-        ret_val &= m_ambiorix_datamodel->set(
-            radio.second->dm_path, "AssociatedSTALinkMetricsInclusionPolicy",
-            radio.second->metric_reporting_policies.assoc_sta_link_metrics_inclusion_policy);
-        ret_val &= m_ambiorix_datamodel->set(
-            radio.second->dm_path, "APMetricsWiFi6",
-            radio.second->metric_reporting_policies.assoc_wifi6_sta_status_report_inclusion_policy);
+        auto transaction = m_ambiorix_datamodel->begin_transaction(radio.second->dm_path);
+        if (!transaction) {
+            ret_val = false;
+            continue;
+        }
+
+        const auto &mrp = radio.second->metric_reporting_policies;
+        ret_val &= transaction->set("STAReportingRCPIThreshold", mrp.sta_reporting_rcpi_threshold);
+        ret_val &= transaction->set("STAReportingRCPIHysteresisMarginOverride",
+                                    mrp.sta_reporting_rcpi_hyst_margin_override_threshold);
+        ret_val &= transaction->set("ChannelUtilizationReportingThreshold",
+                                    mrp.ap_reporting_channel_utilization_threshold);
+        ret_val &= transaction->set("AssociatedSTATrafficStatsInclusionPolicy",
+                                    mrp.assoc_sta_traffic_stats_inclusion_policy);
+        ret_val &= transaction->set("AssociatedSTALinkMetricsInclusionPolicy",
+                                    mrp.assoc_sta_link_metrics_inclusion_policy);
+        ret_val &=
+            transaction->set("APMetricsWiFi6", mrp.assoc_wifi6_sta_status_report_inclusion_policy);
+        ret_val &= !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
     }
     return ret_val;
 }
