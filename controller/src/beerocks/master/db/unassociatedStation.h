@@ -86,6 +86,8 @@ public:
         return true;
     }
 
+    void remove_agent(const sMacAddr &agent_mac) { m_agents.erase(agent_mac); }
+
     /**
      * @brief set agent radio
      *

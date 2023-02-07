@@ -2,6 +2,7 @@
 // Copyright (c) 2022 CableLabs for prplMesh All rights reserved.
 //
 #include "vbss_core.h"
+#include <cmath>
 
 namespace vbss {
 
@@ -91,6 +92,17 @@ bool VbssCore::create_set_of_vbss_ids(const uint8_t bssid_orig[ETH_ALEN],
     return true;
 }
 
+bool VbssCore::compare_incoming_to_curr(const int8_t &cur_rssi, const int8_t &income_rssi)
+{
+    // Currently equation is very simple
+    // We want a value that is 20% better
+    // Leaving method here for more complex equations later
+    int8_t calc_val = cur_rssi + (std::abs(cur_rssi) * .2);
+    if (income_rssi > calc_val)
+        return true;
+    return false;
+}
+
 uint8_t VbssCore::copy_fixed_and_base(const uint8_t fixed[ETH_ALEN], const uint8_t base[ETH_ALEN],
                                       vbss::vbss_id &tmp_bssid)
 {
@@ -122,4 +134,4 @@ std::vector<uint8_t> VbssCore::determine_orthogonal_vals(const uint8_t &b_val)
     return ret_val;
 }
 
-}
+} // namespace vbss

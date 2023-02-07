@@ -302,11 +302,33 @@ public:
      * @brief Sends information to vbss manager for booking purposes when an
      *          agent notifies a vbss has been destroyed
      * 
-     * @param vbss_id 
+     * @param vbss_id vbss id of the vbss that has been destroyed
+     * @return true no errors 
+     * @return false if errors have occurred
+     */
+    bool handle_vbss_destruction(const sMacAddr &vbss_id);
+
+    /**
+     * @brief Process when unassociated station stats come in;
+     *          this forwards to the vbss manager
+     * 
+     * @param unassociatedStats The DS containing the stats that have just been entered into the DM
+     * @return true No errors have occurred
+     * @return false An error has occurred in the processing
+     */
+    bool handle_vsta_unassociated_stats(const vbss::sUnassociatedStatsEvent &unassociatedStats);
+
+    /**
+     * @brief Sends information to vbss manager for when a successful move has occurred
+     * 
+     * @param sta_mac mac of station that moved
+     * @param cur_ruid new ruid that station is at
+     * @param old_ruid old ruid that station moved from
      * @return true 
      * @return false 
      */
-    bool handle_vbss_destruction(const sMacAddr &vbss_id);
+    bool handle_move_complete(const sMacAddr &sta_mac, const sMacAddr &cur_ruid,
+                              const sMacAddr &old_ruid);
 
 private:
     /**

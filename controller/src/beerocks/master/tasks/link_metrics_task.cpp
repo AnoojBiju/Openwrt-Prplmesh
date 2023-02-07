@@ -16,6 +16,11 @@
 #include <tlvf/wfa_map/tlvUnassociatedStaLinkMetricsQuery.h>
 #include <tlvf/wfa_map/tlvUnassociatedStaLinkMetricsResponse.h>
 
+#ifdef ENABLE_VBSS
+#include "../../../../vbss/vbss_actions.h"
+#include "../../../../vbss/vbss_task.h"
+#endif
+
 #include <easylogging++.h>
 
 using namespace beerocks;
@@ -62,7 +67,7 @@ void LinkMetricsTask::work()
         }
 
         // TODO: is the unassociated station request interval the same as the link metric ? or shall we consider a different one ?
-        if (!cmdu_tx.create(
+        /*if (!cmdu_tx.create(
                 0, ieee1905_1::eMessageType::UNASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE)) {
             LOG(ERROR) << "Failed building message UNASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE!";
             return;
@@ -70,7 +75,7 @@ void LinkMetricsTask::work()
         cmdu_tx.addClass<wfa_map::tlvUnassociatedStaLinkMetricsQuery>();
         for (const auto &agent : database.get_all_connected_agents()) {
             son_actions::send_cmdu_to_agent(agent->al_mac, cmdu_tx, database);
-        }
+        }*/
 
         last_query_request = std::chrono::steady_clock::now();
     }
@@ -305,6 +310,11 @@ bool LinkMetricsTask::handle_cmdu_1905_unassociated_station_link_metric_response
                    << " reports zero stations, nothing to do!";
         return true;
     }
+#ifdef ENABLE_VBSS
+    vbss::sUnassociatedStatsEvent unassociated_event;
+    unassociated_event.agent_mac = src_mac;
+    unassociated_event.mmid      = mid;
+#endif
     for (int i = 0; i < number_of_station_entries; ++i) {
         const auto station_tuple = unassoc_sta_link_metrics_tlv->sta_list(i);
         const auto sta_metrics   = std::get<1>(station_tuple);
@@ -384,10 +394,20 @@ bool LinkMetricsTask::handle_cmdu_1905_unassociated_station_link_metric_response
             char buf[sizeof "2011-10-08T07:07:09Z"];
             strftime(buf, sizeof buf, "%FT%TZ", gmtime(&received_time));
             stats.time_stamp = buf;
+#ifdef ENABLE_VBSS
+            unassociated_event.station_stats.push_back(std::make_tuple(
+                sta_metrics.sta_mac, sta_metrics.uplink_rcpi_dbm_enc, radio_mac_address));
+#endif
 
             database.update_unassociated_station_stats(sta_metrics.sta_mac, stats, radio->dm_path);
         }
     }
+#ifdef ENABLE_VBSS
+    if (unassociated_event.station_stats.size()) {
+        tasks.push_event(database.get_vbss_task_id(), vbss_task::eEventType::UNASSOCIATED_STATS,
+                         &unassociated_event);
+    }
+#endif
     return true;
 }
 

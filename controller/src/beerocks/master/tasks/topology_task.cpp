@@ -674,6 +674,7 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
         vbss::sStationConnectedEvent sta_conn_event = {};
         sta_conn_event.client_mac                   = client_mac;
         sta_conn_event.bss_id                       = bssid;
+        sta_conn_event.channel                      = wifi_channel.get_channel();
         tasks.push_event(database.get_vbss_task_id(), vbss_task::eEventType::STATION_CONNECTED,
                          &sta_conn_event);
 #endif
