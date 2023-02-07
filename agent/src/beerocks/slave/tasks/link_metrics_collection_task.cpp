@@ -504,7 +504,7 @@ void LinkMetricsCollectionTask::handle_unassociated_sta_link_metrics_query(
 {
     const auto message_id = cmdu_rx.getMessageId();
 
-    LOG(DEBUG) << "Received Unassociated STA Link Metrics Query, mid=" << message_id;
+    LOG(DEBUG) << "Received Unassociated STA Link Metrics Query, mid=" << std::hex << message_id;
 
     const auto unassociated_sta_link_metrics_query_tlv =
         cmdu_rx.getClass<wfa_map::tlvUnassociatedStaLinkMetricsQuery>();
@@ -572,7 +572,7 @@ void LinkMetricsCollectionTask::handle_unassociated_sta_link_metrics_query(
                             << " Station with mac_addr: " << tlvf::mac_to_string(un_station_mac)
                             << " is already connected to the radio with mac_addr: "
                             << tlvf::mac_to_string(radio->front.iface_mac)
-                            << " --> it will not get monitored as non_assocated station!";
+                            << " --> it will not get monitored as non_associated station!";
                     }
                     map_stations_per_channel[channel].emplace_back(un_station_mac);
                 }
