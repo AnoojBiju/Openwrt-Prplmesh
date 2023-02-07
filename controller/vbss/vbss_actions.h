@@ -110,7 +110,8 @@ struct sDestructionEvent {
 struct sStationConnectedEvent {
     sMacAddr client_mac;
     sMacAddr bss_id;
-    sStationConnectedEvent(const sMacAddr &clnt_mac, const sMacAddr &Bss_id)
+    uint8_t channel;
+    sStationConnectedEvent(const sMacAddr &clnt_mac, const sMacAddr &Bss_id, const uint8_t &channel)
         : client_mac(clnt_mac), bss_id(Bss_id)
     {
     }
@@ -125,6 +126,13 @@ struct sStationDisconEvent {
     {
     }
     sStationDisconEvent() {}
+};
+
+struct sUnassociatedStatsEvent {
+    sMacAddr agent_mac;
+    uint16_t mmid;
+    std::vector<std::tuple<sMacAddr, int8_t, sMacAddr>> station_stats;
+    sUnassociatedStatsEvent() {}
 };
 
 class vbss_actions {
@@ -213,6 +221,8 @@ public:
                                                          const uint8_t op_class,
                                                          const sClientVBSS &client_vbss,
                                                          son::db &database);
+
+    static bool send_unassociated_sta_request(son::db &database);
 
 private:
     /**

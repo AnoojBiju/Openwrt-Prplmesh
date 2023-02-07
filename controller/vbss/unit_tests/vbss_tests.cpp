@@ -71,4 +71,12 @@ TEST(VbssCoreTest, Create_Set_Mask)
         ASSERT_EQ(sampleVector[i], g_fixed_mask_list[i]);
     }
 }
+
+TEST(VbssCoreTest, TestCompareEquation)
+{
+    using vbss::VbssCore;
+
+    VbssCore testCore = VbssCore();
+    ASSERT_TRUE(testCore.compare_incoming_to_curr(-60, -45));
+}
 } // namespace

@@ -12,6 +12,9 @@ VbssManager::VbssManager(son::db &db, std::shared_ptr<beerocks::TimerManager> ti
     : m_database(db), m_timer_manager(timer_manager), m_controlled_by_nbapi(nbapiControl),
       m_use_legacy_steering(legacyMode)
 {
+    m_current_num_vbss         = 0;
+    m_max_num_vbss_system      = 0;
+    last_sent_unassociated_mid = 0;
     LOG_IF(!m_timer_manager, FATAL) << "Timer manager is a null pointer!";
 }
 
@@ -76,8 +79,8 @@ bool VbssManager::analyze_radio_restriction(
                         // Copy list of available vbss ids to the agent db object
                         sMacAddr avail_id;
                         std::copy_n(id_it.data(), ETH_ALEN, avail_id.oct);
-                        //    agent->radios[radio_id]->vbss_ids_used[avail_id] = false;
                         radio_instance->vbss_ids_used[avail_id] = false;
+                        m_global_vbssid_map[avail_id]           = false;
                     }
                     //agent->radios[radio_id]->has_vbss_restrictions = true;
                     radio_instance->has_vbss_restrictions = true;
@@ -206,7 +209,10 @@ bool VbssManager::handle_vbss_creation(const sMacAddr &radio_mac, const sMacAddr
         LOG(ERROR) << "Failed to get radio with radio mac: " << radio_mac;
         return false;
     }
+    // Perhaps move this to when we try to create
+    // May or may not create race condition
     radio->vbss_ids_used[vbss_id] = true;
+    m_global_vbssid_map[vbss_id]  = true;
     ++m_current_num_vbss;
     LOG(DEBUG) << "We now have " << m_current_num_vbss << " vbss running";
     return true;
@@ -228,8 +234,25 @@ bool VbssManager::handle_station_connect(const vbss::sStationConnectedEvent &sta
         return false;
     }
     m_client_agent[stationConnect.client_mac] = agent->al_mac;
+    sVStaStats clientStats;
+    clientStats.vbss_id = stationConnect.bss_id;
 
-    return register_client_for_rssi(stationConnect.client_mac);
+    m_vsta_stats[stationConnect.client_mac] = clientStats;
+
+    return register_client_for_rssi(stationConnect);
+}
+
+bool VbssManager::handle_success_move(const sMacAddr &sta_mac, const sMacAddr &cur_ruid,
+                                      const sMacAddr &old_ruid)
+{
+    // Should we update the datamodel here?
+    const auto &iter = std::find(m_cur_move_vbssid.begin(), m_cur_move_vbssid.end(),
+                                 m_vsta_stats[sta_mac].vbss_id);
+    m_cur_move_vbssid.erase(iter);
+    m_vsta_stats[sta_mac].next_best_agent = {};
+    m_vsta_stats[sta_mac].next_best_count = 0;
+    m_vsta_stats[sta_mac].next_best_rssi  = -120;
+    return true;
 }
 
 bool VbssManager::handle_station_disconnect(const vbss::sStationDisconEvent &stationDisconn,
@@ -241,14 +264,92 @@ bool VbssManager::handle_station_disconnect(const vbss::sStationDisconEvent &sta
         return false;
     }
     // update that vbss id is no longer being used
-    radio->vbss_ids_used[stationDisconn.client_vbss.vbssid] = false;
+    //radio->vbss_ids_used[stationDisconn.client_vbss.vbssid] = false;
     m_client_agent.erase(stationDisconn.client_vbss.client_mac);
+
+    m_vsta_stats.erase(stationDisconn.client_vbss.client_mac);
+
     destroyEvent.client_vbss         = stationDisconn.client_vbss;
     destroyEvent.should_disassociate = false;
     LOG(DEBUG) << "Station: " << stationDisconn.client_vbss.client_mac << " has disconnected\n"
                << "From VBSS ID: " << stationDisconn.client_vbss.vbssid
                << "\nReported by Topology: " << stationDisconn.from_topology_notification;
     return true;
+}
+
+bool VbssManager::process_vsta_stats_event(const vbss::sUnassociatedStatsEvent &unassociated_stats,
+                                           bool &shouldMove,
+                                           std::vector<vbss::sMoveEvent> &moveVals)
+{
+    bool ret_val = false;
+    // First thing first compare MID
+    if (last_sent_unassociated_mid > unassociated_stats.mmid) {
+        LOG(ERROR) << "Recieved stale data, expected MID = or great: " << last_sent_unassociated_mid
+                   << "Got " << unassociated_stats.mmid << " instead";
+        return false;
+    }
+    for (auto &sta_stat : unassociated_stats.station_stats) {
+        sMacAddr sta_mac    = std::get<0>(sta_stat);
+        int8_t incomingStat = son::wireless_utils::convert_rssi_from_rcpi(std::get<1>(sta_stat));
+        if (m_vsta_stats.find(sta_mac) == m_vsta_stats.end()) {
+            // TODO: Think about how to handle this, should not happen
+            continue;
+        }
+        // Get the current value from database
+        auto station = m_database.get_station(sta_mac);
+        if (!station) {
+            LOG(ERROR) << "Failed to find station in database with mac: " << sta_mac;
+            continue;
+        }
+        int8_t curRssi;
+        int8_t throwAwayPackets;
+        if (!station->get_cross_rx_rssi(tlvf::mac_to_string(unassociated_stats.agent_mac), curRssi,
+                                        throwAwayPackets)) {
+            LOG(ERROR) << "Failed to recieve current RSSI from current agent for station: "
+                       << sta_mac;
+        }
+        if (compare_incoming_to_curr(curRssi, incomingStat)) {
+            // This means the incoming is better
+            if (m_vsta_stats[sta_mac].next_best_agent == unassociated_stats.agent_mac) {
+                // We got a repeater
+                m_vsta_stats[sta_mac].next_best_count++;
+                m_vsta_stats[sta_mac].next_best_rssi = incomingStat;
+                if (m_vsta_stats[sta_mac].next_best_count > BEST_MOVE_COUNT) {
+                    LOG(DEBUG) << "We found a radio that's better to move to";
+                    auto radio = m_database.get_radio_by_bssid(m_vsta_stats[sta_mac].vbss_id);
+                    if (!radio) {
+                        LOG(ERROR) << "Failed to get radio associated with VBSS: "
+                                   << m_vsta_stats[sta_mac].vbss_id;
+                        ret_val = false;
+                        continue;
+                    }
+                    auto bss = m_database.get_bss(m_vsta_stats[sta_mac].vbss_id);
+                    if (!bss) {
+                        LOG(ERROR) << "Failed to get BSS object with vbssid: "
+                                   << m_vsta_stats[sta_mac].vbss_id;
+                        continue;
+                    }
+                    shouldMove = true;
+                    vbss::sMoveEvent moveEventVals;
+                    moveEventVals.client_vbss.vbssid               = m_vsta_stats[sta_mac].vbss_id;
+                    moveEventVals.client_vbss.client_is_associated = true;
+                    moveEventVals.client_vbss.client_mac           = sta_mac;
+                    moveEventVals.dest_ruid                        = std::get<2>(sta_stat);
+                    moveEventVals.ssid                             = bss->ssid;
+                    moveEventVals.client_vbss.current_connected_ruid = radio->radio_uid;
+                    moveVals.push_back(moveEventVals);
+                    m_cur_move_vbssid.push_back(m_vsta_stats[sta_mac].vbss_id);
+                }
+            } else {
+                // New best
+                m_vsta_stats[sta_mac].next_best_agent = unassociated_stats.agent_mac;
+                m_vsta_stats[sta_mac].next_best_count = 1;
+                m_vsta_stats[sta_mac].next_best_rssi  = incomingStat;
+            }
+        }
+    }
+
+    return ret_val;
 }
 
 bool VbssManager::handle_vbss_destruction(const sMacAddr &vbssid)
@@ -259,7 +360,12 @@ bool VbssManager::handle_vbss_destruction(const sMacAddr &vbssid)
         return false;
     }
     radio->vbss_ids_used[vbssid] = false;
-    auto vbss                    = m_database.get_bss(vbssid);
+    const auto &iter = std::find(m_cur_move_vbssid.begin(), m_cur_move_vbssid.end(), vbssid);
+    if (iter == m_cur_move_vbssid.end()) {
+        // This is not a move update global map
+        m_global_vbssid_map[vbssid] = false;
+    }
+    auto vbss = m_database.get_bss(vbssid);
     if (!vbss) {
         LOG(ERROR) << "Failed to find instance of vbss object in database";
         return false;
@@ -272,7 +378,34 @@ bool VbssManager::handle_vbss_destruction(const sMacAddr &vbssid)
     return true;
 }
 
-bool VbssManager::register_client_for_rssi(const sMacAddr &client_mac) { return true; }
+// Assumption is that there is at least >1 agent in network
+bool VbssManager::register_client_for_rssi(const vbss::sStationConnectedEvent &stationConnect)
+{
+    //First find all agents that client is connected to
+    //Create list, then pass this information into db
+    auto conn_agent = m_database.get_agent_by_bssid(stationConnect.bss_id);
+    if (!conn_agent) {
+        LOG(ERROR) << "Failed to find agent connected to vbss " << stationConnect.bss_id;
+        return false;
+    }
+    std::vector<sMacAddr> not_connected_agents;
+    for (auto &agent : m_database.get_all_connected_agents()) {
+        LOG(DEBUG) << "Connected to agent: " << conn_agent->al_mac << "\n Looking at Agent "
+                   << agent->al_mac;
+        if (agent->al_mac != conn_agent->al_mac)
+            not_connected_agents.push_back(agent->al_mac);
+    }
+    LOG(DEBUG) << "Agent list is " << not_connected_agents.size();
+    if (not_connected_agents.size()) {
+        if (!m_database.add_unassociated_station(stationConnect.client_mac, stationConnect.channel,
+                                                 not_connected_agents)) {
+            LOG(ERROR) << "Failed to add " << stationConnect.client_mac
+                       << " to the unassociated station database";
+            return false;
+        }
+    }
+    return true;
+}
 
 bool VbssManager::can_radio_support_another_vbss(const sMacAddr &agent_mac, const sMacAddr &bssid)
 {
@@ -387,7 +520,7 @@ bool VbssManager::find_available_vbssid(const sMacAddr &radio_mac, sMacAddr &nVb
         return false;
     }
     for (const auto &it : radio->vbss_ids_used) {
-        if (it.second == false) {
+        if (it.second == false && m_global_vbssid_map[it.first] == false) {
             std::copy_n(it.first.oct, ETH_ALEN, nVbss_id.oct);
             return true;
         }
@@ -399,6 +532,7 @@ void VbssManager::analyze_clients()
 {
     // Get list of all Clients
     // Iterate over the clients to verify in the best connection
+    /*
     for (auto const &it : m_database.m_stations) {
         // We only care about the vstations
         auto client = it.second.get();
@@ -408,6 +542,15 @@ void VbssManager::analyze_clients()
         // Determine which Agent has reported the best RSSI
 
         //
+    }
+    */
+    // Since this is structured differently, we will once a second just send out request
+    if (m_database.get_unassociated_stations().size()) {
+        auto cntrlCntx = m_database.get_controller_ctx();
+        if (!cntrlCntx) {
+            LOG(ERROR) << "Failed to get the controller context for VBSS Manager";
+        }
+        cntrlCntx->get_unassociated_stations_stats();
     }
 }
 
