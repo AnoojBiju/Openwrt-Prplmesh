@@ -7635,16 +7635,16 @@ bool db::dm_set_device_ssid_to_vid_map(const Agent &agent,
         return true;
     }
 
-    auto ssidtovidmapping_path =
-        m_ambiorix_datamodel->add_instance(agent.dm_path + ".SSIDtoVIDMapping");
-    if (ssidtovidmapping_path.empty()) {
+    auto transaction =
+        m_ambiorix_datamodel->begin_transaction(agent.dm_path + ".SSIDtoVIDMapping", true);
+    if (!transaction) {
         LOG(ERROR) << "Failed to add: " << agent.dm_path << ".SSIDtoVIDMapping";
         return false;
     }
-    ret_val &= m_ambiorix_datamodel->set(ssidtovidmapping_path, "SSID", config.ssid);
-    ret_val &= m_ambiorix_datamodel->set(ssidtovidmapping_path, "VID", config.vlan_id);
+    ret_val &= transaction->set("SSID", config.ssid);
+    ret_val &= transaction->set("VID", config.vlan_id);
 
-    return ret_val;
+    return ret_val && !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
 }
 
 bool db::dm_set_default_8021q(const Agent &agent, const uint16_t primary_vlan_id,
