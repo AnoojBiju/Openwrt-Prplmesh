@@ -7964,21 +7964,18 @@ bool db::dm_add_agent_1905_layer_security_capabilities(
 {
     m_ambiorix_datamodel->remove_all_instances(agent.dm_path + ".IEEE1905Security");
 
-    auto ieee_1905_sec_path =
-        m_ambiorix_datamodel->add_instance(agent.dm_path + ".IEEE1905Security");
-    if (ieee_1905_sec_path.empty()) {
+    auto transaction =
+        m_ambiorix_datamodel->begin_transaction(agent.dm_path + ".IEEE1905Security", true);
+    if (!transaction) {
         return false;
     }
 
     bool ret_val = true;
-    ret_val &=
-        m_ambiorix_datamodel->set(ieee_1905_sec_path, "OnboardingProtocol", onboard_protocol);
-    ret_val &=
-        m_ambiorix_datamodel->set(ieee_1905_sec_path, "IntegrityAlgorithm", integrity_algorithm);
-    ret_val &=
-        m_ambiorix_datamodel->set(ieee_1905_sec_path, "EncryptionAlgorithm", encryption_algorithm);
+    ret_val &= transaction->set("OnboardingProtocol", onboard_protocol);
+    ret_val &= transaction->set("IntegrityAlgorithm", integrity_algorithm);
+    ret_val &= transaction->set("EncryptionAlgorithm", encryption_algorithm);
 
-    return ret_val;
+    return ret_val && !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
 }
 
 bool db::dm_set_metric_reporting_policies(const Agent &agent)
