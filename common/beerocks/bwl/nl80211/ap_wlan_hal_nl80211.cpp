@@ -1729,7 +1729,50 @@ bool ap_wlan_hal_nl80211::add_station(const std::string &ifname, const sMacAddr 
         return false;
     }
 
-    return m_nl80211_client->add_station(ifname, mac, assoc_req, aid);
+    if(!m_nl80211_client->add_station(ifname, mac, assoc_req, aid)){
+        LOG(ERROR) << "Failed to add a new station!";
+        return false;
+    }
+
+    // TODO: properly send sACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION
+
+    auto vap_id = get_vap_id_with_bss(ifname);
+    if (vap_id < 0) {
+        LOG(ERROR) << "vap id not found for " << ifname;
+        return false;
+    }
+    {
+
+        auto msg_buff =
+            ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION));
+        auto msg =
+            reinterpret_cast<sACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION *>(msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        // Initialize the message
+        memset(msg_buff.get(), 0, sizeof(sACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION));
+
+        if (vap_id < 0) {
+            LOG(ERROR) << "Invalid vap_id " << vap_id;
+            return false;
+        }
+
+        msg->params.vap_id       = vap_id;
+        msg->params.mac          = mac;
+        msg->params.capabilities = {};
+
+        //init the freq band cap with the target radio freq band info
+        msg->params.capabilities.band_5g_capable = m_radio_info.is_5ghz;
+        msg->params.capabilities.band_2g_capable =
+            (son::wireless_utils::which_freq_type(m_radio_info.vht_center_freq) ==
+             beerocks::eFreqType::FREQ_24G);
+
+        // Add the message to the queue
+        event_queue_push(Event::STA_Connected, msg_buff);
+
+    }
+
+        return true;
 }
 
 bool ap_wlan_hal_nl80211::get_key(const std::string &ifname, sKeyInfo &key_info)
