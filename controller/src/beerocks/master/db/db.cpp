@@ -7542,27 +7542,27 @@ bool db::dm_restore_sta_steering_event(const Station &station)
                << " event size:" << sta_events.size();
 
     for (auto &event : sta_events) {
+        auto transaction = m_ambiorix_datamodel->begin_transaction(steering_history, true);
+        if (!transaction) {
+            LOG(ERROR) << "Failed to add instance to " << steering_history;
+            return false;
+        }
 
-        auto steering_event_path = m_ambiorix_datamodel->add_instance(steering_history);
+        ret_val &= transaction->set("APOrigin", tlvf::mac_to_string(event.original_bssid));
+        ret_val &= transaction->set("APDestination", tlvf::mac_to_string(event.target_bssid));
+        ret_val &= transaction->set("SteeringDuration", event.duration.count());
+        ret_val &= transaction->set("SteeringApproach", event.steering_approach);
+        ret_val &= transaction->set("TriggerEvent", event.trigger_event);
+        ret_val &= transaction->set("Time", event.timestamp);
+
+        auto steering_event_path = m_ambiorix_datamodel->commit_transaction(std::move(transaction));
         if (steering_event_path.empty()) {
             LOG(ERROR) << "Failed to add instance to " << steering_history;
             return false;
         }
 
         // Set steering event data model path
-        event.dm_path = steering_event_path;
-
-        ret_val &= m_ambiorix_datamodel->set(steering_event_path, "APOrigin",
-                                             tlvf::mac_to_string(event.original_bssid));
-        ret_val &= m_ambiorix_datamodel->set(steering_event_path, "APDestination",
-                                             tlvf::mac_to_string(event.target_bssid));
-        ret_val &= m_ambiorix_datamodel->set(steering_event_path, "SteeringDuration",
-                                             event.duration.count());
-        ret_val &= m_ambiorix_datamodel->set(steering_event_path, "SteeringApproach",
-                                             event.steering_approach);
-        ret_val &=
-            m_ambiorix_datamodel->set(steering_event_path, "TriggerEvent", event.trigger_event);
-        ret_val &= m_ambiorix_datamodel->set(steering_event_path, "Time", event.timestamp);
+        event.dm_path = std::move(steering_event_path);
     }
 
     return ret_val;
