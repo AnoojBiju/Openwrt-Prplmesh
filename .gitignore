@@ -22,4 +22,6 @@ ipkg-*/
 .dccache
 .idea
 .idea/*
+.vscode
+.vscode/*
 cmake-build-debug
