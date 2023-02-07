@@ -896,6 +896,8 @@ bool mon_wlan_hal_dwpal::update_stations_stats(const std::string &vap_iface_name
         auto client_mac = tlvf::mac_from_string(sta_mac);
         sStaExtendedStats sta_ext_stats;
         size_t stats_size = sizeof(sta_ext_stats);
+        sPeerStats peer_stats;
+        size_t peer_stats_size = sizeof(peer_stats);
 
         auto ret = dwpald_drv_get(
             (char *)vap_iface_name.c_str(), LTQ_NL80211_VENDOR_SUBCMD_GET_TR181_PEER_STATS, &res,
@@ -917,6 +919,28 @@ bool mon_wlan_hal_dwpal::update_stations_stats(const std::string &vap_iface_name
         // RX Packets
         calc_curr_traffic(sta_ext_stats.unicast_rx_packets_cnt, sta_stats.rx_packets_cnt,
                           sta_stats.rx_packets);
+<<<<<<< HEAD
+=======
+
+        ret = dwpald_drv_get((char *)vap_iface_name.c_str(),
+                             LTQ_NL80211_VENDOR_SUBCMD_GET_PER_CLIENT_STATS, &res, client_mac.oct,
+                             sizeof(client_mac.oct), &peer_stats, &peer_stats_size);
+        if ((ret != DWPALD_SUCCESS) || (res < 0)) {
+            LOG(ERROR) << __func__ << " LTQ_NL80211_VENDOR_SUBCMD_GET_PER_CLIENT_STATS failed!";
+            return false;
+        }
+
+        uint64_t tx_err = peer_stats.oneOrMoreRetryCount + peer_stats.packetRetransCount +
+                          peer_stats.dropCntReasonClassifier + peer_stats.dropCntReasonDisconnect +
+                          peer_stats.dropCntReasonATF + peer_stats.dropCntReasonTSFlush +
+                          peer_stats.dropCntReasonReKey + peer_stats.dropCntReasonSetKey +
+                          peer_stats.dropCntReasonDiscard + peer_stats.dropCntReasonDsabled +
+                          peer_stats.dropCntReasonAggError;
+
+        calc_curr_traffic(tx_err, sta_stats.tx_errors_cnt, sta_stats.tx_errors);
+        calc_curr_traffic(peer_stats.mpduRetryCount, sta_stats.rx_errors_cnt, sta_stats.rx_errors);
+
+>>>>>>> 2a6835bb6 (bwl:dwpald: fetch tx and rx errors)
     } else {
         int res         = 0;
         auto client_mac = tlvf::mac_from_string(sta_mac);
