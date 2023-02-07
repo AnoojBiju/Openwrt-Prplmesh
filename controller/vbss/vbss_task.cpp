@@ -376,8 +376,20 @@ bool vbss_task::handle_move_response_msg(const sMacAddr &src_mac,
 bool vbss_task::handle_move_cancel_response(const sMacAddr &src_mac,
                                             ieee1905_1::CmduMessageRx &cmdu_rx)
 {
-    LOG(DEBUG) << " - NOT IMPLEMENTED!";
-    return false;
+    auto client_info_tlv = cmdu_rx.getClass<wfa_map::tlvClientInfo>();
+    if (!client_info_tlv) {
+        LOG(ERROR) << "Move Cancel response message missing Client Info TLV!";
+        return false;
+    }
+    auto existing_move = active_moves.get(client_info_tlv->bssid());
+    if (!existing_move) {
+        LOG(ERROR) << "Spurious Move Cancel response message! No known active move for BSSID '"
+                   << client_info_tlv->bssid() << "'";
+        return false;
+    }
+    active_moves.erase(client_info_tlv->bssid());
+    LOG(DEBUG) << "Handled Move Cancel response for BSSID '" << client_info_tlv->bssid() << "'";
+    return true;
 }
 
 bool vbss_task::handle_trigger_chan_switch_announce_resp(const sMacAddr &src_mac,
