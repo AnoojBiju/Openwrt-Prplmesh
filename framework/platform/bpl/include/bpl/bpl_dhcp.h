@@ -13,6 +13,7 @@
 #include <bcl/network/network_utils.h>
 #include <tlvf/common/sMacAddr.h>
 
+#include <array>
 #include <chrono>
 #include <string>
 #include <unordered_map>
