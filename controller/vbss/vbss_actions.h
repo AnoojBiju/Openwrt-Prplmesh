@@ -111,8 +111,10 @@ struct sStationConnectedEvent {
     sMacAddr client_mac;
     sMacAddr bss_id;
     uint8_t channel;
-    sStationConnectedEvent(const sMacAddr &clnt_mac, const sMacAddr &Bss_id, const uint8_t &channel)
-        : client_mac(clnt_mac), bss_id(Bss_id)
+    uint8_t op_class;
+    sStationConnectedEvent(const sMacAddr &clnt_mac, const sMacAddr &Bss_id, const uint8_t &Channel,
+                           const uint8_t &Op_Class)
+        : client_mac(clnt_mac), bss_id(Bss_id), channel(Channel), op_class(Op_Class)
     {
     }
     sStationConnectedEvent() {}

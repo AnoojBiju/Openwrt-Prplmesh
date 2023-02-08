@@ -2659,13 +2659,16 @@ public:
     bool dm_remove_unassociated_sta(const std::string &radio_dm, const std::string &sta_mac);
 
     bool add_unassociated_station(const sMacAddr &unassociated_sta_mac, const uint8_t &channel,
-                                  const std::vector<sMacAddr> &agent_macs);
+                                  const uint8_t &op_class, const std::vector<sMacAddr> &agent_macs);
 
     bool update_unassociated_station_agents(const sMacAddr &sta_mac,
                                             const std::vector<sMacAddr> &agent_macs);
 
     std::shared_ptr<Agent::sRadio>
     get_radio_by_channel(const sMacAddr &agent_mac, const uint8_t &channel, uint8_t &chan_op_class);
+
+    std::shared_ptr<Agent::sRadio> get_radio_by_op_class(const sMacAddr &agent_mac,
+                                                         const uint8_t &op_class);
 
     /**
      * @brief Adds a single station to the unassociated_stations list
