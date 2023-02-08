@@ -38,6 +38,7 @@
 #include <tlvf/wfa_map/tlvProfile2CacStatusReport.h>
 
 #include <algorithm>
+#include <array>
 #include <mutex>
 #include <queue>
 #include <vector>

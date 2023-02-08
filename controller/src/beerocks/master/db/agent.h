@@ -12,6 +12,7 @@
 #include <bcl/beerocks_defines.h>
 #include <bcl/beerocks_mac_map.h>
 #include <bcl/beerocks_message_structs.h>
+#include <array>
 #include <memory>
 #include <string>
 #include <tlvf/common/sMacAddr.h>

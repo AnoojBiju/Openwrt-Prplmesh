@@ -9,6 +9,7 @@
 #include <bcl/beerocks_os_utils.h>
 #include <bcl/beerocks_string_utils.h>
 
+#include <array>
 #include <chrono>
 #include <fcntl.h>
 #include <linux/limits.h>
