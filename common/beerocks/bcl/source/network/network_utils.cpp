@@ -987,10 +987,11 @@ bool network_utils::linux_iface_get_speed(const std::string &iface, uint32_t &li
 
         string_utils::copy_string(ifr.ifr_name, iface.c_str(), sizeof(ifr.ifr_name));
 #ifdef ETHTOOL_GLINKSETTINGS
-	char ecmd[sizeof(struct ethtool_link_settings) + 3 * ETHTOOL_LINK_MODE_MASK_MAX_KERNEL_NU32 * sizeof(__u32)] = { 0 };
-	struct ethtool_link_settings *req = reinterpret_cast<struct ethtool_link_settings *>(ecmd);
-	__u32 *link_mode_data = reinterpret_cast<__u32 *>(req + 1);
-        ifr.ifr_data = ecmd;
+        char ecmd[sizeof(struct ethtool_link_settings) +
+                  3 * ETHTOOL_LINK_MODE_MASK_MAX_KERNEL_NU32 * sizeof(__u32)] = {};
+        struct ethtool_link_settings *req = reinterpret_cast<struct ethtool_link_settings *>(ecmd);
+        __u32 *link_mode_data             = reinterpret_cast<__u32 *>(req + 1);
+        ifr.ifr_data                      = ecmd;
 
         /* Handshake with kernel to determine number of words for link
          * mode bitmaps. When requested number of bitmap words is not
@@ -999,7 +1000,7 @@ bool network_utils::linux_iface_get_speed(const std::string &iface, uint32_t &li
          * (aka. invalid bitmap length) to get this info.
          */
         req->cmd = ETHTOOL_GLINKSETTINGS;
-        rc           = ioctl(sock, SIOCETHTOOL, &ifr);
+        rc       = ioctl(sock, SIOCETHTOOL, &ifr);
         if (0 == rc) {
             /**
              * See above: we expect a strictly negative value from kernel.
@@ -1024,9 +1025,8 @@ bool network_utils::linux_iface_get_speed(const std::string &iface, uint32_t &li
                      * __u32 map_advertising[link_mode_masks_nwords];
                      * __u32 map_lp_advertising[link_mode_masks_nwords];
                      */
-                    max_advertised_speed = link_speed;
-                    const __u32 *map_advertising =
-                        &link_mode_data[req->link_mode_masks_nwords];
+                    max_advertised_speed         = link_speed;
+                    const __u32 *map_advertising = &link_mode_data[req->link_mode_masks_nwords];
                     linux_iface_get_max_speed_from_link_modes(
                         map_advertising, req->link_mode_masks_nwords, max_advertised_speed);
                     result = true;
