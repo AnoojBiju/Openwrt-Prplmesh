@@ -398,7 +398,7 @@ bool VbssManager::register_client_for_rssi(const vbss::sStationConnectedEvent &s
     LOG(DEBUG) << "Agent list is " << not_connected_agents.size();
     if (not_connected_agents.size()) {
         if (!m_database.add_unassociated_station(stationConnect.client_mac, stationConnect.channel,
-                                                 not_connected_agents)) {
+                                                 stationConnect.op_class, not_connected_agents)) {
             LOG(ERROR) << "Failed to add " << stationConnect.client_mac
                        << " to the unassociated station database";
             return false;

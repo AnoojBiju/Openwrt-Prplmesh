@@ -328,6 +328,8 @@ public:
 
         /** Is there restrictions for the creations of BSSIDs for the VBSS */
         bool has_vbss_restrictions = false;
+
+        uint8_t oper_class = 0;
     };
 
     struct sBackhaul {

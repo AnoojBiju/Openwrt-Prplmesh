@@ -6379,6 +6379,8 @@ bool db::add_current_op_class(const sMacAddr &radio_mac, uint8_t op_class, uint8
         return true;
     }
 
+    radio->oper_class = op_class;
+
     // Prepare path to the CurrentOperatingClasses instance
     // Data model path example: Device.WiFi.DataElements.Network.Device.1.Radio.1.CurrentOperatingClasses
     auto op_class_path = radio_path + ".CurrentOperatingClasses";
@@ -8151,7 +8153,7 @@ bool db::dm_remove_unassociated_sta(const std::string &radio_dm, const std::stri
 }
 
 bool db::add_unassociated_station(const sMacAddr &unassociated_sta_mac, const uint8_t &channel,
-                                  const std::vector<sMacAddr> &agent_macs)
+                                  const uint8_t &op_class, const std::vector<sMacAddr> &agent_macs)
 {
     // Create the entry in the database
     LOG(DEBUG) << "Looking for radios on agents that support scanning on channel: " << channel
@@ -8161,16 +8163,20 @@ bool db::add_unassociated_station(const sMacAddr &unassociated_sta_mac, const ui
     std::string sta_str_mac   = tlvf::mac_to_string(unassociated_sta_mac);
     for (auto &agent_mac : agent_macs) {
         // Now update the agent list along with updating the dm as we go
-        uint8_t chan_op_class;
-        auto radio = get_radio_by_channel(agent_mac, channel, chan_op_class);
+        //uint8_t chan_op_class;
+        //        std::shared_ptr<prplmesh::controller::db::Agent::sRadio> radio = nullptr;
+        // radio = get_radio_by_channel(agent_mac, channel, chan_op_class);
+        auto radio = get_radio_by_op_class(agent_mac, op_class);
         if (!radio) {
+            // Dirty hack to look up by op class
             continue;
         }
+
         ret_val = true;
         // If we got here then we know agent exists;
         new_unassociated_sta->add_agent(agent_mac, radio->radio_uid);
         // Theoretically should always be the same, can add checks later
-        new_unassociated_sta->set_operating_class(chan_op_class);
+        new_unassociated_sta->set_operating_class(op_class);
         new_unassociated_sta->set_channel(channel);
         if (!dm_set_unassociated_sta(radio->dm_path, sta_str_mac)) {
             LOG(ERROR) << "Failed to update datamodel for agent mac: " << agent_mac;
@@ -8231,10 +8237,10 @@ bool db::update_unassociated_station_agents(const sMacAddr &sta_mac,
     }
 
     //Now add remaining agents
-    uint8_t throwAwayOpClass;
+    uint8_t throwaway_op_class;
     for (auto &incoming_agent : agent_vector) {
-        auto radio =
-            get_radio_by_channel(incoming_agent, unassociated_sta->get_channel(), throwAwayOpClass);
+        auto radio = get_radio_by_channel(incoming_agent, unassociated_sta->get_channel(),
+                                          throwaway_op_class);
         if (!radio) {
             LOG(DEBUG) << "Agent " << incoming_agent
                        << " does not have a radio that can listen on channel "
@@ -8252,6 +8258,23 @@ bool db::update_unassociated_station_agents(const sMacAddr &sta_mac,
     return ret_val;
 }
 
+std::shared_ptr<Agent::sRadio> db::get_radio_by_op_class(const sMacAddr &agent_mac,
+                                                         const uint8_t &op_class)
+{
+    auto agent = m_agents.get(agent_mac);
+    if (!agent) {
+        LOG(ERROR) << "Can't find agent with mac: " << agent_mac;
+        return nullptr;
+    }
+    for (auto &radio : agent->radios) {
+        if (radio.second->oper_class == op_class) {
+            return radio.second;
+        }
+    }
+    LOG(ERROR) << "Failed to find radio with op class: " << op_class;
+    return nullptr;
+}
+
 std::shared_ptr<Agent::sRadio>
 db::get_radio_by_channel(const sMacAddr &agent_mac, const uint8_t &channel, uint8_t &chan_op_class)
 {
@@ -8260,16 +8283,26 @@ db::get_radio_by_channel(const sMacAddr &agent_mac, const uint8_t &channel, uint
         LOG(ERROR) << "Can't find agent with mac: " << agent_mac;
         return nullptr;
     }
-    auto comp_fnct = [channel](uint8_t val) { return (val == channel); };
+    //auto comp_fnct = [channel](uint8_t val) { return (val == channel); };
     for (auto &radio : agent->radios) {
+        LOG(DEBUG) << "Looking at radio: " << radio.second->radio_uid;
         auto chan_scan_cap = radio.second->scan_capabilities;
-        for (auto &operating_class : chan_scan_cap.operating_classes) {
-            auto iter = std::find_if(operating_class.second.begin(), operating_class.second.end(),
-                                     comp_fnct);
-            if (iter != operating_class.second.end()) {
-                chan_op_class = operating_class.first;
-                return radio.second;
+        for (auto &op_class : chan_scan_cap.operating_classes) {
+            //auto iter = std::find_if(operating_class.second.begin(), operating_class.second.end(),
+            //                        comp_fnct);
+            LOG(DEBUG) << "Looking at op class " << op_class.first;
+            for (auto &chan : op_class.second) {
+                LOG(DEBUG) << "Analyzing channel: " << chan << " against input: " << channel;
+                if (chan == channel) {
+                    chan_op_class = op_class.first;
+                    return radio.second;
+                }
             }
+
+            //if (iter != operating_class.second.end()) {
+            //    chan_op_class = operating_class.first;
+            //    return radio.second;
+            //}
         }
     }
     LOG(DEBUG) << "No radio found in Agent " << agent_mac << " using channel " << channel;
