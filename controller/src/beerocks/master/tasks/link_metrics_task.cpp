@@ -191,8 +191,8 @@ bool LinkMetricsTask::handle_cmdu_1905_link_metric_response(const sMacAddr &src_
             old_link_metrics_removed = true;
         }
 
-        LOG(DEBUG) << "Received TLV_RECEIVER_LINK_METRIC from al_mac =" << reporting_agent_al_mac
-                   << " reported neighbor al_mac =" << rx_metric->neighbor_al_mac();
+        // LOG(DEBUG) << "Received TLV_RECEIVER_LINK_METRIC from al_mac =" << reporting_agent_al_mac
+        //            << " reported neighbor al_mac =" << rx_metric->neighbor_al_mac();
 
         // Fill Rx data from TLV for specified Neighbor
         // Note: The Database node stats and the Datamodels' stats are not the same.
@@ -266,10 +266,10 @@ bool LinkMetricsTask::handle_cmdu_1905_link_metric_response(const sMacAddr &src_
                                               iface_rx_link.second.packet_errors);
     }
 
-    LOG(DEBUG) << "Metrics data are added from al_mac = " << reporting_agent_al_mac << " with "
-               << new_link_metrics.size() << " neighbors.";
+    //LOG(DEBUG) << "Metrics data are added from al_mac = " << reporting_agent_al_mac << " with "
+    //           << new_link_metrics.size() << " neighbors.";
 
-    print_link_metric_map(link_metric_data);
+    //print_link_metric_map(link_metric_data);
 
     // TODO store the link metric response data in the DB and trigger the relevant task.
     // For now, this is only used for certification so update the certification cmdu.
