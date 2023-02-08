@@ -12,8 +12,11 @@
 
 #include <tlvf/wfa_map/tlvDscpMappingTable.h>
 #include <tlvf/wfa_map/tlvProfile2ErrorCode.h>
+#include <bpl/bpl_service_prio_utils.h>
 
 namespace beerocks {
+
+std::shared_ptr<bpl::ServicePrioritizationUtils> service_prio_utils;
 
 ServicePrioritizationTask::ServicePrioritizationTask(slave_thread &btl_ctx,
                                                      ieee1905_1::CmduMessageTx &cmdu_tx)
@@ -39,6 +42,18 @@ bool ServicePrioritizationTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx,
     return true;
 }
 
+bool service_prio_utils_init()
+{
+    	LOG(DEBUG) << "%s called" << __func__;
+	service_prio_utils = bpl::register_service_prio_utils();
+	if(service_prio_utils) {
+		LOG(DEBUG) << "%s called allocated" << __func__;
+	} else {
+		LOG(DEBUG) << "%s called not allocated" << __func__;
+	}
+	return true;
+}
+
 void ServicePrioritizationTask::handle_service_prioritization_request(
     ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac)
 {
@@ -60,6 +75,12 @@ void ServicePrioritizationTask::handle_service_prioritization_request(
     std::vector<std::shared_ptr<wfa_map::tlvServicePrioritizationRule>> rules_to_add;
     auto db = AgentDB::get();
     for (auto &rule : service_prioritization_rules) {
+        LOG(DEBUG) << "Service Prioritization Rule TLV Dump"
+                   << "\nRule id=" << rule->rule_params().id
+                   << "\nadd_remove=" << rule->rule_params().bits_field1.add_remove
+                   << "\nprecedence=" << rule->rule_params().precedence
+                   << "\noutput=" << rule->rule_params().output
+                   << "\nalways_match=" << rule->rule_params().bits_field2.always_match;
         // Remove
         if (!rule->rule_params().bits_field1.add_remove) {
             rules_to_remove.push_back(rule);
@@ -134,6 +155,26 @@ void ServicePrioritizationTask::handle_service_prioritization_request(
         std::copy(dscp_mapping_table, dscp_mapping_table + 64,
                   db->service_prioritization.dscp_mapping_table.begin());
     }
+    auto m_dscp_mapping_table = db->service_prioritization.dscp_mapping_table;
+    int i                     = 0;
+    for (const auto &dscp : m_dscp_mapping_table) {
+        LOG(DEBUG) << "dscp[" << i << "]=" << dscp;
+        i++;
+    }
+
+    const auto &rules = db->service_prioritization.rules;
+    auto it           = rules.cbegin();
+    i                 = 0;
+    LOG(DEBUG) << "All Service Prioritization Rules Dump max_rules="
+               << db->device_conf.max_prioritization_rules;
+    while (it != rules.cend()) {
+        LOG(DEBUG) << "Service Prioritization Rule TLV i=" << i << "\nRule id=" << it->second.id
+                   << "\nadd_remove=" << it->second.bits_field1.add_remove
+                   << "\nprecedence=" << it->second.precedence << "\noutput=" << it->second.output
+                   << "\nalways_match=" << it->second.bits_field2.always_match;
+        ++it;
+        i++;
+    }
 
     if (!qos_apply_active_rule()) {
         LOG(ERROR) << "Failed setting up QoS active rule";
@@ -153,13 +194,17 @@ bool ServicePrioritizationTask::qos_apply_active_rule()
         }
         ++it;
     }
+    LOG(ERROR) << "inside %s" << __func__;
     if (active != rules.cend()) {
         switch (active->second.output) {
         case QOS_USE_DSCP_MAP:
+    	LOG(ERROR) << "inside QOS_USE_DSCP_MAP" << __func__;
             return qos_setup_dscp_map();
         case QOS_USE_UP:
+    LOG(ERROR) << "inside QOS_USE_UP" << __func__;
             return qos_setup_up_map();
         default:
+    	LOG(ERROR) << "inside single_value" << __func__;
             return qos_setup_single_value_map(active->second.output);
         }
     }
@@ -169,7 +214,12 @@ bool ServicePrioritizationTask::qos_apply_active_rule()
 
 bool ServicePrioritizationTask::qos_flush_setup()
 {
+    LOG(ERROR) << "inside %s" << __func__;
+	if(!service_prio_utils) {
+		return false;
+	}
     //TODO: PPM-2389, drive ebtables or external software
+    service_prio_utils->flush_rules();
     return true;
 }
 
@@ -184,6 +234,7 @@ bool ServicePrioritizationTask::qos_setup_single_value_map(uint8_t pcp)
     qos_flush_setup();
 
     LOG(DEBUG) << "ServicePrioritizationTask::qos_create_single_value_map - NOT IMPLEMENTED YET";
+    service_prio_utils->apply_single_value_map(pcp);
 
     //TODO: PPM-2389, drive ebtables or external software
     return true;
@@ -191,11 +242,13 @@ bool ServicePrioritizationTask::qos_setup_single_value_map(uint8_t pcp)
 
 bool ServicePrioritizationTask::qos_setup_dscp_map()
 {
+    LOG(ERROR) << "inside %s" << __func__;
     LOG(DEBUG) << "ServicePrioritizationTask::qos_setup_dscp_map - DSCP custom map used for PCP";
 
     qos_flush_setup();
 
     LOG(DEBUG) << "ServicePrioritizationTask::qos_setup_dscp_map - NOT IMPLEMENTED YET";
+    service_prio_utils->apply_dscp_map();
 
     //TODO: PPM-2389, drive ebtables or external software
     return true;
@@ -208,6 +261,7 @@ bool ServicePrioritizationTask::qos_setup_up_map()
     qos_flush_setup();
 
     LOG(DEBUG) << "ServicePrioritizationTask::qos_setup_up_map - NOT IMPLEMENTED YET";
+    service_prio_utils->apply_up_map();
 
     //TODO: PPM-2389, drive ebtables or external software
     return true;

@@ -20,6 +20,8 @@
 
 #include <bpl/bpl_dhcp.h>
 
+#include "../tasks/service_prioritization_task.h"
+
 #include <net/if.h> // if_nametoindex
 
 namespace beerocks {
@@ -210,6 +212,8 @@ bool PlatformManager::start()
             }
         }
     }
+
+    beerocks::service_prio_utils_init();
 
     // Start the async work queue
     m_should_stop = false;

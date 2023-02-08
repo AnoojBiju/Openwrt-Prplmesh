@@ -138,6 +138,7 @@ elseif (TARGET_PLATFORM STREQUAL "linux")
     file(GLOB_RECURSE bpl_platform_sources 
         ${MODULE_PATH}/*/linux/*.c*
         ${MODULE_PATH}/cfg/vendor/*.c*
+	${MODULE_PATH}/service_prioritization/dummy/service_prio_utils_dummy.cpp
     )
 
     add_definitions(-DPLATFORM_DB_PATH_TEMP="${TMP_PATH}/prplmesh_platform_db")
