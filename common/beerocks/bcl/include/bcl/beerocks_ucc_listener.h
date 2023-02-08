@@ -13,6 +13,7 @@
 
 #include <tlvf/CmduMessageTx.h>
 
+#include <array>
 #include <list>
 #include <string>
 #include <unordered_map>

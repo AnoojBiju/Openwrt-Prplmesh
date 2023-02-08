@@ -8,6 +8,7 @@
 
 #include "cac_capabilities.h"
 #include <algorithm>
+#include <array>
 
 namespace beerocks {
 
