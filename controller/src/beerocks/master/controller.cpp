@@ -308,6 +308,7 @@ bool Controller::start()
             ieee1905_1::eMessageType::CLIENT_SECURITY_CONTEXT_RESPONSE_MESSAGE,
             ieee1905_1::eMessageType::VIRTUAL_BSS_MOVE_PREPARATION_RESPONSE_MESSAGE,
             ieee1905_1::eMessageType::VIRTUAL_BSS_RESPONSE_MESSAGE,
+            ieee1905_1::eMessageType::VIRTUAL_BSS_MOVE_CANCEL_RESPONSE_MESSAGE,
             ieee1905_1::eMessageType::TRIGGER_CHANNEL_SWITCH_ANNOUNCEMENT_RESPONSE_MESSAGE,
         })) {
         LOG(ERROR) << "Failed subscribing to the Bus";

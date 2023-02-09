@@ -197,11 +197,9 @@ private:
      * 
      * @param src_mac The MAC address of the agent who sent the response
      * @param cmdu_rx The response message
-     * @param did_cancel "Move Preperation" response if false, "Move Cancel" if true
      * @return Whether the response was handled successfully or not
      */
-    bool handle_move_response_msg(const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx,
-                                  bool did_cancel);
+    bool handle_move_response_msg(const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
      * @brief Handles the "Trigger Channel Switch Announcement Response" which includes a Client Info TLV and a Trigger Channel Switch Announcement TLV
@@ -279,6 +277,15 @@ private:
      * @param vbssid The VBSSID of the event to remove the timer for.
      */
     void remove_timer_for_timed_event(const sMacAddr &vbssid);
+
+    /**
+     * @brief Handles a Move Cancel Response message
+     * 
+     * @param src_mac The Agent the message came from.
+     * @param cmdu_rx The CMDU to process. 
+     * @return true on success, otherwise false.
+     */
+    bool handle_move_cancel_response(const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
 };
 
 #endif // VBSS_TASK_H
