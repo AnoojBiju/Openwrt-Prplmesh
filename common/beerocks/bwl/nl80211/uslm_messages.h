@@ -63,8 +63,6 @@ struct message_request_header {
 
 struct message_response_header {
     error_code_t error_code;
-    // the MAC this response is about.
-    uint8_t mac[6];
 } __attribute__((packed));
 struct request {
     message_request_header header;

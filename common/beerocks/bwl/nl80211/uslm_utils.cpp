@@ -65,6 +65,7 @@ bool uslm_utils::parse_station_stats_from_buf(const uint8_t *buf, size_t buflen,
     } else {
         stats_out.signal_strength =
             son::wireless_utils::convert_rcpi_from_rssi(station_link_metrics->rssi);
+        stats_out.channel = station_link_metrics->channel_number;
     }
     return true;
 }
