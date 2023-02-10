@@ -348,14 +348,26 @@ bool LinkMetricsTask::handle_cmdu_1905_unassociated_station_link_metric_response
             return false;
         }
         sMacAddr radio_mac_address(beerocks::net::network_utils::ZERO_MAC);
-        for (auto &radio : (*agent)->radios) {
-            for (auto &operating_class : radio.second->scan_capabilities.operating_classes) {
-                if (operating_class_received == operating_class.first) {
-                    radio_mac_address = radio.first;
-                }
-            }
-        }
+        auto rad          = database.get_radio_by_op_class(src_mac, operating_class_received);
+        radio_mac_address = rad->radio_uid;
+        LOG(DEBUG) << "This unassociated station link measure was made on Radio "
+                   << radio_mac_address << " on Agent " << src_mac;
+        // for (auto &radio : (*agent)->radios) {
+        //     LOG(DEBUG) << "Looking at radio " << radio.first
+        //                << ", # of known opclasses for this radio: "
+        //                << radio.second->scan_capabilities.operating_classes;
+        //     for (auto &operating_class : radio.second->scan_capabilities.operating_classes) {
+        //         LOG(DEBUG) << "Possible spoofable opclass=" << operating_class.first
+        //                    << ", looking for " << operating_class_received;
+        //         if (operating_class_received == operating_class.first) {
+        //             radio_mac_address = radio.first;
+        //         }
+        //     }
+        // }
 
+// VBSS uses the station-sniffer module for unassociated station link metrics.
+// The station-sniffer module does not care about opclass, so ignore this check.
+#ifndef ENABLE_VBSS
         if (tlvf::mac_to_string(radio_mac_address) ==
             beerocks::net::network_utils::ZERO_MAC_STRING) {
             LOG(ERROR) << "Agent with mac_addr: " << tlvf::mac_to_string((*agent)->al_mac)
@@ -364,6 +376,26 @@ bool LinkMetricsTask::handle_cmdu_1905_unassociated_station_link_metric_response
                        << " !!, un_station stats will not get updated! ";
             return false;
         }
+#endif
+
+        UnassociatedStation::Stats stats;
+        stats.uplink_rcpi_dbm_enc = sta_metrics.uplink_rcpi_dbm_enc;
+
+        time_t received_time = sta_metrics.measurement_to_report_delta_msec;
+        char buf[sizeof "2011-10-08T07:07:09Z"];
+        strftime(buf, sizeof buf, "%FT%TZ", gmtime(&received_time));
+        stats.time_stamp = buf;
+#ifdef ENABLE_VBSS
+        unassociated_event.station_stats.push_back(std::make_tuple(
+            sta_metrics.sta_mac, sta_metrics.uplink_rcpi_dbm_enc, radio_mac_address));
+#endif
+
+#ifdef ENABLE_VBSS
+        if (unassociated_event.station_stats.size()) {
+            tasks.push_event(database.get_vbss_task_id(), vbss_task::eEventType::UNASSOCIATED_STATS,
+                             &unassociated_event);
+        }
+#endif
 
         auto radio = database.get_radio(src_mac, radio_mac_address);
         if (!radio) {
@@ -394,20 +426,20 @@ bool LinkMetricsTask::handle_cmdu_1905_unassociated_station_link_metric_response
             char buf[sizeof "2011-10-08T07:07:09Z"];
             strftime(buf, sizeof buf, "%FT%TZ", gmtime(&received_time));
             stats.time_stamp = buf;
-#ifdef ENABLE_VBSS
-            unassociated_event.station_stats.push_back(std::make_tuple(
-                sta_metrics.sta_mac, sta_metrics.uplink_rcpi_dbm_enc, radio_mac_address));
-#endif
+            // #ifdef ENABLE_VBSS
+            //             unassociated_event.station_stats.push_back(std::make_tuple(
+            //                 sta_metrics.sta_mac, sta_metrics.uplink_rcpi_dbm_enc, radio_mac_address));
+            // #endif
 
             database.update_unassociated_station_stats(sta_metrics.sta_mac, stats, radio->dm_path);
         }
     }
-#ifdef ENABLE_VBSS
-    if (unassociated_event.station_stats.size()) {
-        tasks.push_event(database.get_vbss_task_id(), vbss_task::eEventType::UNASSOCIATED_STATS,
-                         &unassociated_event);
-    }
-#endif
+    // #ifdef ENABLE_VBSS
+    //     if (unassociated_event.station_stats.size()) {
+    //         tasks.push_event(database.get_vbss_task_id(), vbss_task::eEventType::UNASSOCIATED_STATS,
+    //                          &unassociated_event);
+    //     }
+    // #endif
     return true;
 }
 
