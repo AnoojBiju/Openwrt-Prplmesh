@@ -187,6 +187,10 @@ private:
     void handle_multi_ap_policy_config_request(ieee1905_1::CmduMessageRx &cmdu_rx);
     void handle_ap_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx);
 
+    void handle_virtual_bss_response(ieee1905_1::CmduMessageRx &cmdu_rx);
+    std::string get_vbss_interface_name(const sMacAddr &vbssid);
+
+    bool register_ext_events_handler(int fd);
     /**
      * Factory to create CMDU client instances connected to CMDU server running in slave.
      */

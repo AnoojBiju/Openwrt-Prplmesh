@@ -151,7 +151,7 @@ bool mon_wlan_hal_nl80211::update_stations_stats(const std::string &vap_iface_na
     stats_policy[NL80211_STA_INFO_TX_RETRIES]    = {NLA_U32, 0, 0};
     stats_policy[NL80211_STA_INFO_TX_FAILED]     = {NLA_U32, 0, 0};
     stats_policy[NL80211_STA_INFO_STA_FLAGS]  = {NLA_UNSPEC, sizeof(struct nl80211_sta_flag_update),
-                                                0};
+                                                 0};
     stats_policy[NL80211_STA_INFO_LOCAL_PM]   = {NLA_U32, 0, 0};
     stats_policy[NL80211_STA_INFO_PEER_PM]    = {NLA_U32, 0, 0};
     stats_policy[NL80211_STA_INFO_NONPEER_PM] = {NLA_U32, 0, 0};
@@ -435,6 +435,11 @@ bool mon_wlan_hal_nl80211::sta_beacon_11k_request(const std::string &vap_iface_n
     dialog_token = 0; //tmp_int;
 
     return true;
+}
+
+bool mon_wlan_hal_nl80211::register_vbss(const std::string &ifname)
+{
+    return base_wlan_hal_nl80211::add_interface(ifname);
 }
 
 bool mon_wlan_hal_nl80211::sta_link_measurements_11k_request(const std::string &vap_iface_name,
