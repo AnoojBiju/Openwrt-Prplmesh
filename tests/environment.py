@@ -598,7 +598,7 @@ class ALEntityDocker(ALEntity):
         # On WSL, connect to the locally exposed container port
         if on_wsl or compose:
             published_port_output = subprocess.check_output(
-                ["docker", "port", name, ucc_port]).decode('utf-8').split(":")
+                ["docker", "port", name, ucc_port]).decode('utf-8').replace("\n", ":").split(":")
             device_ip = published_port_output[0]
             ucc_port = int(published_port_output[1])
         else:
