@@ -107,6 +107,8 @@ enum class eTlvTypeMap : uint8_t {
     TLV_DEVICE_INVENTORY = 0xd4,
     TLV_AGENT_LIST = 0xd5,
     TLV_ANTICIPATED_CHANNEL_PREFERENCE = 0xd6,
+    TLV_SPATIAL_REUSE_REQUEST = 0xd8,
+    TLV_SPATIAL_REUSE_REPORT = 0xd9,
     TLV_SPATIAL_REUSE_CONFIG_RESPONSE = 0xda,
     TLV_QOS_MANAGEMENT_POLICY = 0xdb,
     TLV_QOS_MANAGEMENT_DESCRIPTOR = 0xdc,
@@ -204,6 +206,8 @@ static const char *eTlvTypeMap_str(eTlvTypeMap enum_value) {
     case eTlvTypeMap::TLV_DEVICE_INVENTORY:                         return "eTlvTypeMap::TLV_DEVICE_INVENTORY";
     case eTlvTypeMap::TLV_AGENT_LIST:                               return "eTlvTypeMap::TLV_AGENT_LIST";
     case eTlvTypeMap::TLV_ANTICIPATED_CHANNEL_PREFERENCE:           return "eTlvTypeMap::TLV_ANTICIPATED_CHANNEL_PREFERENCE";
+    case eTlvTypeMap::TLV_SPATIAL_REUSE_REQUEST:                    return "eTlvTypeMap::TLV_SPATIAL_REUSE_REQUEST";
+    case eTlvTypeMap::TLV_SPATIAL_REUSE_REPORT:                     return "eTlvTypeMap::TLV_SPATIAL_REUSE_REPORT";
     case eTlvTypeMap::TLV_SPATIAL_REUSE_CONFIG_RESPONSE:            return "eTlvTypeMap::TLV_SPATIAL_REUSE_CONFIG_RESPONSE";
     case eTlvTypeMap::TLV_QOS_MANAGEMENT_POLICY:                    return "eTlvTypeMap::TLV_QOS_MANAGEMENT_POLICY";
     case eTlvTypeMap::TLV_QOS_MANAGEMENT_DESCRIPTOR:                return "eTlvTypeMap::TLV_QOS_MANAGEMENT_DESCRIPTOR";
@@ -308,6 +312,8 @@ public:
         case 0xd4:
         case 0xd5:
         case 0xd6:
+        case 0xd8:
+        case 0xd9:
         case 0xda:
         case 0xdb:
         case 0xdc:
