@@ -497,6 +497,8 @@ bool ap_wlan_hal_whm::restricted_channels_get(char *channel_list)
 
 bool ap_wlan_hal_whm::read_acs_report()
 {
+    // Whm (similar to nl80211) does not support any channel ranking thus no need to provide any acs_report.
+    // Channel selection will be done at the controller level.
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
     return true;
 }
