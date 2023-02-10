@@ -1097,8 +1097,8 @@ bool mon_wlan_hal_dwpal::channel_scan_trigger(int dwell_time_msec,
 
     int cmd_res = 0;
     auto ret    = dwpal_driver_nl_scan_trigger_sync(get_dwpal_nl_ctx(),
-                                                 (char *)m_radio_info.iface_name.c_str(), &cmd_res,
-                                                 &channel_scan_params);
+                                                    (char *)m_radio_info.iface_name.c_str(), &cmd_res,
+                                                    &channel_scan_params);
     if (ret != DWPAL_SUCCESS && cmd_res != 0) {
         LOG(ERROR) << " scan trigger failed! Abort scan";
         return false;
@@ -1599,6 +1599,12 @@ bool mon_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std
         break;
     }
 
+    return true;
+}
+
+bool mon_wlan_hal_dwpal::register_vbss(const std::string &ifname)
+{
+    LOG(DEBUG) << __func__ << " - NOT IMPLEMENTED";
     return true;
 }
 

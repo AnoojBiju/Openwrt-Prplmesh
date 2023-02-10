@@ -24,6 +24,7 @@
 #include <tlvf/tlvftypes.h>
 #include <tlvf/wfa_map/tlvApMetricQuery.h>
 #include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
+#include <tlvf/wfa_map/tlvVirtualBssEvent.h>
 
 #include <cmath>
 #include <vector>
@@ -1672,6 +1673,9 @@ void Monitor::handle_cmdu_ieee1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx)
     case ieee1905_1::eMessageType::MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE:
         handle_multi_ap_policy_config_request(cmdu_rx);
         break;
+    case ieee1905_1::eMessageType::VIRTUAL_BSS_RESPONSE_MESSAGE:
+        handle_virtual_bss_response(cmdu_rx);
+        break;
     default:
         LOG(ERROR) << "Unknown CMDU message type: " << std::hex << int(cmdu_message_type);
     }
@@ -1744,6 +1748,80 @@ void Monitor::handle_multi_ap_policy_config_request(ieee1905_1::CmduMessageRx &c
             break;
         }
     }
+}
+
+void Monitor::handle_virtual_bss_response(ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    // AP manager has either deleted or created a new vap
+    // Must register with the event handlers so we can well monitor that Iface
+    LOG(DEBUG) << "Processing Virtual BSS Message";
+    auto virtual_bss_event_tlv = cmdu_rx.getClass<wfa_map::VirtualBssEvent>();
+    if (!virtual_bss_event_tlv) {
+        LOG(ERROR) << "Can not find Virtual BSS Event TLV in VBSS response message";
+        return;
+    }
+    if (virtual_bss_event_tlv->success()) {
+        std::string vIfaceName = get_vbss_interface_name(virtual_bss_event_tlv->bssid());
+        if (!mon_wlan_hal->register_vbss(vIfaceName)) {
+            LOG(ERROR) << "Failed to register vbss: " << virtual_bss_event_tlv->bssid()
+                       << " on the Monitor thread";
+            return;
+        }
+        if (!register_ext_events_handler(mon_wlan_hal->get_ext_events_fds().back())) {
+            LOG(ERROR) << "Failed to register vbss ext_events";
+            return;
+        }
+    }
+    // Do we need to do anything when it's deleted?
+    return;
+}
+
+bool Monitor::register_ext_events_handler(int fd)
+{
+    beerocks::EventLoop::EventHandlers ext_events_handler{
+        .name = "mon_hal_ext_events",
+        .on_read =
+            [&](int fd, EventLoop &loop) {
+                if (!mon_wlan_hal->process_ext_events(fd)) {
+                    LOG(ERROR) << "process_ext_events(" << fd << " failed!";
+                    return false;
+                }
+                return true;
+            },
+        .on_write = nullptr,
+        .on_disconnect =
+            [&](int fd, EventLoop &loop) {
+                LOG(ERROR) << "mon_hal_ext_events disconnected! on fd " << fd;
+                auto it = std::find(m_mon_hal_ext_events.begin(), m_mon_hal_ext_events.end(), fd);
+                if (it != m_mon_hal_ext_events.end()) {
+                    *it = beerocks::net::FileDescriptor::invalid_descriptor;
+                }
+                return false;
+            },
+        .on_error =
+            [&](int fd, EventLoop &loop) {
+                LOG(ERROR) << "mon_hal_ext_events error! on fd " << fd;
+                auto it = std::find(m_mon_hal_ext_events.begin(), m_mon_hal_ext_events.end(), fd);
+                if (it != m_mon_hal_ext_events.end()) {
+                    *it = beerocks::net::FileDescriptor::invalid_descriptor;
+                }
+                return false;
+            },
+    };
+    if (!m_event_loop->register_handlers(fd, ext_events_handler)) {
+        LOG(ERROR) << "Failed to register handler for event fd " << fd;
+        return false;
+    }
+    return true;
+}
+
+std::string Monitor::get_vbss_interface_name(const sMacAddr &vbssid)
+{
+    // Copied from AP manager logic, need to move to common code access later
+    std::string ifname = tlvf::mac_to_string(vbssid);
+    ifname.erase(std::remove(ifname.begin(), ifname.end(), ':'), ifname.end());
+    size_t indx = monitor_iface.find_first_of("0123456789");
+    return ifname + monitor_iface.at(indx);
 }
 
 void Monitor::handle_ap_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx)

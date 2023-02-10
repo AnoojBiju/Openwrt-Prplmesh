@@ -418,7 +418,8 @@ void Controller::start_optional_tasks()
     // However we want to control metrics timing;
     // As such we will kill it if it is running right now
     // Then we will send out requests by VbssManager
-    database.config.link_metrics_request_interval_seconds = std::chrono::seconds::zero();
+    //database.config.link_metrics_request_interval_seconds = std::chrono::seconds::zero();
+    database.config.link_metrics_request_interval_seconds = std::chrono::seconds(1);
     if (!m_link_metrics_task) {
         LOG(DEBUG) << "Starting link metrics for vbss manager";
         m_link_metrics_task =

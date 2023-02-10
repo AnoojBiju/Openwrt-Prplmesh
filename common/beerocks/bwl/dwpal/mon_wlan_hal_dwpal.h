@@ -86,6 +86,8 @@ protected:
         return base_wlan_hal::event_queue_push(int(event), data);
     }
 
+    virtual bool register_vbss(const std::string &ifname) override;
+
     // Private data-members:
 private:
     bool dwpal_get_scan_params_fg(sScanCfgParams &params, size_t &result_size)
