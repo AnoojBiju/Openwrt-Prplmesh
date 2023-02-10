@@ -779,6 +779,8 @@ bool mon_wlan_hal_nl80211::sta_unassoc_rssi_measurement(
         }
         auto response_rx_time = std::chrono::system_clock::now();
         stats.mac_adress      = tlvf::mac_from_string(mac_pair.first);
+        // TODO: very bad! dont hardcore opclass
+        stats.operating_class = 128;
 
         // Spec states that timestamp field is the delta between the request for a measurement, and
         // the response being read.
