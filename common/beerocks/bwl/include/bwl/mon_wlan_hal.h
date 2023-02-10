@@ -130,6 +130,8 @@ public:
      */
     virtual bool
     sta_unassoc_rssi_measurement(std::unordered_map<std::string, uint8_t> &new_list) = 0;
+
+    virtual bool register_vbss(const std::string &ifname) = 0;
 };
 
 // mon HAL factory types

@@ -136,12 +136,25 @@ void VbssTask::handle_virtual_bss_response(ieee1905_1::CmduMessageRx &cmdu_rx)
 
     // CMDU received from ap_manager
     m_btl_ctx.forward_cmdu_to_controller(cmdu_rx);
-
+    // Whether this is a creation or deletion it needs to be forwarded to monitor to
+    // register and unregister from the events
+    auto db    = AgentDB::get();
+    auto radio = db->get_radio_by_mac(virtual_bss_event_tlv->bssid(), AgentDB::eMacType::BSSID);
+    if (!radio) {
+        LOG(ERROR) << "Failed to get radio for vbss id: " << virtual_bss_event_tlv->bssid();
+    } else {
+        auto monitor_fd = m_btl_ctx.get_monitor_fd(radio->front.iface_name);
+        if (!m_btl_ctx.forward_cmdu_to_uds(monitor_fd, cmdu_rx)) {
+            LOG(ERROR) << "Failed to forward to monitor thread virtual bss response message";
+        }
+    }
     if (virtual_bss_event_tlv->success()) {
 
         // If the request was handled successfully, we have to send a
         // topology notification as a BSS has either be created or
         // removed as a result.
+        // Send to MON so it can register events and monitor stations on vbss
+
         LOG(INFO) << "Sending topology notification to notify controller of the BSS change";
 
         auto cmdu_header =
