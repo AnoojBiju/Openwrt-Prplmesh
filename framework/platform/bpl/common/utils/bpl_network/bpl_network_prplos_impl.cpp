@@ -18,6 +18,83 @@ using namespace wbapi;
 namespace beerocks {
 namespace bpl {
 
+/**
+ * @brief get port name
+ *
+ * @param[in] port_path: absolute path to the port
+ * @param[out] port_name: name of the port (if empty in port datamodel, will try to retrieve from lower layer)
+ * @return true if a non-zero length string was read from the datamodel and written to the port_name,
+ * false otherwise
+*/
+static bool get_bridge_port_name(const std::string &port_path, std::string &port_name)
+{
+
+    LOG(INFO) << "get port name for " << port_path;
+
+    AmbiorixConnectionSmartPtr amxb_connection = AmbiorixConnectionManager::get_connection();
+    if (!amxb_connection) {
+        LOG(ERROR) << "can't retrieve connection to amxb bus";
+    }
+
+    std::string tmp_name = amxb_connection->get_param(port_path, "Name")->get<std::string>();
+
+    if (!tmp_name.length()) {
+        //try to get name from lower layer
+        LOG(ERROR) << "name for " << port_path
+                   << " not configured, retrieving name from LowerLayers";
+        std::string port_ll =
+            amxb_connection->get_param(port_path, "LowerLayers")->get<std::string>();
+        std::string ll_name = amxb_connection->get_param(port_ll, "Name")->get<std::string>();
+        if (!ll_name.length()) {
+            LOG(ERROR) << "can't retrieve port name from LowerLayers for " << port_path;
+            return false;
+        }
+        tmp_name = ll_name;
+    }
+
+    port_name = tmp_name;
+    LOG(DEBUG) << port_path << " name " << port_name;
+    return true;
+}
+/**
+ * @brief get a vector of port paths from the management port of bridge
+ * @param[in] bridge : the target bridge alias
+ * @param[out] port_paths : vector<string> of port paths
+*/
+static bool get_management_port_lower_layers(const std::string &bridge,
+                                             std::vector<std::string> &port_paths)
+{
+    AmbiorixConnectionSmartPtr amxb_connection = AmbiorixConnectionManager::get_connection();
+    if (!amxb_connection) {
+        LOG(ERROR) << "can't retrieve connection to amxb bus";
+        return false;
+    }
+
+    std::string bridge_filter    = "Bridge.[Alias == '" + bridge + "'].";
+    std::string port_filter      = "Port.[ManagementPort == 1].";
+    std::string port_search_path = "Device.Bridging." + bridge_filter + port_filter;
+
+    std::string mp_path; // management port
+    std::vector<std::string> mp_path_vec;
+    if (amxb_connection->resolve_path(port_search_path, mp_path_vec)) {
+        mp_path = mp_path_vec[0];
+    } else {
+        LOG(ERROR) << "can't retrieve management port for " << bridge;
+        return false;
+    }
+
+    std::string mp_lower_layers =
+        amxb_connection->get_param(mp_path, "LowerLayers")->get<std::string>();
+
+    LOG(INFO) << "lower layers for management port " << mp_lower_layers;
+    std::stringstream lower_layers_ss(mp_lower_layers);
+
+    for (std::string port; std::getline(lower_layers_ss, port, ',');) {
+        port_paths.push_back(port);
+    }
+    return true;
+}
+
 std::vector<std::string> bpl_network::get_iface_list_from_bridge(const std::string &bridge_name)
 {
     std::vector<std::string> ifs;
@@ -26,69 +103,22 @@ std::vector<std::string> bpl_network::get_iface_list_from_bridge(const std::stri
         LOG(ERROR) << "can't retrieve connection to amxb bus";
     }
 
-    std::string bridge_alias = bridge_name.substr(bridge_name.find("-") + 1);
+    std::string bridge = bridge_name.substr(bridge_name.find("-") + 1);
     // extract bridge alias from bridge name: substring starting after the dash
 
-    std::string bridge_filter    = "Bridge.[Alias == '" + bridge_alias + "' && Enable == 1].";
-    std::string port_filter      = "Port.[ManagementPort == 0].";
-    std::string port_search_path = "Bridging." + bridge_filter + port_filter;
-
-    LOG(INFO) << "iacob bridge search path " << port_search_path;
-
-    //inlining the ambiorix_client::get_objects_multi() function
-    auto bridge_ports_obj = amxb_connection->get_object(port_search_path, 0, false);
-    if (!bridge_ports_obj) {
-        LOG(ERROR) << "can't retrieve bridge ports for " << bridge_alias;
+    std::vector<std::string> port_paths;
+    if (!get_management_port_lower_layers(bridge, port_paths)) {
+        LOG(ERROR) << "can't retrieve lower layer for the management port of " << bridge;
         return ifs;
     }
-    auto bridge_ports_map = bridge_ports_obj->take_childs<AmbiorixVariantMapSmartPtr>();
 
-    if (!bridge_ports_map) {
-        LOG(ERROR) << "can't flatten port objects into a map";
-        return ifs;
-    }
-    for (auto const &it : *bridge_ports_map) {
-        auto port = it.second;
-        int port_enable; // port config
-        std::string port_lower_layers;
+    for (auto port : port_paths) {
         std::string port_name;
-
-        port.read_child<>(port_enable, "Enable");
-        port.read_child<>(port_lower_layers, "LowerLayers");
-        port.read_child<>(port_name, "Name");
-
-        std::stringstream port_desc;
-        port_desc << "port " << it.first << " name " << port_name << " name length "
-                  << port_name.length() << " lower layers " << port_lower_layers << " enable "
-                  << port_enable;
-        std::stringstream log_msg;
-
-        if (!port_enable) {
-            log_msg << "skip port not enabled " << port_desc.str();
-            LOG(ERROR) << log_msg.str();
+        if (!get_bridge_port_name(port, port_name)) {
             continue;
-        } else if (!port_lower_layers.length()) {
-            log_msg << "skip port lower layer not configured " << port_desc.str();
-            LOG(ERROR) << log_msg.str();
-            continue;
-        } else if (port_name.length() == 0) { // if name not available, get from lower layer
-            // at this point lower layer has a non-zero length
-            auto ssid_object = amxb_connection->get_object(port_lower_layers, 0, true);
-            if (!ssid_object) {
-                log_msg << "skip port unable to retrieve lower layer name " << port_desc.str();
-                LOG(ERROR) << log_msg.str();
-                continue;
-            }
-            std::string ssid_name;
-            ssid_object->read_child<>(ssid_name, "Name");
-            LOG(DEBUG) << "retrieved name " << ssid_name << " for " << port_desc.str();
-            ifs.push_back(ssid_name);
-        } else {
-            LOG(DEBUG) << port_desc.str();
-            ifs.push_back(port_name);
         }
+        ifs.push_back(port_name);
     }
-
     return ifs;
 }
 
