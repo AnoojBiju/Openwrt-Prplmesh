@@ -49,6 +49,15 @@ public:
      * @return std::vector<std::string> of interface names that belong to the bridge
      */
     static std::vector<std::string> get_iface_list_from_bridge(const std::string &bridge);
+
+    /**
+     * @brief Add the interface iface to the bridge
+     *
+     * @param[in] bridge the bridge to which the interface is to be added
+     * @param[in] iface  the interface to be added to the bridge
+     * @return bool
+    */
+    static bool add_iface_to_bridge(const std::string &bridge, const std::string &iface);
 };
 } // namespace bpl
 } // namespace beerocks
