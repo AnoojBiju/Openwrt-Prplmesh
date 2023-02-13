@@ -1926,7 +1926,7 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
         // entity (hostapd) that adds it automaticaly.
         auto bridge        = db->bridge.iface_name;
         auto bridge_ifaces = bpl::bpl_network::get_iface_list_from_bridge(bridge);
-        if (!beerocks::net::network_utils::linux_add_iface_to_bridge(bridge, iface)) {
+        if (!bpl::bpl_network::add_iface_to_bridge(bridge, iface)) {
             LOG(INFO) << "The wireless interface " << iface << " is already in the bridge";
         }
 
@@ -2995,7 +2995,7 @@ void BackhaulManager::handle_dev_reset_default(
     if (std::find(bridge_ifaces.begin(), bridge_ifaces.end(), eth_iface) != bridge_ifaces.end()) {
         LOG(INFO) << "The wired interface is already in the bridge";
     } else {
-        if (!beerocks::net::network_utils::linux_add_iface_to_bridge(bridge, eth_iface)) {
+        if (!bpl::bpl_network::add_iface_to_bridge(bridge, eth_iface)) {
             LOG(ERROR) << "Failed to add iface '" << eth_iface << "' to bridge '" << bridge
                        << "' !";
             m_agent_ucc_listener->send_reply(
