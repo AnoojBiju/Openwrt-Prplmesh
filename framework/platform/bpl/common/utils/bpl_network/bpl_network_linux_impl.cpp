@@ -6,8 +6,16 @@
  * See LICENSE file for more details.
  */
 
+#include <bcl/beerocks_string_utils.h>
+
 #include <dirent.h>
+#include <linux/if_bridge.h>
+#include <linux/sockios.h>
+#include <net/if.h>
 #include <string.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <unistd.h>
 
 #include <easylogging++.h>
 
@@ -37,6 +45,48 @@ std::vector<std::string> bpl_network::get_iface_list_from_bridge(const std::stri
     }
 
     return ifs;
+}
+
+bool bpl_network::add_iface_to_bridge(const std::string &bridge, const std::string &iface)
+{
+    LOG(DEBUG) << "add iface " << iface << " to bridge " << bridge;
+
+    struct ifreq ifr;
+    int err;
+    unsigned long ifindex = if_nametoindex(iface.c_str());
+    if (ifindex == 0) {
+        LOG(ERROR) << "invalid iface index=" << ifindex << " for " << iface;
+        return false;
+    }
+
+    int br_socket_fd;
+    if ((br_socket_fd = socket(AF_LOCAL, SOCK_STREAM, 0)) < 0) {
+        LOG(ERROR) << "can't open br_socket_fd";
+        return false;
+    }
+
+    string_utils::copy_string(ifr.ifr_name, bridge.c_str(), IFNAMSIZ);
+#ifdef SIOCBRADDIF
+    ifr.ifr_ifindex = ifindex;
+    err             = ioctl(br_socket_fd, SIOCBRADDIF, &ifr);
+    if (err < 0)
+#endif
+    {
+        unsigned long args[4] = {BRCTL_ADD_IF, ifindex, 0, 0};
+
+        ifr.ifr_data = (char *)args;
+        err          = ioctl(br_socket_fd, SIOCDEVPRIVATE, &ifr);
+    }
+
+    close(br_socket_fd);
+    return err < 0 ? false : true;
+    /*
+    std::string cmd;
+    cmd = "brctl addif " + bridge + " " + iface;
+    system(cmd.c_str());
+    LOG(DEBUG) << cmd;
+    return true;
+    */
 }
 } // namespace bpl
 } // namespace beerocks
