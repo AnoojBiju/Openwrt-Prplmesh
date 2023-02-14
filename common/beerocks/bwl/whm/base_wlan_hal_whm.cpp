@@ -150,7 +150,7 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
     event_handler->callback_fn = [](AmbiorixVariant &event_data, void *context) -> void {
         base_wlan_hal_whm *hal = (static_cast<base_wlan_hal_whm *>(context));
         std::string sta_path;
-        if (!event_data.read_child<>(sta_path, "path") || sta_path.empty()) {
+        if (!event_data.read_child(sta_path, "path") || sta_path.empty()) {
             return;
         }
         std::string ap_path = wbapi_utils::get_path_ap_of_assocDev(sta_path);
@@ -160,33 +160,36 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
                                        return element.second.path == ap_path;
                                    });
         if (vap_it == vapsExtInfo.end()) {
+            LOG(DEBUG) << "Did not find any matching VAP with path= " << ap_path;
             return;
         }
         auto &stations = hal->m_stations;
         auto sta_it    = std::find_if(stations.begin(), stations.end(),
-                                   [&](const std::pair<std::string, STAExtInfo> &element) {
+                                   [&](const std::pair<std::string, sStationInfo> &element) {
                                        return element.second.path == sta_path;
                                    });
         std::string sta_mac;
+        if (sta_mac.empty()) {
+            LOG(DEBUG) << "Sta event with empty macaddress!";
+            return;
+        }
+
         auto sta_mac_obj = event_data.find_child_deep("parameters.MACAddress.to");
+        if (!hal->m_ambiorix_cl->get_param(sta_mac, sta_path, "MACAddress")) {
+            LOG(DEBUG) << "Unknown sta path " << sta_path;
+            return;
+        }
+
         if (sta_mac_obj && !sta_mac_obj->empty()) {
             sta_mac = sta_mac_obj->get<std::string>();
         } else if (sta_it != stations.end()) {
             sta_mac = sta_it->first;
-        } else if (!hal->m_ambiorix_cl->get_param<>(sta_mac, sta_path, "MACAddress")) {
-            LOG(WARNING) << "unknown sta path " << sta_path;
-            return;
+        } else { // new station connected
+
+            stations.insert(
+                std::make_pair(sta_mac, sStationInfo(sta_mac, sta_path, vap_it->second.bssid)));
         }
-        if (sta_it != stations.end()) {
-            sta_it->second.path = sta_path;
-        } else if (!sta_mac.empty()) {
-            STAExtInfo staInfo;
-            staInfo.path = sta_path;
-            sta_it       = stations.insert(std::make_pair(sta_mac, staInfo)).first;
-        } else {
-            LOG(WARNING) << "missing station mac";
-            return;
-        }
+
         auto parameters = event_data.find_child("parameters");
         if (!parameters || parameters->empty()) {
             return;
@@ -231,7 +234,7 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
         LOG(DEBUG) << "Station instance " << sta_path << " deleted";
         auto &stations = hal->m_stations;
         auto sta_it    = std::find_if(stations.begin(), stations.end(),
-                                   [&](const std::pair<std::string, STAExtInfo> &element) {
+                                   [&](const std::pair<std::string, sStationInfo> &element) {
                                        return element.second.path == sta_path;
                                    });
         if (sta_it != stations.end()) {
@@ -266,6 +269,61 @@ bool base_wlan_hal_whm::process_sta_event(const std::string &interface, const st
                                           const std::string &key, const AmbiorixVariant *value)
 {
     return true;
+}
+
+std::list<sStationInfo> base_wlan_hal_whm::get_connected_stations_from_whm()
+{
+    std::list<sStationInfo> connected_stations;
+
+    std::string associated_devices_path = m_radio_info.iface_name + "AssociatedDevice.";
+    auto associated_devices_pwhm =
+        m_ambiorix_cl->get_object_multi<AmbiorixVariantMapSmartPtr>(associated_devices_path);
+    if (!associated_devices_pwhm) {
+        LOG(DEBUG) << "Failed reading: " << m_radio_info.iface_name << "AssociatedDevice.";
+        return connected_stations;
+    }
+    //Lets iterate through all instances
+    for (auto &associated_device_pwhm : *associated_devices_pwhm) {
+        std::string mac_addr;
+        if (!associated_device_pwhm.second.read_child(mac_addr, "MACAddress")) {
+            LOG(DEBUG) << "Failed reading MACAddress";
+            continue;
+        }
+        //m_ambiorix_cl->resolve_path(associated_devices_path + ".", mac_addr);
+        std::string path;
+        //wissem get path!
+        auto vap_it = std::find_if(m_vapsExtInfo.begin(), m_vapsExtInfo.end(),
+                                   [&](const std::pair<std::string, VAPExtInfo> &element) {
+                                       return element.second.path == path;
+                                   });
+        if (vap_it == m_vapsExtInfo.end()) {
+            LOG(DEBUG) << "Did not find any matching VAP with path= " << path;
+            return connected_stations;
+        }
+
+        if (!associated_device_pwhm.second.read_child(mac_addr, "MACAddress")) {
+            LOG(DEBUG) << "Failed reading MACAddress";
+            continue;
+        }
+
+        //Lets synchronize cached stations list
+        if (m_stations.find(mac_addr) == m_stations.end()) {
+            LOG(WARNING)
+                << " station with mac= " << mac_addr
+                << " exists in the pwhm but in the prplmesh, could be that an event was missed!";
+            auto new_station = m_stations.insert(
+                std::make_pair(mac_addr, sStationInfo(mac_addr, path, vap_it->second.bssid)));
+
+            new_station.first->second.capabilities.band_5g_capable = m_radio_info.is_5ghz;
+            new_station.first->second.capabilities.band_2g_capable =
+                (son::wireless_utils::which_freq_type(m_radio_info.vht_center_freq) ==
+                 beerocks::eFreqType::FREQ_24G);
+        }
+
+        connected_stations.push_back(sStationInfo(mac_addr, "", vap_it->second.bssid));
+    }
+
+    return connected_stations;
 }
 
 bool base_wlan_hal_whm::fsm_setup() { return true; }
@@ -520,6 +578,7 @@ bool base_wlan_hal_whm::refresh_vap_info(int id, const AmbiorixVariant &ap_obj)
 
     mapped_vap_element.mac    = vap_element.mac;
     mapped_vap_extInfo.status = vap_extInfo.status;
+    mapped_vap_extInfo.bssid  = vap_element.mac;
 
     return true;
 }

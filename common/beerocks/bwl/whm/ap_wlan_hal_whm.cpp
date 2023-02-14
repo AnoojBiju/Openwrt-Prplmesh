@@ -530,7 +530,41 @@ bool ap_wlan_hal_whm::get_vap_enable(const std::string &iface_name, bool &enable
 bool ap_wlan_hal_whm::generate_connected_clients_events(
     bool &is_finished_all_clients, std::chrono::steady_clock::time_point max_iteration_timeout)
 {
-    //LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    while (!m_connected_stations_to_be_sent.empty()) {
+
+        // if thread awake time is too long - return false (means there is more handling to be done on next wake-up)
+        if (std::chrono::steady_clock::now() > max_iteration_timeout) {
+            LOG(DEBUG) << " Thread is awake too long - will continue on next wakeup, number of "
+                          "remaining stations = "
+                       << m_connected_stations_to_be_sent.size();
+
+            is_finished_all_clients = false;
+            return true;
+        }
+
+        auto connected_station_to_consume = m_connected_stations_to_be_sent.begin();
+        auto station_data                 = m_stations.find(*connected_station_to_consume);
+        if (station_data == m_stations.end()) {
+            LOG(ERROR) << " connected station details not found!!";
+            return false;
+        }
+        auto msg_buff =
+            ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION));
+        LOG_IF(msg_buff == nullptr, FATAL) << "Memory allocation failed!";
+        auto msg =
+            reinterpret_cast<sACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION *>(msg_buff.get());
+        msg->params.vap_id       = get_vap_id_with_mac(station_data->second.bssid);
+        msg->params.bssid        = tlvf::mac_from_string(station_data->second.bssid);
+        msg->params.mac          = tlvf::mac_from_string(station_data->second.mac);
+        msg->params.capabilities = station_data->second.capabilities;
+
+        event_queue_push(Event::STA_Connected, msg_buff);
+        m_connected_stations_to_be_sent.erase(*connected_station_to_consume);
+    }
+
+    LOG(DEBUG) << "Finished to generate connected clients events for all vaps";
+    is_finished_all_clients = true;
+
     return true;
 }
 
@@ -723,6 +757,13 @@ bool ap_wlan_hal_whm::process_sta_event(const std::string &interface, const std:
                     }
                 }
             }
+            auto saved_station = m_stations.find(sta_mac);
+            if (saved_station == m_stations.end()) {
+                LOG(WARNING) << "station not found!";
+                return false;
+            }
+            saved_station->second.capabilities = msg->params.capabilities;
+            m_connected_stations_to_be_sent.insert(sta_mac);
 
             // Add the message to the queue
             event_queue_push(Event::STA_Connected, msg_buff);
@@ -741,6 +782,8 @@ bool ap_wlan_hal_whm::process_sta_event(const std::string &interface, const std:
             msg->params.vap_id = vap_id;
 
             LOG(WARNING) << "disconnected station " << sta_mac << " from vap " << interface;
+
+            m_connected_stations_to_be_sent.erase(sta_mac);
 
             event_queue_push(Event::STA_Disconnected, msg_buff);
         }
