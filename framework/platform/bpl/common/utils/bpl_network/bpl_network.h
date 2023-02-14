@@ -58,6 +58,22 @@ public:
      * @return bool
     */
     static bool add_iface_to_bridge(const std::string &bridge, const std::string &iface);
+
+    /**
+     * @brief Get list of BSS interfaces.
+     *
+     * A BSS could have more than one interface that belongs to it. Specifically, when configuring
+     * a BSS as bBSS, a platform could create several virtual netdevs of which only one backhaul
+     * station could connect.
+     * This function returns a list of the base BSS interface name and all of its
+     * extended interfaces.
+     *
+     * @param bss_iface BSS interface name.
+     * @param bridge_iface Bridge interface name.
+     * @return List of the base BSS interface name and all of its extended interfaces.
+     */
+    static std::vector<std::string> get_bss_ifaces(const std::string &bss_iface,
+                                                   const std::string &bridge_iface);
 };
 } // namespace bpl
 } // namespace beerocks

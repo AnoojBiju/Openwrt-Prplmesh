@@ -13,6 +13,8 @@
 #include "agent_db.h"
 #include "traffic_separation.h"
 
+#include <bpl_network/bpl_network.h>
+
 constexpr char DOT_PVID_SUFFIX[] = ".pvid";
 #define PVID_SUFFIX &DOT_PVID_SUFFIX[1]
 
@@ -194,7 +196,7 @@ void TrafficSeparation::apply_policy(const std::string &radio_iface)
                            << m_profile_x_disallow_override_unsupported_configuration;
             }
             auto bss_iface_netdevs =
-                network_utils::get_bss_ifaces(bss_iface, db->bridge.iface_name);
+                bpl::bpl_network::get_bss_ifaces(bss_iface, db->bridge.iface_name);
 
             for (const auto &bss_iface_netdev : bss_iface_netdevs) {
 
@@ -232,7 +234,7 @@ void TrafficSeparation::apply_policy(const std::string &radio_iface)
                             db->traffic_separation.primary_vlan_id);
 
             auto bss_iface_netdevs =
-                network_utils::get_bss_ifaces(bss_iface, db->bridge.iface_name);
+                bpl::bpl_network::get_bss_ifaces(bss_iface, db->bridge.iface_name);
 
             for (const auto &bss_iface_netdev : bss_iface_netdevs) {
                 set_vlan_policy(bss_iface_netdev, ePortMode::UNTAGGED_PORT, is_bridge,

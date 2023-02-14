@@ -307,5 +307,40 @@ bool bpl_network::add_iface_to_bridge(const std::string &bridge_name, const std:
     return false;
 }
 
+std::vector<std::string> bpl_network::get_bss_ifaces(const std::string &bss_iface,
+                                                     const std::string &bridge_iface)
+{
+    if (bss_iface.empty()) {
+        LOG(ERROR) << "bss_iface is empty!";
+        return {};
+    }
+    if (bridge_iface.empty()) {
+        LOG(ERROR) << "bridge_iface is empty!";
+        return {};
+    }
+
+    auto ifaces_on_bridge = get_iface_list_from_bridge(bridge_iface);
+
+    /**
+     * Find all interfaces that their name contain the base bss name.
+     * On upstream Hostapd the pattern is: "<bss_iface_name>.staN"
+     * (e.g wlan0.0.sta1, wlan0.0.sta2 etc)
+     * On MaxLinear platforms the pattern is: "bN_<bss_iface_name>"
+     * (e.g b0_wlan0.0, b1_wlan0.0 etc).
+     *
+     * NOTE: If the VAP interface is wlan-long0.0, then the STA interface name will use an
+     * abbreviated version b0_wlan-long0 instead of b0_wlan-long0.0.
+     * It doesn't really work anyway because with that truncation, you may get conflicts between
+     * wlan-long0.0 and wlan-lang0.1.
+     */
+
+    std::vector<std::string> bss_ifaces;
+    for (const auto &iface : ifaces_on_bridge) {
+        if (iface.find(bss_iface) != std::string::npos) {
+            bss_ifaces.push_back(iface);
+        }
+    }
+    return bss_ifaces;
+}
 } // namespace bpl
 } // namespace beerocks
