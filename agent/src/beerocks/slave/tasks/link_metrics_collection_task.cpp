@@ -113,6 +113,7 @@ void LinkMetricsCollectionTask::work()
         m_ap_metrics_reporting_info.last_reporting_time_point = std::chrono::steady_clock::now();
     }
     if (0 == m_ap_metrics_reporting_info.reporting_interval_s) {
+	LOG(DEBUG) << "CW: no reporting_interval_s so returning";
         return;
     }
 
@@ -120,7 +121,13 @@ void LinkMetricsCollectionTask::work()
                              now - m_ap_metrics_reporting_info.last_reporting_time_point)
                              .count();
 
+    auto elapsed_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                             now - m_ap_metrics_reporting_info.last_reporting_time_point)
+                             .count();
+
+    LOG(DEBUG) << "CW: el time:"<< elapsed_time_s << " & rep_int:" << m_ap_metrics_reporting_info.reporting_interval_s;
     if (elapsed_time_s < m_ap_metrics_reporting_info.reporting_interval_s) {
+	LOG(DEBUG) << "CW: *********** el ms:"<< elapsed_time_ms;
         return;
     }
 

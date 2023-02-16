@@ -1764,7 +1764,7 @@ void Monitor::handle_ap_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx)
             return;
         }
         const auto &bssid = std::get<1>(bssid_tuple);
-        LOG(DEBUG) << "Received AP_METRICS_QUERY_MESSAGE, mid=" << std::hex << int(mid)
+        LOG(DEBUG) << "CW: Received AP_METRICS_QUERY_MESSAGE, mid=" << std::hex << int(mid)
                    << "  bssid " << bssid;
 
         bssid_list.emplace_back(bssid);
@@ -1775,7 +1775,7 @@ void Monitor::handle_ap_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx)
         return;
     }
 
-    LOG(DEBUG) << "Sending AP_METRICS_RESPONSE_MESSAGE to slave_socket, mid=" << std::hex
+    LOG(DEBUG) << "CW: Sending AP_METRICS_RESPONSE_MESSAGE to slave_socket, mid=" << std::hex
                << int(mid);
     send_cmdu(cmdu_tx);
 }

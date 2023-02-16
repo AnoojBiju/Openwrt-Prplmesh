@@ -319,8 +319,10 @@ bool agent_monitoring_task::send_multi_ap_policy_config_request(const sMacAddr &
         return false;
     }
 
-    metric_reporting_policy_tlv->metrics_reporting_interval_sec() =
-        database.config.link_metrics_request_interval_seconds.count();
+    //metric_reporting_policy_tlv->metrics_reporting_interval_sec() =
+    //    database.config.link_metrics_request_interval_seconds.count();
+
+    metric_reporting_policy_tlv->metrics_reporting_interval_sec() = 2;
 
     if (!metric_reporting_policy_tlv->alloc_metrics_reporting_conf_list(agent->radios.size())) {
         LOG(ERROR) << "alloc_metrics_reporting_conf_list() has failed";
