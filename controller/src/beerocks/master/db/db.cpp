@@ -5415,8 +5415,8 @@ void db::clear_bss_info_configuration()
 
 void db::clear_bss_info_configuration(const sMacAddr &al_mac) { bss_infos[al_mac].clear(); }
 
-void db::add_traffic_separataion_configuration(const sMacAddr &al_mac,
-                                               const wireless_utils::sTrafficSeparationSsid &config)
+void db::add_traffic_separation_configuration(const sMacAddr &al_mac,
+                                              const wireless_utils::sTrafficSeparationSsid &config)
 {
     traffic_separation_policy_configurations[al_mac].push_back(config);
 }
@@ -5428,7 +5428,7 @@ void db::add_default_8021q_settings(const sMacAddr &al_mac,
 }
 
 const std::list<wireless_utils::sTrafficSeparationSsid>
-db::get_traffic_separataion_configuration(const sMacAddr &al_mac)
+db::get_traffic_separation_configuration(const sMacAddr &al_mac)
 {
     auto config = traffic_separation_policy_configurations.find(al_mac);
     if (config != traffic_separation_policy_configurations.end()) {
