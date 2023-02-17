@@ -190,12 +190,10 @@ static bool enable_port(const std::string &port_object)
     return set_port_enable_state(port_object, true);
 }
 
-/*static bool disable_port(const std::string &port_object)
+static bool disable_port(const std::string &port_object)
 {
     return set_port_enable_state(port_object, false);
 }
-commented out since it triggers an "unused function" error
-*/
 
 std::vector<std::string> bpl_network::get_iface_list_from_bridge(const std::string &bridge_name)
 {
@@ -304,6 +302,20 @@ bool bpl_network::add_iface_to_bridge(const std::string &bridge_name, const std:
     }
 
     LOG(ERROR) << "failed to add new instance";
+    return false;
+}
+
+/**
+ * @brief the easiest tr181 operation that produces the expected result is
+ * disabling the corresponding bridge port
+*/
+bool bpl_network::remove_iface_from_bridge(const std::string &bridge, const std::string &iface)
+{
+    std::string interface_port_path;
+    if (get_bridge_port_path(bridge, iface, interface_port_path)) {
+        disable_port(interface_port_path);
+        return true;
+    }
     return false;
 }
 

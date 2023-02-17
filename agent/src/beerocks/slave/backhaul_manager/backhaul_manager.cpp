@@ -3075,7 +3075,7 @@ bool BackhaulManager::handle_dev_set_config(
         auto eth_iface     = db->ethernet.wan.iface_name;
         if (std::find(bridge_ifaces.begin(), bridge_ifaces.end(), eth_iface) !=
             bridge_ifaces.end()) {
-            if (!beerocks::net::network_utils::linux_remove_iface_from_bridge(bridge, eth_iface)) {
+            if (!bpl::bpl_network::remove_iface_from_bridge(bridge, eth_iface)) {
                 LOG(ERROR) << "Failed to remove interface '" << eth_iface << "' from bridge '"
                            << bridge << "' !";
                 return false;

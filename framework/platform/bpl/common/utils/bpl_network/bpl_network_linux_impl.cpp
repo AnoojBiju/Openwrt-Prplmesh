@@ -89,6 +89,49 @@ bool bpl_network::add_iface_to_bridge(const std::string &bridge, const std::stri
     */
 }
 
+bool bpl_network::remove_iface_from_bridge(const std::string &bridge, const std::string &iface)
+{
+    LOG(DEBUG) << "remove iface " << iface << " from bridge " << bridge;
+
+    struct ifreq ifr;
+    int err;
+    unsigned long ifindex = if_nametoindex(iface.c_str());
+
+    if (ifindex == 0) {
+        LOG(ERROR) << "invalid iface index=" << ifindex << " for " << iface;
+        return false;
+    }
+
+    int br_socket_fd;
+    if ((br_socket_fd = socket(AF_LOCAL, SOCK_STREAM, 0)) < 0) {
+        LOG(ERROR) << "can't open br_socket_fd";
+        return false;
+    }
+
+    string_utils::copy_string(ifr.ifr_name, bridge.c_str(), IFNAMSIZ);
+#ifdef SIOCBRDELIF
+    ifr.ifr_ifindex = ifindex;
+    err             = ioctl(br_socket_fd, SIOCBRDELIF, &ifr);
+    if (err < 0)
+#endif
+    {
+        unsigned long args[4] = {BRCTL_DEL_IF, ifindex, 0, 0};
+
+        ifr.ifr_data = (char *)args;
+        err          = ioctl(br_socket_fd, SIOCDEVPRIVATE, &ifr);
+    }
+
+    close(br_socket_fd);
+    return err < 0 ? false : true;
+    /*
+    std::string cmd;
+    cmd = "brctl delif " + bridge + " " + iface;
+    system(cmd.c_str());
+    LOG(DEBUG) << cmd;
+    return true;
+    */
+}
+
 std::vector<std::string> bpl_network::get_bss_ifaces(const std::string &bss_iface,
                                                      const std::string &bridge_iface)
 {

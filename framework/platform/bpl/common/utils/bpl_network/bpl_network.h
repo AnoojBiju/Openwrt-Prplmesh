@@ -58,6 +58,7 @@ public:
      * @return bool
     */
     static bool add_iface_to_bridge(const std::string &bridge, const std::string &iface);
+    static bool remove_iface_from_bridge(const std::string &bridge, const std::string &iface);
 
     /**
      * @brief Get list of BSS interfaces.
