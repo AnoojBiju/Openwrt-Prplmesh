@@ -6,14 +6,14 @@
  * See LICENSE file for more details.
  */
 
-#include "bpl_network.h"
+#include <bpl_network/bpl_network.h>
 
 #include <easylogging++.h>
 
 #include <ambiorix_connection_manager.h>
 
-using namespace beerocks;
-using namespace wbapi;
+using namespace beerocks::net;
+using namespace beerocks::wbapi;
 
 namespace beerocks {
 namespace bpl {
@@ -354,5 +354,120 @@ std::vector<std::string> bpl_network::get_bss_ifaces(const std::string &bss_ifac
     }
     return bss_ifaces;
 }
+
+bool bpl_network::iface_get_name(const sMacAddr &mac, std::string &iface)
+{
+    // try to get matching MAC Address from either Device.WiFi.SSID or Device.Ethernet.Interface
+    // resolve Device.WiFi.SSID.[MACAddress == mac]
+    // resolve Device.Ethernet.Interface.[MACAddress == mac]
+    // when used as [(mac) to (ethernet interface)] the function is not surjective, as several eth ports may
+    // have the same MAC Address on certain boards
+
+    AmbiorixConnectionSmartPtr amxb_connection = AmbiorixConnectionManager::get_connection();
+    if (!amxb_connection) {
+        LOG(ERROR) << "can't retrieve connection to amxb bus";
+        return false;
+    }
+
+    std::string mac_str = tlvf::mac_to_string(mac);
+
+    //typically BSSIDs are lowercase, MACAddress-es are uppercase
+    std::transform(mac_str.begin(), mac_str.end(), mac_str.begin(), ::toupper);
+
+    LOG(DEBUG) << "get iface name by mac " << mac_str;
+
+    std::string ssid_filter = "Device.WiFi.SSID.[MACAddress == '" + mac_str + "'].";
+    std::string eth_filter  = "Device.Ethernet.Interface.[MACAddress == '" + mac_str + "'].";
+
+    std::vector<std::string> iface_paths;
+
+    if (!amxb_connection->resolve_path(ssid_filter, iface_paths)) {
+        if (!amxb_connection->resolve_path(eth_filter, iface_paths)) {
+            LOG(ERROR) << "can't retrieve the interface object corresponding to "
+                       << mac_str;
+            return false;
+        }
+    }
+    // if we got here, at least one (and at most one) resolve path was successful
+    iface = amxb_connection->get_param(iface_paths[0], "Name")->get<std::string>();
+    return true;
+}
+
+/**
+ * @brief : typically this function is used with a bridge name as parameter;
+ * the search path is as follows:
+ * ip_iface = Device.IP.Interface.[Name == @param[in] iface_name].
+ * ip = ip_iface.IPv4Address.[first non-empty IPAddress].IPAddress
+ * netmask = ip_iface.IPv4Address.[first non-empty IPAddress].SubnetMask
+ * mac = ip_iface.LowerLayers.MACAddress (LowerLayers is an Device.Ethernet.Link)
+ * gw = ip_iface.Router.GatewayIPAddress
+*/
+bool bpl_network::get_iface_info(network_utils::iface_info &info, const std::string &iface_name)
+{
+    // for the ip address, the code is written as if there is only one IP address possible for
+    // one interface
+    info.iface = iface_name;
+    info.mac.clear();
+    info.ip.clear();
+    info.netmask.clear();
+    info.ip_gw.clear();
+    // it's unclear where the ip_gw is later used, but it is retrieved in the datamodel
+    // under Device.Routing
+    // example
+    // Device.Routing.Router.1.IPv4Forwarding.4.GatewayIPAddress=""
+    // Device.Routing.Router.1.IPv4Forwarding.4.Interface="br-lan"
+
+    AmbiorixConnectionSmartPtr amxb_connection = AmbiorixConnectionManager::get_connection();
+    if (!amxb_connection) {
+        LOG(ERROR) << "can't retrieve connection to amxb bus";
+        return false;
+    }
+
+    // first resolve: identify the IP.Interface and its first IP.Interface.IPv4Address instance;
+    std::string ip_iface = "Device.IP.Interface.[Name == '" + iface_name + "'].";
+    std::string ip_addr  = ip_iface + "IPv4Address.[IPAddress != '']";
+
+    std::vector<std::string> ip_iface_paths, ip_addr_paths;
+    if (!amxb_connection->resolve_path(ip_iface, ip_iface_paths)) {
+        LOG(ERROR) << "cannot retrieve ip interface object for " << iface_name;
+        return false;
+    }
+    if (!amxb_connection->resolve_path(ip_addr, ip_addr_paths)) {
+        LOG(ERROR) << "cannot retrieve ip addr object for " << iface_name;
+        return false;
+    }
+
+    // second resolve : get IP.Interface.LowerLayers and identify the routing rule for the given
+    // interface
+    std::string lower_layer =
+        amxb_connection->get_param(ip_iface_paths[0], "LowerLayers")->get<std::string>();
+    std::string router =
+        amxb_connection->get_param(ip_iface_paths[0], "Router")->get<std::string>();
+
+    std::string fwd_rule = router + "IPv4Forwarding.[Interface =='" + iface_name + "'].";
+    std::vector<std::string> fwding_rules;
+    if (!amxb_connection->resolve_path(fwd_rule, fwding_rules)) {
+        LOG(ERROR) << "cannot retrieve forwarding rules for " << router << " with rules "
+                   << fwd_rule;
+        return false;
+    }
+    LOG(INFO) << "found " << lower_layer << " "
+              << " router " << router << " " << fwd_rule << " " << ip_addr_paths[0];
+
+    // fill output
+    info.mac     = amxb_connection->get_param(lower_layer, "MACAddress")->get<std::string>();
+    info.ip      = amxb_connection->get_param(ip_addr_paths[0], "IPAddress")->get<std::string>();
+    info.netmask = amxb_connection->get_param(ip_addr_paths[0], "SubnetMask")->get<std::string>();
+    info.ip_gw =
+        amxb_connection->get_param(fwding_rules[0], "GatewayIPAddress")->get<std::string>();
+
+    std::stringstream ss;
+    ss << "br-lan mac " << info.mac << " info.ip " << info.ip << " netmask " << info.netmask
+       << " gw_ip " << info.ip_gw;
+
+    LOG(DEBUG) << ss.str();
+    return true;
+}
+
 } // namespace bpl
 } // namespace beerocks

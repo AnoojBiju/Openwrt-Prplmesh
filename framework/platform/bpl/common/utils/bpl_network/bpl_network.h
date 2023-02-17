@@ -10,6 +10,7 @@
 #define _BPL_NETWORK_H_
 
 //#include <bcl/beerocks_os_utils.h>
+#include <bcl/network/network_utils.h>
 
 #include <cstdint>
 #include <list>
@@ -19,7 +20,6 @@
 //#include <netinet/ether.h>
 
 //#include <bcl/network/net_struct>
-//#include <bcl/network/network_utils.h>
 //#include <bcl/network/socket.h>
 /*
 #define ETH_HDRLEN 14 // Ethernet header length
@@ -75,6 +75,24 @@ public:
      */
     static std::vector<std::string> get_bss_ifaces(const std::string &bss_iface,
                                                    const std::string &bridge_iface);
+
+    /**
+     * @brief get interface name for a given mac address
+     *
+     * @param[in] mac : mac address of the interface
+     * @param[out] iface : name of the interface
+     * @return : true if iface contains a valid name, false otherwise
+    */
+    static bool iface_get_name(const sMacAddr &mac, std::string &iface);
+
+    /**
+     * @brief fill the iface_info structure
+     *
+     * @param[out] info : struct with info about the interface
+     * @param[in] iface_name : name of the interface
+     * @return : true if iface_name holds a valid value, false otherwise
+    */
+    static bool get_iface_info(net::network_utils::iface_info &info, const std::string &iface_name);
 };
 } // namespace bpl
 } // namespace beerocks
