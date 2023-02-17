@@ -998,6 +998,7 @@ bool nl80211_client_impl::set_tx_power_limit(const std::string &interface_name, 
         return false;
     }
 
+    LOG(DEBUG) << "CW: Applying Tx power via NL, TX power = " << limit;
     return m_socket.get()->send_receive_msg(
         NL80211_CMD_SET_WIPHY, 0,
         [&](struct nl_msg *msg) -> bool {
