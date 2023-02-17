@@ -972,11 +972,27 @@ static bool linux_iface_get_max_speed_from_link_modes(const uint32_t *link_mode_
 bool network_utils::linux_iface_get_speed(const std::string &iface, uint32_t &link_speed,
                                           uint32_t &max_advertised_speed)
 {
+    LOG(DEBUG) << "Into the linux_iface_get_speed function";
     int sock;
+
+    LOG(DEBUG) << "Came into Before assigning before processing linux_iface_get_speed - This is "
+                  "LINK speed: "
+               << link_speed;
+    LOG(DEBUG) << "Came into Before assigning before processing linux_iface_get_speed - This is "
+                  "max speed: "
+               << max_advertised_speed;
+
     bool result = false;
 
     link_speed           = SPEED_UNKNOWN;
     max_advertised_speed = link_speed;
+
+    LOG(DEBUG) << "Came into After assigning before processing linux_iface_get_speed - This is "
+                  "LINK speed: "
+               << link_speed;
+    LOG(DEBUG)
+        << "Came into After assigning before processing linux_iface_get_speed - This is max speed: "
+        << max_advertised_speed;
 
     sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
     if (sock < 0) {
@@ -987,6 +1003,7 @@ bool network_utils::linux_iface_get_speed(const std::string &iface, uint32_t &li
 
         string_utils::copy_string(ifr.ifr_name, iface.c_str(), sizeof(ifr.ifr_name));
 #ifdef ETHTOOL_GLINKSETTINGS
+        LOG(DEBUG) << "Into the dull part - ETHTOOL_GLINKSETTINGS of linux_iface_get_speed";
         char ecmd[sizeof(struct ethtool_link_settings) +
                   3 * ETHTOOL_LINK_MODE_MASK_MAX_KERNEL_NU32 * sizeof(__u32)] = {};
         struct ethtool_link_settings *req = reinterpret_cast<struct ethtool_link_settings *>(ecmd);
@@ -1001,6 +1018,7 @@ bool network_utils::linux_iface_get_speed(const std::string &iface, uint32_t &li
          */
         req->cmd = ETHTOOL_GLINKSETTINGS;
         rc       = ioctl(sock, SIOCETHTOOL, &ifr);
+        LOG(DEBUG) << "Dull part - ETHTOOL_GLINKSETTINGS - First RC value : rc " << rc;
         if (0 == rc) {
             /**
              * See above: we expect a strictly negative value from kernel.
@@ -1008,16 +1026,19 @@ bool network_utils::linux_iface_get_speed(const std::string &iface, uint32_t &li
             if ((req->link_mode_masks_nwords >= 0) || (ETHTOOL_GLINKSETTINGS != req->cmd)) {
                 LOG(ERROR) << "ETHTOOL_GLINKSETTINGS handshake failed";
             } else {
+                LOG(DEBUG) << "ETHTOOL_GLINKSETTINGS handshake passed";
                 /**
                  * Got the real req->link_mode_masks_nwords, now send the real request
                  */
                 req->cmd                    = ETHTOOL_GLINKSETTINGS;
                 req->link_mode_masks_nwords = -req->link_mode_masks_nwords;
                 rc                          = ioctl(sock, SIOCETHTOOL, &ifr);
+                LOG(DEBUG) << "Dull part - ETHTOOL_GLINKSETTINGS - Second RC value : rc " << rc;
                 if ((0 != rc) || (req->link_mode_masks_nwords <= 0) ||
                     (req->cmd != ETHTOOL_GLINKSETTINGS)) {
                     LOG(ERROR) << "ETHTOOL_GLINKSETTINGS request failed";
                 } else {
+                    LOG(DEBUG) << "ETHTOOL_GLINKSETTINGS request PASSED and moving ahead";
                     link_speed = req->speed;
 
                     /* layout of link_mode_data fields:
@@ -1044,6 +1065,13 @@ bool network_utils::linux_iface_get_speed(const std::string &iface, uint32_t &li
         if (!result)
 #endif
         {
+            LOG(DEBUG)
+                << "Came into After assigning After processing linux_iface_get_speed - This is "
+                   "LINK speed: In the brackets"
+                << link_speed;
+            LOG(DEBUG) << "Came into After assigning After processing linux_iface_get_speed - "
+                          "This is max speed: In the brackets"
+                       << max_advertised_speed;
             struct ethtool_cmd ecmd_legacy;
 
             ifr.ifr_data = reinterpret_cast<char *>(&ecmd_legacy);
@@ -1052,16 +1080,26 @@ bool network_utils::linux_iface_get_speed(const std::string &iface, uint32_t &li
             ecmd_legacy.cmd = ETHTOOL_GSET;
 
             rc = ioctl(sock, SIOCETHTOOL, &ifr);
+            LOG(DEBUG) << "ETHTOOL_GSET - RC value : rc " << rc;
             if (0 == rc) {
                 link_speed           = ethtool_cmd_speed(&ecmd_legacy);
                 max_advertised_speed = link_speed;
                 linux_iface_get_max_speed_from_link_modes(&ecmd_legacy.advertising, 1,
                                                           max_advertised_speed);
+                LOG(DEBUG) << "ETHTOOL_GSET - Gonna set it to true";
                 result = true;
             }
         }
 
+        LOG(DEBUG) << "Came into linux_iface_get_speed - This is "
+                      "LINK speed: LAST"
+                   << link_speed;
+        LOG(DEBUG) << "Came into linux_iface_get_speed - This is "
+                      "Max speed: LAST"
+                   << max_advertised_speed;
+
         if (rc < 0) {
+            LOG(DEBUG) << "The ioctl failed print";
             LOG(ERROR) << "ioctl failed: " << strerror(errno);
         }
 

@@ -126,6 +126,7 @@ BackhaulManager::BackhaulManager(const config_file::sConfigSlave &config,
 
     // Agent tasks
     m_task_pool.add_task(std::make_shared<TopologyTask>(*this, cmdu_tx));
+    LOG(INFO) << "Added topology task to BH task pool";
     m_task_pool.add_task(std::make_shared<ChannelSelectionTask>(*this, cmdu_tx));
     m_task_pool.add_task(std::make_shared<ChannelScanTask>(*this, cmdu_tx));
     m_task_pool.add_task(

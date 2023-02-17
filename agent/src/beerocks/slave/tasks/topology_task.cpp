@@ -54,6 +54,7 @@ void TopologyTask::work()
     if (now - m_periodic_discovery_timestamp >
         std::chrono::seconds(TOPOLOGY_DISCOVERY_TX_CYCLE_SEC)) {
         m_periodic_discovery_timestamp = now;
+        LOG(DEBUG) << "Sending a topology discovery";
         send_topology_discovery();
     }
 
@@ -73,6 +74,8 @@ void TopologyTask::work()
     bool neighbors_list_changed = false;
     for (auto &neighbors_on_local_iface_entry : db->neighbor_devices) {
         auto &neighbors_on_local_iface = neighbors_on_local_iface_entry.second;
+        sMacAddr upper_key             = neighbors_on_local_iface_entry.first;
+        LOG(DEBUG) << "Received Iface MAC on topology discovery timeout check : " << upper_key;
         for (auto it = neighbors_on_local_iface.begin(); it != neighbors_on_local_iface.end();) {
             auto &last_topology_discovery = it->second.timestamp;
             if (now - last_topology_discovery >
@@ -82,6 +85,8 @@ void TopologyTask::work()
                 it                     = neighbors_on_local_iface.erase(it);
                 neighbors_list_changed = true;
                 continue;
+            } else {
+                LOG(DEBUG) << "Discovery yet to expire";
             }
             ++it;
         }
@@ -118,6 +123,7 @@ bool TopologyTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t ifac
 {
     switch (cmdu_rx.getMessageType()) {
     case ieee1905_1::eMessageType::TOPOLOGY_DISCOVERY_MESSAGE: {
+        LOG(DEBUG) << "Going to handle a topology discovery";
         handle_topology_discovery(cmdu_rx, iface_index, dst_mac, src_mac);
         break;
     }
@@ -129,6 +135,7 @@ bool TopologyTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t ifac
         return handle_vendor_specific(cmdu_rx, src_mac, beerocks_header);
     }
     default: {
+        LOG(DEBUG) << "Is not a topology related message";
         // Message was not handled, therefore return false.
         return false;
     }
@@ -140,6 +147,9 @@ void TopologyTask::handle_topology_discovery(ieee1905_1::CmduMessageRx &cmdu_rx,
                                              uint32_t iface_index, const sMacAddr &dst_mac,
                                              const sMacAddr &src_mac)
 {
+    LOG(DEBUG) << "Handling a topology discovery message from DST MAC : " << dst_mac
+               << " - SRC MAC : " << src_mac;
+
     auto tlvAlMac = cmdu_rx.getClass<ieee1905_1::tlvAlMacAddress>();
     if (!tlvAlMac) {
         LOG(ERROR) << "getClass tlvAlMacAddress failed";
@@ -150,6 +160,7 @@ void TopologyTask::handle_topology_discovery(ieee1905_1::CmduMessageRx &cmdu_rx,
 
     // Filter out the messages we have sent.
     if (tlvAlMac->mac() == db->bridge.mac) {
+        LOG(DEBUG) << "Message getting filtered";
         return;
     }
 
@@ -164,6 +175,8 @@ void TopologyTask::handle_topology_discovery(ieee1905_1::CmduMessageRx &cmdu_rx,
     }
 
     std::string local_receiving_iface_name = network_utils::linux_get_iface_name(iface_index);
+    LOG(DEBUG) << "Local receiving Iface : " << local_receiving_iface_name.size()
+               << " The Iface : " << local_receiving_iface_name;
     if (local_receiving_iface_name.empty()) {
         LOG(ERROR) << "Failed getting interface name for index: " << iface_index;
         return;
@@ -175,6 +188,7 @@ void TopologyTask::handle_topology_discovery(ieee1905_1::CmduMessageRx &cmdu_rx,
         LOG(ERROR) << "Failed getting MAC address for interface: " << local_receiving_iface_name;
         return;
     }
+    LOG(DEBUG) << "Local receiving Iface MAC : " << local_receiving_iface_mac_str;
 
     sMacAddr local_receiving_iface_mac = tlvf::mac_from_string(local_receiving_iface_mac_str);
 
@@ -200,8 +214,10 @@ void TopologyTask::handle_topology_discovery(ieee1905_1::CmduMessageRx &cmdu_rx,
     // Add/Update the device on our list.
     AgentDB::sNeighborDevice neighbor_device;
     neighbor_device.transmitting_iface_mac = tlvMac->mac();
-    neighbor_device.timestamp              = std::chrono::steady_clock::now();
-    neighbor_device.receiving_iface_name   = local_receiving_iface_name;
+    LOG(DEBUG) << "Transmitting Iface MAC : " << neighbor_device.transmitting_iface_mac;
+    neighbor_device.timestamp            = std::chrono::steady_clock::now();
+    neighbor_device.receiving_iface_name = local_receiving_iface_name;
+    LOG(DEBUG) << "Receiving Iface Name : " << neighbor_device.receiving_iface_name;
 
     auto &neighbor_devices_by_al_mac            = db->neighbor_devices[local_receiving_iface_mac];
     neighbor_devices_by_al_mac[tlvAlMac->mac()] = neighbor_device;
@@ -335,8 +351,10 @@ void TopologyTask::send_topology_discovery()
 
     // Make list of ifaces Macs to send on the message.
     auto ifaces = network_utils::linux_get_iface_list_from_bridge(db->bridge.iface_name);
+    LOG(DEBUG) << "List of interfaces length : " << ifaces.size();
     for (const auto &iface_name : ifaces) {
         if (!network_utils::linux_iface_is_up_and_running(iface_name)) {
+            LOG(DEBUG) << "Interface isn't up and running : " << iface_name;
             continue;
         }
 
@@ -345,6 +363,7 @@ void TopologyTask::send_topology_discovery()
             LOG(ERROR) << "Failed getting MAC address for interface: " << iface_name;
             return;
         }
+        LOG(DEBUG) << "MAC of the running iface: " << iface_mac_str;
 
         auto iface_mac = tlvf::mac_from_string(iface_mac_str);
 

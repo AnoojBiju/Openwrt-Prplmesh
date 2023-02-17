@@ -53,6 +53,7 @@ bool LinkMetricsCollectionTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx,
 {
     switch (cmdu_rx.getMessageType()) {
     case ieee1905_1::eMessageType::LINK_METRIC_QUERY_MESSAGE: {
+        LOG(DEBUG) << "Going to handle a link metric query from source MAC: " << src_mac;
         handle_link_metric_query(cmdu_rx, src_mac);
         break;
     }
@@ -174,6 +175,7 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
 
     tlvLinkMetricQueryAllNeighbors = cmdu_rx.getClass<ieee1905_1::tlvLinkMetricQueryAllNeighbors>();
     if (!tlvLinkMetricQueryAllNeighbors) {
+        LOG(DEBUG) << "TLV Link metric query processing";
         tlvLinkMetricQuery = cmdu_rx.getClass<ieee1905_1::tlvLinkMetricQuery>();
         if (!tlvLinkMetricQuery) {
             LOG(ERROR) << "getClass ieee1905_1::tlvLinkMetricQueryAllNeighbors and "
@@ -194,6 +196,7 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
      * Query can specify a particular neighbor device or all neighbor devices.
      */
     sMacAddr neighbor_al_mac = net::network_utils::ZERO_MAC;
+    LOG(DEBUG) << "Zero MAC : " << net::network_utils::ZERO_MAC;
 
     /**
      * Obtain link metrics for either all neighbors or a specific neighbor
@@ -245,6 +248,7 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
      * Neighbors are grouped by the interface that connects to them.
      */
     std::map<sLinkInterface, std::vector<sLinkNeighbor>> neighbor_links_map;
+    LOG(DEBUG) << "Going to get the neighbour links - neighbor_al_mac : " << neighbor_al_mac;
     if (!get_neighbor_links(neighbor_al_mac, neighbor_links_map)) {
         LOG(ERROR) << "Failed to get the list of neighbor links";
         return;
@@ -279,6 +283,7 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
      * Report link metrics for the link with specific neighbor or for all neighbors, as
      * obtained from topology database
      */
+    LOG(DEBUG) << "neighbor_links_map size : " << neighbor_links_map.size();
     for (const auto &entry : neighbor_links_map) {
         auto interface        = entry.first;
         const auto &neighbors = entry.second;
@@ -291,7 +296,7 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
 
         for (const auto &neighbor : neighbors) {
 
-            LOG(TRACE) << "Getting link metrics for interface " << interface.iface_name
+            LOG(DEBUG) << "Getting link metrics for interface " << interface.iface_name
                        << " (MediaType = " << std::hex << (int)interface.media_type
                        << ") and neighbor " << neighbor.iface_mac;
 
@@ -302,7 +307,6 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
                            << " and neighbor " << neighbor.iface_mac;
                 return;
             }
-
             if (!add_link_metrics_tlv(reporter_al_mac, interface, neighbor, link_metrics,
                                       link_metrics_type)) {
                 return;
@@ -1236,9 +1240,17 @@ bool LinkMetricsCollectionTask::add_link_metrics_tlv(const sMacAddr &reporter_al
 std::unique_ptr<link_metrics_collector>
 LinkMetricsCollectionTask::create_link_metrics_collector(const sLinkInterface &link_interface) const
 {
+
+    LOG(DEBUG) << "CUrrent interface for collector creation : " << link_interface.iface_name;
     ieee1905_1::eMediaType media_type = link_interface.media_type;
+    LOG(DEBUG) << "The media type of the link interface in collector - media_type : " << media_type;
+
     ieee1905_1::eMediaTypeGroup media_type_group =
         static_cast<ieee1905_1::eMediaTypeGroup>(media_type >> 8);
+
+    LOG(DEBUG)
+        << "The media type group of the link interface in collector - media_type_group checking : "
+        << media_type_group;
 
     if (ieee1905_1::eMediaTypeGroup::IEEE_802_3 == media_type_group) {
         return std::make_unique<ieee802_3_link_metrics_collector>();
@@ -1266,27 +1278,81 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
     // address of the transmitting device together with the interface that such message is
     // received through.
     auto db = AgentDB::get();
+    LOG(DEBUG) << "Coming into get neighbour links";
 
-    auto add_eth_neighbor = [&](const std::string &iface_name, const sMacAddr &iface_mac) {
+    LOG(DEBUG) << "Printing ALL NEIGHBORS PRIOR";
+
+    for (const auto &neighbors_on_local_iface : db->neighbor_devices) {
+        sMacAddr upper_key = neighbors_on_local_iface.first;
+        LOG(DEBUG) << "Just Print - Upper KEY Received IFace MAC : " << upper_key;
+        auto &neighbors = neighbors_on_local_iface.second;
+        LOG(DEBUG) << "Just Print - Got the neighbors in second";
+        LOG(DEBUG) << "Just Print - Neighbor size in the loop : " << neighbors.size();
+        for (const auto &neighbor_entry : neighbors) {
+            LOG(DEBUG) << "Just Print - Into the nested for each loop";
+            sMacAddr neighbor_AL_MAC = neighbor_entry.first;
+            LOG(DEBUG) << "Just Print - Sub KEY Neighbor AL MAC : " << neighbor_AL_MAC;
+            std::string receiving_iface = neighbor_entry.second.receiving_iface_name;
+            LOG(DEBUG) << "Just Print - Receiving Iface name : " << receiving_iface;
+            sMacAddr transmitting_iface = neighbor_entry.second.transmitting_iface_mac;
+            LOG(DEBUG) << "Just Print - Transmitting IFace (Other Device) : " << transmitting_iface;
+        }
+    }
+
+    LOG(DEBUG) << "DONE PRINTING ALL NEIGHBORS";
+
+    auto add_eth_neighbor = [&](const std::string &iface_name, const sMacAddr &iface_mac,
+                                std::string type) {
         sLinkInterface wired_interface;
         wired_interface.iface_name = iface_name;
         wired_interface.iface_mac  = iface_mac;
 
-        if (!MediaType::get_media_type(wired_interface.iface_name,
-                                       ieee1905_1::eMediaTypeGroup::IEEE_802_3,
-                                       wired_interface.media_type)) {
-            LOG(ERROR) << "Unable to compute media type for interface "
-                       << wired_interface.iface_name;
-            return false;
+        LOG(DEBUG) << "Going into get media type";
+        LOG(DEBUG) << "iface_name : " << iface_name;
+
+        if (strcmp(type, "eth") == 0) {
+            LOG(DEBUG) << "Going into ETH media type";
+            if (!MediaType::get_media_type(wired_interface.iface_name,
+                                           ieee1905_1::eMediaTypeGroup::IEEE_802_3,
+                                           wired_interface.media_type)) {
+                LOG(ERROR) << "Unable to compute media type for interface "
+                           << wired_interface.iface_name;
+                return false;
+            }
         }
 
+        if (strcmp(type, "wifi") == 0) {
+            LOG(DEBUG) << "Going into Wifi media type";
+            if (!MediaType::get_media_type(wired_interface.iface_name,
+                                           ieee1905_1::eMediaTypeGroup::IEEE_802_11,
+                                           wired_interface.media_type)) {
+                LOG(ERROR) << "Unable to compute media type for interface "
+                           << wired_interface.iface_name;
+                return false;
+            }
+        }
+
+        //LOG(DEBUG) << "DB Neighbour devices : " << db->neighbor_devices;
+
         for (const auto &neighbors_on_local_iface : db->neighbor_devices) {
+            sMacAddr upper_key = neighbors_on_local_iface.first;
+            LOG(DEBUG) << "Upper KEY Received IFace MAC : " << upper_key;
             auto &neighbors = neighbors_on_local_iface.second;
+            LOG(DEBUG) << "Got the neighbors in second";
+            LOG(DEBUG) << "Neighbor size in the loop : " << neighbors.size();
             for (const auto &neighbor_entry : neighbors) {
-                if (neighbor_entry.second.receiving_iface_name == iface_name) {
+                LOG(DEBUG) << "Into the nested for each loop";
+                sMacAddr neighbor_AL_MAC = neighbor_entry.first;
+                LOG(DEBUG) << "Sub KEY Neighbor AL MAC : " << neighbor_AL_MAC;
+                std::string receiving_iface = neighbor_entry.second.receiving_iface_name;
+                LOG(DEBUG) << "Receiving Iface name : " << receiving_iface;
+                sMacAddr transmitting_iface = neighbor_entry.second.transmitting_iface_mac;
+                LOG(DEBUG) << "Transmitting IFace (Other Device) : " << transmitting_iface;
+                LOG(DEBUG) << "Current IFace in check : " << iface_name;
+                if (receiving_iface == iface_name) {
                     sLinkNeighbor neighbor;
-                    neighbor.al_mac    = neighbor_entry.first;
-                    neighbor.iface_mac = neighbor_entry.second.transmitting_iface_mac;
+                    neighbor.al_mac    = neighbor_AL_MAC;
+                    neighbor.iface_mac = transmitting_iface;
                     if ((neighbor_mac_filter == net::network_utils::ZERO_MAC) ||
                         (neighbor_mac_filter == neighbor.al_mac)) {
                         neighbor_links_map[wired_interface].push_back(neighbor);
@@ -1297,19 +1363,27 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
         return true;
     };
 
+    LOG(DEBUG) << "Local GW value : " << db->device_conf.local_gw;
+
     // Add WAN interface
     if (!db->device_conf.local_gw && !db->ethernet.wan.iface_name.empty()) {
-        if (!add_eth_neighbor(db->ethernet.wan.iface_name, db->ethernet.wan.mac)) {
+        LOG(DEBUG) << "Adding a WAN interface";
+        LOG(DEBUG) << "ETH wan IFace Name : " << db->ethernet.wan.iface_name;
+        LOG(DEBUG) << "ETH wan IFace MAC : " << db->ethernet.wan.mac;
+        if (!add_eth_neighbor(db->ethernet.wan.iface_name, db->ethernet.wan.mac, "eth")) {
             // Error message inside the lambda function.
             return false;
+            LOG(DEBUG) << "No error in lambda WAN interface";
         }
     }
 
     // Add LAN interfaces
     for (const auto &lan_iface_info : db->ethernet.lan) {
-        if (!add_eth_neighbor(lan_iface_info.iface_name, lan_iface_info.mac)) {
+        LOG(DEBUG) << "Adding a LAN interface";
+        if (!add_eth_neighbor(lan_iface_info.iface_name, lan_iface_info.mac, "eth")) {
             // Error message inside the lambda function.
             return false;
+            LOG(DEBUG) << "No error in lambda LAN interface";
         }
     }
 
@@ -1347,6 +1421,122 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
                 (neighbor_mac_filter == neighbor.al_mac)) {
                 neighbor_links_map[interface].push_back(neighbor);
             }
+        }
+    }
+
+    LOG(DEBUG) << "db->statuses.ap_autoconfiguration_completed : "
+               << db->statuses.ap_autoconfiguration_completed;
+
+    // LOG(DEBUG) << "Adding the hardcoded value for wlan1";
+    // if (db->statuses.ap_autoconfiguration_completed) {
+    //     sMacAddr wlan1_mac = tlvf::mac_from_string("00:50:f1:02:31:5e");
+    //     LOG(DEBUG) << "Saved wlan1 MAC: " << wlan1_mac;
+    //     std::string wlan1_iface = "wlan1";
+    //     LOG(DEBUG) << "All set correctly for hardcoded value - wlan1 iface name : " << wlan1_iface;
+    //     if (!add_eth_neighbor(wlan1_iface, wlan1_mac)) {
+    //         // Error message inside the lambda function.
+    //         return false;
+    //         LOG(DEBUG) << "No error in lambda hardcoded interface";
+    //     }
+    // }
+
+    // LOG(DEBUG) << "Adding the hardcoded value for wlan1 as an eth interface (direct into link map)";
+    // if (db->statuses.ap_autoconfiguration_completed) {
+    //     LOG(DEBUG) << "Into the if condition adding as eth into map";
+    //     sLinkInterface interface;
+    //     std::string wlan1_iface = "wlan1";
+    //     LOG(DEBUG) << "All set correctly for hardcoded value - wlan1 iface name : " << wlan1_iface;
+    //     interface.iface_name = wlan1_iface;
+    //     sMacAddr wlan1_mac   = tlvf::mac_from_string("00:50:f1:02:31:5e");
+    //     LOG(DEBUG) << "Saved wlan1 MAC: " << wlan1_mac;
+    //     interface.iface_mac  = wlan1_mac;
+    //     interface.media_type = ieee1905_1::eMediaType::IEEE_802_3AB_GIGABIT_ETHERNET;
+    //     LOG(DEBUG) << "Finished setting all the interfaces details";
+    //     sLinkNeighbor neighbor;
+    //     sMacAddr neighbor_al_mac = tlvf::mac_from_string("00:03:7f:cc:00:34");
+    //     LOG(DEBUG) << "The set neighbor AL MAC: " << neighbor_al_mac;
+    //     neighbor.al_mac                  = neighbor_al_mac;
+    //     sMacAddr neighbor_transmit_iface = tlvf::mac_from_string("06:03:7f:12:43:27");
+    //     LOG(DEBUG) << "The neighbor transmitting MAC " << neighbor_transmit_iface;
+    //     neighbor.iface_mac = neighbor_transmit_iface;
+    //     neighbor_links_map[interface].push_back(neighbor);
+    //     LOG(DEBUG) << "Added the hardcoded (direct into map) as ETH";
+    // } else {
+    //     LOG(DEBUG) << "Failed if condition - wlan1 as ETH into map";
+    // }
+
+    //sw_2      Link encap:Ethernet  HWaddr 00:50:F1:22:02:31
+
+    // LOG(DEBUG) << "Adding the hardcoded value for wlan1 as an eth interface (direct into link map)";
+    // if (db->statuses.ap_autoconfiguration_completed) {
+    //     LOG(DEBUG)
+    //         << "Adding the hardcoded value for wlan1 as WIFI interface (direct into link map)";
+    //     sLinkInterface interface;
+    //     std::string wlan1_iface = "wlan1";
+    //     LOG(DEBUG) << "All set correctly for hardcoded value - wlan1 iface name as WIFI: "
+    //                << wlan1_iface;
+    //     interface.iface_name = wlan1_iface;
+    //     sMacAddr wlan1_mac   = tlvf::mac_from_string("00:50:f1:02:31:5e");
+    //     LOG(DEBUG) << "Saved wlan1 MAC as WIFI : " << wlan1_mac;
+    //     interface.iface_mac  = wlan1_mac;
+    //     interface.media_type = ieee1905_1::eMediaType::IEEE_802_11AC_5_GHZ;
+    //     LOG(DEBUG) << "Finished setting all the interfaces details as WIFI ";
+    //     sLinkNeighbor neighbor;
+    //     sMacAddr neighbor_al_mac = tlvf::mac_from_string("00:03:7f:cc:00:34");
+    //     LOG(DEBUG) << "The set neighbor AL MAC as WIFI: " << neighbor_al_mac;
+    //     neighbor.al_mac                  = neighbor_al_mac;
+    //     sMacAddr neighbor_transmit_iface = tlvf::mac_from_string("06:03:7f:12:43:27");
+    //     LOG(DEBUG) << "The neighbor transmitting MAC as WIFI :" << neighbor_transmit_iface;
+    //     neighbor.iface_mac = neighbor_transmit_iface;
+    //     neighbor_links_map[interface].push_back(neighbor);
+    //     LOG(DEBUG) << "Added the hardcoded (direct into map) as WIFI";
+    // } else {
+    //     LOG(DEBUG) << "Failed if condition - wlan1 as WIFI into map";
+    // }
+
+    // LOG(DEBUG)
+    //     << "Adding the hardcoded value for sw_2 as a gigabit eth interface (direct into link map)";
+    // if (db->statuses.ap_autoconfiguration_completed) {
+    //     LOG(DEBUG) << "Adding the hardcoded value for sw_2 as ETH interface (direct into link map)";
+    //     sLinkInterface interface;
+    //     std::string wlan1_iface = "sw_2";
+    //     LOG(DEBUG) << "All set correctly for hardcoded value - sw_2 iface name as ETH: "
+    //                << wlan1_iface;
+    //     interface.iface_name = wlan1_iface;
+    //     sMacAddr wlan1_mac   = tlvf::mac_from_string("00:50:f1:22:02:31");
+    //     LOG(DEBUG) << "Saved sw_2 MAC as ETH : " << wlan1_mac;
+    //     interface.iface_mac  = wlan1_mac;
+    //     interface.media_type = ieee1905_1::eMediaType::IEEE_802_3AB_GIGABIT_ETHERNET;
+    //     LOG(DEBUG) << "Finished setting all the sw_2 interfaces details as Gigabit ETH ";
+    //     sLinkNeighbor neighbor;
+    //     sMacAddr neighbor_al_mac = tlvf::mac_from_string("00:03:7f:cc:00:34");
+    //     LOG(DEBUG) << "The set neighbor AL MAC as ETH in sw_2 case: " << neighbor_al_mac;
+    //     neighbor.al_mac                  = neighbor_al_mac;
+    //     sMacAddr neighbor_transmit_iface = tlvf::mac_from_string("06:03:7f:12:43:27");
+    //     LOG(DEBUG) << "The neighbor transmitting MAC as ETH in sw_2 case :"
+    //                << neighbor_transmit_iface;
+    //     neighbor.iface_mac = neighbor_transmit_iface;
+    //     neighbor_links_map[interface].push_back(neighbor);
+    //     LOG(DEBUG) << "Added the hardcoded sw_2 (direct into map) as ETH";
+    // } else {
+    //     LOG(DEBUG) << "Failed if condition - wlan1 as WIFI into map";
+    // }
+
+    beerocks::slave_thread::sAgentConfig config;
+    for (const auto &radio_conf_element : config.radios) {
+        std::string bh_iface = radio_conf_element.second.backhaul_wireless_iface;
+
+        if (!bh_iface.empty()) {
+            std::string bh_iface_mac_string;
+            beerocks::net::network_utils::linux_iface_get_mac(bh_iface, bh_iface_mac_string);
+            sMacAddr bh_mac = tlvf::mac_from_string(bh_iface_mac_string);
+
+            if (!add_eth_neighbor(bh_iface, bh_mac, "wifi")) {
+                // Error message inside the lambda function.
+                return false;
+                LOG(DEBUG) << "No error in latest impl";
+            }
+            break
         }
     }
 

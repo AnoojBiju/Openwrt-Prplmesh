@@ -77,22 +77,29 @@ bool MediaType::get_media_type(const std::string &interface_name,
                                ieee1905_1::eMediaTypeGroup media_type_group,
                                ieee1905_1::eMediaType &media_type)
 {
+    LOG(DEBUG) << "Came into get_media_type";
+
     bool result = false;
     media_type  = ieee1905_1::eMediaType::UNKNOWN_MEDIA;
 
     if (ieee1905_1::eMediaTypeGroup::IEEE_802_3 == media_type_group) {
         uint32_t link_speed;
         uint32_t max_speed;
+        LOG(DEBUG) << "Came into the first get_media_type if condition interface name: "
+                   << interface_name;
         if (net::network_utils::linux_iface_get_speed(interface_name, link_speed, max_speed)) {
+            LOG(DEBUG) << "Came into if condition of getting speed";
             if (SPEED_100 == max_speed) {
                 media_type = ieee1905_1::eMediaType::IEEE_802_3U_FAST_ETHERNET;
+                LOG(DEBUG) << "Media is fast internet";
             } else if (SPEED_1000 <= max_speed) {
                 media_type = ieee1905_1::eMediaType::IEEE_802_3AB_GIGABIT_ETHERNET;
+                LOG(DEBUG) << "Media is gigabit internet";
             }
         }
         result = true;
     } else if (ieee1905_1::eMediaTypeGroup::IEEE_802_11 == media_type_group) {
-
+        LOG(DEBUG) << "Media type group is 802.11";
         auto db = AgentDB::get();
 
         auto radio = db->radio(interface_name);
