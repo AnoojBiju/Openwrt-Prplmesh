@@ -1002,7 +1002,7 @@ bool nl80211_client_impl::set_tx_power_limit(const std::string &interface_name, 
         NL80211_CMD_SET_WIPHY, 0,
         [&](struct nl_msg *msg) -> bool {
             nla_put_u32(msg, NL80211_ATTR_IFINDEX, iface_index);
-            nla_put_u32(msg, NL80211_ATTR_WIPHY_TX_POWER_SETTING, NL80211_TX_POWER_LIMITED);
+            nla_put_u32(msg, NL80211_ATTR_WIPHY_TX_POWER_SETTING, NL80211_TX_POWER_FIXED);
             nla_put_u32(msg, NL80211_ATTR_WIPHY_TX_POWER_LEVEL, limit * 100); //mBm
             return true;
         },
