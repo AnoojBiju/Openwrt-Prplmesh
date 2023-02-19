@@ -804,7 +804,7 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
                 .key_idx = 0,
                 .mac     = virtual_bss_creation_tlv->client_mac(),
                 .key     = {virtual_bss_creation_tlv->ptk(),
-                            virtual_bss_creation_tlv->ptk() + virtual_bss_creation_tlv->key_length()},
+                        virtual_bss_creation_tlv->ptk() + virtual_bss_creation_tlv->key_length()},
                 .key_seq = pw_key_seq,
 
                 // TODO: PPM-2368: We need to know the pairwise cipher. For now, use CCMP
@@ -828,7 +828,7 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
                 .key_idx = 1,
                 .mac     = beerocks::net::network_utils::ZERO_MAC,
                 .key     = {virtual_bss_creation_tlv->gtk(),
-                            virtual_bss_creation_tlv->gtk() + virtual_bss_creation_tlv->key_length()},
+                        virtual_bss_creation_tlv->gtk() + virtual_bss_creation_tlv->key_length()},
                 .key_seq = group_key_seq,
 
                 // TODO: PPM-2368: We need to know the groupwise cipher. For now, use CCMP

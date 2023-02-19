@@ -34,8 +34,7 @@ private:
     void handle_slave_channel_selection_response(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                  const sMacAddr &src_mac);
 
-    bool send_service_prio_config(const sMacAddr &radio_mac,
-                                  const beerocks_message::sServicePrioConfig &request);
+    bool send_service_prio_config(const beerocks_message::sServicePrioConfig &request);
 
     bool qos_apply_active_rule();
     bool qos_flush_setup();

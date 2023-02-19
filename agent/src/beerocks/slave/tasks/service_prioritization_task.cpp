@@ -146,26 +146,6 @@ void ServicePrioritizationTask::handle_service_prioritization_request(
         std::copy(dscp_mapping_table, dscp_mapping_table + 64,
                   db->service_prioritization.dscp_mapping_table.begin());
     }
-    auto m_dscp_mapping_table = db->service_prioritization.dscp_mapping_table;
-    int i                     = 0;
-    for (const auto &dscp : m_dscp_mapping_table) {
-        LOG(DEBUG) << "dscp[" << i << "]=" << dscp;
-        i++;
-    }
-
-    const auto &rules = db->service_prioritization.rules;
-    auto it           = rules.cbegin();
-    i                 = 0;
-    LOG(DEBUG) << "All Service Prioritization Rules Dump max_rules="
-               << db->device_conf.max_prioritization_rules;
-    while (it != rules.cend()) {
-        LOG(DEBUG) << "Service Prioritization Rule TLV i=" << i << "\nRule id=" << it->second.id
-                   << "\nadd_remove=" << it->second.bits_field1.add_remove
-                   << "\nprecedence=" << it->second.precedence << "\noutput=" << it->second.output
-                   << "\nalways_match=" << it->second.bits_field2.always_match;
-        ++it;
-        i++;
-    }
 
     if (!qos_apply_active_rule()) {
         LOG(ERROR) << "Failed setting up QoS active rule";
@@ -186,17 +166,16 @@ bool ServicePrioritizationTask::qos_apply_active_rule()
         ++it;
     }
     if (active != rules.cend()) {
-        auto db                                = AgentDB::get();
-        std::string iface                            = "wlan0";
-        const auto &radio                            = db->radio(iface);
-        const auto &radio_mac                        = radio->front.iface_mac;
+        if (!service_prio_utils) {
+            LOG(ERROR) << "Service Priority Utilities are not found";
+            return false;
+        }
+        auto db                                      = AgentDB::get();
         beerocks_message::sServicePrioConfig request = {0};
         request.mode                                 = active->second.output;
         std::copy(db->service_prioritization.dscp_mapping_table.begin(),
                   db->service_prioritization.dscp_mapping_table.end(), request.data);
-        if (radio_mac != beerocks::net::network_utils::ZERO_MAC) {
-            beerocks::ServicePrioritizationTask::send_service_prio_config(radio_mac, request);
-        }
+        beerocks::ServicePrioritizationTask::send_service_prio_config(request);
         switch (active->second.output) {
         case QOS_USE_DSCP_MAP:
             return qos_setup_dscp_map();
@@ -212,9 +191,6 @@ bool ServicePrioritizationTask::qos_apply_active_rule()
 
 bool ServicePrioritizationTask::qos_flush_setup()
 {
-    if (!service_prio_utils) {
-        return false;
-    }
     //TODO: PPM-2389, drive ebtables or external software
     service_prio_utils->flush_rules();
     return true;
@@ -263,7 +239,7 @@ bool ServicePrioritizationTask::qos_setup_up_map()
 }
 
 bool ServicePrioritizationTask::send_service_prio_config(
-    const sMacAddr &radio_mac, const beerocks_message::sServicePrioConfig &request)
+    const beerocks_message::sServicePrioConfig &request)
 {
     // Sending the config to all AP managers
     m_btl_ctx.m_radio_managers.do_on_each_radio_manager(
@@ -280,8 +256,7 @@ bool ServicePrioritizationTask::send_service_prio_config(
 
             request_msg->cs_params().mode = request.mode;
             std::copy(request.data, request.data + 64, request_msg->cs_params().data);
-            LOG(DEBUG) << "Sending service priority config to radio " << radio_mac
-                       << " mode: " << request.mode;
+            LOG(DEBUG) << "Sending service priority config to radio, mode: " << request.mode;
 
             m_btl_ctx.send_cmdu(radio_manager.ap_manager_fd, m_cmdu_tx);
             return true;
