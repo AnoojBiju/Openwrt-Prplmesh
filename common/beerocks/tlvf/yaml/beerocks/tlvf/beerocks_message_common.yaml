@@ -1070,3 +1070,13 @@ sUnassociatedStationStats:
   operating_class: uint8_t
   time_stamp:
     _type: uint32_t
+
+sServicePrioConfig:
+  _type: struct
+  mode:
+    _type: uint8_t
+  data:
+    _type: uint8_t
+    _length: [ 64 ]
+    _value: 0
+

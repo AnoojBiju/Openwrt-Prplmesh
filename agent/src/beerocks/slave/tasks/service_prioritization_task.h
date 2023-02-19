@@ -11,9 +11,9 @@
 
 #include "task.h"
 
-#include <tlvf/CmduMessageTx.h>
 #include <bpl/bpl.h>
 #include <bpl/bpl_service_prio_utils.h>
+#include <tlvf/CmduMessageTx.h>
 
 namespace beerocks {
 
@@ -34,21 +34,23 @@ private:
     void handle_slave_channel_selection_response(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                  const sMacAddr &src_mac);
 
+    bool send_service_prio_config(const sMacAddr &radio_mac,
+                                  const beerocks_message::sServicePrioConfig &request);
+
     bool qos_apply_active_rule();
     bool qos_flush_setup();
     bool qos_setup_single_value_map(uint8_t pcp);
     bool qos_setup_dscp_map();
     bool qos_setup_up_map();
 
-
     slave_thread &m_btl_ctx;
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
 
-    //std::shared_ptr<beerocks::bpl::ServicePrioritizationUtils> service_prio_utils;
+    std::shared_ptr<beerocks::bpl::ServicePrioritizationUtils> service_prio_utils;
 
     enum : uint8_t { QOS_USE_DSCP_MAP = 0x08, QOS_USE_UP = 0x09 };
 };
-    
+
 bool service_prio_utils_init();
 
 } // namespace beerocks

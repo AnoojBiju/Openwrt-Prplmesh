@@ -9,19 +9,25 @@
 #include "service_prioritization_task.h"
 #include "../agent_db.h"
 #include "../son_slave_thread.h"
+#include <beerocks/tlvf/beerocks_message_apmanager.h>
 
+#include <bpl/bpl_service_prio_utils.h>
 #include <tlvf/wfa_map/tlvDscpMappingTable.h>
 #include <tlvf/wfa_map/tlvProfile2ErrorCode.h>
-#include <bpl/bpl_service_prio_utils.h>
 
 namespace beerocks {
-
-std::shared_ptr<bpl::ServicePrioritizationUtils> service_prio_utils;
 
 ServicePrioritizationTask::ServicePrioritizationTask(slave_thread &btl_ctx,
                                                      ieee1905_1::CmduMessageTx &cmdu_tx)
     : Task(eTaskType::SERVICE_PRIORITIZATION), m_btl_ctx(btl_ctx), m_cmdu_tx(cmdu_tx)
 {
+    LOG(DEBUG) << "called " << __func__;
+    service_prio_utils = bpl::register_service_prio_utils();
+    if (ServicePrioritizationTask::service_prio_utils) {
+        LOG(DEBUG) << __func__ << "called allocated";
+    } else {
+        LOG(DEBUG) << __func__ << "called  not allocated";
+    }
 }
 
 bool ServicePrioritizationTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx,
@@ -42,17 +48,7 @@ bool ServicePrioritizationTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx,
     return true;
 }
 
-bool service_prio_utils_init()
-{
-    	LOG(DEBUG) << "%s called" << __func__;
-	service_prio_utils = bpl::register_service_prio_utils();
-	if(service_prio_utils) {
-		LOG(DEBUG) << "%s called allocated" << __func__;
-	} else {
-		LOG(DEBUG) << "%s called not allocated" << __func__;
-	}
-	return true;
-}
+bool service_prio_utils_init() { return true; }
 
 void ServicePrioritizationTask::handle_service_prioritization_request(
     ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac)
@@ -176,8 +172,12 @@ void ServicePrioritizationTask::handle_service_prioritization_request(
         i++;
     }
 
-    if (!qos_apply_active_rule()) {
-        LOG(ERROR) << "Failed setting up QoS active rule";
+    if (db->service_prioritization.rules.empty()) {
+        LOG(ERROR) << "No active rules, disabling service prio in hostap";
+    } else {
+        if (!qos_apply_active_rule()) {
+            LOG(ERROR) << "Failed setting up QoS active rule";
+        }
     }
 }
 
@@ -196,15 +196,28 @@ bool ServicePrioritizationTask::qos_apply_active_rule()
     }
     LOG(ERROR) << "inside %s" << __func__;
     if (active != rules.cend()) {
+        auto db                                      = AgentDB::get();
+        std::string iface                            = "wlan0";
+        const auto &radio                            = db->radio(iface);
+        const auto &radio_mac                        = radio->front.iface_mac;
+        beerocks_message::sServicePrioConfig request = {0};
+        request.mode                                 = active->second.output;
+        std::copy(db->service_prioritization.dscp_mapping_table.begin(),
+                  db->service_prioritization.dscp_mapping_table.end(), request.data);
+        LOG(DEBUG) << "Before sending";
+        if (radio_mac != beerocks::net::network_utils::ZERO_MAC) {
+            beerocks::ServicePrioritizationTask::send_service_prio_config(radio_mac, request);
+            LOG(DEBUG) << "After sending";
+        }
         switch (active->second.output) {
         case QOS_USE_DSCP_MAP:
-    	LOG(ERROR) << "inside QOS_USE_DSCP_MAP" << __func__;
+            LOG(ERROR) << "inside QOS_USE_DSCP_MAP" << __func__;
             return qos_setup_dscp_map();
         case QOS_USE_UP:
-    LOG(ERROR) << "inside QOS_USE_UP" << __func__;
+            LOG(ERROR) << "inside QOS_USE_UP" << __func__;
             return qos_setup_up_map();
         default:
-    	LOG(ERROR) << "inside single_value" << __func__;
+            LOG(ERROR) << "inside single_value" << __func__;
             return qos_setup_single_value_map(active->second.output);
         }
     }
@@ -215,9 +228,9 @@ bool ServicePrioritizationTask::qos_apply_active_rule()
 bool ServicePrioritizationTask::qos_flush_setup()
 {
     LOG(ERROR) << "inside %s" << __func__;
-	if(!service_prio_utils) {
-		return false;
-	}
+    if (!service_prio_utils) {
+        return false;
+    }
     //TODO: PPM-2389, drive ebtables or external software
     service_prio_utils->flush_rules();
     return true;
@@ -264,6 +277,32 @@ bool ServicePrioritizationTask::qos_setup_up_map()
     service_prio_utils->apply_up_map();
 
     //TODO: PPM-2389, drive ebtables or external software
+    return true;
+}
+
+bool ServicePrioritizationTask::send_service_prio_config(
+    const sMacAddr &radio_mac, const beerocks_message::sServicePrioConfig &request)
+{
+    m_btl_ctx.m_radio_managers.do_on_each_radio_manager(
+        [&](slave_thread::sManagedRadio &radio_manager,
+            const std::string &fronthaul_iface) -> bool {
+            auto request_msg = message_com::create_vs_message<
+                beerocks_message::cACTION_APMANAGER_HOSTAP_SERVICE_PRIO_CONFIG>(m_cmdu_tx);
+
+            if (!request_msg) {
+                LOG(ERROR)
+                    << "Failed to build cACTION_APMANAGER_HOSTAP_SERVICE_PRIO_CONFIG message";
+                return false;
+            }
+
+            request_msg->cs_params().mode = request.mode;
+            std::copy(request.data, request.data + 64, request_msg->cs_params().data);
+            LOG(DEBUG) << "Sending service priority config to radio " << radio_mac
+                       << " mode: " << request.mode;
+
+            m_btl_ctx.send_cmdu(radio_manager.ap_manager_fd, m_cmdu_tx);
+            return true;
+        });
     return true;
 }
 

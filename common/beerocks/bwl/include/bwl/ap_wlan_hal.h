@@ -515,6 +515,8 @@ public:
     virtual bool prepare_unassoc_sta_link_metrics_response(
         std::shared_ptr<wfa_map::tlvUnassociatedStaLinkMetricsResponse> &response) = 0;
 
+    virtual bool hostap_service_prio_config(const uint8_t *data) = 0;
+
 private:
     static const int frame_body_idx = (sizeof(s80211MgmtFrame::sHeader) * 2);
 

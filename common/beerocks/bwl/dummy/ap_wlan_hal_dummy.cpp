@@ -791,6 +791,23 @@ bool ap_wlan_hal_dummy::prepare_unassoc_sta_link_metrics_response(
     return true;
 }
 
+bool ap_wlan_hal_dummy::hostap_service_prio_config(const uint8_t *data)
+{
+    char pcp_array[64] = {0};
+    std::string qos_map;
+    std::stringstream ss;
+    std::copy(data, data + 64, pcp_array);
+    for (auto i = 0; i < 21; i++) {
+        if (i != 0) {
+            ss << ",";
+        }
+        ss << i << "," << int(pcp_array[i]);
+    }
+    qos_map = ss.str();
+    LOG(DEBUG) << "Setting QOS_MAP_SET " << qos_map;
+    return true;
+}
+
 } // namespace dummy
 
 std::shared_ptr<ap_wlan_hal> ap_wlan_hal_create(std::string iface_name, bwl::hal_conf_t hal_conf,
