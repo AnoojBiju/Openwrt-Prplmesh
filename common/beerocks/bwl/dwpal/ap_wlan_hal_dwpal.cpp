@@ -3446,6 +3446,12 @@ bool ap_wlan_hal_dwpal::prepare_unassoc_sta_link_metrics_response(
     return false
 }
 
+bool ap_wlan_hal_dwpal::hostap_service_prio_config(const uint8_t *data)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
 } // namespace bwl
 
 std::shared_ptr<ap_wlan_hal> ap_wlan_hal_create(std::string iface_name, hal_conf_t hal_conf,
