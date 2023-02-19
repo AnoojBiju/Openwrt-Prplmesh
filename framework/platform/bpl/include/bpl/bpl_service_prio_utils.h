@@ -11,24 +11,15 @@
 #include <cstdint>
 #include <memory>
 
-
 namespace beerocks {
 namespace bpl {
 
 class ServicePrioritizationUtils {
 public:
-    virtual bool flush_rules() {
-	  return false;
-    }
-    virtual bool apply_single_value_map(uint8_t pcp) {
-	    return false;
-    }
-    virtual bool apply_dscp_map() {
-	    return false;
-    }
-    virtual bool apply_up_map() {
-	    return false;
-    }
+    virtual bool flush_rules() { return false; }
+    virtual bool apply_single_value_map(uint8_t pcp) { return false; }
+    virtual bool apply_dscp_map() { return false; }
+    virtual bool apply_up_map() { return false; }
 };
 
 std::shared_ptr<ServicePrioritizationUtils> register_service_prio_utils();

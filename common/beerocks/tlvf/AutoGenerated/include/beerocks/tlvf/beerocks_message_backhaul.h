@@ -599,27 +599,6 @@ class cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE : public BaseCla
         uint8_t* m_success = nullptr;
 };
 
-class cACTION_BACKHAUL_HOSTAP_SERVICE_PRIO_CONFIG : public BaseClass
-{
-    public:
-        cACTION_BACKHAUL_HOSTAP_SERVICE_PRIO_CONFIG(uint8_t* buff, size_t buff_len, bool parse = false);
-        explicit cACTION_BACKHAUL_HOSTAP_SERVICE_PRIO_CONFIG(std::shared_ptr<BaseClass> base, bool parse = false);
-        ~cACTION_BACKHAUL_HOSTAP_SERVICE_PRIO_CONFIG();
-
-        static eActionOp_BACKHAUL get_action_op(){
-            return (eActionOp_BACKHAUL)(ACTION_BACKHAUL_HOSTAP_SERVICE_PRIO_CONFIG);
-        }
-        sServicePrioConfig& cs_params();
-        void class_swap() override;
-        bool finalize() override;
-        static size_t get_initial_size();
-
-    private:
-        bool init();
-        eActionOp_BACKHAUL* m_action_op = nullptr;
-        sServicePrioConfig* m_cs_params = nullptr;
-};
-
 class cACTION_BACKHAUL_RADIO_DISABLE_REQUEST : public BaseClass
 {
     public:

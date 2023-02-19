@@ -8,8 +8,7 @@ class ServicePrioritizationUtils_dummy : public ServicePrioritizationUtils {
     virtual bool apply_single_value_map(uint8_t pcp) override;
     virtual bool apply_dscp_map() override;
     virtual bool apply_up_map() override;
-
 };
 
-}
-}
+} // namespace bpl
+} // namespace beerocks

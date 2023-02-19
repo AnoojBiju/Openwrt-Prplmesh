@@ -51,8 +51,6 @@ private:
     enum : uint8_t { QOS_USE_DSCP_MAP = 0x08, QOS_USE_UP = 0x09 };
 };
 
-bool service_prio_utils_init();
-
 } // namespace beerocks
 
 #endif // _SERVICE_PRIORITIZATION_TASK_H_

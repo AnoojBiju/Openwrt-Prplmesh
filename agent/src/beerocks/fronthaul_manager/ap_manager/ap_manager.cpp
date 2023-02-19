@@ -1873,7 +1873,6 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             LOG(ERROR) << "addClass has failed";
             return;
         }
-        LOG(DEBUG) << "HOSTAP Service PRIO CONFIG";
         ap_wlan_hal->hostap_service_prio_config(msg->cs_params().data);
         break;
     }

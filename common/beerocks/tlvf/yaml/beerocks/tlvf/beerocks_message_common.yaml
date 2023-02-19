@@ -1079,4 +1079,3 @@ sServicePrioConfig:
     _type: uint8_t
     _length: [ 64 ]
     _value: 0
-
