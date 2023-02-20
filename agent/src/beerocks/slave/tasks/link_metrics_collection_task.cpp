@@ -88,7 +88,7 @@ bool LinkMetricsCollectionTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx,
     return true;
 }
 
-#define MAX_TIMEOUT_MS_ALLOWED 100
+#define GRACE_PERIOD_MS 150
 
 void LinkMetricsCollectionTask::work()
 {
@@ -129,7 +129,7 @@ void LinkMetricsCollectionTask::work()
 
     auto timeout_diff_ms = (m_ap_metrics_reporting_info.reporting_interval_s*1000 - elapsed_time_ms); 
     LOG(DEBUG) << "CW: el time:"<< elapsed_time_s << " & rep_int:" << m_ap_metrics_reporting_info.reporting_interval_s << " timeout diff in ms:" << timeout_diff_ms;
-    if ((elapsed_time_s < m_ap_metrics_reporting_info.reporting_interval_s) && (timeout_diff_ms > MAX_TIMEOUT_MS_ALLOWED)) {
+    if ((elapsed_time_s < m_ap_metrics_reporting_info.reporting_interval_s) && (timeout_diff_ms > GRACE_PERIOD_MS)) {
 	LOG(DEBUG) << "CW: *********** el ms:"<< elapsed_time_ms;
         return;
     }
