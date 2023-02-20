@@ -255,7 +255,8 @@ bool ServicePrioritizationTask::send_service_prio_config(
             }
 
             request_msg->cs_params().mode = request.mode;
-            std::copy(request.data, request.data + 64, request_msg->cs_params().data);
+            std::copy(request.data, request.data + beerocks::message::DSCP_MAPPING_LIST_LENGTH,
+                      request_msg->cs_params().data);
             LOG(DEBUG) << "Sending service priority config to radio, mode: " << request.mode;
 
             m_btl_ctx.send_cmdu(radio_manager.ap_manager_fd, m_cmdu_tx);

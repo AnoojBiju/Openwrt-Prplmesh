@@ -793,10 +793,10 @@ bool ap_wlan_hal_dummy::prepare_unassoc_sta_link_metrics_response(
 
 bool ap_wlan_hal_dummy::hostap_service_prio_config(const uint8_t *data)
 {
-    char pcp_array[64] = {0};
+    char pcp_array[beerocks::message::DSCP_MAPPING_LIST_LENGTH] = {0};
     std::string qos_map;
     std::stringstream ss;
-    std::copy(data, data + 64, pcp_array);
+    std::copy(data, data + beerocks::message::DSCP_MAPPING_LIST_LENGTH, pcp_array);
     for (auto i = 0; i < 21; i++) {
         if (i != 0) {
             ss << ",";
