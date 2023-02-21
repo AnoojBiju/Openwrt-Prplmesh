@@ -1617,6 +1617,8 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             return;
         }
 
+        std::string bridge_name = request->bridge_ifname_str();
+
         std::list<son::wireless_utils::sBssInfoConf> bss_info_conf_list;
         auto wifi_credentials_size = request->wifi_credentials_size();
 
@@ -1687,7 +1689,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
 
         if (perform_update && !bss_info_conf_list.empty()) {
             ap_wlan_hal->update_vap_credentials(bss_info_conf_list, backhaul_wps_ssid,
-                                                backhaul_wps_passphrase);
+                                                backhaul_wps_passphrase, bridge_name);
 
             // hostapd is enabled and started radio beaconing after autoconfiguration
             // then radio tx power is updated, so to keep agent DB updated send CSA notification

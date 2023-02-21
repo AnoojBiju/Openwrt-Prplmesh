@@ -2075,6 +2075,10 @@ bool ApAutoConfigurationTask::send_ap_bss_configuration_message(
         LOG(ERROR) << "Failed building message!";
         return false;
     }
+
+    auto db = AgentDB::get();
+    request->set_bridge_ifname(db->bridge.iface_name);
+
     std::stringstream ss;
     for (const auto &config : configs) {
         auto c = request->create_wifi_credentials();
