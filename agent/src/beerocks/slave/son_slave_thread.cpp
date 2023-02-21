@@ -287,7 +287,7 @@ bool slave_thread::thread_init()
     LOG(DEBUG) << "FSM timer created with fd=" << m_fsm_timer;
 
     // Create a timer to run internal tasks periodically
-    constexpr auto tasks_timer_period = std::chrono::milliseconds(500);
+    constexpr auto tasks_timer_period = std::chrono::milliseconds(300);
 
     m_tasks_timer = m_timer_manager->add_timer(
         "Agent Tasks", tasks_timer_period, tasks_timer_period,
