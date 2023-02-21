@@ -371,6 +371,12 @@ bool ap_wlan_hal_dummy::set_tx_power_limit(int tx_pow_limit)
     return true;
 }
 
+bool ap_wlan_hal_dummy::get_tx_power(uint32_t &tx_power)
+{
+    tx_power = 10;
+    return true;
+}
+
 bool ap_wlan_hal_dummy::set_vap_enable(const std::string &iface_name, const bool enable)
 {
     return true;

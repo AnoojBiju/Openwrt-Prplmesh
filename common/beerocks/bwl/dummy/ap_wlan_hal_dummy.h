@@ -76,6 +76,7 @@ public:
     virtual bool restricted_channels_get(char *channel_list) override;
     virtual bool read_acs_report() override;
     virtual bool set_tx_power_limit(int tx_pow_limit) override;
+    virtual bool get_tx_power(uint32_t &tx_power) override;
     virtual bool set_vap_enable(const std::string &iface_name, const bool enable) override;
     virtual bool get_vap_enable(const std::string &iface_name, bool &enable) override;
 
