@@ -1353,7 +1353,8 @@ static bool create_multiap_map(const son::wireless_utils::sBssInfoConf &bss_info
 
 bool ap_wlan_hal_dwpal::update_vap_credentials(
     std::list<son::wireless_utils::sBssInfoConf> &bss_info_conf_list,
-    const std::string &backhaul_wps_ssid, const std::string &backhaul_wps_passphrase)
+    const std::string &backhaul_wps_ssid, const std::string &backhaul_wps_passphrase,
+    const std::string &bridge_ifname)
 {
     // The bss_info_conf_list contains list of all changes.
     // In this function we are updating the hostapd .conf files with
@@ -1438,6 +1439,11 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
         if (hostapd_config == hostapd_config_vaps.end()) {
             LOG(ERROR) << "Could not find a hostapd BSS with a BSSID of " << bss_info_conf.bssid;
             return false;
+        }
+
+        if (!bridge_ifname.empty() &&
+            beerocks::net::network_utils::linux_iface_is_up(bridge_ifname)) {
+            hostapd_config_set_value(hostapd_config->second, "bridge", bridge_ifname);
         }
 
         if (bss_info_conf.teardown) {
