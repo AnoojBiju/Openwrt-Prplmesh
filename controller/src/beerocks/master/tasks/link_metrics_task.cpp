@@ -347,28 +347,10 @@ bool LinkMetricsTask::handle_cmdu_1905_unassociated_station_link_metric_response
             LOG(ERROR) << "Failed to get agent with mac_addr: " << tlvf::mac_to_string(src_mac);
             return false;
         }
-        sMacAddr radio_mac_address(beerocks::net::network_utils::ZERO_MAC);
-        for (auto &radio : (*agent)->radios) {
-            for (auto &operating_class : radio.second->scan_capabilities.operating_classes) {
-                if (operating_class_received == operating_class.first) {
-                    radio_mac_address = radio.first;
-                }
-            }
-        }
-
-        if (tlvf::mac_to_string(radio_mac_address) ==
-            beerocks::net::network_utils::ZERO_MAC_STRING) {
-            LOG(ERROR) << "Agent with mac_addr: " << tlvf::mac_to_string((*agent)->al_mac)
-                       << " has no radio that supports operating_class: "
-                       << operating_class_received
-                       << " !!, un_station stats will not get updated! ";
-            return false;
-        }
-
-        auto radio = database.get_radio(src_mac, radio_mac_address);
+        auto radio = database.get_radio_by_op_class((*agent)->al_mac, operating_class_received);
         if (!radio) {
-            LOG(ERROR) << "Failed to get radio with in agent with mac_addr: " << src_mac
-                       << " and radio_uid: " << tlvf::mac_to_string(radio_mac_address);
+            LOG(ERROR) << "Failed to lookup radio from operating class " << operating_class_received
+                       << " on Agent " << src_mac;
             return false;
         }
         if (radio->dm_path.empty()) {
@@ -380,7 +362,7 @@ bool LinkMetricsTask::handle_cmdu_1905_unassociated_station_link_metric_response
             auto agent_radio = un_stat_database->get_agents().find(src_mac);
             if (agent_radio != un_stat_database->get_agents().end()) {
                 //update the station with the mac_addr of the radio that is monitoring it
-                un_stat_database->set_radio_mac(src_mac, radio_mac_address);
+                un_stat_database->set_radio_mac(src_mac, radio->radio_uid);
             } else {
                 LOG(WARNING) << "is agent: " << tlvf::mac_to_string(src_mac)
                              << " non intentially monitoring station with mac_address: "
@@ -396,7 +378,7 @@ bool LinkMetricsTask::handle_cmdu_1905_unassociated_station_link_metric_response
             stats.time_stamp = buf;
 #ifdef ENABLE_VBSS
             unassociated_event.station_stats.push_back(std::make_tuple(
-                sta_metrics.sta_mac, sta_metrics.uplink_rcpi_dbm_enc, radio_mac_address));
+                sta_metrics.sta_mac, sta_metrics.uplink_rcpi_dbm_enc, radio->radio_uid));
 #endif
 
             database.update_unassociated_station_stats(sta_metrics.sta_mac, stats, radio->dm_path);
