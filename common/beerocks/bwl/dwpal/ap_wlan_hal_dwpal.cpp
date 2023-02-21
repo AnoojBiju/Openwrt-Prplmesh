@@ -1360,7 +1360,8 @@ static bool set_vap_multiap_mode(std::vector<std::string> &vap_hostapd_config, b
 
 bool ap_wlan_hal_dwpal::update_vap_credentials(
     std::list<son::wireless_utils::sBssInfoConf> &bss_info_conf_list,
-    const std::string &backhaul_wps_ssid, const std::string &backhaul_wps_passphrase)
+    const std::string &backhaul_wps_ssid, const std::string &backhaul_wps_passphrase,
+    const std::string &bridge_ifname)
 {
     // The bss_info_conf_list contains list of all VAPs and STAs that have to be created
     // on the radio. If the list is empty, there should be no VAPs left.
@@ -1415,6 +1416,11 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
             LOG(ERROR) << "Autoconfiguration: invalid enc_type "
                        << int(bss_info_conf.encryption_type);
             return false;
+        }
+
+        if (!bridge_ifname.empty() &&
+            beerocks::net::network_utils::linux_iface_is_up(bridge_ifname)) {
+            hostapd_config_set_value(hostapd_config->second, "bridge", bridge_ifname);
         }
 
         LOG(DEBUG) << "Autoconfiguration for ssid: " << bss_info_conf.ssid
