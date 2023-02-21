@@ -34,6 +34,11 @@ private:
     void handle_slave_channel_selection_response(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                  const sMacAddr &src_mac);
 
+    /**
+    * @brief Sends notification to HostAP/Driver about the current service prioritization config
+    *
+    * @return true if config applied or handled properly, otherwise false.
+    * */
     bool send_service_prio_config(const beerocks_message::sServicePrioConfig &request);
 
     bool qos_apply_active_rule();

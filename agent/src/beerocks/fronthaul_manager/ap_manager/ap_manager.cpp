@@ -1873,7 +1873,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             LOG(ERROR) << "addClass has failed";
             return;
         }
-        ap_wlan_hal->hostap_service_prio_config(msg->cs_params().data);
+        ap_wlan_hal->configure_service_priority(msg->cs_params().data);
         break;
     }
     default: {

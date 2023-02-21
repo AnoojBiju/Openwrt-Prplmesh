@@ -6,25 +6,25 @@ namespace bpl {
 
 bool ServicePrioritizationUtils_dummy::flush_rules()
 {
-    LOG(ERROR) << "%s:not Supported in Dummy" << __func__;
+    LOG(ERROR) << __func__ << ":not Supported in Dummy";
     return false;
 }
 
 bool ServicePrioritizationUtils_dummy::apply_single_value_map(uint8_t pcp)
 {
-    LOG(ERROR) << "%s:not Supported in Dummy" << __func__;
+    LOG(ERROR) << __func__ << ":not Supported in Dummy";
     return false;
 }
 
 bool ServicePrioritizationUtils_dummy::apply_dscp_map()
 {
-    LOG(ERROR) << "%s:not Supported in Dummy" << __func__;
+    LOG(ERROR) << __func__ << ":not Supported in Dummy";
     return false;
 }
 
 bool ServicePrioritizationUtils_dummy::apply_up_map()
 {
-    LOG(ERROR) << "%s:not Supported in Dummy" << __func__;
+    LOG(ERROR) << __func__ << ":not Supported in Dummy";
     return false;
 }
 

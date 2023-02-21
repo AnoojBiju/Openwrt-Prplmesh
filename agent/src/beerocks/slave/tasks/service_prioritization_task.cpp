@@ -66,12 +66,12 @@ void ServicePrioritizationTask::handle_service_prioritization_request(
     std::vector<std::shared_ptr<wfa_map::tlvServicePrioritizationRule>> rules_to_add;
     auto db = AgentDB::get();
     for (auto &rule : service_prioritization_rules) {
-        LOG(DEBUG) << "Service Prioritization Rule TLV Dump"
-                   << "\nRule id=" << rule->rule_params().id
-                   << "\nadd_remove=" << rule->rule_params().bits_field1.add_remove
-                   << "\nprecedence=" << rule->rule_params().precedence
-                   << "\noutput=" << rule->rule_params().output
-                   << "\nalways_match=" << rule->rule_params().bits_field2.always_match;
+        LOG(DEBUG) << "Service Prioritization Rule TLV Dump" << std::endl
+                   << "Rule id=" << rule->rule_params().id << std::endl
+                   << "add_remove=" << rule->rule_params().bits_field1.add_remove << std::endl
+                   << "precedence=" << rule->rule_params().precedence << std::endl
+                   << "output=" << rule->rule_params().output << std::endl
+                   << "always_match=" << rule->rule_params().bits_field2.always_match;
         // Remove
         if (!rule->rule_params().bits_field1.add_remove) {
             rules_to_remove.push_back(rule);
@@ -171,7 +171,7 @@ bool ServicePrioritizationTask::qos_apply_active_rule()
             return false;
         }
         auto db                                      = AgentDB::get();
-        beerocks_message::sServicePrioConfig request = {0};
+        beerocks_message::sServicePrioConfig request = {};
         request.mode                                 = active->second.output;
         std::copy(db->service_prioritization.dscp_mapping_table.begin(),
                   db->service_prioritization.dscp_mapping_table.end(), request.data);
@@ -192,8 +192,8 @@ bool ServicePrioritizationTask::qos_apply_active_rule()
 bool ServicePrioritizationTask::qos_flush_setup()
 {
     //TODO: PPM-2389, drive ebtables or external software
-    service_prio_utils->flush_rules();
-    return true;
+    // as per vendor specific in the Service Prioritization utility
+    return service_prio_utils->flush_rules();
 }
 
 bool ServicePrioritizationTask::qos_setup_single_value_map(uint8_t pcp)
@@ -204,12 +204,14 @@ bool ServicePrioritizationTask::qos_setup_single_value_map(uint8_t pcp)
         return false;
     }
 
-    qos_flush_setup();
-
-    service_prio_utils->apply_single_value_map(pcp);
+    if (qos_flush_setup() == false) {
+        return false;
+    }
+    //LOG(DEBUG) << "ServicePrioritizationTask::qos_create_single_value_map - NOT IMPLEMENTED YET";
 
     //TODO: PPM-2389, drive ebtables or external software
-    return true;
+    // as per vendor specific in the Service Prioritization utility
+    return service_prio_utils->apply_single_value_map(pcp);
 }
 
 bool ServicePrioritizationTask::qos_setup_dscp_map()
@@ -218,11 +220,11 @@ bool ServicePrioritizationTask::qos_setup_dscp_map()
 
     qos_flush_setup();
 
-    LOG(DEBUG) << "ServicePrioritizationTask::qos_setup_dscp_map - NOT IMPLEMENTED YET";
-    service_prio_utils->apply_dscp_map();
+    //LOG(DEBUG) << "ServicePrioritizationTask::qos_setup_dscp_map - NOT IMPLEMENTED YET";
 
     //TODO: PPM-2389, drive ebtables or external software
-    return true;
+    // as per vendor specific in the Service Prioritization utility
+    return service_prio_utils->apply_dscp_map();
 }
 
 bool ServicePrioritizationTask::qos_setup_up_map()
@@ -231,11 +233,11 @@ bool ServicePrioritizationTask::qos_setup_up_map()
 
     qos_flush_setup();
 
-    LOG(DEBUG) << "ServicePrioritizationTask::qos_setup_up_map - NOT IMPLEMENTED YET";
-    service_prio_utils->apply_up_map();
+    //LOG(DEBUG) << "ServicePrioritizationTask::qos_setup_up_map - NOT IMPLEMENTED YET";
 
     //TODO: PPM-2389, drive ebtables or external software
-    return true;
+    // as per vendor specific in the Service Prioritization utility
+    return service_prio_utils->apply_up_map();
 }
 
 bool ServicePrioritizationTask::send_service_prio_config(

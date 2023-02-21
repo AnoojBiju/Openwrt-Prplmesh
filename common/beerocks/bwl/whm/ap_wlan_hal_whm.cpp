@@ -807,7 +807,7 @@ bool ap_wlan_hal_whm::prepare_unassoc_sta_link_metrics_response(
     return false;
 }
 
-bool ap_wlan_hal_whm::hostap_service_prio_config(const uint8_t *data)
+bool ap_wlan_hal_whm::configure_service_priority(const uint8_t *data)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return false;
