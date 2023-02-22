@@ -1975,9 +1975,8 @@ public:
      * @param[in] al_mac AL MAC address of agent.
      * @param[in] config Traffic separation policy configuration.
      */
-    void
-    add_traffic_separataion_configuration(const sMacAddr &al_mac,
-                                          const wireless_utils::sTrafficSeparationSsid &config);
+    void add_traffic_separation_configuration(const sMacAddr &al_mac,
+                                              const wireless_utils::sTrafficSeparationSsid &config);
     /**
      * @brief Store default 802.1Q settings for agent.
      *
@@ -1995,7 +1994,7 @@ public:
      * @return List of policies for the AL mac. If not found, return empty list.
      */
     const std::list<wireless_utils::sTrafficSeparationSsid>
-    get_traffic_separataion_configuration(const sMacAddr &al_mac);
+    get_traffic_separation_configuration(const sMacAddr &al_mac);
 
     /**
      * @brief Get default 802.1Q settings for agent.
