@@ -273,13 +273,18 @@ bool prplmesh_cli::prpl_conn_map()
     return true;
 }
 
-bool prplmesh_cli::print_help()
+void prplmesh_cli::print_help()
 {
-    std::cout << "Usage: prplmesh_cli -c <command>" << std::endl
+    std::cerr << "Usage: prplmesh_cli -c <command>" << std::endl
               << "Next commands are available : " << std::endl
               << "help      \t\t: get supported commands" << std::endl
+              << "version   \t\t: get current prplMesh version" << std::endl
               << "conn_map  \t\t: dump the latest network map" << std::endl;
-    return true;
+}
+
+void prplmesh_cli::print_version()
+{
+    std::cerr << "prplMesh version: " << BEEROCKS_VERSION << std::endl;
 }
 
 } // namespace prplmesh_api

@@ -31,7 +31,8 @@ public:
     prplmesh_cli();
     bool get_ip_from_iface(const std::string &iface, std::string &ip);
     bool prpl_conn_map();
-    bool print_help();
+    void print_help();
+    void print_version();
 
     /**
     * @brief Recursive function that prints the topology of agents.

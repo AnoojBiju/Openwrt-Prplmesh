@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
 
     int opt;
     std::string command_string;
-    while ((opt = getopt(argc, argv, "c:")) != -1) {
+    while ((opt = getopt(argc, argv, "c:v")) != -1) {
         switch (opt) {
         case 'c': {
             command_string = std::string(optarg);
@@ -33,11 +33,15 @@ int main(int argc, char *argv[])
             } else if (command_string == "help") {
                 prpl_cli.print_help();
             } else {
-                std::cout << "Error, command not found: " << command_string << std::endl
+                std::cerr << "Error, command not found: " << command_string << std::endl
                           << "Run '-c help' to see supported commands" << std::endl;
             }
 
             break;
+        }
+        case 'v': {
+            prpl_cli.print_version();
+            return 0;
         }
         default: {
             prpl_cli.print_help();
