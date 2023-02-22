@@ -8451,43 +8451,42 @@ void db::update_unassociated_station_stats(const sMacAddr &mac_address,
                                            const std::string &radio_dm_path = std::string())
 {
     auto station = m_unassociated_stations.find(mac_address);
-    if (station != m_unassociated_stations.end()) {
-        station->second->update_stats(new_stats);
-
-        // update  controller DM
-        //Example of path : Device.WiFi.DataElements.Network.Device.1.Radio.2.UnassociatedSTA.
-        std::string new_station_path;
-        if (!radio_dm_path.empty()) {
-            std::string unassociated_sta_path = radio_dm_path + ".UnassociatedSTA";
-            auto index                        = m_ambiorix_datamodel->get_instance_index(
-                unassociated_sta_path + ".[MACAddress == '%s'].", tlvf::mac_to_string(mac_address));
-            if (!index) {
-                LOG(ERROR) << " UnassociatedSTA with mac " << mac_address
-                           << " does not exists under the path " << unassociated_sta_path << " !";
-
-                new_station_path = m_ambiorix_datamodel->add_instance(unassociated_sta_path);
-                if (new_station_path.empty()) {
-                    LOG(ERROR) << "Failed to add new unassociated station stats with path "
-                               << unassociated_sta_path;
-                    return;
-                } else {
-                    new_station_path.append(".");
-                    LOG(DEBUG) << "Successfully added object with path : " << new_station_path;
-                }
-            } else {
-                new_station_path.append(".");
-                new_station_path.append(std::to_string(index));
-            }
-            m_ambiorix_datamodel->set(new_station_path, "MACAddress", mac_address);
-            m_ambiorix_datamodel->set(new_station_path, " SignalStrength",
-                                      new_stats.uplink_rcpi_dbm_enc);
-            m_ambiorix_datamodel->set_time(new_station_path, new_stats.time_stamp);
-            LOG(DEBUG) << "Setting MACAddress " << mac_address
-                       << "SignalStrength: " << new_stats.uplink_rcpi_dbm_enc << " TimeStamp"
-                       << new_stats.time_stamp;
-        }
+    if (m_unassociated_stations.end() == station) {
+        LOG(DEBUG) << "No known unassociated station entry for MAC '" << mac_address << "'";
+        return;
     }
-    return;
+
+    if (radio_dm_path.empty()) {
+        LOG(DEBUG) << "Radio DM path is empty!";
+        return;
+    }
+
+    station->second->update_stats(new_stats);
+
+    // Now, update the DM
+    std::string unassociated_sta_path = radio_dm_path + ".UnassociatedSTA";
+    auto index                        = m_ambiorix_datamodel->get_instance_index(
+        unassociated_sta_path + ".[MACAddress == '%s'].", tlvf::mac_to_string(mac_address));
+
+    if (0 == index) {
+        std::string new_unassociated_sta_path =
+            m_ambiorix_datamodel->add_instance(unassociated_sta_path);
+        if (new_unassociated_sta_path.empty()) {
+            LOG(ERROR) << "Could not add new unassociated station to DM, path="
+                       << unassociated_sta_path;
+            return;
+        }
+        // We know we successfully added this unassociated station to the DM for the first time, so
+        // the index must be one.
+        index                 = 1;
+        unassociated_sta_path = new_unassociated_sta_path;
+    }
+    unassociated_sta_path.append(".");
+    unassociated_sta_path.append(std::to_string(index));
+    m_ambiorix_datamodel->set(unassociated_sta_path, "MACAddress", mac_address);
+    m_ambiorix_datamodel->set(unassociated_sta_path, "SignalStrength",
+                              new_stats.uplink_rcpi_dbm_enc);
+    m_ambiorix_datamodel->set_time(unassociated_sta_path, new_stats.time_stamp);
 }
 
 std::list<std::pair<std::string, std::shared_ptr<UnassociatedStation::Stats>>>
