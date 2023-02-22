@@ -2727,7 +2727,6 @@ public:
      * @param  radio_dm_path   radio data model:
      *          example:Device.WiFi.DataElements.Network.Device.1.Radio.1.
      * 
-     * @return unassociated stations 
      */
     void update_unassociated_station_stats(const sMacAddr &mac_address,
                                            UnassociatedStation::Stats &new_stats,
