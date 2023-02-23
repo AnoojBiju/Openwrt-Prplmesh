@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
 
     int opt;
     std::string command_string;
-    while ((opt = getopt(argc, argv, "c:v")) != -1) {
+    while ((opt = getopt(argc, argv, "c:vh")) != -1) {
         switch (opt) {
         case 'c': {
             command_string = std::string(optarg);
@@ -43,9 +43,10 @@ int main(int argc, char *argv[])
             prpl_cli.print_version();
             return 0;
         }
+        case 'h': /* breakthrough */
         default: {
             prpl_cli.print_help();
-            return 1;
+            return opt != 'h';
         }
         }
     }

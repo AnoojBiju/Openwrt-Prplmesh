@@ -287,5 +287,61 @@ void prplmesh_cli::print_version()
     std::cerr << "prplMesh version: " << BEEROCKS_VERSION << std::endl;
 }
 
+std::string prplmesh_cli::get_ap_path(const std::string &ap)
+{
+    std::stringstream path;
+    path << CONTROLLER_ROOT_DM << ".Network.AccessPoint.";
+    int i = atoi(ap.c_str());
+    if (i != 0) {
+        path << i << ".";
+        return path.str();
+    } else {
+        std::string ap_ht_path     = path.str() + "*.";
+        const amxc_htable_t *ht_ap = m_amx_client->get_htable_object(ap_ht_path);
+        amxc_htable_iterate(ap_it, ht_ap)
+        {
+            std::string ap_path_i = amxc_htable_it_get_key(ap_it);
+            amxc_var_t *ap_obj    = m_amx_client->get_object(ap_path_i);
+            std::string ap_ssid   = GET_CHAR(ap_obj, "SSID");
+
+            if (strcasecmp(ap.c_str(), ap_ssid.c_str()) == 0) {
+                return ap_path_i;
+            }
+        }
+    }
+    return "";
+}
+
+void prplmesh_cli::set_ssid(const std::string &ap, const std::string &ssid)
+{
+    std::string ap_path = get_ap_path(ap);
+    if (ap_path.empty()) {
+        std::cerr << "No AP found with id " << ap << std::endl;
+        return;
+    }
+
+    amxc_var_t *ap_obj = m_amx_client->get_object(ap_path);
+    if (!ap_obj) {
+        std::cerr << "Unable to access object at path " << ap_path << std::endl;
+        return;
+    }
+}
+
+void prplmesh_cli::set_security(const std::string &ap, const std::string &type,
+                                const std::string &passphrase)
+{
+    std::string ap_path = get_ap_path(ap);
+    if (ap_path.empty()) {
+        std::cerr << "No AP found with id " << ap << std::endl;
+        return;
+    }
+
+    amxc_var_t *ap_obj = m_amx_client->get_object(ap_path);
+    if (!ap_obj) {
+        std::cerr << "Unable to access object at path " << ap_path << std::endl;
+        return;
+    }
+}
+
 } // namespace prplmesh_api
 } // namespace beerocks

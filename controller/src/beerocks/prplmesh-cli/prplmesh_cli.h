@@ -33,6 +33,23 @@ public:
     bool prpl_conn_map();
     void print_help();
     void print_version();
+    std::string get_ap_path(const std::string &ap);
+    /**
+     * @brief Change the SSID of an access point.
+     *
+     * @param[in] ap The Access Point to the SSID on.
+     * @param[in] ssid The SSID to set.
+     */
+    void set_ssid(const std::string &ap, const std::string &ssid);
+    /**
+     * @brief Set the security of an access point
+     *
+     * @param[in] ap The Access Point to modify
+     * @param[in] type The security type (e.g. WPA2) to use. Must be a valid and supported algorithm.
+     * @param[in] passphrase The pass phrase to use.
+     */
+    void set_security(const std::string &ap, const std::string &type,
+                      const std::string &passphrase);
 
     /**
     * @brief Recursive function that prints the topology of agents.
