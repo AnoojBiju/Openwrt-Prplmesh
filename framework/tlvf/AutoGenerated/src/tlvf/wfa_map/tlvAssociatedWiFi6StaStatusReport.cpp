@@ -56,6 +56,8 @@ bool tlvAssociatedWiFi6StaStatusReport::alloc_tid_queue_size_list(size_t count) 
         return false;
     }
     size_t len = sizeof(sTidQueueSize) * count;
+    TLVF_LOG(DEBUG) << "****THE VALUE OF getBuffRemainingBytes()_alloc_tid_queue_size = " << getBuffRemainingBytes();
+    TLVF_LOG(DEBUG) << "****THE VALUE OF LENGTH  = " << len;
     if(getBuffRemainingBytes() < len )  {
         TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
         return false;
@@ -129,6 +131,8 @@ size_t tlvAssociatedWiFi6StaStatusReport::get_initial_size()
 
 bool tlvAssociatedWiFi6StaStatusReport::init()
 {
+    TLVF_LOG(DEBUG) << "****THE VALUE OF getBuffRemainingBytes() = " << getBuffRemainingBytes();
+    TLVF_LOG(DEBUG) << "****THE VALUE OF get_initial_size()  = " << get_initial_size();
     if (getBuffRemainingBytes() < get_initial_size()) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
         return false;
