@@ -28,8 +28,8 @@ constexpr char BEEROCKS_CONTROLLER_UDS[] = "uds_controller";
 constexpr char BEEROCKS_PLATFORM_UDS[]   = "uds_platform";
 constexpr char BEEROCKS_BACKHAUL_UDS[]   = "uds_backhaul";
 
-constexpr uint8_t IEEE80211_QOS_TID_MAX_UP =
-    8; // Maximum number of user priorities for class of service
+// Maximum number of user priorities for class of service
+constexpr int IEEE80211_QOS_TID_MAX_UP = 8;
 
 // configuration files path
 #ifdef BEEROCKS_RDKB
@@ -88,7 +88,7 @@ enum eStructsConsts {
 enum eMessageConsts {
     MESSAGE_VERSION       = 6,
     MESSAGE_MAGIC         = 0x55CDABEF,
-    MESSAGE_BUFFER_LENGTH = 4096,
+    MESSAGE_BUFFER_LENGTH = 8192,
 };
 } //namespace message
 

@@ -96,6 +96,7 @@ void CapabilityReportingTask::handle_client_capability_query(ieee1905_1::CmduMes
     }
 
     auto client_info_tlv_t = m_cmdu_tx.addClass<wfa_map::tlvClientInfo>();
+    LOG(DEBUG) << "**** THE VALUE IS ******" << client_info_tlv_t->getBuffRemainingBytes();
     if (!client_info_tlv_t) {
         LOG(ERROR) << "addClass wfa_map::tlvClientInfo has failed";
         return;
@@ -162,6 +163,7 @@ void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
     }
 
     auto ap_capability_tlv = m_cmdu_tx.addClass<wfa_map::tlvApCapability>();
+    LOG(DEBUG) << "**** THE VALUE IS ******" << ap_capability_tlv->getBuffRemainingBytes();
     if (!ap_capability_tlv) {
         LOG(ERROR) << "addClass wfa_map::tlvApCapability has failed";
         return;
