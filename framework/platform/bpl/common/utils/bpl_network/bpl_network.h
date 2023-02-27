@@ -9,28 +9,12 @@
 #ifndef _BPL_NETWORK_H_
 #define _BPL_NETWORK_H_
 
-//#include <bcl/beerocks_os_utils.h>
 #include <bcl/network/network_utils.h>
 
 #include <cstdint>
 #include <list>
 #include <string>
 #include <vector>
-
-//#include <netinet/ether.h>
-
-//#include <bcl/network/net_struct>
-//#include <bcl/network/socket.h>
-/*
-#define ETH_HDRLEN 14 // Ethernet header length
-#define IP4_HDRLEN 20 // IPv4 header length
-#define ARP_HDRLEN 28 // ARP header length
-// Define some constants.
-#ifndef ARPOP_REQUEST
-#define ARPOP_REQUEST 1 // Taken from <linux/if_arp.h>
-#define ARPOP_REPLY 2
-#endif
-*/
 
 namespace beerocks {
 namespace bpl {
@@ -75,6 +59,13 @@ public:
      */
     static std::vector<std::string> get_bss_ifaces(const std::string &bss_iface,
                                                    const std::string &bridge_iface);
+
+    /**
+     * @brief get mac of an interface from it's name
+     * @param[in] iface: name of the interface
+     * @param[out] mac : mac address of the interface
+    */
+    static bool iface_get_mac(const std::string &iface, std::string &mac);
 
     /**
      * @brief get interface name for a given mac address
