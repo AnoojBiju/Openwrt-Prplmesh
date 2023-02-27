@@ -977,12 +977,21 @@ void ApManager::handle_virtual_bss_move_cancel_request(ieee1905_1::CmduMessageRx
 void ApManager::handle_unassoc_sta_link_metrics_query_message(ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     const auto mid = cmdu_rx.getMessageId();
+    LOG(DEBUG) << "Received UNASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE, mid=" << std::hex << mid;
     auto unassoc_sta_link_metric_query =
         cmdu_rx.getClass<wfa_map::tlvUnassociatedStaLinkMetricsQuery>();
     if (!unassoc_sta_link_metric_query) {
         LOG(ERROR) << "Unassoc sta link metric query cmdu mid =" << mid << " get class failed";
         return;
     }
+
+    // Send Ack for the Unassociated STA Link Metrics Query
+    auto cmdu_tx_header = cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE);
+    if (!cmdu_tx_header) {
+        LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
+        return;
+    }
+    send_cmdu(cmdu_tx);
     ap_wlan_hal->send_unassoc_sta_link_metric_query(unassoc_sta_link_metric_query);
 }
 
