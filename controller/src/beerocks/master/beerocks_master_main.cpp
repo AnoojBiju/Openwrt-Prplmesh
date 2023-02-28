@@ -17,6 +17,7 @@
 #include <bcl/network/network_utils.h>
 #include <bcl/network/sockets_impl.h>
 #include <bpl/bpl_cfg.h>
+#include <bpl_network/bpl_network.h>
 #include <btl/broker_client_factory_factory.h>
 #include <mapf/common/utils.h>
 
@@ -740,7 +741,7 @@ int main(int argc, char *argv[])
 
     beerocks::net::network_utils::iface_info bridge_info;
     const auto &bridge_iface = beerocks_slave_conf.bridge_iface;
-    if (beerocks::net::network_utils::get_iface_info(bridge_info, bridge_iface) != 0) {
+    if (!beerocks::bpl::bpl_network::get_iface_info(bridge_info, bridge_iface)) {
         LOG(ERROR) << "Failed reading addresses from the bridge!";
         return 0;
     }

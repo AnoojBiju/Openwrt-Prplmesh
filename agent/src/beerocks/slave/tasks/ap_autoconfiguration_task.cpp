@@ -699,7 +699,7 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_wsc_m1_message(
 
     // Read the IP addresses of the bridge interface
     network_utils::iface_info bridge_info;
-    if (beerocks::net::network_utils::get_iface_info(bridge_info, db->bridge.iface_name) != 0) {
+    if (!beerocks::bpl::bpl_network::get_iface_info(bridge_info, db->bridge.iface_name)) {
         LOG(ERROR) << "Failed reading addresses for: " << db->bridge.iface_name;
         return false;
     }

@@ -261,7 +261,7 @@ void TrafficSeparation::apply_policy(const std::string &radio_iface)
 
     std::string ipv4_str;
     network_utils::iface_info bridge_iface_info;
-    if (network_utils::get_iface_info(bridge_iface_info, db->bridge.iface_name) != 0) {
+    if (!bpl::bpl_network::get_iface_info(bridge_iface_info, db->bridge.iface_name)) {
         LOG(ERROR) << "Failed to get iface info of bridge " << db->bridge.iface_name;
         return;
     }
