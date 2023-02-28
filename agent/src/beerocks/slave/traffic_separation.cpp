@@ -165,7 +165,7 @@ void TrafficSeparation::apply_policy(const std::string &radio_iface)
 
         std::string bss_iface;
 
-        if (!network_utils::linux_iface_get_name(bss.mac, bss_iface)) {
+        if (!bpl::bpl_network::iface_get_name(bss.mac, bss_iface)) {
             LOG(WARNING) << "Interface with MAC " << bss.mac << " does not exist";
             continue;
         }
