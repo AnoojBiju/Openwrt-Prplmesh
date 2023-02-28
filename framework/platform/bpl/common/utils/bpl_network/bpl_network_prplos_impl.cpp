@@ -355,6 +355,41 @@ std::vector<std::string> bpl_network::get_bss_ifaces(const std::string &bss_ifac
     return bss_ifaces;
 }
 
+bool bpl_network::iface_get_mac(const std::string &iface, std::string &mac)
+{
+    mac.clear();
+
+    AmbiorixConnectionSmartPtr amxb_connection = AmbiorixConnectionManager::get_connection();
+    if (!amxb_connection) {
+        LOG(ERROR) << "can't retrieve connection to amxb bus";
+        return false;
+    }
+
+    std::string radio_filter    = "Device.WiFi.Radio.[Name == '" + iface + "'].";
+    std::string ssid_filter     = "Device.WiFi.SSID.[Name == '" + iface + "'].";
+    std::string eth_filter      = "Device.Ethernet.Interface.[Name == '" + iface + "'].";
+    std::string eth_link_filter = "Device.Ethernet.Link.[Name == '" + iface + "'].";
+
+    std::vector<std::string> iface_paths;
+
+    if (!amxb_connection->resolve_path(radio_filter, iface_paths)) {
+        if (!amxb_connection->resolve_path(ssid_filter, iface_paths)) {
+            if (!amxb_connection->resolve_path(eth_link_filter, iface_paths)) {
+                if (!amxb_connection->resolve_path(eth_filter, iface_paths)) {
+                    LOG(ERROR) << "cannot retrieve the interface object corresponding to " << iface;
+                    return false;
+                }
+            }
+        }
+    }
+    // the only ordering in the above sequence is Radio before SSID
+
+    // if we got here, at least one (and at most one) resolve path was successful
+    mac = amxb_connection->get_param(iface_paths[0], "MACAddress")->get<std::string>();
+    std::transform(mac.begin(), mac.end(), mac.begin(), ::tolower);
+    return true;
+}
+
 bool bpl_network::iface_get_name(const sMacAddr &mac, std::string &iface)
 {
     // try to get matching MAC Address from either Device.WiFi.SSID or Device.Ethernet.Interface
