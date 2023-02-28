@@ -21,6 +21,7 @@
 #include <tlvf/BaseClass.h>
 #include <tlvf/ClassList.h>
 #include "tlvf/wfa_map/eTlvTypeMap.h"
+#include "tlvf/common/sMacAddr.h"
 #include <ostream>
 
 namespace wfa_map {
@@ -53,6 +54,7 @@ class tlvSpatialReuseConfigResponse : public BaseClass
         
         const eTlvTypeMap& type();
         const uint16_t& length();
+        sMacAddr& radio_uid();
         //Channel selection response code, with respect to the Spatial Reuse Request
         eResponseCode& response_code();
         void class_swap() override;
@@ -63,6 +65,7 @@ class tlvSpatialReuseConfigResponse : public BaseClass
         bool init();
         eTlvTypeMap* m_type = nullptr;
         uint16_t* m_length = nullptr;
+        sMacAddr* m_radio_uid = nullptr;
         eResponseCode* m_response_code = nullptr;
 };
 
