@@ -496,13 +496,13 @@ bool ap_wlan_hal_whm::hybrid_mode_supported()
 
 bool ap_wlan_hal_whm::restricted_channels_set(char *channel_list)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    // We chose not to implement it because it is a custom feature and has no reference in the prplmesh Spec.
     return true;
 }
 
 bool ap_wlan_hal_whm::restricted_channels_get(char *channel_list)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    // We chose not to implement it because it is a custom feature and has no reference in the prplmesh Spec.
     return false;
 }
 
