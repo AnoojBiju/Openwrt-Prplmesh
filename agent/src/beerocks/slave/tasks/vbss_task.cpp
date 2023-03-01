@@ -173,31 +173,6 @@ void VbssTask::handle_virtual_bss_response(ieee1905_1::CmduMessageRx &cmdu_rx)
 
     // CMDU received from ap_manager
     m_btl_ctx.forward_cmdu_to_controller(cmdu_rx);
-
-    if (virtual_bss_event_tlv->success()) {
-
-        // If the request was handled successfully, we have to send a
-        // topology notification as a BSS has either be created or
-        // removed as a result.
-        LOG(INFO) << "Sending topology notification to notify controller of the BSS change";
-
-        auto cmdu_header =
-            m_cmdu_tx.create(0, ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE);
-        if (!cmdu_header) {
-            LOG(ERROR) << "Failed to create TOPOLOGY_NOTIFICATION_MESSAGE cmdu";
-            return;
-        }
-
-        auto tlvAlMacAddress = m_cmdu_tx.addClass<ieee1905_1::tlvAlMacAddress>();
-        if (!tlvAlMacAddress) {
-            LOG(ERROR) << "addClass ieee1905_1::tlvAlMacAddress failed";
-            return;
-        }
-
-        auto db                = AgentDB::get();
-        tlvAlMacAddress->mac() = db->bridge.mac;
-        m_btl_ctx.send_cmdu_to_controller({}, m_cmdu_tx);
-    }
 }
 
 bool VbssTask::handle_move_cancel_request(ieee1905_1::CmduMessageRx &cmdu_rx)
