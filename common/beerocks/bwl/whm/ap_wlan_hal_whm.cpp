@@ -581,6 +581,7 @@ bool ap_wlan_hal_whm::set_radio_mbo_assoc_disallow(bool enable)
 
 bool ap_wlan_hal_whm::set_primary_vlan_id(uint16_t primary_vlan_id)
 {
+    // Networking is responsible of handling vlanId, so pwhm does not interfere with vlans.
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
     return true;
 }
