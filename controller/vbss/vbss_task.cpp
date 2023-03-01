@@ -451,6 +451,25 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
         if (cntrCtx) {
             return cntrCtx->handle_vbss_creation(ruid, vbssid);
         }
+        auto radio = m_database.get_radio_by_uid(vbss_event_tlv->radio_uid());
+        if (!radio) {
+            LOG(ERROR) << "Could not find radio with UID '" << vbss_event_tlv->radio_uid() << "'";
+            return false;
+        }
+        auto bss = radio->bsses.add(vbss_event_tlv->bssid(), *radio);
+        if (!bss) {
+            LOG(ERROR) << "Could not add BSS '" << vbss_event_tlv->bssid() << "' to radio '"
+                       << radio->radio_uid << "'";
+            return false;
+        }
+        if (!m_database.update_vap(src_mac, radio->radio_uid, vbss_event_tlv->bssid(),
+                                   existing_creation->ssid, false)) {
+            LOG(ERROR) << "Could not update VAP, RUID '" << radio->radio_uid << "', BSSID '"
+                       << vbss_event_tlv->bssid() << "', SSID '" << existing_creation->ssid << "'";
+            return false;
+        }
+
+        return true;
     }
 
     auto existing_destruction = active_destruction_events.get(vbssid);
