@@ -119,17 +119,13 @@ void LinkMetricsCollectionTask::work()
         return;
     }
 
-    int elapsed_time_s = std::chrono::duration_cast<std::chrono::seconds>(
-                             now - m_ap_metrics_reporting_info.last_reporting_time_point)
-                             .count();
-
     auto elapsed_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                              now - m_ap_metrics_reporting_info.last_reporting_time_point)
                              .count();
 
     auto timeout_diff_ms = (m_ap_metrics_reporting_info.reporting_interval_s*1000 - elapsed_time_ms); 
-    LOG(DEBUG) << "CW: el time:"<< elapsed_time_s << " & rep_int:" << m_ap_metrics_reporting_info.reporting_interval_s << " timeout diff in ms:" << timeout_diff_ms;
-    if ((elapsed_time_s < m_ap_metrics_reporting_info.reporting_interval_s) && (timeout_diff_ms > GRACE_PERIOD_MS)) {
+    LOG(DEBUG) << "CW: rep_int:" << m_ap_metrics_reporting_info.reporting_interval_s << " timeout diff in ms:" << timeout_diff_ms;
+    if (timeout_diff_ms > GRACE_PERIOD_MS) {
 	LOG(DEBUG) << "CW: *********** el ms:"<< elapsed_time_ms;
         return;
     }
