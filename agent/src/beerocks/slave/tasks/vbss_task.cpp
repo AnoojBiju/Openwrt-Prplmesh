@@ -188,24 +188,6 @@ void VbssTask::handle_virtual_bss_response(ieee1905_1::CmduMessageRx &cmdu_rx)
             }
             m_move_requests.erase(virtual_bss_event_tlv->bssid());
         }
-        LOG(INFO) << "Sending topology notification to notify controller of the BSS change";
-
-        auto cmdu_header =
-            m_cmdu_tx.create(0, ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE);
-        if (!cmdu_header) {
-            LOG(ERROR) << "Failed to create TOPOLOGY_NOTIFICATION_MESSAGE cmdu";
-            return;
-        }
-
-        auto tlvAlMacAddress = m_cmdu_tx.addClass<ieee1905_1::tlvAlMacAddress>();
-        if (!tlvAlMacAddress) {
-            LOG(ERROR) << "addClass ieee1905_1::tlvAlMacAddress failed";
-            return;
-        }
-
-        //auto db                = AgentDB::get();
-        tlvAlMacAddress->mac() = db->bridge.mac;
-        m_btl_ctx.send_cmdu_to_controller({}, m_cmdu_tx);
     }
 }
 
