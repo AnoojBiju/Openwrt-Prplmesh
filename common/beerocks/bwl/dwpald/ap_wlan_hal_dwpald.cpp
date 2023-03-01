@@ -1448,9 +1448,12 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
             hostapd_config_set_value(hostapd_config->second, "start_disabled", "1");
             // Disable backhaul BSS
             hostapd_config_set_value(hostapd_config->second, "multi_ap", "0");
+            // Clear multi_ap related configs
             hostapd_config_set_value(hostapd_config->second, "multi_ap_backhaul_ssid", "");
             hostapd_config_set_value(hostapd_config->second, "multi_ap_backhaul_wpa_passphrase",
                                      "");
+            hostapd_config_set_value(hostapd_config->second, "multi_ap_profile1_disallow", "");
+            hostapd_config_set_value(hostapd_config->second, "multi_ap_profile2_disallow", "");
 
             // Add to pending reconfigure
             ifaces_to_reconfigure.insert(hostapd_config->first);
