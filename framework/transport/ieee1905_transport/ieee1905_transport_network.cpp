@@ -167,6 +167,13 @@ bool Ieee1905Transport::open_interface_socket(NetworkInterface &interface)
         return false;
     }
 
+    int rcvbuf = (512 * 1024);
+    if (setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &rcvbuf, sizeof(rcvbuf)) < 0) {
+        MAPF_ERR("Failed setting SO_RCVBUF option: " << strerror(errno));
+        close(sockfd);
+        return false;
+    }
+
     // bind to specified interface - note that we cannot use SO_BINDTODEVICE sockopt as it does not support AF_PACKET sockets
     struct sockaddr_ll sockaddr;
     memset(&sockaddr, 0, sizeof(struct sockaddr_ll));
