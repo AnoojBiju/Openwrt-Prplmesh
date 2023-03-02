@@ -1015,6 +1015,7 @@ bool network_utils::linux_iface_get_speed(const std::string &iface, uint32_t &li
                 ecmd.req.cmd                    = ETHTOOL_GLINKSETTINGS;
                 ecmd.req.link_mode_masks_nwords = -ecmd.req.link_mode_masks_nwords;
                 rc                              = ioctl(sock, SIOCETHTOOL, &ifr);
+		LOG(DEBUG) << "CW: rc=" << rc << ",ecmd.req.link_mode_masks_nwords=" << ecmd.req.link_mode_masks_nwords<< " and ecmd.req.cmd="<< ecmd.req.cmd;
                 if ((0 != rc) || (ecmd.req.link_mode_masks_nwords <= 0) ||
                     (ecmd.req.cmd != ETHTOOL_GLINKSETTINGS)) {
                     LOG(ERROR) << "ETHTOOL_GLINKSETTINGS request failed";
