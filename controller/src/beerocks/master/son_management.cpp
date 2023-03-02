@@ -2526,7 +2526,8 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             auto &out_stat               = std::get<1>(response->sta_list(count));
             out_stat.sta_mac             = tlvf::mac_from_string(un_station.first);
             out_stat.uplink_rcpi_dbm_enc = un_station.second->uplink_rcpi_dbm_enc;
-            strncpy(out_stat.time_stamp, un_station.second->time_stamp.c_str(), 40);
+            snprintf(out_stat.time_stamp, sizeof(out_stat.time_stamp), "%s",
+                     un_station.second->time_stamp.c_str());
             //Also logging it
             LOG(TRACE) << " Station with mac address : " << out_stat.sta_mac
                        << " has a signal strength of " << out_stat.uplink_rcpi_dbm_enc
