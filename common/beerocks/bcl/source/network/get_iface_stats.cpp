@@ -183,7 +183,9 @@ static bool get_iface_stats(int fd, const std::string &iface_name, sInterfaceSta
                 if (get_iface_stats(msg_ptr, iface_name, iface_stats)) {
                     msg_done = true;
                     result   = true;
+		    LOG(DEBUG) << "CW: get_iface_stats 2";
                 }
+		LOG(DEBUG) << "CW: get_iface_stats 3";
                 break;
             }
         }
@@ -215,6 +217,7 @@ static bool get_iface_stats(const std::string &iface_name, sInterfaceStats &ifac
         LOG(ERROR) << "Failed creating Netlink socket: " << strerror(errno);
         return false;
     }
+    LOG(DEBUG) << "CW: get_iface_stats 1";
 
     /**
      * Get interface stats using Netlink socket
