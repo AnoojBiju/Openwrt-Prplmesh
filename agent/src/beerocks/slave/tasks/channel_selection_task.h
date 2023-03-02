@@ -15,6 +15,9 @@
 #include <tlvf/CmduMessageTx.h>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
 #include <tlvf/wfa_map/tlvChannelSelectionResponse.h>
+#include <tlvf/wfa_map/tlvSpatialReuseConfigResponse.h>
+#include <tlvf/wfa_map/tlvSpatialReuseReport.h>
+#include <tlvf/wfa_map/tlvSpatialReuseRequest.h>
 #include <tlvf/wfa_map/tlvTransmitPowerLimit.h>
 #include <unordered_map>
 
@@ -154,6 +157,9 @@ private:
 
     bool handle_transmit_power_limit(
         const std::shared_ptr<wfa_map::tlvTransmitPowerLimit> tx_power_limit_tlv);
+
+    bool
+    set_spatial_reuse_tlv(const std::shared_ptr<wfa_map::tlvSpatialReuseRequest> spatial_reuse_tlv);
 
     bool store_controller_preference(
         const std::shared_ptr<wfa_map::tlvChannelPreference> channel_preference_tlv);

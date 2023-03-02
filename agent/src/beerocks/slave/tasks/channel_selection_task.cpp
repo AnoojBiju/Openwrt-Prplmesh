@@ -19,6 +19,7 @@
 #include <tlvf/wfa_map/tlvProfile2CacCompletionReport.h>
 #include <tlvf/wfa_map/tlvProfile2CacStatusReport.h>
 #include <tlvf/wfa_map/tlvRadioOperationRestriction.h>
+#include <tlvf/wfa_map/tlvSpatialReuseReport.h>
 #include <tlvf/wfa_map/tlvTransmitPowerLimit.h>
 
 #include "task_messages.h"
@@ -301,6 +302,26 @@ void ChannelSelectionTask::handle_channel_selection_request(ieee1905_1::CmduMess
     }
 
     auto db = AgentDB::get();
+
+    //Handle controller spatial reuse tlv.
+    for (const auto &spatial_reuse_request_tlv :
+         cmdu_rx.getClassList<wfa_map::tlvSpatialReuseRequest>()) {
+        auto radio = db->get_radio_by_mac(spatial_reuse_request_tlv->radio_uid());
+        if (!radio) {
+            LOG(ERROR) << "ruid not found: " << spatial_reuse_request_tlv->radio_uid();
+            return;
+        }
+        auto wifi6_caps =
+            reinterpret_cast<beerocks::net::sWIFI6Capabilities *>(&radio->wifi6_capability);
+        if (!wifi6_caps->spatial_reuse) {
+            continue;
+        }
+        if (!set_spatial_reuse_tlv(spatial_reuse_request_tlv)) {
+            LOG(ERROR) << "Failed to set spatial reuse request params";
+        }
+    }
+
+    //    auto db = AgentDB::get();
     // Check if controller is prplMesh.
     if (db->controller_info.prplmesh_controller) {
         // Controller is prplMesh, parse selection extension TLV.
@@ -340,6 +361,25 @@ void ChannelSelectionTask::handle_channel_selection_request(ieee1905_1::CmduMess
 
         LOG(DEBUG) << "Radio " << radio_mac << " is returning " << response_code
                    << " as a response!";
+    }
+
+    for (const auto radio : db->get_radios_list()) {
+        auto wifi6_caps =
+            reinterpret_cast<beerocks::net::sWIFI6Capabilities *>(&radio->wifi6_capability);
+        auto spatial_reuse_config_response_tlv =
+            m_cmdu_tx.addClass<wfa_map::tlvSpatialReuseConfigResponse>();
+        if (!spatial_reuse_config_response_tlv) {
+            LOG(ERROR) << "addClass ieee1905_1::tlvSpatialReuseConfigResponse has failed";
+            return;
+        }
+        //spatial_reuse_config_response_tlv->radio_uid = radio->front.iface_mac;
+        if (wifi6_caps->spatial_reuse) {
+            spatial_reuse_config_response_tlv->response_code() =
+                wfa_map::tlvSpatialReuseConfigResponse::ACCEPT;
+        } else {
+            spatial_reuse_config_response_tlv->response_code() =
+                wfa_map::tlvSpatialReuseConfigResponse::DECLINE;
+        }
     }
     // Send response back to the sender.
     LOG(DEBUG) << "Sending Channel-Selection-Response to broker";
@@ -1242,6 +1282,44 @@ bool ChannelSelectionTask::handle_transmit_power_limit(
     radio_request.outgoing_request.tx_limit_valid = true;
     radio_request.power_switch_received           = true;
 
+    return true;
+}
+
+bool ChannelSelectionTask::set_spatial_reuse_tlv(
+    const std::shared_ptr<wfa_map::tlvSpatialReuseRequest> spatial_reuse_tlv)
+{
+    auto request_msg = message_com::create_vs_message<
+        beerocks_message::cACTION_BACKHAUL_HOSTAP_CONFIG_SPATIAL_REUSE_REQUEST>(m_cmdu_tx);
+
+    if (!request_msg) {
+        LOG(ERROR) << "Failed to build message";
+        return false;
+    }
+
+    request_msg->params().ruid      = spatial_reuse_tlv->radio_uid();
+    request_msg->params().bss_color = spatial_reuse_tlv->flags1().bss_color;
+    request_msg->params().hesiga_sr_15_allowed =
+        spatial_reuse_tlv->flags2().HESIGA_Spatial_reuse_value15_allowed;
+    request_msg->params().srg_info_valid       = spatial_reuse_tlv->flags2().SRG_information_valid;
+    request_msg->params().non_srg_offset_valid = spatial_reuse_tlv->flags2().Non_SRG_offset_valid;
+    request_msg->params().psr_disallowed       = spatial_reuse_tlv->flags2().Psr_Disallowed;
+    request_msg->params().non_srg_obsspd_max_offset =
+        spatial_reuse_tlv->Non_SRG_obsspd_max_offset();
+    request_msg->params().srg_obsspd_min_offset     = spatial_reuse_tlv->SRG_obsspd_min_offset();
+    request_msg->params().srg_obsspd_max_offset     = spatial_reuse_tlv->SRG_obsspd_max_offset();
+    request_msg->params().srg_bss_color_bit_map     = spatial_reuse_tlv->SRG_bss_color_bitmap();
+    request_msg->params().srg_partial_bssid_bit_map = spatial_reuse_tlv->SRG_partial_bssid_bitmap();
+
+    auto agent_fd = m_btl_ctx.get_agent_fd();
+    if (agent_fd == beerocks::net::FileDescriptor::invalid_descriptor) {
+        LOG(ERROR) << "socket to Agent not found";
+        return false;
+    }
+
+    auto action_header         = message_com::get_beerocks_header(m_cmdu_tx)->actionhdr();
+    action_header->radio_mac() = spatial_reuse_tlv->radio_uid();
+
+    m_btl_ctx.send_cmdu(agent_fd, m_cmdu_tx);
     return true;
 }
 

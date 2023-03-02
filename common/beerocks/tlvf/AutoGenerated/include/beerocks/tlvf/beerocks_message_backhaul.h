@@ -465,6 +465,27 @@ class cACTION_BACKHAUL_HOSTAP_CANCEL_ACTIVE_CAC_RESPONSE : public BaseClass
         uint8_t* m_success = nullptr;
 };
 
+class cACTION_BACKHAUL_HOSTAP_CONFIG_SPATIAL_REUSE_REQUEST : public BaseClass
+{
+    public:
+        cACTION_BACKHAUL_HOSTAP_CONFIG_SPATIAL_REUSE_REQUEST(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_BACKHAUL_HOSTAP_CONFIG_SPATIAL_REUSE_REQUEST(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_BACKHAUL_HOSTAP_CONFIG_SPATIAL_REUSE_REQUEST();
+
+        static eActionOp_BACKHAUL get_action_op(){
+            return (eActionOp_BACKHAUL)(ACTION_BACKHAUL_HOSTAP_CONFIG_SPATIAL_REUSE_REQUEST);
+        }
+        sSpatialReuseRequest& params();
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_BACKHAUL* m_action_op = nullptr;
+        sSpatialReuseRequest* m_params = nullptr;
+};
+
 class cACTION_BACKHAUL_HOSTAP_CSA_NOTIFICATION : public BaseClass
 {
     public:

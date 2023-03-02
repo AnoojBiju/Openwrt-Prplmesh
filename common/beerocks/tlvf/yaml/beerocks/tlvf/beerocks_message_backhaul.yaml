@@ -102,6 +102,10 @@ cACTION_BACKHAUL_HOSTAP_CANCEL_ACTIVE_CAC_RESPONSE:
   _type: class
   success : uint8_t # bool
 
+cACTION_BACKHAUL_HOSTAP_CONFIG_SPATIAL_REUSE_REQUEST:
+  _type: class
+  params: sSpatialReuseRequest
+
 cACTION_BACKHAUL_HOSTAP_CSA_NOTIFICATION:
   _type: class
   cs_params: sApChannelSwitch

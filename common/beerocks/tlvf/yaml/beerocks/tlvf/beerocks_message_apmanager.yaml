@@ -91,6 +91,10 @@ cACTION_APMANAGER_HOSTAP_CANCEL_ACTIVE_CAC_RESPONSE:
   _type: class
   success: uint8_t # bool
 
+cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REQUEST:
+  _type: class
+  params : sSpatialReuseRequest
+
 cACTION_APMANAGER_HOSTAP_CSA_ERROR_NOTIFICATION:
   _type: class
   cs_params: sApChannelSwitch

@@ -808,7 +808,7 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
                 .key_idx = 0,
                 .mac     = virtual_bss_creation_tlv->client_mac(),
                 .key     = {virtual_bss_creation_tlv->ptk(),
-                        virtual_bss_creation_tlv->ptk() + virtual_bss_creation_tlv->key_length()},
+                            virtual_bss_creation_tlv->ptk() + virtual_bss_creation_tlv->key_length()},
                 .key_seq = pw_key_seq,
 
                 // TODO: PPM-2368: We need to know the pairwise cipher. For now, use CCMP
@@ -832,7 +832,7 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
                 .key_idx = 1,
                 .mac     = beerocks::net::network_utils::ZERO_MAC,
                 .key     = {virtual_bss_creation_tlv->gtk(),
-                        virtual_bss_creation_tlv->gtk() + virtual_bss_creation_tlv->key_length()},
+                            virtual_bss_creation_tlv->gtk() + virtual_bss_creation_tlv->key_length()},
                 .key_seq = group_key_seq,
 
                 // TODO: PPM-2368: We need to know the groupwise cipher. For now, use CCMP
@@ -1232,6 +1232,29 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             send_cmdu(cmdu_tx);
             return;
         }
+        break;
+    }
+
+    case beerocks_message::ACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REQUEST: {
+        auto request =
+            beerocks_header
+                ->addClass<beerocks_message::cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REQUEST>();
+        if (request == nullptr) {
+            LOG(ERROR) << "addClass cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REQUEST failed";
+            return;
+        }
+
+        if (ap_wlan_hal->set_spatial_reuse_config(
+                request->params().ruid, request->params().bss_color,
+                request->params().hesiga_sr_15_allowed, request->params().srg_info_valid,
+                request->params().non_srg_offset_valid, request->params().psr_disallowed,
+                request->params().non_srg_obsspd_max_offset,
+                request->params().srg_obsspd_min_offset, request->params().srg_obsspd_max_offset,
+                request->params().srg_bss_color_bit_map,
+                request->params().srg_partial_bssid_bit_map)) {
+            LOG(ERROR) << "set_spatial_reuse_config failed";
+        }
+
         break;
     }
 

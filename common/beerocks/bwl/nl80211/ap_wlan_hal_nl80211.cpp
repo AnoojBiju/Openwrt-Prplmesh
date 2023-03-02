@@ -528,8 +528,8 @@ bool ap_wlan_hal_nl80211::refresh_radio_info()
             auto &channel_info        = m_radio_info.channels_list[supported_channel_info.number];
             channel_info.tx_power_dbm = supported_channel_info.tx_power;
             channel_info.dfs_state    = supported_channel_info.is_dfs
-                                         ? supported_channel_info.dfs_state
-                                         : beerocks::eDfsState::DFS_STATE_MAX;
+                                            ? supported_channel_info.dfs_state
+                                            : beerocks::eDfsState::DFS_STATE_MAX;
 
             for (auto bw : supported_channel_info.supported_bandwidths) {
                 // Since bwl nl8011 does not support ranking, set all ranking to highest rank (1).
@@ -740,6 +740,15 @@ bool ap_wlan_hal_nl80211::sta_deauth(int8_t vap_id, const std::string &mac, uint
         return false;
     }
 
+    return true;
+}
+
+bool ap_wlan_hal_nl80211::set_spatial_reuse_config(
+    const sMacAddr &ruid, uint8_t bss_color, uint8_t hesiga_sr_15_allowed, uint8_t srg_info_valid,
+    uint8_t non_srg_offset_valid, uint8_t psr_disallowed, uint8_t non_srg_obsspd_max_offset,
+    uint8_t srg_obsspd_min_offset, uint8_t srg_obsspd_max_offset, uint64_t srg_bss_color_bit_map,
+    uint64_t srg_partial_bssid_bit_map)
+{
     return true;
 }
 

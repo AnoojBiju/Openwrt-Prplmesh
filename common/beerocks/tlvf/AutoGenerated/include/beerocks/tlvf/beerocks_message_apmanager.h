@@ -373,6 +373,27 @@ class cACTION_APMANAGER_HOSTAP_CANCEL_ACTIVE_CAC_RESPONSE : public BaseClass
         uint8_t* m_success = nullptr;
 };
 
+class cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REQUEST : public BaseClass
+{
+    public:
+        cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REQUEST(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REQUEST(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REQUEST();
+
+        static eActionOp_APMANAGER get_action_op(){
+            return (eActionOp_APMANAGER)(ACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REQUEST);
+        }
+        sSpatialReuseRequest& params();
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_APMANAGER* m_action_op = nullptr;
+        sSpatialReuseRequest* m_params = nullptr;
+};
+
 class cACTION_APMANAGER_HOSTAP_CSA_ERROR_NOTIFICATION : public BaseClass
 {
     public:

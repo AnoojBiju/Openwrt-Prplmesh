@@ -1805,6 +1805,36 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
         break;
     }
 
+    case beerocks_message::ACTION_BACKHAUL_HOSTAP_CONFIG_SPATIAL_REUSE_REQUEST: {
+        auto &radio_mac = beerocks_header->actionhdr()->radio_mac();
+        auto db         = AgentDB::get();
+        auto radio      = db->get_radio_by_mac(radio_mac, AgentDB::eMacType::RADIO);
+        if (!radio) {
+            break;
+        }
+        auto &radio_manager = m_radio_managers[radio->front.iface_name];
+
+        LOG(DEBUG) << "received ACTION_BACKHAUL_HOSTAP_CONFIG_SPATIAL_REUSE_REQUEST";
+        auto request_in = beerocks_header->addClass<
+            beerocks_message::cACTION_BACKHAUL_HOSTAP_CONFIG_SPATIAL_REUSE_REQUEST>();
+        if (!request_in) {
+            LOG(ERROR) << "addClass cACTION_BACKHAUL_HOSTAP_CONFIG_SPATIAL_REUSE_REQUEST failed";
+            return false;
+        }
+
+        auto request_out = message_com::create_vs_message<
+            beerocks_message::cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REQUEST>(cmdu_tx);
+        if (!request_out) {
+            LOG(ERROR) << "Failed building message!";
+            return false;
+        }
+
+        LOG(DEBUG) << "send cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REQUEST";
+        request_out->params() = request_in->params();
+        send_cmdu(radio_manager.ap_manager_fd, cmdu_tx);
+        break;
+    }
+
     case beerocks_message::ACTION_BACKHAUL_HOSTAP_CANCEL_ACTIVE_CAC_REQUEST: {
         auto &radio_mac = beerocks_header->actionhdr()->radio_mac();
         auto db         = AgentDB::get();

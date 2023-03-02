@@ -113,6 +113,8 @@
 #include <tlvf/wfa_map/tlvSearchedService.h>
 #include <tlvf/wfa_map/tlvServicePrioritizationRule.h>
 #include <tlvf/wfa_map/tlvSpatialReuseConfigResponse.h>
+#include <tlvf/wfa_map/tlvSpatialReuseReport.h>
+#include <tlvf/wfa_map/tlvSpatialReuseRequest.h>
 #include <tlvf/wfa_map/tlvStaMacAddressType.h>
 #include <tlvf/wfa_map/tlvSteeringBTMReport.h>
 #include <tlvf/wfa_map/tlvSteeringPolicy.h>
@@ -467,6 +469,12 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     }
     case (wfa_map::eTlvTypeMap::TLV_ASSOCIATED_WIFI_6_STA_STATUS_REPORT): {
         return msg.addClass<wfa_map::tlvAssociatedWiFi6StaStatusReport>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_SPATIAL_REUSE_REQUEST): {
+        return msg.addClass<wfa_map::tlvSpatialReuseRequest>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_SPATIAL_REUSE_REPORT): {
+        return msg.addClass<wfa_map::tlvSpatialReuseReport>();
     }
     case (wfa_map::eTlvTypeMap::TLV_1905_LAYER_SECURITY_CAPABILITY): {
         return msg.addClass<wfa_map::tlv1905LayerSecurityCapability>();
