@@ -88,6 +88,9 @@ bool LinkMetricsCollectionTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx,
     return true;
 }
 
+// If time period is less than define ms then agent can send the ap metrics response
+#define GRACE_PERIOD_MS 150
+
 void LinkMetricsCollectionTask::work()
 {
     auto db = AgentDB::get();
@@ -116,11 +119,12 @@ void LinkMetricsCollectionTask::work()
         return;
     }
 
-    int elapsed_time_s = std::chrono::duration_cast<std::chrono::seconds>(
-                             now - m_ap_metrics_reporting_info.last_reporting_time_point)
-                             .count();
-
-    if (elapsed_time_s < m_ap_metrics_reporting_info.reporting_interval_s) {
+    auto elapsed_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                               now - m_ap_metrics_reporting_info.last_reporting_time_point)
+                               .count();
+    auto timeout_diff_ms =
+        (m_ap_metrics_reporting_info.reporting_interval_s * 1000 - elapsed_time_ms);
+    if (timeout_diff_ms > GRACE_PERIOD_MS) {
         return;
     }
 
