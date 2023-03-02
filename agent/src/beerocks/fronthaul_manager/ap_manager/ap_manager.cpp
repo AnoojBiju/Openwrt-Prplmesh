@@ -795,7 +795,7 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
                 .key_idx = 0,
                 .mac     = virtual_bss_creation_tlv->client_mac(),
                 .key     = {virtual_bss_creation_tlv->ptk(),
-                        virtual_bss_creation_tlv->ptk() + virtual_bss_creation_tlv->key_length()},
+                            virtual_bss_creation_tlv->ptk() + virtual_bss_creation_tlv->key_length()},
                 .key_seq = pw_key_seq,
 
                 // TODO: PPM-2368: We need to know the pairwise cipher. For now, use CCMP
@@ -819,7 +819,7 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
                 .key_idx = 1,
                 .mac     = beerocks::net::network_utils::ZERO_MAC,
                 .key     = {virtual_bss_creation_tlv->gtk(),
-                        virtual_bss_creation_tlv->gtk() + virtual_bss_creation_tlv->key_length()},
+                            virtual_bss_creation_tlv->gtk() + virtual_bss_creation_tlv->key_length()},
                 .key_seq = group_key_seq,
 
                 // TODO: PPM-2368: We need to know the groupwise cipher. For now, use CCMP
@@ -835,13 +835,14 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
 
         // TODO: PPM-2349: add support for the client capabilities
 
+        // If we get here, we handled the creation successfully.
+        send_virtual_bss_response(virtual_bss_creation_tlv->radio_uid(),
+                                  virtual_bss_creation_tlv->bssid(), true);
+
         // refresh the vaps info.
         // TODO: re-visit after PPM-1923 is fixed.
         handle_aps_update_list();
 
-        // If we get here, we handled the creation successfully.
-        send_virtual_bss_response(virtual_bss_creation_tlv->radio_uid(),
-                                  virtual_bss_creation_tlv->bssid(), true);
         return;
     }
 
@@ -857,14 +858,12 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
             return;
         }
 
-        // TODO: PPM-2350: add support for disassociating the client
-
-        // refresh the vaps info.
-        handle_aps_update_list();
-
         // If we get here, we handled the destruction successfully.
         send_virtual_bss_response(virtual_bss_destruction_tlv->radio_uid(),
                                   virtual_bss_destruction_tlv->bssid(), true);
+        // refresh the vaps info.
+        handle_aps_update_list();
+
         return;
     }
 
