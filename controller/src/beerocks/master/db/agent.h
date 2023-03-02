@@ -9,6 +9,7 @@
 #ifndef AGENT_H
 #define AGENT_H
 
+#include <array>
 #include <bcl/beerocks_defines.h>
 #include <bcl/beerocks_mac_map.h>
 #include <bcl/beerocks_message_structs.h>
