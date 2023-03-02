@@ -3373,6 +3373,71 @@ BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
 }
 cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST::~cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST() {
 }
+uint8_t& cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST::bridge_ifname_length() {
+    return (uint8_t&)(*m_bridge_ifname_length);
+}
+
+std::string cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST::bridge_ifname_str() {
+    char *bridge_ifname_ = bridge_ifname();
+    if (!bridge_ifname_) { return std::string(); }
+    auto str = std::string(bridge_ifname_, m_bridge_ifname_idx__);
+    auto pos = str.find_first_of('\0');
+    if (pos != std::string::npos) {
+        str.erase(pos);
+    }
+    return str;
+}
+
+char* cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST::bridge_ifname(size_t length) {
+    if( (m_bridge_ifname_idx__ == 0) || (m_bridge_ifname_idx__ < length) ) {
+        TLVF_LOG(ERROR) << "bridge_ifname length is smaller than requested length";
+        return nullptr;
+    }
+    return ((char*)m_bridge_ifname);
+}
+
+bool cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST::set_bridge_ifname(const std::string& str) { return set_bridge_ifname(str.c_str(), str.size()); }
+bool cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST::set_bridge_ifname(const char str[], size_t size) {
+    if (str == nullptr) {
+        TLVF_LOG(WARNING) << "set_bridge_ifname received a null pointer.";
+        return false;
+    }
+    if (m_bridge_ifname_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_bridge_ifname was already allocated!";
+        return false;
+    }
+    if (!alloc_bridge_ifname(size)) { return false; }
+    std::copy(str, str + size, m_bridge_ifname);
+    return true;
+}
+bool cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST::alloc_bridge_ifname(size_t count) {
+    if (m_lock_order_counter__ > 0) {;
+        TLVF_LOG(ERROR) << "Out of order allocation for variable length list bridge_ifname, abort!";
+        return false;
+    }
+    size_t len = sizeof(char) * count;
+    if(getBuffRemainingBytes() < len )  {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
+        return false;
+    }
+    m_lock_order_counter__ = 0;
+    uint8_t *src = (uint8_t *)&m_bridge_ifname[*m_bridge_ifname_length];
+    uint8_t *dst = src + len;
+    if (!m_parse__) {
+        size_t move_length = getBuffRemainingBytes(src) - len;
+        std::copy_n(src, move_length, dst);
+    }
+    m_wifi_credentials_size = (uint8_t *)((uint8_t *)(m_wifi_credentials_size) + len);
+    m_wifi_credentials = (WSC::cConfigData *)((uint8_t *)(m_wifi_credentials) + len);
+    m_bridge_ifname_idx__ += count;
+    *m_bridge_ifname_length += count;
+    if (!buffPtrIncrementSafe(len)) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
+        return false;
+    }
+    return true;
+}
+
 uint8_t& cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST::wifi_credentials_size() {
     return (uint8_t&)(*m_wifi_credentials_size);
 }
@@ -3387,7 +3452,7 @@ std::tuple<bool, WSC::cConfigData&> cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_RE
 }
 
 std::shared_ptr<WSC::cConfigData> cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST::create_wifi_credentials() {
-    if (m_lock_order_counter__ > 0) {
+    if (m_lock_order_counter__ > 1) {
         TLVF_LOG(ERROR) << "Out of order allocation for variable length list wifi_credentials, abort!";
         return nullptr;
     }
@@ -3400,7 +3465,7 @@ std::shared_ptr<WSC::cConfigData> cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQU
         TLVF_LOG(ERROR) << "Not enough available space on buffer";
         return nullptr;
     }
-    m_lock_order_counter__ = 0;
+    m_lock_order_counter__ = 1;
     m_lock_allocation__ = true;
     uint8_t *src = (uint8_t *)m_wifi_credentials;
     if (m_wifi_credentials_idx__ > 0) {
@@ -3485,6 +3550,7 @@ bool cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST::finalize()
 size_t cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST::get_initial_size()
 {
     size_t class_size = 0;
+    class_size += sizeof(uint8_t); // bridge_ifname_length
     class_size += sizeof(uint8_t); // wifi_credentials_size
     return class_size;
 }
@@ -3493,6 +3559,19 @@ bool cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST::init()
 {
     if (getBuffRemainingBytes() < get_initial_size()) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
+        return false;
+    }
+    m_bridge_ifname_length = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!m_parse__) *m_bridge_ifname_length = 0;
+    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
+        return false;
+    }
+    m_bridge_ifname = reinterpret_cast<char*>(m_buff_ptr__);
+    uint8_t bridge_ifname_length = *m_bridge_ifname_length;
+    m_bridge_ifname_idx__ = bridge_ifname_length;
+    if (!buffPtrIncrementSafe(sizeof(char) * (bridge_ifname_length))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (bridge_ifname_length) << ") Failed!";
         return false;
     }
     m_wifi_credentials_size = reinterpret_cast<uint8_t*>(m_buff_ptr__);

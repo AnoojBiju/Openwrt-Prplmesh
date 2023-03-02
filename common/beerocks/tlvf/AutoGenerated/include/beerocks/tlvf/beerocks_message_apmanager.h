@@ -992,6 +992,12 @@ class cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST : public BaseClass
         static eActionOp_APMANAGER get_action_op(){
             return (eActionOp_APMANAGER)(ACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST);
         }
+        uint8_t& bridge_ifname_length();
+        std::string bridge_ifname_str();
+        char* bridge_ifname(size_t length = 0);
+        bool set_bridge_ifname(const std::string& str);
+        bool set_bridge_ifname(const char buffer[], size_t size);
+        bool alloc_bridge_ifname(size_t count = 1);
         uint8_t& wifi_credentials_size();
         std::tuple<bool, WSC::cConfigData&> wifi_credentials(size_t idx);
         std::shared_ptr<WSC::cConfigData> create_wifi_credentials();
@@ -1003,12 +1009,15 @@ class cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST : public BaseClass
     private:
         bool init();
         eActionOp_APMANAGER* m_action_op = nullptr;
+        uint8_t* m_bridge_ifname_length = nullptr;
+        char* m_bridge_ifname = nullptr;
+        size_t m_bridge_ifname_idx__ = 0;
+        int m_lock_order_counter__ = 0;
         uint8_t* m_wifi_credentials_size = nullptr;
         WSC::cConfigData* m_wifi_credentials = nullptr;
         size_t m_wifi_credentials_idx__ = 0;
         std::vector<std::shared_ptr<WSC::cConfigData>> m_wifi_credentials_vector;
         bool m_lock_allocation__ = false;
-        int m_lock_order_counter__ = 0;
 };
 
 class cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_RESPONSE : public BaseClass

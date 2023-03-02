@@ -50,7 +50,8 @@ public:
     virtual bool
     update_vap_credentials(std::list<son::wireless_utils::sBssInfoConf> &bss_info_conf_list,
                            const std::string &backhaul_wps_ssid,
-                           const std::string &backhaul_wps_passphrase) override;
+                           const std::string &backhaul_wps_passphrase,
+                           const std::string &bridge_ifname) override;
     virtual bool sta_unassoc_rssi_measurement(const std::string &mac, int chan, int bw,
                                               int vht_center_frequency, int delay,
                                               int window_size) override;

@@ -192,7 +192,8 @@ public:
     virtual bool
     update_vap_credentials(std::list<son::wireless_utils::sBssInfoConf> &bss_info_conf_list,
                            const std::string &backhaul_wps_ssid,
-                           const std::string &backhaul_wps_passphrase) = 0;
+                           const std::string &backhaul_wps_passphrase,
+                           const std::string &bridge_ifname) = 0;
 
     /**
      * TODO: Move to the base class?

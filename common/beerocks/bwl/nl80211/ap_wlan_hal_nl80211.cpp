@@ -808,7 +808,8 @@ bool ap_wlan_hal_nl80211::sta_bss_steer(int8_t vap_id, const std::string &mac,
 
 bool ap_wlan_hal_nl80211::update_vap_credentials(
     std::list<son::wireless_utils::sBssInfoConf> &bss_info_conf_list,
-    const std::string &backhaul_wps_ssid, const std::string &backhaul_wps_passphrase)
+    const std::string &backhaul_wps_ssid, const std::string &backhaul_wps_passphrase,
+    const std::string &bridge_ifname)
 {
     // Load hostapd config for the radio
     prplmesh::hostapd::Configuration conf = load_hostapd_config(m_radio_info.iface_name);
@@ -886,6 +887,11 @@ bool ap_wlan_hal_nl80211::update_vap_credentials(
             LOG(ERROR) << "Failed to set the authentication/encryption parameters!";
             abort = true;
             break;
+        }
+
+        if (!bridge_ifname.empty() &&
+            beerocks::net::network_utils::linux_iface_is_up(bridge_ifname)) {
+            conf.set_create_vap_value(vap_id, "bridge", bridge_ifname);
         }
 
         LOG(DEBUG) << "Autoconfiguration for ssid: " << bss_it.ssid << " auth_type: " << auth_type

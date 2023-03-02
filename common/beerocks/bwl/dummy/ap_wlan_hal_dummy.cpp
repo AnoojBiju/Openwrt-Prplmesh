@@ -126,7 +126,7 @@ HALState ap_wlan_hal_dummy::attach(bool block)
     }
 
     std::list<son::wireless_utils::sBssInfoConf> bss_info_conf_list;
-    update_vap_credentials(bss_info_conf_list, "", "");
+    update_vap_credentials(bss_info_conf_list, "", "", "");
 
     // On Operational send the AP_Attached event to the AP Manager
     if (state == HALState::Operational) {
@@ -204,7 +204,8 @@ bool ap_wlan_hal_dummy::sta_bss_steer(int8_t vap_id, const std::string &mac,
 
 bool ap_wlan_hal_dummy::update_vap_credentials(
     std::list<son::wireless_utils::sBssInfoConf> &bss_info_conf_list,
-    const std::string &backhaul_wps_ssid, const std::string &backhaul_wps_passphrase)
+    const std::string &backhaul_wps_ssid, const std::string &backhaul_wps_passphrase,
+    const std::string &bridge_ifname)
 {
     std::vector<int> configured_vaps;
     for (auto &bss_info_conf : bss_info_conf_list) {
