@@ -1211,8 +1211,8 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
         }
 
         if (ap_wlan_hal->get_radio_info().channel == request->cs_params().channel &&
-            ap_wlan_hal->get_radio_info().bandwidth == request->cs_params().bandwidth &&
-            !request->tx_limit_valid()) {
+            utils::convert_bandwidth_to_enum(ap_wlan_hal->get_radio_info().bandwidth) ==
+                request->cs_params().bandwidth) {
             // No need to switch channels
             LOG(INFO) << "No need to switch channels as current channel and requested channels are "
                          "the same.";
