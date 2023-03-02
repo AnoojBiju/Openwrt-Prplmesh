@@ -772,18 +772,21 @@ bool ap_wlan_hal_whm::set(const std::string &param, const std::string &value, in
 bool ap_wlan_hal_whm::add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
                               std::string &bridge, bool vbss)
 {
+    // Virtual bss will not be covered by the pwhm, for now!
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return false;
 }
 
 bool ap_wlan_hal_whm::remove_bss(std::string &ifname)
 {
+    // Virtual bss will not be covered by the pwhm, for now!
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return false;
 }
 
 bool ap_wlan_hal_whm::add_key(const std::string &ifname, const sKeyInfo &key_info)
 {
+    // Virtual bss will not be covered by the pwhm, for now!
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return false;
 }
@@ -791,12 +794,14 @@ bool ap_wlan_hal_whm::add_key(const std::string &ifname, const sKeyInfo &key_inf
 bool ap_wlan_hal_whm::add_station(const std::string &ifname, const sMacAddr &mac,
                                   assoc_frame::AssocReqFrame &assoc_req)
 {
+    // Virtual bss will not be covered by the pwhm, for now!
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return false;
 }
 
 bool ap_wlan_hal_whm::get_key(const std::string &ifname, sKeyInfo &key_info)
 {
+    // Virtual bss will not be covered by the pwhm, for now!
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return false;
 }
@@ -804,6 +809,7 @@ bool ap_wlan_hal_whm::get_key(const std::string &ifname, sKeyInfo &key_info)
 bool ap_wlan_hal_whm::send_delba(const std::string &ifname, const sMacAddr &dst,
                                  const sMacAddr &src, const sMacAddr &bssid)
 {
+    // Virtual bss will not be covered by the pwhm, for now!
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return false;
 }
