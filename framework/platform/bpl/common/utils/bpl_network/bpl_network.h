@@ -68,6 +68,14 @@ public:
     static bool iface_get_mac(const std::string &iface, std::string &mac);
 
     /**
+     * @brief get ip address of an interface
+     * @param[in] iface : name of the interface
+     * @param[out] ip : string representation of the ip address
+     * @return bool : true if ip was written into, false otherwise
+    */
+    static bool iface_get_ip(const std::string &iface, std::string &ip);
+
+    /**
      * @brief get interface name for a given mac address
      *
      * @param[in] mac : mac address of the interface
@@ -75,6 +83,14 @@ public:
      * @return : true if iface contains a valid name, false otherwise
     */
     static bool iface_get_name(const sMacAddr &mac, std::string &iface);
+
+    /**
+     * @brief Gets the bridge name hosting the provided interface.
+     * @param[in] iface : name of the interface
+     * @param[out] bridge : name of the bridge
+     * @return true if a value was written to the output parameter bridge
+     */
+    static bool iface_get_host_bridge(const std::string &iface, std::string &bridge);
 
     /**
      * @brief fill the iface_info structure

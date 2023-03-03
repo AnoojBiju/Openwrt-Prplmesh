@@ -11,6 +11,7 @@
 #include <bcl/beerocks_string_utils.h>
 
 #include <dirent.h>
+#include <limits.h>
 #include <linux/if_bridge.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
@@ -429,6 +430,32 @@ bool bpl_network::iface_get_mac(const std::string &iface, std::string &mac)
     return true;
 }
 
+bool bpl_network::iface_get_ip(const std::string &iface, std::string &ip)
+{
+    struct ifreq ifr;
+    int fd;
+
+    ip.clear();
+
+    if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+        LOG(ERROR) << "Can't open SOCK_DGRAM socket";
+        return false;
+    }
+
+    ifr.ifr_addr.sa_family = AF_INET;
+    string_utils::copy_string(ifr.ifr_name, iface.c_str(), IFNAMSIZ);
+
+    if (ioctl(fd, SIOCGIFADDR, &ifr) == -1) {
+        LOG(ERROR) << "SIOCGIFADDR";
+        close(fd);
+        return false;
+    }
+    close(fd);
+    uint32_t ip_uint = ((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr.s_addr;
+    ip               = network_utils::ipv4_to_string(ip_uint);
+    return true;
+}
+
 bool bpl_network::iface_get_name(const sMacAddr &mac, std::string &iface)
 {
     bool found = false;
@@ -449,6 +476,19 @@ bool bpl_network::iface_get_name(const sMacAddr &mac, std::string &iface)
     if_freenameindex(head);
 
     return found;
+}
+
+bool bpl_network::iface_get_host_bridge(const std::string &iface, std::string &bridge)
+{
+    bridge.clear();
+    std::string bridge_path("/sys/class/net/" + iface + "/brport/bridge");
+    char resolvedPath[PATH_MAX];
+    if (!realpath(bridge_path.c_str(), resolvedPath)) {
+        return false;
+    }
+    std::string pathStr = resolvedPath;
+    bridge              = pathStr.substr(pathStr.rfind('/') + 1);
+    return true;
 }
 
 bool bpl_network::get_iface_info(network_utils::iface_info &info, const std::string &iface_name)

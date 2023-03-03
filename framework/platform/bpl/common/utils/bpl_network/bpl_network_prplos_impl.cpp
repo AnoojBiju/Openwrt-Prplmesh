@@ -91,6 +91,43 @@ static bool get_lower_layer_for_interface(const std::string &iface, std::string 
 }
 
 /**
+ * @brief get the path of a port for the given interface without specifying the bridge
+ *
+ * @param[in] iface  : name of the interface
+ * @param[out] port  : full path of the port instance
+*/
+static bool get_bridge_port_path(const std::string &iface, std::string &port)
+{
+    AmbiorixConnectionSmartPtr amxb_connection = AmbiorixConnectionManager::get_connection();
+    if (!amxb_connection) {
+        LOG(ERROR) << "can't retrieve connection to amxb bus";
+    }
+    std::string bridge_filter    = "Bridge.*.";
+    std::string port_filter      = "Port.[ManagementPort == 0].";
+    std::string port_search_path = "Device.Bridging." + bridge_filter + port_filter;
+
+    LOG(DEBUG) << "retrieve bridge ports with search path " << port_search_path;
+
+    std::vector<std::string> port_paths;
+    if (!amxb_connection->resolve_path(port_search_path, port_paths)) {
+        LOG(ERROR) << "cannot retrieve the port objects corresponding to " << port_search_path;
+        return false;
+    }
+
+    std::string tmp_str;
+    for (auto const &port_path : port_paths) {
+        if (!get_bridge_port_name(port_path, tmp_str)) {
+            continue;
+        }
+        if (tmp_str == iface) {
+            port = port_path;
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
  * @brief get the path of a bridge port for the given interface
  * 
  * @param[in] bridge : name of the bridge interface
@@ -390,6 +427,32 @@ bool bpl_network::iface_get_mac(const std::string &iface, std::string &mac)
     return true;
 }
 
+bool bpl_network::iface_get_ip(const std::string &iface, std::string &ip)
+{
+    ip.clear();
+
+    AmbiorixConnectionSmartPtr amxb_connection = AmbiorixConnectionManager::get_connection();
+    if (!amxb_connection) {
+        LOG(ERROR) << "can't retrieve connection to amxb bus";
+        return false;
+    }
+
+    // first resolve: identify the IP.Interface and its first IP.Interface.IPv4Address instance;
+    std::string ip_iface = "Device.IP.Interface.[Name == '" + iface + "'].";
+    std::string ip_addr  = ip_iface + "IPv4Address.[IPAddress != '']";
+
+    std::vector<std::string> ip_addr_paths;
+
+    if (!amxb_connection->resolve_path(ip_addr, ip_addr_paths)) {
+        LOG(ERROR) << "cannot retrieve ip addr object for " << iface;
+        return false;
+    }
+
+    // if we got here, at least one (and at most one) resolve path was successful
+    ip = amxb_connection->get_param(ip_addr_paths[0], "IPAddress")->get<std::string>();
+    return true;
+}
+
 bool bpl_network::iface_get_name(const sMacAddr &mac, std::string &iface)
 {
     // try to get matching MAC Address from either Device.WiFi.SSID or Device.Ethernet.Interface
@@ -418,13 +481,46 @@ bool bpl_network::iface_get_name(const sMacAddr &mac, std::string &iface)
 
     if (!amxb_connection->resolve_path(ssid_filter, iface_paths)) {
         if (!amxb_connection->resolve_path(eth_filter, iface_paths)) {
-            LOG(ERROR) << "can't retrieve the interface object corresponding to "
-                       << mac_str;
+            LOG(ERROR) << "can't retrieve the interface object corresponding to " << mac_str;
             return false;
         }
     }
     // if we got here, at least one (and at most one) resolve path was successful
     iface = amxb_connection->get_param(iface_paths[0], "Name")->get<std::string>();
+    return true;
+}
+
+bool bpl_network::iface_get_host_bridge(const std::string &iface, std::string &bridge)
+{
+
+    bridge.clear();
+
+    AmbiorixConnectionSmartPtr amxb_connection = AmbiorixConnectionManager::get_connection();
+    if (!amxb_connection) {
+        LOG(ERROR) << "can't retrieve connection to amxb bus";
+        return false;
+    }
+
+    std::string port_path;
+    get_bridge_port_path(iface, port_path);
+    // returns a string Device.Bridging.Bridge.x.Port.y.
+    // the useful information here is X;
+    // to get bridge name, replace y with 1 and read the name
+    // from the management port
+
+    if (port_path.back() == '.') {
+        port_path.pop_back();
+    } // remove trailing '.' if any
+
+    auto pos = port_path.rfind('.');
+    if (pos == std::string::npos) {
+        LOG(ERROR) << "malformed path " << port_path;
+        return false;
+    }
+    auto management_port = port_path.substr(0, pos) + ".1.";
+
+    bridge = amxb_connection->get_param(management_port, "Name")->get<std::string>();
+
     return true;
 }
 
