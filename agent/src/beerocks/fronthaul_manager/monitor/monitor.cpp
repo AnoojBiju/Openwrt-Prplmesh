@@ -2322,8 +2322,8 @@ void Monitor::update_vaps_in_db()
 
     std::string bridge_iface_mac;
     std::string bridge_iface_ip;
-    beerocks::net::network_utils::linux_iface_get_ip(bridge_iface, bridge_iface_ip);
     bpl::bpl_network::iface_get_mac(bridge_iface, bridge_iface_mac);
+    bpl::bpl_network::iface_get_ip(bridge_iface, bridge_iface_ip);
 
     for (int vap_id = beerocks::IFACE_VAP_ID_MIN; vap_id <= beerocks::IFACE_VAP_ID_MAX; vap_id++) {
 
@@ -2334,15 +2334,14 @@ void Monitor::update_vaps_in_db()
             auto curr_vap = radio_vaps.at(vap_id);
             std::string vap_bridge_iface_mac;
             std::string vap_bridge_iface_ip;
-            auto vap_bridge_iface =
-                beerocks::net::network_utils::linux_iface_get_host_bridge(iface_name);
+            std::string vap_bridge_iface;
+            bpl::bpl_network::iface_get_host_bridge(iface_name, vap_bridge_iface);
             if (vap_bridge_iface == bridge_iface) {
                 vap_bridge_iface_mac = bridge_iface_mac;
                 vap_bridge_iface_ip  = bridge_iface_ip;
             } else if (vap_bridge_iface != "") {
-                beerocks::net::network_utils::linux_iface_get_ip(vap_bridge_iface,
-                                                                 vap_bridge_iface_ip);
                 bpl::bpl_network::iface_get_mac(vap_bridge_iface, vap_bridge_iface_mac);
+                bpl::bpl_network::iface_get_ip(vap_bridge_iface, vap_bridge_iface_ip);
             }
 
             auto vap_node = mon_db.vap_add(iface_name, vap_id);

@@ -8,8 +8,8 @@
 
 #include "monitor_db.h"
 
-#include <bcl/network/network_utils.h>
 #include <bcl/son/son_wireless_utils.h>
+#include <bpl_network/bpl_network.h>
 #include <easylogging++.h>
 
 using namespace son;
@@ -106,7 +106,7 @@ std::ostream &operator<<(std::ostream &ost, monitor_vap_node *vap_node)
 std::string monitor_vap_node::get_ipv4()
 {
     std::string ip;
-    network_utils::linux_iface_get_ip(iface, ip);
+    bpl::bpl_network::iface_get_ip(iface, ip);
     return ip;
 }
 
