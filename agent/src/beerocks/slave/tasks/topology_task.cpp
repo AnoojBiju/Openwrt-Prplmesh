@@ -173,8 +173,7 @@ void TopologyTask::handle_topology_discovery(ieee1905_1::CmduMessageRx &cmdu_rx,
     }
 
     std::string local_receiving_iface_mac_str;
-    if (!network_utils::linux_iface_get_mac(local_receiving_iface_name,
-                                            local_receiving_iface_mac_str)) {
+    if (!bpl_network::iface_get_mac(local_receiving_iface_name, local_receiving_iface_mac_str)) {
         LOG(ERROR) << "Failed getting MAC address for interface: " << local_receiving_iface_name;
         return;
     }
@@ -350,7 +349,7 @@ void TopologyTask::send_topology_discovery()
         }
 
         std::string iface_mac_str;
-        if (!network_utils::linux_iface_get_mac(iface_name, iface_mac_str)) {
+        if (!bpl_network::iface_get_mac(iface_name, iface_mac_str)) {
             LOG(ERROR) << "Failed getting MAC address for interface: " << iface_name;
             return;
         }
@@ -461,7 +460,7 @@ bool TopologyTask::add_device_information_tlv()
 
         // default to zero mac if get_mac fails.
         std::string eth_iface_mac = network_utils::ZERO_MAC_STRING;
-        network_utils::linux_iface_get_mac(local_eth_iface_name, eth_iface_mac);
+        bpl_network::iface_get_mac(local_eth_iface_name, eth_iface_mac);
         localInterfaceInfo->mac()               = tlvf::mac_from_string(eth_iface_mac);
         localInterfaceInfo->media_type()        = media_type;
         localInterfaceInfo->media_info_length() = 0;

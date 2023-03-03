@@ -12,6 +12,7 @@
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
 #include <bcl/son/son_wireless_utils.h>
+#include <bpl_network/bpl_network.h>
 
 #include <limits.h>
 #include <sys/stat.h>
@@ -419,7 +420,7 @@ bool base_wlan_hal_dummy::refresh_radio_info()
     m_radio_info.he_mcs_set       = {};
 
     std::string radio_mac;
-    beerocks::net::network_utils::linux_iface_get_mac(m_radio_info.iface_name, radio_mac);
+    beerocks::bpl::bpl_network::iface_get_mac(m_radio_info.iface_name, radio_mac);
     for (int vap_id = 0; vap_id < predefined_vaps_num; vap_id++) {
         auto mac = tlvf::mac_from_string(radio_mac);
         mac.oct[5] += vap_id;
@@ -498,7 +499,7 @@ bool base_wlan_hal_dummy::process_ext_events(int fd)
 std::string base_wlan_hal_dummy::get_radio_mac()
 {
     std::string mac;
-    if (!beerocks::net::network_utils::linux_iface_get_mac(m_radio_info.iface_name, mac)) {
+    if (!beerocks::bpl::bpl_network::iface_get_mac(m_radio_info.iface_name, mac)) {
         LOG(ERROR) << "Failed to get radio mac from ifname " << m_radio_info.iface_name;
     }
     return mac;

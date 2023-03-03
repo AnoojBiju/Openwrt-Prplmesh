@@ -14,6 +14,7 @@
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
 #include <bcl/son/son_wireless_utils.h>
+#include <bpl_network/bpl_network.h>
 #include <easylogging++.h>
 #include <math.h>
 #include <net/if.h> // if_nametoindex
@@ -3052,7 +3053,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         msg->params.mac         = tlvf::mac_from_string(MACAddress);
         msg->params.status_code = status_code;
         std::string bssid;
-        beerocks::net::network_utils::linux_iface_get_mac(vap_name, bssid);
+        beerocks::bpl::bpl_network::iface_get_mac(vap_name, bssid);
         LOG(DEBUG) << "BTM response source BSSID: " << bssid;
         msg->params.source_bssid = tlvf::mac_from_string(bssid);
 

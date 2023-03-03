@@ -12,6 +12,7 @@
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
 #include <bcl/son/son_wireless_utils.h>
+#include <bpl_network/bpl_network.h>
 #include <bwl/nl80211_client_factory.h>
 #include <net/if.h> // if_nametoindex
 
@@ -983,7 +984,7 @@ bool base_wlan_hal_dwpal::process_ext_events(int fd)
 std::string base_wlan_hal_dwpal::get_radio_mac()
 {
     std::string mac;
-    if (!beerocks::net::network_utils::linux_iface_get_mac(m_radio_info.iface_name, mac)) {
+    if (!beerocks::bpl::bpl_network::iface_get_mac(m_radio_info.iface_name, mac)) {
         LOG(ERROR) << "Failed to get radio mac from ifname " << m_radio_info.iface_name;
     }
     return mac;

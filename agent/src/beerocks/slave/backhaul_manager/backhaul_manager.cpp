@@ -112,7 +112,7 @@ BackhaulManager::BackhaulManager(const config_file::sConfigSlave &config,
     m_eFSMState = EState::INIT;
 
     std::string bridge_mac;
-    if (!beerocks::net::network_utils::linux_iface_get_mac(config.bridge_iface, bridge_mac)) {
+    if (!bpl::bpl_network::iface_get_mac(config.bridge_iface, bridge_mac)) {
         LOG(ERROR) << "Failed getting MAC address for interface: " << config.bridge_iface;
     } else {
         db->dm_set_agent_mac(bridge_mac);

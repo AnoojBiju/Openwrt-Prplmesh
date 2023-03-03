@@ -28,6 +28,7 @@
 #include <bcl/beerocks_utils.h>
 #include <bcl/beerocks_wifi_channel.h>
 #include <bcl/network/network_utils.h>
+#include <bpl_network/bpl_network.h>
 #include <btl/broker_client_factory_factory.h>
 
 #include <beerocks/tlvf/beerocks_message.h>
@@ -91,6 +92,7 @@ constexpr std::chrono::seconds WAIT_FOR_FRONTHAUL_JOINED_TIMEOUT_SEC  = std::chr
 //////////////////////////////////////////////////////////////////////////////
 
 using namespace beerocks;
+using namespace bpl;
 using namespace net;
 using namespace son;
 
@@ -610,7 +612,7 @@ bool slave_thread::read_platform_configuration()
         std::string iface_mac;
         for (const auto &lan_iface : lan_iface_list) {
 
-            if (beerocks::net::network_utils::linux_iface_get_mac(lan_iface, iface_mac)) {
+            if (bpl_network::iface_get_mac(lan_iface, iface_mac)) {
                 db->ethernet.lan.emplace_back(lan_iface, tlvf::mac_from_string(iface_mac));
             }
         }
@@ -4047,7 +4049,7 @@ bool slave_thread::agent_fsm()
 
         auto db = AgentDB::get();
         std::string iface_mac;
-        if (!network_utils::linux_iface_get_mac(db->bridge.iface_name, iface_mac)) {
+        if (!bpl_network::iface_get_mac(db->bridge.iface_name, iface_mac)) {
             LOG(ERROR) << "Failed reading addresses from the bridge!";
             platform_notify_error(bpl::eErrorCode::BH_READING_DATA_FROM_THE_BRIDGE, "");
             m_radio_managers.do_on_each_radio_manager(
@@ -4066,7 +4068,7 @@ bool slave_thread::agent_fsm()
         // configuration from the Platform Manager. Since we initialize the local_gw flag later,
         // check if the WAN interface is empty instead of the local_gw flag.
         if (!db->ethernet.wan.iface_name.empty()) {
-            if (!network_utils::linux_iface_get_mac(db->ethernet.wan.iface_name, iface_mac)) {
+            if (!bpl_network::iface_get_mac(db->ethernet.wan.iface_name, iface_mac)) {
                 LOG(ERROR) << "Failed reading wan mac address! iface="
                            << db->ethernet.wan.iface_name;
                 m_radio_managers.do_on_each_radio_manager(

@@ -200,7 +200,7 @@ endif()
 add_library(${PROJECT_NAME} ${bwl_common_sources} ${bwl_platform_sources})
 set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-Wl,-z,defs")
 set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${prplmesh_VERSION} SOVERSION ${prplmesh_VERSION_MAJOR})
-target_link_libraries(${PROJECT_NAME} bcl elpp ${BWL_LIBS})
+target_link_libraries(${PROJECT_NAME} bcl bpl elpp ${BWL_LIBS})
 target_include_directories(${PROJECT_NAME}
     PRIVATE
         ${PLATFORM_INCLUDE_DIR}
@@ -243,7 +243,7 @@ if (BUILD_TESTS)
         PUBLIC
             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     )
-    target_link_libraries(${TEST_PROJECT_NAME} prplmesh_hostapd bcl elpp ${BWL_LIBS})
+    target_link_libraries(${TEST_PROJECT_NAME} prplmesh_hostapd bcl bpl elpp ${BWL_LIBS})
     target_link_libraries(${TEST_PROJECT_NAME} gtest_main)
     install(TARGETS ${TEST_PROJECT_NAME} DESTINATION tests)
     add_test(NAME ${TEST_PROJECT_NAME} COMMAND $<TARGET_FILE:${TEST_PROJECT_NAME}>)

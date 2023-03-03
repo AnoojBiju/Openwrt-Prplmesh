@@ -19,6 +19,8 @@
 #include <bcl/beerocks_logging_custom.h>
 #include <bpl/bpl_cfg.h>
 
+#include <bpl_network/bpl_network.h>
+
 #include <beerocks/tlvf/beerocks_message.h>
 
 #include <tlvf/tlvftypes.h>
@@ -63,7 +65,7 @@ Monitor::Monitor(const std::string &monitor_iface_,
      * received from controller that is addressed to this monitor instance.
      */
     std::string radio_mac = beerocks::net::network_utils::ZERO_MAC_STRING;
-    if (!beerocks::net::network_utils::linux_iface_get_mac(monitor_iface, radio_mac)) {
+    if (!bpl::bpl_network::iface_get_mac(monitor_iface, radio_mac)) {
         LOG(ERROR) << "Failed getting MAC address for interface: " << monitor_iface;
         m_radio_mac = beerocks::net::network_utils::ZERO_MAC;
     } else {
@@ -2320,8 +2322,8 @@ void Monitor::update_vaps_in_db()
 
     std::string bridge_iface_mac;
     std::string bridge_iface_ip;
-    beerocks::net::network_utils::linux_iface_get_mac(bridge_iface, bridge_iface_mac);
     beerocks::net::network_utils::linux_iface_get_ip(bridge_iface, bridge_iface_ip);
+    bpl::bpl_network::iface_get_mac(bridge_iface, bridge_iface_mac);
 
     for (int vap_id = beerocks::IFACE_VAP_ID_MIN; vap_id <= beerocks::IFACE_VAP_ID_MAX; vap_id++) {
 
@@ -2338,10 +2340,9 @@ void Monitor::update_vaps_in_db()
                 vap_bridge_iface_mac = bridge_iface_mac;
                 vap_bridge_iface_ip  = bridge_iface_ip;
             } else if (vap_bridge_iface != "") {
-                beerocks::net::network_utils::linux_iface_get_mac(vap_bridge_iface,
-                                                                  vap_bridge_iface_mac);
                 beerocks::net::network_utils::linux_iface_get_ip(vap_bridge_iface,
                                                                  vap_bridge_iface_ip);
+                bpl::bpl_network::iface_get_mac(vap_bridge_iface, vap_bridge_iface_mac);
             }
 
             auto vap_node = mon_db.vap_add(iface_name, vap_id);
