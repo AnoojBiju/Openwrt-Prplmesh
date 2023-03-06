@@ -53,6 +53,12 @@
  */
 constexpr auto fsm_timer_period = std::chrono::milliseconds(1000);
 
+/**
+ * Time to wait before restoring the behavior of deauthenticating
+ * unknown stations on a new VBSS.
+ */
+constexpr auto vbss_deauth_unknown_stas_grace_period = std::chrono::milliseconds(2000);
+
 #define SELECT_TIMEOUT_MSC 1000
 #define ACS_READ_SLEEP_USC 1000
 #define READ_ACS_ATTEMPT_MAX 5
@@ -893,12 +899,24 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
 
         // TODO: PPM-2349: add support for the client capabilities
 
-        // Restore the behavior of deauthenticating unknown STAs:
-        if (!ap_wlan_hal->set_no_deauth_unknown_sta(ifname, false)) {
-            LOG(ERROR) << "Failed to set no_deauth_unknown_sta! ifname: " << ifname;
-            send_virtual_bss_response(virtual_bss_creation_tlv->radio_uid(),
-                                      virtual_bss_creation_tlv->bssid(), false);
-            return;
+        // Restore deauthenticating unknown stations only after some
+        // time, to give the AP a bit more time to process any pending
+        // frames.
+        m_vbss_deauth_unknown_stas_timer = m_timer_manager->add_timer(
+            "vbss_deauth_unknown_stas_timer", vbss_deauth_unknown_stas_grace_period,
+            std::chrono::milliseconds::zero(), [=](int fd, beerocks::EventLoop &loop) {
+                m_timer_manager->remove_timer(m_vbss_deauth_unknown_stas_timer);
+                LOG(DEBUG) << "Restoring set_no_deauth_unknown_sta to false";
+                // Restore the behavior of deauthenticating unknown STAs:
+                if (!ap_wlan_hal->set_no_deauth_unknown_sta(ifname, false)) {
+                    LOG(WARNING) << "Failed to set no_deauth_unknown_sta! ifname: " << ifname;
+                }
+                return true;
+            });
+
+        if (m_vbss_deauth_unknown_stas_timer == beerocks::net::FileDescriptor::invalid_descriptor) {
+            LOG(WARNING) << "Failed to create the vbss_deauth_unknown_stas timer!";
+            // This is not a blocker, keep going.
         }
 
         // Now that the BSS is ready, update the beacon in case it's

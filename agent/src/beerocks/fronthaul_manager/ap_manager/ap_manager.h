@@ -294,6 +294,11 @@ private:
     int m_fsm_timer = beerocks::net::FileDescriptor::invalid_descriptor;
 
     /**
+     * File descriptor of the timer to resume deauthenticating unknown stations.
+     */
+    int m_vbss_deauth_unknown_stas_timer = beerocks::net::FileDescriptor::invalid_descriptor;
+
+    /**
      * CMDU client connected to the the CMDU server running in slave.
      * This object is dynamically created using the CMDU client factory for the slave provided in 
      * class constructor.
