@@ -485,6 +485,25 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
         if (cntrxCtx) {
             return cntrxCtx->handle_vbss_destruction(vbssid);
         }
+        auto radio = m_database.get_radio_by_uid(vbss_event_tlv->radio_uid());
+        if (!radio) {
+            LOG(ERROR) << "Could not find radio with UID '" << vbss_event_tlv->radio_uid() << "'";
+            return false;
+        }
+        auto bss_it = radio->bsses.find(vbss_event_tlv->bssid());
+        if (bss_it == radio->bsses.end()) {
+            LOG(ERROR) << "BSS '" << vbss_event_tlv->bssid() << "' not found on radio '"
+                       << vbss_event_tlv->radio_uid() << "'";
+            return false;
+        }
+        auto bss = bss_it->second;
+        if (!m_database.remove_vap(*radio, *bss)) {
+            LOG(ERROR) << "Could not remove VAP with BSSID '" << vbss_event_tlv->bssid()
+                       << "' on radio '" << vbss_event_tlv->radio_uid() << "'";
+            return false;
+        }
+
+        return true;
     }
 
     LOG(DEBUG) << "Checking existing moves with creation state";
