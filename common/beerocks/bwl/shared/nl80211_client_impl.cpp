@@ -482,10 +482,13 @@ bool nl80211_client_impl::get_radio_info(const std::string &interface_name, radi
                                 //set the bit if mu_beamformer is supported.
                                 band.he_capability    = band.he_capability | (1 << 6);
                                 band.wifi6_capability = band.wifi6_capability | ((uint64_t)1 << 37);
-                                break;
-                            case 1:
                                 //set the bit if su_beamformee is supported.
                                 band.wifi6_capability = band.wifi6_capability | ((uint64_t)1 << 38);
+                                break;
+                            case 1:
+                                //Supports only mu_beamformer
+                                band.he_capability    = band.he_capability | (1 << 6);
+                                band.wifi6_capability = band.wifi6_capability | ((uint64_t)1 << 37);
                                 break;
                             default:
                                 break;

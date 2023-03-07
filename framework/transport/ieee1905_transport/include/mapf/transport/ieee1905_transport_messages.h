@@ -69,7 +69,7 @@ inline std::ostream &operator<<(std::ostream &out, Type value) { return out << T
 class Message {
 public:
     static constexpr uint32_t kMessageMagic   = 0xB8C16F47;
-    static constexpr uint32_t kMaxFrameLength = 4096;
+    static constexpr uint32_t kMaxFrameLength = 8192;
 
     class Frame {
     public:

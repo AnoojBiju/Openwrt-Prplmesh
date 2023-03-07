@@ -582,7 +582,9 @@ bool CapabilityReportingTask::add_ap_wifi6_capabilities(const std::string &iface
                                     (radio->he_mcs_set[9] << 16) | (radio->he_mcs_set[8] << 24));
         }
         role->flags2().su_beamformer                = wifi6_caps->su_beamformer;
+		LOG(DEBUG) << "THE VALUE OF su_beamformee " << wifi6_caps->su_beamformee;
         role->flags2().su_beamformee                = wifi6_caps->su_beamformee;
+		LOG(DEBUG) << "THE VALUE OF mu_Beamformer_status " << wifi6_caps->mu_Beamformer_status;
         role->flags2().mu_Beamformer_status         = wifi6_caps->mu_Beamformer_status;
         role->flags2().beamformee_sts_less_80mhz    = wifi6_caps->beamformee_sts_less_80mhz;
         role->flags2().beamformee_sts_greater_80mhz = wifi6_caps->beamformee_sts_greater_80mhz;
