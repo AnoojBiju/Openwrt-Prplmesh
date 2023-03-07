@@ -1195,6 +1195,137 @@ bool ap_wlan_hal_dwpal::sta_deauth(int8_t vap_id, const std::string &mac, uint32
     return true;
 }
 
+bool load_config_file(std::string &ruid, std::string &fname, std::string &vap, std::vector<std::string> &hostap_config_main_vap, std::vector<std::string> &hostap_config_logical_vap) {
+
+    bool loaded                                = false;
+    std::string line;
+    std::string bssid;
+    std::string main_vap;
+    std::string main_vap_bssid;
+    std::vector<std::string> hostapd_cfg_names = {
+        "/var/run/hostapd-phy0.conf", "/var/run/hostapd-phy1.conf", "/var/run/hostapd-phy2.conf",
+        "/var/run/hostapd-phy3.conf"};
+
+    for (const auto &try_fname : hostapd_cfg_names) {
+        LOG(DEBUG) << "Trying to load " << try_fname << "...";
+        hostap_config_main_vap.clear();
+        hostap_config_logical_vap.clear();
+
+        if (!beerocks::os_utils::file_exists(try_fname)) {
+            continue;
+        }
+
+        std::ifstream file;
+        bool main_vap_end = false;
+        file.open(try_fname);
+        unsigned int curLine = 0;
+        while(getline(file, line)) {
+            const std::string interface_eq("interface=");
+            if (line.compare(0, interface_eq.length(), interface_eq) == 0) {
+                main_vap.assign(line, interface_eq.length(), std::string::npos);
+            }
+
+            const std::string bssid_eq("bssid=");
+            if (line.compare(0, bssid_eq.length(), bssid_eq) == 0) {
+                bssid.assign(line, bssid_eq.length(), std::string::npos);
+                LOG(DEBUG) << "bssid = " << bssid;
+                LOG(DEBUG) << "found: " << "bssid= @"<< "line: " << curLine;
+            }
+
+            if (line.empty() && !main_vap_end) {
+                LOG(DEBUG) << "empty line found at = line:" << curLine;
+                main_vap_bssid = bssid;
+                vap = main_vap;
+                main_vap_end = true;
+            }
+
+            if (!main_vap_end) {
+                hostap_config_main_vap.push_back(line);
+            } else {
+                hostap_config_logical_vap.push_back(line);
+            }
+            curLine++;
+        }
+
+        if (main_vap_bssid != ruid) {
+            LOG(DEBUG) << "bssid not available in this config file: " << try_fname;
+            file.close();
+            continue;
+        } else {
+            LOG(DEBUG) << "bssid_found";
+        }
+
+        loaded = true;
+        file.close();
+        fname.assign(try_fname);
+        break;
+    }
+
+    if (!loaded) {
+        hostap_config_main_vap.clear();
+        hostap_config_logical_vap.clear();
+    }
+
+    return loaded;
+}
+
+bool ap_wlan_hal_dwpal::set_spatial_reuse_config(
+    const sMacAddr &ruid, uint8_t bss_color, uint8_t hesiga_sr_15_allowed, uint8_t srg_info_valid,
+    uint8_t non_srg_offset_valid, uint8_t psr_disallowed, uint8_t non_srg_obsspd_max_offset,
+    uint8_t srg_obsspd_min_offset, uint8_t srg_obsspd_max_offset, uint64_t srg_bss_color_bit_map,
+    uint64_t srg_partial_bssid_bit_map)
+{
+    std::string fname;
+    std::string vap;
+    std::vector<std::string> hostap_config_main_vap;
+    std::vector<std::string> hostap_config_logical_vap;
+    bool config_available = false;
+    std::string bssid = tlvf::mac_to_string(ruid);
+
+    if (!load_config_file(bssid, fname , vap, hostap_config_main_vap, hostap_config_logical_vap)) {
+        LOG(ERROR) << "config not found";
+    }
+
+    LOG(DEBUG) << "file name =" << fname;
+    LOG(DEBUG) << "vap =" << vap;
+
+    std::ofstream outfile;
+    outfile.open(fname , std::ofstream::out | std::ofstream::trunc); // opens the file
+    if(!outfile) { // file couldn't be opened
+        LOG(ERROR) << "Error: file could not be opened";
+        exit(1);
+    }
+
+    for (uint8_t i = 0; i < hostap_config_main_vap.size(); i++) {
+        const std::string bss_clr_eq("bss_color=");
+        if (hostap_config_main_vap[i].compare(0, bss_clr_eq.length(), bss_clr_eq) == 0) {
+            //LOG(DEBUG) << "data written to file";
+            outfile << "bss_color=" + std::to_string(126) << std::endl;
+            config_available = true;
+
+        } else {
+            outfile << hostap_config_main_vap[i] << std::endl;
+            //LOG(DEBUG) << "writing to out file";
+        }
+    }
+
+    if (!config_available) {
+        outfile << "bss_color=" << std::to_string(225) << std::endl;
+        outfile << "hesisga=" << std::to_string(128) << std::endl;
+    }
+
+    for (uint8_t i = 0; i < hostap_config_logical_vap.size(); i++) {
+        outfile << hostap_config_logical_vap[i] << std::endl;
+    }
+    outfile.close();
+    // Send the command
+    std::string cmd("RECONF " + vap);
+    if (!dwpal_send_cmd(cmd)) {
+        LOG(ERROR) << "Spatial Reuse: \"" << cmd << "\" command to hostapd has failed!";
+    }
+    return true;
+}
+
 bool ap_wlan_hal_dwpal::sta_bss_steer(int8_t vap_id, const std::string &mac,
                                       const std::string &bssid, int oper_class, int chan,
                                       int disassoc_timer_btt, int valid_int_btt, int reason)

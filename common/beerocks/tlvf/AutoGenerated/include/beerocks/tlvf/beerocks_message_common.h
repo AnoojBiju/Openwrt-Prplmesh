@@ -132,6 +132,28 @@ typedef struct sApChannelSwitch {
     }
 } __attribute__((packed)) sApChannelSwitch;
 
+typedef struct sSpatialReuseRequest {
+    sMacAddr ruid;
+    uint8_t bss_color;
+    uint8_t hesiga_sr_15_allowed;
+    uint8_t srg_info_valid;
+    uint8_t non_srg_offset_valid;
+    uint8_t psr_disallowed;
+    uint8_t non_srg_obsspd_max_offset;
+    uint8_t srg_obsspd_min_offset;
+    uint8_t srg_obsspd_max_offset;
+    uint64_t srg_bss_color_bit_map;
+    uint64_t srg_partial_bssid_bit_map;
+    void struct_swap(){
+        ruid.struct_swap();
+        tlvf_swap(64, reinterpret_cast<uint8_t*>(&srg_bss_color_bit_map));
+        tlvf_swap(64, reinterpret_cast<uint8_t*>(&srg_partial_bssid_bit_map));
+    }
+    void struct_init(){
+        ruid.struct_init();
+    }
+} __attribute__((packed)) sSpatialReuseRequest;
+
 typedef struct sDfsCacCompleted {
     uint32_t timeout;
     uint32_t frequency;

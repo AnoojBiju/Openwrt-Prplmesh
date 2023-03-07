@@ -1797,7 +1797,10 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
         }
 
         LOG(DEBUG) << "send cACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START";
-        request_out->cs_params()      = request_in->cs_params();
+        request_out->cs_params() = request_in->cs_params();
+        if (request_in->spatial_reuse_valid()) {
+            request_out->params() = request_in->params();
+        }
         request_out->tx_limit()       = request_in->tx_limit();
         request_out->tx_limit_valid() = request_in->tx_limit_valid();
         send_cmdu(radio_manager.ap_manager_fd, cmdu_tx);

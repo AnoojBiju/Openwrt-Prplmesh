@@ -1147,6 +1147,20 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
                    << beerocks::utils::convert_bandwidth_to_int(
                           (beerocks::eWiFiBandwidth)request->cs_params().bandwidth);
 
+        if (request->spatial_reuse_valid()) {
+            if (!ap_wlan_hal->set_spatial_reuse_config(
+                    request->params().ruid, request->params().bss_color,
+                    request->params().hesiga_sr_15_allowed, request->params().srg_info_valid,
+                    request->params().non_srg_offset_valid, request->params().psr_disallowed,
+                    request->params().non_srg_obsspd_max_offset,
+                    request->params().srg_obsspd_min_offset,
+                    request->params().srg_obsspd_max_offset,
+                    request->params().srg_bss_color_bit_map,
+                    request->params().srg_partial_bssid_bit_map)) {
+                    LOG(ERROR) << "set_spatial_reuse_config failed";
+            }
+        }
+
         LOG_IF(request->cs_params().channel == 0, DEBUG) << "Start ACS";
 
         // Set transmit power
