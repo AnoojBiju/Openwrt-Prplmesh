@@ -357,7 +357,6 @@ class cACTION_MONITOR_CLIENT_ASSOCIATED_STA_LINK_METRIC_REQUEST : public BaseCla
         static eActionOp_MONITOR get_action_op(){
             return (eActionOp_MONITOR)(ACTION_MONITOR_CLIENT_ASSOCIATED_STA_LINK_METRIC_REQUEST);
         }
-        uint8_t& sync();
         sMacAddr& sta_mac();
         void class_swap() override;
         bool finalize() override;
@@ -366,7 +365,6 @@ class cACTION_MONITOR_CLIENT_ASSOCIATED_STA_LINK_METRIC_REQUEST : public BaseCla
     private:
         bool init();
         eActionOp_MONITOR* m_action_op = nullptr;
-        uint8_t* m_sync = nullptr;
         sMacAddr* m_sta_mac = nullptr;
 };
 

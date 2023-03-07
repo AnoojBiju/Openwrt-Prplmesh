@@ -496,7 +496,6 @@ void LinkMetricsCollectionTask::handle_associated_sta_link_metrics_query(
         LOG(ERROR) << "Failed to build ACTION_MONITOR_CLIENT_ASSOCIATED_STA_LINK_METRIC_REQUEST";
         return;
     }
-    request_out->sync()    = true;
     request_out->sta_mac() = mac->sta_mac();
 
     auto monitor_fd = m_btl_ctx.get_monitor_fd(radio->front.iface_name);
