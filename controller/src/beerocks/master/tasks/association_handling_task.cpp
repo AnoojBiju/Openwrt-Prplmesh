@@ -176,8 +176,9 @@ void association_handling_task::work()
     }
 
     case REQUEST_RSSI_MEASUREMENT_WAIT: {
+        auto station = database.get_station(tlvf::mac_from_string(sta_mac));
         if (!database.settings_client_band_steering() &&
-            !database.settings_client_optimal_path_roaming()) {
+            !database.settings_client_optimal_path_roaming() && !station->get_vsta_status()) {
             TASK_LOG(DEBUG) << "band_steering and client_roaming are disabled! skipping on rssi "
                                "measurement, and finish the task";
             state = FINISH;
@@ -288,11 +289,12 @@ void association_handling_task::handle_response(std::string mac,
 
             break;
         }
-
+        auto station = database.get_station(tlvf::mac_from_string(sta_mac));
         if (database.settings_client_11k_roaming() &&
             (database.get_node_beacon_measurement_support_level(sta_mac) ==
              beerocks::BEACON_MEAS_UNSUPPORTED) &&
-            (database.get_node_type(sta_mac) == beerocks::TYPE_CLIENT)) {
+            (database.get_node_type(sta_mac) == beerocks::TYPE_CLIENT) &&
+            !station->get_vsta_status()) {
 
             state        = CHECK_11K_BEACON_MEASURE_CAP;
             max_attempts = BEACON_MEASURE_MAX_ATTEMPTS;
@@ -305,7 +307,13 @@ void association_handling_task::handle_response(std::string mac,
     case beerocks_message::ACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_RESPONSE: {
         TASK_LOG(DEBUG) << "response for rx_rssi measurement from " << original_parent_mac
                         << " for sta " << sta_mac << " was received";
-        state = FINISH;
+        auto station = database.get_station(tlvf::mac_from_string(sta_mac));
+        if (station->get_vsta_status()) {
+            // We want to continually get measurements in VBSS
+            state = REQUEST_RSSI_MEASUREMENT;
+        } else {
+            state = FINISH;
+        }
         break;
     }
     case beerocks_message::ACTION_CONTROL_CLIENT_BEACON_11K_RESPONSE: {

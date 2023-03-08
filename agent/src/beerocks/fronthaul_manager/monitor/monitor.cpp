@@ -928,6 +928,7 @@ bool Monitor::update_sta_stats(const std::chrono::steady_clock::time_point &time
         sta_stats.poll_cnt++;
 
         // Update unicast/gobal stats as per the config.
+
         is_read_unicast = mon_db.get_clients_unicast_measurements();
         if (!mon_wlan_hal->update_stations_stats(vap_node->get_iface(), sta_mac,
                                                  sta_stats.hal_stats, is_read_unicast)) {
@@ -967,7 +968,7 @@ bool Monitor::update_sta_stats(const std::chrono::steady_clock::time_point &time
                     sta_node->set_last_change_time();
                 }
                 sta_stats.rx_rssi_curr = int8_t(rssi_db);
-                //LOG(INFO)  << sta_mac << ", rx_rssi=" << int(rssi_db);
+                //LOG(INFO) << sta_mac << ", rx_rssi=" << int(rssi_db);
             }
 
             sta_node->set_rx_rssi_ready(true);
@@ -1762,6 +1763,13 @@ void Monitor::handle_virtual_bss_response(ieee1905_1::CmduMessageRx &cmdu_rx)
     }
     if (virtual_bss_event_tlv->success()) {
         std::string vIfaceName = get_vbss_interface_name(virtual_bss_event_tlv->bssid());
+
+        // Sometimes we get multiple messages
+        if (beerocks::IFACE_ID_INVALID !=
+            mon_db.get_vap_id(tlvf::mac_to_string(virtual_bss_event_tlv->bssid()))) {
+            //LOG(DEBUG) << "We got a repeat message";
+            return;
+        }
         if (!mon_wlan_hal->register_vbss(vIfaceName)) {
             LOG(ERROR) << "Failed to register vbss: " << virtual_bss_event_tlv->bssid()
                        << " on the Monitor thread";
@@ -1771,6 +1779,8 @@ void Monitor::handle_virtual_bss_response(ieee1905_1::CmduMessageRx &cmdu_rx)
             LOG(ERROR) << "Failed to register vbss ext_events";
             return;
         }
+        // Update the ap list
+        update_vaps_in_db();
     }
     // Do we need to do anything when it's deleted?
     return;
