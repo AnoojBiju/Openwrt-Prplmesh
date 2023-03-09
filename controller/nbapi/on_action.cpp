@@ -610,11 +610,10 @@ amxd_status_t trigger_vbss_destruction(amxd_object_t *object, amxd_function_t *f
         LOG(ERROR) << "vbssid_str is empty";
         return amxd_status_parameter_not_found;
     }
-
     // Read Radio object
 
     amxd_object_t *radio_object = NULL;
-    radio_object                = amxd_object_get_parent(object);
+    radio_object                = amxd_object_get_parent(amxd_object_get_parent(object));
 
     if (radio_object == NULL) {
         LOG(ERROR) << "Failed retrieving the Radio grandparent of the BSS object";
