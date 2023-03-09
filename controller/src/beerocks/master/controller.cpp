@@ -4116,6 +4116,11 @@ bool Controller::trigger_vbss_creation(const sMacAddr &dest_ruid, const sMacAddr
                                        const std::string &new_bss_pass)
 {
 #ifdef ENABLE_VBSS
+    int task_id = database.get_vbss_task_id();
+    if (db::TASK_ID_NOT_FOUND == task_id) {
+        LOG(ERROR) << "Could not trigger VBSS creation! VBSS task id not found.";
+        return false;
+    }
     vbss::sClientVBSS client_vbss = {};
     // Can assume client is not associated since this is not called during a move
     client_vbss.client_is_associated   = false;
@@ -4123,8 +4128,16 @@ bool Controller::trigger_vbss_creation(const sMacAddr &dest_ruid, const sMacAddr
     client_vbss.current_connected_ruid = beerocks::net::network_utils::ZERO_MAC;
     client_vbss.vbssid                 = vbssid;
 
-    return vbss::vbss_actions::create_vbss(client_vbss, dest_ruid, new_bss_ssid, new_bss_pass,
-                                           nullptr, database);
+    vbss::sCreationEvent creation_event{};
+    creation_event.client_vbss  = client_vbss;
+    creation_event.ssid         = new_bss_ssid;
+    creation_event.password     = new_bss_pass;
+    creation_event.dest_ruid    = dest_ruid;
+    creation_event.sec_ctx_info = nullptr;
+
+    m_task_pool.push_event(task_id, vbss_task::eEventType::CREATE, &creation_event);
+    return true;
+
 #endif
     LOG(ERROR) << "Failed to trigger VBSS creation! VBSS is not enabled!";
     return false;
@@ -4135,6 +4148,11 @@ bool Controller::trigger_vbss_destruction(const sMacAddr &connected_ruid, const 
                                           const bool should_disassociate)
 {
 #ifdef ENABLE_VBSS
+    int task_id = database.get_vbss_task_id();
+    if (db::TASK_ID_NOT_FOUND == task_id) {
+        LOG(ERROR) << "Could not trigger VBSS destruction! VBSS task id not found.";
+        return false;
+    }
     vbss::sClientVBSS client_vbss = {};
     // Can assume client is associated since we are destroying a VBSS
     client_vbss.client_is_associated   = true;
@@ -4142,7 +4160,11 @@ bool Controller::trigger_vbss_destruction(const sMacAddr &connected_ruid, const 
     client_vbss.current_connected_ruid = connected_ruid;
     client_vbss.vbssid                 = vbssid;
 
-    return vbss::vbss_actions::destroy_vbss(client_vbss, should_disassociate, database);
+    vbss::sDestructionEvent destruction_event{};
+    destruction_event.client_vbss         = client_vbss;
+    destruction_event.should_disassociate = should_disassociate;
+    m_task_pool.push_event(task_id, vbss_task::eEventType::DESTROY, &destruction_event);
+    return true;
 #endif
     LOG(ERROR) << "Failed to trigger VBSS destruction! VBSS is not enabled!";
     return false;
