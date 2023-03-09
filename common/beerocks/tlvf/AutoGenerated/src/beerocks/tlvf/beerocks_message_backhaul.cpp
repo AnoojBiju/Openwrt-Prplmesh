@@ -1281,6 +1281,10 @@ sApChannelSwitch& cACTION_BACKHAUL_HOSTAP_CHANNEL_SWITCH_ACS_START::cs_params() 
     return (sApChannelSwitch&)(*m_cs_params);
 }
 
+sSpatialReuseRequest& cACTION_BACKHAUL_HOSTAP_CHANNEL_SWITCH_ACS_START::params() {
+    return (sSpatialReuseRequest&)(*m_params);
+}
+
 int8_t& cACTION_BACKHAUL_HOSTAP_CHANNEL_SWITCH_ACS_START::tx_limit() {
     return (int8_t&)(*m_tx_limit);
 }
@@ -1289,10 +1293,15 @@ uint8_t& cACTION_BACKHAUL_HOSTAP_CHANNEL_SWITCH_ACS_START::tx_limit_valid() {
     return (uint8_t&)(*m_tx_limit_valid);
 }
 
+uint8_t& cACTION_BACKHAUL_HOSTAP_CHANNEL_SWITCH_ACS_START::spatial_reuse_valid() {
+    return (uint8_t&)(*m_spatial_reuse_valid);
+}
+
 void cACTION_BACKHAUL_HOSTAP_CHANNEL_SWITCH_ACS_START::class_swap()
 {
     tlvf_swap(8*sizeof(eActionOp_BACKHAUL), reinterpret_cast<uint8_t*>(m_action_op));
     m_cs_params->struct_swap();
+    m_params->struct_swap();
 }
 
 bool cACTION_BACKHAUL_HOSTAP_CHANNEL_SWITCH_ACS_START::finalize()
@@ -1326,8 +1335,10 @@ size_t cACTION_BACKHAUL_HOSTAP_CHANNEL_SWITCH_ACS_START::get_initial_size()
 {
     size_t class_size = 0;
     class_size += sizeof(sApChannelSwitch); // cs_params
+    class_size += sizeof(sSpatialReuseRequest); // params
     class_size += sizeof(int8_t); // tx_limit
     class_size += sizeof(uint8_t); // tx_limit_valid
+    class_size += sizeof(uint8_t); // spatial_reuse_valid
     return class_size;
 }
 
@@ -1343,12 +1354,23 @@ bool cACTION_BACKHAUL_HOSTAP_CHANNEL_SWITCH_ACS_START::init()
         return false;
     }
     if (!m_parse__) { m_cs_params->struct_init(); }
+    m_params = reinterpret_cast<sSpatialReuseRequest*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(sSpatialReuseRequest))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sSpatialReuseRequest) << ") Failed!";
+        return false;
+    }
+    if (!m_parse__) { m_params->struct_init(); }
     m_tx_limit = reinterpret_cast<int8_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(int8_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(int8_t) << ") Failed!";
         return false;
     }
     m_tx_limit_valid = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
+        return false;
+    }
+    m_spatial_reuse_valid = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;

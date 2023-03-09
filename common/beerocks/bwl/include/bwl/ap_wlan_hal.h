@@ -160,6 +160,15 @@ public:
      */
     virtual bool sta_deauth(int8_t vap_id, const std::string &mac, uint32_t reason = 0) = 0;
 
+    virtual bool set_spatial_reuse_config(const sMacAddr &ruid, uint8_t bss_color,
+                                          uint8_t hesiga_sr_15_allowed, uint8_t srg_info_valid,
+                                          uint8_t non_srg_offset_valid, uint8_t psr_disallowed,
+                                          uint8_t non_srg_obsspd_max_offset,
+                                          uint8_t srg_obsspd_min_offset,
+                                          uint8_t srg_obsspd_max_offset,
+                                          uint64_t srg_bss_color_bit_map,
+                                          uint64_t srg_partial_bssid_bit_map) = 0;
+
     /**
      * @brief Send a 802.11v steer request (BSS Transition) to a connected station.
      *

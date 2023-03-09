@@ -103,6 +103,20 @@ sApChannelSwitch:
     _type: uint8_t
     _value: 5
 
+sSpatialReuseRequest:
+  _type: struct
+  ruid: sMacAddr 
+  bss_color: uint8_t #bit[5-0]
+  hesiga_sr_15_allowed: uint8_t #bit 4
+  srg_info_valid: uint8_t #bit 3
+  non_srg_offset_valid: uint8_t #bit 2
+  psr_disallowed: uint8_t #bit 0
+  non_srg_obsspd_max_offset: uint8_t
+  srg_obsspd_min_offset: uint8_t
+  srg_obsspd_max_offset: uint8_t
+  srg_bss_color_bit_map: uint64_t
+  srg_partial_bssid_bit_map: uint64_t
+
 sDfsCacCompleted:
   _type: struct
   timeout: uint32_t

@@ -258,7 +258,7 @@ void ChannelSelectionTask::handle_channel_preference_query(ieee1905_1::CmduMessa
 void ChannelSelectionTask::handle_channel_selection_request(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                             const sMacAddr &src_mac)
 {
-    const auto mid = cmdu_rx.getMessageId();
+    const auto mid = cmdu_rx.getMessageId(); 
 
     LOG(DEBUG) << "Received CHANNEL_SELECTION_REQUEST, mid=" << std::hex << mid;
 
@@ -301,6 +301,25 @@ void ChannelSelectionTask::handle_channel_selection_request(ieee1905_1::CmduMess
     }
 
     auto db = AgentDB::get();
+
+    //Handle controller spatial reuse tlv.
+    for (const auto &spatial_reuse_request_tlv :
+         cmdu_rx.getClassList<wfa_map::tlvSpatialReuseRequest>()) {
+        auto radio = db->get_radio_by_mac(spatial_reuse_request_tlv->radio_uid());
+        if (!radio) {
+            LOG(ERROR) << "ruid not found: " << spatial_reuse_request_tlv->radio_uid();
+            return;
+        }
+        auto wifi6_caps =
+            reinterpret_cast<beerocks::net::sWIFI6Capabilities *>(&radio->wifi6_capability);
+        if (!wifi6_caps->spatial_reuse) {
+            continue;
+        }
+        if (!handle_spatial_reuse_tlv(spatial_reuse_request_tlv)) {
+            LOG(ERROR) << "Failed to set spatial reuse request params";
+        }
+    }
+
     // Check if controller is prplMesh.
     if (db->controller_info.prplmesh_controller) {
         // Controller is prplMesh, parse selection extension TLV.
@@ -341,6 +360,31 @@ void ChannelSelectionTask::handle_channel_selection_request(ieee1905_1::CmduMess
         LOG(DEBUG) << "Radio " << radio_mac << " is returning " << response_code
                    << " as a response!";
     }
+
+    for (const auto radio : db->get_radios_list()) {
+
+        const auto &radio_mac    = radio->front.iface_mac;
+        const auto &request_iter = m_pending_selection.requests.find(radio_mac);
+        if(request_iter->second.spatial_reuse_request_recieved) {
+            auto spatial_reuse_config_response_tlv =
+                m_cmdu_tx.addClass<wfa_map::tlvSpatialReuseConfigResponse>();
+            if (!spatial_reuse_config_response_tlv) {
+                LOG(ERROR) << "addClass ieee1905_1::tlvSpatialReuseConfigResponse has failed";
+                return;
+            }
+            auto wifi6_caps =
+                reinterpret_cast<beerocks::net::sWIFI6Capabilities *>(&radio->wifi6_capability);
+            //spatial_reuse_config_response_tlv->radio_uid = radio->front.iface_mac;
+            if (wifi6_caps->spatial_reuse) {
+                spatial_reuse_config_response_tlv->response_code() =
+                    wfa_map::tlvSpatialReuseConfigResponse::ACCEPT;
+            } else {
+                spatial_reuse_config_response_tlv->response_code() =
+                    wfa_map::tlvSpatialReuseConfigResponse::DECLINE;
+            }
+        }
+    }
+
     // Send response back to the sender.
     LOG(DEBUG) << "Sending Channel-Selection-Response to broker";
     m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, db->controller_info.bridge_mac, db->bridge.mac);
@@ -359,7 +403,8 @@ void ChannelSelectionTask::handle_channel_selection_request(ieee1905_1::CmduMess
         }
 
         // Check if Channel-Switch is needed
-        if (!request.channel_switch_needed && !request.power_switch_received) {
+        if (!request.channel_switch_needed && !request.power_switch_received &&
+            !request.spatial_reuse_request_recieved) {
             LOG(DEBUG) << "No Channel Switch needed for radio " << radio_mac;
             request.manually_send_operating_report = true;
             manually_send_operating_report         = true;
@@ -1245,6 +1290,37 @@ bool ChannelSelectionTask::handle_transmit_power_limit(
     return true;
 }
 
+bool ChannelSelectionTask::handle_spatial_reuse_tlv(
+    const std::shared_ptr<wfa_map::tlvSpatialReuseRequest> spatial_reuse_tlv)
+{
+    const auto &radio_mac = spatial_reuse_tlv->radio_uid();
+    auto &radio_request   = m_pending_selection.requests[radio_mac];
+
+    LOG(DEBUG) << "received tlvSpatialReuseRequest";
+
+    radio_request.outgoing_request.ruid      = spatial_reuse_tlv->radio_uid();
+    radio_request.outgoing_request.bss_color = spatial_reuse_tlv->flags1().bss_color;
+    radio_request.outgoing_request.hesiga_sr_15_allowed =
+        spatial_reuse_tlv->flags2().HESIGA_Spatial_reuse_value15_allowed;
+    radio_request.outgoing_request.srg_info_valid =
+        spatial_reuse_tlv->flags2().SRG_information_valid;
+    radio_request.outgoing_request.non_srg_offset_valid =
+        spatial_reuse_tlv->flags2().Non_SRG_offset_valid;
+    radio_request.outgoing_request.psr_disallowed = spatial_reuse_tlv->flags2().Psr_Disallowed;
+    radio_request.outgoing_request.non_srg_obsspd_max_offset =
+        spatial_reuse_tlv->Non_SRG_obsspd_max_offset();
+    radio_request.outgoing_request.srg_obsspd_min_offset =
+        spatial_reuse_tlv->SRG_obsspd_min_offset();
+    radio_request.outgoing_request.srg_obsspd_max_offset =
+        spatial_reuse_tlv->SRG_obsspd_max_offset();
+    radio_request.outgoing_request.srg_bss_color_bit_map =
+        spatial_reuse_tlv->SRG_bss_color_bitmap();
+    radio_request.outgoing_request.srg_partial_bssid_bit_map =
+        spatial_reuse_tlv->SRG_partial_bssid_bitmap();
+    radio_request.spatial_reuse_request_recieved = true;
+    return true;
+}
+
 bool ChannelSelectionTask::store_controller_preference(
     const std::shared_ptr<wfa_map::tlvChannelPreference> channel_preference_tlv)
 {
@@ -1643,6 +1719,28 @@ bool ChannelSelectionTask::send_channel_switch_request(
     request_msg->cs_params().channel   = request.outgoing_request.channel;
     request_msg->cs_params().bandwidth = request.outgoing_request.bandwidth;
     request_msg->cs_params().csa_count = request.outgoing_request.CSA_count;
+
+    //spatial reuse request params
+    if (request.spatial_reuse_request_recieved) {
+        request_msg->params().ruid                 = request.outgoing_request.ruid;
+        request_msg->params().bss_color            = request.outgoing_request.bss_color;
+        request_msg->params().hesiga_sr_15_allowed = request.outgoing_request.hesiga_sr_15_allowed;
+        request_msg->params().srg_info_valid       = request.outgoing_request.srg_info_valid;
+        request_msg->params().non_srg_offset_valid = request.outgoing_request.non_srg_offset_valid;
+        request_msg->params().psr_disallowed       = request.outgoing_request.psr_disallowed;
+        request_msg->params().non_srg_obsspd_max_offset =
+            request.outgoing_request.non_srg_obsspd_max_offset;
+        request_msg->params().srg_obsspd_min_offset =
+            request.outgoing_request.srg_obsspd_min_offset;
+        request_msg->params().srg_obsspd_max_offset =
+            request.outgoing_request.srg_obsspd_max_offset;
+        request_msg->params().srg_bss_color_bit_map =
+            request.outgoing_request.srg_bss_color_bit_map;
+        request_msg->params().srg_partial_bssid_bit_map =
+            request.outgoing_request.srg_partial_bssid_bit_map;
+    }
+
+    request_msg->spatial_reuse_valid() = request.spatial_reuse_request_recieved;
 
     if (request.outgoing_request.bandwidth >= beerocks::eWiFiBandwidth::BANDWIDTH_40) {
         // Because we want to switch to a bandwidth that is greater then 20Mhz,

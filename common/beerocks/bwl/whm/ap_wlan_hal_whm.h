@@ -44,6 +44,14 @@ public:
     virtual bool sta_deny(const std::string &mac, const std::string &bssid) override;
     virtual bool sta_disassoc(int8_t vap_id, const std::string &mac, uint32_t reason = 0) override;
     virtual bool sta_deauth(int8_t vap_id, const std::string &mac, uint32_t reason = 0) override;
+    virtual bool set_spatial_reuse_config(const sMacAddr &ruid, uint8_t bss_color,
+                                          uint8_t hesiga_sr_15_allowed, uint8_t srg_info_valid,
+                                          uint8_t non_srg_offset_valid, uint8_t psr_disallowed,
+                                          uint8_t non_srg_obsspd_max_offset,
+                                          uint8_t srg_obsspd_min_offset,
+                                          uint8_t srg_obsspd_max_offset,
+                                          uint64_t srg_bss_color_bit_map,
+                                          uint64_t srg_partial_bssid_bit_map) override;
     virtual bool sta_bss_steer(int8_t vap_id, const std::string &mac, const std::string &bssid,
                                int oper_class, int chan, int disassoc_timer_btt, int valid_int_btt,
                                int reason) override;

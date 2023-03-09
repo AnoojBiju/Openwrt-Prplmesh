@@ -15,6 +15,9 @@
 #include <tlvf/CmduMessageTx.h>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
 #include <tlvf/wfa_map/tlvChannelSelectionResponse.h>
+#include <tlvf/wfa_map/tlvSpatialReuseConfigResponse.h>
+#include <tlvf/wfa_map/tlvSpatialReuseReport.h>
+#include <tlvf/wfa_map/tlvSpatialReuseRequest.h>
 #include <tlvf/wfa_map/tlvTransmitPowerLimit.h>
 #include <unordered_map>
 
@@ -74,10 +77,23 @@ private:
             int8_t tx_limit                    = 0;
             bool tx_limit_valid                = false;
             uint8_t CSA_count                  = 5;
+            //Spatial Reuse Request Prams
+            sMacAddr ruid                      = {};
+            uint8_t bss_color                  = 0;
+            uint8_t hesiga_sr_15_allowed       = 0;
+            uint8_t srg_info_valid             = 0;
+            uint8_t non_srg_offset_valid       = 0;
+            uint8_t psr_disallowed             = 0;
+            uint8_t non_srg_obsspd_max_offset  = 0;
+            uint8_t srg_obsspd_min_offset      = 0;
+            uint8_t srg_obsspd_max_offset      = 0;
+            uint64_t srg_bss_color_bit_map     = 0;
+            uint64_t srg_partial_bssid_bit_map = 0;
         } outgoing_request;
         sSelectedChannel selected_channel;
         bool power_switch_received          = false;
         bool channel_switch_needed          = false;
+        bool spatial_reuse_request_recieved = false;
         bool is_zwdfs_needed                = false;
         bool manually_send_operating_report = false;
     };
@@ -157,6 +173,9 @@ private:
 
     bool store_controller_preference(
         const std::shared_ptr<wfa_map::tlvChannelPreference> channel_preference_tlv);
+
+    bool handle_spatial_reuse_tlv(
+        const std::shared_ptr<wfa_map::tlvSpatialReuseRequest> spatial_reuse_tlv);
 
     bool check_received_preferences_contain_violation(const sMacAddr &radio_mac);
 
