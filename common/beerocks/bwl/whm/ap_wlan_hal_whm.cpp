@@ -537,13 +537,110 @@ bool ap_wlan_hal_whm::get_vap_enable(const std::string &iface_name, bool &enable
 bool ap_wlan_hal_whm::generate_connected_clients_events(
     bool &is_finished_all_clients, std::chrono::steady_clock::time_point max_iteration_timeout)
 {
-    //LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    // For the pwhm, we belive the time requirement will be maintained all time, thus we will ignore the max_iteration_timeout
+    for (auto &vap : m_vapsExtInfo) {
+
+        std::string vap_path                = vap.second.path;
+        std::string associated_devices_path = vap_path + "AssociatedDevice.";
+
+        auto associated_devices_pwhm =
+            m_ambiorix_cl->get_object_multi<AmbiorixVariantMapSmartPtr>(associated_devices_path);
+
+        if (associated_devices_pwhm == nullptr) {
+            LOG(DEBUG) << "Failed reading: " << associated_devices_path;
+            return true;
+        }
+
+        auto vap_id = get_vap_id_with_bss(vap.first);
+        if (vap_id == beerocks::IFACE_ID_INVALID) {
+            LOG(DEBUG) << "Invalid vap_id";
+            continue;
+        }
+        //Lets iterate through all instances
+        for (auto &associated_device_pwhm : *associated_devices_pwhm) {
+            bool is_active;
+            if (!associated_device_pwhm.second.read_child(is_active, "Active") || !is_active) {
+                // we are only interested in connected stations
+                continue;
+            }
+
+            std::string mac_addr;
+            if (!associated_device_pwhm.second.read_child(mac_addr, "MACAddress")) {
+                LOG(DEBUG) << "Failed reading MACAddress";
+                continue;
+            }
+
+            auto msg_buff =
+                ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION));
+            LOG_IF(msg_buff == nullptr, FATAL) << "Memory allocation failed!";
+            memset(msg_buff.get(), 0, sizeof(sACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION));
+            auto msg = reinterpret_cast<sACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION *>(
+                msg_buff.get());
+
+            msg->params.vap_id = vap_id;
+            msg->params.bssid  = tlvf::mac_from_string(m_radio_info.available_vaps[vap_id].mac);
+            msg->params.mac    = tlvf::mac_from_string(mac_addr);
+
+            msg->params.capabilities.band_5g_capable = m_radio_info.is_5ghz;
+            msg->params.capabilities.band_2g_capable =
+                (son::wireless_utils::which_freq_type(m_radio_info.vht_center_freq) ==
+                 beerocks::eFreqType::FREQ_24G);
+            msg->params.association_frame_length = 0;
+
+            auto answer = get_last_assoc_frame(vap.first, mac_addr);
+            if (!answer) {
+                LOG(ERROR) << "fail to get last frame";
+                continue;
+            }
+            std::string frame_body_str;
+            if (!answer->read_child<>(frame_body_str, "frame") || frame_body_str.empty()) {
+                LOG(WARNING) << "STA connected without previously receiving a "
+                                "(re-)association frame!";
+            } else {
+                auto assoc_frame_type = assoc_frame::AssocReqFrame::UNKNOWN;
+                auto management_frame = create_mgmt_frame_notification(frame_body_str.c_str());
+                if (management_frame) {
+                    auto &frame_body = management_frame->data;
+                    // Add the latest association frame
+                    std::copy(frame_body.begin(), frame_body.end(), msg->params.association_frame);
+                    msg->params.association_frame_length = frame_body.size();
+                    assoc_frame_type = assoc_frame::AssocReqFrame::ASSOCIATION_REQUEST;
+                    if (management_frame->type == eManagementFrameType::REASSOCIATION_REQUEST) {
+                        assoc_frame_type = assoc_frame::AssocReqFrame::REASSOCIATION_REQUEST;
+                    }
+
+                    auto assoc_frame = assoc_frame::AssocReqFrame::parse(
+                        msg->params.association_frame, msg->params.association_frame_length,
+                        assoc_frame_type);
+
+                    auto res = son::assoc_frame_utils::get_station_capabilities_from_assoc_frame(
+                        assoc_frame, msg->params.capabilities);
+                    if (!res) {
+                        LOG(ERROR) << "Failed to get station capabilities.";
+                    };
+                }
+            }
+
+            auto sta_it = m_stations.find(mac_addr);
+            if (sta_it == m_stations.end()) {
+                m_stations.insert(
+                    std::make_pair(mac_addr, sStationInfo(associated_device_pwhm.first)));
+            } else {
+                sta_it->second.path = associated_device_pwhm.first; //enforce the path
+            }
+
+            event_queue_push(Event::STA_Connected, msg_buff);
+        }
+    }
+    is_finished_all_clients = true;
     return true;
 }
 
 bool ap_wlan_hal_whm::pre_generate_connected_clients_events()
 {
-    //LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+
+    // For the pwhm and the evolution of prplmesh, we dont see a need to implement this function, all will be done throughh the main
+    // function generate_connected_clients_events
     return true;
 }
 
@@ -804,13 +901,12 @@ bool ap_wlan_hal_whm::send_delba(const std::string &ifname, const sMacAddr &dst,
 void ap_wlan_hal_whm::send_unassoc_sta_link_metric_query(
     std::shared_ptr<wfa_map::tlvUnassociatedStaLinkMetricsQuery> &query)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
 }
 
 bool ap_wlan_hal_whm::prepare_unassoc_sta_link_metrics_response(
     std::shared_ptr<wfa_map::tlvUnassociatedStaLinkMetricsResponse> &response)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    //LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return false;
 }
 

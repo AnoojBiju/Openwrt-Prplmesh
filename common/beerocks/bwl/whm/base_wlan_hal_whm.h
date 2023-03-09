@@ -38,12 +38,13 @@ struct VAPExtInfo {
     bool operator!=(const VAPExtInfo &other) const { return !(*this == other); }
 };
 
-struct STAExtInfo {
+struct sStationInfo {
+    explicit sStationInfo(const std::string &path_in) : path(path_in) {}
     std::string path;
 
-    bool operator==(const STAExtInfo &other) const { return (path == other.path); }
+    bool operator==(const sStationInfo &other) const { return (path == other.path); }
 
-    bool operator!=(const STAExtInfo &other) const { return !(*this == other); }
+    bool operator!=(const sStationInfo &other) const { return !(*this == other); }
 };
 
 /*!
@@ -97,7 +98,7 @@ protected:
     std::unique_ptr<nl80211_client> m_iso_nl80211_client; //impl nl80211 client apis with whm dm
     std::string m_radio_path;
     std::unordered_map<std::string, VAPExtInfo> m_vapsExtInfo; // key = vap_ifname
-    std::unordered_map<std::string, STAExtInfo> m_stations;    // key = sta_mac
+    std::unordered_map<std::string, sStationInfo> m_stations;  // key = sta_mac
     void subscribe_to_radio_events();
     void subscribe_to_ap_events();
     void subscribe_to_sta_events();
