@@ -574,7 +574,7 @@ amxd_status_t trigger_vbss_creation(amxd_object_t *object, amxd_function_t *func
  *          along with the option to disassociate the client from the network
  *
  * Example of usage:
- * ubus call Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.1.VBSSClient.1 TriggerVBSSDestruction
+ * ubus call Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.1 TriggerVBSSDestruction
  * '{"client_mac" : "aa:bb:cc:dd:ee:ff", "should_disassociate" : false}'
  *
  */
@@ -593,8 +593,8 @@ amxd_status_t trigger_vbss_destruction(amxd_object_t *object, amxd_function_t *f
 
     sMacAddr client_mac = {};
     if (!tlvf::mac_from_string(client_mac.oct, client_mac_str)) {
-        LOG(ERROR) << "Failed to move VBSS via NB API! Given Client MAC address (" << client_mac_str
-                   << ") is not a valid MAC address";
+        LOG(ERROR) << "Failed to destroy VBSS via NB API! Given Client MAC address ("
+                   << client_mac_str << ") is not a valid MAC address";
         return amxd_status_invalid_value;
     }
 
@@ -617,7 +617,7 @@ amxd_status_t trigger_vbss_destruction(amxd_object_t *object, amxd_function_t *f
     radio_object                = amxd_object_get_parent(object);
 
     if (radio_object == NULL) {
-        LOG(ERROR) << "Failed retrieving the Radio grandparent of the VBSSClient object";
+        LOG(ERROR) << "Failed retrieving the Radio grandparent of the BSS object";
         return amxd_status_object_not_found;
     }
 
