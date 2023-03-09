@@ -220,9 +220,8 @@ bool vbss_task::handle_vbss_creation_event(const vbss::sCreationEvent &create_ev
                        << client_vbss.current_connected_ruid;
             return false;
         }
-        sMacAddr agent_mac = agent->al_mac;
         // Client is already associated, Must have the Security Context to create a VBSS
-        if (!vbss::vbss_actions::send_client_security_ctx_request(agent_mac, client_vbss,
+        if (!vbss::vbss_actions::send_client_security_ctx_request(agent->al_mac, client_vbss,
                                                                   m_database)) {
             LOG(ERROR) << "Could not start VBSS creation for client with MAC address " << client_mac
                        << "! Client Security Context Request failed to send!";
