@@ -197,14 +197,86 @@ bool mon_wlan_hal_whm::channel_scan_dump_results()
 bool mon_wlan_hal_whm::generate_connected_clients_events(
     bool &is_finished_all_clients, std::chrono::steady_clock::time_point max_iteration_timeout)
 {
-    //LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+
+    while (!m_connected_stations_to_be_sent.empty()) {
+
+        // if thread awake time is too long - return false (means there is more handling to be done on next wake-up)
+        if (std::chrono::steady_clock::now() > max_iteration_timeout) {
+            LOG(DEBUG) << "Thread is awake too long, " << m_connected_stations_to_be_sent.size()
+                       << " STA_Connected events will be sent the next iteration";
+            is_finished_all_clients = false;
+            return true;
+        }
+
+        auto connected_station_to_consume = m_connected_stations_to_be_sent.begin();
+
+        auto ap_path = wbapi_utils::get_path_ap_of_assocDev(*connected_station_to_consume);
+        if (ap_path.empty()) {
+            LOG(DEBUG) << "Failed getting ap_path for station with path "
+                       << *connected_station_to_consume;
+            continue;
+        }
+        auto vap_it = std::find_if(m_vapsExtInfo.begin(), m_vapsExtInfo.end(),
+                                   [&](const std::pair<std::string, VAPExtInfo> &element) {
+                                       return element.second.path == ap_path;
+                                   });
+        if (vap_it == m_vapsExtInfo.end()) {
+            LOG(DEBUG) << "Did not find any matching VAP with path= " << ap_path;
+            continue;
+        }
+        std::string ssid_ref, ssid_path, bssid;
+        if (m_ambiorix_cl->get_object(ap_path)->read_child(ssid_ref, "SSIDReference") &&
+            m_ambiorix_cl->resolve_path(ssid_ref + ".", ssid_path)) {
+            auto ssid_obj = m_ambiorix_cl->get_object(ssid_path);
+            if (!ssid_obj) {
+                LOG(ERROR) << "Failed to get ssid object";
+                return false;
+            }
+            if (!ssid_obj->read_child(bssid, "BSSID")) {
+                LOG(DEBUG) << "Failed to get BSSID!";
+                continue;
+            }
+        }
+
+        auto station_obj = m_ambiorix_cl->get_object(*connected_station_to_consume);
+        if (station_obj == nullptr) {
+            LOG(DEBUG) << "Failed getting  object!  of station with path "
+                       << *connected_station_to_consume;
+            continue;
+        }
+        std::string mac_addr;
+        if (!station_obj->read_child(mac_addr, "MACAddress")) {
+            LOG(DEBUG) << "Failed reading MACAddress for station with path "
+                       << *connected_station_to_consume;
+            continue;
+        }
+
+        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_MONITOR_CLIENT_ASSOCIATED_NOTIFICATION));
+        LOG_IF(msg_buff == nullptr, FATAL) << "Memory allocation failed!";
+        // Initialize the message
+        memset(msg_buff.get(), 0, sizeof(sACTION_MONITOR_CLIENT_ASSOCIATED_NOTIFICATION));
+        auto msg =
+            reinterpret_cast<sACTION_MONITOR_CLIENT_ASSOCIATED_NOTIFICATION *>(msg_buff.get());
+        msg->vap_id = get_vap_id_with_mac(bssid);
+        msg->mac    = tlvf::mac_from_string(mac_addr);
+
+        event_queue_push(Event::STA_Connected, msg_buff);
+        m_connected_stations_to_be_sent.erase(*connected_station_to_consume);
+    }
+
     is_finished_all_clients = true;
+
     return true;
 }
 
 bool mon_wlan_hal_whm::pre_generate_connected_clients_events()
 {
-    //LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    m_connected_stations_to_be_sent.clear();
+    //The purpose is to read from pwhm rather than using the cashed results, so that we surpass any issue of missed connection/disconnection of station
+    auto stations_from_pwhm = get_connected_stations_from_whm();
+    for (const auto &station : stations_from_pwhm) {
+        m_connected_stations_to_be_sent.insert(station.path);
+    }
     return true;
 }
 
@@ -318,6 +390,7 @@ bool mon_wlan_hal_whm::sta_unassoc_rssi_measurement(
         WiFi.Radio.wifi0.NaStaMonitor.NonAssociatedDevice.{i}.SignalStrength=0
         WiFi.Radio.wifi0.NaStaMonitor.NonAssociatedDevice.{i}.TimeStamp=0001-01-01T00:00:00Z
     */
+
     std::vector<sUnassociatedStationStats> stats;
 
     std::list<std::string> amx_un_stations_to_be_removed;

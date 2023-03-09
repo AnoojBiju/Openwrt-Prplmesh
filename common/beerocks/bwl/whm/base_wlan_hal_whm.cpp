@@ -164,7 +164,7 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
         }
         auto &stations = hal->m_stations;
         auto sta_it    = std::find_if(stations.begin(), stations.end(),
-                                   [&](const std::pair<std::string, STAExtInfo> &element) {
+                                   [&](const std::pair<std::string, sStationInfo> &element) {
                                        return element.second.path == sta_path;
                                    });
         std::string sta_mac;
@@ -180,9 +180,7 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
         if (sta_it != stations.end()) {
             sta_it->second.path = sta_path;
         } else if (!sta_mac.empty()) {
-            STAExtInfo staInfo;
-            staInfo.path = sta_path;
-            sta_it       = stations.insert(std::make_pair(sta_mac, staInfo)).first;
+            stations.insert(std::make_pair(sta_mac, sStationInfo(sta_path)));
         } else {
             LOG(WARNING) << "missing station mac";
             return;
@@ -231,7 +229,7 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
         LOG(DEBUG) << "Station instance " << sta_path << " deleted";
         auto &stations = hal->m_stations;
         auto sta_it    = std::find_if(stations.begin(), stations.end(),
-                                   [&](const std::pair<std::string, STAExtInfo> &element) {
+                                   [&](const std::pair<std::string, sStationInfo> &element) {
                                        return element.second.path == sta_path;
                                    });
         if (sta_it != stations.end()) {
@@ -266,6 +264,35 @@ bool base_wlan_hal_whm::process_sta_event(const std::string &interface, const st
                                           const std::string &key, const AmbiorixVariant *value)
 {
     return true;
+}
+
+std::list<sStationInfo> base_wlan_hal_whm::get_connected_stations_from_whm()
+{
+    std::list<sStationInfo> connected_stations;
+
+    for (auto &vap : m_vapsExtInfo) {
+
+        std::string vap_path                = vap.second.path;
+        std::string associated_devices_path = vap_path + "AssociatedDevice.";
+
+        auto associated_devices_pwhm =
+            m_ambiorix_cl->get_object_multi<AmbiorixVariantMapSmartPtr>(associated_devices_path);
+
+        if (associated_devices_pwhm == nullptr) {
+            LOG(DEBUG) << "Failed reading: " << associated_devices_path << "AssociatedDevice.";
+            return connected_stations;
+        }
+        //Lets iterate through all instances
+        for (auto &associated_device_pwhm : *associated_devices_pwhm) {
+            bool is_active;
+            if (!associated_device_pwhm.second.read_child(is_active, "Active") || !is_active) {
+                // we are only interested in connected stations
+                continue;
+            }
+            connected_stations.push_back(sStationInfo(associated_device_pwhm.first));
+        }
+    }
+    return connected_stations;
 }
 
 bool base_wlan_hal_whm::fsm_setup() { return true; }

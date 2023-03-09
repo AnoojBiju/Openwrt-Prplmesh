@@ -89,6 +89,9 @@ protected:
 
     virtual bool set(const std::string &param, const std::string &value, int vap_id) override;
 
+    //connected stations that need to be considered in the next generate_connected_clients_events
+    std::unordered_set<std::string> m_connected_stations_to_be_sent;
+
 private:
     bool process_ap_event(const std::string &interface, const std::string &key,
                           const beerocks::wbapi::AmbiorixVariant *value) override;

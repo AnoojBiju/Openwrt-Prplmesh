@@ -537,13 +537,91 @@ bool ap_wlan_hal_whm::get_vap_enable(const std::string &iface_name, bool &enable
 bool ap_wlan_hal_whm::generate_connected_clients_events(
     bool &is_finished_all_clients, std::chrono::steady_clock::time_point max_iteration_timeout)
 {
-    //LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+
+    while (!m_connected_stations_to_be_sent.empty()) {
+
+        // if thread awake time is too long - return false (means there is more handling to be done on next wake-up)
+        if (std::chrono::steady_clock::now() > max_iteration_timeout) {
+            LOG(DEBUG) << "Thread is awake too long, " << m_connected_stations_to_be_sent.size()
+                       << " STA_Connected events will be sent the next iteration";
+            is_finished_all_clients = false;
+            return true;
+        }
+
+        auto connected_station_to_consume = m_connected_stations_to_be_sent.begin();
+
+        auto station_obj = m_ambiorix_cl->get_object(*connected_station_to_consume);
+        if (!station_obj) {
+            LOG(ERROR) << "Failed to get associated device with path:"
+                       << *connected_station_to_consume;
+            continue;
+        }
+        std::string mac_addr;
+        if (!station_obj->read_child(mac_addr, "MACAddress")) {
+            LOG(DEBUG) << "Failed reading MACAddress for station with path "
+                       << *connected_station_to_consume;
+            continue;
+        }
+
+        auto ap_path = wbapi_utils::get_path_ap_of_assocDev(*connected_station_to_consume);
+        if (ap_path.empty()) {
+            LOG(DEBUG) << "Failed getting ap_path for station with path "
+                       << *connected_station_to_consume;
+            continue;
+        }
+        auto vap_it = std::find_if(m_vapsExtInfo.begin(), m_vapsExtInfo.end(),
+                                   [&](const std::pair<std::string, VAPExtInfo> &element) {
+                                       return element.second.path == ap_path;
+                                   });
+        if (vap_it == m_vapsExtInfo.end()) {
+            LOG(DEBUG) << "Did not find any matching VAP with path= " << ap_path;
+            continue;
+        }
+        std::string ssid_ref, ssid_path, bssid;
+        if (m_ambiorix_cl->get_object(ap_path)->read_child(ssid_ref, "SSIDReference") &&
+            m_ambiorix_cl->resolve_path(ssid_ref + ".", ssid_path)) {
+            auto ssid_obj = m_ambiorix_cl->get_object(ssid_path);
+            if (!ssid_obj) {
+                LOG(ERROR) << "Failed to get ssid object";
+                return false;
+            }
+            if (!ssid_obj->read_child(bssid, "BSSID")) {
+                LOG(DEBUG) << "Failed to get BSSID!";
+                continue;
+            }
+        }
+
+        auto msg_buff =
+            ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION));
+        LOG_IF(msg_buff == nullptr, FATAL) << "Memory allocation failed!";
+        auto msg =
+            reinterpret_cast<sACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION *>(msg_buff.get());
+
+        msg->params.vap_id = get_vap_id_with_mac(bssid);
+        msg->params.bssid  = tlvf::mac_from_string(bssid);
+        msg->params.mac    = tlvf::mac_from_string(mac_addr);
+        auto station_flash = m_stations.find(mac_addr);
+        if (station_flash != m_stations.end()) {
+            msg->params.capabilities = station_flash->second.capabilities;
+        }
+
+        event_queue_push(Event::STA_Connected, msg_buff);
+        m_connected_stations_to_be_sent.erase(*connected_station_to_consume);
+    }
+
+    is_finished_all_clients = true;
+
     return true;
 }
 
 bool ap_wlan_hal_whm::pre_generate_connected_clients_events()
 {
-    //LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    m_connected_stations_to_be_sent.clear();
+    //The purpose is to read from pwhm rather than using the cashed results, so that we bypass any risk of missed connection/disconnection of station
+    auto stations_from_pwhm = get_connected_stations_from_whm();
+    for (const auto &station : stations_from_pwhm) {
+        m_connected_stations_to_be_sent.insert(station.path);
+    }
     return true;
 }
 
@@ -727,6 +805,10 @@ bool ap_wlan_hal_whm::process_sta_event(const std::string &interface, const std:
                         LOG(ERROR) << "Failed to get station capabilities.";
                     } else {
                         son::wireless_utils::print_station_capabilities(msg->params.capabilities);
+                        auto station = m_stations.find(sta_mac);
+                        if (station != m_stations.end()) {
+                            station->second.capabilities = msg->params.capabilities;
+                        }
                     }
                 }
             }
@@ -804,13 +886,12 @@ bool ap_wlan_hal_whm::send_delba(const std::string &ifname, const sMacAddr &dst,
 void ap_wlan_hal_whm::send_unassoc_sta_link_metric_query(
     std::shared_ptr<wfa_map::tlvUnassociatedStaLinkMetricsQuery> &query)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
 }
 
 bool ap_wlan_hal_whm::prepare_unassoc_sta_link_metrics_response(
     std::shared_ptr<wfa_map::tlvUnassociatedStaLinkMetricsResponse> &response)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    //LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return false;
 }
 

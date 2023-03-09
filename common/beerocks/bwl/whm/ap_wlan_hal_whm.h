@@ -136,6 +136,8 @@ private:
     bool process_sta_event(const std::string &interface, const std::string &sta_mac,
                            const std::string &key,
                            const beerocks::wbapi::AmbiorixVariant *value) override;
+    //connected stations that need to be considered in the next generate_connected_clients_events
+    std::unordered_set<std::string> m_connected_stations_to_be_sent;
 };
 
 } // namespace whm
