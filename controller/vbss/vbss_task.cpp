@@ -206,13 +206,6 @@ bool vbss_task::handle_vbss_creation_event(const sCreationEvent &create_event)
         return false;
     }
 
-    auto agent = m_database.get_agent_by_radio_uid(client_vbss.current_connected_ruid);
-    if (!agent) {
-        LOG(ERROR) << "Could not start VBSS creation for client with MAC address " << client_mac
-                   << "! Could not find agent for radio uid " << client_vbss.current_connected_ruid;
-        return false;
-    }
-
     active_creation_events.add(client_vbss.vbssid, client_vbss, create_event.dest_ruid,
                                create_event.ssid, create_event.password);
 
@@ -220,11 +213,16 @@ bool vbss_task::handle_vbss_creation_event(const sCreationEvent &create_event)
     // within some time span. So, spin up a timer at this point in the move state machine.
     begin_timer_for_timed_event(client_vbss, VBSS_EVENT_TIMEOUT_MS);
 
-    sMacAddr agent_mac = agent->al_mac;
-
     if (client_vbss.client_is_associated) {
+        auto agent = m_database.get_agent_by_radio_uid(client_vbss.current_connected_ruid);
+        if (!agent) {
+            LOG(ERROR) << "Could not start VBSS creation for client with MAC address " << client_mac
+                       << "! Could not find agent for radio uid "
+                       << client_vbss.current_connected_ruid;
+            return false;
+        }
         // Client is already associated, Must have the Security Context to create a VBSS
-        if (!vbss::vbss_actions::send_client_security_ctx_request(agent_mac, client_vbss,
+        if (!vbss::vbss_actions::send_client_security_ctx_request(agent->al_mac, client_vbss,
                                                                   m_database)) {
             LOG(ERROR) << "Could not start VBSS creation for client with MAC address " << client_mac
                        << "! Client Security Context Request failed to send!";
