@@ -1363,7 +1363,7 @@ void LinkMetricsCollectionTask::handle_event(uint8_t event_enum_value, const voi
         break;
     }
     default: {
-        LOG(DEBUG) << "Message handler doesn't exist for event type " << event_enum_value;
+        LOG(DEBUG) << "Message handler doesnot exist for event type " << event_enum_value;
         break;
     }
     }
