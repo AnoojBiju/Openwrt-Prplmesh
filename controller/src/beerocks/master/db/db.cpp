@@ -381,6 +381,9 @@ std::shared_ptr<Agent> db::add_node_ire(const sMacAddr &mac, const sMacAddr &par
         LOG(ERROR) << "Failed to set Manufacturer OUI";
     }
 
+    m_ambiorix_datamodel->set(agent->dm_path + ".MultiAPDevice", "EasyMeshAgentOperationMode",
+                              std::string{"RUNNING"});
+
     return agent;
 }
 
