@@ -290,6 +290,13 @@ int bml_update_wifi_credentials(BML_CTX ctx)
     return (pBML->update_wifi_credentials());
 }
 
+int bml_spatial_reuse_params(BML_CTX ctx)
+{
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
+
+    return (pBML->get_spatial_reuse());
+}
+
 int bml_get_wifi_credentials(BML_CTX ctx, int vap_id, char *ssid, char *pass, int *sec)
 {
     // Validate input parameters

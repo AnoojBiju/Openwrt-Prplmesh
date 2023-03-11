@@ -1629,6 +1629,113 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
     return (vap_ok_count == vap_total_count);
 }
 
+bool ap_wlan_hal_dwpal::get_spatial_reuse()
+{
+    LOG(DEBUG) << "Badhri Inside " << __func__;
+    char *reply = nullptr;
+
+    spatial_reuse sr;
+    /*  reply:
+    HE SR Control : 0
+    Non-SRG OBSSPD Max Offset : 170
+    SRG OBSSPD Min Offset : 0
+    SRG OBSSPD Max Offset : 0
+    SRG BSS Color Bitmap Part1 : 0
+    SRG BSS Color Bitmap Part2 : 0
+    SRG BSS Color Bitmap Part3 : 0
+    SRG BSS Color Bitmap Part4 : 0
+    SRG BSS Color Bitmap Part5 : 0
+    SRG BSS Color Bitmap Part6 : 0
+    SRG BSS Color Bitmap Part7 : 0
+    SRG BSS Color Bitmap Part8 : 0
+    SRG Partial BSSID Bitmap Part1 : 0
+    SRG Partial BSSID Bitmap Part2 : 0
+    SRG Partial BSSID Bitmap Part3 : 0
+    SRG Partial BSSID Bitmap Part4 : 0
+    SRG Partial BSSID Bitmap Part5 : 0
+    SRG Partial BSSID Bitmap Part6 : 0
+    SRG Partial BSSID Bitmap Part7 : 0
+    SRG Partial BSSID Bitmap Part8 : 0
+    BssColor Info : 61
+    OBSS BssColor Bitmap : 400000000000020
+    */
+
+    if (!dwpal_send_cmd("GET_HE_SR_PARAM", &reply)) {
+        LOG(ERROR) << "HE PARAM GET unsuccessful";
+        return false;
+    }
+
+    LOG(DEBUG) << "GET_HE_SR_PARAM reply= " << reply;
+
+    size_t replyLen               = strnlen(reply, HOSTAPD_TO_DWPAL_MSG_LENGTH);
+    size_t numOfValidArgs[22]     = {0};
+    FieldsToParse fieldsToParse[] = {
+        {&sr.he_sr_control, &numOfValidArgs[0], DWPAL_UNSIGNED_CHAR_PARAM, "HE SR Control=", 0},
+        {&sr.he_non_srg_obss_pd_max_offset, &numOfValidArgs[1], DWPAL_UNSIGNED_CHAR_PARAM,
+         "Non-SRG OBSSPD Max Offset=", 0},
+        {&sr.he_srg_obss_pd_min_offset, &numOfValidArgs[2], DWPAL_UNSIGNED_CHAR_PARAM,
+         "SRG OBSSPD Min Offset=", 0},
+        {&sr.he_srg_obss_pd_max_offset, &numOfValidArgs[3], DWPAL_UNSIGNED_CHAR_PARAM,
+         "SRG OBSSPD Max Offset=", 0},
+        {&sr.he_srg_bss_color_bitmap[0], &numOfValidArgs[4], DWPAL_UNSIGNED_CHAR_PARAM,
+         "SRG BSS Color Bitmap Part1=", 0},
+        {&sr.he_srg_bss_color_bitmap[1], &numOfValidArgs[5], DWPAL_UNSIGNED_CHAR_PARAM,
+         "SRG BSS Color Bitmap Part2=", 0},
+        {&sr.he_srg_bss_color_bitmap[2], &numOfValidArgs[6], DWPAL_UNSIGNED_CHAR_PARAM,
+         "SRG BSS Color Bitmap Part3=", 0},
+        {&sr.he_srg_bss_color_bitmap[3], &numOfValidArgs[7], DWPAL_UNSIGNED_CHAR_PARAM,
+         "SRG BSS Color Bitmap Part4=", 0},
+        {&sr.he_srg_bss_color_bitmap[4], &numOfValidArgs[8], DWPAL_UNSIGNED_CHAR_PARAM,
+         "SRG BSS Color Bitmap Part5=", 0},
+        {&sr.he_srg_bss_color_bitmap[5], &numOfValidArgs[9], DWPAL_UNSIGNED_CHAR_PARAM,
+         "SRG BSS Color Bitmap Part6=", 0},
+        {&sr.he_srg_bss_color_bitmap[6], &numOfValidArgs[10], DWPAL_UNSIGNED_CHAR_PARAM,
+         "SRG BSS Color Bitmap Part7=", 0},
+        {&sr.he_srg_bss_color_bitmap[7], &numOfValidArgs[11], DWPAL_UNSIGNED_CHAR_PARAM,
+         "SRG BSS Color Bitmap Part8=", 0},
+        {&sr.he_srg_partial_bssid_bitmap[0], &numOfValidArgs[12], DWPAL_UNSIGNED_CHAR_PARAM,
+         "SRG Partial BSSID Bitmap Part1=", 0},
+        {&sr.he_srg_partial_bssid_bitmap[1], &numOfValidArgs[13], DWPAL_UNSIGNED_CHAR_PARAM,
+         "SRG Partial BSSID Bitmap Part2=", 0},
+        {&sr.he_srg_partial_bssid_bitmap[2], &numOfValidArgs[14], DWPAL_UNSIGNED_CHAR_PARAM,
+         "SRG Partial BSSID Bitmap Part3=", 0},
+        {&sr.he_srg_partial_bssid_bitmap[3], &numOfValidArgs[15], DWPAL_UNSIGNED_CHAR_PARAM,
+         "SRG Partial BSSID Bitmap Part4=", 0},
+        {&sr.he_srg_partial_bssid_bitmap[4], &numOfValidArgs[16], DWPAL_UNSIGNED_CHAR_PARAM,
+         "SRG Partial BSSID Bitmap Part5=", 0},
+        {&sr.he_srg_partial_bssid_bitmap[5], &numOfValidArgs[17], DWPAL_UNSIGNED_CHAR_PARAM,
+         "SRG Partial BSSID Bitmap Part6=", 0},
+        {&sr.he_srg_partial_bssid_bitmap[6], &numOfValidArgs[18], DWPAL_UNSIGNED_CHAR_PARAM,
+         "SRG Partial BSSID Bitmap Part7=", 0},
+        {&sr.he_srg_partial_bssid_bitmap[7], &numOfValidArgs[19], DWPAL_UNSIGNED_CHAR_PARAM,
+         "SRG Partial BSSID Bitmap Part8=", 0},
+        {&sr.bss_color_info, &numOfValidArgs[20], DWPAL_UNSIGNED_CHAR_PARAM, "BssColor Info=", 0},
+        {&sr.obss_bss_color_bitmap, &numOfValidArgs[21], DWPAL_INT64_HEX_PARAM,
+         "OBSS BssColor Bitmap=", 0},
+        {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
+    if (dwpal_string_to_struct_parse(reply, replyLen, fieldsToParse, sizeof(m_radio_info)) ==
+        DWPAL_FAILURE) {
+        LOG(ERROR) << "DWPAL parse error ==> Abort";
+        return false;
+    }
+
+    LOG(DEBUG) << "HE SR Control= " << sr.he_sr_control;
+    LOG(DEBUG) << "Non-SRG OBSSPD Max Offset= " << sr.he_non_srg_obss_pd_max_offset;
+    LOG(DEBUG) << "SRG OBSSPD Min Offset= " << sr.he_srg_obss_pd_min_offset;
+    LOG(DEBUG) << "SRG OBSSPD Max Offset= " << sr.he_srg_obss_pd_max_offset;
+
+    for (int i = 0; i <= 7; i++) {
+        LOG(DEBUG) << "SRG BSS Color Bitmap Part" << i << "= " << sr.he_srg_bss_color_bitmap[i];
+    }
+    for (int i = 0; i <= 7; i++) {
+        LOG(DEBUG) << "SRG Partial BSSID Bitmap Part" << i << "= "
+                   << sr.he_srg_partial_bssid_bitmap[i];
+    }
+    LOG(DEBUG) << "BssColor Info= " << sr.bss_color_info;
+    LOG(DEBUG) << "OBSS BssColor Bitmap= " << sr.obss_bss_color_bitmap;
+    return true;
+}
+
 bool ap_wlan_hal_dwpal::sta_unassoc_rssi_measurement(const std::string &mac, int chan, int bw,
                                                      int vht_center_frequency, int delay,
                                                      int window_size)

@@ -287,7 +287,7 @@ bool slave_thread::thread_init()
     LOG(DEBUG) << "FSM timer created with fd=" << m_fsm_timer;
 
     // Create a timer to run internal tasks periodically
-    constexpr auto tasks_timer_period = std::chrono::milliseconds(300);
+    constexpr auto tasks_timer_period = std::chrono::milliseconds(500);
 
     m_tasks_timer = m_timer_manager->add_timer(
         "Agent Tasks", tasks_timer_period, tasks_timer_period,
@@ -1509,6 +1509,30 @@ bool slave_thread::handle_cmdu_control_message(int fd,
         send_cmdu(radio_manager.monitor_fd, cmdu_tx);
         break;
     }
+    case beerocks_message::ACTION_CONTROL_GET_SPATIAL_REUSE_PARAMS: {
+        LOG(TRACE) << "ACTION_CONTROL_GET_SPATIAL_REUSE_PARAMS";
+        auto request_in =
+            beerocks_header->addClass<beerocks_message::cACTION_CONTROL_GET_SPATIAL_REUSE_PARAMS>();
+        if (!request_in) {
+            LOG(ERROR) << "addClass cACTION_CONTROL_GET_SPATIAL_REUSE_PARAMS failed";
+            return false;
+        }
+        auto request_out = message_com::create_vs_message<
+            beerocks_message::cACTION_APMANAGER_GET_SPATIAL_REUSE_PARAMS>(cmdu_tx);
+        if (!request_out) {
+            LOG(ERROR) << "Failed building cACTION_APMANAGER_GET_SPATIAL_REUSE_PARAMS message!";
+            return false;
+        }
+
+        for (const auto &radio_manager_element : m_radio_managers.get()) {
+            auto &radio_manager = radio_manager_element.second;
+            LOG(DEBUG) << "send cACTION_APMANAGER_GET_SPATIAL_REUSE_PARAMS to "
+                       << radio_manager.ap_manager_fd;
+            send_cmdu(radio_manager.ap_manager_fd, cmdu_tx);
+        }
+        break;
+    }
+
     default: {
         LOG(ERROR) << "Unknown CONTROL message, action_op: " << int(beerocks_header->action_op());
         return false;

@@ -1388,6 +1388,46 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         }
         break;
     }
+    case beerocks_message::ACTION_BML_GET_SPATIAL_REUSE_PARAMS: {
+        LOG(DEBUG) << "ACTION_BML_GET_SPATIAL_REUSE_PARAMS";
+        uint32_t ret = 0;
+        auto request =
+            beerocks_header->addClass<beerocks_message::cACTION_BML_GET_SPATIAL_REUSE_PARAMS>();
+        if (!request) {
+            LOG(ERROR) << "addClass cACTION_BML_GET_SPATIAL_REUSE_PARAMS failed";
+            return;
+        }
+        auto spatial_request = message_com::create_vs_message<
+            beerocks_message::cACTION_CONTROL_GET_SPATIAL_REUSE_PARAMS>(cmdu_tx);
+        if (spatial_request == nullptr) {
+            LOG(ERROR) << "addClass cACTION_CONTROL_GET_SPATIAL_REUSE_PARAMS failed";
+            break;
+        }
+        for (const auto &agent : database.get_all_connected_agents()) {
+            for (const auto &radio_map_elemet : agent->radios) {
+
+                auto radio = radio_map_elemet.second;
+                auto state = database.get_node_state(tlvf::mac_to_string(radio->radio_uid));
+
+                if (state != beerocks::STATE_DISCONNECTED) {
+                    son_actions::send_cmdu_to_agent(agent->al_mac, cmdu_tx, database,
+                                                    tlvf::mac_to_string(radio->radio_uid));
+                }
+            }
+        }
+        ret           = 1;
+        auto response = message_com::create_vs_message<
+            beerocks_message::cACTION_BML_GET_SPATIAL_REUSE_PARAMS_RESPONSE>(cmdu_tx);
+        if (!response) {
+            LOG(ERROR) << "Failed building message ACTION_BML_GET_SPATIAL_REUSE_PARAMS_RESPONSE ! ";
+        } else {
+            response->error_code() = ret;
+            if (!controller_ctx->send_cmdu(sd, cmdu_tx)) {
+                LOG(ERROR) << "Error sending cmdu message";
+            }
+        }
+        break;
+    }
     case beerocks_message::ACTION_BML_SET_VAP_LIST_CREDENTIALS_REQUEST: {
 
         uint32_t result = 1; //1-fail 0-success

@@ -199,6 +199,7 @@ int bml_clear_wifi_credentials(BML_CTX ctx, const char *al_mac);
  * @return BML_RET_OK on success.
  */
 int bml_update_wifi_credentials(BML_CTX ctx);
+int bml_spatial_reuse_params(BML_CTX ctx);
 
 /**
  * Get Wi-Fi credentials (SSID and security) for the beerocks network.

@@ -213,6 +213,9 @@ cACTION_APMANAGER_STEERING_CLIENT_SET_REQUEST:
   _type: class
   params: sSteeringClientSetRequest
 
+cACTION_APMANAGER_GET_SPATIAL_REUSE_PARAMS:
+  _type: class
+
 cACTION_APMANAGER_STEERING_CLIENT_SET_RESPONSE:
   _type: class
   params: sSteeringClientSetResponse

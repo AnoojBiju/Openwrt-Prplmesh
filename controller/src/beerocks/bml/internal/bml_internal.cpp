@@ -544,6 +544,13 @@ int bml_internal::process_cmdu_header(std::shared_ptr<beerocks_header> beerocks_
             }
 
         } break;
+        case beerocks_message::ACTION_BML_GET_SPATIAL_REUSE_PARAMS_RESPONSE: {
+            // Signal any waiting threads
+            if (!wake_up(beerocks_message::ACTION_BML_GET_SPATIAL_REUSE_PARAMS_RESPONSE, 0)) {
+                LOG(WARNING) << "Received ACTION_BML_GET_SPATIAL_REUSE_PARAMS_RESPONSE, but no "
+                                "one is waiting...";
+            }
+        } break;
         // Operation status responce
         case beerocks_message::ACTION_BML_TOPOLOGY_RESPONSE: {
 
@@ -3188,6 +3195,67 @@ int bml_internal::update_wifi_credentials()
 
     // Clear the promise holder
     m_prmWiFiCredentialsUpdate = nullptr;
+
+    return BML_RET_OK;
+}
+
+int bml_internal::get_spatial_reuse()
+{
+    beerocks::promise<bool> prmSpatialReuse;
+    int iOpTimeout = 60000; // Default timeout
+
+    if (!m_sockPlatform && !connect_to_platform()) {
+        return (-BML_RET_CONNECT_FAIL);
+    }
+
+    // Command supported only on local master
+    if (!is_local_master()) {
+        LOG(ERROR) << "Command supported only on local master!";
+        return (-BML_RET_OP_NOT_SUPPORTED);
+    }
+
+    // Initialize the promise for receiving the response
+    m_prmSpatialReuse = &prmSpatialReuse;
+
+    // If the socket is not valid, attempt to re-establish the connection
+    if (!m_sockMaster) {
+        int iRet = connect_to_master();
+        if (iRet != BML_RET_OK) {
+            // Clear the promise holder
+            m_prmSpatialReuse = nullptr;
+            return iRet;
+        }
+    }
+
+    auto spatial_request =
+        message_com::create_vs_message<beerocks_message::cACTION_BML_GET_SPATIAL_REUSE_PARAMS>(
+            cmdu_tx);
+
+    if (!spatial_request) {
+        LOG(ERROR) << "Failed building cACTION_BML_GET_SPATIAL_REUSE_PARAMS message!";
+        // Clear the promise holder
+        m_prmSpatialReuse = nullptr;
+        return (-BML_RET_OP_FAILED);
+    }
+
+    LOG(TRACE) << "Trying to fetch Spatial Reuse params from hostapd.";
+
+    if (!message_com::send_cmdu(m_sockMaster, cmdu_tx)) {
+        LOG(ERROR) << "Failed sending update message!";
+        // Clear the promise holder
+        m_prmSpatialReuse = nullptr;
+        return (-BML_RET_OP_FAILED);
+    }
+
+    if (!prmSpatialReuse.wait_for(iOpTimeout)) {
+        LOG(WARNING) << "Timeout while waiting for configuration update response...";
+        // Clear the promise holder
+        m_prmSpatialReuse = nullptr;
+        return (-BML_RET_TIMEOUT);
+    }
+
+    // Clear the promise holder
+    m_prmSpatialReuse = nullptr;
 
     return BML_RET_OK;
 }

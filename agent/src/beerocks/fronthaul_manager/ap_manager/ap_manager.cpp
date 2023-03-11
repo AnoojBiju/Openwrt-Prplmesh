@@ -1908,6 +1908,11 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
         m_multiap_controller_profile = msg->profile();
         break;
     }
+    case beerocks_message::ACTION_APMANAGER_GET_SPATIAL_REUSE_PARAMS: {
+        LOG(DEBUG) << "Badhri Calling get_spatial_reuse";
+        ap_wlan_hal->get_spatial_reuse();
+        break;
+    }
     default: {
         LOG(ERROR) << "Unsupported header action_op: " << int(beerocks_header->action_op());
         break;

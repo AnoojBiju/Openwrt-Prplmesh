@@ -396,6 +396,8 @@ void cli_bml::setFunctionsMapAndArray()
         static_cast<pFunction>(&cli_bml::clear_wifi_credentials_caller), 1, 1, STRING_ARG);
     insertCommandToMap("bml_update_wifi_credentials", "", "Updates wifi credentials.",
                        static_cast<pFunction>(&cli_bml::update_wifi_credentials_caller), 0, 0);
+    insertCommandToMap("bml_get_spatial_reuse_params", "", "Get Spatial Reuse Parameters.",
+                       static_cast<pFunction>(&cli_bml::spatial_reuse_params_caller), 0, 0);
     insertCommandToMap("bml_get_wifi_credentials", "[<vap_id>]",
                        "Get SSID and security type for the given VAP (or Vap=0 by default)",
                        static_cast<pFunction>(&cli_bml::get_wifi_credentials_caller), 0, 1,
@@ -1034,6 +1036,13 @@ int cli_bml::update_wifi_credentials_caller(int numOfArgs)
     else
         return -1;
 }
+int cli_bml::spatial_reuse_params_caller(int numOfArgs)
+{
+    if (numOfArgs == 0)
+        return spatial_reuse_params();
+    else
+        return -1;
+}
 int cli_bml::get_wifi_credentials_caller(int numOfArgs)
 {
     if (numOfArgs == 0)
@@ -1661,6 +1670,14 @@ int cli_bml::update_wifi_credentials()
     int ret = bml_update_wifi_credentials(ctx);
 
     printBmlReturnVals("bml_update_wifi_credentials", ret);
+    return 0;
+}
+
+int cli_bml::spatial_reuse_params()
+{
+    int ret = bml_spatial_reuse_params(ctx);
+
+    printBmlReturnVals("bml_spatial_reuse_params", ret);
     return 0;
 }
 

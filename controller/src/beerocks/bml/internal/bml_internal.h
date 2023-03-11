@@ -91,6 +91,7 @@ public:
     * @return BML_RET_OK if success, error code otherwise
     */
     int update_wifi_credentials();
+    int get_spatial_reuse();
 
     // Get wireless SSID and security
     int get_wifi_credentials(int vap_id, char *ssid, char *pass, int *sec);
@@ -484,6 +485,7 @@ private:
     beerocks::promise<bool> *m_prmOnboard               = nullptr;
     beerocks::promise<bool> *m_prmWiFiCredentialsSet    = nullptr;
     beerocks::promise<bool> *m_prmWiFiCredentialsUpdate = nullptr;
+    beerocks::promise<bool> *m_prmSpatialReuse          = nullptr;
     beerocks::promise<bool> *m_prmWiFiCredentialsClear  = nullptr;
     beerocks::promise<bool> *m_prmWiFiCredentialsGet    = nullptr;
     beerocks::promise<bool> *m_prmAdminCredentialsGet   = nullptr;

@@ -111,6 +111,7 @@ private:
     int set_wifi_credentials_caller(int numOfArgs);
     int clear_wifi_credentials_caller(int numOfArgs);
     int update_wifi_credentials_caller(int numOfArgs);
+    int spatial_reuse_params_caller(int numOfArgs);
     int get_wifi_credentials_caller(int numOfArgs);
     int set_onboarding_state_caller(int numOfArgs);
     int get_onboarding_state_caller(int numOfArgs);
@@ -176,6 +177,7 @@ private:
                              const std::string &bss_type = "fronthaul", bool add_sae = false);
     int clear_wifi_credentials(const std::string &al_mac);
     int update_wifi_credentials();
+    int spatial_reuse_params();
     int get_wifi_credentials(int vap_id = 0);
     int set_onboarding_state(int enable);
     int get_onboarding_state();

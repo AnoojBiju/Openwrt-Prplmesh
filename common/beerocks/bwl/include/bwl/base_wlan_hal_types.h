@@ -64,6 +64,17 @@ struct VAPElement {
     bool operator!=(const VAPElement &other) const { return !(*this == other); }
 };
 
+struct spatial_reuse {
+    uint8_t he_sr_control;
+    uint8_t he_non_srg_obss_pd_max_offset;
+    uint8_t he_srg_obss_pd_min_offset;
+    uint8_t he_srg_obss_pd_max_offset;
+    uint8_t he_srg_bss_color_bitmap[8];
+    uint8_t he_srg_partial_bssid_bitmap[8];
+    uint8_t bss_color_info;
+    uint64_t obss_bss_color_bitmap;
+};
+
 enum class ChanSwReason { Unknown = 0, Radar = 1, CoEx_20 = 2, CoEx_40 = 3 };
 
 // WLAN Security Types

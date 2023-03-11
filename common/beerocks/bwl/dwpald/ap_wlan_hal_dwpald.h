@@ -104,6 +104,7 @@ public:
     virtual bool set_mbo_assoc_disallow(const std::string &bssid, bool enable) override;
     virtual bool set_radio_mbo_assoc_disallow(bool enable) override;
     virtual bool set_primary_vlan_id(uint16_t primary_vlan_id) override;
+    virtual bool get_spatial_reuse() override;
 
     virtual bool process_dwpal_event(char *ifname, char *buffer, int bufLen,
                                      const std::string &opcode) override;
