@@ -24,6 +24,7 @@ namespace bwl {
 // Allocate a char array wrapped in a shared_ptr
 #define ALLOC_SMART_BUFFER(size)                                                                   \
     std::shared_ptr<char>(new char[size], [](char *obj) {                                          \
+        LOG(DEBUG) << "CW: Req size:" << size;                                                     \
         if (obj)                                                                                   \
             delete[] obj;                                                                          \
     })
