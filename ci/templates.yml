@@ -35,6 +35,7 @@
 
 .build-for-openwrt:
   stage: build
+  timeout: 5h
   script:
     - mkdir -p "build/$TARGET_DEVICE"
     - tools/docker/builder/openwrt/build.sh --verbose -d "$TARGET_DEVICE" -t "prplmesh-builder-$TARGET_DEVICE:$CI_COMMIT_SHORT_SHA-$CI_PIPELINE_ID" 2>&1

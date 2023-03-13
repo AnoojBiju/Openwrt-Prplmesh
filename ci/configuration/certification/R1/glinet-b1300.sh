@@ -21,7 +21,7 @@ if data_overlay_not_initialized; then
   done
   logger -t prplmesh -p daemon.info "Data overlay is initialized."
 fi
-sleep 10
+sleep 5
 
 ubus wait_for DHCPv4
 ubus wait_for DHCPv6
@@ -35,7 +35,7 @@ ubus call DHCPv6.Server _set '{"parameters": { "Enable": False }}'
 # Save the IP settings persistently (PPM-2351):
 sed -ri 's/(dm-save.*) = false/\1 = true/g' /etc/amx/ip-manager/ip-manager.odl
 /etc/init.d/ip-manager restart
-sleep 12
+sleep 15
 
 ubus wait_for IP.Interface
 
@@ -82,21 +82,28 @@ ubus call Ethernet.Link _get '{ "rel_path": ".[Name == \"eth0\"]." }' || {
 LAN_INTERFACE="IP.Interface"
 ubus call IP.Interface _get '{ "rel_path": ".[Name == \"eth0\"]." }' || {
     echo "Adding IP.Interface"
-    LAN_INTERFACE=".""$(ubus call IP.Interface _add "{ \"parameters\": { \"Name\": \"eth0\", \"UCISectionNameIPv4\": \"cert\", \"Alias\": \"eth0\", \"LowerLayers\": \"Device.Ethernet.Link.$ETH_LINK.\", \"Enable\": true } }" | jsonfilter -e '@.index')"
+    LAN_INTERFACE="IP.Interface.""$(ubus call IP.Interface _add "{ \"parameters\": { \"Name\": \"eth0\", \"UCISectionNameIPv4\": \"cert\", \"Alias\": \"eth0\", \"LowerLayers\": \"Device.Ethernet.Link.$ETH_LINK.\", \"Enable\": true } }" | jsonfilter -e '@.index')"
+    
+    # Create an SSH server on the control interface if there is none (Starting one on the WAN interface doesn't work)
+    # echo "Adding SSH server on control interface"
+    # ubus call SSH.Server _get '{ "rel_path": ".[Alias == \"control\"]." }' || {
+    #     sleep 2
+    #     ubus call "SSH.Server" _add "{ \"rel_path\": \".\", \"parameters\": { \"Interface\": \"Device.$LAN_INTERFACE.\", \"AllowRootPasswordLogin\": true, \"Alias\": \"control\" } }"
+    # }
 }
 
 # Wait until the interface is created, it seems like we can not add to the newly created interface object directly after creating it
-ubus wait_for "IP.Interface$LAN_INTERFACE"
-sleep 12
+ubus wait_for "$LAN_INTERFACE"
+sleep 15
 
 # We can now add the IP address if there is none yet:
-ubus call IP.Interface _get '{ "rel_path": ".[Name == \"eth0\"].IPv4Address.[Alias == \"eth0\"]." }' || {
+ubus call IP.Interface _get '{ "rel_path": ".[Alias == \"eth0\"].IPv4Address.[Alias == \"eth0\"]." }' || {
     echo "Adding IP address $IP"
-    ubus call "IP.Interface" _add '{ "rel_path": ".[Name == \"eth0\"].IPv4Address.", "parameters": { "IPAddress": "192.168.250.172", "SubnetMask": "255.255.255.0", "AddressingType": "Static", "Alias": "eth0", "Enable" : true } }'
+    ubus call "IP.Interface" _add '{ "rel_path": ".[Alias == \"eth0\"].IPv4Address.", "parameters": { "IPAddress": "192.168.250.172", "SubnetMask": "255.255.255.0", "AddressingType": "Static", "Alias": "eth0", "Enable" : true } }'
 }
 sleep 5
 # Finally, we can enable it:
-ubus call "IP.Interface" _set '{ "rel_path": ".[Name == \"eth0\"].", "parameters": { "IPv4Enable": true } }'
+ubus call "IP.Interface" _set '{ "rel_path": ".[Alias == \"eth0\"].", "parameters": { "IPv4Enable": true } }'
 
 # Wired backhaul interface:
 # Set the WAN interface as backhaul interface
@@ -234,13 +241,22 @@ sleep 10
 ip a |grep "br-lan:" |grep "state UP" >/dev/null || (echo "LAN Bridge DOWN, restarting bridge manager" && /etc/init.d/tr181-bridging restart && sleep 15)
 
 # If we still can't ping the UCC, restart the IP manager
-ping -i 1 -c 2 192.168.250.199 || (/etc/init.d/ip-manager restart && sleep 12)
+ping -i 1 -c 2 192.168.250.199 || (/etc/init.d/ip-manager restart && sleep 15)
+ping -i 1 -c 2 192.168.250.199 || (/etc/init.d/ip-manager restart && sleep 15)
 
-# Restart the ssh server
-/etc/init.d/ssh-server restart
-sleep 5
+# Remove the default lan/wan SSH servers if they exist
+ubus call "SSH.Server" _del '{ "rel_path": ".[Alias == \"lan\"]" }' || true
+ubus call "SSH.Server" _del '{ "rel_path": ".[Alias == \"wan\"]" }' || true
 
-# Start an ssh server on the control interfce
-# The ssh server that is already running will only accept connections from 
-# the IP interface that was configured with the IP-Manager
+# Trigger the startup of the SSH server (Starting one on the WAN interface doesn't work)
+# ubus call "SSH.Server" _set '{ "rel_path": ".[Alias == \"control\"].", "parameters": { "Enable": false } }'
+# sleep 5
+# ubus call "SSH.Server" _set '{ "rel_path": ".[Alias == \"control\"].", "parameters": { "Enable": true } }'
+
+# Add command to start dropbear to rc.local to allow SSH access after reboot
+BOOTSCRIPT="/etc/rc.local"
+SERVER_CMD="sleep 20 && dropbear -F -T 10 -p192.168.250.172:22 &"
+if ! grep -q "$SERVER_CMD" "$BOOTSCRIPT"; then { head -n -2 "$BOOTSCRIPT"; echo "$SERVER_CMD"; tail -2 "$BOOTSCRIPT"; } >> btscript.tmp; mv btscript.tmp "$BOOTSCRIPT"; fi
+
+# Start a SSH server manually
 dropbear -F -T 10 -p192.168.250.172:22 &
