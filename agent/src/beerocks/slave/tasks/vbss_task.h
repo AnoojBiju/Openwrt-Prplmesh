@@ -63,6 +63,13 @@ private:
      * @param cmdu_rx 
      */
     void handle_virtual_bss_cap_request(ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief this is to hold vbssid and sta_mac to create a dumbed
+     *        down version of the bss_request message to pass to 
+     *        monitor thread upon successful creation of a vbss
+     */
+    std::unordered_map<sMacAddr, sMacAddr> m_move_requests;
 };
 } // namespace beerocks
 
