@@ -1310,7 +1310,7 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
         LOG(DEBUG) << "Going into get media type";
         LOG(DEBUG) << "iface_name : " << iface_name;
 
-        if (strcmp(type, "eth") == 0) {
+        if (type == "eth") {
             LOG(DEBUG) << "Going into ETH media type";
             if (!MediaType::get_media_type(wired_interface.iface_name,
                                            ieee1905_1::eMediaTypeGroup::IEEE_802_3,
@@ -1321,7 +1321,7 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
             }
         }
 
-        if (strcmp(type, "wifi") == 0) {
+        if (type == "wifi") {
             LOG(DEBUG) << "Going into Wifi media type";
             if (!MediaType::get_media_type(wired_interface.iface_name,
                                            ieee1905_1::eMediaTypeGroup::IEEE_802_11,
@@ -1331,7 +1331,6 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
                 return false;
             }
         }
-
         //LOG(DEBUG) << "DB Neighbour devices : " << db->neighbor_devices;
 
         for (const auto &neighbors_on_local_iface : db->neighbor_devices) {
@@ -1536,7 +1535,7 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
                 return false;
                 LOG(DEBUG) << "No error in latest impl";
             }
-            break
+            break;
         }
     }
 
