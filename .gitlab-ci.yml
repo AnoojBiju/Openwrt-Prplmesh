@@ -272,7 +272,8 @@ db_unit_tests:
 test-gw-repeater:
   stage: test
   script:
-    - tests/test_gw_repeater.sh --rm --unique-id $CI_JOB_ID
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - tests/test_gw_repeater.sh --rm --unique-id $CI_JOB_ID --tag $CI_PIPELINE_ID
   artifacts:
     paths:
       - logs
