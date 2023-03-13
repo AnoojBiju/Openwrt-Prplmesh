@@ -8,6 +8,7 @@
 
 #include "utils_wlan_hal_whm.h"
 #include <easylogging++.h>
+#include <unordered_set>
 
 namespace bwl {
 namespace whm {
@@ -75,6 +76,78 @@ eFreqType_to_eCh_scan_Op_Fr_Ba(const beerocks::eFreqType freq_type)
     }
     }
 };
+
+std::vector<eChannelScanResultEncryptionMode>
+get_scan_result_encryption_modes_from_str(const std::string &encryption_modes_str)
+{
+    std::vector<eChannelScanResultEncryptionMode> encryption_modes_vect;
+    if (encryption_modes_str.find("Default") != std::string::npos) {
+        encryption_modes_vect.push_back(bwl::eChannelScanResultEncryptionMode::eEncryption_Mode_NA);
+    }
+    if (encryption_modes_str.find("AES") != std::string::npos) {
+        encryption_modes_vect.push_back(
+            bwl::eChannelScanResultEncryptionMode::eEncryption_Mode_AES);
+    }
+    if (encryption_modes_str.find("TKIP") != std::string::npos) {
+        encryption_modes_vect.push_back(
+            bwl::eChannelScanResultEncryptionMode::eEncryption_Mode_TKIP);
+    }
+    return encryption_modes_vect;
+}
+
+std::vector<eChannelScanResultStandards>
+get_scan_result_operating_standards_from_str(const std::string &standards_str)
+{
+    std::vector<eChannelScanResultStandards> supported_standards;
+    std::unordered_set<std::string>
+        all_standards; // split the standards received as a string, mostly to differentiate between a, ac and ax
+    const char *delim = ",";
+    std::string standards_to_consume(standards_str);
+    char *token = strtok(&standards_to_consume[0], delim);
+    while (token) {
+        all_standards.insert(std::string(token));
+        token = strtok(NULL, delim);
+    }
+
+    if (all_standards.find("a") != all_standards.end()) {
+        supported_standards.push_back(bwl::eChannelScanResultStandards::eStandard_802_11a);
+    }
+    if (all_standards.find("b") != all_standards.end()) {
+        supported_standards.push_back(bwl::eChannelScanResultStandards::eStandard_802_11b);
+    }
+    if (all_standards.find("g") != all_standards.end()) {
+        supported_standards.push_back(bwl::eChannelScanResultStandards::eStandard_802_11g);
+    }
+    if (all_standards.find("n") != all_standards.end()) {
+        supported_standards.push_back(bwl::eChannelScanResultStandards::eStandard_802_11n);
+    }
+    if (all_standards.find("ac") != all_standards.end()) {
+        supported_standards.push_back(bwl::eChannelScanResultStandards::eStandard_802_11ac);
+    }
+    if (all_standards.find("ax") != all_standards.end()) {
+        supported_standards.push_back(bwl::eChannelScanResultStandards::eStandard_802_11ax);
+    }
+    return supported_standards;
+}
+
+std::vector<eChannelScanResultSecurityMode>
+get_scan_security_modes_from_str(const std::string &security_modes_str)
+{
+    std::vector<eChannelScanResultSecurityMode> security_modes;
+    if (security_modes_str.find("WEP-") != std::string::npos) {
+        security_modes.push_back(bwl::eChannelScanResultSecurityMode::eSecurity_Mode_WEP);
+    }
+    if (security_modes_str.find("WPA-") != std::string::npos) {
+        security_modes.push_back(bwl::eChannelScanResultSecurityMode::eSecurity_Mode_WPA);
+    }
+    if (security_modes_str.find("WPA2-") != std::string::npos) {
+        security_modes.push_back(bwl::eChannelScanResultSecurityMode::eSecurity_Mode_WPA2);
+    }
+    if (security_modes_str.find("WPA3-") != std::string::npos) {
+        security_modes.push_back(bwl::eChannelScanResultSecurityMode::eSecurity_Mode_WPA3);
+    }
+    return security_modes;
+}
 
 namespace {
 

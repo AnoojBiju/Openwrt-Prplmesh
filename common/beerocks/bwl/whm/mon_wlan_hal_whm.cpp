@@ -226,10 +226,8 @@ bool mon_wlan_hal_whm::channel_scan_dump_cached_results()
         auto results_notif = std::make_shared<sCHANNEL_SCAN_RESULTS_NOTIFICATION>();
         auto &results      = results_notif->channel_scan_results;
 
-        if (map.find("SSID") == map.end()) {
-            string_utils::copy_string(results.ssid, map["SSID"].c_str(),
-                                      beerocks::message::WIFI_SSID_MAX_LENGTH);
-        }
+        string_utils::copy_string(results.ssid, map["SSID"].c_str(),
+                                  beerocks::message::WIFI_SSID_MAX_LENGTH);
 
         results.bssid = tlvf::mac_from_string(map["BSSID"]);
 
@@ -253,75 +251,21 @@ bool mon_wlan_hal_whm::channel_scan_dump_cached_results()
 
         if (map.find("SecurityModeEnabled") != map.end()) {
             std::string security_mode_enabled(map["SecurityModeEnabled"]);
-            if (security_mode_enabled.find("WEP-") != std::string::npos) {
-                results.security_mode_enabled.push_back(
-                    bwl::eChannelScanResultSecurityMode::eSecurity_Mode_WEP);
-            }
-            if (security_mode_enabled.find("WPA-") != std::string::npos) {
-                results.security_mode_enabled.push_back(
-                    bwl::eChannelScanResultSecurityMode::eSecurity_Mode_WPA);
-            }
-            if (security_mode_enabled.find("WPA2-") != std::string::npos) {
-                results.security_mode_enabled.push_back(
-                    bwl::eChannelScanResultSecurityMode::eSecurity_Mode_WPA2);
-            }
-            if (security_mode_enabled.find("WPA3-") != std::string::npos) {
-                results.security_mode_enabled.push_back(
-                    bwl::eChannelScanResultSecurityMode::eSecurity_Mode_WPA3);
-            }
+            results.security_mode_enabled =
+                utils_wlan_hal_whm::get_scan_security_modes_from_str(security_mode_enabled);
         }
 
         if (map.find("EncryptionMode") != map.end()) {
             std::string encryption_mode(map["EncryptionMode"]);
-            if (encryption_mode.find("Default") != std::string::npos) {
-                results.encryption_mode.push_back(
-                    bwl::eChannelScanResultEncryptionMode::eEncryption_Mode_NA);
-            }
-            if (encryption_mode.find("AES") != std::string::npos) {
-                results.encryption_mode.push_back(
-                    bwl::eChannelScanResultEncryptionMode::eEncryption_Mode_AES);
-            }
-            if (encryption_mode.find("TKIP") != std::string::npos) {
-                results.encryption_mode.push_back(
-                    bwl::eChannelScanResultEncryptionMode::eEncryption_Mode_TKIP);
-            }
+            results.encryption_mode =
+                utils_wlan_hal_whm::get_scan_result_encryption_modes_from_str(encryption_mode);
         }
 
         if (map.find("OperatingStandards") != map.end()) {
             std::string supported_standards(map["OperatingStandards"]);
-            std::unordered_set<std::string>
-                all_standards; // split the standards received as a string, mostly to differentiate between a, ac and ax
-            const char *delim = ",";
-            char *token       = strtok(&supported_standards[0], delim);
-            while (token) {
-                all_standards.insert(std::string(token));
-                token = strtok(NULL, delim);
-            }
-
-            if (all_standards.find("a") != all_standards.end()) {
-                results.supported_standards.push_back(
-                    bwl::eChannelScanResultStandards::eStandard_802_11a);
-            }
-            if (all_standards.find("b") != all_standards.end()) {
-                results.supported_standards.push_back(
-                    bwl::eChannelScanResultStandards::eStandard_802_11b);
-            }
-            if (all_standards.find("g") != all_standards.end()) {
-                results.supported_standards.push_back(
-                    bwl::eChannelScanResultStandards::eStandard_802_11g);
-            }
-            if (all_standards.find("n") != all_standards.end()) {
-                results.supported_standards.push_back(
-                    bwl::eChannelScanResultStandards::eStandard_802_11n);
-            }
-            if (all_standards.find("ac") != all_standards.end()) {
-                results.supported_standards.push_back(
-                    bwl::eChannelScanResultStandards::eStandard_802_11ac);
-            }
-            if (all_standards.find("ax") != all_standards.end()) {
-                results.supported_standards.push_back(
-                    bwl::eChannelScanResultStandards::eStandard_802_11ax);
-            }
+            results.supported_standards =
+                utils_wlan_hal_whm::get_scan_result_operating_standards_from_str(
+                    supported_standards);
         }
 
         LOG(DEBUG) << "Processing results for BSSID:" << results.bssid

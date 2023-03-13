@@ -265,6 +265,9 @@ bool base_wlan_hal_whm::process_sta_event(const std::string &interface, const st
 {
     return true;
 }
+
+bool base_wlan_hal_whm::process_scan_complete_event(const std::string &result) { return true; }
+
 bool base_wlan_hal_whm::fsm_setup() { return true; }
 
 HALState base_wlan_hal_whm::attach(bool block)
@@ -684,8 +687,6 @@ void base_wlan_hal_whm::subscribe_to_scan_complete_events()
 
     m_ambiorix_cl->subscribe_to_object_event(m_radio_path, event_handler, filter);
 }
-
-bool base_wlan_hal_whm::process_scan_complete_event(const std::string &result) { return true; }
 
 } // namespace whm
 } // namespace bwl

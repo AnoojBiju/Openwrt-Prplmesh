@@ -45,6 +45,24 @@ bwl::eChannelScanResultOperatingFrequencyBand
 eFreqType_to_eCh_scan_Op_Fr_Ba(const beerocks::eFreqType freq_type);
 
 /**
+* @brief Decodes encryption_modes to a  vector of type eChannelScanResultEncryptionMode
+*/
+std::vector<eChannelScanResultEncryptionMode>
+get_scan_result_encryption_modes_from_str(const std::string &encryption_modes);
+
+/**
+* @brief Decodes  standards to a vector of type eChannelScanResultStandards
+*/
+std::vector<eChannelScanResultStandards>
+get_scan_result_operating_standards_from_str(const std::string &standards);
+
+/**
+* @brief Decodes  security_modes to a vector of type eChannelScanResultSecurityMode
+*/
+std::vector<eChannelScanResultSecurityMode>
+get_scan_security_modes_from_str(const std::string &security_modes);
+
+/**
 * @brief Convertion table of Security type from string to WiFiSec.
 */
 const std::map<std::string, WiFiSec> security_type_table;
