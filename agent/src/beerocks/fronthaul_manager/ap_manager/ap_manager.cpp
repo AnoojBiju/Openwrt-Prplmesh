@@ -1910,7 +1910,13 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
     }
     case beerocks_message::ACTION_APMANAGER_GET_SPATIAL_REUSE_PARAMS: {
         LOG(DEBUG) << "Badhri Calling get_spatial_reuse";
-        ap_wlan_hal->get_spatial_reuse();
+        bwl::spatial_reuse sr;
+        ap_wlan_hal->get_spatial_reuse(sr);
+        auto spatial_reuse_report = message_com::create_vs_message<
+            beerocks_message::cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION>(cmdu_tx);
+        //spatial_reuse_report->sr_params() = sr;
+
+        send_cmdu(cmdu_tx);
         break;
     }
     default: {

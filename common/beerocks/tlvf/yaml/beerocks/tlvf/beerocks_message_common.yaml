@@ -1070,3 +1070,24 @@ sUnassociatedStationStats:
   operating_class: uint8_t
   time_stamp:
     _type: uint32_t
+
+sSpatialReuseParams:
+  _type: struct
+  he_sr_control: 
+    _type: uint8_t
+  he_non_srg_obss_pd_max_offset:
+    _type: uint8_t
+  he_srg_obss_pd_min_offset:
+    _type: uint8_t
+  he_srg_obss_pd_max_offset:
+    _type: uint8_t
+  he_srg_bss_color_bitmap:
+    _type: uint8_t
+    _length: ["beerocks::message::HE_SRG_BSS_COLOR_BITMAP_LENGTH"]
+  he_srg_partial_bssid_bitmap:
+    _type: uint8_t
+    _length: ["beerocks::message::HE_SRG_PARTIAL_BSSID_BITMAP_LENGTH"]
+  bss_color_info:
+    _type: uint8_t
+  obss_bss_color_bitmap:
+    _type: uint64_t

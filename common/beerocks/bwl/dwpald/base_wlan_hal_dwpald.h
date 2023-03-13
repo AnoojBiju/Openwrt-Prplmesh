@@ -31,6 +31,7 @@ namespace dwpal {
 
 #define MAX_VAPS_PER_RADIO 16
 #define IF_LENGTH IF_NAMESIZE + 1
+#define SR_MAX_BITMAP_PARTS 8
 
 typedef struct {
     char name[IF_LENGTH];

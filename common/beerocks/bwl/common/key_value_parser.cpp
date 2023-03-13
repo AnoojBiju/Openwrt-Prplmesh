@@ -175,12 +175,18 @@ void KeyValueParser::parse_event_keyless_params(const std::string &event_str, si
     }
 }
 
-bool KeyValueParser::read_param(const std::string &key, parsed_line_t &obj, int64_t &value,
+template <typename T>
+bool KeyValueParser::read_param(const std::string &key, parsed_line_t &obj, T &value,
                                 bool ignore_unknown)
 {
     auto val_iter = obj.find(key);
     if (val_iter == obj.end()) {
         return false;
+    }
+
+    if (std::is_same<T, std::string&>::value) {
+        value = (val_iter->second).c_str();
+        return true;
     }
 
     static const std::string unknown_string = "UNKNOWN";
@@ -192,17 +198,6 @@ bool KeyValueParser::read_param(const std::string &key, parsed_line_t &obj, int6
 
     value = beerocks::string_utils::stoi(val_iter->second);
 
-    return true;
-}
-
-bool KeyValueParser::read_param(const std::string &key, parsed_line_t &obj, const char **value)
-{
-    auto val_iter = obj.find(key);
-    if (val_iter == obj.end()) {
-        return false;
-    }
-
-    *value = reinterpret_cast<const char *>((val_iter->second).c_str());
     return true;
 }
 

@@ -99,6 +99,10 @@ cACTION_APMANAGER_HOSTAP_CSA_NOTIFICATION:
   _type: class
   cs_params: sApChannelSwitch
 
+cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION:
+  _type: class
+  sr_params: sSpatialReuseParams
+
 cACTION_APMANAGER_HOSTAP_ACS_NOTIFICATION:
   _type: class
   cs_params: sApChannelSwitch

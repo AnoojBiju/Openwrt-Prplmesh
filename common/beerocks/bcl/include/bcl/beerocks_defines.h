@@ -84,6 +84,8 @@ enum eStructsConsts {
     HE_MCS_SET_SIZE                      = 32,
     DEV_MAX_RADIOS                       = 3,
     DSCP_MAPPING_LIST_LENGTH             = 64,
+    HE_SRG_BSS_COLOR_BITMAP_LENGTH       = 8,
+    HE_SRG_PARTIAL_BSSID_BITMAP_LENGTH   = 8,
 };
 
 enum eMessageConsts {

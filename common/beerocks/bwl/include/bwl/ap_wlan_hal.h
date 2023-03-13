@@ -420,7 +420,7 @@ public:
      * @return true on success, false otherwise.
      */
     virtual bool set_primary_vlan_id(uint16_t primary_vlan_id) = 0;
-    virtual bool get_spatial_reuse()                           = 0;
+    virtual bool get_spatial_reuse(spatial_reuse &sr)          = 0;
 
     /**
      * @brief Set CCE Indication value on the Radio.

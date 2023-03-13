@@ -49,10 +49,11 @@ protected:
     static void parse_multiline(std::istringstream &iss, std::list<char> delimiter_list,
                                 parsed_multiline_t &parsed_multiline);
 
-    static bool read_param(const std::string &key, parsed_line_t &obj, int64_t &value,
+    template <typename T>
+    static bool read_param(const std::string &key, parsed_line_t &obj, T &value,
                            bool ignore_unknown = false);
 
-    static bool read_param(const std::string &key, parsed_line_t &obj, const char **value);
+    //static bool read_param(const std::string &key, parsed_line_t &obj, const char **value);
 
     static void parsed_obj_debug(const parsed_line_t &obj);
     static void parsed_obj_debug(const parsed_multiline_t &obj);

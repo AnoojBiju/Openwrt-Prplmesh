@@ -24,6 +24,7 @@ extern "C" {
 
 #define UNHANDLED_EVENTS_LOGS 20
 #define MAX_FAILED_NL_MSG_GET 3
+int flag = 0;
 
 namespace bwl {
 namespace dwpal {
@@ -188,7 +189,12 @@ bool base_wlan_hal_dwpal::fsm_setup()
             [&](TTransition &transition, const void *args) -> bool {
                 // Attempt to read radio info
                 if (!refresh_radio_info()) {
-                    return (transition.change_destination(dwpal_fsm_state::Detach));
+                    flag++;
+                    if (flag < 3) {
+                        return (transition.change_destination(dwpal_fsm_state::Delay));
+                    } else {
+                        return (transition.change_destination(dwpal_fsm_state::Detach));
+                    }
                 }
 
                 // If Non-AP HAL, continue to the next state

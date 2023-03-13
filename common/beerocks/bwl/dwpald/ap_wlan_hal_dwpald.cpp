@@ -1629,45 +1629,195 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
     return (vap_ok_count == vap_total_count);
 }
 
-bool ap_wlan_hal_dwpal::get_spatial_reuse()
+bool ap_wlan_hal_dwpal::get_spatial_reuse(bwl::spatial_reuse &sr)
 {
     LOG(DEBUG) << "Badhri Inside " << __func__;
-    char *reply = nullptr;
+    //char *reply = nullptr;
+    parsed_line_t reply;
+    int64_t tmp_int;
 
-    spatial_reuse sr;
     /*  reply:
-    HE SR Control : 0
-    Non-SRG OBSSPD Max Offset : 170
-    SRG OBSSPD Min Offset : 0
-    SRG OBSSPD Max Offset : 0
-    SRG BSS Color Bitmap Part1 : 0
-    SRG BSS Color Bitmap Part2 : 0
-    SRG BSS Color Bitmap Part3 : 0
-    SRG BSS Color Bitmap Part4 : 0
-    SRG BSS Color Bitmap Part5 : 0
-    SRG BSS Color Bitmap Part6 : 0
-    SRG BSS Color Bitmap Part7 : 0
-    SRG BSS Color Bitmap Part8 : 0
-    SRG Partial BSSID Bitmap Part1 : 0
-    SRG Partial BSSID Bitmap Part2 : 0
-    SRG Partial BSSID Bitmap Part3 : 0
-    SRG Partial BSSID Bitmap Part4 : 0
-    SRG Partial BSSID Bitmap Part5 : 0
-    SRG Partial BSSID Bitmap Part6 : 0
-    SRG Partial BSSID Bitmap Part7 : 0
-    SRG Partial BSSID Bitmap Part8 : 0
-    BssColor Info : 61
-    OBSS BssColor Bitmap : 400000000000020
+    HE SR Control=0
+    Non-SRG OBSSPD Max Offset=170
+    SRG OBSSPD Min Offset=0
+    SRG OBSSPD Max Offset=0
+    SRG BSS Color Bitmap Part1=0
+    SRG BSS Color Bitmap Part2=0
+    SRG BSS Color Bitmap Part3=0
+    SRG BSS Color Bitmap Part4=0
+    SRG BSS Color Bitmap Part5=0
+    SRG BSS Color Bitmap Part6=0
+    SRG BSS Color Bitmap Part7=0
+    SRG BSS Color Bitmap Part8=0
+    SRG Partial BSSID Bitmap Part1=0
+    SRG Partial BSSID Bitmap Part2=0
+    SRG Partial BSSID Bitmap Part3=0
+    SRG Partial BSSID Bitmap Part4=0
+    SRG Partial BSSID Bitmap Part5=0
+    SRG Partial BSSID Bitmap Part6=0
+    SRG Partial BSSID Bitmap Part7=0
+    SRG Partial BSSID Bitmap Part8=0
+    BssColor Info=61
+    OBSS BssColor Bitmap=400000000000020
     */
 
-    if (!dwpal_send_cmd("GET_HE_SR_PARAM", &reply)) {
+    if (!dwpal_send_cmd("GET_HE_SR_PARAM", reply)) {
         LOG(ERROR) << "HE PARAM GET unsuccessful";
         return false;
     }
 
     LOG(DEBUG) << "GET_HE_SR_PARAM reply= " << reply;
+    if (!read_param("HE SR Control=", reply, tmp_int)) {
+        return false;
+    }
 
-    size_t replyLen               = strnlen(reply, HOSTAPD_TO_DWPAL_MSG_LENGTH);
+    sr.he_sr_control = tmp_int;
+
+    if (!read_param("Non-SRG OBSSPD Max Offset=", reply, tmp_int)) {
+        return false;
+    }
+
+    sr.he_non_srg_obss_pd_max_offset = tmp_int;
+
+    if (!read_param("SRG OBSSPD Min Offset=", reply, tmp_int)) {
+        return false;
+    }
+    sr.he_srg_obss_pd_min_offset = tmp_int;
+
+    if (!read_param("SRG OBSSPD Max Offset=", reply, tmp_int)) {
+        return false;
+    }
+
+    sr.he_srg_obss_pd_max_offset = tmp_int;
+
+    for (auto bmap = 1; bmap <= SR_MAX_BITMAP_PARTS; bmap++) {
+        std::ostringstream os;
+        os << "SRG BSS Color Bitmap Part" << bmap + 1 << "="; /* SRG BSS Color Bitmap Part(bmap)=*/
+        if (!read_param(os.str(), reply, tmp_int)) {
+            return false;
+        }
+        sr.he_srg_bss_color_bitmap[bmap] = tmp_int;
+    }
+
+    for (auto bmap = 0; bmap < SR_MAX_BITMAP_PARTS; bmap++) {
+        std::ostringstream os;
+        os << "SRG Partial BSSID Bitmap Part" << bmap + 1
+           << "="; /* SRG BSS Color Bitmap Part(bmap)=*/
+        if (!read_param(os.str(), reply, tmp_int)) {
+            return false;
+        }
+        sr.he_srg_partial_bssid_bitmap[bmap] = tmp_int;
+    }
+
+    /*if (!read_param("SRG BSS Color Bitmap Part1=", reply, tmp_int)) {
+		return false;
+	}
+	sr.he_srg_bss_color_bitmap[0] = tmp_int;
+	
+	if (!read_param("SRG BSS Color Bitmap Part2=", reply, tmp_int)) {
+		return false;
+	}
+	
+	sr.he_srg_bss_color_bitmap[1] = tmp_int;
+	
+	if (!read_param("SRG BSS Color Bitmap Part3", reply, tmp_int)) {
+		return false;
+	}
+	
+	sr.he_srg_bss_color_bitmap[2] = tmp_int;
+	
+	if (!read_param("SRG BSS Color Bitmap Part4", reply, tmp_int)) {
+		return false;
+	}
+	
+	sr.he_srg_bss_color_bitmap[3] = tmp_int;
+	
+	if (!read_param("SRG BSS Color Bitmap Part5", reply, tmp_int)) {
+		return false;
+	}
+	
+	sr.he_srg_bss_color_bitmap[4] = tmp_int;
+	
+	if (!read_param("SRG BSS Color Bitmap Part6", reply, tmp_int)) {
+		return false;
+	}
+	
+	sr.he_srg_bss_color_bitmap[5] = tmp_int;
+	
+	if (!read_param("SRG BSS Color Bitmap Part7", reply, tmp_int)) {
+		return false;
+	}
+	
+	sr.he_srg_bss_color_bitmap[6] = tmp_int;
+	
+	if (!read_param("SRG BSS Color Bitmap Part8", reply, tmp_int)) {
+		return false;
+	}
+	
+	sr.he_srg_bss_color_bitmap[7] = tmp_int;
+	
+	if (!read_param("SRG Partial BSSID Bitmap Part1", reply, tmp_int)) {
+		return false;
+	}
+	
+	sr.he_srg_partial_bssid_bitmap[0] = tmp_int;
+	
+	if (!read_param("SRG Partial BSSID Bitmap Part2", reply, tmp_int)) {
+		return false;
+	}
+	
+	sr.he_srg_partial_bssid_bitmap[1] = tmp_int;
+	
+	if (!read_param("SRG Partial BSSID Bitmap Part3", reply, tmp_int)) {
+		return false;
+	}
+	
+	sr.he_srg_partial_bssid_bitmap[2] = tmp_int;
+	
+	if (!read_param("SRG Partial BSSID Bitmap Part4", reply, tmp_int)) {
+		return false;
+	}
+	
+	sr.he_srg_partial_bssid_bitmap[3] = tmp_int;
+	
+	if (!read_param("SRG Partial BSSID Bitmap Part5", reply, tmp_int)) {
+		return false;
+	}
+	
+	sr.he_srg_partial_bssid_bitmap[4] = tmp_int;
+	
+	if (!read_param("SRG Partial BSSID Bitmap Part6", reply, tmp_int)) {
+		return false;
+	}
+	
+	sr.he_srg_partial_bssid_bitmap[5] = tmp_int;
+	
+	if (!read_param("SRG Partial BSSID Bitmap Part7", reply, tmp_int)) {
+		return false;
+	}
+	
+	sr.he_srg_partial_bssid_bitmap[6] = tmp_int;
+	
+	if (!read_param("SRG Partial BSSID Bitmap Part8", reply, tmp_int)) {
+		return false;
+	}
+	
+	sr.he_srg_partial_bssid_bitmap[7] = tmp_int; */
+
+    if (!read_param("BssColor Info", reply, tmp_int)) {
+        return false;
+    }
+
+    sr.bss_color_info = tmp_int;
+
+    uint64_t tmp_uint;
+    if (!read_param("OBSS BssColor Bitmap", reply, tmp_uint)) {
+        return false;
+    }
+
+    sr.obss_bss_color_bitmap = tmp_int;
+
+    /*size_t replyLen               = strnlen(reply, HOSTAPD_TO_DWPAL_MSG_LENGTH);
     size_t numOfValidArgs[22]     = {0};
     FieldsToParse fieldsToParse[] = {
         {&sr.he_sr_control, &numOfValidArgs[0], DWPAL_UNSIGNED_CHAR_PARAM, "HE SR Control=", 0},
@@ -1717,19 +1867,20 @@ bool ap_wlan_hal_dwpal::get_spatial_reuse()
         DWPAL_FAILURE) {
         LOG(ERROR) << "DWPAL parse error ==> Abort";
         return false;
-    }
+    } */
 
     LOG(DEBUG) << "HE SR Control= " << sr.he_sr_control;
     LOG(DEBUG) << "Non-SRG OBSSPD Max Offset= " << sr.he_non_srg_obss_pd_max_offset;
     LOG(DEBUG) << "SRG OBSSPD Min Offset= " << sr.he_srg_obss_pd_min_offset;
     LOG(DEBUG) << "SRG OBSSPD Max Offset= " << sr.he_srg_obss_pd_max_offset;
 
-    for (int i = 0; i <= 7; i++) {
-        LOG(DEBUG) << "SRG BSS Color Bitmap Part" << i << "= " << sr.he_srg_bss_color_bitmap[i];
+    for (auto bmap = 0; bmap < SR_MAX_BITMAP_PARTS; bmap++) {
+        LOG(DEBUG) << "SRG BSS Color Bitmap Part" << bmap << "= "
+                   << sr.he_srg_bss_color_bitmap[bmap];
     }
-    for (int i = 0; i <= 7; i++) {
-        LOG(DEBUG) << "SRG Partial BSSID Bitmap Part" << i << "= "
-                   << sr.he_srg_partial_bssid_bitmap[i];
+    for (auto bmap = 0; bmap < SR_MAX_BITMAP_PARTS; bmap++) {
+        LOG(DEBUG) << "SRG Partial BSSID Bitmap Part" << bmap << "= "
+                   << sr.he_srg_partial_bssid_bitmap[bmap];
     }
     LOG(DEBUG) << "BssColor Info= " << sr.bss_color_info;
     LOG(DEBUG) << "OBSS BssColor Bitmap= " << sr.obss_bss_color_bitmap;
