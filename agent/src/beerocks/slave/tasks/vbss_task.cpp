@@ -55,6 +55,11 @@ void VbssTask::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
     auto vbss_creation_tlv = cmdu_rx.getClass<wfa_map::VirtualBssCreation>();
     if (vbss_creation_tlv) {
         radio_uid = vbss_creation_tlv->radio_uid();
+        if (vbss_creation_tlv->client_assoc()) {
+            m_move_requests[vbss_creation_tlv->bssid()] = vbss_creation_tlv->client_mac();
+        } else {
+            m_move_requests[vbss_creation_tlv->bssid()] = net::network_utils::ZERO_MAC;
+        }
     } else {
         auto vbss_destruction_tlv = cmdu_rx.getClass<wfa_map::VirtualBssDestruction>();
         if (vbss_destruction_tlv) {
@@ -138,23 +143,51 @@ void VbssTask::handle_virtual_bss_response(ieee1905_1::CmduMessageRx &cmdu_rx)
     m_btl_ctx.forward_cmdu_to_controller(cmdu_rx);
     // Whether this is a creation or deletion it needs to be forwarded to monitor to
     // register and unregister from the events
-    auto db    = AgentDB::get();
-    auto radio = db->get_radio_by_mac(virtual_bss_event_tlv->bssid(), AgentDB::eMacType::BSSID);
-    if (!radio) {
-        LOG(ERROR) << "Failed to get radio for vbss id: " << virtual_bss_event_tlv->bssid();
-    } else {
-        auto monitor_fd = m_btl_ctx.get_monitor_fd(radio->front.iface_name);
-        if (!m_btl_ctx.forward_cmdu_to_uds(monitor_fd, cmdu_rx)) {
-            LOG(ERROR) << "Failed to forward to monitor thread virtual bss response message";
-        }
-    }
+
     if (virtual_bss_event_tlv->success()) {
 
         // If the request was handled successfully, we have to send a
         // topology notification as a BSS has either be created or
         // removed as a result.
         // Send to MON so it can register events and monitor stations on vbss
+        auto db = AgentDB::get();
+        // When we receive a response check to see if successful for a known creation request
+        // if successful we will create a new dumbed down request message to send to monitor
+        // thread
+        if (m_move_requests.end() != m_move_requests.find(virtual_bss_event_tlv->bssid())) {
+            // known creation with possible move
+            LOG(INFO) << "Sending request to monitor thread to register for events";
+            auto cmdu_header =
+                m_cmdu_tx.create(0, ieee1905_1::eMessageType::VIRTUAL_BSS_REQUEST_MESSAGE);
+            if (!cmdu_header) {
+                LOG(ERROR) << "FAILED to create vbss request to send to monitor thread";
 
+                m_move_requests.erase(virtual_bss_event_tlv->bssid());
+                return;
+            }
+            auto vbss_creation_req = m_cmdu_tx.addClass<wfa_map::VirtualBssCreation>();
+            if (!vbss_creation_req) {
+                LOG(ERROR) << "Failed to vbss creation request to send to monitor";
+                m_move_requests.erase(virtual_bss_event_tlv->bssid());
+                return;
+            }
+            // Yes, this isn't fully filled in
+            // Monitor doesn't need any more information then this
+            vbss_creation_req->bssid()      = virtual_bss_event_tlv->bssid();
+            vbss_creation_req->client_mac() = m_move_requests[virtual_bss_event_tlv->bssid()];
+            auto radio =
+                db->get_radio_by_mac(virtual_bss_event_tlv->bssid(), AgentDB::eMacType::BSSID);
+            if (!radio) {
+                LOG(ERROR) << "Failed to get radio for vbss id: " << virtual_bss_event_tlv->bssid();
+            } else {
+                auto monitor_fd = m_btl_ctx.get_monitor_fd(radio->front.iface_name);
+                if (!m_btl_ctx.send_cmdu(monitor_fd, m_cmdu_tx)) {
+                    LOG(ERROR)
+                        << "Failed to forward to monitor thread virtual bss response message";
+                }
+            }
+            m_move_requests.erase(virtual_bss_event_tlv->bssid());
+        }
         LOG(INFO) << "Sending topology notification to notify controller of the BSS change";
 
         auto cmdu_header =
@@ -170,7 +203,7 @@ void VbssTask::handle_virtual_bss_response(ieee1905_1::CmduMessageRx &cmdu_rx)
             return;
         }
 
-        auto db                = AgentDB::get();
+        //auto db                = AgentDB::get();
         tlvAlMacAddress->mac() = db->bridge.mac;
         m_btl_ctx.send_cmdu_to_controller({}, m_cmdu_tx);
     }

@@ -24,7 +24,7 @@
 #include <tlvf/tlvftypes.h>
 #include <tlvf/wfa_map/tlvApMetricQuery.h>
 #include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
-#include <tlvf/wfa_map/tlvVirtualBssEvent.h>
+#include <tlvf/wfa_map/tlvVirtualBssCreation.h>
 
 #include <cmath>
 #include <vector>
@@ -1674,8 +1674,8 @@ void Monitor::handle_cmdu_ieee1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx)
     case ieee1905_1::eMessageType::MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE:
         handle_multi_ap_policy_config_request(cmdu_rx);
         break;
-    case ieee1905_1::eMessageType::VIRTUAL_BSS_RESPONSE_MESSAGE:
-        handle_virtual_bss_response(cmdu_rx);
+    case ieee1905_1::eMessageType::VIRTUAL_BSS_REQUEST_MESSAGE:
+        handle_virtual_bss_request(cmdu_rx);
         break;
     default:
         LOG(ERROR) << "Unknown CMDU message type: " << std::hex << int(cmdu_message_type);
@@ -1751,38 +1751,43 @@ void Monitor::handle_multi_ap_policy_config_request(ieee1905_1::CmduMessageRx &c
     }
 }
 
-void Monitor::handle_virtual_bss_response(ieee1905_1::CmduMessageRx &cmdu_rx)
+void Monitor::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     // AP manager has either deleted or created a new vap
     // Must register with the event handlers so we can well monitor that Iface
     LOG(DEBUG) << "Processing Virtual BSS Message";
-    auto virtual_bss_event_tlv = cmdu_rx.getClass<wfa_map::VirtualBssEvent>();
-    if (!virtual_bss_event_tlv) {
-        LOG(ERROR) << "Can not find Virtual BSS Event TLV in VBSS response message";
+    auto virtual_bss_creation_req = cmdu_rx.getClass<wfa_map::VirtualBssCreation>();
+    if (!virtual_bss_creation_req) {
+        LOG(ERROR) << "Can not find Virtual BSS Request TLV in VBSS request message";
         return;
     }
-    if (virtual_bss_event_tlv->success()) {
-        std::string vIfaceName = get_vbss_interface_name(virtual_bss_event_tlv->bssid());
+    std::string vIfaceName = get_vbss_interface_name(virtual_bss_creation_req->bssid());
 
-        // Sometimes we get multiple messages
-        if (beerocks::IFACE_ID_INVALID !=
-            mon_db.get_vap_id(tlvf::mac_to_string(virtual_bss_event_tlv->bssid()))) {
-            //LOG(DEBUG) << "We got a repeat message";
-            return;
-        }
-        if (!mon_wlan_hal->register_vbss(vIfaceName)) {
-            LOG(ERROR) << "Failed to register vbss: " << virtual_bss_event_tlv->bssid()
-                       << " on the Monitor thread";
-            return;
-        }
-        if (!register_ext_events_handler(mon_wlan_hal->get_ext_events_fds().back())) {
-            LOG(ERROR) << "Failed to register vbss ext_events";
-            return;
-        }
-        // Update the ap list
-        update_vaps_in_db();
+    // Sometimes we get multiple messages
+    if (beerocks::IFACE_ID_INVALID !=
+        mon_db.get_vap_id(tlvf::mac_to_string(virtual_bss_creation_req->bssid()))) {
+        //LOG(DEBUG) << "We got a repeat message";
+        return;
     }
-    // Do we need to do anything when it's deleted?
+    if (!mon_wlan_hal->register_vbss(vIfaceName)) {
+        LOG(ERROR) << "Failed to register vbss: " << virtual_bss_creation_req->bssid()
+                   << " on the Monitor thread";
+        return;
+    }
+
+    if (!register_ext_events_handler(mon_wlan_hal->get_ext_events_fds().back())) {
+        LOG(ERROR) << "Failed to register vbss ext_events";
+        return;
+    }
+    // Update the ap list
+    update_vaps_in_db();
+    // Now see if a station is already associated
+    if (virtual_bss_creation_req->client_mac() != net::network_utils::ZERO_MAC) {
+        auto sta_mac = tlvf::mac_to_string(virtual_bss_creation_req->client_mac());
+        if (!handle_sta_conn_event(sta_mac, mon_wlan_hal->get_ext_events_fds().back())) {
+            LOG(ERROR) << "Failed to register connected sta in vbss request";
+        }
+    }
     return;
 }
 
@@ -1832,6 +1837,49 @@ std::string Monitor::get_vbss_interface_name(const sMacAddr &vbssid)
     ifname.erase(std::remove(ifname.begin(), ifname.end(), ':'), ifname.end());
     size_t indx = monitor_iface.find_first_of("0123456789");
     return ifname + monitor_iface.at(indx);
+}
+
+bool Monitor::handle_sta_conn_event(const std::string &sta_mac, const int8_t &vap_id)
+{
+
+    LOG(INFO) << "STA_Connected: mac=" << sta_mac << " vap_id=" << int(vap_id);
+
+    std::string sta_ipv4             = beerocks::net::network_utils::ZERO_IP_STRING;
+    std::string set_bridge_4addr_mac = beerocks::net::network_utils::ZERO_MAC_STRING;
+
+    auto old_node = mon_db.sta_find(sta_mac);
+    if (old_node) {
+        sta_ipv4             = old_node->get_ipv4();
+        set_bridge_4addr_mac = old_node->get_bridge_4addr_mac();
+    }
+
+    mon_db.sta_erase(sta_mac);
+
+    auto vap_node = mon_db.vap_get_by_id(vap_id);
+    if (!vap_node) {
+        LOG(ERROR) << "vap_id " << int(vap_id) << " does not exist";
+        return false;
+    }
+
+    auto sta_node = mon_db.sta_add(sta_mac, vap_id);
+    sta_node->set_ipv4(sta_ipv4);
+    sta_node->set_bridge_4addr_mac(set_bridge_4addr_mac);
+
+#ifdef FEATURE_PRE_ASSOCIATION_STEERING
+    sta_node->set_measure_sta_enable(true);
+    //clean pre_association_steering monitor data if already in database.
+    auto client = mon_pre_association_steering_hal.conf_get_client(sta_mac);
+    if (client) {
+        client->setStartTime(std::chrono::steady_clock::now());
+        client->setLastSampleTime(std::chrono::steady_clock::now());
+        client->setAccumulatedPackets(0);
+        client->clearData();
+    }
+#else
+    sta_node->set_measure_sta_enable(
+        (mon_db.get_clients_measuremet_mode() == monitor_db::eClientsMeasurementMode::ENABLE_ALL));
+#endif /* FEATURE_PRE_ASSOCIATION_STEERING */
+    return true;
 }
 
 void Monitor::handle_ap_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx)
@@ -2187,44 +2235,9 @@ bool Monitor::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
 
         auto sta_mac = tlvf::mac_to_string(msg->mac);
         auto vap_id  = msg->vap_id;
-
-        LOG(INFO) << "STA_Connected: mac=" << sta_mac << " vap_id=" << int(vap_id);
-
-        std::string sta_ipv4             = beerocks::net::network_utils::ZERO_IP_STRING;
-        std::string set_bridge_4addr_mac = beerocks::net::network_utils::ZERO_MAC_STRING;
-
-        auto old_node = mon_db.sta_find(sta_mac);
-        if (old_node) {
-            sta_ipv4             = old_node->get_ipv4();
-            set_bridge_4addr_mac = old_node->get_bridge_4addr_mac();
+        if (!handle_sta_conn_event(sta_mac, vap_id)) {
+            LOG(ERROR) << "Error processing sta connection event, for station: " << sta_mac;
         }
-
-        mon_db.sta_erase(sta_mac);
-
-        auto vap_node = mon_db.vap_get_by_id(vap_id);
-        if (!vap_node) {
-            LOG(ERROR) << "vap_id " << int(vap_id) << " does not exist";
-            return false;
-        }
-
-        auto sta_node = mon_db.sta_add(sta_mac, vap_id);
-        sta_node->set_ipv4(sta_ipv4);
-        sta_node->set_bridge_4addr_mac(set_bridge_4addr_mac);
-
-#ifdef FEATURE_PRE_ASSOCIATION_STEERING
-        sta_node->set_measure_sta_enable(true);
-        //clean pre_association_steering monitor data if already in database.
-        auto client = mon_pre_association_steering_hal.conf_get_client(sta_mac);
-        if (client) {
-            client->setStartTime(std::chrono::steady_clock::now());
-            client->setLastSampleTime(std::chrono::steady_clock::now());
-            client->setAccumulatedPackets(0);
-            client->clearData();
-        }
-#else
-        sta_node->set_measure_sta_enable((mon_db.get_clients_measuremet_mode() ==
-                                          monitor_db::eClientsMeasurementMode::ENABLE_ALL));
-#endif /* FEATURE_PRE_ASSOCIATION_STEERING */
         break;
     }
     case Event::STA_Disconnected: {
