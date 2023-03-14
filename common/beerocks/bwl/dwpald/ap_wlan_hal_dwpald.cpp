@@ -1634,7 +1634,7 @@ bool ap_wlan_hal_dwpal::get_spatial_reuse(bwl::spatial_reuse &sr)
     LOG(DEBUG) << "Badhri Inside " << __func__;
     //char *reply = nullptr;
     parsed_line_t reply;
-    int64_t tmp_int;
+    uint8_t tmp_int;
 
     /*  reply:
     HE SR Control=0
