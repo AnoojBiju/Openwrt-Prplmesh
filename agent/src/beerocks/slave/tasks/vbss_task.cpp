@@ -150,7 +150,6 @@ void VbssTask::handle_virtual_bss_response(ieee1905_1::CmduMessageRx &cmdu_rx)
         // topology notification as a BSS has either be created or
         // removed as a result.
         // Send to MON so it can register events and monitor stations on vbss
-        auto db = AgentDB::get();
         // When we receive a response check to see if successful for a known creation request
         // if successful we will create a new dumbed down request message to send to monitor
         // thread
@@ -175,6 +174,7 @@ void VbssTask::handle_virtual_bss_response(ieee1905_1::CmduMessageRx &cmdu_rx)
             // Monitor doesn't need any more information then this
             vbss_creation_req->bssid()      = virtual_bss_event_tlv->bssid();
             vbss_creation_req->client_mac() = m_move_requests[virtual_bss_event_tlv->bssid()];
+            auto db                         = AgentDB::get();
             auto radio =
                 db->get_radio_by_mac(virtual_bss_event_tlv->bssid(), AgentDB::eMacType::BSSID);
             if (!radio) {
