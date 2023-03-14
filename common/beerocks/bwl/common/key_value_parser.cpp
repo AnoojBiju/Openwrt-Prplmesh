@@ -184,7 +184,7 @@ bool KeyValueParser::read_param(const std::string &key, parsed_line_t &obj, T &v
         return false;
     }
 
-    if (std::is_same<T, std::string&>::value) {
+    if (std::is_same<T, std::string &>::value) {
         value = (val_iter->second).c_str();
         return true;
     }
