@@ -831,7 +831,7 @@ bool mon_wlan_hal_dwpal::update_stations_stats(const std::string &vap_iface_name
                                                const std::string &sta_mac, SStaStats &sta_stats,
                                                bool is_read_unicast)
 {
-    const char *tmp_str;
+    std::string tmp_str;
     int64_t tmp_int;
     sPeerStats peer_stats;
     size_t peer_stats_size = sizeof(peer_stats);
@@ -846,7 +846,7 @@ bool mon_wlan_hal_dwpal::update_stations_stats(const std::string &vap_iface_name
     }
 
     // RSSI
-    if (!read_param("ShortTermRSSIAverage", reply, &tmp_str)) {
+    if (!read_param("ShortTermRSSIAverage", reply, tmp_str)) {
         LOG(ERROR) << "Failed reading ShortTermRSSIAverage parameter!";
         return false;
     }
@@ -861,7 +861,7 @@ bool mon_wlan_hal_dwpal::update_stations_stats(const std::string &vap_iface_name
     }
 
     // SNR
-    if (!read_param("SNR", reply, &tmp_str)) {
+    if (!read_param("SNR", reply, tmp_str)) {
         LOG(ERROR) << "Failed reading SNR parameter!";
         return false;
     }

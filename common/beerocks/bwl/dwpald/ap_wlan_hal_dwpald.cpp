@@ -3332,13 +3332,13 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
         parsed_line_t parsed_obj;
         parse_event(buffer, parsed_obj);
 
-        const char *client_mac_str;
-        if (!read_param("_mac", parsed_obj, &client_mac_str)) {
+        std::string client_mac_str;
+        if (!read_param("_mac", parsed_obj, client_mac_str)) {
             return false;
         }
 
-        const char *vap_name;
-        if (!read_param("_iface", parsed_obj, &vap_name)) {
+        std::string vap_name;
+        if (!read_param("_iface", parsed_obj, vap_name)) {
             return false;
         }
 
@@ -3439,7 +3439,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
         msg->params.channel = tmp_int;
 
         // Secondary Channel
-        if (!read_param("sec_chan", parsed_obj, &tmp_str)) {
+        if (!read_param("sec_chan", parsed_obj, tmp_str)) {
             LOG(ERROR) << "Failed reading 'secondary_channel' parameter!";
             return false;
         }
@@ -3448,7 +3448,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
         msg->params.secondary_channel = beerocks::string_utils::stoi(tmp_string);
 
         // Bandwidth
-        if (!read_param("width", parsed_obj, &tmp_str)) {
+        if (!read_param("width", parsed_obj, tmp_str)) {
             LOG(ERROR) << "Failed reading 'bandwidth' parameter!";
             return false;
         }
@@ -3458,7 +3458,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
         msg->params.bandwidth = beerocks::eWiFiBandwidth(dwpal_bw_to_beerocks_bw(tmp_int));
 
         // CAC Duration
-        if (!read_param("cac_time", parsed_obj, &tmp_str)) {
+        if (!read_param("cac_time", parsed_obj, tmp_str)) {
             LOG(ERROR) << "Failed reading 'cac_duration_sec' parameter!";
             return false;
         }
@@ -3711,17 +3711,17 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
         // Initialize the message
         memset(msg_buff.get(), 0, sizeof(sStaConnectionFail));
 
-        const char *client_mac_str = nullptr;
+        std::string client_mac_str;
 
-        if (!read_param("_mac", parsed_obj, &client_mac_str)) {
+        if (!read_param("_mac", parsed_obj, client_mac_str)) {
             return false;
         }
         msg->sta_mac = tlvf::mac_from_string(client_mac_str);
         LOG(DEBUG) << "sta connection failure: offending STA mac: " << msg->sta_mac;
 
-        const char *vap_name = nullptr;
+        std::string vap_name;
 
-        if (!read_param("_iface", parsed_obj, &vap_name)) {
+        if (!read_param("_iface", parsed_obj, vap_name)) {
             return false;
         }
 

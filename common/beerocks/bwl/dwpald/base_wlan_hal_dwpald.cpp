@@ -739,7 +739,7 @@ bool base_wlan_hal_dwpal::refresh_radio_info()
     // TODO: update on every refresh?
 
     // Read Radio status
-    const char *tmp_str;
+    std::string tmp_str;
     int64_t tmp_int;
     parsed_line_t reply_obj;
 
@@ -758,7 +758,7 @@ bool base_wlan_hal_dwpal::refresh_radio_info()
     m_radio_info.channel_ext_above = tmp_int;
 
     // RSSI
-    if (!read_param("state", reply_obj, &tmp_str)) {
+    if (!read_param("state", reply_obj, tmp_str)) {
         LOG(ERROR) << "Failed reading 'state' parameter!";
         return false;
     }
@@ -793,7 +793,7 @@ bool base_wlan_hal_dwpal::refresh_radio_info()
 
 bool base_wlan_hal_dwpal::get_vap_type(const std::string &ifname, bool &fronthaul, bool &backhaul)
 {
-    const char *tmp_str;
+    std::string tmp_str;
     parsed_line_t reply;
 
     std::string cmd;
@@ -806,7 +806,7 @@ bool base_wlan_hal_dwpal::get_vap_type(const std::string &ifname, bool &fronthau
     }
 
     // Mesh mode
-    if (!read_param("mesh_mode", reply, &tmp_str)) {
+    if (!read_param("mesh_mode", reply, tmp_str)) {
         // if mesh_mode not defined at all, assume fronthaul
         fronthaul = true;
         backhaul  = false;
@@ -1022,7 +1022,7 @@ bool base_wlan_hal_dwpal::dwpal_get_phy_chan_status(sPhyChanStatus &status)
 }
 bool base_wlan_hal_dwpal::update_conn_status(char *ifname, std::vector<int> &vap_id)
 {
-    const char *tmp_str = nullptr;
+    std::string tmp_str;
     parsed_line_t reply;
 
     /* Make radio interface connection state as true before sending STATUS command. */
@@ -1071,7 +1071,7 @@ bool base_wlan_hal_dwpal::update_conn_status(char *ifname, std::vector<int> &vap
     for (auto vap_it = 0; vap_it < MAX_VAPS_PER_RADIO; vap_it++) {
         std::ostringstream os;
         os << "bss[" << vap_it << "]"; /* bss[0] - bss[15]*/
-        if (!read_param(os.str(), reply, &tmp_str)) {
+        if (!read_param(os.str(), reply, tmp_str)) {
             if (vap_it == 0) {
                 return false;
             }

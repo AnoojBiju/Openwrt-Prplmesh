@@ -53,8 +53,6 @@ protected:
     static bool read_param(const std::string &key, parsed_line_t &obj, T &value,
                            bool ignore_unknown = false);
 
-    //static bool read_param(const std::string &key, parsed_line_t &obj, const char **value);
-
     static void parsed_obj_debug(const parsed_line_t &obj);
     static void parsed_obj_debug(const parsed_multiline_t &obj);
 
