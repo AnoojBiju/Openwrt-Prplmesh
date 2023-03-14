@@ -164,7 +164,7 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
         }
         auto &stations = hal->m_stations;
         auto sta_it    = std::find_if(stations.begin(), stations.end(),
-                                   [&](const std::pair<std::string, STAExtInfo> &element) {
+                                   [&](const std::pair<std::string, sStationInfo> &element) {
                                        return element.second.path == sta_path;
                                    });
         std::string sta_mac;
@@ -180,9 +180,7 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
         if (sta_it != stations.end()) {
             sta_it->second.path = sta_path;
         } else if (!sta_mac.empty()) {
-            STAExtInfo staInfo;
-            staInfo.path = sta_path;
-            sta_it       = stations.insert(std::make_pair(sta_mac, staInfo)).first;
+            stations.insert(std::make_pair(sta_mac, sStationInfo(sta_path)));
         } else {
             LOG(WARNING) << "missing station mac";
             return;
@@ -231,7 +229,7 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
         LOG(DEBUG) << "Station instance " << sta_path << " deleted";
         auto &stations = hal->m_stations;
         auto sta_it    = std::find_if(stations.begin(), stations.end(),
-                                   [&](const std::pair<std::string, STAExtInfo> &element) {
+                                   [&](const std::pair<std::string, sStationInfo> &element) {
                                        return element.second.path == sta_path;
                                    });
         if (sta_it != stations.end()) {
@@ -267,7 +265,6 @@ bool base_wlan_hal_whm::process_sta_event(const std::string &interface, const st
 {
     return true;
 }
-
 bool base_wlan_hal_whm::fsm_setup() { return true; }
 
 HALState base_wlan_hal_whm::attach(bool block)

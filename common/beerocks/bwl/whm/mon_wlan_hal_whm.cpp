@@ -137,7 +137,7 @@ bool mon_wlan_hal_whm::update_station_qos_control_params(const std::string &vap_
                                                          const std::string &sta_mac,
                                                          SStaQosCtrlParams &sta_qos_ctrl_params)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    //LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
     return true;
 }
 
@@ -197,14 +197,71 @@ bool mon_wlan_hal_whm::channel_scan_dump_results()
 bool mon_wlan_hal_whm::generate_connected_clients_events(
     bool &is_finished_all_clients, std::chrono::steady_clock::time_point max_iteration_timeout)
 {
-    //LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    // For the pwhm, we belive the time requirement will be maintained all time, thus we will ignore the max_iteration_timeout
+    for (auto &vap : m_vapsExtInfo) {
+
+        std::string vap_path                = vap.second.path;
+        std::string associated_devices_path = vap_path + "AssociatedDevice.";
+
+        auto associated_devices_pwhm =
+            m_ambiorix_cl->get_object_multi<AmbiorixVariantMapSmartPtr>(associated_devices_path);
+
+        if (associated_devices_pwhm == nullptr) {
+            LOG(DEBUG) << "Failed reading: " << associated_devices_path;
+            return true;
+        }
+
+        auto vap_id = get_vap_id_with_bss(vap.first);
+        if (vap_id == beerocks::IFACE_ID_INVALID) {
+            LOG(DEBUG) << "Invalid vap_id";
+            continue;
+        }
+
+        //Lets iterate through all instances
+        for (auto &associated_device_pwhm : *associated_devices_pwhm) {
+            bool is_active;
+            if (!associated_device_pwhm.second.read_child(is_active, "Active") || !is_active) {
+                // we are only interested in connected stations
+                continue;
+            }
+
+            std::string mac_addr;
+            if (!associated_device_pwhm.second.read_child(mac_addr, "MACAddress")) {
+                LOG(DEBUG) << "Failed reading MACAddress";
+                continue;
+            }
+
+            auto msg_buff =
+                ALLOC_SMART_BUFFER(sizeof(sACTION_MONITOR_CLIENT_ASSOCIATED_NOTIFICATION));
+            LOG_IF(msg_buff == nullptr, FATAL) << "Memory allocation failed!";
+            // Initialize the message
+            memset(msg_buff.get(), 0, sizeof(sACTION_MONITOR_CLIENT_ASSOCIATED_NOTIFICATION));
+            auto msg =
+                reinterpret_cast<sACTION_MONITOR_CLIENT_ASSOCIATED_NOTIFICATION *>(msg_buff.get());
+            msg->vap_id = vap_id;
+            msg->mac    = tlvf::mac_from_string(mac_addr);
+
+            auto sta_it = m_stations.find(mac_addr);
+            if (sta_it == m_stations.end()) {
+                m_stations.insert(
+                    std::make_pair(mac_addr, sStationInfo(associated_device_pwhm.first)));
+            } else {
+                sta_it->second.path = associated_device_pwhm.first; //enforce the path
+            }
+
+            event_queue_push(Event::STA_Connected, msg_buff);
+        }
+    }
+
     is_finished_all_clients = true;
+
     return true;
 }
 
 bool mon_wlan_hal_whm::pre_generate_connected_clients_events()
 {
-    //LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    // For the pwhm and the evolution of prplmesh, we dont see a need to implement this function, all will be done throughh the main
+    // function generate_connected_clients_events
     return true;
 }
 
@@ -318,6 +375,7 @@ bool mon_wlan_hal_whm::sta_unassoc_rssi_measurement(
         WiFi.Radio.wifi0.NaStaMonitor.NonAssociatedDevice.{i}.SignalStrength=0
         WiFi.Radio.wifi0.NaStaMonitor.NonAssociatedDevice.{i}.TimeStamp=0001-01-01T00:00:00Z
     */
+
     std::vector<sUnassociatedStationStats> stats;
 
     std::list<std::string> amx_un_stations_to_be_removed;
