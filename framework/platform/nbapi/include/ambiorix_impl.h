@@ -93,57 +93,14 @@ public:
     bool init(const std::string &amxb_backend, const std::string &bus_uri,
               const std::string &datamodel_path);
 
-    bool set(const std::string &relative_path, const std::string &parameter,
-             const std::string &value) override;
-    bool set(const std::string &relative_path, const std::string &parameter,
-             const int8_t &value) override;
-    bool set(const std::string &relative_path, const std::string &parameter,
-             const int16_t &value) override;
-    bool set(const std::string &relative_path, const std::string &parameter,
-             const int32_t &value) override;
-    bool set(const std::string &relative_path, const std::string &parameter,
-             const int64_t &value) override;
-    bool set(const std::string &relative_path, const std::string &parameter,
-             const uint8_t &value) override;
-    bool set(const std::string &relative_path, const std::string &parameter,
-             const uint16_t &value) override;
-    bool set(const std::string &relative_path, const std::string &parameter,
-             const uint32_t &value) override;
-    bool set(const std::string &relative_path, const std::string &parameter,
-             const uint64_t &value) override;
-    bool set(const std::string &relative_path, const std::string &parameter,
-             const bool &value) override;
-    bool set(const std::string &relative_path, const std::string &parameter,
-             const double &value) override;
-    bool set(const std::string &relative_path, const std::string &parameter,
-             const sMacAddr &value) override;
-
-    std::string add_instance(const std::string &relative_path) override;
+    std::unique_ptr<SingleObjectTransaction> begin_transaction(const std::string &, bool) override;
+    std::string commit_transaction(std::unique_ptr<SingleObjectTransaction>) override;
 
     bool remove_instance(const std::string &relative_path, uint32_t index) override;
 
     uint32_t get_instance_index(const std::string &specific_path, const std::string &key) override;
 
     std::string get_datamodel_time_format() override;
-
-    /**
-     * @brief Set current data and time in RFC 3339 format.
-     *
-     * @param path_to_object Path to NBAPI object which has parameter object.
-     * @param param parameter name which is default as TimeStamp.
-     * @return True if date and time successfully set, false otherwise.
-     */
-    bool set_current_time(const std::string &path_to_object,
-                          const std::string &param = "TimeStamp") override;
-
-    /**
-     * @brief Set field 'TimeStamp'  in RFC 3339 format.
-     *
-     * @param path_to_object Path to NBAPI object which has parameter object 'TimeStamp'
-     * @param param time_stamp specific time_stamp.
-     * @return True if date and time successfully set, false otherwise.
-     */
-    bool set_time(const std::string &path_to_object, const std::string &time_stamp) override;
 
     bool remove_all_instances(const std::string &relative_path) override;
 

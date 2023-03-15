@@ -477,10 +477,10 @@ bool db::dm_add_sta_beacon_measurement(const beerocks_message::sBeaconResponse11
     }
     m_dialog_tokens[beacon.sta_mac] = beacon.dialog_token;
 
-    std::string measurement_inst =
-        m_ambiorix_datamodel->add_instance(sta->dm_path + ".MeasurementReport");
+    auto measurement_inst =
+        m_ambiorix_datamodel->begin_transaction(sta->dm_path + ".MeasurementReport", true);
 
-    if (measurement_inst.empty()) {
+    if (!measurement_inst) {
         LOG(ERROR) << "Failed to add: " << sta->dm_path << ".MeasurementReport";
         return false;
     }
@@ -488,20 +488,24 @@ bool db::dm_add_sta_beacon_measurement(const beerocks_message::sBeaconResponse11
 
     ret_val &= dm_set_multi_ap_sta_noise_param(*sta, beacon.rcpi, beacon.rsni);
 
-    ret_val &= m_ambiorix_datamodel->set(measurement_inst, "BSSID", beacon.bssid);
-    ret_val &=
-        m_ambiorix_datamodel->set(measurement_inst, "MeasurementToken", beacon.measurement_token);
-    ret_val &= m_ambiorix_datamodel->set(measurement_inst, "RCPI", beacon.rcpi);
-    ret_val &= m_ambiorix_datamodel->set(measurement_inst, "RSNI", beacon.rsni);
-    ret_val &= m_ambiorix_datamodel->set(measurement_inst, "Channel", beacon.channel);
-    ret_val &= m_ambiorix_datamodel->set(measurement_inst, "OpClass", beacon.op_class);
-    ret_val &= m_ambiorix_datamodel->set(measurement_inst, "DialogToken", beacon.dialog_token);
-    ret_val &= m_ambiorix_datamodel->set(measurement_inst, "RepMode", beacon.rep_mode);
-    ret_val &= m_ambiorix_datamodel->set(measurement_inst, "PhyType", beacon.phy_type);
-    ret_val &= m_ambiorix_datamodel->set(measurement_inst, "AntId", beacon.ant_id);
-    ret_val &= m_ambiorix_datamodel->set(measurement_inst, "Duration", beacon.duration);
-    ret_val &= m_ambiorix_datamodel->set(measurement_inst, "StartTime", beacon.start_time);
-    return ret_val;
+    ret_val &= measurement_inst->set("BSSID", beacon.bssid);
+    ret_val &= measurement_inst->set("MeasurementToken", beacon.measurement_token);
+    ret_val &= measurement_inst->set("RCPI", beacon.rcpi);
+    ret_val &= measurement_inst->set("RSNI", beacon.rsni);
+    ret_val &= measurement_inst->set("Channel", beacon.channel);
+    ret_val &= measurement_inst->set("OpClass", beacon.op_class);
+    ret_val &= measurement_inst->set("DialogToken", beacon.dialog_token);
+    ret_val &= measurement_inst->set("RepMode", beacon.rep_mode);
+    ret_val &= measurement_inst->set("PhyType", beacon.phy_type);
+    ret_val &= measurement_inst->set("AntId", beacon.ant_id);
+    ret_val &= measurement_inst->set("Duration", beacon.duration);
+    ret_val &= measurement_inst->set("StartTime", beacon.start_time);
+
+    if (!ret_val || m_ambiorix_datamodel->commit_transaction(std::move(measurement_inst)).empty()) {
+        LOG(ERROR) << "Failed to commit: " << sta->dm_path << ".MeasurementReport";
+        return false;
+    }
+    return true;
 }
 
 bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac)
@@ -1271,30 +1275,32 @@ bool db::set_ap_vht_capabilities(wfa_map::tlvApVhtCapabilities &vht_caps_tlv)
     auto flags1 = vht_caps_tlv.flags1();
     auto flags2 = vht_caps_tlv.flags2();
 
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_obj, "MCSNSSTxSet", vht_caps_tlv.supported_vht_tx_mcs());
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_obj, "MCSNSSRxSet", vht_caps_tlv.supported_vht_rx_mcs());
+    auto transaction = m_ambiorix_datamodel->begin_transaction(path_to_obj);
+    if (!transaction) {
+        LOG(ERROR) << "Failed to start transaction for " << path_to_obj;
+        return false;
+    }
 
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfTxSpatialStreams",
-                                         flags1.max_num_of_supported_tx_spatial_streams + 1);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfRxSpatialStreams",
-                                         flags1.max_num_of_supported_rx_spatial_streams + 1);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "VHTShortGI80",
-                                         static_cast<bool>(flags1.short_gi_support_80mhz));
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_obj, "VHTShortGI160",
-                                  static_cast<bool>(flags1.short_gi_support_160mhz_and_80_80mhz));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "VHT8080",
-                                         static_cast<bool>(flags2.vht_support_80_80mhz));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "VHT160",
-                                         static_cast<bool>(flags2.vht_support_160mhz));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SUBeamformer",
-                                         static_cast<bool>(flags2.su_beamformer_capable));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MUBeamformer",
-                                         static_cast<bool>(flags2.mu_beamformer_capable));
+    ret_val &= transaction->set("MCSNSSTxSet", vht_caps_tlv.supported_vht_tx_mcs());
+    ret_val &= transaction->set("MCSNSSRxSet", vht_caps_tlv.supported_vht_rx_mcs());
 
-    return ret_val;
+    ret_val &= transaction->set("MaxNumberOfTxSpatialStreams",
+                                flags1.max_num_of_supported_tx_spatial_streams + 1);
+    ret_val &= transaction->set("MaxNumberOfRxSpatialStreams",
+                                flags1.max_num_of_supported_rx_spatial_streams + 1);
+    ret_val &= transaction->set("VHTShortGI80", static_cast<bool>(flags1.short_gi_support_80mhz));
+    ret_val &= transaction->set("VHTShortGI160",
+                                static_cast<bool>(flags1.short_gi_support_160mhz_and_80_80mhz));
+    ret_val &= transaction->set("VHT8080", static_cast<bool>(flags2.vht_support_80_80mhz));
+    ret_val &= transaction->set("VHT160", static_cast<bool>(flags2.vht_support_160mhz));
+    ret_val &= transaction->set("SUBeamformer", static_cast<bool>(flags2.su_beamformer_capable));
+    ret_val &= transaction->set("MUBeamformer", static_cast<bool>(flags2.mu_beamformer_capable));
+
+    if (!ret_val || m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty()) {
+        LOG(ERROR) << "Failed to commit sub-object" << path_to_obj;
+        return false;
+    }
+    return true;
 }
 
 bool db::dm_add_ap_operating_classes(const std::string &radio_mac, uint8_t max_tx_power,
@@ -1309,40 +1315,46 @@ bool db::dm_add_ap_operating_classes(const std::string &radio_mac, uint8_t max_t
         return false;
     }
 
-    std::string path_to_obj = radio->dm_path;
-    if (path_to_obj.empty()) {
+    if (radio->dm_path.empty()) {
         return true;
     }
 
-    path_to_obj += ".Capabilities.OperatingClasses";
-    std::string path_to_obj_instance = m_ambiorix_datamodel->add_instance(path_to_obj);
-    if (path_to_obj_instance.empty()) {
+    std::string path_to_obj = radio->dm_path + ".Capabilities.OperatingClasses";
+    auto transaction        = m_ambiorix_datamodel->begin_transaction(path_to_obj, true);
+    if (!transaction) {
         LOG(ERROR) << "Failed to add object: " << path_to_obj;
         return false;
     }
 
-    if (!m_ambiorix_datamodel->set(path_to_obj_instance, "MaxTxPower", max_tx_power)) {
+    if (!transaction->set("MaxTxPower", max_tx_power)) {
         LOG(ERROR) << "Failed to set " << path_to_obj << " MaxTxPower: " << max_tx_power;
         return_value = false;
     }
 
-    if (!m_ambiorix_datamodel->set(path_to_obj_instance, "Class", op_class)) {
+    if (!transaction->set("Class", op_class)) {
         LOG(ERROR) << "Failed to set " << path_to_obj << " Class: " << op_class;
         return_value = false;
     }
 
+    auto path_to_obj_instance = m_ambiorix_datamodel->commit_transaction(std::move(transaction));
+    if (path_to_obj_instance.empty()) {
+        LOG(ERROR) << "Failed to commit creation of new object at " << path_to_obj;
+        return false;
+    }
     path_to_obj = path_to_obj_instance + ".NonOperable";
     for (auto non_op_channel : non_operable_channels) {
-        auto path_to_non_operable_instance = m_ambiorix_datamodel->add_instance(path_to_obj);
-        if (path_to_non_operable_instance.empty()) {
+        transaction = m_ambiorix_datamodel->begin_transaction(path_to_obj, true);
+        if (!transaction) {
             LOG(ERROR) << "Failed to add object: " << path_to_obj;
             return_value = false;
             continue;
         }
-        if (!m_ambiorix_datamodel->set(path_to_non_operable_instance, "NonOpChannelNumber",
-                                       non_op_channel)) {
-            LOG(ERROR) << "Failed to set " << path_to_non_operable_instance
-                       << "NonOpChannelNumber: " << non_op_channel;
+        if (!transaction->set("NonOpChannelNumber", non_op_channel)) {
+            LOG(ERROR) << "Failed to set NonOpChannelNumber: " << non_op_channel;
+            return_value = false;
+        }
+        if (m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty()) {
+            LOG(ERROR) << "Failed to commit creation of new object at " << path_to_obj;
             return_value = false;
         }
     }
@@ -1376,36 +1388,39 @@ bool db::set_ap_he_capabilities(wfa_map::tlvApHeCapabilities &he_caps_tlv)
     auto flags1 = he_caps_tlv.flags1();
     auto flags2 = he_caps_tlv.flags2();
 
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfTxSpatialStreams",
-                                         flags1.max_num_of_supported_tx_spatial_streams + 1);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfRxSpatialStreams",
-                                         flags1.max_num_of_supported_rx_spatial_streams + 1);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HE8080",
-                                         static_cast<bool>(flags1.he_support_80_80mhz));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HE160",
-                                         static_cast<bool>(flags1.he_support_160mhz));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SUBeamformer",
-                                         static_cast<bool>(flags2.su_beamformer_capable));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MUBeamformer",
-                                         static_cast<bool>(flags2.mu_beamformer_capable));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "ULMUMIMO",
-                                         static_cast<bool>(flags2.ul_mu_mimo_capable));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "ULOFDMA",
-                                         static_cast<bool>(flags2.ul_ofdm_capable));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "DLOFDMA",
-                                         static_cast<bool>(flags2.dl_ofdm_capable));
+    auto transaction = m_ambiorix_datamodel->begin_transaction(path_to_obj);
+    if (!transaction) {
+        LOG(ERROR) << "Failed to start transaction for " << path_to_obj;
+        return false;
+    }
+
+    ret_val &= transaction->set("MaxNumberOfTxSpatialStreams",
+                                flags1.max_num_of_supported_tx_spatial_streams + 1);
+    ret_val &= transaction->set("MaxNumberOfRxSpatialStreams",
+                                flags1.max_num_of_supported_rx_spatial_streams + 1);
+    ret_val &= transaction->set("HE8080", static_cast<bool>(flags1.he_support_80_80mhz));
+    ret_val &= transaction->set("HE160", static_cast<bool>(flags1.he_support_160mhz));
+    ret_val &= transaction->set("SUBeamformer", static_cast<bool>(flags2.su_beamformer_capable));
+    ret_val &= transaction->set("MUBeamformer", static_cast<bool>(flags2.mu_beamformer_capable));
+    ret_val &= transaction->set("ULMUMIMO", static_cast<bool>(flags2.ul_mu_mimo_capable));
+    ret_val &= transaction->set("ULOFDMA", static_cast<bool>(flags2.ul_ofdm_capable));
+    ret_val &= transaction->set("DLOFDMA", static_cast<bool>(flags2.dl_ofdm_capable));
+    ret_val &= !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
 
     uint8_t supported_he_mcs_length = he_caps_tlv.supported_he_mcs_length();
     path_to_obj += "MCSNSS";
     for (int i = 0; i < supported_he_mcs_length; i++) {
-        auto path_to_obj_instance = m_ambiorix_datamodel->add_instance(path_to_obj);
-        if (path_to_obj_instance.empty()) {
+        transaction = m_ambiorix_datamodel->begin_transaction(path_to_obj, true);
+        if (!transaction) {
             LOG(ERROR) << "Failed to add " << path_to_obj;
             ret_val = false;
             continue;
         }
-        ret_val &= m_ambiorix_datamodel->set(path_to_obj_instance + '.', "MCSNSSSet",
-                                             *he_caps_tlv.supported_he_mcs(i));
+        ret_val &= transaction->set("MCSNSSSet", *he_caps_tlv.supported_he_mcs(i));
+        if (m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty()) {
+            LOG(ERROR) << "Failed to commit " << path_to_obj;
+            ret_val = false;
+        }
     }
 
     return ret_val;
@@ -1432,50 +1447,42 @@ bool db::dm_set_sta_he_capabilities(const std::string &path_to_sta,
     bool ret_val            = true;
     std::string path_to_obj = path_to_sta + "WiFi6Capabilities.";
 
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfTxSpatialStreams", sta_cap.he_ss);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfRxSpatialStreams", sta_cap.he_ss);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HE8080",
-                                         static_cast<bool>(sta_cap.he_bw == BANDWIDTH_80_80));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HE160",
-                                         static_cast<bool>(sta_cap.he_bw == BANDWIDTH_160));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SUBeamformer",
-                                         static_cast<bool>(sta_cap.he_su_beamformer));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SUBeamformee",
-                                         static_cast<bool>(sta_cap.he_su_beamformee));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MUBeamformer",
-                                         static_cast<bool>(sta_cap.he_mu_beamformer));
-    ret_val &= m_ambiorix_datamodel->set(
-        path_to_obj, "Beamformee80orLess",
-        static_cast<bool>(sta_cap.he_su_beamformee ? sta_cap.he_beamformee_sts_less_80mhz : false));
-    ret_val &= m_ambiorix_datamodel->set(
-        path_to_obj, "BeamformeeAbove80",
-        static_cast<bool>(sta_cap.he_su_beamformee && (sta_cap.he_bw > BANDWIDTH_80)
-                              ? sta_cap.he_beamformee_sts_great_80mhz
-                              : false));
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_obj, "ULMUMIMO", static_cast<bool>(sta_cap.ul_mu_mimo));
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_obj, "ULOFDMA", static_cast<bool>(sta_cap.ul_ofdma));
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_obj, "DLOFDMA", static_cast<bool>(sta_cap.dl_ofdma));
-    // TODO: find the values for the unfilled parameters, PPM-2112
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxDLMUMIMO", sta_cap.dl_mu_mimo_max_users);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxULMUMIMO", sta_cap.ul_mu_mimo_max_users);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxDLOFDMA", sta_cap.dl_ofdma_max_users);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxULOFDMA", sta_cap.ul_ofdma_max_users);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "RTS", static_cast<bool>(false));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MURTS", static_cast<bool>(sta_cap.ul_ofdma));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MultiBSSID", static_cast<bool>(false));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MUEDCA", static_cast<bool>(false));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "TWTRequestor",
-                                         static_cast<bool>(sta_cap.twt_requester));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "TWTResponder",
-                                         static_cast<bool>(sta_cap.twt_responder));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SpatialReuse", static_cast<bool>(false));
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_obj, "AnticipatedChannelUsage", static_cast<bool>(false));
+    auto transaction = m_ambiorix_datamodel->begin_transaction(path_to_obj);
+    if (!transaction) {
+        LOG(ERROR) << "Failed to start transaction for " << path_to_obj;
+        return false;
+    }
 
-    return ret_val;
+    ret_val &= transaction->set("MaxNumberOfTxSpatialStreams", sta_cap.he_ss);
+    ret_val &= transaction->set("MaxNumberOfRxSpatialStreams", sta_cap.he_ss);
+    ret_val &= transaction->set("HE8080", static_cast<bool>(sta_cap.he_bw == BANDWIDTH_80_80));
+    ret_val &= transaction->set("HE160", static_cast<bool>(sta_cap.he_bw == BANDWIDTH_160));
+    ret_val &= transaction->set("SUBeamformer", static_cast<bool>(sta_cap.he_su_beamformer));
+    ret_val &= transaction->set("SUBeamformee", static_cast<bool>(sta_cap.he_su_beamformee));
+    ret_val &= transaction->set("MUBeamformer", static_cast<bool>(sta_cap.he_mu_beamformer));
+    ret_val &= transaction->set("Beamformee80orLess",
+                                sta_cap.he_su_beamformee && sta_cap.he_beamformee_sts_less_80mhz);
+    ret_val &= transaction->set("BeamformeeAbove80", sta_cap.he_su_beamformee &&
+                                                         (sta_cap.he_bw > BANDWIDTH_80) &&
+                                                         sta_cap.he_beamformee_sts_great_80mhz);
+    ret_val &= transaction->set("ULMUMIMO", static_cast<bool>(sta_cap.ul_mu_mimo));
+    ret_val &= transaction->set("ULOFDMA", static_cast<bool>(sta_cap.ul_ofdma));
+    ret_val &= transaction->set("DLOFDMA", static_cast<bool>(sta_cap.dl_ofdma));
+    // TODO: find the values for the unfilled parameters, PPM-2112
+    ret_val &= transaction->set("MaxDLMUMIMO", sta_cap.dl_mu_mimo_max_users);
+    ret_val &= transaction->set("MaxULMUMIMO", sta_cap.ul_mu_mimo_max_users);
+    ret_val &= transaction->set("MaxDLOFDMA", sta_cap.dl_ofdma_max_users);
+    ret_val &= transaction->set("MaxULOFDMA", sta_cap.ul_ofdma_max_users);
+    ret_val &= transaction->set("RTS", static_cast<bool>(false));
+    ret_val &= transaction->set("MURTS", static_cast<bool>(sta_cap.ul_ofdma));
+    ret_val &= transaction->set("MultiBSSID", static_cast<bool>(false));
+    ret_val &= transaction->set("MUEDCA", static_cast<bool>(false));
+    ret_val &= transaction->set("TWTRequestor", static_cast<bool>(sta_cap.twt_requester));
+    ret_val &= transaction->set("TWTResponder", static_cast<bool>(sta_cap.twt_responder));
+    ret_val &= transaction->set("SpatialReuse", static_cast<bool>(false));
+    ret_val &= transaction->set("AnticipatedChannelUsage", static_cast<bool>(false));
+
+    return ret_val && !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
 }
 
 bool db::set_ap_wifi6_capabilities(wfa_map::tlvApWifi6Capabilities &wifi6_caps_tlv)
@@ -1490,10 +1497,11 @@ bool db::set_ap_wifi6_capabilities(wfa_map::tlvApWifi6Capabilities &wifi6_caps_t
         return true;
     }
 
-    auto path_to_obj = radio->dm_path + ".Capabilities.";
-    bool ret_val     = true;
+    bool ret_val = true;
 
     for (auto iter1 = 0; iter1 < wifi6_caps_tlv.number_of_roles(); iter1++) {
+        auto path_to_obj = radio->dm_path + ".Capabilities.";
+
         auto role_tuple = wifi6_caps_tlv.role(iter1);
         if (!std::get<0>(role_tuple)) {
             LOG(ERROR) << "role entry has failed!";
@@ -1523,49 +1531,40 @@ bool db::set_ap_wifi6_capabilities(wfa_map::tlvApWifi6Capabilities &wifi6_caps_t
             path_to_obj += "WiFi6bSTARole.";
         }
 
+        auto transaction = m_ambiorix_datamodel->begin_transaction(path_to_obj);
+        if (!transaction) {
+            LOG(ERROR) << "Failed to start transaction for " << path_to_obj;
+            return false;
+        }
+
         //TODO: Need to set the value for MCS_NSS and OFDMA (PPM-2288)
-        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "AgentRole", flags1.agent_role);
-        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HE160",
-                                             static_cast<bool>(flags1.he_support_160mhz));
-        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HE8080",
-                                             static_cast<bool>(flags1.he_support_80_80mhz));
-        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MCSNSSLength", flags1.mcs_nss_length);
-        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SUBeamformer",
-                                             static_cast<bool>(flags2.su_beamformer));
-        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SUBeamformee",
-                                             static_cast<bool>(flags2.su_beamformee));
-        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MUBeamformer",
-                                             static_cast<bool>(flags2.mu_Beamformer_status));
-        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "BeamformeeStsLess80",
-                                             static_cast<bool>(flags2.beamformee_sts_less_80mhz));
-        ret_val &=
-            m_ambiorix_datamodel->set(path_to_obj, "BeamformeeStsGreater80",
-                                      static_cast<bool>(flags2.beamformee_sts_greater_80mhz));
-        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "ULMUMIMO",
-                                             static_cast<bool>(flags2.ul_mu_mimo));
-        ret_val &=
-            m_ambiorix_datamodel->set(path_to_obj, "ULOFDMA", static_cast<bool>(flags2.ul_ofdma));
-        ret_val &=
-            m_ambiorix_datamodel->set(path_to_obj, "DLOFDMA", static_cast<bool>(flags2.dl_ofdma));
-        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfUsersSupportedTX",
-                                             flags3.max_dl_mu_mimo_tx);
-        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfUsersSupportedRX",
-                                             flags3.max_ul_mu_mimo_rx);
-        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "RTS", static_cast<bool>(flags4.rts));
-        ret_val &=
-            m_ambiorix_datamodel->set(path_to_obj, "MURTS", static_cast<bool>(flags4.mu_rts));
-        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MULTIBSSID",
-                                             static_cast<bool>(flags4.multi_bssid));
-        ret_val &=
-            m_ambiorix_datamodel->set(path_to_obj, "MUEDCA", static_cast<bool>(flags4.mu_edca));
-        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "TwtRequester",
-                                             static_cast<bool>(flags4.twt_requester));
-        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "TwtResponder",
-                                             static_cast<bool>(flags4.twt_responder));
-        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SpatialReuse",
-                                             static_cast<bool>(flags4.spatial_reuse));
-        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "AnticipatedChannelUsage",
-                                             static_cast<bool>(flags4.anticipated_channel_usage));
+        ret_val &= transaction->set("AgentRole", flags1.agent_role);
+        ret_val &= transaction->set("HE160", static_cast<bool>(flags1.he_support_160mhz));
+        ret_val &= transaction->set("HE8080", static_cast<bool>(flags1.he_support_80_80mhz));
+        ret_val &= transaction->set("MCSNSSLength", flags1.mcs_nss_length);
+        ret_val &= transaction->set("SUBeamformer", static_cast<bool>(flags2.su_beamformer));
+        ret_val &= transaction->set("SUBeamformee", static_cast<bool>(flags2.su_beamformee));
+        ret_val &= transaction->set("MUBeamformer", static_cast<bool>(flags2.mu_Beamformer_status));
+        ret_val &= transaction->set("BeamformeeStsLess80",
+                                    static_cast<bool>(flags2.beamformee_sts_less_80mhz));
+        ret_val &= transaction->set("BeamformeeStsGreater80",
+                                    static_cast<bool>(flags2.beamformee_sts_greater_80mhz));
+        ret_val &= transaction->set("ULMUMIMO", static_cast<bool>(flags2.ul_mu_mimo));
+        ret_val &= transaction->set("ULOFDMA", static_cast<bool>(flags2.ul_ofdma));
+        ret_val &= transaction->set("DLOFDMA", static_cast<bool>(flags2.dl_ofdma));
+        ret_val &= transaction->set("MaxNumberOfUsersSupportedTX", flags3.max_dl_mu_mimo_tx);
+        ret_val &= transaction->set("MaxNumberOfUsersSupportedRX", flags3.max_ul_mu_mimo_rx);
+        ret_val &= transaction->set("RTS", static_cast<bool>(flags4.rts));
+        ret_val &= transaction->set("MURTS", static_cast<bool>(flags4.mu_rts));
+        ret_val &= transaction->set("MULTIBSSID", static_cast<bool>(flags4.multi_bssid));
+        ret_val &= transaction->set("MUEDCA", static_cast<bool>(flags4.mu_edca));
+        ret_val &= transaction->set("TwtRequester", static_cast<bool>(flags4.twt_requester));
+        ret_val &= transaction->set("TwtResponder", static_cast<bool>(flags4.twt_responder));
+        ret_val &= transaction->set("SpatialReuse", static_cast<bool>(flags4.spatial_reuse));
+        ret_val &= transaction->set("AnticipatedChannelUsage",
+                                    static_cast<bool>(flags4.anticipated_channel_usage));
+
+        ret_val &= !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
     }
     return ret_val;
 }
@@ -1581,18 +1580,21 @@ bool db::dm_set_sta_ht_capabilities(const std::string &path_to_sta,
     bool ret_val            = true;
     std::string path_to_obj = path_to_sta + "HTCapabilities.";
 
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HTShortGI20",
-                                         static_cast<bool>(sta_cap.ht_low_bw_short_gi));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HTShortGI40",
-                                         static_cast<bool>(sta_cap.ht_high_bw_short_gi));
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_obj, "HT40", (sta_cap.ht_bw == beerocks::BANDWIDTH_40));
+    auto transaction = m_ambiorix_datamodel->begin_transaction(path_to_obj);
+    if (!transaction) {
+        LOG(ERROR) << "Failed to start transaction for " << path_to_obj;
+        return false;
+    }
+
+    ret_val &= transaction->set("HTShortGI20", static_cast<bool>(sta_cap.ht_low_bw_short_gi));
+    ret_val &= transaction->set("HTShortGI40", static_cast<bool>(sta_cap.ht_high_bw_short_gi));
+    ret_val &= transaction->set("HT40", (sta_cap.ht_bw == beerocks::BANDWIDTH_40));
     // TODO: find value for tx_spatial_streams PPM-792.
     // Parse the (Re)Association Request frame.
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfTxSpatialStreams", sta_cap.ht_ss);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfRxSpatialStreams", sta_cap.ht_ss);
+    ret_val &= transaction->set("MaxNumberOfTxSpatialStreams", sta_cap.ht_ss);
+    ret_val &= transaction->set("MaxNumberOfRxSpatialStreams", sta_cap.ht_ss);
 
-    return ret_val;
+    return ret_val && !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
 }
 
 bool db::dm_set_sta_vht_capabilities(const std::string &path_to_sta,
@@ -1606,29 +1608,28 @@ bool db::dm_set_sta_vht_capabilities(const std::string &path_to_sta,
     bool ret_val            = true;
     std::string path_to_obj = path_to_sta + "VHTCapabilities.";
 
+    auto transaction = m_ambiorix_datamodel->begin_transaction(path_to_obj);
+    if (!transaction) {
+        LOG(ERROR) << "Failed to start transaction for " << path_to_obj;
+        return false;
+    }
+
     auto vht_mcs_set = son::wireless_utils::get_vht_mcs_set(sta_cap.vht_mcs, sta_cap.vht_ss);
 
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MCSNSSTxSet", vht_mcs_set);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MCSNSSRxSet", vht_mcs_set);
+    ret_val &= transaction->set("MCSNSSTxSet", vht_mcs_set);
+    ret_val &= transaction->set("MCSNSSRxSet", vht_mcs_set);
     // TODO: find value for tx_spatial_streams PPM-792.
     // Parse the (Re)Association Request frame.
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfTxSpatialStreams", sta_cap.vht_ss);
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfRxSpatialStreams", sta_cap.vht_ss);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "VHTShortGI80",
-                                         static_cast<bool>(sta_cap.vht_low_bw_short_gi));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "VHTShortGI160",
-                                         static_cast<bool>(sta_cap.vht_high_bw_short_gi));
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_obj, "VHT8080", (BANDWIDTH_80_80 <= sta_cap.vht_bw));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "VHT160", (BANDWIDTH_160 <= sta_cap.vht_bw));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SUBeamformer",
-                                         static_cast<bool>(sta_cap.vht_su_beamformer));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MUBeamformer",
-                                         static_cast<bool>(sta_cap.vht_mu_beamformer));
+    ret_val &= transaction->set("MaxNumberOfTxSpatialStreams", sta_cap.vht_ss);
+    ret_val &= transaction->set("MaxNumberOfRxSpatialStreams", sta_cap.vht_ss);
+    ret_val &= transaction->set("VHTShortGI80", static_cast<bool>(sta_cap.vht_low_bw_short_gi));
+    ret_val &= transaction->set("VHTShortGI160", static_cast<bool>(sta_cap.vht_high_bw_short_gi));
+    ret_val &= transaction->set("VHT8080", (BANDWIDTH_80_80 <= sta_cap.vht_bw));
+    ret_val &= transaction->set("VHT160", (BANDWIDTH_160 <= sta_cap.vht_bw));
+    ret_val &= transaction->set("SUBeamformer", static_cast<bool>(sta_cap.vht_su_beamformer));
+    ret_val &= transaction->set("MUBeamformer", static_cast<bool>(sta_cap.vht_mu_beamformer));
 
-    return ret_val;
+    return ret_val && !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
 }
 
 bool db::dm_add_assoc_event_sta_caps(const std::string &assoc_event_path,
@@ -1665,22 +1666,23 @@ bool db::dm_set_assoc_event_sta_ht_cap(const std::string &path_to_event,
         return false;
     }
 
-    bool ret_val               = true;
-    std::string path_to_ht_cap = path_to_event + "HTCapabilities.";
+    bool ret_val            = true;
+    std::string path_to_obj = path_to_event + "HTCapabilities.";
 
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_ht_cap, "MaxNumberOfTxSpatialStreams", sta_cap.ht_ss);
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_ht_cap, "MaxNumberOfRxSpatialStreams", sta_cap.ht_ss);
-    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "HTShortGI20",
-                                         static_cast<bool>(sta_cap.ht_low_bw_short_gi));
-    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "HTShortGI40",
-                                         static_cast<bool>(sta_cap.ht_high_bw_short_gi));
+    auto transaction = m_ambiorix_datamodel->begin_transaction(path_to_obj);
+    if (!transaction) {
+        LOG(ERROR) << "Failed to start transaction for " << path_to_obj;
+        return false;
+    }
+
+    ret_val &= transaction->set("MaxNumberOfTxSpatialStreams", sta_cap.ht_ss);
+    ret_val &= transaction->set("MaxNumberOfRxSpatialStreams", sta_cap.ht_ss);
+    ret_val &= transaction->set("HTShortGI20", static_cast<bool>(sta_cap.ht_low_bw_short_gi));
+    ret_val &= transaction->set("HTShortGI40", static_cast<bool>(sta_cap.ht_high_bw_short_gi));
     // Set to 1 if both 20 MHz and 40 MHz operation is supported
-    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "HT40",
-                                         (sta_cap.ht_bw == beerocks::BANDWIDTH_40));
+    ret_val &= transaction->set("HT40", (sta_cap.ht_bw == beerocks::BANDWIDTH_40));
 
-    return ret_val;
+    return ret_val && !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
 }
 
 bool db::dm_set_assoc_event_sta_vht_cap(const std::string &path_to_event,
@@ -1691,31 +1693,29 @@ bool db::dm_set_assoc_event_sta_vht_cap(const std::string &path_to_event,
         return false;
     }
 
-    bool ret_val               = true;
-    std::string path_to_ht_cap = path_to_event + "VHTCapabilities.";
+    bool ret_val            = true;
+    std::string path_to_obj = path_to_event + "VHTCapabilities.";
+
+    auto transaction = m_ambiorix_datamodel->begin_transaction(path_to_obj);
+    if (!transaction) {
+        LOG(ERROR) << "Failed to start transaction for " << path_to_obj;
+        return false;
+    }
 
     auto vht_mcs_set = son::wireless_utils::get_vht_mcs_set(sta_cap.vht_mcs, sta_cap.vht_ss);
 
-    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "MCSNSSTxSet", vht_mcs_set);
-    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "MCSNSSRxSet", vht_mcs_set);
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_ht_cap, "MaxNumberOfTxSpatialStreams", sta_cap.vht_ss);
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_ht_cap, "MaxNumberOfRxSpatialStreams", sta_cap.vht_ss);
-    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "VHTShortGI80",
-                                         static_cast<bool>(sta_cap.vht_low_bw_short_gi));
-    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "VHTShortGI160",
-                                         static_cast<bool>(sta_cap.vht_high_bw_short_gi));
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_ht_cap, "VHT8080", (BANDWIDTH_80_80 <= sta_cap.vht_bw));
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_ht_cap, "VHT160", (BANDWIDTH_160 <= sta_cap.vht_bw));
-    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "SUBeamformer",
-                                         static_cast<bool>(sta_cap.vht_su_beamformer));
-    ret_val &= m_ambiorix_datamodel->set(path_to_ht_cap, "MUBeamformer",
-                                         static_cast<bool>(sta_cap.vht_mu_beamformer));
+    ret_val &= transaction->set("MCSNSSTxSet", vht_mcs_set);
+    ret_val &= transaction->set("MCSNSSRxSet", vht_mcs_set);
+    ret_val &= transaction->set("MaxNumberOfTxSpatialStreams", sta_cap.vht_ss);
+    ret_val &= transaction->set("MaxNumberOfRxSpatialStreams", sta_cap.vht_ss);
+    ret_val &= transaction->set("VHTShortGI80", static_cast<bool>(sta_cap.vht_low_bw_short_gi));
+    ret_val &= transaction->set("VHTShortGI160", static_cast<bool>(sta_cap.vht_high_bw_short_gi));
+    ret_val &= transaction->set("VHT8080", (BANDWIDTH_80_80 <= sta_cap.vht_bw));
+    ret_val &= transaction->set("VHT160", (BANDWIDTH_160 <= sta_cap.vht_bw));
+    ret_val &= transaction->set("SUBeamformer", static_cast<bool>(sta_cap.vht_su_beamformer));
+    ret_val &= transaction->set("MUBeamformer", static_cast<bool>(sta_cap.vht_mu_beamformer));
 
-    return ret_val;
+    return ret_val && !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
 }
 
 bool db::dm_set_assoc_event_sta_he_cap(const std::string &path_to_event,
@@ -1729,50 +1729,42 @@ bool db::dm_set_assoc_event_sta_he_cap(const std::string &path_to_event,
     bool ret_val            = true;
     std::string path_to_obj = path_to_event + "WiFi6Capabilities.";
 
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfTxSpatialStreams", sta_cap.he_ss);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfRxSpatialStreams", sta_cap.he_ss);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HE8080",
-                                         static_cast<bool>(sta_cap.he_bw == BANDWIDTH_80_80));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HE160",
-                                         static_cast<bool>(sta_cap.he_bw == BANDWIDTH_160));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SUBeamformer",
-                                         static_cast<bool>(sta_cap.he_su_beamformer));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SUBeamformee",
-                                         static_cast<bool>(sta_cap.he_su_beamformee));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MUBeamformer",
-                                         static_cast<bool>(sta_cap.he_mu_beamformer));
-    ret_val &= m_ambiorix_datamodel->set(
-        path_to_obj, "Beamformee80orLess",
-        static_cast<bool>(sta_cap.he_su_beamformee ? sta_cap.he_beamformee_sts_less_80mhz : false));
-    ret_val &= m_ambiorix_datamodel->set(
-        path_to_obj, "BeamformeeAbove80",
-        static_cast<bool>(sta_cap.he_su_beamformee && (sta_cap.he_bw > BANDWIDTH_80)
-                              ? sta_cap.he_beamformee_sts_great_80mhz
-                              : false));
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_obj, "ULMUMIMO", static_cast<bool>(sta_cap.ul_mu_mimo));
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_obj, "ULOFDMA", static_cast<bool>(sta_cap.ul_ofdma));
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_obj, "DLOFDMA", static_cast<bool>(sta_cap.dl_ofdma));
-    // TODO: find the values for the unfilled parameters, PPM-2112
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxDLMUMIMO", sta_cap.dl_mu_mimo_max_users);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxULMUMIMO", sta_cap.ul_mu_mimo_max_users);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxDLOFDMA", sta_cap.dl_ofdma_max_users);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxULOFDMA", sta_cap.ul_ofdma_max_users);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "RTS", static_cast<bool>(false));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MURTS", static_cast<bool>(sta_cap.ul_ofdma));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MultiBSSID", static_cast<bool>(false));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MUEDCA", static_cast<bool>(false));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "TWTRequestor",
-                                         static_cast<bool>(sta_cap.twt_requester));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "TWTResponder",
-                                         static_cast<bool>(sta_cap.twt_responder));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SpatialReuse", static_cast<bool>(false));
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_obj, "AnticipatedChannelUsage", static_cast<bool>(false));
+    auto transaction = m_ambiorix_datamodel->begin_transaction(path_to_obj);
+    if (!transaction) {
+        LOG(ERROR) << "Failed to start transaction for " << path_to_obj;
+        return false;
+    }
 
-    return ret_val;
+    ret_val &= transaction->set("MaxNumberOfTxSpatialStreams", sta_cap.he_ss);
+    ret_val &= transaction->set("MaxNumberOfRxSpatialStreams", sta_cap.he_ss);
+    ret_val &= transaction->set("HE8080", static_cast<bool>(sta_cap.he_bw == BANDWIDTH_80_80));
+    ret_val &= transaction->set("HE160", static_cast<bool>(sta_cap.he_bw == BANDWIDTH_160));
+    ret_val &= transaction->set("SUBeamformer", static_cast<bool>(sta_cap.he_su_beamformer));
+    ret_val &= transaction->set("SUBeamformee", static_cast<bool>(sta_cap.he_su_beamformee));
+    ret_val &= transaction->set("MUBeamformer", static_cast<bool>(sta_cap.he_mu_beamformer));
+    ret_val &= transaction->set("Beamformee80orLess",
+                                sta_cap.he_su_beamformee && sta_cap.he_beamformee_sts_less_80mhz);
+    ret_val &= transaction->set("BeamformeeAbove80", sta_cap.he_su_beamformee &&
+                                                         (sta_cap.he_bw > BANDWIDTH_80) &&
+                                                         sta_cap.he_beamformee_sts_great_80mhz);
+    ret_val &= transaction->set("ULMUMIMO", static_cast<bool>(sta_cap.ul_mu_mimo));
+    ret_val &= transaction->set("ULOFDMA", static_cast<bool>(sta_cap.ul_ofdma));
+    ret_val &= transaction->set("DLOFDMA", static_cast<bool>(sta_cap.dl_ofdma));
+    // TODO: find the values for the unfilled parameters, PPM-2112
+    ret_val &= transaction->set("MaxDLMUMIMO", sta_cap.dl_mu_mimo_max_users);
+    ret_val &= transaction->set("MaxULMUMIMO", sta_cap.ul_mu_mimo_max_users);
+    ret_val &= transaction->set("MaxDLOFDMA", sta_cap.dl_ofdma_max_users);
+    ret_val &= transaction->set("MaxULOFDMA", sta_cap.ul_ofdma_max_users);
+    ret_val &= transaction->set("RTS", static_cast<bool>(false));
+    ret_val &= transaction->set("MURTS", static_cast<bool>(sta_cap.ul_ofdma));
+    ret_val &= transaction->set("MultiBSSID", static_cast<bool>(false));
+    ret_val &= transaction->set("MUEDCA", static_cast<bool>(false));
+    ret_val &= transaction->set("TWTRequestor", static_cast<bool>(sta_cap.twt_requester));
+    ret_val &= transaction->set("TWTResponder", static_cast<bool>(sta_cap.twt_responder));
+    ret_val &= transaction->set("SpatialReuse", static_cast<bool>(false));
+    ret_val &= transaction->set("AnticipatedChannelUsage", static_cast<bool>(false));
+
+    return ret_val && !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
 }
 
 bool db::set_station_capabilities(const std::string &client_mac,
@@ -3648,55 +3640,59 @@ const std::vector<sChannelScanResults> db::get_channel_scan_report(const sMacAdd
     return get_channel_scan_report(RUID, index);
 }
 
-static void dm_add_bss_neighbors(std::shared_ptr<beerocks::nbapi::Ambiorix> m_ambiorix_datamodel,
+static void dm_add_bss_neighbors(beerocks::nbapi::Ambiorix *m_ambiorix_datamodel,
                                  const std::string &channel_path,
                                  const std::vector<wfa_map::cNeighbors> &neighbors)
 {
+    std::string path_to_object = channel_path + ".NeighborBSS";
     for (auto neighbor : neighbors) {
         // Device.WiFi.DataElements.Network.Device.1.Radio.2.ScanResult.3.OpClassScan.4.ChannelScan.5.NeighborBSS
-        auto neighbor_path = m_ambiorix_datamodel->add_instance(channel_path + ".NeighborBSS");
+        auto transaction = m_ambiorix_datamodel->begin_transaction(path_to_object, true);
 
-        if (neighbor_path.empty()) {
+        if (!transaction) {
             LOG(ERROR) << "Failed to add NeighborBSS to " << channel_path;
             return;
         }
-        m_ambiorix_datamodel->set(neighbor_path, "BSSID", neighbor.bssid());
-        m_ambiorix_datamodel->set(neighbor_path, "SSID", neighbor.ssid_str());
-        m_ambiorix_datamodel->set(neighbor_path, "SignalStrength", neighbor.signal_strength());
-        m_ambiorix_datamodel->set(neighbor_path, "ChannelBandwidth",
-                                  neighbor.channels_bw_list_str());
+        transaction->set("BSSID", neighbor.bssid());
+        transaction->set("SSID", neighbor.ssid_str());
+        transaction->set("SignalStrength", neighbor.signal_strength());
+        transaction->set("ChannelBandwidth", neighbor.channels_bw_list_str());
         if (neighbor.bss_load_element_present()) {
-            m_ambiorix_datamodel->set(neighbor_path, "ChannelUtilization",
-                                      neighbor.channel_utilization());
-            m_ambiorix_datamodel->set(neighbor_path, "StationCount", neighbor.station_count());
+            transaction->set("ChannelUtilization", neighbor.channel_utilization());
+            transaction->set("StationCount", neighbor.station_count());
         }
     }
 }
 
-static std::string
-dm_add_channel_scan(std::shared_ptr<beerocks::nbapi::Ambiorix> m_ambiorix_datamodel,
-                    const std::string &class_path, const uint8_t &channel, const uint8_t noise,
-                    const uint8_t utilization, const std::string &ISO_8601_timestamp)
+static std::string dm_add_channel_scan(beerocks::nbapi::Ambiorix *m_ambiorix_datamodel,
+                                       const std::string &class_path, const uint8_t &channel,
+                                       const uint8_t noise, const uint8_t utilization,
+                                       const std::string &ISO_8601_timestamp)
 {
     // Device.WiFi.DataElements.Network.Device.1.Radio.2.ScanResult.3.OpClassScan.4.ChannelScan.5
-    std::string channel_path;
+    std::string channel_path = class_path + ".ChannelScan";
     uint32_t channel_index = m_ambiorix_datamodel->get_instance_index(
         class_path + ".ChannelScan.[Channel == '%s'].", std::to_string(channel));
 
     if (channel_index) {
-        channel_path = class_path + ".ChannelScan." + std::to_string(channel_index);
-    } else {
-        channel_path = m_ambiorix_datamodel->add_instance(class_path + ".ChannelScan");
-        if (channel_path.empty()) {
-            LOG(ERROR) << "Failed to add ChannelScan instance to " << class_path;
-            return {};
-        }
+        channel_path += '.';
+        channel_path += std::to_string(channel_index);
     }
-    m_ambiorix_datamodel->set(channel_path, "TimeStamp", ISO_8601_timestamp);
-    m_ambiorix_datamodel->set(channel_path, "Channel", channel);
-    m_ambiorix_datamodel->set(channel_path, "Utilization", utilization);
-    m_ambiorix_datamodel->set(channel_path, "Noise", noise);
-    return channel_path;
+
+    auto transaction = m_ambiorix_datamodel->begin_transaction(channel_path, !channel_index);
+    if (!transaction) {
+        LOG(ERROR) << "Failed to start a transaction for "
+                   << (!channel_index ? "a new object instance at " : "") << channel_path;
+
+        return "";
+    }
+
+    transaction->set("TimeStamp", ISO_8601_timestamp);
+    transaction->set("Channel", channel);
+    transaction->set("Utilization", utilization);
+    transaction->set("Noise", noise);
+
+    return m_ambiorix_datamodel->commit_transaction(std::move(transaction));
 }
 
 static std::string
@@ -3764,9 +3760,9 @@ bool db::dm_add_scan_result(const sMacAddr &ruid, const uint8_t &operating_class
 
     auto op_class_path =
         dm_add_op_class_scan(m_ambiorix_datamodel, scan_result_path, operating_class);
-    auto channel_path = dm_add_channel_scan(m_ambiorix_datamodel, op_class_path, channel, noise,
+    auto channel_path = dm_add_channel_scan(&*m_ambiorix_datamodel, op_class_path, channel, noise,
                                             utilization, ISO_8601_timestamp);
-    dm_add_bss_neighbors(m_ambiorix_datamodel, channel_path, neighbors);
+    dm_add_bss_neighbors(&*m_ambiorix_datamodel, channel_path, neighbors);
     return true;
 }
 
@@ -3826,7 +3822,7 @@ bool db::restore_steer_history()
     if (steer_history.empty()) {
         return true;
     }
-    for (auto entry : steer_history) {
+    for (auto &entry : steer_history) {
 
         auto obj_path = dm_add_steer_event();
 
@@ -3835,16 +3831,22 @@ bool db::restore_steer_history()
             return false;
         }
         m_steer_history.push(entry.first);
-        ret &= m_ambiorix_datamodel->set(obj_path, "DeviceId", entry.second["device_id"]);
-        ret &= m_ambiorix_datamodel->set(obj_path, "SteeredFrom", entry.second["steered_from"]);
-        ret &= m_ambiorix_datamodel->set(obj_path, "SteeredTo", entry.second["steered_to"]);
-        ret &= m_ambiorix_datamodel->set(obj_path, "Result", entry.second["result"]);
-        ret &= m_ambiorix_datamodel->set(obj_path, "TimeStamp", entry.second["time_stamp"]);
-        ret &= m_ambiorix_datamodel->set(obj_path, "SteeringType", entry.second["steering_type"]);
-        ret &=
-            m_ambiorix_datamodel->set(obj_path, "SteeringOrigin", entry.second["steering_origin"]);
-        ret &=
-            m_ambiorix_datamodel->set(obj_path, "TimeTaken", std::stoi(entry.second["time_taken"]));
+
+        auto transaction = m_ambiorix_datamodel->begin_transaction(obj_path);
+        if (!transaction) {
+            LOG(ERROR) << "Failed to start transaction for " << obj_path;
+            return false;
+        }
+
+        ret &= transaction->set("DeviceId", entry.second["device_id"]);
+        ret &= transaction->set("SteeredFrom", entry.second["steered_from"]);
+        ret &= transaction->set("SteeredTo", entry.second["steered_to"]);
+        ret &= transaction->set("Result", entry.second["result"]);
+        ret &= transaction->set("TimeStamp", entry.second["time_stamp"]);
+        ret &= transaction->set("SteeringType", entry.second["steering_type"]);
+        ret &= transaction->set("SteeringOrigin", entry.second["steering_origin"]);
+        ret &= transaction->set("TimeTaken", std::stoi(entry.second["time_taken"]));
+        ret &= !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
     }
     return ret;
 }
@@ -4736,7 +4738,33 @@ bool db::notify_disconnection(const std::string &client_mac, const uint16_t reas
         return false;
     }
 
-    std::string path_to_eventdata = m_ambiorix_datamodel->add_instance(path_to_disassoc_event_data);
+    auto transaction = m_ambiorix_datamodel->begin_transaction(path_to_disassoc_event_data, true);
+    if (!transaction) {
+        return false;
+    }
+
+    bool ret_val = true;
+
+    ret_val &= transaction->set("BSSID", bssid);
+    ret_val &= transaction->set("MACAddress", client_mac);
+    ret_val &= transaction->set("ReasonCode", reason_code);
+    ret_val &= transaction->set("BytesSent", n->stats_info->tx_bytes);
+    ret_val &= transaction->set("BytesReceived", n->stats_info->rx_bytes);
+    ret_val &= transaction->set("PacketsSent", n->stats_info->tx_packets);
+    ret_val &= transaction->set("PacketsReceived", n->stats_info->rx_packets);
+
+    // ErrorsSent and ErrorsReceived are not available yet on stats_info
+    ret_val &= transaction->set("ErrorsSent", static_cast<uint32_t>(0));
+    ret_val &= transaction->set("ErrorsReceived", static_cast<uint32_t>(0));
+    ret_val &= transaction->set("RetransCount", n->stats_info->retrans_count);
+    ret_val &= transaction->set_current_time();
+
+    if (!ret_val) {
+        return false;
+    }
+
+    std::string path_to_eventdata =
+        m_ambiorix_datamodel->commit_transaction(std::move(transaction));
 
     if (path_to_eventdata.empty()) {
         return false;
@@ -4744,28 +4772,7 @@ bool db::notify_disconnection(const std::string &client_mac, const uint16_t reas
 
     m_disassoc_events.push(path_to_eventdata);
 
-    bool ret_val = true;
-
-    ret_val &= m_ambiorix_datamodel->set(path_to_eventdata, "BSSID", bssid);
-    ret_val &= m_ambiorix_datamodel->set(path_to_eventdata, "MACAddress", client_mac);
-    ret_val &= m_ambiorix_datamodel->set(path_to_eventdata, "ReasonCode", reason_code);
-    ret_val &= m_ambiorix_datamodel->set(path_to_eventdata, "BytesSent", n->stats_info->tx_bytes);
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_eventdata, "BytesReceived", n->stats_info->rx_bytes);
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_eventdata, "PacketsSent", n->stats_info->tx_packets);
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_eventdata, "PacketsReceived", n->stats_info->rx_packets);
-
-    // ErrorsSent and ErrorsReceived are not available yet on stats_info
-    ret_val &= m_ambiorix_datamodel->set(path_to_eventdata, "ErrorsSent", static_cast<uint32_t>(0));
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_eventdata, "ErrorsReceived", static_cast<uint32_t>(0));
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_eventdata, "RetransCount", n->stats_info->retrans_count);
-    ret_val &= m_ambiorix_datamodel->set_current_time(path_to_eventdata);
-
-    return ret_val;
+    return true;
 }
 
 bool db::set_node_stats_info(const sMacAddr &mac, const beerocks_message::sStaStatsParams *params)
@@ -4814,18 +4821,22 @@ bool db::set_vap_stats_info(const sMacAddr &bssid, uint64_t uc_tx_bytes, uint64_
         return true;
     }
 
+    auto transaction = m_ambiorix_datamodel->begin_transaction(bss->dm_path);
+    if (!transaction) {
+        return false;
+    }
+
     bool ret_val = true;
 
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "UnicastBytesSent", uc_tx_bytes);
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "UnicastBytesReceived", uc_rx_bytes);
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "MulticastBytesSent", mc_tx_bytes);
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "MulticastBytesReceived", mc_rx_bytes);
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "BroadcastBytesSent", bc_tx_bytes);
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "BroadcastBytesReceived", bc_rx_bytes);
+    ret_val &= transaction->set("UnicastBytesSent", uc_tx_bytes);
+    ret_val &= transaction->set("UnicastBytesReceived", uc_rx_bytes);
+    ret_val &= transaction->set("MulticastBytesSent", mc_tx_bytes);
+    ret_val &= transaction->set("MulticastBytesReceived", mc_rx_bytes);
+    ret_val &= transaction->set("BroadcastBytesSent", bc_tx_bytes);
+    ret_val &= transaction->set("BroadcastBytesReceived", bc_rx_bytes);
+    ret_val &= transaction->set_current_time();
 
-    m_ambiorix_datamodel->set_current_time(bss->dm_path);
-
-    return ret_val;
+    return ret_val && !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
 }
 
 bool db::commit_persistent_db_changes()
@@ -6113,18 +6124,21 @@ bool db::set_ap_ht_capabilities(const sMacAddr &radio_mac,
     bool ret_val = true;
     path_to_obj += "HTCapabilities.";
 
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HTShortGI20",
-                                         static_cast<bool>(flags.short_gi_support_20mhz));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HTShortGI40",
-                                         static_cast<bool>(flags.short_gi_support_40mhz));
-    ret_val &=
-        m_ambiorix_datamodel->set(path_to_obj, "HT40", static_cast<bool>(flags.ht_support_40mhz));
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfTxSpatialStreams",
-                                         flags.max_num_of_supported_tx_spatial_streams + 1);
-    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfRxSpatialStreams",
-                                         flags.max_num_of_supported_rx_spatial_streams + 1);
+    auto transaction = m_ambiorix_datamodel->begin_transaction(path_to_obj);
+    if (!transaction) {
+        LOG(ERROR) << "Failed to start transaction for " << path_to_obj;
+        return false;
+    }
 
-    return ret_val;
+    ret_val &= transaction->set("HTShortGI20", static_cast<bool>(flags.short_gi_support_20mhz));
+    ret_val &= transaction->set("HTShortGI40", static_cast<bool>(flags.short_gi_support_40mhz));
+    ret_val &= transaction->set("HT40", static_cast<bool>(flags.ht_support_40mhz));
+    ret_val &= transaction->set("MaxNumberOfTxSpatialStreams",
+                                flags.max_num_of_supported_tx_spatial_streams + 1);
+    ret_val &= transaction->set("MaxNumberOfRxSpatialStreams",
+                                flags.max_num_of_supported_rx_spatial_streams + 1);
+
+    return ret_val && !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
 }
 
 bool db::dm_set_device_multi_ap_capabilities(const std::string &device_mac)
@@ -6280,20 +6294,21 @@ bool db::dm_restore_steering_summary_stats(Station &station)
     auto steer_summary = station.steering_summary_stats;
     auto obj_path      = station.dm_path + ".MultiAPSTA.SteeringSummaryStats";
 
-    ret_val &=
-        m_ambiorix_datamodel->set(obj_path, "BlacklistAttempts", steer_summary.blacklist_attempts);
-    ret_val &= m_ambiorix_datamodel->set(obj_path, "BlacklistSuccesses",
-                                         steer_summary.blacklist_successes);
-    ret_val &=
-        m_ambiorix_datamodel->set(obj_path, "BlacklistFailures", steer_summary.blacklist_failures);
-    ret_val &= m_ambiorix_datamodel->set(obj_path, "BTMAttempts", steer_summary.btm_attempts);
-    ret_val &= m_ambiorix_datamodel->set(obj_path, "BTMSuccesses", steer_summary.btm_successes);
-    ret_val &= m_ambiorix_datamodel->set(obj_path, "BTMFailures", steer_summary.btm_failures);
-    ret_val &=
-        m_ambiorix_datamodel->set(obj_path, "BTMQueryResponses", steer_summary.btm_query_responses);
-    ret_val &= m_ambiorix_datamodel->set(obj_path, "LastSteerTime", steer_summary.last_steer_time);
+    auto transaction = m_ambiorix_datamodel->begin_transaction(obj_path);
+    if (!transaction) {
+        return false;
+    }
 
-    return ret_val;
+    ret_val &= transaction->set("BlacklistAttempts", steer_summary.blacklist_attempts);
+    ret_val &= transaction->set("BlacklistSuccesses", steer_summary.blacklist_successes);
+    ret_val &= transaction->set("BlacklistFailures", steer_summary.blacklist_failures);
+    ret_val &= transaction->set("BTMAttempts", steer_summary.btm_attempts);
+    ret_val &= transaction->set("BTMSuccesses", steer_summary.btm_successes);
+    ret_val &= transaction->set("BTMFailures", steer_summary.btm_failures);
+    ret_val &= transaction->set("BTMQueryResponses", steer_summary.btm_query_responses);
+    ret_val &= transaction->set("LastSteerTime", steer_summary.last_steer_time);
+
+    return ret_val && !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
 }
 
 void db::dm_increment_steer_summary_stats(const std::string &param_name)
@@ -6312,14 +6327,20 @@ bool db::dm_add_failed_connection_event(const sMacAddr &bssid, const sMacAddr &s
         return false;
     }
 
+    auto transaction = m_ambiorix_datamodel->begin_transaction(event_path);
+    if (!transaction) {
+        return false;
+    }
+
     bool ret_val = true;
 
-    ret_val &= m_ambiorix_datamodel->set_current_time(event_path);
-    ret_val &= m_ambiorix_datamodel->set(event_path, "BSSID", bssid);
-    ret_val &= m_ambiorix_datamodel->set(event_path, "MACAddress", sta_mac);
-    ret_val &= m_ambiorix_datamodel->set(event_path, "StatusCode", status_code);
-    ret_val &= m_ambiorix_datamodel->set(event_path, "ReasonCode", reason_code);
-    return ret_val;
+    ret_val &= transaction->set_current_time();
+    ret_val &= transaction->set("BSSID", bssid);
+    ret_val &= transaction->set("MACAddress", sta_mac);
+    ret_val &= transaction->set("StatusCode", status_code);
+    ret_val &= transaction->set("ReasonCode", reason_code);
+
+    return ret_val && !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
 }
 
 std::string db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_mac,
@@ -6543,26 +6564,33 @@ bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, cons
         return false;
     }
 
-    if (bss->dm_path.empty()) {
+    bool new_instance    = bss->dm_path.empty();
+    std::string new_path = new_instance ? radio->dm_path + ".BSS" : "";
 
-        auto bss_path     = radio->dm_path + ".BSS";
-        auto bss_instance = m_ambiorix_datamodel->add_instance(bss_path);
-        if (bss_instance.empty()) {
-            LOG(ERROR) << "Failed to add " << bss_path << " instance.";
-            return false;
-        }
-        bss->dm_path = bss_instance;
+    const std::string &relative_path = new_instance ? new_path : bss->dm_path;
+    auto transaction = m_ambiorix_datamodel->begin_transaction(relative_path, new_instance);
+    if (!transaction) {
+        LOG(ERROR) << "Failed to start a transaction for "
+                   << (new_instance ? "a new object instance at " : "") << relative_path;
+
+        return false;
     }
 
-    auto ret_val = true;
+#define TRANS_SET(KEY, VALUE)                                                                      \
+    do {                                                                                           \
+        if (!transaction->set(KEY, VALUE)) {                                                       \
+            LOG(ERROR) << "Failed to set key " << KEY << " to value " << VALUE;                    \
+            return false;                                                                          \
+        }                                                                                          \
+    } while (0)
 
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "BSSID", bssid);
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "SSID", ssid);
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "Enabled", bss->enabled);
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "FronthaulUse", bss->fronthaul);
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "BackhaulUse", bss->backhaul);
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "IsVBSS", is_vbss);
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "ByteCounterUnits", bss->byte_counter_units);
+    TRANS_SET("BSSID", bssid);
+    TRANS_SET("SSID", ssid);
+    TRANS_SET("Enabled", bss->enabled);
+    TRANS_SET("FronthaulUse", bss->fronthaul);
+    TRANS_SET("BackhaulUse", bss->backhaul);
+    TRANS_SET("IsVBSS", is_vbss);
+    TRANS_SET("ByteCounterUnits", bss->byte_counter_units);
 
     /*
         Set value for LastChange variable - it is creation time, when someone will
@@ -6574,10 +6602,24 @@ bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, cons
         static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::seconds>(
                                   std::chrono::steady_clock::now().time_since_epoch())
                                   .count());
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "LastChange", creation_time);
-    ret_val &= m_ambiorix_datamodel->set_current_time(bss->dm_path);
+    TRANS_SET("LastChange", creation_time);
+    if (!transaction->set_current_time()) {
+        LOG(ERROR) << "Failed to set the current time";
+        return false;
+    }
 
-    return ret_val;
+#undef TRANS_SET
+
+    auto commit_ret = m_ambiorix_datamodel->commit_transaction(std::move(transaction));
+    if (commit_ret.empty()) {
+        LOG(ERROR) << "Failed to commit the transaction";
+        return false;
+    }
+    if (bss->dm_path.empty()) {
+        bss->dm_path = std::move(commit_ret);
+    }
+
+    return true;
 }
 
 bool db::dm_uint64_param_one_up(const std::string &obj_path, const std::string &param_name)
@@ -6610,29 +6652,40 @@ bool db::set_radio_metrics(const sMacAddr &radio_mac, uint8_t noise, uint8_t tra
         return false;
     }
 
-    auto radio_path = radio->dm_path;
-    if (radio_path.empty()) {
+    auto &radio_path = radio->dm_path;
+    if (radio->dm_path.empty()) {
         return true;
     }
 
+    auto transaction = m_ambiorix_datamodel->begin_transaction(radio_path);
+    if (!transaction) {
+        LOG(ERROR) << "Failed to start transaction for " << radio_path;
+        return false;
+    }
+
     // Data model path example: Device.WiFi.DataElements.Network.Device.1.Radio.1.Noise
-    if (!m_ambiorix_datamodel->set(radio_path, "Noise", noise)) {
+    if (!transaction->set("Noise", noise)) {
         LOG(ERROR) << "Failed to set " << radio_path << ".Noise " << noise;
         return false;
     }
 
-    if (!m_ambiorix_datamodel->set(radio_path, "Transmit", transmit)) {
+    if (!transaction->set("Transmit", transmit)) {
         LOG(ERROR) << "Failed to set " << radio_path << ".Transmit " << transmit;
         return false;
     }
 
-    if (!m_ambiorix_datamodel->set(radio_path, "ReceiveSelf", receive_self)) {
+    if (!transaction->set("ReceiveSelf", receive_self)) {
         LOG(ERROR) << "Failed to set " << radio_path << ".ReceiveSelf " << receive_self;
         return false;
     }
 
-    if (!m_ambiorix_datamodel->set(radio_path, "ReceiveOther", receive_other)) {
+    if (!transaction->set("ReceiveOther", receive_other)) {
         LOG(ERROR) << "Failed to set " << radio_path << ".ReceiveOther " << receive_other;
+        return false;
+    }
+
+    if (m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty()) {
+        LOG(ERROR) << "Failed to commit transaction for " << radio_path;
         return false;
     }
 
@@ -6833,15 +6886,26 @@ bool db::dm_update_interface_tx_stats(const sMacAddr &device_mac, const sMacAddr
     // Prepare path to the Interface object Stats, like Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.Stats
     auto stats_path = iface->m_dm_path + ".Stats";
 
+    auto transaction = m_ambiorix_datamodel->begin_transaction(stats_path);
+    if (!transaction) {
+        LOG(ERROR) << "Failed to start transaction for " << stats_path;
+        return false;
+    }
+
     // Set value for the path as Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.Stats.PacketsSent
-    if (!m_ambiorix_datamodel->set(stats_path, "PacketsSent", packets_sent)) {
+    if (!transaction->set("PacketsSent", packets_sent)) {
         LOG(ERROR) << "Failed to set " << stats_path << ".PacketsSent: " << packets_sent;
         return false;
     }
 
     // Set value for the path as Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.Stats.ErrorsSent
-    if (!m_ambiorix_datamodel->set(stats_path, "ErrorsSent", errors_sent)) {
+    if (!transaction->set("ErrorsSent", errors_sent)) {
         LOG(ERROR) << "Failed to set " << stats_path << ".ErrorsSent: " << errors_sent;
+        return false;
+    }
+
+    if (m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty()) {
+        LOG(ERROR) << "Failed to commit transaction for " << stats_path;
         return false;
     }
 
@@ -6870,15 +6934,26 @@ bool db::dm_update_interface_rx_stats(const sMacAddr &device_mac, const sMacAddr
     // Prepare path to the Interface object Stats, like Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.Stats
     auto stats_path = iface->m_dm_path + ".Stats";
 
+    auto transaction = m_ambiorix_datamodel->begin_transaction(stats_path);
+    if (!transaction) {
+        LOG(ERROR) << "Failed to start transaction for " << stats_path;
+        return false;
+    }
+
     // Set value for the path as Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.Stats.PacketsReceived
-    if (!m_ambiorix_datamodel->set(stats_path, "PacketsReceived", packets_received)) {
+    if (!transaction->set("PacketsReceived", packets_received)) {
         LOG(ERROR) << "Failed to set " << stats_path << ".PacketsReceived: " << packets_received;
         return false;
     }
 
     // Set value for the path as Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.Stats.ErrorsReceived
-    if (!m_ambiorix_datamodel->set(stats_path, "ErrorsReceived", errors_received)) {
+    if (!transaction->set("ErrorsReceived", errors_received)) {
         LOG(ERROR) << "Failed to set " << stats_path << ".ErrorsReceived: " << errors_received;
+        return false;
+    }
+
+    if (m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty()) {
+        LOG(ERROR) << "Failed to commit transaction for " << stats_path;
         return false;
     }
 
@@ -6989,17 +7064,18 @@ bool db::dm_set_sta_extended_link_metrics(
         return true;
     }
 
-    bool ret_val = true;
-    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "LastDataDownlinkRate",
-                                         metrics.last_data_down_link_rate);
-    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "LastDataUplinkRate",
-                                         metrics.last_data_up_link_rate);
-    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "UtilizationReceive",
-                                         metrics.utilization_receive);
-    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "UtilizationTransmit",
-                                         metrics.utilization_transmit);
+    auto transaction = m_ambiorix_datamodel->begin_transaction(station->dm_path);
+    if (!transaction) {
+        return false;
+    }
 
-    return ret_val;
+    bool ret_val = true;
+    ret_val &= transaction->set("LastDataDownlinkRate", metrics.last_data_down_link_rate);
+    ret_val &= transaction->set("LastDataUplinkRate", metrics.last_data_up_link_rate);
+    ret_val &= transaction->set("UtilizationReceive", metrics.utilization_receive);
+    ret_val &= transaction->set("UtilizationTransmit", metrics.utilization_transmit);
+
+    return ret_val && !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
 }
 
 bool db::dm_set_sta_traffic_stats(const sMacAddr &sta_mac, sAssociatedStaTrafficStats &stats)
@@ -7015,20 +7091,22 @@ bool db::dm_set_sta_traffic_stats(const sMacAddr &sta_mac, sAssociatedStaTraffic
         return true;
     }
 
-    bool ret_val = true;
-    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "BytesSent", stats.m_byte_sent);
-    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "BytesReceived", stats.m_byte_received);
-    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "PacketsSent", stats.m_packets_sent);
-    ret_val &=
-        m_ambiorix_datamodel->set(station->dm_path, "PacketsReceived", stats.m_packets_received);
-    ret_val &=
-        m_ambiorix_datamodel->set(station->dm_path, "RetransCount", stats.m_retransmission_count);
-    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "ErrorsSent", stats.m_tx_packets_error);
-    ret_val &=
-        m_ambiorix_datamodel->set(station->dm_path, "ErrorsReceived", stats.m_rx_packets_error);
-    ret_val &= m_ambiorix_datamodel->set_current_time(station->dm_path);
+    auto transaction = m_ambiorix_datamodel->begin_transaction(station->dm_path);
+    if (!transaction) {
+        return false;
+    }
 
-    return ret_val;
+    bool ret_val = true;
+    ret_val &= transaction->set("BytesSent", stats.m_byte_sent);
+    ret_val &= transaction->set("BytesReceived", stats.m_byte_received);
+    ret_val &= transaction->set("PacketsSent", stats.m_packets_sent);
+    ret_val &= transaction->set("PacketsReceived", stats.m_packets_received);
+    ret_val &= transaction->set("RetransCount", stats.m_retransmission_count);
+    ret_val &= transaction->set("ErrorsSent", stats.m_tx_packets_error);
+    ret_val &= transaction->set("ErrorsReceived", stats.m_rx_packets_error);
+    ret_val &= transaction->set_current_time();
+
+    return ret_val && !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
 }
 
 bool db::dm_add_tid_queue_sizes(
@@ -7047,14 +7125,14 @@ bool db::dm_add_tid_queue_sizes(
 
     // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.TIDQueueSizes.{i}.
     for (auto &tid_queue : tid_queue_vector) {
-        auto tid_queue_size_path =
-            m_ambiorix_datamodel->add_instance(station.dm_path + ".TIDQueueSizes");
-        if (tid_queue_size_path.empty()) {
+        auto transaction = m_ambiorix_datamodel->begin_transaction(station.dm_path + ".TIDQueueSizes", true);
+        if (!transaction) {
             return false;
         }
 
-        ret_val &= m_ambiorix_datamodel->set(tid_queue_size_path, "TID", tid_queue.tid);
-        ret_val &= m_ambiorix_datamodel->set(tid_queue_size_path, "Size", tid_queue.queue_size);
+        ret_val &= transaction->set("TID", tid_queue.tid);
+        ret_val &= transaction->set("Size", tid_queue.queue_size);
+        ret_val &= !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
     }
 
     return ret_val;
@@ -7456,28 +7534,34 @@ bool db::add_sta_steering_event(const sMacAddr &sta_mac, sStaSteeringEvent &even
     bool ret_val          = true;
     auto steering_history = station->dm_path + ".MultiAPSTA.SteeringHistory";
 
-    auto steering_event_path = m_ambiorix_datamodel->add_instance(steering_history);
-    if (steering_event_path.empty()) {
+    auto transaction = m_ambiorix_datamodel->begin_transaction(steering_history, true);
+    if (!transaction) {
         LOG(ERROR) << "Failed to add instance to " << steering_history;
         return false;
     }
 
     LOG(DEBUG) << "Add station steering event to database sta:" << sta_mac;
+
+    ret_val &= transaction->set("APOrigin", event.original_bssid);
+    ret_val &= transaction->set("APDestination", event.target_bssid);
+    ret_val &= transaction->set("SteeringDuration", event.duration.count());
+    ret_val &= transaction->set("SteeringApproach", event.steering_approach);
+    ret_val &= transaction->set("TriggerEvent", event.trigger_event);
+    ret_val &= transaction->set("Time", event.timestamp);
+
+    auto steering_event_path = m_ambiorix_datamodel->commit_transaction(std::move(transaction));
+    ret_val &= !steering_event_path.empty();
+
+    if (!ret_val) {
+        return false;
+    }
+
     sta_events.push_back(event);
 
     // Update steering event data model path
-    sta_events.back().dm_path = steering_event_path;
+    sta_events.back().dm_path = std::move(steering_event_path);
 
-    ret_val &= m_ambiorix_datamodel->set(steering_event_path, "APOrigin", event.original_bssid);
-    ret_val &= m_ambiorix_datamodel->set(steering_event_path, "APDestination", event.target_bssid);
-    ret_val &=
-        m_ambiorix_datamodel->set(steering_event_path, "SteeringDuration", event.duration.count());
-    ret_val &=
-        m_ambiorix_datamodel->set(steering_event_path, "SteeringApproach", event.steering_approach);
-    ret_val &= m_ambiorix_datamodel->set(steering_event_path, "TriggerEvent", event.trigger_event);
-    ret_val &= m_ambiorix_datamodel->set(steering_event_path, "Time", event.timestamp);
-
-    return ret_val;
+    return true;
 }
 
 bool db::dm_restore_sta_steering_event(const Station &station)
@@ -7491,27 +7575,27 @@ bool db::dm_restore_sta_steering_event(const Station &station)
                << " event size:" << sta_events.size();
 
     for (auto &event : sta_events) {
+        auto transaction = m_ambiorix_datamodel->begin_transaction(steering_history, true);
+        if (!transaction) {
+            LOG(ERROR) << "Failed to add instance to " << steering_history;
+            return false;
+        }
 
-        auto steering_event_path = m_ambiorix_datamodel->add_instance(steering_history);
+        ret_val &= transaction->set("APOrigin", tlvf::mac_to_string(event.original_bssid));
+        ret_val &= transaction->set("APDestination", tlvf::mac_to_string(event.target_bssid));
+        ret_val &= transaction->set("SteeringDuration", event.duration.count());
+        ret_val &= transaction->set("SteeringApproach", event.steering_approach);
+        ret_val &= transaction->set("TriggerEvent", event.trigger_event);
+        ret_val &= transaction->set("Time", event.timestamp);
+
+        auto steering_event_path = m_ambiorix_datamodel->commit_transaction(std::move(transaction));
         if (steering_event_path.empty()) {
             LOG(ERROR) << "Failed to add instance to " << steering_history;
             return false;
         }
 
         // Set steering event data model path
-        event.dm_path = steering_event_path;
-
-        ret_val &= m_ambiorix_datamodel->set(steering_event_path, "APOrigin",
-                                             tlvf::mac_to_string(event.original_bssid));
-        ret_val &= m_ambiorix_datamodel->set(steering_event_path, "APDestination",
-                                             tlvf::mac_to_string(event.target_bssid));
-        ret_val &= m_ambiorix_datamodel->set(steering_event_path, "SteeringDuration",
-                                             event.duration.count());
-        ret_val &= m_ambiorix_datamodel->set(steering_event_path, "SteeringApproach",
-                                             event.steering_approach);
-        ret_val &=
-            m_ambiorix_datamodel->set(steering_event_path, "TriggerEvent", event.trigger_event);
-        ret_val &= m_ambiorix_datamodel->set(steering_event_path, "Time", event.timestamp);
+        event.dm_path = std::move(steering_event_path);
     }
 
     return ret_val;
@@ -7527,16 +7611,18 @@ bool db::dm_set_device_multi_ap_backhaul(const Agent &agent)
 
     const auto multiap_backhaul_path = agent.dm_path + ".MultiAPDevice.Backhaul";
 
+    auto transaction = m_ambiorix_datamodel->begin_transaction(multiap_backhaul_path);
+    if (!transaction) {
+        return false;
+    }
+
     // Controller does not have any Backhaul, so leave it as TR-181 states it.
     if (agent.is_gateway) {
-        ret_val &=
-            m_ambiorix_datamodel->set(multiap_backhaul_path, "LinkType", std::string{"None"});
-        ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "MACAddress", std::string{});
-        ret_val &=
-            m_ambiorix_datamodel->set(multiap_backhaul_path, "BackhaulMACAddress", std::string{});
-        ret_val &=
-            m_ambiorix_datamodel->set(multiap_backhaul_path, "BackhaulDeviceID", std::string{});
-        return ret_val;
+        ret_val &= transaction->set("LinkType", std::string{"None"});
+        ret_val &= transaction->set("MACAddress", std::string{});
+        ret_val &= transaction->set("BackhaulMACAddress", std::string{});
+        ret_val &= transaction->set("BackhaulDeviceID", std::string{});
+        return ret_val && !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
     }
 
     // TODO: Implement different link types (PPM-1656)
@@ -7556,23 +7642,21 @@ bool db::dm_set_device_multi_ap_backhaul(const Agent &agent)
         break;
     }
 
-    ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "LinkType", iface_link_str);
-    ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "MACAddress",
-                                         agent.backhaul.backhaul_interface);
-    ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "BackhaulMACAddress",
-                                         agent.backhaul.parent_interface);
+    ret_val &= transaction->set("LinkType", iface_link_str);
+    ret_val &= transaction->set("MACAddress", agent.backhaul.backhaul_interface);
+    ret_val &= transaction->set("BackhaulMACAddress", agent.backhaul.parent_interface);
 
     auto parent_agent = agent.backhaul.parent_agent.lock();
     if (!parent_agent) {
 
         //TODO: Error log could be added after (PPM-2043), otherwise it floods logs
-        m_ambiorix_datamodel->set(multiap_backhaul_path, "BackhaulDeviceID", std::string{});
+        transaction->set("BackhaulDeviceID", std::string{});
+        m_ambiorix_datamodel->commit_transaction(std::move(transaction));
         return false;
     }
-    ret_val &=
-        m_ambiorix_datamodel->set(multiap_backhaul_path, "BackhaulDeviceID", parent_agent->al_mac);
+    ret_val &= transaction->set("BackhaulDeviceID", parent_agent->al_mac);
 
-    return ret_val;
+    return ret_val && !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
 }
 
 bool db::dm_set_device_ssid_to_vid_map(const Agent &agent,
@@ -7584,16 +7668,16 @@ bool db::dm_set_device_ssid_to_vid_map(const Agent &agent,
         return true;
     }
 
-    auto ssidtovidmapping_path =
-        m_ambiorix_datamodel->add_instance(agent.dm_path + ".SSIDtoVIDMapping");
-    if (ssidtovidmapping_path.empty()) {
+    auto transaction =
+        m_ambiorix_datamodel->begin_transaction(agent.dm_path + ".SSIDtoVIDMapping", true);
+    if (!transaction) {
         LOG(ERROR) << "Failed to add: " << agent.dm_path << ".SSIDtoVIDMapping";
         return false;
     }
-    ret_val &= m_ambiorix_datamodel->set(ssidtovidmapping_path, "SSID", config.ssid);
-    ret_val &= m_ambiorix_datamodel->set(ssidtovidmapping_path, "VID", config.vlan_id);
+    ret_val &= transaction->set("SSID", config.ssid);
+    ret_val &= transaction->set("VID", config.vlan_id);
 
-    return ret_val;
+    return ret_val && !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
 }
 
 bool db::dm_set_default_8021q(const Agent &agent, const uint16_t primary_vlan_id,
@@ -7609,15 +7693,16 @@ bool db::dm_set_default_8021q(const Agent &agent, const uint16_t primary_vlan_id
         return false;
     }
 
-    auto default_8021q_path = m_ambiorix_datamodel->add_instance(agent.dm_path + ".Default8021Q");
-    if (default_8021q_path.empty()) {
+    auto transaction =
+        m_ambiorix_datamodel->begin_transaction(agent.dm_path + ".Default8021Q", true);
+    if (!transaction) {
         return false;
     }
-    ret_val &= m_ambiorix_datamodel->set(default_8021q_path, "Enable", bool(primary_vlan_id > 0));
-    ret_val &= m_ambiorix_datamodel->set(default_8021q_path, "PrimaryVID", primary_vlan_id);
-    ret_val &= m_ambiorix_datamodel->set(default_8021q_path, "DefaultPCP", default_pcp);
+    ret_val &= transaction->set("Enable", bool(primary_vlan_id > 0));
+    ret_val &= transaction->set("PrimaryVID", primary_vlan_id);
+    ret_val &= transaction->set("DefaultPCP", default_pcp);
 
-    return ret_val;
+    return ret_val && !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
 }
 
 bool db::dm_set_profile1_device_info(const Agent &agent)
@@ -7887,21 +7972,24 @@ bool db::dm_set_radio_vbss_capabilities(const sMacAddr &radio_uid, uint8_t max_v
 
     std::string vbss_caps_dm_path = radio->dm_path + ".Capabilities.VBSSCapabilities";
 
+    auto transaction = m_ambiorix_datamodel->begin_transaction(vbss_caps_dm_path);
+    if (!transaction) {
+        LOG(ERROR) << "Failed to start transaction for " << vbss_caps_dm_path;
+        return false;
+    }
+
     bool ret_val = true;
 
-    ret_val &= m_ambiorix_datamodel->set(vbss_caps_dm_path, "MaxVBSS", max_vbss);
-    ret_val &= m_ambiorix_datamodel->set(vbss_caps_dm_path, "VBSSsSubtract", vbsses_subtract);
-    ret_val &= m_ambiorix_datamodel->set(vbss_caps_dm_path, "ApplyVBSSIDRestrictions",
-                                         apply_vbssid_restrictions);
-    ret_val &= m_ambiorix_datamodel->set(vbss_caps_dm_path, "ApplyVBSSIDMatchMaskRestrictions",
-                                         apply_vbssid_match_mask_restrictions);
-    ret_val &= m_ambiorix_datamodel->set(vbss_caps_dm_path, "ApplyVBSSIDFixedBitsRestrictions",
-                                         apply_fixed_bits_restrictions);
-    ret_val &= m_ambiorix_datamodel->set(vbss_caps_dm_path, "VBSSIDFixedBitsMask", fixed_bits_mask);
+    ret_val &= transaction->set("MaxVBSS", max_vbss);
+    ret_val &= transaction->set("VBSSsSubtract", vbsses_subtract);
+    ret_val &= transaction->set("ApplyVBSSIDRestrictions", apply_vbssid_restrictions);
     ret_val &=
-        m_ambiorix_datamodel->set(vbss_caps_dm_path, "VBSSIDFixedBitsValue", fixed_bits_value);
+        transaction->set("ApplyVBSSIDMatchMaskRestrictions", apply_vbssid_match_mask_restrictions);
+    ret_val &= transaction->set("ApplyVBSSIDFixedBitsRestrictions", apply_fixed_bits_restrictions);
+    ret_val &= transaction->set("VBSSIDFixedBitsMask", fixed_bits_mask);
+    ret_val &= transaction->set("VBSSIDFixedBitsValue", fixed_bits_value);
 
-    return ret_val;
+    return ret_val && !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
 }
 
 bool db::dm_add_agent_1905_layer_security_capabilities(
@@ -7912,21 +8000,18 @@ bool db::dm_add_agent_1905_layer_security_capabilities(
 {
     m_ambiorix_datamodel->remove_all_instances(agent.dm_path + ".IEEE1905Security");
 
-    auto ieee_1905_sec_path =
-        m_ambiorix_datamodel->add_instance(agent.dm_path + ".IEEE1905Security");
-    if (ieee_1905_sec_path.empty()) {
+    auto transaction =
+        m_ambiorix_datamodel->begin_transaction(agent.dm_path + ".IEEE1905Security", true);
+    if (!transaction) {
         return false;
     }
 
     bool ret_val = true;
-    ret_val &=
-        m_ambiorix_datamodel->set(ieee_1905_sec_path, "OnboardingProtocol", onboard_protocol);
-    ret_val &=
-        m_ambiorix_datamodel->set(ieee_1905_sec_path, "IntegrityAlgorithm", integrity_algorithm);
-    ret_val &=
-        m_ambiorix_datamodel->set(ieee_1905_sec_path, "EncryptionAlgorithm", encryption_algorithm);
+    ret_val &= transaction->set("OnboardingProtocol", onboard_protocol);
+    ret_val &= transaction->set("IntegrityAlgorithm", integrity_algorithm);
+    ret_val &= transaction->set("EncryptionAlgorithm", encryption_algorithm);
 
-    return ret_val;
+    return ret_val && !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
 }
 
 bool db::dm_set_metric_reporting_policies(const Agent &agent)
@@ -7944,25 +8029,25 @@ bool db::dm_set_metric_reporting_policies(const Agent &agent)
             continue;
         }
 
-        ret_val &= m_ambiorix_datamodel->set(
-            radio.second->dm_path, "STAReportingRCPIThreshold",
-            radio.second->metric_reporting_policies.sta_reporting_rcpi_threshold);
-        ret_val &= m_ambiorix_datamodel->set(
-            radio.second->dm_path, "STAReportingRCPIHysteresisMarginOverride",
-            radio.second->metric_reporting_policies
-                .sta_reporting_rcpi_hyst_margin_override_threshold);
-        ret_val &= m_ambiorix_datamodel->set(
-            radio.second->dm_path, "ChannelUtilizationReportingThreshold",
-            radio.second->metric_reporting_policies.ap_reporting_channel_utilization_threshold);
-        ret_val &= m_ambiorix_datamodel->set(
-            radio.second->dm_path, "AssociatedSTATrafficStatsInclusionPolicy",
-            radio.second->metric_reporting_policies.assoc_sta_traffic_stats_inclusion_policy);
-        ret_val &= m_ambiorix_datamodel->set(
-            radio.second->dm_path, "AssociatedSTALinkMetricsInclusionPolicy",
-            radio.second->metric_reporting_policies.assoc_sta_link_metrics_inclusion_policy);
-        ret_val &= m_ambiorix_datamodel->set(
-            radio.second->dm_path, "APMetricsWiFi6",
-            radio.second->metric_reporting_policies.assoc_wifi6_sta_status_report_inclusion_policy);
+        auto transaction = m_ambiorix_datamodel->begin_transaction(radio.second->dm_path);
+        if (!transaction) {
+            ret_val = false;
+            continue;
+        }
+
+        const auto &mrp = radio.second->metric_reporting_policies;
+        ret_val &= transaction->set("STAReportingRCPIThreshold", mrp.sta_reporting_rcpi_threshold);
+        ret_val &= transaction->set("STAReportingRCPIHysteresisMarginOverride",
+                                    mrp.sta_reporting_rcpi_hyst_margin_override_threshold);
+        ret_val &= transaction->set("ChannelUtilizationReportingThreshold",
+                                    mrp.ap_reporting_channel_utilization_threshold);
+        ret_val &= transaction->set("AssociatedSTATrafficStatsInclusionPolicy",
+                                    mrp.assoc_sta_traffic_stats_inclusion_policy);
+        ret_val &= transaction->set("AssociatedSTALinkMetricsInclusionPolicy",
+                                    mrp.assoc_sta_link_metrics_inclusion_policy);
+        ret_val &=
+            transaction->set("APMetricsWiFi6", mrp.assoc_wifi6_sta_status_report_inclusion_policy);
+        ret_val &= !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
     }
     return ret_val;
 }
@@ -8068,16 +8153,16 @@ bool db::dm_set_service_prioritization_rules(const Agent &agent)
     }
 
     for (const auto &rule : agent.service_prioritization.rules) {
-        auto sp_rule_path = m_ambiorix_datamodel->add_instance(agent.dm_path + ".SPRule");
-        if (sp_rule_path.empty()) {
+        auto transaction = m_ambiorix_datamodel->begin_transaction(agent.dm_path + ".SPRule", true);
+        if (!transaction) {
             return false;
         }
 
-        ret_val &= m_ambiorix_datamodel->set(sp_rule_path, "ID", rule.first);
-        ret_val &= m_ambiorix_datamodel->set(sp_rule_path, "Precedence", rule.second.precedence);
-        ret_val &= m_ambiorix_datamodel->set(sp_rule_path, "Output", rule.second.output);
-        ret_val &= m_ambiorix_datamodel->set(sp_rule_path, "AlwaysMatch",
-                                             rule.second.bits_field2.always_match);
+        ret_val &= transaction->set("ID", rule.first);
+        ret_val &= transaction->set("Precedence", rule.second.precedence);
+        ret_val &= transaction->set("Output", rule.second.output);
+        ret_val &= transaction->set("AlwaysMatch", rule.second.bits_field2.always_match);
+        ret_val &= !m_ambiorix_datamodel->commit_transaction(std::move(transaction)).empty();
     }
 
     return ret_val;
