@@ -176,7 +176,7 @@ void VbssTask::handle_virtual_bss_response(ieee1905_1::CmduMessageRx &cmdu_rx)
             vbss_creation_req->client_mac() = m_move_requests[virtual_bss_event_tlv->bssid()];
             auto db                         = AgentDB::get();
             auto radio =
-                db->get_radio_by_mac(virtual_bss_event_tlv->bssid(), AgentDB::eMacType::BSSID);
+                db->get_radio_by_mac(virtual_bss_event_tlv->radio_uid(), AgentDB::eMacType::BSSID);
             if (!radio) {
                 LOG(ERROR) << "Failed to get radio for vbss id: " << virtual_bss_event_tlv->bssid();
             } else {
