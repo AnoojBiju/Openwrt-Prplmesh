@@ -6,7 +6,6 @@
 * See LICENSE file for more details.
 */
 
-
 #include "service_prio_utils_dummy.h"
 #include <easylogging++.h>
 
