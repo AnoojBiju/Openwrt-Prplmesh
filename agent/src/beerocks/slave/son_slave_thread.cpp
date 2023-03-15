@@ -880,6 +880,11 @@ bool slave_thread::handle_cmdu_ap_manager_ieee1905_1_message(const std::string &
 {
     auto cmdu_message_type = cmdu_rx.getMessageType();
     switch (cmdu_message_type) {
+    case ieee1905_1::eMessageType::VIRTUAL_BSS_RESPONSE_MESSAGE:
+        if (!m_task_pool.handle_cmdu(cmdu_rx, {}, {}, {}, fd)) {
+            LOG(ERROR) << "Failed to handle VBSS Response from AP Manager";
+        }
+        break;
     // Forward unhandled messages to the backhaul manager (probably headed to the controller)
     default:
         const auto mid = cmdu_rx.getMessageId();
@@ -3208,7 +3213,7 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
     }
 
     if (!link_to_controller()) {
-        LOG(DEBUG) << "link_to_controller is broken!";
+        //LOG(DEBUG) << "link_to_controller is broken!";
         return true;
     }
 
