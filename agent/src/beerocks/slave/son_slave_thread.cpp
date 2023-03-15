@@ -772,7 +772,7 @@ bool slave_thread::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
             return handle_cmdu_control_message(fd, beerocks_header);
         } break;
         case beerocks_message::ACTION_BACKHAUL: {
-            return handle_cmdu_backhaul_manager_message(fd, beerocks_header);
+            return handle_cmdu_backhaul_manager_message(fd, cmdu_rx, beerocks_header);
         } break;
         case beerocks_message::ACTION_PLATFORM: {
             return handle_cmdu_platform_manager_message(fd, beerocks_header);
@@ -1519,7 +1519,7 @@ bool slave_thread::handle_cmdu_control_message(int fd,
 }
 
 bool slave_thread::handle_cmdu_backhaul_manager_message(
-    int fd, std::shared_ptr<beerocks_header> beerocks_header)
+    int fd, ieee1905_1::CmduMessageRx &cmdu_rx, std::shared_ptr<beerocks_header> beerocks_header)
 {
     if (!m_backhaul_manager_client) {
         LOG(ERROR) << "backhaul_socket == nullptr";
@@ -2069,6 +2069,15 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
         LOG(DEBUG) << "send cACTION_MONITOR_CHANNEL_SCAN_ABORT_REQUEST";
         send_cmdu(radio_manager.monitor_fd, cmdu_tx);
         break;
+    }
+    case beerocks_message::ACTION_BACKHAUL_APPLY_VLAN_POLICY_REQUEST: {
+        // This message is handled in ApAutoConfigurationTask::handle_vendor_specific(),
+        // call m_task_pool.handle_cmdu() so ApAutoConfigurationTask can handle it.
+        if (!m_task_pool.handle_cmdu(cmdu_rx, 0, {}, {}, fd, beerocks_header)) {
+            LOG(ERROR) << "Failed to handle BACKHAUL_MANAGER message, action_op: "
+                       << int(beerocks_header->action_op());
+            return false;
+        }
     }
     default: {
         LOG(ERROR) << "Unknown BACKHAUL_MANAGER message, action_op: "

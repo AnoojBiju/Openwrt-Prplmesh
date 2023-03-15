@@ -189,7 +189,7 @@ private:
     void handle_client_disconnected(int fd);
 
     bool handle_cmdu_control_message(int fd, std::shared_ptr<beerocks_header> beerocks_header);
-    bool handle_cmdu_backhaul_manager_message(int fd,
+    bool handle_cmdu_backhaul_manager_message(int fd, ieee1905_1::CmduMessageRx &cmdu_rx,
                                               std::shared_ptr<beerocks_header> beerocks_header);
     bool handle_cmdu_platform_manager_message(int fd,
                                               std::shared_ptr<beerocks_header> beerocks_header);
