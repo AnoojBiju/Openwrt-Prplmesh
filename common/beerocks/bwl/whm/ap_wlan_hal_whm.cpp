@@ -424,6 +424,11 @@ bool ap_wlan_hal_whm::sta_softblock_add(const std::string &vap_name, const std::
                                         uint8_t authetication_snr_threshold_hi,
                                         uint8_t authetication_snr_threshold_lo)
 {
+    // softblock is used to block stations at the probe request level
+    // (instead of during the authentication or association).  It
+    // doesn't seem to be part of nl80211, so it cannot be
+    // implemented in pwhm. In prplMesh, it is only used by BML commands which
+    // are triggered by an external process.
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
     return true;
 }
@@ -431,6 +436,11 @@ bool ap_wlan_hal_whm::sta_softblock_add(const std::string &vap_name, const std::
 bool ap_wlan_hal_whm::sta_softblock_remove(const std::string &vap_name,
                                            const std::string &client_mac)
 {
+    // softblock is used to block stations at the probe request level
+    // (instead of during the authentication or association).  It
+    // doesn't seem to be part of nl80211, so it cannot be
+    // implemented in pwhm. In prplMesh, it is only used by BML commands which
+    // are triggered by an external process.
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
     return true;
 }
