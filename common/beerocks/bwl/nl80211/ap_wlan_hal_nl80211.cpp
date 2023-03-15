@@ -1841,6 +1841,12 @@ bool ap_wlan_hal_nl80211::set_no_deauth_unknown_sta(const std::string &ifname, b
     return true;
 }
 
+bool ap_wlan_hal_nl80211::configure_service_priority(const uint8_t *data)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
 } // namespace nl80211
 
 std::shared_ptr<ap_wlan_hal> ap_wlan_hal_create(std::string iface_name, hal_conf_t hal_conf,
