@@ -25,11 +25,14 @@ if [ -z "$1" ] ; then
 fi
 
 TARGET="$1"
-LOG_DIR="$rootdir/logs/${TARGET}"
+
+if [ -z "${LOG_DIR:-}" ] ; then
+    LOG_DIR="$rootdir/logs/${TARGET}"
+fi
 
 mkdir -p "$LOG_DIR"
 
-echo "Collecting logs"
+echo "Collecting logs into $LOG_DIR"
 
 ssh "$TARGET" <<"EOF" > "$LOG_DIR/${TARGET}_diags.log"
 date
