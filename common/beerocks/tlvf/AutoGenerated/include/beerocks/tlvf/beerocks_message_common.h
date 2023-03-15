@@ -1448,6 +1448,18 @@ typedef struct sUnassociatedStationStats {
     }
 } __attribute__((packed)) sUnassociatedStationStats;
 
+typedef struct sServicePrioConfig {
+    uint8_t mode;
+    uint8_t data[64];
+    void struct_swap(){
+    }
+    void struct_init(){
+            for (size_t i = 0; i < 64; i++) {
+                data[i] = 0x0;
+            }
+    }
+} __attribute__((packed)) sServicePrioConfig;
+
 
 }; // close namespace: beerocks_message
 
