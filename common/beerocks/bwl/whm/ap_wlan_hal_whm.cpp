@@ -1178,6 +1178,12 @@ bool ap_wlan_hal_whm::set_no_deauth_unknown_sta(const std::string &ifname, bool 
     return true;
 }
 
+bool ap_wlan_hal_whm::configure_service_priority(const uint8_t *data)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
 } // namespace whm
 
 std::shared_ptr<ap_wlan_hal> ap_wlan_hal_create(std::string iface_name, bwl::hal_conf_t hal_conf,
