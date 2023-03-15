@@ -141,6 +141,10 @@ cACTION_APMANAGER_HOSTAP_SET_PRIMARY_VLAN_ID_REQUEST:
   _type: class
   primary_vlan_id: uint16_t
 
+cACTION_APMANAGER_HOSTAP_SERVICE_PRIO_CONFIG:
+  _type: class
+  cs_params: sServicePrioConfig
+
 cACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION:
   _type: class
   mac: sMacAddr
