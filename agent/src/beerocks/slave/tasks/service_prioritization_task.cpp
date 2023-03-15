@@ -9,7 +9,9 @@
 #include "service_prioritization_task.h"
 #include "../agent_db.h"
 #include "../son_slave_thread.h"
+#include <beerocks/tlvf/beerocks_message_apmanager.h>
 
+#include <bpl/bpl_service_prio_utils.h>
 #include <tlvf/wfa_map/tlvDscpMappingTable.h>
 #include <tlvf/wfa_map/tlvProfile2ErrorCode.h>
 
@@ -19,6 +21,10 @@ ServicePrioritizationTask::ServicePrioritizationTask(slave_thread &btl_ctx,
                                                      ieee1905_1::CmduMessageTx &cmdu_tx)
     : Task(eTaskType::SERVICE_PRIORITIZATION), m_btl_ctx(btl_ctx), m_cmdu_tx(cmdu_tx)
 {
+    service_prio_utils = bpl::register_service_prio_utils();
+    if (!service_prio_utils) {
+        LOG(ERROR) << "failed to register service prio utils";
+    }
 }
 
 bool ServicePrioritizationTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx,
@@ -60,6 +66,12 @@ void ServicePrioritizationTask::handle_service_prioritization_request(
     std::vector<std::shared_ptr<wfa_map::tlvServicePrioritizationRule>> rules_to_add;
     auto db = AgentDB::get();
     for (auto &rule : service_prioritization_rules) {
+        LOG(DEBUG) << "Service Prioritization Rule TLV Dump" << std::endl
+                   << "Rule id=" << rule->rule_params().id << std::endl
+                   << "add_remove=" << rule->rule_params().bits_field1.add_remove << std::endl
+                   << "precedence=" << rule->rule_params().precedence << std::endl
+                   << "output=" << rule->rule_params().output << std::endl
+                   << "always_match=" << rule->rule_params().bits_field2.always_match;
         // Remove
         if (!rule->rule_params().bits_field1.add_remove) {
             rules_to_remove.push_back(rule);
@@ -154,6 +166,16 @@ bool ServicePrioritizationTask::qos_apply_active_rule()
         ++it;
     }
     if (active != rules.cend()) {
+        if (!service_prio_utils) {
+            LOG(ERROR) << "Service Priority Utilities are not found";
+            return false;
+        }
+        auto db                                      = AgentDB::get();
+        beerocks_message::sServicePrioConfig request = {};
+        request.mode                                 = active->second.output;
+        std::copy(db->service_prioritization.dscp_mapping_table.begin(),
+                  db->service_prioritization.dscp_mapping_table.end(), request.data);
+        beerocks::ServicePrioritizationTask::send_service_prio_config(request);
         switch (active->second.output) {
         case QOS_USE_DSCP_MAP:
             return qos_setup_dscp_map();
@@ -170,7 +192,8 @@ bool ServicePrioritizationTask::qos_apply_active_rule()
 bool ServicePrioritizationTask::qos_flush_setup()
 {
     //TODO: PPM-2389, drive ebtables or external software
-    return true;
+    // as per vendor specific in the Service Prioritization utility
+    return service_prio_utils->flush_rules();
 }
 
 bool ServicePrioritizationTask::qos_setup_single_value_map(uint8_t pcp)
@@ -181,12 +204,14 @@ bool ServicePrioritizationTask::qos_setup_single_value_map(uint8_t pcp)
         return false;
     }
 
-    qos_flush_setup();
-
-    LOG(DEBUG) << "ServicePrioritizationTask::qos_create_single_value_map - NOT IMPLEMENTED YET";
+    if (qos_flush_setup() == false) {
+        return false;
+    }
+    //LOG(DEBUG) << "ServicePrioritizationTask::qos_create_single_value_map - NOT IMPLEMENTED YET";
 
     //TODO: PPM-2389, drive ebtables or external software
-    return true;
+    // as per vendor specific in the Service Prioritization utility
+    return service_prio_utils->apply_single_value_map(pcp);
 }
 
 bool ServicePrioritizationTask::qos_setup_dscp_map()
@@ -195,10 +220,11 @@ bool ServicePrioritizationTask::qos_setup_dscp_map()
 
     qos_flush_setup();
 
-    LOG(DEBUG) << "ServicePrioritizationTask::qos_setup_dscp_map - NOT IMPLEMENTED YET";
+    //LOG(DEBUG) << "ServicePrioritizationTask::qos_setup_dscp_map - NOT IMPLEMENTED YET";
 
     //TODO: PPM-2389, drive ebtables or external software
-    return true;
+    // as per vendor specific in the Service Prioritization utility
+    return service_prio_utils->apply_dscp_map();
 }
 
 bool ServicePrioritizationTask::qos_setup_up_map()
@@ -207,9 +233,37 @@ bool ServicePrioritizationTask::qos_setup_up_map()
 
     qos_flush_setup();
 
-    LOG(DEBUG) << "ServicePrioritizationTask::qos_setup_up_map - NOT IMPLEMENTED YET";
+    //LOG(DEBUG) << "ServicePrioritizationTask::qos_setup_up_map - NOT IMPLEMENTED YET";
 
     //TODO: PPM-2389, drive ebtables or external software
+    // as per vendor specific in the Service Prioritization utility
+    return service_prio_utils->apply_up_map();
+}
+
+bool ServicePrioritizationTask::send_service_prio_config(
+    const beerocks_message::sServicePrioConfig &request)
+{
+    // Sending the config to all AP managers
+    m_btl_ctx.m_radio_managers.do_on_each_radio_manager(
+        [&](slave_thread::sManagedRadio &radio_manager,
+            const std::string &fronthaul_iface) -> bool {
+            auto request_msg = message_com::create_vs_message<
+                beerocks_message::cACTION_APMANAGER_HOSTAP_SERVICE_PRIO_CONFIG>(m_cmdu_tx);
+
+            if (!request_msg) {
+                LOG(ERROR)
+                    << "Failed to build cACTION_APMANAGER_HOSTAP_SERVICE_PRIO_CONFIG message";
+                return false;
+            }
+
+            request_msg->cs_params().mode = request.mode;
+            std::copy(request.data, request.data + beerocks::message::DSCP_MAPPING_LIST_LENGTH,
+                      request_msg->cs_params().data);
+            LOG(DEBUG) << "Sending service priority config to radio, mode: " << request.mode;
+
+            m_btl_ctx.send_cmdu(radio_manager.ap_manager_fd, m_cmdu_tx);
+            return true;
+        });
     return true;
 }
 
