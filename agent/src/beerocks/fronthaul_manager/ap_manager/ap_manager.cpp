@@ -1908,6 +1908,16 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
         m_multiap_controller_profile = msg->profile();
         break;
     }
+    case beerocks_message::ACTION_APMANAGER_HOSTAP_SERVICE_PRIO_CONFIG: {
+        auto msg = beerocks_header
+                       ->addClass<beerocks_message::cACTION_APMANAGER_HOSTAP_SERVICE_PRIO_CONFIG>();
+        if (!msg) {
+            LOG(ERROR) << "addClass has failed";
+            return;
+        }
+        ap_wlan_hal->configure_service_priority(msg->cs_params().data);
+        break;
+    }
     default: {
         LOG(ERROR) << "Unsupported header action_op: " << int(beerocks_header->action_op());
         break;
