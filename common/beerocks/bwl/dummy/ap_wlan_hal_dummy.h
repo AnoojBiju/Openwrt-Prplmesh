@@ -118,6 +118,8 @@ public:
     virtual bool prepare_unassoc_sta_link_metrics_response(
         std::shared_ptr<wfa_map::tlvUnassociatedStaLinkMetricsResponse> &response) override;
 
+    virtual bool configure_service_priority(const uint8_t *data) override;
+
     // Protected methods:
 protected:
     virtual bool process_dummy_event(parsed_obj_map_t &parsed_obj) override;

@@ -3452,6 +3452,23 @@ bool ap_wlan_hal_dwpal::prepare_unassoc_sta_link_metrics_response(
     return false
 }
 
+bool ap_wlan_hal_dwpal::configure_service_priority(const uint8_t *data)
+{
+    char pcp_array[beerocks::message::DSCP_MAPPING_LIST_LENGTH] = {};
+    std::string qos_map;
+    std::stringstream ss;
+    std::copy(data, data + beerocks::message::DSCP_MAPPING_LIST_LENGTH, pcp_array);
+    for (auto i = 0; i < 21; i++) {
+        if (i != 0) {
+            ss << ",";
+        }
+        ss << i << "," << int(pcp_array[i]);
+    }
+    qos_map = ss.str();
+    LOG(DEBUG) << "Setting QOS_MAP_SET " << qos_map;
+    return true;
+}
+
 } // namespace bwl
 
 std::shared_ptr<ap_wlan_hal> ap_wlan_hal_create(std::string iface_name, hal_conf_t hal_conf,
