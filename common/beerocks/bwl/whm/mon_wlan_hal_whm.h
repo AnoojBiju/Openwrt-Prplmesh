@@ -87,7 +87,7 @@ protected:
 
     virtual bool set(const std::string &param, const std::string &value, int vap_id) override;
 
-    virtual bool register_vbss(const std::string &ifname) override;
+    virtual int register_vbss(const std::string &ifname) override;
 
 private:
     bool process_ap_event(const std::string &interface, const std::string &key,

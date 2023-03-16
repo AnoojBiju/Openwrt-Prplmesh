@@ -216,6 +216,8 @@ private:
     std::shared_ptr<beerocks::CmduClient> m_slave_client;
 
     bool m_remove_agent_client = false;
+
+    std::unordered_map<std::string, int> m_vbss_ext_fds;
 };
 } // namespace son
 

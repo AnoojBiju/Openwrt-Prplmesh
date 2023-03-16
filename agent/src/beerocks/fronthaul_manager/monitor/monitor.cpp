@@ -1769,22 +1769,24 @@ void Monitor::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
         //LOG(DEBUG) << "We got a repeat message";
         return;
     }
-    if (!mon_wlan_hal->register_vbss(vIfaceName)) {
+    int fds = mon_wlan_hal->register_vbss(vIfaceName);
+    if (fds == -1) {
         LOG(ERROR) << "Failed to register vbss: " << virtual_bss_creation_req->bssid()
                    << " on the Monitor thread";
         return;
     }
 
-    if (!register_ext_events_handler(mon_wlan_hal->get_ext_events_fds().back())) {
+    if (!register_ext_events_handler(fds)) {
         LOG(ERROR) << "Failed to register vbss ext_events";
         return;
     }
+    m_vbss_ext_fds[vIfaceName] = fds;
     // Update the ap list
     update_vaps_in_db();
     // Now see if a station is already associated
     if (virtual_bss_creation_req->client_mac() != net::network_utils::ZERO_MAC) {
         auto sta_mac = tlvf::mac_to_string(virtual_bss_creation_req->client_mac());
-        if (!handle_sta_conn_event(sta_mac, mon_wlan_hal->get_ext_events_fds().back())) {
+        if (!handle_sta_conn_event(sta_mac, fds)) {
             LOG(ERROR) << "Failed to register connected sta in vbss request";
         }
     }

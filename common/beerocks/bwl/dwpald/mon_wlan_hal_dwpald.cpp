@@ -1951,10 +1951,10 @@ bool mon_wlan_hal_dwpal::sta_unassoc_rssi_measurement(
     return true;
 }
 
-bool mon_wlan_hal_dwpal::register_vbss(const std::string &ifname)
+int mon_wlan_hal_dwpal::register_vbss(const std::string &ifname)
 {
     LOG(DEBUG) << __func__ << " - NOT IMPLEMENTED";
-    return true;
+    return -1;
 }
 
 } // namespace dwpal

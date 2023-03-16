@@ -86,7 +86,7 @@ protected:
     {
         return base_wlan_hal::event_queue_push(int(event), data);
     }
-    virtual bool register_vbss(const std::string &ifname) override;
+    virtual int register_vbss(const std::string &ifname) override;
 
     // Private data-members:
 private:

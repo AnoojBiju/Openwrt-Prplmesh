@@ -1602,10 +1602,10 @@ bool mon_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std
     return true;
 }
 
-bool mon_wlan_hal_dwpal::register_vbss(const std::string &ifname)
+int mon_wlan_hal_dwpal::register_vbss(const std::string &ifname)
 {
     LOG(DEBUG) << __func__ << " - NOT IMPLEMENTED";
-    return true;
+    return -1;
 }
 
 bool mon_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)

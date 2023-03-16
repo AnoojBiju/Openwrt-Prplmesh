@@ -91,7 +91,7 @@ protected:
 
     bool sta_unassoc_rssi_measurement(std::unordered_map<std::string, uint8_t> &new_list) final;
 
-    virtual bool register_vbss(const std::string &ifname) override;
+    virtual int register_vbss(const std::string &ifname) override;
 
     // Private data-members:
 private:

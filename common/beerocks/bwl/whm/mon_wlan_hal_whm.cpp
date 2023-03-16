@@ -288,10 +288,10 @@ bool mon_wlan_hal_whm::set(const std::string &param, const std::string &value, i
     return true;
 }
 
-bool mon_wlan_hal_whm::register_vbss(const std::string &ifname)
+int mon_wlan_hal_whm::register_vbss(const std::string &ifname)
 {
     LOG(DEBUG) << __func__ << " - NOT IMPLEMENTED";
-    return true;
+    return -1;
 }
 
 bool mon_wlan_hal_whm::set_estimated_service_parameters(uint8_t *esp_info_field)

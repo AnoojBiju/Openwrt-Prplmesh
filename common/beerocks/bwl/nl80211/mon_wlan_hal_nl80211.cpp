@@ -437,7 +437,7 @@ bool mon_wlan_hal_nl80211::sta_beacon_11k_request(const std::string &vap_iface_n
     return true;
 }
 
-bool mon_wlan_hal_nl80211::register_vbss(const std::string &ifname)
+int mon_wlan_hal_nl80211::register_vbss(const std::string &ifname)
 {
     return base_wlan_hal_nl80211::add_interface(ifname);
 }
