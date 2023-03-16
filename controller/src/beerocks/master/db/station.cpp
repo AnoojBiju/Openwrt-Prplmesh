@@ -102,6 +102,25 @@ bool Station::get_cross_rx_rssi(const std::string &ap_mac_, int8_t &rssi, int8_t
     return true;
 }
 
+bool Station::get_cross_rx_rssi(const std::string &ap_mac_, int8_t &rssi, int8_t &packets,
+                                std::chrono::duration<double> &ts)
+{
+    auto it = m_cross_rx_rssi.find(ap_mac_);
+    if (it == m_cross_rx_rssi.end()) {
+        rssi    = beerocks::RSSI_INVALID;
+        packets = -1;
+        return false;
+    }
+    auto now = std::chrono::steady_clock::now();
+    rssi     = it->second->rssi;
+    packets  = it->second->packets;
+    //    std::chrono::duration<int64_t, std::nano> dur = std::chrono::steady_clock::now() - it->second->timestamp;
+    //ts = std::chrono::duration_cast<std::chrono::seconds>(now - it->second->timestamp);
+    std::chrono::duration<double> diff = now - it->second->timestamp;
+    ts                                 = diff;
+    return true;
+}
+
 void Station::set_cross_rx_rssi(const std::string &ap_mac_, int8_t rssi, int8_t packets)
 {
     auto it = m_cross_rx_rssi.find(ap_mac_);

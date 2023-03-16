@@ -28,7 +28,8 @@ public:
         DESTROY,
         STATION_CONNECTED,
         STATION_DISCONNECT,
-        UNASSOCIATED_STATS
+        UNASSOCIATED_STATS,
+        AGENT_DISCONNECT
     };
 
 protected:

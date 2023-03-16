@@ -141,6 +141,9 @@ void vbss_task::handle_event(int event_enum_value, void *event_obj)
         }
         break;
     }
+    //case eEventType::AGENT_DISCONNECT: {
+    //    auto
+    //}
     default:
         LOG(WARNING) << "VBSS Task recieved an unhandled event type (" << event_enum_value << ")";
         break;
@@ -480,6 +483,7 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
                        << "! Destroy event failed";
             return false;
         }
+
         auto cntrxCtx = m_database.get_controller_ctx();
         if (cntrxCtx) {
             return cntrxCtx->handle_vbss_destruction(vbssid);
@@ -572,6 +576,17 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
                        << existing_move->client_vbss.current_connected_ruid << " failed!";
         }
         active_moves.erase(vbssid);
+        auto cntrlCntx = m_database.get_controller_ctx();
+        if (!cntrlCntx) {
+            LOG(ERROR) << "FAILED TO GET CONTROLLER CONTEXT FOR MOVE COMPLETE";
+            return false;
+        }
+        if (!cntrlCntx->handle_move_complete(existing_move->client_vbss.client_mac,
+                                             existing_move->dest_ruid,
+                                             existing_move->client_vbss.current_connected_ruid)) {
+            LOG(ERROR) << "Failed to send to controller move complete";
+            return false;
+        }
         return true;
     }
 

@@ -113,6 +113,8 @@ public:
     bool get_beacon_measurement(const std::string &ap_mac_, uint8_t &rcpi, uint8_t &rsni);
     void set_beacon_measurement(const std::string &ap_mac_, uint8_t rcpi, uint8_t rsni);
     bool get_cross_rx_rssi(const std::string &ap_mac_, int8_t &rssi, int8_t &rx_packets);
+    bool get_cross_rx_rssi(const std::string &ap_mac_, int8_t &rssi, int8_t &rx_packets,
+                           std::chrono::duration<double> &ts);
     void set_cross_rx_rssi(const std::string &ap_mac_, int8_t rssi, int8_t rx_packets);
     void clear_cross_rssi();
     void set_bss(std::shared_ptr<Agent::sRadio::sBss> bss);
@@ -120,8 +122,9 @@ public:
 
     friend class ::son::db;
 
-    void set_vsta_status(const bool &is_vsta){m_is_vsta = is_vsta;}
-    bool get_vsta_status(){return m_is_vsta;}
+    void set_vsta_status(const bool &is_vsta) { m_is_vsta = is_vsta; }
+    bool get_vsta_status() { return m_is_vsta; }
+
 private:
     int m_client_locating_task_id_new_connection   = -1;
     int m_client_locating_task_id_exist_connection = -1;

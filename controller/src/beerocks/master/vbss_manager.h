@@ -118,23 +118,27 @@ public:
 
     struct sVStaStats {
         sMacAddr vbss_id;
+        sMacAddr cur_ruid;
         sMacAddr next_best_agent;
         int8_t next_best_rssi;
         uint8_t next_best_count;
+        bool move_in_progress;
 
         sVStaStats(const sMacAddr &Vbss_Id) : vbss_id(Vbss_Id)
         {
-            next_best_rssi  = -120;
-            next_best_count = 0;
-            next_best_agent = {};
+            next_best_rssi   = -120;
+            next_best_count  = 0;
+            next_best_agent  = {};
+            move_in_progress = false;
         }
 
         sVStaStats()
         {
-            vbss_id         = {};
-            next_best_rssi  = -120;
-            next_best_count = 0;
-            next_best_agent = {};
+            vbss_id          = {};
+            next_best_rssi   = -120;
+            next_best_count  = 0;
+            next_best_agent  = {};
+            move_in_progress = false;
         }
 
         ~sVStaStats() {}

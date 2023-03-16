@@ -233,10 +233,14 @@ bool VbssManager::handle_station_connect(const vbss::sStationConnectedEvent &sta
         LOG(ERROR) << "Failed to find agent hosting bssid: " << stationConnect.bss_id;
         return false;
     }
+    auto radio = m_database.get_radio_by_bssid(stationConnect.bss_id);
+    if (!radio) {
+        LOG(ERROR) << "Failed to find radio by bssid: " << stationConnect.bss_id;
+    }
     m_client_agent[stationConnect.client_mac] = agent->al_mac;
     sVStaStats clientStats;
-    clientStats.vbss_id = stationConnect.bss_id;
-
+    clientStats.vbss_id                     = stationConnect.bss_id;
+    clientStats.cur_ruid                    = radio->radio_uid;
     m_vsta_stats[stationConnect.client_mac] = clientStats;
 
     return register_client_for_rssi(stationConnect);
@@ -245,13 +249,30 @@ bool VbssManager::handle_station_connect(const vbss::sStationConnectedEvent &sta
 bool VbssManager::handle_success_move(const sMacAddr &sta_mac, const sMacAddr &cur_ruid,
                                       const sMacAddr &old_ruid)
 {
-    // Should we update the datamodel here?
+    // First need to update unassociated station model
+    std::vector<sMacAddr> not_connected_agents;
+    auto n_agent = m_database.get_agent_by_radio_uid(old_ruid);
+    if (!n_agent) {
+        LOG(ERROR) << "Failed to find the agent for the new connected radio" << old_ruid;
+        return false;
+    }
+    for (auto &agent : m_database.get_all_connected_agents()) {
+        if (agent->al_mac != n_agent->al_mac)
+            not_connected_agents.push_back(agent->al_mac);
+    }
+    if (!m_database.update_unassociated_station_agents(sta_mac, not_connected_agents)) {
+        LOG(ERROR) << "Failed to update the unassociated station agents list";
+        return false;
+    }
     const auto &iter = std::find(m_cur_move_vbssid.begin(), m_cur_move_vbssid.end(),
                                  m_vsta_stats[sta_mac].vbss_id);
     m_cur_move_vbssid.erase(iter);
-    m_vsta_stats[sta_mac].next_best_agent = {};
-    m_vsta_stats[sta_mac].next_best_count = 0;
-    m_vsta_stats[sta_mac].next_best_rssi  = -120;
+    m_vsta_stats[sta_mac].next_best_agent  = {};
+    m_vsta_stats[sta_mac].next_best_count  = 0;
+    m_vsta_stats[sta_mac].next_best_rssi   = -120;
+    m_vsta_stats[sta_mac].move_in_progress = false;
+    m_vsta_stats[sta_mac].cur_ruid         = cur_ruid;
+    m_client_agent[sta_mac]                = n_agent->al_mac;
     return true;
 }
 
@@ -283,6 +304,8 @@ bool VbssManager::process_vsta_stats_event(const vbss::sUnassociatedStatsEvent &
 {
     bool ret_val = false;
     // First thing first compare MID
+    //std::chrono::time_point<std::chrono::steady_clock> start_time =
+    //   std::chrono::steady_clock::now();
     if (last_sent_unassociated_mid > unassociated_stats.mmid) {
         LOG(ERROR) << "Recieved stale data, expected MID = or great: " << last_sent_unassociated_mid
                    << "Got " << unassociated_stats.mmid << " instead";
@@ -303,15 +326,26 @@ bool VbssManager::process_vsta_stats_event(const vbss::sUnassociatedStatsEvent &
         }
         int8_t curRssi;
         int8_t throwAwayPackets;
-        if (!station->get_cross_rx_rssi(tlvf::mac_to_string(unassociated_stats.agent_mac), curRssi,
-                                        throwAwayPackets)) {
+        std::chrono::duration<double> ts;
+        if (!station->get_cross_rx_rssi(tlvf::mac_to_string(m_vsta_stats[sta_mac].cur_ruid),
+                                        curRssi, throwAwayPackets, ts)) {
             LOG(ERROR) << "Failed to recieve current RSSI from current agent for station: "
                        << sta_mac;
+            continue;
+        }
+        //auto duration = std::chrono::duration<std::chrono::seconds>(start_time - ts).count();
+        if (ts.count() > 2) {
+            LOG(INFO) << "We are comparing against old rssi data, it's been " << ts.count()
+                      << " since last assoicated rssi came in.";
+            continue;
         }
         if (compare_incoming_to_curr(curRssi, incomingStat)) {
             // This means the incoming is better
             if (m_vsta_stats[sta_mac].next_best_agent == unassociated_stats.agent_mac) {
                 // We got a repeater
+                if (m_vsta_stats[sta_mac].move_in_progress) {
+                    continue;
+                }
                 m_vsta_stats[sta_mac].next_best_count++;
                 m_vsta_stats[sta_mac].next_best_rssi = incomingStat;
                 if (m_vsta_stats[sta_mac].next_best_count > BEST_MOVE_COUNT) {
@@ -339,12 +373,14 @@ bool VbssManager::process_vsta_stats_event(const vbss::sUnassociatedStatsEvent &
                     moveEventVals.client_vbss.current_connected_ruid = radio->radio_uid;
                     moveVals.push_back(moveEventVals);
                     m_cur_move_vbssid.push_back(m_vsta_stats[sta_mac].vbss_id);
+                    m_vsta_stats[sta_mac].move_in_progress = true;
                 }
             } else {
                 // New best
-                m_vsta_stats[sta_mac].next_best_agent = unassociated_stats.agent_mac;
-                m_vsta_stats[sta_mac].next_best_count = 1;
-                m_vsta_stats[sta_mac].next_best_rssi  = incomingStat;
+                m_vsta_stats[sta_mac].next_best_agent  = unassociated_stats.agent_mac;
+                m_vsta_stats[sta_mac].next_best_count  = 1;
+                m_vsta_stats[sta_mac].next_best_rssi   = incomingStat;
+                m_vsta_stats[sta_mac].move_in_progress = false;
             }
         }
     }
