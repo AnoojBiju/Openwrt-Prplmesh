@@ -242,7 +242,7 @@ private:
     /**
      * @brief Amount to increase a TXPN by when moving a VBSS.
      */
-    static constexpr size_t TX_PN_INCREASE_AMOUNT{1000};
+    static constexpr size_t TX_PN_INCREASE_AMOUNT{100000};
 
     /**
      * @brief Increments the value of a transmission packet number (TX PN) by a given amount.
