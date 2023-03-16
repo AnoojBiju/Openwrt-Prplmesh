@@ -623,6 +623,10 @@ bool Controller::handle_cmdu_1905_1_message(const sMacAddr &src_mac,
     case ieee1905_1::eMessageType::CLIENT_CAPABILITY_REPORT_MESSAGE:
     case ieee1905_1::eMessageType::CHANNEL_PREFERENCE_REPORT_MESSAGE:
     case ieee1905_1::eMessageType::CHANNEL_SELECTION_RESPONSE_MESSAGE:
+    case ieee1905_1::eMessageType::VIRTUAL_BSS_RESPONSE_MESSAGE:
+    case ieee1905_1::eMessageType::VIRTUAL_BSS_CAPABILITIES_REPONSE_MESSAGE:
+    case ieee1905_1::eMessageType::VIRTUAL_BSS_MOVE_CANCEL_RESPONSE_MESSAGE:
+    case ieee1905_1::eMessageType::VIRTUAL_BSS_MOVE_PREPARATION_RESPONSE_MESSAGE:
 
         return true;
     default:
