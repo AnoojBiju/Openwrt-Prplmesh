@@ -794,18 +794,78 @@ bool ap_wlan_hal_dummy::prepare_unassoc_sta_link_metrics_response(
 
 bool ap_wlan_hal_dummy::configure_service_priority(const uint8_t *data)
 {
-    char pcp_array[beerocks::message::DSCP_MAPPING_LIST_LENGTH] = {};
-    std::string qos_map;
+    uint8_t dscp[beerocks::message::DSCP_MAPPING_LIST_LENGTH] = {};
     std::stringstream ss;
-    std::copy(data, data + beerocks::message::DSCP_MAPPING_LIST_LENGTH, pcp_array);
-    for (auto i = 0; i < 21; i++) {
-        if (i != 0) {
-            ss << ",";
-        }
-        ss << i << "," << int(pcp_array[i]);
+    std::copy(data, data + beerocks::message::DSCP_MAPPING_LIST_LENGTH, dscp);
+    std::pair<uint8_t, uint8_t> wmm_range[8]                                               = {};
+    std::pair<uint8_t, uint8_t> wmm_exception[beerocks::message::DSCP_MAPPING_LIST_LENGTH] = {};
+    int i = 0, j = 0, k = 0;
+
+    for (i = 0; i < beerocks::message::DSCP_MAPPING_LIST_LENGTH; i++) {
+        wmm_exception[i].first  = 255;
+        wmm_exception[i].second = 255;
     }
-    qos_map = ss.str();
-    LOG(DEBUG) << "Setting QOS_MAP_SET " << qos_map;
+
+    for (i = 0; i < 8; i++) {
+        wmm_range[i].first  = 255;
+        wmm_range[i].second = 255;
+    }
+
+    for (i = 0; i < beerocks::message::DSCP_MAPPING_LIST_LENGTH; i++) {
+        if ((i != 63) && dscp[i] == dscp[i + 1]) {
+            for (j = i + 1; j < beerocks::message::DSCP_MAPPING_LIST_LENGTH; j++) {
+                if ((j == 63) || ((j != 63) && dscp[j] != dscp[j + 1])) {
+                    if ((j - 1) >= (wmm_range[dscp[j]].second - wmm_range[dscp[j]].first)) {
+                        wmm_range[dscp[j]].first  = i;
+                        wmm_range[dscp[j]].second = j;
+                        i                         = j;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    LOG(DEBUG) << "Setting QOS_MAP_SET";
+    for (i = 0; i < 8; i++) {
+        LOG(DEBUG) << "wmm_range[" << i << "]"
+                   << "start=" << wmm_range[i].first << ",end=" << wmm_range[i].second;
+    }
+    for (i = 0, j = 0; i < 64; i++) {
+        for (k = 0; k < 8; k++) {
+            if ((i >= wmm_range[k].first) && (i <= wmm_range[k].second)) {
+                std::cout << "1st exception = dscp = " << +i << ", pcp = " << +dscp[i] << std::endl;
+                break;
+            }
+        }
+        if (k == 8) {
+            wmm_exception[j].first    = i;
+            wmm_exception[j++].second = dscp[i];
+        }
+    }
+
+    for (i = 0; i < 64; i++) {
+        LOG(DEBUG) << "exception[" << i << "] : pcp = " << wmm_exception[i].second
+                   << ", dscp = " << wmm_exception[i].first;
+    }
+
+    for (i = 0; i < 21; i++) {
+        if (wmm_exception[i].first == 255) {
+            break;
+        }
+        ss << +wmm_exception[i].first << "," << +wmm_exception[i].second << ",";
+    }
+
+    for (i = 0; i < 8; i++) {
+        if (i == 7) {
+            ss << +wmm_range[i].first << "," << +wmm_range[i].second;
+        } else {
+            ss << +wmm_range[i].first << "," << +wmm_range[i].second << ",";
+        }
+    }
+
+    LOG(DEBUG) << ss.str();
+
     return true;
 }
 
