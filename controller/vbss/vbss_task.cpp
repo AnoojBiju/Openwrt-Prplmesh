@@ -570,13 +570,32 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
     existing_move = get_matching_active_move(vbssid, vbss::eMoveProcessState::VBSS_DESTRUCTION);
     if (existing_move) {
         // Recieved destruction request response during a move
-
+        LOG(DEBUG) << "Move is complete";
         if (!is_succeeded) {
             LOG(ERROR) << "VBSS Destruction on radio "
                        << existing_move->client_vbss.current_connected_ruid << " failed!";
         }
         active_moves.erase(vbssid);
-        auto cntrlCntx = m_database.get_controller_ctx();
+        if (!m_database.remove_node(vbssid)) {
+            LOG(ERROR) << "Failed to remove node " << vbssid;
+        }
+        auto old_radio =
+            m_database.get_radio_by_uid(existing_move->client_vbss.current_connected_ruid);
+        if (!old_radio) {
+            LOG(ERROR) << "Failed to find the old radio station was connected to at uid: "
+                       << existing_move->client_vbss.current_connected_ruid;
+            return false;
+        }
+        old_radio->vbss_ids_used[vbssid] = false;
+        auto n_radio                     = m_database.get_radio_by_uid(existing_move->dest_ruid);
+        if (!n_radio) {
+            LOG(ERROR) << "Failed to find the new radio station is connected to: "
+                       << existing_move->dest_ruid;
+            return false;
+        }
+        //auto bss = n_radio->bsses.add(vbssid)
+        n_radio->vbss_ids_used[vbssid] = true;
+        auto cntrlCntx                 = m_database.get_controller_ctx();
         if (!cntrlCntx) {
             LOG(ERROR) << "FAILED TO GET CONTROLLER CONTEXT FOR MOVE COMPLETE";
             return false;

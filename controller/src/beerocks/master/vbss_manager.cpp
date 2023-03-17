@@ -250,15 +250,19 @@ bool VbssManager::handle_success_move(const sMacAddr &sta_mac, const sMacAddr &c
                                       const sMacAddr &old_ruid)
 {
     // First need to update unassociated station model
+    LOG(DEBUG) << "handling success move";
     std::vector<sMacAddr> not_connected_agents;
-    auto n_agent = m_database.get_agent_by_radio_uid(old_ruid);
+    auto n_agent = m_database.get_agent_by_radio_uid(cur_ruid);
     if (!n_agent) {
-        LOG(ERROR) << "Failed to find the agent for the new connected radio" << old_ruid;
+        LOG(ERROR) << "Failed to find the agent for the new connected radio" << cur_ruid;
         return false;
     }
     for (auto &agent : m_database.get_all_connected_agents()) {
-        if (agent->al_mac != n_agent->al_mac)
+        LOG(DEBUG) << "Comparing " << agent->al_mac << " to " << n_agent->al_mac;
+        if (agent->al_mac != n_agent->al_mac) {
             not_connected_agents.push_back(agent->al_mac);
+            LOG(DEBUG) << "Added " << agent->al_mac;
+        }
     }
     if (!m_database.update_unassociated_station_agents(sta_mac, not_connected_agents)) {
         LOG(ERROR) << "Failed to update the unassociated station agents list";

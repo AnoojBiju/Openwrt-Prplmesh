@@ -59,8 +59,13 @@ void association_handling_task::work()
         // instance of it.
         int prev_task_id = station->association_handling_task_id;
         if (tasks.is_task_running(prev_task_id)) {
-            finish();
-            return;
+            if (station->get_vsta_status()) {
+                // Kill old make new
+                tasks.kill_task(prev_task_id);
+            } else {
+                finish();
+                return;
+            }
         }
         station->association_handling_task_id = id;
 
@@ -88,7 +93,7 @@ void association_handling_task::work()
          */
 
         std::string new_hostap_mac;
-
+        // parent == bssid
         new_hostap_mac = database.get_node_parent(sta_mac);
         if (new_hostap_mac != original_parent_mac ||
             database.get_node_state(sta_mac) != beerocks::STATE_CONNECTED) {
@@ -125,6 +130,7 @@ void association_handling_task::work()
 
         auto radio_mac = database.get_node_parent_radio(new_hostap_mac);
         auto agent_mac = database.get_node_parent_ire(radio_mac);
+        LOG(DEBUG) << "DELETE ME: Sending request to " << agent_mac << " for " << radio_mac;
         son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, radio_mac);
 
         add_pending_mac(database.get_node_parent_radio(new_hostap_mac),

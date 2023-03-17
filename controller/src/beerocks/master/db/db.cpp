@@ -8217,7 +8217,7 @@ bool db::update_unassociated_station_agents(const sMacAddr &sta_mac,
     std::string str_sta_mac = tlvf::mac_to_string(sta_mac);
     for (auto &agent_cur : unassociated_sta->get_agents()) {
         auto iter = std::find(agent_vector.end(), agent_vector.begin(), agent_cur.first);
-        if (iter == agent_macs.end()) {
+        if (iter != agent_vector.end()) {
             to_be_removed.push_back(agent_cur.first);
             auto agent = m_agents.get(agent_cur.first);
             if (!agent) {
@@ -8248,10 +8248,9 @@ bool db::update_unassociated_station_agents(const sMacAddr &sta_mac,
     }
 
     //Now add remaining agents
-    uint8_t throwaway_op_class;
+    //uint8_t throwaway_op_class;
     for (auto &incoming_agent : agent_vector) {
-        auto radio = get_radio_by_channel(incoming_agent, unassociated_sta->get_channel(),
-                                          throwaway_op_class);
+        auto radio = get_radio_by_op_class(incoming_agent, unassociated_sta->get_operating_class());
         if (!radio) {
             LOG(DEBUG) << "Agent " << incoming_agent
                        << " does not have a radio that can listen on channel "

@@ -1775,7 +1775,7 @@ void Monitor::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
                    << " on the Monitor thread";
         return;
     }
-
+    LOG(DEBUG) << "Registered " << vIfaceName << " on fds " << fds;
     if (!register_ext_events_handler(fds)) {
         LOG(ERROR) << "Failed to register vbss ext_events";
         return;
@@ -1786,7 +1786,13 @@ void Monitor::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
     // Now see if a station is already associated
     if (virtual_bss_creation_req->client_mac() != net::network_utils::ZERO_MAC) {
         auto sta_mac = tlvf::mac_to_string(virtual_bss_creation_req->client_mac());
-        if (!handle_sta_conn_event(sta_mac, fds)) {
+        int vap_id   = mon_db.get_vap_id(tlvf::mac_to_string(virtual_bss_creation_req->bssid()));
+        if (vap_id == beerocks::IFACE_ID_INVALID) {
+            LOG(ERROR) << "Can not find the vap id for bssid: "
+                       << virtual_bss_creation_req->bssid();
+            return;
+        }
+        if (!handle_sta_conn_event(sta_mac, vap_id)) {
             LOG(ERROR) << "Failed to register connected sta in vbss request";
         }
     }
