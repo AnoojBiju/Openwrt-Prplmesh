@@ -75,7 +75,7 @@ def capture_logs(device: GenericDevice, path: str):
                 shell.sendline(log.cmd)
                 shell.expect(log.cmd)
                 shell.expect(device.serial_prompt, timeout=180)
-                cmd_output = shell.before.decode("utf-8")
+                cmd_output = shell.before.decode("utf-8", "backslashreplace")
                 with open(f"{path}/{log.filename}", "w", encoding="utf-8") as output_file:
                     output_file.writelines(cmd_output)
     print("Done")
