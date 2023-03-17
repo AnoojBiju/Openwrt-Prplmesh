@@ -22,17 +22,8 @@ LogCommand = namedtuple("LogCommand", "cmd, filename")
 
 LOG_COMMANDS = \
     [
-        LogCommand("ip address show", "ip-addr.txt"),
         LogCommand("cat /etc/config/network", "config-network.txt"),
-        LogCommand('ubus call IP _get \'{ "depth": "10" }\'', "dm-IP.txt"),
-        LogCommand('ubus call Bridging _get \'{ "depth": "10" }\'', "dm-Bridge.txt"),
-        LogCommand('ubus call Ethernet _get \'{ "depth": "10" }\'', "dm-Ethernet.txt"),
-        LogCommand('ubus call DHCPv4 _get \'{ "depth": "10" }\'', "dm-DHCPv4.txt"),
-        LogCommand('ubus call DHCPv6 _get \'{ "depth": "10" }\'', "dm-DHCPv6.txt"),
-        LogCommand('ubus call Firewall _get \'{ "depth": "10" }\'', "dm-Firewall.txt"),
-        LogCommand('ubus call WiFi _get \'{ "depth": "10" }\'', "dm-WiFi.txt"),
-        LogCommand('logread', "syslog.txt"),
-        LogCommand('iptables -L', "iptables-filter.txt"),
+        LogCommand("getDebugInformation --all -o -", "debug-information.txt"),
         LogCommand('find /etc/config/tr181-bridging/ -type f -print -exec cat {} \';\'',
                    "config-tr181-bridging.txt"),
         LogCommand('find /etc/amx/tr181-bridging/ -type f -print -exec cat {} \';\'',
@@ -82,7 +73,7 @@ def capture_logs(device: GenericDevice, path: str):
             for log in LOG_COMMANDS:
                 shell.sendline(log.cmd)
                 shell.expect(log.cmd)
-                shell.expect(device.serial_prompt)
+                shell.expect(device.serial_prompt, timeout=180)
                 cmd_output = shell.before.decode("utf-8")
                 with open(f"{path}/{log.filename}", "w", encoding="utf-8") as output_file:
                     output_file.writelines(cmd_output)
