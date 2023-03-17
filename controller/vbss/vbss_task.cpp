@@ -682,6 +682,10 @@ bool vbss_task::should_trigger_channel_switch(const sMacAddr src_ruid, const sMa
     uint8_t dest_channel  = dest_wifi_channel.get_channel();
     uint8_t dest_op_class = m_database.get_hostap_operating_class(dest_ruid);
 
+    LOG(DEBUG) << "Checking if channel switch is needed: Source " << src_ruid << " is on channel "
+               << src_channel << " op_class " << src_op_class << " - destination " << dest_ruid
+               << " is on channel " << dest_channel << " op_class " << dest_op_class;
+
     if (src_channel == dest_channel && src_op_class == dest_op_class) {
         // Same channels and op classes, do not trigger channel switch
         return false;
