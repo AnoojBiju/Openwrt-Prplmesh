@@ -24,6 +24,7 @@ LOG_COMMANDS = \
     [
         LogCommand("cat /etc/config/network", "config-network.txt"),
         LogCommand("getDebugInformation --all -o -", "debug-information.txt"),
+        LogCommand("cat /tmp/amx_mon_objects.log", "amx_mon_objects.txt"),
         LogCommand('find /etc/config/tr181-bridging/ -type f -print -exec cat {} \';\'',
                    "config-tr181-bridging.txt"),
         LogCommand('find /etc/amx/tr181-bridging/ -type f -print -exec cat {} \';\'',
