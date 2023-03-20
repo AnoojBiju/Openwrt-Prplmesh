@@ -23,38 +23,36 @@ if data_overlay_not_initialized; then
 fi
 sleep 2
 
+# Stop and disable the miniupnpd as it is logging a lot
+/etc/init.d/tr181-upnp stop
+rm -f /etc/rc.d/*tr181-upnp
+pkill -9 miniupnpd
+
+# disable firewall
+/etc/init.d/tr181-firewall stop ; sleep 2 ; /etc/init.d/tr181-firewall stop
+rm -f /etc/rc.d/*tr181-firewall
+
 ubus wait_for IP.Interface
 
 # Stop and disable the DHCP clients:
+ubus call DHCPv4.Client _set '{ "rel_path": "[Alias == \"wan\"].", "parameters":{"Enable":false}}'
+ubus call DHCPv6.Client _set '{ "rel_path": "[Alias == \"wan\"].", "parameters":{"Enable":false}}'
 /etc/init.d/tr181-dhcpv4client stop
-rm -f /etc/rc.d/S27tr181-dhcpv4client
+rm -f /etc/rc.d/*tr181-dhcpv4client
 /etc/init.d/tr181-dhcpv6client stop
-rm -f /etc/rc.d/S25tr181-dhcpv6client
+rm -f /etc/rc.d/*tr181-dhcpv6client
 
 # IP for device upgrades, operational tests, Boardfarm data network, ...
 # Note that this device uses the WAN interface (as on some Omnias the
 # others don't work in the bootloader):
-# Add the IP address if there is none yet:
-ubus call IP.Interface _get '{ "rel_path": ".[Alias == \"wan\"].IPv4Address.[Alias == \"wan\"]." }' || {
-    echo "Adding IP address $IP"
-    ubus call "IP.Interface" _add '{ "rel_path": ".[Alias == \"wan\"].IPv4Address.", "parameters": { "Alias": "wan", "AddressingType": "Static" } }'
-}
-# Configure it:
-ubus call "IP.Interface" _set '{ "rel_path": ".[Alias == \"wan\"].IPv4Address.1", "parameters": { "IPAddress": "192.168.1.100", "SubnetMask": "255.255.255.0", "AddressingType": "Static", "Enable" : true } }'
-# Enable it:
-ubus call "IP.Interface" _set '{ "rel_path": ".[Alias == \"wan\"].", "parameters": { "IPv4Enable": true } }'
 
 # Set a LAN IP:
 ubus call "IP.Interface" _set '{ "rel_path": ".[Alias == \"lan\"].IPv4Address.[Alias == \"lan\"].", "parameters": { "IPAddress": "192.165.0.100" } }'
+# Set a WAN IP:
+ubus call "IP.Interface" _set '{ "rel_path": ".[Alias == \"wan\"].IPv4Address.1", "parameters": { "IPAddress": "192.168.1.100", "SubnetMask": "255.255.255.0", "AddressingType": "Static", "Enable" : true } }'
 
 # Wired backhaul interface:
 uci set prplmesh.config.backhaul_wire_iface='eth2'
-
-# For now there is no way to disable the firewall (see PCF-590).
-# Instead, wait for it in the datamodel, then set the whole INPUT
-# chain to ACCEPT:
-ubus wait_for Firewall
-iptables -P INPUT ACCEPT
 
 # Required for config_load:
 . /lib/functions/system.sh
@@ -174,25 +172,12 @@ config_load wireless
 config_foreach set_channel wifi-device
 
 uci commit
-/etc/init.d/system restart
-/etc/init.d/network restart
+reload_config
+sleep 10
 
-# (necessary when prplOS will be upstepped for this platform)
-#sleep 10
-
-# Try to work around PCF-681: if we don't have a connectivity, restart
-# tr181-bridging
-# Check the status of the LAN bridge
-# ip a |grep "br-lan:" |grep "state UP" >/dev/null || (echo "LAN Bridge DOWN, restarting bridge manager" && /etc/init.d/tr181-bridging restart && sleep 15)
-
-# If we still can't ping the UCC, restart the IP manager
-# ping -i 1 -c 2 192.168.250.199 || (/etc/init.d/ip-manager restart && sleep 12)
-
-# Restart the ssh server
-# /etc/init.d/ssh-server restart
-# sleep 5
+ping -i 1 -c 2 192.168.1.2 || (/etc/init.d/ip-manager restart && sleep 10)
 
 # Start an ssh server on the control interfce
 # The ssh server that is already running will only accept connections from 
 # the IP interface that was configured with the IP-Manager
-# dropbear -F -T 10 -p192.168.250.190:22 &
+dropbear -F -T 10 -p192.168.1.100:22 &
