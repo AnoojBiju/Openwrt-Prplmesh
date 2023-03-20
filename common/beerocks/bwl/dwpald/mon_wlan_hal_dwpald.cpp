@@ -24,6 +24,7 @@ extern "C" {
 }
 
 #define MONITOR_DWPALD_ATTACH_ID 1
+int retry = 0;
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////// DWPAL////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -1786,8 +1787,7 @@ static int drv_evt_callback(struct nl_msg *msg)
     }
 #endif
     LOG(DEBUG) << "DWPAL nl event recv";
-    if(ctx)
-    {
+    if (ctx) {
         ctx->process_dwpal_nl_event(msg, ctx);
     }
     return 0;
@@ -1795,6 +1795,10 @@ static int drv_evt_callback(struct nl_msg *msg)
 
 bool mon_wlan_hal_dwpal::dwpald_attach(char *ifname)
 {
+    if (retry < 3) {
+        retry++;
+        return false;
+    }
     auto iface_ids = beerocks::utils::get_ids_from_iface_string(ifname);
 
     static dwpald_hostap_event hostap_radio_event_handlers[] = {

@@ -3330,8 +3330,7 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
         return -1;
     }
 #endif
-    if(ctx)
-    {
+    if (ctx) {
         ctx->process_dwpal_event(ifname, buffer, len, opcode);
     }
     return 0;

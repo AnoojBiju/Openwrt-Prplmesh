@@ -177,6 +177,8 @@ private:
     dwpal_fsm_state m_last_attach_state = dwpal_fsm_state::Detach;
 
     std::chrono::steady_clock::time_point m_state_timeout;
+    int m_conn_state_retry_counter    = 0;
+    int m_dwpald_attach_retry_counter = 0;
 
     char m_wpa_ctrl_buffer[HOSTAPD_TO_DWPAL_MSG_LENGTH];
     size_t m_wpa_ctrl_buffer_size = HOSTAPD_TO_DWPAL_MSG_LENGTH;
