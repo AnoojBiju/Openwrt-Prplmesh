@@ -1795,7 +1795,7 @@ static int drv_evt_callback(struct nl_msg *msg)
 
 bool mon_wlan_hal_dwpal::dwpald_attach(char *ifname)
 {
-    if (retry < 3) {
+    if (retry < 10) {
         retry++;
         return false;
     }
