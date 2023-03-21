@@ -54,6 +54,12 @@ static sta_wlan_hal::Event dwpal_to_bwl_event(const std::string &opcode)
         return sta_wlan_hal::Event::ChannelSwitch;
     } else if (opcode == "UNCONNECTED-STA-RSSI") {
         return sta_wlan_hal::Event::STA_Unassoc_RSSI;
+    } else if (opcode == "INTERFACE_CONNECTED_OK") {
+        return sta_wlan_hal::Event::Interface_Connected_OK;
+    } else if (opcode == "INTERFACE_RECONNECTED_OK") {
+        return sta_wlan_hal::Event::Interface_Reconnected_OK;
+    } else if (opcode == "INTERFACE_DISCONNECTED") {
+        return sta_wlan_hal::Event::Interface_Disconnected;
     }
 
     return sta_wlan_hal::Event::Invalid;
@@ -107,6 +113,7 @@ sta_wlan_hal_dwpal::~sta_wlan_hal_dwpal()
             LOG(ERROR) << " Failed to detach from dwpald for interface" << vap_name;
         }
     }
+    ctx = NULL;
 }
 
 bool sta_wlan_hal_dwpal::start_wps_pbc()
@@ -473,7 +480,8 @@ std::string sta_wlan_hal_dwpal::get_ssid() { return m_active_ssid; }
 
 std::string sta_wlan_hal_dwpal::get_bssid() { return m_active_bssid; }
 
-bool sta_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std::string &opcode)
+bool sta_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufLen,
+                                             const std::string &opcode)
 {
     LOG(TRACE) << __func__ << " " << get_iface_name() << " - opcode: |" << opcode << "|";
 
@@ -590,6 +598,22 @@ bool sta_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std
         event_queue_push(event);
 
     } break;
+    case Event::Interface_Connected_OK:
+    case Event::Interface_Reconnected_OK: {
+        LOG(INFO) << "INTERFACE_RECONNECTED_OK or INTERFACE_CONNECTED_OK from intf " << ifname;
+        auto ret = update_conn_status(ifname);
+        LOG(INFO) << "Status update return value " << ret;
+        break;
+    }
+    case Event::Interface_Disconnected: {
+        LOG(INFO) << "INTERFACE_DISCONNECTED from intf " << ifname;
+        for (auto &con : conn_state) {
+            // Update interface connection status for vap to false
+            conn_state[con.first] = false;
+            LOG(INFO) << "updated connection status for intf " << con.first << " with false";
+        }
+        break;
+    }
 
     // Gracefully ignore unhandled events
     // TODO: Probably should be changed to an error once dwpal will stop
@@ -605,9 +629,16 @@ bool sta_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std
 /* hostap event callback executed in dwpald context */
 static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t len)
 {
+    std::string opcode(op_code);
+#if 0
     if (write(ctx->get_ext_evt_write_pfd(), buffer, len) < 0) {
         LOG(ERROR) << "Failed writing hostap event callback data";
         return -1;
+    }
+#endif
+    if(ctx)
+    {
+        ctx->process_dwpal_event(ifname, buffer, len, opcode);
     }
     return 0;
 }
@@ -619,7 +650,9 @@ bool sta_wlan_hal_dwpal::dwpald_attach(char *ifname)
     static dwpald_hostap_event supplicant_event_handlers[] = {
         {HAP_EVENT("CTRL-EVENT-CONNECTED")},      {HAP_EVENT("CTRL-EVENT-DISCONNECTED")},
         {HAP_EVENT("CTRL-EVENT-TERMINATING")},    {HAP_EVENT("CTRL-EVENT-SCAN-RESULTS")},
-        {HAP_EVENT("CTRL-EVENT-CHANNEL-SWITCH")}, {HAP_EVENT("UNCONNECTED-STA-RSSI")}};
+        {HAP_EVENT("CTRL-EVENT-CHANNEL-SWITCH")}, {HAP_EVENT("UNCONNECTED-STA-RSSI")},
+        {HAP_EVENT("INTERFACE_CONNECTED_OK")},    {HAP_EVENT("INTERFACE_RECONNECTED_OK")},
+        {HAP_EVENT("INTERFACE_DISCONNECTED")}};
 
     if (dwpald_connect("sta_wlan_hal") != DWPALD_SUCCESS) {
         LOG(ERROR) << "Failed to connect to dwpald";

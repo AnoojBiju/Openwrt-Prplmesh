@@ -17,7 +17,6 @@ ARG PACKAGES_FOR_BUILD="\
     libnl-3-dev \
     libnl-genl-3-dev \
     libnl-route-3-dev \
-    libreadline-dev \
     libssl-dev \
     ninja-build \
     pkg-config \
