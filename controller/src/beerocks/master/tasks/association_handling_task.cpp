@@ -103,8 +103,8 @@ void association_handling_task::work()
             return;
         }
 
-        LOG(DEBUG) << "START_MONITORING_REQUEST hostap_mac=" << new_hostap_mac << " sta_mac "
-                   << sta_mac;
+        //LOG(DEBUG) << "START_MONITORING_REQUEST hostap_mac=" << new_hostap_mac << " sta_mac "
+        //           << sta_mac;
 
         auto request = message_com::create_vs_message<
             beerocks_message::cACTION_CONTROL_CLIENT_START_MONITORING_REQUEST>(cmdu_tx, id);
@@ -128,12 +128,28 @@ void association_handling_task::work()
             }
         }
 
-        auto radio_mac = database.get_node_parent_radio(new_hostap_mac);
-        auto agent_mac = database.get_node_parent_ire(radio_mac);
-        LOG(DEBUG) << "DELETE ME: Sending request to " << agent_mac << " for " << radio_mac;
-        son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, radio_mac);
+        //auto radio_mac = database.get_node_parent_radio(new_hostap_mac);
+        //auto agent_mac = database.get_node_parent_ire(radio_mac);
+        auto station = database.get_station(tlvf::mac_from_string(sta_mac));
+        if (!station) {
+            LOG(ERROR) << "Failed to find station with mac: " << sta_mac << std::endl;
+            return;
+        }
+        //auto radio = station->get_bss()->radio;
+        auto agent = database.get_agent_by_radio_uid(station->get_bss()->radio.radio_uid);
+        if (!agent) {
+            LOG(ERROR) << "Failed to find agent to radio uid: "
+                       << station->get_bss()->radio.radio_uid;
+            return;
+        }
+        //LOG(DEBUG) << "DELETE ME: Sending request to " << agent->al_mac << " for "
+        //           << station->get_bss()->radio.radio_uid;
+        son_actions::send_cmdu_to_agent(agent->al_mac, cmdu_tx, database,
+                                        tlvf::mac_to_string(station->get_bss()->radio.radio_uid));
 
-        add_pending_mac(database.get_node_parent_radio(new_hostap_mac),
+        //add_pending_mac(database.get_node_parent_radio(new_hostap_mac),
+        //                beerocks_message::ACTION_CONTROL_CLIENT_START_MONITORING_RESPONSE);
+        add_pending_mac(tlvf::mac_to_string(station->get_bss()->radio.radio_uid),
                         beerocks_message::ACTION_CONTROL_CLIENT_START_MONITORING_RESPONSE);
         set_responses_timeout(START_MONITORING_RESPONSE_TIMEOUT_MSEC);
         break;
@@ -211,7 +227,7 @@ void association_handling_task::work()
          */
         TASK_LOG(DEBUG) << "starting rssi measurement on " << sta_mac;
         std::string hostap_mac = database.get_node_parent(sta_mac);
-        auto agent_mac         = database.get_node_parent_ire(hostap_mac);
+        //auto agent_mac         = database.get_node_parent_ire(hostap_mac);
 
         if (hostap_mac != original_parent_mac ||
             database.get_node_state(sta_mac) != beerocks::STATE_CONNECTED) {
@@ -240,13 +256,25 @@ void association_handling_task::work()
         measurement_request->params().bandwidth = hostap_wifi_channel.get_bandwidth();
         measurement_request->params().cross     = 0;
 
-        const auto parent_radio = database.get_node_parent_radio(hostap_mac);
-        son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, parent_radio);
+        //const auto parent_radio = database.get_node_parent_radio(hostap_mac);
+        auto station = database.get_station(tlvf::mac_from_string(sta_mac));
+        if (!station) {
+            LOG(ERROR) << "Failed to find station with mac: " << sta_mac << std::endl;
+            return;
+        }
+        auto agent = database.get_agent_by_radio_uid(station->get_bss()->radio.radio_uid);
+        if (!agent) {
+            LOG(ERROR) << "Failed to find agent to radio uid: "
+                       << station->get_bss()->radio.radio_uid;
+            return;
+        }
+        son_actions::send_cmdu_to_agent(agent->al_mac, cmdu_tx, database,
+                                        tlvf::mac_to_string(station->get_bss()->radio.radio_uid));
 
         TASK_LOG(DEBUG) << "requested rx rssi measurement from " << hostap_mac << " for sta "
                         << sta_mac;
 
-        add_pending_mac(parent_radio,
+        add_pending_mac(tlvf::mac_to_string(station->get_bss()->radio.radio_uid),
                         beerocks_message::ACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_RESPONSE);
         set_responses_timeout(3000);
         break;
@@ -446,12 +474,16 @@ void association_handling_task::handle_responses_timeout(
     std::unordered_multimap<std::string, beerocks_message::eActionOp_CONTROL> timed_out_macs)
 {
     ++attempts;
-
+    auto station = database.get_station(tlvf::mac_from_string(sta_mac));
+    if (!station) {
+        LOG(ERROR) << "Failed to find station in database";
+        return;
+    }
     switch (state) {
     case START_RSSI_MONITORING: {
         TASK_LOG(DEBUG) << "response for start monitoring from " << original_parent_mac
                         << " for sta " << sta_mac << " timed out! attempts=" << attempts;
-        if (attempts >= max_attempts) {
+        if (attempts >= max_attempts && !station->get_vsta_status()) {
             TASK_LOG(ERROR) << "state START_RSSI_MONITORING reached maximum attempts = " << attempts
                             << " aborting task!";
             TASK_LOG(WARNING) << "client " << sta_mac
@@ -461,9 +493,10 @@ void association_handling_task::handle_responses_timeout(
         break;
     }
     case REQUEST_RSSI_MEASUREMENT: {
+
         TASK_LOG(DEBUG) << "response for rx rssi measurement from " << original_parent_mac
                         << " for sta " << sta_mac << " timed out! attempts=" << attempts;
-        if (attempts >= max_attempts) {
+        if (attempts >= max_attempts && !station->get_vsta_status()) {
             /*
             * TODO
             * this shouldn't really happen unless the new IRE/hostap is malfunctioning
