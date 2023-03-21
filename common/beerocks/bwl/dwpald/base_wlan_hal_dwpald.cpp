@@ -138,16 +138,18 @@ bool base_wlan_hal_dwpal::fsm_setup()
                 // Check if not exist before
                 bool attached = false;
                 if (m_dwpal_event_pfd[0] == 0) {
+                    LOG(DEBUG) << "Badhri Attaching dwpald for radio";
                     attached = attach_dwpald_interface(beerocks::IFACE_RADIO_ID);
                 } else {
-                    //Already attached
+                    LOG(DEBUG) << "Badhri Already attached to dwpald";
                     attached = true;
                 }
 
                 // detach if wlan (hostapd/supplicant) was not attached
                 if (attached) {
                     if (get_type() != HALType::Station) {
-                        // Interface state is true as interface is attached
+                        LOG(DEBUG) << " Interface state is true as interface is attached, changing "
+                                      "to get_radio_info";
                         conn_state[get_iface_name().c_str()] = true;
                         return (transition.change_destination(dwpal_fsm_state::GetRadioInfo));
                     }
@@ -189,14 +191,16 @@ bool base_wlan_hal_dwpal::fsm_setup()
 
         .on(dwpal_fsm_event::Attach, {dwpal_fsm_state::AttachVaps, dwpal_fsm_state::Detach},
             [&](TTransition &transition, const void *args) -> bool {
-                // Attempt to read radio info
+                LOG(DEBUG) << "Attempt to read radio info";
                 if (m_conn_state_retry_counter < CONN_STATE_MAX_RETRY) {
+                    LOG(DEBUG) << "Badhri conn_state = " << conn_state[get_iface_name().c_str()];
+                    LOG(DEBUG) << "Badhri refresh_radio_info " << refresh_radio_info();
                     if ((conn_state[get_iface_name().c_str()]) && (refresh_radio_info())) {
                         LOG(INFO) << "Badhri Refresh radio information successfull";
                         m_conn_state_retry_counter = 0;
                     } else {
-                        LOG(INFO)
-                            << "Badhri Incrementing m_conn_state_retry_counter and return false";
+                        LOG(INFO) << "Badhri Incrementing m_conn_state_retry_counter = "
+                                  << m_conn_state_retry_counter << " and return false";
                         ++m_conn_state_retry_counter;
                         return false;
                     }

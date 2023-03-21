@@ -1795,6 +1795,7 @@ static int drv_evt_callback(struct nl_msg *msg)
 
 bool mon_wlan_hal_dwpal::dwpald_attach(char *ifname)
 {
+    LOG(DEBUG) << "Badhri Entered Monitor dwpal attach, retry = " << retry;
     if (retry < 10) {
         retry++;
         return false;
