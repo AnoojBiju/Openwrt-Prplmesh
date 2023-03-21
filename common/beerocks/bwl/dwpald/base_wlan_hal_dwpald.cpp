@@ -24,6 +24,8 @@ extern "C" {
 
 #define UNHANDLED_EVENTS_LOGS 20
 #define MAX_FAILED_NL_MSG_GET 3
+int DWPALD_ATTACH_MAX_RETRY = 5;
+int CONN_STATE_MAX_RETRY    = 5;
 
 namespace bwl {
 namespace dwpal {
@@ -151,10 +153,19 @@ bool base_wlan_hal_dwpal::fsm_setup()
                     }
                     return true;
                 } else {
-                    LOG(ERROR) << "Failed attaching to the hostapd control interface of "
-                               << m_radio_info.iface_name;
-                    conn_state[get_iface_name().c_str()] = false;
-                    return (transition.change_destination(dwpal_fsm_state::Detach));
+                    if (m_dwpald_attach_retry_counter < DWPALD_ATTACH_MAX_RETRY) {
+                        LOG(INFO)
+                            << "Incrementing m_dwpald_attach_retry_counter and returning false";
+                        ++m_dwpald_attach_retry_counter;
+                        return false;
+                    } else {
+                        LOG(ERROR) << "Failed attaching to the hostapd control interface of "
+                                   << m_radio_info.iface_name;
+                        conn_state[get_iface_name().c_str()] = false;
+                        m_dwpald_attach_retry_counter        = 0;
+                        LOG(INFO) << "dwpald_attach_retry_counter reached maximum retry";
+                        return (transition.change_destination(dwpal_fsm_state::Detach));
+                    }
                 }
 
                 // Stay in the current state
@@ -179,10 +190,20 @@ bool base_wlan_hal_dwpal::fsm_setup()
         .on(dwpal_fsm_event::Attach, {dwpal_fsm_state::AttachVaps, dwpal_fsm_state::Detach},
             [&](TTransition &transition, const void *args) -> bool {
                 // Attempt to read radio info
-                if (!refresh_radio_info()) {
+                if (m_conn_state_retry_counter < CONN_STATE_MAX_RETRY) {
+                    if ((conn_state[get_iface_name().c_str()]) && (refresh_radio_info())) {
+                        LOG(INFO) << "Refresh radio information successfull";
+                        m_conn_state_retry_counter = 0;
+                    } else {
+                        LOG(INFO) << "Incrementing m_conn_state_retry_counter and return false";
+                        ++m_conn_state_retry_counter;
+                        return false;
+                    }
+                } else {
+                    LOG(INFO) << "conn_state_max_retry reached";
+                    m_conn_state_retry_counter = 0;
                     return (transition.change_destination(dwpal_fsm_state::Detach));
                 }
-
                 // If Non-AP HAL, continue to the next state
                 if (get_type() != HALType::AccessPoint) {
                     return true;
