@@ -306,11 +306,13 @@ void association_handling_task::handle_response(std::string mac,
             return;
         }
 
+        auto station = database.get_station(tlvf::mac_from_string(sta_mac));
         TASK_LOG(DEBUG) << "received ACTION_CONTROL_CLIENT_START_MONITORING_RESPONSE, success="
                         << string_utils::bool_str(response->success());
 
         if (!response->success()) {
-            if (++attempts >= max_attempts) {
+
+            if (++attempts >= max_attempts && station->get_vsta_status()) {
                 TASK_LOG(ERROR) << "state START_RSSI_MONITORING reached maximum attempts = "
                                 << attempts << " aborting task!";
 
@@ -323,7 +325,6 @@ void association_handling_task::handle_response(std::string mac,
 
             break;
         }
-        auto station = database.get_station(tlvf::mac_from_string(sta_mac));
         if (database.settings_client_11k_roaming() &&
             (database.get_node_beacon_measurement_support_level(sta_mac) ==
              beerocks::BEACON_MEAS_UNSUPPORTED) &&
