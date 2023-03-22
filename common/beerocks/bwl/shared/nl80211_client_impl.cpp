@@ -1050,6 +1050,73 @@ bool nl80211_client_impl::add_key(const std::string &interface_name, const sKeyI
         [&](struct nl_msg *msg) {});
 }
 
+static void dump(unsigned char *b, size_t l)
+{
+    if (!b)
+        return;
+    LOG(DEBUG) << "Dumping buf of len " << l;
+    for (size_t i = 0; i < l; i++) {
+        LOG(DEBUG) << "i=" << i << ", b[i]=" << std::hex << (int)b[i];
+    }
+}
+
+struct ieee80211_ht_capabilities {
+    uint16_t ht_capabilities_info;
+    uint8_t a_mpdu_params; /* Maximum A-MPDU Length Exponent B0..B1
+			   * Minimum MPDU Start Spacing B2..B4
+			   * Reserved B5..B7 */
+    uint8_t supported_mcs_set[16];
+    uint16_t ht_extended_capabilities;
+    uint32_t tx_bf_capability_info;
+    uint8_t asel_capabilities;
+} __attribute__((packed));
+
+static bool translate_ht(assoc_frame::AssocReqFrame &assoc_req,
+                         ieee80211_ht_capabilities &ht_caps_out)
+{
+    uint16_t ht_cap_info = 0;
+    memcpy(&ht_cap_info, &assoc_req.sta_ht_capability()->ht_cap_info(), sizeof(ht_cap_info));
+    ht_caps_out.ht_capabilities_info = ht_cap_info;
+    uint8_t mpdu                     = 0;
+    memcpy(&mpdu, &assoc_req.sta_ht_capability()->a_mpdu_param(), sizeof(mpdu));
+    ht_caps_out.a_mpdu_params = mpdu;
+    memcpy(ht_caps_out.supported_mcs_set, assoc_req.sta_ht_capability()->ht_mcs_set(),
+           sizeof(ht_caps_out.supported_mcs_set));
+    ht_caps_out.ht_extended_capabilities = assoc_req.sta_ht_capability()->ht_extended_caps();
+    ht_caps_out.tx_bf_capability_info    = assoc_req.sta_ht_capability()->tx_beamforming_caps();
+    ht_caps_out.asel_capabilities        = assoc_req.sta_ht_capability()->asel_caps();
+    return true;
+}
+
+struct ieee80211_vht_capabilities {
+    uint32_t vht_capabilities_info;
+    struct {
+        uint16_t rx_map;
+        uint16_t rx_highest;
+        uint16_t tx_map;
+        uint16_t tx_highest;
+    } vht_supported_mcs_set;
+} __attribute__((packed));
+
+static bool translate_vht(assoc_frame::AssocReqFrame &assoc_req,
+                          ieee80211_vht_capabilities &caps_out)
+{
+    uint32_t vht_caps_info = 0;
+    memcpy(&vht_caps_info, &assoc_req.sta_vht_capability()->vht_cap_info(), sizeof(vht_caps_info));
+    caps_out.vht_capabilities_info = vht_caps_info;
+    caps_out.vht_supported_mcs_set.rx_map =
+        (uint16_t)assoc_req.sta_vht_capability()->supported_vht_mcs().rx_mcs_map;
+    caps_out.vht_supported_mcs_set.rx_highest = (uint16_t)assoc_req.sta_vht_capability()
+                                                    ->supported_vht_mcs()
+                                                    .rx_highest_supp_long_gi_data_rate;
+    caps_out.vht_supported_mcs_set.tx_map =
+        (uint16_t)assoc_req.sta_vht_capability()->supported_vht_mcs().tx_mcs_map;
+    caps_out.vht_supported_mcs_set.tx_highest = (uint16_t)assoc_req.sta_vht_capability()
+                                                    ->supported_vht_mcs()
+                                                    .tx_highest_supp_long_gi_data_rate;
+    return true;
+}
+
 bool nl80211_client_impl::add_station(const std::string &interface_name, const sMacAddr &mac,
                                       assoc_frame::AssocReqFrame &assoc_req, uint16_t aid)
 {
