@@ -759,26 +759,31 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
             return;
         }
 
-        // if (!ap_wlan_hal->set_macacl_type(bwl::eMacACLType::ACCEPT_LIST,
-        //                                   virtual_bss_creation_tlv->bssid())) {
-        //     LOG(ERROR) << "Failed to configure MAC ACL!";
-        //     send_virtual_bss_response(virtual_bss_creation_tlv->radio_uid(),
-        //                               virtual_bss_creation_tlv->bssid(), false);
-        //     return;
-        // }
-        // if (!ap_wlan_hal->sta_acceptlist_modify(virtual_bss_creation_tlv->client_mac(),
-        //                                         virtual_bss_creation_tlv->bssid(),
-        //                                         bwl::sta_acl_action::ADD)) {
-        //     LOG(ERROR) << "Failed to allow the new STA! MAC: "
-        //                << virtual_bss_creation_tlv->client_mac();
-        //     send_virtual_bss_response(virtual_bss_creation_tlv->radio_uid(),
-        //                               virtual_bss_creation_tlv->bssid(), false);
-        //     return;
-        // }
+        // We only configure the acceptlist if the station was already
+        // associated, to allow the controller to create VBSSes for
+        // any specific station (i.e. before the actual station MAC is
+        // known).
 
         if (virtual_bss_creation_tlv->client_assoc()) {
 
             LOG(DEBUG) << "The client was already associated, adding a new station and its keys.";
+
+            if (!ap_wlan_hal->set_macacl_type(bwl::eMacACLType::ACCEPT_LIST,
+                                              virtual_bss_creation_tlv->bssid())) {
+                LOG(ERROR) << "Failed to configure MAC ACL!";
+                send_virtual_bss_response(virtual_bss_creation_tlv->radio_uid(),
+                                          virtual_bss_creation_tlv->bssid(), false);
+                return;
+            }
+            if (!ap_wlan_hal->sta_acceptlist_modify(virtual_bss_creation_tlv->client_mac(),
+                                                    virtual_bss_creation_tlv->bssid(),
+                                                    bwl::sta_acl_action::ADD)) {
+                LOG(ERROR) << "Failed to allow the new STA! MAC: "
+                           << virtual_bss_creation_tlv->client_mac();
+                send_virtual_bss_response(virtual_bss_creation_tlv->radio_uid(),
+                                          virtual_bss_creation_tlv->bssid(), false);
+                return;
+            }
 
             // Configure unicast beacons:
             if (!ap_wlan_hal->set_beacon_da(ifname, virtual_bss_creation_tlv->client_mac())) {
