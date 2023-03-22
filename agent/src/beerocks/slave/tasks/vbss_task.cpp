@@ -160,7 +160,7 @@ void VbssTask::handle_virtual_bss_response(ieee1905_1::CmduMessageRx &cmdu_rx)
         if (m_move_requests.end() != m_move_requests.find(virtual_bss_event_tlv->bssid())) {
             // known creation with possible move
             auto sta_mac = m_move_requests[virtual_bss_event_tlv->bssid()];
-            auto val     = m_move_requests.erase(virtual_bss_event_tlv->bssid());
+            m_move_requests.erase(virtual_bss_event_tlv->bssid());
             auto cmdu_header =
                 m_cmdu_tx.create(0, ieee1905_1::eMessageType::VIRTUAL_BSS_REQUEST_MESSAGE);
             if (!cmdu_header) {
