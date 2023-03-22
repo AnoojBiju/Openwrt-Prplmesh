@@ -93,6 +93,7 @@ protected:
 
     virtual int register_vbss(const std::string &ifname) override;
 
+    virtual bool remove_vbss(const std::string &ifname) override;
     // Private data-members:
 private:
     std::shared_ptr<char> m_temp_dummy_value;

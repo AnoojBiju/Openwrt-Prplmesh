@@ -54,6 +54,8 @@ static mon_wlan_hal::Event wav_to_bwl_event(const std::string &opcode)
         return mon_wlan_hal::Event::RRM_Beacon_Request_Status;
     } else if (opcode == "BEACON-RESP-RX") {
         return mon_wlan_hal::Event::RRM_Beacon_Response;
+    } else if (opcode == "AP-DISABLED") {
+        return mon_wlan_hal::Event::AP_Disabled;
     }
     // } else if (opcode == "RRM-LINK-MEASUREMENT-RECEIVED") {
 
@@ -442,6 +444,18 @@ int mon_wlan_hal_nl80211::register_vbss(const std::string &ifname)
     return base_wlan_hal_nl80211::add_interface(ifname);
 }
 
+bool mon_wlan_hal_nl80211::remove_vbss(const std::string &ifname)
+{
+    LOG(DEBUG) << "Removing BSS with ifname: " << ifname;
+    //std::stringstream cmd;
+    //cmd << "REMOVE " << ifname;
+    //if (!wpa_ctrl_send_msg(cmd.str(), global_iface)) {
+    //    LOG(ERROR) << "Failed to remove vbss!";
+    //    return false;
+    //}
+    return base_wlan_hal_nl80211::remove_interface(ifname);
+}
+
 bool mon_wlan_hal_nl80211::sta_link_measurements_11k_request(const std::string &vap_iface_name,
                                                              const std::string &sta_mac)
 {
@@ -560,6 +574,15 @@ bool mon_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
         // Add the message to the queue
         event_queue_push(Event::STA_Disconnected, msg_buff);
 
+    } break;
+
+    case Event::AP_Disabled: {
+        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sHOSTAP_DISABLED_NOTIFICATION));
+        auto msg      = reinterpret_cast<sHOSTAP_DISABLED_NOTIFICATION *>(msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+        memset(msg_buff.get(), 0, sizeof(sHOSTAP_DISABLED_NOTIFICATION));
+        msg->vap_id = vap_id;
+        event_queue_push(Event::AP_Disabled, msg_buff);
     } break;
 
     case Event::RRM_Beacon_Request_Status: {

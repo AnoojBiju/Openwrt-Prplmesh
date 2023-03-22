@@ -89,6 +89,8 @@ protected:
 
     virtual int register_vbss(const std::string &ifname) override;
 
+    virtual bool remove_vbss(const std::string &ifname) override;
+
 private:
     bool process_ap_event(const std::string &interface, const std::string &key,
                           const beerocks::wbapi::AmbiorixVariant *value) override;

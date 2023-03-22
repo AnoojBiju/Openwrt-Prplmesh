@@ -25,6 +25,7 @@
 #include <tlvf/wfa_map/tlvApMetricQuery.h>
 #include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
 #include <tlvf/wfa_map/tlvVirtualBssCreation.h>
+#include <tlvf/wfa_map/tlvVirtualBssDestruction.h>
 
 #include <cmath>
 #include <vector>
@@ -1666,7 +1667,6 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
 void Monitor::handle_cmdu_ieee1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto cmdu_message_type = cmdu_rx.getMessageType();
-
     switch (cmdu_message_type) {
     case ieee1905_1::eMessageType::AP_METRICS_QUERY_MESSAGE:
         handle_ap_metrics_query(cmdu_rx);
@@ -1675,6 +1675,7 @@ void Monitor::handle_cmdu_ieee1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx)
         handle_multi_ap_policy_config_request(cmdu_rx);
         break;
     case ieee1905_1::eMessageType::VIRTUAL_BSS_REQUEST_MESSAGE:
+        //LOG(DEBUG) << "DELETE ME, MESSAGE  GETTING THROUGH";
         handle_virtual_bss_request(cmdu_rx);
         break;
     default:
@@ -1757,44 +1758,71 @@ void Monitor::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
     // Must register with the event handlers so we can well monitor that Iface
     LOG(DEBUG) << "Processing Virtual BSS Message";
     auto virtual_bss_creation_req = cmdu_rx.getClass<wfa_map::VirtualBssCreation>();
-    if (!virtual_bss_creation_req) {
-        LOG(ERROR) << "Can not find Virtual BSS Request TLV in VBSS request message";
-        return;
-    }
-    std::string vIfaceName = get_vbss_interface_name(virtual_bss_creation_req->bssid());
+    if (virtual_bss_creation_req) {
+        std::string vIfaceName = get_vbss_interface_name(virtual_bss_creation_req->bssid());
 
-    // Sometimes we get multiple messages
-    if (beerocks::IFACE_ID_INVALID !=
-        mon_db.get_vap_id(tlvf::mac_to_string(virtual_bss_creation_req->bssid()))) {
-        //LOG(DEBUG) << "We got a repeat message";
-        return;
-    }
-    int fds = mon_wlan_hal->register_vbss(vIfaceName);
-    if (fds == -1) {
-        LOG(ERROR) << "Failed to register vbss: " << virtual_bss_creation_req->bssid()
-                   << " on the Monitor thread";
-        return;
-    }
-    LOG(DEBUG) << "Registered " << vIfaceName << " on fds " << fds;
-    if (!register_ext_events_handler(fds)) {
-        LOG(ERROR) << "Failed to register vbss ext_events";
-        return;
-    }
-    m_vbss_ext_fds[vIfaceName] = fds;
-    // Update the ap list
-    update_vaps_in_db();
-    // Now see if a station is already associated
-    if (virtual_bss_creation_req->client_mac() != net::network_utils::ZERO_MAC) {
-        auto sta_mac = tlvf::mac_to_string(virtual_bss_creation_req->client_mac());
-        int vap_id   = mon_db.get_vap_id(tlvf::mac_to_string(virtual_bss_creation_req->bssid()));
-        if (vap_id == beerocks::IFACE_ID_INVALID) {
-            LOG(ERROR) << "Can not find the vap id for bssid: "
-                       << virtual_bss_creation_req->bssid();
+        // Sometimes we get multiple messages
+        if (beerocks::IFACE_ID_INVALID !=
+            mon_db.get_vap_id(tlvf::mac_to_string(virtual_bss_creation_req->bssid()))) {
+            LOG(DEBUG) << "We got a repeat message";
             return;
         }
-        if (!handle_sta_conn_event(sta_mac, vap_id)) {
-            LOG(ERROR) << "Failed to register connected sta in vbss request";
+        int fds = mon_wlan_hal->register_vbss(vIfaceName);
+        if (fds == -1) {
+            LOG(ERROR) << "Failed to register vbss: " << virtual_bss_creation_req->bssid()
+                       << " on the Monitor thread";
+            return;
         }
+        LOG(DEBUG) << "Registered " << vIfaceName << " on fds " << fds;
+        if (!register_ext_events_handler(fds)) {
+            LOG(ERROR) << "Failed to register vbss ext_events";
+            return;
+        }
+        m_vbss_ext_fds[vIfaceName] = fds;
+        // Update the ap list
+        update_vaps_in_db();
+        // Now see if a station is already associated
+        if (virtual_bss_creation_req->client_mac() != net::network_utils::ZERO_MAC) {
+            LOG(DEBUG) << "ADDING STATION: " << virtual_bss_creation_req->client_mac();
+            auto sta_mac = tlvf::mac_to_string(virtual_bss_creation_req->client_mac());
+            int vap_id = mon_db.get_vap_id(tlvf::mac_to_string(virtual_bss_creation_req->bssid()));
+            if (vap_id == beerocks::IFACE_ID_INVALID) {
+                LOG(ERROR) << "Can not find the vap id for bssid: "
+                           << virtual_bss_creation_req->bssid();
+                return;
+            }
+            if (!handle_sta_conn_event(sta_mac, vap_id)) {
+                LOG(ERROR) << "Failed to register connected sta in vbss request";
+            }
+        }
+        return;
+    }
+    auto virtual_bss_destruction = cmdu_rx.getClass<wfa_map::VirtualBssDestruction>();
+    if (virtual_bss_destruction) {
+        std::string ifname = get_vbss_interface_name(virtual_bss_destruction->bssid());
+        if (m_vbss_ext_fds.find(ifname) != m_vbss_ext_fds.end()) {
+            LOG(DEBUG) << "We are deleting the interface: " << virtual_bss_destruction->bssid();
+            handle_remove_vbss(ifname);
+        }
+    }
+    return;
+}
+
+void Monitor::handle_remove_vbss(const std::string ifname)
+{
+    int fd = m_vbss_ext_fds[ifname];
+    m_vbss_ext_fds.erase(ifname);
+    if (!mon_wlan_hal->remove_vbss(ifname)) {
+        LOG(WARNING) << "Failed to remove the interface from monitor " << ifname;
+        return;
+    }
+    if (m_vbss_ext_fds.count(ifname) < 1) {
+        LOG(WARNING) << "FD for " << ifname << " does not exist.";
+        return;
+    }
+    if (!m_event_loop->remove_handlers(m_vbss_ext_fds[ifname])) {
+        LOG(WARNING) << "Failed to remove " << ifname << " fd from event loop";
+        return;
     }
     return;
 }
@@ -2129,6 +2157,10 @@ bool Monitor::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
             send_cmdu(cmdu_tx);
         }
 
+        auto vap = mon_db.vap_get_by_id(msg->vap_id);
+        if (m_vbss_ext_fds.find(vap->get_iface()) != m_vbss_ext_fds.end()) {
+            handle_remove_vbss(vap->get_iface());
+        }
         update_vaps_in_db();
 
     } break;

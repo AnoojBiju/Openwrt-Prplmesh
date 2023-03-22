@@ -1957,6 +1957,12 @@ int mon_wlan_hal_dwpal::register_vbss(const std::string &ifname)
     return -1;
 }
 
+bool mon_wlan_hal_dwpal::remove_vbss(const std::string &ifname)
+{
+    LOG(DEBUG) << __func__ << " - NOT IMPLEMENTED";
+    return true;
+}
+
 } // namespace dwpal
 
 std::shared_ptr<mon_wlan_hal> mon_wlan_hal_create(const std::string &iface_name,

@@ -88,6 +88,8 @@ protected:
     }
     virtual int register_vbss(const std::string &ifname) override;
 
+    virtual bool remove_vbss(const std::string &ifname) override;
+
     // Private data-members:
 private:
     bool dwpal_get_scan_params_fg(sScanCfgParams &params, size_t &result_size)

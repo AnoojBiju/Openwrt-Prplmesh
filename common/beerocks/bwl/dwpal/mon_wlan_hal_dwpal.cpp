@@ -1608,6 +1608,12 @@ int mon_wlan_hal_dwpal::register_vbss(const std::string &ifname)
     return -1;
 }
 
+bool mon_wlan_hal_dwpal::remove_vbss(const std::string &ifname)
+{
+    LOG(DEBUG) << __func__ << " - NOT IMPLEMENTED";
+    return true;
+}
+
 bool mon_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)
 {
     struct nlmsghdr *nlh    = nlmsg_hdr(msg);
