@@ -576,9 +576,6 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
                        << existing_move->client_vbss.current_connected_ruid << " failed!";
         }
         active_moves.erase(vbssid);
-        if (!m_database.remove_node(vbssid)) {
-            LOG(ERROR) << "Failed to remove node " << vbssid;
-        }
         auto old_radio =
             m_database.get_radio_by_uid(existing_move->client_vbss.current_connected_ruid);
         if (!old_radio) {
