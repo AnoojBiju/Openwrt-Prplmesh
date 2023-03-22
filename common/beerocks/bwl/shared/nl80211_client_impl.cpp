@@ -37,6 +37,7 @@
 #include <bcl/beerocks_defines.h>
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
+#include <bcl/son/son_assoc_frame_utils.h>
 #include <bwl/base_802_11_defs.h>
 #include <tlvf/CmduMessageTx.h>
 #include <tlvf/ieee_802_11/sMacHeader.h>
@@ -1136,23 +1137,91 @@ bool nl80211_client_impl::add_station(const std::string &interface_name, const s
 
     LOG(DEBUG) << "Adding station with MAC : '" << tlvf::mac_to_string(mac) << "'.";
 
+    beerocks::message::sRadioCapabilities sta_caps{};
+    if (!son::assoc_frame_utils::get_station_capabilities_from_assoc_frame(
+            std::make_shared<assoc_frame::AssocReqFrame>(assoc_req), sta_caps)) {
+        LOG(ERROR) << "Failed to get station capabilities for STA '" << mac << "'";
+        return false;
+    }
+    son::wireless_utils::print_station_capabilities(sta_caps);
+    LOG(DEBUG) << "WiFi Standard for STA " << mac << " is " << sta_caps.wifi_standard;
+
+    ieee80211_vht_capabilities vht_caps{};
+    if (!translate_vht(assoc_req, vht_caps)) {
+        LOG(ERROR) << "Could not deduce VHT capabilities for station '" << mac << "'";
+        return false;
+    }
+
+    LOG(DEBUG) << "Dumping VHT caps";
+    dump((unsigned char *)&vht_caps, sizeof(vht_caps));
+
+    ieee80211_ht_capabilities ht_caps{};
+    if (!translate_ht(assoc_req, ht_caps)) {
+        LOG(ERROR) << "Could not deduce HT capabilities for station '" << mac << "'";
+        return false;
+    }
+
+    LOG(DEBUG) << "Dumping HT caps";
+    dump((unsigned char *)&ht_caps, sizeof(ht_caps));
+
+    LOG(DEBUG) << "Dumping listen interval";
+    LOG(DEBUG) << std::hex << assoc_req.listen_interval() << std::dec;
+    LOG(DEBUG) << "Dumping supported rates";
+    dump((unsigned char *)assoc_req.supported_rates(), assoc_req.supported_rates_length());
+
+    nl80211_sta_flag_update flags;
+    flags.mask = (1 << NL80211_STA_FLAG_AUTHENTICATED) | (1 << NL80211_STA_FLAG_ASSOCIATED) |
+                 (1 << NL80211_STA_FLAG_WME) | (1 << NL80211_STA_FLAG_AUTHORIZED);
+    flags.set = flags.mask;
+
+    LOG(DEBUG) << "flags.mask=" << std::hex << flags.mask;
+
     // TODO: PPM-2358: add the station through hostapd instead
-    return m_socket.get()->send_receive_msg(
+    bool ok = m_socket.get()->send_receive_msg(
         NL80211_CMD_NEW_STATION, 0,
         [&](struct nl_msg *msg) -> bool {
             nla_put_u32(msg, NL80211_ATTR_IFINDEX, iface_index);
             nla_put(msg, NL80211_ATTR_MAC, ETH_ALEN, mac.oct);
-            nla_put_u16(msg, NL80211_ATTR_STA_LISTEN_INTERVAL, assoc_req.listen_interval());
-            nla_put(msg, NL80211_ATTR_STA_SUPPORTED_RATES, assoc_req.supported_rates_length(),
-                    assoc_req.supported_rates());
-            nla_put_u16(msg, NL80211_ATTR_STA_AID, aid);
-            // Set the station as authorized:
-            nla_put_u64(msg, NL80211_ATTR_STA_FLAGS2, 0x0000000200000002);
+
+            if (nla_put(msg, NL80211_ATTR_STA_SUPPORTED_RATES, assoc_req.supported_rates_length(),
+                        assoc_req.supported_rates())) {
+                LOG(ERROR) << "Failed to set NL80211_ATTR_STA_SUPPORTED_RATES!";
+                return false;
+            }
+            if (nla_put(msg, NL80211_ATTR_STA_FLAGS2, sizeof(flags), &flags)) {
+                LOG(ERROR) << "Failed to set NL80211_ATTR_STA_FLAGS2!";
+                return false;
+            }
+            if (nla_put_u16(msg, NL80211_ATTR_STA_AID, aid)) {
+                LOG(ERROR) << "Failed to set NL80211_ATTR_STA_AID!";
+                return false;
+            }
+            if (nla_put_u16(msg, NL80211_ATTR_STA_LISTEN_INTERVAL, assoc_req.listen_interval())) {
+                LOG(ERROR) << "Failed to set NL80211_ATTR_STA_LISTEN_INTERVAL!";
+                return false;
+            }
+            if (nla_put(msg, NL80211_ATTR_HT_CAPABILITY, sizeof(ht_caps), (const void *)&ht_caps)) {
+                LOG(ERROR) << "Failed to set NL80211_ATTR_HT_CAPABILITY!";
+                return false;
+            }
+            if (nla_put(msg, NL80211_ATTR_VHT_CAPABILITY, sizeof(vht_caps),
+                        (const void *)&vht_caps)) {
+                LOG(ERROR) << "Failed to set NL80211_ATTR_VHT_CAPABILITY!";
+                return false;
+            }
+
+            // TODO- unhardcode me
+            if (nla_put_u16(msg, NL80211_ATTR_STA_CAPABILITY, 0x11)) {
+                LOG(ERROR) << "Failed to set NL80211_ATTR_STA_CAPABILITY!";
+                return false;
+            }
 
             // TODO: PPM-2349: add station capabilities
             return true;
         },
         [&](struct nl_msg *msg) {});
+
+    return ok;
 }
 
 bool nl80211_client_impl::get_key(const std::string &interface_name, sKeyInfo &key_info)
