@@ -1637,7 +1637,7 @@ bool ap_wlan_hal_nl80211::add_key(const std::string &ifname, const sKeyInfo &key
 }
 
 bool ap_wlan_hal_nl80211::add_station(const std::string &ifname, const sMacAddr &mac,
-                                      assoc_frame::AssocReqFrame &assoc_req)
+                                      std::vector<uint8_t> &raw_assoc_req)
 {
     // TODO: PPM-2358: the AIDs are managed by hostapd. We currently
     // have no way to know what AIDs hostapd already assigned. As a
@@ -1652,7 +1652,41 @@ bool ap_wlan_hal_nl80211::add_station(const std::string &ifname, const sMacAddr 
         return false;
     }
 
-    return m_nl80211_client->add_station(ifname, mac, assoc_req, aid);
+    if (raw_assoc_req.empty()) {
+        LOG(ERROR) << "Could not add station '" << mac << "' to interface '" << ifname
+                   << "', empty association frame.";
+        return false;
+    }
+    auto assoc_req = assoc_frame::AssocReqFrame::parse(raw_assoc_req.data(), raw_assoc_req.size());
+    if (!assoc_req) {
+        LOG(ERROR) << "Could not add station '" << mac << "' to interface '" << ifname
+                   << "', could not parse association frame!";
+        return false;
+    }
+    if (!m_nl80211_client->add_station(ifname, mac, *assoc_req, aid)) {
+        LOG(ERROR) << "Could not add station";
+        return false;
+    }
+    auto vap_id = get_vap_id_with_bss(ifname);
+    if (vap_id < 0) {
+        LOG(ERROR) << "Failed to find vap id from BSS '" << ifname << "'";
+        return false;
+    }
+    auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION));
+    auto msg = reinterpret_cast<sACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION *>(msg_buff.get());
+    LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+    // Initialize the message
+    memset(msg_buff.get(), 0, sizeof(sACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION));
+
+    msg->params.mac    = mac;
+    msg->params.vap_id = vap_id;
+    std::copy_n(raw_assoc_req.begin(), raw_assoc_req.size(), msg->params.association_frame);
+    msg->params.association_frame_length = raw_assoc_req.size();
+    son::assoc_frame_utils::get_station_capabilities_from_assoc_frame(assoc_req,
+                                                                      msg->params.capabilities);
+    event_queue_push(Event::STA_Connected, msg_buff);
+    return true;
 }
 
 bool ap_wlan_hal_nl80211::get_key(const std::string &ifname, sKeyInfo &key_info)

@@ -879,7 +879,7 @@ bool ap_wlan_hal_whm::add_key(const std::string &ifname, const sKeyInfo &key_inf
 }
 
 bool ap_wlan_hal_whm::add_station(const std::string &ifname, const sMacAddr &mac,
-                                  assoc_frame::AssocReqFrame &assoc_req)
+                                  std::vector<uint8_t> &raw_assoc_req)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return false;
