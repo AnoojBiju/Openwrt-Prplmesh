@@ -1010,29 +1010,6 @@ void ApManager::handle_virtual_bss_move_preparation_request(ieee1905_1::CmduMess
         return;
     }
 
-    // After we send an initial DELBA to the STA undergoing a move, the STA respects the DELBA,
-    // but the AP continues doing blockacks. It has been noted that in subsequent moves, the AP no
-    // longer does blockacks. It's assumed that this is due to multiple DELBAs being sent.
-    // So, send 2 spaced apart a bit.
-    auto delba_delay   = std::chrono::milliseconds(5);
-    m_vbss_delba_timer = m_timer_manager->add_timer(
-        "vbss_delba", delba_delay, std::chrono::milliseconds::zero(),
-        [=](int fd, beerocks::EventLoop &ev_loop) {
-            m_timer_manager->remove_timer(m_vbss_delba_timer);
-            LOG(DEBUG) << "Sending DELBA to " << client_info_tlv_rx->client_mac();
-            if (!ap_wlan_hal->send_delba(get_vbss_interface_name(client_info_tlv_tx->bssid()),
-                                         client_info_tlv_rx->client_mac(),
-                                         client_info_tlv_tx->bssid(),
-                                         client_info_tlv_tx->bssid())) {
-                LOG(ERROR) << "Failed to send DELBA to '" << client_info_tlv_rx->client_mac()
-                           << "'!";
-            }
-            return true;
-        });
-    if (beerocks::net::FileDescriptor::invalid_descriptor == m_vbss_delba_timer) {
-        LOG(ERROR) << "Failed to create the vbss_delba timer!";
-    }
-
     send_cmdu(cmdu_tx);
 }
 
