@@ -70,6 +70,8 @@ private:
      *        monitor thread upon successful creation of a vbss
      */
     std::unordered_map<sMacAddr, sMacAddr> m_move_requests;
+
+    std::vector<sMacAddr> m_delete_events;
 };
 } // namespace beerocks
 

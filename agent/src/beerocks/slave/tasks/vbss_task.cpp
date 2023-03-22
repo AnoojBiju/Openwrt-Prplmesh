@@ -60,10 +60,14 @@ void VbssTask::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
         } else {
             m_move_requests[vbss_creation_tlv->bssid()] = net::network_utils::ZERO_MAC;
         }
+        //LOG(DEBUG) << "Added: " << vbss_creation_tlv->bssid()
+        //           << " with station: " << m_move_requests[vbss_creation_tlv->bssid()] << std::endl;
     } else {
         auto vbss_destruction_tlv = cmdu_rx.getClass<wfa_map::VirtualBssDestruction>();
         if (vbss_destruction_tlv) {
             radio_uid = vbss_destruction_tlv->radio_uid();
+            m_delete_events.push_back(vbss_destruction_tlv->bssid());
+            //LOG(DEBUG) << "Added destruction to vector m_delete events" << std::endl;
         }
     }
 
@@ -132,7 +136,7 @@ bool VbssTask::handle_virtual_bss_move_preparation_request(ieee1905_1::CmduMessa
 
 void VbssTask::handle_virtual_bss_response(ieee1905_1::CmduMessageRx &cmdu_rx)
 {
-    LOG(DEBUG) << "Received Virtual BSS Response";
+    LOG(DEBUG) << "Received Virtual BSS Response with MID=" << cmdu_rx.getMessageId() << std::endl;
     auto virtual_bss_event_tlv = cmdu_rx.getClass<wfa_map::VirtualBssEvent>();
     if (!virtual_bss_event_tlv) {
         LOG(ERROR) << "Virtual BSS Response does not contain Virtual BSS Event TLV!";
@@ -155,15 +159,17 @@ void VbssTask::handle_virtual_bss_response(ieee1905_1::CmduMessageRx &cmdu_rx)
         // thread
         if (m_move_requests.end() != m_move_requests.find(virtual_bss_event_tlv->bssid())) {
             // known creation with possible move
-            LOG(INFO) << "Sending request to monitor thread to register for events";
+            auto sta_mac = m_move_requests[virtual_bss_event_tlv->bssid()];
+            auto val     = m_move_requests.erase(virtual_bss_event_tlv->bssid());
             auto cmdu_header =
                 m_cmdu_tx.create(0, ieee1905_1::eMessageType::VIRTUAL_BSS_REQUEST_MESSAGE);
             if (!cmdu_header) {
                 LOG(ERROR) << "FAILED to create vbss request to send to monitor thread";
-
-                m_move_requests.erase(virtual_bss_event_tlv->bssid());
                 return;
             }
+            LOG(INFO) << "Sending request to monitor thread to register for events for bssid: "
+                      << virtual_bss_event_tlv->bssid()
+                      << " with MID= " << m_cmdu_tx.getMessageId();
             auto vbss_creation_req = m_cmdu_tx.addClass<wfa_map::VirtualBssCreation>();
             if (!vbss_creation_req) {
                 LOG(ERROR) << "Failed to vbss creation request to send to monitor";
@@ -173,10 +179,10 @@ void VbssTask::handle_virtual_bss_response(ieee1905_1::CmduMessageRx &cmdu_rx)
             // Yes, this isn't fully filled in
             // Monitor doesn't need any more information then this
             vbss_creation_req->bssid()      = virtual_bss_event_tlv->bssid();
-            vbss_creation_req->client_mac() = m_move_requests[virtual_bss_event_tlv->bssid()];
+            vbss_creation_req->client_mac() = sta_mac;
             auto db                         = AgentDB::get();
             auto radio =
-                db->get_radio_by_mac(virtual_bss_event_tlv->radio_uid(), AgentDB::eMacType::BSSID);
+                db->get_radio_by_mac(virtual_bss_event_tlv->radio_uid(), AgentDB::eMacType::RADIO);
             if (!radio) {
                 LOG(ERROR) << "Failed to get radio for vbss id: " << virtual_bss_event_tlv->bssid();
             } else {
@@ -186,8 +192,41 @@ void VbssTask::handle_virtual_bss_response(ieee1905_1::CmduMessageRx &cmdu_rx)
                         << "Failed to forward to monitor thread virtual bss response message";
                 }
             }
-            m_move_requests.erase(virtual_bss_event_tlv->bssid());
+            return;
         }
+        auto iter = std::find(m_delete_events.begin(), m_delete_events.end(),
+                              virtual_bss_event_tlv->bssid());
+        if (iter != m_delete_events.end()) {
+            // Response from a delete event, need to tell monitor
+            m_delete_events.erase(iter);
+            LOG(INFO) << "Sending delete event to monitor for vbss "
+                      << virtual_bss_event_tlv->bssid();
+            auto cmdu_header =
+                m_cmdu_tx.create(0, ieee1905_1::eMessageType::VIRTUAL_BSS_REQUEST_MESSAGE);
+            if (!cmdu_header) {
+                LOG(ERROR) << "Failed to make cmdu header for request to destroy to monitor";
+                return;
+            }
+            auto vbss_deletion = m_cmdu_tx.addClass<wfa_map::VirtualBssDestruction>();
+            if (!vbss_deletion) {
+                LOG(ERROR) << "Failed to make vbss destruction tlv";
+                return;
+            }
+            vbss_deletion->bssid() = virtual_bss_event_tlv->bssid();
+            auto db                = AgentDB::get();
+            auto radio =
+                db->get_radio_by_mac(virtual_bss_event_tlv->radio_uid(), AgentDB::eMacType::RADIO);
+            if (!radio) {
+                LOG(ERROR) << "Failed to get radio for vbss id: " << virtual_bss_event_tlv->bssid();
+            } else {
+                if (!m_btl_ctx.send_cmdu(m_btl_ctx.get_monitor_fd(radio->front.iface_name),
+                                         m_cmdu_tx)) {
+                    LOG(ERROR)
+                        << "Failed to forward to monitor thread the vbss destruction message";
+                }
+            }
+        }
+        return;
     }
 }
 
