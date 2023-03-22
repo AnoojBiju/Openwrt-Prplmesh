@@ -1820,7 +1820,7 @@ void Monitor::handle_remove_vbss(const std::string ifname)
         LOG(WARNING) << "FD for " << ifname << " does not exist.";
         return;
     }
-    if (!m_event_loop->remove_handlers(m_vbss_ext_fds[ifname])) {
+    if (!m_event_loop->remove_handlers(fd)) {
         LOG(WARNING) << "Failed to remove " << ifname << " fd from event loop";
         return;
     }
