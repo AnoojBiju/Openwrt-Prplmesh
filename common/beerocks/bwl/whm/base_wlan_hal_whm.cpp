@@ -212,7 +212,8 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
                          " && ((contains('parameters.AuthenticationState'))"
                          " || (contains('parameters.MACAddress')))";
 
-    m_ambiorix_cl->subscribe_to_object_event(wifi_ad_path, event_handler, filter);
+    // TODO : switch the subscription object path back to wifi_ad_path once libamxb client start supporting large path subscriptions
+    m_ambiorix_cl->subscribe_to_object_event(wbapi_utils::search_path_ap(), event_handler, filter);
 
     // station instances cleanup
     auto sta_del_event_handler         = std::make_shared<sAmbiorixEventHandler>();
