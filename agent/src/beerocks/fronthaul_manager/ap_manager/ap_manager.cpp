@@ -2934,21 +2934,23 @@ bool ApManager::add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &
 bool ApManager::remove_bss(std::string &ifname)
 {
     LOG(DEBUG) << "Removing bss " << ifname;
-    if (!ap_wlan_hal->remove_bss(ifname)) {
-        LOG(ERROR) << "Failed to remove the BSS!";
-        return false;
-    }
+
     if (m_dynamic_bss_ext_events_fds.count(ifname) < 1) {
-        LOG(ERROR) << "Could not find ext events fd for interface " << ifname;
-        return false;
+        LOG(WARNING) << "Could not find ext events fd for interface " << ifname;
+        // Continue, try to remove the BSS anyway.
     }
     int fd = m_dynamic_bss_ext_events_fds[ifname];
 
     if (!m_event_loop->remove_handlers(fd)) {
-        LOG(ERROR) << "Unable to remove handlers for external event fd " << fd;
-        return false;
+        LOG(WARNING) << "Unable to remove handlers for external event fd " << fd;
+        // Continue, try to remove the BSS anyway.
     }
     m_dynamic_bss_ext_events_fds.erase(ifname);
+
+    if (!ap_wlan_hal->remove_bss(ifname)) {
+        LOG(ERROR) << "Failed to remove the BSS!";
+        return false;
+    }
 
     return true;
 }
