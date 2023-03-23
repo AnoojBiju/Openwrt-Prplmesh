@@ -124,6 +124,9 @@ public:
     virtual bool prepare_unassoc_sta_link_metrics_response(
         std::shared_ptr<wfa_map::tlvUnassociatedStaLinkMetricsResponse> &response) override;
 
+    virtual bool set_spatial_reuse_config(
+        son::wireless_utils::sSpatialReuseParams &spatial_reuse_params) override;
+
     // Protected methods:
 protected:
     virtual bool dwpald_attach(char *ifname) override;

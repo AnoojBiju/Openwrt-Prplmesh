@@ -792,6 +792,12 @@ bool ap_wlan_hal_dummy::prepare_unassoc_sta_link_metrics_response(
     return true;
 }
 
+bool ap_wlan_hal_dummy::set_spatial_reuse_config(
+    son::wireless_utils::sSpatialReuseParams &spatial_reuse_params)
+{
+    return true;
+}
+
 } // namespace dummy
 
 std::shared_ptr<ap_wlan_hal> ap_wlan_hal_create(std::string iface_name, bwl::hal_conf_t hal_conf,

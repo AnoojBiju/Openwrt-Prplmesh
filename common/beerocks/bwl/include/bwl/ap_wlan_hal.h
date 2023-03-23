@@ -514,6 +514,9 @@ public:
     virtual bool prepare_unassoc_sta_link_metrics_response(
         std::shared_ptr<wfa_map::tlvUnassociatedStaLinkMetricsResponse> &response) = 0;
 
+    virtual bool
+    set_spatial_reuse_config(son::wireless_utils::sSpatialReuseParams &spatial_reuse_params) = 0;
+
 private:
     static const int frame_body_idx = (sizeof(s80211MgmtFrame::sHeader) * 2);
 

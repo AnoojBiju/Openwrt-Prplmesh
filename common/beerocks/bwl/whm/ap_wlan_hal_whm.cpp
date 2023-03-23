@@ -910,6 +910,12 @@ bool ap_wlan_hal_whm::prepare_unassoc_sta_link_metrics_response(
     return false;
 }
 
+bool ap_wlan_hal_whm::set_spatial_reuse_config(
+    son::wireless_utils::sSpatialReuseParams &spatial_reuse_params)
+{
+    return true;
+}
+
 } // namespace whm
 
 std::shared_ptr<ap_wlan_hal> ap_wlan_hal_create(std::string iface_name, bwl::hal_conf_t hal_conf,

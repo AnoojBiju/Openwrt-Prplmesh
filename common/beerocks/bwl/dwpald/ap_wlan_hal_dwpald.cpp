@@ -1767,7 +1767,6 @@ bool ap_wlan_hal_dwpal::switch_channel(int chan, beerocks::eWiFiBandwidth bw,
             cmd += " vht"; // ac
         }
     }
-
     // Send command
     LOG(DEBUG) << "switch channel command: " << cmd;
     if (!dwpal_send_cmd(cmd)) {
@@ -3778,6 +3777,32 @@ bool ap_wlan_hal_dwpal::prepare_unassoc_sta_link_metrics_response(
     // clear the map and mark measurement_start as false
     m_unassoc_sta_map.clear();
     m_measurement_start = false;
+    return true;
+}
+
+bool ap_wlan_hal_dwpal::set_spatial_reuse_config(
+    son::wireless_utils::sSpatialReuseParams &spatial_reuse_params)
+{
+    // Build command string
+    std::string cmd =
+        "SET_HE_SR_PARAM " +
+        "sr_control_field_srp_disallowed=" + spatial_reuse_params.psr_disallowed +
+        " sr_control_field_non_srg_offset_present=" + spatial_reuse_params.non_srg_offset_valid +
+        " sr_control_field_srg_information_present=" + spatial_reuse_params.srg_information_valid +
+        " sr_control_field_hesiga_spatial_reuse_value15_allowed=" +
+        spatial_reuse_params.hesiga_spatial_reuse_value15_allowed +
+        " non_srg_obss_pd_max_offset=" + spatial_reuse_params.non_srg_obsspd_max_offset +
+        " srg_obss_pd_min_offset=" + spatial_reuse_params.srg_obsspd_min_offset +
+        " he_srg_obss_pd_max_offset= " + spatial_reuse_params.srg_obsspd_max_offset +
+        " srg_bss_color_bitmap=" + spatial_reuse_params.srg_bss_color_bitmap +
+        " srg_partial_bssid_bitmap=" + spatial_reuse_params.srg_partial_bssid_bitmap;
+
+    LOG(INFO) << "Spatial reuse configs set command - " << cmd;
+
+    if (!dwpal_send_cmd(cmd)) {
+        LOG(ERROR) << "set_spatial_reuse_config() failed!";
+        return false;
+    }
     return true;
 }
 
