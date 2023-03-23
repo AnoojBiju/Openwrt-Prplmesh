@@ -80,8 +80,12 @@ cACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION:
 cACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START:
   _type: class
   cs_params: sApChannelSwitch
+  sr_params: sSpatialReuseParams
   tx_limit: int8_t
   tx_limit_valid: uint8_t #bool
+  spatial_reuse_valid:
+    _type: uint8_t
+    _value: 0
 
 cACTION_APMANAGER_HOSTAP_CANCEL_ACTIVE_CAC_REQUEST:
   _type: class
@@ -129,7 +133,7 @@ cACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST:
   channel: uint8_t
   bandwidth: beerocks::eWiFiBandwidth
   center_frequency: uint32_t
-  csa_count: 
+  csa_count:
     _type: uint8_t
     _value: 5
 
