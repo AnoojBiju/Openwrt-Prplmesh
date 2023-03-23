@@ -112,6 +112,8 @@ enum class eTlvTypeMap : uint8_t {
     TLV_QOS_MANAGEMENT_DESCRIPTOR = 0xdc,
     TLV_CONTROLLER_CAPABILITY = 0xdd,
     TLV_VIRTUAL_BSS = 0xde,
+    TLV_SPATIAL_REUSE_REQUEST = 0xd8,
+    TLV_SPATIAL_REUSE_REPORT = 0xd9,
     TLV_AP_WIFI_6_CAPABILITIES = 0xaa,
 };
 // Enum AutoPrint generated code snippet begining- DON'T EDIT!
@@ -209,6 +211,8 @@ static const char *eTlvTypeMap_str(eTlvTypeMap enum_value) {
     case eTlvTypeMap::TLV_QOS_MANAGEMENT_DESCRIPTOR:                return "eTlvTypeMap::TLV_QOS_MANAGEMENT_DESCRIPTOR";
     case eTlvTypeMap::TLV_CONTROLLER_CAPABILITY:                    return "eTlvTypeMap::TLV_CONTROLLER_CAPABILITY";
     case eTlvTypeMap::TLV_VIRTUAL_BSS:                              return "eTlvTypeMap::TLV_VIRTUAL_BSS";
+    case eTlvTypeMap::TLV_SPATIAL_REUSE_REQUEST:                    return "eTlvTypeMap::TLV_SPATIAL_REUSE_REQUEST";
+    case eTlvTypeMap::TLV_SPATIAL_REUSE_REPORT:                     return "eTlvTypeMap::TLV_SPATIAL_REUSE_REPORT";
     case eTlvTypeMap::TLV_AP_WIFI_6_CAPABILITIES:                   return "eTlvTypeMap::TLV_AP_WIFI_6_CAPABILITIES";
     }
     static std::string out_str = std::to_string(int(enum_value));
@@ -313,6 +317,8 @@ public:
         case 0xdc:
         case 0xdd:
         case 0xde:
+        case 0xd8:
+        case 0xd9:
         case 0xaa:
                 ret = true;
                 break;
