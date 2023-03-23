@@ -1193,6 +1193,28 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
 
         LOG_IF(request->cs_params().channel == 0, DEBUG) << "Start ACS";
 
+        son::wireless_utils::sSpatialReuseParams spatial_reuse_params;
+
+        spatial_reuse_params.bss_color = request->sr_params().bss_color;
+        spatial_reuse_params.hesiga_spatial_reuse_value15_allowed =
+            request->sr_params().hesiga_spatial_reuse_value15_allowed;
+        spatial_reuse_params.srg_information_valid = request->sr_params().srg_information_valid;
+        spatial_reuse_params.non_srg_offset_valid  = request->sr_params().non_srg_offset_valid;
+        spatial_reuse_params.psr_disallowed        = request->sr_params().psr_disallowed;
+        spatial_reuse_params.non_srg_obsspd_max_offset =
+            request->sr_params().non_srg_obsspd_max_offset;
+        spatial_reuse_params.srg_obsspd_min_offset = request->sr_params().srg_obsspd_min_offset;
+        spatial_reuse_params.srg_obsspd_max_offset = request->sr_params().srg_obsspd_max_offset;
+        spatial_reuse_params.srg_bss_color_bitmap  = request->sr_params().srg_bss_color_bitmap;
+        spatial_reuse_params.srg_partial_bssid_bitmap =
+            request->sr_params().srg_partial_bssid_bitmap;
+
+        if (request->spatial_reuse_valid()) {
+            if (!ap_wlan_hal->set_spatial_reuse_config(spatial_reuse_params)) {
+                LOG(ERROR) << "set_spatial_reuse_config failed";
+            }
+        }
+
         // Set transmit power
         if (request->tx_limit_valid()) {
             ap_wlan_hal->set_tx_power_limit(request->tx_limit());
