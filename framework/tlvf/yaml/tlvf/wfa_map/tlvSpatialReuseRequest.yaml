@@ -1,0 +1,44 @@
+#
+---
+_namespace: wfa_map
+
+tlvSpatialReuseRequest:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_SPATIAL_REUSE_REQUEST
+  length: uint16_t
+  radio_uid: sMacAddr
+  flags1: sFlags1
+  flags2: sFlags2
+  non_srg_obsspd_max_offset:
+    _type: uint8_t
+  srg_obsspd_min_offset:
+    _type: uint8_t
+  srg_obsspd_max_offset:
+    _type: uint8_t
+  srg_bss_color_bitmap:
+    _type: uint64_t
+  srg_partial_bssid_bitmap:
+    _type: uint64_t
+  reserved:
+    _type: uint16_t
+
+sFlags1:
+  _type: struct
+  _bit_field: uint8_t
+  bss_color:
+    _bit_range: [5, 0]
+
+sFlags2:
+  _type: struct
+  _bit_field: uint8_t
+  hesiga_spatial_reuse_value15_allowed:
+    _bit_range: [4, 4]
+  srg_information_valid:
+    _bit_range: [3, 3]
+  non_srg_offset_valid:
+    _bit_range: [2, 2]
+  psr_disallowed:
+    _bit_range: [0, 0]
