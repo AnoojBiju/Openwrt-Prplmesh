@@ -1075,6 +1075,11 @@ struct ieee80211_ht_capabilities {
 static bool translate_ht(assoc_frame::AssocReqFrame &assoc_req,
                          ieee80211_ht_capabilities &ht_caps_out)
 {
+    if (!assoc_req.sta_ht_capability()) {
+        LOG(INFO) << "Station does not have HT capabilities";
+        return true;
+    }
+
     uint16_t ht_cap_info = 0;
     memcpy(&ht_cap_info, &assoc_req.sta_ht_capability()->ht_cap_info(), sizeof(ht_cap_info));
     ht_caps_out.ht_capabilities_info = ht_cap_info;
@@ -1102,6 +1107,11 @@ struct ieee80211_vht_capabilities {
 static bool translate_vht(assoc_frame::AssocReqFrame &assoc_req,
                           ieee80211_vht_capabilities &caps_out)
 {
+    if (!assoc_req.sta_vht_capability()) {
+        LOG(INFO) << "Station does not have VHT capabilities";
+        return true;
+    }
+
     uint32_t vht_caps_info = 0;
     memcpy(&vht_caps_info, &assoc_req.sta_vht_capability()->vht_cap_info(), sizeof(vht_caps_info));
     caps_out.vht_capabilities_info = vht_caps_info;
