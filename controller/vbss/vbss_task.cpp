@@ -449,10 +449,7 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
                        << "! Creation event failed";
             return false;
         }
-        auto cntrCtx = m_database.get_controller_ctx();
-        if (cntrCtx) {
-            return cntrCtx->handle_vbss_creation(ruid, vbssid);
-        }
+
         auto radio = m_database.get_radio_by_uid(vbss_event_tlv->radio_uid());
         if (!radio) {
             LOG(ERROR) << "Could not find radio with UID '" << vbss_event_tlv->radio_uid() << "'";
@@ -470,8 +467,13 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
                        << vbss_event_tlv->bssid() << "', SSID '" << existing_creation->ssid << "'";
             return false;
         }
-
-        return true;
+        radio->current_vbss_used += 1;
+        auto cntrCtx = m_database.get_controller_ctx();
+        if (cntrCtx) {
+            return cntrCtx->handle_vbss_creation(ruid, vbssid);
+        }
+        // Possibly add a log here
+        return false;
     }
 
     auto existing_destruction = active_destruction_events.get(vbssid);
@@ -484,10 +486,6 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
             return false;
         }
 
-        auto cntrxCtx = m_database.get_controller_ctx();
-        if (cntrxCtx) {
-            return cntrxCtx->handle_vbss_destruction(vbssid);
-        }
         auto radio = m_database.get_radio_by_uid(vbss_event_tlv->radio_uid());
         if (!radio) {
             LOG(ERROR) << "Could not find radio with UID '" << vbss_event_tlv->radio_uid() << "'";
@@ -505,8 +503,13 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
                        << "' on radio '" << vbss_event_tlv->radio_uid() << "'";
             return false;
         }
-
-        return true;
+        radio->current_vbss_used -= 1;
+        auto cntrxCtx = m_database.get_controller_ctx();
+        if (cntrxCtx) {
+            return cntrxCtx->handle_vbss_destruction(vbssid);
+        }
+        // We are here if no cntrxCtx is had, should log
+        return false;
     }
 
     LOG(DEBUG) << "Checking existing moves with creation state";
@@ -584,7 +587,8 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
             return false;
         }
         old_radio->vbss_ids_used[vbssid] = false;
-        auto n_radio                     = m_database.get_radio_by_uid(existing_move->dest_ruid);
+        old_radio->current_vbss_used -= 1;
+        auto n_radio = m_database.get_radio_by_uid(existing_move->dest_ruid);
         if (!n_radio) {
             LOG(ERROR) << "Failed to find the new radio station is connected to: "
                        << existing_move->dest_ruid;
@@ -592,7 +596,8 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
         }
         //auto bss = n_radio->bsses.add(vbssid)
         n_radio->vbss_ids_used[vbssid] = true;
-        auto cntrlCntx                 = m_database.get_controller_ctx();
+        n_radio->current_vbss_used -= 1;
+        auto cntrlCntx = m_database.get_controller_ctx();
         if (!cntrlCntx) {
             LOG(ERROR) << "FAILED TO GET CONTROLLER CONTEXT FOR MOVE COMPLETE";
             return false;

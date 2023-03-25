@@ -4844,7 +4844,7 @@ bool Controller::send_agent_capabilities_to_vbss_manager(
 {
     if (m_vbss_manager->analyze_radio_restriction(agent_mac, ruid_cap_map)) {
         //Check to see if Agent is currently hosting a VBSS, if not, tell it to
-        if (m_vbss_manager->currently_have_vbss_free(agent_mac)) {
+        if (!m_vbss_manager->currently_have_vbss_free(agent_mac)) {
             return create_and_send_vbss_creation(agent_mac);
         }
         // Don't have space, not a error
@@ -4890,8 +4890,11 @@ bool Controller::handle_sta_connect_vbss(const vbss::sStationConnectedEvent &sta
             //                            beerocks::net::network_utils::ZERO_MAC);
             get_unassociated_stations_stats();
         }
-        if (!create_and_send_vbss_creation(agent->al_mac)) {
-            LOG(DEBUG) << "Unable to start another vbss on agent " << agent->al_mac;
+        // This may have been from a move, make sure no vbss is open currently
+        if (!m_vbss_manager->currently_have_vbss_free(agent->al_mac)) {
+            if (!create_and_send_vbss_creation(agent->al_mac)) {
+                LOG(DEBUG) << "Unable to start another vbss on agent " << agent->al_mac;
+            }
         }
     } else {
         LOG(ERROR) << "Unable to find agent associated to bssid " << stationConnect.bss_id;

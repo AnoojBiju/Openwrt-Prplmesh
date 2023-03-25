@@ -179,6 +179,13 @@ protected:
     bool register_client_for_rssi(const vbss::sStationConnectedEvent &stationConnect);
 
 private:
+    struct sOpenVbssStatus {
+        sMacAddr vbss_id;
+        bool create_sent;
+        bool create_success;
+        sOpenVbssStatus() {}
+        ~sOpenVbssStatus() {}
+    };
     /*
     * @brief This method will run on a frequency that's predfined and will make sure each 
     *           vsta and vbss combination is being hosted on the best client as determined
@@ -213,7 +220,7 @@ private:
 
     std::unordered_map<sMacAddr, bool> m_global_vbssid_map;
 
-    std::unordered_map<sMacAddr, sMacAddr> m_open_vbsses;
+    std::unordered_map<sMacAddr, vbss::VbssManager::sOpenVbssStatus> m_open_vbsses;
 
     std::unordered_map<sMacAddr, sVStaStats> m_vsta_stats;
 
