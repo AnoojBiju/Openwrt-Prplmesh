@@ -1810,19 +1810,20 @@ void Monitor::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
 
 void Monitor::handle_remove_vbss(const std::string ifname)
 {
-    int fd = m_vbss_ext_fds[ifname];
-    m_vbss_ext_fds.erase(ifname);
-    if (!mon_wlan_hal->remove_vbss(ifname)) {
-        LOG(WARNING) << "Failed to remove the interface from monitor " << ifname;
-        return;
-    }
     if (m_vbss_ext_fds.count(ifname) < 1) {
         LOG(WARNING) << "FD for " << ifname << " does not exist.";
         return;
     }
+    int fd = m_vbss_ext_fds[ifname];
+    m_vbss_ext_fds.erase(ifname);
+    if (!mon_wlan_hal->remove_vbss(ifname)) {
+        LOG(WARNING) << "Failed to remove the interface from monitor " << ifname;
+    }
     if (!m_event_loop->remove_handlers(fd)) {
         LOG(WARNING) << "Failed to remove " << ifname << " fd from event loop";
-        return;
+    }
+    if (!mon_db.vap_remove(fd)) {
+        LOG(WARNING) << "Failed to remove vap with fd " << fd << " from monitor db";
     }
     return;
 }

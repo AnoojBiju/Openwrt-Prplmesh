@@ -863,9 +863,15 @@ bool base_wlan_hal_nl80211::refresh_vaps_info(int id)
             return true;
 
         } else if (mapped_vap_element.bss != vap_element.bss) {
-            LOG(ERROR) << "bss mismatch! vap_element.bss=" << vap_element.bss
-                       << ", mapped_vap_element.bss=" << mapped_vap_element.bss;
-            return false;
+            //LOG(ERROR) << "bss mismatch! vap_element.bss=" << vap_element.bss
+            //           << ", mapped_vap_element.bss=" << mapped_vap_element.bss;
+            // This is not an error, it means a VAP went down
+            // The kernel automatically shifts the vap ids
+            LOG(WARNING) << "BSSID " << vap_element.bss << " does not match stored "
+                         << mapped_vap_element.bss
+                         << "\n Old bss has been destroyed and FDs have shifted";
+            mapped_vap_element = vap_element;
+            return true;
         } else if (mapped_vap_element.ssid != vap_element.ssid) {
             LOG(DEBUG) << "SSID changed from " << mapped_vap_element.ssid << ", to "
                        << vap_element.ssid << ". Overriding VAP element.";
