@@ -29,6 +29,11 @@ rm -f /etc/rc.d/S27tr181-dhcpv4client
 /etc/init.d/tr181-dhcpv6client stop
 rm -f /etc/rc.d/S25tr181-dhcpv6client
 
+# disable firewall
+/etc/init.d/tr181-firewall stop ; sleep 2 ; /etc/init.d/tr181-firewall stop
+rm -f /etc/rc.d/*tr181-firewall
+
+
 # Save the IP settings persistently (PPM-2351):
 sed -ri 's/(dm-save.*) = false/\1 = true/g' /etc/amx/ip-manager/ip-manager.odl
 /etc/init.d/ip-manager restart
@@ -52,12 +57,6 @@ ubus call "IP.Interface" _set '{ "rel_path": ".[Name == \"br-lan\"].IPv4Address.
 
 # Wired backhaul interface:
 uci set prplmesh.config.backhaul_wire_iface='lan0'
-
-# For now there is no way to disable the firewall (see PCF-590).
-# Instead, wait for it in the datamodel, then set the whole INPUT
-# chain to ACCEPT:
-ubus wait_for Firewall
-iptables -P INPUT ACCEPT
 
 # Required for config_load:
 . /lib/functions/system.sh
@@ -158,7 +157,7 @@ uci del wireless.guest_radio1
 # of the test).
 # See also PPM-1928.
 set_channel() {
-    if [ "$(uci get "wireless.${1}.hwmode")" = "11g" ] ; then
+    if [ "$(uci get "wireless.${1}.band")" = "2g" ] ; then
         uci set "wireless.${1}.channel"=1
     else
         uci set "wireless.${1}.channel"=48
@@ -177,14 +176,13 @@ config_load wireless
 config_foreach set_channel wifi-device
 
 uci commit
-/etc/init.d/system restart
-/etc/init.d/network restart
+reload_config
 sleep 10
 
 # Try to work around PCF-681: if we don't have a connectivity, restart
 # tr181-bridging
 # Check the status of the LAN bridge
-ip a |grep "br-lan:" |grep "state UP" >/dev/null || (echo "LAN Bridge DOWN, restarting bridge manager" && /etc/init.d/tr181-bridging restart && sleep 15)
+ip a l br-lan |grep "state UP" >/dev/null || (echo "LAN Bridge DOWN, restarting bridge manager" && /etc/init.d/tr181-bridging restart && sleep 15)
 
 # If we still can't ping the UCC, restart the IP manager
 ping -i 1 -c 2 192.168.250.199 || (/etc/init.d/ip-manager restart && sleep 12)
@@ -197,4 +195,4 @@ ping -i 1 -c 2 192.168.250.199 || (/etc/init.d/ip-manager restart && sleep 12)
 # Start an ssh server on the control interfce
 # The ssh server that is already running will only accept connections from 
 # the IP interface that was configured with the IP-Manager
-# dropbear -F -T 10 -p192.168.250.190:22 &
+dropbear -F -T 10 -p192.168.250.190:22 &
