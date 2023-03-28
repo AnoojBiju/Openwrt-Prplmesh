@@ -120,6 +120,14 @@ test-on-turris-omnia:
     OPENWRT_IMAGE: openwrt-mvebu-cortexa9-cznic_turris-omnia-sysupgrade.img.gz
   needs: ["build-for-turris-omnia"]
 
+test-on-turris-omnia-whm:
+  extends: .test-on-target-whm
+  variables:
+    TARGET_DEVICE: turris-omnia
+    TARGET_DEVICE_NAME: turris-omnia-1
+    OPENWRT_IMAGE: openwrt-mvebu-cortexa9-cznic_turris-omnia-sysupgrade.img.gz
+  needs: ["build-for-turris-omnia-whm"]
+
 test-on-glinet-b1300:
   extends: .test-on-target
   variables:
