@@ -161,7 +161,11 @@ if (USE_PRPLMESH_WHM)
 
     list(APPEND bpl_platform_sources ${MODULE_PATH}/cfg/prplMesh_WHM/bpl.cpp)
     list(APPEND bpl_platform_sources ${MODULE_PATH}/cfg/prplMesh_WHM/bpl_cfg_wifi.cpp)
-    list(APPEND bpl_platform_sources ${MODULE_PATH}/common/utils/bpl_network/bpl_network_prplos_impl.cpp)
+    if (USE_BPL_PRPLOS_IMPL)
+        list(APPEND bpl_platform_sources ${MODULE_PATH}/common/utils/bpl_network/bpl_network_prplos_impl.cpp)
+    else()
+        list(APPEND bpl_platform_sources ${MODULE_PATH}/common/utils/bpl_network/bpl_network_linux_impl.cpp)
+    endif()
 
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WBAPI_SOCK}")
 
