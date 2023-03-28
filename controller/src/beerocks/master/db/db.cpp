@@ -5480,6 +5480,21 @@ bool db::dm_set_sta_link_metrics(const sMacAddr &sta_mac, uint32_t downlink_est_
     return ret_val;
 }
 
+bool db::dm_set_sta_link_metrics_vs(const sMacAddr &sta_mac, uint8_t rcpi)
+{
+    auto station = get_station(sta_mac);
+    if (!station) {
+        LOG(ERROR) << "Failed to get station in db with mac: " << sta_mac;
+        return false;
+    }
+
+    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.
+    if (station->dm_path.empty())
+        return true;
+
+    return m_ambiorix_datamodel->set(station->dm_path, "SignalStrength", rcpi);
+}
+
 //
 // PRIVATE FUNCTIONS
 //   must be used from a thread safe context

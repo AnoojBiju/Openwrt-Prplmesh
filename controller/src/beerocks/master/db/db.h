@@ -1100,6 +1100,15 @@ public:
     bool dm_set_sta_link_metrics(const sMacAddr &sta_mac, uint32_t downlink_est_mac_data_rate,
                                  uint32_t uplink_est_mac_data_rate, uint8_t signal_strength);
 
+    /**
+     * @brief Update a station's signal strength based on VS measurement
+     * 
+     * @param sta_mac The station to udpate
+     * @param signal_strength The RPCI
+     * @return true on success, false otherwise.
+     */
+    bool dm_set_sta_link_metrics_vs(const sMacAddr &sta_mac, uint8_t signal_strength);
+
     const beerocks::message::sRadioCapabilities *
     get_station_current_capabilities(const std::string &mac);
 

@@ -3429,6 +3429,12 @@ bool Controller::handle_cmdu_control_message(
             client->cross_tx_phy_rate_100kb = notification->params().tx_phy_rate_100kb;
             client->cross_rx_phy_rate_100kb = notification->params().rx_phy_rate_100kb;
         }
+        if (!database.dm_set_sta_link_metrics_vs(
+                client->mac,
+                wireless_utils::convert_rcpi_from_rssi(notification->params().rx_rssi))) {
+            LOG(ERROR) << "Failed to update link metrics data model for station '" << client->mac
+                       << "'";
+        }
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
         if ((beerocks_header->id() == database.get_pre_association_steering_task_id())) {
             beerocks_message::sSteeringEvSnr new_event;
