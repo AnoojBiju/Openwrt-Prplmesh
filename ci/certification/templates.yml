@@ -18,10 +18,10 @@
   variables:
     RUN_ON_DEVICE: "turris-omnia"
   before_script:
-    - tools/deploy_firmware.py --device turris-omnia --target-name "$RUN_ON_DEVICE" --image "$TURRIS_OMNIA_FULLIMAGE" --configuration ci/configuration/certification/R1/turris-omnia.sh
-    - tools/deploy_ipk.sh --certification-mode $RUN_ON_DEVICE build/$RUN_ON_DEVICE/prplmesh.ipk
+    - tools/deploy_firmware.py --device turris-omnia --target-name "$RUN_ON_DEVICE" --image "$TURRIS_OMNIA_FULLIMAGE" --whm --configuration ci/configuration/certification/R1/whm/turris-omnia.sh
+    - tools/deploy_ipk.sh --certification-mode $RUN_ON_DEVICE buildWHM/$RUN_ON_DEVICE/prplmesh.ipk
   needs:
-    - job: build-for-turris-omnia
+    - job: build-for-turris-omnia-whm
   tags:
     - certs-tests
     - turris-omnia
@@ -32,7 +32,7 @@
   variables:
     RUN_ON_DEVICE: "glinet-b1300"
   before_script:
-    - tools/deploy_firmware.py --device glinet-b1300 --target-name "$RUN_ON_DEVICE" --image "$GLINET_B1300_FULLIMAGE" --whm --full --configuration ci/configuration/certification/R1/whm/glinet-b1300.sh
+    - tools/deploy_firmware.py --device glinet-b1300 --target-name "$RUN_ON_DEVICE" --image "$GLINET_B1300_FULLIMAGE" --whm --configuration ci/configuration/certification/R1/whm/glinet-b1300.sh
     - tools/deploy_ipk.sh --certification-mode $RUN_ON_DEVICE buildWHM/$RUN_ON_DEVICE/prplmesh.ipk
   needs:
     - job: build-for-glinet-b1300-whm
@@ -60,10 +60,10 @@
   variables:
     RUN_ON_DEVICE: "turris-omnia"
   before_script:
-    - tools/deploy_firmware.py --device turris-omnia --target-name "$RUN_ON_DEVICE" --image "$TURRIS_OMNIA_FULLIMAGE" --configuration ci/configuration/certification/R4/turris-omnia.sh
-    - tools/deploy_ipk.sh --certification-mode $RUN_ON_DEVICE build/$RUN_ON_DEVICE/prplmesh.ipk
+    - tools/deploy_firmware.py --device turris-omnia --target-name "$RUN_ON_DEVICE" --image "$TURRIS_OMNIA_FULLIMAGE" --whm --configuration ci/configuration/certification/R4/whm/turris-omnia.sh
+    - tools/deploy_ipk.sh --certification-mode $RUN_ON_DEVICE buildWHM/$RUN_ON_DEVICE/prplmesh.ipk
   needs:
-    - job: build-for-turris-omnia
+    - job: build-for-turris-omnia-whm
   tags:
     - certs-tests-R4
     - turris-omnia
