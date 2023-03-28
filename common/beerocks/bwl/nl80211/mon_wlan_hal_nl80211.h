@@ -92,7 +92,7 @@ protected:
 private:
     std::shared_ptr<char> m_temp_wav_value;
     const char *m_unassociated_stations_socket_path = "/tmp/uslm_socket";
-    int m_unassociated_stations_client_fd{-1};
+    std::unique_ptr<int, std::function<void(int*)>> m_unassociated_stations_client_fd;
 };
 
 } // namespace nl80211
