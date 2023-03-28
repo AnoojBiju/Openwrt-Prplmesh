@@ -8161,7 +8161,9 @@ bool db::dm_set_unassociated_sta(const std::string &radio_dm, const std::string 
 bool db::dm_remove_unassociated_sta(const std::string &radio_dm, const std::string &sta_mac)
 {
     std::string unassociated_path = radio_dm + ".UnassociatedSTA";
-    auto indx = m_ambiorix_datamodel->get_instance_index(unassociated_path, sta_mac);
+
+    auto indx = m_ambiorix_datamodel->get_instance_index(
+        unassociated_path + ".[MACAddress == '%s'].", sta_mac);
     if (indx == 0) {
         LOG(ERROR) << "Cound no find unassociated STA with mac " << sta_mac << " at path "
                    << unassociated_path;
