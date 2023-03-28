@@ -4,10 +4,10 @@
   variables:
     RUN_ON_DEVICE: "turris-omnia"
   before_script:
-    - tools/deploy_firmware.py --device turris-omnia --target-name "$RUN_ON_DEVICE" --image "$TURRIS_OMNIA_FULLIMAGE" --configuration ci/configuration/certification/R1/turris-omnia.sh
+    - tools/deploy_firmware.py --device turris-omnia --target-name "$RUN_ON_DEVICE" --whm --image "$TURRIS_OMNIA_FULLIMAGE" --configuration ci/configuration/certification/R1/whm/turris-omnia.sh
     - tools/deploy_ipk.sh --certification-mode $RUN_ON_DEVICE build/$RUN_ON_DEVICE/prplmesh.ipk
   needs:
-    - job: build-for-turris-omnia
+    - job: build-for-turris-omnia-whm
   tags:
     - certs-tests
     - turris-omnia

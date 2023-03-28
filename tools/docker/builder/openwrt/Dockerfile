@@ -68,7 +68,7 @@ RUN printf '\033[1;35m%s Cloning prplWrt\n\033[0m' "$(date --iso-8601=seconds --
     && git checkout "$OPENWRT_TOOLCHAIN_VERSION" \
     && ./scripts/gen_config.py "$TARGET_SYSTEM" prpl \
     && make defconfig \
-    && make -j"$(nproc)" \
+    && make -j1 V=sc \
     && rm -rf bin \
     && rm -rf build_dir/target*/libnl-3* \
     && rm -rf build_dir/target*/openssl* \

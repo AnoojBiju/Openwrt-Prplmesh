@@ -32,3 +32,8 @@ build-for-turris-omnia:
   extends: .build-for-openwrt
   variables:
     TARGET_DEVICE: "turris-omnia"
+
+build-for-turris-omnia-whm:
+  extends: .build-for-openwrt-whm
+  variables:
+    TARGET_DEVICE: "turris-omnia"
