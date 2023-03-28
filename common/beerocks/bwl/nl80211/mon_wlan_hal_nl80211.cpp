@@ -732,18 +732,27 @@ bool mon_wlan_hal_nl80211::sta_unassoc_rssi_measurement(
     static bool is_socket_setup_complete = false;
 
     if (!is_socket_setup_complete) {
+        LOG(DEBUG) << "Setup not complete yet, setting up now";
         sockaddr_un remote = {};
         remote.sun_family  = AF_UNIX;
         std::strncpy(remote.sun_path, m_unassociated_stations_socket_path,
                      std::strlen(m_unassociated_stations_socket_path) + 1);
-        m_unassociated_stations_client_fd = socket(PF_UNIX, SOCK_STREAM, 0);
-        if (m_unassociated_stations_client_fd < 0) {
+        m_unassociated_stations_client_fd = std::unique_ptr<int, std::function<void(int*)>>(new int(socket(PF_UNIX, SOCK_STREAM, 0)), [](int *fd) {
+            if (fd && *fd >= 0) {
+                LOG(DEBUG) << "Closing unassociated stations fd " << *fd;
+                close(*fd);
+            }
+        });
+        if (!m_unassociated_stations_client_fd || *m_unassociated_stations_client_fd < 0) {
             LOG(ERROR) << " socket() failed";
             return false;
         }
+
+        LOG(DEBUG) << "Created file descriptor " << *m_unassociated_stations_client_fd
+                   << " for unassociated stations";
         socklen_t len =
             std::strlen(m_unassociated_stations_socket_path) + sizeof(remote.sun_family);
-        if (connect(m_unassociated_stations_client_fd, (sockaddr *)&remote, len) < 0) {
+        if (connect(*m_unassociated_stations_client_fd, (sockaddr *)&remote, len) < 0) {
             LOG(ERROR) << "connect() failed: could not connect to "
                        << m_unassociated_stations_socket_path;
             return false;
@@ -751,22 +760,26 @@ bool mon_wlan_hal_nl80211::sta_unassoc_rssi_measurement(
         is_socket_setup_complete = true;
         LOG(DEBUG) << "Opened a Unix client socket to " << m_unassociated_stations_socket_path;
     }
-    if (m_unassociated_stations_client_fd == -1) {
-        LOG(ERROR) << "Unassociated station client socket is -1";
+    if (!m_unassociated_stations_client_fd || *m_unassociated_stations_client_fd < 0) {
+        LOG(ERROR) << "Unassociated station client socket is invalid";
         is_socket_setup_complete = false;
         return false;
     }
 
     for (const auto &mac_pair : new_list) {
+        LOG(DEBUG) << "Sending register sta message for " << mac_pair.first;
         if (!uslm_utils::send_register_sta_message(mac_pair.first,
-                                                   m_unassociated_stations_client_fd)) {
+                                                   *m_unassociated_stations_client_fd)) {
             LOG(ERROR)
                 << "Failed to send monitor registration request for unassociated station, MAC="
                 << mac_pair.first;
+            is_socket_setup_complete = false;
             return false;
         }
+
+        LOG(DEBUG) << "Getting the register response for " << mac_pair.first;
         uint8_t rx_buffer[256] = {};
-        if (recv(m_unassociated_stations_client_fd, rx_buffer, sizeof(rx_buffer), 0) < 0) {
+        if (recv(*m_unassociated_stations_client_fd, rx_buffer, sizeof(rx_buffer), 0) < 0) {
             LOG(ERROR) << "Failed to recv() response for unassociated station monitoring "
                           "registration request for STA "
                        << mac_pair.first;
@@ -782,15 +795,19 @@ bool mon_wlan_hal_nl80211::sta_unassoc_rssi_measurement(
     sUnassociatedStationsStats stats_list = {};
 
     for (const auto &mac_pair : new_list) {
+
+        LOG(DEBUG) << "Sending sta link metrics query message for " << mac_pair.first;
         if (!uslm_utils::send_sta_link_metrics_request_message(mac_pair.first,
-                                                               m_unassociated_stations_client_fd)) {
+                                                               *m_unassociated_stations_client_fd)) {
             LOG(ERROR) << "Failed to send STA link metrics request message to "
                        << m_unassociated_stations_socket_path;
             return false;
         }
+
+        LOG(DEBUG) << "Getting the sta link metrics response for " << mac_pair.first;
         auto request_tx_time   = std::chrono::system_clock::now();
         uint8_t rx_buffer[256] = {};
-        if (recv(m_unassociated_stations_client_fd, rx_buffer, sizeof(rx_buffer), 0) < 0) {
+        if (recv(*m_unassociated_stations_client_fd, rx_buffer, sizeof(rx_buffer), 0) < 0) {
             LOG(ERROR) << "Failed to recv() response for unassociated STA link metrics for STA "
                        << mac_pair.first;
             return false;
@@ -818,6 +835,8 @@ bool mon_wlan_hal_nl80211::sta_unassoc_rssi_measurement(
     std::memset(resp_buff.get(), 0, sizeof(sUnassociatedStationsStats));
     std::copy(stats_list.un_stations_stats.begin(), stats_list.un_stations_stats.end(),
               std::back_inserter(resp->un_stations_stats));
+
+    LOG(DEBUG) << "Sending Unassociated stations stats response";
     event_queue_push(Event::Unassociation_Stations_Stats, resp_buff);
     return true;
 }
