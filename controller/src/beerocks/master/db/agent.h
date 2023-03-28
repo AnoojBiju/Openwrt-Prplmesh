@@ -326,6 +326,8 @@ public:
 
         uint8_t current_vbss_used = 0;
 
+        uint8_t num_legacy_bss = 0;
+
         /** Is there restrictions for the creations of BSSIDs for the VBSS */
         bool has_vbss_restrictions = false;
 
