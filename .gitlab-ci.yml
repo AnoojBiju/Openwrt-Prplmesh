@@ -354,10 +354,6 @@ upload-artifacts:
   needs:
     - build-in-docker
     - platform
-    - job: build-for-intel-mips
-      project: $CI_PROJECT_PATH
-      ref: $CI_COMMIT_REF_NAME
-      artifacts: true
     - job: build-for-turris-omnia
       project: $CI_PROJECT_PATH
       ref: $CI_COMMIT_REF_NAME
