@@ -484,19 +484,26 @@ bool ap_wlan_hal_whm::is_zwdfs_antenna_enabled()
 
 bool ap_wlan_hal_whm::hybrid_mode_supported()
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
-    return true;
+    std::string multiAPTypesSupported;
+    auto radio = m_ambiorix_cl->get_object(m_radio_path);
+    if (!radio->read_child(multiAPTypesSupported, "multiAPTypesSupported")) {
+        LOG(ERROR) << "failed to get multiAPTypesSupported object";
+        return false;
+    }
+    bool fBSS = (multiAPTypesSupported.find("FronthaulBSS") != std::string::npos);
+    bool bBSS = (multiAPTypesSupported.find("BackhaulBSS") != std::string::npos);
+    return fBSS && bBSS;
 }
 
 bool ap_wlan_hal_whm::restricted_channels_set(char *channel_list)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    // We chose not to implement it because it is a custom feature and has no reference in the prplmesh Spec.
     return true;
 }
 
 bool ap_wlan_hal_whm::restricted_channels_get(char *channel_list)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    // We chose not to implement it because it is a custom feature and has no reference in the prplmesh Spec.
     return false;
 }
 
@@ -672,6 +679,7 @@ bool ap_wlan_hal_whm::set_radio_mbo_assoc_disallow(bool enable)
 
 bool ap_wlan_hal_whm::set_primary_vlan_id(uint16_t primary_vlan_id)
 {
+    // Networking is responsible of handling vlanId, so pwhm does not interfere with vlans.
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
     return true;
 }
@@ -862,18 +870,21 @@ bool ap_wlan_hal_whm::set(const std::string &param, const std::string &value, in
 bool ap_wlan_hal_whm::add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
                               std::string &bridge, bool vbss)
 {
+    // Virtual bss will not be covered by the pwhm, for now!
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return false;
 }
 
 bool ap_wlan_hal_whm::remove_bss(std::string &ifname)
 {
+    // Virtual bss will not be covered by the pwhm, for now!
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return false;
 }
 
 bool ap_wlan_hal_whm::add_key(const std::string &ifname, const sKeyInfo &key_info)
 {
+    // Virtual bss will not be covered by the pwhm, for now!
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return false;
 }
@@ -881,12 +892,14 @@ bool ap_wlan_hal_whm::add_key(const std::string &ifname, const sKeyInfo &key_inf
 bool ap_wlan_hal_whm::add_station(const std::string &ifname, const sMacAddr &mac,
                                   std::vector<uint8_t> &raw_assoc_req)
 {
+    // Virtual bss will not be covered by the pwhm, for now!
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return false;
 }
 
 bool ap_wlan_hal_whm::get_key(const std::string &ifname, sKeyInfo &key_info)
 {
+    // Virtual bss will not be covered by the pwhm, for now!
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return false;
 }
@@ -894,6 +907,7 @@ bool ap_wlan_hal_whm::get_key(const std::string &ifname, sKeyInfo &key_info)
 bool ap_wlan_hal_whm::send_delba(const std::string &ifname, const sMacAddr &dst,
                                  const sMacAddr &src, const sMacAddr &bssid)
 {
+    // Virtual bss will not be covered by the pwhm, for now!
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return false;
 }
