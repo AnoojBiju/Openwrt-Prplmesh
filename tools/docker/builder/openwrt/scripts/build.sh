@@ -26,7 +26,7 @@ OPENWRT_VERSION=${OPENWRT_VERSION}
 OPENWRT_TOOLCHAIN_VERSION=${OPENWRT_TOOLCHAIN_VERSION}
 PRPLMESH_VERSION=${PRPLMESH_VERSION}
 EOT
-find bin -name 'prplmesh*.ipk' -exec cp -v {} "artifacts/prplmesh.ipk" \;
+find bin -name 'prplmesh_*.ipk' -exec cp -v {} "artifacts/prplmesh.ipk" \;
 find bin/targets/"$TARGET_SYSTEM"/*/ -type f -maxdepth 1 -exec cp -v {} "artifacts/" \;
 cp .config artifacts/openwrt.config
 cp files/etc/prplwrt-version artifacts/
