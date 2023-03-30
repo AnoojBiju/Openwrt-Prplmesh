@@ -39,6 +39,8 @@ bool VbssManager::analyze_radio_restriction(
     const sMacAddr &agent_mac,
     const beerocks::mac_map<vbss::sAPRadioVBSSCapabilities> &ruid_cap_map)
 {
+    LOG(DEBUG) << "Analyzing radio VBSS capabilities for agent " << agent_mac;
+
     bool ret_val = true;
     auto agent   = m_database.m_agents.get(agent_mac);
     if (agent == nullptr) {
@@ -62,6 +64,12 @@ bool VbssManager::analyze_radio_restriction(
                        << " associated with agent: " << agent_mac;
             continue;
         }
+
+        if (radio_instance->bsses.size() == 0) {
+            LOG(INFO) << "No known BSSes yet for radio with UID " << radio_id;
+            continue;
+        }
+
         //Get a bssid in use so we can make the different iterations
         auto base_bssid = radio_instance->bsses.begin()->first;
         LOG(DEBUG) << "Creating bss map for radio: " << radio_id;

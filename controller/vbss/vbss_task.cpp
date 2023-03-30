@@ -284,6 +284,7 @@ bool vbss_task::handle_vbss_destruction_event(const vbss::sDestructionEvent &des
 bool vbss_task::handle_ap_radio_vbss_caps_msg(const sMacAddr &src_mac,
                                               ieee1905_1::CmduMessageRx &cmdu_rx)
 {
+    LOG(DEBUG) << "Received Virtual Capabilities Response message";
 
     auto ap_vbss_caps_tlv_list = cmdu_rx.getClassList<wfa_map::ApRadioVbssCapabilities>();
     if (ap_vbss_caps_tlv_list.empty()) {
