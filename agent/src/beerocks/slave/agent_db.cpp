@@ -101,16 +101,21 @@ AgentDB::sRadio *AgentDB::get_radio_by_mac(const sMacAddr &mac, eMacType mac_typ
 
 void AgentDB::erase_client(const sMacAddr &client_mac, sMacAddr bssid)
 {
+    LOG(DEBUG) << __func__ << " client_mac=" << client_mac << " from bssid=" << bssid;
     if (bssid != net::network_utils::ZERO_MAC) {
         auto radio = get_radio_by_mac(bssid, eMacType::BSSID);
         if (!radio) {
+            LOG(ERROR) << "Could not find radio hosting bssid=" << bssid;
             return;
         }
+        LOG(DEBUG) << "Erasing client_mac=" << client_mac << " from radio->associated_clients";
         radio->associated_clients.erase(client_mac);
         return;
     }
 
     for (auto &radio : m_radios) {
+        LOG(DEBUG) << "Erasing client_mac=" << client_mac
+                   << " from radio=" << radio.front.iface_mac;
         radio.associated_clients.erase(client_mac);
     }
 }
