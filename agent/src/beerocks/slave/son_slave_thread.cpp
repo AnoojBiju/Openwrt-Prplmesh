@@ -3505,7 +3505,7 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
             response_out->sta_list_length() = operaying_class.second.size();
             size_t count(0);
             for (auto &station : operaying_class.second) {
-                auto &stats_out          = std::get<1>(response_out->sta_list(count));
+                auto &stats_out          = std::get<1>(response_out->sta_list(count++));
                 stats_out.channel_number = station.channel_number;
                 stats_out.measurement_to_report_delta_msec =
                     station.measurement_to_report_delta_msec;
