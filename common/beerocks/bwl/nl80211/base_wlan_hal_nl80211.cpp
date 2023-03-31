@@ -780,6 +780,17 @@ bool base_wlan_hal_nl80211::refresh_vaps_info(int id)
         return false;
     }
 
+    auto swap_vap_element = [&](VAPElement &old_val, VAPElement &shifted_val, uint16_t &vapId) {
+        for (auto &it : m_radio_info.available_vaps) {
+            if (it.second.bss == shifted_val.bss) {
+                it.second                          = old_val;
+                m_radio_info.available_vaps[vapId] = shifted_val;
+                return true;
+            }
+        }
+        return false;
+    };
+
     auto fill_bss_info = [&](uint16_t vap_id) {
         VAPElement vap_element;
 
@@ -870,7 +881,13 @@ bool base_wlan_hal_nl80211::refresh_vaps_info(int id)
             LOG(WARNING) << "BSSID " << vap_element.bss << " does not match stored "
                          << mapped_vap_element.bss
                          << "\n Old bss has been destroyed and FDs have shifted";
-            mapped_vap_element = vap_element;
+            //mapped_vap_element = vap_element;
+            //return true;
+            if (!swap_vap_element(mapped_vap_element, vap_element, vap_id)) {
+                LOG(ERROR) << "Failed to swap " << vap_element.bss << " for old bss "
+                           << mapped_vap_element.bss;
+                return false;
+            }
             return true;
         } else if (mapped_vap_element.ssid != vap_element.ssid) {
             LOG(DEBUG) << "SSID changed from " << mapped_vap_element.ssid << ", to "
