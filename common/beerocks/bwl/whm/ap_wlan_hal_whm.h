@@ -102,8 +102,8 @@ public:
     virtual bool set_radio_mbo_assoc_disallow(bool enable) override;
     virtual bool set_primary_vlan_id(uint16_t primary_vlan_id) override;
     virtual bool set_cce_indication(uint16_t advertise_cce) override;
-    virtual bool add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
-                         std::string &bridge, bool vbss) override;
+    virtual int add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
+                        std::string &bridge, bool vbss) override;
     virtual bool remove_bss(std::string &ifname) override;
     virtual bool add_key(const std::string &ifname, const sKeyInfo &key_info) override;
     virtual bool add_station(const std::string &ifname, const sMacAddr &mac,

@@ -441,8 +441,8 @@ public:
      * @param vbss Whether the BSS to create is a VBSS or not.
      * @return true on success, false otherwise.
      */
-    virtual bool add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
-                         std::string &bridge, bool vbss) = 0;
+    virtual int add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
+                        std::string &bridge, bool vbss) = 0;
 
     /**
      * @brief Dynamically remove a BSS for the radio.
