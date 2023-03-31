@@ -375,7 +375,8 @@ bool VbssManager::process_vsta_stats_event(const vbss::sUnassociatedStatsEvent &
         //auto duration = std::chrono::duration<std::chrono::seconds>(start_time - ts).count();
         if (ts.count() > 2) {
             LOG(INFO) << "We are comparing against old rssi data, it's been " << ts.count()
-                      << " since last assoicated rssi came in.";
+                      << "s since last associated rssi came in for station=" << sta_mac
+                      << " relative to radio " << m_vsta_stats[sta_mac].cur_ruid;
             continue;
         }
         if (compare_incoming_to_curr(curRssi, incomingStat)) {
