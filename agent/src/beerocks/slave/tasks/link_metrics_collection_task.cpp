@@ -550,6 +550,16 @@ void LinkMetricsCollectionTask::handle_unassociated_sta_link_metrics_query(
                     auto &un_station_mac = std::get<1>(one_channel_params.sta_list(internal_count));
                     if (radio->associated_clients.find(un_station_mac) !=
                         radio->associated_clients.end()) {
+                        // TODO: this erase_client call is a hack.
+                        // When a VBSS move occurs, the sACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION
+                        // sent during nl80211_client::add_station should take care of removing this
+                        // station from the source AP's DB. There's a call in son_slave_thread
+                        // to remove the newly associated client MAC from all radios, which it does.
+                        // But when this codepath is taken, somehow, the client MAC is back in the
+                        // source radios associated_clients list. Likely due to some sort of race condition, somewhere.
+                        // Since we're short on time for the VBSS demo, just blindly erase the station
+                        // MAC from the radio's associated_client list.
+                        db->erase_client(un_station_mac, radio->front.iface_mac);
                         station_connected = true;
                         /*
                     If any of the STAs specified in the Unassociated STA Link Metrics Query message is associated with
