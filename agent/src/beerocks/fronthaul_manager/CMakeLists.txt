@@ -29,6 +29,10 @@ if (USE_PRPLMESH_WHM)
     list(APPEND LIBS wbapi)
 endif()
 
+if (ENABLE_VBSS)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DENABLE_VBSS")
+endif()
+
 #FEATURE_PRE_ASSOCIATION_STEERING
 list(FIND FEATURES "FEATURE_PRE_ASSOCIATION_STEERING" _feature_pre_association_steering_index)
 if(${_feature_pre_association_steering_index} GREATER -1)
