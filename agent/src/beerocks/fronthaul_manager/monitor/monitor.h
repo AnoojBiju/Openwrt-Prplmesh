@@ -45,6 +45,7 @@ public:
     virtual void on_thread_stop() override;
 
 private:
+    std::unique_ptr<int, std::function<void(int *)>> m_station_sniffer_client_fd;
     /**
      * @brief Sends given CMDU message to the slave.
      *

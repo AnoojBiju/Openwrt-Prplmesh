@@ -27,7 +27,12 @@
 #include <tlvf/wfa_map/tlvVirtualBssCreation.h>
 #include <tlvf/wfa_map/tlvVirtualBssDestruction.h>
 
+#include "bwl/uslm_messages.h"
+#include "bwl/uslm_utils.h"
+#include <bwl/base_wlan_hal_types.h>
+
 #include <cmath>
+#include <sys/un.h>
 #include <vector>
 
 using namespace beerocks;
@@ -1395,6 +1400,122 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
                        << " sta not assoc, id=" << beerocks_header->id();
             break;
         }
+#ifdef ENABLE_VBSS
+        static std::string uslm_socket_path = "/tmp/uslm_socket";
+        LOG(DEBUG) << "Associated RSSI request for STA " << sta_node->get_mac();
+        static bool is_socket_setup_complete = false;
+
+        if (!is_socket_setup_complete) {
+            LOG(DEBUG) << "Setup not complete yet, setting up now";
+            sockaddr_un remote = {};
+            remote.sun_family  = AF_UNIX;
+            std::strncpy(remote.sun_path, uslm_socket_path.c_str(), uslm_socket_path.size() + 1);
+            m_station_sniffer_client_fd = std::unique_ptr<int, std::function<void(int *)>>(
+                new int(socket(PF_UNIX, SOCK_STREAM, 0)), [](int *fd) {
+                    if (fd && *fd >= 0) {
+                        LOG(DEBUG) << "Closing station-sniffer fd " << *fd;
+                        close(*fd);
+                    }
+                });
+            if (!m_station_sniffer_client_fd || *m_station_sniffer_client_fd < 0) {
+                LOG(ERROR) << " socket() failed";
+                return;
+            }
+
+            LOG(DEBUG) << "Created file descriptor " << *m_station_sniffer_client_fd
+                       << " for station-sniffer";
+            socklen_t len = uslm_socket_path.size() + sizeof(remote.sun_family);
+            if (connect(*m_station_sniffer_client_fd, (sockaddr *)&remote, len) < 0) {
+                LOG(ERROR) << "connect() failed: could not connect to " << uslm_socket_path
+                           << ", errno=" << strerror(errno);
+                return;
+            }
+            is_socket_setup_complete = true;
+            LOG(DEBUG) << "Opened a Unix client socket to " << uslm_socket_path;
+        }
+        if (!m_station_sniffer_client_fd || *m_station_sniffer_client_fd < 0) {
+            LOG(ERROR) << "station-sniffer client socket is invalid";
+            is_socket_setup_complete = false;
+            return;
+        }
+        LOG(DEBUG) << "Sending link metrics registration message for STA " << sta_node->get_mac();
+        if (!uslm_utils::send_register_sta_message(sta_node->get_mac(),
+                                                   *m_station_sniffer_client_fd)) {
+            LOG(ERROR) << "Failed to send monitor registration request for associated station, MAC="
+                       << sta_node->get_mac();
+            is_socket_setup_complete = false;
+            return;
+        }
+
+        LOG(DEBUG) << "Getting the register response for " << sta_node->get_mac();
+        uint8_t rx_buffer[256] = {};
+        if (recv(*m_station_sniffer_client_fd, rx_buffer, sizeof(rx_buffer), 0) < 0) {
+            LOG(ERROR) << "Failed to recv() response for associated station monitoring "
+                          "registration request for STA "
+                       << sta_node->get_mac();
+            return;
+        }
+        const response *response_header = (response *)rx_buffer;
+        if (uslm_utils::get_response_error_code(*response_header) != error_code_t::ERROR_OK) {
+            LOG(ERROR) << "Failed to register STA " << sta_node->get_mac() << " to be monitored.";
+            return;
+        }
+
+        LOG(DEBUG) << "Sending sta link metrics query message for " << sta_node->get_mac();
+        if (!uslm_utils::send_sta_link_metrics_request_message(sta_node->get_mac(),
+                                                               *m_station_sniffer_client_fd)) {
+            LOG(ERROR) << "Failed to send STA link metrics request message to " << uslm_socket_path;
+            return;
+        }
+
+        LOG(DEBUG) << "Getting the sta link metrics response for " << sta_node->get_mac();
+        memset(rx_buffer, 0, sizeof(rx_buffer));
+        if (recv(*m_station_sniffer_client_fd, rx_buffer, sizeof(rx_buffer), 0) < 0) {
+            LOG(ERROR) << "Failed to recv() response for associated STA link metrics for STA "
+                       << sta_node->get_mac();
+            return;
+        }
+        bwl::sUnassociatedStationStats stats = {};
+        if (!uslm_utils::parse_station_stats_from_buf(rx_buffer, sizeof(rx_buffer), stats)) {
+            LOG(ERROR) << "Could not parse link metrics for associated STA " << sta_node->get_mac();
+            return;
+        }
+
+        // First, ACK the request.
+        auto response_ack = message_com::create_vs_message<
+            beerocks_message::cACTION_MONITOR_CLIENT_RX_RSSI_MEASUREMENT_CMD_RESPONSE>(
+            cmdu_tx, beerocks_header->id());
+        if (response_ack == nullptr) {
+            LOG(ERROR) << "Failed building message!";
+            return;
+        }
+        response_ack->mac() = tlvf::mac_from_string(sta_node->get_mac());
+        send_cmdu(cmdu_tx);
+
+        // Now, send the measurement response
+        auto measurement_response = message_com::create_vs_message<
+            beerocks_message::cACTION_MONITOR_CLIENT_RX_RSSI_MEASUREMENT_RESPONSE>(
+            cmdu_tx, beerocks_header->id());
+
+        if (measurement_response == nullptr) {
+            LOG(ERROR) << "Failed building message!";
+            return;
+        }
+        measurement_response->params().result.mac = tlvf::mac_from_string(sta_node->get_mac());
+        // uslm_utils converts from RSSI to RCPI, but the message expects RSSI. Convert back.
+        measurement_response->params().rx_rssi =
+            son::wireless_utils::convert_rssi_from_rcpi(stats.signal_strength);
+        measurement_response->params().vap_id = sta_node->get_vap_id();
+        LOG(DEBUG) << "Associated RSSI request finished for STA " << sta_node->get_mac()
+                   << ". RSSI: " << (int)measurement_response->params().rx_rssi;
+        LOG(DEBUG) << "Sending measurement response";
+        // Leave the remaining param() fields default-initialized, we don't care about them for VBSS.
+        send_cmdu(cmdu_tx);
+        break;
+#else
+        auto response = message_com::create_vs_message<
+            beerocks_message::cACTION_MONITOR_CLIENT_RX_RSSI_MEASUREMENT_RESPONSE>(
+            cmdu_tx, beerocks_header->id());
 
         sta_node->push_rx_rssi_request_id(beerocks_header->id());
 
@@ -1432,6 +1553,7 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
         }
 
         break;
+#endif // ENABLE_VBSS
     }
     case beerocks_message::ACTION_MONITOR_CLIENT_BEACON_11K_REQUEST: {
         LOG(TRACE) << "received ACTION_MONITOR_CLIENT_BEACON_11K_REQUEST";
