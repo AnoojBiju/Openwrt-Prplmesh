@@ -7,8 +7,8 @@
  */
 
 #include "mon_wlan_hal_nl80211.h"
-#include "uslm_messages.h"
-#include "uslm_utils.h"
+#include "bwl/uslm_messages.h"
+#include "bwl/uslm_utils.h"
 
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
@@ -737,12 +737,13 @@ bool mon_wlan_hal_nl80211::sta_unassoc_rssi_measurement(
         remote.sun_family  = AF_UNIX;
         std::strncpy(remote.sun_path, m_unassociated_stations_socket_path,
                      std::strlen(m_unassociated_stations_socket_path) + 1);
-        m_unassociated_stations_client_fd = std::unique_ptr<int, std::function<void(int*)>>(new int(socket(PF_UNIX, SOCK_STREAM, 0)), [](int *fd) {
-            if (fd && *fd >= 0) {
-                LOG(DEBUG) << "Closing unassociated stations fd " << *fd;
-                close(*fd);
-            }
-        });
+        m_unassociated_stations_client_fd = std::unique_ptr<int, std::function<void(int *)>>(
+            new int(socket(PF_UNIX, SOCK_STREAM, 0)), [](int *fd) {
+                if (fd && *fd >= 0) {
+                    LOG(DEBUG) << "Closing unassociated stations fd " << *fd;
+                    close(*fd);
+                }
+            });
         if (!m_unassociated_stations_client_fd || *m_unassociated_stations_client_fd < 0) {
             LOG(ERROR) << " socket() failed";
             return false;
@@ -797,8 +798,8 @@ bool mon_wlan_hal_nl80211::sta_unassoc_rssi_measurement(
     for (const auto &mac_pair : new_list) {
 
         LOG(DEBUG) << "Sending sta link metrics query message for " << mac_pair.first;
-        if (!uslm_utils::send_sta_link_metrics_request_message(mac_pair.first,
-                                                               *m_unassociated_stations_client_fd)) {
+        if (!uslm_utils::send_sta_link_metrics_request_message(
+                mac_pair.first, *m_unassociated_stations_client_fd)) {
             LOG(ERROR) << "Failed to send STA link metrics request message to "
                        << m_unassociated_stations_socket_path;
             return false;
