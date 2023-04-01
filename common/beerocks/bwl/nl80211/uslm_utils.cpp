@@ -6,10 +6,10 @@
  * See LICENSE file for more details.
  */
 
-#include "uslm_utils.h"
+#include "bwl/uslm_utils.h"
 #include "bcl/son/son_wireless_utils.h"
+#include "bwl/uslm_messages.h"
 #include "tlvf/tlvftypes.h"
-#include "uslm_messages.h"
 #include <sys/socket.h>
 
 static enum beerocks::eWiFiBandwidth uslm_bw_to_beerocks_bw(const uint16_t bw)
