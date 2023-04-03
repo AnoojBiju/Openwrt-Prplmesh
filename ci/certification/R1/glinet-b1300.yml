@@ -12,7 +12,7 @@ R1:glinet-b1300:MAP-4.2.1:
     - when: manual
       allow_failure: true
 
-R1:glinet-b1300:MAP-4.2.1-WHM:
+R1:glinet-b1300:WHM:MAP-4.2.1:
   extends: .certification:R1:glinet-b1300-WHM
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
