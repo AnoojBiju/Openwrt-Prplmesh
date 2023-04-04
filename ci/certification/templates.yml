@@ -4,7 +4,7 @@
   variables:
     RUN_ON_DEVICE: "glinet-b1300"
   before_script:
-    - tools/deploy_firmware.py --device glinet-b1300 --target-name "$RUN_ON_DEVICE" --image "$GLINET_B1300_FULLIMAGE" --configuration ci/configuration/certification/R1/glinet-b1300.sh
+    - tools/deploy_firmware.py --device glinet-b1300 --target-name "$RUN_ON_DEVICE" --image "$GLINET_B1300_FULLIMAGE" --full --configuration ci/configuration/certification/R1/glinet-b1300.sh
     - tools/deploy_ipk.sh --certification-mode $RUN_ON_DEVICE build/$RUN_ON_DEVICE/prplmesh.ipk
   needs:
     - job: build-for-glinet-b1300

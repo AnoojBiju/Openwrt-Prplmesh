@@ -1,11 +1,7 @@
-R1:glinet-b1300:passing_tests_variant_A.txt:
+R1:glinet-b1300:passing_tests_ci_job_4053662705.txt:
   extends: .certification:R1:glinet-b1300
-  rules:
-    - when: manual
   timeout: 3h
 
-R1:glinet-b1300:WHM:passing_tests_variant_A.txt:
+R1:glinet-b1300:WHM:passing_tests_ci_job_4053662705.txt:
   extends: .certification:R1:glinet-b1300-WHM
-  rules:
-    - when: manual
   timeout: 3h
