@@ -117,28 +117,39 @@ public:
                              const sMacAddr &old_ruid);
 
     struct sVStaStats {
+        // In the future this should be a list, by rssi values
+        // TODO: MAKE THIS DYNAMIC, RSSI VALUE, BEST COUNTS, ETC.
         sMacAddr vbss_id;
         sMacAddr cur_ruid;
         sMacAddr next_best_agent;
+        sMacAddr second_best_agent;
         int8_t next_best_rssi;
+        int8_t second_best_rssi;
         uint8_t next_best_count;
+        uint8_t second_best_count;
         bool move_in_progress;
 
         sVStaStats(const sMacAddr &Vbss_Id) : vbss_id(Vbss_Id)
         {
-            next_best_rssi   = -120;
-            next_best_count  = 0;
-            next_best_agent  = {};
-            move_in_progress = false;
+            next_best_rssi    = -120;
+            second_best_rssi  = -120;
+            next_best_count   = 0;
+            second_best_count = 0;
+            next_best_agent   = {};
+            second_best_agent = {};
+            move_in_progress  = false;
         }
 
         sVStaStats()
         {
-            vbss_id          = {};
-            next_best_rssi   = -120;
-            next_best_count  = 0;
-            next_best_agent  = {};
-            move_in_progress = false;
+            vbss_id           = {};
+            next_best_rssi    = -120;
+            second_best_rssi  = -120;
+            next_best_count   = 0;
+            second_best_count = 0;
+            next_best_agent   = {};
+            second_best_agent = {};
+            move_in_progress  = false;
         }
 
         ~sVStaStats() {}

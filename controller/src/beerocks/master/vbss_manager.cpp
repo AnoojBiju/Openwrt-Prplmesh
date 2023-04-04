@@ -273,9 +273,16 @@ bool VbssManager::handle_station_connect(const vbss::sStationConnectedEvent &sta
         }
     }
     sVStaStats clientStats;
-    clientStats.vbss_id                     = stationConnect.bss_id;
-    clientStats.cur_ruid                    = radio->radio_uid;
-    m_vsta_stats[stationConnect.client_mac] = clientStats;
+    clientStats.vbss_id                                       = stationConnect.bss_id;
+    clientStats.cur_ruid                                      = radio->radio_uid;
+    m_vsta_stats[stationConnect.client_mac]                   = clientStats;
+    m_vsta_stats[stationConnect.client_mac].next_best_agent   = {};
+    m_vsta_stats[stationConnect.client_mac].next_best_count   = 0;
+    m_vsta_stats[stationConnect.client_mac].next_best_rssi    = -120;
+    m_vsta_stats[stationConnect.client_mac].second_best_agent = {};
+    m_vsta_stats[stationConnect.client_mac].second_best_count = 0;
+    m_vsta_stats[stationConnect.client_mac].second_best_rssi  = -120;
+    m_vsta_stats[stationConnect.client_mac].move_in_progress  = false;
 
     return register_client_for_rssi(stationConnect);
 }
@@ -306,12 +313,15 @@ bool VbssManager::handle_success_move(const sMacAddr &sta_mac, const sMacAddr &c
     const auto &iter = std::find(m_cur_move_vbssid.begin(), m_cur_move_vbssid.end(),
                                  m_vsta_stats[sta_mac].vbss_id);
     m_cur_move_vbssid.erase(iter);
-    m_vsta_stats[sta_mac].next_best_agent  = {};
-    m_vsta_stats[sta_mac].next_best_count  = 0;
-    m_vsta_stats[sta_mac].next_best_rssi   = -120;
-    m_vsta_stats[sta_mac].move_in_progress = false;
-    m_vsta_stats[sta_mac].cur_ruid         = cur_ruid;
-    m_client_agent[sta_mac]                = n_agent->al_mac;
+    m_vsta_stats[sta_mac].next_best_agent   = {};
+    m_vsta_stats[sta_mac].next_best_count   = 0;
+    m_vsta_stats[sta_mac].next_best_rssi    = -120;
+    m_vsta_stats[sta_mac].second_best_agent = {};
+    m_vsta_stats[sta_mac].second_best_count = 0;
+    m_vsta_stats[sta_mac].second_best_rssi  = -120;
+    m_vsta_stats[sta_mac].move_in_progress  = false;
+    m_vsta_stats[sta_mac].cur_ruid          = cur_ruid;
+    m_client_agent[sta_mac]                 = n_agent->al_mac;
     return ret_val;
 }
 
@@ -363,6 +373,35 @@ bool VbssManager::process_vsta_stats_event(const vbss::sUnassociatedStatsEvent &
             LOG(ERROR) << "Failed to find station in database with mac: " << sta_mac;
             continue;
         }
+
+        auto create_move_event = [&]() {
+            LOG(DEBUG) << "We found a radio that's better to move to";
+            auto radio = m_database.get_radio_by_bssid(m_vsta_stats[sta_mac].vbss_id);
+            if (!radio) {
+                LOG(ERROR) << "Failed to get radio associated with VBSS: "
+                           << m_vsta_stats[sta_mac].vbss_id;
+                return false;
+            }
+            auto bss = m_database.get_bss(m_vsta_stats[sta_mac].vbss_id);
+            if (!bss) {
+                LOG(ERROR) << "Failed to get BSS object with vbssid: "
+                           << m_vsta_stats[sta_mac].vbss_id;
+                return false;
+            }
+            shouldMove = true;
+            vbss::sMoveEvent moveEventVals;
+            moveEventVals.client_vbss.vbssid                 = m_vsta_stats[sta_mac].vbss_id;
+            moveEventVals.client_vbss.client_is_associated   = true;
+            moveEventVals.client_vbss.client_mac             = sta_mac;
+            moveEventVals.dest_ruid                          = std::get<2>(sta_stat);
+            moveEventVals.ssid                               = bss->ssid;
+            moveEventVals.client_vbss.current_connected_ruid = radio->radio_uid;
+            moveVals.push_back(moveEventVals);
+            m_cur_move_vbssid.push_back(m_vsta_stats[sta_mac].vbss_id);
+            m_vsta_stats[sta_mac].move_in_progress = true;
+            return true;
+        };
+
         int8_t curRssi;
         int8_t throwAwayPackets;
         std::chrono::duration<double> ts;
@@ -379,17 +418,18 @@ bool VbssManager::process_vsta_stats_event(const vbss::sUnassociatedStatsEvent &
                       << " relative to radio " << m_vsta_stats[sta_mac].cur_ruid;
             continue;
         }
+        if (m_vsta_stats[sta_mac].move_in_progress) {
+            continue;
+        }
         if (compare_incoming_to_curr(curRssi, incomingStat)) {
             // This means the incoming is better
             if (m_vsta_stats[sta_mac].next_best_agent == unassociated_stats.agent_mac) {
                 // We got a repeater
-                if (m_vsta_stats[sta_mac].move_in_progress) {
-                    continue;
-                }
                 m_vsta_stats[sta_mac].next_best_count++;
                 m_vsta_stats[sta_mac].next_best_rssi = incomingStat;
                 if (m_vsta_stats[sta_mac].next_best_count > BEST_MOVE_COUNT) {
-                    LOG(DEBUG) << "We found a radio that's better to move to";
+                    ret_val = create_move_event();
+                    /*LOG(DEBUG) << "We found a radio that's better to move to";
                     auto radio = m_database.get_radio_by_bssid(m_vsta_stats[sta_mac].vbss_id);
                     if (!radio) {
                         LOG(ERROR) << "Failed to get radio associated with VBSS: "
@@ -414,13 +454,43 @@ bool VbssManager::process_vsta_stats_event(const vbss::sUnassociatedStatsEvent &
                     moveVals.push_back(moveEventVals);
                     m_cur_move_vbssid.push_back(m_vsta_stats[sta_mac].vbss_id);
                     m_vsta_stats[sta_mac].move_in_progress = true;
+                    */
                 }
-            } else {
+                // We got a better signal from a different known agent
+            } else if (m_vsta_stats[sta_mac].second_best_agent == unassociated_stats.agent_mac) {
+                m_vsta_stats[sta_mac].second_best_count++;
+                m_vsta_stats[sta_mac].second_best_rssi = incomingStat;
+                if (m_vsta_stats[sta_mac].second_best_count >
+                    (m_vsta_stats[sta_mac].next_best_count * 3)) {
+                    // We should now consider this to be the best
+                    // So do a swap
+                    m_vsta_stats[sta_mac].second_best_agent = m_vsta_stats[sta_mac].next_best_agent;
+                    m_vsta_stats[sta_mac].second_best_rssi  = m_vsta_stats[sta_mac].next_best_rssi;
+                    m_vsta_stats[sta_mac].next_best_agent   = unassociated_stats.agent_mac;
+                    m_vsta_stats[sta_mac].next_best_rssi    = incomingStat;
+                    if (m_vsta_stats[sta_mac].second_best_count > BEST_MOVE_COUNT) {
+                        LOG(DEBUG) << "We are moving to second best agent";
+                        ret_val = create_move_event();
+                    }
+                }
+                // See if its strictly better then the next best
+            } else if (incomingStat > m_vsta_stats[sta_mac].next_best_rssi) {
                 // New best
-                m_vsta_stats[sta_mac].next_best_agent  = unassociated_stats.agent_mac;
-                m_vsta_stats[sta_mac].next_best_count  = 1;
-                m_vsta_stats[sta_mac].next_best_rssi   = incomingStat;
-                m_vsta_stats[sta_mac].move_in_progress = false;
+                m_vsta_stats[sta_mac].second_best_agent = m_vsta_stats[sta_mac].next_best_agent;
+                m_vsta_stats[sta_mac].second_best_rssi  = m_vsta_stats[sta_mac].next_best_rssi;
+                m_vsta_stats[sta_mac].second_best_count = 1;
+                m_vsta_stats[sta_mac].next_best_agent   = unassociated_stats.agent_mac;
+                m_vsta_stats[sta_mac].next_best_count   = 1;
+                m_vsta_stats[sta_mac].next_best_rssi    = incomingStat;
+                m_vsta_stats[sta_mac].move_in_progress  = false;
+            } else if (incomingStat > m_vsta_stats[sta_mac].second_best_rssi) {
+                m_vsta_stats[sta_mac].second_best_agent = unassociated_stats.agent_mac;
+                m_vsta_stats[sta_mac].second_best_rssi  = incomingStat;
+                m_vsta_stats[sta_mac].second_best_count = 1;
+            } else {
+                // If you're not first you're last
+                LOG(DEBUG) << "We got a stat that's better then current, but not better then first "
+                              "or second";
             }
         }
     }
