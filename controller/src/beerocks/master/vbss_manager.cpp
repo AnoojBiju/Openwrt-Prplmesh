@@ -248,12 +248,23 @@ bool VbssManager::handle_vbss_creation(const sMacAddr &radio_mac, const sMacAddr
 
 bool VbssManager::handle_station_connect(const vbss::sStationConnectedEvent &stationConnect)
 {
+    LOG(DEBUG) << "Station connect event! STA " << stationConnect.client_mac << " to BSSID "
+               << stationConnect.bss_id;
+
     // Do some book keeping
     auto client = m_database.get_station(stationConnect.client_mac);
     if (!client) {
         // This shouldn't happen
         LOG(ERROR) << "Failed to find station with mac: " << stationConnect.client_mac;
         return false;
+    }
+    // In order to avoid race condition between VBSS move finish and station connected on dest AP
+    // events. If VSTA status is already set, this is a station connect event as a result of a move.
+    // No need to re-register the client and add it to the DB, etc.
+    if (client->get_vsta_status()) {
+        LOG(TRACE) << "Spurious client connect for STA " << stationConnect.client_mac
+                   << ", ignoring";
+        return true;
     }
     client->set_vsta_status(true);
     auto agent = m_database.get_agent_by_bssid(stationConnect.bss_id);
@@ -285,7 +296,8 @@ bool VbssManager::handle_success_move(const sMacAddr &sta_mac, const sMacAddr &c
 {
     // First need to update unassociated station model
     bool ret_val = true;
-    LOG(DEBUG) << "handling success move";
+    LOG(DEBUG) << "handling success move for STA " << sta_mac << " from old_ruid=" << old_ruid
+               << " to cur_ruid=" << cur_ruid;
     std::vector<sMacAddr> not_connected_agents;
     auto n_agent = m_database.get_agent_by_radio_uid(cur_ruid);
     if (!n_agent) {
@@ -296,7 +308,8 @@ bool VbssManager::handle_success_move(const sMacAddr &sta_mac, const sMacAddr &c
         LOG(DEBUG) << "Comparing " << agent->al_mac << " to " << n_agent->al_mac;
         if (agent->al_mac != n_agent->al_mac) {
             not_connected_agents.push_back(agent->al_mac);
-            LOG(DEBUG) << "Added " << agent->al_mac;
+            LOG(DEBUG) << "Added " << agent->al_mac << " to list of not connected agents for STA "
+                       << sta_mac;
         }
     }
     if (!m_database.update_unassociated_station_agents(sta_mac, not_connected_agents)) {
@@ -466,7 +479,7 @@ bool VbssManager::register_client_for_rssi(const vbss::sStationConnectedEvent &s
     }
     std::vector<sMacAddr> not_connected_agents;
     for (auto &agent : m_database.get_all_connected_agents()) {
-        LOG(DEBUG) << "Connected to agent: " << conn_agent->al_mac << "\n Looking at Agent "
+        LOG(DEBUG) << "Connected to agent: " << conn_agent->al_mac << " Looking at Agent "
                    << agent->al_mac;
         if (agent->al_mac != conn_agent->al_mac)
             not_connected_agents.push_back(agent->al_mac);

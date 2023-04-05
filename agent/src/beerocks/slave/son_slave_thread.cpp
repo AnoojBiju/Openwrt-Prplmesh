@@ -3296,6 +3296,9 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
 
         response_out->params()            = response_in->params();
         response_out->params().src_module = beerocks::BEEROCKS_ENTITY_MONITOR;
+        LOG(DEBUG)
+            << "Sending ACTION_MONITOR_CLIENT_RX_RSSI_MEASUREMENT_RESPONSE to controller via "
+            << fronthaul_iface;
         send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
         break;
     }
@@ -3511,6 +3514,12 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
                     station.measurement_to_report_delta_msec;
                 stats_out.sta_mac             = station.sta_mac;
                 stats_out.uplink_rcpi_dbm_enc = station.uplink_rcpi_dbm_enc;
+            }
+            LOG(DEBUG) << "Unassociated station stats to send to controller:";
+            for (int i = 0; i < response_out->sta_list_length(); i++) {
+                auto sta_data = std::get<1>(response_out->sta_list(i));
+                LOG(DEBUG) << "Unassociated STA #" << i << " MAC " << sta_data.sta_mac << " RCPI "
+                           << sta_data.uplink_rcpi_dbm_enc << " CHAN " << sta_data.channel_number;
             }
 
             LOG(DEBUG)
