@@ -232,9 +232,8 @@ run-certification-tests-R1-platform-essensium:
   tags:
     - certs-tests-essensium
   needs:
-    - job: build-for-intel-mips
-    - job: build-for-turris-omnia
     - job: build-for-glinet-b1300
+    - job: build-for-glinet-b1300-whm
   rules:
     - if: '$TESTS_TO_RUN_ESSENSIUM !~ /^\$/ && $DEVICE_UNDER_TEST_ESSENSIUM != "prplmesh"'
     - when: manual
