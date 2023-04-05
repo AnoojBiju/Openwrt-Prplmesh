@@ -8143,46 +8143,136 @@ bool db::dm_set_device_ap_capabilities(const Agent &agent)
 
 bool db::dm_set_unassociated_sta(const std::string &radio_dm, const std::string &sta_mac)
 {
-    std::string unassociated_path = radio_dm + ".UnassociatedSTA";
-    auto unassociated_sta_path    = m_ambiorix_datamodel->add_instance(unassociated_path);
-    if (unassociated_sta_path.empty()) {
-        LOG(ERROR) << "Failed to add instance unassociated station to DM with mac " << sta_mac
-                   << "\nTo DM path: " << unassociated_path;
+    auto station = m_unassociated_stations.get(tlvf::mac_from_string(sta_mac));
+    if (!station) {
+        LOG(ERROR) << "No known unassociated station with MAC " << sta_mac
+                   << ", not creating data model entry";
         return false;
     }
-    unassociated_sta_path.append(".");
-    if (!m_ambiorix_datamodel->set(unassociated_sta_path, "MACAddress", sta_mac)) {
-        LOG(ERROR) << "Failed to set STA Mac in unassociated STA DM path";
+    // First, check if this unassociated station already exists for the given radio DM
+    for (const std::string &dm_entry : station->m_dm_paths) {
+        if (dm_entry.substr(0, radio_dm.size()) == radio_dm) {
+            LOG(DEBUG) << "Unassociated station " << sta_mac
+                       << " is already in the data model under " << dm_entry;
+            // Nothing to do, since this is creation in the DM.
+            return true;
+        }
+    }
+    // If it was not found in the DM, add it.
+    std::string new_unassociated_station_dm_path =
+        m_ambiorix_datamodel->add_instance(radio_dm + ".UnassociatedSTA");
+    if (new_unassociated_station_dm_path.empty()) {
+        LOG(ERROR) << "Failed to add instance for unassociated station " << sta_mac;
         return false;
     }
+    // We added this path and the Ambiorix transaction finished succesfully.
+    // Add this new DM path to this unassociated station's list of DM paths.
+    station->m_dm_paths.push_back(new_unassociated_station_dm_path);
+
+    m_ambiorix_datamodel->set(new_unassociated_station_dm_path, "MACAddress",
+                              station->get_mac_Address());
+    LOG(DEBUG) << "Added DM entry for unassociated STA " << sta_mac << " at "
+               << new_unassociated_station_dm_path;
+    // std::string unassociated_path = radio_dm + ".UnassociatedSTA";
+    // auto unassociated_sta_path    = m_ambiorix_datamodel->add_instance(unassociated_path);
+    // if (unassociated_sta_path.empty()) {
+    //     LOG(ERROR) << "Failed to add instance unassociated station to DM with mac " << sta_mac
+    //                << "\nTo DM path: " << unassociated_path;
+    //     return false;
+    // }
+    // unassociated_sta_path.append(".");
+    // if (!m_ambiorix_datamodel->set(unassociated_sta_path, "MACAddress", sta_mac)) {
+    //     LOG(ERROR) << "Failed to set STA Mac in unassociated STA DM path";
+    //     return false;
+    // }
+    // return true;
     return true;
 }
 
 bool db::dm_remove_unassociated_sta(const std::string &radio_dm, const std::string &sta_mac)
 {
-    std::string unassociated_path = radio_dm + ".UnassociatedSTA";
+    auto station = m_unassociated_stations.get(tlvf::mac_from_string(sta_mac));
+    if (!station) {
+        LOG(ERROR) << "No known unassociated station with MAC " << sta_mac
+                   << ", cannot remove from data model";
+        return false;
+    }
 
-    auto indx = m_ambiorix_datamodel->get_instance_index(
-        unassociated_path + ".[MACAddress == '%s'].", sta_mac);
-    if (indx == 0) {
-        LOG(ERROR) << "Cound no find unassociated STA with mac " << sta_mac << " at path "
-                   << unassociated_path;
-        return false;
-    }
-    if (m_ambiorix_datamodel->remove_instance(unassociated_path, indx)) {
-        LOG(DEBUG) << "Removed unassociated station with mac " << sta_mac << " at datapath "
-                   << unassociated_path;
+    // Silently return true incase the NBAPI is disabled.
+    if (station->m_dm_paths.empty())
         return true;
-    } else {
-        LOG(ERROR) << "Failed to remove unassociated station with mac " << sta_mac
-                   << " at datapath " << unassociated_path;
+
+    std::string path_to_remove = "";
+
+    for (const std::string &dm_path : station->m_dm_paths) {
+        // Since any given unassociated station can be monitored by multiple radios on multiple
+        // agents, walk the station's DM path entries and find the one prefixed with the right
+        // radio DM path too.
+        if (dm_path.substr(0, radio_dm.size()) == radio_dm) {
+            LOG(DEBUG) << "Found the data model entry to remove for unassociated station "
+                       << sta_mac << ": " << dm_path;
+            path_to_remove = dm_path;
+        }
+    }
+
+    if (path_to_remove.empty()) {
+        LOG(ERROR) << "Could not find the data model path to remove for unassociated station "
+                   << sta_mac;
         return false;
     }
+    auto path_and_index = get_dm_index_from_path(path_to_remove);
+    if (path_and_index.first.empty()) {
+        LOG(ERROR) << "Could not find index for DM path: " << path_to_remove;
+        return false;
+    }
+    const std::string path = path_and_index.first;
+    uint32_t index         = path_and_index.second;
+    if (!m_ambiorix_datamodel->remove_instance(path, index)) {
+        LOG(ERROR) << "Failed to remove path '" << path << "' from the data model!";
+        return false;
+    }
+
+    // Successfully removed from the data model, delete this unassociated station's DM entry.
+    auto dm_path_it =
+        std::find(station->m_dm_paths.begin(), station->m_dm_paths.end(), path_to_remove);
+    if (dm_path_it == station->m_dm_paths.end()) {
+        LOG(WARNING) << "Removed path '" << path_to_remove
+                     << "' from the data model for unassociated STA " << station->get_mac_Address()
+                     << ", but this DM entry was not found in the station object!";
+        // Not an error condition.
+    }
+    LOG(DEBUG) << "pre-erase: " << station->m_dm_paths.size();
+    station->m_dm_paths.erase(dm_path_it);
+    LOG(DEBUG) << "post-erase: " << station->m_dm_paths.size();
+
+    return true;
+
+    // std::string unassociated_path = radio_dm + ".UnassociatedSTA";
+
+    // auto indx = m_ambiorix_datamodel->get_instance_index(
+    //     unassociated_path + ".[MACAddress == '%s'].", sta_mac);
+    // if (indx == 0) {
+    //     LOG(ERROR) << "Cound no find unassociated STA with mac " << sta_mac << " at path "
+    //                << unassociated_path;
+    //     return false;
+    // }
+    // if (m_ambiorix_datamodel->remove_instance(unassociated_path, indx)) {
+    //     LOG(DEBUG) << "Removed unassociated station with mac " << sta_mac << " at datapath "
+    //                << unassociated_path;
+    //     return true;
+    // } else {
+    //     LOG(ERROR) << "Failed to remove unassociated station with mac " << sta_mac
+    //                << " at datapath " << unassociated_path;
+    //     return false;
+    // }
 }
 
 bool db::add_unassociated_station(const sMacAddr &unassociated_sta_mac, const uint8_t &channel,
                                   const uint8_t &op_class, const std::vector<sMacAddr> &agent_macs)
 {
+    for (const auto &agent : agent_macs) {
+        LOG(DEBUG) << __func__ << " sta mac " << unassociated_sta_mac << " agent " << agent;
+    }
     // Create the entry in the database
     LOG(DEBUG) << "Looking for radios on agents that support scanning on channel: " << channel
                << "for unassociated station mac: " << unassociated_sta_mac;
@@ -8230,39 +8320,79 @@ bool db::update_unassociated_station_agents(const sMacAddr &sta_mac,
         LOG(ERROR) << "Failed to find the unassociated station with MAC " << sta_mac;
         return false;
     }
-    std::vector<sMacAddr> to_be_removed;
-    std::string str_sta_mac = tlvf::mac_to_string(sta_mac);
-    for (auto &agent_cur : unassociated_sta->get_agents()) {
-        auto iter = std::find(agent_vector.end(), agent_vector.begin(), agent_cur.first);
-        if (iter != agent_vector.end()) {
-            to_be_removed.push_back(agent_cur.first);
-            auto agent = m_agents.get(agent_cur.first);
-            if (!agent) {
-                LOG(ERROR) << "Failed to find agent with mac " << agent_cur.first;
-                ret_val = false;
-                continue;
-            }
-            auto radio = agent->radios[agent_cur.second];
-            if (!radio) {
-                LOG(ERROR) << "Failed to get radio with UID " << agent_cur.second;
-                ret_val = false;
-                continue;
-            }
-            if (!dm_remove_unassociated_sta(radio->dm_path, str_sta_mac)) {
-                LOG(ERROR) << "Failed to remove unassociated station from datamodel with mac: "
-                           << sta_mac;
-                ret_val = false;
-                continue;
-            }
-        } else {
-            // This agent radio combo already exists
-            agent_vector.erase(iter);
+    std::vector<sMacAddr> diff;
+    for (const auto &agent : unassociated_sta->get_agents()) {
+        auto it = std::find(agent_macs.begin(), agent_macs.end(), agent.first);
+        if (it == agent_macs.end()) {
+            LOG(DEBUG) << " Agent " << agent.first << " no longer monitoring STA " << sta_mac;
+            diff.push_back(agent.first);
         }
     }
-    // Remove agents that didn't make the cut
-    for (auto &old_agents : to_be_removed) {
-        unassociated_sta->remove_agent(old_agents);
+
+    LOG(DEBUG) << " There are " << agent_macs.size() << " elements in agent_macs and "
+               << unassociated_sta->get_agents().size()
+               << " elements in unassociated_sta->get_agents() and " << diff.size()
+               << " elements in the difference between the two.";
+
+    int i = 0;
+    for (const auto &e : diff) {
+        LOG(DEBUG) << "diff #" << i++ << ": " << e;
     }
+    for (const auto &agent_to_remove : diff) {
+        for (const auto &current_agent : unassociated_sta->get_agents()) {
+            if (agent_to_remove == current_agent.first) {
+                auto radio_uid = current_agent.second;
+                auto radio     = get_radio_by_uid(radio_uid);
+                if (!radio) {
+                    LOG(ERROR) << "Could not find radio by UID " << radio_uid;
+                    return false;
+                }
+                if (!dm_remove_unassociated_sta(radio->dm_path, tlvf::mac_to_string(sta_mac))) {
+                    LOG(ERROR) << "Failed to remove unassociated station " << sta_mac
+                               << " from the data model!";
+                    return false;
+                }
+            }
+        }
+    }
+    for (const auto &removed_agent : diff) {
+        unassociated_sta->remove_agent(removed_agent);
+    }
+    // std::vector<sMacAddr> to_be_removed;
+    // std::string str_sta_mac = tlvf::mac_to_string(sta_mac);
+    // for (auto &agent_cur : unassociated_sta->get_agents()) {
+    //     auto iter = std::find(agent_vector.end(), agent_vector.begin(), agent_cur.first);
+    //     if (iter != agent_vector.end()) {
+    //         to_be_removed.push_back(agent_cur.first);
+    //         auto agent = m_agents.get(agent_cur.first);
+    //         if (!agent) {
+    //             LOG(ERROR) << "Failed to find agent with mac " << agent_cur.first;
+    //             ret_val = false;
+    //             continue;
+    //         }
+    //         auto radio = agent->radios[agent_cur.second];
+    //         if (!radio) {
+    //             LOG(ERROR) << "Failed to get radio with UID " << agent_cur.second;
+    //             ret_val = false;
+    //             continue;
+    //         }
+    //         LOG(DEBUG) << " Agent " << agent_cur.first << " radio " << radio->dm_path
+    //                    << " to be removed!";
+    //         if (!dm_remove_unassociated_sta(radio->dm_path, str_sta_mac)) {
+    //             LOG(ERROR) << "Failed to remove unassociated station from datamodel with mac: "
+    //                        << sta_mac;
+    //             ret_val = false;
+    //             continue;
+    //         }
+    //     } else {
+    //         // This agent radio combo already exists
+    //         agent_vector.erase(iter);
+    //     }
+    // }
+    // Remove agents that didn't make the cut
+    // for (auto &old_agents : to_be_removed) {
+    //     unassociated_sta->remove_agent(old_agents);
+    // }
 
     //Now add remaining agents
     //uint8_t throwaway_op_class;
@@ -8275,7 +8405,7 @@ bool db::update_unassociated_station_agents(const sMacAddr &sta_mac,
             continue;
         }
         unassociated_sta->add_agent(incoming_agent, radio->radio_uid);
-        if (!dm_set_unassociated_sta(radio->dm_path, str_sta_mac)) {
+        if (!dm_set_unassociated_sta(radio->dm_path, tlvf::mac_to_string(sta_mac))) {
             LOG(ERROR) << "Failed to set DM for station: " << sta_mac << " on radio "
                        << radio->radio_uid;
             ret_val = false;
@@ -8666,41 +8796,66 @@ void db::update_unassociated_station_stats(const sMacAddr &mac_address,
                                            UnassociatedStation::Stats &new_stats,
                                            const std::string &radio_dm_path = std::string())
 {
-    auto station = m_unassociated_stations.find(mac_address);
-    if (m_unassociated_stations.end() == station) {
-        LOG(DEBUG) << "No known unassociated station entry for MAC '" << mac_address << "'";
+    auto station_it = m_unassociated_stations.find(mac_address);
+    if (station_it == m_unassociated_stations.end()) {
+        LOG(ERROR) << "No known unassociated station with MAC " << mac_address << ", not updating!";
         return;
     }
+    auto station = station_it->second;
+    station->update_stats(new_stats);
 
+    // Silently return incase the NBAPI is disabled.
+    if (station->m_dm_paths.empty())
+        return;
     if (radio_dm_path.empty()) {
         LOG(DEBUG) << "Radio DM path is empty!";
         return;
     }
-
-    station->second->update_stats(new_stats);
-
-    // Now, update the DM
-    std::string unassociated_sta_path = radio_dm_path + ".UnassociatedSTA";
-    auto index                        = m_ambiorix_datamodel->get_instance_index(
-        unassociated_sta_path + ".[MACAddress == '%s'].", tlvf::mac_to_string(mac_address));
-
-    if (0 == index) {
-        std::string new_unassociated_sta_path =
-            m_ambiorix_datamodel->add_instance(unassociated_sta_path);
-        if (new_unassociated_sta_path.empty()) {
-            LOG(ERROR) << "Could not add new unassociated station to DM, path="
-                       << unassociated_sta_path;
-            return;
+    std::string path_to_update = "";
+    for (const std::string &dm_path : station->m_dm_paths) {
+        // Since any given unassociated station can be monitored by multiple radios on multiple
+        // agents, walk the station's DM path entries and find the one prefixed with the right
+        // radio DM path too.
+        if (dm_path.substr(0, radio_dm_path.size()) == radio_dm_path) {
+            LOG(DEBUG) << "Found a data model entry for unassociated STA " << mac_address << " at "
+                       << dm_path << "!";
+            path_to_update = dm_path;
+            break;
         }
-        unassociated_sta_path = new_unassociated_sta_path;
-    } else {
-        unassociated_sta_path.append(".");
-        unassociated_sta_path.append(std::to_string(index));
     }
-    m_ambiorix_datamodel->set(unassociated_sta_path, "MACAddress", mac_address);
-    m_ambiorix_datamodel->set(unassociated_sta_path, "SignalStrength",
-                              new_stats.uplink_rcpi_dbm_enc);
-    m_ambiorix_datamodel->set_time(unassociated_sta_path, new_stats.time_stamp);
+    if (path_to_update.empty()) {
+        LOG(ERROR) << "Could not find a data model entry for unassociated STA " << mac_address
+                   << ", cannot update!";
+        return;
+    }
+    m_ambiorix_datamodel->set(path_to_update, "SignalStrength",
+                              station->get_stats().uplink_rcpi_dbm_enc);
+    m_ambiorix_datamodel->set(path_to_update, "MACAddress", station->get_mac_Address());
+    m_ambiorix_datamodel->set_time(path_to_update, station->get_stats().time_stamp);
+
+    // OLD
+    // Now, update the DM
+    // std::string unassociated_sta_path = radio_dm_path + ".UnassociatedSTA";
+    // auto index                        = m_ambiorix_datamodel->get_instance_index(
+    //     unassociated_sta_path + ".[MACAddress == '%s'].", tlvf::mac_to_string(mac_address));
+
+    // if (0 == index) {
+    //     std::string new_unassociated_sta_path =
+    //         m_ambiorix_datamodel->add_instance(unassociated_sta_path);
+    //     if (new_unassociated_sta_path.empty()) {
+    //         LOG(ERROR) << "Could not add new unassociated station to DM, path="
+    //                    << unassociated_sta_path;
+    //         return;
+    //     }
+    //     unassociated_sta_path = new_unassociated_sta_path;
+    // } else {
+    //     unassociated_sta_path.append(".");
+    //     unassociated_sta_path.append(std::to_string(index));
+    // }
+    // m_ambiorix_datamodel->set(unassociated_sta_path, "MACAddress", mac_address);
+    // m_ambiorix_datamodel->set(unassociated_sta_path, "SignalStrength",
+    //                           new_stats.uplink_rcpi_dbm_enc);
+    // m_ambiorix_datamodel->set_time(unassociated_sta_path, new_stats.time_stamp);
 }
 
 std::list<std::pair<std::string, std::shared_ptr<UnassociatedStation::Stats>>>

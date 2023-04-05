@@ -115,6 +115,8 @@ public:
      */
     const std::unordered_map<sMacAddr, sMacAddr> &get_agents() const { return m_agents; };
 
+    std::vector<std::string> m_dm_paths;
+
 private:
     sMacAddr m_mac_address;
     uint8_t m_operating_class = 0;
