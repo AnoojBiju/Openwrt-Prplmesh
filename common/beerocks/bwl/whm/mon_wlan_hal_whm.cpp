@@ -7,6 +7,7 @@
  */
 
 #include "mon_wlan_hal_whm.h"
+#include <bwl/mon_wlan_hal_types.h>
 
 #include <amxd/amxd_object.h>
 #include <bcl/beerocks_utils.h>
@@ -45,6 +46,7 @@ mon_wlan_hal_whm::mon_wlan_hal_whm(const std::string &iface_name, hal_event_cb_t
 {
     subscribe_to_ap_events();
     subscribe_to_sta_events();
+    subscribe_to_scan_complete_events();
 }
 
 mon_wlan_hal_whm::~mon_wlan_hal_whm() {}
@@ -178,20 +180,109 @@ bool mon_wlan_hal_whm::sta_link_measurements_11k_request(const std::string &vap_
 bool mon_wlan_hal_whm::channel_scan_trigger(int dwell_time_msec,
                                             const std::vector<unsigned int> &channel_pool)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
-    return false;
+    if (channel_pool.empty()) {
+        LOG(INFO) << "channel_pool is empty!, scanning all channels";
+    }
+
+    std::string channels;
+    if (!channel_pool.empty()) {
+        for (auto &input_channel : channel_pool) {
+            channels += std::to_string(input_channel);
+            channels += ",";
+        }
+        channels.pop_back();
+    }
+
+    if (m_scan_active) {
+        AmbiorixVariant result_abort;
+        AmbiorixVariant args_abort(AMXC_VAR_ID_HTABLE);
+        //scan is already active, as per spec, cancel the old one and start new one
+        if (!m_ambiorix_cl->call(m_radio_path, "stopScan", args_abort, result_abort)) {
+            LOG(INFO) << " remote function stopScan startScan Failed!";
+            return false;
+        } else {
+            m_scan_active = false;
+            event_queue_push(Event::Channel_Scan_Aborted);
+        }
+    }
+    AmbiorixVariant result;
+    AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
+    if (!channels.empty()) {
+        args.add_child<>("channels", channels);
+    }
+    if (!m_ambiorix_cl->call(m_radio_path, "startScan", args, result)) {
+        LOG(ERROR) << " remote function call startScan Failed!";
+        return false;
+    }
+    event_queue_push(Event::Channel_Scan_Triggered);
+    m_scan_active = true;
+    return true;
 }
 
 bool mon_wlan_hal_whm::channel_scan_dump_cached_results()
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    //read stats cached internally
+    for (auto &map : m_scan_results) {
+        auto results_notif = std::make_shared<sCHANNEL_SCAN_RESULTS_NOTIFICATION>();
+        auto &results      = results_notif->channel_scan_results;
+
+        string_utils::copy_string(results.ssid, map["SSID"].c_str(),
+                                  beerocks::message::WIFI_SSID_MAX_LENGTH);
+
+        results.bssid = tlvf::mac_from_string(map["BSSID"]);
+
+        int32_t center_channel = std::stoi(map["CentreChannel"]);
+
+        int32_t bandwidth                   = std::stoi(map["Bandwidth"]);
+        results.operating_channel_bandwidth = utils_wlan_hal_whm::get_bandwidth_from_int(bandwidth);
+
+        results.channel = std::stoul(map["Channel"]);
+
+        WifiChannel wifi_channel(results.channel, center_channel,
+                                 utils::convert_bandwidth_to_enum(bandwidth));
+        results.operating_frequency_band =
+            utils_wlan_hal_whm::eFreqType_to_eCh_scan_Op_Fr_Ba(wifi_channel.get_freq_type());
+
+        results.signal_strength_dBm = std::stoi(map["RSSI"]);
+
+        if (map.find("Noise") != map.end()) {
+            results.noise_dBm = std::stoi(map["Noise"]);
+        }
+
+        if (map.find("SecurityModeEnabled") != map.end()) {
+            std::string security_mode_enabled(map["SecurityModeEnabled"]);
+            results.security_mode_enabled =
+                utils_wlan_hal_whm::get_scan_security_modes_from_str(security_mode_enabled);
+        }
+
+        if (map.find("EncryptionMode") != map.end()) {
+            std::string encryption_mode(map["EncryptionMode"]);
+            results.encryption_mode =
+                utils_wlan_hal_whm::get_scan_result_encryption_modes_from_str(encryption_mode);
+        }
+
+        if (map.find("OperatingStandards") != map.end()) {
+            std::string supported_standards(map["OperatingStandards"]);
+            results.supported_standards =
+                utils_wlan_hal_whm::get_scan_result_operating_standards_from_str(
+                    supported_standards);
+        }
+
+        LOG(DEBUG) << "Processing results for BSSID:" << results.bssid
+                   << " on Channel: " << results.channel;
+        event_queue_push(Event::Channel_Scan_Dump_Result, results_notif);
+        event_queue_push(Event::Channel_Scan_New_Results_Ready, results_notif);
+    }
+
     return true;
 }
 
 bool mon_wlan_hal_whm::channel_scan_dump_results()
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
-    return false;
+    //Lets update our internal results from the pwhm then dump them
+    get_scan_results_from_pwhm();
+    channel_scan_dump_cached_results(); //lets dump the results
+    return true;
 }
 
 bool mon_wlan_hal_whm::generate_connected_clients_events(
@@ -267,8 +358,14 @@ bool mon_wlan_hal_whm::pre_generate_connected_clients_events()
 
 bool mon_wlan_hal_whm::channel_scan_abort()
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
-    return false;
+    AmbiorixVariant result;
+    AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
+    if (!m_ambiorix_cl->call(m_radio_path, "stopScan", args, result)) {
+        LOG(ERROR) << " remote function call stopScan Failed!";
+        return false;
+    }
+    event_queue_push(Event::Channel_Scan_Aborted);
+    return true;
 }
 
 bool mon_wlan_hal_whm::process_ap_event(const std::string &interface, const std::string &key,
@@ -479,7 +576,139 @@ bool mon_wlan_hal_whm::sta_unassoc_rssi_measurement(
                      msg_buff); // send message internally the monitor
 
     return true;
-} // namespace whm
+}
+
+bool mon_wlan_hal_whm::process_scan_complete_event(const std::string &result)
+{
+    if (result == "error") {
+        LOG(DEBUG) << " received ScanComplete event with Error indication!";
+        m_scan_active = false;
+        event_queue_push(Event::Channel_Scan_Finished);
+        return false;
+    }
+    if (result == "done" && m_scan_active) {
+        m_scan_results.clear();
+        event_queue_push(Event::Channel_Scan_Finished);
+        m_scan_active = false;
+        get_scan_results_from_pwhm();
+    }
+    return true;
+}
+
+bool mon_wlan_hal_whm::get_scan_results_from_pwhm()
+{
+    AmbiorixVariant result;
+    AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
+    if (!m_ambiorix_cl->call(m_radio_path, "getScanResults", args, result)) {
+        LOG(ERROR) << " remote function call getScanResults Failed!";
+        return false;
+    }
+    AmbiorixVariantListSmartPtr scan_results_list =
+        result.read_children<AmbiorixVariantListSmartPtr>();
+    if (!scan_results_list) {
+        LOG(ERROR) << "failed reading scan_results!";
+        return false;
+    }
+
+    if (scan_results_list->empty()) {
+        LOG(ERROR) << "scan_results are empty";
+        return false;
+    }
+
+    m_scan_results.clear();
+
+    auto results_as_wrapped_list = scan_results_list->front();
+
+    auto ssid_results_as_list =
+        results_as_wrapped_list.read_children<AmbiorixVariantListSmartPtr>();
+
+    for (auto &ssid_results_map : *ssid_results_as_list) {
+        auto data_map = ssid_results_map.read_children<AmbiorixVariantMapSmartPtr>();
+        auto &map     = *data_map;
+
+        std::unordered_map<std::string, std::string> map_cach_bssid;
+
+        std::string bssid;
+        if (map.find("BSSID") != map.end()) {
+            map["BSSID"].get(bssid);
+            map_cach_bssid["BSSID"] = bssid;
+        } else {
+            LOG(DEBUG) << "BSSID is missing,skipping";
+            continue;
+        }
+
+        if (map.find("SSID") != map.end()) {
+            std::string ssid;
+            map["SSID"].get(ssid);
+            map_cach_bssid["SSID"] = ssid;
+        } else {
+            LOG(DEBUG) << "SSID is missing,skipping";
+            continue;
+        }
+
+        if (map.find("CentreChannel") != map.end()) {
+            std::string center_channel;
+            map["CentreChannel"].get(center_channel);
+            map_cach_bssid["CentreChannel"] = center_channel;
+        } else {
+            LOG(DEBUG) << "CentreChannel is missing,skipping";
+            continue;
+        }
+
+        std::string bandwidth;
+        if (map.find("Bandwidth") != map.end()) {
+            map["Bandwidth"].get(bandwidth);
+            map_cach_bssid["Bandwidth"] = bandwidth;
+        } else {
+            LOG(DEBUG) << "Bandwidth is missing,skipping";
+            continue;
+        }
+        if (map.find("Channel") != map.end()) {
+            std::string channel;
+            map["Channel"].get(channel);
+            map_cach_bssid["Channel"] = channel;
+        } else {
+            LOG(DEBUG) << "Channel is missing,skipping";
+            continue;
+        }
+
+        if (map.find("RSSI") != map.end()) {
+            std::string rssi;
+            map["RSSI"].get(rssi);
+            map_cach_bssid["RSSI"] = rssi;
+        } else {
+            LOG(DEBUG) << "RSSI is missing,skipping";
+            continue;
+        }
+
+        if (map.find("Noise") != map.end()) {
+            std::string noise;
+            map["Noise"].get(noise);
+            map_cach_bssid["Noise"] = noise;
+        }
+
+        if (map.find("SecurityModeEnabled") != map.end()) {
+            std::string security_mode_enabled;
+            map["SecurityModeEnabled"].get(security_mode_enabled);
+            map_cach_bssid["SecurityModeEnabled"] = security_mode_enabled;
+        }
+
+        if (map.find("EncryptionMode") != map.end()) {
+            std::string encryption_mode;
+            map["EncryptionMode"].get(encryption_mode);
+            map_cach_bssid["EncryptionMode"] = encryption_mode;
+        }
+
+        if (map.find("OperatingStandards") != map.end()) {
+            std::string operating_standards;
+            map["OperatingStandards"].get(operating_standards);
+            map_cach_bssid["OperatingStandards"] = operating_standards;
+        }
+
+        m_scan_results.push_back(map_cach_bssid);
+    }
+    return true;
+}
 
 } // namespace whm
 

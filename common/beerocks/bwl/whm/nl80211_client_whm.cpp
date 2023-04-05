@@ -35,7 +35,7 @@ bool nl80211_client_whm::get_interfaces(std::vector<std::string> &interfaces)
     if (!ssids) {
         return false;
     }
-    auto ssids_map = ssids->read_childs<AmbiorixVariantMapSmartPtr>();
+    auto ssids_map = ssids->read_children<AmbiorixVariantMapSmartPtr>();
     if (!ssids_map) {
         return false;
     }

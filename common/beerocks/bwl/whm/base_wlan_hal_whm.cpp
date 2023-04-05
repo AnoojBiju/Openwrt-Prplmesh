@@ -58,7 +58,7 @@ void base_wlan_hal_whm::subscribe_to_radio_events()
         if (!parameters || parameters->empty()) {
             return;
         }
-        auto params_map = parameters->read_childs<AmbiorixVariantMapSmartPtr>();
+        auto params_map = parameters->read_children<AmbiorixVariantMapSmartPtr>();
         if (!params_map) {
             return;
         }
@@ -107,7 +107,7 @@ void base_wlan_hal_whm::subscribe_to_ap_events()
         if (!parameters || parameters->empty()) {
             return;
         }
-        auto params_map = parameters->read_childs<AmbiorixVariantMapSmartPtr>();
+        auto params_map = parameters->read_children<AmbiorixVariantMapSmartPtr>();
         if (!params_map) {
             return;
         }
@@ -189,7 +189,7 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
         if (!parameters || parameters->empty()) {
             return;
         }
-        auto params_map = parameters->read_childs<AmbiorixVariantMapSmartPtr>();
+        auto params_map = parameters->read_children<AmbiorixVariantMapSmartPtr>();
         if (!params_map) {
             return;
         }
@@ -266,6 +266,9 @@ bool base_wlan_hal_whm::process_sta_event(const std::string &interface, const st
 {
     return true;
 }
+
+bool base_wlan_hal_whm::process_scan_complete_event(const std::string &result) { return true; }
+
 bool base_wlan_hal_whm::fsm_setup() { return true; }
 
 HALState base_wlan_hal_whm::attach(bool block)
@@ -646,6 +649,44 @@ bool base_wlan_hal_whm::get_channel_utilization(uint8_t &channel_utilization)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
     return true;
+}
+
+void base_wlan_hal_whm::subscribe_to_scan_complete_events()
+{
+
+    auto event_handler         = std::make_shared<sAmbiorixEventHandler>();
+    event_handler->event_type  = AMX_CL_SCAN_COMPLETE_EVT;
+    event_handler->callback_fn = [](AmbiorixVariant &event_data, void *context) -> void {
+        if (!event_data) {
+            return;
+        }
+        std::string notif_name;
+        if (!event_data.read_child(notif_name, "notification")) {
+            LOG(DEBUG) << " Received Notification  without 'notification' param!";
+            return;
+        }
+        if (notif_name != AMX_CL_SCAN_COMPLETE_EVT) {
+            LOG(DEBUG) << " Received wrong Notification : " << notif_name
+                       << " instead of: " << AMX_CL_SCAN_COMPLETE_EVT;
+            return;
+        }
+        base_wlan_hal_whm *hal = (static_cast<base_wlan_hal_whm *>(context));
+
+        std::string result;
+        if (!event_data.read_child(result, "Result")) {
+            LOG(ERROR) << " received ScanComplete event without Result param!";
+            return;
+        }
+
+        hal->process_scan_complete_event(result);
+    };
+    event_handler->context = this;
+    std::string filter     = "(path matches '" + m_radio_path +
+                         "$')"
+                         " && (notification == '" +
+                         AMX_CL_SCAN_COMPLETE_EVT + "')";
+
+    m_ambiorix_cl->subscribe_to_object_event(m_radio_path, event_handler, filter);
 }
 
 } // namespace whm

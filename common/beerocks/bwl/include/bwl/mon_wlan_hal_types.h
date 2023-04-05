@@ -428,6 +428,7 @@ enum class eChannelScanResultSecurityMode : uint8_t {
     eSecurity_Mode_WEP  = 0x1,
     eSecurity_Mode_WPA  = 0x2,
     eSecurity_Mode_WPA2 = 0x3,
+    eSecurity_Mode_WPA3 = 0x4,
 };
 
 enum class eChannelScanResultOperatingFrequencyBand : uint8_t {

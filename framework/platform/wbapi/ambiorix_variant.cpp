@@ -30,7 +30,10 @@
 namespace beerocks {
 namespace wbapi {
 
-amxc_var_t *AmbiorixVariantBaseAccess::amxc_var_ptr(AmbiorixVariant &obj) { return obj.m_var_ctx; }
+amxc_var_t *AmbiorixVariantBaseAccess::get_amxc_var_ptr(AmbiorixVariant &obj)
+{
+    return obj.m_var_ctx;
+}
 
 AmbiorixVariant::AmbiorixVariant(const uint32_t type)
 {
@@ -233,7 +236,7 @@ bool AmbiorixVariant::get(float &value) const
     GET_VARIANT_AS(AMXC_VAR_ID_FLOAT, float, value, m_var_ctx)
 }
 
-bool AmbiorixVariant::get_childs(AmbiorixVariantListSmartPtr &result, bool extract)
+bool AmbiorixVariant::get_children(AmbiorixVariantListSmartPtr &result, bool extract)
 {
     if (!result) {
         result = std::move(std::make_unique<AmbiorixVariantList>());
@@ -250,7 +253,7 @@ bool AmbiorixVariant::get_childs(AmbiorixVariantListSmartPtr &result, bool extra
     return true;
 }
 
-bool AmbiorixVariant::get_childs(AmbiorixVariantMapSmartPtr &result, bool extract)
+bool AmbiorixVariant::get_children(AmbiorixVariantMapSmartPtr &result, bool extract)
 {
     if (!result) {
         result = std::move(std::make_unique<AmbiorixVariantMap>());

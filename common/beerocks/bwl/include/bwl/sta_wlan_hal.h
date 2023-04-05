@@ -63,7 +63,7 @@ public:
     virtual bool scan_bss(const sMacAddr &bssid, uint8_t channel,
                           beerocks::eFreqType freq_type) = 0;
 
-    virtual int get_scan_results(const std::string &ssid, std::vector<SScanResult> &list,
+    virtual int get_scan_results(const std::string &ssid, std::vector<sScanResult> &list,
                                  bool parse_vsie = false) = 0;
 
     virtual bool connect(const std::string &ssid, const std::string &pass, WiFiSec sec,

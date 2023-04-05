@@ -35,7 +35,7 @@ public:
     virtual bool initiate_scan() override;
     bool scan_bss(const sMacAddr &bssid, uint8_t channel, beerocks::eFreqType freq_type) override;
     virtual bool start_wps_pbc() override;
-    virtual int get_scan_results(const std::string &ssid, std::vector<SScanResult> &list,
+    virtual int get_scan_results(const std::string &ssid, std::vector<sScanResult> &list,
                                  bool parse_vsie) override;
 
     virtual bool connect(const std::string &ssid, const std::string &pass, WiFiSec sec,

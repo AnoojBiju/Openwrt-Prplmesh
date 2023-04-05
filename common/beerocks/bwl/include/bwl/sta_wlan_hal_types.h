@@ -18,7 +18,10 @@ namespace bwl {
 // 16 Octets + 4 dashes + null terminator RFC 4122
 #define UUID_STR_SIZE (16 * 2 + 4 + 4)
 
-struct SScanResult {
+struct sScanResult {
+    sScanResult()
+        : bssid({0}), channel(0), freq_type(beerocks::eFreqType::FREQ_UNKNOWN),
+          rssi(UINT8_MAX){}; //used UINT8_MAX to initialise it with non-valid value
     sMacAddr bssid;
     uint8_t channel;
     beerocks::eFreqType freq_type;

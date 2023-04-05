@@ -100,15 +100,26 @@ protected:
     std::unordered_map<std::string, VAPExtInfo> m_vapsExtInfo; // key = vap_ifname
     std::unordered_map<std::string, sStationInfo> m_stations;  // key = sta_mac
     void subscribe_to_radio_events();
-    void subscribe_to_ap_events();
-    void subscribe_to_sta_events();
     virtual bool process_radio_event(const std::string &interface, const std::string &key,
                                      const beerocks::wbapi::AmbiorixVariant *value);
+
+    void subscribe_to_ap_events();
     virtual bool process_ap_event(const std::string &interface, const std::string &key,
                                   const beerocks::wbapi::AmbiorixVariant *value);
+
+    void subscribe_to_sta_events();
     virtual bool process_sta_event(const std::string &interface, const std::string &sta_mac,
                                    const std::string &key,
                                    const beerocks::wbapi::AmbiorixVariant *value);
+
+    /**
+     * @brief subscribe to WiFi.Radio. ScanComplete dm notification
+     */
+    void subscribe_to_scan_complete_events();
+    /**
+     * @brief Process the event "ScanComplete" when received from the dm
+     */
+    virtual bool process_scan_complete_event(const std::string &result);
 
     // Private data-members:
 private:

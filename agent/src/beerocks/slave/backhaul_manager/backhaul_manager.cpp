@@ -2238,7 +2238,7 @@ bool BackhaulManager::select_bssid()
     std::string best_24_sta_iface, best_5_high_sta_iface, best_5_low_sta_iface, best_5_sta_iface;
 
     // Support up to 256 scan results
-    std::vector<bwl::SScanResult> scan_results;
+    std::vector<bwl::sScanResult> scan_results;
 
     auto db = AgentDB::get();
 
@@ -2445,7 +2445,7 @@ bool BackhaulManager::select_bssid()
 void BackhaulManager::get_scan_measurement()
 {
     // Support up to 256 scan results
-    std::vector<bwl::SScanResult> scan_results;
+    std::vector<bwl::sScanResult> scan_results;
     auto db = AgentDB::get();
 
     LOG(DEBUG) << "get_scan_measurement: SSID = " << db->device_conf.back_radio.ssid;
