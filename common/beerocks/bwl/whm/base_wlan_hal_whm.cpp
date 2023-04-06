@@ -96,7 +96,7 @@ void base_wlan_hal_whm::subscribe_to_ap_events()
         }
         auto &vapsExtInfo = hal->m_vapsExtInfo;
         auto vap_it       = std::find_if(vapsExtInfo.begin(), vapsExtInfo.end(),
-                                   [&](const std::pair<std::string, VAPExtInfo> &element) {
+                                         [&](const std::pair<std::string, VAPExtInfo> &element) {
                                        return element.second.path == ap_path;
                                    });
         if (vap_it == vapsExtInfo.end()) {
@@ -156,7 +156,7 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
         std::string ap_path = wbapi_utils::get_path_ap_of_assocDev(sta_path);
         auto &vapsExtInfo   = hal->m_vapsExtInfo;
         auto vap_it         = std::find_if(vapsExtInfo.begin(), vapsExtInfo.end(),
-                                   [&](const std::pair<std::string, VAPExtInfo> &element) {
+                                           [&](const std::pair<std::string, VAPExtInfo> &element) {
                                        return element.second.path == ap_path;
                                    });
         if (vap_it == vapsExtInfo.end()) {
@@ -164,7 +164,7 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
         }
         auto &stations = hal->m_stations;
         auto sta_it    = std::find_if(stations.begin(), stations.end(),
-                                   [&](const std::pair<std::string, sStationInfo> &element) {
+                                      [&](const std::pair<std::string, sStationInfo> &element) {
                                        return element.second.path == sta_path;
                                    });
         std::string sta_mac;
@@ -230,7 +230,7 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
         LOG(DEBUG) << "Station instance " << sta_path << " deleted";
         auto &stations = hal->m_stations;
         auto sta_it    = std::find_if(stations.begin(), stations.end(),
-                                   [&](const std::pair<std::string, sStationInfo> &element) {
+                                      [&](const std::pair<std::string, sStationInfo> &element) {
                                        return element.second.path == sta_path;
                                    });
         if (sta_it != stations.end()) {
@@ -358,32 +358,31 @@ bool base_wlan_hal_whm::refresh_radio_info()
     radio->read_child(supported_standards, "SupportedStandards");
 
     //Ht capabilities
-    //pwhm does not provide any info about HT Capabilities for radios
-    // m_radio_info.ht_capability = 0;
-    m_radio_info.ht_supported = supported_standards.find("n") != std::string::npos ? 1 : 0;
-
-    //VHt capabilities
-    struct beerocks::net::sVHTCapabilities *vht_caps_ptr =
-        (struct beerocks::net::sVHTCapabilities *)(&m_radio_info.vht_capability);
-
-    m_radio_info.wifi6_capability = supported_standards.find("ax") != std::string::npos ? 1 : 0;
-
-    if (radio->read_child(s_val, "TxBeamformingCapsAvailable")) {
-        m_radio_info.vht_capability  = 0;
-        auto vht_mcs_set_pwhm_tx_vec = beerocks::string_utils::str_split(s_val, ',');
-        if (std::find(vht_mcs_set_pwhm_tx_vec.begin(), vht_mcs_set_pwhm_tx_vec.end(),
-                      "VHT_MU_BF") != vht_mcs_set_pwhm_tx_vec.end()) {
-            vht_caps_ptr->mu_beamformer_capable = true;
-        }
-        if (std::find(vht_mcs_set_pwhm_tx_vec.begin(), vht_mcs_set_pwhm_tx_vec.end(),
-                      "VHT_SU_BF") != vht_mcs_set_pwhm_tx_vec.end()) {
-            vht_caps_ptr->su_beamformer_capable = true;
+    if (radio->read_child(s_val, "HTCapabilities")) {
+        std::vector<uint8_t> decoded_bin;
+        if (utils_wlan_hal_whm::base64_decode(decoded_bin, s_val)) {
+            memcpy(&m_radio_info.ht_capability, &decoded_bin[0],
+                   sizeof(m_radio_info.ht_capability));
+        } else {
+            LOG(WARNING) << "Error while decoding HTCapabilities with value " << s_val;
         }
     }
 
-    vht_caps_ptr->vht_support_160mhz     = m_radio_info.max_bandwidth == BANDWIDTH_160 ? 1 : 0;
-    vht_caps_ptr->short_gi_support_80mhz = 0;
+    m_radio_info.ht_supported = supported_standards.find("n") != std::string::npos ? 1 : 0;
+
+    //VHt capabilities
     m_radio_info.vht_supported = supported_standards.find("ac") != std::string::npos ? 1 : 0;
+    if (radio->read_child(s_val, "VHTCapabilities")) {
+        std::vector<uint8_t> decoded_bin;
+        if (utils_wlan_hal_whm::base64_decode(decoded_bin, s_val)) {
+            memcpy(&m_radio_info.vht_capability, &decoded_bin[0],
+                   sizeof(m_radio_info.vht_capability));
+        } else {
+            LOG(WARNING) << "Error while decoding VHTCapabilities with value " << s_val;
+        }
+    }
+
+    m_radio_info.wifi6_capability = supported_standards.find("ax") != std::string::npos ? 1 : 0;
 
     //SupportedHtMCS
     //pwhm does not provide any info about HT MCS for radios

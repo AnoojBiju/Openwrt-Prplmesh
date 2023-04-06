@@ -33,6 +33,12 @@ public:
      */
     static WiFiSec security_type_from_string(const std::string &security_type);
 
+    /**
+     * @brief Decodes a base64 string 
+     */
+    static bool base64_decode(std::vector<uint8_t> &decoded_output,
+                              const std::string &base64_input);
+
 private:
     /**
      * @brief Convertion table of Security type from string to WiFiSec.

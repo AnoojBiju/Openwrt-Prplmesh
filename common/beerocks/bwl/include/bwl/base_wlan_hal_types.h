@@ -168,8 +168,8 @@ struct RadioInfo {
     beerocks::eFreqType frequency_band = beerocks::eFreqType::FREQ_UNKNOWN; /**< Frequency band */
     beerocks::eWiFiBandwidth max_bandwidth =
         beerocks::eWiFiBandwidth::BANDWIDTH_UNKNOWN; /**< Maximum supported bandwidth */
-    bool ht_supported     = false;                   /**< Is HT supported flag */
-    uint8_t ht_capability = 0;                       /**< HT capabilities */
+    bool ht_supported      = false;                  /**< Is HT supported flag */
+    uint16_t ht_capability = 0;                      /**< HT capabilities */
 
     /**< 16-byte attribute containing the MCS set as defined in 802.11n */
     std::array<uint8_t, beerocks::message::HT_MCS_SET_SIZE> ht_mcs_set;

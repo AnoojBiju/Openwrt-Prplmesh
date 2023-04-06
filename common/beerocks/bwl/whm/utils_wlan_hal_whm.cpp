@@ -51,5 +51,74 @@ WiFiSec utils_wlan_hal_whm::security_type_from_string(const std::string &securit
     return map_it == security_type_table.end() ? WiFiSec::Invalid : map_it->second;
 }
 
+static const uint8_t sBase64Table[65] =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+bool utils_wlan_hal_whm::base64_decode(std::vector<uint8_t> &decoded_output,
+                                       const std::string &base64_input)
+{
+    decoded_output.clear();
+    uint8_t dtable[256] = {0x80};
+    dtable['=']         = 0;
+    size_t i            = 0;
+    for (i = 0; i < sizeof(sBase64Table) - 1; i++) {
+        dtable[sBase64Table[i]] = (uint8_t)i;
+    }
+
+    size_t count   = 0;
+    size_t srcSize = base64_input.length();
+    for (i = 0; i < srcSize; i++) {
+        if (dtable[(uint8_t)base64_input[i]] != 0x80) {
+            count++;
+        }
+    }
+
+    if ((count == 0) || count % 4) {
+        return false;
+    }
+
+    size_t outputLength = (count / 4) * 3;
+    decoded_output.resize(outputLength);
+
+    uint8_t *pos = &decoded_output[0];
+    count        = 0;
+    uint8_t block[4];
+    size_t pad = 0;
+    for (i = 0; i < srcSize; i++) {
+        uint8_t tmp = dtable[(uint8_t)base64_input[i]];
+        if (tmp == 0x80) {
+            continue;
+        }
+
+        if (base64_input[i] == '=') {
+            pad++;
+        }
+        block[count] = tmp;
+        count++;
+        if (count == 4) {
+            *pos = (block[0] << 2) | (block[1] >> 4);
+            pos++;
+            *pos = (block[1] << 4) | (block[2] >> 2);
+            pos++;
+            *pos = (block[2] << 6) | block[3];
+            pos++;
+            count = 0;
+            if (pad) {
+                if (pad == 1) {
+                    pos--;
+                } else if (pad == 2) {
+                    pos -= 2;
+                } else {
+                    /* Invalid padding */
+                    LOG(ERROR) << "Invalid padding";
+                    return false;
+                }
+                break;
+            }
+        }
+    }
+    return true;
+}
+
 } // namespace whm
 } // namespace bwl
