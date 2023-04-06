@@ -1673,6 +1673,7 @@ int ap_wlan_hal_nl80211::add_bss(std::string &ifname, son::wireless_utils::sBssI
     }
     if (vbss) {
         conf.set_create_head_value("broadcast_deauth", "0");
+        conf.set_create_head_value("no_deauth_unknown_sta", "1");
     }
     if (!conf.store()) {
         LOG(ERROR) << "Failed to store the hostapd configuration!";
@@ -1816,6 +1817,21 @@ bool ap_wlan_hal_nl80211::update_beacon(const std::string &ifname)
     const std::string cmd = "UPDATE_BEACON";
 
     // Send command
+    if (!wpa_ctrl_send_msg(cmd, ifname)) {
+        LOG(ERROR) << __func__ << " failed!";
+        return false;
+    }
+
+    return true;
+}
+
+bool ap_wlan_hal_nl80211::set_no_deauth_unknown_sta(const std::string &ifname, bool value)
+{
+    LOG(TRACE) << __func__ << " ifname: " << ifname << " value: " << value;
+
+    std::string set_value = value ? "1" : "0";
+    const std::string cmd = "SET no_deauth_unknown_sta " + set_value;
+
     if (!wpa_ctrl_send_msg(cmd, ifname)) {
         LOG(ERROR) << __func__ << " failed!";
         return false;
