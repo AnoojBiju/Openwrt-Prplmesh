@@ -296,7 +296,7 @@ boardfarm-tests:
     - job: build-in-docker
     - job: image-build-boardfarm-ci
   tags:
-    - boardfarm-compose
+    - boardfarm-compose2
   timeout: 30m
 
 boardfarm-stability-tests:
