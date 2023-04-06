@@ -60,16 +60,6 @@ void son_actions::handle_completed_connection(db &database, ieee1905_1::CmduMess
     if (database.is_node_wireless(client_mac)) {
         LOG(DEBUG) << "node " << client_mac << " is wireless";
         /*
-         * send disassociate request to previous hostap to clear STA mac from its list
-         */
-        if ((!previous_hostap_mac.empty()) &&
-            (previous_hostap_mac != network_utils::ZERO_MAC_STRING) &&
-            (previous_hostap_mac != new_hostap_mac)) {
-            disconnect_client(database, cmdu_tx, client_mac, previous_hostap_mac,
-                              eDisconnect_Type_Disassoc, 0);
-        }
-
-        /*
          * launch association handling task for async actions
          * and further handling of the new connection
          */
