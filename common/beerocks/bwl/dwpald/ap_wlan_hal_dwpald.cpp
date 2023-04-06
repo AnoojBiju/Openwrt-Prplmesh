@@ -1115,13 +1115,13 @@ bool ap_wlan_hal_dwpal::set_channel(int chan, beerocks::eWiFiBandwidth bw, int c
     return true;
 }
 
-bool ap_wlan_hal_dwpal::sta_allow(const std::string &mac, const std::string &bssid)
+bool ap_wlan_hal_dwpal::sta_allow(const sMacAddr &mac, const sMacAddr &bssid)
 {
     // Check if the requested BSSID is part of this radio
     for (const auto &vap : m_radio_info.available_vaps) {
-        if (vap.second.mac == bssid) {
+        if (vap.second.mac == tlvf::mac_to_string(bssid)) {
             // Send the command
-            std::string cmd = "STA_ALLOW " + mac;
+            std::string cmd = "STA_ALLOW " + tlvf::mac_to_string(mac);
             if (!dwpal_send_cmd(cmd, vap.first)) {
                 LOG(ERROR) << "sta_allow() failed!";
                 return false;
@@ -1135,13 +1135,13 @@ bool ap_wlan_hal_dwpal::sta_allow(const std::string &mac, const std::string &bss
     return true;
 }
 
-bool ap_wlan_hal_dwpal::sta_deny(const std::string &mac, const std::string &bssid)
+bool ap_wlan_hal_dwpal::sta_deny(const sMacAddr &mac, const sMacAddr &bssid)
 {
     // Check if the requested BSSID is part of this radio
     for (const auto &vap : m_radio_info.available_vaps) {
-        if (vap.second.mac == bssid) {
+        if (vap.second.mac == tlvf::mac_to_string(bssid)) {
             // Send the command
-            std::string cmd = "DENY_MAC " + mac + " reject_sta=33";
+            std::string cmd = "DENY_MAC " + tlvf::mac_to_string(mac) + " reject_sta=33";
             if (!dwpal_send_cmd(cmd, vap.first)) {
                 LOG(ERROR) << "sta_allow() failed!";
                 return false;
@@ -1153,6 +1153,19 @@ bool ap_wlan_hal_dwpal::sta_deny(const std::string &mac, const std::string &bssi
 
     // If the requested BSSID is not part of this radio, return silently
     return true;
+}
+
+bool ap_wlan_hal_dwpal::sta_acceptlist_modify(const sMacAddr &mac, const sMacAddr &bssid,
+                                              bwl::sta_acl_action action)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
+bool ap_wlan_hal_dwpal::set_macacl_type(const eMacACLType &acl_type, const sMacAddr &bssid)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
 }
 
 bool ap_wlan_hal_dwpal::sta_disassoc(int8_t vap_id, const std::string &mac, uint32_t reason)
@@ -3779,6 +3792,18 @@ bool ap_wlan_hal_dwpal::prepare_unassoc_sta_link_metrics_response(
     m_unassoc_sta_map.clear();
     m_measurement_start = false;
     return true;
+}
+
+bool ap_wlan_hal_dwpal::set_beacon_da(const std::string &ifname, const sMacAddr &mac)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
+bool ap_wlan_hal_dwpal::update_beacon(const std::string &ifname)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
 }
 
 } // namespace dwpal

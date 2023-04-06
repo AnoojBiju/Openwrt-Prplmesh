@@ -155,16 +155,27 @@ bool ap_wlan_hal_dummy::set_channel(int chan, beerocks::eWiFiBandwidth bw, int c
     return write_status_file("channel", value.str());
 }
 
-bool ap_wlan_hal_dummy::sta_allow(const std::string &mac, const std::string &bssid)
+bool ap_wlan_hal_dummy::sta_allow(const sMacAddr &mac, const sMacAddr &bssid)
 {
     LOG(DEBUG) << "Got client allow request for " << mac << " on bssid " << bssid;
     return true;
 }
 
-bool ap_wlan_hal_dummy::sta_deny(const std::string &mac, const std::string &bssid)
+bool ap_wlan_hal_dummy::sta_deny(const sMacAddr &mac, const sMacAddr &bssid)
 {
     LOG(DEBUG) << "Got client disallow request for " << mac << " on bssid " << bssid
                << " reject_sta: 33";
+    return true;
+}
+
+bool ap_wlan_hal_dummy::sta_acceptlist_modify(const sMacAddr &mac, const sMacAddr &bssid,
+                                              bwl::sta_acl_action action)
+{
+    return true;
+}
+
+bool ap_wlan_hal_dummy::set_macacl_type(const eMacACLType &acl_type, const sMacAddr &bssid)
+{
     return true;
 }
 
@@ -790,6 +801,18 @@ bool ap_wlan_hal_dummy::prepare_unassoc_sta_link_metrics_response(
     m_measurement_start = false;
 
     return true;
+}
+
+bool ap_wlan_hal_dummy::set_beacon_da(const std::string &ifname, const sMacAddr &mac)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
+bool ap_wlan_hal_dummy::update_beacon(const std::string &ifname)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
 }
 
 } // namespace dummy

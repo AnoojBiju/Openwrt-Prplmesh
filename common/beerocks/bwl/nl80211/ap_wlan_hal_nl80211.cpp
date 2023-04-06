@@ -649,15 +649,15 @@ bool ap_wlan_hal_nl80211::set_channel(int chan, beerocks::eWiFiBandwidth bw, int
     return true;
 }
 
-bool ap_wlan_hal_nl80211::sta_allow(const std::string &mac, const std::string &bssid)
+bool ap_wlan_hal_nl80211::sta_allow(const sMacAddr &mac, const sMacAddr &bssid)
 {
     LOG(TRACE) << __func__ << " mac: " << mac << ", bssid: " << bssid;
 
     // Build command string
     // We use the DENY_ACL list only
-    const std::string cmd = "DENY_ACL DEL_MAC " + mac;
+    const std::string cmd = "DENY_ACL DEL_MAC " + tlvf::mac_to_string(mac);
 
-    auto vap_id = get_vap_id_with_mac(bssid);
+    auto vap_id = get_vap_id_with_mac(tlvf::mac_to_string(bssid));
     if (vap_id < 0) {
         LOG(ERROR) << "no vap has bssid " << bssid;
         return false;
@@ -673,15 +673,15 @@ bool ap_wlan_hal_nl80211::sta_allow(const std::string &mac, const std::string &b
     return true;
 }
 
-bool ap_wlan_hal_nl80211::sta_deny(const std::string &mac, const std::string &bssid)
+bool ap_wlan_hal_nl80211::sta_deny(const sMacAddr &mac, const sMacAddr &bssid)
 {
     LOG(TRACE) << __func__ << " mac: " << mac << ", bssid: " << bssid;
 
     // Build command string
     // We use the DENY_ACL list only
-    const std::string cmd = "DENY_ACL ADD_MAC " + mac;
+    const std::string cmd = "DENY_ACL ADD_MAC " + tlvf::mac_to_string(mac);
 
-    auto vap_id = get_vap_id_with_mac(bssid);
+    auto vap_id = get_vap_id_with_mac(tlvf::mac_to_string(bssid));
     if (vap_id < 0) {
         LOG(ERROR) << "no vap has bssid " << bssid;
         return false;
@@ -691,6 +691,83 @@ bool ap_wlan_hal_nl80211::sta_deny(const std::string &mac, const std::string &bs
     // Send command
     if (!wpa_ctrl_send_msg(cmd, ifname)) {
         LOG(ERROR) << "sta_deny() failed!";
+        return false;
+    }
+
+    return true;
+}
+
+bool ap_wlan_hal_nl80211::sta_acceptlist_modify(const sMacAddr &mac, const sMacAddr &bssid,
+                                                bwl::sta_acl_action action)
+{
+    const std::string cmd = "ACCEPT_ACL ";
+    std::string action_cmd;
+
+    switch (action) {
+    case bwl::sta_acl_action::ADD: {
+        action_cmd = "ADD_MAC " + tlvf::mac_to_string(mac);
+        break;
+    }
+
+    case bwl::sta_acl_action::DEL: {
+        action_cmd = "DEL_MAC " + tlvf::mac_to_string(mac);
+        break;
+    }
+    default: {
+        LOG(ERROR) << "Unknown action ";
+        return false;
+    }
+    }
+
+    LOG(TRACE) << __func__ << " mac: " << mac << ", bssid: " << bssid
+               << " action cmd: " << action_cmd;
+
+    auto vap_id = get_vap_id_with_mac(tlvf::mac_to_string(bssid));
+    if (vap_id < 0) {
+        LOG(ERROR) << "no vap has bssid " << bssid;
+        return false;
+    }
+    std::string ifname = m_radio_info.available_vaps[vap_id].bss;
+
+    // Send command
+    if (!wpa_ctrl_send_msg(cmd + action_cmd, ifname)) {
+        LOG(ERROR) << __func__ << " failed!";
+        return false;
+    }
+
+    return true;
+}
+
+bool ap_wlan_hal_nl80211::set_macacl_type(const eMacACLType &acl_type, const sMacAddr &bssid)
+{
+    LOG(TRACE) << __func__ << " acl_type: " << int(acl_type) << ", bssid: " << bssid;
+
+    std::string macaddr_acl = "0";
+
+    switch (acl_type) {
+    case eMacACLType::DENY_LIST: {
+        macaddr_acl = "0";
+        break;
+    }
+    case eMacACLType::ACCEPT_LIST: {
+        macaddr_acl = "1";
+        break;
+    }
+    }
+
+    // Build command string
+    const std::string cmd = "SET macaddr_acl " + macaddr_acl;
+
+    auto vap_id = get_vap_id_with_mac(tlvf::mac_to_string(bssid));
+    if (vap_id < 0) {
+        LOG(ERROR) << "no vap has bssid " << bssid;
+        return false;
+    }
+    std::string ifname = m_radio_info.available_vaps[vap_id].bss;
+
+    // Send command
+    if (!wpa_ctrl_send_msg(cmd, ifname)) {
+        LOG(ERROR) << __func__ << " failed!";
         return false;
     }
 
@@ -1713,6 +1790,38 @@ bool ap_wlan_hal_nl80211::prepare_unassoc_sta_link_metrics_response(
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return false;
+}
+
+bool ap_wlan_hal_nl80211::set_beacon_da(const std::string &ifname, const sMacAddr &mac)
+{
+    LOG(TRACE) << __func__ << " ifname: " << ifname << ", mac: " << mac;
+
+    // Build command string
+    const std::string cmd = "SET beacon_da " + tlvf::mac_to_string(mac);
+
+    // Send command
+    if (!wpa_ctrl_send_msg(cmd, ifname)) {
+        LOG(ERROR) << __func__ << " failed!";
+        return false;
+    }
+
+    return true;
+}
+
+bool ap_wlan_hal_nl80211::update_beacon(const std::string &ifname)
+{
+    LOG(TRACE) << __func__ << " ifname: " << ifname;
+
+    // Build command string
+    const std::string cmd = "UPDATE_BEACON";
+
+    // Send command
+    if (!wpa_ctrl_send_msg(cmd, ifname)) {
+        LOG(ERROR) << __func__ << " failed!";
+        return false;
+    }
+
+    return true;
 }
 
 } // namespace nl80211

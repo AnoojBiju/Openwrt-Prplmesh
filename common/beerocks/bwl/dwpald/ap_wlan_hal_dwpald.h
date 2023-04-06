@@ -43,8 +43,11 @@ public:
     virtual bool
     set_channel(int chan, beerocks::eWiFiBandwidth bw = beerocks::eWiFiBandwidth::BANDWIDTH_UNKNOWN,
                 int center_channel = 0) override;
-    virtual bool sta_allow(const std::string &mac, const std::string &bssid) override;
-    virtual bool sta_deny(const std::string &mac, const std::string &bssid) override;
+    virtual bool sta_allow(const sMacAddr &mac, const sMacAddr &bssid) override;
+    virtual bool sta_deny(const sMacAddr &mac, const sMacAddr &bssid) override;
+    virtual bool sta_acceptlist_modify(const sMacAddr &mac, const sMacAddr &bssid,
+                                       bwl::sta_acl_action action) override;
+    virtual bool set_macacl_type(const eMacACLType &acl_type, const sMacAddr &bssid) override;
     virtual bool sta_disassoc(int8_t vap_id, const std::string &mac, uint32_t reason = 0) override;
     virtual bool sta_deauth(int8_t vap_id, const std::string &mac, uint32_t reason = 0) override;
     virtual bool sta_bss_steer(int8_t vap_id, const std::string &mac, const std::string &bssid,
@@ -118,6 +121,8 @@ public:
     virtual bool get_key(const std::string &ifname, sKeyInfo &key_info) override;
     virtual bool send_delba(const std::string &ifname, const sMacAddr &dst, const sMacAddr &src,
                             const sMacAddr &bssid);
+    virtual bool set_beacon_da(const std::string &ifname, const sMacAddr &mac) override;
+    virtual bool update_beacon(const std::string &ifname) override;
 
     virtual void send_unassoc_sta_link_metric_query(
         std::shared_ptr<wfa_map::tlvUnassociatedStaLinkMetricsQuery> &query) override;

@@ -126,7 +126,7 @@ public:
      *
      * @return true on success or false on error.
      */
-    virtual bool sta_allow(const std::string &mac, const std::string &bssid) = 0;
+    virtual bool sta_allow(const sMacAddr &mac, const sMacAddr &bssid) = 0;
 
     /**
      * @brief Deny the station with the given MAC address from connecting to the AP.
@@ -136,7 +136,29 @@ public:
      * 
      * @return true on success or false on error.
      */
-    virtual bool sta_deny(const std::string &mac, const std::string &bssid) = 0;
+    virtual bool sta_deny(const sMacAddr &mac, const sMacAddr &bssid) = 0;
+
+    /**
+     * @brief Remove the station with the given MAC address from the accept list.
+     *
+     * @param [in] mac The MAC address of the station.
+     * @param [in] bssid The BSSID to which the operation is applicable.
+     * @param [in] action The action to perform (add, remove, ...).
+     *
+     * @return true on success or false on error.
+     */
+    virtual bool sta_acceptlist_modify(const sMacAddr &mac, const sMacAddr &bssid,
+                                       bwl::sta_acl_action action) = 0;
+
+    /**
+     * @brief Set the MAC ACL type (see struct eMacACLType).
+     *
+     * @param [in] acl_type the new ACL type.
+     * @param [in] bssid The BSSID to which the operation is applicable.
+     *
+     * @return true on success or false on error.
+     */
+    virtual bool set_macacl_type(const eMacACLType &acl_type, const sMacAddr &bssid) = 0;
 
     /**
      * @brief Disassociate the station with the given MAC address.
@@ -513,6 +535,25 @@ public:
      */
     virtual bool prepare_unassoc_sta_link_metrics_response(
         std::shared_ptr<wfa_map::tlvUnassociatedStaLinkMetricsResponse> &response) = 0;
+
+    /**
+     * @brief Set the beacons destination MAC address.
+     *
+     * @param [in] ifname the interface name.
+     * @param [in] mac the MAC address to set to.
+     *
+     * @return true on success or false on error.
+     */
+    virtual bool set_beacon_da(const std::string &ifname, const sMacAddr &mac) = 0;
+
+    /**
+     * @brief Update beacon frames content.
+     *
+     * @param [in] ifname the interface name.
+     *
+     * @return true on success or false on error.
+     */
+    virtual bool update_beacon(const std::string &ifname) = 0;
 
 private:
     static const int frame_body_idx = (sizeof(s80211MgmtFrame::sHeader) * 2);

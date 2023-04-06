@@ -759,8 +759,48 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
             return;
         }
 
+        // refresh vaps info so that the new vap id can be retrieved
+        // from the BSSID (needed for ACLs):
+        if (!ap_wlan_hal->refresh_vaps_info()) {
+            LOG(ERROR) << "Failed to refresh vaps info!";
+            return;
+        }
+
+        // We only configure the acceptlist if the station was already
+        // associated, to allow the controller to create VBSSes for
+        // any specific station (i.e. before the actual station MAC is
+        // known).
+
         if (virtual_bss_creation_tlv->client_assoc()) {
             LOG(DEBUG) << "The client was already associated, adding a new station and its keys.";
+
+            if (!ap_wlan_hal->set_macacl_type(bwl::eMacACLType::ACCEPT_LIST,
+                                              virtual_bss_creation_tlv->bssid())) {
+                LOG(ERROR) << "Failed to configure MAC ACL!";
+                send_virtual_bss_response(virtual_bss_creation_tlv->radio_uid(),
+                                          virtual_bss_creation_tlv->bssid(), false);
+                return;
+            }
+
+            if (!ap_wlan_hal->sta_acceptlist_modify(virtual_bss_creation_tlv->client_mac(),
+                                                    virtual_bss_creation_tlv->bssid(),
+                                                    bwl::sta_acl_action::ADD)) {
+                LOG(ERROR) << "Failed to allow the new STA! MAC: "
+                           << virtual_bss_creation_tlv->client_mac();
+                send_virtual_bss_response(virtual_bss_creation_tlv->radio_uid(),
+                                          virtual_bss_creation_tlv->bssid(), false);
+                return;
+            }
+
+            // Configure unicast beacons:
+            if (!ap_wlan_hal->set_beacon_da(ifname, virtual_bss_creation_tlv->client_mac())) {
+                LOG(ERROR) << "Failed to setup unicast beacons! MAC: "
+                           << virtual_bss_creation_tlv->client_mac();
+                send_virtual_bss_response(virtual_bss_creation_tlv->radio_uid(),
+                                          virtual_bss_creation_tlv->bssid(), false);
+                return;
+            }
+
             auto client_capability_report = cmdu_rx.getClass<wfa_map::tlvClientCapabilityReport>();
             if (!client_capability_report) {
                 LOG(ERROR) << "Missing client capability report for an associated client!";
@@ -852,6 +892,15 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
         }
 
         // TODO: PPM-2349: add support for the client capabilities
+
+        // Now that the BSS is ready, update the beacon in case it's
+        // needed (e.g. unicast beacons have been configured):
+        if (!ap_wlan_hal->update_beacon(ifname)) {
+            LOG(ERROR) << "Failed to update beacons! ifname: " << ifname;
+            send_virtual_bss_response(virtual_bss_creation_tlv->radio_uid(),
+                                      virtual_bss_creation_tlv->bssid(), false);
+            return;
+        }
 
         // refresh the vaps info.
         // TODO: re-visit after PPM-1923 is fixed.
@@ -1393,23 +1442,22 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             return;
         }
 
-        std::string sta_mac = tlvf::mac_to_string(request->mac());
-        std::string bssid   = tlvf::mac_to_string(request->bssid());
-
         const auto &vap_unordered_map = ap_wlan_hal->get_radio_info().available_vaps;
-        auto it = std::find_if(vap_unordered_map.begin(), vap_unordered_map.end(),
-                               [&](const std::pair<int, bwl::VAPElement> &element) {
-                                   return element.second.mac == bssid;
-                               });
+        auto it =
+            std::find_if(vap_unordered_map.begin(), vap_unordered_map.end(),
+                         [&](const std::pair<int, bwl::VAPElement> &element) {
+                             return element.second.mac == tlvf::mac_to_string(request->bssid());
+                         });
 
         if (it == vap_unordered_map.end()) {
             //AP does not have the requested vap, probably will be handled on the other AP
             return;
         }
 
-        LOG(DEBUG) << "CLIENT_DISALLOW: mac = " << sta_mac << ", bssid = " << bssid;
+        LOG(DEBUG) << "CLIENT_DISALLOW: mac = " << request->mac()
+                   << ", bssid = " << request->bssid();
 
-        ap_wlan_hal->sta_deny(sta_mac, bssid);
+        ap_wlan_hal->sta_deny(request->mac(), request->bssid());
 
         // Check if validity period is set then add it to the "disallowed client timeouts" list
         // This list will be polled in ap_manager_fsm() while in operational state through method
@@ -1452,14 +1500,12 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             return;
         }
 
-        std::string sta_mac = tlvf::mac_to_string(request->mac());
-        std::string bssid   = tlvf::mac_to_string(request->bssid());
-
         const auto &vap_unordered_map = ap_wlan_hal->get_radio_info().available_vaps;
-        auto it = std::find_if(vap_unordered_map.begin(), vap_unordered_map.end(),
-                               [&](const std::pair<int, bwl::VAPElement> &element) {
-                                   return element.second.mac == bssid;
-                               });
+        auto it =
+            std::find_if(vap_unordered_map.begin(), vap_unordered_map.end(),
+                         [&](const std::pair<int, bwl::VAPElement> &element) {
+                             return element.second.mac == tlvf::mac_to_string(request->bssid());
+                         });
 
         if (it == vap_unordered_map.end()) {
             //AP does not have the requested vap, probably will be handled on the other AP
@@ -1468,8 +1514,8 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
 
         remove_client_from_disallowed_list(request->mac(), request->bssid());
 
-        LOG(DEBUG) << "CLIENT_ALLOW: mac = " << sta_mac << ", bssid = " << bssid;
-        ap_wlan_hal->sta_allow(sta_mac, bssid);
+        LOG(DEBUG) << "CLIENT_ALLOW: mac = " << request->mac() << ", bssid = " << request->bssid();
+        ap_wlan_hal->sta_allow(request->mac(), request->bssid());
 
         break;
     }
@@ -2896,7 +2942,7 @@ void ApManager::allow_expired_clients()
     for (auto it = m_disallowed_clients.begin(); it != m_disallowed_clients.end();) {
         if (std::chrono::steady_clock::now() > it->timeout) {
             LOG(DEBUG) << "CLIENT_ALLOW: mac = " << it->mac << ", bssid = " << it->bssid;
-            ap_wlan_hal->sta_allow(tlvf::mac_to_string(it->mac), tlvf::mac_to_string(it->bssid));
+            ap_wlan_hal->sta_allow(it->mac, it->bssid);
             it = m_disallowed_clients.erase(it);
         } else {
             it++;
