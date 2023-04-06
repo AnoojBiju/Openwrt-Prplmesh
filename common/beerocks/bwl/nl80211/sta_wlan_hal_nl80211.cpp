@@ -101,7 +101,7 @@ bool sta_wlan_hal_nl80211::scan_bss(const sMacAddr &bssid, uint8_t channel,
     return true;
 }
 
-int sta_wlan_hal_nl80211::get_scan_results(const std::string &ssid, std::vector<SScanResult> &list,
+int sta_wlan_hal_nl80211::get_scan_results(const std::string &ssid, std::vector<sScanResult> &list,
                                            bool parse_vsie)
 {
     return 0;

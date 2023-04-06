@@ -107,9 +107,9 @@ bool ap_wlan_hal_whm::set_channel(int chan, beerocks::eWiFiBandwidth bw, int cen
     return true;
 }
 
-bool ap_wlan_hal_whm::sta_allow(const std::string &mac, const std::string &bssid)
+bool ap_wlan_hal_whm::sta_allow(const sMacAddr &mac, const sMacAddr &bssid)
 {
-    auto vap_id = get_vap_id_with_mac(bssid);
+    auto vap_id = get_vap_id_with_mac(tlvf::mac_to_string(bssid));
     if (vap_id < 0) {
         LOG(ERROR) << "no vap has bssid " << bssid;
         return false;
@@ -130,8 +130,9 @@ bool ap_wlan_hal_whm::sta_allow(const std::string &mac, const std::string &bssid
     }
 
     // check if the sta is included in accesslist entries
-    std::string entry_path = wbapi_utils::search_path_mac_filtering_entry_by_mac(ifname, mac);
-    bool sta_found         = m_ambiorix_cl->resolve_path(entry_path, entry_path);
+    std::string entry_path =
+        wbapi_utils::search_path_mac_filtering_entry_by_mac(ifname, tlvf::mac_to_string(mac));
+    bool sta_found = m_ambiorix_cl->resolve_path(entry_path, entry_path);
 
     if (sta_found && mode == "WhiteList") {
         LOG(TRACE) << "sta allowed in WhiteList mode";
@@ -145,7 +146,7 @@ bool ap_wlan_hal_whm::sta_allow(const std::string &mac, const std::string &bssid
     // delete sta from the BlackList
     AmbiorixVariant result;
     AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
-    args.add_child("mac", mac);
+    args.add_child("mac", tlvf::mac_to_string(mac));
     bool ret = true;
     if (mode == "WhiteList") {
         ret = m_ambiorix_cl->call(mac_filter_path, "addEntry", args, result);
@@ -161,9 +162,9 @@ bool ap_wlan_hal_whm::sta_allow(const std::string &mac, const std::string &bssid
     return true;
 }
 
-bool ap_wlan_hal_whm::sta_deny(const std::string &mac, const std::string &bssid)
+bool ap_wlan_hal_whm::sta_deny(const sMacAddr &mac, const sMacAddr &bssid)
 {
-    auto vap_id = get_vap_id_with_mac(bssid);
+    auto vap_id = get_vap_id_with_mac(tlvf::mac_to_string(bssid));
     if (vap_id < 0) {
         LOG(ERROR) << "no vap has bssid " << bssid;
         return false;
@@ -184,8 +185,9 @@ bool ap_wlan_hal_whm::sta_deny(const std::string &mac, const std::string &bssid)
     }
 
     // check if the sta is included in accesslist entries
-    std::string entry_path = wbapi_utils::search_path_mac_filtering_entry_by_mac(ifname, mac);
-    bool sta_found         = m_ambiorix_cl->resolve_path(entry_path, entry_path);
+    std::string entry_path =
+        wbapi_utils::search_path_mac_filtering_entry_by_mac(ifname, tlvf::mac_to_string(mac));
+    bool sta_found = m_ambiorix_cl->resolve_path(entry_path, entry_path);
 
     if (sta_found && mode == "BlackList") {
         LOG(TRACE) << "sta denied in BlackList mode";
@@ -199,7 +201,7 @@ bool ap_wlan_hal_whm::sta_deny(const std::string &mac, const std::string &bssid)
     bool ret = true;
     AmbiorixVariant result;
     AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
-    args.add_child("mac", mac);
+    args.add_child("mac", tlvf::mac_to_string(mac));
     if (mode == "Off") {
         LOG(WARNING) << "change MACFiltering mode to BlackList";
         AmbiorixVariant new_obj(AMXC_VAR_ID_HTABLE);
@@ -222,6 +224,19 @@ bool ap_wlan_hal_whm::sta_deny(const std::string &mac, const std::string &bssid)
         LOG(ERROR) << "MACFiltering update entry failed!";
         return false;
     }
+    return true;
+}
+
+bool ap_wlan_hal_whm::sta_acceptlist_modify(const sMacAddr &mac, const sMacAddr &bssid,
+                                            bwl::sta_acl_action action)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    return true;
+}
+
+bool ap_wlan_hal_whm::set_macacl_type(const eMacACLType &acl_type, const sMacAddr &bssid)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
     return true;
 }
 
@@ -484,19 +499,26 @@ bool ap_wlan_hal_whm::is_zwdfs_antenna_enabled()
 
 bool ap_wlan_hal_whm::hybrid_mode_supported()
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
-    return true;
+    std::string multiAPTypesSupported;
+    auto radio = m_ambiorix_cl->get_object(m_radio_path);
+    if (!radio->read_child(multiAPTypesSupported, "multiAPTypesSupported")) {
+        LOG(ERROR) << "failed to get multiAPTypesSupported object";
+        return false;
+    }
+    bool fBSS = (multiAPTypesSupported.find("FronthaulBSS") != std::string::npos);
+    bool bBSS = (multiAPTypesSupported.find("BackhaulBSS") != std::string::npos);
+    return fBSS && bBSS;
 }
 
 bool ap_wlan_hal_whm::restricted_channels_set(char *channel_list)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    // We chose not to implement it because it is a custom feature and has no reference in the prplmesh Spec.
     return true;
 }
 
 bool ap_wlan_hal_whm::restricted_channels_get(char *channel_list)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    // We chose not to implement it because it is a custom feature and has no reference in the prplmesh Spec.
     return false;
 }
 
@@ -672,6 +694,7 @@ bool ap_wlan_hal_whm::set_radio_mbo_assoc_disallow(bool enable)
 
 bool ap_wlan_hal_whm::set_primary_vlan_id(uint16_t primary_vlan_id)
 {
+    // Networking is responsible of handling vlanId, so pwhm does not interfere with vlans.
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
     return true;
 }
@@ -859,34 +882,39 @@ bool ap_wlan_hal_whm::set(const std::string &param, const std::string &value, in
     return true;
 }
 
-bool ap_wlan_hal_whm::add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
-                              std::string &bridge, bool vbss)
+int ap_wlan_hal_whm::add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
+                             std::string &bridge, bool vbss)
 {
+    // Virtual bss will not be covered by the pwhm, for now!
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return false;
 }
 
 bool ap_wlan_hal_whm::remove_bss(std::string &ifname)
 {
+    // Virtual bss will not be covered by the pwhm, for now!
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return false;
 }
 
 bool ap_wlan_hal_whm::add_key(const std::string &ifname, const sKeyInfo &key_info)
 {
+    // Virtual bss will not be covered by the pwhm, for now!
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return false;
 }
 
 bool ap_wlan_hal_whm::add_station(const std::string &ifname, const sMacAddr &mac,
-                                  assoc_frame::AssocReqFrame &assoc_req)
+                                  std::vector<uint8_t> &raw_assoc_req)
 {
+    // Virtual bss will not be covered by the pwhm, for now!
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return false;
 }
 
 bool ap_wlan_hal_whm::get_key(const std::string &ifname, sKeyInfo &key_info)
 {
+    // Virtual bss will not be covered by the pwhm, for now!
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return false;
 }
@@ -894,6 +922,7 @@ bool ap_wlan_hal_whm::get_key(const std::string &ifname, sKeyInfo &key_info)
 bool ap_wlan_hal_whm::send_delba(const std::string &ifname, const sMacAddr &dst,
                                  const sMacAddr &src, const sMacAddr &bssid)
 {
+    // Virtual bss will not be covered by the pwhm, for now!
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return false;
 }
@@ -908,6 +937,18 @@ bool ap_wlan_hal_whm::prepare_unassoc_sta_link_metrics_response(
 {
     //LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return false;
+}
+
+bool ap_wlan_hal_whm::set_beacon_da(const std::string &ifname, const sMacAddr &mac)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    return true;
+}
+
+bool ap_wlan_hal_whm::update_beacon(const std::string &ifname)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    return true;
 }
 
 } // namespace whm

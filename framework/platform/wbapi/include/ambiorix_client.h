@@ -68,8 +68,8 @@ public:
      *
      * @param[in] object_path: may be search path (possibly multiple match) or absolute path (unique match)
      * @param[in] depth: relative depth, it indicates how many levels of child objects are returned
-     * @return AmbiorixVariantListSmartPtr including variant childs
-     *      or AmbiorixVariantMapSmartPtr sorting childs in pairs of [object path, object content],
+     * @return AmbiorixVariantListSmartPtr including variant children
+     *      or AmbiorixVariantMapSmartPtr sorting children in pairs of [object path, object content],
      *      or Empty when operation fails.
      */
     template <typename T>
@@ -82,7 +82,7 @@ public:
         if (!objs) {
             return T{};
         }
-        return objs->take_childs<T>();
+        return objs->take_children<T>();
     }
 
     /**
