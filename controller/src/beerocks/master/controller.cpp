@@ -4223,6 +4223,7 @@ bool Controller::handle_tlv_profile2_cac_capabilities(Agent &agent,
 
     std::stringstream ss;
 
+    agent.device_info.country_code.clear();
     agent.device_info.country_code += static_cast<char>(*cac_capabilities_tlv->country_code(0));
     agent.device_info.country_code += static_cast<char>(*cac_capabilities_tlv->country_code(1));
     ss << "Country code: " << agent.device_info.country_code << std::endl;
