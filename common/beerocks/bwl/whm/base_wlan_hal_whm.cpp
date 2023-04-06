@@ -647,7 +647,11 @@ std::string base_wlan_hal_whm::get_radio_mac()
 
 bool base_wlan_hal_whm::get_channel_utilization(uint8_t &channel_utilization)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    uint16_t chLoad;
+    m_ambiorix_cl->get_param<>(chLoad, m_radio_path, "ChannelLoad");
+
+    //convert channel load from ratio 100 to ratio 255
+    channel_utilization = (chLoad * UINT8_MAX) / 100;
     return true;
 }
 
