@@ -499,15 +499,8 @@ bool ap_wlan_hal_whm::is_zwdfs_antenna_enabled()
 
 bool ap_wlan_hal_whm::hybrid_mode_supported()
 {
-    std::string multiAPTypesSupported;
-    auto radio = m_ambiorix_cl->get_object(m_radio_path);
-    if (!radio->read_child(multiAPTypesSupported, "multiAPTypesSupported")) {
-        LOG(ERROR) << "failed to get multiAPTypesSupported object";
-        return false;
-    }
-    bool fBSS = (multiAPTypesSupported.find("FronthaulBSS") != std::string::npos);
-    bool bBSS = (multiAPTypesSupported.find("BackhaulBSS") != std::string::npos);
-    return fBSS && bBSS;
+    // Hybrid mode is always supported to allow configuring fBss/bBss on profile 1
+    return true;
 }
 
 bool ap_wlan_hal_whm::restricted_channels_set(char *channel_list)
