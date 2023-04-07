@@ -17,6 +17,11 @@
 int main(int argc, char *argv[])
 {
     beerocks::prplmesh_api::prplmesh_cli prpl_cli;
+    if (argc < 2) {
+        prpl_cli.print_help();
+        return 1;
+    }
+
     int opt;
     std::string command_string;
     while ((opt = getopt(argc, argv, "c:")) != -1) {
