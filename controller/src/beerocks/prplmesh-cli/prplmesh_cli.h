@@ -34,6 +34,11 @@ public:
     void print_help();
     void print_version();
     std::string get_ap_path(const std::string &ap);
+
+    /**
+     * @brief Show existing Access Point details
+     */
+    void show_ap();
     /**
      * @brief Change the SSID of an access point.
      *

@@ -10,6 +10,7 @@
 #include "prplmesh_amx_client.h"
 
 #include <arpa/inet.h>
+#include <ios>
 #include <iostream>
 #include <iterator>
 #include <map>
@@ -279,6 +280,7 @@ void prplmesh_cli::print_help()
               << "Next commands are available : " << std::endl
               << "help      \t\t: get supported commands" << std::endl
               << "version   \t\t: get current prplMesh version" << std::endl
+              << "show_ap   \t\t: show AccessPoints" << std::endl
               << "conn_map  \t\t: dump the latest network map" << std::endl;
 }
 
@@ -310,6 +312,43 @@ std::string prplmesh_cli::get_ap_path(const std::string &ap)
         }
     }
     return "";
+}
+
+void prplmesh_cli::show_ap()
+{
+    std::cout << "Show AccessPoints:" << std::endl;
+    std::string ap_ht_path     = CONTROLLER_ROOT_DM ".Network.AccessPoint.*.";
+    const amxc_htable_t *ht_ap = m_amx_client->get_htable_object(ap_ht_path);
+    if (!ht_ap) {
+        // No access points defined?
+        // Or error retrieving object?
+        std::cerr << "Unable to access object at path " << ap_ht_path << std::endl;
+        return;
+    }
+    int ap_index = 0;
+    auto flags = std::cout.flags();
+    boolalpha(std::cout);
+    amxc_htable_iterate(ap_it, ht_ap)
+    {
+        ap_index++;
+        std::string ap_path_i = amxc_htable_it_get_key(ap_it);
+        amxc_var_t *ap_obj    = m_amx_client->get_object(ap_path_i);
+        // AP[1]: ssid: PrplCli, MultiApMode: Fronthaul
+        //     Band 2.4G: true, Band 5G-L: true, Band 5G-H: true, Band 6G: false
+        std::cout << "AP[" << ap_index << "]:";
+        std::string ap_ssid = GET_CHAR(ap_obj, "SSID");
+        std::cout << " ssid: " << ap_ssid;
+        std::string ap_multi_ap_mode = GET_CHAR(ap_obj, "MultiApMode");
+        std::cout << ", MultiAPMode: " << ap_multi_ap_mode << std::endl;
+        std::cout << "    Band 2.4G: " << GET_BOOL(ap_obj, "Band2_4G");
+        std::cout << ", Band 5G-L: " << GET_BOOL(ap_obj, "Band5GL");
+        std::cout << ", Band 5G-H: " << GET_BOOL(ap_obj, "Band5GH");
+        std::cout << ", Band 6G: " << GET_BOOL(ap_obj, "Band6G") << std::endl;
+    }
+    std::cout.flags(flags);
+    if (ap_index == 0) {
+        std::cout << "(None defined)" << std::endl;
+    }
 }
 
 void prplmesh_cli::set_ssid(const std::string &ap, const std::string &ssid)

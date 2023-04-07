@@ -30,6 +30,8 @@ int main(int argc, char *argv[])
             command_string = std::string(optarg);
             if (command_string == "conn_map") {
                 prpl_cli.prpl_conn_map();
+            } else if (command_string == "show_ap") {
+                prpl_cli.show_ap();
             } else if (command_string == "help") {
                 prpl_cli.print_help();
             } else {
