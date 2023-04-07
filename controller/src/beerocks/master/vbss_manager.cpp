@@ -336,17 +336,34 @@ bool VbssManager::handle_station_disconnect(const vbss::sStationDisconEvent &sta
         LOG(ERROR) << "Failed to find radio with bss id: " << stationDisconn.client_vbss.vbssid;
         return false;
     }
+    auto sta_mac = stationDisconn.client_vbss.client_mac;
     // update that vbss id is no longer being used
     //radio->vbss_ids_used[stationDisconn.client_vbss.vbssid] = false;
-    m_client_agent.erase(stationDisconn.client_vbss.client_mac);
+    m_client_agent.erase(sta_mac);
 
-    m_vsta_stats.erase(stationDisconn.client_vbss.client_mac);
+    m_vsta_stats.erase(sta_mac);
 
     destroyEvent.client_vbss         = stationDisconn.client_vbss;
     destroyEvent.should_disassociate = false;
-    LOG(DEBUG) << "Station: " << stationDisconn.client_vbss.client_mac << " has disconnected\n"
+    LOG(DEBUG) << "Station: " << sta_mac << " has disconnected\n"
                << "From VBSS ID: " << stationDisconn.client_vbss.vbssid
                << "\nReported by Topology: " << stationDisconn.from_topology_notification;
+    auto unassociated_station = m_database.get_unassociated_stations().get(sta_mac);
+    if (!unassociated_station)
+        // It wasn't being monitored, nothing to do.
+        return true;
+    // It was monitored. In a normal VBSS workflow, there should never be a station disassociation
+    // unless the station associates to a static BSS or disconnects entirely from the network.
+    // So, remove all DM instances of this station as "unassociated"
+    for (const auto &agent_monitoring_station : unassociated_station->get_agents()) {
+        auto radio_mac = agent_monitoring_station.second;
+        auto radio     = m_database.get_radio_by_uid(radio_mac);
+        if (!m_database.dm_remove_unassociated_sta(radio->dm_path, tlvf::mac_to_string(sta_mac))) {
+            LOG(ERROR) << "Failed to remove unassociated station " << sta_mac
+                       << " from the data model on station disconnect.";
+            return false;
+        }
+    }
     return true;
 }
 
