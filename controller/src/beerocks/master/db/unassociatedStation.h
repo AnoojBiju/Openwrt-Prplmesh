@@ -115,6 +115,9 @@ public:
      */
     const std::unordered_map<sMacAddr, sMacAddr> &get_agents() const { return m_agents; };
 
+    /**
+     * @brief The list of data model paths for this unassociated station.
+     */
     std::vector<std::string> m_dm_paths;
 
 private:

@@ -8173,19 +8173,6 @@ bool db::dm_set_unassociated_sta(const std::string &radio_dm, const std::string 
                               station->get_mac_Address());
     LOG(DEBUG) << "Added DM entry for unassociated STA " << sta_mac << " at "
                << new_unassociated_station_dm_path;
-    // std::string unassociated_path = radio_dm + ".UnassociatedSTA";
-    // auto unassociated_sta_path    = m_ambiorix_datamodel->add_instance(unassociated_path);
-    // if (unassociated_sta_path.empty()) {
-    //     LOG(ERROR) << "Failed to add instance unassociated station to DM with mac " << sta_mac
-    //                << "\nTo DM path: " << unassociated_path;
-    //     return false;
-    // }
-    // unassociated_sta_path.append(".");
-    // if (!m_ambiorix_datamodel->set(unassociated_sta_path, "MACAddress", sta_mac)) {
-    //     LOG(ERROR) << "Failed to set STA Mac in unassociated STA DM path";
-    //     return false;
-    // }
-    // return true;
     return true;
 }
 
@@ -8240,31 +8227,11 @@ bool db::dm_remove_unassociated_sta(const std::string &radio_dm, const std::stri
                      << "' from the data model for unassociated STA " << station->get_mac_Address()
                      << ", but this DM entry was not found in the station object!";
         // Not an error condition.
+    } else {
+        station->m_dm_paths.erase(dm_path_it);
     }
-    LOG(DEBUG) << "pre-erase: " << station->m_dm_paths.size();
-    station->m_dm_paths.erase(dm_path_it);
-    LOG(DEBUG) << "post-erase: " << station->m_dm_paths.size();
 
     return true;
-
-    // std::string unassociated_path = radio_dm + ".UnassociatedSTA";
-
-    // auto indx = m_ambiorix_datamodel->get_instance_index(
-    //     unassociated_path + ".[MACAddress == '%s'].", sta_mac);
-    // if (indx == 0) {
-    //     LOG(ERROR) << "Cound no find unassociated STA with mac " << sta_mac << " at path "
-    //                << unassociated_path;
-    //     return false;
-    // }
-    // if (m_ambiorix_datamodel->remove_instance(unassociated_path, indx)) {
-    //     LOG(DEBUG) << "Removed unassociated station with mac " << sta_mac << " at datapath "
-    //                << unassociated_path;
-    //     return true;
-    // } else {
-    //     LOG(ERROR) << "Failed to remove unassociated station with mac " << sta_mac
-    //                << " at datapath " << unassociated_path;
-    //     return false;
-    // }
 }
 
 bool db::add_unassociated_station(const sMacAddr &unassociated_sta_mac, const uint8_t &channel,
@@ -8320,25 +8287,28 @@ bool db::update_unassociated_station_agents(const sMacAddr &sta_mac,
         LOG(ERROR) << "Failed to find the unassociated station with MAC " << sta_mac;
         return false;
     }
-    std::vector<sMacAddr> diff;
+    std::vector<sMacAddr> agents_no_longer_monitoring_station;
     for (const auto &agent : unassociated_sta->get_agents()) {
         auto it = std::find(agent_macs.begin(), agent_macs.end(), agent.first);
         if (it == agent_macs.end()) {
             LOG(DEBUG) << " Agent " << agent.first << " no longer monitoring STA " << sta_mac;
-            diff.push_back(agent.first);
+            agents_no_longer_monitoring_station.push_back(agent.first);
         }
+    }
+
+    if (agents_no_longer_monitoring_station.empty()) {
+        LOG(DEBUG) << "No change in agents monitoring unassociated station '" << sta_mac
+                   << "', nothing to do!";
+        return true;
     }
 
     LOG(DEBUG) << " There are " << agent_macs.size() << " elements in agent_macs and "
                << unassociated_sta->get_agents().size()
-               << " elements in unassociated_sta->get_agents() and " << diff.size()
+               << " elements in unassociated_sta->get_agents() and "
+               << agents_no_longer_monitoring_station.size()
                << " elements in the difference between the two.";
 
-    int i = 0;
-    for (const auto &e : diff) {
-        LOG(DEBUG) << "diff #" << i++ << ": " << e;
-    }
-    for (const auto &agent_to_remove : diff) {
+    for (const auto &agent_to_remove : agents_no_longer_monitoring_station) {
         for (const auto &current_agent : unassociated_sta->get_agents()) {
             if (agent_to_remove == current_agent.first) {
                 auto radio_uid = current_agent.second;
@@ -8355,47 +8325,11 @@ bool db::update_unassociated_station_agents(const sMacAddr &sta_mac,
             }
         }
     }
-    for (const auto &removed_agent : diff) {
-        unassociated_sta->remove_agent(removed_agent);
+    for (const auto &agent_to_remove : agents_no_longer_monitoring_station) {
+        unassociated_sta->remove_agent(agent_to_remove);
     }
-    // std::vector<sMacAddr> to_be_removed;
-    // std::string str_sta_mac = tlvf::mac_to_string(sta_mac);
-    // for (auto &agent_cur : unassociated_sta->get_agents()) {
-    //     auto iter = std::find(agent_vector.end(), agent_vector.begin(), agent_cur.first);
-    //     if (iter != agent_vector.end()) {
-    //         to_be_removed.push_back(agent_cur.first);
-    //         auto agent = m_agents.get(agent_cur.first);
-    //         if (!agent) {
-    //             LOG(ERROR) << "Failed to find agent with mac " << agent_cur.first;
-    //             ret_val = false;
-    //             continue;
-    //         }
-    //         auto radio = agent->radios[agent_cur.second];
-    //         if (!radio) {
-    //             LOG(ERROR) << "Failed to get radio with UID " << agent_cur.second;
-    //             ret_val = false;
-    //             continue;
-    //         }
-    //         LOG(DEBUG) << " Agent " << agent_cur.first << " radio " << radio->dm_path
-    //                    << " to be removed!";
-    //         if (!dm_remove_unassociated_sta(radio->dm_path, str_sta_mac)) {
-    //             LOG(ERROR) << "Failed to remove unassociated station from datamodel with mac: "
-    //                        << sta_mac;
-    //             ret_val = false;
-    //             continue;
-    //         }
-    //     } else {
-    //         // This agent radio combo already exists
-    //         agent_vector.erase(iter);
-    //     }
-    // }
-    // Remove agents that didn't make the cut
-    // for (auto &old_agents : to_be_removed) {
-    //     unassociated_sta->remove_agent(old_agents);
-    // }
 
     //Now add remaining agents
-    //uint8_t throwaway_op_class;
     for (auto &incoming_agent : agent_vector) {
         auto radio = get_radio_by_op_class(incoming_agent, unassociated_sta->get_operating_class());
         if (!radio) {
@@ -8832,30 +8766,6 @@ void db::update_unassociated_station_stats(const sMacAddr &mac_address,
                               station->get_stats().uplink_rcpi_dbm_enc);
     m_ambiorix_datamodel->set(path_to_update, "MACAddress", station->get_mac_Address());
     m_ambiorix_datamodel->set_time(path_to_update, station->get_stats().time_stamp);
-
-    // OLD
-    // Now, update the DM
-    // std::string unassociated_sta_path = radio_dm_path + ".UnassociatedSTA";
-    // auto index                        = m_ambiorix_datamodel->get_instance_index(
-    //     unassociated_sta_path + ".[MACAddress == '%s'].", tlvf::mac_to_string(mac_address));
-
-    // if (0 == index) {
-    //     std::string new_unassociated_sta_path =
-    //         m_ambiorix_datamodel->add_instance(unassociated_sta_path);
-    //     if (new_unassociated_sta_path.empty()) {
-    //         LOG(ERROR) << "Could not add new unassociated station to DM, path="
-    //                    << unassociated_sta_path;
-    //         return;
-    //     }
-    //     unassociated_sta_path = new_unassociated_sta_path;
-    // } else {
-    //     unassociated_sta_path.append(".");
-    //     unassociated_sta_path.append(std::to_string(index));
-    // }
-    // m_ambiorix_datamodel->set(unassociated_sta_path, "MACAddress", mac_address);
-    // m_ambiorix_datamodel->set(unassociated_sta_path, "SignalStrength",
-    //                           new_stats.uplink_rcpi_dbm_enc);
-    // m_ambiorix_datamodel->set_time(unassociated_sta_path, new_stats.time_stamp);
 }
 
 std::list<std::pair<std::string, std::shared_ptr<UnassociatedStation::Stats>>>
