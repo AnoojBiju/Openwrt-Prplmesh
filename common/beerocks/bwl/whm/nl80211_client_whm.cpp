@@ -91,8 +91,9 @@ bool nl80211_client_whm::get_sta_info(const std::string &interface_name,
     if (assoc_device_obj->read_child<>(u32Val, "LastDataUplinkRate")) {
         sta_info.tx_bitrate_100kbps = u32Val / 100;
     }
-    std::string sVal;
-    assoc_device_obj->read_child<>(sVal, "DownlinkBandwidth");
+    uint32_t dl_bandwidth;
+    assoc_device_obj->read_child(dl_bandwidth, "DownlinkBandwidth");
+    std::string sVal      = std::to_string(dl_bandwidth);
     sta_info.dl_bandwidth = wbapi_utils::bandwith_from_string(sVal + "MHz");
 
     return true;
