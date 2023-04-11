@@ -412,9 +412,10 @@ bool base_wlan_hal_whm::refresh_radio_info()
         beerocks::utils::convert_bandwidth_to_enum(m_radio_info.bandwidth),
         m_radio_info.channel_ext_above);
 
-    radio->read_child(m_radio_info.tx_power, "TransmitPower");
-    if (radio->read_child(s_val, "Status")) {
-        m_radio_info.radio_state = utils_wlan_hal_whm::radio_state_from_string(s_val);
+    radio->read_child<>(m_radio_info.tx_power, "TransmitPower");
+    bool enable_flag = false;
+    if (radio->read_child<>(enable_flag, "Enable")) {
+        m_radio_info.radio_state = utils_wlan_hal_whm::radio_state_from_bool(enable_flag);
         if (m_radio_info.radio_state == eRadioState::ENABLED) {
             m_radio_info.wifi_ctrl_enabled = 2; // Assume Operational
             m_radio_info.tx_enabled        = 1;
