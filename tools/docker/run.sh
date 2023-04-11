@@ -39,7 +39,7 @@ main() {
     while true; do
         case "$1" in
             -v | --verbose)     VERBOSE=true; shift ;;
-            -h | --help)        usage; exit 0; shift ;;
+            -h | --help)        usage; exit 0;;
             -d | --detach)      DETACH=true; shift ;;
             -f | --force)       FORCE=true; shift ;;
             -n | --name)        NAME="$2"; shift; shift ;;

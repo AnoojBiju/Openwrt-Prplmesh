@@ -90,9 +90,9 @@ do
             PID_STUCK=true
         fi
     done
-     # shellcheck disable=SC2039
+     # shellcheck disable=SC3014
      [ "$PID_STUCK" == "true" ] && {
-         # shellcheck disable=SC2039
+         # shellcheck disable=SC3006,SC3018
          (( PID_STUCK_RETRIES++ ))
         echo "$0: WARNING [$(date)]: Beerocks processes stuck retry count=$PID_STUCK_RETRIES"
         echo "$0: WARNING [$(date)]: Beerocks processes stuck retry count=$PID_STUCK_RETRIES"  >> "$BEEROCKS_LOG_PATH/logs/slow_down.log"

@@ -39,7 +39,7 @@ main() {
 
     while true; do
         case "$1" in
-            -h | --help)        usage; exit 0; shift ;;
+            -h | --help)        usage; exit 0;;
             -k | --kill)        stop_cmd="kill"; shift;;
             -r | --remove)      remove=true; shift;;
             -u | --unique-id)   unique_id="$2"; shift 2 ;;

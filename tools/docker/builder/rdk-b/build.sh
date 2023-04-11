@@ -75,7 +75,7 @@ main() {
 
     while true; do
         case "$1" in
-            -h | --help)               usage; exit 0; shift ;;
+            -h | --help)               usage; exit 0;;
             -v | --verbose)            VERBOSE=true; shift ;;
             -d | --target-device)      TARGET_DEVICE="$2"; shift ; shift ;;
             -c | --cache)              CACHE_DIR="$2"; shift ; shift ;;

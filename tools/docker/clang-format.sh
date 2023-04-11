@@ -28,7 +28,7 @@ main() {
     while true; do
         case "$1" in
             -v | --verbose)     VERBOSE=true; shift ;;
-            -h | --help)        usage; exit 0; shift ;;
+            -h | --help)        usage; exit 0;;
             -t | --tag)         TAG=":$2"; shift; shift ;;
             -- ) shift; break ;;
             * ) err "unsupported argument $1"; usage; exit 1 ;;

@@ -72,7 +72,7 @@ main() {
     while true; do
         case "$1" in
             -v | --verbose)       VERBOSE_OPT="-v"; shift ;;
-            -h | --help)          usage; exit 0; shift ;;
+            -h | --help)          usage; exit 0;;
             -d | --delay)         DELAY="$2"; shift; shift ;;
             -f | --force)         docker_opts+=("-f"); shift ;;
             -u | --unique-id)     UNIQUE_ID="$2"; shift; shift ;;
@@ -107,7 +107,7 @@ main() {
 
     [ "$START_GATEWAY" = "true" ] && {
         status "Start GW (Controller + local Agent)"
-        "${rootdir}"/tools/docker/run.sh ${VERBOSE_OPT} "${docker_opts[@]}" "${GW_EXTRA_OPT[@]}" \
+        "${rootdir}"/tools/docker/run.sh "${VERBOSE_OPT}" "${docker_opts[@]}" "${GW_EXTRA_OPT[@]}" \
             start-controller-agent -d -n "${GW_NAME}" -- "$@"
     }
 
@@ -119,7 +119,7 @@ main() {
     [ "$START_REPEATER" = "true" ] && {
         for repeater in $REPEATER_NAMES; do
             status "Start Repeater (Remote Agent): $repeater"
-            "${rootdir}"/tools/docker/run.sh ${VERBOSE_OPT} "${docker_opts[@]}" "${RP_EXTRA_OPT[@]}" \
+            "${rootdir}"/tools/docker/run.sh "${VERBOSE_OPT}" "${docker_opts[@]}" "${RP_EXTRA_OPT[@]}" \
                 start-agent -d -n "${repeater}" -- "$@"
         done
     }
@@ -129,7 +129,7 @@ main() {
 
     error=0
     [ "$START_GATEWAY" = "true" ] && report "GW operational" \
-        "${rootdir}"/tools/docker/test.sh ${VERBOSE_OPT} -n "${GW_NAME}"
+        "${rootdir}"/tools/docker/test.sh "${VERBOSE_OPT}" -n "${GW_NAME}"
 
 
     [ "$START_REPEATER" = "true" ] && {
@@ -137,7 +137,7 @@ main() {
         do
             REPEATER_BRIDGE_MAC=$(get_repater_bridge_mac "${repeater}")
             report "Repeater $repeater operational" \
-            "${rootdir}"/tools/docker/test.sh ${VERBOSE_OPT} -n "${GW_NAME}" -b "${REPEATER_BRIDGE_MAC}"
+            "${rootdir}"/tools/docker/test.sh "${VERBOSE_OPT}" -n "${GW_NAME}" -b "${REPEATER_BRIDGE_MAC}"
         done
     }
 

@@ -81,30 +81,30 @@ chmod +x _GO_KW
 rm -rf .kw*
 
 echo Connecting to remote klocwork server...
-kwcheck create --url $URL_PATH || \
+kwcheck create --url "$URL_PATH" || \
 { 
 echo "*** ERROR: Connecting to KW server has failed *** ";
 echo making sure klocwork is authenticated to the correct server, and try connect again
 if [ "$PLATFORM_TYPE" = "rdkb" ]; then
       kwauth --url https://klocwork3-jf.devtools.intel.com:8140 || \
       {
-            echo "*** ERROR: retval=$?, Could not authenticated to Klocwork server. exit. *** "
+            echo "*** ERROR: retval=$?, Could not authenticate to Klocwork server. exit. *** "
             exit
       }
       echo reconnecting to remote klocwork server...
-      kwcheck create --url $URL_PATH || \
+      kwcheck create --url "$URL_PATH" || \
       {
             echo "*** ERROR: retval=$?, Could not reconnect to Klocwork server. exit. *** "
             exit
       }
 elif [ "$PLATFORM_TYPE" = "ugw" ]; then
-      kwauth --url https://klocwork-iind4.devtools.intel.com:8105
+      kwauth --url https://klocwork-iind4.devtools.intel.com:8105 || \
       {
-            echo "*** ERROR: retval=$?, Could not authenticated to Klocwork server. exit. *** "
+            echo "*** ERROR: retval=$?, Could not authenticate to Klocwork server. exit. *** "
             exit
       }
       echo reconnecting to remote klocwork server...
-      kwcheck create --url $URL_PATH || \
+      kwcheck create --url "$URL_PATH" || \
       {
             echo "*** ERROR: retval=$?, Could not reconnect to Klocwork server. exit. *** "
             exit
