@@ -18,10 +18,19 @@ eRadioState radio_state_from_string(const std::string &state)
 {
     if (state == "Down") {
         return eRadioState::DISABLED;
-    } else if (state == "Up") {
+    } else if (state == "Up" || state == "Dormant") {
         return eRadioState::ENABLED;
     } else {
         return eRadioState::UNKNOWN;
+    }
+}
+
+eRadioState radio_state_from_bool(const bool flag)
+{
+    if (flag == false) {
+        return eRadioState::DISABLED;
+    } else {
+        return eRadioState::ENABLED;
     }
 }
 

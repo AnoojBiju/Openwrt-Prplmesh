@@ -413,8 +413,17 @@ bool base_wlan_hal_whm::refresh_radio_info()
         m_radio_info.channel_ext_above);
 
     radio->read_child(m_radio_info.tx_power, "TransmitPower");
-    if (radio->read_child(s_val, "Status")) {
-        m_radio_info.radio_state = utils_wlan_hal_whm::radio_state_from_string(s_val);
+    bool enable_flag = false;
+    // because of the async nature of pwhm calls, and because of the strict Radio.Status
+    // implementation, Radio.Status follows a path that goes through the Status=Down / Disabled
+    // when certain operations, like enable(), are performed on AccessPoint instances above it;
+    // reading the Radio.Status() during onboarding (system in transient state) returns various
+    // values that would be long to enumerate; and some of these transient values forbid enabling
+    // AccessPoints when they are non-transient
+    // moreover, Radio.Enable constitutes a "promise" that
+    // upon activating an AccessPoint, Radio.Status will go to Enable eventually (in a matter of seconds)
+    if (radio->read_child(enable_flag, "Enable")) {
+        m_radio_info.radio_state = utils_wlan_hal_whm::radio_state_from_bool(enable_flag);
         if (m_radio_info.radio_state == eRadioState::ENABLED) {
             m_radio_info.wifi_ctrl_enabled = 2; // Assume Operational
             m_radio_info.tx_enabled        = 1;
