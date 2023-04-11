@@ -96,7 +96,7 @@ void base_wlan_hal_whm::subscribe_to_ap_events()
         }
         auto &vapsExtInfo = hal->m_vapsExtInfo;
         auto vap_it       = std::find_if(vapsExtInfo.begin(), vapsExtInfo.end(),
-                                   [&](const std::pair<std::string, VAPExtInfo> &element) {
+                                         [&](const std::pair<std::string, VAPExtInfo> &element) {
                                        return element.second.path == ap_path;
                                    });
         if (vap_it == vapsExtInfo.end()) {
@@ -156,7 +156,7 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
         std::string ap_path = wbapi_utils::get_path_ap_of_assocDev(sta_path);
         auto &vapsExtInfo   = hal->m_vapsExtInfo;
         auto vap_it         = std::find_if(vapsExtInfo.begin(), vapsExtInfo.end(),
-                                   [&](const std::pair<std::string, VAPExtInfo> &element) {
+                                           [&](const std::pair<std::string, VAPExtInfo> &element) {
                                        return element.second.path == ap_path;
                                    });
         if (vap_it == vapsExtInfo.end()) {
@@ -164,7 +164,7 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
         }
         auto &stations = hal->m_stations;
         auto sta_it    = std::find_if(stations.begin(), stations.end(),
-                                   [&](const std::pair<std::string, sStationInfo> &element) {
+                                      [&](const std::pair<std::string, sStationInfo> &element) {
                                        return element.second.path == sta_path;
                                    });
         std::string sta_mac;
@@ -230,7 +230,7 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
         LOG(DEBUG) << "Station instance " << sta_path << " deleted";
         auto &stations = hal->m_stations;
         auto sta_it    = std::find_if(stations.begin(), stations.end(),
-                                   [&](const std::pair<std::string, sStationInfo> &element) {
+                                      [&](const std::pair<std::string, sStationInfo> &element) {
                                        return element.second.path == sta_path;
                                    });
         if (sta_it != stations.end()) {
@@ -412,9 +412,10 @@ bool base_wlan_hal_whm::refresh_radio_info()
         beerocks::utils::convert_bandwidth_to_enum(m_radio_info.bandwidth),
         m_radio_info.channel_ext_above);
 
-    radio->read_child(m_radio_info.tx_power, "TransmitPower");
-    if (radio->read_child(s_val, "Status")) {
-        m_radio_info.radio_state = utils_wlan_hal_whm::radio_state_from_string(s_val);
+    radio->read_child<>(m_radio_info.tx_power, "TransmitPower");
+    bool enable_flag = false;
+    if (radio->read_child<>(enable_flag, "Enable")) {
+        m_radio_info.radio_state = utils_wlan_hal_whm::radio_state_from_bool(enable_flag);
         if (m_radio_info.radio_state == eRadioState::ENABLED) {
             m_radio_info.wifi_ctrl_enabled = 2; // Assume Operational
             m_radio_info.tx_enabled        = 1;
