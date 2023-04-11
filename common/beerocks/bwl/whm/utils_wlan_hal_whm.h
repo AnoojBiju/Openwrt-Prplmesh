@@ -29,6 +29,11 @@ eRadioState radio_state_from_string(const std::string &state);
 std::string security_type_to_string(const WiFiSec &security_type);
 
 /**
+ * @brief Converts WiFiSec security type to string
+    */
+std::string security_type_to_string(const WiFiSec &security_type);
+
+/**
 * @brief Converts a string-based security type to WiFiSec
 */
 WiFiSec security_type_from_string(const std::string &security_type);

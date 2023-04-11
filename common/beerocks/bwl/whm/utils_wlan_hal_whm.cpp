@@ -25,6 +25,15 @@ eRadioState radio_state_from_string(const std::string &state)
     }
 }
 
+eRadioState utils_wlan_hal_whm::radio_state_from_bool(const bool &flag)
+{
+    if (flag == false) {
+        return eRadioState::DISABLED;
+    } else {
+        return eRadioState::ENABLED;
+    }
+}
+
 std::string security_type_to_string(const WiFiSec &security_type)
 {
     for (const auto &map_it : security_type_table) {
