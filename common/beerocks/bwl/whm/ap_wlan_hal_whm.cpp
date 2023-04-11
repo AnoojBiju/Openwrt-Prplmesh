@@ -369,6 +369,13 @@ bool ap_wlan_hal_whm::update_vap_credentials(
                 LOG(ERROR) << "Failed to disable vap " << ifname;
             }
             continue;
+        } else {
+            LOG(INFO) << "enable vap " << wifi_vap_path;
+            new_obj.add_child("Enable", true);
+            ret = m_ambiorix_cl->update_object(wifi_vap_path, new_obj);
+            if (!ret) {
+                LOG(ERROR) << "Failed to enable vap " << wifi_vap_path;
+            }
         }
 
         auto auth_type =
