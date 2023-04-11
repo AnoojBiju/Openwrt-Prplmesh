@@ -69,7 +69,7 @@ def configure_device(device: GenericDevice, configuration_file: Path):
         with open(str(configuration_file)) as config_file:
             # Write the configuration file line by line on the device:
             for line in config_file.readlines():
-                shell.send(line)
+                shell.sendstring(line)
                 shell.expect("> ")
                 md5.update(line.encode())
         shell.sendline("END_OF_TRANSMISSION")
