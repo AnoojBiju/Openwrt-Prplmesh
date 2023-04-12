@@ -30,7 +30,7 @@ std::string security_type_to_string(const WiFiSec &security_type);
 
 /**
  * @brief Converts WiFiSec security type to string
-    */
+*/
 std::string security_type_to_string(const WiFiSec &security_type);
 
 /**
