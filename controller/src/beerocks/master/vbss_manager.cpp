@@ -318,7 +318,13 @@ bool VbssManager::handle_success_move(const sMacAddr &sta_mac, const sMacAddr &c
     }
     const auto &iter = std::find(m_cur_move_vbssid.begin(), m_cur_move_vbssid.end(),
                                  m_vsta_stats[sta_mac].vbss_id);
-    m_cur_move_vbssid.erase(iter);
+
+    if (iter == m_cur_move_vbssid.end()) {
+        LOG(WARNING) << "Could not find existing move for " << m_vsta_stats[sta_mac].vbss_id;
+    } else {
+        LOG(DEBUG) << "Erasing current move for " << m_vsta_stats[sta_mac].vbss_id;
+        m_cur_move_vbssid.erase(iter);
+    }
     m_vsta_stats[sta_mac].next_best_agent  = {};
     m_vsta_stats[sta_mac].next_best_count  = 0;
     m_vsta_stats[sta_mac].next_best_rssi   = -120;
