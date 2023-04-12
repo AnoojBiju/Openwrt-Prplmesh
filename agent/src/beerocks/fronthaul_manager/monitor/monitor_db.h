@@ -485,6 +485,7 @@ public:
     monitor_sta_node *sta_add(const std::string &sta_mac, const int8_t vap_id);
     void sta_erase(const std::string &sta_mac);
     void sta_erase_all();
+    void erase_sta_by_vap_id(const int8_t &vap_id);
     monitor_sta_node *sta_find(const std::string &mac);
     monitor_sta_node *sta_find_by_ipv4(const std::string &ipv4);
     std::unordered_map<std::string, monitor_sta_node *>::iterator sta_begin()

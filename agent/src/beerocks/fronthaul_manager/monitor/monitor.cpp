@@ -293,11 +293,12 @@ bool Monitor::monitor_fsm()
     }
 
     if (!m_slave_client) {
-        LOG(ERROR) << "Not connected to slave!";
+        LOG(ERROR) << "Not connected to slave, RESETING!";
         return false;
     }
 
     // Unexpected HAL detach or too many failed commands
+
     if ((mon_wlan_hal->get_state() != bwl::HALState::Operational && mon_hal_attached == true) ||
         (hal_command_failures_count > HAL_MAX_COMMAND_FAILURES)) {
         LOG(ERROR) << "Unexpected HAL detach detected - Failed commands: "
@@ -539,7 +540,6 @@ bool Monitor::monitor_fsm()
 
         // HAL is attached and operational
     } else {
-
         // Process external events
         auto itFdMax =
             std::max_element(std::begin(m_mon_hal_ext_events), std::end(m_mon_hal_ext_events));
@@ -573,6 +573,7 @@ bool Monitor::monitor_fsm()
             now + std::chrono::milliseconds(mon_db.get_polling_rate_msec() / 2);
 
         if (m_generate_connected_clients_events && (m_next_generate_connected_events_time < now)) {
+
             bool is_finished_all_clients = false;
             // If there is not enough time to generate all events, the method will be called in the
             // next FSM iteration, and so on until all connected clients are eventually reported.
@@ -601,9 +602,7 @@ bool Monitor::monitor_fsm()
             // If clients measurement mode is disabled - no need to call update_sta_stats.
             // The differentiation between measure all clients and only specific clients is done
             // as internally in the update_sta_stats.
-
             update_sta_qos_ctrl_params();
-
             if (mon_db.get_clients_measuremet_mode() !=
                 monitor_db::eClientsMeasurementMode::DISABLE_ALL) {
                 // Update the statistics
@@ -613,9 +612,7 @@ bool Monitor::monitor_fsm()
             // NOTE: Radio & VAP statistics are updated only on last poll cycle
             if (mon_db.get_radio_stats_enable() && mon_db.is_last_poll())
                 update_ap_stats();
-
             send_heartbeat();
-
             mon_db.poll_done();
         }
 
@@ -871,7 +868,12 @@ bool Monitor::update_sta_qos_ctrl_params()
             return false;
         }
 
-        auto vap_node             = mon_db.vap_get_by_id(sta_node->get_vap_id());
+        auto vap_node = mon_db.vap_get_by_id(sta_node->get_vap_id());
+        if (vap_node == nullptr) {
+            // Node was deleted, station should be cleaned up
+            LOG(ERROR) << "Station with MAC: " << sta_mac << " has no home.";
+            return false;
+        }
         auto &sta_qos_ctrl_params = sta_node->get_qos_ctrl_params();
 
         // Update the stats
@@ -911,7 +913,11 @@ bool Monitor::update_sta_stats(const std::chrono::steady_clock::time_point &time
             continue;
         }
 
-        auto vap_node        = mon_db.vap_get_by_id(sta_node->get_vap_id());
+        auto vap_node = mon_db.vap_get_by_id(sta_node->get_vap_id());
+        if (vap_node == nullptr) {
+            LOG(ERROR) << "vap node is a nullptr for station: " << sta_mac;
+            continue;
+        }
         auto &sta_stats      = sta_node->get_stats();
         bool is_read_unicast = false;
 
@@ -1919,31 +1925,43 @@ void Monitor::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
         }
         return;
     }
-    auto virtual_bss_destruction = cmdu_rx.getClass<wfa_map::VirtualBssDestruction>();
-    if (virtual_bss_destruction) {
-        std::string ifname = get_vbss_interface_name(virtual_bss_destruction->bssid());
-        if (m_vbss_ext_fds.find(ifname) != m_vbss_ext_fds.end()) {
-            LOG(DEBUG) << "We are deleting the interface: " << virtual_bss_destruction->bssid();
-            handle_remove_vbss(ifname);
-        }
-    }
+    // auto virtual_bss_destruction = cmdu_rx.getClass<wfa_map::VirtualBssDestruction>();
+    // if (virtual_bss_destruction) {
+    //     std::string ifname = get_vbss_interface_name(virtual_bss_destruction->bssid());
+    //     if (m_vbss_ext_fds.find(ifname) != m_vbss_ext_fds.end()) {
+    //         LOG(DEBUG) << "We are deleting the interface: " << virtual_bss_destruction->bssid();
+    //         handle_remove_vbss(ifname);
+    //     }
+    // }
     return;
 }
 
-void Monitor::handle_remove_vbss(const std::string ifname)
+void Monitor::handle_remove_vbss(const std::string &ifname, const int8_t &vap_id)
 {
     if (m_vbss_ext_fds.count(ifname) < 1) {
         LOG(WARNING) << "FD for " << ifname << " does not exist.";
         return;
     }
     int fd = m_vbss_ext_fds[ifname];
+    LOG(DEBUG) << "Removing IFNAME: " << ifname << " with " << fd;
     m_vbss_ext_fds.erase(ifname);
-    if (!mon_wlan_hal->remove_vbss(ifname)) {
-        LOG(WARNING) << "Failed to remove the interface from monitor " << ifname;
+    //  if (!mon_wlan_hal->remove_vbss(ifname)) {
+    //      LOG(WARNING) << "Failed to remove the interface from monitor " << ifname;
+    //  }
+    //  if (!m_event_loop->remove_handlers(fd)) {
+    //      LOG(WARNING) << "Failed to remove " << ifname << " fd from event loop";
+    //  }
+    auto vap = mon_db.vap_get_by_id(vap_id);
+    if (vap) {
+        if (vap->sta_get_count() > 0) {
+            // We have stations still connected, need to delete
+            mon_db.erase_sta_by_vap_id(vap_id);
+        }
     }
     if (!m_event_loop->remove_handlers(fd)) {
         LOG(WARNING) << "Failed to remove " << ifname << " fd from event loop";
     }
+
     if (!mon_db.vap_remove(fd)) {
         LOG(WARNING) << "Failed to remove vap with fd " << fd << " from monitor db";
     }
@@ -2281,8 +2299,10 @@ bool Monitor::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
         }
 
         auto vap = mon_db.vap_get_by_id(msg->vap_id);
-        if (m_vbss_ext_fds.find(vap->get_iface()) != m_vbss_ext_fds.end()) {
-            handle_remove_vbss(vap->get_iface());
+        if (vap == nullptr) {
+            LOG(ERROR) << "Vap with ID: " << msg->vap_id << " could not be found";
+        } else if (m_vbss_ext_fds.find(vap->get_iface()) != m_vbss_ext_fds.end()) {
+            handle_remove_vbss(vap->get_iface(), msg->vap_id);
         }
         update_vaps_in_db();
 
