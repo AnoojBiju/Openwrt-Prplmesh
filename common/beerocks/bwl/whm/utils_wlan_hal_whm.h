@@ -26,7 +26,6 @@ eRadioState radio_state_from_string(const std::string &state);
 /**
  * @brief Convert a bool to a string of {eRadioState::DISABLED, eRadioState::ENABLED}
 */
-
 static eRadioState radio_state_from_bool(const bool &flag);
 
 /**
