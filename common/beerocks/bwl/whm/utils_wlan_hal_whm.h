@@ -24,9 +24,9 @@ namespace utils_wlan_hal_whm {
 eRadioState radio_state_from_string(const std::string &state);
 
 /**
-* @brief Converts WiFiSec security type to string
-*/
-std::string security_type_to_string(const WiFiSec &security_type);
+ * @brief Convert from a bool radio.enable to eRadioState
+ */
+eRadioState radio_state_from_bool(const bool &flag);
 
 /**
  * @brief Converts WiFiSec security type to string
