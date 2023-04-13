@@ -1394,9 +1394,11 @@ bool nl80211_client_impl::send_delba(const std::string &interface_name, const sM
         return false;
     }
 
-    // Send a delba with reason code 0x25:
-    //    delba_entry << "0 1 37" << std::endl;
-    delba_entry << "0 1 1" << std::endl;
+    // Send a delba with reason code 1 (unknown) for all TIDs:
+    for (uint8_t tid = 0; tid < 16; tid++) {
+        delba_entry << std::to_string(tid) + " 1 1" << std::endl;
+    }
+
     delba_entry.close();
 
     if (delba_entry.fail()) {
