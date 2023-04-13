@@ -1657,6 +1657,7 @@ int ap_wlan_hal_nl80211::add_bss(std::string &ifname, son::wireless_utils::sBssI
     conf.set_create_head_value("interface", ifname);
     conf.set_create_head_value("bssid", tlvf::mac_to_string(bss_conf.bssid));
     conf.set_create_head_value("ssid", bss_conf.ssid);
+    conf.set_create_head_value("notify_mgmt_frames", "1");
     conf.set_create_head_value("ctrl_interface",
                                std::string(bwl::nl80211::base_ctrl_path) + "/hostapd");
 
