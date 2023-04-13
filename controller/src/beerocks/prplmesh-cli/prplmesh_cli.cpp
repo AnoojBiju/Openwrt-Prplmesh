@@ -283,6 +283,10 @@ show_ap   		: show AccessPoints
 set_ssid  		: set SSID
   -o .<ap_object_number>|<ap_ssid>	Use .. if <ap_ssid> starts with .
   -n <new_ssid_name>
+set_security		: set security
+  -o .<ap_object_number>|<ap_ssid>	Same as for set_ssid
+  -m None|WPA2-Personal
+  -p <passphrase>			For the WPA2-Personal mode
 conn_map  		: dump the latest network map
 )help!";
 }
@@ -385,20 +389,45 @@ bool prplmesh_cli::set_ssid(const std::string &ap, const std::string &ssid)
     return status == AMXB_STATUS_OK;
 }
 
-void prplmesh_cli::set_security(const std::string &ap, const std::string &type,
+bool prplmesh_cli::set_security(const std::string &ap, const std::string &mode,
                                 const std::string &passphrase)
 {
     std::string ap_path = get_ap_path(ap);
     if (ap_path.empty()) {
         std::cerr << "No AP found with id " << ap << std::endl;
-        return;
+        return false;
     }
 
-    amxc_var_t *ap_obj = m_amx_client->get_object(ap_path);
+    amxc_var_t *ap_obj = m_amx_client->get_object(ap_path += "Security.");
     if (!ap_obj) {
         std::cerr << "Unable to access object at path " << ap_path << std::endl;
-        return;
+        return false;
     }
+
+    amxc_var_set(cstring_t, GET_ARG(ap_obj, "ModeEnabled"), mode.c_str());
+    auto status = m_amx_client->set_object(ap_path, ap_obj, ap_obj);
+    if (status != AMXB_STATUS_OK) {
+        std::cerr << "Changing security params failed with: " << amxb_get_error(status) << '\n';
+        return false;
+    }
+
+    if (mode == "WPA2-Personal") {
+        ap_obj = amxc_var_get_first(amxc_var_get_first(ap_obj));
+        if (GET_ARG(ap_obj, "KeyPassphrase")) {
+            amxc_var_set(cstring_t, GET_ARG(ap_obj, "KeyPassphrase"), passphrase.c_str());
+        } else {
+            amxc_var_add_key(cstring_t, ap_obj, "KeyPassphrase", passphrase.c_str());
+        }
+        status = m_amx_client->set_object(ap_path, ap_obj, ap_obj);
+    }
+
+    if (status != AMXB_STATUS_OK) {
+        std::cerr << "Changing security params failed with: " << amxb_get_error(status) << '\n';
+    } else {
+        std::cerr << "Successfully set " << ap_path << " params" << std::endl;
+    }
+
+    return status == AMXB_STATUS_OK;
 }
 
 } // namespace prplmesh_api

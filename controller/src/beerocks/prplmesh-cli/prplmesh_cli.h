@@ -56,10 +56,10 @@ public:
      * @brief Set the security of an access point
      *
      * @param[in] ap The Access Point to modify
-     * @param[in] type The security type (e.g. WPA2) to use. Must be a valid and supported algorithm.
-     * @param[in] passphrase The pass phrase to use.
+     * @param[in] mode The security type (e.g. WPA2) to use. Must be a valid and supported algorithm
+     * @param[in] passphrase The pass phrase to use
      */
-    void set_security(const std::string &ap, const std::string &type,
+    bool set_security(const std::string &ap, const std::string &mode,
                       const std::string &passphrase);
 
     /**

@@ -38,6 +38,32 @@ bool set_ssid(int argc, char *argv[])
     return ap and ssid and prpl_cli.set_ssid(ap, ssid);
 }
 
+bool set_security(int argc, char *argv[])
+{
+    int opt;
+    char *ap         = 0;
+    char *mode       = 0;
+    char *passphrase = 0;
+
+    while ((opt = getopt(argc, argv, "o:m:p:")) != -1) {
+        switch (opt) {
+        case 'o':
+            ap = optarg;
+            break;
+        case 'm':
+            mode = optarg;
+            break;
+        case 'p':
+            passphrase = optarg;
+            break;
+        default:
+            return false;
+        }
+    }
+
+    return ap and mode and prpl_cli.set_security(ap, mode, passphrase ?: "");
+}
+
 int main(int argc, char *argv[])
 {
     if (argc < 2) {
@@ -57,6 +83,8 @@ int main(int argc, char *argv[])
                 prpl_cli.show_ap();
             } else if (command_string == "set_ssid") {
                 return !set_ssid(argc, argv);
+            } else if (command_string == "set_security") {
+                return !set_security(argc, argv);
             } else if (command_string == "help") {
                 prpl_cli.print_help();
             } else {
