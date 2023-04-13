@@ -1316,21 +1316,23 @@ bool nl80211_client_impl::send_delba(const std::string &interface_name, const sM
     }
 
     std::string delba_path = debugfs_dir + "/delba";
-    std::ofstream delba_entry(delba_path);
 
-    if (!delba_entry) {
-        LOG(ERROR) << "Failed to open debugfs entry '" << delba_path << "'!";
-        return false;
-    }
+    // Send a delba with reason code 1 (unknown) for all TIDs:
+    for (int tid = 0; tid < 16; tid++) {
+        std::ofstream delba_entry(delba_path);
 
-    // Send a delba with reason code 0x25:
-    //    delba_entry << "0 1 37" << std::endl;
-    delba_entry << "0 1 1" << std::endl;
-    delba_entry.close();
+        if (!delba_entry) {
+            LOG(ERROR) << "Failed to open debugfs entry '" << delba_path << "'!";
+            return false;
+        }
 
-    if (delba_entry.fail()) {
-        LOG(ERROR) << "Failed to write to " << delba_path << ": " << strerror(errno);
-        return false;
+        delba_entry << std::to_string(tid) + " 1 1" << std::endl;
+        delba_entry.close();
+
+        if (delba_entry.fail()) {
+            LOG(ERROR) << "Failed to write to " << delba_path << ": " << strerror(errno);
+            return false;
+        }
     }
 
     // Next, we send a delba frame manually anyway in case the debugfs
