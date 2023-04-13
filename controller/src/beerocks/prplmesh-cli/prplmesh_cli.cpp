@@ -10,7 +10,6 @@
 #include "prplmesh_amx_client.h"
 
 #include <arpa/inet.h>
-#include <ios>
 #include <iostream>
 #include <iterator>
 #include <map>
@@ -276,12 +275,16 @@ bool prplmesh_cli::prpl_conn_map()
 
 void prplmesh_cli::print_help()
 {
-    std::cerr << "Usage: prplmesh_cli -c <command>" << std::endl
-              << "Next commands are available : " << std::endl
-              << "help      \t\t: get supported commands" << std::endl
-              << "version   \t\t: get current prplMesh version" << std::endl
-              << "show_ap   \t\t: show AccessPoints" << std::endl
-              << "conn_map  \t\t: dump the latest network map" << std::endl;
+    std::cerr << R"help!(Usage: prplmesh_cli -c <command> [command_arguments]
+Next commands are available :
+help      		: get supported commands
+version   		: get current prplMesh version
+show_ap   		: show AccessPoints
+set_ssid  		: set SSID
+  -o .<ap_object_number>|<ap_ssid>	Use .. if <ap_ssid> starts with .
+  -n <new_ssid_name>
+conn_map  		: dump the latest network map
+)help!";
 }
 
 void prplmesh_cli::print_version()
@@ -289,28 +292,33 @@ void prplmesh_cli::print_version()
     std::cerr << "prplMesh version: " << BEEROCKS_VERSION << std::endl;
 }
 
-std::string prplmesh_cli::get_ap_path(const std::string &ap)
+std::string prplmesh_cli::get_ap_path(std::string ap)
 {
     std::stringstream path;
     path << CONTROLLER_ROOT_DM << ".Network.AccessPoint.";
-    int i = atoi(ap.c_str());
-    if (i != 0) {
-        path << i << ".";
-        return path.str();
-    } else {
-        std::string ap_ht_path     = path.str() + "*.";
-        const amxc_htable_t *ht_ap = m_amx_client->get_htable_object(ap_ht_path);
-        amxc_htable_iterate(ap_it, ht_ap)
-        {
-            std::string ap_path_i = amxc_htable_it_get_key(ap_it);
-            amxc_var_t *ap_obj    = m_amx_client->get_object(ap_path_i);
-            std::string ap_ssid   = GET_CHAR(ap_obj, "SSID");
 
-            if (strcasecmp(ap.c_str(), ap_ssid.c_str()) == 0) {
-                return ap_path_i;
-            }
+    if (ap[0] == '.' and ap[1] != '.') {
+        path << ap.substr(1) << '.';
+        return path.str();
+    }
+
+    if (ap[0] == '.' and ap[1] == '.') {
+        ap = ap.substr(1);
+    }
+
+    std::string ap_ht_path     = path.str() + "*.";
+    const amxc_htable_t *ht_ap = m_amx_client->get_htable_object(ap_ht_path);
+    amxc_htable_iterate(ap_it, ht_ap)
+    {
+        std::string ap_path_i = amxc_htable_it_get_key(ap_it);
+        amxc_var_t *ap_obj    = m_amx_client->get_object(ap_path_i);
+        std::string ap_ssid   = GET_CHAR(ap_obj, "SSID");
+
+        if (strcasecmp(ap.c_str(), ap_ssid.c_str()) == 0) {
+            return ap_path_i;
         }
     }
+
     return "";
 }
 
@@ -325,9 +333,9 @@ void prplmesh_cli::show_ap()
         std::cerr << "Unable to access object at path " << ap_ht_path << std::endl;
         return;
     }
-    int ap_index = 0;
     auto flags = std::cout.flags();
     boolalpha(std::cout);
+    int ap_index = 0;
     amxc_htable_iterate(ap_it, ht_ap)
     {
         ap_index++;
@@ -351,19 +359,30 @@ void prplmesh_cli::show_ap()
     }
 }
 
-void prplmesh_cli::set_ssid(const std::string &ap, const std::string &ssid)
+bool prplmesh_cli::set_ssid(const std::string &ap, const std::string &ssid)
 {
     std::string ap_path = get_ap_path(ap);
     if (ap_path.empty()) {
         std::cerr << "No AP found with id " << ap << std::endl;
-        return;
+        return false;
     }
 
     amxc_var_t *ap_obj = m_amx_client->get_object(ap_path);
     if (!ap_obj) {
         std::cerr << "Unable to access object at path " << ap_path << std::endl;
-        return;
+        return false;
     }
+
+    amxc_var_set(cstring_t, GET_ARG(ap_obj, "SSID"), ssid.c_str());
+    auto status = m_amx_client->set_object(ap_path, ap_obj);
+
+    if (status != AMXB_STATUS_OK) {
+        std::cerr << "Setting new SSID failed with: " << amxb_get_error(status) << std::endl;
+    } else {
+        std::cerr << "Successfully set " << ap_path << " SSID to " << ssid << std::endl;
+    }
+
+    return status == AMXB_STATUS_OK;
 }
 
 void prplmesh_cli::set_security(const std::string &ap, const std::string &type,

@@ -33,19 +33,25 @@ public:
     bool prpl_conn_map();
     void print_help();
     void print_version();
-    std::string get_ap_path(const std::string &ap);
+
+    /**
+     * @brief Get an AP path by index or SSID
+     * 
+     * @param[in] ap #<index> or string (use ## if SSID starts with #)
+     */
+    std::string get_ap_path(std::string ap);
 
     /**
      * @brief Show existing Access Point details
      */
     void show_ap();
     /**
-     * @brief Change the SSID of an access point.
+     * @brief Change the SSID of an access point
      *
-     * @param[in] ap The Access Point to the SSID on.
-     * @param[in] ssid The SSID to set.
+     * @param[in] ap The Access Point to the SSID on
+     * @param[in] ssid The SSID to set
      */
-    void set_ssid(const std::string &ap, const std::string &ssid);
+    bool set_ssid(const std::string &ap, const std::string &ssid);
     /**
      * @brief Set the security of an access point
      *

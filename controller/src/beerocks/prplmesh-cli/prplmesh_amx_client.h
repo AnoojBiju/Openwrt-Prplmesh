@@ -51,6 +51,11 @@ public:
     amxc_var_t *get_object(const std::string &object_path);
     const amxc_htable_t *get_htable_object(const std::string &object_path);
 
+    /**
+     * @returns status from amxb_error.h (AMXB_STATUS_OK on success etc.)
+     */
+    int set_object(const std::string &path, amxc_var_t *value, amxc_var_t *ret = 0);
+
 private:
     amxb_bus_ctx_t *bus_ctx = nullptr;
 };
