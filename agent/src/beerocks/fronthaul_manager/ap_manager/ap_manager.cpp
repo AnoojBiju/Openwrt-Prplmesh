@@ -1703,6 +1703,8 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             return;
         }
 
+        LOG(DEBUG) << "handle ACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST";
+
         std::string bridge_name = request->bridge_ifname_str();
 
         std::list<son::wireless_utils::sBssInfoConf> bss_info_conf_list;
@@ -1796,6 +1798,9 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             const auto &radio_vaps              = ap_wlan_hal->get_radio_info().available_vaps;
             response->number_of_bss_available() = radio_vaps.size();
             send_cmdu(cmdu_tx);
+        } else {
+            LOG(ERROR) << "discard new configuration because "
+                       << (perform_update ? "configuration is empty" : "radio not enabled");
         }
         break;
     }
