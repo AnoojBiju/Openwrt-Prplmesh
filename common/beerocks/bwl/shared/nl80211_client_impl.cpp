@@ -1368,8 +1368,10 @@ bool nl80211_client_impl::send_delba(const std::string &interface_name, const sM
     // As mac_to_string doesn't give any guarantee that the mac is
     // lowercase (which means it could change in the future), make
     // sure it is:
-    std::transform(station.begin(), station.end(),station.begin(), ::tolower);
-    std::string debugfs_dir = std::string("/sys/kernel/debug/ieee80211/phy") + std::to_string(wiphy) + "/netdev:" + interface_name + "/stations/" + station;
+    std::transform(station.begin(), station.end(), station.begin(), ::tolower);
+    std::string debugfs_dir = std::string("/sys/kernel/debug/ieee80211/phy") +
+                              std::to_string(wiphy) + "/netdev:" + interface_name + "/stations/" +
+                              station;
     std::string aggr_mode_path = debugfs_dir + "/aggr_mode";
     std::ofstream aggr_mode_entry(aggr_mode_path);
 
@@ -1387,23 +1389,21 @@ bool nl80211_client_impl::send_delba(const std::string &interface_name, const sM
     }
 
     std::string delba_path = debugfs_dir + "/delba";
-    std::ofstream delba_entry(delba_path);
-
-    if (!delba_entry) {
-        LOG(ERROR) << "Failed to open debugfs entry '" << delba_path << "'!";
-        return false;
-    }
 
     // Send a delba with reason code 1 (unknown) for all TIDs:
     for (uint8_t tid = 0; tid < 16; tid++) {
-        delba_entry << std::to_string(tid) + " 1 1";
-    }
-
-    delba_entry.close();
-
-    if (delba_entry.fail()) {
-        LOG(ERROR) << "Failed to write to " << delba_path << ": " << strerror(errno);
-        return false;
+        std::ofstream delba_entry(delba_path);
+        if (!delba_entry) {
+            LOG(ERROR) << "Failed to open debugfs entry '" << delba_path << "'!";
+            continue;
+        }
+        delba_entry << std::to_string(tid) + " 1 1" << std::endl;
+        if (delba_entry.fail()) {
+            LOG(ERROR) << "Failed to write to " << delba_path << ", TID: " << tid
+                       << ", errno: " << strerror(errno);
+            continue;
+        }
+        delba_entry.close();
     }
 
     // Next, we send a delba frame manually anyway in case the debugfs
