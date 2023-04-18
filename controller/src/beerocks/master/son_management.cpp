@@ -1722,11 +1722,15 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
                 // Because preference is still valid, we need to check the channel's preference
                 int8_t channel_preference = database.get_channel_preference(
                     request->radio_mac(), operating_class, request->channel());
-                if (channel_preference <= 0) {
+                if (channel_preference <=
+                    (int8_t)beerocks::eChannelPreferenceRankingConsts::NON_OPERABLE) {
                     LOG(ERROR) << "channel #" << request->channel() << " and bandwidth "
                                << beerocks::utils::convert_bandwidth_to_int(request->bandwidth())
                                << ", are "
-                               << ((channel_preference == 0) ? "Non-Operable" : "Invalid");
+                               << ((channel_preference ==
+                                    (int8_t)beerocks::eChannelPreferenceRankingConsts::NON_OPERABLE)
+                                       ? "Non-Operable"
+                                       : "Invalid");
 
                     response->code() = uint8_t(eChannelSwitchStatus::INOPERABLE_CHANNEL);
                     controller_ctx->send_cmdu(sd, cmdu_tx);
