@@ -147,6 +147,12 @@ void LinkMetricsCollectionTask::work()
     // query can be cleared in case of query is sent to all bissids.
     m_ap_metric_query.clear();
 
+    // AP metrics response message will be sent only when there is respective AP metric
+    // query on queue(based on MID). Since AP metric query queue is cleared, AP metric responses also
+    // need to be cleared to avoid unnecessary stacking of responses which may lead to memory leak.
+    m_ap_metric_response.clear();
+    m_radio_ap_metric_response.clear();
+
     // Send ap_metrics query on all bssids exists on the Agent.
     send_ap_metric_query_message(UINT16_MAX);
 }
