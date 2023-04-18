@@ -162,7 +162,7 @@ bool AmbiorixConnection::remove_instance(const std::string &object_path, int ins
     int ret = amxb_del(m_bus_ctx, object_path.c_str(), instance_id, NULL, get_amxc_var_ptr(result),
                        AMX_CL_DEF_TIMEOUT);
     LOG_IF(ret != AMXB_STATUS_OK, ERROR)
-        << "remove instance [" << object_path << "." << std::to_string(instance_id) << "] failed";
+        << "remove instance [" << object_path << std::to_string(instance_id) << "] failed";
     return (ret == AMXB_STATUS_OK);
 }
 
@@ -172,8 +172,7 @@ bool AmbiorixConnection::call(const std::string &object_path, const char *method
     const std::lock_guard<std::recursive_mutex> lock(m_mutex);
     int ret = amxb_call(m_bus_ctx, object_path.c_str(), method, get_amxc_var_ptr(args),
                         get_amxc_var_ptr(result), AMX_CL_DEF_TIMEOUT);
-    LOG_IF(ret != AMXB_STATUS_OK, ERROR)
-        << "calling [" << object_path << "." << method << "] failed";
+    LOG_IF(ret != AMXB_STATUS_OK, ERROR) << "calling [" << object_path << method << "] failed";
     return (ret == AMXB_STATUS_OK);
 }
 
