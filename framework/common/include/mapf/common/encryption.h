@@ -9,14 +9,13 @@
 #ifndef ENCRYPTION_H_
 #define ENCRYPTION_H_
 
-#include <cstdint>
-#include <stddef.h>
+#include <openssl/bn.h>
+#include <openssl/engine.h>
+#include <openssl/evp.h>
+#include <openssl/ossl_typ.h>
 
-extern "C" {
-/** Internal defintion from OpenSSL, avoids requiring include of openssl headers. */
-struct dh_st;
-typedef struct evp_md_ctx_st EVP_MD_CTX;
-}
+#include <cstddef>
+#include <cstdint>
 
 namespace mapf {
 
@@ -48,6 +47,10 @@ private:
 ///
 class diffie_hellman {
 public:
+    // Predefined 1536-bit safe prime for Diffie-Hellman key exchange
+    static const uint8_t dh1536_p[];
+    // Predefined generator for Diffie-Hellman key exchange
+    static const uint8_t dh1536_g[];
     /**
      * @brief Generate a keypair suitable for Diffie-Hellman key exchange
      */
@@ -69,8 +72,8 @@ public:
      * @param[in] remote_pubkey_length Length of @a remote_pubkey.
      * @return true if successful, false if not.
      */
-    bool compute_key(uint8_t *key, unsigned &key_length, const uint8_t *remote_pubkey,
-                     unsigned remote_pubkey_length) const;
+    bool compute_key(uint8_t *key, size_t &key_length, const uint8_t *remote_pubkey,
+                     size_t remote_pubkey_length) const;
 
     /**
      * @brief Get the public key
@@ -80,7 +83,7 @@ public:
     /**
      * @brief Get the length of pubkey().
      */
-    unsigned pubkey_length() const { return m_pubkey_length; }
+    size_t pubkey_length() const { return m_pubkey_length; }
 
     /**
      * @brief Get the nonce
@@ -90,24 +93,30 @@ public:
     /**
      * @brief Get the length of nonce().
      */
-    unsigned nonce_length() const { return sizeof(m_nonce); }
+    size_t nonce_length() const { return sizeof(m_nonce); }
 
     /**
      * @brief Maximum length of pubkey().
      */
-    static const unsigned max_pubkey_length = 192;
+    static const size_t max_pubkey_length = 192;
 
 private:
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     /**
-     * OpenSSL Diffie-Hellman state structure.
-     */
-    struct dh_st *m_dh;
-
+    * OpenSSL Diffie-Hellman state structure.
+    */
+    DH *m_dh;
+#else
+    /**
+    * OpenSSL EVP state structure.
+    */
+    EVP_PKEY *m_evp;
+#endif
     /**
      * If keypair generation failed in the constructor, this will be @a nullptr.
      */
-    uint8_t *m_pubkey        = nullptr;
-    unsigned m_pubkey_length = 0;
+    uint8_t *m_pubkey      = nullptr;
+    size_t m_pubkey_length = 0;
     uint8_t m_nonce[16];
 
     diffie_hellman(const diffie_hellman &) = delete;
@@ -215,7 +224,7 @@ void copy_pubkey(const diffie_hellman &dh, uint8_t *dest);
  * @return true on success, false on error
  */
 void wps_calculate_keys(const diffie_hellman &dh, const uint8_t *remote_pubkey,
-                        unsigned remote_pubkey_length, const uint8_t *m1_nonce, const uint8_t *mac,
+                        size_t remote_pubkey_length, const uint8_t *m1_nonce, const uint8_t *mac,
                         const uint8_t *m2_nonce, uint8_t *authkey, uint8_t *keywrapkey);
 
 } // namespace encryption
