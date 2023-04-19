@@ -208,6 +208,12 @@ public:
      */
     const std::string &uri() const;
 
+    /**
+    @brief This function searchs for the path to the ubus socket depending on the openwrt's version.
+    @return The path to the ubus socket.
+    */
+    static const std::string fetch_ubus_path();
+
 private:
     std::recursive_mutex m_mutex;
     std::string m_amxb_backend;

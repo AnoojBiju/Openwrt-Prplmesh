@@ -35,7 +35,10 @@ base_wlan_hal_whm::base_wlan_hal_whm(HALType type, const std::string &iface_name
     m_ambiorix_cl = std::make_shared<beerocks::wbapi::AmbiorixClient>();
     LOG_IF(!m_ambiorix_cl, FATAL) << "Unable to create ambiorix client instance!";
 
-    LOG_IF(!m_ambiorix_cl->connect(), FATAL) << "Unable to connect to the ambiorix backend!";
+    LOG_IF(!m_ambiorix_cl->connect(AMBIORIX_WBAPI_BACKEND_PATH,
+                                   beerocks::wbapi::AmbiorixConnection::fetch_ubus_path()),
+           FATAL)
+        << "Unable to connect to the ambiorix backend!";
 
     m_fds_ext_events = {};
 

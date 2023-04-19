@@ -85,6 +85,15 @@ AmbiorixVariantSmartPtr AmbiorixConnection::get_object(const std::string &object
     return entries;
 }
 
+const std::string AmbiorixConnection::fetch_ubus_path()
+{
+    struct stat info;
+    if (lstat("/var/run/ubus/ubus.sock", &info) == 0) {
+        return "ubus:/var/run/ubus/ubus.sock";
+    }
+    return "ubus:/var/run/ubus.sock";
+}
+
 AmbiorixVariantSmartPtr AmbiorixConnection::get_param(const std::string &object_path,
                                                       const std::string &param_name)
 {

@@ -39,8 +39,7 @@ public:
      * @return True on success and false otherwise.
      * 
     */
-    bool connect(const std::string &amxb_backend = {AMBIORIX_WBAPI_BACKEND_PATH},
-                 const std::string &bus_uri      = {AMBIORIX_WBAPI_BUS_URI});
+    bool connect(const std::string &amxb_backend, const std::string &bus_uri);
 
     /**
      * @brief read and return content tree of first object matching requested path.
