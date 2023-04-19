@@ -69,7 +69,7 @@ AmbiorixVariantSmartPtr AmbiorixConnection::get_object(const std::string &object
     const std::lock_guard<std::recursive_mutex> lock(m_mutex);
     AmbiorixVariant result;
     int ret      = amxb_get(m_bus_ctx, object_path.c_str(), depth, get_amxc_var_ptr(result),
-                       AMX_CL_DEF_TIMEOUT);
+                            AMX_CL_DEF_TIMEOUT);
     auto entries = result.find_child(0);
     if (ret != AMXB_STATUS_OK || !entries) {
         LOG(ERROR) << "Request path [" << object_path << "] failed";
@@ -165,8 +165,7 @@ bool AmbiorixConnection::call(const std::string &object_path, const char *method
     const std::lock_guard<std::recursive_mutex> lock(m_mutex);
     int ret = amxb_call(m_bus_ctx, object_path.c_str(), method, get_amxc_var_ptr(args),
                         get_amxc_var_ptr(result), AMX_CL_DEF_TIMEOUT);
-    LOG_IF(ret != AMXB_STATUS_OK, ERROR)
-        << "calling [" << object_path << "." << method << "] failed";
+    LOG_IF(ret != AMXB_STATUS_OK, ERROR) << "calling [" << object_path << method << "] failed";
     return (ret == AMXB_STATUS_OK);
 }
 
