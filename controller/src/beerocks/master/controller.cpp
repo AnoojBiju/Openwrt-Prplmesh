@@ -1556,7 +1556,6 @@ void Controller::set_esp(const std::string &param_name, const sMacAddr &reportin
     estimated_service_param.bytes[0] = est_service_info_field[0];
     estimated_service_param.bytes[1] = est_service_info_field[1];
     estimated_service_param.bytes[2] = est_service_info_field[2];
-    (estimated_service_param.bytes[2]);
     database.set_estimated_service_param(reporting_agent_bssid, param_name,
                                          estimated_service_param.value);
 }
@@ -3441,7 +3440,7 @@ bool Controller::handle_cmdu_control_message(
             new_event.snr        = notification->params().rx_snr;
             new_event.client_mac = notification->params().result.mac;
             new_event.bssid      = database.get_hostap_vap_mac(tlvf::mac_from_string(ap_mac),
-                                                          notification->params().vap_id);
+                                                               notification->params().vap_id);
             m_task_pool.push_event(database.get_pre_association_steering_task_id(),
                                    pre_association_steering_task::eEvents::
                                        STEERING_EVENT_RSSI_MEASUREMENT_SNR_NOTIFICATION,
