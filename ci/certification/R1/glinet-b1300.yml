@@ -33,6 +33,16 @@ R1:glinet-b1300:MAP-4.2.2_BH5GL:
     - when: manual
       allow_failure: true
 
+R1:glinet-b1300:WHM:MAP-4.2.2_BH5GL:
+  extends: .certification:R1:glinet-b1300-WHM
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.2_BH5GL:glinet-b1300.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
 
 R1:glinet-b1300:MAP-4.2.3_BHWIFI_FH5GH:
   extends: .certification:R1:glinet-b1300
