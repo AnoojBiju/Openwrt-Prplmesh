@@ -61,6 +61,11 @@ const amxc_htable_t *AmxClient::get_htable_object(const std::string &object_path
     return nullptr;
 }
 
+int AmxClient::set_object(const std::string &path, amxc_var_t *value, amxc_var_t *ret)
+{
+    return amxb_set(bus_ctx, path.c_str(), value, ret, 3);
+}
+
 AmxClient::~AmxClient()
 {
     amxb_free(&bus_ctx);
