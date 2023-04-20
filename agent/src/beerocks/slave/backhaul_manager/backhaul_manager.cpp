@@ -2830,7 +2830,7 @@ bool BackhaulManager::start_wps_pbc(const sMacAddr &radio_mac)
         // no BH link anyway).
         // This is a temporary solution for axepoint (prplwrt) in order to pass wbh easymesh
         // certification tests (Need to be removed once PPM-643 or PPM-1580 are solved)
-        for (const auto &radio_info : m_radios_info) {
+/*         for (const auto &radio_info : m_radios_info) {
             auto msg = message_com::create_vs_message<
                 beerocks_message::cACTION_BACKHAUL_RADIO_DISABLE_REQUEST>(cmdu_tx);
             if (!msg) {
@@ -2846,7 +2846,7 @@ bool BackhaulManager::start_wps_pbc(const sMacAddr &radio_mac)
                 return false;
             }
             UTILS_SLEEP_MSEC(3000);
-        }
+        } */
         if (!sta_wlan_hal->start_wps_pbc()) {
             LOG(ERROR) << "Failed to start wps";
             return false;
