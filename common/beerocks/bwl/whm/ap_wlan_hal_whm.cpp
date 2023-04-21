@@ -570,15 +570,104 @@ bool ap_wlan_hal_whm::read_acs_report()
     return true;
 }
 
+#define MAX_TX_POWER_ABSOLUTE_MW 100
+
 bool ap_wlan_hal_whm::set_tx_power_limit(int tx_pow_limit)
 {
+    std::string power_list_str;
+    m_ambiorix_cl->get_param<>(power_list_str, m_radio_path, "TransmitPowerSupported");
+
+    std::stringstream ss(power_list_str);
+    std::vector<int> power_list_vec;
+    int tx_pow_relative;
+    int new_value(-1); // -1 is a special value for tr181 Radio.TransmitPower 'auto mode';
+
+    while (ss.good()) {
+        std::string substr;
+        getline(ss, substr, ',');
+        if (stoi(substr) > 0) { // skip special value of -1
+            power_list_vec.push_back(stoi(substr));
+        }
+    }
+    std::sort(power_list_vec.begin(), power_list_vec.end());
+
+    //convert tx_pow_limit from dBm to mW
+    std::map<int, double> dbm_to_mw_conversion_table = {
+        {-7, 0.2000},   {-6, 0.2512},   {-5, 0.3162},   {-4, 0.3981},   {-3, 0.5012},
+        {-2, 0.6310},   {-1, 0.7943},   {0, 1.0000},    {1, 1.2589},    {2, 1.5849},
+        {3, 1.9953},    {4, 2.5119},    {5, 3.1628},    {6, 3.9811},    {7, 5.0119},
+        {8, 6.3096},    {9, 7.9433},    {10, 10.000},   {11, 12.5893},  {12, 15.8489},
+        {13, 19.9526},  {14, 25.1189},  {15, 31.6228},  {16, 39.8107},  {17, 50.1187},
+        {18, 63.0957},  {19, 79.4328},  {20, 100.00},   {21, 125.8925}, {22, 158.4893},
+        {23, 199.5262}, {24, 251.1886}, {25, 316.2278}, {26, 398.1072}, {27, 501.1872},
+        {28, 630.9573}, {29, 794.3282}, {30, 1000.00},
+    };
+    /* human-readable conversion table  (from https://www.rapidtables.com/convert/power/dBm_to_mW.html)
+{-7 ,  0.200},  {12 ,  15.8489},
+{-6 ,  0.2512},  {13 ,  19.9526},
+{-5 ,  0.3162},  {14 ,  25.1189},
+{-4 ,  0.3981},  {15 ,  31.6228},
+{-3 ,  0.5012},  {16 ,  39.8107},
+{-2 ,  0.6310},  {17 ,  50.1187},
+{-1 ,  0.7943},  {18 ,  63.0957},
+{0  ,  1.0000},   {19 ,  79.4328},
+{1  ,  1.2589},   {20 ,  100.00},
+{2  ,  1.5849},   {21 ,  125.8925},
+{3  ,  1.9953},   {22 ,  158.4893},
+{4  ,  2.5119},   {23 ,  199.5262},
+{5  ,  3.1628},   {24 ,  251.1886},
+{6  ,  3.9811},   {25 ,  316.2278},
+{7  ,  5.0119},   {26 ,  398.1072},
+{8  ,  6.3096},   {27 ,  501.1872},
+{9  ,  7.9433},   {28 ,  630.9573},
+{10 ,	10.00},   {29 ,  794.3282},
+{11 ,  12.5893},  {30 ,  1000.00},
+
+notes on maintenance: adjust MAX_TX_POWER according to board; extend table if needed
+ideally, expose the MAX_TX_POWER_ABSOLUTE_MW via bpl;
+the code below will still work
+*/
+    auto pow_it = dbm_to_mw_conversion_table.find(tx_pow_limit);
+
+    if (pow_it == dbm_to_mw_conversion_table.end()) {
+        if (tx_pow_limit < dbm_to_mw_conversion_table.begin()->first) {
+            //use smallest possible value
+            new_value = *power_list_vec.begin();
+        } else {
+            //use biggest possible value
+            new_value = *power_list_vec.rbegin();
+        }
+    } else {
+        float denominator(MAX_TX_POWER_ABSOLUTE_MW), ratio, numerator;
+        numerator       = pow_it->second;
+        ratio           = numerator * 100 / denominator;
+        tx_pow_relative = floor(ratio);
+
+        // power_list_vec is sorted; use reverse iterator until
+        // the computed tx_pow_relative fits between between two values of "TransmitPowerSupported"
+        // then use the small value of the two (with reverse iterator, it's the current one)
+        std::vector<int>::reverse_iterator r_it;
+        for (r_it = power_list_vec.rbegin(); &*(r_it.base() - 1) != &*(power_list_vec.begin());
+             r_it++) {
+            // stop on the first element of the vector instead of the rend() iterator
+
+            if (tx_pow_relative >= *r_it) {
+                //computed value is smaller than previous, but bigger than current, use current value
+                break;
+            }
+        }
+        new_value = *r_it;
+    }
+
     AmbiorixVariant new_obj(AMXC_VAR_ID_HTABLE);
-    new_obj.add_child<>("TransmitPower", uint8_t(tx_pow_limit));
+    new_obj.add_child<>("TransmitPower", int8_t(new_value));
     bool ret = m_ambiorix_cl->update_object(m_radio_path, new_obj);
 
     if (!ret) {
-        LOG(ERROR) << "unable to set tx power limit!";
+        LOG(ERROR) << "unable to set tx power limit for " << m_radio_path;
         return false;
+    } else {
+        LOG(INFO) << "Absolute power " << tx_pow_limit << " dBm, relative power " << new_value;
     }
 
     return true;
