@@ -460,8 +460,48 @@ bool ap_wlan_hal_whm::sta_softblock_remove(const std::string &vap_name,
 bool ap_wlan_hal_whm::switch_channel(int chan, beerocks::eWiFiBandwidth bw,
                                      int vht_center_frequency, int csa_beacon_count)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
-    return true;
+    LOG(TRACE) << __func__ << " channel: " << chan << ", bw enum: " << bw
+               << " bw mhz: " << wbapi_utils::bandwith_to_string(bw)
+               << ", vht_center_frequency: " << vht_center_frequency;
+
+    AmbiorixVariant new_obj(AMXC_VAR_ID_HTABLE);
+    bool amx_ret, status = true;
+
+    if (bw == beerocks::eWiFiBandwidth::BANDWIDTH_40) {
+
+        auto freq_type = son::wireless_utils::which_freq_type(vht_center_frequency);
+        int freq       = son::wireless_utils::channel_to_freq(chan, freq_type);
+
+        // Extension Channel
+        if (freq < vht_center_frequency) {
+            new_obj.add_child<>("ExtensionChannel", "AboveControlChannel");
+        } else {
+            new_obj.add_child<>("ExtensionChannel", "BelowControlChannel");
+        }
+        amx_ret = m_ambiorix_cl->update_object(m_radio_path, new_obj);
+        if (!amx_ret) {
+            LOG(ERROR) << "can't update Radio.ExtensionChannel for " << m_radio_path;
+            status = false;
+        }
+    }
+    // WiFi.Radio.2.OperatingChannelBandwidth
+    new_obj.set_type(AMXC_VAR_ID_HTABLE);
+    new_obj.add_child("OperatingChannelBandwidth", wbapi_utils::bandwith_to_string(bw));
+    amx_ret = m_ambiorix_cl->update_object(m_radio_path, new_obj);
+    if (!amx_ret) {
+        LOG(ERROR) << "can't update Radio.OperatingChannelBandwidth for " << m_radio_path;
+        status = false;
+    }
+
+    new_obj.set_type(AMXC_VAR_ID_HTABLE);
+    new_obj.add_child("Channel", chan);
+    amx_ret = m_ambiorix_cl->update_object(m_radio_path, new_obj);
+    if (!amx_ret) {
+        LOG(ERROR) << "can't update Radio.Channel for " << m_radio_path;
+        status = false;
+    }
+
+    return status;
 }
 
 bool ap_wlan_hal_whm::cancel_cac(int chan, beerocks::eWiFiBandwidth bw, int vht_center_frequency,
