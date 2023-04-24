@@ -157,10 +157,11 @@ bool sta_wlan_hal_whm::process_scan_complete_event(const std::string &result)
 
 bool sta_wlan_hal_whm::start_wps_pbc()
 {
+    LOG(ERROR) << "wissemmmm start_wps_pbc called";
     AmbiorixVariant args, result;
     bool enable(false);
-    m_ambiorix_cl->get_param(enable,m_radio_path, "Enable");
-    LOG(ERROR) << "wissemmmm " << m_radio_path << " Enable= " << enable;
+    m_ambiorix_cl->get_param(enable, m_radio_path, "Enable");
+    LOG(ERROR) << "wissemmmm start_wps_pbc" << m_radio_path << " Enable= " << enable;
 
     std::string wps_path = m_ep_path + "WPS.";
     bool ret             = m_ambiorix_cl->call(wps_path, "pushButton", args, result);
@@ -169,6 +170,7 @@ bool sta_wlan_hal_whm::start_wps_pbc()
         LOG(ERROR) << "start_wps_pbc() failed!";
         return false;
     }
+    LOG(ERROR) << "wissemmmm start_wps_pbc success";
     return true;
 }
 
