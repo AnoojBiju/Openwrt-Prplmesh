@@ -332,6 +332,7 @@ void BackhaulManager::on_thread_stop()
                 radio_info->sta_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
             }
         }
+        LOG(DEBUG) << " wissemmmm pop_back " << tlvf::mac_to_string(radio_info->radio_mac);
         m_radios_info.pop_back();
     }
 
@@ -1548,11 +1549,13 @@ bool BackhaulManager::handle_slave_backhaul_message(int fd, ieee1905_1::CmduMess
                 radio_info               = std::make_shared<sRadioInfo>();
                 radio_info->hostap_iface = radio->front.iface_name;
                 radio_info->sta_iface    = radio->back.iface_name;
-                LOG(DEBUG) << "Pushing new Radio";
+                LOG(DEBUG) << "Pushing new Radio "
+                           << " wissemmmm with mac= " << radio->front.iface_mac;
                 m_radios_info.push_back(radio_info);
             } else {
                 radio_info = *found;
-                LOG(DEBUG) << "Updating new Radio";
+                LOG(DEBUG) << "Updating new Radio "
+                           << " wissemmmm with mac= " << radio->front.iface_mac;
             }
 
             radio_info->radio_mac = radio->front.iface_mac;
@@ -1692,7 +1695,7 @@ bool BackhaulManager::handle_slave_backhaul_message(int fd, ieee1905_1::CmduMess
                                          [&](const std::shared_ptr<sRadioInfo> &radio_info) {
                                              return radio_info->hostap_iface == front_iface_name;
                                          });
-
+        LOG(DEBUG) << " wissemmmm removing " << front_iface_name;
         m_radios_info.erase(removed_it, m_radios_info.end());
 
         // Notify channel selection task on zwdfs radio re-connect
@@ -2830,7 +2833,7 @@ bool BackhaulManager::start_wps_pbc(const sMacAddr &radio_mac)
         // no BH link anyway).
         // This is a temporary solution for axepoint (prplwrt) in order to pass wbh easymesh
         // certification tests (Need to be removed once PPM-643 or PPM-1580 are solved)
-/*         for (const auto &radio_info : m_radios_info) {
+        /*         for (const auto &radio_info : m_radios_info) {
             auto msg = message_com::create_vs_message<
                 beerocks_message::cACTION_BACKHAUL_RADIO_DISABLE_REQUEST>(cmdu_tx);
             if (!msg) {
@@ -2930,7 +2933,11 @@ std::shared_ptr<bwl::sta_wlan_hal> BackhaulManager::get_selected_backhaul_sta_wl
                          return tlvf::mac_from_string(m_selected_backhaul) == radio_info->radio_mac;
                      });
     if (selected_backhaul_it == m_radios_info.end()) {
-        LOG(ERROR) << "Invalid backhaul";
+        LOG(ERROR) << "Invalid backhaul" << m_selected_backhaul;
+        for  (auto & radio : m_radios_info)
+        {
+             LOG(ERROR) << "wissemmmm radio found = "<<tlvf::mac_to_string(radio->radio_mac);
+        }
         return nullptr;
     }
     return (*selected_backhaul_it)->sta_wlan_hal;
@@ -3023,7 +3030,8 @@ void BackhaulManager::handle_dev_reset_default(
         return;
     }
 
-    m_selected_backhaul           = "";
+    m_selected_backhaul = "";
+    LOG(ERROR) << "wissemmmm m_selected_backhaul=" << m_selected_backhaul;
     m_is_in_reset_state           = true;
     m_dev_reset_default_completed = false;
 }
@@ -3052,6 +3060,7 @@ bool BackhaulManager::handle_dev_set_config(
     if (backhaul == DEV_SET_ETH) {
         // wired backhaul connection.
         m_selected_backhaul = DEV_SET_ETH;
+        LOG(ERROR) << "wissemmmm m_selected_backhaul=" << m_selected_backhaul;
     } else {
         // wireless backhaul connection.
         // backhaul param must be a radio UID, in hex, starting with 0x
@@ -3067,6 +3076,7 @@ bool BackhaulManager::handle_dev_set_config(
             backhaul_radio_uid.oct[idx] = std::stoul(backhaul.substr(2 + 2 * idx, 2), 0, 16);
         }
         m_selected_backhaul = tlvf::mac_to_string(backhaul_radio_uid);
+        LOG(ERROR) << "wissemmmm m_selected_backhaul=" << m_selected_backhaul;
 
         // remove wired (ethernet) interface from the bridge
         auto db            = AgentDB::get();
