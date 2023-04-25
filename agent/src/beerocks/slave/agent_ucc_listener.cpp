@@ -145,7 +145,8 @@ bool agent_ucc_listener::handle_start_wps_registration(const std::string &band,
                                                        std::string &err_string)
 {
     auto freq          = band_to_freq(band);
-    auto radio_mac_str = m_btl_ctx.freq_to_radio_mac(freq);
+    auto radio_mac_str = m_btl_ctx.freq_to_radio_mac_wissem(freq);
+    LOG(DEBUG) << "wissemmm triggering wps on radio_mac_str="<<radio_mac_str;
     if (radio_mac_str.empty()) {
         err_string = "Failed to get radio for " + band;
         return false;

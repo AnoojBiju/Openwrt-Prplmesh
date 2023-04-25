@@ -2794,6 +2794,23 @@ std::string BackhaulManager::freq_to_radio_mac(eFreqType freq) const
     LOG(ERROR) << "Radio not found for freq " << int(freq);
     return {};
 }
+std::string BackhaulManager::freq_to_radio_mac_wissem(eFreqType freq) const
+{
+    auto db = AgentDB::get();
+    for (const auto radio : db->get_radios_list()) {
+        if (!radio) {
+            continue;
+        }
+        if (radio->wifi_channel.get_freq_type() == freq) {
+            LOG(ERROR) << "wissemmmm found radio with mac= "
+                       << tlvf::mac_to_string(radio->back.iface_mac);
+            return tlvf::mac_to_string(radio->back.iface_mac);
+        }
+    }
+
+    LOG(ERROR) << "Radio not found for freq " << int(freq);
+    return {};
+}
 
 bool BackhaulManager::start_wps_pbc(const sMacAddr &radio_mac)
 {
@@ -2934,9 +2951,8 @@ std::shared_ptr<bwl::sta_wlan_hal> BackhaulManager::get_selected_backhaul_sta_wl
                      });
     if (selected_backhaul_it == m_radios_info.end()) {
         LOG(ERROR) << "Invalid backhaul" << m_selected_backhaul;
-        for  (auto & radio : m_radios_info)
-        {
-             LOG(ERROR) << "wissemmmm radio found = "<<tlvf::mac_to_string(radio->radio_mac);
+        for (auto &radio : m_radios_info) {
+            LOG(ERROR) << "wissemmmm radio found = " << tlvf::mac_to_string(radio->radio_mac);
         }
         return nullptr;
     }

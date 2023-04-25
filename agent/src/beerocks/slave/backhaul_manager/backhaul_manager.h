@@ -131,6 +131,8 @@ public:
      */
     std::string freq_to_radio_mac(eFreqType freq) const;
 
+    std::string freq_to_radio_mac_wissem(eFreqType freq) const;
+
     /**
      * @brief start WPS PBC
      * 
