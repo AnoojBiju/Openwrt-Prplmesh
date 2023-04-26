@@ -841,9 +841,16 @@ AmbiorixVariantSmartPtr ap_wlan_hal_whm::get_last_assoc_frame(const std::string 
     AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
     args.add_child("mac", sta_mac);
 
-    std::string ap_path = wbapi_utils::search_path_assocDev_by_mac(vap_iface, sta_mac);
+    std::string ap_path{};
+    bool ret =
+        m_ambiorix_cl->resolve_path(wbapi_utils::search_path_ap_by_iface(vap_iface), ap_path);
+    if (!ret) {
+        LOG(ERROR) << "can't resolve " << wbapi_utils::search_path_ap_by_iface(vap_iface);
+    } else {
+        LOG(DEBUG) << "get assoc frame path " << ap_path << " for " << sta_mac;
+    }
 
-    bool ret = m_ambiorix_cl->call(ap_path, "getLastAssocReq", args, data);
+    ret = m_ambiorix_cl->call(ap_path, "getLastAssocReq", args, data);
 
     AmbiorixVariantSmartPtr result = data.find_child(0);
     if (!ret || !result) {
