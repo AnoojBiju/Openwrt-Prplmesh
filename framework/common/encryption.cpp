@@ -179,78 +179,62 @@ bool diffie_hellman::compute_key(uint8_t *key, size_t &key_length, const uint8_t
 #else
 diffie_hellman::diffie_hellman() : m_evp(nullptr), m_pubkey(nullptr)
 {
-
     MAPF_DBG("Generating EVP keypair");
 
-    BIGNUM *p = BN_bin2bn(dh1536_p, sizeof(dh1536_p), nullptr);
-    BIGNUM *g = BN_bin2bn(dh1536_g, sizeof(dh1536_g), nullptr);
+    std::unique_ptr<BIGNUM, decltype(&BN_free)> p(BN_bin2bn(dh1536_p, sizeof(dh1536_p), nullptr),
+                                                  &BN_free);
+    std::unique_ptr<BIGNUM, decltype(&BN_free)> g(BN_bin2bn(dh1536_g, sizeof(dh1536_g), nullptr),
+                                                  &BN_free);
 
-    EVP_PKEY_CTX *pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_DH, nullptr);
+    std::unique_ptr<EVP_PKEY_CTX, decltype(&EVP_PKEY_CTX_free)> pctx(
+        EVP_PKEY_CTX_new_id(EVP_PKEY_DH, nullptr), &EVP_PKEY_CTX_free);
     if (pctx == nullptr) {
         MAPF_ERR("Failed to allocate parameter generation EVP_PKEY_CTX");
         return;
     }
 
-    if (EVP_PKEY_paramgen_init(pctx) != 1) {
+    if (EVP_PKEY_paramgen_init(pctx.get()) != 1) {
         MAPF_ERR("Failed to initialize parameter generation");
-        EVP_PKEY_CTX_free(pctx);
         return;
     }
 
-    // Set the custom DH parameters
-    EVP_PKEY *params = EVP_PKEY_new();
-    int ret_p        = EVP_PKEY_set_bn_param(params, "p", p);
-    int ret_g        = EVP_PKEY_set_bn_param(params, "g", g);
-    BN_free(p);
-    BN_free(g);
+    std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)> params(EVP_PKEY_new(), &EVP_PKEY_free);
+    int ret_p = EVP_PKEY_set_bn_param(params.get(), "p", p.get());
+    int ret_g = EVP_PKEY_set_bn_param(params.get(), "g", g.get());
 
     if (ret_p != 1 || ret_g != 1) {
         MAPF_ERR("Failed to set custom DH parameters");
-        EVP_PKEY_free(params);
-        EVP_PKEY_CTX_free(pctx);
         return;
     }
-    // Generate a key pair
-    EVP_PKEY_CTX *kctx = EVP_PKEY_CTX_new(params, nullptr);
+
+    std::unique_ptr<EVP_PKEY_CTX, decltype(&EVP_PKEY_CTX_free)> kctx(
+        EVP_PKEY_CTX_new(params.get(), nullptr), &EVP_PKEY_CTX_free);
     if (kctx == nullptr) {
         MAPF_ERR("Failed to allocate key generation EVP_PKEY_CTX");
-        EVP_PKEY_free(params);
-        EVP_PKEY_CTX_free(pctx);
         return;
     }
 
-    if (EVP_PKEY_keygen_init(kctx) != 1) {
+    if (EVP_PKEY_keygen_init(kctx.get()) != 1) {
         MAPF_ERR("Failed to initialize key generation");
-        EVP_PKEY_CTX_free(kctx);
-        EVP_PKEY_free(params);
-        EVP_PKEY_CTX_free(pctx);
         return;
     }
 
-    if (EVP_PKEY_keygen(kctx, &m_evp) != 1) {
+    if (EVP_PKEY_keygen(kctx.get(), &m_evp) != 1) {
         MAPF_ERR("Failed to generate DH key pair");
-        EVP_PKEY_CTX_free(kctx);
-        EVP_PKEY_free(params);
-        EVP_PKEY_CTX_free(pctx);
         return;
     }
-    EVP_PKEY_CTX_free(kctx);
-    EVP_PKEY_free(params);
 
-    // Get the public key
     BIGNUM *pub_key = nullptr;
     if (EVP_PKEY_get_bn_param(m_evp, "pub", &pub_key) != 1) {
         MAPF_ERR("Failed to get the public key");
         return;
     }
 
-    // Convert the public key to a byte array
     m_pubkey_length = BN_num_bytes(pub_key);
     m_pubkey        = new uint8_t[m_pubkey_length];
     BN_bn2bin(pub_key, m_pubkey);
     BN_free(pub_key);
 
-    // Generate a nonce
     if (RAND_bytes(m_nonce, sizeof(m_nonce)) != 1) {
         MAPF_ERR("Failed to generate nonce");
     }
@@ -275,34 +259,34 @@ bool diffie_hellman::compute_key(uint8_t *key, size_t &key_length, const uint8_t
 
     MAPF_DBG("Computing DH shared key");
 
-    BIGNUM *pub_key = BN_bin2bn(remote_pubkey, remote_pubkey_length, NULL);
+    std::unique_ptr<BIGNUM, decltype(&BN_clear_free)> pub_key(
+        BN_bin2bn(remote_pubkey, remote_pubkey_length, nullptr), &BN_clear_free);
     if (pub_key == nullptr) {
         MAPF_ERR("Failed to set DH remote_pub_key");
-        return 0;
+        return false;
     }
 
     // Compute the shared secret and save it in the output buffer
-    if ((int)key_length < EVP_PKEY_size(m_evp)) {
-        MAPF_ERR("Output buffer for DH shared key to small: ")
-            << key_length << " < " << EVP_PKEY_size(m_evp);
-        BN_clear_free(pub_key);
-        return false;
-    }
-    EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new(m_evp, nullptr);
-    if (!ctx) {
-        MAPF_ERR("EVP_PKEY_CTX_new failed");
-        BN_free(pub_key);
+    if (key_length < (size_t)EVP_PKEY_size(m_evp)) {
+        MAPF_ERR("Output buffer for DH shared key too small: " << key_length << " < "
+                                                               << EVP_PKEY_size(m_evp));
         return false;
     }
 
-    int ret = EVP_PKEY_derive(ctx, key, &key_length);
-    EVP_PKEY_CTX_free(ctx);
-    BN_clear_free(pub_key);
+    std::unique_ptr<EVP_PKEY_CTX, decltype(&EVP_PKEY_CTX_free)> ctx(
+        EVP_PKEY_CTX_new(m_evp, nullptr), &EVP_PKEY_CTX_free);
+    if (!ctx) {
+        MAPF_ERR("EVP_PKEY_CTX_new failed");
+        return false;
+    }
+
+    int ret = EVP_PKEY_derive(ctx.get(), key, &key_length);
     if (ret < 0) {
         MAPF_ERR("Failed to compute DH shared key");
         return false;
     }
-    key_length = (size_t)ret;
+
+    key_length = static_cast<size_t>(ret);
     return true;
 }
 #endif
