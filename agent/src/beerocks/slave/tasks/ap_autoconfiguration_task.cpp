@@ -324,6 +324,8 @@ bool ApAutoConfigurationTask::handle_vendor_specific(
 void ApAutoConfigurationTask::configuration_complete_wait_action(const std::string &radio_iface)
 {
     auto &radio_conf_params = m_radios_conf_params[radio_iface];
+#if !USE_PRPLMESH_WHM
+// counting BSSes that are actually active is a faux-pas for whm; see PPM-2531 for discussion
 
     // num_of_bss_available updates on ACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_RESPONSE handler
     if (!radio_conf_params.num_of_bss_available) {
@@ -343,6 +345,7 @@ void ApAutoConfigurationTask::configuration_complete_wait_action(const std::stri
             return;
         }
     }
+#endif
 
     // Arbitrary value
     constexpr uint8_t WAIT_IFACES_INSIDE_THE_BRIDGE_TIMEOUT_SECONDS = 30;
