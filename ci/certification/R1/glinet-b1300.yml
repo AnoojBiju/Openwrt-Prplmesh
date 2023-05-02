@@ -54,6 +54,15 @@ R1:glinet-b1300:MAP-4.2.3_BHWIFI_FH5GH:
     - when: manual
       allow_failure: true
 
+R1:glinet-b1300:MAP-4.2.3_ETH_FH5GH:
+  extends: .certification:R1:glinet-b1300-WHM
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.3_ETH_FH5GH:glinet-b1300.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
 
 R1:glinet-b1300:MAP-4.3.1_BHWIFI:
   extends: .certification:R1:glinet-b1300-WHM
@@ -98,6 +107,15 @@ R1:glinet-b1300:MAP-4.4.2_BHWIFI_FH5GH:
     - when: manual
       allow_failure: true
 
+R1:glinet-b1300:MAP-4.4.2_ETH_FH5GH:
+  extends: .certification:R1:glinet-b1300-WHM
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.4.2_ETH_FH5GH:glinet-b1300.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
 
 R1:glinet-b1300:MAP-4.4.3_BHWIFI_FH5GH:
   extends: .certification:R1:glinet-b1300-WHM
