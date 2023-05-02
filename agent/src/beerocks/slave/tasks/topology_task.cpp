@@ -227,26 +227,32 @@ void TopologyTask::handle_topology_query(ieee1905_1::CmduMessageRx &cmdu_rx,
     }
 
     if (!add_device_information_tlv()) {
+        LOG(ERROR) << "Failed to add device information TLV";
         return;
     }
 
     if (!add_1905_neighbor_device_tlv()) {
+        LOG(ERROR) << "Failed to add neighbor device TLV";
         return;
     }
 
     if (!add_supported_service_tlv()) {
+        LOG(ERROR) << "Failed to add supported service TLV";
         return;
     }
 
     if (!add_ap_operational_bss_tlv()) {
+        LOG(ERROR) << "Failed to add AP operational BSS TLV";
         return;
     }
 
     if (!add_associated_clients_tlv()) {
+        LOG(ERROR) << "Failed to add associated clients TLV";
         return;
     }
 
     if (!add_vs_tlv_bssid_iface_mapping()) {
+        LOG(ERROR) << "Failed to add VS TLV BSSID iface mapping";
         return;
     }
 
@@ -758,6 +764,7 @@ bool TopologyTask::add_associated_clients_tlv()
     }
 
     if (include_associated_clients_tlv) {
+        LOG(DEBUG) << "At least one client is associated, Associated Clients TLV will be added";
         auto tlvAssociatedClients = m_cmdu_tx.addClass<wfa_map::tlvAssociatedClients>();
         if (!tlvAssociatedClients) {
             LOG(ERROR) << "addClass wfa_map::tlvAssociatedClients failed";
@@ -798,6 +805,7 @@ bool TopologyTask::add_associated_clients_tlv()
 
                     client_info->mac()                             = associated_client_entry.first;
                     client_info->time_since_last_association_sec() = elapsed;
+                    LOG(DEBUG) << "Adding client_info for client " << client_info->mac();
 
                     bss_list->add_clients_associated_list(client_info);
                 }

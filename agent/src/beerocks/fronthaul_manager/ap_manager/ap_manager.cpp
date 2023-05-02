@@ -53,6 +53,12 @@
  */
 constexpr auto fsm_timer_period = std::chrono::milliseconds(1000);
 
+/**
+ * Time to wait before restoring the behavior of deauthenticating
+ * unknown stations on a new VBSS.
+ */
+constexpr auto vbss_deauth_unknown_stas_grace_period = std::chrono::milliseconds(2000);
+
 #define SELECT_TIMEOUT_MSC 1000
 #define ACS_READ_SLEEP_USC 1000
 #define READ_ACS_ATTEMPT_MAX 5
@@ -414,6 +420,7 @@ bool ApManager::stop()
                 m_event_loop->remove_handlers(fd);
             }
         }
+        m_dynamic_bss_ext_events_fds.clear();
 
         if (m_ap_hal_int_events > 0) {
             m_event_loop->remove_handlers(m_ap_hal_int_events);
@@ -758,8 +765,48 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
             return;
         }
 
+        // refresh vaps info so that the new vap id can be retrieved
+        // from the BSSID (needed for ACLs):
+        if (!ap_wlan_hal->refresh_vaps_info()) {
+            LOG(ERROR) << "Failed to refresh vaps info!";
+            return;
+        }
+
+        // We only configure the acceptlist if the station was already
+        // associated, to allow the controller to create VBSSes for
+        // any specific station (i.e. before the actual station MAC is
+        // known).
+
         if (virtual_bss_creation_tlv->client_assoc()) {
             LOG(DEBUG) << "The client was already associated, adding a new station and its keys.";
+
+            if (!ap_wlan_hal->set_macacl_type(bwl::eMacACLType::ACCEPT_LIST,
+                                              virtual_bss_creation_tlv->bssid())) {
+                LOG(ERROR) << "Failed to configure MAC ACL!";
+                send_virtual_bss_response(virtual_bss_creation_tlv->radio_uid(),
+                                          virtual_bss_creation_tlv->bssid(), false);
+                return;
+            }
+
+            if (!ap_wlan_hal->sta_acceptlist_modify(virtual_bss_creation_tlv->client_mac(),
+                                                    virtual_bss_creation_tlv->bssid(),
+                                                    bwl::sta_acl_action::ADD)) {
+                LOG(ERROR) << "Failed to allow the new STA! MAC: "
+                           << virtual_bss_creation_tlv->client_mac();
+                send_virtual_bss_response(virtual_bss_creation_tlv->radio_uid(),
+                                          virtual_bss_creation_tlv->bssid(), false);
+                return;
+            }
+
+            // Configure unicast beacons:
+            if (!ap_wlan_hal->set_beacon_da(ifname, virtual_bss_creation_tlv->client_mac())) {
+                LOG(ERROR) << "Failed to setup unicast beacons! MAC: "
+                           << virtual_bss_creation_tlv->client_mac();
+                send_virtual_bss_response(virtual_bss_creation_tlv->radio_uid(),
+                                          virtual_bss_creation_tlv->bssid(), false);
+                return;
+            }
+
             auto client_capability_report = cmdu_rx.getClass<wfa_map::tlvClientCapabilityReport>();
             if (!client_capability_report) {
                 LOG(ERROR) << "Missing client capability report for an associated client!";
@@ -777,8 +824,12 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
                 return;
             }
 
+            std::vector<uint8_t> raw_association_frame = {
+                client_capability_report->association_frame(),
+                client_capability_report->association_frame() +
+                    client_capability_report->association_frame_length()};
             if (!ap_wlan_hal->add_station(ifname, virtual_bss_creation_tlv->client_mac(),
-                                          *association_request)) {
+                                          raw_association_frame)) {
                 LOG(ERROR) << "Failed to add the station!";
                 send_virtual_bss_response(virtual_bss_creation_tlv->radio_uid(),
                                           virtual_bss_creation_tlv->bssid(), false);
@@ -848,6 +899,35 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
 
         // TODO: PPM-2349: add support for the client capabilities
 
+        // Restore deauthenticating unknown stations only after some
+        // time, to give the AP a bit more time to process any pending
+        // frames.
+        m_vbss_deauth_unknown_stas_timer = m_timer_manager->add_timer(
+            "vbss_deauth_unknown_stas_timer", vbss_deauth_unknown_stas_grace_period,
+            std::chrono::milliseconds::zero(), [=](int fd, beerocks::EventLoop &loop) {
+                m_timer_manager->remove_timer(m_vbss_deauth_unknown_stas_timer);
+                LOG(DEBUG) << "Restoring set_no_deauth_unknown_sta to false";
+                // Restore the behavior of deauthenticating unknown STAs:
+                if (!ap_wlan_hal->set_no_deauth_unknown_sta(ifname, false)) {
+                    LOG(WARNING) << "Failed to set no_deauth_unknown_sta! ifname: " << ifname;
+                }
+                return true;
+            });
+
+        if (m_vbss_deauth_unknown_stas_timer == beerocks::net::FileDescriptor::invalid_descriptor) {
+            LOG(WARNING) << "Failed to create the vbss_deauth_unknown_stas timer!";
+            // This is not a blocker, keep going.
+        }
+
+        // Now that the BSS is ready, update the beacon in case it's
+        // needed (e.g. unicast beacons have been configured):
+        if (!ap_wlan_hal->update_beacon(ifname)) {
+            LOG(ERROR) << "Failed to update beacons! ifname: " << ifname;
+            send_virtual_bss_response(virtual_bss_creation_tlv->radio_uid(),
+                                      virtual_bss_creation_tlv->bssid(), false);
+            return;
+        }
+
         // refresh the vaps info.
         // TODO: re-visit after PPM-1923 is fixed.
         handle_aps_update_list();
@@ -888,7 +968,7 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
             }
         }
 
-        if (!ap_wlan_hal->remove_bss(ifname)) {
+        if (!remove_bss(ifname)) {
             LOG(ERROR) << "Failed to remove the BSS!";
             send_virtual_bss_response(virtual_bss_destruction_tlv->radio_uid(),
                                       virtual_bss_destruction_tlv->bssid(), false);
@@ -977,12 +1057,21 @@ void ApManager::handle_virtual_bss_move_cancel_request(ieee1905_1::CmduMessageRx
 void ApManager::handle_unassoc_sta_link_metrics_query_message(ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     const auto mid = cmdu_rx.getMessageId();
+    LOG(DEBUG) << "Received UNASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE, mid=" << std::hex << mid;
     auto unassoc_sta_link_metric_query =
         cmdu_rx.getClass<wfa_map::tlvUnassociatedStaLinkMetricsQuery>();
     if (!unassoc_sta_link_metric_query) {
         LOG(ERROR) << "Unassoc sta link metric query cmdu mid =" << mid << " get class failed";
         return;
     }
+
+    // Send Ack for the Unassociated STA Link Metrics Query
+    auto cmdu_tx_header = cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE);
+    if (!cmdu_tx_header) {
+        LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
+        return;
+    }
+    send_cmdu(cmdu_tx);
     ap_wlan_hal->send_unassoc_sta_link_metric_query(unassoc_sta_link_metric_query);
 }
 
@@ -1202,8 +1291,8 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
         }
 
         if (ap_wlan_hal->get_radio_info().channel == request->cs_params().channel &&
-            ap_wlan_hal->get_radio_info().bandwidth == request->cs_params().bandwidth &&
-            !request->tx_limit_valid()) {
+            utils::convert_bandwidth_to_enum(ap_wlan_hal->get_radio_info().bandwidth) ==
+                request->cs_params().bandwidth) {
             // No need to switch channels
             LOG(INFO) << "No need to switch channels as current channel and requested channels are "
                          "the same.";
@@ -1379,23 +1468,22 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             return;
         }
 
-        std::string sta_mac = tlvf::mac_to_string(request->mac());
-        std::string bssid   = tlvf::mac_to_string(request->bssid());
-
         const auto &vap_unordered_map = ap_wlan_hal->get_radio_info().available_vaps;
-        auto it = std::find_if(vap_unordered_map.begin(), vap_unordered_map.end(),
-                               [&](const std::pair<int, bwl::VAPElement> &element) {
-                                   return element.second.mac == bssid;
-                               });
+        auto it =
+            std::find_if(vap_unordered_map.begin(), vap_unordered_map.end(),
+                         [&](const std::pair<int, bwl::VAPElement> &element) {
+                             return element.second.mac == tlvf::mac_to_string(request->bssid());
+                         });
 
         if (it == vap_unordered_map.end()) {
             //AP does not have the requested vap, probably will be handled on the other AP
             return;
         }
 
-        LOG(DEBUG) << "CLIENT_DISALLOW: mac = " << sta_mac << ", bssid = " << bssid;
+        LOG(DEBUG) << "CLIENT_DISALLOW: mac = " << request->mac()
+                   << ", bssid = " << request->bssid();
 
-        ap_wlan_hal->sta_deny(sta_mac, bssid);
+        ap_wlan_hal->sta_deny(request->mac(), request->bssid());
 
         // Check if validity period is set then add it to the "disallowed client timeouts" list
         // This list will be polled in ap_manager_fsm() while in operational state through method
@@ -1438,14 +1526,12 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             return;
         }
 
-        std::string sta_mac = tlvf::mac_to_string(request->mac());
-        std::string bssid   = tlvf::mac_to_string(request->bssid());
-
         const auto &vap_unordered_map = ap_wlan_hal->get_radio_info().available_vaps;
-        auto it = std::find_if(vap_unordered_map.begin(), vap_unordered_map.end(),
-                               [&](const std::pair<int, bwl::VAPElement> &element) {
-                                   return element.second.mac == bssid;
-                               });
+        auto it =
+            std::find_if(vap_unordered_map.begin(), vap_unordered_map.end(),
+                         [&](const std::pair<int, bwl::VAPElement> &element) {
+                             return element.second.mac == tlvf::mac_to_string(request->bssid());
+                         });
 
         if (it == vap_unordered_map.end()) {
             //AP does not have the requested vap, probably will be handled on the other AP
@@ -1454,8 +1540,8 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
 
         remove_client_from_disallowed_list(request->mac(), request->bssid());
 
-        LOG(DEBUG) << "CLIENT_ALLOW: mac = " << sta_mac << ", bssid = " << bssid;
-        ap_wlan_hal->sta_allow(sta_mac, bssid);
+        LOG(DEBUG) << "CLIENT_ALLOW: mac = " << request->mac() << ", bssid = " << request->bssid();
+        ap_wlan_hal->sta_allow(request->mac(), request->bssid());
 
         break;
     }
@@ -1617,6 +1703,8 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             return;
         }
 
+        std::string bridge_name = request->bridge_ifname_str();
+
         std::list<son::wireless_utils::sBssInfoConf> bss_info_conf_list;
         auto wifi_credentials_size = request->wifi_credentials_size();
 
@@ -1687,7 +1775,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
 
         if (perform_update && !bss_info_conf_list.empty()) {
             ap_wlan_hal->update_vap_credentials(bss_info_conf_list, backhaul_wps_ssid,
-                                                backhaul_wps_passphrase);
+                                                backhaul_wps_passphrase, bridge_name);
 
             // hostapd is enabled and started radio beaconing after autoconfiguration
             // then radio tx power is updated, so to keep agent DB updated send CSA notification
@@ -2880,7 +2968,7 @@ void ApManager::allow_expired_clients()
     for (auto it = m_disallowed_clients.begin(); it != m_disallowed_clients.end();) {
         if (std::chrono::steady_clock::now() > it->timeout) {
             LOG(DEBUG) << "CLIENT_ALLOW: mac = " << it->mac << ", bssid = " << it->bssid;
-            ap_wlan_hal->sta_allow(tlvf::mac_to_string(it->mac), tlvf::mac_to_string(it->bssid));
+            ap_wlan_hal->sta_allow(it->mac, it->bssid);
             it = m_disallowed_clients.erase(it);
         } else {
             it++;
@@ -2901,15 +2989,43 @@ bool ApManager::zwdfs_ap() const
 bool ApManager::add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
                         std::string &bridge, bool vbss)
 {
-    if (!ap_wlan_hal->add_bss(ifname, bss_conf, bridge, true)) {
+    int fd = ap_wlan_hal->add_bss(ifname, bss_conf, bridge, true);
+
+    if (fd < 0) {
         LOG(ERROR) << "Failed to add a new BSS!";
         return false;
     }
 
-    if (!register_ext_events_handlers(ap_wlan_hal->get_ext_events_fds().back())) {
+    m_dynamic_bss_ext_events_fds[ifname] = fd;
+
+    if (!register_ext_events_handlers(fd)) {
         LOG(ERROR) << "Failed to register ext_events handlers for the new BSS!";
         return false;
     }
+    return true;
+}
+
+bool ApManager::remove_bss(std::string &ifname)
+{
+    LOG(DEBUG) << "Removing bss " << ifname;
+
+    if (m_dynamic_bss_ext_events_fds.count(ifname) < 1) {
+        LOG(WARNING) << "Could not find ext events fd for interface " << ifname;
+        // Continue, try to remove the BSS anyway.
+    }
+    int fd = m_dynamic_bss_ext_events_fds[ifname];
+
+    if (!m_event_loop->remove_handlers(fd)) {
+        LOG(WARNING) << "Unable to remove handlers for external event fd " << fd;
+        // Continue, try to remove the BSS anyway.
+    }
+    m_dynamic_bss_ext_events_fds.erase(ifname);
+
+    if (!ap_wlan_hal->remove_bss(ifname)) {
+        LOG(ERROR) << "Failed to remove the BSS!";
+        return false;
+    }
+
     return true;
 }
 
@@ -2933,6 +3049,12 @@ bool ApManager::register_ext_events_handlers(int fd)
                 if (it != m_ap_hal_ext_events.end()) {
                     *it = beerocks::net::FileDescriptor::invalid_descriptor;
                 }
+                auto if_it = std::find_if(
+                    m_dynamic_bss_ext_events_fds.begin(), m_dynamic_bss_ext_events_fds.end(),
+                    [fd](const std::pair<std::string, int> &i) -> bool { return i.second == fd; });
+                if (if_it != m_dynamic_bss_ext_events_fds.end()) {
+                    m_dynamic_bss_ext_events_fds.erase(if_it);
+                }
                 return false;
             },
         .on_error =
@@ -2941,6 +3063,12 @@ bool ApManager::register_ext_events_handlers(int fd)
                 auto it = std::find(m_ap_hal_ext_events.begin(), m_ap_hal_ext_events.end(), fd);
                 if (it != m_ap_hal_ext_events.end()) {
                     *it = beerocks::net::FileDescriptor::invalid_descriptor;
+                }
+                auto if_it = std::find_if(
+                    m_dynamic_bss_ext_events_fds.begin(), m_dynamic_bss_ext_events_fds.end(),
+                    [fd](const std::pair<std::string, int> &i) -> bool { return i.second == fd; });
+                if (if_it != m_dynamic_bss_ext_events_fds.end()) {
+                    m_dynamic_bss_ext_events_fds.erase(if_it);
                 }
                 return false;
             },

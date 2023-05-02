@@ -1231,7 +1231,7 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
         bss->fronthaul          = bss_info_conf.fronthaul;
         bss->backhaul           = bss_info_conf.backhaul;
         bss->byte_counter_units = agent->byte_counter_units;
-        if (!database.update_vap(ruid, bss->bssid, bss->ssid, bss->backhaul)) {
+        if (!database.update_vap(src_mac, ruid, bss->bssid, bss->ssid, bss->backhaul)) {
             LOG(ERROR) << "Failed to update VAP for radio " << ruid << " BSS " << bss->bssid
                        << " SSID " << bss->ssid;
         }
@@ -3005,6 +3005,7 @@ bool Controller::handle_cmdu_control_message(
             break;
         }
 
+        LOG(DEBUG) << "Removing vap from DB: " << bss->dm_path;
         database.remove_vap(*radio, *bss);
 
         if (radio->bsses.erase(disabled_bssid) != 1) {
@@ -3047,7 +3048,7 @@ bool Controller::handle_cmdu_control_message(
         bss->fronthaul = notification->vap_info().fronthaul_vap;
         bss->backhaul  = notification->vap_info().backhaul_vap;
 
-        database.add_vap(radio_mac_str, vap_id, tlvf::mac_to_string(bssid), ssid,
+        database.add_vap(src_mac, radio_mac_str, vap_id, tlvf::mac_to_string(bssid), ssid,
                          notification->vap_info().backhaul_vap);
 
         // update bml listeners
@@ -3151,7 +3152,7 @@ bool Controller::handle_cmdu_control_message(
                   << vaps_list;
 
         for (auto vap : vaps_info) {
-            if (!database.update_vap(radio_mac, tlvf::mac_from_string(vap.second.mac),
+            if (!database.update_vap(src_mac, radio_mac, tlvf::mac_from_string(vap.second.mac),
                                      vap.second.ssid, vap.second.backhaul_vap)) {
                 LOG(ERROR) << "Failed to update VAP for radio " << radio_mac << " BSS "
                            << vap.second.mac << " SSID " << vap.second.ssid;
@@ -3171,6 +3172,8 @@ bool Controller::handle_cmdu_control_message(
             }
 
             // Remove the vap from DB
+            LOG(DEBUG) << "Removing BSS " << bss->bssid << " with path " << bss->dm_path
+                       << " from DB";
             database.remove_vap(*radio, *bss);
         }
 
@@ -3502,7 +3505,7 @@ bool Controller::handle_cmdu_control_message(
 
         if (!database.has_node(tlvf::mac_from_string(client_mac))) {
             LOG(DEBUG) << "client mac not in DB, add temp node " << client_mac;
-            database.add_node_station(tlvf::mac_from_string(client_mac));
+            database.add_node_station(src_mac, tlvf::mac_from_string(client_mac));
             database.update_node_last_seen(client_mac);
         }
 
@@ -4220,6 +4223,7 @@ bool Controller::handle_tlv_profile2_cac_capabilities(Agent &agent,
 
     std::stringstream ss;
 
+    agent.device_info.country_code.clear();
     agent.device_info.country_code += static_cast<char>(*cac_capabilities_tlv->country_code(0));
     agent.device_info.country_code += static_cast<char>(*cac_capabilities_tlv->country_code(1));
     ss << "Country code: " << agent.device_info.country_code << std::endl;

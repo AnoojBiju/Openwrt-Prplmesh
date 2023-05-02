@@ -342,7 +342,8 @@ status_function() {
         # skip files that aren't symlinks (and skip the literal glob if there is no matching file):
         [ -L "$main_agent_log" ] || return
 
-        radios=$(grep 'fronthaul_iface=' "$main_agent_log"  | cut -d "=" -f2)
+        [ "$(file -Lb --mime-type "$main_agent_log")" = 'text/plain' ] || err "$main_agent_log is not a text file"
+        radios=$(grep -a 'fronthaul_iface=' "$main_agent_log"  | cut -d "=" -f2)
         for radio in $radios ; do
             report "$radio radio agent operational" radio_agent_operational "$LOGS_PATH" "$radio"
         done

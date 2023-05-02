@@ -88,6 +88,9 @@ bool LinkMetricsCollectionTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx,
     return true;
 }
 
+// If time period is less than define ms then agent can send the ap metrics response
+#define GRACE_PERIOD_MS 150
+
 void LinkMetricsCollectionTask::work()
 {
     auto db = AgentDB::get();
@@ -116,11 +119,12 @@ void LinkMetricsCollectionTask::work()
         return;
     }
 
-    int elapsed_time_s = std::chrono::duration_cast<std::chrono::seconds>(
-                             now - m_ap_metrics_reporting_info.last_reporting_time_point)
-                             .count();
-
-    if (elapsed_time_s < m_ap_metrics_reporting_info.reporting_interval_s) {
+    auto elapsed_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                               now - m_ap_metrics_reporting_info.last_reporting_time_point)
+                               .count();
+    auto timeout_diff_ms =
+        (m_ap_metrics_reporting_info.reporting_interval_s * 1000 - elapsed_time_ms);
+    if (timeout_diff_ms > GRACE_PERIOD_MS) {
         return;
     }
 
@@ -142,6 +146,12 @@ void LinkMetricsCollectionTask::work()
     // To fix existing problem (PPM-1203) of remained un-answered queries,
     // query can be cleared in case of query is sent to all bissids.
     m_ap_metric_query.clear();
+
+    // AP metrics response message will be sent only when there is respective AP metric
+    // query on queue(based on MID). Since AP metric query queue is cleared, AP metric responses also
+    // need to be cleared to avoid unnecessary stacking of responses which may lead to memory leak.
+    m_ap_metric_response.clear();
+    m_radio_ap_metric_response.clear();
 
     // Send ap_metrics query on all bssids exists on the Agent.
     send_ap_metric_query_message(UINT16_MAX);
@@ -492,7 +502,6 @@ void LinkMetricsCollectionTask::handle_associated_sta_link_metrics_query(
         LOG(ERROR) << "Failed to build ACTION_MONITOR_CLIENT_ASSOCIATED_STA_LINK_METRIC_REQUEST";
         return;
     }
-    request_out->sync()    = true;
     request_out->sta_mac() = mac->sta_mac();
 
     auto monitor_fd = m_btl_ctx.get_monitor_fd(radio->front.iface_name);

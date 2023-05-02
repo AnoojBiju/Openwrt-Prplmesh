@@ -128,6 +128,7 @@ void agent_monitoring_task::handle_event(int event_type, void *obj)
 bool agent_monitoring_task::start_agent_monitoring(const sMacAddr &src_mac,
                                                    ieee1905_1::CmduMessageRx &cmdu_rx)
 {
+    LOG(DEBUG) << "Starting agent monitoring for agent " << src_mac;
     auto tlvDeviceInformation = cmdu_rx.getClass<ieee1905_1::tlvDeviceInformation>();
     if (!tlvDeviceInformation) {
         LOG(ERROR) << "ieee1905_1::tlvDeviceInformation not found";
@@ -148,6 +149,7 @@ bool agent_monitoring_task::start_agent_monitoring(const sMacAddr &src_mac,
 
         if (radio_entry.radio_bss_list_length() != bsses_from_m2.size()) {
 
+            LOG(WARNING) << "Not all BSSes from M2 configured by agent";
             // Not all BSSes from M2 configured by Agents radio
             return false;
         }
@@ -554,9 +556,8 @@ bool agent_monitoring_task::add_profile_2default_802q_settings_tlv(
 bool agent_monitoring_task::add_traffic_policy_tlv(db &database, ieee1905_1::CmduMessageTx &cmdu_tx,
                                                    std::shared_ptr<WSC::m1> m1)
 {
-    auto traffic_separation_configs =
-        database.get_traffic_separataion_configuration(m1->mac_addr());
-    auto al_mac = m1->mac_addr();
+    auto traffic_separation_configs = database.get_traffic_separation_configuration(m1->mac_addr());
+    auto al_mac                     = m1->mac_addr();
 
     auto agent = database.m_agents.get(al_mac);
     if (!agent) {

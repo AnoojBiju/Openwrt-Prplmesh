@@ -308,6 +308,10 @@ int main(int argc, char *argv[])
         // shall only be used for ZWDFS purpose, and shall not monitor anything by definition.
         if (ap_manager_state == son::ApManager::eApManagerState::OPERATIONAL) {
             if (monitor_is_running || ap_manager.zwdfs_ap()) {
+                if (!monitor.is_running()) {
+                    LOG(INFO) << "Restarting monitor thread";
+                    monitor_is_running = false;
+                }
                 continue;
             } else if (monitor.start()) {
                 monitor_is_running = true;

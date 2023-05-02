@@ -1115,13 +1115,13 @@ bool ap_wlan_hal_dwpal::set_channel(int chan, beerocks::eWiFiBandwidth bw, int c
     return true;
 }
 
-bool ap_wlan_hal_dwpal::sta_allow(const std::string &mac, const std::string &bssid)
+bool ap_wlan_hal_dwpal::sta_allow(const sMacAddr &mac, const sMacAddr &bssid)
 {
     // Check if the requested BSSID is part of this radio
     for (const auto &vap : m_radio_info.available_vaps) {
-        if (vap.second.mac == bssid) {
+        if (vap.second.mac == tlvf::mac_to_string(bssid)) {
             // Send the command
-            std::string cmd = "STA_ALLOW " + mac;
+            std::string cmd = "STA_ALLOW " + tlvf::mac_to_string(mac);
             if (!dwpal_send_cmd(cmd, vap.first)) {
                 LOG(ERROR) << "sta_allow() failed!";
                 return false;
@@ -1135,13 +1135,13 @@ bool ap_wlan_hal_dwpal::sta_allow(const std::string &mac, const std::string &bss
     return true;
 }
 
-bool ap_wlan_hal_dwpal::sta_deny(const std::string &mac, const std::string &bssid)
+bool ap_wlan_hal_dwpal::sta_deny(const sMacAddr &mac, const sMacAddr &bssid)
 {
     // Check if the requested BSSID is part of this radio
     for (const auto &vap : m_radio_info.available_vaps) {
-        if (vap.second.mac == bssid) {
+        if (vap.second.mac == tlvf::mac_to_string(bssid)) {
             // Send the command
-            std::string cmd = "DENY_MAC " + mac + " reject_sta=33";
+            std::string cmd = "DENY_MAC " + tlvf::mac_to_string(mac) + " reject_sta=33";
             if (!dwpal_send_cmd(cmd, vap.first)) {
                 LOG(ERROR) << "sta_allow() failed!";
                 return false;
@@ -1153,6 +1153,19 @@ bool ap_wlan_hal_dwpal::sta_deny(const std::string &mac, const std::string &bssi
 
     // If the requested BSSID is not part of this radio, return silently
     return true;
+}
+
+bool ap_wlan_hal_dwpal::sta_acceptlist_modify(const sMacAddr &mac, const sMacAddr &bssid,
+                                              bwl::sta_acl_action action)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
+bool ap_wlan_hal_dwpal::set_macacl_type(const eMacACLType &acl_type, const sMacAddr &bssid)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
 }
 
 bool ap_wlan_hal_dwpal::sta_disassoc(int8_t vap_id, const std::string &mac, uint32_t reason)
@@ -1353,7 +1366,8 @@ static bool create_multiap_map(const son::wireless_utils::sBssInfoConf &bss_info
 
 bool ap_wlan_hal_dwpal::update_vap_credentials(
     std::list<son::wireless_utils::sBssInfoConf> &bss_info_conf_list,
-    const std::string &backhaul_wps_ssid, const std::string &backhaul_wps_passphrase)
+    const std::string &backhaul_wps_ssid, const std::string &backhaul_wps_passphrase,
+    const std::string &bridge_ifname)
 {
     // The bss_info_conf_list contains list of all changes.
     // In this function we are updating the hostapd .conf files with
@@ -1440,6 +1454,11 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
             return false;
         }
 
+        if (!bridge_ifname.empty() &&
+            beerocks::net::network_utils::linux_iface_is_up(bridge_ifname)) {
+            hostapd_config_set_value(hostapd_config->second, "bridge", bridge_ifname);
+        }
+
         if (bss_info_conf.teardown) {
             LOG(INFO) << "BSS " << bss_info_conf.bssid << " need to be torn down.";
             // Clearing SSID
@@ -1448,9 +1467,12 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
             hostapd_config_set_value(hostapd_config->second, "start_disabled", "1");
             // Disable backhaul BSS
             hostapd_config_set_value(hostapd_config->second, "multi_ap", "0");
+            // Clear multi_ap related configs
             hostapd_config_set_value(hostapd_config->second, "multi_ap_backhaul_ssid", "");
             hostapd_config_set_value(hostapd_config->second, "multi_ap_backhaul_wpa_passphrase",
                                      "");
+            hostapd_config_set_value(hostapd_config->second, "multi_ap_profile1_disallow", "");
+            hostapd_config_set_value(hostapd_config->second, "multi_ap_profile2_disallow", "");
 
             // Add to pending reconfigure
             ifaces_to_reconfigure.insert(hostapd_config->first);
@@ -3614,8 +3636,8 @@ bool ap_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)
     return false;
 }
 
-bool ap_wlan_hal_dwpal::add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
-                                std::string &bridge, bool vbss)
+int ap_wlan_hal_dwpal::add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
+                               std::string &bridge, bool vbss)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return false;
@@ -3634,7 +3656,7 @@ bool ap_wlan_hal_dwpal::add_key(const std::string &ifname, const sKeyInfo &key_i
 }
 
 bool ap_wlan_hal_dwpal::add_station(const std::string &ifname, const sMacAddr &mac,
-                                    assoc_frame::AssocReqFrame &assoc_req)
+                                    std::vector<uint8_t> &raw_assoc_req)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return false;
@@ -3770,6 +3792,24 @@ bool ap_wlan_hal_dwpal::prepare_unassoc_sta_link_metrics_response(
     m_unassoc_sta_map.clear();
     m_measurement_start = false;
     return true;
+}
+
+bool ap_wlan_hal_dwpal::set_beacon_da(const std::string &ifname, const sMacAddr &mac)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
+bool ap_wlan_hal_dwpal::update_beacon(const std::string &ifname)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
+bool ap_wlan_hal_dwpal::set_no_deauth_unknown_sta(const std::string &ifname, bool value)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
 }
 
 } // namespace dwpal

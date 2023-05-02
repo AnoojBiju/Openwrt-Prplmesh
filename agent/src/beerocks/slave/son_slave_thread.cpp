@@ -287,7 +287,7 @@ bool slave_thread::thread_init()
     LOG(DEBUG) << "FSM timer created with fd=" << m_fsm_timer;
 
     // Create a timer to run internal tasks periodically
-    constexpr auto tasks_timer_period = std::chrono::milliseconds(500);
+    constexpr auto tasks_timer_period = std::chrono::milliseconds(300);
 
     m_tasks_timer = m_timer_manager->add_timer(
         "Agent Tasks", tasks_timer_period, tasks_timer_period,
@@ -3506,7 +3506,7 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
             response_out->alloc_sta_list(operating_class.second.size());
             size_t count(0);
             for (auto &station : operating_class.second) {
-                auto &stats_out          = std::get<1>(response_out->sta_list(count));
+                auto &stats_out          = std::get<1>(response_out->sta_list(count++));
                 stats_out.channel_number = station.channel_number;
                 stats_out.measurement_to_report_delta_msec =
                     station.measurement_to_report_delta_msec;

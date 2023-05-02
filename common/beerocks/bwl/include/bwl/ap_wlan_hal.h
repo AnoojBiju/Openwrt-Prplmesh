@@ -126,7 +126,7 @@ public:
      *
      * @return true on success or false on error.
      */
-    virtual bool sta_allow(const std::string &mac, const std::string &bssid) = 0;
+    virtual bool sta_allow(const sMacAddr &mac, const sMacAddr &bssid) = 0;
 
     /**
      * @brief Deny the station with the given MAC address from connecting to the AP.
@@ -136,7 +136,29 @@ public:
      * 
      * @return true on success or false on error.
      */
-    virtual bool sta_deny(const std::string &mac, const std::string &bssid) = 0;
+    virtual bool sta_deny(const sMacAddr &mac, const sMacAddr &bssid) = 0;
+
+    /**
+     * @brief Remove the station with the given MAC address from the accept list.
+     *
+     * @param [in] mac The MAC address of the station.
+     * @param [in] bssid The BSSID to which the operation is applicable.
+     * @param [in] action The action to perform (add, remove, ...).
+     *
+     * @return true on success or false on error.
+     */
+    virtual bool sta_acceptlist_modify(const sMacAddr &mac, const sMacAddr &bssid,
+                                       bwl::sta_acl_action action) = 0;
+
+    /**
+     * @brief Set the MAC ACL type (see struct eMacACLType).
+     *
+     * @param [in] acl_type the new ACL type.
+     * @param [in] bssid The BSSID to which the operation is applicable.
+     *
+     * @return true on success or false on error.
+     */
+    virtual bool set_macacl_type(const eMacACLType &acl_type, const sMacAddr &bssid) = 0;
 
     /**
      * @brief Disassociate the station with the given MAC address.
@@ -192,7 +214,8 @@ public:
     virtual bool
     update_vap_credentials(std::list<son::wireless_utils::sBssInfoConf> &bss_info_conf_list,
                            const std::string &backhaul_wps_ssid,
-                           const std::string &backhaul_wps_passphrase) = 0;
+                           const std::string &backhaul_wps_passphrase,
+                           const std::string &bridge_ifname) = 0;
 
     /**
      * TODO: Move to the base class?
@@ -440,8 +463,8 @@ public:
      * @param vbss Whether the BSS to create is a VBSS or not.
      * @return true on success, false otherwise.
      */
-    virtual bool add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
-                         std::string &bridge, bool vbss) = 0;
+    virtual int add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
+                        std::string &bridge, bool vbss) = 0;
 
     /**
      * @brief Dynamically remove a BSS for the radio.
@@ -465,14 +488,12 @@ public:
      * @brief Manually add a station on a BSS.
      *
      * @param ifname The interface name on which to add the station.
-     * @param mac The MAC address of the station.
-     * @param mac An association request of the station (used for
-     * capabilities).
+     * @param mac The MAC address of the station to add.
+     * @param raw_assoc_req The raw association request of the station.
      * @return true on success, false otherwise.
      */
     virtual bool add_station(const std::string &ifname, const sMacAddr &mac,
-                             assoc_frame::AssocReqFrame &assoc_req) = 0;
-
+                             std::vector<uint8_t> &raw_assoc_req) = 0;
     /**
      * @brief Get a key for a station.
      *
@@ -514,6 +535,39 @@ public:
      */
     virtual bool prepare_unassoc_sta_link_metrics_response(
         std::shared_ptr<wfa_map::tlvUnassociatedStaLinkMetricsResponse> &response) = 0;
+
+    /**
+     * @brief Set the beacons destination MAC address.
+     *
+     * @param [in] ifname the interface name.
+     * @param [in] mac the MAC address to set to.
+     *
+     * @return true on success or false on error.
+     */
+    virtual bool set_beacon_da(const std::string &ifname, const sMacAddr &mac) = 0;
+
+    /**
+     * @brief Update beacon frames content.
+     *
+     * @param [in] ifname the interface name.
+     *
+     * @return true on success or false on error.
+     */
+    virtual bool update_beacon(const std::string &ifname) = 0;
+
+    /**
+     * @brief Set the option to not deauthenticate unknown stations
+     * when data frames are received from stations that are not known
+     * yet.
+     *
+     * @param [in] ifname the interface name.
+     * @param [in] value the value for the option (true means do not
+     * deauthenticate unknown stations, false means deauthenticate
+     * unknown stations).
+     *
+     * @return true on success or false on error.
+     */
+    virtual bool set_no_deauth_unknown_sta(const std::string &ifname, bool value) = 0;
 
 private:
     static const int frame_body_idx = (sizeof(s80211MgmtFrame::sHeader) * 2);

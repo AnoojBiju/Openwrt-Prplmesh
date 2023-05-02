@@ -466,7 +466,7 @@ bool controller_ucc_listener::handle_dev_set_config(
                 wireless_utils::sTrafficSeparationSsid config;
                 config.ssid    = ssid_conf.ssid_name_str();
                 config.vlan_id = ssid_conf.vlan_id();
-                m_database.add_traffic_separataion_configuration(mac, config);
+                m_database.add_traffic_separation_configuration(mac, config);
             }
         } break;
         default: {

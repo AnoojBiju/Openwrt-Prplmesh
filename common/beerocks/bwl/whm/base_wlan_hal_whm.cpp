@@ -58,7 +58,7 @@ void base_wlan_hal_whm::subscribe_to_radio_events()
         if (!parameters || parameters->empty()) {
             return;
         }
-        auto params_map = parameters->read_childs<AmbiorixVariantMapSmartPtr>();
+        auto params_map = parameters->read_children<AmbiorixVariantMapSmartPtr>();
         if (!params_map) {
             return;
         }
@@ -91,7 +91,7 @@ void base_wlan_hal_whm::subscribe_to_ap_events()
     event_handler->callback_fn = [](AmbiorixVariant &event_data, void *context) -> void {
         base_wlan_hal_whm *hal = (static_cast<base_wlan_hal_whm *>(context));
         std::string ap_path;
-        if (!event_data.read_child<>(ap_path, "path") || ap_path.empty()) {
+        if (!event_data.read_child(ap_path, "path") || ap_path.empty()) {
             return;
         }
         auto &vapsExtInfo = hal->m_vapsExtInfo;
@@ -107,7 +107,7 @@ void base_wlan_hal_whm::subscribe_to_ap_events()
         if (!parameters || parameters->empty()) {
             return;
         }
-        auto params_map = parameters->read_childs<AmbiorixVariantMapSmartPtr>();
+        auto params_map = parameters->read_children<AmbiorixVariantMapSmartPtr>();
         if (!params_map) {
             return;
         }
@@ -150,7 +150,7 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
     event_handler->callback_fn = [](AmbiorixVariant &event_data, void *context) -> void {
         base_wlan_hal_whm *hal = (static_cast<base_wlan_hal_whm *>(context));
         std::string sta_path;
-        if (!event_data.read_child<>(sta_path, "path") || sta_path.empty()) {
+        if (!event_data.read_child(sta_path, "path") || sta_path.empty()) {
             return;
         }
         std::string ap_path = wbapi_utils::get_path_ap_of_assocDev(sta_path);
@@ -164,7 +164,7 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
         }
         auto &stations = hal->m_stations;
         auto sta_it    = std::find_if(stations.begin(), stations.end(),
-                                   [&](const std::pair<std::string, STAExtInfo> &element) {
+                                   [&](const std::pair<std::string, sStationInfo> &element) {
                                        return element.second.path == sta_path;
                                    });
         std::string sta_mac;
@@ -180,9 +180,7 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
         if (sta_it != stations.end()) {
             sta_it->second.path = sta_path;
         } else if (!sta_mac.empty()) {
-            STAExtInfo staInfo;
-            staInfo.path = sta_path;
-            sta_it       = stations.insert(std::make_pair(sta_mac, staInfo)).first;
+            stations.insert(std::make_pair(sta_mac, sStationInfo(sta_path)));
         } else {
             LOG(WARNING) << "missing station mac";
             return;
@@ -191,7 +189,7 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
         if (!parameters || parameters->empty()) {
             return;
         }
-        auto params_map = parameters->read_childs<AmbiorixVariantMapSmartPtr>();
+        auto params_map = parameters->read_children<AmbiorixVariantMapSmartPtr>();
         if (!params_map) {
             return;
         }
@@ -214,7 +212,8 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
                          " && ((contains('parameters.AuthenticationState'))"
                          " || (contains('parameters.MACAddress')))";
 
-    m_ambiorix_cl->subscribe_to_object_event(wifi_ad_path, event_handler, filter);
+    // TODO : switch the subscription object path back to wifi_ad_path once libamxb client start supporting large path subscriptions
+    m_ambiorix_cl->subscribe_to_object_event(wbapi_utils::search_path_ap(), event_handler, filter);
 
     // station instances cleanup
     auto sta_del_event_handler         = std::make_shared<sAmbiorixEventHandler>();
@@ -223,15 +222,15 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
         base_wlan_hal_whm *hal = (static_cast<base_wlan_hal_whm *>(context));
         std::string sta_templ_path;
         uint32_t sta_index;
-        if (!event_data.read_child<>(sta_templ_path, "path") || sta_templ_path.empty() ||
-            !event_data.read_child<>(sta_index, "index") || !sta_index) {
+        if (!event_data.read_child(sta_templ_path, "path") || sta_templ_path.empty() ||
+            !event_data.read_child(sta_index, "index") || !sta_index) {
             return;
         }
         std::string sta_path = sta_templ_path + std::to_string(sta_index) + ".";
         LOG(DEBUG) << "Station instance " << sta_path << " deleted";
         auto &stations = hal->m_stations;
         auto sta_it    = std::find_if(stations.begin(), stations.end(),
-                                   [&](const std::pair<std::string, STAExtInfo> &element) {
+                                   [&](const std::pair<std::string, sStationInfo> &element) {
                                        return element.second.path == sta_path;
                                    });
         if (sta_it != stations.end()) {
@@ -268,6 +267,8 @@ bool base_wlan_hal_whm::process_sta_event(const std::string &interface, const st
     return true;
 }
 
+bool base_wlan_hal_whm::process_scan_complete_event(const std::string &result) { return true; }
+
 bool base_wlan_hal_whm::fsm_setup() { return true; }
 
 HALState base_wlan_hal_whm::attach(bool block)
@@ -294,44 +295,110 @@ bool base_wlan_hal_whm::refresh_radio_info()
     if (!radio) {
         return false;
     }
-    std::string sVal;
-    if (radio->read_child<>(sVal, "OperatingFrequencyBand")) {
-        m_radio_info.frequency_band = wbapi_utils::band_to_freq(sVal);
+    std::string s_val;
+    if (radio->read_child(s_val, "OperatingFrequencyBand")) {
+        m_radio_info.frequency_band = wbapi_utils::band_to_freq(s_val);
     }
     m_radio_info.is_5ghz = (m_radio_info.frequency_band == beerocks::eFreqType::FREQ_5G);
-    radio->read_child<>(m_radio_info.wifi_ctrl_enabled, "Enable");
-    if (radio->read_child<>(sVal, "MaxChannelBandwidth")) {
-        m_radio_info.max_bandwidth = wbapi_utils::bandwith_from_string(sVal);
-    }
-    auto bandwidth = beerocks::utils::convert_bandwidth_to_enum(m_radio_info.bandwidth);
-    if (radio->read_child<>(sVal, "CurrentOperatingChannelBandwidth")) {
-        bandwidth              = wbapi_utils::bandwith_from_string(sVal);
+    radio->read_child(m_radio_info.wifi_ctrl_enabled, "Enable");
+
+    if (radio->read_child(s_val, "CurrentOperatingChannelBandwidth")) {
+        auto bandwidth         = wbapi_utils::bandwith_from_string(s_val);
         m_radio_info.bandwidth = beerocks::utils::convert_bandwidth_to_int(bandwidth);
     }
-    radio->read_child<>(m_radio_info.channel, "Channel");
+    radio->read_child(m_radio_info.channel, "Channel");
     m_radio_info.is_dfs_channel = son::wireless_utils::is_dfs_channel(m_radio_info.channel);
 
-    // TODO: read radio capabilities and supported channel list (PPM-2120)
-    if (radio->read_child<>(sVal, "PossibleChannels")) {
-        auto channels_vec = beerocks::string_utils::str_split(sVal, ',');
+    std::vector<int32_t> bandwidths = {20, 40, 80, 160};
+    if (radio->read_child(s_val, "PossibleChannels")) {
+        auto channels_vec = beerocks::string_utils::str_split(s_val, ',');
         for (auto &chan_str : channels_vec) {
             uint32_t chanNum          = beerocks::string_utils::stoi(chan_str);
             auto &channel_info        = m_radio_info.channels_list[chanNum];
             channel_info.tx_power_dbm = m_radio_info.tx_power;
 
-            //TODO: fetch DFS channel current CAC state
-            channel_info.dfs_state = beerocks::eDfsState::DFS_STATE_MAX;
+            std::unordered_set<std::string> cleared_channels_set;
+            std::unordered_set<std::string> radar_triggered_channels_set;
 
-            //TODO: fetch Device.WiFi.Radio.{i}.SupportedOperatingChannelBandwidths
-            for (uint8_t bw = m_radio_info.max_bandwidth;
-                 bw > beerocks::eWiFiBandwidth::BANDWIDTH_UNKNOWN; bw--) {
-                channel_info.bw_info_list[beerocks::eWiFiBandwidth(bw)] = 1;
+            s_val = radio->find_child_deep("ChannelMgt.ClearedDfsChannels")->get<std::string>();
+            auto cleared_channels_vec = beerocks::string_utils::str_split(s_val, ',');
+            cleared_channels_set.insert(cleared_channels_vec.cbegin(), cleared_channels_vec.cend());
+
+            s_val = radio->find_child_deep("ChannelMgt.ClearedDfsChannels")->get<std::string>();
+            auto radar_triggered_channels_vec = beerocks::string_utils::str_split(s_val, ',');
+            radar_triggered_channels_set.insert(radar_triggered_channels_vec.cbegin(),
+                                                radar_triggered_channels_vec.cend());
+
+            if (son::wireless_utils::is_dfs_channel(chanNum)) {
+                if (cleared_channels_set.find(chan_str) != cleared_channels_set.end()) {
+                    channel_info.dfs_state = beerocks::eDfsState::AVAILABLE;
+                } else if (radar_triggered_channels_set.find(chan_str) !=
+                           radar_triggered_channels_set.end()) {
+                    channel_info.dfs_state = beerocks::eDfsState::UNAVAILABLE;
+                } else {
+                    channel_info.dfs_state = beerocks::eDfsState::USABLE;
+                }
+
+            } else {
+                channel_info.dfs_state = beerocks::eDfsState::DFS_STATE_MAX;
+            }
+
+            if (radio->read_child(s_val, "MaxChannelBandwidth")) {
+                m_radio_info.max_bandwidth = wbapi_utils::bandwith_from_string(s_val);
+                auto max_bandwidth =
+                    beerocks::utils::convert_bandwidth_to_int(m_radio_info.max_bandwidth);
+                for (auto &bandw_iter : bandwidths) {
+                    if (bandw_iter > max_bandwidth) {
+                        continue;
+                    }
+                    channel_info
+                        .bw_info_list[beerocks::utils::convert_bandwidth_to_enum(bandw_iter)] = 1;
+                }
             }
         }
     }
-    if (radio->read_child<>(sVal, "ExtensionChannel")) {
-        bool channel_ext_above = (sVal == "AboveControlChannel");
-        if (!channel_ext_above && (sVal == "Auto") && (m_radio_info.bandwidth > 20)) {
+    std::string supported_standards;
+    radio->read_child(supported_standards, "SupportedStandards");
+
+    //Ht capabilities
+    //pwhm does not provide any info about HT Capabilities for radios
+    // m_radio_info.ht_capability = 0;
+    m_radio_info.ht_supported = supported_standards.find("n") != std::string::npos ? 1 : 0;
+
+    //VHt capabilities
+    struct beerocks::net::sVHTCapabilities *vht_caps_ptr =
+        (struct beerocks::net::sVHTCapabilities *)(&m_radio_info.vht_capability);
+
+    m_radio_info.wifi6_capability = supported_standards.find("ax") != std::string::npos ? 1 : 0;
+
+    if (radio->read_child(s_val, "TxBeamformingCapsAvailable")) {
+        m_radio_info.vht_capability  = 0;
+        auto vht_mcs_set_pwhm_tx_vec = beerocks::string_utils::str_split(s_val, ',');
+        if (std::find(vht_mcs_set_pwhm_tx_vec.begin(), vht_mcs_set_pwhm_tx_vec.end(),
+                      "VHT_MU_BF") != vht_mcs_set_pwhm_tx_vec.end()) {
+            vht_caps_ptr->mu_beamformer_capable = true;
+        }
+        if (std::find(vht_mcs_set_pwhm_tx_vec.begin(), vht_mcs_set_pwhm_tx_vec.end(),
+                      "VHT_SU_BF") != vht_mcs_set_pwhm_tx_vec.end()) {
+            vht_caps_ptr->su_beamformer_capable = true;
+        }
+    }
+
+    vht_caps_ptr->vht_support_160mhz     = m_radio_info.max_bandwidth == BANDWIDTH_160 ? 1 : 0;
+    vht_caps_ptr->short_gi_support_80mhz = 0;
+    m_radio_info.vht_supported = supported_standards.find("ac") != std::string::npos ? 1 : 0;
+
+    //SupportedHtMCS
+    //pwhm does not provide any info about HT MCS for radios
+    //m_radio_info.he_mcs_set.
+
+    //SupportedVHtMCS
+    //pwhm does not provide any info about VHT MCS for radios
+    //m_radio_info.vht_mcs_set.
+
+    if (radio->read_child(s_val, "ExtensionChannel")) {
+        bool channel_ext_above = (s_val == "AboveControlChannel");
+        if (!channel_ext_above && (s_val == "Auto") && (m_radio_info.bandwidth > 20)) {
             if (m_radio_info.frequency_band != beerocks::eFreqType::FREQ_24G) {
                 channel_ext_above = ((m_radio_info.channel / 4) % 2);
             } else {
@@ -341,18 +408,19 @@ bool base_wlan_hal_whm::refresh_radio_info()
         m_radio_info.channel_ext_above = channel_ext_above;
     }
     m_radio_info.vht_center_freq = son::wireless_utils::channel_to_vht_center_freq(
-        m_radio_info.channel, m_radio_info.frequency_band, bandwidth,
+        m_radio_info.channel, m_radio_info.frequency_band,
+        beerocks::utils::convert_bandwidth_to_enum(m_radio_info.bandwidth),
         m_radio_info.channel_ext_above);
 
-    radio->read_child<>(m_radio_info.tx_power, "TransmitPower");
-    if (radio->read_child<>(sVal, "Status")) {
-        m_radio_info.radio_state = utils_wlan_hal_whm::radio_state_from_string(sVal);
+    radio->read_child(m_radio_info.tx_power, "TransmitPower");
+    if (radio->read_child(s_val, "Status")) {
+        m_radio_info.radio_state = utils_wlan_hal_whm::radio_state_from_string(s_val);
         if (m_radio_info.radio_state == eRadioState::ENABLED) {
             m_radio_info.wifi_ctrl_enabled = 2; // Assume Operational
             m_radio_info.tx_enabled        = 1;
         }
     }
-    m_ambiorix_cl->get_param<>(m_radio_info.ant_num, m_radio_path + "DriverStatus.", "NrTxAntenna");
+    m_ambiorix_cl->get_param(m_radio_info.ant_num, m_radio_path + "DriverStatus.", "NrTxAntenna");
 
     if (!m_radio_info.available_vaps.size()) {
         if (!refresh_vaps_info(beerocks::IFACE_RADIO_ID)) {
@@ -462,11 +530,11 @@ bool base_wlan_hal_whm::refresh_vap_info(int id, const AmbiorixVariant &ap_obj)
             (mac != beerocks::net::network_utils::ZERO_MAC_STRING)) {
             vap_element.bss = ifname;
             vap_element.mac = mac;
-            ssid_obj->read_child<>(vap_element.ssid, "SSID");
+            ssid_obj->read_child(vap_element.ssid, "SSID");
             vap_element.fronthaul = false;
             vap_element.backhaul  = false;
             std::string multi_ap_type;
-            if (ap_obj.read_child<>(multi_ap_type, "MultiAPType")) {
+            if (ap_obj.read_child(multi_ap_type, "MultiAPType")) {
                 if (multi_ap_type.find("FronthaulBSS") != std::string::npos) {
                     vap_element.fronthaul = true;
                 }
@@ -579,8 +647,50 @@ std::string base_wlan_hal_whm::get_radio_mac()
 
 bool base_wlan_hal_whm::get_channel_utilization(uint8_t &channel_utilization)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    uint16_t chLoad;
+    m_ambiorix_cl->get_param<>(chLoad, m_radio_path, "ChannelLoad");
+
+    //convert channel load from ratio 100 to ratio 255
+    channel_utilization = (chLoad * UINT8_MAX) / 100;
     return true;
+}
+
+void base_wlan_hal_whm::subscribe_to_scan_complete_events()
+{
+
+    auto event_handler         = std::make_shared<sAmbiorixEventHandler>();
+    event_handler->event_type  = AMX_CL_SCAN_COMPLETE_EVT;
+    event_handler->callback_fn = [](AmbiorixVariant &event_data, void *context) -> void {
+        if (!event_data) {
+            return;
+        }
+        std::string notif_name;
+        if (!event_data.read_child(notif_name, "notification")) {
+            LOG(DEBUG) << " Received Notification  without 'notification' param!";
+            return;
+        }
+        if (notif_name != AMX_CL_SCAN_COMPLETE_EVT) {
+            LOG(DEBUG) << " Received wrong Notification : " << notif_name
+                       << " instead of: " << AMX_CL_SCAN_COMPLETE_EVT;
+            return;
+        }
+        base_wlan_hal_whm *hal = (static_cast<base_wlan_hal_whm *>(context));
+
+        std::string result;
+        if (!event_data.read_child(result, "Result")) {
+            LOG(ERROR) << " received ScanComplete event without Result param!";
+            return;
+        }
+
+        hal->process_scan_complete_event(result);
+    };
+    event_handler->context = this;
+    std::string filter     = "(path matches '" + m_radio_path +
+                         "$')"
+                         " && (notification == '" +
+                         AMX_CL_SCAN_COMPLETE_EVT + "')";
+
+    m_ambiorix_cl->subscribe_to_object_event(m_radio_path, event_handler, filter);
 }
 
 } // namespace whm

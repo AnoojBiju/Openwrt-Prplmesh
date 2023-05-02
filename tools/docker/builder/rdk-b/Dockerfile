@@ -82,7 +82,7 @@ FROM rdk-b-builder as rdk-b-prplmesh-builder
 
 RUN printf '\033[1;35m%s Cloning RDK-B\n\033[0m' "$(date --iso-8601=seconds --universal)" \
     && yes | repo init -u https://code.rdkcentral.com/r/rdkcmf/manifests \
-    -m rdkb-turris-extsrc.xml -b rdkb-2021q4-dunfell \
+    -m rdkb-turris-extsrc.xml -b rdkb-2022q4-dunfell \
     && repo sync
 
 # Fix a bug in "current" turris setup with meta-rdk-ext

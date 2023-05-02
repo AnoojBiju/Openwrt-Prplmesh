@@ -31,7 +31,36 @@ public:
     prplmesh_cli();
     bool get_ip_from_iface(const std::string &iface, std::string &ip);
     bool prpl_conn_map();
-    bool print_help();
+    void print_help();
+    void print_version();
+
+    /**
+     * @brief Get an AP path by index or SSID
+     * 
+     * @param[in] ap #<index> or string (use ## if SSID starts with #)
+     */
+    std::string get_ap_path(std::string ap);
+
+    /**
+     * @brief Show existing Access Point details
+     */
+    void show_ap();
+    /**
+     * @brief Change the SSID of an access point
+     *
+     * @param[in] ap The Access Point to the SSID on
+     * @param[in] ssid The SSID to set
+     */
+    bool set_ssid(const std::string &ap, const std::string &ssid);
+    /**
+     * @brief Set the security of an access point
+     *
+     * @param[in] ap The Access Point to modify
+     * @param[in] mode The security type (e.g. WPA2) to use. Must be a valid and supported algorithm
+     * @param[in] passphrase The pass phrase to use
+     */
+    bool set_security(const std::string &ap, const std::string &mode,
+                      const std::string &passphrase);
 
     /**
     * @brief Recursive function that prints the topology of agents.

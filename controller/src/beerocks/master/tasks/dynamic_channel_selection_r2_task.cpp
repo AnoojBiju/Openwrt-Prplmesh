@@ -1364,7 +1364,8 @@ bool dynamic_channel_selection_r2_task::remove_invalid_channel_selection_request
                 }
                 const auto channel_preference = database.get_channel_preference(
                     radio_mac, operating_class, channel_number, true);
-                if (channel_preference <= 0) {
+                if (channel_preference <=
+                    (int8_t)beerocks::eChannelPreferenceRankingConsts::NON_OPERABLE) {
                     LOG(ERROR) << "Channel Selection request for channel: " << channel_number
                                << " & operating class: " << operating_class << " is invalid";
                     invalid_channel_selection_requests.push_back(

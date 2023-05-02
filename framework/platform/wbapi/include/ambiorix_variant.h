@@ -37,10 +37,11 @@ using AmbiorixVariantMapSmartPtr  = std::unique_ptr<AmbiorixVariantMap>;
 
 /**
  * @Class AmbiorixVariantBaseAccess: utility class giving access to basic amxc variant pointer
+ * This is is a privilege class  giving access to m_var_ctx, only supposed to be used by one or very limited number of other users. 
  */
 class AmbiorixVariantBaseAccess {
 public:
-    amxc_var_t *amxc_var_ptr(AmbiorixVariant &obj);
+    amxc_var_t *get_amxc_var_ptr(AmbiorixVariant &obj);
 
 protected:
     AmbiorixVariantBaseAccess()          = default;
@@ -281,46 +282,46 @@ public:
     /**
      * @brief Builds vector of child variants, of a composite variant
      *
-     * @param[out] childs: resulting vector of child variants
+     * @param[out] children: resulting vector of child variants
      * @param[in] extract: flag whether extracting child from container
-     * @return true when childs are retrieved successfully
+     * @return true when children are retrieved successfully
      */
-    bool get_childs(AmbiorixVariantListSmartPtr &result, bool extract);
+    bool get_children(AmbiorixVariantListSmartPtr &result, bool extract);
 
     /**
      * @brief Builds map of child variants, sorted by variant path,
      * of a composite variant.
      * (Only applicable for htable composite variant.)
      *
-     * @param[out] childs: resulting map of child variants
+     * @param[out] children: resulting map of child variants
      * @param[in] extract: flag whether extracting child from container
-     * @return true when childs are retrieved successfully
+     * @return true when children are retrieved successfully
      */
-    bool get_childs(AmbiorixVariantMapSmartPtr &result, bool extract);
+    bool get_children(AmbiorixVariantMapSmartPtr &result, bool extract);
 
     /**
-     * @brief Template method provides set of references to variant childs
+     * @brief Template method provides set of references to variant children
      * of a composite variant
      *
      * @return resulting set of child variants
      */
-    template <typename T> T read_childs()
+    template <typename T> T read_children()
     {
         T result = T();
-        get_childs(result, false);
+        get_children(result, false);
         return result;
     }
 
     /**
      * @brief Template method breaks down a composite variant
-     * into a set of variant childs
+     * into a set of variant children
      *
      * @return resulting set of child variants
      */
-    template <typename T> T take_childs()
+    template <typename T> T take_children()
     {
         T result = T();
-        get_childs(result, true);
+        get_children(result, true);
         return result;
     }
 
@@ -351,7 +352,7 @@ public:
     /**
      * @brief Returns pointer to ambiorix variant context
      */
-    friend amxc_var_t *AmbiorixVariantBaseAccess::amxc_var_ptr(AmbiorixVariant &obj);
+    friend amxc_var_t *AmbiorixVariantBaseAccess::get_amxc_var_ptr(AmbiorixVariant &obj);
 
 private:
     /**

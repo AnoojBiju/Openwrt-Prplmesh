@@ -33,6 +33,10 @@ const uint16_t& tlvSpatialReuseConfigResponse::length() {
     return (const uint16_t&)(*m_length);
 }
 
+sMacAddr& tlvSpatialReuseConfigResponse::radio_uid() {
+    return (sMacAddr&)(*m_radio_uid);
+}
+
 tlvSpatialReuseConfigResponse::eResponseCode& tlvSpatialReuseConfigResponse::response_code() {
     return (eResponseCode&)(*m_response_code);
 }
@@ -40,6 +44,7 @@ tlvSpatialReuseConfigResponse::eResponseCode& tlvSpatialReuseConfigResponse::res
 void tlvSpatialReuseConfigResponse::class_swap()
 {
     tlvf_swap(16, reinterpret_cast<uint8_t*>(m_length));
+    m_radio_uid->struct_swap();
 }
 
 bool tlvSpatialReuseConfigResponse::finalize()
@@ -75,6 +80,7 @@ size_t tlvSpatialReuseConfigResponse::get_initial_size()
     size_t class_size = 0;
     class_size += sizeof(eTlvTypeMap); // type
     class_size += sizeof(uint16_t); // length
+    class_size += sizeof(sMacAddr); // radio_uid
     class_size += sizeof(eResponseCode); // response_code
     return class_size;
 }
@@ -97,6 +103,13 @@ bool tlvSpatialReuseConfigResponse::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
         return false;
     }
+    m_radio_uid = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(sMacAddr))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sMacAddr) << ") Failed!";
+        return false;
+    }
+    if(m_length && !m_parse__){ (*m_length) += sizeof(sMacAddr); }
+    if (!m_parse__) { m_radio_uid->struct_init(); }
     m_response_code = reinterpret_cast<eResponseCode*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(eResponseCode))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(eResponseCode) << ") Failed!";

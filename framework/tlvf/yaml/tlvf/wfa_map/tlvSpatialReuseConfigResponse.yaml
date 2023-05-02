@@ -9,6 +9,7 @@ tlvSpatialReuseConfigResponse:
     _type: eTlvTypeMap
     _value_const: TLV_SPATIAL_REUSE_CONFIG_RESPONSE
   length: uint16_t
+  radio_uid: sMacAddr
   response_code:
     _type: eResponseCode
     _comment: Channel selection response code, with respect to the Spatial Reuse Request

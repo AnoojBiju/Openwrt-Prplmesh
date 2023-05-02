@@ -12,6 +12,7 @@ ARG PACKAGES_FOR_BUILD="\
     cmake \
     gcc \
     git \
+    gpg \
     libjson-c-dev \
     libncurses-dev \
     libnl-3-dev \
@@ -22,6 +23,7 @@ ARG PACKAGES_FOR_BUILD="\
     pkg-config \
     python3 \
     python3-yaml \
+    wget \
     "
 
 ARG PACKAGES_FOR_AMBIORIX="\
@@ -73,9 +75,12 @@ RUN apt-get update && apt-get install -y $PACKAGES && \
     # We need liburiparser-dev > v. 9.0 which isn't avalaible in default
     # 18.04 Ubuntu repos. So add Ubuntu 19.10 repo which has v. 0.9.3-2
     echo "deb http://old-releases.ubuntu.com/ubuntu eoan main universe" | tee -a  /etc/apt/sources.list && \
+    # We need a new version of cmake, that can be found in the kitware PPA
+    wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - > /usr/share/keyrings/kitware-archive-keyring.gpg && \
+    echo 'deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ bionic main' >> /etc/apt/sources.list.d/kitware.list && \
     apt-get update && \
     apt-get install -y \
-    liburiparser-dev && \
+    liburiparser-dev cmake=3.25.2-0kitware1ubuntu18.04.1 && \
     rm -rf /var/lib/apt/lists/*
 
 RUN curl https://storage.googleapis.com/git-repo-downloads/repo > /usr/bin/repo && \

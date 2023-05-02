@@ -126,7 +126,7 @@ HALState ap_wlan_hal_dummy::attach(bool block)
     }
 
     std::list<son::wireless_utils::sBssInfoConf> bss_info_conf_list;
-    update_vap_credentials(bss_info_conf_list, "", "");
+    update_vap_credentials(bss_info_conf_list, "", "", "");
 
     // On Operational send the AP_Attached event to the AP Manager
     if (state == HALState::Operational) {
@@ -155,16 +155,27 @@ bool ap_wlan_hal_dummy::set_channel(int chan, beerocks::eWiFiBandwidth bw, int c
     return write_status_file("channel", value.str());
 }
 
-bool ap_wlan_hal_dummy::sta_allow(const std::string &mac, const std::string &bssid)
+bool ap_wlan_hal_dummy::sta_allow(const sMacAddr &mac, const sMacAddr &bssid)
 {
     LOG(DEBUG) << "Got client allow request for " << mac << " on bssid " << bssid;
     return true;
 }
 
-bool ap_wlan_hal_dummy::sta_deny(const std::string &mac, const std::string &bssid)
+bool ap_wlan_hal_dummy::sta_deny(const sMacAddr &mac, const sMacAddr &bssid)
 {
     LOG(DEBUG) << "Got client disallow request for " << mac << " on bssid " << bssid
                << " reject_sta: 33";
+    return true;
+}
+
+bool ap_wlan_hal_dummy::sta_acceptlist_modify(const sMacAddr &mac, const sMacAddr &bssid,
+                                              bwl::sta_acl_action action)
+{
+    return true;
+}
+
+bool ap_wlan_hal_dummy::set_macacl_type(const eMacACLType &acl_type, const sMacAddr &bssid)
+{
     return true;
 }
 
@@ -204,7 +215,8 @@ bool ap_wlan_hal_dummy::sta_bss_steer(int8_t vap_id, const std::string &mac,
 
 bool ap_wlan_hal_dummy::update_vap_credentials(
     std::list<son::wireless_utils::sBssInfoConf> &bss_info_conf_list,
-    const std::string &backhaul_wps_ssid, const std::string &backhaul_wps_passphrase)
+    const std::string &backhaul_wps_ssid, const std::string &backhaul_wps_passphrase,
+    const std::string &bridge_ifname)
 {
     std::vector<int> configured_vaps;
     for (auto &bss_info_conf : bss_info_conf_list) {
@@ -687,8 +699,8 @@ bool ap_wlan_hal_dummy::set(const std::string &param, const std::string &value, 
     return true;
 }
 
-bool ap_wlan_hal_dummy::add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
-                                std::string &bridge, bool vbss)
+int ap_wlan_hal_dummy::add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
+                               std::string &bridge, bool vbss)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return false;
@@ -707,7 +719,7 @@ bool ap_wlan_hal_dummy::add_key(const std::string &ifname, const sKeyInfo &key_i
 }
 
 bool ap_wlan_hal_dummy::add_station(const std::string &ifname, const sMacAddr &mac,
-                                    assoc_frame::AssocReqFrame &assoc_req)
+                                    std::vector<uint8_t> &raw_assoc_req)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return false;
@@ -789,6 +801,24 @@ bool ap_wlan_hal_dummy::prepare_unassoc_sta_link_metrics_response(
     m_measurement_start = false;
 
     return true;
+}
+
+bool ap_wlan_hal_dummy::set_beacon_da(const std::string &ifname, const sMacAddr &mac)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
+bool ap_wlan_hal_dummy::update_beacon(const std::string &ifname)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
+bool ap_wlan_hal_dummy::set_no_deauth_unknown_sta(const std::string &ifname, bool value)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
 }
 
 } // namespace dummy
