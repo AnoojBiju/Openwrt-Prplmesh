@@ -151,9 +151,14 @@ bool bpl_cfg_get_wireless_settings(std::list<son::wireless_utils::sBssInfoConf> 
                 configuration.backhaul = true;
             }
         }
-
-        if (bpl_cfg_get_wifi_credentials(iface, configuration)) {
+        bool ap_enable = false;
+        ap.read_child<>(ap_enable, "Enable");
+        if (ap_enable && bpl_cfg_get_wifi_credentials(iface, configuration)) {
+            LOG(INFO) << "add " << configuration.ssid << " to wireless settigns size "
+                      << wireless_settings.size() << " path " << it.first;
             wireless_settings.push_back(configuration);
+        } else {
+            LOG(INFO) << " ap " << it.first << " is disabled";
         }
     }
 

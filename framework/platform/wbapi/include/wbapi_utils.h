@@ -27,6 +27,11 @@ public:
     static beerocks::eWiFiBandwidth bandwith_from_string(const std::string &bandwidth);
 
     /**
+     * @brief Converts beerocks::eWiFiBandwidth to a tr181-compatible string representation
+     */
+    static std::string bandwith_to_string(const beerocks::eWiFiBandwidth &bandwidth);
+
+    /**
      * @brief Converts a string-based bandwidth
      * (Ref TR181 Device.WiFi.Radio.{i}.SupportedFrequencyBands: 2.4GHz, 5GHz, 6GHz
      * to beerocks::eFreqType.

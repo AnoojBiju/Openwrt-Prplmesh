@@ -859,7 +859,7 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
                 .key_idx = 0,
                 .mac     = virtual_bss_creation_tlv->client_mac(),
                 .key     = {virtual_bss_creation_tlv->ptk(),
-                        virtual_bss_creation_tlv->ptk() + virtual_bss_creation_tlv->key_length()},
+                            virtual_bss_creation_tlv->ptk() + virtual_bss_creation_tlv->key_length()},
                 .key_seq = pw_key_seq,
 
                 // TODO: PPM-2368: We need to know the pairwise cipher. For now, use CCMP
@@ -883,7 +883,7 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
                 .key_idx = 1,
                 .mac     = beerocks::net::network_utils::ZERO_MAC,
                 .key     = {virtual_bss_creation_tlv->gtk(),
-                        virtual_bss_creation_tlv->gtk() + virtual_bss_creation_tlv->key_length()},
+                            virtual_bss_creation_tlv->gtk() + virtual_bss_creation_tlv->key_length()},
                 .key_seq = group_key_seq,
 
                 // TODO: PPM-2368: We need to know the groupwise cipher. For now, use CCMP
@@ -1705,6 +1705,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
 
         std::string bridge_name = request->bridge_ifname_str();
 
+        LOG(DEBUG) << "handle ACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST";
         std::list<son::wireless_utils::sBssInfoConf> bss_info_conf_list;
         auto wifi_credentials_size = request->wifi_credentials_size();
 
@@ -1796,6 +1797,9 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             const auto &radio_vaps              = ap_wlan_hal->get_radio_info().available_vaps;
             response->number_of_bss_available() = radio_vaps.size();
             send_cmdu(cmdu_tx);
+        } else {
+            LOG(ERROR) << "discard new configuration because "
+                       << (perform_update ? "configuration is empty" : "radio not enabled");
         }
         break;
     }

@@ -28,6 +28,18 @@ beerocks::eWiFiBandwidth wbapi_utils::bandwith_from_string(const std::string &ba
     return beerocks::eWiFiBandwidth::BANDWIDTH_UNKNOWN;
 }
 
+std::string wbapi_utils::bandwith_to_string(const beerocks::eWiFiBandwidth &bandwidth)
+{
+    auto map_it = std::find_if(band_width_table.begin(), band_width_table.end(),
+                               [&](const std::pair<std::string, beerocks::eWiFiBandwidth> &elem) {
+                                   return (bandwidth == elem.second);
+                               });
+    if (map_it != band_width_table.end()) {
+        return map_it->first;
+    }
+    return {};
+}
+
 const std::map<std::string, std::pair<std::string, beerocks::eFreqType>>
     wbapi_utils::band_freq_table = {
         {"2.4GHz", {"24g", beerocks::eFreqType::FREQ_24G}},
