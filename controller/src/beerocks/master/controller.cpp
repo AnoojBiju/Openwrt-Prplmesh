@@ -2857,6 +2857,10 @@ bool Controller::handle_non_intel_slave_join(
     database.set_node_state(eth_switch_mac, beerocks::STATE_CONNECTED);
     database.set_node_name(eth_switch_mac, agent->device_info.manufacturer + "_ETH");
     database.set_node_manufacturer(eth_switch_mac, agent->device_info.manufacturer);
+    // An AP Capability Report will always be received after the M1, and thus
+    // this OS Version value will be overriden by the more complete
+    // SoftwareVersion value from the Device Inventory TLV if present
+    database.set_software_version(agent, std::to_string(m1.os_version()));
 
     // Update existing node, or add a new one
     if (database.has_node(radio_mac)) {

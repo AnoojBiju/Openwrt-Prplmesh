@@ -1419,6 +1419,25 @@ bool db::set_ap_he_capabilities(wfa_map::tlvApHeCapabilities &he_caps_tlv)
     return ret_val;
 }
 
+bool db::set_software_version(std::shared_ptr<Agent> agent, const std::string &sw_version)
+{
+    if (!agent) {
+        LOG(ERROR) << "Invalid agent pointer provided";
+        return false;
+    }
+
+    if (agent->dm_path.empty()) {
+        return true;
+    }
+
+    if (!m_ambiorix_datamodel->set(agent->dm_path, "SoftwareVersion", sw_version)) {
+        LOG(ERROR) << "Failed to set " << agent->dm_path << ".SoftwareVersion: " << sw_version;
+        return false;
+    }
+
+    return true;
+}
+
 const beerocks::message::sRadioCapabilities *
 db::get_station_current_capabilities(const std::string &mac)
 {
