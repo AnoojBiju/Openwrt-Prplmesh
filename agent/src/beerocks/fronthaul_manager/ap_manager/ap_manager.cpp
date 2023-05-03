@@ -1899,6 +1899,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
         break;
     }
     case beerocks_message::ACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_REQUEST: {
+        LOG(INFO) << "handle ACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_REQUEST";
         if (!handle_aps_update_list()) {
             LOG(ERROR) << "Failed notifying vaps list update!";
             return;

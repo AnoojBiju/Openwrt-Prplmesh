@@ -325,7 +325,8 @@ void ApAutoConfigurationTask::configuration_complete_wait_action(const std::stri
 {
     auto &radio_conf_params = m_radios_conf_params[radio_iface];
 #if !USE_PRPLMESH_WHM
-// counting BSSes that are actually active is a faux-pas for whm; see PPM-2531 for discussion
+    // counting BSSes that are actually active is a faux-pas for whm; see PPM-2531 for discussion
+    // if after onboarding the agent is not operating correctly, debug by reading the datamodel
 
     // num_of_bss_available updates on ACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_RESPONSE handler
     if (!radio_conf_params.num_of_bss_available) {
@@ -347,6 +348,10 @@ void ApAutoConfigurationTask::configuration_complete_wait_action(const std::stri
     }
 #endif
 
+    LOG(INFO) << "num_of_bss_available " << radio_conf_params.num_of_bss_available
+              << " enabled_bssids " << radio_conf_params.enabled_bssids.size() << " radio_iface "
+              << radio_iface;
+
     // Arbitrary value
     constexpr uint8_t WAIT_IFACES_INSIDE_THE_BRIDGE_TIMEOUT_SECONDS = 30;
 
@@ -354,6 +359,8 @@ void ApAutoConfigurationTask::configuration_complete_wait_action(const std::stri
         if (!send_ap_bss_info_update_request(radio_iface)) {
             LOG(ERROR) << "send_ap_bss_info_update_request has failed";
             return;
+        } else {
+            LOG(INFO) << "send ACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_REQUEST " << radio_iface;
         }
         radio_conf_params.sent_vaps_list_update = true;
 
@@ -365,6 +372,9 @@ void ApAutoConfigurationTask::configuration_complete_wait_action(const std::stri
     if (!radio_conf_params.received_vaps_list_update) {
         return;
     }
+    LOG(INFO) << "received_vaps_list_update is true";
+
+#if !USE_PRPLMESH_WHM
 
     // Check if all reported interfaces are in the bridge
     auto db               = AgentDB::get();
@@ -375,7 +385,13 @@ void ApAutoConfigurationTask::configuration_complete_wait_action(const std::stri
         return;
     }
     for (const auto &bssid : radio->front.bssids) {
+
         if (bssid.iface_name.empty()) {
+            continue;
+        }
+
+        if (!bssid.active) {
+            LOG(INFO) << "skip bssid " << bssid.iface_name << " since it is disabled";
             continue;
         }
         auto found = std::find(ifaces_in_bridge.begin(), ifaces_in_bridge.end(), bssid.iface_name);
@@ -400,6 +416,10 @@ void ApAutoConfigurationTask::configuration_complete_wait_action(const std::stri
             return;
         }
     }
+    /* these checks do not make any sense when using bwl::whm;
+    if after onboarding the agent is not operating correctly,
+    debug by reading the datamodel */
+#endif
 
     FSM_MOVE_STATE(radio_iface, eState::CONFIGURED);
 
@@ -1658,8 +1678,9 @@ void ApAutoConfigurationTask::handle_vs_vaps_list_update_notification(
 
     const auto &fronthaul_iface = radio->front.iface_name;
 
+    auto &radio_conf_params = m_radios_conf_params[radio_iface];
     LOG(INFO) << "received ACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION "
-              << fronthaul_iface;
+              << fronthaul_iface << " waiting for it? " << radio_conf_params.sent_vaps_list_update;
 
     m_btl_ctx.update_vaps_info(fronthaul_iface, notification_in->params().vaps);
 
@@ -1671,7 +1692,7 @@ void ApAutoConfigurationTask::handle_vs_vaps_list_update_notification(
     }
 
     notification_out->params() = notification_in->params();
-    LOG(TRACE) << "send ACTION_CONTROL_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION " << fronthaul_iface;
+    LOG(TRACE) << "handle ACTION_CONTROL_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION " << fronthaul_iface;
     m_btl_ctx.send_cmdu_to_controller(fronthaul_iface, m_cmdu_tx);
 
     // This probably changed the "AP Operational BSS" list in topology, so send a notification
@@ -1688,8 +1709,6 @@ void ApAutoConfigurationTask::handle_vs_vaps_list_update_notification(
 
     tlvAlMacAddress->mac() = db->bridge.mac;
     m_btl_ctx.send_cmdu_to_controller(fronthaul_iface, m_cmdu_tx);
-
-    auto &radio_conf_params = m_radios_conf_params[radio_iface];
 
     radio_conf_params.received_vaps_list_update = true;
 
