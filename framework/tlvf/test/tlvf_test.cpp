@@ -1855,8 +1855,8 @@ int test_create_ap_radio_vbss_response_cmdu()
     ieee1905_1::CmduMessageTx cmdu_tx(tx_buffer, tx_buffer_size);
 
     if (!cmdu_tx.create(1 /*mid*/,
-                        ieee1905_1::eMessageType::VIRTUAL_BSS_CAPABILITIES_REPONSE_MESSAGE)) {
-        LOG(ERROR) << "cmdu creation of type VIRTUAL_BSS_CAPABILITIES_REPONSE_MESSAGE, has failed";
+                        ieee1905_1::eMessageType::VIRTUAL_BSS_CAPABILITIES_RESPONSE_MESSAGE)) {
+        LOG(ERROR) << "cmdu creation of type VIRTUAL_BSS_CAPABILITIES_RESPONSE_MESSAGE, has failed";
         errors++;
     }
     auto ap_radio_vbss_capabilities = cmdu_tx.addClass<wfa_map::ApRadioVbssCapabilities>();

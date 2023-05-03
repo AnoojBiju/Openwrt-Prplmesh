@@ -82,7 +82,7 @@ vbss_task::~vbss_task()
 bool vbss_task::handle_ieee1905_1_msg(const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     switch (cmdu_rx.getMessageType()) {
-    case ieee1905_1::eMessageType::VIRTUAL_BSS_CAPABILITIES_REPONSE_MESSAGE:
+    case ieee1905_1::eMessageType::VIRTUAL_BSS_CAPABILITIES_RESPONSE_MESSAGE:
         return handle_ap_radio_vbss_caps_msg(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::VIRTUAL_BSS_RESPONSE_MESSAGE:
         return handle_vbss_event_response(src_mac, cmdu_rx);
