@@ -759,6 +759,14 @@ bool Controller::handle_cmdu_1905_autoconfiguration_search(const sMacAddr &src_m
             LOG(ERROR) << "addClass wfa_map::tlvProfile2MultiApProfile failed";
             return false;
         }
+
+        tlvProfile2MultiApProfileController->profile() = wfa_map::tlvProfile2MultiApProfile::
+            eMultiApProfile::MULTIAP_PROFILE_1; // Profile-1 of EasyMesh R4
+        auto profile2_ap_capability_tlv = cmdu_tx.addClass<wfa_map::tlvProfile2ApCapability>();
+        if (profile2_ap_capability_tlv) {
+            profile2_ap_capability_tlv->capabilities_bit_field().byte_counter_units =
+                wfa_map::tlvProfile2ApCapability::eByteCounterUnits::KIBIBYTES;
+        }
     }
 
     auto beerocks_header = beerocks::message_com::parse_intel_vs_message(cmdu_rx);
