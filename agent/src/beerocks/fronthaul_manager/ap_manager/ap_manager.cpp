@@ -121,6 +121,7 @@ static void copy_vaps_info(std::shared_ptr<bwl::ap_wlan_hal> &ap_wlan_hal,
         vaps[i].profile2_backhaul_sta_association_disallowed =
             curr_vap.profile2_backhaul_sta_association_disallowed;
     }
+    LOG(INFO) << "copy_vaps_info";
 }
 
 static void build_channels_list(ieee1905_1::CmduMessageTx &cmdu_tx,
@@ -1899,6 +1900,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
         break;
     }
     case beerocks_message::ACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_REQUEST: {
+        LOG(INFO) << "handle ACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_REQUEST handle";
         if (!handle_aps_update_list()) {
             LOG(ERROR) << "Failed notifying vaps list update!";
             return;
