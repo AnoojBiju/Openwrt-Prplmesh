@@ -6766,7 +6766,9 @@ bool db::dm_add_interface_element(const sMacAddr &device_mac, const sMacAddr &in
     }
 
     // Prepare path to the Interface object MediaType, like Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.MediaType
-    if (!m_ambiorix_datamodel->set(iface->m_dm_path, "MediaType", media_type)) {
+    auto media_type_str =
+        std::string(ieee1905_1::eMediaType_str(ieee1905_1::eMediaType(media_type)));
+    if (!m_ambiorix_datamodel->set(iface->m_dm_path, "MediaType", media_type_str)) {
         LOG(ERROR) << "Failed to set " << iface->m_dm_path << ".MediaType: " << media_type;
         return false;
     }
