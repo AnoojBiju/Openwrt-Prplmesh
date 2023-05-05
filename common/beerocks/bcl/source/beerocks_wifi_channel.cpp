@@ -57,7 +57,7 @@ WifiChannel::WifiChannel(uint8_t channel, eFreqType freq_type, eWiFiBandwidth ba
     if (!are_params_valid(channel, freq_type, center_frequency, bandwidth)) {
         LOG(ERROR) << "invalid wifiChannel params. Creating an empty channel instead";
         initialize_empty_wifi_channel_members();
-    } else if (m_freq_type == eFreqType::FREQ_6G && bandwidth == eWiFiBandwidth::BANDWIDTH_160) {
+    } else if (freq_type == eFreqType::FREQ_6G && bandwidth == eWiFiBandwidth::BANDWIDTH_160) {
         /*
         according to the P802.11ax_D7.0 standard, Section 9.4.2.249:
         center_frequency_1 shall be the center frequency of the primary 80MHz channel,
