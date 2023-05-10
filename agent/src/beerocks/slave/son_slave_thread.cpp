@@ -4615,7 +4615,7 @@ bool slave_thread::send_cmdu_to_controller(const std::string &fronthaul_iface,
         beerocks_header->actionhdr()->direction() = beerocks::BEEROCKS_DIRECTION_CONTROLLER;
     }
 
-    sMacAddr dst_addr;
+    sMacAddr dst_addr; LOG(ERROR) << cmdu_tx.getMessageType();
     switch (cmdu_tx.getMessageType()) {
     case ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE:
     case ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_SEARCH_MESSAGE:
@@ -4623,7 +4623,7 @@ bool slave_thread::send_cmdu_to_controller(const std::string &fronthaul_iface,
         dst_addr = network_utils::MULTICAST_1905_MAC_ADDR;
         break;
     default:
-        dst_addr = db->controller_info.bridge_mac;
+        dst_addr = db->controller_info.bridge_mac; LOG(ERROR) << dst_addr;
         break;
     }
 
