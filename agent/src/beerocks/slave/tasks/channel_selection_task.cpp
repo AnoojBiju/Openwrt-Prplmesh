@@ -1439,10 +1439,10 @@ ChannelSelectionTask::sSelectedChannel ChannelSelectionTask::select_next_channel
     }
 
     auto find_best_beacon_channel =
-        [&](const uint8_t primary_channel, const beerocks::eWiFiBandwidth bandwidth,
+        [&](const uint8_t channel, const beerocks::eWiFiBandwidth bandwidth,
             const uint8_t operating_class) -> std::pair<uint8_t, uint8_t> {
         const auto beacon_channels =
-            son::wireless_utils::center_channel_5g_to_beacon_channels(primary_channel, bandwidth);
+            son::wireless_utils::center_channel_5g_to_beacon_channels(channel, bandwidth);
 
         uint8_t best_bcn_pref = 0;
         uint8_t best_bcn_chan = 0;
@@ -1475,7 +1475,7 @@ ChannelSelectionTask::sSelectedChannel ChannelSelectionTask::select_next_channel
                                                          operating_class_20Mhz, best_bcn_chan);
         // Get the controller preference for the central channel
         auto bcn_controller_pref =
-            get_preference_for_channel(controller_preferences, operating_class, primary_channel);
+            get_preference_for_channel(controller_preferences, operating_class, channel);
         // Return the combination of the beacon's radio's preference with the primary's controller's preference.
         return std::make_pair(best_bcn_chan, (bcn_controller_pref + bcn_radio_pref));
     };
@@ -1504,7 +1504,7 @@ ChannelSelectionTask::sSelectedChannel ChannelSelectionTask::select_next_channel
                 continue;
             }
 
-            auto primary_channel = channel_number;
+            auto channel = channel_number;
             if (son::wireless_utils::is_operating_class_using_central_channel(operating_class)) {
                 auto source_channel_it =
                     son::wireless_utils::channels_table_5g.find(channel_number);
@@ -1513,11 +1513,11 @@ ChannelSelectionTask::sSelectedChannel ChannelSelectionTask::select_next_channel
                                  << " for overlapping channels";
                     continue;
                 }
-                primary_channel = source_channel_it->second.at(bandwidth).center_channel;
+                channel = source_channel_it->second.at(bandwidth).center_channel;
             }
 
-            const auto cumulative_preference = get_cumulative_preference(
-                radio, received_preferences, operating_class, primary_channel);
+            const auto cumulative_preference =
+                get_cumulative_preference(radio, received_preferences, operating_class, channel);
             if (cumulative_preference == 0) {
                 // Either radio or controller preference is Non-Operable, skipping
                 continue;
@@ -1543,19 +1543,19 @@ ChannelSelectionTask::sSelectedChannel ChannelSelectionTask::select_next_channel
             //
             auto primary_preference = cumulative_preference;
             if (bandwidth >= eWiFiBandwidth::BANDWIDTH_80) {
-                LOG(INFO) << "[" << primary_channel << "-" << operating_class << "("
+                LOG(INFO) << "[" << channel << "-" << operating_class << "("
                           << utils::convert_bandwidth_to_int(bandwidth)
                           << "MHz)] uses a beacon channel.";
                 auto best_channel_pair =
-                    find_best_beacon_channel(primary_channel, bandwidth, operating_class);
+                    find_best_beacon_channel(channel, bandwidth, operating_class);
                 // For any fail case, we should switch to the selected primary channel
                 if (best_channel_pair.first != 0) {
-                    primary_channel    = best_channel_pair.first;
+                    channel            = best_channel_pair.first;
                     primary_preference = best_channel_pair.second;
                 }
             }
 
-            LOG(INFO) << "[" << primary_channel << "-" << operating_class << "("
+            LOG(INFO) << "[" << channel << "-" << operating_class << "("
                       << utils::convert_bandwidth_to_int(bandwidth)
                       << "MHz)] has a preference score of " << primary_preference;
 
@@ -1570,11 +1570,11 @@ ChannelSelectionTask::sSelectedChannel ChannelSelectionTask::select_next_channel
                 }
             }
 
-            LOG(INFO) << "[" << primary_channel << "-" << operating_class << "("
+            LOG(INFO) << "[" << channel << "-" << operating_class << "("
                       << utils::convert_bandwidth_to_int(bandwidth)
                       << "MHz)] is the new Best-Channel";
             // Override selected channel
-            best_channel.channel          = primary_channel;
+            best_channel.channel          = channel;
             best_channel.preference_score = primary_preference;
             best_channel.operating_class  = operating_class;
             best_channel.bw               = bandwidth;
