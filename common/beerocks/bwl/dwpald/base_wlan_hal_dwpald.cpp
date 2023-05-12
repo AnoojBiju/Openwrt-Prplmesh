@@ -128,15 +128,7 @@ bool base_wlan_hal_dwpal::fsm_setup()
         })
 
         // Handle "Detach" event
-        .on(dwpal_fsm_event::Detach, dwpal_fsm_state::Detach,
-            [&](TTransition &transition, const void *args) -> bool {
-                bool detach = false;
-                if (dwpald_disconnect() == DWPALD_SUCCESS) {
-                    detach = true;
-                    LOG(DEBUG) << "Disconnected dwpald";
-                }
-                return detach;
-            })
+        .on(dwpal_fsm_event::Detach, dwpal_fsm_state::Detach)
 
         // Handle "Attach" event
         .on(dwpal_fsm_event::Attach,
@@ -380,17 +372,9 @@ bool base_wlan_hal_dwpal::fsm_setup()
         //////////////////////////////////////////////////////////////////////////
 
         .state(dwpal_fsm_state::Detach)
-
         .entry([&](const void *args) -> bool {
-            bool success        = false;
-            m_fds_ext_events[0] = -1;
-            m_fd_nl_events      = -1;
             LOG(DEBUG) << "dwpal_fsm_state::Detach";
-            if (dwpald_disconnect() == DWPALD_SUCCESS) {
-                success = true;
-                LOG(DEBUG) << "Disconnected dwpald";
-            }
-            return success;
+            return true;
         })
 
         // Handle "Attach" event
@@ -1093,6 +1077,10 @@ bool base_wlan_hal_dwpal::update_conn_status(char *ifname, std::vector<int> &vap
                 return false;
             }
             break;
+        }
+        if (tmp_str == nullptr) {
+            //Ignore if tmp_str is null
+            continue;
         }
         auto iface_ids = beerocks::utils::get_ids_from_iface_string(tmp_str);
         if (iface_ids.vap_id == beerocks::IFACE_RADIO_ID) {

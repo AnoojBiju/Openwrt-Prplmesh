@@ -780,6 +780,10 @@ ap_wlan_hal_dwpal::~ap_wlan_hal_dwpal()
             LOG(ERROR) << " Failed to detach from dwpald for interface" << vap_name;
         }
     }
+    if (dwpald_disconnect() == DWPALD_SUCCESS) {
+        LOG(DEBUG) << "Disconnected dwpald";
+    }
+
     ctx = nullptr;
 }
 
