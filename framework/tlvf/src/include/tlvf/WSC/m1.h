@@ -35,6 +35,7 @@ public:
         eWscRfBands bands;
         std::vector<uint8_t> encrypted_settings;
         uint8_t iv[WSC_ENCRYPTED_SETTINGS_IV_LENGTH];
+        uint32_t os_version;
     };
 
     m1(uint8_t *buff, size_t buff_len, bool parse) : WscAttrList(buff, buff_len, parse) {}
@@ -71,6 +72,7 @@ public:
     uint16_t rf_bands() const { return getAttr<cWscAttrRfBands>()->bands(); };
 
     sMacAddr mac_addr() const { return getAttr<cWscAttrMac>()->data(); };
+    uint32_t os_version() const { return getAttr<cWscAttrOsVersion>()->os_version(); };
 };
 
 } // namespace WSC

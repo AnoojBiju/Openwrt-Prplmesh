@@ -1091,6 +1091,16 @@ public:
                                 const wfa_map::tlvApHtCapabilities::sFlags &flags);
 
     /**
+     * @brief Set the SoftwareVersion value in DM
+     *
+     * @param[in] agent Pointer to the Agent to update
+     * @param[in] sw_version Value to set
+     *
+     * @return true if the value has been set successfully, false otherwise
+     */
+    bool set_software_version(std::shared_ptr<Agent> agent, const std::string &sw_version);
+
+    /**
      * @brief Add 'VHTCapabilities' data element, set values to its parameters.
      * Example of full path to object:
      * "Device.WiFi.DataElements.Netwok.Device.1.Radio.1.Capabilities.VHTCapabilities"
