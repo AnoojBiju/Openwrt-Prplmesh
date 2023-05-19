@@ -119,6 +119,24 @@
                 %read-only string BackhaulMACAddress = "";
                 %read-only string BackhaulDeviceID = "";
                 %read-only string MACAddress = "";
+
+                %read-only object Stats {
+                    %read-only uint64 BytesSent = 0;
+                    %read-only uint64 BytesReceived = 0;
+                    %read-only uint64 PacketsSent = 0;
+                    %read-only uint64 PacketsReceived = 0;
+                    %read-only uint64 ErrorsSent = 0;
+                    %read-only uint64 ErrorsReceived = 0;
+                    %read-only uint32 LinkUtilization = 0 {
+                        on action validate call check_range [0, 100];
+                    }
+                    %read-only uint32 SignalStrength = 0 {
+                        on action validate call check_range [0, 255];
+                    }
+                    %read-only uint32 LastDataDownlinkRate = 0;
+                    %read-only uint32 LastDataUplinkRate = 0;
+                    %read-only datetime TimeStamp = "2020-08-31T11:22:39Z";
+                }
             }
         }
 
