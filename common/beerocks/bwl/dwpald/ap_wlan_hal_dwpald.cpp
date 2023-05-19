@@ -787,6 +787,8 @@ ap_wlan_hal_dwpal::~ap_wlan_hal_dwpal()
     ctx = nullptr;
 }
 
+bool ap_wlan_hal_dwpal::detach() { return base_wlan_hal_dwpal::detach(); }
+
 HALState ap_wlan_hal_dwpal::attach(bool block)
 {
     auto state = base_wlan_hal_dwpal::attach(block);

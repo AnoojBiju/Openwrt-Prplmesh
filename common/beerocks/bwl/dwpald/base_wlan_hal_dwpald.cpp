@@ -30,6 +30,12 @@ int CONN_STATE_MAX_RETRY    = 5;
 namespace bwl {
 namespace dwpal {
 
+/*
+ * Global mutex to call critical DWPALD APIs between ApManager and Monitor thread to avoid
+ * race conditions.
+ */
+std::mutex base_wlan_hal_dwpal::m_lock;
+
 //////////////////////////////////////////////////////////////////////////////
 ////////////////////////// Local Module Functions ////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -501,8 +507,11 @@ bool base_wlan_hal_dwpal::dwpal_send_cmd(const std::string &cmd, int vap_id)
         result = DWPALD_DISCONNECTED;
         if ((conn_state[get_iface_name().c_str()] == true)) {
             buff_size_copy = m_wpa_ctrl_buffer_size;
+            // Lock acquired to avoid parallel activity with dwpald_stop_listener.
+            std::unique_lock<std::mutex> lock(m_lock);
             result = dwpald_hostap_cmd(get_iface_name().c_str(), cmd.c_str(), cmd.length(), buffer,
                                        &buff_size_copy);
+            lock.unlock();
             if (result != 0) {
                 LOG(DEBUG) << "Failed to send cmd to DWPALD: " << cmd << " --> Retry";
             }

@@ -167,6 +167,12 @@ protected:
      */
     std::unordered_map<std::string, bool> conn_state;
 
+    /*
+    * Mutex to call critical dwpald APIs between ApManager and Monitor thread to avoid
+    * race conditions.
+    */
+    static std::mutex m_lock;
+
     // Private data-members:
 private:
     bool get_vap_type(const std::string &ifname, bool &fronthaul, bool &backhaul);

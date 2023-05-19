@@ -36,6 +36,7 @@ public:
     virtual ~ap_wlan_hal_dwpal();
 
     virtual HALState attach(bool block = false) override;
+    virtual bool detach() override;
     bool refresh_radio_info() override;
     virtual bool enable() override;
     virtual bool disable() override;
