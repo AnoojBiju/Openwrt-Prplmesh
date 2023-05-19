@@ -620,8 +620,6 @@ bool vbss_task::handle_vbss_event_response(const sMacAddr &src_mac,
 bool vbss_task::handle_unassociated_vsta_stats(
     const vbss::sUnassociatedStatsEvent &unassociated_stat_event)
 {
-    LOG(DEBUG) << "Handling unassociated station stats event";
-
     // Currently we are just going to push up to controller to give off to vbss maanger
     auto cntrlCntx = m_database.get_controller_ctx();
     if (!cntrlCntx) {

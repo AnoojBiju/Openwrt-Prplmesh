@@ -4828,9 +4828,6 @@ bool Controller::send_unassociated_sta_link_metrics_query_message(
                 }
             }
 
-            LOG(DEBUG) << " sending a new tlvUnassociatedStaLinkMetricsQuery to agent: "
-                       << tlvf::mac_to_string(agent.first)
-                       << " with: operating_class: " << operating_class.first;
             unassociated_sta_query->operating_class_of_channel_list() = operating_class.first;
             unassociated_sta_query->channel_list_length() =
                 operating_class.second.size(); //number of channels

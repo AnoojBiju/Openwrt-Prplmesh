@@ -295,15 +295,17 @@ bool VbssManager::handle_success_move(const sMacAddr &sta_mac, const sMacAddr &c
                                       const sMacAddr &old_ruid)
 {
     // First need to update unassociated station model
-    bool ret_val = true;
-    LOG(DEBUG) << "handling success move for STA " << sta_mac << " from old_ruid=" << old_ruid
-               << " to cur_ruid=" << cur_ruid;
+    bool ret_val   = true;
+    auto old_agent = m_database.get_agent_by_radio_uid(old_ruid);
     std::vector<sMacAddr> not_connected_agents;
     auto n_agent = m_database.get_agent_by_radio_uid(cur_ruid);
     if (!n_agent) {
         LOG(ERROR) << "Failed to find the agent for the new connected radio" << cur_ruid;
         return false;
     }
+    LOG(DEBUG) << "handling success move for STA " << sta_mac << " from old_ruid=" << old_ruid
+               << " on agent " << old_agent->al_mac << " to cur_ruid=" << cur_ruid
+               << " on new agent " << n_agent->al_mac;
     for (auto &agent : m_database.get_all_connected_agents()) {
         LOG(DEBUG) << "Comparing " << agent->al_mac << " to " << n_agent->al_mac;
         if (agent->al_mac != n_agent->al_mac) {
@@ -425,7 +427,7 @@ bool VbssManager::process_vsta_stats_event(const vbss::sUnassociatedStatsEvent &
                 m_vsta_stats[sta_mac].next_best_count++;
                 m_vsta_stats[sta_mac].next_best_rssi = incomingStat;
                 if (m_vsta_stats[sta_mac].next_best_count > BEST_MOVE_COUNT) {
-                    LOG(DEBUG) << "We found a radio that's better to move to";
+                    LOG(DEBUG) << "We found a radio that's better to move to for STA" << sta_mac;
                     auto radio = m_database.get_radio_by_bssid(m_vsta_stats[sta_mac].vbss_id);
                     if (!radio) {
                         LOG(ERROR) << "Failed to get radio associated with VBSS: "
@@ -479,7 +481,7 @@ bool VbssManager::handle_vbss_destruction(const sMacAddr &vbssid)
     }
     auto vbss = m_database.get_bss(vbssid);
     if (!vbss) {
-        LOG(ERROR) << "Failed to find instance of vbss object in database";
+        LOG(ERROR) << "VBSS with BSSID '" << vbssid << "' not in database!";
         return false;
     }
     // Get the vbss substring to place back in unused vbss options
@@ -493,11 +495,16 @@ bool VbssManager::handle_vbss_destruction(const sMacAddr &vbssid)
 // Assumption is that there is at least >1 agent in network
 bool VbssManager::register_client_for_rssi(const vbss::sStationConnectedEvent &stationConnect)
 {
+    if (m_database.get_all_connected_agents().size() <= 1) {
+        LOG(DEBUG) << "Single AP network!";
+        return true;
+    }
     //First find all agents that client is connected to
     //Create list, then pass this information into db
     auto conn_agent = m_database.get_agent_by_bssid(stationConnect.bss_id);
     if (!conn_agent) {
-        LOG(ERROR) << "Failed to find agent connected to vbss " << stationConnect.bss_id;
+        LOG(ERROR) << "Failed to find Agent hosting VBSS with VBSSID '" << stationConnect.bss_id
+                   << "'";
         return false;
     }
     std::vector<sMacAddr> not_connected_agents;
@@ -508,13 +515,11 @@ bool VbssManager::register_client_for_rssi(const vbss::sStationConnectedEvent &s
             not_connected_agents.push_back(agent->al_mac);
     }
     LOG(DEBUG) << "Agent list is " << not_connected_agents.size();
-    if (not_connected_agents.size()) {
-        if (!m_database.add_unassociated_station(stationConnect.client_mac, stationConnect.channel,
-                                                 stationConnect.op_class, not_connected_agents)) {
-            LOG(ERROR) << "Failed to add " << stationConnect.client_mac
-                       << " to the unassociated station database";
-            return false;
-        }
+    if (!m_database.add_unassociated_station(stationConnect.client_mac, stationConnect.channel,
+                                             stationConnect.op_class, not_connected_agents)) {
+        LOG(ERROR) << "Failed to add " << stationConnect.client_mac
+                   << " to the unassociated station database";
+        return false;
     }
     return true;
 }
@@ -525,7 +530,7 @@ bool VbssManager::can_radio_support_another_vbss(const sMacAddr &agent_mac, cons
     auto radio = m_database.get_radio_by_bssid(bssid);
     if (!radio) {
         LOG(ERROR) << "Radio hosting bss id: " << bssid
-                   << " not found, vbss analysis failed new client" << std::endl;
+                   << " not found, vbss analysis failed new client";
         return false;
     }
     // if (!radio->vbss_radio) {
@@ -535,13 +540,12 @@ bool VbssManager::can_radio_support_another_vbss(const sMacAddr &agent_mac, cons
     // }
 
     if (radio->current_vbss_used >= radio->max_vbss) {
-        LOG(ERROR) << "Radio with id: " << radio->radio_uid << " has no space for a vbss!"
-                   << std::endl;
+        LOG(ERROR) << "Radio with id: " << radio->radio_uid << " has no space for a vbss!";
         return false;
     }
 
-    LOG(DEBUG) << "Radio with id: " << radio->radio_uid << " has space for a vbss!" << std::endl;
-    return false;
+    LOG(DEBUG) << "Radio with id: " << radio->radio_uid << " has space for a vbss!";
+    return true;
 }
 
 // This method should only be used in the event that a client has connected to an old none virtual bss
@@ -673,8 +677,7 @@ bool VbssManager::can_system_have_another_vbss()
 
 bool VbssManager::currently_have_vbss_free(const sMacAddr &agent_mac)
 {
-    const auto ret_val = m_open_vbsses.find(agent_mac);
-    return (ret_val != m_open_vbsses.end()) ? true : false;
+    return m_open_vbsses.find(agent_mac) != m_open_vbsses.end();
 }
 
 } // namespace vbss

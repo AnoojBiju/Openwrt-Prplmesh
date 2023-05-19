@@ -216,6 +216,9 @@ private:
 
     std::vector<std::string> m_used_ssid_extensions;
 
+    /**
+     * @brief Maps associated station MACs to currently connected Agent ID.
+     */
     std::unordered_map<sMacAddr, sMacAddr> m_client_agent;
 
     std::unordered_map<sMacAddr, bool> m_global_vbssid_map;

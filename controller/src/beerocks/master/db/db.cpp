@@ -8326,6 +8326,9 @@ bool db::update_unassociated_station_agents(const sMacAddr &sta_mac,
         }
     }
     for (const auto &agent_to_remove : agents_no_longer_monitoring_station) {
+        LOG(DEBUG) << "Removing Agent " << agent_to_remove
+                   << " from list of Agents monitoring unassociated station "
+                   << unassociated_sta->get_mac_Address();
         unassociated_sta->remove_agent(agent_to_remove);
     }
 
