@@ -258,6 +258,12 @@ bool VbssManager::handle_station_connect(const vbss::sStationConnectedEvent &sta
         LOG(ERROR) << "Failed to find station with mac: " << stationConnect.client_mac;
         return false;
     }
+    auto agent = m_database.get_agent_by_bssid(stationConnect.bss_id);
+    if (!agent) {
+        LOG(ERROR) << "Failed to find agent hosting bssid: " << stationConnect.bss_id;
+        return false;
+    }
+    m_client_agent[stationConnect.client_mac] = agent->al_mac;
     // In order to avoid race condition between VBSS move finish and station connected on dest AP
     // events. If VSTA status is already set, this is a station connect event as a result of a move.
     // No need to re-register the client and add it to the DB, etc.
@@ -266,17 +272,12 @@ bool VbssManager::handle_station_connect(const vbss::sStationConnectedEvent &sta
                    << ", ignoring";
         return true;
     }
-    client->set_vsta_status(true);
-    auto agent = m_database.get_agent_by_bssid(stationConnect.bss_id);
-    if (!agent) {
-        LOG(ERROR) << "Failed to find agent hosting bssid: " << stationConnect.bss_id;
-        return false;
-    }
     auto radio = m_database.get_radio_by_bssid(stationConnect.bss_id);
     if (!radio) {
         LOG(ERROR) << "Failed to find radio by bssid: " << stationConnect.bss_id;
+        return false;
     }
-    m_client_agent[stationConnect.client_mac] = agent->al_mac;
+    client->set_vsta_status(true);
     if (m_open_vbsses.find(agent->al_mac) != m_open_vbsses.end()) {
         if (m_open_vbsses[agent->al_mac].vbss_id == stationConnect.bss_id) {
             //Erase the open vbss list
@@ -346,7 +347,6 @@ bool VbssManager::handle_station_disconnect(const vbss::sStationDisconEvent &sta
     }
     auto sta_mac = stationDisconn.client_vbss.client_mac;
     // update that vbss id is no longer being used
-    //radio->vbss_ids_used[stationDisconn.client_vbss.vbssid] = false;
     m_client_agent.erase(sta_mac);
 
     m_vsta_stats.erase(sta_mac);
@@ -381,8 +381,6 @@ bool VbssManager::process_vsta_stats_event(const vbss::sUnassociatedStatsEvent &
 {
     bool ret_val = false;
     // First thing first compare MID
-    //std::chrono::time_point<std::chrono::steady_clock> start_time =
-    //   std::chrono::steady_clock::now();
     if (last_sent_unassociated_mid > unassociated_stats.mmid) {
         LOG(ERROR) << "Recieved stale data, expected MID = or great: " << last_sent_unassociated_mid
                    << "Got " << unassociated_stats.mmid << " instead";
@@ -410,7 +408,7 @@ bool VbssManager::process_vsta_stats_event(const vbss::sUnassociatedStatsEvent &
                        << sta_mac;
             continue;
         }
-        //auto duration = std::chrono::duration<std::chrono::seconds>(start_time - ts).count();
+
         if (ts.count() > 2) {
             LOG(INFO) << "We are comparing against old rssi data, it's been " << ts.count()
                       << "s since last associated rssi came in for station=" << sta_mac
