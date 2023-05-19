@@ -24,7 +24,7 @@ class SerialDevice(pexpect.fdpexpect.fdspawn):
     udev rule to make sure it's the case).
     """
 
-    send_delay = 10
+    send_delay = 3
     """The delay (in milliseconds) to wait before sending another character.
     This is used for cases where the serial console cannot handle a regular pexpect
     "sendline" because the characters are sent too fast.
@@ -94,3 +94,13 @@ class SerialDevice(pexpect.fdpexpect.fdspawn):
             time.sleep(self.send_delay / 1000.)
         super().sendline("")
         time.sleep(self.send_delay / 1000.)
+
+    def sendstring(self, s: str):
+        """Imitates pexpect send(), but waits for a delay between each
+        characters to give the device some time to process them.
+        """
+        if not self.serial:
+            raise ValueError("There is no serial! Use connect() to create it first.")
+        for char in s:
+            self.send(char)
+            time.sleep(self.send_delay / 1000.)

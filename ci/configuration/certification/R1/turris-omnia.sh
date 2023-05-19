@@ -21,7 +21,7 @@ if data_overlay_not_initialized; then
   done
   logger -t prplmesh -p daemon.info "Data overlay is initialized."
 fi
-sleep 10
+sleep 5
 
 # Stop and disable the DHCP clients:
 /etc/init.d/tr181-dhcpv4client stop
@@ -32,7 +32,7 @@ rm -f /etc/rc.d/S25tr181-dhcpv6client
 # Save the IP settings persistently (PPM-2351):
 sed -ri 's/(dm-save.*) = false/\1 = true/g' /etc/amx/ip-manager/ip-manager.odl
 /etc/init.d/ip-manager restart
-sleep 12
+sleep 15
 
 ubus wait_for IP.Interface
 
@@ -187,7 +187,14 @@ sleep 10
 ip a |grep "br-lan:" |grep "state UP" >/dev/null || (echo "LAN Bridge DOWN, restarting bridge manager" && /etc/init.d/tr181-bridging restart && sleep 15)
 
 # If we still can't ping the UCC, restart the IP manager
-ping -i 1 -c 2 192.168.250.199 || (/etc/init.d/ip-manager restart && sleep 12)
+ping -i 1 -c 2 192.168.250.199 || (/etc/init.d/ip-manager restart && sleep 15)
+ping -i 1 -c 2 192.168.250.199 || (/etc/init.d/ip-manager restart && sleep 15)
+
+# Add iptables rule to rc.local to allow SSH access after reboot
+# (Necessary because the prplOS version of Turris-omnia is held back)
+BOOTSCRIPT="/etc/rc.local"
+IPTABLES_CMD="iptables -P INPUT ACCEPT"
+if ! grep -q "$IPTABLES_CMD" "$BOOTSCRIPT"; then { head -n -2 "$BOOTSCRIPT"; echo "$IPTABLES_CMD"; tail -2 "$BOOTSCRIPT"; } >> btscript.tmp; mv btscript.tmp "$BOOTSCRIPT"; fi
 
 # Restart the ssh server
 # (necessary when prplOS will be upstepped for this platform)
