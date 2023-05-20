@@ -52,6 +52,7 @@ ap_wlan_hal_whm::ap_wlan_hal_whm(const std::string &iface_name, hal_event_cb_t c
     subscribe_to_radio_events();
     subscribe_to_ap_events();
     subscribe_to_sta_events();
+    subscribe_to_ap_bss_tm_events();
 }
 
 ap_wlan_hal_whm::~ap_wlan_hal_whm() {}
@@ -66,6 +67,39 @@ HALState ap_wlan_hal_whm::attach(bool block)
     }
 
     return state;
+}
+
+void ap_wlan_hal_whm::subscribe_to_ap_bss_tm_events()
+{
+    auto event_handler         = std::make_shared<sAmbiorixEventHandler>();
+    event_handler->event_type  = AMX_CL_BSS_TM_RESPONSE_EVT;
+    event_handler->callback_fn = [](AmbiorixVariant &event_data, void *context) -> void {
+        std::string ap_path;
+        if (!event_data || (event_data.read_child(ap_path, "path") == false) || ap_path.empty()) {
+            return;
+        }
+        ap_wlan_hal_whm *hal = (static_cast<ap_wlan_hal_whm *>(context));
+        auto &vapsExtInfo    = hal->m_vapsExtInfo;
+        auto vap_it          = std::find_if(vapsExtInfo.begin(), vapsExtInfo.end(),
+                                   [&](const std::pair<std::string, VAPExtInfo> &element) {
+                                       return element.second.path == ap_path;
+                                   });
+        if (vap_it == vapsExtInfo.end()) {
+            LOG(DEBUG) << "vap_it not found";
+            return;
+        }
+        LOG(DEBUG) << "event from iface " << vap_it->first;
+
+        hal->process_ap_bss_event(vap_it->first, &event_data);
+    };
+    event_handler->context = this;
+
+    std::string filter = "(path matches '" + wbapi_utils::search_path_ap() +
+                         "[0-9]+.$')"
+                         " && (notification == '" +
+                         AMX_CL_BSS_TM_RESPONSE_EVT + "')";
+
+    m_ambiorix_cl->subscribe_to_object_event(wbapi_utils::search_path_ap(), event_handler, filter);
 }
 
 bool ap_wlan_hal_whm::enable()
@@ -866,6 +900,53 @@ bool ap_wlan_hal_whm::process_sta_event(const std::string &interface, const std:
         }
     }
 
+    return true;
+}
+
+bool ap_wlan_hal_whm::process_ap_bss_event(const std::string &interface,
+                                           const beerocks::wbapi::AmbiorixVariant *event_data)
+{
+    std::string name_notification;
+    event_data->read_child(name_notification, "notification");
+    if (name_notification == AMX_CL_BSS_TM_RESPONSE_EVT) {
+        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_CLIENT_BSS_STEER_RESPONSE));
+        auto msg = reinterpret_cast<sACTION_APMANAGER_CLIENT_BSS_STEER_RESPONSE *>(msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        // Initialize the message
+        memset(msg_buff.get(), 0, sizeof(sACTION_APMANAGER_CLIENT_BSS_STEER_RESPONSE));
+
+        // Client params
+        std::string data;
+        event_data->read_child(data, "PeerMacAddress");
+        msg->params.mac = tlvf::mac_from_string(data);
+        int32_t status_code(UINT32_MAX);
+        event_data->read_child(status_code, "StatusCode");
+
+        auto vap_id = get_vap_id_with_bss(interface);
+        if (vap_id == beerocks::IFACE_ID_INVALID) {
+            LOG(ERROR) << "Invalid vap_id";
+            return false;
+        }
+        msg->params.source_bssid = tlvf::mac_from_string(m_radio_info.available_vaps[vap_id].mac);
+
+        msg->params.status_code = status_code;
+        if (msg->params.status_code == 0) {
+            event_data->read_child(data, "TargetBssid");
+            msg->params.target_bssid = tlvf::mac_from_string(data);
+        } else {
+            LOG(ERROR) << "BSS Transition Management Query for station " << msg->params.mac
+                       << " has been rejected with Status code = " << msg->params.status_code;
+        }
+
+        LOG(DEBUG) << "BTM Response with mac= " << msg->params.mac
+                   << " status_code= " << msg->params.status_code
+                   << " source_bssid= " << msg->params.source_bssid
+                   << " target_bssid= " << msg->params.target_bssid;
+
+        // Add the message to the queue
+        event_queue_push(Event::BSS_TM_Response, msg_buff);
+    }
     return true;
 }
 
