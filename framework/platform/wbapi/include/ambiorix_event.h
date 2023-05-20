@@ -21,6 +21,7 @@ constexpr char AMX_CL_INSTANCE_REMOVED_EVT[] = "dm:instance-removed";
 constexpr char AMX_CL_PERIODIC_INFORM_EVT[]  = "dm:periodic-inform";
 constexpr char AMX_CL_WPS_PAIRING_DONE[]     = "pairingDone";
 constexpr char AMX_CL_SCAN_COMPLETE_EVT[]    = "ScanComplete";
+constexpr char AMX_CL_BSS_TM_RESPONSE_EVT[]  = "BSS-TM-RESP";
 
 namespace beerocks {
 namespace wbapi {
