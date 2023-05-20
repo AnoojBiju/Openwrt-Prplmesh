@@ -52,6 +52,7 @@ ap_wlan_hal_whm::ap_wlan_hal_whm(const std::string &iface_name, hal_event_cb_t c
     subscribe_to_radio_events();
     subscribe_to_ap_events();
     subscribe_to_sta_events();
+    subscribe_to_bss_tm_response_events();
 }
 
 ap_wlan_hal_whm::~ap_wlan_hal_whm() {}
@@ -66,6 +67,21 @@ HALState ap_wlan_hal_whm::attach(bool block)
     }
 
     return state;
+}
+
+void ap_wlan_hal_whm::subscribe_to_bss_tm_response_events()
+{
+    auto event_handler         = std::make_shared<sAmbiorixEventHandler>();
+    event_handler->event_type  = AMX_CL_BSS_TM_RESPONSE_EVT;
+    event_handler->callback_fn = [](AmbiorixVariant &event_data, void *context) -> void {
+        if (!event_data) {
+            return;
+        }
+        ap_wlan_hal_whm *hal = (static_cast<ap_wlan_hal_whm *>(context));
+        hal->process_ap_bss_tm_response_event(hal->get_iface_name(), &event_data);
+    };
+    event_handler->context = this;
+    m_ambiorix_cl->subscribe_to_object_event(wbapi_utils::search_path_ap(), event_handler);
 }
 
 bool ap_wlan_hal_whm::enable()
@@ -271,6 +287,7 @@ bool ap_wlan_hal_whm::sta_bss_steer(int8_t vap_id, const std::string &mac, const
                                     int oper_class, int chan, int disassoc_timer_btt,
                                     int valid_int_btt, int reason)
 {
+    LOG(DEBUG) << "wissemmmm sta_bss_steer called";
     if (!check_vap_id(vap_id)) {
         LOG(ERROR) << "invalid vap_id " << vap_id;
         return false;
@@ -286,6 +303,7 @@ bool ap_wlan_hal_whm::sta_bss_steer(int8_t vap_id, const std::string &mac, const
     args.add_child("validity", valid_int_btt);
     args.add_child("disassoc", disassoc_timer_btt);
     args.add_child("transitionReason", reason);
+    args.add_child("wait", 3500);
     auto wifi_ap_path = wbapi_utils::search_path_ap_by_iface(ifname);
     bool ret          = m_ambiorix_cl->call(wifi_ap_path, "sendBssTransferRequest", args, result);
 
@@ -1009,6 +1027,49 @@ bool ap_wlan_hal_whm::process_sta_event(const std::string &interface, const std:
         }
     }
 
+    return true;
+}
+
+bool ap_wlan_hal_whm::process_ap_bss_tm_response_event(
+    const std::string &interface, const beerocks::wbapi::AmbiorixVariant *event_data)
+{
+    LOG(DEBUG) << "wissemmmm ap_bss_tm_response_event  received";
+    std::string name_notification;
+    event_data->read_child(name_notification, "notification");
+    if (name_notification == AMX_CL_BSS_TM_RESPONSE_EVT) {
+        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_CLIENT_BSS_STEER_RESPONSE));
+        auto msg = reinterpret_cast<sACTION_APMANAGER_CLIENT_BSS_STEER_RESPONSE *>(msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        // Initialize the message
+        memset(msg_buff.get(), 0, sizeof(sACTION_APMANAGER_CLIENT_BSS_STEER_RESPONSE));
+
+        // Client params
+        std::string data;
+        event_data->read_child(data, "mac");
+        msg->params.mac = tlvf::mac_from_string(data);
+        event_data->read_child(msg->params.status_code, "status_code");
+        event_data->read_child(data, "source_bssid");
+        msg->params.source_bssid = tlvf::mac_from_string(data);
+
+        //actual version of pwhm does not extract the target_bssid from the nl80211 BSS-TM-RESP packet, but as per spec IEEE Std 802.11, 9.6.14.10
+        // BTM Status Code of value 0 means the station accepted the target_bssid sent in the request
+        if (msg->params.status_code == 0) {
+            event_data->read_child(data, "target_bssid");
+            msg->params.target_bssid = tlvf::mac_from_string(data);
+        } else {
+            //As per spec IEEE Std 802.11, 9.6.14.10, target_bssid is OPTIONAL in the response
+            LOG(INFO) << "BTM Response : status ACCEPT but no target bssid";
+        }
+
+        LOG(DEBUG) << "Received event: " << AMX_CL_BSS_TM_RESPONSE_EVT
+                   << "with mac= " << msg->params.mac << " status_code= " << msg->params.status_code
+                   << " source_bssid= " << msg->params.source_bssid
+                   << " target_bssid= " << msg->params.target_bssid;
+
+        // Add the message to the queue
+        event_queue_push(Event::BSS_TM_Response, msg_buff);
+    }
     return true;
 }
 

@@ -142,6 +142,17 @@ private:
     bool process_sta_event(const std::string &interface, const std::string &sta_mac,
                            const std::string &key,
                            const beerocks::wbapi::AmbiorixVariant *value) override;
+
+    /**
+     * @brief Subscribe to Ap event "BSS-TM-RESP" from pwhm
+     */
+    void subscribe_to_bss_tm_response_events();
+
+    /**
+     * @brief Process event "BSS-TM-RESP"
+     */
+    bool process_ap_bss_tm_response_event(const std::string &interface,
+                                          const beerocks::wbapi::AmbiorixVariant *value);
 };
 
 } // namespace whm
