@@ -141,6 +141,10 @@ cACTION_APMANAGER_HOSTAP_SET_PRIMARY_VLAN_ID_REQUEST:
   _type: class
   primary_vlan_id: uint16_t
 
+cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION:
+  _type: class
+  sr_params: sSpatialReuseParams
+
 cACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION:
   _type: class
   mac: sMacAddr
@@ -268,3 +272,10 @@ cACTION_APMANAGER_CHANNELS_LIST_RESPONSE:
 cACTION_APMANAGER_SET_MAP_CONTROLLER_PROFILE:
   _type: class
   profile: wfa_map::tlvProfile2MultiApProfile::eMultiApProfile
+
+cACTION_APMANAGER_SET_SPATIAL_REUSE_PARAMS:
+  _type: class
+  sr_params: sSpatialReuseParams
+
+cACTION_APMANAGER_GET_SPATIAL_REUSE_PARAMS:
+  _type: class
