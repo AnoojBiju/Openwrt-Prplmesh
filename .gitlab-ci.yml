@@ -56,9 +56,6 @@ platform:
   needs:
     - build-in-docker
     - image-build-boardfarm-ci
-  rules:
-    - if: $CI_MERGE_REQUEST_LABELS =~ /.*test-upgrade-image.*/
-    - !reference [.rules-for-expensive-job, rules]
   variables:
     STABILITY_TESTS: $STABILITY_TESTS
     ALTRAN_TESTS: $ALTRAN_TESTS
@@ -149,7 +146,7 @@ nbapi-docgen:
       - build/html
     when: always
   needs:
-  - job: build-in-docker
+    - job: build-in-docker
 
 # Updates gitlab pages with the NBAPI documentation:
 # https://prpl-foundation.gitlab.io/prplmesh/prplMesh/
@@ -303,7 +300,7 @@ boardfarm-stability-tests:
   extends: boardfarm-tests
   parallel: 10
   rules:
-    - if: '$STABILITY_TESTS'
+    - if: "$STABILITY_TESTS"
 
 run-certification-tests-R1-prplmesh-essensium:
   extends: .run-certification-tests-R1

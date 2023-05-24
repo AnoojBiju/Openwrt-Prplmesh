@@ -12,7 +12,7 @@ FROM ubuntu:bionic-20210930 as openwrt-prerequisites
 
 RUN apt-get update \
     && apt-get -y install --no-install-recommends \
-    autoconf-archive build-essential libncurses5 libncurses5-dev python python3 \
+    autoconf-archive build-essential libncurses5 libncurses5-dev python python3 python3-distutils \
     unzip git ca-certificates gawk wget file bash fakeroot \
     python-yaml python3-yaml rsync less vim gnupg software-properties-common \
     #   yq is available in a separate ppa (needs gnupg and software-properties-common):
@@ -68,7 +68,7 @@ RUN printf '\033[1;35m%s Cloning prplWrt\n\033[0m' "$(date --iso-8601=seconds --
     && git checkout "$OPENWRT_TOOLCHAIN_VERSION" \
     && ./scripts/gen_config.py "$TARGET_SYSTEM" prpl \
     && make defconfig \
-    && make -j"$(nproc)" \
+    && make -j1 V=sc \
     && rm -rf bin \
     && rm -rf build_dir/target*/libnl-3* \
     && rm -rf build_dir/target*/openssl* \
