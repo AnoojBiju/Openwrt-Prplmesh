@@ -133,8 +133,15 @@ bool ap_wlan_hal_whm::set_channel(int chan, beerocks::eWiFiBandwidth bw, int cen
     new_obj.add_child<>("Channel", uint8_t(chan));
     bool ret = m_ambiorix_cl->update_object(m_radio_path, new_obj);
 
+    if (chan == 0) {
+        LOG(INFO) << "return true for channel:0";
+        return true;
+        // ap_manager sometimes writes 0 value as part of resetting the radio
+        // it expects a return true in this case, so give it that
+    }
+
     if (!ret) {
-        LOG(ERROR) << "unable to set channel!";
+        LOG(ERROR) << "unable to set channel! ch: " << chan << " center chan : " << center_channel;
         return false;
     }
 
