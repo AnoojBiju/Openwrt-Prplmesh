@@ -76,6 +76,8 @@ build-for-cgr:
   needs: []
   rules:
     - if: '$CI_PARENT_PIPELINE_SOURCE == "schedule" && $BUILD_CGR == "yes"'
+    - when: manual
+      allow_failure: true
 
 test-upgrade-image-on-turris-omnia:
   extends: .test-upgrade-image

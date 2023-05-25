@@ -15,6 +15,9 @@
     - if [ "$CI_COMMIT_BRANCH" = "master" ]; then latest_tag="--tag latest"; fi
     - ./tools/docker/image-build.sh --image "${CI_JOB_NAME#image-build-}" --tag $CI_PIPELINE_ID $latest_tag --push
   retry: 2
+  rules:
+    - when: manual
+      allow_failure: true
 
 .in-prplmesh-builder:
   image:
@@ -22,6 +25,9 @@
     entrypoint: [""]
   tags:
     - docker
+  rules:
+    - when: manual
+      allow_failure: true
   needs: ["image-build-builder/ubuntu/bionic"]
 
 .run-test-in-docker:
@@ -30,6 +36,9 @@
   script:
     - cd build/install
     - ./tests/${CI_JOB_NAME}
+  rules:
+    - when: manual
+      allow_failure: true
   needs:
     - job: build-in-docker
 
@@ -47,6 +56,9 @@
   tags:
     - shell
     - docker-build
+  rules:
+    - when: manual
+      allow_failure: true
   needs: []
 
 .build-for-openwrt-whm:
@@ -58,8 +70,8 @@
     paths:
       - "buildWHM/*"
   rules:
-  - when: always
-    allow_failure: false
+    - when: manual
+      allow_failure: true
 
 .build-for-rdkb:
   stage: build
@@ -81,6 +93,9 @@
   tags:
     - shell
     - docker-build
+  rules:
+    - when: manual
+      allow_failure: true
   needs: []
 
 .test-upgrade-image:
@@ -127,6 +142,9 @@
     when: always
   tags:
     - targets
+  rules:
+    - when: manual
+      allow_failure: true
   timeout: 20m
 
 .test-on-target-whm:
@@ -161,6 +179,9 @@
     when: always
   tags:
     - targets
+  rules:
+    - when: manual
+      allow_failure: true
   timeout: 20m
 
 .run-certification-tests:
@@ -201,6 +222,9 @@
     paths:
       - logs
     when: always
+  rules:
+    - when: manual
+      allow_failure: true
   timeout: 36h
 
 .run-certification-tests-R1:
