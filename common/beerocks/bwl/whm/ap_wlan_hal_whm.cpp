@@ -358,6 +358,15 @@ bool ap_wlan_hal_whm::update_vap_credentials(
         } else {
             LOG(INFO) << "enable vap " << wifi_vap_path;
             new_obj.add_child<bool>("Enable", true);
+            std::string multi_ap;
+            if (bss_info_conf.fronthaul) {
+                multi_ap += "FronthaulBSS,";
+            }
+            if (bss_info_conf.backhaul) {
+                multi_ap += "BackhaulBSS";
+            }
+            LOG(ERROR) << "set multiaptype " << multi_ap;
+            new_obj.add_child("MultiAPType", multi_ap);
             ret = m_ambiorix_cl->update_object(wifi_vap_path, new_obj);
             if (!ret) {
                 LOG(ERROR) << "Failed to enable vap " << wifi_vap_path;
