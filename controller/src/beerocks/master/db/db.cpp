@@ -7798,6 +7798,52 @@ bool db::dm_add_radio_cac_capabilities(
     return ret_val;
 }
 
+bool db::dm_save_radio_cac_completion_report(wfa_map::cCacCompletionReportRadio &radioReport)
+{
+    auto radioMac = radioReport.radio_uid();
+    auto pRadio   = get_radio_by_uid(radioMac);
+    if (nullptr == pRadio) {
+        return false;
+    }
+    if (pRadio->dm_path.empty()) {
+        return true;
+    }
+
+    const auto CAC_completion_path       = pRadio->dm_path + ".CACCompletion";
+    const auto CAC_completion_pairs_path = CAC_completion_path + ".Pairs";
+    bool ret_val                         = true;
+
+    // Clear old pairs instances
+    if (!m_ambiorix_datamodel->remove_all_instances(CAC_completion_pairs_path)) {
+        return false;
+    }
+
+    ret_val &= m_ambiorix_datamodel->set(CAC_completion_path, "OperatingClass",
+                                         radioReport.operating_class());
+    ret_val &= m_ambiorix_datamodel->set(CAC_completion_path, "Channel", radioReport.channel());
+    ret_val &= m_ambiorix_datamodel->set(CAC_completion_path, "Status",
+                                         static_cast<uint8_t>(radioReport.cac_completion_status()));
+
+    for (size_t i = 0; i < radioReport.number_of_detected_pairs(); i++) {
+        if (!std::get<0>(radioReport.detected_pairs(i))) {
+            continue;
+        }
+
+        auto pair_path = m_ambiorix_datamodel->add_instance(CAC_completion_pairs_path);
+        if (pair_path.empty()) {
+            return false;
+        }
+
+        auto &detected_pair = std::get<1>(radioReport.detected_pairs(i));
+        ret_val &= m_ambiorix_datamodel->set(pair_path, "OperatingClassDetected",
+                                             detected_pair.operating_class_detected);
+        ret_val &=
+            m_ambiorix_datamodel->set(pair_path, "ChannelDetected", detected_pair.channel_detected);
+    }
+
+    return ret_val;
+}
+
 bool db::dm_add_radio_scan_capabilities(const Agent::sRadio &radio)
 {
     if (radio.dm_path.empty()) {

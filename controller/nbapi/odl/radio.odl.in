@@ -141,6 +141,30 @@
             }
         }
 
+        /* Describes the Channel Availability Check (CAC) Completion Report */
+        %read-only object CACCompletion {
+            %read-only uint32 OperatingClass = 0;
+            %read-only uint32 Channel = 0;
+            %read-only uint32 Status {
+                default 0xff;
+                /* cCacCompletionReportRadio::eCompletionStatus */
+                on action validate call check_enum [
+                    0x0,
+                    0x1,
+                    0x2,
+                    0x3,
+                    0x4,
+                    0x5,
+                    0xff
+                ];
+            }
+            %read-only object Pairs [] {
+                counted with PairsNumberOfEntries;
+                %read-only uint32 OperatingClassDetected = 0;
+                %read-only uint32 ChannelDetected = 0;
+            }
+        }
+
         /* Describes the channel scan capabilities of a radio */
         %read-only object ScanCapability {
 
