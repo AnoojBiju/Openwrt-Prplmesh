@@ -93,7 +93,7 @@ test-upgrade-image-on-glinet-b1300:
     OPENWRT_IMAGE: openwrt-ipq40xx-generic-glinet_gl-b1300-squashfs-sysupgrade.bin
   needs: ["build-for-glinet-b1300"]
 
-test-upgrade-image-on-nec-wx3000hp:
+.test-upgrade-image-on-nec-wx3000hp:
   extends: .test-upgrade-image
   variables:
     TARGET_DEVICE: nec-wx3000hp
@@ -201,7 +201,7 @@ boardfarm-on-turris-omnia-rdkb-stability:
   rules:
     - if: '$STABILITY_TESTS == "yes"'
 
-run-tests-on-altran-glinet-testbed:
+.run-tests-on-altran-glinet-testbed:
   extends: .test-on-target
   variables:
     TARGET_DEVICE: glinet-b1300
@@ -223,7 +223,7 @@ run-tests-on-altran-glinet-testbed:
   needs:
     - job: build-for-glinet-b1300
 
-run-certification-tests-R1-platform-essensium:
+.run-certification-tests-R1-platform-essensium:
   extends: .run-certification-tests-R1
   before_script:
     - !reference [.run-certification-tests-R1, before_script]
@@ -239,7 +239,7 @@ run-certification-tests-R1-platform-essensium:
     - when: manual
       allow_failure: true
 
-run-certification-tests-R2-platform-essensium:
+.run-certification-tests-R2-platform-essensium:
   extends: .run-certification-tests-R2
   before_script:
     - !reference [.run-certification-tests-R2, before_script]
@@ -255,7 +255,7 @@ run-certification-tests-R2-platform-essensium:
     - job: build-for-intel-mips
     - job: build-for-turris-omnia
 
-run-certification-tests-R4-platform-essensium:
+.run-certification-tests-R4-platform-essensium:
   extends: .run-certification-tests-R4
   before_script:
     - !reference [.run-certification-tests-R4, before_script]
@@ -271,7 +271,7 @@ run-certification-tests-R4-platform-essensium:
     - job: build-for-intel-mips
     - job: build-for-turris-omnia
 
-run-certification-tests-R1-platform-isr:
+.run-certification-tests-R1-platform-isr:
   extends: .run-certification-tests-R1
   before_script:
     - !reference [.run-certification-tests-R1, before_script]

@@ -1,7 +1,5 @@
 framework/platform/bpl/cfg/linux/bpl_cfg_ifaces.cpp
 analyzer-venv
-/*.ipk
-/build/
 /logs/
 output.log
 _GO_KW

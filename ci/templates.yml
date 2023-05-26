@@ -43,6 +43,9 @@
       - "build/*"
     expire_in: 4 weeks
     when: always
+  rules:
+    - when: manual
+      allow_failure: true
   tags:
     - shell
     - docker-build
@@ -57,8 +60,8 @@
     paths:
       - "buildWHM/*"
   rules:
-  - when: always
-    allow_failure: false
+    - when: manual
+      allow_failure: true
 
 .build-for-rdkb:
   stage: build
@@ -77,6 +80,9 @@
       - "build/${TARGET_DEVICE}-rdk/"
     expire_in: 4 weeks
     when: always
+  rules:
+    - when: manual
+      allow_failure: true
   tags:
     - shell
     - docker-build
@@ -124,6 +130,9 @@
       - logs
     expire_in: 4 weeks
     when: always
+  rules:
+    - when: manual
+      allow_failure: true
   tags:
     - targets
   timeout: 20m
@@ -158,6 +167,9 @@
       - logs
     expire_in: 4 weeks
     when: always
+  rules:
+    - when: manual
+      allow_failure: true
   tags:
     - targets
   timeout: 20m

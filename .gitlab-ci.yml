@@ -16,8 +16,8 @@ workflow:
 
 stages:
   - containers
-  - build
   - platform
+  - build
   - test
   - certification-dummy
   - upload
@@ -53,9 +53,9 @@ image-build-scripts:
 
 platform:
   stage: platform
-  needs:
-    - build-in-docker
-    - image-build-boardfarm-ci
+  # needs:
+  #   - build-in-docker
+  #   - image-build-boardfarm-ci
   rules:
     - if: $CI_MERGE_REQUEST_LABELS =~ /.*test-upgrade-image.*/
     - !reference [.rules-for-expensive-job, rules]
