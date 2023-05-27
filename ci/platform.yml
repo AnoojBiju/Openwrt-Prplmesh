@@ -18,6 +18,7 @@ workflow:
     - if: '$CI_PIPELINE_SOURCE == "parent_pipeline"'
 
 stages:
+  - certification-R1-glinet
   - build
   - test
   - certification-R1-turris-omnia
