@@ -1,0 +1,41 @@
+/* SPDX-License-Identifier: BSD-2-Clause-Patent
+ *
+ * SPDX-FileCopyrightText: 2020 the prplMesh contributors (see AUTHORS.md)
+ *
+ * This code is subject to the terms of the BSD+Patent license.
+ * See LICENSE file for more details.
+ */
+
+#!/usr/bin/amxrt
+
+%config {
+    name = "prplmesh";
+
+    import-dbg = false;
+    dm-eventing-enabled = true;
+    storage-path = "/opt/${name}/config/";
+    storage-type = "odl";
+    %global odl = {
+        dm-load = false,
+        load-dm-events = true,
+        dm-save = false,
+        dm-save-on-changed = true,
+        dm-save-delay = 1000,
+        dm-defaults = "${name}_defaults/",
+        directory = "${storage-path}/odl"
+    };
+
+    //main files
+    definition_file = "${name}_definitions.odl";
+
+    //persistent storage
+    pcm_svc_config = {
+        "Objects" = "X_PRPL-ORG_WiFiController"
+    };
+}
+
+#include "mod_sahtrace.odl";
+#include "mod_pcm_svc.odl";
+
+include "${definition_file}";
+

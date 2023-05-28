@@ -751,7 +751,7 @@ int main(int argc, char *argv[])
     auto events_list        = prplmesh::controller::actions::get_events_list();
     auto funcs_list         = prplmesh::controller::actions::get_func_list();
 
-    auto controller_dm_path = mapf::utils::get_install_path() + "config/odl/controller.odl";
+    auto controller_dm_path = mapf::utils::get_install_path() + CONTROLLER_DATAMODEL_PATH;
     auto amb_dm_obj         = std::make_shared<beerocks::nbapi::AmbiorixImpl>(
         event_loop, on_action_handlers, events_list, funcs_list);
     LOG_IF(!amb_dm_obj, FATAL) << "Unable to create Ambiorix!";

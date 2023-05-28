@@ -30,7 +30,7 @@ namespace {
 
 constexpr auto g_assoc_event_path = CONTROLLER_ROOT_DM ".AssociationEvent.AssociationEventData";
 constexpr auto g_device_path      = CONTROLLER_ROOT_DM ".Network.Device";
-constexpr auto g_controller_data_model_path = "config/odl/controller.odl";
+constexpr auto g_controller_data_model_path = "config/odl/prplmesh_definitions.odl";
 constexpr auto g_zero_mac                   = "00:00:00:00:00:00";
 constexpr auto g_bridge_mac                 = "46:55:66:77:00:00";
 constexpr auto g_bridge_oui                 = "465566";
