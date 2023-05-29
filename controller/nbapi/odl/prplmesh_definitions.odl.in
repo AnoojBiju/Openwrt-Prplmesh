@@ -139,7 +139,7 @@
                     bool OptimalPathPreferSignalStrength = false;
                     bool HealthCheckTaskEnabled = false;
                     bool StatisticsPollingTaskEnabled = false;
-                    uint32 StatisticsPollingRateSec = 1 {
+                    %persistent uint32 StatisticsPollingRateSec = 1 {
                         on action validate call check_range [1, 10000];
                     }
                     bool DFSReentry = false;
@@ -148,8 +148,9 @@
                         uint32 SPRuleOutput = 0 {
                             on action validate call check_range [0, 9];
                         }
-                        string DSCPMap {
+                        %persistent string DSCPMap {
                             on action validate call check_range [0, 64];
+                            userflags %upc;
                         }
                     }
                 }
