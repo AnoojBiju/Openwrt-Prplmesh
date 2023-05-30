@@ -124,6 +124,11 @@ bool bpl_cfg_get_wifi_credentials(const std::string &iface,
 
     configuration.network_key = parameters[prefix + "psk"];
 
+    auto band_type = parameters[prefix + "band"];
+    if (!band_type.empty()) {
+        configuration.operating_class = son::wireless_utils::string_to_wsc_oper_class(band_type);
+    }
+
     return true;
 }
 

@@ -366,7 +366,8 @@ bool base_wlan_hal_dummy::refresh_radio_info()
 {
     m_radio_info.max_bandwidth = beerocks::eWiFiBandwidth::BANDWIDTH_40;
 
-    if (get_iface_name() == "wlan2") {
+    auto iface_name = get_iface_name();
+    if (iface_name == "wlan2") {
         m_radio_info.is_5ghz        = true;
         m_radio_info.frequency_band = beerocks::eFreqType::FREQ_5G;
         for (uint16_t ch = 36; ch <= 64; ch += 4) {
@@ -397,7 +398,7 @@ bool base_wlan_hal_dummy::refresh_radio_info()
             channel_info.bw_info_list[beerocks::eWiFiBandwidth::BANDWIDTH_80]  = 1;
             channel_info.bw_info_list[beerocks::eWiFiBandwidth::BANDWIDTH_160] = 1;
         }
-    } else {
+    } else if (iface_name == "wlan0") {
         m_radio_info.frequency_band = beerocks::eFreqType::FREQ_24G;
         for (uint16_t ch = 1; ch <= 11; ch++) {
             auto &channel_info     = m_radio_info.channels_list[ch];
@@ -405,6 +406,20 @@ bool base_wlan_hal_dummy::refresh_radio_info()
             // Set all ranking to highest rank (1)
             channel_info.bw_info_list[beerocks::eWiFiBandwidth::BANDWIDTH_20] = 1;
         }
+    } else if (iface_name == "wlan4") {
+        m_radio_info.frequency_band = beerocks::eFreqType::FREQ_6G;
+        for (uint16_t ch = 1; ch <= 221; ch += 4) {
+            auto &channel_info     = m_radio_info.channels_list[ch];
+            channel_info.dfs_state = beerocks::eDfsState::DFS_STATE_MAX;
+            // Set all ranking to highest rank (1)
+            channel_info.bw_info_list[beerocks::eWiFiBandwidth::BANDWIDTH_20]  = 1;
+            channel_info.bw_info_list[beerocks::eWiFiBandwidth::BANDWIDTH_40]  = 1;
+            channel_info.bw_info_list[beerocks::eWiFiBandwidth::BANDWIDTH_80]  = 1;
+            channel_info.bw_info_list[beerocks::eWiFiBandwidth::BANDWIDTH_160] = 1;
+        }
+    } else {
+        LOG(ERROR) << "Invalid iface name " << iface_name << " . must be wlan0, wlan2 or wlan4";
+        return false;
     }
 
     m_radio_info.ht_supported     = true;

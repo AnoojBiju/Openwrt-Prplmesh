@@ -386,7 +386,7 @@ void cli_bml::setFunctionsMapAndArray()
         "ssid - service set identifier "
         "Optionals: "
         "network_key - password. If empty, configure open network. Default - empty. "
-        "bands - can be 24g, 5g or 24g-5g. Default - 24g-5g. "
+        "bands - can be 24g, 5g, 24g-5g or 24g-5g-6g. Default - 24g-5g. "
         "bss_type - can be fronthaul, backhaul, fronthaul-backhaul. Default fronthaul."
         "add_sae - 1 for true. Adds SAE to the authentication type. Must be set with network_key",
         static_cast<pFunction>(&cli_bml::set_wifi_credentials_caller), 2, 6, STRING_ARG, STRING_ARG,

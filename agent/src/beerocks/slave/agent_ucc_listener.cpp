@@ -130,12 +130,14 @@ bool agent_ucc_listener::send_cmdu_to_destination(ieee1905_1::CmduMessageTx &cmd
 
 static enum eFreqType band_to_freq(const std::string &band)
 {
-    if (band == "24G") {
+    if (band == "2G") {
         return eFreqType::FREQ_24G;
     } else if (band == "5GL") {
         return eFreqType::FREQ_5G;
     } else if (band == "5GH") {
         return eFreqType::FREQ_5G;
+    } else if (band == "6G") {
+        return eFreqType::FREQ_6G;
     } else {
         return eFreqType::FREQ_UNKNOWN;
     }

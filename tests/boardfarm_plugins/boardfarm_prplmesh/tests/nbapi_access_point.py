@@ -49,8 +49,8 @@ class NbapiAccessPoint(PrplMeshBaseTest):
                 assert next((ssid_name for ssid_name, ssid_val in ssids.items()
                              if ssid_val == bss.ssid), False),\
                     f"BSS {bss.bssid} is configured with ssid {bss.ssid}."
-        assert found, f"BSS with SSID: {ssid}, doesn't appear on radio "
-        "uid: {radio.uid}, path: {radio.path}."
+        assert found, f"BSS with SSID: {ssid}, doesn't appear on radio " \
+            "uid: {radio.uid}, path: {radio.path}."
 
     def check_bss_conf(self, radio, ssid: str, config: {}):
         self.check_log(radio,
@@ -164,7 +164,21 @@ class NbapiAccessPoint(PrplMeshBaseTest):
             for radio in device.radios.values():
                 self.check_bss_in_radio(ssid["all_bands"], radio, ssid, config_all_bands,
                                         controller)
-                self.check_bss_in_radio(ssid["5GH_24G"], radio, ssid, {"fronthaul": "true"},
-                                        controller)
                 self.check_bss_in_radio(ssid["F+B"], radio, ssid, {"backhaul": "true"}, controller)
-                self.check_bss_is_disabled(ssid["6G"], radio, controller)
+
+        radios_non_6G = []
+        radios_6G = []
+        for device in topology.values():
+            for radio in device.radios.values():
+                if len([vap for vap in radio.vaps.values() if vap.ssid == "Test-6G"]) > 0:
+                    radios_6G.append(radio)
+                else:
+                    radios_non_6G.append(radio)
+
+        for radio in radios_non_6G:
+            self.check_bss_in_radio(ssid["5GH_24G"], radio, ssid, {"fronthaul": "true"},
+                                    controller)
+            self.check_bss_is_disabled(ssid["6G"], radio, controller)
+
+        for radio in radios_6G:
+            self.check_bss_in_radio(ssid["6G"], radio, ssid, {"fronthaul": "true"}, controller)

@@ -26,13 +26,13 @@ class ApOperationalBss(PrplMeshBaseTest):
 
         self.dev.DUT.wired_sniffer.start(self.__class__.__name__ + "-" + self.dev.DUT.name)
         self.checkpoint()
-        ssid = 'Boardfarm-Tests-24G-5g-1'
+        ssid = 'Boardfarm-Tests-24G-5g-6g-1'
         controller.beerocks_cli_command('bml_clear_wifi_credentials {}'.format(agent.mac))
         controller.beerocks_cli_command('bml_set_wifi_credentials {} {} {} {} {}'
                                         .format(agent.mac,
                                                 ssid,
                                                 "maprocks1",
-                                                "24g-5g",
+                                                "24g-5g-6g",
                                                 "fronthaul"))
         controller.beerocks_cli_command('bml_update_wifi_credentials')
         time.sleep(3)
@@ -92,7 +92,7 @@ class ApOperationalBss(PrplMeshBaseTest):
                                         .format(agent.mac,
                                                 ssid,
                                                 "maprocks1",
-                                                "24g-5g",
+                                                "24g-5g-6g",
                                                 "backhaul"))
         controller.beerocks_cli_command('bml_update_wifi_credentials')
         time.sleep(3)

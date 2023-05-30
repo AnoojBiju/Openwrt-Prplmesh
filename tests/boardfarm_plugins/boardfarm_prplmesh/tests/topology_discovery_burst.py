@@ -44,6 +44,6 @@ class TopologyDiscoveryBurst(PrplMeshBaseTest):
 
         # 60 seconds is the time defined by the standard to remove neighbors if no topology
         # discovery message has been received from it.
-        # Sleep 65 seconds (+5 seconds as safety threshold) to promise that no topology
+        # Sleep 75 seconds (+10 seconds as safety threshold) to promise that no topology
         # notifications will be sent during the proceeding tests.
-        time.sleep(65)
+        time.sleep(75)

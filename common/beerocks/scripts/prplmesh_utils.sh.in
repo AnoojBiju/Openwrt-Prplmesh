@@ -67,9 +67,11 @@ platform_init() {
     ip link add @BEEROCKS_BRIDGE_IFACE@ address "${base_mac}:00:00" type bridge
     ip link add @BEEROCKS_WLAN1_IFACE@ address "${base_mac}:00:10" type dummy
     ip link add @BEEROCKS_WLAN2_IFACE@ address "${base_mac}:00:20" type dummy
+    ip link add @BEEROCKS_WLAN3_IFACE@ address "${base_mac}:00:30" type dummy
     ip link set dev @BEEROCKS_WLAN1_IFACE@ up
     ip link set dev @BEEROCKS_WLAN2_IFACE@ up
-    for iface in @BEEROCKS_WLAN1_IFACE@ @BEEROCKS_WLAN2_IFACE@ $DATA_IFACE
+    ip link set dev @BEEROCKS_WLAN3_IFACE@ up
+    for iface in @BEEROCKS_WLAN1_IFACE@ @BEEROCKS_WLAN2_IFACE@ @BEEROCKS_WLAN3_IFACE@ $DATA_IFACE
     do
         echo "add $iface to @BEEROCKS_BRIDGE_IFACE@"
         nmcli d set "$iface" managed no
@@ -85,7 +87,7 @@ platform_deinit() {
     echo "platform deinit"
     [ -z "$DATA_IFACE" ] && err "DATA_IFACE not set, abort" && exit 1
     [ -z "$CONTROL_IFACE" ] && err "CONTROL_IFACE not set, abort" && exit 1
-    for iface in @BEEROCKS_WLAN1_IFACE@ @BEEROCKS_WLAN2_IFACE@ $DATA_IFACE
+    for iface in @BEEROCKS_WLAN1_IFACE@ @BEEROCKS_WLAN2_IFACE@ @BEEROCKS_WLAN3_IFACE@ $DATA_IFACE
     do
         echo "remove $iface from @BEEROCKS_BRIDGE_IFACE@"
         ip link set dev "$iface" nomaster
@@ -93,6 +95,7 @@ platform_deinit() {
     done
     ip link del @BEEROCKS_WLAN1_IFACE@
     ip link del @BEEROCKS_WLAN2_IFACE@
+    ip link del @BEEROCKS_WLAN3_IFACE@
     ip link del @BEEROCKS_BRIDGE_IFACE@
 }
 
@@ -308,8 +311,9 @@ status_function() {
             # > OK Main radio agent operational
             # > OK wlan0 radio agent operational
             # > OK wlan2 radio agent operational
+            # > OK wlan4 radio agent operational
             OK_Count=$(echo "$OUTPUT" | grep -c -e "OK.*operational")
-            if [ "$OK_Count" -eq 3 ]; then
+            if [ "$OK_Count" -eq 4 ]; then
                 success "operational test success!"
                 OUTPUT=$(echo "$OUTPUT" | grep -E '(FAIL|OK).*?operational')
                 success "$OUTPUT"
@@ -323,6 +327,9 @@ status_function() {
                 fi
                 if [ "$(echo "$OUTPUT" | grep -c -e " @BEEROCKS_WLAN2_IFACE@ .*operational")" -eq 0 ]; then
                     err "FAIL @BEEROCKS_WLAN2_IFACE@ radio agent operational"
+                fi
+                if [ "$(echo "$OUTPUT" | grep -c -e " @BEEROCKS_WLAN3_IFACE@ .*operational")" -eq 0 ]; then
+                    err "FAIL @BEEROCKS_WLAN3_IFACE@ radio agent operational"
                 fi
                 exit 1
             fi

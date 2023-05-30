@@ -226,7 +226,7 @@ amxd_status_t access_point_commit(amxd_object_t *object, amxd_function_t *func, 
         }
         if (get_param_bool(access_point_inst, "Band2_4G")) {
             bss_info.operating_class.splice(bss_info.operating_class.end(),
-                                            son::wireless_utils::string_to_wsc_oper_class("24g"));
+                                            son::wireless_utils::string_to_wsc_oper_class("2g"));
         }
         if (get_param_bool(access_point_inst, "Band5GH")) {
             bss_info.operating_class.splice(bss_info.operating_class.end(),

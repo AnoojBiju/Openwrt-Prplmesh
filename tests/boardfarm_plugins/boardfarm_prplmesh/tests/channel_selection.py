@@ -25,9 +25,9 @@ class ChannelSelection(PrplMeshBaseTest):
     Check if the channel is switched when there's an empty channel selection
      request changing tx_power_limit
     - Should fail if channels are different
-    Trigger channel selection to channel 6 and 36. Check that operating channel
-     report was sent.
-    - Should fail if channels haven't changed to 6 and 36
+    Trigger channel selection to channel 6 (2.4GHz), 36 (5GHz) and 109 (6GHz).
+     Check that operating channel report was sent.
+    - Should fail if channels haven't changed to 6, 36 and 109.
     """
 
     def runTest(self):
@@ -66,9 +66,15 @@ class ChannelSelection(PrplMeshBaseTest):
 
         self.checkpoint()
 
-        orig_chan_0 = agent.radios[0].get_current_channel()
-        orig_chan_1 = agent.radios[1].get_current_channel()
-        debug("Starting channel wlan0: {}, wlan2: {}".format(orig_chan_0, orig_chan_1))
+        orig_channels_lst = []
+        for radio in agent.radios:
+            orig_channels_lst.append(radio.get_current_channel())
+
+        starting_channels_str = "Starting channel "
+        for idx, orig_chan in enumerate(orig_channels_lst):
+            starting_channels_str += "wlan{}: {}, ".format(idx * 2, orig_chan)
+        starting_channels_str = starting_channels_str[:-2]
+        debug(starting_channels_str)
 
         debug("Send channel preference query")
         ch_pref_query_mid = controller.dev_send_1905(agent.mac,
@@ -93,13 +99,13 @@ class ChannelSelection(PrplMeshBaseTest):
 
         check_single_channel_response(self, 0x00)
 
-        cur_chan_0 = agent.radios[0].get_current_channel()
-        cur_chan_1 = agent.radios[1].get_current_channel()
+        cur_channels_lst = []
+        for radio in agent.radios:
+            cur_channels_lst.append(radio.get_current_channel())
 
-        if cur_chan_0 != orig_chan_0:
-            self.fail("Radio 0 channel switched to {}".format(cur_chan_0))
-        if cur_chan_1 != orig_chan_1:
-            self.fail("Radio 1 channel switched to {}".format(cur_chan_1))
+        for i in range(len(orig_channels_lst)):
+            if cur_channels_lst[i] != orig_channels_lst[i]:
+                self.fail("Radio {} channel switched to {}".format(i, cur_channels_lst[i]))
 
         oper_channel_reports = self.check_cmdu_type("operating channel report",
                                                     self.ieee1905['eMessageType']
@@ -117,24 +123,26 @@ class ChannelSelection(PrplMeshBaseTest):
 
         for payload_transmit_power in (tp16dBm, tp17dBm):
             debug("Send empty channel selection request with changing tx_power_limit")
+
+            tx_power_limit_tlvs_lst = []
+            for i in range(len(agent.radios)):
+                tx_power_limit_tlvs_lst.append(tlv(self.ieee1905['eTlvTypeMap']
+                                                   ['TLV_TRANSMIT_POWER_LIMIT'],
+                                                   '{} 0x{:02x}'.format(agent.radios[i].mac,
+                                                                        payload_transmit_power)))
             cs_req_mid = controller.dev_send_1905(
                 agent.mac,
                 self.ieee1905['eMessageType']['CHANNEL_SELECTION_REQUEST_MESSAGE'],
-                tlv(self.ieee1905['eTlvTypeMap']['TLV_TRANSMIT_POWER_LIMIT'],
-                    '{} 0x{:02x}'.format(agent.radios[0].mac,
-                                         payload_transmit_power)),
-                tlv(self.ieee1905['eTlvTypeMap']['TLV_TRANSMIT_POWER_LIMIT'],
-                    '{} 0x{:02x}'.format(agent.radios[1].mac,
-                                         payload_transmit_power))
-            )
+                *tx_power_limit_tlvs_lst)
             time.sleep(1)
 
-            cur_power_0 = agent.radios[0].get_power_limit()
-            cur_power_1 = agent.radios[1].get_power_limit()
-            if cur_power_0 != payload_transmit_power:
-                self.fail("Radio 0 tx_power switched to {}".format(cur_power_0))
-            if cur_power_1 != payload_transmit_power:
-                self.fail("Radio 1 tx_power switched to {}".format(cur_power_1))
+            cur_power_lst = []
+            for radio in agent.radios:
+                cur_power_lst.append(radio.get_power_limit())
+
+            for idx, cur_power in enumerate(cur_power_lst):
+                if cur_power != payload_transmit_power:
+                    self.fail("Radio {} tx_power swithed to {}".format(idx, cur_power))
 
             self.check_cmdu_type_single("Channel Selection Response",
                                         self.ieee1905['eMessageType']
@@ -142,12 +150,17 @@ class ChannelSelection(PrplMeshBaseTest):
                                         agent.mac,
                                         controller.mac, cs_req_mid)
 
-            cur_chan_0 = agent.radios[0].get_current_channel()
-            cur_chan_1 = agent.radios[1].get_current_channel()
-            if cur_chan_0 != orig_chan_0:
-                self.fail("Radio 0 channel switched to {}".format(cur_chan_0))
-            if cur_chan_1 != orig_chan_1:
-                self.fail("Radio 1 channel switched to {}".format(cur_chan_1))
+            cur_channels_lst = []
+            for radio in agent.radios:
+                cur_channels_lst.append(radio.get_current_channel())
+
+            cur_channels_lst = []
+            for radio in agent.radios:
+                cur_channels_lst.append(radio.get_current_channel())
+
+            for i in range(len(orig_channels_lst)):
+                if cur_channels_lst[i] != orig_channels_lst[i]:
+                    self.fail("Radio {} channel switched to {}".format(i, cur_channels_lst[i]))
 
             oper_channel_reports = self.check_cmdu_type("operating channel report",
                                                         self.ieee1905['eMessageType']
@@ -188,50 +201,63 @@ class ChannelSelection(PrplMeshBaseTest):
         # payload_wlan2  - request for change channel on 36
         payload_wlan2 = ChannelTlvs.CHANNEL_36.value
 
+        # payload_wlan4  - request for change channel on 109
+        payload_wlan4 = ChannelTlvs.CHANNEL_109.value
+
+        channel_preference_payloads = []
+        channel_preference_payloads.append(payload_wlan0)
+        channel_preference_payloads.append(payload_wlan2)
+        if len(agent.radios) > 2:
+            channel_preference_payloads.append(payload_wlan4)
+
         """
-        Step 1: Trigger channel selection to channel 6 and 36. Check that
+        Step 1: Trigger channel selection to channel 6, 36 and 109. Check that
                 operating channel report was sent.
 
-        Step 2: Trigger channel selection to channel 6 and 36 again - check that
+        Step 2: Trigger channel selection to channel 6, 36 and 109 again - check that
                 operating channel report is sent again. This is to catch bugs
                 when we don't send channel report when there is no need to
                 switch channel
         """
         for i in range(1, 3):
             debug("Send channel selection request, step {}".format(i))
-            cs_req_mid = controller.dev_send_1905(
-                agent.mac,
-                0x8006,
-                tlv(self.ieee1905['eTlvTypeMap']['TLV_CHANNEL_PREFERENCE'],
-                    '{} {}'.format(agent.radios[0].mac, payload_wlan0)),
-                tlv(self.ieee1905['eTlvTypeMap']['TLV_TRANSMIT_POWER_LIMIT'],
-                    '{} 0x{:2x}'.format(agent.radios[0].mac, tp16dBm)),
-                tlv(self.ieee1905['eTlvTypeMap']['TLV_CHANNEL_PREFERENCE'],
-                    '{} {}'.format(agent.radios[1].mac, payload_wlan2)),
-                tlv(self.ieee1905['eTlvTypeMap']['TLV_TRANSMIT_POWER_LIMIT'],
-                    '{} 0x{:2x}'.format(agent.radios[1].mac, tp16dBm))
-            )
+
+            channel_selection_tlvs = []
+            for idx, payload in enumerate(channel_preference_payloads):
+                channel_selection_tlvs.append(tlv(self.ieee1905['eTlvTypeMap']
+                                                  ['TLV_CHANNEL_PREFERENCE'],
+                                                  '{} {}'.format(agent.radios[idx].mac, payload)))
+                channel_selection_tlvs.append(tlv(self.ieee1905['eTlvTypeMap']
+                                                  ['TLV_TRANSMIT_POWER_LIMIT'],
+                                                  '{} 0x{:2x}'.format(agent.radios[idx].mac,
+                                                                      tp16dBm)))
+
+            cs_req_mid = controller.dev_send_1905(agent.mac, 0x8006, *channel_selection_tlvs)
             time.sleep(1)
 
             debug("Confirming tlvTransmitPowerLimit has been received with correct value on agent,"
                   " step {}".format(i))
 
-            cur_power_0 = agent.radios[0].get_power_limit()
-            cur_power_1 = agent.radios[1].get_power_limit()
-            if cur_power_0 != tp16dBm:
-                self.fail("Radio 0 tx_power switched to {}".format(cur_power_0))
-            if cur_power_1 != tp16dBm:
-                self.fail("Radio 1 tx_power switched to {}".format(cur_power_1))
+            cur_power_lst = []
+            for radio in agent.radios:
+                cur_power_lst.append(radio.get_power_limit())
+
+            for idx, cur_power in enumerate(cur_power_lst):
+                if cur_power != tp16dBm:
+                    self.fail("Radio {} tx_power swithed to {}".format(idx, cur_power))
 
             check_single_channel_response(self, 0x00)
 
-            # payload_wlan0 and payload_wlan1 forced to channel 6 resp. 36, check that this happened
-            (cur_chan_channel_0, _, _) = agent.radios[0].get_current_channel()
-            (cur_chan_channel_1, _, _) = agent.radios[1].get_current_channel()
-            if cur_chan_channel_0 != 6:
-                self.fail("Radio 0 channel switched to {} instead of 6".format(cur_chan_channel_0))
-            if cur_chan_channel_1 != 36:
-                self.fail("Radio 1 channel switched to {} instead of 36".format(cur_chan_channel_1))
+            # payload_wlan0, payload_wlan2 and payload_wlan4 (if existed) forced to
+            # channel 6, 36, 109 resp. check that this happened
+            expected_channels = [6, 36, 109]
+            for i in range(len(agent.radios)):
+                (cur_chan_channel, _, _) = agent.radios[i].get_current_channel()
+                if cur_chan_channel != expected_channels[i]:
+                    self.fail("Radio {} channel "
+                              "switched to {} instead of {}".format(i,
+                                                                    cur_chan_channel,
+                                                                    expected_channels[i]))
 
             oper_channel_reports = self.check_cmdu_type("operating channel report",
                                                         self.ieee1905['eMessageType']
