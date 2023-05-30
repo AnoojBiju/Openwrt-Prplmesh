@@ -10,21 +10,36 @@
 
 %config {
     name = "prplmesh";
-
+    prplmesh = {
+        mod-dir = "${prefix}${plugin-dir}/${name}/modules",
+        external-mod-dir = "${prefix}${plugin-dir}/modules"
+    };
     import-dbg = false;
     dm-eventing-enabled = true;
-    storage-path = "/opt/${name}/config/";
+    storage-path = "/opt/${name}/share";
     storage-type = "odl";
-    %global odl = {
-        dm-load = false,
-        load-dm-events = true,
-        dm-save = false,
+    odl = {
+        dm-load = true,
+        dm-save = true,
         dm-save-on-changed = true,
         dm-save-delay = 1000,
         dm-defaults = "${name}_defaults/",
-        directory = "${storage-path}/odl"
+        directory = "${rw_data_path}/config/odl"
     };
-
+    cfg-dir = "/etc/amx";
+    include-dirs = [
+        ".",
+        "${cfg-dir}/${name}",
+        "${cfg-dir}/modules",
+        "/opt/prplmesh/config/odl"
+    ];
+    import-dirs = [
+        ".",
+        "${prefix}${plugin-dir}/${name}",
+        "${prefix}${plugin-dir}/modules",
+        "${prefix}/usr/lib/amx/${name}",
+        "${prefix}/usr/lib/amx/modules"
+    ];
     //main files
     definition_file = "${name}_definitions.odl";
 
