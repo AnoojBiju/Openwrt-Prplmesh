@@ -15,9 +15,9 @@ workflow:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 stages:
+  - platform
   - containers
   - build
-  - platform
   - test
   - certification-dummy
   - upload
