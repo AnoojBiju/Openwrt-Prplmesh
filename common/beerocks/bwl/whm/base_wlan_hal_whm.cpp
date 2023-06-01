@@ -441,6 +441,7 @@ bool base_wlan_hal_whm::get_radio_vaps(AmbiorixVariantList &aps)
     auto result =
         m_ambiorix_cl->get_object_multi<AmbiorixVariantMapSmartPtr>(wbapi_utils::search_path_ap());
     if (!result) {
+        LOG(ERROR) << "could not get ap multi object for " << wbapi_utils::search_path_ap();
         return false;
     }
     std::string radio_path;
@@ -449,6 +450,8 @@ bool base_wlan_hal_whm::get_radio_vaps(AmbiorixVariantList &aps)
         if ((ap.empty()) ||
             (!m_ambiorix_cl->resolve_path(wbapi_utils::get_path_radio_reference(ap), radio_path)) ||
             (radio_path != m_radio_path)) {
+            LOG(ERROR) << "iteration on ap " << it.first << " problem with radio reference ? ";
+            LOG(ERROR) << "radio path " << radio_path << " m_radio_path " << m_radio_path;
             continue;
         }
         aps.emplace_back(std::move(ap));
@@ -498,6 +501,10 @@ bool base_wlan_hal_whm::refresh_vaps_info(int id)
                 detectNewVaps |= ((isKnown != wasKnown) || (!wasActive && isEnabled));
                 if (!wasEnabled && isEnabled) {
                     newEnabledVaps.push_back(saved_vaps[vap_id].bss);
+                }
+                if (!isEnabled) {
+                    LOG(INFO) << "vap disabled " << saved_vaps[vap_id].ssid;
+                    //saved_vapsbeerocks::net::network_utils::ZERO_MAC_STRING;
                 }
             }
         }
