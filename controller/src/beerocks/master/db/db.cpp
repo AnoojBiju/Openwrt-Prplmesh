@@ -6528,30 +6528,19 @@ bool db::remove_hostap_supported_operating_classes(const sMacAddr &radio_mac)
 
 bool db::set_radio_utilization(const sMacAddr &bssid, uint8_t utilization)
 {
-
-    std::string bssid_string = tlvf::mac_to_string(bssid);
-
-    auto find_node = std::find_if(
-        std::begin(nodes), std::end(nodes),
-        [&bssid_string](const std::unordered_map<std::string, std::shared_ptr<son::node>> &map) {
-            return map.find(bssid_string) != map.end();
-        });
-
-    if (find_node == std::end(nodes)) {
-        LOG(ERROR) << "Failed to get radio node for bssid: " << bssid_string;
+    auto radio = get_radio_by_bssid(bssid);
+    if (!radio) {
+        LOG(ERROR) << "Failed to get radio for bssid: " << bssid;
         return false;
     }
 
-    auto radio_node = find_node->at(bssid_string);
-
-    auto radio_path = radio_node->dm_path;
-    if (radio_path.empty()) {
+    if (radio->dm_path.empty()) {
         return true;
     }
 
     // Path to the object example: Device.WiFi.DataElements.Network.Device.1.Radio.1.Utilization
-    if (!m_ambiorix_datamodel->set(radio_path, "Utilization", utilization)) {
-        LOG(ERROR) << "Failed to set " << radio_path << ".Utilization: " << utilization;
+    if (!m_ambiorix_datamodel->set(radio->dm_path, "Utilization", utilization)) {
+        LOG(ERROR) << "Failed to set " << radio->dm_path << ".Utilization: " << utilization;
         return false;
     }
 
