@@ -62,6 +62,8 @@ const std::string ControllerConnectivityTask::fsm_state_to_string(eState status)
         return "CONNECTION_TIMEOUT";
     case eState::BACKHAUL_LINK_DISCONNECTED:
         return "BACKHAUL_LINK_DISCONNECTED";
+    case eState::RECONNECTION:
+        return "RECONNECTION";
     default:
         LOG(ERROR) << "state argument doesn't have an enum";
         break;
