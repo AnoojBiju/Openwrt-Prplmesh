@@ -293,6 +293,7 @@ bool base_wlan_hal_whm::refresh_radio_info()
 {
     auto radio = m_ambiorix_cl->get_object(m_radio_path);
     if (!radio) {
+        LOG(ERROR) << " cannot refresh radio info, radio object missing ";
         return false;
     }
     std::string s_val;
@@ -424,7 +425,9 @@ bool base_wlan_hal_whm::refresh_radio_info()
     m_ambiorix_cl->get_param(m_radio_info.ant_num, m_radio_path + "DriverStatus.", "NrTxAntenna");
 
     if (!m_radio_info.available_vaps.size()) {
+        LOG(INFO) << " calling refresh_vaps_info because local info struct is empty ";
         if (!refresh_vaps_info(beerocks::IFACE_RADIO_ID)) {
+            LOG(ERROR) << " could not refresh vaps info for radio " << beerocks::IFACE_RADIO_ID;
             return false;
         }
     }
@@ -472,7 +475,7 @@ bool base_wlan_hal_whm::refresh_vaps_info(int id)
 {
     bool ret   = false;
     int vap_id = -1;
-
+    LOG(INFO) << "refresh vaps info id: " << id;
     AmbiorixVariantList curr_vaps;
     get_radio_vaps(curr_vaps);
 
@@ -555,6 +558,7 @@ bool base_wlan_hal_whm::refresh_vap_info(int id, const AmbiorixVariant &ap_obj)
                                         vap_extInfo.path);
             m_ambiorix_cl->resolve_path(wifi_ssid_path, vap_extInfo.ssid_path);
             vap_extInfo.status = wbapi_utils::get_ap_status(ap_obj);
+            LOG(INFO) << "status for " << ifname << " " << vap_extInfo.status;
         }
     }
 
@@ -566,6 +570,7 @@ bool base_wlan_hal_whm::refresh_vap_info(int id, const AmbiorixVariant &ap_obj)
             m_vapsExtInfo.erase(m_radio_info.available_vaps[id].bss);
             m_radio_info.available_vaps.erase(id);
         }
+        LOG(ERROR) << "VAP MAC empty return early";
         return true;
     }
 
