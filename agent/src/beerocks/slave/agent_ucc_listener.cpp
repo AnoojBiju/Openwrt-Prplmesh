@@ -136,6 +136,8 @@ static enum eFreqType band_to_freq(const std::string &band)
         return eFreqType::FREQ_5G;
     } else if (band == "5GH") {
         return eFreqType::FREQ_5G;
+    } else if (band == "NA") {
+        return eFreqType::FREQ_5G;
     } else {
         return eFreqType::FREQ_UNKNOWN;
     }
