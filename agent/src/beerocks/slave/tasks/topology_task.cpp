@@ -727,6 +727,7 @@ bool TopologyTask::add_ap_operational_bss_tlv()
         auto radio_list         = tlvApOperationalBSS->create_radio_list();
         radio_list->radio_uid() = radio->front.iface_mac;
         for (const auto &bssid : radio->front.bssids) {
+            LOG(ERROR) << "wissemmmm add_ap_operational_bss_tlv ssid= " << bssid.ssid;
             if (bssid.mac == network_utils::ZERO_MAC) {
                 continue;
             }
