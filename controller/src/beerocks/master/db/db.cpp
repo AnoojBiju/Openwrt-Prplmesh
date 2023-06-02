@@ -7057,19 +7057,67 @@ bool db::dm_set_sta_traffic_stats(const sMacAddr &sta_mac, sAssociatedStaTraffic
         return true;
     }
 
-    bool ret_val = true;
-    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "BytesSent", stats.m_byte_sent);
-    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "BytesReceived", stats.m_byte_received);
-    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "PacketsSent", stats.m_packets_sent);
-    ret_val &=
-        m_ambiorix_datamodel->set(station->dm_path, "PacketsReceived", stats.m_packets_received);
-    ret_val &=
-        m_ambiorix_datamodel->set(station->dm_path, "RetransCount", stats.m_retransmission_count);
-    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "ErrorsSent", stats.m_tx_packets_error);
-    ret_val &=
-        m_ambiorix_datamodel->set(station->dm_path, "ErrorsReceived", stats.m_rx_packets_error);
-    ret_val &= m_ambiorix_datamodel->set_current_time(station->dm_path);
+    auto bss = station->get_bss();
+    if (!bss) {
+        LOG(INFO) << "Failed to find BSS hosting STA " << sta_mac;
+        return true;
+    }
+    auto agent = get_agent_by_bssid(bss->bssid);
+    if (!agent) {
+        LOG(ERROR) << "Failed to find Agent hosting BSSID " << bss->bssid;
+        return true;
+    }
 
+    bool ret_val = true;
+    if (stats.m_byte_sent < station->last_traffic_stats_received.bytes_sent) {
+        station->cumulated_traffic_stats.bytes_sent += (recalculate_attr_to_byte_units(agent->byte_counter_units, UINT32_MAX) - station->last_traffic_stats_received.bytes_sent) + stats.m_byte_sent;
+    } else {
+        station->cumulated_traffic_stats.bytes_sent +=
+            stats.m_byte_sent - station->last_traffic_stats_received.bytes_sent;
+    }
+    station->last_traffic_stats_received.bytes_sent = stats.m_byte_sent;
+    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "BytesSent",
+                                         station->cumulated_traffic_stats.bytes_sent);
+
+    if (stats.m_byte_received < station->last_traffic_stats_received.bytes_received) {
+        station->cumulated_traffic_stats.bytes_received += (recalculate_attr_to_byte_units(agent->byte_counter_units, UINT32_MAX) - station->last_traffic_stats_received.bytes_received) + stats.m_byte_received;
+    } else {
+        station->cumulated_traffic_stats.bytes_received +=
+            stats.m_byte_received - station->last_traffic_stats_received.bytes_received;
+    }
+    station->last_traffic_stats_received.bytes_received = stats.m_byte_received;
+    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "BytesReceived",
+                                         station->cumulated_traffic_stats.bytes_received);
+
+    station->cumulated_traffic_stats.packets_sent +=
+        stats.m_packets_sent - station->last_traffic_stats_received.packets_sent;
+    station->last_traffic_stats_received.packets_sent = stats.m_packets_sent;
+    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "PacketsSent",
+                                         station->cumulated_traffic_stats.packets_sent);
+
+    station->cumulated_traffic_stats.packets_received +=
+        stats.m_packets_received - station->last_traffic_stats_received.packets_received;
+    station->last_traffic_stats_received.packets_received = stats.m_packets_received;
+    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "PacketsReceived",
+                                         station->cumulated_traffic_stats.packets_received);
+
+    station->cumulated_traffic_stats.retrans_count +=
+        stats.m_retransmission_count - station->last_traffic_stats_received.retrans_count;
+    station->last_traffic_stats_received.retrans_count = stats.m_retransmission_count;
+    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "RetransCount",
+                                         station->cumulated_traffic_stats.retrans_count);
+
+    station->cumulated_traffic_stats.errors_sent +=
+        stats.m_tx_packets_error - station->last_traffic_stats_received.errors_sent;
+    station->last_traffic_stats_received.errors_sent = stats.m_tx_packets_error;
+    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "ErrorsSent",
+                                         station->cumulated_traffic_stats.errors_sent);
+
+    station->cumulated_traffic_stats.errors_received +=
+        stats.m_rx_packets_error - station->last_traffic_stats_received.errors_received;
+    station->last_traffic_stats_received.errors_received = stats.m_rx_packets_error;
+    ret_val &= m_ambiorix_datamodel->set(station->dm_path, "ErrorsReceived",
+                                         station->cumulated_traffic_stats.errors_received);
     return ret_val;
 }
 
@@ -7126,6 +7174,9 @@ bool db::dm_remove_sta(Station &station)
     }
     auto instance = get_dm_index_from_path(station.dm_path);
     station.dm_path.clear();
+
+    station.last_traffic_stats_received = {};
+    station.cumulated_traffic_stats     = {};
 
     return m_ambiorix_datamodel->remove_instance(instance.first, instance.second);
 }
@@ -8545,3 +8596,4 @@ db::get_unassociated_stations_stats() const
     }
     return stats;
 }
+f

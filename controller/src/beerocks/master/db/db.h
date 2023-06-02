@@ -249,8 +249,8 @@ public:
     typedef struct {
         uint64_t m_byte_sent            = 0;
         uint64_t m_byte_received        = 0;
-        uint64_t m_packets_sent         = 0;
-        uint64_t m_packets_received     = 0;
+        uint32_t m_packets_sent         = 0;
+        uint32_t m_packets_received     = 0;
         uint32_t m_tx_packets_error     = 0;
         uint32_t m_rx_packets_error     = 0;
         uint32_t m_retransmission_count = 0;

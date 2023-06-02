@@ -103,6 +103,26 @@ public:
         uint32_t last_steer_time     = 0;
     } steering_summary_stats;
 
+    struct last_traffic_stats_received_t {
+        uint32_t bytes_sent       = 0;
+        uint32_t bytes_received   = 0;
+        uint32_t packets_sent     = 0;
+        uint32_t packets_received = 0;
+        uint32_t errors_sent      = 0;
+        uint32_t errors_received  = 0;
+        uint32_t retrans_count    = 0;
+    } last_traffic_stats_received;
+
+    struct cumulated_traffic_stats_t {
+        uint64_t bytes_sent       = 0;
+        uint64_t bytes_received   = 0;
+        uint64_t packets_sent     = 0;
+        uint64_t packets_received = 0;
+        uint64_t errors_sent      = 0;
+        uint64_t errors_received  = 0;
+        uint64_t retrans_count    = 0;
+    } cumulated_traffic_stats;
+
     std::string assoc_timestamp;
 
     std::string assoc_event_path; /**< assoc event data model path */
