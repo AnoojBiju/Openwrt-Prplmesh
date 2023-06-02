@@ -273,6 +273,12 @@ private:
     int m_fsm_timer = beerocks::net::FileDescriptor::invalid_descriptor;
 
     /**
+     * @brief Handle to timer that checks if VBSS clients have disassociated.
+     */
+    int m_vbss_disassociated_stations_timer = beerocks::net::FileDescriptor::invalid_descriptor;
+
+    std::vector<sMacAddr> m_vbss_clients;
+    /**
      * File descriptor of the timer to resume deauthenticating unknown stations.
      */
     int m_vbss_deauth_unknown_stas_timer = beerocks::net::FileDescriptor::invalid_descriptor;

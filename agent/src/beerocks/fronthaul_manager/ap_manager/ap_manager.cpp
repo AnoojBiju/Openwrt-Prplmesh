@@ -368,6 +368,17 @@ bool ApManager::start()
     LOG(DEBUG) << "FSM timer created with fd = " << m_fsm_timer;
     transaction.add_rollback_action([&]() { m_timer_manager->remove_timer(m_fsm_timer); });
 
+    m_vbss_disassociated_stations_timer = m_timer_manager->add_timer(
+        "VBSS Station Disassociated", std::chrono::milliseconds(500),
+        std::chrono::milliseconds(500), [&](int fd, beerocks::EventLoop &loop) {
+            for (const sMacAddr &vbss_station_mac : m_vbss_clients) {
+                ap_wlan_hal->is_station_disassociated(vbss_station_mac);
+            }
+            return true;
+        });
+    LOG(DEBUG) << "VBSS Station Disassociated timer created with fd="
+               << m_vbss_disassociated_stations_timer;
+
     // Create an instance of a CMDU client connected to the CMDU server that is running in the slave
     m_slave_client = m_slave_cmdu_client_factory->create_instance();
     if (!m_slave_client) {
@@ -882,6 +893,8 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
                                           virtual_bss_creation_tlv->bssid(), false);
                 return;
             }
+            // Station added OK
+            m_vbss_clients.push_back(virtual_bss_creation_tlv->client_mac());
         }
 
         // TODO: PPM-2349: add support for the client capabilities
@@ -2085,6 +2098,13 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
                            std::chrono::seconds(DISABLE_BACKHAUL_VAP_TIMEOUT_SEC),
 
             }));
+        }
+
+        auto vbss_client_it = std::find_if(
+            m_vbss_clients.begin(), m_vbss_clients.end(),
+            [&](const sMacAddr &vbss_sta_mac) -> bool { return vbss_sta_mac == msg->params.mac; });
+        if (vbss_client_it != m_vbss_clients.end()) {
+            m_vbss_clients.erase(vbss_client_it);
         }
 
         auto notification = message_com::create_vs_message<
