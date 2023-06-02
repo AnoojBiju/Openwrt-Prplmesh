@@ -7,6 +7,8 @@
  */
 
 #include "ap_wlan_hal_nl80211.h"
+#include "bwl/uslm_messages.h"
+#include "bwl/uslm_utils.h"
 #include <bcl/beerocks_os_utils.h>
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
@@ -22,6 +24,7 @@
 #include <netlink/genl/genl.h>
 #include <netlink/msg.h>
 #include <netlink/netlink.h>
+#include <sys/un.h>
 #include <type_traits>
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1816,6 +1819,87 @@ bool ap_wlan_hal_nl80211::update_beacon(const std::string &ifname)
         return false;
     }
 
+    return true;
+}
+
+bool ap_wlan_hal_nl80211::is_station_disassociated(const sMacAddr &station_mac)
+{
+    LOG(DEBUG) << __func__ << " -- checking if STA " << station_mac << " has disassociated";
+    static bool is_socket_setup_complete = false;
+
+    if (!is_socket_setup_complete) {
+        LOG(DEBUG) << "Setup not complete yet, setting up now";
+        sockaddr_un remote = {};
+        remote.sun_family  = AF_UNIX;
+        std::strncpy(remote.sun_path, m_unassociated_stations_socket_path,
+                     std::strlen(m_unassociated_stations_socket_path) + 1);
+        m_unassociated_stations_client_fd = std::unique_ptr<int, std::function<void(int *)>>(
+            new int(socket(PF_UNIX, SOCK_STREAM, 0)), [](int *fd) {
+                if (fd && *fd >= 0) {
+                    LOG(DEBUG) << "Closing disassociated stations fd " << *fd;
+                    close(*fd);
+                }
+            });
+        if (!m_unassociated_stations_client_fd || *m_unassociated_stations_client_fd < 0) {
+            LOG(ERROR) << " socket() failed";
+            return false;
+        }
+
+        LOG(DEBUG) << "Created file descriptor " << *m_unassociated_stations_client_fd
+                   << " for checking disassociated stations";
+        socklen_t len =
+            std::strlen(m_unassociated_stations_socket_path) + sizeof(remote.sun_family);
+        if (connect(*m_unassociated_stations_client_fd, (sockaddr *)&remote, len) < 0) {
+            LOG(ERROR) << "connect() failed: could not connect to "
+                       << m_unassociated_stations_socket_path;
+            return false;
+        }
+        is_socket_setup_complete = true;
+        LOG(DEBUG) << "Opened a Unix client socket to " << m_unassociated_stations_socket_path;
+    }
+    if (!m_unassociated_stations_client_fd || *m_unassociated_stations_client_fd < 0) {
+        LOG(ERROR) << "Disassociated station client socket is invalid";
+        is_socket_setup_complete = false;
+        return false;
+    }
+    if (!uslm_utils::send_sta_disassoc_query(tlvf::mac_to_string(station_mac),
+                                             *m_unassociated_stations_client_fd)) {
+        LOG(ERROR) << "Could not check if STA " << station_mac << " is disassociated!";
+        return false;
+    }
+    uint8_t buf[256] = {};
+    if (recv(*m_unassociated_stations_client_fd, buf, sizeof(buf), 0) < 0) {
+        int local_errno = errno;
+        LOG(ERROR) << "Could not recv() response for station disassociation query, errno="
+                   << local_errno;
+        return false;
+    }
+    sta_disassoc_response *resp = (sta_disassoc_response *)buf;
+    if (resp->disassociated) {
+        LOG(DEBUG) << "STA " << station_mac << " has disassociated according to station-sniffer!";
+
+        auto disassoc_buff =
+            ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_CLIENT_DISCONNECTED_NOTIFICATION));
+        auto msg = reinterpret_cast<sACTION_APMANAGER_CLIENT_DISCONNECTED_NOTIFICATION *>(
+            disassoc_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+        std::memset(disassoc_buff.get(), 0,
+                    sizeof(sACTION_APMANAGER_CLIENT_DISCONNECTED_NOTIFICATION));
+        msg->params.mac = station_mac;
+        // reason code 1 -- generic disassociation
+        LOG(DEBUG) << "Tucker station " << station_mac << " has left BSSID "
+                   << tlvf::mac_to_string(resp->bssid);
+        msg->params.reason = 1;
+        msg->params.vap_id = get_vap_id_with_mac(tlvf::mac_to_string(resp->bssid));
+        msg->params.source = 0;
+        msg->params.type   = 0;
+        LOG(DEBUG) << "Emitting a STA_Disconnected event for STA " << msg->params.mac
+                   << ", vap_id=" << (int)msg->params.vap_id
+                   << ", reason=" << (int)msg->params.reason << ", type=" << (int)msg->params.type
+                   << ", source=" << (int)msg->params.source
+                   << ", from bssid=" << tlvf::mac_from_array(resp->bssid);
+        event_queue_push(Event::STA_Disconnected, disassoc_buff);
+    }
     return true;
 }
 

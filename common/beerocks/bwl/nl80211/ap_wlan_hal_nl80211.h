@@ -114,6 +114,7 @@ public:
     virtual bool set_no_deauth_unknown_sta(const std::string &ifname, bool value) override;
     virtual bool set_beacon_da(const std::string &ifname, const sMacAddr &mac) override;
     virtual bool update_beacon(const std::string &ifname) override;
+    virtual bool is_station_disassociated(const sMacAddr &station_mac) override;
 
     // Protected methods:
 protected:
@@ -136,8 +137,10 @@ private:
     // (re)association requests. only the last one is stored to
     // include it in STA-CONNECTED:
     std::unordered_map<std::string, std::shared_ptr<sMGMT_FRAME_NOTIFICATION>>
-        m_latest_assoc_frame = {};
-    uint16_t m_aid           = 2007; // AIDs must be in the range 1-2007
+        m_latest_assoc_frame                        = {};
+    uint16_t m_aid                                  = 2007; // AIDs must be in the range 1-2007
+    const char *m_unassociated_stations_socket_path = "/tmp/uslm_socket";
+    std::unique_ptr<int, std::function<void(int *)>> m_unassociated_stations_client_fd;
 };
 
 } // namespace nl80211

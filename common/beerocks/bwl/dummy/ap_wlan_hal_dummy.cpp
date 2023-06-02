@@ -755,6 +755,12 @@ bool ap_wlan_hal_dummy::update_beacon(const std::string &ifname)
     return false;
 }
 
+bool ap_wlan_hal_dummy::is_station_disassociated(const sMacAddr &station_mac)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return true;
+}
+
 } // namespace dummy
 
 std::shared_ptr<ap_wlan_hal> ap_wlan_hal_create(std::string iface_name, bwl::hal_conf_t hal_conf,

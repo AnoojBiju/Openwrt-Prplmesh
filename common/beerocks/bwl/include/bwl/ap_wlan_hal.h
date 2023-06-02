@@ -537,6 +537,8 @@ public:
      */
     virtual bool set_beacon_da(const std::string &ifname, const sMacAddr &mac) = 0;
 
+    virtual bool is_station_disassociated(const sMacAddr &station_mac) = 0;
+
     /**
      * @brief Update beacon frames content.
      *
