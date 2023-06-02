@@ -89,6 +89,11 @@ bool uslm_utils::send_unregister_sta_message(const std::string &sta_mac, int fd)
     return send_message(sta_mac, fd, message_type_t::MSG_UNREGISTER_STA);
 }
 
+bool uslm_utils::send_sta_disassoc_query(const std::string &sta_mac, int fd)
+{
+    return send_message(sta_mac, fd, message_type_t::MSG_STA_DISASSOC_QUERY);
+}
+
 error_code_t uslm_utils::get_response_error_code(const response &resp)
 {
     return resp.response.error_code;

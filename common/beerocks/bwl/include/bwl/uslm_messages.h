@@ -34,6 +34,27 @@ enum class message_type_t : uint32_t {
      *
      */
     MSG_GET_STA_WMI_STATS = 0x08,
+
+    MSG_STA_DISASSOC_QUERY = 0x40,
+};
+
+enum class notification_type_t : uint32_t {
+    STATION_DISASSOCIATED = 0x01,
+};
+
+struct notification_header {
+    notification_type_t notification_type;
+    // station mac
+    uint8_t mac[6];
+};
+
+struct notification : public notification_header {
+    notification_header notif_header;
+};
+
+struct station_disassociation_notification : public notification {
+    // the bssid mac (in msg header) disassociated from
+    uint8_t bssid[6];
 };
 
 enum class error_code_t : uint32_t {
@@ -84,6 +105,13 @@ struct sta_wma_lm : public response {
     int16_t channel_number;
     uint64_t timestamp;
     int8_t wma_rssi;
+} __attribute__((packed));
+
+struct sta_disassoc_query : public request {};
+
+struct sta_disassoc_response : public response {
+    uint8_t disassociated;
+    uint8_t bssid[6];
 } __attribute__((packed));
 
 struct periodicity_message : public request {
