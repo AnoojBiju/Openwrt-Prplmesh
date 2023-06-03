@@ -686,7 +686,9 @@ mon_wlan_hal_dwpal::mon_wlan_hal_dwpal(const std::string &iface_name, hal_event_
     ctx = this;
 }
 
-mon_wlan_hal_dwpal::~mon_wlan_hal_dwpal()
+mon_wlan_hal_dwpal::~mon_wlan_hal_dwpal() { ctx = nullptr; }
+
+bool mon_wlan_hal_dwpal::detach()
 {
     if (dwpald_hostap_detach_with_id(m_radio_info.iface_name.c_str(), MONITOR_DWPALD_ATTACH_ID) !=
         DWPALD_SUCCESS) {
@@ -700,7 +702,17 @@ mon_wlan_hal_dwpal::~mon_wlan_hal_dwpal()
             LOG(ERROR) << " Failed to detach from dwpald for interface" << vap_name;
         }
     }
-    ctx = nullptr;
+
+    // Lock acquired to avoid parallel activity with dwpald_hostap_cmd.
+    std::unique_lock<std::mutex> lock(m_lock);
+    if (dwpald_stop_listener() != DWPALD_SUCCESS) {
+        lock.unlock();
+        LOG(ERROR) << "Failed to stop listener thread in dwpald";
+        return false;
+    }
+    lock.unlock();
+
+    return base_wlan_hal_dwpal::detach();
 }
 
 bool mon_wlan_hal_dwpal::update_radio_stats(SRadioStats &radio_stats)
@@ -1880,7 +1892,9 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
         return -1;
     }
 #endif
-    ctx->process_dwpal_event(ifname, buffer, len, opcode);
+    if (ctx) {
+        ctx->process_dwpal_event(ifname, buffer, len, opcode);
+    }
     return 0;
 }
 

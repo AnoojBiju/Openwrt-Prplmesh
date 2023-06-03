@@ -33,6 +33,7 @@ public:
     mon_wlan_hal_dwpal(const std::string &iface_name, hal_event_cb_t callback,
                        const bwl::hal_conf_t &hal_conf);
     virtual ~mon_wlan_hal_dwpal();
+    virtual bool detach() override;
 
     virtual bool update_radio_stats(SRadioStats &radio_stats) override;
     virtual bool update_vap_stats(const std::string &vap_iface_name, SVapStats &vap_stats) override;

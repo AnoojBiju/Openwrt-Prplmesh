@@ -30,6 +30,12 @@ int CONN_STATE_MAX_RETRY    = 5;
 namespace bwl {
 namespace dwpal {
 
+/*
+ * Global mutex to call critical DWPALD APIs between ApManager and Monitor thread to avoid
+ * race conditions.
+ */
+std::mutex base_wlan_hal_dwpal::m_lock;
+
 //////////////////////////////////////////////////////////////////////////////
 ////////////////////////// Local Module Functions ////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -128,15 +134,7 @@ bool base_wlan_hal_dwpal::fsm_setup()
         })
 
         // Handle "Detach" event
-        .on(dwpal_fsm_event::Detach, dwpal_fsm_state::Detach,
-            [&](TTransition &transition, const void *args) -> bool {
-                bool detach = false;
-                if (dwpald_disconnect() == DWPALD_SUCCESS) {
-                    detach = true;
-                    LOG(DEBUG) << "Disconnected dwpald";
-                }
-                return detach;
-            })
+        .on(dwpal_fsm_event::Detach, dwpal_fsm_state::Detach)
 
         // Handle "Attach" event
         .on(dwpal_fsm_event::Attach,
@@ -380,17 +378,9 @@ bool base_wlan_hal_dwpal::fsm_setup()
         //////////////////////////////////////////////////////////////////////////
 
         .state(dwpal_fsm_state::Detach)
-
         .entry([&](const void *args) -> bool {
-            bool success        = false;
-            m_fds_ext_events[0] = -1;
-            m_fd_nl_events      = -1;
             LOG(DEBUG) << "dwpal_fsm_state::Detach";
-            if (dwpald_disconnect() == DWPALD_SUCCESS) {
-                success = true;
-                LOG(DEBUG) << "Disconnected dwpald";
-            }
-            return success;
+            return true;
         })
 
         // Handle "Attach" event
@@ -517,8 +507,11 @@ bool base_wlan_hal_dwpal::dwpal_send_cmd(const std::string &cmd, int vap_id)
         result = DWPALD_DISCONNECTED;
         if ((conn_state[get_iface_name().c_str()] == true)) {
             buff_size_copy = m_wpa_ctrl_buffer_size;
+            // Lock acquired to avoid parallel activity with dwpald_stop_listener.
+            std::unique_lock<std::mutex> lock(m_lock);
             result = dwpald_hostap_cmd(get_iface_name().c_str(), cmd.c_str(), cmd.length(), buffer,
                                        &buff_size_copy);
+            lock.unlock();
             if (result != 0) {
                 LOG(DEBUG) << "Failed to send cmd to DWPALD: " << cmd << " --> Retry";
             }
@@ -1093,6 +1086,10 @@ bool base_wlan_hal_dwpal::update_conn_status(char *ifname, std::vector<int> &vap
                 return false;
             }
             break;
+        }
+        if (tmp_str == nullptr) {
+            //Ignore if tmp_str is null
+            continue;
         }
         auto iface_ids = beerocks::utils::get_ids_from_iface_string(tmp_str);
         if (iface_ids.vap_id == beerocks::IFACE_RADIO_ID) {
